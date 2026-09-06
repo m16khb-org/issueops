@@ -1,4 +1,4 @@
 interface:
   display_name: "IssueOps Review"
   short_description: "Run and record the adversarial review of an IssueOps plan or diff"
-  default_prompt: "Use $issueops-review to run and record an independent review of the selected cycle plan or diff, preserving verdict freshness and following the bounded correction loop and user-authorized scope."
+  default_prompt: "Use $issueops-review to check the selected cycle plan or diff for required behavior and contract defects, record an evidence-based verdict, and review only the correction delta after the first pass. Preserve verdict freshness, the bounded correction loop, and user-authorized scope."

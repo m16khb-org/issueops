@@ -1,4 +1,4 @@
 interface:
   display_name: "Design Review"
   short_description: "Review plans and designs before implementation"
-  default_prompt: "Use $design-review as an isolated sub-agent to challenge this plan before implementation and return a proceed, revise, or stop verdict with concrete findings."
+  default_prompt: "Use $design-review as an isolated sub-agent to check this plan for necessary behavior and contract defects. Return an evidence-based proceed, revise, or stop verdict; optional improvements do not block approval."
