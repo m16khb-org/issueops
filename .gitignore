@@ -15,6 +15,7 @@ cache/
 .cache/
 .antigravitycli/
 .omo/
+.agents/
 evidence
 .issueops/state/
 
