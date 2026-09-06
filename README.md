@@ -86,7 +86,7 @@ io daemon status --json
 `committed`, `transition_id`, 네이티브 활성화 receipt를 확인하고 새 바이너리로
 `inspect`, `docs`, daemon status를 다시 읽습니다.
 
-`install`은 `--interactive`, `--project-local`, `--path-mode=auto|manual|skip`를 지원하고 `bootstrap`은 `--sync`를 추가로 지원합니다. `--project-local`은 `.claude/skills/*`, `.mcp.json`, `.omo/skills/*`, `.omo/mcp.json`을 명시적으로 생성합니다. Host hook과 Omo lifecycle extension 등록은 계속 사용자 수준에 둡니다. 검증된 기존 harness command file을 인수해야 할 때만 `--adopt-command-file`을 사용합니다.
+`install`은 `--interactive`, `--project-local`, `--path-mode=auto|manual|skip`를 지원하고 `bootstrap`은 `--sync`를 추가로 지원합니다. `--project-local`은 `.mcp.json`, `.omo/mcp.json`, `.agents/mcp_config.json`을 명시적으로 생성합니다. 스킬 링크는 항상 user-scope에만 만들며 repo-local로는 만들지 않습니다. Host hook과 Omo lifecycle extension 등록은 계속 사용자 수준에 둡니다. 검증된 기존 harness command file을 인수해야 할 때만 `--adopt-command-file`을 사용합니다.
 
 `install`과 `update`는 native activation 뒤 선택적 upstream provisioning도 수행합니다. [`configs/upstream.json`](configs/upstream.json)에 선언된 missing Claude plugin은 Claude CLI로 설치하고, Git skill은 issueops state cache에 가져와 Claude 사용자 skill 경로에 연결합니다. 이미 있는 항목은 건너뜁니다. upstream/network 실패는 결과에 보고하되 native install을 실패시키지 않습니다. 현재 이 경로는 Claude Code만 대상으로 합니다.
 

@@ -78,8 +78,9 @@ io inspect --json
 
 `install` supports `--interactive`, `--project-local`, and
 `--path-mode=auto|manual|skip`; `bootstrap` also supports `--sync`.
-`--project-local` creates `.claude/skills/*`, `.mcp.json`, `.omo/skills/*`, and
-`.omo/mcp.json`. Use `--adopt-command-file` only for an existing file with a
+`--project-local` creates `.mcp.json`, `.omo/mcp.json`, and
+`.agents/mcp_config.json`. Skill links are always user-scope and are never
+created inside the repo. Use `--adopt-command-file` only for an existing file with a
 verified harness build identity.
 
 `install` and `update` run optional upstream provisioning after native activation.

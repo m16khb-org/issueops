@@ -159,7 +159,7 @@ Acceptance criteria:
 
 ### Phase 6 — Claude Code adapter
 
-상태: `internal/adapter/claude`가 `port.HostInstaller`를 구현한다. 기본 설치는 `~/.claude/skills`, user-scope MCP 등록 경로, `~/.claude/settings.json` lifecycle hook 등록을 사용한다. `.claude/skills`, `.claude/settings.json`, `.mcp.json` 같은 repo-local 파일은 명시적 `--project-local`에서만 쓴다.
+상태: `internal/adapter/claude`가 `port.HostInstaller`를 구현한다. 기본 설치는 `~/.claude/skills`, user-scope MCP 등록 경로, `~/.claude/settings.json` lifecycle hook 등록을 사용한다. `.mcp.json` 같은 repo-local MCP 설정은 명시적 `--project-local`에서만 쓰고, `.claude/skills`와 `.claude/settings.json`은 repo-local로 쓰지 않는다.
 
 Deliverables:
 

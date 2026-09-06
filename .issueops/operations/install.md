@@ -37,7 +37,7 @@ checkout's `skills/` but no longer exists (a removed or renamed shared skill);
 links that point elsewhere or still resolve are left alone, and `--dry-run`
 reports them as `would_remove` instead of deleting. Omo receives
 `~/.omo/mcp.json` plus `~/.omo/extensions/issueops.js`; explicit
-`--project-local` additionally writes `.omo/skills/*` and `.omo/mcp.json`.
+`--project-local` additionally writes `.omo/mcp.json`.
 Before any non-dry-run activation, the installer renders the complete host and
 shell-path plan and snapshots every affected file, symlink, mode, and newly
 created parent directory. Any host write or activation-seal failure restores
@@ -75,9 +75,11 @@ Default user-level install updates:
 - Omo lifecycle extension: `~/.omo/extensions/issueops.js`
 - Optional Claude Code plugins and Git skills declared in `configs/upstream.json` (currently Claude-scoped): entries already present are skipped, and upstream failures are reported as `upstream ...` messages without failing native installation. See [hosts.md](hosts.md#upstream-plugins-and-skills).
 
-Default install does not create target-repo `.claude/skills`,
-`.claude/settings.json`, `.mcp.json`, `.omo/skills`, or `.omo/mcp.json`. Use
-explicit project-local options only when a repo should own those files.
+Default install does not create target-repo `.claude/settings.json`,
+`.mcp.json`, `.omo/mcp.json`, or `.agents/mcp_config.json`. Use explicit
+project-local options only when a repo should own those MCP files. Repo-local
+skill links (`.claude/skills`, `.omo/skills`, `.agents/skills`) are never
+created: user-scope links already resolve to the same `skills/` source.
 
 Dry-run checks:
 

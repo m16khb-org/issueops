@@ -76,7 +76,7 @@ Orca는 `exec.CommandContext`로 설치된 CLI를 호출하는 선택적 IssueOp
 | 운영 개선 | `self-verify`, `self-augment`, `stability-audit` |
 | 작성·시각화 | `fluent-korean`, `diagram-design` |
 
-기본 설치는 같은 `skills/` 원본을 `~/.codex/skills/`, `~/.claude/skills/`, `~/.omo/agent/skills/`에 연결한다. repo-local skill link는 `--project-local`에서만 생성하고, upstream catalog에서 받은 외부 skill cache는 이 34개 원본과 분리한다. trigger와 사용 계약은 각 `SKILL.md`가 정의한다.
+기본 설치는 같은 `skills/` 원본을 `~/.codex/skills/`, `~/.claude/skills/`, `~/.omo/agent/skills/`에 연결한다. repo-local skill link는 `--project-local`에서도 생성하지 않고(user-scope와 대상이 같아 중복), upstream catalog에서 받은 외부 skill cache는 이 34개 원본과 분리한다. trigger와 사용 계약은 각 `SKILL.md`가 정의한다.
 
 ---
 

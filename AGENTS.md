@@ -117,7 +117,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - 핵심 동작은 host-specific plugin에 넣지 말고 Go core/port에 둔다.
 - **Sub-agent 사용 원칙:** 메인 에이전트가 직접 작업을 수행한다. Sub-agent는 12가지 검증된 net-positive 패턴(악마의 변호인, 대량 탐색, 병렬 독립 연구, 격리 작업 등 — `.issueops/SUB_AGENT_PATTERNS.md` 참조)에만 예외적으로 사용한다. 단일 파일 편집, 전체 컨텍스트가 필요한 작업, 교차 아키텍처 판단은 sub-agent로 위임하지 않는다.
 - Codex용 plugin/skill, Claude Code용 slash command/hook/MCP 설정, Omo용 native skill/MCP/extension 설정은 core 호출을 위한 얇은 어댑터로 둔다.
-- 공용 스킬은 `skills/<skill-name>/`을 source of truth로 두고, 기본 설치는 사용자 홈의 Codex/Claude/Omo skill 경로만 연결한다. 적용 대상 레포에는 명시적 `--project-local` 없이는 파일을 쓰지 않는다.
+- 공용 스킬은 `skills/<skill-name>/`을 source of truth로 두고, 스킬 링크는 항상 사용자 홈의 Codex/Claude/Omo/agy skill 경로에만 만든다. `--project-local`은 project MCP 설정만 추가로 쓰며 repo-local 스킬 링크는 만들지 않는다(user-scope와 대상이 같아 중복이다). 적용 대상 레포에는 명시적 `--project-local` 없이는 파일을 쓰지 않는다.
 - 원격에 남는 한국어 텍스트는 write 직전에 `fluent-korean` 스킬을 호출해 다듬는다. 대상은 issue와 PR/MR의 제목·본문, issue 댓글, review thread 답글이다. 한국어 게이트는 한글 비율만 검사하므로 AI가 쓴 티는 이 호출로만 걸러진다.
 - 커밋 메시지는 `.issueops/COMMIT_POLICY.md`의 **Conventional Commit subject + Lore body** 형식을 따른다.
 - CLI는 사람이 직접 실행해도 이해 가능한 JSON/text 출력을 제공해야 한다.
@@ -141,7 +141,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `internal/adapter/` | Codex/Claude/Omo, process, Git, provider, worker 등 concrete boundary 구현 |
 | `internal/architecture/` | production import graph와 layer dependency fitness test |
 | `configs/` | Codex/Claude/Omo/MCP 설정 템플릿 |
-| `.claude/skills/` | 명시적 `--project-local` 때만 생성되는 Claude Code project-native skill 연결. 기본 설치에서는 생성하지 않으며 git 추적 금지 |
+| `.omo/mcp.json`, `.agents/mcp_config.json` | 명시적 `--project-local` 때만 생성되는 Omo/agy project MCP 설정. 스킬 링크는 어떤 경우에도 repo-local로 만들지 않으며 git 추적 금지 |
 | `.mcp.json` | 이 하네스 repo의 dogfood/project-local Claude MCP 설정. 기본 설치는 user-scope MCP를 사용하며 대상 repo에는 쓰지 않음 |
 | `bin/issueops` | 빌드된 로컬 하네스 CLI/MCP 바이너리 |
 | `skills/` | Codex/Claude/Omo가 공유하는 스킬 source of truth |
