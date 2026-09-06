@@ -434,6 +434,12 @@ Wave 2: [dependent tasks]
 
 ## IssueOps Integration
 
+When called by an IssueOps stage, return the completed plan to that stage and continue its
+authorized workflow. Do not add the standalone "Start Work / Verified Execution / Further Review"
+choice or a final user-approval gate. The IssueOps router owns one current-session/new-session/hold
+choice after branch/worktree preparation; either execution choice includes approval through the
+stated endpoint. Preserve any narrower user-requested stopping point.
+
 When an IssueOps cycle exists (`issueops status --id "$ISSUEOPS_ID" --json`):
 
 1. Derive the plan slug from the issue number: `{issue-number}-{short-title}`
@@ -463,7 +469,8 @@ When an IssueOps cycle exists (`issueops status --id "$ISSUEOPS_ID" --json`):
 - Include QA scenarios in every task (no exceptions)
 - Use the incremental write protocol for large plans
 - Delete the draft after plan completion (Step 6)
-- Present "Start Work" vs "Verified Execution Loop" vs "Further Review" after plan completion
+- For standalone planning, present "Start Work" vs "Verified Execution Loop" vs "Further Review"
+  after plan completion. When called by IssueOps, return to its stage without another approval menu.
 
 **PLANNER MODE BOUNDARY:** Planner mode is sticky only after Implementation Planning is explicitly invoked or planning is justified by ambiguity, module count, or architectural risk. Imperative language alone does not force planning. If a clear small execution request arrives without an explicit planning request, return to the normal executor path instead of producing a plan.
 

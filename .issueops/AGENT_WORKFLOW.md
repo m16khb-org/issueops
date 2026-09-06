@@ -23,6 +23,26 @@ description: Agent start, execution, verification, and completion flow.
 - 구조 선택이나 대안 기각 사유가 생기면 MCP `project_docs_append(kind=adr)`로 `.issueops/ADR.md`에 남긴다.
 - 반복 실패, false case, 위험한 운영 주의는 MCP `project_docs_append(kind=caution)`으로 `.issueops/CAUTIONS.md`에 남긴다.
 
+## IssueOps 실행 방식 선택
+
+전체 사이클은 `skills/issueops/SKILL.md`의 한 번의 실행 방식 선택을 따른다. 일반 흐름은
+이슈 확정·계획·리뷰 뒤 `execution prepare --mode direct`와 사유를 사용해 canonical
+worktree를 준비한다. 아직 새 세션은 띄우지 않는다. 준비된 branch/worktree와 계획·종료점을
+보여 주고 현재 세션(추천), 같은 worktree의 새 세션, 보류 중 하나를 선택받는다.
+
+현재 세션·새 세션 선택은 승인된 범위의 구현·정리·문서 반영·검증·issue branch 커밋·푸시·
+draft PR/MR 발행·execution complete까지 허용한다. 사용자의 답변·대화 근거·ID·경로·범위·
+종료점을 기존 decision record에 남긴다. 새 세션 인계는 기존 holder의 release를 확인한 뒤
+같은 worktree에서 수행하며, 새 holder는 선택 기록을 확인하고 재승인 없이 이어간다.
+보류는 release 후 자원을 보존하며 구현을 허용하지 않는다. 구체적인 인계와 수동 시작
+경로는 `skills/issueops/references/session-choice.md`를 따른다.
+
+선택한 ID를 인계·압축 요약에 유지하고 `next --id`로 이어간다. stage·claim·`--approved`는
+사람의 승인이 아니다. 최신 사용자 지시와 더 좁은 종료점이 우선하며 merge·배포·파괴적
+cleanup은 승인에 포함하지 않는다. 일반 테스트 실패와 stale 증거는 승인 범위에서
+수정·재검증하고, 스스로 해소할 수 없는 범위·권한 결정만 묻는다. 검증 증거 재사용 조건은
+`skills/issueops-verify/SKILL.md`를 따른다.
+
 ## Verify
 
 `AGENTS.md`의 Goal-Driven Execution 원칙을 기본으로 하고, 이 프로젝트에서는 다음 검증 라우팅을 추가한다.
@@ -58,7 +78,7 @@ Delegated child cycle은 parent plan/evidence가 sub-agent pattern slug, 기대 
 
 독립적인 일시 fan-out은 host의 native subagent concurrency controls를 사용한다. Durable delegated work는 IssueOps child cycle, isolated canonical worktree, generation-fenced execution ownership, 그리고 parent accept/reject validation을 사용한다.
 
-phase 진입은 fail-closed다: `grill` 진입은 problem 완료(`intent_contract`)를, `plan` 진입은 grill 완료(`issue_url`+`branch`+`plan_prep`+`split_decision`+`domain_review`)를 요구한다. `phase_ledger`는 phase 전이 시 entered_at/completed_at를 stamp하고, 없으면 `issueops status --json`이 sentinel timestamp로 파생해 보여준다 — resume 시 이 ledger와 missing artifact로 어느 phase부터 이어갈지 판단한다. plan/compatibility-review에서 `design-review` devil's-advocate(sub-agent-only)가 `stop`을 내면 `issueops regress --id --reason`으로 `grill`로 회귀해 재조사·재계획한다(design 승인 무효화 + plan/compat ledger stale 표기). 판정 기록은 검토한 플랜의 sha256(`reviewed_plan_digest`)에 묶이므로, 판정 뒤 플랜을 고쳤으면 최종 플랜으로 design-review를 다시 돌려 기록해야 implement에 들어갈 수 있다(`devils_advocate_review_stale`; implement 진입 이후의 플랜 편집은 게이트 대상이 아니다). 안전성, 되돌릴 수 있음, 사용자 의도 정합성, sub-agent tradeoff 판단이 흔들리는 지점은 hook이 판단하지 않고 main agent가 세 가지 선택지로 멈춘다.
+phase 진입은 fail-closed다: `grill` 진입은 problem 완료(`intent_contract`)를, `plan` 진입은 grill 완료(`issue_url`+`branch`+`plan_prep`+`split_decision`+`domain_review`)를 요구한다. `phase_ledger`는 phase 전이 시 entered_at/completed_at를 stamp하고, 없으면 `issueops status --json`이 sentinel timestamp로 파생해 보여준다 — resume 시 이 ledger와 missing artifact로 어느 phase부터 이어갈지 판단한다. plan/compatibility-review에서 `design-review` devil's-advocate(sub-agent-only)가 `stop`을 내면 `issueops regress --id --reason`으로 `grill`로 회귀해 재조사·재계획한다(design 승인 무효화 + plan/compat ledger stale 표기). 판정 기록은 검토한 플랜의 sha256(`reviewed_plan_digest`)에 묶이므로, 판정 뒤 플랜을 고쳤으면 최종 플랜으로 design-review를 다시 돌려 기록해야 implement에 들어갈 수 있다(`devils_advocate_review_stale`; implement 진입 이후의 플랜 편집은 게이트 대상이 아니다). 안전성·사용자 의도·권한에 관한 결정을 조사로 해소할 수 없으면 main agent가 필요한 결정을 근거와 함께 묻는다. 스스로 해소할 수 있는 검증 실패는 승인 범위 안에서 수정한다.
 
 ## MCP Usage Rule
 
@@ -100,7 +120,8 @@ Endpoint/controller/DTO/schema/OpenAPI 변경 시 `.issueops/OPEN_API_SPEC.md`�
 ## Execution v1 workflow
 
 After the provider-linked branch and exact base SHA are recorded, preview and
-confirm `issueops execution prepare --mode auto`. GitHub Orca is the exception:
+confirm `issueops execution prepare --mode direct --direct-reason "<session-choice preparation reason>"`
+for the ordinary interactive flow, then choose the session. An explicitly requested GitHub Orca execution is the exception:
 record the matching provider/issue identity and exact base SHA first, prepare
 the local-only Orca branch, then create and record the linked branch before
 plan linkage and implementation. Direct mode grants the calling native session
@@ -129,4 +150,4 @@ merge and destructive cleanup require separate authority.
 
 ## 10단계 흐름 요약
 
-1·2단계는 source checkout의 준비 세션이 `issueops-create-issue`와 `issueops-prepare`로 수행하며 lease를 갖지 않는다. 3단계 `issueops-plan`도 같은 세션이 수행하고, 그 끝의 `execution prepare --mode auto`가 워크트리와 구현 세션을 만든다 — Orca가 준비돼 있으면 Orca가 세션을 띄우고 lease는 claimable로 남으며, 아니면 direct로 그 세션이 generation 1 홀더가 된다. 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` → `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` → `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며 reflect-completion→close-issue→cleanup finish 순서를 지킨다(OPERATIONS.md 참조). 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이 일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은 `gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다.
+1·2단계는 source checkout의 준비 세션이 `issueops-create-issue`와 `issueops-prepare`로 수행하며 lease를 갖지 않는다. 3단계 `issueops-plan`도 같은 세션이 수행하고, 기본은 `execution prepare --mode direct`로 워크트리를 준비한 뒤 현재 세션·새 세션·보류를 선택받는다. 선택 전 새 세션은 띄우지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다. 명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다. 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` → `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` → `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며 reflect-completion→close-issue→cleanup finish 순서를 지킨다(OPERATIONS.md 참조). 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이 일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은 `gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다.

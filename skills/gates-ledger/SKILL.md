@@ -12,7 +12,7 @@ description: Create, check, and report task gate ledgers with the issueops gates
 - 계획이 게이트를 만든다: [`issueops-plan`](../issueops-plan/SKILL.md)
 - 구현이 EVIDENCE를 채운다: [`issueops-implement`](../issueops-implement/SKILL.md)
 - 정리 뒤 재실행: [`issueops-clean`](../issueops-clean/SKILL.md)
-- 검증이 읽기 전용으로 재검사한다: [`issueops-verify`](../issueops-verify/SKILL.md)
+- 검증이 유효한 증거를 읽고 필요할 때 재실행한다: [`issueops-verify`](../issueops-verify/SKILL.md)
 
 ## 경로 규칙
 
@@ -84,7 +84,8 @@ EXPECT를 느슨하게 고쳐 통과시키지 않는다. 그렇게 하면 원장
 - 미충족 게이트가 남으면 `gates_incomplete:<file>`로 pr 진입이 막힌다. 원장이 아예
   없으면 이 요구는 추가되지 않는다.
 - 단계별 소유: 3단계 계획이 원장을 만들고, 4단계 구현이 `--write`로 EVIDENCE를 채우며,
-  5단계 정리 뒤 다시 `--write`로 재실행하고, 7단계 검증이 읽기 전용으로 재검사한다.
+  5단계 정리 뒤 다시 `--write`로 재실행한다. 7단계는 `issueops-verify`의 증거 재사용
+  조건을 확인해 `status`로 읽거나 `check`로 재실행한다.
 - 원장 파일은 변경 집합에 포함되므로 `ai-slop-clean record` 이후에 원장을 고치면
   fingerprint가 바뀌어 `ai_slop_clean_stale`이 된다. 원장 갱신은 봉인 전에 끝낸다.
 

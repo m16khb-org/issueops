@@ -392,6 +392,11 @@ Loop per goal. Cap at 5 cycles per goal (after 5, checkpoint and surface diagnos
 
 Trigger when every goal's criteria are passing.
 
+Inside an IssueOps cycle, continue through its clean → docs → verify stages once. Those stages
+own evidence reuse and resealing (`issueops-verify`) and the bounded review loop (`issueops-review`).
+Do not run the standalone sequence below as an additional gate. The router's prepared-worktree
+confirmation governs the authorized endpoint; finishing this skill is not another user-approval stop.
+
 1. **Targeted verification**: Re-run the changed behavior tests.
 2. **AI slop clean**: Run targeted verification plus the IssueOps cleanup stage skill (`skills/issueops-clean/SKILL.md`) when cleanup is in scope; use `issueops self-verify` for harness-level health, not as a generic cleanup substitute.
 3. **Re-verify** after cleanup.

@@ -155,7 +155,14 @@ Required skills:
    side effect, rollback, verification을 검토한다. blocker가 있으면 승인하지 말고 종료한다. blocker가
    없을 때만 아래 placeholder를 검토 결과의 리터럴 값으로 채워 compatibility-review를 승인·기록한다:
    {COMPATIBILITY_REVIEW_COMMAND}
-10. compatibility review와 execution readiness를 확인한다. 다음 command가 `none`이 아니면 exact command로
+10. 구현 진입 전에 required skill `issueops`의 "한 번의 실행 방식 선택"을 적용한다.
+   이미 현재 세션·새 세션 중 하나를 고른 사이클은 인계문과 status의 실제 선택 기록·범위·종료점을
+   대조하고 재질문 없이 이어간다. 보류 기록은 구현 승인이 아니다. 아직 선택하지 않았다면 실제
+   holder가 준비된 branch/worktree를 보여 주고 현재 세션·같은 worktree의 새 세션·보류를 한 번 묻는다.
+   새 세션 선택이면 같은 worktree의 lease를 인계하며 기존 세션은 구현하지 않는다.
+   phase나 claim 성공을 사람의 승인으로 해석하지 않는다. 확인 뒤에는 같은 lifecycle ID로
+   승인된 draft PR/MR 발행·execution complete까지 진행하며 단계별 재승인을 요구하지 않는다.
+   compatibility review와 execution readiness를 확인한다. 다음 command가 `none`이 아니면 exact command로
    implement phase에 진입하고, 이 전이가 성공하기 전에는 구현 파일을 수정하지 않는다. `none`이면 현재 phase가 이미 implement 이후이므로
    backward 전이를 시도하지 않고 현재 phase에서 승인된 scoped recovery를 계속한다. 이때 구현 diff를 수정했다면
    publication 전에 cleanup fingerprint와 fresh implementation review를 다시 기록한다:
@@ -168,7 +175,8 @@ Required skills:
 3. 각 acceptance ID에 대해 test 이름, 실행 명령, 관찰 결과를 {TURING_REPORT_PATH}에 누적한다.
 4. 변경 뒤 AI-slop pass를 수행해 중복 branch, legacy shim, 불필요 abstraction, 주석 소음,
    dead code, 과도한 complexity를 제거하되 요청 밖 코드는 손대지 않는다.
-5. 아래 verification을 실제 실행하고 output을 근거로 기록한다. 추론만으로 PASS라고 하지 않는다.
+5. 아래 verification의 실제 output을 근거로 기록한다. `issueops-verify`의 조건을 만족하는
+   기존 성공 증거는 재사용하고, 나머지는 실행한다. 추론만으로 PASS라고 하지 않는다.
    최신 사용자 지시가 전체 검증을 제한하면 해당 명령은 실행하지 말고 생략 근거와 대체한 targeted
    검증을 report에 기록한다.
 
@@ -181,7 +189,8 @@ publication과 종료:
 2. verification report를 포함한 구현 diff를 더 이상 수정할 필요가 없는 상태로 만든 뒤 다음 exact command로
    ai-slop-clean phase에 진입한다:
    {ENTER_AI_SLOP_CLEAN_COMMAND}
-3. 구현 diff를 project docs와 대조한다. 이번 변경이 CAUTIONS에 남길 재발 함정이나 ADR에
+3. `issueops-docs` 절차로 구현 diff를 project docs와 대조하고, 문서 수정 뒤 필요한 검증과
+   재봉인을 마친다. 이전 검증을 새 fingerprint의 실행 증거로 바꾸지 않는다. CAUTIONS에 남길 재발 함정이나 ADR에
    남길 결정을 만들었으면 문서를 **먼저 고친 뒤** verdict `updated`와 고친 경로로 기록하고,
    남길 것이 없으면 무엇을 확인했는지 evidence에 적어 verdict `no-change`로 기록한다.
    변경 집합에 없는 문서를 적으면 기록이 거부된다:
@@ -194,8 +203,8 @@ publication과 종료:
 5. 모든 acceptance와 승인된 verification이 PASS한 뒤, planner급 모델 {REVIEWER_MODEL}
    ({REVIEWER_EFFORT})의 fresh 서브에이전트로 구현 diff에 대한 design-review 적대 리뷰를
    수행한다. 실제 verdict와 findings/evidence를 다음 command로 기록한다. verdict가 `revise`면
-   지적을 수정하고 cleanup 검증과 fresh 리뷰를 반복하며, verdict가 `stop`이면 blocker를 보고하고
-   종료한다. `pass`일 때만 commit/push/PR로 진행한다:
+   지적을 수정하고, verdict가 `stop`이면 publication을 멈춘다. 수정·재리뷰·중단은
+   `issueops-review`의 유한한 루프와 승인 범위를 따른다. `pass`일 때만 commit/push/PR로 진행한다:
    {IMPLEMENTATION_REVIEW_COMMAND}
 6. 리뷰가 봉인한 diff를 더 수정하지 않고 atomic-commit-push 계약으로 commit/push한다. 변경이
    필요해지면 cleanup 검증과 구현 리뷰를 새 fingerprint로 다시 수행한다.

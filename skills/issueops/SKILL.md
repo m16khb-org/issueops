@@ -18,24 +18,47 @@ issueops next --json
 이 명령은 읽기 전용이다. record와 로컬 관측만 쓰고 fetch도 provider 호출도 하지
 않는다. 출력을 이렇게 읽는다.
 
-1. `stage.key`를 아래 `## 단계 표`로 스킬과 한국어 label로 바꾼다.
-2. `lease`, `missing`, `next_command`, `exits`를 사용자에게 그대로 보여 준다.
-   `next_command_kind`가 `template`이면 `<...>`와 `$ACTOR_FLAGS`에 채울 값을 함께
-   보여 주고, 실행은 사용자가 값을 확인한 뒤에 한다.
-3. 아래 선택지 네 줄을 묻는다.
+1. 사용자나 현재 대화가 지정한 lifecycle ID가 있으면 처음부터
+   `issueops next --id "$ISSUEOPS_ID" --json`을 실행한다. 없을 때만 자동 선택한다.
+   `selected.id` 또는 `start` 결과의 ID를 이후 명령·인계·압축 요약에 유지한다.
+2. `stage.key`를 아래 `## 단계 표`로 바꾸고 해당 스킬을 실행한다. 단계가 끝나면 같은
+   ID로 `next`를 다시 읽고 다음 단계로 이어간다. 단계 선택 메뉴를 반복해서 묻지 않는다.
+3. `next_command_kind=template`의 값은 record·whoami·계획·저장소에서 채운다.
+   명령의 placeholder나 `--confirm` 자체는 사용자 질문 사유가 아니다.
 
-```text
-1. 이어서 진행: <스킬> (<label>) (추천)
-2. 다른 단계 지정: 원하는 단계 번호를 말해 주세요
-3. 중단: issueops-abandon (일시 중단·폐기)
-4. 새 사이클 시작: issueops-create-issue (이 저장소에 다른 사이클이 있어도 새로 시작한다)
-```
+- `ambiguous`라도 대화에 지정된 ID가 있으면 그 ID로 다시 읽는다. ID가 없고 후보를
+  구별할 근거도 없을 때만 고르게 한다. 다른 사이클을 임의로 선택하거나 정리하지 않는다.
+- `none`이면 요청 범위에 맞게 이슈 단계로 들어간다. 본문 초안이나 상태 조회만 요청했으면
+  그 결과만 제공한다. 사용자가 새 사이클을 요청하면 기존 후보와 별개로 시작한다.
+- `blocked.*`는 아래 중단 규칙을 따른다. 다른 holder의 작업을 대신하거나 상태를 우회하지 않는다.
 
-- `blocked.*`면 진행하지 않는다. 1번을 `1. 대기: <next_command>로 상태를 다시
-  읽습니다`로 바꾼다.
-- `ambiguous`면 `candidates`를 보여 주고 어느 ID인지 고르게 한다. 추측해서 고르지
-  않는다.
-- `none`이면 1번과 4번이 같으므로 4번을 생략한다.
+## 한 번의 실행 방식 선택
+
+전체 IssueOps 작업의 기본 확인 지점은 **브랜치·canonical worktree 준비 완료 후,
+구현 진입 전**이다. 이슈 확정 후 브랜치 준비·계획·리뷰·worktree provisioning은 이어서
+수행하되 새 세션은 아직 띄우지 않는다. 시작 전에 이 선택 지점과 이후 종료점이 draft PR/MR 발행·execution complete임을
+알린다. 사용자가 이슈 작성·계획만 요청했으면 그 범위에서 끝낸다.
+
+- `issueops-plan`이 direct mode로 워크트리를 먼저 준비한다. 현재 holder가 실측한
+  이슈·브랜치·worktree 경로·계획 요약·종료점을 보여 준 뒤 아래 선택을 한 번 받는다.
+
+  1. **현재 세션에서 계속 (추천)**: 준비된 worktree에서 구현한다.
+  2. **같은 worktree의 새 세션에서 계속**: 계획·진행 상태·승인 범위를 인계한다.
+  3. **여기서 보류**: 작업 권한을 해제하고 준비 상태를 보존한다.
+
+- 1·2번 선택은 구현·정리·문서 반영·검증·issue branch 커밋·푸시·draft PR/MR 발행·
+  execution complete까지의 승인이다. 구현 진입과 테스트는 선택 뒤에 시작한다.
+  3번은 구현 승인이 아니다. merge·배포·force push·파괴적 cleanup은 포함하지 않는다.
+- "ㅇㅇ", "진행해"는 선택지를 보여 주며 기본값을 설명한 경우 1번으로 처리한다.
+  선택 방식이 모호하거나 답이 없으면 대신 고르지 않는다. 더 좁은 종료점이나 취소,
+  선택을 생략하고 특정 방식으로 진행하라는 명시적 지시는 우선한다.
+- 선택 기록·lease 해제·새 세션 인계는 [session-choice.md](references/session-choice.md)를
+  따른다. 새 세션은 실제 승인 기록을 읽고 이어가며 같은 선택이나 진행 승인을 다시 묻지
+  않는다. 기록은 사용자 답변의 근거를 보존하며, phase·claim·`--approved`만으로 승인을
+  만들지 않는다. 진행 중인 이전 버전 사이클도 실행 방식을 바꾸려고 worktree를 재생성하지 않는다.
+
+단계 스킬과 함께 쓰는 계획·검증·Git 스킬도 이 승인 범위와 종료점을 따른다.
+하위 스킬의 일반적인 "계속할까요" 절차를 추가 확인 지점으로 만들지 않는다.
 
 ## 10단계와 스킬
 
@@ -64,10 +87,11 @@ Issue 단계에서 PR/MR 스킬을, PR/MR 단계에서 Issue 스킬을 함께 �
 ## 세션 경계
 
 - **1·2단계는 source checkout의 준비 세션**이 수행한다. 워크트리는 아직 없다.
-- **3단계**도 같은 세션이 수행하고, 그 끝의 `execution prepare --mode auto`가 워크트리와
-  구현 세션을 만든다. Orca가 준비돼 있으면 Orca가, 아니면 direct가 고른다.
-- **4단계 이후는 구현 세션**이 canonical worktree에서 수행한다. Orca 모드면 prepare가
-  띄운 세션이 봉인된 claim으로 홀더가 되고, direct 모드면 3단계 세션이 그대로 이어간다.
+- **3단계**도 같은 세션이 수행한다. 기본은 `execution prepare --mode direct`로
+  워크트리만 준비하고 위 실행 방식을 선택받는다. Orca 설치 여부로 세션을 자동 선택하지 않는다.
+- **4단계 이후는 선택한 세션**이 canonical worktree에서 수행한다. 현재 세션은 기존
+  lease를 유지하고, 새 세션은 이전 holder의 release를 확인한 뒤 같은 worktree를 인수한다.
+  사용자가 명시적으로 요청한 Orca execution과 이미 존재하는 Orca 사이클은 기존 core 경로를 따른다.
 - lease는 3단계의 인계에서 생긴다. 다른 세션이나 다른 호스트에서 이어받는 경로는
   [`issueops-abandon`](../issueops-abandon/SKILL.md)의 재개·인수 절이 설명한다.
 
@@ -75,7 +99,7 @@ Issue 단계에서 PR/MR 스킬을, PR/MR 단계에서 Issue 스킬을 함께 �
 
 단계 스킬은 이 절을 링크하고 복사하지 않는다.
 
-**(a) 단계 판별.** 모든 단계 스킬은 `issueops next --json`으로 시작하고
+**(a) 단계 판별.** 모든 단계 스킬은 선택한 ID의 `issueops next --id "$ISSUEOPS_ID" --json`으로 시작하고
 `stage.key`가 자기 단계인지 확인한다. 아니면 표가 지목하는 스킬로 안내한다. `blocked.*`
 면 중단한다. phase를 추정하지 않는다.
 
@@ -183,7 +207,7 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
 - 변경 집합에 마이그레이션·엔티티·SQL 스키마 파일이 있으면 실제 데이터베이스에서
   인덱스 현황과 대상 테이블 row 수를 관찰해 관찰값과 출처를 기록한다.
 - Git staging/push는 `atomic-commit-push`, 고급 history 작업은 `git-operations`가
-  소유한다. 사용자 지시 없이 commit하거나 push하지 않는다.
+  소유한다. 위 실행 방식 선택에서 승인된 issue branch의 commit·push는 다시 묻지 않는다.
 - destructive cleanup은 exact target과 fingerprint를 preview한 뒤 별도 사용자
   승인을 받는다.
 
@@ -202,13 +226,16 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
 | `references/remote-issue.md` | provider relation과 hierarchy |
 | `references/evidence-contract.md` | domain/API/live/review/completion evidence |
 | `references/execution.md` | direct/Orca, generation, claim/recovery/publication |
+| `references/session-choice.md` | 준비 후 현재 세션·새 세션·보류 선택, 승인 기록과 인계 |
 | `references/orchestration.md` | delegated child contract |
 | `references/review-feedback.md` | feedback·thread resolution |
 | `references/cleanup-state.md` | post-merge cleanup |
 
 ## Stop conditions
 
-다음 조건이면 다음 phase나 remote write로 진행하지 않는다.
+다음 조건이면 해당 phase나 remote write를 실행하지 않는다. 승인 범위 안에서 조사·수정·
+재검증으로 해소할 수 있으면 에이전트가 해소하고 같은 ID로 `next`를 다시 읽는다.
+stale 판정이나 테스트 실패 자체를 사용자에게 진행 여부를 물을 이유로 삼지 않는다.
 
 - provider, credentials, project, Issue owner, target branch가 모호하다.
 - intent·success criteria·domain term 해석이 구현을 바꿀 만큼 갈린다.
@@ -219,6 +246,12 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
   누락했다고 보고한다.
 - label·assignee·한국어 body·target branch·live readback이 검증되지 않았다.
 - merge evidence 없이 cleanup을 요청한다.
+
+사용자에게 묻는 경우는 실행 방식 선택, 조사로 해소되지 않는 대상·요구사항 모호함,
+승인 범위를 바꾸는 결정, 필요한 권한·자격 증명, 또는 안전한 자동 복구가 불가능한 충돌이다.
+질문에는 필요한 결정과 그 근거를 적는다. 동일 blocker가 두 번의 복구 시도에도 그대로면
+시도한 명령과 원인을 보고하고 중단한다. 진행 중인 다른 holder를 기다리는 무한 polling이나
+결과가 모호한 원격 mutation의 반복 실행은 하지 않는다.
 
 ## IssueOps benchmark artifact contract
 

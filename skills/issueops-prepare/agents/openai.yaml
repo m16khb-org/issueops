@@ -1,4 +1,4 @@
 interface:
   display_name: "IssueOps Prepare"
   short_description: "Seal the branch identity of an IssueOps cycle"
-  default_prompt: "Use $issueops-prepare to give a cycle its branch identity: pin the exact base SHA, record it with `issueops branch prepare`, create and verify the provider-side branch link after user confirmation, and move the cycle to the plan phase. This skill never creates a worktree — `issueops execution prepare --mode auto` owns worktree provisioning and picks git or Orca at the end of the plan stage. Follow the GitHub Orca branch ordering in execution.md when Orca is in play."
+  default_prompt: "Use $issueops-prepare to pin the base SHA, record and verify the branch identity within the authorized preparation scope, and continue to planning. Worktree preparation and the single session choice belong to the subsequent stage; Orca availability alone does not select a session."

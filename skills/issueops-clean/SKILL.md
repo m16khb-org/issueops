@@ -116,6 +116,9 @@ git -C "$WORKTREE" diff --check
 # 변경 범위의 focused 테스트를 다시 실행한다.
 ```
 
+focused 테스트가 원장의 CHECK에 포함되어 있으면 위 `gates check`의 실행 결과를
+사용한다. 같은 pass에서 같은 입력에 같은 테스트를 별도로 한 번 더 실행하지 않는다.
+
 verified-execution report를 확정한다. report는 워크트리 **안**의 정규 파일이어야 하고, 형식은
 [`verified-execution`](../verified-execution/SKILL.md)의 보고 계약을 따른다. 이번 변경의 **side effect 목록**과
 **성능 측정값**을 반드시 담는다. 링크나 임시 경로가 아니라 커밋될 파일이어야 한다.

@@ -20,8 +20,10 @@ description: Apply the shared IssueOps remote write protocol to any governed "is
 2. **한국어 게이트를 통과한다.** 번들된 스크립트가 한글 비율을 판정한다. 실패하면
    원격을 건드리지 말고 다시 쓴다.
 3. **preview를 먼저 실행한다.** `--confirm` 없는 같은 명령이 무엇이 쓰일지 보여 준다.
-4. **confirm은 preview와 완전히 같은 요청에만 붙인다.** 본문 한 글자라도 다르면 그것은
-   사용자가 승인한 요청이 아니다.
+4. **confirm은 preview와 완전히 같은 요청에만 붙인다.** 본문이 바뀌면 preview부터 다시
+   실행한다. `--confirm`은 CLI의 실행 확정 플래그다. 승인된 작업 범위 안에서는 에이전트가
+   preview를 검토하고 실행하며 매번 사람에게 재승인받지 않는다. 사용자가 특정 본문을
+   그대로 승인했거나 수정이 범위를 바꾸면 변경된 내용에 대한 승인이 필요하다.
 5. **쓴 뒤 읽는다.** provider가 조용히 무시한 write를 성공으로 보고하지 않으려면
    readback이 필요하다.
 6. **결과가 불명확하면 재호출하지 않고 reconcile한다.** timeout이나 전송 실패는 "쓰이지
@@ -123,7 +125,7 @@ issueops feedback mark-issue-updated --id "$ISSUEOPS_ID" $RECORD_ACTOR_FLAGS --j
 
 - raw `gh`·`glab`로 본문을 고친다. pending intent가 없으니 모호한 결과를 회복할 수 없다.
 - preview 없이 `--confirm`을 붙인다.
-- preview 뒤 본문을 고치고 같은 `--confirm`을 붙인다. 승인된 것과 다른 것이 쓰인다.
+- preview 뒤 본문을 고치고 preview를 다시 하지 않는다. 검토한 요청과 다른 것이 쓰인다.
 - timeout 뒤 create를 다시 실행한다. 중복 이슈나 중복 PR이 생기고, 그것을 정리하는 일이
   원래 작업보다 커진다.
 - 실패 로그를 그대로 붙인다. 토큰과 자격 증명이 원격 이력에 영구히 남는다.

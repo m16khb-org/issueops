@@ -92,12 +92,15 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
 
 ## 루프 규칙
 
-- 1·2라운드는 대상 전체를 검토한다. 3라운드부터는 직전 판정 이후의 delta만 본다.
-  같은 것을 세 번 읽는 리뷰는 새 결함을 찾지 못한다.
+- 첫 라운드는 대상 전체를 검토한다. 수정 후에는 직전 지적·변경 delta·영향받은 계약을
+  중심으로 검토하고, 구조나 범위가 바뀌었을 때만 전체를 다시 읽는다. 같은 대상의
+  수정·재리뷰는 최대 3라운드다. 그 안에 통과하지 못하면 남은 결함과 시도한 수정을 보고한다.
 - `revise`면 호출한 단계가 대상을 고치고 이 스킬을 다시 실행한다.
 - `stop`이면 `--target plan`은 호출자가 `issueops regress --id
   "$ISSUEOPS_ID" --reason "<TEXT>"`로 grill까지 되돌려 재조사·재계획한다.
-  `--target diff`는 blocker를 보고하고 멈춘다. 진행 판단은 사용자가 한다.
+  `--target diff`는 publication을 멈춘다. 승인 범위 안에서 해소할 수 있는 결함은
+  구현 단계로 돌아가 수정하고 다시 리뷰한다. 범위·권한·요구사항 결정이 필요할 때만
+  사용자에게 묻는다. stop 판정을 pass로 바꾸거나 우회하지 않는다.
 - `pass`는 finding이 하나 이상 있어야 기록된다. 아무것도 공격하지 않은 통과는 리뷰가
   일어나지 않았다는 뜻이다.
 - `--waive`는 override이며 `--waiver-rationale`이 필수다. "지적을 반영했다"는 뜻으로

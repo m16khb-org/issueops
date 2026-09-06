@@ -1076,7 +1076,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-implement"
         },
         {
-          "description": "Turn a branch-prepared IssueOps cycle into an implementable contract from the source checkout. Read the operating documents that constrain the change, write the plan, stage it as the sealed plan artifact, approve the design review, run the adversarial review loop until it passes, then hand off with \"execution prepare --mode auto\" so Orca launches the implementation session when it is available and direct keeps the current session when it is not. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then let the user choose the current session, a new session in that worktree, or hold before implementation. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-plan",
@@ -7629,7 +7629,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-implement"
               },
               {
-                "description": "Turn a branch-prepared IssueOps cycle into an implementable contract from the source checkout. Read the operating documents that constrain the change, write the plan, stage it as the sealed plan artifact, approve the design review, run the adversarial review loop until it passes, then hand off with \"execution prepare --mode auto\" so Orca launches the implementation session when it is available and direct keeps the current session when it is not. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then let the user choose the current session, a new session in that worktree, or hold before implementation. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-plan",

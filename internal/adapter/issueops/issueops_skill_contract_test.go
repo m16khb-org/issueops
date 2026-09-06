@@ -24,7 +24,7 @@ func TestIssueOpsSkillKeepsCoreWorkflowContract(t *testing.T) {
 	stages := map[string]string{
 		"issueops intent record": readIssueOpsContractFile(t, "skills", "issueops-create-issue", "SKILL.md"),
 		"issueops design review": readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md"),
-		"issueops execution prepare --id \"$ISSUEOPS_ID\" --mode auto": readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md"),
+		"issueops execution prepare --id \"$ISSUEOPS_ID\" --mode direct": readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md"),
 	}
 	for want, document := range stages {
 		if !strings.Contains(document, want) {

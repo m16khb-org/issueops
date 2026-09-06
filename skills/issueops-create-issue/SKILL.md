@@ -6,7 +6,7 @@ description: Confirm and create the IssueOps issue that a cycle contracts on. In
 # IssueOps Create Issue
 
 이 스킬의 일은 **1단계 하나**다. 무엇을 할 일인지 확정하고, 그 확정을 원장에
-기록하고, 팀이 보는 이슈로 만든다. 브랜치·계획·구현은 하지 않는다.
+기록하고, 팀이 보는 이슈로 만든다. 브랜치·계획·구현은 다음 단계 스킬이 소유한다.
 
 - 전체 흐름과 단계 판별: [`issueops`](../issueops/SKILL.md)
 - 다음 단계: [`issueops-prepare`](../issueops-prepare/SKILL.md)
@@ -16,13 +16,13 @@ description: Confirm and create the IssueOps issue that a cycle contracts on. In
 ## 이 스킬이 맞는지 확인
 
 ```bash
+# ID가 있으면 --id "$ISSUEOPS_ID"를 붙인다. 새 사이클 선택에만 자동 판정을 쓴다.
 issueops next --json
 ```
 
 `stage.key`가 `none`이거나 `issue`면 이 스킬이다. 사용자가 라우터의 "새 사이클
 시작"을 골랐으면 `stage.key`와 무관하게 진행하며, 이 저장소에 다른 사이클이 있어도
-새 `start`는 허용된다. 그 밖의 값이면 라우터 `## 단계 표`가 지목하는 스킬을 안내하고
-멈춘다.
+새 `start`는 허용된다. 그 밖의 값이면 라우터 `## 단계 표`가 지목하는 스킬로 이어간다.
 
 `start`는 **source checkout**에서 실행한다. 워크트리 안에서 실행하면 record의 repo가
 워크트리를 가리키고 이후 모든 경로 판정이 어긋난다.
@@ -89,7 +89,8 @@ issueops phase --id "$ISSUEOPS_ID" --to grill $RECORD_ACTOR_FLAGS --json
 ```
 
 여기까지가 로컬 기록이다. 다음은 원격 write이므로 본문 초안을 사용자에게 보여 주고
-승인을 받은 뒤 [`issueops-remote-write`](../issueops-remote-write/SKILL.md)의 절차로
+현재 요청에 이슈 발행이 포함되어 있으면 별도 재승인 없이
+[`issueops-remote-write`](../issueops-remote-write/SKILL.md)의 절차로
 진행한다. 그 스킬이 fluent-korean 호출, 한국어 게이트, preview, 동일 요청 confirm,
 readback, 모호할 때의 reconcile을 소유한다.
 
@@ -102,7 +103,8 @@ issueops link-issue --id "$ISSUEOPS_ID" --issue-url "$ISSUE_URL" $RECORD_ACTOR_F
 `remote create-issue`가 `issue_url`을 record에 이미 넣었으면 `link-issue`는 생략한다.
 `status --json`으로 확인하고 없을 때만 실행한다.
 
-마지막 출력은 다음 세 줄이다.
+이슈만 요청했으면 다음 세 줄로 완료 보고한다. 전체 작업 요청이면 진행 상황으로 알린 뒤
+같은 ID로 `issueops-prepare`를 실행한다. 실행 방식 선택은 worktree 준비 후 한 번 받는다.
 
 ```text
 ISSUEOPS_ID: <id>

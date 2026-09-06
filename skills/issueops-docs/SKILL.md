@@ -89,16 +89,19 @@ go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -update -cou
 
 ## 4 재봉인
 
-문서를 하나라도 고쳤으면 정리 단계의 봉인을 다시 맞춘다.
+문서를 하나라도 고쳤으면 변경된 문서·프롬프트·계약에 필요한 검증을 실행한 뒤 정리
+단계의 봉인을 다시 맞춘다. 실행된 프롬프트나 생성 계약도 바뀔 수 있으므로 문서라는
+이유만으로 이전 검증이 여전히 유효하다고 간주하지 않는다.
 
 ```bash
 issueops ai-slop-clean record --id "$ISSUEOPS_ID" \
   --category "<5단계와 같은 category>" \
-  --verification "<5단계의 검증 결과 그대로>" $RECORD_ACTOR_FLAGS --json
+  --verification "<문서 변경 뒤 실행한 검증 명령·결과>" $RECORD_ACTOR_FLAGS --json
 ```
 
-category는 정리 단계와 같고, verification도 그때의 결과를 그대로 적는다. 문서만
-바뀌었으므로 코드 검증 결과는 달라지지 않는다. 고친 문서가 없으면 재봉인하지 않는다.
+category는 정리 단계와 같다. 이전 코드 검증의 명령·시점·대상을 보존하고, 새 fingerprint에
+대해 실행한 결과로 바꿔 적지 않는다. 재봉인 자체는 테스트 실행 증거가 아니다. 7단계가
+`issueops-verify`의 조건으로 필요한 나머지 검사를 결정한다. 고친 문서가 없으면 재봉인하지 않는다.
 
 ## 5 판정 기록
 

@@ -35,15 +35,28 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
 검증이 실패해 코드를 고쳐야 하면 4단계로 돌아가 구현·정리·재봉인·문서 반영을 다시
 밟는다. `next`가 `clean`으로 되돌리는 것이 그 신호다.
 
-## 1 읽기 전용 재검증
+## 1 검증 증거 확인과 필요한 재검증
+
+현재 fingerprint에 대한 성공 기록이 있고 명령·입력·의존성·환경이 같으며 외부 상태의
+유효기간도 지나지 않았으면 그 결과를 재사용한다. 단계가 바뀌었다는 이유만으로 같은
+명령을 다시 실행하지 않는다. 하나라도 확인할 수 없거나 저장소가 새 실행을 요구하면
+다시 실행한다. fingerprint 변경·실패·새 검증 항목은 재검증 사유다.
 
 ```bash
-# 원장은 다시 채우지 않고 읽기만 한다. EVIDENCE는 앞 단계가 채웠다.
+# 위 조건을 만족하면 기존 EVIDENCE를 읽는다. status는 CHECK를 실행하지 않는다.
+issueops gates status --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKTREE" --json
+
+# 새 실행이 필요하면 CHECK를 실행하되 원장은 바꾸지 않는다.
 issueops gates check --file "$LEDGER" --cwd "$WORKTREE" --workspace-root "$WORKTREE" --json
 
-# 저장소가 정한 검증 battery를 실행한다. 이 저장소는 AGENTS.md가 그 목록을 소유한다.
+# 게이트 CHECK에서 이미 실행한 명령은 중복 실행하지 않는다.
+# 저장소의 필수 검증 중 아직 유효한 성공 증거가 없는 명령만 실행한다.
 issueops verify-work --json -- "$VERIFY_COMMAND"
 ```
+
+위 명령은 모두 순서대로 실행하는 목록이 아니다. 재사용할 때는 원래 명령·결과·시점과
+현재 입력이 같다는 근거를 보고한다. 실행하지 않은 명령을 새 PASS로 기록하거나 stale
+판정을 덮어쓰지 않는다. 필수 리뷰·readiness·lease 검사는 그대로 수행한다.
 
 - endpoint·DTO·OpenAPI가 바뀌었으면 `.issueops/OPEN_API_SPEC.md` 게이트를 적용하고
   `issueops api-doc check --json`을 실행한다. 대상 저장소에

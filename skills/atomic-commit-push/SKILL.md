@@ -13,7 +13,9 @@ Turn local changes into one or more atomic commits, verify each commit as approp
 
 ## Safety rules
 
-- Only commit/push when the user explicitly asks for it.
+- Commit/push only within user authorization. Approval to continue an IssueOps cycle through
+  draft PR/MR publication includes commits and pushes to that cycle's issue branch; do not
+  request the same approval again. A request limited to local edits does not authorize publication.
 - Read the repo's nearest `AGENTS.md`/`CLAUDE.md` and relevant project docs before committing.
 - If `.issueops/COMMIT_POLICY.md` exists, use it as the commit-message source of truth.
 - Never use `git add .` or `git commit -a`. Stage exact files, and use `git add -p` when a file mixes unrelated changes.
