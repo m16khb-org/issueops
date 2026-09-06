@@ -33,7 +33,7 @@ func promptInstallChoices(projectLocal, dryRun bool, pathMode string, in io.Read
 	fprintf(out, "issueops install\n")
 	fprintf(out, "Installs user-scope Codex/Claude skills, MCP config, hooks, and the issueops command shim.\n")
 	fprintf(out, "\n")
-	fprintf(out, "Project-local files write .mcp.json and .claude/ links into this harness repo. Most installs should keep this disabled.\n")
+	fprintf(out, "Project-local files write project MCP configs (.mcp.json, .omo/mcp.json, .agents/mcp_config.json) into this harness repo so it runs its own ./bin/issueops. Skills stay user-scope. Most installs should keep this disabled.\n")
 	projectAnswer, err := promptLine(reader, out, "Enable project-local files? [y/N]: ")
 	if err != nil {
 		return choices, err

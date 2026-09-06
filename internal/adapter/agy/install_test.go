@@ -45,7 +45,9 @@ func TestInstallerWritesNativeAgySurfaces(t *testing.T) {
 	}
 
 	assertAgyTestSkillLink(t, filepath.Join(req.Home, ".gemini", "config", "skills", "alpha"), filepath.Join(req.Root, "skills", "alpha"))
-	assertAgyTestSkillLink(t, filepath.Join(req.Root, ".agents", "skills", "alpha"), filepath.Join(req.Root, "skills", "alpha"))
+	if _, err := os.Lstat(filepath.Join(req.Root, ".agents", "skills")); !os.IsNotExist(err) {
+		t.Fatalf("project-local install must not create repo-local agy skill links: %v", err)
+	}
 
 	globalMCP := readAgyTestJSON(t, filepath.Join(req.Home, ".gemini", "config", "mcp_config.json"))
 	assertAgyTestMCPServer(t, globalMCP, "issueops", req.BinPath, req.Root)

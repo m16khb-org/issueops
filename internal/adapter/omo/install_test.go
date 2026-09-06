@@ -45,7 +45,9 @@ func TestInstallerWritesNativeOmoSurfaces(t *testing.T) {
 	}
 
 	assertOmoTestSkillLink(t, filepath.Join(req.Home, ".omo", "agent", "skills", "alpha"), filepath.Join(req.Root, "skills", "alpha"))
-	assertOmoTestSkillLink(t, filepath.Join(req.Root, ".omo", "skills", "alpha"), filepath.Join(req.Root, "skills", "alpha"))
+	if _, err := os.Lstat(filepath.Join(req.Root, ".omo", "skills")); !os.IsNotExist(err) {
+		t.Fatalf("project-local install must not create repo-local omo skill links: %v", err)
+	}
 
 	globalMCP := readOmoTestJSON(t, filepath.Join(req.Home, ".omo", "mcp.json"))
 	assertOmoTestMCPServer(t, globalMCP, "issueops", req.BinPath, req.Root)

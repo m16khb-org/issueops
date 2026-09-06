@@ -79,13 +79,11 @@ func TestClaudeInstallerProjectLocalIsExplicit(t *testing.T) {
 	if _, err := NewInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
-	for _, path := range []string{filepath.Join(root, ".claude", "skills", "alpha"), filepath.Join(root, ".mcp.json")} {
-		if !exists(path) {
-			t.Fatalf("project-local installer did not write %s", path)
-		}
+	if !exists(filepath.Join(root, ".mcp.json")) {
+		t.Fatalf("project-local installer did not write %s", filepath.Join(root, ".mcp.json"))
 	}
-	if exists(filepath.Join(root, ".claude", "settings.json")) {
-		t.Fatalf("project-local installer should not write repo-local Claude settings")
+	if exists(filepath.Join(root, ".claude")) {
+		t.Fatalf("project-local installer should not write the repo-local Claude directory")
 	}
 }
 

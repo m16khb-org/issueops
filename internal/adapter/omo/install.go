@@ -14,7 +14,7 @@ func (Installer) Name() string { return "omo" }
 
 func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
 	plan := NewInstallPlan("omo", req.DryRun)
-	enabledSkills, links, messages, skillErrs := PlanHostSkillLinks(
+	_, links, messages, skillErrs := PlanHostSkillLinks(
 		req.Root,
 		filepath.Join(req.Home, ".omo", "agent", "skills"),
 		req.SkillNames,
@@ -48,11 +48,6 @@ func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult,
 	))
 
 	if req.ProjectLocal {
-		for _, skillName := range enabledSkills {
-			target := filepath.ToSlash(filepath.Join("..", "..", "skills", skillName))
-			path := filepath.Join(req.Root, ".omo", "skills", skillName)
-			plan.Link(EnsureSymlinkPlan(target, path, req.DryRun))
-		}
 		plan.File(writeOmoProjectMCP(
 			filepath.Join(req.Root, ".omo", "mcp.json"),
 			"omo_project_mcp_config",

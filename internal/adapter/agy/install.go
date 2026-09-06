@@ -15,7 +15,7 @@ func (Installer) Name() string { return "agy" }
 func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
 	plan := NewInstallPlan("agy", req.DryRun)
 	geminiRoot := filepath.Join(req.Home, ".gemini", "config")
-	enabledSkills, links, messages, skillErrs := PlanHostSkillLinks(
+	_, links, messages, skillErrs := PlanHostSkillLinks(
 		req.Root,
 		filepath.Join(geminiRoot, "skills"),
 		req.SkillNames,
@@ -34,11 +34,6 @@ func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult,
 	))
 
 	if req.ProjectLocal {
-		for _, skillName := range enabledSkills {
-			target := filepath.ToSlash(filepath.Join("..", "..", "skills", skillName))
-			path := filepath.Join(req.Root, ".agents", "skills", skillName)
-			plan.Link(EnsureSymlinkPlan(target, path, req.DryRun))
-		}
 		plan.File(writeAgyProjectMCP(
 			filepath.Join(req.Root, ".agents", "mcp_config.json"),
 			"agy_project_mcp_config",

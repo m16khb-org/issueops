@@ -16,7 +16,7 @@ func (Installer) Name() string { return "claude" }
 func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
 	plan := NewInstallPlan("claude", req.DryRun)
 
-	enabledSkills, links, messages, skillErrs := PlanHostSkillLinks(req.Root, filepath.Join(req.Home, ".claude", "skills"), req.SkillNames, "claude", req.DryRun)
+	_, links, messages, skillErrs := PlanHostSkillLinks(req.Root, filepath.Join(req.Home, ".claude", "skills"), req.SkillNames, "claude", req.DryRun)
 	plan.Messages(messages)
 	plan.Links(links)
 	plan.Errs(skillErrs)
@@ -33,9 +33,6 @@ func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult,
 	plan.File(WriteJSONPlan(hooksTemplatePath, "claude_hooks_template", claudeSettingsConfig("./bin/issueops"), 0o644, req.DryRun))
 
 	if req.ProjectLocal {
-		for _, skillName := range enabledSkills {
-			plan.Link(EnsureSymlinkPlan(filepath.ToSlash(filepath.Join("..", "..", "skills", skillName)), filepath.Join(req.Root, ".claude", "skills", skillName), req.DryRun))
-		}
 		plan.File(WriteJSONPlan(filepath.Join(req.Root, ".mcp.json"), "claude_project_mcp_config", mcpConfig, 0o644, req.DryRun))
 	}
 

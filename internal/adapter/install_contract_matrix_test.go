@@ -692,21 +692,9 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 	assertPathMissing(t, filepath.Join(req.Home, ".gemini", "config", "skills", "claude-only"))
 	assertPathMissing(t, filepath.Join(req.Home, ".gemini", "config", "skills", "omo-only"))
 	if req.ProjectLocal {
-		for _, skill := range []string{"alpha", "beta", "claude-only"} {
-			assertRootSkillSymlink(t, filepath.Join(req.Root, ".claude", "skills", skill), filepath.Join(req.Root, "skills", skill))
-		}
-		assertPathMissing(t, filepath.Join(req.Root, ".claude", "skills", "codex-only"))
-		for _, skill := range []string{"alpha", "beta", "omo-only"} {
-			assertRootSkillSymlink(t, filepath.Join(req.Root, ".omo", "skills", skill), filepath.Join(req.Root, "skills", skill))
-		}
-		assertPathMissing(t, filepath.Join(req.Root, ".omo", "skills", "codex-only"))
-		assertPathMissing(t, filepath.Join(req.Root, ".omo", "skills", "claude-only"))
-		for _, skill := range []string{"alpha", "beta", "agy-only"} {
-			assertRootSkillSymlink(t, filepath.Join(req.Root, ".agents", "skills", skill), filepath.Join(req.Root, "skills", skill))
-		}
-		assertPathMissing(t, filepath.Join(req.Root, ".agents", "skills", "codex-only"))
-		assertPathMissing(t, filepath.Join(req.Root, ".agents", "skills", "claude-only"))
-		assertPathMissing(t, filepath.Join(req.Root, ".agents", "skills", "omo-only"))
+		assertPathMissing(t, filepath.Join(req.Root, ".claude"))
+		assertPathMissing(t, filepath.Join(req.Root, ".omo", "skills"))
+		assertPathMissing(t, filepath.Join(req.Root, ".agents", "skills"))
 		for _, path := range []string{filepath.Join(req.Root, ".mcp.json"), filepath.Join(req.Root, ".omo", "mcp.json"), filepath.Join(req.Root, ".agents", "mcp_config.json")} {
 			if !exists(path) {
 				t.Fatalf("project-local opt-in did not write %s", path)

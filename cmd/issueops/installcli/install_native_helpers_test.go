@@ -52,11 +52,13 @@ func TestPrintInstallNativeResultCoversDryRunAndProjectLocalModes(t *testing.T) 
 		"Installed issueops native integrations:",
 		"- mode: user/global + explicit project-local",
 		"- Project-local Claude MCP config: /repo/harness/.mcp.json",
-		"- Project-local Claude skills: /repo/harness/.claude/skills/*",
 	} {
 		if !strings.Contains(installedOut, want) {
 			t.Fatalf("installed output missing %q:\n%s", want, installedOut)
 		}
+	}
+	if strings.Contains(installedOut, "Project-local Claude skills") {
+		t.Fatalf("project-local install must not advertise repo-local skill links:\n%s", installedOut)
 	}
 }
 
