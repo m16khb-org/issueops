@@ -42,6 +42,24 @@ issueops next --id "$ISSUEOPS_ID" --json
 - force 연산, 기본 브랜치 변경, `gh issue develop`을 쓰지 않는다. `gh issue develop`은
   링크 시점의 base branch HEAD를 쓰므로 봉인한 SHA와 갈라진다.
 
+## base branch 결정
+
+`BASE_BRANCH`는 묻지 않고 정한다. 아래 순서로 처음 해소되는 값을 쓰고, 결정 근거를
+`branch prepare` 보고에 한 줄로 남긴다.
+
+1. 사용자가 이번 요청에서 명시한 브랜치.
+2. 이슈 본문·라벨·마일스톤이 지정한 통합 브랜치.
+3. 대상 repo의 project docs가 정의한 기본 통합 브랜치(`.issueops/`나 그 repo가 쓰는
+   agent 문서 디렉터리의 CONVENTIONS·OPERATIONS).
+4. 같은 종류의 변경이 실제로 병합된 브랜치. provider의 최근 MR/PR target이나
+   `git log --merges`로 실측한다.
+5. repo의 default branch.
+
+5번이 항상 해소되므로 base branch는 질문 사유가 되지 않는다. 후보가 둘 이상 보여도
+릴리스 관례가 가리키는 쪽이 있으면 그것으로 진행한다. "prod에 바로 넣어야 할 수도
+있다" 같은 가능성은 묻는 근거가 아니다. 릴리스 흐름을 건너뛰는 base는 사용자가 명시한
+경우에만 쓴다. 관례와 다르게 정했으면 그 사실을 보고에 적는다.
+
 ## 절차
 
 ```bash

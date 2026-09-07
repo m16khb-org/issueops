@@ -237,7 +237,9 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
 재검증으로 해소할 수 있으면 에이전트가 해소하고 같은 ID로 `next`를 다시 읽는다.
 stale 판정이나 테스트 실패 자체를 사용자에게 진행 여부를 물을 이유로 삼지 않는다.
 
-- provider, credentials, project, Issue owner, target branch가 모호하다.
+- provider, credentials, project, Issue owner가 모호하다. target branch는
+  [`issueops-prepare`](../issueops-prepare/SKILL.md)의 base branch 결정 순서로
+  해소하고 질문 사유로 삼지 않는다.
 - intent·success criteria·domain term 해석이 구현을 바꿀 만큼 갈린다.
 - design open question, compatibility blocker, stale review가 남아 있다.
 - branch/worktree/plan/generation/actor가 current record와 맞지 않는다.
@@ -247,8 +249,11 @@ stale 판정이나 테스트 실패 자체를 사용자에게 진행 여부를 �
 - label·assignee·한국어 body·target branch·live readback이 검증되지 않았다.
 - merge evidence 없이 cleanup을 요청한다.
 
-사용자에게 묻는 경우는 실행 방식 선택, 조사로 해소되지 않는 대상·요구사항 모호함,
-승인 범위를 바꾸는 결정, 필요한 권한·자격 증명, 또는 안전한 자동 복구가 불가능한 충돌이다.
+사이클이 정상적으로 흘러갈 때 사용자에게 묻는 지점은 **실행 방식 선택 하나뿐**이다.
+준비를 끝낸 뒤 현재 세션·새 세션·보류를 고르는 그 지점 말고는, 조사·문서·관례로 답할
+수 있는 것을 묻지 않는다. 근거가 한쪽을 가리키면 그쪽으로 진행하고 판단 근거를 보고에
+적는다. 그밖에 묻는 경우는 조사로도 해소되지 않는 요구사항 모호함, 승인 범위를 바꾸는
+결정, 필요한 권한·자격 증명, 또는 안전한 자동 복구가 불가능한 충돌로 한정한다.
 질문에는 필요한 결정과 그 근거를 적는다. 동일 blocker가 두 번의 복구 시도에도 그대로면
 시도한 명령과 원인을 보고하고 중단한다. 진행 중인 다른 holder를 기다리는 무한 polling이나
 결과가 모호한 원격 mutation의 반복 실행은 하지 않는다.
