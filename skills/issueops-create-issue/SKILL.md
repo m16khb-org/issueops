@@ -37,8 +37,9 @@ issueops next --json
 2. **코드베이스 조사.** `.codegraph/`가 있으면 `codegraph explore "<질문>"`으로 관련
    심볼과 호출 경로를 찾고, 없으면 `rg`로 찾는다. 만진 심볼·파일·호출 경로를 evidence
    문자열로 만든다(`--codebase-survey-evidence`).
-3. **배경지식과 웹 조사.** 외부 API의 의미나 계약이 걸릴 때만 조사한다
-   (`--web-research-evidence`). 조사하지 않았으면 waive하지 말고 왜 필요 없는지를
+3. **배경지식과 웹 조사.** 외부 API의 의미나 계약이 걸릴 때만
+   [`web-research`](../web-research/SKILL.md)로 조사하고 그 결과를
+   `--web-research-evidence`에 넣는다. 조사하지 않았으면 waive하지 말고 왜 필요 없는지를
    evidence로 쓴다. 관련 이슈는 `--related-score-ref`로, 이미 내려진 결정은
    `--decisions-evidence`로 남긴다.
 
@@ -59,6 +60,13 @@ issueops next --json
 - 다음을 확인할 때까지 이슈를 만들지 않는다: 사용자에게 보이는 문제와 지금 중요한
   이유, 테스트와 실제 표면으로 검증 가능한 성공 기준, 비목표와 범위 경계, 근거가 필요한
   도메인 용어, 필요한 파일·API·명령·런타임 표면, 구현을 실질적으로 바꿀 열린 결정.
+
+blocking 질문이 둘 이상이거나 답에 따라 만들 것이 갈리면
+[`implementation-planning`](../implementation-planning/SKILL.md)의 인터뷰 절차를 쓴다.
+드래프트 파일을 먼저 만들고, 한 번에 한 질문만 하고, 매 답변 뒤 clearance check로 남은
+모호함을 센다. 그 드래프트의 `Requirements (confirmed)` 절이 intent contract
+`--interpreted-intent`의 원문이 된다. 확정 뒤 드래프트는 지운다 — 이슈 본문이 유일한
+계약이다.
 
 ## 기록 순서
 

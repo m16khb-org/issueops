@@ -71,7 +71,13 @@ issueops docs --json
 | `## 적용되는 결정과 주의사항` | 위 문서 확인의 결과 |
 | `## 재사용하는 기존 구현` | plan-prep의 코드베이스 조사에서 찾은 심볼·패키지·테스트 헬퍼와 재사용 방식. 새로 만드는 것이 있으면 기존 것으로 왜 안 되는지 |
 | `## 성능 영향` | hot path 여부, 복잡도 변화, 측정 계획. 알고리즘 선택이 걸리면 [`algorithm-optimization`](../algorithm-optimization/SKILL.md) |
-| `## 하위 호환성과 side effect` | CLI JSON·MCP schema·golden·record schema·provider body 계약, 기존 데이터, 롤백 경로 |
+| `## 하위 호환성과 side effect` | CLI JSON·MCP schema·golden·record schema·provider body 계약, 기존 데이터, 롤백 경로. 마이그레이션·엔티티·인덱스·쿼리가 걸리면 [`database-design`](../database-design/SKILL.md)으로 정규화 판단·인덱스 계획·예상 row 수를 먼저 정하고 그 값을 여기 적는다. 7단계의 실측이 이 값과 대조된다 |
+
+계획이 **LLM에게 주는 프롬프트 본문**을 바꾸면(서브에이전트·리뷰어 프롬프트,
+`.issueops/prompt-engineering/`의 문서, SKILL 안의 프롬프트 템플릿 블록)
+[`prompt-engineering`](../prompt-engineering/SKILL.md)으로 측정 가능한 출력 기준을 정해
+`## 하위 호환성과 side effect` 절에 적는다: 무엇이 나오면 그 프롬프트가 실패한 것이고,
+어떤 산출물로 확인하는가. 메인 에이전트가 읽는 절차 산문 변경은 해당 없다.
 
 이 네 절은 형식이 아니라 판단이다. "재사용할 것이 없다"는 결론도 근거와 함께 적으면
 유효하고, 근거 없이 비워 두면 리뷰가 그것을 공격한다. 절 제목 자체는 4단계의
