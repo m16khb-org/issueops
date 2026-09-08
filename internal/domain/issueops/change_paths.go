@@ -29,6 +29,20 @@ var contractPathPrefixes = []string{
 	"internal/contract/", "internal/domain/cli/", "internal/domain/commandparse/", "configs/",
 }
 
+// frontendExtensions는 사람이 보는 화면을 만드는 확장자다. `.js`와 `.ts`는
+// 백엔드에서도 흔해 넣지 않는다 — 그래서 `.js` React나 `src/ui/**/*.ts`는
+// 잡히지 않는 알려진 누락이다.
+var frontendExtensions = map[string]bool{
+	".tsx": true, ".jsx": true, ".vue": true, ".svelte": true, ".astro": true,
+	".css": true, ".scss": true, ".less": true, ".html": true,
+}
+
+// frontendPathSegments는 화면 자산이 모이는 디렉터리다. 세그먼트 완전일치만
+// 인정해 `componentsx`·`pageset` 같은 이름이 걸리지 않게 한다.
+var frontendPathSegments = map[string]bool{
+	"components": true, "pages": true, "public": true, "styles": true,
+}
+
 // docsPathPrefixes는 운영 문서와 스킬이다.
 var docsPathPrefixes = []string{".issueops/", "skills/", "docs/"}
 
@@ -49,6 +63,36 @@ func PathIsSchemaChange(rel string) bool {
 	for _, segment := range strings.Split(path.Dir(rel), "/") {
 		switch segment {
 		case "migrations", "migration", "entities":
+			return true
+		}
+	}
+	return false
+}
+
+// PathIsFrontendChange는 그 경로가 사람이 보는 화면을 바꾸는지 본다. 티어와
+// 독립인 QA 라우팅 힌트이며 위험 순위를 바꾸지 않는다. `.html` 테스트 픽스처처럼
+// 화면이 아닌 파일도 잡히는 오탐이 있는데, 오탐의 비용은 QA를 `Not Run`으로
+// 적는 한 줄이라 좁게 잡아 누락을 늘리는 쪽보다 낫다.
+func PathIsFrontendChange(rel string) bool {
+	rel = normalizeChangePath(rel)
+	if rel == "" {
+		return false
+	}
+	if frontendExtensions[path.Ext(rel)] {
+		return true
+	}
+	for _, segment := range strings.Split(path.Dir(rel), "/") {
+		if frontendPathSegments[segment] {
+			return true
+		}
+	}
+	return false
+}
+
+// HasFrontendChange는 변경 집합에 화면 변경이 하나라도 있는지 본다.
+func HasFrontendChange(paths []string) bool {
+	for _, rel := range paths {
+		if PathIsFrontendChange(rel) {
 			return true
 		}
 	}

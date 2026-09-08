@@ -117,3 +117,39 @@ func TestNextWarnsWhenTheChangeSetIsUnobservable(t *testing.T) {
 		t.Fatalf("an unobservable change set must warn: %v", result.Warnings)
 	}
 }
+
+// frontend 신호는 티어와 독립이며 관측에 성공했을 때만 켜진다.
+func TestNextFlagsFrontendChangeSetsWithoutChangingTier(t *testing.T) {
+	calls := 0
+	ports := reviewTierPorts(implementRecordForTier(), []string{"src/pages/Home.tsx", "internal/adapter/x.go"}, true, &calls)
+	result, err := NewService(ports).Next(context.Background(), "/state", "/repo", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Review.Frontend {
+		t.Fatalf("a .tsx change must raise the frontend signal: %+v", result.Review)
+	}
+	if result.Review.Tier != "default" {
+		t.Fatalf("the frontend signal must not change the tier, got %q", result.Review.Tier)
+	}
+
+	calls = 0
+	docs := reviewTierPorts(implementRecordForTier(), []string{".issueops/CAUTIONS.md"}, true, &calls)
+	docsResult, err := NewService(docs).Next(context.Background(), "/state", "/repo", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if docsResult.Review.Frontend || docsResult.Review.Tier != "docs-only" {
+		t.Fatalf("a docs-only change set carries no frontend signal: %+v", docsResult.Review)
+	}
+
+	calls = 0
+	unobserved := reviewTierPorts(implementRecordForTier(), []string{"src/pages/Home.tsx"}, false, &calls)
+	unobservedResult, err := NewService(unobserved).Next(context.Background(), "/state", "/repo", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unobservedResult.Review.Frontend {
+		t.Fatal("an unobservable change set must not raise a signal it did not see")
+	}
+}

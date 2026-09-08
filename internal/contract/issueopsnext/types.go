@@ -74,6 +74,9 @@ type Review struct {
 	// Lenses는 그 티어에서 적용할 코드베이스 존중 렌즈다. 병렬 리뷰 허용 여부는
 	// 담지 않는다 — 그 판단은 issueops-verify 스킬 문장이 소유한다.
 	Lenses []string `json:"lenses,omitempty"`
+	// Frontend는 변경 집합이 화면을 건드리는지다. QA 라우팅 신호이며 위험
+	// 순위(Tier)와 별개다. 신호가 둘 이상 필요해지면 그때 계약을 바꾼다.
+	Frontend bool `json:"frontend,omitempty"`
 }
 
 type Entry struct {

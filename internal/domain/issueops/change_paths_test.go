@@ -132,3 +132,50 @@ func TestReviewLensesForTierNarrowsDocsOnlyAndLeadsWithCompat(t *testing.T) {
 		}
 	}
 }
+
+// frontend 신호는 QA 라우팅 힌트다. 위험 순위(tier)와 별개이며 티어를 바꾸지 않는다.
+func TestPathIsFrontendChangeMatchesExtensionsAndSegments(t *testing.T) {
+	for _, path := range []string{
+		"app/Home.tsx", "src/Button.jsx", "web/App.vue", "ui/Card.svelte", "site/index.astro",
+		"styles/main.css", "theme/app.scss", "legacy/old.less", "public/index.html",
+		"components/Button.go", "pages/api.go", "styles/tokens.json",
+	} {
+		if !PathIsFrontendChange(path) {
+			t.Fatalf("%s must be a frontend change", path)
+		}
+	}
+	for _, path := range []string{
+		"", "README.md", "internal/adapter/user.go", "internal/componentsx/a.go",
+		"pkg/pageset/b.go", "cmd/publicity/c.go",
+	} {
+		if PathIsFrontendChange(path) {
+			t.Fatalf("%s must not be a frontend change", path)
+		}
+	}
+}
+
+// 알려진 오탐과 누락을 여기 고정한다. 신호는 라우팅 힌트이므로 오탐 비용은
+// `Not Run` 한 줄이고 누락 비용은 QA 미제안이다.
+func TestPathIsFrontendChangeKnownFalsePositivesAndNegatives(t *testing.T) {
+	if !PathIsFrontendChange("skills/aside-functional-qa/testdata/client-qa-fixture.html") {
+		t.Fatal("documented false positive: an .html test fixture trips the signal")
+	}
+	for _, missed := range []string{"app/Home.js", "src/ui/store.ts", "src/app.component.ts"} {
+		if PathIsFrontendChange(missed) {
+			t.Fatalf("documented false negative changed: %s now matches", missed)
+		}
+	}
+}
+
+func TestHasFrontendChangeIsIndependentOfTier(t *testing.T) {
+	paths := []string{".issueops/ADR.md", "app/Home.tsx"}
+	if !HasFrontendChange(paths) {
+		t.Fatal("one frontend path is enough")
+	}
+	if got := ClassifyChangeTier(paths); got != ChangeTierDocsOnly && got != ChangeTierDefault {
+		t.Fatalf("the frontend signal must not change the tier ranking, got %q", got)
+	}
+	if HasFrontendChange([]string{"internal/a.go"}) || HasFrontendChange(nil) {
+		t.Fatal("no frontend path means no signal")
+	}
+}

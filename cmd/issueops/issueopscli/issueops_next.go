@@ -51,6 +51,9 @@ func printIssueOpsNextText(result issueopsnextcontract.Result) {
 		fmt.Printf("review: model=%s effort=%s tier=%s lenses=%s\n",
 			issueOpsNextExit(result.Review.Model), issueOpsNextExit(result.Review.Effort),
 			issueOpsNextExit(result.Review.Tier), issueOpsNextExit(strings.Join(result.Review.Lenses, ",")))
+		if result.Review.Frontend {
+			fmt.Println("review signal: frontend")
+		}
 	}
 	if result.NextCommand != "" {
 		fmt.Printf("next: %s\n", result.NextCommand)

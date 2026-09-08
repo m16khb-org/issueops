@@ -114,6 +114,7 @@ func (service *Service) applyReviewTier(
 		paths, observed := ports.ChangedPaths(record)
 		if observed {
 			tier = issueopsdomain.ClassifyChangeTier(paths)
+			result.Review.Frontend = issueopsdomain.HasFrontendChange(paths)
 		} else {
 			result.Warnings = append(result.Warnings, "change set is unobservable, so the review tier falls back to default")
 		}
