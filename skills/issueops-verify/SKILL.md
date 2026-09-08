@@ -35,6 +35,26 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
 검증이 실패해 코드를 고쳐야 하면 4단계로 돌아가 구현·정리·재봉인·문서 반영을 다시
 밟는다. `next`가 `clean`으로 되돌리는 것이 그 신호다.
 
+## 0 동시에 띄운다
+
+봉인된 fingerprint를 확인한 뒤 아래 셋을 **같은 fingerprint에 대해 동시에** 시작한다.
+셋 다 읽기 전용이라 봉인을 바꾸지 않으므로 순서대로 기다릴 이유가 없다.
+
+1. 게이트 원장과 저장소 검증 배터리(1절). `gates check`는 `--write` 없이 실행한다.
+   `--write`는 4·5단계가 소유한다.
+2. 스키마 실측(2절). 변경 집합에 스키마 파일이 있을 때만 활성화된다.
+3. 구현 리뷰 서브에이전트(3절).
+
+- **배터리가 실패하면 리뷰 결과를 버린다.** 판정을 기록하지 않은 채 4단계로 돌아간다.
+  실패한 diff에 대한 리뷰 판정은 fingerprint가 바뀌는 순간 무효다.
+- 이 동시 실행의 전제는 정리 단계가 관련 검증을 이미 통과시켰다는 것이다. 배터리
+  실패가 드물지 않으면 병렬화가 아니라 5단계를 먼저 고친다.
+  `issueops review-metrics --repo "$WORKTREE" --json`의 revise 비율이 그 신호다.
+- 이 fan-out은 `SUB_AGENT_PATTERNS.md`의 기대 이득 `parallel_speed`에 해당한다.
+  그 slug와 실제로 절약한 벽시계 시간을 verified-execution report에 적는다.
+- 정리(5단계)·문서 반영(6단계)과는 동시에 실행하지 않는다. 그 둘은 파일을 쓰므로
+  봉인을 바꾼다.
+
 ## 1 검증 증거 확인과 필요한 재검증
 
 현재 fingerprint에 대한 성공 기록이 있고 명령·입력·의존성·환경이 같으며 외부 상태의
@@ -94,13 +114,25 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 ## 3 구현 리뷰
 
 [`issueops-review`](../issueops-review/SKILL.md)를 `--target diff`로 호출한다. 루프
-절차는 그 스킬이 소유한다. 이 단계가 아는 것은 셋이다.
+절차는 그 스킬이 소유한다. 이 단계가 아는 것은 다섯이다.
 
 - 리뷰어에게 diff와 **계획을 함께** 준다. 무엇을 하기로 했는지 모르는 리뷰어는 구현이
   계획에서 벗어났는지 판정할 수 없다.
 - `pass`만 통과한다. `revise`면 지적을 고쳐야 하므로 4단계로 돌아간다. 이 단계에서
   고치면 fingerprint가 바뀌어 앞 판정이 전부 stale이 된다.
 - 모드에 따른 면제는 없다. execution이 있는 사이클은 전부 이 게이트의 대상이다.
+- **계획 리뷰가 남긴 주장을 함께 준다.** `issueops status --id "$ISSUEOPS_ID" --json`의
+  `devils_advocate_review.findings`와 `history`의 finding을 "검증할 주장 목록"으로
+  프롬프트에 넣는다. 리뷰어는 diff 전체를 탐색하기 전에 그 주장이 실제로 지켜졌는지
+  확인한다. 계획 리뷰에서 살아남은 위험이 구현에서 되살아났는지가 가장 싸게 잡히는 결함이다.
+- **렌즈는 `next.review.lenses`만 적용한다.** `issueops next --id "$ISSUEOPS_ID" --json`이
+  돌려주는 티어와 렌즈를 프롬프트에 넣고 그 목록만 검토하게 한다. `docs-only` 티어는
+  side effect 렌즈 하나다.
+
+`next.review.tier`가 `schema-auth`이고 `git -C "$WORKTREE" diff --stat "$BASE_SHA"`의
+변경 줄 수가 500을 넘을 때만 렌즈 네 개를 서브에이전트 넷으로 나눈다. 합치는 규칙은
+"필수 결함이 하나라도 있으면 `revise`"다. 그 밖의 티어에서는 나누지 않는다 — 조정
+비용이 절약한 시간을 넘는다. 이 분할 조건은 이 문장이 단독으로 소유하며 코드에는 없다.
 
 ## 4 호환성 재확인과 readiness
 
@@ -127,6 +159,10 @@ plan.md, gates.md, verified-execution report, 문서, 구현을 커밋·푸시�
 `phase --to pr`를 실행한다.
 
 ## 나쁜 예
+
+- 배터리가 실패했는데 동시에 돌던 리뷰의 `pass`를 기록한다. 그 판정은 무효인 diff에
+  대한 것이다.
+- 검증 단계에서 `gates check --write`를 실행한다. 원장이 바뀌어 봉인이 stale이 된다.
 
 | 나쁜 행동 | 문제 |
 |---|---|
