@@ -68,7 +68,7 @@ issueops next --json
 | 6 프로젝트 문서 반영 | [`issueops-docs`](../issueops-docs/SKILL.md) | `project-docs-update` |
 | 7 검증 | [`issueops-verify`](../issueops-verify/SKILL.md) | `database-design`, `verified-execution` |
 | 8 커밋·푸시 | [`atomic-commit-push`](../atomic-commit-push/SKILL.md) | `git-operations`(history 수술) |
-| 9 PR/MR 발행·완료 | [`issueops-create-pr`](../issueops-create-pr/SKILL.md), [`issueops-complete`](../issueops-complete/SKILL.md) | `review-agent-feedback`(봇 스레드), `pr-review`(사람 리뷰 요청) |
+| 9 PR/MR 발행·완료 | [`issueops-create-pr`](../issueops-create-pr/SKILL.md), [`issueops-complete`](../issueops-complete/SKILL.md) | — |
 | 10 머지 후 정리 | [`issueops-cleanup`](../issueops-cleanup/SKILL.md) | — |
 | 탈출(어느 단계든) | [`issueops-abandon`](../issueops-abandon/SKILL.md) | — |
 | 공용: 적대 리뷰 | [`issueops-review`](../issueops-review/SKILL.md) | 3·7단계 |
@@ -224,7 +224,7 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
 | `references/execution.md` | direct/Orca, generation, claim/recovery/publication |
 | `references/session-choice.md` | 환경별 자동 세션 결정, 승인 근거 기록과 인계 |
 | `references/orchestration.md` | delegated child contract |
-| `references/review-feedback.md` | feedback·thread resolution |
+| `references/review-feedback.md` | feedback·thread resolution. 봇 스레드는 `review-agent-feedback`, 사람 리뷰 요청은 `pr-review` |
 | `references/cleanup-state.md` | post-merge cleanup |
 
 ## Stop conditions

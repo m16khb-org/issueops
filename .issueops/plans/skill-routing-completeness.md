@@ -172,7 +172,7 @@
   1. `skills/issueops/references/review-feedback.md:30` 문단(Kodus·Gemini)을 교체: "자동 리뷰어(Kodus, CodeRabbit, Copilot, Gemini Code Assist 등)의 스레드는 [`review-agent-feedback`](../../review-agent-feedback/SKILL.md)이 소유한다. 목록·검증·판정·답글·반응·resolve의 순서와 `판정: 타당` 형식은 그 스킬을 따른다. 그 스킬이 `contract_change`를 발견하면 아래 이슈 본문 갱신 절로 돌아온다."
   2. 42-54행의 `타당성:` 답글 블록과 56-63행의 `선택지` 블록은 **유지**하되, 앞 문장을 "사람 리뷰어의 스레드에 답할 때는 이 형식을 쓴다"로 한정한다. 코드 펜스를 자르지 않는다.
   3. `feedback mark-issue-updated` 절은 그대로.
-  4. `skills/issueops/SKILL.md:65-71` 표 9단계 "함께 쓰는 스킬": `review-agent-feedback`(봇 스레드), `pr-review`(사람 리뷰 요청 시).
+  4. `skills/issueops/SKILL.md`의 **Reference map** 행 `references/review-feedback.md`에 `review-agent-feedback`(봇 스레드)와 `pr-review`(사람 리뷰 요청)를 적는다. 9단계 "함께 쓰는 스킬" 열이 아니다 — 리뷰 피드백은 발행 뒤 phase이고 그 본문은 `issueops-create-pr`이 아니라 이 reference가 소유하므로, 표에 넣으면 감사가 새 표↔본문 불일치로 잡는다.
   **Must NOT do**: `review-agent-feedback` 본문 수정. 사람 리뷰 문장·블록 삭제.
 
   **Recommended Agent**: quick
