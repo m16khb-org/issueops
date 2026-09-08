@@ -61,6 +61,12 @@ issueops next --id "$ISSUEOPS_ID" --json
 4. 출력 계약: 판정(`pass|revise|stop`), 필수 결함별 위치·발생 조건·위반한 계약·근거와
    최소 수정 또는 확인 방법. 발견한 필수 결함은 한 번에 전달한다. 결함이 없으면
    없다고 쓰고 확인한 계약과 근거를 남긴다. 선택적 개선 목록과 대안 설계는 요구하지 않는다.
+   필수 결함에는 **그 결함이 살아 있는지 기계로 판별하는 한 줄**을 함께 요구한다:
+   `CHECK: <read-only 명령> | EXPECT: <출력에 있어야 할 문자열>`. CHECK를 쓸 수 없는
+   지적은 필수 결함으로 세지 않고 "확인 요청"으로 분류한다. 그 확인은 호출자가 대신
+   수행해 결과를 다음 라운드에 넘긴다([`design-review`의 Blocking threshold](../design-review/SKILL.md#blocking-threshold)).
+   `next.review.tier`와 `lenses`를 프롬프트에 넣어 그 렌즈만 적용하게 한다.
+   `docs-only` 티어는 side effect 렌즈 하나다.
 5. 코드베이스 존중 렌즈 네 개.
 
 이름·스타일·선택적 리팩터링·가상 규모를 이유로 수정이나 추가 테스트를 요구하지 않는다.
@@ -77,6 +83,23 @@ issueops next --id "$ISSUEOPS_ID" --json
   기존 호출자를 깨지 않는가. 기본값이 종전 동작을 유지하는가.
 - **side effect**: 파일·원격·durable state에 남는 변화가 문서화된 것과 일치하는가.
   실패했을 때 남는 상태가 사람이 이어받을 수 있는 모양인가.
+
+## 지적을 실행한다
+
+리뷰어가 낸 CHECK는 호출자가 실행한다. 실행 결과는 다음 라운드의 **입력**이지
+판정이 아니다.
+
+```bash
+issueops verify-work --json -- <CHECK>
+```
+
+- `--target plan`과 `--target diff` 모두 이 경로로 실행한다. 계획 단계에는 아직 게이트
+  원장 파일이 없다(원장은 4단계 진입의 `gates init`이 만든다). 그러니 여기서 `gates`
+  명령을 부르지 않는다.
+- plan 리뷰에서 살아남은 CHECK/EXPECT는 4단계 진입의 그 단일 `gates init` spec에
+  `G(n+1)..`로 얹어 원장의 일부가 되게 한다.
+- diff 리뷰의 CHECK는 원장에 넣지 않는다. 검증 단계에서 파일을 고치면 봉인이 바뀐다.
+- 각 CHECK의 명령·종료 코드·EXPECT 일치 여부를 그 결함 옆에 적어 다음 라운드에 넘긴다.
 
 ## 기록
 
@@ -101,9 +124,21 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
 
 ## 루프 규칙
 
-- 첫 라운드는 대상 전체를 검토한다. 수정 후에는 직전 지적·변경 delta·영향받은 계약을
-  중심으로 검토하고, 구조나 범위가 바뀌었을 때만 전체를 다시 읽는다. 같은 대상의
-  수정·재리뷰는 최대 3라운드다. 그 안에 통과하지 못하면 남은 결함과 시도한 수정을 보고한다.
+- 첫 라운드는 대상 전체를 검토한다. 수정 뒤의 라운드는 **delta 리뷰**다. 대상 전체를
+  다시 읽히지 않고 직전 지적, 각 CHECK의 실행 결과, 대상의 delta, 영향받은 계약만
+  새 컨텍스트 서브에이전트에 넘긴다. 판정과 기록할 finding은 그 서브에이전트가 정하고
+  호출자는 받은 verdict를 그대로 기록한다. CHECK가 전부 통과했다는 사실은 delta 리뷰의
+  입력이지 호출자가 `pass`를 정할 근거가 아니다.
+- 구조나 범위가 바뀌었거나 CHECK 없는 필수 결함이 남았으면 전체 리뷰를 다시 띄운다.
+- 같은 대상의 수정·재리뷰는 최대 3라운드다. 3라운드는 `next.review.model`과 다른 모델
+  또는 한 단계 높은 effort로 띄우고, 그 사실을 `--reviewer-model`·`--reviewer-effort`
+  (diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에 통과하지 못하면 남은 결함과 시도한
+  수정을 보고한다.
+- 같은 plan phase의 비-waived `revise`는 세 번까지다. 네 번째는 CLI가
+  `revise round cap reached`로 거부한다. 그때의 탈출은 `stop`을 기록하고
+  `issueops remote reflect-devils-advocate --confirm`으로 반영한 뒤 `regress`로
+  재계획하거나, 근거를 적은 `--waive --waiver-rationale`로 넘어가는 것이다. `revise`
+  상태에서 `regress`를 직접 부르면 거부된다.
 - `revise`면 호출한 단계가 근거를 확인해 필요한 결함을 고치고 이 스킬을 다시 실행한다.
   반증된 지적만 남았으면 대상을 불필요하게 바꾸지 않고 반증 자료로 새 판정을 받는다.
 - `stop`이면 `--target plan`은 호출자가 `issueops regress --id
@@ -139,6 +174,7 @@ issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm --json
 - 저자 세션이 인라인으로 게이트를 밟고 `--reviewer-context subagent`로 기록한다.
   기록은 통과하지만 리뷰는 없었다.
 - 리뷰를 실행하지 않고 `--verdict pass`를 기록한다. 게이트 연극이다.
+- CHECK가 전부 통과했다는 이유로 호출자가 `pass`를 기록한다. 판정 없는 기록이다.
 - `revise` 판정을 고치는 대신 `--waive`로 닫는다.
 - 판정 뒤 계획이나 코드를 고치고 재검토를 생략한다. stale 판정으로 다음 단계에서
   막히고, 막히지 않았다면 검토되지 않은 변경이 게시된 것이다.
