@@ -3,12 +3,12 @@ package issueops
 import (
 	"context"
 	"fmt"
-	"path"
 	"strings"
 	"time"
 
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 // RecordIssueOpsSchemaEvidence는 스키마·마이그레이션·엔티티 변경 사이클의
@@ -97,25 +97,8 @@ func changeSetTouchesSchema(changed []string) bool {
 	return false
 }
 
-// pathIsSchemaChange는 확실한 스키마 신호만 인정한다. 오탐이 나면 DB 없는
-// 사이클까지 게이트가 켜지므로, 판단이 갈리는 패턴은 일부러 뺀다.
+// pathIsSchemaChange는 도메인 규칙에 위임한다. 같은 경로 판정을 리뷰 티어
+// 분류기와 이 게이트가 각자 들고 있으면 둘이 갈라진다.
 func pathIsSchemaChange(rel string) bool {
-	rel = strings.ToLower(strings.TrimSpace(rel))
-	if rel == "" {
-		return false
-	}
-	base := path.Base(rel)
-	if strings.HasSuffix(base, ".sql") || base == "schema.prisma" {
-		return true
-	}
-	if strings.HasSuffix(base, ".entity.ts") || strings.HasSuffix(base, ".entity.js") || strings.HasSuffix(base, ".entity.go") {
-		return true
-	}
-	for _, segment := range strings.Split(path.Dir(rel), "/") {
-		switch segment {
-		case "migrations", "migration", "entities":
-			return true
-		}
-	}
-	return false
+	return issueopsdomain.PathIsSchemaChange(rel)
 }
