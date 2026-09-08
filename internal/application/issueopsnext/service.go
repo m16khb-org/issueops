@@ -173,7 +173,7 @@ func (service *Service) buildInput(
 	if ports.LocalReadiness != nil &&
 		(record.Phase == issueopscontract.IssueOpsPhaseAISlopClean || record.Phase == issueopscontract.IssueOpsPhaseFeedback) {
 		readiness := ports.LocalReadiness(record)
-		input.Local = &issueopsnextdomain.Readiness{Ready: readiness.Ready, Missing: readiness.Missing}
+		input.Local = &issueopsnextdomain.Readiness{Ready: readiness.Ready, Missing: readiness.Missing, Warnings: readiness.Warnings}
 	}
 	return input
 }

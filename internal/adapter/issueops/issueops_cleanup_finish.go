@@ -452,6 +452,18 @@ func preparedBaseBranch(record issueops.IssueOpsRecord) string {
 	return strings.TrimSpace(record.BranchPrepare.BaseBranch)
 }
 
+// preparedBaseRef는 봉인된 base branch 이름을 `origin/<name>` 비교에 쓸 수 있게
+// 정규화한다. BranchPrepare.BaseBranch는 TrimSpace만 거쳐 저장되므로
+// `refs/heads/main`이나 `origin/main` 형태가 들어올 수 있다. 정규화 뒤에도 로컬
+// tracking ref가 없으면(한 번도 fetch하지 않은 워크트리) 호출자가 조용히
+// 건너뛴다 — 문서화된 false negative이며 sync-base preview가 그 공백을 메운다.
+func preparedBaseRef(record issueops.IssueOpsRecord) string {
+	base := preparedBaseBranch(record)
+	base = strings.TrimPrefix(base, "refs/heads/")
+	base = strings.TrimPrefix(base, "origin/")
+	return strings.TrimSpace(base)
+}
+
 func cleanupFinishFingerprint(inventory cleanupFinishInventory) (string, error) {
 	data, err := json.Marshal(inventory)
 	if err != nil {

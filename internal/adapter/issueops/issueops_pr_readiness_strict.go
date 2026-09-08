@@ -47,6 +47,17 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bo
 		if strings.TrimSpace(GitOut(gitRoot, "status", "--porcelain=v1")) != "" {
 			missing = append(missing, "worktree_clean")
 		}
+		// base drift는 경고다. missing에 넣지 않으므로 PR 게이트 정책은 그대로다.
+		// fetch하지 않고 로컬 tracking ref만 본다 — 진실은 `execution sync-base
+		// --preview`가 fetch해서 확인한다.
+		if base := preparedBaseRef(record); base != "" {
+			remoteRef := "origin/" + base
+			if code, _, _ := GitCmd(gitRoot, "rev-parse", "--verify", "--end-of-options", remoteRef+"^{commit}"); code == 0 {
+				if code, _, _ := GitCmd(gitRoot, "merge-base", "--is-ancestor", remoteRef, "HEAD"); code != 0 {
+					warnings = append(warnings, "base_advanced: "+remoteRef+" is not an ancestor of HEAD; run issueops execution sync-base --id "+record.ID+" --preview")
+				}
+			}
+		}
 		upstream := strings.TrimSpace(GitOut(gitRoot, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"))
 		if upstream == "" {
 			missing = append(missing, "upstream")

@@ -17,6 +17,9 @@ import (
 type Readiness struct {
 	Ready   bool
 	Missing []string
+	// Warnings는 차단하지 않는 관측이다. readiness가 이미 내던 경고를 버리지
+	// 않고 `next`까지 전달한다(base drift가 이 경로로 보인다).
+	Warnings []string
 }
 
 type Input struct {
@@ -424,11 +427,16 @@ func exits(in Input) issueopsnextcontract.Exits {
 }
 
 func warnings(in Input) []string {
+	var out []string
+	// readiness가 이미 관측한 비차단 경고는 어떤 stage로 분류되든 그대로 전달한다.
+	// 특정 분기에 두면 먼저 맞은 규칙이 early return하며 경고가 사라진다.
+	if in.Local != nil && len(in.Local.Warnings) > 0 {
+		out = append(out, in.Local.Warnings...)
+	}
 	execution := in.Record.Execution
 	if execution == nil {
-		return nil
+		return out
 	}
-	var out []string
 	if root := strings.TrimSpace(execution.Workspace.Root); root != "" && !in.WorktreePresent {
 		out = append(out, "canonical worktree is missing at "+root)
 	}
