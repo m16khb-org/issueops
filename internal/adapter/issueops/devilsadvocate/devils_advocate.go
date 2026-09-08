@@ -46,6 +46,9 @@ func Record(store Store, stateRoot, id string, req model.IssueOpsDevilsAdvocateR
 	}
 	review.ReviewedPlanDigest = digest
 	if prev := record.DevilsAdvocateReview; prev != nil {
+		if err := checkReviseRoundCap(id, review, *prev); err != nil {
+			return model.IssueOpsRecord{OK: false}, err
+		}
 		review.History = append(append([]model.IssueOpsDevilsAdvocateRound{}, prev.History...), roundOf(*prev))
 	}
 	record.DevilsAdvocateReview = &review
@@ -117,4 +120,34 @@ func cleanList(values []string) []string {
 		out = append(out, v)
 	}
 	return out
+}
+
+// reviseRoundCap bounds unwaived revise verdicts per plan phase. Three rounds
+// that still say "revise" mean the plan is thrashing rather than converging, so
+// the fourth round must take a decision instead of another correction loop.
+// A regress clears DevilsAdvocateReview, so a re-planned cycle counts from zero.
+const reviseRoundCap = 3
+
+// checkReviseRoundCap rejects the fourth unwaived revise. It routes to the
+// exits that are actually open: `issueops regress` refuses to run while the
+// current verdict is revise, so the escape is stop -> reflect -> regress, or an
+// explicit waiver.
+func checkReviseRoundCap(id string, next model.IssueOpsDevilsAdvocateReview, prev model.IssueOpsDevilsAdvocateReview) error {
+	if next.Verdict != "revise" || next.Waived {
+		return nil
+	}
+	unwaived := 0
+	for _, round := range append(append([]model.IssueOpsDevilsAdvocateRound{}, prev.History...), roundOf(prev)) {
+		if round.Verdict == "revise" && !round.Waived {
+			unwaived++
+		}
+	}
+	if unwaived < reviseRoundCap {
+		return nil
+	}
+	return fmt.Errorf(
+		"revise round cap reached: cycle %s already recorded %d unwaived revise verdicts on this plan phase, so the plan is not converging; "+
+			"record a stop verdict, reflect it with issueops remote reflect-devils-advocate --id %s --confirm, then issueops regress --id %s --reason <TEXT>; "+
+			"or record this round with --waive --waiver-rationale <TEXT>",
+		id, unwaived, id, id)
 }
