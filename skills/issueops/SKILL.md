@@ -68,7 +68,7 @@ issueops next --json
 | 6 프로젝트 문서 반영 | [`issueops-docs`](../issueops-docs/SKILL.md) | `project-docs-update` |
 | 7 검증 | [`issueops-verify`](../issueops-verify/SKILL.md) | `database-design`, `verified-execution` |
 | 8 커밋·푸시 | [`atomic-commit-push`](../atomic-commit-push/SKILL.md) | `git-operations`(history 수술) |
-| 9 PR/MR 발행·완료 | [`issueops-create-pr`](../issueops-create-pr/SKILL.md), [`issueops-complete`](../issueops-complete/SKILL.md) | — |
+| 9 PR/MR 발행·완료 | [`issueops-create-pr`](../issueops-create-pr/SKILL.md), [`issueops-complete`](../issueops-complete/SKILL.md) | `review-agent-feedback`(봇 스레드), `pr-review`(사람 리뷰 요청) |
 | 10 머지 후 정리 | [`issueops-cleanup`](../issueops-cleanup/SKILL.md) | — |
 | 탈출(어느 단계든) | [`issueops-abandon`](../issueops-abandon/SKILL.md) | — |
 | 공용: 적대 리뷰 | [`issueops-review`](../issueops-review/SKILL.md) | 3·7단계 |

@@ -27,7 +27,10 @@ When creating or editing a PR/MR, assign it to the currently authenticated user 
 
 When handling remote PR/MR review feedback, first verify each reviewer claim against the diff, code, and commands before changing files. Apply only confirmed fixes, then reply in the original review thread with the commit and verification evidence.
 
-Automated review comments from Kodus, Gemini Code Assist, and similar tools are **review-agent feedback**, not lower-priority noise. Treat each item like any other reviewer claim: classify it, verify whether it is valid, stale, noisy, or a contract change, reply in the original thread with evidence, and resolve only after the fix or obsolescence is verified.
+자동 리뷰어(Kodus, CodeRabbit, Copilot, Gemini Code Assist 등)의 스레드는
+[`review-agent-feedback`](../../review-agent-feedback/SKILL.md)이 소유한다. 목록·검증·판정·
+답글·반응·resolve의 순서와 `판정: 타당` 답글 형식은 그 스킬을 따르고 여기서 다시 적지
+않는다. 그 스킬이 `contract_change`를 발견하면 아래 이슈 본문 갱신 절로 돌아온다.
 
 The remote issue is the source of truth for IssueOps scope. If user feedback, review feedback, QA, CI evidence, or agent analysis changes the problem statement, acceptance criteria, non-goals, verification, implementation scope, related issue links, or labels, update the issue body before continuing. A thread/comment may record discussion, but it is not enough; the issue body must match the implementation contract. Invoke the `fluent-korean` skill on the updated body, then run the Korean Remote Artifact Gate, then write. The same `fluent-korean` pass applies to every review-thread reply and issue comment this phase publishes.
 
@@ -41,7 +44,7 @@ Until this is recorded, `issueops pr-readiness --strict` must remain blocked wit
 
 When the user asks only for review-validity verification, verify each remote review claim against the diff, code, and commands, then reply in the original review thread with the verdict before reporting back to the user. Each thread reply must say whether the review is `타당` or `타당하지 않음`, cite concrete evidence, and state the next action.
 
-Use this thread reply shape:
+**사람 리뷰어**의 스레드에 답할 때는 이 형식을 쓴다(봇 스레드는 위 스킬의 형식을 쓴다):
 
 ```text
 타당성: 타당
@@ -53,7 +56,7 @@ Use this thread reply shape:
 다음 조치: <수정 진행|별도 PR 분리|보류 사유>
 ```
 
-After posting thread replies, report the evidence-based verdict and present numbered next actions:
+사람 리뷰어 스레드에 답글을 올린 뒤에는 근거 기반 판정을 보고하고 번호 붙인 다음 조치를 제시한다:
 
 ```text
 선택지:

@@ -182,7 +182,7 @@
   **References**: `review-feedback.md:28-63`; `skills/review-agent-feedback/SKILL.md:3(description 범위),21-116`; `skills/pr-review/SKILL.md` description.
 
   **Acceptance Criteria**:
-  - [ ] `rg -c "review-agent-feedback" review-feedback.md` ≥ 2. `rg -c "Kodus" review-feedback.md`가 새 문장의 1건뿐. `rg -c "타당성: 타당|선택지:" review-feedback.md` = 2(유지).
+  - [ ] `rg -c "review-agent-feedback" review-feedback.md` ≥ 1(위임 문단 하나가 소유권과 contract_change 복귀를 함께 말하므로 문서를 늘려 2건을 만들지 않는다). `rg -c "Kodus" review-feedback.md`가 새 문장의 1건뿐. `rg -c "타당성: 타당|선택지:" review-feedback.md` = 2(유지).
   - [ ] `rg -n "review-agent-feedback|pr-review" skills/issueops/SKILL.md`가 9단계 행에 각 1건.
 
   **QA Scenarios**:
