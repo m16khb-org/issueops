@@ -3,7 +3,6 @@ package issueopsapp
 import "issueops/cmd/issueops/selfworkflow"
 
 type SelfVerifyLLMEvalConfig = selfworkflow.SelfVerifyLLMEvalConfig
-type SelfVerifyLLMEvalInput = selfworkflow.SelfVerifyLLMEvalInput
 type SelfVerifyLLMEvalOptions = selfworkflow.SelfVerifyLLMEvalOptions
 
 func applySelfVerifyLLMEval(result SelfAugmentResult, opts SelfVerifyLLMEvalOptions) (SelfAugmentResult, error) {

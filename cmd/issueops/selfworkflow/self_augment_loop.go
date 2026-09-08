@@ -9,10 +9,6 @@ import (
 
 type SelfAugmentRunDeps = augmentcmd.Deps
 
-func RunSelfAugment(args []string) error {
-	return RunSelfAugmentWithDeps(args, SelfAugmentRunDeps{})
-}
-
 func RunSelfAugmentWithDeps(args []string, deps SelfAugmentRunDeps) error {
 	if deps.Output == nil {
 		deps.Output = os.Stdout

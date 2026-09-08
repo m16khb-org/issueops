@@ -22,7 +22,4 @@ var (
 	PrepareManagedCommandPathCandidate func(target, candidate, path string, adopt, dryRun bool) (ManagedCommandPathTransaction, installcontract.ManagedCommandPathPlan, error)
 	// SemanticSHA256은 MCP 카탈로그의 정규 다이제스트를 계산한다.
 	SemanticSHA256 func(value any) (string, error)
-	// VerifyCodexActivation과 VerifyClaudeActivation은 host별 활성화 증적을 읽는다.
-	VerifyCodexActivation  func(port.NativeInstallRequest) (any, error)
-	VerifyClaudeActivation func(port.NativeInstallRequest) (any, error)
 )

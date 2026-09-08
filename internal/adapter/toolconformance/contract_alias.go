@@ -13,13 +13,10 @@ type (
 	Classification    = toolconformancecontract.Classification
 	CaseResult        = toolconformancecontract.CaseResult
 	BaselineCase      = toolconformancecontract.BaselineCase
-	GateDecision      = toolconformancecontract.GateDecision
-	EpisodeStatus     = toolconformancecontract.EpisodeStatus
 	EpisodeReport     = toolconformancecontract.EpisodeReport
 	HostReport        = toolconformancecontract.HostReport
 	BenchmarkCounts   = toolconformancecontract.BenchmarkCounts
 	GateReport        = toolconformancecontract.GateReport
-	BenchmarkEvidence = toolconformancecontract.BenchmarkEvidence
 	BenchmarkReport   = toolconformancecontract.BenchmarkReport
 )
 
@@ -38,7 +35,6 @@ const (
 	EnumMismatch                  = toolconformancecontract.EnumMismatch
 	EpisodeCompleted              = toolconformancecontract.EpisodeCompleted
 	EpisodeIncomplete             = toolconformancecontract.EpisodeIncomplete
-	GateBaselinePassed            = toolconformancecontract.GateBaselinePassed
 	GateInconclusive              = toolconformancecontract.GateInconclusive
 	GateDeferHardening            = toolconformancecontract.GateDeferHardening
 	GateNeedsReproduction         = toolconformancecontract.GateNeedsReproduction
@@ -47,8 +43,5 @@ const (
 )
 
 var (
-	ParseEpisodeStatus  = toolconformancecontract.ParseEpisodeStatus
-	ValidGateDecision   = toolconformancecontract.ValidGateDecision
 	ParseClassification = toolconformancecontract.ParseClassification
-	ParseGateDecision   = toolconformancecontract.ParseGateDecision
 )

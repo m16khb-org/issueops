@@ -7,7 +7,6 @@ import (
 
 type IssueOpsBenchmarkFixture = issueopscontract.IssueOpsBenchmarkFixture
 type IssueOpsBenchmarkArtifact = issueopscontract.IssueOpsBenchmarkArtifact
-type SkillRouting = issueopscontract.SkillRouting
 type IssueOpsDimensionScore = benchmark.IssueOpsDimensionScore
 type IssueOpsBenchmarkScore = benchmark.IssueOpsBenchmarkScore
 type IssueOpsBenchmarkRunRequest = benchmark.IssueOpsBenchmarkRunRequest
@@ -17,10 +16,7 @@ type IssueOpsAutoresearchCandidate = benchmark.IssueOpsAutoresearchCandidate
 type IssueOpsAutoresearchGateRequest = benchmark.IssueOpsAutoresearchGateRequest
 type IssueOpsAutoresearchGateResult = benchmark.IssueOpsAutoresearchGateResult
 type IssueOpsLLMJudgeRequest = benchmark.IssueOpsLLMJudgeRequest
-type RecordedRun = benchmark.RecordedRun
 type RecordedOutcomes = benchmark.RecordedOutcomes
-type FixtureReliability = benchmark.FixtureReliability
-type PassPowKPoint = benchmark.PassPowKPoint
 type ReliabilityReport = benchmark.ReliabilityReport
 type IssueOpsJudgeMap = benchmark.IssueOpsJudgeMap
 type JudgeSample = benchmark.JudgeSample

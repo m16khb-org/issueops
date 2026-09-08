@@ -26,10 +26,6 @@ func RunBoundedReadbackContext(ctx context.Context, repo, name string, args ...s
 	return stdout, err
 }
 
-func RunBoundedMutation(repo, name string, args ...string) (stdout []byte, invoked bool, err error) {
-	return RunBoundedMutationContext(context.Background(), repo, name, args...)
-}
-
 func RunBoundedMutationContext(ctx context.Context, repo, name string, args ...string) (stdout []byte, invoked bool, err error) {
 	return runBoundedCommandContext(ctx, repo, name, args, providerMutationTimeout, providerReadbackLimit)
 }

@@ -14,12 +14,8 @@ type Deps struct {
 
 var deps = defaultDeps()
 
-// Configure installs host-provided dependencies (called once by the composition
-// root); Reset restores defaults for tests via t.Cleanup.
+// Configure installs host-provided dependencies called once by the composition root.
 func Configure(d Deps) { deps = d }
-
-// Reset restores standalone defaults.
-func Reset() { deps = defaultDeps() }
 
 func defaultDeps() Deps {
 	return Deps{ResolveTarget: defaultResolveTarget}

@@ -18,22 +18,6 @@ type SelfVerifyCandidatesDeps struct {
 	Save   func(result *SelfVerificationCandidateExportResult, key string) error
 }
 
-func RunSelfVerify(args []string) error {
-	if len(args) > 0 && args[0] == "history" {
-		return RunSelfVerifyHistory(args[1:])
-	}
-	if len(args) > 0 && args[0] == "compare" {
-		return RunSelfVerifyCompare(args[1:])
-	}
-	if len(args) > 0 && args[0] == "promote" {
-		return RunSelfVerifyPromote(args[1:])
-	}
-	if len(args) > 0 && args[0] == "candidates" {
-		return RunSelfVerifyCandidates(args[1:])
-	}
-	return RunSelfVerifyWithDeps(args, SelfVerifyRunDeps{})
-}
-
 func RunSelfVerifyWithDeps(args []string, deps SelfVerifyRunDeps) error {
 	if deps.NewProgressReporter == nil {
 		deps.NewProgressReporter = NewSelfVerifyProgressReporter

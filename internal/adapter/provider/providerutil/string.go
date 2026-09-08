@@ -21,10 +21,6 @@ func MissingStrings(want, got []string) []string {
 	return missing
 }
 
-func MissingAssignees(want, got []string) []string {
-	return MissingStrings(want, got)
-}
-
 func FirstNonEmpty(values ...string) string {
 	for _, value := range values {
 		value = strings.TrimSpace(value)

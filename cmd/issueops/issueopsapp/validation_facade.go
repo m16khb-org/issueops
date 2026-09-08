@@ -4,8 +4,6 @@ import (
 	"issueops/cmd/issueops/validationcli"
 )
 
-type ClaudeMCPDuplicateWarning = validationcli.ClaudeMCPDuplicateWarning
-
 func validateInspect(binary, root string) StepResult {
 	return validationcli.ValidateInspect(binary, root)
 }

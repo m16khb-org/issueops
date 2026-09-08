@@ -19,7 +19,3 @@ func shellQuote(s string) string {
 	}
 	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
 }
-
-func ShellQuote(s string) string {
-	return shellQuote(s)
-}

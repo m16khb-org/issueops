@@ -67,10 +67,6 @@ func knownIssueOpsFeedbackClassification(classification string) bool {
 	return issueops.KnownFeedbackClassification(classification)
 }
 
-func MarkIssueOpsContractFeedbackIssueUpdated(stateRoot, id string) (issueops.IssueOpsRecord, error) {
-	return markIssueOpsContractFeedbackIssueUpdated(stateRoot, id, nil)
-}
-
 func MarkIssueOpsContractFeedbackIssueUpdatedWithActor(stateRoot, id string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return markIssueOpsContractFeedbackIssueUpdated(stateRoot, id, &actor)
 }

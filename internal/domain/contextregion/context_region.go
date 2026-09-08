@@ -13,17 +13,6 @@ import "encoding/json"
 // lets docs/contract/state builders and their golden tests share one source of
 // truth instead of each re-deciding which fields are volatile.
 
-const (
-	// RegionImmutablePrefix holds system-prompt-like context that must stay
-	// byte-identical across builds so a host can reuse it as a cache prefix.
-	RegionImmutablePrefix = "immutable_prefix"
-	// RegionAppendOnlyLog holds turn-by-turn records that may grow but must
-	// preserve their existing prefix order.
-	RegionAppendOnlyLog = "append_only_log"
-	// RegionVolatileScratch holds values expected to differ between builds.
-	RegionVolatileScratch = "volatile_scratch"
-)
-
 // VolatileContextFields are JSON field names whose values are expected to
 // change between otherwise-identical builds. They belong to the volatile
 // region and must be excluded before asserting prefix byte-determinism. The

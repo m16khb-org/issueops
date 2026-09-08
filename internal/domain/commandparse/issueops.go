@@ -15,13 +15,10 @@ import (
 var (
 	SplitCommandTokens                 = shelltoken.SplitCommandTokens
 	HasActiveShellSpecialQuoting       = shelltoken.HasActiveShellSpecialQuoting
-	HasActiveShellComment              = shelltoken.HasActiveShellComment
 	HasActiveZshEqualsExpansion        = shelltoken.HasActiveZshEqualsExpansion
 	HasUnquotedControlOperator         = shelltoken.HasUnquotedControlOperator
-	HasUnquotedBackgroundOperator      = shelltoken.HasUnquotedBackgroundOperator
 	HasActiveCommandSubstitution       = shelltoken.HasActiveCommandSubstitution
 	HasActiveOutputRedirect            = shelltoken.HasActiveOutputRedirect
-	HasActiveInputRedirect             = shelltoken.HasActiveInputRedirect
 	HasActiveParameterOrTildeExpansion = shelltoken.HasActiveParameterOrTildeExpansion
 	HasActivePathnameExpansion         = shelltoken.HasActivePathnameExpansion
 )

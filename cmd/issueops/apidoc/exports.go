@@ -7,8 +7,6 @@ import (
 )
 
 type (
-	CheckResult   = apiDocCheckResult
-	ReviewFinding = apiDocReviewFinding
 	ReviewOptions = apiDocReviewOptions
 	ReviewResult  = apiDocReviewResult
 	StaticOptions = apiDocStaticOptions
@@ -19,24 +17,8 @@ func Run(args []string) error {
 	return runAPIDoc(args)
 }
 
-func RunCheck(args []string) error {
-	return runAPIDocCheck(args)
-}
-
-func RunCheckWithOptions(staticOptions StaticOptions, reviewOptions ReviewOptions) (CheckResult, error) {
-	return runAPIDocCheckWithOptions(staticOptions, reviewOptions)
-}
-
-func RunReview(args []string) error {
-	return runAPIDocReview(args)
-}
-
 func RunReviewWithOptions(options ReviewOptions) (ReviewResult, error) {
 	return runAPIDocReviewWithOptions(options)
-}
-
-func RunStaticCheck(args []string) error {
-	return runAPIDocStaticCheck(args)
 }
 
 func RunStaticCheckWithOptions(options StaticOptions) (StaticResult, error) {
@@ -45,14 +27,6 @@ func RunStaticCheckWithOptions(options StaticOptions) (StaticResult, error) {
 
 func Evidence(repo string, files []string) string {
 	return reviewfiles.Evidence(repo, files)
-}
-
-func PrintReview(result ReviewResult) {
-	printAPIDocReview(result)
-}
-
-func PrintStaticCheck(result StaticResult) {
-	printAPIDocStaticCheck(result)
 }
 
 func IsReviewGateError(err error) bool {

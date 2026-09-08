@@ -14,17 +14,11 @@ const selfVerifyAggregateOutputBudgetBytes = 8 * 1024
 
 type StepResult = commandstep.StepResult
 type SelfAugmentCompareResult = selfworkflow.SelfAugmentCompareResult
-type SelfAugmentSlowStep = selfworkflow.SelfAugmentSlowStep
 type SelfAugmentSlowStepRegression = selfworkflow.SelfAugmentSlowStepRegression
 type SelfAugmentStateSnapshot = selfworkflow.SelfAugmentStateSnapshot
 type SelfAugmentStateCheckpoint = selfworkflow.SelfAugmentStateCheckpoint
-type SelfAugmentStepDurationStat = selfworkflow.SelfAugmentStepDurationStat
 type SelfAugmentStepBudgetRegression = selfworkflow.SelfAugmentStepBudgetRegression
 type SelfAugmentSummary = selfworkflow.SelfAugmentSummary
-type SelfAugmentPromoteResult = selfworkflow.SelfAugmentPromoteResult
-type SelfAugmentHistoryEntry = selfworkflow.SelfAugmentHistoryEntry
-type SelfAugmentHistoryResult = selfworkflow.SelfAugmentHistoryResult
-type SelfAugmentHistoryRetention = selfworkflow.SelfAugmentHistoryRetention
 type SelfVerificationCandidateExportResult = selfworkflow.SelfVerificationCandidateExportResult
 type SelfVerificationCandidate = selfworkflow.SelfVerificationCandidate
 type SelfVerificationCandidateExportStateSnapshot = selfworkflow.SelfVerificationCandidateExportStateSnapshot

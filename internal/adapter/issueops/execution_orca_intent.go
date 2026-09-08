@@ -18,9 +18,8 @@ import (
 )
 
 const (
-	orcaIntentNotInvoked  = "not_invoked_proven"
-	orcaIntentUnknown     = "unknown"
-	maxOrcaIntentAttempts = 2
+	orcaIntentNotInvoked = "not_invoked_proven"
+	orcaIntentUnknown    = "unknown"
 
 	orcaIntentPurposePrepare = "prepare"
 	orcaIntentPurposeResume  = "resume"

@@ -2,8 +2,6 @@ package validationcli
 
 import "issueops/cmd/issueops/validationcli/stepbudget"
 
-type StepBudgetCommandRunner = stepbudget.StepBudgetCommandRunner
-type StepBudgetSnapshotWriter = stepbudget.StepBudgetSnapshotWriter
 type StepBudgetValidationDeps = stepbudget.StepBudgetValidationDeps
 
 func ValidateStepBudgetBaseline(binary, root string, seed int64) StepResult {

@@ -14,10 +14,6 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-func StartIssueOpsChild(stateRoot string, req issueops.IssueOpsChildStartRequest) (issueops.IssueOpsChildStartResult, error) {
-	return startIssueOpsChild(stateRoot, req, nil)
-}
-
 func StartIssueOpsChildWithActor(stateRoot string, req issueops.IssueOpsChildStartRequest, actor IssueOpsActor) (issueops.IssueOpsChildStartResult, error) {
 	return startIssueOpsChild(stateRoot, req, &actor)
 }
@@ -189,10 +185,6 @@ func issueOpsChildStatus(stateRoot, parentID string, repair bool, actor *IssueOp
 	return result, nil
 }
 
-func AcceptIssueOpsChild(stateRoot, parentID, childID string, evidence []string) (issueops.IssueOpsChildValidationResult, error) {
-	return acceptIssueOpsChild(stateRoot, parentID, childID, evidence, nil)
-}
-
 func AcceptIssueOpsChildWithActor(stateRoot, parentID, childID string, evidence []string, actor IssueOpsActor) (issueops.IssueOpsChildValidationResult, error) {
 	return acceptIssueOpsChild(stateRoot, parentID, childID, evidence, &actor)
 }
@@ -251,10 +243,6 @@ func acceptArchivedIssueOpsChild(stateRoot, parentID, childID string, evidence [
 	return issueops.IssueOpsChildValidationResult{OK: true, ParentID: parentID, ChildID: childID, ParentRef: updated}, nil
 }
 
-func RejectIssueOpsChild(stateRoot, parentID, childID, reason string, evidence []string) (issueops.IssueOpsChildValidationResult, error) {
-	return rejectIssueOpsChild(stateRoot, parentID, childID, reason, evidence, nil)
-}
-
 func RejectIssueOpsChildWithActor(stateRoot, parentID, childID, reason string, evidence []string, actor IssueOpsActor) (issueops.IssueOpsChildValidationResult, error) {
 	return rejectIssueOpsChild(stateRoot, parentID, childID, reason, evidence, &actor)
 }
@@ -269,10 +257,6 @@ func rejectIssueOpsChild(stateRoot, parentID, childID, reason string, evidence [
 		return issueops.IssueOpsChildValidationResult{OK: false, ParentID: strings.TrimSpace(parentID), ChildID: strings.TrimSpace(childID)}, err
 	}
 	return recordIssueOpsChildVerdict(stateRoot, parentID, child, "rejected", reason, cleanIssueOpsTextValues(evidence), actor)
-}
-
-func DropIssueOpsChild(stateRoot, parentID, childID, reason string) (issueops.IssueOpsChildValidationResult, error) {
-	return dropIssueOpsChild(stateRoot, parentID, childID, reason, nil)
 }
 
 func DropIssueOpsChildWithActor(stateRoot, parentID, childID, reason string, actor IssueOpsActor) (issueops.IssueOpsChildValidationResult, error) {

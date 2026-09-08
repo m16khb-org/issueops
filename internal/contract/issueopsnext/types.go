@@ -11,7 +11,6 @@ import issueopscontract "issueops/internal/contract/issueops"
 
 type Record = issueopscontract.IssueOpsRecord
 type Phase = issueopscontract.IssueOpsPhase
-type Readiness = issueopscontract.IssueOpsReadiness
 
 const (
 	PhaseProblem             = issueopscontract.IssueOpsPhaseProblem

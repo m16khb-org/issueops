@@ -21,11 +21,6 @@ const (
 
 const (
 	defaultLoopTargetScoreExclusive = model.DefaultLoopTargetScoreExclusive
-	selfAugmentationLessonKind      = model.SelfAugmentationLessonKind
-	selfAugmentationKoreanName      = model.SelfAugmentationKoreanName
-	selfAugmentationPlanKind        = model.SelfAugmentationPlanKind
-	selfVerificationKoreanName      = model.SelfVerificationKoreanName
-	selfVerificationSummaryKind     = model.SelfVerificationSummaryKind
 )
 
 type StepResult = commandstep.StepResult

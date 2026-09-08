@@ -30,12 +30,6 @@ const (
 
 var IssueOpsPhases = issueops.IssueOpsPhases
 
-const IssueOpsDesignReviewEvidenceExample = intentdesign.DesignReviewEvidenceExample
-
-func VerifyIssueOpsRemoteArtifact(stateRoot, id string, req issueops.IssueOpsRemoteArtifactVerificationRequest) (issueops.IssueOpsRecord, error) {
-	return verifyIssueOpsRemoteArtifact(stateRoot, id, req, nil)
-}
-
 func VerifyIssueOpsRemoteArtifactWithActor(stateRoot, id string, req issueops.IssueOpsRemoteArtifactVerificationRequest, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return verifyIssueOpsRemoteArtifact(stateRoot, id, req, &actor)
 }
@@ -87,10 +81,6 @@ func issueOpsActiveStore() active.Store {
 	}
 }
 
-func IssueOpsCleanupStatusByID(stateRoot, id string, req issueops.IssueOpsCleanupStatusRequest) (issueops.IssueOpsCleanupStatus, error) {
-	return cleanupstatus.ByID(issueOpsCleanupStatusStore(), stateRoot, id, req)
-}
-
 func IssueOpsCleanupStatusForRecord(record issueops.IssueOpsRecord, req issueops.IssueOpsCleanupStatusRequest) issueops.IssueOpsCleanupStatus {
 	return cleanupstatus.ForRecord(record, req)
 }
@@ -119,12 +109,6 @@ func CloseIssueOpsChildren(stateRoot, id string, req issueops.IssueOpsCloseChild
 
 func issueOpsRemoteArtifactMissing(record issueops.IssueOpsRecord) []string {
 	return cleanupstatus.RemoteArtifactMissing(record)
-}
-
-func issueOpsCleanupStatusStore() cleanupstatus.Store {
-	return cleanupstatus.Store{
-		Read: ReadIssueOps,
-	}
 }
 
 func PrepareIssueOpsBranch(stateRoot, id string, req issueops.IssueOpsBranchPrepareRequest) (issueops.IssueOpsRecord, error) {
@@ -182,10 +166,6 @@ func RetargetIssueOpsBranchWithActor(stateRoot, id string, req issueops.IssueOps
 		return e
 	})
 	return rec, err
-}
-
-func ValidateIssueOpsIssueBranch(branch string) error {
-	return validateIssueOpsIssueBranch(branch)
 }
 
 func validateIssueOpsIssueBranch(branch string) error {
@@ -521,10 +501,6 @@ func linkIssueOpsChild(stateRoot, id, childURL, title string, actor *IssueOpsAct
 		return e
 	})
 	return rec, err
-}
-
-func LinkIssueOpsRelated(stateRoot, id, linkType, relatedURL, title string) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsRelated(stateRoot, id, linkType, relatedURL, title, nil)
 }
 
 func LinkIssueOpsRelatedWithActor(stateRoot, id, linkType, relatedURL, title string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {

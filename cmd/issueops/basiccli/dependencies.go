@@ -30,18 +30,13 @@ type Deps struct {
 	DocsIndex func(root, version string) docscontract.DocsIndexResult
 }
 
-// deps는 현재 구성된 의존성을 담는다. package-private이며 Configure/Reset을
-// 통해서만 변경되므로, import 순서에 민감한 init() 부수효과가 아니라 명시적으로
-// 와이어링된다.
+// deps는 현재 구성된 의존성을 담는다. package-private이며 Configure를 통해서만
+// 변경되므로, import 순서에 민감한 init() 부수효과가 아니라 명시적으로 와이어링된다.
 var deps = defaultDeps()
 
 // Configure는 호스트가 제공하는 의존성을 설치한다. composition root가 시작 시
-// 한 번 호출하며, 테스트는 fake로 호출한 뒤 t.Cleanup에서 Reset으로 복원한다.
+// 한 번 호출한다.
 func Configure(d Deps) { deps = d }
-
-// Reset은 단독 실행 기본값을 복원한다. 테스트는 주입한 fake가 테스트 간에 새지
-// 않도록 이를 defer한다.
-func Reset() { deps = defaultDeps() }
 
 func defaultDeps() Deps {
 	return Deps{

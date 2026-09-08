@@ -6,38 +6,22 @@ import (
 	"issueops/cmd/issueops/selfworkflow"
 )
 
-const (
-	selfVerificationSummaryKind         = selfworkflow.SelfVerificationSummaryKind
-	selfVerificationKoreanName          = selfworkflow.SelfVerificationKoreanName
-	selfAugmentationLessonKind          = selfworkflow.SelfAugmentationLessonKind
-	selfAugmentationKoreanName          = selfworkflow.SelfAugmentationKoreanName
-	selfAugmentationPlanKind            = selfworkflow.SelfAugmentationPlanKind
-	defaultLoopTargetScoreExclusive     = selfworkflow.DefaultLoopTargetScoreExclusive
-	selfAugmentCandidateStatusOpen      = selfworkflow.SelfAugmentCandidateStatusOpen
-	selfAugmentCandidateStatusSatisfied = selfworkflow.SelfAugmentCandidateStatusSatisfied
-)
+const selfVerificationSummaryKind = selfworkflow.SelfVerificationSummaryKind
 
-type SelfAugmentStateCheckpoint = selfworkflow.SelfAugmentStateCheckpoint
 type SelfAugmentPromoteResult = selfworkflow.SelfAugmentPromoteResult
 type SelfAugmentIteration = selfworkflow.SelfAugmentIteration
 type SelfAugmentCompareResult = selfworkflow.SelfAugmentCompareResult
 type SelfAugmentSlowStepRegression = selfworkflow.SelfAugmentSlowStepRegression
 type SelfAugmentStepBudgetRegression = selfworkflow.SelfAugmentStepBudgetRegression
 type SelfAugmentHistoryResult = selfworkflow.SelfAugmentHistoryResult
-type SelfAugmentHistoryRetention = selfworkflow.SelfAugmentHistoryRetention
 type selfAugmentHistoryRetentionOptions = selfworkflow.SelfAugmentHistoryRetentionOptions
 type SelfAugmentHistoryEntry = selfworkflow.SelfAugmentHistoryEntry
-type SelfAugmentHistorySkipped = selfworkflow.SelfAugmentHistorySkipped
 type SelfAugmentPlanRequest = selfworkflow.SelfAugmentPlanRequest
 type SelfAugmentPlanResult = selfworkflow.SelfAugmentPlanResult
 type SelfAugmentInfluence = selfworkflow.SelfAugmentInfluence
 type SelfAugmentGoal = selfworkflow.SelfAugmentGoal
 type SelfAugmentCandidate = selfworkflow.SelfAugmentCandidate
 type SelfAugmentRepoSignals = selfworkflow.SelfAugmentRepoSignals
-type SelfAugmentLessonRequest = selfworkflow.SelfAugmentLessonRequest
-type SelfAugmentLessonResult = selfworkflow.SelfAugmentLessonResult
-type SelfAugmentLessonStateSnapshot = selfworkflow.SelfAugmentLessonStateSnapshot
-type SelfAugmentPlanStateSnapshot = selfworkflow.SelfAugmentPlanStateSnapshot
 type SelfAugmentStateSnapshot = selfworkflow.SelfAugmentStateSnapshot
 type SelfAugmentResult = selfworkflow.SelfAugmentResult
 type SelfAugmentSummary = selfworkflow.SelfAugmentSummary

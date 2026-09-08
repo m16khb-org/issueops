@@ -1,11 +1,5 @@
 package issueopslease
 
-type ResumeRequest struct {
-	ID                 string `json:"id"`
-	ExpectedGeneration uint64 `json:"expected_generation"`
-	CWD                string `json:"cwd"`
-}
-
 type ResumeArtifacts struct {
 	ClaimTokenPath      string `json:"claim_token_path"`
 	IssueBodySHA256     string `json:"issue_body_sha256"`

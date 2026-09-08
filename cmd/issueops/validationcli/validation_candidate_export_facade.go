@@ -2,7 +2,6 @@ package validationcli
 
 import "issueops/cmd/issueops/validationcli/candidateexport"
 
-type CandidateExportCommandRunner = candidateexport.CandidateExportCommandRunner
 type CandidateExportValidationDeps = candidateexport.CandidateExportValidationDeps
 
 func ValidateSelfVerifyCandidateExport(binary, root string, seed int64) StepResult {

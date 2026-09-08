@@ -12,10 +12,6 @@ import (
 	"issueops/internal/port"
 )
 
-func ReconcileExecution(stateRoot string, req ExecutionReconcileRequest) (ExecutionReconcileResult, error) {
-	return ReconcileExecutionWithDependencies(context.Background(), stateRoot, req, ExecutionReconcileDependencies{})
-}
-
 func ReconcileExecutionWithDependencies(ctx context.Context, stateRoot string, req ExecutionReconcileRequest, deps ExecutionReconcileDependencies) (ExecutionReconcileResult, error) {
 	if req.Preview == req.Confirm {
 		return ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile requires exactly one of preview or confirm")

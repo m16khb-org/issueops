@@ -8,20 +8,6 @@ import (
 const (
 	OrcaMaxBaselineIDs = 512
 
-	// IssueOps implementer(하위 세션 execution owner)의 host별 기본 모델.
-	// execution prepare가 --owner-model/--owner-effort 미지정 호출에 적용한다.
-	IssueOpsImplementerModelCodex  = "gpt-5.6-terra"
-	IssueOpsImplementerEffortCodex = "xhigh"
-	// Claude Code 자동 체인은 Opus 5 planner가 계획·리뷰하고 Sonnet 5
-	// implementer가 실행한다. Fable 5는 명시적 수동 지정에만 사용한다.
-	IssueOpsImplementerModelClaude = "claude-sonnet-5"
-	// claude CLI의 --effort <level> 플래그 실지원을 확인함(2026-07-24).
-	// 플래그가 제거되면 ownerAgentCommand(adapter/orca/client.go)의 claude
-	// 분기에서 effort 인자를 조건부 생략으로 되돌린다.
-	IssueOpsImplementerEffortClaude = "high"
-	IssueOpsImplementerModelOmo     = "openai-codex/gpt-5.6-sol"
-	IssueOpsImplementerEffortOmo    = "max"
-
 	// IssueOps planner(계획/리뷰 세션)의 host별 기본 모델. 하위 세션이 구현
 	// diff의 design-review 적대 리뷰 서브에이전트를 띄울 때 사용한다(설계 v5 WS5).
 	IssueOpsPlannerModelCodex   = "gpt-5.6-sol"
@@ -38,20 +24,6 @@ func IssueOpsPlannerDefaults(host string) (model string, effort string, ok bool)
 		return IssueOpsPlannerModelCodex, IssueOpsPlannerEffortCodex, true
 	case "claude":
 		return IssueOpsPlannerModelClaude, IssueOpsPlannerEffortClaude, true
-	}
-	return "", "", false
-}
-
-// IssueOpsImplementerDefaults는 host별 implementer 기본 모델/effort를 반환한다.
-// 지원하지 않는 host면 ok=false를 반환하고 호출자가 host 검증 에러를 처리한다.
-func IssueOpsImplementerDefaults(host string) (model string, effort string, ok bool) {
-	switch host {
-	case "codex":
-		return IssueOpsImplementerModelCodex, IssueOpsImplementerEffortCodex, true
-	case "claude":
-		return IssueOpsImplementerModelClaude, IssueOpsImplementerEffortClaude, true
-	case "omo":
-		return IssueOpsImplementerModelOmo, IssueOpsImplementerEffortOmo, true
 	}
 	return "", "", false
 }

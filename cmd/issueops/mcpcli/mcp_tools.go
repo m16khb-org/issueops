@@ -77,12 +77,6 @@ func HandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
 	return HandleToolCallWithDependencies(params, MCPDependencies{})
 }
 
-// HandleToolCallWithReleaseHandler keeps the server dependency immutable per
-// call instead of caching a composition-root handler in package state.
-func HandleToolCallWithReleaseHandler(params json.RawMessage, release issueopscontract.ExecutionReleaseHandler) (any, *jsonrpc.Error) {
-	return HandleToolCallWithDependencies(params, MCPDependencies{Release: release})
-}
-
 func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies) (any, *jsonrpc.Error) {
 	var call MCPToolCall
 	if err := json.Unmarshal(params, &call); err != nil {

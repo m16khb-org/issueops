@@ -45,17 +45,13 @@ func ReadRemoteIssueSnapshot(ctx context.Context, prov port.IssueProvider, req p
 	return reader.ReadIssueSnapshot(ctx, req)
 }
 
-// CreateRemotePullRequestViaProvider는 provider가 구성되어 있을 때만 PR을 만든다.
-// 같은 패키지의 CreateRemotePullRequest는 lifecycle 상태를 함께 다루는 상위 경로이고,
-// 이 함수는 provider 호출 직전의 가드만 담당한다.
-func CreateRemotePullRequestViaProvider(req port.IssueProviderCreatePullRequestRequest, prov port.IssueProvider) (port.IssueProviderCreatePullRequestResult, error) {
-	return CreateRemotePullRequestViaProviderContext(context.Background(), req, prov)
-}
-
 type contextPullRequestCreator interface {
 	CreatePullRequestContext(context.Context, port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)
 }
 
+// CreateRemotePullRequestViaProviderContext는 provider가 구성되어 있을 때만
+// PR을 만든다. 같은 패키지의 CreateRemotePullRequest는 lifecycle 상태를 함께
+// 다루는 상위 경로이고, 이 함수는 provider 호출 직전의 가드만 담당한다.
 func CreateRemotePullRequestViaProviderContext(ctx context.Context, req port.IssueProviderCreatePullRequestRequest, prov port.IssueProvider) (port.IssueProviderCreatePullRequestResult, error) {
 	if prov == nil {
 		return port.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("no issue provider configured")
@@ -69,16 +65,12 @@ func CreateRemotePullRequestViaProviderContext(ctx context.Context, req port.Iss
 	return prov.CreatePullRequest(req)
 }
 
-// ReconcileRemotePullRequestViaProvider는 provider가 remote create 조정을 지원할 때만
-// 조정을 수행한다.
-func ReconcileRemotePullRequestViaProvider(req port.IssueProviderReconcilePullRequestRequest, prov port.IssueProvider) (port.IssueProviderReconcilePullRequestResult, error) {
-	return ReconcileRemotePullRequestViaProviderContext(context.Background(), req, prov)
-}
-
 type contextPullRequestReconciler interface {
 	ReconcilePullRequestContext(context.Context, port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error)
 }
 
+// ReconcileRemotePullRequestViaProviderContext는 provider가 remote create 조정을
+// 지원할 때만 조정을 수행한다.
 func ReconcileRemotePullRequestViaProviderContext(ctx context.Context, req port.IssueProviderReconcilePullRequestRequest, prov port.IssueProvider) (port.IssueProviderReconcilePullRequestResult, error) {
 	if reconciler, ok := prov.(contextPullRequestReconciler); ok {
 		return reconciler.ReconcilePullRequestContext(ctx, req)

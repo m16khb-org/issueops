@@ -9,8 +9,6 @@ const defaultLoopTargetScoreExclusive = model.DefaultLoopTargetScoreExclusive
 
 type SelfAugmentResult = model.SelfAugmentResult
 type SelfAugmentSlowStep = model.SelfAugmentSlowStep
-type SelfAugmentSlowStepRegression = model.SelfAugmentSlowStepRegression
-type SelfAugmentStepBudgetRegression = model.SelfAugmentStepBudgetRegression
 type SelfAugmentStepDurationStat = model.SelfAugmentStepDurationStat
 type SelfAugmentSummary = model.SelfAugmentSummary
 type SelfVerificationContract = model.SelfVerificationContract

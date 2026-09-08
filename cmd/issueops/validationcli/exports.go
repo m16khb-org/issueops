@@ -10,10 +10,6 @@ func ValidateCommandPolicy(binary, root string) StepResult {
 	return validateCommandPolicy(binary, root)
 }
 
-func ValidateCommandAuditSmoke(binary, root string, seed int64) StepResult {
-	return ValidateCommandAudit(binary, root, seed)
-}
-
 func ValidateContractCheckSmoke(binary, root string) StepResult {
 	return ValidateContractCheck(binary, root)
 }

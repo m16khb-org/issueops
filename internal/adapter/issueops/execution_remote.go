@@ -22,13 +22,10 @@ import (
 var externalIntentBucket = fmt.Sprintf("external_intent_v%d", issueops.IssueOpsSchemaVersion)
 
 const (
-	externalIntentRemotePR     = "remote_pr_create"
-	remoteInvocationUnknown    = "unknown"
-	remoteInvocationNotInvoked = "not_invoked_proven"
+	externalIntentRemotePR  = "remote_pr_create"
+	remoteInvocationUnknown = "unknown"
 )
 
-type RemotePullRequestCreateFunc func(string, port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)
-type RemotePullRequestReconcileFunc func(string, port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error)
 type RemoteArtifactVerifyFunc func(issueops.IssueOpsRemoteArtifactVerificationRequest) error
 
 type RemotePullRequestDependencies struct {

@@ -8,7 +8,6 @@ import (
 
 type SelfVerificationCandidateExportResult = selfworkflow.SelfVerificationCandidateExportResult
 type SelfVerificationCandidate = selfworkflow.SelfVerificationCandidate
-type SelfVerificationCandidateExportStateSnapshot = selfworkflow.SelfVerificationCandidateExportStateSnapshot
 type selfVerifyPlannedStep = selfworkflow.SelfVerifyPlannedStep
 
 type selfVerifyCandidatesDeps struct {

@@ -24,11 +24,8 @@ import (
 )
 
 type (
-	HarnessStatus              = statuscli.Status
-	SelfVerifyStatus           = statuscli.SelfVerificationStatus
-	VerifyWorkResult           = statuscli.WorkResult
-	VerifyWorkEvidenceItem     = statuscli.WorkEvidenceItem
-	VerifyWorkSuggestedCommand = statuscli.WorkSuggestedCommand
+	HarnessStatus    = statuscli.Status
+	VerifyWorkResult = statuscli.WorkResult
 )
 
 func wireBasicCLIDeps() {

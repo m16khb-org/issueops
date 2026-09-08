@@ -22,9 +22,6 @@ import (
 
 const channelBucket = "channel_v1"
 
-// ErrWaitTimeout은 recv --wait가 시간 안에 새 메시지를 못 본 결과다.
-var ErrWaitTimeout = errors.New("wait timeout")
-
 // StateDatabase는 이 package가 실제로 쓰는 저장소 연산만 선언한다.
 type StateDatabase interface {
 	Get(bucket, id string) ([]byte, bool, error)

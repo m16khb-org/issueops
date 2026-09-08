@@ -1182,7 +1182,6 @@ func isFoundationOwner(path string) bool {
 		"internal/domain/policy",
 		"internal/domain/state",
 		"internal/port/nativeactivation",
-		"internal/port/policy",
 		"internal/port/state",
 	} {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {

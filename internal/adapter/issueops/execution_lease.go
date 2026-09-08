@@ -63,10 +63,6 @@ func StatusExecution(stateRoot, id string) (ExecutionResult, error) {
 	return result, nil
 }
 
-func ReplaceExecution(stateRoot string, req ExecutionReplaceRequest) (ExecutionReplaceResult, error) {
-	return ReplaceExecutionWithDependencies(context.Background(), stateRoot, req, ExecutionReplaceDependencies{})
-}
-
 func ReplaceExecutionWithDependencies(ctx context.Context, stateRoot string, req ExecutionReplaceRequest, deps ExecutionReplaceDependencies) (ExecutionReplaceResult, error) {
 	actor, err := normalizeNativeActor(req.Actor)
 	if err != nil {

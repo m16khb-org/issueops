@@ -13,8 +13,6 @@ import (
 	"issueops/internal/port"
 )
 
-const ExecutionModeAuto = "auto"
-
 // ensureOrcaBranchIsFree는 Orca가 워크트리를 만들기 전에 대상 브랜치 이름이
 // 비어 있는지 확인한다.
 //

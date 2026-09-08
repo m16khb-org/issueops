@@ -10,8 +10,6 @@ import (
 	"issueops/cmd/issueops/selfworkflow/steps"
 )
 
-const SelfVerifyLLMEvalEvidenceBudgetBytes = llmeval.SelfVerifyLLMEvalEvidenceBudgetBytes
-
 type SelfVerifyLLMEvalConfig = llmeval.SelfVerifyLLMEvalConfig
 type SelfVerifyLLMEvalInput = llmeval.SelfVerifyLLMEvalInput
 type SelfVerifyLLMEvalOptions = llmeval.SelfVerifyLLMEvalOptions

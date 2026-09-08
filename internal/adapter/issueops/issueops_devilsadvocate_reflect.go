@@ -11,16 +11,12 @@ import (
 	"issueops/internal/port"
 )
 
-// ReflectDevilsAdvocateFindings writes the recorded devil's-advocate findings
-// into the linked remote issue's managed body section through the supplied
-// provider. On a confirmed successful update it stamps IssueReflectedAt, which
-// the regress precondition requires so a stop's findings reach the issue before
-// the cycle re-plans. Without confirm it returns the provider's dry-run preview
-// and does not mutate state.
-func ReflectDevilsAdvocateFindings(stateRoot, id string, confirm bool, prov port.IssueProvider) (issueops.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
-	return reflectDevilsAdvocateFindings(stateRoot, id, confirm, prov, nil)
-}
-
+// ReflectDevilsAdvocateFindingsWithActor writes the recorded devil's-advocate
+// findings into the linked remote issue's managed body section through the
+// supplied provider. On a confirmed successful update it stamps
+// IssueReflectedAt, which the regress precondition requires so a stop's
+// findings reach the issue before the cycle re-plans. Without confirm it
+// returns the provider's dry-run preview and does not mutate state.
 func ReflectDevilsAdvocateFindingsWithActor(stateRoot, id string, confirm bool, prov port.IssueProvider, actor IssueOpsActor) (issueops.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return reflectDevilsAdvocateFindings(stateRoot, id, confirm, prov, &actor)
 }

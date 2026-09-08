@@ -34,12 +34,6 @@ func RunIssueOpsWithDependencies(args []string, deps Dependencies) error {
 	return runIssueOpsWithDependencies(args, deps)
 }
 
-// RunIssueOpsWithReleaseHandler is the composition-root entry point for the
-// production release vertical. Other IssueOps actions retain their existing facade.
-func RunIssueOpsWithReleaseHandler(args []string, release issueopscontract.ExecutionReleaseHandler) error {
-	return RunIssueOpsWithExecutionHandlers(args, nil, release)
-}
-
 func RunIssueOpsWithExecutionHandlers(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler) error {
 	return RunIssueOpsWithExecutionHandlersAndReseed(args, claim, release, nil)
 }
