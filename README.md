@@ -256,7 +256,7 @@ issueops contract check --json
 - IssueOps 단계: `issueops`(라우터), `issueops-create-issue`, `issueops-prepare`, `issueops-plan`, `issueops-implement`, `issueops-clean`, `issueops-docs`, `issueops-verify`, `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, `issueops-abandon`
 - IssueOps 공용: `issueops-review`, `gates-ledger`, `issueops-remote-write`, `issueops-sync-issue`, `issueops-sync-pr`
 - Project docs: `project-bootstrap`, `project-docs-bootstrap`, `project-docs-update`, `project-docs-optimize`
-- UI/UX와 브라우저 QA: `ui-ux-craft`, `aside-functional-qa`, `aside-visual-qa`, `aside-web-qa`, `read-public-artifact`
+- UI/UX와 브라우저 QA: `ui-ux-craft`, `aside-functional-qa`, `aside-visual-qa`, `aside-web-qa`, `read-public-artifact`. 앞의 둘은 `next.review.frontend`가 켜진 사이클의 4·7단계에서 호출됩니다
 - 코드 리뷰: `pr-review`, `review-agent-feedback`
 - 운영 개선: `io-update`, `self-verify`, `self-augment`, `stability-audit`
 - 한국어 작성과 시각화: `fluent-korean`, `diagram-design`

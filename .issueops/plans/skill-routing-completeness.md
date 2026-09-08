@@ -131,11 +131,11 @@
 
   **What to do**:
   1. `skills/issueops/SKILL.md:65-71` 표: 3단계 `design-review` → `issueops-review`. 4단계 `code-quality-metrics` 제거. (4·7·9단계의 새 동반 스킬은 T5·T2가 넣는다.)
-  2. `skills/issueops-create-issue/SKILL.md` "## 질문 규칙" 끝: blocking 질문이 둘 이상이거나 답에 따라 만들 것이 갈리면 [`implementation-planning`](../implementation-planning/SKILL.md)의 Phase 2 인터뷰 절차(드래프트 파일, 한 번에 한 질문, clearance check)를 쓴다. 드래프트의 "Requirements (confirmed)"가 `--interpreted-intent`의 원문이 된다.
-  3. `skills/issueops-plan/SKILL.md:73-75` 표 `## 하위 호환성과 side effect` 행: 계획이 마이그레이션·엔티티·인덱스·쿼리를 바꾸면 [`database-design`](../database-design/SKILL.md)으로 설계를 검토하고 결과(정규화 판단, 인덱스 계획, 예상 row 수)를 이 절에 적는다. 7단계 실측은 이 값과 대조한다.
+  2. `skills/issueops-create-issue/SKILL.md` "## 질문 규칙" 끝: blocking 질문이 둘 이상이거나 답에 따라 만들 것이 갈리면 `implementation-planning`의 Phase 2 인터뷰 절차(드래프트 파일, 한 번에 한 질문, clearance check)를 쓴다. 드래프트의 "Requirements (confirmed)"가 `--interpreted-intent`의 원문이 된다.
+  3. `skills/issueops-plan/SKILL.md:73-75` 표 `## 하위 호환성과 side effect` 행: 계획이 마이그레이션·엔티티·인덱스·쿼리를 바꾸면 `database-design`으로 설계를 검토하고 결과(정규화 판단, 인덱스 계획, 예상 row 수)를 이 절에 적는다. 7단계 실측은 이 값과 대조한다.
   4. `skills/issueops-plan/SKILL.md` 네 절 표 뒤에 `prompt-engineering` 분기(LLM에게 주는 프롬프트 본문 변경 시 측정 가능한 출력 기준). 표가 3단계에 그 스킬을 약속하므로 이것도 표↔본문 정합이며 T6가 아니라 여기서 한다.
-  5. `skills/issueops-create-issue/SKILL.md` 3항(배경지식과 웹 조사)이 `--web-research-evidence` 플래그만 부르고 [`web-research`](../web-research/SKILL.md) 스킬 이름을 부르지 않았다. 스킬 호출로 바꾼다.
-  6. `skills/issueops-implement/SKILL.md` "## 구현 루프" 끝: 같은 focused test가 **두 번** GREEN에 실패하면 세 번째를 추측으로 시도하지 않고 [`issueops-debugging`](../issueops-debugging/SKILL.md)으로 재현·격리·근본 원인을 먼저 잡는다. 이 카운터는 `verified-execution`의 "같은 기준 3회 실패 → 목표 종료"와 **같은 카운터**이며, 세 번째 실패가 그 종료다. 진단은 verified-execution report의 실패 항목에 적는다.
+  5. `skills/issueops-create-issue/SKILL.md` 3항(배경지식과 웹 조사)이 `--web-research-evidence` 플래그만 부르고 `web-research` 스킬 이름을 부르지 않았다. 스킬 호출로 바꾼다.
+  6. `skills/issueops-implement/SKILL.md` "## 구현 루프" 끝: 같은 focused test가 **두 번** GREEN에 실패하면 세 번째를 추측으로 시도하지 않고 `issueops-debugging`으로 재현·격리·근본 원인을 먼저 잡는다. 이 카운터는 `verified-execution`의 "같은 기준 3회 실패 → 목표 종료"와 **같은 카운터**이며, 세 번째 실패가 그 종료다. 진단은 verified-execution report의 실패 항목에 적는다.
   **Must NOT do**: 절 구조 변경. 4단계 본문에 `code-quality-metrics` 추가.
 
   **Recommended Agent**: quick
@@ -169,7 +169,7 @@
 - [ ] 2. review-feedback.md의 봇 리뷰 이중 소유 제거 (사람 리뷰어 형식은 유지)
 
   **What to do**:
-  1. `skills/issueops/references/review-feedback.md:30` 문단(Kodus·Gemini)을 교체: "자동 리뷰어(Kodus, CodeRabbit, Copilot, Gemini Code Assist 등)의 스레드는 [`review-agent-feedback`](../../review-agent-feedback/SKILL.md)이 소유한다. 목록·검증·판정·답글·반응·resolve의 순서와 `판정: 타당` 형식은 그 스킬을 따른다. 그 스킬이 `contract_change`를 발견하면 아래 이슈 본문 갱신 절로 돌아온다."
+  1. `skills/issueops/references/review-feedback.md:30` 문단(Kodus·Gemini)을 교체: "자동 리뷰어(Kodus, CodeRabbit, Copilot, Gemini Code Assist 등)의 스레드는 `review-agent-feedback`이 소유한다. 목록·검증·판정·답글·반응·resolve의 순서와 `판정: 타당` 형식은 그 스킬을 따른다. 그 스킬이 `contract_change`를 발견하면 아래 이슈 본문 갱신 절로 돌아온다."
   2. 42-54행의 `타당성:` 답글 블록과 56-63행의 `선택지` 블록은 **유지**하되, 앞 문장을 "사람 리뷰어의 스레드에 답할 때는 이 형식을 쓴다"로 한정한다. 코드 펜스를 자르지 않는다.
   3. `feedback mark-issue-updated` 절은 그대로.
   4. `skills/issueops/SKILL.md`의 **Reference map** 행 `references/review-feedback.md`에 `review-agent-feedback`(봇 스레드)와 `pr-review`(사람 리뷰 요청)를 적는다. 9단계 "함께 쓰는 스킬" 열이 아니다 — 리뷰 피드백은 발행 뒤 phase이고 그 본문은 `issueops-create-pr`이 아니라 이 reference가 소유하므로, 표에 넣으면 감사가 새 표↔본문 불일치로 잡는다.
@@ -280,9 +280,9 @@
 - [ ] 5. 구현·검증 스킬의 base drift·frontend 분기
 
   **What to do**:
-  1. `skills/issueops-implement/SKILL.md` "## 시작 게이트" 끝, **base drift**: `next` 경고에 기대지 않고 시작 게이트에서 `issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json`을 직접 돌린다(구현 단계의 `next`는 readiness를 부르지 않는다). 이 호출은 **claim 뒤, lease가 active(self)인 상태**에서 한다. claimable 상태에서는 `released_completion_authority`로 거부되므로(`execution_sync_base.go:278`) 재개된 Orca 세션도 claim을 먼저 끝낸다. `merge_needed`가 false면 계속. true이고 `conflict_files`가 비면 `--apply --confirm --fingerprint <preview의 fingerprint>`로 반영한다. **이 apply는 4단계 진입, 즉 봉인이 하나도 없을 때만 한다.** 반영하면 변경 집합이 `BranchPrepare.BaseSHA` 기준으로 잡히므로 base가 바꾼 파일이 이 사이클의 diff·티어·리뷰 대상에 포함된다는 것을 계획 `## 하위 호환성과 side effect`에 적는다. 미커밋 tracked 변경이 있으면 apply가 `worktree_clean`으로 거부되므로 먼저 커밋하거나 stash하지 말고 시작 게이트 시점(변경 없음)에 한다. `conflict_files`가 있으면 계획의 영향 범위를 다시 보고 사용자에게 알린다. rebase는 하지 않는다([`rebase-onto-parent`](../rebase-onto-parent/SKILL.md)).
-     "## 구현 루프" 끝, **frontend**: `next --json`의 `review.frontend`가 true면 컴포넌트 출처·접근성·반응형·모션 감소는 [`ui-ux-craft`](../ui-ux-craft/SKILL.md) 규칙을 따르고, 그 스킬이 요구하는 디자인 시스템 확인 결과를 verified-execution report의 "UI 판단" 절에 적는다(7단계 QA의 INTENT가 된다).
-  2. `skills/issueops-verify/SKILL.md` "## 0 동시에 띄운다" 네 번째 track, **frontend QA**: `review.frontend`가 true면 [`aside-web-qa`](../aside-web-qa/SKILL.md)를 동시에 띄운다. 입력 매핑: TARGET=계획·이슈 본문의 로컬 실행 절차가 준 URL, SCOPE=변경 집합의 frontend 경로, REQUIREMENTS=이슈 성공 기준과 `gates.md`, INTENT=4단계 report의 "UI 판단" 절. 넷 중 하나라도 없으면 QA를 `Not Run`으로 report에 사유와 함께 적고 지어내지 않는다. 보고서 출력 경로는 ignored 영역 `.issueops/issues/<n>/review/`(review-agent-feedback이 쓰는 곳)이나 worktree 밖으로 고정한다 — worktree 안 미추적 파일은 fingerprint에 들어가 봉인을 깬다. 제품을 바꾸는 시나리오(로그인 상태 변경, 데이터 생성)는 aside의 "allowed mutations and cleanup contract"로 한정하고 그 정리 영수증을 report에 적는다. 배터리가 실패하면 QA 결과도 버린다.
+  1. `skills/issueops-implement/SKILL.md` "## 시작 게이트" 끝, **base drift**: `next` 경고에 기대지 않고 시작 게이트에서 `issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json`을 직접 돌린다(구현 단계의 `next`는 readiness를 부르지 않는다). 이 호출은 **claim 뒤, lease가 active(self)인 상태**에서 한다. claimable 상태에서는 `released_completion_authority`로 거부되므로(`execution_sync_base.go:278`) 재개된 Orca 세션도 claim을 먼저 끝낸다. `merge_needed`가 false면 계속. true이고 `conflict_files`가 비면 `--apply --confirm --fingerprint <preview의 fingerprint>`로 반영한다. **이 apply는 4단계 진입, 즉 봉인이 하나도 없을 때만 한다.** 반영하면 변경 집합이 `BranchPrepare.BaseSHA` 기준으로 잡히므로 base가 바꾼 파일이 이 사이클의 diff·티어·리뷰 대상에 포함된다는 것을 계획 `## 하위 호환성과 side effect`에 적는다. 미커밋 tracked 변경이 있으면 apply가 `worktree_clean`으로 거부되므로 먼저 커밋하거나 stash하지 말고 시작 게이트 시점(변경 없음)에 한다. `conflict_files`가 있으면 계획의 영향 범위를 다시 보고 사용자에게 알린다. rebase는 하지 않는다(`rebase-onto-parent`).
+     "## 구현 루프" 끝, **frontend**: `next --json`의 `review.frontend`가 true면 컴포넌트 출처·접근성·반응형·모션 감소는 `ui-ux-craft` 규칙을 따르고, 그 스킬이 요구하는 디자인 시스템 확인 결과를 verified-execution report의 "UI 판단" 절에 적는다(7단계 QA의 INTENT가 된다).
+  2. `skills/issueops-verify/SKILL.md` "## 0 동시에 띄운다" 네 번째 track, **frontend QA**: `review.frontend`가 true면 `aside-web-qa`를 동시에 띄운다. 입력 매핑: TARGET=계획·이슈 본문의 로컬 실행 절차가 준 URL, SCOPE=변경 집합의 frontend 경로, REQUIREMENTS=이슈 성공 기준과 `gates.md`, INTENT=4단계 report의 "UI 판단" 절. 넷 중 하나라도 없으면 QA를 `Not Run`으로 report에 사유와 함께 적고 지어내지 않는다. 보고서 출력 경로는 ignored 영역 `.issueops/issues/<n>/review/`(review-agent-feedback이 쓰는 곳)이나 worktree 밖으로 고정한다 — worktree 안 미추적 파일은 fingerprint에 들어가 봉인을 깬다. 제품을 바꾸는 시나리오(로그인 상태 변경, 데이터 생성)는 aside의 "allowed mutations and cleanup contract"로 한정하고 그 정리 영수증을 report에 적는다. 배터리가 실패하면 QA 결과도 버린다.
      "## 3 구현 리뷰", **frontend 렌즈**: `review.frontend`가 true면 diff 리뷰 프롬프트의 "검증할 주장 목록"에 4단계 report의 "UI 판단" 절을 넣고, 렌즈 목록에 `ui-ux-craft`의 접근성·반응형·모션 감소 세 항목을 덧붙인다. 이것이 Gap Analysis의 측정 기준(frontend 사이클의 리뷰 finding에 그 렌즈 언급이 0건이면 실패)이 가리키는 변경이다.
      "## 4 호환성 재확인과 readiness", **base drift**: strict readiness `warnings`의 `base_advanced`는 차단이 아니다. 이 단계에서는 `sync-base --preview`로 충돌 유무만 report에 기록하고 **apply하지 않는다** — apply는 봉인된 변경 집합에 base의 파일을 끌어들여 5단계부터 다시 밟게 만든다. 머지는 PR 병합 시점에 provider가 한다(PR 정책 불변). 충돌이 있으면 그 사실을 PR 본문 "위험" 절에 적는다.
   3. `skills/issueops/SKILL.md:65-71` 표: 4단계 `ui-ux-craft`(frontend), `rebase-onto-parent`(base drift 사유), 7단계 `aside-web-qa`(frontend).
@@ -319,7 +319,7 @@
 - [ ] 6. requirements-analysis·prompt-engineering 분기, ADR·CONVENTIONS·README·골든 최종
 
   **What to do**:
-  1. `skills/issueops-create-issue/SKILL.md` "## 입력 세 가지" 1항 뒤: 사용자가 HWP·PDF·DOCX 기획서나 화면 캡처를 줬으면 [`requirements-analysis`](../requirements-analysis/SKILL.md)로 요구사항·모순·누락을 추출한다. 원문 요청은 그대로 `--raw-request`, 추출한 제약은 `intent record --constraint`, 모순·누락은 `--ambiguity`에 넣는다.
+  1. `skills/issueops-create-issue/SKILL.md` "## 입력 세 가지" 1항 뒤: 사용자가 HWP·PDF·DOCX 기획서나 화면 캡처를 줬으면 `requirements-analysis`로 요구사항·모순·누락을 추출한다. 원문 요청은 그대로 `--raw-request`, 추출한 제약은 `intent record --constraint`, 모순·누락은 `--ambiguity`에 넣는다.
   3. `issueops project append --kind adr`: 제목 "Pipeline skill routing: companion skills called by name, base drift as a three-surface model, frontend as a next flag". context에 감사 결과, decision에 T1–T5와 base drift 3표면 모델(경고=5~8단계 힌트, preview=진실, apply=4단계 진입만), 기각: base drift 차단 키(PR 정책), frontend 티어(순위 오염), `Signals` 슬라이스(값 하나), `upstream_synced`→sync-base(의미 불일치), 검증 단계 apply(봉인 파괴·변경 집합 오염, `evidence.go:197`), owner prompt required skills 확장, `diffBaseRef`의 봉인 의미 변경(별도 결정으로 미룸). `ADR.md` 색인.
   4. `.issueops/CONVENTIONS.md` `next.review` 항목에 `frontend`와 `warnings`의 `base_advanced`·passthrough 한 줄씩.
   5. `README.md`·`README.en.md` 스킬 절 "UI/UX와 브라우저 QA"에 "frontend 신호가 있는 사이클의 4·7단계에서 호출" 구절.

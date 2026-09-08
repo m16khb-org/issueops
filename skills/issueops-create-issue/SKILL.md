@@ -34,6 +34,11 @@ issueops next --json
 
 1. **사용자가 준 정보.** 원문을 그대로 intent contract의 `--raw-request`에 넣는다.
    요약해서 넣으면 나중에 해석이 맞았는지 대조할 원본이 사라진다.
+   사용자가 HWP·PDF·DOCX 기획서나 화면 캡처를 줬으면
+   [`requirements-analysis`](../requirements-analysis/SKILL.md)로 요구사항·모순·누락을
+   먼저 추출한다. 원문 요청은 그대로 `--raw-request`에 넣고, 추출한 제약은
+   `intent record --constraint`에, 모순과 누락은 `--ambiguity`에 넣는다. 문서를 요약해
+   `--raw-request`를 대체하지 않는다.
 2. **코드베이스 조사.** `.codegraph/`가 있으면 `codegraph explore "<질문>"`으로 관련
    심볼과 호출 경로를 찾고, 없으면 `rg`로 찾는다. 만진 심볼·파일·호출 경로를 evidence
    문자열로 만든다(`--codebase-survey-evidence`).

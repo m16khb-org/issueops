@@ -89,7 +89,14 @@ agent가 즉시 알아야 할 canonical 요약이다.
   티어 계산은 implement 이후 phase에서만 일어난다. 스킬 경로(`issueops-review`,
   `issueops-verify`)의 리뷰어 effort는 이 출력이 소유한다. owner prompt의
   `{REVIEWER_EFFORT}`는 아직 prepare 시점 planner 기본값이며 티어를 반영하지 않는다.
-  owner가 검증 시점에 `.review`를 읽게 하는 프롬프트 한 줄은 미구현이다.
+  owner가 검증 시점에 `.review`를 읽게 하는 프롬프트 한 줄은 미구현이다. 같은 출력의
+  `frontend`는 변경 집합이 화면을 건드리는지 알리는 QA 라우팅 신호이며 티어와 별개다.
+  4단계는 이 신호로 `ui-ux-craft`, 7단계는 `aside-web-qa`로 간다.
+- strict readiness는 준비된 base가 앞서 나갔을 때 `base_advanced` 경고를 낸다. 차단 키가
+  아니라 경고이며 fetch하지 않는다. `next`가 readiness 경고를 그대로 전달하므로 5~8단계
+  출력에서 보인다. 진실은 `issueops execution sync-base --preview`가 fetch해서 확인하고,
+  `--apply`는 봉인이 없는 4단계 진입에서만 한다 — 그 뒤에 하면 봉인된 변경 집합에 base의
+  파일이 들어와 정리·리뷰·문서 판정이 한꺼번에 stale이 된다.
 
 ## 이슈 산출물 레이아웃
 
