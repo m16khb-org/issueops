@@ -68,7 +68,14 @@ func TestCLIIssueOpsReviewMetricsReadsRoundsAndRejectsAmbiguousScope(t *testing.
 		}
 	}
 
-	if err := runIssueOps([]string{"review-metrics", "--id", "io-missing", "--json"}); err == nil {
-		t.Fatal("unreadable single cycle must surface the read error")
-	}
+	// 오류도 다른 issueops 명령과 같은 JSON 형태여야 스크립트가 파싱할 수 있다.
+	missingOut, missingErr := captureStdoutAndErrorForIssueOps(t, func() error {
+		return runIssueOps([]string{"review-metrics", "--id", "io-missing", "--json"})
+	})
+	assertIssueOpsJSONErrorContains(t, missingOut, missingErr, "io-missing")
+
+	scopeOut, scopeErr := captureStdoutAndErrorForIssueOps(t, func() error {
+		return runIssueOps([]string{"review-metrics", "--json"})
+	})
+	assertIssueOpsJSONErrorContains(t, scopeOut, scopeErr, "exactly one of --id or --repo")
 }

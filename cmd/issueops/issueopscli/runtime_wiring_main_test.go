@@ -102,16 +102,16 @@ func wireIssueOpsRuntimeForTests() {
 		ListIssueOpsCycles:            listCycles,
 		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
 			return issueopscore.ReviewMetrics(stateRoot, id, repo, issueopscore.ReviewMetricsDeps{
-				ListCycleIDs: func(stateRoot, repo string) ([]string, error) {
+				ListCycleIDs: func(stateRoot, repo string) ([]string, []string, error) {
 					result, err := listCycles(stateRoot, repo)
 					if err != nil {
-						return nil, err
+						return nil, nil, err
 					}
 					ids := make([]string, 0, len(result.Entries))
 					for _, entry := range result.Entries {
 						ids = append(ids, entry.ID)
 					}
-					return ids, nil
+					return ids, append([]string(nil), result.UnreadableIDs...), nil
 				},
 			})
 		},

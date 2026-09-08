@@ -57,8 +57,11 @@ type IssueOpsReviewMetricsAggregate struct {
 
 // IssueOpsReviewMetricsResult는 `issueops review-metrics`의 응답이다.
 type IssueOpsReviewMetricsResult struct {
-	OK          bool                           `json:"ok"`
-	Cycles      []IssueOpsReviewMetricsCycle   `json:"cycles"`
+	OK     bool                         `json:"ok"`
+	Cycles []IssueOpsReviewMetricsCycle `json:"cycles"`
+	// ReadErrors는 집계에서 빠진 사이클 수다. 모집단이 줄었다는 사실을 숨기면
+	// revise 비율이 어떤 사이클들에서 나온 값인지 알 수 없다(issueops list 선례).
+	ReadErrors  int                            `json:"read_errors,omitempty"`
 	Aggregate   IssueOpsReviewMetricsAggregate `json:"aggregate"`
 	Warnings    []string                       `json:"warnings,omitempty"`
 	GeneratedAt string                         `json:"generated_at"`

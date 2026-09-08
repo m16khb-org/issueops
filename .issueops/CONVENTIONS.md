@@ -86,8 +86,10 @@ agent가 즉시 알아야 할 canonical 요약이다.
   새 durable 필드도 만들지 않는다. `--id`와 `--repo`는 정확히 하나만 쓴다.
 - `issueops next`의 `review`는 host planner 기본 모델과 함께 변경 집합 티어
   (`docs-only|contract|schema-auth|default`), 적용할 렌즈, 티어별 effort를 돌려준다.
-  티어 계산은 implement 이후 phase에서만 일어난다. 리뷰어 effort의 소유자는 이 출력
-  하나이며 owner prompt에 정적으로 박지 않는다.
+  티어 계산은 implement 이후 phase에서만 일어난다. 스킬 경로(`issueops-review`,
+  `issueops-verify`)의 리뷰어 effort는 이 출력이 소유한다. owner prompt의
+  `{REVIEWER_EFFORT}`는 아직 prepare 시점 planner 기본값이며 티어를 반영하지 않는다.
+  owner가 검증 시점에 `.review`를 읽게 하는 프롬프트 한 줄은 미구현이다.
 
 ## 이슈 산출물 레이아웃
 

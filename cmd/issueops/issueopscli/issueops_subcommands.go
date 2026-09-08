@@ -518,6 +518,12 @@ func runIssueOpsReviewMetrics(args []string) error {
 	}
 	result, err := issueOpsCLIDeps.IssueOpsReviewMetrics(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *repo)
 	if err != nil {
+		// 다른 issueops 명령과 같은 오류 형태를 낸다: --json이면 {"ok":false,"error":...}.
+		if *jsonOut {
+			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
+				return printErr
+			}
+		}
 		return err
 	}
 	if *jsonOut {

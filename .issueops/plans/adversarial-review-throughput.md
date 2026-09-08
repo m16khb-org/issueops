@@ -468,6 +468,20 @@
 ## Commit Strategy
 태스크당 커밋 하나, 총 8개. 순서는 T1 → T2 → T3 → T5 → T4 → T6 → T7 → T8. 형식은 `.issueops/COMMIT_POLICY.md`의 Conventional + Lore. 각 커밋 시점에 `go test ./... -count=1`이 통과해야 하므로 골든은 그 태스크가 재생성한다(T1 usage, T6 owner prompt·response contract, T8 `.issueops` 변경분). 이 저장소에서 IssueOps 사이클로 진행하면 8단계 `atomic-commit-push`가 같은 분할을 쓴다.
 
+## 미구현으로 남긴 범위 (2026-09-08)
+
+실행 중 제3자가 같은 워킹 트리에서 세션 선택 모델을 자동 인계로 바꾸는 편집을
+시작했다. 그 미커밋 변경을 덮어쓰지 않기 위해 다음 셋을 남겼다.
+
+| 남긴 것 | 이유 | 재개 조건 |
+|---|---|---|
+| T5 전체 (plan-prep fan-out) | `skills/issueops-create-issue`·`issueops-plan` 두 파일만 고치는 작업인데 둘 다 편집 중 | 그 편집이 커밋되면 두 절을 추가한다 |
+| T6.6 owner prompt 한 줄 | `testdata/execution_owner_prompt.txt`는 편집 중인 `.issueops/prompt-engineering/prompts/issueops-v1-owner-execution-v1.md`와 byte-for-byte 짝이다 | 프롬프트 문서가 커밋되면 두 파일에 같은 줄을 넣고 골든 2종을 재생성한다 |
+| T8의 AGENT_WORKFLOW 한 줄 | 그 파일도 편집 중 | 위와 같다 |
+
+그 결과 `.issueops/CONVENTIONS.md`의 `next.review` 항목은 스킬 경로에만 참이며,
+owner prompt 경로는 여전히 prepare 시점 planner 기본값을 쓴다고 명시해 두었다.
+
 ## Success Criteria
 - 새 사이클에서 `review-metrics`가 라운드·판정·단계 소요를 보여 준다.
 - docs-only 변경의 검증 단계가 medium effort 리뷰어와 side effect 렌즈 하나로 끝난다.
