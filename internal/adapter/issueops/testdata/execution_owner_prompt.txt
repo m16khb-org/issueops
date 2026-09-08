@@ -99,12 +99,12 @@ Required skills:
    side effect, rollback, verification을 검토한다. blocker가 있으면 승인하지 말고 종료한다. blocker가
    없을 때만 아래 placeholder를 검토 결과의 리터럴 값으로 채워 compatibility-review를 승인·기록한다:
    {COMPATIBILITY_REVIEW_COMMAND}
-10. 구현 진입 전에 required skill `issueops`의 "한 번의 실행 방식 선택"을 적용한다.
-   이미 현재 세션·새 세션 중 하나를 고른 사이클은 인계문과 status의 실제 선택 기록·범위·종료점을
-   대조하고 재질문 없이 이어간다. 보류 기록은 구현 승인이 아니다. 아직 선택하지 않았다면 실제
-   holder가 준비된 branch/worktree를 보여 주고 현재 세션·같은 worktree의 새 세션·보류를 한 번 묻는다.
-   새 세션 선택이면 같은 worktree의 lease를 인계하며 기존 세션은 구현하지 않는다.
-   phase나 claim 성공을 사람의 승인으로 해석하지 않는다. 확인 뒤에는 같은 lifecycle ID로
+10. 구현 진입 전에 required skill `issueops`의 "환경별 자동 세션 인계"를 따른다.
+   이미 인계받은 owner는 인계문과 status의 실제 결정 기록·범위·종료점을 대조하고 이어간다.
+   Orca에서 실행 중이라는 이유로 자동 인계를 다시 적용하거나 새 세션을 띄우지 않는다.
+   아직 인계하지 않은 준비 세션만 Orca ready이면 새 세션, absent/unready이면 현재 세션으로
+   자동 결정한다. 실행 방식이나 진행 여부를 묻지 않는다. 보류·범위 제한 등 최신 지시가 우선한다.
+   자동 결정과 phase/claim 성공은 승인 범위를 넓히지 않는다. 확인 뒤에는 같은 lifecycle ID로
    승인된 draft PR/MR 발행·execution complete까지 진행하며 단계별 재승인을 요구하지 않는다.
    compatibility review와 execution readiness를 확인한다. 다음 command가 `none`이 아니면 exact command로
    implement phase에 진입하고, 이 전이가 성공하기 전에는 구현 파일을 수정하지 않는다. `none`이면 현재 phase가 이미 implement 이후이므로

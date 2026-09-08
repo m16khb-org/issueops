@@ -145,7 +145,7 @@ which stage a cycle is in, so every host gets the same answer.
 |---|---|---|
 | 1 Confirm and create the issue | `issueops-create-issue` | Settles the contract through research and blocking questions, then creates the issue |
 | 2 Prepare the branch | `issueops-prepare` | Seals the base SHA and links the branch to the issue |
-| 3 Read docs, plan, review, hand off | `issueops-plan` | Reads the operating docs, writes the plan, passes review, and asks for the session choice |
+| 3 Read docs, plan, review, hand off | `issueops-plan` | Reads the operating docs, writes the plan, passes review, and picks the execution session automatically |
 | 4 Implement | `issueops-implement` | Implements with TDD in the canonical worktree |
 | 5 Clean AI slop | `issueops-clean` | Removes residue and seals the change set |
 | 6 Reflect into project docs | `issueops-docs` | Records decisions and pitfalls in the operating docs and reseals |
@@ -154,10 +154,13 @@ which stage a cycle is in, so every host gets the same answer.
 | 9 Publish the PR/MR and complete | `issueops-create-pr`, `issueops-complete` | Creates the draft and seals the completion evidence |
 | 10 Clean up after merge | `issueops-cleanup` | Closes the issue and reclaims the worktree and branch |
 
-A cycle asks the user exactly one question. After the branch and worktree are
-ready, the user chooses once between continuing in the current session, handing
-off to a new session in the same worktree, or holding. Leaving a cycle from any
-stage belongs to `issueops-abandon`. Procedures shared by several stages live in
+A normal cycle asks nothing about where to run. Once the branch and worktree are
+ready, it checks whether the Orca runtime reports ready: if it does, the work
+hands off to a new session in the same worktree, otherwise it continues in the
+current one. That branch decides only where the work runs; the original request's
+approved scope and endpoint are unchanged, and an explicit instruction to hold or
+to use a particular session wins over it. Leaving a cycle from any stage belongs
+to `issueops-abandon`. Procedures shared by several stages live in
 `issueops-review` (adversarial review), `gates-ledger` (gate ledgers), and
 `issueops-remote-write` (the remote write protocol).
 

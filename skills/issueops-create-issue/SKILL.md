@@ -104,7 +104,7 @@ issueops link-issue --id "$ISSUEOPS_ID" --issue-url "$ISSUE_URL" $RECORD_ACTOR_F
 `status --json`으로 확인하고 없을 때만 실행한다.
 
 이슈만 요청했으면 다음 세 줄로 완료 보고한다. 전체 작업 요청이면 진행 상황으로 알린 뒤
-같은 ID로 `issueops-prepare`를 실행한다. 실행 방식 선택은 worktree 준비 후 한 번 받는다.
+같은 ID로 `issueops-prepare`를 실행한다. worktree 준비 후 환경별 자동 세션 인계를 적용한다.
 
 ```text
 ISSUEOPS_ID: <id>

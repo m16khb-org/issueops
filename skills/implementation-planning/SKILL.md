@@ -436,9 +436,10 @@ Wave 2: [dependent tasks]
 
 When called by an IssueOps stage, return the completed plan to that stage and continue its
 authorized workflow. Do not add the standalone "Start Work / Verified Execution / Further Review"
-choice or a final user-approval gate. The IssueOps router owns one current-session/new-session/hold
-choice after branch/worktree preparation; either execution choice includes approval through the
-stated endpoint. Preserve any narrower user-requested stopping point.
+choice or a final user-approval gate. After branch/worktree preparation, the IssueOps router
+automatically hands off to a new session when Orca is ready and otherwise continues in the
+current session. This routing preserves the original authorization and endpoint; it does not
+grant additional approval. Preserve any narrower user-requested stopping point.
 
 When an IssueOps cycle exists (`issueops status --id "$ISSUEOPS_ID" --json`):
 

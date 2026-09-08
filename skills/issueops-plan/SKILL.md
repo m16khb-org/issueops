@@ -1,12 +1,12 @@
 ---
 name: issueops-plan
-description: Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then let the user choose the current session, a new session in that worktree, or hold before implementation. Use when "issueops next" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says "계획 세워줘", "계획 검토해줘", "구현 인계".
+description: Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then automatically hand off to a new session when Orca is ready or continue in the current session otherwise. Use when "issueops next" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says "계획 세워줘", "계획 검토해줘", "구현 인계".
 ---
 
 # IssueOps Plan
 
 이 스킬의 일은 **구현할 수 있는 계약을 만들고 구현 세션에 넘기는 것**이다. 구현은
-하지 않는다. 워크트리를 먼저 준비하고, 사용자가 실행 방식을 고른 뒤 구현으로 넘긴다.
+하지 않는다. 워크트리를 먼저 준비하고, 환경별 자동 세션 인계로 구현에 넘긴다.
 
 - 전체 흐름과 단계 판별: [`issueops`](../issueops/SKILL.md)
 - 계획 작성: [`implementation-planning`](../implementation-planning/SKILL.md)
@@ -28,7 +28,7 @@ issueops next --id "$ISSUEOPS_ID" --json
 ## 어디에서 실행하는가
 
 이 단계는 **source checkout의 준비 세션**이 수행한다. 워크트리는 아직 없다. 워크트리를
-만드는 것은 이 단계 끝의 `execution prepare`다. 기본 흐름은 direct로 준비해 세션 선택을 남겨 둔다.
+만드는 것은 이 단계 끝의 `execution prepare`다. 기본 흐름은 direct로 준비한 뒤 환경별 자동 세션 인계를 적용한다.
 
 그래서 계획 파일은 **source checkout 밖의 임시 파일**에 쓰고 `artifact stage`로 올린다.
 source checkout 안에 계획을 만들면 그 파일이 커밋 대상이 되고, 워크트리가 생긴 뒤에는
@@ -78,9 +78,9 @@ issueops docs --json
 `issueops link-plan`이 검사한다. 네 제목 중 하나라도 없는 계획은
 `plan is missing required sections`로 연결이 거부되므로, 제목을 바꾸거나 합치지 않는다.
 
-계획에 lifecycle ID, 사용자 요청 범위, 브랜치·worktree 준비 뒤의 실행 방식 선택,
-확인 후 종료점을 적어 Orca owner도 같은 경계를 알게 한다. 이 계획은 예정된 실행 범위이며
-사용자가 아직 하지 않은 확인의 증거가 아니다. 이미 읽은 plan-prep 조사와 문서는 변경이나
+계획에 lifecycle ID, 사용자 요청 범위, 브랜치·worktree 준비 뒤의 환경별 자동 세션 인계,
+승인된 종료점을 적어 Orca owner도 같은 경계를 알게 한다. 자동 인계는 사용자 요청 범위를
+넓히지 않는다. 이미 읽은 plan-prep 조사와 문서는 변경이나
 새 질문이 없으면 재사용한다. 작업 규모에 맞춰 필요한 검증 명령을 정하고, 같은 명령을
 게이트와 별도 검증 목록에 중복 등록하지 않는다.
 
@@ -161,23 +161,26 @@ issueops regress --id "$ISSUEOPS_ID" --reason "<리뷰 결론>" $RECORD_ACTOR_FL
 
 ## 인계
 
+사용자 요청이 계획 작성·검토까지라면 여기서 계획과 검토 결과를 보고하고 종료한다.
+아래 `execution prepare`, lease 발급, 새 세션 실행이나 구현 진입은 하지 않는다.
+이 경우 아래 인계 후 검증 항목도 적용하지 않는다.
+
 ```bash
 issueops execution whoami --json   # ACTOR_FLAGS 원문
 issueops execution prepare --id "$ISSUEOPS_ID" --mode direct \
-  --direct-reason "워크트리 준비 후 사용자가 실행 세션을 선택" \
+  --direct-reason "워크트리 준비 후 환경별 자동 세션 인계" \
   --owner-host "$HOST" $ACTOR_FLAGS --json        # preview
 # 출력의 next_command(--expected-readiness-fingerprint 포함)를 그대로 실행한다.
 ```
 
 이 기본 경로는 기존 direct API를 사용해 같은 세션에 lease를 부여하고 계획을
-materialize한다. Orca가 설치돼 있어도 선택 전에 새 세션을 띄우지 않는다. 반환된
-`resolved_mode`, canonical path, branch, 계획을 확인한 뒤
-[`issueops`](../issueops/SKILL.md)의 **한 번의 실행 방식 선택**을 받는다.
+materialize한다. 반환된 `resolved_mode`, canonical path, branch, 계획을 확인한 뒤
+[`issueops`](../issueops/SKILL.md)의 **환경별 자동 세션 인계**를 적용한다.
 
-1번이면 현재 holder가 구현으로 이어간다. 2번이면
-[session-choice.md](../issueops/references/session-choice.md)로 선택 기록과 lease를 인계한다.
-3번이면 같은 절차의 보류 경로를 따른다. 새 세션 선택 때문에 mode를 바꾸거나 worktree를
-다시 만들지 않는다. 선택 자체가 승인된 종료점까지의 진행 허가이므로 두 번째 질문은 없다.
+[session-choice.md](../issueops/references/session-choice.md)에 따라 Orca가 ready면
+현재 holder가 결정 기록과 release를 마치고 같은 worktree에 새 세션 하나를 띄운다.
+Orca가 없거나 unready면 lease를 유지하고 현재 세션에서 구현으로 이어간다.
+실행 방식이나 진행 여부를 묻지 않는다. 명시적인 보류·범위 제한은 우선한다.
 
 사용자가 명시적으로 Orca execution을 요청했거나 기존 사이클이 Orca mode면 그 core
 경로를 보존한다. `auto|orca` API의 의미는 바꾸지 않는다. planner gate 실패를 mode 변경으로
@@ -203,7 +206,7 @@ materialize한다. Orca가 설치돼 있어도 선택 전에 새 세션을 띄�
 |---|---|---|
 | source checkout 안에 계획 파일을 만든다 | 커밋 대상이 되고 워크트리 생성 뒤 계획이 두 곳에 존재한다 | 임시 디렉터리에 쓰고 `artifact stage` |
 | `git worktree add`를 실행한다 | Orca 경로가 이름 충돌로 깨진다 | `execution prepare`가 만들게 둔다 |
-| 세션 선택 전에 `--mode auto`로 새 owner를 띄운다 | 사용자가 현재 세션을 고를 수 없다 | 기본은 direct로 준비하고 실행 방식을 선택받는다 |
+| 세션 인계를 위해 `--mode auto`로 바꾸거나 worktree를 재생성한다 | execution mode와 native 세션 인계를 혼동한다 | direct로 준비한 같은 worktree에서 환경별 자동 세션 인계를 적용한다 |
 | 기존 동작에 대한 단언을 확인 없이 계획에 쓴다 | 저자가 몇 분이면 읽을 코드를 리뷰어가 읽게 되고, 틀린 단언 하나가 리뷰 라운드와 전면 개정을 부른다 | 스테이징 전에 명령으로 확인하고 `파일:라인`을 인용한다 |
 | 리뷰 없이 `--verdict pass`를 기록한다 | 게이트 연극이다 | `issueops-review`로 실제 리뷰를 돌린다 |
 | revise 판정을 `--waive`로 닫는다 | 지적이 반영되지 않은 채 구현으로 간다 | 계획을 고치고 다시 검토한다 |

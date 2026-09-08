@@ -24,17 +24,17 @@ description: Agent start, execution, verification, and completion flow.
 - 반복 실패, false case, 위험한 운영 주의는 MCP `project_docs_append(kind=caution)`으로 `.issueops/CAUTIONS.md`에 남긴다.
 - IssueOps 사이클 안에서 위 두 append의 시점은 `skills/issueops-docs/SKILL.md`가 소유한다. 구현 단계(4)의 append는 정리 봉인보다 앞서므로 그대로 두고, 정리 봉인(5) 뒤의 append는 문서 단계(6)가 재봉인하며, 검증(7) 이후의 append는 두 봉인을 stale로 만들어 `issueops next`가 문서 단계로 되돌린다. 계획 단계(3)에서 읽은 문서는 계획의 `## 적용되는 결정과 주의사항` 절에 남기고, `issueops link-plan`이 그 절을 포함한 네 필수 절의 존재를 검사한다.
 
-## IssueOps 실행 방식 선택
+## IssueOps 자동 세션 인계
 
-전체 사이클은 `skills/issueops/SKILL.md`의 한 번의 실행 방식 선택을 따른다. 일반 흐름은
+전체 사이클은 `skills/issueops/SKILL.md`의 환경별 자동 세션 인계를 따른다. 일반 흐름은
 이슈 확정·계획·리뷰 뒤 `execution prepare --mode direct`와 사유를 사용해 canonical
-worktree를 준비한다. 아직 새 세션은 띄우지 않는다. 준비된 branch/worktree와 계획·종료점을
-보여 주고 현재 세션(추천), 같은 worktree의 새 세션, 보류 중 하나를 선택받는다.
+worktree를 준비한다. Orca runtime이 ready면 같은 worktree의 새 세션으로 자동 인계하고,
+Orca가 없거나 unready면 현재 세션에서 이어간다. 실행 방식 메뉴나 진행 여부를 묻지 않는다.
 
-현재 세션·새 세션 선택은 승인된 범위의 구현·정리·문서 반영·검증·issue branch 커밋·푸시·
-draft PR/MR 발행·execution complete까지 허용한다. 사용자의 답변·대화 근거·ID·경로·범위·
-종료점을 기존 decision record에 남긴다. 새 세션 인계는 기존 holder의 release를 확인한 뒤
-같은 worktree에서 수행하며, 새 holder는 선택 기록을 확인하고 재승인 없이 이어간다.
+자동 결정은 원래 요청의 승인 범위·종료점을 유지한다. 환경 관찰값·원래 사용자 요청·
+대화 근거·ID·경로·범위·종료점을 기존 decision record에 남긴다.
+새 세션 인계는 기존 holder의 release를 확인한 뒤 같은 worktree에서 수행하며,
+새 holder는 기록을 확인하고 재질문이나 재인계 없이 이어간다.
 보류는 release 후 자원을 보존하며 구현을 허용하지 않는다. 구체적인 인계와 수동 시작
 경로는 `skills/issueops/references/session-choice.md`를 따른다.
 
@@ -121,8 +121,8 @@ Endpoint/controller/DTO/schema/OpenAPI 변경 시 `.issueops/OPEN_API_SPEC.md`�
 ## Execution v1 workflow
 
 After the provider-linked branch and exact base SHA are recorded, preview and
-confirm `issueops execution prepare --mode direct --direct-reason "<session-choice preparation reason>"`
-for the ordinary interactive flow, then choose the session. An explicitly requested GitHub Orca execution is the exception:
+confirm `issueops execution prepare --mode direct --direct-reason "<automatic session handoff reason>"`
+for the ordinary flow, then apply the environment-based automatic session handoff. An explicitly requested GitHub Orca execution is the exception:
 record the matching provider/issue identity and exact base SHA first, prepare
 the local-only Orca branch, then create and record the linked branch before
 plan linkage and implementation. Direct mode grants the calling native session
@@ -151,4 +151,4 @@ merge and destructive cleanup require separate authority.
 
 ## 10단계 흐름 요약
 
-1·2단계는 source checkout의 준비 세션이 `issueops-create-issue`와 `issueops-prepare`로 수행하며 lease를 갖지 않는다. 3단계 `issueops-plan`도 같은 세션이 수행하고, 기본은 `execution prepare --mode direct`로 워크트리를 준비한 뒤 현재 세션·새 세션·보류를 선택받는다. 선택 전 새 세션은 띄우지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다. 명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다. 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` → `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` → `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며 reflect-completion→close-issue→cleanup finish 순서를 지킨다(OPERATIONS.md 참조). 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이 일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은 `gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다.
+1·2단계는 source checkout의 준비 세션이 `issueops-create-issue`와 `issueops-prepare`로 수행하며 lease를 갖지 않는다. 3단계 `issueops-plan`도 같은 세션이 수행하고, 기본은 `execution prepare --mode direct`로 워크트리를 준비한 뒤 Orca가 ready면 새 세션으로 자동 인계하고, 없거나 unready면 현재 세션에서 이어간다. 실행 방식은 묻지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다. 명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다. 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` → `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` → `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며 reflect-completion→close-issue→cleanup finish 순서를 지킨다(OPERATIONS.md 참조). 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이 일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은 `gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다.

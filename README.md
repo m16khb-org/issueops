@@ -134,7 +134,7 @@ issueops start --repo "$PWD" --branch "123-short-description" --json
 |---|---|---|
 | 1 이슈 확정·생성 | `issueops-create-issue` | 조사와 blocking 질문으로 계약을 확정하고 이슈를 만듭니다 |
 | 2 브랜치 준비 | `issueops-prepare` | base SHA를 봉인하고 브랜치를 이슈에 연결합니다 |
-| 3 문서 확인·계획·검토·인계 | `issueops-plan` | 운영 문서를 읽고 계획을 쓰고 검토를 통과한 뒤 실행 방식을 선택받습니다 |
+| 3 문서 확인·계획·검토·인계 | `issueops-plan` | 운영 문서를 읽고 계획을 쓰고 검토를 통과한 뒤 실행 세션을 자동으로 정합니다 |
 | 4 구현 | `issueops-implement` | canonical worktree에서 TDD로 구현합니다 |
 | 5 AI slop 정리 | `issueops-clean` | 찌꺼기를 걷어 내고 변경 집합을 봉인합니다 |
 | 6 프로젝트 문서 반영 | `issueops-docs` | 결정과 함정을 운영 문서에 남기고 재봉인합니다 |
@@ -143,8 +143,10 @@ issueops start --repo "$PWD" --branch "123-short-description" --json
 | 9 PR/MR 발행·완료 | `issueops-create-pr`, `issueops-complete` | draft를 만들고 완료 증거를 봉인합니다 |
 | 10 머지 후 정리 | `issueops-cleanup` | 이슈를 닫고 worktree와 브랜치를 회수합니다 |
 
-사이클 중 사용자에게 묻는 지점은 하나뿐입니다. 브랜치와 worktree 준비가 끝난 뒤 현재
-세션에서 계속할지, 같은 worktree의 새 세션으로 넘길지, 보류할지를 한 번 고릅니다. 어느
+정상적인 사이클은 실행 방식을 묻지 않습니다. 브랜치와 worktree 준비가 끝나면 Orca
+런타임이 ready인지 확인해, ready면 같은 worktree의 새 세션으로 자동 인계하고 없거나
+unready면 현재 세션에서 이어갑니다. 이 분기는 실행 위치만 정하며 원래 요청의 승인 범위와
+종료점은 그대로입니다. 보류나 특정 세션을 지정한 최신 지시가 이 분기보다 우선합니다. 어느
 단계에서든 빠져나오는 길은 `issueops-abandon`이 맡습니다. 여러 단계가 함께 쓰는 절차는
 `issueops-review`(적대 리뷰), `gates-ledger`(게이트 원장), `issueops-remote-write`(원격 쓰기)로
 분리되어 있습니다.

@@ -59,10 +59,11 @@ git -C "$WORKTREE" status --porcelain
 holder가 이 세션이 아니거나 generation이 다르면 구현하지 않고 아래 회복 표를 따른다.
 worktree의 branch·HEAD가 record와 다르거나 무관한 dirty 변경이 있으면 멈춘다.
 
-이 실측 뒤, 아래 진입 절차 전에 [`issueops`](../issueops/SKILL.md)의 **한 번의 실행 방식
-선택**이 있었는지 확인한다. 현재 세션·새 세션 중 하나를 선택한 기록과 승인 범위가 있으면
-다시 묻지 않는다. 새 세션은 인계문과 `status`의 실제 결정을 대조하고 자기 lease로
-인수한 뒤 이어간다. 보류는 구현 승인이 아니다. 아직 선택하지 않았다면 공용 라우터가 묻는다.
+이 실측 뒤, 아래 진입 절차 전에 [`issueops`](../issueops/SKILL.md)의 **환경별 자동 세션
+인계** 기록과 원래 요청의 승인 범위를 확인한다. 새 세션은 인계문과 `status`의 실제
+결정을 대조하고 자기 lease로 인수한 뒤 이어간다. 이미 인계받은 세션은 환경 분기를
+다시 적용하거나 새 세션을 띄우지 않는다. 보류는 구현 승인이 아니다. 아직 인계하지 않은
+준비 세션이면 공용 라우터의 자동 분기를 적용하며 실행 방식을 묻지 않는다.
 
 ## 진입 절차
 
@@ -101,7 +102,7 @@ blocker가 하나라도 있으면 compatibility review는 승인되지 않는다
 - 검증은 변경 범위에 집중한 명령을 실행하고 명령과 결과를 그대로 기록한다.
   실행하지 않은 검증을 `pass`로 적지 않는다.
 - commit·push는 승인된 종료점에 포함되어 있으면 [`atomic-commit-push`](../atomic-commit-push/SKILL.md)로
-  이어간다. 실행 방식 선택에서 허용된 issue branch의 publication을 다시 묻지 않는다.
+  이어간다. 원래 요청에서 허용된 issue branch의 publication을 다시 묻지 않는다.
 - API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다.
 - RED/GREEN 증거는 [`gates-ledger`](../gates-ledger/SKILL.md)로
   `.issueops/issues/<n>/gates.md`에 `gates check --write`로 채운다.

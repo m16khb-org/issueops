@@ -32,30 +32,26 @@ issueops next --json
   그 결과만 제공한다. 사용자가 새 사이클을 요청하면 기존 후보와 별개로 시작한다.
 - `blocked.*`는 아래 중단 규칙을 따른다. 다른 holder의 작업을 대신하거나 상태를 우회하지 않는다.
 
-## 한 번의 실행 방식 선택
+## 환경별 자동 세션 인계
 
-전체 IssueOps 작업의 기본 확인 지점은 **브랜치·canonical worktree 준비 완료 후,
-구현 진입 전**이다. 이슈 확정 후 브랜치 준비·계획·리뷰·worktree provisioning은 이어서
-수행하되 새 세션은 아직 띄우지 않는다. 시작 전에 이 선택 지점과 이후 종료점이 draft PR/MR 발행·execution complete임을
-알린다. 사용자가 이슈 작성·계획만 요청했으면 그 범위에서 끝낸다.
+전체 IssueOps 작업은 **브랜치·canonical worktree 준비 완료 후, 구현 진입 전**에
+환경에 따라 실행 세션을 자동으로 정한다. 현재 세션·새 세션·보류 메뉴를 묻지 않는다.
+전체 사이클 요청의 종료점은 draft PR/MR 발행·execution complete이며, 사용자가
+이슈 작성·계획만 요청했거나 더 좁은 종료점을 정했으면 그 범위에서 끝낸다.
 
-- `issueops-plan`이 direct mode로 워크트리를 먼저 준비한다. 현재 holder가 실측한
-  이슈·브랜치·worktree 경로·계획 요약·종료점을 보여 준 뒤 아래 선택을 한 번 받는다.
-
-  1. **현재 세션에서 계속 (추천)**: 준비된 worktree에서 구현한다.
-  2. **같은 worktree의 새 세션에서 계속**: 계획·진행 상태·승인 범위를 인계한다.
-  3. **여기서 보류**: 작업 권한을 해제하고 준비 상태를 보존한다.
-
-- 1·2번 선택은 구현·정리·문서 반영·검증·issue branch 커밋·푸시·draft PR/MR 발행·
-  execution complete까지의 승인이다. 구현 진입과 테스트는 선택 뒤에 시작한다.
-  3번은 구현 승인이 아니다. merge·배포·force push·파괴적 cleanup은 포함하지 않는다.
-- "ㅇㅇ", "진행해"는 선택지를 보여 주며 기본값을 설명한 경우 1번으로 처리한다.
-  선택 방식이 모호하거나 답이 없으면 대신 고르지 않는다. 더 좁은 종료점이나 취소,
-  선택을 생략하고 특정 방식으로 진행하라는 명시적 지시는 우선한다.
-- 선택 기록·lease 해제·새 세션 인계는 [session-choice.md](references/session-choice.md)를
-  따른다. 새 세션은 실제 승인 기록을 읽고 이어가며 같은 선택이나 진행 승인을 다시 묻지
-  않는다. 기록은 사용자 답변의 근거를 보존하며, phase·claim·`--approved`만으로 승인을
-  만들지 않는다. 진행 중인 이전 버전 사이클도 실행 방식을 바꾸려고 worktree를 재생성하지 않는다.
+- `issueops-plan`이 direct mode로 워크트리를 먼저 준비한다. 설치된 `orca-cli` 안내를
+  읽고 `orca status --json`의 `runtime.state == "ready"`인지 확인한다.
+  ready면 같은 worktree의 새 세션으로 자동 인계하고, Orca가 없거나 unready면
+  현재 세션에서 이어간다. 바이너리 설치 여부만으로 ready라고 판단하지 않는다.
+- 기록·lease 해제·새 세션 실행은 [session-choice.md](references/session-choice.md)를
+  따른다. 새 세션은 인계 기록을 읽고 이어가며 자동 분기를 다시 적용해 또 다른 세션을
+  띄우지 않는다. 이미 인계받은 Orca owner도 동일하다.
+- 자동 분기는 실행 위치만 정한다. 원래 요청의 승인 범위·종료점을 그대로 유지하며,
+  구현만 요청한 작업에 commit·push·PR/MR 발행 권한을 추가하지 않는다.
+  phase·claim·`--approved`도 승인 근거가 아니다.
+- 현재 세션 진행·새 세션·보류를 명시한 최신 사용자 지시는 자동 분기보다 우선한다.
+  보류는 lease를 해제하고 준비 상태를 보존한다. 기존 worktree와 execution mode는
+  세션 인계를 이유로 바꾸거나 다시 만들지 않는다.
 
 단계 스킬과 함께 쓰는 계획·검증·Git 스킬도 이 승인 범위와 종료점을 따른다.
 하위 스킬의 일반적인 "계속할까요" 절차를 추가 확인 지점으로 만들지 않는다.
@@ -88,7 +84,7 @@ Issue 단계에서 PR/MR 스킬을, PR/MR 단계에서 Issue 스킬을 함께 �
 
 - **1·2단계는 source checkout의 준비 세션**이 수행한다. 워크트리는 아직 없다.
 - **3단계**도 같은 세션이 수행한다. 기본은 `execution prepare --mode direct`로
-  워크트리만 준비하고 위 실행 방식을 선택받는다. Orca 설치 여부로 세션을 자동 선택하지 않는다.
+  워크트리를 준비하고 위 환경별 자동 세션 인계를 적용한다.
 - **4단계 이후는 선택한 세션**이 canonical worktree에서 수행한다. 현재 세션은 기존
   lease를 유지하고, 새 세션은 이전 holder의 release를 확인한 뒤 같은 worktree를 인수한다.
   사용자가 명시적으로 요청한 Orca execution과 이미 존재하는 Orca 사이클은 기존 core 경로를 따른다.
@@ -207,7 +203,7 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
 - 변경 집합에 마이그레이션·엔티티·SQL 스키마 파일이 있으면 실제 데이터베이스에서
   인덱스 현황과 대상 테이블 row 수를 관찰해 관찰값과 출처를 기록한다.
 - Git staging/push는 `atomic-commit-push`, 고급 history 작업은 `git-operations`가
-  소유한다. 위 실행 방식 선택에서 승인된 issue branch의 commit·push는 다시 묻지 않는다.
+  소유한다. 원래 요청에서 승인된 issue branch의 commit·push는 다시 묻지 않는다.
 - destructive cleanup은 exact target과 fingerprint를 preview한 뒤 별도 사용자
   승인을 받는다.
 
@@ -226,7 +222,7 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
 | `references/remote-issue.md` | provider relation과 hierarchy |
 | `references/evidence-contract.md` | domain/API/live/review/completion evidence |
 | `references/execution.md` | direct/Orca, generation, claim/recovery/publication |
-| `references/session-choice.md` | 준비 후 현재 세션·새 세션·보류 선택, 승인 기록과 인계 |
+| `references/session-choice.md` | 환경별 자동 세션 결정, 승인 근거 기록과 인계 |
 | `references/orchestration.md` | delegated child contract |
 | `references/review-feedback.md` | feedback·thread resolution |
 | `references/cleanup-state.md` | post-merge cleanup |
@@ -249,9 +245,9 @@ stale 판정이나 테스트 실패 자체를 사용자에게 진행 여부를 �
 - label·assignee·한국어 body·target branch·live readback이 검증되지 않았다.
 - merge evidence 없이 cleanup을 요청한다.
 
-사이클이 정상적으로 흘러갈 때 사용자에게 묻는 지점은 **실행 방식 선택 하나뿐**이다.
-준비를 끝낸 뒤 현재 세션·새 세션·보류를 고르는 그 지점 말고는, 조사·문서·관례로 답할
-수 있는 것을 묻지 않는다. 근거가 한쪽을 가리키면 그쪽으로 진행하고 판단 근거를 보고에
+정상적인 사이클에서는 실행 방식을 묻지 않고 환경별 자동 세션 인계를 적용한다.
+조사·문서·관례로 답할 수 있는 것도 묻지 않는다.
+근거가 한쪽을 가리키면 그쪽으로 진행하고 판단 근거를 보고에
 적는다. 그밖에 묻는 경우는 조사로도 해소되지 않는 요구사항 모호함, 승인 범위를 바꾸는
 결정, 필요한 권한·자격 증명, 또는 안전한 자동 복구가 불가능한 충돌로 한정한다.
 질문에는 필요한 결정과 그 근거를 적는다. 동일 blocker가 두 번의 복구 시도에도 그대로면
