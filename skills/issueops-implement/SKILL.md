@@ -77,7 +77,7 @@ issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json
 ```
 
 - `merge_needed`가 false면 그대로 진행한다.
-- true이고 `conflict_files`가 비었으면 `--apply --confirm --fingerprint <preview의 값>`으로
+- true이고 `conflict_files`가 비었으면 `--apply --confirm --fingerprint <preview의 값> $ACTOR_FLAGS`로
   반영한다. **이 apply는 지금, 즉 봉인이 하나도 없는 4단계 진입에서만 한다.** 반영하면
   변경 집합이 봉인된 `BranchPrepare.BaseSHA` 기준으로 잡히므로 base가 바꾼 파일이 이
   사이클의 diff·티어·리뷰 대상에 들어온다. 그 사실을 계획의
