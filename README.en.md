@@ -193,6 +193,10 @@ These gates exist in the CLI for the operating docs:
   `next` returns the cycle to stage 6.
 - The gate applies to every record from implement onward, with or without an
   execution lease.
+- `issueops devils-advocate review` accepts at most three unwaived `revise` verdicts
+  per plan phase. The fourth is refused, and the error names the exits that are
+  actually open: record `stop`, reflect it, then `regress`, or take the round with
+  an explicit waiver.
 
 Hooks carry no enforcement. The 2026-08-27 decision removed every legacy
 enforcement hook, and a hook that announces the stage was rejected because it
@@ -246,10 +250,10 @@ Five boundaries hold:
 | Workflow | `issueops`, `loop`, `gates`, `channel` | Durable workflow, completion gate ledgers, cross-session message channels |
 | Docs and hooks | `project`, `hook` | Project doc creation, routing, and refresh; the `SessionStart` context hook entry point |
 | State and runtime | `state`, `daemon`, `mcp`, `worker` | User state, MCP backend, limited local jobs |
-| Improvement and research | `self-verify`, `self-augment`, `web-fetch` | Harness verification, improvement candidates, resilient public web fetches |
+| Improvement and research | `self-verify`, `self-augment`, `web-fetch`, `review-metrics` | Harness verification, improvement candidates, resilient public web fetches, adversarial-review round and verdict metrics |
 
 The full command and MCP tool contract comes from the built binary. The current
-checkout's response contract defines 29 top-level CLI commands and 51 MCP tools.
+checkout's response contract defines 64 CLI commands and 51 MCP tools.
 
 ```bash
 issueops --help

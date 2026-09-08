@@ -81,6 +81,13 @@ agent가 즉시 알아야 할 canonical 요약이다.
 - `doctor`는 기본 read-only. `state doctor`는 checkpoint store 무결성 전용.
 - IssueOps 상태머신 reducer 계약과 외부 orchestration adapter 경계는
   [`conventions/state-policy-and-hooks.md`](conventions/state-policy-and-hooks.md).
+- `issueops review-metrics (--id ID | --repo PATH)`는 적대 리뷰의 라운드·판정 분포·
+  regress 수·단계 소요를 record에서 파생하는 읽기 전용 조망이다. record를 쓰지 않으며
+  새 durable 필드도 만들지 않는다. `--id`와 `--repo`는 정확히 하나만 쓴다.
+- `issueops next`의 `review`는 host planner 기본 모델과 함께 변경 집합 티어
+  (`docs-only|contract|schema-auth|default`), 적용할 렌즈, 티어별 effort를 돌려준다.
+  티어 계산은 implement 이후 phase에서만 일어난다. 리뷰어 effort의 소유자는 이 출력
+  하나이며 owner prompt에 정적으로 박지 않는다.
 
 ## 이슈 산출물 레이아웃
 

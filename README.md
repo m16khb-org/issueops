@@ -176,6 +176,9 @@ IssueOps는 규칙을 세 층으로 나눕니다. 어느 층에 둘지는 실수
   `--reviewed-doc`으로 하나 이상 적어야 통과합니다. 판정은 변경 집합 fingerprint에 묶이므로
   이후 diff가 바뀌면 `project_docs_review_stale`이 되어 `next`가 6단계로 되돌립니다.
 - 이 게이트는 실행 lease 유무와 무관하게 implement 이후 모든 record에 걸립니다.
+- `issueops devils-advocate review`는 같은 계획 단계에서 waive하지 않은 `revise`를 세
+  번까지만 받습니다. 네 번째는 거부하고, 열려 있는 탈출 경로(`stop` 기록 → 반영 →
+  `regress`, 또는 waiver)를 오류 문구가 안내합니다.
 
 hook에는 enforcement가 없습니다. 2026-08-27 결정으로 legacy enforcement hook을 모두 삭제했고,
 stage를 hook이 알려 주는 방식도 stage 판별이 두 곳에 생긴다는 이유로 기각했습니다. 근거는
@@ -228,10 +231,10 @@ flowchart LR
 | 작업 흐름 | `issueops`, `loop`, `gates`, `channel` | durable workflow, 완료 게이트 원장, 세션 간 메시지 채널 |
 | 문서와 hook | `project`, `hook` | project docs 생성·라우팅·갱신과 `SessionStart` context hook 진입점 |
 | 상태와 실행 | `state`, `daemon`, `mcp`, `worker` | user state, MCP backend, 제한된 local job 관리 |
-| 개선과 조사 | `self-verify`, `self-augment`, `web-fetch` | 하네스 검증, 개선 후보 탐색, 실패에 대응하는 공개 웹 조회 |
+| 개선과 조사 | `self-verify`, `self-augment`, `web-fetch`, `review-metrics` | 하네스 검증, 개선 후보 탐색, 공개 웹 조회, 적대 리뷰 라운드·판정 지표 |
 
 전체 명령과 MCP 도구 계약은 빌드된 바이너리에서 확인합니다. 현재 체크아웃의 response
-contract에는 최상위 CLI 명령 29개와 MCP 도구 51개가 정의되어 있습니다.
+contract에는 CLI 명령 64개와 MCP 도구 51개가 정의되어 있습니다.
 
 ```bash
 issueops --help
