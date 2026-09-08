@@ -25,6 +25,21 @@ func TestPathIsSchemaChangeAcceptsOnlyCertainSignals(t *testing.T) {
 	}
 }
 
+// 어댑터에서 옮겨 오며 경로 정규화에 `\\` -> `/` 치환이 붙었다. git은 항상 `/`를
+// 내보내므로 실제 입력 집합은 옛 규칙과 같고, Windows 구분자에서만 더 넓다.
+// 우연이 아니라 의도임을 여기서 고정한다.
+func TestPathIsSchemaChangeAlsoAcceptsWindowsSeparators(t *testing.T) {
+	if !PathIsSchemaChange(`db\migrations\001.rb`) {
+		t.Fatal("a backslash-separated migrations path must classify like its slash form")
+	}
+	if !PathIsSchemaChange("db/migrations/001.rb") {
+		t.Fatal("the slash form must keep classifying")
+	}
+	if got := ClassifyChangeTier([]string{`db\migrations\001.rb`}); got != ChangeTierSchemaAuth {
+		t.Fatalf("tier = %q, want schema-auth", got)
+	}
+}
+
 func TestClassifyChangeTierRanksSchemaAuthAboveContractAndDocs(t *testing.T) {
 	for _, testCase := range []struct {
 		name  string

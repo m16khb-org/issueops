@@ -398,7 +398,8 @@
   **Acceptance Criteria**:
   - [ ] `python3 scripts/validate-skill.py skills/issueops-verify` exit 0.
   - [ ] `rg -n "동시에|review.tier|검증할 주장|리뷰 결과를 버리고" skills/issueops-verify/SKILL.md` 각 1건 이상.
-  - [ ] `rg -n "문서 반영과 동시|정리와 동시|check --write" skills/issueops-verify/SKILL.md` 0건.
+  - [ ] `rg -n "문서 반영과 동시|정리와 동시" skills/issueops-verify/SKILL.md` 0건.
+        `check --write`의 유일한 매치는 나쁜 예의 금지 문장이며 허용 문구가 아니다.
 
   **QA Scenarios**:
   ```
@@ -411,7 +412,7 @@
   Scenario: 렌즈 분할 조건이 스킬에만 있다
     Channel: bash
     Steps: rg -n "parallel-allowed" internal/ skills/
-    Expected: 0건
+    Expected: 프로덕션 코드와 스킬 본문 0건. 부재를 단언하는 change_paths_test.go 한 줄은 예외
     Evidence: .issueops/evidence/task-7-verify-skill-error.txt
   ```
 
@@ -463,7 +464,7 @@
 - [ ] F1. Plan Compliance Audit — T1–T8의 What to do가 diff에 그대로 있는가. `git log --oneline -8`의 제목이 Commit 항목과 일치하는가.
 - [ ] F2. Code Quality Review — `issueops-clean` 절차로 AI slop 정리, `code-quality-metrics` 전후 비교, 죽은 코드·중복 판정(도메인 vs adapter, 코드 vs 스킬) 없음.
 - [ ] F3. Real Manual QA — 각 태스크 QA 시나리오를 실행하고 evidence 파일 존재 확인: `ls .issueops/evidence/task-*`가 16개.
-- [ ] F4. Scope Fidelity Check — Must NOT Have 일곱 항목이 diff에 없는가: `rg -n "PostToolUse|PreToolUse" configs/` 0건, fingerprint 분리 코드 없음, 스킬에 모델 이름 없음, `gates add` 없음, `parallel-allowed` 없음.
+- [ ] F4. Scope Fidelity Check — Must NOT Have 일곱 항목이 diff에 없는가: `rg -n "PostToolUse|PreToolUse" configs/` 0건, fingerprint 분리 코드 없음, 스킬에 모델 이름 없음, `gates add` 없음, `parallel-allowed`가 프로덕션 코드와 스킬 본문에 없음(부재 단언 테스트는 예외).
 
 ## Commit Strategy
 태스크당 커밋 하나, 총 8개. 순서는 T1 → T2 → T3 → T5 → T4 → T6 → T7 → T8. 형식은 `.issueops/COMMIT_POLICY.md`의 Conventional + Lore. 각 커밋 시점에 `go test ./... -count=1`이 통과해야 하므로 골든은 그 태스크가 재생성한다(T1 usage, T6 owner prompt·response contract, T8 `.issueops` 변경분). 이 저장소에서 IssueOps 사이클로 진행하면 8단계 `atomic-commit-push`가 같은 분할을 쓴다.
