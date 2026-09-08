@@ -47,6 +47,11 @@ func printIssueOpsNextText(result issueopsnextcontract.Result) {
 	for _, candidate := range result.Candidates {
 		fmt.Printf("candidate: %s phase=%s branch=%s\n", candidate.ID, candidate.Phase, candidate.Branch)
 	}
+	if result.Review.Model != "" || result.Review.Tier != "" {
+		fmt.Printf("review: model=%s effort=%s tier=%s lenses=%s\n",
+			issueOpsNextExit(result.Review.Model), issueOpsNextExit(result.Review.Effort),
+			issueOpsNextExit(result.Review.Tier), issueOpsNextExit(strings.Join(result.Review.Lenses, ",")))
+	}
 	if result.NextCommand != "" {
 		fmt.Printf("next: %s\n", result.NextCommand)
 	}

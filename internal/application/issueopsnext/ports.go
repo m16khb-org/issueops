@@ -20,8 +20,13 @@ type Ports struct {
 	// WriterlessCommand는 writer 없는 lease의 회복 명령이다.
 	WriterlessCommand func(record issueopscontract.IssueOpsRecord) string
 	PlannerDefaults   func(host string) (model, effort string, ok bool)
-	StagedArtifacts   func(stateRoot, id string) ([]string, error)
-	Actor             func() (host, sessionID string, err error)
+	// ChangedPaths는 봉인 대상 변경 집합의 경로다. observed가 false면 git으로
+	// 관측할 수 없었다는 뜻이며, nil과 빈 슬라이스를 구분해 추정하지 않는다.
+	// implement 이후 phase에서만 호출한다(git 읽기가 두 번 추가된다).
+	ChangedPaths        func(record issueopscontract.IssueOpsRecord) (paths []string, observed bool)
+	ReviewEffortForTier func(host, tier string) string
+	StagedArtifacts     func(stateRoot, id string) ([]string, error)
+	Actor               func() (host, sessionID string, err error)
 	// ProcessLive는 홀더 프로세스 관측이다. 관측하지 못하면 nil을 돌려주고,
 	// 분류기는 그것을 "살아 있다"로 본다.
 	ProcessLive func(receipt issueopscontract.NativeProcessReceipt) *bool

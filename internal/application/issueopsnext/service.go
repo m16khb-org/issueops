@@ -9,6 +9,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
+	issueopsdomain "issueops/internal/domain/issueops"
 	issueopsnextdomain "issueops/internal/domain/issueopsnext"
 )
 
@@ -94,7 +95,37 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		return result, nil
 	}
 	result.Selected = recordEntry(record)
-	return applyDecision(result, issueopsnextdomain.Classify(service.buildInput(stateRoot, sourceRoot, record, listing.Entries, actorHost, actorSession))), nil
+	decided := applyDecision(result, issueopsnextdomain.Classify(service.buildInput(stateRoot, sourceRoot, record, listing.Entries, actorHost, actorSession)))
+	return service.applyReviewTier(decided, record, actorHost), nil
+}
+
+// applyReviewTier는 선택된 사이클의 변경 집합으로 리뷰 티어·렌즈·effort를 채운다.
+// implement 이전 phase에는 봉인할 변경 집합이 없으므로 git을 읽지 않는다. 관측에
+// 실패하면 추정하지 않고 기본 티어와 경고를 남긴다.
+func (service *Service) applyReviewTier(
+	result issueopsnextcontract.Result,
+	record issueopscontract.IssueOpsRecord,
+	actorHost string,
+) issueopsnextcontract.Result {
+	ports := service.ports
+	tier := issueopsdomain.ChangeTierDefault
+	implementRank := issueopsdomain.IssueOpsPhaseRank(issueopscontract.IssueOpsPhaseImplement)
+	if issueopsdomain.IssueOpsPhaseRank(record.Phase) >= implementRank && ports.ChangedPaths != nil {
+		paths, observed := ports.ChangedPaths(record)
+		if observed {
+			tier = issueopsdomain.ClassifyChangeTier(paths)
+		} else {
+			result.Warnings = append(result.Warnings, "change set is unobservable, so the review tier falls back to default")
+		}
+	}
+	result.Review.Tier = string(tier)
+	result.Review.Lenses = issueopsdomain.ReviewLensesForTier(tier)
+	if ports.ReviewEffortForTier != nil && actorHost != "" {
+		if effort := ports.ReviewEffortForTier(actorHost, string(tier)); effort != "" {
+			result.Review.Effort = effort
+		}
+	}
+	return result
 }
 
 func (service *Service) buildInput(

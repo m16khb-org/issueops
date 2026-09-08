@@ -10,6 +10,7 @@ import (
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	issueopsnextinbound "issueops/internal/adapter/inbound/issueopsnext"
 	issueopscore "issueops/internal/adapter/issueops"
+	"issueops/internal/adapter/issueops/implementation"
 	issueopsinventoryoutbound "issueops/internal/adapter/outbound/issueopsinventory"
 	"issueops/internal/adapter/outbound/issueopsrecord"
 	preflightadapter "issueops/internal/adapter/preflight"
@@ -40,7 +41,11 @@ func issueOpsNextHandler(
 		LocalReadiness:    issueopscore.IssueOpsLocalPRReadiness,
 		WriterlessCommand: issueopscore.ExecutionWriterAbsentRecoveryCommand,
 		PlannerDefaults:   port.IssueOpsPlannerDefaults,
-		StagedArtifacts:   stagedArtifactNames,
+		// 변경 집합 관측은 implement 이후 phase에서만 일어나며 git을 두 번
+		// 읽는다(readiness 관측과 별개다).
+		ChangedPaths:        implementation.ObservedChangedPaths,
+		ReviewEffortForTier: port.IssueOpsReviewEffortForTier,
+		StagedArtifacts:     stagedArtifactNames,
 		Actor: func() (string, string, error) {
 			host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
 			return host, sessionID, err

@@ -3,6 +3,7 @@ package port
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -18,6 +19,23 @@ const (
 
 // IssueOpsPlannerDefaults는 host별 planner(reviewer급) 기본 모델/effort를
 // 반환한다.
+// IssueOpsReviewEffortDocsOnly는 문서만 바뀐 변경 집합의 리뷰 effort다. 적대
+// 리뷰의 비용을 변경 집합에 비례시키는 유일한 하향 분기다.
+const IssueOpsReviewEffortDocsOnly = "medium"
+
+// IssueOpsReviewEffortForTier는 티어별 리뷰 effort를 돌려준다. docs-only만
+// 낮추고 나머지는 host planner 기본값을 그대로 쓴다.
+func IssueOpsReviewEffortForTier(host string, tier string) string {
+	_, effort, ok := IssueOpsPlannerDefaults(host)
+	if !ok {
+		return ""
+	}
+	if strings.TrimSpace(tier) == "docs-only" {
+		return IssueOpsReviewEffortDocsOnly
+	}
+	return effort
+}
+
 func IssueOpsPlannerDefaults(host string) (model string, effort string, ok bool) {
 	switch host {
 	case "codex":

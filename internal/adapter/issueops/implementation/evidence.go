@@ -232,3 +232,13 @@ func cleanRelativePath(path string) string {
 	}
 	return filepath.ToSlash(path)
 }
+
+// ObservedChangedPaths는 ChangedPaths와 같은 관측이되 git 루트를 찾았는지를 함께
+// 돌려준다. 호출자가 nil과 빈 슬라이스 구분에 기대지 않도록 명시 값으로 넘긴다.
+func ObservedChangedPaths(record model.IssueOpsRecord) ([]string, bool) {
+	gitRoot := changeGitRoot(record)
+	if gitRoot == "" {
+		return nil, false
+	}
+	return changedPathsIn(record, gitRoot), true
+}
