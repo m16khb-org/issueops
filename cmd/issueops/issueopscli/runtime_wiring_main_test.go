@@ -32,6 +32,7 @@ import (
 
 	issueopsnextinbound "issueops/internal/adapter/inbound/issueopsnext"
 	issueopsnextapplication "issueops/internal/application/issueopsnext"
+	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 )
 
@@ -85,20 +86,35 @@ func wireIssueOpsRuntimeForTests() {
 		Now:        time.Now,
 	})
 	ConfigureIssueOpsRuntime2(IssueOpsCLIDeps{
-		AcceptIssueOpsChildWithActor:                issueopscore.AcceptIssueOpsChildWithActor,
-		AddIssueOpsDecisionWithActor:                decisions.AddWithActor,
-		DropIssueOpsChildWithActor:                  issueopscore.DropIssueOpsChildWithActor,
-		IssueOpsChildStatusWithActor:                issueopscore.IssueOpsChildStatusWithActor,
-		IssueOpsPRReadiness:                         issueopscore.IssueOpsPRReadiness,
-		IssueOpsNext:                                issueopsnextinbound.NewNextHandler(next),
-		IssueOpsStateRoot:                           issueopscore.IssueOpsStateRoot,
-		IssueOpsStatus:                              issueopsstatusinbound.NewStatusHandler(status),
-		LinkIssueOpsChildWithActor:                  issueopscore.LinkIssueOpsChildWithActor,
-		LinkIssueOpsIssueWithActor:                  issueopscore.LinkIssueOpsIssueWithActor,
-		LinkIssueOpsPlanWithActor:                   issueopscore.LinkIssueOpsPlanWithActor,
-		LinkIssueOpsRelatedWithActor:                issueopscore.LinkIssueOpsRelatedWithActor,
-		LinkIssueOpsWorktreeWithActor:               issueopscore.LinkIssueOpsWorktreeWithActor,
-		ListIssueOpsCycles:                          listCycles,
+		AcceptIssueOpsChildWithActor:  issueopscore.AcceptIssueOpsChildWithActor,
+		AddIssueOpsDecisionWithActor:  decisions.AddWithActor,
+		DropIssueOpsChildWithActor:    issueopscore.DropIssueOpsChildWithActor,
+		IssueOpsChildStatusWithActor:  issueopscore.IssueOpsChildStatusWithActor,
+		IssueOpsPRReadiness:           issueopscore.IssueOpsPRReadiness,
+		IssueOpsNext:                  issueopsnextinbound.NewNextHandler(next),
+		IssueOpsStateRoot:             issueopscore.IssueOpsStateRoot,
+		IssueOpsStatus:                issueopsstatusinbound.NewStatusHandler(status),
+		LinkIssueOpsChildWithActor:    issueopscore.LinkIssueOpsChildWithActor,
+		LinkIssueOpsIssueWithActor:    issueopscore.LinkIssueOpsIssueWithActor,
+		LinkIssueOpsPlanWithActor:     issueopscore.LinkIssueOpsPlanWithActor,
+		LinkIssueOpsRelatedWithActor:  issueopscore.LinkIssueOpsRelatedWithActor,
+		LinkIssueOpsWorktreeWithActor: issueopscore.LinkIssueOpsWorktreeWithActor,
+		ListIssueOpsCycles:            listCycles,
+		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
+			return issueopscore.ReviewMetrics(stateRoot, id, repo, issueopscore.ReviewMetricsDeps{
+				ListCycleIDs: func(stateRoot, repo string) ([]string, error) {
+					result, err := listCycles(stateRoot, repo)
+					if err != nil {
+						return nil, err
+					}
+					ids := make([]string, 0, len(result.Entries))
+					for _, entry := range result.Entries {
+						ids = append(ids, entry.ID)
+					}
+					return ids, nil
+				},
+			})
+		},
 		ObserveNativeProcessAncestry:                issueopscore.ObserveNativeProcessAncestry,
 		PrepareIssueOpsBranchWithActor:              issueopscore.PrepareIssueOpsBranchWithActor,
 		PruneIssueOps:                               issueopsretentioninbound.NewPruneHandler(retention),

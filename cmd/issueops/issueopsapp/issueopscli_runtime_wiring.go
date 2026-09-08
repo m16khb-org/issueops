@@ -18,20 +18,25 @@ func configureIssueOpsCLIRuntime() {
 	decisions := issueOpsDecisionHandlers(observer)
 	routing := issueOpsRoutingHandlers(observer)
 	issueopscli.ConfigureIssueOpsRuntime2(issueopscli.IssueOpsCLIDeps{
-		AcceptIssueOpsChildWithActor:   issueopscore.AcceptIssueOpsChildWithActor,
-		AddIssueOpsDecisionWithActor:   decisions.AddWithActor,
-		DropIssueOpsChildWithActor:     issueopscore.DropIssueOpsChildWithActor,
-		IssueOpsChildStatusWithActor:   issueopscore.IssueOpsChildStatusWithActor,
-		IssueOpsPRReadiness:            issueopscore.IssueOpsPRReadiness,
-		IssueOpsNext:                   issueOpsNextHandler(artifacts.Names, observer),
-		IssueOpsStateRoot:              issueopscore.IssueOpsStateRoot,
-		IssueOpsStatus:                 issueOpsStatusHandler(observer),
-		LinkIssueOpsChildWithActor:     issueopscore.LinkIssueOpsChildWithActor,
-		LinkIssueOpsIssueWithActor:     issueopscore.LinkIssueOpsIssueWithActor,
-		LinkIssueOpsPlanWithActor:      issueopscore.LinkIssueOpsPlanWithActor,
-		LinkIssueOpsRelatedWithActor:   issueopscore.LinkIssueOpsRelatedWithActor,
-		LinkIssueOpsWorktreeWithActor:  issueopscore.LinkIssueOpsWorktreeWithActor,
-		ListIssueOpsCycles:             issueOpsInventoryListHandler(observer),
+		AcceptIssueOpsChildWithActor:  issueopscore.AcceptIssueOpsChildWithActor,
+		AddIssueOpsDecisionWithActor:  decisions.AddWithActor,
+		DropIssueOpsChildWithActor:    issueopscore.DropIssueOpsChildWithActor,
+		IssueOpsChildStatusWithActor:  issueopscore.IssueOpsChildStatusWithActor,
+		IssueOpsPRReadiness:           issueopscore.IssueOpsPRReadiness,
+		IssueOpsNext:                  issueOpsNextHandler(artifacts.Names, observer),
+		IssueOpsStateRoot:             issueopscore.IssueOpsStateRoot,
+		IssueOpsStatus:                issueOpsStatusHandler(observer),
+		LinkIssueOpsChildWithActor:    issueopscore.LinkIssueOpsChildWithActor,
+		LinkIssueOpsIssueWithActor:    issueopscore.LinkIssueOpsIssueWithActor,
+		LinkIssueOpsPlanWithActor:     issueopscore.LinkIssueOpsPlanWithActor,
+		LinkIssueOpsRelatedWithActor:  issueopscore.LinkIssueOpsRelatedWithActor,
+		LinkIssueOpsWorktreeWithActor: issueopscore.LinkIssueOpsWorktreeWithActor,
+		ListIssueOpsCycles:            issueOpsInventoryListHandler(observer),
+		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
+			return issueopscore.ReviewMetrics(stateRoot, id, repo, issueopscore.ReviewMetricsDeps{
+				ListCycleIDs: issueOpsCycleIDLister(observer),
+			})
+		},
 		ObserveNativeProcessAncestry:   issueopscore.ObserveNativeProcessAncestry,
 		PrepareIssueOpsBranchWithActor: issueopscore.PrepareIssueOpsBranchWithActor,
 		RetargetIssueOpsBranchWithActor: func(stateRoot, id string, req issueopscontract.IssueOpsBranchRetargetRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {

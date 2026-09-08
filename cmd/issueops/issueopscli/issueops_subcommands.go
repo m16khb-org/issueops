@@ -506,6 +506,37 @@ func runIssueOpsSchemaEvidence(args []string) error {
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
+// runIssueOpsReviewMetrics는 적대 리뷰의 라운드·판정·단계 소요를 읽는 표면이다.
+// 읽기 전용이며 record를 바꾸지 않는다. `--id`와 `--repo`는 정확히 하나만 쓴다.
+func runIssueOpsReviewMetrics(args []string) error {
+	fs := flag.NewFlagSet("issueops review-metrics", flag.ContinueOnError)
+	id := fs.String("id", "", "single issueops id")
+	repo := fs.String("repo", "", "aggregate every cycle in this repository")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
+		return err
+	}
+	result, err := issueOpsCLIDeps.IssueOpsReviewMetrics(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *repo)
+	if err != nil {
+		return err
+	}
+	if *jsonOut {
+		return printJSON(result)
+	}
+	fmt.Printf(
+		"cycles: %d (reviewed %d, mean rounds %.2f, revise %.2f, stop %.2f)\n",
+		result.Aggregate.Cycles, result.Aggregate.ReviewedCycles,
+		result.Aggregate.MeanRounds, result.Aggregate.ReviseRatio, result.Aggregate.StopRatio,
+	)
+	for _, cycle := range result.Cycles {
+		fmt.Printf("  %s  phase=%s  rounds=%d  regress=%d\n", cycle.ID, cycle.Phase, cycle.DevilsAdvocateRounds, cycle.RegressCount)
+	}
+	for _, warning := range result.Warnings {
+		fmt.Printf("  warning: %s\n", warning)
+	}
+	return nil
+}
+
 // runIssueOpsList는 다중 사이클 조망 표면이다. span lock·repair 없이 전량
 // 읽고, scanned_records로 O(N) 비용을 관측 가능하게 한다(설계 v5 WS6).
 func runIssueOpsList(args []string) error {

@@ -378,6 +378,10 @@
           "name": "remote-score"
         },
         {
+          "description": "IssueOps review-metrics",
+          "name": "review-metrics"
+        },
+        {
           "description": "IssueOps routing-score",
           "name": "routing-score"
         },
@@ -394,7 +398,7 @@
           "name": "status"
         }
       ],
-      "hash": "ff7ec4da79957dae49beaee44780c7fe6a12057c10ff49a7618b36d93e96a8f8",
+      "hash": "f6b847a820c70aa6b031a143e6e81f5e40131b1dc66cc566817643db6086f021",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -6912,6 +6916,10 @@
                 "name": "remote-score"
               },
               {
+                "description": "IssueOps review-metrics",
+                "name": "review-metrics"
+              },
+              {
                 "description": "IssueOps routing-score",
                 "name": "routing-score"
               },
@@ -6928,7 +6936,7 @@
                 "name": "status"
               }
             ],
-            "hash": "ff7ec4da79957dae49beaee44780c7fe6a12057c10ff49a7618b36d93e96a8f8",
+            "hash": "f6b847a820c70aa6b031a143e6e81f5e40131b1dc66cc566817643db6086f021",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",

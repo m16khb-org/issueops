@@ -37,6 +37,7 @@ type IssueOpsCLIDeps struct {
 	LinkIssueOpsRelatedWithActor                func(stateRoot, id, linkType, relatedURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	LinkIssueOpsWorktreeWithActor               func(stateRoot, id, worktreePath string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	ListIssueOpsCycles                          func(stateRoot, repo string) (issueopsinventorycontract.ListResult, error)
+	IssueOpsReviewMetrics                       func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error)
 	ObserveNativeProcessAncestry                func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
 	PrepareIssueOpsBranchWithActor              func(stateRoot, id string, req issueopscontract.IssueOpsBranchPrepareRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RetargetIssueOpsBranchWithActor             func(stateRoot, id string, req issueopscontract.IssueOpsBranchRetargetRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
@@ -107,6 +108,9 @@ func ConfigureIssueOpsRuntime2(deps IssueOpsCLIDeps) {
 	}
 	if deps.ListIssueOpsCycles != nil {
 		issueOpsCLIDeps.ListIssueOpsCycles = deps.ListIssueOpsCycles
+	}
+	if deps.IssueOpsReviewMetrics != nil {
+		issueOpsCLIDeps.IssueOpsReviewMetrics = deps.IssueOpsReviewMetrics
 	}
 	if deps.ObserveNativeProcessAncestry != nil {
 		issueOpsCLIDeps.ObserveNativeProcessAncestry = deps.ObserveNativeProcessAncestry
@@ -230,6 +234,9 @@ func neutralIssueOpsCLIDeps() IssueOpsCLIDeps {
 		},
 		ListIssueOpsCycles: func(stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
 			return issueopsinventorycontract.ListResult{}, errIssueOpsCLINotConfigured
+		},
+		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
+			return issueopscontract.IssueOpsReviewMetricsResult{}, errIssueOpsCLINotConfigured
 		},
 		ObserveNativeProcessAncestry: func(pid int) ([]issueopscontract.NativeProcessReceipt, error) {
 			return nil, errIssueOpsCLINotConfigured

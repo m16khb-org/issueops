@@ -391,6 +391,10 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		repeatable: []string{"--finding", "--evidence"},
 		booleans:   []string{"--json"},
 	},
+	"review-metrics": {
+		values:   []string{"--id", "--repo"},
+		booleans: []string{"--json"},
+	},
 	"project-docs-review record": {
 		values:     []string{"--id", "--verdict", "--doc", "--reviewed-doc", "--evidence", "--host", "--session-id", "--agent-id", "--cwd"},
 		repeatable: []string{"--doc", "--reviewed-doc", "--evidence"},
