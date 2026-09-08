@@ -44,8 +44,17 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
    `--write`는 4·5단계가 소유한다.
 2. 스키마 실측(2절). 변경 집합에 스키마 파일이 있을 때만 활성화된다.
 3. 구현 리뷰 서브에이전트(3절).
+4. 화면 QA(`next`의 `review.frontend`가 true일 때만).
+   [`aside-web-qa`](../aside-web-qa/SKILL.md)에 네 입력을 이렇게 매핑한다.
+   TARGET=계획이나 이슈 본문의 로컬 실행 절차가 준 URL, SCOPE=변경 집합의 frontend 경로,
+   REQUIREMENTS=이슈의 성공 기준과 `gates.md`, INTENT=4단계 report의 `## UI 판단` 절.
+   넷 중 하나라도 없으면 지어내지 말고 QA를 `Not Run`으로 report에 사유와 함께 적는다.
+   보고서 출력 경로는 ignored 영역 `.issueops/issues/<n>/review/`나 워크트리 밖으로
+   고정한다 — 워크트리 안 미추적 파일은 fingerprint에 들어가 봉인을 깬다. 제품을 바꾸는
+   시나리오는 그 스킬의 allowed mutations·cleanup 계약 안으로 한정하고 정리 영수증을
+   report에 적는다. `aside-functional-qa`·`aside-visual-qa`를 직접 부르지 않는다.
 
-- **배터리가 실패하면 리뷰 결과를 버린다.** 판정을 기록하지 않은 채 4단계로 돌아간다.
+- **배터리가 실패하면 리뷰와 QA 결과를 버린다.** 판정을 기록하지 않은 채 4단계로 돌아간다.
   실패한 diff에 대한 리뷰 판정은 fingerprint가 바뀌는 순간 무효다.
 - 이 동시 실행의 전제는 정리 단계가 관련 검증을 이미 통과시켰다는 것이다. 배터리
   실패가 드물지 않으면 병렬화가 아니라 5단계를 먼저 고친다.
@@ -114,7 +123,7 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 ## 3 구현 리뷰
 
 [`issueops-review`](../issueops-review/SKILL.md)를 `--target diff`로 호출한다. 루프
-절차는 그 스킬이 소유한다. 이 단계가 아는 것은 다섯이다.
+절차는 그 스킬이 소유한다. 이 단계가 아는 것은 여섯이다.
 
 - 리뷰어에게 diff와 **계획을 함께** 준다. 무엇을 하기로 했는지 모르는 리뷰어는 구현이
   계획에서 벗어났는지 판정할 수 없다.
@@ -128,6 +137,11 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 - **렌즈는 `next.review.lenses`만 적용한다.** `issueops next --id "$ISSUEOPS_ID" --json`이
   돌려주는 티어와 렌즈를 프롬프트에 넣고 그 목록만 검토하게 한다. `docs-only` 티어는
   side effect 렌즈 하나다.
+- **`review.frontend`가 true면 UI 렌즈를 더한다.** diff 리뷰 프롬프트의 "검증할 주장
+  목록"에 4단계 report의 `## UI 판단` 절을 넣고, 렌즈 목록에 접근성·반응형 상태·모션
+  감소 세 항목을 덧붙인다. 이 셋이 [`ui-ux-craft`](../ui-ux-craft/SKILL.md)가 소유한
+  판단이며, frontend 사이클의 리뷰 finding에 이 렌즈 언급이 하나도 없으면 프롬프트가
+  실패한 것이다.
 
 `next.review.tier`가 `schema-auth`이고 `git -C "$WORKTREE" diff --stat "$BASE_SHA"`의
 변경 줄 수가 500을 넘을 때만 렌즈 네 개를 서브에이전트 넷으로 나눈다. 합치는 규칙은
@@ -135,6 +149,13 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
 비용이 절약한 시간을 넘는다. 이 분할 조건은 이 문장이 단독으로 소유하며 코드에는 없다.
 
 ## 4 호환성 재확인과 readiness
+
+strict readiness `warnings`의 `base_advanced`는 차단이 아니다. 이 단계에서는
+`issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json`으로 충돌
+유무만 확인해 report에 적고 **apply하지 않는다.** apply는 봉인된 변경 집합에 base의
+파일을 끌어들여 fingerprint를 바꾸고, 정리·구현 리뷰·문서 반영 판정이 한꺼번에 stale이
+되어 5단계부터 다시 밟게 만든다. 머지는 PR 병합 시점에 provider가 한다. 충돌이 있으면 그
+사실을 PR 본문의 위험 절에 적는다.
 
 구현된 diff가 계획 시점의 compatibility review와 다르면 durable 판정을 최신으로 맞춘다.
 

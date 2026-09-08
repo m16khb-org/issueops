@@ -65,6 +65,27 @@ worktree의 branch·HEAD가 record와 다르거나 무관한 dirty 변경이 있
 다시 적용하거나 새 세션을 띄우지 않는다. 보류는 구현 승인이 아니다. 아직 인계하지 않은
 준비 세션이면 공용 라우터의 자동 분기를 적용하며 실행 방식을 묻지 않는다.
 
+### base가 앞서 나갔는지 본다
+
+`next`의 경고에 기대지 않는다. 구현 단계의 `next`는 readiness를 부르지 않아 그 경고가
+여기서는 나오지 않는다. **claim 뒤 lease가 active(self)인 상태에서** 직접 관측한다.
+claimable 상태에서는 `released_completion_authority`로 거부되므로 재개된 세션도 claim을
+먼저 끝낸다.
+
+```bash
+issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json
+```
+
+- `merge_needed`가 false면 그대로 진행한다.
+- true이고 `conflict_files`가 비었으면 `--apply --confirm --fingerprint <preview의 값>`으로
+  반영한다. **이 apply는 지금, 즉 봉인이 하나도 없는 4단계 진입에서만 한다.** 반영하면
+  변경 집합이 봉인된 `BranchPrepare.BaseSHA` 기준으로 잡히므로 base가 바꾼 파일이 이
+  사이클의 diff·티어·리뷰 대상에 들어온다. 그 사실을 계획의
+  `## 하위 호환성과 side effect` 절에 적는다. 이미 추적 중인 미커밋 변경이 있으면
+  `worktree_clean`으로 거부되므로 변경이 없는 이 시점에 한다.
+- `conflict_files`가 있으면 계획의 영향 범위를 다시 보고 사용자에게 알린다.
+- rebase하지 않는다. 이유는 [`rebase-onto-parent`](../rebase-onto-parent/SKILL.md)가 소유한다.
+
 ## 진입 절차
 
 `stage.key`가 `implement.enter`면 아래를 순서대로 실행한다. Orca 세션이든 direct
@@ -119,6 +140,11 @@ blocker가 하나라도 있으면 compatibility review는 승인되지 않는다
    성능이 나아졌다고 적지 않는다.
 4. **side effect를 목록으로 적는다.** 파일·원격·durable state에 남는 변화를 verified-execution
    report에 적는다.
+
+`issueops next --id "$ISSUEOPS_ID" --json`의 `review.frontend`가 true면 컴포넌트 출처·
+접근성·반응형 상태·모션 감소는 [`ui-ux-craft`](../ui-ux-craft/SKILL.md)의 규칙을 따른다.
+그 스킬이 요구하는 디자인 시스템 확인 결과를 verified-execution report의 **`## UI 판단`**
+절에 적는다. 그 절이 7단계 브라우저 QA의 INTENT가 되므로 비워 두면 QA가 돌지 않는다.
 
 같은 focused test가 **두 번** GREEN에 실패하면 세 번째를 추측으로 시도하지 않는다.
 [`issueops-debugging`](../issueops-debugging/SKILL.md)으로 실패 명령을 그대로 재현하고
