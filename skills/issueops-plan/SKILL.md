@@ -74,7 +74,9 @@ issueops docs --json
 | `## 하위 호환성과 side effect` | CLI JSON·MCP schema·golden·record schema·provider body 계약, 기존 데이터, 롤백 경로 |
 
 이 네 절은 형식이 아니라 판단이다. "재사용할 것이 없다"는 결론도 근거와 함께 적으면
-유효하고, 근거 없이 비워 두면 리뷰가 그것을 공격한다.
+유효하고, 근거 없이 비워 두면 리뷰가 그것을 공격한다. 절 제목 자체는 4단계의
+`issueops link-plan`이 검사한다. 네 제목 중 하나라도 없는 계획은
+`plan is missing required sections`로 연결이 거부되므로, 제목을 바꾸거나 합치지 않는다.
 
 계획에 lifecycle ID, 사용자 요청 범위, 브랜치·worktree 준비 뒤의 실행 방식 선택,
 확인 후 종료점을 적어 Orca owner도 같은 경계를 알게 한다. 이 계획은 예정된 실행 범위이며

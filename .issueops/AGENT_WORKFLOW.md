@@ -22,6 +22,7 @@ description: Agent start, execution, verification, and completion flow.
 - remote VCS 작업은 canonical worktree의 선택 문서 `.issueops/VCS.md`를 먼저 읽는다. 문서에 없는 provider recipe를 실제로 성공시켰다면 같은 worktree에서 `project_docs_read` 후 `project_docs_revise` SHA-CAS로 갱신한다. GitLab/GitHub 모두 기록할 수 있지만 secret, 개인 tool 경로, server namespace, 추측한 MCP 이름은 남기지 않으며 OpenWiki 자동 update를 실행하지 않는다.
 - 구조 선택이나 대안 기각 사유가 생기면 MCP `project_docs_append(kind=adr)`로 `.issueops/ADR.md`에 남긴다.
 - 반복 실패, false case, 위험한 운영 주의는 MCP `project_docs_append(kind=caution)`으로 `.issueops/CAUTIONS.md`에 남긴다.
+- IssueOps 사이클 안에서 위 두 append의 시점은 `skills/issueops-docs/SKILL.md`가 소유한다. 구현 단계(4)의 append는 정리 봉인보다 앞서므로 그대로 두고, 정리 봉인(5) 뒤의 append는 문서 단계(6)가 재봉인하며, 검증(7) 이후의 append는 두 봉인을 stale로 만들어 `issueops next`가 문서 단계로 되돌린다. 계획 단계(3)에서 읽은 문서는 계획의 `## 적용되는 결정과 주의사항` 절에 남기고, `issueops link-plan`이 그 절을 포함한 네 필수 절의 존재를 검사한다.
 
 ## IssueOps 실행 방식 선택
 
@@ -55,7 +56,7 @@ cleanup은 승인에 포함하지 않는다. 일반 테스트 실패와 stale �
 ## Finish
 
 - 커밋이 필요하면 `.issueops/COMMIT_POLICY.md`를 따른다.
-- 해결한 false case나 구조 결정은 필요한 경우 MCP `project_docs_append`로 기록한다.
+- 해결한 false case나 구조 결정은 필요한 경우 MCP `project_docs_append`로 기록한다. IssueOps 사이클이라면 그 기록의 시점과 재봉인은 문서 단계(`skills/issueops-docs/SKILL.md`)가 소유하고, publication 게이트 `project_docs_review`는 `no-change`에도 실제로 읽은 `--reviewed-doc` 경로를 요구한다.
 
 ## Hook context injection and lifecycle observation
 

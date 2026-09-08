@@ -26,7 +26,11 @@ publication is blocked until the cycle records whether the change left anything
 for the operating docs. Update the documents here **first**, then record the
 verdict from `issueops-implement` — the gate seals the change fingerprint, and a
 document edited after the record makes that seal stale. `--verdict updated`
-requires the doc path to be in the change set, so an unedited file cannot pass.
+requires the doc path to be in the change set, so an unedited file cannot pass,
+and `--verdict no-change` requires at least one `--reviewed-doc` path that
+exists under `.issueops/` (or the root `AGENTS.md`), so an unread catalog cannot
+pass either. When the change was appended during implementation, the docs
+stage (`issueops-docs`) re-checks it against the final diff and owns the reseal.
 
 ## When to Trigger
 

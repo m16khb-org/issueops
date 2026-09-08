@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-09-08 | IssueOps project-doc gates: link-plan checks the four plan sections and no-change needs reviewed docs | [record](adr/2026-09-08-issueops-project-doc-gates-link-plan-checks-the-four-plan-se.md) |
 | 2026-09-02 | IssueOps binds artifacts to the code project, not the issue project | [record](adr/2026-09-02-issueops-binds-artifacts-to-the-code-project-not-the-issue-p.md) |
 | 2026-09-05 | IssueOps ten-stage skills, CLI-owned stage detection, and the auto execution mode | [record](adr/2026-09-05-issueops-ten-stage-skills-with-auto-execution-mode.md) |
 | 2026-09-02 | IssueOps publication evidence gates: project-doc reflection and conditional schema measurement | [record](adr/2026-09-02-issueops-publication-evidence-gates-project-doc-reflection-a.md) |

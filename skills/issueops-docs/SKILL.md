@@ -31,6 +31,12 @@ issueops next --id "$ISSUEOPS_ID" --json
 그래서 재봉인은 이 단계가 소유한다. 문서를 고치고 재봉인하지 않으면
 `ai_slop_clean_stale`로 다음 단계가 전부 막힌다.
 
+`.issueops/AGENT_WORKFLOW.md`의 Work 절은 작업 도중에도 ADR·CAUTIONS를 append하라고
+한다. 두 규칙은 충돌하지 않는다. 4단계 구현 중의 append는 정리 봉인보다 앞서므로 그대로
+두고, 이 단계에서는 그 append가 최종 diff와 맞는지 다시 대조한다. 5단계 봉인 뒤에 생긴
+append는 이 단계의 재봉인이 흡수한다. 7단계 이후의 append는 두 봉인을 모두 stale로
+만들므로 `next`가 이 단계로 되돌린다.
+
 ## 1 라우팅
 
 구현 diff 요약을 만들어 읽을 문서를 고른다. 요약에는 변경 파일 목록, 새로 생긴
@@ -112,13 +118,18 @@ issueops project-docs-review record --id "$ISSUEOPS_ID" \
 
 # 고칠 것이 없을 때
 issueops project-docs-review record --id "$ISSUEOPS_ID" \
-  --verdict no-change --evidence "<대조한 문서 목록과 판단>" $RECORD_ACTOR_FLAGS --json
+  --verdict no-change \
+  --reviewed-doc ".issueops/CONSTITUTION.md" --reviewed-doc ".issueops/CAUTIONS.md" \
+  --reviewed-doc ".issueops/ADR.md" \
+  --evidence "<대조한 문서와 판단>" $RECORD_ACTOR_FLAGS --json
 ```
 
 - `updated`는 `--doc` 경로가 **실제 변경 집합 안에** 있어야 통과한다. 고쳤다는
   자기신고만으로는 통과하지 않는다.
-- `no-change`는 `--doc`을 받지 않는다. 대신 무엇을 대조했는지가 evidence다.
-  "대조했으나 없음"과 "대조하지 않음"은 다르므로, 읽은 문서를 나열한다.
+- `no-change`는 `--doc`을 받지 않는다. 대신 실제로 읽은 문서를 `--reviewed-doc`으로
+  하나 이상 적어야 통과한다. 경로는 `.issueops/` 아래이거나 루트 `AGENTS.md`여야 하고
+  지금 존재해야 한다. "대조했으나 없음"과 "대조하지 않음"을 코드가 구분하는 근거가
+  이 경로 목록이다. `updated`에도 같은 규칙으로 `--reviewed-doc`을 덧붙일 수 있다.
 - 이 기록도 변경 집합 fingerprint를 봉인한다. 이후 diff가 바뀌면
   `project_docs_review_stale`이 되고 `next`가 이 단계로 되돌린다.
 
@@ -135,7 +146,8 @@ issueops project-docs-review record --id "$ISSUEOPS_ID" \
 | 문서를 고치고 재봉인을 생략한다 | `ai_slop_clean_stale`로 이후 단계가 전부 막힌다 |
 | 구현이 규칙을 어겼는데 규칙을 고쳐 덮는다 | 문서가 코드를 따라가면 문서는 아무것도 제약하지 못한다 |
 | ADR의 기존 항목을 고친다 | ADR은 append-only다. 뒤집는 결정은 새 항목으로 적는다 |
-| `no-change`를 근거 없이 기록한다 | 읽지 않은 것과 읽었는데 없는 것을 구분할 수 없다 |
+| `no-change`를 `--reviewed-doc` 없이 기록한다 | 거부된다. 읽지 않은 것과 읽었는데 없는 것을 구분할 수 없다 |
+| 존재하지 않거나 `.issueops/` 밖의 경로를 `--reviewed-doc`에 적는다 | 거부된다. 읽은 project doc만 적는다 |
 | 이 단계에서 코드를 고친다 | 그 변경은 정리와 검증을 다시 통과해야 한다. 4단계로 돌아간다 |
 
 ## 검증

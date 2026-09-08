@@ -202,8 +202,8 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
   실행한다.
 - publication 전에 구현 diff를 project docs와 양방향으로 대조한다. CONSTITUTION·
   CONVENTIONS·ARCHITECTURE를 어겼으면 구현을 고치고, CAUTIONS에 남길 재발 함정이나
-  ADR에 남길 결정이 생겼으면 문서를 먼저 고친 뒤 기록한다. 남길 것이 없으면 확인
-  근거와 함께 `no-change`로 기록한다.
+  ADR에 남길 결정이 생겼으면 문서를 먼저 고친 뒤 기록한다. 남길 것이 없으면 실제로
+  읽은 문서 경로(`--reviewed-doc`)와 확인 근거를 함께 `no-change`로 기록한다.
 - 변경 집합에 마이그레이션·엔티티·SQL 스키마 파일이 있으면 실제 데이터베이스에서
   인덱스 현황과 대상 테이블 row 수를 관찰해 관찰값과 출처를 기록한다.
 - Git staging/push는 `atomic-commit-push`, 고급 history 작업은 `git-operations`가

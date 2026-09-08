@@ -71,6 +71,8 @@ worktree의 branch·HEAD가 record와 다르거나 무관한 dirty 변경이 있
 
 ```bash
 # prepare가 스테이징한 계획을 워크트리에 풀어 두고 plan_path를 채웠으면 생략한다.
+# 계획에 3단계의 네 필수 절(## 적용되는 결정과 주의사항, ## 재사용하는 기존 구현,
+# ## 성능 영향, ## 하위 호환성과 side effect)이 없으면 연결이 거부된다.
 issueops link-plan --id "$ISSUEOPS_ID" --plan-path "$WORKTREE_PLAN" \
   $RECORD_ACTOR_FLAGS --json
 
