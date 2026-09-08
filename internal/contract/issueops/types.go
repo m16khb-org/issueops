@@ -470,9 +470,12 @@ type IssueOpsImplementationReview struct {
 // verdict가 updated면 Docs에 적은 문서가 실제 변경 집합 안에 있어야 하므로,
 // "갱신했다"는 자기신고만으로는 게이트를 통과할 수 없다.
 type IssueOpsProjectDocsReview struct {
-	Verdict  string   `json:"verdict"` // updated | no-change
-	Docs     []string `json:"docs,omitempty"`
-	Evidence []string `json:"evidence"`
+	Verdict string   `json:"verdict"` // updated | no-change
+	Docs    []string `json:"docs,omitempty"`
+	// ReviewedDocs는 판정이 실제로 읽은 project doc의 repo-상대 경로다.
+	// no-change는 최소 하나를 요구해 "대조했으나 없음"을 경로로 증명한다.
+	ReviewedDocs []string `json:"reviewed_docs,omitempty"`
+	Evidence     []string `json:"evidence"`
 	// ReviewedFingerprint는 검토가 본 변경 집합의 content fingerprint다
 	// (implementation_review 선례). 이후 diff가 바뀌면 stale로 거부한다.
 	ReviewedFingerprint string `json:"reviewed_fingerprint"`

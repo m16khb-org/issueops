@@ -187,7 +187,7 @@ func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (i
 	}
 	worktree := makeIssueOpsCLIWorktreeForTest(t, repo, branch)
 	planPath := filepath.Join(worktree, "plans", "parent.md")
-	writeIssueOpsCLIFileForTest(t, worktree, "plans/parent.md", "parent plan\n")
+	writeIssueOpsCLIFileForTest(t, worktree, "plans/parent.md", planBodyForCLITest())
 	prepareIssueOpsCLIParentImplementationSurface(t, record.ID, branch, worktree)
 	recordIssueOpsCLIParentDelegationPrereqs(t, record.ID, planPath)
 	record, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
@@ -207,7 +207,7 @@ func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (
 	if code, _, stderr := preflight.GitCmd(repo, "checkout", "-q", "-b", branch); code != 0 {
 		t.Fatalf("git checkout parent branch failed: %s", stderr)
 	}
-	writeIssueOpsCLIFileForTest(t, repo, "plans/parent-pr.md", "parent plan\n")
+	writeIssueOpsCLIFileForTest(t, repo, "plans/parent-pr.md", planBodyForCLITest())
 	writeIssueOpsCLIFileForTest(t, repo, "internal/parent.go", "package parent\n")
 	if code, _, stderr := preflight.GitCmd(repo, "add", "plans/parent-pr.md", "internal/parent.go"); code != 0 {
 		t.Fatalf("git add parent files failed: %s", stderr)

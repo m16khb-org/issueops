@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"issueops/cmd/issueops/issueopsapp/responsecontract"
 	"issueops/internal/adapter/outbound/sqlstore"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]string, stateDir, workspaceDir, gitRepoDir string) map[string]any {
@@ -113,7 +115,7 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 	cliSnapshot["issueops_review_design"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"design", "review", "--id", issueopsID, "--problem-summary", "IssueOps needs explicit design review", "--proposed-design", "Gate implementation on approved design", "--refactor-plan", "Keep changes local to IssueOps state and adapters", "--risk", "golden contract drift", "--alternative", "docs-only guidance", "--verification", "design review checked contract drift risk", "--verification", "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden", "--approved", "--json"})
 	})
-	writeContractFile(t, contractWorktree, "docs/superpowers/plans/contract.md", "plan\n")
+	writeContractFile(t, contractWorktree, "docs/superpowers/plans/contract.md", "# plan\n"+strings.Join(issueopsdomain.RequiredPlanSections, "\n본문\n")+"\n본문\n")
 	cliSnapshot["issueops_link_plan"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"link-plan", "--id", issueopsID, "--plan-path", filepath.Join(contractWorktree, "docs", "superpowers", "plans", "contract.md"), "--json"})
 	})

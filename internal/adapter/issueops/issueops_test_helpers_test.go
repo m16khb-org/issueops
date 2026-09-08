@@ -9,6 +9,7 @@ import (
 
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 type claimableExecutionFixture struct {
@@ -159,8 +160,9 @@ func initIssueOpsRepo(t *testing.T) string {
 		}
 	}
 	writeIssueOpsFile(t, repo, "README.md", "readme\n")
-	writeIssueOpsFile(t, repo, "plans/demo.md", "plan\n")
-	if code, _, stderr := preflight.GitCmd(repo, "add", "README.md", "plans/demo.md"); code != 0 {
+	writeIssueOpsFile(t, repo, "plans/demo.md", planBodyForTest())
+	writeIssueOpsFile(t, repo, ".issueops/CAUTIONS.md", "# cautions\n")
+	if code, _, stderr := preflight.GitCmd(repo, "add", "README.md", "plans/demo.md", ".issueops/CAUTIONS.md"); code != 0 {
 		t.Fatalf("git add failed: %s", stderr)
 	}
 	if code, _, stderr := preflight.GitCmd(repo, "commit", "-q", "-m", "initial"); code != 0 {
@@ -186,6 +188,11 @@ func makeIssueOpsWorktreeDirForTest(t *testing.T, repo, slug string) string {
 		t.Fatal(err)
 	}
 	return worktree
+}
+
+// planBodyForTest는 link-plan이 요구하는 네 필수 절을 모두 가진 최소 계획 본문이다.
+func planBodyForTest() string {
+	return "# plan\n" + strings.Join(issueopsdomain.RequiredPlanSections, "\n본문\n") + "\n본문\n"
 }
 
 func writeIssueOpsFile(t *testing.T, repo, rel, content string) {

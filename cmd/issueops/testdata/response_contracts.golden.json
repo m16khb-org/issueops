@@ -3078,7 +3078,8 @@
       ],
       "issue_url": "https://gitlab.example/group/project/-/issues/1",
       "missing": [
-        "ai_slop_clean"
+        "ai_slop_clean",
+        "project_docs_review"
       ],
       "ok": true,
       "plan_path": "$ISSUEOPS_WORKTREE/docs/superpowers/plans/contract.md",
@@ -3281,7 +3282,7 @@
           "second-system effect: three cache backends for one need"
         ],
         "recorded_at": "$TIMESTAMP",
-        "reviewed_plan_digest": "1b4025dc7b8d27cf38df85e77b20ed44a00851a2c28b338560560d85deded8e3",
+        "reviewed_plan_digest": "5c223638161a919cbb7c383ab3cba5491bb005f7b0c347100dda5464ff487106",
         "reviewer_context": "subagent",
         "reviewer_pattern": "devils-advocate-review",
         "verdict": "stop"
@@ -4177,6 +4178,7 @@
         "pr": {
           "missing": [
             "ai_slop_clean",
+            "project_docs_review",
             "remote_artifact"
           ],
           "notes": [

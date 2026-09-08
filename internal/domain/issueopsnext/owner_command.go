@@ -63,7 +63,7 @@ func OwnerCommand(id, missingKey string) string {
 			" --verdict <pass|revise|stop> --finding <TEXT> --evidence <TEXT>"
 	case "project_docs_review", "project_docs_review_stale":
 		return "issueops project-docs-review record --id " + id +
-			" --verdict <updated|no-change> --evidence <TEXT>"
+			" --verdict <updated|no-change> --reviewed-doc <PATH> --evidence <TEXT>"
 	case "schema_evidence", "schema_evidence_stale":
 		return "issueops schema-evidence record --id " + id +
 			" --measurement <TEXT> --source <TEXT>"

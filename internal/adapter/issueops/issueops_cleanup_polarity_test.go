@@ -111,7 +111,7 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 		t.Fatal(err)
 	}
 	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
-	writeIssueOpsFile(t, worktree, "plans/demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 	if record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md")); err != nil {
 		t.Fatal(err)
 	}

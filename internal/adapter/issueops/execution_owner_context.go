@@ -404,7 +404,7 @@ func executionOwnerCommandsFor(record issueops.IssueOpsRecord, req ExecutionPrep
 	}
 	implementationReview += " " + shortActor + " --json"
 	projectDocsReview := "issueops project-docs-review record --id " + quoteExecutionOwnerArg(record.ID) +
-		" --verdict <PROJECT_DOCS_VERDICT> --doc <UPDATED_DOC_PATH> --evidence <PROJECT_DOCS_EVIDENCE> " + shortActor + " --json"
+		" --verdict <PROJECT_DOCS_VERDICT> --doc <UPDATED_DOC_PATH> --reviewed-doc <REVIEWED_DOC_PATH> --evidence <PROJECT_DOCS_EVIDENCE> " + shortActor + " --json"
 	schemaEvidence := "issueops schema-evidence record --id " + quoteExecutionOwnerArg(record.ID) +
 		" --measurement <OBSERVED_VALUE> --source <OBSERVATION_SOURCE> " + shortActor + " --json"
 	enterPR := "issueops phase --id " + quoteExecutionOwnerArg(record.ID) +

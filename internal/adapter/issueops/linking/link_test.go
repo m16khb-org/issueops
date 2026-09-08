@@ -30,6 +30,7 @@ func newLinkStoreForTest(records ...model.IssueOpsRecord) (*linkStoreForTest, St
 		BranchEvidenceMissing:  store.branchEvidenceMissingFor,
 		DesignReviewMissing:    store.designReviewMissingFor,
 		PlanPathExists:         store.planPathExists,
+		PlanSectionsMissing:    planSectionsMissingForTest,
 		PlanPathInsideWorktree: store.planPathInsideWorktree,
 		WorktreePathValid:      store.worktreePathValid,
 		UniqueSorted:           uniqueSortedForTest,
@@ -61,6 +62,19 @@ func (s *linkStoreForTest) branchEvidenceMissingFor(model.IssueOpsRecord) []stri
 
 func (s *linkStoreForTest) designReviewMissingFor(model.IssueOpsRecord) []string {
 	return append([]string(nil), s.designReviewMissing...)
+}
+
+func planSectionsMissingForTest(path string) []string {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return []string{"unreadable"}
+	}
+	return issueopsdomain.MissingPlanSections(string(raw))
+}
+
+// planBodyForTest는 issueops-plan 스킬이 요구하는 네 절을 모두 가진 최소 계획이다.
+func planBodyForTest() []byte {
+	return []byte("# plan\n" + strings.Join(issueopsdomain.RequiredPlanSections, "\n본문\n") + "\n본문\n")
 }
 
 func (s *linkStoreForTest) planPathExists(_ string, path string) bool {
@@ -131,7 +145,7 @@ func TestLinkPlanValidatesReadinessAndPersistsAbsolutePath(t *testing.T) {
 		t.Fatal(err)
 	}
 	planPath := filepath.Join(planDir, "plan.md")
-	if err := os.WriteFile(planPath, []byte("# plan\n"), 0o600); err != nil {
+	if err := os.WriteFile(planPath, planBodyForTest(), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	record := model.IssueOpsRecord{
@@ -165,7 +179,7 @@ func TestLinkPlanIsIdempotentButRejectsPathReplacement(t *testing.T) {
 	linkedPlan := filepath.Join(planDir, "linked.md")
 	replacementPlan := filepath.Join(planDir, "replacement.md")
 	for _, path := range []string{linkedPlan, replacementPlan} {
-		if err := os.WriteFile(path, []byte("# plan\n"), 0o600); err != nil {
+		if err := os.WriteFile(path, planBodyForTest(), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -195,7 +209,7 @@ func TestLinkPlanIsIdempotentButRejectsPathReplacement(t *testing.T) {
 func TestLinkPlanRejectsBoundaryViolations(t *testing.T) {
 	repo, worktree := issueOpsRepoAndWorktreeFixture(t, "feature/plan-boundary")
 	outsidePlanPath := filepath.Join(filepath.Dir(worktree), "outside-plan.md")
-	if err := os.WriteFile(outsidePlanPath, []byte("# outside plan\n"), 0o600); err != nil {
+	if err := os.WriteFile(outsidePlanPath, planBodyForTest(), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	record := model.IssueOpsRecord{
@@ -244,10 +258,34 @@ func TestLinkPlanRejectsBoundaryViolations(t *testing.T) {
 	}
 }
 
+// 계획의 네 필수 절은 형식이 아니라 판단 기록이다. 절이 빠진 계획은 연결 자체를
+// 거부해 "읽지 않은 것"과 "읽었는데 없는 것"을 구분하지 않은 계획이 구현에
+// 들어가지 못하게 한다.
+func TestLinkPlanRejectsPlanWithoutRequiredSections(t *testing.T) {
+	repo, worktree := issueOpsRepoAndWorktreeFixture(t, "feature/plan-sections")
+	planPath := filepath.Join(worktree, "plan.md")
+	if err := os.WriteFile(planPath, []byte("# plan\n## 적용되는 결정과 주의사항\n- 없음\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	record := model.IssueOpsRecord{
+		ID:           "io-link-plan-sections",
+		Repo:         repo,
+		Branch:       "feature/plan-sections",
+		Phase:        model.IssueOpsPhasePlan,
+		IssueURL:     "https://github.com/example/repo/issues/10",
+		WorktreePath: worktree,
+	}
+	_, store := newLinkStoreForTest(record)
+	_, err := LinkPlan(store, t.TempDir(), record.ID, "plan.md")
+	if err == nil || !strings.Contains(err.Error(), "required sections") || !strings.Contains(err.Error(), "## 성능 영향") {
+		t.Fatalf("plan without required sections must be rejected with the missing titles: %v", err)
+	}
+}
+
 func TestLinkWorktreeValidatesIsolationBranchAndExistingPlan(t *testing.T) {
 	repo, worktree := issueOpsRepoAndWorktreeFixture(t, "feature/worktree")
 	planPath := filepath.Join(worktree, "plan.md")
-	if err := os.WriteFile(planPath, []byte("# plan\n"), 0o600); err != nil {
+	if err := os.WriteFile(planPath, planBodyForTest(), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	record := model.IssueOpsRecord{
@@ -269,7 +307,7 @@ func TestLinkWorktreeValidatesIsolationBranchAndExistingPlan(t *testing.T) {
 
 	otherRepo, otherWorktree := issueOpsRepoAndWorktreeFixture(t, "feature/other")
 	otherPlan := filepath.Join(filepath.Dir(otherWorktree), "outside-plan.md")
-	if err := os.WriteFile(otherPlan, []byte("# plan\n"), 0o600); err != nil {
+	if err := os.WriteFile(otherPlan, planBodyForTest(), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	badPlan := record

@@ -16,7 +16,7 @@ func TestIssueOpsLinkPlanResolvesRelativePathInsideLinkedWorktree(t *testing.T) 
 	if err := os.MkdirAll(filepath.Join(repo, "docs", "plans"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	writeIssueOpsFile(t, repo, "docs/plans/source-only.md", "source plan\n")
+	writeIssueOpsFile(t, repo, "docs/plans/source-only.md", planBodyForTest())
 	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestIssueOpsLinkPlanResolvesRelativePathInsideLinkedWorktree(t *testing.T) 
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, "docs/plans/external-link.md"); err == nil || !strings.Contains(err.Error(), "inside linked worktree") {
 		t.Fatalf("relative symlink plan should resolve inside linked worktree, got %v", err)
 	}
-	writeIssueOpsFile(t, worktree, "docs/plans/worktree.md", "worktree plan\n")
+	writeIssueOpsFile(t, worktree, "docs/plans/worktree.md", planBodyForTest())
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, "docs/plans/worktree.md")
 	if err != nil {
 		t.Fatal(err)

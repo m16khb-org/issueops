@@ -23,7 +23,7 @@ func TestIssueOpsImplementationReadinessRequiresCompatibilityReview(t *testing.T
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
 		Execution:     issueOpsExecutionForTest(repo, worktree, "1-demo"),
 	}
-	writeIssueOpsFile(t, worktree, "plans/demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 
 	ready := IssueOpsImplementationReadiness(record)
 	if ready.Ready || !containsString(ready.Missing, "compatibility_review") {
@@ -35,7 +35,7 @@ func TestIssueOpsImplementationReadinessRequiresCompatibilityReview(t *testing.T
 		t.Fatalf("compatibility review alone should still require devils_advocate_review, got %+v", ready)
 	}
 	record.DevilsAdvocateReview = issueOpsDevilsAdvocateReviewForTest()
-	record.DevilsAdvocateReview.ReviewedPlanDigest = digestExecutionOwnerBytes([]byte("plan\n"))
+	record.DevilsAdvocateReview.ReviewedPlanDigest = digestExecutionOwnerBytes([]byte(planBodyForTest()))
 	ready = IssueOpsImplementationReadiness(record)
 	if !ready.Ready || len(ready.Missing) != 0 {
 		t.Fatalf("compatibility + devils-advocate review should satisfy the last implementation gate, got %+v", ready)
@@ -66,7 +66,7 @@ func TestIssueOpsPhaseImplementRequiresCompatibilityReviewPhase(t *testing.T) {
 		t.Fatal(err)
 	}
 	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
-	writeIssueOpsFile(t, worktree, "plans/demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md"))
 	if err != nil {
 		t.Fatal(err)

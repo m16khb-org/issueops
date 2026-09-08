@@ -451,10 +451,10 @@ func runIssueOpsImplementationReview(args []string) error {
 
 // runIssueOpsProjectDocsReview는 publication 직전 project-doc 반영 판정을
 // 기록하는 표면이다. verdict updated는 --doc 경로가 실제 변경 집합에 있어야
-// 통과한다.
+// 통과하고, no-change는 실제로 읽은 --reviewed-doc 경로를 최소 하나 요구한다.
 func runIssueOpsProjectDocsReview(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println("Usage: issueops project-docs-review record --id ID --verdict updated|no-change [--doc PATH...] --evidence TEXT... [--json]")
+		fmt.Println("Usage: issueops project-docs-review record --id ID --verdict updated|no-change [--doc PATH...] [--reviewed-doc PATH...] --evidence TEXT... [--json]")
 		return nil
 	}
 	if args[0] != "record" {
@@ -463,8 +463,9 @@ func runIssueOpsProjectDocsReview(args []string) error {
 	fs := flag.NewFlagSet("issueops project-docs-review record", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	verdict := fs.String("verdict", "", "updated|no-change")
-	var docs, evidence repeatedFlag
+	var docs, reviewedDocs, evidence repeatedFlag
 	fs.Var(&docs, "doc", "updated project doc path, worktree-relative (repeatable)")
+	fs.Var(&reviewedDocs, "reviewed-doc", "project doc path that was read for this verdict; required for no-change (repeatable)")
 	fs.Var(&evidence, "evidence", "what was checked and why (repeatable)")
 	addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -472,7 +473,7 @@ func runIssueOpsProjectDocsReview(args []string) error {
 		return err
 	}
 	record, err := issueOpsCLIDeps.RecordIssueOpsProjectDocsReview(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsProjectDocsReviewRequest{
-		Verdict: *verdict, Docs: docs, Evidence: evidence,
+		Verdict: *verdict, Docs: docs, ReviewedDocs: reviewedDocs, Evidence: evidence,
 	})
 	return printIssueOpsResult(record, *jsonOut, err)
 }

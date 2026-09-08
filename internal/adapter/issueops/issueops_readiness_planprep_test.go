@@ -94,7 +94,7 @@ func TestImplementationReadinessRequiresExecutionLease(t *testing.T) {
 	repo := t.TempDir()
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "1-demo")
 	planPath := filepath.Join(worktree, "plans/demo.md")
-	writeIssueOpsFile(t, worktree, "plans/demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 
 	rec := baseIntentRecord("trivial")
 	rec.Repo = repo

@@ -411,6 +411,7 @@ type stableV1ImplementationReview struct {
 type stableV1ProjectDocsReview struct {
 	Verdict             string   `json:"verdict"`
 	Docs                []string `json:"docs,omitempty"`
+	ReviewedDocs        []string `json:"reviewed_docs,omitempty"`
 	Evidence            []string `json:"evidence"`
 	ReviewedFingerprint string   `json:"reviewed_fingerprint"`
 	RecordedAt          string   `json:"recorded_at"`

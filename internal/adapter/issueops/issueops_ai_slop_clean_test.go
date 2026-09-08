@@ -50,7 +50,7 @@ func TestIssueOpsAISlopCleanRejectsUntrackedPlanWithoutImplementation(t *testing
 		t.Fatal(err)
 	}
 	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
-	writeIssueOpsFile(t, worktree, "plans/new-demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/new-demo.md", planBodyForTest())
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans", "new-demo.md")); err != nil {
 		t.Fatal(err)
 	}

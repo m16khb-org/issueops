@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -93,7 +94,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	}
 	recordIssueOpsCoreDesignForCLITest(t, id)
 	planPath := filepath.Join(worktree, "plans", "remote-verify.md")
-	writeIssueOpsCLIFileForTest(t, worktree, "plans/remote-verify.md", "plan\n")
+	writeIssueOpsCLIFileForTest(t, worktree, "plans/remote-verify.md", planBodyForCLITest())
 	if _, err := issueopscore.LinkIssueOpsPlan(issueopscore.IssueOpsStateRoot(), id, planPath); err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +157,10 @@ func makeIssueOpsCLIGitRepoForRemoteVerifyTest(t *testing.T) string {
 		}
 	}
 	writeIssueOpsCLIFileForTest(t, repo, "README.md", "readme\n")
-	if code, _, stderr := preflight.GitCmd(repo, "add", "README.md"); code != 0 {
+	// no-change 판정이 인용할 project doc을 base commit에 넣어 봉인 뒤 untracked
+	// 파일이 생기지 않게 한다.
+	writeIssueOpsCLIFileForTest(t, repo, ".issueops/CAUTIONS.md", "# cautions\n")
+	if code, _, stderr := preflight.GitCmd(repo, "add", "README.md", ".issueops/CAUTIONS.md"); code != 0 {
 		t.Fatalf("git add failed: %s", stderr)
 	}
 	if code, _, stderr := preflight.GitCmd(repo, "commit", "-q", "-m", "initial"); code != 0 {
@@ -187,9 +191,29 @@ func assertIssueOpsJSONErrorContains(t *testing.T, out string, err error, want s
 // no-change가 정확한 판정이다.
 func recordIssueOpsCoreProjectDocsReviewForCLITest(t *testing.T, id string) {
 	t.Helper()
+	record, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// no-change는 실제로 읽은 project doc 경로를 요구한다. CLI 픽스처 디렉터리에
+	// 없으면 만들어 준다.
+	root := strings.TrimSpace(record.WorktreePath)
+	if root == "" {
+		root = strings.TrimSpace(record.Repo)
+	}
+	reviewed := filepath.Join(root, ".issueops", "CAUTIONS.md")
+	if _, statErr := os.Stat(reviewed); statErr != nil {
+		if err := os.MkdirAll(filepath.Dir(reviewed), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(reviewed, []byte("# cautions\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if _, err := issueopscore.RecordIssueOpsProjectDocsReview(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsProjectDocsReviewRequest{
-		Verdict:  "no-change",
-		Evidence: []string{"이 변경은 운영 문서에 남길 결정을 만들지 않는다"},
+		Verdict:      "no-change",
+		ReviewedDocs: []string{".issueops/CAUTIONS.md"},
+		Evidence:     []string{"이 변경은 운영 문서에 남길 결정을 만들지 않는다"},
 	}); err != nil {
 		t.Fatal(err)
 	}

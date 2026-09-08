@@ -13,9 +13,10 @@ type IssueOpsImplementationReviewRequest struct {
 
 // IssueOpsProjectDocsReviewRequest는 publication 직전 project-doc 반영 판정이다.
 type IssueOpsProjectDocsReviewRequest struct {
-	Verdict  string
-	Docs     []string
-	Evidence []string
+	Verdict      string
+	Docs         []string
+	ReviewedDocs []string
+	Evidence     []string
 }
 
 // IssueOpsSchemaEvidenceRequest는 스키마 변경 사이클의 실측 근거 기록이다.

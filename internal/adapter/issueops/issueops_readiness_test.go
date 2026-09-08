@@ -51,7 +51,7 @@ func TestImplementGateDoesNotRequireCodeGraph(t *testing.T) {
 	repo := t.TempDir()
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, "1-demo")
 	planPath := filepath.Join(worktree, "plans/demo.md")
-	writeIssueOpsFile(t, worktree, "plans/demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 
 	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-demo"})
 	if err != nil {
@@ -113,6 +113,8 @@ func TestIssueOpsStrictPRReadinessRequiresCleanSyncedRepo(t *testing.T) {
 		DesignReview:  issueOpsDesignReviewForTest(),
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/1", Branch: "main", BaseBranch: "main", LinkVerified: true},
 		AISlopCleanAt: "2026-06-05T00:00:00Z",
+		// publication 게이트는 execution lease가 없는 record에도 걸린다.
+		ProjectDocsReview: &issueops.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
 
 	ready := IssueOpsStrictPRReadiness(record)
@@ -159,6 +161,8 @@ func TestIssueOpsStrictPRReadinessUsesLinkedWorktree(t *testing.T) {
 		DesignReview:  issueOpsDesignReviewForTest(),
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: "https://gitlab.example/group/project/-/issues/2", Branch: branch, BaseBranch: "main", LinkVerified: true},
 		AISlopCleanAt: "2026-06-05T00:00:00Z",
+		// publication 게이트는 execution lease가 없는 record에도 걸린다.
+		ProjectDocsReview: &issueops.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
 
 	ready := IssueOpsStrictPRReadiness(record)
@@ -208,7 +212,7 @@ func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChan
 		t.Fatal(err)
 	}
 	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
-	writeIssueOpsFile(t, worktree, "plans/demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md"))
 	if err != nil {
 		t.Fatal(err)

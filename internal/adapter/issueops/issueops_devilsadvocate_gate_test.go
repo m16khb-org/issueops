@@ -25,14 +25,14 @@ func TestImplementationReadinessRequiresDevilsAdvocateVerdict(t *testing.T) {
 		BranchPrepare:       &issueops.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/example/repo/issues/1", Branch: "1-demo", BaseBranch: "main", LinkVerified: true},
 		Execution:           issueOpsExecutionForTest(repo, worktree, "1-demo"),
 	}
-	writeIssueOpsFile(t, worktree, "plans/demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 
 	// No review → blocked.
 	if ready := IssueOpsImplementationReadiness(record); ready.Ready || !containsString(ready.Missing, "devils_advocate_review") {
 		t.Fatalf("missing devil's-advocate review must block implement: %+v", ready.Missing)
 	}
 	// pass → clears the gate.
-	bound := digestExecutionOwnerBytes([]byte("plan\n"))
+	bound := digestExecutionOwnerBytes([]byte(planBodyForTest()))
 	record.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"attacked gate 3"}, ReviewerContext: "subagent", ReviewedPlanDigest: bound, RecordedAt: "t"}
 	if ready := IssueOpsImplementationReadiness(record); !ready.Ready || len(ready.Missing) != 0 {
 		t.Fatalf("pass verdict should clear the gate: %+v", ready.Missing)

@@ -3,12 +3,14 @@ package issueops
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/contract/issueops"
+	"issueops/internal/domain/projectdoc"
 )
 
 // RecordIssueOpsProjectDocsReview는 publication 직전 project-doc 반영 판정을
@@ -30,6 +32,10 @@ func RecordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDo
 	if verdict == "no-change" && len(docs) > 0 {
 		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review verdict no-change must not list updated docs")
 	}
+	reviewedDocs := cleanReviewValues(req.ReviewedDocs)
+	if verdict == "no-change" && len(reviewedDocs) == 0 {
+		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review verdict no-change requires at least one --reviewed-doc path that was actually read")
+	}
 	var record issueops.IssueOpsRecord
 	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		rec, e := ReadIssueOps(stateRoot, id)
@@ -47,9 +53,13 @@ func RecordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDo
 		if e != nil {
 			return e
 		}
+		reviewed, e := normalizeReviewedDocPaths(rec, reviewedDocs)
+		if e != nil {
+			return e
+		}
 		now := time.Now().UTC().Format(time.RFC3339Nano)
 		rec.ProjectDocsReview = &issueops.IssueOpsProjectDocsReview{
-			Verdict: verdict, Docs: normalized, Evidence: evidence,
+			Verdict: verdict, Docs: normalized, ReviewedDocs: reviewed, Evidence: evidence,
 			ReviewedFingerprint: fingerprint,
 			RecordedAt:          now,
 		}
@@ -88,6 +98,35 @@ func normalizeProjectDocPaths(record issueops.IssueOpsRecord, docs []string) ([]
 	return out, nil
 }
 
+// normalizeReviewedDocPaths는 읽었다고 신고한 문서가 실제 project doc이고 지금
+// 존재하는지 확인한다. 변경 집합 안에 있을 필요는 없다 — 읽기만 한 문서가
+// 대부분이다. 허용 범위는 `.issueops/` 아래와 루트 `AGENTS.md`다.
+func normalizeReviewedDocPaths(record issueops.IssueOpsRecord, docs []string) ([]string, error) {
+	if len(docs) == 0 {
+		return nil, nil
+	}
+	root := issueOpsStrictGitRoot(record)
+	out := make([]string, 0, len(docs))
+	for _, doc := range docs {
+		rel := relativeChangePath(root, doc)
+		if rel == "" {
+			return nil, fmt.Errorf("project docs review reviewed path %q must be inside the worktree", doc)
+		}
+		if rel != "AGENTS.md" && !strings.HasPrefix(rel, projectdoc.ProjectDocsDir+"/") {
+			return nil, fmt.Errorf("project docs review reviewed path %s is not a project doc (expected %s/... or AGENTS.md)", rel, projectdoc.ProjectDocsDir)
+		}
+		if root == "" {
+			return nil, fmt.Errorf("project docs review cannot verify reviewed path %s without a worktree or repo root", rel)
+		}
+		info, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(rel)))
+		if statErr != nil || info.IsDir() {
+			return nil, fmt.Errorf("project docs review reviewed path %s does not exist as a file", rel)
+		}
+		out = append(out, rel)
+	}
+	return out, nil
+}
+
 func relativeChangePath(root, path string) string {
 	path = strings.TrimSpace(path)
 	if path == "" {
@@ -111,12 +150,9 @@ func relativeChangePath(root, path string) string {
 }
 
 // projectDocsReviewMissing은 publication 게이트 판정이다. implementation review와
-// 달리 execution mode를 가리지 않는다 — direct 모드 사이클도 운영 문서에 남길
-// 결정을 만들 수 있기 때문이다.
+// 달리 execution mode도, execution lease 유무도 가리지 않는다 — 어떤 경로로
+// implement 이후 phase에 왔든 운영 문서에 남길 결정을 만들 수 있기 때문이다.
 func projectDocsReviewMissing(record issueops.IssueOpsRecord, currentFingerprint string) string {
-	if record.Execution == nil {
-		return ""
-	}
 	review := record.ProjectDocsReview
 	if review == nil {
 		return "project_docs_review"

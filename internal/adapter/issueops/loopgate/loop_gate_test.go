@@ -161,6 +161,8 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 			CreatedAt:    "2026-07-07T00:00:00Z",
 		},
 		AISlopCleanAt: "2026-07-07T00:00:00Z",
+		// publication 게이트는 execution lease가 없는 record에도 걸린다.
+		ProjectDocsReview: &issueopscontract.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
 	if _, err := issueops.WriteIssueOps(issueops.IssueOpsStateRoot(), record); err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)

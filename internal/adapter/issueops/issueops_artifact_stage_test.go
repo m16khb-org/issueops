@@ -312,7 +312,7 @@ func TestReleasedArtifactRecoveryLinksPlanBeforeStaging(t *testing.T) {
 		t.Fatal(err)
 	}
 	planPath := filepath.Join(worktree, "plans", "recovery.md")
-	writePlanArtifactTestFile(t, planPath, "# Recovery plan\n")
+	writePlanArtifactTestFile(t, planPath, planBodyForTest())
 	linked, err := LinkIssueOpsPlanWithActor(stateRoot, record.ID, planPath, issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)

@@ -165,7 +165,7 @@ func TestStartIssueOpsChildCreatesDelegatedProfile(t *testing.T) {
 	if _, err := LinkIssueOpsWorktree(stateRoot, child.ID, childWorktree); err != nil {
 		t.Fatal(err)
 	}
-	writeIssueOpsFile(t, childWorktree, "plans/child.md", "child plan\n")
+	writeIssueOpsFile(t, childWorktree, "plans/child.md", planBodyForTest())
 	if _, err := LinkIssueOpsPlan(stateRoot, child.ID, filepath.Join(childWorktree, "plans/child.md")); err != nil {
 		t.Fatal(err)
 	}
@@ -794,7 +794,7 @@ func createDelegationReadyParentForTest(t *testing.T, stateRoot string) issueops
 		t.Fatal(err)
 	}
 	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
-	writeIssueOpsFile(t, worktree, "plans/parent.md", "parent plan\n")
+	writeIssueOpsFile(t, worktree, "plans/parent.md", planBodyForTest())
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/parent.md"))
 	if err != nil {
 		t.Fatal(err)

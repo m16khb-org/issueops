@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/testsupport"
 )
 
@@ -46,6 +47,11 @@ func makeIssueOpsCLIWorktreeForTest(t *testing.T, repo, slug string) string {
 		t.Fatal(err)
 	}
 	return worktree
+}
+
+// planBodyForCLITest는 link-plan이 요구하는 네 필수 절을 모두 가진 최소 계획 본문이다.
+func planBodyForCLITest() string {
+	return "# plan\n" + strings.Join(issueopsdomain.RequiredPlanSections, "\n본문\n") + "\n본문\n"
 }
 
 func writeIssueOpsCLIFileForTest(t *testing.T, root, rel, content string) {

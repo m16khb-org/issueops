@@ -161,7 +161,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	if _, err := LinkIssueOpsWorktree(stateRoot, record.ID, worktree); err != nil {
 		t.Fatal(err)
 	}
-	writeIssueOpsFile(t, worktree, "plans/demo.md", "plan\n")
+	writeIssueOpsFile(t, worktree, "plans/demo.md", planBodyForTest())
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md")); err == nil || !strings.Contains(err.Error(), "design_review") {
 		t.Fatalf("plan link should require approved design review, got %v", err)
 	}

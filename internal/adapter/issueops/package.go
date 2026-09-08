@@ -533,6 +533,7 @@ func issueOpsLinkingStore() linking.Store {
 		BranchEvidenceMissing:  issueOpsBranchEvidenceMissing,
 		DesignReviewMissing:    issueOpsDesignReviewMissing,
 		PlanPathExists:         issueOpsPlanPathExists,
+		PlanSectionsMissing:    issueOpsPlanSectionsMissing,
 		PlanPathInsideWorktree: issueOpsPlanPathInsideWorktree,
 		WorktreePathValid:      issueOpsWorktreePathValid,
 		UniqueSorted:           stringlist.UniqueSorted,

@@ -19,6 +19,7 @@ type Store struct {
 	BranchEvidenceMissing  func(record model.IssueOpsRecord) []string
 	DesignReviewMissing    func(record model.IssueOpsRecord) []string
 	PlanPathExists         func(repo, path string) bool
+	PlanSectionsMissing    func(path string) []string
 	PlanPathInsideWorktree func(worktree, planPath string) bool
 	WorktreePathValid      func(path string) bool
 	UniqueSorted           func(values []string) []string
@@ -79,6 +80,11 @@ func LinkPlan(store Store, stateRoot, id, planPath string) (model.IssueOpsRecord
 			return record, nil
 		}
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("plan_path is already linked; edit the linked plan in place instead of replacing its identity")
+	}
+	// 필수 절 검사는 새로 연결할 때만 한다. 이미 연결된 계획의 identity 규칙이
+	// 먼저이고, 그 계획의 본문은 devils-advocate digest가 따로 묶는다.
+	if missing := store.PlanSectionsMissing(path); len(missing) > 0 {
+		return model.IssueOpsRecord{OK: false}, fmt.Errorf("plan is missing required sections: %s", strings.Join(missing, ", "))
 	}
 	record.PlanPath = path
 	return store.TouchWrite(stateRoot, record)

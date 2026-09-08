@@ -80,7 +80,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 		t.Fatalf("worktree link should persist exact path: %#v", worktreeRecord)
 	}
 	recordIssueOpsCLIDesignForTest(t, id)
-	writeIssueOpsCLIFileForTest(t, worktreePath, "docs/superpowers/plans/demo.md", "plan\n")
+	writeIssueOpsCLIFileForTest(t, worktreePath, "docs/superpowers/plans/demo.md", planBodyForCLITest())
 	plan := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"link-plan", "--id", id, "--plan-path", filepath.Join(worktreePath, "docs", "superpowers", "plans", "demo.md"), "--json"})
 	})
@@ -171,6 +171,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 		t.Fatalf("ai-slop-clean should require implementation changes, got %v", err)
 	}
 	writeIssueOpsCLIFileForTest(t, worktreePath, "internal/demo.go", "package demo\n")
+	writeIssueOpsCLIFileForTest(t, worktreePath, ".issueops/CAUTIONS.md", "# cautions\n")
 	cleaned := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{"phase", "--id", id, "--to", "ai-slop-clean", "--json"}, actor))
 	})
@@ -186,6 +187,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	docsReview := captureStdoutForContract(t, func() error {
 		return runIssueOps(withIssueOpsCLIActor([]string{
 			"project-docs-review", "record", "--id", id, "--verdict", "no-change",
+			"--reviewed-doc", ".issueops/CAUTIONS.md",
 			"--evidence", "이 변경은 운영 문서에 남길 결정을 만들지 않는다", "--json",
 		}, actor))
 	})
