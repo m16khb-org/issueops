@@ -160,6 +160,11 @@ func TestPathIsFrontendChangeKnownFalsePositivesAndNegatives(t *testing.T) {
 	if !PathIsFrontendChange("skills/aside-functional-qa/testdata/client-qa-fixture.html") {
 		t.Fatal("documented false positive: an .html test fixture trips the signal")
 	}
+	// 변경 집합은 미추적 파일도 포함하므로, 워크트리에 남은 도구 산출물도 신호를
+	// 켠다. coverage.html이 대표적이다. 비용은 QA를 Not Run으로 적는 한 줄이다.
+	if !PathIsFrontendChange("coverage.html") {
+		t.Fatal("documented false positive: a leftover coverage report trips the signal")
+	}
 	for _, missed := range []string{"app/Home.js", "src/ui/store.ts", "src/app.component.ts"} {
 		if PathIsFrontendChange(missed) {
 			t.Fatalf("documented false negative changed: %s now matches", missed)

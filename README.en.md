@@ -276,7 +276,7 @@ host's user-level skill path at this directory.
 - IssueOps stages: `issueops` (router), `issueops-create-issue`, `issueops-prepare`, `issueops-plan`, `issueops-implement`, `issueops-clean`, `issueops-docs`, `issueops-verify`, `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, `issueops-abandon`
 - IssueOps shared: `issueops-review`, `gates-ledger`, `issueops-remote-write`, `issueops-sync-issue`, `issueops-sync-pr`
 - Project docs: `project-bootstrap`, `project-docs-bootstrap`, `project-docs-update`, `project-docs-optimize`
-- UI/UX and browser QA: `ui-ux-craft`, `aside-functional-qa`, `aside-visual-qa`, `aside-web-qa`, `read-public-artifact`. The first and the orchestrator are reached from stages 4 and 7 when `next.review.frontend` is set
+- UI/UX and browser QA: `ui-ux-craft`, `aside-functional-qa`, `aside-visual-qa`, `aside-web-qa`, `read-public-artifact`. Of these, `ui-ux-craft` and `aside-web-qa` are reached from stages 4 and 7 when `next.review.frontend` is set; the other two QA skills are driven by that orchestrator, never called by the cycle directly
 - Code review: `pr-review`, `review-agent-feedback`
 - Operational improvement: `io-update`, `self-verify`, `self-augment`, `stability-audit`
 - Korean writing and diagrams: `fluent-korean`, `diagram-design`
