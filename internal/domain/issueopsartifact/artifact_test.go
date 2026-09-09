@@ -49,7 +49,7 @@ func TestNormalizeNameAcceptsOnlyCatalogNames(t *testing.T) {
 			t.Fatalf("NormalizeName(%q) = %q, %v", name, got, err)
 		}
 	}
-	for _, bad := range []string{"", "diagram", "PLAN", "verified-execution"} {
+	for _, bad := range []string{"", "diagram", "PLAN", "verified-execution", "intent"} {
 		if _, err := NormalizeName(bad); err == nil || !strings.Contains(err.Error(), "plan|spec|verified-execution-loop") {
 			t.Fatalf("NormalizeName(%q) must fail with the catalog message: %v", bad, err)
 		}

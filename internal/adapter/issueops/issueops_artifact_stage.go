@@ -7,9 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"issueops/internal/adapter/issueops/intentdesign"
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
+	"issueops/internal/domain/issueopsintent"
 	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/secretdetection"
 )
 
 // artifactStageBucket은 prepare 이전에 코디네이터가 스테이징한 artifact를
@@ -257,6 +260,20 @@ func materializeStagedArtifacts(stateRoot string, record issueops.IssueOpsRecord
 			return nil, fmt.Errorf("materialize artifact %s: %w", name, err)
 		}
 		manifest[name] = digestExecutionOwnerBytes([]byte(content))
+	}
+	// intent는 staging 대상이 아니라 record.intent에서 파생하는 문서다. 문서에
+	// 기록 시각을 넣지 않으므로 같은 내용의 재기록은 같은 바이트가 되고, 내용이
+	// 달라진 재봉인은 plan과 똑같이 불변 writer가 거부한다.
+	if record.Intent != nil {
+		content := []byte(issueopsintent.Render(intentdesign.IntentDocument(record)))
+		if secretdetection.Contains(string(content)) {
+			// 오류가 staging 표면을 가리키면 사용자가 엉뚱한 곳을 고치므로 record 쪽 명령을 안내한다.
+			return nil, fmt.Errorf("materialize artifact intent: record.intent contains secret-like values; rerun `issueops intent record` with the value redacted, then rerun execution prepare")
+		}
+		if err := writeExecutionOwnerArtifact(root, sealedArtifactPath(record, root, "intent"), content); err != nil {
+			return nil, fmt.Errorf("materialize artifact intent: %w", err)
+		}
+		manifest["intent"] = digestExecutionOwnerBytes(content)
 	}
 	return manifest, nil
 }
