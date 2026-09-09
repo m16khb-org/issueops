@@ -30,7 +30,7 @@ description: Create, check, and report task gate ledgers with the issueops gates
 
 ```bash
 issueops gates init --file "$WORKTREE/.issueops/issues/$ISSUE/gates.md" --scope "$ISSUE" \
-  --gate "G1: <관찰 가능한 결과> | CHECK: <read-only 명령> | EXPECT: <출력에 포함될 문자열>" \
+  --gate "G1: <관찰 가능한 결과> | CHECK: <read-only 명령> | EXPECT: <출력 줄 전체·줄 머리 또는 /정규식/>" \
   --gate "G2: <결과> | CHECK: <명령> | EXPECT: <문자열>" --json
 ```
 
@@ -38,8 +38,16 @@ issueops gates init --file "$WORKTREE/.issueops/issues/$ISSUE/gates.md" --scope 
   거부된다"처럼 동작으로 쓴다.
 - CHECK는 command policy를 지나므로 셸 확장과 파이프 우회를 넣지 않는다.
   `$(...)`, 백틱, `&&`로 이어 붙인 우회는 정책이 거부한다. 한 게이트에 명령 하나다.
-- 통과 조건은 EXPECT 문자열 일치와 종료 코드 0 **둘 다**이다. 한쪽만으로는 통과하지
+- 통과 조건은 EXPECT 일치와 종료 코드 0 **둘 다**이다. 한쪽만으로는 통과하지
   않는다.
+- EXPECT는 부분 문자열이 아니다. 세 형식 중 하나여야 통과한다(`internal/domain/gates/evaluate.go`
+  `ExpectMatches`): 출력의 어느 한 **줄 전체**가 EXPECT와 같거나, 어느 한 줄이 EXPECT로
+  **시작하고 바로 뒤가 공백·탭**이거나(`EXPECT: ok`가 `ok  	issueops/...` 줄에 맞는 이유),
+  `/정규식/` 형식(`/Skill is valid/`, `/^ok\s/m`처럼 `i`·`m`·`s` 플래그 가능)이 출력에
+  매치돼야 한다. `grep -n`처럼 줄 앞에 번호가 붙는 출력은 정규식 형식으로 쓴다.
+- 출력에 자격 증명처럼 보이는 값이 하나라도 있으면 EVIDENCE 전체가 `<redacted>`로
+  바뀌어 어떤 EXPECT도 매치되지 않는다. `go test ./...`처럼 긴 출력은
+  `python3 -c`로 감싸 출력을 캡처하고 종료 코드만 `ALL_PASS` 같은 한 줄로 바꿔 내보낸다.
 - 자동으로 관찰할 수 없는 결과는 게이트로 쓰지 않는다. 그런 것은 수동 확인 기록으로
   남기고 EVIDENCE에 관측 시각과 관측값을 적는다.
 

@@ -48,7 +48,7 @@ skills/
 | 레이어 | 책임 | 의존 가능 | 금지 |
 |--------|------|-----------|------|
 | `contract` | transport/state가 공유하는 DTO, schema version, error vocabulary | 다른 contract, 표준 라이브러리 | 판정 로직, filesystem/process/DB I/O |
-| `domain` | 순수 규칙, reducer, classifier | contract, 순수 domain helper, 표준 라이브러리 | adapter/cmd, filesystem/process/DB I/O. clock은 기본 주입하되 `auditid` timestamp ID 생성은 현재 명시적 예외 |
+| `domain` | 순수 규칙, reducer, classifier | 같은 capability의 contract(`internal/domain/<cap>` → `internal/contract/<cap>`), 순수 domain helper, 표준 라이브러리 | adapter/cmd, 다른 capability의 contract, filesystem/process/DB I/O. clock은 기본 주입하되 `auditid` timestamp ID 생성은 현재 명시적 예외 |
 | `application` | domain과 좁은 port를 조합하는 use case | contract, domain, port | concrete adapter, cmd transport |
 | `port` | 외부 capability interface와 error contract | contract, 표준 라이브러리 | domain/application/adapter/cmd concrete 구현 |
 | `adapter/inbound` | capability request를 application 호출로 변환 | contract, application | outbound adapter 직접 호출 |
@@ -92,10 +92,14 @@ legacy edge를 없앨 때는 **소비되는 심볼의 성격**이 처방을 결�
 - **타입 이동과 함수 주입은 대개 둘 다 필요하다.** 한 capability의 소비자가 타입과 함수를
   함께 쓰면, 타입만 옮겨도 여전히 adapter를 import하고 함수만 주입하면 시그니처에 쓸 타입이
   없다.
-- domain은 contract와 순수 domain helper를 import할 수 있으며 Go import graph는 acyclic이어야
-  한다. 특정 IssueOps vertical의 stricter ratchet이 contract-only dependency를 요구할 때만 그
-  범위를 좁힌다. 두 capability가 공유하는 wire/persisted 타입은 contract에 두고, redaction 같은
-  보안 규칙을 중복 선언해 dependency 규칙을 우회하지 않는다.
+- domain은 **같은 capability의** contract(`internal/domain/<cap>` → `internal/contract/<cap>`)와
+  순수 domain helper만 import할 수 있으며 Go import graph는 acyclic이어야 한다. 다른 capability의
+  contract(예: `internal/contract/issueops`)를 domain에서 import하면
+  `domain_must_not_import_implementation`으로 즉시 실패한다(`isAllowedDomainContract`). 그 DTO가
+  필요하면 domain은 순수 필드 구조체를 입력으로 받고 adapter가 record를 그 구조체로 옮긴다
+  (#507의 `issueopsintent.Document`와 `intentdesign.IntentDocument`). 두 capability가 공유하는
+  wire/persisted 타입은 contract에 두고, redaction 같은 보안 규칙을 중복 선언해 dependency
+  규칙을 우회하지 않는다.
 - **주입에 default 구현을 두지 않는다.** default가 concrete를 가리키면 그 package가 다시
   adapter를 알게 된다. 미주입은 조용히 통과시키지 말고 구조화된 오류로 드러낸다.
 - 하위 package만 정리해서 상위가 대신 그 adapter를 import하게 되면 edge는 **이동만 하고 줄지
