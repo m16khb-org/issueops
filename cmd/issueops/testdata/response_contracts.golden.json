@@ -1080,7 +1080,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-implement"
         },
         {
-          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then automatically hand off to a new session when Orca is ready or continue in the current session otherwise. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+          "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Orca or Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-plan",
@@ -7639,7 +7639,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-implement"
               },
               {
-                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then automatically hand off to a new session when Orca is ready or continue in the current session otherwise. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
+                "description": "Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Orca or Herdr when available, otherwise continue in the current session. Use when \"issueops next\" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says \"계획 세워줘\", \"계획 검토해줘\", \"구현 인계\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-plan",

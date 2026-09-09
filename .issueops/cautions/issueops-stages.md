@@ -9,19 +9,24 @@ Family index: [CAUTIONS.md](../CAUTIONS.md). 10단계 흐름을 운영하면서 
 생기는 문제만 여기 둔다. lease·fence 문제는 `issueops-execution.md`, 브랜치·게이트
 문제는 `issueops-lifecycle.md`가 소유한다.
 
-## 1. `--mode auto`는 준비 여부를 보고 모드를 고른다 — 스킬이 정하지 않는다
+## 1. execution mode와 세션 런처를 혼동하지 않는다
 
-증상: 계획 세션이 `--mode direct`를 강제해 Orca가 준비된 환경에서도 direct로
-내려간다. 또는 그 반대로 Orca가 없는 환경에서 `--mode orca`가 실패한다.
+증상: 새 세션을 열려고 이미 준비된 direct execution을 `auto|orca`로 바꾸거나,
+Orca·Herdr의 worktree 생성 명령으로 canonical worktree를 다시 만든다.
 
-원인: 모드 판정을 스킬 본문이 하려고 했다. 준비 여부는 실행 시점 관측이므로
-문서가 미리 알 수 없다.
+원인: workspace/lease 운영 방식과 native 세션 배치를 같은 결정으로 취급했다.
 
-규칙: 3단계 인계는 `execution prepare --mode auto` 하나다. 결과의 `resolved_mode`로
-어느 쪽이 골라졌는지 확인하고, Orca면 그 세션이 띄운 구현 세션이 이어간다.
-`--mode direct`는 사용자가 명시적으로 승인한 예외이며 `--direct-reason`이 필요하다.
+규칙: 일반 경로는 사유를 포함한 `execution prepare --mode direct`로 준비하고,
+`session-choice.md`에 따라 Orca, Herdr, 현재 세션 순서로 결정한다. 같은 worktree와
+mode를 유지하며 release 뒤 새 세션 하나에 인계한다. 명시적으로 요청했거나 기존에
+선택된 Orca execution의 core 경로와 `auto|orca` API 의미는 유지한다.
 
-근거: `skills/issueops-plan/SKILL.md` 인계 절, `skills/issueops/references/execution.md` Prepare.
+Herdr 0.9.0은 Claude의 첫 MCP 선택 화면을 `idle`로 보고한 사례가 있다.
+`interactive_ready`나 prompt 제출 성공만 믿지 말고 실제 입력 화면과 native 수신 기록을
+확인한다. 모호한 전달 결과는 같은 세션에서 조사하며 다른 host로 대체하지 않는다.
+
+근거: `skills/issueops-plan/SKILL.md` 인계 절,
+`skills/issueops/references/session-choice.md`의 환경 판별과 Herdr 실행 절.
 
 ## 2. 워크트리 세션은 `<source>.worktrees` 쓰기 권한이 필요하다
 

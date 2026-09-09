@@ -1,4 +1,4 @@
 interface:
   display_name: "IssueOps Plan"
   short_description: "Read the constraints, write the plan, get it reviewed, hand off the implementation"
-  default_prompt: "Use $issueops-plan to prepare the reviewed plan and canonical worktree before the user chooses the current session, a new session in that worktree, or hold. Follow the skill for direct preparation and preserve any explicitly requested execution mode."
+  default_prompt: "Use $issueops-plan to prepare the reviewed plan and canonical worktree, then apply the shared automatic session handoff: ready Orca first, available Herdr second, otherwise the current session. Preserve explicit user choices, the current native host, approved scope, and execution mode. Follow the shared release/recovery procedure before starting one new session in the existing worktree."

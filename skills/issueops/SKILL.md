@@ -41,8 +41,10 @@ issueops next --json
 
 - `issueops-plan`이 direct mode로 워크트리를 먼저 준비한다. 설치된 `orca-cli` 안내를
   읽고 `orca status --json`의 `runtime.state == "ready"`인지 확인한다.
-  ready면 같은 worktree의 새 세션으로 자동 인계하고, Orca가 없거나 unready면
-  현재 세션에서 이어간다. 바이너리 설치 여부만으로 ready라고 판단하지 않는다.
+  ready면 같은 worktree의 새 세션으로 자동 인계한다. Orca가 없거나 unready면
+  Herdr의 실행 중인 서버·호환성·현재 native host 실행 가능 여부를 확인해 같은
+  worktree에서 새 세션을 연다. 둘 다 사용 불가면 현재 세션에서 이어간다.
+  바이너리 설치 여부만으로 ready라고 판단하지 않는다.
 - 기록·lease 해제·새 세션 실행은 [session-choice.md](references/session-choice.md)를
   따른다. 새 세션은 인계 기록을 읽고 이어가며 자동 분기를 다시 적용해 또 다른 세션을
   띄우지 않는다. 이미 인계받은 Orca owner도 동일하다.

@@ -28,8 +28,10 @@ description: Agent start, execution, verification, and completion flow.
 
 전체 사이클은 `skills/issueops/SKILL.md`의 환경별 자동 세션 인계를 따른다. 일반 흐름은
 이슈 확정·계획·리뷰 뒤 `execution prepare --mode direct`와 사유를 사용해 canonical
-worktree를 준비한다. Orca runtime이 ready면 같은 worktree의 새 세션으로 자동 인계하고,
-Orca가 없거나 unready면 현재 세션에서 이어간다. 실행 방식 메뉴나 진행 여부를 묻지 않는다.
+worktree를 준비한다. Orca runtime이 ready면 같은 worktree의 새 세션으로 자동 인계한다.
+Orca가 없거나 unready면 Herdr의 실행 중인 서버·호환성·현재 native host 실행 가능 여부를
+확인해 새 세션으로 인계하고, 둘 다 사용 불가면 현재 세션에서 이어간다.
+실행 방식 메뉴나 진행 여부를 묻지 않는다. Herdr는 준비된 worktree를 열며 재생성하지 않는다.
 
 자동 결정은 원래 요청의 승인 범위·종료점을 유지한다. 환경 관찰값·원래 사용자 요청·
 대화 근거·ID·경로·범위·종료점을 기존 decision record에 남긴다.
@@ -151,4 +153,16 @@ merge and destructive cleanup require separate authority.
 
 ## 10단계 흐름 요약
 
-1·2단계는 source checkout의 준비 세션이 `issueops-create-issue`와 `issueops-prepare`로 수행하며 lease를 갖지 않는다. 3단계 `issueops-plan`도 같은 세션이 수행하고, 기본은 `execution prepare --mode direct`로 워크트리를 준비한 뒤 Orca가 ready면 새 세션으로 자동 인계하고, 없거나 unready면 현재 세션에서 이어간다. 실행 방식은 묻지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다. 명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다. 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` → `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` → `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며 reflect-completion→close-issue→cleanup finish 순서를 지킨다(OPERATIONS.md 참조). 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이 일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은 `gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다.
+1·2단계는 source checkout의 준비 세션이 `issueops-create-issue`와 `issueops-prepare`로
+수행하며 lease를 갖지 않는다. 3단계 `issueops-plan`도 같은 세션이 수행하고,
+`execution prepare --mode direct`로 워크트리를 준비한 뒤 위 자동 세션 인계를 따른다.
+Orca, Herdr 순서로 사용 가능 여부를 확인하며 둘 다 사용 불가면 현재 세션에서 이어간다.
+실행 방식은 묻지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다.
+명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다.
+4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` →
+`issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` →
+`issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며
+reflect-completion→close-issue→cleanup finish 순서를 지킨다(OPERATIONS.md 참조).
+어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이
+일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은
+`gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다.

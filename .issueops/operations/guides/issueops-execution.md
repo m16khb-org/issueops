@@ -171,11 +171,16 @@ Enter 한 번으로 전달한다. Raw multiline send는 줄마다 별도 turn으
 단계 판별은 `issueops next --json`이 소유한다. 읽기 전용이며 현재 단계,
 미충족 게이트, 다음 명령, 탈출 경로를 돌려준다. 세션 경계는 하나뿐이다: 1~3단계는
 source checkout의 준비 세션이, 4단계 이후는 canonical worktree의 구현 세션이 수행하며,
-그 경계를 만드는 것이 3단계 끝의 `execution prepare --mode auto`다. 어느 단계에서든
+그 경계를 만드는 것이 3단계 끝의 worktree 준비와 세션 인계다. 일반 경로는 사유를 포함한
+`execution prepare --mode direct` 뒤 `skills/issueops/references/session-choice.md`를 따른다.
+Orca가 ready면 Orca, 없거나 unready면 사용 가능한 Herdr로 같은 worktree에 새 세션을
+열고, 둘 다 사용 불가면 현재 세션에서 이어간다. Claude Code·Codex·Omo host를 유지하며
+Herdr에서는 `worktree create` 대신 `worktree open`으로 준비된 checkout을 등록한다.
+기존 Orca execution과 명시적인 `auto|orca` 경로는 이 문서의 core 절차를 유지한다. 어느 단계에서든
 빠져나오는 길은 `issueops-abandon`이고, 미머지 사이클의 원격 정리는 `cleanup abandon`의
 `--close-pr`·`--close-issue`·`--delete-remote-branch`가 소유한다.
 
-- 스폰 준비: 승인된 child plan을 source checkout 밖의 임시 파일에 작성 → `issueops artifact stage --id ID --name plan --file PATH --json` → `issueops execution prepare --id ID --mode auto ...`. `spec|verified-execution-loop`도 prepare 전에 stage할 수 있고 잘못 올렸으면 `artifact unstage`한다. Clean released Orca에서는 next-generation recovery용 plan stage만 허용되며 반드시 `execution replace --reseed` 후 resume한다. (`--owner-model` 생략 시 host implementer 기본값: codex `gpt-5.6-terra`/xhigh, claude `claude-sonnet-5`/high, Omo `openai-codex/gpt-5.6-sol`/max; Claude planner/reviewer 기본값은 `claude-opus-5`/high이며 Fable 5는 명시적 수동 지정만 허용).
+- Orca child 스폰 준비: 승인된 child plan을 source checkout 밖의 임시 파일에 작성 → `issueops artifact stage --id ID --name plan --file PATH --json` → `issueops execution prepare --id ID --mode auto ...`. `spec|verified-execution-loop`도 prepare 전에 stage할 수 있고 잘못 올렸으면 `artifact unstage`한다. Clean released Orca에서는 next-generation recovery용 plan stage만 허용되며 반드시 `execution replace --reseed` 후 resume한다. (`--owner-model` 생략 시 host implementer 기본값: codex `gpt-5.6-terra`/xhigh, claude `claude-sonnet-5`/high, Omo `openai-codex/gpt-5.6-sol`/max; Claude planner/reviewer 기본값은 `claude-opus-5`/high이며 Fable 5는 명시적 수동 지정만 허용).
 - Orca가 Omo TUI를 native `--inject` 대상으로 인식하지 않는 runtime에서는 harness가 non-inject dispatch의 official preamble을 검증한 뒤 sealed terminal handle에 `terminal send --enter`로 전달한다. 이미 dispatch가 보이지만 prompt delivery receipt가 없는 recovery는 성공으로 간주하지 않고 fence한다.
 - 다중 사이클 조망: `issueops list [--repo PATH] --json` — one-query SQLite snapshot에서 물리 `scanned_records`, `read_errors`/`unreadable_ids`/bounded `diagnostics`와 claimable/cleanup/unreflected/pending/failure/cleanup-failure 상태를 함께 노출한다. invalid row의 raw payload나 free-form 오류는 출력하지 않는다.
 - 하위 세션 publication(orca): `issueops implementation-review record --id ID --verdict pass --finding ... --evidence ... --reviewer-model <planner급>` 기록 후에만 `remote create-pr`가 통과한다. diff가 바뀌면 stale로 다시 막힌다.

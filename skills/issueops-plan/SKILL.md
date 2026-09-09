@@ -1,6 +1,6 @@
 ---
 name: issueops-plan
-description: Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then automatically hand off to a new session when Orca is ready or continue in the current session otherwise. Use when "issueops next" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says "계획 세워줘", "계획 검토해줘", "구현 인계".
+description: Prepare the plan, reviews, and canonical worktree for an IssueOps cycle, then hand off through Orca or Herdr when available, otherwise continue in the current session. Use when "issueops next" reports plan.write, plan.design, plan.review, or plan.handoff, or when the user says "계획 세워줘", "계획 검토해줘", "구현 인계".
 ---
 
 # IssueOps Plan
@@ -185,7 +185,9 @@ materialize한다. 반환된 `resolved_mode`, canonical path, branch, 계획을 
 
 [session-choice.md](../issueops/references/session-choice.md)에 따라 Orca가 ready면
 현재 holder가 결정 기록과 release를 마치고 같은 worktree에 새 세션 하나를 띄운다.
-Orca가 없거나 unready면 lease를 유지하고 현재 세션에서 구현으로 이어간다.
+Orca가 없거나 unready면 Herdr의 서버·호환성·현재 native host 실행 가능 여부를
+확인해 같은 release·새 세션 인계 절차를 적용한다. 둘 다 사용 불가면 lease를
+유지하고 현재 세션에서 구현으로 이어간다. Herdr는 기존 worktree를 열 뿐 재생성하지 않는다.
 실행 방식이나 진행 여부를 묻지 않는다. 명시적인 보류·범위 제한은 우선한다.
 
 사용자가 명시적으로 Orca execution을 요청했거나 기존 사이클이 Orca mode면 그 core
@@ -218,7 +220,7 @@ Orca가 없거나 unready면 lease를 유지하고 현재 세션에서 구현으
 | revise 판정을 `--waive`로 닫는다 | 지적이 반영되지 않은 채 구현으로 간다 | 계획을 고치고 다시 검토한다 |
 | 판정 뒤 계획을 고치고 재검토를 생략한다 | stale 판정으로 인계가 막히거나, 검토되지 않은 계획이 구현된다 | 다시 검토해 새 판정을 기록한다 |
 | staged plan 없이 인계한다 | prepare가 워크트리에 materialize할 계획이 없다 | `artifact stage`를 먼저 한다 |
-| Orca 세션이 떴는데 이 세션이 계속 구현한다 | 두 세션이 같은 워크트리를 쓴다 | `resolved_mode`가 orca면 여기서 멈춘다 |
+| 새 세션에 인계했는데 이 세션이 계속 구현한다 | 두 세션이 같은 워크트리를 쓴다 | direct mode라도 Orca·Herdr 인계 전달을 확인하면 여기서 멈춘다 |
 
 ## 검증
 
