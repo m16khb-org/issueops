@@ -47,7 +47,7 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
 4. 화면 QA(`next`의 `review.frontend`가 true일 때만).
    [`aside-web-qa`](../aside-web-qa/SKILL.md)에 네 입력을 이렇게 매핑한다.
    TARGET=계획이나 이슈 본문의 로컬 실행 절차가 준 URL, SCOPE=변경 집합의 frontend 경로,
-   REQUIREMENTS=이슈의 성공 기준과 `gates.md`, INTENT=4단계 report의 `## UI 판단` 절.
+   REQUIREMENTS=intent 문서와 이슈의 성공 기준, `gates.md`, INTENT=4단계 report의 `## UI 판단` 절.
    넷 중 하나라도 없으면 지어내지 말고 QA를 `Not Run`으로 report에 사유와 함께 적는다.
    보고서 출력 경로는 ignored 영역 `.issueops/issues/<n>/review/`나 워크트리 밖으로
    고정한다 — 워크트리 안 미추적 파일은 fingerprint에 들어가 봉인을 깬다. 제품을 바꾸는
@@ -65,6 +65,12 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
   봉인을 바꾼다.
 
 ## 1 검증 증거 확인과 필요한 재검증
+
+게이트 원장을 읽기 전에 봉인 intent 문서(`<artifact_dir>/intent.md`, 없으면
+`status --json`의 `.intent`)의 성공 기준과 비목표를 읽는다. 원장의 G 항목과 이슈의 완료
+기준이 그 성공 기준을 모두 덮는지 대조하고, 덮지 않는 성공 기준은 report의 `## 의도 대조`
+절에 적어 4절의 readiness 판정에서 blocker로 다룬다. direct 사이클에서 봉인 뒤 intent가
+다시 기록됐으면 `status --json`의 `.intent`가 최신이다.
 
 현재 fingerprint에 대한 성공 기록이 있고 명령·입력·의존성·환경이 같으며 외부 상태의
 유효기간도 지나지 않았으면 그 결과를 재사용한다. 단계가 바뀌었다는 이유만으로 같은
@@ -158,6 +164,7 @@ strict readiness `warnings`의 `base_advanced`는 차단이 아니다. 이 단�
 사실을 PR 본문의 위험 절에 적는다.
 
 구현된 diff가 계획 시점의 compatibility review와 다르면 durable 판정을 최신으로 맞춘다.
+1절의 `## 의도 대조`에 미충족 항목이 있으면 approved로 기록하지 않는다.
 
 ```bash
 issueops compatibility review --id "$ISSUEOPS_ID" \

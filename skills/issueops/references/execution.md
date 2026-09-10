@@ -400,6 +400,16 @@ issueops artifact stage --id "$ISSUEOPS_ID" --name verified-execution-loop --fil
 ```
 
 - 이름은 `plan|spec|verified-execution-loop` 고정, 파일당 1MiB 상한, secret 패턴은 거부된다(스크럽 없음).
+- `intent`는 staging 대상이 아니다. prepare가 `record.intent`(원문 요청·해석·성공 기준·비목표·
+  제약·모호함·intent_class)를 렌더해 같은 디렉터리에 `intent.md`로 봉인하고 manifest에
+  `intent`로 넣는다. 문서에 기록 시각이 없어 같은 내용의 재기록은 reseed·resume을 그대로
+  통과하고, 내용이 달라진 재봉인은 plan과 같이 불변 writer가 거부한다. 그때 Orca는 사람이
+  워크트리의 `intent.md`를 지운 뒤 `execution replace --reseed`로 다음 generation에 다시
+  봉인한다. direct에는 봉인 뒤 `intent.md`를 다시 만들 CLI 경로가 없으므로 읽는 쪽
+  (review·verify·create-pr)은 `status --json`의 `.intent`를 fallback으로 본다. 자격 증명
+  형태는 `intent record`가 기록 시점에 거부하고, 그 이전에 기록된 record나 delegation이
+  만든 child intent는 prepare의 materialize가 거부하며 그때는 `intent record`를 고친 뒤 같은
+  prepare를 다시 실행한다(child record는 `--intent-class delegated-child`를 유지한다).
 - Orca prepare preflight는 non-empty staged `plan`을 remote issue read와 모든 외부
   mutation 전에 요구한다. 이미 `plan_path`가 있으면 canonical child worktree 안의
   regular file이어야 하고 staged bytes와 SHA-256이 정확히 같아야 한다.

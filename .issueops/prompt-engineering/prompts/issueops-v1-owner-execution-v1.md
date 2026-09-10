@@ -117,9 +117,13 @@ Required skills:
 
 3. {PACKET_PATH}의 digest와 issue body digest를 확인하고 acceptance IDs
    [{ACCEPTANCE_IDS}]를 개인 체크리스트로 만든다. packet의 artifact_manifest에
-   항목이 있으면 {WORKTREE_ROOT}/.issueops/artifact/의 plan/spec/verified-execution-loop
-   문서를 digest 검증 후 읽고 구현 계약의 일부로 삼는다. 원격 issue digest는 provider API의 body
-   field UTF-8 bytes만 개행을 덧붙이지 않고 계산하며 JSON envelope나 tool display를 hash하지 않는다.
+   항목이 있으면 record의 artifact_dir(기본 {WORKTREE_ROOT}/.issueops/issues/<n>/artifact/)의
+   plan/spec/verified-execution-loop 문서를 digest 검증 후 읽고 구현 계약의 일부로 삼는다.
+   manifest에 intent가 있으면 같은 디렉터리의 intent.md를 digest 검증 후 먼저 읽는다. 그 문서는
+   요청자 의도 계약이고 원격 issue body는 구현 계약이다. issue body의 완료 기준·범위가 intent.md의
+   성공 기준·비목표와 충돌하면 mutation 없이 두 문서의 해당 줄을 인용해 blocker를 보고한다.
+   원격 issue digest는 provider API의 body field UTF-8 bytes만 개행을 덧붙이지 않고 계산하며
+   JSON envelope나 tool display를 hash하지 않는다.
 4. `{LEASE_STATUS_COMMAND}`를 한 번 실행한다.
 5. expected claimable 상태에서 아래 command가 `none`이 아니면 실행 가능한 명령이 아니라 sealed claim template이다.
    status가 coordinator 전용 recovery `execution resume`을 next_command로 반환해도 dispatched owner는
@@ -245,7 +249,7 @@ publication과 종료:
 - Verification: <every command + PASS/FAIL>
 - AI-slop clean: <removed duplication/legacy/noise or none>
 - Draft PR/MR: <URL or none>
-- Deviations: <issue-vs-code mismatch with file:line evidence or none>
+- Deviations: <issue-vs-code or intent-vs-issue mismatch with file:line evidence or none>
 - Blockers: <exact state/error/next command or none>
 ```
 

@@ -22,7 +22,7 @@ description: Run an adversarial design-review review as a fresh sub-agent on an 
 | target | 리뷰 대상 | 함께 주는 자료 |
 |---|---|---|
 | `plan` | `status --json`의 `plan_path` 파일 전체(링크 전이면 staged plan artifact) | 이슈 본문, intent contract의 성공 기준, design review 본문 |
-| `diff` | `git -C "$WORKTREE" diff "$BASE_SHA"` 전체 | plan 파일 전체, 검증 명령과 결과, 변경한 프로젝트 문서 |
+| `diff` | `git -C "$WORKTREE" diff "$BASE_SHA"` 전체 | plan 파일 전체, 봉인 intent 문서(`<artifact_dir>/intent.md`, 없으면 `status --json`의 `.intent`), 검증 명령과 결과, 변경한 프로젝트 문서 |
 
 리뷰어 모델과 effort는 다음 명령이 돌려준다.
 
@@ -56,7 +56,8 @@ issueops next --id "$ISSUEOPS_ID" --json
 것은 리뷰어에게 존재하지 않는다.
 
 1. 대상 전문(위 표의 리뷰 대상과 함께 주는 자료).
-2. 성공 기준과 범위 경계.
+2. 성공 기준과 범위 경계. `diff` 대상이면 intent 문서의 성공 기준·비목표 대비 diff가 무엇을 덮고 무엇을
+   벗어나는지도 판정하게 한다.
 3. 관련 ADR과 CAUTIONS 항목의 경로와 제목.
 4. 출력 계약: 판정(`pass|revise|stop`), 필수 결함별 위치·발생 조건·위반한 계약·근거와
    최소 수정 또는 확인 방법. 발견한 필수 결함은 한 번에 전달한다. 결함이 없으면
