@@ -125,7 +125,7 @@ func validateClaimPacket(record leasecontract.Record, issueDigest, packetDigest 
 		return fmt.Errorf("sealed context packet issue body does not hash to its sealed digest: expected=%s observed=%s", issueDigest, observed)
 	}
 	for name, digest := range packet.ArtifactManifest {
-		path := filepath.Join(execution.Workspace.Root, ".issueops", "artifact", name+".md")
+		path := sealedClaimArtifactPath(execution, execution.Workspace.Root, name)
 		artifact, err := readClaimOwnerArtifact(execution.Workspace.Root, path)
 		if err != nil {
 			return fmt.Errorf("read sealed artifact %s: %w", name, err)
@@ -135,6 +135,17 @@ func validateClaimPacket(record leasecontract.Record, issueDigest, packetDigest 
 		}
 	}
 	return nil
+}
+
+// sealedClaimArtifactPath는 record가 기록한 artifact_dir 아래의 봉인 아티팩트 경로다.
+// execution prepare의 materialize와 같은 규칙을 써야 claim이 같은 파일을 읽는다. 빈 값은
+// legacy `.issueops/artifact`를 뜻한다(contract/issueops/execution.go:71-74).
+func sealedClaimArtifactPath(execution *leasecontract.Execution, root, name string) string {
+	dir := strings.TrimSpace(execution.Workspace.ArtifactDir)
+	if dir == "" {
+		dir = ".issueops/artifact"
+	}
+	return filepath.Join(root, filepath.FromSlash(dir), name+".md")
 }
 
 func claimContextPacketPath(record leasecontract.Record) string {

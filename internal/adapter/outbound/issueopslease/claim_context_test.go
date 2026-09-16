@@ -26,7 +26,7 @@ func TestClaimContextPreflight(t *testing.T) {
 
 func TestClaimContextPreflightRejectsSealedArtifactDrift(t *testing.T) {
 	issueBody := "## acceptance criteria\n\n- [ ] AC-01: packet artifact\n"
-	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", issueBody, []byte("sealed plan\n"))
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", issueBody, "", []byte("sealed plan\n"))
 	if _, err := fixture.preflight.Preflight(context.Background(), fixture.request); err != nil {
 		t.Fatalf("sealed artifact preflight: %v", err)
 	}
@@ -40,9 +40,17 @@ func TestClaimContextPreflightRejectsSealedArtifactDrift(t *testing.T) {
 
 func TestClaimContextPreflightAcceptsSealed98163ByteArtifact(t *testing.T) {
 	issueBody := "## acceptance criteria\n\n- [ ] AC-04: claim the sealed plan\n"
-	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/237", issueBody, make([]byte, 98_163))
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/237", issueBody, "", make([]byte, 98_163))
 	if _, err := fixture.preflight.Preflight(context.Background(), fixture.request); err != nil {
 		t.Fatalf("98,163-byte sealed artifact preflight: %v", err)
+	}
+}
+
+func TestClaimContextPreflightReadsSealedArtifactFromRecordedArtifactDir(t *testing.T) {
+	issueBody := "## acceptance criteria\n\n- [ ] AC-01: recorded artifact dir\n"
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/508", issueBody, ".issueops/issues/508/artifact", []byte("sealed plan\n"))
+	if _, err := fixture.preflight.Preflight(context.Background(), fixture.request); err != nil {
+		t.Fatalf("recorded artifact_dir preflight: %v", err)
 	}
 }
 
@@ -52,14 +60,19 @@ type sealedClaimContext struct {
 	artifactPath string
 }
 
-func newSealedClaimContext(t *testing.T, issueURL, issueBody string, artifact []byte) sealedClaimContext {
+func newSealedClaimContext(t *testing.T, issueURL, issueBody, artifactDir string, artifact []byte) sealedClaimContext {
 	t.Helper()
 	record := claimableRecord(t, leasecontract.Actor{}, "token")
 	record.Execution.Mode = "orca"
 	record.Execution.Workspace.SourceRoot = filepath.Dir(record.Execution.Workspace.Root)
 	record.Execution.Workspace.Driver = "orca"
 	record.IssueURL = issueURL
-	artifactPath := filepath.Join(record.Execution.Workspace.Root, ".issueops", "artifact", "plan.md")
+	record.Execution.Workspace.ArtifactDir = artifactDir
+	sealedDir := artifactDir
+	if sealedDir == "" {
+		sealedDir = ".issueops/artifact"
+	}
+	artifactPath := filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(sealedDir), "plan.md")
 	if err := os.MkdirAll(filepath.Dir(artifactPath), 0o700); err != nil {
 		t.Fatal(err)
 	}
