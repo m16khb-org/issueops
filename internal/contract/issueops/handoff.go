@@ -1,7 +1,8 @@
 package issueops
 
 const (
-	IssueOpsHandoffSchemaVersion = 1
+	IssueOpsHandoffSchemaVersion         = 1
+	IssueOpsHandoffDeliverySchemaVersion = 1
 
 	IssueOpsHandoffPhaseReleaseReadiness = "release-readiness"
 	IssueOpsHandoffPhaseReceiveReadiness = "receive-readiness"
@@ -15,6 +16,34 @@ const (
 	IssueOpsHandoffTaskKindFormatter = "formatter"
 	IssueOpsHandoffTaskKindFixture   = "fixture"
 	IssueOpsHandoffTaskKindUnknown   = "unknown"
+
+	IssueOpsHandoffDeliveryStateNotObserved = "not_observed"
+	IssueOpsHandoffDeliveryStateObserved    = "observed"
+
+	IssueOpsHandoffDeliveryLauncherDirect = "direct"
+	IssueOpsHandoffDeliveryLauncherOrca   = "orca"
+	IssueOpsHandoffDeliveryLauncherHerdr  = "herdr"
+	IssueOpsHandoffDeliveryLauncherCmux   = "cmux"
+
+	IssueOpsHandoffDeliveryEvidenceLauncherReceipt                = "launcher_receipt"
+	IssueOpsHandoffDeliveryEvidenceNativeReceipt                  = "native_receipt"
+	IssueOpsHandoffDeliveryEvidenceIssueOpsClaim                  = "issueops_claim"
+	IssueOpsHandoffDeliveryEvidenceLauncherAccepted               = "launcher_accepted"
+	IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost           = "accepted_response_lost"
+	IssueOpsHandoffDeliveryEvidenceOrcaDispatch                   = "orca_dispatch"
+	IssueOpsHandoffDeliveryEvidenceOmoSendFailed                  = "omo_send_failed"
+	IssueOpsHandoffDeliveryEvidenceOmoSendAccepted                = "omo_send_accepted"
+	IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost            = "omo_send_response_lost"
+	IssueOpsHandoffDeliveryEvidenceRawInput                       = "raw_input"
+	IssueOpsHandoffDeliveryEvidenceHerdrWaitState                 = "herdr_wait_state"
+	IssueOpsHandoffDeliveryEvidenceTimeout                        = "timeout"
+	IssueOpsHandoffDeliveryEvidenceAgentPromptStalled             = "agent_prompt_stalled"
+	IssueOpsHandoffDeliveryEvidenceReplaceBeforeExternalCallCrash = "replace_before_external_call_crash"
+	IssueOpsHandoffDeliveryEvidenceReplaceAfterExternalCallCrash  = "replace_after_external_call_crash"
+	IssueOpsHandoffDeliveryEvidenceReseedBeforeExternalCallCrash  = "reseed_before_external_call_crash"
+	IssueOpsHandoffDeliveryEvidenceReseedAfterExternalCallCrash   = "reseed_after_external_call_crash"
+	IssueOpsHandoffDeliveryEvidenceResumeBeforeExternalCallCrash  = "resume_before_external_call_crash"
+	IssueOpsHandoffDeliveryEvidenceResumeAfterExternalCallCrash   = "resume_after_external_call_crash"
 )
 
 type IssueOpsHandoffSnapshot struct {
@@ -134,4 +163,70 @@ type IssueOpsHandoffDecision struct {
 	SelectiveRecheck []string `json:"selective_recheck,omitempty"`
 	Quarantine       []string `json:"quarantine,omitempty"`
 	RejectReasons    []string `json:"reject_reasons,omitempty"`
+}
+
+type IssueOpsHandoffDeliveryObservation struct {
+	SchemaVersion      int                               `json:"schema_version"`
+	AttemptID          string                            `json:"attempt_id"`
+	LifecycleID        string                            `json:"lifecycle_id"`
+	PromptSHA256       string                            `json:"prompt_sha256"`
+	Request            IssueOpsHandoffDeliveryRequest    `json:"request"`
+	Launcher           IssueOpsHandoffDeliveryLauncher   `json:"launcher"`
+	Target             IssueOpsHandoffDeliveryTarget     `json:"target"`
+	OwnerActor         *NativeActor                      `json:"owner_actor,omitempty"`
+	SourceGeneration   uint64                            `json:"source_generation"`
+	CreatedAt          string                            `json:"created_at"`
+	UpdatedAt          string                            `json:"updated_at"`
+	Receipt            IssueOpsHandoffDeliveryReceipt    `json:"receipt"`
+	InputAccepted      IssueOpsHandoffDeliveryState      `json:"input_accepted"`
+	NativeTurnObserved IssueOpsHandoffDeliveryState      `json:"native_turn_observed"`
+	OwnerClaimed       IssueOpsHandoffDeliveryState      `json:"owner_claimed"`
+	Ambiguous          IssueOpsHandoffDeliveryState      `json:"ambiguous"`
+	OwnerClaim         IssueOpsHandoffDeliveryOwnerClaim `json:"owner_claim,omitempty"`
+}
+
+type IssueOpsHandoffDeliveryRequest struct {
+	DurableID      string `json:"durable_id"`
+	RetryRequestID string `json:"retry_request_id,omitempty"`
+	RetryOfAttempt string `json:"retry_of_attempt,omitempty"`
+}
+
+type IssueOpsHandoffDeliveryLauncher struct {
+	Name      string `json:"name"`
+	Version   string `json:"version"`
+	Path      string `json:"path"`
+	RuntimeID string `json:"runtime_id"`
+	MachineID string `json:"machine_id"`
+	ServerID  string `json:"server_id"`
+}
+
+type IssueOpsHandoffDeliveryTarget struct {
+	TerminalID string               `json:"terminal_id,omitempty"`
+	PaneID     string               `json:"pane_id,omitempty"`
+	Process    NativeProcessReceipt `json:"process"`
+}
+
+type IssueOpsHandoffDeliveryReceipt struct {
+	Location string `json:"location"`
+	Digest   string `json:"digest"`
+}
+
+type IssueOpsHandoffDeliveryState struct {
+	Status     string `json:"status"`
+	ObservedAt string `json:"observed_at,omitempty"`
+	Evidence   string `json:"evidence,omitempty"`
+}
+
+type IssueOpsHandoffDeliveryOwnerClaim struct {
+	Claimed    bool        `json:"claimed,omitempty"`
+	Generation uint64      `json:"generation,omitempty"`
+	Actor      NativeActor `json:"actor,omitempty"`
+	ClaimedAt  string      `json:"claimed_at,omitempty"`
+}
+
+type IssueOpsHandoffDeliveryDecision struct {
+	Accepted        bool     `json:"accepted"`
+	OwnerAuthorized bool     `json:"owner_authorized"`
+	RetryAuthorized bool     `json:"retry_authorized"`
+	RejectReasons   []string `json:"reject_reasons,omitempty"`
 }
