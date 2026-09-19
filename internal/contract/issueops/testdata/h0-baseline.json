@@ -1,0 +1,541 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-20T00:00:00Z",
+  "attempt_id": "h0-capability-baseline-fixture",
+  "machine": "deterministic-fixture",
+  "cells": [
+    {
+      "launcher": "orca",
+      "host": "codex",
+      "status": "not-run",
+      "selected_launcher": "orca",
+      "observed_launcher": "orca",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-codex"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-codex"
+        },
+        "capable": {
+          "claim": "live",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-codex",
+          "detail": "prompt-delivery capability observed; host owner E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "orca-codex"
+        }
+      }
+    },
+    {
+      "launcher": "orca",
+      "host": "claude",
+      "status": "not-run",
+      "selected_launcher": "orca",
+      "observed_launcher": "orca",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-claude"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-claude"
+        },
+        "capable": {
+          "claim": "live",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-claude",
+          "detail": "prompt-delivery capability observed; host owner E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "orca-claude"
+        }
+      }
+    },
+    {
+      "launcher": "orca",
+      "host": "omo",
+      "status": "not-run",
+      "selected_launcher": "orca",
+      "observed_launcher": "orca",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-omo"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-omo"
+        },
+        "capable": {
+          "claim": "live",
+          "observed": true,
+          "version": "1.4.200",
+          "executable_path": "/fixture/bin/orca",
+          "runtime_identity": "fixture-orca-runtime-a",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "orca-omo",
+          "detail": "prompt-delivery capability observed; Omo dispatch/send E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "orca-omo"
+        }
+      }
+    },
+    {
+      "launcher": "herdr",
+      "host": "codex",
+      "status": "not-run",
+      "selected_launcher": "herdr",
+      "observed_launcher": "herdr",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-codex"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-codex"
+        },
+        "capable": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-codex",
+          "detail": "agent start recipe available; native claim E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "herdr-codex"
+        }
+      }
+    },
+    {
+      "launcher": "herdr",
+      "host": "claude",
+      "status": "not-run",
+      "selected_launcher": "herdr",
+      "observed_launcher": "herdr",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-claude"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-claude"
+        },
+        "capable": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-claude",
+          "detail": "agent start recipe available; native claim E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "herdr-claude"
+        }
+      }
+    },
+    {
+      "launcher": "herdr",
+      "host": "omo",
+      "status": "not-run",
+      "selected_launcher": "herdr",
+      "observed_launcher": "herdr",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-omo"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-omo"
+        },
+        "capable": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.9.0",
+          "executable_path": "/fixture/bin/herdr",
+          "runtime_identity": "fixture-herdr-server-protocol-22",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "herdr-omo",
+          "detail": "pane run recipe available; native Omo claim E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "herdr-omo"
+        }
+      }
+    },
+    {
+      "launcher": "cmux",
+      "host": "codex",
+      "status": "unavailable",
+      "selected_launcher": "cmux",
+      "observed_launcher": "cmux",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.64.10",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-bundle",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "cmux-codex"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": false,
+          "attempt_id": "cmux-codex",
+          "detail": "control connection unavailable"
+        },
+        "capable": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "cmux-codex"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "cmux-codex"
+        }
+      }
+    },
+    {
+      "launcher": "cmux",
+      "host": "claude",
+      "status": "unavailable",
+      "selected_launcher": "cmux",
+      "observed_launcher": "cmux",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.64.10",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-bundle",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "cmux-claude"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": false,
+          "attempt_id": "cmux-claude",
+          "detail": "control connection unavailable"
+        },
+        "capable": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "cmux-claude"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "cmux-claude"
+        }
+      }
+    },
+    {
+      "launcher": "cmux",
+      "host": "omo",
+      "status": "unavailable",
+      "selected_launcher": "cmux",
+      "observed_launcher": "cmux",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.64.10",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-bundle",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "cmux-omo"
+        },
+        "connected": {
+          "claim": "live",
+          "observed": false,
+          "attempt_id": "cmux-omo",
+          "detail": "control connection unavailable; cmux omo is not treated as Omo native"
+        },
+        "capable": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "cmux-omo"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "cmux-omo"
+        }
+      }
+    },
+    {
+      "launcher": "direct",
+      "host": "codex",
+      "status": "not-run",
+      "selected_launcher": "direct",
+      "observed_launcher": "direct",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.155.1",
+          "executable_path": "/fixture/bin/codex",
+          "runtime_identity": "fixture-direct-codex",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "direct-codex"
+        },
+        "connected": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "direct-codex"
+        },
+        "capable": {
+          "claim": "installed",
+          "observed": true,
+          "version": "0.155.1",
+          "executable_path": "/fixture/bin/codex",
+          "runtime_identity": "fixture-direct-codex",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "direct-codex",
+          "detail": "host CLI installed; fresh native claim E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "direct-codex"
+        }
+      }
+    },
+    {
+      "launcher": "direct",
+      "host": "claude",
+      "status": "not-run",
+      "selected_launcher": "direct",
+      "observed_launcher": "direct",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "2.1.272",
+          "executable_path": "/fixture/bin/claude",
+          "runtime_identity": "fixture-direct-claude",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "direct-claude"
+        },
+        "connected": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "direct-claude"
+        },
+        "capable": {
+          "claim": "installed",
+          "observed": true,
+          "version": "2.1.272",
+          "executable_path": "/fixture/bin/claude",
+          "runtime_identity": "fixture-direct-claude",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "direct-claude",
+          "detail": "host CLI installed; fresh native claim E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "direct-claude"
+        }
+      }
+    },
+    {
+      "launcher": "direct",
+      "host": "omo",
+      "status": "not-run",
+      "selected_launcher": "direct",
+      "observed_launcher": "direct",
+      "evidence": {
+        "installed": {
+          "claim": "installed",
+          "observed": true,
+          "version": "5.0.0-0.beta.22",
+          "executable_path": "/fixture/bin/omo",
+          "runtime_identity": "fixture-direct-omo",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "direct-omo"
+        },
+        "connected": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "direct-omo"
+        },
+        "capable": {
+          "claim": "installed",
+          "observed": true,
+          "version": "5.0.0-0.beta.22",
+          "executable_path": "/fixture/bin/omo",
+          "runtime_identity": "fixture-direct-omo",
+          "observed_at": "2026-09-20T00:00:00Z",
+          "attempt_id": "direct-omo",
+          "detail": "host CLI installed; fresh native claim E2E not run"
+        },
+        "runtime_verified": {
+          "claim": "not-run",
+          "observed": false,
+          "attempt_id": "direct-omo"
+        }
+      }
+    }
+  ],
+  "handoffs": [
+    {
+      "from_host": "codex",
+      "to_host": "claude",
+      "semantics": "material-transfer"
+    },
+    {
+      "from_host": "codex",
+      "to_host": "omo",
+      "semantics": "material-transfer"
+    },
+    {
+      "from_host": "claude",
+      "to_host": "codex",
+      "semantics": "material-transfer"
+    },
+    {
+      "from_host": "claude",
+      "to_host": "omo",
+      "semantics": "material-transfer"
+    },
+    {
+      "from_host": "omo",
+      "to_host": "codex",
+      "semantics": "material-transfer"
+    },
+    {
+      "from_host": "omo",
+      "to_host": "claude",
+      "semantics": "material-transfer"
+    }
+  ],
+  "recovery": {
+    "direct": {
+      "mode": "direct",
+      "steps": [
+        "direct-released",
+        "replace-preview",
+        "returned-recovery-chain",
+        "claimable",
+        "claim"
+      ],
+      "failure_cases": [
+        "released-immediate-claim",
+        "stale-generation"
+      ]
+    },
+    "orca": {
+      "mode": "orca",
+      "steps": [
+        "orca-released",
+        "replace",
+        "reseed",
+        "resume",
+        "sealed-owner-claim"
+      ],
+      "failure_cases": [
+        "released-immediate-claim",
+        "stale-generation",
+        "duplicate-orca-owner",
+        "manual-orca-owner"
+      ]
+    }
+  },
+  "kind": "deterministic-fixture"
+}
