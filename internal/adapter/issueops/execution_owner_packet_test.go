@@ -183,6 +183,24 @@ func TestExecutionOwnerPromptSeparatesSealedClaimFromRecoveryResume(t *testing.T
 	}
 }
 
+func TestExecutionOwnerPromptFiltersStaleHandoffEvidence(t *testing.T) {
+	record, req := ownerPacketFixture()
+	prompt := strings.ToLower(executionOwnerPromptFixture(t, record, req))
+	for _, required := range []string{
+		"인계 자료 digest",
+		"현재 head, 계획 digest, 인계 자료 digest",
+		"stale하거나 누락된 근거는 필요한 범위만 다시 확인",
+		"서로 다른 host의 session id는 이식 가능한 identity가 아니다",
+		"독립 direct claim",
+		"이전 세션의",
+		"callback이나 결과는 source 변경",
+	} {
+		if !strings.Contains(prompt, required) {
+			t.Fatalf("owner prompt is missing handoff freshness contract %q", required)
+		}
+	}
+}
+
 func TestExecutionOwnerPromptOrdersLifecycleMutationsBeforePublication(t *testing.T) {
 	record, req := ownerPacketFixture()
 	prompt := executionOwnerPromptFixture(t, record, req)

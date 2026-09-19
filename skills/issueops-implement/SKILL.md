@@ -64,6 +64,10 @@ worktree의 branch·HEAD가 record와 다르거나 무관한 dirty 변경이 있
 결정을 대조하고 자기 lease로 인수한 뒤 이어간다. 이미 인계받은 세션은 환경 분기를
 다시 적용하거나 새 세션을 띄우지 않는다. 보류는 구현 승인이 아니다. 아직 인계하지 않은
 준비 세션이면 공용 라우터의 자동 분기를 적용하며 실행 방식을 묻지 않는다.
+인계문이 있으면 현재 HEAD, 계획 digest, 인계 자료 digest를 현재 worktree와 대조한다.
+stale하거나 누락된 근거는 필요한 범위만 다시 확인한다. 서로 다른 host의 session ID는
+이식 가능한 identity가 아니다. 독립 direct claim 경로는 Orca owner packet 없이 인계 자료와
+status를 검증한 뒤 direct claim 복구 체인을 따른다.
 
 ### base가 앞서 나갔는지 본다
 
@@ -210,6 +214,11 @@ issueops child status --parent "$ISSUEOPS_ID" \
 - child가 scope drift를 보고하면 child를 조용히 넓히지 않는다. 사용자가
   승인해도 경로는 두 가지뿐이다: 새 scope를 **새 child**로 분리하거나, plan을
   개정하고 plan hash에 묶인 리뷰 freshness를 다시 확인한다.
+- 인계 준비나 최신 사용자 취소·범위 축소 뒤에는 새 쓰기 작업과 하위 작업 dispatch를
+  중지한다. 이 스킬이 시작한 child나 worker는 인계 자료에 소유자, 실행 핸들, 입력 리비전,
+  쓰기 범위, 결과 위치, 읽기 작업인지 쓰기 작업인지의 분류를 남기고, writer와 자손
+  프로세스가 실제로 종료됐는지 확인한다. 사용자의 최신 취소나 범위 변경이 우선하며,
+  이전 세션의 callback이나 결과는 source 변경이나 pass 기록의 근거가 될 수 없다.
 - accept 전 rubric: 위임한 scope·expected worktree 준수, acceptance별 증거,
   선언한 검증 명령의 실행 결과, 무관한 diff·secret·stale scaffold 없음. 하나라도
   모호하면 accept하지 않는다.

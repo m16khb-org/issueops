@@ -112,6 +112,60 @@ func TestIssueOpsExecutionDocumentationPreservesParallelIndependence(t *testing.
 	}
 }
 
+func TestIssueOpsHandoffRequiresDrainBeforeRelease(t *testing.T) {
+	sessionChoice := readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md")
+	planSkill := readIssueOpsContractFile(t, "skills", "issueops-plan", "SKILL.md")
+	implementSkill := readIssueOpsContractFile(t, "skills", "issueops-implement", "SKILL.md")
+	all := strings.ToLower(sessionChoice + "\n" + planSkill + "\n" + implementSkill)
+	for _, want := range []string{
+		"새 쓰기 작업과 하위 작업 dispatch를 중지",
+		"소유자, 실행 핸들, 입력 리비전, 쓰기 범위, 결과 위치",
+		"읽기 작업인지 쓰기 작업인지",
+		"build, golden, generator, formatter, fixture, 분류할 수 없는 작업",
+		"대기 중인 writer가 0",
+		"자손 프로세스가 실제로 종료",
+		"signal 전송이나 lease release만으로는 프로세스 종료",
+		"늦게 도착한 결과는 격리",
+		"이전 세션의 callback이나 결과",
+		"사용자의 최신 취소나 범위 변경",
+	} {
+		if !strings.Contains(all, want) {
+			t.Fatalf("handoff drain contract missing %q", want)
+		}
+	}
+	if release := strings.Index(strings.ToLower(sessionChoice), "issueops execution release"); release >= 0 {
+		for _, beforeRelease := range []string{"대기 중인 writer가 0", "늦게 도착한 결과는 격리"} {
+			if index := strings.Index(strings.ToLower(sessionChoice), beforeRelease); index < 0 || index > release {
+				t.Fatalf("%q must be required before execution release", beforeRelease)
+			}
+		}
+	}
+}
+
+func TestIssueOpsHandoffMaterialFreshnessContract(t *testing.T) {
+	sessionChoice := strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))
+	for _, want := range []string{
+		"목적, 비목표, 승인된 종료점",
+		"source root와 canonical worktree",
+		"base head, full head, diff",
+		"계획 경로와 계획 digest",
+		"입력, 명령, 시각, 환경, 실패",
+		"미완료 작업과 결과 위치",
+		"현재 lifecycle 상태",
+		"resume 명령과 읽기 전용 확인 명령",
+		"secret, 인증 정보, 이전 lease token",
+		"현재 head, 계획 digest, 인계 자료 digest",
+		"stale하거나 누락된 근거는 필요한 범위만 다시 확인",
+		"서로 다른 host의",
+		"session id는 이식 가능한 identity가 아니다",
+		"독립 direct claim",
+	} {
+		if !strings.Contains(sessionChoice, want) {
+			t.Fatalf("handoff material freshness contract missing %q", want)
+		}
+	}
+}
+
 func TestIssueOpsOrchestrationBindsOmoAgentsToCanonicalWorktrees(t *testing.T) {
 	all := strings.ToLower(joinIssueOpsContractDocuments(map[string]string{
 		"orchestration": readIssueOpsContractFile(t, "skills", "issueops", "references", "orchestration.md"),

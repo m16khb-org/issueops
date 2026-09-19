@@ -184,7 +184,11 @@ materialize한다. 반환된 `resolved_mode`, canonical path, branch, 계획을 
 [`issueops`](../issueops/SKILL.md)의 **환경별 자동 세션 인계**를 적용한다.
 
 [session-choice.md](../issueops/references/session-choice.md)에 따라 Orca가 ready면
-현재 holder가 결정 기록과 release를 마치고 같은 worktree에 새 세션 하나를 띄운다.
+현재 holder가 결정 기록, 인계 자료 봉인, writer 정리를 마친 뒤 release하고
+같은 worktree에 새 세션 하나를 띄운다. 이때 새 쓰기 작업과 하위 작업 dispatch를 중지하고,
+소유자, 실행 핸들, 입력 리비전, 쓰기 범위, 결과 위치, 읽기 작업인지 쓰기 작업인지의 분류,
+대기 중인 writer가 0이라는 재확인, 자손 프로세스가 실제로 종료됐다는 관측, 늦게 도착한
+결과는 격리했다는 기록을 인계 자료와 release 이전 증거로 남긴다.
 Orca가 없거나 unready면 Herdr의 서버·호환성·현재 native host 실행 가능 여부를
 확인해 같은 release·새 세션 인계 절차를 적용한다. 둘 다 사용 불가면 lease를
 유지하고 현재 세션에서 구현으로 이어간다. Herdr는 기존 worktree를 열 뿐 재생성하지 않는다.

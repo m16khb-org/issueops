@@ -66,9 +66,33 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
 봉인된 claim을 사용하고 결정 기록을 읽는다. 수동으로 연 세션은 이 owner를 대신 claim하지
 않고 coordinator 복구 경로만 사용한다. 아래 3번의 별도 세션 실행은 이 경우 생략한다.
 
-1. 인계할 내용을 먼저 준비한다: 위 결정의 created_at과 내용, exact ID·issue·branch·worktree,
-   계획 경로, 현재 단계·성공 기준·승인된 종료점. 인계문에 secret이나 claim token은 넣지 않는다.
-2. 기존 holder가 canonical worktree에서 최신 `whoami`의 actor flags로 release한다.
+1. 인계할 내용을 먼저 준비한다. 우선 **새 쓰기 작업과 하위 작업 dispatch를 중지**하고,
+   이미 시작한 작업을 빠짐없이 열거한다. 각 항목에는 **소유자, 실행 핸들, 입력 리비전,
+   쓰기 범위, 결과 위치**를 적고, **읽기 작업인지 쓰기 작업인지** 분류한다.
+   build, golden, generator, formatter, fixture, 분류할 수 없는 작업은 명령, cwd, 출력 위치로
+   공유 상태를 바꾸지 않는다는 점이 확인되기 전까지 writer로 다룬다. 공유 상태 밖의
+   immutable 입력만 읽는 독립 reader만 계속 실행할 수 있으며, writer와 그 자손 프로세스는
+   release 전에 종료하거나 취소해야 한다.
+2. bounded observation으로 writer와 **자손 프로세스가 실제로 종료**됐는지 확인한다.
+   signal 전송이나 lease release만으로는 프로세스 종료를 증명할 수 없다. canonical
+   worktree와 공유 state를 다시 읽어 **대기 중인 writer가 0**임을 확인하고, 성공·실패 출력과
+   결과 위치를 자료에 적는다. **늦게 도착한 결과는 격리**해 입력 리비전과 출처만 남긴다.
+   이전 세션의 callback이나 결과는 release 뒤 source 변경이나 pass 기록의 근거가 될 수 없다.
+   사용자의 최신 취소나 범위 변경이 저장된 인계문보다 우선하며, 그 지시가 오면 새 dispatch를
+   중지한다.
+3. 봉인된 인계 자료를 만든다. 필수 필드는 **목적, 비목표, 승인된 종료점**,
+   **source root와 canonical worktree**, **base head, full head, diff**, **계획 경로와 계획
+   digest**, 완료한 조사와 검증의 **입력, 명령, 시각, 환경, 실패**, **미완료 작업과 결과 위치**,
+   **현재 lifecycle 상태**, exact **resume 명령과 읽기 전용 확인 명령**, 그리고 인계 자료
+   digest다. 자료에는 secret, 인증 정보, 이전 lease token을 넣지 않는다.
+4. 위 결정의 created_at과 내용, exact ID·issue·branch·worktree, 계획 경로, 현재 단계·성공 기준·
+   승인된 종료점을 인계문에 실제 값으로 채운다. 인계문에 secret이나 claim token은 넣지 않는다.
+   수신자는 **현재 HEAD, 계획 digest, 인계 자료 digest**를 대조하고, 일치하는 근거만
+   재사용한다. stale하거나 누락된 근거는 필요한 범위만 다시 확인한다. 서로 다른 host의
+   session ID는 이식 가능한 identity가 아니다. 새 host/session은 durable actor flags와 runtime
+   receipt로 다시 식별한다. **독립 direct claim**은 이 자료와 status를 검증하지만,
+   일반 direct claim에 Orca owner context packet을 요구하지 않는다.
+5. 기존 holder가 canonical worktree에서 최신 `whoami`의 actor flags로 release한다.
 
    ```bash
    issueops execution release --id "$ISSUEOPS_ID" --generation "$GENERATION" $ACTOR_FLAGS --json
@@ -77,7 +101,7 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
 
    released임을 확인하기 전에는 새 세션을 시작하지 않는다. release 실패를 revoke나
    worktree 삭제로 우회하지 않는다. release 후 기존 세션은 구현하거나 다시 claim하지 않는다.
-3. 자동 `new-session`이면 추가 질문 없이 **기존 worktree에** 새 세션 하나만 연다.
+6. 자동 `new-session`이면 추가 질문 없이 **기존 worktree에** 새 세션 하나만 연다.
    현재 native host를 유지하고 현재 모델·effort는 해당 launch가 지원하는 값만 전달한다.
    사용자가 직접 세션을 열겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
    Orca에서는 설치된 `orca-cli` 안내로 exact worktree 경로를 확인한 뒤 `terminal create`와
@@ -85,7 +109,7 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
    `worktree create`, `switch-mode`, coordinator task 생성은
    이 인계의 수단이 아니다. 직접 실행 가능한 launch 기능이 없으면 경로와 인계문을 제공하고
    수동 시작이 남았다고 알린다. 현재 세션에서 몰래 구현하거나 실행됐다고 보고하지 않는다.
-4. 실행 결과가 모호하면 새 세션을 또 띄우지 않고 기존 terminal/session을 확인한다.
+7. 실행 결과가 모호하면 새 세션을 또 띄우지 않고 기존 terminal/session을 확인한다.
    인계 전달을 확인하면 원래 세션은 종료 보고한다. 구현 완료를 기다리는 감독 루프를 만들지 않는다.
 
 인계문에는 다음 내용을 실제 값으로 채운다.
@@ -95,14 +119,26 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
 ID: <lifecycle ID>
 worktree: <absolute path>
 issue / branch / plan: <verified values>
+인계 자료 digest: <sha256>
+목적, 비목표, 승인된 종료점: <actual values>
+source root와 canonical worktree: <actual values>
+base head, full head, diff: <actual values>
+계획 경로와 계획 digest: <actual values>
+검증 입력, 명령, 시각, 환경, 실패: <actual values>
+미완료 작업과 결과 위치: <actual values>
+현재 lifecycle 상태: <actual state>
+resume 명령과 읽기 전용 확인 명령: <exact commands>
 사용자 선택 기록: status.decisions의 <created_at>, 제목 "실행 방식 선택"
 선택: new-session. 런처: <orca|herdr>. 결정 근거: <사용 가능 관찰 또는 명시적 지시>
 원래 사용자 요청: <actual request and conversation reference>
 승인 범위와 종료점: <scope>, <draft PR/MR publication + execution complete, or narrower endpoint>
-기존 holder는 release를 마쳤습니다. 현재 status와 선택 기록을 읽고 인계 내용과 대조하세요.
+기존 holder는 release를 마쳤습니다. 현재 status와 선택 기록, 현재 HEAD, 계획 digest,
+인계 자료 digest를 읽고 인계 내용과 대조하세요. stale하거나 누락된 근거는 필요한 범위만 다시 확인하세요.
 같은 worktree에서 next --id가 제공하는 복구 명령 체인을 따라 자기 native actor로 인수하세요.
 direct의 released 상태는 replace preview부터 시작하며 이후 반환된 exact next_command를 따릅니다.
 execution resume은 Orca binding 전용이므로 direct에 쓰지 마세요. 현재 generation을 직접 관측하세요.
+독립 direct claim은 자료와 status 검증을 요구하지만 Orca owner packet을 요구하지 않습니다.
+서로 다른 host의 session ID는 이식 가능한 identity가 아니므로 새 host/session은 자기 native actor flags로 식별하세요.
 active(self)가 된 뒤 승인된 범위 안에서 재질문 없이 이어가세요. 자동 인계를 다시 적용해 새 세션을 띄우지 마세요.
 기록보다 최신 사용자 지시가 우선합니다.
 ```

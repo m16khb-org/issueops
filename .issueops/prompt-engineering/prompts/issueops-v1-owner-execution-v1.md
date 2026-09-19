@@ -124,6 +124,13 @@ Required skills:
    성공 기준·비목표와 충돌하면 mutation 없이 두 문서의 해당 줄을 인용해 blocker를 보고한다.
    원격 issue digest는 provider API의 body field UTF-8 bytes만 개행을 덧붙이지 않고 계산하며
    JSON envelope나 tool display를 hash하지 않는다.
+   인계 자료 digest가 제공됐으면 현재 HEAD, 계획 digest, 인계 자료 digest를 현재 status와
+   worktree에서 대조한다. stale하거나 누락된 근거는 필요한 범위만 다시 확인한다. 일치하는
+   조사·검증 근거만 재사용하고, drift가 난 HEAD·계획·자료·누락 근거는 해당 범위만 다시
+   확인한다. 서로 다른 host의 session ID는 이식 가능한 identity가 아니다. 새 host/session은
+   durable actor flags와 runtime receipt로 다시 식별한다. 독립 direct claim은 이 자료와
+   status 검증을 요구하지만 Orca owner context packet을 요구하지 않는다. 이전 세션의
+   callback이나 결과는 source 변경이나 pass 기록의 근거가 될 수 없다.
 4. `{LEASE_STATUS_COMMAND}`를 한 번 실행한다.
 5. expected claimable 상태에서 아래 command가 `none`이 아니면 실행 가능한 명령이 아니라 sealed claim template이다.
    status가 coordinator 전용 recovery `execution resume`을 next_command로 반환해도 dispatched owner는
