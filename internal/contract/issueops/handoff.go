@@ -3,6 +3,9 @@ package issueops
 const (
 	IssueOpsHandoffSchemaVersion = 1
 
+	IssueOpsHandoffPhaseReleaseReadiness = "release-readiness"
+	IssueOpsHandoffPhaseReceiveReadiness = "receive-readiness"
+
 	IssueOpsHandoffTaskReader = "reader"
 	IssueOpsHandoffTaskWriter = "writer"
 
@@ -16,6 +19,7 @@ const (
 
 type IssueOpsHandoffSnapshot struct {
 	SchemaVersion int                          `json:"schema_version"`
+	Phase         string                       `json:"phase"`
 	Sealed        IssueOpsHandoffSealed        `json:"sealed"`
 	Current       IssueOpsHandoffCurrent       `json:"current"`
 	Sender        IssueOpsHandoffSession       `json:"sender"`
@@ -41,6 +45,7 @@ type IssueOpsHandoffCurrent struct {
 	MaterialDigest       string                    `json:"material_digest"`
 	Evidence             []IssueOpsHandoffEvidence `json:"evidence,omitempty"`
 	SharedStateRechecked bool                      `json:"shared_state_rechecked"`
+	ReleaseCompleted     bool                      `json:"release_completed,omitempty"`
 }
 
 type IssueOpsHandoffEvidence struct {
@@ -90,10 +95,11 @@ type IssueOpsHandoffExecution struct {
 }
 
 type IssueOpsHandoffUserDirective struct {
-	MaterialVersion int  `json:"material_version"`
-	LatestVersion   int  `json:"latest_version"`
-	Cancelled       bool `json:"cancelled,omitempty"`
-	ScopeChanged    bool `json:"scope_changed,omitempty"`
+	MaterialVersion    int    `json:"material_version"`
+	LatestVersion      int    `json:"latest_version"`
+	CurrentInstruction string `json:"current_instruction"`
+	Cancelled          bool   `json:"cancelled,omitempty"`
+	ScopeChanged       bool   `json:"scope_changed,omitempty"`
 }
 
 type IssueOpsHandoffTask struct {
@@ -121,7 +127,9 @@ type IssueOpsHandoffLateResult struct {
 }
 
 type IssueOpsHandoffDecision struct {
+	Phase            string   `json:"phase"`
 	AllowRelease     bool     `json:"allow_release"`
+	AllowReceive     bool     `json:"allow_receive"`
 	ReusableEvidence []string `json:"reusable_evidence,omitempty"`
 	SelectiveRecheck []string `json:"selective_recheck,omitempty"`
 	Quarantine       []string `json:"quarantine,omitempty"`

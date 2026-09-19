@@ -8,7 +8,7 @@ import (
 )
 
 func EvaluateHandoff(snapshot issueopscontract.IssueOpsHandoffSnapshot) issueopscontract.IssueOpsHandoffDecision {
-	decision := issueopscontract.IssueOpsHandoffDecision{}
+	decision := issueopscontract.IssueOpsHandoffDecision{Phase: snapshot.Phase}
 	if fatal := handoffFatalRejectReasons(snapshot); len(fatal) > 0 {
 		decision.RejectReasons = fatal
 		return decision
@@ -80,7 +80,14 @@ func EvaluateHandoff(snapshot issueopscontract.IssueOpsHandoffSnapshot) issueops
 	sort.Strings(decision.Quarantine)
 
 	decision.SelectiveRecheck = uniqueSorted(decision.SelectiveRecheck)
-	decision.AllowRelease = len(decision.RejectReasons) == 0
+	if len(decision.RejectReasons) == 0 {
+		switch snapshot.Phase {
+		case issueopscontract.IssueOpsHandoffPhaseReleaseReadiness:
+			decision.AllowRelease = true
+		case issueopscontract.IssueOpsHandoffPhaseReceiveReadiness:
+			decision.AllowReceive = true
+		}
+	}
 	return decision
 }
 
@@ -88,6 +95,18 @@ func handoffFatalRejectReasons(snapshot issueopscontract.IssueOpsHandoffSnapshot
 	reasons := []string{}
 	if snapshot.SchemaVersion != issueopscontract.IssueOpsHandoffSchemaVersion {
 		reasons = append(reasons, "unsupported_schema")
+	}
+	switch snapshot.Phase {
+	case issueopscontract.IssueOpsHandoffPhaseReleaseReadiness:
+		if !handoffSessionEmpty(snapshot.Receiver) {
+			reasons = append(reasons, "receiver_present_before_release")
+		}
+	case issueopscontract.IssueOpsHandoffPhaseReceiveReadiness:
+		if !snapshot.Current.ReleaseCompleted {
+			reasons = append(reasons, "release_not_recorded")
+		}
+	default:
+		reasons = append(reasons, "unsupported_phase")
 	}
 	for _, required := range []struct {
 		name  string
@@ -110,9 +129,6 @@ func handoffFatalRejectReasons(snapshot issueopscontract.IssueOpsHandoffSnapshot
 		{"sender_host", snapshot.Sender.Host},
 		{"sender_session", snapshot.Sender.SessionID},
 		{"sender_process", snapshot.Sender.ProcessReceipt},
-		{"receiver_host", snapshot.Receiver.Host},
-		{"receiver_session", snapshot.Receiver.SessionID},
-		{"receiver_process", snapshot.Receiver.ProcessReceipt},
 	} {
 		if strings.TrimSpace(required.value) == "" {
 			reasons = append(reasons, "missing_"+required.name)
@@ -120,26 +136,18 @@ func handoffFatalRejectReasons(snapshot issueopscontract.IssueOpsHandoffSnapshot
 	}
 	if len(snapshot.Sealed.Material.NonGoals) == 0 {
 		reasons = append(reasons, "missing_material_non_goals")
+	} else if handoffHasBlankString(snapshot.Sealed.Material.NonGoals) {
+		reasons = append(reasons, "missing_material_non_goal")
 	}
 	if len(snapshot.Sealed.Material.ResumeCommands) == 0 {
 		reasons = append(reasons, "missing_resume_commands")
-	} else {
-		for _, command := range snapshot.Sealed.Material.ResumeCommands {
-			if strings.TrimSpace(command) == "" {
-				reasons = append(reasons, "missing_resume_command")
-				break
-			}
-		}
+	} else if handoffHasBlankString(snapshot.Sealed.Material.ResumeCommands) {
+		reasons = append(reasons, "missing_resume_command")
 	}
 	if len(snapshot.Sealed.Material.ReadOnlyCommands) == 0 {
 		reasons = append(reasons, "missing_read_only_commands")
-	} else {
-		for _, command := range snapshot.Sealed.Material.ReadOnlyCommands {
-			if strings.TrimSpace(command) == "" {
-				reasons = append(reasons, "missing_read_only_command")
-				break
-			}
-		}
+	} else if handoffHasBlankString(snapshot.Sealed.Material.ReadOnlyCommands) {
+		reasons = append(reasons, "missing_read_only_command")
 	}
 	if len(snapshot.Sealed.Material.Verification) == 0 {
 		reasons = append(reasons, "missing_verification")
@@ -211,29 +219,73 @@ func handoffFatalRejectReasons(snapshot issueopscontract.IssueOpsHandoffSnapshot
 			reasons = append(reasons, "duplicate_late_result:"+late.ID)
 		}
 		lateResultIDs[lateID] = true
+		for _, required := range []struct {
+			name  string
+			value string
+		}{
+			{"source_session", late.SourceSessionID},
+			{"input_revision", late.InputRevision},
+			{"result_location", late.ResultLocation},
+		} {
+			if lateID != "" && strings.TrimSpace(required.value) == "" {
+				reasons = append(reasons, "missing_late_result_"+required.name+":"+late.ID)
+			}
+		}
 	}
-	if snapshot.UserDirective.Cancelled && snapshot.UserDirective.LatestVersion > snapshot.UserDirective.MaterialVersion {
-		reasons = append(reasons, "user_cancelled_after_material")
+	if snapshot.UserDirective.Cancelled {
+		reasons = append(reasons, "user_cancelled")
+	}
+	if strings.TrimSpace(snapshot.UserDirective.CurrentInstruction) == "" {
+		reasons = append(reasons, "missing_current_user_instruction")
 	}
 	if snapshot.UserDirective.ScopeChanged && snapshot.UserDirective.LatestVersion > snapshot.UserDirective.MaterialVersion {
 		reasons = append(reasons, "user_scope_changed_after_material")
 	}
-	if snapshot.Sender.Host != snapshot.Receiver.Host && snapshot.Sender.SessionID == snapshot.Receiver.SessionID {
-		reasons = append(reasons, "cross_host_session_id_not_portable")
-	}
-	if !snapshot.Execution.StatusValidated {
-		reasons = append(reasons, "status_not_validated")
-	}
-	switch snapshot.Execution.Mode {
-	case issueopscontract.ExecutionModeDirect:
-	case issueopscontract.ExecutionModeOrca:
-		if !snapshot.Execution.OrcaPacketPresent {
-			reasons = append(reasons, "orca_packet_required")
+	if snapshot.Phase == issueopscontract.IssueOpsHandoffPhaseReceiveReadiness {
+		for _, required := range []struct {
+			name  string
+			value string
+		}{
+			{"receiver_host", snapshot.Receiver.Host},
+			{"receiver_session", snapshot.Receiver.SessionID},
+			{"receiver_process", snapshot.Receiver.ProcessReceipt},
+		} {
+			if strings.TrimSpace(required.value) == "" {
+				reasons = append(reasons, "missing_"+required.name)
+			}
 		}
-	default:
-		reasons = append(reasons, "unsupported_execution_mode")
+		if snapshot.Sender.Host != snapshot.Receiver.Host && snapshot.Sender.SessionID == snapshot.Receiver.SessionID {
+			reasons = append(reasons, "cross_host_session_id_not_portable")
+		}
+		if !snapshot.Execution.StatusValidated {
+			reasons = append(reasons, "status_not_validated")
+		}
+		switch snapshot.Execution.Mode {
+		case issueopscontract.ExecutionModeDirect:
+		case issueopscontract.ExecutionModeOrca:
+			if !snapshot.Execution.OrcaPacketPresent {
+				reasons = append(reasons, "orca_packet_required")
+			}
+		default:
+			reasons = append(reasons, "unsupported_execution_mode")
+		}
 	}
 	return reasons
+}
+
+func handoffSessionEmpty(session issueopscontract.IssueOpsHandoffSession) bool {
+	return strings.TrimSpace(session.Host) == "" &&
+		strings.TrimSpace(session.SessionID) == "" &&
+		strings.TrimSpace(session.ProcessReceipt) == ""
+}
+
+func handoffHasBlankString(values []string) bool {
+	for _, value := range values {
+		if strings.TrimSpace(value) == "" {
+			return true
+		}
+	}
+	return false
 }
 
 func handoffEvidenceIdentityRejectReasons(scope string, evidence []issueopscontract.IssueOpsHandoffEvidence) []string {
