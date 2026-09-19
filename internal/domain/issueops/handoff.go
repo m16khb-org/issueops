@@ -101,6 +101,7 @@ func handoffFatalRejectReasons(snapshot issueopscontract.IssueOpsHandoffSnapshot
 		if !handoffSessionEmpty(snapshot.Receiver) {
 			reasons = append(reasons, "receiver_present_before_release")
 		}
+		reasons = append(reasons, handoffExecutionBeforeReleaseRejectReasons(snapshot.Execution)...)
 	case issueopscontract.IssueOpsHandoffPhaseReceiveReadiness:
 		if !snapshot.Current.ReleaseCompleted {
 			reasons = append(reasons, "release_not_recorded")
@@ -286,6 +287,23 @@ func handoffHasBlankString(values []string) bool {
 		}
 	}
 	return false
+}
+
+func handoffExecutionBeforeReleaseRejectReasons(execution issueopscontract.IssueOpsHandoffExecution) []string {
+	reasons := []string{}
+	if execution.StatusValidated {
+		reasons = append(reasons, "execution_status_present_before_release")
+	}
+	if execution.OrcaPacketPresent {
+		reasons = append(reasons, "execution_orca_packet_present_before_release")
+	}
+	if strings.TrimSpace(string(execution.Mode)) != "" {
+		reasons = append(reasons, "execution_mode_present_before_release")
+	}
+	if strings.TrimSpace(execution.OrcaRecoveryAction) != "" {
+		reasons = append(reasons, "execution_orca_recovery_action_present_before_release")
+	}
+	return reasons
 }
 
 func handoffEvidenceIdentityRejectReasons(scope string, evidence []issueopscontract.IssueOpsHandoffEvidence) []string {

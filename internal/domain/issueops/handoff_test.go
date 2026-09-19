@@ -74,6 +74,28 @@ func TestEvaluateHandoffMaterialScenarios(t *testing.T) {
 			want: releaseDecision(false, nil, nil, nil, []string{"receiver_present_before_release"}),
 		},
 		{
+			name: "validated receive status rejects release readiness",
+			edit: func(s *issueopscontract.IssueOpsHandoffSnapshot) {
+				s.Execution.StatusValidated = true
+			},
+			want: releaseDecision(false, nil, nil, nil, []string{"execution_status_present_before_release"}),
+		},
+		{
+			name: "orca packet evidence rejects release readiness",
+			edit: func(s *issueopscontract.IssueOpsHandoffSnapshot) {
+				s.Execution.OrcaPacketPresent = true
+			},
+			want: releaseDecision(false, nil, nil, nil, []string{"execution_orca_packet_present_before_release"}),
+		},
+		{
+			name: "receive mode and recovery action reject release readiness",
+			edit: func(s *issueopscontract.IssueOpsHandoffSnapshot) {
+				s.Execution.Mode = issueopscontract.ExecutionModeOrca
+				s.Execution.OrcaRecoveryAction = "resume"
+			},
+			want: releaseDecision(false, nil, nil, nil, []string{"execution_mode_present_before_release", "execution_orca_recovery_action_present_before_release"}),
+		},
+		{
 			name: "reader2 writer1 blocks release until writer descendants terminate and shared state is rechecked",
 			edit: func(s *issueopscontract.IssueOpsHandoffSnapshot) {
 				s.Current.SharedStateRechecked = false
