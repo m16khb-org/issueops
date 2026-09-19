@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 import os
@@ -36,9 +35,10 @@ class MeasureEfficiencyTest(unittest.TestCase):
         sample_count: int = 20,
         wall_time_seconds: float = 0.001,
         machine: str = "fixture-arm64",
+        revision: str = "b" * 40,
     ) -> dict[str, object]:
         return {
-            "revision": "b" * 40,
+            "revision": revision,
             "tool": {"name": "fixture-go", "version": "go version go1.fixture test/arch"},
             "environment": {
                 "system": "FixtureOS",
@@ -46,7 +46,18 @@ class MeasureEfficiencyTest(unittest.TestCase):
                 "machine": machine,
                 "processor": "fixture-cpu",
                 "cpu_count": 8,
-                "variables": {"GOOS": "fixture", "GOARCH": "arm64"},
+                "variables": {
+                    "PATH_SHA256": hashlib.sha256(b"/fixture/bin").hexdigest(),
+                    "GOFLAGS": "<unset>",
+                    "GOWORK": "<unset>",
+                    "GOENV": "<unset>",
+                    "CGO_ENABLED": "0",
+                    "CC": "<unset>",
+                    "CXX": "<unset>",
+                    "LANG": "C.UTF-8",
+                    "LC_ALL": "<unset>",
+                    "LC_CTYPE": "<unset>",
+                },
             },
             "command": {
                 "argv": ["/definitely/not/go", "test", "-json", f"-count={sample_count}", "./..."],
@@ -199,7 +210,7 @@ class MeasureEfficiencyTest(unittest.TestCase):
                 self.assertEqual(artifact["bytes"], len(content))
                 self.assertEqual(artifact["sha256"], hashlib.sha256(content).hexdigest())
 
-    def test_compare_accepts_identical_revision_contract_despite_duration_noise(self) -> None:
+    def test_compare_accepts_cross_revision_contract_despite_duration_noise(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             baseline = self.record_fixture(root, "run-001-baseline", "baseline", 1)
@@ -208,7 +219,7 @@ class MeasureEfficiencyTest(unittest.TestCase):
                 "run-002-candidate",
                 "candidate",
                 2,
-                execution=self.execution_metadata(wall_time_seconds=9.5),
+                execution=self.execution_metadata(wall_time_seconds=9.5, revision="c" * 40),
             )
 
             result = self.compare(root, baseline, candidate)
@@ -229,7 +240,7 @@ class MeasureEfficiencyTest(unittest.TestCase):
                 "diagnostics": [{"severity": "error", "message": "fixture diagnostic"}],
             },
             "warning": {**baseline_contract, "warnings": ["fixture_warning"]},
-            "redaction": {**baseline_contract, "access_token": "example"},
+            "redaction": {key: value for key, value in baseline_contract.items() if key != "access_token"},
         }
         for expected_kind, candidate_contract in cases.items():
             with self.subTest(kind=expected_kind), tempfile.TemporaryDirectory() as temp:
@@ -342,28 +353,61 @@ class MeasureEfficiencyTest(unittest.TestCase):
                     self.assertEqual(result.returncode, 1)
                     self.assertRegex(result.stderr, r"workspace-relative|outside workspace|regular file")
 
-    def test_record_rejects_unredacted_secret_like_output(self) -> None:
-        with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
-            args = self.prepare_record(
-                root,
-                "run-001-baseline",
-                "baseline",
-                1,
-                stdout="access_token=super-secret-value\n",
-            )
+    def test_record_accepts_only_exact_redaction_placeholders(self) -> None:
+        unsafe_values = (
+            "super-secret-value",
+            "prefix<redacted>",
+            "<redacted>-suffix",
+            "Bearer <redacted> suffix",
+            '" <redacted> "',
+        )
+        for value in unsafe_values:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                args = self.prepare_record(
+                    root,
+                    "run-001-baseline",
+                    "baseline",
+                    1,
+                    stdout=f"access_token={value}\n",
+                )
 
-            result = subprocess.run(
-                args,
-                cwd=root,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
+                result = subprocess.run(
+                    args,
+                    cwd=root,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
 
-            self.assertEqual(result.returncode, 1)
-            self.assertIn("unredacted secret-like material", result.stderr)
-            self.assertFalse((root / ".issueops-runtime" / "efficiency" / "run-001-baseline").exists())
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("unredacted secret-like material", result.stderr)
+                self.assertFalse((root / ".issueops-runtime" / "efficiency" / "run-001-baseline").exists())
+
+    def test_record_requires_fixed_relevant_environment_keys(self) -> None:
+        mutations = {
+            "empty": lambda variables: variables.clear(),
+            "missing": lambda variables: variables.pop("GOFLAGS"),
+            "extra": lambda variables: variables.update({"ARBITRARY": "value"}),
+            "raw_path": lambda variables: variables.update({"PATH_SHA256": "/fixture/bin"}),
+            "empty_value": lambda variables: variables.update({"CC": ""}),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                execution = self.execution_metadata()
+                mutate(execution["environment"]["variables"])
+
+                result = subprocess.run(
+                    self.prepare_record(root, "run-001-baseline", "baseline", 1, execution=execution),
+                    cwd=root,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+
+                self.assertEqual(result.returncode, 1)
+                self.assertIn("environment variables", result.stderr)
 
     def test_record_rejects_go_count_sample_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -416,6 +460,88 @@ class MeasureEfficiencyTest(unittest.TestCase):
                     if drift["kind"] == "measurement"
                 }
                 self.assertIn(condition, conditions)
+
+    def test_compare_reports_contract_drift_when_measurements_are_not_comparable(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            baseline = self.record_fixture(root, "run-001-baseline", "baseline", 1)
+            candidate = self.record_fixture(
+                root,
+                "run-003-candidate",
+                "candidate",
+                3,
+                contract={**self.base_contract(), "new_field": True},
+            )
+
+            result = self.compare(root, baseline, candidate)
+
+            self.assertEqual(result.returncode, 1, result.stderr)
+            comparison = json.loads(result.stdout)
+            self.assertFalse(comparison["comparable"])
+            self.assertFalse(comparison["contract_equal"])
+            kinds = {item["kind"] for item in comparison["drifts"]}
+            self.assertIn("measurement", kinds)
+            self.assertIn("output", kinds)
+            self.assertIn("field", kinds)
+
+    def test_compare_rejects_execution_and_coverage_count_reductions(self) -> None:
+        lines = self.go_test_output().splitlines(keepends=True)
+        cases = {
+            "command_invocations": ({}, None),
+            "samples": ({"sample_count": 19}, None),
+            "packages_started": ({}, "".join(lines[1:])),
+            "packages_finished": ({}, "".join(lines[:4] + lines[5:])),
+            "tests_started": ({}, "".join(lines[:2] + lines[3:])),
+            "tests_finished": ({}, "".join(lines[:3] + lines[4:])),
+        }
+        for condition, (change, stdout) in cases.items():
+            with self.subTest(condition=condition), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                baseline_execution = self.execution_metadata()
+                if condition == "command_invocations":
+                    baseline_execution["execution"]["command_invocations"] = 2
+                baseline = self.record_fixture(
+                    root,
+                    "run-001-baseline",
+                    "baseline",
+                    1,
+                    execution=baseline_execution,
+                )
+                execution = self.execution_metadata(sample_count=change.get("sample_count", 20))
+                execution["execution"].update(change.get("execution", {}))
+                candidate = self.record_fixture(
+                    root,
+                    "run-002-candidate",
+                    "candidate",
+                    2,
+                    execution=execution,
+                    stdout=stdout,
+                )
+
+                result = self.compare(root, baseline, candidate)
+
+                self.assertEqual(result.returncode, 1, result.stdout)
+                comparison = json.loads(result.stdout)
+                self.assertFalse(comparison["comparable"])
+                self.assertTrue(comparison["contract_equal"])
+                conditions = {
+                    item.get("condition")
+                    for item in comparison["drifts"]
+                    if item["kind"] == "measurement"
+                }
+                self.assertIn(condition, conditions)
+
+    def test_compare_rejects_manifest_outside_efficiency_root_before_reading(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            candidate = self.record_fixture(root, "run-002-candidate", "candidate", 2)
+            outside = root / "fixtures" / "outside-manifest.pipe"
+            os.mkfifo(outside)
+
+            result = self.compare(root, outside.relative_to(root), candidate)
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("outside efficiency output root", result.stderr)
 
 
 if __name__ == "__main__":

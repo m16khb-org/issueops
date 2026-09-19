@@ -15,6 +15,18 @@ from typing import Any
 
 
 SCHEMA_VERSION = 2
+RELEVANT_ENVIRONMENT_KEYS = (
+    "PATH_SHA256",
+    "GOFLAGS",
+    "GOWORK",
+    "GOENV",
+    "CGO_ENABLED",
+    "CC",
+    "CXX",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+)
 ERROR_KEYS = {"error", "errors"}
 WARNING_KEYS = {"warning", "warnings"}
 REDACTION_MARKER = "<redacted>"
@@ -30,15 +42,7 @@ SECRET_TOKEN = re.compile(
 )
 SAFE_SECRET_VALUES = {
     "<redacted>",
-    "redacted",
-    "placeholder",
-    "example",
-    "fake",
-    "dummy",
-    "sample",
-    "$secret",
-    "$token",
-    "...",
+    "Bearer <redacted>",
 }
 COUNT_KEYS = (
     "command_invocations",
@@ -179,8 +183,13 @@ def validate_environment(value: Any, label: str) -> dict[str, Any]:
         required(environment, key, str, label)
     positive_integer(environment, "cpu_count", label)
     variables = required(environment, "variables", dict, label)
-    if any(not isinstance(key, str) or not isinstance(item, str) for key, item in variables.items()):
-        raise ValueError(f"invalid {label}: variables")
+    if set(variables) != set(RELEVANT_ENVIRONMENT_KEYS):
+        raise ValueError(f"invalid {label}: environment variables must use the fixed relevant key set")
+    if any(not isinstance(item, str) or not item for item in variables.values()):
+        raise ValueError(f"invalid {label}: environment variables require values or <unset>")
+    path_digest = variables["PATH_SHA256"]
+    if path_digest != "<unset>" and not re.fullmatch(r"[0-9a-f]{64}", path_digest):
+        raise ValueError(f"invalid {label}: environment variables require a PATH_SHA256 digest")
     return environment
 
 
@@ -257,8 +266,10 @@ def validate_execution(value: Any, root: Path, label: str = "execution metadata"
 
 
 def safe_secret_value(value: str) -> bool:
-    value = value.strip().strip('"\'').strip().lower()
-    return REDACTION_MARKER in value or value in SAFE_SECRET_VALUES
+    candidate = value.strip()
+    if len(candidate) >= 2 and candidate[0] == candidate[-1] and candidate[0] in {'"', "'"}:
+        candidate = candidate[1:-1]
+    return candidate in SAFE_SECRET_VALUES
 
 
 def secret_findings(raw: bytes, label: str) -> list[str]:
@@ -514,10 +525,12 @@ def validate_go_test(value: Any, parser: str) -> dict[str, Any] | None:
 
 
 def read_manifest(root: Path, raw_path: str) -> dict[str, Any]:
-    manifest_path, manifest_raw = read_regular(root, raw_path, "manifest")
     efficiency_root = (root / ".issueops-runtime" / "efficiency").resolve(strict=False)
-    if not inside(manifest_path, efficiency_root):
+    relative = relative_argument(raw_path, "manifest")
+    candidate = (root / relative).resolve(strict=False)
+    if not inside(efficiency_root, root) or not inside(candidate, efficiency_root):
         raise ValueError("invalid manifest: outside efficiency output root")
+    manifest_path, manifest_raw = read_regular(root, raw_path, "manifest")
     manifest = require_object(parse_json(manifest_raw, "manifest"), "manifest")
     if required(manifest, "schema_version", int, "manifest") != SCHEMA_VERSION:
         raise ValueError("invalid manifest: schema_version")
@@ -607,30 +620,34 @@ def run_compare(args: argparse.Namespace) -> int:
     b_measurement, c_measurement = baseline["measurement"], candidate["measurement"]
     measurement_checks = {
         "series": b_measurement["series_id"] == c_measurement["series_id"],
-        "revision": b_measurement["revision"] == c_measurement["revision"],
         "tool": baseline["tool"] == candidate["tool"],
         "environment": baseline["environment"] == candidate["environment"],
         "fixed_inputs": baseline["inputs"] == candidate["inputs"],
         "command": baseline["command"] == candidate["command"],
+        "command_invocations": baseline["counts"]["command_invocations"] == candidate["counts"]["command_invocations"],
         "samples": baseline["counts"]["samples"] == candidate["counts"]["samples"],
+        "packages_started": baseline["counts"]["packages_started"] == candidate["counts"]["packages_started"],
+        "packages_finished": baseline["counts"]["packages_finished"] == candidate["counts"]["packages_finished"],
+        "tests_started": baseline["counts"]["tests_started"] == candidate["counts"]["tests_started"],
+        "tests_finished": baseline["counts"]["tests_finished"] == candidate["counts"]["tests_finished"],
         "alternating_sequence": b_measurement["variant"] == "baseline" and c_measurement["variant"] == "candidate" and c_measurement["sequence"] == b_measurement["sequence"] + 1,
         "successful_execution": all(item["execution"]["exit_code"] == 0 and not item["execution"]["timed_out"] for item in (baseline, candidate)),
     }
-    drifts = [drift("measurement", name) for name, passed in measurement_checks.items() if not passed]
-    comparable = not drifts
-    if comparable:
-        left, right = baseline["_projection"], candidate["_projection"]
-        checks = {
-            "output": left["sha256"] == right["sha256"],
-            "field": left["field_paths"] == right["field_paths"],
-            "error": left["errors"] == right["errors"],
-            "warning": left["warnings"] == right["warnings"],
-            "redaction": left["redactions"] == right["redactions"],
-        }
-        drifts.extend(drift(name) for name, passed in checks.items() if not passed)
-    contract_equal = comparable and not drifts
+    measurement_drifts = [drift("measurement", name) for name, passed in measurement_checks.items() if not passed]
+    left, right = baseline["_projection"], candidate["_projection"]
+    contract_checks = {
+        "output": left["sha256"] == right["sha256"],
+        "field": left["field_paths"] == right["field_paths"],
+        "error": left["errors"] == right["errors"],
+        "warning": left["warnings"] == right["warnings"],
+        "redaction": left["redactions"] == right["redactions"],
+    }
+    contract_drifts = [drift(name) for name, passed in contract_checks.items() if not passed]
+    comparable = not measurement_drifts
+    contract_equal = not contract_drifts
+    drifts = measurement_drifts + contract_drifts
     result = {
-        "ok": contract_equal,
+        "ok": comparable and contract_equal,
         "comparable": comparable,
         "contract_equal": contract_equal,
         "drifts": drifts,
