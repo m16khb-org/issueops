@@ -1,9 +1,9 @@
 ---
 name: issueops-review
-description: Run an adversarial design-review review as a fresh sub-agent on an IssueOps plan or implementation diff, then record the verdict in the durable ledger with the plan digest or change fingerprint sealed. Owns the revise and stop loop rules shared by the plan and verify stages. Use when issueops-plan or issueops-verify needs a review, or when the user says "계획 검토", "구현 리뷰", "design-review 돌려줘", "devil's advocate".
+description: Use when issueops-plan or issueops-verify needs an independent review of a cycle plan or implementation diff, or when the user asks for "계획 검토", "구현 리뷰", "design-review", or "devil's advocate" within an IssueOps cycle.
 ---
 
-# IssueOps Review
+# IssueOps Plan and Implementation Review
 
 이 스킬의 일은 **적대 리뷰 한 번을 실제로 실행하고 그 판정을 원장에 기록하는
 것**이다. 계획 단계와 검증 단계가 같은 규칙을 쓰도록 두 곳에서 이 스킬을
@@ -36,8 +36,9 @@ issueops next --id "$ISSUEOPS_ID" --json
 있으면 이 호스트의 기본값이 정의돼 있지 않다는 뜻이므로, 진행하지 말고 어떤 모델로
 리뷰할지 사용자에게 묻는다.
 
-`--target diff`는 정리와 재검증이 끝난 diff에만 실행한다. 판정이 fingerprint에
-묶이므로, 리뷰 뒤 파일을 고치면 그 판정은 무효가 된다.
+`--target diff`는 정리와 문서 반영이 끝나 봉인된 diff에 실행한다. 검증과 리뷰의
+동시 실행은 `issueops-verify`를 따르며, 모든 필수 결과를 확인한 뒤 판정을 기록한다.
+판정이 fingerprint에 묶이므로, 리뷰 뒤 파일을 고치면 그 판정은 무효가 된다.
 
 ## 실행
 
@@ -62,13 +63,18 @@ issueops next --id "$ISSUEOPS_ID" --json
 4. 출력 계약: 판정(`pass|revise|stop`), 필수 결함별 위치·발생 조건·위반한 계약·근거와
    최소 수정 또는 확인 방법. 발견한 필수 결함은 한 번에 전달한다. 결함이 없으면
    없다고 쓰고 확인한 계약과 근거를 남긴다. 선택적 개선 목록과 대안 설계는 요구하지 않는다.
-   필수 결함에는 **그 결함이 살아 있는지 기계로 판별하는 한 줄**을 함께 요구한다:
-   `CHECK: <read-only 명령> | EXPECT: <출력에 있어야 할 문자열>`. CHECK를 쓸 수 없는
-   지적은 필수 결함으로 세지 않고 "확인 요청"으로 분류한다. 그 확인은 호출자가 대신
-   수행해 결과를 다음 라운드에 넘긴다([`design-review`의 Blocking threshold](../design-review/SKILL.md#blocking-threshold)).
-   `next.review.tier`와 `lenses`를 프롬프트에 넣어 그 렌즈만 적용하게 한다.
-   `docs-only` 티어는 side effect 렌즈 하나다.
-5. 코드베이스 존중 렌즈 네 개.
+   명령으로 판별할 수 있는 지적에는
+   `CHECK: <read-only 명령> | EXPECT: <출력에 있어야 할 문자열>`을 함께 요구한다.
+   한 줄 명령으로 표현할 수 없으면 확인할 가정·절차·통과 조건을 적는다. 필수 계약의
+   증거가 빠졌으면 **필수 검증 공백**으로 남기고 `revise` 또는 `stop`으로 판정한다.
+   호출자가 확인한 결과를 다음 라운드에 전달하며, CHECK 형식의 유무로 차단 여부를
+   바꾸지 않는다([`design-review`의 Blocking threshold](../design-review/SKILL.md#blocking-threshold)).
+5. 대상에 맞는 렌즈. `plan`에는 design-review의 계획 렌즈와 아래 코드베이스 존중
+   렌즈를 적용한다. 구현 전 `next.review.tier`는 변경 경로를 조회하지 않은 `default`이므로
+   계획의 위험 분류로 해석하지 않는다. 계획에 명시한 인증·스키마 등 필수 계약을 확인한다.
+   `diff`에는 `next.review.tier`와 `lenses`를 전달하고 선택된 렌즈만 적용한다.
+   `docs-only`의 코드베이스 존중 렌즈는 `side-effect` 하나다. frontend 추가 렌즈는
+   호출한 검증 단계의 규칙을 따른다.
 
 이름·스타일·선택적 리팩터링·가상 규모를 이유로 수정이나 추가 테스트를 요구하지 않는다.
 영향받은 필수 동작의 증거가 부족하면 그 가정을 판별하는 최소 확인을 요청한다.
@@ -104,7 +110,10 @@ issueops verify-work --json -- <CHECK>
 
 ## 기록
 
-리뷰가 **끝난 뒤에만** 기록한다. 기록이 리뷰를 대신하지 않는다.
+리뷰가 **끝난 뒤에만** 호출자가 기록한다. 기록이 리뷰를 대신하지 않는다.
+`diff` 리뷰를 검증 배터리·스키마 확인·QA와 병렬로 수행했다면 모든 필수 결과를 모으고
+현재 fingerprint가 시작 때와 같은지 확인한 뒤 기록한다. 검증 실패나 미확인 필수 계약이
+있으면 먼저 도착한 `pass`를 기록하지 않는다. 실패 증거는 호출한 단계에 전달한다.
 
 ```bash
 # --target plan
@@ -130,7 +139,8 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
   새 컨텍스트 서브에이전트에 넘긴다. 판정과 기록할 finding은 그 서브에이전트가 정하고
   호출자는 받은 verdict를 그대로 기록한다. CHECK가 전부 통과했다는 사실은 delta 리뷰의
   입력이지 호출자가 `pass`를 정할 근거가 아니다.
-- 구조나 범위가 바뀌었거나 CHECK 없는 필수 결함이 남았으면 전체 리뷰를 다시 띄운다.
+- 구조나 범위가 바뀌면 전체 리뷰를 다시 띄운다. 필수 검증 공백은 그 확인 결과와
+  영향받은 계약을 delta 리뷰에 포함한다. CHECK 형식이 없다는 이유만으로 전체를 반복하지 않는다.
 - 같은 대상의 수정·재리뷰는 최대 3라운드다. 3라운드는 `next.review.model`과 다른 모델
   또는 한 단계 높은 effort로 띄우고, 그 사실을 `--reviewer-model`·`--reviewer-effort`
   (diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에 통과하지 못하면 남은 결함과 시도한

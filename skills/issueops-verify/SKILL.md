@@ -1,6 +1,6 @@
 ---
 name: issueops-verify
-description: Run the IssueOps verify stage on the sealed diff without touching any file. Re-run the gate ledger and the repository's verification battery read-only, record the conditional schema evidence, run the adversarial implementation review through issueops-review, re-check compatibility against the real diff, and prove strict PR readiness leaves only commit and push. Use when "issueops next" reports verify, or when the user says "검증 단계", "검증해줘", "리뷰 돌리고 검증".
+description: Use when "issueops next" reports the verify stage, or when the user asks to verify a sealed IssueOps implementation before publication.
 ---
 
 # IssueOps Verify
@@ -35,10 +35,13 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
 검증이 실패해 코드를 고쳐야 하면 4단계로 돌아가 구현·정리·재봉인·문서 반영을 다시
 밟는다. `next`가 `clean`으로 되돌리는 것이 그 신호다.
 
-## 0 동시에 띄운다
+## 0 재사용을 확인하고 필요한 작업을 병렬 실행한다
 
-봉인된 fingerprint를 확인한 뒤 아래 셋을 **같은 fingerprint에 대해 동시에** 시작한다.
-셋 다 읽기 전용이라 봉인을 바꾸지 않으므로 순서대로 기다릴 이유가 없다.
+봉인된 fingerprint와 1절의 증거 재사용 조건을 먼저 확인한다. 아래 작업 중 유효한
+증거가 없는 필수 작업만 고르고, 입력과 실행 환경을 공유해 서로 영향을 주지 않는
+작업을 **같은 fingerprint에 대해 동시에** 시작한다. 같은 DB나 브라우저 상태를 쓰는
+검증은 순서대로 실행한다. 리뷰어에게는 기존 검증 증거와 아직 실행 중인 항목을 구분해
+전달하고, 추가 결과가 판정에 영향을 주면 기록 전에 그 결과로 delta 리뷰를 받는다.
 
 1. 게이트 원장과 저장소 검증 배터리(1절). `gates check`는 `--write` 없이 실행한다.
    `--write`는 4·5단계가 소유한다.
@@ -54,11 +57,14 @@ change fingerprint는 `git diff <base>..HEAD`와 `git status`가 가리키는 **
    시나리오는 그 스킬의 allowed mutations·cleanup 계약 안으로 한정하고 정리 영수증을
    report에 적는다. `aside-functional-qa`·`aside-visual-qa`를 직접 부르지 않는다.
 
-- **배터리가 실패하면 리뷰와 QA 결과를 버린다.** 판정을 기록하지 않은 채 4단계로 돌아간다.
-  실패한 diff에 대한 리뷰 판정은 fingerprint가 바뀌는 순간 무효다.
+- **결과를 모두 모은 뒤 판정을 기록한다.** 배터리가 실패하거나 필수 스키마·QA 증거가
+  빠졌으면 먼저 도착한 리뷰 `pass`를 기록하지 않는다. 실패 출력과 리뷰 지적은 수정에
+  쓸 근거로 보존하고 4단계로 돌아간다. 수정으로 fingerprint가 바뀌면 이전 판정을
+  재사용하지 않는다. `Not Run`이 성공 기준 검증을 누락했다면 readiness의 blocker다.
 - 이 동시 실행의 전제는 정리 단계가 관련 검증을 이미 통과시켰다는 것이다. 배터리
   실패가 드물지 않으면 병렬화가 아니라 5단계를 먼저 고친다.
-  `issueops review-metrics --repo "$WORKTREE" --json`의 revise 비율이 그 신호다.
+  검증 명령의 실패 기록으로 판단한다. `issueops review-metrics --repo "$WORKTREE"
+  --json`의 revise 비율은 계획 리뷰 판정 비율이며 배터리 실패율이 아니다.
 - 이 fan-out은 `SUB_AGENT_PATTERNS.md`의 기대 이득 `parallel_speed`에 해당한다.
   그 slug와 실제로 절약한 벽시계 시간을 verified-execution report에 적는다.
 - 정리(5단계)·문서 반영(6단계)과는 동시에 실행하지 않는다. 그 둘은 파일을 쓰므로
@@ -140,7 +146,7 @@ issueops schema-evidence record --id "$ISSUEOPS_ID" \
   `devils_advocate_review.findings`와 `history`의 finding을 "검증할 주장 목록"으로
   프롬프트에 넣는다. 리뷰어는 diff 전체를 탐색하기 전에 그 주장이 실제로 지켜졌는지
   확인한다. 계획 리뷰에서 살아남은 위험이 구현에서 되살아났는지가 가장 싸게 잡히는 결함이다.
-- **렌즈는 `next.review.lenses`만 적용한다.** `issueops next --id "$ISSUEOPS_ID" --json`이
+- **코드베이스 존중 렌즈는 `next.review.lenses`만 적용한다.** `issueops next --id "$ISSUEOPS_ID" --json`이
   돌려주는 티어와 렌즈를 프롬프트에 넣고 그 목록만 검토하게 한다. `docs-only` 티어는
   side effect 렌즈 하나다.
 - **`review.frontend`가 true면 UI 렌즈를 더한다.** diff 리뷰 프롬프트의 "검증할 주장

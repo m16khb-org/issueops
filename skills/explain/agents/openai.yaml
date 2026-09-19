@@ -1,0 +1,4 @@
+interface:
+  display_name: "Explain"
+  short_description: "Explain concepts, plans, code, and outcomes clearly"
+  default_prompt: "Use $explain to explain this in terms the reader understands, connecting the main answer to its evidence, reasoning, examples, and relevant limits."

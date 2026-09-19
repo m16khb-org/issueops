@@ -76,7 +76,7 @@ issueops next --json
 | 공용: 적대 리뷰 | [`issueops-review`](../issueops-review/SKILL.md) | 3·7단계 |
 | 공용: 게이트 원장 | [`gates-ledger`](../gates-ledger/SKILL.md) | 3·4·5·7단계 |
 | 공용: 원격 쓰기 | [`issueops-remote-write`](../issueops-remote-write/SKILL.md) | 1·9·10단계, 본문 동기화 |
-| 공용: 사용자 보고 | [`issueops-explain`](../issueops-explain/SKILL.md) | 어느 단계든, 사람에게 말로 설명할 때 |
+| 공용: 사용자 보고 | [`explain`](../explain/SKILL.md) | 어느 단계든, 사람에게 말로 설명할 때 |
 
 이미 만든 본문이 사이클보다 낡으면 [`issueops-sync-issue`](../issueops-sync-issue/SKILL.md)와
 [`issueops-sync-pr`](../issueops-sync-pr/SKILL.md)이 관리 블록을 보존한 채 교체한다.

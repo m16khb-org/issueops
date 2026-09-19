@@ -968,6 +968,13 @@
           "path": "$ISSUEOPS_ROOT/skills/diagram-design"
         },
         {
+          "description": "Use when explaining concepts, code, plans, decisions, investigation findings, or work outcomes in terms the reader can understand, especially for \"설명해줘\", \"쉽게 설명해줘\", \"어떤 근거야\", \"왜 이렇게 했어\", \"뭔 소린지 모르겠다\", or \"explain how this works\".",
+          "has_openai_yaml": true,
+          "has_skill_md": true,
+          "name": "explain",
+          "path": "$ISSUEOPS_ROOT/skills/explain"
+        },
+        {
           "description": "MUST USE whenever writing, revising, or reviewing Korean text, or when replying to a user in Korean. Produces clear and natural Korean while preserving code conventions and established technical terms, and removes AI-style writing patterns (AI티/slop) from Korean output.",
           "has_openai_yaml": true,
           "has_skill_md": true,
@@ -1101,7 +1108,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-remote-write"
         },
         {
-          "description": "Run an adversarial design-review review as a fresh sub-agent on an IssueOps plan or implementation diff, then record the verdict in the durable ledger with the plan digest or change fingerprint sealed. Owns the revise and stop loop rules shared by the plan and verify stages. Use when issueops-plan or issueops-verify needs a review, or when the user says \"계획 검토\", \"구현 리뷰\", \"design-review 돌려줘\", \"devil's advocate\".",
+          "description": "Use when issueops-plan or issueops-verify needs an independent review of a cycle plan or implementation diff, or when the user asks for \"계획 검토\", \"구현 리뷰\", \"design-review\", or \"devil's advocate\" within an IssueOps cycle.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-review",
@@ -1122,7 +1129,7 @@
           "path": "$ISSUEOPS_ROOT/skills/issueops-sync-pr"
         },
         {
-          "description": "Run the IssueOps verify stage on the sealed diff without touching any file. Re-run the gate ledger and the repository's verification battery read-only, record the conditional schema evidence, run the adversarial implementation review through issueops-review, re-check compatibility against the real diff, and prove strict PR readiness leaves only commit and push. Use when \"issueops next\" reports verify, or when the user says \"검증 단계\", \"검증해줘\", \"리뷰 돌리고 검증\".",
+          "description": "Use when \"issueops next\" reports the verify stage, or when the user asks to verify a sealed IssueOps implementation before publication.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "issueops-verify",
@@ -5432,6 +5439,7 @@
           "database-design",
           "design-review",
           "diagram-design",
+          "explain",
           "fluent-korean",
           "gates-ledger",
           "git-operations",
@@ -7527,6 +7535,13 @@
                 "path": "$ISSUEOPS_ROOT/skills/diagram-design"
               },
               {
+                "description": "Use when explaining concepts, code, plans, decisions, investigation findings, or work outcomes in terms the reader can understand, especially for \"설명해줘\", \"쉽게 설명해줘\", \"어떤 근거야\", \"왜 이렇게 했어\", \"뭔 소린지 모르겠다\", or \"explain how this works\".",
+                "has_openai_yaml": true,
+                "has_skill_md": true,
+                "name": "explain",
+                "path": "$ISSUEOPS_ROOT/skills/explain"
+              },
+              {
                 "description": "MUST USE whenever writing, revising, or reviewing Korean text, or when replying to a user in Korean. Produces clear and natural Korean while preserving code conventions and established technical terms, and removes AI-style writing patterns (AI티/slop) from Korean output.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
@@ -7660,7 +7675,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-remote-write"
               },
               {
-                "description": "Run an adversarial design-review review as a fresh sub-agent on an IssueOps plan or implementation diff, then record the verdict in the durable ledger with the plan digest or change fingerprint sealed. Owns the revise and stop loop rules shared by the plan and verify stages. Use when issueops-plan or issueops-verify needs a review, or when the user says \"계획 검토\", \"구현 리뷰\", \"design-review 돌려줘\", \"devil's advocate\".",
+                "description": "Use when issueops-plan or issueops-verify needs an independent review of a cycle plan or implementation diff, or when the user asks for \"계획 검토\", \"구현 리뷰\", \"design-review\", or \"devil's advocate\" within an IssueOps cycle.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-review",
@@ -7681,7 +7696,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/issueops-sync-pr"
               },
               {
-                "description": "Run the IssueOps verify stage on the sealed diff without touching any file. Re-run the gate ledger and the repository's verification battery read-only, record the conditional schema evidence, run the adversarial implementation review through issueops-review, re-check compatibility against the real diff, and prove strict PR readiness leaves only commit and push. Use when \"issueops next\" reports verify, or when the user says \"검증 단계\", \"검증해줘\", \"리뷰 돌리고 검증\".",
+                "description": "Use when \"issueops next\" reports the verify stage, or when the user asks to verify a sealed IssueOps implementation before publication.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "issueops-verify",
@@ -8798,6 +8813,7 @@
                 "database-design",
                 "design-review",
                 "diagram-design",
+                "explain",
                 "fluent-korean",
                 "gates-ledger",
                 "git-operations",
