@@ -18,7 +18,8 @@
           "executable_path": "/fixture/bin/orca",
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "orca-codex"
+          "attempt_id": "orca-codex",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
@@ -27,7 +28,8 @@
           "executable_path": "/fixture/bin/orca",
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "orca-codex"
+          "attempt_id": "orca-codex",
+          "result": "positive"
         },
         "capable": {
           "claim": "live",
@@ -37,12 +39,14 @@
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "orca-codex",
-          "detail": "prompt-delivery capability observed; host owner E2E not run"
+          "detail": "prompt-delivery capability observed; host owner E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "orca-codex"
+          "attempt_id": "orca-codex",
+          "result": "not-run"
         }
       }
     },
@@ -60,7 +64,8 @@
           "executable_path": "/fixture/bin/orca",
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "orca-claude"
+          "attempt_id": "orca-claude",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
@@ -69,7 +74,8 @@
           "executable_path": "/fixture/bin/orca",
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "orca-claude"
+          "attempt_id": "orca-claude",
+          "result": "positive"
         },
         "capable": {
           "claim": "live",
@@ -79,12 +85,14 @@
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "orca-claude",
-          "detail": "prompt-delivery capability observed; host owner E2E not run"
+          "detail": "prompt-delivery capability observed; host owner E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "orca-claude"
+          "attempt_id": "orca-claude",
+          "result": "not-run"
         }
       }
     },
@@ -102,7 +110,8 @@
           "executable_path": "/fixture/bin/orca",
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "orca-omo"
+          "attempt_id": "orca-omo",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
@@ -111,7 +120,8 @@
           "executable_path": "/fixture/bin/orca",
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "orca-omo"
+          "attempt_id": "orca-omo",
+          "result": "positive"
         },
         "capable": {
           "claim": "live",
@@ -121,12 +131,14 @@
           "runtime_identity": "fixture-orca-runtime-a",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "orca-omo",
-          "detail": "prompt-delivery capability observed; Omo dispatch/send E2E not run"
+          "detail": "prompt-delivery capability observed; Omo dispatch/send E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "orca-omo"
+          "attempt_id": "orca-omo",
+          "result": "not-run"
         }
       }
     },
@@ -144,7 +156,8 @@
           "executable_path": "/fixture/bin/herdr",
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "herdr-codex"
+          "attempt_id": "herdr-codex",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
@@ -153,7 +166,8 @@
           "executable_path": "/fixture/bin/herdr",
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "herdr-codex"
+          "attempt_id": "herdr-codex",
+          "result": "positive"
         },
         "capable": {
           "claim": "installed",
@@ -163,12 +177,14 @@
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "herdr-codex",
-          "detail": "agent start recipe available; native claim E2E not run"
+          "detail": "agent start recipe available; native claim E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "herdr-codex"
+          "attempt_id": "herdr-codex",
+          "result": "not-run"
         }
       }
     },
@@ -186,7 +202,8 @@
           "executable_path": "/fixture/bin/herdr",
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "herdr-claude"
+          "attempt_id": "herdr-claude",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
@@ -195,7 +212,8 @@
           "executable_path": "/fixture/bin/herdr",
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "herdr-claude"
+          "attempt_id": "herdr-claude",
+          "result": "positive"
         },
         "capable": {
           "claim": "installed",
@@ -205,12 +223,14 @@
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "herdr-claude",
-          "detail": "agent start recipe available; native claim E2E not run"
+          "detail": "agent start recipe available; native claim E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "herdr-claude"
+          "attempt_id": "herdr-claude",
+          "result": "not-run"
         }
       }
     },
@@ -228,7 +248,8 @@
           "executable_path": "/fixture/bin/herdr",
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "herdr-omo"
+          "attempt_id": "herdr-omo",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
@@ -237,7 +258,8 @@
           "executable_path": "/fixture/bin/herdr",
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "herdr-omo"
+          "attempt_id": "herdr-omo",
+          "result": "positive"
         },
         "capable": {
           "claim": "installed",
@@ -247,12 +269,14 @@
           "runtime_identity": "fixture-herdr-server-protocol-22",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "herdr-omo",
-          "detail": "pane run recipe available; native Omo claim E2E not run"
+          "detail": "pane run recipe available; native Omo claim E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "herdr-omo"
+          "attempt_id": "herdr-omo",
+          "result": "not-run"
         }
       }
     },
@@ -270,23 +294,35 @@
           "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
           "runtime_identity": "fixture-cmux-bundle",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "cmux-codex"
+          "attempt_id": "cmux-codex",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
-          "observed": false,
+          "observed": true,
           "attempt_id": "cmux-codex",
-          "detail": "control connection unavailable"
+          "detail": "control connection unavailable",
+          "result": "negative",
+          "version": "fixture-cmux-bundle",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-unavailable",
+          "observed_at": "2026-09-20T00:00:00Z"
         },
         "capable": {
-          "claim": "not-run",
-          "observed": false,
-          "attempt_id": "cmux-codex"
+          "claim": "installed",
+          "observed": true,
+          "attempt_id": "cmux-codex",
+          "result": "negative",
+          "version": "fixture-cmux-bundle",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-unavailable",
+          "observed_at": "2026-09-20T00:00:00Z"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "cmux-codex"
+          "attempt_id": "cmux-codex",
+          "result": "not-run"
         }
       }
     },
@@ -304,23 +340,35 @@
           "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
           "runtime_identity": "fixture-cmux-bundle",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "cmux-claude"
+          "attempt_id": "cmux-claude",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
-          "observed": false,
+          "observed": true,
           "attempt_id": "cmux-claude",
-          "detail": "control connection unavailable"
+          "detail": "control connection unavailable",
+          "result": "negative",
+          "version": "fixture-cmux-bundle",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-unavailable",
+          "observed_at": "2026-09-20T00:00:00Z"
         },
         "capable": {
-          "claim": "not-run",
-          "observed": false,
-          "attempt_id": "cmux-claude"
+          "claim": "installed",
+          "observed": true,
+          "attempt_id": "cmux-claude",
+          "result": "negative",
+          "version": "fixture-cmux-bundle",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-unavailable",
+          "observed_at": "2026-09-20T00:00:00Z"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "cmux-claude"
+          "attempt_id": "cmux-claude",
+          "result": "not-run"
         }
       }
     },
@@ -338,23 +386,35 @@
           "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
           "runtime_identity": "fixture-cmux-bundle",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "cmux-omo"
+          "attempt_id": "cmux-omo",
+          "result": "positive"
         },
         "connected": {
           "claim": "live",
-          "observed": false,
+          "observed": true,
           "attempt_id": "cmux-omo",
-          "detail": "control connection unavailable; cmux omo is not treated as Omo native"
+          "detail": "control connection unavailable; cmux omo is not treated as Omo native",
+          "result": "negative",
+          "version": "fixture-cmux-bundle",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-unavailable",
+          "observed_at": "2026-09-20T00:00:00Z"
         },
         "capable": {
-          "claim": "not-run",
-          "observed": false,
-          "attempt_id": "cmux-omo"
+          "claim": "installed",
+          "observed": true,
+          "attempt_id": "cmux-omo",
+          "result": "negative",
+          "version": "fixture-cmux-bundle",
+          "executable_path": "/fixture/Applications/cmux.app/Contents/MacOS/cmux",
+          "runtime_identity": "fixture-cmux-unavailable",
+          "observed_at": "2026-09-20T00:00:00Z"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "cmux-omo"
+          "attempt_id": "cmux-omo",
+          "result": "not-run"
         }
       }
     },
@@ -372,10 +432,12 @@
           "executable_path": "/fixture/bin/codex",
           "runtime_identity": "fixture-direct-codex",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "direct-codex"
+          "attempt_id": "direct-codex",
+          "result": "positive"
         },
         "connected": {
           "claim": "not-run",
+          "result": "not-run",
           "observed": false,
           "attempt_id": "direct-codex"
         },
@@ -387,12 +449,14 @@
           "runtime_identity": "fixture-direct-codex",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "direct-codex",
-          "detail": "host CLI installed; fresh native claim E2E not run"
+          "detail": "host CLI installed; fresh native claim E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "direct-codex"
+          "attempt_id": "direct-codex",
+          "result": "not-run"
         }
       }
     },
@@ -410,10 +474,12 @@
           "executable_path": "/fixture/bin/claude",
           "runtime_identity": "fixture-direct-claude",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "direct-claude"
+          "attempt_id": "direct-claude",
+          "result": "positive"
         },
         "connected": {
           "claim": "not-run",
+          "result": "not-run",
           "observed": false,
           "attempt_id": "direct-claude"
         },
@@ -425,12 +491,14 @@
           "runtime_identity": "fixture-direct-claude",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "direct-claude",
-          "detail": "host CLI installed; fresh native claim E2E not run"
+          "detail": "host CLI installed; fresh native claim E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "direct-claude"
+          "attempt_id": "direct-claude",
+          "result": "not-run"
         }
       }
     },
@@ -448,10 +516,12 @@
           "executable_path": "/fixture/bin/omo",
           "runtime_identity": "fixture-direct-omo",
           "observed_at": "2026-09-20T00:00:00Z",
-          "attempt_id": "direct-omo"
+          "attempt_id": "direct-omo",
+          "result": "positive"
         },
         "connected": {
           "claim": "not-run",
+          "result": "not-run",
           "observed": false,
           "attempt_id": "direct-omo"
         },
@@ -463,12 +533,14 @@
           "runtime_identity": "fixture-direct-omo",
           "observed_at": "2026-09-20T00:00:00Z",
           "attempt_id": "direct-omo",
-          "detail": "host CLI installed; fresh native claim E2E not run"
+          "detail": "host CLI installed; fresh native claim E2E not run",
+          "result": "positive"
         },
         "runtime_verified": {
           "claim": "not-run",
           "observed": false,
-          "attempt_id": "direct-omo"
+          "attempt_id": "direct-omo",
+          "result": "not-run"
         }
       }
     }
@@ -537,5 +609,6 @@
       ]
     }
   },
-  "kind": "deterministic-fixture"
+  "kind": "deterministic-fixture",
+  "runtime_identity": "fixture-h0-runtime"
 }

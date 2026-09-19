@@ -91,7 +91,7 @@ func TestValidateStatusEvidenceRelationships(t *testing.T) {
 		cell := &baseline.Cells[0]
 		cell.Status = StatusNotRun
 		cell.Evidence.RuntimeVerified = observation(ClaimLive, true)
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "not-run") {
+		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "non-supported") {
 			t.Fatalf("not-run relationship error=%v", err)
 		}
 	})
@@ -115,6 +115,7 @@ func TestValidateRejectsSilentFallback(t *testing.T) {
 func TestValidateSeparatesInstalledCapableFromRuntimeSupported(t *testing.T) {
 	baseline := minimalBaseline()
 	cell := &baseline.Cells[0]
+	baseline.Kind = BaselineKindLiveObservation
 	cell.Status = StatusSupported
 	cell.Evidence.Installed = observation(ClaimInstalled, true)
 	cell.Evidence.Connected = observation(ClaimLive, true)
@@ -129,6 +130,7 @@ func TestValidateSeparatesInstalledCapableFromRuntimeSupported(t *testing.T) {
 func TestValidateSeparatesMockFromLiveRuntimeSupport(t *testing.T) {
 	baseline := minimalBaseline()
 	cell := &baseline.Cells[0]
+	baseline.Kind = BaselineKindLiveObservation
 	cell.Status = StatusSupported
 	cell.Evidence.RuntimeVerified = observation(ClaimMock, true)
 
@@ -139,21 +141,144 @@ func TestValidateSeparatesMockFromLiveRuntimeSupport(t *testing.T) {
 
 func TestValidateRequiresLiveObservationIdentity(t *testing.T) {
 	baseline := minimalBaseline()
-	baseline.Cells[0].Evidence.Connected = Observation{Claim: ClaimLive, Observed: true, Version: "1.0.0", ExecutablePath: "/bin/tool", ObservedAt: "2026-09-20T00:00:00Z", AttemptID: "attempt"}
+	baseline.Cells[0].Evidence.Connected = Observation{Claim: ClaimLive, Result: ObservationResultPositive, Observed: true, Version: "1.0.0", ExecutablePath: "/bin/tool", ObservedAt: "2026-09-20T00:00:00Z", AttemptID: "attempt"}
 	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "runtime_identity") {
 		t.Fatalf("missing live identity error=%v", err)
 	}
 }
 
+func TestValidateRequiresExactlySixDirectedCrossHostHandoffs(t *testing.T) {
+	baseline := minimalBaseline()
+	if err := Validate(baseline); err != nil {
+		t.Fatalf("complete handoff fixture rejected: %v", err)
+	}
+
+	baseline = minimalBaseline()
+	baseline.HandOffs = baseline.HandOffs[:5]
+	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "six directed cross-host") {
+		t.Fatalf("missing handoff error=%v", err)
+	}
+
+	baseline = minimalBaseline()
+	baseline.HandOffs[5] = baseline.HandOffs[0]
+	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "duplicate handoff") {
+		t.Fatalf("duplicate handoff error=%v", err)
+	}
+
+	baseline = minimalBaseline()
+	baseline.HandOffs[0] = HandOff{FromHost: HostCodex, ToHost: HostCodex, Semantics: HandOffMaterialTransfer}
+	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "self handoff") {
+		t.Fatalf("self handoff error=%v", err)
+	}
+
+	baseline = minimalBaseline()
+	baseline.HandOffs[0].Semantics = HandOffNativeSessionMigration
+	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "material transfer") {
+		t.Fatalf("native migration error=%v", err)
+	}
+}
+
 func TestValidateRejectsCrossHostNativeSessionMigration(t *testing.T) {
 	baseline := minimalBaseline()
-	baseline.HandOffs = []HandOff{{
-		FromHost: HostCodex, ToHost: HostClaude,
-		Semantics: HandOffNativeSessionMigration,
-	}}
+	baseline.HandOffs[0].Semantics = HandOffNativeSessionMigration
 	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "material transfer") {
 		t.Fatalf("cross-host migration error=%v", err)
 	}
+}
+
+func TestValidateAcceptsLiveSupportedWhenRuntimeBindsToBaseline(t *testing.T) {
+	baseline := minimalBaseline()
+	baseline.Kind = BaselineKindLiveObservation
+	cell := &baseline.Cells[0]
+	cell.Status = StatusSupported
+	cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
+	cell.Evidence.RuntimeVerified.AttemptID = baseline.AttemptID
+	cell.Evidence.RuntimeVerified.RuntimeIdentity = baseline.RuntimeIdentity
+
+	if err := Validate(baseline); err != nil {
+		t.Fatalf("live supported baseline rejected: %v", err)
+	}
+}
+
+func TestValidateEvidenceResultsAreExplicit(t *testing.T) {
+	t.Run("deterministic supported is rejected", func(t *testing.T) {
+		baseline := minimalBaseline()
+		cell := &baseline.Cells[0]
+		cell.Status = StatusSupported
+		cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
+		cell.Evidence.RuntimeVerified.AttemptID = baseline.AttemptID
+		cell.Evidence.RuntimeVerified.RuntimeIdentity = baseline.RuntimeIdentity
+		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "live-observation") {
+			t.Fatalf("deterministic supported error=%v", err)
+		}
+	})
+
+	t.Run("supported requires baseline attempt binding", func(t *testing.T) {
+		baseline := minimalBaseline()
+		baseline.Kind = BaselineKindLiveObservation
+		cell := &baseline.Cells[0]
+		cell.Status = StatusSupported
+		cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
+		cell.Evidence.RuntimeVerified.RuntimeIdentity = baseline.RuntimeIdentity
+		cell.Evidence.RuntimeVerified.AttemptID = "other-attempt"
+		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "baseline attempt") {
+			t.Fatalf("supported attempt binding error=%v", err)
+		}
+	})
+
+	t.Run("supported requires baseline runtime binding", func(t *testing.T) {
+		baseline := minimalBaseline()
+		baseline.Kind = BaselineKindLiveObservation
+		cell := &baseline.Cells[0]
+		cell.Status = StatusSupported
+		cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
+		cell.Evidence.RuntimeVerified.AttemptID = baseline.AttemptID
+		cell.Evidence.RuntimeVerified.RuntimeIdentity = "other-runtime"
+		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "baseline runtime") {
+			t.Fatalf("supported runtime binding error=%v", err)
+		}
+	})
+
+	t.Run("unsupported requires explicit negative capable evidence", func(t *testing.T) {
+		baseline := minimalBaseline()
+		cell := &baseline.Cells[0]
+		cell.Status = StatusUnsupported
+		cell.Evidence.Capable = observationResult(ClaimNotRun, ObservationResultNotRun)
+		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "explicit negative capable") {
+			t.Fatalf("unsupported explicit negative error=%v", err)
+		}
+	})
+
+	t.Run("unavailable requires explicit negative connected or capable evidence", func(t *testing.T) {
+		baseline := minimalBaseline()
+		cell := &baseline.Cells[6]
+		cell.Status = StatusUnavailable
+		cell.Evidence.Connected = observationResult(ClaimNotRun, ObservationResultNotRun)
+		cell.Evidence.Capable = observationResult(ClaimNotRun, ObservationResultNotRun)
+		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "explicit negative connected or capable") {
+			t.Fatalf("unavailable explicit negative error=%v", err)
+		}
+	})
+
+	t.Run("non-supported status rejects live runtime verified", func(t *testing.T) {
+		baseline := minimalBaseline()
+		cell := &baseline.Cells[0]
+		cell.Status = StatusNotRun
+		cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
+		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "non-supported") {
+			t.Fatalf("non-supported live runtime error=%v", err)
+		}
+	})
+
+	t.Run("not-run requires explicit not-run runtime result", func(t *testing.T) {
+		baseline := minimalBaseline()
+		cell := &baseline.Cells[0]
+		cell.Status = StatusNotRun
+		cell.Evidence.RuntimeVerified = observationResult(ClaimNotRun, ObservationResultNegative)
+		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "not-run") {
+			t.Fatalf("not-run explicit result error=%v", err)
+		}
+	})
 }
 
 func TestValidateRecoveryModeInvariants(t *testing.T) {
@@ -232,25 +357,23 @@ func minimalBaseline() Baseline {
 				SelectedLauncher: launcher,
 				ObservedLauncher: launcher,
 				Evidence: Evidence{
-					Installed:       observation(ClaimInstalled, true),
-					Connected:       observation(ClaimLive, launcher != LauncherCmux),
-					Capable:         observation(ClaimInstalled, launcher != LauncherCmux),
-					RuntimeVerified: observation(ClaimNotRun, false),
+					Installed:       observationResult(ClaimInstalled, ObservationResultPositive),
+					Connected:       connectionObservation(launcher),
+					Capable:         capabilityObservation(launcher),
+					RuntimeVerified: observationResult(ClaimNotRun, ObservationResultNotRun),
 				},
 			})
 		}
 	}
 	return Baseline{
-		SchemaVersion: 1,
-		Kind:          BaselineKindDeterministicFixture,
-		GeneratedAt:   "2026-09-20T00:00:00Z",
-		AttemptID:     "h0-test-attempt",
-		Machine:       "fixture-machine",
-		Cells:         cells,
-		HandOffs: []HandOff{{
-			FromHost: HostCodex, ToHost: HostClaude,
-			Semantics: HandOffMaterialTransfer,
-		}},
+		SchemaVersion:   1,
+		Kind:            BaselineKindDeterministicFixture,
+		GeneratedAt:     "2026-09-20T00:00:00Z",
+		AttemptID:       "h0-test-attempt",
+		Machine:         "fixture-machine",
+		RuntimeIdentity: "fixture-runtime",
+		Cells:           cells,
+		HandOffs:        allDirectedCrossHostHandoffs(),
 		Recovery: RecoveryInvariants{
 			Direct: RecoveryChain{
 				Mode: RecoveryModeDirect,
@@ -285,10 +408,32 @@ func minimalBaseline() Baseline {
 		},
 	}
 }
+func allDirectedCrossHostHandoffs() []HandOff {
+	hosts := []Host{HostCodex, HostClaude, HostOmo}
+	handoffs := make([]HandOff, 0, 6)
+	for _, fromHost := range hosts {
+		for _, toHost := range hosts {
+			if fromHost == toHost {
+				continue
+			}
+			handoffs = append(handoffs, HandOff{FromHost: fromHost, ToHost: toHost, Semantics: HandOffMaterialTransfer})
+		}
+	}
+	return handoffs
+}
 
 func observation(claim Claim, observed bool) Observation {
+	if observed {
+		return observationResult(claim, ObservationResultPositive)
+	}
+	return observationResult(claim, ObservationResultNotRun)
+}
+
+func observationResult(claim Claim, result ObservationResult) Observation {
+	observed := result != ObservationResultNotRun
 	return Observation{
 		Claim:           claim,
+		Result:          result,
 		Observed:        observed,
 		Version:         "fixture-version",
 		ExecutablePath:  "/fixture/bin/tool",
@@ -296,4 +441,18 @@ func observation(claim Claim, observed bool) Observation {
 		ObservedAt:      "2026-09-20T00:00:00Z",
 		AttemptID:       "attempt-1",
 	}
+}
+
+func connectionObservation(launcher Launcher) Observation {
+	if launcher == LauncherCmux {
+		return observationResult(ClaimInstalled, ObservationResultNegative)
+	}
+	return observationResult(ClaimLive, ObservationResultPositive)
+}
+
+func capabilityObservation(launcher Launcher) Observation {
+	if launcher == LauncherCmux {
+		return observationResult(ClaimInstalled, ObservationResultNegative)
+	}
+	return observationResult(ClaimInstalled, ObservationResultPositive)
 }
