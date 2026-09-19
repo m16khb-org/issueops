@@ -6,7 +6,6 @@ import (
 	install "issueops/internal/adapter/install"
 	activationport "issueops/internal/port/nativeactivation"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -319,6 +318,8 @@ func TestInstallCommandApprovedDryRunReportsManagedAdoptionWithoutWriting(t *tes
 }
 
 func TestInstallCommandApprovedDryRunValidatesStagedCandidate(t *testing.T) {
+	assertManagedCommandFixtureContract(t)
+
 	home := t.TempDir()
 	root := t.TempDir()
 	target := filepath.Join(root, "bin", "issueops")
@@ -352,12 +353,8 @@ func buildManagedTestCommand(t *testing.T) string {
 
 func buildManagedCommandAt(t *testing.T, target string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	command := exec.Command("go", "build", "-o", target, "../../../cmd/issueops")
-	if output, err := command.CombinedOutput(); err != nil {
-		t.Fatalf("build managed test command: %v\n%s", err, output)
+	if err := managedTestCommandSource.copyTo(target); err != nil {
+		t.Fatalf("copy managed test command: %v", err)
 	}
 }
 

@@ -1,6 +1,7 @@
 package installcli
 
 import (
+	"fmt"
 	installutiladapter "issueops/internal/adapter/installutil"
 	installcontract "issueops/internal/contract/install"
 	"os"
@@ -19,5 +20,13 @@ func TestMain(m *testing.M) {
 		return transaction, plan, err
 	}
 	SemanticSHA256 = installutiladapter.SemanticSHA256
-	os.Exit(m.Run())
+	exitCode := runWithManagedCommandFixture(
+		buildManagedTestCommandSource,
+		func(fixture managedCommandFixture) int {
+			managedTestCommandSource = fixture
+			return m.Run()
+		},
+		func(err error) { fmt.Fprintln(os.Stderr, err) },
+	)
+	os.Exit(exitCode)
 }
