@@ -25,26 +25,21 @@ const (
 	IssueOpsHandoffDeliveryLauncherHerdr  = "herdr"
 	IssueOpsHandoffDeliveryLauncherCmux   = "cmux"
 
-	IssueOpsHandoffDeliveryEvidenceLauncherReceipt                = "launcher_receipt"
-	IssueOpsHandoffDeliveryEvidenceNativeReceipt                  = "native_receipt"
-	IssueOpsHandoffDeliveryEvidenceIssueOpsClaim                  = "issueops_claim"
-	IssueOpsHandoffDeliveryEvidenceLauncherAccepted               = "launcher_accepted"
-	IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost           = "accepted_response_lost"
-	IssueOpsHandoffDeliveryEvidenceOrcaDispatch                   = "orca_dispatch"
-	IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt            = "orca_dispatch_receipt"
-	IssueOpsHandoffDeliveryEvidenceOmoSendFailed                  = "omo_send_failed"
-	IssueOpsHandoffDeliveryEvidenceOmoSendAccepted                = "omo_send_accepted"
-	IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost            = "omo_send_response_lost"
-	IssueOpsHandoffDeliveryEvidenceRawInput                       = "raw_input"
-	IssueOpsHandoffDeliveryEvidenceHerdrWaitState                 = "herdr_wait_state"
-	IssueOpsHandoffDeliveryEvidenceTimeout                        = "timeout"
-	IssueOpsHandoffDeliveryEvidenceAgentPromptStalled             = "agent_prompt_stalled"
-	IssueOpsHandoffDeliveryEvidenceReplaceBeforeExternalCallCrash = "replace_before_external_call_crash"
-	IssueOpsHandoffDeliveryEvidenceReplaceAfterExternalCallCrash  = "replace_after_external_call_crash"
-	IssueOpsHandoffDeliveryEvidenceReseedBeforeExternalCallCrash  = "reseed_before_external_call_crash"
-	IssueOpsHandoffDeliveryEvidenceReseedAfterExternalCallCrash   = "reseed_after_external_call_crash"
-	IssueOpsHandoffDeliveryEvidenceResumeBeforeExternalCallCrash  = "resume_before_external_call_crash"
-	IssueOpsHandoffDeliveryEvidenceResumeAfterExternalCallCrash   = "resume_after_external_call_crash"
+	IssueOpsHandoffDeliveryEvidenceLauncherReceipt      = "launcher_receipt"
+	IssueOpsHandoffDeliveryEvidenceNativeReceipt        = "native_receipt"
+	IssueOpsHandoffDeliveryEvidenceIssueOpsClaim        = "issueops_claim"
+	IssueOpsHandoffDeliveryEvidenceLauncherAccepted     = "launcher_accepted"
+	IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost = "accepted_response_lost"
+	IssueOpsHandoffDeliveryEvidenceOrcaDispatch         = "orca_dispatch"
+	IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt  = "orca_dispatch_receipt"
+	IssueOpsHandoffDeliveryEvidenceOmoSendFailed        = "omo_send_failed"
+	IssueOpsHandoffDeliveryEvidenceOmoSendAccepted      = "omo_send_accepted"
+	IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost  = "omo_send_response_lost"
+	IssueOpsHandoffDeliveryEvidenceRawInput             = "raw_input"
+	IssueOpsHandoffDeliveryEvidenceHerdrWaitState       = "herdr_wait_state"
+	IssueOpsHandoffDeliveryEvidenceTimeout              = "timeout"
+	IssueOpsHandoffDeliveryEvidenceAgentPromptStalled   = "agent_prompt_stalled"
+	IssueOpsHandoffDeliveryEvidenceExternalCallStaged   = "external_call_staged"
 )
 
 type IssueOpsHandoffSnapshot struct {
@@ -182,6 +177,7 @@ type IssueOpsHandoffDeliveryObservation struct {
 	CreatedAt          string                            `json:"created_at"`
 	UpdatedAt          string                            `json:"updated_at"`
 	Receipt            IssueOpsHandoffDeliveryReceipt    `json:"receipt"`
+	CallStaged         IssueOpsHandoffDeliveryState      `json:"call_staged,omitempty"`
 	InputAccepted      IssueOpsHandoffDeliveryState      `json:"input_accepted"`
 	NativeTurnObserved IssueOpsHandoffDeliveryState      `json:"native_turn_observed"`
 	OwnerClaimed       IssueOpsHandoffDeliveryState      `json:"owner_claimed"`

@@ -26,9 +26,12 @@ type ReconcileStageReceipt struct {
 	RunBound       bool                      `json:"run_bound,omitempty"`
 	TaskID         string                    `json:"task_id,omitempty"`
 	DispatchID     string                    `json:"dispatch_id,omitempty"`
+	RequestID      string                    `json:"request_id,omitempty"`
+	PromptReceipt  *OrcaPromptReceipt        `json:"prompt_receipt,omitempty"`
 }
 
 type ReconcileStageInventory struct {
 	Candidates        []ReconcileStageReceipt `json:"candidates"`
 	AuthoritativeZero bool                    `json:"authoritative_zero"`
+	ExactReplay       bool                    `json:"exact_replay,omitempty"`
 }

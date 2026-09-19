@@ -99,7 +99,7 @@ func (s *ResumeService) Resume(ctx context.Context, request ResumeRequest) (Resu
 				_ = s.repository.RecordFailure(fenceCtx, intent, intent.InvocationState, err)
 				return cause
 			}
-			stagePlan, err := leasedomain.PlanResumeStage(leasedomain.ResumeStageRequest{CandidateCount: len(inventory.Candidates), AuthoritativeZero: inventory.AuthoritativeZero, InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts})
+			stagePlan, err := leasedomain.PlanResumeStage(leasedomain.ResumeStageRequest{CandidateCount: len(inventory.Candidates), AuthoritativeZero: inventory.AuthoritativeZero, ExactReplay: inventory.ExactReplay, InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts})
 			if err != nil {
 				cause := resumeStageDecisionCause(intent, inventory, err)
 				_ = s.repository.RecordFailure(fenceCtx, intent, intent.InvocationState, cause)

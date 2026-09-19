@@ -43,6 +43,11 @@ type executionClient interface {
 	SendTerminalPrompt(context.Context, string, string, string) (port.OrcaPromptReceipt, error)
 }
 
+type executionDeliveryIdentityClient interface {
+	DeliveryIdentity(context.Context) (port.ExecutionOrcaDeliveryIdentity, error)
+	ShowRequest(context.Context, string) (port.OrcaRequestObservation, error)
+}
+
 type executionInventoryClient interface {
 	listTerminalsInventory(context.Context, string) (executionTerminalInventory, error)
 	listAllTasksInventory(context.Context) (executionTaskInventory, error)
@@ -105,6 +110,57 @@ func (p *ExecutionProvisioner) Probe(ctx context.Context, req port.ExecutionOrca
 	}
 	result, err := p.client.Probe(ctx, port.OrcaProbeRequest{Repo: req.Repo, Agent: req.Host, Provider: req.Provider})
 	return port.ExecutionOrcaProbeResult{Available: result.Available, Ready: result.Ready, Code: result.Code}, err
+}
+
+func (p *ExecutionProvisioner) InspectDeliveryIdentity(ctx context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaDeliveryIdentity, error) {
+	client, ok := p.client.(executionDeliveryIdentityClient)
+	if !ok {
+		return port.ExecutionOrcaDeliveryIdentity{}, fmt.Errorf("Orca delivery identity observation is unavailable")
+	}
+	identity, err := client.DeliveryIdentity(ctx)
+	if err != nil {
+		return port.ExecutionOrcaDeliveryIdentity{}, err
+	}
+	if req.Prepared == nil || strings.TrimSpace(identity.RuntimeID) != strings.TrimSpace(req.Prepared.RuntimeID) {
+		return port.ExecutionOrcaDeliveryIdentity{}, fmt.Errorf("Orca delivery runtime identity changed")
+	}
+	terminal, err := p.resolveIntentTerminal(ctx, req)
+	if err != nil {
+		return port.ExecutionOrcaDeliveryIdentity{}, err
+	}
+	identity.TerminalPTYID = terminal.PTYID
+	identity.TerminalHandle = terminal.Handle
+	return identity, nil
+}
+
+func (p *ExecutionProvisioner) ObserveRequest(ctx context.Context, requestID string) (port.OrcaRequestObservation, error) {
+	client, ok := p.client.(executionDeliveryIdentityClient)
+	if !ok {
+		return port.OrcaRequestObservation{}, fmt.Errorf("Orca request observation is unavailable")
+	}
+	return client.ShowRequest(ctx, requestID)
+}
+
+func (p *ExecutionProvisioner) InspectDeliveryDispatch(ctx context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, bool, error) {
+	client, err := p.intentInventoryClient()
+	if err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, false, err
+	}
+	inventory, err := client.showDispatchInventory(ctx, req.TaskID)
+	if err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, false, err
+	}
+	if err := validateExecutionInventoryRuntime(inventory.RuntimeID, req.Prepared.RuntimeID); err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, false, err
+	}
+	if inventory.Dispatch == nil {
+		return port.ExecutionOrcaIntentReceipt{}, false, nil
+	}
+	dispatch := *inventory.Dispatch
+	if err := validateExecutionObservedDispatch(dispatch, req.Prepared.RuntimeID, req.TaskID); err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, false, err
+	}
+	return port.ExecutionOrcaIntentReceipt{TaskID: dispatch.TaskID, DispatchID: dispatch.ID, RequestID: dispatch.RequestID}, true, nil
 }
 
 func (p *ExecutionProvisioner) InspectIntent(ctx context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentInventory, error) {
@@ -275,6 +331,14 @@ func (p *ExecutionProvisioner) inspectIntentDispatch(ctx context.Context, req po
 }
 
 func (p *ExecutionProvisioner) InvokeIntent(ctx context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, error) {
+	return p.invokeIntent(ctx, req, nil)
+}
+
+func (p *ExecutionProvisioner) InvokeIntentObserved(ctx context.Context, req port.ExecutionOrcaIntentRequest, observe func(port.ExecutionOrcaCallObservation) error) (port.ExecutionOrcaIntentReceipt, error) {
+	return p.invokeIntent(ctx, req, observe)
+}
+
+func (p *ExecutionProvisioner) invokeIntent(ctx context.Context, req port.ExecutionOrcaIntentRequest, observe func(port.ExecutionOrcaCallObservation) error) (port.ExecutionOrcaIntentReceipt, error) {
 	if p == nil || p.client == nil {
 		return port.ExecutionOrcaIntentReceipt{}, executionPreflightError(fmt.Errorf("Orca client is unavailable"))
 	}
@@ -352,6 +416,12 @@ func (p *ExecutionProvisioner) InvokeIntent(ctx context.Context, req port.Execut
 			return port.ExecutionOrcaIntentReceipt{}, executionPreflightError(err)
 		}
 		inject := req.Probe.Host != "omo"
+		dispatchReceipt := port.ExecutionOrcaIntentReceipt{TaskID: req.TaskID, TerminalPTYID: terminal.PTYID, TerminalHandle: terminal.Handle}
+		if observe != nil {
+			if err := observe(port.ExecutionOrcaCallObservation{CallKind: "dispatch", Phase: port.ExecutionOrcaCallStaged, Receipt: dispatchReceipt}); err != nil {
+				return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{Code: "delivery_observation_failed", Detail: err.Error(), Invoked: false, CallPhase: "orca_dispatch"}
+			}
+		}
 		dispatch, err := p.client.Dispatch(ctx, port.OrcaDispatchRequest{
 			RunID: req.RunID, TaskID: req.TaskID, ToHandle: terminal.Handle, Inject: inject, ReturnPreamble: true, RetryRequestID: req.RetryRequestID,
 		})
@@ -364,8 +434,19 @@ func (p *ExecutionProvisioner) InvokeIntent(ctx context.Context, req port.Execut
 		if err := validateExecutionInvokedDispatch(dispatch, req.Prepared.RuntimeID, req.TaskID, terminal.Handle, inject); err != nil {
 			return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{Code: "dispatch_identity_mismatch", Detail: err.Error(), Invoked: true}
 		}
+		dispatchReceipt = port.ExecutionOrcaIntentReceipt{TaskID: dispatch.TaskID, DispatchID: dispatch.ID, RequestID: dispatch.RequestID, TerminalPTYID: terminal.PTYID, TerminalHandle: terminal.Handle}
+		if observe != nil {
+			if err := observe(port.ExecutionOrcaCallObservation{CallKind: "dispatch", Phase: port.ExecutionOrcaCallCompleted, Receipt: dispatchReceipt}); err != nil {
+				return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{Code: "delivery_observation_failed", Detail: err.Error(), Invoked: true, DispatchRequestID: strings.TrimSpace(dispatch.RequestID), CallPhase: "orca_dispatch"}
+			}
+		}
 		var promptReceipt *port.OrcaPromptReceipt
 		if !inject {
+			if observe != nil {
+				if err := observe(port.ExecutionOrcaCallObservation{CallKind: "prompt", Phase: port.ExecutionOrcaCallStaged, Receipt: dispatchReceipt}); err != nil {
+					return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{Code: "delivery_observation_failed", Detail: err.Error(), Invoked: true, DispatchRequestID: strings.TrimSpace(dispatch.RequestID), CallPhase: "terminal_send"}
+				}
+			}
 			receipt, err := p.client.SendTerminalPrompt(ctx, terminal.Handle, dispatch.Preamble, req.PromptRetryRequestID)
 			if err != nil {
 				if typed, ok := errors.AsType[*port.OrcaError](err); ok {
@@ -375,9 +456,23 @@ func (p *ExecutionProvisioner) InvokeIntent(ctx context.Context, req port.Execut
 				}
 				return port.ExecutionOrcaIntentReceipt{}, err
 			}
+			if expected := strings.TrimSpace(req.ExpectedPromptProcessIncarnation); expected != "" && strings.TrimSpace(receipt.ProcessIncarnation) != expected {
+				return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{
+					Code: "terminal_process_incarnation_mismatch", Detail: "terminal prompt receipt belongs to a different process incarnation", Invoked: true,
+					OrchestrationRequestID: strings.TrimSpace(receipt.RequestID), DispatchRequestID: strings.TrimSpace(dispatch.RequestID), CallPhase: "terminal_send",
+				}
+			}
 			promptReceipt = &receipt
+			if observe != nil {
+				completed := dispatchReceipt
+				completed.PromptReceipt = promptReceipt
+				if err := observe(port.ExecutionOrcaCallObservation{CallKind: "prompt", Phase: port.ExecutionOrcaCallCompleted, Receipt: completed}); err != nil {
+					return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{Code: "delivery_observation_failed", Detail: err.Error(), Invoked: true, OrchestrationRequestID: strings.TrimSpace(receipt.RequestID), DispatchRequestID: strings.TrimSpace(dispatch.RequestID), CallPhase: "terminal_send"}
+				}
+			}
 		}
-		return port.ExecutionOrcaIntentReceipt{TaskID: dispatch.TaskID, DispatchID: dispatch.ID, RequestID: dispatch.RequestID, PromptReceipt: promptReceipt}, nil
+		dispatchReceipt.PromptReceipt = promptReceipt
+		return dispatchReceipt, nil
 	default:
 		return port.ExecutionOrcaIntentReceipt{}, executionPreflightError(fmt.Errorf("unsupported stage %q", req.Stage))
 	}

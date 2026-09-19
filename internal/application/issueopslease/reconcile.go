@@ -52,7 +52,7 @@ func (s *ReconcileService) Reconcile(ctx context.Context, request ReconcileReque
 		return s.failed(ctx, base, err)
 	}
 	plan, err := leasedomain.PlanReconcileStage(leasedomain.ReconcileStageRequest{
-		Stage: intent.Stage, CandidateCount: len(inventory.Candidates), AuthoritativeZero: inventory.AuthoritativeZero,
+		Stage: intent.Stage, CandidateCount: len(inventory.Candidates), AuthoritativeZero: inventory.AuthoritativeZero, ExactReplay: inventory.ExactReplay,
 		InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts,
 	})
 	if err != nil {

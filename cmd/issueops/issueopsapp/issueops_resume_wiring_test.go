@@ -3,11 +3,14 @@ package issueopsapp
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	auditadapter "issueops/internal/adapter/audit"
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
 	"issueops/internal/adapter/issueops"
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
@@ -68,6 +71,64 @@ func TestResumePlanIdentityFailureStopsBeforeOperationAndOrcaMutation(t *testing
 	}
 }
 
+func TestIssueOpsResumeProductionWiringObservesDispatch(t *testing.T) {
+	stateRoot, record, tokenPath, _, _ := seedOrcaClaimSnapshot(t)
+	oldRoot := record.Execution.Workspace.Root
+	canonicalRoot := record.Repo + ".worktrees/" + record.Branch
+	if err := os.MkdirAll(filepath.Dir(canonicalRoot), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	claimWiringGit(t, record.Repo, "worktree", "move", record.Execution.Workspace.Root, canonicalRoot)
+	record.WorktreePath = canonicalRoot
+	record.Execution.Workspace.Root = canonicalRoot
+	record.PlanPath = strings.Replace(record.PlanPath, oldRoot, canonicalRoot, 1)
+	packetPath := issueops.SealedOwnerContextPacketPath(record)
+	packetData, err := os.ReadFile(packetPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var packet map[string]any
+	if err := json.Unmarshal(packetData, &packet); err != nil {
+		t.Fatal(err)
+	}
+	packet["owner_host"] = "codex"
+	packet["owner_model"] = "model"
+	packet["worktree_root"] = canonicalRoot
+	packet["claim_token_file"] = strings.Replace(tokenPath, oldRoot, canonicalRoot, 1)
+	packetData, err = json.Marshal(packet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(packetPath, packetData, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	promptPath := filepath.Join(filepath.Dir(packetPath), "owner-prompt.txt")
+	prompt := []byte("resume owner prompt")
+	if err := os.WriteFile(promptPath, prompt, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	record.Execution.Orca.ContextPacketSHA256 = claimWiringSHA256(string(packetData))
+	record.Execution.Orca.OwnerPromptSHA256 = claimWiringSHA256(string(prompt))
+	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+		t.Fatal(err)
+	}
+	fake := &resumePlanMutationFake{}
+	service, err := newIssueOpsResumeService(stateRoot, fake, fake)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := leaseinbound.NewResumeHandler(service)(context.Background(), stateRoot, issueops.ExecutionResumeRequest{
+		ID: record.ID, ExpectedGeneration: 1, Actor: claimWiringActor(t), CWD: record.Execution.Workspace.Root, Confirm: true,
+	})
+	if err != nil || !result.OK {
+		t.Fatalf("resume result=%+v err=%v", result, err)
+	}
+	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	if err != nil || len(observations) < 2 {
+		t.Fatalf("resume dispatch observations=%d err=%v", len(observations), err)
+	}
+}
+
 type resumePlanMutationFake struct {
 	ownerCalls   int
 	probeCalls   int
@@ -80,14 +141,43 @@ func (fake *resumePlanMutationFake) Probe(context.Context, port.ExecutionOrcaPro
 	return port.ExecutionOrcaProbeResult{Available: true, Ready: true}, nil
 }
 
+func (*resumePlanMutationFake) InspectDeliveryIdentity(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaDeliveryIdentity, error) {
+	runtimeID := "runtime"
+	if request.Prepared != nil && request.Prepared.RuntimeID != "" {
+		runtimeID = request.Prepared.RuntimeID
+	}
+	return port.ExecutionOrcaDeliveryIdentity{LauncherPath: "/test/orca", Version: "1.4.200", RuntimeID: runtimeID, MachineID: "test-machine", TargetIdentity: "local", TerminalPTYID: request.TerminalPTYID, TerminalHandle: "term-test"}, nil
+}
+
+func (*resumePlanMutationFake) InspectDeliveryDispatch(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, bool, error) {
+	return port.ExecutionOrcaIntentReceipt{}, false, nil
+}
+
+func (*resumePlanMutationFake) ObserveRequest(context.Context, string) (port.OrcaRequestObservation, error) {
+	return port.OrcaRequestObservation{}, nil
+}
+
 func (fake *resumePlanMutationFake) InspectIntent(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentInventory, error) {
 	fake.inspectCalls++
 	return port.ExecutionOrcaIntentInventory{AuthoritativeZero: true}, nil
 }
 
-func (fake *resumePlanMutationFake) InvokeIntent(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, error) {
+func (fake *resumePlanMutationFake) InvokeIntent(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, error) {
 	fake.invokeCalls++
-	return port.ExecutionOrcaIntentReceipt{}, nil
+	switch request.Stage {
+	case port.ExecutionOrcaIntentTerminal:
+		return port.ExecutionOrcaIntentReceipt{TerminalPTYID: "pty-resume"}, nil
+	case port.ExecutionOrcaIntentRun:
+		return port.ExecutionOrcaIntentReceipt{RunID: "run-resume"}, nil
+	case port.ExecutionOrcaIntentRunBind:
+		return port.ExecutionOrcaIntentReceipt{RunID: request.RunID, RunBound: true}, nil
+	case port.ExecutionOrcaIntentTask:
+		return port.ExecutionOrcaIntentReceipt{TaskID: "task-resume"}, nil
+	case port.ExecutionOrcaIntentDispatch:
+		return port.ExecutionOrcaIntentReceipt{TaskID: request.TaskID, DispatchID: "dispatch-resume", RequestID: "11111111-1111-4111-8111-111111111111"}, nil
+	default:
+		return port.ExecutionOrcaIntentReceipt{}, nil
+	}
 }
 
 func (fake *resumePlanMutationFake) InspectOwner(context.Context, port.ExecutionOrcaOwnerInventoryRequest) (port.ExecutionOrcaOwnerInventory, error) {
@@ -177,6 +267,17 @@ func TestResumePortReceiptPreservesRunStages(t *testing.T) {
 	bound := resumePortReceipt(string(port.ExecutionOrcaIntentRunBind), leasecontract.ResumeStageReceipt{RunID: "run-resume", RunBound: true})
 	if bound.RunID != "run-resume" || !bound.RunBound {
 		t.Fatalf("Run bind receipt=%#v", bound)
+	}
+}
+
+func TestResumePortReceiptPreservesDispatchAndPromptRequestIDs(t *testing.T) {
+	receipt := leasecontract.ResumeStageReceipt{
+		TaskID: "task-resume", DispatchID: "dispatch-resume", RequestID: "11111111-1111-4111-8111-111111111111",
+		PromptReceipt: &leasecontract.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-resume", Stages: []string{"input_accepted"}},
+	}
+	got := resumePortReceipt(string(port.ExecutionOrcaIntentDispatch), receipt)
+	if got.RequestID != receipt.RequestID || got.PromptReceipt == nil || got.PromptReceipt.RequestID != receipt.PromptReceipt.RequestID || got.PromptReceipt.ProcessIncarnation != "process-resume" {
+		t.Fatalf("resume dispatch receipt lost durable IDs: %+v", got)
 	}
 }
 

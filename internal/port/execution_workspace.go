@@ -99,17 +99,20 @@ const (
 // ExecutionOrcaIntentRequest is the complete, durable identity for one Orca
 // mutation. The core persists this identity before InvokeIntent is allowed.
 type ExecutionOrcaIntentRequest struct {
-	Stage                ExecutionOrcaIntentStage       `json:"stage"`
-	OperationID          string                         `json:"operation_id,omitempty"`
-	RetryRequestID       string                         `json:"retry_request_id,omitempty"`
-	PromptRetryRequestID string                         `json:"prompt_retry_request_id,omitempty"`
-	SourceGeneration     uint64                         `json:"source_generation,omitempty"`
-	Marker               string                         `json:"marker"`
-	Workspace            ExecutionWorkspaceRequest      `json:"workspace"`
-	Probe                ExecutionOrcaProbeRequest      `json:"probe"`
-	Prepared             *ExecutionOrcaWorkspaceReceipt `json:"prepared,omitempty"`
-	Launch               *ExecutionOrcaLaunchRequest    `json:"launch,omitempty"`
-	TerminalPTYID        string                         `json:"terminal_pty_id,omitempty"`
+	Stage                ExecutionOrcaIntentStage `json:"stage"`
+	OperationID          string                   `json:"operation_id,omitempty"`
+	RetryRequestID       string                   `json:"retry_request_id,omitempty"`
+	PromptRetryRequestID string                   `json:"prompt_retry_request_id,omitempty"`
+	// ExpectedPromptProcessIncarnation is transient evidence recovered from the
+	// audit log. It is never persisted as retry or claim authority.
+	ExpectedPromptProcessIncarnation string                         `json:"-"`
+	SourceGeneration                 uint64                         `json:"source_generation,omitempty"`
+	Marker                           string                         `json:"marker"`
+	Workspace                        ExecutionWorkspaceRequest      `json:"workspace"`
+	Probe                            ExecutionOrcaProbeRequest      `json:"probe"`
+	Prepared                         *ExecutionOrcaWorkspaceReceipt `json:"prepared,omitempty"`
+	Launch                           *ExecutionOrcaLaunchRequest    `json:"launch,omitempty"`
+	TerminalPTYID                    string                         `json:"terminal_pty_id,omitempty"`
 	// TerminalHandle is a transient observation only. Adapters must re-resolve
 	// the current handle from Prepared.WorktreeID + TerminalPTYID and must not
 	// use this value as authority. The core never persists it.
@@ -134,12 +137,51 @@ type ExecutionOrcaIntentReceipt struct {
 type ExecutionOrcaIntentInventory struct {
 	Candidates        []ExecutionOrcaIntentReceipt `json:"candidates"`
 	AuthoritativeZero bool                         `json:"authoritative_zero,omitempty"`
+	ExactReplay       bool                         `json:"exact_replay,omitempty"`
+}
+
+// ExecutionOrcaDeliveryIdentity is read-only identity observed from the
+// installed Orca executable, its live runtime, and the exact target terminal.
+type ExecutionOrcaDeliveryIdentity struct {
+	LauncherPath   string `json:"launcher_path"`
+	Version        string `json:"version"`
+	RuntimeID      string `json:"runtime_id"`
+	MachineID      string `json:"machine_id"`
+	TargetIdentity string `json:"target_identity"`
+	TerminalPTYID  string `json:"terminal_pty_id"`
+	TerminalHandle string `json:"terminal_handle"`
 }
 
 type ExecutionOrcaProvisioner interface {
 	Probe(context.Context, ExecutionOrcaProbeRequest) (ExecutionOrcaProbeResult, error)
 	InspectIntent(context.Context, ExecutionOrcaIntentRequest) (ExecutionOrcaIntentInventory, error)
 	InvokeIntent(context.Context, ExecutionOrcaIntentRequest) (ExecutionOrcaIntentReceipt, error)
+}
+
+// ExecutionOrcaDeliveryObserver exposes only read-only observations used by
+// the composition-root audit decorator. It does not grant retry or claim
+// authority.
+type ExecutionOrcaDeliveryObserver interface {
+	InspectDeliveryIdentity(context.Context, ExecutionOrcaIntentRequest) (ExecutionOrcaDeliveryIdentity, error)
+	InspectDeliveryDispatch(context.Context, ExecutionOrcaIntentRequest) (ExecutionOrcaIntentReceipt, bool, error)
+	ObserveRequest(context.Context, string) (OrcaRequestObservation, error)
+}
+
+type ExecutionOrcaCallPhase string
+
+const (
+	ExecutionOrcaCallStaged    ExecutionOrcaCallPhase = "staged"
+	ExecutionOrcaCallCompleted ExecutionOrcaCallPhase = "completed"
+)
+
+type ExecutionOrcaCallObservation struct {
+	CallKind string
+	Phase    ExecutionOrcaCallPhase
+	Receipt  ExecutionOrcaIntentReceipt
+}
+
+type ExecutionOrcaObservedInvoker interface {
+	InvokeIntentObserved(context.Context, ExecutionOrcaIntentRequest, func(ExecutionOrcaCallObservation) error) (ExecutionOrcaIntentReceipt, error)
 }
 
 type ExecutionOrcaOwnerInventoryRequest struct {

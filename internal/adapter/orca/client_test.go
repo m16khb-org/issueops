@@ -127,6 +127,27 @@ func TestProbeDoesNotUseVersionOrMutate(t *testing.T) {
 	}
 }
 
+func TestDeliveryIdentityUsesInstalledExecutableAndLiveStatusFields(t *testing.T) {
+	runner := newFakeRunner(t)
+	runner.lookPaths["orca"] = "/opt/orca/bin/orca"
+	runner.responses["orca status --json"] = CommandOutput{Stdout: []byte(`{
+		"ok":true,"result":{"runtime":{"state":"ready","reachable":true,"runtimeId":"runtime-live","appVersion":"1.4.200"},"target":{"kind":"local"},"graph":{"state":"ready"}},
+		"_meta":{"runtimeId":"runtime-live"}
+	}`)}
+
+	identity, err := NewClient(runner).DeliveryIdentity(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identity.LauncherPath != "/opt/orca/bin/orca" || identity.Version != "1.4.200" ||
+		identity.RuntimeID != "runtime-live" || identity.TargetIdentity != "local" || identity.MachineID == "" {
+		t.Fatalf("delivery identity=%+v", identity)
+	}
+	if len(runner.calls) != 1 || strings.Join(runner.calls[0], " ") != "orca status --json" {
+		t.Fatalf("delivery identity calls=%#v", runner.calls)
+	}
+}
+
 func TestProbeRequiresInstalledCodexHookTrustBypassFlag(t *testing.T) {
 	runner := newFakeRunner(t)
 	runner.lookPaths["orca"] = "/usr/local/bin/orca"
@@ -1452,7 +1473,9 @@ func addCompleteProbeLeafHelp(runner *fakeRunner) {
 		"orca orchestration task-list --help":     "--ready --status --run --json",
 		"orca orchestration gate-list --help":     "--run --json",
 		"orca orchestration task-update --help":   "--id --status --result --run --from --json",
-		"orca orchestration dispatch --help":      "--task --to --run --from --inject --return-preamble --json",
+		"orca orchestration dispatch --help":      "--task --to --run --from --inject --return-preamble --retry-request --json",
+		"orca orchestration request-show --help":  "--request --json",
+		"orca terminal send --help":               "--terminal --text --enter --retry-request --json",
 		"orca orchestration dispatch-show --help": "--task --preamble --from --json",
 		"orca orchestration send --help":          "--run --to --from --type --subject --body --task-id --dispatch-id --outcome --files-modified --report-path --json",
 		"orca worktree rm --help":                 "--worktree --force --json",

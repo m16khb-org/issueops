@@ -5,6 +5,7 @@ import (
 	"errors"
 	guard "issueops/internal/adapter/guard"
 	guardcontract "issueops/internal/contract/guard"
+	issueopscontract "issueops/internal/contract/issueops"
 	trace "issueops/internal/contract/trace"
 	"path/filepath"
 	"strings"
@@ -41,6 +42,30 @@ func TestRunTraceAnalyzeWritesTextSummary(t *testing.T) {
 	})
 	if !strings.Contains(out, "trace analysis: 1 finding") || !strings.Contains(out, "verify: issueops guard check") {
 		t.Fatalf("unexpected trace text output:\n%s", out)
+	}
+}
+
+func TestRunTraceHandoffDeliveryObserveUsesInjectedAuditProducer(t *testing.T) {
+	input := filepath.Join(t.TempDir(), "delivery.json")
+	writeFileForCLITest(t, input, `{"schema_version":1,"attempt_id":"manual-attempt"}`)
+	old := TraceHandoffDeliveryObserve
+	TraceHandoffDeliveryObserve = func(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (trace.HandoffDeliveryObserveResult, error) {
+		if observation.AttemptID != "manual-attempt" {
+			t.Fatalf("observation=%+v", observation)
+		}
+		observation.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/handoff-delivery.jsonl#audit_log_id=audit-1", Digest: strings.Repeat("a", 64)}
+		return trace.HandoffDeliveryObserveResult{OK: true, Kind: "handoff_delivery_observation", AuditLogID: "audit-1", Observation: observation}, nil
+	}
+	t.Cleanup(func() { TraceHandoffDeliveryObserve = old })
+	out := captureStatusVerifyStdout(t, func() error {
+		return RunTrace([]string{"handoff-delivery", "--input", input, "--json"})
+	})
+	var result trace.HandoffDeliveryObserveResult
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatal(err)
+	}
+	if !result.OK || result.AuditLogID != "audit-1" || result.Observation.Receipt.Location == "" {
+		t.Fatalf("result=%+v", result)
 	}
 }
 

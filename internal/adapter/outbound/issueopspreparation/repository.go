@@ -344,6 +344,10 @@ func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state prep
 		if state.Intent.Launch == nil {
 			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca sealed owner artifact identity is missing")
 		}
+		intent.OrcaRequestID = strings.TrimSpace(receipt.RequestID)
+		if receipt.PromptReceipt != nil {
+			intent.OrcaPromptRequestID = strings.TrimSpace(receipt.PromptReceipt.RequestID)
+		}
 		record.Execution.Lease = leasecontract.Lease{
 			Generation: state.Intent.Generation, Status: "claimable", ClaimTokenSHA256: state.Intent.ClaimTokenSHA256,
 		}

@@ -137,6 +137,28 @@ func TestIssueOpsHandoffDocsRouteToDrainAndFreshnessModel(t *testing.T) {
 	}
 }
 
+func TestIssueOpsHandoffRoutesEveryNewSessionThroughProductionObservation(t *testing.T) {
+	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
+	for _, want := range []string{
+		"prepare·resume·reconcile에 연결된 production observer",
+		"direct execution의 raw orca 전송은 아래 `trace handoff-delivery` producer",
+		"herdr 전송도 아래 `trace handoff-delivery` producer",
+		"issueops trace handoff-delivery --input",
+		"retry, claim, status를 바꾸지 않는다",
+		"herdr_wait_state`이며 native turn 증거가 아니다",
+		`"source_generation": <generation>`,
+		`"process": { "pid": <receiver pid>`,
+		`"started_at": "<receiver process rfc3339nano start time>"`,
+		`"executable": "<absolute observed receiver executable>"`,
+		"staged observation에는 launcher가 아직 반환하지 않은 process를 추측해 넣지 않는다",
+		"claim holder의 `session_process`와 pid·시작 시각·executable이 모두 일치",
+	} {
+		if !strings.Contains(sessionChoice, want) {
+			t.Fatalf("new-session observation routing contract missing %q", want)
+		}
+	}
+}
+
 func TestIssueOpsOrchestrationBindsOmoAgentsToCanonicalWorktrees(t *testing.T) {
 	all := strings.ToLower(joinIssueOpsContractDocuments(map[string]string{
 		"orchestration": readIssueOpsContractFile(t, "skills", "issueops", "references", "orchestration.md"),

@@ -61,7 +61,7 @@ func (adapter *OrcaGatewayAdapter) Inspect(ctx context.Context, request preparat
 	if err != nil {
 		return preparationcontract.IntentInventory{}, err
 	}
-	result := preparationcontract.IntentInventory{AuthoritativeZero: inventory.AuthoritativeZero}
+	result := preparationcontract.IntentInventory{AuthoritativeZero: inventory.AuthoritativeZero, ExactReplay: inventory.ExactReplay}
 	for _, candidate := range inventory.Candidates {
 		result.Candidates = append(result.Candidates, fromPortIntentReceipt(candidate))
 	}
@@ -95,7 +95,9 @@ func (adapter *OrcaGatewayAdapter) Invoke(ctx context.Context, request preparati
 
 func toPortIntentRequest(request preparationcontract.IntentRequest) port.ExecutionOrcaIntentRequest {
 	result := port.ExecutionOrcaIntentRequest{
-		Stage: port.ExecutionOrcaIntentStage(request.Stage), Marker: request.Marker,
+		Stage: port.ExecutionOrcaIntentStage(request.Stage), OperationID: request.OperationID,
+		RetryRequestID: request.OrcaRequestID, PromptRetryRequestID: request.OrcaPromptRequestID,
+		SourceGeneration: request.Generation, Marker: request.Marker,
 		Workspace: toWorkspaceRequest(request.Workspace),
 		Probe: port.ExecutionOrcaProbeRequest{
 			Repo: request.Probe.Repo, Host: request.Probe.Host, Model: request.Probe.Model,
@@ -132,7 +134,15 @@ func fromPortIntentReceipt(receipt port.ExecutionOrcaIntentReceipt) preparationc
 	result := preparationcontract.IntentReceipt{
 		TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle,
 		RunID: receipt.RunID, RunBound: receipt.RunBound, TaskID: receipt.TaskID,
-		DispatchID: receipt.DispatchID,
+		DispatchID: receipt.DispatchID, RequestID: receipt.RequestID,
+	}
+	if receipt.PromptReceipt != nil {
+		result.PromptReceipt = &preparationcontract.PromptReceipt{
+			RequestID: receipt.PromptReceipt.RequestID, Stages: append([]string(nil), receipt.PromptReceipt.Stages...),
+			Provider: receipt.PromptReceipt.Provider, Observation: receipt.PromptReceipt.Observation,
+			ProcessIncarnation: receipt.PromptReceipt.ProcessIncarnation, Generation: receipt.PromptReceipt.Generation,
+			BaselineWorkingSequence: receipt.PromptReceipt.BaselineWorkingSequence,
+		}
 	}
 	if receipt.Workspace != nil {
 		result.Workspace = &preparationcontract.OrcaWorkspaceReceipt{

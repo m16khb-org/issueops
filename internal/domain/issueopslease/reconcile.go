@@ -24,6 +24,7 @@ type ReconcileStageRequest struct {
 	Stage              string
 	CandidateCount     int
 	AuthoritativeZero  bool
+	ExactReplay        bool
 	InvocationState    string
 	InvocationAttempts int
 }
@@ -43,6 +44,12 @@ func PlanReconcileStage(request ReconcileStageRequest) (ReconcileStagePlan, erro
 	}
 	if request.CandidateCount == 1 {
 		return ReconcileStagePlan{Action: ReconcileStageAdopt, CandidateIndex: 0}, nil
+	}
+	if request.ExactReplay {
+		if request.InvocationAttempts >= 2 {
+			return ReconcileStagePlan{Action: ReconcileStagePreserve, Reason: "retry-exhausted"}, nil
+		}
+		return ReconcileStagePlan{Action: ReconcileStageInvoke}, nil
 	}
 	if !request.AuthoritativeZero {
 		return ReconcileStagePlan{Action: ReconcileStagePreserve, Reason: "non-authoritative-zero"}, nil

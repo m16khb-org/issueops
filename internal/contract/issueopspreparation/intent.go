@@ -100,16 +100,20 @@ type LaunchRequest struct {
 }
 
 type IntentRequest struct {
-	Stage         IntentStage           `json:"stage"`
-	Marker        string                `json:"marker"`
-	Workspace     WorkspaceRequest      `json:"workspace"`
-	Probe         ProbeRequest          `json:"probe"`
-	Prepared      *OrcaWorkspaceReceipt `json:"prepared,omitempty"`
-	Launch        *LaunchRequest        `json:"launch,omitempty"`
-	TerminalPTYID string                `json:"terminal_pty_id,omitempty"`
-	RunID         string                `json:"run_id,omitempty"`
-	RunBound      bool                  `json:"run_bound,omitempty"`
-	TaskID        string                `json:"task_id,omitempty"`
+	Stage               IntentStage           `json:"stage"`
+	OperationID         string                `json:"operation_id,omitempty"`
+	Generation          uint64                `json:"generation,omitempty"`
+	OrcaRequestID       string                `json:"orca_request_id,omitempty"`
+	OrcaPromptRequestID string                `json:"orca_prompt_request_id,omitempty"`
+	Marker              string                `json:"marker"`
+	Workspace           WorkspaceRequest      `json:"workspace"`
+	Probe               ProbeRequest          `json:"probe"`
+	Prepared            *OrcaWorkspaceReceipt `json:"prepared,omitempty"`
+	Launch              *LaunchRequest        `json:"launch,omitempty"`
+	TerminalPTYID       string                `json:"terminal_pty_id,omitempty"`
+	RunID               string                `json:"run_id,omitempty"`
+	RunBound            bool                  `json:"run_bound,omitempty"`
+	TaskID              string                `json:"task_id,omitempty"`
 }
 
 type IntentReceipt struct {
@@ -120,11 +124,24 @@ type IntentReceipt struct {
 	RunBound       bool                  `json:"run_bound,omitempty"`
 	TaskID         string                `json:"task_id,omitempty"`
 	DispatchID     string                `json:"dispatch_id,omitempty"`
+	RequestID      string                `json:"request_id,omitempty"`
+	PromptReceipt  *PromptReceipt        `json:"prompt_receipt,omitempty"`
+}
+
+type PromptReceipt struct {
+	RequestID               string   `json:"request_id"`
+	Stages                  []string `json:"stages,omitempty"`
+	Provider                string   `json:"provider,omitempty"`
+	Observation             string   `json:"observation,omitempty"`
+	ProcessIncarnation      string   `json:"process_incarnation,omitempty"`
+	Generation              uint64   `json:"generation,omitempty"`
+	BaselineWorkingSequence uint64   `json:"baseline_working_sequence,omitempty"`
 }
 
 type IntentInventory struct {
 	Candidates        []IntentReceipt `json:"candidates"`
 	AuthoritativeZero bool            `json:"authoritative_zero,omitempty"`
+	ExactReplay       bool            `json:"exact_replay,omitempty"`
 }
 
 type InvocationError struct {

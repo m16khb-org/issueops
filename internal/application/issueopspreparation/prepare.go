@@ -212,12 +212,12 @@ func (service *Service) advanceOrca(ctx context.Context, state IntentState) (Int
 	if len(inventory.Candidates) == 1 {
 		return service.applyOrcaReceipt(ctx, state, inventory.Candidates[0])
 	}
-	if !inventory.AuthoritativeZero {
+	if !inventory.ExactReplay && !inventory.AuthoritativeZero {
 		cause := fmt.Errorf("Orca intent inventory returned a non-authoritative zero; intent retained")
 		_ = service.recordOrcaFailure(ctx, state, state.Intent.InvocationState, cause)
 		return IntentProgress{State: state, Pending: true}, cause
 	}
-	if state.Intent.InvocationState != preparationcontract.InvocationNotInvoked && state.Intent.Stage != preparationcontract.IntentStageRunBind {
+	if !inventory.ExactReplay && state.Intent.InvocationState != preparationcontract.InvocationNotInvoked && state.Intent.Stage != preparationcontract.IntentStageRunBind {
 		cause := fmt.Errorf("authoritative zero cannot retry an Orca mutation whose absence was not proven; intent retained")
 		_ = service.recordOrcaFailure(ctx, state, state.Intent.InvocationState, cause)
 		return IntentProgress{State: state, Pending: true}, cause
@@ -270,7 +270,9 @@ func (service *Service) recordOrcaFailure(ctx context.Context, state IntentState
 
 func intentRequest(intent preparationcontract.Intent) preparationcontract.IntentRequest {
 	request := preparationcontract.IntentRequest{
-		Stage: intent.Stage, Marker: intent.Marker, Workspace: intent.Workspace,
+		Stage: intent.Stage, OperationID: intent.OperationID, Generation: intent.Generation,
+		OrcaRequestID: intent.OrcaRequestID, OrcaPromptRequestID: intent.OrcaPromptRequestID,
+		Marker: intent.Marker, Workspace: intent.Workspace,
 		Probe: intent.Probe, Prepared: intent.Prepared, TerminalPTYID: intent.TerminalPTYID,
 		RunID: intent.RunID, RunBound: intent.RunBound, TaskID: intent.TaskID,
 	}

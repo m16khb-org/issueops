@@ -11,7 +11,9 @@ mode를 바꾸지 않는다. 일반 흐름은 direct로 만든 **같은 worktree
 시작해 새 세션을 연쇄 생성하지 않는다.
 
 준비 세션은 설치된 `orca-cli` 안내로 실행 파일을 정하고 `orca status --json`을 확인한다.
-`runtime.state == "ready"`면 Orca의 `new-session`을 선택한다. Orca가 없거나
+`runtime.state == "ready"`면 Orca의 `new-session`을 선택한다. 기존 Orca execution은
+prepare·resume·reconcile에 연결된 production observer를 사용한다. direct execution의 raw
+Orca 전송은 아래 `trace handoff-delivery` producer로 실제 호출 전후를 기록한다. Orca가 없거나
 unready인 것이 확인됐을 때만 Herdr를 확인한다.
 
 ```bash
@@ -22,7 +24,8 @@ herdr pane run --help
 ```
 
 Herdr는 실행 중인 서버가 있고 client/server endpoint가 호환되며, 기존 worktree를
-열고 **현재 native host**를 실행할 수 있을 때 `new-session`을 선택한다. Claude·Codex는
+열고 **현재 native host**를 실행할 수 있을 때 `new-session`을 선택한다. Herdr 전송도 아래
+`trace handoff-delivery` producer로 호출 전후를 기록한다. Claude·Codex는
 설치된 `herdr agent start --help`의 kind와 해당 실행 파일을 확인하고, Omo는
 `omo --help`의 초기 프롬프트 지원과 `pane run`을 확인한다. `herdr status`는
 사람용 출력이므로 존재하지 않는 JSON 필드나 `--json` 옵션을 가정하지 않는다.
@@ -105,10 +108,11 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
    현재 native host를 유지하고 현재 모델·effort는 해당 launch가 지원하는 값만 전달한다.
    사용자가 직접 세션을 열겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
    Orca에서는 설치된 `orca-cli` 안내로 exact worktree 경로를 확인한 뒤 `terminal create`와
-   일회성 prompt 전달을 사용한다. Herdr는 아래 **Herdr 실행** 절을 따른다.
-   `worktree create`, `switch-mode`, coordinator task 생성은
-   이 인계의 수단이 아니다. 직접 실행 가능한 launch 기능이 없으면 경로와 인계문을 제공하고
-   수동 시작이 남았다고 알린다. 현재 세션에서 몰래 구현하거나 실행됐다고 보고하지 않는다.
+   일회성 prompt 전달을 사용한다. Herdr는 아래 **Herdr 실행** 절을 따른다. raw launcher를
+   호출하기 직전과 receipt를 읽은 직후에는 아래 producer를 호출한다. staged 관측 기록이
+   실패하면 launcher를 호출하지 않는다. 호출 뒤 관측 기록이 실패하면 같은 입력을 다시
+   보내지 않고 기존 terminal/session을 확인한다. `worktree create`, `switch-mode`, coordinator
+   task 생성은 이 인계의 수단이 아니다.
 7. 실행 결과가 모호하면 새 세션을 또 띄우지 않고 기존 terminal/session을 확인한다.
    인계 전달을 확인하면 원래 세션은 종료 보고한다. 구현 완료를 기다리는 감독 루프를 만들지 않는다.
 
@@ -136,6 +140,91 @@ top-level `requestId`, `state`(`completed|pending|absent`), `method`, `interpret
 새 IssueOps owner나 자동 retry 권한이 아니다. IssueOps handoff delivery observation은 folded evidence로
 현재 lineage/prompt/material/runtime/generation과 충돌하는 recovery를 fail-closed시키지만, blind retry,
 새 owner claim, status promotion을 승인하지 않는다.
+
+### raw launcher 전송 관측
+
+direct execution에서 Orca나 Herdr를 호출할 때는 `issueops trace handoff-delivery`를 공통
+producer로 사용한다. 이 명령은 user-state audit에 관측만 추가하며 retry, claim, status를
+바꾸지 않는다. 입력 JSON에는 실제로 읽은 launcher path/version, runtime과 server 또는 target
+identity, terminal/pane, generation, prompt와 material digest를 넣는다. `unknown`, `pending`,
+runtime ID를 복사한 server ID 같은 대체값을 만들지 않는다.
+
+외부 호출 직전에는 안전한 임시 파일에 다음 observation을 만들고 producer 성공을 확인한다.
+`created_at`, `updated_at`, `call_staged.observed_at`에는 같은 RFC3339Nano 시각을 쓴다.
+
+```json
+{
+  "schema_version": 1,
+  "attempt_id": "manual-direct:<lifecycle>:<generation>:<launcher>:<one attempt>",
+  "lineage_id": "manual-direct:generation:<generation>:prompt:<prompt sha256>:material:<material sha256>:call:prompt",
+  "lifecycle_id": "<lifecycle>",
+  "prompt_sha256": "<sha256>",
+  "material_sha256": "<sha256>",
+  "request": {"durable_id": ""},
+  "launcher": {"name": "<orca|herdr>", "version": "<observed>", "path": "<absolute observed path>", "runtime_id": "<observed>", "machine_id": "<observed>", "server_id": "<observed target identity>"},
+  "target": {"terminal_id": "<observed>", "pane_id": "<observed>"},
+  "expected_owner_host": "<codex|claude|omo>",
+  "source_generation": <generation>,
+  "created_at": "<RFC3339Nano>",
+  "updated_at": "<same RFC3339Nano>",
+  "receipt": {},
+  "call_staged": {"status": "observed", "observed_at": "<same RFC3339Nano>", "evidence": "external_call_staged"},
+  "input_accepted": {"status": "not_observed"},
+  "native_turn_observed": {"status": "not_observed"},
+  "owner_claimed": {"status": "not_observed"},
+  "ambiguous": {"status": "not_observed"}
+}
+```
+
+```bash
+issueops trace handoff-delivery --input "$OBSERVATION_JSON" --json
+```
+
+receipt를 받은 뒤 같은 attempt/lineage/`created_at`으로 두 번째 observation을 기록한다. Orca는
+반환된 terminal prompt UUID만 `request.durable_id`에 넣고 실제 `processIncarnation`도 보존한다.
+launcher가 제공하는 process 조회로 수신 agent의 PID, 시작 시각, executable을 확인해
+`target.process`에 기록한다. 이 PID reuse-safe receipt를 확인할 수 없으면 owner claim과 연결하지
+않으며, 입력 수락 관측까지만 남긴다.
+
+```json
+{
+  "target": {
+    "terminal_id": "<observed>",
+    "pane_id": "<observed>",
+    "process_incarnation": "<observed>",
+    "process": {
+      "pid": <receiver pid>,
+      "started_at": "<receiver process RFC3339Nano start time>",
+      "executable": "<absolute observed receiver executable>"
+    }
+  },
+  "source_generation": <generation>
+}
+```
+
+이 조각은 두 번째 observation의 필수 receiver correlation 필드다. staged observation에는
+launcher가 아직 반환하지 않은 process를 추측해 넣지 않는다. 완료 observation의 process는
+claim holder의 `session_process`와 PID·시작 시각·executable이 모두 일치해야 owner-claim
+근거로 연결된다.
+첫 호출에는 retry ID를 넣지 않는다. 입력 수락 receipt에는 `input_accepted`의 evidence로
+`launcher_receipt`를 사용한다. 실제 native host 기록에서 새 turn을 확인한 경우에만
+`native_turn_observed`를 `native_receipt`로 기록한다. timeout이나 응답 유실은 `ambiguous`에
+각각 `timeout` 또는 `accepted_response_lost`로 기록하며 자동 재전송하지 않는다.
+
+Herdr의 `pane run`이나 `agent prompt` 성공은 `launcher_accepted` 입력 증거로만 기록한다.
+`agent_prompt_stalled`와 wait 결과는 `ambiguous`의 `agent_prompt_stalled` 또는
+`herdr_wait_state`이며 native turn 증거가 아니다. 수신자가 IssueOps claim에 성공하면 claim
+handler가 기존 권한 저장소를 읽어 `owner_claimed`를 별도로 기록한다. 수동 JSON으로
+`owner_claimed`를 만들지 않는다. claim handler는 current generation, expected host, 단 하나의
+manual lineage, 입력 수락 상태, claim holder와 일치하는 PID·시작 시각·executable을 모두 확인한
+경우에만 그 manual observation에 claim 증거를 추가한다.
+
+두 번째 observation JSON을 만든 뒤 같은 producer를 다시 호출하고, 응답의
+`observation.receipt.location`과 digest를 읽어 실제 audit frame을 확인한다.
+
+```bash
+issueops trace handoff-delivery --input "$OBSERVATION_JSON" --json
+```
 
 인계문에는 다음 내용을 실제 값으로 채운다.
 
@@ -175,7 +264,8 @@ phase/claim 성공으로 승인 범위를 넓히지 않는다. 승인 근거를 
 ### Herdr 실행
 
 이 절은 위 direct release가 확인된 뒤에만 실행한다. Herdr는 세션 배치만 맡으며
-IssueOps lease나 `direct|orca` mode를 소유하지 않는다.
+IssueOps lease나 `direct|orca` mode를 소유하지 않는다. 실제 Herdr 호출 전후에는 위
+`trace handoff-delivery` producer를 사용한다.
 
 1. `SOURCE_ROOT`와 `WORKTREE`는 record에서 확인한 절대경로다. 기존 checkout을 연다.
 

@@ -175,6 +175,7 @@ const (
 type ResumeStageRequest struct {
 	CandidateCount     int
 	AuthoritativeZero  bool
+	ExactReplay        bool
 	InvocationState    string
 	InvocationAttempts int
 }
@@ -191,6 +192,12 @@ func PlanResumeStage(request ResumeStageRequest) (ResumeStagePlan, error) {
 	}
 	if request.CandidateCount == 1 {
 		return ResumeStagePlan{Action: ResumeStageAdopt, CandidateIndex: 0}, nil
+	}
+	if request.ExactReplay {
+		if request.InvocationAttempts >= 2 {
+			return ResumeStagePlan{}, Deny(DenyResumeStage, fmt.Errorf("retry-exhausted"))
+		}
+		return ResumeStagePlan{Action: ResumeStageInvoke}, nil
 	}
 	if !request.AuthoritativeZero {
 		return ResumeStagePlan{Action: ResumeStageReconcile, Reason: "non-authoritative-zero"}, nil

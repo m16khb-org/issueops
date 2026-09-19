@@ -46,8 +46,16 @@ func TestOrcaAdapterMapsProbeInspectAndInvoke(t *testing.T) {
 		t.Fatalf("inventory=%+v err=%v", inventory, err)
 	}
 	receipt, err := adapter.Invoke(context.Background(), request)
-	if err != nil || receipt.DispatchID != "dispatch" || !hydrated || provider.invoke.Launch == nil || provider.invoke.Launch.Prompt != "sealed prompt" {
+	if err != nil || receipt.DispatchID != "dispatch" || receipt.RequestID != "11111111-1111-4111-8111-111111111111" ||
+		receipt.PromptReceipt == nil || receipt.PromptReceipt.RequestID != "22222222-2222-4222-8222-222222222222" ||
+		!hydrated || provider.invoke.Launch == nil || provider.invoke.Launch.Prompt != "sealed prompt" {
 		t.Fatalf("receipt=%+v hydrated=%v invoke=%+v err=%v", receipt, hydrated, provider.invoke, err)
+	}
+	for _, got := range []port.ExecutionOrcaIntentRequest{provider.inspect, provider.invoke} {
+		if got.OperationID != request.OperationID || got.SourceGeneration != request.Generation ||
+			got.RetryRequestID != request.OrcaRequestID || got.PromptRetryRequestID != request.OrcaPromptRequestID {
+			t.Fatalf("durable preparation identity dropped: got=%+v request=%+v", got, request)
+		}
 	}
 }
 
@@ -98,7 +106,9 @@ func TestOrcaAdapterFailsClosedOnMissingDependenciesAndBranchPrecheck(t *testing
 
 func adapterIntentRequest() preparationcontract.IntentRequest {
 	return preparationcontract.IntentRequest{
-		Stage: preparationcontract.IntentStageDispatch, Marker: "marker",
+		Stage: preparationcontract.IntentStageDispatch, OperationID: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		Generation: 7, OrcaRequestID: "11111111-1111-4111-8111-111111111111",
+		OrcaPromptRequestID: "22222222-2222-4222-8222-222222222222", Marker: "marker",
 		Workspace: preparationcontract.WorkspaceRequest{LifecycleID: "io-orca", SourceRoot: "/repo", Root: "/worktree", Branch: "199-orca", BaseBranch: "main", BaseHead: "base", Confirm: true},
 		Probe:     preparationcontract.ProbeRequest{Repo: "/repo", Host: "codex", Model: "model", Provider: "github", Issue: 199, Marker: "marker"},
 		Prepared: &preparationcontract.OrcaWorkspaceReceipt{
@@ -123,12 +133,18 @@ func (fake *orcaProviderFake) Probe(_ context.Context, request port.ExecutionOrc
 }
 func (fake *orcaProviderFake) InspectIntent(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentInventory, error) {
 	fake.inspect = request
-	return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{{RunID: "run"}}, AuthoritativeZero: false}, nil
+	return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{{
+		RunID: "run", RequestID: "11111111-1111-4111-8111-111111111111",
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-1"},
+	}}, AuthoritativeZero: false}, nil
 }
 func (fake *orcaProviderFake) InvokeIntent(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, error) {
 	fake.invoke = request
 	if fake.invokeErr != nil {
 		return port.ExecutionOrcaIntentReceipt{}, fake.invokeErr
 	}
-	return port.ExecutionOrcaIntentReceipt{DispatchID: "dispatch"}, nil
+	return port.ExecutionOrcaIntentReceipt{
+		DispatchID: "dispatch", RequestID: "11111111-1111-4111-8111-111111111111",
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-1"},
+	}, nil
 }

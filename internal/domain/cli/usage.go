@@ -71,6 +71,7 @@ Usage:
   issueops quality inspect [--repo PATH] [--json]
   issueops verify-work [--repo PATH] [--all] [--json] [--] [READ_ONLY_ARGV...]
   issueops trace analyze --input <jsonl|state-key> [--json]
+  issueops trace handoff-delivery --input <observation.json|-> [--json]
   issueops contract schema [--json]
   issueops contract check [--json]
   issueops state write --key KEY (--value TEXT|--input FILE|--stdin) [--json]

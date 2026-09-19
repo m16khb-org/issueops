@@ -20,6 +20,10 @@ func RunTraceAnalyze(args []string) error {
 	return runTraceAnalyze(args)
 }
 
+func RunTraceHandoffDeliveryObserve(args []string) error {
+	return runTraceHandoffDeliveryObserve(args)
+}
+
 func RunGuard(args []string) error {
 	return runGuard(args)
 }

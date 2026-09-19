@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -46,10 +47,16 @@ func (c *Client) Status(ctx context.Context) (port.OrcaStatus, error) {
 			PID int `json:"pid"`
 		} `json:"app"`
 		Runtime struct {
-			State     string `json:"state"`
-			Reachable bool   `json:"reachable"`
-			RuntimeID string `json:"runtimeId"`
+			State      string `json:"state"`
+			Reachable  bool   `json:"reachable"`
+			RuntimeID  string `json:"runtimeId"`
+			AppVersion string `json:"appVersion"`
 		} `json:"runtime"`
+		Target struct {
+			Kind     string `json:"kind"`
+			ID       string `json:"id"`
+			ServerID string `json:"serverId"`
+		} `json:"target"`
 		Graph struct {
 			State string `json:"state"`
 		} `json:"graph"`
@@ -61,7 +68,38 @@ func (c *Client) Status(ctx context.Context) (port.OrcaStatus, error) {
 	if payload.Runtime.RuntimeID != "" {
 		runtimeID = payload.Runtime.RuntimeID
 	}
-	return port.OrcaStatus{RuntimeID: runtimeID, RuntimeReachable: payload.Runtime.Reachable, RuntimeState: payload.Runtime.State, GraphState: payload.Graph.State, AppPID: payload.App.PID}, nil
+	targetIdentity := firstNonEmpty(payload.Target.ServerID, payload.Target.ID, payload.Target.Kind)
+	return port.OrcaStatus{RuntimeID: runtimeID, Version: strings.TrimSpace(payload.Runtime.AppVersion), TargetIdentity: targetIdentity, RuntimeReachable: payload.Runtime.Reachable, RuntimeState: payload.Runtime.State, GraphState: payload.Graph.State, AppPID: payload.App.PID}, nil
+}
+
+func (c *Client) DeliveryIdentity(ctx context.Context) (port.ExecutionOrcaDeliveryIdentity, error) {
+	status, err := c.Status(ctx)
+	if err != nil {
+		return port.ExecutionOrcaDeliveryIdentity{}, err
+	}
+	path, err := c.runner.LookPath("orca")
+	if err != nil || strings.TrimSpace(path) == "" {
+		return port.ExecutionOrcaDeliveryIdentity{}, &port.OrcaError{Code: "orca_identity_unresolved", Detail: "installed Orca executable path is unavailable"}
+	}
+	version := strings.TrimSpace(status.Version)
+	if version == "" {
+		versionOutput, versionErr := c.runText(ctx, "", readTimeout, []string{"orca", "--version"})
+		if versionErr != nil {
+			return port.ExecutionOrcaDeliveryIdentity{}, &port.OrcaError{Code: "orca_identity_unresolved", Detail: "installed Orca version is unavailable"}
+		}
+		version = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(versionOutput), "orca"))
+	}
+	if version == "" || strings.TrimSpace(status.TargetIdentity) == "" {
+		return port.ExecutionOrcaDeliveryIdentity{}, &port.OrcaError{Code: "orca_identity_unresolved", Detail: "Orca version or server identity is unavailable"}
+	}
+	machineID, err := os.Hostname()
+	if err != nil || strings.TrimSpace(machineID) == "" {
+		return port.ExecutionOrcaDeliveryIdentity{}, &port.OrcaError{Code: "orca_identity_unresolved", Detail: "machine identity is unavailable"}
+	}
+	return port.ExecutionOrcaDeliveryIdentity{
+		LauncherPath: path, Version: version, RuntimeID: status.RuntimeID,
+		MachineID: strings.TrimSpace(machineID), TargetIdentity: status.TargetIdentity,
+	}, nil
 }
 
 func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.OrcaProbeResult, error) {
@@ -159,7 +197,9 @@ func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.Orc
 		{argv: []string{"orca", "orchestration", "task-list", "--help"}, want: []string{"--ready", "--status", "--run", "--json"}},
 		{argv: []string{"orca", "orchestration", "gate-list", "--help"}, want: []string{"--run", "--json"}},
 		{argv: []string{"orca", "orchestration", "task-update", "--help"}, want: []string{"--id", "--status", "--result", "--run", "--from", "--json"}},
-		{argv: []string{"orca", "orchestration", "dispatch", "--help"}, want: []string{"--task", "--to", "--run", "--from", "--inject", "--return-preamble", "--json"}},
+		{argv: []string{"orca", "orchestration", "dispatch", "--help"}, want: []string{"--task", "--to", "--run", "--from", "--inject", "--return-preamble", "--retry-request", "--json"}},
+		{argv: []string{"orca", "orchestration", "request-show", "--help"}, want: []string{"--request", "--json"}},
+		{argv: []string{"orca", "terminal", "send", "--help"}, want: []string{"--terminal", "--text", "--enter", "--retry-request", "--json"}},
 		{argv: []string{"orca", "orchestration", "dispatch-show", "--help"}, want: []string{"--task", "--preamble", "--from", "--json"}},
 		{argv: []string{"orca", "orchestration", "send", "--help"}, want: []string{"--run", "--to", "--from", "--type", "--subject", "--body", "--task-id", "--dispatch-id", "--outcome", "--files-modified", "--report-path", "--json"}},
 		{argv: []string{"orca", "worktree", "rm", "--help"}, want: []string{"--worktree", "--force", "--json"}},

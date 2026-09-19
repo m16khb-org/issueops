@@ -84,7 +84,13 @@ type OrcaProbeResult struct {
 }
 
 type OrcaStatus struct {
-	RuntimeID        string `json:"runtime_id,omitempty"`
+	RuntimeID      string `json:"runtime_id,omitempty"`
+	ExecutablePath string `json:"executable_path,omitempty"`
+	Version        string `json:"version,omitempty"`
+	// TargetIdentity is read directly from target.serverId, target.id, or
+	// target.kind, in that order. Local runtimes therefore use "local" without
+	// presenting it as a server identifier.
+	TargetIdentity   string `json:"target_identity,omitempty"`
 	RuntimeReachable bool   `json:"runtime_reachable"`
 	RuntimeState     string `json:"runtime_state,omitempty"`
 	GraphState       string `json:"graph_state,omitempty"`

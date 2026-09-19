@@ -9,6 +9,8 @@ import (
 	guardadapter "issueops/internal/adapter/guard"
 	lintdiagnoseadapter "issueops/internal/adapter/lintdiagnose"
 	traceadapter "issueops/internal/adapter/trace"
+	issueopscontract "issueops/internal/contract/issueops"
+	tracecontract "issueops/internal/contract/trace"
 )
 
 // configureTailCapabilities2는 commit 제안, lint 진단, guard 검사, trace 분석을
@@ -16,6 +18,10 @@ import (
 func configureTailCapabilities2() {
 	basicclit2deps.GuardCheck = guardadapter.GuardCheck
 	basicclit2deps.TraceAnalyze = traceadapter.TraceAnalyze
+	basicclit2deps.TraceHandoffDeliveryObserve = func(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (tracecontract.HandoffDeliveryObserveResult, error) {
+		record, err := auditManualHandoffDeliveryObservation(observation)
+		return tracecontract.HandoffDeliveryObserveResult{OK: err == nil, Kind: record.Kind, AuditLogID: record.AuditLogID, Observation: record.Observation}, err
+	}
 	mcpclit2deps.DiagnoseCommand = lintdiagnoseadapter.DiagnoseCommand
 	mcpclit2deps.SuggestCommit = commitsuggestadapter.SuggestCommit
 	projectclit2deps.DiagnoseCommand = lintdiagnoseadapter.DiagnoseCommand

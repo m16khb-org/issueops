@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/issueopscli/executioncmd"
+	auditadapter "issueops/internal/adapter/audit"
 	issueopscore "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/preflight"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -66,6 +67,7 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 
 func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	stateRoot := t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", stateRoot)
 	repo := t.TempDir()
 	claimWiringGit(t, repo, "init", "-q", "-b", "main")
 	claimWiringGit(t, repo, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "--allow-empty", "-q", "-m", "initial")
@@ -141,6 +143,10 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	}
 	if fallbackCalls != 0 {
 		t.Fatalf("validated request snapshot called provider fallback %d times", fallbackCalls)
+	}
+	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	if err != nil || len(observations) == 0 {
+		t.Fatalf("fresh preparation bypassed delivery observation: observations=%d err=%v", len(observations), err)
 	}
 }
 

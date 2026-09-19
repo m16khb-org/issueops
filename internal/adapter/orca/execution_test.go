@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -82,6 +83,85 @@ func TestExecutionDoesNotReconcileUnprovenOmoPromptDelivery(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "Omo prompt delivery is unproven") {
 		t.Fatalf("unproven Omo prompt delivery must stay fenced: %v", err)
+	}
+}
+
+func TestExecutionObservedOmoStagesDispatchAndPromptAroundEachCall(t *testing.T) {
+	workspace, probe := executionFixture(t)
+	probe.Host = "omo"
+	probe.Model = "openai-codex/gpt-5.6-sol"
+	launch := executionLaunchFixture(t, workspace.Root)
+	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
+	client := &executionFake{
+		workspace: workspace, probeRequest: probe,
+		terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
+		dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Preamble: "preamble", RequestID: "11111111-1111-4111-8111-111111111111"},
+		promptReceipt:  &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "incarnation-1"},
+	}
+	request := port.ExecutionOrcaIntentRequest{Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe, Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true, TaskID: "task-69"}
+	var events []string
+	_, err := NewExecutionClient(client).InvokeIntentObserved(context.Background(), request, func(observation port.ExecutionOrcaCallObservation) error {
+		events = append(events, observation.CallKind+":"+string(observation.Phase))
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"dispatch:staged", "dispatch:completed", "prompt:staged", "prompt:completed"}
+	if !reflect.DeepEqual(events, want) {
+		t.Fatalf("call observation order=%v want=%v", events, want)
+	}
+}
+
+func TestExecutionObservedOmoCrashAfterDispatchDoesNotReachPromptCall(t *testing.T) {
+	workspace, probe := executionFixture(t)
+	probe.Host = "omo"
+	probe.Model = "openai-codex/gpt-5.6-sol"
+	launch := executionLaunchFixture(t, workspace.Root)
+	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
+	client := &executionFake{
+		workspace: workspace, probeRequest: probe,
+		terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
+		dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Preamble: "preamble", RequestID: "11111111-1111-4111-8111-111111111111"},
+	}
+	request := port.ExecutionOrcaIntentRequest{Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe, Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true, TaskID: "task-69"}
+	_, err := NewExecutionClient(client).InvokeIntentObserved(context.Background(), request, func(observation port.ExecutionOrcaCallObservation) error {
+		if observation.CallKind == "dispatch" && observation.Phase == port.ExecutionOrcaCallCompleted {
+			return errors.New("injected crash after dispatch")
+		}
+		return nil
+	})
+	var orcaErr *port.OrcaError
+	if !errors.As(err, &orcaErr) || orcaErr.DispatchRequestID != "11111111-1111-4111-8111-111111111111" {
+		t.Fatalf("crash boundary error=%#v", err)
+	}
+	if slices.Contains(client.calls, "send-terminal-prompt") {
+		t.Fatalf("prompt call crossed crash boundary: calls=%v", client.calls)
+	}
+}
+
+func TestExecutionOmoPromptReplayRejectsProcessIncarnationMismatchAndPreservesIDs(t *testing.T) {
+	workspace, probe := executionFixture(t)
+	probe.Host = "omo"
+	probe.Model = "openai-codex/gpt-5.6-sol"
+	launch := executionLaunchFixture(t, workspace.Root)
+	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
+	dispatchRequestID := "11111111-1111-4111-8111-111111111111"
+	promptRequestID := "22222222-2222-4222-8222-222222222222"
+	client := &executionFake{
+		workspace: workspace, probeRequest: probe,
+		terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
+		dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Preamble: "preamble", RequestID: dispatchRequestID},
+		promptReceipt:  &port.OrcaPromptReceipt{RequestID: promptRequestID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "incarnation-replaced"},
+	}
+	request := port.ExecutionOrcaIntentRequest{Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe, Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true, TaskID: "task-69", RetryRequestID: dispatchRequestID, PromptRetryRequestID: promptRequestID, ExpectedPromptProcessIncarnation: "incarnation-original"}
+	_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
+	var orcaErr *port.OrcaError
+	if !errors.As(err, &orcaErr) || orcaErr.Code != "terminal_process_incarnation_mismatch" || orcaErr.DispatchRequestID != dispatchRequestID || orcaErr.OrchestrationRequestID != promptRequestID {
+		t.Fatalf("process mismatch error=%#v", err)
+	}
+	if client.dispatchRequest.RetryRequestID != dispatchRequestID {
+		t.Fatalf("dispatch replay ID=%q", client.dispatchRequest.RetryRequestID)
 	}
 }
 
@@ -1285,6 +1365,8 @@ type executionFake struct {
 	createdTask               *port.OrcaTask
 	promptHandle              string
 	prompt                    string
+	promptReceipt             *port.OrcaPromptReceipt
+	promptErr                 error
 	terminalDetail            *executionTerminalDetailInventory
 	terminalDetailErr         error
 	terminalInventoryRuntime  *string
@@ -1384,6 +1466,12 @@ func (f *executionFake) SendTerminalPrompt(_ context.Context, handle, prompt, re
 	f.calls = append(f.calls, "send-terminal-prompt")
 	f.promptHandle = handle
 	f.prompt = prompt
+	if f.promptErr != nil {
+		return port.OrcaPromptReceipt{}, f.promptErr
+	}
+	if f.promptReceipt != nil {
+		return *f.promptReceipt, nil
+	}
 	return port.OrcaPromptReceipt{RequestID: requestID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", Observation: "turn_started", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: 1}, nil
 }
 

@@ -59,11 +59,15 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 		name  string
 		state issueopscontract.IssueOpsHandoffDeliveryState
 	}{
+		{"call_staged", observation.CallStaged},
 		{"input_accepted", observation.InputAccepted},
 		{"native_turn_observed", observation.NativeTurnObserved},
 		{"owner_claimed", observation.OwnerClaimed},
 		{"ambiguous", observation.Ambiguous},
 	} {
+		if item.name == "call_staged" && item.state.Status == "" {
+			continue
+		}
 		if err := validateHandoffDeliveryState(item.name, item.state, observation); err != nil {
 			return err
 		}
@@ -72,6 +76,9 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 		}
 	}
 	if observation.OwnerActor != nil {
+		if err := validateHandoffDeliveryActorBounds(*observation.OwnerActor); err != nil {
+			return err
+		}
 		if err := issueopscontract.ValidateNativeActor(*observation.OwnerActor); err != nil {
 			return err
 		}
@@ -158,6 +165,7 @@ func MergeHandoffDeliveryObservation(current, next issueopscontract.IssueOpsHand
 	}
 	merged := current
 	merged.UpdatedAt = next.UpdatedAt
+	merged.CallStaged = mergeHandoffDeliveryState(merged.CallStaged, next.CallStaged)
 	merged.InputAccepted = mergeHandoffDeliveryState(merged.InputAccepted, next.InputAccepted)
 	merged.NativeTurnObserved = mergeHandoffDeliveryState(merged.NativeTurnObserved, next.NativeTurnObserved)
 	merged.OwnerClaimed = mergeHandoffDeliveryState(merged.OwnerClaimed, next.OwnerClaimed)
@@ -217,15 +225,26 @@ func validateHandoffDeliveryTarget(target issueopscontract.IssueOpsHandoffDelive
 			return fmt.Errorf("delivery observation %s is too large", name)
 		}
 	}
-	if target.Process != nil && (target.Process.PID <= 0 || strings.TrimSpace(target.Process.StartedAt) == "" || strings.TrimSpace(target.Process.Executable) == "" || len(target.Process.Executable) > handoffDeliveryFieldLimit) {
-		return fmt.Errorf("delivery observation process identity is invalid")
+	if target.Process != nil {
+		if len(target.Process.StartedAt) > handoffDeliveryFieldLimit || len(target.Process.Executable) > handoffDeliveryFieldLimit {
+			return fmt.Errorf("delivery observation process identity is too large")
+		}
+		if target.Process.PID <= 0 || strings.TrimSpace(target.Process.StartedAt) == "" || strings.TrimSpace(target.Process.Executable) == "" {
+			return fmt.Errorf("delivery observation process identity is invalid")
+		}
 	}
 	return nil
 }
 
 func validateHandoffDeliveryState(name string, state issueopscontract.IssueOpsHandoffDeliveryState, observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
+	if len(state.Status) > handoffDeliveryFieldLimit || len(state.ObservedAt) > handoffDeliveryFieldLimit || len(state.Evidence) > handoffDeliveryFieldLimit {
+		return fmt.Errorf("delivery observation %s state is too large", name)
+	}
 	switch state.Status {
 	case issueopscontract.IssueOpsHandoffDeliveryStateNotObserved:
+		if state.ObservedAt != "" || state.Evidence != "" {
+			return fmt.Errorf("delivery observation %s not_observed payload must be empty", name)
+		}
 		return nil
 	case issueopscontract.IssueOpsHandoffDeliveryStateObserved:
 		if strings.TrimSpace(state.ObservedAt) == "" || strings.TrimSpace(state.Evidence) == "" {
@@ -299,6 +318,12 @@ func validateHandoffDeliveryClaimConsistency(observation issueopscontract.IssueO
 	if observation.OwnerClaimed.Evidence != issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim {
 		return fmt.Errorf("delivery owner claim evidence is invalid")
 	}
+	if len(observation.OwnerClaim.ClaimedAt) > handoffDeliveryFieldLimit {
+		return fmt.Errorf("delivery owner claim timestamp is too large")
+	}
+	if err := validateHandoffDeliveryActorBounds(observation.OwnerClaim.Actor); err != nil {
+		return err
+	}
 	if _, err := validateHandoffDeliveryTime(observation.OwnerClaim.ClaimedAt); err != nil {
 		return fmt.Errorf("delivery owner claim timestamp is invalid")
 	}
@@ -331,6 +356,9 @@ func validateHandoffDeliveryRequest(request issueopscontract.IssueOpsHandoffDeli
 }
 
 func validateHandoffDeliveryTimestamps(created, updated string) (time.Time, time.Time, error) {
+	if len(created) > handoffDeliveryFieldLimit || len(updated) > handoffDeliveryFieldLimit {
+		return time.Time{}, time.Time{}, fmt.Errorf("delivery observation timestamps are too large")
+	}
 	createdAt, err := validateHandoffDeliveryTime(created)
 	if err != nil {
 		return time.Time{}, time.Time{}, fmt.Errorf("delivery observation created_at is invalid")
@@ -363,6 +391,25 @@ func validateHandoffDeliveryTime(value string) (time.Time, error) {
 	return time.Parse(time.RFC3339Nano, strings.TrimSpace(value))
 }
 
+func validateHandoffDeliveryActorBounds(actor issueopscontract.NativeActor) error {
+	for name, value := range map[string]string{
+		"actor host": actor.Host, "actor session_id": actor.SessionID, "actor agent_id": actor.AgentID,
+	} {
+		if len(value) > handoffDeliveryFieldLimit {
+			return fmt.Errorf("delivery observation %s is too large", name)
+		}
+	}
+	if actor.SessionProcess != nil && (len(actor.SessionProcess.StartedAt) > handoffDeliveryFieldLimit || len(actor.SessionProcess.Executable) > handoffDeliveryFieldLimit) {
+		return fmt.Errorf("delivery observation actor process identity is too large")
+	}
+	for _, receipt := range actor.ProcessAncestry {
+		if len(receipt.StartedAt) > handoffDeliveryFieldLimit || len(receipt.Executable) > handoffDeliveryFieldLimit {
+			return fmt.Errorf("delivery observation actor process ancestry is too large")
+		}
+	}
+	return nil
+}
+
 func validateHandoffDeliveryModeEvidence(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
 	if observation.Launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr &&
 		observation.NativeTurnObserved.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved &&
@@ -379,6 +426,8 @@ func validateHandoffDeliveryModeEvidence(observation issueopscontract.IssueOpsHa
 
 func validHandoffDeliveryEvidenceForState(stateName, evidence string, observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
 	switch stateName {
+	case "call_staged":
+		return evidence == issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged
 	case "input_accepted":
 		switch evidence {
 		case issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt,
@@ -402,13 +451,7 @@ func validHandoffDeliveryEvidenceForState(stateName, evidence string, observatio
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceTimeout,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceAgentPromptStalled,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceHerdrWaitState,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceReplaceBeforeExternalCallCrash,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceReplaceAfterExternalCallCrash,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceReseedBeforeExternalCallCrash,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceReseedAfterExternalCallCrash,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceResumeBeforeExternalCallCrash,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceResumeAfterExternalCallCrash:
+			issueopscontract.IssueOpsHandoffDeliveryEvidenceHerdrWaitState:
 			return true
 		case issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendFailed,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost:
@@ -428,6 +471,7 @@ func handoffDeliveryOmoEvidenceAllowed(observation issueopscontract.IssueOpsHand
 
 func handoffDeliveryHasEvidence(observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
 	for _, state := range []issueopscontract.IssueOpsHandoffDeliveryState{
+		observation.CallStaged,
 		observation.InputAccepted,
 		observation.NativeTurnObserved,
 		observation.OwnerClaimed,

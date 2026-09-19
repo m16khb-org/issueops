@@ -204,33 +204,6 @@ func TestMergeHandoffDeliveryObservationModeSpecificRecoveryEvidence(t *testing.
 			wantOK: true,
 		},
 		{
-			name: "replace crash boundary records ambiguity without success",
-			base: deliveryObservationFixture,
-			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-				next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceReplaceAfterExternalCallCrash)
-				return next
-			},
-			wantOK: true,
-		},
-		{
-			name: "reseed crash boundary records ambiguity without success",
-			base: deliveryObservationFixture,
-			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-				next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceReseedBeforeExternalCallCrash)
-				return next
-			},
-			wantOK: true,
-		},
-		{
-			name: "resume crash boundary records ambiguity without success",
-			base: deliveryObservationFixture,
-			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-				next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceResumeAfterExternalCallCrash)
-				return next
-			},
-			wantOK: true,
-		},
-		{
 			name: "same durable request cannot carry changed process incarnation",
 			base: deliveryObservationFixture,
 			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
@@ -470,6 +443,52 @@ func TestValidateHandoffDeliveryOwnerClaimConsistency(t *testing.T) {
 			test.edit(&observation)
 			if err := ValidateHandoffDeliveryObservation(observation); err == nil || err.Error() != test.want {
 				t.Fatalf("error=%v", err)
+			}
+		})
+	}
+}
+
+func TestValidateHandoffDeliveryNotObservedRequiresEmptyPayload(t *testing.T) {
+	for _, mutate := range []func(*issueopscontract.IssueOpsHandoffDeliveryObservation){
+		func(observation *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+			observation.NativeTurnObserved.ObservedAt = "2026-09-20T10:01:00Z"
+		},
+		func(observation *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+			observation.NativeTurnObserved.Evidence = issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt
+		},
+	} {
+		observation := deliveryObservationFixture()
+		mutate(&observation)
+		if err := ValidateHandoffDeliveryObservation(observation); err == nil || !strings.Contains(err.Error(), "not_observed payload must be empty") {
+			t.Fatalf("not_observed payload accepted: observation=%+v err=%v", observation.NativeTurnObserved, err)
+		}
+	}
+}
+
+func TestValidateHandoffDeliveryBoundsStateAndProcessTimestamps(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*issueopscontract.IssueOpsHandoffDeliveryObservation)
+	}{
+		{name: "state status", mutate: func(observation *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+			observation.NativeTurnObserved.Status = strings.Repeat("x", handoffDeliveryFieldLimit+1)
+		}},
+		{name: "state observed at", mutate: func(observation *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+			observation.InputAccepted.ObservedAt = strings.Repeat("x", handoffDeliveryFieldLimit+1)
+		}},
+		{name: "state evidence", mutate: func(observation *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+			observation.InputAccepted.Evidence = strings.Repeat("x", handoffDeliveryFieldLimit+1)
+		}},
+		{name: "process started at", mutate: func(observation *issueopscontract.IssueOpsHandoffDeliveryObservation) {
+			observation.Target.Process.StartedAt = strings.Repeat("x", handoffDeliveryFieldLimit+1)
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			observation := deliveryObservationFixture()
+			test.mutate(&observation)
+			if err := ValidateHandoffDeliveryObservation(observation); err == nil || !strings.Contains(err.Error(), "too large") {
+				t.Fatalf("unbounded %s accepted: %v", test.name, err)
 			}
 		})
 	}

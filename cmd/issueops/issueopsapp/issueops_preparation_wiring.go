@@ -73,7 +73,7 @@ func newIssueOpsPreparationService(stateRoot, id string, deps issueOpsPreparatio
 	repository := preparationoutbound.NewSQLiteRepositoryWithDiagnosticRedactor(database, policy.RedactDiagnostic)
 	direct := preparationoutbound.NewDirectWorkspace(deps.Direct)
 	gateway := preparationoutbound.NewOrcaGateway(preparationoutbound.OrcaDependencies{
-		Provisioner: deps.Orca,
+		Provisioner: newHandoffDeliveryProvisioner(stateRoot, deps.Orca, deps.Now),
 		ValidateProbe: func(_ context.Context, request preparationcontract.ProbeRequest) (string, error) {
 			return issueops.ValidateExecutionPreparationOrcaProbe(stateRoot, id, request)
 		},

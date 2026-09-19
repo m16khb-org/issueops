@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
@@ -38,7 +37,7 @@ func newIssueOpsResumeService(stateRoot string, provisioner port.ExecutionOrcaPr
 	if err != nil {
 		return nil, err
 	}
-	effects := &coreResumeEffects{stateRoot: stateRoot, provisioner: provisioner, owner: owner, now: time.Now}
+	effects := &coreResumeEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, time.Now), owner: owner, now: time.Now}
 	repository := leaseoutbound.NewResumeRepository(db, effects)
 	return leaseapp.NewResumeService(
 		fence,
@@ -155,16 +154,13 @@ func (e *coreResumeEffects) inspectStage(ctx context.Context, intent leaseapp.Re
 	if err != nil {
 		return leasecontract.ResumeStageInventory{}, err
 	}
-	if err := consumeHandoffDeliveryRecoveryEvidence(request); err != nil {
-		return leasecontract.ResumeStageInventory{}, err
-	}
 	inventory, err := e.provisioner.InspectIntent(ctx, request)
 	if err != nil {
 		return leasecontract.ResumeStageInventory{}, err
 	}
-	result := leasecontract.ResumeStageInventory{AuthoritativeZero: inventory.AuthoritativeZero}
+	result := leasecontract.ResumeStageInventory{AuthoritativeZero: inventory.AuthoritativeZero, ExactReplay: inventory.ExactReplay}
 	for _, candidate := range inventory.Candidates {
-		result.Candidates = append(result.Candidates, leasecontract.ResumeStageReceipt{TerminalPTYID: candidate.TerminalPTYID, RunID: candidate.RunID, RunBound: candidate.RunBound, TaskID: candidate.TaskID, DispatchID: candidate.DispatchID})
+		result.Candidates = append(result.Candidates, resumeContractReceipt(candidate))
 	}
 	return result, nil
 }
@@ -181,20 +177,11 @@ func (e *coreResumeEffects) invokeStage(ctx context.Context, intent leaseapp.Res
 	if err != nil {
 		return leasecontract.ResumeStageReceipt{}, err
 	}
-	if err := observeHandoffDeliveryBefore(request, e.now); err != nil {
-		return leasecontract.ResumeStageReceipt{}, err
-	}
 	receipt, err := e.provisioner.InvokeIntent(ctx, request)
 	if err != nil {
-		if observeErr := observeHandoffDeliveryFailure(request, err, e.now); observeErr != nil {
-			err = errors.Join(err, observeErr)
-		}
 		return leasecontract.ResumeStageReceipt{}, err
 	}
-	if err := observeHandoffDeliveryAfter(request, receipt, e.now); err != nil {
-		return leasecontract.ResumeStageReceipt{}, err
-	}
-	return leasecontract.ResumeStageReceipt{TerminalPTYID: receipt.TerminalPTYID, RunID: receipt.RunID, RunBound: receipt.RunBound, TaskID: receipt.TaskID, DispatchID: receipt.DispatchID}, nil
+	return resumeContractReceipt(receipt), nil
 }
 
 func resumeCoreRecord(record leasecontract.Record) (issueopscontract.IssueOpsRecord, error) {
@@ -249,7 +236,29 @@ func resumePortReceipt(stage string, receipt leasecontract.ResumeStageReceipt) p
 	case port.ExecutionOrcaIntentTask:
 		result.TaskID = receipt.TaskID
 	case port.ExecutionOrcaIntentDispatch:
-		result.TaskID, result.DispatchID = receipt.TaskID, receipt.DispatchID
+		result.TaskID, result.DispatchID, result.RequestID = receipt.TaskID, receipt.DispatchID, receipt.RequestID
+		if receipt.PromptReceipt != nil {
+			result.PromptReceipt = &port.OrcaPromptReceipt{
+				RequestID: receipt.PromptReceipt.RequestID, Stages: append([]string(nil), receipt.PromptReceipt.Stages...), Provider: receipt.PromptReceipt.Provider,
+				Observation: receipt.PromptReceipt.Observation, ProcessIncarnation: receipt.PromptReceipt.ProcessIncarnation,
+				Generation: receipt.PromptReceipt.Generation, BaselineWorkingSequence: receipt.PromptReceipt.BaselineWorkingSequence,
+			}
+		}
+	}
+	return result
+}
+
+func resumeContractReceipt(receipt port.ExecutionOrcaIntentReceipt) leasecontract.ResumeStageReceipt {
+	result := leasecontract.ResumeStageReceipt{
+		TerminalPTYID: receipt.TerminalPTYID, RunID: receipt.RunID, RunBound: receipt.RunBound,
+		TaskID: receipt.TaskID, DispatchID: receipt.DispatchID, RequestID: receipt.RequestID,
+	}
+	if receipt.PromptReceipt != nil {
+		result.PromptReceipt = &leasecontract.OrcaPromptReceipt{
+			RequestID: receipt.PromptReceipt.RequestID, Stages: append([]string(nil), receipt.PromptReceipt.Stages...), Provider: receipt.PromptReceipt.Provider,
+			Observation: receipt.PromptReceipt.Observation, ProcessIncarnation: receipt.PromptReceipt.ProcessIncarnation,
+			Generation: receipt.PromptReceipt.Generation, BaselineWorkingSequence: receipt.PromptReceipt.BaselineWorkingSequence,
+		}
 	}
 	return result
 }

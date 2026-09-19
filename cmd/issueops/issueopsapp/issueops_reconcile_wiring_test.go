@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	auditadapter "issueops/internal/adapter/audit"
 	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
@@ -22,6 +23,26 @@ type reconcileProvisionerFake struct {
 
 func (*reconcileProvisionerFake) Probe(context.Context, port.ExecutionOrcaProbeRequest) (port.ExecutionOrcaProbeResult, error) {
 	return port.ExecutionOrcaProbeResult{Available: true, Ready: true}, nil
+}
+
+func (*reconcileProvisionerFake) InspectDeliveryIdentity(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaDeliveryIdentity, error) {
+	runtimeID := "runtime"
+	if request.Prepared != nil && request.Prepared.RuntimeID != "" {
+		runtimeID = request.Prepared.RuntimeID
+	}
+	return port.ExecutionOrcaDeliveryIdentity{
+		LauncherPath: "/test/orca", Version: "1.4.200", RuntimeID: runtimeID, MachineID: "test-machine", TargetIdentity: "local",
+		TerminalPTYID: request.TerminalPTYID, TerminalHandle: "term-test",
+	}, nil
+}
+
+func (f *reconcileProvisionerFake) InspectDeliveryDispatch(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, bool, error) {
+	receipt := reconcileSuccessfulReceipt(request)
+	return receipt, receipt.DispatchID != "", nil
+}
+
+func (*reconcileProvisionerFake) ObserveRequest(context.Context, string) (port.OrcaRequestObservation, error) {
+	return port.OrcaRequestObservation{}, nil
 }
 
 func (f *reconcileProvisionerFake) InspectIntent(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentInventory, error) {
@@ -122,6 +143,9 @@ func TestIssueOpsReconcileVerticalAdvancesRemainingStagesOneCallAtATime(t *testi
 		"orca_reconcile_completed",
 	}
 	for index, wantCode := range wantCodes {
+		if index == len(wantCodes)-1 {
+			fake.adopt = false
+		}
 		beforeInspects := fake.inspectCalls
 		raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, issueops.ExecutionActionRequest{
 			Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
@@ -134,6 +158,10 @@ func TestIssueOpsReconcileVerticalAdvancesRemainingStagesOneCallAtATime(t *testi
 		if result.Code != wantCode || fake.inspectCalls != beforeInspects+1 {
 			t.Fatalf("stage %d result=%#v inspect=%d", index, result, fake.inspectCalls-beforeInspects)
 		}
+	}
+	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	if err != nil || len(observations) == 0 {
+		t.Fatalf("reconcile dispatch bypassed delivery observation: observations=%d err=%v", len(observations), err)
 	}
 }
 

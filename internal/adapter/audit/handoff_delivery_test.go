@@ -45,7 +45,7 @@ func TestAuditHandoffDeliveryObservationWritesBounded0600JSONL(t *testing.T) {
 	if err := json.Unmarshal([]byte(strings.TrimSpace(string(data))), &decoded); err != nil {
 		t.Fatalf("decode audit record: %v\n%s", err, data)
 	}
-	if decoded.Observation.AttemptID != observation.AttemptID || decoded.Observation.Receipt.Location != "<redacted>" {
+	if decoded.Observation.AttemptID != observation.AttemptID || decoded.Observation.Receipt.Location != "audit/handoff-delivery.jsonl#audit_log_id="+decoded.AuditLogID || decoded.Observation.Receipt.Digest == "" {
 		t.Fatalf("decoded=%+v", decoded)
 	}
 }
@@ -166,6 +166,50 @@ func TestFoldHandoffDeliveryAuditObservationsPreservesVerifiedPrefixOnTruncatedT
 	}
 }
 
+func TestFoldHandoffDeliveryAuditCorruptionIsScopedToItsLineage(t *testing.T) {
+	stateDir := t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
+	installAuditStateDepsForTest(t)
+
+	current := auditDeliveryObservationFixture()
+	unrelated := auditDeliveryObservationFixture()
+	unrelated.LifecycleID = "io-unrelated"
+	unrelated.LineageID = "lineage-unrelated"
+	if _, err := AuditHandoffDeliveryObservation(current); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AuditHandoffDeliveryObservation(unrelated); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(stateDir, "audit", "handoff-delivery.jsonl")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
+	var corrupted HandoffDeliveryAuditRecord
+	if err := json.Unmarshal([]byte(lines[1]), &corrupted); err != nil {
+		t.Fatal(err)
+	}
+	corrupted.RecordDigest = strings.Repeat("f", 64)
+	encoded, err := json.Marshal(corrupted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines[1] = string(encoded)
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	folded, _, err := FoldHandoffDeliveryAuditObservationsForAt(stateDir, current.LifecycleID, current.LineageID)
+	if err != nil || len(folded) != 1 {
+		t.Fatalf("unrelated corruption blocked current lineage: folded=%d err=%v", len(folded), err)
+	}
+	if _, _, err := FoldHandoffDeliveryAuditObservationsForAt(stateDir, unrelated.LifecycleID, unrelated.LineageID); err == nil {
+		t.Fatal("current-lineage corruption did not fail closed")
+	}
+}
+
 func TestAuditHandoffDeliveryObservationDoesNotTouchIssueOpsState(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
@@ -194,20 +238,6 @@ func TestReadHandoffDeliveryAuditObservationsFailsClosedOnBadJSONL(t *testing.T)
 		{
 			name: "malformed",
 			line: func() string { return "{not-json}\n" },
-		},
-		{
-			name: "partial",
-			line: func() string {
-				record := HandoffDeliveryAuditRecord{
-					OK: true, Kind: "handoff_delivery_observation",
-					Observation: auditDeliveryObservationFixture(),
-				}
-				data, err := json.Marshal(record)
-				if err != nil {
-					panic(err)
-				}
-				return string(data[:len(data)/2])
-			},
 		},
 		{
 			name: "unknown observation schema",
