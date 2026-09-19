@@ -1,13 +1,11 @@
 package architecture
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -223,12 +221,18 @@ func TestLegacyInfrastructureIncludesNetAndSyscall(t *testing.T) {
 }
 
 func TestProductionGraphHasNoLegacyAdapterEdges(t *testing.T) {
+	assertPackageInventoryCacheUsesOneSharedReadAndOneFreshStabilityRead(t)
+	assertPackageInventoryCacheReturnsDefensiveViews(t)
+	assertPackageInventorySeparatesProductionAndTestImports(t)
+	assertPackageInventoryPropagatesCommandFailure(t)
+	assertPackageInventoryRejectsTruncatedJSON(t)
+
 	edges := loadProductionEdges(t)
 	if got := evaluateEdges(edges); len(got) != 0 {
 		t.Fatalf("forbidden dependency violations:\n%s", formatViolations(got))
 	}
 
-	secondInventory := loadProductionEdges(t)
+	secondInventory := loadFreshProductionEdges(t)
 	if !reflect.DeepEqual(edges, secondInventory) {
 		t.Fatalf("production import inventory is not byte-stable")
 	}
@@ -1269,63 +1273,6 @@ func containsViolation(violations []violation, rule string, edge dependencyEdge)
 		}
 	}
 	return false
-}
-
-func loadProductionEdges(t *testing.T) []dependencyEdge {
-	t.Helper()
-	repoRoot := findRepoRoot(t)
-	command := exec.Command("go", "list", "-json", "./...")
-	command.Dir = repoRoot
-	output, err := command.Output()
-	if err != nil {
-		t.Fatalf("go list -json ./...: %v", err)
-	}
-
-	decoder := json.NewDecoder(strings.NewReader(string(output)))
-	var edges []dependencyEdge
-	for decoder.More() {
-		var pkg struct {
-			ImportPath string
-			Imports    []string
-		}
-		if err := decoder.Decode(&pkg); err != nil {
-			t.Fatalf("decode go list package: %v", err)
-		}
-		if !strings.HasPrefix(pkg.ImportPath, "issueops/") {
-			continue
-		}
-		for _, imported := range pkg.Imports {
-			edges = append(edges, dependencyEdge{normalizeImport(pkg.ImportPath), normalizeImport(imported)})
-		}
-	}
-	return sortedEdges(edges)
-}
-
-func loadProductionPackages(t *testing.T) []string {
-	t.Helper()
-	repoRoot := findRepoRoot(t)
-	command := exec.Command("go", "list", "-json", "./...")
-	command.Dir = repoRoot
-	output, err := command.Output()
-	if err != nil {
-		t.Fatalf("go list -json ./...: %v", err)
-	}
-
-	decoder := json.NewDecoder(strings.NewReader(string(output)))
-	var packages []string
-	for decoder.More() {
-		var pkg struct {
-			ImportPath string
-		}
-		if err := decoder.Decode(&pkg); err != nil {
-			t.Fatalf("decode go list package: %v", err)
-		}
-		if strings.HasPrefix(pkg.ImportPath, "issueops/") {
-			packages = append(packages, normalizeImport(pkg.ImportPath))
-		}
-	}
-	sort.Strings(packages)
-	return packages
 }
 
 func findRepoRoot(t *testing.T) string {

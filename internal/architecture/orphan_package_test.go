@@ -1,8 +1,6 @@
 package architecture
 
 import (
-	"encoding/json"
-	"os/exec"
 	"sort"
 	"strings"
 	"testing"
@@ -102,47 +100,4 @@ func TestOrphanPackageAllowlistHasNoStaleEntries(t *testing.T) {
 			t.Errorf("allowlist 항목 %s는 이제 import된다; 항목을 지운다", path)
 		}
 	}
-}
-
-const modulePrefix = "issueops/"
-
-type modulePackage struct {
-	ImportPath   string
-	Name         string
-	GoFiles      []string
-	Imports      []string
-	TestImports  []string
-	XTestImports []string
-}
-
-func (p modulePackage) allImports() []string {
-	all := make([]string, 0, len(p.Imports)+len(p.TestImports)+len(p.XTestImports))
-	all = append(all, p.Imports...)
-	all = append(all, p.TestImports...)
-	all = append(all, p.XTestImports...)
-	return all
-}
-
-func loadModulePackages(t *testing.T) []modulePackage {
-	t.Helper()
-	command := exec.Command("go", "list", "-json", "./...")
-	command.Dir = findRepoRoot(t)
-	output, err := command.Output()
-	if err != nil {
-		t.Fatalf("go list -json ./...: %v", err)
-	}
-
-	decoder := json.NewDecoder(strings.NewReader(string(output)))
-	var packages []modulePackage
-	for decoder.More() {
-		var pkg modulePackage
-		if err := decoder.Decode(&pkg); err != nil {
-			t.Fatalf("decode go list package: %v", err)
-		}
-		if !strings.HasPrefix(pkg.ImportPath, modulePrefix) {
-			continue
-		}
-		packages = append(packages, pkg)
-	}
-	return packages
 }
