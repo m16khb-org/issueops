@@ -39,6 +39,12 @@ Claude, or a live model. The normative live/reproduction and evidence rules are 
 
 For the repository's deterministic completion gate, pass explicit `--llm-eval=false` when the environment intentionally exports `ISSUEOPS_SELF_VERIFY_LLM_EVAL=gate`; explicit CLI flags override the environment. Record that override and restart the verification sequence from its first gate after any interrupted or prompt-only run. Do not report a prompt-only result as an external LLM judgment.
 
+`self-verify` owns one deterministic evidence pass for the checks it actually
+runs. A passing result does not prove `go vet ./...` or `go test -race ./... -count=1` ran unless the `risk QA tier` step includes those exact commands. For
+the final verification battery, use the base-to-head plus preserved work scope
+from `.issueops/testing/self-verification.md`: clean committed Go changes still
+need any missing vet/race members in the same evidence bundle.
+
 ## Gate
 
 Completion requires every concrete goal score to exceed the target score. The default target is 95. If any item scores 95 or below, the state is not complete; improve, retry, or report the blocker.

@@ -52,6 +52,17 @@ ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops self-verify promote --from-key se
 grep -R "Conventional Commit\|Lore:" -n AGENTS.md .issueops/COMMIT_POLICY.md skills/atomic-commit-push/SKILL.md
 ```
 
+## 최종 검증 battery
+
+완료 보고의 최종 검증 battery는 같은 revision, 같은 환경, 같은 입력 상태에서 나온 하나의 evidence bundle로 기록한다. 범위는 현재 미커밋 파일만이 아니라 검증 대상 base-to-head diff와 보존된 작업 범위다. clean working tree에 이미 커밋된 Go 변경도 이 범위에 들어가며, 이때 필요한 Go 정적·race 검증을 working-tree 기준 self-verify 위험 tier가 대신했다고 추정하지 않는다.
+
+기본 완료 battery의 소유 관계는 다음과 같다.
+
+- `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json`이 self-verify가 실제로 수행한 test/build/golden/docs/inspect 증거를 소유한다. 현재 step 목록은 `go test ./... -count=1`, contract golden의 full-test 포함 관계, `go build -o <temp>/issueops ./cmd/issueops`, `doctor --static-only --json`, `inspect smoke`, `docs index smoke`를 포함한다.
+- 최종 battery에서 self-verify JSON이 같은 revision과 환경에서 통과했고 그 step 결과가 완전하면 `go test ./... -count=1`, `go build -o bin/issueops ./cmd/issueops`, `./bin/issueops docs --json`, `./bin/issueops inspect --json`을 별도 최종 책임으로 다시 실행하지 않는다. 이때 전체 `go test ./... -count=1`을 별도 책임으로 다시 실행하지 않는다.
+- `go vet ./...`와 `go test -race ./... -count=1`은 Go 변경 기본 검증의 별도 구성원이다. self-verify의 `risk QA tier`가 그 명령을 실제 실행한 step을 같은 bundle에 담았을 때만 포함 관계로 인정한다. risk tier가 current working tree 기준으로 비어 있거나 `go vet`만 실행했으면 누락된 명령은 같은 battery에서 별도 실행한다.
+- 최종 battery 명령은 `gofmt -l $(git ls-files '*.go')`, `go vet ./...`, `go test -race ./... -count=1`, `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json` 중 이번 변경 범위가 요구하는 모든 항목을 포함한다. self-verify가 소유한 test/build/docs/inspect 증거를 재사용할 때도 vet/race 결과는 `unit-and-contract.md`의 Go 변경 기준을 따른다.
+
 IssueOps benchmark fixtures must stay repo-agnostic. They score portable workflow evidence rather than one target repository's domain facts: domain invariants vs exact/equivalent mechanisms, API-doc gate evidence, live runtime evidence matrices, review-feedback accountability, and completion hygiene. A deterministic benchmark passes only when `average_score == 100`, `minimum_score == 100`, and `critical_failure_count == 0`.
 
 추가 확인:
@@ -80,6 +91,8 @@ claude mcp list | grep issueops
 다단계 검증 시나리오에서 한 단계라도 실패하면 이전 통과를 재사용하지 말고 1단계부터 전체를 다시 실행한다.
 
 완료 보고의 evidence는 마지막으로 "전 단계 통과"한 단일 run에서만 가져온다. 서로 다른 run의 부분 통과를 조합하지 않는다.
+
+실패, 취소, revision 또는 환경 drift, prompt-only LLM 평가, incomplete result는 완료 evidence가 아니다. 실패 뒤 다음 시도는 최종 검증 battery 첫 항목부터 다시 시작하며, 실패 전 step의 부분 통과를 새 bundle에 섞지 않는다.
 
 재실행 비용이 커도 부분 통과를 "검증됨"으로 기록하지 않는다. 비용이 문제면 시나리오를 더 작은 독립 시나리오로 나눈다.
 

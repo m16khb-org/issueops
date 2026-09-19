@@ -10,7 +10,7 @@ IssueOps execution vertical contract lives in
 
 ## Go 코드 변경 기본 검증
 
-Go 코드를 추가하면 다음 기본 검증을 실행한다. `self-verify`는 working tree risk를 확인해 `risk QA tier`에서 `go vet ./...` 또는 `go test -race ./... -count=1`를 조건부로 실행한다.
+Go 코드를 추가하면 다음 기본 검증을 실행한다. 최종 검증 battery에서 self-verify가 실제로 실행했거나 명시적으로 재사용한 항목은 중복 실행하지 않는다. 다만 `risk QA tier`는 현재 working tree 기준이므로 clean committed Go diff, base-to-head plus preserved work 범위의 Go 변경, 또는 보존된 미커밋 Go 작업이 있는데 risk tier가 `go vet ./...` 또는 `go test -race ./... -count=1`를 실제 실행하지 않았으면 누락된 명령은 별도 실행한다.
 
 ```bash
 gofmt -l $(git ls-files '*.go')

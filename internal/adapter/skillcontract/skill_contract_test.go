@@ -262,6 +262,8 @@ func TestSelfVerifySkillPinsGateContract(t *testing.T) {
 		"No Z.AI request is sent",
 		"`gate` therefore returns a non-passing `llm_eval` result",
 		"pass explicit `--llm-eval=false`",
+		"does not prove `go vet ./...` or `go test -race ./... -count=1` ran",
+		"base-to-head plus preserved work scope",
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("self-verify SKILL.md missing contract phrase %q", want)
@@ -278,6 +280,41 @@ func TestSelfVerifySkillPinsGateContract(t *testing.T) {
 		t.Fatal("self-verify SKILL.md must not claim that prompt-only evaluation invokes Z.AI")
 	}
 	assertRetiredHostsAbsent(t, "self-verify SKILL.md", body)
+}
+
+func TestFinalVerificationBatteryPinsSingleOwnerContract(t *testing.T) {
+	selfVerification := readRepoFileForTest(t, filepath.Join(".issueops", "testing", "self-verification.md"))
+	unitContract := readRepoFileForTest(t, filepath.Join(".issueops", "testing", "unit-and-contract.md"))
+	for _, want := range []string{
+		"최종 검증 battery",
+		"같은 revision",
+		"base-to-head diff와 보존된 작업 범위",
+		"`go test ./... -count=1`",
+		"`go build -o bin/issueops ./cmd/issueops`",
+		"`./bin/issueops docs --json`",
+		"`./bin/issueops inspect --json`",
+		"`./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json`",
+		"self-verify가 실제로 수행한 test/build/golden/docs/inspect",
+		"`go vet ./...`",
+		"`go test -race ./... -count=1`",
+		"전체 `go test ./... -count=1`을 별도 책임으로 다시 실행하지 않는다",
+		"실패, 취소, revision 또는 환경 drift, prompt-only LLM 평가, incomplete result",
+	} {
+		if !strings.Contains(selfVerification, want) {
+			t.Fatalf("self-verification contract missing %q", want)
+		}
+	}
+	for _, want := range []string{
+		"최종 검증 battery에서 self-verify가 실제로 실행했거나 명시적으로 재사용한 항목은 중복 실행하지 않는다.",
+		"`risk QA tier`는 현재 working tree 기준",
+		"clean committed Go diff",
+		"base-to-head plus preserved work",
+		"별도 실행한다",
+	} {
+		if !strings.Contains(unitContract, want) {
+			t.Fatalf("unit-and-contract final battery guidance missing %q", want)
+		}
+	}
 }
 
 func TestVerificationDocsPinHandoffProbeCommands(t *testing.T) {
