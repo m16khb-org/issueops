@@ -866,15 +866,14 @@ chmod 0700 "$output"
 
 const fakePythonScript = `#!/usr/bin/env bash
 set -euo pipefail
-if [[ "${1:-}" != - ]]; then
+if [[ "${1:-}" != - || "${FAKE_SCENARIO:-}" != activated-digest-blank || "${3:-}" != */activated.json ]]; then
   exec "$REAL_PYTHON" "$@"
 fi
 program="$(mktemp)"
 trap 'rm -f "$program"' EXIT
 sed -n '1,$p' >"$program"
 "$REAL_PYTHON" "$program" "${@:2}"
-if [[ "${FAKE_SCENARIO:-}" == activated-digest-blank && "${3:-}" == */activated.json ]]; then
-  "$REAL_PYTHON" - "$3" <<'PY'
+"$REAL_PYTHON" - "$3" <<'PY'
 import json
 import sys
 
@@ -886,7 +885,6 @@ with open(path, "w", encoding="utf-8") as handle:
     json.dump(value, handle, sort_keys=True, separators=(",", ":"))
     handle.write("\n")
 PY
-fi
 `
 
 const fakeGitScript = `#!/usr/bin/env bash
