@@ -63,6 +63,78 @@ func TestIssueOpsStrictPRReadinessStillFetches(t *testing.T) {
 	}
 }
 
+func TestIssueOpsStrictPRReadinessReobservesSchemaPathsAfterFetch(t *testing.T) {
+	repo := initIssueOpsRepo(t)
+	branch := "12-post-fetch-schema"
+	for _, args := range [][]string{
+		{"checkout", "-q", "-b", branch},
+		{"add", "feature.go"},
+		{"commit", "-q", "-m", "feat: add non-schema change"},
+		{"push", "-q", "-u", "origin", branch},
+	} {
+		if args[0] == "add" {
+			writeRepoFileForTest(t, repo, "feature.go", "package feature\n")
+		}
+		if code, _, stderr := preflightadapter.GitCmd(repo, args...); code != 0 {
+			t.Fatalf("git %v failed: %s", args, stderr)
+		}
+	}
+
+	remote := strings.TrimSpace(preflightadapter.GitOut(repo, "remote", "get-url", "origin"))
+	cloneRoot := t.TempDir()
+	upstream := filepath.Join(cloneRoot, "upstream")
+	if code, _, stderr := preflightadapter.GitCmd(cloneRoot, "clone", "-q", "--branch", "main", remote, upstream); code != 0 {
+		t.Fatalf("clone upstream fixture: %s", stderr)
+	}
+	for _, args := range [][]string{
+		{"config", "user.name", "IssueOps Upstream"},
+		{"config", "user.email", "upstream@example.test"},
+		{"add", "db/migrations/001_remote.sql"},
+		{"commit", "-q", "-m", "feat: advance base with schema change"},
+		{"push", "-q", "origin", "main"},
+	} {
+		if args[0] == "add" {
+			writeRepoFileForTest(t, upstream, "db/migrations/001_remote.sql", "CREATE TABLE remote_change(id bigint);\n")
+		}
+		if code, _, stderr := preflightadapter.GitCmd(upstream, args...); code != 0 {
+			t.Fatalf("upstream git %v failed: %s", args, stderr)
+		}
+	}
+
+	record := baseAdvancedRecord(repo, "main")
+	record.ID = "io-post-fetch-schema"
+	record.Branch = branch
+	record.BranchPrepare.Branch = branch
+	record.BranchPrepare.BaseSHA = strings.Repeat("f", 40)
+	record.Execution = &issueops.Execution{Mode: issueops.ExecutionModeDirect}
+	before := implementation.ObserveLocalChangesAt(record, repo)
+	if !before.Verified || !reflect.DeepEqual(before.Paths, []string{"feature.go"}) || before.Fingerprint == "" {
+		t.Fatalf("pre-fetch fallback observation = %+v", before)
+	}
+	record.AISlopCleanFingerprint = before.Fingerprint
+
+	ready := IssueOpsStrictPRReadiness(record)
+
+	if ready.CurrentFingerprint != before.Fingerprint {
+		t.Fatalf("strict fingerprint must stay bound to the preflight snapshot: got %q want %q", ready.CurrentFingerprint, before.Fingerprint)
+	}
+	if !containsString(ready.Missing, "schema_evidence") {
+		t.Fatalf("post-fetch schema path must activate schema evidence: missing=%v warnings=%v", ready.Missing, ready.Warnings)
+	}
+	for _, unexpected := range []string{"current_fingerprint", "ai_slop_clean_fingerprint", "ai_slop_clean_stale", "upstream_fetch", "upstream_synced"} {
+		if containsString(ready.Missing, unexpected) {
+			t.Fatalf("strict readiness added %q: missing=%v warnings=%v", unexpected, ready.Missing, ready.Warnings)
+		}
+	}
+	if hasBaseAdvancedWarning(ready) {
+		t.Fatalf("base warning must preserve its pre-fetch ordering: %v", ready.Warnings)
+	}
+	after := implementation.ChangedPaths(record)
+	if !reflect.DeepEqual(after, []string{"db/migrations/001_remote.sql", "feature.go"}) {
+		t.Fatalf("post-fetch fallback paths = %v", after)
+	}
+}
+
 func TestIssueOpsLocalPRReadinessSharesOneVerifiedChangeObservationWithSchemaGate(t *testing.T) {
 	repo := gitRepoWithProjectDocsForTest(t)
 	writeRepoFileForTest(t, repo, "db/migrations/001_add_index.sql", "CREATE INDEX idx_x ON x(id);\n")

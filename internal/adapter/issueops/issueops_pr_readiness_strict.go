@@ -30,8 +30,8 @@ func IssueOpsStrictPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOps
 }
 
 // issueOpsObservedPRReadiness는 두 표면의 유일한 본체다. syncUpstream이 false면
-// fetch와 동기화 판정을 건너뛴다. 나머지 관측은 한 번만 수행한다 — local을
-// 부른 뒤 strict가 같은 git 명령을 다시 실행하지 않게 하려는 것이다.
+// fetch와 동기화 판정을 건너뛰고, 같은 변경 관측을 schema 판정에도 쓴다.
+// strict schema 판정은 fetch 뒤 경로를 다시 읽어 원격 ref 갱신을 반영한다.
 func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bool) (issueops.IssueOpsReadiness, implementation.LocalChangeObservation) {
 	ready := IssueOpsPRReadiness(record)
 	ready.Strict = syncUpstream
@@ -102,8 +102,15 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bo
 	if docsMissing := projectDocsReviewMissing(record, currentFingerprint); strings.HasSuffix(docsMissing, "_stale") {
 		missing = append(missing, docsMissing)
 	}
-	// schema_evidence는 non-strict 표면이 판정하지 않으므로 여기서 전체를 본다.
-	if schemaMissing := schemaEvidenceMissingForPaths(record, changeObservation.Paths, currentFingerprint); schemaMissing != "" {
+	// local은 검증된 관측을 공유한다. strict는 fetch가 fallback ref를 바꿀 수
+	// 있으므로 기존 순서대로 fetch 뒤 변경 경로를 새로 관측한다.
+	schemaMissing := ""
+	if syncUpstream {
+		schemaMissing = schemaEvidenceMissing(record, currentFingerprint)
+	} else if record.Execution != nil {
+		schemaMissing = schemaEvidenceMissingForPaths(record, changeObservation.Paths, currentFingerprint)
+	}
+	if schemaMissing != "" {
 		missing = append(missing, schemaMissing)
 	}
 	if strings.TrimSpace(record.AISlopCleanAt) != "" {

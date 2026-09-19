@@ -83,11 +83,53 @@ func TestObserveLocalChangesPreservesChangeSetContracts(t *testing.T) {
 	}
 }
 
-func TestObserveLocalChangesUsesFallbackBaseAndDoesNotCrossRepositories(t *testing.T) {
+func TestObserveLocalChangesUsesFallbackBaseForCommittedDiff(t *testing.T) {
+	repo, record := newLocalObservationRepo(t)
+	baseSHA := strings.TrimSpace(runGitOutput(t, repo, "rev-parse", "HEAD"))
+	runGit(t, repo, "update-ref", "refs/remotes/origin/fallback-base", baseSHA)
+	writeObservationFile(t, repo, "only-fallback.go", "package fallback\n")
+	runGit(t, repo, "add", "only-fallback.go")
+	runGit(t, repo, "commit", "-m", "add fallback-only change")
+	record.BranchPrepare.BaseSHA = strings.Repeat("f", 40)
+	record.BranchPrepare.BaseBranch = "fallback-base"
+
+	if status := strings.TrimSpace(runGitOutput(t, repo, "status", "--porcelain=v1")); status != "" {
+		t.Fatalf("fixture must expose the change only through the fallback diff, status=%q", status)
+	}
+	observation := ObserveLocalChangesAt(record, repo)
+
+	if !observation.Verified || !reflect.DeepEqual(observation.Paths, []string{"only-fallback.go"}) {
+		t.Fatalf("fallback observation = %+v", observation)
+	}
+	if observation.Fingerprint == "" || observation.Fingerprint != ChangeFingerprint(record) {
+		t.Fatalf("fallback fingerprint was not preserved: observation=%q legacy=%q", observation.Fingerprint, ChangeFingerprint(record))
+	}
+}
+
+func TestObserveLocalChangesPreservesEmptySnapshotWhenAllFallbackRefsFail(t *testing.T) {
+	repo, record := newLocalObservationRepo(t)
+	writeObservationFile(t, repo, "committed.go", "package committed\n")
+	runGit(t, repo, "add", "committed.go")
+	runGit(t, repo, "commit", "-m", "add committed change")
+	record.BranchPrepare.BaseSHA = strings.Repeat("f", 40)
+	record.BranchPrepare.BaseBranch = "missing-base"
+
+	if status := strings.TrimSpace(runGitOutput(t, repo, "status", "--porcelain=v1")); status != "" {
+		t.Fatalf("fixture must be clean, status=%q", status)
+	}
+	observation := ObserveLocalChangesAt(record, repo)
+
+	if !observation.Verified || len(observation.Paths) != 0 || observation.Fingerprint != "" {
+		t.Fatalf("failed fallbacks must preserve the legacy empty snapshot: %+v", observation)
+	}
+	if fingerprint := ChangeFingerprint(record); fingerprint != "" {
+		t.Fatalf("legacy fingerprint with no usable base = %q, want empty", fingerprint)
+	}
+}
+
+func TestObserveLocalChangesDoesNotCrossRepositories(t *testing.T) {
 	repoA, recordA := newLocalObservationRepo(t)
 	repoB, recordB := newLocalObservationRepo(t)
-	recordA.BranchPrepare.BaseSHA = strings.Repeat("f", 40)
-	recordB.BranchPrepare.BaseSHA = "bad-base"
 	writeObservationFile(t, repoA, "only-a.go", "package a\n")
 	writeObservationFile(t, repoB, "only-b.go", "package b\n")
 
@@ -95,10 +137,10 @@ func TestObserveLocalChangesUsesFallbackBaseAndDoesNotCrossRepositories(t *testi
 	observedB := ObserveLocalChangesAt(recordB, repoB)
 
 	if !observedA.Verified || !reflect.DeepEqual(observedA.Paths, []string{"only-a.go"}) {
-		t.Fatalf("repo A fallback observation = %+v", observedA)
+		t.Fatalf("repo A observation = %+v", observedA)
 	}
 	if !observedB.Verified || !reflect.DeepEqual(observedB.Paths, []string{"only-b.go"}) {
-		t.Fatalf("repo B fallback observation = %+v", observedB)
+		t.Fatalf("repo B observation = %+v", observedB)
 	}
 }
 
