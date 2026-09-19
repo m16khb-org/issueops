@@ -2,7 +2,10 @@ package issueopsinventory
 
 import (
 	"context"
+	"crypto/sha256"
 	"errors"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -108,6 +111,212 @@ func TestServiceListCyclesFiltersAndProjectsInventory(t *testing.T) {
 	}
 }
 
+func TestServiceListCyclesReusesExactRecordNormalizationWithinRequest(t *testing.T) {
+	tests := []struct {
+		name        string
+		recordCount int
+		uniquePaths int
+	}{
+		{name: "N1_U1", recordCount: 1, uniquePaths: 1},
+		{name: "N100_U1", recordCount: 100, uniquePaths: 1},
+		{name: "N100_U10", recordCount: 100, uniquePaths: 10},
+		{name: "N100_U100", recordCount: 100, uniquePaths: 100},
+		{name: "N1000_U1", recordCount: 1000, uniquePaths: 1},
+		{name: "N1000_U10", recordCount: 1000, uniquePaths: 10},
+		{name: "N1000_U1000", recordCount: 1000, uniquePaths: 1000},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repository := inventoryFixture(test.recordCount, test.uniquePaths)
+			paths := newRecordingNormalizer(func(string, int) string { return "/source" })
+			service := NewService(repository, fixedClock{now: time.Unix(0, 0).UTC()}, paths)
+
+			result, err := service.ListCycles(context.Background(), "/state", "/filter")
+			if err != nil {
+				t.Fatalf("list cycles: %v", err)
+			}
+			if len(result.Entries) != test.recordCount {
+				t.Fatalf("entries = %d, want %d", len(result.Entries), test.recordCount)
+			}
+			for index, entry := range result.Entries {
+				if want := fmt.Sprintf("io-%04d", index); entry.ID != want {
+					t.Fatalf("entry %d ID = %q, want %q", index, entry.ID, want)
+				}
+			}
+			if got := paths.Calls("/filter"); got != 1 {
+				t.Fatalf("repo-filter normalization calls = %d, want 1", got)
+			}
+			if got, want := paths.TotalCalls(), test.uniquePaths+1; got != want {
+				t.Fatalf("normalization calls = %d, want %d (U + separate repo filter)", got, want)
+			}
+			for unique := 0; unique < test.uniquePaths; unique++ {
+				path := fmt.Sprintf("/worktree-%04d", unique)
+				if got := paths.Calls(path); got != 1 {
+					t.Fatalf("Normalize(%q) calls = %d, want 1", path, got)
+				}
+			}
+		})
+	}
+}
+
+func TestServiceListCyclesCachesFallbacksButKeepsDistinctInputs(t *testing.T) {
+	tests := []struct {
+		name        string
+		filter      string
+		recordPaths []string
+		normalize   func(string, int) string
+		wantIDs     []string
+		wantCalls   map[string]int
+	}{
+		{
+			name:        "deleted_repo_uses_lexical_fallback",
+			filter:      "/deleted/repo",
+			recordPaths: []string{"/deleted/repo", "/deleted/repo"},
+			normalize:   func(path string, _ int) string { return path },
+			wantIDs:     []string{"io-0000", "io-0001"},
+			wantCalls:   map[string]int{"/deleted/repo": 2},
+		},
+		{
+			name:        "git_failure_fallback_is_reused",
+			filter:      "/selected",
+			recordPaths: []string{"/git-failure", "/git-failure"},
+			normalize:   func(path string, _ int) string { return path },
+			wantIDs:     []string{},
+			wantCalls:   map[string]int{"/selected": 1, "/git-failure": 1},
+		},
+		{
+			name:        "different_worktrees_are_observed_separately",
+			filter:      "/source",
+			recordPaths: []string{"/source.worktrees/one", "/source.worktrees/two"},
+			normalize: func(path string, _ int) string {
+				if path == "/source.worktrees/one" || path == "/source.worktrees/two" {
+					return "/source"
+				}
+				return path
+			},
+			wantIDs: []string{"io-0000", "io-0001"},
+			wantCalls: map[string]int{
+				"/source":               1,
+				"/source.worktrees/one": 1,
+				"/source.worktrees/two": 1,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			repository := inventoryRecords(test.recordPaths)
+			paths := newRecordingNormalizer(test.normalize)
+			service := NewService(repository, fixedClock{now: time.Unix(0, 0).UTC()}, paths)
+
+			result, err := service.ListCycles(context.Background(), "/state", test.filter)
+			if err != nil {
+				t.Fatalf("list cycles: %v", err)
+			}
+			if len(result.Entries) != len(test.wantIDs) {
+				t.Fatalf("entries = %+v, want IDs %v", result.Entries, test.wantIDs)
+			}
+			for index, want := range test.wantIDs {
+				if result.Entries[index].ID != want {
+					t.Fatalf("entry %d ID = %q, want %q", index, result.Entries[index].ID, want)
+				}
+			}
+			for path, want := range test.wantCalls {
+				if got := paths.Calls(path); got != want {
+					t.Fatalf("Normalize(%q) calls = %d, want %d", path, got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestServiceListCyclesReobservesRecordPathsBetweenRequests(t *testing.T) {
+	repository := inventoryRecords([]string{"/linked"})
+	paths := newRecordingNormalizer(func(path string, call int) string {
+		if path != "/linked" {
+			return path
+		}
+		if call == 1 {
+			return "/source-a"
+		}
+		return "/source-b"
+	})
+	service := NewService(repository, fixedClock{now: time.Unix(0, 0).UTC()}, paths)
+
+	first, err := service.ListCycles(context.Background(), "/state", "/source-a")
+	if err != nil || len(first.Entries) != 1 {
+		t.Fatalf("first list = %+v, %v", first, err)
+	}
+	second, err := service.ListCycles(context.Background(), "/state", "/source-b")
+	if err != nil || len(second.Entries) != 1 {
+		t.Fatalf("second list = %+v, %v", second, err)
+	}
+	if got := paths.Calls("/linked"); got != 2 {
+		t.Fatalf("linked path calls = %d, want one fresh observation per request", got)
+	}
+}
+
+func TestServiceListCyclesKeepsConcurrentRequestCachesIndependent(t *testing.T) {
+	repository := inventoryRecords([]string{"/worktree", "/worktree"})
+	paths := newRecordingNormalizer(func(path string, _ int) string {
+		if path == "/worktree" {
+			return "/source"
+		}
+		return path
+	})
+	service := NewService(repository, fixedClock{now: time.Unix(0, 0).UTC()}, paths)
+
+	const requests = 16
+	start := make(chan struct{})
+	errors := make(chan error, requests)
+	var group sync.WaitGroup
+	for range requests {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			<-start
+			result, err := service.ListCycles(context.Background(), "/state", "/source")
+			if err != nil {
+				errors <- err
+				return
+			}
+			if len(result.Entries) != 2 {
+				errors <- fmt.Errorf("entries = %d, want 2", len(result.Entries))
+			}
+		}()
+	}
+	close(start)
+	group.Wait()
+	close(errors)
+	for err := range errors {
+		t.Error(err)
+	}
+	if got := paths.Calls("/source"); got != requests {
+		t.Fatalf("repo-filter calls = %d, want %d", got, requests)
+	}
+	if got := paths.Calls("/worktree"); got != requests {
+		t.Fatalf("record-path calls = %d, want %d request-local observations", got, requests)
+	}
+}
+
+func BenchmarkServiceListCyclesNormalization(b *testing.B) {
+	repository := inventoryFixture(1000, 10)
+	paths := &benchmarkNormalizer{}
+	service := NewService(repository, fixedClock{now: time.Unix(0, 0).UTC()}, paths)
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		result, err := service.ListCycles(context.Background(), "/state", "/filter")
+		if err != nil {
+			b.Fatal(err)
+		}
+		if len(result.Entries) != 1000 {
+			b.Fatalf("entries = %d, want 1000", len(result.Entries))
+		}
+		benchmarkEntryCountSink = len(result.Entries)
+	}
+	b.ReportMetric(float64(paths.calls)/float64(b.N), "normalizations/op")
+}
+
 func TestServiceListCyclesReturnsRepositoryFailure(t *testing.T) {
 	want := errors.New("inventory unavailable")
 	service := NewService(
@@ -123,6 +332,81 @@ func TestServiceListCyclesReturnsRepositoryFailure(t *testing.T) {
 	if result.OK {
 		t.Fatalf("failed result must not be ok: %+v", result)
 	}
+}
+
+func inventoryFixture(recordCount, uniquePaths int) fakeRepository {
+	paths := make([]string, recordCount)
+	for index := range paths {
+		paths[index] = fmt.Sprintf("/worktree-%04d", index%uniquePaths)
+	}
+	return inventoryRecords(paths)
+}
+
+func inventoryRecords(paths []string) fakeRepository {
+	repository := fakeRepository{
+		ids:     make([]string, len(paths)),
+		records: make(map[string]issueopscontract.IssueOpsRecord, len(paths)),
+	}
+	for index, path := range paths {
+		id := fmt.Sprintf("io-%04d", index)
+		repository.ids[index] = id
+		repository.records[id] = issueopscontract.IssueOpsRecord{
+			ID:    id,
+			Repo:  path,
+			Phase: issueopscontract.IssueOpsPhasePlan,
+		}
+	}
+	return repository
+}
+
+type recordingNormalizer struct {
+	mu        sync.Mutex
+	calls     map[string]int
+	normalize func(string, int) string
+}
+
+func newRecordingNormalizer(normalize func(string, int) string) *recordingNormalizer {
+	return &recordingNormalizer{calls: map[string]int{}, normalize: normalize}
+}
+
+func (normalizer *recordingNormalizer) Normalize(path string) string {
+	normalizer.mu.Lock()
+	defer normalizer.mu.Unlock()
+	normalizer.calls[path]++
+	return normalizer.normalize(path, normalizer.calls[path])
+}
+
+func (normalizer *recordingNormalizer) Calls(path string) int {
+	normalizer.mu.Lock()
+	defer normalizer.mu.Unlock()
+	return normalizer.calls[path]
+}
+
+func (normalizer *recordingNormalizer) TotalCalls() int {
+	normalizer.mu.Lock()
+	defer normalizer.mu.Unlock()
+	total := 0
+	for _, calls := range normalizer.calls {
+		total += calls
+	}
+	return total
+}
+
+type benchmarkNormalizer struct{ calls int64 }
+
+var (
+	benchmarkDigestSink     [32]byte
+	benchmarkEntryCountSink int
+)
+
+func (normalizer *benchmarkNormalizer) Normalize(path string) string {
+	normalizer.calls++
+	digest := sha256.Sum256([]byte(path))
+	for range 32 {
+		digest = sha256.Sum256(digest[:])
+	}
+	benchmarkDigestSink = digest
+	return "/source"
 }
 
 type fakeRepository struct {

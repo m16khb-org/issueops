@@ -44,9 +44,17 @@ func (service *Service) ListCycles(
 	for _, diagnostic := range diagnostics {
 		result.UnreadableIDs = append(result.UnreadableIDs, diagnostic.ID)
 	}
+	normalizedRecordPaths := make(map[string]string)
 	for _, record := range records {
-		if repo != "" && service.paths.Normalize(record.Repo) != repo {
-			continue
+		if repo != "" {
+			normalizedRepo, ok := normalizedRecordPaths[record.Repo]
+			if !ok {
+				normalizedRepo = service.paths.Normalize(record.Repo)
+				normalizedRecordPaths[record.Repo] = normalizedRepo
+			}
+			if normalizedRepo != repo {
+				continue
+			}
 		}
 		result.Entries = append(result.Entries, issueopsinventorydomain.ProjectEntry(record))
 	}
