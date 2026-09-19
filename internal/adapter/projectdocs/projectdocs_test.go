@@ -236,7 +236,19 @@ func TestRouteProjectDocsRetainsAllCategoriesInCompoundRequests(t *testing.T) {
 			want: []string{"AGENTS.md", ".issueops/ARCHITECTURE.md", ".issueops/TECH_STACK.md", ".issueops/TESTING.md", ".issueops/OPEN_API_SPEC.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CAUTIONS.md"},
 		},
 		{
+			task: "performance profiling openapi endpoint",
+			want: []string{"AGENTS.md", ".issueops/ARCHITECTURE.md", ".issueops/TECH_STACK.md", ".issueops/TESTING.md", ".issueops/OPEN_API_SPEC.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CAUTIONS.md"},
+		},
+		{
+			task: "performance profiling & openapi endpoint",
+			want: []string{"AGENTS.md", ".issueops/ARCHITECTURE.md", ".issueops/TECH_STACK.md", ".issueops/TESTING.md", ".issueops/OPEN_API_SPEC.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CAUTIONS.md"},
+		},
+		{
 			task: "PR review and CI test",
+			want: []string{"AGENTS.md", ".issueops/COMMIT_POLICY.md", ".issueops/TESTING.md", ".issueops/CAUTIONS.md", ".issueops/TECH_STACK.md", ".issueops/AGENT_WORKFLOW.md"},
+		},
+		{
+			task: "PR review CI test",
 			want: []string{"AGENTS.md", ".issueops/COMMIT_POLICY.md", ".issueops/TESTING.md", ".issueops/CAUTIONS.md", ".issueops/TECH_STACK.md", ".issueops/AGENT_WORKFLOW.md"},
 		},
 	}
@@ -251,6 +263,30 @@ func TestRouteProjectDocsRetainsAllCategoriesInCompoundRequests(t *testing.T) {
 		}
 		if strings.Join(got, "\n") != strings.Join(tt.want, "\n") {
 			t.Fatalf("compound route for %q = %v, want %v", tt.task, got, tt.want)
+		}
+	}
+}
+
+func TestRouteProjectDocsDoesNotInflateOverlappingSingleCategoryTriggers(t *testing.T) {
+	root := t.TempDir()
+	tests := []struct {
+		task string
+		want []string
+	}{
+		{task: "redesign", want: []string{"AGENTS.md", ".issueops/DESIGN.md", ".issueops/CONVENTIONS.md"}},
+		{task: "system design", want: []string{"AGENTS.md", ".issueops/ARCHITECTURE.md", ".issueops/DESIGN.md", ".issueops/ADR.md", ".issueops/CONSTITUTION.md", ".issueops/CONVENTIONS.md"}},
+	}
+	for _, tt := range tests {
+		route, err := RouteProjectDocs(root, tt.task)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := make([]string, 0, len(route.Docs))
+		for _, doc := range route.Docs {
+			got = append(got, doc.RelPath)
+		}
+		if strings.Join(got, "\n") != strings.Join(tt.want, "\n") {
+			t.Fatalf("route for %q = %v, want %v", tt.task, got, tt.want)
 		}
 	}
 }
@@ -284,6 +320,13 @@ func TestRouteProjectDocsQualityTableHasNoRequiredOmissions(t *testing.T) {
 			if !routeContains(route.Docs, required) {
 				t.Errorf("%s request %q missing required doc %s: %+v", tc.Category, tc.Request, required, route.Docs)
 			}
+		}
+		actual := make([]string, 0, len(route.Docs))
+		for _, doc := range route.Docs {
+			actual = append(actual, doc.RelPath)
+		}
+		if strings.Join(actual, "\n") != strings.Join(tc.RequiredDocs, "\n") {
+			t.Errorf("%s request %q routed docs = %v, want exact %v", tc.Category, tc.Request, actual, tc.RequiredDocs)
 		}
 	}
 	for _, category := range []string{"implementation", "verification", "architecture", "api", "vcs", "operations"} {
