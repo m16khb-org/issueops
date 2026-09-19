@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -12,6 +13,15 @@ import (
 	"issueops/internal/adapter/issueops/readinesspaths"
 	model "issueops/internal/contract/issueops"
 )
+
+// LocalChangeObservation binds one readiness evaluation to a verified path
+// set and the fingerprint derived from that exact content snapshot. Callers
+// must not use an unverified observation to clear a readiness gate.
+type LocalChangeObservation struct {
+	Paths       []string
+	Fingerprint string
+	Verified    bool
+}
 
 func HasEvidence(record model.IssueOpsRecord) bool {
 	worktree := strings.TrimSpace(record.WorktreePath)
@@ -82,6 +92,99 @@ func ChangeFingerprint(record model.IssueOpsRecord) string {
 	if len(ordered) == 0 {
 		return ""
 	}
+	fingerprint, ok := fingerprintPaths(gitRoot, ordered, os.ReadFile)
+	if !ok {
+		return ""
+	}
+	return fingerprint
+}
+
+// ObserveLocalChangesAt observes paths and content twice inside one readiness
+// evaluation. One retry tolerates a single concurrent file update; a snapshot
+// that keeps changing is returned as unverified with no fingerprint.
+//
+// gitRoot is already selected and validated by the readiness caller. Keeping
+// that root avoids re-running root selection while preserving the caller's
+// worktree-first fallback.
+func ObserveLocalChangesAt(record model.IssueOpsRecord, gitRoot string) LocalChangeObservation {
+	return observeLocalChangesAt(record, gitRoot, os.ReadFile)
+}
+
+func observeLocalChangesAt(
+	record model.IssueOpsRecord,
+	gitRoot string,
+	readFile func(string) ([]byte, error),
+) LocalChangeObservation {
+	if strings.TrimSpace(gitRoot) == "" || readFile == nil {
+		return LocalChangeObservation{}
+	}
+	base := diffBaseRef(record, gitRoot)
+	var lastPaths []string
+	for range 2 {
+		firstPaths, ok := observedPathsIn(gitRoot, base)
+		if !ok {
+			return LocalChangeObservation{Paths: lastPaths}
+		}
+		lastPaths = firstPaths
+		firstFingerprint, ok := fingerprintPaths(gitRoot, firstPaths, readFile)
+		if !ok {
+			continue
+		}
+		secondPaths, ok := observedPathsIn(gitRoot, base)
+		if !ok {
+			continue
+		}
+		lastPaths = secondPaths
+		secondFingerprint, ok := fingerprintPaths(gitRoot, secondPaths, readFile)
+		if ok && slices.Equal(firstPaths, secondPaths) && firstFingerprint == secondFingerprint {
+			return LocalChangeObservation{
+				Paths:       append([]string{}, firstPaths...),
+				Fingerprint: firstFingerprint,
+				Verified:    true,
+			}
+		}
+	}
+	return LocalChangeObservation{Paths: append([]string{}, lastPaths...)}
+}
+
+func observedPathsIn(gitRoot, base string) ([]string, bool) {
+	paths := map[string]bool{}
+	if base != "" {
+		code, names, _ := GitCmd(gitRoot, "diff", "--name-only", base+"..HEAD", "--")
+		if code != 0 {
+			return nil, false
+		}
+		for _, name := range strings.Split(names, "\n") {
+			if path := cleanRelativePath(name); path != "" {
+				paths[path] = true
+			}
+		}
+	}
+	code, status, _ := GitCmdRaw(gitRoot, "status", "--porcelain=v1", "--untracked-files=all")
+	if code != 0 {
+		return nil, false
+	}
+	for _, line := range strings.Split(status, "\n") {
+		if path := cleanRelativePath(PorcelainPath(line)); path != "" {
+			paths[path] = true
+		}
+	}
+	ordered := make([]string, 0, len(paths))
+	for path := range paths {
+		ordered = append(ordered, path)
+	}
+	sort.Strings(ordered)
+	return ordered, true
+}
+
+func fingerprintPaths(
+	gitRoot string,
+	ordered []string,
+	readFile func(string) ([]byte, error),
+) (string, bool) {
+	if len(ordered) == 0 {
+		return "", true
+	}
 	var b strings.Builder
 	b.WriteString("issueops-ai-slop-clean:v1\n")
 	for _, rel := range ordered {
@@ -94,15 +197,15 @@ func ChangeFingerprint(record model.IssueOpsRecord) string {
 		if info.IsDir() {
 			continue
 		}
-		content, err := os.ReadFile(abs)
+		content, err := readFile(abs)
 		if err != nil {
-			return ""
+			return "", false
 		}
 		sum := sha256.Sum256(content)
 		b.WriteString(rel + "\x00" + hex.EncodeToString(sum[:]) + "\n")
 	}
 	sum := sha256.Sum256([]byte(b.String()))
-	return hex.EncodeToString(sum[:])
+	return hex.EncodeToString(sum[:]), true
 }
 
 func PorcelainPath(line string) string {

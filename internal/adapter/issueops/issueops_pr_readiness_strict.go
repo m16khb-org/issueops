@@ -30,6 +30,7 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bo
 	warnings := []string{}
 	currentHead := ""
 	currentFingerprint := ""
+	changeObservation := implementation.LocalChangeObservation{}
 
 	gitRoot := issueOpsStrictGitRoot(record)
 	if gitRoot == "" {
@@ -38,7 +39,11 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bo
 		missing = append(missing, "repo_git")
 	} else {
 		currentHead = issueOpsCurrentHead(record)
-		currentFingerprint = implementation.ChangeFingerprint(record)
+		changeObservation = implementation.ObserveLocalChangesAt(record, gitRoot)
+		currentFingerprint = changeObservation.Fingerprint
+		if !changeObservation.Verified {
+			missing = append(missing, "current_fingerprint")
+		}
 		branch := strings.TrimSpace(GitOut(gitRoot, "branch", "--show-current"))
 		if strings.TrimSpace(record.Branch) != "" && branch != strings.TrimSpace(record.Branch) {
 			missing = append(missing, "branch_match")
@@ -89,7 +94,7 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bo
 		missing = append(missing, docsMissing)
 	}
 	// schema_evidence는 non-strict 표면이 판정하지 않으므로 여기서 전체를 본다.
-	if schemaMissing := schemaEvidenceMissing(record, currentFingerprint); schemaMissing != "" {
+	if schemaMissing := schemaEvidenceMissingForPaths(record, changeObservation.Paths, currentFingerprint); schemaMissing != "" {
 		missing = append(missing, schemaMissing)
 	}
 	if strings.TrimSpace(record.AISlopCleanAt) != "" {

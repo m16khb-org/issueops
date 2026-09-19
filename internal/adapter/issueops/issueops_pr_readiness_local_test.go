@@ -1,9 +1,12 @@
 package issueops
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/issueops/implementation"
+	preflightadapter "issueops/internal/adapter/preflight"
 	"issueops/internal/contract/issueops"
 )
 
@@ -56,6 +59,53 @@ func TestIssueOpsStrictPRReadinessStillFetches(t *testing.T) {
 	}
 	if !fetched {
 		t.Fatalf("strict readiness must fetch, ran %v", commands)
+	}
+}
+
+func TestIssueOpsLocalPRReadinessSharesOneVerifiedChangeObservationWithSchemaGate(t *testing.T) {
+	repo := gitRepoWithProjectDocsForTest(t)
+	writeRepoFileForTest(t, repo, "db/migrations/001_add_index.sql", "CREATE INDEX idx_x ON x(id);\n")
+	baseSHA := strings.TrimSpace(preflightadapter.GitOut(repo, "rev-parse", "HEAD"))
+	branch := strings.TrimSpace(preflightadapter.GitOut(repo, "branch", "--show-current"))
+	record := issueops.IssueOpsRecord{
+		ID: "io-local-observation", Repo: repo, WorktreePath: repo, Branch: branch,
+		Phase: issueops.IssueOpsPhaseAISlopClean, PlanPath: filepath.Join(repo, ".issueops", "ADR.md"),
+		BranchPrepare: &issueops.IssueOpsBranchPrepare{BaseBranch: branch, BaseSHA: baseSHA, LinkVerified: true},
+		Execution:     &issueops.Execution{Mode: issueops.ExecutionModeDirect},
+		AISlopCleanAt: "2026-01-01T00:00:00Z",
+	}
+	previousCmd, previousRaw := implementation.GitCmd, implementation.GitCmdRaw
+	var commands []string
+	implementation.GitCmd = func(dir string, args ...string) (int, string, string) {
+		commands = append(commands, strings.Join(args, " "))
+		return preflightadapter.GitCmd(dir, args...)
+	}
+	implementation.GitCmdRaw = func(dir string, args ...string) (int, string, string) {
+		commands = append(commands, strings.Join(args, " "))
+		return preflightadapter.GitCmdRaw(dir, args...)
+	}
+	t.Cleanup(func() { implementation.GitCmd, implementation.GitCmdRaw = previousCmd, previousRaw })
+
+	ready := IssueOpsLocalPRReadiness(record)
+
+	if !containsString(ready.Missing, "schema_evidence") {
+		t.Fatalf("schema change must keep the schema evidence gate: %v", ready.Missing)
+	}
+	counts := map[string]int{}
+	for _, command := range commands {
+		switch {
+		case strings.HasPrefix(command, "rev-parse --verify"):
+			counts["base"]++
+		case strings.HasPrefix(command, "diff --name-only"):
+			counts["diff"]++
+		case strings.HasPrefix(command, "status --porcelain"):
+			counts["status"]++
+		case strings.HasPrefix(command, "rev-parse --is-inside-work-tree"):
+			counts["root"]++
+		}
+	}
+	if counts["root"] != 0 || counts["base"] != 1 || counts["diff"] != 2 || counts["status"] != 2 || len(commands) != 5 {
+		t.Fatalf("readiness change observation commands = %v (counts=%v), want one base resolution and two verified snapshots", commands, counts)
 	}
 }
 
