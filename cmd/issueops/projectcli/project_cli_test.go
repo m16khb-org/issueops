@@ -74,6 +74,27 @@ func TestRunProjectRouteDocs_joinsTaskArgs_whenTaskFlagIsOmitted(t *testing.T) {
 	}
 }
 
+func TestRunProjectRouteDocs_routesProfilingWithoutCommitReasons(t *testing.T) {
+	repo := t.TempDir()
+	out := captureStatusVerifyStdout(t, func() error {
+		return RunRouteDocs([]string{"--repo", repo, "--task", "performance profiling", "--json"})
+	})
+	var result projectdocs.ProjectDocsRouteResult
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatalf("decode route-docs json: %v\n%s", err, out)
+	}
+	for _, want := range []string{".issueops/ARCHITECTURE.md", ".issueops/TECH_STACK.md", ".issueops/TESTING.md"} {
+		if !projectRouteHasRel(result, want) {
+			t.Fatalf("performance route missing %s: %+v", want, result.Docs)
+		}
+	}
+	for _, doc := range result.Docs {
+		if doc.RelPath == ".issueops/COMMIT_POLICY.md" || strings.Contains(doc.Reason, "commit") {
+			t.Fatalf("performance route contains commit-only entry: %+v", doc)
+		}
+	}
+}
+
 func TestRunProjectRecord_recordsADR_whenRequiredFieldsAreProvided(t *testing.T) {
 	// Given
 	repo := t.TempDir()

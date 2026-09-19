@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 )
 
 func RouteProjectDocs(repoRoot, task string) (projectdocscontract.ProjectDocsRouteResult, error) {
@@ -60,6 +61,14 @@ func RouteProjectDocs(repoRoot, task string) (projectdocscontract.ProjectDocsRou
 }
 
 func routeDocsForTask(task string) []routeDoc {
+	var result []routeDoc
+	for _, clause := range splitTaskClauses(task) {
+		result = appendRouteDocsUnique(result, routeDocsForClause(clause)...)
+	}
+	return result
+}
+
+func routeDocsForClause(task string) []routeDoc {
 	base := []routeDoc{{"AGENTS.md", "repo-level agent entrypoint and document router"}}
 	p := func(name, reason string) routeDoc {
 		return routeDoc{filepath.ToSlash(filepath.Join(ProjectDocsDir, name)), reason}
@@ -85,16 +94,19 @@ func routeDocsForTask(task string) []routeDoc {
 	if strings.Contains(task, "adr") || strings.Contains(task, "decision") || strings.Contains(task, "alternative") || strings.Contains(task, "why") {
 		return add(p("ADR.md", "architecture decision rationale, rejected alternatives, and consequences"), p("ARCHITECTURE.md", "current structure affected by the decision"), p("CONSTITUTION.md", "principles that constrain decisions"))
 	}
+	if strings.Contains(task, "performance") || strings.Contains(task, "profiling") || strings.Contains(task, "성능") || strings.Contains(task, "프로파일링") {
+		return add(p("ARCHITECTURE.md", "performance-sensitive structure and boundaries"), p("TECH_STACK.md", "toolchain and profiling technology evidence"), p("TESTING.md", "performance verification and regression checks"))
+	}
 	if strings.Contains(task, "execution") || strings.Contains(task, "finish") || strings.Contains(task, "complete") || strings.Contains(task, "workflow") {
 		return add(p("AGENT_WORKFLOW.md", "agent start/work/verify/finish procedure"), p("TESTING.md", "verification evidence before completion"))
 	}
-	if strings.Contains(task, "commit") || strings.Contains(task, "pr") || strings.Contains(task, "push") {
+	if strings.Contains(task, "commit") || hasTaskToken(task, "pr") || strings.Contains(task, "push") {
 		return add(p("COMMIT_POLICY.md", "commit message, staging, and verification policy"), p("TESTING.md", "checks to run before commit/PR"), p("CAUTIONS.md", "project-specific commit risks"))
 	}
 	if strings.Contains(task, "openapi") || strings.Contains(task, "swagger") || strings.Contains(task, "endpoint") || strings.Contains(task, "controller") || strings.Contains(task, "dto") || strings.Contains(task, "api doc") || strings.Contains(task, "api spec") {
 		return add(p("OPEN_API_SPEC.md", "project-specific OpenAPI/Swagger static and agent review prompt"), p("TESTING.md", "API documentation check commands and static-vs-agent boundary"), p("AGENT_WORKFLOW.md", "verification workflow"), p("CAUTIONS.md", "known API documentation risks"))
 	}
-	if strings.Contains(task, "test") || strings.Contains(task, "testing") || strings.Contains(task, "spec") || strings.Contains(task, "verify") || strings.Contains(task, "ci") {
+	if strings.Contains(task, "test") || strings.Contains(task, "testing") || strings.Contains(task, "spec") || strings.Contains(task, "verify") || hasTaskToken(task, "ci") {
 		return add(p("TESTING.md", "well/poorly structured test guidance plus test/build/lint command candidates"), p("TECH_STACK.md", "toolchain evidence"), p("AGENT_WORKFLOW.md", "verification workflow"), p("CAUTIONS.md", "known verification risks"))
 	}
 	if strings.Contains(task, "ux") || strings.Contains(task, "style") || strings.Contains(task, "styling") || strings.Contains(task, "css") || strings.Contains(task, "typography") || strings.Contains(task, "palette") || strings.Contains(task, "theme") || strings.Contains(task, "color") || strings.Contains(task, "accessibility") || strings.Contains(task, "a11y") || strings.Contains(task, "animation") || strings.Contains(task, "motion") || strings.Contains(task, "redesign") {
@@ -110,4 +122,44 @@ func routeDocsForTask(task string) []routeDoc {
 		return add(p("OPERATIONS.md", "local development, environment, and deployment guidance"), p("TECH_STACK.md", "toolchain evidence"), p("CAUTIONS.md", "operational risks"))
 	}
 	return add(p("CONSTITUTION.md", "source-of-truth and operating principles"), p("AGENT_WORKFLOW.md", "default start/work/verify/finish workflow"), p("CONVENTIONS.md", "general editing rules"), p("CAUTIONS.md", "known project risks"), p("TESTING.md", "default test design and verification guidance"))
+}
+
+func splitTaskClauses(task string) []string {
+	task = strings.ReplaceAll(task, " 및 ", " and ")
+	parts := strings.Split(task, " and ")
+	clauses := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if clause := strings.TrimSpace(part); clause != "" {
+			clauses = append(clauses, clause)
+		}
+	}
+	if len(clauses) == 0 {
+		return []string{task}
+	}
+	return clauses
+}
+
+func hasTaskToken(task, token string) bool {
+	for _, field := range strings.FieldsFunc(task, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	}) {
+		if field == token {
+			return true
+		}
+	}
+	return false
+}
+
+func appendRouteDocsUnique(dst []routeDoc, docs ...routeDoc) []routeDoc {
+	seen := make(map[string]bool, len(dst)+len(docs))
+	for _, doc := range dst {
+		seen[doc.rel] = true
+	}
+	for _, doc := range docs {
+		if !seen[doc.rel] {
+			dst = append(dst, doc)
+			seen[doc.rel] = true
+		}
+	}
+	return dst
 }

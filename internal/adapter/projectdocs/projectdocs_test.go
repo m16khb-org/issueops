@@ -1,6 +1,7 @@
 package projectdocs
 
 import (
+	"encoding/json"
 	projectdocscontract "issueops/internal/contract/projectdocs"
 	projectdoc "issueops/internal/domain/projectdoc"
 	"os"
@@ -163,6 +164,131 @@ func TestRouteProjectDocsIncludesOptionalVCSForRemoteWork(t *testing.T) {
 	} {
 		if !routeContains(route.Docs, want) {
 			t.Fatalf("combined VCS/commit route missing %s: %+v", want, route.Docs)
+		}
+	}
+}
+
+func TestRouteProjectDocsMatchesShortAbbreviationsAsWholeTokens(t *testing.T) {
+	root := t.TempDir()
+	tests := []struct {
+		name      string
+		task      string
+		want      []string
+		notWanted []string
+	}{
+		{name: "PR review", task: "PR review", want: []string{".issueops/COMMIT_POLICY.md"}},
+		{name: "CI test", task: "CI test", want: []string{".issueops/TESTING.md", ".issueops/TECH_STACK.md"}},
+		{name: "CI token without test synonym", task: "CI pipeline", want: []string{".issueops/TESTING.md", ".issueops/TECH_STACK.md"}},
+		{name: "pull request phrase", task: "pull request", want: []string{".issueops/VCS.md"}},
+		{name: "OpenAPI endpoint phrase", task: "openapi endpoint", want: []string{".issueops/OPEN_API_SPEC.md"}},
+		{name: "profile is not PR", task: "profile", notWanted: []string{".issueops/COMMIT_POLICY.md"}},
+		{name: "improve is not PR", task: "improve", notWanted: []string{".issueops/COMMIT_POLICY.md"}},
+		{name: "principal is neither PR nor CI", task: "principal", notWanted: []string{".issueops/COMMIT_POLICY.md", ".issueops/TECH_STACK.md"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := RouteProjectDocs(root, tt.task)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range tt.want {
+				if !routeContains(route.Docs, want) {
+					t.Fatalf("route for %q missing %s: %+v", tt.task, want, route.Docs)
+				}
+			}
+			for _, unwanted := range tt.notWanted {
+				if routeContains(route.Docs, unwanted) {
+					t.Fatalf("route for %q unexpectedly contains %s: %+v", tt.task, unwanted, route.Docs)
+				}
+			}
+		})
+	}
+}
+
+func TestRouteProjectDocsRoutesProfilingWithoutCommitOnlyReasons(t *testing.T) {
+	root := t.TempDir()
+	for _, task := range []string{"performance profiling", "성능 프로파일링"} {
+		route, err := RouteProjectDocs(root, task)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, want := range []string{".issueops/ARCHITECTURE.md", ".issueops/TECH_STACK.md", ".issueops/TESTING.md"} {
+			if !routeContains(route.Docs, want) {
+				t.Fatalf("profiling route for %q missing %s: %+v", task, want, route.Docs)
+			}
+		}
+		for _, doc := range route.Docs {
+			if doc.RelPath == ".issueops/COMMIT_POLICY.md" || strings.Contains(doc.Reason, "commit") {
+				t.Fatalf("profiling route for %q contains commit-only entry: %+v", task, doc)
+			}
+		}
+	}
+}
+
+func TestRouteProjectDocsRetainsAllCategoriesInCompoundRequests(t *testing.T) {
+	root := t.TempDir()
+	tests := []struct {
+		task string
+		want []string
+	}{
+		{
+			task: "performance profiling and openapi endpoint",
+			want: []string{"AGENTS.md", ".issueops/ARCHITECTURE.md", ".issueops/TECH_STACK.md", ".issueops/TESTING.md", ".issueops/OPEN_API_SPEC.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CAUTIONS.md"},
+		},
+		{
+			task: "PR review and CI test",
+			want: []string{"AGENTS.md", ".issueops/COMMIT_POLICY.md", ".issueops/TESTING.md", ".issueops/CAUTIONS.md", ".issueops/TECH_STACK.md", ".issueops/AGENT_WORKFLOW.md"},
+		},
+	}
+	for _, tt := range tests {
+		route, err := RouteProjectDocs(root, tt.task)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := make([]string, 0, len(route.Docs))
+		for _, doc := range route.Docs {
+			got = append(got, doc.RelPath)
+		}
+		if strings.Join(got, "\n") != strings.Join(tt.want, "\n") {
+			t.Fatalf("compound route for %q = %v, want %v", tt.task, got, tt.want)
+		}
+	}
+}
+
+func TestRouteProjectDocsQualityTableHasNoRequiredOmissions(t *testing.T) {
+	type qualityCase struct {
+		Category     string   `json:"category"`
+		Request      string   `json:"request"`
+		RequiredDocs []string `json:"required_docs"`
+	}
+	raw, err := os.ReadFile(filepath.Join("testdata", "route_quality_cases.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []qualityCase
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) != 12 {
+		t.Fatalf("quality table has %d cases, want 12", len(cases))
+	}
+	categories := map[string]int{}
+	root := t.TempDir()
+	for _, tc := range cases {
+		categories[tc.Category]++
+		route, err := RouteProjectDocs(root, tc.Request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, required := range tc.RequiredDocs {
+			if !routeContains(route.Docs, required) {
+				t.Errorf("%s request %q missing required doc %s: %+v", tc.Category, tc.Request, required, route.Docs)
+			}
+		}
+	}
+	for _, category := range []string{"implementation", "verification", "architecture", "api", "vcs", "operations"} {
+		if categories[category] != 2 {
+			t.Errorf("quality table category %s has %d cases, want 2", category, categories[category])
 		}
 	}
 }

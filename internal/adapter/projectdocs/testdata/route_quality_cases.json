@@ -1,0 +1,62 @@
+[
+  {
+    "category": "implementation",
+    "request": "implement issueops handler",
+    "required_docs": ["AGENTS.md", ".issueops/CONSTITUTION.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CONVENTIONS.md", ".issueops/CAUTIONS.md", ".issueops/TESTING.md"]
+  },
+  {
+    "category": "implementation",
+    "request": "edit application code",
+    "required_docs": ["AGENTS.md", ".issueops/CONSTITUTION.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CONVENTIONS.md", ".issueops/CAUTIONS.md", ".issueops/TESTING.md"]
+  },
+  {
+    "category": "verification",
+    "request": "run CI test",
+    "required_docs": ["AGENTS.md", ".issueops/TESTING.md", ".issueops/TECH_STACK.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CAUTIONS.md"]
+  },
+  {
+    "category": "verification",
+    "request": "verify regression failure",
+    "required_docs": ["AGENTS.md", ".issueops/CAUTIONS.md", ".issueops/TESTING.md", ".issueops/ADR.md"]
+  },
+  {
+    "category": "architecture",
+    "request": "architecture refactor",
+    "required_docs": ["AGENTS.md", ".issueops/ARCHITECTURE.md", ".issueops/DESIGN.md", ".issueops/ADR.md", ".issueops/CONSTITUTION.md", ".issueops/CONVENTIONS.md"]
+  },
+  {
+    "category": "architecture",
+    "request": "ADR decision alternatives",
+    "required_docs": ["AGENTS.md", ".issueops/ADR.md", ".issueops/ARCHITECTURE.md", ".issueops/CONSTITUTION.md"]
+  },
+  {
+    "category": "api",
+    "request": "openapi endpoint",
+    "required_docs": ["AGENTS.md", ".issueops/OPEN_API_SPEC.md", ".issueops/TESTING.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CAUTIONS.md"]
+  },
+  {
+    "category": "api",
+    "request": "swagger controller DTO",
+    "required_docs": ["AGENTS.md", ".issueops/OPEN_API_SPEC.md", ".issueops/TESTING.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CAUTIONS.md"]
+  },
+  {
+    "category": "vcs",
+    "request": "GitLab merge request",
+    "required_docs": ["AGENTS.md", ".issueops/VCS.md", ".issueops/CONSTITUTION.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CONVENTIONS.md", ".issueops/CAUTIONS.md", ".issueops/TESTING.md"]
+  },
+  {
+    "category": "vcs",
+    "request": "GitHub pull request",
+    "required_docs": ["AGENTS.md", ".issueops/VCS.md", ".issueops/CONSTITUTION.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CONVENTIONS.md", ".issueops/CAUTIONS.md", ".issueops/TESTING.md"]
+  },
+  {
+    "category": "operations",
+    "request": "deploy local service",
+    "required_docs": ["AGENTS.md", ".issueops/OPERATIONS.md", ".issueops/TECH_STACK.md", ".issueops/CAUTIONS.md"]
+  },
+  {
+    "category": "operations",
+    "request": "operate local environment",
+    "required_docs": ["AGENTS.md", ".issueops/OPERATIONS.md", ".issueops/TECH_STACK.md", ".issueops/CAUTIONS.md"]
+  }
+]
