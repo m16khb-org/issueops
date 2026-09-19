@@ -145,9 +145,9 @@ func (f *executionLaunchTimingFake) Dispatch(_ context.Context, req port.OrcaDis
 	}, nil
 }
 
-func (f *executionLaunchTimingFake) SendTerminalPrompt(context.Context, string, string) error {
+func (f *executionLaunchTimingFake) SendTerminalPrompt(context.Context, string, string, string) (port.OrcaPromptReceipt, error) {
 	f.calls = append(f.calls, "send-terminal-prompt")
-	return nil
+	return port.OrcaPromptReceipt{}, nil
 }
 
 func (f *executionLaunchTimingFake) ListTerminals(context.Context, string) ([]port.OrcaTerminal, error) {

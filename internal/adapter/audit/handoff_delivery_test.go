@@ -23,17 +23,18 @@ func TestAuditHandoffDeliveryObservationWritesBounded0600JSONL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !record.OK || record.Kind != "handoff_delivery_observation" || record.LogPath != filepath.Join(stateDir, "audit", "handoff-delivery.jsonl") {
+	if !record.OK || record.Kind != "handoff_delivery_observation" || record.SchemaVersion != 1 || record.LogPath != "audit/handoff-delivery.jsonl" || record.RecordDigest == "" {
 		t.Fatalf("record=%+v", record)
 	}
-	info, err := os.Stat(record.LogPath)
+	logPath := filepath.Join(stateDir, record.LogPath)
+	info, err := os.Stat(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if info.Mode().Perm() != 0o600 {
 		t.Fatalf("audit log mode=%#o", info.Mode().Perm())
 	}
-	data, err := os.ReadFile(record.LogPath)
+	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,6 +47,19 @@ func TestAuditHandoffDeliveryObservationWritesBounded0600JSONL(t *testing.T) {
 	}
 	if decoded.Observation.AttemptID != observation.AttemptID || decoded.Observation.Receipt.Location != "<redacted>" {
 		t.Fatalf("decoded=%+v", decoded)
+	}
+}
+
+func TestAuditHandoffDeliveryObservationAcceptsUnknownProcessPreCall(t *testing.T) {
+	stateDir := t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
+	installAuditStateDepsForTest(t)
+
+	observation := auditDeliveryObservationFixture()
+	observation.Target.Process = nil
+	observation.Target.ProcessIncarnation = ""
+	if _, err := AuditHandoffDeliveryObservation(observation); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -116,9 +130,39 @@ func TestReadAndFoldHandoffDeliveryAuditObservations(t *testing.T) {
 	if len(decisions) != 2 || !decisions[0].Accepted || !decisions[1].Accepted {
 		t.Fatalf("decisions=%+v", decisions)
 	}
-	got := folded[first.AttemptID]
+	got := folded["io-delivery\x00lineage-1"]
 	if got.InputAccepted.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved {
 		t.Fatalf("folded observation did not merge accepted input: %+v", got)
+	}
+}
+
+func TestFoldHandoffDeliveryAuditObservationsPreservesVerifiedPrefixOnTruncatedTail(t *testing.T) {
+	stateDir := t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
+	installAuditStateDepsForTest(t)
+
+	if _, err := AuditHandoffDeliveryObservation(auditDeliveryObservationFixture()); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(stateDir, "audit", "handoff-delivery.jsonl")
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0o600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := file.WriteString(`{"ok":true,"kind":"handoff_delivery_observation"`); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	observations, err := ReadHandoffDeliveryAuditObservations()
+	if err == nil || len(observations) != 1 {
+		t.Fatalf("observations=%d err=%v", len(observations), err)
+	}
+	folded, decisions, err := FoldHandoffDeliveryAuditObservations()
+	if err == nil || len(folded) != 1 || len(decisions) != 1 || !decisions[0].Accepted {
+		t.Fatalf("folded=%d decisions=%+v err=%v", len(folded), decisions, err)
 	}
 }
 
@@ -223,6 +267,22 @@ func TestHandoffDeliveryAuditFailsClosedOnUnsafeLogFile(t *testing.T) {
 			},
 		},
 		{
+			name: "symlink parent",
+			setup: func(t *testing.T, path string) {
+				t.Helper()
+				if err := os.Remove(filepath.Dir(path)); err != nil {
+					t.Fatal(err)
+				}
+				target := filepath.Join(filepath.Dir(filepath.Dir(path)), "audit-target")
+				if err := os.Mkdir(target, 0o700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(target, filepath.Dir(path)); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
 			name: "permissive permissions",
 			setup: func(t *testing.T, path string) {
 				t.Helper()
@@ -254,10 +314,12 @@ func TestHandoffDeliveryAuditFailsClosedOnUnsafeLogFile(t *testing.T) {
 
 func auditDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryObservation {
 	return issueopscontract.IssueOpsHandoffDeliveryObservation{
-		SchemaVersion: issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
-		AttemptID:     "attempt-1",
-		LifecycleID:   "io-delivery",
-		PromptSHA256:  strings.Repeat("a", 64),
+		SchemaVersion:  issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
+		AttemptID:      "attempt-1",
+		LineageID:      "lineage-1",
+		LifecycleID:    "io-delivery",
+		PromptSHA256:   strings.Repeat("a", 64),
+		MaterialSHA256: strings.Repeat("e", 64),
 		Request: issueopscontract.IssueOpsHandoffDeliveryRequest{
 			DurableID: "request-1",
 		},
@@ -265,7 +327,7 @@ func auditDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryO
 			Name: "orca", Version: "1.4.200", Path: "/usr/local/bin/orca", RuntimeID: "runtime-1", MachineID: "machine-1", ServerID: "server-1",
 		},
 		Target: issueopscontract.IssueOpsHandoffDeliveryTarget{
-			TerminalID: "term-1", PaneID: "pane-1", Process: issueopscontract.NativeProcessReceipt{
+			TerminalID: "term-1", PaneID: "pane-1", ProcessIncarnation: "incarnation-1", Process: &issueopscontract.NativeProcessReceipt{
 				PID: 8080, StartedAt: "2026-09-20T10:00:00Z", Executable: "/usr/local/bin/codex",
 			},
 		},

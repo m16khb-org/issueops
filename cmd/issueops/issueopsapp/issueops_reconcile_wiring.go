@@ -111,6 +111,9 @@ func (e *coreReconcileEffects) inspectStage(ctx context.Context, intent leaseapp
 	if err != nil {
 		return leasecontract.ReconcileStageInventory{}, false, err
 	}
+	if err := consumeHandoffDeliveryRecoveryEvidence(request); err != nil {
+		return leasecontract.ReconcileStageInventory{}, true, err
+	}
 	inventory, err := e.provisioner.InspectIntent(ctx, request)
 	if err != nil {
 		return leasecontract.ReconcileStageInventory{}, true, err
@@ -134,13 +137,22 @@ func (e *coreReconcileEffects) invokeStage(ctx context.Context, intent leaseapp.
 	if err != nil {
 		return leasecontract.ReconcileStageReceipt{}, "unknown", err
 	}
+	if err := observeHandoffDeliveryBefore(request, e.now); err != nil {
+		return leasecontract.ReconcileStageReceipt{}, "unknown", err
+	}
 	receipt, err := e.provisioner.InvokeIntent(ctx, request)
 	if err != nil {
+		if observeErr := observeHandoffDeliveryFailure(request, err, e.now); observeErr != nil {
+			err = errors.Join(err, observeErr)
+		}
 		invocation := "unknown"
 		if typed, ok := errors.AsType[*port.OrcaError](err); ok && !typed.Invoked {
 			invocation = "not_invoked_proven"
 		}
 		return leasecontract.ReconcileStageReceipt{}, invocation, err
+	}
+	if err := observeHandoffDeliveryAfter(request, receipt, e.now); err != nil {
+		return leasecontract.ReconcileStageReceipt{}, "unknown", err
 	}
 	converted, err := reconcileContractReceipt(receipt)
 	return converted, "", err

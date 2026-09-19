@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"issueops/internal/contract/issueops"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -74,5 +75,53 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 	}
 	if advanced.Execution.Lease.Status != issueops.LeaseStatusReleased || advanced.Execution.Orca != nil {
 		t.Fatalf("worktree receipt advanced lease or owner binding: %#v", advanced.Execution)
+	}
+}
+
+func TestRecordOrcaIntentTerminalSendFailurePreservesDispatchAndPromptRequestIDs(t *testing.T) {
+	stateRoot, record, payload := resumeIntentFixture(t, "github", 16)
+	var err error
+	for payload.Stage != preparationcontract.IntentStageDispatch {
+		receipt := port.ExecutionOrcaIntentReceipt{}
+		switch payload.Stage {
+		case preparationcontract.IntentStageTerminal:
+			receipt.TerminalPTYID = "pty-next"
+		case preparationcontract.IntentStageRun:
+			receipt.RunID = "run-next"
+		case preparationcontract.IntentStageRunBind:
+			receipt.RunID = "run-next"
+			receipt.RunBound = true
+		case preparationcontract.IntentStageTask:
+			receipt.TaskID = "task-next"
+		default:
+			t.Fatalf("unexpected stage before dispatch: %s", payload.Stage)
+		}
+		record, payload, err = advanceOrcaIntentReceipt(context.Background(), stateRoot, record, payload, receipt, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := ReadExecutionResumeIntent(stateRoot, record.ID, payload.OperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cause := &port.OrcaError{
+		Code: "operation_unknown", Invoked: true, CallPhase: "terminal_send",
+		DispatchRequestID:      "11111111-1111-4111-8111-111111111111",
+		OrchestrationRequestID: "22222222-2222-4222-8222-222222222222",
+	}
+	if err := RecordExecutionResumeIntentFailure(stateRoot, state, orcaIntentUnknown, cause, nil); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := ReadExecutionResumeIntent(stateRoot, record.ID, payload.OperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatedPayload, err := executionResumeIntentPayload(updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updatedPayload.OrcaRequestID != "11111111-1111-4111-8111-111111111111" || updatedPayload.OrcaPromptRequestID != "22222222-2222-4222-8222-222222222222" {
+		t.Fatalf("durable IDs not preserved separately: dispatch=%q prompt=%q", updatedPayload.OrcaRequestID, updatedPayload.OrcaPromptRequestID)
 	}
 }

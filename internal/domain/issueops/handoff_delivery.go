@@ -18,16 +18,22 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 	if observation.SchemaVersion != issueopscontract.IssueOpsHandoffDeliverySchemaVersion {
 		return fmt.Errorf("unsupported delivery observation schema")
 	}
-	if strings.TrimSpace(observation.AttemptID) == "" {
+	if strings.TrimSpace(observation.AttemptID) == "" || len(observation.AttemptID) > handoffDeliveryFieldLimit {
 		return fmt.Errorf("delivery observation attempt_id is required")
 	}
-	if strings.TrimSpace(observation.LifecycleID) == "" {
+	if strings.TrimSpace(observation.LineageID) == "" || len(observation.LineageID) > handoffDeliveryFieldLimit {
+		return fmt.Errorf("delivery observation lineage_id is required")
+	}
+	if strings.TrimSpace(observation.LifecycleID) == "" || len(observation.LifecycleID) > handoffDeliveryFieldLimit {
 		return fmt.Errorf("delivery observation lifecycle_id is required")
 	}
 	if !handoffDeliveryDigest.MatchString(strings.TrimSpace(observation.PromptSHA256)) {
 		return fmt.Errorf("delivery observation prompt digest is invalid")
 	}
-	if err := validateHandoffDeliveryRequest(observation.Request, observation.AttemptID); err != nil {
+	if !handoffDeliveryDigest.MatchString(strings.TrimSpace(observation.MaterialSHA256)) {
+		return fmt.Errorf("delivery observation material digest is invalid")
+	}
+	if err := validateHandoffDeliveryRequest(observation.Request); err != nil {
 		return err
 	}
 	if observation.SourceGeneration == 0 {
@@ -70,11 +76,17 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 			return err
 		}
 	}
+	if observation.ExpectedOwnerHost != "" && observation.ExpectedOwnerHost != "codex" && observation.ExpectedOwnerHost != "claude" && observation.ExpectedOwnerHost != "omo" {
+		return fmt.Errorf("delivery observation expected owner host is invalid")
+	}
 	if err := validateHandoffDeliveryClaimConsistency(observation); err != nil {
 		return err
 	}
 	if err := validateHandoffDeliveryModeEvidence(observation); err != nil {
 		return err
+	}
+	if !handoffDeliveryHasEvidence(observation) {
+		return fmt.Errorf("delivery observation requires at least one observed evidence state")
 	}
 	return nil
 }
@@ -83,28 +95,37 @@ func FoldHandoffDeliveryObservations(observations []issueopscontract.IssueOpsHan
 	folded := map[string]issueopscontract.IssueOpsHandoffDeliveryObservation{}
 	decisions := []issueopscontract.IssueOpsHandoffDeliveryDecision{}
 	for _, observation := range observations {
-		attemptID := strings.TrimSpace(observation.AttemptID)
-		if attemptID == "" {
-			decisions = append(decisions, handoffDeliveryReject("delivery observation attempt_id is required"))
+		key := HandoffDeliveryFoldKey(observation)
+		if key == "" {
+			decisions = append(decisions, handoffDeliveryReject("delivery observation lineage identity is required"))
 			continue
 		}
-		current, ok := folded[attemptID]
+		current, ok := folded[key]
 		if !ok {
 			if err := ValidateHandoffDeliveryObservation(observation); err != nil {
 				decisions = append(decisions, handoffDeliveryReject(err.Error()))
 				continue
 			}
-			folded[attemptID] = observation
+			folded[key] = observation
 			decisions = append(decisions, issueopscontract.IssueOpsHandoffDeliveryDecision{Accepted: true})
 			continue
 		}
 		merged, decision := MergeHandoffDeliveryObservation(current, observation)
 		decisions = append(decisions, decision)
 		if decision.Accepted {
-			folded[attemptID] = merged
+			folded[key] = merged
 		}
 	}
 	return folded, decisions
+}
+
+func HandoffDeliveryFoldKey(observation issueopscontract.IssueOpsHandoffDeliveryObservation) string {
+	lifecycleID := strings.TrimSpace(observation.LifecycleID)
+	lineageID := strings.TrimSpace(observation.LineageID)
+	if lifecycleID == "" || lineageID == "" {
+		return ""
+	}
+	return lifecycleID + "\x00" + lineageID
 }
 
 func MergeHandoffDeliveryObservation(current, next issueopscontract.IssueOpsHandoffDeliveryObservation) (issueopscontract.IssueOpsHandoffDeliveryObservation, issueopscontract.IssueOpsHandoffDeliveryDecision) {
@@ -127,7 +148,11 @@ func MergeHandoffDeliveryObservation(current, next issueopscontract.IssueOpsHand
 		return current, handoffDeliveryReject("cmux raw input cannot prove native turn")
 	}
 	if next.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved {
-		if err := validateHandoffDeliveryOwnerClaim(current, next.OwnerClaim); err != nil {
+		ownerCheck := current
+		if ownerCheck.OwnerActor == nil {
+			ownerCheck.OwnerActor = next.OwnerActor
+		}
+		if err := validateHandoffDeliveryOwnerClaim(ownerCheck, next.OwnerClaim); err != nil {
 			return current, handoffDeliveryReject(err.Error())
 		}
 	}
@@ -137,12 +162,19 @@ func MergeHandoffDeliveryObservation(current, next issueopscontract.IssueOpsHand
 	merged.NativeTurnObserved = mergeHandoffDeliveryState(merged.NativeTurnObserved, next.NativeTurnObserved)
 	merged.OwnerClaimed = mergeHandoffDeliveryState(merged.OwnerClaimed, next.OwnerClaimed)
 	merged.Ambiguous = mergeHandoffDeliveryState(merged.Ambiguous, next.Ambiguous)
-	if merged.Request.RetryRequestID == "" && next.Request.RetryRequestID != "" {
-		merged.Request.RetryRequestID = next.Request.RetryRequestID
-		merged.Request.RetryOfAttempt = next.Request.RetryOfAttempt
+	if merged.Request.DurableID == "" {
+		merged.Request.DurableID = next.Request.DurableID
 	}
+	merged.Target = mergeHandoffDeliveryTarget(merged.Target, next.Target)
 	if next.OwnerClaim.Claimed {
 		merged.OwnerClaim = next.OwnerClaim
+	}
+	if merged.OwnerActor == nil && next.OwnerActor != nil {
+		actor := *next.OwnerActor
+		merged.OwnerActor = &actor
+	}
+	if strings.TrimSpace(next.Receipt.Location) != "" && strings.TrimSpace(next.Receipt.Digest) != "" {
+		merged.Receipt = next.Receipt
 	}
 	return merged, issueopscontract.IssueOpsHandoffDeliveryDecision{Accepted: true}
 }
@@ -176,8 +208,17 @@ func validateHandoffDeliveryTarget(target issueopscontract.IssueOpsHandoffDelive
 	if strings.TrimSpace(target.TerminalID) == "" && strings.TrimSpace(target.PaneID) == "" {
 		return fmt.Errorf("delivery observation terminal or pane identity is required")
 	}
-	if target.Process.PID <= 0 || strings.TrimSpace(target.Process.StartedAt) == "" || strings.TrimSpace(target.Process.Executable) == "" {
-		return fmt.Errorf("delivery observation process identity is required")
+	for name, value := range map[string]string{
+		"terminal_id":         target.TerminalID,
+		"pane_id":             target.PaneID,
+		"process_incarnation": target.ProcessIncarnation,
+	} {
+		if len(value) > handoffDeliveryFieldLimit {
+			return fmt.Errorf("delivery observation %s is too large", name)
+		}
+	}
+	if target.Process != nil && (target.Process.PID <= 0 || strings.TrimSpace(target.Process.StartedAt) == "" || strings.TrimSpace(target.Process.Executable) == "" || len(target.Process.Executable) > handoffDeliveryFieldLimit) {
+		return fmt.Errorf("delivery observation process identity is invalid")
 	}
 	return nil
 }
@@ -204,10 +245,14 @@ func handoffDeliveryIdentityMismatch(current, next issueopscontract.IssueOpsHand
 	switch {
 	case current.AttemptID != next.AttemptID:
 		return "delivery observation attempt identity changed"
+	case current.LineageID != next.LineageID:
+		return "delivery observation lineage identity changed"
 	case current.LifecycleID != next.LifecycleID:
 		return "delivery observation lifecycle identity changed"
 	case current.PromptSHA256 != next.PromptSHA256:
 		return "delivery observation prompt digest changed"
+	case current.MaterialSHA256 != next.MaterialSHA256:
+		return "delivery observation material digest changed"
 	case requestReason != "":
 		return requestReason
 	case current.CreatedAt != next.CreatedAt:
@@ -216,12 +261,10 @@ func handoffDeliveryIdentityMismatch(current, next issueopscontract.IssueOpsHand
 		return "delivery observation source generation changed"
 	case !reflect.DeepEqual(current.Launcher, next.Launcher):
 		return "delivery observation launcher identity changed"
-	case !reflect.DeepEqual(current.Target, next.Target):
+	case handoffDeliveryTargetMismatch(current.Target, next.Target):
 		return "delivery observation process identity changed"
-	case !reflect.DeepEqual(current.OwnerActor, next.OwnerActor):
+	case current.OwnerActor != nil && next.OwnerActor != nil && !reflect.DeepEqual(current.OwnerActor, next.OwnerActor):
 		return "delivery observation owner identity changed"
-	case !reflect.DeepEqual(current.Receipt, next.Receipt):
-		return "delivery observation receipt identity changed"
 	default:
 		return ""
 	}
@@ -238,14 +281,8 @@ func validateHandoffDeliveryOwnerClaim(current issueopscontract.IssueOpsHandoffD
 }
 
 func handoffDeliveryRequestIdentityMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryRequest) string {
-	if current.DurableID != next.DurableID {
+	if current.DurableID != "" && next.DurableID != "" && current.DurableID != next.DurableID {
 		return "delivery observation request identity changed"
-	}
-	if current.RetryRequestID != "" && next.RetryRequestID != "" && current.RetryRequestID != next.RetryRequestID {
-		return "delivery observation retry request identity changed"
-	}
-	if current.RetryOfAttempt != "" && next.RetryOfAttempt != "" && current.RetryOfAttempt != next.RetryOfAttempt {
-		return "delivery observation retry request identity changed"
 	}
 	return ""
 }
@@ -286,14 +323,9 @@ func mergeHandoffDeliveryState(current, next issueopscontract.IssueOpsHandoffDel
 	return current
 }
 
-func validateHandoffDeliveryRequest(request issueopscontract.IssueOpsHandoffDeliveryRequest, attemptID string) error {
-	if strings.TrimSpace(request.DurableID) == "" || len(request.DurableID) > handoffDeliveryFieldLimit {
+func validateHandoffDeliveryRequest(request issueopscontract.IssueOpsHandoffDeliveryRequest) error {
+	if len(request.DurableID) > handoffDeliveryFieldLimit {
 		return fmt.Errorf("delivery observation durable request identity is invalid")
-	}
-	if request.RetryRequestID != "" {
-		if len(request.RetryRequestID) > handoffDeliveryFieldLimit || strings.TrimSpace(request.RetryOfAttempt) != strings.TrimSpace(attemptID) {
-			return fmt.Errorf("delivery observation retry request identity is invalid")
-		}
 	}
 	return nil
 }
@@ -351,9 +383,10 @@ func validHandoffDeliveryEvidenceForState(stateName, evidence string, observatio
 		switch evidence {
 		case issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherAccepted,
-			issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatch,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput:
 			return true
+		case issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatch:
+			return observation.ExpectedOwnerHost != "omo"
 		case issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendAccepted:
 			return handoffDeliveryOmoEvidenceAllowed(observation)
 		default:
@@ -366,6 +399,7 @@ func validHandoffDeliveryEvidenceForState(stateName, evidence string, observatio
 	case "ambiguous":
 		switch evidence {
 		case issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost,
+			issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceTimeout,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceAgentPromptStalled,
 			issueopscontract.IssueOpsHandoffDeliveryEvidenceHerdrWaitState,
@@ -389,7 +423,45 @@ func validHandoffDeliveryEvidenceForState(stateName, evidence string, observatio
 
 func handoffDeliveryOmoEvidenceAllowed(observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
 	return observation.Launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherOrca &&
-		observation.OwnerActor != nil && observation.OwnerActor.Host == "omo"
+		((observation.OwnerActor != nil && observation.OwnerActor.Host == "omo") || observation.ExpectedOwnerHost == "omo")
+}
+
+func handoffDeliveryHasEvidence(observation issueopscontract.IssueOpsHandoffDeliveryObservation) bool {
+	for _, state := range []issueopscontract.IssueOpsHandoffDeliveryState{
+		observation.InputAccepted,
+		observation.NativeTurnObserved,
+		observation.OwnerClaimed,
+		observation.Ambiguous,
+	} {
+		if state.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved {
+			return true
+		}
+	}
+	return false
+}
+
+func handoffDeliveryTargetMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) bool {
+	if current.TerminalID != next.TerminalID || current.PaneID != next.PaneID {
+		return true
+	}
+	if current.ProcessIncarnation != "" && next.ProcessIncarnation != "" && current.ProcessIncarnation != next.ProcessIncarnation {
+		return true
+	}
+	if current.Process != nil && next.Process != nil && !reflect.DeepEqual(current.Process, next.Process) {
+		return true
+	}
+	return false
+}
+
+func mergeHandoffDeliveryTarget(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) issueopscontract.IssueOpsHandoffDeliveryTarget {
+	if current.ProcessIncarnation == "" {
+		current.ProcessIncarnation = next.ProcessIncarnation
+	}
+	if current.Process == nil && next.Process != nil {
+		process := *next.Process
+		current.Process = &process
+	}
+	return current
 }
 
 func handoffDeliveryReject(reason string) issueopscontract.IssueOpsHandoffDeliveryDecision {

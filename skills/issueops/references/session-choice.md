@@ -112,6 +112,31 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
 7. 실행 결과가 모호하면 새 세션을 또 띄우지 않고 기존 terminal/session을 확인한다.
    인계 전달을 확인하면 원래 세션은 종료 보고한다. 구현 완료를 기다리는 감독 루프를 만들지 않는다.
 
+Orca 1.4.200 이상에서 인계 전달을 관측할 때 IssueOps operation ID와 Orca mutation request ID를
+혼동하지 않는다. `newExecutionOperationID()`는 IssueOps intent CAS lineage이고 Orca의
+`--retry-request` 값이 아니다. 설치 번들의 `shared/orchestration-retry-request-id.js`는
+`--retry-request`를 UUID로 검증하며, “Orca reported for the original request; omit to start a new request”를
+계약으로 둔다. 따라서 첫 `orca orchestration dispatch`와 첫 `orca terminal send`에는
+`--retry-request`를 붙이지 않는다. 성공 응답의 `mutation.requestId` 또는 ambiguous error의
+`data.orchestrationRequestId`로 받은 UUID만 같은 외부 호출의 read-only recovery에서 재사용한다.
+
+Omo 인계는 durable 외부 호출이 두 개다. `orchestration dispatch --return-preamble --inject=false`가
+반환하는 dispatch mutation UUID와, 그 preamble을 전달하는 `terminal send` prompt UUID는 서로 다른
+identity다. dispatch UUID를 terminal send의 `--retry-request`로 넘기지 않고, terminal prompt UUID를
+dispatch recovery에 쓰지 않는다. dispatch 성공은 preamble 생성 증거일 뿐 Omo 입력 수락이 아니다.
+Omo 입력 수락은 `terminal send`의 prompt receipt(`requestId`, `stages`, `provider`, `observation`,
+`processIncarnation`, `generation`, `baselineWorkingSequence`)로만 기록한다. `turn_started` 같은
+native turn 관측과 IssueOps owner claim은 여전히 별도 상태이며, claim/status는 IssueOps claim CAS만
+바꾼다.
+
+`orca orchestration request-show --request <uuid> --json`은 read-only evidence다. 설치 번들의
+`handlers/orchestration/mutation-request-show-handler.js`와 `shared/orchestration-mutation-request.js`는
+top-level `requestId`, `state`(`completed|pending|absent`), `method`, `interpretation`을 출력한다.
+`completed`는 Orca가 같은 UUID replay를 idempotent하게 처리한다는 증거이고, `pending`·`absent`도
+새 IssueOps owner나 자동 retry 권한이 아니다. IssueOps handoff delivery observation은 folded evidence로
+현재 lineage/prompt/material/runtime/generation과 충돌하는 recovery를 fail-closed시키지만, blind retry,
+새 owner claim, status promotion을 승인하지 않는다.
+
 인계문에는 다음 내용을 실제 값으로 채운다.
 
 ```text

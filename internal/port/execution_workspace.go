@@ -99,13 +99,17 @@ const (
 // ExecutionOrcaIntentRequest is the complete, durable identity for one Orca
 // mutation. The core persists this identity before InvokeIntent is allowed.
 type ExecutionOrcaIntentRequest struct {
-	Stage         ExecutionOrcaIntentStage       `json:"stage"`
-	Marker        string                         `json:"marker"`
-	Workspace     ExecutionWorkspaceRequest      `json:"workspace"`
-	Probe         ExecutionOrcaProbeRequest      `json:"probe"`
-	Prepared      *ExecutionOrcaWorkspaceReceipt `json:"prepared,omitempty"`
-	Launch        *ExecutionOrcaLaunchRequest    `json:"launch,omitempty"`
-	TerminalPTYID string                         `json:"terminal_pty_id,omitempty"`
+	Stage                ExecutionOrcaIntentStage       `json:"stage"`
+	OperationID          string                         `json:"operation_id,omitempty"`
+	RetryRequestID       string                         `json:"retry_request_id,omitempty"`
+	PromptRetryRequestID string                         `json:"prompt_retry_request_id,omitempty"`
+	SourceGeneration     uint64                         `json:"source_generation,omitempty"`
+	Marker               string                         `json:"marker"`
+	Workspace            ExecutionWorkspaceRequest      `json:"workspace"`
+	Probe                ExecutionOrcaProbeRequest      `json:"probe"`
+	Prepared             *ExecutionOrcaWorkspaceReceipt `json:"prepared,omitempty"`
+	Launch               *ExecutionOrcaLaunchRequest    `json:"launch,omitempty"`
+	TerminalPTYID        string                         `json:"terminal_pty_id,omitempty"`
 	// TerminalHandle is a transient observation only. Adapters must re-resolve
 	// the current handle from Prepared.WorktreeID + TerminalPTYID and must not
 	// use this value as authority. The core never persists it.
@@ -123,6 +127,8 @@ type ExecutionOrcaIntentReceipt struct {
 	RunBound       bool                           `json:"run_bound,omitempty"`
 	TaskID         string                         `json:"task_id,omitempty"`
 	DispatchID     string                         `json:"dispatch_id,omitempty"`
+	RequestID      string                         `json:"request_id,omitempty"`
+	PromptReceipt  *OrcaPromptReceipt             `json:"prompt_receipt,omitempty"`
 }
 
 type ExecutionOrcaIntentInventory struct {

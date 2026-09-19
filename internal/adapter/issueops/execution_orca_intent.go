@@ -124,6 +124,16 @@ func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.Issue
 		next := record
 		next.Execution.Failure = &issueops.ExecutionFailure{OperationID: expected.OperationID, Code: "external_operation_ambiguous", Message: boundedExecutionRemoteDiagnostic(cause), At: executionNow(now)}
 		expected.InvocationState = invocation
+		if typed, ok := errors.AsType[*port.OrcaError](cause); ok && strings.TrimSpace(typed.OrchestrationRequestID) != "" {
+			if typed.CallPhase == "terminal_send" {
+				if strings.TrimSpace(typed.DispatchRequestID) != "" {
+					expected.OrcaRequestID = strings.TrimSpace(typed.DispatchRequestID)
+				}
+				expected.OrcaPromptRequestID = strings.TrimSpace(typed.OrchestrationRequestID)
+			} else {
+				expected.OrcaRequestID = strings.TrimSpace(typed.OrchestrationRequestID)
+			}
+		}
 		data, err := preparationIntentCodec.Encode(expected)
 		if err != nil {
 			return err
@@ -208,6 +218,10 @@ func advanceOrcaIntentReceiptWithExpectedRaw(ctx context.Context, stateRoot stri
 	case preparationcontract.IntentStageDispatch:
 		if strings.TrimSpace(receipt.TaskID) != expected.TaskID || strings.TrimSpace(receipt.DispatchID) == "" {
 			return record, expected, fmt.Errorf("Orca dispatch candidate is incomplete")
+		}
+		updated.OrcaRequestID = strings.TrimSpace(receipt.RequestID)
+		if receipt.PromptReceipt != nil {
+			updated.OrcaPromptRequestID = strings.TrimSpace(receipt.PromptReceipt.RequestID)
 		}
 	default:
 		return record, expected, fmt.Errorf("unsupported Orca intent stage %q", expected.Stage)
@@ -457,7 +471,8 @@ func executionOrcaIntentInspectionRequest(record issueops.IssueOpsRecord, payloa
 		return port.ExecutionOrcaIntentRequest{}, err
 	}
 	request := port.ExecutionOrcaIntentRequest{
-		Stage: intentPortStage(payload.Stage), Marker: payload.Marker,
+		Stage: intentPortStage(payload.Stage), OperationID: payload.OperationID,
+		RetryRequestID: payload.OrcaRequestID, PromptRetryRequestID: payload.OrcaPromptRequestID, SourceGeneration: payload.Generation, Marker: payload.Marker,
 		Workspace: intentPortWorkspaceRequest(payload.Workspace), Probe: intentPortProbeRequest(payload.Probe),
 		Prepared: intentPortOrcaWorkspaceReceiptPointer(payload.Prepared), TerminalPTYID: payload.TerminalPTYID,
 		RunID: payload.RunID, RunBound: payload.RunBound, TaskID: payload.TaskID,

@@ -3,6 +3,7 @@ package orca
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,15 @@ type ExecutionProvisioner struct {
 	terminalSettleInterval time.Duration
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
 type executionClient interface {
 	Probe(context.Context, port.OrcaProbeRequest) (port.OrcaProbeResult, error)
 	ListWorktrees(context.Context, string) ([]port.OrcaWorktree, error)
@@ -30,7 +40,7 @@ type executionClient interface {
 	UseRun(context.Context, string) (port.OrcaRun, error)
 	CreateTask(context.Context, port.OrcaCreateTaskRequest) (port.OrcaTask, error)
 	Dispatch(context.Context, port.OrcaDispatchRequest) (port.OrcaDispatch, error)
-	SendTerminalPrompt(context.Context, string, string) error
+	SendTerminalPrompt(context.Context, string, string, string) (port.OrcaPromptReceipt, error)
 }
 
 type executionInventoryClient interface {
@@ -343,20 +353,31 @@ func (p *ExecutionProvisioner) InvokeIntent(ctx context.Context, req port.Execut
 		}
 		inject := req.Probe.Host != "omo"
 		dispatch, err := p.client.Dispatch(ctx, port.OrcaDispatchRequest{
-			RunID: req.RunID, TaskID: req.TaskID, ToHandle: terminal.Handle, Inject: inject, ReturnPreamble: true,
+			RunID: req.RunID, TaskID: req.TaskID, ToHandle: terminal.Handle, Inject: inject, ReturnPreamble: true, RetryRequestID: req.RetryRequestID,
 		})
 		if err != nil {
+			if typed, ok := errors.AsType[*port.OrcaError](err); ok {
+				typed.CallPhase = "orca_dispatch"
+			}
 			return port.ExecutionOrcaIntentReceipt{}, err
 		}
 		if err := validateExecutionInvokedDispatch(dispatch, req.Prepared.RuntimeID, req.TaskID, terminal.Handle, inject); err != nil {
 			return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{Code: "dispatch_identity_mismatch", Detail: err.Error(), Invoked: true}
 		}
+		var promptReceipt *port.OrcaPromptReceipt
 		if !inject {
-			if err := p.client.SendTerminalPrompt(ctx, terminal.Handle, dispatch.Preamble); err != nil {
+			receipt, err := p.client.SendTerminalPrompt(ctx, terminal.Handle, dispatch.Preamble, req.PromptRetryRequestID)
+			if err != nil {
+				if typed, ok := errors.AsType[*port.OrcaError](err); ok {
+					typed.Invoked = true
+					typed.CallPhase = "terminal_send"
+					typed.DispatchRequestID = strings.TrimSpace(dispatch.RequestID)
+				}
 				return port.ExecutionOrcaIntentReceipt{}, err
 			}
+			promptReceipt = &receipt
 		}
-		return port.ExecutionOrcaIntentReceipt{TaskID: dispatch.TaskID, DispatchID: dispatch.ID}, nil
+		return port.ExecutionOrcaIntentReceipt{TaskID: dispatch.TaskID, DispatchID: dispatch.ID, RequestID: dispatch.RequestID, PromptReceipt: promptReceipt}, nil
 	default:
 		return port.ExecutionOrcaIntentReceipt{}, executionPreflightError(fmt.Errorf("unsupported stage %q", req.Stage))
 	}

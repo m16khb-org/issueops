@@ -21,7 +21,7 @@ func TestMergeHandoffDeliveryObservationBindsEveryMutableIdentity(t *testing.T) 
 		{
 			name: "stale restarted process cannot merge",
 			edit: func(next *issueopscontract.IssueOpsHandoffDeliveryObservation) {
-				next.Target.Process.PID = 9090
+				next.Target.ProcessIncarnation = "incarnation-2"
 			},
 			want: "delivery observation process identity changed",
 		},
@@ -52,13 +52,6 @@ func TestMergeHandoffDeliveryObservationBindsEveryMutableIdentity(t *testing.T) 
 				next.Launcher.Name = "herdr"
 			},
 			want: "delivery observation launcher identity changed",
-		},
-		{
-			name: "changed receipt digest cannot merge",
-			edit: func(next *issueopscontract.IssueOpsHandoffDeliveryObservation) {
-				next.Receipt.Digest = strings.Repeat("c", 64)
-			},
-			want: "delivery observation receipt identity changed",
 		},
 	}
 
@@ -113,10 +106,9 @@ func TestMergeHandoffDeliveryObservationRejectsBlindRetryAndInexactClaims(t *tes
 	base.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceAgentPromptStalled)
 
 	blindRetry := base
-	blindRetry.Request.RetryRequestID = "retry-1"
-	blindRetry.Request.RetryOfAttempt = "other-attempt"
+	blindRetry.Request.DurableID = "retry-1"
 	_, decision := MergeHandoffDeliveryObservation(base, blindRetry)
-	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation retry request identity is invalid"}) {
+	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation request identity changed"}) {
 		t.Fatalf("blind retry decision=%+v", decision)
 	}
 
@@ -177,11 +169,25 @@ func TestMergeHandoffDeliveryObservationModeSpecificRecoveryEvidence(t *testing.
 				return base
 			},
 			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
+				next.InputAccepted = issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved}
+				next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt)
+				return next
+			},
+			wantOK: true,
+		},
+		{
+			name: "Omo dispatch-created preamble cannot prove input accepted",
+			base: func() issueopscontract.IssueOpsHandoffDeliveryObservation {
+				base := deliveryObservationFixture()
+				base.ExpectedOwnerHost = "omo"
+				return base
+			},
+			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
 				next.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOrcaDispatch)
 				next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendFailed)
 				return next
 			},
-			wantOK: true,
+			reason: "delivery observation input_accepted evidence is invalid",
 		},
 		{
 			name: "Omo send accepted response loss is not owner claim",
@@ -228,7 +234,7 @@ func TestMergeHandoffDeliveryObservationModeSpecificRecoveryEvidence(t *testing.
 			name: "same durable request cannot carry changed process incarnation",
 			base: deliveryObservationFixture,
 			update: func(next issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-				next.Target.Process.StartedAt = "2026-09-20T10:30:00Z"
+				next.Target.ProcessIncarnation = "incarnation-2"
 				next.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherAccepted)
 				return next
 			},
@@ -350,38 +356,31 @@ func TestFoldHandoffDeliveryObservationsReadsAppendOnlyEvidence(t *testing.T) {
 	if !reflect.DeepEqual(decisions[2].RejectReasons, []string{"delivery observation prompt digest changed"}) {
 		t.Fatalf("stale decision=%+v", decisions[2])
 	}
-	if got := folded[first.AttemptID]; got.InputAccepted.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved {
+	if got := folded[HandoffDeliveryFoldKey(first)]; got.InputAccepted.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved {
 		t.Fatalf("folded=%+v", got)
 	}
 }
 
-func TestHandoffDeliveryObservationRecordsRetryIdentityWithoutRetryAuthority(t *testing.T) {
+func TestHandoffDeliveryObservationUsesDurableRequestForRetryWithoutRetryAuthority(t *testing.T) {
 	current := deliveryObservationFixture()
 	next := current
-	next.Request.RetryRequestID = "retry-request-1"
-	next.Request.RetryOfAttempt = current.AttemptID
 	next.Ambiguous = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
 
 	merged, decision := MergeHandoffDeliveryObservation(current, next)
 	if !decision.Accepted || decision.RetryAuthorized || decision.OwnerAuthorized {
 		t.Fatalf("retry identity must be evidence only: %+v", decision)
 	}
-	if merged.Request.RetryRequestID != "retry-request-1" || merged.Request.RetryOfAttempt != current.AttemptID {
-		t.Fatalf("merge must preserve retry identity as evidence: %+v", merged.Request)
-	}
-	if next.Request.RetryRequestID == "" {
-		t.Fatal("test did not carry retry identity in the observation update")
+	if merged.Request.DurableID != current.Request.DurableID {
+		t.Fatalf("merge must preserve the original durable request identity: %+v", merged.Request)
 	}
 }
 
-func TestHandoffDeliveryRetryIdentityIsMonotonic(t *testing.T) {
+func TestHandoffDeliveryRetryCannotChangeDurableRequest(t *testing.T) {
 	current := deliveryObservationFixture()
-	current.Request.RetryRequestID = "retry-request-1"
-	current.Request.RetryOfAttempt = current.AttemptID
 	next := current
-	next.Request.RetryRequestID = "retry-request-2"
+	next.Request.DurableID = "retry-request-2"
 	_, decision := MergeHandoffDeliveryObservation(current, next)
-	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation retry request identity changed"}) {
+	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation request identity changed"}) {
 		t.Fatalf("decision=%+v", decision)
 	}
 }
@@ -480,6 +479,7 @@ func TestMergeHandoffDeliveryObservationRejectsBackwardUpdateTimestamp(t *testin
 	current := deliveryObservationFixture()
 	next := current
 	next.UpdatedAt = "2026-09-20T10:00:30Z"
+	next.Ambiguous.ObservedAt = "2026-09-20T10:00:20Z"
 	_, decision := MergeHandoffDeliveryObservation(current, next)
 	if decision.Accepted || !reflect.DeepEqual(decision.RejectReasons, []string{"delivery observation update timestamp moved backward"}) {
 		t.Fatalf("decision=%+v", decision)
@@ -525,10 +525,12 @@ func TestHandoffDeliveryObservationRejectsPromptTextAndTokenLeakage(t *testing.T
 
 func deliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryObservation {
 	return issueopscontract.IssueOpsHandoffDeliveryObservation{
-		SchemaVersion: issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
-		AttemptID:     "attempt-1",
-		LifecycleID:   "io-delivery",
-		PromptSHA256:  strings.Repeat("a", 64),
+		SchemaVersion:  issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
+		AttemptID:      "attempt-1",
+		LineageID:      "lineage-1",
+		LifecycleID:    "io-delivery",
+		PromptSHA256:   strings.Repeat("a", 64),
+		MaterialSHA256: strings.Repeat("e", 64),
 		Request: issueopscontract.IssueOpsHandoffDeliveryRequest{
 			DurableID: "request-1",
 		},
@@ -536,7 +538,7 @@ func deliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryObserv
 			Name: "orca", Version: "1.4.200", Path: "/usr/local/bin/orca", RuntimeID: "runtime-1", MachineID: "machine-1", ServerID: "server-1",
 		},
 		Target: issueopscontract.IssueOpsHandoffDeliveryTarget{
-			TerminalID: "term-1", PaneID: "pane-1", Process: issueopscontract.NativeProcessReceipt{
+			TerminalID: "term-1", PaneID: "pane-1", ProcessIncarnation: "incarnation-1", Process: &issueopscontract.NativeProcessReceipt{
 				PID: 8080, StartedAt: "2026-09-20T10:00:00Z", Executable: "/usr/local/bin/codex",
 			},
 		},
@@ -554,7 +556,7 @@ func deliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryObserv
 		InputAccepted:      deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, ""),
 		NativeTurnObserved: deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, ""),
 		OwnerClaimed:       deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, ""),
-		Ambiguous:          deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, ""),
+		Ambiguous:          deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceAgentPromptStalled),
 	}
 }
 

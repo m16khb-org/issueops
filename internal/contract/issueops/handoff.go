@@ -31,6 +31,7 @@ const (
 	IssueOpsHandoffDeliveryEvidenceLauncherAccepted               = "launcher_accepted"
 	IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost           = "accepted_response_lost"
 	IssueOpsHandoffDeliveryEvidenceOrcaDispatch                   = "orca_dispatch"
+	IssueOpsHandoffDeliveryEvidenceOrcaDispatchReceipt            = "orca_dispatch_receipt"
 	IssueOpsHandoffDeliveryEvidenceOmoSendFailed                  = "omo_send_failed"
 	IssueOpsHandoffDeliveryEvidenceOmoSendAccepted                = "omo_send_accepted"
 	IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost            = "omo_send_response_lost"
@@ -168,11 +169,14 @@ type IssueOpsHandoffDecision struct {
 type IssueOpsHandoffDeliveryObservation struct {
 	SchemaVersion      int                               `json:"schema_version"`
 	AttemptID          string                            `json:"attempt_id"`
+	LineageID          string                            `json:"lineage_id"`
 	LifecycleID        string                            `json:"lifecycle_id"`
 	PromptSHA256       string                            `json:"prompt_sha256"`
+	MaterialSHA256     string                            `json:"material_sha256"`
 	Request            IssueOpsHandoffDeliveryRequest    `json:"request"`
 	Launcher           IssueOpsHandoffDeliveryLauncher   `json:"launcher"`
 	Target             IssueOpsHandoffDeliveryTarget     `json:"target"`
+	ExpectedOwnerHost  string                            `json:"expected_owner_host,omitempty"`
 	OwnerActor         *NativeActor                      `json:"owner_actor,omitempty"`
 	SourceGeneration   uint64                            `json:"source_generation"`
 	CreatedAt          string                            `json:"created_at"`
@@ -186,9 +190,7 @@ type IssueOpsHandoffDeliveryObservation struct {
 }
 
 type IssueOpsHandoffDeliveryRequest struct {
-	DurableID      string `json:"durable_id"`
-	RetryRequestID string `json:"retry_request_id,omitempty"`
-	RetryOfAttempt string `json:"retry_of_attempt,omitempty"`
+	DurableID string `json:"durable_id"`
 }
 
 type IssueOpsHandoffDeliveryLauncher struct {
@@ -201,9 +203,10 @@ type IssueOpsHandoffDeliveryLauncher struct {
 }
 
 type IssueOpsHandoffDeliveryTarget struct {
-	TerminalID string               `json:"terminal_id,omitempty"`
-	PaneID     string               `json:"pane_id,omitempty"`
-	Process    NativeProcessReceipt `json:"process"`
+	TerminalID         string                `json:"terminal_id,omitempty"`
+	PaneID             string                `json:"pane_id,omitempty"`
+	ProcessIncarnation string                `json:"process_incarnation,omitempty"`
+	Process            *NativeProcessReceipt `json:"process,omitempty"`
 }
 
 type IssueOpsHandoffDeliveryReceipt struct {

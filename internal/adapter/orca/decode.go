@@ -16,6 +16,9 @@ type envelope struct {
 	Error  struct {
 		Code    string `json:"code"`
 		Message string `json:"message"`
+		Data    struct {
+			OrchestrationRequestID string `json:"orchestrationRequestId"`
+		} `json:"data"`
 	} `json:"error"`
 	Meta struct {
 		RuntimeID string `json:"runtimeId"`
@@ -35,7 +38,10 @@ func decodeResult(output CommandOutput, target any) (string, error) {
 		if code == "" {
 			code = "orca_rejected"
 		}
-		return env.Meta.RuntimeID, &port.OrcaError{Code: code, Detail: boundedDiagnostic(env.Error.Message), Invoked: output.Invoked}
+		return env.Meta.RuntimeID, &port.OrcaError{
+			Code: code, Detail: boundedDiagnostic(env.Error.Message), Invoked: output.Invoked,
+			OrchestrationRequestID: strings.TrimSpace(env.Error.Data.OrchestrationRequestID),
+		}
 	}
 	if target != nil {
 		if len(env.Result) == 0 || string(env.Result) == "null" {

@@ -563,8 +563,15 @@ func (c *Client) Dispatch(ctx context.Context, req port.OrcaDispatchRequest) (po
 	if req.ReturnPreamble {
 		argv = append(argv, "--return-preamble")
 	}
+	if requestID := strings.TrimSpace(req.RetryRequestID); requestID != "" {
+		argv = append(argv, "--retry-request", requestID)
+	}
 	argv = append(argv, "--json")
-	return c.dispatchResult(ctx, argv)
+	dispatch, err := c.dispatchResult(ctx, argv)
+	if strings.TrimSpace(req.RetryRequestID) != "" {
+		dispatch.RequestID = strings.TrimSpace(req.RetryRequestID)
+	}
+	return dispatch, err
 }
 
 func (c *Client) ShowDispatch(ctx context.Context, taskID string) (port.OrcaDispatch, error) {
@@ -577,6 +584,23 @@ func (c *Client) showDispatchInventory(ctx context.Context, taskID string) (exec
 
 func (c *Client) ShowDispatchFrom(ctx context.Context, taskID, fromHandle string) (port.OrcaDispatch, error) {
 	return c.dispatchResult(ctx, []string{"orca", "orchestration", "dispatch-show", "--task", taskID, "--preamble", "--from", fromHandle, "--json"})
+}
+
+func (c *Client) ShowRequest(ctx context.Context, requestID string) (port.OrcaRequestObservation, error) {
+	requestID = strings.TrimSpace(requestID)
+	if requestID == "" || len(requestID) > 1024 || strings.ContainsRune(requestID, 0) {
+		return port.OrcaRequestObservation{}, &port.OrcaError{Code: "request_identity_invalid"}
+	}
+	var payload struct {
+		RequestID string `json:"requestId"`
+		State     string `json:"state"`
+		Method    string `json:"method"`
+	}
+	runtimeID, err := c.runJSON(ctx, "", readTimeout, []string{"orca", "orchestration", "request-show", "--request", requestID, "--json"}, &payload)
+	if err != nil {
+		return port.OrcaRequestObservation{}, err
+	}
+	return port.OrcaRequestObservation{RuntimeID: runtimeID, RequestID: payload.RequestID, Status: payload.State, Method: payload.Method}, nil
 }
 
 // SendWorkerDone은 core와 CLI에서 호출되지 않는다(#127에서 보존 결정). 판단
@@ -696,6 +720,9 @@ func (c *Client) dispatchInventoryResult(ctx context.Context, argv []string) (ex
 		} `json:"dispatch"`
 		Injected bool   `json:"injected"`
 		Preamble string `json:"preamble"`
+		Mutation struct {
+			RequestID string `json:"requestId"`
+		} `json:"mutation"`
 	}
 	runtimeID, err := c.runJSON(ctx, "", createTimeout, argv, &payload)
 	if err != nil {
@@ -704,6 +731,6 @@ func (c *Client) dispatchInventoryResult(ctx context.Context, argv []string) (ex
 	if payload.Dispatch == nil {
 		return executionDispatchInventory{RuntimeID: runtimeID}, nil
 	}
-	dispatch := port.OrcaDispatch{RuntimeID: runtimeID, ID: payload.Dispatch.ID, TaskID: payload.Dispatch.TaskID, AssigneeHandle: payload.Dispatch.AssigneeHandle, Status: payload.Dispatch.Status, Injected: payload.Injected, Preamble: payload.Preamble}
+	dispatch := port.OrcaDispatch{RuntimeID: runtimeID, ID: payload.Dispatch.ID, TaskID: payload.Dispatch.TaskID, AssigneeHandle: payload.Dispatch.AssigneeHandle, Status: payload.Dispatch.Status, Injected: payload.Injected, Preamble: payload.Preamble, RequestID: strings.TrimSpace(payload.Mutation.RequestID)}
 	return executionDispatchInventory{RuntimeID: runtimeID, Dispatch: &dispatch}, nil
 }

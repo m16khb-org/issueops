@@ -806,10 +806,14 @@ func TestClientSendsOfficialPreambleToExactOmoTerminal(t *testing.T) {
 	prompt := "official-preamble line one\nofficial-preamble line two"
 	bracketedPrompt := "\x1b[200~" + prompt + "\x1b[201~"
 	command := "orca terminal send --terminal " + handle + " --text " + bracketedPrompt + " --enter --json"
-	runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"send":{"accepted":true}}}`)}
+	runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"send":{"accepted":true,"prompt":{"requestId":"22222222-2222-4222-8222-222222222222","stages":["input_accepted","turn_started"],"provider":"omo","observation":"turn_started","processIncarnation":"incarnation-1","generation":7,"baselineWorkingSequence":9}}}}`)}
 
-	if err := NewClient(runner).SendTerminalPrompt(context.Background(), handle, prompt); err != nil {
+	receipt, err := NewClient(runner).SendTerminalPrompt(context.Background(), handle, prompt, "")
+	if err != nil {
 		t.Fatal(err)
+	}
+	if receipt.RequestID != "22222222-2222-4222-8222-222222222222" || receipt.ProcessIncarnation != "incarnation-1" || receipt.Generation != 7 || receipt.BaselineWorkingSequence != 9 || !slices.Equal(receipt.Stages, []string{"input_accepted", "turn_started"}) {
+		t.Fatalf("prompt receipt = %+v", receipt)
 	}
 	want := [][]string{{"orca", "terminal", "send", "--terminal", handle, "--text", bracketedPrompt, "--enter", "--json"}}
 	if !reflect.DeepEqual(runner.calls, want) {
@@ -817,12 +821,104 @@ func TestClientSendsOfficialPreambleToExactOmoTerminal(t *testing.T) {
 	}
 }
 
+func TestClientSendsOmoTerminalPromptWithExactRetryRequest(t *testing.T) {
+	runner := newFakeRunner(t)
+	handle := "term_00000000-0000-4000-8000-000000000069"
+	prompt := "official-preamble"
+	bracketedPrompt := "\x1b[200~" + prompt + "\x1b[201~"
+	command := "orca terminal send --terminal " + handle + " --text " + bracketedPrompt + " --enter --retry-request 22222222-2222-4222-8222-222222222222 --json"
+	runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"send":{"accepted":true,"prompt":{"requestId":"22222222-2222-4222-8222-222222222222","stages":["input_accepted"],"provider":"omo","observation":"submitted","processIncarnation":"incarnation-1","generation":7,"baselineWorkingSequence":9}}}}`)}
+
+	receipt, err := NewClient(runner).SendTerminalPrompt(context.Background(), handle, prompt, "22222222-2222-4222-8222-222222222222")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if receipt.RequestID != "22222222-2222-4222-8222-222222222222" {
+		t.Fatalf("prompt receipt = %+v", receipt)
+	}
+	want := [][]string{{"orca", "terminal", "send", "--terminal", handle, "--text", bracketedPrompt, "--enter", "--retry-request", "22222222-2222-4222-8222-222222222222", "--json"}}
+	if !reflect.DeepEqual(runner.calls, want) {
+		t.Fatalf("terminal prompt calls = %#v, want %#v", runner.calls, want)
+	}
+}
+
+func TestClientDispatchRecordsInitialRequestIDWithoutRetryFlag(t *testing.T) {
+	runner := newFakeRunner(t)
+	command := "orca orchestration dispatch --task task-1 --to term_worker --run run_issueops_1 --return-preamble --json"
+	runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"dispatch":{"id":"dispatch-1","task_id":"task-1","assignee_handle":"term_worker","status":"dispatched"},"injected":false,"preamble":"send this","mutation":{"requestId":"11111111-1111-4111-8111-111111111111"}}}`)}
+
+	got, err := NewClient(runner).Dispatch(context.Background(), port.OrcaDispatchRequest{
+		RunID: "run_issueops_1", TaskID: "task-1", ToHandle: "term_worker", ReturnPreamble: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ID != "dispatch-1" || got.RequestID != "11111111-1111-4111-8111-111111111111" || got.Preamble != "send this" {
+		t.Fatalf("dispatch=%+v", got)
+	}
+	want := [][]string{{"orca", "orchestration", "dispatch", "--task", "task-1", "--to", "term_worker", "--run", "run_issueops_1", "--return-preamble", "--json"}}
+	if !reflect.DeepEqual(runner.calls, want) {
+		t.Fatalf("dispatch calls=%#v want=%#v", runner.calls, want)
+	}
+}
+
+func TestClientDispatchUsesPersistedRetryRequestOnlyForRecovery(t *testing.T) {
+	runner := newFakeRunner(t)
+	command := "orca orchestration dispatch --task task-1 --to term_worker --run run_issueops_1 --return-preamble --retry-request 11111111-1111-4111-8111-111111111111 --json"
+	runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"dispatch":{"id":"dispatch-1","task_id":"task-1","assignee_handle":"term_worker","status":"dispatched"},"injected":false,"preamble":"send this","mutation":{"requestId":"11111111-1111-4111-8111-111111111111"}}}`)}
+
+	got, err := NewClient(runner).Dispatch(context.Background(), port.OrcaDispatchRequest{
+		RunID: "run_issueops_1", TaskID: "task-1", ToHandle: "term_worker", ReturnPreamble: true, RetryRequestID: "11111111-1111-4111-8111-111111111111",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.RequestID != "11111111-1111-4111-8111-111111111111" {
+		t.Fatalf("dispatch=%+v", got)
+	}
+	want := [][]string{{"orca", "orchestration", "dispatch", "--task", "task-1", "--to", "term_worker", "--run", "run_issueops_1", "--return-preamble", "--retry-request", "11111111-1111-4111-8111-111111111111", "--json"}}
+	if !reflect.DeepEqual(runner.calls, want) {
+		t.Fatalf("dispatch calls=%#v want=%#v", runner.calls, want)
+	}
+}
+
+func TestClientRequestShowIsReadOnlyRecovery(t *testing.T) {
+	runner := newFakeRunner(t)
+	runner.responses["orca orchestration request-show --request 11111111-1111-4111-8111-111111111111 --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"requestId":"11111111-1111-4111-8111-111111111111","state":"completed","method":"orchestration.dispatch","interpretation":"recorded"},"_meta":{"runtimeId":"runtime-1"}}`)}
+
+	got, err := NewClient(runner).ShowRequest(context.Background(), "11111111-1111-4111-8111-111111111111")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.RuntimeID != "runtime-1" || got.RequestID != "11111111-1111-4111-8111-111111111111" || got.Status != "completed" || got.Method != "orchestration.dispatch" {
+		t.Fatalf("request observation=%+v", got)
+	}
+	want := [][]string{{"orca", "orchestration", "request-show", "--request", "11111111-1111-4111-8111-111111111111", "--json"}}
+	if !reflect.DeepEqual(runner.calls, want) {
+		t.Fatalf("request-show calls=%#v want=%#v", runner.calls, want)
+	}
+}
+
+func TestClientPreservesOrchestrationRequestIDFromStructuredError(t *testing.T) {
+	runner := newFakeRunner(t)
+	command := "orca orchestration request-show --request 11111111-1111-4111-8111-111111111111 --json"
+	runner.responses[command] = CommandOutput{Invoked: true, Stdout: []byte(`{"ok":false,"error":{"code":"operation_unknown","message":"lost response","data":{"orchestrationRequestId":"11111111-1111-4111-8111-111111111111"}}}`)}
+	runner.errors[command] = &port.OrcaError{Code: "command_failed", Detail: "stdout: operation_unknown", Invoked: true}
+
+	_, err := NewClient(runner).ShowRequest(context.Background(), "11111111-1111-4111-8111-111111111111")
+	var orcaErr *port.OrcaError
+	if !errors.As(err, &orcaErr) || orcaErr.Code != "operation_unknown" || orcaErr.OrchestrationRequestID != "11111111-1111-4111-8111-111111111111" {
+		t.Fatalf("structured error=%#v", err)
+	}
+}
+
 func TestClientRejectsBracketedPasteControlInTerminalPrompt(t *testing.T) {
 	runner := newFakeRunner(t)
-	err := NewClient(runner).SendTerminalPrompt(
+	_, err := NewClient(runner).SendTerminalPrompt(
 		context.Background(),
 		"term_00000000-0000-4000-8000-000000000069",
 		"official-preamble\x1b[201~injected-turn",
+		"request-1",
 	)
 	var orcaErr *port.OrcaError
 	if !errors.As(err, &orcaErr) || orcaErr.Code != "terminal_prompt_invalid" || orcaErr.Invoked {

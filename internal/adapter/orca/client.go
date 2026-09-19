@@ -614,27 +614,45 @@ func (c *Client) BootstrapTerminalAgent(ctx context.Context, req port.OrcaBootst
 	return nil
 }
 
-func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt string) error {
+func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, requestID string) (port.OrcaPromptReceipt, error) {
 	handle = strings.TrimSpace(handle)
 	if !concreteTerminalHandlePattern.MatchString(handle) || strings.TrimSpace(prompt) == "" ||
 		strings.ContainsAny(prompt, "\x00\x1b") {
-		return &port.OrcaError{Code: "terminal_prompt_invalid"}
+		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "terminal_prompt_invalid"}
 	}
 	prompt = "\x1b[200~" + prompt + "\x1b[201~"
 	var payload struct {
 		Send struct {
 			Accepted bool `json:"accepted"`
+			Prompt   struct {
+				RequestID               string   `json:"requestId"`
+				Stages                  []string `json:"stages"`
+				Provider                string   `json:"provider"`
+				Observation             string   `json:"observation"`
+				ProcessIncarnation      string   `json:"processIncarnation"`
+				Generation              uint64   `json:"generation"`
+				BaselineWorkingSequence uint64   `json:"baselineWorkingSequence"`
+			} `json:"prompt"`
 		} `json:"send"`
 	}
-	if _, err := c.runJSON(ctx, "", createTimeout, []string{
-		"orca", "terminal", "send", "--terminal", handle, "--text", prompt, "--enter", "--json",
-	}, &payload); err != nil {
-		return err
+	argv := []string{"orca", "terminal", "send", "--terminal", handle, "--text", prompt, "--enter"}
+	if requestID = strings.TrimSpace(requestID); requestID != "" {
+		argv = append(argv, "--retry-request", requestID)
+	}
+	argv = append(argv, "--json")
+	if _, err := c.runJSON(ctx, "", createTimeout, argv, &payload); err != nil {
+		return port.OrcaPromptReceipt{}, err
 	}
 	if !payload.Send.Accepted {
-		return &port.OrcaError{Code: "terminal_prompt_rejected", Invoked: true}
+		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "terminal_prompt_rejected", Invoked: true}
 	}
-	return nil
+	return port.OrcaPromptReceipt{
+		RequestID: payload.Send.Prompt.RequestID, Stages: payload.Send.Prompt.Stages,
+		Provider: payload.Send.Prompt.Provider, Observation: payload.Send.Prompt.Observation,
+		ProcessIncarnation:      payload.Send.Prompt.ProcessIncarnation,
+		Generation:              payload.Send.Prompt.Generation,
+		BaselineWorkingSequence: payload.Send.Prompt.BaselineWorkingSequence,
+	}, nil
 }
 
 func (c *Client) RefreshTerminal(ctx context.Context, worktreeID, ptyID string) (port.OrcaTerminal, error) {

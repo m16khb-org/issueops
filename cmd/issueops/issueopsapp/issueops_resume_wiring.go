@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -154,6 +155,9 @@ func (e *coreResumeEffects) inspectStage(ctx context.Context, intent leaseapp.Re
 	if err != nil {
 		return leasecontract.ResumeStageInventory{}, err
 	}
+	if err := consumeHandoffDeliveryRecoveryEvidence(request); err != nil {
+		return leasecontract.ResumeStageInventory{}, err
+	}
 	inventory, err := e.provisioner.InspectIntent(ctx, request)
 	if err != nil {
 		return leasecontract.ResumeStageInventory{}, err
@@ -177,8 +181,17 @@ func (e *coreResumeEffects) invokeStage(ctx context.Context, intent leaseapp.Res
 	if err != nil {
 		return leasecontract.ResumeStageReceipt{}, err
 	}
+	if err := observeHandoffDeliveryBefore(request, e.now); err != nil {
+		return leasecontract.ResumeStageReceipt{}, err
+	}
 	receipt, err := e.provisioner.InvokeIntent(ctx, request)
 	if err != nil {
+		if observeErr := observeHandoffDeliveryFailure(request, err, e.now); observeErr != nil {
+			err = errors.Join(err, observeErr)
+		}
+		return leasecontract.ResumeStageReceipt{}, err
+	}
+	if err := observeHandoffDeliveryAfter(request, receipt, e.now); err != nil {
 		return leasecontract.ResumeStageReceipt{}, err
 	}
 	return leasecontract.ResumeStageReceipt{TerminalPTYID: receipt.TerminalPTYID, RunID: receipt.RunID, RunBound: receipt.RunBound, TaskID: receipt.TaskID, DispatchID: receipt.DispatchID}, nil

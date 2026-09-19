@@ -47,10 +47,13 @@ func IssueOpsPlannerDefaults(host string) (model string, effort string, ok bool)
 }
 
 type OrcaError struct {
-	Code    string `json:"code"`
-	Detail  string `json:"detail,omitempty"`
-	Invoked bool   `json:"invoked,omitempty"`
-	Timeout bool   `json:"timeout,omitempty"`
+	Code                   string `json:"code"`
+	Detail                 string `json:"detail,omitempty"`
+	Invoked                bool   `json:"invoked,omitempty"`
+	Timeout                bool   `json:"timeout,omitempty"`
+	OrchestrationRequestID string `json:"orchestration_request_id,omitempty"`
+	DispatchRequestID      string `json:"dispatch_request_id,omitempty"`
+	CallPhase              string `json:"call_phase,omitempty"`
 }
 
 func (e *OrcaError) Error() string {
@@ -234,6 +237,7 @@ type OrcaDispatchRequest struct {
 	FromHandle     string `json:"from_handle,omitempty"`
 	Inject         bool   `json:"inject"`
 	ReturnPreamble bool   `json:"return_preamble"`
+	RetryRequestID string `json:"retry_request_id,omitempty"`
 }
 
 type OrcaDispatch struct {
@@ -244,6 +248,24 @@ type OrcaDispatch struct {
 	Status         string `json:"status,omitempty"`
 	Injected       bool   `json:"injected,omitempty"`
 	Preamble       string `json:"preamble,omitempty"`
+	RequestID      string `json:"request_id,omitempty"`
+}
+
+type OrcaRequestObservation struct {
+	RuntimeID string `json:"-"`
+	RequestID string `json:"request_id"`
+	Status    string `json:"status"`
+	Method    string `json:"method,omitempty"`
+}
+
+type OrcaPromptReceipt struct {
+	RequestID               string   `json:"request_id"`
+	Stages                  []string `json:"stages,omitempty"`
+	Provider                string   `json:"provider,omitempty"`
+	Observation             string   `json:"observation,omitempty"`
+	ProcessIncarnation      string   `json:"process_incarnation,omitempty"`
+	Generation              uint64   `json:"generation,omitempty"`
+	BaselineWorkingSequence uint64   `json:"baseline_working_sequence,omitempty"`
 }
 
 type OrcaMessage struct {
@@ -330,6 +352,7 @@ type OrcaDispatchClient interface {
 	Dispatch(context.Context, OrcaDispatchRequest) (OrcaDispatch, error)
 	ShowDispatch(context.Context, string) (OrcaDispatch, error)
 	ShowDispatchFrom(context.Context, string, string) (OrcaDispatch, error)
+	ShowRequest(context.Context, string) (OrcaRequestObservation, error)
 }
 
 // OrcaClient keeps the historical aggregate method set for compatibility.

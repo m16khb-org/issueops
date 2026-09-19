@@ -1380,11 +1380,11 @@ func (f *executionFake) Dispatch(_ context.Context, req port.OrcaDispatchRequest
 	return port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: req.TaskID, AssigneeHandle: req.ToHandle, Injected: true}, nil
 }
 
-func (f *executionFake) SendTerminalPrompt(_ context.Context, handle, prompt string) error {
+func (f *executionFake) SendTerminalPrompt(_ context.Context, handle, prompt, requestID string) (port.OrcaPromptReceipt, error) {
 	f.calls = append(f.calls, "send-terminal-prompt")
 	f.promptHandle = handle
 	f.prompt = prompt
-	return nil
+	return port.OrcaPromptReceipt{RequestID: requestID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", Observation: "turn_started", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: 1}, nil
 }
 
 func (f *executionFake) ListTerminals(context.Context, string) ([]port.OrcaTerminal, error) {
