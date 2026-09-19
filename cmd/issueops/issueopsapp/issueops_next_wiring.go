@@ -32,35 +32,84 @@ func issueOpsNextHandler(
 	string,
 ) (issueopsnextcontract.Result, error) {
 	listCycles := issueOpsInventoryListHandler(observers...)
-	service := issueopsnextapplication.NewService(issueopsnextapplication.Ports{
-		ListCycles: func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
-			return listCycles(stateRoot, repo)
-		},
-		ReadRecord:        issueopscore.ReadIssueOps,
-		Completion:        issueopscore.IssueOpsPhaseCompletion,
-		LocalReadiness:    issueopscore.IssueOpsLocalPRReadiness,
-		WriterlessCommand: issueopscore.ExecutionWriterAbsentRecoveryCommand,
-		PlannerDefaults:   port.IssueOpsPlannerDefaults,
-		// 변경 집합 관측은 implement 이후 phase에서만 일어나며 git을 두 번
-		// 읽는다(readiness 관측과 별개다).
-		ChangedPaths:        implementation.ObservedChangedPaths,
-		ReviewEffortForTier: port.IssueOpsReviewEffortForTier,
-		StagedArtifacts:     stagedArtifactNames,
-		Actor: func() (string, string, error) {
-			host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
-			return host, sessionID, err
-		},
-		ProcessLive:   observeIssueOpsHolderLiveness,
-		SourceRoot:    issueopsinventoryoutbound.CleanPath{}.Normalize,
-		CleanPath:     filepath.Clean,
-		WorktreeState: observeIssueOpsWorktreeState,
-		CurrentBranch: func(cwd string) string {
-			return strings.TrimSpace(preflightadapter.GitOut(cwd, "branch", "--show-current"))
-		},
-		Env: os.Getenv,
-		Now: time.Now,
-	})
-	return issueopsnextinbound.NewNextHandler(service)
+	return func(stateRoot, cwd, id string) (issueopsnextcontract.Result, error) {
+		localObservation := nextLocalReadinessObservation{
+			observe:  issueopscore.ObserveIssueOpsLocalPRReadiness,
+			fallback: implementation.ObservedChangedPaths,
+		}
+		service := issueopsnextapplication.NewService(issueopsnextapplication.Ports{
+			ListCycles: func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
+				return listCycles(stateRoot, repo)
+			},
+			ReadRecord:          issueopscore.ReadIssueOps,
+			Completion:          issueopscore.IssueOpsPhaseCompletion,
+			LocalReadiness:      localObservation.localReadiness,
+			WriterlessCommand:   issueopscore.ExecutionWriterAbsentRecoveryCommand,
+			PlannerDefaults:     port.IssueOpsPlannerDefaults,
+			ChangedPaths:        localObservation.changedPaths,
+			ReviewEffortForTier: port.IssueOpsReviewEffortForTier,
+			StagedArtifacts:     stagedArtifactNames,
+			Actor: func() (string, string, error) {
+				host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
+				return host, sessionID, err
+			},
+			ProcessLive:   observeIssueOpsHolderLiveness,
+			SourceRoot:    issueopsinventoryoutbound.CleanPath{}.Normalize,
+			CleanPath:     filepath.Clean,
+			WorktreeState: observeIssueOpsWorktreeState,
+			CurrentBranch: func(cwd string) string {
+				return strings.TrimSpace(preflightadapter.GitOut(cwd, "branch", "--show-current"))
+			},
+			Env: os.Getenv,
+			Now: time.Now,
+		})
+		return issueopsnextinbound.NewNextHandler(service)(stateRoot, cwd, id)
+	}
+}
+
+type nextLocalReadinessObservation struct {
+	observe  func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, implementation.LocalChangeObservation)
+	fallback func(issueopscontract.IssueOpsRecord) ([]string, bool)
+	record   nextObservationRecord
+	changes  implementation.LocalChangeObservation
+	set      bool
+}
+
+type nextObservationRecord struct {
+	id, repo, worktree, executionRoot string
+	branch, baseBranch, baseSHA       string
+}
+
+func (observation *nextLocalReadinessObservation) localReadiness(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
+	ready, changes := observation.observe(record)
+	observation.record = nextObservationRecordOf(record)
+	observation.changes = changes
+	observation.set = true
+	return ready
+}
+
+func (observation *nextLocalReadinessObservation) changedPaths(record issueopscontract.IssueOpsRecord) ([]string, bool) {
+	if observation.set && observation.record == nextObservationRecordOf(record) {
+		return append([]string{}, observation.changes.Paths...), observation.changes.Verified
+	}
+	if observation.fallback == nil {
+		return nil, false
+	}
+	return observation.fallback(record)
+}
+
+func nextObservationRecordOf(record issueopscontract.IssueOpsRecord) nextObservationRecord {
+	key := nextObservationRecord{
+		id: record.ID, repo: record.Repo, worktree: record.WorktreePath, branch: record.Branch,
+	}
+	if record.Execution != nil {
+		key.executionRoot = record.Execution.Workspace.Root
+	}
+	if record.BranchPrepare != nil {
+		key.baseBranch = record.BranchPrepare.BaseBranch
+		key.baseSHA = record.BranchPrepare.BaseSHA
+	}
+	return key
 }
 
 // observeIssueOpsHolderLiveness는 PID 재사용까지 판정하는 기존 관측을 그대로

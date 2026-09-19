@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -106,6 +107,35 @@ func TestIssueOpsLocalPRReadinessSharesOneVerifiedChangeObservationWithSchemaGat
 	}
 	if counts["root"] != 0 || counts["base"] != 1 || counts["diff"] != 2 || counts["status"] != 2 || len(commands) != 5 {
 		t.Fatalf("readiness change observation commands = %v (counts=%v), want one base resolution and two verified snapshots", commands, counts)
+	}
+}
+
+func TestObserveIssueOpsLocalPRReadinessReturnsTheReadinessChangeSet(t *testing.T) {
+	repo := gitRepoWithProjectDocsForTest(t)
+	writeRepoFileForTest(t, repo, "db/migrations/001_add_index.sql", "CREATE INDEX idx_x ON x(id);\n")
+	record := issueops.IssueOpsRecord{
+		ID: "io-local-result", Repo: repo, WorktreePath: repo,
+		BranchPrepare: &issueops.IssueOpsBranchPrepare{
+			BaseBranch: strings.TrimSpace(preflightadapter.GitOut(repo, "branch", "--show-current")),
+			BaseSHA:    strings.TrimSpace(preflightadapter.GitOut(repo, "rev-parse", "HEAD")),
+		},
+		Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect},
+	}
+
+	ready, observation := ObserveIssueOpsLocalPRReadiness(record)
+
+	if ready.Strict {
+		t.Fatal("the observation surface must retain local readiness semantics")
+	}
+	if !observation.Verified {
+		t.Fatalf("stable local changes must be verified: %+v", observation)
+	}
+	wantPaths := []string{".issueops/CAUTIONS.md", "change.go", "db/migrations/001_add_index.sql"}
+	if !reflect.DeepEqual(observation.Paths, wantPaths) {
+		t.Fatalf("observed paths = %v, want %v", observation.Paths, wantPaths)
+	}
+	if ready.CurrentFingerprint == "" || ready.CurrentFingerprint != observation.Fingerprint {
+		t.Fatalf("readiness and observation fingerprints diverged: ready=%q observation=%q", ready.CurrentFingerprint, observation.Fingerprint)
 	}
 }
 
