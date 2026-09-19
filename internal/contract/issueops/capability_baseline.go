@@ -328,15 +328,15 @@ func validateRecovery(recovery RecoveryInvariants) error {
 	if recovery.Direct.Mode != RecoveryModeDirect || !sameSteps(recovery.Direct.Steps, direct) {
 		return fmt.Errorf("direct recovery must be released -> replace preview -> returned recovery chain -> claimable -> claim")
 	}
-	if !containsFailures(recovery.Direct.FailureCases, []RecoveryFailure{RecoveryFailureReleasedImmediateClaim, RecoveryFailureStaleGeneration}) {
-		return fmt.Errorf("direct recovery must reject released-immediate claim and stale generation")
+	if !sameFailures(recovery.Direct.FailureCases, []RecoveryFailure{RecoveryFailureReleasedImmediateClaim, RecoveryFailureStaleGeneration}) {
+		return fmt.Errorf("direct recovery failure cases must exactly match released-immediate claim and stale generation")
 	}
 	orca := []RecoveryStep{RecoveryOrcaReleased, RecoveryReplace, RecoveryReseed, RecoveryResume, RecoverySealedOwnerClaim}
 	if recovery.Orca.Mode != RecoveryModeOrca || !sameSteps(recovery.Orca.Steps, orca) {
 		return fmt.Errorf("orca recovery must be released -> replace -> reseed -> resume -> sealed owner claim")
 	}
-	if !containsFailures(recovery.Orca.FailureCases, []RecoveryFailure{RecoveryFailureReleasedImmediateClaim, RecoveryFailureStaleGeneration, RecoveryFailureDuplicateOrcaOwner, RecoveryFailureManualOrcaOwner}) {
-		return fmt.Errorf("orca recovery must reject released-immediate claim, stale generation, duplicate owner, and manual owner")
+	if !sameFailures(recovery.Orca.FailureCases, []RecoveryFailure{RecoveryFailureReleasedImmediateClaim, RecoveryFailureStaleGeneration, RecoveryFailureDuplicateOrcaOwner, RecoveryFailureManualOrcaOwner}) {
+		return fmt.Errorf("orca recovery failure cases must exactly match released-immediate claim, stale generation, duplicate owner, and manual owner")
 	}
 	return nil
 }
@@ -353,17 +353,22 @@ func sameSteps(got, want []RecoveryStep) bool {
 	return true
 }
 
-func containsFailures(got, want []RecoveryFailure) bool {
+func sameFailures(got, want []RecoveryFailure) bool {
+	if len(got) != len(want) {
+		return false
+	}
 	set := map[RecoveryFailure]bool{}
-	for _, failure := range got {
+	for _, failure := range want {
 		set[failure] = true
 	}
-	for _, failure := range want {
-		if !set[failure] {
+	seen := map[RecoveryFailure]bool{}
+	for _, failure := range got {
+		if !set[failure] || seen[failure] {
 			return false
 		}
+		seen[failure] = true
 	}
-	return true
+	return len(seen) == len(set)
 }
 
 func validLauncher(launcher Launcher) bool {

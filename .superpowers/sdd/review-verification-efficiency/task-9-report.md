@@ -62,3 +62,12 @@ Fix round evidence:
 
 - No live launcher-to-host E2E was run. The fixture records those cells as `not-run` or `unavailable` and does not claim runtime support.
 - No speed improvement is claimed. H0 only establishes fixed input/contract evidence that later P0-style measurements can compare against.
+
+## Fix Round 2 — Recovery FailureCases exact-set validation
+
+Reviewer found that recovery `FailureCases` used membership-only validation, which accepted extra values, duplicate values, and unknown string values. The fix replaces membership validation with exact-set validation for both direct and Orca recovery modes while preserving step ordering validation unchanged.
+
+Verification for fix round 2:
+
+- RED: `go test ./internal/contract/issueops -run TestValidateRecoveryFailureCasesAreExactSets -count=1` failed before the fix because direct/orca extra and duplicate failure cases were accepted, and unknown values only failed through the older membership message.
+- GREEN: `go test ./internal/contract/issueops -run 'TestValidateRecoveryFailureCasesAreExactSets|TestValidateRecoveryModeInvariants' -count=1` passed after adding exact-set validation.

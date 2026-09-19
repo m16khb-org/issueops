@@ -331,6 +331,60 @@ func TestValidateRecoveryModeInvariants(t *testing.T) {
 	}
 }
 
+func TestValidateRecoveryFailureCasesAreExactSets(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*Baseline)
+	}{
+		{
+			name: "direct extra failure",
+			mutate: func(b *Baseline) {
+				b.Recovery.Direct.FailureCases = append(b.Recovery.Direct.FailureCases, RecoveryFailureDuplicateOrcaOwner)
+			},
+		},
+		{
+			name: "direct duplicate failure",
+			mutate: func(b *Baseline) {
+				b.Recovery.Direct.FailureCases = append(b.Recovery.Direct.FailureCases, RecoveryFailureReleasedImmediateClaim)
+			},
+		},
+		{
+			name: "direct unknown failure",
+			mutate: func(b *Baseline) {
+				b.Recovery.Direct.FailureCases[0] = RecoveryFailure("future-direct-failure")
+			},
+		},
+		{
+			name: "orca extra failure",
+			mutate: func(b *Baseline) {
+				b.Recovery.Orca.FailureCases = append(b.Recovery.Orca.FailureCases, RecoveryFailure("future-orca-failure"))
+			},
+		},
+		{
+			name: "orca duplicate failure",
+			mutate: func(b *Baseline) {
+				b.Recovery.Orca.FailureCases = append(b.Recovery.Orca.FailureCases, RecoveryFailureManualOrcaOwner)
+			},
+		},
+		{
+			name: "orca unknown failure",
+			mutate: func(b *Baseline) {
+				b.Recovery.Orca.FailureCases[0] = RecoveryFailure("future-orca-failure")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseline := minimalBaseline()
+			tt.mutate(&baseline)
+			if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "failure cases") {
+				t.Fatalf("failure cases accepted or wrong error: %v", err)
+			}
+		})
+	}
+}
+
 func readFixture(t *testing.T, name string, target any) {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("testdata", name))
