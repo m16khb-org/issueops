@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import re
+import shlex
 import stat
 import sys
 from datetime import datetime, timezone
@@ -21,6 +22,11 @@ RELEVANT_ENVIRONMENT_KEYS = (
     "GOWORK",
     "GOENV",
     "CGO_ENABLED",
+    "GOMAXPROCS",
+    "GOGC",
+    "GOMEMLIMIT",
+    "GOEXPERIMENT",
+    "GODEBUG",
     "CC",
     "CXX",
     "LANG",
@@ -208,30 +214,42 @@ def validate_command(value: Any, root: Path, label: str, *, parser: bool) -> dic
     return command
 
 
-def go_test_count(argv: list[str]) -> int | None:
-    if len(argv) < 2 or Path(argv[0]).name != "go" or argv[1] != "test":
-        return None
-    result = 1
-    index = 2
-    while index < len(argv):
-        argument = argv[index]
+def count_flag_values(arguments: list[str], source: str) -> list[int]:
+    values: list[int] = []
+    index = 0
+    while index < len(arguments):
+        argument = arguments[index]
         raw: str | None = None
         if argument.startswith("-count="):
             raw = argument.split("=", 1)[1]
         elif argument == "-count":
             index += 1
-            if index >= len(argv):
-                raise ValueError("invalid execution metadata: go test -count has no value")
-            raw = argv[index]
+            if index >= len(arguments):
+                raise ValueError(f"{source} go test -count has no value")
+            raw = arguments[index]
         if raw is not None:
             try:
-                result = int(raw)
+                value = int(raw)
             except ValueError as error:
-                raise ValueError("invalid execution metadata: go test -count") from error
-            if result < 1:
-                raise ValueError("invalid execution metadata: go test -count")
+                raise ValueError(f"invalid {source} go test -count") from error
+            if value < 1:
+                raise ValueError(f"invalid {source} go test -count")
+            values.append(value)
         index += 1
-    return result
+    return values
+
+
+def go_test_count(argv: list[str], goflags: str) -> int | None:
+    if len(argv) < 2 or Path(argv[0]).name != "go" or argv[1] != "test":
+        return None
+    try:
+        goflag_arguments = [] if goflags == "<unset>" else shlex.split(goflags)
+    except ValueError as error:
+        raise ValueError("ambiguous GOFLAGS") from error
+    values = count_flag_values(argv[2:], "argv") + count_flag_values(goflag_arguments, "GOFLAGS")
+    if len(set(values)) > 1:
+        raise ValueError("conflicting go test -count values")
+    return values[0] if values else 1
 
 
 def validate_execution(value: Any, root: Path, label: str = "execution metadata") -> dict[str, Any]:
@@ -259,7 +277,7 @@ def validate_execution(value: Any, root: Path, label: str = "execution metadata"
     finite_number(execution, "wall_time_seconds", f"{label} execution")
     positive_integer(execution, "command_invocations", f"{label} execution")
     samples = positive_integer(execution, "sample_count", f"{label} execution")
-    count = go_test_count(command["argv"])
+    count = go_test_count(command["argv"], environment["variables"]["GOFLAGS"])
     if count is not None and count != samples:
         raise ValueError("sample_count does not match go test -count")
     return metadata

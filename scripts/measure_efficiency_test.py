@@ -52,6 +52,11 @@ class MeasureEfficiencyTest(unittest.TestCase):
                     "GOWORK": "<unset>",
                     "GOENV": "<unset>",
                     "CGO_ENABLED": "0",
+                    "GOMAXPROCS": "<unset>",
+                    "GOGC": "<unset>",
+                    "GOMEMLIMIT": "<unset>",
+                    "GOEXPERIMENT": "<unset>",
+                    "GODEBUG": "<unset>",
                     "CC": "<unset>",
                     "CXX": "<unset>",
                     "LANG": "C.UTF-8",
@@ -231,6 +236,27 @@ class MeasureEfficiencyTest(unittest.TestCase):
             self.assertTrue(comparison["contract_equal"])
             self.assertEqual(comparison["drifts"], [])
 
+    def test_compare_accepts_same_revision_contract_despite_duration_noise(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            baseline = self.record_fixture(root, "run-001-baseline", "baseline", 1)
+            candidate = self.record_fixture(
+                root,
+                "run-002-candidate",
+                "candidate",
+                2,
+                execution=self.execution_metadata(wall_time_seconds=9.5),
+            )
+
+            result = self.compare(root, baseline, candidate)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            comparison = json.loads(result.stdout)
+            self.assertTrue(comparison["ok"])
+            self.assertTrue(comparison["comparable"])
+            self.assertTrue(comparison["contract_equal"])
+            self.assertEqual(comparison["drifts"], [])
+
     def test_compare_rejects_field_error_warning_and_redaction_drift(self) -> None:
         baseline_contract = self.base_contract()
         cases = {
@@ -388,6 +414,11 @@ class MeasureEfficiencyTest(unittest.TestCase):
         mutations = {
             "empty": lambda variables: variables.clear(),
             "missing": lambda variables: variables.pop("GOFLAGS"),
+            "missing_gomaxprocs": lambda variables: variables.pop("GOMAXPROCS"),
+            "missing_gogc": lambda variables: variables.pop("GOGC"),
+            "missing_gomemlimit": lambda variables: variables.pop("GOMEMLIMIT"),
+            "missing_goexperiment": lambda variables: variables.pop("GOEXPERIMENT"),
+            "missing_godebug": lambda variables: variables.pop("GODEBUG"),
             "extra": lambda variables: variables.update({"ARBITRARY": "value"}),
             "raw_path": lambda variables: variables.update({"PATH_SHA256": "/fixture/bin"}),
             "empty_value": lambda variables: variables.update({"CC": ""}),
@@ -427,6 +458,39 @@ class MeasureEfficiencyTest(unittest.TestCase):
             self.assertEqual(result.returncode, 1)
             self.assertIn("sample_count does not match go test -count", result.stderr)
 
+    def test_record_derives_go_count_from_argv_and_goflags(self) -> None:
+        cases = (
+            ("argv_only", "<unset>", True, None),
+            ("goflags_only", "-count=20", False, None),
+            ("matching_duplicate", "-count 20", True, None),
+            ("conflict", "-count=19", True, "conflicting go test -count"),
+            ("ambiguous", "-count", False, "go test -count has no value"),
+        )
+        for name, goflags, keep_argv_count, expected_error in cases:
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                execution = self.execution_metadata()
+                execution["environment"]["variables"]["GOFLAGS"] = goflags
+                if name == "argv_only":
+                    index = execution["command"]["argv"].index("-count=20")
+                    execution["command"]["argv"][index : index + 1] = ["-count", "20"]
+                elif not keep_argv_count:
+                    execution["command"]["argv"].remove("-count=20")
+
+                result = subprocess.run(
+                    self.prepare_record(root, "run-001-baseline", "baseline", 1, execution=execution),
+                    cwd=root,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+
+                if expected_error is None:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                else:
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn(expected_error, result.stderr)
+
     def test_compare_rejects_changed_inputs_environment_and_non_alternating_runs(self) -> None:
         cases = ("fixed_inputs", "environment", "alternating_sequence")
         for condition in cases:
@@ -460,6 +524,32 @@ class MeasureEfficiencyTest(unittest.TestCase):
                     if drift["kind"] == "measurement"
                 }
                 self.assertIn(condition, conditions)
+
+    def test_compare_rejects_go_runtime_environment_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            baseline = self.record_fixture(root, "run-001-baseline", "baseline", 1)
+            execution = self.execution_metadata()
+            execution["environment"]["variables"]["GOMAXPROCS"] = "1"
+            candidate = self.record_fixture(
+                root,
+                "run-002-candidate",
+                "candidate",
+                2,
+                execution=execution,
+            )
+
+            result = self.compare(root, baseline, candidate)
+
+            self.assertEqual(result.returncode, 1, result.stdout)
+            comparison = json.loads(result.stdout)
+            self.assertFalse(comparison["comparable"])
+            conditions = {
+                item.get("condition")
+                for item in comparison["drifts"]
+                if item["kind"] == "measurement"
+            }
+            self.assertIn("environment", conditions)
 
     def test_compare_reports_contract_drift_when_measurements_are_not_comparable(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
