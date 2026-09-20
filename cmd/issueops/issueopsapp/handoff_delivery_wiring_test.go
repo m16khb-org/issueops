@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -96,6 +97,20 @@ func TestHandoffDeliveryOmoDurablePromptReceiptRecoversCandidateWithoutExternalW
 	}
 }
 
+func TestHandoffDeliveryFreshOmoDelegatesWithoutDurableDispatchInspection(t *testing.T) {
+	stateRoot := t.TempDir()
+	request := handoffDeliveryRequestFixture("omo")
+	fake := &handoffDeliveryFreshOmoFake{}
+
+	inventory, err := newHandoffDeliveryProvisioner(stateRoot, fake, time.Now).InspectIntent(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !inventory.AuthoritativeZero || fake.dispatchInspections != 0 || fake.inventoryInspections != 1 {
+		t.Fatalf("fresh Omo inventory=%+v dispatch inspections=%d inventory inspections=%d", inventory, fake.dispatchInspections, fake.inventoryInspections)
+	}
+}
+
 func TestHandoffDeliveryOmoCrashBetweenCallsReplaysDispatchIDAndStartsPromptOnce(t *testing.T) {
 	stateRoot := t.TempDir()
 	request := handoffDeliveryRequestFixture("omo")
@@ -147,6 +162,89 @@ func TestHandoffDeliveryOmoPromptResponseLossReplaysBothExactIDs(t *testing.T) {
 	}
 	if fake.lastInvokeRequest.RetryRequestID != dispatchID || fake.lastInvokeRequest.PromptRetryRequestID != promptID {
 		t.Fatalf("exact replay IDs dispatch=%q prompt=%q", fake.lastInvokeRequest.RetryRequestID, fake.lastInvokeRequest.PromptRetryRequestID)
+	}
+}
+
+func TestHandoffDeliveryOmoAcceptedPromptCrashWithoutDurableIDDoesNotSendAgain(t *testing.T) {
+	stateRoot := t.TempDir()
+	request := handoffDeliveryRequestFixture("omo")
+	dispatchID := "11111111-1111-4111-8111-111111111111"
+	fake := &handoffDeliveryPromptCrashFake{
+		handoffDeliveryProvisionerFake: handoffDeliveryProvisionerFake{
+			receipt: port.ExecutionOrcaIntentReceipt{
+				TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1",
+				DispatchID: "dispatch-1", RequestID: dispatchID,
+			},
+			requestObservation: port.OrcaRequestObservation{
+				RuntimeID: "runtime-1", RequestID: dispatchID, Status: "completed", Method: "orchestration.dispatch",
+			},
+		},
+	}
+	observed := newHandoffDeliveryProvisioner(stateRoot, fake, time.Now)
+
+	if _, err := observed.InvokeIntent(context.Background(), request); err == nil {
+		t.Fatal("injected process crash after accepted terminal send was lost")
+	}
+	if fake.promptCalls != 1 {
+		t.Fatalf("initial prompt calls=%d want=1", fake.promptCalls)
+	}
+
+	inventory, err := observed.InspectIntent(context.Background(), request)
+	if err == nil && inventory.ExactReplay {
+		_, _ = observed.InvokeIntent(context.Background(), request)
+	}
+	if err == nil {
+		t.Fatalf("staged prompt without a durable UUID was classified for recovery: %+v", inventory)
+	}
+	if fake.promptCalls != 1 {
+		t.Fatalf("ambiguous prompt was sent again: calls=%d", fake.promptCalls)
+	}
+}
+
+func TestHandoffDeliveryDispatchCandidateRequiresExactRequestAndTerminalIdentity(t *testing.T) {
+	const dispatchID = "11111111-1111-4111-8111-111111111111"
+	tests := []struct {
+		name    string
+		host    string
+		receipt port.ExecutionOrcaIntentReceipt
+	}{
+		{
+			name: "codex different request UUID", host: "codex",
+			receipt: port.ExecutionOrcaIntentReceipt{TaskID: "task-1", DispatchID: "dispatch-1", RequestID: "99999999-9999-4999-8999-999999999999", TerminalPTYID: "pty-1", TerminalHandle: "term-1"},
+		},
+		{
+			name: "claude different assignee", host: "claude",
+			receipt: port.ExecutionOrcaIntentReceipt{TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID, TerminalPTYID: "pty-1", TerminalHandle: "term-other"},
+		},
+		{
+			name: "omo dual launcher other terminal", host: "omo",
+			receipt: port.ExecutionOrcaIntentReceipt{TaskID: "task-1", DispatchID: "dispatch-other", RequestID: dispatchID, TerminalPTYID: "pty-other", TerminalHandle: "term-other"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			stateRoot := t.TempDir()
+			request := handoffDeliveryRequestFixture(test.host)
+			identity := handoffDeliveryIdentityFixture()
+			if err := observeHandoffDeliveryFailure(stateRoot, request, identity, &port.OrcaError{
+				Code: "response_lost", Invoked: true, OrchestrationRequestID: dispatchID, CallPhase: "orca_dispatch",
+			}, time.Now); err != nil {
+				t.Fatal(err)
+			}
+			fake := &handoffDeliveryProvisionerFake{
+				receipt: test.receipt,
+				requestObservation: port.OrcaRequestObservation{
+					RuntimeID: "runtime-1", RequestID: dispatchID, Status: "completed", Method: "orchestration.dispatch",
+				},
+			}
+			inventory, err := newHandoffDeliveryProvisioner(stateRoot, fake, time.Now).InspectIntent(context.Background(), request)
+			if err == nil {
+				t.Fatalf("mismatched dispatch candidate was adopted or replayed: %+v", inventory)
+			}
+			if fake.invokeCalls != 0 {
+				t.Fatalf("identity mismatch performed external work: %d", fake.invokeCalls)
+			}
+		})
 	}
 }
 
@@ -329,6 +427,46 @@ type handoffDeliveryProvisionerFake struct {
 	invokeErr          error
 	invokeCalls        int
 	lastInvokeRequest  port.ExecutionOrcaIntentRequest
+}
+
+type handoffDeliveryPromptCrashFake struct {
+	handoffDeliveryProvisionerFake
+	promptCalls int
+}
+
+type handoffDeliveryFreshOmoFake struct {
+	handoffDeliveryProvisionerFake
+	dispatchInspections  int
+	inventoryInspections int
+}
+
+func (fake *handoffDeliveryFreshOmoFake) InspectDeliveryDispatch(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, bool, error) {
+	fake.dispatchInspections++
+	return port.ExecutionOrcaIntentReceipt{}, false, errors.New("fresh delivery has no durable dispatch request")
+}
+
+func (fake *handoffDeliveryFreshOmoFake) InspectIntent(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentInventory, error) {
+	fake.inventoryInspections++
+	return port.ExecutionOrcaIntentInventory{AuthoritativeZero: true}, nil
+}
+
+func (fake *handoffDeliveryPromptCrashFake) InvokeIntentObserved(_ context.Context, request port.ExecutionOrcaIntentRequest, observe func(port.ExecutionOrcaCallObservation) error) (port.ExecutionOrcaIntentReceipt, error) {
+	fake.invokeCalls++
+	fake.lastInvokeRequest = request
+	dispatchReceipt := fake.receipt
+	if err := observe(port.ExecutionOrcaCallObservation{CallKind: "dispatch", Phase: port.ExecutionOrcaCallStaged, Receipt: dispatchReceipt}); err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, err
+	}
+	if err := observe(port.ExecutionOrcaCallObservation{CallKind: "dispatch", Phase: port.ExecutionOrcaCallCompleted, Receipt: dispatchReceipt}); err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, err
+	}
+	if err := observe(port.ExecutionOrcaCallObservation{CallKind: "prompt", Phase: port.ExecutionOrcaCallStaged, Receipt: dispatchReceipt}); err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, err
+	}
+	fake.promptCalls++
+	return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{
+		Code: "process_crash", Invoked: true, DispatchRequestID: dispatchReceipt.RequestID, CallPhase: "terminal_send",
+	}
 }
 
 func (*handoffDeliveryProvisionerFake) InspectDeliveryIdentity(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaDeliveryIdentity, error) {

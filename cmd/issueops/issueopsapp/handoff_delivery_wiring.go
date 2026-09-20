@@ -251,9 +251,19 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 	if !ok {
 		return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Orca delivery request observer is unavailable")
 	}
-	dispatchRequestID := firstNonEmptyIssueOpsApp(request.RetryRequestID, dispatchObservation.Request.DurableID)
-	if strings.TrimSpace(request.RetryRequestID) != "" && !dispatchFound {
-		return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Orca dispatch retry request has no matching delivery observation")
+	dispatchRequestID, err := handoffDeliveryDurableRequestID(request.RetryRequestID, dispatchObservation.Request.DurableID, dispatchFound, "dispatch")
+	if err != nil {
+		return port.ExecutionOrcaIntentInventory{}, false, err
+	}
+	if dispatchFound && dispatchRequestID == "" {
+		return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Orca dispatch delivery is ambiguous without a durable request ID")
+	}
+	promptRequestID, err := handoffDeliveryDurableRequestID(request.PromptRetryRequestID, promptObservation.Request.DurableID, promptFound, "prompt")
+	if err != nil {
+		return port.ExecutionOrcaIntentInventory{}, false, err
+	}
+	if !dispatchFound && !promptFound {
+		return port.ExecutionOrcaIntentInventory{}, false, nil
 	}
 	dispatchStatus := ""
 	if dispatchRequestID != "" {
@@ -264,25 +274,36 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 	}
 	if request.Probe.Host != "omo" {
 		if dispatchStatus == "completed" || dispatchStatus == "pending" {
-			dispatchReceipt, exists, inspectErr := observer.InspectDeliveryDispatch(ctx, request)
+			inspectRequest := request
+			inspectRequest.RetryRequestID = dispatchRequestID
+			dispatchReceipt, exists, inspectErr := observer.InspectDeliveryDispatch(ctx, inspectRequest)
 			if inspectErr != nil {
 				return port.ExecutionOrcaIntentInventory{}, false, inspectErr
 			}
 			if exists {
-				dispatchReceipt.RequestID = dispatchRequestID
+				if err := validateHandoffDeliveryDispatchReceipt(dispatchReceipt, request, identity, dispatchRequestID); err != nil {
+					return port.ExecutionOrcaIntentInventory{}, false, err
+				}
 				return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{dispatchReceipt}}, true, nil
 			}
 			return port.ExecutionOrcaIntentInventory{ExactReplay: true}, true, nil
 		}
 		return port.ExecutionOrcaIntentInventory{}, false, nil
 	}
+	if !dispatchFound {
+		return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Omo prompt delivery has no recovered dispatch lineage")
+	}
 
-	dispatchReceipt, dispatchExists, err := observer.InspectDeliveryDispatch(ctx, request)
+	inspectRequest := request
+	inspectRequest.RetryRequestID = dispatchRequestID
+	dispatchReceipt, dispatchExists, err := observer.InspectDeliveryDispatch(ctx, inspectRequest)
 	if err != nil {
 		return port.ExecutionOrcaIntentInventory{}, false, err
 	}
 	if dispatchExists {
-		dispatchReceipt.RequestID = dispatchRequestID
+		if err := validateHandoffDeliveryDispatchReceipt(dispatchReceipt, request, identity, dispatchRequestID); err != nil {
+			return port.ExecutionOrcaIntentInventory{}, false, err
+		}
 	}
 	if promptFound && (promptObservation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved || promptObservation.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved) {
 		if !dispatchExists || strings.TrimSpace(promptObservation.Request.DurableID) == "" || strings.TrimSpace(promptObservation.Target.ProcessIncarnation) == "" {
@@ -298,9 +319,8 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 		}
 		return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{dispatchReceipt}}, true, nil
 	}
-	promptRequestID := firstNonEmptyIssueOpsApp(request.PromptRetryRequestID, promptObservation.Request.DurableID)
-	if strings.TrimSpace(request.PromptRetryRequestID) != "" && !promptFound {
-		return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Orca prompt retry request has no matching delivery observation")
+	if promptFound && promptRequestID == "" {
+		return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Omo prompt delivery is ambiguous without a durable request ID")
 	}
 	if promptRequestID != "" {
 		// Orca request-show is scoped to orchestration mutations. A terminal
@@ -312,6 +332,29 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 		return port.ExecutionOrcaIntentInventory{ExactReplay: true}, true, nil
 	}
 	return port.ExecutionOrcaIntentInventory{}, false, nil
+}
+
+func handoffDeliveryDurableRequestID(requestID, observedID string, found bool, callKind string) (string, error) {
+	requestID = strings.TrimSpace(requestID)
+	observedID = strings.TrimSpace(observedID)
+	if requestID != "" {
+		if !found || observedID == "" || requestID != observedID {
+			return "", fmt.Errorf("Orca %s retry request has no exact delivery observation", callKind)
+		}
+		return requestID, nil
+	}
+	return observedID, nil
+}
+
+func validateHandoffDeliveryDispatchReceipt(receipt port.ExecutionOrcaIntentReceipt, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, requestID string) error {
+	if strings.TrimSpace(receipt.RequestID) != strings.TrimSpace(requestID) ||
+		strings.TrimSpace(receipt.TaskID) != strings.TrimSpace(request.TaskID) ||
+		strings.TrimSpace(receipt.DispatchID) == "" ||
+		strings.TrimSpace(receipt.TerminalPTYID) != strings.TrimSpace(identity.TerminalPTYID) ||
+		strings.TrimSpace(receipt.TerminalHandle) != strings.TrimSpace(identity.TerminalHandle) {
+		return fmt.Errorf("Orca dispatch candidate does not match the durable request and delivery terminal identity")
+	}
+	return nil
 }
 
 func recoverHandoffDeliveryRequest(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity) (port.ExecutionOrcaIntentRequest, error) {

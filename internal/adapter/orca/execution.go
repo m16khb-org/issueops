@@ -142,6 +142,13 @@ func (p *ExecutionProvisioner) ObserveRequest(ctx context.Context, requestID str
 }
 
 func (p *ExecutionProvisioner) InspectDeliveryDispatch(ctx context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, bool, error) {
+	if strings.TrimSpace(req.RetryRequestID) == "" {
+		return port.ExecutionOrcaIntentReceipt{}, false, fmt.Errorf("Orca dispatch delivery inspection requires a durable request ID")
+	}
+	terminal, err := p.resolveIntentTerminal(ctx, req)
+	if err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, false, err
+	}
 	client, err := p.intentInventoryClient()
 	if err != nil {
 		return port.ExecutionOrcaIntentReceipt{}, false, err
@@ -157,10 +164,13 @@ func (p *ExecutionProvisioner) InspectDeliveryDispatch(ctx context.Context, req 
 		return port.ExecutionOrcaIntentReceipt{}, false, nil
 	}
 	dispatch := *inventory.Dispatch
-	if err := validateExecutionObservedDispatch(dispatch, req.Prepared.RuntimeID, req.TaskID); err != nil {
+	if err := validateExecutionObservedDispatch(dispatch, req.Prepared.RuntimeID, req.TaskID, terminal.Handle, req.RetryRequestID); err != nil {
 		return port.ExecutionOrcaIntentReceipt{}, false, err
 	}
-	return port.ExecutionOrcaIntentReceipt{TaskID: dispatch.TaskID, DispatchID: dispatch.ID, RequestID: dispatch.RequestID}, true, nil
+	return port.ExecutionOrcaIntentReceipt{
+		TaskID: dispatch.TaskID, DispatchID: dispatch.ID, RequestID: dispatch.RequestID,
+		TerminalPTYID: terminal.PTYID, TerminalHandle: terminal.Handle,
+	}, true, nil
 }
 
 func (p *ExecutionProvisioner) InspectIntent(ctx context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentInventory, error) {
@@ -324,10 +334,20 @@ func (p *ExecutionProvisioner) inspectIntentDispatch(ctx context.Context, req po
 	if req.Probe.Host == "omo" {
 		return port.ExecutionOrcaIntentInventory{}, fmt.Errorf("Orca Omo prompt delivery is unproven after dispatch")
 	}
-	if err := validateExecutionObservedDispatch(dispatch, req.Prepared.RuntimeID, req.TaskID); err != nil {
+	if strings.TrimSpace(req.RetryRequestID) == "" {
+		return port.ExecutionOrcaIntentInventory{}, fmt.Errorf("Orca dispatch candidate requires a durable request ID")
+	}
+	terminal, err := p.resolveIntentTerminal(ctx, req)
+	if err != nil {
 		return port.ExecutionOrcaIntentInventory{}, err
 	}
-	return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{{TaskID: dispatch.TaskID, DispatchID: dispatch.ID}}}, nil
+	if err := validateExecutionObservedDispatch(dispatch, req.Prepared.RuntimeID, req.TaskID, terminal.Handle, req.RetryRequestID); err != nil {
+		return port.ExecutionOrcaIntentInventory{}, err
+	}
+	return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{{
+		TaskID: dispatch.TaskID, DispatchID: dispatch.ID, RequestID: dispatch.RequestID,
+		TerminalPTYID: terminal.PTYID, TerminalHandle: terminal.Handle,
+	}}}, nil
 }
 
 func (p *ExecutionProvisioner) InvokeIntent(ctx context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, error) {

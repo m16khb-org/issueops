@@ -234,10 +234,11 @@ func validateExecutionInvokedDispatch(dispatch port.OrcaDispatch, runtimeID, tas
 	return nil
 }
 
-func validateExecutionObservedDispatch(dispatch port.OrcaDispatch, runtimeID, taskID string) error {
+func validateExecutionObservedDispatch(dispatch port.OrcaDispatch, runtimeID, taskID, terminalHandle, requestID string) error {
 	if strings.TrimSpace(dispatch.ID) == "" || strings.TrimSpace(runtimeID) == "" || dispatch.RuntimeID != runtimeID || dispatch.TaskID != taskID ||
-		strings.TrimSpace(dispatch.AssigneeHandle) == "" || strings.TrimSpace(dispatch.Status) == "" {
-		return fmt.Errorf("Orca dispatch does not match the sealed task identity")
+		strings.TrimSpace(terminalHandle) == "" || dispatch.AssigneeHandle != terminalHandle ||
+		strings.TrimSpace(requestID) == "" || dispatch.RequestID != requestID || strings.TrimSpace(dispatch.Status) == "" {
+		return fmt.Errorf("Orca dispatch does not match the sealed task, terminal, and request identity")
 	}
 	return nil
 }

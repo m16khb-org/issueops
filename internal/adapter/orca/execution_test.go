@@ -165,6 +165,64 @@ func TestExecutionOmoPromptReplayRejectsProcessIncarnationMismatchAndPreservesID
 	}
 }
 
+func TestExecutionInspectDeliveryDispatchRequiresDurableRequestAndCurrentAssignee(t *testing.T) {
+	workspace, probe := executionFixture(t)
+	launch := executionLaunchFixture(t, workspace.Root)
+	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
+	const requestID = "11111111-1111-4111-8111-111111111111"
+	baseRequest := port.ExecutionOrcaIntentRequest{
+		Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe,
+		Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", TerminalHandle: "term-stale",
+		RunID: "run-69", RunBound: true, TaskID: "task-69", RetryRequestID: requestID,
+	}
+	tests := []struct {
+		name      string
+		terminals []port.OrcaTerminal
+		dispatch  port.OrcaDispatch
+		wantOK    bool
+	}{
+		{
+			name:      "exact current terminal",
+			terminals: []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-current", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
+			dispatch:  port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-current", Status: "dispatched", RequestID: requestID},
+			wantOK:    true,
+		},
+		{
+			name:      "different request UUID",
+			terminals: []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-current", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
+			dispatch:  port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-current", Status: "dispatched", RequestID: "99999999-9999-4999-8999-999999999999"},
+		},
+		{
+			name:      "different assignee",
+			terminals: []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-current", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
+			dispatch:  port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-other", Status: "dispatched", RequestID: requestID},
+		},
+		{
+			name: "dual launcher other terminal",
+			terminals: []port.OrcaTerminal{
+				{RuntimeID: "runtime-69", Handle: "term-current", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true},
+				{RuntimeID: "runtime-69", Handle: "term-other", PTYID: "pty-other", WorktreeID: "wt-69", Connected: true, Writable: true},
+			},
+			dispatch: port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-other", TaskID: "task-69", AssigneeHandle: "term-other", Status: "dispatched", RequestID: requestID},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := &executionFake{terminals: test.terminals, dispatch: test.dispatch}
+			receipt, exists, err := NewExecutionClient(client).InspectDeliveryDispatch(context.Background(), baseRequest)
+			if test.wantOK {
+				if err != nil || !exists || receipt.RequestID != requestID || receipt.TerminalHandle != "term-current" || receipt.TerminalPTYID != "pty-69" {
+					t.Fatalf("exact dispatch receipt=%+v exists=%v err=%v", receipt, exists, err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("mismatched dispatch accepted: receipt=%+v exists=%v", receipt, exists)
+			}
+		})
+	}
+}
+
 func TestExecutionProvisionerCreatesOneWorktreeAndLaunchesOneOwner(t *testing.T) {
 	workspace, request := executionFixture(t)
 	client := &executionFake{workspace: workspace, probeRequest: request}
@@ -437,14 +495,15 @@ func TestExecutionIntentStagesAreIndividuallyInspectableAndInvoked(t *testing.T)
 	if err != nil || dispatchReceipt.DispatchID != "dispatch-69" {
 		t.Fatalf("invoke dispatch intent: receipt=%#v err=%v", dispatchReceipt, err)
 	}
-	client.dispatch = port.OrcaDispatch{RuntimeID: "runtime-69", ID: dispatchReceipt.DispatchID, TaskID: taskReceipt.TaskID, AssigneeHandle: "term-69", Injected: true, Status: "dispatched"}
+	dispatchRequest.RetryRequestID = dispatchReceipt.RequestID
+	client.dispatch = port.OrcaDispatch{RuntimeID: "runtime-69", ID: dispatchReceipt.DispatchID, TaskID: taskReceipt.TaskID, AssigneeHandle: "term-69", Injected: true, Status: "dispatched", RequestID: dispatchReceipt.RequestID}
 	assertExecutionIntentOne(t, provisioner, dispatchRequest)
 
 	wantCalls := []string{
 		"list", "create-worktree", "list", "list-terminals-inventory", "create-terminal", "list-terminals-inventory",
 		"list-runs", "create-run", "list-runs", "current-run", "current-run", "use-run", "current-run",
 		"list-run-tasks-inventory", "create-task", "list-run-tasks-inventory", "show-dispatch-inventory",
-		"list-terminals-inventory", "dispatch", "show-dispatch-inventory",
+		"list-terminals-inventory", "dispatch", "show-dispatch-inventory", "list-terminals-inventory",
 	}
 	if !reflect.DeepEqual(client.calls, wantCalls) {
 		t.Fatalf("each intent must perform only its own inventory or mutation: got %v want %v", client.calls, wantCalls)
@@ -1032,13 +1091,14 @@ func TestExecutionIntentReResolvesRotatedTerminalHandle(t *testing.T) {
 	}
 
 	client.calls = nil
-	client.dispatch = port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-historical", Status: "running"}
+	request.RetryRequestID = receipt.RequestID
+	client.dispatch = port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-current", Status: "running", RequestID: receipt.RequestID}
 	inventory, err := provisioner.InspectIntent(context.Background(), request)
 	if err != nil || len(inventory.Candidates) != 1 {
-		t.Fatalf("dispatch inventory rejected the installed dispatch-show shape after handle rotation: inventory=%#v err=%v", inventory, err)
+		t.Fatalf("dispatch inventory rejected the re-resolved current handle: inventory=%#v err=%v", inventory, err)
 	}
-	if !reflect.DeepEqual(client.calls, []string{"show-dispatch-inventory"}) {
-		t.Fatalf("existing dispatch reconciliation must not resolve a current handle or invoke another dispatch: %v", client.calls)
+	if !reflect.DeepEqual(client.calls, []string{"show-dispatch-inventory", "list-terminals-inventory"}) {
+		t.Fatalf("existing dispatch reconciliation must resolve and verify the current handle without dispatching: %v", client.calls)
 	}
 }
 
@@ -1459,7 +1519,11 @@ func (f *executionFake) Dispatch(_ context.Context, req port.OrcaDispatchRequest
 	if f.dispatchResult != nil {
 		return *f.dispatchResult, nil
 	}
-	return port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: req.TaskID, AssigneeHandle: req.ToHandle, Injected: true}, nil
+	requestID := req.RetryRequestID
+	if requestID == "" {
+		requestID = "11111111-1111-4111-8111-111111111111"
+	}
+	return port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: req.TaskID, AssigneeHandle: req.ToHandle, Injected: true, RequestID: requestID}, nil
 }
 
 func (f *executionFake) SendTerminalPrompt(_ context.Context, handle, prompt, requestID string) (port.OrcaPromptReceipt, error) {

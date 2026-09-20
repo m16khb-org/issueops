@@ -180,6 +180,47 @@ func TestIssueOpsReconcileVerticalDoesNotClaimInspectionWithoutProvisioner(t *te
 	}
 }
 
+func TestIssueOpsReconcileVerticalKeepsStagedOnlyDispatchUnclaimable(t *testing.T) {
+	stateRoot, record, fake := reconcilePendingFixture(t, port.ExecutionOrcaIntentTerminal)
+	fake.adopt = true
+	fake.inspectCalls = 0
+	fake.invokeCalls = 0
+	request := issueops.ExecutionActionRequest{
+		Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
+		Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
+	}
+	deps := issueops.ExecutionActionDependencies{Orca: fake, Reconcile: issueOpsReconcileHandler}
+
+	for range 4 {
+		if _, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps); err != nil {
+			t.Fatalf("advance to dispatch: %v", err)
+		}
+	}
+	fake.adopt = false
+	fake.failStage = port.ExecutionOrcaIntentDispatch
+	if _, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps); err == nil {
+		t.Fatal("fixture dispatch must stop after staging the ambiguous external call")
+	}
+	fake.adopt = true
+	fake.inspectCalls = 0
+	fake.invokeCalls = 0
+
+	raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps)
+	if err == nil {
+		t.Fatalf("staged-only dispatch became recoverable: %#v", raw)
+	}
+	if fake.invokeCalls != 0 {
+		t.Fatalf("ambiguous staged dispatch performed external work: %d", fake.invokeCalls)
+	}
+	persisted, readErr := issueops.ReadIssueOps(stateRoot, record.ID)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if persisted.Execution == nil || persisted.Execution.Pending == nil || persisted.Execution.Lease.Status == issueopscontract.LeaseStatusClaimable {
+		t.Fatalf("identity-unbound dispatch changed lease authority: %#v", persisted.Execution)
+	}
+}
+
 func TestIssueOpsReconcileVerticalUsesInjectedClockForFailureReceipt(t *testing.T) {
 	stateRoot, record, fake := reconcilePendingFixture(t, port.ExecutionOrcaIntentTerminal)
 	want := time.Date(2026, 8, 1, 11, 12, 13, 14, time.UTC)
