@@ -26,3 +26,33 @@ func TestBoundedBufferReportsTruncationWithoutShortWrite(t *testing.T) {
 		t.Fatal("bounded buffer retained truncated suffix")
 	}
 }
+
+func TestSemanticResponseDigestIsHostNeutral(t *testing.T) {
+	shapes := []any{
+		map[string]any{"content": "captured"},
+		map[string]any{"content": "captured", "duration_ms": 17, "server": "issueops_probe"},
+		map[string]any{
+			"content": []any{map[string]any{"type": "text", "text": "captured"}},
+			"details": map[string]any{"server": "issueops_probe", "tool": "harness_probe_empty_object"},
+		},
+	}
+	var want string
+	for index, shape := range shapes {
+		got, err := semanticResponseDigest([]any{shape})
+		if err != nil {
+			t.Fatalf("shape %d: %v", index, err)
+		}
+		if index == 0 {
+			want = got
+		} else if got != want {
+			t.Fatalf("shape %d digest = %q, want %q", index, got, want)
+		}
+	}
+	different, err := semanticResponseDigest([]any{map[string]any{"content": "different"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if different == want {
+		t.Fatal("semantic response difference produced the same digest")
+	}
+}

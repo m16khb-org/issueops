@@ -39,8 +39,10 @@ func TestOmoRunnerPreflightUsesNativeOmoAndRequiresExplicitModel(t *testing.T) {
 		if !reflect.DeepEqual(request.Argv, []string{"/opt/bin/omo", "--version"}) {
 			t.Fatalf("argv = %#v", request.Argv)
 		}
-		if !reflect.DeepEqual(request.Env, []string{"HOME=/private/home", "PATH=/opt/bin"}) {
-			t.Fatalf("env = %#v", request.Env)
+		home := environmentValue(t, request.Env, "HOME")
+		agent := environmentValue(t, request.Env, "OMO_CODING_AGENT_DIR")
+		if home == "/private/home" || filepath.Base(home) != "home" || filepath.Dir(home) != filepath.Dir(agent) || filepath.Base(agent) != "agent" || environmentValue(t, request.Env, "PATH") != "/opt/bin" {
+			t.Fatalf("private env = %#v", request.Env)
 		}
 		return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22 (engine: senpi 2026.8.26-2)\n")}, nil
 	}}
@@ -122,7 +124,7 @@ func TestOmoRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 			t.Fatalf("command = %+v", command)
 		}
 		if !reflect.DeepEqual(command.Env, []string{
-			"HOME=/private/home",
+			"HOME=" + filepath.Join(episodeRoot, "home"),
 			"OMO_CODING_AGENT_DIR=" + filepath.Join(episodeRoot, "agent"),
 			"PATH=/test/bin",
 			"USER=tester",
@@ -199,10 +201,12 @@ func TestOmoRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 	if !result.SessionStartObserved || result.PreToolUseObserved || result.CallCount != 1 || result.ExitCode != 0 || result.AmbientToolCount != 1 {
 		t.Fatalf("runtime evidence = %+v", result)
 	}
-	const responseJSON = `[{"content":[{"text":"captured","type":"text"}],"details":{"server":"issueops_probe","tool":"harness_probe_empty_object"}}]`
-	wantDigest := sha256.Sum256([]byte(responseJSON))
-	if result.ResponseSHA256 != hex.EncodeToString(wantDigest[:]) {
-		t.Fatalf("response digest = %q, want %x", result.ResponseSHA256, wantDigest)
+	wantDigest, err := semanticResponseDigest([]any{map[string]any{"content": "captured"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.ResponseSHA256 != wantDigest {
+		t.Fatalf("response digest = %q, want %s", result.ResponseSHA256, wantDigest)
 	}
 	if received.Argv == nil {
 		t.Fatal("native Omo process was not invoked")
@@ -303,6 +307,63 @@ func TestOmoRunnerRunRejectsCaptureCardinalityMismatch(t *testing.T) {
 
 	result := runner.Run(context.Background(), request)
 	if result.Completed || result.Cause != "transport" || result.Code != "probe_call_cardinality_invalid" {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestObserveOmoStreamRejectsAmbientUnmatchedAndDuplicateExecutions(t *testing.T) {
+	request := omoProbeRequest()
+	target := "mcp_issueops_probe_" + request.ProbeTool
+	base := string(omoSuccessfulStream(request, target))
+	ambientPair := `{"type":"tool_execution_start","toolCallId":"ambient-1","toolName":"read_file","args":{}}` + "\n" +
+		`{"type":"tool_execution_end","toolCallId":"ambient-1","toolName":"read_file","result":{"content":"ambient"},"isError":false}` + "\n"
+	targetStart := `{"type":"tool_execution_start","toolCallId":"call-1","toolName":"` + target + `","args":{}}` + "\n"
+	targetEnd := `{"type":"tool_execution_end","toolCallId":"call-1","toolName":"` + target + `","result":{"content":"captured"},"isError":false}` + "\n"
+	tests := []struct {
+		name   string
+		stream string
+	}{
+		{name: "ambient before target", stream: ambientPair + base},
+		{name: "ambient after target", stream: base + ambientPair},
+		{name: "unmatched ambient start", stream: base + `{"type":"tool_execution_start","toolCallId":"ambient-1","toolName":"read_file","args":{}}` + "\n"},
+		{name: "unmatched ambient end", stream: base + `{"type":"tool_execution_end","toolCallId":"ambient-1","toolName":"read_file","result":{"content":"ambient"},"isError":false}` + "\n"},
+		{name: "duplicate target start", stream: strings.Replace(base, targetStart, targetStart+targetStart, 1)},
+		{name: "duplicate target end", stream: base + targetEnd},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := observeOmoStream([]byte(test.stream), target); err == nil {
+				t.Fatal("invalid all-tool execution stream was accepted")
+			}
+		})
+	}
+}
+
+func TestOmoRunnerDerivesAmbientToolCountFromRejectedStream(t *testing.T) {
+	request := omoProbeRequest()
+	root := filepath.Join(t.TempDir(), "episode")
+	target := "mcp_issueops_probe_" + request.ProbeTool
+	stream := append(omoSuccessfulStream(request, target), []byte(
+		`{"type":"tool_execution_start","toolCallId":"ambient-1","toolName":"read_file","args":{}}`+"\n"+
+			`{"type":"tool_execution_end","toolCallId":"ambient-1","toolName":"read_file","result":{"content":"ambient"},"isError":false}`+"\n",
+	)...)
+	runner := NewOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
+		LookPath: func(string) (string, error) { return "/test/bin/omo", nil },
+		TempDir: func(_, _ string) (string, error) {
+			if err := os.Mkdir(root, 0o700); err != nil {
+				return "", err
+			}
+			return root, nil
+		},
+		Process: &omoFakeProcess{run: func(context.Context, CommandRequest) (CommandOutput, error) {
+			writeOmoCapture(t, filepath.Join(root, "result.json"), request)
+			return CommandOutput{Stdout: stream}, nil
+		}},
+		Getenv: func(string) string { return "" },
+	})
+
+	result := runner.Run(context.Background(), request)
+	if result.Completed || result.Code != "host_stream_multiple_calls" || result.AmbientToolCount != 2 {
 		t.Fatalf("result = %+v", result)
 	}
 }

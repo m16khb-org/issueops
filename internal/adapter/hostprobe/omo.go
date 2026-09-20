@@ -3,8 +3,6 @@ package hostprobe
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,9 +49,15 @@ type omoMCPServer struct {
 }
 
 type omoStreamObservation struct {
-	Model          string
-	MCPCallCount   int
-	ResponseSHA256 string
+	Model            string
+	AmbientToolCount int
+	MCPCallCount     int
+	ResponseSHA256   string
+}
+
+type omoToolExecution struct {
+	name  string
+	ended bool
 }
 
 type omoLifecycleContract struct {
@@ -72,6 +76,11 @@ type omoLifecycleRule struct {
 	AcceptedOnly bool   `json:"accepted_only"`
 }
 
+type omoAuthSnapshot struct {
+	present bool
+	data    []byte
+}
+
 func NewOmoRunner(harnessBinary, lifecycleExtension string, deps Dependencies) OmoRunner {
 	return OmoRunner{
 		harnessBinary:      harnessBinary,
@@ -83,7 +92,48 @@ func NewOmoRunner(harnessBinary, lifecycleExtension string, deps Dependencies) O
 func (OmoRunner) Name() string { return "omo" }
 
 func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest) port.HostProbePreflight {
-	result := preflight(ctx, r.deps, r.Name(), "omo", request, isolatedHostEnv(r.deps))
+	result := port.HostProbePreflight{
+		Host:           r.Name(),
+		RequestedModel: request.Model,
+		EvidenceSource: "omo_preflight",
+	}
+	executable, err := r.resolveExecutable()
+	if err != nil {
+		result.Cause = "harness_environment"
+		result.Code = "executable_not_found"
+		return result
+	}
+	result.Installed = true
+	auth, err := resolveOmoAuth(r.deps)
+	if err != nil {
+		result.Cause = "harness_environment"
+		result.Code = "auth_copy_failed"
+		return result
+	}
+	root, err := newEpisodeRoot(r.deps, r.Name())
+	if err != nil {
+		result.Cause = "harness_environment"
+		result.Code = "episode_root_create_failed"
+		return result
+	}
+	defer func() { _ = os.RemoveAll(root) }()
+	if err := prepareOmoPrivateState(root, auth); err != nil {
+		result.Cause = "harness_environment"
+		result.Code = "episode_prepare_failed"
+		return result
+	}
+	output, err := r.deps.Process.Run(ctx, CommandRequest{
+		Argv:    []string{executable, "--version"},
+		Env:     isolatedOmoEnv(r.deps, root),
+		Timeout: VersionTimeout,
+	})
+	if err != nil || output.ExitCode != 0 {
+		result.Cause = "harness_environment"
+		result.Code = "version_probe_failed"
+		return result
+	}
+	result.Ready = true
+	result.Version = boundedVersion(string(output.Stdout))
 	result.MockExtensionVerified = validOmoLifecycleExtension(r.lifecycleExtension)
 	if result.Ready && !result.MockExtensionVerified {
 		result.Ready = false
@@ -98,6 +148,18 @@ func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest)
 		result.EvidenceSource = "omo_preflight"
 	}
 	return result
+}
+
+func (r OmoRunner) resolveExecutable() (string, error) {
+	executable, err := r.deps.LookPath("omo")
+	if err != nil {
+		return "", err
+	}
+	executable, err = filepath.Abs(executable)
+	if err != nil || !filepath.IsAbs(executable) {
+		return "", fmt.Errorf("omo_executable_invalid")
+	}
+	return executable, nil
 }
 
 func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.HostProbeResult {
@@ -119,9 +181,13 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "harness_binary_path_invalid")
 	}
 	request.HarnessBinary = harnessBinary
-	executable, err := r.deps.LookPath("omo")
+	executable, err := r.resolveExecutable()
 	if err != nil {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "executable_not_found")
+	}
+	auth, err := resolveOmoAuth(r.deps)
+	if err != nil {
+		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "auth_copy_failed")
 	}
 	root, err := newEpisodeRoot(r.deps, r.Name())
 	if err != nil {
@@ -129,19 +195,18 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.
 	}
 	defer func() { _ = os.RemoveAll(root) }()
 
+	if err := prepareOmoPrivateState(root, auth); err != nil {
+		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_prepare_failed")
+	}
 	resultPath := filepath.Join(root, "result.json")
 	targetTool := omoProbeToolName(request.ProbeTool)
 	if err := prepareOmoEpisode(root, r.lifecycleExtension, targetTool, request, resultPath); err != nil {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_prepare_failed")
 	}
-	if err := copyOmoAuth(root, r.deps); err != nil {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "auth_copy_failed")
-	}
-	environment := replaceEnvironmentValue(isolatedHostEnv(r.deps, "OMO_CODING_AGENT_DIR"), "OMO_CODING_AGENT_DIR", filepath.Join(root, "agent"))
 	output, err := r.deps.Process.Run(ctx, CommandRequest{
 		Cwd:     root,
 		Argv:    omoArgv(executable, root, targetTool, request),
-		Env:     environment,
+		Env:     isolatedOmoEnv(r.deps, root),
 		Timeout: EpisodeTimeout,
 	})
 	if err != nil {
@@ -160,6 +225,8 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.
 		cause, code := omoStreamFailure(err)
 		result := failedResult(r.Name(), "", request, started, r.deps, cause, code)
 		result.ExitCode = output.ExitCode
+		result.AmbientToolCount = observation.AmbientToolCount
+		result.CallCount = observation.MCPCallCount
 		return result
 	}
 	capture, err := decodeEpisodeCapture(resultPath, request)
@@ -180,6 +247,7 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.
 	// lifecycle extension injected one hidden project-doc message first.
 	result.SessionStartObserved = true
 	result.ResponseSHA256 = observation.ResponseSHA256
+	result.AmbientToolCount = observation.AmbientToolCount
 	result.ExitCode = output.ExitCode
 	return result
 }
@@ -254,37 +322,63 @@ func prepareOmoEpisode(root, lifecycleExtension, targetTool string, request port
 	return writePrivateFile(filepath.Join(root, "agent", "mcp.json"), data)
 }
 
-func copyOmoAuth(root string, deps Dependencies) error {
+func resolveOmoAuth(deps Dependencies) (omoAuthSnapshot, error) {
 	sourceAgentDir := strings.TrimSpace(deps.Getenv("OMO_CODING_AGENT_DIR"))
 	if sourceAgentDir == "" {
 		home := strings.TrimSpace(deps.Getenv("HOME"))
 		if home == "" {
-			return nil
+			return omoAuthSnapshot{}, nil
 		}
 		if !filepath.IsAbs(home) {
-			return fmt.Errorf("omo_home_invalid")
+			return omoAuthSnapshot{}, fmt.Errorf("omo_home_invalid")
 		}
 		sourceAgentDir = filepath.Join(home, ".omo", "agent")
 	}
 	if !filepath.IsAbs(sourceAgentDir) {
-		return fmt.Errorf("omo_agent_dir_invalid")
+		return omoAuthSnapshot{}, fmt.Errorf("omo_agent_dir_invalid")
 	}
 	source := filepath.Join(sourceAgentDir, "auth.json")
 	info, err := os.Lstat(source)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return omoAuthSnapshot{}, nil
 		}
-		return err
+		return omoAuthSnapshot{}, err
 	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 {
-		return fmt.Errorf("omo_auth_invalid")
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 || info.Size() > MaxOutputBytes {
+		return omoAuthSnapshot{}, fmt.Errorf("omo_auth_invalid")
 	}
-	data, err := readBoundedEvidenceFile(source)
+	file, err := os.Open(source)
 	if err != nil {
-		return err
+		return omoAuthSnapshot{}, err
 	}
-	return writePrivateFile(filepath.Join(root, "agent", "auth.json"), data)
+	defer file.Close()
+	opened, err := file.Stat()
+	if err != nil || !os.SameFile(info, opened) || !opened.Mode().IsRegular() || opened.Mode().Perm() != 0o600 || opened.Size() > MaxOutputBytes {
+		return omoAuthSnapshot{}, fmt.Errorf("omo_auth_invalid")
+	}
+	data, err := io.ReadAll(io.LimitReader(file, MaxOutputBytes+1))
+	if err != nil || len(data) > MaxOutputBytes {
+		return omoAuthSnapshot{}, fmt.Errorf("omo_auth_invalid")
+	}
+	return omoAuthSnapshot{present: true, data: data}, nil
+}
+
+func prepareOmoPrivateState(root string, auth omoAuthSnapshot) error {
+	for _, directory := range []string{filepath.Join(root, "home"), filepath.Join(root, "agent")} {
+		if err := os.MkdirAll(directory, 0o700); err != nil {
+			return err
+		}
+	}
+	if !auth.present {
+		return nil
+	}
+	return writePrivateFile(filepath.Join(root, "agent", "auth.json"), auth.data)
+}
+
+func isolatedOmoEnv(deps Dependencies, root string) []string {
+	environment := replaceEnvironmentValue(isolatedHostEnv(deps, "OMO_CODING_AGENT_DIR"), "HOME", filepath.Join(root, "home"))
+	return replaceEnvironmentValue(environment, "OMO_CODING_AGENT_DIR", filepath.Join(root, "agent"))
 }
 
 func omoArgv(executable, root, targetTool string, request port.HostProbeRequest) []string {
@@ -356,8 +450,7 @@ func observeOmoStream(data []byte, targetTool string) (omoStreamObservation, err
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
-	starts := map[string]bool{}
-	ends := map[string]bool{}
+	executions := map[string]*omoToolExecution{}
 	results := make([]any, 0, 1)
 	observation := omoStreamObservation{}
 	events := 0
@@ -368,7 +461,7 @@ func observeOmoStream(data []byte, targetTool string) (omoStreamObservation, err
 			if errors.Is(err, io.EOF) {
 				break
 			}
-			return omoStreamObservation{}, fmt.Errorf("host_stream_invalid")
+			return observation, fmt.Errorf("host_stream_invalid")
 		}
 		events++
 		typeName, _ := event["type"].(string)
@@ -383,52 +476,73 @@ func observeOmoStream(data []byte, targetTool string) (omoStreamObservation, err
 				}
 			}
 		case "tool_execution_start":
-			if event["toolName"] != targetTool {
-				continue
-			}
+			toolName, _ := event["toolName"].(string)
 			id, _ := event["toolCallId"].(string)
-			if id == "" || starts[id] {
-				return omoStreamObservation{}, fmt.Errorf("host_stream_multiple_calls")
+			if id == "" || toolName == "" {
+				return observation, fmt.Errorf("host_stream_invalid")
 			}
-			starts[id] = true
+			observation.AmbientToolCount++
+			if _, exists := executions[id]; exists {
+				return observation, fmt.Errorf("host_stream_multiple_calls")
+			}
+			executions[id] = &omoToolExecution{name: toolName}
+			if toolName == targetTool {
+				observation.MCPCallCount++
+			}
 		case "tool_execution_end":
-			if event["toolName"] != targetTool {
-				continue
-			}
+			toolName, _ := event["toolName"].(string)
 			id, _ := event["toolCallId"].(string)
-			if id == "" || !starts[id] || ends[id] {
-				return omoStreamObservation{}, fmt.Errorf("host_stream_invalid")
+			execution := executions[id]
+			if id == "" || toolName == "" || execution == nil || execution.name != toolName || execution.ended {
+				return observation, fmt.Errorf("host_stream_invalid")
 			}
-			ends[id] = true
+			execution.ended = true
 			if isError, ok := event["isError"].(bool); !ok || isError {
-				return omoStreamObservation{}, fmt.Errorf("host_stream_tool_error")
+				if toolName == targetTool {
+					return observation, fmt.Errorf("host_stream_tool_error")
+				}
+				return observation, fmt.Errorf("host_stream_non_target_call")
 			}
 			result, ok := event["result"]
 			if !ok || result == nil {
-				return omoStreamObservation{}, fmt.Errorf("host_stream_invalid")
+				return observation, fmt.Errorf("host_stream_invalid")
 			}
-			results = append(results, result)
+			if toolName == targetTool {
+				results = append(results, result)
+			}
 		}
 	}
 	if events == 0 || sessions != 1 {
-		return omoStreamObservation{}, fmt.Errorf("host_stream_invalid")
+		return observation, fmt.Errorf("host_stream_invalid")
 	}
-	if len(starts) == 0 && len(ends) == 0 {
-		return omoStreamObservation{}, fmt.Errorf("host_stream_no_call")
+	if len(executions) == 0 {
+		return observation, fmt.Errorf("host_stream_no_call")
 	}
-	if len(starts) != 1 || len(ends) != 1 || len(results) != 1 {
-		return omoStreamObservation{}, fmt.Errorf("host_stream_multiple_calls")
+	for _, execution := range executions {
+		if !execution.ended {
+			return observation, fmt.Errorf("host_stream_invalid")
+		}
+	}
+	if observation.AmbientToolCount != 1 {
+		return observation, fmt.Errorf("host_stream_multiple_calls")
+	}
+	for _, execution := range executions {
+		if execution.name != targetTool {
+			return observation, fmt.Errorf("host_stream_non_target_call")
+		}
+	}
+	if observation.MCPCallCount != 1 || len(results) != 1 {
+		return observation, fmt.Errorf("host_stream_invalid")
 	}
 	if observation.Model == "" {
-		return omoStreamObservation{}, fmt.Errorf("host_stream_model_missing")
+		return observation, fmt.Errorf("host_stream_model_missing")
 	}
-	canonical, err := json.Marshal(results)
+	digest, err := semanticResponseDigest(results)
 	if err != nil {
-		return omoStreamObservation{}, fmt.Errorf("host_stream_invalid")
+		return observation, fmt.Errorf("host_stream_invalid")
 	}
-	digest := sha256.Sum256(canonical)
 	observation.MCPCallCount = 1
-	observation.ResponseSHA256 = hex.EncodeToString(digest[:])
+	observation.ResponseSHA256 = digest
 	return observation, nil
 }
 
@@ -436,7 +550,7 @@ func omoStreamFailure(err error) (string, string) {
 	switch err.Error() {
 	case "host_stream_no_call":
 		return "unknown", "no_call"
-	case "host_stream_invalid", "host_stream_multiple_calls", "host_stream_tool_error", "host_stream_model_missing":
+	case "host_stream_invalid", "host_stream_multiple_calls", "host_stream_non_target_call", "host_stream_tool_error", "host_stream_model_missing":
 		return "transport", err.Error()
 	default:
 		return "transport", "host_stream_invalid"

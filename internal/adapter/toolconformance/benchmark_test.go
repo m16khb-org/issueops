@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -234,18 +235,136 @@ func TestLiveGateResumeRejectsStaleSchemaEvidence(t *testing.T) {
 	initial.Hosts[0].Cases[0].SchemaSHA256 = "stale"
 
 	reproductionRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{"empty_object": {invalid}}}
-	report, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+	_, err = core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
 		Hosts: []string{"codex"}, Profile: "clean", Only: "codex:empty_object", TargetCompleted: 10, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "reproduction", Previous: &initial,
 	}, catalogDescriptors(), core.LiveBenchmarkDependencies{Runners: map[string]port.HostProbeRunner{"codex": reproductionRunner}, Token: func() string { return "token" }})
+	if err == nil || err.Error() != "invalid_previous_episode_evidence" {
+		t.Fatalf("err=%v", err)
+	}
+	if got := reproductionRunner.calls["empty_object"]; got != 0 {
+		t.Fatalf("stale evidence triggered fresh calls=%d", got)
+	}
+}
+
+func TestLiveGateReusesOnlyCertifiedSchemaV2Episode(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	initialRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	initial, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "initial",
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{Runners: map[string]port.HostProbeRunner{"codex": initialRunner}, Token: func() string { return "token-a" }})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := reproductionRunner.calls["empty_object"]; got != 10 {
-		t.Fatalf("fresh calls=%d want=10", got)
+
+	resumeRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	resumed, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "resumed", Previous: &initial,
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{Runners: map[string]port.HostProbeRunner{"codex": resumeRunner}, Token: func() string { return "token-b" }})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if report.Gate.Decision != core.GateNeedsReproduction || report.Gate.ConfirmedCount != 0 {
-		t.Fatalf("stale evidence influenced gate: %+v", report.Gate)
+	if resumeRunner.calls["empty_object"] != 0 {
+		t.Fatalf("fresh calls = %d, want reused evidence", resumeRunner.calls["empty_object"])
 	}
+	host := resumed.Hosts[0]
+	if host.Status != issueopscontract.StatusSupported || !host.Evidence.LiveAttempted || !host.Evidence.LiveVerified || host.CompletedEpisodes != 1 {
+		t.Fatalf("resumed host = %+v", host)
+	}
+}
+
+func TestLiveGateRejectsSchemaV1ResumeWithoutAdditiveMigration(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	previous := certifiedPreviousReport(t, fixtures)
+	previous.SchemaVersion = 1
+	runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	_, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "schema-1", Previous: &previous,
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{Runners: map[string]port.HostProbeRunner{"codex": runner}, Token: func() string { return "new-token" }})
+	if err == nil || err.Error() != "unsupported_previous_report_schema:1" {
+		t.Fatalf("err = %v", err)
+	}
+	if runner.calls["empty_object"] != 0 {
+		t.Fatalf("schema-v1 report triggered %d fresh calls", runner.calls["empty_object"])
+	}
+}
+
+func TestLiveGateRejectsLegacyShapedAndIdentityDriftedSchemaV2Episodes(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	baseline := certifiedPreviousReport(t, fixtures)
+	tests := []struct {
+		name   string
+		mutate func(*core.BenchmarkReport)
+	}{
+		{name: "legacy shaped runtime proof", mutate: func(report *core.BenchmarkReport) {
+			episode := &report.Hosts[0].Cases[0]
+			episode.ObservedModel = ""
+			episode.DurationMS = 0
+			episode.SessionStartObserved = false
+			episode.AmbientToolCount = 0
+			episode.ResponseSHA256 = ""
+		}},
+		{name: "host", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].Host = "claude" }},
+		{name: "host version", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].HostVersion = "old" }},
+		{name: "profile", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].Profile = "context-pressure" }},
+		{name: "requested model", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].RequestedModel = "model-b" }},
+		{name: "observed model", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].ObservedModel = "model-b" }},
+		{name: "schema digest", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].SchemaSHA256 = strings.Repeat("b", 64) }},
+		{name: "response digest", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].ResponseSHA256 = "bad" }},
+		{name: "exit", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].ExitCode = 7 }},
+		{name: "duration", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].DurationMS = 0 }},
+		{name: "context", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].SessionStartObserved = false }},
+		{name: "ambient count", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].AmbientToolCount = 2 }},
+		{name: "one call", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].CallCount = 2 }},
+		{name: "evidence id", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].EvidenceID = "bad" }},
+		{name: "raw digest", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].RawArgumentsSHA256 = "bad" }},
+		{name: "diagnostic cause", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].FailureCause = "model" }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			previous := cloneBenchmarkReport(t, baseline)
+			test.mutate(&previous)
+			runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+			_, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+				Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
+				TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "malformed", Previous: &previous,
+			}, catalogDescriptors(), core.LiveBenchmarkDependencies{Runners: map[string]port.HostProbeRunner{"codex": runner}, Token: func() string { return "new-token" }})
+			if err == nil || err.Error() != "invalid_previous_episode_evidence" {
+				t.Fatalf("err = %v", err)
+			}
+			if runner.calls["empty_object"] != 0 {
+				t.Fatalf("invalid evidence triggered %d fresh calls", runner.calls["empty_object"])
+			}
+		})
+	}
+}
+
+func certifiedPreviousReport(t *testing.T, fixtures map[string]core.Fixture) core.BenchmarkReport {
+	t.Helper()
+	runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	report, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "certified",
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{Runners: map[string]port.HostProbeRunner{"codex": runner}, Token: func() string { return "certified-token" }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return report
+}
+
+func cloneBenchmarkReport(t *testing.T, report core.BenchmarkReport) core.BenchmarkReport {
+	t.Helper()
+	data, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cloned core.BenchmarkReport
+	if err := json.Unmarshal(data, &cloned); err != nil {
+		t.Fatal(err)
+	}
+	return cloned
 }
 
 func TestContextPressureProfileIsFixedSizeAndHash(t *testing.T) {

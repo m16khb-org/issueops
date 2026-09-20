@@ -183,9 +183,10 @@ ISSUEOPS_TOOL_CONFORMANCE_LIVE=1 issueops contract conformance live \
   --json
 ```
 
-The Omo runner uses the installed native `omo` command with a private temporary
-agent root, explicit generated lifecycle and guard extensions, one direct MCP
-tool, JSON print mode, and ambient discovery disabled. A report with only
+The Omo runner resolves the installed native `omo` command and optional strict
+auth source before creating a private temporary `HOME` and agent root. It uses
+explicit generated lifecycle and guard extensions, one direct MCP tool, JSON
+print mode, and ambient discovery disabled. A report with only
 installed/preflight or deterministic mock evidence remains `not-run` or
 `unavailable`; only a completed live episode may report `supported`.
 

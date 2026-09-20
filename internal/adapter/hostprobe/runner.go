@@ -22,9 +22,11 @@ import (
 )
 
 const (
-	MaxOutputBytes = 64 << 10
-	EpisodeTimeout = 5 * time.Minute
-	VersionTimeout = 10 * time.Second
+	MaxOutputBytes              = 64 << 10
+	EpisodeTimeout              = 5 * time.Minute
+	VersionTimeout              = 10 * time.Second
+	processTerminationGrace     = 250 * time.Millisecond
+	processTerminationHardLimit = 2 * time.Second
 )
 
 type CommandRequest struct {
@@ -107,8 +109,20 @@ func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutpu
 	select {
 	case err = <-waited:
 	case <-runCtx.Done():
-		_ = terminateProcessTree(cmd)
-		err = <-waited
+		terminationErr := terminateProcessTree(cmd)
+		if terminationErr != nil {
+			_ = cmd.Process.Kill()
+		}
+		select {
+		case err = <-waited:
+		case <-time.After(processTerminationGrace):
+			_ = cmd.Process.Kill()
+			select {
+			case err = <-waited:
+			case <-time.After(processTerminationHardLimit):
+				return CommandOutput{}, fmt.Errorf("command_termination_failed")
+			}
+		}
 	}
 	out := CommandOutput{
 		Stdout:          append([]byte(nil), stdout.Bytes()...),
@@ -212,6 +226,17 @@ type hostStreamObservation struct {
 	DurationMS           int64  `json:"duration_ms"`
 }
 
+type semanticToolResponse struct {
+	Content           []semanticToolContent `json:"content"`
+	StructuredContent any                   `json:"structured_content,omitempty"`
+	IsError           bool                  `json:"is_error"`
+}
+
+type semanticToolContent struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
 func observeHostStream(data []byte) (hostStreamObservation, error) {
 	if len(data) == 0 || len(data) > MaxOutputBytes {
 		return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
@@ -246,14 +271,95 @@ func observeHostStream(data []byte) (hostStreamObservation, error) {
 		return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
 	}
 	if len(results) > 0 {
-		canonical, err := json.Marshal(results)
+		digest, err := semanticResponseDigest(results)
 		if err != nil {
 			return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
 		}
-		digest := sha256.Sum256(canonical)
-		observation.ResponseSHA256 = hex.EncodeToString(digest[:])
+		observation.ResponseSHA256 = digest
 	}
 	return observation, nil
+}
+
+func semanticResponseDigest(results []any) (string, error) {
+	if len(results) == 0 {
+		return "", fmt.Errorf("semantic_response_missing")
+	}
+	projection := make([]semanticToolResponse, 0, len(results))
+	for _, result := range results {
+		projected, err := projectSemanticToolResponse(result)
+		if err != nil {
+			return "", err
+		}
+		projection = append(projection, projected)
+	}
+	canonical, err := json.Marshal(projection)
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(canonical)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+func projectSemanticToolResponse(value any) (semanticToolResponse, error) {
+	object, ok := value.(map[string]any)
+	if !ok {
+		return semanticToolResponse{}, fmt.Errorf("semantic_response_invalid")
+	}
+	rawContent, ok := object["content"]
+	if !ok {
+		return semanticToolResponse{}, fmt.Errorf("semantic_response_invalid")
+	}
+	content, err := projectSemanticToolContent(rawContent)
+	if err != nil {
+		return semanticToolResponse{}, err
+	}
+	projected := semanticToolResponse{Content: content}
+	if structured, exists := object["structuredContent"]; exists {
+		projected.StructuredContent = structured
+	} else if structured, exists := object["structured_content"]; exists {
+		projected.StructuredContent = structured
+	}
+	if rawError, exists := object["isError"]; exists {
+		isError, ok := rawError.(bool)
+		if !ok {
+			return semanticToolResponse{}, fmt.Errorf("semantic_response_invalid")
+		}
+		projected.IsError = isError
+	} else if rawError, exists := object["is_error"]; exists {
+		isError, ok := rawError.(bool)
+		if !ok {
+			return semanticToolResponse{}, fmt.Errorf("semantic_response_invalid")
+		}
+		projected.IsError = isError
+	}
+	return projected, nil
+}
+
+func projectSemanticToolContent(value any) ([]semanticToolContent, error) {
+	switch content := value.(type) {
+	case string:
+		return []semanticToolContent{{Type: "text", Text: content}}, nil
+	case []any:
+		projected := make([]semanticToolContent, 0, len(content))
+		for _, rawBlock := range content {
+			block, ok := rawBlock.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("semantic_response_invalid")
+			}
+			typeName, _ := block["type"].(string)
+			text, textOK := block["text"].(string)
+			if typeName == "" && textOK {
+				typeName = "text"
+			}
+			if typeName != "text" || !textOK {
+				return nil, fmt.Errorf("semantic_response_invalid")
+			}
+			projected = append(projected, semanticToolContent{Type: "text", Text: text})
+		}
+		return projected, nil
+	default:
+		return nil, fmt.Errorf("semantic_response_invalid")
+	}
 }
 
 func observeClaudeProbeCalls(value any, calls map[string]bool) {
