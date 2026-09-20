@@ -397,6 +397,37 @@ func TestHandoffDeliveryExactClaimIsIdempotentAndOtherOwnerRejected(t *testing.T
 	}
 }
 
+func TestHandoffDeliveryManualClaimRequiresImmediateReseedGeneration(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		manual     bool
+		generation uint64
+		wantValid  bool
+	}{
+		{name: "standard exact generation", generation: 7, wantValid: true},
+		{name: "standard next generation", generation: 8},
+		{name: "manual source generation", manual: true, generation: 7},
+		{name: "manual immediate reseed generation", manual: true, generation: 8, wantValid: true},
+		{name: "manual future generation", manual: true, generation: 9},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			observation := deliveryObservationFixture()
+			if test.manual {
+				observation.AttemptID = "manual-direct:" + observation.LifecycleID + ":7:orca:attempt-1"
+				observation.LineageID = "manual-direct:" + observation.LineageID
+			}
+			observation.OwnerClaimed = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceIssueOpsClaim)
+			observation.OwnerClaim = issueopscontract.IssueOpsHandoffDeliveryOwnerClaim{
+				Claimed: true, Generation: test.generation, Actor: *observation.OwnerActor, ClaimedAt: "2026-09-20T10:02:00Z",
+			}
+			err := ValidateHandoffDeliveryObservation(observation)
+			if (err == nil) != test.wantValid {
+				t.Fatalf("generation=%d valid=%v err=%v", test.generation, test.wantValid, err)
+			}
+		})
+	}
+}
+
 func TestValidateHandoffDeliveryOwnerClaimConsistency(t *testing.T) {
 	tests := []struct {
 		name string

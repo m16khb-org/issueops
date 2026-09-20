@@ -542,8 +542,9 @@ func TestManualCmuxHandoffDeliveryAllowsOnlyReleasedDirectStaging(t *testing.T) 
 }
 
 func TestPublicManualHandoffProducerRejectsEveryOwnerClaimField(t *testing.T) {
-	stateRoot := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", stateRoot)
+	stateDir := t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
+	stateRoot := issueopsadapter.IssueOpsStateRoot()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	request := handoffDeliveryRequestFixture("codex")
 	request.Workspace.LifecycleID = record.ID
@@ -577,6 +578,36 @@ func TestPublicManualHandoffProducerRejectsEveryOwnerClaimField(t *testing.T) {
 	}
 	if _, err := auditManualHandoffDeliveryObservation(observation); err != nil {
 		t.Fatalf("valid manual observation: %v", err)
+	}
+}
+
+func TestPublicManualHandoffProducerUsesIssueOpsStateNamespace(t *testing.T) {
+	stateDir := t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
+	stateRoot := issueopsadapter.IssueOpsStateRoot()
+	record := seedReleasedDirectHandoffRecord(t, stateRoot)
+	request := handoffDeliveryRequestFixture("codex")
+	request.Workspace.LifecycleID = record.ID
+	identity := handoffDeliveryIdentityFixture()
+	eventNow := handoffDeliveryEventClock(time.Now)
+	observation, err := handoffDeliveryObservation(stateRoot, request, identity, port.ExecutionOrcaIntentReceipt{}, "", "prompt", eventNow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observation.AttemptID = handoffDeliveryManualLineagePrefix + record.ID + ":1:orca:namespace"
+	observation.LineageID = handoffDeliveryManualLineagePrefix + observation.LineageID
+	observation.CallStaged = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged)
+
+	if _, err := auditManualHandoffDeliveryObservation(observation); err != nil {
+		t.Fatalf("audit manual observation through production namespace: %v", err)
+	}
+	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	if err != nil || len(observations) != 1 {
+		t.Fatalf("issueops namespace observations=%d err=%v", len(observations), err)
+	}
+	parentObservations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateDir)
+	if err != nil || len(parentObservations) != 0 {
+		t.Fatalf("parent namespace observations=%d err=%v", len(parentObservations), err)
 	}
 }
 

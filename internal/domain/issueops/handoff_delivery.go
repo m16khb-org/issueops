@@ -15,6 +15,8 @@ var handoffDeliveryDigest = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 const handoffDeliveryFieldLimit = 1024
 
+const handoffDeliveryManualLineagePrefix = "manual-direct:"
+
 func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
 	if observation.SchemaVersion != issueopscontract.IssueOpsHandoffDeliverySchemaVersion {
 		return fmt.Errorf("unsupported delivery observation schema")
@@ -365,7 +367,12 @@ func handoffDeliveryIdentityMismatch(current, next issueopscontract.IssueOpsHand
 }
 
 func validateHandoffDeliveryOwnerClaim(current issueopscontract.IssueOpsHandoffDeliveryObservation, claim issueopscontract.IssueOpsHandoffDeliveryOwnerClaim) error {
-	if !claim.Claimed || claim.Generation != current.SourceGeneration || strings.TrimSpace(claim.ClaimedAt) == "" || current.OwnerActor == nil {
+	generationMatches := claim.Generation == current.SourceGeneration
+	if strings.HasPrefix(current.AttemptID, handoffDeliveryManualLineagePrefix+current.LifecycleID+":") &&
+		strings.HasPrefix(current.LineageID, handoffDeliveryManualLineagePrefix) {
+		generationMatches = claim.Generation > 1 && current.SourceGeneration == claim.Generation-1
+	}
+	if !claim.Claimed || !generationMatches || strings.TrimSpace(claim.ClaimedAt) == "" || current.OwnerActor == nil {
 		return fmt.Errorf("delivery owner claim identity mismatch")
 	}
 	if !reflect.DeepEqual(claim.Actor, *current.OwnerActor) {

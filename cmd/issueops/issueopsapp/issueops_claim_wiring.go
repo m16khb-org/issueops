@@ -104,7 +104,8 @@ func observeSuccessfulManualIssueOpsClaim(stateRoot string, result issueops.Exec
 	}
 	candidates := make([]issueopscontract.IssueOpsHandoffDeliveryObservation, 0, 1)
 	for _, observation := range observations {
-		if observation.LifecycleID == result.ID && observation.SourceGeneration == result.Execution.Lease.Generation &&
+		if observation.LifecycleID == result.ID && result.Execution.Lease.Generation > 1 &&
+			observation.SourceGeneration == result.Execution.Lease.Generation-1 &&
 			strings.HasPrefix(observation.LineageID, handoffDeliveryManualLineagePrefix) && observation.ExpectedOwnerHost == result.Execution.Lease.Holder.Host {
 			candidates = append(candidates, observation)
 		}

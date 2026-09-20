@@ -18,14 +18,15 @@ import (
 const handoffDeliveryManualLineagePrefix = "manual-direct:"
 
 func auditManualHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditadapter.HandoffDeliveryAuditRecord, error) {
-	record, err := issueopsadapter.ReadIssueOps(auditadapter.StateDir(), observation.LifecycleID)
+	stateRoot := issueopsadapter.IssueOpsStateRoot()
+	record, err := issueopsadapter.ReadIssueOps(stateRoot, observation.LifecycleID)
 	if err != nil {
 		return auditadapter.HandoffDeliveryAuditRecord{}, err
 	}
 	if err := validateManualHandoffDeliveryObservation(record, observation); err != nil {
 		return auditadapter.HandoffDeliveryAuditRecord{}, err
 	}
-	return auditadapter.AuditHandoffDeliveryObservation(observation)
+	return auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation)
 }
 
 func validateManualHandoffDeliveryObservation(record issueopscontract.IssueOpsRecord, observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
