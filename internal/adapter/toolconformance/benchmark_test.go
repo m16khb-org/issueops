@@ -398,6 +398,82 @@ func TestLiveGateRejectsUnselectedIncompletePreviousEpisode(t *testing.T) {
 	}
 }
 
+func TestLiveGateRejectsPreviousOnlyHostEpisodes(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	tests := []struct {
+		name              string
+		claudeFailureCode string
+		wantStatus        string
+	}{
+		{name: "completed", wantStatus: "completed"},
+		{name: "incomplete", claudeFailureCode: "host_process_failed", wantStatus: "incomplete"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			previous, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+				Hosts: []string{"codex", "claude"}, Models: map[string]string{"codex": "model-a", "claude": "model-b"}, Profile: "clean",
+				TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "two-hosts",
+			}, catalogDescriptors(), core.LiveBenchmarkDependencies{
+				Runners: map[string]port.HostProbeRunner{
+					"codex":  &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}},
+					"claude": &fakeProbeRunner{host: "claude", fixtures: fixtures, responses: map[string][]map[string]any{}, failCode: test.claudeFailureCode},
+				},
+				Token: func() string { return "previous-token" },
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(previous.Hosts) != 2 || len(previous.Hosts[1].Cases) == 0 || string(previous.Hosts[1].Cases[0].Status) != test.wantStatus {
+				t.Fatalf("previous claude host = %+v", previous.Hosts)
+			}
+
+			resumeRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+			_, err = core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+				Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean",
+				TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "one-host", Previous: &previous,
+			}, catalogDescriptors(), core.LiveBenchmarkDependencies{
+				Runners: map[string]port.HostProbeRunner{"codex": resumeRunner}, Token: func() string { return "new-token" },
+			})
+			if err == nil || err.Error() != "invalid_previous_episode_selection" {
+				t.Fatalf("err = %v", err)
+			}
+			if len(resumeRunner.calls) != 0 {
+				t.Fatalf("previous-only host triggered fresh calls: %+v", resumeRunner.calls)
+			}
+		})
+	}
+}
+
+func TestLiveGateRejectsInvalidPreviousHostRows(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	baseline := certifiedPreviousReport(t, fixtures)
+	tests := []struct {
+		name   string
+		mutate func(*core.BenchmarkReport)
+	}{
+		{name: "duplicate host", mutate: func(report *core.BenchmarkReport) {
+			report.Hosts = append(report.Hosts, report.Hosts[0])
+		}},
+		{name: "missing host identity", mutate: func(report *core.BenchmarkReport) {
+			report.Hosts = append(report.Hosts, core.HostReport{})
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			previous := cloneBenchmarkReport(t, baseline)
+			test.mutate(&previous)
+			runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+			_, err := resumeCertifiedReport(t, previous, runner)
+			if err == nil || err.Error() != "invalid_previous_report_identity" {
+				t.Fatalf("err = %v", err)
+			}
+			if len(runner.calls) != 0 {
+				t.Fatalf("invalid host rows triggered fresh calls: %+v", runner.calls)
+			}
+		})
+	}
+}
+
 func TestLiveGateResumesSelectedZeroCompletedReport(t *testing.T) {
 	fixtures := benchmarkFixtures(t)
 	previousRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, failCode: "host_process_failed"}

@@ -63,6 +63,9 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 	if err != nil {
 		return BenchmarkReport{}, err
 	}
+	if err := validatePreviousSelection(request.Previous, selected); err != nil {
+		return BenchmarkReport{}, err
+	}
 	report := BenchmarkReport{
 		OK:            true,
 		SchemaVersion: ReportSchemaVersion,
@@ -567,10 +570,8 @@ func resumableHostReport(previous *BenchmarkReport, host, requestedModel, hostVe
 		if candidate.Host != host {
 			continue
 		}
-		if matched != nil {
-			return nil, fmt.Errorf("invalid_previous_report_identity")
-		}
 		matched = candidate
+		break
 	}
 	if matched == nil {
 		return nil, nil
@@ -589,9 +590,6 @@ func resumableHostReport(previous *BenchmarkReport, host, requestedModel, hostVe
 	seenEvidence := map[string]bool{}
 	observedModel := ""
 	for _, episode := range matched.Cases {
-		if _, selectedPair := selectedFixtureForPair(selected, host, episode.FixtureID); !selectedPair {
-			return nil, fmt.Errorf("invalid_previous_episode_selection")
-		}
 		identity := episode.Host + "\x00" + episode.FixtureID + "\x00" + fmt.Sprint(episode.Attempt)
 		if seenIdentities[identity] {
 			return nil, fmt.Errorf("duplicate_previous_episode_identity")
@@ -643,6 +641,37 @@ func resumableHostReport(previous *BenchmarkReport, host, requestedModel, hostVe
 		}
 	}
 	return matched, nil
+}
+
+func validatePreviousSelection(previous *BenchmarkReport, selected []fixturePair) error {
+	if previous == nil {
+		return nil
+	}
+	seenHosts := make(map[string]bool, len(previous.Hosts))
+	for _, hostReport := range previous.Hosts {
+		if hostReport.Host == "" || seenHosts[hostReport.Host] {
+			return fmt.Errorf("invalid_previous_report_identity")
+		}
+		seenHosts[hostReport.Host] = true
+	}
+	for _, hostReport := range previous.Hosts {
+		selectedHost := false
+		for _, pair := range selected {
+			if pair.Host == hostReport.Host {
+				selectedHost = true
+				break
+			}
+		}
+		if !selectedHost {
+			return fmt.Errorf("invalid_previous_episode_selection")
+		}
+		for _, episode := range hostReport.Cases {
+			if _, selectedPair := selectedFixtureForPair(selected, hostReport.Host, episode.FixtureID); !selectedPair {
+				return fmt.Errorf("invalid_previous_episode_selection")
+			}
+		}
+	}
+	return nil
 }
 
 func selectedFixtureForPair(pairs []fixturePair, host, fixture string) (Fixture, bool) {
