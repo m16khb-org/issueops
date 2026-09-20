@@ -115,7 +115,9 @@ func startDaemonProcess(exe string, paths daemonPaths) error {
 	if err := cmd.Start(); err != nil {
 		return err
 	}
-	_ = cmd.Process.Release()
+	// A long-lived MCP proxy remains the daemon's parent. Reap its child on
+	// exit so a zombie PID cannot block stop/start and proxy reconnection.
+	go func() { _ = cmd.Wait() }()
 	return nil
 }
 
