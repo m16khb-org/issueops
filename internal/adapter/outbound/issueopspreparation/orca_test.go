@@ -135,7 +135,7 @@ func (fake *orcaProviderFake) InspectIntent(_ context.Context, request port.Exec
 	fake.inspect = request
 	return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{{
 		RunID: "run", RequestID: "11111111-1111-4111-8111-111111111111",
-		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-1"},
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1},
 	}}, AuthoritativeZero: false}, nil
 }
 func (fake *orcaProviderFake) InvokeIntent(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, error) {
@@ -145,6 +145,6 @@ func (fake *orcaProviderFake) InvokeIntent(_ context.Context, request port.Execu
 	}
 	return port.ExecutionOrcaIntentReceipt{
 		DispatchID: "dispatch", RequestID: "11111111-1111-4111-8111-111111111111",
-		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-1"},
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1},
 	}, nil
 }

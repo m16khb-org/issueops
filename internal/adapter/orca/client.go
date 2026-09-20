@@ -671,7 +671,7 @@ func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, request
 				Observation             string   `json:"observation"`
 				ProcessIncarnation      string   `json:"processIncarnation"`
 				Generation              uint64   `json:"generation"`
-				BaselineWorkingSequence uint64   `json:"baselineWorkingSequence"`
+				BaselineWorkingSequence *uint64  `json:"baselineWorkingSequence"`
 			} `json:"prompt"`
 		} `json:"send"`
 	}
@@ -686,13 +686,30 @@ func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, request
 	if !payload.Send.Accepted {
 		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "terminal_prompt_rejected", Invoked: true}
 	}
-	return port.OrcaPromptReceipt{
+	if payload.Send.Prompt.BaselineWorkingSequence == nil {
+		return port.OrcaPromptReceipt{}, &port.OrcaError{
+			Code: "terminal_prompt_receipt_invalid", Detail: "Orca Omo prompt receipt is missing baselineWorkingSequence", Invoked: true,
+			OrchestrationRequestID: strings.TrimSpace(payload.Send.Prompt.RequestID), CallPhase: "terminal_send",
+		}
+	}
+	receipt := port.OrcaPromptReceipt{
 		RequestID: payload.Send.Prompt.RequestID, Stages: payload.Send.Prompt.Stages,
 		Provider: payload.Send.Prompt.Provider, Observation: payload.Send.Prompt.Observation,
 		ProcessIncarnation:      payload.Send.Prompt.ProcessIncarnation,
 		Generation:              payload.Send.Prompt.Generation,
-		BaselineWorkingSequence: payload.Send.Prompt.BaselineWorkingSequence,
-	}, nil
+		BaselineWorkingSequence: *payload.Send.Prompt.BaselineWorkingSequence,
+	}
+	if err := port.ValidateOrcaPromptReceipt(receipt, requestID, ""); err != nil {
+		code := "terminal_prompt_receipt_invalid"
+		if requestID != "" && strings.TrimSpace(receipt.RequestID) != requestID {
+			code = "terminal_prompt_request_identity_mismatch"
+		}
+		return port.OrcaPromptReceipt{}, &port.OrcaError{
+			Code: code, Detail: err.Error(), Invoked: true,
+			OrchestrationRequestID: strings.TrimSpace(receipt.RequestID), CallPhase: "terminal_send",
+		}
+	}
+	return receipt, nil
 }
 
 func (c *Client) RefreshTerminal(ctx context.Context, worktreeID, ptyID string) (port.OrcaTerminal, error) {

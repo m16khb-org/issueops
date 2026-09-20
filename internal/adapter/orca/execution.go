@@ -451,6 +451,12 @@ func (p *ExecutionProvisioner) invokeIntent(ctx context.Context, req port.Execut
 			}
 			return port.ExecutionOrcaIntentReceipt{}, err
 		}
+		if err := port.ValidateOrcaDurableRequestID(dispatch.RequestID, req.RetryRequestID); err != nil {
+			return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{
+				Code: "dispatch_request_identity_mismatch", Detail: err.Error(), Invoked: true,
+				OrchestrationRequestID: strings.TrimSpace(dispatch.RequestID), CallPhase: "orca_dispatch",
+			}
+		}
 		if err := validateExecutionInvokedDispatch(dispatch, req.Prepared.RuntimeID, req.TaskID, terminal.Handle, inject); err != nil {
 			return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{Code: "dispatch_identity_mismatch", Detail: err.Error(), Invoked: true}
 		}
@@ -476,9 +482,23 @@ func (p *ExecutionProvisioner) invokeIntent(ctx context.Context, req port.Execut
 				}
 				return port.ExecutionOrcaIntentReceipt{}, err
 			}
-			if expected := strings.TrimSpace(req.ExpectedPromptProcessIncarnation); expected != "" && strings.TrimSpace(receipt.ProcessIncarnation) != expected {
+			if err := port.ValidateOrcaDurableRequestID(receipt.RequestID, req.PromptRetryRequestID); err != nil {
+				code := "terminal_prompt_receipt_invalid"
+				if strings.TrimSpace(req.PromptRetryRequestID) != "" {
+					code = "terminal_prompt_request_identity_mismatch"
+				}
 				return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{
-					Code: "terminal_process_incarnation_mismatch", Detail: "terminal prompt receipt belongs to a different process incarnation", Invoked: true,
+					Code: code, Detail: err.Error(), Invoked: true,
+					OrchestrationRequestID: strings.TrimSpace(receipt.RequestID), DispatchRequestID: strings.TrimSpace(dispatch.RequestID), CallPhase: "terminal_send",
+				}
+			}
+			if err := port.ValidateOrcaPromptReceipt(receipt, req.PromptRetryRequestID, req.ExpectedPromptProcessIncarnation); err != nil {
+				code := "terminal_prompt_receipt_invalid"
+				if expected := strings.TrimSpace(req.ExpectedPromptProcessIncarnation); expected != "" && strings.TrimSpace(receipt.ProcessIncarnation) != expected {
+					code = "terminal_process_incarnation_mismatch"
+				}
+				return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{
+					Code: code, Detail: err.Error(), Invoked: true,
 					OrchestrationRequestID: strings.TrimSpace(receipt.RequestID), DispatchRequestID: strings.TrimSpace(dispatch.RequestID), CallPhase: "terminal_send",
 				}
 			}

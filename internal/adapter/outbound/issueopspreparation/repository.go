@@ -335,8 +335,11 @@ func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state prep
 		intent.TaskID = strings.TrimSpace(receipt.TaskID)
 		intent.Stage = preparationcontract.IntentStageDispatch
 	case preparationcontract.IntentStageDispatch:
-		if strings.TrimSpace(receipt.TaskID) != state.Intent.TaskID || strings.TrimSpace(receipt.DispatchID) == "" {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca dispatch candidate is incomplete")
+		if err := port.ValidateExecutionOrcaDeliveryReceipt(preparationDeliveryReceipt(receipt), port.OrcaDeliveryReceiptExpectation{
+			Host: state.Intent.Probe.Host, TaskID: state.Intent.TaskID, TerminalPTYID: state.Intent.TerminalPTYID,
+			DispatchRequestID: state.Intent.OrcaRequestID, PromptRequestID: state.Intent.OrcaPromptRequestID,
+		}); err != nil {
+			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca dispatch candidate is incomplete: %w", err)
 		}
 		if state.Intent.Prepared == nil {
 			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca prepared workspace receipt is missing")
@@ -408,6 +411,22 @@ func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state prep
 	state.Snapshot = preparationcontract.Snapshot{Record: record, RecordRaw: recordData, ClaimTokenPath: state.OwnerArtifacts.ClaimTokenPath}
 	state.Pending = true
 	return preparationapp.IntentProgress{State: state, Pending: true}, nil
+}
+
+func preparationDeliveryReceipt(receipt preparationcontract.IntentReceipt) port.ExecutionOrcaIntentReceipt {
+	result := port.ExecutionOrcaIntentReceipt{
+		TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle,
+		TaskID: receipt.TaskID, DispatchID: receipt.DispatchID, RequestID: receipt.RequestID,
+	}
+	if receipt.PromptReceipt != nil {
+		result.PromptReceipt = &port.OrcaPromptReceipt{
+			RequestID: receipt.PromptReceipt.RequestID, Stages: append([]string(nil), receipt.PromptReceipt.Stages...),
+			Provider: receipt.PromptReceipt.Provider, Observation: receipt.PromptReceipt.Observation,
+			ProcessIncarnation: receipt.PromptReceipt.ProcessIncarnation, Generation: receipt.PromptReceipt.Generation,
+			BaselineWorkingSequence: receipt.PromptReceipt.BaselineWorkingSequence,
+		}
+	}
+	return result
 }
 
 func (repository *SQLiteRepository) compareAndApply(ctx context.Context, state preparationapp.IntentState, mutations []port.RecordMutation) error {

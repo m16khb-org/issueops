@@ -240,7 +240,7 @@ func repositoryOrcaReceipt(stage preparationcontract.IntentStage) preparationcon
 	case preparationcontract.IntentStageTask:
 		return preparationcontract.IntentReceipt{TaskID: "task"}
 	case preparationcontract.IntentStageDispatch:
-		return preparationcontract.IntentReceipt{TaskID: "task", DispatchID: "dispatch"}
+		return preparationcontract.IntentReceipt{TerminalPTYID: "terminal", TerminalHandle: "term-handle", TaskID: "task", DispatchID: "dispatch", RequestID: "11111111-1111-4111-8111-111111111111"}
 	default:
 		return preparationcontract.IntentReceipt{}
 	}

@@ -3,8 +3,11 @@ package port
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+var orcaRequestUUIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 const (
 	OrcaMaxBaselineIDs = 512
@@ -272,6 +275,83 @@ type OrcaPromptReceipt struct {
 	ProcessIncarnation      string   `json:"process_incarnation,omitempty"`
 	Generation              uint64   `json:"generation,omitempty"`
 	BaselineWorkingSequence uint64   `json:"baseline_working_sequence,omitempty"`
+}
+
+type OrcaDeliveryReceiptExpectation struct {
+	Host                     string
+	TaskID                   string
+	TerminalPTYID            string
+	TerminalHandle           string
+	DispatchRequestID        string
+	PromptRequestID          string
+	PromptProcessIncarnation string
+}
+
+func ValidateOrcaDurableRequestID(actual, retry string) error {
+	actual = strings.TrimSpace(actual)
+	retry = strings.TrimSpace(retry)
+	if !orcaRequestUUIDPattern.MatchString(actual) {
+		return fmt.Errorf("Orca response is missing a durable request UUID")
+	}
+	if retry != "" && actual != retry {
+		return fmt.Errorf("Orca response request UUID does not match the requested retry UUID")
+	}
+	return nil
+}
+
+func ValidateOrcaPromptReceipt(receipt OrcaPromptReceipt, retryID, expectedProcess string) error {
+	if err := ValidateOrcaDurableRequestID(receipt.RequestID, retryID); err != nil {
+		return err
+	}
+	if strings.TrimSpace(receipt.Provider) != "omo" || strings.TrimSpace(receipt.ProcessIncarnation) == "" || receipt.Generation == 0 {
+		return fmt.Errorf("Orca Omo prompt receipt is incomplete")
+	}
+	accepted := false
+	for _, stage := range receipt.Stages {
+		if strings.TrimSpace(stage) == "input_accepted" {
+			accepted = true
+			break
+		}
+	}
+	if !accepted {
+		return fmt.Errorf("Orca Omo prompt receipt has no input_accepted stage")
+	}
+	if expectedProcess = strings.TrimSpace(expectedProcess); expectedProcess != "" && strings.TrimSpace(receipt.ProcessIncarnation) != expectedProcess {
+		return fmt.Errorf("Orca Omo prompt receipt belongs to a different process incarnation")
+	}
+	return nil
+}
+
+func ValidateExecutionOrcaDeliveryReceipt(receipt ExecutionOrcaIntentReceipt, expected OrcaDeliveryReceiptExpectation) error {
+	if strings.TrimSpace(receipt.TaskID) == "" || strings.TrimSpace(receipt.TaskID) != strings.TrimSpace(expected.TaskID) ||
+		strings.TrimSpace(receipt.DispatchID) == "" || strings.TrimSpace(receipt.TerminalPTYID) == "" || strings.TrimSpace(receipt.TerminalHandle) == "" {
+		return fmt.Errorf("Orca dispatch receipt is incomplete")
+	}
+	if terminalPTYID := strings.TrimSpace(expected.TerminalPTYID); terminalPTYID != "" && strings.TrimSpace(receipt.TerminalPTYID) != terminalPTYID {
+		return fmt.Errorf("Orca dispatch receipt belongs to a different terminal PTY")
+	}
+	if terminalHandle := strings.TrimSpace(expected.TerminalHandle); terminalHandle != "" && strings.TrimSpace(receipt.TerminalHandle) != terminalHandle {
+		return fmt.Errorf("Orca dispatch receipt belongs to a different current terminal handle")
+	}
+	if err := ValidateOrcaDurableRequestID(receipt.RequestID, expected.DispatchRequestID); err != nil {
+		return err
+	}
+	switch strings.TrimSpace(expected.Host) {
+	case "codex", "claude":
+		if receipt.PromptReceipt != nil {
+			return fmt.Errorf("Orca injected dispatch unexpectedly carried a prompt receipt")
+		}
+	case "omo":
+		if receipt.PromptReceipt == nil {
+			return fmt.Errorf("Orca Omo delivery is missing its prompt receipt")
+		}
+		if err := ValidateOrcaPromptReceipt(*receipt.PromptReceipt, expected.PromptRequestID, expected.PromptProcessIncarnation); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("Orca delivery receipt host is invalid")
+	}
+	return nil
 }
 
 type OrcaMessage struct {

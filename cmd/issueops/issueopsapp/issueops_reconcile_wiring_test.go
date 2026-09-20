@@ -19,6 +19,7 @@ type reconcileProvisionerFake struct {
 	invokeCalls  int
 	adopt        bool
 	failStage    port.ExecutionOrcaIntentStage
+	receipt      *port.ExecutionOrcaIntentReceipt
 }
 
 func (*reconcileProvisionerFake) Probe(context.Context, port.ExecutionOrcaProbeRequest) (port.ExecutionOrcaProbeResult, error) {
@@ -37,7 +38,7 @@ func (*reconcileProvisionerFake) InspectDeliveryIdentity(_ context.Context, requ
 }
 
 func (f *reconcileProvisionerFake) InspectDeliveryDispatch(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, bool, error) {
-	receipt := reconcileSuccessfulReceipt(request)
+	receipt := f.receiptFor(request)
 	return receipt, receipt.DispatchID != "", nil
 }
 
@@ -48,7 +49,7 @@ func (*reconcileProvisionerFake) ObserveRequest(context.Context, string) (port.O
 func (f *reconcileProvisionerFake) InspectIntent(_ context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentInventory, error) {
 	f.inspectCalls++
 	if f.adopt {
-		return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{reconcileSuccessfulReceipt(request)}}, nil
+		return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{f.receiptFor(request)}}, nil
 	}
 	return port.ExecutionOrcaIntentInventory{AuthoritativeZero: true}, nil
 }
@@ -71,7 +72,14 @@ func (f *reconcileProvisionerFake) InvokeIntent(_ context.Context, request port.
 	if request.Stage == f.failStage {
 		return port.ExecutionOrcaIntentReceipt{}, &port.OrcaError{Code: "transport", Invoked: true}
 	}
-	return reconcileSuccessfulReceipt(request), nil
+	return f.receiptFor(request), nil
+}
+
+func (f *reconcileProvisionerFake) receiptFor(request port.ExecutionOrcaIntentRequest) port.ExecutionOrcaIntentReceipt {
+	if f.receipt != nil && request.Stage == port.ExecutionOrcaIntentDispatch {
+		return *f.receipt
+	}
+	return reconcileSuccessfulReceipt(request)
 }
 
 func TestIssueOpsReconcileVerticalAdoptsExactlyOneStage(t *testing.T) {
@@ -221,6 +229,59 @@ func TestIssueOpsReconcileVerticalKeepsStagedOnlyDispatchUnclaimable(t *testing.
 	}
 }
 
+func TestIssueOpsReconcileVerticalRejectsIncompleteDeliveryReceiptBeforeClaimable(t *testing.T) {
+	const dispatchRequestID = "11111111-1111-4111-8111-111111111111"
+	const promptRequestID = "22222222-2222-4222-8222-222222222222"
+	for _, test := range []struct {
+		name    string
+		host    string
+		receipt port.ExecutionOrcaIntentReceipt
+	}{
+		{
+			name: "codex empty durable dispatch UUID", host: "codex",
+			receipt: port.ExecutionOrcaIntentReceipt{TaskID: "task-reconciled", DispatchID: "dispatch-reconciled", TerminalPTYID: "pty-reconciled", TerminalHandle: "term-test"},
+		},
+		{
+			name: "claude malformed durable dispatch UUID", host: "claude",
+			receipt: port.ExecutionOrcaIntentReceipt{TaskID: "task-reconciled", DispatchID: "dispatch-reconciled", RequestID: "not-a-uuid", TerminalPTYID: "pty-reconciled", TerminalHandle: "term-test"},
+		},
+		{
+			name: "omo incomplete prompt receipt", host: "omo",
+			receipt: port.ExecutionOrcaIntentReceipt{
+				TaskID: "task-reconciled", DispatchID: "dispatch-reconciled", RequestID: dispatchRequestID,
+				TerminalPTYID: "pty-reconciled", TerminalHandle: "term-test",
+				PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptRequestID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1"},
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stateRoot, record, fake := reconcilePendingFixtureForHost(t, port.ExecutionOrcaIntentTerminal, test.host)
+			fake.adopt = true
+			request := issueops.ExecutionActionRequest{
+				Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
+				Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
+			}
+			deps := issueops.ExecutionActionDependencies{Orca: fake, Reconcile: issueOpsReconcileHandler}
+			for range 4 {
+				if _, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps); err != nil {
+					t.Fatalf("advance to dispatch: %v", err)
+				}
+			}
+			fake.receipt = &test.receipt
+			if raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps); err == nil {
+				t.Fatalf("incomplete receipt became claimable: %#v", raw)
+			}
+			persisted, err := issueops.ReadIssueOps(stateRoot, record.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if persisted.Execution == nil || persisted.Execution.Pending == nil || persisted.Execution.Lease.Status == issueopscontract.LeaseStatusClaimable {
+				t.Fatalf("incomplete receipt changed authority: %#v", persisted.Execution)
+			}
+		})
+	}
+}
+
 func TestIssueOpsReconcileVerticalUsesInjectedClockForFailureReceipt(t *testing.T) {
 	stateRoot, record, fake := reconcilePendingFixture(t, port.ExecutionOrcaIntentTerminal)
 	want := time.Date(2026, 8, 1, 11, 12, 13, 14, time.UTC)
@@ -251,6 +312,10 @@ func TestIssueOpsReconcileVerticalUsesInjectedClockForFailureReceipt(t *testing.
 }
 
 func reconcilePendingFixture(t *testing.T, failStage port.ExecutionOrcaIntentStage) (string, issueopscontract.IssueOpsRecord, *reconcileProvisionerFake) {
+	return reconcilePendingFixtureForHost(t, failStage, "codex")
+}
+
+func reconcilePendingFixtureForHost(t *testing.T, failStage port.ExecutionOrcaIntentStage, host string) (string, issueopscontract.IssueOpsRecord, *reconcileProvisionerFake) {
 	t.Helper()
 	stateRoot := t.TempDir()
 	repo := filepath.Join(t.TempDir(), "source")
@@ -283,7 +348,7 @@ func reconcilePendingFixture(t *testing.T, failStage port.ExecutionOrcaIntentSta
 		},
 	})
 	request := issueops.ExecutionPrepareRequest{
-		ID: record.ID, Mode: "orca", Actor: claimWiringActor(t), CWD: repo, OwnerHost: "codex", OwnerModel: "model", Confirm: true,
+		ID: record.ID, Mode: "orca", Actor: claimWiringActor(t), CWD: repo, OwnerHost: host, OwnerModel: "model", Confirm: true,
 	}
 	request.Confirm = false
 	preview, err := prepare(context.Background(), stateRoot, request, issueops.ExecutionPrepareInvocation{})
@@ -325,7 +390,17 @@ func reconcileSuccessfulReceipt(request port.ExecutionOrcaIntentRequest) port.Ex
 	case port.ExecutionOrcaIntentTask:
 		return port.ExecutionOrcaIntentReceipt{TaskID: "task-reconciled"}
 	case port.ExecutionOrcaIntentDispatch:
-		return port.ExecutionOrcaIntentReceipt{TaskID: request.TaskID, DispatchID: "dispatch-reconciled"}
+		receipt := port.ExecutionOrcaIntentReceipt{
+			TaskID: request.TaskID, DispatchID: "dispatch-reconciled", RequestID: "11111111-1111-4111-8111-111111111111",
+			TerminalPTYID: request.TerminalPTYID, TerminalHandle: "term-test",
+		}
+		if request.Probe.Host == "omo" {
+			receipt.PromptReceipt = &port.OrcaPromptReceipt{
+				RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted"}, Provider: "omo",
+				Observation: "supported", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: 0,
+			}
+		}
+		return receipt
 	default:
 		return port.ExecutionOrcaIntentReceipt{}
 	}

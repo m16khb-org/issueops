@@ -46,6 +46,7 @@ func TestExecutionDispatchesOmoWithOfficialPreamble(t *testing.T) {
 		dispatchResult: &port.OrcaDispatch{
 			RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69",
 			AssigneeHandle: "term-69", Status: "dispatched", Preamble: "official Omo preamble",
+			RequestID: "11111111-1111-4111-8111-111111111111",
 		},
 	}
 	receipt, err := NewExecutionClient(client).InvokeIntent(context.Background(), port.ExecutionOrcaIntentRequest{
@@ -96,7 +97,7 @@ func TestExecutionObservedOmoStagesDispatchAndPromptAroundEachCall(t *testing.T)
 		workspace: workspace, probeRequest: probe,
 		terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
 		dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Preamble: "preamble", RequestID: "11111111-1111-4111-8111-111111111111"},
-		promptReceipt:  &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "incarnation-1"},
+		promptReceipt:  &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: 0},
 	}
 	request := port.ExecutionOrcaIntentRequest{Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe, Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true, TaskID: "task-69"}
 	var events []string
@@ -152,7 +153,7 @@ func TestExecutionOmoPromptReplayRejectsProcessIncarnationMismatchAndPreservesID
 		workspace: workspace, probeRequest: probe,
 		terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
 		dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Preamble: "preamble", RequestID: dispatchRequestID},
-		promptReceipt:  &port.OrcaPromptReceipt{RequestID: promptRequestID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "incarnation-replaced"},
+		promptReceipt:  &port.OrcaPromptReceipt{RequestID: promptRequestID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "incarnation-replaced", Generation: 1, BaselineWorkingSequence: 0},
 	}
 	request := port.ExecutionOrcaIntentRequest{Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe, Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true, TaskID: "task-69", RetryRequestID: dispatchRequestID, PromptRetryRequestID: promptRequestID, ExpectedPromptProcessIncarnation: "incarnation-original"}
 	_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
@@ -162,6 +163,108 @@ func TestExecutionOmoPromptReplayRejectsProcessIncarnationMismatchAndPreservesID
 	}
 	if client.dispatchRequest.RetryRequestID != dispatchRequestID {
 		t.Fatalf("dispatch replay ID=%q", client.dispatchRequest.RetryRequestID)
+	}
+}
+
+func TestExecutionDispatchRequiresActualDurableResponseIdentity(t *testing.T) {
+	const retryID = "11111111-1111-4111-8111-111111111111"
+	for _, test := range []struct {
+		name       string
+		retryID    string
+		responseID string
+		wantOK     bool
+	}{
+		{name: "initial empty"},
+		{name: "retry empty", retryID: retryID},
+		{name: "retry different", retryID: retryID, responseID: "99999999-9999-4999-8999-999999999999"},
+		{name: "retry exact", retryID: retryID, responseID: retryID, wantOK: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			workspace, probe := executionFixture(t)
+			launch := executionLaunchFixture(t, workspace.Root)
+			prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
+			client := &executionFake{
+				workspace: workspace, probeRequest: probe,
+				terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
+				dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Injected: true, RequestID: test.responseID},
+			}
+			request := port.ExecutionOrcaIntentRequest{
+				Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe,
+				Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true,
+				TaskID: "task-69", RetryRequestID: test.retryID,
+			}
+			receipt, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
+			if test.wantOK {
+				if err != nil || receipt.RequestID != retryID {
+					t.Fatalf("receipt=%+v err=%v", receipt, err)
+				}
+				return
+			}
+			var orcaErr *port.OrcaError
+			if !errors.As(err, &orcaErr) || orcaErr.Code != "dispatch_request_identity_mismatch" || !orcaErr.Invoked || orcaErr.OrchestrationRequestID != test.responseID {
+				t.Fatalf("dispatch identity error=%#v", err)
+			}
+		})
+	}
+}
+
+func TestExecutionOmoPromptRequiresCompleteDurableReceiptIdentity(t *testing.T) {
+	const dispatchID = "11111111-1111-4111-8111-111111111111"
+	const promptID = "22222222-2222-4222-8222-222222222222"
+	complete := port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", Observation: "supported", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: 0}
+	for _, test := range []struct {
+		name     string
+		retryID  string
+		receipt  port.OrcaPromptReceipt
+		wantCode string
+		wantOK   bool
+	}{
+		{name: "initial empty request", receipt: func() port.OrcaPromptReceipt { value := complete; value.RequestID = ""; return value }(), wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "retry empty request", retryID: promptID, receipt: func() port.OrcaPromptReceipt { value := complete; value.RequestID = ""; return value }(), wantCode: "terminal_prompt_request_identity_mismatch"},
+		{name: "retry different request", retryID: promptID, receipt: func() port.OrcaPromptReceipt {
+			value := complete
+			value.RequestID = "99999999-9999-4999-8999-999999999999"
+			return value
+		}(), wantCode: "terminal_prompt_request_identity_mismatch"},
+		{name: "retry exact request", retryID: promptID, receipt: complete, wantOK: true},
+		{name: "missing accepted stage", receipt: func() port.OrcaPromptReceipt {
+			value := complete
+			value.Stages = []string{"turn_started"}
+			return value
+		}(), wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "wrong provider", receipt: func() port.OrcaPromptReceipt { value := complete; value.Provider = "old-host"; return value }(), wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "empty process", receipt: func() port.OrcaPromptReceipt { value := complete; value.ProcessIncarnation = ""; return value }(), wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "zero generation", receipt: func() port.OrcaPromptReceipt { value := complete; value.Generation = 0; return value }(), wantCode: "terminal_prompt_receipt_invalid"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			workspace, probe := executionFixture(t)
+			probe.Host = "omo"
+			probe.Model = "openai-codex/gpt-5.6-sol"
+			launch := executionLaunchFixture(t, workspace.Root)
+			prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
+			client := &executionFake{
+				workspace: workspace, probeRequest: probe,
+				terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
+				dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Preamble: "preamble", RequestID: dispatchID},
+				promptReceipt:  &test.receipt,
+			}
+			request := port.ExecutionOrcaIntentRequest{
+				Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe,
+				Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true,
+				TaskID: "task-69", PromptRetryRequestID: test.retryID,
+			}
+			receipt, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
+			if test.wantOK {
+				if err != nil || receipt.PromptReceipt == nil || receipt.PromptReceipt.RequestID != promptID {
+					t.Fatalf("receipt=%+v err=%v", receipt, err)
+				}
+				return
+			}
+			var orcaErr *port.OrcaError
+			if !errors.As(err, &orcaErr) || orcaErr.Code != test.wantCode || !orcaErr.Invoked {
+				t.Fatalf("prompt receipt error=%#v", err)
+			}
+		})
 	}
 }
 
@@ -1535,6 +1638,9 @@ func (f *executionFake) SendTerminalPrompt(_ context.Context, handle, prompt, re
 	}
 	if f.promptReceipt != nil {
 		return *f.promptReceipt, nil
+	}
+	if requestID == "" {
+		requestID = "22222222-2222-4222-8222-222222222222"
 	}
 	return port.OrcaPromptReceipt{RequestID: requestID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", Observation: "turn_started", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: 1}, nil
 }

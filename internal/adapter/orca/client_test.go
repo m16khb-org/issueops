@@ -903,6 +903,83 @@ func TestClientDispatchUsesPersistedRetryRequestOnlyForRecovery(t *testing.T) {
 	}
 }
 
+func TestClientDispatchRejectsMissingOrMismatchedDurableResponseRequestID(t *testing.T) {
+	const retryID = "11111111-1111-4111-8111-111111111111"
+	for _, test := range []struct {
+		name       string
+		retryID    string
+		responseID string
+	}{
+		{name: "initial response empty"},
+		{name: "retry response empty", retryID: retryID},
+		{name: "retry response different", retryID: retryID, responseID: "99999999-9999-4999-8999-999999999999"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			runner := newFakeRunner(t)
+			argv := []string{"orca", "orchestration", "dispatch", "--task", "task-1", "--to", "term_worker", "--run", "run_issueops_1", "--return-preamble"}
+			if test.retryID != "" {
+				argv = append(argv, "--retry-request", test.retryID)
+			}
+			argv = append(argv, "--json")
+			runner.responses[strings.Join(argv, " ")] = CommandOutput{Stdout: []byte(fmt.Sprintf(`{"ok":true,"result":{"dispatch":{"id":"dispatch-1","task_id":"task-1","assignee_handle":"term_worker","status":"dispatched"},"injected":false,"preamble":"send this","mutation":{"requestId":%q}}}`, test.responseID))}
+
+			_, err := NewClient(runner).Dispatch(context.Background(), port.OrcaDispatchRequest{
+				RunID: "run_issueops_1", TaskID: "task-1", ToHandle: "term_worker", ReturnPreamble: true, RetryRequestID: test.retryID,
+			})
+			var orcaErr *port.OrcaError
+			if !errors.As(err, &orcaErr) || orcaErr.Code != "dispatch_request_identity_mismatch" || !orcaErr.Invoked || orcaErr.OrchestrationRequestID != test.responseID {
+				t.Fatalf("dispatch identity error=%#v", err)
+			}
+		})
+	}
+}
+
+func TestClientTerminalPromptRequiresDurableInstalledReceipt(t *testing.T) {
+	const retryID = "22222222-2222-4222-8222-222222222222"
+	validPrompt := `{"requestId":"22222222-2222-4222-8222-222222222222","stages":["input_accepted"],"provider":"omo","observation":"supported","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`
+	for _, test := range []struct {
+		name       string
+		retryID    string
+		promptJSON string
+		wantCode   string
+		wantOK     bool
+	}{
+		{name: "initial empty request", promptJSON: `{"requestId":"","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "retry empty request", retryID: retryID, promptJSON: `{"requestId":"","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_request_identity_mismatch"},
+		{name: "retry different request", retryID: retryID, promptJSON: `{"requestId":"99999999-9999-4999-8999-999999999999","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_request_identity_mismatch"},
+		{name: "retry exact request", retryID: retryID, promptJSON: validPrompt, wantOK: true},
+		{name: "wrong provider", promptJSON: `{"requestId":"22222222-2222-4222-8222-222222222222","stages":["input_accepted"],"provider":"old-host","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "missing accepted stage", promptJSON: `{"requestId":"22222222-2222-4222-8222-222222222222","stages":["turn_started"],"provider":"omo","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "empty process incarnation", promptJSON: `{"requestId":"22222222-2222-4222-8222-222222222222","stages":["input_accepted"],"provider":"omo","processIncarnation":"","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "zero generation", promptJSON: `{"requestId":"22222222-2222-4222-8222-222222222222","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":0,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "missing baseline sequence", promptJSON: `{"requestId":"22222222-2222-4222-8222-222222222222","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":1}`, wantCode: "terminal_prompt_receipt_invalid"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			runner := newFakeRunner(t)
+			handle := "term_00000000-0000-4000-8000-000000000069"
+			bracketedPrompt := "\x1b[200~official-preamble\x1b[201~"
+			argv := []string{"orca", "terminal", "send", "--terminal", handle, "--text", bracketedPrompt, "--enter"}
+			if test.retryID != "" {
+				argv = append(argv, "--retry-request", test.retryID)
+			}
+			argv = append(argv, "--json")
+			runner.responses[strings.Join(argv, " ")] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"send":{"accepted":true,"prompt":` + test.promptJSON + `}}}`)}
+
+			receipt, err := NewClient(runner).SendTerminalPrompt(context.Background(), handle, "official-preamble", test.retryID)
+			if test.wantOK {
+				if err != nil || receipt.RequestID != retryID || receipt.BaselineWorkingSequence != 0 {
+					t.Fatalf("receipt=%+v err=%v", receipt, err)
+				}
+				return
+			}
+			var orcaErr *port.OrcaError
+			if !errors.As(err, &orcaErr) || orcaErr.Code != test.wantCode || !orcaErr.Invoked {
+				t.Fatalf("prompt receipt error=%#v", err)
+			}
+		})
+	}
+}
+
 func TestClientRequestShowIsReadOnlyRecovery(t *testing.T) {
 	runner := newFakeRunner(t)
 	runner.responses["orca orchestration request-show --request 11111111-1111-4111-8111-111111111111 --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"requestId":"11111111-1111-4111-8111-111111111111","state":"completed","method":"orchestration.dispatch","interpretation":"recorded"},"_meta":{"runtimeId":"runtime-1"}}`)}

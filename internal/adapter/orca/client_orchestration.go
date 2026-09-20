@@ -568,10 +568,16 @@ func (c *Client) Dispatch(ctx context.Context, req port.OrcaDispatchRequest) (po
 	}
 	argv = append(argv, "--json")
 	dispatch, err := c.dispatchResult(ctx, argv)
-	if strings.TrimSpace(req.RetryRequestID) != "" {
-		dispatch.RequestID = strings.TrimSpace(req.RetryRequestID)
+	if err != nil {
+		return dispatch, err
 	}
-	return dispatch, err
+	if err := port.ValidateOrcaDurableRequestID(dispatch.RequestID, req.RetryRequestID); err != nil {
+		return port.OrcaDispatch{}, &port.OrcaError{
+			Code: "dispatch_request_identity_mismatch", Detail: err.Error(), Invoked: true,
+			OrchestrationRequestID: strings.TrimSpace(dispatch.RequestID),
+		}
+	}
+	return dispatch, nil
 }
 
 func (c *Client) ShowDispatch(ctx context.Context, taskID string) (port.OrcaDispatch, error) {

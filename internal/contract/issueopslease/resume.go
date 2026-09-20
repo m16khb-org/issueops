@@ -15,13 +15,14 @@ type ResumeReceipt struct {
 }
 
 type ResumeStageReceipt struct {
-	TerminalPTYID string             `json:"terminal_pty_id,omitempty"`
-	RunID         string             `json:"run_id,omitempty"`
-	RunBound      bool               `json:"run_bound,omitempty"`
-	TaskID        string             `json:"task_id,omitempty"`
-	DispatchID    string             `json:"dispatch_id,omitempty"`
-	RequestID     string             `json:"request_id,omitempty"`
-	PromptReceipt *OrcaPromptReceipt `json:"prompt_receipt,omitempty"`
+	TerminalPTYID  string             `json:"terminal_pty_id,omitempty"`
+	TerminalHandle string             `json:"terminal_handle,omitempty"`
+	RunID          string             `json:"run_id,omitempty"`
+	RunBound       bool               `json:"run_bound,omitempty"`
+	TaskID         string             `json:"task_id,omitempty"`
+	DispatchID     string             `json:"dispatch_id,omitempty"`
+	RequestID      string             `json:"request_id,omitempty"`
+	PromptReceipt  *OrcaPromptReceipt `json:"prompt_receipt,omitempty"`
 }
 
 type OrcaPromptReceipt struct {

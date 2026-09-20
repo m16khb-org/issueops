@@ -199,10 +199,12 @@ type IssueOpsHandoffDeliveryLauncher struct {
 }
 
 type IssueOpsHandoffDeliveryTarget struct {
-	TerminalID         string                `json:"terminal_id,omitempty"`
-	PaneID             string                `json:"pane_id,omitempty"`
-	ProcessIncarnation string                `json:"process_incarnation,omitempty"`
-	Process            *NativeProcessReceipt `json:"process,omitempty"`
+	TerminalID              string                `json:"terminal_id,omitempty"`
+	PaneID                  string                `json:"pane_id,omitempty"`
+	ProcessIncarnation      string                `json:"process_incarnation,omitempty"`
+	PromptGeneration        *uint64               `json:"prompt_generation,omitempty"`
+	BaselineWorkingSequence *uint64               `json:"baseline_working_sequence,omitempty"`
+	Process                 *NativeProcessReceipt `json:"process,omitempty"`
 }
 
 type IssueOpsHandoffDeliveryReceipt struct {

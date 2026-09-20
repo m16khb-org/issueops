@@ -26,15 +26,15 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 	if err != nil {
 		return nil, err
 	}
-	stateParent, stateName, state, err := openHandoffDeliveryStateRootWindows(stateRoot)
+	statePathRoots, statePathNames, err := openHandoffDeliveryStateRootWindows(stateRoot)
 	if err != nil {
 		return nil, err
 	}
+	state := statePathRoots[len(statePathRoots)-1]
 	closeState := true
 	defer func() {
 		if closeState {
-			_ = state.Close()
-			_ = stateParent.Close()
+			_ = closeHandoffDeliveryWindowsRoots(statePathRoots)
 		}
 	}()
 
@@ -86,8 +86,10 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 
 	handle := &handoffDeliveryAuditHandle{file: file}
 	handle.verifyPath = func() error {
-		if err := verifyHandoffDeliveryWindowsRootEntry(stateParent, stateName, state); err != nil {
-			return fmt.Errorf("handoff delivery state root changed: %w", err)
+		for index, name := range statePathNames {
+			if err := verifyHandoffDeliveryWindowsRootEntry(statePathRoots[index], name, statePathRoots[index+1]); err != nil {
+				return fmt.Errorf("handoff delivery state path component %q changed: %w", name, err)
+			}
 		}
 		if err := verifyHandoffDeliveryWindowsRootEntry(state, "audit", audit); err != nil {
 			return fmt.Errorf("handoff delivery audit directory changed: %w", err)
@@ -102,26 +104,27 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 		}
 		return nil
 	}
-	handle.closePath = func() error { return errors.Join(audit.Close(), state.Close(), stateParent.Close()) }
+	handle.closePath = func() error { return errors.Join(audit.Close(), closeHandoffDeliveryWindowsRoots(statePathRoots)) }
 	closeAudit = false
 	closeState = false
 	return handle, nil
 }
 
-func openHandoffDeliveryStateRootWindows(stateRoot string) (*os.Root, string, *os.Root, error) {
+func openHandoffDeliveryStateRootWindows(stateRoot string) ([]*os.Root, []string, error) {
 	volume := filepath.VolumeName(stateRoot)
 	if volume == "" {
-		return nil, "", nil, errors.New("handoff delivery state root has no volume")
+		return nil, nil, errors.New("handoff delivery state root has no volume")
 	}
 	rootPath := volume + string(os.PathSeparator)
 	parts := strings.FieldsFunc(strings.TrimPrefix(stateRoot, rootPath), func(r rune) bool { return os.IsPathSeparator(uint8(r)) })
 	if len(parts) == 0 {
-		return nil, "", nil, errors.New("handoff delivery state root cannot be a volume root")
+		return nil, nil, errors.New("handoff delivery state root cannot be a volume root")
 	}
 	current, err := os.OpenRoot(rootPath)
 	if err != nil {
-		return nil, "", nil, err
+		return nil, nil, err
 	}
+	pathRoots := []*os.Root{current}
 	for index, part := range parts {
 		var beforeOpen func()
 		if index == len(parts)-1 {
@@ -129,16 +132,23 @@ func openHandoffDeliveryStateRootWindows(stateRoot string) (*os.Root, string, *o
 		}
 		next, err := openHandoffDeliveryWindowsDirectory(current, part, beforeOpen)
 		if err != nil {
-			_ = current.Close()
-			return nil, "", nil, err
+			_ = closeHandoffDeliveryWindowsRoots(pathRoots)
+			return nil, nil, err
 		}
-		if index == len(parts)-1 {
-			return current, part, next, nil
-		}
-		_ = current.Close()
+		pathRoots = append(pathRoots, next)
 		current = next
 	}
-	panic("unreachable")
+	return pathRoots, parts, nil
+}
+
+func closeHandoffDeliveryWindowsRoots(roots []*os.Root) error {
+	errs := make([]error, 0, len(roots))
+	for index := len(roots) - 1; index >= 0; index-- {
+		if err := roots[index].Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func openHandoffDeliveryWindowsDirectory(parent *os.Root, name string, beforeOpen func()) (*os.Root, error) {

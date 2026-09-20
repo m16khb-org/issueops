@@ -216,8 +216,11 @@ func advanceOrcaIntentReceiptWithExpectedRaw(ctx context.Context, stateRoot stri
 		updated.TaskID = strings.TrimSpace(receipt.TaskID)
 		updated.Stage = preparationcontract.IntentStageDispatch
 	case preparationcontract.IntentStageDispatch:
-		if strings.TrimSpace(receipt.TaskID) != expected.TaskID || strings.TrimSpace(receipt.DispatchID) == "" {
-			return record, expected, fmt.Errorf("Orca dispatch candidate is incomplete")
+		if err := port.ValidateExecutionOrcaDeliveryReceipt(receipt, port.OrcaDeliveryReceiptExpectation{
+			Host: expected.Probe.Host, TaskID: expected.TaskID, TerminalPTYID: expected.TerminalPTYID,
+			DispatchRequestID: expected.OrcaRequestID, PromptRequestID: expected.OrcaPromptRequestID,
+		}); err != nil {
+			return record, expected, fmt.Errorf("Orca dispatch candidate is incomplete: %w", err)
 		}
 		updated.OrcaRequestID = strings.TrimSpace(receipt.RequestID)
 		if receipt.PromptReceipt != nil {

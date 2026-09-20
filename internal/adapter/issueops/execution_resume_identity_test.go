@@ -147,7 +147,7 @@ func TestResumeDispatchRetainsDurableArtifactIdentity(t *testing.T) {
 		{RunID: "run-next"},
 		{RunID: "run-next", RunBound: true},
 		{TaskID: "task-next"},
-		{TaskID: "task-next", DispatchID: "dispatch-next"},
+		{TerminalPTYID: "pty-next", TerminalHandle: "term-next", TaskID: "task-next", DispatchID: "dispatch-next", RequestID: "11111111-1111-4111-8111-111111111111"},
 	}
 	var err error
 	for _, receipt := range steps {

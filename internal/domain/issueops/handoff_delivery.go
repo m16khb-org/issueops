@@ -225,6 +225,12 @@ func validateHandoffDeliveryTarget(target issueopscontract.IssueOpsHandoffDelive
 			return fmt.Errorf("delivery observation %s is too large", name)
 		}
 	}
+	if (target.PromptGeneration == nil) != (target.BaselineWorkingSequence == nil) {
+		return fmt.Errorf("delivery observation prompt receipt counters are incomplete")
+	}
+	if target.PromptGeneration != nil && *target.PromptGeneration == 0 {
+		return fmt.Errorf("delivery observation prompt generation is invalid")
+	}
 	if target.Process != nil {
 		if len(target.Process.StartedAt) > handoffDeliveryFieldLimit || len(target.Process.Executable) > handoffDeliveryFieldLimit {
 			return fmt.Errorf("delivery observation process identity is too large")
@@ -485,10 +491,22 @@ func handoffDeliveryHasEvidence(observation issueopscontract.IssueOpsHandoffDeli
 }
 
 func handoffDeliveryTargetMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) bool {
-	if current.TerminalID != next.TerminalID || current.PaneID != next.PaneID {
+	if current.TerminalID != next.TerminalID {
+		return true
+	}
+	// PTY/runtime identity is stable, while Orca may rotate the transient pane
+	// handle. A pane-only change is valid only while both observations name the
+	// same nonempty PTY; current dispatch inspection still fences the assignee.
+	if current.PaneID != next.PaneID && strings.TrimSpace(current.TerminalID) == "" {
 		return true
 	}
 	if current.ProcessIncarnation != "" && next.ProcessIncarnation != "" && current.ProcessIncarnation != next.ProcessIncarnation {
+		return true
+	}
+	if current.PromptGeneration != nil && next.PromptGeneration != nil && *current.PromptGeneration != *next.PromptGeneration {
+		return true
+	}
+	if current.BaselineWorkingSequence != nil && next.BaselineWorkingSequence != nil && *current.BaselineWorkingSequence != *next.BaselineWorkingSequence {
 		return true
 	}
 	if current.Process != nil && next.Process != nil && !reflect.DeepEqual(current.Process, next.Process) {
@@ -498,8 +516,19 @@ func handoffDeliveryTargetMismatch(current, next issueopscontract.IssueOpsHandof
 }
 
 func mergeHandoffDeliveryTarget(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) issueopscontract.IssueOpsHandoffDeliveryTarget {
+	if strings.TrimSpace(next.PaneID) != "" {
+		current.PaneID = next.PaneID
+	}
 	if current.ProcessIncarnation == "" {
 		current.ProcessIncarnation = next.ProcessIncarnation
+	}
+	if current.PromptGeneration == nil && next.PromptGeneration != nil {
+		value := *next.PromptGeneration
+		current.PromptGeneration = &value
+	}
+	if current.BaselineWorkingSequence == nil && next.BaselineWorkingSequence != nil {
+		value := *next.BaselineWorkingSequence
+		current.BaselineWorkingSequence = &value
 	}
 	if current.Process == nil && next.Process != nil {
 		process := *next.Process

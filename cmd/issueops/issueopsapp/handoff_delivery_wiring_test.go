@@ -79,7 +79,7 @@ func TestHandoffDeliveryOmoDurablePromptReceiptRecoversCandidateWithoutExternalW
 	promptID := "22222222-2222-4222-8222-222222222222"
 	receipt := port.ExecutionOrcaIntentReceipt{
 		TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID,
-		PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "process-1"},
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: 0},
 	}
 	if err := observeHandoffDeliveryCompleted(stateRoot, request, identity, "dispatch", receipt, time.Now); err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestHandoffDeliveryOmoCrashBetweenCallsReplaysDispatchIDAndStartsPromptOnce
 		t.Fatalf("crash recovery inventory=%+v err=%v", inventory, err)
 	}
 	promptID := "22222222-2222-4222-8222-222222222222"
-	fake.receipt.PromptReceipt = &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1"}
+	fake.receipt.PromptReceipt = &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: 0}
 	if _, err := observed.InvokeIntent(context.Background(), request); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestHandoffDeliveryOmoPromptResponseLossReplaysBothExactIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	fake := &handoffDeliveryProvisionerFake{
-		receipt:            port.ExecutionOrcaIntentReceipt{TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID, PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1"}},
+		receipt:            port.ExecutionOrcaIntentReceipt{TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID, PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: 0}},
 		requestObservation: port.OrcaRequestObservation{RuntimeID: "runtime-1", RequestID: dispatchID, Status: "completed", Method: "orchestration.dispatch"},
 	}
 	observed := newHandoffDeliveryProvisioner(stateRoot, fake, time.Now)
@@ -162,6 +162,53 @@ func TestHandoffDeliveryOmoPromptResponseLossReplaysBothExactIDs(t *testing.T) {
 	}
 	if fake.lastInvokeRequest.RetryRequestID != dispatchID || fake.lastInvokeRequest.PromptRetryRequestID != promptID {
 		t.Fatalf("exact replay IDs dispatch=%q prompt=%q", fake.lastInvokeRequest.RetryRequestID, fake.lastInvokeRequest.PromptRetryRequestID)
+	}
+}
+
+func TestHandoffDeliveryResponseLossUsesStablePTYAcrossRotatedHandle(t *testing.T) {
+	const requestID = "11111111-1111-4111-8111-111111111111"
+	for _, test := range []struct {
+		name           string
+		currentPTY     string
+		currentHandle  string
+		dispatchHandle string
+		wantCandidate  bool
+	}{
+		{name: "same PTY rotated handle", currentPTY: "pty-1", currentHandle: "term-rotated", dispatchHandle: "term-rotated", wantCandidate: true},
+		{name: "wrong PTY", currentPTY: "pty-other", currentHandle: "term-rotated", dispatchHandle: "term-rotated"},
+		{name: "current wrong assignee", currentPTY: "pty-1", currentHandle: "term-rotated", dispatchHandle: "term-other"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stateRoot := t.TempDir()
+			request := handoffDeliveryRequestFixture("codex")
+			originalIdentity := handoffDeliveryIdentityFixture()
+			if err := observeHandoffDeliveryFailure(stateRoot, request, originalIdentity, &port.OrcaError{
+				Code: "response_lost", Invoked: true, OrchestrationRequestID: requestID, CallPhase: "orca_dispatch",
+			}, time.Now); err != nil {
+				t.Fatal(err)
+			}
+			currentIdentity := originalIdentity
+			currentIdentity.TerminalPTYID = test.currentPTY
+			currentIdentity.TerminalHandle = test.currentHandle
+			fake := &handoffDeliveryProvisionerFake{
+				identity: currentIdentity,
+				receipt: port.ExecutionOrcaIntentReceipt{
+					TaskID: "task-1", DispatchID: "dispatch-1", RequestID: requestID,
+					TerminalPTYID: test.currentPTY, TerminalHandle: test.dispatchHandle,
+				},
+				requestObservation: port.OrcaRequestObservation{RuntimeID: "runtime-1", RequestID: requestID, Status: "completed", Method: "orchestration.dispatch"},
+			}
+			inventory, err := newHandoffDeliveryProvisioner(stateRoot, fake, time.Now).InspectIntent(context.Background(), request)
+			if test.wantCandidate {
+				if err != nil || len(inventory.Candidates) != 1 || inventory.Candidates[0].TerminalHandle != test.currentHandle || inventory.Candidates[0].TerminalPTYID != test.currentPTY {
+					t.Fatalf("rotated-handle recovery inventory=%+v err=%v", inventory, err)
+				}
+				return
+			}
+			if err == nil {
+				t.Fatalf("mismatched terminal recovery accepted: %+v", inventory)
+			}
+		})
 	}
 }
 
@@ -422,6 +469,7 @@ func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscon
 
 type handoffDeliveryProvisionerFake struct {
 	receipt            port.ExecutionOrcaIntentReceipt
+	identity           port.ExecutionOrcaDeliveryIdentity
 	requestObservation port.OrcaRequestObservation
 	requestErr         error
 	invokeErr          error
@@ -469,7 +517,10 @@ func (fake *handoffDeliveryPromptCrashFake) InvokeIntentObserved(_ context.Conte
 	}
 }
 
-func (*handoffDeliveryProvisionerFake) InspectDeliveryIdentity(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaDeliveryIdentity, error) {
+func (fake *handoffDeliveryProvisionerFake) InspectDeliveryIdentity(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaDeliveryIdentity, error) {
+	if strings.TrimSpace(fake.identity.RuntimeID) != "" {
+		return fake.identity, nil
+	}
 	return handoffDeliveryIdentityFixture(), nil
 }
 

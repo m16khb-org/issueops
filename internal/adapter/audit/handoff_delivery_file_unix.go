@@ -20,23 +20,24 @@ const (
 )
 
 // openHandoffDeliveryAudit walks from the filesystem root with openat and
-// O_NOFOLLOW, then retains handles for the state root, audit directory, and
-// leaf. The caller reads back an append through the returned leaf descriptor;
-// VerifyPath rejects namespace replacement before success is reported.
+// O_NOFOLLOW, then retains every directory handle from the trusted filesystem
+// root through the state root, audit directory, and leaf. The caller reads back
+// an append through the returned leaf descriptor; VerifyPath rejects any
+// namespace-link replacement before success is reported.
 func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (*handoffDeliveryAuditHandle, error) {
 	stateRoot, err := handoffDeliveryStateRootPath(stateRoot)
 	if err != nil {
 		return nil, err
 	}
-	stateParentFD, stateName, stateFD, err := openHandoffDeliveryStateRootUnix(stateRoot)
+	statePathFDs, statePathNames, err := openHandoffDeliveryStateRootUnix(stateRoot)
 	if err != nil {
 		return nil, err
 	}
+	stateFD := statePathFDs[len(statePathFDs)-1]
 	closeState := true
 	defer func() {
 		if closeState {
-			_ = unix.Close(stateFD)
-			_ = unix.Close(stateParentFD)
+			_ = closeHandoffDeliveryUnixFDs(statePathFDs)
 		}
 	}()
 
@@ -99,8 +100,10 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 
 	handle := &handoffDeliveryAuditHandle{file: file}
 	handle.verifyPath = func() error {
-		if err := verifyHandoffDeliveryUnixEntry(stateParentFD, stateName, stateFD, true); err != nil {
-			return fmt.Errorf("handoff delivery state root changed: %w", err)
+		for index, name := range statePathNames {
+			if err := verifyHandoffDeliveryUnixEntry(statePathFDs[index], name, statePathFDs[index+1], true); err != nil {
+				return fmt.Errorf("handoff delivery state path component %q changed: %w", name, err)
+			}
 		}
 		if err := verifyHandoffDeliveryUnixEntry(stateFD, "audit", auditFD, true); err != nil {
 			return fmt.Errorf("handoff delivery audit directory changed: %w", err)
@@ -111,25 +114,26 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 		return nil
 	}
 	handle.closePath = func() error {
-		return errors.Join(unix.Close(auditFD), unix.Close(stateFD), unix.Close(stateParentFD))
+		return errors.Join(unix.Close(auditFD), closeHandoffDeliveryUnixFDs(statePathFDs))
 	}
 	closeAudit = false
 	closeState = false
 	return handle, nil
 }
 
-func openHandoffDeliveryStateRootUnix(stateRoot string) (parentFD int, name string, stateFD int, err error) {
+func openHandoffDeliveryStateRootUnix(stateRoot string) ([]int, []string, error) {
 	if !filepath.IsAbs(stateRoot) {
-		return -1, "", -1, errors.New("handoff delivery state root must be absolute")
+		return nil, nil, errors.New("handoff delivery state root must be absolute")
 	}
 	parts := strings.FieldsFunc(filepath.Clean(stateRoot), func(r rune) bool { return r == os.PathSeparator })
 	if len(parts) == 0 {
-		return -1, "", -1, errors.New("handoff delivery state root cannot be the filesystem root")
+		return nil, nil, errors.New("handoff delivery state root cannot be the filesystem root")
 	}
 	currentFD, err := unix.Open(string(os.PathSeparator), unix.O_RDONLY|unix.O_DIRECTORY|unix.O_CLOEXEC|unix.O_NOFOLLOW, 0)
 	if err != nil {
-		return -1, "", -1, fmt.Errorf("open handoff delivery trusted root: %w", err)
+		return nil, nil, fmt.Errorf("open handoff delivery trusted root: %w", err)
 	}
+	pathFDs := []int{currentFD}
 	for index, part := range parts {
 		var beforeOpen func()
 		if index == len(parts)-1 {
@@ -137,16 +141,23 @@ func openHandoffDeliveryStateRootUnix(stateRoot string) (parentFD int, name stri
 		}
 		nextFD, openErr := openPinnedHandoffDeliveryUnixDirectory(currentFD, part, beforeOpen)
 		if openErr != nil {
-			_ = unix.Close(currentFD)
-			return -1, "", -1, fmt.Errorf("open handoff delivery state component %q: %w", part, openErr)
+			_ = closeHandoffDeliveryUnixFDs(pathFDs)
+			return nil, nil, fmt.Errorf("open handoff delivery state component %q: %w", part, openErr)
 		}
-		if index == len(parts)-1 {
-			return currentFD, part, nextFD, nil
-		}
-		_ = unix.Close(currentFD)
+		pathFDs = append(pathFDs, nextFD)
 		currentFD = nextFD
 	}
-	panic("unreachable")
+	return pathFDs, parts, nil
+}
+
+func closeHandoffDeliveryUnixFDs(fds []int) error {
+	errs := make([]error, 0, len(fds))
+	for index := len(fds) - 1; index >= 0; index-- {
+		if err := unix.Close(fds[index]); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
 }
 
 func openPinnedHandoffDeliveryUnixDirectory(parentFD int, name string, beforeOpen func()) (int, error) {

@@ -174,7 +174,7 @@ func (fake *resumePlanMutationFake) InvokeIntent(_ context.Context, request port
 	case port.ExecutionOrcaIntentTask:
 		return port.ExecutionOrcaIntentReceipt{TaskID: "task-resume"}, nil
 	case port.ExecutionOrcaIntentDispatch:
-		return port.ExecutionOrcaIntentReceipt{TaskID: request.TaskID, DispatchID: "dispatch-resume", RequestID: "11111111-1111-4111-8111-111111111111"}, nil
+		return port.ExecutionOrcaIntentReceipt{TerminalPTYID: "pty-resume", TerminalHandle: "term-test", TaskID: "task-resume", DispatchID: "dispatch-resume", RequestID: "11111111-1111-4111-8111-111111111111"}, nil
 	default:
 		return port.ExecutionOrcaIntentReceipt{}, nil
 	}

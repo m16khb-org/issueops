@@ -194,6 +194,10 @@ func observeHandoffDeliveryCompleted(stateRoot string, request port.ExecutionOrc
 			return fmt.Errorf("Omo prompt completion is missing its durable receipt")
 		}
 		observation.Target.ProcessIncarnation = strings.TrimSpace(receipt.PromptReceipt.ProcessIncarnation)
+		generation := receipt.PromptReceipt.Generation
+		baseline := receipt.PromptReceipt.BaselineWorkingSequence
+		observation.Target.PromptGeneration = &generation
+		observation.Target.BaselineWorkingSequence = &baseline
 		observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendAccepted)
 		if containsHandoffDeliveryString(receipt.PromptReceipt.Stages, "turn_started") {
 			observation.NativeTurnObserved = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt)
@@ -306,7 +310,8 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 		}
 	}
 	if promptFound && (promptObservation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved || promptObservation.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved) {
-		if !dispatchExists || strings.TrimSpace(promptObservation.Request.DurableID) == "" || strings.TrimSpace(promptObservation.Target.ProcessIncarnation) == "" {
+		if !dispatchExists || strings.TrimSpace(promptObservation.Request.DurableID) == "" || strings.TrimSpace(promptObservation.Target.ProcessIncarnation) == "" ||
+			promptObservation.Target.PromptGeneration == nil || promptObservation.Target.BaselineWorkingSequence == nil {
 			return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Omo prompt delivery recovery evidence is incomplete")
 		}
 		stages := []string{"input_accepted"}
@@ -315,7 +320,16 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 		}
 		dispatchReceipt.PromptReceipt = &port.OrcaPromptReceipt{
 			RequestID: promptObservation.Request.DurableID, Stages: stages, Provider: "omo",
-			ProcessIncarnation: promptObservation.Target.ProcessIncarnation, Generation: request.SourceGeneration,
+			ProcessIncarnation:      promptObservation.Target.ProcessIncarnation,
+			Generation:              *promptObservation.Target.PromptGeneration,
+			BaselineWorkingSequence: *promptObservation.Target.BaselineWorkingSequence,
+		}
+		if err := port.ValidateExecutionOrcaDeliveryReceipt(dispatchReceipt, port.OrcaDeliveryReceiptExpectation{
+			Host: request.Probe.Host, TaskID: request.TaskID, TerminalPTYID: identity.TerminalPTYID, TerminalHandle: identity.TerminalHandle,
+			DispatchRequestID: dispatchRequestID, PromptRequestID: promptObservation.Request.DurableID,
+			PromptProcessIncarnation: promptObservation.Target.ProcessIncarnation,
+		}); err != nil {
+			return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Omo prompt delivery recovery evidence is incomplete: %w", err)
 		}
 		return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{dispatchReceipt}}, true, nil
 	}
@@ -402,8 +416,7 @@ func foldedHandoffDeliveryObservation(stateRoot string, request port.ExecutionOr
 	}
 	if observation.PromptSHA256 != probe.PromptSHA256 || observation.MaterialSHA256 != probe.MaterialSHA256 || observation.SourceGeneration != probe.SourceGeneration ||
 		observation.Launcher != probe.Launcher || observation.ExpectedOwnerHost != probe.ExpectedOwnerHost ||
-		observation.Target.TerminalID != "" && observation.Target.TerminalID != identity.TerminalPTYID ||
-		observation.Target.PaneID != "" && observation.Target.PaneID != identity.TerminalHandle {
+		observation.Target.TerminalID != "" && observation.Target.TerminalID != identity.TerminalPTYID {
 		return issueopscontract.IssueOpsHandoffDeliveryObservation{}, false, fmt.Errorf("handoff delivery recovery evidence conflicts with current request identity")
 	}
 	return observation, true, nil

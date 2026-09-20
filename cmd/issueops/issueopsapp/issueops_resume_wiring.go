@@ -236,6 +236,7 @@ func resumePortReceipt(stage string, receipt leasecontract.ResumeStageReceipt) p
 	case port.ExecutionOrcaIntentTask:
 		result.TaskID = receipt.TaskID
 	case port.ExecutionOrcaIntentDispatch:
+		result.TerminalPTYID, result.TerminalHandle = receipt.TerminalPTYID, receipt.TerminalHandle
 		result.TaskID, result.DispatchID, result.RequestID = receipt.TaskID, receipt.DispatchID, receipt.RequestID
 		if receipt.PromptReceipt != nil {
 			result.PromptReceipt = &port.OrcaPromptReceipt{
@@ -250,7 +251,7 @@ func resumePortReceipt(stage string, receipt leasecontract.ResumeStageReceipt) p
 
 func resumeContractReceipt(receipt port.ExecutionOrcaIntentReceipt) leasecontract.ResumeStageReceipt {
 	result := leasecontract.ResumeStageReceipt{
-		TerminalPTYID: receipt.TerminalPTYID, RunID: receipt.RunID, RunBound: receipt.RunBound,
+		TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle, RunID: receipt.RunID, RunBound: receipt.RunBound,
 		TaskID: receipt.TaskID, DispatchID: receipt.DispatchID, RequestID: receipt.RequestID,
 	}
 	if receipt.PromptReceipt != nil {
