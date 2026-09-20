@@ -22,7 +22,7 @@ Usage:
   issueops state list [--json]
   issueops state prune --max-age DURATION [--confirm] [--json]
   issueops state doctor [--json]
-  issueops start --repo PATH [--branch NAME] [--json]
+  issueops start --repo PATH [--branch NAME | --new] [--json]
   issueops status --id ID [--json]
   issueops list [--repo PATH] [--json]
   issueops review-metrics (--id ID | --repo PATH) [--json]

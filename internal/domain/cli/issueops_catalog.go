@@ -16,7 +16,7 @@ import "strings"
 //
 // 줄 순서가 곧 렌더 순서다. 새 명령은 여기 한 곳에만 추가하고, 최상위에도 노출할
 // 것이면 축약 키에 그 명령 경로를 더한다.
-const issueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME] [--json]
+const issueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --new] [--json]
   issueops status --id ID [--json]
   issueops list [--repo PATH] [--json]
   issueops review-metrics (--id ID | --repo PATH) [--json]

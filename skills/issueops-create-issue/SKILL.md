@@ -27,6 +27,12 @@ issueops next --json
 `start`는 **source checkout**에서 실행한다. 워크트리 안에서 실행하면 record의 repo가
 워크트리를 가리키고 이후 모든 경로 판정이 어긋난다.
 
+`next`가 기존 사이클을 선택했지만 사용자가 별도의 새 사이클을 명시적으로 요청했다면
+첫 명령에 `--new`를 붙인다. `--new`는 `--branch`와 함께 쓸 수 없고, 실행할 때마다
+새 lifecycle ID를 만든다. 성공 응답의 ID를 이후 명령에 계속 사용한다. 응답을 받았는지
+불분명하면 `issueops list --repo "$SOURCE_ROOT" --json`으로 먼저 확인하고, 같은 명령을
+바로 다시 실행하지 않는다.
+
 ## 입력 세 가지
 
 이슈는 세 곳에서 온 것을 합쳐 만든다. 각 조사 결과가 그대로 plan-prep의 evidence가
@@ -79,6 +85,7 @@ blocking 질문이 둘 이상이거나 답에 따라 만들 것이 갈리면
 
 ```bash
 issueops start --repo "$SOURCE_ROOT" --json      # ISSUEOPS_ID를 받는다
+# 기존 사이클과 별도의 새 사이클을 요청한 경우에만 위 명령에 --new를 붙인다.
 
 issueops intent record --id "$ISSUEOPS_ID" \
   --raw-request "<사용자 원문>" --interpreted-intent "<해석>" \

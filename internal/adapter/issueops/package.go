@@ -237,14 +237,31 @@ func normalizeIssueOpsRepo(repo string) string {
 }
 
 func StartIssueOps(stateRoot string, req issueops.IssueOpsStartRequest) (issueops.IssueOpsRecord, error) {
-	id := issueOpsStartLockID(req.Repo, req.Branch)
+	id, err := issueOpsStartRecordID(req)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
+	}
 	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
+	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
+		store := issueOpsStartStore()
+		if req.New {
+			store.NewID = func(string, string) string { return id }
+		}
 		var e error
-		rec, e = start.Start(issueOpsStartStore(), stateRoot, req)
+		rec, e = start.Start(store, stateRoot, req)
 		return e
 	})
 	return rec, err
+}
+
+func issueOpsStartRecordID(req issueops.IssueOpsStartRequest) (string, error) {
+	if !req.New {
+		return issueOpsStartLockID(req.Repo, req.Branch), nil
+	}
+	if strings.TrimSpace(req.Branch) != "" {
+		return "", fmt.Errorf("a new issueops cycle requires a branchless start")
+	}
+	return newIndependentIssueOpsID(normalizeIssueOpsRepo(req.Repo))
 }
 
 func issueOpsStartStore() start.Store {

@@ -3,6 +3,7 @@ package issueops
 import (
 	"bytes"
 	"context"
+	cryptorand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -177,6 +178,16 @@ func IssueOpsStateRoot() string {
 func newIssueOpsID(repo, branch string) string {
 	sum := sha256.Sum256([]byte(strings.TrimSpace(repo) + "\x00" + strings.TrimSpace(branch)))
 	return "io-" + hex.EncodeToString(sum[:])[:12]
+}
+
+func newIndependentIssueOpsID(repo string) (string, error) {
+	var nonce [16]byte
+	if _, err := cryptorand.Read(nonce[:]); err != nil {
+		return "", fmt.Errorf("generate independent issueops id: %w", err)
+	}
+	seed := append([]byte(strings.TrimSpace(repo)+"\x00"), nonce[:]...)
+	sum := sha256.Sum256(seed)
+	return "io-" + hex.EncodeToString(sum[:])[:12], nil
 }
 
 func NewIssueOpsID(repo, branch string) string {

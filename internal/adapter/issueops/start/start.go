@@ -1,7 +1,9 @@
 package start
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"strings"
 	"time"
@@ -36,7 +38,12 @@ func Start(store Store, stateRoot string, req model.IssueOpsStartRequest) (model
 	}
 	id := store.NewID(repo, branch)
 	if existing, err := store.Read(stateRoot, id); err == nil {
+		if req.New {
+			return model.IssueOpsRecord{OK: false}, fmt.Errorf("refusing to create new issueops record %s: id already exists", id)
+		}
 		return existing, nil
+	} else if req.New && !errors.Is(err, fs.ErrNotExist) {
+		return model.IssueOpsRecord{OK: false}, fmt.Errorf("refusing to create new issueops record %s: existing state is unreadable: %w", id, err)
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	return store.Write(stateRoot, model.IssueOpsRecord{

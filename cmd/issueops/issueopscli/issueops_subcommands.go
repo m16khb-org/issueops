@@ -19,11 +19,12 @@ func runIssueOpsStart(args []string) error {
 	fs := flag.NewFlagSet("issueops start", flag.ContinueOnError)
 	repo := fs.String("repo", "", "repository path")
 	branch := fs.String("branch", "", "working branch")
+	newCycle := fs.Bool("new", false, "create a new branchless cycle instead of resuming")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.StartIssueOps(issueOpsCLIDeps.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: *repo, Branch: *branch})
+	record, err := issueOpsCLIDeps.StartIssueOps(issueOpsCLIDeps.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: *repo, Branch: *branch, New: *newCycle})
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 

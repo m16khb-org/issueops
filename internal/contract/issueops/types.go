@@ -3,6 +3,8 @@ package issueops
 type IssueOpsStartRequest struct {
 	Repo   string `json:"repo"`
 	Branch string `json:"branch,omitempty"`
+	// New requests a fresh branchless lifecycle instead of deterministic resume.
+	New bool `json:"new,omitempty"`
 }
 
 type IssueOpsFeedbackItem struct {

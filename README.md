@@ -121,6 +121,15 @@ exits: pause=issueops execution release --id io-xxxx --generation 1 ... abandon=
 issueops start --repo "$PWD" --branch "123-short-description" --json
 ```
 
+같은 저장소에서 브랜치를 정하기 전인 별도 사이클을 명시적으로 시작하려면 `--new`를
+새 사이클 하나당 한 번만 사용하고 반환된 ID로 이어갑니다. 이 플래그는 호출할 때마다
+새 ID를 만들며 `--branch`와 함께 쓸 수 없습니다. 응답이 불분명하면 다시 실행하기 전에
+`issueops list --repo "$PWD" --json`으로 생성 여부를 확인합니다.
+
+```bash
+issueops start --repo "$PWD" --new --json
+```
+
 원격 issue, PR/MR 생성과 cleanup은 preview 또는 dry-run이 기본입니다. 외부 변경은 명시적인
 `--confirm`과 fingerprint·actor 계약을 요구하고, 결과가 불확실하면 재시도 대신 `reconcile`로
 정확히 하나의 결과를 확인합니다.

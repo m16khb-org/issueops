@@ -51,6 +51,41 @@ func TestStartReturnsExistingRecordWithoutRewrite(t *testing.T) {
 	}
 }
 
+func TestStartNewRefusesExistingIDWithoutRewrite(t *testing.T) {
+	existing := model.IssueOpsRecord{OK: true, SchemaVersion: 1, ID: "io-v1", Repo: "/repo", Phase: model.IssueOpsPhasePlan}
+	store := Store{
+		Read: func(string, string) (model.IssueOpsRecord, error) { return existing, nil },
+		Write: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+			t.Fatal("an explicit new cycle must not overwrite an existing record")
+			return model.IssueOpsRecord{}, nil
+		},
+		NewID:          func(string, string) string { return existing.ID },
+		ValidateBranch: func(string) error { return nil },
+	}
+
+	if _, err := Start(store, t.TempDir(), model.IssueOpsStartRequest{Repo: existing.Repo, New: true}); err == nil {
+		t.Fatal("explicit new start must reject an id collision")
+	}
+}
+
+func TestStartNewRefusesUnreadableIDWithoutRewrite(t *testing.T) {
+	store := Store{
+		Read: func(string, string) (model.IssueOpsRecord, error) {
+			return model.IssueOpsRecord{}, errors.New("invalid state")
+		},
+		Write: func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+			t.Fatal("an explicit new cycle must not overwrite an unreadable record")
+			return model.IssueOpsRecord{}, nil
+		},
+		NewID:          func(string, string) string { return "io-v1" },
+		ValidateBranch: func(string) error { return nil },
+	}
+
+	if _, err := Start(store, t.TempDir(), model.IssueOpsStartRequest{Repo: "/repo", New: true}); err == nil {
+		t.Fatal("explicit new start must preserve an unreadable record")
+	}
+}
+
 func TestStartCanonicalizesLinkedWorktreeRepoBeforeIDAndWrite(t *testing.T) {
 	const (
 		worktree = "/repo.worktrees/69-v1"
