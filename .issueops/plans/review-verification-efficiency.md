@@ -834,3 +834,106 @@ Orca execution의 core resume·봉인 owner 경로를 분리했고 H0/H2 실패 
 H0~H5는 계획 상태다. 실제 런처/host 인계 성능과 9개 조합의 live 성공을 이번 조사로
 인증하지 않았다. 이번에 검증한 것은 설치 도구의 read-only 기능·상태, 기존 코드와 격리
 테스트, 인계 계획의 순서·경쟁/복구 조건이다. 런타임·스킬 구현은 이 추가 요청에서 바꾸지 않았다.
+
+## 최종 결과와 채택 판정
+
+### 판정 전제
+
+최종 판정은 보존된 P0 manifest, Task 0~13 보고서, 각 후보의 독립 리뷰와 Task 14의
+격리 검증을 다시 대조한 결과다. 서로 다른 명령, 표본 계획, revision, 환경의 백분율은
+합산하지 않았다. 과거 자료가 불완전하면 보존하되 채택 수치에서 제외했다. 설치 확인,
+deterministic mock, runtime 관측, live 실행은 서로 다른 증거 등급으로 유지했다.
+
+### 성능 후보와 계약 후보
+
+아래 표의 P0 비교는 Task 14에서 새 benchmark를 실행한 결과가 아니다. 보존된 최종
+manifest를 `scripts/measure_efficiency.py compare`로 다시 검증했으며, P0/P8/P1/P2/P3/
+P4/P5의 채택 쌍은 모두 `ok=true`, `comparable=true`, `contract_equal=true`,
+`drifts=[]`를 반환했다.
+
+| 후보 | 최종 commit과 근거 | 같은 비교 안의 관측값 | 최종 판정과 독립 리뷰 |
+|---|---|---|---|
+| P0 | `02cc8ed4`, `bfa7d6a9`, `54a92d80`, `6699371e`; `p0-final-schema-001-baseline` ↔ `002-candidate` | wall 1.500685583초→1.132806875초, package 0.482초→0.203초 | **ADOPT-AS-CORRECTNESS-ONLY**. 최종 schema의 수집·비교와 시간 비의존 계약만 입증했다. 속도 주장은 없다. 세 차례 수정 뒤 독립 리뷰가 승인했다. |
+| P8 | `8dd368e8`; preplanned hostprobe A/B 두 쌍 | A wall 29.924738초→26.199218초(-12.4%), package 29.345초→25.650초(-12.6%). B wall 26.754056초→25.274850초(-5.5%), package 26.170초→24.654초(-5.8%) | **ADOPT**. 일반 fixture Python 호출의 rewrite subprocess를 없앴다. production probe는 바뀌지 않았다. 일반 p95 주장은 없으며 독립 리뷰가 승인했다. |
+| P1 | `61db492b`; N=1000/U=10 고정 benchmark | normalization 1001→11회, median 1.558110ms→0.2788135ms(-82.1%), p95 1.683155ms→0.372141ms(-77.9%), capture wall 7.258161초→1.932091초 | **ADOPT**. +3 alloc/op, +607.5 B/op, max RSS +1.35%를 수용했다. U=N에서는 호출 감소가 없다. 독립 리뷰가 승인했다. |
+| P2 | `8e497780`; architecture package와 full-suite pair | `go list` 25→2회. package wall 9.724164초→2.045303초(-79.0%), elapsed 9.108초→1.806초(-80.2%). full wall 153.272060초→126.545508초(-17.4%), package 합 1321.028초→969.788초(-26.6%) | **ADOPT**. full max-child RSS +0.63%(+2.51MB)는 함께 기록한다. 한 번의 전체 run 밖으로 일반화하지 않으며 독립 리뷰가 승인했다. |
+| P3 | `2c9d023a`; clean-commit installcli package pair | 실제 build 14→1회, package wall 10.670001초→4.478903초(-58.0%), elapsed 9.722초→3.425초(-64.8%), max RSS -3.8% | **ADOPT**. clean-commit package pair만 사용한다. 불완전 fingerprint의 full candidates는 거부했으므로 전체 suite 속도 주장은 없다. 증거 수정 뒤 독립 리뷰가 승인했다. |
+| P4 | `16baaa44`, `a6c9c263`, `92518bf4`; Stage 1과 repaired Stage 2 pair | Stage 1 Git 18→15회, median -10.2%, p95 -13.7%, wall 6.756초→5.673초. Stage 2 Git 25→21회, median 308.383ms→256.722ms(-16.8%), p95 346.041ms→291.351ms(-15.8%), wall 11.903329초→9.955572초(-16.4%) | **ADOPT**. Stage 2는 metrics/result/git log가 receipt digest에 묶였다. strict fetch 뒤 schema path는 다시 읽는다. 수정 뒤 독립 리뷰가 승인했다. |
+| P5 | `d529069f`, `2307dc89`; final review-fix pair와 12-request table | 누락 0→0, 불필요 문서 0→0, 읽은 bytes 711,848→711,848. 단일 wall 0.738874291초→1.147330458초(+55.28%) | **ADOPT-AS-CORRECTNESS-ONLY**. token은 측정하지 않았다. 단일 wall 표본으로 속도 개선이나 회귀를 주장하지 않는다. compound-routing 수정 뒤 독립 리뷰가 승인했다. |
+| P6 | `2ef8c791`; testing/self-verification 계약과 실제 step mapping | 최종 전체 `go test` 소유자를 self-verify 한 번으로 정리하고, 포함되지 않은 vet/race는 같은 배터리에서 별도로 유지했다. | **ADOPT-AS-CORRECTNESS-ONLY**. 실행기나 영속 cache를 추가하지 않았고 속도 주장은 없다. 독립 리뷰가 승인했다. |
+
+### 인계·호스트 안전 변경
+
+H0~H5는 성능 후보가 아니다. 계약 테스트, 실제 wiring, deterministic mock과 독립 리뷰에
+근거해 모두 **ADOPT-AS-CORRECTNESS-ONLY**로 판정한다.
+
+| 범위 | commit과 채택 근거 | 비주장과 rollback 단위 |
+|---|---|---|
+| H0 | `03c90d13`, `483a1f3c`, `f98ab8f3`, `ec9de5ea`; 12-cell matrix, 6개 directed cross-host 자료 전달, exact failure set, 최종 리뷰 승인 | live E2E 성공을 뜻하지 않는다. capability contract/fixture 커밋 묶음으로 되돌릴 수 있다. |
+| H1/H3 | `d49c9fe7`, `50d586dc`, `40eccf2a`, `b1bafe5f`; drain·release·receive·freshness를 순수 decision contract와 skill 경계로 검증하고 최종 리뷰 승인 | 새 process manager나 ownership authority가 아니다. 네 커밋 묶음이 rollback 단위다. |
+| H2 | `e62b1e4b`부터 `f62c8e93`까지의 delivery observation/recovery 수리; production wiring, receipt/identity/crash·retry fencing, 최종 fresh 리뷰 승인 | observation은 권한이 아니며 claim CAS만 작업 권한을 부여한다. H2 commit 범위를 독립적으로 되돌릴 수 있다. |
+| H4 | `09473153`, `88f7702d`, `880b477c`, `35096f1c`, `7c7e7ccc`; native Omo runner와 `goja` mock-pi, resume evidence validator, 최종 fresh 리뷰 승인 | 설치/mock/runtime 증거로 live Omo를 인증하지 않는다. live 상태는 `not-run`이다. H4 묶음이 rollback 단위다. |
+| H5 | `434e7282`, `df68e43d`, `dd322b48`; explicit cmux CLI, exact target/path/prompt/UID/revalidation fencing, 최종 fresh 리뷰 승인 | 자동 선택은 Orca→Herdr→현재 세션이며 cmux는 명시적 선택에만 사용한다. socket은 disconnected이고 live 행은 인증하지 않았다. H5 묶음이 rollback 단위다. |
+
+### 적대적 리뷰 fixture
+
+production 문서를 훼손하지 않고 ignored 임시 packet 두 개를 같은 revision과 같은
+`side-effect` lens로 만들었다. seeded packet에는 필수 인증 공백을 advisory로 낮추고,
+검증 배터리가 끝나기 전에 pass를 기록하며, 실패 뒤에도 그 pass를 유지하는 결함을 넣었다.
+clean packet은 현재 계약대로 최초 revise, 공백 해소, fresh delta review, 배터리와 QA 성공,
+최종 fingerprint 일치 뒤에만 pass를 기록한다.
+
+기대 답을 알려주지 않은 fresh isolated `gpt-5.6-sol`/max reviewer를 A 다음 B 순서로
+실행했다. seeded verdict는 `revise`였고 의도한 세 결함을 모두 찾았다. clean verdict는
+`pass`였으며 필수 finding은 없었다. 결과는 seeded detection `1/1`, clean false positive
+`0`, false pass `0`이다. 이 한 쌍은 SHA-256으로 고정한 합성 packet 두 개만 평가하며
+일반적인 리뷰 정확도를 추정하지 않는다. 원문 verdict와 제외한 두 calibration 초안은
+`.issueops/tmp/task14/review-results.md`에 남겼다.
+
+### 설치, parity, 최종 검증
+
+tracked 계획은 최종 증거의 acceptance contract를 고정한다. Task 14 결과는 이 단락을
+포함한 exact commit에서 물리적 임시 checkout과 mode 0700의 private `HOME`,
+`CODEX_HOME`, `ISSUEOPS_STATE_DIR`, daemon dir를 사용해 수집하고, 정확한 revision,
+환경, candidate binary digest, 명령별 duration과 raw 상태를 ignored
+`.issueops/tmp/task-14-report.md`에 기록한다. 이 보고서의 exact-HEAD 결과가 최종 판정의
+authoritative result다.
+
+채택하려면 candidate binary를 해당 revision에서 한 번만 빌드하고 다음 조건을 모두
+충족해야 한다.
+
+- install dry-run, update dry-run, candidate install, self-verify에서 PATH 선두 cmux·Omo
+  sentinel 호출이 각각 0이어야 한다. 이는 기본 경로의 비호출 증거이며 live 실행
+  증거가 아니다.
+- 공용 `skills/` 원본과 Codex·Claude·Omo·agy 링크, command/MCP 설정, Claude lifecycle
+  설정, Omo extension이 candidate root/binary/digest에 묶여야 한다. 기본 install은 대상
+  repository에 project-local 파일을 만들면 안 된다.
+- deterministic fixture/mock의 CLI·MCP·native command/tool/schema/digest/exit 의미가
+  같아야 한다. Codex, Claude, Omo live 행은 `not-run`으로 유지한다.
+- `gofmt -l $(git ls-files '*.go')`, `git diff --check`, 관련 skill validator가 통과해야 한다.
+- self-verify risk tier가 clean docs-only revision에서 실행하지 않는 `go vet ./...`와
+  `go test -race ./... -count=1`은 별도로 통과해야 한다. architecture와 두 golden은
+  self-verify가 소유한 전체 `go test ./... -count=1` 결과에 포함한다.
+- `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json`은
+  `ok=true`, `termination_eligible=true`, 26/26 step, 최저 goal score 100이어야 한다.
+
+어느 조건이든 실패하거나 tracked 파일·환경이 바뀌면 bundle 전체를 폐기하고 처음부터
+다시 실행한다. 위 수치는 exact-HEAD 보고서에서 실제로 관측됐을 때만 Task 14 결과로
+인용한다.
+
+### 보류·거부와 한계
+
+- 최종 test sampling, gate 약화, timeout 단축과 `-count=1` 제거는 **REJECT**다.
+- 모든 gate를 병렬화하는 scheduler rewrite, 전역 Git/provider/permission cache,
+  측정 없는 SQLite writer-lock/WAL 변경은 **PARK**다.
+- reviewer model 하향, 성공 기준 생략, 원문 대신 손실 요약 사용은 **REJECT**다.
+- 이미 있는 bulk scan과 local/strict readiness 분리를 새 개선처럼 다시 구현하는 방안은
+  **REJECT**다.
+- P3의 불완전 fingerprint full candidates, P4의 receipt 없는 초기 Stage 2 자료, P5의
+  첫 fix candidate, P0의 superseded schema-v1/v2 자료는 **REJECT-AS-EVIDENCE**다.
+  감사 추적을 위해 artifact는 삭제하지 않았다.
+- 이번 작업은 외부 계정, live Codex·Claude·Omo episode, Orca/Herdr/cmux 실제 인계,
+  cmux app/socket/workspace/send를 실행하지 않았다. live latency, token 절감, 일반 p95,
+  모든 입력의 무손실, cmux path lookup의 남은 race closure를 주장하지 않는다.
+
+이 판정은 Task 14 candidate다. 최종 독립 리뷰 전에는 자체 승인으로 간주하지 않는다.
