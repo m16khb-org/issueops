@@ -26,6 +26,9 @@ var execDeps = ExecutionDeps{
 	SyncExecutionBase: func(context.Context, string, issueopscontract.ExecutionSyncBaseRequest, issueopscontract.ExecutionSyncBaseDeps) (issueopscontract.ExecutionSyncBaseResult, error) {
 		return issueopscontract.ExecutionSyncBaseResult{}, errExecutionNotConfigured
 	},
+	HandoffCmux: func(context.Context, string, issueopscontract.ExecutionCmuxHandoffRequest) (issueopscontract.ExecutionCmuxHandoffResult, error) {
+		return issueopscontract.ExecutionCmuxHandoffResult{}, errExecutionNotConfigured
+	},
 }
 
 // ExecutionDeps는 composition root가 실제 어댑터를 꽂는 진입점이다.
@@ -35,6 +38,7 @@ type ExecutionDeps struct {
 	IssueOpsStateRoot            func() string
 	SwitchExecutionMode          func(context.Context, string, issueopscontract.ExecutionSwitchModeRequest, issueopscontract.ExecutionSwitchModeDependencies) (issueopscontract.ExecutionSwitchModeResult, error)
 	SyncExecutionBase            func(context.Context, string, issueopscontract.ExecutionSyncBaseRequest, issueopscontract.ExecutionSyncBaseDeps) (issueopscontract.ExecutionSyncBaseResult, error)
+	HandoffCmux                  issueopscontract.ExecutionCmuxHandoffHandler
 }
 
 func ConfigureExecution(deps ExecutionDeps) {
@@ -52,5 +56,8 @@ func ConfigureExecution(deps ExecutionDeps) {
 	}
 	if deps.SyncExecutionBase != nil {
 		execDeps.SyncExecutionBase = deps.SyncExecutionBase
+	}
+	if deps.HandoffCmux != nil {
+		execDeps.HandoffCmux = deps.HandoffCmux
 	}
 }

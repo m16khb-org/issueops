@@ -183,6 +183,7 @@ type IssueOpsHandoffDeliveryObservation struct {
 	OwnerClaimed       IssueOpsHandoffDeliveryState      `json:"owner_claimed"`
 	Ambiguous          IssueOpsHandoffDeliveryState      `json:"ambiguous"`
 	OwnerClaim         IssueOpsHandoffDeliveryOwnerClaim `json:"owner_claim,omitempty"`
+	Timing             *IssueOpsHandoffDeliveryTiming    `json:"timing,omitempty"`
 }
 
 type IssueOpsHandoffDeliveryRequest struct {
@@ -190,21 +191,51 @@ type IssueOpsHandoffDeliveryRequest struct {
 }
 
 type IssueOpsHandoffDeliveryLauncher struct {
-	Name      string `json:"name"`
-	Version   string `json:"version"`
-	Path      string `json:"path"`
-	RuntimeID string `json:"runtime_id"`
-	MachineID string `json:"machine_id"`
-	ServerID  string `json:"server_id"`
+	Name                string                                      `json:"name"`
+	Version             string                                      `json:"version"`
+	Path                string                                      `json:"path"`
+	RuntimeID           string                                      `json:"runtime_id,omitempty"`
+	MachineID           string                                      `json:"machine_id,omitempty"`
+	ServerID            string                                      `json:"server_id,omitempty"`
+	EndpointIncarnation *IssueOpsHandoffDeliveryEndpointIncarnation `json:"endpoint_incarnation,omitempty"`
+}
+
+type IssueOpsHandoffDeliveryEndpointIncarnation struct {
+	Path           string `json:"path"`
+	Kind           string `json:"kind"`
+	Device         uint64 `json:"device"`
+	Inode          uint64 `json:"inode"`
+	CTimeNS        int64  `json:"ctime_ns"`
+	OwnerUID       uint32 `json:"owner_uid"`
+	OwnerGID       uint32 `json:"owner_gid"`
+	Mode           uint32 `json:"mode"`
+	ParentPath     string `json:"parent_path"`
+	ParentDevice   uint64 `json:"parent_device"`
+	ParentInode    uint64 `json:"parent_inode"`
+	ParentOwnerUID uint32 `json:"parent_owner_uid"`
+	ParentOwnerGID uint32 `json:"parent_owner_gid"`
+	ParentMode     uint32 `json:"parent_mode"`
 }
 
 type IssueOpsHandoffDeliveryTarget struct {
 	TerminalID              string                `json:"terminal_id,omitempty"`
 	PaneID                  string                `json:"pane_id,omitempty"`
+	WindowID                string                `json:"window_id,omitempty"`
+	WorkspaceID             string                `json:"workspace_id,omitempty"`
+	SurfaceID               string                `json:"surface_id,omitempty"`
+	CWD                     string                `json:"cwd,omitempty"`
 	ProcessIncarnation      string                `json:"process_incarnation,omitempty"`
 	PromptGeneration        *uint64               `json:"prompt_generation,omitempty"`
 	BaselineWorkingSequence *uint64               `json:"baseline_working_sequence,omitempty"`
 	Process                 *NativeProcessReceipt `json:"process,omitempty"`
+}
+
+type IssueOpsHandoffDeliveryTiming struct {
+	PreflightMS       uint64 `json:"preflight_ms,omitempty"`
+	WorkspaceCreateMS uint64 `json:"workspace_create_ms,omitempty"`
+	TargetResolveMS   uint64 `json:"target_resolve_ms,omitempty"`
+	InputSendMS       uint64 `json:"input_send_ms,omitempty"`
+	ReceiverReceiptMS uint64 `json:"receiver_receipt_ms,omitempty"`
 }
 
 type IssueOpsHandoffDeliveryReceipt struct {

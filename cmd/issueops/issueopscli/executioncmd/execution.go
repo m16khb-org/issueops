@@ -34,6 +34,7 @@ type Deps struct {
 	PrintError             func(error) error
 	syncBase               func(context.Context, string, model.ExecutionSyncBaseRequest, model.ExecutionSyncBaseDeps) (model.ExecutionSyncBaseResult, error)
 	Provenance             provenanceport.Observer
+	HandoffCmux            model.ExecutionCmuxHandoffHandler
 	nativeActorObservation *nativeActorObservation
 }
 
@@ -71,6 +72,7 @@ const Usage = `Usage:
   issueops execution complete --id ID --generation N --final-head SHA --verification-report PATH --remote-artifact-url URL --verification TEXT... ACTOR_FLAGS --confirm [--json]
   issueops execution sync-base --id ID --completion-generation N (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort) ACTOR_FLAGS [--json]
   issueops execution switch-mode --id ID --mode direct|orca [--apply --confirm --fingerprint SHA256] ACTOR_FLAGS [--json]
+  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --socket ABS --window UUID --host codex|claude|omo --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
 
 ACTOR_FLAGS: --host codex|claude|omo --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH`
 
@@ -102,9 +104,51 @@ func Run(args []string, deps Deps) error {
 		return runSyncBase(args[1:], deps)
 	case "switch-mode":
 		return runSwitchMode(args[1:], deps)
+	case "handoff-cmux":
+		return runHandoffCmux(args[1:], deps)
 	default:
 		return fmt.Errorf("unknown issueops execution subcommand %q", args[0])
 	}
+}
+
+func runHandoffCmux(args []string, deps Deps) error {
+	fs := flag.NewFlagSet("issueops execution handoff-cmux", flag.ContinueOnError)
+	id := fs.String("id", "", "IssueOps id")
+	generation := fs.Uint64("generation", 0, "released direct execution generation")
+	cmuxExecutable := fs.String("cmux-executable", "", "absolute observed cmux executable")
+	cmuxVersion := fs.String("cmux-version", "", "exact expected cmux version")
+	socketPath := fs.String("socket", "", "absolute cmux Unix socket path")
+	windowID := fs.String("window", "", "exact cmux window UUID")
+	host := fs.String("host", "", "native host: codex, claude, or omo")
+	hostExecutable := fs.String("host-executable", "", "absolute native host executable")
+	modelName := fs.String("model", "", "native host model")
+	effort := fs.String("effort", "", "native host effort")
+	promptFile := fs.String("prompt-file", "", "private sealed prompt file")
+	promptDigest := fs.String("prompt-sha256", "", "sealed prompt SHA-256")
+	materialDigest := fs.String("material-sha256", "", "sealed material SHA-256")
+	jsonOut := fs.Bool("json", false, "print JSON")
+	if done, err := parse(fs, args); done || err != nil {
+		return err
+	}
+	request := model.ExecutionCmuxHandoffRequest{
+		ID: *id, Generation: *generation, CmuxExecutable: *cmuxExecutable, CmuxVersion: *cmuxVersion,
+		SocketPath: *socketPath, WindowID: *windowID, Host: *host, HostExecutable: *hostExecutable,
+		Model: *modelName, Effort: *effort, PromptFile: *promptFile, PromptSHA256: *promptDigest, MaterialSHA256: *materialDigest,
+	}
+	if request.ID == "" || request.Generation == 0 || request.CmuxExecutable == "" || request.CmuxVersion == "" ||
+		request.SocketPath == "" || request.WindowID == "" || request.Host == "" || request.HostExecutable == "" ||
+		request.Model == "" || request.PromptFile == "" || request.PromptSHA256 == "" || request.MaterialSHA256 == "" {
+		return output(nil, *jsonOut, fmt.Errorf("execution handoff-cmux requires every explicit identity fence"), deps)
+	}
+	handler := deps.HandoffCmux
+	if handler == nil {
+		handler = execDeps.HandoffCmux
+	}
+	if deps.StateRoot == nil || handler == nil {
+		return output(nil, *jsonOut, fmt.Errorf("execution handoff-cmux is unavailable"), deps)
+	}
+	result, err := handler(context.Background(), deps.StateRoot(), request)
+	return output(result, *jsonOut, err, deps)
 }
 
 type actorFlags struct {
@@ -690,6 +734,8 @@ func printText(value any) {
 	case model.ExecutionSyncBaseResult:
 		fmt.Printf("%s %s merged=%t pushed=%t conflicts=%d next=%s\n",
 			result.ID, result.Mode, result.Merged, result.Pushed, len(result.ConflictFiles), result.NextCommand)
+	case model.ExecutionCmuxHandoffResult:
+		fmt.Printf("%s cmux %s window=%s workspace=%s surface=%s\n", result.ID, result.Status, result.Target.WindowID, result.Target.WorkspaceID, result.Target.SurfaceID)
 	default:
 		fmt.Printf("%v\n", value)
 	}

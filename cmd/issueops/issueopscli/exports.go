@@ -28,6 +28,7 @@ type Dependencies struct {
 	Complete    issueopscontract.ExecutionCompleteHandler
 	Publication remotecmd.PublicationHandlers
 	Provenance  provenanceport.Observer
+	HandoffCmux issueopscontract.ExecutionCmuxHandoffHandler
 }
 
 func RunIssueOpsWithDependencies(args []string, deps Dependencies) error {

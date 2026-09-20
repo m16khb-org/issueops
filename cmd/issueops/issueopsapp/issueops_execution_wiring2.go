@@ -15,6 +15,7 @@ func configureIssueOpsExecutionRunners() {
 		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
 		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
 		SyncExecutionBase:            issueopscore.SyncExecutionBase,
+		HandoffCmux:                  issueOpsCmuxHandoffHandler,
 	})
 	mcpcli.ConfigureExecution(mcpcli.ExecutionDeps{
 		ExecuteExecution:             issueopscore.ExecuteExecution,

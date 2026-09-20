@@ -46,6 +46,7 @@ func TestIssueOpsUsageListsNewlyAddedSubcommands(t *testing.T) {
 		"issueops remote-score",
 		"compatibility-review",
 		"issueops execution prepare --id ID --mode auto|direct|orca",
+		"issueops execution handoff-cmux --id ID --generation N",
 	}
 	for _, fragment := range wantFragments {
 		if !strings.Contains(usage, fragment) {

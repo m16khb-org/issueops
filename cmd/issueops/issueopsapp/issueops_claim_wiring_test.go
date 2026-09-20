@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -148,6 +149,61 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 			claimed := got.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved
 			if claimed != test.wantClaim {
 				t.Fatalf("owner claim attached=%v want=%v observation=%+v", claimed, test.wantClaim, got)
+			}
+		})
+	}
+}
+
+func TestSuccessfulDirectClaimUsesCmuxOnlyAfterRawInputAndExactReceiverCorrelation(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		created       bool
+		inputAccepted bool
+		process       bool
+		wantClaim     bool
+	}{
+		{name: "staged only"},
+		{name: "workspace created only", created: true},
+		{name: "raw input without receiver", created: true, inputAccepted: true},
+		{name: "raw input exact receiver", created: true, inputAccepted: true, process: true, wantClaim: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stateRoot := t.TempDir()
+			actor := claimWiringActor(t)
+			createdAt := time.Now().UTC().Add(-time.Minute).Format(time.RFC3339Nano)
+			observation := manualCmuxHandoffObservation("io-cmux-claim", 1)
+			observation.CreatedAt, observation.UpdatedAt = createdAt, createdAt
+			observation.CallStaged.ObservedAt = createdAt
+			if test.created {
+				observation.Target.WorkspaceID = "11111111-1111-4111-8111-111111111111"
+				observation.Target.SurfaceID = "22222222-2222-4222-8222-222222222222"
+			}
+			if test.inputAccepted {
+				observation.InputAccepted = issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: createdAt, Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput}
+			}
+			if test.process {
+				process := *actor.SessionProcess
+				observation.Target.Process = &process
+				observation.Target.ProcessIncarnation = fmt.Sprintf("%d:%s:%s", process.PID, process.StartedAt, process.Executable)
+			}
+			if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+				t.Fatal(err)
+			}
+			claimedAt := time.Now().UTC().Format(time.RFC3339Nano)
+			result := issueops.ExecutionResult{OK: true, ID: observation.LifecycleID, Execution: issueopscontract.Execution{
+				Mode:  issueopscontract.ExecutionModeDirect,
+				Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
+			}}
+			if err := observeSuccessfulIssueOpsClaim(stateRoot, result); err != nil {
+				t.Fatal(err)
+			}
+			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := folded[observation.LifecycleID+"\x00"+observation.LineageID]
+			if claimed := got.OwnerClaimed.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved; claimed != test.wantClaim {
+				t.Fatalf("claim=%v want=%v observation=%+v", claimed, test.wantClaim, got)
 			}
 		})
 	}

@@ -28,6 +28,7 @@ func issueOpsExecutionDeps(deps Dependencies) executioncmd.Deps {
 		Complete:    deps.Complete,
 		Publication: deps.Publication,
 		Provenance:  deps.Provenance,
+		HandoffCmux: deps.HandoffCmux,
 		PrintJSON:   printJSON,
 		PrintError:  printIssueOpsErrorJSON,
 	}

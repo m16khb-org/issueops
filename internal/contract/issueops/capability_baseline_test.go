@@ -36,6 +36,36 @@ func TestH0BaselineFixtureCoversEveryLauncherHostCell(t *testing.T) {
 	}
 }
 
+func TestH5CmuxRowsAndCrossHostMaterialTransferStayAtH0EvidenceLevel(t *testing.T) {
+	var baseline Baseline
+	readFixture(t, "h0-baseline.json", &baseline)
+	cmuxRows := map[Host]bool{HostCodex: false, HostClaude: false, HostOmo: false}
+	for _, cell := range baseline.Cells {
+		if cell.Launcher != LauncherCmux {
+			continue
+		}
+		cmuxRows[cell.Host] = true
+		if cell.Status != StatusUnavailable || cell.Evidence.Installed.Result != ObservationResultPositive ||
+			cell.Evidence.Installed.Version != "0.64.10" || cell.Evidence.Connected.Result != ObservationResultNegative ||
+			cell.Evidence.RuntimeVerified.Result != ObservationResultNotRun {
+			t.Fatalf("cmux host row overclaims certification: %+v", cell)
+		}
+	}
+	for host, present := range cmuxRows {
+		if !present {
+			t.Fatalf("missing cmux same-host contract row for %s", host)
+		}
+	}
+	if len(baseline.HandOffs) != 6 {
+		t.Fatalf("directed cross-host handoff count=%d", len(baseline.HandOffs))
+	}
+	for _, handoff := range baseline.HandOffs {
+		if handoff.FromHost == handoff.ToHost || handoff.Semantics != HandOffMaterialTransfer {
+			t.Fatalf("cross-host handoff pretends native session migration: %+v", handoff)
+		}
+	}
+}
+
 func TestValidateRejectsBlankOrUnknownStatus(t *testing.T) {
 	baseline := minimalBaseline()
 	baseline.Cells[0].Status = ""

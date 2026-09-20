@@ -37,8 +37,10 @@ func validateManualHandoffDeliveryObservation(record issueopscontract.IssueOpsRe
 		!strings.HasPrefix(observation.LineageID, handoffDeliveryManualLineagePrefix) {
 		return fmt.Errorf("manual handoff delivery observation requires an isolated manual-direct namespace")
 	}
-	if observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherOrca && observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr {
-		return fmt.Errorf("manual handoff delivery observation launcher must be Orca or Herdr")
+	if observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherOrca &&
+		observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr &&
+		observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
+		return fmt.Errorf("manual handoff delivery observation launcher must be Orca, Herdr, or cmux")
 	}
 	if observation.OwnerActor != nil || observation.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateNotObserved ||
 		observation.OwnerClaim.Claimed || observation.OwnerClaim.Generation != 0 || observation.OwnerClaim.ClaimedAt != "" ||

@@ -38,6 +38,58 @@ Herdr는 실행 중인 서버가 있고 client/server endpoint가 호환되며, 
 현재 세션에서 구현하지 않는다.
 사용자가 현재 세션·새 세션·보류를 명시했으면 그 지시가 우선한다.
 
+### 사용자가 명시한 cmux 인계
+
+cmux는 위 자동 선택에 참여하지 않는다. 사용자가 cmux 사용을 명시했고, 기존 direct
+execution이 정확한 generation에서 released이며 canonical worktree가 이미 있을 때만 다음
+명령을 실행한다. bare `cmux <path>`는 앱을 자동으로 시작할 수 있으므로 실행하지 않는다.
+Omo도 generic terminal 안에서 native Omo 실행 파일을 직접 실행하며 `cmux omo`를 호출하지
+않는다.
+
+prompt 파일은 canonical worktree 안의 absolute regular file로 만들고 mode 0600, 최대 512 KiB,
+SHA-256을 확인한다. material digest는 봉인된 인계 자료의 SHA-256이다. cmux와 native host
+실행 파일, socket, window UUID, model을 실측한 exact 값으로 채우고, 해당 host가 지원하는
+effort만 전달한다.
+
+```bash
+issueops execution handoff-cmux \
+  --id "$ISSUEOPS_ID" --generation "$GENERATION" \
+  --cmux-executable "$CMUX_EXECUTABLE" --cmux-version "$CMUX_VERSION" \
+  --socket "$CMUX_SOCKET" --window "$CMUX_WINDOW_UUID" \
+  --host "$HOST" --host-executable "$HOST_EXECUTABLE" \
+  --model "$MODEL" --effort "$EFFORT" \
+  --prompt-file "$PROMPT_FILE" --prompt-sha256 "$PROMPT_SHA256" \
+  --material-sha256 "$MATERIAL_SHA256" --json
+```
+
+이 명령은 앱을 시작하거나 설치하지 않고 socket을 검색하거나 권한을 바꾸지도 않는다.
+absolute non-symlink Unix socket의 owner, mode, parent, device, inode, ctime을 읽어 **endpoint
+incarnation**으로 봉인하고, exact executable/version, `ping`, `capabilities`, exact window의
+`identify --no-caller`만 bounded read-only preflight로 실행한다. socket 부재·접근 거부,
+불완전하거나 중복된 응답, 필요한 capability 부재, endpoint incarnation 변화는 mutation 전에
+fail-closed된다.
+
+preflight가 끝나면 같은 handoff-delivery lineage에 exact window와 cwd만 `call_staged`로 먼저
+기록한다. 아직 없는 workspace/surface identity를 만들지 않는다. 그 뒤 exact window에 빈
+workspace 하나를 만들고, 반환된 workspace의 단일 pane/surface와 cwd를 다시 확인해 같은
+관측을 보강한 다음, 그 exact window/workspace/surface로 private launcher command를 한 번만
+보낸다. private artifact는 mode 0700 directory, mode 0600 prompt, mode 0700 launcher를 쓰며
+receiver가 cwd와 cmux scope를 확인하고 receipt를 남긴 뒤 prompt와 launcher를 지운다.
+
+cmux 0.64.10의 성공한 raw input은 `input_accepted`의 `raw_input` 증거일 뿐이다.
+`native_turn_observed`나 `owner_claimed`를 설정하지 않는다. exact receiver PID, 시작 시각,
+executable을 직접 관측한 뒤에도 권한은 생기지 않으며, 수신자의 별도 IssueOps claim CAS만
+owner claim을 만든다. 이 버전은 runtime, machine, server ID를 노출하지 않으므로 빈 값을
+추측해 채우지 않는다. endpoint incarnation은 같은 socket endpoint가 유지됐다는 증거일 뿐
+cmux runtime identity나 live host 지원 인증이 아니다.
+
+workspace create 또는 send가 timeout, 응답 유실, malformed receipt, target/cwd/runtime 변화로
+끝나면 같은 attempt/lineage의 ambiguous evidence와 recovery artifact를 확인하고 명령을 다시
+실행하지 않는다. durable request ID가 반환되지 않으므로 새 값을 만들거나 blind retry에 쓰지
+않는다. exact 반환 ID와 read-only `identify`/`list-*`로 기존 workspace를 조사하며 자동으로
+workspace를 닫지 않는다. 명시적인 복구 결정을 내리기 전에는 다른 런처나 current로 전환하지
+않는다.
+
 결정 결과와 원래 요청의 종료점을 짧게 알리고 아래 기록을 남긴다. 자동 결정은 세션
 배치만 정하며 사용자 요청에 없던 commit·push·publication 권한을 만들지 않는다.
 
@@ -49,7 +101,7 @@ issueops decision add --id "$ISSUEOPS_ID" --kind implementation \
 ```
 
 `CHOICE_RECORD`에는 `current|new-session|hold`, 자동 결정인지 명시적 지시인지,
-선택한 런처(`orca|herdr|none`)와 확인한 status·host 실행 가능 관찰값(없으면 부재 근거),
+선택한 런처(`orca|herdr|none`, 명시적 지시일 때만 `cmux`)와 확인한 status·host 실행 가능 관찰값(없으면 부재 근거),
 원래 사용자 요청과 그 대화 위치,
 선택 시점의 lifecycle ID·issue URL·branch·worktree·계획 경로, 승인 범위·종료점과
 현재 generation을 적는다. `hold`의 승인 범위는 보류다. 이 기록의 created_at과 내용을

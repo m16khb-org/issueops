@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -52,7 +53,10 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 	if err := validateHandoffDeliveryLauncher(observation.Launcher); err != nil {
 		return err
 	}
-	if err := validateHandoffDeliveryTarget(observation.Target); err != nil {
+	if err := validateHandoffDeliveryTarget(observation); err != nil {
+		return err
+	}
+	if err := validateHandoffDeliveryTiming(observation.Timing); err != nil {
 		return err
 	}
 	for _, item := range []struct {
@@ -174,6 +178,7 @@ func MergeHandoffDeliveryObservation(current, next issueopscontract.IssueOpsHand
 		merged.Request.DurableID = next.Request.DurableID
 	}
 	merged.Target = mergeHandoffDeliveryTarget(merged.Target, next.Target)
+	merged.Timing = mergeHandoffDeliveryTiming(merged.Timing, next.Timing)
 	if next.OwnerClaim.Claimed {
 		merged.OwnerClaim = next.OwnerClaim
 	}
@@ -195,12 +200,26 @@ func validateHandoffDeliveryLauncher(launcher issueopscontract.IssueOpsHandoffDe
 		return fmt.Errorf("delivery observation launcher is invalid")
 	}
 	for name, value := range map[string]string{
-		"launcher name":       launcher.Name,
-		"launcher version":    launcher.Version,
-		"launcher path":       launcher.Path,
-		"launcher runtime_id": launcher.RuntimeID,
-		"launcher machine_id": launcher.MachineID,
-		"launcher server_id":  launcher.ServerID,
+		"launcher name": launcher.Name, "launcher version": launcher.Version, "launcher path": launcher.Path,
+	} {
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf("delivery observation %s is required", name)
+		}
+		if len(value) > handoffDeliveryFieldLimit {
+			return fmt.Errorf("delivery observation %s is too large", name)
+		}
+	}
+	if launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
+		if launcher.RuntimeID != "" || launcher.MachineID != "" || launcher.ServerID != "" {
+			return fmt.Errorf("cmux delivery observation cannot invent runtime, machine, or server identity")
+		}
+		return validateHandoffDeliveryEndpointIncarnation(launcher.EndpointIncarnation)
+	}
+	if launcher.EndpointIncarnation != nil {
+		return fmt.Errorf("delivery observation endpoint incarnation is only valid for cmux")
+	}
+	for name, value := range map[string]string{
+		"launcher runtime_id": launcher.RuntimeID, "launcher machine_id": launcher.MachineID, "launcher server_id": launcher.ServerID,
 	} {
 		if strings.TrimSpace(value) == "" {
 			return fmt.Errorf("delivery observation %s is required", name)
@@ -212,13 +231,44 @@ func validateHandoffDeliveryLauncher(launcher issueopscontract.IssueOpsHandoffDe
 	return nil
 }
 
-func validateHandoffDeliveryTarget(target issueopscontract.IssueOpsHandoffDeliveryTarget) error {
-	if strings.TrimSpace(target.TerminalID) == "" && strings.TrimSpace(target.PaneID) == "" {
+func validateHandoffDeliveryEndpointIncarnation(endpoint *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) error {
+	if endpoint == nil {
+		return fmt.Errorf("cmux delivery observation socket endpoint incarnation is required")
+	}
+	if endpoint.Kind != "unix_socket" || !filepath.IsAbs(endpoint.Path) || filepath.Clean(endpoint.Path) != endpoint.Path ||
+		!filepath.IsAbs(endpoint.ParentPath) || filepath.Clean(endpoint.ParentPath) != endpoint.ParentPath ||
+		filepath.Dir(endpoint.Path) != endpoint.ParentPath || endpoint.Inode == 0 || endpoint.CTimeNS <= 0 || endpoint.ParentInode == 0 {
+		return fmt.Errorf("cmux delivery observation socket endpoint incarnation is invalid")
+	}
+	if len(endpoint.Path) > handoffDeliveryFieldLimit || len(endpoint.ParentPath) > handoffDeliveryFieldLimit {
+		return fmt.Errorf("cmux delivery observation socket endpoint incarnation is too large")
+	}
+	if endpoint.Mode != 0o600 || endpoint.ParentMode&0o022 != 0 && endpoint.ParentMode&0o1000 == 0 {
+		return fmt.Errorf("cmux delivery observation socket endpoint permissions are unsafe")
+	}
+	return nil
+}
+
+func validateHandoffDeliveryTarget(observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
+	target := observation.Target
+	if observation.Launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
+		if strings.TrimSpace(target.WindowID) == "" || strings.TrimSpace(target.CWD) == "" {
+			return fmt.Errorf("cmux delivery observation requires exact window and cwd identity")
+		}
+		if observation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved &&
+			(strings.TrimSpace(target.WorkspaceID) == "" || strings.TrimSpace(target.SurfaceID) == "") {
+			return fmt.Errorf("cmux input receipt requires exact workspace and surface identity")
+		}
+	} else if strings.TrimSpace(target.TerminalID) == "" && strings.TrimSpace(target.PaneID) == "" {
 		return fmt.Errorf("delivery observation terminal or pane identity is required")
 	}
 	for name, value := range map[string]string{
 		"terminal_id":         target.TerminalID,
 		"pane_id":             target.PaneID,
+		"window_id":           target.WindowID,
+		"workspace_id":        target.WorkspaceID,
+		"surface_id":          target.SurfaceID,
+		"cwd":                 target.CWD,
 		"process_incarnation": target.ProcessIncarnation,
 	} {
 		if len(value) > handoffDeliveryFieldLimit {
@@ -237,6 +287,23 @@ func validateHandoffDeliveryTarget(target issueopscontract.IssueOpsHandoffDelive
 		}
 		if target.Process.PID <= 0 || strings.TrimSpace(target.Process.StartedAt) == "" || strings.TrimSpace(target.Process.Executable) == "" {
 			return fmt.Errorf("delivery observation process identity is invalid")
+		}
+	}
+	return nil
+}
+
+func validateHandoffDeliveryTiming(timing *issueopscontract.IssueOpsHandoffDeliveryTiming) error {
+	if timing == nil {
+		return nil
+	}
+	const maximumTimingMS = 10 * 60 * 1000
+	for name, value := range map[string]uint64{
+		"preflight_ms": timing.PreflightMS, "workspace_create_ms": timing.WorkspaceCreateMS,
+		"target_resolve_ms": timing.TargetResolveMS, "input_send_ms": timing.InputSendMS,
+		"receiver_receipt_ms": timing.ReceiverReceiptMS,
+	} {
+		if value > maximumTimingMS {
+			return fmt.Errorf("delivery observation %s is out of bounds", name)
 		}
 	}
 	return nil
@@ -286,8 +353,10 @@ func handoffDeliveryIdentityMismatch(current, next issueopscontract.IssueOpsHand
 		return "delivery observation source generation changed"
 	case !reflect.DeepEqual(current.Launcher, next.Launcher):
 		return "delivery observation launcher identity changed"
-	case handoffDeliveryTargetMismatch(current.Target, next.Target):
-		return "delivery observation process identity changed"
+	case handoffDeliveryTargetMismatch(current.Launcher.Name, current.Target, next.Target) != "":
+		return handoffDeliveryTargetMismatch(current.Launcher.Name, current.Target, next.Target)
+	case handoffDeliveryTimingMismatch(current.Timing, next.Timing):
+		return "delivery observation timing changed"
 	case current.OwnerActor != nil && next.OwnerActor != nil && !reflect.DeepEqual(current.OwnerActor, next.OwnerActor):
 		return "delivery observation owner identity changed"
 	default:
@@ -490,32 +559,54 @@ func handoffDeliveryHasEvidence(observation issueopscontract.IssueOpsHandoffDeli
 	return false
 }
 
-func handoffDeliveryTargetMismatch(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) bool {
+func handoffDeliveryTargetMismatch(launcher string, current, next issueopscontract.IssueOpsHandoffDeliveryTarget) string {
+	if launcher == issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
+		for _, values := range [][2]string{
+			{current.WindowID, next.WindowID}, {current.WorkspaceID, next.WorkspaceID},
+			{current.SurfaceID, next.SurfaceID}, {current.CWD, next.CWD},
+		} {
+			if values[0] != "" && values[1] != "" && values[0] != values[1] {
+				return "delivery observation target identity changed"
+			}
+		}
+	}
 	if current.TerminalID != next.TerminalID {
-		return true
+		return "delivery observation process identity changed"
 	}
 	// PTY/runtime identity is stable, while Orca may rotate the transient pane
 	// handle. A pane-only change is valid only while both observations name the
 	// same nonempty PTY; current dispatch inspection still fences the assignee.
 	if current.PaneID != next.PaneID && strings.TrimSpace(current.TerminalID) == "" {
-		return true
+		return "delivery observation process identity changed"
 	}
 	if current.ProcessIncarnation != "" && next.ProcessIncarnation != "" && current.ProcessIncarnation != next.ProcessIncarnation {
-		return true
+		return "delivery observation process identity changed"
 	}
 	if current.PromptGeneration != nil && next.PromptGeneration != nil && *current.PromptGeneration != *next.PromptGeneration {
-		return true
+		return "delivery observation process identity changed"
 	}
 	if current.BaselineWorkingSequence != nil && next.BaselineWorkingSequence != nil && *current.BaselineWorkingSequence != *next.BaselineWorkingSequence {
-		return true
+		return "delivery observation process identity changed"
 	}
 	if current.Process != nil && next.Process != nil && !reflect.DeepEqual(current.Process, next.Process) {
-		return true
+		return "delivery observation process identity changed"
 	}
-	return false
+	return ""
 }
 
 func mergeHandoffDeliveryTarget(current, next issueopscontract.IssueOpsHandoffDeliveryTarget) issueopscontract.IssueOpsHandoffDeliveryTarget {
+	if current.WindowID == "" {
+		current.WindowID = next.WindowID
+	}
+	if current.WorkspaceID == "" {
+		current.WorkspaceID = next.WorkspaceID
+	}
+	if current.SurfaceID == "" {
+		current.SurfaceID = next.SurfaceID
+	}
+	if current.CWD == "" {
+		current.CWD = next.CWD
+	}
 	if strings.TrimSpace(next.PaneID) != "" {
 		current.PaneID = next.PaneID
 	}
@@ -535,6 +626,52 @@ func mergeHandoffDeliveryTarget(current, next issueopscontract.IssueOpsHandoffDe
 		current.Process = &process
 	}
 	return current
+}
+
+func handoffDeliveryTimingMismatch(current, next *issueopscontract.IssueOpsHandoffDeliveryTiming) bool {
+	if current == nil || next == nil {
+		return false
+	}
+	for _, values := range [][2]uint64{
+		{current.PreflightMS, next.PreflightMS}, {current.WorkspaceCreateMS, next.WorkspaceCreateMS},
+		{current.TargetResolveMS, next.TargetResolveMS}, {current.InputSendMS, next.InputSendMS},
+		{current.ReceiverReceiptMS, next.ReceiverReceiptMS},
+	} {
+		if values[0] != 0 && values[1] != 0 && values[0] != values[1] {
+			return true
+		}
+	}
+	return false
+}
+
+func mergeHandoffDeliveryTiming(current, next *issueopscontract.IssueOpsHandoffDeliveryTiming) *issueopscontract.IssueOpsHandoffDeliveryTiming {
+	if current == nil && next == nil {
+		return nil
+	}
+	if current == nil {
+		value := *next
+		return &value
+	}
+	merged := *current
+	if next == nil {
+		return &merged
+	}
+	if merged.PreflightMS == 0 {
+		merged.PreflightMS = next.PreflightMS
+	}
+	if merged.WorkspaceCreateMS == 0 {
+		merged.WorkspaceCreateMS = next.WorkspaceCreateMS
+	}
+	if merged.TargetResolveMS == 0 {
+		merged.TargetResolveMS = next.TargetResolveMS
+	}
+	if merged.InputSendMS == 0 {
+		merged.InputSendMS = next.InputSendMS
+	}
+	if merged.ReceiverReceiptMS == 0 {
+		merged.ReceiverReceiptMS = next.ReceiverReceiptMS
+	}
+	return &merged
 }
 
 func handoffDeliveryReject(reason string) issueopscontract.IssueOpsHandoffDeliveryDecision {

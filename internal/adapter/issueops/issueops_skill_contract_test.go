@@ -159,6 +159,35 @@ func TestIssueOpsHandoffRoutesEveryNewSessionThroughProductionObservation(t *tes
 	}
 }
 
+func TestIssueOpsCmuxHandoffIsExplicitAndFollowsTheDefaultFallback(t *testing.T) {
+	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
+	fallback := strings.Index(sessionChoice, "둘 다 없거나 사용 불가")
+	explicit := strings.Index(sessionChoice, "사용자가 명시한 cmux")
+	if fallback < 0 || explicit < 0 || explicit <= fallback {
+		t.Fatalf("explicit cmux procedure must follow the default Orca -> Herdr -> current fallback: fallback=%d explicit=%d", fallback, explicit)
+	}
+	if strings.Contains(sessionChoice[:explicit], "cmux") {
+		t.Fatal("the default launcher selection must not probe or select cmux")
+	}
+	for _, want := range []string{
+		"issueops execution handoff-cmux",
+		"--cmux-executable",
+		"--socket",
+		"--window",
+		"cmux omo",
+		"raw_input",
+		"native_turn_observed",
+		"owner_claimed",
+		"다시 실행하지 않는다",
+		"다른 런처나 current로 전환하지 않는다",
+		"endpoint incarnation",
+	} {
+		if !strings.Contains(sessionChoice[explicit:], want) {
+			t.Fatalf("explicit cmux handoff contract missing %q", want)
+		}
+	}
+}
+
 func TestIssueOpsOrchestrationBindsOmoAgentsToCanonicalWorktrees(t *testing.T) {
 	all := strings.ToLower(joinIssueOpsContractDocuments(map[string]string{
 		"orchestration": readIssueOpsContractFile(t, "skills", "issueops", "references", "orchestration.md"),

@@ -114,6 +114,18 @@ func TestMergeHandoffDeliveryObservationRejectsBlindRetryAndInexactClaims(t *tes
 
 	cmuxBase := deliveryObservationFixture()
 	cmuxBase.Launcher.Name = "cmux"
+	cmuxBase.Launcher.RuntimeID = ""
+	cmuxBase.Launcher.MachineID = ""
+	cmuxBase.Launcher.ServerID = ""
+	cmuxBase.Launcher.EndpointIncarnation = &issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
+		Path: "/private/tmp/cmux-test.sock", Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
+		OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: "/private/tmp", ParentDevice: 1,
+		ParentInode: 1, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,
+	}
+	cmuxBase.Target.WindowID = "window-1"
+	cmuxBase.Target.WorkspaceID = "workspace-1"
+	cmuxBase.Target.SurfaceID = "surface-1"
+	cmuxBase.Target.CWD = "/repo/worktree"
 	cmuxBase.NativeTurnObserved = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateNotObserved, "")
 	inputFromCmux := cmuxBase
 	inputFromCmux.InputAccepted = deliveryState(issueopscontract.IssueOpsHandoffDeliveryStateObserved, issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput)

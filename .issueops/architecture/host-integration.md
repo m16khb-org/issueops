@@ -16,6 +16,22 @@
 
 `configs/upstream.json`의 선언형 upstream catalog는 shared skill layer와 분리되어 있다. Native activation 후 Claude Code에만 없는 plugin/Git skill을 선택적으로 provision한다. Provision 실패는 install/readiness 성공에 영향을 주지 않는다. Codex와 Omo에는 `skills/`의 first-party 원본만 기본으로 연결한다.
 
+### 명시적 cmux terminal launcher
+
+`internal/adapter/cmux`는 기존 released direct execution의 canonical worktree에 native host를
+여는 outbound terminal adapter다. 사용자 지시로 `issueops execution handoff-cmux`를 실행할
+때만 연결되며, 자동 Orca → Herdr → current 선택, install, update, self-verify는 이 adapter를
+probe하거나 readiness 조건으로 삼지 않는다. `execution` command가 generation/worktree fence와
+host argv를 소유하고, 기존 handoff-delivery audit가 call stage와 receipt를 소유한다. cmux는
+exact window에 workspace/surface를 배치하고 raw input을 전달할 뿐 lease, claim, native turn을
+만들 수 없다.
+
+cmux 0.64.10의 CLI 응답에는 stable runtime, machine, server ID가 없다. 따라서 integration은
+absolute non-symlink Unix socket의 lstat·owner·mode·parent를 `endpoint_incarnation`으로 기록해
+preflight, create, send 사이의 endpoint 안정성만 확인한다. 이를 runtime identity로 바꾸어
+해석하지 않는다. owner authority는 수신 프로세스의 PID·시작 시각·absolute executable과
+IssueOps claim CAS가 모두 일치할 때만 생긴다.
+
 ## Pioneer Skills Layer
 
 issueops는 `skills/` 디렉토리를 공용 스킬 33개의 단일 출처(single source of truth)로 관리한다. 그중 12개는 `internal/domain/pioneerskill/catalog.go`가 고정하는 pioneer skill catalog이고, 나머지 21개는 host·workflow·문서·QA용 operational skill이다. 수량은 `issueops inspect --json`과 각 `skills/<name>/SKILL.md`로 검증한다. namesake 설명과 사용 계약은 각 skill의 frontmatter와 identity를 참조한다.

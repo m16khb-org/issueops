@@ -201,6 +201,33 @@ JSON print mode, and ambient discovery disabled. A report with only
 installed/preflight or deterministic test evidence remains `not-run` or
 `unavailable`; only a completed live episode may report `supported`.
 
+## Explicit cmux handoff
+
+cmux is an opt-in terminal launcher for an existing canonical worktree. It is
+never part of automatic host selection and is not installed, started, or
+required by `issueops install`, `update`, or `self-verify`. Follow
+[`skills/issueops/references/session-choice.md`](../../skills/issueops/references/session-choice.md#사용자가-명시한-cmux-인계)
+only after the user explicitly requests cmux and the exact direct generation is
+released.
+
+The supported command is `issueops execution handoff-cmux`. Supply the observed
+absolute cmux executable, exact version, absolute Unix socket, exact window UUID,
+native host executable, model/effort, and sealed prompt/material digests. Do not
+run bare `cmux <path>` because it may start the app, and do not run `cmux omo`;
+the generic terminal command executes the absolute native Omo binary. The
+IssueOps preflight is limited to version, ping, capabilities, and exact-target
+identify. It never discovers a socket or changes its permissions.
+
+The command records `call_staged` before `new-workspace`, creates one workspace
+with `--focus false`, resolves one exact surface, and sends once. A create or
+send timeout/response loss is terminal for that lineage: inspect the returned
+IDs and recovery directory read-only, do not rerun the command, switch launcher,
+or close the workspace automatically. Raw-input acceptance and a bootstrap
+process receipt remain delivery evidence; only the normal IssueOps claim CAS
+creates authority. cmux 0.64.10 exposes no runtime/machine/server identity, so
+the recorded socket endpoint incarnation proves endpoint stability only and
+cannot certify a live cmux × host row.
+
 ## IssueOps Host Rule
 
 Hooks only inject static project-doc context. They do not create issues, edit files, run tests, wait on background jobs, prepare branches/worktrees, open PRs/MRs, reply to review threads, merge, clean up branches/worktrees, or block tool events. The main agent loop owns the user-visible `problem -> grill -> issue linkage -> plan -> compatibility-review -> implement -> ai-slop-clean -> feedback -> pr -> done -> post-done cleanup` workflow through `issueops ...` CLI/MCP state. The durable phase enum has no artifact-linkage or cleanup labels; explicit IssueOps commands own CAS, lease authority, remote writes, verification, publication, and cleanup. Hook output is neither an enforcement path nor ownership evidence.

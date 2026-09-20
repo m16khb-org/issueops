@@ -31,6 +31,15 @@ Execution tests must cover:
 
 - `direct`, explicit `orca`, and `auto`; `auto` may fall back only when the
   read-only Orca probe fails before the first external mutation.
+- explicit cmux handoff as a separate released-direct path. Deterministic tests
+  must cover exact binary/version/socket/window fences, endpoint-incarnation
+  stability, stage-before-create ordering, target enrichment, one-shot send,
+  receiver PID/start/executable correlation, and the absence of native-turn or
+  claim promotion from raw input. They must also cover Codex, Claude, and native
+  Omo argv; multiline/quoted shell input; missing/denied sockets; malformed and
+  duplicate responses; wrong cwd/target; runtime endpoint replacement; create
+  and send response loss; duplicate attempts; and recovery artifact/orphan
+  boundaries without retry, fallback, or automatic workspace cleanup.
 - `issueops next` stage classification as a table test over the rule order, and an
   assertion that the read path performs no fetch: the local readiness surface must
   run without `git fetch`, and the strict surface must still run it.
@@ -138,6 +147,22 @@ Use this focused package set before the full repository gates:
 go test ./internal/adapter/issueops/... ./internal/adapter/orca ./internal/adapter/codex ./internal/adapter/claude ./cmd/issueops/issueopscli ./cmd/issueops/hookcli ./cmd/issueops/hookcli/hookinput ./cmd/issueops/mcpcli -count=1
 go test -race ./internal/adapter/issueops/... ./internal/adapter/orca ./cmd/issueops/issueopscli ./cmd/issueops/hookcli ./cmd/issueops/hookcli/hookinput ./cmd/issueops/mcpcli -count=1
 ```
+
+For cmux changes, add the deterministic boundary and H0 projection checks. Do
+not launch the app or perform a live workspace mutation as part of the default
+suite:
+
+```bash
+go test ./internal/adapter/cmux ./internal/domain/nativehost ./internal/domain/issueops ./cmd/issueops/issueopsapp ./cmd/issueops/issueopscli/executioncmd -count=1
+go test -race ./internal/adapter/cmux ./internal/domain/nativehost ./internal/domain/issueops ./cmd/issueops/issueopsapp ./cmd/issueops/issueopscli/executioncmd -count=1
+go test ./internal/contract/issueops -run 'H0|H5' -count=1
+```
+
+The deterministic H0 fixture contains the three cmux × native-host same-host
+rows and six directed cross-host material-transfer rows. Installed/version
+evidence with a disconnected socket remains `unavailable`; runtime and live
+cells remain `not-run`, and no cmux × host combination is certified without a
+separate completed live episode.
 
 Native activation tests use isolated temporary homes. They require same-
 directory staged build, smoke, atomic rename, strict Codex/Claude semantic and

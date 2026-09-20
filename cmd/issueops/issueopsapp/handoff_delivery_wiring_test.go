@@ -516,6 +516,31 @@ func TestManualHandoffDeliveryRejectsClaimForgeryAndUsesIsolatedLineage(t *testi
 	}
 }
 
+func TestManualCmuxHandoffDeliveryAllowsOnlyReleasedDirectStaging(t *testing.T) {
+	record := issueopscontract.IssueOpsRecord{
+		ID: "io-cmux-manual",
+		Execution: &issueopscontract.Execution{
+			Mode:  issueopscontract.ExecutionModeDirect,
+			Lease: issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusReleased},
+		},
+	}
+	observation := manualCmuxHandoffObservation(record.ID, 3)
+	if err := validateManualHandoffDeliveryObservation(record, observation); err != nil {
+		t.Fatalf("valid cmux staging rejected: %v", err)
+	}
+
+	wrongGeneration := observation
+	wrongGeneration.SourceGeneration++
+	if err := validateManualHandoffDeliveryObservation(record, wrongGeneration); err == nil || !strings.Contains(err.Error(), "exact released direct execution generation") {
+		t.Fatalf("wrong generation accepted: %v", err)
+	}
+	active := record
+	active.Execution = &issueopscontract.Execution{Mode: issueopscontract.ExecutionModeDirect, Lease: issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusActive}}
+	if err := validateManualHandoffDeliveryObservation(active, observation); err == nil || !strings.Contains(err.Error(), "exact released direct execution generation") {
+		t.Fatalf("active generation accepted: %v", err)
+	}
+}
+
 func TestPublicManualHandoffProducerRejectsEveryOwnerClaimField(t *testing.T) {
 	stateRoot := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateRoot)
@@ -552,6 +577,38 @@ func TestPublicManualHandoffProducerRejectsEveryOwnerClaimField(t *testing.T) {
 	}
 	if _, err := auditManualHandoffDeliveryObservation(observation); err != nil {
 		t.Fatalf("valid manual observation: %v", err)
+	}
+}
+
+func manualCmuxHandoffObservation(lifecycleID string, generation uint64) issueopscontract.IssueOpsHandoffDeliveryObservation {
+	created := "2026-09-20T10:00:01Z"
+	return issueopscontract.IssueOpsHandoffDeliveryObservation{
+		SchemaVersion:  issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
+		AttemptID:      handoffDeliveryManualLineagePrefix + lifecycleID + ":3:cmux:attempt",
+		LineageID:      handoffDeliveryManualLineagePrefix + "generation:3:cmux:window:window-1",
+		LifecycleID:    lifecycleID,
+		PromptSHA256:   strings.Repeat("a", 64),
+		MaterialSHA256: strings.Repeat("b", 64),
+		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
+			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: "0.64.10",
+			Path: "/Applications/cmux.app/Contents/Resources/bin/cmux",
+			EndpointIncarnation: &issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
+				Path: "/private/tmp/cmux-test.sock", Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
+				OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: "/private/tmp", ParentDevice: 1,
+				ParentInode: 1, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,
+			},
+		},
+		Target:             issueopscontract.IssueOpsHandoffDeliveryTarget{WindowID: "window-1", CWD: "/repo/worktree"},
+		ExpectedOwnerHost:  "codex",
+		SourceGeneration:   generation,
+		CreatedAt:          created,
+		UpdatedAt:          created,
+		Receipt:            issueopscontract.IssueOpsHandoffDeliveryReceipt{Location: "audit/cmux.json", Digest: strings.Repeat("d", 64)},
+		CallStaged:         issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateObserved, ObservedAt: created, Evidence: issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged},
+		InputAccepted:      issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+		NativeTurnObserved: issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+		OwnerClaimed:       issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
+		Ambiguous:          issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
 	}
 }
 
