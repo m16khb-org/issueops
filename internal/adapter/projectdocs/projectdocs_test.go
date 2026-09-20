@@ -528,3 +528,17 @@ func docMapKeys(docs map[string]string) []string {
 	}
 	return keys
 }
+
+func TestRouteCompoundImplementationKeepsEditingContracts(t *testing.T) {
+	for _, task := range []string{"implement endpoint and commit PR", "edit application code and run CI test", "구현 후 openapi 검증"} {
+		route, err := RouteProjectDocs(t.TempDir(), task)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, required := range []string{".issueops/CONSTITUTION.md", ".issueops/CONVENTIONS.md", ".issueops/AGENT_WORKFLOW.md", ".issueops/CAUTIONS.md", ".issueops/TESTING.md"} {
+			if !routeContains(route.Docs, required) {
+				t.Errorf("%q missing %s", task, required)
+			}
+		}
+	}
+}

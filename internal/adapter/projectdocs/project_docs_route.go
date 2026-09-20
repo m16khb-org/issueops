@@ -81,6 +81,12 @@ func routeDocsForTask(task string) []routeDoc {
 		matched = true
 		result = appendRouteDocsUnique(result, names...)
 	}
+	add(hasTaskToken(task, "implement") || hasTaskToken(task, "implementation") || hasTaskToken(task, "edit") || strings.Contains(task, "구현"),
+		p("CONSTITUTION.md", "source-of-truth and operating principles"),
+		p("AGENT_WORKFLOW.md", "default start/work/verify/finish workflow"),
+		p("CONVENTIONS.md", "general editing rules"),
+		p("CAUTIONS.md", "known project risks"),
+		p("TESTING.md", "default test design and verification guidance"))
 	add(strings.Contains(task, "conflict") || strings.Contains(task, "constitution") || strings.Contains(task, "principle") || strings.Contains(task, "instruction") || strings.Contains(task, "session"),
 		p("CONSTITUTION.md", "SessionStart baseline and source-of-truth priority"), p("CAUTIONS.md", "risks that may affect the decision"))
 	add(strings.Contains(task, "caution") || strings.Contains(task, "risk") || strings.Contains(task, "false") || strings.Contains(task, "failure") || strings.Contains(task, "regression"),
