@@ -589,6 +589,9 @@ func resumableHostReport(previous *BenchmarkReport, host, requestedModel, hostVe
 	seenEvidence := map[string]bool{}
 	observedModel := ""
 	for _, episode := range matched.Cases {
+		if _, selectedPair := selectedFixtureForPair(selected, host, episode.FixtureID); !selectedPair {
+			return nil, fmt.Errorf("invalid_previous_episode_selection")
+		}
 		identity := episode.Host + "\x00" + episode.FixtureID + "\x00" + fmt.Sprint(episode.Attempt)
 		if seenIdentities[identity] {
 			return nil, fmt.Errorf("duplicate_previous_episode_identity")

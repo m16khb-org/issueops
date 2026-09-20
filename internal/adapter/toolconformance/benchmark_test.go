@@ -346,6 +346,88 @@ func TestLiveGateReusesOnlyCertifiedSchemaV2Episode(t *testing.T) {
 	}
 }
 
+func TestLiveGateRejectsUnselectedCompletedPreviousEpisode(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	previousRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	previous, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "all-completed",
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{
+		Runners: map[string]port.HostProbeRunner{"codex": previousRunner}, Token: func() string { return "previous-token" },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if previous.Hosts[0].CompletedEpisodes != len(fixtures) {
+		t.Fatalf("completed episodes = %d, want %d", previous.Hosts[0].CompletedEpisodes, len(fixtures))
+	}
+
+	resumeRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	_, err = resumeCertifiedReport(t, previous, resumeRunner)
+	if err == nil || err.Error() != "invalid_previous_episode_selection" {
+		t.Fatalf("err = %v", err)
+	}
+	if resumeRunner.calls["empty_object"] != 0 {
+		t.Fatalf("unselected completed evidence triggered %d fresh calls", resumeRunner.calls["empty_object"])
+	}
+}
+
+func TestLiveGateRejectsUnselectedIncompletePreviousEpisode(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	previousRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, failCode: "host_process_failed"}
+	previous, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "all-incomplete",
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{
+		Runners: map[string]port.HostProbeRunner{"codex": previousRunner}, Token: func() string { return "previous-token" },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if previous.Hosts[0].CompletedEpisodes != 0 || previous.Hosts[0].AttemptCount != len(fixtures) {
+		t.Fatalf("previous host = %+v", previous.Hosts[0])
+	}
+
+	resumeRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	_, err = resumeCertifiedReport(t, previous, resumeRunner)
+	if err == nil || err.Error() != "invalid_previous_episode_selection" {
+		t.Fatalf("err = %v", err)
+	}
+	if resumeRunner.calls["empty_object"] != 0 {
+		t.Fatalf("unselected incomplete evidence triggered %d fresh calls", resumeRunner.calls["empty_object"])
+	}
+}
+
+func TestLiveGateResumesSelectedZeroCompletedReport(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	previousRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, failCode: "host_process_failed"}
+	previous, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "selected-incomplete",
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{
+		Runners: map[string]port.HostProbeRunner{"codex": previousRunner}, Token: func() string { return "previous-token" },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if previous.Hosts[0].CompletedEpisodes != 0 || previous.Hosts[0].AttemptCount != 1 {
+		t.Fatalf("previous host = %+v", previous.Hosts[0])
+	}
+
+	resumeRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	resumed, err := resumeCertifiedReport(t, previous, resumeRunner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resumeRunner.calls["empty_object"] != 1 {
+		t.Fatalf("fresh calls = %d, want 1", resumeRunner.calls["empty_object"])
+	}
+	host := resumed.Hosts[0]
+	if host.Status != issueopscontract.StatusSupported || !host.Evidence.LiveAttempted || !host.Evidence.LiveVerified || host.CompletedEpisodes != 1 {
+		t.Fatalf("resumed host = %+v", host)
+	}
+}
+
 func TestLiveGateRejectsSchemaV1ResumeWithoutAdditiveMigration(t *testing.T) {
 	fixtures := benchmarkFixtures(t)
 	previous := certifiedPreviousReport(t, fixtures)
