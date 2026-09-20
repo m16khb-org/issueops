@@ -13,3 +13,16 @@ func TestConformanceModelOverridesRejectMalformedAndDuplicateValues(t *testing.T
 		}
 	}
 }
+
+func TestToolConformanceRunnersIncludeNativeOmo(t *testing.T) {
+	runners := toolConformanceRunners("/private/bin/issueops")
+	for _, host := range []string{"codex", "claude", "omo"} {
+		runner := runners[host]
+		if runner == nil || runner.Name() != host {
+			t.Fatalf("runner %q = %#v", host, runner)
+		}
+	}
+	if len(runners) != 3 {
+		t.Fatalf("runners = %#v", runners)
+	}
+}

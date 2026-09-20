@@ -165,6 +165,7 @@ func preflight(ctx context.Context, deps Dependencies, host, executable string, 
 		result.EvidenceSource = host + "_preflight"
 		return result
 	}
+	result.Installed = true
 	output, err := deps.Process.Run(ctx, CommandRequest{Argv: []string{path, "--version"}, Env: env, Timeout: VersionTimeout})
 	if err != nil {
 		result.Cause = "harness_environment"
@@ -174,6 +175,7 @@ func preflight(ctx context.Context, deps Dependencies, host, executable string, 
 	}
 	result.Ready = true
 	result.Version = boundedVersion(string(output.Stdout))
+	result.EvidenceSource = host + "_preflight"
 	return result
 }
 

@@ -157,6 +157,43 @@ func TestConformanceLivePassesFullyParsedFlagsToInjectedProcessAfterOptIn(t *tes
 	}
 }
 
+func TestConformanceLiveDefaultsExcludeOmoAndExplicitSelectionIncludesIt(t *testing.T) {
+	old, had := os.LookupEnv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
+	defer func() {
+		if had {
+			_ = os.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", old)
+		} else {
+			_ = os.Unsetenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
+		}
+	}()
+	_ = os.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "1")
+	root := t.TempDir()
+	requests := []LiveRequest{}
+	restore := ConfigureConformance(ConformanceDependencies{
+		Root:             func() string { return root },
+		EvaluateBaseline: func() (int, bool, error) { return 1, true, nil },
+		RunProcess: func(_ context.Context, request LiveRequest) (toolconformance.BenchmarkReport, error) {
+			requests = append(requests, request)
+			return toolconformance.BenchmarkReport{
+				OK: true, SchemaVersion: toolconformance.ReportSchemaVersion, RunID: fmt.Sprintf("selection-%d", len(requests)),
+				Profile: request.Profile, Gate: toolconformance.GateReport{Decision: toolconformance.GateDeferHardening},
+				Hosts: []toolconformance.HostReport{}, Warnings: []string{},
+			}, nil
+		},
+	})
+	defer restore()
+
+	if err := runConformanceLive(nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := runConformanceLive([]string{"--hosts", "omo", "--model", "omo=google/gemini-2.5-pro"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(requests) != 2 || !reflect.DeepEqual(requests[0].Hosts, []string{"codex", "claude"}) || !reflect.DeepEqual(requests[1].Hosts, []string{"omo"}) {
+		t.Fatalf("live host selections = %#v", requests)
+	}
+}
+
 func TestConformanceServeParsesRequiredFlags(t *testing.T) {
 	if err := runConformanceServe(nil); err == nil {
 		t.Fatal("serve missing flags accepted")

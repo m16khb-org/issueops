@@ -8,6 +8,7 @@ import (
 
 	"issueops/cmd/issueops/contractcli"
 	"issueops/internal/adapter/hostprobe"
+	omoHost "issueops/internal/adapter/omo"
 	"issueops/internal/adapter/toolconformance"
 	mcpadapter "issueops/internal/domain/mcp"
 	"issueops/internal/port"
@@ -26,15 +27,20 @@ func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest
 	for _, tool := range mcpadapter.AdvertisedTools() {
 		descriptors = append(descriptors, toolconformance.ToolDescriptor{Name: tool.Name, InputSchema: tool.InputSchema})
 	}
-	runners := map[string]port.HostProbeRunner{
-		"codex":  hostprobe.NewCodexRunner(binary, hostprobe.Dependencies{}),
-		"claude": hostprobe.NewClaudeRunner(binary, hostprobe.Dependencies{}),
-	}
+	runners := toolConformanceRunners(binary)
 	return toolconformance.RunLiveBenchmark(ctx, toolconformance.LiveBenchmarkRequest{
 		Hosts: request.Hosts, Models: models,
 		Profile: request.Profile, Only: request.Only, TargetCompleted: request.TargetCompleted,
 		MaxAttemptsPerCase: request.MaxAttemptsPerCase, HarnessBinary: binary, Previous: request.Previous,
 	}, descriptors, toolconformance.LiveBenchmarkDependencies{Runners: runners})
+}
+
+func toolConformanceRunners(binary string) map[string]port.HostProbeRunner {
+	return map[string]port.HostProbeRunner{
+		"codex":  hostprobe.NewCodexRunner(binary, hostprobe.Dependencies{}),
+		"claude": hostprobe.NewClaudeRunner(binary, hostprobe.Dependencies{}),
+		"omo":    hostprobe.NewOmoRunner(binary, omoHost.LifecycleExtension(binary), hostprobe.Dependencies{}),
+	}
 }
 
 func conformanceModelOverrides(values []string) (map[string]string, error) {

@@ -742,10 +742,8 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 		}
 	}
 	omoExtension := readFile(t, filepath.Join(req.Home, ".omo", "extensions", "issueops.js"))
-	for _, needle := range []string{`pi.on("session_start"`, `pi.on("session_compact"`, `"--json"`, req.BinPath} {
-		if !strings.Contains(omoExtension, needle) {
-			t.Fatalf("Omo lifecycle extension missing %q:\n%s", needle, omoExtension)
-		}
+	if want := omoadapter.LifecycleExtension(req.BinPath); omoExtension != want {
+		t.Fatalf("installed Omo lifecycle extension differs from generated contract:\n%s", omoExtension)
 	}
 	agyMCP := readFile(t, filepath.Join(req.Home, ".gemini", "config", "mcp_config.json"))
 	for _, needle := range []string{`"issueops"`, req.BinPath, req.Root} {

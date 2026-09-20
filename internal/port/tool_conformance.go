@@ -19,14 +19,16 @@ type HostProbeRequest struct {
 
 // HostProbePreflight records whether a host can run without starting a model episode.
 type HostProbePreflight struct {
-	Ready          bool
-	Host           string
-	Version        string
-	RequestedModel string
-	ObservedModel  string
-	Cause          string
-	Code           string
-	EvidenceSource string
+	Ready                 bool
+	Installed             bool
+	MockExtensionVerified bool
+	Host                  string
+	Version               string
+	RequestedModel        string
+	ObservedModel         string
+	Cause                 string
+	Code                  string
+	EvidenceSource        string
 }
 
 // HostProbeResult contains only bounded, redacted evidence from one episode.

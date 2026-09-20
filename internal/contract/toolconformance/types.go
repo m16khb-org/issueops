@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"issueops/internal/contract/failurecause"
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 const (
 	FixtureManifestVersion        = 1
-	ReportSchemaVersion           = 1
+	ReportSchemaVersion           = 2
 	ExactValid                    = "exact_valid"
 	UnknownKey                    = "unknown_key"
 	CoercibleTypeDrift            = "coercible_type_drift"
@@ -78,8 +79,12 @@ type EpisodeReport struct {
 	Profile              string                  `json:"profile"`
 	Attempt              int                     `json:"attempt"`
 	DurationMS           int64                   `json:"duration_ms"`
+	SessionStartObserved bool                    `json:"session_start_observed"`
+	PreToolUseObserved   bool                    `json:"pre_tool_use_observed"`
 	AmbientToolCount     int                     `json:"ambient_tool_count"`
 	CallCount            int                     `json:"call_count"`
+	ResponseSHA256       string                  `json:"response_sha256,omitempty"`
+	ExitCode             int                     `json:"exit_code"`
 	RawArgumentsSHA256   string                  `json:"raw_arguments_sha256,omitempty"`
 	EvidenceID           string                  `json:"evidence_id,omitempty"`
 	CanonicalArguments   any                     `json:"canonical_arguments,omitempty"`
@@ -93,14 +98,25 @@ type EpisodeReport struct {
 	FailureCauseEvidence []failurecause.Evidence `json:"failure_cause_evidence"`
 }
 
+type HostEvidence struct {
+	Installed             bool   `json:"installed"`
+	PreflightReady        bool   `json:"preflight_ready"`
+	MockExtensionVerified bool   `json:"mock_extension_verified"`
+	LiveAttempted         bool   `json:"live_attempted"`
+	LiveVerified          bool   `json:"live_verified"`
+	StatusReason          string `json:"status_reason,omitempty"`
+}
+
 type HostReport struct {
-	Host              string          `json:"host"`
-	Version           string          `json:"version"`
-	RequestedModel    string          `json:"requested_model"`
-	ObservedModel     string          `json:"observed_model"`
-	AttemptCount      int             `json:"attempt_count"`
-	CompletedEpisodes int             `json:"completed_episodes"`
-	Cases             []EpisodeReport `json:"cases"`
+	Status            issueopscontract.Status `json:"status"`
+	Evidence          HostEvidence            `json:"evidence"`
+	Host              string                  `json:"host"`
+	Version           string                  `json:"version"`
+	RequestedModel    string                  `json:"requested_model"`
+	ObservedModel     string                  `json:"observed_model"`
+	AttemptCount      int                     `json:"attempt_count"`
+	CompletedEpisodes int                     `json:"completed_episodes"`
+	Cases             []EpisodeReport         `json:"cases"`
 }
 
 type BenchmarkCounts struct {

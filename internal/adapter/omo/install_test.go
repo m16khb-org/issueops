@@ -60,12 +60,14 @@ func TestInstallerWritesNativeOmoSurfaces(t *testing.T) {
 	assertOmoTestMCPServer(t, projectMCP, "issueops_project", "./bin/issueops", ".")
 
 	extension := readOmoTestFile(t, filepath.Join(req.Home, ".omo", "extensions", "issueops.js"))
+	contract := parseGeneratedLifecycleContract(t, extension)
+	if contract.Events["session_start"] != (generatedLifecycleRule{Subcommand: "session-start"}) ||
+		contract.Events["session_compact"] != (generatedLifecycleRule{Subcommand: "post-compact", AcceptedOnly: true}) ||
+		contract.Message != (generatedLifecycleMessage{CustomType: "issueops:project-docs"}) {
+		t.Fatalf("unexpected Omo lifecycle contract: %+v", contract)
+	}
 	for _, token := range []string{
-		`pi.on("session_start"`,
-		`pi.on("session_compact"`,
-		`event.accepted`,
 		`"--json"`,
-		`display: false`,
 		req.BinPath,
 	} {
 		if !strings.Contains(extension, token) {

@@ -198,7 +198,7 @@
               "kind": "omo_lifecycle_extension_template",
               "path": "$ROOT/configs/omo/issueops.js",
               "written": true,
-              "content_sha256": "e106931220715cff460eb70240cde8bc28bf482c3f5b5b0dcaa8a122bc7c5c67",
+              "content_sha256": "cba6fac075a0debde808c75ff2b95ff8c76212a31ce66bc07c8323c12563f693",
               "content": ""
             },
             {
@@ -219,7 +219,7 @@
               "kind": "omo_user_lifecycle_extension",
               "path": "$HOME/.omo/extensions/issueops.js",
               "written": true,
-              "content_sha256": "a0d1bcfb7c68fce814b1561dd1023699fd3bcfd12ae2e50d303232595a887ff2",
+              "content_sha256": "a38aa403bf3ca4123050f377108d5e91e4534e2c753b52ee88cb57c8fb75071e",
               "content": ""
             },
             {
@@ -449,7 +449,7 @@
               "kind": "omo_lifecycle_extension_template",
               "path": "$ROOT/configs/omo/issueops.js",
               "written": true,
-              "content_sha256": "e106931220715cff460eb70240cde8bc28bf482c3f5b5b0dcaa8a122bc7c5c67",
+              "content_sha256": "cba6fac075a0debde808c75ff2b95ff8c76212a31ce66bc07c8323c12563f693",
               "content": ""
             },
             {
@@ -463,7 +463,7 @@
               "kind": "omo_user_lifecycle_extension",
               "path": "$HOME/.omo/extensions/issueops.js",
               "written": true,
-              "content_sha256": "a0d1bcfb7c68fce814b1561dd1023699fd3bcfd12ae2e50d303232595a887ff2",
+              "content_sha256": "a38aa403bf3ca4123050f377108d5e91e4534e2c753b52ee88cb57c8fb75071e",
               "content": ""
             },
             {

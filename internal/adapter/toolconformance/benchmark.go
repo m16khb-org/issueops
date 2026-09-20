@@ -12,6 +12,7 @@ import (
 	"time"
 
 	failurecausecontract "issueops/internal/contract/failurecause"
+	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -74,7 +75,10 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 		if runner == nil {
 			return BenchmarkReport{}, fmt.Errorf("unsupported_host:%s", host)
 		}
-		hostReport := HostReport{Host: host, RequestedModel: modelForHost(models, host), Cases: []EpisodeReport{}}
+		hostReport := HostReport{
+			Status: issueopscontract.StatusNotRun,
+			Host:   host, RequestedModel: modelForHost(models, host), Cases: []EpisodeReport{},
+		}
 		for _, episode := range previous[host] {
 			fixture, selectedPair := selectedFixtureForPair(selected, host, episode.FixtureID)
 			if !selectedPair || episode.SchemaSHA256 != fixture.SchemaSHA256 || episode.RequestedModel != hostReport.RequestedModel {
@@ -94,8 +98,19 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 		preflightRequest := port.HostProbeRequest{HarnessBinary: request.HarnessBinary, Model: hostReport.RequestedModel}
 		preflight := runner.Preflight(ctx, preflightRequest)
 		hostReport.Version = preflight.Version
+		hostReport.Evidence.Installed = preflight.Installed
+		hostReport.Evidence.PreflightReady = preflight.Ready
+		hostReport.Evidence.MockExtensionVerified = preflight.MockExtensionVerified
 		if preflight.ObservedModel != "" {
 			hostReport.ObservedModel = preflight.ObservedModel
+		}
+		if !preflight.Ready {
+			hostReport.Evidence.StatusReason = preflight.Code
+			if !preflight.Installed || preflight.Code == "version_probe_failed" {
+				hostReport.Status = issueopscontract.StatusUnavailable
+			} else if preflight.Code == "mock_extension_invalid" {
+				hostReport.Status = issueopscontract.StatusUnsupported
+			}
 		}
 		for _, pair := range selected {
 			if pair.Host != host {
@@ -110,6 +125,7 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 			}
 			newAttemptLimit := (request.TargetCompleted - completed) * request.MaxAttemptsPerCase
 			for newAttempts := 0; completed < request.TargetCompleted && newAttempts < newAttemptLimit; newAttempts++ {
+				hostReport.Evidence.LiveAttempted = true
 				attempt := attemptsForFixture(hostReport.Cases, fixture.ID) + 1
 				prompt, _ := BuildEpisodePrompt(fixture, request.Profile)
 				runResult := runner.Run(ctx, port.HostProbeRequest{
@@ -155,6 +171,14 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 		})
 		hostReport.AttemptCount = len(hostReport.Cases)
 		hostReport.CompletedEpisodes = countCompleted(hostReport.Cases)
+		if hostReport.Evidence.PreflightReady && hostReport.CompletedEpisodes > 0 {
+			hostReport.Status = issueopscontract.StatusSupported
+			hostReport.Evidence.LiveVerified = true
+			hostReport.Evidence.StatusReason = ""
+		} else if hostReport.Evidence.LiveAttempted {
+			hostReport.Status = issueopscontract.StatusUnavailable
+			hostReport.Evidence.StatusReason = "live_probe_incomplete"
+		}
 		report.Hosts = append(report.Hosts, hostReport)
 	}
 	report.Counts = countReport(report)
@@ -232,32 +256,32 @@ func BuildEpisodePrompt(fixture Fixture, profile string) (string, string) {
 
 func classifyHostResult(result port.HostProbeResult, fixture Fixture) EpisodeReport {
 	if !result.Completed {
-		return incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, result.Cause, result.Code, result.EvidenceSource)
+		return incompleteHostResult(result, fixture, result.Cause, result.Code, result.EvidenceSource)
 	}
 	classification, err := ParseClassification(result.Classification)
 	if err != nil || result.EvidenceID == "" || !validEvidenceID(result.EvidenceID) {
-		return incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, "transport", "probe_result_invalid", result.Host+"_runner")
+		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	if result.CallCount == 0 || classification == Classification(NoCall) {
-		return incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, "unknown", "no_call", result.Host+"_runner")
+		return incompleteHostResult(result, fixture, "unknown", "no_call", result.Host+"_runner")
 	}
 	if (result.CallCount > 1) != (classification == Classification(MultipleCalls)) {
-		return incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, "transport", "probe_result_invalid", result.Host+"_runner")
+		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	var arguments any
 	if err := json.Unmarshal([]byte(result.CanonicalArgumentsJSON), &arguments); err != nil {
-		return incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, "transport", "probe_result_invalid", result.Host+"_runner")
+		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	diagnostics := []Diagnostic{}
 	if err := json.Unmarshal([]byte(result.DiagnosticsJSON), &diagnostics); err != nil {
-		return incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, "transport", "probe_result_invalid", result.Host+"_runner")
+		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	sortDiagnostics(diagnostics)
 	if (classification == Classification(ExactValid) || classification == Classification(ValidButSemanticallyDifferent)) && (!result.CanonicalValid || len(diagnostics) != 0) {
-		return incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, "transport", "probe_result_invalid", result.Host+"_runner")
+		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	if schemaDriftClassification(classification) && result.CanonicalValid {
-		return incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, "transport", "probe_result_invalid", result.Host+"_runner")
+		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	evidence := []failurecausecontract.Evidence{}
 	failed := classification != Classification(ExactValid)
@@ -280,8 +304,12 @@ func classifyHostResult(result port.HostProbeResult, fixture Fixture) EpisodeRep
 		Profile:              result.Profile,
 		Attempt:              result.Attempt,
 		DurationMS:           result.DurationMS,
+		SessionStartObserved: result.SessionStartObserved,
+		PreToolUseObserved:   result.PreToolUseObserved,
 		AmbientToolCount:     result.AmbientToolCount,
 		CallCount:            result.CallCount,
+		ResponseSHA256:       result.ResponseSHA256,
+		ExitCode:             result.ExitCode,
 		RawArgumentsSHA256:   result.RawArgumentsSHA256,
 		EvidenceID:           result.EvidenceID,
 		CanonicalArguments:   arguments,
@@ -294,6 +322,19 @@ func classifyHostResult(result port.HostProbeResult, fixture Fixture) EpisodeRep
 		FailureCauseReason:   causeResult.Reason,
 		FailureCauseEvidence: causeResult.Evidence,
 	}
+}
+
+func incompleteHostResult(result port.HostProbeResult, fixture Fixture, cause, code, source string) EpisodeReport {
+	episode := incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, cause, code, source)
+	episode.ObservedModel = result.ObservedModel
+	episode.DurationMS = result.DurationMS
+	episode.SessionStartObserved = result.SessionStartObserved
+	episode.PreToolUseObserved = result.PreToolUseObserved
+	episode.AmbientToolCount = result.AmbientToolCount
+	episode.CallCount = result.CallCount
+	episode.ResponseSHA256 = result.ResponseSHA256
+	episode.ExitCode = result.ExitCode
+	return episode
 }
 
 func validEvidenceID(value string) bool {

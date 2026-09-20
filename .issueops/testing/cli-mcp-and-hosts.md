@@ -39,13 +39,25 @@ go build -o bin/issueops ./cmd/issueops
 
 baseline은 representative schema 3개와 `valid`, `unknown_key`, `coercible_type_drift`, `noncoercible_type_drift` payload class의 preregistered 10 cases를 정확히 판정하고, 승격된 behavioral regression fixture가 있으면 handler 호출 0회·동일한 state digest·정규화된 final result를 재생한다.
 
-Live 측정은 CI와 기본 self-verify에 포함하지 않는다. `ISSUEOPS_TOOL_CONFORMANCE_LIVE=1`과 host/model/auth 입력을 명시한 뒤 clean-context `3 hosts × 3 fixtures = 9 completed episodes`를 수집한다. environment/transport/no-call attempt는 model denominator에서 제외하며, case당 최대 3회 retry 후 9 episodes를 채우지 못하면 `inconclusive`다. invalid raw call은 동일 host/schema/diagnostic signature가 2회 이상 재현되어야 regression fixture와 canonical production enforcement 후보가 된다. 한 번뿐인 관측은 승격하지 않는다.
+Live 측정은 CI와 기본 self-verify에 포함하지 않는다. 기본 `contract conformance live` host 목록은 Codex/Claude로 유지한다. Omo native episode는 `ISSUEOPS_TOOL_CONFORMANCE_LIVE=1`, `--hosts omo`, explicit `--model omo=provider/model`을 모두 지정한 경우에만 시작하며 OpenCode/OMP로 대체하지 않는다. 세 host parity를 측정할 때는 각 host/model을 명시해 clean-context `3 hosts × 3 fixtures = 9 completed episodes`를 수집한다. environment/transport/no-call attempt는 model denominator에서 제외하며, case당 최대 3회 retry 후 9 episodes를 채우지 못하면 `inconclusive`다. invalid raw call은 동일 host/schema/diagnostic signature가 2회 이상 재현되어야 regression fixture와 canonical production enforcement 후보가 된다. 한 번뿐인 관측은 승격하지 않는다.
+
+```bash
+ISSUEOPS_TOOL_CONFORMANCE_LIVE=1 ./bin/issueops contract conformance live \
+  --hosts omo \
+  --model omo=provider/model \
+  --profile clean \
+  --target-completed 1 \
+  --max-attempts-per-case 3 \
+  --json
+```
+
+Live report schema v2는 H0 status vocabulary를 그대로 사용한다. host evidence의 `installed`, `preflight_ready`, `mock_extension_verified`, `live_attempted`, `live_verified`, `status_reason`을 분리하며 completed live episode가 있을 때만 `status=supported`를 허용한다. 설치 및 deterministic mock만 확인했거나 명시 모델이 없어 episode를 시작하지 않았으면 `not-run`, executable/version preflight가 실패하면 `unavailable`이다. episode에는 context hook 관찰, MCP response digest, observed model, exit code, duration을 bounded/redacted evidence로 남긴다.
 
 환경 실패율 5%는 조사 warning일 뿐 pass/fail threshold가 아니다. context-pressure profile과 10/20 reproduction batch는 clean initial matrix와 denominator를 합치지 않고 별도 승인·비용 경계로 실행한다. evidence는 `.issueops/evidence/tool-conformance/`에 mode 0600/0700으로 저장하고 git에 추가하지 않는다.
 
 ## Reversible child-host smoke
 
-Reversible Codex/Claude child-host smoke는 일반 live matrix와 별도다. `scripts/verify-child-host-smoke.sh`는 literal `--confirm-user-activation`, clean local HEAD, exact singleton remote ref가 모두 일치할 때만 user-scope integration을 잠시 활성화한다. 활성화 직후 두 command-host의 managed `SessionStart` handler는 command·type·timeout·key set까지 exact contract로 검증하고 managed event set이 정확히 `SessionStart` 하나인지 확인하며, legacy event·enforcement flag·shell suffix를 거부한다. 실제 child episode는 `SessionStart`를 관찰하고 `PreToolUse`가 관찰되지 않음을 확인한다; 압축 후 `SessionStart(compact)` 재실행은 host가 compaction을 발생시킨 경우에만 일어나므로 config contract와 host 전사로 증명한다. Codex는 검증된 활성화 handler 자체를 user config·plugin·co-resident hook을 로드하지 않는 private episode `CODEX_HOME`에 투영한 뒤 invocation-scoped `--dangerously-bypass-hook-trust`를 사용하며 trust state는 수정·저장하지 않는다. Host runner는 marker와 native MCP result를 boolean/count/SHA-256/exit/duration projection으로 합친 뒤 원문 stream과 marker를 폐기한다. 영수증의 `validation_lane=native_host`는 Codex·Claude adapter 실동작만 증명하며 Orca Run/task/dispatch/claim 증거를 대신하지 않는다. 어떤 post-activation 실패도 source installer 1회, 원래 네 설정 파일의 private byte snapshot 원자 복원, before/restore raw+semantic digest equality를 모두 통과하지 못하면 `verdict=pass`가 될 수 없다.
+Reversible Codex/Claude child-host smoke는 일반 live matrix와 별도다. 이 스크립트는 user-scope Codex/Claude activation의 원자 복원 계약을 검증하므로 Omo live/account gate를 추가하지 않는다. Omo는 generated lifecycle SSoT를 소비하는 deterministic mock-pi test와 위의 explicit native live runner에서 따로 검증한다. `scripts/verify-child-host-smoke.sh`는 literal `--confirm-user-activation`, clean local HEAD, exact singleton remote ref가 모두 일치할 때만 user-scope integration을 잠시 활성화한다. 활성화 직후 두 command-host의 managed `SessionStart` handler는 command·type·timeout·key set까지 exact contract로 검증하고 managed event set이 정확히 `SessionStart` 하나인지 확인하며, legacy event·enforcement flag·shell suffix를 거부한다. 실제 child episode는 `SessionStart`를 관찰하고 `PreToolUse`가 관찰되지 않음을 확인한다; 압축 후 `SessionStart(compact)` 재실행은 host가 compaction을 발생시킨 경우에만 일어나므로 config contract와 host 전사로 증명한다. Codex는 검증된 활성화 handler 자체를 user config·plugin·co-resident hook을 로드하지 않는 private episode `CODEX_HOME`에 투영한 뒤 invocation-scoped `--dangerously-bypass-hook-trust`를 사용하며 trust state는 수정·저장하지 않는다. Host runner는 marker와 native MCP result를 boolean/count/SHA-256/exit/duration projection으로 합친 뒤 원문 stream과 marker를 폐기한다. 영수증의 `validation_lane=native_host`는 Codex·Claude adapter 실동작만 증명하며 Orca Run/task/dispatch/claim 증거를 대신하지 않는다. 어떤 post-activation 실패도 source installer 1회, 원래 네 설정 파일의 private byte snapshot 원자 복원, before/restore raw+semantic digest equality를 모두 통과하지 못하면 `verdict=pass`가 될 수 없다.
 
 managed regular command adoption 테스트는 기본 refusal과 승인 dry-run 무변경, 실제 staged candidate의 정적 build identity, file matrix/size boundary, atomic exchange 시점의 destination drift 보존, apply/finalize, injected rollback, transition-fenced Begin/Seal/Abort, direct-vs-explicit cleanup ownership을 각각 검증한다. child smoke에서 adoption은 literal confirmation 이후 child activation 한 번에만 전달되어야 하며 source restore에는 전달되지 않아야 한다.
 
@@ -56,8 +68,10 @@ Native integration smoke는 single-pass verification battery의 일부로
 user-level skill 파일 존재, Codex/Claude MCP registration, Omo
 `~/.omo/mcp.json`, 그리고 managed Omo lifecycle extension을 확인한다.
 The deterministic battery does not require the external Omo runtime: it checks
-installed Omo skill paths, exact MCP semantics, and exact generated extension
-bytes. This keeps issueops independently verifiable.
+installed Omo skill paths, exact MCP semantics, exact generated extension
+bytes, and the same generated lifecycle SSoT through a deterministic mock-pi
+contract runner. This keeps issueops independently verifiable without Node,
+Omo, an account, a provider, Orca, companion tools, or network access.
 
 Release/manual QA adds the runtime evidence that deterministic self-verification
 cannot own. In an isolated `HOME`, run native install, then use the installed

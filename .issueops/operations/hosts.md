@@ -169,6 +169,26 @@ test -f ~/.omo/extensions/issueops.js
 Agent-harness does not install or gate the external Omo runtime itself; install
 Omo through its official distribution path.
 
+Omo tool-conformance live verification is an explicit, potentially billable
+operation. It requires both the live opt-in and an explicit Omo model; the
+default live host list remains Codex/Claude.
+
+```bash
+ISSUEOPS_TOOL_CONFORMANCE_LIVE=1 issueops contract conformance live \
+  --hosts omo \
+  --model omo=provider/model \
+  --profile clean \
+  --target-completed 1 \
+  --max-attempts-per-case 3 \
+  --json
+```
+
+The Omo runner uses the installed native `omo` command with a private temporary
+agent root, explicit generated lifecycle and guard extensions, one direct MCP
+tool, JSON print mode, and ambient discovery disabled. A report with only
+installed/preflight or deterministic mock evidence remains `not-run` or
+`unavailable`; only a completed live episode may report `supported`.
+
 ## IssueOps Host Rule
 
 Hooks only inject static project-doc context. They do not create issues, edit files, run tests, wait on background jobs, prepare branches/worktrees, open PRs/MRs, reply to review threads, merge, clean up branches/worktrees, or block tool events. The main agent loop owns the user-visible `problem -> grill -> issue linkage -> plan -> compatibility-review -> implement -> ai-slop-clean -> feedback -> pr -> done -> post-done cleanup` workflow through `issueops ...` CLI/MCP state. The durable phase enum has no artifact-linkage or cleanup labels; explicit IssueOps commands own CAS, lease authority, remote writes, verification, publication, and cleanup. Hook output is neither an enforcement path nor ownership evidence.

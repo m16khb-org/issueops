@@ -20,7 +20,7 @@
       "ok": true,
       "profile": "deterministic",
       "run_id": "deterministic-baseline",
-      "schema_version": 1,
+      "schema_version": 2,
       "warnings": []
     },
     "contract_schema": {
