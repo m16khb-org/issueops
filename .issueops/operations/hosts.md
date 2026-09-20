@@ -184,10 +184,21 @@ ISSUEOPS_TOOL_CONFORMANCE_LIVE=1 issueops contract conformance live \
 ```
 
 The Omo runner resolves the installed native `omo` command and optional strict
-auth source before creating a private temporary `HOME` and agent root. It uses
-explicit generated lifecycle and guard extensions, one direct MCP tool, JSON
-print mode, and ambient discovery disabled. A report with only
-installed/preflight or deterministic mock evidence remains `not-run` or
+auth source before creating a private temporary `HOME` and agent root. On Unix,
+the auth leaf is opened relative to a no-follow directory handle and its
+identity, mode, size, and modification time must remain stable across the
+bounded read. Symlinks and anything other than a regular mode-0600 file fail
+closed. Private-root cleanup is part of both preflight and episode success; a
+cleanup failure returns `private_root_cleanup_failed` and cannot leave a success
+report.
+
+Production preflight compares the supplied lifecycle module byte-for-byte with
+the canonical module generated for the exact harness binary. This proves source
+identity, while actual async JavaScript behavior remains deterministic test
+evidence and native live behavior remains explicit live evidence. The runner
+uses explicit generated lifecycle and guard extensions, one direct MCP tool,
+JSON print mode, and ambient discovery disabled. A report with only
+installed/preflight or deterministic test evidence remains `not-run` or
 `unavailable`; only a completed live episode may report `supported`.
 
 ## IssueOps Host Rule

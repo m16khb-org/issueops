@@ -30,6 +30,9 @@ func RunSessionStart(args []string, config Config) error {
 		return err
 	}
 	stdin, _ := io.ReadAll(os.Stdin)
+	if err := recordLiveProbeSessionStart(stdin); err != nil {
+		return err
+	}
 	cat := BuildProjectDocCatalogContext(resolveRepo(*repo, stdin, config))
 	if *jsonOut {
 		return config.PrintJSON(cat)

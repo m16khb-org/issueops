@@ -157,7 +157,7 @@ func TestChildHostSmokeModePersistsOnlyBoundedCodexObservation(t *testing.T) {
 		if runtimeCodexHome == sourceCodexHome || runtimeCodexHome != filepath.Join(request.Cwd, "codex-home") {
 			t.Fatalf("runtime CODEX_HOME=%q source=%q", runtimeCodexHome, sourceCodexHome)
 		}
-		assertProjectedCodexSmokeHooks(t, filepath.Join(runtimeCodexHome, "hooks.json"), observationPath, harnessBinary)
+		assertProjectedCodexSmokeHooks(t, filepath.Join(runtimeCodexHome, "hooks.json"), observationPath, harnessBinary, "codex")
 		if _, err := os.Stat(coResidentSentinel); err == nil || !os.IsNotExist(err) {
 			t.Fatalf("co-resident user hook executed: %v", err)
 		}
@@ -171,7 +171,7 @@ func TestChildHostSmokeModePersistsOnlyBoundedCodexObservation(t *testing.T) {
 			t.Fatalf("env=%q want=%q", request.Env, wantEnv)
 		}
 		writeCodexCapture(t, filepath.Join(request.Cwd, "result.json"), "run-token")
-		writeChildSmokeHookMarkers(t, observationPath)
+		writeChildSmokeHookMarkers(t, observationPath, "gpt-default")
 		return CommandOutput{Stdout: mcpOnlyHostStream(t, stream)}, nil
 	}}
 	environment := map[string]string{
@@ -204,7 +204,7 @@ func environmentValue(t *testing.T, environment []string, name string) string {
 	return ""
 }
 
-func assertProjectedCodexSmokeHooks(t *testing.T, path, observationPath, harnessBinary string) {
+func assertProjectedCodexSmokeHooks(t *testing.T, path, observationPath, harnessBinary, host string) {
 	t.Helper()
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -233,7 +233,8 @@ func assertProjectedCodexSmokeHooks(t *testing.T, path, observationPath, harness
 			t.Fatalf("%s groups=%+v", event, groups)
 		}
 		hook := groups[0].Hooks[0]
-		if hook.Type != "command" || hook.Timeout != 5 || !strings.Contains(hook.Command, "ISSUEOPS_CHILD_SMOKE_HOOKS=1") || !strings.Contains(hook.Command, observationPath) || !strings.HasSuffix(hook.Command, testCodexManagedHookCommand(harnessBinary, event)) {
+		expected := shellSingleQuote(harnessBinary) + " hook session-start --host " + host
+		if hook.Type != "command" || hook.Timeout != 5 || !strings.Contains(hook.Command, "ISSUEOPS_CHILD_SMOKE_HOOKS=1") || !strings.Contains(hook.Command, observationPath) || !strings.HasSuffix(hook.Command, expected) {
 			t.Fatalf("%s hook=%+v", event, hook)
 		}
 	}
@@ -302,7 +303,7 @@ func TestChildHostSmokeModePersistsOnlyBoundedClaudeObservation(t *testing.T) {
 				t.Fatalf("setting sources=%q want user", got)
 			}
 			writeClaudeCapture(t, filepath.Join(command.Cwd, "result.json"), request.RunToken)
-			writeChildSmokeHookMarkers(t, observationPath)
+			writeChildSmokeHookMarkers(t, observationPath, request.Model)
 			return CommandOutput{Stdout: mcpOnlyHostStream(t, stream)}, nil
 		}},
 		LookPath: func(string) (string, error) { return "/opt/bin/claude", nil },
@@ -327,20 +328,19 @@ func TestChildHostSmokeRejectsSymlinkedHookMarker(t *testing.T) {
 	if err := os.Symlink(target, observationPath+".hooks"); err != nil {
 		t.Fatal(err)
 	}
-	_, err := observeRecordedHookEvents(Dependencies{Getenv: func(name string) string {
-		if name == "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE" {
-			return observationPath
-		}
-		return ""
-	}})
+	_, err := observeRecordedHookEvents(observationPath)
 	if err == nil {
 		t.Fatal("symlinked hook marker was accepted")
 	}
 }
 
-func writeChildSmokeHookMarkers(t *testing.T, observationPath string) {
+func writeChildSmokeHookMarkers(t *testing.T, observationPath, model string) {
 	t.Helper()
-	data := []byte("{\"event\":\"SessionStart\"}\n")
+	data, err := json.Marshal(map[string]string{"event": "SessionStart", "model": model})
+	if err != nil {
+		t.Fatal(err)
+	}
+	data = append(data, '\n')
 	if err := os.WriteFile(observationPath+".hooks", data, 0o600); err != nil {
 		t.Fatal(err)
 	}

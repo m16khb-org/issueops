@@ -85,10 +85,42 @@ func TestOmoRunnerPreflightRejectsUnverifiedLifecycleContract(t *testing.T) {
 	}
 }
 
+func TestOmoRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
+	canonical := omoadapter.LifecycleExtension("/opt/bin/issueops")
+	mutations := []struct {
+		name string
+		old  string
+		new  string
+	}{
+		{name: "empty handler", old: "return runIssueopsLifecycle(pi, rule, ctx)", new: "return undefined"},
+		{name: "await removed", old: "const result = await pi.exec(", new: "const result = pi.exec("},
+		{name: "hook argv", old: `["hook", rule.subcommand, "--repo", ctx.cwd, "--json"]`, new: `["hook", rule.subcommand, "--json"]`},
+	}
+	for _, mutation := range mutations {
+		t.Run(mutation.name, func(t *testing.T) {
+			source := strings.Replace(canonical, mutation.old, mutation.new, 1)
+			if source == canonical {
+				t.Fatalf("mutation target %q missing", mutation.old)
+			}
+			runner := NewOmoRunner("/opt/bin/issueops", source, Dependencies{
+				Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
+					return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
+				}},
+				LookPath: func(string) (string, error) { return "/opt/bin/omo", nil },
+			})
+
+			got := runner.Preflight(context.Background(), port.HostProbeRequest{Model: "google/gemini-2.5-pro"})
+			if got.Ready || got.MockExtensionVerified || got.Code != "mock_extension_invalid" {
+				t.Fatalf("mutated module preflight = %+v", got)
+			}
+		})
+	}
+}
+
 func TestOmoRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testing.T) {
 	t.Parallel()
 
-	runner := NewOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension(), Dependencies{
+	runner := NewOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{}, errors.New("version unavailable")
 		}},
@@ -98,6 +130,78 @@ func TestOmoRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testin
 	got := runner.Preflight(context.Background(), port.HostProbeRequest{Model: "google/gemini-2.5-pro"})
 	if got.Ready || !got.Installed || got.Code != "version_probe_failed" || got.EvidenceSource != "omo_preflight" {
 		t.Fatalf("preflight = %+v", got)
+	}
+}
+
+func TestOmoRunnerPreflightFailsClosedWhenPrivateRootCleanupFails(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "preflight")
+	runner := NewOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
+		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
+			return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
+		}},
+		LookPath: func(string) (string, error) { return "/opt/bin/omo", nil },
+		TempDir: func(_, _ string) (string, error) {
+			if err := os.Mkdir(root, 0o700); err != nil {
+				return "", err
+			}
+			return root, nil
+		},
+		RemoveAll: func(path string) error {
+			if path != root {
+				t.Fatalf("cleanup path = %q", path)
+			}
+			return errors.New("sensitive cleanup detail")
+		},
+	})
+
+	got := runner.Preflight(context.Background(), port.HostProbeRequest{Model: "google/gemini-2.5-pro"})
+	if got.Ready || got.Code != "private_root_cleanup_failed" || got.Cause != "harness_environment" || got.EvidenceSource != "omo_preflight" {
+		t.Fatalf("preflight = %+v", got)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), root) || strings.Contains(string(encoded), "sensitive cleanup detail") {
+		t.Fatalf("cleanup result leaked private details: %s", encoded)
+	}
+}
+
+func TestOmoRunnerEpisodeFailsClosedWhenPrivateRootCleanupFails(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "episode")
+	request := omoProbeRequest()
+	target := "mcp_issueops_probe_" + request.ProbeTool
+	runner := NewOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
+		LookPath: func(string) (string, error) { return "/test/bin/omo", nil },
+		TempDir: func(_, _ string) (string, error) {
+			if err := os.Mkdir(root, 0o700); err != nil {
+				return "", err
+			}
+			return root, nil
+		},
+		Process: &omoFakeProcess{run: func(context.Context, CommandRequest) (CommandOutput, error) {
+			writeOmoCapture(t, filepath.Join(root, "result.json"), request)
+			return CommandOutput{Stdout: omoSuccessfulStream(request, target)}, nil
+		}},
+		RemoveAll: func(path string) error {
+			if path != root {
+				t.Fatalf("cleanup path = %q", path)
+			}
+			return errors.New("sensitive cleanup detail")
+		},
+		Getenv: func(string) string { return "" },
+	})
+
+	got := runner.Run(context.Background(), request)
+	if got.Completed || got.Code != "private_root_cleanup_failed" || got.Cause != "harness_environment" || got.EvidenceSource != "omo_runner" {
+		t.Fatalf("episode = %+v", got)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), root) || strings.Contains(string(encoded), "sensitive cleanup detail") {
+		t.Fatalf("cleanup result leaked private details: %s", encoded)
 	}
 }
 
@@ -116,7 +220,7 @@ func TestOmoRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 	}
 	request := omoProbeRequest()
 	targetTool := "mcp_issueops_probe_" + request.ProbeTool
-	lifecycleSource := omoTestLifecycleExtension()
+	lifecycleSource := omoTestLifecycleExtension(harnessBinary)
 	var received CommandRequest
 	process := &omoFakeProcess{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
 		received = command
@@ -382,8 +486,13 @@ func omoProbeRequest() port.HostProbeRequest {
 	}
 }
 
-func omoTestLifecycleExtension() string {
-	return omoadapter.LifecycleExtension("/test/bin/issueops")
+func omoTestLifecycleExtension(harnessBinary ...string) string {
+	binary := "issueops"
+	if len(harnessBinary) > 0 {
+		binary = harnessBinary[0]
+	}
+	absolute, _ := filepath.Abs(binary)
+	return omoadapter.LifecycleExtension(absolute)
 }
 
 func writeOmoCapture(t *testing.T, path string, request port.HostProbeRequest) {

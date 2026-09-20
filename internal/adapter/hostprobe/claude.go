@@ -3,8 +3,9 @@ package hostprobe
 import (
 	"context"
 	"encoding/json"
-	"os"
+	"fmt"
 	"path/filepath"
+	"strings"
 
 	"issueops/internal/port"
 )
@@ -39,7 +40,7 @@ func (r ClaudeRunner) Preflight(ctx context.Context, request port.HostProbeReque
 	return preflight(ctx, r.deps, r.Name(), "claude", request, isolatedHostEnv(r.deps))
 }
 
-func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) port.HostProbeResult {
+func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
 	if r.harnessBinary == "" {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "harness_binary_missing")
@@ -56,9 +57,13 @@ func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) po
 	}
 	root, err := newEpisodeRoot(r.deps, r.Name())
 	if err != nil {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_root_create_failed")
+		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", episodeRootFailureCode(err))
 	}
-	defer func() { _ = os.RemoveAll(root) }()
+	defer func() {
+		if err := r.deps.RemoveAll(root); err != nil {
+			result = failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "private_root_cleanup_failed")
+		}
+	}()
 
 	resultPath := filepath.Join(root, "result.json")
 	serve := serveArgv(request, resultPath)
@@ -80,14 +85,24 @@ func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) po
 	}
 
 	hookSmoke := r.deps.Getenv("ISSUEOPS_CHILD_SMOKE_HOOKS") == "1"
-	envNames := []string{}
+	observationPath := filepath.Join(root, "live-observation.json")
 	if hookSmoke {
-		envNames = append(envNames, "ISSUEOPS_CHILD_SMOKE_HOOKS", "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
+		observationPath = strings.TrimSpace(r.deps.Getenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"))
 	}
+	settingsPath := ""
+	if !hookSmoke {
+		settingsPath = filepath.Join(root, "hooks.settings.json")
+		if err := prepareClaudeLiveSettings(settingsPath, harnessBinary, observationPath); err != nil {
+			return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "claude_live_settings_invalid")
+		}
+	}
+	environment := isolatedHostEnv(r.deps)
+	environment = replaceEnvironmentValue(environment, "ISSUEOPS_CHILD_SMOKE_HOOKS", "1")
+	environment = replaceEnvironmentValue(environment, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE", observationPath)
 	output, err := r.deps.Process.Run(ctx, CommandRequest{
 		Cwd:     root,
-		Argv:    claudeArgvMode(executable, configPath, request, hookSmoke),
-		Env:     isolatedHostEnv(r.deps, envNames...),
+		Argv:    claudeArgvMode(executable, configPath, settingsPath, request, hookSmoke),
+		Env:     environment,
 		Timeout: EpisodeTimeout,
 	})
 	if err != nil {
@@ -99,21 +114,22 @@ func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) po
 		cause, code := claudeCaptureFailure(err)
 		return failedResult(r.Name(), "", request, started, r.deps, cause, code)
 	}
-	result := completedResult(r.Name(), "", request, started, r.deps, capture)
-	if observed := observedModelFromOutput(output.Stdout); observed != "" {
-		result.ObservedModel = observed
+	result = completedResult(r.Name(), "", request, started, r.deps, capture)
+	observation, err := observeHostStream(output.Stdout)
+	if err != nil {
+		return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
 	}
+	recorded, err := observeRecordedHookEvents(observationPath)
+	if err != nil || mergeHookObservation(&observation, recorded) != nil {
+		return failedResult(r.Name(), "", request, started, r.deps, "transport", "hook_observation_invalid")
+	}
+	if !validHostRuntimeObservation(observation) {
+		return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
+	}
+	applyHostStreamObservation(&result, observation, output.ExitCode)
+	result.ObservedModel = observation.Model
+	result.AmbientToolCount = observation.AmbientToolCount
 	if hookSmoke {
-		observation, err := observeHostStream(output.Stdout)
-		if err != nil {
-			return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
-		}
-		recorded, err := observeRecordedHookEvents(r.deps)
-		if err != nil {
-			return failedResult(r.Name(), "", request, started, r.deps, "transport", err.Error())
-		}
-		mergeHookObservation(&observation, recorded)
-		applyHostStreamObservation(&result, observation, output.ExitCode)
 		if err := persistChildSmokeObservation(r.deps, result, observation.MCPCallCount); err != nil {
 			return failedResult(r.Name(), "", request, started, r.deps, "transport", err.Error())
 		}
@@ -121,7 +137,23 @@ func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) po
 	return result
 }
 
-func claudeArgvMode(executable, configPath string, request port.HostProbeRequest, hookSmoke bool) []string {
+func prepareClaudeLiveSettings(path, harnessBinary, observationPath string) error {
+	if !filepath.IsAbs(path) || !filepath.IsAbs(harnessBinary) || !filepath.IsAbs(observationPath) {
+		return fmt.Errorf("claude_live_settings_path_invalid")
+	}
+	command := "/usr/bin/env ISSUEOPS_CHILD_SMOKE_HOOKS=1 ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE=" + shellSingleQuote(observationPath) + " " +
+		shellSingleQuote(harnessBinary) + " hook session-start --host claude"
+	document := codexSmokeHookDocument{Hooks: map[string][]codexSmokeHookGroup{
+		"SessionStart": {{Hooks: []codexSmokeHook{{Type: "command", Command: command, Timeout: 5}}}},
+	}}
+	data, err := json.Marshal(document)
+	if err != nil {
+		return err
+	}
+	return writePrivateFile(path, append(data, '\n'))
+}
+
+func claudeArgvMode(executable, configPath, settingsPath string, request port.HostProbeRequest, hookSmoke bool) []string {
 	settingSources := ""
 	if hookSmoke {
 		settingSources = "user"
@@ -138,6 +170,9 @@ func claudeArgvMode(executable, configPath string, request port.HostProbeRequest
 		"--permission-mode", "dontAsk",
 		"--tools", "",
 		"--allowedTools=mcp__" + claudeProbeServer + "__" + request.ProbeTool,
+	}
+	if !hookSmoke {
+		argv = append(argv, "--settings", settingsPath, "--include-hook-events")
 	}
 	if request.Model != "" && request.Model != "default" {
 		argv = append(argv, "--model", request.Model)

@@ -5,6 +5,7 @@ import "context"
 // HostProbeRequest is the host-neutral input for one isolated conformance episode.
 type HostProbeRequest struct {
 	HarnessBinary         string
+	HostVersion           string
 	FixtureID             string
 	ProbeTool             string
 	SourceTool            string

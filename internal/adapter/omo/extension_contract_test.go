@@ -55,6 +55,8 @@ type lifecycleModuleObservation struct {
 	ExecCalls     []lifecycleExecCall
 	Messages      []lifecycleMessageCall
 	Notifications []lifecycleNotification
+	HandlerState  goja.PromiseState
+	HandlerResult any
 }
 
 func TestGeneratedLifecycleExtensionExecutesActualMockPiModule(t *testing.T) {
@@ -109,6 +111,12 @@ func TestGeneratedLifecycleExtensionExecutesActualMockPiModule(t *testing.T) {
 			if len(got.Messages) != test.wantSend {
 				t.Fatalf("messages = %#v, want count %d", got.Messages, test.wantSend)
 			}
+			if test.wantArgv != nil && got.HandlerState != goja.PromiseStateFulfilled {
+				t.Fatalf("handler promise state = %v, want fulfilled", got.HandlerState)
+			}
+			if test.wantArgv != nil && got.HandlerResult != nil {
+				t.Fatalf("handler promise result = %#v, want undefined", got.HandlerResult)
+			}
 			if test.wantSend == 1 {
 				want := lifecycleMessageCall{
 					Message: map[string]any{"customType": "issueops:project-docs", "content": test.wantContent, "display": false},
@@ -137,6 +145,7 @@ func TestGeneratedLifecycleExtensionProofRejectsRuntimeMutations(t *testing.T) {
 		{name: "public sendMessage renamed", old: "pi.sendMessage(", new: "pi.sendCustomMessage("},
 		{name: "display made visible", old: `"display":false`, new: `"display":true`},
 		{name: "trigger turn enabled", old: `"trigger_turn":false`, new: `"trigger_turn":true`},
+		{name: "await removed", old: "const result = await pi.exec(", new: "const result = pi.exec("},
 	}
 	for _, mutation := range mutations {
 		t.Run(mutation.name, func(t *testing.T) {
@@ -172,7 +181,8 @@ func verifyLifecycleModule(source string) error {
 		Message: map[string]any{"customType": "issueops:project-docs", "content": "catalog", "display": false},
 		Options: map[string]any{"triggerTurn": false},
 	}}
-	if !reflect.DeepEqual(accepted.ExecCalls, wantExec) || !reflect.DeepEqual(accepted.Messages, wantMessage) || len(accepted.Notifications) != 0 {
+	if !reflect.DeepEqual(accepted.ExecCalls, wantExec) || !reflect.DeepEqual(accepted.Messages, wantMessage) || len(accepted.Notifications) != 0 ||
+		accepted.HandlerState != goja.PromiseStateFulfilled || accepted.HandlerResult != nil {
 		return fmt.Errorf("accepted lifecycle behavior drifted")
 	}
 	return nil
@@ -210,10 +220,15 @@ func executeLifecycleModule(source, eventName string, accepted bool, execResult 
 			panic(runtime.NewTypeError(err.Error()))
 		}
 		observation.ExecCalls = append(observation.ExecCalls, lifecycleExecCall{Binary: call.Argument(0).String(), Argv: argv, Options: options})
+		promise, resolve, reject := runtime.NewPromise()
 		if execResult.Err != nil {
-			panic(runtime.NewGoError(execResult.Err))
+			if err := reject(runtime.NewGoError(execResult.Err)); err != nil {
+				panic(runtime.NewGoError(err))
+			}
+		} else if err := resolve(map[string]any{"code": execResult.Code, "stdout": execResult.Stdout}); err != nil {
+			panic(runtime.NewGoError(err))
 		}
-		return runtime.ToValue(map[string]any{"code": execResult.Code, "stdout": execResult.Stdout})
+		return runtime.ToValue(promise)
 	}); err != nil {
 		return lifecycleModuleObservation{}, err
 	}
@@ -261,8 +276,22 @@ func executeLifecycleModule(source, eventName string, accepted bool, execResult 
 		return lifecycleModuleObservation{}, err
 	}
 	event := runtime.ToValue(map[string]any{"accepted": accepted})
-	if _, err := handler(goja.Undefined(), event, ctx); err != nil {
+	returned, err := handler(goja.Undefined(), event, ctx)
+	if err != nil {
 		return lifecycleModuleObservation{}, fmt.Errorf("invoke %s: %w", eventName, err)
+	}
+	if _, err := runtime.RunString("void 0"); err != nil {
+		return lifecycleModuleObservation{}, fmt.Errorf("drain %s jobs: %w", eventName, err)
+	}
+	if returned != nil && !goja.IsUndefined(returned) {
+		promise, ok := returned.Export().(*goja.Promise)
+		if !ok {
+			return lifecycleModuleObservation{}, fmt.Errorf("%s handler did not return a promise", eventName)
+		}
+		observation.HandlerState = promise.State()
+		if result := promise.Result(); result != nil && !goja.IsUndefined(result) {
+			observation.HandlerResult = result.Export()
+		}
 	}
 	return observation, nil
 }

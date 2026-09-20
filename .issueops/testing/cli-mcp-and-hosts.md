@@ -51,7 +51,9 @@ ISSUEOPS_TOOL_CONFORMANCE_LIVE=1 ./bin/issueops contract conformance live \
   --json
 ```
 
-Live report schema v2는 H0 status vocabulary를 그대로 사용한다. host evidence의 `installed`, `preflight_ready`, `mock_extension_verified`, `live_attempted`, `live_verified`, `status_reason`을 분리하며 completed live episode가 있을 때만 `status=supported`를 허용한다. 설치 및 deterministic mock만 확인했거나 명시 모델이 없어 episode를 시작하지 않았으면 `not-run`, executable/version preflight가 실패하면 `unavailable`이다. episode에는 context hook 관찰, host-neutral semantic MCP response digest, observed model, exit code, duration을 bounded/redacted evidence로 남긴다. Resume은 schema v2의 complete identity와 runtime evidence를 다시 검증한다. schema v1이나 runtime proof가 빠진 legacy-shaped v2를 additive migration하지 않고 fail-closed로 거부한다.
+Live report schema v2는 H0 status vocabulary를 그대로 사용한다. host evidence의 `installed`, `preflight_ready`, `mock_extension_verified`, `live_attempted`, `live_verified`, `status_reason`을 분리하며 completed live episode가 있을 때만 `status=supported`를 허용한다. 설치 및 deterministic mock만 확인했거나 명시 모델이 없어 episode를 시작하지 않았으면 `not-run`, executable/version preflight가 실패하면 `unavailable`이다. Codex와 Claude의 일반 live runner는 user-scope hook 설정을 읽지 않고, private episode 설정에 canonical `SessionStart` command를 직접 설치한다. 이 경로는 child smoke 활성화 여부와 무관하게 context marker, native JSONL의 전체 tool count, target MCP result를 함께 수집한다. Codex private home에는 auth 외의 user state를 투영하지 않고 Claude는 `--setting-sources ""`와 private `--settings`를 사용한다.
+
+Fresh와 resume completed episode는 같은 validator를 통과해야 한다. 현재 host/version, requested model/profile, fixture/schema, attempt와 observed model이 일치하고, duration이 양수이며, `SessionStart=true`, `PreToolUse=false`, 전체 tool count와 target count가 각각 정확히 1이어야 한다. 또한 semantic response SHA-256, exit 0, evidence/raw/diagnostic digest, canonical arguments, diagnostics, failure-cause projection이 모두 유효해야 한다. Fresh 결과가 이 계약을 위반하면 incomplete `probe_result_invalid`로 바뀌며 `supported`나 `live_verified`를 만들 수 없다. Resume은 `(host, fixture, attempt)` 중복, evidence ID 중복, target보다 많은 completed episode, HostReport counter/status/evidence/ObservedModel 불일치를 fresh call 전에 거부한다. schema v1이나 runtime proof가 빠진 legacy-shaped v2를 additive migration하지 않고 fail-closed로 거부한다.
 
 환경 실패율 5%는 조사 warning일 뿐 pass/fail threshold가 아니다. context-pressure profile과 10/20 reproduction batch는 clean initial matrix와 denominator를 합치지 않고 별도 승인·비용 경계로 실행한다. evidence는 `.issueops/evidence/tool-conformance/`에 mode 0600/0700으로 저장하고 git에 추가하지 않는다.
 
@@ -70,8 +72,13 @@ user-level skill 파일 존재, Codex/Claude MCP registration, Omo
 The deterministic battery does not require the external Omo runtime: it checks
 installed Omo skill paths, exact MCP semantics, exact generated extension
 bytes, and executes that generated JavaScript module against a mock pi with a
-test-only pure-Go runtime. Mutation cases pin accepted-event filtering, exact
-hook argv, public `pi.sendMessage`, `display:false`, and `triggerTurn:false`.
+test-only pure-Go runtime. Production preflight proves that the supplied module
+is byte-for-byte the canonical module generated for the exact harness binary;
+it does not claim that JavaScript ran. Test proof drives fulfilled and rejected
+`pi.exec` promises, waits for the returned handler promise to settle, and pins
+rejection handling. Mutation cases pin accepted-event filtering, exact hook
+argv, awaited execution, public `pi.sendMessage`, `display:false`, and
+`triggerTurn:false`.
 This keeps issueops independently verifiable without Node, Omo, an account, a
 provider, Orca, companion tools, or network access.
 

@@ -97,7 +97,7 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 			hostReport.ObservedModel = preflight.ObservedModel
 		}
 		if preflight.Ready {
-			previousHost, err := resumableHostReport(request.Previous, host, hostReport.RequestedModel, preflight.Version)
+			previousHost, err := resumableHostReport(request.Previous, host, hostReport.RequestedModel, preflight.Version, request.Profile, fixtures, selected, request.TargetCompleted)
 			if err != nil {
 				return BenchmarkReport{}, err
 			}
@@ -107,11 +107,11 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 					if !selectedPair || episode.Status != EpisodeCompleted {
 						continue
 					}
-					expectation := resumedEpisodeExpectation{
+					expectation := completedEpisodeExpectation{
 						Host: host, HostVersion: preflight.Version, RequestedModel: hostReport.RequestedModel,
-						ObservedModel: previousHost.ObservedModel, Profile: request.Profile, Fixture: fixture,
+						Profile: request.Profile, Fixture: fixture, Attempt: episode.Attempt,
 					}
-					if !validResumedEpisode(episode, expectation) {
+					if !validCompletedEpisode(episode, expectation) {
 						return BenchmarkReport{}, fmt.Errorf("invalid_previous_episode_evidence")
 					}
 					if seenEvidenceIDs[episode.EvidenceID] {
@@ -150,6 +150,7 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 				prompt, _ := BuildEpisodePrompt(fixture, request.Profile)
 				runResult := runner.Run(ctx, port.HostProbeRequest{
 					HarnessBinary:         request.HarnessBinary,
+					HostVersion:           preflight.Version,
 					FixtureID:             fixture.ID,
 					ProbeTool:             fixture.ProbeTool,
 					SourceTool:            fixture.SourceTool,
@@ -162,11 +163,12 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 					RunToken:              deps.Token(),
 				})
 				episode := classifyHostResult(runResult, fixture)
-				if episode.HostVersion == "" {
-					episode.HostVersion = preflight.Version
+				expectation := completedEpisodeExpectation{
+					Host: host, HostVersion: preflight.Version, RequestedModel: hostReport.RequestedModel,
+					Profile: request.Profile, Fixture: fixture, Attempt: attempt,
 				}
-				if episode.ObservedModel == "" {
-					episode.ObservedModel = hostReport.ObservedModel
+				if episode.Status == EpisodeCompleted && !validCompletedEpisode(episode, expectation) {
+					episode = incompleteEpisode(host, preflight.Version, fixture, request.Profile, hostReport.RequestedModel, attempt, "transport", "probe_result_invalid", host+"_runner")
 				}
 				if episode.Status == EpisodeCompleted {
 					if seenEvidenceIDs[episode.EvidenceID] {
@@ -319,7 +321,7 @@ func classifyHostResult(result port.HostProbeResult, fixture Fixture) EpisodeRep
 		HostVersion:          result.HostVersion,
 		RequestedModel:       result.RequestedModel,
 		ObservedModel:        result.ObservedModel,
-		FixtureID:            fixture.ID,
+		FixtureID:            result.FixtureID,
 		SchemaSHA256:         result.SchemaSHA256,
 		Profile:              result.Profile,
 		Attempt:              result.Attempt,
@@ -365,26 +367,24 @@ func validEvidenceID(value string) bool {
 	return err == nil
 }
 
-type resumedEpisodeExpectation struct {
+type completedEpisodeExpectation struct {
 	Host           string
 	HostVersion    string
 	RequestedModel string
-	ObservedModel  string
 	Profile        string
 	Fixture        Fixture
+	Attempt        int
 }
 
-func validResumedEpisode(episode EpisodeReport, expected resumedEpisodeExpectation) bool {
+func validCompletedEpisode(episode EpisodeReport, expected completedEpisodeExpectation) bool {
 	if episode.Status != EpisodeCompleted || episode.Host != expected.Host || episode.HostVersion != expected.HostVersion ||
-		episode.RequestedModel != expected.RequestedModel || episode.ObservedModel != expected.ObservedModel || strings.TrimSpace(episode.ObservedModel) == "" ||
+		episode.RequestedModel != expected.RequestedModel || strings.TrimSpace(episode.ObservedModel) == "" || strings.TrimSpace(episode.ObservedModel) != episode.ObservedModel ||
+		len(episode.ObservedModel) > 256 || strings.ContainsAny(episode.ObservedModel, "\r\n") ||
 		episode.FixtureID != expected.Fixture.ID || episode.SchemaSHA256 != expected.Fixture.SchemaSHA256 ||
-		episode.Profile != expected.Profile || episode.Attempt < 1 {
+		episode.Profile != expected.Profile || episode.Attempt != expected.Attempt || episode.Attempt < 1 {
 		return false
 	}
-	if episode.DurationMS <= 0 || !episode.SessionStartObserved || episode.ExitCode != 0 || episode.AmbientToolCount != 1 || episode.CallCount != 1 {
-		return false
-	}
-	if episode.Host == "omo" && episode.PreToolUseObserved {
+	if episode.DurationMS <= 0 || !episode.SessionStartObserved || episode.PreToolUseObserved || episode.ExitCode != 0 || episode.AmbientToolCount != 1 || episode.CallCount != 1 {
 		return false
 	}
 	if !validEvidenceID(episode.EvidenceID) || !validEvidenceID(episode.RawArgumentsSHA256) || !validEvidenceID(episode.ResponseSHA256) || episode.CanonicalArguments == nil {
@@ -418,9 +418,6 @@ func validResumedEpisode(episode EpisodeReport, expected resumedEpisodeExpectati
 			cause = failurecausecontract.ContractInput
 		}
 		evidence = append(evidence, failurecausecontract.Evidence{Cause: cause, Code: string(episode.Classification), Source: "tool_conformance"})
-	}
-	if ClassifyFailureCause == nil {
-		return false
 	}
 	cause := ClassifyFailureCause(failed, evidence)
 	return episode.FailureCause == cause.Cause && episode.FailureCauseReason == cause.Reason && reflect.DeepEqual(episode.FailureCauseEvidence, cause.Evidence)
@@ -560,7 +557,7 @@ func countReport(report BenchmarkReport) BenchmarkCounts {
 	return counts
 }
 
-func resumableHostReport(previous *BenchmarkReport, host, requestedModel, hostVersion string) (*HostReport, error) {
+func resumableHostReport(previous *BenchmarkReport, host, requestedModel, hostVersion, profile string, fixtures []Fixture, selected []fixturePair, targetCompleted int) (*HostReport, error) {
 	if previous == nil {
 		return nil, nil
 	}
@@ -581,16 +578,66 @@ func resumableHostReport(previous *BenchmarkReport, host, requestedModel, hostVe
 	if matched.Version != hostVersion || matched.RequestedModel != requestedModel {
 		return nil, fmt.Errorf("invalid_previous_episode_evidence")
 	}
-	hasCompleted := false
-	for _, episode := range matched.Cases {
-		if episode.Status == EpisodeCompleted {
-			hasCompleted = true
-			break
-		}
-	}
-	if hasCompleted && (matched.Status != issueopscontract.StatusSupported || strings.TrimSpace(matched.ObservedModel) == "" ||
-		!matched.Evidence.Installed || !matched.Evidence.PreflightReady || !matched.Evidence.LiveAttempted || !matched.Evidence.LiveVerified) {
+	if matched.AttemptCount != len(matched.Cases) || matched.CompletedEpisodes != countCompleted(matched.Cases) || matched.AttemptCount < 0 || matched.CompletedEpisodes < 0 {
 		return nil, fmt.Errorf("invalid_previous_episode_evidence")
+	}
+	fixturesByID := make(map[string]Fixture, len(fixtures))
+	for _, fixture := range fixtures {
+		fixturesByID[fixture.ID] = fixture
+	}
+	seenIdentities := map[string]bool{}
+	seenEvidence := map[string]bool{}
+	observedModel := ""
+	for _, episode := range matched.Cases {
+		identity := episode.Host + "\x00" + episode.FixtureID + "\x00" + fmt.Sprint(episode.Attempt)
+		if seenIdentities[identity] {
+			return nil, fmt.Errorf("duplicate_previous_episode_identity")
+		}
+		seenIdentities[identity] = true
+		fixture, knownFixture := fixturesByID[episode.FixtureID]
+		if episode.Host != host || episode.HostVersion != hostVersion || episode.RequestedModel != requestedModel || episode.Profile != profile ||
+			!knownFixture || episode.SchemaSHA256 != fixture.SchemaSHA256 || episode.Attempt < 1 ||
+			(episode.Status != EpisodeCompleted && episode.Status != EpisodeIncomplete) {
+			return nil, fmt.Errorf("invalid_previous_episode_evidence")
+		}
+		if episode.ObservedModel != "" {
+			if strings.TrimSpace(episode.ObservedModel) != episode.ObservedModel || len(episode.ObservedModel) > 256 || strings.ContainsAny(episode.ObservedModel, "\r\n") ||
+				(observedModel != "" && episode.ObservedModel != observedModel) {
+				return nil, fmt.Errorf("invalid_previous_episode_evidence")
+			}
+			observedModel = episode.ObservedModel
+		}
+		if episode.Status != EpisodeCompleted {
+			continue
+		}
+		if !validCompletedEpisode(episode, completedEpisodeExpectation{
+			Host: host, HostVersion: hostVersion, RequestedModel: requestedModel,
+			Profile: profile, Fixture: fixture, Attempt: episode.Attempt,
+		}) || episode.ObservedModel != matched.ObservedModel {
+			return nil, fmt.Errorf("invalid_previous_episode_evidence")
+		}
+		if seenEvidence[episode.EvidenceID] {
+			return nil, fmt.Errorf("duplicate_previous_episode_evidence")
+		}
+		seenEvidence[episode.EvidenceID] = true
+	}
+	hasCompleted := matched.CompletedEpisodes > 0
+	hasLiveAttempts := len(matched.Cases) > 0
+	if !matched.Evidence.Installed || !matched.Evidence.PreflightReady || matched.Evidence.LiveAttempted != hasLiveAttempts ||
+		matched.Evidence.LiveVerified != hasCompleted || !hasLiveAttempts || matched.ObservedModel != observedModel {
+		return nil, fmt.Errorf("invalid_previous_episode_evidence")
+	}
+	if hasCompleted {
+		if matched.Status != issueopscontract.StatusSupported || strings.TrimSpace(matched.ObservedModel) == "" || matched.Evidence.StatusReason != "" {
+			return nil, fmt.Errorf("invalid_previous_episode_evidence")
+		}
+	} else if matched.Status != issueopscontract.StatusUnavailable || matched.Evidence.StatusReason != "live_probe_incomplete" {
+		return nil, fmt.Errorf("invalid_previous_episode_evidence")
+	}
+	for _, pair := range selected {
+		if pair.Host == host && completedForFixture(matched.Cases, pair.Fixture.ID) > targetCompleted {
+			return nil, fmt.Errorf("invalid_previous_episode_evidence")
+		}
 	}
 	return matched, nil
 }

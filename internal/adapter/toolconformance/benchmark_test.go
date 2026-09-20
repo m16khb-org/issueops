@@ -21,6 +21,7 @@ type fakeProbeRunner struct {
 	failCode  string
 	calls     map[string]int
 	preflight *port.HostProbePreflight
+	mutate    func(*port.HostProbeResult)
 }
 
 func (f *fakeProbeRunner) Name() string { return f.host }
@@ -29,7 +30,7 @@ func (f *fakeProbeRunner) Preflight(context.Context, port.HostProbeRequest) port
 	if f.preflight != nil {
 		return *f.preflight
 	}
-	return port.HostProbePreflight{Ready: true, Installed: true, Host: f.host, Version: f.host + "-1", RequestedModel: "default", ObservedModel: "default"}
+	return port.HostProbePreflight{Ready: true, Installed: true, Host: f.host, Version: f.host + "-1", RequestedModel: "default"}
 }
 
 func (f *fakeProbeRunner) Run(_ context.Context, request port.HostProbeRequest) port.HostProbeResult {
@@ -39,7 +40,7 @@ func (f *fakeProbeRunner) Run(_ context.Context, request port.HostProbeRequest) 
 	index := f.calls[request.FixtureID]
 	f.calls[request.FixtureID]++
 	if f.failCode != "" {
-		return port.HostProbeResult{Host: f.host, HostVersion: f.host + "-1", RequestedModel: request.Model, ObservedModel: request.Model, FixtureID: request.FixtureID, Profile: request.Profile, Attempt: request.Attempt, Cause: "transport", Code: f.failCode, EvidenceSource: f.host + "_runner"}
+		return port.HostProbeResult{Host: f.host, HostVersion: request.HostVersion, RequestedModel: request.Model, ObservedModel: request.Model, FixtureID: request.FixtureID, Profile: request.Profile, Attempt: request.Attempt, Cause: "transport", Code: f.failCode, EvidenceSource: f.host + "_runner"}
 	}
 	arguments := f.fixtures[request.FixtureID].ExpectedArguments
 	if values := f.responses[request.FixtureID]; index < len(values) {
@@ -57,10 +58,10 @@ func (f *fakeProbeRunner) Run(_ context.Context, request port.HostProbeRequest) 
 		diagnostics = []core.Diagnostic{{Path: "/requireUnique", Code: core.UnknownKey, Expected: "declared property", Actual: "boolean"}}
 	}
 	diagnosticsJSON, _ := json.Marshal(diagnostics)
-	return port.HostProbeResult{
+	result := port.HostProbeResult{
 		Completed:              true,
 		Host:                   f.host,
-		HostVersion:            f.host + "-1",
+		HostVersion:            request.HostVersion,
 		RequestedModel:         request.Model,
 		ObservedModel:          request.Model,
 		FixtureID:              request.FixtureID,
@@ -69,7 +70,7 @@ func (f *fakeProbeRunner) Run(_ context.Context, request port.HostProbeRequest) 
 		Attempt:                request.Attempt,
 		DurationMS:             1,
 		SessionStartObserved:   true,
-		PreToolUseObserved:     true,
+		PreToolUseObserved:     false,
 		AmbientToolCount:       1,
 		CallCount:              1,
 		ResponseSHA256:         fmt.Sprintf("%x", sha256.Sum256([]byte("response"))),
@@ -82,6 +83,10 @@ func (f *fakeProbeRunner) Run(_ context.Context, request port.HostProbeRequest) 
 		CanonicalValid:         canonicalValid,
 		DiagnosticsJSON:        string(diagnosticsJSON),
 	}
+	if f.mutate != nil {
+		f.mutate(&result)
+	}
+	return result
 }
 
 func TestLiveReportSeparatesInstalledMockAndLiveEvidence(t *testing.T) {
@@ -108,9 +113,76 @@ func TestLiveReportSeparatesInstalledMockAndLiveEvidence(t *testing.T) {
 		t.Fatalf("host evidence = %+v status=%q", host.Evidence, host.Status)
 	}
 	episode := host.Cases[0]
-	if !episode.SessionStartObserved || !episode.PreToolUseObserved || episode.ResponseSHA256 == "" || episode.ExitCode != 0 || episode.DurationMS != 1 {
+	if !episode.SessionStartObserved || episode.PreToolUseObserved || episode.ResponseSHA256 == "" || episode.ExitCode != 0 || episode.DurationMS != 1 {
 		t.Fatalf("episode runtime evidence = %+v", episode)
 	}
+}
+
+func TestLiveReportValidatesFreshCompletedEvidenceForEveryHost(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	for _, host := range []string{"codex", "claude", "omo"} {
+		t.Run(host+" good", func(t *testing.T) {
+			runner := &fakeProbeRunner{host: host, fixtures: fixtures, responses: map[string][]map[string]any{}}
+			report, err := runSingleFreshEpisode(t, host, runner)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := report.Hosts[0]
+			if got.Status != issueopscontract.StatusSupported || !got.Evidence.LiveVerified || got.CompletedEpisodes != 1 {
+				t.Fatalf("host report = %+v", got)
+			}
+		})
+
+		for _, invalid := range []struct {
+			name   string
+			mutate func(*port.HostProbeResult)
+		}{
+			{name: "host", mutate: func(result *port.HostProbeResult) { result.Host = "other" }},
+			{name: "version", mutate: func(result *port.HostProbeResult) { result.HostVersion = "stale" }},
+			{name: "requested model", mutate: func(result *port.HostProbeResult) { result.RequestedModel = "other-model" }},
+			{name: "observed model", mutate: func(result *port.HostProbeResult) { result.ObservedModel = "" }},
+			{name: "fixture", mutate: func(result *port.HostProbeResult) { result.FixtureID = "other" }},
+			{name: "schema", mutate: func(result *port.HostProbeResult) { result.SchemaSHA256 = strings.Repeat("b", 64) }},
+			{name: "profile", mutate: func(result *port.HostProbeResult) { result.Profile = "context-pressure" }},
+			{name: "attempt", mutate: func(result *port.HostProbeResult) { result.Attempt++ }},
+			{name: "duration", mutate: func(result *port.HostProbeResult) { result.DurationMS = 0 }},
+			{name: "context", mutate: func(result *port.HostProbeResult) { result.SessionStartObserved = false }},
+			{name: "unsupported pre tool claim", mutate: func(result *port.HostProbeResult) { result.PreToolUseObserved = true }},
+			{name: "ambient count", mutate: func(result *port.HostProbeResult) { result.AmbientToolCount = 2 }},
+			{name: "target count", mutate: func(result *port.HostProbeResult) { result.CallCount = 2 }},
+			{name: "response digest", mutate: func(result *port.HostProbeResult) { result.ResponseSHA256 = "bad" }},
+			{name: "exit", mutate: func(result *port.HostProbeResult) { result.ExitCode = 7 }},
+			{name: "raw digest", mutate: func(result *port.HostProbeResult) { result.RawArgumentsSHA256 = "bad" }},
+			{name: "evidence id", mutate: func(result *port.HostProbeResult) { result.EvidenceID = "bad" }},
+			{name: "canonical arguments", mutate: func(result *port.HostProbeResult) { result.CanonicalArgumentsJSON = "null" }},
+			{name: "diagnostics", mutate: func(result *port.HostProbeResult) {
+				result.DiagnosticsJSON = `[{"path":"/x","code":"","expected":"","actual":""}]`
+			}},
+		} {
+			t.Run(host+" bad "+invalid.name, func(t *testing.T) {
+				runner := &fakeProbeRunner{host: host, fixtures: fixtures, responses: map[string][]map[string]any{}, mutate: invalid.mutate}
+				report, err := runSingleFreshEpisode(t, host, runner)
+				if err != nil {
+					t.Fatal(err)
+				}
+				got := report.Hosts[0]
+				if got.Status == issueopscontract.StatusSupported || got.Evidence.LiveVerified || got.CompletedEpisodes != 0 || len(got.Cases) != 1 || got.Cases[0].Status != core.EpisodeIncomplete {
+					t.Fatalf("invalid fresh evidence was promoted: %+v", got)
+				}
+			})
+		}
+	}
+}
+
+func runSingleFreshEpisode(t *testing.T, host string, runner port.HostProbeRunner) (core.BenchmarkReport, error) {
+	t.Helper()
+	models := map[string]string{host: "model-a"}
+	return core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{host}, Models: models, Profile: "clean", Only: host + ":empty_object",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: host + "-fresh",
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{
+		Runners: map[string]port.HostProbeRunner{host: runner}, Token: func() string { return host + "-token" },
+	})
 }
 
 func TestLiveReportKeepsInstalledOmoWithoutEpisodeNotRun(t *testing.T) {
@@ -339,6 +411,130 @@ func TestLiveGateRejectsLegacyShapedAndIdentityDriftedSchemaV2Episodes(t *testin
 			}
 		})
 	}
+}
+
+func TestLiveGateRejectsDuplicateEpisodeIdentityWithDifferentEvidenceIDs(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	previous := certifiedPreviousReport(t, fixtures)
+	copy := previous.Hosts[0].Cases[0]
+	copy.EvidenceID = fmt.Sprintf("%x", sha256.Sum256([]byte("different-evidence")))
+	previous.Hosts[0].Cases = append(previous.Hosts[0].Cases, copy)
+	previous.Hosts[0].AttemptCount = 2
+	previous.Hosts[0].CompletedEpisodes = 2
+
+	runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	_, err := resumeCertifiedReport(t, previous, runner)
+	if err == nil {
+		t.Fatal("duplicate (host, fixture, attempt) identity was accepted")
+	}
+	if runner.calls["empty_object"] != 0 {
+		t.Fatalf("duplicate identity triggered %d fresh calls", runner.calls["empty_object"])
+	}
+}
+
+func TestLiveGateRejectsInconsistentPreviousHostSummary(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	baseline := certifiedPreviousReport(t, fixtures)
+	tests := []struct {
+		name   string
+		mutate func(*core.HostReport)
+	}{
+		{name: "attempt count", mutate: func(host *core.HostReport) { host.AttemptCount = 0 }},
+		{name: "completed count", mutate: func(host *core.HostReport) { host.CompletedEpisodes = 0 }},
+		{name: "status", mutate: func(host *core.HostReport) { host.Status = issueopscontract.StatusNotRun }},
+		{name: "live attempted", mutate: func(host *core.HostReport) { host.Evidence.LiveAttempted = false }},
+		{name: "live verified", mutate: func(host *core.HostReport) { host.Evidence.LiveVerified = false }},
+		{name: "status reason", mutate: func(host *core.HostReport) { host.Evidence.StatusReason = "stale" }},
+		{name: "observed model", mutate: func(host *core.HostReport) { host.ObservedModel = "other-model" }},
+		{name: "episode observed model", mutate: func(host *core.HostReport) { host.Cases[0].ObservedModel = "other-model" }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			previous := cloneBenchmarkReport(t, baseline)
+			test.mutate(&previous.Hosts[0])
+			runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+			_, err := resumeCertifiedReport(t, previous, runner)
+			if err == nil {
+				t.Fatal("inconsistent previous host summary was accepted")
+			}
+			if runner.calls["empty_object"] != 0 {
+				t.Fatalf("invalid summary triggered %d fresh calls", runner.calls["empty_object"])
+			}
+		})
+	}
+}
+
+func TestLiveGateRejectsInconsistentIncompletePreviousHostSummary(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	failedRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, failCode: "host_process_failed"}
+	baseline, err := core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "failed",
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{
+		Runners: map[string]port.HostProbeRunner{"codex": failedRunner}, Token: func() string { return "failed-token" },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if baseline.Hosts[0].CompletedEpisodes != 0 || baseline.Hosts[0].Status != issueopscontract.StatusUnavailable {
+		t.Fatalf("failed baseline = %+v", baseline.Hosts[0])
+	}
+	tests := []struct {
+		name   string
+		mutate func(*core.HostReport)
+	}{
+		{name: "installed", mutate: func(host *core.HostReport) { host.Evidence.Installed = false }},
+		{name: "preflight ready", mutate: func(host *core.HostReport) { host.Evidence.PreflightReady = false }},
+		{name: "live attempted", mutate: func(host *core.HostReport) { host.Evidence.LiveAttempted = false }},
+		{name: "live verified", mutate: func(host *core.HostReport) { host.Evidence.LiveVerified = true }},
+		{name: "status", mutate: func(host *core.HostReport) { host.Status = issueopscontract.StatusSupported }},
+		{name: "status reason", mutate: func(host *core.HostReport) { host.Evidence.StatusReason = "" }},
+		{name: "observed model", mutate: func(host *core.HostReport) { host.ObservedModel = "other-model" }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			previous := cloneBenchmarkReport(t, baseline)
+			test.mutate(&previous.Hosts[0])
+			runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+			_, err := resumeCertifiedReport(t, previous, runner)
+			if err == nil {
+				t.Fatal("inconsistent incomplete previous host summary was accepted")
+			}
+			if runner.calls["empty_object"] != 0 {
+				t.Fatalf("invalid incomplete summary triggered %d fresh calls", runner.calls["empty_object"])
+			}
+		})
+	}
+}
+
+func TestLiveGateRejectsExtraCompletedEpisodesBeyondCurrentTarget(t *testing.T) {
+	fixtures := benchmarkFixtures(t)
+	previous := certifiedPreviousReport(t, fixtures)
+	extra := previous.Hosts[0].Cases[0]
+	extra.Attempt = 2
+	extra.EvidenceID = fmt.Sprintf("%x", sha256.Sum256([]byte("extra-completed")))
+	previous.Hosts[0].Cases = append(previous.Hosts[0].Cases, extra)
+	previous.Hosts[0].AttemptCount = 2
+	previous.Hosts[0].CompletedEpisodes = 2
+
+	runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
+	_, err := resumeCertifiedReport(t, previous, runner)
+	if err == nil {
+		t.Fatal("extra completed evidence beyond the requested target was accepted")
+	}
+	if runner.calls["empty_object"] != 0 {
+		t.Fatalf("extra completed evidence triggered %d fresh calls", runner.calls["empty_object"])
+	}
+}
+
+func resumeCertifiedReport(t *testing.T, previous core.BenchmarkReport, runner port.HostProbeRunner) (core.BenchmarkReport, error) {
+	t.Helper()
+	return core.RunLiveBenchmark(context.Background(), core.LiveBenchmarkRequest{
+		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
+		TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "resumed-invalid", Previous: &previous,
+	}, catalogDescriptors(), core.LiveBenchmarkDependencies{
+		Runners: map[string]port.HostProbeRunner{"codex": runner}, Token: func() string { return "new-token" },
+	})
 }
 
 func certifiedPreviousReport(t *testing.T, fixtures map[string]core.Fixture) core.BenchmarkReport {

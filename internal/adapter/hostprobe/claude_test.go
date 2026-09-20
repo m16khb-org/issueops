@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"issueops/internal/adapter/toolconformance"
 	"issueops/internal/port"
@@ -103,7 +104,8 @@ func TestClaudeRunnerRunUsesOnePrivateProbeConfig(t *testing.T) {
 			if command.Timeout != EpisodeTimeout {
 				t.Fatalf("timeout=%s want %s", command.Timeout, EpisodeTimeout)
 			}
-			if !reflect.DeepEqual(command.Env, []string{"HOME=/private/home", "PATH=/test/bin", "USER=tester"}) {
+			observationPath := environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
+			if !reflect.DeepEqual(command.Env, []string{"HOME=/private/home", "ISSUEOPS_CHILD_SMOKE_HOOKS=1", "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE=" + observationPath, "PATH=/test/bin", "USER=tester"}) {
 				t.Fatalf("env=%q want isolated host env", command.Env)
 			}
 			rootInfo, err := os.Stat(episodeRoot)
@@ -153,13 +155,15 @@ func TestClaudeRunnerRunUsesOnePrivateProbeConfig(t *testing.T) {
 				"--output-format", "stream-json", "--strict-mcp-config", "--mcp-config", configPath,
 				"--no-session-persistence", "--permission-mode", "dontAsk", "--tools", "",
 				"--allowedTools=mcp__issueops_probe__" + request.ProbeTool,
+				"--settings", filepath.Join(episodeRoot, "hooks.settings.json"), "--include-hook-events",
 				"--model", request.Model, request.Prompt,
 			}
 			if !reflect.DeepEqual(command.Argv, wantArgv) {
 				t.Fatalf("argv=%q want %q", command.Argv, wantArgv)
 			}
 			writeClaudeCapture(t, resultPath, request.RunToken)
-			return CommandOutput{Stdout: []byte(request.Prompt), Stderr: []byte("credential-value")}, nil
+			writeChildSmokeHookMarkers(t, observationPath, request.Model)
+			return CommandOutput{Stdout: claudeSuccessfulStream(request.Model, request.ProbeTool), Stderr: []byte("credential-value")}, nil
 		}},
 	})
 
@@ -184,6 +188,99 @@ func TestClaudeRunnerRunUsesOnePrivateProbeConfig(t *testing.T) {
 	}
 }
 
+func TestClaudeRunnerNormalLiveCollectsCanonicalRuntimeEvidenceWithoutActivatedHooks(t *testing.T) {
+	rootParent := t.TempDir()
+	episodeRoot := filepath.Join(rootParent, "episode")
+	request := claudeProbeRequest()
+	request.HostVersion = "claude 2.1.272"
+	now := time.Unix(100, 0)
+	runner := NewClaudeRunner("issueops", Dependencies{
+		TempDir: func(_, _ string) (string, error) {
+			if err := os.Mkdir(episodeRoot, 0o700); err != nil {
+				return "", err
+			}
+			return episodeRoot, nil
+		},
+		LookPath: func(string) (string, error) { return "/test/bin/claude", nil },
+		Environ:  func() []string { return []string{"PATH=/test/bin", "SECRET=redacted"} },
+		Now: func() time.Time {
+			now = now.Add(25 * time.Millisecond)
+			return now
+		},
+		Process: claudeCommandRunner{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+			if got := argumentValue(t, command.Argv, "--setting-sources"); got != "" {
+				t.Fatalf("setting sources = %q", got)
+			}
+			settingsPath := argumentValue(t, command.Argv, "--settings")
+			observationPath := environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
+			assertProjectedCodexSmokeHooks(t, settingsPath, observationPath, func() string {
+				absolute, err := filepath.Abs("issueops")
+				if err != nil {
+					t.Fatal(err)
+				}
+				return absolute
+			}(), "claude")
+			if !containsArgument(command.Argv, "--include-hook-events") {
+				t.Fatalf("Claude live argv omitted hook events: %q", command.Argv)
+			}
+			writeClaudeCapture(t, filepath.Join(command.Cwd, "result.json"), request.RunToken)
+			writeChildSmokeHookMarkers(t, observationPath, request.Model)
+			stream := strings.Join([]string{
+				`{"type":"system","subtype":"init","model":"claude-opus-4-6"}`,
+				`{"type":"assistant","message":{"content":[{"type":"tool_use","id":"target","name":"mcp__issueops_probe__issueops_web_fetch_resilient","input":{}}]}}`,
+				`{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"target","content":"captured"}]},"tool_use_result":{"content":"captured"}}`,
+			}, "\n") + "\n"
+			return CommandOutput{Stdout: []byte(stream), ExitCode: 0}, nil
+		}},
+	})
+
+	got := runner.Run(context.Background(), request)
+	if !got.Completed || got.HostVersion != request.HostVersion || got.ObservedModel != request.Model || got.DurationMS != 25 ||
+		!got.SessionStartObserved || got.PreToolUseObserved || got.AmbientToolCount != 1 || got.CallCount != 1 || !validSHA256(got.ResponseSHA256) || got.ExitCode != 0 {
+		t.Fatalf("normal live result = %+v", got)
+	}
+}
+
+func TestClaudeRunnerCleanupFailureSuppressesSuccessfulEpisode(t *testing.T) {
+	parent := t.TempDir()
+	root := filepath.Join(parent, "episode")
+	request := claudeProbeRequest()
+	request.HostVersion = "claude 2.1.272"
+	runner := NewClaudeRunner("issueops", Dependencies{
+		TempDir: func(_, _ string) (string, error) {
+			if err := os.Mkdir(root, 0o700); err != nil {
+				return "", err
+			}
+			return root, nil
+		},
+		LookPath: func(string) (string, error) { return filepath.Join(parent, "claude"), nil },
+		RemoveAll: func(path string) error {
+			if path != root {
+				t.Fatalf("cleanup path = %q", path)
+			}
+			return errors.New("sensitive cleanup detail")
+		},
+		Process: claudeCommandRunner{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+			writeClaudeCapture(t, filepath.Join(command.Cwd, "result.json"), request.RunToken)
+			writeChildSmokeHookMarkers(t, environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"), request.Model)
+			return CommandOutput{Stdout: claudeSuccessfulStream(request.Model, request.ProbeTool)}, nil
+		}},
+		Now: func() time.Time { return time.Unix(100, 0) },
+	})
+
+	got := runner.Run(context.Background(), request)
+	if got.Completed || got.Code != "private_root_cleanup_failed" || got.Cause != "harness_environment" || got.EvidenceSource != "claude_runner" {
+		t.Fatalf("cleanup result = %+v", got)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), root) || strings.Contains(string(encoded), "sensitive cleanup detail") {
+		t.Fatalf("cleanup result leaked private details: %s", encoded)
+	}
+}
+
 func TestClaudeRunnerRunDefaultModelOmitsModelFlag(t *testing.T) {
 	episodeRoot := filepath.Join(t.TempDir(), "episode")
 	request := claudeProbeRequest()
@@ -203,7 +300,9 @@ func TestClaudeRunnerRunDefaultModelOmitsModelFlag(t *testing.T) {
 				}
 			}
 			writeClaudeCapture(t, filepath.Join(episodeRoot, "result.json"), request.RunToken)
-			return CommandOutput{}, nil
+			observationPath := environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
+			writeChildSmokeHookMarkers(t, observationPath, "claude-default")
+			return CommandOutput{Stdout: claudeSuccessfulStream("claude-default", request.ProbeTool)}, nil
 		}},
 	})
 
@@ -269,7 +368,7 @@ func TestClaudeRunnerPreflightUsesClaudeExecutable(t *testing.T) {
 
 func TestNewClaudeRunnerNormalizesDependencies(t *testing.T) {
 	runner := NewClaudeRunner("issueops", Dependencies{})
-	if runner.deps.Process == nil || runner.deps.LookPath == nil || runner.deps.Now == nil || runner.deps.TempDir == nil || runner.deps.Getenv == nil || runner.deps.Environ == nil {
+	if runner.deps.Process == nil || runner.deps.LookPath == nil || runner.deps.Now == nil || runner.deps.TempDir == nil || runner.deps.RemoveAll == nil || runner.deps.Getenv == nil || runner.deps.Environ == nil {
 		t.Fatalf("dependencies were not normalized: %#v", runner.deps)
 	}
 	if runner.harnessBinary != "issueops" {
@@ -278,3 +377,11 @@ func TestNewClaudeRunnerNormalizesDependencies(t *testing.T) {
 }
 
 var _ port.HostProbeRunner = ClaudeRunner{}
+
+func claudeSuccessfulStream(model, probeTool string) []byte {
+	return []byte(strings.Join([]string{
+		`{"type":"system","subtype":"init","model":` + jsonString(model) + `}`,
+		`{"type":"assistant","message":{"content":[{"type":"tool_use","id":"target","name":"mcp__issueops_probe__` + probeTool + `","input":{}}]}}`,
+		`{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"target","content":"captured"}]},"tool_use_result":{"content":"captured"}}`,
+	}, "\n") + "\n")
+}

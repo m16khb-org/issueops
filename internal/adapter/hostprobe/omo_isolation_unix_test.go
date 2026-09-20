@@ -53,7 +53,7 @@ func TestOmoRunnerKeepsVersionAndEpisodeWritesInsidePrivateHomes(t *testing.T) {
 	tempParent := t.TempDir()
 	roots := []string{filepath.Join(tempParent, "preflight"), filepath.Join(tempParent, "episode")}
 	nextRoot := 0
-	runner := NewOmoRunner(harness, omoTestLifecycleExtension(), Dependencies{
+	runner := NewOmoRunner(harness, omoTestLifecycleExtension(harness), Dependencies{
 		Process: ExecRunner{},
 		LookPath: func(name string) (string, error) {
 			if name != "omo" {
@@ -104,6 +104,31 @@ func TestOmoRunnerKeepsVersionAndEpisodeWritesInsidePrivateHomes(t *testing.T) {
 				t.Fatalf("original HOME retained %q artifact: %s", forbidden, entry.Path)
 			}
 		}
+	}
+}
+
+func TestResolveOmoAuthRejectsSymlinkToRegularAuthFile(t *testing.T) {
+	home := t.TempDir()
+	agentDir := filepath.Join(home, ".omo", "agent")
+	if err := os.MkdirAll(agentDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(home, "real-auth.json")
+	if err := os.WriteFile(target, []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, filepath.Join(agentDir, "auth.json")); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := resolveOmoAuth(normalizeDependencies(Dependencies{Getenv: func(name string) string {
+		if name == "HOME" {
+			return home
+		}
+		return ""
+	}}))
+	if err == nil {
+		t.Fatal("symlinked auth file was accepted")
 	}
 }
 

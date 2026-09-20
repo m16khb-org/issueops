@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode"
 
+	"issueops/internal/domain/omolifecycle"
 	"issueops/internal/port"
 )
 
@@ -60,22 +61,6 @@ type omoToolExecution struct {
 	ended bool
 }
 
-type omoLifecycleContract struct {
-	SchemaVersion int                         `json:"schema_version"`
-	Events        map[string]omoLifecycleRule `json:"events"`
-	Message       struct {
-		CustomType  string `json:"custom_type"`
-		Display     bool   `json:"display"`
-		TriggerTurn bool   `json:"trigger_turn"`
-	} `json:"message"`
-	Warning string `json:"warning"`
-}
-
-type omoLifecycleRule struct {
-	Subcommand   string `json:"subcommand"`
-	AcceptedOnly bool   `json:"accepted_only"`
-}
-
 type omoAuthSnapshot struct {
 	present bool
 	data    []byte
@@ -91,8 +76,8 @@ func NewOmoRunner(harnessBinary, lifecycleExtension string, deps Dependencies) O
 
 func (OmoRunner) Name() string { return "omo" }
 
-func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest) port.HostProbePreflight {
-	result := port.HostProbePreflight{
+func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest) (result port.HostProbePreflight) {
+	result = port.HostProbePreflight{
 		Host:           r.Name(),
 		RequestedModel: request.Model,
 		EvidenceSource: "omo_preflight",
@@ -113,10 +98,18 @@ func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest)
 	root, err := newEpisodeRoot(r.deps, r.Name())
 	if err != nil {
 		result.Cause = "harness_environment"
-		result.Code = "episode_root_create_failed"
+		result.Code = episodeRootFailureCode(err)
 		return result
 	}
-	defer func() { _ = os.RemoveAll(root) }()
+	defer func() {
+		if err := r.deps.RemoveAll(root); err != nil {
+			result.Ready = false
+			result.MockExtensionVerified = false
+			result.Cause = "harness_environment"
+			result.Code = "private_root_cleanup_failed"
+			result.EvidenceSource = "omo_preflight"
+		}
+	}()
 	if err := prepareOmoPrivateState(root, auth); err != nil {
 		result.Cause = "harness_environment"
 		result.Code = "episode_prepare_failed"
@@ -134,7 +127,7 @@ func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest)
 	}
 	result.Ready = true
 	result.Version = boundedVersion(string(output.Stdout))
-	result.MockExtensionVerified = validOmoLifecycleExtension(r.lifecycleExtension)
+	result.MockExtensionVerified = validOmoLifecycleExtension(r.harnessBinary, r.lifecycleExtension)
 	if result.Ready && !result.MockExtensionVerified {
 		result.Ready = false
 		result.Cause = "harness_environment"
@@ -162,7 +155,7 @@ func (r OmoRunner) resolveExecutable() (string, error) {
 	return executable, nil
 }
 
-func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.HostProbeResult {
+func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
 	if r.harnessBinary == "" {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "harness_binary_missing")
@@ -170,7 +163,7 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.
 	if strings.TrimSpace(r.lifecycleExtension) == "" {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "lifecycle_extension_missing")
 	}
-	if !validOmoLifecycleExtension(r.lifecycleExtension) {
+	if !validOmoLifecycleExtension(r.harnessBinary, r.lifecycleExtension) {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "mock_extension_invalid")
 	}
 	if !explicitOmoModel(request.Model) {
@@ -191,9 +184,13 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.
 	}
 	root, err := newEpisodeRoot(r.deps, r.Name())
 	if err != nil {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_root_create_failed")
+		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", episodeRootFailureCode(err))
 	}
-	defer func() { _ = os.RemoveAll(root) }()
+	defer func() {
+		if err := r.deps.RemoveAll(root); err != nil {
+			result = failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "private_root_cleanup_failed")
+		}
+	}()
 
 	if err := prepareOmoPrivateState(root, auth); err != nil {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_prepare_failed")
@@ -241,7 +238,7 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.
 		result.ExitCode = output.ExitCode
 		return result
 	}
-	result := completedResult(r.Name(), "", request, started, r.deps, capture)
+	result = completedResult(r.Name(), "", request, started, r.deps, capture)
 	result.ObservedModel = observation.Model
 	// The private guard extension blocks this exact MCP tool unless the managed
 	// lifecycle extension injected one hidden project-doc message first.
@@ -252,28 +249,9 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) port.
 	return result
 }
 
-func validOmoLifecycleExtension(source string) bool {
-	const prefix = "const issueopsLifecycleContract = "
-	if strings.Count(source, prefix) != 1 {
-		return false
-	}
-	remaining := source[strings.Index(source, prefix)+len(prefix):]
-	end := strings.IndexByte(remaining, '\n')
-	if end < 0 {
-		return false
-	}
-	var contract omoLifecycleContract
-	if err := json.Unmarshal([]byte(remaining[:end]), &contract); err != nil {
-		return false
-	}
-	if contract.SchemaVersion != 1 || len(contract.Events) != 2 || contract.Warning != "issueops lifecycle hook failed" {
-		return false
-	}
-	if contract.Events["session_start"] != (omoLifecycleRule{Subcommand: "session-start"}) ||
-		contract.Events["session_compact"] != (omoLifecycleRule{Subcommand: "post-compact", AcceptedOnly: true}) {
-		return false
-	}
-	return contract.Message.CustomType == "issueops:project-docs" && !contract.Message.Display && !contract.Message.TriggerTurn
+func validOmoLifecycleExtension(harnessBinary, source string) bool {
+	absolute, err := filepath.Abs(harnessBinary)
+	return err == nil && source == omolifecycle.Extension(absolute)
 }
 
 func explicitOmoModel(model string) bool {
@@ -338,28 +316,12 @@ func resolveOmoAuth(deps Dependencies) (omoAuthSnapshot, error) {
 		return omoAuthSnapshot{}, fmt.Errorf("omo_agent_dir_invalid")
 	}
 	source := filepath.Join(sourceAgentDir, "auth.json")
-	info, err := os.Lstat(source)
+	data, err := readOmoAuthFile(source, MaxOutputBytes)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return omoAuthSnapshot{}, nil
 		}
 		return omoAuthSnapshot{}, err
-	}
-	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 || info.Size() > MaxOutputBytes {
-		return omoAuthSnapshot{}, fmt.Errorf("omo_auth_invalid")
-	}
-	file, err := os.Open(source)
-	if err != nil {
-		return omoAuthSnapshot{}, err
-	}
-	defer file.Close()
-	opened, err := file.Stat()
-	if err != nil || !os.SameFile(info, opened) || !opened.Mode().IsRegular() || opened.Mode().Perm() != 0o600 || opened.Size() > MaxOutputBytes {
-		return omoAuthSnapshot{}, fmt.Errorf("omo_auth_invalid")
-	}
-	data, err := io.ReadAll(io.LimitReader(file, MaxOutputBytes+1))
-	if err != nil || len(data) > MaxOutputBytes {
-		return omoAuthSnapshot{}, fmt.Errorf("omo_auth_invalid")
 	}
 	return omoAuthSnapshot{present: true, data: data}, nil
 }

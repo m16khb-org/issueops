@@ -35,7 +35,7 @@ func (r CodexRunner) Preflight(ctx context.Context, request port.HostProbeReques
 	return preflight(ctx, r.deps, r.Name(), "codex", request, isolatedHostEnv(r.deps, "CODEX_HOME"))
 }
 
-func (r CodexRunner) Run(ctx context.Context, request port.HostProbeRequest) port.HostProbeResult {
+func (r CodexRunner) Run(ctx context.Context, request port.HostProbeRequest) (result port.HostProbeResult) {
 	started := r.deps.Now()
 	if r.harnessBinary == "" {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "harness_binary_missing")
@@ -52,25 +52,38 @@ func (r CodexRunner) Run(ctx context.Context, request port.HostProbeRequest) por
 	}
 	root, err := newEpisodeRoot(r.deps, r.Name())
 	if err != nil {
-		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_root_create_failed")
+		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", episodeRootFailureCode(err))
 	}
-	defer func() { _ = os.RemoveAll(root) }()
+	defer func() {
+		if err := r.deps.RemoveAll(root); err != nil {
+			result = failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "private_root_cleanup_failed")
+		}
+	}()
 
 	resultPath := filepath.Join(root, "result.json")
 	hookSmoke := r.deps.Getenv("ISSUEOPS_CHILD_SMOKE_HOOKS") == "1"
+	observationPath := filepath.Join(root, "live-observation.json")
+	if hookSmoke {
+		observationPath = strings.TrimSpace(r.deps.Getenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"))
+	}
 	argv := codexArgvMode(executable, root, request, resultPath, hookSmoke)
 	envNames := []string{"CODEX_HOME"}
-	if hookSmoke {
-		envNames = append(envNames, "ISSUEOPS_CHILD_SMOKE_HOOKS", "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
-	}
 	environment := isolatedHostEnv(r.deps, envNames...)
+	environment = replaceEnvironmentValue(environment, "ISSUEOPS_CHILD_SMOKE_HOOKS", "1")
+	environment = replaceEnvironmentValue(environment, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE", observationPath)
+	var runtimeCodexHome string
 	if hookSmoke {
-		runtimeCodexHome, err := prepareCodexSmokeHome(root, harnessBinary, r.deps.Getenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"), r.deps)
+		runtimeCodexHome, err = prepareCodexSmokeHome(root, harnessBinary, observationPath, r.deps)
 		if err != nil {
 			return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "codex_smoke_home_invalid")
 		}
-		environment = replaceEnvironmentValue(environment, "CODEX_HOME", runtimeCodexHome)
+	} else {
+		runtimeCodexHome, err = prepareCodexLiveHome(root, harnessBinary, observationPath, r.deps)
+		if err != nil {
+			return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "codex_live_home_invalid")
+		}
 	}
+	environment = replaceEnvironmentValue(environment, "CODEX_HOME", runtimeCodexHome)
 	output, err := r.deps.Process.Run(ctx, CommandRequest{
 		Cwd:     root,
 		Argv:    argv,
@@ -86,18 +99,22 @@ func (r CodexRunner) Run(ctx context.Context, request port.HostProbeRequest) por
 		cause, code := codexCaptureFailure(err)
 		return failedResult(r.Name(), "", request, started, r.deps, cause, code)
 	}
-	result := completedResult(r.Name(), "", request, started, r.deps, capture)
+	result = completedResult(r.Name(), "", request, started, r.deps, capture)
+	observation, err := observeHostStream(output.Stdout)
+	if err != nil {
+		return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
+	}
+	recorded, err := observeRecordedHookEvents(observationPath)
+	if err != nil || mergeHookObservation(&observation, recorded) != nil {
+		return failedResult(r.Name(), "", request, started, r.deps, "transport", "hook_observation_invalid")
+	}
+	if !validHostRuntimeObservation(observation) {
+		return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
+	}
+	applyHostStreamObservation(&result, observation, output.ExitCode)
+	result.ObservedModel = observation.Model
+	result.AmbientToolCount = observation.AmbientToolCount
 	if hookSmoke {
-		observation, err := observeHostStream(output.Stdout)
-		if err != nil {
-			return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
-		}
-		recorded, err := observeRecordedHookEvents(r.deps)
-		if err != nil {
-			return failedResult(r.Name(), "", request, started, r.deps, "transport", err.Error())
-		}
-		mergeHookObservation(&observation, recorded)
-		applyHostStreamObservation(&result, observation, output.ExitCode)
 		if err := persistChildSmokeObservation(r.deps, result, observation.MCPCallCount); err != nil {
 			return failedResult(r.Name(), "", request, started, r.deps, "transport", err.Error())
 		}
@@ -131,6 +148,26 @@ func prepareCodexSmokeHome(root, harnessBinary, observationPath string, deps Dep
 	if err != nil {
 		return "", err
 	}
+	return writeCodexProbeHome(root, sourceHome, document)
+}
+
+func prepareCodexLiveHome(root, harnessBinary, observationPath string, deps Dependencies) (string, error) {
+	if !filepath.IsAbs(root) || !filepath.IsAbs(harnessBinary) || !filepath.IsAbs(observationPath) {
+		return "", fmt.Errorf("codex_live_path_invalid")
+	}
+	sourceHome, err := resolveCodexSourceHome(deps)
+	if err != nil {
+		return "", err
+	}
+	command := "/usr/bin/env ISSUEOPS_CHILD_SMOKE_HOOKS=1 ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE=" + shellSingleQuote(observationPath) + " " +
+		shellSingleQuote(harnessBinary) + " hook session-start --host codex"
+	document := codexSmokeHookDocument{Hooks: map[string][]codexSmokeHookGroup{
+		"SessionStart": {{Hooks: []codexSmokeHook{{Type: "command", Command: command, Timeout: 5}}}},
+	}}
+	return writeCodexProbeHome(root, sourceHome, document)
+}
+
+func writeCodexProbeHome(root, sourceHome string, document codexSmokeHookDocument) (string, error) {
 	runtimeHome := filepath.Join(root, "codex-home")
 	if err := os.Mkdir(runtimeHome, 0o700); err != nil {
 		return "", err
@@ -290,7 +327,7 @@ func codexArgvMode(executable, root string, request port.HostProbeRequest, resul
 		"exec",
 	}
 	if !hookSmoke {
-		argv = append(argv, "--ignore-user-config")
+		argv = append(argv, "--ignore-user-config", "--dangerously-bypass-hook-trust")
 	} else {
 		argv = append(argv, "--dangerously-bypass-hook-trust")
 	}

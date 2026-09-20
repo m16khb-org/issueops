@@ -110,6 +110,7 @@ func TestCodexRunnerRunUsesIsolatedProbe(t *testing.T) {
 			codexBinary,
 			"exec",
 			"--ignore-user-config",
+			"--dangerously-bypass-hook-trust",
 			"--ignore-rules",
 			"--ephemeral",
 			"--json",
@@ -126,7 +127,9 @@ func TestCodexRunnerRunUsesIsolatedProbe(t *testing.T) {
 		if !reflect.DeepEqual(request.Argv, want) {
 			t.Errorf("argv = %#v\nwant %#v", request.Argv, want)
 		}
-		if !reflect.DeepEqual(request.Env, []string{"CODEX_HOME=/private/codex", "PATH=/opt/bin"}) {
+		runtimeHome := environmentValue(t, request.Env, "CODEX_HOME")
+		observationPath := environmentValue(t, request.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
+		if runtimeHome != filepath.Join(request.Cwd, "codex-home") || environmentValue(t, request.Env, "ISSUEOPS_CHILD_SMOKE_HOOKS") != "1" || environmentValue(t, request.Env, "PATH") != "/opt/bin" {
 			t.Errorf("env = %#v", request.Env)
 		}
 		if request.Timeout != EpisodeTimeout {
@@ -136,7 +139,8 @@ func TestCodexRunnerRunUsesIsolatedProbe(t *testing.T) {
 			t.Errorf("probe overrides = %d, want 3", countCodexProbeOverrides(request.Argv))
 		}
 		writeCodexCapture(t, resultPath, "run-token")
-		return CommandOutput{Stdout: []byte("not persisted"), Stderr: []byte("not persisted")}, nil
+		writeChildSmokeHookMarkers(t, observationPath, "gpt-5")
+		return CommandOutput{Stdout: codexSuccessfulStream("gpt-5"), Stderr: []byte("not persisted")}, nil
 	}}
 	runner := NewCodexRunner(harnessRelative, Dependencies{
 		Process:  process,
@@ -165,6 +169,118 @@ func TestCodexRunnerRunUsesIsolatedProbe(t *testing.T) {
 	}
 }
 
+func TestCodexRunnerNormalLiveCollectsCanonicalRuntimeEvidenceWithoutActivatedHooks(t *testing.T) {
+	rootParent := t.TempDir()
+	sourceHome := filepath.Join(rootParent, "source-codex-home")
+	if err := os.Mkdir(sourceHome, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceHome, "auth.json"), []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	harness, err := filepath.Abs(filepath.Join("testdata", "issueops"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := codexRequest("gpt-5")
+	request.HostVersion = "codex 1.2.3"
+	var episodeRoot string
+	now := time.Unix(100, 0)
+	process := &codexFakeProcess{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+		episodeRoot = command.Cwd
+		observationPath := environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE")
+		runtimeHome := environmentValue(t, command.Env, "CODEX_HOME")
+		if runtimeHome == sourceHome || runtimeHome != filepath.Join(command.Cwd, "codex-home") {
+			t.Fatalf("runtime CODEX_HOME = %q", runtimeHome)
+		}
+		assertProjectedCodexSmokeHooks(t, filepath.Join(runtimeHome, "hooks.json"), observationPath, harness, "codex")
+		if !containsArgument(command.Argv, "--ignore-user-config") || !containsArgument(command.Argv, "--dangerously-bypass-hook-trust") {
+			t.Fatalf("normal live argv does not isolate config and trust canonical hooks: %q", command.Argv)
+		}
+		writeCodexCapture(t, filepath.Join(command.Cwd, "result.json"), request.RunToken)
+		writeChildSmokeHookMarkers(t, observationPath, request.Model)
+		stream := strings.Join([]string{
+			`{"type":"thread.started","thread_id":"thread-probe"}`,
+			`{"type":"item.completed","item":{"type":"mcp_tool_call","id":"target","server":"issueops_probe","status":"completed","result":{"content":"captured"}}}`,
+		}, "\n") + "\n"
+		return CommandOutput{Stdout: []byte(stream), ExitCode: 0}, nil
+	}}
+	runner := NewCodexRunner(harness, Dependencies{
+		Process:  process,
+		LookPath: func(string) (string, error) { return filepath.Join(rootParent, "codex"), nil },
+		TempDir:  func(_, pattern string) (string, error) { return os.MkdirTemp(rootParent, pattern) },
+		Getenv: func(name string) string {
+			if name == "CODEX_HOME" {
+				return sourceHome
+			}
+			return ""
+		},
+		Environ: func() []string { return []string{"PATH=/opt/bin", "CODEX_HOME=" + sourceHome, "SECRET=redacted"} },
+		Now: func() time.Time {
+			now = now.Add(25 * time.Millisecond)
+			return now
+		},
+	})
+
+	got := runner.Run(context.Background(), request)
+	if !got.Completed || got.HostVersion != request.HostVersion || got.ObservedModel != request.Model || got.DurationMS != 25 ||
+		!got.SessionStartObserved || got.PreToolUseObserved || got.AmbientToolCount != 1 || got.CallCount != 1 || !validSHA256(got.ResponseSHA256) || got.ExitCode != 0 {
+		t.Fatalf("normal live result = %+v", got)
+	}
+	if _, err := os.Stat(episodeRoot); !os.IsNotExist(err) {
+		t.Fatalf("episode root cleanup err = %v", err)
+	}
+}
+
+func TestCodexRunnerCleanupFailureSuppressesSuccessfulEpisode(t *testing.T) {
+	parent := t.TempDir()
+	request := codexRequest("gpt-5")
+	request.HostVersion = "codex 1.2.3"
+	root := filepath.Join(parent, "episode")
+	runner := NewCodexRunner("issueops", Dependencies{
+		TempDir: func(_, _ string) (string, error) {
+			if err := os.Mkdir(root, 0o700); err != nil {
+				return "", err
+			}
+			return root, nil
+		},
+		LookPath: func(string) (string, error) { return filepath.Join(parent, "codex"), nil },
+		RemoveAll: func(path string) error {
+			if path != root {
+				t.Fatalf("cleanup path = %q", path)
+			}
+			return errors.New("sensitive cleanup detail")
+		},
+		Process: &codexFakeProcess{run: func(_ context.Context, command CommandRequest) (CommandOutput, error) {
+			writeCodexCapture(t, filepath.Join(command.Cwd, "result.json"), request.RunToken)
+			writeChildSmokeHookMarkers(t, environmentValue(t, command.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"), request.Model)
+			return CommandOutput{Stdout: codexSuccessfulStream(request.Model)}, nil
+		}},
+		Now: func() time.Time { return time.Unix(100, 0) },
+	})
+
+	got := runner.Run(context.Background(), request)
+	if got.Completed || got.Code != "private_root_cleanup_failed" || got.Cause != "harness_environment" || got.EvidenceSource != "codex_runner" {
+		t.Fatalf("cleanup result = %+v", got)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(encoded), root) || strings.Contains(string(encoded), "sensitive cleanup detail") {
+		t.Fatalf("cleanup result leaked private details: %s", encoded)
+	}
+}
+
+func containsArgument(argv []string, wanted string) bool {
+	for _, arg := range argv {
+		if arg == wanted {
+			return true
+		}
+	}
+	return false
+}
+
 func TestCodexRunnerRunModelSelection(t *testing.T) {
 	t.Parallel()
 
@@ -180,6 +296,10 @@ func TestCodexRunnerRunModelSelection(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			parent := t.TempDir()
 			process := &codexFakeProcess{run: func(_ context.Context, request CommandRequest) (CommandOutput, error) {
+				observedModel := test.model
+				if observedModel == "" || observedModel == "default" {
+					observedModel = "gpt-default"
+				}
 				for i, arg := range request.Argv {
 					if arg != "--model" {
 						continue
@@ -191,13 +311,15 @@ func TestCodexRunnerRunModelSelection(t *testing.T) {
 						t.Errorf("model args = %#v, want %#v", []string{arg, request.Argv[i+1]}, test.wantModel)
 					}
 					writeCodexCapture(t, filepath.Join(request.Cwd, "result.json"), "run-token")
-					return CommandOutput{}, nil
+					writeChildSmokeHookMarkers(t, environmentValue(t, request.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"), observedModel)
+					return CommandOutput{Stdout: codexSuccessfulStream(observedModel)}, nil
 				}
 				if len(test.wantModel) != 0 {
 					t.Errorf("model args missing, want %#v", test.wantModel)
 				}
 				writeCodexCapture(t, filepath.Join(request.Cwd, "result.json"), "run-token")
-				return CommandOutput{}, nil
+				writeChildSmokeHookMarkers(t, environmentValue(t, request.Env, "ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"), observedModel)
+				return CommandOutput{Stdout: codexSuccessfulStream(observedModel)}, nil
 			}}
 			runner := NewCodexRunner(filepath.Join(parent, "issueops"), Dependencies{
 				Process:  process,
@@ -275,4 +397,11 @@ func writeCodexCapture(t *testing.T, path, runToken string) {
 	if err := os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func codexSuccessfulStream(model string) []byte {
+	return []byte(strings.Join([]string{
+		`{"type":"thread.started","thread_id":"thread-probe","model":` + jsonString(model) + `}`,
+		`{"type":"item.completed","item":{"type":"mcp_tool_call","id":"target","server":"issueops_probe","status":"completed","result":{"content":"captured"}}}`,
+	}, "\n") + "\n")
 }

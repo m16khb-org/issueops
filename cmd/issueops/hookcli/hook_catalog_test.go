@@ -79,6 +79,36 @@ func TestRunHookSessionStartInjectsCatalogClaude(t *testing.T) {
 	}
 }
 
+func TestRunHookSessionStartRecordsBoundedLiveProbeEvidence(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Chmod(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	observationPath := filepath.Join(root, "observation.json")
+	t.Setenv("ISSUEOPS_CHILD_SMOKE_HOOKS", "1")
+	t.Setenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE", observationPath)
+	repo := hookTempRepoWithDoc(t)
+	runHookCapture(t, `{"cwd":"`+repo+`","hook_event_name":"SessionStart","model":"gpt-5.4","permission_mode":"never","session_id":"session"}`, func() error {
+		return runHook([]string{"session-start", "--host", "codex"})
+	})
+
+	data, err := os.ReadFile(observationPath + ".hooks")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]string
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got["event"] != "SessionStart" || got["model"] != "gpt-5.4" {
+		t.Fatalf("probe evidence = %#v", got)
+	}
+	info, err := os.Stat(observationPath + ".hooks")
+	if err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("probe evidence mode = %v err=%v", info, err)
+	}
+}
+
 // Claude Code and Codex both re-run SessionStart with source "compact" after
 // compaction, and neither host accepts model-facing context on PostCompact,
 // so the compact source must inject exactly like startup.

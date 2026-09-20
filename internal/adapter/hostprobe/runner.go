@@ -29,6 +29,8 @@ const (
 	processTerminationHardLimit = 2 * time.Second
 )
 
+var errPrivateRootCleanup = errors.New("private_root_cleanup_failed")
+
 type CommandRequest struct {
 	Cwd     string
 	Argv    []string
@@ -49,12 +51,13 @@ type CommandRunner interface {
 }
 
 type Dependencies struct {
-	Process  CommandRunner
-	LookPath func(string) (string, error)
-	Now      func() time.Time
-	TempDir  func(string, string) (string, error)
-	Getenv   func(string) string
-	Environ  func() []string
+	Process   CommandRunner
+	LookPath  func(string) (string, error)
+	Now       func() time.Time
+	TempDir   func(string, string) (string, error)
+	RemoveAll func(string) error
+	Getenv    func(string) string
+	Environ   func() []string
 }
 
 type ExecRunner struct{}
@@ -161,6 +164,9 @@ func normalizeDependencies(deps Dependencies) Dependencies {
 	if deps.TempDir == nil {
 		deps.TempDir = os.MkdirTemp
 	}
+	if deps.RemoveAll == nil {
+		deps.RemoveAll = os.RemoveAll
+	}
 	if deps.Getenv == nil {
 		deps.Getenv = os.Getenv
 	}
@@ -220,6 +226,8 @@ type episodeCapture struct {
 type hostStreamObservation struct {
 	SessionStartObserved bool   `json:"session_start_observed"`
 	PreToolUseObserved   bool   `json:"pre_tool_use_observed"`
+	Model                string `json:"-"`
+	AmbientToolCount     int    `json:"-"`
 	MCPCallCount         int    `json:"mcp_call_count"`
 	ResponseSHA256       string `json:"response_sha256"`
 	ExitCode             int    `json:"exit_code"`
@@ -256,8 +264,11 @@ func observeHostStream(data []byte) (hostStreamObservation, error) {
 			return hostStreamObservation{}, fmt.Errorf("host_stream_invalid")
 		}
 		events++
+		observeStructuredModel(event, &observation)
 		observeHookEvent(event, &observation)
-		observeClaudeProbeCalls(event, claudeProbeCalls)
+		if err := observeToolCalls(event, claudeProbeCalls, &observation); err != nil {
+			return hostStreamObservation{}, err
+		}
 		for _, result := range observedClaudeProbeResults(event, claudeProbeCalls) {
 			observation.MCPCallCount++
 			results = append(results, result)
@@ -278,6 +289,62 @@ func observeHostStream(data []byte) (hostStreamObservation, error) {
 		observation.ResponseSHA256 = digest
 	}
 	return observation, nil
+}
+
+func observeStructuredModel(value any, observation *hostStreamObservation) {
+	event, ok := value.(map[string]any)
+	if !ok || observation.Model != "" {
+		return
+	}
+	if model, ok := event["model"].(string); ok && strings.TrimSpace(model) != "" {
+		observation.Model = boundedVersion(model)
+		return
+	}
+	if message, ok := event["message"].(map[string]any); ok {
+		if model, ok := message["model"].(string); ok && strings.TrimSpace(model) != "" {
+			observation.Model = boundedVersion(model)
+		}
+	}
+}
+
+func observeToolCalls(value any, claudeCalls map[string]bool, observation *hostStreamObservation) error {
+	event, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	if event["type"] == "item.completed" {
+		item, _ := event["item"].(map[string]any)
+		typeName, _ := item["type"].(string)
+		switch typeName {
+		case "reasoning", "agent_message", "todo_list":
+		case "":
+			return fmt.Errorf("host_stream_invalid")
+		default:
+			observation.AmbientToolCount++
+		}
+	}
+	if event["type"] != "assistant" {
+		return nil
+	}
+	message, _ := event["message"].(map[string]any)
+	content, _ := message["content"].([]any)
+	for _, rawBlock := range content {
+		block, _ := rawBlock.(map[string]any)
+		if block["type"] != "tool_use" {
+			continue
+		}
+		name, _ := block["name"].(string)
+		id, _ := block["id"].(string)
+		if id == "" || name == "" {
+			return fmt.Errorf("host_stream_invalid")
+		}
+		if _, exists := claudeCalls[id]; exists {
+			return fmt.Errorf("host_stream_invalid")
+		}
+		claudeCalls[id] = strings.Contains(name, "issueops_probe")
+		observation.AmbientToolCount++
+	}
+	return nil
 }
 
 func semanticResponseDigest(results []any) (string, error) {
@@ -362,23 +429,6 @@ func projectSemanticToolContent(value any) ([]semanticToolContent, error) {
 	}
 }
 
-func observeClaudeProbeCalls(value any, calls map[string]bool) {
-	event, ok := value.(map[string]any)
-	if !ok || event["type"] != "assistant" {
-		return
-	}
-	message, _ := event["message"].(map[string]any)
-	content, _ := message["content"].([]any)
-	for _, rawBlock := range content {
-		block, _ := rawBlock.(map[string]any)
-		name, _ := block["name"].(string)
-		id, _ := block["id"].(string)
-		if block["type"] == "tool_use" && id != "" && strings.Contains(name, "issueops_probe") {
-			calls[id] = true
-		}
-	}
-}
-
 func observedClaudeProbeResults(value any, calls map[string]bool) []any {
 	event, ok := value.(map[string]any)
 	if !ok || event["type"] != "user" {
@@ -390,10 +440,17 @@ func observedClaudeProbeResults(value any, calls map[string]bool) []any {
 	for _, rawBlock := range content {
 		block, _ := rawBlock.(map[string]any)
 		id, _ := block["tool_use_id"].(string)
-		if block["type"] != "tool_result" || !calls[id] {
+		if block["type"] != "tool_result" {
+			continue
+		}
+		isProbe, exists := calls[id]
+		if !exists {
 			continue
 		}
 		delete(calls, id)
+		if !isProbe {
+			continue
+		}
 		if result, exists := event["tool_use_result"]; exists && result != nil {
 			results = append(results, result)
 		} else {
@@ -455,8 +512,8 @@ func observedMCPResult(value any) (any, bool) {
 	}
 }
 
-func observeRecordedHookEvents(deps Dependencies) (hostStreamObservation, error) {
-	observationPath := strings.TrimSpace(deps.Getenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE"))
+func observeRecordedHookEvents(observationPath string) (hostStreamObservation, error) {
+	observationPath = strings.TrimSpace(observationPath)
 	if !filepath.IsAbs(observationPath) {
 		return hostStreamObservation{}, fmt.Errorf("hook_observation_invalid")
 	}
@@ -475,7 +532,6 @@ func observeRecordedHookEvents(deps Dependencies) (hostStreamObservation, error)
 	if err != nil {
 		return hostStreamObservation{}, fmt.Errorf("hook_observation_invalid")
 	}
-	defer func() { _ = os.Remove(markerPath) }()
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	observation := hostStreamObservation{}
@@ -483,6 +539,7 @@ func observeRecordedHookEvents(deps Dependencies) (hostStreamObservation, error)
 	for {
 		var marker struct {
 			Event string `json:"event"`
+			Model string `json:"model"`
 		}
 		if err := decoder.Decode(&marker); err != nil {
 			if errors.Is(err, io.EOF) {
@@ -493,7 +550,12 @@ func observeRecordedHookEvents(deps Dependencies) (hostStreamObservation, error)
 		events++
 		switch marker.Event {
 		case "SessionStart":
+			model := boundedVersion(marker.Model)
+			if model == "" || model != marker.Model || (observation.Model != "" && observation.Model != model) {
+				return hostStreamObservation{}, fmt.Errorf("hook_observation_invalid")
+			}
 			observation.SessionStartObserved = true
+			observation.Model = model
 		case "PreToolUse":
 			observation.PreToolUseObserved = true
 		default:
@@ -503,12 +565,28 @@ func observeRecordedHookEvents(deps Dependencies) (hostStreamObservation, error)
 	if events == 0 {
 		return hostStreamObservation{}, fmt.Errorf("hook_observation_invalid")
 	}
+	if err := os.Remove(markerPath); err != nil {
+		return hostStreamObservation{}, fmt.Errorf("hook_observation_cleanup_failed")
+	}
 	return observation, nil
 }
 
-func mergeHookObservation(observation *hostStreamObservation, recorded hostStreamObservation) {
+func mergeHookObservation(observation *hostStreamObservation, recorded hostStreamObservation) error {
+	if observation.Model != "" && recorded.Model != "" && observation.Model != recorded.Model {
+		return fmt.Errorf("host_model_mismatch")
+	}
+	if observation.Model == "" {
+		observation.Model = recorded.Model
+	}
 	observation.SessionStartObserved = observation.SessionStartObserved || recorded.SessionStartObserved
 	observation.PreToolUseObserved = observation.PreToolUseObserved || recorded.PreToolUseObserved
+	return nil
+}
+
+func validHostRuntimeObservation(observation hostStreamObservation) bool {
+	return observation.SessionStartObserved && !observation.PreToolUseObserved &&
+		observation.Model != "" && observation.AmbientToolCount == 1 && observation.MCPCallCount == 1 &&
+		validSHA256(observation.ResponseSHA256)
 }
 
 func newEpisodeRoot(deps Dependencies, host string) (string, error) {
@@ -517,10 +595,19 @@ func newEpisodeRoot(deps Dependencies, host string) (string, error) {
 		return "", err
 	}
 	if err := os.Chmod(root, 0o700); err != nil {
-		_ = os.RemoveAll(root)
+		if cleanupErr := deps.RemoveAll(root); cleanupErr != nil {
+			return "", errPrivateRootCleanup
+		}
 		return "", err
 	}
 	return root, nil
+}
+
+func episodeRootFailureCode(err error) string {
+	if errors.Is(err, errPrivateRootCleanup) {
+		return "private_root_cleanup_failed"
+	}
+	return "episode_root_create_failed"
 }
 
 func serveArgv(request port.HostProbeRequest, resultPath string) []string {
@@ -623,6 +710,9 @@ func validSHA256(value string) bool {
 }
 
 func completedResult(host, version string, request port.HostProbeRequest, started time.Time, deps Dependencies, capture episodeCapture) port.HostProbeResult {
+	if version == "" {
+		version = request.HostVersion
+	}
 	arguments, _ := json.Marshal(capture.CanonicalArguments)
 	diagnostics, _ := json.Marshal(capture.Diagnostics)
 	return port.HostProbeResult{
@@ -704,6 +794,9 @@ func persistChildSmokeObservation(deps Dependencies, result port.HostProbeResult
 }
 
 func failedResult(host, version string, request port.HostProbeRequest, started time.Time, deps Dependencies, cause, code string) port.HostProbeResult {
+	if version == "" {
+		version = request.HostVersion
+	}
 	return port.HostProbeResult{
 		Host:             host,
 		HostVersion:      version,
