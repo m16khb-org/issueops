@@ -15,7 +15,11 @@ import (
 	"issueops/internal/domain/nativehost"
 )
 
-const maximumPromptBytes = 512 << 10
+// MaximumPromptBytes keeps the prompt argv plus its terminating NUL below
+// Linux MAX_ARG_STRLEN (32 pages, 128 KiB on 4 KiB-page systems) with a 2x
+// margin and remains portable to Darwin. ReadPrompt and PrepareLauncher must
+// enforce this one shared bound.
+const MaximumPromptBytes = 64 << 10
 
 type ArtifactRequest struct {
 	Root           string
@@ -76,7 +80,7 @@ func PrepareLauncher(request ArtifactRequest) (PreparedLauncher, error) {
 		!validUUID(request.WindowID) || !validUUID(request.WorkspaceID) || !validUUID(request.SurfaceID) {
 		return PreparedLauncher{}, fmt.Errorf("cmux launcher artifact scope is invalid")
 	}
-	if len(request.Prompt) > maximumPromptBytes || bytes.IndexByte(request.Prompt, 0) >= 0 || digest(request.Prompt) != request.PromptSHA256 || !validDigest(request.MaterialSHA256) {
+	if len(request.Prompt) > MaximumPromptBytes || bytes.IndexByte(request.Prompt, 0) >= 0 || digest(request.Prompt) != request.PromptSHA256 || !validDigest(request.MaterialSHA256) {
 		return PreparedLauncher{}, fmt.Errorf("cmux launcher prompt or material digest is invalid")
 	}
 	hostInfo, err := os.Stat(request.HostExecutable)

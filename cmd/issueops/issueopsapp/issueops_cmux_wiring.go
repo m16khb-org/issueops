@@ -38,6 +38,20 @@ type cmuxHandoffDependencies struct {
 	Cleanup                func(cmuxadapter.PreparedLauncher) error
 }
 
+type cmuxCanonicalRootFence struct {
+	stateRoot     string
+	lifecycleID   string
+	generation    uint64
+	requestedCWD  string
+	canonicalRoot string
+	workspaceRoot string
+	worktreePath  string
+	rootHandle    *os.File
+	rootIdentity  os.FileInfo
+	getwd         func() (string, error)
+	gitTop        func(string) (string, error)
+}
+
 func issueOpsCmuxHandoffHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest) (issueopscontract.ExecutionCmuxHandoffResult, error) {
 	client := cmuxadapter.Client{Runner: cmuxadapter.ExecRunner{}, ObserveEndpoint: cmuxadapter.ObserveEndpoint, UID: os.Getuid()}
 	return issueOpsCmuxHandoffHandlerWithDeps(ctx, stateRoot, request, cmuxHandoffDependencies{
@@ -61,14 +75,12 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	if cmuxRequestContainsNUL(request) {
 		return result, fmt.Errorf("cmux handoff identity must not contain NUL bytes")
 	}
-	record, err := issueopsadapter.ReadIssueOps(stateRoot, request.ID)
+	fence, record, err := newCmuxCanonicalRootFence(stateRoot, request, deps.Getwd, deps.GitTop)
 	if err != nil {
 		return result, err
 	}
-	root, err := validateCmuxReleasedDirectRecord(record, request.Generation, request.CWD, deps.Getwd, deps.GitTop)
-	if err != nil {
-		return result, err
-	}
+	defer fence.Close()
+	root := fence.canonicalRoot
 	attemptID, lineageID := cmuxHandoffIDs(request)
 	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
 	if err != nil {
@@ -84,7 +96,11 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 			return result, fmt.Errorf("cmux handoff generation already has a staged attempt; inspect the existing lineage and do not retry")
 		}
 	}
-	prompt, err := deps.ReadPrompt(root, request.PromptFile, request.PromptSHA256)
+	promptPath, err := cmuxCanonicalPromptPath(root, request.PromptFile, record.Execution.Workspace.Root, record.WorktreePath)
+	if err != nil {
+		return result, err
+	}
+	prompt, err := deps.ReadPrompt(root, promptPath, request.PromptSHA256)
 	if err != nil {
 		return result, err
 	}
@@ -98,11 +114,15 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		return result, err
 	}
 
-	preflightStarted := time.Now()
-	preflight, err := deps.Client.Preflight(ctx, cmuxadapter.PreflightRequest{
+	preflightRequest := cmuxadapter.PreflightRequest{
 		Executable: request.CmuxExecutable, ExpectedVersion: request.CmuxVersion, ExpectedBuild: request.CmuxBuild,
 		SocketPath: request.SocketPath, WindowID: request.WindowID,
-	})
+	}
+	if record, err = fence.Check(); err != nil {
+		return result, err
+	}
+	preflightStarted := time.Now()
+	preflight, err := deps.Client.Preflight(ctx, preflightRequest)
 	if err != nil {
 		result.Status = "unavailable"
 		return result, err
@@ -132,7 +152,11 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	observation = audited.Observation
 	result = cmuxResult(request, observation, "staged", "")
 
-	created, createErr := deps.Client.CreateWorkspace(ctx, cmuxadapter.CreateRequest{Preflight: preflight, AttemptID: attemptID, CWD: root})
+	createRequest := cmuxadapter.CreateRequest{Preflight: preflight, AttemptID: attemptID, CWD: root}
+	if record, err = fence.Check(); err != nil {
+		return result, err
+	}
+	created, createErr := deps.Client.CreateWorkspace(ctx, createRequest)
 	if created.CWD != "" && !sameCmuxPath(created.CWD, root) {
 		createErr = errors.Join(createErr, fmt.Errorf("cmux created workspace cwd target mismatch"))
 	}
@@ -184,7 +208,15 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
 		return cmuxResult(request, audited.Observation, "pre_send_failed", ""), errors.Join(err, auditErr)
 	}
-	sendReceipt, sendErr := deps.Client.Send(ctx, cmuxadapter.SendRequest{Created: created, Command: prepared.Command})
+	sendRequest := cmuxadapter.SendRequest{Created: created, Command: prepared.Command}
+	checkedRecord, fenceErr := fence.Check()
+	if fenceErr != nil {
+		observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
+		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		return cmuxResult(request, audited.Observation, "pre_send_failed", prepared.Directory), errors.Join(fenceErr, auditErr)
+	}
+	record = checkedRecord
+	sendReceipt, sendErr := deps.Client.Send(ctx, sendRequest)
 	observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
 	observation.Timing.InputSendMS = sendReceipt.SendMS
 	if sendErr != nil {
@@ -258,32 +290,122 @@ func cmuxHandoffIDs(request issueopscontract.ExecutionCmuxHandoffRequest) (strin
 	return attempt, lineage
 }
 
-func validateCmuxReleasedDirectRecord(record issueopscontract.IssueOpsRecord, generation uint64, requestedCWD string, getwd func() (string, error), gitTop func(string) (string, error)) (string, error) {
+func newCmuxCanonicalRootFence(stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest, getwd func() (string, error), gitTop func(string) (string, error)) (*cmuxCanonicalRootFence, issueopscontract.IssueOpsRecord, error) {
+	record, err := issueopsadapter.ReadIssueOps(stateRoot, request.ID)
+	if err != nil {
+		return nil, issueopscontract.IssueOpsRecord{}, err
+	}
+	root, rootIdentity, err := validateCmuxReleasedDirectRecord(record, request.Generation, request.CWD, getwd, gitTop)
+	if err != nil {
+		return nil, issueopscontract.IssueOpsRecord{}, err
+	}
+	handle, err := os.Open(root)
+	if err != nil {
+		return nil, issueopscontract.IssueOpsRecord{}, fmt.Errorf("open cmux handoff canonical worktree: %w", err)
+	}
+	fence := &cmuxCanonicalRootFence{
+		stateRoot: stateRoot, lifecycleID: request.ID, generation: request.Generation,
+		requestedCWD: request.CWD, canonicalRoot: root, rootHandle: handle,
+		workspaceRoot: record.Execution.Workspace.Root, worktreePath: record.WorktreePath,
+		rootIdentity: rootIdentity, getwd: getwd, gitTop: gitTop,
+	}
+	checked, err := fence.Check()
+	if err != nil {
+		_ = handle.Close()
+		return nil, issueopscontract.IssueOpsRecord{}, err
+	}
+	return fence, checked, nil
+}
+
+func (fence *cmuxCanonicalRootFence) Check() (issueopscontract.IssueOpsRecord, error) {
+	record, err := issueopsadapter.ReadIssueOps(fence.stateRoot, fence.lifecycleID)
+	if err != nil {
+		return issueopscontract.IssueOpsRecord{}, err
+	}
+	if record.Execution == nil || record.Execution.Workspace.Root != fence.workspaceRoot || record.WorktreePath != fence.worktreePath {
+		return issueopscontract.IssueOpsRecord{}, fmt.Errorf("cmux handoff durable worktree path changed")
+	}
+	root, currentIdentity, err := validateCmuxReleasedDirectRecord(record, fence.generation, fence.requestedCWD, fence.getwd, fence.gitTop)
+	if err != nil {
+		return issueopscontract.IssueOpsRecord{}, err
+	}
+	openedIdentity, err := fence.rootHandle.Stat()
+	if err != nil || root != fence.canonicalRoot || !os.SameFile(fence.rootIdentity, openedIdentity) || !os.SameFile(fence.rootIdentity, currentIdentity) {
+		return issueopscontract.IssueOpsRecord{}, fmt.Errorf("cmux handoff canonical worktree filesystem identity changed")
+	}
+	return record, nil
+}
+
+func (fence *cmuxCanonicalRootFence) Close() {
+	if fence != nil && fence.rootHandle != nil {
+		_ = fence.rootHandle.Close()
+	}
+}
+
+func validateCmuxReleasedDirectRecord(record issueopscontract.IssueOpsRecord, generation uint64, requestedCWD string, getwd func() (string, error), gitTop func(string) (string, error)) (string, os.FileInfo, error) {
 	if record.Execution == nil || record.Execution.Mode != issueopscontract.ExecutionModeDirect ||
 		record.Execution.Lease.Status != issueopscontract.LeaseStatusReleased || record.Execution.Lease.Generation != generation {
-		return "", fmt.Errorf("cmux handoff requires the exact released direct execution generation")
+		return "", nil, fmt.Errorf("cmux handoff requires the exact released direct execution generation")
 	}
-	root := filepath.Clean(record.Execution.Workspace.Root)
-	if !filepath.IsAbs(root) || !sameCmuxPath(root, record.WorktreePath) {
-		return "", fmt.Errorf("cmux handoff canonical worktree identity mismatch")
+	root, rootIdentity, err := cmuxCanonicalDirectory(record.Execution.Workspace.Root)
+	if err != nil {
+		return "", nil, fmt.Errorf("cmux handoff canonical worktree identity mismatch")
 	}
-	info, err := os.Stat(root)
-	if err != nil || !info.IsDir() {
-		return "", fmt.Errorf("cmux handoff canonical worktree is unavailable")
+	if !sameCmuxDirectory(root, rootIdentity, record.WorktreePath) {
+		return "", nil, fmt.Errorf("cmux handoff durable worktree is not the canonical worktree")
 	}
-	resolvedRoot, err := filepath.EvalSymlinks(root)
-	if err != nil || !filepath.IsAbs(requestedCWD) || filepath.Clean(requestedCWD) != requestedCWD || !sameCmuxPath(requestedCWD, resolvedRoot) {
-		return "", fmt.Errorf("cmux handoff request cwd is not the canonical worktree")
+	if !sameCmuxDirectory(root, rootIdentity, requestedCWD) {
+		return "", nil, fmt.Errorf("cmux handoff request cwd is not the canonical worktree")
 	}
 	processCWD, err := getwd()
-	if err != nil || !filepath.IsAbs(processCWD) || !sameCmuxPath(processCWD, resolvedRoot) {
-		return "", fmt.Errorf("cmux handoff process cwd is not the canonical worktree")
+	if err != nil || !sameCmuxDirectory(root, rootIdentity, processCWD) {
+		return "", nil, fmt.Errorf("cmux handoff process cwd is not the canonical worktree")
 	}
-	top, err := gitTop(resolvedRoot)
-	if err != nil || !sameCmuxPath(top, root) {
-		return "", fmt.Errorf("cmux handoff cwd is not the canonical Git worktree")
+	top, err := gitTop(root)
+	if err != nil || !sameCmuxDirectory(root, rootIdentity, top) {
+		return "", nil, fmt.Errorf("cmux handoff cwd is not the canonical Git worktree")
 	}
-	return root, nil
+	return root, rootIdentity, nil
+}
+
+func cmuxCanonicalDirectory(path string) (string, os.FileInfo, error) {
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return "", nil, fmt.Errorf("path is not absolute and clean")
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", nil, fmt.Errorf("resolve path: %w", err)
+	}
+	if !filepath.IsAbs(resolved) {
+		return "", nil, fmt.Errorf("resolved path is not absolute")
+	}
+	identity, err := os.Stat(resolved)
+	if err != nil || !identity.IsDir() {
+		return "", nil, fmt.Errorf("path is not an available directory")
+	}
+	return filepath.Clean(resolved), identity, nil
+}
+
+func sameCmuxDirectory(root string, rootIdentity os.FileInfo, candidate string) bool {
+	resolved, identity, err := cmuxCanonicalDirectory(candidate)
+	return err == nil && resolved == root && os.SameFile(rootIdentity, identity)
+}
+
+func cmuxCanonicalPromptPath(canonicalRoot, promptPath string, rootAliases ...string) (string, error) {
+	if !filepath.IsAbs(promptPath) || filepath.Clean(promptPath) != promptPath {
+		return "", fmt.Errorf("cmux prompt file must be a clean path inside the canonical worktree")
+	}
+	for _, base := range append([]string{canonicalRoot}, rootAliases...) {
+		if !filepath.IsAbs(base) || filepath.Clean(base) != base {
+			continue
+		}
+		relative, err := filepath.Rel(base, promptPath)
+		if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+			continue
+		}
+		return filepath.Join(canonicalRoot, relative), nil
+	}
+	return "", fmt.Errorf("cmux prompt file must be inside the canonical worktree")
 }
 
 func validateCmuxHostExecutable(path string) error {

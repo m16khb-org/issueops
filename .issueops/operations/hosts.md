@@ -219,6 +219,13 @@ the generic terminal command executes the absolute native Omo binary. The
 IssueOps preflight is limited to version, ping, capabilities, and exact-target
 identify. It never discovers a socket or changes its permissions.
 
+The prompt leaf must be a regular mode-0600 file owned by the current effective
+UID, no larger than 64 KiB, and stable in owner, mode, size, and identity across
+the same-FD read. The 64 KiB bound is shared by prompt reading and launcher
+preparation because the native host receives the prompt as one argv string.
+Directory ownership is outside this leaf rule; no-follow directory handles and
+namespace identity checks protect traversal.
+
 The command records `call_staged` before `new-workspace`, creates one workspace
 with `--focus false`, resolves one exact surface, and sends once. A create or
 send timeout/response loss is terminal for that lineage: inspect the returned
@@ -230,7 +237,13 @@ observed executable matches the expected host executable. Wrapper descendants
 that cannot be proved stay explicitly unverified. cmux 0.64.10 exposes no
 runtime/machine/server identity, and the recorded socket endpoint incarnation
 is an observation of one path entry rather than proof of peer identity or full
-socket-race closure. It cannot certify a live cmux × host row.
+socket-race closure. Before each Preflight, CreateWorkspace, and Send call, the
+handler rereads the durable record and rechecks released status, generation,
+request and process cwd, durable worktree, Git top-level, and the initially
+pinned canonical-root filesystem identity. CreateWorkspace receives the
+validated canonical path. The adapter cannot bind cmux's own path lookup to the
+pinned directory descriptor, so the immediate recheck narrows but cannot remove
+the path-to-cmux race. It cannot certify a live cmux × host row.
 
 ## IssueOps Host Rule
 

@@ -22,7 +22,7 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 		t.Fatal(err)
 	}
 	marker := filepath.Join(root, "interpolated")
-	prompt := strings.Repeat("long-line\\value\n", 4096) + "'single' \"double\" $(touch " + marker + ") `touch " + marker + "` \\n literal\n\n"
+	prompt := strings.Repeat("long-line\\value\n", 1024) + "'single' \"double\" $(touch " + marker + ") `touch " + marker + "` \\n literal\n\n"
 	for _, test := range []struct {
 		host, model, effort string
 		wantPrefix          []string
@@ -90,6 +90,56 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 			receipt, err := ReadBootstrapReceipt(prepared.ReceiptPath)
 			if err != nil || receipt.Status != "ok" || receipt.CWD != worktree || receipt.WindowID != testWindow || receipt.WorkspaceID != testWorkspace || receipt.SurfaceID != testSurface {
 				t.Fatalf("receipt=%+v err=%v", receipt, err)
+			}
+		})
+	}
+}
+
+func TestPrepareLauncherUsesPortableSingleArgumentBoundary(t *testing.T) {
+	const promptLimit = 64 << 10
+	root := canonicalTempDir(t)
+	worktree := filepath.Join(root, "worktree")
+	if err := os.Mkdir(worktree, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	host := filepath.Join(root, "codex")
+	if err := os.WriteFile(host, []byte("#!/bin/sh\nexit 0\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name    string
+		size    int
+		wantErr bool
+	}{
+		{name: "maximum", size: promptLimit},
+		{name: "maximum plus one", size: promptLimit + 1, wantErr: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			prompt := []byte(strings.Repeat("p", test.size))
+			prepared, err := PrepareLauncher(ArtifactRequest{
+				Root: filepath.Join(root, "artifacts-"+strings.ReplaceAll(test.name, " ", "-")), CWD: worktree,
+				WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
+				Host: "codex", HostExecutable: host, Model: "model", Prompt: prompt,
+				PromptSHA256: digestBytes(prompt), MaterialSHA256: strings.Repeat("b", 64),
+			})
+			if test.wantErr {
+				if err == nil {
+					_ = prepared.Cleanup()
+					t.Fatalf("launcher accepted prompt size %d", test.size)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("launcher rejected prompt size %d: %v", test.size, err)
+			}
+			command := exec.Command("/bin/sh", "-c", prepared.Command)
+			command.Dir = worktree
+			command.Env = validCmuxEnvironment(os.Environ())
+			if output, err := command.CombinedOutput(); err != nil {
+				t.Fatalf("launcher rejected prompt argv size %d: %v\n%s", test.size, err, output)
+			}
+			if err := prepared.Cleanup(); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

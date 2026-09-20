@@ -36,8 +36,14 @@ Execution tests must cover:
   stability, stage-before-create ordering, target enrichment, one-shot send,
   receiver PID/start/executable correlation, and the absence of native-turn or
   claim promotion from raw input. Prompt reads must use one bounded no-follow
-  handle-relative read and reject namespace replacement, symlinks, oversize,
-  unsafe mode, and NUL bytes before external calls. They must also cover Codex,
+  handle-relative read and reject namespace replacement, symlinks, content over
+  the shared 64 KiB single-argv bound, unsafe mode, a leaf owner other than the
+  current effective UID, owner drift, and NUL bytes before external calls. The
+  handler must pin the first canonical-root identity, reread the durable record,
+  and recheck the request/process cwd, worktree, Git top-level, generation, and
+  root identity immediately before Preflight, CreateWorkspace, and Send. Tests
+  must replace state or the root namespace after the preceding call and prove
+  that the next call is not made. They must also cover Codex,
   Claude, and native Omo argv; multiline/quoted shell input; missing/denied
   sockets; malformed and duplicate responses; wrong cwd/target; runtime
   endpoint replacement; create and send response loss; same-generation

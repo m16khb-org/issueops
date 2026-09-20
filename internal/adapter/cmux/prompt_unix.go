@@ -79,21 +79,28 @@ func readPromptPlatform(root, path, expectedDigest string, afterOpen func()) ([]
 	}
 	defer file.Close()
 	var before unix.Stat_t
-	if err := unix.Fstat(leafFD, &before); err != nil || before.Mode&unix.S_IFMT != unix.S_IFREG || before.Mode&0o777 != 0o600 || before.Size < 0 || before.Size > maximumPromptBytes {
-		return nil, fmt.Errorf("cmux prompt file boundary is unsafe")
+	if err := unix.Fstat(leafFD, &before); err != nil {
+		return nil, fmt.Errorf("stat cmux prompt file: %w", err)
+	}
+	expectedUID := uint32(os.Geteuid())
+	if err := validatePromptLeafStat(before, expectedUID); err != nil {
+		return nil, err
 	}
 	if afterOpen != nil {
 		afterOpen()
 	}
-	value, err := io.ReadAll(io.LimitReader(file, maximumPromptBytes+1))
+	value, err := io.ReadAll(io.LimitReader(file, MaximumPromptBytes+1))
 	if err != nil {
 		return nil, err
 	}
-	if len(value) > maximumPromptBytes {
+	if len(value) > MaximumPromptBytes {
 		return nil, fmt.Errorf("cmux prompt file exceeds the safe maximum")
 	}
 	var after unix.Stat_t
-	if err := unix.Fstat(leafFD, &after); err != nil || !samePromptStat(before, after) {
+	if err := unix.Fstat(leafFD, &after); err != nil {
+		return nil, fmt.Errorf("restat cmux prompt file: %w", err)
+	}
+	if err := validatePromptLeafStat(after, expectedUID); err != nil || !samePromptStat(before, after) {
 		return nil, fmt.Errorf("cmux prompt file identity changed while reading")
 	}
 	leaf := promptOpenedComponent{parentFD: currentFD, name: leafName, fd: leafFD, stat: before}
@@ -104,6 +111,19 @@ func readPromptPlatform(root, path, expectedDigest string, afterOpen func()) ([]
 		return nil, err
 	}
 	return value, nil
+}
+
+func validatePromptLeafStat(stat unix.Stat_t, expectedUID uint32) error {
+	if stat.Mode&unix.S_IFMT != unix.S_IFREG || stat.Mode&0o777 != 0o600 || stat.Size < 0 {
+		return fmt.Errorf("cmux prompt leaf must be a regular mode-0600 file")
+	}
+	if stat.Uid != expectedUID {
+		return fmt.Errorf("cmux prompt leaf owner must match the current effective uid")
+	}
+	if stat.Size > MaximumPromptBytes {
+		return fmt.Errorf("cmux prompt file exceeds the safe maximum")
+	}
+	return nil
 }
 
 func closePromptComponents(components []promptOpenedComponent) {

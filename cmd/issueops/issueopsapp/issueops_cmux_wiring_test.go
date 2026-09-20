@@ -13,6 +13,7 @@ import (
 
 	auditadapter "issueops/internal/adapter/audit"
 	cmuxadapter "issueops/internal/adapter/cmux"
+	issueopsadapter "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -65,9 +66,16 @@ func TestCmuxHandoffStagesBeforeCreateAndEnrichesOneNonAuthoritativeLineage(t *t
 	if len(observations) != 4 {
 		t.Fatalf("observation count=%d observations=%+v", len(observations), observations)
 	}
+	canonicalRoot, err := filepath.EvalSymlinks(record.WorktreePath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	staged, enriched, accepted, correlated := observations[0], observations[1], observations[2], observations[3]
-	if staged.CallStaged.Status != "observed" || staged.Target.WindowID == "" || staged.Target.CWD != record.WorktreePath || staged.Target.WorkspaceID != "" || staged.Target.SurfaceID != "" {
+	if staged.CallStaged.Status != "observed" || staged.Target.WindowID == "" || staged.Target.CWD != canonicalRoot || staged.Target.WorkspaceID != "" || staged.Target.SurfaceID != "" {
 		t.Fatalf("invalid pre-create stage: %+v", staged)
+	}
+	if fake.createRequest.CWD != canonicalRoot {
+		t.Fatalf("create cwd=%q want canonical %q", fake.createRequest.CWD, canonicalRoot)
 	}
 	if staged.LineageID != enriched.LineageID || staged.LineageID != accepted.LineageID || staged.LineageID != correlated.LineageID || enriched.Target.WorkspaceID != testWorkspace || enriched.Target.SurfaceID != testSurface {
 		t.Fatalf("lineage enrichment diverged: %+v %+v %+v", staged, enriched, accepted)
@@ -138,6 +146,127 @@ func TestCmuxHandoffRejectsRequestCWDBeforeAnyCmuxCall(t *testing.T) {
 	}
 	if fake.preflightCalls != 0 || fake.createCalls != 0 || fake.sendCalls != 0 {
 		t.Fatalf("wrong request cwd reached cmux: preflight=%d create=%d send=%d", fake.preflightCalls, fake.createCalls, fake.sendCalls)
+	}
+}
+
+func TestCmuxHandoffRevalidatesDurableRecordImmediatelyBeforePreflight(t *testing.T) {
+	stateRoot := t.TempDir()
+	record := seedReleasedDirectHandoffRecord(t, stateRoot)
+	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
+	fake := &cmuxClientFake{t: t, preflight: cmuxPreflightFixture()}
+
+	_, err := issueOpsCmuxHandoffHandlerWithDeps(context.Background(), stateRoot,
+		cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest), cmuxHandoffDependencies{
+			Client: fake, Now: time.Now, Getwd: func() (string, error) { return record.WorktreePath, nil },
+			GitTop:                 func(root string) (string, error) { return root, nil },
+			ValidateHostExecutable: func(string) error { return nil },
+			ReadPrompt: func(root, path, digest string) ([]byte, error) {
+				value, readErr := cmuxadapter.ReadPrompt(root, path, digest)
+				if readErr != nil {
+					return nil, readErr
+				}
+				advanceCmuxRecordGeneration(t, stateRoot, record.ID)
+				return value, nil
+			},
+		})
+	if err == nil || !strings.Contains(err.Error(), "generation") {
+		t.Fatalf("durable generation drift before preflight accepted: %v", err)
+	}
+	if fake.preflightCalls != 0 || fake.createCalls != 0 || fake.sendCalls != 0 {
+		t.Fatalf("durable drift reached cmux: preflight=%d create=%d send=%d", fake.preflightCalls, fake.createCalls, fake.sendCalls)
+	}
+}
+
+func TestCmuxHandoffRevalidatesDurableWorktreeAfterPreflightBeforeCreate(t *testing.T) {
+	stateRoot := t.TempDir()
+	record := seedReleasedDirectHandoffRecord(t, stateRoot)
+	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
+	fake := &cmuxClientFake{t: t, stateRoot: stateRoot, recordID: record.ID, preflight: cmuxPreflightFixture()}
+	fake.afterPreflight = func() {
+		alias := record.WorktreePath + "-alias"
+		if err := os.Symlink(record.WorktreePath, alias); err != nil {
+			t.Fatal(err)
+		}
+		rewriteCmuxRecordWorktree(t, stateRoot, record.ID, alias)
+	}
+
+	_, err := issueOpsCmuxHandoffHandlerWithDeps(context.Background(), stateRoot,
+		cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest), cmuxHandoffDependencies{
+			Client: fake, Now: cmuxTestClock(time.Now().UTC()), Getwd: func() (string, error) { return record.WorktreePath, nil },
+			GitTop:                 func(root string) (string, error) { return root, nil },
+			ValidateHostExecutable: func(string) error { return nil },
+		})
+	if err == nil || !strings.Contains(err.Error(), "durable worktree") {
+		t.Fatalf("durable worktree drift after preflight accepted: %v", err)
+	}
+	if fake.preflightCalls != 1 || fake.createCalls != 0 || fake.sendCalls != 0 {
+		t.Fatalf("post-preflight drift reached create/send: preflight=%d create=%d send=%d", fake.preflightCalls, fake.createCalls, fake.sendCalls)
+	}
+}
+
+func TestCmuxHandoffRejectsCanonicalRootReplacementAfterCreateBeforeSend(t *testing.T) {
+	stateRoot := t.TempDir()
+	record := seedReleasedDirectHandoffRecord(t, stateRoot)
+	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
+	fake := &cmuxClientFake{t: t, stateRoot: stateRoot, recordID: record.ID, preflight: cmuxPreflightFixture(), created: cmuxCreatedFixture()}
+	fake.created.CWD = record.WorktreePath
+	fake.afterCreate = func() {
+		moved := record.WorktreePath + "-replaced"
+		if err := os.Rename(record.WorktreePath, moved); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(record.WorktreePath, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	_, err := issueOpsCmuxHandoffHandlerWithDeps(context.Background(), stateRoot,
+		cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest), cmuxHandoffDependencies{
+			Client: fake, Now: cmuxTestClock(time.Now().UTC()), Getwd: func() (string, error) { return record.WorktreePath, nil },
+			GitTop:                 func(root string) (string, error) { return root, nil },
+			ValidateHostExecutable: func(string) error { return nil },
+			Prepare: func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
+				return cmuxadapter.PreparedLauncher{Directory: t.TempDir(), Command: "/bin/sh '/tmp/launch.sh'"}, nil
+			},
+		})
+	if err == nil || !strings.Contains(err.Error(), "canonical worktree") {
+		t.Fatalf("canonical root replacement accepted: %v", err)
+	}
+	if fake.preflightCalls != 1 || fake.createCalls != 1 || fake.sendCalls != 0 {
+		t.Fatalf("post-create root replacement reached send: preflight=%d create=%d send=%d", fake.preflightCalls, fake.createCalls, fake.sendCalls)
+	}
+}
+
+func TestCmuxHandoffRejectsPromptAbovePortableSingleArgumentBoundBeforePreflight(t *testing.T) {
+	const promptLimit = 64 << 10
+	stateRoot := t.TempDir()
+	record := seedReleasedDirectHandoffRecord(t, stateRoot)
+	value := []byte(strings.Repeat("p", promptLimit+1))
+	promptPath := filepath.Join(record.WorktreePath, "oversize-cmux-prompt")
+	if err := os.WriteFile(promptPath, value, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	fake := &cmuxClientFake{t: t, preflight: cmuxPreflightFixture()}
+	prepareCalls := 0
+
+	_, err := issueOpsCmuxHandoffHandlerWithDeps(context.Background(), stateRoot,
+		cmuxHandoffRequestFixture(record.ID, promptPath, digestBytes(value)), cmuxHandoffDependencies{
+			Client: fake, Now: time.Now, Getwd: func() (string, error) { return record.WorktreePath, nil },
+			GitTop:                 func(root string) (string, error) { return root, nil },
+			ValidateHostExecutable: func(string) error { return nil },
+			Prepare: func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
+				prepareCalls++
+				return cmuxadapter.PreparedLauncher{}, nil
+			},
+		})
+	if err == nil || !strings.Contains(err.Error(), "maximum") {
+		t.Fatalf("prompt above single-argument bound accepted: %v", err)
+	}
+	if fake.preflightCalls != 0 || fake.createCalls != 0 || fake.sendCalls != 0 {
+		t.Fatalf("oversize prompt reached cmux: preflight=%d create=%d send=%d", fake.preflightCalls, fake.createCalls, fake.sendCalls)
+	}
+	if prepareCalls != 0 {
+		t.Fatalf("oversize prompt reached artifact preparation: calls=%d", prepareCalls)
 	}
 }
 
@@ -422,22 +551,31 @@ type cmuxClientFake struct {
 	stateRoot, recordID                    string
 	preflight                              cmuxadapter.PreflightResult
 	created                                cmuxadapter.CreatedWorkspace
+	createRequest                          cmuxadapter.CreateRequest
 	preflightCalls, createCalls, sendCalls int
 	createErr, sendErr                     error
+	afterPreflight, afterCreate            func()
 }
 
 func (fake *cmuxClientFake) Preflight(context.Context, cmuxadapter.PreflightRequest) (cmuxadapter.PreflightResult, error) {
 	fake.preflightCalls++
+	if fake.afterPreflight != nil {
+		fake.afterPreflight()
+	}
 	return fake.preflight, nil
 }
 
-func (fake *cmuxClientFake) CreateWorkspace(context.Context, cmuxadapter.CreateRequest) (cmuxadapter.CreatedWorkspace, error) {
+func (fake *cmuxClientFake) CreateWorkspace(_ context.Context, request cmuxadapter.CreateRequest) (cmuxadapter.CreatedWorkspace, error) {
 	fake.createCalls++
+	fake.createRequest = request
 	if fake.stateRoot != "" {
 		observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(fake.stateRoot)
 		if err != nil || len(observations) != 1 || observations[0].CallStaged.Status != "observed" || observations[0].Target.WorkspaceID != "" {
 			fake.t.Fatalf("workspace created before stage audit: observations=%+v err=%v", observations, err)
 		}
+	}
+	if fake.afterCreate != nil {
+		fake.afterCreate()
 	}
 	return fake.created, fake.createErr
 }
@@ -469,6 +607,31 @@ func writeCmuxPromptFixture(t *testing.T, root string) (string, string) {
 		t.Fatal(err)
 	}
 	return path, digestBytes(value)
+}
+
+func advanceCmuxRecordGeneration(t *testing.T, stateRoot, id string) {
+	t.Helper()
+	record, err := issueopsadapter.ReadIssueOps(stateRoot, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record.Execution.Lease.Generation++
+	if _, err := issueopsadapter.WriteIssueOps(stateRoot, record); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func rewriteCmuxRecordWorktree(t *testing.T, stateRoot, id, root string) {
+	t.Helper()
+	record, err := issueopsadapter.ReadIssueOps(stateRoot, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record.WorktreePath = root
+	record.Execution.Workspace.Root = root
+	if _, err := issueopsadapter.WriteIssueOps(stateRoot, record); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func cmuxPreflightFixture() cmuxadapter.PreflightResult {
