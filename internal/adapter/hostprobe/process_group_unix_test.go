@@ -83,3 +83,33 @@ func TestExecRunnerBoundsWaitWhenGroupTerminationDoesNotStopProcess(t *testing.T
 		t.Fatalf("termination wait took %s", elapsed)
 	}
 }
+
+func TestExecRunnerProjectsLongOmoStreamWithoutLosingToolEvidence(t *testing.T) {
+	request := omoProbeRequest()
+	target := omoProbeToolName(request.ProbeTool)
+	noise := strings.Repeat(`{"type":"message_update","text":"display only"}`+"\n", 4000)
+	stream := noise + string(omoSuccessfulStream(request, target))
+	path := filepath.Join(t.TempDir(), "stream.jsonl")
+	if err := os.WriteFile(path, []byte(stream), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	output, err := (ExecRunner{}).Run(context.Background(), CommandRequest{Argv: []string{"/bin/cat", path}, OmoJSONL: true})
+	if err != nil || output.StdoutTruncated {
+		t.Fatalf("truncated=%t err=%v", output.StdoutTruncated, err)
+	}
+	got, err := observeOmoStream(output.Stdout, target)
+	if err != nil || got.AmbientToolCount != 1 || got.MCPCallCount != 1 {
+		t.Fatalf("observation=%+v err=%v", got, err)
+	}
+}
+
+func TestExecRunnerEnforcesOutputBound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "output")
+	if err := os.WriteFile(path, []byte(strings.Repeat("x", MaxOutputBytes+1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := (ExecRunner{}).Run(context.Background(), CommandRequest{Argv: []string{"/bin/cat", path}})
+	if err == nil || !got.StdoutTruncated || len(got.Stdout) > MaxOutputBytes {
+		t.Fatalf("bytes=%d truncated=%t err=%v", len(got.Stdout), got.StdoutTruncated, err)
+	}
+}

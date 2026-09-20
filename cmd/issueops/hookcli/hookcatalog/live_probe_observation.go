@@ -28,13 +28,13 @@ func recordLiveProbeSessionStart(input []byte) error {
 		Model         string `json:"model"`
 	}
 	decoder := json.NewDecoder(bytes.NewReader(input))
-	if err := decoder.Decode(&payload); err != nil || payload.HookEventName != "SessionStart" || strings.TrimSpace(payload.Model) == "" ||
+	if err := decoder.Decode(&payload); err != nil || payload.HookEventName != "SessionStart" ||
 		strings.TrimSpace(payload.Model) != payload.Model || len(payload.Model) > 256 || strings.ContainsAny(payload.Model, "\r\n") {
 		return fmt.Errorf("live_probe_observation_invalid")
 	}
 	data, err := json.Marshal(struct {
 		Event string `json:"event"`
-		Model string `json:"model"`
+		Model string `json:"model,omitempty"`
 	}{Event: "SessionStart", Model: payload.Model})
 	if err != nil {
 		return fmt.Errorf("live_probe_observation_invalid")

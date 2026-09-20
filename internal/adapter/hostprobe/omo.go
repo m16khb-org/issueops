@@ -201,10 +201,11 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) (resu
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "episode_prepare_failed")
 	}
 	output, err := r.deps.Process.Run(ctx, CommandRequest{
-		Cwd:     root,
-		Argv:    omoArgv(executable, root, targetTool, request),
-		Env:     isolatedOmoEnv(r.deps, root),
-		Timeout: EpisodeTimeout,
+		Cwd:      root,
+		Argv:     omoArgv(executable, root, targetTool, request),
+		Env:      isolatedOmoEnv(r.deps, root),
+		Timeout:  EpisodeTimeout,
+		OmoJSONL: true,
 	})
 	if err != nil {
 		cause, code := normalizedProcessFailure(err, "host_process_failed")

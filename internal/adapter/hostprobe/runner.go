@@ -32,10 +32,11 @@ const (
 var errPrivateRootCleanup = errors.New("private_root_cleanup_failed")
 
 type CommandRequest struct {
-	Cwd     string
-	Argv    []string
-	Env     []string
-	Timeout time.Duration
+	Cwd      string
+	Argv     []string
+	Env      []string
+	Timeout  time.Duration
+	OmoJSONL bool
 }
 
 type CommandOutput struct {
@@ -101,8 +102,14 @@ func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutpu
 	}
 	stdout := &boundedBuffer{limit: MaxOutputBytes}
 	stderr := &boundedBuffer{limit: MaxOutputBytes}
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
+	// Hide bytes.Buffer.ReadFrom: io.Copy must use the bounded Write method.
+	cmd.Stdout = struct{ io.Writer }{stdout}
+	cmd.Stderr = struct{ io.Writer }{stderr}
+	var projection *omoOutput
+	if request.OmoJSONL {
+		projection = &omoOutput{output: stdout}
+		cmd.Stdout = projection
+	}
 	if err := cmd.Start(); err != nil {
 		return CommandOutput{}, fmt.Errorf("command_failed")
 	}
@@ -126,6 +133,9 @@ func (ExecRunner) Run(ctx context.Context, request CommandRequest) (CommandOutpu
 				return CommandOutput{}, fmt.Errorf("command_termination_failed")
 			}
 		}
+	}
+	if projection != nil {
+		projection.flush()
 	}
 	out := CommandOutput{
 		Stdout:          append([]byte(nil), stdout.Bytes()...),
@@ -265,7 +275,9 @@ func observeHostStream(data []byte) (hostStreamObservation, error) {
 		}
 		events++
 		observeStructuredModel(event, &observation)
-		observeHookEvent(event, &observation)
+		if err := observeHookEvent(event, &observation); err != nil {
+			return hostStreamObservation{}, err
+		}
 		if err := observeToolCalls(event, claudeProbeCalls, &observation); err != nil {
 			return hostStreamObservation{}, err
 		}
@@ -317,6 +329,10 @@ func observeToolCalls(value any, claudeCalls map[string]bool, observation *hostS
 		typeName, _ := item["type"].(string)
 		switch typeName {
 		case "reasoning", "agent_message", "todo_list":
+		case "error":
+			if item["message"] != "`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation." {
+				return fmt.Errorf("host_stream_invalid")
+			}
 		case "":
 			return fmt.Errorf("host_stream_invalid")
 		default:
@@ -399,6 +415,9 @@ func projectSemanticToolResponse(value any) (semanticToolResponse, error) {
 		}
 		projected.IsError = isError
 	}
+	if projected.IsError {
+		return semanticToolResponse{}, fmt.Errorf("semantic_response_tool_error")
+	}
 	return projected, nil
 }
 
@@ -452,6 +471,13 @@ func observedClaudeProbeResults(value any, calls map[string]bool) []any {
 			continue
 		}
 		if result, exists := event["tool_use_result"]; exists && result != nil {
+			if content, ok := result.([]any); ok {
+				projected := map[string]any{"content": content}
+				if isError, exists := block["is_error"]; exists {
+					projected["is_error"] = isError
+				}
+				result = projected
+			}
 			results = append(results, result)
 		} else {
 			results = append(results, block)
@@ -460,10 +486,10 @@ func observedClaudeProbeResults(value any, calls map[string]bool) []any {
 	return results
 }
 
-func observeHookEvent(value any, observation *hostStreamObservation) {
+func observeHookEvent(value any, observation *hostStreamObservation) error {
 	event, ok := value.(map[string]any)
 	if !ok {
-		return
+		return nil
 	}
 	var name string
 	switch event["type"] {
@@ -477,10 +503,14 @@ func observeHookEvent(value any, observation *hostStreamObservation) {
 	}
 	switch strings.ToLower(strings.ReplaceAll(name, "_", "")) {
 	case "sessionstart":
+		if event["type"] == "system" && (event["exit_code"] != json.Number("0") || event["outcome"] != "success") {
+			return fmt.Errorf("hook_observation_invalid")
+		}
 		observation.SessionStartObserved = true
 	case "pretooluse":
 		observation.PreToolUseObserved = true
 	}
+	return nil
 }
 
 func observedMCPResult(value any) (any, bool) {
@@ -551,11 +581,13 @@ func observeRecordedHookEvents(observationPath string) (hostStreamObservation, e
 		switch marker.Event {
 		case "SessionStart":
 			model := boundedVersion(marker.Model)
-			if model == "" || model != marker.Model || (observation.Model != "" && observation.Model != model) {
+			if model != marker.Model || (observation.Model != "" && model != "" && observation.Model != model) {
 				return hostStreamObservation{}, fmt.Errorf("hook_observation_invalid")
 			}
 			observation.SessionStartObserved = true
-			observation.Model = model
+			if model != "" {
+				observation.Model = model
+			}
 		case "PreToolUse":
 			observation.PreToolUseObserved = true
 		default:

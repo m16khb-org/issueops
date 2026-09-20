@@ -105,7 +105,7 @@ func (r CodexRunner) Run(ctx context.Context, request port.HostProbeRequest) (re
 		return failedResult(r.Name(), "", request, started, r.deps, "transport", "host_stream_invalid")
 	}
 	recorded, err := observeRecordedHookEvents(observationPath)
-	if err != nil || mergeHookObservation(&observation, recorded) != nil {
+	if err != nil || !recorded.SessionStartObserved || mergeHookObservation(&observation, recorded) != nil {
 		return failedResult(r.Name(), "", request, started, r.deps, "transport", "hook_observation_invalid")
 	}
 	if !validHostRuntimeObservation(observation) {

@@ -245,3 +245,26 @@ func TestRetiredHookSubcommandsAreRejected(t *testing.T) {
 		}
 	}
 }
+
+func TestRunHookClaudeLiveProbeWithoutModel(t *testing.T) {
+	root := t.TempDir()
+	if err := os.Chmod(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "observation.json")
+	t.Setenv("ISSUEOPS_CHILD_SMOKE_HOOKS", "1")
+	t.Setenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE", path)
+	repo := hookTempRepoWithDoc(t)
+	runHookCapture(t, `{"cwd":"`+repo+`","hook_event_name":"SessionStart","source":"startup"}`, func() error { return runHook([]string{"session-start", "--host", "claude"}) })
+	data, err := os.ReadFile(path + ".hooks")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var marker map[string]string
+	if err := json.Unmarshal(data, &marker); err != nil {
+		t.Fatal(err)
+	}
+	if marker["event"] != "SessionStart" || marker["model"] != "" {
+		t.Fatalf("marker=%v", marker)
+	}
+}

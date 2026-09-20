@@ -301,6 +301,9 @@ func classifyHostResult(result port.HostProbeResult, fixture Fixture) EpisodeRep
 	if err := json.Unmarshal([]byte(result.DiagnosticsJSON), &diagnostics); err != nil {
 		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
+	if diagnostics == nil {
+		diagnostics = []Diagnostic{}
+	}
 	sortDiagnostics(diagnostics)
 	if (classification == Classification(ExactValid) || classification == Classification(ValidButSemanticallyDifferent)) && (!result.CanonicalValid || len(diagnostics) != 0) {
 		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
