@@ -26,6 +26,7 @@ func TestExecutionHandoffCmuxCLIRequiresExplicitCompleteIdentity(t *testing.T) {
 	args := []string{
 		"handoff-cmux", "--id", "io-13", "--generation", "7",
 		"--cmux-executable", "/Applications/cmux.app/Contents/Resources/bin/cmux", "--cmux-version", "0.64.10",
+		"--cmux-build-identity", "cmux 0.64.10 (90) [fafa50702]", "--cwd", "/repo/worktree",
 		"--socket", "/private/tmp/cmux.sock", "--window", "11111111-1111-4111-8111-111111111111",
 		"--host", "omo", "--host-executable", "/opt/homebrew/bin/omo", "--model", "openai/gpt-5.6", "--effort", "xhigh",
 		"--prompt-file", "/repo/worktree/.issueops/cmux-prompt", "--prompt-sha256", strings.Repeat("a", 64),
@@ -35,8 +36,8 @@ func TestExecutionHandoffCmuxCLIRequiresExplicitCompleteIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := issueopscontract.ExecutionCmuxHandoffRequest{
-		ID: "io-13", Generation: 7, CmuxExecutable: "/Applications/cmux.app/Contents/Resources/bin/cmux", CmuxVersion: "0.64.10",
-		SocketPath: "/private/tmp/cmux.sock", WindowID: "11111111-1111-4111-8111-111111111111",
+		ID: "io-13", Generation: 7, CmuxExecutable: "/Applications/cmux.app/Contents/Resources/bin/cmux", CmuxVersion: "0.64.10", CmuxBuild: "cmux 0.64.10 (90) [fafa50702]",
+		SocketPath: "/private/tmp/cmux.sock", WindowID: "11111111-1111-4111-8111-111111111111", CWD: "/repo/worktree",
 		Host: "omo", HostExecutable: "/opt/homebrew/bin/omo", Model: "openai/gpt-5.6", Effort: "xhigh",
 		PromptFile: "/repo/worktree/.issueops/cmux-prompt", PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
 	}

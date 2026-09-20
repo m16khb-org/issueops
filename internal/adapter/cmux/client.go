@@ -21,8 +21,12 @@ import (
 
 const commandTimeout = 5 * time.Second
 
+const (
+	SupportedVersion       = "0.64.10"
+	SupportedBuildIdentity = "cmux 0.64.10 (90) [fafa50702]"
+)
+
 var (
-	cmuxVersionPattern      = regexp.MustCompile(`^cmux ([0-9]+\.[0-9]+\.[0-9]+)(?:\s|$)`)
 	cmuxWorkspaceRefPattern = regexp.MustCompile(`^workspace:[0-9]+$`)
 )
 
@@ -54,6 +58,7 @@ type Client struct {
 type PreflightRequest struct {
 	Executable      string
 	ExpectedVersion string
+	ExpectedBuild   string
 	SocketPath      string
 	WindowID        string
 }
@@ -61,6 +66,7 @@ type PreflightRequest struct {
 type PreflightResult struct {
 	Executable string
 	Version    string
+	Build      string
 	SocketPath string
 	WindowID   string
 	Endpoint   EndpointIncarnation
@@ -109,13 +115,17 @@ func (err *MutationError) Error() string {
 func (err *MutationError) Unwrap() error { return err.Cause }
 
 func (client Client) Preflight(ctx context.Context, request PreflightRequest) (PreflightResult, error) {
+	if err := requireSupportedPlatform(); err != nil {
+		return PreflightResult{}, err
+	}
 	if client.Runner == nil || client.ObserveEndpoint == nil {
 		return PreflightResult{}, fmt.Errorf("cmux preflight dependencies are unavailable")
 	}
 	if !filepath.IsAbs(request.Executable) || filepath.Clean(request.Executable) != request.Executable {
 		return PreflightResult{}, fmt.Errorf("cmux executable must be an absolute clean path")
 	}
-	if request.ExpectedVersion == "" || request.SocketPath == "" || !validUUID(request.WindowID) {
+	if request.ExpectedVersion != SupportedVersion || request.ExpectedBuild != SupportedBuildIdentity ||
+		request.SocketPath == "" || strings.ContainsRune(request.SocketPath, 0) || !validUUID(request.WindowID) {
 		return PreflightResult{}, fmt.Errorf("cmux preflight identity is incomplete")
 	}
 	before, err := client.ObserveEndpoint(request.SocketPath, client.UID)
@@ -126,9 +136,9 @@ func (client Client) Preflight(ctx context.Context, request PreflightRequest) (P
 	if err != nil {
 		return PreflightResult{}, fmt.Errorf("cmux version preflight failed: %w", err)
 	}
-	match := cmuxVersionPattern.FindStringSubmatch(strings.TrimSpace(string(versionOutput.Stdout)))
-	if len(match) != 2 || match[1] != request.ExpectedVersion {
-		return PreflightResult{}, fmt.Errorf("cmux version mismatch: expected %s", request.ExpectedVersion)
+	versionIdentity := string(versionOutput.Stdout)
+	if versionIdentity != request.ExpectedBuild && versionIdentity != request.ExpectedBuild+"\n" {
+		return PreflightResult{}, fmt.Errorf("cmux version/build mismatch: expected %s", request.ExpectedBuild)
 	}
 	ping, err := client.run(ctx, request.Executable, request.SocketPath, "ping")
 	if err != nil || strings.TrimSpace(string(ping.Stdout)) != "PONG" {
@@ -156,10 +166,13 @@ func (client Client) Preflight(ctx context.Context, request PreflightRequest) (P
 	if !SameEndpoint(before, after) {
 		return PreflightResult{}, fmt.Errorf("cmux socket endpoint incarnation changed during preflight")
 	}
-	return PreflightResult{Executable: request.Executable, Version: request.ExpectedVersion, SocketPath: request.SocketPath, WindowID: request.WindowID, Endpoint: before}, nil
+	return PreflightResult{Executable: request.Executable, Version: request.ExpectedVersion, Build: request.ExpectedBuild, SocketPath: request.SocketPath, WindowID: request.WindowID, Endpoint: before}, nil
 }
 
 func (client Client) CreateWorkspace(ctx context.Context, request CreateRequest) (CreatedWorkspace, error) {
+	if err := requireSupportedPlatform(); err != nil {
+		return CreatedWorkspace{}, err
+	}
 	if !validUUID(request.Preflight.WindowID) || !filepath.IsAbs(request.CWD) || filepath.Clean(request.CWD) != request.CWD || strings.TrimSpace(request.AttemptID) == "" {
 		return CreatedWorkspace{}, fmt.Errorf("cmux create request identity is invalid")
 	}
@@ -191,6 +204,9 @@ func (client Client) CreateWorkspace(ctx context.Context, request CreateRequest)
 }
 
 func (client Client) Send(ctx context.Context, request SendRequest) (SendReceipt, error) {
+	if err := requireSupportedPlatform(); err != nil {
+		return SendReceipt{}, err
+	}
 	created := request.Created
 	if !validUUID(created.WindowID) || !validUUID(created.WorkspaceID) || !validUUID(created.SurfaceID) || strings.TrimSpace(request.Command) == "" {
 		return SendReceipt{}, fmt.Errorf("cmux send target is incomplete")

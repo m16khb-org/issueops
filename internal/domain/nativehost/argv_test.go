@@ -24,6 +24,10 @@ func TestBuildInteractiveArgvPinsInstalledNativeHostContracts(t *testing.T) {
 			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5", "--effort", "high", "--", prompt},
 		},
 		{
+			host: "claude", executable: "/opt/native/claude", model: "claude-sonnet-5", effort: "xhigh",
+			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5", "--effort", "xhigh", "--", prompt},
+		},
+		{
 			host: "omo", executable: "/opt/native/omo", model: "openai/gpt-5.6", effort: "xhigh",
 			want: []string{"/opt/native/omo", "--model", "openai/gpt-5.6:xhigh", "--", prompt},
 		},
@@ -50,6 +54,7 @@ func TestBuildInteractiveArgvRejectsUnsupportedOrAmbiguousInputs(t *testing.T) {
 	}{
 		{name: "unknown host", host: "opencode", executable: "/opt/native/opencode", model: "model"},
 		{name: "relative executable", host: "codex", executable: "codex", model: "model"},
+		{name: "wrong host executable", host: "codex", executable: "/usr/bin/python3", model: "model"},
 		{name: "missing model", host: "codex", executable: "/opt/native/codex"},
 		{name: "effort injection", host: "claude", executable: "/opt/native/claude", model: "model", effort: "high\n--danger"},
 		{name: "model option injection", host: "omo", executable: "/opt/native/omo", model: "--help"},

@@ -12,6 +12,9 @@ import (
 type EndpointIncarnation = issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation
 
 func ObserveEndpoint(path string, expectedUID int) (EndpointIncarnation, error) {
+	if err := requireSupportedPlatform(); err != nil {
+		return EndpointIncarnation{}, err
+	}
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
 		return EndpointIncarnation{}, fmt.Errorf("cmux socket path must be absolute and clean")
 	}

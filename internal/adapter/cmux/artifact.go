@@ -1,8 +1,10 @@
 package cmux
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,11 +34,12 @@ type ArtifactRequest struct {
 }
 
 type PreparedLauncher struct {
-	Directory    string
-	PromptPath   string
-	LauncherPath string
-	ReceiptPath  string
-	Command      string
+	Directory      string
+	PromptPath     string
+	LauncherPath   string
+	ReceiptPath    string
+	Command        string
+	HostArgvSHA256 string
 }
 
 type BootstrapReceipt struct {
@@ -60,16 +63,20 @@ type BootstrapExpectation struct {
 	SurfaceID      string
 	SocketPath     string
 	HostExecutable string
+	HostArgvSHA256 string
 	PromptSHA256   string
 	MaterialSHA256 string
 }
 
 func PrepareLauncher(request ArtifactRequest) (PreparedLauncher, error) {
+	if err := requireSupportedPlatform(); err != nil {
+		return PreparedLauncher{}, err
+	}
 	if !filepath.IsAbs(request.Root) || !filepath.IsAbs(request.CWD) || !filepath.IsAbs(request.SocketPath) ||
 		!validUUID(request.WindowID) || !validUUID(request.WorkspaceID) || !validUUID(request.SurfaceID) {
 		return PreparedLauncher{}, fmt.Errorf("cmux launcher artifact scope is invalid")
 	}
-	if len(request.Prompt) > maximumPromptBytes || digest(request.Prompt) != request.PromptSHA256 || !validDigest(request.MaterialSHA256) {
+	if len(request.Prompt) > maximumPromptBytes || bytes.IndexByte(request.Prompt, 0) >= 0 || digest(request.Prompt) != request.PromptSHA256 || !validDigest(request.MaterialSHA256) {
 		return PreparedLauncher{}, fmt.Errorf("cmux launcher prompt or material digest is invalid")
 	}
 	hostInfo, err := os.Stat(request.HostExecutable)
@@ -94,7 +101,9 @@ func PrepareLauncher(request ArtifactRequest) (PreparedLauncher, error) {
 		LauncherPath: filepath.Join(directory, "launch.sh"), ReceiptPath: filepath.Join(directory, "bootstrap.receipt"),
 	}
 	fail := func(cause error) (PreparedLauncher, error) {
-		_ = os.RemoveAll(directory)
+		if cleanupErr := os.RemoveAll(directory); cleanupErr != nil {
+			cause = errors.Join(cause, fmt.Errorf("cleanup cmux launcher artifact: %w", cleanupErr))
+		}
 		return PreparedLauncher{}, cause
 	}
 	if err := os.WriteFile(prepared.PromptPath, request.Prompt, 0o600); err != nil {
@@ -105,14 +114,15 @@ func PrepareLauncher(request ArtifactRequest) (PreparedLauncher, error) {
 		return fail(err)
 	}
 	argvDigest := digest([]byte(strings.Join(argv[:len(argv)-1], "\x00") + "\x00" + request.PromptSHA256))
+	prepared.HostArgvSHA256 = argvDigest
 	script := launcherScript(request, prepared, argv, argvDigest)
 	if err := os.WriteFile(prepared.LauncherPath, []byte(script), 0o700); err != nil {
 		return fail(err)
 	}
-	prepared.Command = "ISSUEOPS_CMUX_WINDOW_ID=" + shellQuote(request.WindowID) +
-		" CMUX_WORKSPACE_ID=" + shellQuote(request.WorkspaceID) +
-		" CMUX_SURFACE_ID=" + shellQuote(request.SurfaceID) +
-		" CMUX_SOCKET_PATH=" + shellQuote(request.SocketPath) +
+	prepared.Command = "ISSUEOPS_CMUX_EXPECTED_WINDOW_ID=" + shellQuote(request.WindowID) +
+		" ISSUEOPS_CMUX_EXPECTED_WORKSPACE_ID=" + shellQuote(request.WorkspaceID) +
+		" ISSUEOPS_CMUX_EXPECTED_SURFACE_ID=" + shellQuote(request.SurfaceID) +
+		" ISSUEOPS_CMUX_EXPECTED_SOCKET_PATH=" + shellQuote(request.SocketPath) +
 		" /bin/sh " + shellQuote(prepared.LauncherPath)
 	return prepared, nil
 }
@@ -137,12 +147,16 @@ func launcherScript(request ArtifactRequest, prepared PreparedLauncher, argv []s
 		"umask 077\n" +
 		"status=ok\n" +
 		"[ \"$PWD\" = " + shellQuote(request.CWD) + " ] || status=identity_mismatch\n" +
-		"[ \"${ISSUEOPS_CMUX_WINDOW_ID-}\" = " + shellQuote(request.WindowID) + " ] || status=identity_mismatch\n" +
-		"[ \"${CMUX_WORKSPACE_ID-}\" = " + shellQuote(request.WorkspaceID) + " ] || status=identity_mismatch\n" +
-		"[ \"${CMUX_SURFACE_ID-}\" = " + shellQuote(request.SurfaceID) + " ] || status=identity_mismatch\n" +
-		"[ \"${CMUX_SOCKET_PATH-}\" = " + shellQuote(request.SocketPath) + " ] || status=identity_mismatch\n" +
+		"[ \"${ISSUEOPS_CMUX_EXPECTED_WINDOW_ID-}\" = " + shellQuote(request.WindowID) + " ] || status=identity_mismatch\n" +
+		"[ \"${ISSUEOPS_CMUX_EXPECTED_WORKSPACE_ID-}\" = " + shellQuote(request.WorkspaceID) + " ] || status=identity_mismatch\n" +
+		"[ \"${ISSUEOPS_CMUX_EXPECTED_SURFACE_ID-}\" = " + shellQuote(request.SurfaceID) + " ] || status=identity_mismatch\n" +
+		"[ \"${ISSUEOPS_CMUX_EXPECTED_SOCKET_PATH-}\" = " + shellQuote(request.SocketPath) + " ] || status=identity_mismatch\n" +
+		"[ -z \"${CMUX_WINDOW_ID-}\" ] || [ \"${CMUX_WINDOW_ID-}\" = \"${ISSUEOPS_CMUX_EXPECTED_WINDOW_ID-}\" ] || status=identity_mismatch\n" +
+		"[ \"${CMUX_WORKSPACE_ID-}\" = \"${ISSUEOPS_CMUX_EXPECTED_WORKSPACE_ID-}\" ] || status=identity_mismatch\n" +
+		"[ \"${CMUX_SURFACE_ID-}\" = \"${ISSUEOPS_CMUX_EXPECTED_SURFACE_ID-}\" ] || status=identity_mismatch\n" +
+		"[ \"${CMUX_SOCKET_PATH-}\" = \"${ISSUEOPS_CMUX_EXPECTED_SOCKET_PATH-}\" ] || status=identity_mismatch\n" +
 		"receipt_tmp=" + shellQuote(prepared.ReceiptPath+".tmp") + "\n" +
-		"printf '%s\\000' '1' \"$status\" \"$$\" \"$PWD\" \"${ISSUEOPS_CMUX_WINDOW_ID-}\" \"${CMUX_WORKSPACE_ID-}\" \"${CMUX_SURFACE_ID-}\" \"${CMUX_SOCKET_PATH-}\" " +
+		"printf '%s\\000' '1' \"$status\" \"$$\" \"$PWD\" \"${CMUX_WINDOW_ID-}\" \"${CMUX_WORKSPACE_ID-}\" \"${CMUX_SURFACE_ID-}\" \"${CMUX_SOCKET_PATH-}\" " +
 		shellQuote(request.HostExecutable) + " " + shellQuote(request.PromptSHA256) + " " + shellQuote(request.MaterialSHA256) + " " + shellQuote(argvDigest) + " > \"$receipt_tmp\"\n" +
 		"/bin/mv \"$receipt_tmp\" " + shellQuote(prepared.ReceiptPath) + "\n" +
 		"[ \"$status\" = ok ] || exit 78\n" +
@@ -172,10 +186,11 @@ func ReadBootstrapReceipt(path string) (BootstrapReceipt, error) {
 }
 
 func ValidateBootstrapReceipt(receipt BootstrapReceipt, expected BootstrapExpectation, observe func(int) (issueopscontract.NativeProcessReceipt, error)) (issueopscontract.NativeProcessReceipt, error) {
-	if receipt.Status != "ok" || receipt.CWD != expected.CWD || receipt.WindowID != expected.WindowID || receipt.WorkspaceID != expected.WorkspaceID ||
+	if receipt.Status != "ok" || receipt.CWD != expected.CWD || receipt.WorkspaceID != expected.WorkspaceID ||
 		receipt.SurfaceID != expected.SurfaceID || receipt.SocketPath != expected.SocketPath ||
+		(receipt.WindowID != "" && receipt.WindowID != expected.WindowID) ||
 		receipt.HostExecutable != expected.HostExecutable || receipt.PromptSHA256 != expected.PromptSHA256 ||
-		receipt.MaterialSHA256 != expected.MaterialSHA256 || !validDigest(receipt.HostArgvSHA256) {
+		receipt.MaterialSHA256 != expected.MaterialSHA256 || !validDigest(expected.HostArgvSHA256) || receipt.HostArgvSHA256 != expected.HostArgvSHA256 {
 		return issueopscontract.NativeProcessReceipt{}, fmt.Errorf("cmux bootstrap receipt identity mismatch")
 	}
 	if observe == nil {
@@ -188,7 +203,22 @@ func ValidateBootstrapReceipt(receipt BootstrapReceipt, expected BootstrapExpect
 	if process.PID != receipt.PID || process.StartedAt == "" || process.Executable == "" {
 		return issueopscontract.NativeProcessReceipt{}, fmt.Errorf("cmux receiver process receipt is incomplete")
 	}
+	if !sameExecutableIdentity(process.Executable, expected.HostExecutable) {
+		return issueopscontract.NativeProcessReceipt{}, fmt.Errorf("cmux receiver process executable does not match the expected native host")
+	}
 	return process, nil
+}
+
+func sameExecutableIdentity(observed, expected string) bool {
+	if !filepath.IsAbs(observed) || filepath.Clean(observed) != observed || !filepath.IsAbs(expected) || filepath.Clean(expected) != expected {
+		return false
+	}
+	if observed == expected {
+		return true
+	}
+	observedResolved, observedErr := filepath.EvalSymlinks(observed)
+	expectedResolved, expectedErr := filepath.EvalSymlinks(expected)
+	return observedErr == nil && expectedErr == nil && observedResolved == expectedResolved
 }
 
 func ensurePrivateDirectory(path string) error {

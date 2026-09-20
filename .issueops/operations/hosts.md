@@ -211,8 +211,9 @@ only after the user explicitly requests cmux and the exact direct generation is
 released.
 
 The supported command is `issueops execution handoff-cmux`. Supply the observed
-absolute cmux executable, exact version, absolute Unix socket, exact window UUID,
-native host executable, model/effort, and sealed prompt/material digests. Do not
+absolute cmux executable, exact `cmux 0.64.10 (90) [fafa50702]` build identity,
+absolute Unix socket, exact window UUID, canonical `--cwd`, native host
+executable, model/effort, and sealed prompt/material digests. Do not
 run bare `cmux <path>` because it may start the app, and do not run `cmux omo`;
 the generic terminal command executes the absolute native Omo binary. The
 IssueOps preflight is limited to version, ping, capabilities, and exact-target
@@ -224,9 +225,12 @@ send timeout/response loss is terminal for that lineage: inspect the returned
 IDs and recovery directory read-only, do not rerun the command, switch launcher,
 or close the workspace automatically. Raw-input acceptance and a bootstrap
 process receipt remain delivery evidence; only the normal IssueOps claim CAS
-creates authority. cmux 0.64.10 exposes no runtime/machine/server identity, so
-the recorded socket endpoint incarnation proves endpoint stability only and
-cannot certify a live cmux × host row.
+creates authority. A process receipt is attached only when the bootstrap PID's
+observed executable matches the expected host executable. Wrapper descendants
+that cannot be proved stay explicitly unverified. cmux 0.64.10 exposes no
+runtime/machine/server identity, and the recorded socket endpoint incarnation
+is an observation of one path entry rather than proof of peer identity or full
+socket-race closure. It cannot certify a live cmux × host row.
 
 ## IssueOps Host Rule
 

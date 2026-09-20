@@ -33,7 +33,7 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 	} {
 		t.Run(test.host, func(t *testing.T) {
 			capture := filepath.Join(root, test.host+"-argv")
-			host := filepath.Join(root, test.host+"-host")
+			host := filepath.Join(root, test.host)
 			hostSource := "#!/bin/sh\nprintf '%s\\000' \"$@\" > \"$HOST_CAPTURE\"\n"
 			if err := os.WriteFile(host, []byte(hostSource), 0o700); err != nil {
 				t.Fatal(err)
@@ -57,7 +57,7 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 			if bytes.Contains(launcherBytes, []byte(prompt)) || strings.Contains(string(launcherBytes), "cmux omo") {
 				t.Fatal("launcher embedded prompt text or cmux host shortcut")
 			}
-			for _, fence := range []string{"ISSUEOPS_CMUX_WINDOW_ID=", "CMUX_WORKSPACE_ID=", "CMUX_SURFACE_ID=", "CMUX_SOCKET_PATH="} {
+			for _, fence := range []string{"ISSUEOPS_CMUX_EXPECTED_WINDOW_ID=", "ISSUEOPS_CMUX_EXPECTED_WORKSPACE_ID=", "ISSUEOPS_CMUX_EXPECTED_SURFACE_ID=", "ISSUEOPS_CMUX_EXPECTED_SOCKET_PATH="} {
 				if !strings.Contains(prepared.Command, fence) {
 					t.Fatalf("bootstrap command missing sealed scope %q: %s", fence, prepared.Command)
 				}
@@ -65,7 +65,7 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 
 			command := exec.CommandContext(context.Background(), "/bin/sh", "-c", prepared.Command)
 			command.Dir = worktree
-			command.Env = append(withoutCmuxEnvironment(os.Environ()), "HOST_CAPTURE="+capture)
+			command.Env = append(validCmuxEnvironment(os.Environ()), "HOST_CAPTURE="+capture)
 			if output, err := command.CombinedOutput(); err != nil {
 				t.Fatalf("launcher: %v\n%s", err, output)
 			}
@@ -105,7 +105,7 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 	if err := os.Mkdir(wrong, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	host := filepath.Join(root, "host")
+	host := filepath.Join(root, "codex")
 	capture := filepath.Join(root, "called")
 	if err := os.WriteFile(host, []byte("#!/bin/sh\ntouch \"$HOST_CAPTURE\"\n"), 0o700); err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 	}
 	command := exec.Command("/bin/sh", "-c", prepared.Command)
 	command.Dir = wrong
-	command.Env = append(withoutCmuxEnvironment(os.Environ()), "HOST_CAPTURE="+capture)
+	command.Env = append(validCmuxEnvironment(os.Environ()), "HOST_CAPTURE="+capture)
 	if err := command.Run(); err == nil {
 		t.Fatal("wrong cwd launcher succeeded")
 	}
@@ -145,10 +145,49 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 	}
 }
 
+func TestPrivateLauncherRejectsWrongAmbientCmuxScope(t *testing.T) {
+	root := canonicalTempDir(t)
+	worktree := filepath.Join(root, "worktree")
+	if err := os.Mkdir(worktree, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	host := filepath.Join(root, "codex")
+	capture := filepath.Join(root, "called")
+	if err := os.WriteFile(host, []byte("#!/bin/sh\ntouch \"$HOST_CAPTURE\"\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	prompt := []byte("prompt")
+	prepared, err := PrepareLauncher(ArtifactRequest{
+		Root: filepath.Join(root, "artifacts"), CWD: worktree, WindowID: testWindow, WorkspaceID: testWorkspace,
+		SurfaceID: testSurface, SocketPath: socketPath, Host: "codex", HostExecutable: host, Model: "model",
+		Prompt: prompt, PromptSHA256: digestBytes(prompt), MaterialSHA256: strings.Repeat("b", 64),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command("/bin/sh", "-c", prepared.Command)
+	command.Dir = worktree
+	command.Env = append(withoutCmuxEnvironment(os.Environ()),
+		"CMUX_WORKSPACE_ID=99999999-9999-4999-8999-999999999999",
+		"CMUX_SURFACE_ID="+testSurface,
+		"CMUX_SOCKET_PATH="+socketPath,
+		"HOST_CAPTURE="+capture)
+	if err := command.Run(); err == nil {
+		t.Fatal("wrong ambient cmux scope succeeded")
+	}
+	if _, err := os.Stat(capture); !os.IsNotExist(err) {
+		t.Fatal("host executed after ambient scope mismatch")
+	}
+	receipt, err := ReadBootstrapReceipt(prepared.ReceiptPath)
+	if err != nil || receipt.Status != "identity_mismatch" || receipt.WorkspaceID == testWorkspace {
+		t.Fatalf("receipt=%+v err=%v", receipt, err)
+	}
+}
+
 func TestValidateBootstrapReceiptRequiresExactProcessCorrelation(t *testing.T) {
 	expected := BootstrapExpectation{
 		CWD: "/repo/worktree", WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
-		HostExecutable: "/opt/native/codex", PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
+		HostExecutable: "/opt/native/codex", HostArgvSHA256: strings.Repeat("c", 64), PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
 	}
 	receipt := BootstrapReceipt{Status: "ok", PID: 8080, CWD: expected.CWD, WindowID: expected.WindowID, WorkspaceID: expected.WorkspaceID, SurfaceID: expected.SurfaceID,
 		SocketPath: expected.SocketPath, HostExecutable: expected.HostExecutable, PromptSHA256: expected.PromptSHA256, MaterialSHA256: expected.MaterialSHA256,
@@ -163,17 +202,42 @@ func TestValidateBootstrapReceiptRequiresExactProcessCorrelation(t *testing.T) {
 	if err != nil || !reflect.DeepEqual(got, process) {
 		t.Fatalf("process=%+v err=%v", got, err)
 	}
+	receipt.WindowID = ""
+	if _, err := ValidateBootstrapReceipt(receipt, expected, func(int) (issueopscontract.NativeProcessReceipt, error) { return process, nil }); err != nil {
+		t.Fatalf("optional absent ambient window rejected: %v", err)
+	}
+	receipt.WindowID = expected.WindowID
 	receipt.CWD = "/tmp/wrong"
 	if _, err := ValidateBootstrapReceipt(receipt, expected, func(int) (issueopscontract.NativeProcessReceipt, error) { return process, nil }); err == nil || !strings.Contains(err.Error(), "identity mismatch") {
 		t.Fatalf("wrong cwd accepted: %v", err)
 	}
+	receipt.CWD = expected.CWD
+	wrongProcess := process
+	wrongProcess.Executable = "/usr/bin/python3"
+	if _, err := ValidateBootstrapReceipt(receipt, expected, func(int) (issueopscontract.NativeProcessReceipt, error) { return wrongProcess, nil }); err == nil || !strings.Contains(err.Error(), "executable") {
+		t.Fatalf("wrong non-shell receiver executable accepted: %v", err)
+	}
+	receipt.HostArgvSHA256 = strings.Repeat("d", 64)
+	if _, err := ValidateBootstrapReceipt(receipt, expected, func(int) (issueopscontract.NativeProcessReceipt, error) { return process, nil }); err == nil || !strings.Contains(err.Error(), "identity mismatch") {
+		t.Fatalf("wrong host argv digest accepted: %v", err)
+	}
+}
+
+func validCmuxEnvironment(environment []string) []string {
+	return append(withoutCmuxEnvironment(environment),
+		"CMUX_WINDOW_ID="+testWindow,
+		"CMUX_WORKSPACE_ID="+testWorkspace,
+		"CMUX_SURFACE_ID="+testSurface,
+		"CMUX_SOCKET_PATH="+socketPath)
 }
 
 func withoutCmuxEnvironment(environment []string) []string {
 	result := make([]string, 0, len(environment))
 	for _, entry := range environment {
 		name, _, _ := strings.Cut(entry, "=")
-		if name != "ISSUEOPS_CMUX_WINDOW_ID" && name != "CMUX_WORKSPACE_ID" && name != "CMUX_SURFACE_ID" && name != "CMUX_SOCKET_PATH" && name != "CMUX_SOCKET" {
+		if name != "ISSUEOPS_CMUX_EXPECTED_WINDOW_ID" && name != "ISSUEOPS_CMUX_EXPECTED_WORKSPACE_ID" &&
+			name != "ISSUEOPS_CMUX_EXPECTED_SURFACE_ID" && name != "ISSUEOPS_CMUX_EXPECTED_SOCKET_PATH" &&
+			name != "CMUX_WINDOW_ID" && name != "CMUX_WORKSPACE_ID" && name != "CMUX_SURFACE_ID" && name != "CMUX_SOCKET_PATH" && name != "CMUX_SOCKET" {
 			result = append(result, entry)
 		}
 	}

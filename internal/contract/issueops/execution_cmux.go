@@ -7,8 +7,10 @@ type ExecutionCmuxHandoffRequest struct {
 	Generation     uint64 `json:"generation"`
 	CmuxExecutable string `json:"cmux_executable"`
 	CmuxVersion    string `json:"cmux_version"`
+	CmuxBuild      string `json:"cmux_build_identity"`
 	SocketPath     string `json:"socket_path"`
 	WindowID       string `json:"window_id"`
+	CWD            string `json:"cwd"`
 	Host           string `json:"host"`
 	HostExecutable string `json:"host_executable"`
 	Model          string `json:"model"`

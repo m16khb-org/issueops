@@ -27,10 +27,12 @@ exact window에 workspace/surface를 배치하고 raw input을 전달할 뿐 lea
 만들 수 없다.
 
 cmux 0.64.10의 CLI 응답에는 stable runtime, machine, server ID가 없다. 따라서 integration은
-absolute non-symlink Unix socket의 lstat·owner·mode·parent를 `endpoint_incarnation`으로 기록해
-preflight, create, send 사이의 endpoint 안정성만 확인한다. 이를 runtime identity로 바꾸어
-해석하지 않는다. owner authority는 수신 프로세스의 PID·시작 시각·absolute executable과
-IssueOps claim CAS가 모두 일치할 때만 생긴다.
+absolute non-symlink Unix socket의 owner·mode·parent와 stat identity를
+`endpoint_incarnation`으로 기록한다. 이 값은 preflight, create, send 사이에 같은 경로 항목을
+관측했다는 뜻이며 실제 peer identity나 socket race의 완전한 차단을 증명하지 않는다. 이를
+runtime identity로 해석하지 않는다. bootstrap PID의 실행 파일이 기대한 native host
+executable과 같은 파일임을 입증한 경우에만 process evidence를 붙이며, owner authority는
+별도의 정상 IssueOps claim CAS가 계속 단독으로 소유한다.
 
 ## Pioneer Skills Layer
 

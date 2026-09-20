@@ -72,7 +72,7 @@ const Usage = `Usage:
   issueops execution complete --id ID --generation N --final-head SHA --verification-report PATH --remote-artifact-url URL --verification TEXT... ACTOR_FLAGS --confirm [--json]
   issueops execution sync-base --id ID --completion-generation N (--preview | --apply --confirm --fingerprint SHA256 | --finalize | --abort) ACTOR_FLAGS [--json]
   issueops execution switch-mode --id ID --mode direct|orca [--apply --confirm --fingerprint SHA256] ACTOR_FLAGS [--json]
-  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --socket ABS --window UUID --host codex|claude|omo --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
+  issueops execution handoff-cmux --id ID --generation N --cmux-executable ABS --cmux-version VERSION --cmux-build-identity IDENTITY --socket ABS --window UUID --cwd ABS --host codex|claude|omo --host-executable ABS --model MODEL [--effort EFFORT] --prompt-file ABS --prompt-sha256 HEX --material-sha256 HEX [--json]
 
 ACTOR_FLAGS: --host codex|claude|omo --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd PATH`
 
@@ -117,8 +117,10 @@ func runHandoffCmux(args []string, deps Deps) error {
 	generation := fs.Uint64("generation", 0, "released direct execution generation")
 	cmuxExecutable := fs.String("cmux-executable", "", "absolute observed cmux executable")
 	cmuxVersion := fs.String("cmux-version", "", "exact expected cmux version")
+	cmuxBuild := fs.String("cmux-build-identity", "", "exact expected cmux version/build identity")
 	socketPath := fs.String("socket", "", "absolute cmux Unix socket path")
 	windowID := fs.String("window", "", "exact cmux window UUID")
+	cwd := fs.String("cwd", "", "canonical worktree and actual process cwd")
 	host := fs.String("host", "", "native host: codex, claude, or omo")
 	hostExecutable := fs.String("host-executable", "", "absolute native host executable")
 	modelName := fs.String("model", "", "native host model")
@@ -131,12 +133,12 @@ func runHandoffCmux(args []string, deps Deps) error {
 		return err
 	}
 	request := model.ExecutionCmuxHandoffRequest{
-		ID: *id, Generation: *generation, CmuxExecutable: *cmuxExecutable, CmuxVersion: *cmuxVersion,
-		SocketPath: *socketPath, WindowID: *windowID, Host: *host, HostExecutable: *hostExecutable,
+		ID: *id, Generation: *generation, CmuxExecutable: *cmuxExecutable, CmuxVersion: *cmuxVersion, CmuxBuild: *cmuxBuild,
+		SocketPath: *socketPath, WindowID: *windowID, CWD: *cwd, Host: *host, HostExecutable: *hostExecutable,
 		Model: *modelName, Effort: *effort, PromptFile: *promptFile, PromptSHA256: *promptDigest, MaterialSHA256: *materialDigest,
 	}
-	if request.ID == "" || request.Generation == 0 || request.CmuxExecutable == "" || request.CmuxVersion == "" ||
-		request.SocketPath == "" || request.WindowID == "" || request.Host == "" || request.HostExecutable == "" ||
+	if request.ID == "" || request.Generation == 0 || request.CmuxExecutable == "" || request.CmuxVersion == "" || request.CmuxBuild == "" ||
+		request.SocketPath == "" || request.WindowID == "" || request.CWD == "" || request.Host == "" || request.HostExecutable == "" ||
 		request.Model == "" || request.PromptFile == "" || request.PromptSHA256 == "" || request.MaterialSHA256 == "" {
 		return output(nil, *jsonOut, fmt.Errorf("execution handoff-cmux requires every explicit identity fence"), deps)
 	}

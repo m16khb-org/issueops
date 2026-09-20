@@ -29,17 +29,21 @@ type cmuxClient interface {
 type cmuxHandoffDependencies struct {
 	Client                 cmuxClient
 	Now                    func() time.Time
+	Getwd                  func() (string, error)
 	GitTop                 func(string) (string, error)
+	ReadPrompt             func(string, string, string) ([]byte, error)
 	ValidateHostExecutable func(string) error
 	Prepare                func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error)
 	AwaitReceipt           func(context.Context, cmuxadapter.PreparedLauncher, cmuxadapter.BootstrapExpectation) (issueopscontract.NativeProcessReceipt, error)
+	Cleanup                func(cmuxadapter.PreparedLauncher) error
 }
 
 func issueOpsCmuxHandoffHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest) (issueopscontract.ExecutionCmuxHandoffResult, error) {
 	client := cmuxadapter.Client{Runner: cmuxadapter.ExecRunner{}, ObserveEndpoint: cmuxadapter.ObserveEndpoint, UID: os.Getuid()}
 	return issueOpsCmuxHandoffHandlerWithDeps(ctx, stateRoot, request, cmuxHandoffDependencies{
-		Client: client, Now: time.Now, GitTop: cmuxGitTop, ValidateHostExecutable: validateCmuxHostExecutable,
-		Prepare: cmuxadapter.PrepareLauncher, AwaitReceipt: awaitCmuxBootstrapReceipt,
+		Client: client, Now: time.Now, Getwd: os.Getwd, GitTop: cmuxGitTop, ReadPrompt: cmuxadapter.ReadPrompt,
+		ValidateHostExecutable: validateCmuxHostExecutable, Prepare: cmuxadapter.PrepareLauncher,
+		AwaitReceipt: awaitCmuxBootstrapReceipt, Cleanup: func(prepared cmuxadapter.PreparedLauncher) error { return prepared.Cleanup() },
 	})
 }
 
@@ -48,15 +52,39 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	if deps.Client == nil || deps.Now == nil || deps.GitTop == nil || deps.ValidateHostExecutable == nil {
 		return result, fmt.Errorf("cmux handoff dependencies are unavailable")
 	}
+	if deps.Getwd == nil {
+		deps.Getwd = os.Getwd
+	}
+	if deps.ReadPrompt == nil {
+		deps.ReadPrompt = cmuxadapter.ReadPrompt
+	}
+	if cmuxRequestContainsNUL(request) {
+		return result, fmt.Errorf("cmux handoff identity must not contain NUL bytes")
+	}
 	record, err := issueopsadapter.ReadIssueOps(stateRoot, request.ID)
 	if err != nil {
 		return result, err
 	}
-	root, err := validateCmuxReleasedDirectRecord(record, request.Generation, deps.GitTop)
+	root, err := validateCmuxReleasedDirectRecord(record, request.Generation, request.CWD, deps.Getwd, deps.GitTop)
 	if err != nil {
 		return result, err
 	}
-	prompt, err := readCmuxPrompt(root, request.PromptFile, request.PromptSHA256)
+	attemptID, lineageID := cmuxHandoffIDs(request)
+	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	if err != nil {
+		return result, err
+	}
+	for _, observation := range observations {
+		if observation.LifecycleID == request.ID && observation.LineageID == lineageID {
+			return result, fmt.Errorf("cmux handoff attempt already exists; inspect the existing lineage and do not retry")
+		}
+		if observation.LifecycleID == request.ID && observation.SourceGeneration == request.Generation &&
+			observation.Launcher.Name == issueopscontract.IssueOpsHandoffDeliveryLauncherCmux &&
+			observation.CallStaged.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved {
+			return result, fmt.Errorf("cmux handoff generation already has a staged attempt; inspect the existing lineage and do not retry")
+		}
+	}
+	prompt, err := deps.ReadPrompt(root, request.PromptFile, request.PromptSHA256)
 	if err != nil {
 		return result, err
 	}
@@ -69,20 +97,10 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	if _, err := nativehost.BuildInteractiveArgv(request.Host, request.HostExecutable, request.Model, request.Effort, ""); err != nil {
 		return result, err
 	}
-	attemptID, lineageID := cmuxHandoffIDs(request)
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
-	if err != nil {
-		return result, err
-	}
-	for _, observation := range observations {
-		if observation.LifecycleID == request.ID && observation.LineageID == lineageID {
-			return result, fmt.Errorf("cmux handoff attempt already exists; inspect the existing lineage and do not retry")
-		}
-	}
 
 	preflightStarted := time.Now()
 	preflight, err := deps.Client.Preflight(ctx, cmuxadapter.PreflightRequest{
-		Executable: request.CmuxExecutable, ExpectedVersion: request.CmuxVersion,
+		Executable: request.CmuxExecutable, ExpectedVersion: request.CmuxVersion, ExpectedBuild: request.CmuxBuild,
 		SocketPath: request.SocketPath, WindowID: request.WindowID,
 	})
 	if err != nil {
@@ -97,7 +115,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		AttemptID:     attemptID, LineageID: lineageID, LifecycleID: request.ID,
 		PromptSHA256: request.PromptSHA256, MaterialSHA256: request.MaterialSHA256,
 		Launcher: issueopscontract.IssueOpsHandoffDeliveryLauncher{
-			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: preflight.Version,
+			Name: issueopscontract.IssueOpsHandoffDeliveryLauncherCmux, Version: preflight.Build,
 			Path: preflight.Executable, EndpointIncarnation: &endpoint,
 		},
 		Target:            issueopscontract.IssueOpsHandoffDeliveryTarget{WindowID: request.WindowID, CWD: root},
@@ -128,15 +146,22 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	observation.Timing.WorkspaceCreateMS = created.CreateMS
 	observation.Timing.TargetResolveMS = created.ResolveMS
 	if createErr != nil {
-		observation.Ambiguous = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
+		if cmuxMutationAmbiguous(createErr) {
+			observation.Ambiguous = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
+		}
 		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
 		if auditErr != nil {
 			return result, errors.Join(createErr, auditErr)
 		}
-		return cmuxResult(request, audited.Observation, "ambiguous", ""), createErr
+		status := "failed"
+		if cmuxMutationAmbiguous(createErr) {
+			status = "ambiguous"
+		}
+		return cmuxResult(request, audited.Observation, status, ""), createErr
 	}
 	if observation.Target.WorkspaceID == "" || observation.Target.SurfaceID == "" {
-		return result, fmt.Errorf("cmux created target identity is incomplete")
+		terminal, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		return cmuxResult(request, terminal.Observation, "failed", ""), errors.Join(fmt.Errorf("cmux created target identity is incomplete"), auditErr)
 	}
 	audited, err = auditCmuxObservation(stateRoot, record, observation)
 	if err != nil {
@@ -156,20 +181,26 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	})
 	if err != nil {
 		observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
-		observation.Ambiguous = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
 		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
-		return cmuxResult(request, audited.Observation, "ambiguous", ""), errors.Join(err, auditErr)
+		return cmuxResult(request, audited.Observation, "pre_send_failed", ""), errors.Join(err, auditErr)
 	}
 	sendReceipt, sendErr := deps.Client.Send(ctx, cmuxadapter.SendRequest{Created: created, Command: prepared.Command})
 	observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
 	observation.Timing.InputSendMS = sendReceipt.SendMS
 	if sendErr != nil {
-		observation.Ambiguous = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
+		if cmuxMutationAmbiguous(sendErr) {
+			observation.Ambiguous = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
+		}
 		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
-		return cmuxResult(request, audited.Observation, "ambiguous", prepared.Directory), errors.Join(sendErr, auditErr)
+		status := "failed"
+		if cmuxMutationAmbiguous(sendErr) {
+			status = "ambiguous"
+		}
+		return cmuxResult(request, audited.Observation, status, prepared.Directory), errors.Join(sendErr, auditErr)
 	}
 	if !sendReceipt.Accepted {
-		return result, fmt.Errorf("cmux send returned no accepted receipt")
+		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		return cmuxResult(request, audited.Observation, "failed", prepared.Directory), errors.Join(fmt.Errorf("cmux send returned no accepted receipt"), auditErr)
 	}
 	observation.InputAccepted = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput)
 	audited, err = auditCmuxObservation(stateRoot, record, observation)
@@ -184,13 +215,16 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	receiptStarted := time.Now()
 	process, receiptErr := deps.AwaitReceipt(ctx, prepared, cmuxadapter.BootstrapExpectation{
 		CWD: root, WindowID: created.WindowID, WorkspaceID: created.WorkspaceID, SurfaceID: created.SurfaceID, SocketPath: request.SocketPath,
-		HostExecutable: request.HostExecutable, PromptSHA256: request.PromptSHA256, MaterialSHA256: request.MaterialSHA256,
+		HostExecutable: request.HostExecutable, HostArgvSHA256: prepared.HostArgvSHA256,
+		PromptSHA256: request.PromptSHA256, MaterialSHA256: request.MaterialSHA256,
 	})
 	observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
 	if receiptErr != nil {
-		observation.Ambiguous = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceTimeout)
 		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
-		return cmuxResult(request, audited.Observation, "input_accepted_receiver_unverified", prepared.Directory), errors.Join(receiptErr, auditErr)
+		if auditErr != nil {
+			return cmuxResult(request, observation, "input_accepted_receiver_unverified", prepared.Directory), auditErr
+		}
+		return cmuxResult(request, audited.Observation, "input_accepted_receiver_unverified", prepared.Directory), nil
 	}
 	observation.Target.Process = &process
 	observation.Target.ProcessIncarnation = strconv.Itoa(process.PID) + ":" + process.StartedAt + ":" + process.Executable
@@ -199,11 +233,13 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	if err != nil {
 		return cmuxResult(request, observation, "input_accepted", prepared.Directory), err
 	}
-	recovery := prepared.Directory
-	if cleanupErr := prepared.Cleanup(); cleanupErr == nil {
-		recovery = ""
+	if deps.Cleanup == nil {
+		deps.Cleanup = func(prepared cmuxadapter.PreparedLauncher) error { return prepared.Cleanup() }
 	}
-	return cmuxResult(request, audited.Observation, "input_accepted", recovery), nil
+	if cleanupErr := deps.Cleanup(prepared); cleanupErr != nil {
+		return cmuxResult(request, audited.Observation, "input_accepted_cleanup_failed", prepared.Directory), fmt.Errorf("cleanup cmux recovery artifact: %w", cleanupErr)
+	}
+	return cmuxResult(request, audited.Observation, "input_accepted", ""), nil
 }
 
 func auditCmuxObservation(stateRoot string, record issueopscontract.IssueOpsRecord, observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditadapter.HandoffDeliveryAuditRecord, error) {
@@ -222,7 +258,7 @@ func cmuxHandoffIDs(request issueopscontract.ExecutionCmuxHandoffRequest) (strin
 	return attempt, lineage
 }
 
-func validateCmuxReleasedDirectRecord(record issueopscontract.IssueOpsRecord, generation uint64, gitTop func(string) (string, error)) (string, error) {
+func validateCmuxReleasedDirectRecord(record issueopscontract.IssueOpsRecord, generation uint64, requestedCWD string, getwd func() (string, error), gitTop func(string) (string, error)) (string, error) {
 	if record.Execution == nil || record.Execution.Mode != issueopscontract.ExecutionModeDirect ||
 		record.Execution.Lease.Status != issueopscontract.LeaseStatusReleased || record.Execution.Lease.Generation != generation {
 		return "", fmt.Errorf("cmux handoff requires the exact released direct execution generation")
@@ -235,29 +271,19 @@ func validateCmuxReleasedDirectRecord(record issueopscontract.IssueOpsRecord, ge
 	if err != nil || !info.IsDir() {
 		return "", fmt.Errorf("cmux handoff canonical worktree is unavailable")
 	}
-	top, err := gitTop(root)
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil || !filepath.IsAbs(requestedCWD) || filepath.Clean(requestedCWD) != requestedCWD || !sameCmuxPath(requestedCWD, resolvedRoot) {
+		return "", fmt.Errorf("cmux handoff request cwd is not the canonical worktree")
+	}
+	processCWD, err := getwd()
+	if err != nil || !filepath.IsAbs(processCWD) || !sameCmuxPath(processCWD, resolvedRoot) {
+		return "", fmt.Errorf("cmux handoff process cwd is not the canonical worktree")
+	}
+	top, err := gitTop(resolvedRoot)
 	if err != nil || !sameCmuxPath(top, root) {
 		return "", fmt.Errorf("cmux handoff cwd is not the canonical Git worktree")
 	}
 	return root, nil
-}
-
-func readCmuxPrompt(root, path, expectedDigest string) ([]byte, error) {
-	if !filepath.IsAbs(path) || filepath.Clean(path) != path || !cmuxPathInside(root, path) {
-		return nil, fmt.Errorf("cmux prompt file must be inside the canonical worktree")
-	}
-	info, err := os.Lstat(path)
-	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 || info.Size() > 512<<10 {
-		return nil, fmt.Errorf("cmux prompt file boundary is unsafe")
-	}
-	value, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	if cmuxSHA256(value) != expectedDigest {
-		return nil, fmt.Errorf("cmux prompt digest mismatch")
-	}
-	return value, nil
 }
 
 func validateCmuxHostExecutable(path string) error {
@@ -308,7 +334,9 @@ func awaitCmuxBootstrapReceipt(ctx context.Context, prepared cmuxadapter.Prepare
 
 func cmuxResult(request issueopscontract.ExecutionCmuxHandoffRequest, observation issueopscontract.IssueOpsHandoffDeliveryObservation, status, recovery string) issueopscontract.ExecutionCmuxHandoffResult {
 	return issueopscontract.ExecutionCmuxHandoffResult{
-		OK: status == "input_accepted", ID: request.ID, Generation: request.Generation, Status: status,
+		OK: observation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved &&
+			observation.Ambiguous.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved,
+		ID: request.ID, Generation: request.Generation, Status: status,
 		Launcher: observation.Launcher, Target: observation.Target, Timing: observation.Timing,
 		InputAccepted:       observation.InputAccepted.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved,
 		NativeTurnObserved:  observation.NativeTurnObserved.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved,
@@ -331,24 +359,6 @@ func sameCmuxPath(left, right string) bool {
 	return leftErr == nil && rightErr == nil && leftResolved == rightResolved
 }
 
-func cmuxPathInside(root, path string) bool {
-	resolvedRoot, err := filepath.EvalSymlinks(filepath.Clean(root))
-	if err != nil {
-		return false
-	}
-	resolvedPath, err := filepath.EvalSymlinks(filepath.Clean(path))
-	if err != nil {
-		return false
-	}
-	relative, err := filepath.Rel(resolvedRoot, resolvedPath)
-	return err == nil && relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator))
-}
-
-func cmuxSHA256(value []byte) string {
-	sum := sha256.Sum256(value)
-	return hex.EncodeToString(sum[:])
-}
-
 func cmuxDigest(value string) bool {
 	if len(value) != 64 || value != strings.ToLower(value) {
 		return false
@@ -368,4 +378,22 @@ func cmuxElapsedMS(start time.Time) uint64 {
 func cmuxShellProcess(executable string) bool {
 	base := strings.TrimSuffix(strings.ToLower(filepath.Base(executable)), ".exe")
 	return base == "sh" || base == "bash" || base == "zsh" || base == "dash"
+}
+
+func cmuxMutationAmbiguous(err error) bool {
+	mutation, ok := errors.AsType[*cmuxadapter.MutationError](err)
+	return ok && mutation.Ambiguous
+}
+
+func cmuxRequestContainsNUL(request issueopscontract.ExecutionCmuxHandoffRequest) bool {
+	for _, value := range []string{
+		request.ID, request.CmuxExecutable, request.CmuxVersion, request.CmuxBuild, request.SocketPath,
+		request.WindowID, request.CWD, request.Host, request.HostExecutable, request.Model, request.Effort,
+		request.PromptFile, request.PromptSHA256, request.MaterialSHA256,
+	} {
+		if strings.ContainsRune(value, 0) {
+			return true
+		}
+	}
+	return false
 }

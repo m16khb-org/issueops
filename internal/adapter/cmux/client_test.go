@@ -38,12 +38,12 @@ func TestPreflightUsesBoundedReadOnlyCmuxCommandsAndExactObservedIdentity(t *tes
 		UID: 501,
 	}
 	result, err := client.Preflight(context.Background(), PreflightRequest{
-		Executable: cmuxPath, ExpectedVersion: "0.64.10", SocketPath: socketPath, WindowID: testWindow,
+		Executable: cmuxPath, ExpectedVersion: SupportedVersion, ExpectedBuild: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if observations != 2 || result.Version != "0.64.10" || result.WindowID != testWindow || !SameEndpoint(result.Endpoint, endpointFixture()) {
+	if observations != 2 || result.Version != SupportedVersion || result.Build != SupportedBuildIdentity || result.WindowID != testWindow || !SameEndpoint(result.Endpoint, endpointFixture()) {
 		t.Fatalf("preflight=%+v observations=%d", result, observations)
 	}
 	for _, request := range runner.seen {
@@ -65,7 +65,7 @@ func TestPreflightFailsClosedOnMalformedOrIncompleteCmuxEvidence(t *testing.T) {
 		steps []runnerStep
 		want  string
 	}{
-		{name: "version mismatch", steps: []runnerStep{{args: []string{"version"}, stdout: "cmux 0.64.9\n"}}, want: "version mismatch"},
+		{name: "version mismatch", steps: []runnerStep{{args: []string{"version"}, stdout: "cmux 0.64.9\n"}}, want: "version/build mismatch"},
 		{name: "ping denied", steps: []runnerStep{{args: []string{"version"}, stdout: "cmux 0.64.10 (90) [fafa50702]\n"}, {args: []string{"ping"}, err: errors.New("permission denied")}}, want: "ping"},
 		{name: "malformed capabilities", steps: []runnerStep{{args: []string{"version"}, stdout: "cmux 0.64.10 (90) [fafa50702]\n"}, {args: []string{"ping"}, stdout: "PONG\n"}, {args: []string{"capabilities"}, stdout: "{"}}, want: "capabilities"},
 		{name: "duplicate capabilities field", steps: []runnerStep{{args: []string{"version"}, stdout: "cmux 0.64.10 (90) [fafa50702]\n"}, {args: []string{"ping"}, stdout: "PONG\n"}, {args: []string{"capabilities"}, stdout: strings.Replace(capabilitiesFixture(), "{", `{"protocol":"other",`, 1)}}, want: "duplicate JSON key"},
@@ -76,9 +76,29 @@ func TestPreflightFailsClosedOnMalformedOrIncompleteCmuxEvidence(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			runner := &queueRunner{t: t, steps: test.steps}
 			client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-			_, err := client.Preflight(context.Background(), PreflightRequest{Executable: cmuxPath, ExpectedVersion: "0.64.10", SocketPath: socketPath, WindowID: testWindow})
+			_, err := client.Preflight(context.Background(), PreflightRequest{Executable: cmuxPath, ExpectedVersion: SupportedVersion, ExpectedBuild: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow})
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("error=%v want=%q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestPreflightRejectsOtherBuildAndTrailingVersionJunk(t *testing.T) {
+	for _, version := range []string{
+		"cmux 0.64.10 (91) [fffffffff]\n",
+		"cmux 0.64.10 (90) [fafa50702] trailing\n",
+	} {
+		t.Run(strings.TrimSpace(version), func(t *testing.T) {
+			runner := &queueRunner{t: t, steps: []runnerStep{
+				{args: []string{"version"}, stdout: version},
+				{args: []string{"ping"}, stdout: "PONG\n"},
+				{args: []string{"capabilities"}, stdout: capabilitiesFixture()},
+				{args: []string{"--id-format", "uuids", "identify", "--window", testWindow, "--no-caller"}, stdout: identifyFixture(testWindow, "", "")},
+			}}
+			client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
+			if _, err := client.Preflight(context.Background(), PreflightRequest{Executable: cmuxPath, ExpectedVersion: SupportedVersion, ExpectedBuild: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow}); err == nil {
+				t.Fatalf("unsupported cmux build accepted: %q", version)
 			}
 		})
 	}
@@ -220,7 +240,7 @@ func (runner *queueRunner) Run(_ context.Context, request CommandRequest) (Comma
 func stableEndpointObserver(string, int) (EndpointIncarnation, error) { return endpointFixture(), nil }
 
 func preflightFixture() PreflightResult {
-	return PreflightResult{Executable: cmuxPath, Version: "0.64.10", SocketPath: socketPath, WindowID: testWindow, Endpoint: endpointFixture()}
+	return PreflightResult{Executable: cmuxPath, Version: SupportedVersion, Build: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow, Endpoint: endpointFixture()}
 }
 
 func createdFixture() CreatedWorkspace {

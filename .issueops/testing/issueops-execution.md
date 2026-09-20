@@ -35,10 +35,14 @@ Execution tests must cover:
   must cover exact binary/version/socket/window fences, endpoint-incarnation
   stability, stage-before-create ordering, target enrichment, one-shot send,
   receiver PID/start/executable correlation, and the absence of native-turn or
-  claim promotion from raw input. They must also cover Codex, Claude, and native
-  Omo argv; multiline/quoted shell input; missing/denied sockets; malformed and
-  duplicate responses; wrong cwd/target; runtime endpoint replacement; create
-  and send response loss; duplicate attempts; and recovery artifact/orphan
+  claim promotion from raw input. Prompt reads must use one bounded no-follow
+  handle-relative read and reject namespace replacement, symlinks, oversize,
+  unsafe mode, and NUL bytes before external calls. They must also cover Codex,
+  Claude, and native Omo argv; multiline/quoted shell input; missing/denied
+  sockets; malformed and duplicate responses; wrong cwd/target; runtime
+  endpoint replacement; create and send response loss; same-generation
+  duplicate attempts across changed targets or payloads; actual process cwd
+  mismatch; and recovery artifact/orphan
   boundaries without retry, fallback, or automatic workspace cleanup.
 - `issueops next` stage classification as a table test over the rule order, and an
   assertion that the read path performs no fetch: the local readiness surface must
