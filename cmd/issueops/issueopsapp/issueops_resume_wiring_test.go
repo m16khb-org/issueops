@@ -273,11 +273,51 @@ func TestResumePortReceiptPreservesRunStages(t *testing.T) {
 func TestResumePortReceiptPreservesDispatchAndPromptRequestIDs(t *testing.T) {
 	receipt := leasecontract.ResumeStageReceipt{
 		TaskID: "task-resume", DispatchID: "dispatch-resume", RequestID: "11111111-1111-4111-8111-111111111111",
-		PromptReceipt: &leasecontract.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-resume", Stages: []string{"input_accepted"}},
+		PromptReceipt: &leasecontract.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-resume", Stages: []string{"input_accepted"}, BaselineWorkingSequence: handoffTestUint64(0)},
 	}
 	got := resumePortReceipt(string(port.ExecutionOrcaIntentDispatch), receipt)
 	if got.RequestID != receipt.RequestID || got.PromptReceipt == nil || got.PromptReceipt.RequestID != receipt.PromptReceipt.RequestID || got.PromptReceipt.ProcessIncarnation != "process-resume" {
 		t.Fatalf("resume dispatch receipt lost durable IDs: %+v", got)
+	}
+}
+
+func TestResumeReceiptPreservesAndValidatesBaselineWorkingSequencePresence(t *testing.T) {
+	const (
+		dispatchID = "11111111-1111-4111-8111-111111111111"
+		promptID   = "22222222-2222-4222-8222-222222222222"
+	)
+	for _, test := range []struct {
+		name    string
+		field   string
+		wantErr bool
+	}{
+		{name: "missing", wantErr: true},
+		{name: "explicit zero", field: `,"baseline_working_sequence":0`},
+		{name: "positive", field: `,"baseline_working_sequence":9`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			raw := `{"terminal_pty_id":"pty-resume","terminal_handle":"term-resume","task_id":"task-resume","dispatch_id":"dispatch-resume","request_id":"` + dispatchID + `","prompt_receipt":{"request_id":"` + promptID + `","stages":["input_accepted"],"provider":"omo","process_incarnation":"process-resume","generation":1` + test.field + `}}`
+			var receipt leasecontract.ResumeStageReceipt
+			if err := json.Unmarshal([]byte(raw), &receipt); err != nil {
+				t.Fatal(err)
+			}
+			got := resumePortReceipt(string(port.ExecutionOrcaIntentDispatch), receipt)
+			err := port.ValidateExecutionOrcaDeliveryReceipt(got, port.OrcaDeliveryReceiptExpectation{
+				Host: "omo", TaskID: "task-resume", TerminalPTYID: "pty-resume", TerminalHandle: "term-resume",
+				DispatchRequestID: dispatchID, PromptRequestID: promptID, PromptProcessIncarnation: "process-resume",
+			})
+			if (err != nil) != test.wantErr {
+				t.Fatalf("resume receipt validation err=%v wantErr=%v receipt=%+v", err, test.wantErr, got)
+			}
+			encoded, err := json.Marshal(resumeContractReceipt(got))
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantField := test.field != ""
+			if bytes.Contains(encoded, []byte(`"baseline_working_sequence"`)) != wantField {
+				t.Fatalf("resume baseline presence want=%v JSON=%s", wantField, encoded)
+			}
+		})
 	}
 }
 

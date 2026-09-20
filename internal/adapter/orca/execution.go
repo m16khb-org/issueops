@@ -134,6 +134,9 @@ func (p *ExecutionProvisioner) InspectDeliveryIdentity(ctx context.Context, req 
 }
 
 func (p *ExecutionProvisioner) ObserveRequest(ctx context.Context, requestID string) (port.OrcaRequestObservation, error) {
+	if err := port.ValidateOrcaRequestID(requestID); err != nil {
+		return port.OrcaRequestObservation{}, err
+	}
 	client, ok := p.client.(executionDeliveryIdentityClient)
 	if !ok {
 		return port.OrcaRequestObservation{}, fmt.Errorf("Orca request observation is unavailable")
@@ -142,7 +145,7 @@ func (p *ExecutionProvisioner) ObserveRequest(ctx context.Context, requestID str
 }
 
 func (p *ExecutionProvisioner) InspectDeliveryDispatch(ctx context.Context, req port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, bool, error) {
-	if strings.TrimSpace(req.RetryRequestID) == "" {
+	if err := port.ValidateOrcaRequestID(req.RetryRequestID); err != nil {
 		return port.ExecutionOrcaIntentReceipt{}, false, fmt.Errorf("Orca dispatch delivery inspection requires a durable request ID")
 	}
 	terminal, err := p.resolveIntentTerminal(ctx, req)

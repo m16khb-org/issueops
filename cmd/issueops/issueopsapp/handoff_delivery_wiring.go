@@ -73,6 +73,12 @@ func (provisioner *handoffDeliveryProvisioner) InspectIntent(ctx context.Context
 	if !isHandoffDeliveryRequest(request) {
 		return provisioner.next.InspectIntent(ctx, request)
 	}
+	if err := validateHandoffDeliveryRetryRequestIDs(request); err != nil {
+		return port.ExecutionOrcaIntentInventory{}, err
+	}
+	if err := rejectStagedHandoffDeliveryWithoutResponse(provisioner.stateRoot, request); err != nil {
+		return port.ExecutionOrcaIntentInventory{}, err
+	}
 	identity, err := provisioner.deliveryIdentity(ctx, request)
 	if err != nil {
 		return port.ExecutionOrcaIntentInventory{}, err
@@ -90,6 +96,12 @@ func (provisioner *handoffDeliveryProvisioner) InspectIntent(ctx context.Context
 func (provisioner *handoffDeliveryProvisioner) InvokeIntent(ctx context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaIntentReceipt, error) {
 	if !isHandoffDeliveryRequest(request) {
 		return provisioner.next.InvokeIntent(ctx, request)
+	}
+	if err := validateHandoffDeliveryRetryRequestIDs(request); err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, err
+	}
+	if err := rejectStagedHandoffDeliveryWithoutResponse(provisioner.stateRoot, request); err != nil {
+		return port.ExecutionOrcaIntentReceipt{}, err
 	}
 	identity, err := provisioner.deliveryIdentity(ctx, request)
 	if err != nil {
@@ -132,6 +144,46 @@ func (provisioner *handoffDeliveryProvisioner) InvokeIntent(ctx context.Context,
 		return port.ExecutionOrcaIntentReceipt{}, err
 	}
 	return receipt, nil
+}
+
+func validateHandoffDeliveryRetryRequestIDs(request port.ExecutionOrcaIntentRequest) error {
+	if err := port.ValidateOrcaRetryRequestID(request.RetryRequestID); err != nil {
+		return fmt.Errorf("Orca dispatch retry request ID is invalid")
+	}
+	if err := port.ValidateOrcaRetryRequestID(request.PromptRetryRequestID); err != nil {
+		return fmt.Errorf("Orca prompt retry request ID is invalid")
+	}
+	return nil
+}
+
+func rejectStagedHandoffDeliveryWithoutResponse(stateRoot string, request port.ExecutionOrcaIntentRequest) error {
+	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	if err != nil {
+		return err
+	}
+	for _, callKind := range []string{"dispatch", "prompt"} {
+		attemptID := strings.TrimSpace(request.OperationID) + ":" + string(request.Stage) + ":" + callKind
+		lineageID := handoffDeliveryLineageID(request, callKind)
+		var latest *issueopscontract.IssueOpsHandoffDeliveryObservation
+		for index := range observations {
+			observation := &observations[index]
+			if observation.AttemptID == attemptID && observation.LineageID == lineageID &&
+				observation.LifecycleID == strings.TrimSpace(request.Workspace.LifecycleID) &&
+				observation.PromptSHA256 == strings.TrimSpace(request.Launch.PromptSHA256) &&
+				observation.MaterialSHA256 == strings.TrimSpace(request.Launch.ContextPacketSHA256) &&
+				observation.SourceGeneration == request.SourceGeneration &&
+				observation.ExpectedOwnerHost == strings.TrimSpace(request.Probe.Host) {
+				latest = observation
+			}
+		}
+		if latest != nil && latest.CallStaged.Status == issueopscontract.IssueOpsHandoffDeliveryStateObserved &&
+			strings.TrimSpace(latest.Request.DurableID) == "" &&
+			latest.InputAccepted.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved &&
+			latest.Ambiguous.Status != issueopscontract.IssueOpsHandoffDeliveryStateObserved {
+			return fmt.Errorf("Orca %s delivery is ambiguous after a staged call without an accepted response identity", callKind)
+		}
+	}
+	return nil
 }
 
 func (provisioner *handoffDeliveryProvisioner) deliveryIdentity(ctx context.Context, request port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaDeliveryIdentity, error) {
@@ -195,9 +247,8 @@ func observeHandoffDeliveryCompleted(stateRoot string, request port.ExecutionOrc
 		}
 		observation.Target.ProcessIncarnation = strings.TrimSpace(receipt.PromptReceipt.ProcessIncarnation)
 		generation := receipt.PromptReceipt.Generation
-		baseline := receipt.PromptReceipt.BaselineWorkingSequence
 		observation.Target.PromptGeneration = &generation
-		observation.Target.BaselineWorkingSequence = &baseline
+		observation.Target.BaselineWorkingSequence = cloneHandoffDeliveryUint64(receipt.PromptReceipt.BaselineWorkingSequence)
 		observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendAccepted)
 		if containsHandoffDeliveryString(receipt.PromptReceipt.Stages, "turn_started") {
 			observation.NativeTurnObserved = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceNativeReceipt)
@@ -218,11 +269,15 @@ func observeHandoffDeliveryFailure(stateRoot string, request port.ExecutionOrcaI
 		if !typed.Invoked || typed.Code == "delivery_observation_failed" {
 			return nil
 		}
-		observation.Request.DurableID = strings.TrimSpace(typed.OrchestrationRequestID)
+		if handoffDeliveryResponseIdentityRejected(request, typed) {
+			return nil
+		}
+		observation.Request.DurableID = handoffDeliveryAcceptedResponseID("", typed.OrchestrationRequestID)
 		if typed.CallPhase == "terminal_send" {
-			if strings.TrimSpace(typed.DispatchRequestID) != "" {
+			dispatchID := handoffDeliveryAcceptedResponseID(request.RetryRequestID, typed.DispatchRequestID)
+			if dispatchID != "" {
 				dispatchNow := handoffDeliveryEventClock(now)
-				dispatchObservation, dispatchErr := handoffDeliveryObservation(stateRoot, request, identity, port.ExecutionOrcaIntentReceipt{}, strings.TrimSpace(typed.DispatchRequestID), "dispatch", dispatchNow)
+				dispatchObservation, dispatchErr := handoffDeliveryObservation(stateRoot, request, identity, port.ExecutionOrcaIntentReceipt{}, dispatchID, "dispatch", dispatchNow)
 				if dispatchErr != nil {
 					return dispatchErr
 				}
@@ -240,6 +295,38 @@ func observeHandoffDeliveryFailure(stateRoot string, request port.ExecutionOrcaI
 	}
 	_, observeErr = auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation)
 	return observeErr
+}
+
+func handoffDeliveryResponseIdentityRejected(request port.ExecutionOrcaIntentRequest, typed *port.OrcaError) bool {
+	if typed == nil {
+		return false
+	}
+	observed := strings.TrimSpace(typed.OrchestrationRequestID)
+	sealed := strings.TrimSpace(request.RetryRequestID)
+	if typed.CallPhase == "terminal_send" {
+		sealed = strings.TrimSpace(request.PromptRetryRequestID)
+		dispatchObserved := strings.TrimSpace(typed.DispatchRequestID)
+		dispatchSealed := strings.TrimSpace(request.RetryRequestID)
+		if dispatchObserved != "" && (port.ValidateOrcaRequestID(dispatchObserved) != nil || dispatchSealed != "" && dispatchObserved != dispatchSealed) {
+			return true
+		}
+	}
+	identityError := typed.Code == "dispatch_request_identity_mismatch" ||
+		typed.Code == "terminal_prompt_request_identity_mismatch" ||
+		typed.Code == "terminal_prompt_receipt_invalid"
+	if observed == "" {
+		return identityError
+	}
+	return port.ValidateOrcaRequestID(observed) != nil || sealed != "" && observed != sealed
+}
+
+func handoffDeliveryAcceptedResponseID(sealed, observed string) string {
+	sealed = strings.TrimSpace(sealed)
+	observed = strings.TrimSpace(observed)
+	if port.ValidateOrcaRequestID(observed) != nil || sealed != "" && observed != sealed {
+		return ""
+	}
+	return observed
 }
 
 func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, provisioner port.ExecutionOrcaProvisioner) (port.ExecutionOrcaIntentInventory, bool, error) {
@@ -268,6 +355,9 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 	}
 	if !dispatchFound && !promptFound {
 		return port.ExecutionOrcaIntentInventory{}, false, nil
+	}
+	if request.Probe.Host == "omo" && promptFound && promptRequestID == "" {
+		return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Omo prompt delivery is ambiguous without a durable request ID")
 	}
 	dispatchStatus := ""
 	if dispatchRequestID != "" {
@@ -322,7 +412,7 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 			RequestID: promptObservation.Request.DurableID, Stages: stages, Provider: "omo",
 			ProcessIncarnation:      promptObservation.Target.ProcessIncarnation,
 			Generation:              *promptObservation.Target.PromptGeneration,
-			BaselineWorkingSequence: *promptObservation.Target.BaselineWorkingSequence,
+			BaselineWorkingSequence: cloneHandoffDeliveryUint64(promptObservation.Target.BaselineWorkingSequence),
 		}
 		if err := port.ValidateExecutionOrcaDeliveryReceipt(dispatchReceipt, port.OrcaDeliveryReceiptExpectation{
 			Host: request.Probe.Host, TaskID: request.TaskID, TerminalPTYID: identity.TerminalPTYID, TerminalHandle: identity.TerminalHandle,
@@ -332,9 +422,6 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 			return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Omo prompt delivery recovery evidence is incomplete: %w", err)
 		}
 		return port.ExecutionOrcaIntentInventory{Candidates: []port.ExecutionOrcaIntentReceipt{dispatchReceipt}}, true, nil
-	}
-	if promptFound && promptRequestID == "" {
-		return port.ExecutionOrcaIntentInventory{}, false, fmt.Errorf("Omo prompt delivery is ambiguous without a durable request ID")
 	}
 	if promptRequestID != "" {
 		// Orca request-show is scoped to orchestration mutations. A terminal
@@ -351,6 +438,12 @@ func inspectHandoffDeliveryRecovery(ctx context.Context, stateRoot string, reque
 func handoffDeliveryDurableRequestID(requestID, observedID string, found bool, callKind string) (string, error) {
 	requestID = strings.TrimSpace(requestID)
 	observedID = strings.TrimSpace(observedID)
+	if err := port.ValidateOrcaRetryRequestID(requestID); err != nil {
+		return "", fmt.Errorf("Orca %s retry request ID is invalid", callKind)
+	}
+	if observedID != "" && port.ValidateOrcaRequestID(observedID) != nil {
+		return "", fmt.Errorf("Orca %s delivery observation has an invalid durable request ID", callKind)
+	}
 	if requestID != "" {
 		if !found || observedID == "" || requestID != observedID {
 			return "", fmt.Errorf("Orca %s retry request has no exact delivery observation", callKind)
@@ -380,11 +473,13 @@ func recoverHandoffDeliveryRequest(stateRoot string, request port.ExecutionOrcaI
 	if err != nil {
 		return request, err
 	}
-	if request.RetryRequestID == "" && dispatchFound {
-		request.RetryRequestID = strings.TrimSpace(dispatch.Request.DurableID)
+	request.RetryRequestID, err = handoffDeliveryDurableRequestID(request.RetryRequestID, dispatch.Request.DurableID, dispatchFound, "dispatch")
+	if err != nil {
+		return request, err
 	}
-	if request.PromptRetryRequestID == "" && promptFound {
-		request.PromptRetryRequestID = strings.TrimSpace(prompt.Request.DurableID)
+	request.PromptRetryRequestID, err = handoffDeliveryDurableRequestID(request.PromptRetryRequestID, prompt.Request.DurableID, promptFound, "prompt")
+	if err != nil {
+		return request, err
 	}
 	if promptFound {
 		request.ExpectedPromptProcessIncarnation = strings.TrimSpace(prompt.Target.ProcessIncarnation)
@@ -423,6 +518,9 @@ func foldedHandoffDeliveryObservation(stateRoot string, request port.ExecutionOr
 }
 
 func observeHandoffDeliveryRequest(ctx context.Context, observer port.ExecutionOrcaDeliveryObserver, requestID, method, runtimeID string) (string, error) {
+	if err := port.ValidateOrcaRequestID(requestID); err != nil {
+		return "", fmt.Errorf("Orca request observation identity is invalid")
+	}
 	observed, err := observer.ObserveRequest(ctx, requestID)
 	if err != nil {
 		return "", err
@@ -530,6 +628,14 @@ func containsHandoffDeliveryString(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func cloneHandoffDeliveryUint64(value *uint64) *uint64 {
+	if value == nil {
+		return nil
+	}
+	cloned := *value
+	return &cloned
 }
 
 func firstNonEmptyIssueOpsApp(values ...string) string {

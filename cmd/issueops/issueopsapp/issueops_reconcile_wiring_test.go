@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -233,9 +234,10 @@ func TestIssueOpsReconcileVerticalRejectsIncompleteDeliveryReceiptBeforeClaimabl
 	const dispatchRequestID = "11111111-1111-4111-8111-111111111111"
 	const promptRequestID = "22222222-2222-4222-8222-222222222222"
 	for _, test := range []struct {
-		name    string
-		host    string
-		receipt port.ExecutionOrcaIntentReceipt
+		name          string
+		host          string
+		receipt       port.ExecutionOrcaIntentReceipt
+		wantClaimable bool
 	}{
 		{
 			name: "codex empty durable dispatch UUID", host: "codex",
@@ -246,11 +248,27 @@ func TestIssueOpsReconcileVerticalRejectsIncompleteDeliveryReceiptBeforeClaimabl
 			receipt: port.ExecutionOrcaIntentReceipt{TaskID: "task-reconciled", DispatchID: "dispatch-reconciled", RequestID: "not-a-uuid", TerminalPTYID: "pty-reconciled", TerminalHandle: "term-test"},
 		},
 		{
-			name: "omo incomplete prompt receipt", host: "omo",
+			name: "omo missing baseline sequence", host: "omo",
 			receipt: port.ExecutionOrcaIntentReceipt{
 				TaskID: "task-reconciled", DispatchID: "dispatch-reconciled", RequestID: dispatchRequestID,
 				TerminalPTYID: "pty-reconciled", TerminalHandle: "term-test",
-				PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptRequestID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1"},
+				PromptReceipt: reconcilePromptReceiptFromJSON(t, `{"request_id":"`+promptRequestID+`","stages":["input_accepted"],"provider":"omo","process_incarnation":"process-1","generation":1}`),
+			},
+		},
+		{
+			name: "omo explicit zero baseline sequence", host: "omo", wantClaimable: true,
+			receipt: port.ExecutionOrcaIntentReceipt{
+				TaskID: "task-reconciled", DispatchID: "dispatch-reconciled", RequestID: dispatchRequestID,
+				TerminalPTYID: "pty-reconciled", TerminalHandle: "term-test",
+				PromptReceipt: reconcilePromptReceiptFromJSON(t, `{"request_id":"`+promptRequestID+`","stages":["input_accepted"],"provider":"omo","process_incarnation":"process-1","generation":1,"baseline_working_sequence":0}`),
+			},
+		},
+		{
+			name: "omo positive baseline sequence", host: "omo", wantClaimable: true,
+			receipt: port.ExecutionOrcaIntentReceipt{
+				TaskID: "task-reconciled", DispatchID: "dispatch-reconciled", RequestID: dispatchRequestID,
+				TerminalPTYID: "pty-reconciled", TerminalHandle: "term-test",
+				PromptReceipt: reconcilePromptReceiptFromJSON(t, `{"request_id":"`+promptRequestID+`","stages":["input_accepted"],"provider":"omo","process_incarnation":"process-1","generation":1,"baseline_working_sequence":9}`),
 			},
 		},
 	} {
@@ -268,18 +286,35 @@ func TestIssueOpsReconcileVerticalRejectsIncompleteDeliveryReceiptBeforeClaimabl
 				}
 			}
 			fake.receipt = &test.receipt
-			if raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps); err == nil {
+			raw, finalErr := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps)
+			if test.wantClaimable && finalErr != nil {
+				t.Fatalf("complete receipt did not become claimable: %#v err=%v", raw, finalErr)
+			}
+			if !test.wantClaimable && finalErr == nil {
 				t.Fatalf("incomplete receipt became claimable: %#v", raw)
 			}
 			persisted, err := issueops.ReadIssueOps(stateRoot, record.ID)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if persisted.Execution == nil || persisted.Execution.Pending == nil || persisted.Execution.Lease.Status == issueopscontract.LeaseStatusClaimable {
+			if test.wantClaimable {
+				if persisted.Execution == nil || persisted.Execution.Pending != nil || persisted.Execution.Lease.Status != issueopscontract.LeaseStatusClaimable {
+					t.Fatalf("complete receipt did not change authority: %#v", persisted.Execution)
+				}
+			} else if persisted.Execution == nil || persisted.Execution.Pending == nil || persisted.Execution.Lease.Status == issueopscontract.LeaseStatusClaimable {
 				t.Fatalf("incomplete receipt changed authority: %#v", persisted.Execution)
 			}
 		})
 	}
+}
+
+func reconcilePromptReceiptFromJSON(t *testing.T, raw string) *port.OrcaPromptReceipt {
+	t.Helper()
+	var receipt port.OrcaPromptReceipt
+	if err := json.Unmarshal([]byte(raw), &receipt); err != nil {
+		t.Fatal(err)
+	}
+	return &receipt
 }
 
 func TestIssueOpsReconcileVerticalUsesInjectedClockForFailureReceipt(t *testing.T) {
@@ -397,7 +432,7 @@ func reconcileSuccessfulReceipt(request port.ExecutionOrcaIntentRequest) port.Ex
 		if request.Probe.Host == "omo" {
 			receipt.PromptReceipt = &port.OrcaPromptReceipt{
 				RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted"}, Provider: "omo",
-				Observation: "supported", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: 0,
+				Observation: "supported", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: handoffTestUint64(0),
 			}
 		}
 		return receipt

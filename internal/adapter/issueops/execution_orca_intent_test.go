@@ -125,3 +125,100 @@ func TestRecordOrcaIntentTerminalSendFailurePreservesDispatchAndPromptRequestIDs
 		t.Fatalf("durable IDs not preserved separately: dispatch=%q prompt=%q", updatedPayload.OrcaRequestID, updatedPayload.OrcaPromptRequestID)
 	}
 }
+
+func TestRecordOrcaIntentFailureRejectsMalformedOrMismatchedResponseIDs(t *testing.T) {
+	const (
+		dispatchA = "11111111-1111-4111-8111-111111111111"
+		dispatchB = "99999999-9999-4999-8999-999999999999"
+		promptA   = "22222222-2222-4222-8222-222222222222"
+		promptB   = "88888888-8888-4888-8888-888888888888"
+	)
+	for _, test := range []struct {
+		name         string
+		seed         *port.OrcaError
+		cause        *port.OrcaError
+		wantDispatch string
+		wantPrompt   string
+	}{
+		{
+			name:  "initial malformed dispatch response",
+			cause: &port.OrcaError{Code: "dispatch_request_identity_mismatch", Invoked: true, CallPhase: "orca_dispatch", OrchestrationRequestID: "not-a-uuid"},
+		},
+		{
+			name:         "initial malformed prompt response",
+			cause:        &port.OrcaError{Code: "terminal_prompt_receipt_invalid", Invoked: true, CallPhase: "terminal_send", DispatchRequestID: dispatchA, OrchestrationRequestID: "not-a-uuid"},
+			wantDispatch: dispatchA,
+		},
+		{
+			name:         "dispatch retry response mismatch",
+			seed:         &port.OrcaError{Code: "response_lost", Invoked: true, CallPhase: "orca_dispatch", OrchestrationRequestID: dispatchA},
+			cause:        &port.OrcaError{Code: "dispatch_request_identity_mismatch", Invoked: true, CallPhase: "orca_dispatch", OrchestrationRequestID: dispatchB},
+			wantDispatch: dispatchA,
+		},
+		{
+			name:         "prompt retry response and dispatch context mismatch",
+			seed:         &port.OrcaError{Code: "response_lost", Invoked: true, CallPhase: "terminal_send", DispatchRequestID: dispatchA, OrchestrationRequestID: promptA},
+			cause:        &port.OrcaError{Code: "terminal_prompt_request_identity_mismatch", Invoked: true, CallPhase: "terminal_send", DispatchRequestID: dispatchB, OrchestrationRequestID: promptB},
+			wantDispatch: dispatchA,
+			wantPrompt:   promptA,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stateRoot, state := resumeDispatchIntentState(t)
+			if test.seed != nil {
+				if err := RecordExecutionResumeIntentFailure(stateRoot, state, orcaIntentUnknown, test.seed, nil); err != nil {
+					t.Fatal(err)
+				}
+				var err error
+				state, err = ReadExecutionResumeIntent(stateRoot, state.Record.ID, state.OperationID)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := RecordExecutionResumeIntentFailure(stateRoot, state, orcaIntentUnknown, test.cause, nil); err != nil {
+				t.Fatal(err)
+			}
+			updated, err := ReadExecutionResumeIntent(stateRoot, state.Record.ID, state.OperationID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			payload, err := executionResumeIntentPayload(updated)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if payload.OrcaRequestID != test.wantDispatch || payload.OrcaPromptRequestID != test.wantPrompt {
+				t.Fatalf("durable retry authority dispatch=%q prompt=%q want dispatch=%q prompt=%q", payload.OrcaRequestID, payload.OrcaPromptRequestID, test.wantDispatch, test.wantPrompt)
+			}
+		})
+	}
+}
+
+func resumeDispatchIntentState(t *testing.T) (string, ExecutionResumeIntentState) {
+	t.Helper()
+	stateRoot, record, payload := resumeIntentFixture(t, "github", 16)
+	for payload.Stage != preparationcontract.IntentStageDispatch {
+		receipt := port.ExecutionOrcaIntentReceipt{}
+		switch payload.Stage {
+		case preparationcontract.IntentStageTerminal:
+			receipt.TerminalPTYID = "pty-next"
+		case preparationcontract.IntentStageRun:
+			receipt.RunID = "run-next"
+		case preparationcontract.IntentStageRunBind:
+			receipt.RunID, receipt.RunBound = "run-next", true
+		case preparationcontract.IntentStageTask:
+			receipt.TaskID = "task-next"
+		default:
+			t.Fatalf("unexpected stage before dispatch: %s", payload.Stage)
+		}
+		var err error
+		record, payload, err = advanceOrcaIntentReceipt(context.Background(), stateRoot, record, payload, receipt, nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	state, err := ReadExecutionResumeIntent(stateRoot, record.ID, payload.OperationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return stateRoot, state
+}

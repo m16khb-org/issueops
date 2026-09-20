@@ -79,7 +79,7 @@ func TestHandoffDeliveryOmoDurablePromptReceiptRecoversCandidateWithoutExternalW
 	promptID := "22222222-2222-4222-8222-222222222222"
 	receipt := port.ExecutionOrcaIntentReceipt{
 		TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID,
-		PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: 0},
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: handoffTestUint64(0)},
 	}
 	if err := observeHandoffDeliveryCompleted(stateRoot, request, identity, "dispatch", receipt, time.Now); err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestHandoffDeliveryOmoCrashBetweenCallsReplaysDispatchIDAndStartsPromptOnce
 		t.Fatalf("crash recovery inventory=%+v err=%v", inventory, err)
 	}
 	promptID := "22222222-2222-4222-8222-222222222222"
-	fake.receipt.PromptReceipt = &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: 0}
+	fake.receipt.PromptReceipt = &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: handoffTestUint64(0)}
 	if _, err := observed.InvokeIntent(context.Background(), request); err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestHandoffDeliveryOmoPromptResponseLossReplaysBothExactIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	fake := &handoffDeliveryProvisionerFake{
-		receipt:            port.ExecutionOrcaIntentReceipt{TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID, PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: 0}},
+		receipt:            port.ExecutionOrcaIntentReceipt{TerminalPTYID: "pty-1", TerminalHandle: "term-1", TaskID: "task-1", DispatchID: "dispatch-1", RequestID: dispatchID, PromptReceipt: &port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "process-1", Generation: 1, BaselineWorkingSequence: handoffTestUint64(0)}},
 		requestObservation: port.OrcaRequestObservation{RuntimeID: "runtime-1", RequestID: dispatchID, Status: "completed", Method: "orchestration.dispatch"},
 	}
 	observed := newHandoffDeliveryProvisioner(stateRoot, fake, time.Now)
@@ -290,6 +290,130 @@ func TestHandoffDeliveryDispatchCandidateRequiresExactRequestAndTerminalIdentity
 			}
 			if fake.invokeCalls != 0 {
 				t.Fatalf("identity mismatch performed external work: %d", fake.invokeCalls)
+			}
+		})
+	}
+}
+
+func TestHandoffDeliveryRejectedResponseIdentityCannotAuthorizeRecovery(t *testing.T) {
+	const (
+		dispatchA = "11111111-1111-4111-8111-111111111111"
+		dispatchB = "99999999-9999-4999-8999-999999999999"
+		promptA   = "22222222-2222-4222-8222-222222222222"
+		promptB   = "88888888-8888-4888-8888-888888888888"
+	)
+	for _, test := range []struct {
+		name       string
+		host       string
+		dispatchID string
+		promptID   string
+		cause      *port.OrcaError
+		rejectedID string
+	}{
+		{
+			name: "initial malformed dispatch response", host: "codex", rejectedID: "not-a-uuid",
+			cause: &port.OrcaError{Code: "dispatch_request_identity_mismatch", Invoked: true, CallPhase: "orca_dispatch", OrchestrationRequestID: "not-a-uuid"},
+		},
+		{
+			name: "dispatch retry response mismatch", host: "codex", dispatchID: dispatchA, rejectedID: dispatchB,
+			cause: &port.OrcaError{Code: "dispatch_request_identity_mismatch", Invoked: true, CallPhase: "orca_dispatch", OrchestrationRequestID: dispatchB},
+		},
+		{
+			name: "initial malformed prompt response", host: "omo", rejectedID: "not-a-uuid",
+			cause: &port.OrcaError{Code: "terminal_prompt_receipt_invalid", Invoked: true, CallPhase: "terminal_send", DispatchRequestID: dispatchA, OrchestrationRequestID: "not-a-uuid"},
+		},
+		{
+			name: "prompt retry response mismatch", host: "omo", dispatchID: dispatchA, promptID: promptA, rejectedID: promptB,
+			cause: &port.OrcaError{Code: "terminal_prompt_request_identity_mismatch", Invoked: true, CallPhase: "terminal_send", DispatchRequestID: dispatchA, OrchestrationRequestID: promptB},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			stateRoot := t.TempDir()
+			request := handoffDeliveryRequestFixture(test.host)
+			request.RetryRequestID = test.dispatchID
+			request.PromptRetryRequestID = test.promptID
+			identity := handoffDeliveryIdentityFixture()
+			if err := observeHandoffDeliveryStaged(stateRoot, request, identity, "dispatch", port.ExecutionOrcaIntentReceipt{}, time.Now); err != nil {
+				t.Fatal(err)
+			}
+			if test.host == "omo" {
+				dispatchReceipt := port.ExecutionOrcaIntentReceipt{
+					TaskID: request.TaskID, DispatchID: "dispatch-1", RequestID: dispatchA,
+					TerminalPTYID: identity.TerminalPTYID, TerminalHandle: identity.TerminalHandle,
+				}
+				if err := observeHandoffDeliveryCompleted(stateRoot, request, identity, "dispatch", dispatchReceipt, time.Now); err != nil {
+					t.Fatal(err)
+				}
+				if err := observeHandoffDeliveryStaged(stateRoot, request, identity, "prompt", dispatchReceipt, time.Now); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := observeHandoffDeliveryFailure(stateRoot, request, identity, test.cause, time.Now); err != nil {
+				t.Fatal(err)
+			}
+
+			fake := &handoffDeliveryProvisionerFake{}
+			inventory, err := newHandoffDeliveryProvisioner(stateRoot, fake, time.Now).InspectIntent(context.Background(), request)
+			if err == nil || inventory.ExactReplay || len(inventory.Candidates) != 0 {
+				t.Fatalf("rejected identity authorized recovery: inventory=%+v err=%v", inventory, err)
+			}
+			if fake.identityCalls != 0 || fake.observeCalls != 0 || fake.invokeCalls != 0 {
+				t.Fatalf("rejected identity triggered another external call: identity=%d observe=%d invoke=%d", fake.identityCalls, fake.observeCalls, fake.invokeCalls)
+			}
+			observations, readErr := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			for _, observation := range observations {
+				if observation.Request.DurableID == test.rejectedID {
+					t.Fatalf("rejected response ID entered audit lineage: %+v", observation)
+				}
+				if observation.Ambiguous.Evidence == issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost ||
+					observation.Ambiguous.Evidence == issueopscontract.IssueOpsHandoffDeliveryEvidenceOmoSendResponseLost {
+					t.Fatalf("identity rejection was classified as accepted response loss: %+v", observation)
+				}
+			}
+		})
+	}
+}
+
+func TestHandoffDeliveryRejectsMalformedRetryIdentityBeforeExternalInspection(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		mutate func(*port.ExecutionOrcaIntentRequest)
+		call   func(port.ExecutionOrcaProvisioner, port.ExecutionOrcaIntentRequest) error
+	}{
+		{
+			name: "inspect dispatch retry",
+			mutate: func(request *port.ExecutionOrcaIntentRequest) {
+				request.RetryRequestID = "not-a-uuid"
+			},
+			call: func(provisioner port.ExecutionOrcaProvisioner, request port.ExecutionOrcaIntentRequest) error {
+				_, err := provisioner.InspectIntent(context.Background(), request)
+				return err
+			},
+		},
+		{
+			name: "invoke prompt retry",
+			mutate: func(request *port.ExecutionOrcaIntentRequest) {
+				request.PromptRetryRequestID = "not-a-uuid"
+			},
+			call: func(provisioner port.ExecutionOrcaProvisioner, request port.ExecutionOrcaIntentRequest) error {
+				_, err := provisioner.InvokeIntent(context.Background(), request)
+				return err
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := handoffDeliveryRequestFixture("omo")
+			test.mutate(&request)
+			fake := &handoffDeliveryProvisionerFake{}
+			err := test.call(newHandoffDeliveryProvisioner(t.TempDir(), fake, time.Now), request)
+			if err == nil {
+				t.Fatal("malformed retry identity was accepted")
+			}
+			if fake.identityCalls != 0 || fake.observeCalls != 0 || fake.invokeCalls != 0 {
+				t.Fatalf("malformed retry identity reached external work: identity=%d observe=%d invoke=%d", fake.identityCalls, fake.observeCalls, fake.invokeCalls)
 			}
 		})
 	}
@@ -472,6 +596,8 @@ type handoffDeliveryProvisionerFake struct {
 	identity           port.ExecutionOrcaDeliveryIdentity
 	requestObservation port.OrcaRequestObservation
 	requestErr         error
+	identityCalls      int
+	observeCalls       int
 	invokeErr          error
 	invokeCalls        int
 	lastInvokeRequest  port.ExecutionOrcaIntentRequest
@@ -518,6 +644,7 @@ func (fake *handoffDeliveryPromptCrashFake) InvokeIntentObserved(_ context.Conte
 }
 
 func (fake *handoffDeliveryProvisionerFake) InspectDeliveryIdentity(context.Context, port.ExecutionOrcaIntentRequest) (port.ExecutionOrcaDeliveryIdentity, error) {
+	fake.identityCalls++
 	if strings.TrimSpace(fake.identity.RuntimeID) != "" {
 		return fake.identity, nil
 	}
@@ -529,6 +656,7 @@ func (fake *handoffDeliveryProvisionerFake) InspectDeliveryDispatch(context.Cont
 }
 
 func (fake *handoffDeliveryProvisionerFake) ObserveRequest(context.Context, string) (port.OrcaRequestObservation, error) {
+	fake.observeCalls++
 	if fake.requestErr != nil {
 		return port.OrcaRequestObservation{}, fake.requestErr
 	}
@@ -588,3 +716,5 @@ func advancingHandoffClock(start time.Time) func() time.Time {
 		return value
 	}
 }
+
+func handoffTestUint64(value uint64) *uint64 { return &value }

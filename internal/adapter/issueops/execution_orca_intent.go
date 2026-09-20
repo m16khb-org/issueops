@@ -124,14 +124,12 @@ func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.Issue
 		next := record
 		next.Execution.Failure = &issueops.ExecutionFailure{OperationID: expected.OperationID, Code: "external_operation_ambiguous", Message: boundedExecutionRemoteDiagnostic(cause), At: executionNow(now)}
 		expected.InvocationState = invocation
-		if typed, ok := errors.AsType[*port.OrcaError](cause); ok && strings.TrimSpace(typed.OrchestrationRequestID) != "" {
+		if typed, ok := errors.AsType[*port.OrcaError](cause); ok {
 			if typed.CallPhase == "terminal_send" {
-				if strings.TrimSpace(typed.DispatchRequestID) != "" {
-					expected.OrcaRequestID = strings.TrimSpace(typed.DispatchRequestID)
-				}
-				expected.OrcaPromptRequestID = strings.TrimSpace(typed.OrchestrationRequestID)
+				expected.OrcaRequestID = adoptOrcaFailureRequestID(expected.OrcaRequestID, typed.DispatchRequestID)
+				expected.OrcaPromptRequestID = adoptOrcaFailureRequestID(expected.OrcaPromptRequestID, typed.OrchestrationRequestID)
 			} else {
-				expected.OrcaRequestID = strings.TrimSpace(typed.OrchestrationRequestID)
+				expected.OrcaRequestID = adoptOrcaFailureRequestID(expected.OrcaRequestID, typed.OrchestrationRequestID)
 			}
 		}
 		data, err := preparationIntentCodec.Encode(expected)
@@ -141,6 +139,18 @@ func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.Issue
 		_, err = persistOrcaIntentTransition(stateRoot, next, expected.OperationID, expectedRecordRaw, expectedIntentRaw, []port.RecordMutation{{Bucket: externalIntentBucket, ID: expected.OperationID, Data: data}})
 		return err
 	})
+}
+
+func adoptOrcaFailureRequestID(sealed, observed string) string {
+	sealed = strings.TrimSpace(sealed)
+	observed = strings.TrimSpace(observed)
+	if port.ValidateOrcaRequestID(observed) != nil {
+		return sealed
+	}
+	if sealed == "" || sealed == observed {
+		return observed
+	}
+	return sealed
 }
 
 func advanceOrcaIntentReceipt(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {

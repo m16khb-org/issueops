@@ -660,6 +660,9 @@ func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, request
 		strings.ContainsAny(prompt, "\x00\x1b") {
 		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "terminal_prompt_invalid"}
 	}
+	if err := port.ValidateOrcaRetryRequestID(requestID); err != nil {
+		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "request_identity_invalid", Detail: err.Error()}
+	}
 	prompt = "\x1b[200~" + prompt + "\x1b[201~"
 	var payload struct {
 		Send struct {
@@ -697,7 +700,7 @@ func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, request
 		Provider: payload.Send.Prompt.Provider, Observation: payload.Send.Prompt.Observation,
 		ProcessIncarnation:      payload.Send.Prompt.ProcessIncarnation,
 		Generation:              payload.Send.Prompt.Generation,
-		BaselineWorkingSequence: *payload.Send.Prompt.BaselineWorkingSequence,
+		BaselineWorkingSequence: payload.Send.Prompt.BaselineWorkingSequence,
 	}
 	if err := port.ValidateOrcaPromptReceipt(receipt, requestID, ""); err != nil {
 		code := "terminal_prompt_receipt_invalid"

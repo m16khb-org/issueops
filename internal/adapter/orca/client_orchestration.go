@@ -553,6 +553,9 @@ func (c *Client) Dispatch(ctx context.Context, req port.OrcaDispatchRequest) (po
 	if err != nil {
 		return port.OrcaDispatch{}, err
 	}
+	if err := port.ValidateOrcaRetryRequestID(req.RetryRequestID); err != nil {
+		return port.OrcaDispatch{}, &port.OrcaError{Code: "request_identity_invalid", Detail: err.Error()}
+	}
 	if _, err := currentCoordinatorHandle(); err != nil {
 		return port.OrcaDispatch{}, err
 	}
@@ -594,7 +597,7 @@ func (c *Client) ShowDispatchFrom(ctx context.Context, taskID, fromHandle string
 
 func (c *Client) ShowRequest(ctx context.Context, requestID string) (port.OrcaRequestObservation, error) {
 	requestID = strings.TrimSpace(requestID)
-	if requestID == "" || len(requestID) > 1024 || strings.ContainsRune(requestID, 0) {
+	if err := port.ValidateOrcaRequestID(requestID); err != nil {
 		return port.OrcaRequestObservation{}, &port.OrcaError{Code: "request_identity_invalid"}
 	}
 	var payload struct {

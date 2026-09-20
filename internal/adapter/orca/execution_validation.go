@@ -20,6 +20,9 @@ func validateExecutionIntentRequest(req port.ExecutionOrcaIntentRequest) error {
 	if err := validateExecutionPrepare(req.Workspace, req.Probe); err != nil {
 		return err
 	}
+	if err := validateExecutionRetryRequestIDs(req); err != nil {
+		return err
+	}
 	switch req.Stage {
 	case port.ExecutionOrcaIntentWorktree:
 		if req.Prepared != nil || req.Launch != nil || req.TerminalPTYID != "" || req.RunID != "" || req.RunBound || req.TaskID != "" {
@@ -65,6 +68,9 @@ func validateExecutionIntentInspectionRequest(req port.ExecutionOrcaIntentReques
 	if err := validateExecutionPrepare(req.Workspace, req.Probe); err != nil {
 		return err
 	}
+	if err := validateExecutionRetryRequestIDs(req); err != nil {
+		return err
+	}
 	switch req.Stage {
 	case port.ExecutionOrcaIntentWorktree:
 		if req.Prepared != nil || req.Launch != nil || req.TerminalPTYID != "" || req.RunID != "" || req.RunBound || req.TaskID != "" {
@@ -93,6 +99,13 @@ func validateExecutionIntentInspectionRequest(req port.ExecutionOrcaIntentReques
 		return fmt.Errorf("unsupported Orca execution intent stage %q", req.Stage)
 	}
 	return nil
+}
+
+func validateExecutionRetryRequestIDs(req port.ExecutionOrcaIntentRequest) error {
+	if err := port.ValidateOrcaRetryRequestID(req.RetryRequestID); err != nil {
+		return err
+	}
+	return port.ValidateOrcaRetryRequestID(req.PromptRetryRequestID)
 }
 
 func validateExecutionInspectionOwnerEnvelope(req port.ExecutionOrcaIntentRequest) error {

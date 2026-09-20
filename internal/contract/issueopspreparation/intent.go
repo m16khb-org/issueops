@@ -135,7 +135,7 @@ type PromptReceipt struct {
 	Observation             string   `json:"observation,omitempty"`
 	ProcessIncarnation      string   `json:"process_incarnation,omitempty"`
 	Generation              uint64   `json:"generation,omitempty"`
-	BaselineWorkingSequence uint64   `json:"baseline_working_sequence,omitempty"`
+	BaselineWorkingSequence *uint64  `json:"baseline_working_sequence,omitempty"`
 }
 
 type IntentInventory struct {

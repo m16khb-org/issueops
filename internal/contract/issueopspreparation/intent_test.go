@@ -3,6 +3,7 @@ package issueopspreparation
 import (
 	"bytes"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -56,6 +57,41 @@ func TestIntentCodecAcceptsOmoOwner(t *testing.T) {
 	intent.Probe.Effort = ImplementerEffortOmo
 	if err := (IntentCodec{}).Validate(intent, prepareOperationID); err != nil {
 		t.Fatalf("Omo owner intent must be valid: %v", err)
+	}
+}
+
+func TestPromptReceiptJSONPreservesBaselineWorkingSequencePresence(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		raw         string
+		wantPresent bool
+		wantValue   uint64
+	}{
+		{name: "missing", raw: `{"request_id":"22222222-2222-4222-8222-222222222222"}`},
+		{name: "explicit zero", raw: `{"request_id":"22222222-2222-4222-8222-222222222222","baseline_working_sequence":0}`, wantPresent: true},
+		{name: "positive", raw: `{"request_id":"22222222-2222-4222-8222-222222222222","baseline_working_sequence":9}`, wantPresent: true, wantValue: 9},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var receipt PromptReceipt
+			if err := json.Unmarshal([]byte(test.raw), &receipt); err != nil {
+				t.Fatal(err)
+			}
+			encoded, err := json.Marshal(receipt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(encoded, &fields); err != nil {
+				t.Fatal(err)
+			}
+			value, present := fields["baseline_working_sequence"]
+			if present != test.wantPresent {
+				t.Fatalf("baseline presence=%v want=%v JSON=%s", present, test.wantPresent, encoded)
+			}
+			if present && string(value) != strconv.FormatUint(test.wantValue, 10) {
+				t.Fatalf("baseline value=%s want=%d JSON=%s", value, test.wantValue, encoded)
+			}
+		})
 	}
 }
 

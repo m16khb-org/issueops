@@ -50,10 +50,12 @@ func IssueOpsPlannerDefaults(host string) (model string, effort string, ok bool)
 }
 
 type OrcaError struct {
-	Code                   string `json:"code"`
-	Detail                 string `json:"detail,omitempty"`
-	Invoked                bool   `json:"invoked,omitempty"`
-	Timeout                bool   `json:"timeout,omitempty"`
+	Code    string `json:"code"`
+	Detail  string `json:"detail,omitempty"`
+	Invoked bool   `json:"invoked,omitempty"`
+	Timeout bool   `json:"timeout,omitempty"`
+	// OrchestrationRequestID is the response value observed for diagnostics.
+	// Callers must validate it against sealed state before using it as retry identity.
 	OrchestrationRequestID string `json:"orchestration_request_id,omitempty"`
 	DispatchRequestID      string `json:"dispatch_request_id,omitempty"`
 	CallPhase              string `json:"call_phase,omitempty"`
@@ -274,7 +276,7 @@ type OrcaPromptReceipt struct {
 	Observation             string   `json:"observation,omitempty"`
 	ProcessIncarnation      string   `json:"process_incarnation,omitempty"`
 	Generation              uint64   `json:"generation,omitempty"`
-	BaselineWorkingSequence uint64   `json:"baseline_working_sequence,omitempty"`
+	BaselineWorkingSequence *uint64  `json:"baseline_working_sequence,omitempty"`
 }
 
 type OrcaDeliveryReceiptExpectation struct {
@@ -290,8 +292,13 @@ type OrcaDeliveryReceiptExpectation struct {
 func ValidateOrcaDurableRequestID(actual, retry string) error {
 	actual = strings.TrimSpace(actual)
 	retry = strings.TrimSpace(retry)
-	if !orcaRequestUUIDPattern.MatchString(actual) {
+	if err := ValidateOrcaRequestID(actual); err != nil {
 		return fmt.Errorf("Orca response is missing a durable request UUID")
+	}
+	if retry != "" {
+		if err := ValidateOrcaRequestID(retry); err != nil {
+			return fmt.Errorf("Orca retry request UUID is invalid")
+		}
 	}
 	if retry != "" && actual != retry {
 		return fmt.Errorf("Orca response request UUID does not match the requested retry UUID")
@@ -299,11 +306,25 @@ func ValidateOrcaDurableRequestID(actual, retry string) error {
 	return nil
 }
 
+func ValidateOrcaRequestID(value string) error {
+	if !orcaRequestUUIDPattern.MatchString(strings.TrimSpace(value)) {
+		return fmt.Errorf("Orca durable request UUID is invalid")
+	}
+	return nil
+}
+
+func ValidateOrcaRetryRequestID(value string) error {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return ValidateOrcaRequestID(value)
+}
+
 func ValidateOrcaPromptReceipt(receipt OrcaPromptReceipt, retryID, expectedProcess string) error {
 	if err := ValidateOrcaDurableRequestID(receipt.RequestID, retryID); err != nil {
 		return err
 	}
-	if strings.TrimSpace(receipt.Provider) != "omo" || strings.TrimSpace(receipt.ProcessIncarnation) == "" || receipt.Generation == 0 {
+	if strings.TrimSpace(receipt.Provider) != "omo" || strings.TrimSpace(receipt.ProcessIncarnation) == "" || receipt.Generation == 0 || receipt.BaselineWorkingSequence == nil {
 		return fmt.Errorf("Orca Omo prompt receipt is incomplete")
 	}
 	accepted := false

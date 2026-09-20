@@ -97,7 +97,7 @@ func TestExecutionObservedOmoStagesDispatchAndPromptAroundEachCall(t *testing.T)
 		workspace: workspace, probeRequest: probe,
 		terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
 		dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Preamble: "preamble", RequestID: "11111111-1111-4111-8111-111111111111"},
-		promptReceipt:  &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: 0},
+		promptReceipt:  &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: orcaTestUint64(0)},
 	}
 	request := port.ExecutionOrcaIntentRequest{Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe, Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true, TaskID: "task-69"}
 	var events []string
@@ -153,7 +153,7 @@ func TestExecutionOmoPromptReplayRejectsProcessIncarnationMismatchAndPreservesID
 		workspace: workspace, probeRequest: probe,
 		terminals:      []port.OrcaTerminal{{RuntimeID: "runtime-69", Handle: "term-69", PTYID: "pty-69", WorktreeID: "wt-69", Connected: true, Writable: true}},
 		dispatchResult: &port.OrcaDispatch{RuntimeID: "runtime-69", ID: "dispatch-69", TaskID: "task-69", AssigneeHandle: "term-69", Status: "dispatched", Preamble: "preamble", RequestID: dispatchRequestID},
-		promptReceipt:  &port.OrcaPromptReceipt{RequestID: promptRequestID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "incarnation-replaced", Generation: 1, BaselineWorkingSequence: 0},
+		promptReceipt:  &port.OrcaPromptReceipt{RequestID: promptRequestID, Stages: []string{"input_accepted"}, Provider: "omo", ProcessIncarnation: "incarnation-replaced", Generation: 1, BaselineWorkingSequence: orcaTestUint64(0)},
 	}
 	request := port.ExecutionOrcaIntentRequest{Stage: port.ExecutionOrcaIntentDispatch, Marker: probe.Marker, Workspace: workspace, Probe: probe, Prepared: &prepared, Launch: &launch, TerminalPTYID: "pty-69", RunID: "run-69", RunBound: true, TaskID: "task-69", RetryRequestID: dispatchRequestID, PromptRetryRequestID: promptRequestID, ExpectedPromptProcessIncarnation: "incarnation-original"}
 	_, err := NewExecutionClient(client).InvokeIntent(context.Background(), request)
@@ -211,7 +211,7 @@ func TestExecutionDispatchRequiresActualDurableResponseIdentity(t *testing.T) {
 func TestExecutionOmoPromptRequiresCompleteDurableReceiptIdentity(t *testing.T) {
 	const dispatchID = "11111111-1111-4111-8111-111111111111"
 	const promptID = "22222222-2222-4222-8222-222222222222"
-	complete := port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", Observation: "supported", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: 0}
+	complete := port.OrcaPromptReceipt{RequestID: promptID, Stages: []string{"input_accepted"}, Provider: "omo", Observation: "supported", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: orcaTestUint64(0)}
 	for _, test := range []struct {
 		name     string
 		retryID  string
@@ -1642,8 +1642,10 @@ func (f *executionFake) SendTerminalPrompt(_ context.Context, handle, prompt, re
 	if requestID == "" {
 		requestID = "22222222-2222-4222-8222-222222222222"
 	}
-	return port.OrcaPromptReceipt{RequestID: requestID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", Observation: "turn_started", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: 1}, nil
+	return port.OrcaPromptReceipt{RequestID: requestID, Stages: []string{"input_accepted", "turn_started"}, Provider: "omo", Observation: "turn_started", ProcessIncarnation: "incarnation-1", Generation: 1, BaselineWorkingSequence: orcaTestUint64(1)}, nil
 }
+
+func orcaTestUint64(value uint64) *uint64 { return &value }
 
 func (f *executionFake) ListTerminals(context.Context, string) ([]port.OrcaTerminal, error) {
 	f.calls = append(f.calls, "list-terminals")

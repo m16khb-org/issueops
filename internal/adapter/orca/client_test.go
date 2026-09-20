@@ -833,7 +833,7 @@ func TestClientSendsOfficialPreambleToExactOmoTerminal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if receipt.RequestID != "22222222-2222-4222-8222-222222222222" || receipt.ProcessIncarnation != "incarnation-1" || receipt.Generation != 7 || receipt.BaselineWorkingSequence != 9 || !slices.Equal(receipt.Stages, []string{"input_accepted", "turn_started"}) {
+	if receipt.RequestID != "22222222-2222-4222-8222-222222222222" || receipt.ProcessIncarnation != "incarnation-1" || receipt.Generation != 7 || receipt.BaselineWorkingSequence == nil || *receipt.BaselineWorkingSequence != 9 || !slices.Equal(receipt.Stages, []string{"input_accepted", "turn_started"}) {
 		t.Fatalf("prompt receipt = %+v", receipt)
 	}
 	want := [][]string{{"orca", "terminal", "send", "--terminal", handle, "--text", bracketedPrompt, "--enter", "--json"}}
@@ -911,6 +911,7 @@ func TestClientDispatchRejectsMissingOrMismatchedDurableResponseRequestID(t *tes
 		responseID string
 	}{
 		{name: "initial response empty"},
+		{name: "initial response malformed", responseID: "not-a-uuid"},
 		{name: "retry response empty", retryID: retryID},
 		{name: "retry response different", retryID: retryID, responseID: "99999999-9999-4999-8999-999999999999"},
 	} {
@@ -945,6 +946,7 @@ func TestClientTerminalPromptRequiresDurableInstalledReceipt(t *testing.T) {
 		wantOK     bool
 	}{
 		{name: "initial empty request", promptJSON: `{"requestId":"","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_receipt_invalid"},
+		{name: "initial malformed request", promptJSON: `{"requestId":"not-a-uuid","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_receipt_invalid"},
 		{name: "retry empty request", retryID: retryID, promptJSON: `{"requestId":"","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_request_identity_mismatch"},
 		{name: "retry different request", retryID: retryID, promptJSON: `{"requestId":"99999999-9999-4999-8999-999999999999","stages":["input_accepted"],"provider":"omo","processIncarnation":"incarnation-1","generation":1,"baselineWorkingSequence":0}`, wantCode: "terminal_prompt_request_identity_mismatch"},
 		{name: "retry exact request", retryID: retryID, promptJSON: validPrompt, wantOK: true},
@@ -967,7 +969,7 @@ func TestClientTerminalPromptRequiresDurableInstalledReceipt(t *testing.T) {
 
 			receipt, err := NewClient(runner).SendTerminalPrompt(context.Background(), handle, "official-preamble", test.retryID)
 			if test.wantOK {
-				if err != nil || receipt.RequestID != retryID || receipt.BaselineWorkingSequence != 0 {
+				if err != nil || receipt.RequestID != retryID || receipt.BaselineWorkingSequence == nil || *receipt.BaselineWorkingSequence != 0 {
 					t.Fatalf("receipt=%+v err=%v", receipt, err)
 				}
 				return
@@ -994,6 +996,50 @@ func TestClientRequestShowIsReadOnlyRecovery(t *testing.T) {
 	want := [][]string{{"orca", "orchestration", "request-show", "--request", "11111111-1111-4111-8111-111111111111", "--json"}}
 	if !reflect.DeepEqual(runner.calls, want) {
 		t.Fatalf("request-show calls=%#v want=%#v", runner.calls, want)
+	}
+}
+
+func TestClientRejectsMalformedRetryRequestIDsBeforeInvocation(t *testing.T) {
+	const malformed = "not-a-uuid"
+	for _, test := range []struct {
+		name string
+		call func(*Client) error
+	}{
+		{
+			name: "dispatch",
+			call: func(client *Client) error {
+				_, err := client.Dispatch(context.Background(), port.OrcaDispatchRequest{
+					RunID: "run_issueops_1", TaskID: "task-1", ToHandle: "term_worker", RetryRequestID: malformed,
+				})
+				return err
+			},
+		},
+		{
+			name: "terminal prompt",
+			call: func(client *Client) error {
+				_, err := client.SendTerminalPrompt(context.Background(), "term_00000000-0000-4000-8000-000000000069", "prompt", malformed)
+				return err
+			},
+		},
+		{
+			name: "request show",
+			call: func(client *Client) error {
+				_, err := client.ShowRequest(context.Background(), malformed)
+				return err
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			runner := newFakeRunner(t)
+			err := test.call(NewClient(runner))
+			var orcaErr *port.OrcaError
+			if !errors.As(err, &orcaErr) || orcaErr.Invoked {
+				t.Fatalf("malformed retry error=%#v", err)
+			}
+			if len(runner.calls) != 0 {
+				t.Fatalf("malformed retry invoked Orca: calls=%#v", runner.calls)
+			}
+		})
 	}
 }
 

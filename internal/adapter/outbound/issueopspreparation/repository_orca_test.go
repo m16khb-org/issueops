@@ -128,6 +128,78 @@ func TestOrcaIntentRepositoryCASCompletesClaimableAuthority(t *testing.T) {
 	}
 }
 
+func TestOrcaIntentRepositoryRequiresBaselinePresenceBeforeFreshClaimable(t *testing.T) {
+	const (
+		dispatchID = "11111111-1111-4111-8111-111111111111"
+		promptID   = "22222222-2222-4222-8222-222222222222"
+	)
+	for _, test := range []struct {
+		name          string
+		baseline      string
+		wantClaimable bool
+	}{
+		{name: "missing"},
+		{name: "explicit zero", baseline: `,"baseline_working_sequence":0`, wantClaimable: true},
+		{name: "positive", baseline: `,"baseline_working_sequence":9`, wantClaimable: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			store, repository, begin := newOrcaRepositoryFixture(t)
+			state, err := repository.BeginIntent(context.Background(), begin)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, stage := range []preparationcontract.IntentStage{
+				preparationcontract.IntentStageWorktree, preparationcontract.IntentStageTerminal,
+				preparationcontract.IntentStageRun, preparationcontract.IntentStageRunBind,
+				preparationcontract.IntentStageTask,
+			} {
+				state, err = repository.MarkInvoking(context.Background(), state)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if stage == preparationcontract.IntentStageWorktree {
+					state.OwnerArtifacts = preparationcontract.OwnerArtifacts{
+						PlanPath:       "/repo.worktrees/199-orca/.issueops/artifact/plan.md",
+						ClaimTokenPath: "/repo.worktrees/199-orca/.issueops/state/claim", ClaimTokenSHA256: strings.Repeat("d", 64),
+						ContextPacketPath: "/repo.worktrees/199-orca/.issueops/context.json", ContextPacketSHA256: strings.Repeat("c", 64),
+						OwnerPromptPath: "/repo.worktrees/199-orca/.issueops/owner.md", OwnerPromptSHA256: strings.Repeat("b", 64),
+					}
+				}
+				progress, applyErr := repository.ApplyReceipt(context.Background(), state, repositoryOrcaReceipt(stage))
+				if applyErr != nil {
+					t.Fatal(applyErr)
+				}
+				state = progress.State
+			}
+			state.Intent.Probe.Host = "omo"
+			intentRaw, err := (preparationcontract.IntentCodec{}).Encode(state.Intent)
+			if err != nil {
+				t.Fatal(err)
+			}
+			store.rows[intentBucket][state.Intent.OperationID] = intentRaw
+			state.IntentRaw = intentRaw
+			state, err = repository.MarkInvoking(context.Background(), state)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			raw := `{"terminal_pty_id":"terminal","terminal_handle":"term-handle","task_id":"task","dispatch_id":"dispatch","request_id":"` + dispatchID + `","prompt_receipt":{"request_id":"` + promptID + `","stages":["input_accepted"],"provider":"omo","process_incarnation":"process-1","generation":1` + test.baseline + `}}`
+			var receipt preparationcontract.IntentReceipt
+			if err := json.Unmarshal([]byte(raw), &receipt); err != nil {
+				t.Fatal(err)
+			}
+			progress, applyErr := repository.ApplyReceipt(context.Background(), state, receipt)
+			if test.wantClaimable {
+				if applyErr != nil || progress.Pending || progress.Result.Execution == nil || progress.Result.Execution.Lease.Status != "claimable" {
+					t.Fatalf("complete fresh receipt not claimable: progress=%+v err=%v", progress, applyErr)
+				}
+			} else if applyErr == nil || !progress.Pending {
+				t.Fatalf("missing baseline became fresh claim authority: progress=%+v err=%v", progress, applyErr)
+			}
+		})
+	}
+}
+
 func TestOrcaIntentRepositoryRejectsStaleDualRawCAS(t *testing.T) {
 	store, repository, begin := newOrcaRepositoryFixture(t)
 	state, err := repository.BeginIntent(context.Background(), begin)
