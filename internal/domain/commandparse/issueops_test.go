@@ -168,7 +168,7 @@ func TestExecutionSyncBaseExactFlags(t *testing.T) {
 }
 
 func TestExecutionReconcileExactFlags(t *testing.T) {
-	command, ok := ParseExactIssueOpsCommand("issueops execution reconcile --id io-1 --operation-id op-1 --host codex --session-id session-1 --agent-id agent-1 --session-pid 42 --session-started-at 2026-07-22T00:00:00Z --session-executable /bin/codex --cwd /repo --confirm --json")
+	command, ok := ParseExactIssueOpsCommand("issueops execution reconcile --id io-1 --host codex --session-id session-1 --agent-id agent-1 --session-pid 42 --session-started-at 2026-07-22T00:00:00Z --session-executable /bin/codex --cwd /repo --confirm --json")
 	if !ok {
 		t.Fatal("execution reconcile command did not parse")
 	}
@@ -177,8 +177,17 @@ func TestExecutionReconcileExactFlags(t *testing.T) {
 		t.Fatal("execution reconcile command has no exact flag spec")
 	}
 	flags, ok := ExactFlags(command, values, booleans, repeatable)
-	if !ok || flags["--operation-id"][0] != "op-1" || flags["--cwd"][0] != "/repo" {
+	if !ok || flags["--id"][0] != "io-1" || flags["--cwd"][0] != "/repo" || flags["--confirm"][0] != "true" {
 		t.Fatalf("execution reconcile flags = %#v ok=%v", flags, ok)
+	}
+	// CLI의 reconcile FlagSet에는 --operation-id가 없다. exact parser도 CLI가
+	// 거부하는 flag를 받아 주면 안 된다.
+	stale, ok := ParseExactIssueOpsCommand("issueops execution reconcile --id io-1 --operation-id op-1 --json")
+	if !ok {
+		t.Fatal("execution reconcile command did not parse")
+	}
+	if flags, ok := ExactFlags(stale, values, booleans, repeatable); ok || flags != nil {
+		t.Fatalf("execution reconcile accepted --operation-id: flags=%#v ok=%v", flags, ok)
 	}
 }
 

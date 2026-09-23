@@ -15,7 +15,9 @@ import "strings"
 //   - `issueopscli.issueOpsUsageText()` — 전체 렌더
 //
 // 줄 순서가 곧 렌더 순서다. 새 명령은 여기 한 곳에만 추가하고, 최상위에도 노출할
-// 것이면 축약 키에 그 명령 경로를 더한다.
+// 것이면 축약 키에 그 명령 경로를 더한다. 각 줄이 handler의 FlagSet, commandparse의
+// exact spec과 같은 flag 집합인지는 issueopscli의
+// TestIssueOpsCommandGrammarAgreesAcrossCatalogFlagSetAndSpec가 검사한다.
 const issueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --new] [--json]
   issueops status --id ID [--json]
   issueops list [--repo PATH] [--json]
@@ -49,7 +51,7 @@ const issueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops execution whoami [--json]
   issueops execution claim --id ID --generation N (--claim-current-token|--claim-token-file PATH) [--issue-body-sha256 SHA256 --context-packet-sha256 SHA256] [--issue-snapshot-file PATH] [ACTOR_FLAGS] [--json]
   issueops execution release --id ID --generation N ACTOR_FLAGS [--json]
-  issueops execution replace --id ID --expected-generation N (--preview|--revoke|--finalize-preview|--finalize|--reseed) [--completion-generation N] [fingerprint/reason flags] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
+  issueops execution replace --id ID --expected-generation N (--preview|--revoke|--finalize-preview|--finalize|--reseed) [--completion-generation N] [--inventory-fingerprint SHA256] [--quiescence-fingerprint SHA256] [--reason TEXT] [--issue-snapshot-file PATH] ACTOR_FLAGS [--confirm] [--json]
   issueops execution resume --id ID --expected-generation N [ACTOR_FLAGS] --confirm [--json]
   issueops execution reconcile --id ID (--preview|--confirm) [--issue-snapshot-file PATH] ACTOR_FLAGS [--json]
   issueops execution complete --id ID --generation N --final-head SHA --verification-report PATH --remote-artifact-url URL --verification TEXT... ACTOR_FLAGS --confirm [--json]
@@ -79,13 +81,13 @@ const issueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --ne
   issueops remote score --input PATH [--judge none|prompt|file] [--judge-file PATH] [--json]
   issueops remote-score --input PATH [--judge none|prompt|file] [--judge-file PATH] [--json]
   issueops remote render-template --kind issue|child|pr --template KIND --title TEXT --provider github|gitlab --field key=value... [--score-file PATH] [--json]
-  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]
+  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]
   issueops remote reconcile-issue --id ID [--confirm] [--json]
   issueops remote sync-graph --id ID [--confirm] [--json]
   issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
-  issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
-  issueops remote create-child --id ID --title TEXT [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]
-  issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... ACTOR_FLAGS [--confirm] [--json]
+  issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--url ARTIFACT_URL] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] RECORD_ACTOR_FLAGS [--confirm] [--json]
+  issueops remote create-child --id ID --title TEXT [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]
+  issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--provider github|gitlab] [--score-file PATH] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... ACTOR_FLAGS [--confirm] [--json]
   issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER RECORD_ACTOR_FLAGS [--json]
   issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] RECORD_ACTOR_FLAGS [--confirm] [--json]
   issueops remote reflect-completion --id ID [--provider github|gitlab] [--confirm] [--json]

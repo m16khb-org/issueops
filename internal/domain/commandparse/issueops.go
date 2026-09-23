@@ -299,7 +299,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"execution reconcile": {
-		values:   []string{"--id", "--operation-id", "--issue-snapshot-file", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
+		values:   []string{"--id", "--issue-snapshot-file", "--host", "--session-id", "--agent-id", "--session-pid", "--session-started-at", "--session-executable", "--cwd"},
 		booleans: []string{"--preview", "--confirm", "--json"},
 	},
 	"execution complete": {
@@ -347,7 +347,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 	},
 	"phase": {
 		values:   []string{"--id", "--to", "--host", "--session-id", "--agent-id", "--cwd"},
-		booleans: []string{"--force", "--json"},
+		booleans: []string{"--json"},
 	},
 	"decision add": {
 		values:     []string{"--id", "--host", "--session-id", "--agent-id", "--cwd", "--title", "--body", "--kind", "--rationale", "--alternative", "--affected-link", "--affected-artifact"},
@@ -410,11 +410,11 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"artifact stage": {
-		values:   []string{"--id", "--name", "--file", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--name", "--file"},
 		booleans: []string{"--json"},
 	},
 	"branch await-link": {
-		values:   []string{"--id", "--timeout", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--timeout"},
 		booleans: []string{"--json"},
 	},
 	"branch retarget": {
@@ -422,15 +422,15 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--json"},
 	},
 	"cleanup status": {
-		values:   []string{"--id", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id"},
 		booleans: []string{"--merged", "--json"},
 	},
 	"cleanup close-children": {
-		values:   []string{"--id", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id"},
 		booleans: []string{"--merged", "--confirm", "--json"},
 	},
 	"cleanup orphan": {
-		values:   []string{"--id", "--repo", "--worktree", "--branch", "--provider", "--kind", "--artifact-url", "--fingerprint", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--repo", "--worktree", "--branch", "--provider", "--kind", "--artifact-url", "--fingerprint"},
 		booleans: []string{"--apply", "--confirm", "--json"},
 	},
 	"cleanup finish": {
@@ -469,7 +469,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--accept-remote-edits", "--confirm", "--json"},
 	},
 	"remote sync-pr": {
-		values:   []string{"--id", "--provider", "--expected-generation", "--body", "--body-file", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--provider", "--url", "--expected-generation", "--body", "--body-file", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
 		booleans: []string{"--accept-remote-edits", "--confirm", "--json"},
 	},
 }

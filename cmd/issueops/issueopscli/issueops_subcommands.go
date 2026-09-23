@@ -119,7 +119,7 @@ func runIssueOpsChild(args []string) error {
 	case "start":
 		return runIssueOpsChildStart(args[1:])
 	case "status":
-		return runIssueOpsChildStatus(args[1:], false)
+		return runIssueOpsChildStatus(args[1:], true)
 	case "list":
 		return runIssueOpsChildStatus(args[1:], false)
 	case "accept":
@@ -158,11 +158,20 @@ func runIssueOpsChildStart(args []string) error {
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
-func runIssueOpsChildStatus(args []string, repairDefault bool) error {
-	fs := flag.NewFlagSet("issueops child status", flag.ContinueOnError)
+// runIssueOpsChildStatus는 child status와 child list가 공유한다. list는 읽기 전용이라
+// 부모 index를 고치는 --repair를 받지 않는다.
+func runIssueOpsChildStatus(args []string, allowRepair bool) error {
+	name := "issueops child list"
+	if allowRepair {
+		name = "issueops child status"
+	}
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
 	actor := addIssueOpsActorFlags(fs)
-	repair := fs.Bool("repair", repairDefault, "append scanned children missing from the parent index")
+	repair := new(bool)
+	if allowRepair {
+		repair = fs.Bool("repair", false, "append scanned children missing from the parent index")
+	}
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
