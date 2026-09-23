@@ -63,9 +63,6 @@ func TestValidateMCPWithDepsRunsSmokeAndCleanup(t *testing.T) {
 			if dir != "/repo" || name != "bin" {
 				return StepResult{OK: false, Error: "unexpected command"}
 			}
-			if !containsEnv(env, "ISSUEOPS_MCP_DIRECT=1") {
-				return StepResult{OK: false, Error: "missing direct SDK env"}
-			}
 			return StepResult{OK: true, Stdout: validMCPSmokeStdout()}
 		},
 	}

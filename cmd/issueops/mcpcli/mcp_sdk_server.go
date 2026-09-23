@@ -1,6 +1,7 @@
 package mcpcli
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -56,7 +57,7 @@ func sdkServerOptionsWithDiagnostics(diagnostics io.Writer) *mcp.ServerOptions {
 
 func sdkServerOptionsWithLogger(logger *slog.Logger) *mcp.ServerOptions {
 	return &mcp.ServerOptions{
-		Instructions: "This MCP endpoint is a proxy to the shared issueops daemon. Use harness tools for shared Codex/Claude inspection, atomic commit preflight, state checkpoints, self-verification, self-augmentation, and commit policy context. External wiki or knowledge-base workflows belong to their own separately installed servers, not issueops.",
+		Instructions: "This MCP endpoint runs the issueops harness in-process for the calling host session. Use harness tools for shared Codex/Claude inspection, atomic commit preflight, state checkpoints, self-verification, self-augmentation, and commit policy context. External wiki or knowledge-base workflows belong to their own separately installed servers, not issueops.",
 		Logger:       logger,
 		Capabilities: &mcp.ServerCapabilities{},
 	}
@@ -251,11 +252,15 @@ func serveMCPStreamSDK(ctx context.Context, input io.Reader, output io.Writer, d
 	if rwc, ok := input.(io.ReadWriteCloser); ok && io.Writer(rwc) == output {
 		return server.Run(ctx, &mcp.IOTransport{Reader: rwc, Writer: rwc})
 	}
-	reader := io.ReadCloser(io.NopCloser(input))
-	if closer, ok := input.(io.ReadCloser); ok {
-		reader = closer
+	// 분리된 stdio는 host가 stdin을 닫아도 이미 받은 요청에 끝까지 응답한다.
+	inflight := newInflightRequests()
+	var closer io.Closer
+	if inputCloser, ok := input.(io.Closer); ok {
+		closer = inputCloser
 	}
-	return server.Run(ctx, &mcp.IOTransport{Reader: reader, Writer: writeCloser{output}})
+	reader := &drainingReader{source: bufio.NewReader(input), closer: closer, inflight: inflight}
+	writer := &observingWriter{target: output, inflight: inflight}
+	return server.Run(ctx, &mcp.IOTransport{Reader: reader, Writer: writer})
 }
 
 type writeCloser struct{ io.Writer }

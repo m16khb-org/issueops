@@ -7,10 +7,6 @@ func RunDaemon(args []string) error {
 	return runDaemon(args)
 }
 
-func RunMCPProxy() error {
-	return runMCPProxy()
-}
-
 func CheckDaemonStatus() Status {
 	return checkDaemonStatus()
 }

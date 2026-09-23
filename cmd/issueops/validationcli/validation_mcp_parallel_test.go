@@ -21,9 +21,6 @@ func TestValidateMCPWithDepsCoversSuccessAndResponseFailures(t *testing.T) {
 			if !containsString(env, "ISSUEOPS_STATE_DIR="+filepath.Join(root, "issueops-mcp-state-*dir")) {
 				return StepResult{Label: "MCP smoke", OK: false, Error: "missing env"}
 			}
-			if !containsString(env, "ISSUEOPS_MCP_DIRECT=1") {
-				return StepResult{Label: "MCP smoke", OK: false, Error: "MCP smoke must use direct SDK transport"}
-			}
 			return StepResult{Label: "MCP smoke", Command: "issueops mcp", OK: true, Stdout: validMCPResponses()}
 		},
 	}

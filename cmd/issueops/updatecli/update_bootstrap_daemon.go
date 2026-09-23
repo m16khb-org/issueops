@@ -22,15 +22,16 @@ type daemonProcess struct {
 	Command string
 }
 
+// refreshRunningDaemonAfterInstall은 설치 뒤 남아 있는 daemon을 내리기만 한다.
+// issueops mcp는 host 세션 안에서 in-process로 동작하므로 새 세션은 daemon을 쓰지
+// 않는다. 이전 binary로 떠 있는 MCP proxy는 연결이 끊기면 스스로 daemon을 다시
+// 띄우고, 그때 설치된 새 binary가 실행된다. 쓰는 곳이 없는 daemon은 띄우지 않는다.
 func refreshRunningDaemonAfterInstall() (bool, error) {
 	binary := filepath.Join(deps.IssueOpsRoot(), "bin", "issueops")
 	if err := installedDaemonCommandRunner(binary, "daemon", "stop", "--json"); err != nil {
 		return true, err
 	}
 	if _, err := terminateStaleDaemonProcesses(); err != nil {
-		return true, err
-	}
-	if err := installedDaemonCommandRunner(binary, "daemon", "start", "--json"); err != nil {
 		return true, err
 	}
 	return true, nil

@@ -66,7 +66,7 @@ func catalogSections() []catalogSection {
 func DaemonStatusTool() Tool {
 	return Tool{
 		Name:        "daemon_status",
-		Description: "Report whether the shared issueops daemon backing this MCP proxy is reachable, including socket and pid metadata.",
+		Description: "Report whether a legacy issueops daemon is running, including socket and pid metadata. issueops mcp serves requests in-process; only MCP proxies started from older binaries still connect to this daemon.",
 		InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 	}
 }
