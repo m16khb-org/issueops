@@ -14,6 +14,17 @@ import (
 // RecordIssueOpsImplementationReview는 verdict와 실질 내용(findings/evidence
 // 각 1개 이상)을 요구한다. reviewer_* 필드는 감사 기록으로만 저장한다.
 func RecordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplementationReviewRequest) (issueops.IssueOpsRecord, error) {
+	return recordIssueOpsImplementationReview(stateRoot, id, req, nil)
+}
+
+// RecordIssueOpsImplementationReviewWithActor는 활성 lease가 있으면 그 holder만
+// 기록하게 한다. 리뷰를 수행한 모델은 reviewer_* 필드에 남고, 기록 권한은
+// 사이클 owner에게 있다.
+func RecordIssueOpsImplementationReviewWithActor(stateRoot, id string, req IssueOpsImplementationReviewRequest, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
+	return recordIssueOpsImplementationReview(stateRoot, id, req, &actor)
+}
+
+func recordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplementationReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
 	if verdict != "pass" && verdict != "revise" && verdict != "stop" {
 		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("implementation review verdict must be pass|revise|stop")
@@ -27,6 +38,9 @@ func RecordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplem
 	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		rec, e := ReadIssueOps(stateRoot, id)
 		if e != nil {
+			return e
+		}
+		if e := validatePostTransferMutation(rec, actor); e != nil {
 			return e
 		}
 		// 기록 시점 하한: 구현 diff가 존재할 수 있는 phase에서만 의미가 있다

@@ -16,6 +16,16 @@ import (
 // 관찰한 값과 그 출처를 함께 요구한다 — 출처 없는 수치는 추정과 구분되지
 // 않기 때문이다. 관찰이 불가능하면 근거를 적어 waive한다.
 func RecordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEvidenceRequest) (issueops.IssueOpsRecord, error) {
+	return recordIssueOpsSchemaEvidence(stateRoot, id, req, nil)
+}
+
+// RecordIssueOpsSchemaEvidenceWithActor는 활성 lease가 있으면 그 holder만
+// 기록하게 한다.
+func RecordIssueOpsSchemaEvidenceWithActor(stateRoot, id string, req IssueOpsSchemaEvidenceRequest, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
+	return recordIssueOpsSchemaEvidence(stateRoot, id, req, &actor)
+}
+
+func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEvidenceRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	measurements := cleanReviewValues(req.Measurements)
 	sources := cleanReviewValues(req.Sources)
 	rationale := strings.TrimSpace(req.WaiverRationale)
@@ -35,6 +45,9 @@ func RecordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEviden
 	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		rec, e := ReadIssueOps(stateRoot, id)
 		if e != nil {
+			return e
+		}
+		if e := validatePostTransferMutation(rec, actor); e != nil {
 			return e
 		}
 		if issueOpsPhaseRank(rec.Phase) < issueOpsPhaseRank(issueops.IssueOpsPhaseImplement) {

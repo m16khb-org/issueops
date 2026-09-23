@@ -17,6 +17,16 @@ import (
 // 기록한다. verdict가 updated면 적어 낸 문서가 실제 변경 집합 안에 있어야
 // 하므로, 문서를 고치지 않고 "갱신했다"고 기록하는 경로가 막힌다.
 func RecordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDocsReviewRequest) (issueops.IssueOpsRecord, error) {
+	return recordIssueOpsProjectDocsReview(stateRoot, id, req, nil)
+}
+
+// RecordIssueOpsProjectDocsReviewWithActor는 활성 lease가 있으면 그 holder만
+// 기록하게 한다.
+func RecordIssueOpsProjectDocsReviewWithActor(stateRoot, id string, req IssueOpsProjectDocsReviewRequest, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
+	return recordIssueOpsProjectDocsReview(stateRoot, id, req, &actor)
+}
+
+func recordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDocsReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
 	if verdict != "updated" && verdict != "no-change" {
 		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review verdict must be updated|no-change")
@@ -40,6 +50,9 @@ func RecordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDo
 	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		rec, e := ReadIssueOps(stateRoot, id)
 		if e != nil {
+			return e
+		}
+		if e := validatePostTransferMutation(rec, actor); e != nil {
 			return e
 		}
 		if issueOpsPhaseRank(rec.Phase) < issueOpsPhaseRank(issueops.IssueOpsPhaseImplement) {

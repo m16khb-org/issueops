@@ -438,15 +438,15 @@ func runIssueOpsImplementationReview(args []string) error {
 	reviewerHost := fs.String("reviewer-host", "", "reviewer host (audit only)")
 	reviewerModel := fs.String("reviewer-model", "", "reviewer model (audit only)")
 	reviewerEffort := fs.String("reviewer-effort", "", "reviewer effort (audit only)")
-	addIssueOpsActorFlags(fs)
+	actor := addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsImplementationReview(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsImplementationReviewRequest{
+	record, err := issueOpsCLIDeps.RecordIssueOpsImplementationReviewWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsImplementationReviewRequest{
 		Verdict: *verdict, Findings: findings, Evidence: evidence,
 		ReviewerHost: *reviewerHost, ReviewerModel: *reviewerModel, ReviewerEffort: *reviewerEffort,
-	})
+	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
@@ -468,14 +468,14 @@ func runIssueOpsProjectDocsReview(args []string) error {
 	fs.Var(&docs, "doc", "updated project doc path, worktree-relative (repeatable)")
 	fs.Var(&reviewedDocs, "reviewed-doc", "project doc path that was read for this verdict; required for no-change (repeatable)")
 	fs.Var(&evidence, "evidence", "what was checked and why (repeatable)")
-	addIssueOpsActorFlags(fs)
+	actor := addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsProjectDocsReview(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsProjectDocsReviewRequest{
+	record, err := issueOpsCLIDeps.RecordIssueOpsProjectDocsReviewWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsProjectDocsReviewRequest{
 		Verdict: *verdict, Docs: docs, ReviewedDocs: reviewedDocs, Evidence: evidence,
-	})
+	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
@@ -496,14 +496,14 @@ func runIssueOpsSchemaEvidence(args []string) error {
 	fs.Var(&sources, "source", "where the value was observed (repeatable)")
 	waive := fs.Bool("waive", false, "waive the measurement requirement")
 	rationale := fs.String("waiver-rationale", "", "why measurement was not possible")
-	addIssueOpsActorFlags(fs)
+	actor := addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsSchemaEvidence(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsSchemaEvidenceRequest{
+	record, err := issueOpsCLIDeps.RecordIssueOpsSchemaEvidenceWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsSchemaEvidenceRequest{
 		Measurements: measurements, Sources: sources, Waive: *waive, WaiverRationale: *rationale,
-	})
+	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
