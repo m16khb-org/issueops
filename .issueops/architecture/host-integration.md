@@ -36,7 +36,7 @@ executable과 같은 파일임을 입증한 경우에만 process evidence를 붙
 
 ## Pioneer Skills Layer
 
-issueops는 `skills/` 디렉토리를 공용 스킬 33개의 단일 출처(single source of truth)로 관리한다. 그중 12개는 `internal/domain/pioneerskill/catalog.go`가 고정하는 pioneer skill catalog이고, 나머지 21개는 host·workflow·문서·QA용 operational skill이다. 수량은 `issueops inspect --json`과 각 `skills/<name>/SKILL.md`로 검증한다. namesake 설명과 사용 계약은 각 skill의 frontmatter와 identity를 참조한다.
+issueops는 `skills/` 디렉토리를 공용 스킬 52개의 단일 출처(single source of truth)로 관리한다. 그중 12개는 `internal/domain/pioneerskill/catalog.go`가 고정하는 pioneer skill catalog이고, 나머지 40개는 host·workflow·문서·QA용 operational skill이다. 수량은 `issueops inspect --json`과 각 `skills/<name>/SKILL.md`로 검증한다. namesake 설명과 사용 계약은 각 skill의 frontmatter와 identity를 참조한다.
 
 ### 스킬 목록과 IssueOps 연동
 
