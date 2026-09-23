@@ -13,8 +13,8 @@ const (
 
 	// IssueOps implementer(하위 세션 execution owner)의 host별 기본 모델.
 	// execution prepare가 --owner-model/--owner-effort 미지정 호출에 적용한다.
-	ImplementerModelCodex  = "gpt-5.6-terra"
-	ImplementerEffortCodex = "xhigh"
+	ImplementerModelCodex  = "gpt-6-sol"
+	ImplementerEffortCodex = "high"
 	// Claude Code 자동 체인은 Opus 5 planner가 계획·리뷰하고 Sonnet 5
 	// implementer가 실행한다. Fable 5는 명시적 수동 지정에만 사용한다.
 	ImplementerModelClaude = "claude-sonnet-5"
