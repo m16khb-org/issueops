@@ -12,19 +12,19 @@
 | 모드 | 도입 단계 | 용도 | 원칙 |
 |------|----------|------|------|
 | `issueops` CLI one-shot | 구현됨 | 모든 host에서 공통으로 호출 가능한 최소 표면 | top-level 명령은 `issueops --help`가 정규 목록이다: `api-doc bootstrap channel contract daemon docs doctor gates guard hook inspect install issueops loop mcp policy preflight project quality self-augment self-verify state status trace update verify-work version web-fetch worker` |
-| `issueops mcp` stdio proxy | 구현됨 | Codex/Claude Code가 같은 MCP schema로 daemon에 연결 | `issueops` daemon을 자동 시작하고 stdio를 Unix socket으로 proxy한다. |
-| `issueops daemon` user-level daemon | 구현됨 | 여러 host/session의 공통 MCP backend, 상태 공유 | `ISSUEOPS_DAEMON_DIR` 또는 `~/.local/state/issueops/daemon`; stale lock, pid, socket, stop/status 제공 |
+| `issueops mcp` stdio server | 구현됨 | Codex/Claude Code/Omo가 같은 MCP schema를 host 세션 안에서 사용 | host가 세션마다 띄운 프로세스 안에서 요청을 처리한다. daemon을 시작하거나 거치지 않으므로 `issueops_execution`이 관측하는 프로세스 계보에 호출 세션이 들어간다. host가 stdin을 닫아도 이미 받은 요청에는 응답한 뒤 종료한다. |
+| `issueops daemon` legacy user-level daemon | 정리 중 | 이전 binary로 떠 있는 MCP proxy가 재연결하는 backend | 새 `issueops mcp`는 쓰지 않는다. `update`/`bootstrap`은 설치 뒤 daemon을 내리기만 하고, 옛 proxy가 재연결하면서 새 binary로 다시 띄운다. `ISSUEOPS_DAEMON_DIR` 또는 `~/.local/state/issueops/daemon`; stale lock, pid, socket, stop/status 제공 |
 | `issueops` | 구현됨 | issue-driven 루프의 durable 상태와 direct/Orca execution v1 lease | IssueOps가 단일 authority다. Orca는 readiness, workspace, native owner launch/inventory만 제공하고 generation/actor/CWD fence는 core가 소유한다. |
 | `issueops loop` | 구현됨 | verify-until-done 루프 계약의 durable 상태와 PR readiness 게이트 | 하네스는 검증 명령을 실행하지 않고 `verify_argv`, 시도 evidence, stop 상태를 기록·게이트한다. |
-| `issueops worker` one-shot jobs | 구현됨 | lifecycle job record(`enqueue/status/list/cancel/cleanup-stuck`)와 policy-gated `run --read-only`(MCP `worker_run_read_only`) | 현재 daemon은 MCP proxy backend이며 장기 상주 job daemon이 아니다. |
+| `issueops worker` one-shot jobs | 구현됨 | lifecycle job record(`enqueue/status/list/cancel/cleanup-stuck`)와 policy-gated `run --read-only`(MCP `worker_run_read_only`) | 장기 상주 job daemon은 없다. |
 | Codex native integration | 구현됨 | user skills, MCP config, `SessionStart` context hook | core 로직 금지, CLI/MCP 호출 래퍼만 허용 |
 | Claude Code native integration | 구현됨 | user skills, user-scope MCP, `SessionStart` context hook | core 정책 우회 금지 |
 | Omo native integration | 구현됨 | user skills, MCP config, `session_start`/`session_compact` extension | core 정책 우회 금지 |
 
-Daemon composition은 listener 시작 전에 MCP dependency를 한 번 구성하고
-immutable snapshot으로 각 stream에 전달한다. Connection accept 경로는 process
-global dependency를 다시 쓰지 않는다. 따라서 동시 session은 같은 contract
-snapshot을 읽고, wiring 변경은 새 daemon process에서만 효력을 갖는다.
+MCP composition은 서버 시작 전에 MCP dependency를 한 번 구성하고 immutable
+snapshot으로 stream에 전달한다. legacy daemon도 listener 시작 전에 같은 방식으로
+구성하고 connection accept 경로에서 process global dependency를 다시 쓰지 않는다.
+따라서 wiring 변경은 새 process에서만 효력을 갖는다.
 
 ## Docs / state / config / logs
 

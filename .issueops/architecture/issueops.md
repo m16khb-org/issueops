@@ -26,7 +26,7 @@
   composition root만 배선한다(`loopgate`와 같은 구조). 상세 계약은
   [ADR 2026-08-22](../adr/decisions/2026-08-22-task-gate-ledger.md)를 참조한다.
 
-- `execution release`는 첫 production vertical이다. CLI/MCP transport facade는 injected release handler만 호출하고, `internal/contract/issueopslease`의 stable v1 canonicalization → pure `internal/domain/issueopslease` → capability-local `internal/application/issueopslease` → inbound/outbound adapter 순서로 흐른다. `cmd/issueops/issueopsapp`만 SQLite store, process observation, clock, filesystem path matcher를 조립하며, 기존 two-argument `ReleaseExecution`은 외부 Go surface와 differential oracle을 위한 compatibility facade로만 남는다.
+- `execution release`는 첫 production vertical이다. CLI/MCP transport facade는 injected release handler만 호출하고, `internal/contract/issueopslease` decode → pure `internal/domain/issueopslease` → capability-local `internal/application/issueopslease` → inbound/outbound adapter 순서로 흐른다. decode는 persisted record를 production record contract(`internal/contract/issueops`)로 엄격하게 읽어 모르는 field를 거부하고, execution만 typed로 다루며 나머지 sidecar는 원문 그대로 보존한다(ADR 2026-09-23). `cmd/issueops/issueopsapp`만 SQLite store, process observation, clock, filesystem path matcher를 조립한다. two-argument `ReleaseExecution` facade는 제거됐고 `TestCurrentIssueOpsVerticalOnly`가 재도입을 막는다.
 - `execution reconcile`의 Orca `worktree_create`·`owner_launch`·`dispatch` confirm도 같은 vertical 경계를 사용한다. kind-local router가 injected handler로 보내고, application은 호출당 현재 durable stage 하나만 inventory/adopt 또는 bounded retry/CAS한다. preview와 no-pending은 side effect가 없는 compatibility router에 남는다.
 - 원격 PR/MR 생성과 `remote_pr_create` 복구는 `issueopspublication` capability vertical이다. `internal/contract/issueopspublication`의 stable mapping → pure domain decision → shared `CreateService`/`ReconcileService` → inbound/outbound adapter 순서로 흐르며, `cmd/issueops/issueopsapp`만 provider, raw schema v1 CAS bridge, live verifier를 조립한다. CLI create와 CLI/MCP reconcile은 같은 request-scoped handler pair를 사용하고, handler가 없으면 legacy full-flow로 우회하지 않고 fail closed한다.
 - 최초 parent issue 생성은 record의 `IssueCreateIntent`가 권위다. Provider 호출
@@ -88,7 +88,11 @@ cycle은 명시값이 없을 때 같은 경로를 계산해 하위 호환한다.
 ### Generation fence and sealed owner context
 
 - Every mutating transition requires the active generation and matching native
-  actor/cwd. Stale generations fail before CAS.
+  actor/cwd. Stale generations fail before CAS. This includes the evidence
+  records that gate publication (`implementation-review`, `project-docs-review`,
+  `schema-evidence record`): the CLI passes the parsed actor flags to the core,
+  and `cmd/issueops/issueopscli/issueops_actor_flags_test.go` rejects an actor
+  flag registration whose result is discarded.
 - Direct preparation grants generation 1 to the caller. Orca preparation stores
   a claimable generation and seals the remote issue digest, private context
   packet, fully rendered prompt, owner host/model/effort, and stable Orca
@@ -106,8 +110,20 @@ cycle은 명시값이 없을 때 같은 경로를 계산해 하위 호환한다.
   execution lease. Only a proven `not_invoked` outcome is retryable.
   `invoked_unknown`, observed URL, verification failure, and receipt failure are
   Doctor findings until `remote reconcile-issue` adopts one exact candidate.
-- sqlstore `BEGIN IMMEDIATE` spans serialize record CAS. No Git, provider, or
-  Orca process call runs while the cycle lock is held.
+- sqlstore `BEGIN IMMEDIATE` spans serialize record CAS. A span covers the whole
+  state root, not one cycle (ADR 2026-07-07), so a call that stalls inside one
+  span stalls every cycle's writes. No network call (`git fetch`, `ls-remote`,
+  `push`, provider CLI or API readback, Orca) runs while a span is held.
+  Observations that feed a write run before the span: the upstream fetch for
+  `pr` entry, the retarget readback and origin lookup, and the change-set
+  fingerprint of evidence records. The span re-reads the record and uses an
+  observation only if its inputs (git root, prepared base, remote artifact,
+  requested branch) are unchanged; otherwise the command fails and is retried.
+  Local Git reads that re-validate a CAS precondition may still run inside the
+  span, such as the HEAD re-check in `cautions/issueops-orchestration.md`.
+  `internal/adapter/issueops/span_network_guard_test.go` probes the span lock
+  from a fake `git` for `pr` entry, retarget, and the evidence records; a new
+  network call in another span needs its own probe case.
 - Remote intent stores generation and native actor. Finish/reconcile rejects a
   changed generation, holder, cwd, branch, or provider result.
 

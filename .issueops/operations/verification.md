@@ -89,7 +89,6 @@ Endpoint/controller/DTO/schema/OpenAPI changes use `.issueops/OPEN_API_SPEC.md` 
 ```bash
 issueops inspect --json
 issueops docs --json
-issueops daemon status --json
 issueops policy check --workspace-root "$PWD" --cwd "$PWD" --json -- git status --short
 scripts/release-repro-smoke.sh
 scripts/release-build-matrix.sh

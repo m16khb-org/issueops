@@ -22,6 +22,12 @@ later dated record says so explicitly. Current supersessions include:
   installation is superseded only for the constrained declarative path in the
   2026-08-28 optional-upstream-provisioning decision. Standalone core success
   remains.
+- The 2026-07-28 lease differential stable v1 canonicalization is superseded by
+  the 2026-09-23 decision that decodes persisted records through the production
+  record contract. Unknown-field rejection and sidecar preservation remain.
+- The Phase 3 daemon-backed MCP proxy in `roadmap.md` is superseded by the
+  2026-09-23 in-process MCP decision. The daemon remains only for MCP proxies
+  started from older binaries.
 
 Historical host, schema, and command names inside dated records preserve the
 rationale at the time of writing. They are not current support contracts. The

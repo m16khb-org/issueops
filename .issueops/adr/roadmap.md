@@ -236,3 +236,12 @@ MVP에서 제외:
 4. response contract golden 범위를 새로 추가되는 capability까지 계속 넓히고, docs byte-size drift가 과하면 normalized subset 전략을 검토
 5. state migration 정책을 multi-version fixture로 확장할 필요가 있는지 dogfood 결과로 판단
 6. command policy catalog를 config로 확장할 필요가 있는지 dogfood 결과로 판단
+
+2026-09-23 기준으로 위 여섯 항목은 모두 처리되거나 결정됐다(1: domain catalog와 cmd transport 분리,
+2: `schema_version=1` fail-closed, 3: `self-verify history/compare/promote`, 4: required-doc projection
+golden, 5: current-only state, 6: `.issueops/policy.json` override). 같은 날 아키텍처 리뷰가 보류한 후속 후보:
+
+1. legacy MCP daemon 제거: 옛 binary의 MCP proxy가 사라지면 daemon 서버·admission·`daemon_status`를 지운다.
+2. record 쓰기 진입점 통합: fence가 `Xxx`/`XxxWithActor` 선택에 달려 있다. 누락이 반복되면 단일 mutate 경로로 옮긴다.
+3. evidence gate 비용: gate 추가가 계속되면 typed validation을 유지한 공통 evidence 엔트리를 검토한다.
+4. session launcher 경계: launcher가 더 늘면 `handoff.go`의 launcher별 어휘를 port로 모은다.

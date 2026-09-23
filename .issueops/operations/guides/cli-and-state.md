@@ -57,7 +57,6 @@ recover IssueOps v1 leases.
 ```bash
 issueops inspect --json
 issueops docs --json
-issueops daemon status --json
 issueops policy check --workspace-root "$PWD" --cwd "$PWD" --json -- git status --short
 issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json
 ```

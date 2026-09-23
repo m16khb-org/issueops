@@ -1,6 +1,6 @@
 ---
 name: cli-and-mcp.md
-description: Direct CLI, daemon-backed MCP, policy, guard, worker, and command smoke operations.
+description: Direct CLI, in-process MCP, policy, guard, worker, and command smoke operations.
 ---
 
 # CLI And MCP Operations
@@ -140,6 +140,9 @@ issueops mcp cleanup --json
 issueops mcp cleanup --apply --json
 ```
 
+`issueops mcp`는 host 세션 안에서 in-process로 동작하며 daemon을 시작하지 않는다. 아래 daemon 명령과
+admission 설정은 이전 binary로 떠 있는 MCP proxy가 붙는 legacy daemon에만 적용된다.
+
 daemon admission은 기본 256개 동시 MCP 연결을 허용한다. 장기 실행 multi-session
 host에서 더 큰 bounded pool이 필요하면 daemon 시작 전에
 `ISSUEOPS_DAEMON_MAX_CONNECTIONS`를 `1..4096` 범위로 설정하고 daemon을
@@ -157,8 +160,7 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
   '{"jsonrpc":"2.0","id":3,"method":"resources/read","params":{"uri":"issueops://commit-policy"}}' \
-  | ISSUEOPS_STATE_DIR="$tmp_state" ISSUEOPS_DAEMON_DIR="$tmp_state/daemon" issueops mcp
-ISSUEOPS_DAEMON_DIR="$tmp_state/daemon" issueops daemon stop --json
+  | ISSUEOPS_STATE_DIR="$tmp_state" issueops mcp
 rm -rf "$tmp_state"
 ```
 

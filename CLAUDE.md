@@ -5,7 +5,7 @@ Claude Code에서 이 저장소를 열면 먼저 `AGENTS.md`를 읽고 동일한
 - 공용 하네스 결정과 작업 계약: `AGENTS.md`
 - 상세 문서: `.issueops/`
 - Claude Code native skills: 기본은 `~/.claude/skills/*` (`atomic-commit-push`, `self-verify`, `self-augment`, `project-bootstrap`). repo-local `.claude/skills/*`는 생성하지 않는다.
-- Claude Code MCP: 기본은 user-scope `issueops` 서버가 중앙 `bin/issueops mcp`를 실행하고 shared daemon에 proxy한다. 이 레포의 `.mcp.json`은 dogfood/project-local 템플릿이다.
+- Claude Code MCP: 기본은 user-scope `issueops` 서버가 중앙 `bin/issueops mcp`를 실행하고, 그 프로세스 안에서 요청을 처리한다(daemon을 거치지 않는다). 이 레포의 `.mcp.json`은 dogfood/project-local 템플릿이다. source checkout에서는 user-scope `issueops`와 `.mcp.json`의 `issueops_project`가 같은 `bin/issueops`를 실행하므로, 둘 다 켜면 같은 도구가 두 번 노출된다. worktree의 새 build를 dogfood할 때만 `issueops_project`를 켠다(`.claude/settings.local.json`의 `enabledMcpjsonServers`).
 - 철학: 하네스 설치·업데이트·검증 경로는 독립 실행 가능해야 한다. 외부 도구가 필요하면 해당 도구의 공식 경로로 별도 설치하고, issueops는 그 설치를 대행하거나 readiness gate로 요구하지 않는다.
 - 사용법은 `.issueops/OPERATIONS.md`를 따른다.
 

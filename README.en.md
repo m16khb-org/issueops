@@ -34,7 +34,7 @@ up gets the same answer.
 | Capability | What it provides |
 |---|---|
 | Cross-host integration | Codex, Claude Code, and Omo native share one core and one response contract |
-| CLI, MCP, and daemon | The human-facing CLI and the agent-facing MCP talk to the same shared daemon |
+| CLI and MCP | The human-facing CLI and the agent-facing MCP share one core and one SQLite state. MCP runs in-process inside the host session |
 | IssueOps cycle | Durable state from issue through plan, worktree, implementation, doc reflection, verification, PR/MR, and cleanup |
 | Project docs | Creates, routes, and incrementally refreshes `AGENTS.md` and `.issueops/`, and enforces reflection through cycle gates |
 | Execution safety | Workspace/cwd boundaries, write/network intent, timeout, redaction, and executable-fence policy |
@@ -102,7 +102,6 @@ work to `project-docs-update`, and restructuring of oversized documents to
 io status --json
 io doctor --repo . --json
 io docs --json
-io daemon status --json
 ```
 
 `doctor` diagnoses install, state, hooks, MCP, daemon, and project docs in one
@@ -226,7 +225,7 @@ flowchart LR
     Codex["Codex"] --> Host["Thin host adapters<br/>skills · hooks · MCP wiring"]
     Claude["Claude Code"] --> Host
     Omo["Omo native"] --> Host
-    Shell["Human shell"] --> Surface["issueops<br/>CLI · MCP proxy · daemon"]
+    Shell["Human shell"] --> Surface["issueops<br/>CLI · in-process MCP"]
     Host --> Surface
     Surface --> Core["Host-neutral Go core"]
     Core --> Policy["policy · guard · contracts"]
@@ -238,7 +237,7 @@ flowchart LR
 Five boundaries hold:
 
 1. Core behavior lives in the Go core, never in a host plugin or hook.
-2. CLI JSON, MCP responses, and daemon responses keep the same meaning.
+2. CLI JSON and MCP responses keep the same meaning.
 3. Host adapters never bypass authentication, command policy, or workspace boundaries.
 4. Hooks provide only `SessionStart` project-doc context; they block no tool call and do no work on the agent's behalf.
 5. The worker handles lifecycle jobs and policy-gated read-only evidence commands only.
@@ -252,7 +251,7 @@ Five boundaries hold:
 | Safety and quality | `policy`, `guard`, `quality`, `verify-work`, `trace`, `contract`, `api-doc`, `preflight` | Execution policy, change quality, evidence and public contract, pre-commit repository checks |
 | Workflow | `issueops`, `loop`, `gates`, `channel` | Durable workflow, completion gate ledgers, cross-session message channels |
 | Docs and hooks | `project`, `hook` | Project doc creation, routing, and refresh; the `SessionStart` context hook entry point |
-| State and runtime | `state`, `daemon`, `mcp`, `worker` | User state, MCP backend, limited local jobs |
+| State and runtime | `state`, `daemon`, `mcp`, `worker` | User state, MCP server, legacy daemon, limited local jobs |
 | Improvement and research | `self-verify`, `self-augment`, `web-fetch`, `review-metrics` | Harness verification, improvement candidates, resilient public web fetches, adversarial-review round and verdict metrics |
 
 The full command and MCP tool contract comes from the built binary. The current

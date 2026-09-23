@@ -14,7 +14,7 @@ hygiene. Dated incident lessons live under [lessons/](lessons/).
 현재 worker는 state-first one-shot job record와 policy-gated `run --read-only`만 제공한다. 장기 상주 worker를 추가하면 stale lock, orphan process, socket 권한, 오래된 binary 문제가 생긴다.
 
 주의:
-- 현재 daemon은 shared MCP backend이지 background job runner가 아니다.
+- 현재 daemon은 이전 binary로 떠 있는 MCP proxy만 쓰는 legacy backend이며 background job runner가 아니다.
 - persistent worker를 도입하기 전에 health/version handshake, graceful shutdown, stale lock cleanup, timeout/cancellation을 고정한다.
 - socket path와 permission을 문서화하고 테스트한다.
 
@@ -38,7 +38,7 @@ hygiene. Dated incident lessons live under [lessons/](lessons/).
 
 ## 13. Daemon lifecycle drift
 
-`issueops mcp`가 daemon을 자동 시작하므로 오래된 binary가 이미 떠 있으면 새 코드 검증과 실제 MCP 동작이 갈라질 수 있다. `issueops update`와 `issueops bootstrap`은 실행 중인 daemon을 post-install 단계에서 재시작하지만, 수동 `go build`나 `install-native`만 실행한 경우에는 daemon이 그대로 남을 수 있다.
+`issueops mcp`는 host 세션 안에서 in-process로 동작하므로 새 세션의 MCP는 daemon build와 갈라지지 않는다. 다만 이전 binary로 떠 있는 MCP proxy는 여전히 daemon에 붙는다. `issueops update`와 `issueops bootstrap`은 post-install 단계에서 daemon을 내리기만 하고, 옛 proxy가 재연결하면서 새 binary로 daemon을 다시 띄운다. 수동 `go build`나 `install-native`만 실행한 경우에는 daemon이 옛 binary로 남을 수 있다.
 
 주의:
 - 수동 설치/빌드 후 MCP smoke 전에는 필요하면 `issueops daemon stop --json`으로 기존 daemon을 내린다.

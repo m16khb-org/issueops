@@ -47,9 +47,10 @@ description: System structure, component boundaries, and responsibilities.
 
 ## 실행 모드와 표면 (요약)
 
-CLI one-shot, `mcp` stdio proxy, `daemon` user-level backend, `issueops`,
-`loop`, `worker` 부분 구현, 그리고 Phase 5/6의 Codex/Claude/Omo UX adapter.
-각 모드의 도입 단계·용도·원칙 표와 daemon socket/lock, MCP schema/descriptor
+CLI one-shot, host 세션 안에서 도는 `mcp` stdio server, 이전 binary의 proxy만
+쓰는 legacy `daemon`, `issueops`, `loop`, `worker` 부분 구현, 그리고 Phase 5/6의
+Codex/Claude/Omo UX adapter. 각 모드의 도입 단계·용도·원칙 표와 legacy daemon
+socket/lock, MCP schema/descriptor
 설계, command-policy catalog와 기본 거부/허용 범주, standalone runtime policy는
 [`architecture/runtime.md`](architecture/runtime.md)가 소유한다.
 
