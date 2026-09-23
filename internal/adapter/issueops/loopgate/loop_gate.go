@@ -17,12 +17,12 @@ import (
 
 // StrictPRReadiness는 레코드 기반 strict readiness에 loop gate를 더한다.
 func StrictPRReadiness(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
-	return withLoopGate(issueops.IssueOpsStrictPRReadiness(record), record.Repo)
+	return WithLoopGate(issueops.IssueOpsStrictPRReadiness(record), record.Repo)
 }
 
 // StrictPRReadinessWithState는 state까지 읽는 strict readiness에 loop gate를 더한다.
 func StrictPRReadinessWithState(stateRoot string, record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
-	return withLoopGate(issueops.IssueOpsStrictPRReadinessWithState(stateRoot, record), record.Repo)
+	return WithLoopGate(issueops.IssueOpsStrictPRReadinessWithState(stateRoot, record), record.Repo)
 }
 
 // AdvancePhase는 pr 단계 진입 전에 strict readiness를 강제한다.
@@ -42,7 +42,9 @@ func AdvancePhaseWithActor(stateRoot, id, to string, actor issueops.IssueOpsActo
 }
 
 // guardPRPhase는 이미 pr 단계인 레코드는 통과시킨다. 재진입까지 막으면 복구 경로가
-// 사라지기 때문이다.
+// 사라지기 때문이다. core readiness는 AdvanceIssueOpsPhase가 upstream을 span 밖에서
+// fetch한 뒤 span 안에서 판정하므로, 여기서는 이 package가 더하는 loop gate만
+// 본다. core 판정을 여기서 다시 하면 upstream fetch가 두 번 일어난다.
 func guardPRPhase(stateRoot, id, to string) error {
 	if issueopscontract.IssueOpsPhase(strings.TrimSpace(to)) != issueopscontract.IssueOpsPhasePR {
 		return nil
@@ -54,13 +56,14 @@ func guardPRPhase(stateRoot, id, to string) error {
 	if record.Phase == issueopscontract.IssueOpsPhasePR {
 		return nil
 	}
-	if ready := StrictPRReadiness(record); !ready.Ready {
+	if ready := WithLoopGate(issueopscontract.IssueOpsReadiness{Ready: true}, record.Repo); !ready.Ready {
 		return fmt.Errorf("cannot enter pr phase: missing %s", strings.Join(ready.Missing, ", "))
 	}
 	return nil
 }
 
-func withLoopGate(ready issueopscontract.IssueOpsReadiness, repo string) issueopscontract.IssueOpsReadiness {
+// WithLoopGate는 readiness에 repo의 loop run gate를 더한다.
+func WithLoopGate(ready issueopscontract.IssueOpsReadiness, repo string) issueopscontract.IssueOpsReadiness {
 	missing, warnings := RepoGateMissing(repo)
 	if len(missing) == 0 && len(warnings) == 0 {
 		return ready

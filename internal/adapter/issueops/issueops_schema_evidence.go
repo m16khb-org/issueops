@@ -41,8 +41,14 @@ func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEviden
 			return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("schema evidence requires at least one --source naming where the measurement was observed")
 		}
 	}
+	// 변경 집합 관측은 span 밖에서 끝낸다(recordIssueOpsImplementationReview 참고).
+	observed, err := ReadIssueOps(stateRoot, id)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
+	}
+	fingerprint := implementation.ChangeFingerprint(observed)
 	var record issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
+	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		rec, e := ReadIssueOps(stateRoot, id)
 		if e != nil {
 			return e
@@ -53,7 +59,9 @@ func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEviden
 		if issueOpsPhaseRank(rec.Phase) < issueOpsPhaseRank(issueops.IssueOpsPhaseImplement) {
 			return fmt.Errorf("schema evidence can only be recorded from the implement phase onward (current: %s)", rec.Phase)
 		}
-		fingerprint := implementation.ChangeFingerprint(rec)
+		if e := requireCurrentChangeObservation(observed, rec); e != nil {
+			return e
+		}
 		now := time.Now().UTC().Format(time.RFC3339Nano)
 		rec.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{
 			Measurements: measurements, Sources: sources,

@@ -2,7 +2,9 @@ package issueops
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"issueops/internal/adapter/issueops/active"
@@ -143,8 +145,21 @@ type BranchRetargetDeps struct {
 }
 
 func RetargetIssueOpsBranchWithActor(stateRoot, id string, req issueops.IssueOpsBranchRetargetRequest, actor IssueOpsActor, deps BranchRetargetDeps) (issueops.IssueOpsRecord, error) {
+	// provider readback과 origin 관측은 원격 호출이다. state root 전역 span 안에서
+	// 기다리면 다른 모든 사이클의 쓰기가 멈추므로 span 밖에서 한 번 관측하고,
+	// span 안의 Retarget은 같은 artifact와 같은 repo·branch를 물을 때만 그 결과를
+	// 쓴다.
+	observed, err := ReadIssueOps(stateRoot, id)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
+	}
+	// 거부될 호출자를 위해 원격을 조회하지 않는다. 권한 판정은 span 안에서 다시 한다.
+	if actorErr := validateRetargetMutation(observed, &actor); actorErr != nil {
+		return issueops.IssueOpsRecord{OK: false}, actorErr
+	}
+	observation := observeBranchRetarget(observed, strings.TrimSpace(req.BaseBranch), deps)
 	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
+	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		record, readErr := ReadIssueOps(stateRoot, id)
 		if readErr != nil {
 			return readErr
@@ -153,19 +168,72 @@ func RetargetIssueOpsBranchWithActor(stateRoot, id string, req issueops.IssueOps
 			return actorErr
 		}
 		store := issueOpsBranchPrepareStore()
-		store.ObserveArtifactTargetBranch = deps.ObserveArtifactTargetBranch
-		store.RemoteBranchPresent = func(repo, branch string) (bool, error) {
-			code, stdout, stderr := GitCmd(repo, "ls-remote", "--heads", "origin", "refs/heads/"+strings.TrimSpace(branch))
-			if code != 0 {
-				return false, fmt.Errorf("git ls-remote failed: %s", strings.TrimSpace(stderr))
-			}
-			return len(strings.Fields(strings.TrimSpace(stdout))) > 0, nil
+		if deps.ObserveArtifactTargetBranch != nil {
+			store.ObserveArtifactTargetBranch = observation.artifactTargetBranch
+			store.RemoteBranchPresent = observation.remoteBranchPresent
 		}
 		var e error
 		rec, e = branchprepare.Retarget(store, stateRoot, id, req)
 		return e
 	})
 	return rec, err
+}
+
+var errBranchRetargetObservationStale = errors.New("IssueOps record changed while the retarget was observed; retry the command")
+
+// branchRetargetObservation은 span 밖에서 끝낸 재타깃 관측이다.
+type branchRetargetObservation struct {
+	artifact      *issueops.IssueOpsRemoteArtifactVerification
+	target        string
+	targetErr     error
+	repo, branch  string
+	present       bool
+	presentErr    error
+	presentStated bool
+}
+
+// observeBranchRetarget은 Retarget이 묻는 순서 그대로 관측한다. artifact target이
+// 요청한 base가 아니면 Retarget이 거기서 거부하므로 origin은 조회하지 않는다.
+func observeBranchRetarget(record issueops.IssueOpsRecord, baseBranch string, deps BranchRetargetDeps) branchRetargetObservation {
+	var observation branchRetargetObservation
+	if deps.ObserveArtifactTargetBranch == nil || record.RemoteArtifact == nil || baseBranch == "" {
+		return observation
+	}
+	artifact := *record.RemoteArtifact
+	observation.artifact = &artifact
+	observation.target, observation.targetErr = deps.ObserveArtifactTargetBranch(artifact)
+	if observation.targetErr != nil || strings.TrimSpace(observation.target) != baseBranch {
+		return observation
+	}
+	observation.repo, observation.branch = record.Repo, baseBranch
+	observation.present, observation.presentErr = issueOpsOriginBranchPresent(record.Repo, baseBranch)
+	observation.presentStated = true
+	return observation
+}
+
+func (observation branchRetargetObservation) artifactTargetBranch(artifact issueops.IssueOpsRemoteArtifactVerification) (string, error) {
+	if observation.artifact == nil || !reflect.DeepEqual(*observation.artifact, artifact) {
+		return "", errBranchRetargetObservationStale
+	}
+	return observation.target, observation.targetErr
+}
+
+func (observation branchRetargetObservation) remoteBranchPresent(repo, branch string) (bool, error) {
+	if !observation.presentStated || observation.repo != repo || observation.branch != branch {
+		return false, errBranchRetargetObservationStale
+	}
+	return observation.present, observation.presentErr
+}
+
+// issueOpsOriginBranchPresent는 origin에 branch가 있는지 본다. 네트워크 호출이라
+// span 밖에서만 부른다. 사용자의 SSH·자격 증명 설정(core.sshCommand 등)을 그대로
+// 쓰도록 주입된 GitCmd로 실행한다.
+func issueOpsOriginBranchPresent(repo, branch string) (bool, error) {
+	code, stdout, stderr := GitCmd(repo, "ls-remote", "--heads", "origin", "refs/heads/"+strings.TrimSpace(branch))
+	if code != 0 {
+		return false, fmt.Errorf("git ls-remote failed: %s", strings.TrimSpace(stderr))
+	}
+	return len(strings.Fields(strings.TrimSpace(stdout))) > 0, nil
 }
 
 func validateIssueOpsIssueBranch(branch string) error {

@@ -30,8 +30,12 @@ func AdvanceIssueOpsPhaseWithActor(stateRoot, id, to string, actor IssueOpsActor
 }
 
 func advanceIssueOpsPhaseWithActor(stateRoot, id, to string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
+	upstream, err := prefetchIssueOpsUpstreamForPhase(stateRoot, id, to, actor)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
+	}
 	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
+	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		record, readErr := ReadIssueOps(stateRoot, id)
 		if readErr != nil {
 			return readErr
@@ -40,13 +44,33 @@ func advanceIssueOpsPhaseWithActor(stateRoot, id, to string, actor *IssueOpsActo
 			return actorErr
 		}
 		var e error
-		rec, e = advanceIssueOpsPhaseLocked(stateRoot, id, to)
+		rec, e = advanceIssueOpsPhaseLocked(stateRoot, id, to, upstream)
 		return e
 	})
 	return rec, err
 }
 
-func advanceIssueOpsPhaseLocked(stateRoot, id, to string) (issueops.IssueOpsRecord, error) {
+// prefetchIssueOpsUpstreamForPhase는 pr 진입일 때만 strict 판정이 쓸 fetch를
+// span 밖에서 끝낸다. 다른 전이는 fetch하지 않는다. 거부될 호출자를 위해 fetch하지
+// 않도록 권한을 먼저 보고, 권한 판정은 span 안에서 다시 한다.
+func prefetchIssueOpsUpstreamForPhase(stateRoot, id, to string, actor *IssueOpsActor) (issueOpsUpstreamFetcher, error) {
+	if issueops.IssueOpsPhase(strings.TrimSpace(to)) != IssueOpsPhasePR {
+		return nil, nil
+	}
+	record, err := ReadIssueOps(stateRoot, id)
+	if err != nil {
+		return nil, err
+	}
+	if record.Phase == IssueOpsPhasePR {
+		return nil, nil
+	}
+	if err := validateExecutionMutation(record, actor); err != nil {
+		return nil, err
+	}
+	return prefetchIssueOpsUpstream(record), nil
+}
+
+func advanceIssueOpsPhaseLocked(stateRoot, id, to string, upstream issueOpsUpstreamFetcher) (issueops.IssueOpsRecord, error) {
 	phase := issueops.IssueOpsPhase(strings.TrimSpace(to))
 	if !knownIssueOpsPhase(phase) {
 		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("unknown issueops phase %q", to)
@@ -64,14 +88,17 @@ func advanceIssueOpsPhaseLocked(stateRoot, id, to string) (issueops.IssueOpsReco
 	if shouldRefreshIssueOpsAISlopClean(record, phase) {
 		return refreshIssueOpsAISlopClean(stateRoot, record)
 	}
-	if err := validateIssueOpsPhaseTransition(stateRoot, record, phase); err != nil {
+	if err := validateIssueOpsPhaseTransition(stateRoot, record, phase, upstream); err != nil {
 		return issueops.IssueOpsRecord{OK: false}, err
 	}
 	record = applyIssueOpsPhaseTransition(record, phase)
 	return touchAndWriteIssueOps(stateRoot, record)
 }
 
-func validateIssueOpsPhaseTransition(stateRoot string, record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase) error {
+// validateIssueOpsPhaseTransition은 span 안에서 불린다. pr 진입 판정은 upstream
+// fetch 결과가 필요하지만 fetch 자체는 호출자가 span 밖에서 끝낸 것만 쓴다.
+// 결과가 없으면 fetch하지 않은 것으로 보고 upstream_fetch로 거부한다.
+func validateIssueOpsPhaseTransition(stateRoot string, record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase, upstream issueOpsUpstreamFetcher) error {
 	if record.Phase == IssueOpsPhaseDone {
 		return fmt.Errorf("cannot leave done phase")
 	}
@@ -118,7 +145,12 @@ func validateIssueOpsPhaseTransition(stateRoot string, record issueops.IssueOpsR
 		return fmt.Errorf("cannot enter feedback phase before ai-slop-clean phase")
 	}
 	if phase == IssueOpsPhasePR {
-		if ready := issueOpsStrictPRReadinessWithState(stateRoot, record); !ready.Ready {
+		if upstream == nil {
+			upstream = func(gitRoot string) issueOpsUpstreamFetch {
+				return issueOpsUpstreamFetch{gitRoot: gitRoot, failed: true, stderr: "upstream was not fetched before the pr transition; retry the command"}
+			}
+		}
+		if ready := issueOpsStrictPRReadinessWithStateUsing(stateRoot, record, upstream); !ready.Ready {
 			return fmt.Errorf("cannot enter pr phase: missing %s", strings.Join(ready.Missing, ", "))
 		}
 	}

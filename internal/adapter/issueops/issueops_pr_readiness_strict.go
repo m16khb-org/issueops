@@ -21,18 +21,55 @@ func IssueOpsLocalPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsR
 // observation used by readiness so the same request can classify review tier
 // without reading Git again.
 func ObserveIssueOpsLocalPRReadiness(record issueops.IssueOpsRecord) (issueops.IssueOpsReadiness, implementation.LocalChangeObservation) {
-	return issueOpsObservedPRReadiness(record, false)
+	return issueOpsObservedPRReadiness(record, nil)
 }
 
 func IssueOpsStrictPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	ready, _ := issueOpsObservedPRReadiness(record, true)
+	ready, _ := issueOpsObservedPRReadiness(record, fetchIssueOpsUpstream)
 	return ready
 }
 
-// issueOpsObservedPRReadiness는 두 표면의 유일한 본체다. syncUpstream이 false면
-// fetch와 동기화 판정을 건너뛰고, 같은 변경 관측을 schema 판정에도 쓴다.
-// strict schema 판정은 fetch 뒤 경로를 다시 읽어 원격 ref 갱신을 반영한다.
-func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bool) (issueops.IssueOpsReadiness, implementation.LocalChangeObservation) {
+// issueOpsUpstreamFetch는 strict readiness가 upstream 동기화를 판정하기 전에
+// 실행한 `git fetch`의 결과다.
+type issueOpsUpstreamFetch struct {
+	gitRoot string
+	failed  bool
+	stderr  string
+}
+
+// issueOpsUpstreamFetcher는 strict 판정이 fetch 결과를 얻는 방법이다. fetch는
+// 네트워크 호출이라 state root 전역 span 안에서 실행하지 않는다. span 안의
+// 판정은 prefetchIssueOpsUpstream이 span 밖에서 끝낸 결과를 받는다.
+type issueOpsUpstreamFetcher func(gitRoot string) issueOpsUpstreamFetch
+
+func fetchIssueOpsUpstream(gitRoot string) issueOpsUpstreamFetch {
+	code, _, stderr := GitCmd(gitRoot, "fetch", "--quiet")
+	return issueOpsUpstreamFetch{gitRoot: gitRoot, failed: code != 0, stderr: strings.TrimSpace(stderr)}
+}
+
+// prefetchIssueOpsUpstream은 strict 판정이 fetch할 조건(git root와 upstream)을
+// span 밖에서 확인해 미리 fetch한다. 돌려주는 fetcher는 같은 git root를 물을
+// 때만 그 결과를 주고, 그 밖에는 fetch하지 않은 채 실패로 판정하게 한다.
+func prefetchIssueOpsUpstream(record issueops.IssueOpsRecord) issueOpsUpstreamFetcher {
+	gitRoot := issueOpsStrictGitRoot(record)
+	fetched := issueOpsUpstreamFetch{gitRoot: gitRoot, failed: true, stderr: "upstream was not fetched before this readiness check; retry the command"}
+	if gitRoot != "" && strings.TrimSpace(GitOut(gitRoot, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")) != "" {
+		fetched = fetchIssueOpsUpstream(gitRoot)
+	}
+	return func(root string) issueOpsUpstreamFetch {
+		if root != fetched.gitRoot {
+			return issueOpsUpstreamFetch{gitRoot: root, failed: true, stderr: "IssueOps worktree changed after the upstream fetch; retry the command"}
+		}
+		return fetched
+	}
+}
+
+// issueOpsObservedPRReadiness는 local과 strict 두 표면의 유일한 본체다.
+// fetchUpstream이 nil이면 fetch와 동기화 판정을 건너뛰고, 같은 변경 관측을
+// schema 판정에도 쓴다. strict schema 판정은 fetch 뒤 경로를 다시 읽어 원격
+// ref 갱신을 반영한다.
+func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream issueOpsUpstreamFetcher) (issueops.IssueOpsReadiness, implementation.LocalChangeObservation) {
+	syncUpstream := fetchUpstream != nil
 	ready := IssueOpsPRReadiness(record)
 	ready.Strict = syncUpstream
 	missing := append([]string{}, ready.Missing...)
@@ -76,10 +113,10 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bo
 		if upstream == "" {
 			missing = append(missing, "upstream")
 		} else if syncUpstream {
-			if code, _, stderr := GitCmd(gitRoot, "fetch", "--quiet"); code != 0 {
+			if fetched := fetchUpstream(gitRoot); fetched.failed {
 				missing = append(missing, "upstream_fetch")
-				if strings.TrimSpace(stderr) != "" {
-					warnings = append(warnings, "failed to fetch upstream: "+strings.TrimSpace(stderr))
+				if fetched.stderr != "" {
+					warnings = append(warnings, "failed to fetch upstream: "+fetched.stderr)
 				}
 			}
 			counts := strings.Fields(GitOut(gitRoot, "rev-list", "--left-right", "--count", "HEAD...@{u}"))
@@ -148,7 +185,11 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, syncUpstream bo
 }
 
 func issueOpsStrictPRReadinessWithState(stateRoot string, record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	ready := IssueOpsStrictPRReadiness(record)
+	return issueOpsStrictPRReadinessWithStateUsing(stateRoot, record, fetchIssueOpsUpstream)
+}
+
+func issueOpsStrictPRReadinessWithStateUsing(stateRoot string, record issueops.IssueOpsRecord, fetchUpstream issueOpsUpstreamFetcher) issueops.IssueOpsReadiness {
+	ready, _ := issueOpsObservedPRReadiness(record, fetchUpstream)
 	childMissing, childWarnings := issueOpsChildPRGateMissing(stateRoot, record)
 	if len(childMissing) == 0 && len(childWarnings) == 0 {
 		return ready

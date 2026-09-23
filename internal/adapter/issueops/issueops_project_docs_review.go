@@ -46,8 +46,21 @@ func recordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDo
 	if verdict == "no-change" && len(reviewedDocs) == 0 {
 		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review verdict no-change requires at least one --reviewed-doc path that was actually read")
 	}
+	// fingerprint를 계산할 수 없는 사이클(비-git worktree 등)도 판정 자체는
+	// 기록할 수 있다 — ai_slop_clean과 같은 관용이다. 빈 채로 봉인하면
+	// 나중에 fingerprint가 생겼을 때 stale로 잡혀 재기록을 요구한다.
+	//
+	// 변경 집합과 문서 경로 관측은 span 밖에서 끝낸다
+	// (recordIssueOpsImplementationReview 참고).
+	observed, err := ReadIssueOps(stateRoot, id)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
+	}
+	fingerprint := implementation.ChangeFingerprint(observed)
+	normalized, normalizeErr := normalizeProjectDocPaths(observed, docs)
+	reviewed, reviewedErr := normalizeReviewedDocPaths(observed, reviewedDocs)
 	var record issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
+	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		rec, e := ReadIssueOps(stateRoot, id)
 		if e != nil {
 			return e
@@ -58,17 +71,14 @@ func recordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDo
 		if issueOpsPhaseRank(rec.Phase) < issueOpsPhaseRank(issueops.IssueOpsPhaseImplement) {
 			return fmt.Errorf("project docs review can only be recorded from the implement phase onward (current: %s)", rec.Phase)
 		}
-		// fingerprint를 계산할 수 없는 사이클(비-git worktree 등)도 판정 자체는
-		// 기록할 수 있다 — ai_slop_clean과 같은 관용이다. 빈 채로 봉인하면
-		// 나중에 fingerprint가 생겼을 때 stale로 잡혀 재기록을 요구한다.
-		fingerprint := implementation.ChangeFingerprint(rec)
-		normalized, e := normalizeProjectDocPaths(rec, docs)
-		if e != nil {
+		if e := requireCurrentChangeObservation(observed, rec); e != nil {
 			return e
 		}
-		reviewed, e := normalizeReviewedDocPaths(rec, reviewedDocs)
-		if e != nil {
-			return e
+		if normalizeErr != nil {
+			return normalizeErr
+		}
+		if reviewedErr != nil {
+			return reviewedErr
 		}
 		now := time.Now().UTC().Format(time.RFC3339Nano)
 		rec.ProjectDocsReview = &issueops.IssueOpsProjectDocsReview{

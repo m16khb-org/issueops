@@ -99,6 +99,17 @@ func ChangeFingerprint(record model.IssueOpsRecord) string {
 	return fingerprint
 }
 
+// ChangeObservationKey는 ChangeFingerprint와 ChangedPaths가 record에서 읽는
+// 입력(git root와 prepared base)이다. 변경 집합을 잠금 span 밖에서 관측한
+// 호출자는 span 안에서 이 값이 그대로인지 확인한 뒤에만 그 관측을 기록한다.
+func ChangeObservationKey(record model.IssueOpsRecord) string {
+	key := []string{readinesspaths.StrictGitRoot(record)}
+	if record.BranchPrepare != nil {
+		key = append(key, strings.TrimSpace(record.BranchPrepare.BaseSHA), strings.TrimSpace(record.BranchPrepare.BaseBranch))
+	}
+	return strings.Join(key, "\x00")
+}
+
 // ObserveLocalChangesAt observes paths and content twice inside one readiness
 // evaluation. One retry tolerates a single concurrent file update; a snapshot
 // that keeps changing is returned as unverified with no fingerprint.
