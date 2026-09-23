@@ -119,7 +119,7 @@ func runIssueOpsChild(args []string) error {
 	case "start":
 		return runIssueOpsChildStart(args[1:])
 	case "status":
-		return runIssueOpsChildStatus(args[1:], false)
+		return runIssueOpsChildStatus(args[1:], true)
 	case "list":
 		return runIssueOpsChildStatus(args[1:], false)
 	case "accept":
@@ -158,11 +158,20 @@ func runIssueOpsChildStart(args []string) error {
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
-func runIssueOpsChildStatus(args []string, repairDefault bool) error {
-	fs := flag.NewFlagSet("issueops child status", flag.ContinueOnError)
+// runIssueOpsChildStatus는 child status와 child list가 공유한다. list는 읽기 전용이라
+// 부모 index를 고치는 --repair를 받지 않는다.
+func runIssueOpsChildStatus(args []string, allowRepair bool) error {
+	name := "issueops child list"
+	if allowRepair {
+		name = "issueops child status"
+	}
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
 	actor := addIssueOpsActorFlags(fs)
-	repair := fs.Bool("repair", repairDefault, "append scanned children missing from the parent index")
+	repair := new(bool)
+	if allowRepair {
+		repair = fs.Bool("repair", false, "append scanned children missing from the parent index")
+	}
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
@@ -438,15 +447,15 @@ func runIssueOpsImplementationReview(args []string) error {
 	reviewerHost := fs.String("reviewer-host", "", "reviewer host (audit only)")
 	reviewerModel := fs.String("reviewer-model", "", "reviewer model (audit only)")
 	reviewerEffort := fs.String("reviewer-effort", "", "reviewer effort (audit only)")
-	addIssueOpsActorFlags(fs)
+	actor := addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsImplementationReview(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsImplementationReviewRequest{
+	record, err := issueOpsCLIDeps.RecordIssueOpsImplementationReviewWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsImplementationReviewRequest{
 		Verdict: *verdict, Findings: findings, Evidence: evidence,
 		ReviewerHost: *reviewerHost, ReviewerModel: *reviewerModel, ReviewerEffort: *reviewerEffort,
-	})
+	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
@@ -468,14 +477,14 @@ func runIssueOpsProjectDocsReview(args []string) error {
 	fs.Var(&docs, "doc", "updated project doc path, worktree-relative (repeatable)")
 	fs.Var(&reviewedDocs, "reviewed-doc", "project doc path that was read for this verdict; required for no-change (repeatable)")
 	fs.Var(&evidence, "evidence", "what was checked and why (repeatable)")
-	addIssueOpsActorFlags(fs)
+	actor := addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsProjectDocsReview(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsProjectDocsReviewRequest{
+	record, err := issueOpsCLIDeps.RecordIssueOpsProjectDocsReviewWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsProjectDocsReviewRequest{
 		Verdict: *verdict, Docs: docs, ReviewedDocs: reviewedDocs, Evidence: evidence,
-	})
+	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
@@ -496,14 +505,14 @@ func runIssueOpsSchemaEvidence(args []string) error {
 	fs.Var(&sources, "source", "where the value was observed (repeatable)")
 	waive := fs.Bool("waive", false, "waive the measurement requirement")
 	rationale := fs.String("waiver-rationale", "", "why measurement was not possible")
-	addIssueOpsActorFlags(fs)
+	actor := addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsSchemaEvidence(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsSchemaEvidenceRequest{
+	record, err := issueOpsCLIDeps.RecordIssueOpsSchemaEvidenceWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsSchemaEvidenceRequest{
 		Measurements: measurements, Sources: sources, Waive: *waive, WaiverRationale: *rationale,
-	})
+	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 

@@ -129,7 +129,6 @@ func TestRefreshRunningDaemonAfterInstallUsesInstalledBinaryLifecycle(t *testing
 	binary := filepath.Join(root, "bin", "issueops")
 	want := [][]string{
 		{binary, "daemon", "stop", "--json"},
-		{binary, "daemon", "start", "--json"},
 	}
 	if !reflect.DeepEqual(commands, want) {
 		t.Fatalf("unexpected installed daemon command sequence:\n got: %#v\nwant: %#v", commands, want)

@@ -42,7 +42,6 @@ func TestEvaluateEdgesRejectsForbiddenDependencies(t *testing.T) {
 		{"domain contract root", dependencyEdge{"internal/domain/session", "internal/contract"}, "domain_must_not_import_implementation"},
 		{"application outbound adapter", dependencyEdge{"internal/application/run", "internal/adapter/provider"}, "application_must_not_import_implementation"},
 		{"release application filesystem", dependencyEdge{"internal/application/issueopslease", "path/filepath"}, "application_must_not_import_implementation"},
-		{"release contract production issueops", dependencyEdge{"internal/contract/issueopslease", "internal/core/issueops/model"}, "leasevertical_contract_must_not_import_production_issueops"},
 		{"publication contract core", dependencyEdge{"internal/contract/issueopspublication", "internal/core/issueops"}, "publication_contract_must_not_import_internal"},
 		{"publication contract database", dependencyEdge{"internal/contract/issueopspublication", "database/sql"}, "publication_contract_must_not_import_internal"},
 		{"publication domain port", dependencyEdge{"internal/domain/issueopspublication", "internal/port"}, "publication_domain_must_only_import_contract"},
@@ -1108,9 +1107,6 @@ func evaluateEdges(edges []dependencyEdge) []violation {
 		if isPreparationOutboundAdapter(edge.importer) && isCore(edge.imported) {
 			violations = append(violations, violation{"preparation_outbound_adapter_must_not_import_core", edge})
 		}
-		if isLeaseVerticalLayer(edge.importer, "contract") && isProductionIssueOps(edge.imported) {
-			violations = append(violations, violation{"leasevertical_contract_must_not_import_production_issueops", edge})
-		}
 		if isInboundAdapter(edge.importer) && isOutboundAdapter(edge.imported) {
 			violations = append(violations, violation{"inbound_adapter_must_not_import_outbound_adapter", edge})
 		}
@@ -1434,11 +1430,6 @@ func isLeaseVerticalLayer(path, layer string) bool {
 
 func isMigratedInboundAdapter(path string) bool {
 	return path == "internal/adapter/inbound/issueopslease" || path == "internal/adapter/inbound/issueopspublication" || path == "internal/adapter/inbound/issueopscompletion" || path == "internal/adapter/inbound/issueopspreparation"
-}
-
-func isProductionIssueOps(path string) bool {
-	return path == "internal/core/issueops" ||
-		(strings.HasPrefix(path, "internal/core/issueops/") && !strings.HasPrefix(path, "internal/core/issueops/testdata/"))
 }
 
 func isLegacyInfrastructure(path string) bool {

@@ -210,11 +210,11 @@ func recordIssueOpsCoreProjectDocsReviewForCLITest(t *testing.T, id string) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := issueopscore.RecordIssueOpsProjectDocsReview(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsProjectDocsReviewRequest{
+	if _, err := issueopscore.RecordIssueOpsProjectDocsReviewWithActor(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsProjectDocsReviewRequest{
 		Verdict:      "no-change",
 		ReviewedDocs: []string{".issueops/CAUTIONS.md"},
 		Evidence:     []string{"이 변경은 운영 문서에 남길 결정을 만들지 않는다"},
-	}); err != nil {
+	}, evidenceRecorderActorForCLITest(record)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -223,12 +223,30 @@ func recordIssueOpsCoreProjectDocsReviewForCLITest(t *testing.T, id string) {
 // 올라가는 CLI 픽스처도 이 기록이 필요하다.
 func recordIssueOpsCoreImplementationReviewForCLITest(t *testing.T, id string) {
 	t.Helper()
-	if _, err := issueopscore.RecordIssueOpsImplementationReview(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsImplementationReviewRequest{
+	record, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := issueopscore.RecordIssueOpsImplementationReviewWithActor(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsImplementationReviewRequest{
 		Verdict:      "pass",
 		Findings:     []string{"변경 범위가 이슈 계약을 넘지 않는다"},
 		Evidence:     []string{"go test ./cmd/issueops/issueopscli -count=1"},
 		ReviewerHost: "claude",
-	}); err != nil {
+	}, evidenceRecorderActorForCLITest(record)); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// evidenceRecorderActorForCLITest는 레코드의 활성 lease holder로 인정되는 actor다.
+// evidence 기록은 owner mutation이라 lease가 있으면 holder만 쓸 수 있다.
+func evidenceRecorderActorForCLITest(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsActor {
+	if record.Execution == nil || record.Execution.Lease.Holder == nil {
+		return issueopscontract.IssueOpsActor{}
+	}
+	holder := record.Execution.Lease.Holder
+	actor := issueopscontract.IssueOpsActor{Host: holder.Host, SessionID: holder.SessionID, AgentID: holder.AgentID, CWD: record.Execution.Workspace.Root}
+	if holder.SessionProcess != nil {
+		actor.NativeProcessAncestry = []issueopscontract.NativeProcessReceipt{*holder.SessionProcess}
+	}
+	return actor
 }

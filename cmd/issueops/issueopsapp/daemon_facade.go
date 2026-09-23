@@ -29,11 +29,6 @@ func runDaemon(args []string) error {
 	return daemoncli.RunDaemon(args)
 }
 
-func runMCPProxy() error {
-	configureDaemonCLI()
-	return daemoncli.RunMCPProxy()
-}
-
 func checkDaemonStatus() daemonStatus {
 	return daemoncli.CheckDaemonStatus()
 }

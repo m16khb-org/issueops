@@ -17,17 +17,29 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func TestRunMCPDirectUsesStreamTransport(t *testing.T) {
-	t.Setenv("ISSUEOPS_MCP_DIRECT", "1")
+// issueops mcp는 호출한 host 세션의 자식 프로세스 안에서 요청을 처리한다. 공유
+// daemon으로 proxy하면 issueops_execution이 호출자 대신 daemon의 프로세스 계보를
+// 관측해 native actor 증명이 성립하지 않는다. 옛 opt-in 환경 변수 없이도 in-process로
+// 동작하고 daemon 파일을 만들지 않아야 한다.
+func TestRunMCPServesInProcessWithoutADaemon(t *testing.T) {
+	t.Setenv("ISSUEOPS_MCP_DIRECT", "")
+	daemonDir := t.TempDir()
+	t.Setenv("ISSUEOPS_DAEMON_DIR", daemonDir)
 	session := startRunMCPTestSession(t, MCPDependencies{})
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil || len(tools.Tools) == 0 {
-		t.Fatalf("RunMCP direct tool listing failed: tools=%#v err=%v", tools, err)
+		t.Fatalf("RunMCP tool listing failed: tools=%#v err=%v", tools, err)
+	}
+	entries, err := os.ReadDir(daemonDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatalf("RunMCP must not start or contact a daemon, found %v in %s", entries, daemonDir)
 	}
 }
 
 func TestRunMCPWithDependenciesUsesItsReleaseHandlerOnDirectTransport(t *testing.T) {
-	t.Setenv("ISSUEOPS_MCP_DIRECT", "1")
 	called := false
 	session := startRunMCPTestSession(t, MCPDependencies{Release: func(_ context.Context, _ string, request issueops.ExecutionReleaseRequest) (issueops.ExecutionResult, error) {
 		called = true

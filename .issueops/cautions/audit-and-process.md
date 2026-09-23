@@ -36,7 +36,7 @@ A stability-audit failure is not automatically a harness defect; the audit frame
 The stability audit can false-fail when its smoke assumptions lag the issueops contract.
 
 주의:
-- `issueops mcp` defaults to the daemon-backed proxy. Newline-delimited JSON-RPC smoke tests that expect direct stdout responses must set `ISSUEOPS_MCP_DIRECT=1`, matching `validationli/mcpsmoke`. Otherwise stdout can be empty while the proxy path exits successfully, producing a false `mcp_ids=[]` failure.
+- `issueops mcp` serves in-process and, since 2026-09-23, answers every request it read before stdin EOF. Newline-delimited JSON-RPC smoke tests no longer need `ISSUEOPS_MCP_DIRECT=1`; the variable is ignored. An empty stdout from such a smoke is now a real failure, not a transport artifact.
 - UserPromptSubmit currently injects compact per-turn `[issueops]` bullet context. The audit must reject old/noisy catalog injection markers such as `Required project docs` or `필수 프롬프트 주입중`, but must not fail merely because compact context contains newlines.
 - `self-verify promote --confirm` refuses failed snapshots by default. Validation fixtures that intentionally promote a non-termination-eligible snapshot for state-roundtrip coverage must pass `--allow-failed-source`; production baseline promotion should not use that override.
 - Pin these assumptions in `skills/stability-audit/scripts/e2e_stability_audit_test.py` and `cmd/issueops/validationcli/stateroundtrip` tests before changing the audit script.

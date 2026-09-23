@@ -31,7 +31,7 @@ record로 묶어 어느 세션에서 이어받아도 같은 답이 나오게 합
 | 기능 | 내용 |
 |---|---|
 | Cross-host 통합 | Codex, Claude Code, Omo native가 하나의 core와 response contract를 공유합니다 |
-| CLI · MCP · daemon | 사람이 쓰는 CLI와 에이전트가 쓰는 MCP가 같은 shared daemon에 연결됩니다 |
+| CLI · MCP | 사람이 쓰는 CLI와 에이전트가 쓰는 MCP가 같은 core와 SQLite state를 씁니다. MCP는 host 세션 안에서 in-process로 동작합니다 |
 | IssueOps 사이클 | 이슈부터 계획, worktree, 구현, 문서 반영, 검증, PR/MR, 정리까지 durable state로 기록합니다 |
 | Project docs | `AGENTS.md`와 `.issueops/` 운영 문서를 생성·라우팅·점진 갱신하고, 사이클 게이트로 반영을 강제합니다 |
 | 실행 안전 | workspace·cwd 경계, write/network intent, timeout, redaction, executable fence 정책을 적용합니다 |
@@ -94,7 +94,6 @@ issueops project route-docs --repo . --task "<작업 요약>" --json
 io status --json
 io doctor --repo . --json
 io docs --json
-io daemon status --json
 ```
 
 `doctor`는 설치, state, hook, MCP, daemon, project docs를 한 번에 진단합니다. `status`는
@@ -215,7 +214,7 @@ flowchart LR
     Codex["Codex"] --> Host["얇은 host adapter<br/>skills · hooks · MCP wiring"]
     Claude["Claude Code"] --> Host
     Omo["Omo native"] --> Host
-    Shell["Human shell"] --> Surface["issueops<br/>CLI · MCP proxy · daemon"]
+    Shell["Human shell"] --> Surface["issueops<br/>CLI · in-process MCP"]
     Host --> Surface
     Surface --> Core["Host-neutral Go core"]
     Core --> Policy["policy · guard · contracts"]
@@ -227,7 +226,7 @@ flowchart LR
 지키는 경계는 다섯 가지입니다.
 
 1. 핵심 동작은 host plugin이나 hook이 아니라 Go core에 둡니다.
-2. CLI JSON, MCP response, daemon response는 같은 의미를 유지합니다.
+2. CLI JSON과 MCP response는 같은 의미를 유지합니다.
 3. host adapter는 인증, command policy, workspace 경계를 우회하지 않습니다.
 4. hook은 `SessionStart` project-doc context만 제공하며 tool 호출을 막거나 작업을 대신하지 않습니다.
 5. worker는 lifecycle job과 policy-gated read-only evidence command만 다룹니다.
@@ -241,7 +240,7 @@ flowchart LR
 | 안전과 품질 | `policy`, `guard`, `quality`, `verify-work`, `trace`, `contract`, `api-doc`, `preflight` | 실행 정책, 변경 품질, evidence와 public contract, 커밋 전 저장소 상태 검사 |
 | 작업 흐름 | `issueops`, `loop`, `gates`, `channel` | durable workflow, 완료 게이트 원장, 세션 간 메시지 채널 |
 | 문서와 hook | `project`, `hook` | project docs 생성·라우팅·갱신과 `SessionStart` context hook 진입점 |
-| 상태와 실행 | `state`, `daemon`, `mcp`, `worker` | user state, MCP backend, 제한된 local job 관리 |
+| 상태와 실행 | `state`, `daemon`, `mcp`, `worker` | user state, MCP server, legacy daemon, 제한된 local job 관리 |
 | 개선과 조사 | `self-verify`, `self-augment`, `web-fetch`, `review-metrics` | 하네스 검증, 개선 후보 탐색, 공개 웹 조회, 적대 리뷰 라운드·판정 지표 |
 
 전체 명령과 MCP 도구 계약은 빌드된 바이너리에서 확인합니다. 현재 체크아웃의 response

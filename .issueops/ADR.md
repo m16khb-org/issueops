@@ -37,6 +37,8 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-09-23 | issueops mcp serves in-process; the shared daemon leaves the MCP path | [record](adr/2026-09-23-issueops-mcp-serves-in-process-the-shared-daemon-leaves-the.md) |
+| 2026-09-23 | The lease contract decodes persisted records through the production record contract; supersedes 2026-07-28 | [record](adr/2026-09-23-the-lease-contract-decodes-persisted-records-through-the-pro.md) |
 | 2026-09-09 | IssueOps seals the requester intent as a derived artifact next to the plan | [record](adr/2026-09-09-issueops-seals-the-requester-intent-as-a-derived-artifact.md) |
 | 2026-09-08 | Pipeline skill routing: companion skills called by name, base drift as a three-surface model, frontend as a next flag | [record](adr/2026-09-08-pipeline-skill-routing-companion-skills-called-by-name-base.md) |
 | 2026-09-08 | Adversarial review throughput: executable findings, change tiers, and concurrent read-only verification | [record](adr/2026-09-08-adversarial-review-throughput-executable-findings-change-tie.md) |
@@ -59,7 +61,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | 2026-08-04 | Post-completion base synchronization uses contract-owned authority | [record](adr/decisions/2026-08-04-post-completion-base-synchronization.md) |
 | 2026-08-04 | Completed reseed requires stamped current completion provenance | [record](adr/decisions/2026-08-04-completed-reseed-stamped-provenance.md) |
 | 2026-07-29 | Release vertical replaces the lease prototype | [record](adr/decisions/2026-07-29-release-vertical-replaces-lease-prototype.md) |
-| 2026-07-28 | Lease differential contract owns stable v1 canonicalization | [record](adr/decisions/2026-07-28-lease-differential-v1-canonicalization.md) |
+| 2026-07-28 | Lease differential contract owns stable v1 canonicalization; superseded on 2026-09-23 | [record](adr/decisions/2026-07-28-lease-differential-v1-canonicalization.md) |
 | 2026-07-27 | Architecture dependency fitness ratchet | [record](adr/decisions/2026-07-27-architecture-dependency-fitness-ratchet.md) |
 | 2026-07-26 | Linked branches are pinned to the sealed base SHA | [record](adr/decisions/2026-07-26-linked-branches-pinned-to-sealed-base-sha.md) |
 | 2026-07-24 | IssueOps planner/implementer dual structure (#78) | [record](adr/decisions/2026-07-24-issueops-planner-implementer-dual-structure.md) |

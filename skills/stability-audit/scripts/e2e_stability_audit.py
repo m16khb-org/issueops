@@ -94,10 +94,6 @@ def is_noisy_user_prompt_context(ctx: str) -> bool:
     return "Required project docs" in ctx or "필수 프롬프트 주입중" in ctx
 
 
-def mcp_smoke_env(env: dict[str, str]) -> dict[str, str]:
-    return {**env, "ISSUEOPS_MCP_DIRECT": "1"}
-
-
 def run_mcp_jsonrpc_process(
     command: list[str],
     calls: list[dict[str, Any]],
@@ -530,7 +526,7 @@ def daemon_and_mcp_stress(report: dict[str, Any], cycles: int) -> None:
             {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "project_docs_route", "arguments": {"task": "install hook mcp daemon operations"}}},
             {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "daemon_status", "arguments": {}}},
         ]
-        mcp = run_mcp_jsonrpc_process([str(BIN), "mcp"], calls, env=mcp_smoke_env(env), timeout=15)
+        mcp = run_mcp_jsonrpc_process([str(BIN), "mcp"], calls, env=env, timeout=15)
         if not mcp["ok"]:
             ok = False
         st = run([str(BIN), "daemon", "status", "--json"], env=env, timeout=10)

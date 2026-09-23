@@ -967,7 +967,7 @@
     "name": "channel_recv"
   },
   {
-    "description": "Report whether the shared issueops daemon backing this MCP proxy is reachable, including socket and pid metadata.",
+    "description": "Report whether a legacy issueops daemon is running, including socket and pid metadata. issueops mcp serves requests in-process; only MCP proxies started from older binaries still connect to this daemon.",
     "inputSchema": {
       "properties": {},
       "type": "object"

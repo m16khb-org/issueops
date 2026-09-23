@@ -16,6 +16,16 @@ import (
 // 관찰한 값과 그 출처를 함께 요구한다 — 출처 없는 수치는 추정과 구분되지
 // 않기 때문이다. 관찰이 불가능하면 근거를 적어 waive한다.
 func RecordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEvidenceRequest) (issueops.IssueOpsRecord, error) {
+	return recordIssueOpsSchemaEvidence(stateRoot, id, req, nil)
+}
+
+// RecordIssueOpsSchemaEvidenceWithActor는 활성 lease가 있으면 그 holder만
+// 기록하게 한다.
+func RecordIssueOpsSchemaEvidenceWithActor(stateRoot, id string, req IssueOpsSchemaEvidenceRequest, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
+	return recordIssueOpsSchemaEvidence(stateRoot, id, req, &actor)
+}
+
+func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEvidenceRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	measurements := cleanReviewValues(req.Measurements)
 	sources := cleanReviewValues(req.Sources)
 	rationale := strings.TrimSpace(req.WaiverRationale)
@@ -31,16 +41,27 @@ func RecordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEviden
 			return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("schema evidence requires at least one --source naming where the measurement was observed")
 		}
 	}
+	// 변경 집합 관측은 span 밖에서 끝낸다(recordIssueOpsImplementationReview 참고).
+	observed, err := ReadIssueOps(stateRoot, id)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
+	}
+	fingerprint := implementation.ChangeFingerprint(observed)
 	var record issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
+	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
 		rec, e := ReadIssueOps(stateRoot, id)
 		if e != nil {
+			return e
+		}
+		if e := validatePostTransferMutation(rec, actor); e != nil {
 			return e
 		}
 		if issueOpsPhaseRank(rec.Phase) < issueOpsPhaseRank(issueops.IssueOpsPhaseImplement) {
 			return fmt.Errorf("schema evidence can only be recorded from the implement phase onward (current: %s)", rec.Phase)
 		}
-		fingerprint := implementation.ChangeFingerprint(rec)
+		if e := requireCurrentChangeObservation(observed, rec); e != nil {
+			return e
+		}
 		now := time.Now().UTC().Format(time.RFC3339Nano)
 		rec.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{
 			Measurements: measurements, Sources: sources,

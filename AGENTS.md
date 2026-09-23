@@ -87,7 +87,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 |------|------|------|
 | 하네스 방식 | **외부 Go 하네스 코어 + 얇은 호스트 어댑터** | 특정 host 전용 구현은 다른 host와 공유하기 어렵다. 외부 CLI/MCP/worker 코어를 두면 Codex, Claude Code, Omo에서 같은 동작을 재사용할 수 있다. |
 | Plugin의 역할 | 핵심 로직이 아니라 **설치·문서·명령 호출 래퍼** | Codex/Claude/Omo별 확장점 차이를 어댑터에 격리한다. |
-| 통합 표면 | 1차 CLI, 2차 daemon-backed MCP stdio proxy, 3차 local job worker | 모든 에이전트는 shell/CLI를 다룰 수 있고, Claude Code는 MCP 연동이 자연스럽다. MCP backend daemon은 공통 context/state에 쓰고, 장기 job worker는 필요성이 확인된 뒤 도입한다. |
+| 통합 표면 | 1차 CLI, 2차 in-process MCP stdio server, 3차 local job worker | 모든 에이전트는 shell/CLI를 다룰 수 있고, Claude Code는 MCP 연동이 자연스럽다. MCP는 host 세션이 띄운 프로세스 안에서 처리해 native actor 계보를 보존하고, 공통 state는 SQLite가 맡는다. 장기 job worker는 필요성이 확인된 뒤 도입한다. |
 | 구현 언어 | **Go** | 현재 로컬 toolchain이 Go 1.26.3이고, 단일 바이너리·동시성·CLI/MCP/daemon 구현 생산성이 Rust보다 유리하다. |
 
 상세 근거와 단계별 계획은 `.issueops/ADR.md`를 따른다.
@@ -124,7 +124,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - MCP tool schema와 CLI JSON 출력은 호스트별로 다르게 만들지 않는다.
 - command policy는 built-in catalog를 기본으로 하되 workspace별 `.issueops/policy.json` override를 매 평가마다 로드한다. load/parse 문제는 기존 `warnings` 필드로 노출하고, 전역 first-root cache를 만들지 않는다.
 - IssueOps record JSON에는 `schema_version`이 포함된다. 현재 쓰기 버전은 1이며, missing/zero/future/unsupported schema는 모두 generic `invalid state`로 fail-safe 거부한다(`TestIssueOpsReaderRejectsMissingAndZeroSchema`). 자동 승격이나 변환 명령은 없다.
-- local job worker는 workspace 경계, command policy, secret redaction, audit log가 준비된 뒤 도입한다. 현재 daemon은 MCP proxy backend다.
+- local job worker는 workspace 경계, command policy, secret redaction, audit log가 준비된 뒤 도입한다. 현재 daemon은 이전 binary로 떠 있는 MCP proxy만 쓰는 legacy backend다.
 - 에이전트 state는 repo 소스와 분리한다. 추적해야 할 지식은 `.issueops/`에, 런타임 캐시/로그는 user state 또는 ignored workspace state에 둔다.
 
 ## 8. Current Directory Map
@@ -168,7 +168,6 @@ go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -count=1
 go build -o bin/issueops ./cmd/issueops
 ./bin/issueops inspect --json
 ./bin/issueops docs --json
-./bin/issueops daemon status --json
 ./bin/issueops policy check --workspace-root "$PWD" --cwd "$PWD" --json -- git status --short
 tmp_state="$(mktemp -d)" && ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops state maintain --json && rm -rf "$tmp_state"
 tmp_state="$(mktemp -d)" && ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops loop start --repo "$PWD" --name smoke --goal "smoke loop contract" --json && rm -rf "$tmp_state"

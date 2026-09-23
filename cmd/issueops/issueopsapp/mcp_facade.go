@@ -42,7 +42,6 @@ func configureMCPCLI() {
 	mcpcli.InspectHarness = func(repo string) any {
 		return inspectHarness(repo)
 	}
-	mcpcli.RunMCPProxy = runMCPProxy
 	mcpcli.DaemonStatus = func() any {
 		return daemonStatusForMCP()
 	}

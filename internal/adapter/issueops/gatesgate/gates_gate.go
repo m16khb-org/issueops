@@ -171,7 +171,10 @@ func GatesRootFor(record issueopscontract.IssueOpsRecord) string {
 	return strings.TrimSpace(record.Repo)
 }
 
-// guardPRPhase는 이미 pr 단계인 레코드는 통과시킨다(복구 경로 보존).
+// guardPRPhase는 이미 pr 단계인 레코드는 통과시킨다(복구 경로 보존). core
+// readiness는 AdvanceIssueOpsPhaseWithActor가 upstream을 span 밖에서 fetch한 뒤
+// span 안에서 판정하므로, 여기서는 이 package가 합성하는 loop·게이트 ledger·
+// 중복 원장 게이트만 본다. core 판정을 여기서 다시 하면 fetch가 두 번 일어난다.
 func guardPRPhase(stateRoot, id, to string) error {
 	if issueopscontract.IssueOpsPhase(strings.TrimSpace(to)) != issueopscontract.IssueOpsPhasePR {
 		return nil
@@ -183,7 +186,10 @@ func guardPRPhase(stateRoot, id, to string) error {
 	if record.Phase == issueopscontract.IssueOpsPhasePR {
 		return nil
 	}
-	if ready := StrictPRReadinessWithState(stateRoot, record); !ready.Ready {
+	ready := loopgate.WithLoopGate(issueopscontract.IssueOpsReadiness{Ready: true}, record.Repo)
+	ready = withGatesGate(ready, GatesRootFor(record), linkedIssueNumber(record))
+	ready = withDuplicateIssueArtifactGate(ready, GatesRootFor(record), linkedIssueNumber(record))
+	if !ready.Ready {
 		return fmt.Errorf("cannot enter pr phase: missing %s", strings.Join(ready.Missing, ", "))
 	}
 	return nil

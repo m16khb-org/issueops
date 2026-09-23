@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	issueopscontract "issueops/internal/contract/issueops"
 	statecontract "issueops/internal/contract/state"
 )
 
@@ -48,6 +49,7 @@ type Record struct {
 	RemoteCompletion        json.RawMessage `json:"remote_completion,omitempty"`
 	SourceMisdirectWarnings int             `json:"source_misdirect_warnings,omitempty"`
 	CleanupFinishFailure    json.RawMessage `json:"cleanup_finish_failure,omitempty"`
+	LinkedBranchCleanup     json.RawMessage `json:"linked_branch_cleanup,omitempty"`
 	CleanupAbandonFailure   json.RawMessage `json:"cleanup_abandon_failure,omitempty"`
 	ImplementationReview    json.RawMessage `json:"implementation_review,omitempty"`
 	ProjectDocsReview       json.RawMessage `json:"project_docs_review,omitempty"`
@@ -90,14 +92,6 @@ type Selection struct {
 	ExplicitDirectReason string `json:"explicit_direct_reason,omitempty"`
 }
 
-type OrcaBinding = stableV1OrcaBinding
-type ExternalIntent = stableV1ExternalIntent
-type Completion = stableV1Completion
-type CompletionHistoryEntry = stableV1CompletionHistory
-type FailureDetail = stableV1Failure
-type SyncBaseResolution = stableV1SyncBaseResolution
-type SyncBaseEvent = stableV1SyncBaseEvent
-
 type Workspace struct {
 	SourceRoot     string `json:"source_root"`
 	Root           string `json:"root"`
@@ -130,8 +124,11 @@ type ProcessReceipt struct {
 	Executable string `json:"executable"`
 }
 
+// Decode는 persisted v1 JSON을 production record contract로 엄격하게 읽는다. 모르는
+// field는 invalid로 거부해, 이 vertical이 모르는 field를 다시 쓰면서 버리지 않게
+// 한다. 그다음 production DTO로 canonical JSON을 만들어 Record로 옮긴다.
 func Decode(id string, data []byte) (Record, error) {
-	var shape stableV1Record
+	var shape issueopscontract.IssueOpsRecord
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&shape); err != nil {

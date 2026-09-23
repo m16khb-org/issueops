@@ -28,7 +28,7 @@ description: Chosen languages, runtimes, tools, and rationale.
 | 로컬 확인 toolchain | `go version go1.26.3 darwin/arm64` |
 | 패키지 관리 | Go modules |
 | 기본 바이너리 | `bin/issueops` (`cmd/issueops` source) |
-| 실행 모드 | CLI one-shot, MCP stdio proxy, user-level daemon, state-first one-shot worker jobs |
+| 실행 모드 | CLI one-shot, in-process MCP stdio server, state-first one-shot worker jobs. legacy daemon은 이전 binary의 MCP proxy만 쓴다 |
 | 설정 prefix | `ISSUEOPS_` |
 
 ## 2.1 Core independence and optional upstream provisioning
@@ -89,8 +89,8 @@ Orca는 `exec.CommandContext`로 설치된 CLI를 호출하는 선택적 IssueOp
 | CLI | 표준 `flag` | `cmd/issueops` CLI와 command package에서 stdlib `flag` 사용; Cobra는 도입하지 않음 |
 | Config/State 직렬화 | 표준 `encoding/json` | 설정·상태는 JSON으로 직렬화; 외부 config 라이브러리(yaml.v3/toml)는 의존성에 없음 |
 | Logging | 표준 `log/slog` | secret redaction은 host 어댑터 계층에서 처리 |
-| MCP | `github.com/modelcontextprotocol/go-sdk` v1.6.1 | daemon socket transport의 기본 SDK. 분리 reader/writer stdio smoke를 위한 legacy JSON-RPC 경로를 병행 유지(ADR "MCP go-sdk 채택" 참조) |
-| IPC | Unix socket | MCP proxy daemon은 Unix socket 사용. localhost HTTP는 future worker 필요 시 검토 |
+| MCP | `github.com/modelcontextprotocol/go-sdk` v1.6.1 | stdio server와 legacy daemon socket transport가 함께 쓰는 SDK. hand-rolled JSON-RPC 경로는 2026-08-03에 제거됐다(ADR "MCP go-sdk 채택" 참조) |
+| IPC | stdio, Unix socket | MCP는 host와 stdio로 통신한다. legacy daemon만 Unix socket을 쓴다. localhost HTTP는 future worker 필요 시 검토 |
 | State 저장 | SQLite (`modernc.org/sqlite`, pure Go) | `ISSUEOPS_STATE_DIR` 또는 `~/.local/state/issueops/`; state root마다 `issueops.db`(WAL, records(bucket,id,data) JSON blob) + `issueops.lock.db`(BEGIN IMMEDIATE span lock). 동시성은 per-root sqlstore span으로 직렬화 |
 | Testing | 표준 `testing`, golden file, `net/http/httptest` | 외부 agent host 없이 core contract를 검증하며 HTTP boundary 격리에만 `httptest` 사용 |
 
@@ -112,7 +112,6 @@ go build -o bin/issueops ./cmd/issueops
 ./bin/issueops policy run --read-only --workspace-root "$PWD" --cwd "$PWD" --json -- git status --short
 ./bin/issueops worker run --read-only --kind smoke --workspace-root "$PWD" --cwd "$PWD" --json -- git status --short
 ./bin/issueops verify-work --json -- git status --short
-./bin/issueops daemon status --json
 ./bin/issueops self-verify --seed=100 --target-score=95 --json
 ./bin/issueops self-verify --seed=100 --target-score=95 --save-state --state-key self-verify-latest --json
 ./bin/issueops self-verify history --prefix self-verify --json

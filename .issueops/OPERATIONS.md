@@ -50,8 +50,9 @@ instead of duplicating their content here or in a guide.
    `issueops-abandon`; the shared ones are `issueops-review`, `gates-ledger`,
    and `issueops-remote-write`. `issueops next` decides which stage
    a cycle is in and which command advances it.
-2. MCP stdio proxy: `issueops mcp` starts or connects to the shared
-   user-level `issueops daemon`.
+2. MCP stdio server: `issueops mcp` serves MCP inside the host session's own
+   process. The legacy `issueops daemon` remains only for MCP proxies started
+   from older binaries.
 3. CLI: 29 top-level commands (`install/update/bootstrap/version`,
    `inspect/preflight/status/doctor/docs`,
    `policy/guard/quality/verify-work/trace/contract/api-doc`, `project/hook`,

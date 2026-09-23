@@ -21,15 +21,14 @@
 
 ```mermaid
 flowchart LR
-    Codex["Codex<br/>AGENTS.md · native skills · MCP config"] --> MCPProxy["issueops mcp<br/>stdio proxy"]
-    Claude["Claude Code<br/>CLAUDE.md · skills · hooks · MCP config"] --> MCPProxy
-    Omo["Omo native<br/>AGENTS.md · skills · MCP · extension"] --> MCPProxy
+    Codex["Codex<br/>AGENTS.md · native skills · MCP config"] --> MCP["issueops mcp<br/>in-process stdio server"]
+    Claude["Claude Code<br/>CLAUDE.md · skills · hooks · MCP config"] --> MCP
+    Omo["Omo native<br/>AGENTS.md · skills · MCP · extension"] --> MCP
     Human["Human shell"] --> CLI["CLI: issueops"]
     Hook["SessionStart context hook"] --> CLI
 
-    MCPProxy --> Daemon["issueops daemon<br/>user-level Unix socket"]
-    CLI --> Core["contract · domain · application<br/>policy · workspace · docs · state"]
-    Daemon --> Core
+    MCP --> Core["contract · domain · application<br/>policy · workspace · docs · state"]
+    CLI --> Core
     Core --> Ports["ports/interfaces"]
     Ports --> FS["fs/git/wiki adapter"]
     Ports --> Proc["process runner adapter"]

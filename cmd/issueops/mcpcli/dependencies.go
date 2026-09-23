@@ -71,10 +71,6 @@ var InspectHarness = func(repo string) any {
 	return map[string]any{"ok": false, "error": "inspect dependency is not configured", "repo": repo}
 }
 
-var RunMCPProxy = func() error {
-	return fmt.Errorf("mcp proxy dependency is not configured")
-}
-
 var DaemonStatus = func() any {
 	return map[string]any{"ok": false, "message": "daemon is not running"}
 }
