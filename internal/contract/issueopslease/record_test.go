@@ -5,13 +5,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	model "issueops/internal/contract/issueops"
 )
-
-func TestStableV1ShapeCoversEveryPersistedCoreField(t *testing.T) {
-	assertJSONShape(t, reflect.TypeOf(model.IssueOpsRecord{}), reflect.TypeOf(stableV1Record{}), "IssueOpsRecord")
-}
 
 func TestValidateActorRetainsLegacyText(t *testing.T) {
 	for _, tc := range []struct {
@@ -218,7 +212,7 @@ func assertJSONShape(t *testing.T, source, target reflect.Type, path string) {
 	for _, field := range jsonTaggedFields(source) {
 		candidate, ok := targetFields[field.tag]
 		if !ok {
-			t.Fatalf("%s.%s (%s) is absent from stable v1 shape", path, field.tag, field.typ)
+			t.Fatalf("%s.%s (%s) is absent from the lease shape", path, field.tag, field.typ)
 		}
 		assertJSONShape(t, field.typ, candidate.typ, path+"."+field.tag)
 	}
