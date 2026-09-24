@@ -138,12 +138,3 @@ func validMCPSmokeStdout() string {
 	}
 	return b.String()
 }
-
-func containsEnv(env []string, want string) bool {
-	for _, item := range env {
-		if item == want {
-			return true
-		}
-	}
-	return false
-}
