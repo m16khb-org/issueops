@@ -351,3 +351,29 @@ func TestScoreLanguageMatchesPythonGate(t *testing.T) {
 		}
 	}
 }
+
+// 진행 결과 구간에는 해시·커밋 SHA·로컬 경로가 없어야 한다(intent 성공 기준 4).
+// 원고에서는 code span이나 코드 블록으로 감싸도 그대로 렌더되므로 예외가 없다.
+func TestCompletionDraftRefusesHarnessValuesInsideCode(t *testing.T) {
+	sha := strings.Repeat("ab", 20)
+	body := "두 이슈를 서로 다른 세션에서 동시에 진행해도 간섭하지 않음을 확인했습니다.\n\n- 커밋: `" + sha + "`\n\n```\n/Users/dev/wt\n" + strings.Repeat("cd", 32) + "\n```\n"
+	report := Check(Input{Kind: KindCompletion, Body: body})
+	for _, code := range []string{"commit_sha_full", "local_path", "sha256_hex"} {
+		if !hasCriticalCode(report, code) {
+			t.Fatalf("a completion draft must refuse %s even inside code: %+v", code, report.Critical)
+		}
+	}
+	pr := Check(Input{Kind: KindPR, Template: artifacttemplate.IssueOpsTemplatePullRequest, Title: "가독성 검사 추가", Body: validPRBody() + "\n\n## 남은 일\n\n```\n" + sha + "\n```"})
+	if !pr.OK {
+		t.Fatalf("issue and PR bodies keep the code exception: %+v", pr)
+	}
+}
+
+func hasCriticalCode(report Report, code string) bool {
+	for _, f := range report.Critical {
+		if f.Code == code {
+			return true
+		}
+	}
+	return false
+}

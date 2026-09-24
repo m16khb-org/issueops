@@ -43,7 +43,7 @@ const completionMaxRunes = 2000
 const summaryMaxRunes = 400
 
 // minHangulChars and maxEnglishRatio match the Python gate this package
-// replaces (skills/issueops-remote-write/scripts/remote_artifact_gate.py).
+// replaced (remote_artifact_gate.py, deleted in #513).
 const (
 	minHangulChars  = 20
 	maxEnglishRatio = 1.2
@@ -114,44 +114,74 @@ func Check(input Input) Report {
 	// break so a finding's line is the line in the original body.
 	prose := blankManagedRegions(input.Body)
 	code := blankCode(prose)
-	template := artifacttemplate.IssueOpsArtifactKind("")
-
 	if input.Kind != KindCompletion {
-		template = templateKindFor(input.Kind)
-		structural := artifacttemplate.Validate(artifacttemplate.IssueOpsTemplateInput{
-			Kind:     template,
-			Template: input.Template,
-			Title:    input.Title,
-			Body:     prose,
-			Fields:   input.Fields,
-		})
-		if slices.Contains(structural.Critical, "summary_section_missing") {
-			report.Critical = append(report.Critical, Finding{Code: "summary_section_missing", Message: "첫 절이 ## 요약이고 비어 있지 않아야 합니다."})
-		}
-		if slices.Contains(structural.Critical, "required_section_missing") {
-			report.Critical = append(report.Critical, Finding{Code: "required_section_missing", Message: "필수 절이 빠졌습니다: " + strings.Join(structural.MissingRequiredSections, ", ")})
-		}
-		if slices.Contains(structural.Critical, "placeholder_section") {
-			report.Critical = append(report.Critical, Finding{Code: "placeholder_section", Message: "필수 절에 자리 표시만 있습니다."})
-		}
-		for _, w := range structural.Warnings {
-			if key, ok := strings.CutPrefix(w, "unrendered_field:"); ok {
-				report.Warnings = append(report.Warnings, Finding{Code: w, Message: "본문에 렌더하지 않는 필드입니다: " + key})
-			}
+		report.addStructural(input, prose)
+	}
+	report.addKoreanRatio(input.Title + "\n" + prose)
+	// A progress-report draft is rendered verbatim, code spans included, so
+	// its line findings get no code exception (intent success criterion 4).
+	lines := code
+	if input.Kind == KindCompletion {
+		lines = prose
+	}
+	report.addLineFindings(lines, input.Kind == KindCompletion)
+	report.addSectionWarnings(input, prose)
+	if hedgeOrIntroCount(code) > 0 || strings.Count(code, "—") >= 3 || strings.Count(code, "→") >= 3 {
+		report.Warnings = append(report.Warnings, Finding{Code: "slop_pattern", Message: "fluent-korean이 잡는 AI 작문 패턴이 있습니다."})
+	}
+	if firstDuplicateSentence(code) != "" {
+		report.Warnings = append(report.Warnings, Finding{Code: "duplicate_sentence", Message: "같은 문장이 두 절 이상에 반복됩니다."})
+	}
+	if input.Kind == KindCompletion && utf8.RuneCountInString(strings.TrimSpace(prose)) > completionMaxRunes {
+		report.Critical = append(report.Critical, Finding{Code: "result_too_long", Message: "진행 결과 원고가 2,000자를 넘습니다."})
+	}
+	report.Critical = sortFindings(report.Critical)
+	report.Warnings = sortFindings(report.Warnings)
+	report.OK = len(report.Critical) == 0
+	return report
+}
+
+// addStructural restates artifacttemplate's structural judgment; this
+// package does not re-implement it.
+func (report *Report) addStructural(input Input, prose string) {
+	structural := artifacttemplate.Validate(artifacttemplate.IssueOpsTemplateInput{
+		Kind:     templateKindFor(input.Kind),
+		Template: input.Template,
+		Title:    input.Title,
+		Body:     prose,
+		Fields:   input.Fields,
+	})
+	if slices.Contains(structural.Critical, "summary_section_missing") {
+		report.Critical = append(report.Critical, Finding{Code: "summary_section_missing", Message: "첫 절이 ## 요약이고 비어 있지 않아야 합니다."})
+	}
+	if slices.Contains(structural.Critical, "required_section_missing") {
+		report.Critical = append(report.Critical, Finding{Code: "required_section_missing", Message: "필수 절이 빠졌습니다: " + strings.Join(structural.MissingRequiredSections, ", ")})
+	}
+	if slices.Contains(structural.Critical, "placeholder_section") {
+		report.Critical = append(report.Critical, Finding{Code: "placeholder_section", Message: "필수 절에 자리 표시만 있습니다."})
+	}
+	for _, w := range structural.Warnings {
+		if key, ok := strings.CutPrefix(w, "unrendered_field:"); ok {
+			report.Warnings = append(report.Warnings, Finding{Code: w, Message: "본문에 렌더하지 않는 필드입니다: " + key})
 		}
 	}
+}
 
-	hangul, englishWords := scoreLanguage(input.Title + "\n" + prose)
+func (report *Report) addKoreanRatio(text string) {
+	hangul, englishWords := scoreLanguage(text)
 	if hangul < minHangulChars {
 		report.Critical = append(report.Critical, Finding{Code: "korean_ratio", Message: "한글이 최소 20자 이상이어야 합니다."})
 	} else if float64(englishWords)/float64(hangul) > maxEnglishRatio {
 		report.Critical = append(report.Critical, Finding{Code: "korean_ratio", Message: "영어 단어 비율이 한글 대비 1.2를 넘습니다."})
 	}
+}
 
-	// local_path and commit_sha_full block a progress-report draft (memo B)
-	// but only warn on issue and PR bodies.
+// addLineFindings scans code-blanked text line by line for hashes, local
+// paths, commit SHAs, and harness terms. local_path and commit_sha_full block
+// a progress-report draft (memo B) but only warn on issue and PR bodies.
+func (report *Report) addLineFindings(code string, completion bool) {
 	pathOrSHA := func(f Finding) {
-		if input.Kind == KindCompletion {
+		if completion {
 			report.Critical = append(report.Critical, f)
 		} else {
 			report.Warnings = append(report.Warnings, f)
@@ -176,40 +206,24 @@ func Check(input Input) Report {
 			}
 		}
 	}
+}
 
+func (report *Report) addSectionWarnings(input Input, prose string) {
 	if input.Kind != KindCompletion {
 		if content, ok := artifacttemplate.SummarySection(prose); ok && utf8.RuneCountInString(content) > summaryMaxRunes {
 			report.Warnings = append(report.Warnings, Finding{Code: "summary_too_long", Message: "요약이 400자를 넘습니다."})
 		}
-		for _, title := range artifacttemplate.OptionalSectionTitles(template, input.Template) {
+		for _, title := range artifacttemplate.OptionalSectionTitles(templateKindFor(input.Kind), input.Template) {
 			if content, ok := artifacttemplate.SectionContent(prose, title); ok && content == "" {
 				report.Warnings = append(report.Warnings, Finding{Code: "empty_optional_section", Message: "선택 절이 비어 있습니다: " + title})
 			}
 		}
 	}
-
 	for _, verifyTitle := range []string{"확인한 것", "검증"} {
 		if content, ok := artifacttemplate.SectionContent(prose, verifyTitle); ok && slices.ContainsFunc(strings.Split(content, "\n"), resultOnlyRe.MatchString) {
 			report.Warnings = append(report.Warnings, Finding{Code: "result_only_pass", Message: verifyTitle + " 절에 결과만 있는 줄이 있습니다."})
 		}
 	}
-
-	if hedgeOrIntroCount(code) > 0 || strings.Count(code, "—") >= 3 || strings.Count(code, "→") >= 3 {
-		report.Warnings = append(report.Warnings, Finding{Code: "slop_pattern", Message: "fluent-korean이 잡는 AI 작문 패턴이 있습니다."})
-	}
-
-	if firstDuplicateSentence(code) != "" {
-		report.Warnings = append(report.Warnings, Finding{Code: "duplicate_sentence", Message: "같은 문장이 두 절 이상에 반복됩니다."})
-	}
-
-	if input.Kind == KindCompletion && utf8.RuneCountInString(strings.TrimSpace(prose)) > completionMaxRunes {
-		report.Critical = append(report.Critical, Finding{Code: "result_too_long", Message: "진행 결과 원고가 2,000자를 넘습니다."})
-	}
-
-	report.Critical = sortFindings(report.Critical)
-	report.Warnings = sortFindings(report.Warnings)
-	report.OK = len(report.Critical) == 0
-	return report
 }
 
 var (
