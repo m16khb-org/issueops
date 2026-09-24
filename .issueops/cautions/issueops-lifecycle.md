@@ -126,6 +126,7 @@ IssueOps에 새 implement-entry(또는 임의 phase) fail-closed 게이트를 �
 - MCP 도구를 추가하면 catalog count 테스트(`IssueOpsBasicTools`/`IssueOpsLifecycleTools`의 exhaustive `wantNames`)와 `mcp_tools.golden.json`을 함께 갱신한다.
 - 게이트가 derived phase-ledger에 나타나면 `response_contracts.golden.json` 스냅샷도 드리프트한다(§27). 스냅샷이 그 phase로 전진하면 전제조건을 실제로 충족(fake CLI 포함)시켜야 한다.
 - 증분 검증만 믿지 말고 커밋 전 `go test ./...` 전체를 한 번 돌려 미검출 패키지 파급을 잡는다.
+- `implement`·`ai-slop-clean` 전이는 `.issueops/issues/<n>/`에 추적 사본(plan·intent·spec·plan-review)을 쓴다(#513). 특정 파일만 `git add`하는 테스트 fixture는 사본이 미커밋으로 남아 pr 진입이 `worktree_clean`에 걸린다. 전이 뒤 `.issueops/issues`를 함께 커밋한다. 사본만 바뀐 상태는 `implementation_changes`를 충족하지 않는다.
 
 ## 30. IssueOps worktree 세션의 source-checkout mirror edit 오인
 
