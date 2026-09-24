@@ -106,7 +106,7 @@ func Validate(input IssueOpsTemplateInput) IssueOpsTemplateValidation {
 	if !supportedArtifactKind(input.Kind) {
 		v.Critical = append(v.Critical, "unsupported_artifact_kind")
 	}
-	if !supportedTemplateForKind(input.Kind, input.Template) {
+	if !SupportsTemplate(input.Kind, input.Template) {
 		v.Critical = append(v.Critical, "unsupported_template_for_artifact")
 	}
 	if strings.TrimSpace(input.Title) == "" {
@@ -123,7 +123,7 @@ func Validate(input IssueOpsTemplateInput) IssueOpsTemplateValidation {
 	if body != "" && !containsHangul(body) {
 		v.Critical = append(v.Critical, "korean_body_required")
 	}
-	if body != "" && supportedArtifactKind(input.Kind) && supportedTemplateForKind(input.Kind, input.Template) {
+	if body != "" && supportedArtifactKind(input.Kind) && SupportsTemplate(input.Kind, input.Template) {
 		if !hasNonEmptySummarySection(body) {
 			v.Critical = append(v.Critical, "summary_section_missing")
 		}
@@ -175,10 +175,6 @@ func supportedArtifactKind(kind IssueOpsArtifactKind) bool {
 
 // SupportsTemplate reports whether template is one of kind's body contracts.
 func SupportsTemplate(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) bool {
-	return supportedTemplateForKind(kind, template)
-}
-
-func supportedTemplateForKind(kind IssueOpsArtifactKind, template IssueOpsTemplateKind) bool {
 	switch kind {
 	case IssueOpsArtifactIssue:
 		switch template {
