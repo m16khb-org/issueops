@@ -23,6 +23,11 @@ type createPRResponse struct {
 	Readability artifactreadability.Report `json:"readability"`
 }
 
+type reflectCompletionResponse struct {
+	port.IssueProviderUpdateIssueBodySectionResult
+	Readability artifactreadability.Report `json:"readability"`
+}
+
 // readabilityDeferredCodes are the template findings the readability report
 // already restates (summary-first, required sections, placeholders, Korean).
 // A preview shows them in the report instead of failing, and a confirm is

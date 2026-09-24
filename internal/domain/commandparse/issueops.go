@@ -453,7 +453,7 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		},
 	},
 	"remote reflect-completion": {
-		values:   []string{"--id", "--provider"},
+		values:   []string{"--id", "--provider", "--body-file"},
 		booleans: []string{"--confirm", "--json"},
 	},
 	"remote reflect-devils-advocate": {

@@ -2,7 +2,6 @@ package issueops
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -67,7 +66,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{}
 
-	if _, _, err := ReflectIssueCompletion(stateRoot, record.ID, false, true, prov); err == nil {
+	if _, _, _, err := ReflectIssueCompletion(stateRoot, record.ID, readableResult, false, true, prov); err == nil {
 		t.Fatal("missing merge evidence must be rejected")
 	}
 	if prov.updateReq != nil {
@@ -75,7 +74,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	}
 
 	prov.updateRes = port.IssueProviderUpdateIssueBodySectionResult{OK: true, Preview: "[dry-run]"}
-	got, result, err := ReflectIssueCompletion(stateRoot, record.ID, true, false, prov)
+	got, result, _, err := ReflectIssueCompletion(stateRoot, record.ID, readableResult, true, false, prov)
 	if err != nil || result.Preview == "" {
 		t.Fatalf("preview must pass through: %v %+v", err, result)
 	}
@@ -87,7 +86,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	}
 
 	prov.updateRes = port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true, URL: record.IssueURL}
-	got, _, err = ReflectIssueCompletion(stateRoot, record.ID, true, true, prov)
+	got, _, _, err = ReflectIssueCompletion(stateRoot, record.ID, readableResult, true, true, prov)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,31 +95,41 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	}
 }
 
-func TestReflectIssueCompletionGathersArtifactsFromDisk(t *testing.T) {
+// readableResult is a progress-report draft that passes the completion check.
+const readableResult = "두 이슈를 서로 다른 세션에서 동시에 진행해도 간섭하지 않음을 실제 실행으로 확인했습니다.\n\n" +
+	"- 계획: 한 사이클을 끝까지 실행한다.\n- 구현: 보고서를 작성했다(PR #85)."
+
+// 진행 결과는 사람이 쓴 원고로만 반영한다. 원고가 없거나, 커밋 SHA 전문이나
+// 로컬 경로가 있거나, 2,000자를 넘으면 provider를 부르기 전에 거부한다(#513).
+func TestReflectCompletionRequiresReadableResult(t *testing.T) {
 	stateRoot, record := completionTestRecord(t)
-	artifactDir := filepath.Join(record.Repo, IssueOpsArtifactDir)
-	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
-		t.Fatal(err)
+	prov := &fakeCompletionProvider{updateRes: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true, URL: record.IssueURL}}
+	for _, tc := range []struct {
+		name, body, want string
+	}{
+		{"missing", "", "--body-file"},
+		{"harness values", readableResult + "\n- 커밋: " + strings.Repeat("ab", 20) + "\n- 작업 공간: /Users/dev/wt", "commit_sha_full"},
+		{"too long", strings.Repeat("완료 보고 문장입니다. ", 250), "result_too_long"},
+	} {
+		_, _, _, err := ReflectIssueCompletion(stateRoot, record.ID, tc.body, true, true, prov)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Fatalf("%s: error = %v, want mention of %q", tc.name, err, tc.want)
+		}
+		if tc.name == "harness values" && !strings.Contains(err.Error(), "local_path") {
+			t.Fatalf("local paths are critical in a progress report: %v", err)
+		}
+		if prov.updateReq != nil {
+			t.Fatalf("%s: a refused draft must not reach the provider", tc.name)
+		}
 	}
-	if err := os.WriteFile(filepath.Join(artifactDir, "plan.md"), []byte("plan 본문"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(artifactDir, "verified-execution-loop.md"), []byte("verified-execution 본문"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	prov := &fakeCompletionProvider{updateRes: port.IssueProviderUpdateIssueBodySectionResult{OK: true}}
-	if _, _, err := ReflectIssueCompletion(stateRoot, record.ID, true, false, prov); err != nil {
-		t.Fatal(err)
+
+	_, _, report, err := ReflectIssueCompletion(stateRoot, record.ID, readableResult, true, true, prov)
+	if err != nil || !report.OK {
+		t.Fatalf("a readable draft must be reflected: err=%v report=%+v", err, report)
 	}
 	c := prov.updateReq.Completion
-	if c.PlanBody != "plan 본문" || !strings.Contains(c.TuringSummary, "verified-execution 본문") {
-		t.Fatalf("artifact bodies must be gathered: %+v", c)
-	}
-	if len(c.ArtifactManifest) != 2 {
-		t.Fatalf("manifest must digest existing artifacts only: %+v", c.ArtifactManifest)
-	}
-	if c.RemoteArtifactURL != "https://github.com/acme/repo/pull/85" {
-		t.Fatalf("remote artifact url must come from the record: %+v", c)
+	if c == nil || c.ResultBody != readableResult || c.RemoteArtifactURL != "https://github.com/acme/repo/pull/85" {
+		t.Fatalf("the payload carries the draft and the PR URL only: %+v", c)
 	}
 }
 

@@ -1,11 +1,14 @@
 package issuebody
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
 	"issueops/internal/port"
 )
+
+var sha256Hex = regexp.MustCompile(`[0-9a-f]{64}`)
 
 func TestMergeManagedSectionIdempotent(t *testing.T) {
 	start, end, err := SectionMarkers(SectionDevilsAdvocate)
@@ -56,85 +59,37 @@ func TestSectionMarkersRejectsUnknownKind(t *testing.T) {
 
 func completionFixture() port.IssueProviderCompletionSection {
 	return port.IssueProviderCompletionSection{
-		FinalHead:           "abc1234",
-		RemoteArtifactURL:   "https://github.com/acme/repo/pull/9",
-		VerificationSummary: []string{"go test ./... ok", "self-verify ok"},
-		ArtifactManifest: []port.IssueProviderArtifactDigest{
-			{Name: "plan", SHA256: strings.Repeat("a", 64)},
-		},
-		TuringSummary: "AC 전부 PASS",
-		SpecBody:      "spec body 전문",
-		PlanBody:      "plan body 전문",
+		RemoteArtifactURL: "https://github.com/acme/repo/pull/9",
+		ResultBody: "두 이슈를 서로 다른 세션에서 동시에 진행해도 간섭하지 않음을 확인했습니다.\n\n" +
+			"- 계획: 한 사이클을 끝까지 실행한다.\n- 구현: 보고서를 작성했다(PR #9).",
 	}
 }
 
-// AC-04: completion 섹션은 블록 헤딩 7종이 항상 존재해야 한다.
-func TestRenderCompletionSectionContainsSevenBlocks(t *testing.T) {
-	got := RenderCompletionSection(completionFixture(), "2026-07-24T00:00:00Z", 0)
-	for _, heading := range []string{
-		"### 최종 head", "### PR/MR", "### 검증 요약",
-		"### Artifact manifest", "### Turing 요약", "### spec 전문", "### plan 전문",
-	} {
-		if !strings.Contains(got, heading) {
-			t.Fatalf("completion section is missing block %q: %q", heading, got)
+// 진행 결과 구간은 사람이 쓴 원고만 담는다. 하네스 값(해시, 최종 head, manifest,
+// plan·spec 전문, 빈 소제목)은 렌더하지 않는다(#513).
+func TestCompletionSectionIsHumanReadable(t *testing.T) {
+	got := RenderCompletionSection(completionFixture())
+	if !strings.HasPrefix(got, CompletionStartMarker+"\n") || !strings.HasSuffix(got, completionEndMarker) {
+		t.Fatalf("the managed region keeps both markers: %q", got)
+	}
+	if !strings.Contains(got, "## 진행 결과\n") || !strings.Contains(got, completionFixture().ResultBody) {
+		t.Fatalf("the region renders the heading and the written result: %q", got)
+	}
+	for _, leaked := range []string{"###", "(없음)", "<details>", "plan 전문", "/Users/", "완료 기록"} {
+		if strings.Contains(got, leaked) {
+			t.Fatalf("the region must not render %q: %q", leaked, got)
 		}
 	}
-	if !strings.Contains(got, "<details>") || !strings.Contains(got, "plan body 전문") {
-		t.Fatalf("collapsible full texts must be present: %q", got)
-	}
-	if strings.Contains(got, completionTruncationNotice) {
-		t.Fatalf("no truncation expected without a limit: %q", got)
-	}
-
-	empty := RenderCompletionSection(port.IssueProviderCompletionSection{}, "t", 0)
-	for _, heading := range []string{"### 최종 head", "### PR/MR", "### 검증 요약", "### Artifact manifest", "### Turing 요약", "### spec 전문", "### plan 전문"} {
-		if !strings.Contains(empty, heading) {
-			t.Fatalf("empty payload must keep block %q: %q", heading, empty)
-		}
-	}
-	if !strings.Contains(empty, completionEmptyPlaceholder) {
-		t.Fatalf("empty payload must render placeholders: %q", empty)
+	if sha256Hex.MatchString(got) {
+		t.Fatalf("the region must not render a 64-digit hex: %q", got)
 	}
 }
 
-// AC-04: 한도 초과 시 plan → spec → verified-execution 우선순위로 절단하고 절단 문구를 남긴다.
-func TestRenderCompletionSectionTruncatesByPriority(t *testing.T) {
+func TestRenderSectionRefusesCompletionOverBudget(t *testing.T) {
 	c := completionFixture()
-	c.PlanBody = strings.Repeat("p", 4000)
-	c.SpecBody = strings.Repeat("s", 400)
-	full := RenderCompletionSection(c, "t", 0)
-	got := RenderCompletionSection(c, "t", len(full)-2000)
-	if strings.Contains(got, c.PlanBody) {
-		t.Fatalf("plan body must be truncated first: len=%d", len(got))
-	}
-	if !strings.Contains(got, c.SpecBody) {
-		t.Fatalf("spec body must survive when dropping plan is enough: %q", got[:200])
-	}
-	if !strings.Contains(got, completionTruncationNotice) {
-		t.Fatalf("truncation notice must be present: %q", got[:200])
-	}
-	// 5차 m1: 절단이 일어나도 블록 헤딩 7종은 전부 남아야 한다.
-	for _, heading := range []string{
-		"### 최종 head", "### PR/MR", "### 검증 요약",
-		"### Artifact manifest", "### Turing 요약", "### spec 전문", "### plan 전문",
-	} {
-		if !strings.Contains(got, heading) {
-			t.Fatalf("truncated section is missing block %q", heading)
-		}
-	}
-}
-
-// C2 ④'가 재사용하는 CleanupAudit 렌더 계약을 고정한다(C3-F9).
-func TestRenderCompletionSectionIncludesCleanupAudit(t *testing.T) {
-	c := completionFixture()
-	c.CleanupAudit = "cleanup 완료: worktree=/tmp/wt branch=80-finish oid=abc at=2026-07-24T00:00:00Z"
-	got := RenderCompletionSection(c, "t", 0)
-	if !strings.Contains(got, "### Cleanup 감사") || !strings.Contains(got, c.CleanupAudit) {
-		t.Fatalf("cleanup audit block must render when set: %q", got)
-	}
-	without := RenderCompletionSection(completionFixture(), "t", 0)
-	if strings.Contains(without, "### Cleanup 감사") {
-		t.Fatalf("cleanup audit block must be absent when unset: %q", without)
+	c.ResultBody = strings.Repeat("긴 원고입니다. ", 200)
+	if _, _, _, err := RenderSection(port.IssueProviderUpdateIssueBodySectionRequest{Section: SectionCompletion, Completion: &c}, "t", 100); err == nil {
+		t.Fatal("a result over the body budget must fail instead of being cut")
 	}
 }
 
@@ -161,23 +116,12 @@ func TestCompletionAndDevilsAdvocateSectionsCoexist(t *testing.T) {
 	daStart, daEnd, _ := SectionMarkers(SectionDevilsAdvocate)
 	coStart, coEnd, _ := SectionMarkers(SectionCompletion)
 	body := MergeManagedSection("base\n", RenderDevilsAdvocateSection([]string{"finding"}, "t"), daStart, daEnd)
-	body = MergeManagedSection(body, RenderCompletionSection(completionFixture(), "t", 0), coStart, coEnd)
+	body = MergeManagedSection(body, RenderCompletionSection(completionFixture()), coStart, coEnd)
 	if strings.Count(body, daStart) != 1 || strings.Count(body, coStart) != 1 {
 		t.Fatalf("both sections must coexist exactly once: %q", body)
 	}
-	body2 := MergeManagedSection(body, RenderCompletionSection(completionFixture(), "t2", 0), coStart, coEnd)
+	body2 := MergeManagedSection(body, RenderCompletionSection(completionFixture()), coStart, coEnd)
 	if !strings.Contains(body2, "finding") || strings.Count(body2, coStart) != 1 {
 		t.Fatalf("re-merging completion must preserve devils-advocate block: %q", body2)
-	}
-}
-
-func TestRenderCompletionSectionListsMissingSealedArtifacts(t *testing.T) {
-	section := RenderCompletionSection(port.IssueProviderCompletionSection{FinalHead: "abc", MissingArtifacts: []string{"plan"}}, "2026-08-27T00:00:00Z", 0)
-	if !strings.Contains(section, "- 봉인 아티팩트 없음: plan") {
-		t.Fatalf("missing sealed artifacts must be rendered under the manifest: %s", section)
-	}
-	plain := RenderCompletionSection(port.IssueProviderCompletionSection{FinalHead: "abc"}, "2026-08-27T00:00:00Z", 0)
-	if strings.Contains(plain, "봉인 아티팩트 없음") {
-		t.Fatalf("no missing artifacts must render no line: %s", plain)
 	}
 }

@@ -503,19 +503,20 @@ issueops implementation-review record --id "$ISSUEOPS_ID"   --verdict pass --fin
 ```bash
 issueops cleanup status --id "$ISSUEOPS_ID" --merged --json
 issueops cleanup close-children --id "$ISSUEOPS_ID" --merged --confirm --json
-issueops remote reflect-completion --id "$ISSUEOPS_ID" --confirm --json   # 보존 먼저
+issueops remote reflect-completion --id "$ISSUEOPS_ID" --body-file "$RESULT_FILE" --confirm --json   # 보존 먼저
 issueops remote close-issue --id "$ISSUEOPS_ID" --confirm --json
 issueops cleanup finish --id "$ISSUEOPS_ID" --preview --json
 issueops cleanup finish --id "$ISSUEOPS_ID" --apply --confirm --fingerprint "$FP" --json
 ```
 
-- `reflect-completion`이 최종 head·PR URL·검증 요약·artifact 본문(plan/spec 접힌
-  전문)을 이슈 본문의 completion 섹션에 보존한 뒤에만 finish가 통과한다.
+- `reflect-completion`이 사람이 쓴 진행 결과(`--body-file`)를 이슈 본문의
+  completion 구간(`## 진행 결과`)에 반영한 뒤에만 finish가 통과한다. 최종 head,
+  검증 요약, plan·spec은 이슈 본문이 아니라 record와 `.issueops/issues/<n>/`에 있다.
 - finish apply는 워크트리 점유 프로세스·Orca 터미널 종료(`workspace_processes_stop`:
   fingerprinted handle별 `orca terminal close`(same handle·`ptyKilled=true`) →
   HUP+TERM → KILL → 최종 점유·터미널 재관측) → orca 워크스페이스
-  회수(force=false) → git worktree 제거 → 로컬 브랜치 CAS 삭제 → 감사 라인 멱등
-  반영 → **레코드 삭제** 순서로 진행하며, 각 단계는 멱등이고 실패 시 레코드를
+  회수(force=false) → git worktree 제거 → 로컬 브랜치 CAS 삭제 → 응답에 감사 라인
+  보고(이슈 본문은 쓰지 않음) → **레코드 삭제** 순서로 진행하며, 각 단계는 멱등이고 실패 시 레코드를
   보존한 채 실패 지점을 기록한다. 재실행 전에는 `--preview`로 새 fingerprint를
   발급받아야 한다(이전 값 무효). preview는 종료될 프로세스(receipt·자손 수)와
   터미널 handle을 싣고 fingerprint에 결속하며, 요청자 자신이 워크트리를 점유하거나

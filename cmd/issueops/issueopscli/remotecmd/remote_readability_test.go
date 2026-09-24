@@ -219,3 +219,28 @@ func TestRemoteSyncRefusesCriticalAndReportsLiveReadability(t *testing.T) {
 		t.Fatalf("sync-issue must pass --template through and refuse a mismatched one, got %v", err)
 	}
 }
+
+func TestReflectCompletionRequiresReadableResult(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	record := remoteIssueOpsRecord(t)
+	record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/7"}
+	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", t.TempDir())
+	verified := 0
+	deps := Deps{
+		VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error { verified++; return nil },
+		PrintJSON:    func(any) error { return nil },
+		PrintError:   func(error) error { return nil },
+	}
+	err := Run([]string{"reflect-completion", "--id", record.ID, "--provider", "github", "--confirm", "--json"}, deps)
+	if err == nil || !strings.Contains(err.Error(), "--body-file is required") || verified != 0 {
+		t.Fatalf("confirm without a draft must fail before the merge readback: err=%v verified=%d", err, verified)
+	}
+	draft := "두 이슈를 서로 다른 세션에서 동시에 진행해도 간섭하지 않음을 확인했습니다.\n\n- 커밋: " + strings.Repeat("ab", 20) + "\n"
+	err = Run([]string{"reflect-completion", "--id", record.ID, "--provider", "github", "--body-file", writeBodyFile(t, draft), "--confirm", "--json"}, deps)
+	if err == nil || !strings.Contains(err.Error(), "commit_sha_full") {
+		t.Fatalf("a draft with a full commit SHA must be refused, got %v", err)
+	}
+}

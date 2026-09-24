@@ -40,7 +40,7 @@ func Run(args []string, deps Deps) error {
 		fmt.Println("  issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] [--host codex|claude|omo] [--session-id SESSION] [--agent-id ID] [--cwd WORKER_PATH] [--confirm] [--json]")
 		fmt.Println("  issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
 		fmt.Println("  issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
-		fmt.Println("  issueops remote reflect-completion --id ID [--provider github|gitlab] [--confirm] [--json]")
+		fmt.Println("  issueops remote reflect-completion --id ID [--provider github|gitlab] [--body-file PATH] [--confirm] [--json]")
 		fmt.Println("  issueops remote close-issue --id ID [--provider github|gitlab] [--confirm] [--json]")
 		return nil
 	}
@@ -263,21 +263,30 @@ func runRemoteReflectCompletion(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote reflect-completion", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
+	bodyFile := fs.String("body-file", "", "progress report markdown file written for human readers; required with --confirm")
 	confirm := fs.Bool("confirm", false, "write to the remote issue; without this, dry-run preview only")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
+	resultBody, err := readBodyInput("", *bodyFile)
+	if err != nil {
+		return deps.printErrorResult(*jsonOut, err)
+	}
+	// 원고 없는 confirm은 머지 readback 전에 거부한다. provider를 부를 이유가 없다.
+	if *confirm && resultBody == "" {
+		return deps.printErrorResult(*jsonOut, fmt.Errorf("--body-file is required with --confirm: write the progress report for human readers first"))
+	}
 	_, prov, err := resolveRemoteCompletionInputs(deps, *id, *providerOverride)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	_, result, err := remoteDeps.ReflectIssueCompletion(remoteDeps.IssueOpsStateRoot(), *id, true, *confirm, prov)
+	_, result, report, err := remoteDeps.ReflectIssueCompletion(remoteDeps.IssueOpsStateRoot(), *id, resultBody, true, *confirm, prov)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
 	if *jsonOut {
-		return deps.printJSON(result)
+		return deps.printJSON(reflectCompletionResponse{IssueProviderUpdateIssueBodySectionResult: result, Readability: report})
 	}
 	if result.Updated {
 		fmt.Printf("reflected completion section: %s\n", result.URL)

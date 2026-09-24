@@ -54,83 +54,11 @@ func RenderDevilsAdvocateSection(findings []string, ts string) string {
 	return b.String()
 }
 
-const completionTruncationNotice = "> 본문 한도 초과로 일부 블록이 절단되었습니다(우선순위: 검증 요약 > verified-execution 요약 > spec > plan)."
-
-const completionEmptyPlaceholder = "(없음)"
-
-// RenderCompletionSection builds the delimited completion section with the
-// seven mandatory block headings. When the rendered section would exceed limit bytes, the
-// lowest-priority collapsible bodies (plan, then spec, then verified-execution summary)
-// are dropped to a placeholder and a truncation notice is included; the block
-// headings themselves always remain so the section shape stays checkable.
-func RenderCompletionSection(c port.IssueProviderCompletionSection, ts string, limit int) string {
-	planBody, specBody, turingBody := c.PlanBody, c.SpecBody, c.TuringSummary
-	truncated := false
-	render := func() string {
-		var b strings.Builder
-		b.WriteString(CompletionStartMarker + "\n")
-		fmt.Fprintf(&b, "## 완료 기록 (%s)\n", ts)
-		fmt.Fprintf(&b, "### 최종 head\n%s\n", orPlaceholder(c.FinalHead))
-		fmt.Fprintf(&b, "### PR/MR\n%s\n", orPlaceholder(c.RemoteArtifactURL))
-		b.WriteString("### 검증 요약\n")
-		if len(c.VerificationSummary) == 0 {
-			b.WriteString(completionEmptyPlaceholder + "\n")
-		}
-		for _, v := range c.VerificationSummary {
-			if v = strings.TrimSpace(v); v != "" {
-				fmt.Fprintf(&b, "- %s\n", v)
-			}
-		}
-		b.WriteString("### Artifact manifest\n")
-		if len(c.ArtifactManifest) == 0 {
-			b.WriteString(completionEmptyPlaceholder + "\n")
-		}
-		for _, a := range c.ArtifactManifest {
-			fmt.Fprintf(&b, "- %s: `%s`\n", a.Name, a.SHA256)
-		}
-		if len(c.MissingArtifacts) > 0 {
-			fmt.Fprintf(&b, "- 봉인 아티팩트 없음: %s\n", strings.Join(c.MissingArtifacts, ", "))
-		}
-		fmt.Fprintf(&b, "### Turing 요약\n%s\n", orPlaceholder(turingBody))
-		b.WriteString(renderCollapsed("spec 전문", specBody))
-		b.WriteString(renderCollapsed("plan 전문", planBody))
-		if audit := strings.TrimSpace(c.CleanupAudit); audit != "" {
-			fmt.Fprintf(&b, "### Cleanup 감사\n%s\n", audit)
-		}
-		if truncated {
-			b.WriteString(completionTruncationNotice + "\n")
-		}
-		b.WriteString(completionEndMarker)
-		return b.String()
-	}
-	section := render()
-	// 우선순위 절단: plan → spec → verified-execution 순으로 본문을 placeholder로 낮춘다.
-	for _, drop := range []*string{&planBody, &specBody, &turingBody} {
-		if limit <= 0 || len(section) <= limit {
-			break
-		}
-		if strings.TrimSpace(*drop) == "" {
-			continue
-		}
-		*drop = ""
-		truncated = true
-		section = render()
-	}
-	return section
-}
-
-func orPlaceholder(v string) string {
-	if v = strings.TrimSpace(v); v == "" {
-		return completionEmptyPlaceholder
-	}
-	return v
-}
-
-func renderCollapsed(title, body string) string {
-	if body = strings.TrimSpace(body); body == "" {
-		return fmt.Sprintf("### %s\n%s\n", title, completionEmptyPlaceholder)
-	}
-	return fmt.Sprintf("### %s\n<details><summary>%s</summary>\n\n%s\n\n</details>\n", title, title, body)
+// RenderCompletionSection builds the delimited progress-report region: the
+// markers, a "## 진행 결과" heading, and the written result. Nothing is
+// truncated; a result over the body budget fails in RenderSection instead.
+func RenderCompletionSection(c port.IssueProviderCompletionSection) string {
+	return CompletionStartMarker + "\n## 진행 결과\n\n" + strings.TrimSpace(c.ResultBody) + "\n" + completionEndMarker
 }
 
 // SectionBudget은 병합 결과가 provider 본문 한도를 지키도록 섹션에 배정
@@ -186,11 +114,10 @@ func RenderSection(req port.IssueProviderUpdateIssueBodySectionRequest, ts strin
 		if req.Completion == nil {
 			return "", "", "", fmt.Errorf("completion payload is required for the completion section")
 		}
-		section = RenderCompletionSection(*req.Completion, ts, limit)
-		// 전 블록 절단 후에도 한도를 넘으면(검증 요약/manifest가 매우 큰 경우)
-		// 잘린 본문을 조용히 밀어넣는 대신 명시적으로 실패한다(C3-F1).
+		section = RenderCompletionSection(*req.Completion)
+		// 원고를 잘라 밀어넣지 않는다. 한도를 넘으면 원고를 줄이라고 실패한다(C3-F1).
 		if limit > 0 && len(section) > limit {
-			return "", "", "", fmt.Errorf("completion section exceeds the body budget (%d > %d) even after truncation", len(section), limit)
+			return "", "", "", fmt.Errorf("completion section exceeds the body budget (%d > %d); shorten the progress report", len(section), limit)
 		}
 		return section, startMarker, endMarker, nil
 	}

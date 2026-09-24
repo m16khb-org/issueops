@@ -39,7 +39,7 @@ type CleanupFinishDeps struct {
 // 담지 않는다 — 틀린 안내는 안내가 없는 것보다 나쁘다(이슈 #154).
 func cleanupFinishRemedyCommand(id string, missing []string) string {
 	if slices.Contains(missing, "completion_reflected") {
-		return fmt.Sprintf("issueops remote reflect-completion --id %s --confirm --json", id)
+		return fmt.Sprintf("issueops remote reflect-completion --id %s --body-file <PROGRESS_REPORT_FILE> --confirm --json", id)
 	}
 	return ""
 }
