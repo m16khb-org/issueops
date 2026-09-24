@@ -128,6 +128,12 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
   $RECORD_ACTOR_FLAGS --json
 ```
 
+finding은 이슈의 `## 계획 검토` 구간과 `.issueops/issues/<n>/plan-review.md`로 팀에 보인다.
+독자가 읽는 한국어 완성 문장으로 쓴다: 무엇을 공격했고 결과가 어땠는지. 해시, 커밋 SHA
+전문, 로컬 절대 경로는 쓰지 않는다(렌더러가 가리지만 문장이 깨진다). 리뷰가 이슈
+본문의 사실이 틀렸다고 판정하면 호출 단계가 `feedback add --classification
+contract_change`로 기록한다([`issueops-plan`](../issueops-plan/SKILL.md)의 검토 루프).
+
 `reviewer_context`와 `reviewer_*`는 감사 필드이지 게이트 조건이 아니다. 하네스는
 모델의 자기신고를 검증할 수 없으므로 verdict와 finding·evidence의 실질만 게이트한다.
 그래서 이 필드를 사실대로 적는 것은 도구가 아니라 실행자의 책임이다.
@@ -177,8 +183,10 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
 issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm --json
 ```
 
-`stop` 판정은 반영이 특히 중요하다. 사이클이 뒤로 돌아간 이유가 이슈에 남지 않으면
-팀이 보는 진행 상태와 실제가 어긋난다.
+이슈에는 라운드 흐름 한 줄("1차 수정 요청(지적 3건) → 계획 수정 → 2차 통과")이
+보이고, `stop` 판정일 때만 중단 이유가 목록으로 붙는다. 지적 원문은 record와
+`plan-review.md`에 있다. `stop` 판정은 반영이 특히 중요하다. 사이클이 뒤로 돌아간
+이유가 이슈에 남지 않으면 팀이 보는 진행 상태와 실제가 어긋난다.
 
 ## 나쁜 예
 

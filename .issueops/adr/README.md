@@ -28,6 +28,10 @@ later dated record says so explicitly. Current supersessions include:
 - The Phase 3 daemon-backed MCP proxy in `roadmap.md` is superseded by the
   2026-09-23 in-process MCP decision. The daemon remains only for MCP proxies
   started from older binaries.
+- The 2026-09-09 intent-seal decision's rejection of a tracked intent file is
+  superseded by the 2026-09-24 human-document decision: phase transitions write
+  tracked copies of intent, plan, spec, and plan review into
+  `.issueops/issues/<n>/`. The sealed intent artifact and its digest remain.
 
 Historical host, schema, and command names inside dated records preserve the
 rationale at the time of writing. They are not current support contracts. The
