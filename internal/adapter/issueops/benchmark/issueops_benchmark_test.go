@@ -157,7 +157,7 @@ func TestScoreIssueOpsBenchmarkArtifactRequiresIssueOpsQualityUpgradeEvidence(t 
 		"reports review feedback cleared without resolving review-agent threads",
 	}}
 	artifact := completeBenchmarkArtifactForTest()
-	artifact.IssueDraft = strings.ReplaceAll(artifact.IssueDraft, "선택 라벨: enhancement(score 0.90), 거절 라벨: documentation(score 0.20), threshold 0.70, 수동 override 없음.\n", "")
+	artifact.ProblemSummary = strings.ReplaceAll(artifact.ProblemSummary, "선택 라벨: enhancement(score 0.90), 거절 라벨: documentation(score 0.20), threshold 0.70, 수동 override 없음.\n", "")
 	artifact.TaskBreakdown = "Worker A owns internal/core only."
 	artifact.CompletionHygiene = strings.ReplaceAll(artifact.CompletionHygiene, "Draft issue completion record stored with final diff, evidence, labels, children, PR URL, and unresolved follow-ups. ", "")
 	artifact.ReviewFeedbackEvidence = "Classification: valid defect. Verification: command and file:line evidence. Thread reply: posted with verdict."
