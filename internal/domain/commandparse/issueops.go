@@ -465,11 +465,11 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		booleans: []string{"--confirm", "--json"},
 	},
 	"remote sync-issue": {
-		values:   []string{"--id", "--provider", "--url", "--body", "--body-file", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--provider", "--url", "--body", "--body-file", "--template", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
 		booleans: []string{"--accept-remote-edits", "--confirm", "--json"},
 	},
 	"remote sync-pr": {
-		values:   []string{"--id", "--provider", "--url", "--expected-generation", "--body", "--body-file", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
+		values:   []string{"--id", "--provider", "--url", "--expected-generation", "--body", "--body-file", "--template", "--expected-body-sha256", "--host", "--session-id", "--agent-id", "--cwd"},
 		booleans: []string{"--accept-remote-edits", "--confirm", "--json"},
 	},
 }
