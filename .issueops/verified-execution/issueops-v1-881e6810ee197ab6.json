@@ -1,0 +1,110 @@
+{
+  "lifecycle_id": "io-312a238fdcfe",
+  "issue_url": "https://github.com/m16khb-org/issueops/issues/517",
+  "branch": "517-review-round3-no-fable",
+  "status": "final for ai-slop-clean; publication evidence follows in the PR and execution complete",
+  "owner": {
+    "host": "claude",
+    "model": "claude-opus-5-5",
+    "effort": "high",
+    "mode": "direct",
+    "lease_generation": 2,
+    "handover": "generation 1 (planning session) released after sealing the plan and handoff; this session took over through execution replace --preview, replace --reseed, and claim --claim-current-token"
+  },
+  "goal": "리뷰 스킬의 3라운드 규칙이 Claude에서 Fable 5를 고르지 않게 하고, 2026-07-24 ADR의 Claude 역할 모델 기본값(fable5/opus4.8)을 새 ADR로 대체한다.",
+  "base_sync": {
+    "command": "issueops execution sync-base --apply --confirm",
+    "observed": "origin/main 844e69c8 (#513 merge) merged as 5a49595c with 0 conflict files and pushed before any seal",
+    "plan_note": "The skill asks to note this in the plan's backward-compatibility section. The plan was left untouched because editing it changes its sha256 and makes the sealed round-3 plan review stale (devils_advocate_review_stale, issueops_readiness.go). The fact is recorded in the compatibility review side effects and here instead."
+  },
+  "tdd_loop": [
+    {
+      "step": "RED",
+      "command": "G3 CHECK before editing",
+      "observed": "missing: Fable 5,claude -p --model,--effort,next.review.effort,codex (exit 1), as the plan predicted"
+    },
+    {
+      "step": "RED",
+      "command": "G4 CHECK before editing",
+      "observed": "missing (exit 1)"
+    },
+    {
+      "step": "GREEN",
+      "command": "T1 edit, then G3 CHECK",
+      "observed": "present (exit 0)"
+    },
+    {
+      "step": "GREEN",
+      "command": "python3 scripts/validate-skill.py skills/issueops-review; python3 scripts/verify-skill-shell.py skills/issueops-review",
+      "observed": "Skill is valid!; skill shell verification passed: 1 file(s)"
+    },
+    {
+      "step": "GREEN",
+      "command": "project_docs_append(kind=adr), then project_docs_revise dry-run and confirm on .issueops/adr/README.md and .issueops/ADR.md",
+      "observed": "new ADR .issueops/adr/2026-09-24-claude-role-models-opus-5-plans-and-reviews-sonnet-5-impleme.md; README 13768324 -> 9137c5ac; ADR.md 223b0dc3 -> 4772a28c"
+    },
+    {
+      "step": "SURFACE",
+      "command": "go test ./cmd/issueops/issueopsapp -run TestResponseContractsGolden -update -count=1; git diff --exit-code -- cmd/issueops/testdata/response_contracts.golden.json",
+      "observed": "ok; golden unchanged"
+    },
+    {
+      "step": "SURFACE",
+      "command": "go build -o bin/issueops ./cmd/issueops; ./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json (G13 pre-run required by the plan)",
+      "observed": "exit 0, ok true, 314s (under the 600s trigger)"
+    }
+  ],
+  "side_effects": [
+    "Files: skills/issueops-review/SKILL.md (two sub-items under the round-3 rule, one bad-example line), new ADR, .issueops/adr/README.md supersession item, .issueops/ADR.md index row, .issueops/issues/517/ tracked copies and gate ledger, this report.",
+    "Remote: issue branch now contains merge commit 5a49595c from sync-base (pushed). Draft PR follows in the publication stage.",
+    "Contract surfaces unchanged: CLI JSON, MCP schema, record schema, response-contract golden, code model defaults (internal/port/orca.go, internal/contract/issueopspreparation/prepare.go), codex and omo round-3 rules.",
+    "Installed skill (~/.claude/skills links to the source checkout skills/) picks up the new wording only after the change merges into the source checkout."
+  ],
+  "verification": {
+    "gates": "run 5: ledger deleted and re-created from the plan's gate spec (13 pending), then issueops gates check --write --timeout-seconds 900 once (6036s; load average 13.4/22.7/42.5 at start, 46-56 at end): 13/13 met in that single run, complete true",
+    "gates_run_2_correction": "Run 2 (4957s) reported 13/13 and was first recorded here and in the ai-slop-clean record as 'one run'. That was wrong: gates check only re-runs gates that are unchecked or pending (needsRun in internal/adapter/gates/check.go), so run 2 executed only G10 and G13 and the ledger combined them with run 1's 11 gates. After the round-1 review fix changed skills/issueops-review/SKILL.md, the ledger was deleted and re-created from the plan's gate spec so that all 13 gates execute in one run (run 4).",
+    "gates_run_4": "fresh ledger, gates check --write --timeout-seconds 900 (1074s, load average 55 at start, 253 at end): 12/13 met; G13 self-verify failed with its inner 'go test ./... -count=1' step exceeding the 10m step timeout (cmd/issueops/selfworkflow/rerun, commandstep). Not combined with any later run; the user chose to lower the machine load and rerun the whole ledger.",
+    "gates_run_3": "gates check without --write (0s): executed nothing because every gate was already checked; not evidence",
+    "diff_check": "git diff --check clean",
+    "gates_run_1": "issueops gates check --write --timeout-seconds 900 (1290s): 11/13 met. G10 go test ./... exit 1 and G13 self-verify 'go test failed: timeout after 10m0s'",
+    "g10_diagnosis": "rerun of go test ./... -count=1 (740s): only internal/adapter/issueops failed, 'panic: test timed out after 10m0s' with TestEnterPlanRequiresSplitDecision running for 2s, so the package ran out of its cumulative 10m budget, no test hung. Load average was 101-109 on 8 cores and rose to 226-258 an hour later (top: 34% idle, 80 running processes from other sessions). The change set is .md only, so the plan's rule applies: wait for the load to drop and rerun the whole ledger in one run; no partial passes are combined."
+  },
+  "ai_slop_clean": {
+    "boundary": "skills/issueops-review/SKILL.md, the new ADR, .issueops/adr/README.md, .issueops/ADR.md, .issueops/issues/517/, this report",
+    "removed": "nothing. The two sub-items and the bad-example line are the sealed plan's wording, plus one clause added after implementation review round 1 (reviewer output path must be the ignored review/ area or outside the worktree); the ADR fields are the plan's T2 text; the tracked plan.md copy is byte-identical to the sealed original (cmp).",
+    "checked": [
+      "dead-code",
+      "duplication",
+      "needless-abstraction",
+      "boundary-violation",
+      "weak-artifact",
+      "unsupported-claim"
+    ],
+    "out_of_scope": []
+  },
+  "metrics": {
+    "scope": "this cycle's own uncommitted changes (git diff --numstat plus new files)",
+    "lines_added": "skills/issueops-review/SKILL.md +12 -0, .issueops/adr/README.md +5, .issueops/ADR.md +1, new ADR 21 lines, new caution 1 file; 0 deletions",
+    "go_files_changed_by_this_cycle": 0,
+    "diff_vs_sealed_base": "116 files, +5414/-2204, 69 .go files; all but the lines above come from the #513 merge brought in by sync-base",
+    "performance": "no runtime code changed; nothing to measure",
+    "review_tier_note": "issueops next reports review tier contract because the diff against the sealed base 92bbbdda includes #513's Go changes"
+  },
+  "project_docs": {
+    "updated": [
+      ".issueops/cautions/2026-09-24-sync-base-stale.md (new caution: editing the plan after the implement-entry sync-base stales the plan review)"
+    ],
+    "already_in_implementation": [
+      "new ADR",
+      ".issueops/adr/README.md",
+      ".issueops/ADR.md"
+    ],
+    "after_doc_change": "golden -update: unchanged; TestResponseContractsGolden ok; ./bin/issueops docs --json rc 0; ./bin/issueops inspect --json rc 0; git diff --check clean"
+  },
+  "implementation_review": {
+    "round1": "claude -p --model claude-opus-5 --effort high (next.review values, tier contract, lenses compat/reuse/perf/side-effect), empty-context session, output written outside the worktree: revise with one blocking defect. The new sub-item told the caller to write the reviewer output to a file without a path constraint; an untracked file inside the worktree enters the change fingerprint (implementation/evidence.go git status --untracked-files=all) and breaks the seal. Fix: the sentence now names the ignored .issueops/issues/<n>/review/ area or a path outside the worktree, matching skills/issueops-verify/SKILL.md. Reviewer CHECK after the fix: path_fixed."
+  },
+  "remaining": [
+    "implementation review, commit, push, draft PR, execution complete"
+  ]
+}
