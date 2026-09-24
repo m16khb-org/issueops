@@ -212,6 +212,19 @@ func Check(input Input) Report {
 	return report
 }
 
+var (
+	maskHashRe      = regexp.MustCompile(`\b(?:[0-9a-fA-F]{64}|[0-9a-fA-F]{40})\b`)
+	maskLocalPathRe = regexp.MustCompile(`(?:/Users/|/home/)[^\s\x60)]*`)
+)
+
+// MaskHarnessValues hides full hashes (64 and 40 hex digits) and local
+// absolute paths in text the harness renders for human readers, such as plan
+// review findings, and says what was left out.
+func MaskHarnessValues(text string) string {
+	text = maskHashRe.ReplaceAllString(text, "[해시 생략]")
+	return maskLocalPathRe.ReplaceAllString(text, "[로컬 경로 생략]")
+}
+
 // KindFor maps a template artifact kind to the readability kind that
 // judges it.
 func KindFor(kind artifacttemplate.IssueOpsArtifactKind) Kind {

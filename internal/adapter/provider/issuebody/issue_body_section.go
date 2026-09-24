@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"issueops/internal/domain/artifactreadability"
 	"issueops/internal/port"
 )
 
@@ -36,19 +37,48 @@ func SectionMarkers(section string) (start, end string, err error) {
 	return "", "", fmt.Errorf("unsupported issue body section %q (want %s|%s)", section, SectionDevilsAdvocate, SectionCompletion)
 }
 
-// RenderDevilsAdvocateSection builds the delimited managed section for the
-// devil's-advocate findings. The delimiters let MergeManagedSection replace
-// the block in place on re-runs instead of appending duplicates.
-func RenderDevilsAdvocateSection(findings []string, ts string) string {
+// planReviewVerdictLabels are the words a reader sees for each verdict.
+var planReviewVerdictLabels = map[string]string{
+	"pass":   "통과",
+	"revise": "수정 요청",
+	"stop":   "중단",
+}
+
+// RenderDevilsAdvocateSection builds the delimited plan-review region: one
+// flow line over every round ("1차 수정 요청(지적 3건) → 계획 수정 → 2차
+// 통과"), and the stop reasons when the current verdict is a stop. Finding
+// text for other verdicts stays in the record and in plan-review.md. The
+// delimiters let MergeManagedSection replace the block in place on re-runs.
+func RenderDevilsAdvocateSection(req port.IssueProviderUpdateIssueBodySectionRequest) string {
 	var b strings.Builder
-	b.WriteString(devilsAdvocateStartMarker + "\n")
-	fmt.Fprintf(&b, "## Devil's-advocate findings (%s)\n", ts)
-	for _, f := range findings {
-		f = strings.TrimSpace(f)
-		if f == "" {
-			continue
+	b.WriteString(devilsAdvocateStartMarker + "\n## 계획 검토\n\n")
+	rounds := req.Rounds
+	if len(rounds) == 0 {
+		rounds = []port.IssueProviderPlanReviewRound{{Verdict: req.Verdict, Findings: len(req.Findings)}}
+	}
+	steps := make([]string, 0, 2*len(rounds))
+	for i, round := range rounds {
+		if i > 0 {
+			steps = append(steps, "계획 수정")
 		}
-		fmt.Fprintf(&b, "- %s\n", f)
+		label := planReviewVerdictLabels[round.Verdict]
+		if label == "" {
+			label = round.Verdict
+		}
+		step := fmt.Sprintf("%d차 %s", i+1, label)
+		if round.Findings > 0 {
+			step += fmt.Sprintf("(지적 %d건)", round.Findings)
+		}
+		steps = append(steps, step)
+	}
+	b.WriteString("계획 검토: " + strings.Join(steps, " → ") + "\n")
+	if req.Verdict == "stop" {
+		b.WriteString("\n중단 이유:\n")
+		for _, f := range req.Findings {
+			if f = strings.TrimSpace(f); f != "" {
+				fmt.Fprintf(&b, "- %s\n", artifactreadability.MaskHarnessValues(f))
+			}
+		}
 	}
 	b.WriteString(devilsAdvocateEndMarker)
 	return b.String()
@@ -102,14 +132,14 @@ func MergeManagedSection(body, section, startMarker, endMarker string) string {
 
 // RenderSection renders the managed block for the requested section kind from
 // the update request payload and returns it with its delimiters.
-func RenderSection(req port.IssueProviderUpdateIssueBodySectionRequest, ts string, limit int) (section, startMarker, endMarker string, err error) {
+func RenderSection(req port.IssueProviderUpdateIssueBodySectionRequest, limit int) (section, startMarker, endMarker string, err error) {
 	startMarker, endMarker, err = SectionMarkers(req.Section)
 	if err != nil {
 		return "", "", "", err
 	}
 	switch req.Section {
 	case SectionDevilsAdvocate:
-		return RenderDevilsAdvocateSection(req.Findings, ts), startMarker, endMarker, nil
+		return RenderDevilsAdvocateSection(req), startMarker, endMarker, nil
 	case SectionCompletion:
 		if req.Completion == nil {
 			return "", "", "", fmt.Errorf("completion payload is required for the completion section")

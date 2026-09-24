@@ -190,3 +190,30 @@ func TestRegressIssueOpsForReplanExplainsReviseRecovery(t *testing.T) {
 		t.Fatalf("revise 거부는 제자리 계획 수정과 fresh review 절차를 안내해야 한다: %v", err)
 	}
 }
+
+// 계획 검토 구간은 렌더만 바뀌고 거부 규칙이 없다(#513). 한글 20자에 못 미치는
+// 짧은 중단 지적도 반영되고, 반영 뒤 regress가 통과해야 한다.
+func TestShortKoreanStopReflectsAndRegresses(t *testing.T) {
+	stateRoot, id := recordAtPhaseForRegressTest(t, IssueOpsPhasePlan)
+	rec, err := ReadIssueOps(stateRoot, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec.IssueURL = "https://github.com/acme/repo/issues/1"
+	rec.DevilsAdvocateReview.Findings = []string{"범위가 이슈와 다르다"}
+	rec.DevilsAdvocateReview.IssueReflectedAt = ""
+	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
+		t.Fatal(err)
+	}
+	prov := &fakeCompletionProvider{updateRes: portUpdateResult(true)}
+	if _, _, err := ReflectDevilsAdvocateFindingsWithActor(stateRoot, id, true, prov, IssueOpsActor{}); err != nil {
+		t.Fatalf("a short Korean stop finding must reflect: %v", err)
+	}
+	req := prov.updateReq
+	if req == nil || req.Verdict != "stop" || len(req.Rounds) != 1 || req.Rounds[0].Findings != 1 || req.Findings[0] != "범위가 이슈와 다르다" {
+		t.Fatalf("the reflect request carries the verdict, the rounds, and the stop findings: %+v", req)
+	}
+	if _, err := RegressIssueOpsForReplan(stateRoot, id, "범위가 이슈와 다르다"); err != nil {
+		t.Fatalf("regress after reflecting the stop must pass: %v", err)
+	}
+}

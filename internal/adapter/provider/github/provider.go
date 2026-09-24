@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"issueops/internal/adapter/provider/issuebody"
 	"issueops/internal/adapter/provider/providerutil"
@@ -670,10 +669,9 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 	if issueURL == "" {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, fmt.Errorf("issue url is required")
 	}
-	ts := time.Now().UTC().Format(time.RFC3339)
 	if !req.Confirm {
 		// preview는 네트워크 없이 payload 유효성만 검증한다.
-		if _, _, _, err := issuebody.RenderSection(req, ts, gitHubIssueBodyLimit); err != nil {
+		if _, _, _, err := issuebody.RenderSection(req, gitHubIssueBodyLimit); err != nil {
 			return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 		}
 		return port.IssueProviderUpdateIssueBodySectionResult{
@@ -690,7 +688,7 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
 	// 병합 결과가 한도를 지키도록 기존 본문을 반영한 예산으로 렌더한다(C3-F1).
-	section, start, end, err := issuebody.RenderSection(req, ts, issuebody.SectionBudget(body, gitHubIssueBodyLimit, start, end))
+	section, start, end, err := issuebody.RenderSection(req, issuebody.SectionBudget(body, gitHubIssueBodyLimit, start, end))
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}

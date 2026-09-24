@@ -197,9 +197,18 @@ type IssueProviderUpdateIssueBodySectionRequest struct {
 	Repo       string                          `json:"repo"`                 // local repo path for provider auth context
 	IssueURL   string                          `json:"issue_url"`            // issue whose body is updated
 	Section    string                          `json:"section"`              // devils-advocate | completion
-	Findings   []string                        `json:"findings,omitempty"`   // devils-advocate payload
+	Findings   []string                        `json:"findings,omitempty"`   // devils-advocate payload: current round's findings
+	Verdict    string                          `json:"verdict,omitempty"`    // devils-advocate payload: current verdict (pass | revise | stop)
+	Rounds     []IssueProviderPlanReviewRound  `json:"rounds,omitempty"`     // devils-advocate payload: every round, oldest first
 	Completion *IssueProviderCompletionSection `json:"completion,omitempty"` // completion payload
 	Confirm    bool                            `json:"confirm"`              // must be true to write; false = dry-run preview
+}
+
+// IssueProviderPlanReviewRound is one plan-review round as the issue shows it:
+// its verdict and how many findings it raised, never the finding text.
+type IssueProviderPlanReviewRound struct {
+	Verdict  string `json:"verdict"`
+	Findings int    `json:"findings"`
 }
 
 // IssueProviderUpdateIssueBodySectionResult reports the outcome of a body update.

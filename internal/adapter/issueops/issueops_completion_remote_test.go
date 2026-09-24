@@ -162,3 +162,7 @@ func TestCloseIssueOpsRemoteIssueGatesAndStamps(t *testing.T) {
 		t.Fatalf("close must target the linked issue: %+v", prov.closeReq)
 	}
 }
+
+func portUpdateResult(updated bool) port.IssueProviderUpdateIssueBodySectionResult {
+	return port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: updated}
+}
