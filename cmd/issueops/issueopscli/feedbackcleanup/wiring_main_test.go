@@ -25,17 +25,11 @@ func TestMain(m *testing.M) {
 				Git:                d.CleanupFinishGit,
 				Processes:          issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses},
 				RemoveOrcaWorktree: d.RemoveOrcaWorktree,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error {
-					return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
-				},
 			})
 		},
 		CleanupRemoteBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
 			return issueopscore.CleanupRemoteBranch(ctx, stateRoot, req, issueopscore.CleanupRemoteBranchDeps{
 				VerifyMergedArtifact: d.VerifyMergedHead,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error {
-					return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
-				},
 			})
 		},
 		CloseIssueOpsChildren:                             issueopscore.CloseIssueOpsChildren,
@@ -47,7 +41,6 @@ func TestMain(m *testing.M) {
 		ObserveNativeProcessAncestry:                      issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                                      issueopscore.ReadIssueOps,
 		ReadRemoteIssueSnapshot:                           issueopscore.ReadRemoteIssueSnapshot,
-		ReflectCleanupAudit:                               issueopscore.ReflectCleanupAudit,
 		ResolveRecordProvider:                             issueopscore.ResolveRecordProvider,
 	})
 	os.Exit(m.Run())

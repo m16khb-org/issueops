@@ -59,7 +59,11 @@ func runRemoteCreateIssue(ctx context.Context, args []string, deps Deps) error {
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	finalBody, err := resolveTemplateBody(resolveTemplateBodyRequest{
+	// The contract and readability refusal happens here, before
+	// BeginIssueCreateIntent seals the request: a sealed intent can only be
+	// retried with the same body, so a body refused after sealing could never
+	// be fixed.
+	resolved, err := resolveTemplateBody(resolveTemplateBodyRequest{
 		Kind:      artifacttemplate.IssueOpsArtifactIssue,
 		Template:  *template,
 		Provider:  providerName,
@@ -68,10 +72,12 @@ func runRemoteCreateIssue(ctx context.Context, args []string, deps Deps) error {
 		BodyFile:  *bodyFile,
 		Fields:    fields,
 		ScoreFile: *scoreFile,
+		Confirm:   *confirm,
 	})
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
+	finalBody := resolved.Body
 	if err := rejectSecretLikeRemoteCreateInputs("issue create", *title, finalBody, labels, assignees); err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
@@ -188,7 +194,7 @@ func runRemoteCreateIssue(ctx context.Context, args []string, deps Deps) error {
 		}
 	}
 	if *jsonOut {
-		return deps.printJSON(result)
+		return deps.printJSON(createIssueResponse{IssueProviderCreateIssueResult: result, Readability: resolved.Readability})
 	}
 	if result.URL != "" {
 		fmt.Printf("created: %s\n", result.URL)

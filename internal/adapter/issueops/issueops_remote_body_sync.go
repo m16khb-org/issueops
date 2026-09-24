@@ -9,6 +9,8 @@ import (
 
 	"issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
+	"issueops/internal/domain/artifactreadability"
+	"issueops/internal/domain/artifacttemplate"
 	bodysync "issueops/internal/domain/issueopsbodysync"
 	"issueops/internal/port"
 )
@@ -58,6 +60,16 @@ func SyncRemoteArtifactBody(
 			return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 		}
 	}
+	artifactKind := bodySyncArtifactKind(kind)
+	template, err := bodySyncTemplate(artifactKind, cmd)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
+	}
+	proposedReadability := checkBodySyncReadability(artifactKind, template, cmd.ProposedBody)
+	// 원격을 읽기 전에 거부한다. 쓸 수 없는 본문에 provider 왕복을 쓰지 않는다.
+	if cmd.Confirm && !proposedReadability.OK {
+		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, artifactreadability.RefusalError(proposedReadability)
+	}
 	if kind == bodysynccontract.KindChild {
 		if err := verifyBodySyncChildHierarchy(ctx, prov, record, url); err != nil {
 			return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
@@ -89,8 +101,13 @@ func SyncRemoteArtifactBody(
 		RecordedAt:         baselineAt,
 		AgeDays:            bodySyncAgeDays(baselineAt),
 		AcceptRemoteEdits:  cmd.AcceptRemoteEdits,
+		Readability:        proposedReadability,
 	}
 	if !cmd.Confirm {
+		// The live body is judged for the author's benefit only: an old or
+		// hand-written remote body is the reason to sync, never a reason to
+		// block one.
+		result.LiveReadability = warningOnly(checkBodySyncReadability(artifactKind, template, live.Body))
 		preview, err := replacer.ReplaceArtifactBody(ctx, port.IssueProviderReplaceArtifactBodyRequest{
 			Repo: record.Repo, Kind: kind, URL: url, Body: plan.MergedBody,
 		})
@@ -297,4 +314,41 @@ func recordBodySync(ctx context.Context, stateRoot, id string, entry issueops.Is
 		return issueops.IssueOpsRecord{OK: false}, err
 	}
 	return stamped, nil
+}
+
+func bodySyncArtifactKind(kind string) artifacttemplate.IssueOpsArtifactKind {
+	switch kind {
+	case bodysynccontract.KindChild:
+		return artifacttemplate.IssueOpsArtifactChild
+	case bodysynccontract.KindPR, bodysynccontract.KindMR:
+		return artifacttemplate.IssueOpsArtifactPR
+	default:
+		return artifacttemplate.IssueOpsArtifactIssue
+	}
+}
+
+// bodySyncTemplate resolves the contract a proposal is judged against. The
+// template is not stored in the record (its decoder rejects unknown fields),
+// so without --template it is inferred from the proposal's own sections.
+func bodySyncTemplate(kind artifacttemplate.IssueOpsArtifactKind, cmd bodysynccontract.Command) (artifacttemplate.IssueOpsTemplateKind, error) {
+	named := artifacttemplate.IssueOpsTemplateKind(strings.ToLower(strings.TrimSpace(cmd.Template)))
+	if named == "" {
+		return artifacttemplate.InferTemplateKind(kind, cmd.ProposedBody), nil
+	}
+	if !artifacttemplate.SupportsTemplate(kind, named) {
+		return "", fmt.Errorf("template %q does not apply to a %s body", named, kind)
+	}
+	return named, nil
+}
+
+func checkBodySyncReadability(kind artifacttemplate.IssueOpsArtifactKind, template artifacttemplate.IssueOpsTemplateKind, body string) artifactreadability.Report {
+	return artifactreadability.Check(artifactreadability.Input{Kind: artifactreadability.KindFor(kind), Template: template, Body: body})
+}
+
+// warningOnly moves every critical finding to the warnings.
+func warningOnly(report artifactreadability.Report) artifactreadability.Report {
+	report.Warnings = append(append([]artifactreadability.Finding{}, report.Critical...), report.Warnings...)
+	report.Critical = []artifactreadability.Finding{}
+	report.OK = true
+	return report
 }

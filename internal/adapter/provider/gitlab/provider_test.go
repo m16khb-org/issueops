@@ -806,6 +806,7 @@ func TestGitLabUpdateIssueBodySectionDryRun(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
 		Section:  port.IssueBodySectionDevilsAdvocate,
+		Verdict:  "stop",
 		IssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		Findings: []string{"gold-plating"},
 	})
@@ -842,6 +843,7 @@ exit 0
 
 	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
 		Section:  port.IssueBodySectionDevilsAdvocate,
+		Verdict:  "stop",
 		Repo:     repo,
 		IssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		Findings: []string{"gold-plating", "schedule optimism"},
@@ -1010,6 +1012,7 @@ func TestGitLabUpdateIssueBodySectionAcceptsWorkItemsIssueURL(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
 		Section:  port.IssueBodySectionDevilsAdvocate,
+		Verdict:  "stop",
 		IssueURL: "https://gitlab.example.com/acme/repo/-/work_items/105",
 		Findings: []string{"gold-plating"},
 	})

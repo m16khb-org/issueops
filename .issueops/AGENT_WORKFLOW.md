@@ -162,7 +162,8 @@ Orca, Herdr 순서로 사용 가능 여부를 확인하며 둘 다 사용 불가
 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` →
 `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` →
 `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며
-reflect-completion→close-issue→cleanup finish 순서를 지킨다(OPERATIONS.md 참조).
+reflect-completion(사람이 쓴 진행 결과를 `--body-file`로 넘긴다)→close-issue→cleanup finish
+순서를 지킨다(OPERATIONS.md 참조).
 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이
 일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은
 `gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다.

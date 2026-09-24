@@ -90,7 +90,7 @@ func assertPackageInventoryCacheReturnsDefensiveViews(t *testing.T) {
 	modules[0].Imports[0] = "mutated/import"
 	modules[0].TestImports[0] = "mutated/test"
 	modules[0].XTestImports[0] = "mutated/xtest"
-	modules = append(modules, modulePackage{ImportPath: "mutated/extra"})
+	_ = append(modules, modulePackage{ImportPath: "mutated/extra"})
 	gotModules, err := cache.modulePackages("/repo")
 	if err != nil {
 		t.Fatal(err)

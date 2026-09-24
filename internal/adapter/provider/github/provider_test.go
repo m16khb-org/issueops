@@ -683,6 +683,7 @@ func TestGitHubUpdateIssueBodySectionDryRun(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
 		Section:  port.IssueBodySectionDevilsAdvocate,
+		Verdict:  "stop",
 		IssueURL: "https://github.com/acme/repo/issues/12",
 		Findings: []string{"gold-plating"},
 	})
@@ -720,6 +721,7 @@ exit 2
 
 	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
 		Section:  port.IssueBodySectionDevilsAdvocate,
+		Verdict:  "stop",
 		Repo:     repo,
 		IssueURL: "https://github.com/acme/repo/issues/12",
 		Findings: []string{"gold-plating", "schedule optimism"},

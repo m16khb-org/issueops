@@ -29,10 +29,23 @@ func AdvanceIssueOpsPhaseWithActor(stateRoot, id, to string, actor IssueOpsActor
 	return advanceIssueOpsPhaseWithActor(stateRoot, id, to, &actor)
 }
 
+// AdvanceIssueOpsPhaseWithActorReport is AdvanceIssueOpsPhaseWithActor plus
+// the tracked-material copies the transition wrote. The report travels in the
+// return value, never in the record.
+func AdvanceIssueOpsPhaseWithActorReport(stateRoot, id, to string, actor IssueOpsActor) (issueops.IssueOpsRecord, issueops.IssueOpsTrackedMaterials, error) {
+	return advanceIssueOpsPhaseReport(stateRoot, id, to, &actor)
+}
+
 func advanceIssueOpsPhaseWithActor(stateRoot, id, to string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
+	record, _, err := advanceIssueOpsPhaseReport(stateRoot, id, to, actor)
+	return record, err
+}
+
+func advanceIssueOpsPhaseReport(stateRoot, id, to string, actor *IssueOpsActor) (issueops.IssueOpsRecord, issueops.IssueOpsTrackedMaterials, error) {
+	var materials issueops.IssueOpsTrackedMaterials
 	upstream, err := prefetchIssueOpsUpstreamForPhase(stateRoot, id, to, actor)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
+		return issueops.IssueOpsRecord{OK: false}, materials, err
 	}
 	var rec issueops.IssueOpsRecord
 	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
@@ -44,10 +57,10 @@ func advanceIssueOpsPhaseWithActor(stateRoot, id, to string, actor *IssueOpsActo
 			return actorErr
 		}
 		var e error
-		rec, e = advanceIssueOpsPhaseLocked(stateRoot, id, to, upstream)
+		rec, materials, e = advanceIssueOpsPhaseLocked(stateRoot, id, to, upstream)
 		return e
 	})
-	return rec, err
+	return rec, materials, err
 }
 
 // prefetchIssueOpsUpstreamForPhase는 pr 진입일 때만 strict 판정이 쓸 fetch를
@@ -70,29 +83,40 @@ func prefetchIssueOpsUpstreamForPhase(stateRoot, id, to string, actor *IssueOpsA
 	return prefetchIssueOpsUpstream(record), nil
 }
 
-func advanceIssueOpsPhaseLocked(stateRoot, id, to string, upstream issueOpsUpstreamFetcher) (issueops.IssueOpsRecord, error) {
+func advanceIssueOpsPhaseLocked(stateRoot, id, to string, upstream issueOpsUpstreamFetcher) (issueops.IssueOpsRecord, issueops.IssueOpsTrackedMaterials, error) {
+	var materials issueops.IssueOpsTrackedMaterials
 	phase := issueops.IssueOpsPhase(strings.TrimSpace(to))
 	if !knownIssueOpsPhase(phase) {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("unknown issueops phase %q", to)
+		return issueops.IssueOpsRecord{OK: false}, materials, fmt.Errorf("unknown issueops phase %q", to)
 	}
 	record, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
-		return record, err
+		return record, materials, err
 	}
 	if record.Phase == phase {
 		if phase == IssueOpsPhaseAISlopClean {
-			return refreshIssueOpsAISlopClean(stateRoot, record)
+			record, err = refreshIssueOpsAISlopClean(stateRoot, record)
+			return record, materials, err
 		}
-		return record, nil
+		return record, materials, nil
 	}
 	if shouldRefreshIssueOpsAISlopClean(record, phase) {
-		return refreshIssueOpsAISlopClean(stateRoot, record)
+		record, err = refreshIssueOpsAISlopClean(stateRoot, record)
+		return record, materials, err
 	}
 	if err := validateIssueOpsPhaseTransition(stateRoot, record, phase, upstream); err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
+		return issueops.IssueOpsRecord{OK: false}, materials, err
+	}
+	// Implement entry and implement exit are the two transitions both direct
+	// and Orca cycles pass, so they refresh the tracked copies. The copies are
+	// written before the transition is applied, so the change set the
+	// ai-slop-clean transition seals already contains them.
+	if phase == IssueOpsPhaseImplement || phase == IssueOpsPhaseAISlopClean {
+		materials = writeTrackedMaterials(record)
 	}
 	record = applyIssueOpsPhaseTransition(record, phase)
-	return touchAndWriteIssueOps(stateRoot, record)
+	record, err = touchAndWriteIssueOps(stateRoot, record)
+	return record, materials, err
 }
 
 // validateIssueOpsPhaseTransition은 span 안에서 불린다. pr 진입 판정은 upstream

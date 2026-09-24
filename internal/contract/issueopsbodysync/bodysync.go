@@ -67,16 +67,28 @@ type Result struct {
 	AgeDays            int      `json:"age_days,omitempty"`
 	AcceptRemoteEdits  bool     `json:"accept_remote_edits,omitempty"`
 	Preview            string   `json:"preview,omitempty"`
+	// Readability judges the proposed body and can reject a confirm.
+	// LiveReadability judges the body already on the remote artifact and is
+	// warning-only, so drift found there never blocks a sync. Both hold an
+	// artifactreadability.Report; the type is `any` here so this contract
+	// package does not import internal/domain/artifactreadability (that
+	// package already imports internal/domain/issueopsbodysync, and this
+	// contract package is imported by issueopsbodysync in turn).
+	Readability     any `json:"readability,omitempty"`
+	LiveReadability any `json:"live_readability,omitempty"`
 }
 
 // Command is one sync request. Kind is what the caller asked for (KindIssue or
 // KindPR); the resolved artifact kind can differ, because a URL under a linked
 // parent resolves to KindChild and a GitLab publication resolves to KindMR.
 type Command struct {
-	ID                 string
-	Kind               string
-	URL                string
-	ProposedBody       string
+	ID           string
+	Kind         string
+	URL          string
+	ProposedBody string
+	// Template names the body contract the proposal follows. Empty means it
+	// is inferred from the proposal's own section titles.
+	Template           string
 	ExpectedBodySHA256 string
 	AcceptRemoteEdits  bool
 	ExpectedGeneration uint64

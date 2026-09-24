@@ -3,7 +3,6 @@ package issueops
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"issueops/internal/contract/issueops"
@@ -80,25 +79,5 @@ func TestMaterializeStagedArtifactsWritesIntoRecordedArtifactDir(t *testing.T) {
 	// 재-materialize는 같은 내용이면 통과하고(불변 계약), 파일은 그대로다.
 	if _, err := materializeStagedArtifacts(stateRoot, record); err != nil {
 		t.Fatalf("idempotent re-materialize must pass: %v", err)
-	}
-}
-
-func TestGatherCompletionSectionReportsMissingPlan(t *testing.T) {
-	root := t.TempDir()
-	record := issueops.IssueOpsRecord{Repo: root, Execution: &issueops.Execution{Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/480/artifact"}}}
-	completion := gatherCompletionSection(record)
-	if strings.Join(completion.MissingArtifacts, ",") != "plan" {
-		t.Fatalf("absent sealed plan must be reported, got %+v", completion.MissingArtifacts)
-	}
-	dir := filepath.Join(root, ".issueops", "issues", "480", "artifact")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "plan.md"), []byte("# plan\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	completion = gatherCompletionSection(record)
-	if len(completion.MissingArtifacts) != 0 || completion.PlanBody == "" {
-		t.Fatalf("sealed plan at the recorded dir must be read: %+v", completion)
 	}
 }

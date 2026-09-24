@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-09-24 | Issue and PR bodies are human documents; implementation materials stay in .issueops/issues/<n>/; partially supersedes 2026-09-09 | [record](adr/2026-09-24-issue-and-pr-bodies-are-human-documents.md) |
 | 2026-09-23 | issueops mcp serves in-process; the shared daemon leaves the MCP path | [record](adr/2026-09-23-issueops-mcp-serves-in-process-the-shared-daemon-leaves-the.md) |
 | 2026-09-23 | The lease contract decodes persisted records through the production record contract; supersedes 2026-07-28 | [record](adr/2026-09-23-the-lease-contract-decodes-persisted-records-through-the-pro.md) |
 | 2026-09-09 | IssueOps seals the requester intent as a derived artifact next to the plan | [record](adr/2026-09-09-issueops-seals-the-requester-intent-as-a-derived-artifact.md) |

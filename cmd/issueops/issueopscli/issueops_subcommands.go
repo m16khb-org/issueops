@@ -335,8 +335,33 @@ func runIssueOpsPhase(args []string) error {
 		}
 		return err
 	}
-	record, err := advancePhaseWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *to, actor.actor())
-	return printIssueOpsResult(record, *jsonOut, err)
+	if advancePhaseReport == nil {
+		record, err := advancePhaseWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *to, actor.actor())
+		return printIssueOpsResult(record, *jsonOut, err)
+	}
+	record, materials, err := advancePhaseReport(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *to, actor.actor())
+	if err != nil || (len(materials.Written) == 0 && len(materials.Warnings) == 0) {
+		return printIssueOpsResult(record, *jsonOut, err)
+	}
+	if !*jsonOut {
+		if err := printIssueOpsResult(record, false, nil); err != nil {
+			return err
+		}
+		for _, path := range materials.Written {
+			fmt.Printf("tracked copy: %s (commit it with the change)\n", path)
+		}
+		for _, warning := range materials.Warnings {
+			fmt.Printf("warning: %s\n", warning)
+		}
+		return nil
+	}
+	return printJSON(phaseResponse{IssueOpsRecord: record, TrackedMaterials: &materials})
+}
+
+// phaseResponse는 phase 전이 JSON에 추적 사본 보고를 얹는다. record 필드가 아니다.
+type phaseResponse struct {
+	issueopscontract.IssueOpsRecord
+	TrackedMaterials *issueopscontract.IssueOpsTrackedMaterials `json:"tracked_materials,omitempty"`
 }
 
 func runIssueOpsPRReadiness(args []string) error {

@@ -17,17 +17,12 @@ func keepRemoteRequest(id string, apply bool, fingerprint string) CleanupFinishR
 // 원격 브랜치를 지울 수도(cleanup remote-branch 게이트 ⑩) 남길 수도
 // (remote_branch_absent) 없으면 사이클은 하네스 안에서 끝나지 않는다. 남기는
 // 것은 명시적 선택으로만 열리고, finish는 레코드를 지우므로 무엇을 남겼는지가
-// 결과와 감사 라인 양쪽에 남아야 그 브랜치를 다시 찾을 수 있다.
+// 결과와 응답의 감사 라인에 남는다. 브랜치 이름은 이슈 번호로 시작하고
+// provider가 이슈에 연결해 보여 주므로 레코드가 지워진 뒤에도 이슈에서 찾을 수 있다.
 func TestCleanupFinishKeepsSurvivingRemoteBranchWhenRequested(t *testing.T) {
 	stateRoot, record, _ := finishTestRecord(t, true)
 	git := &fakeFinishGit{branchOID: "abc123", remoteBranchOID: "f00dcafe"}
 	deps := finishDeps(git)
-	audit := ""
-	deps.ReflectAudit = func(_ issueops.IssueOpsRecord, _ portCompletionSection, line string) error {
-		audit = line
-		return nil
-	}
-
 	preview, err := CleanupFinish(context.Background(), stateRoot, keepRemoteRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatalf("명시적으로 남기기로 한 원격 브랜치는 finish를 막지 않는다: %v %v", err, preview.Missing)
@@ -48,8 +43,8 @@ func TestCleanupFinishKeepsSurvivingRemoteBranchWhenRequested(t *testing.T) {
 	if result.KeptRemoteBranch == nil || result.KeptRemoteBranch.RemoteOID != "f00dcafe" {
 		t.Fatalf("apply 결과도 남긴 브랜치를 담아야 한다: %+v", result.KeptRemoteBranch)
 	}
-	if !strings.Contains(audit, "remote_branch_kept=") || !strings.Contains(audit, "f00dcafe") {
-		t.Fatalf("감사 라인은 레코드 삭제 뒤 남는 유일한 흔적이다: %q", audit)
+	if !strings.Contains(result.Audit, "remote_branch_kept=") || !strings.Contains(result.Audit, "f00dcafe") {
+		t.Fatalf("감사 라인은 남긴 브랜치를 적어야 한다: %q", result.Audit)
 	}
 }
 

@@ -19,7 +19,7 @@ func TestDefaultsForNoExtraRequirementsFixture(t *testing.T) {
 		"저장소 맥락: minimal repo context",
 		"- 해당 fixture의 추가 요구사항 없음",
 		"- Worker Fixture owns verification that this fixture has no additional task requirements.",
-		"Fixture: `empty-requirements` - Fallback title",
+		"fixture `empty-requirements`(Fallback title)",
 	} {
 		if !strings.Contains(strings.Join([]string{
 			artifact.ProblemSummary,

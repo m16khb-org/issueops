@@ -105,15 +105,22 @@ agent가 즉시 알아야 할 canonical 요약이다.
 
 ```text
 .issueops/issues/<issue-number>/
-  plan.md      추적  기본 플랜(`issueops link-plan` 대상). 같은 번호에 플랜이 여럿이면 plan-<slug>.md
+  plan.md      추적  기본 플랜. 봉인 플랜을 쓰는 사이클은 구현 진입·종료 전이가 사본을 쓴다
+                     (plan_path가 artifact/ 밖이면 그 파일이 곧 추적 플랜이라 사본을 만들지 않는다).
+                     같은 번호에 플랜이 여럿이면 plan-<slug>.md
+  intent.md    추적  요청자 의도 계약의 사본. 구현 진입·종료 전이가 봉인 intent나 record에서 쓴다
+  plan-review.md 추적 계획 검토 라운드와 지적(해시·로컬 경로는 가림). 같은 전이가 record에서 쓴다
   gates.md     추적  `gates init/check` 원장. `gates check`와 IssueOps `gates_incomplete`가 1순위로 읽는다
-  spec.md      추적  선택. superpowers 스펙을 이슈에 붙일 때
+  spec.md      추적  선택. superpowers 스펙을 이슈에 붙일 때. 봉인 spec이 있으면 같은 전이가 사본을 쓴다
   review/      무시  pr-review·review-agent-feedback 작업 파일(`<provider>-<mr번호>/`)
   artifact/    무시  봉인 아티팩트(plan/spec/verified-execution-loop/intent, 0600 불변). 레코드
                      `execution.workspace.artifact_dir`가 이 경로를 영속한다(#482). intent는
                      staging이 아니라 prepare가 record.intent에서 파생한다(#507)
 ```
 
+- 사본(plan.md, intent.md, spec.md, plan-review.md)은 파생물이다. 내용이 같으면 쓰지 않고,
+  다르면 현재 봉인 원본과 record로 덮어쓴다. 구현 진입 뒤 생긴 사본은 첫 커밋에 포함한다.
+  사본만 바뀐 상태는 `implementation_changes`를 충족하지 않는다(#513).
 - 이슈가 없는 작업의 플랜은 `.issueops/plans/<slug>.md`, 리뷰 작업 파일은
   `.issueops/tmp/`에 둔다. 둘 다 이슈 번호를 알 수 없을 때만 쓰는 fallback이다.
 - PR readiness는 현재 사이클의 이슈 원장(`issues/<번호>/gates.md`, 같은 번호의 옛 파일)과

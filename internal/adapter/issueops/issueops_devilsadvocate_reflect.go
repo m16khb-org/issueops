@@ -44,6 +44,8 @@ func reflectDevilsAdvocateFindings(stateRoot, id string, confirm bool, prov port
 		IssueURL: record.IssueURL,
 		Section:  port.IssueBodySectionDevilsAdvocate,
 		Findings: review.Findings,
+		Verdict:  review.Verdict,
+		Rounds:   planReviewRounds(review),
 		Confirm:  confirm,
 	})
 	if err != nil {
@@ -73,6 +75,16 @@ func reflectDevilsAdvocateFindings(stateRoot, id string, confirm bool, prov port
 		return issueops.IssueOpsRecord{OK: false}, result, lockErr
 	}
 	return record, result, nil
+}
+
+// planReviewRounds lists every recorded round, oldest first, as the issue
+// shows it: verdict and finding count.
+func planReviewRounds(review *issueops.IssueOpsDevilsAdvocateReview) []port.IssueProviderPlanReviewRound {
+	rounds := make([]port.IssueProviderPlanReviewRound, 0, len(review.History)+1)
+	for _, round := range review.History {
+		rounds = append(rounds, port.IssueProviderPlanReviewRound{Verdict: round.Verdict, Findings: len(round.Findings)})
+	}
+	return append(rounds, port.IssueProviderPlanReviewRound{Verdict: review.Verdict, Findings: len(review.Findings)})
 }
 
 // issueOpsLinkedPlanDigest는 링크된 플랜 파일의 sha256이다. owner preflight와

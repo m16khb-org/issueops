@@ -57,7 +57,7 @@ When the user must choose a route, cleanup action, feedback response, or next ph
 IssueOps state is durable because `issueops ...` commands record intent, issue links, branch preparation, worktree paths, tool preparation, design review, plan links, ai-slop-clean evidence, feedback joins, PR/MR readiness, and cleanup status. Moving any of that work into lifecycle hooks would make progress depend on host-specific event timing and incomplete hook payloads.
 
 주의:
-- The installed hook is context-only (`SessionStart` project-doc catalog). It does not block tool events, create or edit issues, mutate files, run tests, wait for background jobs, prepare branches or worktrees, create PRs/MRs, reply to reviews, merge, or delete branches/worktrees. Korean remote-artifact and VCS-linking checks run inside the `issueops remote ...` commands that own the artifact.
+- The installed hook is context-only (`SessionStart` project-doc catalog). It does not block tool events, create or edit issues, mutate files, run tests, wait for background jobs, prepare branches or worktrees, create PRs/MRs, reply to reviews, merge, or delete branches/worktrees. The readability check (Korean ratio, summary-first, required sections, hashes outside code) runs inside the `issueops remote` publish and sync commands (`create-issue`, `create-child`, `create-pr`, `sync-issue`, `sync-pr`), and VCS-linking checks run inside the `issueops remote ...` commands that own the artifact.
 - When readiness reports `intent_contract`, `plan_prep_*`, `branch_prepare`, compatibility/design/plan evidence, canonical workspace/lease, `ai_slop_clean`, or contract feedback, run the owning `issueops` command in the main-agent loop and retry readiness. Workspace and write authority belong to `issueops execution prepare/status/claim/release/replace/reconcile/switch-mode/complete`; do not add a hook-side workaround.
 - `execution replace --revoke`는 **다른** 홀더를 걷어내는 명령이다. 자기 lease에 실행하면 `revoking` 상태와 살아 있는 홀더가 겹쳐 claim·release·replace가 모두 막힌다(2026-07-26 실측, 세션 재시작으로만 벗어났다). 자기 정리는 `release --generation N`이다. #170이 이 자기-revoke를 거부하도록 고쳤지만, 진단이 막히는 상태를 스스로 만들지 않는 규율이 먼저다.
 - `--session-id`는 host가 부여한 세션 식별자이며 조합해 만드는 값이 아니다. 세션을 재시작해도 그 값은 유지되고 PID만 바뀌므로, 재시작 후의 `holder_identity_mismatch`는 홀더가 죽었다는 뜻이 아니라 잘못된 id가 기록됐다는 뜻이다. `execution whoami`로 확인한다.
@@ -126,6 +126,7 @@ IssueOps에 새 implement-entry(또는 임의 phase) fail-closed 게이트를 �
 - MCP 도구를 추가하면 catalog count 테스트(`IssueOpsBasicTools`/`IssueOpsLifecycleTools`의 exhaustive `wantNames`)와 `mcp_tools.golden.json`을 함께 갱신한다.
 - 게이트가 derived phase-ledger에 나타나면 `response_contracts.golden.json` 스냅샷도 드리프트한다(§27). 스냅샷이 그 phase로 전진하면 전제조건을 실제로 충족(fake CLI 포함)시켜야 한다.
 - 증분 검증만 믿지 말고 커밋 전 `go test ./...` 전체를 한 번 돌려 미검출 패키지 파급을 잡는다.
+- `implement`·`ai-slop-clean` 전이는 `.issueops/issues/<n>/`에 추적 사본(plan·intent·spec·plan-review)을 쓴다(#513). 특정 파일만 `git add`하는 테스트 fixture는 사본이 미커밋으로 남아 pr 진입이 `worktree_clean`에 걸린다. 전이 뒤 `.issueops/issues`를 함께 커밋한다. 사본만 바뀐 상태는 `implementation_changes`를 충족하지 않는다.
 
 ## 30. IssueOps worktree 세션의 source-checkout mirror edit 오인
 

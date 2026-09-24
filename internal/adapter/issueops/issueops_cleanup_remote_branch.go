@@ -13,7 +13,6 @@ import (
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsremote"
-	"issueops/internal/port"
 )
 
 // CleanupRemoteBranchDeps는 외부 표면 주입점이다.
@@ -26,10 +25,6 @@ import (
 type CleanupRemoteBranchDeps struct {
 	Git                  func(ctx context.Context, dir string, args ...string) (int, string)
 	VerifyMergedArtifact func(artifact issueops.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error)
-	// ReflectAudit는 삭제 성공 사실을 이슈 본문 completion 섹션에 멱등 병합한다
-	// (finish ④'의 CleanupAudit 병합 선례). best-effort이며 실패해도 이미 끝난
-	// 원격 삭제를 되돌리지 않는다.
-	ReflectAudit func(record issueops.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error
 	// ObserveArtifact는 replacement 증거를 provider에서 읽는다. 주입되지 않으면
 	// 그 경로는 열리지 않는다 — 관측 없이 증거를 인정하지 않는다(#323).
 	ObserveArtifact func(url string) (issueopsdomain.ArtifactObservation, error)
@@ -91,8 +86,6 @@ func CleanupRemoteBranch(ctx context.Context, stateRoot string, req CleanupRemot
 		result.OK = false
 		return result, fmt.Errorf("stale cleanup fingerprint; run --preview again and retry with the new value")
 	}
-	// 파괴 이전에 보존 payload를 스냅샷한다(finish C2-F1 선례).
-	completionSnapshot := gatherCompletionSection(record)
 	// fully-qualified ref는 동명 태그를 배제하고, force-with-lease는 preview→push
 	// 사이에 남은 TOCTOU를 서버측에서 원자적으로 봉쇄한다(design-review H7).
 	ref := "refs/heads/" + inventory.Branch
@@ -107,15 +100,8 @@ func CleanupRemoteBranch(ctx context.Context, stateRoot string, req CleanupRemot
 	}
 	result.Deleted = true
 	result.DeletedAt = time.Now().UTC().Format(time.RFC3339)
-	if deps.ReflectAudit != nil {
-		audit := fmt.Sprintf("원격 브랜치 삭제: branch=%s oid=%s at=%s", inventory.Branch, inventory.RemoteOID, result.DeletedAt)
-		if err := deps.ReflectAudit(record, completionSnapshot, audit); err == nil {
-			result.AuditReflected = true
-		} else {
-			// best-effort지만 무흔적 실패는 금지 — 결과에 표면화한다.
-			result.AuditError = err.Error()
-		}
-	}
+	// 감사 라인은 응답에만 남긴다. 이슈 본문은 쓰지 않는다(#513).
+	result.Audit = fmt.Sprintf("원격 브랜치 삭제: branch=%s oid=%s at=%s", inventory.Branch, inventory.RemoteOID, result.DeletedAt)
 	return result, nil
 }
 
