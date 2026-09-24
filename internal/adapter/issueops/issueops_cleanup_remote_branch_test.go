@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
 const (
@@ -362,17 +361,11 @@ func TestCleanupRemoteBranchPushFailureSurfacesFailedStep(t *testing.T) {
 	}
 }
 
-// 감사(design-review M12): apply 성공 시 브랜치·OID·시각이 이슈 본문 감사 라인으로
-// 멱등 반영되고, 반영 실패는 삭제를 되돌리지 않되 결과에 드러난다.
-func TestCleanupRemoteBranchApplyReflectsAuditLine(t *testing.T) {
+// 감사(design-review M12): apply 성공 시 브랜치·OID·시각이 응답 audit에 남는다.
+// 이슈 본문은 쓰지 않는다(#513).
+func TestCleanupRemoteBranchApplyReportsAuditLine(t *testing.T) {
 	stateRoot, record := remoteBranchTestRecord(t)
-	git := remoteBranchGit()
-	deps := remoteBranchDeps(git)
-	var seen string
-	deps.ReflectAudit = func(_ issueops.IssueOpsRecord, _ port.IssueProviderCompletionSection, audit string) error {
-		seen = audit
-		return nil
-	}
+	deps := remoteBranchDeps(remoteBranchGit())
 	preview, err := CleanupRemoteBranch(context.Background(), stateRoot, remoteBranchRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatal(err)
@@ -381,28 +374,7 @@ func TestCleanupRemoteBranchApplyReflectsAuditLine(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.AuditReflected || result.AuditError != "" {
-		t.Fatalf("audit must be reflected: %+v", result)
-	}
-	if !strings.Contains(seen, remoteBranchTestBranch) || !strings.Contains(seen, remoteBranchTestHeadOID) || !strings.Contains(seen, result.DeletedAt) {
-		t.Fatalf("audit line must carry branch, oid and time: %q", seen)
-	}
-
-	stateRoot2, record2 := remoteBranchTestRecord(t)
-	git2 := remoteBranchGit()
-	deps2 := remoteBranchDeps(git2)
-	deps2.ReflectAudit = func(issueops.IssueOpsRecord, port.IssueProviderCompletionSection, string) error {
-		return fmt.Errorf("provider unavailable")
-	}
-	preview2, err := CleanupRemoteBranch(context.Background(), stateRoot2, remoteBranchRequest(record2.ID, false, ""), deps2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result2, err := CleanupRemoteBranch(context.Background(), stateRoot2, remoteBranchRequest(record2.ID, true, preview2.Fingerprint), deps2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !result2.Deleted || result2.AuditReflected || !strings.Contains(result2.AuditError, "provider unavailable") {
-		t.Fatalf("audit failure must be surfaced without undoing the deletion: %+v", result2)
+	if !strings.Contains(result.Audit, remoteBranchTestBranch) || !strings.Contains(result.Audit, remoteBranchTestHeadOID) || !strings.Contains(result.Audit, result.DeletedAt) {
+		t.Fatalf("audit line must carry branch, oid and time: %q", result.Audit)
 	}
 }

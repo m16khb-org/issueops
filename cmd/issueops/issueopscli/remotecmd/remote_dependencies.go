@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"issueops/internal/domain/artifactreadability"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
@@ -37,7 +38,7 @@ type RemoteDeps struct {
 	ReadIssueOps                               func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueCreateOutcome                   func(stateRoot, id string, outcome issueopscontract.IssueOpsIssueCreateOutcome) (issueopscontract.IssueOpsRecord, error)
 	ReflectDevilsAdvocateFindingsWithActor     func(stateRoot, id string, confirm bool, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
-	ReflectIssueCompletion                     func(stateRoot, id string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
+	ReflectIssueCompletion                     func(stateRoot, id, resultBody string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, artifactreadability.Report, error)
 	RenderIssueOpsRemoteJudgePrompt            func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error)
 	ResolveRecordProvider                      func(record issueopscontract.IssueOpsRecord) string
 	ResolveProviderProjectAuthority            func(repo, provider string) (string, error)
@@ -179,8 +180,8 @@ func neutralRemoteDeps() RemoteDeps {
 		ReflectDevilsAdvocateFindingsWithActor: func(stateRoot, id string, confirm bool, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 			return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, errRemoteNotConfigured
 		},
-		ReflectIssueCompletion: func(stateRoot, id string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
-			return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, errRemoteNotConfigured
+		ReflectIssueCompletion: func(stateRoot, id, resultBody string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, artifactreadability.Report, error) {
+			return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, artifactreadability.Report{}, errRemoteNotConfigured
 		},
 		RenderIssueOpsRemoteJudgePrompt: func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error) {
 			return issueopsremote.IssueOpsRemoteJudgePromptResult{}, errRemoteNotConfigured

@@ -31,24 +31,13 @@ func SyncRemoteIssueGraph(record issueops.IssueOpsRecord) (map[string]any, error
 		return nil, fmt.Errorf("cannot determine provider from cycle")
 	}
 
-	var body strings.Builder
-	body.WriteString("## Related Issue Graph\n\n")
-	body.WriteString("This issue graph was recorded by issueops IssueOps:\n\n")
-	for _, link := range record.IssueLinks {
-		label := linkTypeLabel(link.Type)
-		body.WriteString(fmt.Sprintf("- **%s**: %s", label, link.URL))
-		if link.Title != "" {
-			body.WriteString(fmt.Sprintf(" (%s)", link.Title))
-		}
-		body.WriteString("\n")
-	}
-	body.WriteString(fmt.Sprintf("\nCycle: `%s`", record.ID))
+	body := renderIssueGraphComment(record)
 
 	switch provider {
 	case "github":
-		return syncGitHubGraph(issueURL, body.String())
+		return syncGitHubGraph(issueURL, body)
 	case "gitlab":
-		return syncGitLabGraph(issueURL, body.String())
+		return syncGitLabGraph(issueURL, body)
 	default:
 		return nil, fmt.Errorf("sync not supported for provider %q", provider)
 	}
@@ -110,22 +99,39 @@ func getLinkCount(body string) int {
 	return count
 }
 
+// renderIssueGraphComment lists the cycle's typed issue links for readers of
+// the parent issue, in Korean and without harness values (#513).
+func renderIssueGraphComment(record issueops.IssueOpsRecord) string {
+	var body strings.Builder
+	body.WriteString("## 관련 이슈\n\n")
+	for _, link := range record.IssueLinks {
+		body.WriteString(fmt.Sprintf("- **%s**: %s", linkTypeLabel(link.Type), link.URL))
+		if link.Title != "" {
+			body.WriteString(fmt.Sprintf(" (%s)", link.Title))
+		}
+		body.WriteString("\n")
+	}
+	return body.String()
+}
+
 func linkTypeLabel(linkType string) string {
 	switch linkType {
 	case "depends-on":
-		return "Depends on"
+		return "선행 이슈"
 	case "blocks":
-		return "Blocks"
+		return "이 이슈가 막는 이슈"
 	case "supersedes":
-		return "Supersedes"
+		return "대체하는 이슈"
 	case "follows-up":
-		return "Follows up"
+		return "후속 이슈"
 	case "duplicates":
-		return "Duplicates"
+		return "중복 이슈"
 	case "splits-from":
-		return "Splits from"
+		return "나뉘어 나온 원래 이슈"
 	case "implements":
-		return "Implements"
+		return "구현하는 이슈"
+	case "child":
+		return "하위 작업"
 	default:
 		return linkType
 	}

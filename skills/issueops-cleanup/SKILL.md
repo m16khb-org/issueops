@@ -69,7 +69,9 @@ decision and a separate `issueops cleanup remote-branch` flow.
      server. Because finish deletes the record, the typed deletion path can no
      longer reach that branch afterwards; the apply result's
      `kept_remote_branch` and the `remote_branch_kept=<branch>@<oid>` fragment
-     in the issue audit line are the only remaining trace. Report both back.
+     in its `audit` line record what stayed, and the branch stays findable from
+     the issue because its name starts with the issue number and the provider
+     links it to the issue. Cleanup never writes the issue body. Report both back.
    A remote that cannot be read blocks the same way and takes the same two
    exits; `--keep-remote-branch` records `state: "unreadable"` instead of an OID.
 7. The merge must have landed on the base the cycle prepared. `cleanup finish`
@@ -178,16 +180,31 @@ The latest user message must confirm the exact targets. A prior generic
 ### 1. Reflect completion into the issue
 
 `cleanup finish` fails closed with `completion_reflected` in `missing` until the
-completion section has been written to the issue; the execution reference
+progress report has been written to the issue; the execution reference
 (`skills/issueops/references/execution.md`) orders this before closure:
 preserve first, then close.
 
+Write the progress report first. It is the only human-written text the harness
+adds to the issue after merge, so write it for the team that reads the issue:
+
+- Read the merged PR body and `issueops status --id "$ISSUEOPS_ID" --json`.
+- Follow the progress-report section of
+  [`references/readable-body.md`](../issueops-remote-write/references/readable-body.md):
+  one or two result sentences, then three to six flow lines (plan, what the
+  review changed, implementation with the PR link, what was checked, what is
+  left). Polish it with `fluent-korean`.
+- Save it to a temporary file outside the worktree. It is not kept anywhere
+  else: the issue body is its record.
+
 ```text
 issueops remote reflect-completion --id "$ISSUEOPS_ID" \
-  --provider "$PROVIDER" --json
+  --provider "$PROVIDER" --body-file "$RESULT_FILE" --json
 issueops remote reflect-completion --id "$ISSUEOPS_ID" \
-  --provider "$PROVIDER" --confirm --json
+  --provider "$PROVIDER" --body-file "$RESULT_FILE" --confirm --json
 ```
+
+The preview's `readability` must show no critical finding: a full commit SHA, a
+local path, or a draft over 2,000 characters is refused.
 
 Continue only when the confirmed result reports `ok: true`. An already-reflected
 completion is an idempotent success.

@@ -9,6 +9,7 @@ import (
 
 	"issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
+	"issueops/internal/domain/artifactreadability"
 	bodysync "issueops/internal/domain/issueopsbodysync"
 	"issueops/internal/port"
 )
@@ -138,7 +139,7 @@ func TestSyncIssueBodyPreviewReportsDriftAndDoesNotWrite(t *testing.T) {
 	prov := &fakeBodySyncProvider{body: live, state: "OPEN"}
 
 	_, result, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
-		Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n새 본문\n",
+		Kind: bodysynccontract.KindIssue, ProposedBody: readableSyncBody,
 	}, prov, actor)
 	if err != nil {
 		t.Fatalf("preview: %v", err)
@@ -190,7 +191,7 @@ func TestSyncIssueBodyConfirmIsFailClosed(t *testing.T) {
 			prov := &fakeBodySyncProvider{body: live, state: "OPEN"}
 
 			_, _, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
-				Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n새 본문\n",
+				Kind: bodysynccontract.KindIssue, ProposedBody: readableSyncBody,
 				ExpectedBodySHA256: tt.expected(live), AcceptRemoteEdits: tt.accept, Confirm: true,
 			}, prov, actor)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
@@ -211,7 +212,7 @@ func TestSyncIssueBodyConfirmWritesPreservesAndRecordsBaseline(t *testing.T) {
 	prov := &fakeBodySyncProvider{body: live, state: "OPEN"}
 
 	updated, result, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
-		Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n새 본문\n",
+		Kind: bodysynccontract.KindIssue, ProposedBody: readableSyncBody,
 		ExpectedBodySHA256: bodysync.SHA256Body(live), Confirm: true,
 	}, prov, actor)
 	if err != nil {
@@ -220,7 +221,7 @@ func TestSyncIssueBodyConfirmWritesPreservesAndRecordsBaseline(t *testing.T) {
 	if !result.Updated || prov.writes != 1 {
 		t.Fatalf("confirm must write exactly once: %+v writes=%d", result, prov.writes)
 	}
-	if !strings.Contains(prov.body, "새 본문") || !strings.Contains(prov.body, port.IssueBodyCompletionStartMarker) {
+	if !strings.Contains(prov.body, "본문 동기화가 원격 본문을") || !strings.Contains(prov.body, port.IssueBodyCompletionStartMarker) {
 		t.Fatalf("the written body must carry the proposal and keep the completion block:\n%s", prov.body)
 	}
 	if len(updated.BodySyncs) != 1 ||
@@ -231,7 +232,7 @@ func TestSyncIssueBodyConfirmWritesPreservesAndRecordsBaseline(t *testing.T) {
 
 	// 같은 본문을 다시 동기화하면 provider를 건드리지 않는다.
 	_, second, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
-		Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n새 본문\n",
+		Kind: bodysynccontract.KindIssue, ProposedBody: readableSyncBody,
 		ExpectedBodySHA256: bodysync.SHA256Body(prov.body), Confirm: true,
 	}, prov, actor)
 	if err != nil {
@@ -366,5 +367,80 @@ func TestSyncBodyRejectsManagedMarkersBeforeAnyProviderCall(t *testing.T) {
 	}
 	if prov.reads != 0 {
 		t.Fatalf("an unusable proposal must not cost a provider round trip")
+	}
+}
+
+// readableSyncBody satisfies the implementation-task contract and the
+// readability check, so fail-closed tests reach the check they exercise.
+const readableSyncBody = `## 요약
+
+본문 동기화가 원격 본문을 새 계약으로 바꿉니다. 끝나면 팀원이 요약만 읽고 변경 이유를 압니다.
+
+## 배경
+
+원격 본문이 사이클의 결정과 달라져 팀원이 잘못된 범위를 읽습니다.
+
+## 완료 기준
+
+- 동기화한 본문의 첫 절이 요약입니다.
+
+## 범위
+
+- 하는 것: 본문 교체
+- 하지 않는 것: 관리 구간 수정
+
+## 검증
+
+어댑터 테스트로 교체 결과를 확인합니다.`
+
+func TestRemoteSyncRefusesCriticalAndReportsLiveReadability(t *testing.T) {
+	stateRoot, record, actor := bodySyncFixture(t)
+	live := "## 문제\n옛 본문\n\n" + syncCompletionBlock
+	record.IssueCreateIntent = bodySyncCreateIntent(record.IssueURL, bodysync.SHA256Body(live))
+	saveBodySyncRecord(t, stateRoot, record)
+	prov := &fakeBodySyncProvider{body: live, state: "OPEN"}
+
+	_, result, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+		Kind: bodysynccontract.KindIssue, ProposedBody: readableSyncBody,
+	}, prov, actor)
+	if err != nil {
+		t.Fatalf("preview: %v", err)
+	}
+	proposed, ok := result.Readability.(artifactreadability.Report)
+	if !ok || !proposed.OK {
+		t.Fatalf("proposed readability = %#v", result.Readability)
+	}
+	liveReport, ok := result.LiveReadability.(artifactreadability.Report)
+	if !ok {
+		t.Fatalf("live readability = %#v", result.LiveReadability)
+	}
+	if !liveReport.OK || len(liveReport.Critical) != 0 {
+		t.Fatalf("live readability must be warning-only: %+v", liveReport)
+	}
+	foundSummary := false
+	for _, w := range liveReport.Warnings {
+		foundSummary = foundSummary || w.Code == "summary_section_missing"
+	}
+	if !foundSummary {
+		t.Fatalf("the old live body's missing summary must surface as a warning: %+v", liveReport.Warnings)
+	}
+
+	readsBefore := prov.reads
+	_, _, err = SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+		Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n요약 절이 없는 본문이라 동기화를 거부해야 합니다.\n",
+		ExpectedBodySHA256: bodysync.SHA256Body(live), Confirm: true,
+	}, prov, actor)
+	if err == nil || !strings.Contains(err.Error(), "summary_section_missing") {
+		t.Fatalf("confirm with a critical proposed body must be refused, got %v", err)
+	}
+	if prov.reads != readsBefore || prov.writes != 0 {
+		t.Fatalf("a refused proposal must not reach the provider: reads=%d writes=%d", prov.reads-readsBefore, prov.writes)
+	}
+
+	_, _, err = SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+		Kind: bodysynccontract.KindIssue, Template: "pull_request", ProposedBody: readableSyncBody,
+	}, prov, actor)
+	if err == nil || !strings.Contains(err.Error(), "template") {
+		t.Fatalf("a template that does not fit the artifact must be refused, got %v", err)
 	}
 }

@@ -47,7 +47,7 @@
 - [x] G12: ADR 파일이 존재하고 색인에 올라 있다
   CHECK: grep -n requester-intent .issueops/ADR.md
   EXPECT: /requester-intent-as-a-derived-artifact/
-  EVIDENCE: 40:| 2026-09-09 | IssueOps seals the requester intent as a derived artifact next to the plan | [record](adr/2026-09-09-issueops-seals-the-requester-intent-as-a-derived-artifact.md) |
+  EVIDENCE: `40:| 2026-09-09 | IssueOps seals the requester intent as a derived artifact next to the plan | [record](adr/2026-09-09-issueops-seals-the-requester-intent-as-a-derived-artifact.md) |`
 - [x] G13: 전체 테스트가 통과한다
   CHECK: python3 -c "import subprocess,sys; r=subprocess.run(['go','test','./...','-count=1'],capture_output=True); print('ALL_PASS' if r.returncode==0 else 'SOME_FAIL'); sys.exit(r.returncode)"
   EXPECT: ALL_PASS

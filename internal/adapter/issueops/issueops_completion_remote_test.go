@@ -2,8 +2,6 @@ package issueops
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -68,7 +66,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{}
 
-	if _, _, err := ReflectIssueCompletion(stateRoot, record.ID, false, true, prov); err == nil {
+	if _, _, _, err := ReflectIssueCompletion(stateRoot, record.ID, readableResult, false, true, prov); err == nil {
 		t.Fatal("missing merge evidence must be rejected")
 	}
 	if prov.updateReq != nil {
@@ -76,7 +74,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	}
 
 	prov.updateRes = port.IssueProviderUpdateIssueBodySectionResult{OK: true, Preview: "[dry-run]"}
-	got, result, err := ReflectIssueCompletion(stateRoot, record.ID, true, false, prov)
+	got, result, _, err := ReflectIssueCompletion(stateRoot, record.ID, readableResult, true, false, prov)
 	if err != nil || result.Preview == "" {
 		t.Fatalf("preview must pass through: %v %+v", err, result)
 	}
@@ -88,7 +86,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	}
 
 	prov.updateRes = port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true, URL: record.IssueURL}
-	got, _, err = ReflectIssueCompletion(stateRoot, record.ID, true, true, prov)
+	got, _, _, err = ReflectIssueCompletion(stateRoot, record.ID, readableResult, true, true, prov)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,81 +95,41 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	}
 }
 
-// cleanup audit은 audit 라인만 더하는 것이 아니라 completion payload 전체를 원격에
-// 쓴다. 그런데 로컬 캐시를 갱신하지 않아, 레코드를 유지하는 cleanup remote-branch
-// 직후 issueops list가 원격에 반영된 사이클을 거짓으로 미반영이라 보고했다.
-func TestReflectCleanupAuditStampsTheCompletionCache(t *testing.T) {
+// readableResult is a progress-report draft that passes the completion check.
+const readableResult = "두 이슈를 서로 다른 세션에서 동시에 진행해도 간섭하지 않음을 실제 실행으로 확인했습니다.\n\n" +
+	"- 계획: 한 사이클을 끝까지 실행한다.\n- 구현: 보고서를 작성했다(PR #85)."
+
+// 진행 결과는 사람이 쓴 원고로만 반영한다. 원고가 없거나, 커밋 SHA 전문이나
+// 로컬 경로가 있거나, 2,000자를 넘으면 provider를 부르기 전에 거부한다(#513).
+func TestReflectCompletionRequiresReadableResult(t *testing.T) {
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{updateRes: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true, URL: record.IssueURL}}
-
-	if err := ReflectCleanupAudit(stateRoot, record, gatherCompletionSection(record), "cleanup 완료: 원격 브랜치 삭제", prov); err != nil {
-		t.Fatal(err)
-	}
-	if prov.updateReq == nil || prov.updateReq.Completion == nil || prov.updateReq.Completion.CleanupAudit == "" {
-		t.Fatalf("audit must be routed inside the completion payload: %+v", prov.updateReq)
-	}
-	got, err := ReadIssueOps(stateRoot, record.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.RemoteCompletion == nil || got.RemoteCompletion.ReflectedAt == "" {
-		t.Fatalf("confirmed audit reflection must stamp ReflectedAt: %+v", got.RemoteCompletion)
-	}
-}
-
-// audit 반영은 best-effort다. 실패가 캐시를 오염시키면 이후 진단이 원격보다
-// 낙관적으로 보고한다.
-func TestReflectCleanupAuditDoesNotStampOnFailure(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		res  port.IssueProviderUpdateIssueBodySectionResult
-		err  error
+		name, body, want string
 	}{
-		{name: "provider error", res: port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err: fmt.Errorf("gh: HTTP 503")},
-		{name: "unconfirmed update", res: port.IssueProviderUpdateIssueBodySectionResult{OK: true}},
+		{"missing", "", "--body-file"},
+		{"harness values", readableResult + "\n- 커밋: " + strings.Repeat("ab", 20) + "\n- 작업 공간: /Users/dev/wt", "commit_sha_full"},
+		{"too long", strings.Repeat("완료 보고 문장입니다. ", 250), "result_too_long"},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			stateRoot, record := completionTestRecord(t)
-			prov := &fakeCompletionProvider{updateRes: tc.res, updateErr: tc.err}
-			if err := ReflectCleanupAudit(stateRoot, record, gatherCompletionSection(record), "cleanup 완료", prov); err == nil {
-				t.Fatal("failed audit reflection must return an error")
-			}
-			got, readErr := ReadIssueOps(stateRoot, record.ID)
-			if readErr != nil {
-				t.Fatal(readErr)
-			}
-			if got.RemoteCompletion != nil && got.RemoteCompletion.ReflectedAt != "" {
-				t.Fatalf("failed reflection must not stamp the cache: %+v", got.RemoteCompletion)
-			}
-		})
+		_, _, _, err := ReflectIssueCompletion(stateRoot, record.ID, tc.body, true, true, prov)
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Fatalf("%s: error = %v, want mention of %q", tc.name, err, tc.want)
+		}
+		if tc.name == "harness values" && !strings.Contains(err.Error(), "local_path") {
+			t.Fatalf("local paths are critical in a progress report: %v", err)
+		}
+		if prov.updateReq != nil {
+			t.Fatalf("%s: a refused draft must not reach the provider", tc.name)
+		}
 	}
-}
 
-func TestReflectIssueCompletionGathersArtifactsFromDisk(t *testing.T) {
-	stateRoot, record := completionTestRecord(t)
-	artifactDir := filepath.Join(record.Repo, IssueOpsArtifactDir)
-	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(artifactDir, "plan.md"), []byte("plan 본문"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(artifactDir, "verified-execution-loop.md"), []byte("verified-execution 본문"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	prov := &fakeCompletionProvider{updateRes: port.IssueProviderUpdateIssueBodySectionResult{OK: true}}
-	if _, _, err := ReflectIssueCompletion(stateRoot, record.ID, true, false, prov); err != nil {
-		t.Fatal(err)
+	_, _, report, err := ReflectIssueCompletion(stateRoot, record.ID, readableResult, true, true, prov)
+	if err != nil || !report.OK {
+		t.Fatalf("a readable draft must be reflected: err=%v report=%+v", err, report)
 	}
 	c := prov.updateReq.Completion
-	if c.PlanBody != "plan 본문" || !strings.Contains(c.TuringSummary, "verified-execution 본문") {
-		t.Fatalf("artifact bodies must be gathered: %+v", c)
-	}
-	if len(c.ArtifactManifest) != 2 {
-		t.Fatalf("manifest must digest existing artifacts only: %+v", c.ArtifactManifest)
-	}
-	if c.RemoteArtifactURL != "https://github.com/acme/repo/pull/85" {
-		t.Fatalf("remote artifact url must come from the record: %+v", c)
+	if c == nil || c.ResultBody != readableResult || c.RemoteArtifactURL != "https://github.com/acme/repo/pull/85" {
+		t.Fatalf("the payload carries the draft and the PR URL only: %+v", c)
 	}
 }
 
@@ -203,4 +161,8 @@ func TestCloseIssueOpsRemoteIssueGatesAndStamps(t *testing.T) {
 	if prov.closeReq.IssueURL != record.IssueURL {
 		t.Fatalf("close must target the linked issue: %+v", prov.closeReq)
 	}
+}
+
+func portUpdateResult(updated bool) port.IssueProviderUpdateIssueBodySectionResult {
+	return port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: updated}
 }

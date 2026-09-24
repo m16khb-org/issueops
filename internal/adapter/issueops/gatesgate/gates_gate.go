@@ -162,6 +162,15 @@ func AdvancePhaseWithActor(stateRoot, id, to string, actor issueops.IssueOpsActo
 	return issueops.AdvanceIssueOpsPhaseWithActor(stateRoot, id, to, actor)
 }
 
+// AdvancePhaseWithActorReport는 AdvancePhaseWithActor와 같은 gate를 거치고,
+// 전이가 쓴 추적 사본 보고를 함께 돌려준다(#513).
+func AdvancePhaseWithActorReport(stateRoot, id, to string, actor issueops.IssueOpsActor) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsTrackedMaterials, error) {
+	if err := guardPRPhase(stateRoot, id, to); err != nil {
+		return issueopscontract.IssueOpsRecord{OK: false}, issueopscontract.IssueOpsTrackedMaterials{}, err
+	}
+	return issueops.AdvanceIssueOpsPhaseWithActorReport(stateRoot, id, to, actor)
+}
+
 // GatesRootFor는 게이트 파일을 찾을 루트다. worktree가 있으면 worktree, 없으면
 // 레코드 repo를 쓴다.
 func GatesRootFor(record issueopscontract.IssueOpsRecord) string {

@@ -31,7 +31,6 @@ type CleanupDeps struct {
 	ObserveNativeProcessAncestry                      func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
 	ReadIssueOps                                      func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
 	ReadRemoteIssueSnapshot                           func(ctx context.Context, prov port.IssueProvider, req port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error)
-	ReflectCleanupAudit                               func(stateRoot string, record issueopscontract.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string, prov port.IssueProvider) error
 	ResolveRecordProvider                             func(issueopscontract.IssueOpsRecord) string
 }
 
@@ -76,9 +75,6 @@ func neutralCleanupDeps() CleanupDeps {
 		},
 		ReadRemoteIssueSnapshot: func(context.Context, port.IssueProvider, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
 			return port.ExecutionIssueSnapshot{}, errCleanupNotConfigured
-		},
-		ReflectCleanupAudit: func(string, issueopscontract.IssueOpsRecord, port.IssueProviderCompletionSection, string, port.IssueProvider) error {
-			return errCleanupNotConfigured
 		},
 		ResolveRecordProvider: func(issueopscontract.IssueOpsRecord) string { return "" },
 	}

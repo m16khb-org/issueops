@@ -126,6 +126,9 @@ blocker가 하나라도 있으면 compatibility review는 승인되지 않는다
   없다"는 source checkout 작업의 근거가 되지 않는다.
 - 검증은 변경 범위에 집중한 명령을 실행하고 명령과 결과를 그대로 기록한다.
   실행하지 않은 검증을 `pass`로 적지 않는다.
+- `phase --to implement`와 `phase --to ai-slop-clean`은 `.issueops/issues/<n>/`에 구현 자료의
+  추적 사본(plan.md, intent.md, spec.md, plan-review.md)을 쓰고 응답 `tracked_materials`에
+  경로를 보고한다. 사본은 변경 집합에 들어가므로 구현 진입 뒤 첫 커밋에 포함한다.
 - commit·push는 승인된 종료점에 포함되어 있으면 [`atomic-commit-push`](../atomic-commit-push/SKILL.md)로
   이어간다. 원래 요청에서 허용된 issue branch의 publication을 다시 묻지 않는다.
 - API/DTO/OpenAPI 변경은 `.issueops/OPEN_API_SPEC.md` gate를 적용한다.

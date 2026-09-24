@@ -320,7 +320,7 @@ func TestRunRemoteCreatePRUsesPublicationHandlerForPreviewAndConfirm(t *testing.
 		},
 	}
 	baseArgs := []string{
-		"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", "Body",
+		"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", readablePRBody,
 		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "octocat", "--json",
 	}
 	if err := Run(baseArgs, deps); err != nil {
@@ -337,8 +337,8 @@ func TestRunRemoteCreatePRUsesPublicationHandlerForPreviewAndConfirm(t *testing.
 	if handlerCalls != 2 || len(printed) != 2 {
 		t.Fatalf("handlerCalls=%d printed=%#v", handlerCalls, printed)
 	}
-	preview := printed[0].(port.IssueProviderCreatePullRequestResult)
-	created := printed[1].(port.IssueProviderCreatePullRequestResult)
+	preview := printed[0].(createPRResponse)
+	created := printed[1].(createPRResponse)
 	if preview.Preview != "would create pull request" || created.URL != "https://github.com/acme/repo/pull/195" {
 		t.Fatalf("preview=%#v created=%#v", preview, created)
 	}
@@ -372,7 +372,7 @@ func TestRunRemoteCreatePRObservesAncestryOnlyForConfirmedMutation(t *testing.T)
 		}},
 	}
 	baseArgs := []string{
-		"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", "Body",
+		"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", readablePRBody,
 		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "octocat",
 		"--host", "codex", "--session-id", "session-1", "--session-pid", "42",
 		"--session-started-at", "2026-07-23T00:00:00Z", "--session-executable", "/bin/codex", "--cwd", record.Repo,
@@ -411,7 +411,7 @@ func TestRunRemoteCreateChildConfirmRecordsChildLink(t *testing.T) {
 		},
 	}
 
-	if err := Run([]string{"create-child", "--id", record.ID, "--title", "Child", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
+	if err := Run([]string{"create-child", "--id", record.ID, "--title", "Child", "--body", readableChildBody, "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
 		t.Fatalf("create-child confirm returned error: %v", err)
 	}
 	updated, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
@@ -435,7 +435,7 @@ func TestRunRemoteCreateChildConfirmUsesActiveLeaseActor(t *testing.T) {
 	writeFakeGhForCreateChild(t, binDir)
 	t.Setenv("PATH", binDir)
 	err := Run([]string{
-		"create-child", "--id", record.ID, "--title", "Child", "--body", "Body",
+		"create-child", "--id", record.ID, "--title", "Child", "--body", readableChildBody,
 		"--label", "bug", "--assignee", "octocat", "--host", "codex",
 		"--session-id", "session-1", "--cwd", worktree, "--confirm", "--json",
 	}, Deps{
@@ -463,7 +463,7 @@ func TestRunRemoteCreateChildRejectsWrongActorBeforeProviderCall(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 
 	err := Run([]string{
-		"create-child", "--id", record.ID, "--title", "Child", "--body", "Body",
+		"create-child", "--id", record.ID, "--title", "Child", "--body", readableChildBody,
 		"--label", "bug", "--assignee", "octocat", "--host", "codex",
 		"--session-id", "wrong-session", "--cwd", worktree, "--confirm", "--json",
 	}, Deps{
@@ -758,7 +758,7 @@ func TestRunRemoteCreateIssueConfirmVerifiesLiveIssue(t *testing.T) {
 			return nil
 		},
 	}
-	if err := Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
+	if err := Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--template", "implementation_task", "--body", readableIssueBody, "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
 		t.Fatalf("create-issue confirm returned error: %v", err)
 	}
 	if len(verified) != 1 {
@@ -793,7 +793,7 @@ func TestRunRemoteCreateIssueConfirmFailsWhenLiveVerificationFails(t *testing.T)
 			return errors.New("remote artifact missing verified label(s): bug")
 		},
 	}
-	if err := Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm"}, deps); err == nil || !strings.Contains(err.Error(), "missing verified label") {
+	if err := Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--template", "implementation_task", "--body", readableIssueBody, "--label", "bug", "--assignee", "octocat", "--confirm"}, deps); err == nil || !strings.Contains(err.Error(), "missing verified label") {
 		t.Fatalf("expected live verification failure to propagate, got %v", err)
 	}
 	stored, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)

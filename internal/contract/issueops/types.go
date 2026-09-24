@@ -261,6 +261,14 @@ type IssueOpsDevilsAdvocateReview struct {
 	IssueReflectedAt string                        `json:"issue_reflected_at,omitempty"`
 }
 
+// IssueOpsTrackedMaterials reports the tracked implementation-material copies a
+// phase transition wrote into .issueops/issues/<n>/ (#513). It is a response
+// value only, never a record field: the record decoder rejects unknown fields.
+type IssueOpsTrackedMaterials struct {
+	Written  []string `json:"written,omitempty"`
+	Warnings []string `json:"warnings,omitempty"`
+}
+
 // IssueOpsDevilsAdvocateRound는 덮어쓰기 전의 라운드 사본이다(History 제외).
 type IssueOpsDevilsAdvocateRound struct {
 	Verdict            string   `json:"verdict"`

@@ -19,7 +19,7 @@ type IssueOpsActor struct {
 //
 // 이 경로는 cleanup finish와 두 가지 축에서 다르다.
 //   - 원격 무접촉: 이슈 본문·PR/MR·원격 브랜치 어느 것도 읽지도 쓰지도 않는다.
-//     ReflectCleanupAudit를 재사용하지 않는 이유는 빈 completion payload가 열린
+//     completion 반영 경로를 쓰지 않는 이유는 빈 completion payload가 열린
 //     이슈에 가짜 "완료 기록" 섹션을 append하고, 그 마커만 보는
 //     `completion_reflected` 게이트가 미래 사이클의 파괴적 finish를 영구
 //     개방하기 때문이다(design-review F3).
@@ -162,6 +162,9 @@ type CleanupFinishResult struct {
 	Branch          string   `json:"branch,omitempty"`
 	WorktreePresent bool     `json:"worktree_present"`
 	BranchPresent   bool     `json:"branch_present"`
+	// Warnings never block finish. tracked_materials_missing marks a cycle
+	// that entered implement before tracked material copies existed (#513).
+	Warnings []string `json:"warnings,omitempty"`
 	// WorkspaceProcesses는 workspace_processes_quiescent가 막았을 때 그 판정의
 	// 근거를 담는다. 게이트는 이미 PID와 명령명을 관측하는데 개수만 쓰고 버려서,
 	// 차단당한 사용자가 lsof를 직접 돌려야 했다 — 그 lsof마저 워크트리 경로를
@@ -177,11 +180,12 @@ type CleanupFinishResult struct {
 	OrcaRemoved               bool                      `json:"orca_removed,omitempty"`
 	WorktreeRemoved           bool                      `json:"worktree_removed,omitempty"`
 	BranchDeleted             bool                      `json:"branch_deleted,omitempty"`
-	AuditReflected            bool                      `json:"audit_reflected,omitempty"`
-	AuditError                string                    `json:"audit_error,omitempty"`
-	RecordDeleted             bool                      `json:"record_deleted,omitempty"`
-	FailedStep                string                    `json:"failed_step,omitempty"`
-	NextCommand               string                    `json:"next_command,omitempty"`
+	// Audit is the cleanup audit line. It is reported here only; cleanup
+	// never writes the issue body (#513).
+	Audit         string `json:"audit,omitempty"`
+	RecordDeleted bool   `json:"record_deleted,omitempty"`
+	FailedStep    string `json:"failed_step,omitempty"`
+	NextCommand   string `json:"next_command,omitempty"`
 	// SupersededBy는 merged 게이트를 replacement 증거로 충족했을 때 그 artifact
 	// URL이다. 무엇을 근거로 통과했는지 결과만 보고 알 수 있어야 한다.
 	SupersededBy string `json:"superseded_by,omitempty"`
@@ -244,10 +248,10 @@ type CleanupRemoteBranchResult struct {
 	AlreadyAbsent        bool   `json:"already_absent,omitempty"`
 	Deleted              bool   `json:"deleted,omitempty"`
 	DeletedAt            string `json:"deleted_at,omitempty"`
-	AuditReflected       bool   `json:"audit_reflected,omitempty"`
-	AuditError           string `json:"audit_error,omitempty"`
-	FailedStep           string `json:"failed_step,omitempty"`
-	NextCommand          string `json:"next_command,omitempty"`
+	// Audit is the deletion audit line, reported here only (#513).
+	Audit       string `json:"audit,omitempty"`
+	FailedStep  string `json:"failed_step,omitempty"`
+	NextCommand string `json:"next_command,omitempty"`
 	// SupersededBy는 게이트 ⑩을 replacement 증거로 통과했을 때 그 artifact URL이다.
 	SupersededBy string `json:"superseded_by,omitempty"`
 	// SupersedeError는 replacement 증거가 제시됐으나 검증에 실패한 사유다.

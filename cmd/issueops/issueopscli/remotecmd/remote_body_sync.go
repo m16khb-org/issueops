@@ -29,6 +29,7 @@ func runRemoteBodySync(ctx context.Context, name, kind string, args []string, de
 	artifactURL := fs.String("url", "", "artifact URL; for sync-issue a provider-native child of the linked issue")
 	body := fs.String("body", "", "replacement body markdown")
 	bodyFile := fs.String("body-file", "", "replacement body markdown file")
+	template := fs.String("template", "", "body contract of the replacement; inferred from its sections when omitted")
 	expectedBodySHA := fs.String("expected-body-sha256", "", "digest of the live body the replacement was built on; required with --confirm")
 	acceptRemoteEdits := fs.Bool("accept-remote-edits", false, "acknowledge that the body was edited outside the harness and the replacement preserves those edits")
 	host := fs.String("host", "", "native holder host")
@@ -56,7 +57,7 @@ func runRemoteBodySync(ctx context.Context, name, kind string, args []string, de
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	replacement, err := resolveTemplateBody(resolveTemplateBodyRequest{Body: *body, BodyFile: *bodyFile})
+	replacement, err := readBodyInput(*body, *bodyFile)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
@@ -76,6 +77,7 @@ func runRemoteBodySync(ctx context.Context, name, kind string, args []string, de
 		Kind:               kind,
 		URL:                *artifactURL,
 		ProposedBody:       replacement,
+		Template:           *template,
 		ExpectedBodySHA256: *expectedBodySHA,
 		AcceptRemoteEdits:  *acceptRemoteEdits,
 		Confirm:            *confirm,

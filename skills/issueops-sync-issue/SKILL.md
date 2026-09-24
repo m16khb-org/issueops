@@ -94,35 +94,28 @@ issueops remote sync-issue \
 
 ## 읽기 좋은 body
 
-본문 형식은 [`issueops-create-issue`](../issueops-create-issue/SKILL.md)의
-template 계약을 그대로 따른다. 최신화라고 해서 낡은 문장을 남겨 두고 새
-문단만 덧붙이지 않는다. **본문은 통째로 교체되므로, 지금 사실이 아닌 문장은
-지운다.**
+본문 형식은 `issueops remote render-template` 골격과
+[`references/readable-body.md`](../issueops-remote-write/references/readable-body.md)를
+그대로 따른다. 최신화라고 해서 낡은 문장을 남겨 두고 새 문단만 덧붙이지 않는다.
+**본문은 통째로 교체되므로, 지금 사실이 아닌 문장은 지운다.** 옛 형식(`## 문제`로
+시작하는 본문)을 동기화할 때는 새 계약의 절로 다시 쓴다.
 
 원격에 쓰기 전에 `fluent-korean` 스킬을 Skill 도구로 호출해서 문장을 다듬는다.
-한국어 게이트는 한글 비율만 보기 때문에 번역투와 AI 티는 걸러지지 않는다.
-이 호출을 건너뛴 body로는 `--confirm`을 붙이지 않는다.
+가독성 검사는 문장이 자연스러운지 판정하지 않으므로 번역투와 AI 티는 걸러지지
+않는다. 이 호출을 건너뛴 body로는 `--confirm`을 붙이지 않는다.
 
-### 좋은 예: child가 늘어난 뒤의 최신화
+### 가독성 판정 읽기
 
-```markdown
-## 문제
-Issue와 PR/MR 본문을 만든 뒤 갱신할 경계가 없어 원격 텍스트가 사이클보다 낡는다.
+preview 응답에는 판정이 두 개 있다.
 
-## 현재 근거
-`internal/port/provider.go`의 `UpdateIssueBodySection`은 관리 섹션 두 개만 바꾼다.
+| 필드 | 대상 | 쓰는 법 |
+|---|---|---|
+| `readability` | 제안 본문 | critical이 있으면 confirm이 거부된다. 고친 뒤 preview부터 다시 한다. warning은 고치거나 남기는 이유를 적는다 |
+| `live_readability` | 원격의 현재 본문 | warning만 담는다. 여기 나온 요약 누락·해시·하네스 용어가 새 본문에서 사라졌는지 확인한다 |
 
-## 하위 Task
-- [p] https://github.com/acme/repo/issues/501 — 본문 병합 도메인, wave 1, prerequisite none
-- [s] https://github.com/acme/repo/issues/502 — CLI 표면, wave 2, prerequisite #501
-
-## 완료 기준
-- [ ] preview가 drift와 보존 섹션을 보고한다.
-- [ ] confirm이 compare-and-swap 없이는 쓰지 않는다.
-
-## 검증
-`go test ./internal/domain/issueopsbodysync ./internal/adapter/issueops -count=1`
-```
+`--template`을 생략하면 제안 본문의 절 제목으로 템플릿을 추론한다(`## 재현 절차` →
+bug, `## 제안` → proposal, `--url` child → child_task, 그 밖 → implementation_task).
+추론이 의도와 다르면 `--template`을 넘긴다.
 
 ### 나쁜 예
 
@@ -142,7 +135,7 @@ preview → 본문 재작성 → 같은 sha로 confirm 순서를 지킨다.
 ```bash
 issueops remote sync-issue \
   --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
-  --body-file "$BODY_FILE" --json
+  --template implementation_task --body-file "$BODY_FILE" --json
 ```
 
 preview가 돌려준 `expected_body_sha256`을 그대로 넘겨 확정한다.
@@ -173,7 +166,8 @@ confirm 결과의 `updated`, `remote_body_sha256`, `preserved_sections`를 확�
 
 ## 품질·성능 게이트
 
-- 품질: drift 판정 기록, 관리 블록 보존, 원격 write 전 `fluent-korean` 호출,
+- 품질: drift 판정 기록, 관리 블록 보존, `readability.critical` 0과 warning 처리,
+  원격 write 전 `fluent-korean` 호출,
   compare-and-swap sha 일치, child hierarchy 검증, secret redaction, readback.
 - 성능: 최신화 단계에서만 이 스킬을 로드한다. 생성 스킬과 PR reference를
   함께 중복 로드하지 않는다.
