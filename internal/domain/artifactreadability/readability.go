@@ -225,6 +225,16 @@ func MaskHarnessValues(text string) string {
 	return maskLocalPathRe.ReplaceAllString(text, "[로컬 경로 생략]")
 }
 
+var planReviewVerdictLabels = map[string]string{"pass": "통과", "revise": "수정 요청", "stop": "중단"}
+
+// PlanReviewVerdictLabel is the word a reader sees for a plan-review verdict.
+func PlanReviewVerdictLabel(verdict string) string {
+	if label := planReviewVerdictLabels[verdict]; label != "" {
+		return label
+	}
+	return verdict
+}
+
 // KindFor maps a template artifact kind to the readability kind that
 // judges it.
 func KindFor(kind artifacttemplate.IssueOpsArtifactKind) Kind {

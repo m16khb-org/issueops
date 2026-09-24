@@ -122,6 +122,10 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	if _, err := loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), id, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
+	// The transition wrote tracked material copies; they ship in the same commit.
+	if code, _, stderr := preflight.GitCmd(worktree, "add", ".issueops/issues"); code != 0 {
+		t.Fatalf("git add tracked materials failed: %s", stderr)
+	}
 	if code, _, stderr := preflight.GitCmd(worktree, "commit", "-q", "-m", "feat: implement remote verify cli"); code != 0 {
 		t.Fatalf("git commit implementation failed: %s", stderr)
 	}

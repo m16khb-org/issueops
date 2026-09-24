@@ -110,6 +110,9 @@ func CleanupFinish(ctx context.Context, stateRoot string, req CleanupFinishReque
 		return CleanupFinishResult{OK: false, ID: req.ID}, err
 	}
 	result := CleanupFinishResult{OK: true, ID: record.ID, Preview: !req.Apply}
+	if trackedMaterialsMissing(record) {
+		result.Warnings = append(result.Warnings, trackedMaterialsMissingWarning)
+	}
 	inventory, missing := cleanupFinishGates(ctx, record, req, deps, &result)
 	result.Missing = missing
 	if len(missing) > 0 {

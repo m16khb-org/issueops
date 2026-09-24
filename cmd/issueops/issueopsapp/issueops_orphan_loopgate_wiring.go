@@ -24,6 +24,7 @@ func configureIssueOpsOrphanAndLoopGate() {
 		AdvancePhaseWithActor: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return gatesgate.AdvancePhaseWithActor(stateRoot, id, to, actor)
 		},
+		AdvancePhaseReport:         gatesgate.AdvancePhaseWithActorReport,
 		StrictPRReadinessWithState: gatesgate.StrictPRReadinessWithState,
 	})
 }

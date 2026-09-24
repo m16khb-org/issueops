@@ -37,13 +37,6 @@ func SectionMarkers(section string) (start, end string, err error) {
 	return "", "", fmt.Errorf("unsupported issue body section %q (want %s|%s)", section, SectionDevilsAdvocate, SectionCompletion)
 }
 
-// planReviewVerdictLabels are the words a reader sees for each verdict.
-var planReviewVerdictLabels = map[string]string{
-	"pass":   "통과",
-	"revise": "수정 요청",
-	"stop":   "중단",
-}
-
 // RenderDevilsAdvocateSection builds the delimited plan-review region: one
 // flow line over every round ("1차 수정 요청(지적 3건) → 계획 수정 → 2차
 // 통과"), and the stop reasons when the current verdict is a stop. Finding
@@ -61,11 +54,7 @@ func RenderDevilsAdvocateSection(req port.IssueProviderUpdateIssueBodySectionReq
 		if i > 0 {
 			steps = append(steps, "계획 수정")
 		}
-		label := planReviewVerdictLabels[round.Verdict]
-		if label == "" {
-			label = round.Verdict
-		}
-		step := fmt.Sprintf("%d차 %s", i+1, label)
+		step := fmt.Sprintf("%d차 %s", i+1, artifactreadability.PlanReviewVerdictLabel(round.Verdict))
 		if round.Findings > 0 {
 			step += fmt.Sprintf("(지적 %d건)", round.Findings)
 		}

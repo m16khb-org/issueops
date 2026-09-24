@@ -162,6 +162,9 @@ type CleanupFinishResult struct {
 	Branch          string   `json:"branch,omitempty"`
 	WorktreePresent bool     `json:"worktree_present"`
 	BranchPresent   bool     `json:"branch_present"`
+	// Warnings never block finish. tracked_materials_missing marks a cycle
+	// that entered implement before tracked material copies existed (#513).
+	Warnings []string `json:"warnings,omitempty"`
 	// WorkspaceProcesses는 workspace_processes_quiescent가 막았을 때 그 판정의
 	// 근거를 담는다. 게이트는 이미 PID와 명령명을 관측하는데 개수만 쓰고 버려서,
 	// 차단당한 사용자가 lsof를 직접 돌려야 했다 — 그 lsof마저 워크트리 경로를

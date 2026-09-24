@@ -12,6 +12,7 @@ import (
 	"issueops/internal/adapter/issueops/pathutil"
 	"issueops/internal/adapter/issueops/readinesspaths"
 	model "issueops/internal/contract/issueops"
+	remote "issueops/internal/domain/issueopsremote"
 )
 
 // LocalChangeObservation binds one readiness evaluation to a verified path
@@ -247,6 +248,30 @@ func PathMatchesPlan(record model.IssueOpsRecord, worktree, path string) bool {
 	return path == planPath
 }
 
+// pathIsPlanningMaterial reports a path that is not implementation work: the
+// linked plan, or a tracked material copy a phase transition derived from the
+// plan and the record (#513). Such a path alone never satisfies
+// implementation_changes.
+func pathIsPlanningMaterial(record model.IssueOpsRecord, worktree, path string) bool {
+	if PathMatchesPlan(record, worktree, path) {
+		return true
+	}
+	rel := path
+	if filepath.IsAbs(path) {
+		r, err := filepath.Rel(pathutil.CleanAbsPath(worktree), pathutil.CleanAbsPath(path))
+		if err != nil {
+			return false
+		}
+		rel = r
+	}
+	rel = filepath.ToSlash(filepath.Clean(rel))
+	issueURL := record.IssueURL
+	if strings.TrimSpace(issueURL) == "" && record.BranchPrepare != nil {
+		issueURL = record.BranchPrepare.IssueURL
+	}
+	return remote.IsTrackedMaterialPath(issueURL, rel)
+}
+
 func gitStatusHasImplementationChange(record model.IssueOpsRecord, worktree string) bool {
 	out := gitStatusPorcelain(worktree)
 	for _, line := range strings.Split(out, "\n") {
@@ -254,7 +279,7 @@ func gitStatusHasImplementationChange(record model.IssueOpsRecord, worktree stri
 		if path == "" {
 			continue
 		}
-		if !PathMatchesPlan(record, worktree, path) {
+		if !pathIsPlanningMaterial(record, worktree, path) {
 			return true
 		}
 	}
@@ -277,7 +302,7 @@ func gitHeadDiffersFromBase(record model.IssueOpsRecord, worktree string) bool {
 	_, names, _ := GitCmd(worktree, "diff", "--name-only", ref+"..HEAD", "--")
 	for _, name := range strings.Split(names, "\n") {
 		name = strings.TrimSpace(name)
-		if name != "" && !PathMatchesPlan(record, worktree, name) {
+		if name != "" && !pathIsPlanningMaterial(record, worktree, name) {
 			return true
 		}
 	}
@@ -296,7 +321,7 @@ func fileTreeHasImplementationChange(record model.IssueOpsRecord, worktree strin
 			}
 			return nil
 		}
-		if !PathMatchesPlan(record, worktree, path) {
+		if !pathIsPlanningMaterial(record, worktree, path) {
 			found = true
 		}
 		return nil

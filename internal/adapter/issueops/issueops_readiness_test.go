@@ -226,7 +226,7 @@ func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChan
 	if strings.TrimSpace(record.AISlopCleanFingerprint) == "" {
 		t.Fatalf("ai-slop-clean should record changed-file fingerprint: %+v", record)
 	}
-	if code, _, stderr := preflight.GitCmd(worktree, "add", "internal/demo.go", "plans/demo.md"); code != 0 {
+	if code, _, stderr := preflight.GitCmd(worktree, "add", "internal/demo.go", "plans/demo.md", ".issueops/issues"); code != 0 {
 		t.Fatalf("git add failed: %s", stderr)
 	}
 	if code, _, stderr := preflight.GitCmd(worktree, "commit", "-q", "-m", "feat: implement after clean"); code != 0 {

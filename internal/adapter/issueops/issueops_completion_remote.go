@@ -43,6 +43,9 @@ func ReflectIssueCompletion(stateRoot, id, resultBody string, merged, confirm bo
 		return issueops.IssueOpsRecord{OK: false}, none, report, fmt.Errorf("--body-file is required with --confirm: write the progress report for human readers first")
 	}
 	report = artifactreadability.Check(artifactreadability.Input{Kind: artifactreadability.KindCompletion, Body: resultBody})
+	if trackedMaterialsMissing(record) {
+		report.Warnings = append(report.Warnings, artifactreadability.Finding{Code: "tracked_materials_missing", Message: trackedMaterialsMissingWarning})
+	}
 	if confirm && !report.OK {
 		return issueops.IssueOpsRecord{OK: false}, none, report, artifactreadability.RefusalError(report)
 	}
