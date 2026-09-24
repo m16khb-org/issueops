@@ -20,6 +20,9 @@ description: Create, check, and report task gate ledgers with the issueops gates
 - 번호가 없으면 `.issueops/gates/<scope>.md`다.
 - 원장은 워크트리 **안**에 둔다. 밖에 두면 변경 집합에 들어가지 않아 커밋되지 않고,
   다음 세션이 그 원장을 찾지 못한다.
+- 같은 폴더의 `plan.md`, `intent.md`, `spec.md`, `plan-review.md`는 구현 자료의 추적
+  사본이다. 경로를 제한하는 게이트를 쓸 때 `.issueops/issues/<n>/` 전체를 허용 경로에
+  넣는다. 봉인 원본이 있는 `artifact/` 하위는 계속 무시된다.
 - 같은 번호의 canonical 원장과 legacy 원장이 함께 있으면 pr 진입이
   `duplicate_issue_artifact:<n>`으로 막힌다. 옛 경로의 원장은 옮기고 지운다.
 
