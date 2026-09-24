@@ -495,24 +495,19 @@ func TestCleanupFinishReportsStoppedProcessesAndAudit(t *testing.T) {
 	deps := finishDeps(&fakeFinishGit{branchOID: "abc123"})
 	deps.Processes = worldCleanupProcesses(world, nil)
 	deps.OrcaTerminals = readyOrca(t, worktree, "term_a")
-	audit := ""
-	deps.ReflectAudit = func(_ issueops.IssueOpsRecord, _ portCompletionSection, line string) error {
-		audit = line
-		return nil
-	}
 	preview, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, true, preview.Fingerprint), deps)
-	if err != nil || !result.AuditReflected {
-		t.Fatalf("apply must succeed and reflect the audit line: err=%v result=%+v", err, result)
+	if err != nil || result.Audit == "" {
+		t.Fatalf("apply must succeed and report the audit line: err=%v result=%+v", err, result)
 	}
 	if result.OrcaTerminalsStopped != 1 || len(result.WorkspaceProcessesStopped) != 1 {
 		t.Fatalf("stopped inventory must be reported: %+v", result)
 	}
-	if !strings.Contains(audit, "stopped=1") || !strings.Contains(audit, "terminals=1") {
-		t.Fatalf("audit line must record the stop counts: %q", audit)
+	if !strings.Contains(result.Audit, "stopped=1") || !strings.Contains(result.Audit, "terminals=1") {
+		t.Fatalf("audit line must record the stop counts: %q", result.Audit)
 	}
 }
 

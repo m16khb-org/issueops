@@ -497,66 +497,24 @@ func TestCleanupFinishBranchDeleteFailureAndGates(t *testing.T) {
 	}
 }
 
-// C2-F1(c): ④' 감사는 파괴 시작 전 스냅샷으로 렌더되어, 워크트리가 삭제된
-// 뒤에도 보존 본문(plan/spec)이 빈 값으로 덮이지 않는다.
-func TestCleanupFinishAuditUsesPreDestructionSnapshot(t *testing.T) {
-	stateRoot, record, worktree := finishTestRecord(t, true)
-	artifactDir := filepath.Join(worktree, ".issueops", "artifact")
-	if err := os.MkdirAll(artifactDir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(artifactDir, "plan.md"), []byte("보존되어야 하는 계획"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	git := &fakeFinishGit{branchOID: "abc123"}
-	deps := finishDeps(git)
-	var audited *struct {
-		completion string
-		audit      string
-	}
-	deps.ReflectAudit = func(_ issueops.IssueOpsRecord, completion portCompletionSection, audit string) error {
-		audited = &struct {
-			completion string
-			audit      string
-		}{completion.PlanBody, audit}
-		// ④' 시점에는 이미 git worktree remove가 실행된 뒤다 — 스냅샷이
-		// 아니라면 PlanBody는 빈 값이었을 것이다.
-		return nil
-	}
+// 감사 라인은 이슈 본문이 아니라 응답 audit에만 남는다(#513). 이슈 본문의
+// 진행 결과는 사람이 쓴 원고라서, 정리 단계가 그 구간을 다시 렌더하면 안 된다.
+func TestCleanupFinishReportsAuditInResponse(t *testing.T) {
+	stateRoot, record, _ := finishTestRecord(t, true)
+	deps := finishDeps(&fakeFinishGit{branchOID: "abc123"})
 	preview, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatal(err)
 	}
-	// fake git은 실제 파일을 지우지 않으므로 여기서 실제 삭제를 흉내낸다:
-	// apply 직전 스냅샷 → 단계 실행 → ④' 검증 순서를 그대로 태운다.
+	if preview.Audit != "" {
+		t.Fatalf("preview destroys nothing and must not report an audit: %q", preview.Audit)
+	}
 	result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, true, preview.Fingerprint), deps)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !result.AuditReflected || result.AuditError != "" {
-		t.Fatalf("audit must be reflected without error: %+v", result)
-	}
-	if audited == nil || audited.completion != "보존되어야 하는 계획" || !strings.Contains(audited.audit, "cleanup 완료") {
-		t.Fatalf("audit must render the pre-destruction snapshot: %+v", audited)
-	}
-
-	// 실패 표면화: ReflectAudit 에러는 ⑤를 막지 않되 AuditError로 드러난다.
-	stateRoot2, record2, _ := finishTestRecord(t, true)
-	git2 := &fakeFinishGit{branchOID: "abc123"}
-	deps2 := finishDeps(git2)
-	deps2.ReflectAudit = func(issueops.IssueOpsRecord, portCompletionSection, string) error {
-		return fmt.Errorf("provider unavailable")
-	}
-	preview2, err := CleanupFinish(context.Background(), stateRoot2, finishRequest(record2.ID, false, ""), deps2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	result2, err := CleanupFinish(context.Background(), stateRoot2, finishRequest(record2.ID, true, preview2.Fingerprint), deps2)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !result2.RecordDeleted || result2.AuditReflected || !strings.Contains(result2.AuditError, "provider unavailable") {
-		t.Fatalf("audit failure must be surfaced without blocking deletion: %+v", result2)
+	if !result.RecordDeleted || !strings.Contains(result.Audit, "cleanup 완료") || !strings.Contains(result.Audit, "abc123") {
+		t.Fatalf("apply must report the audit line in the response: %+v", result)
 	}
 }
 

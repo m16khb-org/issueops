@@ -69,7 +69,9 @@ decision and a separate `issueops cleanup remote-branch` flow.
      server. Because finish deletes the record, the typed deletion path can no
      longer reach that branch afterwards; the apply result's
      `kept_remote_branch` and the `remote_branch_kept=<branch>@<oid>` fragment
-     in the issue audit line are the only remaining trace. Report both back.
+     in its `audit` line record what stayed, and the branch stays findable from
+     the issue because its name starts with the issue number and the provider
+     links it to the issue. Cleanup never writes the issue body. Report both back.
    A remote that cannot be read blocks the same way and takes the same two
    exits; `--keep-remote-branch` records `state: "unreadable"` instead of an OID.
 7. The merge must have landed on the base the cycle prepared. `cleanup finish`

@@ -20,14 +20,9 @@ import (
 // CleanupFinishDeps는 파괴 단계의 외부 표면 주입점이다. Git은 (dir, args...)를
 // 실행해 (exitCode, stdout)을 돌려준다. RemoveOrcaWorktree는 orca 관리
 // 워크스페이스 회수이며 "이미 없음"을 성공으로 정규화해야 한다(멱등 계약).
-// ReflectAudit는 ④' 감사 라인의 멱등 병합(UpdateIssueBodySection 재사용)이다.
 type CleanupFinishDeps struct {
 	Git                func(dir string, args ...string) (int, string)
 	RemoveOrcaWorktree func(ctx context.Context, worktreeID string) error
-	// ReflectAudit는 ②(파괴 시작) 이전에 스냅샷한 completion payload에 감사
-	// 라인을 더해 멱등 병합한다 — 삭제된 워크트리를 다시 읽어 보존 본문을
-	// 빈 값으로 덮어쓰는 사고를 구조적으로 차단한다(C2-F1 (c)).
-	ReflectAudit func(record issueops.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error
 	// Processes는 워크트리 점유 관측·종료 표면이고 OrcaTerminals는 워크트리에 매인
 	// Orca 터미널 인벤토리·종료 표면이다. 둘 다 nil이면 기본 구현 또는 "Orca 없음"
 	// 으로 동작한다(#477).
@@ -59,7 +54,9 @@ func keepRemoteBranchFlag(keep bool) string {
 }
 
 // keptRemoteBranchAudit는 남긴 원격 브랜치를 감사 라인 조각으로 렌더한다.
-// 레코드가 삭제되면 이슈 본문의 이 한 줄이 그 브랜치의 유일한 기록이다.
+// 레코드가 삭제된 뒤에는 브랜치 이름이 추적 근거다. branch prepare가 이름을
+// <이슈 번호>-<slug>로 강제하고 provider가 그 브랜치를 이슈에 연결해 보여
+// 주므로, 남긴 브랜치는 이슈에서 찾을 수 있다(#513).
 func keptRemoteBranchAudit(kept *issueops.CleanupKeptRemoteBranch) string {
 	if kept == nil {
 		return ""
@@ -141,9 +138,6 @@ func CleanupFinish(ctx context.Context, stateRoot string, req CleanupFinishReque
 		result.OK = false
 		return result, fmt.Errorf("stale cleanup fingerprint; run --preview again and retry with the new value")
 	}
-	// C2-F1: 파괴 단계에 들어가기 전에 보존 payload를 스냅샷한다. ④'는 이
-	// 스냅샷으로만 렌더하므로 워크트리 삭제 이후에도 보존 본문이 유지된다.
-	completionSnapshot := gatherCompletionSection(record)
 	fail := func(step string, stepErr error) (CleanupFinishResult, error) {
 		result.OK = false
 		result.FailedStep = step
@@ -207,20 +201,13 @@ func CleanupFinish(ctx context.Context, stateRoot string, req CleanupFinishReque
 		}
 		result.BranchDeleted = true
 	}
-	// ④' 감사 라인 best-effort 멱등 반영 — 실패해도 ⑤를 막지 않는다.
-	if deps.ReflectAudit != nil {
-		audit := fmt.Sprintf("cleanup 완료: worktree=%s branch=%s oid=%s stopped=%d terminals=%d%s at=%s",
-			orNone(inventory.WorktreeRoot), orNone(inventory.Branch), orNone(inventory.BranchOID),
-			len(result.WorkspaceProcessesStopped), result.OrcaTerminalsStopped,
-			keptRemoteBranchAudit(result.KeptRemoteBranch),
-			time.Now().UTC().Format(time.RFC3339))
-		if err := deps.ReflectAudit(record, completionSnapshot, audit); err == nil {
-			result.AuditReflected = true
-		} else {
-			// best-effort지만 무흔적 실패는 금지 — 결과에 표면화한다.
-			result.AuditError = err.Error()
-		}
-	}
+	// ④' 감사 라인은 응답에만 남긴다. 이슈 본문의 진행 결과는 사람이 쓴
+	// 원고이므로 정리 단계가 그 구간을 다시 쓰지 않는다(#513).
+	result.Audit = fmt.Sprintf("cleanup 완료: worktree=%s branch=%s oid=%s stopped=%d terminals=%d%s at=%s",
+		orNone(inventory.WorktreeRoot), orNone(inventory.Branch), orNone(inventory.BranchOID),
+		len(result.WorkspaceProcessesStopped), result.OrcaTerminalsStopped,
+		keptRemoteBranchAudit(result.KeptRemoteBranch),
+		time.Now().UTC().Format(time.RFC3339))
 	// ⑤ 레코드 삭제 — 결정적 ID 재사용과의 충돌을 끝내는 수명 종료.
 	if err := deleteIssueOps(stateRoot, record.ID); err != nil {
 		return fail(issueops.CleanupFailureStepRecordDelete, err)
@@ -362,8 +349,8 @@ func cleanupFinishGates(ctx context.Context, record issueops.IssueOpsRecord, req
 		// KeepRemoteBranch는 그 대가를 알고 받는 명시적 선택이다. 원격 tip이
 		// 머지된 head보다 전진했고 후속 artifact도 없으면 remote-branch 게이트 ⑩이
 		// 삭제를 막는데, 그때 이 게이트까지 남기기를 막으면 사이클을 끝낼 경로가
-		// 하나도 남지 않는다. H8의 대가는 면제하는 대신 기록으로 갚는다: 무엇이
-		// 남았는지를 결과와 ④' 감사 라인에 적어 레코드 삭제 뒤에도 찾을 수 있게 한다.
+		// 하나도 남지 않는다. 무엇이 남았는지는 결과와 ④' 감사 라인에 적고,
+		// 레코드 삭제 뒤에는 이슈에 연결된 브랜치로 찾는다(#513).
 		code, out := deps.Git(record.Repo, "ls-remote", "--heads", "origin", "refs/heads/"+inventory.Branch)
 		readable, fields := code == 0, strings.Fields(strings.TrimSpace(out))
 		switch {
@@ -494,42 +481,6 @@ func orNone(v string) string {
 		return "(없음)"
 	}
 	return v
-}
-
-// ReflectCleanupAudit는 ④' 감사 라인을 completion 섹션의 멱등 병합으로
-// 반영한다(CleanupAudit 필드 재사용 — 동일 내용 재실행은 같은 본문을 만든다).
-// completion은 파괴 시작 전에 스냅샷된 payload여야 한다(C2-F1).
-//
-// 이 경로는 audit 라인만 더하는 것이 아니라 completion payload 전체를 원격에
-// 쓴다. 따라서 성공하면 ReflectIssueCompletion과 같은 효과이며 로컬 캐시도 함께
-// 채워야 한다 — 그러지 않으면 레코드를 유지하는 cleanup remote-branch 직후
-// issueops list가 원격에 반영된 사이클을 거짓으로 미반영이라 보고한다(#128).
-func ReflectCleanupAudit(stateRoot string, record issueops.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string, prov port.IssueProvider) error {
-	if prov == nil {
-		return fmt.Errorf("no issue provider configured")
-	}
-	completion.CleanupAudit = audit
-	result, err := prov.UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
-		Repo:       record.Repo,
-		IssueURL:   record.IssueURL,
-		Section:    port.IssueBodySectionCompletion,
-		Completion: &completion,
-		Confirm:    true,
-	})
-	if err != nil {
-		return err
-	}
-	if !result.Updated {
-		return fmt.Errorf("cleanup audit reflection was not confirmed")
-	}
-	// 확인된 반영만 캐시에 남긴다. audit 반영은 best-effort이므로 실패가 캐시를
-	// 원격보다 낙관적으로 만들어서는 안 된다. finish 경로에서는 직후 레코드가
-	// 삭제되어 무해하고, 파괴 단계가 중간 실패해 레코드가 잔존하면 오히려
-	// 정확해진다.
-	_, err = stampRemoteCompletion(stateRoot, record.ID, func(rc *issueops.IssueOpsRemoteCompletion, now string) {
-		rc.ReflectedAt = now
-	})
-	return err
 }
 
 // branchRefPresent는 exact local branch ref가 여전히 존재하는지 재관측한다.
