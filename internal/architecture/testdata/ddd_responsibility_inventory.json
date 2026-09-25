@@ -10492,17 +10492,14 @@
         "func attemptsForFixture",
         "func classifyHostResult",
         "func completedForFixture",
-        "func completedForPair",
         "func countCompleted",
         "func countReport",
-        "func decideGate",
         "func incompleteEpisode",
         "func incompleteHostResult",
         "func modelForHost",
         "func mustJSON",
         "func randomToken",
         "func resumableHostReport",
-        "func schemaDriftClassification",
         "func selectFixturePairs",
         "func selectedFixtureForPair",
         "func validCompletedEpisode",
@@ -13921,6 +13918,17 @@
       ]
     },
     {
+      "path": "internal/domain/toolconformance/gate.go",
+      "owner": "domain",
+      "task": "T15",
+      "symbols": [
+        "func DecideGate",
+        "func SchemaDriftClassification",
+        "func completedForPair",
+        "type SelectedPair"
+      ]
+    },
+    {
       "path": "internal/domain/toolconformance/invalid_arguments.go",
       "owner": "domain",
       "task": "T20",
@@ -14984,14 +14992,16 @@
       "source_symbol": "func decideGate",
       "responsibility": "conformance evidence gate",
       "target": "internal/domain/toolconformance",
+      "target_symbol": "func DecideGate",
       "task": "T15",
       "entrypoints": [
         "issueops contract benchmark"
       ],
       "evidence_tests": [
+        "internal/domain/toolconformance/gate_test.go",
         "internal/adapter/toolconformance/benchmark_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "risk-qa",

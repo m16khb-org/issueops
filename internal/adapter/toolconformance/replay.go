@@ -9,6 +9,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	toolconformancedomain "issueops/internal/domain/toolconformance"
 )
 
 const regressionFixtureLimit = 64 << 10
@@ -52,7 +54,7 @@ func validateRegressionFixture(fixture RegressionFixture) error {
 	if !validEvidenceID(fixture.SourceSchemaSHA256) || !validEvidenceID(fixture.RawArgumentsSHA256) {
 		return fmt.Errorf("invalid_regression_fixture_digest")
 	}
-	if !schemaDriftClassification(fixture.ExpectedClassification) {
+	if !toolconformancedomain.SchemaDriftClassification(fixture.ExpectedClassification) {
 		return fmt.Errorf("regression_classification_not_drift")
 	}
 	diagnostics := append([]Diagnostic(nil), fixture.ExpectedDiagnostics...)

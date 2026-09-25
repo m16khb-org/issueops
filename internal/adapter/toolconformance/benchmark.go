@@ -14,6 +14,7 @@ import (
 
 	failurecausecontract "issueops/internal/contract/failurecause"
 	issueopscontract "issueops/internal/contract/issueops"
+	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"issueops/internal/port"
 )
 
@@ -207,7 +208,11 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 		report.Hosts = append(report.Hosts, hostReport)
 	}
 	report.Counts = countReport(report)
-	report.Gate = decideGate(report, selected, request.TargetCompleted)
+	gatePairs := make([]toolconformancedomain.SelectedPair, 0, len(selected))
+	for _, pair := range selected {
+		gatePairs = append(gatePairs, toolconformancedomain.SelectedPair{Host: pair.Host, FixtureID: pair.Fixture.ID})
+	}
+	report.Gate = toolconformancedomain.DecideGate(report, gatePairs, request.TargetCompleted)
 	if report.Gate.Decision == GateInconclusive {
 		report.OK = false
 	}
@@ -308,7 +313,7 @@ func classifyHostResult(result port.HostProbeResult, fixture Fixture) EpisodeRep
 	if (classification == Classification(ExactValid) || classification == Classification(ValidButSemanticallyDifferent)) && (!result.CanonicalValid || len(diagnostics) != 0) {
 		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
-	if schemaDriftClassification(classification) && result.CanonicalValid {
+	if toolconformancedomain.SchemaDriftClassification(classification) && result.CanonicalValid {
 		return incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	evidence := []failurecausecontract.Evidence{}
@@ -413,7 +418,7 @@ func validCompletedEpisode(episode EpisodeReport, expected completedEpisodeExpec
 	if validClassification && (!episode.AdvertisedValid || !episode.CanonicalValid || len(episode.Diagnostics) != 0) {
 		return false
 	}
-	if schemaDriftClassification(episode.Classification) && episode.CanonicalValid {
+	if toolconformancedomain.SchemaDriftClassification(episode.Classification) && episode.CanonicalValid {
 		return false
 	}
 	evidence := []failurecausecontract.Evidence{}
@@ -464,67 +469,6 @@ func DiagnosticSignature(classification Classification, diagnostics []Diagnostic
 	return hex.EncodeToString(sum[:])
 }
 
-func decideGate(report BenchmarkReport, selected []fixturePair, target int) GateReport {
-	for _, pair := range selected {
-		if completedForPair(report, pair.Host, pair.Fixture.ID) < target {
-			return GateReport{Decision: GateInconclusive}
-		}
-	}
-	type signatureCount struct {
-		Host      string
-		FixtureID string
-		Signature string
-		Count     int
-	}
-	counts := map[string]*signatureCount{}
-	for _, host := range report.Hosts {
-		for _, episode := range host.Cases {
-			if episode.Status != "completed" || !schemaDriftClassification(episode.Classification) {
-				continue
-			}
-			key := host.Host + "\x00" + episode.FixtureID + "\x00" + episode.DiagnosticSignature
-			if counts[key] == nil {
-				counts[key] = &signatureCount{Host: host.Host, FixtureID: episode.FixtureID, Signature: episode.DiagnosticSignature}
-			}
-			counts[key].Count++
-		}
-	}
-	ordered := make([]*signatureCount, 0, len(counts))
-	for _, count := range counts {
-		ordered = append(ordered, count)
-	}
-	sort.Slice(ordered, func(i, j int) bool {
-		if ordered[i].Host != ordered[j].Host {
-			return ordered[i].Host < ordered[j].Host
-		}
-		if ordered[i].FixtureID != ordered[j].FixtureID {
-			return ordered[i].FixtureID < ordered[j].FixtureID
-		}
-		return ordered[i].Signature < ordered[j].Signature
-	})
-	for _, count := range ordered {
-		if count.Count >= 2 {
-			return GateReport{Decision: GateAuthorizeHardening, ConfirmedSignature: count.Signature, ConfirmedCount: count.Count}
-		}
-	}
-	if len(ordered) == 0 {
-		return GateReport{Decision: GateDeferHardening}
-	}
-	if target >= 20 {
-		return GateReport{Decision: GateUnreproducedObservation}
-	}
-	return GateReport{Decision: GateNeedsReproduction, NextReproductionTarget: ordered[0].Host + ":" + ordered[0].FixtureID}
-}
-
-func schemaDriftClassification(classification Classification) bool {
-	switch string(classification) {
-	case UnknownKey, CoercibleTypeDrift, NoncoercibleTypeDrift, InvalidJSON, MissingRequired, EnumMismatch:
-		return true
-	default:
-		return false
-	}
-}
-
 func countReport(report BenchmarkReport) BenchmarkCounts {
 	counts := BenchmarkCounts{}
 	for _, host := range report.Hosts {
@@ -555,7 +499,7 @@ func countReport(report BenchmarkReport) BenchmarkCounts {
 			if episode.Classification == Classification(ValidButSemanticallyDifferent) {
 				counts.ValidSemanticDifferences++
 			}
-			if schemaDriftClassification(episode.Classification) {
+			if toolconformancedomain.SchemaDriftClassification(episode.Classification) {
 				counts.SchemaDriftObservations++
 			}
 		}
@@ -684,15 +628,6 @@ func selectedFixtureForPair(pairs []fixturePair, host, fixture string) (Fixture,
 		}
 	}
 	return Fixture{}, false
-}
-
-func completedForPair(report BenchmarkReport, host, fixture string) int {
-	for _, hostReport := range report.Hosts {
-		if hostReport.Host == host {
-			return completedForFixture(hostReport.Cases, fixture)
-		}
-	}
-	return 0
 }
 
 func completedForFixture(episodes []EpisodeReport, fixture string) int {
