@@ -32,6 +32,11 @@ later dated record says so explicitly. Current supersessions include:
   superseded by the 2026-09-24 human-document decision: phase transitions write
   tracked copies of intent, plan, spec, and plan review into
   `.issueops/issues/<n>/`. The sealed intent artifact and its digest remain.
+- The Claude role-model defaults named in the 2026-07-24 planner/implementer
+  record (claude fable5/opus4.8) are superseded by the 2026-09-24 Claude
+  role-model decision: planner and reviewer `claude-opus-5`/high, implementer
+  `claude-sonnet-5`/high, and Fable 5 only on explicit manual request. The dual
+  planner/implementer structure itself is unchanged.
 
 Historical host, schema, and command names inside dated records preserve the
 rationale at the time of writing. They are not current support contracts. The
