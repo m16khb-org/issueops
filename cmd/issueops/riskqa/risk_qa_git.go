@@ -4,6 +4,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	riskqacontract "issueops/internal/contract/riskqa"
 )
 
 func gitChangedPaths(root string) ([]string, []string) {
@@ -19,7 +21,7 @@ func gitChangedPaths(root string) ([]string, []string) {
 			paths = append(paths, path)
 		}
 	}
-	return uniqueSortedStrings(paths), nil
+	return riskqacontract.NormalizePaths(paths), nil
 }
 
 func ParseGitStatusPath(line string) string {

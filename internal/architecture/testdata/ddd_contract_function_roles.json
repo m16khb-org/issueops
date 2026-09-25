@@ -465,6 +465,11 @@
     "role": "error"
   },
   {
+    "path": "internal/contract/riskqa/paths.go",
+    "symbol": "func NormalizePaths",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/state/errors.go",
     "symbol": "func Invalid",
     "role": "error"

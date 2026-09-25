@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	riskqadomain "issueops/internal/domain/riskqa"
 )
 
 func TestValidateRiskQATierWrapperRunsElevatedDefaultCommands(t *testing.T) {
@@ -67,7 +69,7 @@ func TestPlanRiskQATierFromPaths(t *testing.T) {
 	for _, tt := range tests {
 		tc := tt
 		t.Run(tc.name, func(t *testing.T) {
-			plan := PlanFromPaths(tc.paths)
+			plan := riskqadomain.PlanFromPaths(tc.paths)
 			if plan.Tier != tc.tier {
 				t.Fatalf("tier=%q want %q: %+v", plan.Tier, tc.tier, plan)
 			}

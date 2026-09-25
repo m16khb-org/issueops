@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"issueops/cmd/issueops/riskqa"
 	"issueops/cmd/issueops/selfworkflow"
+	riskqadomain "issueops/internal/domain/riskqa"
 )
 
 type RiskQATierPlan = riskqa.RiskQATierPlan
@@ -33,7 +34,7 @@ func planRiskQATier(root string) RiskQATierPlan {
 }
 
 func planRiskQATierFromPaths(paths []string) RiskQATierPlan {
-	return riskqa.PlanFromPaths(paths)
+	return riskqadomain.PlanFromPaths(paths)
 }
 
 func parseGitStatusPath(line string) string {

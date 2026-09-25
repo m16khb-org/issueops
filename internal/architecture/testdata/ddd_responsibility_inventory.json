@@ -3274,10 +3274,7 @@
       "task": "T16",
       "symbols": [
         "func Plan",
-        "func PlanFromPaths",
-        "func PlanJSON",
-        "func isRiskSensitivePath",
-        "func uniqueSortedStrings"
+        "func PlanJSON"
       ]
     },
     {
@@ -12331,6 +12328,22 @@
       ]
     },
     {
+      "path": "internal/contract/riskqa/paths.go",
+      "owner": "contract",
+      "task": "T16",
+      "symbols": [
+        "func NormalizePaths"
+      ]
+    },
+    {
+      "path": "internal/contract/riskqa/plan.go",
+      "owner": "contract",
+      "task": "T16",
+      "symbols": [
+        "type RiskQATierPlan"
+      ]
+    },
+    {
       "path": "internal/contract/state/errors.go",
       "owner": "contract",
       "task": "T02",
@@ -13847,6 +13860,15 @@
       ]
     },
     {
+      "path": "internal/domain/riskqa/plan.go",
+      "owner": "domain",
+      "task": "T16",
+      "symbols": [
+        "func PlanFromPaths",
+        "func isRiskSensitivePath"
+      ]
+    },
+    {
       "path": "internal/domain/secretdetection/secret.go",
       "owner": "domain",
       "task": "T20",
@@ -15009,14 +15031,16 @@
       "source_symbol": "func PlanFromPaths",
       "responsibility": "change path to verification tier",
       "target": "internal/domain/riskqa",
+      "target_symbol": "func PlanFromPaths",
       "task": "T16",
       "entrypoints": [
         "issueops self-verify"
       ],
       "evidence_tests": [
+        "internal/domain/riskqa/plan_test.go",
         "cmd/issueops/riskqa/risk_qa_wrapper_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "self-verify-score",

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/commandstep"
+	riskqacontract "issueops/internal/contract/riskqa"
 )
 
 const (
@@ -17,12 +18,7 @@ const (
 	fullRaceCommand                      = "go test -race ./... -count=1"
 )
 
-type RiskQATierPlan struct {
-	Tier         string   `json:"tier"`
-	ChangedPaths []string `json:"changed_paths"`
-	Reasons      []string `json:"reasons"`
-	Commands     []string `json:"commands"`
-}
+type RiskQATierPlan = riskqacontract.RiskQATierPlan
 
 type StepResult = commandstep.StepResult
 
