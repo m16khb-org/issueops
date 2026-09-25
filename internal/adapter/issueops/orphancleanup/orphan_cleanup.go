@@ -12,6 +12,7 @@ import (
 
 	model "issueops/internal/contract/issueops"
 	corehealth "issueops/internal/domain/operationalhealth"
+	"issueops/internal/domain/policy"
 )
 
 // Dependencies keep the control-plane policy in core while the CLI supplies
@@ -329,7 +330,7 @@ func boundedGitFailure(stderr string) string {
 		return "git returned a non-zero exit"
 	}
 	if len(stderr) > 512 {
-		return stderr[:512]
+		return policy.TruncateBytes(stderr, 512)
 	}
 	return stderr
 }

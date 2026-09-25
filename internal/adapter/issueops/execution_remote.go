@@ -424,7 +424,7 @@ func boundedExecutionRemoteDiagnostic(err error) string {
 	}
 	message := strings.TrimSpace(policy.RedactDiagnostic(err.Error()))
 	if len(message) > 4096 {
-		message = message[:4096]
+		message = policy.TruncateBytes(message, 4096)
 	}
 	return message
 }

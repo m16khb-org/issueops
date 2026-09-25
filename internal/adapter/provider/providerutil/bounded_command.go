@@ -38,7 +38,7 @@ func DryRunPreview(name string, args ...string) string {
 	argv := append([]string{name}, args...)
 	value := strings.Join(policy.RedactArgv(argv), " ")
 	if len(value) > providerDiagnosticLimit {
-		value = value[:providerDiagnosticLimit] + "...[truncated]"
+		value = policy.TruncateBytes(value, providerDiagnosticLimit) + "...[truncated]"
 	}
 	return "[dry-run] would execute: " + value
 }
@@ -97,6 +97,9 @@ func (b *boundedBuffer) Write(p []byte) (int, error) {
 }
 
 func (b *boundedBuffer) String() string {
+	if b.truncated {
+		return policy.TrimIncompleteRune(string(b.data))
+	}
 	return string(b.data)
 }
 

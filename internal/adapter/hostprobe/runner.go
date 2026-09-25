@@ -215,7 +215,7 @@ func boundedVersion(value string) string {
 		value = value[:index]
 	}
 	if len(value) > 256 {
-		value = value[:256]
+		value = policy.TruncateBytes(value, 256)
 	}
 	return value
 }

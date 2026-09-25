@@ -14,6 +14,7 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
+	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
 
@@ -469,7 +470,7 @@ func (repository *SQLiteRepository) boundedDiagnostic(cause error) string {
 		}
 	}
 	if len(message) > 4096 {
-		message = message[:4096]
+		message = policy.TruncateBytes(message, 4096)
 	}
 	return message
 }

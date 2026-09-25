@@ -367,7 +367,7 @@ func durableIssueCreateFailure(err error) string {
 	const maxBytes = 2048
 	diagnostic := policydomain.RedactDiagnostic(strings.TrimSpace(err.Error()))
 	if len(diagnostic) > maxBytes {
-		diagnostic = diagnostic[:maxBytes]
+		diagnostic = policydomain.TruncateBytes(diagnostic, maxBytes)
 	}
 	return diagnostic
 }
