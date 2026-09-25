@@ -7965,7 +7965,7 @@
         "func MarkIssueOpsContractFeedbackIssueUpdatedWithActor",
         "func addIssueOpsFeedback",
         "func markIssueOpsContractFeedbackIssueUpdated",
-        "func reviewFeedbackStore"
+        "func reviewMutationStore"
       ]
     },
     {
@@ -7994,7 +7994,6 @@
         "func recordIssueOpsAISlopCleanEvidence",
         "func recordIssueOpsAISlopCleanEvidenceLocked",
         "func recordIssueOpsDomainReview",
-        "func recordIssueOpsDomainReviewLocked",
         "func resolveIssueOpsFeedback"
       ]
     },
@@ -11107,14 +11106,21 @@
       ]
     },
     {
+      "path": "internal/application/issueopsreview/domain_review.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func RecordDomainReview"
+      ]
+    },
+    {
       "path": "internal/application/issueopsreview/feedback.go",
       "owner": "application",
       "task": "T03",
       "symbols": [
         "func AddFeedback",
         "func MarkContractFeedbackIssueUpdated",
-        "func ResolveFeedback",
-        "func mutateFeedback"
+        "func ResolveFeedback"
       ]
     },
     {
@@ -11143,6 +11149,14 @@
       "symbols": [
         "func RecordCompatibilityReview",
         "func RecordDevilsAdvocate"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreview/record_mutation.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func mutateReviewRecord"
       ]
     },
     {
@@ -13405,6 +13419,7 @@
       "owner": "domain",
       "task": "T03",
       "symbols": [
+        "func ValidateDomainReviewRecord",
         "func ValidateImplementationReviewRecord",
         "func ValidateProjectDocsReviewRecord",
         "func ValidateSchemaEvidenceRecord"
@@ -14090,9 +14105,9 @@
         "type CompatibilityStore",
         "type DevilsAdvocateStore",
         "type EvidenceReviewStore",
-        "type FeedbackStore",
         "type ProjectDocsReviewStore",
-        "type RegressStore"
+        "type RegressStore",
+        "type ReviewMutationStore"
       ]
     },
     {

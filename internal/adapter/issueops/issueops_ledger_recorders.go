@@ -23,42 +23,11 @@ func RecordIssueOpsDomainReviewWithActor(stateRoot, id string, req issueops.Issu
 }
 
 func recordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validateWorkspacePreparationMutation(record, actor); actorErr != nil {
-			return actorErr
-		}
-		var e error
-		rec, e = recordIssueOpsDomainReviewLocked(stateRoot, id, req)
-		return e
-	})
-	return rec, err
-}
-
-func recordIssueOpsDomainReviewLocked(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest) (issueops.IssueOpsRecord, error) {
-	modelFit := strings.TrimSpace(req.ModelFit)
-	terminology := cleanIssueOpsTextValues(req.Terminology)
-	if modelFit == "" && len(terminology) == 0 {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("domain review requires model_fit or terminology")
+	store := reviewMutationStore(actor)
+	store.ValidateMutation = func(record issueops.IssueOpsRecord) error {
+		return validateWorkspacePreparationMutation(record, actor)
 	}
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return record, err
-	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	record.DomainReview = &issueops.IssueOpsDomainReview{
-		Terminology:       terminology,
-		ModelFit:          modelFit,
-		Risks:             cleanIssueOpsTextValues(req.Risks),
-		OpenUncertainties: cleanIssueOpsTextValues(req.OpenUncertainties),
-		ReviewedAt:        now,
-	}
-	record.UpdatedAt = now
-	return writeIssueOps(stateRoot, record)
+	return reviewapp.RecordDomainReview(store, stateRoot, id, req)
 }
 
 // RecordIssueOpsAISlopCleanEvidence persists which cleanup categories were
@@ -123,5 +92,5 @@ func ResolveIssueOpsFeedbackWithActor(stateRoot, id string, index int, resolutio
 }
 
 func resolveIssueOpsFeedback(stateRoot, id string, index int, resolution string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.ResolveFeedback(reviewFeedbackStore(actor), stateRoot, id, index, resolution)
+	return reviewapp.ResolveFeedback(reviewMutationStore(actor), stateRoot, id, index, resolution)
 }

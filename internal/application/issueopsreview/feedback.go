@@ -9,8 +9,8 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func AddFeedback(store reviewport.FeedbackStore, stateRoot, id, source, body, classification string) (model.IssueOpsRecord, error) {
-	return mutateFeedback(store, stateRoot, id, func() error {
+func AddFeedback(store reviewport.ReviewMutationStore, stateRoot, id, source, body, classification string) (model.IssueOpsRecord, error) {
+	return mutateReviewRecord(store, stateRoot, id, func() error {
 		source = strings.TrimSpace(source)
 		body = strings.TrimSpace(body)
 		classification = strings.ToLower(strings.TrimSpace(classification))
@@ -37,8 +37,8 @@ func AddFeedback(store reviewport.FeedbackStore, stateRoot, id, source, body, cl
 	})
 }
 
-func MarkContractFeedbackIssueUpdated(store reviewport.FeedbackStore, stateRoot, id string) (model.IssueOpsRecord, error) {
-	return mutateFeedback(store, stateRoot, id, nil, func(record *model.IssueOpsRecord) error {
+func MarkContractFeedbackIssueUpdated(store reviewport.ReviewMutationStore, stateRoot, id string) (model.IssueOpsRecord, error) {
+	return mutateReviewRecord(store, stateRoot, id, nil, func(record *model.IssueOpsRecord) error {
 		now := store.Now()
 		marked := false
 		for i := range record.Feedback {
@@ -55,8 +55,8 @@ func MarkContractFeedbackIssueUpdated(store reviewport.FeedbackStore, stateRoot,
 	})
 }
 
-func ResolveFeedback(store reviewport.FeedbackStore, stateRoot, id string, index int, resolution string) (model.IssueOpsRecord, error) {
-	return mutateFeedback(store, stateRoot, id, func() error {
+func ResolveFeedback(store reviewport.ReviewMutationStore, stateRoot, id string, index int, resolution string) (model.IssueOpsRecord, error) {
+	return mutateReviewRecord(store, stateRoot, id, func() error {
 		resolution = strings.ToLower(strings.TrimSpace(resolution))
 		if !model.KnownFeedbackResolution(resolution) || resolution == "" {
 			return fmt.Errorf("unknown feedback resolution %q; use valid-defect, question-answered, or noise-dismissed", resolution)
@@ -71,35 +71,4 @@ func ResolveFeedback(store reviewport.FeedbackStore, stateRoot, id string, index
 		record.UpdatedAt = now
 		return nil
 	})
-}
-
-func mutateFeedback(store reviewport.FeedbackStore, stateRoot, id string, prepare func() error, apply func(*model.IssueOpsRecord) error) (model.IssueOpsRecord, error) {
-	var result model.IssueOpsRecord
-	err := store.WithLock(stateRoot, id, func() error {
-		current, err := store.Read(stateRoot, id)
-		if err != nil {
-			return err
-		}
-		if err := store.ValidateMutation(current); err != nil {
-			return err
-		}
-		if prepare != nil {
-			if err := prepare(); err != nil {
-				return err
-			}
-		}
-		current, err = store.Read(stateRoot, id)
-		if err != nil {
-			return err
-		}
-		if err := apply(&current); err != nil {
-			return err
-		}
-		result, err = store.Write(stateRoot, current)
-		return err
-	})
-	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
-	}
-	return result, nil
 }

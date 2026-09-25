@@ -62,6 +62,18 @@ func TestValidateSchemaEvidenceRecord(t *testing.T) {
 	}
 }
 
+func TestValidateDomainReviewRecord(t *testing.T) {
+	if err := ValidateDomainReviewRecord("", 0); errorText(err) != "domain review requires model_fit or terminology" {
+		t.Fatalf("empty domain review = %v", err)
+	}
+	if err := ValidateDomainReviewRecord("model fits", 0); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateDomainReviewRecord("", 1); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func errorText(err error) string {
 	if err == nil {
 		return ""

@@ -2,6 +2,13 @@ package issueopsreview
 
 import "fmt"
 
+func ValidateDomainReviewRecord(modelFit string, terminologyCount int) error {
+	if modelFit == "" && terminologyCount == 0 {
+		return fmt.Errorf("domain review requires model_fit or terminology")
+	}
+	return nil
+}
+
 func ValidateImplementationReviewRecord(verdict string, findings, evidence int) error {
 	if verdict != "pass" && verdict != "revise" && verdict != "stop" {
 		return fmt.Errorf("implementation review verdict must be pass|revise|stop")

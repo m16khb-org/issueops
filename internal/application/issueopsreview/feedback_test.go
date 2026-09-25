@@ -13,7 +13,7 @@ func TestFeedbackUseCasesKeepAuthorityBeforeMutationAndOneWrite(t *testing.T) {
 	const at = "2026-09-25T00:00:00Z"
 	record := model.IssueOpsRecord{ID: "io-feedback", Phase: model.IssueOpsPhaseAISlopClean, AISlopCleanAt: at}
 	reads, writes := 0, 0
-	store := reviewport.FeedbackStore{
+	store := reviewport.ReviewMutationStore{
 		WithLock:         func(_, _ string, fn func() error) error { return fn() },
 		Read:             func(_, _ string) (model.IssueOpsRecord, error) { reads++; return record, nil },
 		ValidateMutation: func(model.IssueOpsRecord) error { return nil },
@@ -55,7 +55,7 @@ func TestFeedbackUseCasesKeepAuthorityBeforeMutationAndOneWrite(t *testing.T) {
 func TestAddFeedbackRejectsAuthorityBeforeInputAndDoesNotWrite(t *testing.T) {
 	authorityErr := errors.New("current holder required")
 	reads, writes := 0, 0
-	store := reviewport.FeedbackStore{
+	store := reviewport.ReviewMutationStore{
 		WithLock: func(_, _ string, fn func() error) error { return fn() },
 		Read: func(_, _ string) (model.IssueOpsRecord, error) {
 			reads++

@@ -38,7 +38,7 @@ type ProjectDocsReviewStore struct {
 	NormalizeReviewedDocs func(model.IssueOpsRecord, []string) ([]string, error)
 }
 
-type FeedbackStore struct {
+type ReviewMutationStore struct {
 	WithLock         func(string, string, func() error) error
 	Read             func(string, string) (model.IssueOpsRecord, error)
 	ValidateMutation func(model.IssueOpsRecord) error

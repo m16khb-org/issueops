@@ -18,7 +18,7 @@ func AddIssueOpsFeedbackWithActor(stateRoot, id, source, body, classification st
 }
 
 func addIssueOpsFeedback(stateRoot, id, source, body, classification string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.AddFeedback(reviewFeedbackStore(actor), stateRoot, id, source, body, classification)
+	return reviewapp.AddFeedback(reviewMutationStore(actor), stateRoot, id, source, body, classification)
 }
 
 func MarkIssueOpsContractFeedbackIssueUpdatedWithActor(stateRoot, id string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
@@ -26,11 +26,11 @@ func MarkIssueOpsContractFeedbackIssueUpdatedWithActor(stateRoot, id string, act
 }
 
 func markIssueOpsContractFeedbackIssueUpdated(stateRoot, id string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.MarkContractFeedbackIssueUpdated(reviewFeedbackStore(actor), stateRoot, id)
+	return reviewapp.MarkContractFeedbackIssueUpdated(reviewMutationStore(actor), stateRoot, id)
 }
 
-func reviewFeedbackStore(actor *IssueOpsActor) reviewport.FeedbackStore {
-	return reviewport.FeedbackStore{
+func reviewMutationStore(actor *IssueOpsActor) reviewport.ReviewMutationStore {
+	return reviewport.ReviewMutationStore{
 		WithLock: func(root, cycleID string, fn func() error) error {
 			return withIssueOpsLock(context.Background(), root, cycleID, func(context.Context) error { return fn() })
 		},
