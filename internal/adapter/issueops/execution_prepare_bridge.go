@@ -8,6 +8,7 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -54,7 +55,7 @@ func ReadExecutionPreparationOwnerEvidence(ctx context.Context, stateRoot string
 	if err != nil {
 		return preparationcontract.OwnerEvidence{}, err
 	}
-	identity, err := (preparationcontract.IntentCodec{}).PrepareIssueIdentity(snapshot.Record)
+	identity, err := preparationdomain.PrepareIssueIdentity(snapshot.Record.IssueURL, preparationcontract.DecodeIssueLinkEvidence(snapshot.Record.BranchPrepare))
 	if err != nil {
 		return preparationcontract.OwnerEvidence{}, err
 	}

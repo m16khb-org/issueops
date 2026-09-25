@@ -1,5 +1,15 @@
 package issueopspublication
 
+const (
+	IssueCreateIntentPending            = "pending"
+	IssueCreateIntentNotInvoked         = "not_invoked"
+	IssueCreateIntentInvokedUnknown     = "invoked_unknown"
+	IssueCreateIntentURLObserved        = "url_observed"
+	IssueCreateIntentVerificationFailed = "verification_failed"
+	IssueCreateIntentReceiptFailed      = "receipt_failed"
+	IssueCreateIntentCompleted          = "completed"
+)
+
 type InvocationState string
 
 const (

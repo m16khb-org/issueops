@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	leasecontract "issueops/internal/contract/issueopslease"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 )
 
 func plannerReadyRecord() leasecontract.Record {
@@ -19,8 +20,8 @@ func plannerReadyRecord() leasecontract.Record {
 // TestMissingPlannerGatesIsQuietOnACompleteRecord는 정상 상태가 조용한지
 // 고정한다. 이 게이트가 시끄러우면 정상 사이클이 prepare에서 막힌다.
 func TestMissingPlannerGatesIsQuietOnACompleteRecord(t *testing.T) {
-	if gates := MissingPlannerGates(plannerReadyRecord()); len(gates) != 0 {
-		t.Fatalf("완비된 record는 게이트를 남기지 않아야 한다: %v", PlannerGateKeys(gates))
+	if gates := missingPlannerGateKeys(plannerReadyRecord()); len(gates) != 0 {
+		t.Fatalf("완비된 record는 게이트를 남기지 않아야 한다: %v", gates)
 	}
 }
 
@@ -40,37 +41,32 @@ func TestMissingPlannerGatesNamesEachOwnerUnfillablePrerequisite(t *testing.T) {
 		name    string
 		mutate  func(*leasecontract.Record)
 		wantKey string
-		wantCmd string
 	}{
-		{"intent 없음", func(r *leasecontract.Record) { r.Intent = nil }, "intent_contract", "issueops intent record --id io-planner"},
+		{"intent 없음", func(r *leasecontract.Record) { r.Intent = nil }, "intent_contract"},
 		{"intent 미완", func(r *leasecontract.Record) {
 			r.Intent = []byte(`{"raw_request":"r","interpreted_intent":"","success_criteria":["c"]}`)
-		}, "intent_contract", "intent record"},
+		}, "intent_contract"},
 		{"success criteria 공백뿐", func(r *leasecontract.Record) {
 			r.Intent = []byte(`{"raw_request":"r","interpreted_intent":"i","success_criteria":["   "]}`)
-		}, "intent_contract", "intent record"},
-		{"design review 없음", func(r *leasecontract.Record) { r.DesignReview = nil }, "design_review", "issueops design review --id io-planner"},
+		}, "intent_contract"},
+		{"design review 없음", func(r *leasecontract.Record) { r.DesignReview = nil }, "design_review"},
 		{"design 미승인", func(r *leasecontract.Record) {
 			r.DesignReview = []byte(`{"problem_summary":"p","proposed_design":"d","verification":["v"],"approved":false}`)
-		}, "design_review", "design review"},
-		{"devils advocate 없음", func(r *leasecontract.Record) { r.DevilsAdvocateReview = nil }, "devils_advocate_review", "devils-advocate review --id io-planner"},
+		}, "design_review"},
+		{"devils advocate 없음", func(r *leasecontract.Record) { r.DevilsAdvocateReview = nil }, "devils_advocate_review"},
 		{"stop 판정 미waive", func(r *leasecontract.Record) {
 			r.DevilsAdvocateReview = []byte(`{"verdict":"stop","recorded_at":"2026-08-09T00:00:00Z"}`)
-		}, "devils_advocate_review", "devils-advocate review"},
+		}, "devils_advocate_review"},
 		{"revise 판정 미waive", func(r *leasecontract.Record) {
 			r.DevilsAdvocateReview = []byte(`{"verdict":"revise","recorded_at":"2026-08-09T00:00:00Z"}`)
-		}, "devils_advocate_review", "devils-advocate review"},
+		}, "devils_advocate_review"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			record := plannerReadyRecord()
 			tc.mutate(&record)
-			gates := MissingPlannerGates(record)
-			keys := PlannerGateKeys(gates)
-			if len(gates) != 1 || keys[0] != tc.wantKey {
-				t.Fatalf("정확히 빠진 것만 지목해야 한다: %v", keys)
-			}
-			if !strings.Contains(gates[0].Command, tc.wantCmd) {
-				t.Fatalf("진단이 실행할 명령을 담아야 한다: %q", gates[0].Command)
+			gates := missingPlannerGateKeys(record)
+			if len(gates) != 1 || gates[0] != tc.wantKey {
+				t.Fatalf("정확히 빠진 것만 지목해야 한다: %v", gates)
 			}
 		})
 	}
@@ -81,16 +77,16 @@ func TestMissingPlannerGatesNamesEachOwnerUnfillablePrerequisite(t *testing.T) {
 func TestMissingPlannerGatesAcceptsAWaivedAdverseVerdict(t *testing.T) {
 	record := plannerReadyRecord()
 	record.DevilsAdvocateReview = []byte(`{"verdict":"stop","waived":true,"reviewed_plan_digest":"abc","recorded_at":"2026-08-09T00:00:00Z"}`)
-	if gates := MissingPlannerGates(record); len(gates) != 0 {
-		t.Fatalf("waive된 판정은 통과해야 한다: %v", PlannerGateKeys(gates))
+	if gates := missingPlannerGateKeys(record); len(gates) != 0 {
+		t.Fatalf("waive된 판정은 통과해야 한다: %v", gates)
 	}
 }
 
 // TestMissingPlannerGatesReportsEveryGapAtOnce는 한 번에 다 알려주는지
 // 고정한다. 하나씩 알려주면 coordinator는 prepare를 세 번 실패시켜야 한다.
 func TestMissingPlannerGatesReportsEveryGapAtOnce(t *testing.T) {
-	gates := MissingPlannerGates(leasecontract.Record{ID: "io-empty"})
-	keys := PlannerGateKeys(gates)
+	gates := missingPlannerGateKeys(leasecontract.Record{ID: "io-empty"})
+	keys := gates
 	if len(keys) != 3 {
 		t.Fatalf("빠진 것을 모두 보고해야 한다: %v", keys)
 	}
@@ -106,7 +102,7 @@ func TestMissingPlannerGatesReportsEveryGapAtOnce(t *testing.T) {
 func TestMissingPlannerGatesTreatsUnparseableRecordsAsMissing(t *testing.T) {
 	record := plannerReadyRecord()
 	record.DesignReview = []byte(`not json`)
-	keys := PlannerGateKeys(MissingPlannerGates(record))
+	keys := missingPlannerGateKeys(record)
 	if len(keys) != 1 || keys[0] != "design_review" {
 		t.Fatalf("파싱 실패는 부재로 다뤄야 한다: %v", keys)
 	}
@@ -115,19 +111,21 @@ func TestMissingPlannerGatesTreatsUnparseableRecordsAsMissing(t *testing.T) {
 func TestMissingPlannerGatesRequiresAPlanBoundDevilsAdvocateReview(t *testing.T) {
 	record := plannerReadyRecord()
 	record.DevilsAdvocateReview = []byte(`{"verdict":"pass","findings":["f"],"reviewer_context":"subagent","recorded_at":"2026-08-28T00:00:00Z"}`)
-	gates := MissingPlannerGates(record)
-	if keys := PlannerGateKeys(gates); len(keys) != 1 || keys[0] != "devils_advocate_review" {
+	gates := missingPlannerGateKeys(record)
+	if keys := gates; len(keys) != 1 || keys[0] != "devils_advocate_review" {
 		t.Fatalf("an unbound review (legacy record) must gate before an owner is launched: %v", keys)
 	}
-	if !strings.Contains(gates[0].Command, "--reviewer-context subagent") {
-		t.Fatalf("command hint must show the binding flag: %q", gates[0].Command)
-	}
+
 	record.DevilsAdvocateReview = []byte(`{"verdict":"pass","findings":["f"],"reviewer_context":"subagent","reviewed_plan_digest":"abc","recorded_at":"2026-08-28T00:00:00Z"}`)
-	if gates := MissingPlannerGates(record); len(gates) != 0 {
-		t.Fatalf("a bound review must be quiet: %v", PlannerGateKeys(gates))
+	if gates := missingPlannerGateKeys(record); len(gates) != 0 {
+		t.Fatalf("a bound review must be quiet: %v", gates)
 	}
 	record.DevilsAdvocateReview = []byte(`{"verdict":"pass","waived":true,"waiver_rationale":"delegated:io-parent parent DA verdict pass","reviewer_pattern":"delegated-parent-review","recorded_at":"2026-08-28T00:00:00Z"}`)
-	if gates := MissingPlannerGates(record); len(gates) != 0 {
-		t.Fatalf("delegated child reviews inherit the parent verdict and must be quiet: %v", PlannerGateKeys(gates))
+	if gates := missingPlannerGateKeys(record); len(gates) != 0 {
+		t.Fatalf("delegated child reviews inherit the parent verdict and must be quiet: %v", gates)
 	}
+}
+
+func missingPlannerGateKeys(record leasecontract.Record) []string {
+	return preparationdomain.MissingPlannerGateKeys(plannerEvidence(record))
 }

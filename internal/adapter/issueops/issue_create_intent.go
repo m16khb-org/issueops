@@ -8,6 +8,8 @@ import (
 
 	"issueops/internal/adapter/issueops/linking"
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
+	issueopspublication "issueops/internal/domain/issueopspublication"
 	issueopsremote "issueops/internal/domain/issueopsremote"
 )
 
@@ -80,7 +82,7 @@ func RecordIssueCreateOutcome(
 		if record.IssueCreateIntent.Status == issueopscontract.IssueCreateIntentCompleted {
 			return fmt.Errorf("issue create intent is already completed")
 		}
-		if err := issueopscontract.ValidateIssueCreateTransition(record.IssueCreateIntent.Status, outcome.Status); err != nil {
+		if err := issueopspublication.ValidateIssueCreateTransition(record.IssueCreateIntent.Status, outcome.Status); err != nil {
 			return err
 		}
 		next := *record.IssueCreateIntent
@@ -95,6 +97,9 @@ func RecordIssueCreateOutcome(
 			}
 		}
 		if err := issueopscontract.ValidateIssueCreateIntent(next); err != nil {
+			return err
+		}
+		if err := issueopsdomain.ValidateIssueCreateIntentInvariants(next); err != nil {
 			return err
 		}
 		record.IssueCreateIntent = &next
@@ -125,7 +130,7 @@ func CompleteIssueCreateIntent(
 		if record.IssueCreateIntent.Status == issueopscontract.IssueCreateIntentCompleted {
 			return fmt.Errorf("issue create intent is already completed")
 		}
-		if err := issueopscontract.ValidateIssueCreateTransition(record.IssueCreateIntent.Status, issueopscontract.IssueCreateIntentCompleted); err != nil {
+		if err := issueopspublication.ValidateIssueCreateTransition(record.IssueCreateIntent.Status, issueopscontract.IssueCreateIntentCompleted); err != nil {
 			return err
 		}
 		canonicalURL := strings.TrimSpace(issueURL)

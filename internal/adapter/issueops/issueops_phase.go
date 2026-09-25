@@ -11,6 +11,7 @@ import (
 	"issueops/internal/contract/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
+	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
 )
 
 func knownIssueOpsPhase(phase issueops.IssueOpsPhase) bool {
@@ -99,11 +100,8 @@ func advanceIssueOpsPhaseLocked(stateRoot, id, to string, upstream issueOpsUpstr
 // fetch 결과가 필요하지만 fetch 자체는 호출자가 span 밖에서 끝낸 것만 쓴다.
 // 결과가 없으면 fetch하지 않은 것으로 보고 upstream_fetch로 거부한다.
 func validateIssueOpsPhaseTransition(stateRoot string, record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase, upstream issueOpsUpstreamFetcher) error {
-	if record.Phase == IssueOpsPhaseDone {
-		return fmt.Errorf("cannot leave done phase")
-	}
-	if issueOpsPhaseRank(phase) < issueOpsPhaseRank(record.Phase) {
-		return fmt.Errorf("cannot move issueops phase backward from %s to %s", record.Phase, phase)
+	if err := issueopsdomain.ValidatePhaseProgression(record.Phase, phase); err != nil {
+		return err
 	}
 	// Fail-closed (rules 1/8): problem and grill have no other readiness gate, so
 	// these are the only enforcement of the problem/grill completion contracts.
@@ -183,6 +181,6 @@ func applyIssueOpsPhaseTransitionAt(record issueops.IssueOpsRecord, phase issueo
 		record.AISlopCleanHead = issueOpsCurrentHead(record)
 		record.AISlopCleanFingerprint = implementation.ChangeFingerprint(record)
 	}
-	record.PhaseLedger = stampIssueOpsForwardTransition(record.PhaseLedger, prevPhase, phase, now)
+	record.PhaseLedger = issueopsdomain.StampForwardTransition(record.PhaseLedger, prevPhase, phase, now, issueopsstatusdomain.ArtifactKeys(prevPhase))
 	return record
 }

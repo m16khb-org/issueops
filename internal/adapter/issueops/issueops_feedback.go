@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"issueops/internal/contract/issueops"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
 func AddIssueOpsFeedback(stateRoot, id, source, body, classification string) (issueops.IssueOpsRecord, error) {
@@ -96,7 +97,7 @@ func markIssueOpsContractFeedbackIssueUpdatedLocked(stateRoot, id string) (issue
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	marked := false
 	for i := range record.Feedback {
-		if issueOpsFeedbackRequiresIssueUpdate(record.Feedback[i]) {
+		if reviewdomain.FeedbackRequiresIssueUpdate(record.Feedback[i].Classification, record.Feedback[i].IssueUpdatedAt) {
 			record.Feedback[i].IssueUpdatedAt = now
 			marked = true
 		}

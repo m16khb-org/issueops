@@ -2,7 +2,6 @@ package issueops
 
 import (
 	"fmt"
-	"strings"
 )
 
 func ValidateRecord(record IssueOpsRecord) error {
@@ -15,22 +14,6 @@ func ValidateRecord(record IssueOpsRecord) error {
 	for phase, entry := range record.PhaseLedger {
 		if !knownRecordPhase(phase) || entry.Phase != phase {
 			return fmt.Errorf("issueops phase ledger identity is invalid")
-		}
-	}
-	if record.PlanPrep != nil {
-		items := []struct {
-			name string
-			item IssueOpsPlanPrepItem
-		}{
-			{name: "prior_decisions", item: record.PlanPrep.PriorDecisions},
-			{name: "related_issues", item: record.PlanPrep.RelatedIssues},
-			{name: "web_research", item: record.PlanPrep.WebResearch},
-			{name: "codebase_survey", item: record.PlanPrep.CodebaseSurvey},
-		}
-		for _, item := range items {
-			if err := validateRecordPlanPrepItem(item.name, item.item); err != nil {
-				return err
-			}
 		}
 	}
 	if record.Intent != nil {
@@ -81,10 +64,6 @@ func ValidateRecord(record IssueOpsRecord) error {
 	if record.IssueCreateIntent != nil {
 		if err := ValidateIssueCreateIntent(*record.IssueCreateIntent); err != nil {
 			return err
-		}
-		if record.IssueCreateIntent.Status == IssueCreateIntentCompleted &&
-			strings.TrimSpace(record.IssueURL) != strings.TrimSpace(record.IssueCreateIntent.CanonicalURL) {
-			return fmt.Errorf("completed issue create intent canonical_url must match issue_url")
 		}
 	}
 	if record.Execution != nil {
@@ -171,20 +150,4 @@ func knownRecordPhase(phase IssueOpsPhase) bool {
 		}
 	}
 	return false
-}
-
-func validateRecordPlanPrepItem(name string, item IssueOpsPlanPrepItem) error {
-	switch item.Status {
-	case "evidence":
-		if len(item.Evidence) == 0 || strings.TrimSpace(item.WaiveReason) != "" {
-			return fmt.Errorf("issueops plan_prep %s evidence is invalid", name)
-		}
-	case "waived":
-		if len(item.Evidence) != 0 || strings.TrimSpace(item.WaiveReason) == "" {
-			return fmt.Errorf("issueops plan_prep %s waiver is invalid", name)
-		}
-	default:
-		return fmt.Errorf("issueops plan_prep %s status %q is invalid", name, item.Status)
-	}
-	return nil
 }

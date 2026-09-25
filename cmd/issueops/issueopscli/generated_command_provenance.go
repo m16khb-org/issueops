@@ -42,7 +42,7 @@ func prepareGeneratedCommandInvocation(args []string, deps Dependencies) ([]stri
 		ExecutableSHA256: receipt.ExecutableSHA256,
 		LeaseGeneration:  authority.Execution.Lease.Generation,
 	}
-	if err := commandparsecontract.ValidateGeneratedCommandInvocation(expected, observed, authority.Execution.Lease.Generation); err != nil {
+	if err := commandparse.ValidateGeneratedCommandInvocation(expected, observed, authority.Execution.Lease.Generation); err != nil {
 		return nil, true, err
 	}
 	return clean, true, nil

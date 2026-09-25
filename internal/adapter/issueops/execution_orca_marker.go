@@ -6,6 +6,7 @@ import (
 
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/domain/issueopsremote"
 )
 
@@ -138,7 +139,7 @@ func sealExternalOrcaIntentPayloadWithIdentity(record issueops.IssueOpsRecord, p
 			"Orca intent lifecycle does not match the verified record",
 		)
 	}
-	return preparationIntentCodec.Seal(payload, preparationcontract.IssueIdentity{Provider: issue.Provider, Issue: issue.Issue})
+	return preparationdomain.SealIntent(payload, preparationcontract.IssueIdentity{Provider: issue.Provider, Issue: issue.Issue})
 }
 
 func validateOrcaIntentIssueIdentity(record issueops.IssueOpsRecord, payload externalOrcaIntentPayload) error {

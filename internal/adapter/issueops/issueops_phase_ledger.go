@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"issueops/internal/contract/issueops"
-	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
 )
 
@@ -43,34 +43,9 @@ func IssueOpsGrillReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsRea
 	if planPrepGateApplies(record) {
 		missing = append(missing, planPrepMissing(record.PlanPrep)...)
 	}
-	missing = append(missing, issueOpsSplitDecisionMissing(record)...)
-	missing = append(missing, issueOpsDomainReviewMissing(record)...)
+	missing = append(missing, issueopsdomain.SplitDecisionMissing(record)...)
+	missing = append(missing, issueopsdomain.DomainReviewMissing(record)...)
 	return issueOpsReadinessFrom(record, missing)
-}
-
-// issueOpsSplitDecisionMissing는 기존 필드에서 split_decision을 파생한다. child/
-// splits-from issue link는 분할이 일어났음을, scope decision은 분할하지 않은
-// 근거를 뜻한다. 전용 필드는 필요 없다.
-func issueOpsSplitDecisionMissing(record issueops.IssueOpsRecord) []string {
-	for _, link := range record.IssueLinks {
-		switch strings.ToLower(strings.TrimSpace(link.Type)) {
-		case "child", "splits-from":
-			return nil
-		}
-	}
-	for _, decision := range record.Decisions {
-		if strings.EqualFold(strings.TrimSpace(decision.Kind), "scope") {
-			return nil
-		}
-	}
-	return []string{"split_decision"}
-}
-
-func issueOpsDomainReviewMissing(record issueops.IssueOpsRecord) []string {
-	if record.DomainReview == nil || strings.TrimSpace(record.DomainReview.ReviewedAt) == "" {
-		return []string{"domain_review"}
-	}
-	return nil
 }
 
 func issueOpsPlanCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
@@ -138,28 +113,10 @@ func issueOpsPRCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadi
 	if record.RemoteArtifact == nil || strings.TrimSpace(record.RemoteArtifact.URL) == "" {
 		missing = append(missing, "remote_artifact")
 	}
-	missing = append(missing, issueOpsTargetBranchMatchMissing(record)...)
+	missing = append(missing, issueopsdomain.TargetBranchMatchMissing(record)...)
 	ready.Missing = stringlist.UniqueSorted(missing)
 	ready.Ready = len(ready.Missing) == 0
 	return ready
-}
-
-// issueOpsTargetBranchMatchMissing는 remote artifact가 있지만 target branch가
-// branch_prepare.base_branch와 다를 때 target_branch_match를 보고한다. 비교 입력을
-// 아직 확보하지 못했으면 remote_artifact가 부재를 다루므로 조용히 넘어가며, pr
-// 진입을 교착시키지 않는다.
-func issueOpsTargetBranchMatchMissing(record issueops.IssueOpsRecord) []string {
-	if record.RemoteArtifact == nil || record.BranchPrepare == nil {
-		return nil
-	}
-	base := strings.TrimSpace(record.BranchPrepare.BaseBranch)
-	if base == "" {
-		return nil
-	}
-	if strings.TrimSpace(record.RemoteArtifact.TargetBranch) != base {
-		return []string{"target_branch_match"}
-	}
-	return nil
 }
 
 func issueOpsDoneCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
@@ -197,58 +154,4 @@ func IssueOpsPhaseCompletion(record issueops.IssueOpsRecord, phase issueops.Issu
 	default:
 		return issueops.IssueOpsReadiness{OK: true, Ready: false, Missing: []string{"unknown_phase"}}
 	}
-}
-
-// stampIssueOpsForwardTransition은 관찰한 phase 전이를 ledger에 기록한다(rule
-// 4/5/11). 떠나는 phase는 완료로 표시한다. 성공한 forward transition은 이전 phase
-// 완료를 요구하는 새 phase의 entry gate를 이미 통과했음을 뜻한다. 진입하는 phase에는
-// 실제 entered_at을 쓴다. timestamp는 derived sentinel이 아니라 관찰한 `now`다.
-// 실제 phase-change 지점에서만 호출하므로 artifact만 기록한 record에 ledger를 추가해
-// golden을 흔들지 않는다.
-func stampIssueOpsForwardTransition(ledger issueops.IssueOpsPhaseLedger, prevPhase, newPhase issueops.IssueOpsPhase, now string) issueops.IssueOpsPhaseLedger {
-	if ledger == nil {
-		ledger = issueops.IssueOpsPhaseLedger{}
-	}
-	prev := ledger[prevPhase]
-	prev.Phase = prevPhase
-	if prev.EnteredAt == "" {
-		prev.EnteredAt = now
-	}
-	prev.CompletedAt = now
-	prev.Artifacts = issueopsstatusdomain.ArtifactKeys(prevPhase)
-	prev.Missing = nil
-	// 이 phase가 실제로 다시 완료된 forward transition은
-	// RegressIssueOpsForReplan이 남긴 stale-regression mark를 지운다. 정상적으로
-	// 재완료된 phase는 더 이상 stale이 아니다.
-	prev.Notes = clearStaleLedgerNotes(prev.Notes)
-	ledger[prevPhase] = prev
-
-	entry := ledger[newPhase]
-	entry.Phase = newPhase
-	if entry.EnteredAt == "" {
-		entry.EnteredAt = now
-	}
-	ledger[newPhase] = entry
-	return ledger
-}
-
-// clearStaleLedgerNotes는 ledger entry의 note에서 stale-regression marker
-// (markIssueOpsLedgerStale 참조)를 제거한다. 이전에 regress된 phase가 forward
-// transition으로 다시 완료되면, 더 이상 유효하지 않은 stale mark가 status에 계속
-// 남지 않게 호출한다.
-func clearStaleLedgerNotes(notes []string) []string {
-	if len(notes) == 0 {
-		return notes
-	}
-	kept := make([]string, 0, len(notes))
-	for _, n := range notes {
-		if strings.HasPrefix(n, "stale:") {
-			continue
-		}
-		kept = append(kept, n)
-	}
-	if len(kept) == 0 {
-		return nil
-	}
-	return kept
 }

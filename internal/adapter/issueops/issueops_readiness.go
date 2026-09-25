@@ -6,10 +6,10 @@ import (
 
 	"issueops/internal/adapter/issueops/delegation"
 	"issueops/internal/adapter/issueops/implementation"
-	"issueops/internal/adapter/issueops/intentdesign"
 	"issueops/internal/adapter/issueops/readinesspaths"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/stringlist"
 )
 
@@ -278,7 +278,7 @@ func issueOpsDesignReviewMissing(record issueops.IssueOpsRecord) []string {
 	if len(cleanIssueOpsTextValues(record.DesignReview.Verification)) == 0 {
 		missing = append(missing, "design_verification")
 	}
-	if record.DesignReview.Approved && !intentdesign.HasDesignReviewEvidence(record.DesignReview.Verification) {
+	if record.DesignReview.Approved && !reviewdomain.HasDesignReviewEvidence(record.DesignReview.Verification) {
 		missing = append(missing, "design_review_evidence")
 	}
 	if !record.DesignReview.Approved {

@@ -154,7 +154,7 @@ func (repository *SQLiteRepository) BeginIntent(ctx context.Context, begin prepa
 			return err
 		}
 		codec := preparationcontract.IntentCodec{}
-		issue, err := codec.PrepareIssueIdentity(current.Record)
+		issue, err := preparationdomain.PrepareIssueIdentity(current.Record.IssueURL, preparationcontract.DecodeIssueLinkEvidence(current.Record.BranchPrepare))
 		if err != nil {
 			return err
 		}
@@ -171,7 +171,7 @@ func (repository *SQLiteRepository) BeginIntent(ctx context.Context, begin prepa
 			InvocationState: preparationcontract.InvocationNotInvoked,
 			Workspace:       begin.Workspace, Probe: begin.Probe, IssueBodySHA256: begin.Owner.BodySHA256,
 		}
-		intent, err = codec.Seal(intent, issue)
+		intent, err = preparationdomain.SealIntent(intent, issue)
 		if err != nil {
 			return err
 		}
@@ -444,7 +444,7 @@ func validateIntentState(state preparationapp.IntentState) error {
 	if len(state.Snapshot.RecordRaw) == 0 || len(state.IntentRaw) == 0 {
 		return fmt.Errorf("Orca intent raw CAS evidence is required")
 	}
-	return (preparationcontract.IntentCodec{}).ValidateRecord(state.Snapshot.Record, state.Intent)
+	return preparationdomain.ValidateIntentRecord(state.Snapshot.Record, state.Intent)
 }
 
 func pendingKind(stage preparationcontract.IntentStage) string {

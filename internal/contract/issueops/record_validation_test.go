@@ -41,7 +41,7 @@ func TestValidateRecordAcceptsCompletePlanPreparation(t *testing.T) {
 	}
 }
 
-func TestValidateRecordRejectsInvalidPlanPreparationShapes(t *testing.T) {
+func TestValidateRecordLeavesPlanPreparationPolicyToDomain(t *testing.T) {
 	tests := []IssueOpsPlanPrepItem{
 		{Status: "evidence", Evidence: []string{"source"}, WaiveReason: "also waived"},
 		{Status: "waived"},
@@ -57,8 +57,8 @@ func TestValidateRecordRejectsInvalidPlanPreparationShapes(t *testing.T) {
 			},
 		}
 
-		if err := ValidateRecord(record); err == nil {
-			t.Fatalf("case %d unexpectedly accepted: %+v", index, item)
+		if err := ValidateRecord(record); err != nil {
+			t.Fatalf("case %d failed shape validation: %v", index, err)
 		}
 	}
 }

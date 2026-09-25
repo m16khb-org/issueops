@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
+	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
 )
 
 // IssueOpsStatus must backfill phases missing from a PARTIAL persisted ledger
@@ -47,12 +49,12 @@ func TestIssueOpsStatusBackfillsPartialLedger(t *testing.T) {
 // A forward transition that re-completes a previously-regressed phase must clear
 // the stale-regression note so status no longer shows the phase as stale forever.
 func TestStampForwardTransitionClearsStaleNote(t *testing.T) {
-	ledger := markIssueOpsLedgerStale(issueops.IssueOpsPhaseLedger{}, "second-system effect", IssueOpsPhasePlan)
+	ledger := issueopsdomain.MarkLedgerStale(issueops.IssueOpsPhaseLedger{}, "stale: design-review regression (second-system effect)", IssueOpsPhasePlan)
 	if len(ledger[IssueOpsPhasePlan].Notes) == 0 {
 		t.Fatal("precondition: plan must carry a stale note before re-completion")
 	}
 
-	ledger = stampIssueOpsForwardTransition(ledger, IssueOpsPhasePlan, IssueOpsPhaseCompatibilityReview, "2026-06-30T00:00:00Z")
+	ledger = issueopsdomain.StampForwardTransition(ledger, IssueOpsPhasePlan, IssueOpsPhaseCompatibilityReview, "2026-06-30T00:00:00Z", issueopsstatusdomain.ArtifactKeys(IssueOpsPhasePlan))
 	plan := ledger[IssueOpsPhasePlan]
 	if plan.CompletedAt == "" {
 		t.Fatalf("plan must be marked complete after the forward transition, got %#v", plan)

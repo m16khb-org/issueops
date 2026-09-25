@@ -8,7 +8,9 @@ import (
 
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	issueopsdomain "issueops/internal/domain/issueops"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
 // RecordIssueOpsSchemaEvidence는 스키마·마이그레이션·엔티티 변경 사이클의
@@ -29,17 +31,8 @@ func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEviden
 	measurements := cleanReviewValues(req.Measurements)
 	sources := cleanReviewValues(req.Sources)
 	rationale := strings.TrimSpace(req.WaiverRationale)
-	if req.Waive {
-		if rationale == "" {
-			return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("schema evidence waiver requires --waiver-rationale")
-		}
-	} else {
-		if len(measurements) == 0 {
-			return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("schema evidence requires at least one --measurement or an explicit --waive")
-		}
-		if len(sources) == 0 {
-			return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("schema evidence requires at least one --source naming where the measurement was observed")
-		}
+	if err := reviewdomain.ValidateSchemaEvidenceRecord(req.Waive, rationale, len(measurements), len(sources)); err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
 	}
 	// 변경 집합 관측은 span 밖에서 끝낸다(recordIssueOpsImplementationReview 참고).
 	observed, err := ReadIssueOps(stateRoot, id)
@@ -89,33 +82,15 @@ func schemaEvidenceMissing(record issueops.IssueOpsRecord, currentFingerprint st
 }
 
 func schemaEvidenceMissingForPaths(record issueops.IssueOpsRecord, changed []string, currentFingerprint string) string {
-	if !changeSetTouchesSchema(changed) {
-		return ""
-	}
-	evidence := record.SchemaEvidence
-	if evidence == nil {
-		return "schema_evidence"
-	}
-	if evidence.Waived {
-		if strings.TrimSpace(evidence.WaiverRationale) == "" {
-			return "schema_evidence"
-		}
-	} else if len(evidence.Measurements) == 0 || len(evidence.Sources) == 0 {
-		return "schema_evidence"
-	}
-	if currentFingerprint != "" && evidence.ReviewedFingerprint != currentFingerprint {
-		return "schema_evidence_stale"
-	}
-	return ""
-}
-
-func changeSetTouchesSchema(changed []string) bool {
-	for _, rel := range changed {
-		if pathIsSchemaChange(rel) {
-			return true
+	evidence := reviewcontract.SchemaGateEvidence{}
+	if recorded := record.SchemaEvidence; recorded != nil {
+		evidence = reviewcontract.SchemaGateEvidence{
+			Present: true, Waived: recorded.Waived, WaiverRationale: recorded.WaiverRationale,
+			MeasurementCount: len(recorded.Measurements), SourceCount: len(recorded.Sources),
+			ReviewedFingerprint: recorded.ReviewedFingerprint,
 		}
 	}
-	return false
+	return reviewdomain.SchemaEvidenceMissing(reviewdomain.ChangeSetTouchesSchema(changed), evidence, currentFingerprint)
 }
 
 // pathIsSchemaChange는 도메인 규칙에 위임한다. 같은 경로 판정을 리뷰 티어

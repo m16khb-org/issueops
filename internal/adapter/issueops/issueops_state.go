@@ -18,6 +18,7 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
 	statecontract "issueops/internal/contract/state"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -258,6 +259,9 @@ func normalizeIssueOpsID(id string) (string, error) {
 
 func validateIssueOpsRecord(record issueops.IssueOpsRecord) error {
 	if err := issueops.ValidateRecord(record); err != nil {
+		return statecontract.ErrInvalidState
+	}
+	if err := issueopsdomain.ValidateRecordInvariants(record); err != nil {
 		return statecontract.ErrInvalidState
 	}
 	return nil

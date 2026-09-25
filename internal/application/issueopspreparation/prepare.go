@@ -2,6 +2,7 @@ package issueopspreparation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -70,11 +71,12 @@ func (service *Service) Prepare(ctx context.Context, command preparationcontract
 			// owner가 보충할 수 없는 planner 전제가 빠져 있으면 띄우지 않는다.
 			// 띄우면 owner는 claim까지 완주한 뒤 채울 수 없는 게이트에 부딪혀
 			// 반드시 실패한다 — 실측으로 그랬다(#319, io-cb83a79e1bfd).
-			if gates := preparationcontract.MissingPlannerGates(snapshot.Record); len(gates) > 0 {
+			if keys := preparationdomain.MissingPlannerGateKeys(plannerEvidence(snapshot.Record)); len(keys) > 0 {
+				gates := plannerGateHints(snapshot.Record.ID, keys)
 				return failedResult(command.ID), plannerGateError(gates)
 			}
 			codec := preparationcontract.IntentCodec{}
-			issue, issueErr := codec.PrepareIssueIdentity(snapshot.Record)
+			issue, issueErr := preparationdomain.PrepareIssueIdentity(snapshot.Record.IssueURL, preparationcontract.DecodeIssueLinkEvidence(snapshot.Record.BranchPrepare))
 			if issueErr != nil {
 				return failedResult(command.ID), issueErr
 			}
@@ -366,7 +368,7 @@ func normalizeOwnerDefaults(command preparationcontract.Command) preparationcont
 	command.OwnerHost = strings.ToLower(strings.TrimSpace(command.OwnerHost))
 	command.OwnerModel = strings.TrimSpace(command.OwnerModel)
 	command.OwnerEffort = strings.TrimSpace(command.OwnerEffort)
-	if model, effort, ok := preparationcontract.ImplementerDefaults(command.OwnerHost); ok {
+	if model, effort, ok := preparationdomain.ImplementerDefaults(command.OwnerHost); ok {
 		if command.OwnerModel == "" {
 			command.OwnerModel = model
 		}
@@ -535,8 +537,40 @@ func quoteArg(value string) string                      { return "'" + strings.R
 func formatTime(value time.Time) string                 { return value.UTC().Format(time.RFC3339Nano) }
 func failedResult(id string) preparationcontract.Result { return preparationcontract.Result{ID: id} }
 
+func plannerEvidence(record preparationcontract.Record) preparationcontract.PlannerEvidence {
+	var evidence preparationcontract.PlannerEvidence
+	if err := json.Unmarshal(record.Intent, &evidence.Intent); err != nil {
+		evidence.Intent = preparationcontract.PlannerIntentEvidence{}
+	}
+	if err := json.Unmarshal(record.DesignReview, &evidence.DesignReview); err != nil {
+		evidence.DesignReview = preparationcontract.PlannerDesignEvidence{}
+	}
+	if err := json.Unmarshal(record.DevilsAdvocateReview, &evidence.DevilsAdvocate); err != nil {
+		evidence.DevilsAdvocate = preparationcontract.PlannerDevilsAdvocateEvidence{}
+	}
+	return evidence
+}
+
 // plannerGateError는 무엇이 빠졌는지와 그것을 기록하는 정확한 명령을 함께
 // 돌려준다. 키만 나열하면 coordinator는 무엇을 실행할지 추측하게 된다.
+func plannerGateHints(id string, keys []string) []preparationcontract.PlannerGate {
+	id = strings.TrimSpace(id)
+	gates := make([]preparationcontract.PlannerGate, 0, len(keys))
+	for _, key := range keys {
+		gate := preparationcontract.PlannerGate{Key: key}
+		switch key {
+		case "intent_contract":
+			gate.Command = "issueops intent record --id " + id + " --raw-request <TEXT> --interpreted-intent <TEXT> --success-criteria <TEXT> ..."
+		case "design_review":
+			gate.Command = "issueops design review --id " + id + " --problem-summary <TEXT> --proposed-design <TEXT> --verification <TEXT> --approved ..."
+		case "devils_advocate_review":
+			gate.Command = "issueops devils-advocate review --id " + id + " --reviewer-context subagent --verdict <VERDICT> --finding <TEXT> ..."
+		}
+		gates = append(gates, gate)
+	}
+	return gates
+}
+
 func plannerGateError(gates []preparationcontract.PlannerGate) error {
 	lines := make([]string, 0, len(gates)+1)
 	lines = append(lines, "Orca prepare needs planner-owned records the owner cannot supply: "+

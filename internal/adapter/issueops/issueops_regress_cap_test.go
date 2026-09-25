@@ -31,17 +31,17 @@ func TestRegressIssueOpsForReplanRecordsRegressEvent(t *testing.T) {
 
 func TestRegressIssueOpsForReplanCapsRepeatedRegressions(t *testing.T) {
 	// One below the cap: the regress is still allowed and appends its event.
-	stateRoot, id := seedRegressEvents(t, issueOpsRegressCap-1)
+	stateRoot, id := seedRegressEvents(t, 2)
 	out, err := RegressIssueOpsForReplan(stateRoot, id, "still within cap")
 	if err != nil {
 		t.Fatalf("regress below cap must be allowed: %v", err)
 	}
-	if len(out.RegressEvents) != issueOpsRegressCap {
-		t.Fatalf("regress events = %d, want %d", len(out.RegressEvents), issueOpsRegressCap)
+	if len(out.RegressEvents) != 3 {
+		t.Fatalf("regress events = %d, want 3", len(out.RegressEvents))
 	}
 
 	// At the cap: fail-closed refusal that demands a human decision, no rewind.
-	stateRoot2, id2 := seedRegressEvents(t, issueOpsRegressCap)
+	stateRoot2, id2 := seedRegressEvents(t, 3)
 	if _, err := RegressIssueOpsForReplan(stateRoot2, id2, "one stop too many"); err == nil ||
 		!strings.Contains(err.Error(), "human decision") {
 		t.Fatalf("regress at cap must be refused with a human-decision escalation, got %v", err)
@@ -53,13 +53,13 @@ func TestRegressIssueOpsForReplanCapsRepeatedRegressions(t *testing.T) {
 	if rec2.Phase != IssueOpsPhasePlan {
 		t.Fatalf("refused regress must not rewind the phase, got %s", rec2.Phase)
 	}
-	if len(rec2.RegressEvents) != issueOpsRegressCap {
+	if len(rec2.RegressEvents) != 3 {
 		t.Fatalf("refused regress must not append events, got %d", len(rec2.RegressEvents))
 	}
 }
 
 func TestRegressCapErrorReportsActualEventCount(t *testing.T) {
-	stateRoot, id := seedRegressEvents(t, issueOpsRegressCap+2)
+	stateRoot, id := seedRegressEvents(t, 5)
 
 	_, err := RegressIssueOpsForReplan(stateRoot, id, "too many stops")
 	if err == nil {

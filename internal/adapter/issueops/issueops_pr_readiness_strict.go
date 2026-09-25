@@ -6,6 +6,7 @@ import (
 
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
 )
 
@@ -172,7 +173,7 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 	} else if !issueOpsWorktreePathValid(path) {
 		missing = append(missing, "worktree_exists")
 	}
-	missing = append(missing, issueOpsTargetBranchMatchMissing(record)...)
+	missing = append(missing, issueopsdomain.TargetBranchMatchMissing(record)...)
 
 	ready.Missing = stringlist.UniqueSorted(missing)
 	ready.Warnings = warnings

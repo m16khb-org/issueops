@@ -8,6 +8,8 @@ import (
 
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/policy"
 )
 
@@ -26,13 +28,10 @@ func RecordIssueOpsImplementationReviewWithActor(stateRoot, id string, req Issue
 
 func recordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplementationReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
-	if verdict != "pass" && verdict != "revise" && verdict != "stop" {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("implementation review verdict must be pass|revise|stop")
-	}
 	findings := cleanReviewValues(req.Findings)
 	evidence := cleanReviewValues(req.Evidence)
-	if len(findings) == 0 || len(evidence) == 0 {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("implementation review requires at least one finding and one evidence entry")
+	if err := reviewdomain.ValidateImplementationReviewRecord(verdict, len(findings), len(evidence)); err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
 	}
 	// 리뷰 대상 바인딩: 현재 변경 집합의 content fingerprint를 봉인한다.
 	// 이후 diff가 바뀌면 게이트가 stale로 거부한다(C4b-F1).
@@ -91,10 +90,24 @@ func recordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplem
 // record와 같은 worktree·base에서 나왔는지 확인한다. 그사이 둘 중 하나가
 // 바뀌었으면 옛 관측으로 기록하지 않고 다시 시도하게 한다.
 func requireCurrentChangeObservation(observed, current issueops.IssueOpsRecord) error {
-	if implementation.ChangeObservationKey(observed) != implementation.ChangeObservationKey(current) {
+	if !reviewdomain.SameChangeObservationIdentity(changeObservationIdentity(observed), changeObservationIdentity(current)) {
 		return fmt.Errorf("IssueOps record %s changed its worktree or base while the change set was observed; retry the command", current.ID)
 	}
 	return nil
+}
+
+func changeObservationIdentity(record issueops.IssueOpsRecord) reviewcontract.ChangeObservationIdentity {
+	root := strings.TrimSpace(record.WorktreePath)
+	if root == "" {
+		root = strings.TrimSpace(record.Repo)
+	}
+	identity := reviewcontract.ChangeObservationIdentity{Root: root}
+	if record.BranchPrepare != nil {
+		identity.HasPreparedBase = true
+		identity.BaseSHA = record.BranchPrepare.BaseSHA
+		identity.BaseBranch = record.BranchPrepare.BaseBranch
+	}
+	return identity
 }
 
 func cleanReviewValues(values []string) []string {
@@ -119,18 +132,11 @@ func cleanReviewValues(values []string) []string {
 // currentFingerprint가 비어 있지 않으면 리뷰가 봉인한 fingerprint와 비교해
 // stale 리뷰를 거부한다.
 func implementationReviewMissing(record issueops.IssueOpsRecord, currentFingerprint string) string {
-	if record.Execution == nil {
-		return ""
+	evidence := reviewcontract.ReviewGateEvidence{}
+	if review := record.ImplementationReview; review != nil {
+		evidence = reviewcontract.ReviewGateEvidence{
+			Present: true, Verdict: review.Verdict, ReviewedFingerprint: review.ReviewedFingerprint,
+		}
 	}
-	review := record.ImplementationReview
-	if review == nil {
-		return "implementation_review"
-	}
-	if review.Verdict != "pass" {
-		return "implementation_review_verdict_" + review.Verdict
-	}
-	if currentFingerprint != "" && review.ReviewedFingerprint != currentFingerprint {
-		return "implementation_review_stale"
-	}
-	return ""
+	return reviewdomain.ImplementationReviewMissing(record.Execution != nil, evidence, currentFingerprint)
 }

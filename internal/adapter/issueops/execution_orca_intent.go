@@ -14,6 +14,7 @@ import (
 	"issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -422,7 +423,7 @@ func reconcileCanonicalOrcaIntent(
 		if err != nil {
 			return err
 		}
-		intent, _, err = preparationIntentCodec.Canonicalize(contractRecord, raw)
+		intent, _, err = preparationdomain.CanonicalizeIntent(contractRecord, raw)
 		if err != nil {
 			return err
 		}

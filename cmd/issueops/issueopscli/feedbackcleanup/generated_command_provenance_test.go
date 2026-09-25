@@ -186,7 +186,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	observed := commandparsecontract.GeneratedCommandProvenance{
 		ExecutablePath: observer.evidence.ExecutablePath, ExecutableSHA256: observer.evidence.ExecutableSHA256, LeaseGeneration: 1,
 	}
-	if err := commandparsecontract.ValidateGeneratedCommandInvocation(provenance, observed, 1); err != nil {
+	if err := commandparse.ValidateGeneratedCommandInvocation(provenance, observed, 1); err != nil {
 		t.Fatal(err)
 	}
 	if err := RunCleanup(clean[1:], deps); err != nil {

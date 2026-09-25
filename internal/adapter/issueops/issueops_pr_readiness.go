@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"issueops/internal/contract/issueops"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/stringlist"
 )
 
@@ -67,16 +68,11 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 
 func issueOpsHasUnresolvedContractFeedback(record issueops.IssueOpsRecord) bool {
 	for _, item := range record.Feedback {
-		if issueOpsFeedbackRequiresIssueUpdate(item) {
+		if reviewdomain.FeedbackRequiresIssueUpdate(item.Classification, item.IssueUpdatedAt) {
 			return true
 		}
 	}
 	return false
-}
-
-func issueOpsFeedbackRequiresIssueUpdate(item issueops.IssueOpsFeedbackItem) bool {
-	return strings.EqualFold(strings.TrimSpace(item.Classification), "contract_change") &&
-		strings.TrimSpace(item.IssueUpdatedAt) == ""
 }
 
 func issueOpsBaseImplementationMissing(record issueops.IssueOpsRecord) []string {

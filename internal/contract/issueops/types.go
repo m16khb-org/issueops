@@ -1,5 +1,7 @@
 package issueops
 
+import reviewcontract "issueops/internal/contract/issueopsreview"
+
 type IssueOpsStartRequest struct {
 	Repo   string `json:"repo"`
 	Branch string `json:"branch,omitempty"`
@@ -149,28 +151,8 @@ type IssueOpsIntentRecordRequest struct {
 	IntentClass       string
 }
 
-type IssueOpsDesignReview struct {
-	ProblemSummary string   `json:"problem_summary"`
-	ProposedDesign string   `json:"proposed_design"`
-	RefactorPlan   string   `json:"refactor_plan,omitempty"`
-	Alternatives   []string `json:"alternatives,omitempty"`
-	Risks          []string `json:"risks,omitempty"`
-	Verification   []string `json:"verification"`
-	OpenQuestions  []string `json:"open_questions,omitempty"`
-	Approved       bool     `json:"approved"`
-	ReviewedAt     string   `json:"reviewed_at"`
-}
-
-type IssueOpsDesignReviewRequest struct {
-	ProblemSummary string
-	ProposedDesign string
-	RefactorPlan   string
-	Alternatives   []string
-	Risks          []string
-	Verification   []string
-	OpenQuestions  []string
-	Approved       bool
-}
+type IssueOpsDesignReview = reviewcontract.DesignReview
+type IssueOpsDesignReviewRequest = reviewcontract.DesignReviewRequest
 
 type IssueOpsDecision struct {
 	Title              string   `json:"title"`
@@ -219,66 +201,14 @@ type IssueOpsPlanPrepRequest struct {
 	CodebaseSurvey IssueOpsPlanPrepItemRequest
 }
 
-type IssueOpsCompatibilityReview struct {
-	BackwardCompatibility []string `json:"backward_compatibility"`
-	SideEffects           []string `json:"side_effects"`
-	RollbackPlan          string   `json:"rollback_plan"`
-	Verification          []string `json:"verification"`
-	Blockers              []string `json:"blockers,omitempty"`
-	Approved              bool     `json:"approved"`
-	ReviewedAt            string   `json:"reviewed_at"`
-}
+type IssueOpsCompatibilityReview = reviewcontract.CompatibilityReview
+type IssueOpsCompatibilityReviewRequest = reviewcontract.CompatibilityReviewRequest
 
-type IssueOpsCompatibilityReviewRequest struct {
-	BackwardCompatibility []string
-	SideEffects           []string
-	RollbackPlan          string
-	Verification          []string
-	Blockers              []string
-	Approved              bool
-}
-
-// IssueOpsDevilsAdvocateReview captures the design-review devil's-advocate verdict on
-// the completed plan/design. A pass (or a stop/revise explicitly waived with
-// rationale) is a fail-closed precondition of implement entry; a stop's findings
-// are reflected into the remote issue before the cycle regresses.
-type IssueOpsDevilsAdvocateReview struct {
-	Verdict         string   `json:"verdict"` // pass | revise | stop
-	Findings        []string `json:"findings,omitempty"`
-	Waived          bool     `json:"waived,omitempty"`
-	WaiverRationale string   `json:"waiver_rationale,omitempty"`
-	ReviewerPattern string   `json:"reviewer_pattern,omitempty"`
-	// ReviewerContext는 감사 기록이다(subagent | inline) — 하네스는 자기신고를
-	// 검증할 수 없으므로 게이트 조건이 아니다(ImplementationReview.reviewer_*와 같은 원칙).
-	ReviewerContext string `json:"reviewer_context,omitempty"`
-	// ReviewedPlanDigest는 기록 시점 링크된 플랜 파일의 sha256이다. implement
-	// 진입과 owner preflight는 현재 플랜과 비교해 stale 판정을 거부한다.
-	ReviewedPlanDigest string `json:"reviewed_plan_digest,omitempty"`
-	// History는 같은 plan phase의 이전 라운드다(오래된 순). regress가 review를
-	// 지우면 함께 사라진다 — stop 라운드는 원격 이슈 반영과 Decisions에 남는다.
-	History          []IssueOpsDevilsAdvocateRound `json:"history,omitempty"`
-	RecordedAt       string                        `json:"recorded_at"`
-	IssueReflectedAt string                        `json:"issue_reflected_at,omitempty"`
-}
-
-// IssueOpsDevilsAdvocateRound는 덮어쓰기 전의 라운드 사본이다(History 제외).
-type IssueOpsDevilsAdvocateRound struct {
-	Verdict            string   `json:"verdict"`
-	Findings           []string `json:"findings,omitempty"`
-	Waived             bool     `json:"waived,omitempty"`
-	WaiverRationale    string   `json:"waiver_rationale,omitempty"`
-	ReviewerContext    string   `json:"reviewer_context,omitempty"`
-	ReviewedPlanDigest string   `json:"reviewed_plan_digest,omitempty"`
-	RecordedAt         string   `json:"recorded_at"`
-}
-
-type IssueOpsDevilsAdvocateReviewRequest struct {
-	Verdict         string
-	Findings        []string
-	Waived          bool
-	WaiverRationale string
-	ReviewerContext string
-}
+// The aliases preserve the persisted IssueOps record shape while review policy
+// moves to the issueopsreview capability.
+type IssueOpsDevilsAdvocateReview = reviewcontract.DevilsAdvocateReview
+type IssueOpsDevilsAdvocateRound = reviewcontract.DevilsAdvocateRound
+type IssueOpsDevilsAdvocateReviewRequest = reviewcontract.DevilsAdvocateReviewRequest
 
 // IssueOpsDomainReview captures the grill-phase domain grilling outcome:
 // terminology, current model fit, risks, and unresolved uncertainties. It is a

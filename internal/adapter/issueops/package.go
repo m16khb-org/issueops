@@ -18,6 +18,7 @@ import (
 	"issueops/internal/adapter/issueops/linking"
 	"issueops/internal/adapter/issueops/start"
 	"issueops/internal/contract/issueops"
+	"issueops/internal/domain/issueopsintent"
 	remote "issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/repoidentity"
 	"issueops/internal/domain/stringlist"
@@ -418,7 +419,7 @@ func recordIssueOpsDesignReview(stateRoot, id string, req issueops.IssueOpsDesig
 }
 
 func cleanIssueOpsTextValues(values []string) []string {
-	return intentdesign.CleanTextValues(values)
+	return issueopsintent.CleanTextValues(values)
 }
 
 func issueOpsIntentDesignStore() intentdesign.Store {

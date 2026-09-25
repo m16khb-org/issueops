@@ -10,6 +10,8 @@ import (
 
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/projectdoc"
 )
 
@@ -28,23 +30,11 @@ func RecordIssueOpsProjectDocsReviewWithActor(stateRoot, id string, req IssueOps
 
 func recordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDocsReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
-	if verdict != "updated" && verdict != "no-change" {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review verdict must be updated|no-change")
-	}
 	docs := cleanReviewValues(req.Docs)
 	evidence := cleanReviewValues(req.Evidence)
-	if len(evidence) == 0 {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review requires at least one evidence entry")
-	}
-	if verdict == "updated" && len(docs) == 0 {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review verdict updated requires at least one --doc path")
-	}
-	if verdict == "no-change" && len(docs) > 0 {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review verdict no-change must not list updated docs")
-	}
 	reviewedDocs := cleanReviewValues(req.ReviewedDocs)
-	if verdict == "no-change" && len(reviewedDocs) == 0 {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("project docs review verdict no-change requires at least one --reviewed-doc path that was actually read")
+	if err := reviewdomain.ValidateProjectDocsReviewRecord(verdict, len(docs), len(evidence), len(reviewedDocs)); err != nil {
+		return issueops.IssueOpsRecord{OK: false}, err
 	}
 	// fingerprint를 계산할 수 없는 사이클(비-git worktree 등)도 판정 자체는
 	// 기록할 수 있다 — ai_slop_clean과 같은 관용이다. 빈 채로 봉인하면
@@ -176,12 +166,9 @@ func relativeChangePath(root, path string) string {
 // 달리 execution mode도, execution lease 유무도 가리지 않는다 — 어떤 경로로
 // implement 이후 phase에 왔든 운영 문서에 남길 결정을 만들 수 있기 때문이다.
 func projectDocsReviewMissing(record issueops.IssueOpsRecord, currentFingerprint string) string {
-	review := record.ProjectDocsReview
-	if review == nil {
-		return "project_docs_review"
+	evidence := reviewcontract.ReviewGateEvidence{}
+	if review := record.ProjectDocsReview; review != nil {
+		evidence = reviewcontract.ReviewGateEvidence{Present: true, ReviewedFingerprint: review.ReviewedFingerprint}
 	}
-	if currentFingerprint != "" && review.ReviewedFingerprint != currentFingerprint {
-		return "project_docs_review_stale"
-	}
-	return ""
+	return reviewdomain.ProjectDocsReviewMissing(evidence, currentFingerprint)
 }

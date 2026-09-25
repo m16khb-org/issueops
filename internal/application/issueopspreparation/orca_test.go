@@ -58,8 +58,8 @@ func TestOrcaPreviewAcceptsOmoOwner(t *testing.T) {
 	fixture := newOrcaApplicationFixture()
 	command := orcaCommand(false, preparationcontract.ModeOrca)
 	command.OwnerHost = "omo"
-	command.OwnerModel = preparationcontract.ImplementerModelOmo
-	command.OwnerEffort = preparationcontract.ImplementerEffortOmo
+	command.OwnerModel = preparationdomain.ImplementerModelOmo
+	command.OwnerEffort = preparationdomain.ImplementerEffortOmo
 
 	result, err := fixture.service.Prepare(context.Background(), command)
 	if err != nil {
@@ -248,7 +248,7 @@ func newOrcaApplicationFixture() *orcaApplicationFixture {
 
 func orcaCommand(confirm bool, mode string) preparationcontract.Command {
 	command := preparationcontract.Command{
-		ID: "io-orca", Mode: mode, CWD: "/repo", OwnerHost: "codex", OwnerModel: preparationcontract.ImplementerModelCodex, OwnerEffort: preparationcontract.ImplementerEffortCodex, Confirm: confirm,
+		ID: "io-orca", Mode: mode, CWD: "/repo", OwnerHost: "codex", OwnerModel: preparationdomain.ImplementerModelCodex, OwnerEffort: preparationdomain.ImplementerEffortCodex, Confirm: confirm,
 		Actor: leasecontract.Actor{Host: "codex", SessionID: "session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}},
 	}
 	if confirm {

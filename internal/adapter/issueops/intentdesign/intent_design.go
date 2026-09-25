@@ -6,10 +6,10 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"time"
-	"unicode"
 
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/policy"
 	"issueops/internal/domain/secretdetection"
 )
@@ -37,10 +37,10 @@ func RecordIntent(store Store, stateRoot, id string, req model.IssueOpsIntentRec
 	if interpretedIntent == rawRequest {
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("interpreted_intent must differ from raw_request")
 	}
-	if !materiallyDifferentIntent(rawRequest, interpretedIntent) {
+	if !issueopsintent.MateriallyDifferentIntent(rawRequest, interpretedIntent) {
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("interpreted_intent must materially differ from raw_request")
 	}
-	successCriteria := CleanTextValues(req.SuccessCriteria)
+	successCriteria := issueopsintent.CleanTextValues(req.SuccessCriteria)
 	if len(successCriteria) == 0 {
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("success_criteria is required")
 	}
@@ -56,9 +56,9 @@ func RecordIntent(store Store, stateRoot, id string, req model.IssueOpsIntentRec
 		RawRequest:        policy.RedactFreeform(rawRequest),
 		InterpretedIntent: policy.RedactFreeform(interpretedIntent),
 		SuccessCriteria:   successCriteria,
-		Constraints:       CleanTextValues(req.Constraints),
-		Ambiguities:       CleanTextValues(req.Ambiguities),
-		NonGoals:          CleanTextValues(req.NonGoals),
+		Constraints:       issueopsintent.CleanTextValues(req.Constraints),
+		Ambiguities:       issueopsintent.CleanTextValues(req.Ambiguities),
+		NonGoals:          issueopsintent.CleanTextValues(req.NonGoals),
 		IntentClass:       intentClass,
 		RecordedAt:        time.Now().UTC().Format(time.RFC3339Nano),
 	}
@@ -71,25 +71,10 @@ func RecordIntent(store Store, stateRoot, id string, req model.IssueOpsIntentRec
 }
 
 func RecordDesignReview(store Store, stateRoot, id string, req model.IssueOpsDesignReviewRequest) (model.IssueOpsRecord, error) {
-	problemSummary := strings.TrimSpace(req.ProblemSummary)
-	if problemSummary == "" {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("problem_summary is required")
+	review, err := reviewdomain.PrepareDesignReview(req)
+	if err != nil {
+		return model.IssueOpsRecord{OK: false}, err
 	}
-	proposedDesign := strings.TrimSpace(req.ProposedDesign)
-	if proposedDesign == "" {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("proposed_design is required")
-	}
-	verification := CleanTextValues(req.Verification)
-	if len(verification) == 0 {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("verification is required")
-	}
-	openQuestions := CleanTextValues(req.OpenQuestions)
-	if req.Approved && len(openQuestions) > 0 {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("approved design review must not have open_questions")
-	}
-	refactorPlan := strings.TrimSpace(req.RefactorPlan)
-	alternatives := CleanTextValues(req.Alternatives)
-	risks := CleanTextValues(req.Risks)
 	record, err := store.Read(stateRoot, id)
 	if err != nil {
 		return record, err
@@ -104,29 +89,14 @@ func RecordDesignReview(store Store, stateRoot, id string, req model.IssueOpsDes
 			return model.IssueOpsRecord{OK: false}, fmt.Errorf("cannot record design review before intent contract: missing %s", strings.Join(blocking, ", "))
 		}
 	}
-	if req.Approved && refactorPlan == "" {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("approved design review requires refactor_plan")
-	}
-	if req.Approved && len(alternatives) == 0 {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("approved design review requires alternatives")
-	}
-	if req.Approved && len(risks) == 0 {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("approved design review requires risks")
-	}
-	if req.Approved && !HasDesignReviewEvidence(verification) {
+	review, err = reviewdomain.FinalizeDesignReview(review, time.Now().UTC().Format(time.RFC3339Nano))
+	if errors.Is(err, reviewdomain.ErrMissingDesignReviewEvidence) {
 		return model.IssueOpsRecord{OK: false}, errors.New(designReviewEvidenceGuidance)
 	}
-	record.DesignReview = &model.IssueOpsDesignReview{
-		ProblemSummary: policy.RedactFreeform(problemSummary),
-		ProposedDesign: policy.RedactFreeform(proposedDesign),
-		RefactorPlan:   policy.RedactFreeform(refactorPlan),
-		Alternatives:   alternatives,
-		Risks:          risks,
-		Verification:   verification,
-		OpenQuestions:  openQuestions,
-		Approved:       req.Approved,
-		ReviewedAt:     time.Now().UTC().Format(time.RFC3339Nano),
+	if err != nil {
+		return model.IssueOpsRecord{OK: false}, err
 	}
+	record.DesignReview = &review
 	return store.TouchWrite(stateRoot, record)
 }
 
@@ -136,78 +106,6 @@ func nonPlanPrepMissing(missing []string) []string {
 		if !strings.HasPrefix(m, "plan_prep_") {
 			out = append(out, m)
 		}
-	}
-	return out
-}
-
-func HasDesignReviewEvidence(values []string) bool {
-	for _, value := range values {
-		text := strings.ToLower(strings.TrimSpace(value))
-		if text == "" {
-			continue
-		}
-		if strings.Contains(text, "design") && (strings.Contains(text, "review") || strings.Contains(text, "audit") || strings.Contains(text, "evaluat")) {
-			return true
-		}
-		if strings.Contains(text, "설계") && (strings.Contains(text, "검수") || strings.Contains(text, "검토")) {
-			return true
-		}
-	}
-	return false
-}
-
-func materiallyDifferentIntent(rawRequest, interpretedIntent string) bool {
-	rawTokens := intentTokenSet(rawRequest)
-	interpretedTokens := intentTokenSet(interpretedIntent)
-	if len(rawTokens) < 4 || len(interpretedTokens) < 4 {
-		return true
-	}
-	shared := 0
-	for token := range rawTokens {
-		if interpretedTokens[token] {
-			shared++
-		}
-	}
-	union := len(rawTokens) + len(interpretedTokens) - shared
-	return union == 0 || float64(shared)/float64(union) < 0.85
-}
-
-func intentTokenSet(text string) map[string]bool {
-	out := map[string]bool{}
-	for _, token := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
-	}) {
-		if token == "" || intentStopWord(token) {
-			continue
-		}
-		out[token] = true
-	}
-	return out
-}
-
-func intentStopWord(token string) bool {
-	switch token {
-	case "a", "an", "the", "please", "좀", "해주세요":
-		return true
-	default:
-		return false
-	}
-}
-
-func CleanTextValues(values []string) []string {
-	seen := map[string]bool{}
-	out := []string{}
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" || strings.Contains(value, "\x00") || seen[value] {
-			continue
-		}
-		value = policy.RedactFreeform(value)
-		if seen[value] {
-			continue
-		}
-		seen[value] = true
-		out = append(out, value)
 	}
 	return out
 }
