@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+// ValidateRecord checks persisted field shapes; cross-field lifecycle rules
+// belong to domain/issueops.ValidateRecordInvariants.
 func ValidateRecord(record IssueOpsRecord) error {
 	if record.SchemaVersion != IssueOpsSchemaVersion {
 		return fmt.Errorf("issueops record schema version is invalid")

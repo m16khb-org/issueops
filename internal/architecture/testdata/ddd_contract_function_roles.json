@@ -97,7 +97,7 @@
   {
     "path": "internal/contract/issueops/record_validation.go",
     "symbol": "func ValidateRecord",
-    "role": "mixed-deferred"
+    "role": "shape"
   },
   {
     "path": "internal/contract/issueops/record_validation.go",
