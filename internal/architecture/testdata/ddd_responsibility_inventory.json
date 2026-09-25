@@ -9311,15 +9311,18 @@
         "func NewSQLiteRepository",
         "func SQLiteRepository.Claim",
         "func SQLiteRepository.Update",
-        "func claimWithinSpan",
-        "func cleanupAbandonApplying",
+        "func claimTransaction.CanonicalCWD",
+        "func claimTransaction.CurrentTokenPath",
+        "func claimTransaction.Load",
+        "func claimTransaction.Persist",
+        "func claimTransaction.ReadToken",
+        "func claimTransaction.RemoveToken",
         "func decodeLeaseRecord",
         "func holderIndexKey",
         "func toApplicationRecord",
-        "func toContractActor",
-        "func toDomainLease",
         "func updateWithinSpan",
         "type SQLiteRepository",
+        "type claimTransaction",
         "type holderIndex"
       ]
     },
@@ -10838,6 +10841,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopslease/claim_transaction.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ClaimWithinTransaction",
+        "func claimContractActor"
+      ]
+    },
+    {
       "path": "internal/application/issueopslease/ports.go",
       "owner": "application",
       "task": "T20",
@@ -10847,6 +10859,7 @@
         "type ClaimPreflightRequest",
         "type ClaimRepository",
         "type ClaimRepositoryRequest",
+        "type ClaimTransaction",
         "type Clock",
         "type ProcessInspector",
         "type ReconcileIntentState",
@@ -13052,6 +13065,8 @@
       "task": "T20",
       "symbols": [
         "func ApplyClaim",
+        "func ClaimTokenMatches",
+        "func CleanupAbandonApplying",
         "func IsClaimRetry",
         "func ValidateClaim",
         "type ClaimOutcome",
@@ -15074,6 +15089,7 @@
       "source_symbol": "func claimWithinSpan",
       "responsibility": "claim authority and token decision order",
       "target": "internal/application/issueopslease",
+      "target_symbol": "func ClaimWithinTransaction",
       "task": "T05",
       "entrypoints": [
         "issueops execution claim"
@@ -15081,7 +15097,7 @@
       "evidence_tests": [
         "internal/adapter/outbound/issueopslease/claim_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "git-preflight-status",

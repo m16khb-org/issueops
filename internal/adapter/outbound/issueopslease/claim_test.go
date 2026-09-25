@@ -1,6 +1,7 @@
 package issueopslease
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -41,6 +42,52 @@ func TestSQLiteClaimTransaction(t *testing.T) {
 	}
 	if _, exists := store.records[holderBucket+"\x00"+holderIndexKey(actor)]; !exists {
 		t.Fatal("holder index was not applied with the record")
+	}
+}
+
+func TestSQLiteClaimRetryDoesNotRequireConsumedToken(t *testing.T) {
+	actor := leasecontract.Actor{Host: "codex", SessionID: "claim-session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "2026-07-30T00:00:00Z", Executable: "/usr/bin/codex"}}
+	record := claimableRecord(t, actor, "claim-token")
+	store := newClaimStore(t, record)
+	path := writeClaimToken(t, record, "claim-token")
+	request := leaseapp.ClaimRepositoryRequest{
+		ID: record.ID, Generation: record.Execution.Lease.Generation,
+		Actor: leasedomain.Actor{Host: actor.Host, SessionID: actor.SessionID, Process: &leasedomain.ProcessReceipt{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
+		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 1, 0, time.UTC)},
+		ValidateRecord: func(leaseapp.Record) error { return nil },
+	}
+	repository := NewSQLiteRepository(store)
+	first, err := repository.Claim(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("token was not consumed: %v", err)
+	}
+	second, err := repository.Claim(context.Background(), request)
+	if err != nil || second.Execution.Lease.Status != "active" || second.Execution.Lease.ClaimedAt != first.Execution.Lease.ClaimedAt {
+		t.Fatalf("retry = %+v, %v", second, err)
+	}
+}
+
+func TestSQLiteClaimApplyFailureKeepsRecordIndexAndTokenUnchanged(t *testing.T) {
+	actor := leasecontract.Actor{Host: "codex", SessionID: "claim-session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "2026-07-30T00:00:00Z", Executable: "/usr/bin/codex"}}
+	record := claimableRecord(t, actor, "claim-token")
+	store := newClaimStore(t, record)
+	before := append([]byte(nil), store.records[recordBucket+"\x00"+record.ID]...)
+	store.applyErr = errors.New("apply failed")
+	path := writeClaimToken(t, record, "claim-token")
+	_, err := NewSQLiteRepository(store).Claim(context.Background(), leaseapp.ClaimRepositoryRequest{
+		ID: record.ID, Generation: record.Execution.Lease.Generation,
+		Actor: leasedomain.Actor{Host: actor.Host, SessionID: actor.SessionID, Process: &leasedomain.ProcessReceipt{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
+		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 1, 0, time.UTC)},
+		ValidateRecord: func(leaseapp.Record) error { return nil },
+	})
+	if err == nil || !bytes.Equal(store.records[recordBucket+"\x00"+record.ID], before) || len(store.records) != 1 {
+		t.Fatalf("apply failure mutated store: err=%v records=%d", err, len(store.records))
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("apply failure removed token: %v", err)
 	}
 }
 
@@ -159,7 +206,10 @@ func writeClaimToken(t *testing.T, record leasecontract.Record, token string) st
 	return path
 }
 
-type claimStore struct{ records map[string][]byte }
+type claimStore struct {
+	records  map[string][]byte
+	applyErr error
+}
 
 type fixedClaimClock struct{ at time.Time }
 
@@ -175,6 +225,9 @@ func (s *claimStore) Get(bucket, id string) ([]byte, bool, error) {
 }
 
 func (s *claimStore) Apply(_ context.Context, mutations []port.RecordMutation) error {
+	if s.applyErr != nil {
+		return s.applyErr
+	}
 	for _, mutation := range mutations {
 		key := mutation.Bucket + "\x00" + mutation.ID
 		if mutation.RequireAbsent {

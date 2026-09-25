@@ -1,9 +1,24 @@
 package issueopslease
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"time"
 )
+
+func CleanupAbandonApplying(raw json.RawMessage) bool {
+	var receipt struct {
+		Step string `json:"step"`
+	}
+	return len(raw) > 0 && json.Unmarshal(raw, &receipt) == nil && receipt.Step == "applying"
+}
+
+func ClaimTokenMatches(expectedDigest, token string) bool {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:]) == expectedDigest
+}
 
 const (
 	DenyLeaseClaimable DenyCode = "lease_claimable"
