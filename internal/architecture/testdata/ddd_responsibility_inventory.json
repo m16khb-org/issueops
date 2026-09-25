@@ -9814,7 +9814,6 @@
         "func sortedKeys",
         "func sortedSubcommandCatalog",
         "func stringSet",
-        "func uniqSorted",
         "type PolicyOverrides",
         "type policyCatalog"
       ]
@@ -9837,7 +9836,8 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func EvaluateCommandPolicy"
+        "func EvaluateCommandPolicy",
+        "func isDirectory"
       ]
     },
     {
@@ -13735,9 +13735,20 @@
       ]
     },
     {
+      "path": "internal/domain/policy/command_decision.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func EvaluateCommandDecision",
+        "func uniqueSorted",
+        "type CommandDecision",
+        "type CommandFacts"
+      ]
+    },
+    {
       "path": "internal/domain/policy/decision.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T09",
       "symbols": [
         "func Rationale",
         "func ResolveTier"
@@ -13746,7 +13757,7 @@
     {
       "path": "internal/domain/policy/redaction.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T09",
       "symbols": [
         "func BoundedDiagnostic",
         "func CleanEnvAllowlist",
@@ -14991,12 +15002,15 @@
       "source_symbol": "func EvaluateCommandPolicy",
       "responsibility": "workspace command permit or deny",
       "target": "internal/domain/policy",
+      "target_symbol": "func EvaluateCommandDecision",
       "task": "T09",
       "entrypoints": [
         "issueops policy check"
       ],
       "evidence_tests": [
-        "internal/adapter/policy/policy_test.go"
+        "internal/domain/policy/command_decision_test.go",
+        "internal/adapter/policy/policy_test.go",
+        "internal/adapter/policy/policy_catalog_test.go"
       ],
       "status": "migrate"
     },

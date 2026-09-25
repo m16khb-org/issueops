@@ -2,7 +2,6 @@ package policy
 
 import (
 	"os"
-	"strings"
 	"time"
 
 	policycontract "issueops/internal/contract/policy"
@@ -41,79 +40,32 @@ func EvaluateCommandPolicy(req policycontract.CommandPolicyRequest) policycontra
 		Tier: policydomain.ResolveTier(policycontract.Request{
 			WriteAllowed: req.WriteAllowed, NetworkAllowed: req.NetworkAllowed, ShellAllowed: req.ShellAllowed,
 		}),
-		DenyReasons: []string{},
-		Warnings:    append([]string{}, catalog.warnings...),
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 	}
-	addDeny := func(reason string) {
-		result.DenyReasons = append(result.DenyReasons, reason)
-	}
-	addWarn := func(warning string) {
-		result.Warnings = append(result.Warnings, warning)
-	}
-
-	if req.WorkspaceRoot == "" {
-		addDeny("workspace_root_required")
-	} else if info, err := os.Stat(root); err != nil || !info.IsDir() {
-		addDeny("workspace_root_not_directory")
-	}
-	if req.CWD == "" {
-		addDeny("cwd_required")
-	} else if info, err := os.Stat(cwd); err != nil || !info.IsDir() {
-		addDeny("cwd_not_directory")
-	}
-	if root != "" && cwd != "" && !sameOrWithin(canonicalRoot, canonicalCWD) {
-		addDeny("cwd_outside_workspace")
-	}
-	if len(argv) == 0 {
-		addDeny("argv_required")
-	}
-	if timeoutErr != nil || timeout <= 0 {
-		addDeny("invalid_timeout")
-	} else if timeout > 15*time.Minute {
-		addDeny("timeout_exceeds_15m")
-	}
-	for _, envName := range req.EnvAllowlist {
-		if !policydomain.ValidEnvName(envName) {
-			addDeny("invalid_env_allowlist_name")
-			break
-		}
-	}
-	for _, arg := range argv {
-		if policydomain.SecretLikeArg(arg) {
-			addDeny("secret_like_argument")
-			break
-		}
+	facts := policydomain.CommandFacts{
+		RootDirectory:   isDirectory(root),
+		CWDDirectory:    isDirectory(cwd),
+		CWDWithinRoot:   sameOrWithin(canonicalRoot, canonicalCWD),
+		Timeout:         timeout,
+		TimeoutValid:    timeoutErr == nil,
+		Warnings:        catalog.warnings,
+		PathOutsideRoot: commandReferencesOutsideWorkspace(canonicalRoot, canonicalCWD, argv),
 	}
 	if len(argv) > 0 {
-		if commandReferencesOutsideWorkspace(canonicalRoot, canonicalCWD, argv) {
-			addDeny("path_outside_workspace")
-		}
-		if catalog.isShellCommand(argv[0]) {
-			if !req.ShellAllowed {
-				addDeny("shell_interpreter_not_allowed")
-			} else if strings.TrimSpace(req.ShellReason) == "" {
-				addDeny("shell_reason_required")
-			} else {
-				addWarn("shell_interpreter_exception")
-			}
-		}
-		if catalog.commandUsesNetwork(argv) && !req.NetworkAllowed {
-			addDeny("network_not_allowed")
-		}
-		if catalog.commandWrites(argv) && !req.WriteAllowed {
-			addDeny("write_not_allowed")
-		}
-		if !req.WriteAllowed && !catalog.readOnlyAllowed(argv) {
-			addDeny("command_not_in_read_only_allowlist")
-		}
-		if reason, expected := pullRequestTargetDeny(root, cwd, argv); reason != "" {
-			addDeny(reason)
-			addWarn("pr_target_branch_expected=" + expected)
-		}
+		facts.ShellCommand = catalog.isShellCommand(argv[0])
+		facts.UsesNetwork = catalog.commandUsesNetwork(argv)
+		facts.Writes = catalog.commandWrites(argv)
+		facts.ReadOnlyAllowed = catalog.readOnlyAllowed(argv)
+		facts.PRTargetDeny, facts.PRTargetExpected = pullRequestTargetDeny(root, cwd, argv)
 	}
-	result.DenyReasons = uniqSorted(result.DenyReasons)
-	result.Warnings = uniqSorted(result.Warnings)
-	result.Allowed = len(result.DenyReasons) == 0
+	decision := policydomain.EvaluateCommandDecision(req, facts)
+	result.DenyReasons = decision.DenyReasons
+	result.Warnings = decision.Warnings
+	result.Allowed = decision.Allowed
 	return result
+}
+
+func isDirectory(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }
