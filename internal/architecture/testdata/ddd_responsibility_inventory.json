@@ -6450,7 +6450,12 @@
       "task": "T11",
       "symbols": [
         "func DefaultNativeInstallRequest",
-        "func InstallNative"
+        "func InstallNative",
+        "func nativeEnvironment.AbsClean",
+        "func nativeEnvironment.ListSkills",
+        "func nativeEnvironment.ResolveStableRoot",
+        "func nativeEnvironment.ValidateRuntime",
+        "type nativeEnvironment"
       ]
     },
     {
@@ -10737,6 +10742,16 @@
       ]
     },
     {
+      "path": "internal/application/install/service.go",
+      "owner": "application",
+      "task": "T11",
+      "symbols": [
+        "func Service.Install",
+        "type Environment",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/issueopsartifact/ports.go",
       "owner": "application",
       "task": "T20",
@@ -12784,6 +12799,14 @@
         "func ActivationStep",
         "func CandidatePathAllowed",
         "func ValidPathMode"
+      ]
+    },
+    {
+      "path": "internal/domain/install/skills.go",
+      "owner": "domain",
+      "task": "T11",
+      "symbols": [
+        "func NormalizeSkillNames"
       ]
     },
     {
