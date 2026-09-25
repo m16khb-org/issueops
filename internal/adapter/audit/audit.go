@@ -8,41 +8,49 @@ import (
 	"path/filepath"
 	"time"
 
-	policydomain "issueops/internal/contract/policy"
+	auditapp "issueops/internal/application/audit"
+	policycontract "issueops/internal/contract/policy"
 )
 
 // AuditCommandPolicy는 명령 요청을 평가해 redacted policy 결정을 JSONL audit
 // log에 append한다. 명령 자체를 실행하지는 않는다.
-func AuditCommandPolicy(req policydomain.CommandPolicyRequest) (auditcontract.CommandAuditRecord, error) {
-	evaluation := EvaluateCommandPolicy(req)
-	record := auditcontract.CommandAuditRecord{
-		OK:          evaluation.Allowed,
-		Kind:        "command_policy_audit",
-		AuditLogID:  evaluation.AuditLogID,
-		GeneratedAt: time.Now().UTC().Format(time.RFC3339Nano),
-		Policy:      evaluation,
-	}
-	path, err := commandAuditLogPath()
-	if err != nil {
-		return record, err
-	}
-	record.LogPath = path
+func AuditCommandPolicy(req policycontract.CommandPolicyRequest) (auditcontract.CommandAuditRecord, error) {
+	return (auditapp.Service{Evaluator: policyEvaluator{EvaluateCommandPolicy}, Writer: commandAuditWriter{}, Clock: auditClock{}}).Audit(req)
+}
+
+type policyEvaluator struct {
+	evaluate func(policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation
+}
+
+func (evaluator policyEvaluator) Evaluate(req policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
+	return evaluator.evaluate(req)
+}
+
+type auditClock struct{}
+
+func (auditClock) Now() time.Time { return time.Now() }
+
+type commandAuditWriter struct{}
+
+func (commandAuditWriter) Path() (string, error) { return commandAuditLogPath() }
+
+func (commandAuditWriter) Append(path string, record auditcontract.CommandAuditRecord) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return record, err
+		return err
 	}
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
-		return record, err
+		return err
 	}
 	defer f.Close()
 	b, err := json.Marshal(record)
 	if err != nil {
-		return record, err
+		return err
 	}
 	if _, err := f.Write(append(b, '\n')); err != nil {
-		return record, err
+		return err
 	}
-	return record, nil
+	return nil
 }
 
 func commandAuditLogPath() (string, error) {

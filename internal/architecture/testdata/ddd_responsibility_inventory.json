@@ -5395,7 +5395,14 @@
       "task": "T09",
       "symbols": [
         "func AuditCommandPolicy",
-        "func commandAuditLogPath"
+        "func auditClock.Now",
+        "func commandAuditLogPath",
+        "func commandAuditWriter.Append",
+        "func commandAuditWriter.Path",
+        "func policyEvaluator.Evaluate",
+        "type auditClock",
+        "type commandAuditWriter",
+        "type policyEvaluator"
       ]
     },
     {
@@ -10715,6 +10722,18 @@
       "task": "T14",
       "symbols": [
         "func isPIDAlive"
+      ]
+    },
+    {
+      "path": "internal/application/audit/service.go",
+      "owner": "application",
+      "task": "T09",
+      "symbols": [
+        "func Service.Audit",
+        "type Clock",
+        "type PolicyEvaluator",
+        "type Service",
+        "type Writer"
       ]
     },
     {
