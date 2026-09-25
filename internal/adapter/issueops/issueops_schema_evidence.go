@@ -1,12 +1,8 @@
 package issueops
 
 import (
-	"context"
-	"fmt"
-	"strings"
-	"time"
-
 	"issueops/internal/adapter/issueops/implementation"
+	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	issueopsdomain "issueops/internal/domain/issueops"
@@ -28,48 +24,7 @@ func RecordIssueOpsSchemaEvidenceWithActor(stateRoot, id string, req IssueOpsSch
 }
 
 func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEvidenceRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	measurements := cleanReviewValues(req.Measurements)
-	sources := cleanReviewValues(req.Sources)
-	rationale := strings.TrimSpace(req.WaiverRationale)
-	if err := reviewdomain.ValidateSchemaEvidenceRecord(req.Waive, rationale, len(measurements), len(sources)); err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	// 변경 집합 관측은 span 밖에서 끝낸다(recordIssueOpsImplementationReview 참고).
-	observed, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	fingerprint := implementation.ChangeFingerprint(observed)
-	var record issueops.IssueOpsRecord
-	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		rec, e := ReadIssueOps(stateRoot, id)
-		if e != nil {
-			return e
-		}
-		if e := validatePostTransferMutation(rec, actor); e != nil {
-			return e
-		}
-		if issueOpsPhaseRank(rec.Phase) < issueOpsPhaseRank(issueops.IssueOpsPhaseImplement) {
-			return fmt.Errorf("schema evidence can only be recorded from the implement phase onward (current: %s)", rec.Phase)
-		}
-		if e := requireCurrentChangeObservation(observed, rec); e != nil {
-			return e
-		}
-		now := time.Now().UTC().Format(time.RFC3339Nano)
-		rec.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{
-			Measurements: measurements, Sources: sources,
-			Waived: req.Waive, WaiverRationale: strings.Join(cleanReviewValues([]string{rationale}), ""),
-			ReviewedFingerprint: fingerprint,
-			RecordedAt:          now,
-		}
-		rec.UpdatedAt = now
-		record, e = writeIssueOps(stateRoot, rec)
-		return e
-	})
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	return record, nil
+	return reviewapp.RecordSchemaEvidence(reviewEvidenceStore(actor), stateRoot, id, req)
 }
 
 // schemaEvidenceMissing은 변경 집합에 스키마 파일이 있을 때만 활성화되는

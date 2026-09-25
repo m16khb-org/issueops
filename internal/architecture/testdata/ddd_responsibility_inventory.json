@@ -7977,11 +7977,9 @@
       "symbols": [
         "func RecordIssueOpsImplementationReview",
         "func RecordIssueOpsImplementationReviewWithActor",
-        "func changeObservationIdentity",
-        "func cleanReviewValues",
         "func implementationReviewMissing",
         "func recordIssueOpsImplementationReview",
-        "func requireCurrentChangeObservation"
+        "func reviewEvidenceStore"
       ]
     },
     {
@@ -11118,7 +11116,16 @@
       "symbols": [
         "func RecordImplementationReview",
         "func changeObservationIdentity",
-        "func cleanReviewValues"
+        "func cleanReviewValues",
+        "func validateCurrentChangeObservation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreview/project_docs_review.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func RecordProjectDocsReview"
       ]
     },
     {
@@ -11136,6 +11143,14 @@
       "task": "T03",
       "symbols": [
         "func Regress"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreview/schema_evidence.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func RecordSchemaEvidence"
       ]
     },
     {
@@ -14064,7 +14079,8 @@
       "symbols": [
         "type CompatibilityStore",
         "type DevilsAdvocateStore",
-        "type ImplementationReviewStore",
+        "type EvidenceReviewStore",
+        "type ProjectDocsReviewStore",
         "type RegressStore"
       ]
     },

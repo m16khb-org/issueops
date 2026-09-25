@@ -8,9 +8,9 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func TestRecordImplementationReviewObservesBeforeLockAndWritesOnce(t *testing.T) {
+func TestRecordSchemaEvidenceObservesBeforeLockAndWritesOnce(t *testing.T) {
 	const at = "2026-09-25T00:00:00Z"
-	record := model.IssueOpsRecord{ID: "io-review", Phase: model.IssueOpsPhaseImplement, WorktreePath: "/repo.worktrees/run"}
+	record := model.IssueOpsRecord{ID: "io-schema", Phase: model.IssueOpsPhaseImplement, WorktreePath: "/repo.worktrees/run"}
 	order := []string{}
 	store := reviewport.EvidenceReviewStore{
 		Read:             func(_, _ string) (model.IssueOpsRecord, error) { order = append(order, "read"); return record, nil },
@@ -23,8 +23,8 @@ func TestRecordImplementationReviewObservesBeforeLockAndWritesOnce(t *testing.T)
 		},
 		Now: func() string { return at },
 	}
-	out, err := RecordImplementationReview(store, "state", record.ID, model.IssueOpsImplementationReviewRequest{
-		Verdict: "PASS", Findings: []string{" finding "}, Evidence: []string{" test "}, ReviewerHost: " CODEX ",
+	out, err := RecordSchemaEvidence(store, "state", record.ID, model.IssueOpsSchemaEvidenceRequest{
+		Measurements: []string{" orders rows=1 "}, Sources: []string{" psql "},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -32,17 +32,17 @@ func TestRecordImplementationReviewObservesBeforeLockAndWritesOnce(t *testing.T)
 	if got := strings.Join(order, ","); got != "read,observe,lock,read,authority,write" {
 		t.Fatalf("effect order = %q", got)
 	}
-	if out.ImplementationReview == nil || out.ImplementationReview.Verdict != "pass" ||
-		out.ImplementationReview.ReviewedFingerprint != "fingerprint" || out.ImplementationReview.ReviewerHost != "codex" ||
-		out.UpdatedAt != at {
-		t.Fatalf("recorded review = %+v", out)
+	if out.SchemaEvidence == nil || out.SchemaEvidence.ReviewedFingerprint != "fingerprint" ||
+		len(out.SchemaEvidence.Measurements) != 1 || out.UpdatedAt != at {
+		t.Fatalf("recorded schema evidence = %+v", out)
 	}
 }
 
-func TestRecordImplementationReviewRejectsChangedObservationWithoutWrite(t *testing.T) {
-	observed := model.IssueOpsRecord{ID: "io-review", Phase: model.IssueOpsPhaseImplement, WorktreePath: "/repo.worktrees/old"}
+func TestRecordSchemaEvidenceRejectsChangedBaseWithoutWrite(t *testing.T) {
+	observed := model.IssueOpsRecord{ID: "io-schema", Phase: model.IssueOpsPhaseImplement, Repo: "/repo"}
 	current := observed
-	current.WorktreePath = "/repo.worktrees/new"
+	observed.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "main", BaseSHA: strings.Repeat("a", 40)}
+	current.BranchPrepare = &model.IssueOpsBranchPrepare{BaseBranch: "main", BaseSHA: strings.Repeat("b", 40)}
 	reads, writes := 0, 0
 	store := reviewport.EvidenceReviewStore{
 		Read: func(_, _ string) (model.IssueOpsRecord, error) {
@@ -58,10 +58,10 @@ func TestRecordImplementationReviewRejectsChangedObservationWithoutWrite(t *test
 		Write:            func(_ string, next model.IssueOpsRecord) (model.IssueOpsRecord, error) { writes++; return next, nil },
 		Now:              func() string { return "2026-09-25T00:00:00Z" },
 	}
-	_, err := RecordImplementationReview(store, "state", observed.ID, model.IssueOpsImplementationReviewRequest{
-		Verdict: "pass", Findings: []string{"finding"}, Evidence: []string{"test"},
+	_, err := RecordSchemaEvidence(store, "state", observed.ID, model.IssueOpsSchemaEvidenceRequest{
+		Measurements: []string{"orders rows=1"}, Sources: []string{"psql"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "changed its worktree or base") || writes != 0 {
-		t.Fatalf("changed observation = %v, writes=%d", err, writes)
+		t.Fatalf("changed base = %v, writes=%d", err, writes)
 	}
 }

@@ -22,12 +22,18 @@ type RegressStore struct {
 	Now            func() string
 }
 
-// ImplementationReviewStore supplies observations and persistence without owning review policy.
-type ImplementationReviewStore struct {
+// EvidenceReviewStore supplies observations and persistence without owning review policy.
+type EvidenceReviewStore struct {
 	Read             func(string, string) (model.IssueOpsRecord, error)
 	Fingerprint      func(model.IssueOpsRecord) string
 	WithLock         func(string, string, func() error) error
 	ValidateMutation func(model.IssueOpsRecord) error
 	Write            func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 	Now              func() string
+}
+
+type ProjectDocsReviewStore struct {
+	EvidenceReviewStore
+	NormalizeDocs         func(model.IssueOpsRecord, []string) ([]string, error)
+	NormalizeReviewedDocs func(model.IssueOpsRecord, []string) ([]string, error)
 }

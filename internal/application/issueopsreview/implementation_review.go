@@ -14,7 +14,7 @@ import (
 
 // RecordImplementationReview observes the change set before taking the record lock,
 // then rechecks its identity against the locked record before one durable write.
-func RecordImplementationReview(store reviewport.ImplementationReviewStore, stateRoot, id string, req model.IssueOpsImplementationReviewRequest) (model.IssueOpsRecord, error) {
+func RecordImplementationReview(store reviewport.EvidenceReviewStore, stateRoot, id string, req model.IssueOpsImplementationReviewRequest) (model.IssueOpsRecord, error) {
 	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
 	findings := cleanReviewValues(req.Findings)
 	evidence := cleanReviewValues(req.Evidence)
@@ -38,8 +38,8 @@ func RecordImplementationReview(store reviewport.ImplementationReviewStore, stat
 		if err := issueopsdomain.ValidateEvidenceRecordingPhase(current.Phase, "implementation review"); err != nil {
 			return err
 		}
-		if !reviewdomain.SameChangeObservationIdentity(changeObservationIdentity(observed), changeObservationIdentity(current)) {
-			return fmt.Errorf("IssueOps record %s changed its worktree or base while the change set was observed; retry the command", current.ID)
+		if err := validateCurrentChangeObservation(observed, current); err != nil {
+			return err
 		}
 		now := store.Now()
 		current.ImplementationReview = &model.IssueOpsImplementationReview{
@@ -83,4 +83,11 @@ func changeObservationIdentity(record model.IssueOpsRecord) reviewcontract.Chang
 		identity.BaseBranch = record.BranchPrepare.BaseBranch
 	}
 	return identity
+}
+
+func validateCurrentChangeObservation(observed, current model.IssueOpsRecord) error {
+	if !reviewdomain.SameChangeObservationIdentity(changeObservationIdentity(observed), changeObservationIdentity(current)) {
+		return fmt.Errorf("IssueOps record %s changed its worktree or base while the change set was observed; retry the command", current.ID)
+	}
+	return nil
 }

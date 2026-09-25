@@ -1,18 +1,18 @@
 package issueops
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"issueops/internal/adapter/issueops/implementation"
+	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/projectdoc"
+	reviewport "issueops/internal/port/issueopsreview"
 )
 
 // RecordIssueOpsProjectDocsReview는 publication 직전 project-doc 반영 판정을
@@ -29,61 +29,11 @@ func RecordIssueOpsProjectDocsReviewWithActor(stateRoot, id string, req IssueOps
 }
 
 func recordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDocsReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
-	docs := cleanReviewValues(req.Docs)
-	evidence := cleanReviewValues(req.Evidence)
-	reviewedDocs := cleanReviewValues(req.ReviewedDocs)
-	if err := reviewdomain.ValidateProjectDocsReviewRecord(verdict, len(docs), len(evidence), len(reviewedDocs)); err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	// fingerprint를 계산할 수 없는 사이클(비-git worktree 등)도 판정 자체는
-	// 기록할 수 있다 — ai_slop_clean과 같은 관용이다. 빈 채로 봉인하면
-	// 나중에 fingerprint가 생겼을 때 stale로 잡혀 재기록을 요구한다.
-	//
-	// 변경 집합과 문서 경로 관측은 span 밖에서 끝낸다
-	// (recordIssueOpsImplementationReview 참고).
-	observed, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	fingerprint := implementation.ChangeFingerprint(observed)
-	normalized, normalizeErr := normalizeProjectDocPaths(observed, docs)
-	reviewed, reviewedErr := normalizeReviewedDocPaths(observed, reviewedDocs)
-	var record issueops.IssueOpsRecord
-	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		rec, e := ReadIssueOps(stateRoot, id)
-		if e != nil {
-			return e
-		}
-		if e := validatePostTransferMutation(rec, actor); e != nil {
-			return e
-		}
-		if issueOpsPhaseRank(rec.Phase) < issueOpsPhaseRank(issueops.IssueOpsPhaseImplement) {
-			return fmt.Errorf("project docs review can only be recorded from the implement phase onward (current: %s)", rec.Phase)
-		}
-		if e := requireCurrentChangeObservation(observed, rec); e != nil {
-			return e
-		}
-		if normalizeErr != nil {
-			return normalizeErr
-		}
-		if reviewedErr != nil {
-			return reviewedErr
-		}
-		now := time.Now().UTC().Format(time.RFC3339Nano)
-		rec.ProjectDocsReview = &issueops.IssueOpsProjectDocsReview{
-			Verdict: verdict, Docs: normalized, ReviewedDocs: reviewed, Evidence: evidence,
-			ReviewedFingerprint: fingerprint,
-			RecordedAt:          now,
-		}
-		rec.UpdatedAt = now
-		record, e = writeIssueOps(stateRoot, rec)
-		return e
-	})
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	return record, nil
+	return reviewapp.RecordProjectDocsReview(reviewport.ProjectDocsReviewStore{
+		EvidenceReviewStore:   reviewEvidenceStore(actor),
+		NormalizeDocs:         normalizeProjectDocPaths,
+		NormalizeReviewedDocs: normalizeReviewedDocPaths,
+	}, stateRoot, id, req)
 }
 
 // normalizeProjectDocPaths는 입력 경로를 repo-상대 slash 경로로 정규화하고,

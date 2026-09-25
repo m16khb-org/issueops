@@ -2,8 +2,6 @@ package issueops
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"issueops/internal/adapter/issueops/implementation"
@@ -11,7 +9,6 @@ import (
 	"issueops/internal/contract/issueops"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	reviewdomain "issueops/internal/domain/issueopsreview"
-	"issueops/internal/domain/policy"
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
@@ -29,7 +26,11 @@ func RecordIssueOpsImplementationReviewWithActor(stateRoot, id string, req Issue
 }
 
 func recordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplementationReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.RecordImplementationReview(reviewport.ImplementationReviewStore{
+	return reviewapp.RecordImplementationReview(reviewEvidenceStore(actor), stateRoot, id, req)
+}
+
+func reviewEvidenceStore(actor *IssueOpsActor) reviewport.EvidenceReviewStore {
+	return reviewport.EvidenceReviewStore{
 		Read:        ReadIssueOps,
 		Fingerprint: implementation.ChangeFingerprint,
 		WithLock: func(root, cycleID string, fn func() error) error {
@@ -40,42 +41,7 @@ func recordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplem
 		},
 		Write: writeIssueOps,
 		Now:   func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
-	}, stateRoot, id, req)
-}
-
-// requireCurrentChangeObservation은 span 밖에서 관측한 변경 집합이 지금
-// record와 같은 worktree·base에서 나왔는지 확인한다. 그사이 둘 중 하나가
-// 바뀌었으면 옛 관측으로 기록하지 않고 다시 시도하게 한다.
-func requireCurrentChangeObservation(observed, current issueops.IssueOpsRecord) error {
-	if !reviewdomain.SameChangeObservationIdentity(changeObservationIdentity(observed), changeObservationIdentity(current)) {
-		return fmt.Errorf("IssueOps record %s changed its worktree or base while the change set was observed; retry the command", current.ID)
 	}
-	return nil
-}
-
-func changeObservationIdentity(record issueops.IssueOpsRecord) reviewcontract.ChangeObservationIdentity {
-	root := strings.TrimSpace(record.WorktreePath)
-	if root == "" {
-		root = strings.TrimSpace(record.Repo)
-	}
-	identity := reviewcontract.ChangeObservationIdentity{Root: root}
-	if record.BranchPrepare != nil {
-		identity.HasPreparedBase = true
-		identity.BaseSHA = record.BranchPrepare.BaseSHA
-		identity.BaseBranch = record.BranchPrepare.BaseBranch
-	}
-	return identity
-}
-
-func cleanReviewValues(values []string) []string {
-	out := []string{}
-	for _, v := range values {
-		v = policy.RedactFreeform(strings.TrimSpace(v))
-		if v != "" {
-			out = append(out, v)
-		}
-	}
-	return out
 }
 
 // implementationReviewMissing은 publication 게이트 판정이며 execution이 있는
