@@ -11121,6 +11121,14 @@
       ]
     },
     {
+      "path": "internal/application/issueopsreview/regress.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func Regress"
+      ]
+    },
+    {
       "path": "internal/application/issueopsrouting/ports.go",
       "owner": "application",
       "task": "T20",
@@ -14014,7 +14022,8 @@
       "task": "T03",
       "symbols": [
         "type CompatibilityStore",
-        "type DevilsAdvocateStore"
+        "type DevilsAdvocateStore",
+        "type RegressStore"
       ]
     },
     {

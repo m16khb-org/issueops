@@ -14,3 +14,10 @@ type CompatibilityStore struct {
 	Ready      func(model.IssueOpsRecord) model.IssueOpsReadiness
 	PhaseRank  func(model.IssueOpsPhase) int
 }
+
+type RegressStore struct {
+	Read           func(string, string) (model.IssueOpsRecord, error)
+	ActiveChildren func(string, model.IssueOpsRecord) ([]string, error)
+	TouchWrite     func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Now            func() string
+}

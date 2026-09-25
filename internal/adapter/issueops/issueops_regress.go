@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
+	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
-	reviewcontract "issueops/internal/contract/issueopsreview"
-	issueopsdomain "issueops/internal/domain/issueops"
 	reviewdomain "issueops/internal/domain/issueopsreview"
+	reviewport "issueops/internal/port/issueopsreview"
 )
 
 // RegressIssueOpsForReplan takes the IssueOps feedback loop backward when the
@@ -51,67 +51,10 @@ func regressIssueOpsForReplan(stateRoot, id, reason string, actor *IssueOpsActor
 }
 
 func regressIssueOpsForReplanLocked(stateRoot, id, reason string) (issueops.IssueOpsRecord, error) {
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return record, err
-	}
-	if err := reviewdomain.CheckRegression(reviewcontract.RegressionPreconditions{
-		CycleID: id, Phase: string(record.Phase), Review: record.DevilsAdvocateReview, RegressCount: len(record.RegressEvents),
-	}); err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	activeChildren, err := issueOpsActiveChildIDs(stateRoot, record)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	if err := reviewdomain.CheckRegressionChildren(activeChildren); err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	change := reviewdomain.BuildRegressionChange(string(record.Phase), reason, now)
-
-	// Audit trail backing the cap: one event per successful regression.
-	record.RegressEvents = append(record.RegressEvents, issueops.IssueOpsRegressEvent{
-		Reason:    change.EventReason,
-		FromPhase: issueops.IssueOpsPhase(change.FromPhase),
-		At:        change.At,
-	})
-
-	// Audit: record the devil's-advocate stop as a scope decision.
-	record.Decisions = append(record.Decisions, issueops.IssueOpsDecision{
-		Title:     change.DecisionTitle,
-		Body:      change.DecisionBody,
-		Kind:      change.DecisionKind,
-		Rationale: change.DecisionRationale,
-		CreatedAt: change.At,
-	})
-
-	// Force a genuine re-plan: the rejected design must be re-reviewed before the
-	// cycle can advance past plan again.
-	if change.ClearDesignApproval && record.DesignReview != nil {
-		record.DesignReview.Approved = false
-	}
-
-	// Rule 12: retain the now-ahead plan/compatibility-review ledger entries as
-	// audit, but mark them stale so they no longer read as complete. A cycle can
-	// reach plan/compatibility-review with an empty or partial ledger (linking and
-	// compatibility-review recorders don't stamp it), so this may persist just the
-	// two stale entries; IssueOpsStatus backfills the remaining phases for display
-	// rather than persisting a derived ledger here (keeping derived ledgers
-	// out of the persisted state).
-	stalePhases := make([]issueops.IssueOpsPhase, 0, len(change.StalePhases))
-	for _, phase := range change.StalePhases {
-		stalePhases = append(stalePhases, issueops.IssueOpsPhase(phase))
-	}
-	record.PhaseLedger = issueopsdomain.MarkLedgerStale(record.PhaseLedger, change.StaleNote, stalePhases...)
-
-	// Clear the consumed devil's-advocate review so the re-planned cycle must earn
-	// a fresh verdict before implement (the gate re-fires).
-	if change.ClearReview {
-		record.DevilsAdvocateReview = nil
-	}
-
-	record.Phase = issueops.IssueOpsPhase(change.ToPhase)
-	record.UpdatedAt = change.At
-	return touchAndWriteIssueOps(stateRoot, record)
+	return reviewapp.Regress(reviewport.RegressStore{
+		Read:           ReadIssueOps,
+		ActiveChildren: issueOpsActiveChildIDs,
+		TouchWrite:     touchAndWriteIssueOps,
+		Now:            func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
+	}, stateRoot, id, reason)
 }
