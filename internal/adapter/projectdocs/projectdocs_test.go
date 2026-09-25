@@ -58,7 +58,7 @@ func TestAnalyzeRenderRouteAndProfile(t *testing.T) {
 	if !routeContains(route.Docs, filepath.ToSlash(filepath.Join(ProjectDocsDir, "OPEN_API_SPEC.md"))) {
 		t.Fatalf("route missing OPEN_API_SPEC: %#v", route.Docs)
 	}
-	if len(routeDocsForTask("dependency upgrade")) < 2 || len(routeDocsForTask("")) < 2 {
+	if len(projectdoc.RouteDocsForTask("dependency upgrade")) < 2 || len(projectdoc.RouteDocsForTask("")) < 2 {
 		t.Fatal("expected routed docs for dependency and default tasks")
 	}
 }

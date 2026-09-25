@@ -10175,18 +10175,7 @@
       "owner": "adapter",
       "task": "T13",
       "symbols": [
-        "func RouteProjectDocs",
-        "func appendRouteDocsUnique",
-        "func hasTaskToken",
-        "func routeDocsForTask"
-      ]
-    },
-    {
-      "path": "internal/adapter/projectdocs/project_docs_route_types.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": [
-        "type routeDoc"
+        "func RouteProjectDocs"
       ]
     },
     {
@@ -13797,6 +13786,17 @@
       ]
     },
     {
+      "path": "internal/domain/projectdoc/route.go",
+      "owner": "domain",
+      "task": "T13",
+      "symbols": [
+        "func RouteDocsForTask",
+        "func appendRouteDocsUnique",
+        "func hasTaskToken",
+        "type RouteDoc"
+      ]
+    },
+    {
       "path": "internal/domain/projectdoc/signal_types.go",
       "owner": "domain",
       "task": "T20",
@@ -14967,14 +14967,16 @@
       "source_symbol": "func routeDocsForTask",
       "responsibility": "task to document routing",
       "target": "internal/domain/projectdoc",
+      "target_symbol": "func RouteDocsForTask",
       "task": "T13",
       "entrypoints": [
         "issueops project-docs route"
       ],
       "evidence_tests": [
+        "internal/domain/projectdoc/route_test.go",
         "internal/adapter/projectdocs/projectdocs_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "tool-gate",
