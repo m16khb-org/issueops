@@ -2,23 +2,11 @@ package guard
 
 import (
 	guardcontract "issueops/internal/contract/guard"
+	guarddomain "issueops/internal/domain/guard"
 	"os"
 	"path/filepath"
 	"strings"
 )
-
-func guardMode(req guardcontract.GuardCheckRequest) string {
-	if req.All {
-		return "all"
-	}
-	if req.Staged {
-		return "staged"
-	}
-	if len(req.Files) > 0 {
-		return "files"
-	}
-	return "staged"
-}
 
 func guardTargetFiles(root string, req guardcontract.GuardCheckRequest) []string {
 	if len(req.Files) > 0 {
@@ -38,7 +26,7 @@ func guardTargetFiles(root string, req guardcontract.GuardCheckRequest) []string
 				return nil
 			}
 			rel, err := filepath.Rel(root, path)
-			if err == nil && isGuardRelevantPath(rel) {
+			if err == nil && guarddomain.RelevantPath(rel) {
 				files = append(files, filepath.ToSlash(rel))
 			}
 			return nil
@@ -53,7 +41,7 @@ func cleanGuardFiles(root string, files []string) []string {
 	out := []string{}
 	for _, file := range files {
 		file = filepath.ToSlash(strings.TrimSpace(file))
-		if file == "" || strings.HasPrefix(file, "../") || filepath.IsAbs(file) || !isGuardRelevantPath(file) {
+		if file == "" || strings.HasPrefix(file, "../") || filepath.IsAbs(file) || !guarddomain.RelevantPath(file) {
 			continue
 		}
 		out = append(out, file)

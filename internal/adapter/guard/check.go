@@ -1,98 +1,30 @@
 package guard
 
 import (
+	guardapp "issueops/internal/application/guard"
 	guardcontract "issueops/internal/contract/guard"
-	"path/filepath"
-	"sort"
-	"strings"
 )
 
 func GuardCheck(req guardcontract.GuardCheckRequest) guardcontract.GuardCheckResult {
-	root := absOrOriginal(req.RepoRoot)
+	return (guardapp.Service{Source: guardSource{}}).Check(req)
+}
+
+type guardSource struct{}
+
+func (guardSource) ResolveRoot(path string) string {
+	root := absOrOriginal(path)
 	if root == "" {
 		root = absOrOriginal(".")
 	}
-	result := guardcontract.GuardCheckResult{
-		OK:           true,
-		RepoRoot:     root,
-		Mode:         guardMode(req),
-		CheckedFiles: []string{},
-		Findings:     []guardcontract.GuardFinding{},
-		Warnings:     []string{},
-	}
-	files := guardTargetFiles(root, req)
-	result.CheckedFiles = files
-	existingSymbols := guardExistingSymbols(root, files)
-	hasProdChange := false
-	hasTestChange := false
-	hasContractSurfaceChange := false
-	hasGoldenChange := false
-	for _, rel := range files {
-		if secretPathRe.MatchString(filepath.ToSlash(rel)) {
-			result.Findings = append(result.Findings, guardcontract.GuardFinding{
-				Severity: "block",
-				Rule:     "secret-like-path",
-				File:     rel,
-				Message:  "Secret-like paths must not be committed or analyzed as ordinary source.",
-			})
-			continue
-		}
-		if isTestPath(rel) {
-			hasTestChange = true
-		} else if isSourcePath(rel) {
-			hasProdChange = true
-		}
-		if isContractSurfacePath(rel) {
-			hasContractSurfaceChange = true
-		}
-		if strings.Contains(filepath.ToSlash(rel), "testdata/") || strings.Contains(strings.ToLower(rel), "golden") {
-			hasGoldenChange = true
-		}
-		content, ok := guardReadFile(root, rel, req.Staged)
-		if !ok {
-			continue
-		}
-		result.Findings = append(result.Findings, guardFileFindings(rel, content, existingSymbols)...)
-	}
-	if hasProdChange && !hasTestChange {
-		result.Findings = append(result.Findings, guardcontract.GuardFinding{
-			Severity: "warn",
-			Rule:     "prod-change-without-test",
-			Message:  "Production source changed without a changed test file; verify this is documentation/config-only or add focused coverage.",
-		})
-	}
-	if hasContractSurfaceChange && !hasGoldenChange {
-		result.Findings = append(result.Findings, guardcontract.GuardFinding{
-			Severity: "warn",
-			Rule:     "contract-surface-without-golden",
-			Message:  "CLI/MCP/adapter contract surface changed without a golden/testdata update.",
-		})
-	}
-	result.Findings = dedupeGuardFindings(result.Findings)
-	sort.Slice(result.Findings, func(i, j int) bool {
-		if guardSeverityRank(result.Findings[i].Severity) != guardSeverityRank(result.Findings[j].Severity) {
-			return guardSeverityRank(result.Findings[i].Severity) < guardSeverityRank(result.Findings[j].Severity)
-		}
-		if result.Findings[i].File != result.Findings[j].File {
-			return result.Findings[i].File < result.Findings[j].File
-		}
-		if result.Findings[i].Line != result.Findings[j].Line {
-			return result.Findings[i].Line < result.Findings[j].Line
-		}
-		return result.Findings[i].Rule < result.Findings[j].Rule
-	})
-	for _, finding := range result.Findings {
-		switch finding.Severity {
-		case "block":
-			result.Summary.Block++
-		case "warn":
-			result.Summary.Warn++
-		case "review":
-			result.Summary.Review++
-		default:
-			result.Summary.Info++
-		}
-	}
-	result.OK = result.Summary.Block == 0
-	return result
+	return root
+}
+
+func (guardSource) TargetFiles(root string, request guardcontract.GuardCheckRequest) []string {
+	return guardTargetFiles(root, request)
+}
+func (guardSource) ExistingSymbols(root string, files []string) map[string][]string {
+	return guardExistingSymbols(root, files)
+}
+func (guardSource) ReadFile(root, rel string, staged bool) (string, bool) {
+	return guardReadFile(root, rel, staged)
 }

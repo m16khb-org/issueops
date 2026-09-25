@@ -3,11 +3,16 @@ package guard
 import (
 	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
-func isGuardRelevantPath(rel string) bool {
-	if secretPathRe.MatchString(filepath.ToSlash(rel)) {
+var secretPathRe = regexp.MustCompile(`(?i)(^|/)(\.env(\.|$)|id_rsa|id_dsa|id_ecdsa|id_ed25519|.*\.pem$|.*\.key$|.*\.p12$|.*\.pfx$|.*credentials.*|.*secret.*)`)
+
+func SecretLikePath(rel string) bool { return secretPathRe.MatchString(filepath.ToSlash(rel)) }
+
+func RelevantPath(rel string) bool {
+	if SecretLikePath(rel) {
 		return true
 	}
 	ext := strings.ToLower(filepath.Ext(rel))
@@ -22,12 +27,12 @@ func isGuardRelevantPath(rel string) bool {
 	}
 }
 
-func isTestPath(rel string) bool {
+func TestPath(rel string) bool {
 	p := strings.ToLower(filepath.ToSlash(rel))
 	return strings.Contains(p, "test") || strings.Contains(p, "spec") || strings.Contains(p, "fixture") || strings.Contains(p, "golden")
 }
 
-func isExecutableTestSourcePath(rel string) bool {
+func ExecutableTestSourcePath(rel string) bool {
 	p := strings.ToLower(filepath.ToSlash(rel))
 	if strings.Contains(p, "testdata/") || strings.Contains(p, ".golden.") || strings.Contains(p, "/fixtures/") || strings.Contains(p, "/fixture/") {
 		return false
@@ -41,7 +46,7 @@ func isExecutableTestSourcePath(rel string) bool {
 	}
 }
 
-func guardAllowsFixtureURL(raw string) bool {
+func AllowsFixtureURL(raw string) bool {
 	parsed, err := url.Parse(raw)
 	if err != nil {
 		return false
@@ -57,9 +62,9 @@ func guardAllowsFixtureURL(raw string) bool {
 		(host == "github.com" && strings.HasPrefix(path, "/example/"))
 }
 
-func isSourcePath(rel string) bool {
+func SourcePath(rel string) bool {
 	p := strings.ToLower(filepath.ToSlash(rel))
-	if isTestPath(p) || strings.HasPrefix(p, ".issueops/") || strings.HasPrefix(p, "docs/") {
+	if TestPath(p) || strings.HasPrefix(p, ".issueops/") || strings.HasPrefix(p, "docs/") {
 		return false
 	}
 	ext := strings.ToLower(filepath.Ext(p))
@@ -71,7 +76,7 @@ func isSourcePath(rel string) bool {
 	}
 }
 
-func isContractSurfacePath(rel string) bool {
+func ContractSurfacePath(rel string) bool {
 	p := filepath.ToSlash(rel)
 	return strings.HasPrefix(p, "cmd/issueops/") || strings.HasPrefix(p, "internal/adapter/") || strings.HasPrefix(p, "internal/core/")
 }

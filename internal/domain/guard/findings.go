@@ -7,7 +7,7 @@ import (
 	"issueops/internal/domain/guardpattern"
 )
 
-func guardFileFindings(rel, content string, existingSymbols map[string][]string) []guardcontract.GuardFinding {
+func FileFindings(rel, content string, existingSymbols map[string][]string) []guardcontract.GuardFinding {
 	findings := []guardcontract.GuardFinding{}
 	immutablePrefixBuilder := strings.Contains(content, pattern.ImmutablePrefixMarker)
 	lines := strings.Split(content, "\n")
@@ -23,7 +23,7 @@ func guardFileFindings(rel, content string, existingSymbols map[string][]string)
 				Evidence: strings.TrimSpace(line),
 			})
 		}
-		if isExecutableTestSourcePath(rel) {
+		if ExecutableTestSourcePath(rel) {
 			if pattern.AmbiguousTestName.MatchString(line) {
 				findings = append(findings, guardcontract.GuardFinding{Severity: "warn", Rule: "ambiguous-test-name", File: rel, Line: lineNo, Message: "Test name is too generic to communicate the protected contract.", Evidence: strings.TrimSpace(line)})
 			}
@@ -31,7 +31,7 @@ func guardFileFindings(rel, content string, existingSymbols map[string][]string)
 				findings = append(findings, guardcontract.GuardFinding{Severity: "block", Rule: "sleep-in-test", File: rel, Line: lineNo, Message: "Tests must not depend on wall-clock sleep; use deterministic synchronization or fake clocks.", Evidence: strings.TrimSpace(line)})
 			}
 			for _, url := range pattern.ExternalURL.FindAllString(line, -1) {
-				if !guardAllowsFixtureURL(url) {
+				if !AllowsFixtureURL(url) {
 					findings = append(findings, guardcontract.GuardFinding{Severity: "block", Rule: "real-external-service-in-test", File: rel, Line: lineNo, Message: "Tests must not depend on real external services.", Evidence: url})
 				}
 			}
@@ -44,12 +44,12 @@ func guardFileFindings(rel, content string, existingSymbols map[string][]string)
 		}
 		if m := pattern.NewSymbol.FindStringSubmatch(line); len(m) == 2 {
 			symbol := m[1]
-			if reuseFinding, ok := guardReuseFinding(rel, lineNo, symbol, existingSymbols); ok {
+			if reuseFinding, ok := ReuseFinding(rel, lineNo, symbol, existingSymbols); ok {
 				findings = append(findings, reuseFinding)
 			}
 		}
 	}
-	if isTestPath(rel) && len(content) > 200_000 {
+	if TestPath(rel) && len(content) > 200_000 {
 		findings = append(findings, guardcontract.GuardFinding{Severity: "warn", Rule: "large-test-fixture", File: rel, Message: "Large test files or fixtures can hide weak assertions; prefer small named fixtures."})
 	}
 	return findings

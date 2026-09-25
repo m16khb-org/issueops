@@ -240,7 +240,7 @@
 
 ### Task 10: Guard·gate ledger 분리 (T10)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T09. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/guard/{findings,paths,symbols,summary}.go`; `internal/adapter/gates/check.go`; `internal/domain/gates/`; `cmd/issueops/gatescli/`
 - **변경/신규 파일:** 신규 `internal/domain/guard/`, `internal/application/guard/`, `internal/application/gates/`; 기존 domain/gates 확장.

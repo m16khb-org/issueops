@@ -5993,15 +5993,12 @@
       "owner": "adapter",
       "task": "T10",
       "symbols": [
-        "func GuardCheck"
-      ]
-    },
-    {
-      "path": "internal/adapter/guard/findings.go",
-      "owner": "adapter",
-      "task": "T10",
-      "symbols": [
-        "func guardFileFindings"
+        "func GuardCheck",
+        "func guardSource.ExistingSymbols",
+        "func guardSource.ReadFile",
+        "func guardSource.ResolveRoot",
+        "func guardSource.TargetFiles",
+        "type guardSource"
       ]
     },
     {
@@ -6018,35 +6015,11 @@
       ]
     },
     {
-      "path": "internal/adapter/guard/paths.go",
-      "owner": "adapter",
-      "task": "T10",
-      "symbols": [
-        "func guardAllowsFixtureURL",
-        "func isContractSurfacePath",
-        "func isExecutableTestSourcePath",
-        "func isGuardRelevantPath",
-        "func isSourcePath",
-        "func isTestPath"
-      ]
-    },
-    {
-      "path": "internal/adapter/guard/summary.go",
-      "owner": "adapter",
-      "task": "T10",
-      "symbols": [
-        "func dedupeGuardFindings",
-        "func guardSeverityRank"
-      ]
-    },
-    {
       "path": "internal/adapter/guard/symbols.go",
       "owner": "adapter",
       "task": "T10",
       "symbols": [
-        "func guardExistingSymbols",
-        "func guardReuseFinding",
-        "func normalizeGuardSymbol"
+        "func guardExistingSymbols"
       ]
     },
     {
@@ -6055,7 +6028,6 @@
       "task": "T10",
       "symbols": [
         "func cleanGuardFiles",
-        "func guardMode",
         "func guardReadFile",
         "func guardTargetFiles"
       ]
@@ -10755,6 +10727,16 @@
       ]
     },
     {
+      "path": "internal/application/guard/service.go",
+      "owner": "application",
+      "task": "T10",
+      "symbols": [
+        "func Service.Check",
+        "type Service",
+        "type Source"
+      ]
+    },
+    {
       "path": "internal/application/issueopsartifact/ports.go",
       "owner": "application",
       "task": "T20",
@@ -12725,6 +12707,57 @@
         "func stripGateIDPrefix",
         "type Gate",
         "type Ledger"
+      ]
+    },
+    {
+      "path": "internal/domain/guard/analysis.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func Analyze",
+        "func Mode",
+        "type Analysis",
+        "type FileObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/guard/findings.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func FileFindings"
+      ]
+    },
+    {
+      "path": "internal/domain/guard/paths.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func AllowsFixtureURL",
+        "func ContractSurfacePath",
+        "func ExecutableTestSourcePath",
+        "func RelevantPath",
+        "func SecretLikePath",
+        "func SourcePath",
+        "func TestPath"
+      ]
+    },
+    {
+      "path": "internal/domain/guard/summary.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func DedupeFindings",
+        "func SeverityRank"
+      ]
+    },
+    {
+      "path": "internal/domain/guard/symbols.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func NormalizeSymbol",
+        "func ReuseFinding"
       ]
     },
     {
@@ -15126,6 +15159,23 @@
       ],
       "evidence_tests": [
         "internal/adapter/outbound/issueopslease/claim_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "guard-content-findings",
+      "source_path": "internal/adapter/guard/findings.go",
+      "source_symbol": "func guardFileFindings",
+      "responsibility": "source content to guard findings",
+      "target": "internal/domain/guard",
+      "target_symbol": "func FileFindings",
+      "task": "T10",
+      "entrypoints": [
+        "issueops guard check"
+      ],
+      "evidence_tests": [
+        "internal/domain/guard/analysis_test.go",
+        "internal/adapter/guard/guard_test.go"
       ],
       "status": "migrated"
     },
