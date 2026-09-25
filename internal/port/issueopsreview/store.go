@@ -37,3 +37,11 @@ type ProjectDocsReviewStore struct {
 	NormalizeDocs         func(model.IssueOpsRecord, []string) ([]string, error)
 	NormalizeReviewedDocs func(model.IssueOpsRecord, []string) ([]string, error)
 }
+
+type FeedbackStore struct {
+	WithLock         func(string, string, func() error) error
+	Read             func(string, string) (model.IssueOpsRecord, error)
+	ValidateMutation func(model.IssueOpsRecord) error
+	Write            func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Now              func() string
+}

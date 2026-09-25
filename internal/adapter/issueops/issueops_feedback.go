@@ -2,12 +2,11 @@ package issueops
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
+	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
-	reviewdomain "issueops/internal/domain/issueopsreview"
+	reviewport "issueops/internal/port/issueopsreview"
 )
 
 func AddIssueOpsFeedback(stateRoot, id, source, body, classification string) (issueops.IssueOpsRecord, error) {
@@ -19,53 +18,7 @@ func AddIssueOpsFeedbackWithActor(stateRoot, id, source, body, classification st
 }
 
 func addIssueOpsFeedback(stateRoot, id, source, body, classification string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, err := ReadIssueOps(stateRoot, id)
-		if err != nil {
-			return err
-		}
-		if err := validatePostTransferMutation(record, actor); err != nil {
-			return err
-		}
-		var e error
-		rec, e = addIssueOpsFeedbackLocked(stateRoot, id, source, body, classification)
-		return e
-	})
-	return rec, err
-}
-
-func addIssueOpsFeedbackLocked(stateRoot, id, source, body, classification string) (issueops.IssueOpsRecord, error) {
-	source = strings.TrimSpace(source)
-	body = strings.TrimSpace(body)
-	classification = strings.ToLower(strings.TrimSpace(classification))
-	if source == "" {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("feedback source is required")
-	}
-	if body == "" {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("feedback body is required")
-	}
-	if !knownIssueOpsFeedbackClassification(classification) {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("unknown issueops feedback classification %q; use contract_change, defect, question, noise, valid_review, stale_review, rollout_evidence_missing, or environment_debt", classification)
-	}
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return record, err
-	}
-	if record.Phase == IssueOpsPhaseDone {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("cannot add feedback after %s phase", record.Phase)
-	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	record.Feedback = append(record.Feedback, issueops.IssueOpsFeedbackItem{Source: source, Body: body, Classification: classification, CreatedAt: now})
-	if strings.TrimSpace(record.AISlopCleanAt) != "" {
-		record.Phase = IssueOpsPhaseFeedback
-	}
-	record.UpdatedAt = now
-	return writeIssueOps(stateRoot, record)
-}
-
-func knownIssueOpsFeedbackClassification(classification string) bool {
-	return issueops.KnownFeedbackClassification(classification)
+	return reviewapp.AddFeedback(reviewFeedbackStore(actor), stateRoot, id, source, body, classification)
 }
 
 func MarkIssueOpsContractFeedbackIssueUpdatedWithActor(stateRoot, id string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
@@ -73,38 +26,19 @@ func MarkIssueOpsContractFeedbackIssueUpdatedWithActor(stateRoot, id string, act
 }
 
 func markIssueOpsContractFeedbackIssueUpdated(stateRoot, id string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, err := ReadIssueOps(stateRoot, id)
-		if err != nil {
-			return err
-		}
-		if err := validatePostTransferMutation(record, actor); err != nil {
-			return err
-		}
-		var e error
-		rec, e = markIssueOpsContractFeedbackIssueUpdatedLocked(stateRoot, id)
-		return e
-	})
-	return rec, err
+	return reviewapp.MarkContractFeedbackIssueUpdated(reviewFeedbackStore(actor), stateRoot, id)
 }
 
-func markIssueOpsContractFeedbackIssueUpdatedLocked(stateRoot, id string) (issueops.IssueOpsRecord, error) {
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return record, err
+func reviewFeedbackStore(actor *IssueOpsActor) reviewport.FeedbackStore {
+	return reviewport.FeedbackStore{
+		WithLock: func(root, cycleID string, fn func() error) error {
+			return withIssueOpsLock(context.Background(), root, cycleID, func(context.Context) error { return fn() })
+		},
+		Read: ReadIssueOps,
+		ValidateMutation: func(record issueops.IssueOpsRecord) error {
+			return validatePostTransferMutation(record, actor)
+		},
+		Write: writeIssueOps,
+		Now:   func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
 	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	marked := false
-	for i := range record.Feedback {
-		if reviewdomain.FeedbackRequiresIssueUpdate(record.Feedback[i].Classification, record.Feedback[i].IssueUpdatedAt) {
-			record.Feedback[i].IssueUpdatedAt = now
-			marked = true
-		}
-	}
-	if !marked {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("no unresolved contract_change feedback requires a remote issue update")
-	}
-	record.UpdatedAt = now
-	return writeIssueOps(stateRoot, record)
 }

@@ -7,6 +7,7 @@ import (
 
 	"context"
 
+	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 )
 
@@ -122,36 +123,5 @@ func ResolveIssueOpsFeedbackWithActor(stateRoot, id string, index int, resolutio
 }
 
 func resolveIssueOpsFeedback(stateRoot, id string, index int, resolution string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, err := ReadIssueOps(stateRoot, id)
-		if err != nil {
-			return err
-		}
-		if err := validatePostTransferMutation(record, actor); err != nil {
-			return err
-		}
-		var e error
-		rec, e = resolveIssueOpsFeedbackLocked(stateRoot, id, index, resolution)
-		return e
-	})
-	return rec, err
-}
-
-func resolveIssueOpsFeedbackLocked(stateRoot, id string, index int, resolution string) (issueops.IssueOpsRecord, error) {
-	resolution = strings.ToLower(strings.TrimSpace(resolution))
-	if !issueops.KnownFeedbackResolution(resolution) || resolution == "" {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("unknown feedback resolution %q; use valid-defect, question-answered, or noise-dismissed", resolution)
-	}
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return record, err
-	}
-	if index < 0 || index >= len(record.Feedback) {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("feedback index %d out of range (have %d items)", index, len(record.Feedback))
-	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	record.Feedback[index].Resolution = resolution
-	record.UpdatedAt = now
-	return writeIssueOps(stateRoot, record)
+	return reviewapp.ResolveFeedback(reviewFeedbackStore(actor), stateRoot, id, index, resolution)
 }

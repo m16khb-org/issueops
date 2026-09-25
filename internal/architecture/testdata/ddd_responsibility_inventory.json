@@ -7964,10 +7964,8 @@
         "func AddIssueOpsFeedbackWithActor",
         "func MarkIssueOpsContractFeedbackIssueUpdatedWithActor",
         "func addIssueOpsFeedback",
-        "func addIssueOpsFeedbackLocked",
-        "func knownIssueOpsFeedbackClassification",
         "func markIssueOpsContractFeedbackIssueUpdated",
-        "func markIssueOpsContractFeedbackIssueUpdatedLocked"
+        "func reviewFeedbackStore"
       ]
     },
     {
@@ -7997,8 +7995,7 @@
         "func recordIssueOpsAISlopCleanEvidenceLocked",
         "func recordIssueOpsDomainReview",
         "func recordIssueOpsDomainReviewLocked",
-        "func resolveIssueOpsFeedback",
-        "func resolveIssueOpsFeedbackLocked"
+        "func resolveIssueOpsFeedback"
       ]
     },
     {
@@ -11110,6 +11107,17 @@
       ]
     },
     {
+      "path": "internal/application/issueopsreview/feedback.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func AddFeedback",
+        "func MarkContractFeedbackIssueUpdated",
+        "func ResolveFeedback",
+        "func mutateFeedback"
+      ]
+    },
+    {
       "path": "internal/application/issueopsreview/implementation_review.go",
       "owner": "application",
       "task": "T03",
@@ -13376,7 +13384,9 @@
       "owner": "domain",
       "task": "T03",
       "symbols": [
-        "func FeedbackRequiresIssueUpdate"
+        "func FeedbackPhaseAfterAdd",
+        "func FeedbackRequiresIssueUpdate",
+        "func ValidateFeedbackIndex"
       ]
     },
     {
@@ -14080,6 +14090,7 @@
         "type CompatibilityStore",
         "type DevilsAdvocateStore",
         "type EvidenceReviewStore",
+        "type FeedbackStore",
         "type ProjectDocsReviewStore",
         "type RegressStore"
       ]
