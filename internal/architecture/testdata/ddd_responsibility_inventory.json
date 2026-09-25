@@ -11471,19 +11471,6 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
-        "func Validate",
-        "func sameFailures",
-        "func sameSteps",
-        "func validClaim",
-        "func validHost",
-        "func validLauncher",
-        "func validObservationResult",
-        "func validStatus",
-        "func validateCells",
-        "func validateEvidence",
-        "func validateHandOffs",
-        "func validateObservation",
-        "func validateRecovery",
         "type Baseline",
         "type BaselineKind",
         "type Cell",
@@ -12619,6 +12606,26 @@
         "type ClaudeHookOutput",
         "type CodexHookOutput",
         "type HostHookOutput"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/capability_baseline.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ValidateCapabilityBaseline",
+        "func sameFailures",
+        "func sameSteps",
+        "func validClaim",
+        "func validHost",
+        "func validLauncher",
+        "func validObservationResult",
+        "func validStatus",
+        "func validateCells",
+        "func validateEvidence",
+        "func validateHandOffs",
+        "func validateObservation",
+        "func validateRecovery"
       ]
     },
     {
@@ -15049,6 +15056,23 @@
       "evidence_tests": [
         "internal/domain/issueops.TestValidateRecordInvariantsRejectsPlanPrepEvidenceAndWaiverConflict",
         "internal/adapter/outbound/issueopsrecord.TestEncodeRejectsRecordInvariantViolationsAsInvalidState"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "capability-baseline-invariants",
+      "source_path": "internal/contract/issueops/capability_baseline.go",
+      "source_symbol": "func Validate",
+      "responsibility": "Cross-host support evidence and recovery chain acceptance rules belong to the cycle domain.",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateCapabilityBaseline",
+      "task": "T02",
+      "entrypoints": [
+        "internal/domain/issueops.ValidateCapabilityBaseline"
+      ],
+      "evidence_tests": [
+        "internal/contract/issueops_test.TestValidateStatusEvidenceRelationships",
+        "internal/contract/issueops_test.TestValidateRecoveryModeInvariants"
       ],
       "status": "migrated"
     }
