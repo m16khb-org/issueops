@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	issueopsartifactdomain "issueops/internal/domain/issueopsartifact"
 )
 
@@ -15,7 +16,7 @@ func validateExecutionMutation(record issueops.IssueOpsRecord, actor *IssueOpsAc
 	if record.Execution == nil {
 		return nil
 	}
-	if err := issueops.ValidateExecution(*record.Execution); err != nil {
+	if err := issueopsdomain.ValidateExecution(*record.Execution); err != nil {
 		return fmt.Errorf("invalid IssueOps execution v1 record: %w", err)
 	}
 	lease := record.Execution.Lease
@@ -83,7 +84,7 @@ func validateRetargetMutation(record issueops.IssueOpsRecord, actor *IssueOpsAct
 	if record.Execution == nil {
 		return nil
 	}
-	if err := issueops.ValidateExecution(*record.Execution); err != nil {
+	if err := issueopsdomain.ValidateExecution(*record.Execution); err != nil {
 		return fmt.Errorf("invalid IssueOps execution v1 record: %w", err)
 	}
 	if record.Execution.Lease.Status != issueops.LeaseStatusActive {

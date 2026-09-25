@@ -133,7 +133,7 @@ func repoSignalRules() []repoSignalRule {
 		{func(root string, signals *SelfAugmentRepoSignals) {
 			signals.HasToolConformanceTransportCoverage = fileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestClassificationsCoverAllContractCases") &&
 				fileContainsTerm(root, filepath.Join("internal", "contract", "toolconformance", "types_test.go"), "TestBenchmarkReportJSONRoundTripPreservesTypedEnums") &&
-				fileContainsTerm(root, filepath.Join("internal", "contract", "issueops", "execution_sync_base_test.go"), "TestValidateWriteLeaseStatusMatrix") &&
+				fileContainsTerm(root, filepath.Join("internal", "domain", "issueops", "execution_sync_base_validation_test.go"), "TestValidateWriteLeaseStatusMatrix") &&
 				fileContainsTerm(root, filepath.Join("internal", "contract", "issueops", "execution_sync_base_test.go"), "TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand")
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {

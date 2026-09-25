@@ -51,58 +51,8 @@
   },
   {
     "path": "internal/contract/issueops/execution.go",
-    "symbol": "func ValidateExecution",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
     "symbol": "func ValidateNativeActor",
     "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validCommitSHA",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validSHA256",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validateExecutionCompletion",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validateExecutionSelection",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validateExecutionSyncBaseEvent",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validateExecutionSyncBaseResolution",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validateOrcaBinding",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validateWorkspace",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueops/execution.go",
-    "symbol": "func validateWriteLease",
-    "role": "mixed-deferred"
   },
   {
     "path": "internal/contract/issueops/execution_base_sync_error.go",

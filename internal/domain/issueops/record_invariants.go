@@ -9,6 +9,11 @@ import (
 
 // ValidateRecordInvariants checks relationships between fields of a persisted cycle.
 func ValidateRecordInvariants(record issueopscontract.IssueOpsRecord) error {
+	if record.Execution != nil {
+		if err := ValidateExecution(*record.Execution); err != nil {
+			return err
+		}
+	}
 	if record.PlanPrep != nil {
 		for _, item := range []struct {
 			name  string

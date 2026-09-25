@@ -133,7 +133,7 @@ func issueOpsImplementationReadiness(record issueops.IssueOpsRecord, checkPlanBi
 	if record.Execution == nil {
 		missing = append(missing, "execution")
 	} else {
-		if err := issueops.ValidateExecution(*record.Execution); err != nil {
+		if err := issueopsdomain.ValidateExecution(*record.Execution); err != nil {
 			missing = append(missing, "execution_valid")
 		}
 		if !samePath(record.WorktreePath, record.Execution.Workspace.Root) {

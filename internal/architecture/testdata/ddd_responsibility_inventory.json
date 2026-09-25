@@ -11529,17 +11529,7 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
-        "func ValidateExecution",
         "func ValidateNativeActor",
-        "func validCommitSHA",
-        "func validSHA256",
-        "func validateExecutionCompletion",
-        "func validateExecutionSelection",
-        "func validateExecutionSyncBaseEvent",
-        "func validateExecutionSyncBaseResolution",
-        "func validateOrcaBinding",
-        "func validateWorkspace",
-        "func validateWriteLease",
         "type Execution",
         "type ExecutionCompletion",
         "type ExecutionCompletionHistory",
@@ -12643,6 +12633,32 @@
         "func pathIsDocument",
         "func pathTouchesAuth",
         "type ChangeTier"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/execution_validation.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ValidateExecution",
+        "func validCommitSHA",
+        "func validSHA256",
+        "func validateExecutionCompletion",
+        "func validateExecutionSelection",
+        "func validateExecutionSyncBaseEvent",
+        "func validateExecutionSyncBaseResolution",
+        "func validateOrcaBinding",
+        "func validateWorkspace",
+        "func validateWriteLease",
+        "type Execution",
+        "type ExecutionCompletion",
+        "type ExecutionMode",
+        "type ExecutionSelection",
+        "type ExecutionSyncBaseEvent",
+        "type ExecutionSyncBaseResolution",
+        "type OrcaBinding",
+        "type Workspace",
+        "type WriteLease"
       ]
     },
     {
@@ -15073,6 +15089,26 @@
       "evidence_tests": [
         "internal/contract/issueops_test.TestValidateStatusEvidenceRelationships",
         "internal/contract/issueops_test.TestValidateRecoveryModeInvariants"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "execution-record-invariants",
+      "source_path": "internal/contract/issueops/execution.go",
+      "source_symbol": "func ValidateExecution",
+      "responsibility": "Execution lease, selection, completion, and binding relationships on a persisted cycle",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateExecution",
+      "task": "T02",
+      "entrypoints": [
+        "internal/adapter/outbound/issueopsrecord.Decode",
+        "internal/adapter/outbound/issueopsrecord.Encode",
+        "internal/adapter/issueops.validateIssueOpsRecord",
+        "internal/adapter/issueops.validateExecutionMutation"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/execution_validation_test.go",
+        "internal/adapter/outbound/issueopsrecord/codec_invariants_test.go"
       ],
       "status": "migrated"
     }

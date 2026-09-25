@@ -66,11 +66,6 @@ func ValidateRecord(record IssueOpsRecord) error {
 			return err
 		}
 	}
-	if record.Execution != nil {
-		if err := ValidateExecution(*record.Execution); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 

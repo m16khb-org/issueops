@@ -21,6 +21,17 @@ func TestDirContainsTermIgnoresTestOnlySignals(t *testing.T) {
 	}
 }
 
+func TestTransportCoverageSignalFollowsExecutionDomainTests(t *testing.T) {
+	root := t.TempDir()
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "contract", "toolconformance", "types_test.go"), "func TestClassificationsCoverAllContractCases() {}\nfunc TestBenchmarkReportJSONRoundTripPreservesTypedEnums() {}\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "issueops", "execution_sync_base_validation_test.go"), "func TestValidateWriteLeaseStatusMatrix() {}\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "contract", "issueops", "execution_sync_base_test.go"), "func TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand() {}\n")
+
+	if signals := CollectSelfAugmentRepoSignals(root, 0, nil, ""); !signals.HasToolConformanceTransportCoverage {
+		t.Fatal("transport coverage must follow the execution invariant tests into domain")
+	}
+}
+
 func TestCollectSelfAugmentRepoSignalsFindsMCPAdapterCatalogInContractCLI(t *testing.T) {
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "mcp", "catalog.go"), "package mcp\nfunc AdapterOwnedTools() {}\n")
