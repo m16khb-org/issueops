@@ -2,14 +2,10 @@ package nativeactivation
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"sort"
-	"strings"
-	"time"
 
 	activationcontract "issueops/internal/contract/nativeactivation"
+	activationdomain "issueops/internal/domain/nativeactivation"
 	activationport "issueops/internal/port/nativeactivation"
 )
 
@@ -26,7 +22,7 @@ func (service *Service) Begin(ctx context.Context, request activationcontract.Re
 	if service == nil || service.backend == nil {
 		return activationcontract.Result{}, fmt.Errorf("native activation backend is required")
 	}
-	if err := validateRequest(request); err != nil {
+	if err := activationdomain.ValidateRequest(request); err != nil {
 		return activationcontract.Result{}, err
 	}
 	if request.TransitionID != "" {
@@ -46,10 +42,10 @@ func (service *Service) Seal(ctx context.Context, request activationcontract.Req
 	if service == nil || service.backend == nil || service.readback == nil {
 		return activationcontract.Result{}, fmt.Errorf("native activation dependencies are required")
 	}
-	if err := validateRequest(request); err != nil {
+	if err := activationdomain.ValidateRequest(request); err != nil {
 		return activationcontract.Result{}, err
 	}
-	if !validTransitionID(request.TransitionID) {
+	if !activationdomain.ValidTransitionID(request.TransitionID) {
 		return activationcontract.Result{}, fmt.Errorf("native activation seal requires the exact transition ID")
 	}
 	readback, err := service.readback.Verify(ctx, request.IssueOpsRoot, request.TargetBinary)
@@ -79,10 +75,10 @@ func (service *Service) Abort(ctx context.Context, request activationcontract.Re
 	if service == nil || service.backend == nil {
 		return activationcontract.Result{}, fmt.Errorf("native activation backend is required")
 	}
-	if err := validateRequest(request); err != nil {
+	if err := activationdomain.ValidateRequest(request); err != nil {
 		return activationcontract.Result{}, err
 	}
-	if !validTransitionID(request.TransitionID) {
+	if !activationdomain.ValidTransitionID(request.TransitionID) {
 		return activationcontract.Result{}, fmt.Errorf("native activation abort requires the exact transition ID")
 	}
 	result, err := service.backend.Abort(ctx, activationport.AbortRequest{
@@ -91,21 +87,10 @@ func (service *Service) Abort(ctx context.Context, request activationcontract.Re
 	if err != nil {
 		return activationcontract.Result{}, err
 	}
-	if err := validateBackendIdentity(request, result); err != nil || !result.Aborted || result.Pending || result.Sealed || !validSHA256(result.BinarySHA256) {
+	if err := validateBackendIdentity(request, result); err != nil || !result.Aborted || result.Pending || result.Sealed || !activationdomain.ValidSHA256(result.BinarySHA256) {
 		return activationcontract.Result{}, fmt.Errorf("native activation backend did not abort the pending transition")
 	}
 	return publicResult(result, activationport.Readback{}), nil
-}
-
-func validateRequest(request activationcontract.Request) error {
-	if strings.TrimSpace(request.StateRoot) == "" || strings.TrimSpace(request.IssueOpsRoot) == "" || strings.TrimSpace(request.TargetBinary) == "" ||
-		request.StateRoot != strings.TrimSpace(request.StateRoot) || request.IssueOpsRoot != strings.TrimSpace(request.IssueOpsRoot) || request.TargetBinary != strings.TrimSpace(request.TargetBinary) {
-		return fmt.Errorf("native activation state root, harness root, and target binary are required")
-	}
-	if request.TransitionID != "" && !validTransitionID(request.TransitionID) {
-		return fmt.Errorf("native activation transition ID is invalid")
-	}
-	return nil
 }
 
 func validateBackendResult(request activationcontract.Request, result activationport.Result, sealed bool) error {
@@ -113,12 +98,12 @@ func validateBackendResult(request activationcontract.Request, result activation
 		return err
 	}
 	if sealed {
-		if !result.Sealed || result.Pending || !validSHA256(result.BinarySHA256) {
+		if !result.Sealed || result.Pending || !activationdomain.ValidSHA256(result.BinarySHA256) {
 			return fmt.Errorf("native activation backend did not seal the receipt")
 		}
 		return nil
 	}
-	if !result.Pending || result.Sealed || !validSHA256(result.BinarySHA256) {
+	if !result.Pending || result.Sealed || !activationdomain.ValidSHA256(result.BinarySHA256) {
 		return fmt.Errorf("native activation backend did not persist a pending activation")
 	}
 	return nil
@@ -126,59 +111,33 @@ func validateBackendResult(request activationcontract.Request, result activation
 
 func validateBackendIdentity(request activationcontract.Request, result activationport.Result) error {
 	if result.StateRoot != request.StateRoot || result.IssueOpsRoot != request.IssueOpsRoot || result.TargetBinary != request.TargetBinary ||
-		(request.TransitionID != "" && result.TransitionID != request.TransitionID) || !validTransitionID(result.TransitionID) {
+		(request.TransitionID != "" && result.TransitionID != request.TransitionID) || !activationdomain.ValidTransitionID(result.TransitionID) {
 		return fmt.Errorf("native activation backend identity mismatch")
 	}
-	if !validTimestamp(result.UpdatedAt) {
+	if !activationdomain.ValidTimestamp(result.UpdatedAt) {
 		return fmt.Errorf("native activation backend transition timestamp is invalid")
 	}
 	return nil
 }
 
-func validTransitionID(value string) bool {
-	decoded, err := hex.DecodeString(value)
-	return err == nil && len(decoded) == 16 && value == strings.ToLower(value)
-}
-
 func validateReadback(readback activationport.Readback) (activationport.Readback, error) {
-	if !validSHA256(readback.CatalogSHA256) {
-		return activationport.Readback{}, fmt.Errorf("native activation readback digest is invalid")
-	}
-	expected := map[string]bool{
-		"codex\x00mcp": true, "codex\x00hooks": true,
-		"claude\x00mcp": true, "claude\x00hooks": true,
-		"omo\x00mcp": true, "omo\x00hooks": true,
-		"agy\x00mcp": true,
-	}
-	paths := map[string]bool{}
-	for _, evidence := range readback.Evidence {
-		key := evidence.Host + "\x00" + evidence.Surface
-		if evidence.Host != strings.TrimSpace(evidence.Host) || evidence.Surface != strings.TrimSpace(evidence.Surface) ||
-			evidence.Path != strings.TrimSpace(evidence.Path) || !expected[key] || evidence.Path == "" || paths[evidence.Path] ||
-			!validSHA256(evidence.SemanticSHA256) || !validSHA256(evidence.SHA256) {
-			return activationport.Readback{}, fmt.Errorf("native activation requires one valid readback for each first-party MCP/hook surface")
+	facts := make([]activationcontract.Evidence, len(readback.Evidence))
+	for i, evidence := range readback.Evidence {
+		facts[i] = activationcontract.Evidence{
+			Host: evidence.Host, Surface: evidence.Surface, Path: evidence.Path,
+			SemanticSHA256: evidence.SemanticSHA256, SHA256: evidence.SHA256,
 		}
-		delete(expected, key)
-		paths[evidence.Path] = true
 	}
-	if len(expected) != 0 || len(readback.Evidence) != 7 {
-		return activationport.Readback{}, fmt.Errorf("native activation requires exactly seven first-party MCP/hook readbacks")
+	order, err := activationdomain.ReadbackOrder(readback.CatalogSHA256, facts)
+	if err != nil {
+		return activationport.Readback{}, err
 	}
-	readback.Evidence = append([]activationport.Evidence(nil), readback.Evidence...)
-	sort.Slice(readback.Evidence, func(left, right int) bool {
-		return readback.Evidence[left].Host+"\x00"+readback.Evidence[left].Surface < readback.Evidence[right].Host+"\x00"+readback.Evidence[right].Surface
-	})
+	sorted := make([]activationport.Evidence, len(order))
+	for i, original := range order {
+		sorted[i] = readback.Evidence[original]
+	}
+	readback.Evidence = sorted
 	return readback, nil
-}
-
-func validSHA256(value string) bool {
-	decoded, err := hex.DecodeString(value)
-	return err == nil && len(decoded) == sha256.Size && value == strings.TrimSpace(value) && value == strings.ToLower(value)
-}
-
-func validTimestamp(value string) bool {
-	parsed, err := time.Parse(time.RFC3339Nano, value)
-	return err == nil && parsed.UTC().Format(time.RFC3339Nano) == value
 }
 
 func publicResult(result activationport.Result, readback activationport.Readback) activationcontract.Result {

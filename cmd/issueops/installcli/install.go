@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	activationapp "issueops/internal/application/nativeactivation"
 	activationcontract "issueops/internal/contract/nativeactivation"
+	installdomain "issueops/internal/domain/install"
 	"issueops/internal/port"
 )
 
@@ -159,8 +159,7 @@ func nativeInstallCandidatePath(target string, dryRun bool, executable func() (s
 	}
 	candidate = filepath.Clean(candidate)
 	target = filepath.Clean(target)
-	if !dryRun && (filepath.Dir(candidate) != filepath.Dir(target) ||
-		(candidate != target && !strings.HasPrefix(filepath.Base(candidate), ".issueops.activate-"))) {
+	if !installdomain.CandidatePathAllowed(candidate, target, dryRun) {
 		return "", fmt.Errorf("native install candidate must be the canonical target or a same-directory staged binary")
 	}
 	return candidate, nil
@@ -254,16 +253,7 @@ func outputInstallResult(result port.NativeInstallResult, err error, jsonOut boo
 }
 
 func nativeActivationStep(dryRun bool, raw string) (string, error) {
-	step := strings.TrimSpace(raw)
-	if dryRun && step != "" {
-		return "", fmt.Errorf("native activation step is not valid during dry-run")
-	}
-	switch step {
-	case "", "begin", "seal", "abort":
-		return step, nil
-	default:
-		return "", fmt.Errorf("invalid native activation step %q", step)
-	}
+	return installdomain.ActivationStep(dryRun, raw)
 }
 
 func installUserHomeDir() (string, error) {
@@ -278,10 +268,5 @@ func installUserHomeDir() (string, error) {
 }
 
 func validInstallPathMode(mode string) bool {
-	switch mode {
-	case "auto", "manual", "skip":
-		return true
-	default:
-		return false
-	}
+	return installdomain.ValidPathMode(mode)
 }

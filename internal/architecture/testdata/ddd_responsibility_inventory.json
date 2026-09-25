@@ -11236,13 +11236,9 @@
         "func Service.Begin",
         "func Service.Seal",
         "func publicResult",
-        "func validSHA256",
-        "func validTimestamp",
-        "func validTransitionID",
         "func validateBackendIdentity",
         "func validateBackendResult",
         "func validateReadback",
-        "func validateRequest",
         "type Service"
       ]
     },
@@ -12781,6 +12777,16 @@
       ]
     },
     {
+      "path": "internal/domain/install/plan.go",
+      "owner": "domain",
+      "task": "T11",
+      "symbols": [
+        "func ActivationStep",
+        "func CandidatePathAllowed",
+        "func ValidPathMode"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/capability_baseline.go",
       "owner": "domain",
       "task": "T20",
@@ -13740,6 +13746,18 @@
       "task": "T19",
       "symbols": [
         "func StateTools"
+      ]
+    },
+    {
+      "path": "internal/domain/nativeactivation/validation.go",
+      "owner": "domain",
+      "task": "T11",
+      "symbols": [
+        "func ReadbackOrder",
+        "func ValidSHA256",
+        "func ValidTimestamp",
+        "func ValidTransitionID",
+        "func ValidateRequest"
       ]
     },
     {
@@ -15159,6 +15177,23 @@
       ],
       "evidence_tests": [
         "internal/adapter/outbound/issueopslease/claim_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "native-activation-transition-id",
+      "source_path": "internal/application/nativeactivation/service.go",
+      "source_symbol": "func validTransitionID",
+      "responsibility": "canonical native activation transition identity",
+      "target": "internal/domain/nativeactivation",
+      "target_symbol": "func ValidTransitionID",
+      "task": "T11",
+      "entrypoints": [
+        "issueops install"
+      ],
+      "evidence_tests": [
+        "internal/domain/nativeactivation/validation_test.go",
+        "internal/application/nativeactivation/service_test.go"
       ],
       "status": "migrated"
     },
