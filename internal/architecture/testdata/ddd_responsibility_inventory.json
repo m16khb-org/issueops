@@ -5932,12 +5932,17 @@
         "func ErrUnmetGates.Error",
         "func appendIssueFolderGateFiles",
         "func appendMarkdownGateFiles",
-        "func checkFile",
+        "func gateClock.Now",
         "func issueFolderNumber",
-        "func needsRun",
+        "func ledgerFileStore.Discover",
+        "func ledgerFileStore.Read",
+        "func ledgerFileStore.WritePreservingMode",
+        "func policyGateRunner.Run",
         "func runGateCheck",
         "type ErrUnmetGates",
-        "type gateCheckOutcome"
+        "type gateClock",
+        "type ledgerFileStore",
+        "type policyGateRunner"
       ]
     },
     {
@@ -10736,6 +10741,20 @@
       ]
     },
     {
+      "path": "internal/application/gates/service.go",
+      "owner": "application",
+      "task": "T10",
+      "symbols": [
+        "func Service.Check",
+        "func Service.checkFile",
+        "type Clock",
+        "type LedgerStore",
+        "type Outcome",
+        "type Runner",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/issueopsartifact/ports.go",
       "owner": "application",
       "task": "T20",
@@ -12666,9 +12685,20 @@
       ]
     },
     {
+      "path": "internal/domain/gates/check_decision.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func CheckArgv",
+        "func DecideCheck",
+        "func ShouldRun",
+        "type CheckDecision"
+      ]
+    },
+    {
       "path": "internal/domain/gates/evaluate.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T10",
       "symbols": [
         "func EvidencePending",
         "func EvidenceTail",
@@ -12681,7 +12711,7 @@
     {
       "path": "internal/domain/gates/ledger.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T10",
       "symbols": [
         "func AppendAbandon",
         "func MarkPass",
@@ -15096,6 +15126,23 @@
       ],
       "evidence_tests": [
         "internal/adapter/outbound/issueopslease/claim_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-rerun",
+      "source_path": "internal/adapter/gates/check.go",
+      "source_symbol": "func needsRun",
+      "responsibility": "unchecked or pending-evidence gate rerun decision",
+      "target": "internal/domain/gates",
+      "target_symbol": "func ShouldRun",
+      "task": "T10",
+      "entrypoints": [
+        "issueops gates check"
+      ],
+      "evidence_tests": [
+        "internal/domain/gates/check_decision_test.go",
+        "internal/adapter/gates/check_test.go"
       ],
       "status": "migrated"
     },
