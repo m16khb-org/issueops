@@ -131,5 +131,5 @@ func budgetOutput(text string) string {
 	if len(text) <= limit {
 		return text
 	}
-	return text[:limit] + "\n<truncated>\n"
+	return policydomain.TruncateBytes(text, limit) + "\n<truncated>\n"
 }

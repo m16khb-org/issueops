@@ -160,7 +160,7 @@ func boundedDiagnostic(value string) string {
 	value = strings.TrimSpace(policy.RedactFreeform(value))
 	const limit = 1024
 	if len(value) > limit {
-		return value[:limit] + "..."
+		return policy.TruncateBytes(value, limit) + "..."
 	}
 	return value
 }

@@ -118,7 +118,7 @@ func appendProcessAudit(path string, record ProcessExecutionRecord) error {
 func boundedProcessField(value string) string {
 	value = strings.TrimSpace(value)
 	if len(value) > processDiagnosticLimit {
-		return value[:processDiagnosticLimit] + "..."
+		return policy.TruncateBytes(value, processDiagnosticLimit) + "..."
 	}
 	return value
 }
