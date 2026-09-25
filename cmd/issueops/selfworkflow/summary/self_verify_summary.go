@@ -71,7 +71,7 @@ func SummarizeSelfVerification(result SelfAugmentResult, targetScore float64) Se
 	if summary.StepDurationStats == nil {
 		summary.StepDurationStats = []SelfAugmentStepDurationStat{}
 	}
-	summary.GoalScores = ScoreSelfVerificationGoals(result, targetScore)
+	summary.GoalScores = MapGoalScores(result, targetScore)
 	summary.Coverage, summary.CoverageGaps = SelfVerificationCoverageForLabels(summary.StepLabels)
 	if summary.FailedStep != "" {
 		summary.RerunCommands = rerun.SelfVerifyRerunCommands(summary.FailedStep, result.BaseSeed, targetScore)

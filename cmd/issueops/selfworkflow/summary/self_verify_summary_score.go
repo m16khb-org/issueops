@@ -1,46 +1,32 @@
 package summary
 
-func ScoreSelfVerificationGoals(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
-	goals := SelfVerificationGoalDefinitions()
-	scores := make([]SelfVerificationGoalScore, 0, len(goals))
-	runCount := result.Iterations
-	if runCount < 1 {
-		runCount = len(result.Runs)
+import selfverifydomain "issueops/internal/domain/selfverify"
+
+// MapGoalScores projects command steps into the pure scoring model and returns
+// the existing summary DTO.
+func MapGoalScores(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
+	definitions := SelfVerificationGoalDefinitions()
+	goals := make([]selfverifydomain.GoalDefinition, 0, len(definitions))
+	for _, definition := range definitions {
+		goals = append(goals, selfverifydomain.GoalDefinition{
+			Name: definition.Name, KoreanName: definition.KoreanName, Labels: definition.Labels,
+		})
 	}
-	for _, goal := range goals {
-		passed := 0
-		total := 0
-		for iteration := 1; iteration <= runCount; iteration++ {
-			steps := map[string]StepResult{}
-			for _, run := range result.Runs {
-				if run.Iteration != iteration {
-					continue
-				}
-				for _, step := range run.Steps {
-					steps[step.Label] = step
-				}
-				break
-			}
-			for _, label := range goal.Labels {
-				total++
-				if step, ok := steps[label]; ok && step.OK {
-					passed++
-				}
-			}
+	runs := make([]selfverifydomain.Run, 0, len(result.Runs))
+	for _, run := range result.Runs {
+		checks := make([]selfverifydomain.Check, 0, len(run.Steps))
+		for _, step := range run.Steps {
+			checks = append(checks, selfverifydomain.Check{Label: step.Label, OK: step.OK})
 		}
-		score := 0.0
-		if total > 0 {
-			score = float64(passed) * 100 / float64(total)
-		}
+		runs = append(runs, selfverifydomain.Run{Iteration: run.Iteration, Checks: checks})
+	}
+	domainScores := selfverifydomain.ScoreGoals(goals, runs, result.Iterations, targetScore)
+	scores := make([]SelfVerificationGoalScore, 0, len(domainScores))
+	for _, score := range domainScores {
 		scores = append(scores, SelfVerificationGoalScore{
-			Name:           goal.Name,
-			KoreanName:     goal.KoreanName,
-			Score:          score,
-			TargetScore:    targetScore,
-			Passed:         score > targetScore,
-			EvidenceLabels: append([]string{}, goal.Labels...),
-			PassedChecks:   passed,
-			TotalChecks:    total,
+			Name: score.Name, KoreanName: score.KoreanName, Score: score.Score,
+			TargetScore: score.TargetScore, Passed: score.Passed, EvidenceLabels: score.EvidenceLabels,
+			PassedChecks: score.PassedChecks, TotalChecks: score.TotalChecks,
 		})
 	}
 	return scores

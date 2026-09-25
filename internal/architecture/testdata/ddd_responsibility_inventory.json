@@ -4187,7 +4187,7 @@
       "owner": "inbound",
       "task": "T17",
       "symbols": [
-        "func ScoreSelfVerificationGoals"
+        "func MapGoalScores"
       ]
     },
     {
@@ -13877,6 +13877,18 @@
       ]
     },
     {
+      "path": "internal/domain/selfverify/goal_score.go",
+      "owner": "domain",
+      "task": "T17",
+      "symbols": [
+        "func ScoreGoals",
+        "type Check",
+        "type GoalDefinition",
+        "type GoalScore",
+        "type Run"
+      ]
+    },
+    {
       "path": "internal/domain/shelltoken/tokens.go",
       "owner": "domain",
       "task": "T20",
@@ -15048,14 +15060,16 @@
       "source_symbol": "func ScoreSelfVerificationGoals",
       "responsibility": "verification goal score threshold",
       "target": "internal/domain/selfverify",
+      "target_symbol": "func ScoreGoals",
       "task": "T17",
       "entrypoints": [
         "issueops self-verify"
       ],
       "evidence_tests": [
+        "internal/domain/selfverify/goal_score_test.go",
         "cmd/issueops/selfworkflow/summary/self_augment_summary_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "install-orchestration",

@@ -27,7 +27,7 @@ func selfVerificationCoverage(stepLabels []string) ([]SelfVerificationCoverage, 
 }
 
 func scoreSelfVerificationGoals(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
-	return summary.ScoreSelfVerificationGoals(result, targetScore)
+	return summary.MapGoalScores(result, targetScore)
 }
 
 func classifySelfVerificationFailure(result SelfAugmentResult, summaryValue SelfAugmentSummary) (string, string, []SelfVerificationFailureCluster) {

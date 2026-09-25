@@ -402,6 +402,7 @@ func dddTask(path string) string {
 		{"internal/domain/toolconformance/gate.go", "T15"},
 		{"internal/contract/riskqa/", "T16"},
 		{"internal/domain/riskqa/", "T16"},
+		{"internal/domain/selfverify/goal_score.go", "T17"},
 	} {
 		if strings.HasPrefix(path, routed.prefix) {
 			return routed.task
