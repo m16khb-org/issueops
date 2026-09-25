@@ -405,6 +405,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueopspublication/issue_create_transition", "T02"},
 		{"internal/domain/state/prune.go", "T14"},
 		{"internal/domain/looprun/", "T14"},
+		{"internal/application/looprun/", "T14"},
 		{"internal/domain/policy/", "T09"},
 		{"internal/application/policy/", "T09"},
 		{"internal/application/audit/", "T09"},

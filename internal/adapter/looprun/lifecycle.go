@@ -2,100 +2,50 @@ package looprun
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io/fs"
-	loopruncontract "issueops/internal/contract/looprun"
-	looprundomain "issueops/internal/domain/looprun"
 	"path/filepath"
 	"strings"
+
+	loopapp "issueops/internal/application/looprun"
+	loopruncontract "issueops/internal/contract/looprun"
+	looprundomain "issueops/internal/domain/looprun"
 )
 
 func Start(req loopruncontract.StartLoopRequest) (loopruncontract.LoopRun, error) {
-	repo, err := normalizeRepo(req.Repo)
-	if err != nil {
-		return loopruncontract.LoopRun{OK: false}, err
-	}
-	prepared, err := looprundomain.PrepareStart(req)
-	if err != nil {
-		return loopruncontract.LoopRun{OK: false}, err
-	}
-	loopID := newLoopID(repo, prepared.Name)
-	var loop loopruncontract.LoopRun
-	err = withLoopLock(context.Background(), loopID, func(context.Context) error {
-		existing, readErr := ReadLoop(loopID)
-		if readErr == nil {
-			if err := looprundomain.Resume(existing); err != nil {
-				return err
-			}
-			loop = existing
-			return nil
-		}
-		if !errors.Is(readErr, fs.ErrNotExist) {
-			return readErr
-		}
-		now := timestampNow()
-		loop = looprundomain.New(loopID, repo, prepared, now, LoopRunCurrentSchemaVersion)
-		var writeErr error
-		loop, writeErr = writeLoop(loop)
-		return writeErr
-	})
-	return loop, err
+	return loopService().Start(req)
 }
 
 func RecordAttempt(loopID string, req loopruncontract.RecordAttemptRequest) (loopruncontract.LoopRun, error) {
-	loopID, err := normalizeLoopID(loopID)
-	if err != nil {
-		return loopruncontract.LoopRun{OK: false}, err
-	}
-	prepared, err := looprundomain.PrepareAttempt(req)
-	if err != nil {
-		return loopruncontract.LoopRun{OK: false, ID: loopID}, err
-	}
-	var loop loopruncontract.LoopRun
-	err = withLoopLock(context.Background(), loopID, func(context.Context) error {
-		var readErr error
-		loop, readErr = ReadLoop(loopID)
-		if readErr != nil {
-			return readErr
-		}
-		now := timestampNow()
-		next, transitionErr := looprundomain.ApplyAttempt(loop, prepared, now)
-		if transitionErr != nil {
-			return transitionErr
-		}
-		loop = next
-		var writeErr error
-		loop, writeErr = writeLoop(loop)
-		return writeErr
-	})
-	return loop, err
+	return loopService().RecordAttempt(loopID, req)
 }
 
 func Stop(loopID string, success bool, reason string) (loopruncontract.LoopRun, error) {
-	loopID, err := normalizeLoopID(loopID)
-	if err != nil {
-		return loopruncontract.LoopRun{OK: false}, err
-	}
-	var loop loopruncontract.LoopRun
-	err = withLoopLock(context.Background(), loopID, func(context.Context) error {
-		var readErr error
-		loop, readErr = ReadLoop(loopID)
-		if readErr != nil {
-			return readErr
-		}
-		now := timestampNow()
-		next, transitionErr := looprundomain.Stop(loop, success, reason, now)
-		if transitionErr != nil {
-			return transitionErr
-		}
-		loop = next
-		var writeErr error
-		loop, writeErr = writeLoop(loop)
-		return writeErr
-	})
-	return loop, err
+	return loopService().Stop(loopID, success, reason)
 }
+
+func loopService() loopapp.Service {
+	return loopapp.Service{Store: loopStore{}, Identity: loopIdentity{}, Clock: loopClock{}, SchemaVersion: LoopRunCurrentSchemaVersion}
+}
+
+type loopStore struct{}
+
+func (loopStore) WithLock(ctx context.Context, id string, fn func(context.Context) error) error {
+	return withLoopLock(ctx, id, fn)
+}
+func (loopStore) Read(id string) (loopruncontract.LoopRun, error) { return ReadLoop(id) }
+func (loopStore) Write(loop loopruncontract.LoopRun) (loopruncontract.LoopRun, error) {
+	return writeLoop(loop)
+}
+
+type loopIdentity struct{}
+
+func (loopIdentity) NormalizeRepo(repo string) (string, error) { return normalizeRepo(repo) }
+func (loopIdentity) NormalizeID(id string) (string, error)     { return normalizeLoopID(id) }
+func (loopIdentity) NewID(repo, name string) string            { return newLoopID(repo, name) }
+
+type loopClock struct{}
+
+func (loopClock) Now() string { return timestampNow() }
 
 func Status(loopID string) (loopruncontract.StatusResult, error) {
 	loop, err := ReadLoop(loopID)

@@ -8568,8 +8568,19 @@
         "func Start",
         "func Status",
         "func Stop",
+        "func loopClock.Now",
+        "func loopIdentity.NewID",
+        "func loopIdentity.NormalizeID",
+        "func loopIdentity.NormalizeRepo",
+        "func loopService",
+        "func loopStore.Read",
+        "func loopStore.WithLock",
+        "func loopStore.Write",
         "func normalizeRepo",
-        "func withLoopLock"
+        "func withLoopLock",
+        "type loopClock",
+        "type loopIdentity",
+        "type loopStore"
       ]
     },
     {
@@ -11185,6 +11196,20 @@
         "func NewService",
         "func Service.Status",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/looprun/service.go",
+      "owner": "application",
+      "task": "T14",
+      "symbols": [
+        "func Service.RecordAttempt",
+        "func Service.Start",
+        "func Service.Stop",
+        "type Clock",
+        "type Identity",
+        "type Service",
+        "type Store"
       ]
     },
     {
