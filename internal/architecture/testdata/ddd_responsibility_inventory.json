@@ -9803,32 +9803,11 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func builtinPolicyCatalogSnapshot",
         "func commandPolicyCatalog",
-        "func copyStringSet",
-        "func copySubcommandCatalog",
-        "func mergePolicyOverrides",
         "func policyCatalogForWorkspace",
         "func policyOverrideWarning",
         "func readPolicyOverrides",
-        "func sortedKeys",
-        "func sortedSubcommandCatalog",
-        "func stringSet",
-        "type PolicyOverrides",
-        "type policyCatalog"
-      ]
-    },
-    {
-      "path": "internal/adapter/policy/policy_command_classification.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": [
-        "func commandBase",
-        "func policyCatalog.commandUsesNetwork",
-        "func policyCatalog.commandWrites",
-        "func policyCatalog.isShellCommand",
-        "func policyCatalog.readOnlyAllowed",
-        "func subcommandAllowed"
+        "type PolicyOverrides"
       ]
     },
     {
@@ -12275,6 +12254,14 @@
       ]
     },
     {
+      "path": "internal/contract/policy/overrides.go",
+      "owner": "contract",
+      "task": "T09",
+      "symbols": [
+        "type PolicyOverrides"
+      ]
+    },
+    {
       "path": "internal/contract/policy/tier.go",
       "owner": "contract",
       "task": "T02",
@@ -13745,6 +13732,24 @@
       "symbols": [
         "func Missing",
         "func Names"
+      ]
+    },
+    {
+      "path": "internal/domain/policy/catalog.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func BuiltinCatalog",
+        "func Catalog.Apply",
+        "func Catalog.Classify",
+        "func Catalog.Snapshot",
+        "func sortedKeys",
+        "func sortedSubcommandCatalog",
+        "func stringSet",
+        "func subcommandAllowed",
+        "type Catalog",
+        "type CatalogSnapshot",
+        "type CommandClassification"
       ]
     },
     {

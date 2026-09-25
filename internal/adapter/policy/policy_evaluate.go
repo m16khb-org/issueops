@@ -20,7 +20,7 @@ type commandObserver struct{}
 func (commandObserver) Observe(req policycontract.CommandPolicyRequest) policyapp.Observation {
 	root := absOrOriginal(req.WorkspaceRoot)
 	cwd := absOrOriginal(req.CWD)
-	catalog := policyCatalogForWorkspace(root)
+	catalog, catalogWarnings := policyCatalogForWorkspace(root)
 	canonicalRoot := canonicalPotentialPath(root)
 	canonicalCWD := canonicalPotentialPath(cwd)
 	argv := append([]string{}, req.Argv...)
@@ -39,14 +39,15 @@ func (commandObserver) Observe(req policycontract.CommandPolicyRequest) policyap
 		CWDWithinRoot:   sameOrWithin(canonicalRoot, canonicalCWD),
 		Timeout:         timeout,
 		TimeoutValid:    timeoutErr == nil,
-		Warnings:        catalog.warnings,
+		Warnings:        catalogWarnings,
 		PathOutsideRoot: commandReferencesOutsideWorkspace(canonicalRoot, canonicalCWD, argv),
 	}
 	if len(argv) > 0 {
-		facts.ShellCommand = catalog.isShellCommand(argv[0])
-		facts.UsesNetwork = catalog.commandUsesNetwork(argv)
-		facts.Writes = catalog.commandWrites(argv)
-		facts.ReadOnlyAllowed = catalog.readOnlyAllowed(argv)
+		classification := catalog.Classify(argv)
+		facts.ShellCommand = classification.ShellCommand
+		facts.UsesNetwork = classification.UsesNetwork
+		facts.Writes = classification.Writes
+		facts.ReadOnlyAllowed = classification.ReadOnlyAllowed
 		facts.PRTargetDeny, facts.PRTargetExpected = pullRequestTargetDeny(root, cwd, argv)
 	}
 	return policyapp.Observation{

@@ -206,6 +206,7 @@ func TestDDDOwnerRoutesKnownMigrationTargets(t *testing.T) {
 		"internal/domain/looprun/lifecycle.go":                           "T14",
 		"internal/domain/policy/command_decision.go":                     "T09",
 		"internal/application/policy/service.go":                         "T09",
+		"internal/contract/policy/overrides.go":                          "T09",
 		"internal/domain/issueops/phase_ledger.go":                       "T04",
 		"internal/contract/issueopspreparation/planner_gates.go":         "T02",
 		"internal/adapter/issueops/devilsadvocate/devils_advocate.go":    "T03",
@@ -408,6 +409,7 @@ func dddTask(path string) string {
 		{"internal/domain/projectdoc/route.go", "T13"},
 		{"internal/domain/toolconformance/gate.go", "T15"},
 		{"internal/contract/riskqa/", "T16"},
+		{"internal/contract/policy/overrides.go", "T09"},
 		{"internal/domain/riskqa/", "T16"},
 		{"internal/domain/selfverify/goal_score.go", "T17"},
 	} {
