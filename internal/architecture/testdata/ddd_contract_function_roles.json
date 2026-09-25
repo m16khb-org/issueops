@@ -1,0 +1,627 @@
+[
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func BindGeneratedCommand",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func ConsumeGeneratedCommandProvenance",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func GeneratedCommandProvenance.Validate",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func GeneratedCommandProvenanceError.Error",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func GeneratedCommandProvenanceError.IssueOpsErrorFields",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func NewGeneratedCommandProvenanceObservationError",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func containsControl",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func generatedCommandProvenanceArg",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func invalidGeneratedCommandProvenance",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/commandparse/generated_command_provenance.go",
+    "symbol": "func quoteGeneratedCommandArg",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func Validate",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func sameFailures",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func sameSteps",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validClaim",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validHost",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validLauncher",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validObservationResult",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validStatus",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validateCells",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validateEvidence",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validateHandOffs",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validateObservation",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/capability_baseline.go",
+    "symbol": "func validateRecovery",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func ValidateExecution",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func ValidateNativeActor",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validCommitSHA",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validSHA256",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validateExecutionCompletion",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validateExecutionSelection",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validateExecutionSyncBaseEvent",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validateExecutionSyncBaseResolution",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validateOrcaBinding",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validateWorkspace",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/execution.go",
+    "symbol": "func validateWriteLease",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/execution_base_sync_error.go",
+    "symbol": "func BaseSyncRequiredError.Error",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueops/execution_base_sync_error.go",
+    "symbol": "func BaseSyncRequiredError.IssueOpsErrorFields",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueops/execution_base_sync_error.go",
+    "symbol": "func NewBaseSyncRequiredError",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueops/intent_class.go",
+    "symbol": "func NormalizeIntentClass",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/issue_create.go",
+    "symbol": "func ValidateIssueCreateIntent",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/issue_create.go",
+    "symbol": "func validateIssueCreateValues",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func KnownFeedbackClassification",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func KnownFeedbackResolution",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func ValidateRecord",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func knownChildValidationVerdict",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func knownCleanupAbandonFailureStep",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func knownCleanupFinishFailureStep",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func knownRecordPhase",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/record_validation.go",
+    "symbol": "func knownRemoteArtifactIdentity",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopsartifact/types.go",
+    "symbol": "func RecoveryError.Error",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopsartifact/types.go",
+    "symbol": "func RecoveryError.IssueOpsErrorFields",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopscompletion/completion.go",
+    "symbol": "func RecordSnapshot.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopslease/failure.go",
+    "symbol": "func Fail",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopslease/failure.go",
+    "symbol": "func Failure.Error",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopslease/failure.go",
+    "symbol": "func Failure.Unwrap",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopslease/failure.go",
+    "symbol": "func FailureCodeOf",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func Decode",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func Encode",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func validHexDigest",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func validateActor",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func validateCompletion",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func validateLease",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func validateRecord",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func validateSelection",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueopslease/record.go",
+    "symbol": "func validateSidecars",
+    "role": "mixed-deferred"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func DecodeIssueLinkEvidence",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.Decode",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.DecodeSelfIdentified",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.DecodeShape",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.Encode",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.ParseMarker",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.RenderMarker",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.RenderReadinessMarker",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.Validate",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentCodec.ValidateShape",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentError.Error",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func IntentError.IssueOpsErrorFields",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func InvocationError.Error",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func InvocationError.Unwrap",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func contractError",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func decodeShape",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func invalidMarker",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func markerField",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func normalizedPurpose",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func parseMarker",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func renderMarker",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func sameOptionalPath",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func samePath",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func validProvider",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func validToken",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func validateIntent",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func validateShape",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/intent.go",
+    "symbol": "func validateWorkspaceReceipt",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/planner_gates.go",
+    "symbol": "func PlannerGateKeys",
+    "role": "projection"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func Command.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func Result.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func Snapshot.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func cloneActor",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func cloneActorPointer",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func cloneBytes",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func cloneExecutionPointer",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func cloneRaw",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func cloneRecord",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspreparation/prepare.go",
+    "symbol": "func cloneStrings",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func Actor.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func Candidate.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func CreateCommand.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func Intent.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func Inventory.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func PreparedCreate.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func ProviderCreateRequest.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func ReconcileResult.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func RecordSnapshot.Clone",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func cloneBytes",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/issueopspublication/publication.go",
+    "symbol": "func cloneStrings",
+    "role": "clone"
+  },
+  {
+    "path": "internal/contract/policy/command_types.go",
+    "symbol": "func IsPolicyDenied",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/policy/command_types.go",
+    "symbol": "func PolicyDeniedError.Error",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/state/errors.go",
+    "symbol": "func Invalid",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/toolconformance/types.go",
+    "symbol": "func Classification.UnmarshalJSON",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/toolconformance/types.go",
+    "symbol": "func EpisodeStatus.UnmarshalJSON",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/toolconformance/types.go",
+    "symbol": "func GateDecision.UnmarshalJSON",
+    "role": "codec"
+  },
+  {
+    "path": "internal/contract/toolconformance/types.go",
+    "symbol": "func ParseClassification",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/toolconformance/types.go",
+    "symbol": "func ParseEpisodeStatus",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/toolconformance/types.go",
+    "symbol": "func ParseGateDecision",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/toolconformance/types.go",
+    "symbol": "func ValidGateDecision",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/upstream/upstream.go",
+    "symbol": "func PluginEntry.ID",
+    "role": "projection"
+  }
+]
