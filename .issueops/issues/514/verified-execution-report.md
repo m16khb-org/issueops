@@ -3,7 +3,7 @@
 - lifecycle ID: `io-34938e479083`
 - 이슈: https://github.com/m16khb-org/issueops/issues/514
 - 브랜치: `514-utf8-safe-truncation` (base `main` @ `92bbbddabb9bbee9c7a1e050fc6fe061d7d45201`)
-- canonical worktree: `/Users/habin/workspace/issueops.worktrees/514-utf8-safe-truncation`
+- canonical worktree: source checkout 옆의 `issueops.worktrees/514-utf8-safe-truncation`
 - 실행 holder: direct, generation 2 (claude, claude-opus-5-5 high)
 - 계획: `.issueops/issues/514/artifact/plan.md` (3차 봉인)
 - 게이트 원장: `.issueops/issues/514/gates.md`
@@ -87,6 +87,11 @@
 ## 성능
 
 - hot path가 아니다. 추가 비용은 `TruncateBytes`·`TailBytes`·`TrimIncompleteRune`에서 최대 3바이트 검사(O(1)), `TruncateRunes`에서 O(maxRunes)다. `max_chars` 기본값 0에서는 `TruncateRunes`가 실행되지 않는다. 측정할 병목이 없어 벤치마크는 두지 않았다(계획의 `## 성능 영향`).
+
+## PR CI
+
+- 브랜치 push로 도는 CI(base `92bbbdda` 기준)는 golangci-lint에서 실패했다. 원인은 이 사이클과 무관한 기존 main lint 오류 두 개(`internal/architecture/package_inventory_cache_test.go:93` ineffassign, `cmd/issueops/validationcli/mcpsmoke/validation_mcp_test.go:142` unused)이며, main의 lint 수정 커밋이 들어간 병합 기준 PR CI에서는 lint가 통과했다.
+- 병합 기준 PR CI의 `python3 -m unittest discover -s scripts -p '*_test.py'`가 이 보고서 때문에 실패했다. 보고서에 적은 작업 공간 절대 경로에 로컬 사용자 이름이 들어 있었고, `scripts/meeting_notes_skill_contract_test.py`가 추적 파일에서 금지하는 식별 데이터 지문과 일치했다. 절대 경로를 상대 표기로 바꿨다.
 
 ## 남은 위험
 
