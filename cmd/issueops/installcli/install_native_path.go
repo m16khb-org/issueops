@@ -110,6 +110,10 @@ func (transaction *installPathTransaction) apply(result *port.NativeInstallResul
 	return err
 }
 
+func (transaction *installPathTransaction) Apply(result *port.NativeInstallResult) error {
+	return transaction.apply(result)
+}
+
 func (transaction *installPathTransaction) rollback(result *port.NativeInstallResult) error {
 	var errs []error
 	if transaction.shortCreated {
@@ -163,6 +167,10 @@ func (transaction *installPathTransaction) rollback(result *port.NativeInstallRe
 	return errors.Join(errs...)
 }
 
+func (transaction *installPathTransaction) Rollback(result *port.NativeInstallResult) error {
+	return transaction.rollback(result)
+}
+
 func installPathDirectoryExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
@@ -175,6 +183,10 @@ func (transaction *installPathTransaction) finalize(result *port.NativeInstallRe
 	plan, err := transaction.command.Finalize()
 	result.CommandPath = managedCommandPathResult(plan)
 	return err
+}
+
+func (transaction *installPathTransaction) Finalize(result *port.NativeInstallResult) error {
+	return transaction.finalize(result)
 }
 
 func managedCommandPathResult(plan installcontract.ManagedCommandPathPlan) *port.ManagedCommandPathResult {

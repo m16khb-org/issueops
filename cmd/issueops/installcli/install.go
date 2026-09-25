@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	installapp "issueops/internal/application/install"
 	activationapp "issueops/internal/application/nativeactivation"
 	activationcontract "issueops/internal/contract/nativeactivation"
 	installdomain "issueops/internal/domain/install"
@@ -78,67 +79,28 @@ func runInstall(args []string) error {
 }
 
 func executeInstall(req port.NativeInstallRequest, candidatePath, pathMode, activationStep string, jsonOut bool, activationService *activationapp.Service, activationRequest activationcontract.Request) error {
-	if activationStep == "abort" {
-		activationRequest.TransitionID = os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID")
-		aborted, abortErr := activationService.Abort(context.Background(), activationRequest)
-		if abortErr != nil {
-			return fmt.Errorf("abort native activation: %w", abortErr)
-		}
-		if jsonOut {
-			return printJSON(aborted)
-		}
-		fmt.Printf("native activation transition %s aborted\n", aborted.TransitionID)
-		return nil
+	outcome, err := installapp.RunTransaction(context.Background(), installapp.TransactionRequest{
+		Install: req, CandidatePath: candidatePath, PathMode: pathMode, Step: activationStep,
+		TransitionID: os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID"), Activation: activationRequest,
+	}, installTransactionEffects{}, activationService)
+	if outcome.Install != nil {
+		return outputInstallResult(*outcome.Install, err, jsonOut)
 	}
-	preflight := port.NativeInstallResult{OK: true, Root: req.Root, Home: req.Home, CodexHome: req.CodexHome, BinPath: req.BinPath}
-	pathTransaction, err := prepareInstallPathPlanForCandidate(&preflight, req, candidatePath, pathMode)
 	if err != nil {
 		return err
 	}
-	if req.DryRun {
-		result, installErr := deps.InstallNative(req)
-		result.Links = append(preflight.Links, result.Links...)
-		result.Files = append(preflight.Files, result.Files...)
-		result.Messages = append(preflight.Messages, result.Messages...)
-		result.CommandPath = preflight.CommandPath
-		appendUpstreamMessages(&result, req.Root, true)
-		return outputInstallResult(result, installErr, jsonOut)
+	if outcome.Activation == nil {
+		return fmt.Errorf("native install produced no result")
 	}
-	hostPlanReq := req
-	hostPlanReq.DryRun = true
-	hostPlan, hostPlanErr := deps.InstallNative(hostPlanReq)
-	if hostPlanErr != nil || !hostPlan.OK {
-		if hostPlanErr == nil {
-			hostPlanErr = fmt.Errorf("native installer dry-run preflight reported ok=false")
-		}
-		return finishHostPreflightFailure(&hostPlan, hostPlanErr, preflight, activationStep, jsonOut)
+	if jsonOut {
+		return printJSON(outcome.Activation)
 	}
-	if hostPlanErr = planShellPath(&hostPlan, hostPlanReq, pathMode); hostPlanErr != nil {
-		return finishHostPreflightFailure(&hostPlan, hostPlanErr, preflight, activationStep, jsonOut)
+	if activationStep == "abort" {
+		fmt.Printf("native activation transition %s aborted\n", outcome.Activation.TransitionID)
+	} else {
+		fmt.Printf("native activation candidate %s is pending as transition %s\n", outcome.Activation.BinarySHA256, outcome.Activation.TransitionID)
 	}
-	hostTransaction, hostTransactionErr := prepareInstallHostTransaction(hostPlan)
-	if hostTransactionErr != nil {
-		return finishHostPreflightFailure(&hostPlan, hostTransactionErr, preflight, activationStep, jsonOut)
-	}
-	done, err := prepareActivationTransition(activationService, &activationRequest, activationStep, jsonOut)
-	if err != nil || done {
-		return err
-	}
-	return applyAndSealInstall(req, pathMode, activationStep, jsonOut, activationService, activationRequest, preflight, pathTransaction, hostTransaction)
-}
-
-func finishHostPreflightFailure(result *port.NativeInstallResult, cause error, preflight port.NativeInstallResult, step string, jsonOut bool) error {
-	result.OK = false
-	result.Links = append(preflight.Links, result.Links...)
-	result.CommandPath = preflight.CommandPath
-	if step == "seal" {
-		result.TransitionID = os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID")
-		result.AbortRequired = true
-		if result.CommandPath != nil {
-			result.CommandPath.AbortRequired = true
-		}
-	}
-	return outputInstallResult(*result, cause, jsonOut)
+	return nil
 }
 
 func nativeInstallCandidatePath(target string, dryRun bool, executable func() (string, error)) (string, error) {
@@ -163,84 +125,6 @@ func nativeInstallCandidatePath(target string, dryRun bool, executable func() (s
 		return "", fmt.Errorf("native install candidate must be the canonical target or a same-directory staged binary")
 	}
 	return candidate, nil
-}
-
-func prepareActivationTransition(service *activationapp.Service, request *activationcontract.Request, step string, jsonOut bool) (bool, error) {
-	if step == "seal" {
-		request.TransitionID = os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID")
-		return false, nil
-	}
-	pending, beginErr := service.Begin(context.Background(), *request)
-	if beginErr != nil {
-		return false, fmt.Errorf("begin native activation: %w", beginErr)
-	}
-	request.TransitionID = pending.TransitionID
-	if step == "begin" {
-		if jsonOut {
-			return true, printJSON(pending)
-		}
-		fmt.Printf("native activation candidate %s is pending as transition %s\n", pending.BinarySHA256, pending.TransitionID)
-		return true, nil
-	}
-	return false, nil
-}
-
-func applyAndSealInstall(req port.NativeInstallRequest, pathMode, activationStep string, jsonOut bool, activationService *activationapp.Service, activationRequest activationcontract.Request, preflight port.NativeInstallResult, pathTransaction *installPathTransaction, hostTransaction *installHostTransaction) error {
-	result := preflight
-	result.TransitionID = activationRequest.TransitionID
-	if applyErr := pathTransaction.apply(&result); applyErr != nil {
-		return finishFailedInstall(&result, applyErr, pathTransaction, hostTransaction, activationService, activationRequest, activationStep, jsonOut)
-	}
-	installed, installErr := deps.InstallNative(req)
-	installed.Links = append(result.Links, installed.Links...)
-	installed.CommandPath = result.CommandPath
-	installed.TransitionID = activationRequest.TransitionID
-	result = installed
-	if installErr == nil && result.OK {
-		installErr = planShellPath(&result, req, pathMode)
-	}
-	if installErr != nil || !result.OK {
-		return finishFailedInstall(&result, installErr, pathTransaction, hostTransaction, activationService, activationRequest, activationStep, jsonOut)
-	}
-	sealed, sealErr := activationService.Seal(context.Background(), activationRequest)
-	if sealErr != nil || !sealed.OK || !sealed.Sealed || sealed.Receipt == nil {
-		if sealErr == nil {
-			sealErr = fmt.Errorf("native activation receipt was not sealed")
-		}
-		return finishFailedInstall(&result, sealErr, pathTransaction, hostTransaction, activationService, activationRequest, activationStep, jsonOut)
-	}
-	result.Committed = true
-	result.Messages = append(result.Messages, "native activation receipt sealed after strict Codex/Claude/Omo MCP and lifecycle readback")
-	// Upstream provisioning runs only after the issueops install is committed, so
-	// a third-party plugin CLI can never take part in the activation transaction.
-	appendUpstreamMessages(&result, req.Root, false)
-	if finalizeErr := pathTransaction.finalize(&result); finalizeErr != nil {
-		result.Messages = append(result.Messages, "native activation is committed; command backup cleanup requires manual recovery: "+finalizeErr.Error())
-		if result.CommandPath != nil {
-			result.CommandPath.BackupRetained = true
-		}
-	}
-	return outputInstallResult(result, nil, jsonOut)
-}
-
-func finishFailedInstall(result *port.NativeInstallResult, cause error, transaction *installPathTransaction, hostTransaction *installHostTransaction, service *activationapp.Service, request activationcontract.Request, step string, jsonOut bool) error {
-	result.OK = false
-	if cause == nil {
-		cause = fmt.Errorf("native installer reported ok=false")
-	}
-	hostRollbackErr := hostTransaction.rollback()
-	rollbackErr := transaction.rollback(result)
-	if step == "seal" {
-		result.AbortRequired = true
-		if result.CommandPath != nil {
-			result.CommandPath.AbortRequired = true
-		}
-	} else {
-		_, abortErr := service.Abort(context.Background(), request)
-		cause = errors.Join(cause, abortErr)
-	}
-	cause = errors.Join(cause, hostRollbackErr, rollbackErr)
-	return outputInstallResult(*result, cause, jsonOut)
 }
 
 func outputInstallResult(result port.NativeInstallResult, err error, jsonOut bool) error {

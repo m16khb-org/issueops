@@ -860,15 +860,11 @@
       "owner": "inbound",
       "task": "T11",
       "symbols": [
-        "func applyAndSealInstall",
         "func executeInstall",
-        "func finishFailedInstall",
-        "func finishHostPreflightFailure",
         "func installUserHomeDir",
         "func nativeActivationStep",
         "func nativeInstallCandidatePath",
         "func outputInstallResult",
-        "func prepareActivationTransition",
         "func runInstall",
         "func validInstallPathMode"
       ]
@@ -880,6 +876,7 @@
       "symbols": [
         "func captureInstallHostParent",
         "func captureInstallHostPath",
+        "func installHostTransaction.RollbackHosts",
         "func installHostTransaction.rollback",
         "func pathDepth",
         "func prepareInstallHostTransaction",
@@ -919,6 +916,9 @@
         "func appendShellPathLinePlan",
         "func ensureShortCommandShimPlan",
         "func installPathDirectoryExists",
+        "func installPathTransaction.Apply",
+        "func installPathTransaction.Finalize",
+        "func installPathTransaction.Rollback",
         "func installPathTransaction.apply",
         "func installPathTransaction.finalize",
         "func installPathTransaction.rollback",
@@ -930,6 +930,19 @@
         "func prepareInstallPathPlanForCandidate",
         "func shellRCAlreadyAddsLocalBin",
         "type installPathTransaction"
+      ]
+    },
+    {
+      "path": "cmd/issueops/installcli/install_transaction_effects.go",
+      "owner": "inbound",
+      "task": "T11",
+      "symbols": [
+        "func installTransactionEffects.AppendUpstream",
+        "func installTransactionEffects.Install",
+        "func installTransactionEffects.PlanShell",
+        "func installTransactionEffects.PrepareHost",
+        "func installTransactionEffects.PreparePath",
+        "type installTransactionEffects"
       ]
     },
     {
@@ -10749,6 +10762,22 @@
         "func Service.Install",
         "type Environment",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/install/transaction.go",
+      "owner": "application",
+      "task": "T11",
+      "symbols": [
+        "func RunTransaction",
+        "func failedInstall",
+        "func hostPreflightFailure",
+        "type Activation",
+        "type HostTransaction",
+        "type PathTransaction",
+        "type TransactionEffects",
+        "type TransactionOutcome",
+        "type TransactionRequest"
       ]
     },
     {
