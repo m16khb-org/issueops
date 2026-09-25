@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
@@ -49,7 +50,7 @@ func (repository *SQLiteRepository) Load(_ context.Context, id string) (preparat
 	if !ok {
 		return preparationcontract.Snapshot{}, fmt.Errorf("issueops record %s not found", id)
 	}
-	record, err := leasecontract.Decode(id, data)
+	record, err := recordcodec.DecodeLease(id, data)
 	if err != nil {
 		return preparationcontract.Snapshot{}, err
 	}
@@ -101,7 +102,7 @@ func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit pre
 				Generation: 1, Status: "active", Holder: &actor, ClaimedAt: commit.ClaimedAt,
 			},
 		}
-		data, err := leasecontract.Encode(record)
+		data, err := recordcodec.EncodeLease(record)
 		if err != nil {
 			return err
 		}
@@ -195,7 +196,7 @@ func (repository *SQLiteRepository) BeginIntent(ctx context.Context, begin prepa
 				OperationID: begin.OperationID, Kind: preparationdomain.PendingKind(intent.Stage), Marker: intent.Marker, StartedAt: begin.StartedAt,
 			},
 		}
-		recordData, err := leasecontract.Encode(record)
+		recordData, err := recordcodec.EncodeLease(record)
 		if err != nil {
 			return err
 		}
@@ -251,7 +252,7 @@ func (repository *SQLiteRepository) RecordFailure(ctx context.Context, state pre
 		OperationID: intent.OperationID, Code: "external_operation_ambiguous",
 		Message: repository.boundedDiagnostic(cause), At: state.FailureAt,
 	}
-	recordData, err := leasecontract.Encode(record)
+	recordData, err := recordcodec.EncodeLease(record)
 	if err != nil {
 		return err
 	}
@@ -347,7 +348,7 @@ func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state prep
 		}
 		record.Execution.Pending = nil
 		record.Execution.Failure = nil
-		recordData, err := leasecontract.Encode(record)
+		recordData, err := recordcodec.EncodeLease(record)
 		if err != nil {
 			return preparationapp.IntentProgress{State: state, Pending: true}, err
 		}
@@ -377,7 +378,7 @@ func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state prep
 	}
 	record.Execution.Pending.Kind = preparationdomain.PendingKind(intent.Stage)
 	record.Execution.Failure = nil
-	recordData, err := leasecontract.Encode(record)
+	recordData, err := recordcodec.EncodeLease(record)
 	if err != nil {
 		return preparationapp.IntentProgress{State: state, Pending: true}, err
 	}
@@ -455,7 +456,7 @@ func ensureRootUnclaimed(store port.RecordInventoryStore, selfID, root string) e
 		if row.ID == self {
 			continue
 		}
-		record, err := leasecontract.Decode(row.ID, row.Data)
+		record, err := recordcodec.DecodeLease(row.ID, row.Data)
 		if err != nil {
 			return fmt.Errorf("canonical worktree 소유권 스캔이 lifecycle %s 레코드를 읽지 못했다; 손상 레코드를 먼저 해소하라: %w", row.ID, err)
 		}

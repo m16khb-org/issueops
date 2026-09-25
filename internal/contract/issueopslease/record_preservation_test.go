@@ -1,4 +1,4 @@
-package issueopslease
+package issueopslease_test
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	leasecodec "issueops/internal/adapter/outbound/issueopsrecord"
 	model "issueops/internal/contract/issueops"
 )
 
@@ -30,7 +31,7 @@ func TestLeaseRecordCarriesEveryPersistedTopLevelField(t *testing.T) {
 
 func TestDecodeRejectsFieldsThePersistedRecordDoesNotDefine(t *testing.T) {
 	valid := `{"ok":true,"schema_version":1,"id":"io-strict","repo":"/repo","phase":"problem","created_at":"2026-09-23T00:00:00Z","updated_at":"2026-09-23T00:00:00Z"}`
-	if _, err := Decode("io-strict", []byte(valid)); err != nil {
+	if _, err := leasecodec.DecodeLease("io-strict", []byte(valid)); err != nil {
 		t.Fatalf("a record with only defined fields must decode: %v", err)
 	}
 	for name, data := range map[string]string{
@@ -38,7 +39,7 @@ func TestDecodeRejectsFieldsThePersistedRecordDoesNotDefine(t *testing.T) {
 		"nested sidecar": strings.Replace(valid, `"ok":true`, `"ok":true,"intent":{"raw_request":"x","future_field":1}`, 1),
 		"execution":      strings.Replace(valid, `"ok":true`, `"ok":true,"execution":{"mode":"direct","future_field":1}`, 1),
 	} {
-		if _, err := Decode("io-strict", []byte(data)); err == nil {
+		if _, err := leasecodec.DecodeLease("io-strict", []byte(data)); err == nil {
 			t.Fatalf("%s unknown field must be rejected so a re-encode cannot drop it", name)
 		}
 	}
@@ -80,11 +81,11 @@ func TestDecodeEncodePreservesEverySidecar(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := Decode(record.ID, data)
+	decoded, err := leasecodec.DecodeLease(record.ID, data)
 	if err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	encoded, err := Encode(decoded)
+	encoded, err := leasecodec.EncodeLease(decoded)
 	if err != nil {
 		t.Fatalf("encode: %v", err)
 	}

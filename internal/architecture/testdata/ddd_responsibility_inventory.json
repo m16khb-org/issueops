@@ -9450,6 +9450,15 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/issueopsrecord/lease_codec.go",
+      "owner": "adapter",
+      "task": "T02",
+      "symbols": [
+        "func DecodeLease",
+        "func EncodeLease"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/issueopsrecord/observer.go",
       "owner": "adapter",
       "task": "T20",
@@ -11909,13 +11918,6 @@
       "symbols": [
         "func Decode",
         "func Encode",
-        "func validHexDigest",
-        "func validateActor",
-        "func validateCompletion",
-        "func validateLease",
-        "func validateRecord",
-        "func validateSelection",
-        "func validateSidecars",
         "type Actor",
         "type Execution",
         "type Lease",
@@ -13012,6 +13014,20 @@
         "type ReconcileStageAction",
         "type ReconcileStagePlan",
         "type ReconcileStageRequest"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopslease/record_validation.go",
+      "owner": "domain",
+      "task": "T02",
+      "symbols": [
+        "func ValidatePersistedActor",
+        "func ValidatePersistedRecord",
+        "func ValidatePersistedSelection",
+        "func ValidatePersistedSidecars",
+        "func validHexDigest",
+        "func validateCompletion",
+        "func validateLease"
       ]
     },
     {
@@ -15273,6 +15289,26 @@
       "evidence_tests": [
         "internal/domain/issueopspreparation/intent_authority_test.go",
         "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "lease-record-invariants",
+      "source_path": "internal/contract/issueopslease/record.go",
+      "source_symbol": "func validateRecord",
+      "responsibility": "persisted execution, lease, selection, and sidecar relationship invariants",
+      "target": "internal/domain/issueopslease",
+      "target_symbol": "func ValidatePersistedRecord",
+      "task": "T02",
+      "entrypoints": [
+        "issueops execution claim",
+        "issueops execution resume",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopslease/record_validation_test.go",
+        "internal/adapter/outbound/issueopsrecord/lease_codec_test.go",
+        "internal/contract/issueopslease/record_test.go"
       ],
       "status": "migrated"
     }

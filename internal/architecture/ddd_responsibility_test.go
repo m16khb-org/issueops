@@ -163,8 +163,7 @@ func TestDDDContractFunctionsHaveExplicitRoles(t *testing.T) {
 		if role.Role == "mixed-deferred" && role.Path != "internal/contract/issueops/record_validation.go" &&
 			role.Path != "internal/contract/issueops/execution.go" &&
 			role.Path != "internal/contract/issueops/capability_baseline.go" &&
-			role.Path != "internal/contract/issueops/issue_create.go" &&
-			role.Path != "internal/contract/issueopslease/record.go" {
+			role.Path != "internal/contract/issueops/issue_create.go" {
 			t.Errorf("new mixed contract policy needs an explicit T02 migration decision: %s", key)
 		}
 		want[key] = true
@@ -392,6 +391,8 @@ func dddTask(path string) string {
 		{"internal/domain/issueopsintent/", "T03"},
 		{"internal/domain/issueops/record_invariants", "T02"},
 		{"internal/domain/issueops/issue_create_invariants", "T02"},
+		{"internal/domain/issueopslease/record_validation.go", "T02"},
+		{"internal/adapter/outbound/issueopsrecord/lease_codec.go", "T02"},
 		{"internal/domain/issueops/execution_validation", "T02"},
 		{"internal/domain/issueops/evidence_phase", "T03"},
 		{"internal/domain/issueops/phase_", "T04"},

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	completionapp "issueops/internal/application/issueopscompletion"
 	completioncontract "issueops/internal/contract/issueopscompletion"
 	leasecontract "issueops/internal/contract/issueopslease"
@@ -50,7 +51,7 @@ func updateWithinSpan(ctx context.Context, store port.TransactionalRecordStore, 
 	if !ok {
 		return completionapp.RepositoryResult{}, fmt.Errorf("issueops record %s not found", id)
 	}
-	record, err := leasecontract.Decode(id, data)
+	record, err := recordcodec.DecodeLease(id, data)
 	if err != nil {
 		return completionapp.RepositoryResult{}, err
 	}
@@ -78,7 +79,7 @@ func updateWithinSpan(ctx context.Context, store port.TransactionalRecordStore, 
 	if err := applySnapshot(&record, after); err != nil {
 		return completionapp.RepositoryResult{}, err
 	}
-	encoded, err := leasecontract.Encode(record)
+	encoded, err := recordcodec.EncodeLease(record)
 	if err != nil {
 		return completionapp.RepositoryResult{}, err
 	}

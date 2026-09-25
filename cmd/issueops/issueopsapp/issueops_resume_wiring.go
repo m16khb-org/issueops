@@ -15,6 +15,7 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	statecontract "issueops/internal/contract/state"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
 )
@@ -208,6 +209,9 @@ func resumeEffectStateFromCore(state issueops.ExecutionResumeIntentState) (lease
 	record, err := leasecontract.Decode(state.Record.ID, data)
 	if err != nil {
 		return leaseoutbound.ResumeEffectState{}, err
+	}
+	if err := leasedomain.ValidatePersistedRecord(record); err != nil {
+		return leaseoutbound.ResumeEffectState{}, statecontract.Invalid("")
 	}
 	return leaseoutbound.ResumeEffectState{Record: record, RecordRaw: append([]byte(nil), state.RecordRaw...), IntentRaw: append([]byte(nil), state.IntentRaw...), OperationID: state.OperationID, Stage: string(state.Stage), InvocationState: state.InvocationState, InvocationAttempts: state.InvocationAttempts, Pending: state.Pending}, nil
 }

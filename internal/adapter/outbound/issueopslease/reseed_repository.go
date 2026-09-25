@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -77,7 +78,7 @@ func (r *ReseedRepository) CommitReseed(ctx context.Context, snapshot leaseapp.R
 			operationErr = fmt.Errorf("stale lease generation: current=%d expected=%d", current.Execution.Lease.Generation, snapshot.Record.Lease.Generation)
 			return operationErr
 		}
-		encoded, err := leasecontract.Encode(next.Stable)
+		encoded, err := recordcodec.EncodeLease(next.Stable)
 		if err != nil {
 			operationErr = leasecontract.Fail(leasecontract.FailurePersistence, err)
 			return operationErr

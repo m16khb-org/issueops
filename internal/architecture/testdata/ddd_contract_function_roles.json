@@ -162,47 +162,12 @@
   {
     "path": "internal/contract/issueopslease/record.go",
     "symbol": "func Decode",
-    "role": "mixed-deferred"
+    "role": "codec"
   },
   {
     "path": "internal/contract/issueopslease/record.go",
     "symbol": "func Encode",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueopslease/record.go",
-    "symbol": "func validHexDigest",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopslease/record.go",
-    "symbol": "func validateActor",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopslease/record.go",
-    "symbol": "func validateCompletion",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/issueopslease/record.go",
-    "symbol": "func validateLease",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueopslease/record.go",
-    "symbol": "func validateRecord",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueopslease/record.go",
-    "symbol": "func validateSelection",
-    "role": "mixed-deferred"
-  },
-  {
-    "path": "internal/contract/issueopslease/record.go",
-    "symbol": "func validateSidecars",
-    "role": "mixed-deferred"
+    "role": "codec"
   },
   {
     "path": "internal/contract/issueopspreparation/intent.go",

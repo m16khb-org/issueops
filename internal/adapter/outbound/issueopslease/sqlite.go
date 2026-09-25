@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	statecontract "issueops/internal/contract/state"
@@ -131,7 +132,7 @@ func claimWithinSpan(ctx context.Context, store port.TransactionalRecordStore, r
 	record.Execution.Lease.ClaimTokenSHA256 = ""
 	record.Execution.Lease.ClaimedAt = outcome.ClaimedAt
 	record.Execution.Lease.ReleasedAt = outcome.ReleasedAt
-	encoded, err := leasecontract.Encode(record)
+	encoded, err := recordcodec.EncodeLease(record)
 	if err != nil {
 		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
 	}
@@ -221,7 +222,7 @@ func updateWithinSpan(
 		return leaseapp.RepositoryResult{}, err
 	}
 	record.Execution.Lease = after.Lease
-	data, err = leasecontract.Encode(record)
+	data, err = recordcodec.EncodeLease(record)
 	if err != nil {
 		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
 	}
@@ -251,7 +252,7 @@ func toApplicationRecord(record leasecontract.Record) leaseapp.Record {
 }
 
 func decodeLeaseRecord(id string, data []byte) (leasecontract.Record, error) {
-	record, err := leasecontract.Decode(id, data)
+	record, err := recordcodec.DecodeLease(id, data)
 	if err == nil {
 		return record, nil
 	}

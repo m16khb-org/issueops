@@ -14,6 +14,8 @@ import (
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	statecontract "issueops/internal/contract/state"
+	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
 )
 
@@ -187,7 +189,14 @@ func reconcileContractRecord(record issueopscontract.IssueOpsRecord) (leasecontr
 	if err != nil {
 		return leasecontract.Record{}, err
 	}
-	return leasecontract.Decode(record.ID, data)
+	decoded, err := leasecontract.Decode(record.ID, data)
+	if err != nil {
+		return leasecontract.Record{}, err
+	}
+	if err := leasedomain.ValidatePersistedRecord(decoded); err != nil {
+		return leasecontract.Record{}, statecontract.Invalid("")
+	}
+	return decoded, nil
 }
 
 func reconcileContractReceipt(receipt port.ExecutionOrcaIntentReceipt) (leasecontract.ReconcileStageReceipt, error) {
