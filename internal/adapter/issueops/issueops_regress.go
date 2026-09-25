@@ -44,17 +44,13 @@ func regressIssueOpsForReplan(stateRoot, id, reason string, actor *IssueOpsActor
 			return actorErr
 		}
 		var e error
-		rec, e = regressIssueOpsForReplanLocked(stateRoot, id, reason)
+		rec, e = reviewapp.Regress(reviewport.RegressStore{
+			Read:           ReadIssueOps,
+			ActiveChildren: issueOpsActiveChildIDs,
+			TouchWrite:     touchAndWriteIssueOps,
+			Now:            func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
+		}, stateRoot, id, reason)
 		return e
 	})
 	return rec, err
-}
-
-func regressIssueOpsForReplanLocked(stateRoot, id, reason string) (issueops.IssueOpsRecord, error) {
-	return reviewapp.Regress(reviewport.RegressStore{
-		Read:           ReadIssueOps,
-		ActiveChildren: issueOpsActiveChildIDs,
-		TouchWrite:     touchAndWriteIssueOps,
-		Now:            func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
-	}, stateRoot, id, reason)
 }

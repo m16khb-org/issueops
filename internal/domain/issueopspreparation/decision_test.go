@@ -1,11 +1,39 @@
 package issueopspreparation
 
 import (
+	"strings"
 	"testing"
 
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 )
+
+func TestValidateSelectionReceiptPreservesDecisionAndEvidenceOrder(t *testing.T) {
+	command := preparationcontract.Command{Mode: preparationcontract.ModeAuto, OwnerHost: "codex", OwnerModel: "model"}
+	probe := preparationcontract.ProbeRequest{Provider: "github", Issue: 42}
+	decision := Decision{RequestedMode: "auto", ResolvedMode: "direct", ProbeAttempted: true, ProbeCode: "unready", FallbackCode: "unready", ProbeProvider: "github", ProbeIssue: 42}
+	selection := preparationcontract.Selection{RequestedMode: "auto", ResolvedMode: "direct", ProbeAttempted: true, ProbeCode: "unready", FallbackCode: "unready", ReadinessFingerprint: Fingerprint(decision, command), SelectedAt: "2026-08-03T00:00:01Z"}
+	if err := ValidateSelectionReceipt(selection, command, probe, preparationcontract.ModeDirect); err != nil {
+		t.Fatalf("valid receipt: %v", err)
+	}
+	for _, test := range []struct {
+		name string
+		edit func(*preparationcontract.Selection)
+		want string
+	}{
+		{"path before fingerprint", func(s *preparationcontract.Selection) { s.ResolvedMode = "orca" }, "chosen execution path"},
+		{"fingerprint before time", func(s *preparationcontract.Selection) { s.ReadinessFingerprint = "stale"; s.SelectedAt = "" }, "fingerprint changed"},
+		{"timestamp", func(s *preparationcontract.Selection) { s.SelectedAt = " " }, "selected_at is required"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			invalid := selection
+			test.edit(&invalid)
+			if err := ValidateSelectionReceipt(invalid, command, probe, preparationcontract.ModeDirect); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("error=%v, want %q", err, test.want)
+			}
+		})
+	}
+}
 
 func TestDecisionMatrix(t *testing.T) {
 	tests := []struct {

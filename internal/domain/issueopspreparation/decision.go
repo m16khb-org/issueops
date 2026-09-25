@@ -196,6 +196,26 @@ func Fingerprint(decision Decision, command preparationcontract.Command) string 
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(projection.String())))
 }
 
+func ValidateSelectionReceipt(selection preparationcontract.Selection, command preparationcontract.Command, probe preparationcontract.ProbeRequest, mode string) error {
+	if selection.ResolvedMode != mode || selection.RequestedMode != command.Mode {
+		return fmt.Errorf("selection receipt does not match the chosen execution path")
+	}
+	decision := Decision{
+		RequestedMode: selection.RequestedMode, ResolvedMode: selection.ResolvedMode,
+		ProbeAttempted: selection.ProbeAttempted, ProbeAvailable: selection.ProbeAvailable,
+		ProbeReady: selection.ProbeReady, ProbeCode: selection.ProbeCode, FallbackCode: selection.FallbackCode,
+		ExplicitDirectReason: selection.ExplicitDirectReason,
+		ProbeProvider:        strings.ToLower(strings.TrimSpace(probe.Provider)), ProbeIssue: probe.Issue,
+	}
+	if expected := Fingerprint(decision, command); selection.ReadinessFingerprint != expected {
+		return fmt.Errorf("selection receipt readiness fingerprint changed before persistence")
+	}
+	if strings.TrimSpace(selection.SelectedAt) == "" {
+		return fmt.Errorf("selection receipt selected_at is required")
+	}
+	return nil
+}
+
 func NormalizeMode(mode string) (string, error) {
 	switch normalized := strings.ToLower(strings.TrimSpace(mode)); normalized {
 	case "", preparationcontract.ModeAuto:

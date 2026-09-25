@@ -18,6 +18,7 @@ type Execution = leasecontract.Execution
 type Workspace = leasecontract.Workspace
 type Lease = leasecontract.Lease
 type OrcaBinding = leasecontract.OrcaBinding
+type Selection = leasecontract.Selection
 
 type Command struct {
 	ID                           string `json:"id"`

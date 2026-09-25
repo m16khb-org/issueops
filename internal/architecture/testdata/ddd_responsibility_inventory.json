@@ -8141,8 +8141,7 @@
       "symbols": [
         "func RegressIssueOpsForReplan",
         "func RegressIssueOpsForReplanWithActor",
-        "func regressIssueOpsForReplan",
-        "func regressIssueOpsForReplanLocked"
+        "func regressIssueOpsForReplan"
       ]
     },
     {
@@ -9363,10 +9362,8 @@
         "func currentClaimTokenPath",
         "func ensureRootUnclaimed",
         "func holderIndexKey",
-        "func pendingKind",
         "func preparationDeliveryReceipt",
         "func validateIntentState",
-        "func validateSelectionReceipt",
         "type DiagnosticRedactor",
         "type SQLiteRepository",
         "type holderIndex"
@@ -12085,6 +12082,7 @@
         "type Record",
         "type Result",
         "type RootClaim",
+        "type Selection",
         "type Snapshot",
         "type Workspace"
       ]
@@ -13141,6 +13139,7 @@
         "func Fingerprint",
         "func NormalizeDirectReason",
         "func NormalizeMode",
+        "func ValidateSelectionReceipt",
         "func preparationCode",
         "func writerless",
         "type Code",
@@ -13165,6 +13164,7 @@
       "task": "T20",
       "symbols": [
         "func CanonicalizeIntent",
+        "func PendingKind",
         "func PrepareIssueIdentity",
         "func SealIntent",
         "func ValidateIntentRecord",
@@ -13173,7 +13173,6 @@
         "func contractError",
         "func leasesEqual",
         "func normalizedPurpose",
-        "func pendingKind",
         "func providerHostMatches",
         "func validProvider"
       ]
@@ -14873,14 +14872,17 @@
       "source_symbol": "func regressIssueOpsForReplanLocked",
       "responsibility": "replan eligibility and phase transition",
       "target": "internal/domain/issueopsreview",
+      "target_symbol": "func CheckRegression",
       "task": "T03",
       "entrypoints": [
         "issueops regress"
       ],
       "evidence_tests": [
+        "internal/domain/issueopsreview/regress_test.go",
+        "internal/application/issueopsreview/regress_test.go",
         "internal/adapter/issueops/issueops_regress_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "claim-sequencing",
@@ -15170,6 +15172,40 @@
       "evidence_tests": [
         "internal/domain/issueops/execution_validation_test.go",
         "internal/adapter/outbound/issueopsrecord/codec_invariants_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "preparation-selection-receipt",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func validateSelectionReceipt",
+      "responsibility": "Selection receipt must match the chosen execution path and the decision fingerprint before persistence",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func ValidateSelectionReceipt",
+      "task": "T05",
+      "entrypoints": [
+        "issueops execution prepare"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspreparation/decision_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "preparation-pending-kind",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func pendingKind",
+      "responsibility": "Map an intent stage to the durable pending operation kind",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func PendingKind",
+      "task": "T05",
+      "entrypoints": [
+        "issueops execution prepare"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspreparation/intent_authority_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
       ],
       "status": "migrated"
     }

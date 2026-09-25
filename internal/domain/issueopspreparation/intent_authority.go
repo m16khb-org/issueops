@@ -45,7 +45,7 @@ func validProvider(value string) bool { return value == "github" || value == "gi
 func ValidateIntentRecordAuthority(record preparationcontract.Record, intent preparationcontract.Intent) error {
 	if record.ID != intent.LifecycleID || record.Execution == nil || record.Execution.Pending == nil ||
 		record.Execution.Pending.OperationID != intent.OperationID || record.Execution.Pending.Marker != intent.Marker ||
-		record.Execution.Pending.Kind != pendingKind(intent.Stage) || record.Execution.Lease.Generation != intent.Generation {
+		record.Execution.Pending.Kind != PendingKind(intent.Stage) || record.Execution.Lease.Generation != intent.Generation {
 		return fmt.Errorf("Orca intent authority changed before CAS")
 	}
 	switch normalizedPurpose(intent) {
@@ -114,7 +114,7 @@ func SealIntent(intent preparationcontract.Intent, issue preparationcontract.Iss
 	return intent, nil
 }
 
-func pendingKind(stage preparationcontract.IntentStage) string {
+func PendingKind(stage preparationcontract.IntentStage) string {
 	switch stage {
 	case preparationcontract.IntentStageWorktree:
 		return "worktree_create"
