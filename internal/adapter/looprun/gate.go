@@ -3,6 +3,7 @@ package looprun
 import (
 	"fmt"
 	loopruncontract "issueops/internal/contract/looprun"
+	looprundomain "issueops/internal/domain/looprun"
 	"sort"
 	"strings"
 )
@@ -32,7 +33,7 @@ func RepoGateMissing(repo string) ([]string, []string) {
 		if strings.TrimSpace(loop.Repo) != normalizedRepo {
 			continue
 		}
-		if loopIncomplete(loop) {
+		if looprundomain.Incomplete(loop) {
 			missing = append(missing, "loop_incomplete:"+loop.ID)
 		}
 	}
@@ -72,13 +73,4 @@ func RepoGateSummaryFor(repo string) (loopruncontract.RepoGateSummary, []string)
 		}
 	}
 	return summary, warnings
-}
-
-func loopIncomplete(loop loopruncontract.LoopRun) bool {
-	switch strings.TrimSpace(loop.Status) {
-	case "active", "exhausted":
-		return true
-	default:
-		return false
-	}
 }

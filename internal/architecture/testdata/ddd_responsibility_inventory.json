@@ -8549,8 +8549,7 @@
       "task": "T14",
       "symbols": [
         "func RepoGateMissing",
-        "func RepoGateSummaryFor",
-        "func loopIncomplete"
+        "func RepoGateSummaryFor"
       ]
     },
     {
@@ -8562,11 +8561,7 @@
         "func Start",
         "func Status",
         "func Stop",
-        "func cleanStrings",
-        "func normalizeMaxAttempts",
         "func normalizeRepo",
-        "func redactFreeform",
-        "func redactStrings",
         "func withLoopLock"
       ]
     },
@@ -13497,6 +13492,25 @@
       ]
     },
     {
+      "path": "internal/domain/looprun/lifecycle.go",
+      "owner": "domain",
+      "task": "T14",
+      "symbols": [
+        "func ApplyAttempt",
+        "func Incomplete",
+        "func New",
+        "func PrepareAttempt",
+        "func PrepareStart",
+        "func Resume",
+        "func Status",
+        "func Stop",
+        "func cleanStrings",
+        "func redactFreeform",
+        "type Attempt",
+        "type Start"
+      ]
+    },
+    {
       "path": "internal/domain/mcp/adapter_owned_catalog.go",
       "owner": "domain",
       "task": "T19",
@@ -14989,17 +15003,19 @@
     {
       "id": "loop-start",
       "source_path": "internal/adapter/looprun/lifecycle.go",
-      "source_symbol": "func Start",
-      "responsibility": "loop initial state transition",
+      "source_symbol": "func normalizeMaxAttempts",
+      "responsibility": "loop start defaults and attempt limit decision",
       "target": "internal/domain/looprun",
+      "target_symbol": "func PrepareStart",
       "task": "T14",
       "entrypoints": [
         "issueops loop start"
       ],
       "evidence_tests": [
+        "internal/domain/looprun/lifecycle_test.go",
         "internal/adapter/looprun/lifecycle_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "state-retention",
@@ -15309,6 +15325,24 @@
         "internal/domain/issueopslease/record_validation_test.go",
         "internal/adapter/outbound/issueopsrecord/lease_codec_test.go",
         "internal/contract/issueopslease/record_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "loop-completion-gate",
+      "source_path": "internal/adapter/looprun/gate.go",
+      "source_symbol": "func loopIncomplete",
+      "responsibility": "active and exhausted loops block completion",
+      "target": "internal/domain/looprun",
+      "target_symbol": "func Incomplete",
+      "task": "T14",
+      "entrypoints": [
+        "issueops loop status",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/looprun/lifecycle_test.go",
+        "internal/adapter/looprun/lifecycle_test.go"
       ],
       "status": "migrated"
     }
