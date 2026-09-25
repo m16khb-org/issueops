@@ -11262,7 +11262,6 @@
       "owner": "application",
       "task": "T20",
       "symbols": [
-        "func SelectPrune",
         "func Service.Prune",
         "func Service.PrunePrefix",
         "func Service.newPruneResult",
@@ -12374,6 +12373,14 @@
         "type StatePruneResult",
         "type StateResult",
         "type StoreMaintainResult"
+      ]
+    },
+    {
+      "path": "internal/contract/state/time.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "func ParseTime"
       ]
     },
     {
@@ -13874,6 +13881,14 @@
       ]
     },
     {
+      "path": "internal/domain/state/prune.go",
+      "owner": "domain",
+      "task": "T14",
+      "symbols": [
+        "func SelectPrune"
+      ]
+    },
+    {
       "path": "internal/domain/state/validation.go",
       "owner": "domain",
       "task": "T20",
@@ -13894,8 +13909,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func NormalizeKey",
-        "func ParseTime"
+        "func NormalizeKey"
       ]
     },
     {
@@ -14935,14 +14949,17 @@
       "source_symbol": "func SelectPrune",
       "responsibility": "record retention selection",
       "target": "internal/domain/state",
+      "target_symbol": "func SelectPrune",
       "task": "T14",
       "entrypoints": [
         "issueops state prune"
       ],
       "evidence_tests": [
-        "internal/application/state/prune_test.go"
+        "internal/domain/state/prune_rules_test.go",
+        "internal/domain/state/prune_test.go",
+        "internal/application/state/service_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "project-doc-route",

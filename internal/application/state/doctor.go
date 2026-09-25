@@ -86,7 +86,7 @@ func inspectDoctorRecord(row DoctorRow) (statecontract.RecordEnvelope, *statecon
 	}
 	record, err := DecodeRecord(row.Key, row.Data)
 	if err == nil {
-		_, err = statepath.ParseTime(record.UpdatedAt)
+		_, err = statecontract.ParseTime(record.UpdatedAt)
 	}
 	if err != nil {
 		return statecontract.RecordEnvelope{}, &statecontract.StateDoctorIssue{Path: row.Path, Key: row.Key, Severity: "error", Code: "invalid_state", Message: "invalid state"}

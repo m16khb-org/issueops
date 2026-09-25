@@ -470,6 +470,11 @@
     "role": "error"
   },
   {
+    "path": "internal/contract/state/time.go",
+    "symbol": "func ParseTime",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/toolconformance/types.go",
     "symbol": "func Classification.UnmarshalJSON",
     "role": "codec"
