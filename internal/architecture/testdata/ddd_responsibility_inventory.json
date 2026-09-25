@@ -9837,7 +9837,9 @@
       "task": "T09",
       "symbols": [
         "func EvaluateCommandPolicy",
-        "func isDirectory"
+        "func commandObserver.Observe",
+        "func isDirectory",
+        "type commandObserver"
       ]
     },
     {
@@ -11216,6 +11218,17 @@
         "func validateBackendResult",
         "func validateReadback",
         "func validateRequest",
+        "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/policy/service.go",
+      "owner": "application",
+      "task": "T09",
+      "symbols": [
+        "func Service.Evaluate",
+        "type Observation",
+        "type Observer",
         "type Service"
       ]
     },
