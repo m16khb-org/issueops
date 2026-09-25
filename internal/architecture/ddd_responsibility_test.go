@@ -392,6 +392,8 @@ func dddTask(path string) string {
 		{"internal/domain/issueopsintent/", "T03"},
 		{"internal/domain/issueops/record_invariants", "T02"},
 		{"internal/domain/issueops/issue_create_invariants", "T02"},
+		{"internal/domain/issueops/execution_validation", "T02"},
+		{"internal/domain/issueops/evidence_phase", "T03"},
 		{"internal/domain/issueops/phase_", "T04"},
 		{"internal/domain/issueops/readiness_", "T04"},
 		{"internal/domain/issueopspublication/issue_create_transition", "T02"},

@@ -11112,6 +11112,16 @@
       ]
     },
     {
+      "path": "internal/application/issueopsreview/implementation_review.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func RecordImplementationReview",
+        "func changeObservationIdentity",
+        "func cleanReviewValues"
+      ]
+    },
+    {
       "path": "internal/application/issueopsreview/record.go",
       "owner": "application",
       "task": "T03",
@@ -12636,9 +12646,17 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/evidence_phase.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func ValidateEvidenceRecordingPhase"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/execution_validation.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T02",
       "symbols": [
         "func ValidateExecution",
         "func validCommitSHA",
@@ -14046,6 +14064,7 @@
       "symbols": [
         "type CompatibilityStore",
         "type DevilsAdvocateStore",
+        "type ImplementationReviewStore",
         "type RegressStore"
       ]
     },

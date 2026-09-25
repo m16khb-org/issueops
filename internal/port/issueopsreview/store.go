@@ -21,3 +21,13 @@ type RegressStore struct {
 	TouchWrite     func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 	Now            func() string
 }
+
+// ImplementationReviewStore supplies observations and persistence without owning review policy.
+type ImplementationReviewStore struct {
+	Read             func(string, string) (model.IssueOpsRecord, error)
+	Fingerprint      func(model.IssueOpsRecord) string
+	WithLock         func(string, string, func() error) error
+	ValidateMutation func(model.IssueOpsRecord) error
+	Write            func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Now              func() string
+}

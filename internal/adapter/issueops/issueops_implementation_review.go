@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops/implementation"
+	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/policy"
+	reviewport "issueops/internal/port/issueopsreview"
 )
 
 // RecordIssueOpsImplementationReview는 verdict와 실질 내용(findings/evidence
@@ -27,63 +29,18 @@ func RecordIssueOpsImplementationReviewWithActor(stateRoot, id string, req Issue
 }
 
 func recordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplementationReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	verdict := strings.ToLower(strings.TrimSpace(req.Verdict))
-	findings := cleanReviewValues(req.Findings)
-	evidence := cleanReviewValues(req.Evidence)
-	if err := reviewdomain.ValidateImplementationReviewRecord(verdict, len(findings), len(evidence)); err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	// 리뷰 대상 바인딩: 현재 변경 집합의 content fingerprint를 봉인한다.
-	// 이후 diff가 바뀌면 게이트가 stale로 거부한다(C4b-F1).
-	//
-	// fingerprint를 계산할 수 없는 사이클(비-git worktree 등)도 판정 자체는
-	// 기록할 수 있다 — project_docs_review·ai_slop_clean과 같은 관용이다.
-	// 게이트가 orca 한정이던 동안에는 실 worktree가 늘 있어 이 경우가 없었지만,
-	// 모든 모드로 넓힌 뒤에는 거부가 곧 탈출구 없는 교착이 된다. 빈 채로
-	// 봉인하면 나중에 fingerprint가 생겼을 때 stale로 잡혀 재기록을 요구하므로
-	// 안전성은 유지된다.
-	//
-	// 관측은 git을 여러 번 부르므로 state root 전역 span 밖에서 끝내고, span
-	// 안에서는 관측 전제(worktree·base)가 그대로인지만 확인한다.
-	observed, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	fingerprint := implementation.ChangeFingerprint(observed)
-	var record issueops.IssueOpsRecord
-	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		rec, e := ReadIssueOps(stateRoot, id)
-		if e != nil {
-			return e
-		}
-		if e := validatePostTransferMutation(rec, actor); e != nil {
-			return e
-		}
-		// 기록 시점 하한: 구현 diff가 존재할 수 있는 phase에서만 의미가 있다
-		// (C4b-F2 — F1의 fingerprint 바인딩과 이중 방어).
-		if issueOpsPhaseRank(rec.Phase) < issueOpsPhaseRank(issueops.IssueOpsPhaseImplement) {
-			return fmt.Errorf("implementation review can only be recorded from the implement phase onward (current: %s)", rec.Phase)
-		}
-		if e := requireCurrentChangeObservation(observed, rec); e != nil {
-			return e
-		}
-		now := time.Now().UTC().Format(time.RFC3339Nano)
-		rec.ImplementationReview = &issueops.IssueOpsImplementationReview{
-			Verdict: verdict, Findings: findings, Evidence: evidence,
-			ReviewedFingerprint: fingerprint,
-			ReviewerHost:        strings.ToLower(strings.TrimSpace(req.ReviewerHost)),
-			ReviewerModel:       strings.TrimSpace(req.ReviewerModel),
-			ReviewerEffort:      strings.TrimSpace(req.ReviewerEffort),
-			RecordedAt:          now,
-		}
-		rec.UpdatedAt = now
-		record, e = writeIssueOps(stateRoot, rec)
-		return e
-	})
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	return record, nil
+	return reviewapp.RecordImplementationReview(reviewport.ImplementationReviewStore{
+		Read:        ReadIssueOps,
+		Fingerprint: implementation.ChangeFingerprint,
+		WithLock: func(root, cycleID string, fn func() error) error {
+			return withIssueOpsLock(context.Background(), root, cycleID, func(context.Context) error { return fn() })
+		},
+		ValidateMutation: func(record issueops.IssueOpsRecord) error {
+			return validatePostTransferMutation(record, actor)
+		},
+		Write: writeIssueOps,
+		Now:   func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
+	}, stateRoot, id, req)
 }
 
 // requireCurrentChangeObservation은 span 밖에서 관측한 변경 집합이 지금
