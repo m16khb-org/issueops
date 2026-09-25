@@ -9852,9 +9852,12 @@
         "func FakeRunCommand",
         "func RunCommand",
         "func RunReadOnlyCommand",
-        "func budgetOutput",
         "func commandEnv",
-        "func runCommand"
+        "func commandExecutor.Execute",
+        "func policyService",
+        "func systemClock.Now",
+        "type commandExecutor",
+        "type systemClock"
       ]
     },
     {
@@ -11198,6 +11201,21 @@
         "func validateReadback",
         "func validateRequest",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/policy/runner.go",
+      "owner": "application",
+      "task": "T09",
+      "symbols": [
+        "func Service.FakeRun",
+        "func Service.Run",
+        "func Service.RunReadOnly",
+        "func Service.run",
+        "func budgetOutput",
+        "type Clock",
+        "type Execution",
+        "type Executor"
       ]
     },
     {
@@ -15375,6 +15393,26 @@
       "evidence_tests": [
         "internal/domain/looprun/lifecycle_test.go",
         "internal/adapter/looprun/lifecycle_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "command-run-orchestration",
+      "source_path": "internal/adapter/policy/policy_run.go",
+      "source_symbol": "func runCommand",
+      "responsibility": "policy evaluation must precede bounded execution and denial must have no process effect",
+      "target": "internal/application/policy",
+      "target_symbol": "func Service.run",
+      "task": "T09",
+      "entrypoints": [
+        "issueops policy run",
+        "issueops policy fake-run",
+        "issueops gates check"
+      ],
+      "evidence_tests": [
+        "internal/application/policy/runner_test.go",
+        "internal/adapter/policy/policy_test.go",
+        "cmd/issueops/policycli/policy_cli_test.go"
       ],
       "status": "migrated"
     }

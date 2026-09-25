@@ -22,6 +22,8 @@ type Observer interface {
 
 type Service struct {
 	Observer Observer
+	Executor Executor
+	Clock    Clock
 }
 
 func (service Service) Evaluate(request policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
