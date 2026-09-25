@@ -9900,28 +9900,13 @@
       ]
     },
     {
-      "path": "internal/adapter/preflight/package_helpers.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": [
-        "func isSecretLikePath",
-        "func uniqSorted"
-      ]
-    },
-    {
       "path": "internal/adapter/preflight/preflight.go",
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func GitPreflight"
-      ]
-    },
-    {
-      "path": "internal/adapter/preflight/status.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": [
-        "func parseGitStatus"
+        "func GitPreflight",
+        "func gitObserver.Observe",
+        "type gitObserver"
       ]
     },
     {
@@ -11243,6 +11228,17 @@
       "task": "T09",
       "symbols": [
         "func Service.Evaluate",
+        "type Observation",
+        "type Observer",
+        "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/preflight/service.go",
+      "owner": "application",
+      "task": "T09",
+      "symbols": [
+        "func Service.Check",
         "type Observation",
         "type Observer",
         "type Service"
@@ -13824,6 +13820,17 @@
       ]
     },
     {
+      "path": "internal/domain/preflight/status.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func AnalyzeStatus",
+        "func Warnings",
+        "func uniqSorted",
+        "type Status"
+      ]
+    },
+    {
       "path": "internal/domain/projectdoc/catalog_types.go",
       "owner": "domain",
       "task": "T20",
@@ -15050,6 +15057,24 @@
         "internal/adapter/outbound/issueopslease/claim_test.go"
       ],
       "status": "migrate"
+    },
+    {
+      "id": "git-preflight-status",
+      "source_path": "internal/adapter/preflight/status.go",
+      "source_symbol": "func parseGitStatus",
+      "responsibility": "Git porcelain status and secret-like path decision",
+      "target": "internal/domain/preflight",
+      "target_symbol": "func AnalyzeStatus",
+      "task": "T09",
+      "entrypoints": [
+        "issueops preflight"
+      ],
+      "evidence_tests": [
+        "internal/domain/preflight/status_test.go",
+        "internal/application/preflight/service_test.go",
+        "internal/adapter/preflight/preflight_test.go"
+      ],
+      "status": "migrated"
     },
     {
       "id": "command-policy",

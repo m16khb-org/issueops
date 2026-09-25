@@ -1,14 +1,22 @@
 package preflight
 
 import (
-	preflightcontract "issueops/internal/contract/preflight"
 	"strings"
+
+	preflightapp "issueops/internal/application/preflight"
+	preflightcontract "issueops/internal/contract/preflight"
 )
 
 func GitPreflight(target, issueOpsRoot string) preflightcontract.PreflightResult {
+	return (preflightapp.Service{Observer: gitObserver{}}).Check(target, issueOpsRoot)
+}
+
+type gitObserver struct{}
+
+func (gitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation {
 	code, root, stderr := GitCmd(target, "rev-parse", "--show-toplevel")
 	if code != 0 {
-		return preflightcontract.PreflightResult{OK: false, Error: "not_git_repo", Path: target, Detail: stderr, Upstream: nil, Ahead: nil, Behind: nil}
+		return preflightapp.Observation{ErrorDetail: stderr}
 	}
 	root = strings.TrimSpace(root)
 	branch := GitOut(root, "branch", "--show-current")
@@ -19,7 +27,6 @@ func GitPreflight(target, issueOpsRoot string) preflightcontract.PreflightResult
 		upstream = &up
 	}
 	status := splitLines(GitOut(root, "status", "--porcelain=v1", "--branch"))
-	staged, unstaged, untracked, secretLike := parseGitStatus(status)
 	var ahead, behind *int
 	if up != "" {
 		counts := strings.Fields(GitOut(root, "rev-list", "--left-right", "--count", up+"...HEAD"))
@@ -30,34 +37,18 @@ func GitPreflight(target, issueOpsRoot string) preflightcontract.PreflightResult
 			ahead = &a
 		}
 	}
-	warnings := []string{}
-	if branch == "" {
-		warnings = append(warnings, "detached_head")
-	}
-	if upstream == nil {
-		warnings = append(warnings, "no_upstream")
-	}
-	if len(secretLike) > 0 {
-		warnings = append(warnings, "secret_like_paths_present")
-	}
-	return preflightcontract.PreflightResult{
-		OK:               true,
+	return preflightapp.Observation{
+		GitOK:            true,
 		RepoRoot:         root,
 		Branch:           branch,
 		Head:             head,
 		Upstream:         upstream,
 		Ahead:            ahead,
 		Behind:           behind,
-		IsClean:          len(staged) == 0 && len(unstaged) == 0 && len(untracked) == 0,
 		StatusLines:      status,
 		Remotes:          listRemotes(root),
 		LastCommit:       GitOut(root, "log", "-1", "--pretty=format:%h %s"),
 		RecentCommits:    recentCommits(root, 5),
 		CommitStyleHints: commitStyleHints(root, issueOpsRoot, 10),
-		StagedFiles:      staged,
-		UnstagedFiles:    unstaged,
-		UntrackedFiles:   untracked,
-		SecretLikePaths:  secretLike,
-		Warnings:         warnings,
 	}
 }

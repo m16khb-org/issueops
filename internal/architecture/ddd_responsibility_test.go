@@ -408,6 +408,8 @@ func dddTask(path string) string {
 		{"internal/domain/policy/", "T09"},
 		{"internal/application/policy/", "T09"},
 		{"internal/application/audit/", "T09"},
+		{"internal/domain/preflight/", "T09"},
+		{"internal/application/preflight/", "T09"},
 		{"internal/domain/projectdoc/route.go", "T13"},
 		{"internal/domain/toolconformance/gate.go", "T15"},
 		{"internal/contract/riskqa/", "T16"},
