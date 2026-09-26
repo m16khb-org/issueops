@@ -10690,6 +10690,14 @@
       "symbols": []
     },
     {
+      "path": "internal/adapter/verification/process.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Run"
+      ]
+    },
+    {
       "path": "internal/adapter/worker/adapter_dependencies.go",
       "owner": "adapter",
       "task": "T14",
@@ -11566,6 +11574,15 @@
         "type SNRResult",
         "type Signal",
         "type Summary"
+      ]
+    },
+    {
+      "path": "internal/application/riskqa/execute.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Execute",
+        "type ExecuteDeps"
       ]
     },
     {
@@ -15009,6 +15026,7 @@
       "owner": "domain",
       "task": "T16",
       "symbols": [
+        "func CoversFullGoTest",
         "func PlanFromPaths",
         "func isRiskSensitivePath"
       ]
@@ -15203,6 +15221,15 @@
       ]
     },
     {
+      "path": "internal/domain/selfverify/output_budget.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BudgetCommandOutput",
+        "func TailWithBudget"
+      ]
+    },
+    {
       "path": "internal/domain/selfverify/step_plan.go",
       "owner": "domain",
       "task": "T20",
@@ -15211,6 +15238,14 @@
         "func ReuseFullTestAsGolden",
         "func ReuseRiskRaceAsFullTest",
         "func StepOrder"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/step_result.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CombineFailedStep"
       ]
     },
     {

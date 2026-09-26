@@ -2,11 +2,18 @@ package riskqa
 
 import (
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
 	riskqacontract "issueops/internal/contract/riskqa"
 )
+
+const FullRaceCommand = "go test -race ./... -count=1"
+
+func CoversFullGoTest(plan riskqacontract.RiskQATierPlan) bool {
+	return slices.Contains(plan.Commands, FullRaceCommand)
+}
 
 func PlanFromPaths(paths []string) riskqacontract.RiskQATierPlan {
 	plan := riskqacontract.RiskQATierPlan{Tier: "standard", ChangedPaths: riskqacontract.NormalizePaths(paths), Reasons: []string{}, Commands: []string{}}
@@ -32,7 +39,7 @@ func PlanFromPaths(paths []string) riskqacontract.RiskQATierPlan {
 	if goChanged && sensitive {
 		plan.Tier = "elevated"
 		plan.Reasons = append(plan.Reasons, "go changes touch policy, MCP, adapter, daemon, state, or harness orchestration surfaces")
-		plan.Commands = append([]string{"go test -race ./... -count=1"}, plan.Commands...)
+		plan.Commands = append([]string{FullRaceCommand}, plan.Commands...)
 	}
 	if !goChanged {
 		plan.Reasons = append(plan.Reasons, "no Go changes detected; race/static tier skipped")

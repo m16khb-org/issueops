@@ -4,12 +4,13 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/commandstep"
+	"issueops/internal/adapter/verification"
 )
 
 type StepResult = commandstep.StepResult
 
 func runCommandStep(dir, label string, timeout time.Duration, stdin string, name string, args ...string) StepResult {
-	return commandstep.Run(dir, label, timeout, stdin, selfVerifyCommandOutputBudgetBytes, name, args...)
+	return verification.Run(dir, label, timeout, stdin, selfVerifyCommandOutputBudgetBytes, name, args...)
 }
 
 func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {

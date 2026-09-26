@@ -4,34 +4,16 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
 func BudgetCommandOutput(s string, budget int) (string, bool, int) {
-	if budget <= 0 {
-		return s, false, len(s)
-	}
-	return TailWithBudget(s, budget)
+	return selfverifydomain.BudgetCommandOutput(s, budget)
 }
 
 func CombineFailedStep(label string, started time.Time, child StepResult, stdoutParts []string, commands []string, outputBudget int) StepResult {
-	stdoutText, stdoutTruncated, stdoutBytes := TailWithBudget(strings.Join(stdoutParts, "\n"), outputBudget)
-	step := StepResult{
-		Label:           label,
-		Command:         strings.Join(commands, " && "),
-		OK:              false,
-		DurationMS:      time.Since(started).Milliseconds(),
-		Stdout:          stdoutText,
-		Stderr:          child.Stderr,
-		StdoutBytes:     stdoutBytes,
-		StderrBytes:     child.StderrBytes,
-		StdoutTruncated: stdoutTruncated,
-		StderrTruncated: child.StderrTruncated,
-		Error:           child.Label + ": " + child.Error,
-	}
-	if step.Error == child.Label+": " {
-		step.Error = child.Label + " failed"
-	}
-	return step
+	return selfverifydomain.CombineFailedStep(label, time.Since(started).Milliseconds(), child, stdoutParts, commands, outputBudget)
 }
 
 func AssertionStep(label string, started time.Time, errs []string) StepResult {
@@ -73,25 +55,7 @@ func Tail(s string, max int) string {
 }
 
 func TailWithBudget(s string, max int) (string, bool, int) {
-	originalBytes := len(s)
-	if max <= 0 {
-		return "", originalBytes > 0, originalBytes
-	}
-	if originalBytes <= max {
-		return s, false, originalBytes
-	}
-	tailBudget := max
-	for {
-		marker := fmt.Sprintf("[truncated: original_bytes=%d omitted_bytes=%d]\n", originalBytes, originalBytes-tailBudget)
-		tailBudgetNext := max - len(marker)
-		if tailBudgetNext < 0 {
-			return marker[:max], true, originalBytes
-		}
-		if tailBudgetNext == tailBudget {
-			return marker + s[originalBytes-tailBudget:], true, originalBytes
-		}
-		tailBudget = tailBudgetNext
-	}
+	return selfverifydomain.TailWithBudget(s, max)
 }
 
 func IndentLines(s string) string {

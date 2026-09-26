@@ -2,20 +2,20 @@ package riskqa
 
 import (
 	"fmt"
-	"slices"
-	"strings"
 	"time"
 
 	"issueops/cmd/issueops/commandstep"
+	riskqaapp "issueops/internal/application/riskqa"
 	riskqacontract "issueops/internal/contract/riskqa"
+	riskqadomain "issueops/internal/domain/riskqa"
 )
 
 const (
 	selfVerifyCommandOutputBudgetBytes   = 32 * 1024
-	selfVerifyAggregateOutputBudgetBytes = 8 * 1024
+	selfVerifyAggregateOutputBudgetBytes = riskqaapp.AggregateOutputBudgetBytes
 	riskQARaceTimeout                    = 10 * time.Minute
 	riskQAVetTimeout                     = 120 * time.Second
-	fullRaceCommand                      = "go test -race ./... -count=1"
+	fullRaceCommand                      = riskqadomain.FullRaceCommand
 )
 
 type RiskQATierPlan = riskqacontract.RiskQATierPlan
@@ -30,7 +30,7 @@ func ValidateForSelfVerify(root string) (StepResult, bool) {
 	deps := defaultDeps()
 	plan := deps.Plan(root)
 	deps.Plan = func(string) RiskQATierPlan { return plan }
-	return ValidateWithDeps(root, deps), slices.Contains(plan.Commands, fullRaceCommand)
+	return ValidateWithDeps(root, deps), riskqadomain.CoversFullGoTest(plan)
 }
 
 func defaultDeps() Deps {
@@ -49,41 +49,14 @@ func defaultDeps() Deps {
 	}
 }
 
-type Deps struct {
-	Plan func(string) RiskQATierPlan
-	Run  func(root string, command string) StepResult
-}
+type Deps = riskqaapp.ExecuteDeps
 
 func ValidateWithDeps(root string, deps Deps) StepResult {
-	started := time.Now()
-	plan := deps.Plan(root)
-	planJSON := PlanJSON(plan)
-	stdoutParts := []string{planJSON}
-	commands := []string{}
-	if len(plan.Commands) == 0 {
-		return StepResult{
-			Label:      "risk QA tier",
-			OK:         true,
-			DurationMS: time.Since(started).Milliseconds(),
-			Stdout:     planJSON,
-		}
+	if deps.RenderPlan == nil {
+		deps.RenderPlan = PlanJSON
 	}
-	for _, command := range plan.Commands {
-		step := deps.Run(root, command)
-		commands = append(commands, step.Command)
-		stdoutParts = append(stdoutParts, step.Stdout)
-		if !step.OK {
-			return commandstep.CombineFailedStep("risk QA tier", started, step, stdoutParts, commands, selfVerifyAggregateOutputBudgetBytes)
-		}
+	if deps.Now == nil {
+		deps.Now = time.Now
 	}
-	stdoutText, stdoutTruncated, stdoutBytes := commandstep.TailWithBudget(strings.Join(stdoutParts, "\n"), selfVerifyAggregateOutputBudgetBytes)
-	return StepResult{
-		Label:           "risk QA tier",
-		Command:         strings.Join(commands, " && "),
-		OK:              true,
-		DurationMS:      time.Since(started).Milliseconds(),
-		Stdout:          stdoutText,
-		StdoutBytes:     stdoutBytes,
-		StdoutTruncated: stdoutTruncated,
-	}
+	return riskqaapp.Execute(root, deps)
 }
