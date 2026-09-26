@@ -9580,15 +9580,19 @@
         "func backendStore",
         "func binaryIdentityFromPath",
         "func decodeExact",
+        "func domainBinary",
+        "func domainEvidence",
         "func hashStableBinary",
         "func newTransitionID",
+        "func pendingSnapshot",
         "func physicalIdentity",
+        "func receiptSnapshot",
         "func sameAbortPending",
-        "func sameBinaryContent",
         "func samePending",
         "func samePhysicalFile",
         "func sameReceipt",
         "func sealedResult",
+        "func transitionFacts",
         "func validBinaryFile",
         "func validTransitionID",
         "func validatePaths",
@@ -13853,6 +13857,20 @@
       "task": "T19",
       "symbols": [
         "func StateTools"
+      ]
+    },
+    {
+      "path": "internal/domain/nativeactivation/state.go",
+      "owner": "domain",
+      "task": "T11",
+      "symbols": [
+        "func PendingMatches",
+        "func ReceiptMatches",
+        "func sameBinaryContent",
+        "type BinaryIdentity",
+        "type PendingSnapshot",
+        "type ReceiptSnapshot",
+        "type TransitionFacts"
       ]
     },
     {

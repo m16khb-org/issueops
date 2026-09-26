@@ -252,7 +252,7 @@
 
 ### Task 11: 설치와 native activation 분리 (T11)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T02. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/install/install.go`; `cmd/issueops/installcli/{install,install_native_path,install_host_transaction}.go`; `internal/application/nativeactivation/service.go`; `internal/adapter/outbound/nativeactivation/sqlite.go`
 - **변경/신규 파일:** 신규 `internal/application/install/`, `internal/domain/nativeactivation/`; 설치 계획 규칙은 기존 `internal/domain/upstream/`와 구분해 `internal/domain/install/`; install outbound/host adapters.
