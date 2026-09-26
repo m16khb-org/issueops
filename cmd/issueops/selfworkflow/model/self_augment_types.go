@@ -1,5 +1,7 @@
 package model
 
+import contract "issueops/internal/contract/selfaugment"
+
 const (
 	SelfVerificationSummaryKind     = "self_verification_summary"
 	SelfVerificationKoreanName      = "자기 검증 루프"
@@ -31,8 +33,4 @@ type SelfAugmentPromoteResult struct {
 	Summary             SelfAugmentSummary `json:"summary"`
 }
 
-type SelfAugmentIteration struct {
-	Iteration int          `json:"iteration"`
-	Seed      int64        `json:"seed"`
-	Steps     []StepResult `json:"steps"`
-}
+type SelfAugmentIteration = contract.SelfAugmentIteration

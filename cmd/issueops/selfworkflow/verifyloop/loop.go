@@ -13,6 +13,7 @@ import (
 	"issueops/cmd/issueops/selfworkflow/progress"
 	"issueops/cmd/issueops/selfworkflow/steps"
 	"issueops/cmd/issueops/selfworkflow/summary"
+	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
 var ErrSelfVerificationGateFailed = errors.New("self-verification quality gate failed")
@@ -116,7 +117,7 @@ func SelfVerify(request Request, deps Deps) (model.SelfAugmentResult, error) {
 				firstFailure = step
 			}
 			failed = true
-			if !request.CollectAllSteps {
+			if !selfverifydomain.ContinueAfterFailure(request.CollectAllSteps) {
 				break
 			}
 		}
