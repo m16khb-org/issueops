@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	lifecyclecontract "issueops/internal/contract/lifecycle"
+	lifecycledomain "issueops/internal/domain/lifecycle"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,11 +28,9 @@ func ForRoot(root string) lifecyclecontract.ProjectFingerprint {
 }
 
 func RepoID(fp lifecyclecontract.ProjectFingerprint) string {
-	parts := []string{fp.RepoRoot, fp.GitDir, fp.GitOriginHash}
-	sum := sha256.Sum256([]byte(strings.Join(parts, "\x00")))
-	return hex.EncodeToString(sum[:])[:24]
+	return lifecycledomain.RepoID(fp)
 }
 
 func Equal(a, b lifecyclecontract.ProjectFingerprint) bool {
-	return a.RepoRoot == b.RepoRoot && a.GitDir == b.GitDir && a.GitOriginHash == b.GitOriginHash
+	return lifecycledomain.EqualFingerprint(a, b)
 }

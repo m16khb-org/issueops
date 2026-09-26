@@ -288,7 +288,7 @@
 
 ### Task 14: Loop·worker·state·lifecycle·channel 분리 (T14)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T09. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/looprun/{lifecycle,gate}.go`; `internal/adapter/worker/{worker,read_only,store}.go`; `internal/application/state/{prune,doctor}.go`; `internal/adapter/lifecycle/lifecycle_project_state_store.go`; `internal/adapter/channel/store.go`
 - **변경/신규 파일:** 신규 domain/application `looprun`, `worker`, `lifecycle`; 신규 application/channel; 기존 domain/state와 application/state 확장. channel에는 불필요한 aggregate를 만들지 않는다.

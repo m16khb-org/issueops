@@ -5539,11 +5539,17 @@
         "func Recv",
         "func Send",
         "func StateRoot",
-        "func fillRecvResult",
+        "func channelEffects.Get",
+        "func channelEffects.ListIDs",
+        "func channelEffects.NewID",
+        "func channelEffects.Now",
+        "func channelEffects.Open",
+        "func channelEffects.Wait",
+        "func messageWriter.Write",
         "func newMessageID",
-        "func readChannel",
-        "func readChannelUnseen",
-        "type StateDatabase"
+        "type StateDatabase",
+        "type channelEffects",
+        "type messageWriter"
       ]
     },
     {
@@ -8513,8 +8519,19 @@
         "func ResolveProjectLifecycleState",
         "func ValidateProjectLifecycleState",
         "func createJSONAtomic",
+        "func lifecycleEffects.Create",
+        "func lifecycleEffects.Fingerprint",
+        "func lifecycleEffects.Mkdir",
+        "func lifecycleEffects.NormalizeRoot",
+        "func lifecycleEffects.Now",
+        "func lifecycleEffects.Paths",
+        "func lifecycleEffects.ReadProfile",
+        "func lifecycleEffects.StateRoot",
+        "func lifecycleEffects.Write",
+        "func lifecycleService",
         "func readProjectLifecycleProfile",
-        "func writeJSONAtomic"
+        "func writeJSONAtomic",
+        "type lifecycleEffects"
       ]
     },
     {
@@ -10810,6 +10827,20 @@
       ]
     },
     {
+      "path": "internal/application/channel/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Recv",
+        "func Service.Send",
+        "func Service.read",
+        "func fillResult",
+        "type Effects",
+        "type Service",
+        "type Writer"
+      ]
+    },
+    {
       "path": "internal/application/gates/service.go",
       "owner": "application",
       "task": "T10",
@@ -11336,6 +11367,17 @@
       ]
     },
     {
+      "path": "internal/application/lifecycle/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Init",
+        "func Service.Resolve",
+        "type Effects",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/looprun/service.go",
       "owner": "application",
       "task": "T14",
@@ -11454,10 +11496,6 @@
       "task": "T20",
       "symbols": [
         "func Doctor",
-        "func harnessOwnedStateDirectory",
-        "func harnessOwnedStateFile",
-        "func inspectDoctorEntry",
-        "func inspectDoctorRecord",
         "type DoctorEntry",
         "type DoctorRow"
       ]
@@ -13866,6 +13904,17 @@
       ]
     },
     {
+      "path": "internal/domain/lifecycle/profile.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func EqualFingerprint",
+        "func NewProfile",
+        "func RepoID",
+        "func ResolveProfile"
+      ]
+    },
+    {
       "path": "internal/domain/looprun/lifecycle.go",
       "owner": "domain",
       "task": "T14",
@@ -14424,6 +14473,19 @@
         "func shellParameterStart",
         "func unquotedBraceExpansion",
         "func unquotedExpansionCloser"
+      ]
+    },
+    {
+      "path": "internal/domain/state/doctor.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func InspectDoctor",
+        "func harnessOwnedStateDirectory",
+        "func harnessOwnedStateFile",
+        "func inspectDoctorEntry",
+        "type DoctorEntry",
+        "type DoctorRecord"
       ]
     },
     {
