@@ -1,39 +1,22 @@
 package trace
 
 import (
-	"fmt"
+	traceapp "issueops/internal/application/trace"
 	tracecontract "issueops/internal/contract/trace"
-	"strings"
 )
 
-const TraceAnalysisKind = "trace_analysis"
+const TraceAnalysisKind = traceapp.AnalysisKind
 
 func TraceAnalyze(req tracecontract.TraceAnalyzeRequest) (tracecontract.TraceAnalyzeResult, error) {
-	input := strings.TrimSpace(req.Input)
-	result := tracecontract.TraceAnalyzeResult{
-		OK:         false,
-		Kind:       TraceAnalysisKind,
-		Input:      input,
-		TraceTypes: []string{},
-		Findings:   []tracecontract.TraceAnalysisFinding{},
-		Warnings:   []string{},
-	}
-	if input == "" {
-		return result, fmt.Errorf("trace analyze input is required")
-	}
+	return (traceapp.Service{Effects: traceEffects{}}).Analyze(req)
+}
+
+type traceEffects struct{}
+
+func (traceEffects) Load(input string) (string, []byte, error) {
 	loaded, err := loadTraceAnalysisInput(input)
-	if err != nil {
-		return result, err
-	}
-	result.InputSource = loaded.Source
-	if len(strings.TrimSpace(string(loaded.Body))) == 0 {
-		return result, fmt.Errorf("trace analyze input is empty")
-	}
-	findings, traceTypes, warnings := analyzeTraceBytes(loaded.Body)
-	result.TraceTypes = traceTypes
-	result.Findings = findings
-	result.FindingCount = len(findings)
-	result.Warnings = warnings
-	result.OK = true
-	return result, nil
+	return loaded.Source, loaded.Body, err
+}
+func (traceEffects) Analyze(body []byte) ([]tracecontract.TraceAnalysisFinding, []string, []string) {
+	return analyzeTraceBytes(body)
 }

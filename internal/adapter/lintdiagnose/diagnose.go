@@ -1,61 +1,31 @@
 package lintdiagnose
 
 import (
-	"fmt"
+	lintdiagnoseapp "issueops/internal/application/lintdiagnose"
 	lintdiagnosecontract "issueops/internal/contract/lintdiagnose"
 	"os/exec"
-	"strings"
 )
 
 func DiagnoseCommand(req lintdiagnosecontract.LintDiagnoseRequest) (lintdiagnosecontract.LintDiagnoseResult, error) {
-	root, err := NormalizeRepoRoot(req.RepoRoot)
-	if err != nil {
-		return lintdiagnosecontract.LintDiagnoseResult{}, err
+	return (lintdiagnoseapp.Service{Effects: lintEffects{}}).Diagnose(req)
+}
+
+func BuildPrompt(exitCode int, logTail string) string {
+	return lintdiagnoseapp.BuildPrompt(exitCode, logTail)
+}
+
+type lintEffects struct{}
+
+func (lintEffects) NormalizeRoot(root string) (string, error) { return NormalizeRepoRoot(root) }
+func (lintEffects) Run(root string, argv []string) (string, int, bool) {
+	command := exec.Command(argv[0], argv[1:]...)
+	command.Dir = root
+	output, err := command.CombinedOutput()
+	if err == nil {
+		return string(output), 0, false
 	}
-
-	if len(req.CommandArgv) == 0 {
-		return lintdiagnosecontract.LintDiagnoseResult{}, fmt.Errorf("missing command to execute")
+	if exitError, ok := err.(*exec.ExitError); ok {
+		return string(output), exitError.ExitCode(), true
 	}
-
-	// 1. Run the targeted command
-	cmdName := req.CommandArgv[0]
-	cmdArgs := req.CommandArgv[1:]
-
-	execCmd := exec.Command(cmdName, cmdArgs...)
-	execCmd.Dir = root
-
-	outputBytes, runErr := execCmd.CombinedOutput()
-	outputStr := string(outputBytes)
-
-	exitCode := 0
-	failed := false
-	if runErr != nil {
-		failed = true
-		if exitError, ok := runErr.(*exec.ExitError); ok {
-			exitCode = exitError.ExitCode()
-		} else {
-			exitCode = -1
-		}
-	}
-
-	result := lintdiagnosecontract.LintDiagnoseResult{
-		OK:          true,
-		CommandArgv: req.CommandArgv,
-		ExitCode:    exitCode,
-		Failed:      failed,
-	}
-
-	if !failed {
-		return result, nil
-	}
-
-	lines := strings.Split(outputStr, "\n")
-	if len(lines) > 150 {
-		lines = lines[len(lines)-150:]
-	}
-	logTail := strings.Join(lines, "\n")
-
-	result.Prompt = BuildPrompt(exitCode, logTail)
-	result.Diagnosis = "command failed; prompt contains the host-agent judgement request"
-	return result, nil
+	return string(output), -1, true
 }

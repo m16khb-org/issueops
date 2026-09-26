@@ -7,6 +7,7 @@ import (
 
 	"issueops/internal/contract/failurecause"
 	"issueops/internal/domain/policy"
+	traceclassification "issueops/internal/domain/traceclassification"
 )
 
 func nestedMap(doc map[string]any, key string) map[string]any {
@@ -164,35 +165,21 @@ func uniqSortedTraceStrings(values []string) []string {
 }
 
 func dedupeTraceFindings(findings []tracecontract.TraceAnalysisFinding) []tracecontract.TraceAnalysisFinding {
-	seen := map[string]bool{}
-	out := []tracecontract.TraceAnalysisFinding{}
+	normalized := make([]tracecontract.TraceAnalysisFinding, 0, len(findings))
+	keys := make([]traceclassification.FindingKey, 0, len(findings))
 	for _, finding := range findings {
 		finding.FailureCause = normalizedFailureCause(finding.FailureCause)
 		finding.FailureCauseEvidence = redactedFailureCauseEvidence(finding.FailureCauseEvidence)
-		key := finding.FailureClass + "\x00" + string(finding.FailureCause) + "\x00" + finding.RecurringPattern + "\x00" + finding.ProposedKnob
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		out = append(out, finding)
+		keys = append(keys, traceclassification.FindingKey{
+			Index: len(normalized), FailureClass: finding.FailureClass, FailureCause: string(finding.FailureCause),
+			RecurringPattern: finding.RecurringPattern, ProposedKnob: finding.ProposedKnob,
+			OverfitRisk: finding.OverfitRisk, VerificationCommand: finding.VerificationCommand,
+		})
+		normalized = append(normalized, finding)
 	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].FailureClass != out[j].FailureClass {
-			return out[i].FailureClass < out[j].FailureClass
-		}
-		if out[i].FailureCause != out[j].FailureCause {
-			return out[i].FailureCause < out[j].FailureCause
-		}
-		if out[i].RecurringPattern != out[j].RecurringPattern {
-			return out[i].RecurringPattern < out[j].RecurringPattern
-		}
-		if out[i].ProposedKnob != out[j].ProposedKnob {
-			return out[i].ProposedKnob < out[j].ProposedKnob
-		}
-		if out[i].OverfitRisk != out[j].OverfitRisk {
-			return out[i].OverfitRisk < out[j].OverfitRisk
-		}
-		return out[i].VerificationCommand < out[j].VerificationCommand
-	})
+	out := []tracecontract.TraceAnalysisFinding{}
+	for _, index := range traceclassification.DeduplicateFindings(keys) {
+		out = append(out, normalized[index])
+	}
 	return out
 }

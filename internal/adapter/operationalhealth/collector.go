@@ -38,7 +38,6 @@ type GitRunner interface {
 type NativeProcessInspector func(issueopscontract.NativeProcessReceipt) (string, issueopscontract.NativeProcessReceipt, error)
 
 const gitInventoryCommandTimeout = 15 * time.Second
-const staleIssueCreatePendingAfter = 5 * time.Minute
 
 type ExecGitRunner struct {
 	timeout time.Duration
@@ -542,25 +541,7 @@ func issueCreateIntentNeedsReconciliationAt(intent *issueopscontract.IssueOpsIss
 	if intent == nil {
 		return false
 	}
-	switch intent.Status {
-	case issueopscontract.IssueCreateIntentPending:
-		updatedAt := strings.TrimSpace(intent.UpdatedAt)
-		if updatedAt == "" {
-			updatedAt = strings.TrimSpace(intent.StartedAt)
-		}
-		observedAt, err := time.Parse(time.RFC3339Nano, updatedAt)
-		if err != nil {
-			return true
-		}
-		return now.UTC().Sub(observedAt.UTC()) > staleIssueCreatePendingAfter
-	case issueopscontract.IssueCreateIntentInvokedUnknown,
-		issueopscontract.IssueCreateIntentURLObserved,
-		issueopscontract.IssueCreateIntentVerificationFailed,
-		issueopscontract.IssueCreateIntentReceiptFailed:
-		return true
-	default:
-		return false
-	}
+	return corehealth.IssueCreateIntentNeedsReconciliationAt(intent.Status, intent.UpdatedAt, intent.StartedAt, now)
 }
 
 func recordOwnsOrca(record issueopscontract.IssueOpsRecord) bool {

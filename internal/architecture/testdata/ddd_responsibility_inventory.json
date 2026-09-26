@@ -5825,7 +5825,9 @@
       "symbols": [
         "func BuildPrompt",
         "func SuggestCommit",
-        "func commitSuggestResponseSchemaExample"
+        "func commitEffects.Diff",
+        "func commitEffects.NormalizeRoot",
+        "type commitEffects"
       ]
     },
     {
@@ -8557,16 +8559,11 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func DiagnoseCommand"
-      ]
-    },
-    {
-      "path": "internal/adapter/lintdiagnose/prompt.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
         "func BuildPrompt",
-        "func lintDiagnoseResponseSchemaExample"
+        "func DiagnoseCommand",
+        "func lintEffects.NormalizeRoot",
+        "func lintEffects.Run",
+        "type lintEffects"
       ]
     },
     {
@@ -10637,7 +10634,10 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func TraceAnalyze"
+        "func TraceAnalyze",
+        "func traceEffects.Analyze",
+        "func traceEffects.Load",
+        "type traceEffects"
       ]
     },
     {
@@ -10838,6 +10838,25 @@
         "type Effects",
         "type Service",
         "type Writer"
+      ]
+    },
+    {
+      "path": "internal/application/commitsuggest/prompt.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func BuildPrompt",
+        "func commitSuggestResponseSchemaExample"
+      ]
+    },
+    {
+      "path": "internal/application/commitsuggest/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Suggest",
+        "type Effects",
+        "type Service"
       ]
     },
     {
@@ -11378,6 +11397,25 @@
       ]
     },
     {
+      "path": "internal/application/lintdiagnose/prompt.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func BuildPrompt",
+        "func lintDiagnoseResponseSchemaExample"
+      ]
+    },
+    {
+      "path": "internal/application/lintdiagnose/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Diagnose",
+        "type Effects",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/looprun/service.go",
       "owner": "application",
       "task": "T14",
@@ -11541,6 +11579,16 @@
         "func Service.stateDir",
         "func Service.writeRecord",
         "type Dependencies",
+        "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/trace/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Analyze",
+        "type Effects",
         "type Service"
       ]
     },
@@ -14175,6 +14223,14 @@
       ]
     },
     {
+      "path": "internal/domain/operationalhealth/intent.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func IssueCreateIntentNeedsReconciliationAt"
+      ]
+    },
+    {
       "path": "internal/domain/pioneerskill/catalog.go",
       "owner": "domain",
       "task": "T20",
@@ -14589,6 +14645,15 @@
         "func DefaultVerificationCommand",
         "func OverfitRiskForClass",
         "func ProposedKnobForStep"
+      ]
+    },
+    {
+      "path": "internal/domain/traceclassification/dedupe.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DeduplicateFindings",
+        "type FindingKey"
       ]
     },
     {
