@@ -15,3 +15,23 @@ type StaticResult struct {
 	Skipped    bool        `json:"skipped,omitempty"`
 	Reason     string      `json:"reason,omitempty"`
 }
+
+type ReviewFinding struct {
+	File     string `json:"file"`
+	Line     *int   `json:"line"`
+	Severity string `json:"severity"`
+	Message  string `json:"message"`
+}
+
+type ReviewResult struct {
+	OK         bool            `json:"ok"`
+	Verdict    string          `json:"verdict"`
+	Summary    string          `json:"summary"`
+	Findings   []ReviewFinding `json:"findings"`
+	Files      []string        `json:"files"`
+	Skipped    bool            `json:"skipped,omitempty"`
+	Reason     string          `json:"reason,omitempty"`
+	Prompt     string          `json:"prompt,omitempty"`
+	Schema     map[string]any  `json:"schema,omitempty"`
+	ResultFile string          `json:"result_file,omitempty"`
+}

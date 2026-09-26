@@ -2,8 +2,6 @@ package apidoc
 
 import (
 	"errors"
-
-	"issueops/cmd/issueops/apidoc/reviewfiles"
 )
 
 type (
@@ -26,7 +24,7 @@ func RunStaticCheckWithOptions(options StaticOptions) (StaticResult, error) {
 }
 
 func Evidence(repo string, files []string) string {
-	return reviewfiles.Evidence(repo, files)
+	return reviewFileEffects.Evidence(repo, files)
 }
 
 func IsReviewGateError(err error) bool {

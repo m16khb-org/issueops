@@ -1,9 +1,27 @@
 package apidoc
 
 import (
+	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 )
+
+var candidateRe = regexp.MustCompile(`(?i)(controller|dto|route|router|handler|endpoint|openapi|swagger|api|schema|proto)`)
+
+func IsCandidate(file string) bool {
+	base := filepath.Base(file)
+	ext := strings.ToLower(filepath.Ext(base))
+	if ext == ".md" || ext == ".txt" {
+		return false
+	}
+	if base == "package.json" || strings.HasSuffix(base, "lock") {
+		return false
+	}
+	return candidateRe.MatchString(file)
+}
+
+func ValidReviewVerdict(verdict string) bool { return verdict == "pass" || verdict == "fail" }
 
 func StaticKinds(file string) (controller, dto bool) {
 	if !strings.HasSuffix(file, ".ts") {

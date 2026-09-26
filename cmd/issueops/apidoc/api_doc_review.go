@@ -4,38 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
+
+	app "issueops/internal/application/apidoc"
+	contract "issueops/internal/contract/apidoc"
 )
 
-type apiDocReviewFinding struct {
-	File     string `json:"file"`
-	Line     *int   `json:"line"`
-	Severity string `json:"severity"`
-	Message  string `json:"message"`
-}
-
-type apiDocReviewResult struct {
-	OK         bool                  `json:"ok"`
-	Verdict    string                `json:"verdict"`
-	Summary    string                `json:"summary"`
-	Findings   []apiDocReviewFinding `json:"findings"`
-	Files      []string              `json:"files"`
-	Skipped    bool                  `json:"skipped,omitempty"`
-	Reason     string                `json:"reason,omitempty"`
-	Prompt     string                `json:"prompt,omitempty"`
-	Schema     map[string]any        `json:"schema,omitempty"`
-	ResultFile string                `json:"result_file,omitempty"`
-}
-
-type apiDocReviewOptions struct {
-	Repo       string
-	Files      []string
-	All        bool
-	DiffFile   string
-	PromptFile string
-	ResultFile string
-	JSON       bool
-}
+type apiDocReviewFinding = contract.ReviewFinding
+type apiDocReviewResult = contract.ReviewResult
+type apiDocReviewOptions = app.ReviewOptions
 
 func runAPIDoc(args []string) error {
 	if len(args) == 0 {
@@ -86,44 +62,19 @@ func runAPIDocReview(args []string) error {
 }
 
 func runAPIDocReviewWithOptions(options apiDocReviewOptions) (apiDocReviewResult, error) {
-	files := normalizeAPIDocFiles(options.Repo, options.Files)
-	if len(files) == 0 && options.All && options.DiffFile == "" {
-		files = trackedAPIDocFiles(options.Repo)
-	}
-	if len(files) == 0 && !options.All && options.DiffFile == "" {
-		files = stagedAPIDocFiles(options.Repo)
-	}
-	if len(files) == 0 && options.DiffFile == "" {
-		summary := "No staged API documentation candidate files."
-		reason := "no_api_doc_candidate_files"
-		if options.All {
-			summary = "No tracked API documentation candidate files."
-			reason = "no_tracked_api_doc_candidate_files"
-		}
-		return apiDocReviewResult{OK: true, Verdict: "pass", Summary: summary, Findings: []apiDocReviewFinding{}, Files: []string{}, Skipped: true, Reason: reason}, nil
-	}
-	diff, err := apiDocInput(options.Repo, files, options.DiffFile, options.All)
-	if err != nil {
-		return apiDocReviewResult{OK: false, Verdict: "fail", Summary: err.Error(), Files: files}, err
-	}
-	if strings.TrimSpace(diff) == "" {
-		summary := "No staged API documentation diff."
-		if options.All {
-			summary = "No API documentation content."
-		}
-		return apiDocReviewResult{OK: true, Verdict: "pass", Summary: summary, Findings: []apiDocReviewFinding{}, Files: files, Skipped: true, Reason: "empty_diff"}, nil
-	}
-	extraPrompt, err := apiDocReviewExtraPrompt(options)
-	if err != nil {
-		return apiDocReviewResult{OK: false, Verdict: "fail", Summary: err.Error(), Files: files}, err
-	}
-	evidence := ""
-	if options.ResultFile == "" {
-		evidence = apiDocReviewEvidence(options.Repo, files)
-	}
-	review, err := runHostAgentAPIDocReview(options, files, diff, extraPrompt, evidence)
-	if err != nil {
-		return review, err
-	}
-	return review, nil
+	return (app.ReviewService{Effects: app.ReviewEffects{
+		NormalizeFiles: normalizeAPIDocFiles,
+		TrackedFiles:   trackedAPIDocFiles,
+		StagedFiles:    stagedAPIDocFiles,
+		Input:          apiDocInput,
+		ExtraPrompt:    apiDocReviewExtraPrompt,
+		Evidence:       apiDocReviewEvidence,
+		BuildPrompt:    buildAPIDocReviewPrompt,
+		Schema:         apiDocReviewSchema,
+		ReadResult: func(repo, file string) (string, []byte, error) {
+			path := resolveAPIDocReviewResultPath(repo, file)
+			data, err := os.ReadFile(path)
+			return path, data, err
+		},
+	}}).Review(options)
 }

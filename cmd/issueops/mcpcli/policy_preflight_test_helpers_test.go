@@ -1,12 +1,13 @@
 package mcpcli
 
 import (
-	reviewfilesppdeps "issueops/cmd/issueops/apidoc/reviewfiles"
+	apidoccli "issueops/cmd/issueops/apidoc"
 	resourcesppdeps "issueops/cmd/issueops/mcpcli/resources"
 	auditppdeps "issueops/internal/adapter/audit"
 	issueopsppdeps "issueops/internal/adapter/issueops"
 	cleanupstatusppdeps "issueops/internal/adapter/issueops/cleanupstatus"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
+	reviewfilesppdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
 	workerppdeps "issueops/internal/adapter/worker"
@@ -27,5 +28,15 @@ func init() {
 	issueopsppdeps.GitOut = preflightadapter.GitOut
 	resourcesppdeps.CommandPolicySummary = policyadapter.CommandPolicySummary
 	reviewfilesppdeps.GitCmd = preflightadapter.GitCmd
+	apidoccli.ConfigureReviewFiles(apidoccli.ReviewFileEffects{
+		ExtraPrompt: reviewfilesppdeps.ExtraPrompt,
+		Diff:        reviewfilesppdeps.Diff,
+		Input:       reviewfilesppdeps.Input,
+		FullContent: reviewfilesppdeps.FullContent,
+		Staged:      reviewfilesppdeps.Staged,
+		Tracked:     reviewfilesppdeps.Tracked,
+		Normalize:   reviewfilesppdeps.Normalize,
+		Evidence:    reviewfilesppdeps.Evidence,
+	})
 	workerppdeps.RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
 }

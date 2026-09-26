@@ -63,7 +63,7 @@ func TestQualitySignalHarvesterIsSatisfiedByQualityInspectCLIAndSignals(t *testi
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "qualitycli", "quality_inspect.go"), "package qualitycli\nfunc Inspect() {}\nconst marker = \"quality inspect\"\n")
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "issueopsapp", "root_command_facade.go"), "package issueopsapp\nvar commands = map[string]any{\"quality\": nil}\n")
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "core", "qualityinspect", "inspect.go"), "package qualityinspect\nconst marker = \"branch_candidate_functions audit_p1_p2_items low_coverage_packages\"\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "contract", "quality", "types.go"), "package quality\nconst marker = \"branch_candidate_functions audit_p1_p2_items low_coverage_packages\"\n")
 
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasQualityInspectCLI || !signals.HasQualityInspectSignals {

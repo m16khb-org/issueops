@@ -104,7 +104,7 @@ func repoSignalRules() []repoSignalRule {
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {
 			signals.HasWorkerStuckRunningDetection = fileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "store.go"), "func DetectStuckWorkerJobs") &&
-				fileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "store.go"), "WorkerStatusFailed") &&
+				fileContainsTerm(root, filepath.Join("internal", "domain", "worker", "lifecycle.go"), "WorkerStatusFailed") &&
 				fileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "worker_test.go"), "TestWorkerDetectStuckJobsMarksDeadPIDAsFailed") &&
 				fileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "worker_test.go"), "TestWorkerDetectStuckJobsSkipsAlivePID") &&
 				fileContainsTerm(root, filepath.Join("cmd", "issueops", "workercli", "worker.go"), `"cleanup-stuck"`) &&
@@ -223,5 +223,6 @@ func hasMCPAdapterCatalog(root string) bool {
 
 func qualityInspectContainsTerm(root, term string) bool {
 	return dirContainsTerm(root, filepath.Join("cmd", "issueops", "qualitycli"), term) ||
+		dirContainsTerm(root, filepath.Join("internal", "contract", "quality"), term) ||
 		dirContainsTerm(root, filepath.Join("internal", "core", "qualityinspect"), term)
 }

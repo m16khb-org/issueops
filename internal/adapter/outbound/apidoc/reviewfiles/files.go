@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
+
+	domain "issueops/internal/domain/apidoc"
 )
 
 func ExtraPrompt(repo, promptFile string) (string, error) {
@@ -114,18 +115,8 @@ func Normalize(repo string, files []string) []string {
 	return out
 }
 
-var candidateRe = regexp.MustCompile(`(?i)(controller|dto|route|router|handler|endpoint|openapi|swagger|api|schema|proto)`)
-
 func IsCandidate(file string) bool {
-	base := filepath.Base(file)
-	ext := strings.ToLower(filepath.Ext(base))
-	if ext == ".md" || ext == ".txt" {
-		return false
-	}
-	if base == "package.json" || strings.HasSuffix(base, "lock") {
-		return false
-	}
-	return candidateRe.MatchString(file)
+	return domain.IsCandidate(file)
 }
 
 func splitLines(text string) []string {

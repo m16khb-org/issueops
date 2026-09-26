@@ -1,7 +1,7 @@
 package issueopscli
 
 import (
-	reviewfilesppdeps "issueops/cmd/issueops/apidoc/reviewfiles"
+	apidoccli "issueops/cmd/issueops/apidoc"
 	mcpclippdeps "issueops/cmd/issueops/mcpcli"
 	resourcesppdeps "issueops/cmd/issueops/mcpcli/resources"
 	auditppdeps "issueops/internal/adapter/audit"
@@ -9,6 +9,7 @@ import (
 	cleanupstatusppdeps "issueops/internal/adapter/issueops/cleanupstatus"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
 	orphancleanupppdeps "issueops/internal/adapter/issueops/orphancleanup"
+	reviewfilesppdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
 )
@@ -29,4 +30,14 @@ func init() {
 	orphancleanupppdeps.GitCmd = preflightadapter.GitCmd
 	resourcesppdeps.CommandPolicySummary = policyadapter.CommandPolicySummary
 	reviewfilesppdeps.GitCmd = preflightadapter.GitCmd
+	apidoccli.ConfigureReviewFiles(apidoccli.ReviewFileEffects{
+		ExtraPrompt: reviewfilesppdeps.ExtraPrompt,
+		Diff:        reviewfilesppdeps.Diff,
+		Input:       reviewfilesppdeps.Input,
+		FullContent: reviewfilesppdeps.FullContent,
+		Staged:      reviewfilesppdeps.Staged,
+		Tracked:     reviewfilesppdeps.Tracked,
+		Normalize:   reviewfilesppdeps.Normalize,
+		Evidence:    reviewfilesppdeps.Evidence,
+	})
 }

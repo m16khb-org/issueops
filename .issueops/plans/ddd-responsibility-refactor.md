@@ -312,7 +312,7 @@
 
 ### Task 16: API 문서 검사·quality·risk QA 이전 (T16)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T13,T15. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/apidoc/{api_doc_static,api_doc_review,staticcheck,reviewfiles,reviewprompt}/`; `cmd/issueops/qualitycli/`; `cmd/issueops/riskqa/{risk_qa_plan,risk_qa_git}.go`
 - **변경/신규 파일:** 신규 contract/domain/application `apidoc`, `quality`, `riskqa`; API source readers/review runners/quality collectors는 outbound, CLI render는 기존 cmd에 유지.

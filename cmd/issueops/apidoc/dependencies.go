@@ -2,15 +2,14 @@ package apidoc
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 
 	app "issueops/internal/application/apidoc"
 )
 
 var (
-	ErrReviewGateFailed     = errors.New("api documentation review gate failed")
-	ErrReviewResultRequired = errors.New("api documentation host-agent review result required")
+	ErrReviewGateFailed     = app.ErrReviewGateFailed
+	ErrReviewResultRequired = app.ErrReviewResultRequired
 	ErrStaticGateFailed     = app.ErrStaticGateFailed
 )
 

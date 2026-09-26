@@ -1,7 +1,7 @@
 package apidoc
 
 import (
-	reviewfilesppdeps "issueops/cmd/issueops/apidoc/reviewfiles"
+	reviewfilesppdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	preflightadapter "issueops/internal/adapter/preflight"
 )
 
@@ -9,4 +9,14 @@ import (
 // 대상만 채운다.
 func init() {
 	reviewfilesppdeps.GitCmd = preflightadapter.GitCmd
+	ConfigureReviewFiles(ReviewFileEffects{
+		ExtraPrompt: reviewfilesppdeps.ExtraPrompt,
+		Diff:        reviewfilesppdeps.Diff,
+		Input:       reviewfilesppdeps.Input,
+		FullContent: reviewfilesppdeps.FullContent,
+		Staged:      reviewfilesppdeps.Staged,
+		Tracked:     reviewfilesppdeps.Tracked,
+		Normalize:   reviewfilesppdeps.Normalize,
+		Evidence:    reviewfilesppdeps.Evidence,
+	})
 }

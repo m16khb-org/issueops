@@ -1,7 +1,7 @@
 package issueopsapp
 
 import (
-	reviewfilesdeps "issueops/cmd/issueops/apidoc/reviewfiles"
+	apidoccli "issueops/cmd/issueops/apidoc"
 	mcpclideps "issueops/cmd/issueops/mcpcli"
 	resourcesdeps "issueops/cmd/issueops/mcpcli/resources"
 	policyclideps "issueops/cmd/issueops/policycli"
@@ -14,6 +14,7 @@ import (
 	cleanupstatusdeps "issueops/internal/adapter/issueops/cleanupstatus"
 	implementationdeps "issueops/internal/adapter/issueops/implementation"
 	orphancleanupdeps "issueops/internal/adapter/issueops/orphancleanup"
+	reviewfilesdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
 	workerdeps "issueops/internal/adapter/worker"
@@ -46,6 +47,16 @@ func configurePolicyAndGitObservers() {
 	preflightfuzzdeps.GitCmd = preflightadapter.GitCmd
 	resourcesdeps.CommandPolicySummary = policyadapter.CommandPolicySummary
 	reviewfilesdeps.GitCmd = preflightadapter.GitCmd
+	apidoccli.ConfigureReviewFiles(apidoccli.ReviewFileEffects{
+		ExtraPrompt: reviewfilesdeps.ExtraPrompt,
+		Diff:        reviewfilesdeps.Diff,
+		Input:       reviewfilesdeps.Input,
+		FullContent: reviewfilesdeps.FullContent,
+		Staged:      reviewfilesdeps.Staged,
+		Tracked:     reviewfilesdeps.Tracked,
+		Normalize:   reviewfilesdeps.Normalize,
+		Evidence:    reviewfilesdeps.Evidence,
+	})
 	statusclideps.RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
 	workerdeps.RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
 }

@@ -29,6 +29,7 @@
       "owner": "inbound",
       "task": "T16",
       "symbols": [
+        "func ConfigureReviewFiles",
         "func Diff",
         "func FullContent",
         "func Input",
@@ -36,7 +37,8 @@
         "func NormalizeFiles",
         "func ReviewExtraPrompt",
         "func StagedFiles",
-        "func TrackedFiles"
+        "func TrackedFiles",
+        "type ReviewFileEffects"
       ]
     },
     {
@@ -62,8 +64,7 @@
       "owner": "inbound",
       "task": "T16",
       "symbols": [
-        "func resolveAPIDocReviewResultPath",
-        "func runHostAgentAPIDocReview"
+        "func resolveAPIDocReviewResultPath"
       ]
     },
     {
@@ -158,61 +159,6 @@
         "type ReviewResult",
         "type StaticOptions",
         "type StaticResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/apidoc/reviewfiles/adapter_dependencies.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/apidoc/reviewfiles/evidence.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func Evidence",
-        "func evidenceBraceDepthDelta",
-        "func evidenceExtractor.addExceptionFilters",
-        "func evidenceExtractor.addMicroserviceHop",
-        "func evidenceExtractor.addThrows",
-        "func evidenceExtractor.buildClassIndex",
-        "func evidenceExtractor.entry",
-        "func evidenceExtractor.extractController",
-        "func evidenceExtractor.readRepoFile",
-        "func evidenceExtractor.render",
-        "func evidenceExtractor.resolveClass",
-        "func extractMethodBody",
-        "func fileContainsAny",
-        "func handlerBody",
-        "func isClientProxyType",
-        "func isControllerLike",
-        "func newEvidenceExtractor",
-        "func nextMethodName",
-        "func parenDepthDeltaOf",
-        "func parseInjections",
-        "func patternWindow",
-        "func sortedPaths",
-        "func stringLiterals",
-        "func throwDetail",
-        "type evidenceEntry",
-        "type evidenceExtractor"
-      ]
-    },
-    {
-      "path": "cmd/issueops/apidoc/reviewfiles/files.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func Diff",
-        "func ExtraPrompt",
-        "func FullContent",
-        "func Input",
-        "func IsCandidate",
-        "func Normalize",
-        "func Staged",
-        "func Tracked",
-        "func splitLines"
       ]
     },
     {
@@ -3161,6 +3107,7 @@
       "owner": "inbound",
       "task": "T16",
       "symbols": [
+        "func ConfigureSourceCollectors",
         "func auditEvidence",
         "func branchEvidence",
         "func collectAuditItems",
@@ -3168,15 +3115,12 @@
         "func collectQualityCandidates",
         "func collectSelfAugmentOpenCount",
         "func collectSelfVerifyOpenCount",
-        "func countBranches",
         "func coverageEvidence",
         "func firstQualityWarning",
         "func parseCoveragePackages",
         "func pioneerIsolatedEvidence",
         "func pioneerIsolatedStatus",
-        "func relOrAbs",
         "func renderCoveragePackages",
-        "func splitMarkdownRow",
         "func statusForCollector",
         "func statusForCount"
       ]
@@ -3186,19 +3130,11 @@
       "owner": "inbound",
       "task": "T16",
       "symbols": [
-        "func boundedQualityBuffer.String",
-        "func boundedQualityBuffer.Truncated",
-        "func boundedQualityBuffer.Write",
+        "func ConfigureCoverage",
         "func coverageCachePath",
-        "func coverageEnvironmentFingerprint",
         "func coverageFingerprint",
-        "func gitCoverageFingerprintInput",
-        "func newBoundedQualityBuffer",
-        "func readCoverageCache",
         "func runGoTestCoverage",
-        "func writeCoverageCache",
-        "type boundedQualityBuffer",
-        "type coverageCacheEntry"
+        "type CoverageEffects"
       ]
     },
     {
@@ -3214,10 +3150,8 @@
         "func addSNRRegressionFinding",
         "func boundedEvidence",
         "func collectPioneerCoverage",
-        "func collectPioneerEvaluationManifest",
         "func collectQualityFindings",
         "func qualityStatuses",
-        "func regularFileExists",
         "func resolveRoot",
         "func successfulSignalValue",
         "type AuditItem",
@@ -3230,8 +3164,7 @@
         "type PioneerCoverage",
         "type QualityCandidate",
         "type Signal",
-        "type Summary",
-        "type pioneerEvaluationCounts"
+        "type Summary"
       ]
     },
     {
@@ -3239,13 +3172,12 @@
       "owner": "inbound",
       "task": "T16",
       "symbols": [
+        "func ConfigureSNRScanner",
         "func computeCodeSNR",
         "func readSNRBaseline",
         "func saveSNRBaseline",
         "func snrBaselineIdentity",
-        "func snrCountFile",
         "func snrEvidence",
-        "func snrStructuralOnly",
         "func validSNRRatio",
         "type SNRResult",
         "type snrBaselineRecord"
@@ -8995,6 +8927,61 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/apidoc/reviewfiles/adapter_dependencies.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": []
+    },
+    {
+      "path": "internal/adapter/outbound/apidoc/reviewfiles/evidence.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Evidence",
+        "func evidenceBraceDepthDelta",
+        "func evidenceExtractor.addExceptionFilters",
+        "func evidenceExtractor.addMicroserviceHop",
+        "func evidenceExtractor.addThrows",
+        "func evidenceExtractor.buildClassIndex",
+        "func evidenceExtractor.entry",
+        "func evidenceExtractor.extractController",
+        "func evidenceExtractor.readRepoFile",
+        "func evidenceExtractor.render",
+        "func evidenceExtractor.resolveClass",
+        "func extractMethodBody",
+        "func fileContainsAny",
+        "func handlerBody",
+        "func isClientProxyType",
+        "func isControllerLike",
+        "func newEvidenceExtractor",
+        "func nextMethodName",
+        "func parenDepthDeltaOf",
+        "func parseInjections",
+        "func patternWindow",
+        "func sortedPaths",
+        "func stringLiterals",
+        "func throwDetail",
+        "type evidenceEntry",
+        "type evidenceExtractor"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/apidoc/reviewfiles/files.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Diff",
+        "func ExtraPrompt",
+        "func FullContent",
+        "func Input",
+        "func IsCandidate",
+        "func Normalize",
+        "func Staged",
+        "func Tracked",
+        "func splitLines"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/issueopsartifact/store_adapter.go",
       "owner": "adapter",
       "task": "T20",
@@ -9605,6 +9592,65 @@
         "type pendingRecord",
         "type physicalFileIdentity",
         "type receiptRecord"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/quality/coverage.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func BoundedQualityBuffer.String",
+        "func BoundedQualityBuffer.Truncated",
+        "func BoundedQualityBuffer.Write",
+        "func CoverageCachePath",
+        "func CoverageFingerprint",
+        "func DefaultCoverageCacheBase",
+        "func NewBoundedQualityBuffer",
+        "func RunGoTestCoverage",
+        "func coverageEnvironmentFingerprint",
+        "func gitCoverageFingerprintInput",
+        "func readCoverageCache",
+        "func renderCoveragePackages",
+        "func writeCoverageCache",
+        "type BoundedQualityBuffer",
+        "type coverageCacheEntry"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/quality/pioneer.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CollectPioneerCoverage",
+        "func collectPioneerEvaluationManifest",
+        "func regularFileExists",
+        "type PioneerBlockedCase",
+        "type PioneerCoverage",
+        "type pioneerEvaluationCounts"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/quality/snr.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ComputeCodeSNR",
+        "func snrCountFile",
+        "type SNRResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/quality/source.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CollectAuditItems",
+        "func CollectBranchFunctions",
+        "func countBranches",
+        "func relOrAbs",
+        "func splitMarkdownRow",
+        "type AuditItem",
+        "type BranchFunction"
       ]
     },
     {
@@ -10787,6 +10833,17 @@
       ]
     },
     {
+      "path": "internal/application/apidoc/review.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ReviewService.Review",
+        "type ReviewEffects",
+        "type ReviewOptions",
+        "type ReviewService"
+      ]
+    },
+    {
       "path": "internal/application/apidoc/static.go",
       "owner": "application",
       "task": "T20",
@@ -11550,6 +11607,22 @@
       ]
     },
     {
+      "path": "internal/application/quality/inspect.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Inspect",
+        "type AuditItem",
+        "type BranchFunction",
+        "type InspectDeps",
+        "type InspectResult",
+        "type PioneerCoverage",
+        "type SNRResult",
+        "type Signal",
+        "type Summary"
+      ]
+    },
+    {
       "path": "internal/application/riskqa/plan.go",
       "owner": "application",
       "task": "T20",
@@ -11740,6 +11813,8 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
+        "type ReviewFinding",
+        "type ReviewResult",
         "type StaticResult",
         "type Violation"
       ]
@@ -12768,6 +12843,31 @@
       ]
     },
     {
+      "path": "internal/contract/quality/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type AuditItem",
+        "type BranchFunction",
+        "type CoveragePackage",
+        "type Finding",
+        "type InspectResult",
+        "type PioneerBlockedCase",
+        "type PioneerCoverage",
+        "type SNRResult",
+        "type Signal",
+        "type Summary"
+      ]
+    },
+    {
+      "path": "internal/contract/qualitycatalog/candidate.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type Candidate"
+      ]
+    },
+    {
       "path": "internal/contract/riskqa/paths.go",
       "owner": "contract",
       "task": "T16",
@@ -12929,8 +13029,10 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func IsCandidate",
         "func SortViolations",
-        "func StaticKinds"
+        "func StaticKinds",
+        "func ValidReviewVerdict"
       ]
     },
     {
@@ -14590,6 +14692,39 @@
         "func writePromptSection",
         "type PromptDataSection",
         "type StructuredPromptSpec"
+      ]
+    },
+    {
+      "path": "internal/domain/quality/policy.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func AddQualityCollectorFailure",
+        "func AddSNRRegressionFinding",
+        "func AuditEvidence",
+        "func BoundedEvidence",
+        "func BranchEvidence",
+        "func CollectQualityFindings",
+        "func CoverageEvidence",
+        "func FirstQualityWarning",
+        "func ParseCoveragePackages",
+        "func PioneerIsolatedEvidence",
+        "func PioneerIsolatedStatus",
+        "func QualityStatuses",
+        "func SNREvidence",
+        "func SNRRegressed",
+        "func SNRStructuralOnly",
+        "func StatusForCollector",
+        "func StatusForCount",
+        "func SuccessfulSignalValue",
+        "func ValidSNRRatio",
+        "type AuditItem",
+        "type BranchFunction",
+        "type CoveragePackage",
+        "type Finding",
+        "type InspectResult",
+        "type PioneerCoverage",
+        "type Signal"
       ]
     },
     {
