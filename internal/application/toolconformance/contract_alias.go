@@ -1,0 +1,47 @@
+package toolconformance
+
+import toolconformancecontract "issueops/internal/contract/toolconformance"
+
+// 계약 타입은 contract 계층이 소유한다. application이 같은 계약 타입을 사용한다.
+type (
+	Fixture           = toolconformancecontract.Fixture
+	RegressionFixture = toolconformancecontract.RegressionFixture
+	ReplayResult      = toolconformancecontract.ReplayResult
+	ToolDescriptor    = toolconformancecontract.ToolDescriptor
+	Diagnostic        = toolconformancecontract.Diagnostic
+	CallObservation   = toolconformancecontract.CallObservation
+	Classification    = toolconformancecontract.Classification
+	CaseResult        = toolconformancecontract.CaseResult
+	BaselineCase      = toolconformancecontract.BaselineCase
+	EpisodeReport     = toolconformancecontract.EpisodeReport
+	HostReport        = toolconformancecontract.HostReport
+	BenchmarkCounts   = toolconformancecontract.BenchmarkCounts
+	GateReport        = toolconformancecontract.GateReport
+	BenchmarkReport   = toolconformancecontract.BenchmarkReport
+)
+
+const (
+	FixtureManifestVersion        = toolconformancecontract.FixtureManifestVersion
+	ReportSchemaVersion           = toolconformancecontract.ReportSchemaVersion
+	ExactValid                    = toolconformancecontract.ExactValid
+	UnknownKey                    = toolconformancecontract.UnknownKey
+	CoercibleTypeDrift            = toolconformancecontract.CoercibleTypeDrift
+	NoncoercibleTypeDrift         = toolconformancecontract.NoncoercibleTypeDrift
+	ValidButSemanticallyDifferent = toolconformancecontract.ValidButSemanticallyDifferent
+	InvalidJSON                   = toolconformancecontract.InvalidJSON
+	NoCall                        = toolconformancecontract.NoCall
+	MultipleCalls                 = toolconformancecontract.MultipleCalls
+	MissingRequired               = toolconformancecontract.MissingRequired
+	EnumMismatch                  = toolconformancecontract.EnumMismatch
+	EpisodeCompleted              = toolconformancecontract.EpisodeCompleted
+	EpisodeIncomplete             = toolconformancecontract.EpisodeIncomplete
+	GateInconclusive              = toolconformancecontract.GateInconclusive
+	GateDeferHardening            = toolconformancecontract.GateDeferHardening
+	GateNeedsReproduction         = toolconformancecontract.GateNeedsReproduction
+	GateAuthorizeHardening        = toolconformancecontract.GateAuthorizeHardening
+	GateUnreproducedObservation   = toolconformancecontract.GateUnreproducedObservation
+)
+
+var (
+	ParseClassification = toolconformancecontract.ParseClassification
+)

@@ -5915,9 +5915,7 @@
         "func addCheck",
         "func addIssue",
         "func checkDaemonAdmission",
-        "func cloneOperationalSnapshot",
-        "func doctorHealthy",
-        "func isUnexpectedStateArtifact"
+        "func doctorHealthy"
       ]
     },
     {
@@ -5925,7 +5923,6 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func severityRank",
         "func shellQuote"
       ]
     },
@@ -5952,8 +5949,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func Classify",
-        "func token"
+        "func Classify"
       ]
     },
     {
@@ -10549,27 +10545,10 @@
         "func BuildEpisodePrompt",
         "func DiagnosticSignature",
         "func RunLiveBenchmark",
-        "func attemptsForFixture",
-        "func classifyHostResult",
-        "func completedForFixture",
-        "func countCompleted",
-        "func countReport",
-        "func incompleteEpisode",
-        "func incompleteHostResult",
-        "func modelForHost",
-        "func mustJSON",
         "func randomToken",
-        "func resumableHostReport",
-        "func selectFixturePairs",
-        "func selectedFixtureForPair",
-        "func validCompletedEpisode",
         "func validEvidenceID",
-        "func validateLiveRequest",
-        "func validatePreviousSelection",
         "type LiveBenchmarkDependencies",
-        "type LiveBenchmarkRequest",
-        "type completedEpisodeExpectation",
-        "type fixturePair"
+        "type LiveBenchmarkRequest"
       ]
     },
     {
@@ -10855,6 +10834,44 @@
       "task": "T20",
       "symbols": [
         "func Service.Suggest",
+        "type Effects",
+        "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/doctor/contract_alias.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "type HarnessDoctorCheck",
+        "type HarnessDoctorDaemonAdmission",
+        "type HarnessDoctorFix",
+        "type HarnessDoctorIssue",
+        "type HarnessDoctorRequest",
+        "type HarnessDoctorResult"
+      ]
+    },
+    {
+      "path": "internal/application/doctor/doctor.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func AddCheck",
+        "func AddIssue",
+        "func CheckDaemonAdmission",
+        "func DoctorHealthy",
+        "func Service.Run",
+        "func cloneOperationalSnapshot",
+        "func isUnexpectedStateArtifact"
+      ]
+    },
+    {
+      "path": "internal/application/doctor/effects.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func severityRank",
+        "func shellQuote",
         "type Effects",
         "type Service"
       ]
@@ -11580,6 +11597,52 @@
         "func Service.writeRecord",
         "type Dependencies",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/toolconformance/benchmark.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func BuildEpisodePrompt",
+        "func DiagnosticSignature",
+        "func RunLiveBenchmark",
+        "func ValidEvidenceID",
+        "func benchmarkPolicy.classifyHostResult",
+        "func benchmarkPolicy.incompleteEpisode",
+        "func benchmarkPolicy.incompleteHostResult",
+        "func benchmarkPolicy.validCompletedEpisode",
+        "func countReport",
+        "func modelForHost",
+        "func mustJSON",
+        "func selectFixturePairs",
+        "func validateLiveRequest",
+        "type LiveBenchmarkDependencies",
+        "type LiveBenchmarkRequest",
+        "type benchmarkPolicy",
+        "type completedEpisodeExpectation",
+        "type fixturePair"
+      ]
+    },
+    {
+      "path": "internal/application/toolconformance/contract_alias.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "type BaselineCase",
+        "type BenchmarkCounts",
+        "type BenchmarkReport",
+        "type CallObservation",
+        "type CaseResult",
+        "type Classification",
+        "type Diagnostic",
+        "type EpisodeReport",
+        "type Fixture",
+        "type GateReport",
+        "type HostReport",
+        "type RegressionFixture",
+        "type ReplayResult",
+        "type ToolDescriptor"
       ]
     },
     {
@@ -12963,6 +13026,15 @@
       ]
     },
     {
+      "path": "internal/domain/failurecause/cause.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Classify",
+        "func token"
+      ]
+    },
+    {
       "path": "internal/domain/gates/check_decision.go",
       "owner": "domain",
       "task": "T10",
@@ -14124,6 +14196,17 @@
       ]
     },
     {
+      "path": "internal/domain/operationalhealth/admission.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DecideAdmission",
+        "func SeverityForFinding",
+        "type Admission",
+        "type AdmissionDecision"
+      ]
+    },
+    {
       "path": "internal/domain/operationalhealth/classifier.go",
       "owner": "domain",
       "task": "T20",
@@ -14585,6 +14668,17 @@
       ]
     },
     {
+      "path": "internal/domain/toolconformance/completed_evidence.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DiagnosticSignature",
+        "func ValidCompletedEpisode",
+        "func ValidEvidenceID",
+        "type CompletedEpisodeExpectation"
+      ]
+    },
+    {
       "path": "internal/domain/toolconformance/gate.go",
       "owner": "domain",
       "task": "T15",
@@ -14601,6 +14695,20 @@
       "task": "T20",
       "symbols": [
         "func InvalidToolArgumentsResult"
+      ]
+    },
+    {
+      "path": "internal/domain/toolconformance/resume.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func AttemptsForFixture",
+        "func CompletedForFixture",
+        "func CountCompleted",
+        "func ResumeHostReport",
+        "func SelectedFixtureForPair",
+        "func ValidatePreviousSelection",
+        "type SelectedFixturePair"
       ]
     },
     {
