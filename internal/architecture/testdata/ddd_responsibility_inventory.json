@@ -10715,6 +10715,25 @@
       "symbols": []
     },
     {
+      "path": "internal/adapter/worker/effects.go",
+      "owner": "adapter",
+      "task": "T14",
+      "symbols": [
+        "func workerEffects.Dir",
+        "func workerEffects.EnsureDir",
+        "func workerEffects.ListIDs",
+        "func workerEffects.Now",
+        "func workerEffects.PID",
+        "func workerEffects.PIDAlive",
+        "func workerEffects.Read",
+        "func workerEffects.Run",
+        "func workerEffects.WithLock",
+        "func workerEffects.Write",
+        "func workerService",
+        "type workerEffects"
+      ]
+    },
+    {
       "path": "internal/adapter/worker/read_only.go",
       "owner": "adapter",
       "task": "T14",
@@ -11539,6 +11558,19 @@
       "symbols": [
         "func FinalizeResult",
         "func SkippedRoutes"
+      ]
+    },
+    {
+      "path": "internal/application/worker/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Cancel",
+        "func Service.DetectStuck",
+        "func Service.Enqueue",
+        "func Service.RunReadOnly",
+        "type Effects",
+        "type Service"
       ]
     },
     {
@@ -14536,6 +14568,22 @@
         "func looksLikePaywall",
         "func metadataFromResponse",
         "func stripTags"
+      ]
+    },
+    {
+      "path": "internal/domain/worker/lifecycle.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Cancel",
+        "func Finish",
+        "func MakeID",
+        "func MarkStuck",
+        "func NewQueued",
+        "func NormalizeKind",
+        "func QueueStats",
+        "func Start",
+        "func ValidID"
       ]
     },
     {
