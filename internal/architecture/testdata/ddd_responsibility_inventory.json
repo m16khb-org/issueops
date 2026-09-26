@@ -11617,6 +11617,15 @@
       ]
     },
     {
+      "path": "internal/application/selfverify/save.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func SaveSummary",
+        "type SaveSummaryDeps"
+      ]
+    },
+    {
       "path": "internal/application/selfverify/steps.go",
       "owner": "application",
       "task": "T20",
@@ -15181,6 +15190,14 @@
         "func SummarizeSteps",
         "type SummaryRun",
         "type SummaryStep"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/summary_snapshot.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func NewSelfVerificationSummarySnapshot"
       ]
     },
     {
