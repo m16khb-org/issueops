@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+
+	app "issueops/internal/application/apidoc"
 )
 
 var (
 	ErrReviewGateFailed     = errors.New("api documentation review gate failed")
 	ErrReviewResultRequired = errors.New("api documentation host-agent review result required")
-	ErrStaticGateFailed     = errors.New("api documentation static check gate failed")
+	ErrStaticGateFailed     = app.ErrStaticGateFailed
 )
 
 var ResolveTarget = func(target string) string {

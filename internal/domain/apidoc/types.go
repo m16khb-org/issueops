@@ -1,4 +1,4 @@
-package staticcheck
+package apidoc
 
 import contract "issueops/internal/contract/apidoc"
 

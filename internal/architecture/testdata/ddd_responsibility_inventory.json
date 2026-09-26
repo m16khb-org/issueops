@@ -231,13 +231,8 @@
       "task": "T16",
       "symbols": [
         "func CheckNestController",
-        "func apiResponseDecoratorSpans",
-        "func controllerDecoratorStart",
-        "func hasClassLevelGuard",
         "func hasNestResponseStatus",
-        "func isNestPrivateRoute",
-        "func min",
-        "func parenDepthDelta"
+        "func isNestPrivateRoute"
       ]
     },
     {
@@ -246,8 +241,6 @@
       "task": "T16",
       "symbols": [
         "func CheckNestDTO",
-        "func apiPropertyHasRequiredKey",
-        "func apiPropertyObjectFlag",
         "func braceDepthDelta"
       ]
     },
@@ -10794,6 +10787,17 @@
       ]
     },
     {
+      "path": "internal/application/apidoc/static.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func StaticService.Check",
+        "type StaticEffects",
+        "type StaticOptions",
+        "type StaticService"
+      ]
+    },
+    {
       "path": "internal/application/audit/service.go",
       "owner": "application",
       "task": "T09",
@@ -11546,6 +11550,15 @@
       ]
     },
     {
+      "path": "internal/application/riskqa/plan.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Plan",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/state/doctor.go",
       "owner": "application",
       "task": "T20",
@@ -11720,6 +11733,15 @@
         "func Service.RunReadOnly",
         "type Effects",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/contract/apidoc/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type StaticResult",
+        "type Violation"
       ]
     },
     {
@@ -12900,6 +12922,49 @@
         "type WorkerJob",
         "type WorkerListResult",
         "type WorkerQueueStats"
+      ]
+    },
+    {
+      "path": "internal/domain/apidoc/candidates.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func SortViolations",
+        "func StaticKinds"
+      ]
+    },
+    {
+      "path": "internal/domain/apidoc/controller.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CheckNestController",
+        "func HasNestResponseStatus",
+        "func IsNestPrivateRoute",
+        "func apiResponseDecoratorSpans",
+        "func controllerDecoratorStart",
+        "func hasClassLevelGuard",
+        "func min",
+        "func parenDepthDelta"
+      ]
+    },
+    {
+      "path": "internal/domain/apidoc/dto.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BraceDepthDelta",
+        "func CheckNestDTO",
+        "func apiPropertyHasRequiredKey",
+        "func apiPropertyObjectFlag"
+      ]
+    },
+    {
+      "path": "internal/domain/apidoc/types.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "type Violation"
       ]
     },
     {
