@@ -11,6 +11,8 @@ import (
 	"syscall"
 
 	"issueops/cmd/issueops/daemoncli/daemonpaths"
+	updateapp "issueops/internal/application/update"
+	updatecontract "issueops/internal/contract/update"
 )
 
 var postInstallMCPProxyRefresh = refreshRunningMCPProxiesAfterInstall
@@ -18,29 +20,9 @@ var mcpProxyProcessLister = listMCPProxyProcesses
 var mcpProxyTerminator = terminateMCPProxyProcess
 var mcpProxyOrphanTerminationSupported = func() bool { return runtime.GOOS == "darwin" }
 
-type mcpProxyProcess struct {
-	PID              int
-	ParentPID        int
-	Command          string
-	StartTime        string
-	Executable       string
-	IdentityVerified bool
-}
-
-type MCPCleanupProcess struct {
-	PID     int    `json:"pid"`
-	Command string `json:"command"`
-	Action  string `json:"action"`
-}
-
-type MCPCleanupResult struct {
-	OK         bool                `json:"ok"`
-	DryRun     bool                `json:"dry_run"`
-	Matched    int                 `json:"matched"`
-	Terminated int                 `json:"terminated"`
-	Processes  []MCPCleanupProcess `json:"processes"`
-	Message    string              `json:"message,omitempty"`
-}
+type mcpProxyProcess = updatecontract.MCPProxyProcess
+type MCPCleanupProcess = updatecontract.MCPCleanupProcess
+type MCPCleanupResult = updatecontract.MCPCleanupResult
 
 func refreshRunningMCPProxiesAfterInstall() (int, error) {
 	// 업데이트는 host가 소유한 stdio 수명을 보존한다. 새 daemon generation은
@@ -50,67 +32,18 @@ func refreshRunningMCPProxiesAfterInstall() (int, error) {
 }
 
 func cleanupMCPProxies(dryRun bool) (MCPCleanupResult, error) {
-	processes, err := mcpProxyProcessLister()
-	if err != nil {
-		return MCPCleanupResult{OK: false, DryRun: dryRun}, err
-	}
-	currentPID := os.Getpid()
-	result := MCPCleanupResult{
-		OK:        true,
-		DryRun:    dryRun,
-		Matched:   len(processes),
-		Processes: []MCPCleanupProcess{},
-	}
-	for _, process := range processes {
-		cleanupProcess := MCPCleanupProcess{
-			PID:     process.PID,
-			Command: process.Command,
-		}
-		switch {
-		case process.PID == currentPID:
-			cleanupProcess.Action = "skip-current"
-		case !process.IdentityVerified || process.StartTime == "" || process.Executable == "":
-			cleanupProcess.Action = "skip-unverified"
-		case process.Command != process.Executable+" mcp":
-			cleanupProcess.Action = "skip-not-exact"
-		case process.ParentPID != 1:
-			cleanupProcess.Action = "skip-live-parent"
-		case !mcpProxyOrphanTerminationSupported():
-			cleanupProcess.Action = "skip-unsupported-platform"
-		case dryRun:
-			cleanupProcess.Action = "would-terminate"
-		default:
-			freshProcesses, err := mcpProxyProcessLister()
-			if err != nil {
-				cleanupProcess.Action = "skip-revalidation-error"
-				result.OK = false
-				result.Processes = append(result.Processes, cleanupProcess)
-				return result, err
-			}
-			fresh, found := findMCPProxyProcess(freshProcesses, process.PID)
-			if !found || !sameMCPProxyProcessIdentity(process, fresh) ||
-				fresh.ParentPID != 1 || !fresh.IdentityVerified ||
-				fresh.Command != fresh.Executable+" mcp" {
-				cleanupProcess.Action = "skip-identity-changed"
-				break
-			}
-			if err := mcpProxyTerminator(process.PID); err != nil {
-				cleanupProcess.Action = "terminate-error"
-				result.OK = false
-				result.Processes = append(result.Processes, cleanupProcess)
-				return result, err
-			}
-			cleanupProcess.Action = "terminated"
-			result.Terminated++
-		}
-		result.Processes = append(result.Processes, cleanupProcess)
-	}
-	if dryRun {
-		result.Message = "dry-run: no MCP proxy processes terminated"
-	} else {
-		result.Message = "MCP proxy cleanup complete"
-	}
-	return result, nil
+	return updateapp.CleanupMCPProxies(mcpProxyCleanupEffects{}, dryRun)
+}
+
+type mcpProxyCleanupEffects struct{}
+
+func (mcpProxyCleanupEffects) List() ([]updatecontract.MCPProxyProcess, error) {
+	return mcpProxyProcessLister()
+}
+func (mcpProxyCleanupEffects) Terminate(pid int) error { return mcpProxyTerminator(pid) }
+func (mcpProxyCleanupEffects) CurrentPID() int         { return os.Getpid() }
+func (mcpProxyCleanupEffects) SupportsOrphanTermination() bool {
+	return mcpProxyOrphanTerminationSupported()
 }
 
 func listMCPProxyProcesses() ([]mcpProxyProcess, error) {
@@ -179,24 +112,6 @@ func parseMCPProxyProcessSnapshot(line, binary string) (mcpProxyProcess, bool) {
 		return mcpProxyProcess{}, false
 	}
 	return mcpProxyProcess{PID: pid, ParentPID: parentPID, Command: command}, true
-}
-
-func findMCPProxyProcess(processes []mcpProxyProcess, pid int) (mcpProxyProcess, bool) {
-	for _, process := range processes {
-		if process.PID == pid {
-			return process, true
-		}
-	}
-	return mcpProxyProcess{}, false
-}
-
-func sameMCPProxyProcessIdentity(left, right mcpProxyProcess) bool {
-	return left.PID == right.PID &&
-		left.ParentPID == right.ParentPID &&
-		left.Command == right.Command &&
-		left.StartTime == right.StartTime &&
-		left.Executable == right.Executable &&
-		left.IdentityVerified == right.IdentityVerified
 }
 
 func terminateMCPProxyProcess(pid int) error {

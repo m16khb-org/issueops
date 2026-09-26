@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
+
+	updateapp "issueops/internal/application/update"
 )
 
 var installScriptCommandRunner = runInstallScriptExec
@@ -36,42 +37,10 @@ func runInstallScriptCommand(commandName string, args []string) error {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
 
-	root := deps.IssueOpsRoot()
-	script := filepath.Join(root, "scripts", "install-native.sh")
-	if _, err := os.Stat(script); err != nil {
-		return fmt.Errorf("install script not found at %s: %w", script, err)
-	}
-
-	scriptArgs := make([]string, 0, 5)
-	if *projectLocal {
-		scriptArgs = append(scriptArgs, "--project-local")
-	}
-	if *dryRun {
-		scriptArgs = append(scriptArgs, "--dry-run")
-	}
-	if *pathMode != "" {
-		scriptArgs = append(scriptArgs, "--path-mode="+*pathMode)
-	}
-	if *interactive {
-		scriptArgs = append(scriptArgs, "--interactive")
-	}
-	if *jsonOut {
-		scriptArgs = append(scriptArgs, "--json")
-	}
-	if *skipBuild {
-		scriptArgs = append(scriptArgs, "--skip-build")
-	}
-
-	if err := installScriptCommandRunner(script, scriptArgs...); err != nil {
-		return err
-	}
-	if *dryRun {
-		return nil
-	}
-	if _, err := postInstallDaemonRefresh(); err != nil {
-		return err
-	}
-	return nil
+	return (updateapp.Service{Installer: updateInstaller{}}).Run(updateapp.Options{
+		Root: deps.IssueOpsRoot(), ProjectLocal: *projectLocal, DryRun: *dryRun,
+		PathMode: *pathMode, Interactive: *interactive, JSON: *jsonOut, SkipBuild: *skipBuild,
+	})
 }
 
 func runInstallScriptExec(script string, args ...string) error {

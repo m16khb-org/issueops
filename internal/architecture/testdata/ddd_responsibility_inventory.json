@@ -4438,16 +4438,29 @@
       "task": "T12",
       "symbols": [
         "func cleanupMCPProxies",
-        "func findMCPProxyProcess",
         "func listMCPProxyProcesses",
+        "func mcpProxyCleanupEffects.CurrentPID",
+        "func mcpProxyCleanupEffects.List",
+        "func mcpProxyCleanupEffects.SupportsOrphanTermination",
+        "func mcpProxyCleanupEffects.Terminate",
         "func parseMCPProxyProcess",
         "func parseMCPProxyProcessSnapshot",
         "func refreshRunningMCPProxiesAfterInstall",
-        "func sameMCPProxyProcessIdentity",
         "func terminateMCPProxyProcess",
         "type MCPCleanupProcess",
         "type MCPCleanupResult",
+        "type mcpProxyCleanupEffects",
         "type mcpProxyProcess"
+      ]
+    },
+    {
+      "path": "cmd/issueops/updatecli/update_effects.go",
+      "owner": "inbound",
+      "task": "T12",
+      "symbols": [
+        "func updateInstaller.Install",
+        "func updateInstaller.RefreshDaemon",
+        "type updateInstaller"
       ]
     },
     {
@@ -11382,6 +11395,28 @@
       ]
     },
     {
+      "path": "internal/application/update/cleanup.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func CleanupMCPProxies",
+        "func findMCPProxyProcess",
+        "func proxyIdentity",
+        "type MCPProxyEffects"
+      ]
+    },
+    {
+      "path": "internal/application/update/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Run",
+        "type Installer",
+        "type Options",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/upstream/service.go",
       "owner": "application",
       "task": "T20",
@@ -12542,6 +12577,16 @@
       ]
     },
     {
+      "path": "internal/contract/update/cleanup.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type MCPCleanupProcess",
+        "type MCPCleanupResult",
+        "type MCPProxyProcess"
+      ]
+    },
+    {
       "path": "internal/contract/upstream/upstream.go",
       "owner": "contract",
       "task": "T02",
@@ -12818,6 +12863,16 @@
         "type ClaudeHookOutput",
         "type CodexHookOutput",
         "type HostHookOutput"
+      ]
+    },
+    {
+      "path": "internal/domain/install/cleanup.go",
+      "owner": "domain",
+      "task": "T11",
+      "symbols": [
+        "func MCPProxyCleanupAction",
+        "func SameMCPProxyIdentity",
+        "type MCPProxyIdentity"
       ]
     },
     {
