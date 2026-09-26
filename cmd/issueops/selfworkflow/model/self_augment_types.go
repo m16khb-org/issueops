@@ -4,19 +4,12 @@ import contract "issueops/internal/contract/selfaugment"
 
 const (
 	SelfVerificationSummaryKind     = "self_verification_summary"
-	SelfVerificationKoreanName      = "자기 검증 루프"
+	SelfVerificationKoreanName      = contract.SelfVerificationKoreanName
 	SelfAugmentationKoreanName      = "자가 증강 루프"
 	DefaultLoopTargetScoreExclusive = 95.0
 )
 
-type SelfAugmentStateCheckpoint struct {
-	OK       bool   `json:"ok"`
-	Key      string `json:"key"`
-	StateDir string `json:"state_dir,omitempty"`
-	Path     string `json:"path,omitempty"`
-	Bytes    int    `json:"bytes,omitempty"`
-	Error    string `json:"error,omitempty"`
-}
+type SelfAugmentStateCheckpoint = contract.SelfAugmentStateCheckpoint
 
 type SelfAugmentPromoteResult struct {
 	OK                  bool               `json:"ok"`

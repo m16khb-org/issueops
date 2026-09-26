@@ -4143,7 +4143,6 @@
       "symbols": [
         "func Deps.withDefaults",
         "func SelfVerify",
-        "func boolPtr",
         "type Deps",
         "type Request"
       ]
@@ -11603,6 +11602,21 @@
       ]
     },
     {
+      "path": "internal/application/selfverify/loop.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ExecuteLoop",
+        "func NewLoopResult",
+        "func boolPtr",
+        "func emit",
+        "func emitEnd",
+        "type LoopDeps",
+        "type LoopRequest",
+        "type ProgressReporter"
+      ]
+    },
+    {
       "path": "internal/application/selfverify/steps.go",
       "owner": "application",
       "task": "T20",
@@ -12928,6 +12942,16 @@
       ]
     },
     {
+      "path": "internal/contract/selfaugment/result.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfAugmentResult",
+        "type SelfAugmentStateCheckpoint",
+        "type SelfVerifyLLMEvalResult"
+      ]
+    },
+    {
       "path": "internal/contract/selfaugment/self_augment_compare_types.go",
       "owner": "contract",
       "task": "T02",
@@ -12973,6 +12997,14 @@
       "task": "T02",
       "symbols": [
         "type SelfVerificationCandidate"
+      ]
+    },
+    {
+      "path": "internal/contract/selfverify/progress.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type ProgressEvent"
       ]
     },
     {

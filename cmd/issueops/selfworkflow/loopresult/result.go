@@ -3,27 +3,11 @@ package loopresult
 import (
 	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/cmd/issueops/selfworkflow/progress"
+	application "issueops/internal/application/selfverify"
 )
 
 func New(iterations int, baseSeed int64, targetScore float64, root string) model.SelfAugmentResult {
-	return model.SelfAugmentResult{
-		LoopKind:     "self_verification",
-		KoreanName:   model.SelfVerificationKoreanName,
-		Iterations:   iterations,
-		BaseSeed:     baseSeed,
-		TargetScore:  targetScore,
-		IssueOpsRoot: root,
-		InspiredBy:   "/Users/sample/workspace/eye-tracking-scroll/scripts/self-augment.js",
-		LoopContract: []string{
-			"quick mode runs one deterministic evidence pass before the final LLM gate",
-			"full mode requires at least 10 seeded iterations before the final LLM gate",
-			"tests and QA are first-class stages, not optional follow-ups",
-			"seeded per-iteration randomized git preflight fuzz",
-			"repeat core invariant, tests, risk-tier QA, build, CLI/MCP schema and response contract golden, CLI, docs, command policy, MCP, state, and native integration smoke checks",
-			"terminate only when every concrete goal score is greater than target_score",
-			"fail fast on the first failed step and report goal scores for recovery",
-		},
-	}
+	return application.NewLoopResult(iterations, baseSeed, targetScore, root)
 }
 
 func EmitStart(reporter *progress.SelfVerifyProgressReporter, loopKind string, iterations int, seed int64) {
