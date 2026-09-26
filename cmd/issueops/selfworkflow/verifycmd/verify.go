@@ -11,6 +11,7 @@ import (
 	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/cmd/issueops/selfworkflow/progress"
 	"issueops/cmd/issueops/selfworkflow/verifyloop"
+	application "issueops/internal/application/selfverify"
 )
 
 type Deps struct {
@@ -51,31 +52,25 @@ func Run(args []string, deps Deps) error {
 	if err != nil {
 		return err
 	}
-	result, err := deps.Verify(verifyloop.Request{
-		BaseSeed:        *seed,
-		TargetScore:     *targetScore,
-		Verbose:         !*jsonOut,
-		Reporter:        reporter,
-		CollectAllSteps: *collectAll,
+	return application.Run(application.RunRequest{
+		Loop: application.LoopRequest{
+			BaseSeed: *seed, TargetScore: *targetScore, Verbose: !*jsonOut,
+			Reporter: reporter, CollectAllSteps: *collectAll,
+		},
+		LLMEnabled: llmEvalConfig.Enabled, LLMMode: llmEvalConfig.Mode,
+		SaveState: *saveState, StateKey: *stateKey, JSONOutput: *jsonOut,
+	}, application.RunDeps{
+		Verify: func(request application.LoopRequest) (model.SelfAugmentResult, error) {
+			return deps.Verify(verifyloop.Request{
+				BaseSeed: request.BaseSeed, TargetScore: request.TargetScore,
+				Verbose: request.Verbose, Reporter: reporter,
+				CollectAllSteps: request.CollectAllSteps,
+			})
+		},
+		ApplyLLMEval: deps.ApplyLLMEval,
+		SaveSummary:  deps.SaveSummary,
+		PrintJSON:    deps.PrintJSON,
 	})
-	if err == nil && llmEvalConfig.Enabled {
-		result, err = deps.ApplyLLMEval(result, llmeval.SelfVerifyLLMEvalOptions{
-			Enabled:     true,
-			Mode:        llmEvalConfig.Mode,
-			TargetScore: *targetScore,
-		})
-	}
-	saveErr := error(nil)
-	if *saveState {
-		saveErr = deps.SaveSummary(&result, *stateKey)
-	}
-	if *jsonOut {
-		_ = deps.PrintJSON(result)
-	}
-	if err == nil && saveErr != nil {
-		return saveErr
-	}
-	return err
 }
 
 func (deps Deps) withDefaults() Deps {

@@ -1,11 +1,10 @@
 package llmeval
 
-import "issueops/cmd/issueops/selfworkflow/model"
+import (
+	"issueops/cmd/issueops/selfworkflow/model"
+	selfverifycontract "issueops/internal/contract/selfverify"
+)
 
-type SelfVerifyLLMEvalOptions struct {
-	Enabled     bool
-	Mode        string
-	TargetScore float64
-}
+type SelfVerifyLLMEvalOptions = selfverifycontract.LLMEvalOptions
 
 type SelfVerifyLLMEvalResult = model.SelfVerifyLLMEvalResult
