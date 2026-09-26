@@ -144,7 +144,7 @@
 
 ### Task 2: Contract의 업무 규칙과 shape 검증 분리 (T02)
 
-- [ ] 완료
+- [x] 완료 — contract 함수 97개 역할 분류와 정책 이관, persisted codec 실패 계약 검증 완료
 - **담당/등급:** 메인 / deep. **선행:** T01. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/contract/issueops/issue_create.go:ValidateIssueCreateTransition`; `internal/contract/issueopspreparation/{planner_gates,prepare,intent}.go`; `internal/contract/issueopslease/record.go`; 모든 contract package
 - **변경/신규 파일:** 확장 `internal/domain/issueopspreparation/`, `internal/domain/issueopspublication/`; 신규 `internal/domain/issueopsreview/`; 신규 domain tests. contract codec 파일은 기존 위치 유지.
