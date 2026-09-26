@@ -3,7 +3,6 @@ package goformat
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,16 +11,14 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/commandstep"
+	application "issueops/internal/application/selfverify"
 )
 
 // Label is the self-verify step label. Command mirrors the CI "Format check
 // (gofmt)" step verbatim so a failing step names exactly what CI runs.
 const (
 	Label   = "gofmt"
-	Command = "gofmt -l $(git ls-files '*.go')"
-
-	timeout                    = 2 * time.Minute
-	aggregateOutputBudgetBytes = 8 * 1024
+	Command = application.FormatCommand
 )
 
 type StepResult = commandstep.StepResult
@@ -54,33 +51,11 @@ func Validate(root string) StepResult {
 
 func ValidateWithDeps(root string, deps Deps) StepResult {
 	deps = deps.withDefaults()
-	started := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	files, err := deps.ListTrackedGoFiles(ctx, root)
-	if err != nil {
-		return failed(started, fmt.Errorf("list tracked .go files: %w", err))
-	}
-	if len(files) == 0 {
-		return failed(started, errors.New("no tracked .go files found; gofmt parity cannot be verified"))
-	}
-	unformatted, err := deps.ListUnformatted(ctx, root, files)
-	if err != nil {
-		return failed(started, fmt.Errorf("gofmt -l: %w", err))
-	}
-	errs := []string{}
-	if len(unformatted) > 0 {
-		errs = append(errs, fmt.Sprintf("%d tracked .go file(s) are not gofmt-clean; run gofmt -w on: %s", len(unformatted), strings.Join(unformatted, " ")))
-	}
-	stdout := []string{fmt.Sprintf("checked %d tracked .go file(s)", len(files))}
-	return commandstep.AssertionStepWithOutput(Label, started, errs, stdout, []string{Command}, aggregateOutputBudgetBytes)
-}
-
-func failed(started time.Time, err error) StepResult {
-	step := commandstep.FailedStep(Label, err)
-	step.Command = Command
-	step.DurationMS = time.Since(started).Milliseconds()
-	return step
+	return application.ValidateFormat(root, application.FormatDeps{
+		ListTrackedGoFiles: deps.ListTrackedGoFiles,
+		ListUnformatted:    deps.ListUnformatted,
+		Now:                time.Now,
+	})
 }
 
 func listTrackedGoFiles(ctx context.Context, root string) ([]string, error) {

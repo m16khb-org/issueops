@@ -17,22 +17,15 @@ func CombineFailedStep(label string, started time.Time, child StepResult, stdout
 }
 
 func AssertionStep(label string, started time.Time, errs []string) StepResult {
-	step := StepResult{Label: label, OK: len(errs) == 0, DurationMS: time.Since(started).Milliseconds()}
-	if len(errs) > 0 {
-		step.Error = strings.Join(errs, "; ")
-	}
-	return step
+	return selfverifydomain.AssertionStep(label, time.Since(started).Milliseconds(), errs)
 }
 
 func AssertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string, outputBudget int) StepResult {
-	step := AssertionStep(label, started, errs)
-	step.Command = strings.Join(commands, " && ")
-	step.Stdout, step.StdoutTruncated, step.StdoutBytes = TailWithBudget(strings.Join(stdoutParts, "\n"), outputBudget)
-	return step
+	return selfverifydomain.AssertionStepWithOutput(label, time.Since(started).Milliseconds(), errs, stdoutParts, commands, outputBudget)
 }
 
 func FailedStep(label string, err error) StepResult {
-	return StepResult{Label: label, OK: false, Error: err.Error()}
+	return selfverifydomain.FailedStep(label, err)
 }
 
 func PrintStep(step StepResult) {

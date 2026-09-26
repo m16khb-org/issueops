@@ -1,7 +1,11 @@
 package issueopsapp
 
 import (
+	"time"
+
 	"issueops/cmd/issueops/validationcli"
+	"issueops/internal/adapter/verification"
+	selfverifyapp "issueops/internal/application/selfverify"
 )
 
 func validateInspect(binary, root string) StepResult {
@@ -73,7 +77,11 @@ func validateRedactionAudit(root string) StepResult {
 }
 
 func validateGoFormat(root string) StepResult {
-	return validationcli.ValidateGoFormat(root)
+	return selfverifyapp.ValidateFormat(root, selfverifyapp.FormatDeps{
+		ListTrackedGoFiles: verification.ListTrackedGoFiles,
+		ListUnformatted:    verification.ListUnformatted,
+		Now:                time.Now,
+	})
 }
 
 func validateQAGate(root string) StepResult {

@@ -4567,7 +4567,6 @@
         "func Validate",
         "func ValidateWithDeps",
         "func commandError",
-        "func failed",
         "func listTrackedGoFiles",
         "func listUnformatted",
         "func nonEmptyLines",
@@ -10689,6 +10688,17 @@
       "symbols": []
     },
     {
+      "path": "internal/adapter/verification/goformat.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ListTrackedGoFiles",
+        "func ListUnformatted",
+        "func commandError",
+        "func nonEmptyLines"
+      ]
+    },
+    {
       "path": "internal/adapter/verification/process.go",
       "owner": "adapter",
       "task": "T20",
@@ -11600,6 +11610,16 @@
       "task": "T20",
       "symbols": [
         "func Candidates"
+      ]
+    },
+    {
+      "path": "internal/application/selfverify/format.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ValidateFormat",
+        "func failedFormat",
+        "type FormatDeps"
       ]
     },
     {
@@ -15217,6 +15237,16 @@
       "task": "T20",
       "symbols": [
         "func NewSelfVerificationSummarySnapshot"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/assertion.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func AssertionStep",
+        "func AssertionStepWithOutput",
+        "func FailedStep"
       ]
     },
     {
