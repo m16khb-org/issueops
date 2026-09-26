@@ -276,7 +276,7 @@
 
 ### Task 13: 프로젝트 문서·bootstrap·수정 use case 이전 (T13)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T09. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/projectdocs/project_docs_{route,revise,append}.go` 및 detection/profile 파일; `internal/adapter/projectbootstrap/project_docs_bootstrap.go`; `internal/domain/projectdoc/`; `cmd/issueops/projectcli/`
 - **변경/신규 파일:** 기존 projectdoc domain 확장; 신규 `internal/application/projectdocs/`, `internal/application/projectbootstrap/`; file/template/Git adapters.

@@ -1,9 +1,7 @@
 package projectdocs
 
 import (
-	"os"
 	"path/filepath"
-	"time"
 
 	projectdocsapp "issueops/internal/application/projectdocs"
 	projectdocscontract "issueops/internal/contract/projectdocs"
@@ -19,27 +17,7 @@ func ReadProjectDoc(repoRoot, relPath string) (projectdocscontract.ProjectDocsRe
 		return projectdocscontract.ProjectDocsReadResult{}, err
 	}
 	path := filepath.Join(root, filepath.FromSlash(rel))
-	result := projectdocscontract.ProjectDocsReadResult{
-		OK:          true,
-		Kind:        "project_docs_read",
-		RepoRoot:    root,
-		RelPath:     rel,
-		Path:        path,
-		GeneratedAt: time.Now().Format(time.RFC3339),
-	}
-	b, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		result.Exists = false
-		result.Warnings = []string{"document_missing: run project_docs_bootstrap_plan or issueops project bootstrap first"}
-		return result, nil
-	}
-	if err != nil {
-		return projectdocscontract.ProjectDocsReadResult{}, err
-	}
-	result.Exists = true
-	result.Content = string(b)
-	result.SHA256 = sha256Hex(result.Content)
-	return result, nil
+	return projectdocsapp.Read(root, rel, path, revisionFileEffects{})
 }
 
 func ReviseProjectDoc(req projectdocscontract.ProjectDocsReviseRequest) (projectdocscontract.ProjectDocsReviseResult, error) {

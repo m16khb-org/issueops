@@ -10080,9 +10080,21 @@
       "owner": "adapter",
       "task": "T13",
       "symbols": [
-        "func AppendProjectDocsEntry",
-        "func appendModularRecord",
-        "func recordSlug"
+        "func AppendProjectDocsEntry"
+      ]
+    },
+    {
+      "path": "internal/adapter/projectdocs/project_docs_append_effects.go",
+      "owner": "adapter",
+      "task": "T13",
+      "symbols": [
+        "func appendFileEffects.EnsureDir",
+        "func appendFileEffects.Exists",
+        "func appendFileEffects.Now",
+        "func appendFileEffects.Path",
+        "func appendFileEffects.Render",
+        "func appendFileEffects.Write",
+        "type appendFileEffects"
       ]
     },
     {
@@ -10205,7 +10217,11 @@
       "owner": "adapter",
       "task": "T13",
       "symbols": [
-        "func RouteProjectDocs"
+        "func RouteProjectDocs",
+        "func routeFileEffects.Exists",
+        "func routeFileEffects.Now",
+        "func routeFileEffects.Path",
+        "type routeFileEffects"
       ]
     },
     {
@@ -11378,12 +11394,39 @@
       ]
     },
     {
+      "path": "internal/application/projectdocs/append.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Append",
+        "type AppendEffects"
+      ]
+    },
+    {
+      "path": "internal/application/projectdocs/read.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Read",
+        "type ReadEffects"
+      ]
+    },
+    {
       "path": "internal/application/projectdocs/revise.go",
       "owner": "application",
       "task": "T20",
       "symbols": [
         "func Revise",
         "type RevisionEffects"
+      ]
+    },
+    {
+      "path": "internal/application/projectdocs/route.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Route",
+        "type RouteEffects"
       ]
     },
     {
@@ -14123,6 +14166,17 @@
       ]
     },
     {
+      "path": "internal/domain/projectdoc/append.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PlanAppend",
+        "func RecordSlug",
+        "type AppendInput",
+        "type AppendPlan"
+      ]
+    },
+    {
       "path": "internal/domain/projectdoc/bootstrap.go",
       "owner": "domain",
       "task": "T20",
@@ -14228,6 +14282,7 @@
       "owner": "domain",
       "task": "T13",
       "symbols": [
+        "func NormalizeRouteTask",
         "func RouteDocsForTask",
         "func appendRouteDocsUnique",
         "func hasTaskToken",

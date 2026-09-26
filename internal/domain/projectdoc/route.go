@@ -8,6 +8,14 @@ import (
 
 type RouteDoc struct{ Rel, Reason string }
 
+func NormalizeRouteTask(task string) string {
+	task = strings.ToLower(strings.TrimSpace(task))
+	if task == "" {
+		return "general"
+	}
+	return task
+}
+
 // RouteDocsForTask expects the lowercased task selected by the caller.
 func RouteDocsForTask(task string) []RouteDoc {
 	base := []RouteDoc{{"AGENTS.md", "repo-level agent entrypoint and document router"}}
