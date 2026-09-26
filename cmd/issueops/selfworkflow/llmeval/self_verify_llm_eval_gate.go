@@ -5,22 +5,14 @@ import (
 	"strings"
 
 	"issueops/cmd/issueops/selfworkflow/model"
+	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
 func ApplySelfVerifyLLMGate(result model.SelfAugmentResult, targetScore float64) (model.SelfAugmentResult, error) {
 	if result.LLMEval == nil || result.LLMEval.Mode != "gate" {
 		return result, nil
 	}
-	reasons := []string{}
-	if !result.LLMEval.OK {
-		reasons = append(reasons, "llm_eval_not_ok")
-	}
-	if result.LLMEval.Score < targetScore {
-		reasons = append(reasons, fmt.Sprintf("score %.2f below target %.2f", result.LLMEval.Score, targetScore))
-	}
-	if len(result.LLMEval.Blockers) > 0 {
-		reasons = append(reasons, "blockers: "+strings.Join(result.LLMEval.Blockers, "; "))
-	}
+	reasons := selfverifydomain.LLMEvalGateReasons(result.LLMEval.Mode, result.LLMEval.OK, result.LLMEval.Score, targetScore, result.LLMEval.Blockers)
 	if len(reasons) == 0 {
 		return result, nil
 	}

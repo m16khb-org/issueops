@@ -3,6 +3,9 @@ package candidateexport
 import (
 	"path/filepath"
 	"time"
+
+	contract "issueops/internal/contract/selfverify"
+	domain "issueops/internal/domain/selfverify"
 )
 
 const SelfVerificationCandidateExportKind = "self_verification_candidate_export"
@@ -25,16 +28,7 @@ type SelfVerificationCandidateExportResult struct {
 	Warnings              []string                    `json:"warnings"`
 }
 
-type SelfVerificationCandidate struct {
-	Priority             int      `json:"priority"`
-	ID                   string   `json:"id"`
-	Category             string   `json:"category"`
-	Status               string   `json:"status"`
-	Score                float64  `json:"score"`
-	WhyNow               []string `json:"why_now"`
-	VerifyWith           []string `json:"verify_with"`
-	SatisfactionEvidence []string `json:"satisfaction_evidence,omitempty"`
-}
+type SelfVerificationCandidate = contract.SelfVerificationCandidate
 
 type SelfVerificationCandidateExportStateSnapshot struct {
 	SchemaVersion         int                         `json:"schema_version"`
@@ -58,16 +52,7 @@ func ExportSelfVerificationCandidates(root string) SelfVerificationCandidateExpo
 	candidates := SelfVerificationCandidateCatalog()
 	openIDs := SelfVerificationCandidateIDsByStatus(candidates, selfAugmentCandidateStatusOpen)
 	satisfiedIDs := SelfVerificationCandidateIDsByStatus(candidates, selfAugmentCandidateStatusSatisfied)
-	var selected *SelfVerificationCandidate
-	for _, candidate := range candidates {
-		if candidate.Status != selfAugmentCandidateStatusOpen {
-			continue
-		}
-		if selected == nil || candidate.Score > selected.Score || (candidate.Score == selected.Score && candidate.Priority < selected.Priority) {
-			copyCandidate := candidate
-			selected = &copyCandidate
-		}
-	}
+	selected := domain.SelectedCandidate(candidates)
 	warnings := []string{}
 	if !sourceExists {
 		warnings = append(warnings, "skills/self-verify/CANDIDATES.md not found; using built-in candidate export catalog")
@@ -91,18 +76,9 @@ func ExportSelfVerificationCandidates(root string) SelfVerificationCandidateExpo
 }
 
 func SelfVerificationCandidateIDsByStatus(candidates []SelfVerificationCandidate, status string) []string {
-	ids := []string{}
-	for _, candidate := range candidates {
-		if candidate.Status == status {
-			ids = append(ids, candidate.ID)
-		}
-	}
-	return ids
+	return domain.CandidateIDsByStatus(candidates, status)
 }
 
 func SelectedSelfVerificationCandidateID(candidate *SelfVerificationCandidate) string {
-	if candidate == nil {
-		return "none"
-	}
-	return candidate.ID
+	return domain.SelectedCandidateID(candidate)
 }

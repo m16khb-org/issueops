@@ -2,31 +2,30 @@ package historycompare
 
 import (
 	"fmt"
+
+	"issueops/internal/domain/selfaugment"
 )
 
 func ApplySelfAugmentHistoryRetention(result *SelfAugmentHistoryResult, options SelfAugmentHistoryRetentionOptions) error {
+	keys := make([]string, 0, len(result.Entries))
+	for _, entry := range result.Entries {
+		keys = append(keys, entry.Key)
+	}
+	decision := selfaugment.PlanHistoryRetention(keys, options.Limit, options.PruneRequested, options.Confirm)
 	retention := &SelfAugmentHistoryRetention{
 		Enabled:        true,
 		Limit:          options.Limit,
 		TotalMatches:   result.TotalMatches,
-		RetainedKeys:   []string{},
-		CandidateKeys:  []string{},
+		RetainedKeys:   decision.RetainedKeys,
+		CandidateKeys:  decision.CandidateKeys,
 		DeletedKeys:    []string{},
-		PruneRequested: options.PruneRequested,
-		Confirm:        options.Confirm,
-		DryRun:         options.PruneRequested && !options.Confirm,
-		Recommendation: "within_retention_budget",
+		PruneRequested: decision.PruneRequested,
+		Confirm:        decision.Confirm,
+		DryRun:         decision.DryRun,
+		Recommendation: decision.Recommendation,
 	}
-	for i, entry := range result.Entries {
-		if i < options.Limit {
-			retention.RetainedKeys = append(retention.RetainedKeys, entry.Key)
-			continue
-		}
-		retention.CandidateKeys = append(retention.CandidateKeys, entry.Key)
-	}
-	if len(retention.CandidateKeys) > 0 {
-		retention.Recommendation = fmt.Sprintf("prune %d history checkpoint(s) beyond retention-limit=%d after reviewing dry-run output", len(retention.CandidateKeys), options.Limit)
-		result.Warnings = append(result.Warnings, fmt.Sprintf("history_retention_candidates:%d", len(retention.CandidateKeys)))
+	if decision.Warning != "" {
+		result.Warnings = append(result.Warnings, decision.Warning)
 	}
 	if options.PruneRequested && options.Confirm {
 		for _, key := range retention.CandidateKeys {
@@ -38,7 +37,7 @@ func ApplySelfAugmentHistoryRetention(result *SelfAugmentHistoryResult, options 
 			}
 			retention.DeletedKeys = append(retention.DeletedKeys, key)
 		}
-		retention.Recommendation = fmt.Sprintf("deleted %d history checkpoint(s) beyond retention-limit=%d", len(retention.DeletedKeys), options.Limit)
+		retention.Recommendation = selfaugment.DeletedHistoryRecommendation(len(retention.DeletedKeys), options.Limit)
 	}
 	result.Retention = retention
 	return nil

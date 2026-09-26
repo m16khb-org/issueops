@@ -2,8 +2,6 @@ package historycompare
 
 import "issueops/cmd/issueops/selfworkflow/model"
 
-const selfVerifyStepBudgetMinRegressionMS int64 = 25
-
 type SelfAugmentCompareResult = model.SelfAugmentCompareResult
 type SelfAugmentHistoryEntry = model.SelfAugmentHistoryEntry
 type SelfAugmentHistoryResult = model.SelfAugmentHistoryResult

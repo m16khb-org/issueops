@@ -3411,8 +3411,7 @@
       "owner": "inbound",
       "task": "T17",
       "symbols": [
-        "func SelfVerificationCandidateCatalog",
-        "func selfVerificationCandidate"
+        "func SelfVerificationCandidateCatalog"
       ]
     },
     {
@@ -6694,14 +6693,7 @@
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "func EvaluateIssueOpsAutoresearchGate",
-        "func compareIssueOpsDimensionRegressions",
-        "func isKnownIssueOpsBenchmarkDimension",
-        "func issueOpsDimensionMinimums",
-        "func issueOpsEditSurfaceViolations",
-        "func issueOpsPathAllowed",
-        "func issueOpsTargetDimensionRegressions",
-        "func normalizeIssueOpsPath"
+        "func EvaluateIssueOpsAutoresearchGate"
       ]
     },
     {
@@ -6727,25 +6719,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/benchmark/issueops_benchmark_quality.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func detectIssueOpsCriticalFailures",
-        "func hasExcessiveEmoji",
-        "func hasIssueOpsGuidelineRef",
-        "func implementationInWorktree",
-        "func isEmojiRune",
-        "func issueOpsAPIDocGateEvidenceComplete",
-        "func issueOpsCompletionHygieneComplete",
-        "func issueOpsDomainContractEvidenceComplete",
-        "func issueOpsLiveEvidenceMatrixComplete",
-        "func issueOpsReviewFeedbackEvidenceComplete",
-        "func reviewPromptIsBounded",
-        "func workerPromptHasContextGate"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/benchmark/issueops_benchmark_run.go",
       "owner": "adapter",
       "task": "T17",
@@ -6764,8 +6737,7 @@
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "func ScoreIssueOpsBenchmarkArtifact",
-        "func issueOpsDimensionNotApplicable"
+        "func ScoreIssueOpsBenchmarkArtifact"
       ]
     },
     {
@@ -6793,21 +6765,7 @@
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "func hasStructuredClause",
         "func issueOpsPioneerSkillEvidenceComplete"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_quality_checks.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func detectIssueOpsQualityCriticalFailures",
-        "func issueOpsChildTaskDependencyClassificationComplete",
-        "func issueOpsDraftIssueCompletionEvidenceComplete",
-        "func issueOpsHierarchyEvidenceComplete",
-        "func issueOpsLabelDecisionEvidenceComplete",
-        "func issueOpsReviewAgentThreadEvidenceComplete"
       ]
     },
     {
@@ -6817,10 +6775,6 @@
       "symbols": [
         "func ComputeReliability",
         "func ScoreSpread",
-        "func binomCoeff",
-        "func binomTailGE",
-        "func binomTailLE",
-        "func bisectProb",
         "func clopperPearson",
         "func passPowK",
         "func round4"
@@ -6840,9 +6794,7 @@
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "func ConsensusJudgeVerdict",
-        "func medianFloat",
-        "func sampleVariance"
+        "func ConsensusJudgeVerdict"
       ]
     },
     {
@@ -6850,11 +6802,7 @@
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "func containsAllFold",
-        "func containsAnyFold",
-        "func containsFold",
-        "func containsHangul",
-        "func hasAllIssueOpsConcepts"
+        "func containsFold"
       ]
     },
     {
@@ -12327,6 +12275,40 @@
       ]
     },
     {
+      "path": "internal/contract/issueopsbenchmark/benchmark_run_types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type ConsensusVerdict",
+        "type FixtureReliability",
+        "type IssueOpsAutoresearchCandidate",
+        "type IssueOpsAutoresearchGateRequest",
+        "type IssueOpsAutoresearchGateResult",
+        "type IssueOpsBenchmarkCompareResult",
+        "type IssueOpsBenchmarkRunRequest",
+        "type IssueOpsBenchmarkRunResult",
+        "type IssueOpsBenchmarkScore",
+        "type IssueOpsDimensionScore",
+        "type IssueOpsJudgeMap",
+        "type IssueOpsLLMJudgeRequest",
+        "type JudgeSample",
+        "type PassPowKPoint",
+        "type RecordedOutcomes",
+        "type RecordedRun",
+        "type ReliabilityReport"
+      ]
+    },
+    {
+      "path": "internal/contract/issueopsbenchmark/benchmark_types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type IssueOpsBenchmarkArtifact",
+        "type IssueOpsBenchmarkFixture",
+        "type SkillRouting"
+      ]
+    },
+    {
       "path": "internal/contract/issueopsbodysync/bodysync.go",
       "owner": "contract",
       "task": "T02",
@@ -12898,6 +12880,46 @@
       ]
     },
     {
+      "path": "internal/contract/selfaugment/history_summary_types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfAugmentSlowStep",
+        "type SelfAugmentStepDurationStat",
+        "type SelfAugmentSummary"
+      ]
+    },
+    {
+      "path": "internal/contract/selfaugment/self_augment_compare_types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfAugmentCompareResult",
+        "type SelfAugmentSlowStepRegression",
+        "type SelfAugmentStepBudgetRegression"
+      ]
+    },
+    {
+      "path": "internal/contract/selfaugment/self_augment_history_types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfAugmentHistoryEntry",
+        "type SelfAugmentHistoryResult",
+        "type SelfAugmentHistoryRetention",
+        "type SelfAugmentHistoryRetentionOptions",
+        "type SelfAugmentHistorySkipped"
+      ]
+    },
+    {
+      "path": "internal/contract/selfaugment/self_augment_state_types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfAugmentStateSnapshot"
+      ]
+    },
+    {
       "path": "internal/contract/selfaugment/types.go",
       "owner": "contract",
       "task": "T02",
@@ -12905,6 +12927,14 @@
         "type SelfAugmentCandidate",
         "type SelfAugmentGoal",
         "type SelfAugmentRepoSignals"
+      ]
+    },
+    {
+      "path": "internal/contract/selfverify/candidate.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfVerificationCandidate"
       ]
     },
     {
@@ -13610,6 +13640,152 @@
       "symbols": [
         "func AuthorizeExecutionMutation",
         "type SamePath"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/compare.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CompareRuns"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/dimensions.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Dimensions"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/gate.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func EvaluateAutoresearchGate",
+        "func compareIssueOpsDimensionRegressions",
+        "func isKnownIssueOpsBenchmarkDimension",
+        "func issueOpsDimensionMinimums",
+        "func issueOpsEditSurfaceViolations",
+        "func issueOpsPathAllowed",
+        "func issueOpsTargetDimensionRegressions",
+        "func normalizeIssueOpsPath"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/issueops_benchmark_quality.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func detectIssueOpsCriticalFailures",
+        "func hasExcessiveEmoji",
+        "func hasIssueOpsGuidelineRef",
+        "func implementationInWorktree",
+        "func isEmojiRune",
+        "func issueOpsAPIDocGateEvidenceComplete",
+        "func issueOpsCompletionHygieneComplete",
+        "func issueOpsDomainContractEvidenceComplete",
+        "func issueOpsLiveEvidenceMatrixComplete",
+        "func issueOpsReviewFeedbackEvidenceComplete",
+        "func reviewPromptIsBounded",
+        "func workerPromptHasContextGate"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/issueops_benchmark_score.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ScoreArtifact",
+        "func issueOpsDimensionNotApplicable"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/issueops_benchmark_summary.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func SummarizeDimensionScores",
+        "func SummarizeRunScores"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/issueops_pioneer_checks.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PioneerSkillEvidenceComplete",
+        "func hasStructuredClause"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/issueops_quality_checks.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func detectIssueOpsQualityCriticalFailures",
+        "func issueOpsChildTaskDependencyClassificationComplete",
+        "func issueOpsDraftIssueCompletionEvidenceComplete",
+        "func issueOpsHierarchyEvidenceComplete",
+        "func issueOpsLabelDecisionEvidenceComplete",
+        "func issueOpsReviewAgentThreadEvidenceComplete"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/issueops_reliability.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ClopperPearson",
+        "func ComputeReliability",
+        "func PassPowK",
+        "func Round4",
+        "func ScoreSpread",
+        "func binomCoeff",
+        "func binomTailGE",
+        "func binomTailLE",
+        "func bisectProb"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/issueops_self_consistency.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ConsensusJudgeVerdict",
+        "func medianFloat",
+        "func sampleVariance"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/issueops_text_match.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ContainsFold",
+        "func containsAllFold",
+        "func containsAnyFold",
+        "func containsHangul",
+        "func hasAllIssueOpsConcepts"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/judge.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func JudgeDownwardOverrideRate",
+        "func ValidateJudgeMetadata"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/run.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func FinalizeRun",
+        "func MergeScoreWithJudge"
       ]
     },
     {
@@ -14845,6 +15021,45 @@
       ]
     },
     {
+      "path": "internal/domain/selfaugment/history_compare.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CompareSnapshots",
+        "func NewCompareResult"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/history_order.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ParseHistoryTimestamp",
+        "func SortHistoryEntries"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/history_regressions.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CompareSlowestStepRegressions",
+        "func CompareStepBudgetRegressions",
+        "func MissingStrings"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/history_retention.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DeletedHistoryRecommendation",
+        "func PlanHistoryRetention",
+        "func ValidateHistoryRetention",
+        "type HistoryRetentionDecision"
+      ]
+    },
+    {
       "path": "internal/domain/selfaugment/lesson.go",
       "owner": "domain",
       "task": "T20",
@@ -14865,6 +15080,47 @@
         "func ScoreBool",
         "func SelectedCandidate",
         "func SelectedCandidateID"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/step_stats.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BuildStepDurationStats",
+        "func MaxSlowStepDurationByLabel",
+        "func StepDurationStatByLabel",
+        "func StepDurationStatsForCompare"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/summary.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func FinalizeSummary",
+        "func SummarizeSteps",
+        "type SummaryRun",
+        "type SummaryStep"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/candidate.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CandidateIDsByStatus",
+        "func SelectedCandidate",
+        "func SelectedCandidateID"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/candidate_catalog.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CandidateCatalog",
+        "func candidate"
       ]
     },
     {
@@ -14897,6 +15153,24 @@
         "type GoalDefinition",
         "type GoalScore",
         "type Run"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/llm_config.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func NormalizeLLMEvalMode",
+        "func ParseLLMEvalEnv",
+        "func ValidateLLMEvalMode"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/llm_gate.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func LLMEvalGateReasons"
       ]
     },
     {

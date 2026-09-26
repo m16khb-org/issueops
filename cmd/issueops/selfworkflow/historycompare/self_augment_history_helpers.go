@@ -1,21 +1,13 @@
 package historycompare
 
 import (
-	"strings"
 	"time"
+
+	"issueops/internal/domain/selfaugment"
 )
 
 func ParseSelfAugmentTimestamp(value string) (time.Time, bool) {
-	if strings.TrimSpace(value) == "" {
-		return time.Time{}, false
-	}
-	if parsed, err := time.Parse(time.RFC3339Nano, value); err == nil {
-		return parsed, true
-	}
-	if parsed, err := time.Parse(time.RFC3339, value); err == nil {
-		return parsed, true
-	}
-	return time.Time{}, false
+	return selfaugment.ParseHistoryTimestamp(value)
 }
 
 func NonNilStringSlice(items []string) []string {

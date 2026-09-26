@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"issueops/cmd/issueops/selfworkflow/stateio"
+	"issueops/internal/domain/selfaugment"
 )
 
 func SelfAugmentHistory(prefix string, limit int, retentionOptions ...SelfAugmentHistoryRetentionOptions) (SelfAugmentHistoryResult, error) {
@@ -26,14 +27,8 @@ func SelfAugmentHistory(prefix string, limit int, retentionOptions ...SelfAugmen
 	if len(retentionOptions) > 0 {
 		retention = retentionOptions[0]
 	}
-	if retention.Limit < 0 {
-		return result, fmt.Errorf("retention-limit must be non-negative")
-	}
-	if retention.Confirm && !retention.PruneRequested {
-		return result, fmt.Errorf("confirm requires --prune-retention")
-	}
-	if retention.PruneRequested && retention.Limit <= 0 {
-		return result, fmt.Errorf("prune-retention requires a positive --retention-limit")
+	if err := selfaugment.ValidateHistoryRetention(retention.Limit, retention.PruneRequested, retention.Confirm); err != nil {
+		return result, err
 	}
 	list, err := StateList()
 	if err != nil {
@@ -80,25 +75,7 @@ func SelfAugmentHistory(prefix string, limit int, retentionOptions ...SelfAugmen
 			SlowestSteps: NonNilSlowStepSlice(snapshot.Summary.SlowestSteps),
 		})
 	}
-	sort.Slice(result.Entries, func(i, j int) bool {
-		left, leftOK := ParseSelfAugmentTimestamp(result.Entries[i].GeneratedAt)
-		right, rightOK := ParseSelfAugmentTimestamp(result.Entries[j].GeneratedAt)
-		if leftOK != rightOK {
-			return leftOK
-		}
-		if leftOK && !left.Equal(right) {
-			return left.After(right)
-		}
-		leftUpdated, leftUpdatedOK := ParseSelfAugmentTimestamp(result.Entries[i].UpdatedAt)
-		rightUpdated, rightUpdatedOK := ParseSelfAugmentTimestamp(result.Entries[j].UpdatedAt)
-		if leftUpdatedOK != rightUpdatedOK {
-			return leftUpdatedOK
-		}
-		if leftUpdatedOK && !leftUpdated.Equal(rightUpdated) {
-			return leftUpdated.After(rightUpdated)
-		}
-		return result.Entries[i].Key < result.Entries[j].Key
-	})
+	selfaugment.SortHistoryEntries(result.Entries)
 	sort.Slice(result.Skipped, func(i, j int) bool { return result.Skipped[i].Key < result.Skipped[j].Key })
 	sort.Strings(result.Warnings)
 	result.TotalMatches = len(result.Entries)

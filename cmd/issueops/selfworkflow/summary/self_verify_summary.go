@@ -1,10 +1,9 @@
 package summary
 
 import (
-	"sort"
-
 	"issueops/cmd/issueops/selfworkflow/rerun"
 	failurecausecontract "issueops/internal/contract/failurecause"
+	selfaugmentdomain "issueops/internal/domain/selfaugment"
 )
 
 func SummarizeSelfAugment(result SelfAugmentResult) SelfAugmentSummary {
@@ -12,65 +11,17 @@ func SummarizeSelfAugment(result SelfAugmentResult) SelfAugmentSummary {
 }
 
 func SummarizeSelfVerification(result SelfAugmentResult, targetScore float64) SelfAugmentSummary {
-	summary := SelfAugmentSummary{
-		TotalRuns:            len(result.Runs),
-		TargetScore:          targetScore,
-		Contract:             SelfVerificationContractValue(),
-		StepLabels:           []string{},
-		SlowestSteps:         []SelfAugmentSlowStep{},
-		StepDurationStats:    []SelfAugmentStepDurationStat{},
-		FailureCauseEvidence: []failurecausecontract.Evidence{},
-	}
-	seenLabels := map[string]bool{}
-	durationsByLabel := map[string][]int64{}
+	runs := make([]selfaugmentdomain.SummaryRun, 0, len(result.Runs))
 	for _, run := range result.Runs {
+		steps := make([]selfaugmentdomain.SummaryStep, 0, len(run.Steps))
 		for _, step := range run.Steps {
-			summary.TotalSteps++
-			if step.OK {
-				summary.PassedSteps++
-			} else {
-				summary.FailedSteps++
-				if summary.FailedStep == "" {
-					summary.FailedIteration = run.Iteration
-					summary.FailedSeed = run.Seed
-					summary.FailedStep = step.Label
-				}
-			}
-			if !seenLabels[step.Label] {
-				seenLabels[step.Label] = true
-				summary.StepLabels = append(summary.StepLabels, step.Label)
-			}
-			summary.SlowestSteps = append(summary.SlowestSteps, SelfAugmentSlowStep{
-				Iteration:  run.Iteration,
-				Seed:       run.Seed,
-				Label:      step.Label,
-				DurationMS: step.DurationMS,
-			})
-			durationsByLabel[step.Label] = append(durationsByLabel[step.Label], step.DurationMS)
+			steps = append(steps, selfaugmentdomain.SummaryStep{Label: step.Label, OK: step.OK, DurationMS: step.DurationMS})
 		}
+		runs = append(runs, selfaugmentdomain.SummaryRun{Iteration: run.Iteration, Seed: run.Seed, Steps: steps})
 	}
-	sort.Slice(summary.SlowestSteps, func(i, j int) bool {
-		if summary.SlowestSteps[i].DurationMS != summary.SlowestSteps[j].DurationMS {
-			return summary.SlowestSteps[i].DurationMS > summary.SlowestSteps[j].DurationMS
-		}
-		if summary.SlowestSteps[i].Iteration != summary.SlowestSteps[j].Iteration {
-			return summary.SlowestSteps[i].Iteration < summary.SlowestSteps[j].Iteration
-		}
-		return summary.SlowestSteps[i].Label < summary.SlowestSteps[j].Label
-	})
-	if len(summary.SlowestSteps) > 5 {
-		summary.SlowestSteps = summary.SlowestSteps[:5]
-	}
-	if summary.StepLabels == nil {
-		summary.StepLabels = []string{}
-	}
-	if summary.SlowestSteps == nil {
-		summary.SlowestSteps = []SelfAugmentSlowStep{}
-	}
-	summary.StepDurationStats = BuildStepDurationStats(durationsByLabel)
-	if summary.StepDurationStats == nil {
-		summary.StepDurationStats = []SelfAugmentStepDurationStat{}
-	}
+	summary := selfaugmentdomain.SummarizeSteps(runs, targetScore)
+	summary.Contract = SelfVerificationContractValue()
+	summary.FailureCauseEvidence = []failurecausecontract.Evidence{}
 	summary.GoalScores = MapGoalScores(result, targetScore)
 	summary.Coverage, summary.CoverageGaps = SelfVerificationCoverageForLabels(summary.StepLabels)
 	if summary.FailedStep != "" {
@@ -87,18 +38,6 @@ func SummarizeSelfVerification(result SelfAugmentResult, targetScore float64) Se
 	}
 	cause := Classify(summary.FailedSteps > 0, evidence)
 	summary.FailureCause, summary.FailureCauseReason, summary.FailureCauseEvidence = cause.Cause, cause.Reason, cause.Evidence
-	summary.MinimumGoalScore = 100
-	if len(summary.GoalScores) == 0 {
-		summary.MinimumGoalScore = 0
-	}
-	summary.TerminationEligible = result.OK
-	for _, goal := range summary.GoalScores {
-		if goal.Score < summary.MinimumGoalScore {
-			summary.MinimumGoalScore = goal.Score
-		}
-		if !goal.Passed {
-			summary.TerminationEligible = false
-		}
-	}
+	selfaugmentdomain.FinalizeSummary(&summary, result.OK)
 	return summary
 }

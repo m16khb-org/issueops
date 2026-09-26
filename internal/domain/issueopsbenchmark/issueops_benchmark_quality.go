@@ -1,12 +1,13 @@
-package benchmark
+package issueopsbenchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-	"os"
+	"path/filepath"
 	"strings"
+
+	issueopscontract "issueops/internal/contract/issueopsbenchmark"
 )
 
-func detectIssueOpsCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact) []string {
+func detectIssueOpsCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) []string {
 	var failures []string
 	for _, rule := range fixture.CriticalFailures {
 		ruleText := strings.ToLower(rule)
@@ -39,13 +40,13 @@ func detectIssueOpsCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFi
 			failures = append(failures, rule)
 		}
 	}
-	return append(failures, detectIssueOpsQualityCriticalFailures(fixture, artifact)...)
+	return append(failures, detectIssueOpsQualityCriticalFailures(fixture, artifact, routingComplete)...)
 }
 
 func implementationInWorktree(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
 	worktreePath := strings.TrimSpace(artifact.WorktreePath)
 	location := strings.TrimSpace(artifact.ImplementationLocation)
-	return worktreePath != "" && location != "" && (location == worktreePath || strings.HasPrefix(location, worktreePath+string(os.PathSeparator)))
+	return worktreePath != "" && location != "" && (location == worktreePath || strings.HasPrefix(location, worktreePath+string(filepath.Separator)))
 }
 
 func issueOpsDomainContractEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
@@ -78,7 +79,7 @@ func issueOpsCompletionHygieneComplete(artifact issueopscontract.IssueOpsBenchma
 func workerPromptHasContextGate(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
 	prompt := artifact.SubagentPrompts
 	return containsAllFold(prompt, "pwd", "branch", "head") &&
-		(containsFold(prompt, "worktree") || strings.TrimSpace(artifact.WorktreePath) != "") &&
+		(ContainsFold(prompt, "worktree") || strings.TrimSpace(artifact.WorktreePath) != "") &&
 		containsAnyFold(prompt, "stop", "halt", "중단")
 }
 
@@ -124,9 +125,9 @@ var issueOpsPRSectionConcepts = [][]string{
 
 func hasIssueOpsGuidelineRef(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
 	const guideline = "skills/issueops-create-issue/SKILL.md; skills/issueops-create-pr/SKILL.md"
-	return containsFold(artifact.GuidelineRef, guideline) ||
-		containsFold(artifact.IssueDraft, guideline) ||
-		containsFold(artifact.PRDraft, guideline)
+	return ContainsFold(artifact.GuidelineRef, guideline) ||
+		ContainsFold(artifact.IssueDraft, guideline) ||
+		ContainsFold(artifact.PRDraft, guideline)
 }
 
 func hasExcessiveEmoji(s string) bool {

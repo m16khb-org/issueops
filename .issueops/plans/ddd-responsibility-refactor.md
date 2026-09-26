@@ -324,7 +324,7 @@
 
 ### Task 17: 자기 검증·증강·IssueOps benchmark 정책 이전 (T17)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T16. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/selfworkflow/{summary,augmentplan,augmentcatalog,historycompare,candidateexport,llmeval}/`; `internal/adapter/issueops/benchmark/`; `internal/domain/qualitycatalog/`
 - **변경/신규 파일:** 신규 contract/domain `selfverify`, `selfaugment`, `issueopsbenchmark`; 해당 application service와 state/judge adapters. 공용 순수 수치 helper는 실제 owner에 둔다.

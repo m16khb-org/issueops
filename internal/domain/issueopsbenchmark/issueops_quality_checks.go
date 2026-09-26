@@ -1,8 +1,10 @@
-package benchmark
+package issueopsbenchmark
 
-import issueopscontract "issueops/internal/contract/issueops"
+import (
+	"strings"
 
-import "strings"
+	issueopscontract "issueops/internal/contract/issueopsbenchmark"
+)
 
 func issueOpsLabelDecisionEvidenceComplete(artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
 	text := artifact.IssueDraft + "\n" + artifact.ProblemSummary
@@ -107,7 +109,7 @@ func issueOpsReviewAgentThreadEvidenceComplete(artifact issueopscontract.IssueOp
 		containsAnyFold(text, "resolveReviewThread", "resolved=true")
 }
 
-func detectIssueOpsQualityCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact) []string {
+func detectIssueOpsQualityCriticalFailures(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact, routingComplete bool) []string {
 	var failures []string
 	for _, rule := range fixture.CriticalFailures {
 		ruleText := strings.ToLower(rule)
@@ -120,9 +122,9 @@ func detectIssueOpsQualityCriticalFailures(fixture issueopscontract.IssueOpsBenc
 			failures = append(failures, rule)
 		case strings.Contains(ruleText, "review-agent threads") && !issueOpsReviewAgentThreadEvidenceComplete(artifact):
 			failures = append(failures, rule)
-		case strings.Contains(ruleText, "skips pioneer method") && !issueOpsPioneerSkillEvidenceComplete(fixture, artifact):
+		case strings.Contains(ruleText, "skips pioneer method") && !PioneerSkillEvidenceComplete(fixture, artifact):
 			failures = append(failures, rule)
-		case strings.Contains(ruleText, "skips expected routing") && len(fixture.ExpectedRouting) > 0 && !issueOpsSkillRoutingFidelityComplete(fixture, artifact):
+		case strings.Contains(ruleText, "skips expected routing") && len(fixture.ExpectedRouting) > 0 && !routingComplete:
 			failures = append(failures, rule)
 		}
 	}

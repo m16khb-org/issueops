@@ -1,12 +1,12 @@
 package llmeval
 
 import (
-	"fmt"
 	"os"
-	"strings"
+
+	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
-const EnvName = "ISSUEOPS_SELF_VERIFY_LLM_EVAL"
+const EnvName = selfverifydomain.LLMEvalEnvName
 
 type SelfVerifyLLMEvalConfig struct {
 	Enabled bool
@@ -14,20 +14,11 @@ type SelfVerifyLLMEvalConfig struct {
 }
 
 func ValidateSelfVerifyLLMEvalMode(mode string) error {
-	switch NormalizeSelfVerifyLLMEvalMode(mode) {
-	case "advisory", "gate":
-		return nil
-	default:
-		return fmt.Errorf("llm-eval-mode must be advisory or gate")
-	}
+	return selfverifydomain.ValidateLLMEvalMode(mode)
 }
 
 func NormalizeSelfVerifyLLMEvalMode(mode string) string {
-	mode = strings.TrimSpace(strings.ToLower(mode))
-	if mode == "" {
-		return "advisory"
-	}
-	return mode
+	return selfverifydomain.NormalizeLLMEvalMode(mode)
 }
 
 func ResolveSelfVerifyLLMEvalConfig(llmEvalFlagSet bool, llmEvalFlagValue bool, llmEvalMode string, llmEvalModeFlagSet bool, lookupEnv func(string) (string, bool)) (SelfVerifyLLMEvalConfig, error) {
@@ -58,14 +49,5 @@ func ResolveSelfVerifyLLMEvalConfig(llmEvalFlagSet bool, llmEvalFlagValue bool, 
 }
 
 func ParseSelfVerifyLLMEvalEnv(value string) (bool, string, error) {
-	switch strings.TrimSpace(strings.ToLower(value)) {
-	case "", "0", "false", "no", "off", "disabled":
-		return false, "advisory", nil
-	case "1", "true", "yes", "on", "enabled", "advisory":
-		return true, "advisory", nil
-	case "gate":
-		return true, "gate", nil
-	default:
-		return false, "advisory", fmt.Errorf("%s must be off, advisory, or gate", EnvName)
-	}
+	return selfverifydomain.ParseLLMEvalEnv(value)
 }
