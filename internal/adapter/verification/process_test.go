@@ -47,3 +47,14 @@ func TestRunUnknownExecutableFails(t *testing.T) {
 		t.Fatalf("unknown executable was accepted: %+v", step)
 	}
 }
+
+func TestRunEnvPreservesLegacyOverridesAndBudget(t *testing.T) {
+	root := t.TempDir()
+	env := []string{"ISSUEOPS_VERIFICATION_TEST=overridden"}
+	legacy := commandstep.RunEnv(root, "env", time.Second, "", env, 28, "sh", "-c", "printf '%s' \"$ISSUEOPS_VERIFICATION_TEST\"; printf error >&2")
+	actual := RunEnv(root, "env", time.Second, "", env, 28, "sh", "-c", "printf '%s' \"$ISSUEOPS_VERIFICATION_TEST\"; printf error >&2")
+	legacy.DurationMS, actual.DurationMS = 0, 0
+	if !reflect.DeepEqual(actual, legacy) || !actual.OK || actual.Stdout != "overridden" {
+		t.Fatalf("adapter=%+v legacy=%+v", actual, legacy)
+	}
+}

@@ -10693,7 +10693,8 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func Run"
+        "func Run",
+        "func RunEnv"
       ]
     },
     {
@@ -15228,6 +15229,15 @@
         "func CoverageDefinitions",
         "func CoverageForLabels",
         "func GoalDefinitions"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/env.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func EnvEntryKey",
+        "func MergeEnvOverrides"
       ]
     },
     {

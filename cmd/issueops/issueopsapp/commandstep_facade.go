@@ -5,6 +5,7 @@ import (
 
 	"issueops/cmd/issueops/commandstep"
 	"issueops/internal/adapter/verification"
+	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
 type StepResult = commandstep.StepResult
@@ -14,19 +15,19 @@ func runCommandStep(dir, label string, timeout time.Duration, stdin string, name
 }
 
 func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
-	return commandstep.RunEnv(dir, label, timeout, stdin, env, selfVerifyCommandOutputBudgetBytes, name, args...)
+	return verification.RunEnv(dir, label, timeout, stdin, env, selfVerifyCommandOutputBudgetBytes, name, args...)
 }
 
 func runCommandStepEnvWithBudget(dir, label string, timeout time.Duration, stdin string, env []string, outputBudget int, name string, args ...string) StepResult {
-	return commandstep.RunEnvWithBudget(dir, label, timeout, stdin, env, outputBudget, name, args...)
+	return verification.RunEnv(dir, label, timeout, stdin, env, outputBudget, name, args...)
 }
 
 func mergeEnvOverrides(base []string, overrides []string) []string {
-	return commandstep.MergeEnvOverrides(base, overrides)
+	return selfverifydomain.MergeEnvOverrides(base, overrides)
 }
 
 func envEntryKey(entry string) (string, bool) {
-	return commandstep.EnvEntryKey(entry)
+	return selfverifydomain.EnvEntryKey(entry)
 }
 
 func budgetCommandOutput(s string, budget int) (string, bool, int) {
