@@ -12,14 +12,7 @@ func MapGoalScores(result SelfAugmentResult, targetScore float64) []SelfVerifica
 			Name: definition.Name, KoreanName: definition.KoreanName, Labels: definition.Labels,
 		})
 	}
-	runs := make([]selfverifydomain.Run, 0, len(result.Runs))
-	for _, run := range result.Runs {
-		checks := make([]selfverifydomain.Check, 0, len(run.Steps))
-		for _, step := range run.Steps {
-			checks = append(checks, selfverifydomain.Check{Label: step.Label, OK: step.OK})
-		}
-		runs = append(runs, selfverifydomain.Run{Iteration: run.Iteration, Checks: checks})
-	}
+	runs := projectRuns(result)
 	domainScores := selfverifydomain.ScoreGoals(goals, runs, result.Iterations, targetScore)
 	scores := make([]SelfVerificationGoalScore, 0, len(domainScores))
 	for _, score := range domainScores {
@@ -30,4 +23,16 @@ func MapGoalScores(result SelfAugmentResult, targetScore float64) []SelfVerifica
 		})
 	}
 	return scores
+}
+
+func projectRuns(result SelfAugmentResult) []selfverifydomain.Run {
+	runs := make([]selfverifydomain.Run, 0, len(result.Runs))
+	for _, run := range result.Runs {
+		checks := make([]selfverifydomain.Check, 0, len(run.Steps))
+		for _, step := range run.Steps {
+			checks = append(checks, selfverifydomain.Check{Label: step.Label, OK: step.OK})
+		}
+		runs = append(runs, selfverifydomain.Run{Iteration: run.Iteration, Seed: run.Seed, Checks: checks})
+	}
+	return runs
 }

@@ -2,32 +2,17 @@ package augmentplan
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"time"
 
-	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/model"
+	"issueops/internal/domain/selfaugment"
 )
 
-const (
-	selfAugmentLessonKeyPrefix = "self-augment-lesson-"
-	// Reflexion lessons are advisory signals, not judgements: repeated severe
-	// failures demote a candidate's curriculum rank so the planner rotates to
-	// the next best option, but they never auto-fail or remove the candidate.
-	lessonPenaltyThreshold = 2
-	lessonPenaltyPerSevere = 15.0
-	recentLessonWindow     = 30 * 24 * time.Hour
-)
+const selfAugmentLessonKeyPrefix = "self-augment-lesson-"
 
 func severeLessonSeverity(severity string) bool {
-	// "error" is the severe tier of the CLI convention (info|warning|error);
-	// major/critical/blocker cover free-text MCP callers.
-	switch strings.ToLower(strings.TrimSpace(severity)) {
-	case "error", "major", "critical", "blocker":
-		return true
-	}
-	return false
+	return selfaugment.SevereLessonSeverity(severity)
 }
 
 func severeLessonCounts() (map[string]int, []string) {
@@ -67,35 +52,9 @@ func severeLessonCountsAt(now time.Time) (map[string]int, []string) {
 }
 
 func recentLesson(generatedAt string, now time.Time) bool {
-	t, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(generatedAt))
-	if err != nil {
-		return false
-	}
-	if t.After(now) {
-		return true
-	}
-	return now.Sub(t) <= recentLessonWindow
+	return selfaugment.RecentLesson(generatedAt, now)
 }
 
 func applyLessonPenalties(candidates []model.SelfAugmentCandidate, severeCounts map[string]int) []string {
-	warnings := []string{}
-	for i := range candidates {
-		if candidates[i].Status != augmentcatalog.SelfAugmentCandidateStatusOpen {
-			continue
-		}
-		count := severeCounts[candidates[i].ID]
-		if count < lessonPenaltyThreshold {
-			continue
-		}
-		before := candidates[i].Score
-		after := before - float64(count)*lessonPenaltyPerSevere
-		if after < 0 {
-			after = 0
-		}
-		candidates[i].Score = after
-		warnings = append(warnings, fmt.Sprintf(
-			"lesson penalty: candidate %q score %.1f -> %.1f after %d severe lessons (advisory demotion; candidate stays open)",
-			candidates[i].ID, before, after, count))
-	}
-	return warnings
+	return selfaugment.ApplyLessonPenalties(candidates, severeCounts)
 }

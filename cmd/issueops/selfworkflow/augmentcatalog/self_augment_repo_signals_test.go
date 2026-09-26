@@ -145,11 +145,11 @@ func TestWorkerStuckRunningDetectionIsSatisfiedByCoreAndCLI(t *testing.T) {
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "worker", "store.go"), `package worker
 
 func DetectStuckWorkerJobs() (WorkerListResult, error) {
-	current.Status = WorkerStatusFailed
 	current.SafetyNotice = "worker job was stuck in running status with dead PID; auto-marked as failed"
 	return result, nil
 }
 `)
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "worker", "lifecycle.go"), "package worker\nconst WorkerStatusFailed = \"failed\"\n")
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "worker", "worker_test.go"), `package worker
 
 func TestWorkerDetectStuckJobsMarksDeadPIDAsFailed() {}

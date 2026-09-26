@@ -1,13 +1,14 @@
 package augmentcatalog
 
-import "issueops/cmd/issueops/selfworkflow/model"
-
-const (
-	SelfAugmentCandidateStatusOpen      = "open"
-	SelfAugmentCandidateStatusSatisfied = "already_satisfied"
+import (
+	"issueops/cmd/issueops/selfworkflow/model"
+	contract "issueops/internal/contract/selfaugment"
 )
 
-const ()
+const (
+	SelfAugmentCandidateStatusOpen      = contract.CandidateStatusOpen
+	SelfAugmentCandidateStatusSatisfied = contract.CandidateStatusSatisfied
+)
 
 type SelfAugmentCandidate = model.SelfAugmentCandidate
 type SelfAugmentGoal = model.SelfAugmentGoal

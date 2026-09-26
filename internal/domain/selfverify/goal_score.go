@@ -1,10 +1,8 @@
 package selfverify
 
-type GoalDefinition struct {
-	Name       string
-	KoreanName string
-	Labels     []string
-}
+import contract "issueops/internal/contract/selfverify"
+
+type GoalDefinition = contract.SelfVerificationGoalDefinition
 
 type Check struct {
 	Label string
@@ -13,19 +11,11 @@ type Check struct {
 
 type Run struct {
 	Iteration int
+	Seed      int64
 	Checks    []Check
 }
 
-type GoalScore struct {
-	Name           string
-	KoreanName     string
-	Score          float64
-	TargetScore    float64
-	Passed         bool
-	EvidenceLabels []string
-	PassedChecks   int
-	TotalChecks    int
-}
+type GoalScore = contract.SelfVerificationGoalScore
 
 func ScoreGoals(goals []GoalDefinition, runs []Run, iterations int, targetScore float64) []GoalScore {
 	scores := make([]GoalScore, 0, len(goals))

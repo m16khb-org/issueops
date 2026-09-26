@@ -4,32 +4,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	domain "issueops/internal/domain/selfaugment"
 )
 
-func ScoreBool(ok bool) float64 {
-	if ok {
-		return 100
-	}
-	return 0
-}
-
-func AllSelfAugmentGoalsPassed(goals []SelfAugmentGoal) bool {
-	if len(goals) == 0 {
-		return false
-	}
-	for _, goal := range goals {
-		if !goal.Passed {
-			return false
-		}
-	}
-	return true
-}
-
+func ScoreBool(ok bool) float64                              { return domain.ScoreBool(ok) }
+func AllSelfAugmentGoalsPassed(goals []SelfAugmentGoal) bool { return domain.AllGoalsPassed(goals) }
 func SelectedCandidateID(candidate *SelfAugmentCandidate) string {
-	if candidate == nil {
-		return ""
-	}
-	return candidate.ID
+	return domain.SelectedCandidateID(candidate)
 }
 
 func DocsContainTerm(root, term string) bool {
@@ -73,24 +55,7 @@ func DirContainsTerm(root, relDir, term string) bool {
 	return false
 }
 
-func SelectGeniusFormulas(text string) []string {
-	if strings.TrimSpace(text) == "" {
-		return []string{}
-	}
-	formulas := []string{
-		"문제 재정의 알고리즘",
-		"혁신적 솔루션 생성 공식",
-		"사고의 진화 방정식",
-		"복잡성 해결 매트릭스",
-	}
-	selected := []string{}
-	for _, formula := range formulas {
-		if strings.Contains(text, formula) {
-			selected = append(selected, formula)
-		}
-	}
-	return selected
-}
+func SelectGeniusFormulas(text string) []string { return domain.SelectGeniusFormulas(text) }
 
 func SelfAugmentResearchInfluences() []SelfAugmentInfluence {
 	return []SelfAugmentInfluence{

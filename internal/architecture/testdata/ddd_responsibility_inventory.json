@@ -3257,10 +3257,7 @@
       "task": "T17",
       "symbols": [
         "func MarkSatisfiedSelfAugmentCandidate",
-        "func SelfAugmentCandidateScore",
-        "func candidateSatisfactionRules",
-        "func evidenceWhen",
-        "type candidateSatisfactionRule"
+        "func SelfAugmentCandidateScore"
       ]
     },
     {
@@ -4125,7 +4122,8 @@
       "owner": "inbound",
       "task": "T17",
       "symbols": [
-        "func MapGoalScores"
+        "func MapGoalScores",
+        "func projectRuns"
       ]
     },
     {
@@ -11632,6 +11630,14 @@
       ]
     },
     {
+      "path": "internal/application/selfaugment/candidates.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Candidates"
+      ]
+    },
+    {
       "path": "internal/application/state/doctor.go",
       "owner": "application",
       "task": "T20",
@@ -12868,6 +12874,14 @@
       ]
     },
     {
+      "path": "internal/contract/qualitycatalog/verification_kind.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type VerificationKind"
+      ]
+    },
+    {
       "path": "internal/contract/riskqa/paths.go",
       "owner": "contract",
       "task": "T16",
@@ -12881,6 +12895,29 @@
       "task": "T16",
       "symbols": [
         "type RiskQATierPlan"
+      ]
+    },
+    {
+      "path": "internal/contract/selfaugment/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfAugmentCandidate",
+        "type SelfAugmentGoal",
+        "type SelfAugmentRepoSignals"
+      ]
+    },
+    {
+      "path": "internal/contract/selfverify/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfVerificationContract",
+        "type SelfVerificationCoverage",
+        "type SelfVerificationCoverageDefinition",
+        "type SelfVerificationFailureCluster",
+        "type SelfVerificationGoalDefinition",
+        "type SelfVerificationGoalScore"
       ]
     },
     {
@@ -14777,6 +14814,77 @@
       "task": "T20",
       "symbols": [
         "func Contains"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/candidate.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CandidateScore",
+        "func MarkSatisfiedCandidate",
+        "func candidateSatisfactionRules",
+        "func evidenceWhen",
+        "type candidateSatisfactionRule"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/candidates.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Candidates"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/genius.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func SelectGeniusFormulas"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/lesson.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ApplyLessonPenalties",
+        "func RecentLesson",
+        "func SevereLessonSeverity"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/priority.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func AllGoalsPassed",
+        "func GoalPassed",
+        "func PrioritizeCandidates",
+        "func ScoreBool",
+        "func SelectedCandidate",
+        "func SelectedCandidateID"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/contract.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ContractValue",
+        "func CoverageDefinitions",
+        "func CoverageForLabels",
+        "func GoalDefinitions"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/failure.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ClassifyFailure",
+        "func FailureClusters"
       ]
     },
     {

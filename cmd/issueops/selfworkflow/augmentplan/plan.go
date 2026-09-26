@@ -3,11 +3,11 @@ package augmentplan
 import (
 	"os"
 	"path/filepath"
-	"sort"
 	"time"
 
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/model"
+	selfaugmentdomain "issueops/internal/domain/selfaugment"
 )
 
 type Request = model.SelfAugmentPlanRequest
@@ -55,31 +55,14 @@ func Plan(req Request, root, version string) Result {
 		},
 	}
 	for i := range goals {
-		goals[i].Passed = goals[i].Score > goals[i].TargetScore
+		goals[i].Passed = selfaugmentdomain.GoalPassed(goals[i].Score, goals[i].TargetScore)
 	}
 	candidates := augmentcatalog.SelfAugmentCandidates(signals)
 	lessonCounts, lessonWarnings := severeLessonCounts()
 	warnings = append(warnings, lessonWarnings...)
 	warnings = append(warnings, applyLessonPenalties(candidates, lessonCounts)...)
-	sort.Slice(candidates, func(i, j int) bool {
-		leftOpen := candidates[i].Status == augmentcatalog.SelfAugmentCandidateStatusOpen
-		rightOpen := candidates[j].Status == augmentcatalog.SelfAugmentCandidateStatusOpen
-		if leftOpen != rightOpen {
-			return leftOpen
-		}
-		if candidates[i].Score != candidates[j].Score {
-			return candidates[i].Score > candidates[j].Score
-		}
-		return candidates[i].ID < candidates[j].ID
-	})
-	var selected *model.SelfAugmentCandidate
-	for _, candidate := range candidates {
-		if candidate.Status == augmentcatalog.SelfAugmentCandidateStatusOpen {
-			copyCandidate := candidate
-			selected = &copyCandidate
-			break
-		}
-	}
+	selfaugmentdomain.PrioritizeCandidates(candidates)
+	selected := selfaugmentdomain.SelectedCandidate(candidates)
 	return Result{
 		OK:                  true,
 		LoopKind:            "self_augmentation",
