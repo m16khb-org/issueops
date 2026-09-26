@@ -10174,6 +10174,17 @@
       ]
     },
     {
+      "path": "internal/adapter/projectdocs/project_docs_revise_effects.go",
+      "owner": "adapter",
+      "task": "T13",
+      "symbols": [
+        "func revisionFileEffects.Now",
+        "func revisionFileEffects.Read",
+        "func revisionFileEffects.Write",
+        "type revisionFileEffects"
+      ]
+    },
+    {
       "path": "internal/adapter/projectdocs/project_docs_route.go",
       "owner": "adapter",
       "task": "T13",
@@ -11338,6 +11349,15 @@
         "type Observation",
         "type Observer",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/projectdocs/revise.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Revise",
+        "type RevisionEffects"
       ]
     },
     {
@@ -14142,6 +14162,17 @@
         "func NormalizeRelPath",
         "func PrefixedKnownProjectDocNames",
         "func PrefixedProjectDocNames"
+      ]
+    },
+    {
+      "path": "internal/domain/projectdoc/revision.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PlanRevision",
+        "func ValidateRevisionInput",
+        "type RevisionInput",
+        "type RevisionPlan"
       ]
     },
     {

@@ -1,12 +1,12 @@
 package projectdocs
 
 import (
-	"fmt"
-	projectdocscontract "issueops/internal/contract/projectdocs"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
+
+	projectdocsapp "issueops/internal/application/projectdocs"
+	projectdocscontract "issueops/internal/contract/projectdocs"
 )
 
 func ReadProjectDoc(repoRoot, relPath string) (projectdocscontract.ProjectDocsReadResult, error) {
@@ -51,63 +51,6 @@ func ReviseProjectDoc(req projectdocscontract.ProjectDocsReviseRequest) (project
 	if err != nil {
 		return projectdocscontract.ProjectDocsReviseResult{}, err
 	}
-	content := strings.TrimRight(req.Content, "\n") + "\n"
-	if strings.TrimSpace(content) == "" {
-		return projectdocscontract.ProjectDocsReviseResult{}, fmt.Errorf("content is required")
-	}
-	summary := strings.TrimSpace(req.Summary)
-	if summary == "" {
-		return projectdocscontract.ProjectDocsReviseResult{}, fmt.Errorf("summary is required")
-	}
 	path := filepath.Join(root, filepath.FromSlash(rel))
-	current := ""
-	currentSHA := ""
-	if b, err := os.ReadFile(path); err == nil {
-		current = string(b)
-		currentSHA = sha256Hex(current)
-	} else if !os.IsNotExist(err) {
-		return projectdocscontract.ProjectDocsReviseResult{}, err
-	}
-	if currentSHA != "" {
-		expected := strings.TrimSpace(req.ExpectedSHA256)
-		if expected == "" {
-			return projectdocscontract.ProjectDocsReviseResult{}, fmt.Errorf("expected_sha256 is required when updating an existing project doc; call project_docs_read first")
-		}
-		if expected != currentSHA {
-			return projectdocscontract.ProjectDocsReviseResult{}, fmt.Errorf("expected_sha256 mismatch for %s: current %s", rel, currentSHA)
-		}
-	}
-	action := "create"
-	if current != "" {
-		action = plannedFileAction(path, content)
-	}
-	nextSHA := sha256Hex(content)
-	warnings := []string{}
-	if !req.Confirm {
-		warnings = append(warnings, "dry_run_only: pass confirm=true to write the updated .issueops document")
-	} else if action != "unchanged" {
-		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-			return projectdocscontract.ProjectDocsReviseResult{}, err
-		}
-		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-			return projectdocscontract.ProjectDocsReviseResult{}, err
-		}
-	}
-	return projectdocscontract.ProjectDocsReviseResult{
-		OK:            true,
-		Kind:          "project_docs_revise",
-		RepoRoot:      root,
-		RelPath:       rel,
-		Path:          path,
-		Action:        action,
-		Confirmed:     req.Confirm,
-		DryRun:        !req.Confirm,
-		GeneratedAt:   time.Now().Format(time.RFC3339),
-		CurrentSHA256: currentSHA,
-		NextSHA256:    nextSHA,
-		Bytes:         len([]byte(content)),
-		Summary:       summary,
-		Evidence:      nonEmptyStrings(req.Evidence),
-		Warnings:      warnings,
-	}, nil
+	return projectdocsapp.Revise(req, root, rel, path, revisionFileEffects{})
 }
