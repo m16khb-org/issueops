@@ -264,7 +264,7 @@
 
 ### Task 12: 업데이트·bootstrap·upstream·호스트 경계 정리 (T12)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T11. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/updatecli/update_bootstrap*.go`; `scripts/install-native.sh`; `internal/application/upstream/service.go`; `internal/adapter/{codex,claude,omo,agy,installutil}/`; `configs/`
 - **변경/신규 파일:** 신규 `internal/application/update/` 및 update process adapter; 기존 upstream vertical과 host adapter 유지. scripts는 build/activation bootstrap wrapper 역할로 제한.
