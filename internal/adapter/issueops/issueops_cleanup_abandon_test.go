@@ -729,3 +729,50 @@ func TestCleanupAbandonApplyRejectsStaleFingerprintAndMissingConfirm(t *testing.
 		t.Fatalf("record must survive a stale apply: %v", err)
 	}
 }
+
+func TestCleanupAbandonRejectsUnknownBranchInventory(t *testing.T) {
+	for _, code := range []int{2, 128, -1} {
+		t.Run(fmt.Sprint(code), func(t *testing.T) {
+			root, record := abandonTestRecord(t)
+			deps := abandonDeps(&fakeAbandonGit{}, nil)
+			deps.Git = func(_ string, args ...string) (int, string) {
+				if args[0] == "rev-parse" {
+					return code, "unavailable"
+				}
+				return 0, ""
+			}
+			preview, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, false, ""), deps)
+			if err == nil || preview.OK || preview.Fingerprint != "" {
+				t.Errorf("unknown branch authorized preview: %+v %v", preview, err)
+			}
+			got, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, true, preview.Fingerprint), deps)
+			if err == nil || got.OK || got.RecordDeleted {
+				t.Errorf("unknown branch authorized apply: %+v %v", got, err)
+			}
+			if _, err := ReadIssueOps(root, record.ID); err != nil {
+				t.Fatalf("unknown branch lost record: %v", err)
+			}
+		})
+	}
+}
+
+func TestCleanupAbandonRejectsNonDirectoryWorkspace(t *testing.T) {
+	root, record := abandonTestRecord(t)
+	path := filepath.Join(t.TempDir(), "workspace")
+	if err := os.WriteFile(path, []byte("preserve"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	mutateFinishRecord(t, root, record.ID, func(r *issueops.IssueOpsRecord) { r.WorktreePath = path })
+	deps := abandonDeps(&fakeAbandonGit{}, nil)
+	preview, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, false, ""), deps)
+	if err == nil || preview.OK || preview.Fingerprint != "" {
+		t.Errorf("file accepted as absent workspace: %+v %v", preview, err)
+	}
+	got, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, true, preview.Fingerprint), deps)
+	if err == nil || got.OK || got.RecordDeleted {
+		t.Errorf("file allowed record deletion: %+v %v", got, err)
+	}
+	if _, err := ReadIssueOps(root, record.ID); err != nil {
+		t.Fatalf("file workspace lost record: %v", err)
+	}
+}

@@ -337,7 +337,14 @@ func cleanupAbandonGates(ctx context.Context, stateRoot string, record issueops.
 		}
 	}
 	if inventory.WorktreeRoot != "" {
-		if info, err := os.Lstat(inventory.WorktreeRoot); err == nil && info.IsDir() {
+		info, err := os.Lstat(inventory.WorktreeRoot)
+		switch {
+		case os.IsNotExist(err):
+		case err != nil:
+			missing = append(missing, "worktree_observable")
+		case !info.IsDir():
+			missing = append(missing, "worktree_observable")
+		default:
 			inventory.WorktreePresent = true
 		}
 	}
@@ -362,9 +369,14 @@ func cleanupAbandonGates(ctx context.Context, stateRoot string, record issueops.
 	result.WorktreeClean = inventory.WorktreeClean
 	result.WorktreeHead = inventory.WorktreeHead
 	if inventory.Branch != "" {
-		if code, out := deps.Git(record.Repo, "rev-parse", "--verify", "--quiet", "refs/heads/"+inventory.Branch); code == 0 {
+		code, out := deps.Git(record.Repo, "rev-parse", "--verify", "--quiet", "refs/heads/"+inventory.Branch)
+		switch {
+		case code == 0 && strings.TrimSpace(out) != "":
 			inventory.BranchOID = strings.TrimSpace(out)
 			result.BranchPresent = true
+		case code == 1:
+		default:
+			missing = append(missing, "local_branch_observable")
 		}
 	}
 	result.BranchOID = inventory.BranchOID
