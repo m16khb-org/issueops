@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops"
+	application "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -37,7 +38,7 @@ func TestIssueReconcileCompositionPreservesPreviewAndRecoversVerificationFailure
 	}
 	body := "sealed body"
 	digest := sha256.Sum256([]byte(body))
-	record, err = beginIssueCreateIntent(root, record.ID, model.IssueOpsIssueCreateIntentRequest{OperationID: strings.Repeat("1", 32), Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "Title", BodySHA256: fmt.Sprintf("%x", digest), StartedAt: "2026-09-28T00:00:00Z", Labels: []string{"bug"}, Assignees: []string{"owner"}})
+	record, err = application.NewIssueCreateIntents(issueops.IssueCreateIntentStore{StateRoot: root}, time.Now).Begin(context.Background(), record.ID, model.IssueOpsIssueCreateIntentRequest{OperationID: strings.Repeat("1", 32), Provider: "github", ProjectAuthority: "github.com/acme/repo", Title: "Title", BodySHA256: fmt.Sprintf("%x", digest), StartedAt: "2026-09-28T00:00:00Z", Labels: []string{"bug"}, Assignees: []string{"owner"}})
 	if err != nil {
 		t.Fatal(err)
 	}

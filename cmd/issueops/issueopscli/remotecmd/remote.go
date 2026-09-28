@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	artifacttemplate "issueops/internal/domain/artifacttemplate"
-	issueopsremote "issueops/internal/domain/issueopsremote"
-	port "issueops/internal/port"
 	"os"
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	artifacttemplate "issueops/internal/domain/artifacttemplate"
+	issueopsremote "issueops/internal/domain/issueopsremote"
+	port "issueops/internal/port"
 )
 
 type Deps struct {
@@ -446,7 +446,7 @@ func runRemoteRenderTemplate(args []string, deps Deps) error {
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	scoreSummary, err := readScoreSummaryFile(*scoreFile)
+	scoreSummary, err := remoteDeps.ReadScoreSummaryFile(*scoreFile)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

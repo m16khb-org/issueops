@@ -1258,14 +1258,12 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/issueops_issue_intent_wiring.go",
+      "path": "cmd/issueops/issueopsapp/issueops_issue_create_wiring.go",
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func beginIssueCreateIntent",
-        "func completeIssueCreateIntent",
-        "func newIssueCreateIntents",
-        "func recordIssueCreateOutcome"
+        "func createIssue",
+        "func newIssueCreator"
       ]
     },
     {
@@ -2454,15 +2452,10 @@
       "symbols": [
         "func Deps.observeNativeProcessAncestry",
         "func Deps.remoteNativeActor",
-        "func joinScoredItems",
-        "func readScoreSummaryFile",
-        "func resolveTemplateBody",
         "func runRemoteCreateChild",
         "func runRemoteCreatePR",
         "func runRemoteSyncGraph",
-        "func validateConfirmRemoteCreate",
-        "func validateCreateChildInputs",
-        "type resolveTemplateBodyRequest"
+        "func validateCreateChildInputs"
       ]
     },
     {
@@ -2471,17 +2464,15 @@
       "task": "T20",
       "symbols": [
         "func ConfigureRemote",
-        "func inferProviderFromRepoRemotes",
         "func neutralRemoteDeps",
         "type RemoteDeps"
       ]
     },
     {
-      "path": "cmd/issueops/issueopscli/remotecmd/remote_issue.go",
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_issue_create.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func rejectSecretLikeRemoteCreateInputs",
         "func runRemoteCreateIssue"
       ]
     },
@@ -7538,6 +7529,19 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/issue_creation_environment.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func IssueCreationEnvironment.InferProvider",
+        "func IssueCreationEnvironment.ProjectAuthority",
+        "func IssueCreationEnvironment.Resolve",
+        "func issueCreationProvider.Create",
+        "type IssueCreationEnvironment",
+        "type issueCreationProvider"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/issueops_actor.go",
       "owner": "adapter",
       "task": "T20",
@@ -8016,7 +8020,6 @@
       "symbols": [
         "func InferProviderFromRepoRemotes",
         "func ResolveProviderProjectAuthority",
-        "func ResolveRecordProvider",
         "func SyncRemoteIssueGraph",
         "func getLinkCount",
         "func linkTypeLabel",
@@ -8266,7 +8269,6 @@
       "task": "T20",
       "symbols": [
         "func CreateRemoteChild",
-        "func CreateRemoteIssue",
         "func CreateRemoteIssueContext",
         "func CreateRemotePullRequestViaProviderContext",
         "func CreateRemotePullRequestWithHandler",
@@ -11538,6 +11540,21 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/issue_create.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func IssueCreator.Create",
+        "func IssueCreator.recordFailure",
+        "func IssueCreator.timestamp",
+        "func NewIssueCreator",
+        "type IssueCreateCommand",
+        "type IssueCreationEnvironment",
+        "type IssueCreationProvider",
+        "type IssueCreator"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/issue_create_failure.go",
       "owner": "application",
       "task": "T07",
@@ -11603,6 +11620,20 @@
         "func publicationDiagnostic",
         "func publicationEligibility",
         "type PublicationJournal"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/template_body.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewTemplateBodyResolver",
+        "func TemplateBodyResolver.Resolve",
+        "func TemplateBodyResolver.ScoreSummary",
+        "func firstNonEmpty",
+        "func joinScoredItems",
+        "type TemplateBodyRequest",
+        "type TemplateBodyResolver"
       ]
     },
     {
@@ -14109,6 +14140,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/issue_create_request.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ClassifyIssueCreateFailure",
+        "func SealIssueCreateRequest",
+        "func ValidateIssueCreateTitle"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/issue_create_transition.go",
       "owner": "domain",
       "task": "T02",
@@ -14243,6 +14284,14 @@
       "symbols": [
         "func ValidateRecordInvariants",
         "func validatePlanPrepItem"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/record_provider.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ResolveRecordProvider"
       ]
     },
     {
@@ -15027,6 +15076,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsremote/create_metadata.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ValidateConfirmCreateMetadata"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsremote/create_preparation.go",
       "owner": "domain",
       "task": "T07",
@@ -15706,6 +15763,14 @@
         "func RedactFreeform",
         "func SecretLikeArg",
         "func ValidEnvName"
+      ]
+    },
+    {
+      "path": "internal/domain/policy/remote_create_inputs.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ValidateRemoteCreateInputs"
       ]
     },
     {
@@ -19634,7 +19699,7 @@
       "evidence_tests": [
         "internal/adapter/issueops/issue_create_intent_test.go",
         "internal/domain/issueops/issue_create_lifecycle_test.go",
-        "cmd/issueops/issueopsapp/issueops_issue_intent_wiring_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go",
         "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
       "status": "migrated"
@@ -19654,7 +19719,7 @@
       "evidence_tests": [
         "internal/adapter/issueops/issue_create_intent_test.go",
         "internal/domain/issueops/issue_create_lifecycle_test.go",
-        "cmd/issueops/issueopsapp/issueops_issue_intent_wiring_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go",
         "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
       "status": "migrated"
@@ -19674,7 +19739,7 @@
       "evidence_tests": [
         "internal/adapter/issueops/issue_create_intent_test.go",
         "internal/domain/issueops/issue_create_lifecycle_test.go",
-        "cmd/issueops/issueopsapp/issueops_issue_intent_wiring_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go",
         "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
       "status": "migrated"
@@ -19753,7 +19818,7 @@
       ],
       "evidence_tests": [
         "internal/adapter/issueops/issue_create_intent_test.go",
-        "cmd/issueops/issueopsapp/issueops_issue_intent_wiring_test.go"
+        "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go"
       ],
       "status": "migrated"
     },
@@ -19786,9 +19851,11 @@
         "issueops remote create-issue"
       ],
       "evidence_tests": [
-        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated",
+      "target_symbol": "func IssueCreator.Create"
     },
     {
       "id": "issue-reconcile-cli-orchestration",
@@ -19840,6 +19907,148 @@
         "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "issue-create-request-seal",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_issue.go",
+      "source_symbol": "func runRemoteCreateIssue",
+      "responsibility": "derive or reuse the operation marker and bind the exact issue body to a digest before invocation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func SealIssueCreateRequest",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/issue_create_request_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-create-failure-classification",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_issue.go",
+      "source_symbol": "func runRemoteCreateIssue",
+      "responsibility": "classify proven non-invocation before observed URL and ambiguous invocation to prevent duplicate creation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ClassifyIssueCreateFailure",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "record-provider-precedence",
+      "source_path": "internal/adapter/issueops/issueops_remote_sync.go",
+      "source_symbol": "func ResolveRecordProvider",
+      "responsibility": "select prepared provider then verified artifact provider then linked issue URL evidence",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ResolveRecordProvider",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-template-body-resolution",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_child_pr.go",
+      "source_symbol": "func resolveTemplateBody",
+      "responsibility": "resolve exclusive inline or file input and validate the rendered template before publication",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func TemplateBodyResolver.Resolve",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-template-score-summary",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_child_pr.go",
+      "source_symbol": "func readScoreSummaryFile",
+      "responsibility": "read and project score input into the remote artifact template summary",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func TemplateBodyResolver.ScoreSummary",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-confirm-create-metadata",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_child_pr.go",
+      "source_symbol": "func validateConfirmRemoteCreate",
+      "responsibility": "require labels and assignees only for confirmed remote creation",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func ValidateConfirmCreateMetadata",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-create-secret-inputs",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_issue.go",
+      "source_symbol": "func rejectSecretLikeRemoteCreateInputs",
+      "responsibility": "reject secret-like title, body, label and assignee input before remote writes",
+      "target": "internal/domain/policy",
+      "target_symbol": "func ValidateRemoteCreateInputs",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-completion-cli-readback",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote.go",
+      "source_symbol": "func resolveRemoteCompletionInputs",
+      "responsibility": "require a verified remote artifact and successful provider merge readback before completion reflection or closure",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "execution-completion-verification-input",
+      "source_path": "internal/application/issueopscompletion/complete.go",
+      "source_symbol": "func normalizeVerification",
+      "responsibility": "require nonempty verification evidence before accepting execution completion",
+      "target": "internal/domain/issueopscompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "migrate"
     }
   ]
 }

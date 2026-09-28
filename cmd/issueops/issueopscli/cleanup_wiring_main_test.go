@@ -6,6 +6,7 @@ import (
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
+	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -45,6 +46,6 @@ func wireCleanupForTests() {
 		ReadIssueOps:                                      issueopscore.ReadIssueOps,
 		ReadRemoteIssueSnapshot:                           issueopscore.ReadRemoteIssueSnapshot,
 		ReflectCleanupAudit:                               issueopscore.ReflectCleanupAudit,
-		ResolveRecordProvider:                             issueopscore.ResolveRecordProvider,
+		ResolveRecordProvider:                             issuedomain.ResolveRecordProvider,
 	})
 }

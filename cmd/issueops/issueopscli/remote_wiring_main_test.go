@@ -2,13 +2,15 @@ package issueopscli
 
 import (
 	"context"
-	"issueops/internal/adapter/provider"
+	"os"
 	"time"
 
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	issueopscore "issueops/internal/adapter/issueops"
+	"issueops/internal/adapter/provider"
 	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
+	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -17,38 +19,33 @@ import (
 func wireRemoteForTests() {
 
 	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
+		CreateIssue: func(ctx context.Context, root string, cmd remoteapp.IssueCreateCommand, verify remoteapp.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error) {
+			store := issueopscore.IssueCreateIntentStore{StateRoot: root}
+			return remoteapp.NewIssueCreator(store, issueopscore.IssueCreationEnvironment{ResolveProvider: provider.Resolve}, remoteapp.NewTemplateBodyResolver(os.ReadFile), newIssueIntentsForTest(root), verify, time.Now).Create(ctx, cmd)
+		},
+		ResolveTemplateBody:  remoteapp.NewTemplateBodyResolver(os.ReadFile).Resolve,
+		ReadScoreSummaryFile: remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,
+
 		ReconcileIssueCreate: func(ctx context.Context, root, id string, confirm bool, verify remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error) {
 			store := issueopscore.IssueCreateIntentStore{StateRoot: root}
 			return remoteapp.NewIssueReconciler(store, issueopscore.IssueCreateCandidateSource{Resolve: provider.Resolve}, newIssueIntentsForTest(root), verify, time.Now).Reconcile(ctx, id, confirm)
 		},
 
-		BeginIssueCreateIntent: func(root, id string, request issueopscontract.IssueOpsIssueCreateIntentRequest) (issueopscontract.IssueOpsRecord, error) {
-			return newIssueIntentsForTest(root).Begin(context.Background(), id, request)
-		},
 		CloseIssueOpsRemoteIssue: issueopscore.CloseIssueOpsRemoteIssue,
-		CompleteIssueCreateIntent: func(root, id, url, at string) (issueopscontract.IssueOpsRecord, error) {
-			return newIssueIntentsForTest(root).Complete(context.Background(), id, url, at)
-		},
 		CreateRemoteChild:        issueopscore.CreateRemoteChild,
-		CreateRemoteIssue:        issueopscore.CreateRemoteIssue,
-		CreateRemoteIssueContext: issueopscore.CreateRemoteIssueContext,
 		CreateRemotePullRequestWithHandler: func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error) {
 			return issueopscore.CreateRemotePullRequestWithHandler(ctx, stateRoot, req, handler)
 		},
-		DecodeIssueOpsRemoteJudgeJSON:      issueopscore.DecodeIssueOpsRemoteJudgeJSON,
-		DecodeIssueOpsRemoteScoringRequest: issueopscore.DecodeIssueOpsRemoteScoringRequest,
-		IssueOpsStateRoot:                  issueopscore.IssueOpsStateRoot,
-		LinkIssueOpsChildWithActor:         issueopscore.LinkIssueOpsChildWithActor,
-		ObserveNativeProcessAncestry:       issueopscore.ObserveNativeProcessAncestry,
-		ReadIssueOps:                       issueopscore.ReadIssueOps,
-		RecordIssueCreateOutcome: func(root, id string, outcome issueopscontract.IssueOpsIssueCreateOutcome) (issueopscontract.IssueOpsRecord, error) {
-			return newIssueIntentsForTest(root).Outcome(context.Background(), id, outcome)
-		},
+		DecodeIssueOpsRemoteJudgeJSON:              issueopscore.DecodeIssueOpsRemoteJudgeJSON,
+		DecodeIssueOpsRemoteScoringRequest:         issueopscore.DecodeIssueOpsRemoteScoringRequest,
+		IssueOpsStateRoot:                          issueopscore.IssueOpsStateRoot,
+		LinkIssueOpsChildWithActor:                 issueopscore.LinkIssueOpsChildWithActor,
+		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
+		ReadIssueOps:                               issueopscore.ReadIssueOps,
 		ReflectDevilsAdvocateFindingsWithActor:     issueopscore.ReflectDevilsAdvocateFindingsWithActor,
 		ReflectIssueCompletion:                     issueopscore.ReflectIssueCompletion,
 		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,
-		ResolveRecordProvider:                      issueopscore.ResolveRecordProvider,
-		ResolveProviderProjectAuthority:            issueopscore.ResolveProviderProjectAuthority,
+		ResolveRecordProvider:                      issuedomain.ResolveRecordProvider,
 		ScoreIssueOpsRemoteCandidates:              issueopscore.ScoreIssueOpsRemoteCandidates,
 		SyncRemoteIssueGraph:                       issueopscore.SyncRemoteIssueGraph,
 		UmbrellaBranchGateReason:                   issueopscore.UmbrellaBranchGateReason,

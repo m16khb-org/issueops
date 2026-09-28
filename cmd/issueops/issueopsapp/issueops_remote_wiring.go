@@ -2,10 +2,13 @@ package issueopsapp
 
 import (
 	"context"
-	"issueops/cmd/issueops/issueopscli/remotecmd"
+	"os"
 
+	"issueops/cmd/issueops/issueopscli/remotecmd"
 	issueopscore "issueops/internal/adapter/issueops"
+	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
+	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -13,13 +16,12 @@ import (
 // root 하나뿐이다.
 func configureIssueOpsRemote() {
 	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
-		ReconcileIssueCreate:      reconcileIssueCreate,
-		BeginIssueCreateIntent:    beginIssueCreateIntent,
-		CloseIssueOpsRemoteIssue:  issueopscore.CloseIssueOpsRemoteIssue,
-		CompleteIssueCreateIntent: completeIssueCreateIntent,
-		CreateRemoteChild:         issueopscore.CreateRemoteChild,
-		CreateRemoteIssue:         issueopscore.CreateRemoteIssue,
-		CreateRemoteIssueContext:  issueopscore.CreateRemoteIssueContext,
+		CreateIssue:              createIssue,
+		ResolveTemplateBody:      remoteapp.NewTemplateBodyResolver(os.ReadFile).Resolve,
+		ReadScoreSummaryFile:     remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,
+		ReconcileIssueCreate:     reconcileIssueCreate,
+		CloseIssueOpsRemoteIssue: issueopscore.CloseIssueOpsRemoteIssue,
+		CreateRemoteChild:        issueopscore.CreateRemoteChild,
 		CreateRemotePullRequestWithHandler: func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error) {
 			return issueopscore.CreateRemotePullRequestWithHandler(ctx, stateRoot, req, handler)
 		},
@@ -29,13 +31,10 @@ func configureIssueOpsRemote() {
 		LinkIssueOpsChildWithActor:                 issueopscore.LinkIssueOpsChildWithActor,
 		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                               issueopscore.ReadIssueOps,
-		RecordIssueCreateOutcome:                   recordIssueCreateOutcome,
 		ReflectDevilsAdvocateFindingsWithActor:     issueopscore.ReflectDevilsAdvocateFindingsWithActor,
 		ReflectIssueCompletion:                     issueopscore.ReflectIssueCompletion,
 		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,
-		InferProviderFromRepoRemotes:               issueopscore.InferProviderFromRepoRemotes,
-		ResolveRecordProvider:                      issueopscore.ResolveRecordProvider,
-		ResolveProviderProjectAuthority:            issueopscore.ResolveProviderProjectAuthority,
+		ResolveRecordProvider:                      issuedomain.ResolveRecordProvider,
 		ScoreIssueOpsRemoteCandidates:              issueopscore.ScoreIssueOpsRemoteCandidates,
 		SyncRemoteArtifactBody:                     syncIssueOpsRemoteArtifactBody,
 		SyncRemoteIssueGraph:                       issueopscore.SyncRemoteIssueGraph,

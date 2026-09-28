@@ -6,6 +6,7 @@ import (
 
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
+	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -18,7 +19,7 @@ func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest
 	wired := cleanupDeps
 	wired.IssueOpsStateRoot = issueopscore.IssueOpsStateRoot
 	wired.ReadIssueOps = issueopscore.ReadIssueOps
-	wired.ResolveRecordProvider = issueopscore.ResolveRecordProvider
+	wired.ResolveRecordProvider = issuedomain.ResolveRecordProvider
 	wired.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps, _ port.IssueProvider) (issueopscontract.CleanupAbandonResult, error) {
 		*requests = append(*requests, req)
 		return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID, RemoteEffects: []string{"close_issue"}}, nil

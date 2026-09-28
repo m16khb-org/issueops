@@ -225,6 +225,8 @@
 
 - **부분 진행 — 이슈 생성 재조정:** `IssueReconciler`가 후보 조회·실물 검증·실패 기록·완료 저장을 조율하고, `domain/issueops`가 미완료 intent, 완전한 단일 후보 검색, 봉인된 프로젝트·제목·본문 digest 일치를 판정한다. 기존 CLI 조율 코드는 삭제하고 별도 transport 파일에 옵션 파싱·출력만 남겼다. provider resolver와 후보 조회 capability는 adapter가 맡으며, 생성·재조정 실패 진단의 redaction/길이 제한은 application의 한 함수로 통합했다. 실제 SQLite composition 테스트로 미리보기 무변경, 검증 실패의 민감정보 제거, 후속 복구와 완료 후 재조회 방지를 확인했다. 실제 CLI/provider subprocess 테스트로 변경된 제목·본문을 실물 검증 전에 거부하고 confirm 여부에 따라 실패 기록을 구분하는 것을 확인했다. 내용 비교를 우회한 overlay에서 두 CLI 시나리오가 실패했다(`issue-reconcile-content-mutation.txt`). 초기 architecture 검사가 발견한 다른 domain 계약 의존성을 제거한 뒤 architecture, 전체 Go suite, 관련 race·vet·build가 통과했다(`full-suite-issue-reconcile.txt`). 생성 명령의 봉인·호출·실패 분류·영수증 조율과 원격 완료 반영은 남아 있으므로 T07은 미완료다.
 
+- **부분 진행 — 이슈 생성 조율:** `IssueCreator`가 record 조회, provider 결정·관측, 본문 준비, intent 저장, provider 호출, 실패 기록, 실물 검증과 완료 저장을 조율한다. domain은 marker/digest 봉인·재사용, 호출 결과 분류, provider 우선순위, 제목·metadata·민감정보 입력 검증을 소유한다. 파일·템플릿·score 본문 준비는 공유 `TemplateBodyResolver`로 이전해 다른 원격 명령도 같은 구현을 사용한다. CLI에는 옵션 파싱과 결과 출력만 남겼고 기존 intent 배선, 사용되지 않는 동기 create wrapper, CLI helper 원본을 삭제했다. 실제 Git/SQLite composition 테스트로 provider 호출 전 저장, 미호출 실패만 재시도, 호출 중 취소 뒤에도 불명확한 결과 저장, 중복 생성 차단, 실물 검증 후 연결·plan 진입을 확인했다. Begin 저장을 우회한 overlay는 provider 호출 직전 테스트에서 실패했다(`issue-create-before-invocation-mutation.txt`). 빌드한 CLI를 임시 repo/state와 테스트용 gh로 실행한 미리보기·생성·readback·중복 차단도 통과했다(`issue-create-binary-smoke.json`). 전체 Go suite, 관련 race·vet·build, architecture가 통과했다(`full-suite-issue-create-orchestration.txt`). 원격 완료 반영·이슈 종료·리뷰 결과 반영과 완료 경로의 남은 판정 이전은 계속 진행한다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료

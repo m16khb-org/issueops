@@ -7,6 +7,7 @@ import (
 
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
+	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -48,7 +49,7 @@ func TestMain(m *testing.M) {
 		ReadIssueOps:                                      issueopscore.ReadIssueOps,
 		ReadRemoteIssueSnapshot:                           issueopscore.ReadRemoteIssueSnapshot,
 		ReflectCleanupAudit:                               issueopscore.ReflectCleanupAudit,
-		ResolveRecordProvider:                             issueopscore.ResolveRecordProvider,
+		ResolveRecordProvider:                             issuedomain.ResolveRecordProvider,
 	})
 	os.Exit(m.Run())
 }

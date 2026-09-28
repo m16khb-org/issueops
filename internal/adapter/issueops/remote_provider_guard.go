@@ -12,11 +12,6 @@ import (
 // 소유다. provider가 없거나 필요한 능력을 갖추지 못한 경우를 호출부마다 반복해서
 // 검사하지 않도록 한곳에 모은다.
 
-// CreateRemoteIssue는 provider가 구성되어 있을 때만 원격 이슈를 만든다.
-func CreateRemoteIssue(req port.IssueProviderCreateIssueRequest, prov port.IssueProvider) (port.IssueProviderCreateIssueResult, error) {
-	return CreateRemoteIssueContext(context.Background(), req, prov)
-}
-
 func CreateRemoteIssueContext(ctx context.Context, req port.IssueProviderCreateIssueRequest, prov port.IssueProvider) (port.IssueProviderCreateIssueResult, error) {
 	if prov == nil {
 		return port.IssueProviderCreateIssueResult{OK: false}, fmt.Errorf("no issue provider configured")

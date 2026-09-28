@@ -7,6 +7,7 @@ import (
 	issueopscore "issueops/internal/adapter/issueops"
 	orcaadapter "issueops/internal/adapter/orca"
 	issueopscontract "issueops/internal/contract/issueops"
+	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -60,6 +61,6 @@ func configureIssueOpsCleanup() {
 		ReadIssueOps:                                      issueopscore.ReadIssueOps,
 		ReadRemoteIssueSnapshot:                           issueopscore.ReadRemoteIssueSnapshot,
 		ReflectCleanupAudit:                               issueopscore.ReflectCleanupAudit,
-		ResolveRecordProvider:                             issueopscore.ResolveRecordProvider,
+		ResolveRecordProvider:                             issuedomain.ResolveRecordProvider,
 	})
 }

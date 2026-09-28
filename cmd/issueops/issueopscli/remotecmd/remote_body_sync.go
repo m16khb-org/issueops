@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"strings"
 
+	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
+	policydomain "issueops/internal/domain/policy"
 )
 
 // runRemoteSyncIssue refreshes a linked issue's body, or the body of one of its
@@ -56,7 +58,7 @@ func runRemoteBodySync(ctx context.Context, name, kind string, args []string, de
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	replacement, err := resolveTemplateBody(resolveTemplateBodyRequest{Body: *body, BodyFile: *bodyFile})
+	replacement, err := remoteDeps.ResolveTemplateBody(remoteapp.TemplateBodyRequest{Body: *body, BodyFile: *bodyFile})
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
@@ -64,7 +66,7 @@ func runRemoteBodySync(ctx context.Context, name, kind string, args []string, de
 		return deps.printErrorResult(*jsonOut, fmt.Errorf("a replacement body is required: pass --body or --body-file"))
 	}
 	// 원격 본문은 durable하다. 생성 경로와 같은 secret 게이트를 통과해야 한다.
-	if err := rejectSecretLikeRemoteCreateInputs(name, "", replacement, nil, nil); err != nil {
+	if err := policydomain.ValidateRemoteCreateInputs(name, "", replacement, nil, nil); err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
 	ancestry, err := deps.observeNativeProcessAncestry()

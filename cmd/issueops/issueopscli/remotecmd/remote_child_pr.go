@@ -2,16 +2,17 @@ package remotecmd
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
-	artifacttemplate "issueops/internal/domain/artifacttemplate"
-	issueopsremote "issueops/internal/domain/issueopsremote"
-	port "issueops/internal/port"
 	"os"
 	"strings"
 
+	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
+	artifacttemplate "issueops/internal/domain/artifacttemplate"
+	issueopsremote "issueops/internal/domain/issueopsremote"
+	policydomain "issueops/internal/domain/policy"
+	port "issueops/internal/port"
 )
 
 func runRemoteCreateChild(args []string, deps Deps) error {
@@ -65,7 +66,7 @@ func runRemoteCreateChild(args []string, deps Deps) error {
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	finalBody, err := resolveTemplateBody(resolveTemplateBodyRequest{
+	finalBody, err := remoteDeps.ResolveTemplateBody(remoteapp.TemplateBodyRequest{
 		Kind:      artifacttemplate.IssueOpsArtifactChild,
 		Template:  *template,
 		Provider:  providerName,
@@ -78,7 +79,7 @@ func runRemoteCreateChild(args []string, deps Deps) error {
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	if err := rejectSecretLikeRemoteCreateInputs("child create", *title, finalBody, labels, assignees); err != nil {
+	if err := policydomain.ValidateRemoteCreateInputs("child create", *title, finalBody, labels, assignees); err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
 	var actor issueopscontract.IssueOpsActor
@@ -171,7 +172,7 @@ func runRemoteCreatePR(args []string, deps Deps) error {
 	if baseBranch == "" && record.BranchPrepare != nil {
 		baseBranch = record.BranchPrepare.BaseBranch
 	}
-	finalBody, err := resolveTemplateBody(resolveTemplateBodyRequest{
+	finalBody, err := remoteDeps.ResolveTemplateBody(remoteapp.TemplateBodyRequest{
 		Kind:      artifacttemplate.IssueOpsArtifactPR,
 		Template:  *template,
 		Provider:  providerName,
@@ -184,10 +185,10 @@ func runRemoteCreatePR(args []string, deps Deps) error {
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	if err := rejectSecretLikeRemoteCreateInputs("pr create", *title, finalBody, labels, assignees); err != nil {
+	if err := policydomain.ValidateRemoteCreateInputs("pr create", *title, finalBody, labels, assignees); err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	if err := validateConfirmRemoteCreate(*confirm, labels, assignees); err != nil {
+	if err := issueopsremote.ValidateConfirmCreateMetadata(*confirm, labels, assignees); err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
 	actor, err := deps.remoteNativeActor(*host, *sessionID, *agentID, *sessionPID, *sessionStartedAt, *sessionExecutable, *confirm)
@@ -257,114 +258,6 @@ func validateCreateChildInputs(title string, labels, assignees []string) error {
 		return fmt.Errorf("at least one child assignee is required")
 	}
 	return nil
-}
-
-type resolveTemplateBodyRequest struct {
-	Kind      artifacttemplate.IssueOpsArtifactKind
-	Template  string
-	Provider  string
-	Title     string
-	Body      string
-	BodyFile  string
-	Fields    []string
-	ScoreFile string
-}
-
-func resolveTemplateBody(req resolveTemplateBodyRequest) (string, error) {
-	body := strings.TrimSpace(req.Body)
-	bodyFile := strings.TrimSpace(req.BodyFile)
-	if body != "" && bodyFile != "" {
-		return "", fmt.Errorf("body and body-file are mutually exclusive")
-	}
-	if bodyFile != "" {
-		b, err := os.ReadFile(bodyFile)
-		if err != nil {
-			return "", err
-		}
-		body = strings.TrimSpace(string(b))
-	}
-	template := strings.TrimSpace(req.Template)
-	if template == "" {
-		return body, nil
-	}
-	fields, err := artifacttemplate.ParseFieldAssignments(req.Fields)
-	if err != nil {
-		return "", err
-	}
-	scoreSummary, err := readScoreSummaryFile(req.ScoreFile)
-	if err != nil {
-		return "", err
-	}
-	input := artifacttemplate.IssueOpsTemplateInput{
-		Kind:         req.Kind,
-		Template:     artifacttemplate.IssueOpsTemplateKind(template),
-		Provider:     req.Provider,
-		Title:        req.Title,
-		Body:         body,
-		Fields:       fields,
-		ScoreSummary: scoreSummary,
-	}
-	result := artifacttemplate.Render(input)
-	if len(result.Validation.Critical) > 0 {
-		return "", fmt.Errorf("template validation failed: %s", strings.Join(result.Validation.Critical, ","))
-	}
-	return result.Body, nil
-}
-
-func validateConfirmRemoteCreate(confirm bool, labels, assignees []string) error {
-	if !confirm {
-		return nil
-	}
-	labels = issueopsremote.CleanValues(labels)
-	assignees = issueopsremote.CleanValues(assignees)
-	if len(labels) == 0 {
-		return fmt.Errorf("at least one label is required with --confirm")
-	}
-	if len(assignees) == 0 {
-		return fmt.Errorf("at least one assignee is required with --confirm")
-	}
-	return nil
-}
-
-func readScoreSummaryFile(path string) (string, error) {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return "", nil
-	}
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
-	}
-	var result issueopsremote.IssueOpsRemoteScoringResult
-	if err := json.Unmarshal(b, &result); err != nil {
-		return strings.TrimSpace(string(b)), nil
-	}
-	parts := []string{fmt.Sprintf("threshold %.2f", result.Threshold)}
-	if len(result.SelectedRelatedIssues) > 0 {
-		parts = append(parts, "선택 관련 이슈: "+joinScoredItems(result.SelectedRelatedIssues))
-	}
-	if len(result.RejectedRelatedIssues) > 0 {
-		parts = append(parts, "거절 관련 이슈: "+joinScoredItems(result.RejectedRelatedIssues))
-	}
-	if len(result.SelectedLabels) > 0 {
-		parts = append(parts, "선택 라벨: "+joinScoredItems(result.SelectedLabels))
-	}
-	if len(result.RejectedLabels) > 0 {
-		parts = append(parts, "거절 라벨: "+joinScoredItems(result.RejectedLabels))
-	}
-	return strings.Join(parts, "\n"), nil
-}
-
-func joinScoredItems(items []issueopsremote.IssueOpsRemoteScoredItem) string {
-	out := make([]string, 0, len(items))
-	for _, item := range items {
-		name := firstNonEmptyMain(item.Name, item.ID, item.Title, item.URL)
-		if name == "" {
-			name = "unknown"
-		}
-		out = append(out, fmt.Sprintf("%s(%.2f)", name, item.Score))
-	}
-	return strings.Join(out, ", ")
 }
 
 func runRemoteSyncGraph(args []string, deps Deps) error {
