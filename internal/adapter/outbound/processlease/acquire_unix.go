@@ -14,6 +14,18 @@ import (
 )
 
 func Acquire(ctx context.Context, directory, key string) (*Lease, error) {
+	return acquire(ctx, directory, key, unix.LOCK_EX)
+}
+
+func AcquireShared(ctx context.Context, directory, key string) (*SharedLease, error) {
+	lease, err := acquire(ctx, directory, key, unix.LOCK_SH)
+	if err != nil {
+		return nil, err
+	}
+	return &SharedLease{file: lease.file}, nil
+}
+
+func acquire(ctx context.Context, directory, key string, mode int) (*Lease, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -54,7 +66,7 @@ func Acquire(ctx context.Context, directory, key string) (*Lease, error) {
 	if info.Mode&unix.S_IFMT != unix.S_IFREG || info.Mode&0777 != 0600 || info.Uid != uint32(os.Geteuid()) {
 		return nil, errors.New("execution lifetime lock must be a private regular file owned by the current user")
 	}
-	if err := unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB); err != nil {
+	if err := unix.Flock(fd, mode|unix.LOCK_NB); err != nil {
 		if errors.Is(err, unix.EWOULDBLOCK) || errors.Is(err, unix.EAGAIN) {
 			return nil, ErrBusy
 		}

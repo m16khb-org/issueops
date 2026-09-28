@@ -57,6 +57,17 @@ Project docs bootstrap:
 - maintenance: `state maintain`은 고정 store root(`state`, `issueops`, `worker`, `loop`)와 `projects/<repo-id>` store의 WAL checkpoint를 truncate하고 sidecar 권한(0600)을 복구한다. 현재 context hook은 static project-doc catalog만 읽으므로 유지보수를 자동 실행하지 않는다.
 - self-verify summary checkpoint는 `self-verify history/compare/promote`와 MCP `self_verify_history/self_verify_compare/self_verify_promote`로 조회·비교·승격한다.
 
+Unix의 sqlstore record 쓰기는 state root의 공용 파일에 shared lease를 얻은 뒤 실행한다.
+`ExcludeWrites`는 같은 파일의 exclusive lease로 모든 bucket의 쓰기를 거부하며 읽기는
+허용한다. `Put`, `Delete`, `DeleteBucket`, `Apply`, `CompareAndApplyFunc`가 이 경계를
+공유한다. SQLite span·transaction과 별개이며, exclusive lease를 가진 호출자는
+record를 쓰거나 span에 진입하지 않는다. 실행 context를 전달받은 자식은 부모가
+종료돼도 exclusive lease를 유지한다. 일반 writer의 `SharedLease`에는 `Close`만 있고,
+자식 종료를 증명하는 `Drain`과 실행 context는 exclusive `Lease`에만 있다.
+잠금 파일은 private state root 안에 유지하고 삭제하지 않는다. 삭제 작업에 연결할 때는
+대상이 state root와 잠금 파일을 포함하지 않는지 먼저 확인해야 한다. non-Unix에서는
+exclusive lease 획득을 거부하고 기존 SQLite 쓰기 동작은 유지한다.
+
 IssueOps v1 execution state, schema authority, capability verticals, and the
 actor model live in [`issueops.md`](issueops.md).
 

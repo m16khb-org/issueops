@@ -17,6 +17,12 @@ type Lease struct {
 	key       string
 }
 
+// SharedLease protects one local writer. It cannot provide execution context or
+// drainage: reacquiring a shared lock cannot prove another shared holder exited.
+type SharedLease struct{ file *os.File }
+
+func (l *SharedLease) Close() error { return l.file.Close() }
+
 type contextKey struct{}
 
 func (l *Lease) Context(ctx context.Context) context.Context {

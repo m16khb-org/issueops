@@ -89,7 +89,7 @@ func harnessOwnedStateFile(name string) bool {
 		}
 	}
 	switch name {
-	case statecontract.HookFailureLogFile, "hook-metrics.jsonl", ".last-store-maintain":
+	case statecontract.HookFailureLogFile, statecontract.RecordWriteLeaseFile, "hook-metrics.jsonl", ".last-store-maintain":
 		return true
 	default:
 		return false

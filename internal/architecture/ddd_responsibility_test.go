@@ -483,6 +483,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueops/linked_branch_cleanup.go", "T08"},
 		{"internal/adapter/issueops/linked_branch_remote_ref.go", "T08"},
 		{"internal/adapter/outbound/processlease/", "T08"},
+		{"internal/adapter/outbound/sqlstore/write_", "T08"},
 		{"internal/contract/issueops/cleanup_finish_inventory.go", "T08"},
 		{"internal/contract/issueops/cleanup_attempt.go", "T08"},
 		{"internal/adapter/issueops/cleanup_finish_environment.go", "T08"},

@@ -1402,7 +1402,8 @@ func isSharedStorageEngineEdge(importer, imported string) bool {
 	return false
 }
 
-// The OS lifetime descriptor is shared by these concrete command runners only.
+// The OS lifetime descriptor is shared by concrete command runners and the
+// record storage engine that excludes writes during inherited cleanup effects.
 // It carries no capability policy or durable state; application code reaches it
 // through an injected lifetime port, never by importing the implementation.
 func isProcessLifetimeEdge(importer, imported string) bool {
@@ -1410,7 +1411,7 @@ func isProcessLifetimeEdge(importer, imported string) bool {
 		return false
 	}
 	switch importer {
-	case "internal/adapter/issueops", "internal/adapter/orca", "internal/adapter/provider/providerutil":
+	case "internal/adapter/issueops", "internal/adapter/orca", "internal/adapter/provider/providerutil", "internal/adapter/outbound/sqlstore":
 		return true
 	default:
 		return false

@@ -9405,7 +9405,8 @@
       "owner": "adapter",
       "task": "T08",
       "symbols": [
-        "func Acquire"
+        "func Acquire",
+        "func AcquireShared"
       ]
     },
     {
@@ -9413,7 +9414,9 @@
       "owner": "adapter",
       "task": "T08",
       "symbols": [
-        "func Acquire"
+        "func Acquire",
+        "func AcquireShared",
+        "func acquire"
       ]
     },
     {
@@ -9425,7 +9428,9 @@
         "func Lease.Close",
         "func Lease.Context",
         "func Lease.Drain",
+        "func SharedLease.Close",
         "type Lease",
+        "type SharedLease",
         "type contextKey"
       ]
     },
@@ -9557,6 +9562,30 @@
         "type RawCASError",
         "type SchemaObject",
         "type spanChainKey"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/sqlstore/write_exclusion.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func DB.ExcludeWrites"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/sqlstore/write_guard_other.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func DB.acquireRecordWriter"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/sqlstore/write_guard_unix.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func DB.acquireRecordWriter"
       ]
     },
     {
@@ -13918,6 +13947,12 @@
         "type StateResult",
         "type StoreMaintainResult"
       ]
+    },
+    {
+      "path": "internal/contract/state/storage.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": []
     },
     {
       "path": "internal/contract/state/time.go",

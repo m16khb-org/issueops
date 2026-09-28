@@ -649,7 +649,12 @@ func openExistingData(dir string) (*sql.DB, error) {
 
 // Put은 (bucket, id)의 record 데이터를 upsert한다.
 func (d *DB) Put(bucket, id string, data []byte) error {
-	_, err := d.data.Exec(`INSERT INTO records (bucket, id, data) VALUES (?, ?, ?)
+	release, err := d.acquireRecordWriter(context.Background())
+	if err != nil {
+		return err
+	}
+	defer release()
+	_, err = d.data.Exec(`INSERT INTO records (bucket, id, data) VALUES (?, ?, ?)
 		ON CONFLICT (bucket, id) DO UPDATE SET data = excluded.data`, bucket, id, data)
 	return err
 }
@@ -676,6 +681,11 @@ func (d *DB) Apply(ctx context.Context, mutations []port.RecordMutation) error {
 	if err := validateMutations(mutations); err != nil {
 		return err
 	}
+	release, err := d.acquireRecordWriter(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	tx, err := d.data.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -710,6 +720,11 @@ func (d *DB) CompareAndApplyFunc(ctx context.Context, expected []port.ExpectedRe
 			return fmt.Errorf("sqlstore expected record bucket, id, and data are required")
 		}
 	}
+	release, err := d.acquireRecordWriter(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	tx, err := d.data.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -782,7 +797,12 @@ func applyMutationsTx(ctx context.Context, tx *sql.Tx, mutations []port.RecordMu
 // Delete는 (bucket, id)의 record를 제거한다. 없는 record를 삭제해도 오류가
 // 아니다.
 func (d *DB) Delete(bucket, id string) error {
-	_, err := d.data.Exec(`DELETE FROM records WHERE bucket = ? AND id = ?`, bucket, id)
+	release, err := d.acquireRecordWriter(context.Background())
+	if err != nil {
+		return err
+	}
+	defer release()
+	_, err = d.data.Exec(`DELETE FROM records WHERE bucket = ? AND id = ?`, bucket, id)
 	return err
 }
 
@@ -824,6 +844,11 @@ func (d *DB) GetAll(bucket string) ([]port.RecordRow, error) {
 
 // DeleteBucket은 bucket의 모든 record를 제거한다.
 func (d *DB) DeleteBucket(bucket string) error {
-	_, err := d.data.Exec(`DELETE FROM records WHERE bucket = ?`, bucket)
+	release, err := d.acquireRecordWriter(context.Background())
+	if err != nil {
+		return err
+	}
+	defer release()
+	_, err = d.data.Exec(`DELETE FROM records WHERE bucket = ?`, bucket)
 	return err
 }

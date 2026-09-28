@@ -120,7 +120,7 @@ func TestFoundationOwnershipRejectsNestedCoreModelPrefix(t *testing.T) {
 	}
 }
 
-// A process lifetime is an OS primitive shared only by the command runners.
+// A process lifetime is shared by command runners and the record write barrier.
 // It must not become a route from application policy to concrete execution.
 func TestProcessLifetimePrimitiveHasNarrowConsumers(t *testing.T) {
 	const primitive = "internal/adapter/outbound/processlease"
@@ -128,6 +128,7 @@ func TestProcessLifetimePrimitiveHasNarrowConsumers(t *testing.T) {
 		"internal/adapter/issueops",
 		"internal/adapter/orca",
 		"internal/adapter/provider/providerutil",
+		"internal/adapter/outbound/sqlstore",
 	} {
 		edge := dependencyEdge{importer, primitive}
 		if got := legacyEdges([]dependencyEdge{edge}); len(got) != 0 {
