@@ -8794,6 +8794,7 @@
         "func readExecutionSealedFile",
         "func validExecutionSHA256",
         "func validateExecutionInspectionOwnerEnvelope",
+        "func validateExecutionIntentForMode",
         "func validateExecutionIntentInspectionRequest",
         "func validateExecutionIntentRequest",
         "func validateExecutionIntentRun",
@@ -14591,6 +14592,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueopspreparation/orca_stage.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ValidateOrcaStagePrerequisites",
+        "func ValidateOrcaStageReceipts",
+        "type OrcaStageFacts"
+      ]
+    },
+    {
       "path": "internal/domain/issueopspreparation/planner_gates.go",
       "owner": "domain",
       "task": "T20",
@@ -18171,8 +18182,33 @@
       "target": "internal/domain/issueopslease",
       "target_symbol": "func DecideWriterlessRecovery",
       "task": "T05",
-      "entrypoints": ["issueops next", "issueops execution prepare"],
-      "evidence_tests": ["internal/domain/issueopslease/writerless_recovery_test.go", "internal/adapter/issueops/execution_resume_identity_test.go"],
+      "entrypoints": [
+        "issueops next",
+        "issueops execution prepare"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopslease/writerless_recovery_test.go",
+        "internal/adapter/issueops/execution_resume_identity_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "orca-intent-stage-receipts",
+      "source_path": "internal/adapter/orca/execution_validation.go",
+      "source_symbol": "func validateExecutionIntentForMode",
+      "responsibility": "validate observed Orca request identity and external owner evidence; domain decides invocation versus inspection prerequisites and receipt stage progression",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func ValidateOrcaStageReceipts",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution prepare --mode orca",
+        "issueops execution resume",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspreparation/orca_stage_test.go",
+        "internal/adapter/orca/execution_test.go"
+      ],
       "status": "retain"
     }
   ]
