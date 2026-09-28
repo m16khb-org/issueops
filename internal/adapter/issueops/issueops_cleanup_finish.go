@@ -509,7 +509,7 @@ func branchRefPresent(git func(dir string, args ...string) (int, string), repo, 
 		return true
 	}
 	code, _ := git(repo, "show-ref", "--verify", "--quiet", "refs/heads/"+branch)
-	return code == 0
+	return code != 1
 }
 
 // verifySupersedingArtifact는 replacement 증거를 provider readback으로 검증한다.

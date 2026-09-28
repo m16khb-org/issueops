@@ -284,6 +284,8 @@
 
 - **부분 진행 — 자식 종료 진입과 감사 반영:** CLI의 머지 조회와 두 단계의 export 래퍼를 삭제했다. `ChildrenCloser`가 잠금 밖에서 부모 머지를 조회하고 잠금 안에서 현재 저장소·부모·자식 목록·artifact가 조회 대상과 같은지 검증한다. 감사 본문 반영은 `AuditReflector`로 옮겼고 기존 adapter 함수와 사용하지 않는 CLI 의존성 필드를 제거했다. 원격 반영 확인 뒤 최신 record에 영수증을 저장하며, 삭제 전 수집한 완료 본문을 보존한다. 대상·SQLite 통합 테스트, 전체 일반·race 테스트(각 292개 패키지), vet·build·architecture가 통과했다. 실제 CLI에서 조회 중 artifact 변경 거부와 상태 보존을 확인했고, 세 가지 검증 우회 mutation은 각각 실패했다. 기존 자식 provider 작업의 잠금 경계는 유지했으며, 실제 정리 실행과 나머지 cleanup 경계 이전이 남아 있어 T08은 미완료다.
 
+- **정리 회귀 수정:** 브랜치 삭제 실패 뒤 `show-ref` 조회 오류를 부재로 해석해 record까지 삭제하던 결함을 수정했다. 종료 코드 `1`만 부재로 인정한다. finish·abandon의 오류 코드 `2`·`128`·`-1` 회귀 테스트 여섯 건이 수정 전 실패하고 수정 후 통과했다. 실제 CLI와 임시 Git 저장소에서도 오류 시 브랜치·record·재시도 영수증 보존을 확인했다. 전체 일반·race 테스트 각각 292개 패키지, vet·build가 통과했다(`T08-ref-observation-*`). 정리 use case의 계층 이전은 계속 남아 있다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료
