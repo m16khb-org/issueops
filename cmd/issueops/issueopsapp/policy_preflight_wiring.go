@@ -11,7 +11,6 @@ import (
 	gatesdeps "issueops/internal/adapter/gates"
 	gitworktreedeps "issueops/internal/adapter/gitworktree"
 	issueopsdeps "issueops/internal/adapter/issueops"
-	cleanupstatusdeps "issueops/internal/adapter/issueops/cleanupstatus"
 	implementationdeps "issueops/internal/adapter/issueops/implementation"
 	orphancleanupdeps "issueops/internal/adapter/issueops/orphancleanup"
 	reviewfilesdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
@@ -31,8 +30,6 @@ func configurePolicyAndGitObservers() {
 func configurePolicyAndGitObserversWithLookup(lookup policyadapter.PreparedBaseBranchLookup) {
 	evaluator := policyadapter.NewEvaluator(lookup)
 	auditdeps.EvaluateCommandPolicy = evaluator.Evaluate
-	cleanupstatusdeps.GitCmd = preflightadapter.GitCmd
-	cleanupstatusdeps.GitOut = preflightadapter.GitOut
 	gatesdeps.EvaluateCommandPolicy = evaluator.Evaluate
 	gatesdeps.RunCommand = evaluator.Run
 	gitworktreedeps.GitCmd = preflightadapter.GitCmd

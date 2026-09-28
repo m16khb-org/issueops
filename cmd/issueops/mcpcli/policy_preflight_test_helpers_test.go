@@ -5,7 +5,6 @@ import (
 	resourcesppdeps "issueops/cmd/issueops/mcpcli/resources"
 	auditppdeps "issueops/internal/adapter/audit"
 	issueopsppdeps "issueops/internal/adapter/issueops"
-	cleanupstatusppdeps "issueops/internal/adapter/issueops/cleanupstatus"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
 	reviewfilesppdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	policyadapter "issueops/internal/adapter/policy"
@@ -19,8 +18,6 @@ func init() {
 	EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
 	FakeRunCommand = policyadapter.FakeRunCommand
 	auditppdeps.EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
-	cleanupstatusppdeps.GitCmd = preflightadapter.GitCmd
-	cleanupstatusppdeps.GitOut = preflightadapter.GitOut
 	implementationppdeps.GitCmd = preflightadapter.GitCmd
 	implementationppdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsppdeps.GitCmd = preflightadapter.GitCmd

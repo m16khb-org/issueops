@@ -278,6 +278,8 @@
 
 - **부분 진행 — 부모·자식 상태와 검증:** 자식 선택·상태 집계·정리 후 승인 기록 판정·인덱스 복구·승인/거절/제외 조건·부모 참조 갱신·우산 브랜치 조건을 domain으로 옮겼다. `StatusService`와 `Validator`가 조회·현재 권한 재확인·저장을 조율한다. 기존 production `issueops_delegation.go`와 우산 topology adapter를 삭제하고 CLI가 application/domain을 직접 구성한다. 부모 저장 잠금 안에서 자식 상태를 다시 확인해 처음 관측한 뒤 다시 열린 자식, 부모/저장소가 바뀐 자식, 정리 작업 중인 자식의 승인을 거부한다. 승인 증거가 없는 삭제된 자식이 고아 상태인데도 완료 gate를 통과하던 기존 모순을 재현하고, 완료 판정에 고아 상태 제외 조건을 추가했다. 수정 후 전체 일반·race suite 각각 293개 패키지와 vet·build·architecture가 통과했다(`T08-child-verdict-final-*`). 실제 CLI에서 조회의 row 불변, 인덱스 복구의 멱등성, 동시 승인 8건 보존, 정리 후 승인/제외 기록 유지, 부적절한 승인 거부와 증거 없는 승인 기록의 PR 차단을 확인했다. 최신 자식 재조회·복구 권한·승인 기록 보존·입력 불변성을 무력화한 overlay가 각각 실패했다. cleanup과 이를 호출하는 readiness 경계의 이전은 남아 있어 T08은 미완료다.
 
+- **부분 진행 — 정리 상태 조회:** 작업 공간·브랜치·원격 산출물·자식 종료 조건과 상태 응답 구성은 domain으로 옮겼다. `StructuralStatus`는 파일/Git 관측을 조율하고 `StatusService`는 조건을 갖춘 사이클의 머지·이슈 조회와 정리 preview를 호출한다. 파일 존재 확인과 Git 실행은 기술 adapter에 남겼다. 기존 `cleanupstatus` 패키지와 production 상태 조회 래퍼, CLI의 조회 조율을 삭제했다. 전체 일반·race suite 각각 293개 패키지와 vet·build·architecture 검사가 통과했다(`T08-cleanup-status-*`). 실제 CLI와 임시 Git 저장소에서 변경 파일·원격 브랜치·브랜치 불일치·조회 실패·없는 디렉터리의 차단과 DB 기록 불변을 확인했다. 차단 조건의 극성, 머지 조회 자격, 다른 사이클의 오류 전파를 무력화한 세 변형도 테스트에서 검출했다. 실제 정리 실행과 readiness 조율의 나머지 이전은 남아 있어 T08은 미완료다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료

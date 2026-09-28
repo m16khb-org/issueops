@@ -17,15 +17,13 @@ var cleanupDeps CleanupDeps
 
 // CleanupDeps는 composition root가 실제 어댑터를 꽂는 진입점이다.
 type CleanupDeps struct {
+	Status                                            func(context.Context, string, string, bool, Deps) (issueopscontract.IssueOpsCleanupStatus, error)
 	AddIssueOpsFeedbackWithActor                      func(stateRoot, id, source, body, classification string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	CleanupAbandon                                    func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, deps Deps, prov port.IssueProvider) (issueopscontract.CleanupAbandonResult, error)
 	CleanupFinish                                     func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, deps Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error)
 	CleanupRemoteBranch                               func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, deps Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error)
 	CleanupLinkedBranch                               func(ctx context.Context, stateRoot string, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error)
 	CloseIssueOpsChildren                             func(stateRoot, id string, req issueopscontract.IssueOpsCloseChildrenRequest, provider func(string) (port.IssueProvider, error)) (issueopscontract.IssueOpsCloseChildrenResult, error)
-	FinalizeIssueOpsCleanupStatus                     func(issueopscontract.IssueOpsCleanupStatus) issueopscontract.IssueOpsCleanupStatus
-	IssueOpsCleanupStatusForRecord                    func(issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsCleanupStatusRequest) issueopscontract.IssueOpsCleanupStatus
-	IssueOpsRemoteArtifactMissing                     func(issueopscontract.IssueOpsRecord) []string
 	IssueOpsStateRoot                                 func() string
 	MarkIssueOpsContractFeedbackIssueUpdatedWithActor func(stateRoot, id string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	ObserveNativeProcessAncestry                      func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
@@ -61,12 +59,10 @@ func neutralCleanupDeps() CleanupDeps {
 		CloseIssueOpsChildren: func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, func(string) (port.IssueProvider, error)) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 			return issueopscontract.IssueOpsCloseChildrenResult{}, errCleanupNotConfigured
 		},
-		FinalizeIssueOpsCleanupStatus: func(s issueopscontract.IssueOpsCleanupStatus) issueopscontract.IssueOpsCleanupStatus { return s },
-		IssueOpsCleanupStatusForRecord: func(issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsCleanupStatusRequest) issueopscontract.IssueOpsCleanupStatus {
-			return issueopscontract.IssueOpsCleanupStatus{}
+		Status: func(context.Context, string, string, bool, Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
+			return issueopscontract.IssueOpsCleanupStatus{}, errCleanupNotConfigured
 		},
-		IssueOpsRemoteArtifactMissing: func(issueopscontract.IssueOpsRecord) []string { return nil },
-		IssueOpsStateRoot:             func() string { return "" },
+		IssueOpsStateRoot: func() string { return "" },
 		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: func(string, string, issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return issueopscontract.IssueOpsRecord{}, errCleanupNotConfigured
 		},

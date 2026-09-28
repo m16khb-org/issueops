@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	issueopscore "issueops/internal/adapter/issueops"
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
@@ -14,23 +15,35 @@ import (
 // 프로덕션에서는 issueopsapp이 주입한다. cleanup CLI 테스트는 실제 정리 경로를
 // 검증하므로 같은 배선을 재현한다.
 func TestMain(m *testing.M) {
+	finish := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
+		return issueopscore.CleanupFinish(ctx, stateRoot, req, issueopscore.CleanupFinishDeps{
+			Git:                d.CleanupFinishGit,
+			Processes:          issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses},
+			RemoveOrcaWorktree: d.RemoveOrcaWorktree,
+			ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
+				return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
+			},
+		})
+	}
 	ConfigureCleanup(CleanupDeps{
+		Status: func(ctx context.Context, root, id string, merged bool, d Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
+			service := cleanupapp.StatusService{
+				Records:    issueopscore.CycleRecordStore{StateRoot: root},
+				Structural: cleanupapp.StructuralStatus{Environment: issueopscore.CleanupStatusEnvironment{RunGit: issueopscore.GitCmd, ReadGit: issueopscore.GitOut}},
+				Provider:   d.Provider, VerifyMergedHead: d.VerifyMergedHead, ReadIssueSnapshot: issueopscore.ReadRemoteIssueSnapshot, CurrentDirectory: os.Getwd,
+				PreviewFinish: func(ctx context.Context, req issueopscontract.CleanupFinishRequest, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
+					return cleanupDeps.CleanupFinish(ctx, root, req, d, prov)
+				},
+			}
+			return service.Status(ctx, id, merged)
+		},
 		AddIssueOpsFeedbackWithActor: issueopscore.AddIssueOpsFeedbackWithActor,
 		CleanupAbandon: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupAbandonResult, error) {
 			return issueopscore.CleanupAbandon(ctx, stateRoot, req, issueopscore.CleanupAbandonDeps{
 				Orca: d.OrcaIntent, OrcaOwner: d.OrcaOwner, Remote: prov,
 			})
 		},
-		CleanupFinish: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
-			return issueopscore.CleanupFinish(ctx, stateRoot, req, issueopscore.CleanupFinishDeps{
-				Git:                d.CleanupFinishGit,
-				Processes:          issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses},
-				RemoveOrcaWorktree: d.RemoveOrcaWorktree,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
-					return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
-				},
-			})
-		},
+		CleanupFinish: finish,
 		CleanupRemoteBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
 			return issueopscore.CleanupRemoteBranch(ctx, stateRoot, req, issueopscore.CleanupRemoteBranchDeps{
 				VerifyMergedArtifact: d.VerifyMergedHead,
@@ -39,11 +52,8 @@ func TestMain(m *testing.M) {
 				},
 			})
 		},
-		CloseIssueOpsChildren:                             issueopscore.CloseIssueOpsChildren,
-		FinalizeIssueOpsCleanupStatus:                     issueopscore.FinalizeIssueOpsCleanupStatus,
-		IssueOpsCleanupStatusForRecord:                    issueopscore.IssueOpsCleanupStatusForRecord,
-		IssueOpsRemoteArtifactMissing:                     issueopscore.IssueOpsRemoteArtifactMissing,
-		IssueOpsStateRoot:                                 issueopscore.IssueOpsStateRoot,
+		CloseIssueOpsChildren: issueopscore.CloseIssueOpsChildren,
+		IssueOpsStateRoot:     issueopscore.IssueOpsStateRoot,
 		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: issueopscore.MarkIssueOpsContractFeedbackIssueUpdatedWithActor,
 		ObserveNativeProcessAncestry:                      issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                                      issueopscore.ReadIssueOps,

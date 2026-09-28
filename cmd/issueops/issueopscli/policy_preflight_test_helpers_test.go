@@ -6,7 +6,6 @@ import (
 	resourcesppdeps "issueops/cmd/issueops/mcpcli/resources"
 	auditppdeps "issueops/internal/adapter/audit"
 	issueopsppdeps "issueops/internal/adapter/issueops"
-	cleanupstatusppdeps "issueops/internal/adapter/issueops/cleanupstatus"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
 	orphancleanupppdeps "issueops/internal/adapter/issueops/orphancleanup"
 	reviewfilesppdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
@@ -18,8 +17,6 @@ import (
 // 대상만 채운다.
 func init() {
 	auditppdeps.EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
-	cleanupstatusppdeps.GitCmd = preflightadapter.GitCmd
-	cleanupstatusppdeps.GitOut = preflightadapter.GitOut
 	implementationppdeps.GitCmd = preflightadapter.GitCmd
 	implementationppdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsppdeps.GitCmd = preflightadapter.GitCmd

@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
@@ -9,7 +10,7 @@ import (
 
 func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
 	missing := stringlist.UniqueSorted(cycleapp.LocalPRReadinessMissing(record, issueOpsReadinessObservations()))
-	cleanup := IssueOpsCleanupStatusForRecord(record, issueops.IssueOpsCleanupStatusRequest{Merged: false})
+	cleanup := (cleanupapp.StructuralStatus{Environment: CleanupStatusEnvironment{RunGit: GitCmd, ReadGit: GitOut}}).ForRecord(record, issueops.IssueOpsCleanupStatusRequest{Merged: false})
 	return issueops.IssueOpsReadiness{
 		OK:             true,
 		Ready:          len(missing) == 0,

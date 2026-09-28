@@ -1,6 +1,7 @@
-package cleanupstatus
+package issueopscleanup_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,7 +9,11 @@ import (
 	"strings"
 	"testing"
 
+	core "issueops/internal/adapter/issueops"
+	preflight "issueops/internal/adapter/preflight"
+	app "issueops/internal/application/issueopscleanup"
 	model "issueops/internal/contract/issueops"
+	domain "issueops/internal/domain/issueops"
 )
 
 func TestByIDReadsRecordAndReportsMissingEvidence(t *testing.T) {
@@ -26,7 +31,7 @@ func TestByIDReadsRecordAndReportsMissingEvidence(t *testing.T) {
 		},
 	})
 
-	status, err := ByID(store.issueOpsStore(), t.TempDir(), "io-123456789abc", model.IssueOpsCleanupStatusRequest{Merged: false})
+	status, err := (app.StatusService{Records: store, Structural: cleanupStructuralForTest()}).Status(context.Background(), "io-123456789abc", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +50,7 @@ func TestByIDReadsRecordAndReportsMissingEvidence(t *testing.T) {
 
 func TestByIDReturnsReadError(t *testing.T) {
 	store := newCleanupStatusTestStore(model.IssueOpsRecord{})
-	status, err := ByID(store.issueOpsStore(), t.TempDir(), "io-123456789abc", model.IssueOpsCleanupStatusRequest{})
+	status, err := (app.StatusService{Records: store, Structural: cleanupStructuralForTest()}).Status(context.Background(), "io-123456789abc", false)
 	if err == nil {
 		t.Fatal("ByID(missing) error = nil, want error")
 	}
@@ -55,7 +60,7 @@ func TestByIDReturnsReadError(t *testing.T) {
 }
 
 func TestRemoteArtifactMissingFieldsAreSorted(t *testing.T) {
-	missing := RemoteArtifactMissing(model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{
+	missing := domain.RemoteArtifactMissing(model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{
 		Labels:    []string{" ", ""},
 		Assignees: nil,
 	}})
@@ -118,7 +123,7 @@ func TestForRecordCoversWorktreeAndGitBranches(t *testing.T) {
 	if !containsString(status.Missing, "branch_match") {
 		t.Fatalf("branch mismatch status = %#v", status)
 	}
-	if worktreePathValid("bad\x00path") {
+	if (core.CleanupStatusEnvironment{}).DirectoryExists("bad\x00path") {
 		t.Fatal("NUL path should be invalid")
 	}
 }
@@ -131,15 +136,17 @@ func newCleanupStatusTestStore(record model.IssueOpsRecord) *cleanupStatusTestSt
 	return &cleanupStatusTestStore{record: record}
 }
 
-func (s *cleanupStatusTestStore) issueOpsStore() Store {
-	return Store{
-		Read: func(_ string, id string) (model.IssueOpsRecord, error) {
-			if s.record.ID != id {
-				return model.IssueOpsRecord{}, fmt.Errorf("missing record")
-			}
-			return s.record, nil
-		},
+func (s *cleanupStatusTestStore) Load(id string) (model.IssueOpsRecord, error) {
+	if s.record.ID != id {
+		return model.IssueOpsRecord{}, fmt.Errorf("missing record")
 	}
+	return s.record, nil
+}
+func cleanupStructuralForTest() app.StructuralStatus {
+	return app.StructuralStatus{Environment: core.CleanupStatusEnvironment{RunGit: preflight.GitCmd, ReadGit: preflight.GitOut}}
+}
+func ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusRequest) model.IssueOpsCleanupStatus {
+	return cleanupStructuralForTest().ForRecord(record, req)
 }
 
 func containsString(values []string, want string) bool {

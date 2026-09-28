@@ -12,6 +12,7 @@ import (
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	orphancontract "issueops/internal/contract/issueopsorphancleanup"
+	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -791,7 +792,7 @@ func TestRunCleanupLinkedBranchDisciplineAndDispatch(t *testing.T) {
 // status는 finish preview의 점유·터미널 관측을 "무엇이 종료될지" 경고로 투영한다
 // (#477, plans/285 parity: schema는 그대로, 점유는 Warnings로).
 func TestCleanupStatusWarningsProjectStoppedProcesses(t *testing.T) {
-	warnings := cleanupStatusWarnings(issueopscontract.CleanupFinishResult{
+	warnings := issuedomain.CleanupStatusWarnings(issueopscontract.CleanupFinishResult{
 		WorkspaceProcesses: []issueopscontract.CleanupWorkspaceProcess{
 			{PID: 4321, Command: "codex", StartedAt: "2026-08-27T00:00:01Z", Executable: "codex"},
 			{PID: 5555, Command: "zsh", StartedAt: "2026-08-27T00:00:02Z", Executable: "zsh"},
@@ -804,7 +805,7 @@ func TestCleanupStatusWarningsProjectStoppedProcesses(t *testing.T) {
 	if !strings.Contains(warnings[2], "프로세스 2개") || !strings.Contains(warnings[2], "Orca 터미널 1개") {
 		t.Fatalf("the summary warning must state what apply will stop: %q", warnings[2])
 	}
-	if quiet := cleanupStatusWarnings(issueopscontract.CleanupFinishResult{}); len(quiet) != 0 {
+	if quiet := issuedomain.CleanupStatusWarnings(issueopscontract.CleanupFinishResult{}); len(quiet) != 0 {
 		t.Fatalf("quiet previews carry no stop warning: %v", quiet)
 	}
 }

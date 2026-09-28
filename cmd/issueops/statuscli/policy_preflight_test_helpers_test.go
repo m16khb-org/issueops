@@ -2,7 +2,6 @@ package statuscli
 
 import (
 	issueopsppdeps "issueops/internal/adapter/issueops"
-	cleanupstatusppdeps "issueops/internal/adapter/issueops/cleanupstatus"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
@@ -13,8 +12,6 @@ import (
 // 대상만 채운다.
 func init() {
 	RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
-	cleanupstatusppdeps.GitCmd = preflightadapter.GitCmd
-	cleanupstatusppdeps.GitOut = preflightadapter.GitOut
 	implementationppdeps.GitCmd = preflightadapter.GitCmd
 	implementationppdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsppdeps.GitCmd = preflightadapter.GitCmd

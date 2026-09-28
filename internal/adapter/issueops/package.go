@@ -8,7 +8,6 @@ import (
 
 	"issueops/internal/adapter/issueops/active"
 	"issueops/internal/adapter/issueops/cleanupchildren"
-	"issueops/internal/adapter/issueops/cleanupstatus"
 	"issueops/internal/adapter/issueops/compatibilityreview"
 	"issueops/internal/adapter/issueops/devilsadvocate"
 	"issueops/internal/adapter/issueops/intentdesign"
@@ -41,18 +40,6 @@ func issueOpsActiveStore() active.Store {
 	}
 }
 
-func IssueOpsCleanupStatusForRecord(record issueops.IssueOpsRecord, req issueops.IssueOpsCleanupStatusRequest) issueops.IssueOpsCleanupStatus {
-	return cleanupstatus.ForRecord(record, req)
-}
-
-func FinalizeIssueOpsCleanupStatus(status issueops.IssueOpsCleanupStatus) issueops.IssueOpsCleanupStatus {
-	return cleanupstatus.Finalize(status)
-}
-
-func IssueOpsRemoteArtifactMissing(record issueops.IssueOpsRecord) []string {
-	return cleanupstatus.RemoteArtifactMissing(record)
-}
-
 func CloseIssueOpsChildren(stateRoot, id string, req issueops.IssueOpsCloseChildrenRequest, provider func(string) (port.IssueProvider, error)) (issueops.IssueOpsCloseChildrenResult, error) {
 	var result issueops.IssueOpsCloseChildrenResult
 	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
@@ -65,10 +52,6 @@ func CloseIssueOpsChildren(stateRoot, id string, req issueops.IssueOpsCloseChild
 		return e
 	})
 	return result, err
-}
-
-func issueOpsRemoteArtifactMissing(record issueops.IssueOpsRecord) []string {
-	return cleanupstatus.RemoteArtifactMissing(record)
 }
 
 // OriginBranchPresent는 origin에 branch가 있는지 본다. 네트워크 호출이라

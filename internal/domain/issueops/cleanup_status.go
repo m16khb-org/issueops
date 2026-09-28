@@ -1,17 +1,64 @@
-package cleanupstatus
+package issueops
 
 import (
-	"os"
+	"fmt"
+	"slices"
+	"sort"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
-	issueopsdomain "issueops/internal/domain/issueops"
-	"issueops/internal/domain/issueopsremote"
-	"issueops/internal/domain/stringlist"
 )
 
-type Store struct {
-	Read func(stateRoot, id string) (model.IssueOpsRecord, error)
+type CleanupStatusObservation struct {
+	WorktreeExists bool
+	StatusCode     int
+	StatusOutput   string
+	StatusError    string
+	Branch         string
+	Remote         string
+	RemoteCode     int
+	RemoteOutput   string
+	RemoteError    string
+}
+
+func hasCleanupMetadata(values []string) bool {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" && !strings.Contains(value, "\x00") {
+			return true
+		}
+	}
+	return false
+}
+
+func cleanupStatusSortedValues(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if value != "" {
+			out = append(out, value)
+		}
+	}
+	sort.Strings(out)
+	return slices.Compact(out)
+}
+
+func CleanupStatusNeedsMergeReadback(record model.IssueOpsRecord, requested bool) bool {
+	return requested && record.Phase == model.IssueOpsPhaseDone && len(RemoteArtifactMissing(record)) == 0
+}
+
+func WithCleanupFinishEvidence(req model.CleanupFinishRequest, body, state string, artifact model.CleanupRemoteBranchArtifactHead) model.CleanupFinishRequest {
+	req.CompletionReflected = strings.Contains(body, model.IssueBodyCompletionStartMarker)
+	req.IssueClosed = strings.EqualFold(strings.TrimSpace(state), "closed")
+	req.MergedBaseBranch = artifact.BaseRefName
+	return req
+}
+
+func CleanupStatusFromFinish(structural model.IssueOpsCleanupStatus, result model.CleanupFinishResult) model.IssueOpsCleanupStatus {
+	return FinalizeCleanupStatus(model.IssueOpsCleanupStatus{
+		OK: true, Ready: result.OK && len(result.Missing) == 0, ID: result.ID, Merged: true,
+		Missing:  append([]string(nil), result.Missing...),
+		Warnings: CleanupStatusWarnings(result), WorktreePath: result.WorktreePath, Branch: result.Branch,
+		RemoteArtifactURL: structural.RemoteArtifactURL,
+	})
 }
 
 func RemoteArtifactMissing(record model.IssueOpsRecord) []string {
@@ -28,24 +75,16 @@ func RemoteArtifactMissing(record model.IssueOpsRecord) []string {
 	if strings.TrimSpace(record.RemoteArtifact.URL) == "" {
 		missing = append(missing, "remote_artifact_url")
 	}
-	if len(remote.CleanValues(record.RemoteArtifact.Labels)) == 0 {
+	if !hasCleanupMetadata(record.RemoteArtifact.Labels) {
 		missing = append(missing, "remote_artifact_labels")
 	}
-	if len(remote.CleanValues(record.RemoteArtifact.Assignees)) == 0 {
+	if !hasCleanupMetadata(record.RemoteArtifact.Assignees) {
 		missing = append(missing, "remote_artifact_assignees")
 	}
-	return stringlist.UniqueSorted(missing)
+	return cleanupStatusSortedValues(missing)
 }
 
-func ByID(store Store, stateRoot, id string, req model.IssueOpsCleanupStatusRequest) (model.IssueOpsCleanupStatus, error) {
-	record, err := store.Read(stateRoot, id)
-	if err != nil {
-		return model.IssueOpsCleanupStatus{OK: false, ID: id}, err
-	}
-	return ForRecord(record, req), nil
-}
-
-func ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusRequest) model.IssueOpsCleanupStatus {
+func BuildCleanupStatus(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusRequest, facts CleanupStatusObservation) model.IssueOpsCleanupStatus {
 	status := model.IssueOpsCleanupStatus{
 		OK:           true,
 		ID:           record.ID,
@@ -56,7 +95,7 @@ func ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusReque
 	if record.RemoteArtifact != nil {
 		status.RemoteArtifactURL = strings.TrimSpace(record.RemoteArtifact.URL)
 	}
-	if issueopsdomain.IssueOpsPhaseRank(record.Phase) < issueopsdomain.IssueOpsPhaseRank(model.IssueOpsPhasePR) {
+	if IssueOpsPhaseRank(record.Phase) < IssueOpsPhaseRank(model.IssueOpsPhasePR) {
 		status.Missing = append(status.Missing, "pr_phase")
 	}
 	status.Missing = append(status.Missing, RemoteArtifactMissing(record)...)
@@ -69,13 +108,13 @@ func ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusReque
 	worktree := strings.TrimSpace(record.WorktreePath)
 	if worktree == "" {
 		status.Missing = append(status.Missing, "worktree_path")
-		return Finalize(status)
+		return FinalizeCleanupStatus(status)
 	}
-	if !worktreePathValid(worktree) {
+	if !facts.WorktreeExists {
 		status.Missing = append(status.Missing, "worktree_exists")
-		return Finalize(status)
+		return FinalizeCleanupStatus(status)
 	}
-	if code, out, stderr := GitCmd(worktree, "status", "--porcelain=v1"); code != 0 {
+	if code, out, stderr := facts.StatusCode, facts.StatusOutput, facts.StatusError; code != 0 {
 		status.Missing = append(status.Missing, "worktree_git_status")
 		if strings.TrimSpace(stderr) != "" {
 			status.Warnings = append(status.Warnings, strings.TrimSpace(stderr))
@@ -87,17 +126,17 @@ func ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusReque
 		// 같은 극성을 쓴다.
 		status.Missing = append(status.Missing, "worktree_clean")
 	}
-	actualBranch := strings.TrimSpace(GitOut(worktree, "branch", "--show-current"))
+	actualBranch := strings.TrimSpace(facts.Branch)
 	if actualBranch == "" {
 		status.Missing = append(status.Missing, "branch")
 	} else if strings.TrimSpace(record.Branch) != "" && actualBranch != strings.TrimSpace(record.Branch) {
 		status.Missing = append(status.Missing, "branch_match")
 	}
-	remote := firstIssueOpsGitRemote(worktree)
+	remote := strings.TrimSpace(facts.Remote)
 	if remote == "" {
 		status.Missing = append(status.Missing, "remote_branch_check_unavailable")
 	} else if actualBranch != "" {
-		if code, out, stderr := GitCmd(worktree, "ls-remote", "--heads", remote, actualBranch); code != 0 {
+		if code, out, stderr := facts.RemoteCode, facts.RemoteOutput, facts.RemoteError; code != 0 {
 			status.Missing = append(status.Missing, "remote_branch_check_failed")
 			if strings.TrimSpace(stderr) != "" {
 				status.Warnings = append(status.Warnings, strings.TrimSpace(stderr))
@@ -113,7 +152,7 @@ func ForRecord(record model.IssueOpsRecord, req model.IssueOpsCleanupStatusReque
 			status.Missing = append(status.Missing, "remote_branch_absent")
 		}
 	}
-	return Finalize(status)
+	return FinalizeCleanupStatus(status)
 }
 
 func hasUnverifiedChildClose(record model.IssueOpsRecord) bool {
@@ -128,12 +167,12 @@ func hasUnverifiedChildClose(record model.IssueOpsRecord) bool {
 	return false
 }
 
-// Finalize applies the cleanup status contract's stable sorting, readiness, and
+// FinalizeCleanupStatus applies the cleanup status contract's stable sorting, readiness, and
 // three-choice presentation to status assembled by either structural inspection
 // or the cleanup finish readiness oracle.
-func Finalize(status model.IssueOpsCleanupStatus) model.IssueOpsCleanupStatus {
-	status.Missing = stringlist.UniqueSorted(status.Missing)
-	status.Warnings = stringlist.UniqueSorted(status.Warnings)
+func FinalizeCleanupStatus(status model.IssueOpsCleanupStatus) model.IssueOpsCleanupStatus {
+	status.Missing = cleanupStatusSortedValues(status.Missing)
+	status.Warnings = cleanupStatusSortedValues(status.Warnings)
 	status.Ready = len(status.Missing) == 0
 	if status.Ready {
 		status.Choices = []string{
@@ -151,21 +190,13 @@ func Finalize(status model.IssueOpsCleanupStatus) model.IssueOpsCleanupStatus {
 	return status
 }
 
-func worktreePathValid(path string) bool {
-	path = strings.TrimSpace(path)
-	if path == "" || strings.Contains(path, "\x00") {
-		return false
+func CleanupStatusWarnings(result model.CleanupFinishResult) []string {
+	warnings := make([]string, 0, len(result.WorkspaceProcesses)+1)
+	for _, process := range result.WorkspaceProcesses {
+		warnings = append(warnings, fmt.Sprintf("%d:%s:%s", process.PID, process.Command, process.StartedAt))
 	}
-	info, err := os.Stat(path)
-	return err == nil && info.IsDir()
-}
-
-func firstIssueOpsGitRemote(worktree string) string {
-	for _, remote := range strings.Fields(GitOut(worktree, "remote")) {
-		remote = strings.TrimSpace(remote)
-		if remote != "" {
-			return remote
-		}
+	if len(result.WorkspaceProcesses) > 0 || len(result.OrcaTerminals) > 0 {
+		warnings = append(warnings, fmt.Sprintf("apply가 프로세스 %d개와 Orca 터미널 %d개를 종료합니다", len(result.WorkspaceProcesses), len(result.OrcaTerminals)))
 	}
-	return ""
+	return warnings
 }

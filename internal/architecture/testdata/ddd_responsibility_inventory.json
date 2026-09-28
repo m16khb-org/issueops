@@ -2191,8 +2191,6 @@
         "func cleanupArtifactUnmerged",
         "func cleanupExecutionGeneration",
         "func cleanupFinishRequest",
-        "func cleanupStatus",
-        "func cleanupStatusWarnings",
         "func localActor",
         "func printCleanupAbandonRemoteEffects",
         "func printCleanupFinishError",
@@ -6941,6 +6939,17 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/cleanup_status_environment.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CleanupStatusEnvironment.DirectoryExists",
+        "func CleanupStatusEnvironment.Git",
+        "func CleanupStatusEnvironment.GitOutput",
+        "type CleanupStatusEnvironment"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/cleanup_workspace_gates.go",
       "owner": "adapter",
       "task": "T08",
@@ -7004,27 +7013,6 @@
         "type Store",
         "type closeChildOutcome",
         "type indexedChildLink"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/cleanupstatus/adapter_dependencies.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/issueops/cleanupstatus/cleanup_status.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func ByID",
-        "func Finalize",
-        "func ForRecord",
-        "func RemoteArtifactMissing",
-        "func firstIssueOpsGitRemote",
-        "func hasUnverifiedChildClose",
-        "func worktreePathValid",
-        "type Store"
       ]
     },
     {
@@ -8172,9 +8160,6 @@
       "task": "T20",
       "symbols": [
         "func CloseIssueOpsChildren",
-        "func FinalizeIssueOpsCleanupStatus",
-        "func IssueOpsCleanupStatusForRecord",
-        "func IssueOpsRemoteArtifactMissing",
         "func LastActiveAt",
         "func OriginBranchPresent",
         "func RecordIssueOpsCompatibilityReview",
@@ -8192,7 +8177,6 @@
         "func issueOpsActiveStore",
         "func issueOpsCompatibilityReviewStore",
         "func issueOpsIntentDesignStore",
-        "func issueOpsRemoteArtifactMissing",
         "func normalizeIssueOpsRepo",
         "func recordIssueOpsCompatibilityReview",
         "func recordIssueOpsDesignReview",
@@ -10972,6 +10956,19 @@
         "func WorkspaceLinker.Worktree",
         "type WorkspaceLinkFiles",
         "type WorkspaceLinker"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/status.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func StatusService.Status",
+        "func StructuralStatus.ForRecord",
+        "type StatusEnvironment",
+        "type StatusRecords",
+        "type StatusService",
+        "type StructuralStatus"
       ]
     },
     {
@@ -14237,6 +14234,24 @@
         "func ValidateChildForVerdict",
         "func ValidateChildValidationIDs",
         "func childVerdictReceipt"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_status.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func BuildCleanupStatus",
+        "func CleanupStatusFromFinish",
+        "func CleanupStatusNeedsMergeReadback",
+        "func CleanupStatusWarnings",
+        "func FinalizeCleanupStatus",
+        "func RemoteArtifactMissing",
+        "func WithCleanupFinishEvidence",
+        "func cleanupStatusSortedValues",
+        "func hasCleanupMetadata",
+        "func hasUnverifiedChildClose",
+        "type CleanupStatusObservation"
       ]
     },
     {
@@ -21978,6 +21993,88 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/umbrella_topology_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-structural-status",
+      "source_path": "internal/adapter/issueops/cleanupstatus/cleanup_status.go",
+      "source_symbol": "func ForRecord",
+      "responsibility": "classify observed worktree, branch, remote, phase and child closure requirements",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func BuildCleanupStatus",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_status_test.go",
+        "internal/application/issueopscleanup/status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-artifact-metadata",
+      "source_path": "internal/adapter/issueops/cleanupstatus/cleanup_status.go",
+      "source_symbol": "func RemoteArtifactMissing",
+      "responsibility": "require artifact identity, labels and assignees for cleanup and phase readiness",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RemoteArtifactMissing",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-status-finalization",
+      "source_path": "internal/adapter/issueops/cleanupstatus/cleanup_status.go",
+      "source_symbol": "func Finalize",
+      "responsibility": "sort requirements without mutating inputs and project readiness choices",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func FinalizeCleanupStatus",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-status-orchestration",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func cleanupStatus",
+      "responsibility": "read structural facts then eligible live merge and issue evidence before finish preview; preserve operational errors",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func StatusService.Status",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup status"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/status_observation_test.go",
+        "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-status-warnings",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func cleanupStatusWarnings",
+      "responsibility": "project occupied processes and terminals as stop warnings",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CleanupStatusWarnings",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup status"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
       ],
       "status": "migrated"
     }

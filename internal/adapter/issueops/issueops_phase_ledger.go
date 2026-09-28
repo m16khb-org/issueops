@@ -29,6 +29,6 @@ func IssueOpsGrillReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsRea
 func IssueOpsPhaseCompletion(record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase) issueops.IssueOpsReadiness {
 	return cycleapp.PhaseCompletion(record, phase, cycleport.PhaseCompletionReadiness{
 		Compatibility: IssueOpsCompatibilityReviewReadiness, AISlopClean: IssueOpsAISlopCleanReadiness,
-		PR: IssueOpsPRReadiness, RemoteArtifactMissing: issueOpsRemoteArtifactMissing,
+		PR: IssueOpsPRReadiness, RemoteArtifactMissing: issueopsdomain.RemoteArtifactMissing,
 	})
 }

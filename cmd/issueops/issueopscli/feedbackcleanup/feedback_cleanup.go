@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
-	port "issueops/internal/port"
-
 	orphancontract "issueops/internal/contract/issueopsorphancleanup"
+	issuedomain "issueops/internal/domain/issueops"
+	port "issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
 
@@ -113,7 +113,7 @@ func RunCleanup(args []string, deps Deps) error {
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		status, err := cleanupStatus(*id, *merged, deps)
+		status, err := cleanupDeps.Status(context.Background(), cleanupDeps.IssueOpsStateRoot(), *id, *merged, deps)
 		if err != nil {
 			if *jsonOut {
 				if printErr := deps.PrintError(err); printErr != nil {
@@ -189,75 +189,11 @@ func RunCleanup(args []string, deps Deps) error {
 	}
 }
 
-func cleanupStatus(id string, mergedRequested bool, deps Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
-	record, err := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), id)
-	if err != nil {
-		return issueopscontract.IssueOpsCleanupStatus{OK: false, ID: id}, err
-	}
-	structural := cleanupDeps.IssueOpsCleanupStatusForRecord(record, issueopscontract.IssueOpsCleanupStatusRequest{})
-	if !mergedRequested || record.Phase != issueopscontract.IssueOpsPhaseDone || len(cleanupDeps.IssueOpsRemoteArtifactMissing(record)) > 0 {
-		return structural, nil
-	}
-
-	providerName := cleanupDeps.ResolveRecordProvider(record)
-	if providerName == "" {
-		return issueopscontract.IssueOpsCleanupStatus{OK: false, ID: id}, fmt.Errorf("cannot determine provider from IssueOps record")
-	}
-	prov, err := deps.Provider(providerName)
-	if err != nil {
-		return issueopscontract.IssueOpsCleanupStatus{OK: false, ID: id}, err
-	}
-	if deps.VerifyMergedHead == nil {
-		return issueopscontract.IssueOpsCleanupStatus{OK: false, ID: id}, fmt.Errorf("merge verification is not configured")
-	}
-	mergedArtifact, err := deps.VerifyMergedHead(*record.RemoteArtifact)
-	if err != nil {
-		return issueopscontract.IssueOpsCleanupStatus{OK: false, ID: id}, fmt.Errorf("merge evidence readback failed (refusing to continue): %w", err)
-	}
-	snapshot, err := cleanupDeps.ReadRemoteIssueSnapshot(context.Background(), prov, port.ExecutionIssueSnapshotRequest{
-		Repo: record.Repo, URL: record.IssueURL,
-	})
-	if err != nil {
-		return issueopscontract.IssueOpsCleanupStatus{OK: false, ID: id}, fmt.Errorf("issue readback failed (refusing to continue): %w", err)
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return issueopscontract.IssueOpsCleanupStatus{OK: false, ID: id}, fmt.Errorf("cannot resolve current directory (refusing cleanup status): %w", err)
-	}
-	result, finishErr := cleanupDeps.CleanupFinish(context.Background(), cleanupDeps.IssueOpsStateRoot(), cleanupFinishRequest(
-		record, snapshot, mergedArtifact, cwd, false, false, "", true, "", false,
-	), deps, prov)
-	if finishErr != nil && (result.ID != id || len(result.Missing) == 0) {
-		return issueopscontract.IssueOpsCleanupStatus{OK: false, ID: id}, finishErr
-	}
-	status := issueopscontract.IssueOpsCleanupStatus{
-		OK:                true,
-		Ready:             result.OK && len(result.Missing) == 0,
-		ID:                result.ID,
-		Merged:            true,
-		Missing:           append([]string(nil), result.Missing...),
-		Warnings:          cleanupStatusWarnings(result),
-		WorktreePath:      result.WorktreePath,
-		Branch:            result.Branch,
-		RemoteArtifactURL: structural.RemoteArtifactURL,
-	}
-	return cleanupDeps.FinalizeIssueOpsCleanupStatus(status), nil
-}
-
 func cleanupFinishRequest(record issueopscontract.IssueOpsRecord, snapshot port.ExecutionIssueSnapshot, mergedArtifact issueopscontract.CleanupRemoteBranchArtifactHead, cwd string, apply, confirm bool, fingerprint string, merged bool, supersededBy string, keepRemoteBranch bool) issueopscontract.CleanupFinishRequest {
-	return issueopscontract.CleanupFinishRequest{
-		ID:                  record.ID,
-		CWD:                 cwd,
-		Merged:              merged,
-		SupersededBy:        supersededBy,
-		CompletionReflected: strings.Contains(snapshot.Body, issueopscontract.IssueBodyCompletionStartMarker),
-		IssueClosed:         strings.EqualFold(strings.TrimSpace(snapshot.State), "closed"),
-		MergedBaseBranch:    mergedArtifact.BaseRefName,
-		KeepRemoteBranch:    keepRemoteBranch,
-		Apply:               apply,
-		Confirm:             confirm,
-		Fingerprint:         fingerprint,
-	}
+	return issuedomain.WithCleanupFinishEvidence(issueopscontract.CleanupFinishRequest{
+		ID: record.ID, CWD: cwd, Merged: merged, SupersededBy: supersededBy,
+		KeepRemoteBranch: keepRemoteBranch, Apply: apply, Confirm: confirm, Fingerprint: fingerprint,
+	}, snapshot.Body, snapshot.State, mergedArtifact)
 }
 
 func runOrphanCleanup(args []string, deps Deps) error {
@@ -754,18 +690,4 @@ func printCleanupLinkedBranchResult(result issueopscontract.CleanupLinkedBranchR
 	if result.AuditError != "" {
 		fmt.Printf("audit error: %s\n", result.AuditError)
 	}
-}
-
-// cleanupStatusWarnings는 finish preview가 관측한 점유 프로세스와 Orca 터미널을
-// status 경고로 투영한다. 점유는 더 이상 차단 사유가 아니라 apply가 종료할
-// 대상이므로, 무엇이 종료될지 한 줄로 알려 준다(#477, plans/285 parity).
-func cleanupStatusWarnings(result issueopscontract.CleanupFinishResult) []string {
-	warnings := make([]string, 0, len(result.WorkspaceProcesses)+1)
-	for _, process := range result.WorkspaceProcesses {
-		warnings = append(warnings, fmt.Sprintf("%d:%s:%s", process.PID, process.Command, process.StartedAt))
-	}
-	if len(result.WorkspaceProcesses) > 0 || len(result.OrcaTerminals) > 0 {
-		warnings = append(warnings, fmt.Sprintf("apply가 프로세스 %d개와 Orca 터미널 %d개를 종료합니다", len(result.WorkspaceProcesses), len(result.OrcaTerminals)))
-	}
-	return warnings
 }

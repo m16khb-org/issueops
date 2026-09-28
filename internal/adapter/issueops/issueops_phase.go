@@ -119,6 +119,6 @@ func phaseEntryReadiness(stateRoot string, upstream issueOpsUpstreamFetcher) cyc
 			}
 			return issueOpsStrictPRReadinessWithStateUsing(stateRoot, record, upstream)
 		},
-		RemoteArtifactMissing: issueOpsRemoteArtifactMissing,
+		RemoteArtifactMissing: issueopsdomain.RemoteArtifactMissing,
 	}
 }
