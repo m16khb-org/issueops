@@ -176,9 +176,10 @@ func TestAwaitBranchLinkRejectsAnUnboundedTimeout(t *testing.T) {
 	root := awaitFixture(t, false)
 	for _, raw := range []string{"0s", "-1m", "31m", "forever"} {
 		deps := &awaitDeps{rounds: [][]linkedbranch.Node{nil}}
-		if _, err := AwaitBranchLink(context.Background(), root,
-			issueopscontract.AwaitBranchLinkRequest{ID: "io-await1", Timeout: raw}, deps.build()); err == nil {
-			t.Fatalf("--timeout %q는 거부해야 한다", raw)
+		result, err := AwaitBranchLink(context.Background(), root,
+			issueopscontract.AwaitBranchLinkRequest{ID: "io-await1", Timeout: raw}, deps.build())
+		if err == nil || result.OK || result.TimedOut || result.Attempts != 0 || deps.observed != 0 || len(deps.slept) != 0 {
+			t.Fatalf("invalid timeout %q must be rejected before polling: result=%+v err=%v observed=%d slept=%v", raw, result, err, deps.observed, deps.slept)
 		}
 	}
 }

@@ -63,9 +63,14 @@ func configureIssueOpsCLIRuntime() {
 			return newBranchRetargeter(stateRoot, remoteverify.ObserveRemoteArtifactTargetLive).Retarget(context.Background(), id, req, actor)
 		},
 		AwaitIssueOpsBranchLink: func(ctx context.Context, stateRoot string, req issueopscontract.AwaitBranchLinkRequest) (issueopscontract.AwaitBranchLinkResult, error) {
-			return issueopscore.AwaitBranchLink(ctx, stateRoot, req, issueopscore.AwaitBranchLinkDeps{
+			return (branchapp.LinkAwaiter{
+				Load: func(id string) (issueopscontract.IssueOpsRecord, error) {
+					return issueopscore.ReadIssueOps(stateRoot, id)
+				},
+				RemoteRef:             (issueopscore.LinkedBranchRemoteRef{}).Observe,
 				ObserveLinkedBranches: issueopscore.ObserveGitHubLinkedBranches(issueopscore.LiveProviderCLI),
-			})
+				Sleep:                 issueopscore.SleepWithContext, Now: time.Now,
+			}).Await(ctx, req)
 		},
 		PruneIssueOps: issueOpsRetentionPruneHandler(observer),
 		ReadIssueOps:  issueopscore.ReadIssueOps,

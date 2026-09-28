@@ -6865,20 +6865,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/branch_await_link.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func AwaitBranchLink",
-        "func awaitBranchLinkGates",
-        "func awaitBranchLinkNextCommand",
-        "func awaitBranchLinkObserve",
-        "func awaitBranchLinkTimeout",
-        "func sleepWithContext",
-        "type AwaitBranchLinkDeps"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/branch_preparation_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -7049,6 +7035,14 @@
         "func cleanupOccupantPIDs",
         "func observeCleanupWorkspaceOccupancy",
         "type CleanupProcessDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/clock.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func SleepWithContext"
       ]
     },
     {
@@ -10871,6 +10865,16 @@
       ]
     },
     {
+      "path": "internal/application/issueopsbranch/await_link.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func LinkAwaiter.Await",
+        "func LinkAwaiter.observe",
+        "type LinkAwaiter"
+      ]
+    },
+    {
       "path": "internal/application/issueopsbranch/link.go",
       "owner": "application",
       "task": "T08",
@@ -14398,6 +14402,15 @@
       "symbols": [
         "func ValidateBranch",
         "func isDecimalString"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/branch_await_link.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func AwaitBranchLinkGates",
+        "func AwaitBranchLinkTimeout"
       ]
     },
     {
@@ -20877,7 +20890,7 @@
         "issueops link-issue"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/linking/link_test.go",
+        "internal/application/issueopsbranch/link_test.go",
         "internal/adapter/issueops/issue_create_intent_test.go"
       ],
       "status": "migrated"
@@ -23262,6 +23275,57 @@
         "internal/domain/issueops/active_cycle_test.go",
         "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go",
         "cmd/issueops/issueopsapp/policy_pull_request_target_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-await-link-admission",
+      "source_path": "internal/adapter/issueops/branch_await_link.go",
+      "source_symbol": "func awaitBranchLinkGates",
+      "responsibility": "validate provider, sealed identity and readback availability before polling",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func AwaitBranchLinkGates",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch await-link"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/branch_await_link_test.go",
+        "internal/adapter/issueops/linked_branch_observation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-await-link-timeout",
+      "source_path": "internal/adapter/issueops/branch_await_link.go",
+      "source_symbol": "func awaitBranchLinkTimeout",
+      "responsibility": "select bounded linked branch wait duration and reject invalid timeout",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func AwaitBranchLinkTimeout",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch await-link"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/branch_await_link_test.go",
+        "internal/adapter/issueops/linked_branch_observation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-await-link-orchestration",
+      "source_path": "internal/adapter/issueops/branch_await_link.go",
+      "source_symbol": "func AwaitBranchLink",
+      "responsibility": "load record, observe linked branch and exact remote ref, classify and poll within deadline",
+      "target": "internal/application/issueopsbranch",
+      "target_symbol": "func LinkAwaiter.Await",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch await-link"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/branch_await_link_test.go",
+        "internal/adapter/issueops/linked_branch_observation_test.go"
       ],
       "status": "migrated"
     }

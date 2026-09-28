@@ -509,6 +509,8 @@ func dddTask(path string) string {
 		{"cmd/issueops/issueopsapp/issueops_link_wiring.go", "T08"},
 		{"internal/domain/issueops/branch_prepare.go", "T08"},
 		{"internal/domain/issueops/active_cycle.go", "T08"},
+		{"internal/domain/issueops/branch_await_link.go", "T08"},
+		{"internal/adapter/issueops/clock.go", "T08"},
 		{"cmd/issueops/issueopsapp/issueops_active_cycle_wiring.go", "T08"},
 		{"internal/domain/issueopsremote/branch_prepare.go", "T08"},
 		{"internal/adapter/issueops/branch_preparation_environment.go", "T08"},
