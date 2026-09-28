@@ -7471,6 +7471,13 @@
         "func executionSyncBaseAbortEffects.AbortMerge",
         "func executionSyncBaseAbortEffects.ClearResolution",
         "func executionSyncBaseActorLabel",
+        "func executionSyncBaseApplyEffects.AbortMerge",
+        "func executionSyncBaseApplyEffects.Head",
+        "func executionSyncBaseApplyEffects.Merge",
+        "func executionSyncBaseApplyEffects.Now",
+        "func executionSyncBaseApplyEffects.PredictConflicts",
+        "func executionSyncBaseApplyEffects.StartResolution",
+        "func executionSyncBaseApplyEffects.UnmergedPaths",
         "func executionSyncBaseAuthorityMissing",
         "func executionSyncBaseCommandPrefix",
         "func executionSyncBaseFail",
@@ -7494,9 +7501,9 @@
         "func executionSyncBaseWorktreeStatus",
         "func finalizeExecutionSyncBase",
         "func parseExecutionSyncBaseMergeTreeNames",
-        "func pushExecutionSyncBase",
         "func startExecutionSyncBaseResolution",
         "type executionSyncBaseAbortEffects",
+        "type executionSyncBaseApplyEffects",
         "type executionSyncBaseFinalizeEffects",
         "type executionSyncBaseInventory",
         "type executionSyncBasePushEffects"
@@ -10955,6 +10962,16 @@
         "func Abort",
         "type AbortRequest",
         "type AbortResult"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbasesync/apply.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Apply",
+        "type ApplyRequest",
+        "type ApplyResult"
       ]
     },
     {
@@ -16205,6 +16222,7 @@
       "task": "T20",
       "symbols": [
         "type BaseSyncAbortEffects",
+        "type BaseSyncApplyEffects",
         "type BaseSyncFinalizeEffects",
         "type BaseSyncPushEffects"
       ]
@@ -18555,7 +18573,7 @@
         "internal/application/issueopsbasesync/push_test.go",
         "internal/adapter/issueops/execution_sync_base_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "base-sync-abort-order",
@@ -18582,8 +18600,25 @@
       "target": "internal/application/issueopsbasesync",
       "target_symbol": "func Finalize",
       "task": "T06",
-      "entrypoints": ["issueops execution sync-base --finalize"],
-      "evidence_tests": ["internal/application/issueopsbasesync/finalize_test.go", "internal/adapter/issueops/execution_sync_base_test.go"],
+      "entrypoints": [
+        "issueops execution sync-base --finalize"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbasesync/finalize_test.go",
+        "internal/adapter/issueops/execution_sync_base_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "base-sync-apply-order",
+      "source_path": "internal/adapter/issueops/execution_sync_base.go",
+      "source_symbol": "func applyExecutionSyncBase",
+      "responsibility": "predict and perform merge, pause on conflicts, then push and record success",
+      "target": "internal/application/issueopsbasesync",
+      "target_symbol": "func Apply",
+      "task": "T06",
+      "entrypoints": ["issueops execution sync-base --apply"],
+      "evidence_tests": ["internal/application/issueopsbasesync/apply_test.go", "internal/adapter/issueops/execution_sync_base_test.go"],
       "status": "retain"
     }
   ]

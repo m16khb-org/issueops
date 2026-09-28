@@ -25,3 +25,14 @@ type BaseSyncFinalizeEffects interface {
 	Head(context.Context, string) (int, string)
 	Now() string
 }
+
+type BaseSyncApplyEffects interface {
+	BaseSyncPushEffects
+	PredictConflicts(context.Context, string, string, string) ([]string, error)
+	Merge(context.Context, string, string) (int, string)
+	UnmergedPaths(context.Context, string) []string
+	StartResolution(context.Context, string, []string) error
+	AbortMerge(context.Context, string) (int, string)
+	Head(context.Context, string) (int, string)
+	Now() string
+}

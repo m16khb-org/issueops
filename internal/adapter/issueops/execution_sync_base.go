@@ -301,42 +301,65 @@ func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueo
 		return *result, fmt.Errorf("stale execution sync-base fingerprint; run --preview again and retry with the new value")
 	}
 	fail := executionSyncBaseFail(record, result)
-	if result.MergeNeeded {
-		conflicts, err := executionSyncBasePredictConflicts(ctx, inventory.Root, inventory.WorkOID, inventory.BaseOID, deps)
-		if err != nil {
-			return fail("merge_tree", err)
-		}
-		if code, out := deps.Git(ctx, inventory.Root, "merge", "--no-ff", "--no-edit", inventory.BaseOID); code != 0 {
-			// 충돌 정지: merge-in-progress를 남기고 같은 holder의 해소를 기다린다.
-			result.MergeInProgress, result.Merged = true, false
-			result.ConflictFiles = conflicts
-			if len(result.ConflictFiles) == 0 {
-				result.ConflictFiles = executionSyncBaseUnmergedPaths(ctx, inventory.Root, deps)
-			}
-			if len(result.ConflictFiles) == 0 {
-				// 충돌이 아닌 다른 실패다 — 게이트 밖 실패로 fail-closed 보고.
-				return fail("merge", fmt.Errorf("git merge: %s", strings.TrimSpace(out)))
-			}
-			if record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased {
-				if err := startExecutionSyncBaseResolution(ctx, stateRoot, record.ID, actor, inventory, result.ConflictFiles); err != nil {
-					_, _ = deps.Git(ctx, inventory.Root, "merge", "--abort")
-					result.MergeInProgress = false
-					return fail("record_resolution", err)
-				}
-			}
-			prefix := executionSyncBaseCommandPrefix(record)
-			result.NextCommand = prefix + " --finalize ACTOR_FLAGS --json"
-			result.AbortCommand = prefix + " --abort ACTOR_FLAGS --json"
-			return *result, nil
-		}
-		result.Merged, result.MergeInProgress = true, false
+	outcome, err := basesyncapp.Apply(ctx, basesyncapp.ApplyRequest{
+		Push: basesyncapp.PushRequest{
+			ID: record.ID, Root: inventory.Root, Branch: inventory.Branch,
+			Mode: issueops.ExecutionSyncBaseEventApply, BaseBranch: inventory.BaseBranch,
+			BaseOID: inventory.BaseOID, Actor: executionSyncBaseActorLabel(actor),
+		},
+		WorkOID: inventory.WorkOID, MergeNeeded: result.MergeNeeded,
+		Released: record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased,
+	}, &executionSyncBaseApplyEffects{
+		executionSyncBasePushEffects: executionSyncBasePushEffects{stateRoot: stateRoot, deps: deps},
+		actor:                        actor, inventory: inventory,
+	})
+	result.ConflictFiles = outcome.ConflictFiles
+	result.MergeInProgress, result.Merged = outcome.MergeInProgress, outcome.Merged
+	result.MergeCommit = outcome.MergeCommit
+	result.Pushed, result.PushRetryRequired = outcome.Pushed, outcome.PushRetryRequired
+	if err != nil {
+		return fail(outcome.FailedStep, err)
 	}
-	code, head := deps.Git(ctx, inventory.Root, "rev-parse", "HEAD")
-	if code != 0 || strings.TrimSpace(head) == "" {
-		return fail("head", fmt.Errorf("git rev-parse HEAD: %s", strings.TrimSpace(head)))
+	if outcome.ConflictPaused {
+		prefix := executionSyncBaseCommandPrefix(record)
+		result.NextCommand = prefix + " --finalize ACTOR_FLAGS --json"
+		result.AbortCommand = prefix + " --abort ACTOR_FLAGS --json"
 	}
-	result.MergeCommit = strings.TrimSpace(head)
-	return pushExecutionSyncBase(ctx, stateRoot, record, actor, inventory, issueops.ExecutionSyncBaseEventApply, 0, deps, result, fail)
+	return *result, nil
+}
+
+type executionSyncBaseApplyEffects struct {
+	executionSyncBasePushEffects
+	actor     issueops.NativeActor
+	inventory executionSyncBaseInventory
+}
+
+func (e *executionSyncBaseApplyEffects) PredictConflicts(ctx context.Context, root, workOID, baseOID string) ([]string, error) {
+	return executionSyncBasePredictConflicts(ctx, root, workOID, baseOID, e.deps)
+}
+
+func (e *executionSyncBaseApplyEffects) Merge(ctx context.Context, root, baseOID string) (int, string) {
+	return e.deps.Git(ctx, root, "merge", "--no-ff", "--no-edit", baseOID)
+}
+
+func (e *executionSyncBaseApplyEffects) UnmergedPaths(ctx context.Context, root string) []string {
+	return executionSyncBaseUnmergedPaths(ctx, root, e.deps)
+}
+
+func (e *executionSyncBaseApplyEffects) StartResolution(ctx context.Context, id string, conflicts []string) error {
+	return startExecutionSyncBaseResolution(ctx, e.stateRoot, id, e.actor, e.inventory, conflicts)
+}
+
+func (e *executionSyncBaseApplyEffects) AbortMerge(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "merge", "--abort")
+}
+
+func (e *executionSyncBaseApplyEffects) Head(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "rev-parse", "HEAD")
+}
+
+func (e *executionSyncBaseApplyEffects) Now() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
 // finalizeExecutionSyncBase는 해소가 끝난 merge-in-progress를 커밋하고 push한다.
@@ -420,25 +443,6 @@ func (e *executionSyncBaseAbortEffects) AbortMerge(ctx context.Context, root str
 
 func (e *executionSyncBaseAbortEffects) ClearResolution(ctx context.Context, id string) error {
 	return clearExecutionSyncBaseResolution(ctx, e.stateRoot, id)
-}
-
-// pushExecutionSyncBase는 비강제 push를 수행하고 성공 시에만 durable 이벤트를
-// append한다. push 실패는 로컬 merge commit을 남긴 채 typed 오류로 끝나며,
-// 다음 preview가 "ahead"로 보고하고 apply 재실행이 merge 없이 push만 한다.
-func pushExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, actor issueops.NativeActor,
-	inventory executionSyncBaseInventory, eventMode string, conflictCount int, deps ExecutionSyncBaseDeps,
-	result *ExecutionSyncBaseResult, fail func(string, error) (ExecutionSyncBaseResult, error)) (ExecutionSyncBaseResult, error) {
-	outcome, err := basesyncapp.PushAndRecord(ctx, basesyncapp.PushRequest{
-		ID: record.ID, Root: inventory.Root, Branch: inventory.Branch,
-		Mode: eventMode, BaseBranch: inventory.BaseBranch, BaseOID: inventory.BaseOID,
-		MergeCommit: result.MergeCommit, ConflictFiles: conflictCount,
-		Actor: executionSyncBaseActorLabel(actor), At: time.Now().UTC().Format(time.RFC3339Nano),
-	}, &executionSyncBasePushEffects{stateRoot: stateRoot, deps: deps})
-	result.Pushed, result.PushRetryRequired = outcome.Pushed, outcome.PushRetryRequired
-	if err != nil {
-		return fail(outcome.FailedStep, err)
-	}
-	return *result, nil
 }
 
 type executionSyncBasePushEffects struct {
