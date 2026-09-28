@@ -12,6 +12,7 @@ import (
 
 	"issueops/internal/adapter/issueops/delegation"
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 func StartIssueOpsChildWithActor(stateRoot string, req issueops.IssueOpsChildStartRequest, actor IssueOpsActor) (issueops.IssueOpsChildStartResult, error) {
@@ -376,7 +377,7 @@ func buildIssueOpsChildStatus(parent issueops.IssueOpsRecord, scanned map[string
 	})
 	if parent.Phase == IssueOpsPhaseDone {
 		for i := range result.Children {
-			if issueOpsChildPRGateKey(result.Children[i], scanned[result.Children[i].CycleID]) != "" {
+			if issueopsdomain.ChildPRGateKey(result.Children[i]) != "" {
 				result.Children[i].ParentClosedState = "parent_closed"
 			}
 		}

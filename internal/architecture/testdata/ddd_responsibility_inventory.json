@@ -7660,11 +7660,8 @@
       "task": "T08",
       "symbols": [
         "func issueOpsActiveChildIDs",
-        "func issueOpsChildDropped",
-        "func issueOpsChildPRGateKey",
         "func issueOpsChildPRGateMissing",
-        "func issueOpsChildStatusWithoutParentLock",
-        "func issueOpsChildTerminal"
+        "func issueOpsChildStatusWithoutParentLock"
       ]
     },
     {
@@ -13761,6 +13758,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/child_gate.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ActiveChildIDs",
+        "func ChildDropped",
+        "func ChildPRGateKey",
+        "func ChildPRGateMissing",
+        "func ChildTerminal"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/early_phase_readiness.go",
       "owner": "domain",
       "task": "T20",
@@ -17914,6 +17923,42 @@
         "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
       "status": "retain"
+    },
+    {
+      "id": "child-pr-gate-key",
+      "source_path": "internal/adapter/issueops/issueops_child_gate.go",
+      "source_symbol": "func issueOpsChildPRGateKey",
+      "responsibility": "child phase and validation verdict determine the parent PR gate key",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ChildPRGateKey",
+      "task": "T04",
+      "entrypoints": ["issueops advance --to pr", "issueops remote create-pr", "issueops child status"],
+      "evidence_tests": ["internal/domain/issueops/child_gate_test.go", "internal/adapter/issueops/issueops_delegation_gate_test.go"],
+      "status": "migrated"
+    },
+    {
+      "id": "child-terminal-gate",
+      "source_path": "internal/adapter/issueops/issueops_child_gate.go",
+      "source_symbol": "func issueOpsChildTerminal",
+      "responsibility": "only done children count as terminal for parent completion",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ChildTerminal",
+      "task": "T04",
+      "entrypoints": ["issueops advance --to pr", "issueops child status"],
+      "evidence_tests": ["internal/domain/issueops/child_gate_test.go", "internal/adapter/issueops/issueops_delegation_gate_test.go"],
+      "status": "migrated"
+    },
+    {
+      "id": "child-dropped-gate",
+      "source_path": "internal/adapter/issueops/issueops_child_gate.go",
+      "source_symbol": "func issueOpsChildDropped",
+      "responsibility": "a dropped child needs verdict, substantial reason, and validation timestamp",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ChildDropped",
+      "task": "T04",
+      "entrypoints": ["issueops advance --to pr", "issueops child status"],
+      "evidence_tests": ["internal/domain/issueops/child_gate_test.go", "internal/adapter/issueops/issueops_delegation_gate_test.go"],
+      "status": "migrated"
     }
   ]
 }
