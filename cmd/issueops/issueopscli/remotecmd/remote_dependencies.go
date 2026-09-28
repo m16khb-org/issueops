@@ -19,30 +19,29 @@ var remoteDeps = neutralRemoteDeps()
 
 // RemoteDeps는 composition root가 실제 어댑터를 꽂는 진입점이다.
 type RemoteDeps struct {
-	CloseRemoteIssue                           func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error)
-	ReflectRemoteCompletion                    func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
-	CreateIssue                                func(context.Context, string, remoteapp.IssueCreateCommand, remoteapp.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error)
-	ResolveTemplateBody                        func(remoteapp.TemplateBodyRequest) (string, error)
-	ReadScoreSummaryFile                       func(string) (string, error)
-	ReconcileIssueCreate                       func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error)
-	CreateRemoteChild                          func(req port.IssueProviderCreateChildRequest, prov port.IssueProvider) (port.IssueProviderCreateChildResult, error)
-	CreateRemotePullRequestWithHandler         func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error)
-	DecodeIssueOpsRemoteJudgeJSON              func(out []byte) (issueopsremote.IssueOpsRemoteScoringResult, error)
-	DecodeIssueOpsRemoteScoringRequest         func(data []byte) (issueopsremote.IssueOpsRemoteScoringRequest, error)
-	IssueOpsStateRoot                          func() string
-	LinkIssueOpsChildWithActor                 func(stateRoot, id, childURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
-	ObserveNativeProcessAncestry               func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
-	ReadIssueOps                               func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
-	ReflectReviewFindings                      func(ctx context.Context, stateRoot, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
-	RenderIssueOpsRemoteJudgePrompt            func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error)
-	ResolveRecordProvider                      func(record issueopscontract.IssueOpsRecord) string
-	ScoreIssueOpsRemoteCandidates              func(req issueopsremote.IssueOpsRemoteScoringRequest) (issueopsremote.IssueOpsRemoteScoringResult, error)
-	SyncRemoteArtifactBody                     func(ctx context.Context, stateRoot, id string, cmd bodysynccontract.Command, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error)
-	SyncRemoteIssueGraph                       func(record issueopscontract.IssueOpsRecord) (map[string]any, error)
-	UmbrellaBranchGateReason                   func(record issueopscontract.IssueOpsRecord) string
-	ValidateIssueOpsMutationActor              func(stateRoot, id string, actor issueopscontract.IssueOpsActor) error
-	ValidateIssueOpsRemoteArtifactVerification func(stateRoot, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) (issueopscontract.IssueOpsRecord, error)
-	VerifyIssueOpsRemoteArtifactWithActor      func(stateRoot, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+	VerifyRemoteArtifact               func(context.Context, string, string, issueopscontract.IssueOpsRemoteArtifactVerificationRequest, issueopscontract.IssueOpsActor, remoteapp.ArtifactLiveVerifier, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error)
+	CloseRemoteIssue                   func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error)
+	ReflectRemoteCompletion            func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
+	CreateIssue                        func(context.Context, string, remoteapp.IssueCreateCommand, remoteapp.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error)
+	ResolveTemplateBody                func(remoteapp.TemplateBodyRequest) (string, error)
+	ReadScoreSummaryFile               func(string) (string, error)
+	ReconcileIssueCreate               func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error)
+	CreateRemoteChild                  func(req port.IssueProviderCreateChildRequest, prov port.IssueProvider) (port.IssueProviderCreateChildResult, error)
+	CreateRemotePullRequestWithHandler func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error)
+	DecodeIssueOpsRemoteJudgeJSON      func(out []byte) (issueopsremote.IssueOpsRemoteScoringResult, error)
+	DecodeIssueOpsRemoteScoringRequest func(data []byte) (issueopsremote.IssueOpsRemoteScoringRequest, error)
+	IssueOpsStateRoot                  func() string
+	LinkIssueOpsChildWithActor         func(stateRoot, id, childURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+	ObserveNativeProcessAncestry       func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
+	ReadIssueOps                       func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
+	ReflectReviewFindings              func(ctx context.Context, stateRoot, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
+	RenderIssueOpsRemoteJudgePrompt    func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error)
+	ResolveRecordProvider              func(record issueopscontract.IssueOpsRecord) string
+	ScoreIssueOpsRemoteCandidates      func(req issueopsremote.IssueOpsRemoteScoringRequest) (issueopsremote.IssueOpsRemoteScoringResult, error)
+	SyncRemoteArtifactBody             func(ctx context.Context, stateRoot, id string, cmd bodysynccontract.Command, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error)
+	SyncRemoteIssueGraph               func(record issueopscontract.IssueOpsRecord) (map[string]any, error)
+	UmbrellaBranchGateReason           func(record issueopscontract.IssueOpsRecord) string
+	ValidateIssueOpsMutationActor      func(stateRoot, id string, actor issueopscontract.IssueOpsActor) error
 }
 
 // ConfigureRemote는 composition root가 실제 구현을 꽂는 진입점이다.
@@ -113,11 +112,8 @@ func ConfigureRemote(deps RemoteDeps) {
 	if deps.ValidateIssueOpsMutationActor != nil {
 		remoteDeps.ValidateIssueOpsMutationActor = deps.ValidateIssueOpsMutationActor
 	}
-	if deps.ValidateIssueOpsRemoteArtifactVerification != nil {
-		remoteDeps.ValidateIssueOpsRemoteArtifactVerification = deps.ValidateIssueOpsRemoteArtifactVerification
-	}
-	if deps.VerifyIssueOpsRemoteArtifactWithActor != nil {
-		remoteDeps.VerifyIssueOpsRemoteArtifactWithActor = deps.VerifyIssueOpsRemoteArtifactWithActor
+	if deps.VerifyRemoteArtifact != nil {
+		remoteDeps.VerifyRemoteArtifact = deps.VerifyRemoteArtifact
 	}
 }
 
@@ -176,10 +172,7 @@ func neutralRemoteDeps() RemoteDeps {
 		},
 		UmbrellaBranchGateReason:      func(record issueopscontract.IssueOpsRecord) string { return "" },
 		ValidateIssueOpsMutationActor: func(stateRoot, id string, actor issueopscontract.IssueOpsActor) error { return errRemoteNotConfigured },
-		ValidateIssueOpsRemoteArtifactVerification: func(stateRoot, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) (issueopscontract.IssueOpsRecord, error) {
-			return issueopscontract.IssueOpsRecord{}, errRemoteNotConfigured
-		},
-		VerifyIssueOpsRemoteArtifactWithActor: func(stateRoot, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		VerifyRemoteArtifact: func(context.Context, string, string, issueopscontract.IssueOpsRemoteArtifactVerificationRequest, issueopscontract.IssueOpsActor, remoteapp.ArtifactLiveVerifier, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error) {
 			return issueopscontract.IssueOpsRecord{}, errRemoteNotConfigured
 		},
 	}

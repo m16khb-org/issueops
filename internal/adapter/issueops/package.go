@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"issueops/internal/adapter/issueops/active"
-	"issueops/internal/adapter/issueops/artifactverify"
 	"issueops/internal/adapter/issueops/branchprepare"
 	"issueops/internal/adapter/issueops/cleanupchildren"
 	"issueops/internal/adapter/issueops/cleanupstatus"
@@ -35,44 +34,6 @@ const (
 )
 
 var IssueOpsPhases = issueops.IssueOpsPhases
-
-func VerifyIssueOpsRemoteArtifactWithActor(stateRoot, id string, req issueops.IssueOpsRemoteArtifactVerificationRequest, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return verifyIssueOpsRemoteArtifact(stateRoot, id, req, &actor)
-}
-
-func verifyIssueOpsRemoteArtifact(stateRoot, id string, req issueops.IssueOpsRemoteArtifactVerificationRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validatePostTransferMutation(record, actor); actorErr != nil {
-			return actorErr
-		}
-		var e error
-		rec, e = artifactverify.Verify(issueOpsArtifactStore(), stateRoot, id, req)
-		return e
-	})
-	return rec, err
-}
-
-func ValidateIssueOpsRemoteArtifactVerification(stateRoot, id string, req issueops.IssueOpsRemoteArtifactVerificationRequest) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		var e error
-		rec, e = artifactverify.Validate(issueOpsArtifactStore(), stateRoot, id, req)
-		return e
-	})
-	return rec, err
-}
-
-func issueOpsArtifactStore() artifactverify.Store {
-	return artifactverify.Store{
-		Read:       ReadIssueOps,
-		TouchWrite: touchAndWriteIssueOps,
-	}
-}
 
 func issueOpsActiveStore() active.Store {
 	return active.Store{

@@ -134,7 +134,7 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhasePR), issueOpsActorForTest(worktree)); err != nil {
 		t.Fatal(err)
 	}
-	if record, err = VerifyIssueOpsRemoteArtifactWithActor(stateRoot, record.ID, issueops.IssueOpsRemoteArtifactVerificationRequest{
+	if record, err = recordVerifiedArtifactForTest(stateRoot, record.ID, issueops.IssueOpsRemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/2",

@@ -20,6 +20,10 @@ import (
 // 검증하므로 같은 배선을 재현한다.
 func TestMain(m *testing.M) {
 	ConfigureRemote(RemoteDeps{
+		VerifyRemoteArtifact: func(ctx context.Context, root, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest, actor issueopscontract.IssueOpsActor, verify remoteapp.ArtifactLiveVerifier, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error) {
+			service := remoteapp.NewArtifactVerificationService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), verify, observe, time.Now)
+			return service.Verify(ctx, id, req, actor)
+		},
 		ReflectRemoteCompletion: func(ctx context.Context, root, id, providerOverride string, confirm bool, verify remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 			return newRemoteCompletionForTest(root, verify).Reflect(ctx, id, providerOverride, confirm)
 		},
@@ -54,14 +58,12 @@ func TestMain(m *testing.M) {
 			service := remoteapp.NewReviewReflectionService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(name string) (remoteapp.ReviewReflectionProvider, error) { return provider.Resolve(name) }, observe, time.Now)
 			return service.Reflect(ctx, id, providerOverride, confirm, actor)
 		},
-		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,
-		ResolveRecordProvider:                      issuedomain.ResolveRecordProvider,
-		ScoreIssueOpsRemoteCandidates:              issueopscore.ScoreIssueOpsRemoteCandidates,
-		SyncRemoteIssueGraph:                       issueopscore.SyncRemoteIssueGraph,
-		UmbrellaBranchGateReason:                   issueopscore.UmbrellaBranchGateReason,
-		ValidateIssueOpsMutationActor:              issueopscore.ValidateIssueOpsMutationActor,
-		ValidateIssueOpsRemoteArtifactVerification: issueopscore.ValidateIssueOpsRemoteArtifactVerification,
-		VerifyIssueOpsRemoteArtifactWithActor:      issueopscore.VerifyIssueOpsRemoteArtifactWithActor,
+		RenderIssueOpsRemoteJudgePrompt: issueopscore.RenderIssueOpsRemoteJudgePrompt,
+		ResolveRecordProvider:           issuedomain.ResolveRecordProvider,
+		ScoreIssueOpsRemoteCandidates:   issueopscore.ScoreIssueOpsRemoteCandidates,
+		SyncRemoteIssueGraph:            issueopscore.SyncRemoteIssueGraph,
+		UmbrellaBranchGateReason:        issueopscore.UmbrellaBranchGateReason,
+		ValidateIssueOpsMutationActor:   issueopscore.ValidateIssueOpsMutationActor,
 	})
 	os.Exit(m.Run())
 }

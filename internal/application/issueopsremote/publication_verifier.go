@@ -57,11 +57,7 @@ func (v *PublicationVerifier) VerifyLive(ctx context.Context, intent contract.In
 		return err
 	}
 	req := model.IssueOpsRemoteArtifactVerificationRequest{Provider: payload.Provider, Kind: payload.Kind, URL: strings.TrimSpace(url), Labels: payload.Request.Labels, Assignees: payload.Request.Assignees, TargetBranch: payload.Request.BaseBranch}
-	authority := remote.ArtifactAuthority{Phase: string(record.Phase), IssueURL: record.IssueURL}
-	if record.BranchPrepare != nil {
-		authority.CodeProjectKey = record.BranchPrepare.CodeProjectKey
-	}
-	if _, err := remote.ProjectArtifact(authority, remote.Artifact{Provider: req.Provider, Kind: req.Kind, URL: req.URL, Labels: req.Labels, Assignees: req.Assignees, TargetBranch: req.TargetBranch}); err != nil {
+	if _, err := projectRemoteArtifact(record, req); err != nil {
 		return err
 	}
 	if v.verify != nil {

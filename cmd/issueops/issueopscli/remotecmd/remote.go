@@ -140,20 +140,9 @@ func Run(args []string, deps Deps) error {
 			Labels:       labels,
 			Assignees:    assignees,
 		}
-		_, err := remoteDeps.ValidateIssueOpsRemoteArtifactVerification(remoteDeps.IssueOpsStateRoot(), *id, req)
-		var record issueopscontract.IssueOpsRecord
-		if err == nil {
-			err = deps.verifyLive(context.Background(), req)
-		}
-		if err == nil {
-			var ancestry []issueopscontract.NativeProcessReceipt
-			ancestry, err = deps.observeNativeProcessAncestry()
-			if err == nil {
-				record, err = remoteDeps.VerifyIssueOpsRemoteArtifactWithActor(remoteDeps.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
-					Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd, NativeProcessAncestry: ancestry,
-				})
-			}
-		}
+		record, err := remoteDeps.VerifyRemoteArtifact(context.Background(), remoteDeps.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
+			Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
+		}, deps.verifyLive, deps.observeNativeProcessAncestry)
 		return deps.printResult(record, *jsonOut, err)
 	case "render-template":
 		return runRemoteRenderTemplate(args[1:], deps)

@@ -1,4 +1,4 @@
-package artifactverify
+package issueopsremote
 
 import (
 	"strings"
@@ -33,7 +33,7 @@ func verificationRequest(url string) model.IssueOpsRemoteArtifactVerificationReq
 // 끝내 채워지지 않아 cleanup까지 같은 지점에서 멈춘다.
 func TestProjectionAcceptsArtifactInSealedCodeProject(t *testing.T) {
 	record := crossProjectRecord("gitlab.example.com/team/service-a")
-	got, err := Projection(record, verificationRequest("https://gitlab.example.com/team/service-a/-/merge_requests/7"))
+	got, err := projectRemoteArtifact(record, verificationRequest("https://gitlab.example.com/team/service-a/-/merge_requests/7"))
 	if err != nil {
 		t.Fatalf("artifact in the sealed code project must be accepted: %v", err)
 	}
@@ -46,7 +46,7 @@ func TestProjectionAcceptsArtifactInSealedCodeProject(t *testing.T) {
 // 코드 프로젝트로 바뀔 뿐 강도는 그대로다.
 func TestProjectionRejectsArtifactOutsideSealedCodeProject(t *testing.T) {
 	record := crossProjectRecord("gitlab.example.com/team/service-a")
-	_, err := Projection(record, verificationRequest("https://gitlab.example.com/team/service-b/-/merge_requests/7"))
+	_, err := projectRemoteArtifact(record, verificationRequest("https://gitlab.example.com/team/service-b/-/merge_requests/7"))
 	if err == nil || !strings.Contains(err.Error(), "must match linked issue project") {
 		t.Fatalf("artifact outside the sealed code project must be rejected: %v", err)
 	}
@@ -55,10 +55,10 @@ func TestProjectionRejectsArtifactOutsideSealedCodeProject(t *testing.T) {
 // 봉인이 없으면 이슈 프로젝트가 곧 코드 프로젝트다 — 기존 사이클의 동작.
 func TestProjectionWithoutSealedCodeProjectStillBindsToIssueProject(t *testing.T) {
 	record := crossProjectRecord("")
-	if _, err := Projection(record, verificationRequest("https://gitlab.example.com/team/service-a/-/merge_requests/7")); err == nil {
+	if _, err := projectRemoteArtifact(record, verificationRequest("https://gitlab.example.com/team/service-a/-/merge_requests/7")); err == nil {
 		t.Fatal("without a sealed code project the artifact must still match the issue project")
 	}
-	if _, err := Projection(record, verificationRequest("https://gitlab.example.com/planning/backlog/-/merge_requests/7")); err != nil {
+	if _, err := projectRemoteArtifact(record, verificationRequest("https://gitlab.example.com/planning/backlog/-/merge_requests/7")); err != nil {
 		t.Fatalf("same-project artifact must remain accepted: %v", err)
 	}
 }

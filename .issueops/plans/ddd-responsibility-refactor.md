@@ -235,6 +235,8 @@
 
 - **부분 진행 — 계획 선택과 발행 검증:** `PlanDigestResolver`가 linked/staged plan 조회를 조율하고 domain이 연결 우선순위와 원문 digest를 판정한다. 읽을 수 없는 linked plan을 staged 내용으로 대체하지 않으며 기존 오류를 보존한다. `PublicationVerifier`는 intent 해석 뒤 최신 record를 조회하고 후보의 봉인된 내용·프로젝트·known URL 및 live 검증 전 phase를 검사한다. 기존 adapter verifier와 불필요한 역변환 helper를 삭제했다. 실제 SQLite 테스트에서 최신 프로젝트·phase 사용과 잘못된 후보 거부를 확인했고, linked plan 우선순위와 최신 record 사용을 우회한 overlay에서 각각 테스트가 실패했다(`review-plan-priority-mutation.txt`, `publication-latest-authority-mutation.txt`). 전체 Go suite(`full-suite-plan-publication-verification.txt`), 관련 race·vet·build·architecture가 통과했다. 실제 바이너리에서도 계획 부재 거부와 staged 원문 SHA256 기록을 확인했다(`plan-binding-binary-smoke.json`). 원격 artifact 검증 결과의 저장 조율은 adapter에 남아 있어 별도 `migrate` 항목으로 기록했으며 T07은 미완료다.
 
+- **부분 진행 — 원격 artifact 검증과 기록:** `ArtifactVerificationService`가 잠금 안 사전 검증, 원격 readback, ancestry 관측, 최신 record의 권한·metadata 재검사와 저장을 조율한다. CLI에는 parse/render만 남겼고 `artifactverify` 패키지와 기존 facade 함수를 삭제했다. 발행 검증도 같은 domain projection 매핑을 재사용한다. SQLite composition 테스트로 원격 오류·ancestry 오류의 무기록, 원격 조회 중 holder·phase·프로젝트 변경의 거부, 동시 증거 보존과 정상 receipt 저장을 확인했다. holder 검사와 ancestry 전달을 각각 제거한 overlay에서 테스트가 실패했다(`artifact-holder-recheck-mutation.txt`, `artifact-ancestry-mutation.txt`). 실제 바이너리는 잘못된 phase에서 provider를 호출하지 않고, 원격 라벨 누락 시 무기록이며 정상 readback 결과를 저장했다(`artifact-verification-binary-smoke.json`). 전체 Go suite(`full-suite-artifact-verification.txt`), 관련 race·vet·build·architecture가 통과했다. 소스 재점검에서 PR 생성 입력 준비, 본문 동기화 CLI 진입부, issue graph 반영의 조율이 남아 있음을 확인해 세 정책을 `migrate`로 추가했다. T07은 미완료다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료

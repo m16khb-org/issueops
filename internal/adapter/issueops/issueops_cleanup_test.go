@@ -1,9 +1,13 @@
 package issueops
 
 import (
+	"context"
+	cycleapp "issueops/internal/application/issueopscycle"
+	remoteapp "issueops/internal/application/issueopsremote"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/contract/issueops"
@@ -76,7 +80,7 @@ func TestIssueOpsCleanupStatusRequiresMergedCleanWorktreeAndDeletedRemoteBranch(
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = VerifyIssueOpsRemoteArtifactWithActor(stateRoot, record.ID, issueops.IssueOpsRemoteArtifactVerificationRequest{
+	record, err = recordVerifiedArtifactForTest(stateRoot, record.ID, issueops.IssueOpsRemoteArtifactVerificationRequest{
 		Provider:  "github",
 		Kind:      "pr",
 		URL:       "https://github.com/example/repo/pull/2",
@@ -150,4 +154,9 @@ func TestIssueOpsCleanupStatusBlocksWhenRemoteBranchCheckUnavailable(t *testing.
 	if status.Ready || !containsString(status.Missing, "remote_branch_check_unavailable") {
 		t.Fatalf("cleanup should block when remote branch check is unavailable, got %+v", status)
 	}
+}
+
+func recordVerifiedArtifactForTest(root, id string, req issueops.IssueOpsRemoteArtifactVerificationRequest, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
+	service := remoteapp.NewArtifactVerificationService(RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(samePath), nil, nil, time.Now)
+	return service.Record(context.Background(), id, req, actor)
 }

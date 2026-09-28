@@ -1146,6 +1146,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_artifact_verification_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newArtifactVerificationService",
+        "func verifyRemoteArtifact"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_artifact_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -6649,17 +6658,6 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/issueops/artifactverify/issueops_remote_artifact.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func Projection",
-        "func Validate",
-        "func Verify",
-        "type Store"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/benchmark/contract_alias.go",
       "owner": "adapter",
       "task": "T17",
@@ -8192,13 +8190,10 @@
         "func RecordIssueOpsPlanPrepWithActor",
         "func RetargetIssueOpsBranchWithActor",
         "func StartIssueOps",
-        "func ValidateIssueOpsRemoteArtifactVerification",
-        "func VerifyIssueOpsRemoteArtifactWithActor",
         "func branchRetargetObservation.artifactTargetBranch",
         "func branchRetargetObservation.remoteBranchPresent",
         "func cleanIssueOpsTextValues",
         "func issueOpsActiveStore",
-        "func issueOpsArtifactStore",
         "func issueOpsBranchPrepareStore",
         "func issueOpsCompatibilityReviewStore",
         "func issueOpsIntentDesignStore",
@@ -8222,7 +8217,6 @@
         "func recordIssueOpsIntent",
         "func recordIssueOpsPlanPrep",
         "func validateIssueOpsIssueBranch",
-        "func verifyIssueOpsRemoteArtifact",
         "type BranchRetargetDeps",
         "type branchRetargetObservation"
       ]
@@ -8271,6 +8265,7 @@
       "symbols": [
         "func RemoteRecordStore.Read",
         "func RemoteRecordStore.Update",
+        "func RemoteRecordStore.WithinTransaction",
         "type RemoteRecordStore"
       ]
     },
@@ -11541,6 +11536,22 @@
         "func ReconcileService.preserve",
         "func reconciledResult",
         "type ReconcileService"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/artifact_verification.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func ArtifactVerificationService.Record",
+        "func ArtifactVerificationService.Validate",
+        "func ArtifactVerificationService.Verify",
+        "func NewArtifactVerificationService",
+        "func projectRemoteArtifact",
+        "type ArtifactLiveVerifier",
+        "type ArtifactVerificationAuthority",
+        "type ArtifactVerificationService",
+        "type ArtifactVerificationStore"
       ]
     },
     {
@@ -19587,7 +19598,7 @@
       ],
       "evidence_tests": [
         "internal/domain/issueopsremote/artifact_test.go",
-        "internal/adapter/issueops/artifactverify/cross_project_test.go",
+        "internal/application/issueopsremote/artifact_cross_project_test.go",
         "internal/adapter/issueops/execution_publication_repository_test.go",
         "cmd/issueops/issueopscli/issueops_remote_verify_cli_test.go"
       ],
@@ -20447,14 +20458,63 @@
       "id": "remote-artifact-verification-recording",
       "source_path": "internal/adapter/issueops/artifactverify/issueops_remote_artifact.go",
       "source_symbol": "func Verify",
-      "responsibility": "read the cycle, project verified artifact metadata and persist the verification record",
+      "responsibility": "sequence local validation, provider readback, ancestry observation and authorized latest-record persistence",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func ArtifactVerificationService.Verify",
       "task": "T07",
       "entrypoints": [
         "issueops remote verify-artifact"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/artifactverify/issueops_remote_artifact_test.go"
+        "internal/application/issueopsremote/artifact_verification_test.go",
+        "cmd/issueops/issueopsapp/issueops_artifact_verification_wiring_test.go",
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-body-sync-command-preparation",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_body_sync.go",
+      "source_symbol": "func runRemoteBodySync",
+      "responsibility": "resolve cycle provider and replacement body, validate remote inputs and observe actor ancestry before body synchronization",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-issue",
+        "issueops remote sync-pr"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_body_sync_wiring_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "remote-publication-command-preparation",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_child_pr.go",
+      "source_symbol": "func runRemoteCreatePR",
+      "responsibility": "resolve provider and branch defaults, render publication body, validate metadata and observe actor before publication",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "remote-issue-graph-sync",
+      "source_path": "internal/adapter/issueops/issueops_remote_sync.go",
+      "source_symbol": "func SyncRemoteIssueGraph",
+      "responsibility": "validate graph synchronization eligibility and render typed issue links before provider comment publication",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-graph"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
       "status": "migrate"
     }

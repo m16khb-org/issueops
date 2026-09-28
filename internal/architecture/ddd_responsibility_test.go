@@ -497,7 +497,7 @@ func dddTask(path string) string {
 			return "T06"
 		case strings.HasPrefix(part, "execution_remote"), strings.HasPrefix(part, "execution_publication"), strings.HasPrefix(part, "issue_create_intent"),
 			strings.HasPrefix(part, "issueops_remote"), strings.HasPrefix(part, "issueops_body_sync"), strings.HasPrefix(part, "issueops_completion_remote"),
-			strings.HasPrefix(part, "issueops_devilsadvocate_reflect"), strings.HasPrefix(part, "artifactverify/"):
+			strings.HasPrefix(part, "issueops_devilsadvocate_reflect"):
 			return "T07"
 		case strings.HasPrefix(part, "start/"), strings.HasPrefix(part, "branchprepare/"),
 			strings.HasPrefix(part, "linking/"), strings.HasPrefix(part, "delegation/"),
