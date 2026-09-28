@@ -2,6 +2,7 @@ package issueopscleanup_test
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	app "issueops/internal/application/issueopscleanup"
@@ -31,5 +32,10 @@ func (r childCleanupFixtureRecords) Save(record model.IssueOpsRecord) (model.Iss
 	return r.store.TouchWrite(r.root, record)
 }
 func ByID(store Store, root, id string, req model.IssueOpsCloseChildrenRequest) (model.IssueOpsCloseChildrenResult, error) {
-	return (app.ChildrenCloser{Records: childCleanupFixtureRecords{store, root}, Provider: store.Provider, Now: time.Now}).Close(context.Background(), id, req)
+	return (app.ChildrenCloser{Records: childCleanupFixtureRecords{store, root}, Provider: store.Provider, VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error {
+		if req.Merged {
+			return nil
+		}
+		return fmt.Errorf("not merged")
+	}, Now: time.Now}).Close(context.Background(), id, req.Merged || req.MergeEvidenceRequested, req.Confirm)
 }

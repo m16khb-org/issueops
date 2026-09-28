@@ -57,10 +57,6 @@ func VerifyChildIssueBeforeLink(childURL string) error {
 	return verifyIssueOpsChildIssueBeforeLink(childURL)
 }
 
-func CleanupMerged(id string, requested bool) bool {
-	return issueOpsCleanupMerged(id, requested)
-}
-
 func VerifyRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
 	return verifyIssueOpsRemoteArtifactLive(req)
 }

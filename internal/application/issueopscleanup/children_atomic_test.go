@@ -39,8 +39,8 @@ func (r *lockedChildCleanupRecords) WithinLock(_ context.Context, id string, fn 
 	return fn()
 }
 func (r *lockedChildCleanupRecords) Load(id string) (model.IssueOpsRecord, error) {
-	if !r.locked || id != r.record.ID {
-		r.t.Fatal("load outside the cycle lock")
+	if id != r.record.ID {
+		r.t.Fatal("unexpected cycle identity")
 	}
 	return r.record, nil
 }
@@ -59,7 +59,7 @@ func (r *lockedChildCleanupRecords) Save(record model.IssueOpsRecord) (model.Iss
 func TestChildrenCloserDoesNotPersistPartialOrUnverifiedReceipts(t *testing.T) {
 	for _, failure := range []string{"provider", "hierarchy", "closed", "save"} {
 		t.Run(failure, func(t *testing.T) {
-			record := model.IssueOpsRecord{ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1", IssueLinks: []model.IssueOpsIssueLink{{Type: "child", URL: "https://github.com/acme/repo/issues/2"}, {Type: "child", URL: "https://github.com/acme/repo/issues/3"}}}
+			record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1", IssueLinks: []model.IssueOpsIssueLink{{Type: "child", URL: "https://github.com/acme/repo/issues/2"}, {Type: "child", URL: "https://github.com/acme/repo/issues/3"}}}
 			original := append([]model.IssueOpsIssueLink(nil), record.IssueLinks...)
 			records := &lockedChildCleanupRecords{t: t, record: record}
 			if failure == "save" {
@@ -79,8 +79,8 @@ func TestChildrenCloserDoesNotPersistPartialOrUnverifiedReceipts(t *testing.T) {
 				}
 				return result, nil
 			}}
-			closer := app.ChildrenCloser{Records: records, Provider: func(string) (port.IssueProvider, error) { return provider, nil }, Now: func() time.Time { return time.Unix(123, 0) }}
-			result, err := closer.Close(context.Background(), record.ID, model.IssueOpsCloseChildrenRequest{Merged: true, Confirm: true})
+			closer := app.ChildrenCloser{VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) { return provider, nil }, Now: func() time.Time { return time.Unix(123, 0) }}
+			result, err := closer.Close(context.Background(), record.ID, true, true)
 			if err == nil || len(result.Children) != 2 {
 				t.Fatalf("result=%+v err=%v", result, err)
 			}
@@ -99,7 +99,7 @@ func TestChildrenCloserDoesNotPersistPartialOrUnverifiedReceipts(t *testing.T) {
 }
 
 func TestChildrenCloserLimitsConcurrencyAndPreservesResultOrder(t *testing.T) {
-	record := model.IssueOpsRecord{ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1"}
+	record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"}, ID: "parent", IssueURL: "https://github.com/acme/repo/issues/1"}
 	for _, suffix := range []string{"2", "3", "4", "5", "6"} {
 		record.IssueLinks = append(record.IssueLinks, model.IssueOpsIssueLink{Type: "child", URL: "https://github.com/acme/repo/issues/" + suffix})
 	}
@@ -112,11 +112,11 @@ func TestChildrenCloserLimitsConcurrencyAndPreservesResultOrder(t *testing.T) {
 		<-release
 		return port.IssueProviderCloseChildResult{ChildURL: req.ChildURL, HierarchyVerified: true, Closed: true}, nil
 	}}
-	closer := app.ChildrenCloser{Records: records, Provider: func(string) (port.IssueProvider, error) { return provider, nil }, Now: func() time.Time { return time.Unix(123, 0) }}
+	closer := app.ChildrenCloser{VerifyMerged: func(model.IssueOpsRemoteArtifactVerification) error { return nil }, Records: records, Provider: func(string) (port.IssueProvider, error) { return provider, nil }, Now: func() time.Time { return time.Unix(123, 0) }}
 	done := make(chan model.IssueOpsCloseChildrenResult, 1)
 	errs := make(chan error, 1)
 	go func() {
-		result, err := closer.Close(context.Background(), record.ID, model.IssueOpsCloseChildrenRequest{Merged: true, Confirm: true})
+		result, err := closer.Close(context.Background(), record.ID, true, true)
 		done <- result
 		errs <- err
 	}()

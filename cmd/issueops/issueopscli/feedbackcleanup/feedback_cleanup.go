@@ -153,15 +153,10 @@ func RunCleanup(args []string, deps Deps) error {
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		verifiedMerged := CleanupMerged(*id, *merged, deps)
-		// 요청 여부와 검증 결과를 함께 넘긴다. 위상 규약 이전의 우산 레코드는
-		// 자체 PR이 없어 verifiedMerged가 항상 false가 되는데, 그 구간에서만
-		// core가 자식의 원격 closed 상태를 대체 증거로 조회한다(#129).
 		result, err := cleanupDeps.CloseIssueOpsChildren(cleanupDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCloseChildrenRequest{
-			Merged:                 verifiedMerged,
 			MergeEvidenceRequested: *merged,
 			Confirm:                *confirm,
-		}, deps.Provider)
+		}, deps)
 		if err != nil {
 			if *jsonOut {
 				if printErr := deps.PrintError(err); printErr != nil {
@@ -605,17 +600,6 @@ func cleanupArtifactUnmerged(id string, deps Deps) bool {
 		return false
 	}
 	return !merged
-}
-
-func CleanupMerged(id string, requested bool, deps Deps) bool {
-	if !requested {
-		return false
-	}
-	record, err := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), id)
-	if err != nil || record.RemoteArtifact == nil {
-		return false
-	}
-	return deps.VerifyMerged(*record.RemoteArtifact) == nil
 }
 
 // runCleanupLinkedBranch는 `createLinkedBranch`가 남긴 ref-null 고아 레코드를

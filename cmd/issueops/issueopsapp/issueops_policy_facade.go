@@ -31,10 +31,6 @@ func runIssueOps(args []string) error {
 	})
 }
 
-func issueOpsCleanupMerged(id string, requested bool) bool {
-	return issueopscli.CleanupMerged(id, requested)
-}
-
 func verifyIssueOpsRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
 	return issueopscli.VerifyRemoteArtifactLive(req)
 }

@@ -80,30 +80,8 @@ func TestRunCleanupStatusAndJSONError(t *testing.T) {
 	}
 }
 
-func TestCleanupMergedAndCommandBoundaries(t *testing.T) {
-	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record := feedbackCleanupIssueOpsRecord(t)
-	verified := 0
-	deps := Deps{
-		ParseFlags:  parseFeedbackCleanupFlags,
-		PrintResult: func(issueopscontract.IssueOpsRecord, bool, error) error { return nil },
-		VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
-			verified++
-			return nil
-		},
-	}
-	if CleanupMerged(record.ID, false, deps) {
-		t.Fatal("unrequested merge confirmation should be false")
-	}
-	if verified != 0 {
-		t.Fatalf("merge verifier should not run without --merged, ran %d times", verified)
-	}
-	if CleanupMerged("missing", true, deps) {
-		t.Fatal("missing record should not verify merged")
-	}
-	if verified != 0 {
-		t.Fatalf("merge verifier should not run for missing records, ran %d times", verified)
-	}
+func TestCleanupCommandBoundaries(t *testing.T) {
+	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintResult: func(issueopscontract.IssueOpsRecord, bool, error) error { return nil }}
 	if err := RunFeedback(nil, deps); err != nil {
 		t.Fatalf("help feedback returned error: %v", err)
 	}
@@ -605,8 +583,11 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 	t.Cleanup(func() { cleanupDeps = previous })
 	wired := cleanupDeps
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
-	wired.ReadIssueOps = issueopscore.ReadIssueOps
-	wired.CloseIssueOpsChildren = func(_ string, _ string, req issueopscontract.IssueOpsCloseChildrenRequest, _ func(string) (port.IssueProvider, error)) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+	wired.ReadIssueOps = func(string, string) (issueopscontract.IssueOpsRecord, error) {
+		t.Fatal("CLI dispatch must not read the record before application locking")
+		return issueopscontract.IssueOpsRecord{}, nil
+	}
+	wired.CloseIssueOpsChildren = func(_ string, _ string, req issueopscontract.IssueOpsCloseChildrenRequest, _ Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 		requests = append(requests, req)
 		return issueopscontract.IssueOpsCloseChildrenResult{ClosedCount: 1, Children: []issueopscontract.IssueOpsCloseChildResult{{URL: "https://example.com/i/1", Closed: true, State: "closed"}}}, nil
 	}
@@ -622,8 +603,7 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 	if err := RunCleanup([]string{"close-children", "--id", record.ID, "--merged", "--confirm", "--json"}, deps); err != nil {
 		t.Fatalf("close-children json: %v", err)
 	}
-	// fixture 레코드에는 RemoteArtifact가 없으므로 merged 검증은 false로
-	// 강등된다(fail-closed). 요청 플래그 전달과 confirm만 계약이다.
+	// CLI는 요청 플래그만 전달한다. 머지 확인 결과는 application이 채운다.
 	if len(requests) != 1 || requests[0].Merged || !requests[0].MergeEvidenceRequested || !requests[0].Confirm {
 		t.Fatalf("request contract wrong: %#v", requests[0])
 	}
@@ -634,7 +614,7 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 	failing := cleanupDeps
 	failing.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
 	failing.ReadIssueOps = issueopscore.ReadIssueOps
-	failing.CloseIssueOpsChildren = func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, func(string) (port.IssueProvider, error)) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+	failing.CloseIssueOpsChildren = func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 		return issueopscontract.IssueOpsCloseChildrenResult{}, errors.New("provider refused")
 	}
 	ConfigureCleanup(failing)

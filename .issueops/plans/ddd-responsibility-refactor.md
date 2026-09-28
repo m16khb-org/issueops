@@ -282,6 +282,8 @@
 
 - **부분 진행 — 자식 이슈 종료:** 머지 증거·부모 이슈 연결·원격 종료 확인 규칙과 종료 영수증 갱신은 domain으로 옮겼다. `ChildrenCloser`는 잠금 안에서 조회·증거 확인·최대 네 건의 provider 호출·전체 결과 확인·저장을 조율한다. 기존 `cleanupchildren` 패키지와 production 조립 래퍼는 삭제했다. 원격 처리 일부가 실패하면 로컬 영수증을 저장하지 않으며, 최초 종료 시각과 원본 관측값을 보존한다. 전체 일반·race suite 각각 292개 패키지와 vet·build·architecture 검사가 통과했다(`T08-cleanup-children-*`). 실제 CLI와 명령 인자를 엄격히 검사하는 로컬 `gh` 대역으로 preview의 무기록, 종료 영수증 저장, 미머지 부모·열린 자식·조회 실패 거부를 확인했다. 부모 artifact 조건·종료 확인·원본 복사를 무력화한 세 변형도 검출했다. CLI의 선행 머지 조회 보조 함수와 실제 워크트리 삭제 등 나머지 cleanup 이전이 남아 있어 T08은 미완료다.
 
+- **부분 진행 — 자식 종료 진입과 감사 반영:** CLI의 머지 조회와 두 단계의 export 래퍼를 삭제했다. `ChildrenCloser`가 잠금 밖에서 부모 머지를 조회하고 잠금 안에서 현재 저장소·부모·자식 목록·artifact가 조회 대상과 같은지 검증한다. 감사 본문 반영은 `AuditReflector`로 옮겼고 기존 adapter 함수와 사용하지 않는 CLI 의존성 필드를 제거했다. 원격 반영 확인 뒤 최신 record에 영수증을 저장하며, 삭제 전 수집한 완료 본문을 보존한다. 대상·SQLite 통합 테스트, 전체 일반·race 테스트(각 292개 패키지), vet·build·architecture가 통과했다. 실제 CLI에서 조회 중 artifact 변경 거부와 상태 보존을 확인했고, 세 가지 검증 우회 mutation은 각각 실패했다. 기존 자식 provider 작업의 잠금 경계는 유지했으며, 실제 정리 실행과 나머지 cleanup 경계 이전이 남아 있어 T08은 미완료다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료

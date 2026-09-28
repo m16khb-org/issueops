@@ -23,13 +23,12 @@ type CleanupDeps struct {
 	CleanupFinish                                     func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, deps Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error)
 	CleanupRemoteBranch                               func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, deps Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error)
 	CleanupLinkedBranch                               func(ctx context.Context, stateRoot string, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error)
-	CloseIssueOpsChildren                             func(stateRoot, id string, req issueopscontract.IssueOpsCloseChildrenRequest, provider func(string) (port.IssueProvider, error)) (issueopscontract.IssueOpsCloseChildrenResult, error)
+	CloseIssueOpsChildren                             func(stateRoot, id string, req issueopscontract.IssueOpsCloseChildrenRequest, deps Deps) (issueopscontract.IssueOpsCloseChildrenResult, error)
 	IssueOpsStateRoot                                 func() string
 	MarkIssueOpsContractFeedbackIssueUpdatedWithActor func(stateRoot, id string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	ObserveNativeProcessAncestry                      func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
 	ReadIssueOps                                      func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
 	ReadRemoteIssueSnapshot                           func(ctx context.Context, prov port.IssueProvider, req port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error)
-	ReflectCleanupAudit                               func(stateRoot string, record issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string, prov port.IssueProvider) error
 	ResolveRecordProvider                             func(issueopscontract.IssueOpsRecord) string
 }
 
@@ -56,7 +55,7 @@ func neutralCleanupDeps() CleanupDeps {
 		CleanupLinkedBranch: func(context.Context, string, issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error) {
 			return issueopscontract.CleanupLinkedBranchResult{}, errCleanupNotConfigured
 		},
-		CloseIssueOpsChildren: func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, func(string) (port.IssueProvider, error)) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+		CloseIssueOpsChildren: func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 			return issueopscontract.IssueOpsCloseChildrenResult{}, errCleanupNotConfigured
 		},
 		Status: func(context.Context, string, string, bool, Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
@@ -72,9 +71,6 @@ func neutralCleanupDeps() CleanupDeps {
 		},
 		ReadRemoteIssueSnapshot: func(context.Context, port.IssueProvider, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
 			return port.ExecutionIssueSnapshot{}, errCleanupNotConfigured
-		},
-		ReflectCleanupAudit: func(string, issueopscontract.IssueOpsRecord, issueopscontract.RemoteCompletionSection, string, port.IssueProvider) error {
-			return errCleanupNotConfigured
 		},
 		ResolveRecordProvider: func(issueopscontract.IssueOpsRecord) string { return "" },
 	}

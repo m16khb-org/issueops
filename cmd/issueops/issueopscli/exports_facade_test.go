@@ -16,9 +16,6 @@ func TestExportedIssueOpsFacades(t *testing.T) {
 	if err := RunIssueOps([]string{"unknown"}); err == nil {
 		t.Fatal("unknown issueops subcommand should fail")
 	}
-	if CleanupMerged("", false) {
-		t.Fatal("cleanup without id and request should not be treated as merged")
-	}
 	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
 		t.Fatal("invalid remote artifact URL should fail before provider inspection")
 	}

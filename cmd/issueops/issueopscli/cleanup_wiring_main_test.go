@@ -8,6 +8,7 @@ import (
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	issueopscore "issueops/internal/adapter/issueops"
 	cleanupapp "issueops/internal/application/issueopscleanup"
+	completionapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
 	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
@@ -16,13 +17,16 @@ import (
 // cleanup CLI는 정리 구현과 의존 조립을 알지 않는다. 어댑터를 아는 곳은
 // composition root 하나뿐이다.
 func wireCleanupForTests() {
+	reflectAudit := func(ctx context.Context, root string, record issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string, prov port.IssueProvider) error {
+		return (cleanupapp.AuditReflector{Receipts: completionapp.NewCompletionReceipts(issueopscore.RemoteRecordStore{StateRoot: root}, time.Now)}).Reflect(ctx, record, completion, audit, prov)
+	}
 	finish := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, d feedbackcleanup.Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
 		return issueopscore.CleanupFinish(ctx, stateRoot, req, issueopscore.CleanupFinishDeps{
 			Git:                d.CleanupFinishGit,
 			Processes:          issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses},
 			RemoveOrcaWorktree: d.RemoveOrcaWorktree,
 			ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
-				return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
+				return reflectAudit(ctx, stateRoot, rec, completion, audit, prov)
 			},
 		})
 	}
@@ -47,19 +51,18 @@ func wireCleanupForTests() {
 			return issueopscore.CleanupRemoteBranch(ctx, stateRoot, req, issueopscore.CleanupRemoteBranchDeps{
 				VerifyMergedArtifact: d.VerifyMergedHead,
 				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
-					return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
+					return reflectAudit(ctx, stateRoot, rec, completion, audit, prov)
 				},
 			})
 		},
-		CloseIssueOpsChildren: func(root, id string, req issueopscontract.IssueOpsCloseChildrenRequest, provider func(string) (port.IssueProvider, error)) (issueopscontract.IssueOpsCloseChildrenResult, error) {
-			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: provider, Now: time.Now}).Close(context.Background(), id, req)
+		CloseIssueOpsChildren: func(root, id string, req issueopscontract.IssueOpsCloseChildrenRequest, d feedbackcleanup.Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: d.Provider, VerifyMerged: d.VerifyMerged, Now: time.Now}).Close(context.Background(), id, req.MergeEvidenceRequested, req.Confirm)
 		},
 		IssueOpsStateRoot: issueopscore.IssueOpsStateRoot,
 		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: issueopscore.MarkIssueOpsContractFeedbackIssueUpdatedWithActor,
 		ObserveNativeProcessAncestry:                      issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                                      issueopscore.ReadIssueOps,
 		ReadRemoteIssueSnapshot:                           issueopscore.ReadRemoteIssueSnapshot,
-		ReflectCleanupAudit:                               issueopscore.ReflectCleanupAudit,
 		ResolveRecordProvider:                             issuedomain.ResolveRecordProvider,
 	})
 }

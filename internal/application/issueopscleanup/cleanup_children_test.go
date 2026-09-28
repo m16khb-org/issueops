@@ -33,9 +33,10 @@ func TestCloseChildrenRequiresMergeEvidence(t *testing.T) {
 
 func TestCloseChildrenDryRunDoesNotMutateState(t *testing.T) {
 	record := model.IssueOpsRecord{
-		ID:       "io-close-children",
-		Repo:     "/repo",
-		IssueURL: "https://github.com/acme/repo/issues/1",
+		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
+		ID:             "io-close-children",
+		Repo:           "/repo",
+		IssueURL:       "https://github.com/acme/repo/issues/1",
 		IssueLinks: []model.IssueOpsIssueLink{{
 			Type:     "child",
 			URL:      "https://github.com/acme/repo/issues/2",
@@ -61,9 +62,10 @@ func TestCloseChildrenDryRunDoesNotMutateState(t *testing.T) {
 
 func TestCloseChildrenConfirmRecordsVerifiedEvidence(t *testing.T) {
 	record := model.IssueOpsRecord{
-		ID:       "io-close-children",
-		Repo:     "/repo",
-		IssueURL: "https://github.com/acme/repo/issues/1",
+		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
+		ID:             "io-close-children",
+		Repo:           "/repo",
+		IssueURL:       "https://github.com/acme/repo/issues/1",
 		IssueLinks: []model.IssueOpsIssueLink{{
 			Type:      "child",
 			URL:       "https://github.com/acme/repo/issues/2",
@@ -96,9 +98,10 @@ func TestCloseChildrenConfirmRecordsVerifiedEvidence(t *testing.T) {
 
 func TestCloseChildrenRunsIndependentProviderCallsConcurrently(t *testing.T) {
 	record := model.IssueOpsRecord{
-		ID:       "io-close-children",
-		Repo:     "/repo",
-		IssueURL: "https://github.com/acme/repo/issues/1",
+		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
+		ID:             "io-close-children",
+		Repo:           "/repo",
+		IssueURL:       "https://github.com/acme/repo/issues/1",
 		IssueLinks: []model.IssueOpsIssueLink{
 			{Type: "child", URL: "https://github.com/acme/repo/issues/2", Provider: "github"},
 			{Type: "child", URL: "https://github.com/acme/repo/issues/3", Provider: "github"},

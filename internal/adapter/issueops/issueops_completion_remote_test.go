@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	completionapp "issueops/internal/application/issueopsremote"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/port"
@@ -106,7 +107,7 @@ func TestReflectCleanupAuditStampsTheCompletionCache(t *testing.T) {
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{updateRes: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true, URL: record.IssueURL}}
 
-	if err := ReflectCleanupAudit(stateRoot, record, completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record), "cleanup 완료: 원격 브랜치 삭제", prov); err != nil {
+	if err := (cleanupapp.AuditReflector{Receipts: completionapp.NewCompletionReceipts(RemoteRecordStore{StateRoot: stateRoot}, time.Now)}).Reflect(context.Background(), record, completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record), "cleanup 완료: 원격 브랜치 삭제", prov); err != nil {
 		t.Fatal(err)
 	}
 	if prov.updateReq == nil || prov.updateReq.Completion == nil || prov.updateReq.Completion.CleanupAudit == "" {
@@ -135,7 +136,7 @@ func TestReflectCleanupAuditDoesNotStampOnFailure(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			stateRoot, record := completionTestRecord(t)
 			prov := &fakeCompletionProvider{updateRes: tc.res, updateErr: tc.err}
-			if err := ReflectCleanupAudit(stateRoot, record, completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record), "cleanup 완료", prov); err == nil {
+			if err := (cleanupapp.AuditReflector{Receipts: completionapp.NewCompletionReceipts(RemoteRecordStore{StateRoot: stateRoot}, time.Now)}).Reflect(context.Background(), record, completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record), "cleanup 완료", prov); err == nil {
 				t.Fatal("failed audit reflection must return an error")
 			}
 			got, readErr := ReadIssueOps(stateRoot, record.ID)

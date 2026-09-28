@@ -20,17 +20,38 @@ type ChildCleanupRecords interface {
 }
 
 type ChildrenCloser struct {
-	Records  ChildCleanupRecords
-	Provider func(string) (port.IssueProvider, error)
-	Now      func() time.Time
+	Records      ChildCleanupRecords
+	Provider     func(string) (port.IssueProvider, error)
+	VerifyMerged func(model.IssueOpsRemoteArtifactVerification) error
+	Now          func() time.Time
 }
 
-func (s ChildrenCloser) Close(ctx context.Context, id string, req model.IssueOpsCloseChildrenRequest) (model.IssueOpsCloseChildrenResult, error) {
+func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm bool) (model.IssueOpsCloseChildrenResult, error) {
 	result := model.IssueOpsCloseChildrenResult{OK: false, ID: id}
+	req := model.IssueOpsCloseChildrenRequest{MergeEvidenceRequested: requested, Confirm: confirm}
+	var observed model.IssueOpsRecord
+	if requested {
+		var err error
+		observed, err = s.Records.Load(id)
+		if err != nil {
+			return result, err
+		}
+		observed.IssueLinks = append([]model.IssueOpsIssueLink(nil), observed.IssueLinks...)
+		if observed.RemoteArtifact != nil {
+			artifact := *observed.RemoteArtifact
+			observed.RemoteArtifact = &artifact
+			req.Merged = s.VerifyMerged(artifact) == nil
+		}
+	}
 	err := s.Records.WithinLock(ctx, id, func() error {
 		record, err := s.Records.Load(id)
 		if err != nil {
 			return err
+		}
+		if requested {
+			if err := domain.ValidateChildCleanupMergeObservation(observed, record); err != nil {
+				return err
+			}
 		}
 		result, err = domain.PrepareChildCleanup(record, req)
 		if err != nil {

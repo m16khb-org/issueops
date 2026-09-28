@@ -280,7 +280,3 @@ func issueOpsOrphanCleanupDeps() OrphanDependencies {
 		VerifyMerged: verifyIssueOpsRemoteArtifactMergedLive,
 	}
 }
-
-func issueOpsCleanupMerged(id string, requested bool) bool {
-	return feedbackcleanup.CleanupMerged(id, requested, issueOpsFeedbackCleanupDeps(nil))
-}

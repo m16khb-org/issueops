@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -66,4 +67,20 @@ func ApplyChildCleanupReceipts(record model.IssueOpsRecord, indices []int, now s
 	}
 	record.UpdatedAt = now
 	return record
+}
+
+// Bind remote merge evidence to the current closure inputs after reacquiring
+// the cycle lock. Metadata unrelated to child closure may advance independently.
+func ValidateChildCleanupMergeObservation(observed, current model.IssueOpsRecord) error {
+	changed := observed.ID != current.ID || observed.Repo != current.Repo || observed.Branch != current.Branch || observed.IssueURL != current.IssueURL || !slices.Equal(observed.IssueLinks, current.IssueLinks)
+	if (observed.RemoteArtifact == nil) != (current.RemoteArtifact == nil) {
+		changed = true
+	} else if observed.RemoteArtifact != nil {
+		before, after := observed.RemoteArtifact, current.RemoteArtifact
+		changed = changed || before.Provider != after.Provider || before.Kind != after.Kind || before.URL != after.URL || before.TargetBranch != after.TargetBranch
+	}
+	if changed {
+		return fmt.Errorf("child cleanup inputs changed during merge observation; retry")
+	}
+	return nil
 }

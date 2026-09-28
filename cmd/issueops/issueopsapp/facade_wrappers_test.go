@@ -398,9 +398,6 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 		t.Fatal("parseGitStatusPath empty")
 	}
 
-	if issueOpsCleanupMerged("", false) {
-		t.Fatal("empty cleanup should not be merged")
-	}
 	if err := verifyIssueOpsRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
 		t.Fatal("invalid remote artifact URL should fail")
 	}

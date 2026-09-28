@@ -126,9 +126,10 @@ func TestCloseChildrenWithoutRequestDoesNotProbeRemote(t *testing.T) {
 // 부모 머지 증거가 검증된 경우에는 종전 경로가 그대로 쓰인다.
 func TestCloseChildrenKeepsParentMergeEvidenceBasis(t *testing.T) {
 	record := model.IssueOpsRecord{
-		ID:       "io-umbrella",
-		Repo:     "/repo",
-		IssueURL: "https://github.com/acme/repo/issues/78",
+		RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "https://github.com/acme/repo/pull/100"},
+		ID:             "io-umbrella",
+		Repo:           "/repo",
+		IssueURL:       "https://github.com/acme/repo/issues/78",
 		IssueLinks: []model.IssueOpsIssueLink{
 			{Type: "child", URL: "https://github.com/acme/repo/issues/79", Provider: "github"},
 		},

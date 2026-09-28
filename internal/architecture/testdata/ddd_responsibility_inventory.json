@@ -1356,7 +1356,6 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func issueOpsCleanupMerged",
         "func parseCommandPolicyFlags",
         "func parseCommandPolicyRunFlags",
         "func runIssueOps",
@@ -2156,7 +2155,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func CleanupMerged",
         "func RunIssueOps",
         "func RunIssueOpsWithDependencies",
         "func RunIssueOpsWithExecutionHandlers",
@@ -2185,7 +2183,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func CleanupMerged",
         "func RunCleanup",
         "func RunFeedback",
         "func cleanupArtifactUnmerged",
@@ -2232,7 +2229,6 @@
       "task": "T20",
       "symbols": [
         "func dispatchIssueOps",
-        "func issueOpsCleanupMerged",
         "func issueOpsFeedbackCleanupDeps",
         "func issueOpsOrphanCleanupDeps",
         "func issueOpsRemoteDeps",
@@ -7792,7 +7788,6 @@
       "task": "T20",
       "symbols": [
         "func CleanupFinish",
-        "func ReflectCleanupAudit",
         "func branchRefPresent",
         "func classifyMergedBase",
         "func cleanupFinishFingerprint",
@@ -10939,6 +10934,16 @@
         "func WorkspaceLinker.Worktree",
         "type WorkspaceLinkFiles",
         "type WorkspaceLinker"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/audit.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func AuditReflector.Reflect",
+        "type AuditReflector",
+        "type CompletionReflectionReceipts"
       ]
     },
     {
@@ -14243,6 +14248,7 @@
         "func ApplyChildCleanupReceipts",
         "func ChildCleanupEvidenceBasis",
         "func PrepareChildCleanup",
+        "func ValidateChildCleanupMergeObservation",
         "func ValidateChildCloseConfirmation",
         "func ValidateClosedChildObservation"
       ]
@@ -20663,14 +20669,17 @@
       "source_symbol": "func ReflectCleanupAudit",
       "responsibility": "reflect the pre-destruction completion snapshot and audit only after confirmed provider application, then record the local receipt",
       "target": "internal/application/issueopscleanup",
+      "target_symbol": "func AuditReflector.Reflect",
       "task": "T08",
       "entrypoints": [
         "issueops cleanup"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/issueops_completion_remote_test.go"
+        "internal/adapter/issueops/issueops_completion_remote_test.go",
+        "internal/application/issueopscleanup/audit_test.go",
+        "internal/adapter/issueops/cleanup_audit_application_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "execution-completion-actor-identity",
@@ -22162,6 +22171,40 @@
         "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "cleanup-child-merge-readback",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func CleanupMerged",
+      "responsibility": "observe parent merge outside the cycle lock and bind it to current closure inputs before child effects",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func ChildrenCloser.Close",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup close-children"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/children_merge_test.go",
+        "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-child-merge-observation-identity",
+      "source_path": "internal/application/issueopscleanup/children.go",
+      "source_symbol": "func ChildrenCloser.Close",
+      "responsibility": "reject changed cycle, repository, branch, parent, child links or artifact identity after external merge observation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateChildCleanupMergeObservation",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup close-children"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/children_merge_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
     }
   ]
 }

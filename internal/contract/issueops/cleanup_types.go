@@ -19,7 +19,7 @@ type IssueOpsActor struct {
 //
 // 이 경로는 cleanup finish와 두 가지 축에서 다르다.
 //   - 원격 무접촉: 이슈 본문·PR/MR·원격 브랜치 어느 것도 읽지도 쓰지도 않는다.
-//     ReflectCleanupAudit를 재사용하지 않는 이유는 빈 completion payload가 열린
+//     완료 감사 반영을 재사용하지 않는 이유는 빈 completion payload가 열린
 //     이슈에 가짜 "완료 기록" 섹션을 append하고, 그 마커만 보는
 //     `completion_reflected` 게이트가 미래 사이클의 파괴적 finish를 영구
 //     개방하기 때문이다(design-review F3).
