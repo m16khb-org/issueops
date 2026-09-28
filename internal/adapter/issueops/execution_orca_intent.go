@@ -128,12 +128,13 @@ func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.Issue
 		next.Execution.Failure = &issueops.ExecutionFailure{OperationID: expected.OperationID, Code: "external_operation_ambiguous", Message: boundedExecutionRemoteDiagnostic(cause), At: executionNow(now)}
 		expected.InvocationState = invocation
 		if typed, ok := errors.AsType[*port.OrcaError](cause); ok {
-			if typed.CallPhase == "terminal_send" {
-				expected.OrcaRequestID = adoptOrcaFailureRequestID(expected.OrcaRequestID, typed.DispatchRequestID)
-				expected.OrcaPromptRequestID = adoptOrcaFailureRequestID(expected.OrcaPromptRequestID, typed.OrchestrationRequestID)
-			} else {
-				expected.OrcaRequestID = adoptOrcaFailureRequestID(expected.OrcaRequestID, typed.OrchestrationRequestID)
-			}
+			expected.OrcaRequestID, expected.OrcaPromptRequestID = preparationdomain.AdoptFailureRequestIDs(preparationdomain.FailureRequestIDFacts{
+				SealedDispatch: expected.OrcaRequestID, SealedPrompt: expected.OrcaPromptRequestID,
+				CallPhase: typed.CallPhase, ObservedDispatch: typed.DispatchRequestID,
+				ObservedOrchestration: typed.OrchestrationRequestID,
+				DispatchValid:         port.ValidateOrcaRequestID(typed.DispatchRequestID) == nil,
+				OrchestrationValid:    port.ValidateOrcaRequestID(typed.OrchestrationRequestID) == nil,
+			})
 		}
 		data, err := preparationIntentCodec.Encode(expected)
 		if err != nil {
@@ -142,18 +143,6 @@ func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.Issue
 		_, err = persistOrcaIntentTransition(stateRoot, next, expected.OperationID, expectedRecordRaw, expectedIntentRaw, []port.RecordMutation{{Bucket: externalIntentBucket, ID: expected.OperationID, Data: data}})
 		return err
 	})
-}
-
-func adoptOrcaFailureRequestID(sealed, observed string) string {
-	sealed = strings.TrimSpace(sealed)
-	observed = strings.TrimSpace(observed)
-	if port.ValidateOrcaRequestID(observed) != nil {
-		return sealed
-	}
-	if sealed == "" || sealed == observed {
-		return observed
-	}
-	return sealed
 }
 
 func advanceOrcaIntentReceipt(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {

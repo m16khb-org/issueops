@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
+	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	leaseapp "issueops/internal/application/issueopslease"
 	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
@@ -17,7 +20,6 @@ import (
 type ResumeEffects interface {
 	Begin(context.Context, leasecontract.Record, []byte, leasecontract.ResumeArtifacts, leasedomain.ResumePlan, string) (ResumeEffectState, error)
 	Read(context.Context, string, string) (ResumeEffectState, error)
-	RecordFailure(context.Context, ResumeEffectState, string, error) error
 	ApplyReceipt(context.Context, ResumeEffectState, leasecontract.ResumeStageReceipt) (ResumeEffectState, error)
 }
 
@@ -35,10 +37,16 @@ type ResumeEffectState struct {
 type ResumeRepository struct {
 	store   port.TransactionalRecordStore
 	effects ResumeEffects
+	now     func() time.Time
+	redact  func(string) string
 }
 
 func NewResumeRepository(store port.TransactionalRecordStore, effects ResumeEffects) *ResumeRepository {
-	return &ResumeRepository{store: store, effects: effects}
+	return NewResumeRepositoryWithDiagnosticRedactor(store, effects, nil, time.Now)
+}
+
+func NewResumeRepositoryWithDiagnosticRedactor(store port.TransactionalRecordStore, effects ResumeEffects, redact func(string) string, now func() time.Time) *ResumeRepository {
+	return &ResumeRepository{store: store, effects: effects, redact: redact, now: now}
 }
 
 func (r *ResumeRepository) LoadSnapshot(_ context.Context, id string, generation uint64) (leaseapp.ResumeSnapshot, error) {
@@ -131,10 +139,74 @@ func (r *ResumeRepository) MarkInvoking(ctx context.Context, intent leaseapp.Res
 }
 
 func (r *ResumeRepository) RecordFailure(ctx context.Context, intent leaseapp.ResumeIntentState, invocation string, cause error) error {
-	if r == nil || r.effects == nil {
-		return leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume persistence bridge is required"))
+	if r == nil || r.store == nil {
+		return leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
 	}
-	return r.effects.RecordFailure(ctx, resumeEffectState(intent), invocation, cause)
+	store, ok := r.store.(port.RecordRawCASStore)
+	if !ok {
+		return leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume record store does not support raw CAS"))
+	}
+	if len(intent.RecordRaw) == 0 || len(intent.IntentRaw) == 0 {
+		return fmt.Errorf("Orca intent raw CAS evidence is required")
+	}
+	codec := preparationcontract.IntentCodec{}
+	current, err := codec.Decode(intent.OperationID, intent.IntentRaw)
+	if err != nil {
+		return err
+	}
+	state := preparationapp.IntentState{Snapshot: preparationcontract.Snapshot{Record: intent.Progress.Record.Stable, RecordRaw: intent.RecordRaw}, Intent: current, IntentRaw: intent.IntentRaw, FailureAt: r.now().UTC().Format(time.RFC3339Nano)}
+	if err := preparationapp.ValidateIntentState(state); err != nil {
+		return err
+	}
+	record, updated, err := preparationapp.ApplyOrcaFailure(state, invocation, func() string { return r.boundedDiagnostic(cause) })
+	if err != nil {
+		return err
+	}
+	if typed, ok := errors.AsType[*port.OrcaError](cause); ok {
+		updated.OrcaRequestID, updated.OrcaPromptRequestID = preparationdomain.AdoptFailureRequestIDs(preparationdomain.FailureRequestIDFacts{
+			SealedDispatch: updated.OrcaRequestID, SealedPrompt: updated.OrcaPromptRequestID,
+			CallPhase: typed.CallPhase, ObservedDispatch: typed.DispatchRequestID,
+			ObservedOrchestration: typed.OrchestrationRequestID,
+			DispatchValid:         port.ValidateOrcaRequestID(typed.DispatchRequestID) == nil,
+			OrchestrationValid:    port.ValidateOrcaRequestID(typed.OrchestrationRequestID) == nil,
+		})
+	}
+	recordData, err := recordcodec.EncodeLease(record)
+	if err != nil {
+		return err
+	}
+	intentData, err := codec.Encode(updated)
+	if err != nil {
+		return err
+	}
+	err = store.CompareAndApply(ctx, []port.ExpectedRecord{
+		{Bucket: recordBucket, ID: record.ID, Data: intent.RecordRaw},
+		{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intent.IntentRaw},
+	}, []port.RecordMutation{
+		{Bucket: recordBucket, ID: record.ID, Data: recordData},
+		{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intentData},
+	})
+	if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
+		if stale.FailedBucket() == recordBucket {
+			return fmt.Errorf("stale raw record snapshot")
+		}
+		return fmt.Errorf("stale raw intent snapshot")
+	}
+	return err
+}
+
+func (r *ResumeRepository) boundedDiagnostic(cause error) string {
+	message := "external operation failed"
+	if r.redact != nil && cause != nil {
+		message = strings.TrimSpace(r.redact(cause.Error()))
+		if message == "" {
+			message = "external operation failed"
+		}
+	}
+	if len(message) > 4096 {
+		message = message[:4096]
+	}
+	return message
 }
 
 func (r *ResumeRepository) ApplyReceipt(ctx context.Context, intent leaseapp.ResumeIntentState, receipt leasecontract.ResumeStageReceipt) (leaseapp.ResumeProgress, error) {

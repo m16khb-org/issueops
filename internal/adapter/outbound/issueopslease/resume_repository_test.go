@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
@@ -42,6 +43,56 @@ func TestResumeRepositoryPropagatesBridgeBeginFailure(t *testing.T) {
 }
 
 func TestResumeRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
+	repository, state, _ := seededResumeIntent(t)
+	next, err := repository.MarkInvoking(context.Background(), state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.InvocationState != preparationcontract.InvocationUnknown || next.InvocationAttempts != 1 {
+		t.Fatalf("next invocation=%q attempts=%d", next.InvocationState, next.InvocationAttempts)
+	}
+	if _, err := repository.MarkInvoking(context.Background(), state); err == nil {
+		t.Fatal("stale raw intent was accepted")
+	}
+}
+
+func TestResumeRepositoryRecordFailureUsesRawCASAndAdoptsRequestIDs(t *testing.T) {
+	repository, state, store := seededResumeIntent(t)
+	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 0, 0, 0, time.UTC) }
+	repository.redact = func(string) string { return "redacted failure" }
+	cause := &port.OrcaError{CallPhase: "terminal_send", DispatchRequestID: "11111111-1111-4111-8111-111111111111", OrchestrationRequestID: "22222222-2222-4222-8222-222222222222"}
+	if err := repository.RecordFailure(context.Background(), state, preparationcontract.InvocationUnknown, cause); err != nil {
+		t.Fatal(err)
+	}
+	data, ok, err := store.Get(recordBucket, state.Progress.Record.ID)
+	if err != nil || !ok {
+		t.Fatalf("record: present=%v err=%v", ok, err)
+	}
+	record, err := decodeLeaseRecord(state.Progress.Record.ID, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := record.Execution.Failure; got == nil || got.Message != "redacted failure" || got.OperationID != state.OperationID || got.At != "2026-07-31T03:00:00Z" {
+		t.Fatalf("failure=%+v", got)
+	}
+	data, ok, err = store.Get("external_intent_v1", state.OperationID)
+	if err != nil || !ok {
+		t.Fatalf("intent: present=%v err=%v", ok, err)
+	}
+	intent, err := (preparationcontract.IntentCodec{}).Decode(state.OperationID, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if intent.OrcaRequestID != cause.DispatchRequestID || intent.OrcaPromptRequestID != cause.OrchestrationRequestID || intent.InvocationState != preparationcontract.InvocationUnknown {
+		t.Fatalf("intent=%+v", intent)
+	}
+	if err := repository.RecordFailure(context.Background(), state, preparationcontract.InvocationUnknown, cause); err == nil {
+		t.Fatal("stale raw snapshot was accepted")
+	}
+}
+
+func seededResumeIntent(t *testing.T) (*ResumeRepository, leaseapp.ResumeIntentState, *sqlstore.DB) {
+	t.Helper()
 	const operationID = "0123456789abcdef0123456789abcdef"
 	record := resumeRepositoryRecord(t, 4)
 	lease := record.Execution.Lease
@@ -100,16 +151,7 @@ func TestResumeRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
 		OperationID: operationID, Stage: string(intent.Stage), InvocationState: intent.InvocationState,
 		RecordRaw: recordRaw, IntentRaw: intentRaw,
 	}
-	next, err := repository.MarkInvoking(context.Background(), state)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if next.InvocationState != preparationcontract.InvocationUnknown || next.InvocationAttempts != 1 {
-		t.Fatalf("next invocation=%q attempts=%d", next.InvocationState, next.InvocationAttempts)
-	}
-	if _, err := repository.MarkInvoking(context.Background(), state); err == nil {
-		t.Fatal("stale raw intent was accepted")
-	}
+	return repository, state, store
 }
 
 func newResumeRepositoryStore(t *testing.T, record leasecontract.Record) (string, *sqlstore.DB) {
@@ -154,9 +196,6 @@ func (f resumeEffectsFake) Begin(context.Context, leasecontract.Record, []byte, 
 }
 func (resumeEffectsFake) Read(context.Context, string, string) (ResumeEffectState, error) {
 	return ResumeEffectState{}, nil
-}
-func (resumeEffectsFake) RecordFailure(context.Context, ResumeEffectState, string, error) error {
-	return nil
 }
 func (resumeEffectsFake) ApplyReceipt(context.Context, ResumeEffectState, leasecontract.ResumeStageReceipt) (ResumeEffectState, error) {
 	return ResumeEffectState{}, nil

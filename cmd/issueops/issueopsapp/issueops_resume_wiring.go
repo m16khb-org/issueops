@@ -17,6 +17,7 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 	statecontract "issueops/internal/contract/state"
 	leasedomain "issueops/internal/domain/issueopslease"
+	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
 
@@ -39,7 +40,7 @@ func newIssueOpsResumeService(stateRoot string, provisioner port.ExecutionOrcaPr
 		return nil, err
 	}
 	effects := &coreResumeEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, time.Now), owner: owner, now: time.Now}
-	repository := leaseoutbound.NewResumeRepository(db, effects)
+	repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(db, effects, policy.RedactDiagnostic, time.Now)
 	return leaseapp.NewResumeService(
 		fence,
 		repository,
@@ -81,14 +82,6 @@ func (e *coreResumeEffects) Read(_ context.Context, id, operationID string) (lea
 		return leaseoutbound.ResumeEffectState{}, err
 	}
 	return resumeEffectStateFromCore(state)
-}
-
-func (e *coreResumeEffects) RecordFailure(_ context.Context, state leaseoutbound.ResumeEffectState, invocation string, cause error) error {
-	coreState, err := resumeCoreIntentState(state)
-	if err != nil {
-		return err
-	}
-	return issueops.RecordExecutionResumeIntentFailure(e.stateRoot, coreState, invocation, cause, e.now)
 }
 
 func (e *coreResumeEffects) ApplyReceipt(ctx context.Context, state leaseoutbound.ResumeEffectState, receipt leasecontract.ResumeStageReceipt) (leaseoutbound.ResumeEffectState, error) {
