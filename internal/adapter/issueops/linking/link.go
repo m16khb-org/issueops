@@ -2,12 +2,12 @@ package linking
 
 import (
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
 
 	model "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsremote"
 )
 
@@ -27,7 +27,7 @@ type Store struct {
 
 func LinkIssue(store Store, stateRoot, id, issueURL string) (model.IssueOpsRecord, error) {
 	u := strings.TrimSpace(issueURL)
-	if err := ValidateIssueURL(u); err != nil {
+	if err := issueopsdomain.ValidateIssueURL(u); err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
 	record, err := store.Read(stateRoot, id)
@@ -123,7 +123,7 @@ func LinkWorktree(store Store, stateRoot, id, worktreePath string) (model.IssueO
 
 func LinkChild(store Store, stateRoot, id, childURL, title string) (model.IssueOpsRecord, error) {
 	u := strings.TrimSpace(childURL)
-	if err := ValidateIssueURL(u); err != nil {
+	if err := issueopsdomain.ValidateIssueURL(u); err != nil {
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("child_url %s", strings.TrimPrefix(err.Error(), "issue_url "))
 	}
 	record, err := store.Read(stateRoot, id)
@@ -175,7 +175,7 @@ func LinkRelated(store Store, stateRoot, id, linkType, relatedURL, title string)
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("invalid link type %q; must be one of: depends-on, blocks, supersedes, follows-up, duplicates, splits-from, implements", lt)
 	}
 	u := strings.TrimSpace(relatedURL)
-	if err := ValidateIssueURL(u); err != nil {
+	if err := issueopsdomain.ValidateIssueURL(u); err != nil {
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("related_url %s", strings.TrimPrefix(err.Error(), "issue_url "))
 	}
 	record, err := store.Read(stateRoot, id)
@@ -196,15 +196,4 @@ func LinkRelated(store Store, stateRoot, id, linkType, relatedURL, title string)
 		CreatedAt: now,
 	})
 	return store.TouchWrite(stateRoot, record)
-}
-
-func ValidateIssueURL(issueURL string) error {
-	if issueURL == "" {
-		return fmt.Errorf("issue_url is required")
-	}
-	parsed, err := url.Parse(issueURL)
-	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
-		return fmt.Errorf("issue_url must be an http(s) URL")
-	}
-	return nil
 }

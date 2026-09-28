@@ -247,7 +247,7 @@ func issueOpsBranchPrepareStore() branchprepare.Store {
 	return branchprepare.Store{
 		Read:             ReadIssueOps,
 		TouchWrite:       touchAndWriteIssueOps,
-		ValidateIssueURL: linking.ValidateIssueURL,
+		ValidateIssueURL: issueopsdomain.ValidateIssueURL,
 		ResolveBaseCommit: func(repo, revision string) (string, error) {
 			code, stdout, stderr := GitCmd(
 				repo,

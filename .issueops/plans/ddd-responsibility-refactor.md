@@ -221,6 +221,8 @@
 
 - **부분 진행 — 본문 동기화:** `issueopsbodysync.Service`가 조회·관리 구간 보존·provider 쓰기·readback 검증·기준값 저장을 조율한다. readback과 부모자식 확인 판정은 domain으로 이전했고, 원본 `SyncRemoteArtifactBody`·`recordBodySync`·`verifyBodySyncChildHierarchy`는 삭제했다. 어댑터는 provider capability 연결과 typed callback을 실행하는 잠금·저장만 맡는다. 실제 저장소 테스트로 관리 구간 보존, 미적용·불일치 readback의 무기록, 호출 중 바뀐 최신 record 보존, 저장 직전 holder 변경 거부를 확인했다. readback·재인가를 각각 우회한 overlay에서 해당 테스트가 실패했다. 전체 Go suite, 관련 race, vet, build, architecture 및 GitHub/GitLab provider tests 통과(`full-suite-body-sync-application.txt`, `body-sync-readback-mutation.txt`, `body-sync-authority-mutation.txt`). 추가 소스 대조에서 확인한 이슈 intent 3개·원격 반영 3개·완료 재시도 1개 규칙은 정책 원장에 `migrate`로 명시했다. 이전 진행 기록에 남은 본문 동기화 이전은 이번 변경으로 끝났으며, 이슈 생성 intent·원격 결과 반영·완료 경로의 책임 이전은 남아 있다.
 
+- **부분 진행 — 이슈 생성 intent:** 시작·결과 기록·완료의 상태 전이와 봉인된 요청 비교를 `domain/issueops`로 이전했다. 기존 생성 전이 정책도 같은 aggregate 패키지로 옮겼으며 URL 검증은 연결과 생성 완료가 공유한다. `application/issueopsremote.IssueCreateIntents`가 typed Update를 통해 최신 record의 전이와 시간을 조율하고, adapter는 잠금·조회·codec·저장만 맡는다. 기존 adapter lifecycle 함수는 삭제했다. 실제 SQLite에서 6개 동시 시작 중 1회만 성공, 변경된 요청 재시도 거부 시 원본 보존, encoding 실패 시 부분 연결 방지를 확인했다. root wiring과 CLI create/reconcile 테스트, 전체 Go suite, 관련 race·vet·build 및 architecture가 통과했다(`full-suite-issue-create-intents.txt`). 봉인 요청 비교를 우회한 overlay에서 실제 저장소 테스트가 실패했다(`issue-create-sealed-retry-mutation.txt`). CLI의 생성·재조정 조율은 아직 남아 있어 정책 원장에 별도 `migrate` 항목으로 기록했으며 T07은 미완료다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료

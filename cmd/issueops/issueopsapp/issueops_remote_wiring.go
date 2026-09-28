@@ -13,9 +13,9 @@ import (
 // root 하나뿐이다.
 func configureIssueOpsRemote() {
 	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
-		BeginIssueCreateIntent:    issueopscore.BeginIssueCreateIntent,
+		BeginIssueCreateIntent:    beginIssueCreateIntent,
 		CloseIssueOpsRemoteIssue:  issueopscore.CloseIssueOpsRemoteIssue,
-		CompleteIssueCreateIntent: issueopscore.CompleteIssueCreateIntent,
+		CompleteIssueCreateIntent: completeIssueCreateIntent,
 		CreateRemoteChild:         issueopscore.CreateRemoteChild,
 		CreateRemoteIssue:         issueopscore.CreateRemoteIssue,
 		CreateRemoteIssueContext:  issueopscore.CreateRemoteIssueContext,
@@ -28,7 +28,7 @@ func configureIssueOpsRemote() {
 		LinkIssueOpsChildWithActor:                 issueopscore.LinkIssueOpsChildWithActor,
 		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                               issueopscore.ReadIssueOps,
-		RecordIssueCreateOutcome:                   issueopscore.RecordIssueCreateOutcome,
+		RecordIssueCreateOutcome:                   recordIssueCreateOutcome,
 		ReflectDevilsAdvocateFindingsWithActor:     issueopscore.ReflectDevilsAdvocateFindingsWithActor,
 		ReflectIssueCompletion:                     issueopscore.ReflectIssueCompletion,
 		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,

@@ -2,9 +2,11 @@ package issueopscli
 
 import (
 	"context"
+	"time"
 
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	issueopscore "issueops/internal/adapter/issueops"
+	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -14,22 +16,28 @@ import (
 func wireRemoteForTests() {
 
 	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
-		BeginIssueCreateIntent:    issueopscore.BeginIssueCreateIntent,
-		CloseIssueOpsRemoteIssue:  issueopscore.CloseIssueOpsRemoteIssue,
-		CompleteIssueCreateIntent: issueopscore.CompleteIssueCreateIntent,
-		CreateRemoteChild:         issueopscore.CreateRemoteChild,
-		CreateRemoteIssue:         issueopscore.CreateRemoteIssue,
-		CreateRemoteIssueContext:  issueopscore.CreateRemoteIssueContext,
+		BeginIssueCreateIntent: func(root, id string, request issueopscontract.IssueOpsIssueCreateIntentRequest) (issueopscontract.IssueOpsRecord, error) {
+			return newIssueIntentsForTest(root).Begin(context.Background(), id, request)
+		},
+		CloseIssueOpsRemoteIssue: issueopscore.CloseIssueOpsRemoteIssue,
+		CompleteIssueCreateIntent: func(root, id, url, at string) (issueopscontract.IssueOpsRecord, error) {
+			return newIssueIntentsForTest(root).Complete(context.Background(), id, url, at)
+		},
+		CreateRemoteChild:        issueopscore.CreateRemoteChild,
+		CreateRemoteIssue:        issueopscore.CreateRemoteIssue,
+		CreateRemoteIssueContext: issueopscore.CreateRemoteIssueContext,
 		CreateRemotePullRequestWithHandler: func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error) {
 			return issueopscore.CreateRemotePullRequestWithHandler(ctx, stateRoot, req, handler)
 		},
-		DecodeIssueOpsRemoteJudgeJSON:              issueopscore.DecodeIssueOpsRemoteJudgeJSON,
-		DecodeIssueOpsRemoteScoringRequest:         issueopscore.DecodeIssueOpsRemoteScoringRequest,
-		IssueOpsStateRoot:                          issueopscore.IssueOpsStateRoot,
-		LinkIssueOpsChildWithActor:                 issueopscore.LinkIssueOpsChildWithActor,
-		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
-		ReadIssueOps:                               issueopscore.ReadIssueOps,
-		RecordIssueCreateOutcome:                   issueopscore.RecordIssueCreateOutcome,
+		DecodeIssueOpsRemoteJudgeJSON:      issueopscore.DecodeIssueOpsRemoteJudgeJSON,
+		DecodeIssueOpsRemoteScoringRequest: issueopscore.DecodeIssueOpsRemoteScoringRequest,
+		IssueOpsStateRoot:                  issueopscore.IssueOpsStateRoot,
+		LinkIssueOpsChildWithActor:         issueopscore.LinkIssueOpsChildWithActor,
+		ObserveNativeProcessAncestry:       issueopscore.ObserveNativeProcessAncestry,
+		ReadIssueOps:                       issueopscore.ReadIssueOps,
+		RecordIssueCreateOutcome: func(root, id string, outcome issueopscontract.IssueOpsIssueCreateOutcome) (issueopscontract.IssueOpsRecord, error) {
+			return newIssueIntentsForTest(root).Outcome(context.Background(), id, outcome)
+		},
 		ReflectDevilsAdvocateFindingsWithActor:     issueopscore.ReflectDevilsAdvocateFindingsWithActor,
 		ReflectIssueCompletion:                     issueopscore.ReflectIssueCompletion,
 		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,
@@ -42,4 +50,8 @@ func wireRemoteForTests() {
 		ValidateIssueOpsRemoteArtifactVerification: issueopscore.ValidateIssueOpsRemoteArtifactVerification,
 		VerifyIssueOpsRemoteArtifactWithActor:      issueopscore.VerifyIssueOpsRemoteArtifactWithActor,
 	})
+}
+
+func newIssueIntentsForTest(root string) *remoteapp.IssueCreateIntents {
+	return remoteapp.NewIssueCreateIntents(issueopscore.IssueCreateIntentStore{StateRoot: root}, time.Now)
 }

@@ -31,3 +31,9 @@ type PublicationEnvironment interface {
 	Timestamp() string
 	NewOperationID() (string, error)
 }
+
+type IssueIntentTransition func(model.IssueOpsRecord) (model.IssueOpsRecord, error)
+
+type IssueIntentStore interface {
+	Update(context.Context, string, IssueIntentTransition) (model.IssueOpsRecord, error)
+}

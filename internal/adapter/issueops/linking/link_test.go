@@ -505,7 +505,7 @@ func TestValidateIssueURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateIssueURL(tt.url)
+			err := issueopsdomain.ValidateIssueURL(tt.url)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ValidateIssueURL(%q) error = %v, wantErr = %v", tt.url, err, tt.wantErr)
 			}

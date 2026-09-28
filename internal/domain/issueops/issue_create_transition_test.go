@@ -1,4 +1,4 @@
-package issueopspublication
+package issueops
 
 import (
 	issueopscontract "issueops/internal/contract/issueops"

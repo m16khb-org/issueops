@@ -942,7 +942,7 @@ func remoteIssueOpsRecordWithCreateIntent(t *testing.T) (issueopscontract.IssueO
 	marker := "<!-- issueops:issue-create:" + operationID + " -->"
 	body := "Body\n\n" + marker
 	digest := sha256.Sum256([]byte(body))
-	updated, err := issueopscore.BeginIssueCreateIntent(issueopscore.IssueOpsStateRoot(), record.ID, issueopscontract.IssueOpsIssueCreateIntentRequest{
+	updated, err := newIssueIntentsForTest(issueopscore.IssueOpsStateRoot()).Begin(context.Background(), record.ID, issueopscontract.IssueOpsIssueCreateIntentRequest{
 		OperationID:      operationID,
 		Provider:         "github",
 		ProjectAuthority: "github.com/acme/repo",

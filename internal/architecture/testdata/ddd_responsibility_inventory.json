@@ -1258,6 +1258,17 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_issue_intent_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func beginIssueCreateIntent",
+        "func completeIssueCreateIntent",
+        "func newIssueCreateIntents",
+        "func recordIssueCreateOutcome"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_next_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -7493,15 +7504,12 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issue_create_intent.go",
+      "path": "internal/adapter/issueops/issue_create_intent_store.go",
       "owner": "adapter",
       "task": "T07",
       "symbols": [
-        "func BeginIssueCreateIntent",
-        "func CompleteIssueCreateIntent",
-        "func RecordIssueCreateOutcome",
-        "func sameIssueCreateRequest",
-        "func validateIssueCreateIntentRequest"
+        "func IssueCreateIntentStore.Update",
+        "type IssueCreateIntentStore"
       ]
     },
     {
@@ -8065,7 +8073,6 @@
         "func LinkPlan",
         "func LinkRelated",
         "func LinkWorktree",
-        "func ValidateIssueURL",
         "func isValidLinkType",
         "type Store"
       ]
@@ -11506,10 +11513,26 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/issue_create_intents.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func IssueCreateIntents.Begin",
+        "func IssueCreateIntents.Complete",
+        "func IssueCreateIntents.Outcome",
+        "func IssueCreateIntents.update",
+        "func NewIssueCreateIntents",
+        "func issueCreateProject",
+        "type IssueCreateIntents"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/ports.go",
       "owner": "application",
       "task": "T07",
       "symbols": [
+        "type IssueIntentStore",
+        "type IssueIntentTransition",
         "type PreparationObserver",
         "type PublicationEnvironment",
         "type PublicationStore"
@@ -14027,6 +14050,34 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/issue_create_lifecycle.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func BeginIssueCreateIntent",
+        "func CompleteIssueCreateIntent",
+        "func RecordIssueCreateOutcome",
+        "func sameIssueCreateRequest",
+        "func validateIssueCreateIntentRequest"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/issue_create_transition.go",
+      "owner": "domain",
+      "task": "T02",
+      "symbols": [
+        "func ValidateIssueCreateTransition"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/issue_url.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ValidateIssueURL"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/phase.go",
       "owner": "domain",
       "task": "T20",
@@ -14894,14 +14945,6 @@
         "func ValidatePendingIntent",
         "type IntentCheckpoint",
         "type PendingIntentFacts"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspublication/issue_create_transition.go",
-      "owner": "domain",
-      "task": "T02",
-      "symbols": [
-        "func ValidateIssueCreateTransition"
       ]
     },
     {
@@ -17081,14 +17124,14 @@
       "source_path": "internal/contract/issueops/issue_create.go",
       "source_symbol": "func ValidateIssueCreateTransition",
       "responsibility": "issue create intent state transition",
-      "target": "internal/domain/issueopspublication",
+      "target": "internal/domain/issueops",
       "target_symbol": "func ValidateIssueCreateTransition",
       "task": "T02",
       "entrypoints": [
         "issueops remote create-issue"
       ],
       "evidence_tests": [
-        "internal/domain/issueopspublication/issue_create_transition_test.go",
+        "internal/domain/issueops/issue_create_transition_test.go",
         "internal/adapter/issueops/issue_create_intent_test.go"
       ],
       "status": "migrated"
@@ -19524,45 +19567,60 @@
       "source_path": "internal/adapter/issueops/issue_create_intent.go",
       "source_symbol": "func BeginIssueCreateIntent",
       "responsibility": "begin or retry exactly the sealed issue create request only after proven non-invocation",
-      "target": "internal/application/issueopsremote",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func BeginIssueCreateIntent",
       "task": "T07",
       "entrypoints": [
-        "issueops remote"
+        "issueops remote create-issue",
+        "issueops remote reconcile-issue"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/issue_create_intent_test.go"
+        "internal/adapter/issueops/issue_create_intent_test.go",
+        "internal/domain/issueops/issue_create_lifecycle_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_intent_wiring_test.go",
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "issue-create-intent-outcome",
       "source_path": "internal/adapter/issueops/issue_create_intent.go",
       "source_symbol": "func RecordIssueCreateOutcome",
       "responsibility": "validate create outcome transitions and sealed project authority before recording provider evidence",
-      "target": "internal/application/issueopsremote",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RecordIssueCreateOutcome",
       "task": "T07",
       "entrypoints": [
-        "issueops remote"
+        "issueops remote create-issue",
+        "issueops remote reconcile-issue"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/issue_create_intent_test.go"
+        "internal/adapter/issueops/issue_create_intent_test.go",
+        "internal/domain/issueops/issue_create_lifecycle_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_intent_wiring_test.go",
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "issue-create-intent-complete",
       "source_path": "internal/adapter/issueops/issue_create_intent.go",
       "source_symbol": "func CompleteIssueCreateIntent",
       "responsibility": "atomically link the canonical created issue, complete its intent, and advance ready planning state",
-      "target": "internal/application/issueopsremote",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CompleteIssueCreateIntent",
       "task": "T07",
       "entrypoints": [
-        "issueops remote"
+        "issueops remote create-issue",
+        "issueops remote reconcile-issue"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/issue_create_intent_test.go"
+        "internal/adapter/issueops/issue_create_intent_test.go",
+        "internal/domain/issueops/issue_create_lifecycle_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_intent_wiring_test.go",
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "remote-completion-reflection",
@@ -19621,6 +19679,72 @@
       ],
       "evidence_tests": [
         "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "issue-create-intent-transaction",
+      "source_path": "internal/adapter/issueops/issue_create_intent.go",
+      "source_symbol": "func BeginIssueCreateIntent",
+      "responsibility": "serialize intent transitions against the latest durable cycle and write the timestamped result atomically",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func IssueCreateIntents.update",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue",
+        "issueops remote reconcile-issue"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issue_create_intent_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_intent_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-link-url-validation",
+      "source_path": "internal/adapter/issueops/linking/link.go",
+      "source_symbol": "func ValidateIssueURL",
+      "responsibility": "require a nonempty HTTP or HTTPS issue URL before linking or completing an issue intent",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateIssueURL",
+      "task": "T08",
+      "entrypoints": [
+        "issueops remote create-issue",
+        "issueops link-issue"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/linking/link_test.go",
+        "internal/adapter/issueops/issue_create_intent_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-create-cli-orchestration",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_issue.go",
+      "source_symbol": "func runRemoteCreateIssue",
+      "responsibility": "seal the issue request before provider invocation and classify failures before verifying and completing publication",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "issue-reconcile-cli-orchestration",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_issue.go",
+      "source_symbol": "func runRemoteReconcileIssue",
+      "responsibility": "locate and verify an existing provider issue before adopting a pending creation intent without duplicate creation",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reconcile-issue"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
       "status": "migrate"
     }
