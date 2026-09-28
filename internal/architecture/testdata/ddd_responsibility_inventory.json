@@ -7311,9 +7311,7 @@
         "func failedExecutionReconcileResult",
         "func finishRemotePullRequestPreInvocationFailure",
         "func jsonMarshalExecutionIntent",
-        "func markRemotePullRequestRetry",
-        "func pendingKindForOrcaStageFromKind",
-        "func reconcilePreviewCode"
+        "func markRemotePullRequestRetry"
       ]
     },
     {
@@ -14673,6 +14671,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreconcile/route.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DecidePending",
+        "func IsOrcaIntentKind",
+        "func exactOrcaIntentKind",
+        "type Decision",
+        "type Route"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsremote/issueops_remote.go",
       "owner": "domain",
       "task": "T20",
@@ -18298,9 +18308,41 @@
       "target": "internal/domain/issueopsbasesync",
       "target_symbol": "func MissingAuthority",
       "task": "T06",
-      "entrypoints": ["issueops execution sync-base --preview", "issueops execution sync-base --apply", "issueops execution sync-base --finalize", "issueops execution sync-base --abort"],
-      "evidence_tests": ["internal/domain/issueopsbasesync/authority_test.go", "internal/adapter/issueops/execution_sync_base_test.go"],
+      "entrypoints": [
+        "issueops execution sync-base --preview",
+        "issueops execution sync-base --apply",
+        "issueops execution sync-base --finalize",
+        "issueops execution sync-base --abort"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbasesync/authority_test.go",
+        "internal/adapter/issueops/execution_sync_base_test.go"
+      ],
       "status": "retain"
+    },
+    {
+      "id": "reconcile-pending-route",
+      "source_path": "internal/adapter/issueops/execution_reconcile.go",
+      "source_symbol": "func reconcilePreviewCode",
+      "responsibility": "classify pending external intent for preview, actor guard, and confirmed recovery route",
+      "target": "internal/domain/issueopsreconcile",
+      "target_symbol": "func DecidePending",
+      "task": "T06",
+      "entrypoints": ["issueops execution reconcile --preview", "issueops execution reconcile --confirm"],
+      "evidence_tests": ["internal/domain/issueopsreconcile/route_test.go", "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-orca-intent-kind",
+      "source_path": "internal/adapter/issueops/execution_reconcile.go",
+      "source_symbol": "func pendingKindForOrcaStageFromKind",
+      "responsibility": "identify local Orca pending kinds shared by reconcile and cleanup",
+      "target": "internal/domain/issueopsreconcile",
+      "target_symbol": "func IsOrcaIntentKind",
+      "task": "T06",
+      "entrypoints": ["issueops execution reconcile", "issueops cleanup abandon"],
+      "evidence_tests": ["internal/domain/issueopsreconcile/route_test.go", "internal/adapter/issueops/issueops_cleanup_abandon_test.go"],
+      "status": "migrated"
     }
   ]
 }

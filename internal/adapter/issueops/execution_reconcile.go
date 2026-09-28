@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	"issueops/internal/contract/issueops"
+	reconciledomain "issueops/internal/domain/issueopsreconcile"
 	"issueops/internal/port"
 )
 
@@ -31,8 +31,12 @@ func ReconcileExecutionWithDependencies(ctx context.Context, stateRoot string, r
 	if !samePath(req.CWD, record.Execution.Workspace.SourceRoot) && !samePath(req.CWD, record.Execution.Workspace.Root) {
 		return ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile cwd must be source_root or the canonical worktree")
 	}
-	isOrcaPending := record.Execution.Pending != nil && record.Execution.Mode == issueops.ExecutionModeOrca && pendingKindForOrcaStageFromKind(record.Execution.Pending.Kind)
-	if req.Confirm && !isOrcaPending {
+	kind := ""
+	if record.Execution.Pending != nil {
+		kind = record.Execution.Pending.Kind
+	}
+	decision := reconciledomain.DecidePending(string(record.Execution.Mode), kind, record.Execution.Pending != nil)
+	if req.Confirm && !decision.SkipMutationGuard {
 		mutationActor := IssueOpsActor{
 			Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID, CWD: req.CWD,
 			NativeProcessAncestry: actor.ProcessAncestry,
@@ -42,23 +46,23 @@ func ReconcileExecutionWithDependencies(ctx context.Context, stateRoot string, r
 		}
 	}
 	result := executionReconcileResult(record, req.Preview, "")
-	if record.Execution.Pending == nil {
+	if decision.Route == reconciledomain.RouteNone {
 		result.Reconciled = true
 		result.Code = "no_pending_external_intent"
 		return result, nil
 	}
 	if req.Preview {
-		result.Code = reconcilePreviewCode(record.Execution.Pending.Kind)
+		result.Code = decision.PreviewCode
 		return result, nil
 	}
-	switch record.Execution.Pending.Kind {
-	case externalIntentRemotePR:
+	switch decision.Route {
+	case reconciledomain.RouteRemotePR:
 		if deps.RemoteReconcile == nil {
 			return failedExecutionReconcileResult(record, "remote_reconcile_unavailable"), ErrRemotePullRequestReconcileHandlerUnavailable
 		}
 		req.Snapshot = &record
 		return deps.RemoteReconcile(ctx, stateRoot, req)
-	case "worktree_create", "owner_launch", "dispatch":
+	case reconciledomain.RouteOrca:
 		if deps.Handler == nil {
 			return failedExecutionReconcileResult(record, "orca_reconcile_ambiguous"), ErrReconcileHandlerUnavailable
 		}
@@ -68,15 +72,6 @@ func ReconcileExecutionWithDependencies(ctx context.Context, stateRoot string, r
 		result.OK = false
 		result.Code = "unsupported_external_intent"
 		return result, fmt.Errorf("unsupported pending external intent kind %q", record.Execution.Pending.Kind)
-	}
-}
-
-func pendingKindForOrcaStageFromKind(kind string) bool {
-	switch strings.TrimSpace(kind) {
-	case "worktree_create", "owner_launch", "dispatch":
-		return true
-	default:
-		return false
 	}
 }
 
@@ -149,17 +144,6 @@ func failedExecutionReconcileResult(record issueops.IssueOpsRecord, code string)
 	result := executionReconcileResult(record, false, code)
 	result.OK = false
 	return result
-}
-
-func reconcilePreviewCode(kind string) string {
-	switch strings.TrimSpace(kind) {
-	case externalIntentRemotePR:
-		return "remote_reconcile_required"
-	case "worktree_create", "owner_launch", "dispatch":
-		return "orca_reconcile_required"
-	default:
-		return "unsupported_external_intent"
-	}
 }
 
 func jsonMarshalExecutionIntent(payload externalRemotePRPayload) ([]byte, error) {

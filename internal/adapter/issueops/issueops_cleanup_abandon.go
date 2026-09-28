@@ -15,6 +15,7 @@ import (
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	leasedomain "issueops/internal/domain/issueopslease"
+	reconciledomain "issueops/internal/domain/issueopsreconcile"
 	"issueops/internal/port"
 )
 
@@ -659,7 +660,7 @@ func cleanupAbandonPendingSafe(ctx context.Context, stateRoot string, record iss
 	pending := record.Execution.Pending
 	// (a) kind allowlist — 로컬 orca mutation 한정. remote PR/MR 계열 kind는
 	// 원격 고아 PR을 남길 수 있으므로 무조건 거부하고 reconcile로 보낸다.
-	if !pendingKindForOrcaStageFromKind(pending.Kind) {
+	if !reconciledomain.IsOrcaIntentKind(pending.Kind) {
 		// reconcile을 지시하는 것만으로는 부족했다. 실측에서 운영자는 reconcile을
 		// 완주한 뒤 무엇을 해야 하는지 알 수 없었다(#139) — 남은 절차를 함께
 		// 알려야 게이트 응답이 탈출 경로가 된다(#140).
