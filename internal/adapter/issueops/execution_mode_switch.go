@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	modeswitchapp "issueops/internal/application/issueopsmodeswitch"
 	"issueops/internal/contract/issueops"
 	leasedomain "issueops/internal/domain/issueopslease"
 	modeswitchdomain "issueops/internal/domain/issueopsmodeswitch"
@@ -88,27 +89,12 @@ func SwitchExecutionMode(ctx context.Context, stateRoot string, req ExecutionSwi
 		result.OK = false
 		return result, fmt.Errorf("stale switch-mode fingerprint; run the preview again and retry with the new value")
 	}
-	if err := removeSwitchModeWorkspace(record, inventory, deps); err != nil {
-		result.OK = false
-		return result, err
-	}
-	// 외부 Git 조작 뒤에는 다시 공통 span lock에서 fence와 record CAS를 확인한다.
-	// cleanup abandon이 먼저 arm됐다면 그 receipt를 지우지 않고 record를 보존한다.
 	expectedSHA := cleanupAbandonRecordSHA(record)
-	err = withIssueOpsLock(ctx, stateRoot, record.ID, func(context.Context) error {
-		current, readErr := ReadIssueOps(stateRoot, record.ID)
-		if readErr != nil {
-			return readErr
-		}
-		if cleanupAbandonRecordSHA(current) != expectedSHA {
-			return fmt.Errorf("execution switch-mode authority changed before record mutation")
-		}
-		current.Execution = nil
-		current.WorktreePath = ""
-		current.PlanPath = ""
-		_, writeErr := writeIssueOps(stateRoot, current)
-		return writeErr
-	})
+	err = modeswitchapp.Apply(ctx, modeswitchapp.ApplyRequest{
+		ID: record.ID, Repo: record.Repo, WorktreeRoot: inventory.WorktreeRoot,
+		WorktreePresent: inventory.WorktreePresent, Branch: inventory.Branch,
+		BranchPresent: inventory.BranchOID != "", ExpectedRecordSHA: expectedSHA,
+	}, &switchModeEffects{stateRoot: stateRoot, deps: deps})
 	if err != nil {
 		result.OK = false
 		return result, err
@@ -200,16 +186,40 @@ func switchModeGates(record issueops.IssueOpsRecord, requested string, deps Exec
 // removeSwitchModeWorkspace는 워크트리와 로컬 브랜치를 지운다. 원격은 건드리지
 // 않는다 — provider-linked 브랜치는 이슈 연결을 담고 있고, 새 모드의 준비가 그
 // 이름을 다시 쓴다.
-func removeSwitchModeWorkspace(record issueops.IssueOpsRecord, inventory switchModeInventory, deps ExecutionSwitchModeDependencies) error {
-	if inventory.WorktreePresent {
-		if code, out := deps.Git(record.Repo, "worktree", "remove", "--force", inventory.WorktreeRoot); code != 0 {
-			return fmt.Errorf("switch-mode could not remove the canonical worktree (record preserved): %s", strings.TrimSpace(out))
-		}
-	}
-	if inventory.BranchOID != "" {
-		if code, out := deps.Git(record.Repo, "branch", "-D", inventory.Branch); code != 0 {
-			return fmt.Errorf("switch-mode could not remove the local branch (record preserved): %s", strings.TrimSpace(out))
-		}
+type switchModeEffects struct {
+	stateRoot string
+	deps      ExecutionSwitchModeDependencies
+}
+
+func (e *switchModeEffects) RemoveWorktree(_ context.Context, repo, root string) error {
+	if code, out := e.deps.Git(repo, "worktree", "remove", "--force", root); code != 0 {
+		return fmt.Errorf("switch-mode could not remove the canonical worktree (record preserved): %s", strings.TrimSpace(out))
 	}
 	return nil
+}
+
+func (e *switchModeEffects) RemoveBranch(_ context.Context, repo, branch string) error {
+	if code, out := e.deps.Git(repo, "branch", "-D", branch); code != 0 {
+		return fmt.Errorf("switch-mode could not remove the local branch (record preserved): %s", strings.TrimSpace(out))
+	}
+	return nil
+}
+
+func (e *switchModeEffects) ResetExecution(ctx context.Context, id, expectedSHA string) error {
+	// 외부 Git 조작 뒤에는 다시 공통 span lock에서 fence와 record CAS를 확인한다.
+	// cleanup abandon이 먼저 arm됐다면 그 receipt를 지우지 않고 record를 보존한다.
+	return withIssueOpsLock(ctx, e.stateRoot, id, func(context.Context) error {
+		current, err := ReadIssueOps(e.stateRoot, id)
+		if err != nil {
+			return err
+		}
+		if cleanupAbandonRecordSHA(current) != expectedSHA {
+			return fmt.Errorf("execution switch-mode authority changed before record mutation")
+		}
+		current.Execution = nil
+		current.WorktreePath = ""
+		current.PlanPath = ""
+		_, err = writeIssueOps(e.stateRoot, current)
+		return err
+	})
 }

@@ -7125,8 +7125,11 @@
       "task": "T06",
       "symbols": [
         "func SwitchExecutionMode",
-        "func removeSwitchModeWorkspace",
+        "func switchModeEffects.RemoveBranch",
+        "func switchModeEffects.RemoveWorktree",
+        "func switchModeEffects.ResetExecution",
         "func switchModeGates",
+        "type switchModeEffects",
         "type switchModeInventory"
       ]
     },
@@ -11311,6 +11314,15 @@
         "type ResumeRequest",
         "type ResumeResult",
         "type ResumeService"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsmodeswitch/switch.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Apply",
+        "type ApplyRequest"
       ]
     },
     {
@@ -16132,6 +16144,14 @@
       ]
     },
     {
+      "path": "internal/port/issueops_mode_switch.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type ModeSwitchEffects"
+      ]
+    },
+    {
       "path": "internal/port/issueopsbasesync/inspector.go",
       "owner": "port",
       "task": "T20",
@@ -18383,6 +18403,21 @@
         "internal/adapter/issueops/execution_orca_intent_test.go"
       ],
       "status": "retain"
+    },
+    {
+      "id": "mode-switch-effect-order",
+      "source_path": "internal/adapter/issueops/execution_mode_switch.go",
+      "source_symbol": "func removeSwitchModeWorkspace",
+      "responsibility": "remove the canonical worktree and local branch before a fenced execution reset",
+      "target": "internal/application/issueopsmodeswitch",
+      "target_symbol": "func Apply",
+      "task": "T06",
+      "entrypoints": ["issueops execution switch-mode --apply"],
+      "evidence_tests": [
+        "internal/application/issueopsmodeswitch/switch_test.go",
+        "internal/adapter/issueops/execution_mode_switch_provenance_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }
