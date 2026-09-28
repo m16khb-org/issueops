@@ -13631,6 +13631,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/ai_slop_fingerprint_readiness.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func AISlopCleanFingerprintReadinessMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/ai_slop_refresh.go",
       "owner": "domain",
       "task": "T20",

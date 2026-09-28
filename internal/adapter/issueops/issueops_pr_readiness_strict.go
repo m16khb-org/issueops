@@ -151,16 +151,7 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 	if schemaMissing != "" {
 		missing = append(missing, schemaMissing)
 	}
-	if strings.TrimSpace(record.AISlopCleanAt) != "" {
-		storedFingerprint := strings.TrimSpace(record.AISlopCleanFingerprint)
-		if storedFingerprint == "" && currentFingerprint != "" {
-			missing = append(missing, "ai_slop_clean_fingerprint")
-		} else if storedFingerprint != "" && currentFingerprint == "" {
-			missing = append(missing, "current_fingerprint")
-		} else if storedFingerprint != "" && storedFingerprint != currentFingerprint {
-			missing = append(missing, "ai_slop_clean_stale")
-		}
-	}
+	missing = append(missing, issueopsdomain.AISlopCleanFingerprintReadinessMissing(record, currentFingerprint)...)
 
 	if path := strings.TrimSpace(record.PlanPath); path != "" && !issueOpsPlanPathExists(gitRoot, path) {
 		missing = append(missing, "plan_exists")
