@@ -59,8 +59,8 @@ func CodeOf(err error) DenyCode {
 }
 
 func ValidateActive(snapshot Snapshot, command Command, canonicalCWD bool) error {
-	if snapshot.Phase != "pr" {
-		return deny(DenyPhase, "execution completion requires pr phase")
+	if err := ValidatePhase(snapshot.Phase); err != nil {
+		return deny(DenyPhase, err.Error())
 	}
 	if snapshot.Lease.Status != "active" || snapshot.Lease.Generation != command.Generation || !sameActor(snapshot.Lease.Holder, &command.Actor) {
 		return deny(DenyAuthority, fmt.Sprintf("only the current holder may complete generation %d", command.Generation))

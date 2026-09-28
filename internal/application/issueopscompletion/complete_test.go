@@ -240,3 +240,53 @@ func activeCompletionRecord(mode string) completioncontract.RecordSnapshot {
 func stableExecution(record completioncontract.RecordSnapshot) leasecontract.Execution {
 	return leasecontract.Execution{Mode: record.Mode, Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: record.CanonicalRoot, Branch: "198", BaseHead: strings.Repeat("b", 40), Driver: map[bool]string{true: "orca", false: "git"}[record.Mode == "orca"], LinkedAt: "2026-08-02T00:00:00Z"}, Lease: leasecontract.Lease{Generation: record.Lease.Generation, Status: record.Lease.Status}}
 }
+
+func TestCompleteRefusalsPreserveEffectOrder(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*Request, *completioncontract.RecordSnapshot, *environmentFake)
+		want   string
+		trace  []string
+	}{
+		{"confirm before evidence", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			q.Confirm = false
+			q.Verification = nil
+		}, "execution complete requires confirm", []string{"process"}},
+		{"evidence before URL", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			q.Verification = nil
+			q.RemoteArtifactURL = "bad"
+		}, "execution completion requires verification evidence", []string{"process"}},
+		{"prepared before phase", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			r.Prepared = false
+			r.Phase = "done"
+		}, completioncontract.ErrExecutionNotPrepared.Error(), []string{"process", "read"}},
+		{"phase before artifact", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) { r.Phase = "implement" }, "execution completion requires pr phase", []string{"process", "read"}},
+		{"head before report", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) { q.FinalHead = "abc" }, "final_head must match canonical worktree HEAD", []string{"process", "read", "artifact", "cwd", "head"}},
+		{"retry generation before path", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			r.Completion = &completioncontract.Completion{}
+		}, "execution completion already exists with different evidence", []string{"process", "read"}},
+		{"retry evidence after path", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			r.Phase = "done"
+			r.Lease.Status = "released"
+			r.Lease.Holder = nil
+			r.Lease.ReleasedAt = "then"
+			r.Completion = &completioncontract.Completion{FinalHead: q.FinalHead, CompletedAt: "then", Verification: []string{"different"}}
+		}, "execution completion already exists with different evidence", []string{"process", "read", "cwd"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			trace := []string{}
+			request := validRequest()
+			record := activeCompletionRecord("direct")
+			env := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json"}
+			tc.change(&request, &record, env)
+			repository := &repositoryFake{record: record, trace: &trace}
+			_, err := NewService(repository, env, fixedClock{fixedCompletionTime}, tracedLiveInspector(&trace)).Complete(context.Background(), request)
+			if err == nil || err.Error() != tc.want {
+				t.Fatalf("error=%v want=%s", err, tc.want)
+			}
+			if repository.commits != 0 || !reflect.DeepEqual(trace, tc.trace) {
+				t.Fatalf("commits=%d trace=%v want=%v", repository.commits, trace, tc.trace)
+			}
+		})
+	}
+}

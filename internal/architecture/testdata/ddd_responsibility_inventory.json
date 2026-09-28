@@ -10986,13 +10986,9 @@
         "func NewService",
         "func Service.Complete",
         "func fromDomainOutcome",
-        "func normalizeVerification",
         "func publicDomainError",
         "func resolveActor",
-        "func terminalCompletionMatches",
         "func toDomainSnapshot",
-        "func validFullCommitSHA",
-        "func validateRemoteArtifactURL",
         "type Request",
         "type Result",
         "type Service"
@@ -14647,6 +14643,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueopscompletion/actor.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func NormalizeActor",
+        "func ValidateLiveActor"
+      ]
+    },
+    {
       "path": "internal/domain/issueopscompletion/artifact.go",
       "owner": "domain",
       "task": "T20",
@@ -14686,6 +14691,29 @@
         "type Outcome",
         "type ProcessReceipt",
         "type Snapshot"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopscompletion/input.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PrepareEvidence",
+        "func ValidateFinalHead",
+        "func ValidatePhase",
+        "func ValidatePrepared",
+        "func normalizeVerification",
+        "func validFullCommitSHA",
+        "func validateRemoteArtifactURL"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopscompletion/retry.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CanRetryCompletion",
+        "func MatchesRetryEvidence"
       ]
     },
     {
@@ -19872,9 +19900,11 @@
         "issueops execution complete"
       ],
       "evidence_tests": [
-        "internal/application/issueopscompletion/complete_test.go"
+        "internal/application/issueopscompletion/complete_test.go",
+        "internal/domain/issueopscompletion/input_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated",
+      "target_symbol": "func CanRetryCompletion"
     },
     {
       "id": "issue-create-intent-transaction",
@@ -20120,9 +20150,11 @@
         "issueops execution complete"
       ],
       "evidence_tests": [
-        "internal/application/issueopscompletion/complete_test.go"
+        "internal/application/issueopscompletion/complete_test.go",
+        "internal/domain/issueopscompletion/input_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated",
+      "target_symbol": "func PrepareEvidence"
     },
     {
       "id": "remote-completion-receipt-rules",
@@ -20192,6 +20224,86 @@
         "internal/adapter/issueops/issueops_completion_remote_test.go"
       ],
       "status": "migrate"
+    },
+    {
+      "id": "execution-completion-actor-identity",
+      "source_path": "internal/domain/issueopscompletion/actor.go",
+      "source_symbol": "func NormalizeActor",
+      "responsibility": "normalize native identity and require a reuse-safe receipt in observed ancestry before inspecting the process",
+      "target": "internal/domain/issueopscompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopscompletion/input_test.go",
+        "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "execution-completion-live-identity",
+      "source_path": "internal/domain/issueopscompletion/actor.go",
+      "source_symbol": "func ValidateLiveActor",
+      "responsibility": "reject a non-live or reused native process identity",
+      "target": "internal/domain/issueopscompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopscompletion/input_test.go",
+        "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "execution-completion-final-head",
+      "source_path": "internal/domain/issueopscompletion/input.go",
+      "source_symbol": "func ValidateFinalHead",
+      "responsibility": "require a full commit hash equal to the observed canonical worktree HEAD",
+      "target": "internal/domain/issueopscompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopscompletion/input_test.go",
+        "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "execution-completion-prepared-phase",
+      "source_path": "internal/domain/issueopscompletion/input.go",
+      "source_symbol": "func ValidatePhase",
+      "responsibility": "require preparation and pr phase before accepting a new completion",
+      "target": "internal/domain/issueopscompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopscompletion/input_test.go",
+        "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "execution-completion-retry-evidence",
+      "source_path": "internal/domain/issueopscompletion/retry.go",
+      "source_symbol": "func MatchesRetryEvidence",
+      "responsibility": "accept a completion retry only when observed report path and recorded verification and remote URL match",
+      "target": "internal/domain/issueopscompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopscompletion/input_test.go",
+        "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "retain"
     }
   ]
 }
