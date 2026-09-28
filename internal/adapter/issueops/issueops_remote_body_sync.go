@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"issueops/internal/contract/issueops"
@@ -80,7 +79,19 @@ func SyncRemoteArtifactBody(
 	if err := bodysync.RejectClosedPublication(kind, live.State); err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	baselineSHA, baselineAt := bodySyncBaseline(record, kind, url)
+	baseline := bodysync.BaselineSnapshot{Entries: make([]bodysync.BaselineEntry, len(record.BodySyncs))}
+	for index, entry := range record.BodySyncs {
+		baseline.Entries[index] = bodysync.BaselineEntry{URL: entry.URL, SHA256: entry.ToSHA256, SyncedAt: entry.SyncedAt}
+	}
+	if record.IssueCreateIntent != nil {
+		baseline.IssueCreateURL = record.IssueCreateIntent.CanonicalURL
+		baseline.IssueCreateSHA256 = record.IssueCreateIntent.BodySHA256
+		baseline.IssueCreateAt = record.IssueCreateIntent.UpdatedAt
+	}
+	if record.RemoteArtifact != nil {
+		baseline.ArtifactVerifiedAt = record.RemoteArtifact.VerifiedAt
+	}
+	baselineSHA, baselineAt := bodysync.SelectBaseline(baseline, kind, url)
 	plan, err := bodysync.BuildPlan(baselineSHA, live.Body, cmd.ProposedBody)
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
@@ -95,7 +106,7 @@ func SyncRemoteArtifactBody(
 		ExpectedBodySHA256: plan.RemoteBodySHA256,
 		PreservedSections:  plan.PreservedSections,
 		RecordedAt:         baselineAt,
-		AgeDays:            bodySyncAgeDays(baselineAt),
+		AgeDays:            bodysync.AgeDays(baselineAt, time.Now()),
 		AcceptRemoteEdits:  cmd.AcceptRemoteEdits,
 	}
 	if !cmd.Confirm {
@@ -168,38 +179,6 @@ func verifyBodySyncChildHierarchy(ctx context.Context, prov port.IssueProvider, 
 	return nil
 }
 
-// bodySyncBaseline is the body the harness last put on the artifact. A prior
-// sync is the most recent truth; before any sync, the create intent's digest is
-// the only thing the harness ever wrote.
-func bodySyncBaseline(record issueops.IssueOpsRecord, kind, url string) (sha, at string) {
-	for _, entry := range record.BodySyncs {
-		if bodysync.SameArtifactURL(entry.URL, url) {
-			return entry.ToSHA256, entry.SyncedAt
-		}
-	}
-	if kind == bodysynccontract.KindIssue && record.IssueCreateIntent != nil &&
-		bodysync.SameArtifactURL(record.IssueCreateIntent.CanonicalURL, url) {
-		return record.IssueCreateIntent.BodySHA256, record.IssueCreateIntent.UpdatedAt
-	}
-	if bodysync.IsPublicationKind(kind) && record.RemoteArtifact != nil {
-		// 생성 시 본문 digest는 기록되지 않으므로 기준선 없이 검증 시각만 보고한다.
-		return "", record.RemoteArtifact.VerifiedAt
-	}
-	return "", ""
-}
-
-func bodySyncAgeDays(at string) int {
-	parsed, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(at))
-	if err != nil {
-		return 0
-	}
-	days := int(time.Since(parsed).Hours() / 24)
-	if days < 0 {
-		return 0
-	}
-	return days
-}
-
 // recordBodySync stores the new baseline under the record lock, keeping one
 // entry per artifact so the list cannot grow without bound.
 func recordBodySync(ctx context.Context, stateRoot, id string, entry issueops.IssueOpsRemoteBodySync, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
@@ -212,17 +191,16 @@ func recordBodySync(ctx context.Context, stateRoot, id string, entry issueops.Is
 		if err := validateExecutionMutation(rec, actor); err != nil {
 			return err
 		}
-		kept := make([]issueops.IssueOpsRemoteBodySync, 0, len(rec.BodySyncs)+1)
-		for _, existing := range rec.BodySyncs {
-			if !bodysync.SameArtifactURL(existing.URL, entry.URL) {
-				kept = append(kept, existing)
-			}
+		urls := make([]string, len(rec.BodySyncs))
+		for index, existing := range rec.BodySyncs {
+			urls[index] = existing.URL
 		}
-		kept = append(kept, entry)
-		if len(kept) > issueops.MaxIssueOpsBodySyncs {
-			kept = kept[len(kept)-issueops.MaxIssueOpsBodySyncs:]
+		indices := bodysync.RetainedBaselineIndices(urls, entry.URL, issueops.MaxIssueOpsBodySyncs)
+		kept := make([]issueops.IssueOpsRemoteBodySync, 0, len(indices)+1)
+		for _, index := range indices {
+			kept = append(kept, rec.BodySyncs[index])
 		}
-		rec.BodySyncs = kept
+		rec.BodySyncs = append(kept, entry)
 		rec.UpdatedAt = entry.SyncedAt
 		var writeErr error
 		stamped, writeErr = writeIssueOps(stateRoot, rec)

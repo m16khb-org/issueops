@@ -7936,8 +7936,6 @@
       "task": "T07",
       "symbols": [
         "func SyncRemoteArtifactBody",
-        "func bodySyncAgeDays",
-        "func bodySyncBaseline",
         "func recordBodySync",
         "func verifyBodySyncChildHierarchy"
       ]
@@ -14299,6 +14297,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsbodysync/baseline.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func AgeDays",
+        "func RetainedBaselineIndices",
+        "func SelectBaseline",
+        "type BaselineEntry",
+        "type BaselineSnapshot"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsbodysync/bodysync.go",
       "owner": "domain",
       "task": "T07",
@@ -17322,6 +17332,59 @@
         "internal/adapter/issueops/issueops_remote_body_sync_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "body-sync-baseline",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func bodySyncBaseline",
+      "responsibility": "choose the most recent recorded body digest before a remote replacement",
+      "target": "internal/domain/issueopsbodysync",
+      "target_symbol": "func SelectBaseline",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr",
+        "issueops remote sync-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/baseline_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "body-sync-baseline-age",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func bodySyncAgeDays",
+      "responsibility": "clamp invalid or future baseline age in preview",
+      "target": "internal/domain/issueopsbodysync",
+      "target_symbol": "func AgeDays",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr",
+        "issueops remote sync-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/baseline_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "body-sync-baseline-persistence",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func recordBodySync",
+      "responsibility": "lock and persist the domain-selected body sync baseline with mutation authority",
+      "target": "internal/domain/issueopsbodysync",
+      "target_symbol": "func RetainedBaselineIndices",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr",
+        "issueops remote sync-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/baseline_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go"
+      ],
+      "status": "retain"
     },
     {
       "id": "loop-start",
