@@ -180,7 +180,7 @@
 
 ### Task 5: Lease·실행 준비의 실제 정책 소유권 완성 (T05)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T04. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/application/issueopslease/{claim,release}.go`; `internal/adapter/outbound/issueopslease/sqlite.go:claimWithinSpan`; `internal/application/issueopspreparation/prepare.go`; `internal/adapter/outbound/issueopspreparation/repository.go`; `internal/port/transactional_record_store.go`
 - **변경/신규 파일:** 기존 lease/preparation domain/application/ports를 확장하고 outbound의 policy orchestration을 제거한다. 별도 중복 lease aggregate는 만들지 않는다.
