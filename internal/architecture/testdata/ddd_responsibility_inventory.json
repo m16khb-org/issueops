@@ -14617,6 +14617,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueopspreparation/orca_receipt_transition.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func NextOrcaReceiptStage"
+      ]
+    },
+    {
       "path": "internal/domain/issueopspreparation/orca_stage.go",
       "owner": "domain",
       "task": "T20",
@@ -18328,8 +18336,14 @@
       "target": "internal/domain/issueopsreconcile",
       "target_symbol": "func DecidePending",
       "task": "T06",
-      "entrypoints": ["issueops execution reconcile --preview", "issueops execution reconcile --confirm"],
-      "evidence_tests": ["internal/domain/issueopsreconcile/route_test.go", "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"],
+      "entrypoints": [
+        "issueops execution reconcile --preview",
+        "issueops execution reconcile --confirm"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreconcile/route_test.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"
+      ],
       "status": "migrated"
     },
     {
@@ -18340,9 +18354,35 @@
       "target": "internal/domain/issueopsreconcile",
       "target_symbol": "func IsOrcaIntentKind",
       "task": "T06",
-      "entrypoints": ["issueops execution reconcile", "issueops cleanup abandon"],
-      "evidence_tests": ["internal/domain/issueopsreconcile/route_test.go", "internal/adapter/issueops/issueops_cleanup_abandon_test.go"],
+      "entrypoints": [
+        "issueops execution reconcile",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreconcile/route_test.go",
+        "internal/adapter/issueops/issueops_cleanup_abandon_test.go"
+      ],
       "status": "migrated"
+    },
+    {
+      "id": "orca-receipt-stage-progression",
+      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
+      "source_symbol": "func advanceOrcaIntentReceiptWithExpectedRaw",
+      "responsibility": "choose the next durable Orca intent stage after a validated receipt",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func NextOrcaReceiptStage",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution prepare --mode orca",
+        "issueops execution resume --confirm",
+        "issueops execution reconcile --confirm"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspreparation/orca_receipt_transition_test.go",
+        "internal/application/issueopspreparation/orca_receipt_test.go",
+        "internal/adapter/issueops/execution_orca_intent_test.go"
+      ],
+      "status": "retain"
     }
   ]
 }

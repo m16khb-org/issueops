@@ -161,8 +161,13 @@ func advanceOrcaIntentReceipt(ctx context.Context, stateRoot string, record issu
 }
 
 func advanceOrcaIntentReceiptWithExpectedRaw(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, expectedRecordRaw, expectedIntentRaw []byte, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
+	nextStage, _, err := preparationdomain.NextOrcaReceiptStage(expected.Stage)
+	if err != nil {
+		return record, expected, err
+	}
 	updated := expected
 	ownerPlanPath := ""
+	updated.Stage = nextStage
 	updated.InvocationState = orcaIntentNotInvoked
 	updated.InvocationAttempts = 0
 	switch expected.Stage {
@@ -203,31 +208,26 @@ func advanceOrcaIntentReceiptWithExpectedRaw(ctx context.Context, stateRoot stri
 			ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256,
 		}
 		updated.ClaimTokenSHA256 = tokenHash
-		updated.Stage = preparationcontract.IntentStageTerminal
 	case preparationcontract.IntentStageTerminal:
 		if strings.TrimSpace(receipt.TerminalPTYID) == "" {
 			return record, expected, fmt.Errorf("Orca terminal candidate is incomplete")
 		}
 		updated.TerminalPTYID = strings.TrimSpace(receipt.TerminalPTYID)
-		updated.Stage = preparationcontract.IntentStageRun
 	case preparationcontract.IntentStageRun:
 		if strings.TrimSpace(receipt.RunID) == "" {
 			return record, expected, fmt.Errorf("Orca Run candidate is incomplete")
 		}
 		updated.RunID = strings.TrimSpace(receipt.RunID)
-		updated.Stage = preparationcontract.IntentStageRunBind
 	case preparationcontract.IntentStageRunBind:
 		if strings.TrimSpace(receipt.RunID) != expected.RunID || !receipt.RunBound {
 			return record, expected, fmt.Errorf("Orca Run binding candidate is incomplete")
 		}
 		updated.RunBound = true
-		updated.Stage = preparationcontract.IntentStageTask
 	case preparationcontract.IntentStageTask:
 		if strings.TrimSpace(receipt.TaskID) == "" {
 			return record, expected, fmt.Errorf("Orca task candidate is incomplete")
 		}
 		updated.TaskID = strings.TrimSpace(receipt.TaskID)
-		updated.Stage = preparationcontract.IntentStageDispatch
 	case preparationcontract.IntentStageDispatch:
 		if err := port.ValidateExecutionOrcaDeliveryReceipt(receipt, port.OrcaDeliveryReceiptExpectation{
 			Host: expected.Probe.Host, TaskID: expected.TaskID, TerminalPTYID: expected.TerminalPTYID,
@@ -239,12 +239,10 @@ func advanceOrcaIntentReceiptWithExpectedRaw(ctx context.Context, stateRoot stri
 		if receipt.PromptReceipt != nil {
 			updated.OrcaPromptRequestID = strings.TrimSpace(receipt.PromptReceipt.RequestID)
 		}
-	default:
-		return record, expected, fmt.Errorf("unsupported Orca intent stage %q", expected.Stage)
 	}
 
 	var persisted issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
+	err = withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
 		current := record
 		if expectedRecordRaw == nil && expectedIntentRaw == nil {
 			matched, stored, err := readAndMatchOrcaIntent(stateRoot, record.ID, expected)
