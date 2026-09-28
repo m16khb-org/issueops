@@ -23,7 +23,7 @@ func (p *completionProvider) UpdateIssueBodySection(ctx context.Context, req por
 	return p.update(req)
 }
 
-func (p *completionProvider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (p *completionProvider) CloseIssue(_ context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	p.closes++
 	return port.IssueProviderCloseIssueResult{OK: true, Closed: true, IssueURL: req.IssueURL}, nil
 }

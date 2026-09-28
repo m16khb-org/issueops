@@ -11,7 +11,7 @@ import (
 
 type CompletionProvider interface {
 	UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
-	CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error)
+	CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error)
 }
 type CompletionProviderResolver func(string) (CompletionProvider, error)
 type MergeVerifier func(model.IssueOpsRemoteArtifactVerification) error
@@ -94,7 +94,7 @@ func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverrid
 	if err := domain.ValidateCloseIssue(record); err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}
-	result, err = provider.CloseIssue(port.IssueProviderCloseIssueRequest{Repo: record.Repo, IssueURL: record.IssueURL, Confirm: confirm})
+	result, err = provider.CloseIssue(ctx, port.IssueProviderCloseIssueRequest{Repo: record.Repo, IssueURL: record.IssueURL, Confirm: confirm})
 	if err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}

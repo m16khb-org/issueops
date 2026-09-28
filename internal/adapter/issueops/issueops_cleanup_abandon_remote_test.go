@@ -37,11 +37,11 @@ func (p *fakeAbandonRemote) CloseChild(port.IssueProviderCloseChildRequest) (por
 func (p *fakeAbandonRemote) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
-func (p *fakeAbandonRemote) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (p *fakeAbandonRemote) CloseIssue(_ context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	p.calls = append(p.calls, "close_issue:"+req.Reason)
 	return p.closeIssue, nil
 }
-func (p *fakeAbandonRemote) ClosePullRequest(port.IssueProviderClosePullRequestRequest) (port.IssueProviderClosePullRequestResult, error) {
+func (p *fakeAbandonRemote) ClosePullRequest(context.Context, port.IssueProviderClosePullRequestRequest) (port.IssueProviderClosePullRequestResult, error) {
 	p.calls = append(p.calls, "close_pr")
 	return p.closePR, p.closePRErr
 }

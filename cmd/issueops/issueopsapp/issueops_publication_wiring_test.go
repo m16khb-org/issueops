@@ -31,7 +31,7 @@ func (*publicationProviderFake) CreateChild(port.IssueProviderCreateChildRequest
 func (*publicationProviderFake) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
-func (*publicationProviderFake) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (*publicationProviderFake) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, nil
 }
 func (*publicationProviderFake) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {

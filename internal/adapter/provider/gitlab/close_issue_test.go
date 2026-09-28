@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,7 +13,7 @@ import (
 
 func TestGitLabCloseIssuePreviewKeepsHostname(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{
+	res, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{
 		IssueURL: "https://gitlab.corp.example.com/acme/repo/-/issues/7",
 	})
 	if err != nil {
@@ -40,7 +41,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{
+	res, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{
 		IssueURL: "https://gitlab.corp.example.com/acme/repo/-/issues/7", Confirm: true,
 	})
 	if err != nil {
@@ -85,7 +86,7 @@ esac
 	t.Setenv("PATH", binDir)
 	issueURL := "https://gitlab.example.com/acme/repo/-/work_items/105"
 
-	preview, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{IssueURL: issueURL})
+	preview, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{IssueURL: issueURL})
 	if err != nil {
 		t.Fatalf("preview must accept the work_items alias: %v", err)
 	}
@@ -93,7 +94,7 @@ esac
 		t.Fatalf("preview must resolve the alias on the issues endpoint: %+v", preview)
 	}
 
-	res, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{IssueURL: issueURL, Confirm: true})
+	res, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{IssueURL: issueURL, Confirm: true})
 	if err != nil {
 		t.Fatalf("confirm must accept the work_items alias: %v", err)
 	}

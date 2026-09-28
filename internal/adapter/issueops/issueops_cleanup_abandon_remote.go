@@ -151,7 +151,7 @@ func cleanupAbandonApplyRemote(
 		if !ok {
 			return fail(issueops.CleanupFailureStepClosePR, fmt.Errorf("provider does not support closing a pull request"))
 		}
-		closed, err := closer.ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+		closed, err := closer.ClosePullRequest(ctx, port.IssueProviderClosePullRequestRequest{
 			Repo: record.Repo, ArtifactURL: record.RemoteArtifact.URL,
 			Kind: strings.TrimSpace(record.RemoteArtifact.Kind), Confirm: true,
 		})
@@ -172,7 +172,7 @@ func cleanupAbandonApplyRemote(
 		result.PRClosed = closed.Closed
 	}
 	if req.CloseIssue {
-		closed, err := deps.Remote.CloseIssue(port.IssueProviderCloseIssueRequest{
+		closed, err := deps.Remote.CloseIssue(ctx, port.IssueProviderCloseIssueRequest{
 			Repo: record.Repo, IssueURL: record.IssueURL, Reason: "not_planned", Confirm: true,
 		})
 		if err != nil {
@@ -200,7 +200,6 @@ func cleanupAbandonApplyRemote(
 		}
 	}
 	result.RemoteEffects = applied
-	_ = ctx
 	return nil
 }
 

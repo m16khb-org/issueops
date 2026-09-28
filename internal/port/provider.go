@@ -246,7 +246,7 @@ type IssueProviderClosePullRequestResult struct {
 // break them all. Callers type-assert and fail closed when an adapter does not
 // implement it.
 type IssueProviderPullRequestCloser interface {
-	ClosePullRequest(IssueProviderClosePullRequestRequest) (IssueProviderClosePullRequestResult, error)
+	ClosePullRequest(context.Context, IssueProviderClosePullRequestRequest) (IssueProviderClosePullRequestResult, error)
 }
 
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
@@ -258,7 +258,7 @@ type IssueProvider interface {
 	CreatePullRequest(req IssueProviderCreatePullRequestRequest) (IssueProviderCreatePullRequestResult, error)
 	CreateChild(req IssueProviderCreateChildRequest) (IssueProviderCreateChildResult, error)
 	CloseChild(req IssueProviderCloseChildRequest) (IssueProviderCloseChildResult, error)
-	CloseIssue(req IssueProviderCloseIssueRequest) (IssueProviderCloseIssueResult, error)
+	CloseIssue(ctx context.Context, req IssueProviderCloseIssueRequest) (IssueProviderCloseIssueResult, error)
 	UpdateIssueBodySection(ctx context.Context, req IssueProviderUpdateIssueBodySectionRequest) (IssueProviderUpdateIssueBodySectionResult, error)
 }
 

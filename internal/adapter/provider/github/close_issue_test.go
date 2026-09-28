@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"runtime"
 	"strings"
 	"testing"
@@ -10,7 +11,7 @@ import (
 
 func TestGitHubCloseIssuePreview(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{
+	res, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{
 		IssueURL: "https://github.com/acme/repo/issues/12",
 	})
 	if err != nil {
@@ -34,7 +35,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{
+	res, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{
 		IssueURL: "https://github.com/acme/repo/issues/12", Confirm: true,
 	})
 	if err != nil {
@@ -59,7 +60,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{
+	res, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{
 		IssueURL: "https://github.com/acme/repo/issues/12", Confirm: true,
 	})
 	if err == nil || !strings.Contains(err.Error(), "not verified") {

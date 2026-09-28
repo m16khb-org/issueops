@@ -550,7 +550,7 @@ func (p *cleanupStatusProvider) CreateChild(port.IssueProviderCreateChildRequest
 func (p *cleanupStatusProvider) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, errors.New("unexpected close child")
 }
-func (p *cleanupStatusProvider) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (p *cleanupStatusProvider) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, errors.New("unexpected close issue")
 }
 func (p *cleanupStatusProvider) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {

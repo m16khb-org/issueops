@@ -37,7 +37,7 @@ func (p *fakeCompletionProvider) CreateChild(port.IssueProviderCreateChildReques
 func (p *fakeCompletionProvider) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
-func (p *fakeCompletionProvider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (p *fakeCompletionProvider) CloseIssue(_ context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	p.closeReq = &req
 	return p.closeRes, p.closeError
 }

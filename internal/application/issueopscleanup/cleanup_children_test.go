@@ -218,7 +218,7 @@ func (p *fakeCloseChildProvider) UpdateIssueBodySection(context.Context, port.Is
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (p *fakeCloseChildProvider) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, nil
 }
 

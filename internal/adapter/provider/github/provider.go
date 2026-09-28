@@ -703,7 +703,7 @@ func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProvid
 
 // CloseIssue closes the parent/primary issue as completed and verifies the
 // final state by readback. Merge-evidence gating is owned by the core caller.
-func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (Provider) CloseIssue(ctx context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	issueURL := strings.TrimSpace(req.IssueURL)
 	if issueURL == "" {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, fmt.Errorf("issue url is required")
@@ -718,21 +718,17 @@ func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueP
 			Preview: fmt.Sprintf("[dry-run] would execute: gh issue close %s --reason %s; gh issue view %s --json state", issueURL, ghQuoteReason(reason), issueURL),
 		}, nil
 	}
-	state, err := readGhIssueState(req.Repo, issueURL)
+	state, err := readGhIssueState(ctx, req.Repo, issueURL)
 	if err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, err
 	}
 	if strings.EqualFold(state, "CLOSED") {
 		return port.IssueProviderCloseIssueResult{OK: true, Provider: "github", IssueURL: issueURL, Closed: true, AlreadyClosed: true, State: state}, nil
 	}
-	closeCmd := exec.Command("gh", "issue", "close", issueURL, "--reason", reason)
-	if req.Repo != "" {
-		closeCmd.Dir = req.Repo
+	if _, _, err := providerutil.RunBoundedMutationContext(ctx, req.Repo, "gh", "issue", "close", issueURL, "--reason", reason); err != nil {
+		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, fmt.Errorf("gh issue close failed: %w", err)
 	}
-	if err := closeCmd.Run(); err != nil {
-		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, fmt.Errorf("gh issue close failed: %s", ghExecStderr(err))
-	}
-	state, err = readGhIssueState(req.Repo, issueURL)
+	state, err = readGhIssueState(ctx, req.Repo, issueURL)
 	if err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, err
 	}
@@ -765,14 +761,10 @@ func ghQuoteReason(reason string) string {
 	return reason
 }
 
-func readGhIssueState(repo, issueURL string) (string, error) {
-	cmd := exec.Command("gh", "issue", "view", issueURL, "--json", "state")
-	if repo != "" {
-		cmd.Dir = repo
-	}
-	out, err := cmd.Output()
+func readGhIssueState(ctx context.Context, repo, issueURL string) (string, error) {
+	out, err := providerutil.RunBoundedReadbackContext(ctx, repo, "gh", "issue", "view", issueURL, "--json", "state")
 	if err != nil {
-		return "", fmt.Errorf("gh issue view failed: %s", ghExecStderr(err))
+		return "", fmt.Errorf("gh issue view failed: %w", err)
 	}
 	var payload struct {
 		State string `json:"state"`

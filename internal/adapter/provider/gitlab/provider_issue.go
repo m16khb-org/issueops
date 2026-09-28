@@ -60,7 +60,7 @@ func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProvid
 
 // CloseIssue closes the parent/primary issue and verifies the final state by
 // readback. Merge-evidence gating is owned by the core caller.
-func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (Provider) CloseIssue(ctx context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	hostname, projectPath, iid, err := parseGitLabIssueURL(req.IssueURL)
 	if err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "gitlab"}, err
@@ -72,17 +72,17 @@ func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueP
 			Preview: fmt.Sprintf("[dry-run] would execute: glab api %s --hostname %s --method PUT -f state_event=close; then readback state", endpoint, hostname),
 		}, nil
 	}
-	state, err := readGlabIssueState(req.Repo, hostname, endpoint)
+	state, err := readGlabIssueState(ctx, req.Repo, hostname, endpoint)
 	if err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "gitlab"}, err
 	}
 	if strings.EqualFold(state, "closed") {
 		return port.IssueProviderCloseIssueResult{OK: true, Provider: "gitlab", IssueURL: req.IssueURL, Closed: true, AlreadyClosed: true, State: state}, nil
 	}
-	if _, err := runGlabAPIContext(context.Background(), req.Repo, hostname, endpoint, "--method", "PUT", "-f", "state_event=close"); err != nil {
+	if _, err := runGlabAPIContext(ctx, req.Repo, hostname, endpoint, "--method", "PUT", "-f", "state_event=close"); err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "gitlab"}, err
 	}
-	state, err = readGlabIssueState(req.Repo, hostname, endpoint)
+	state, err = readGlabIssueState(ctx, req.Repo, hostname, endpoint)
 	if err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "gitlab"}, err
 	}
@@ -92,8 +92,8 @@ func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueP
 	return port.IssueProviderCloseIssueResult{OK: true, Provider: "gitlab", IssueURL: req.IssueURL, Closed: true, State: state}, nil
 }
 
-func readGlabIssueState(repo, hostname, endpoint string) (string, error) {
-	out, err := runGlabAPIContext(context.Background(), repo, hostname, endpoint)
+func readGlabIssueState(ctx context.Context, repo, hostname, endpoint string) (string, error) {
+	out, err := runGlabAPIContext(ctx, repo, hostname, endpoint)
 	if err != nil {
 		return "", err
 	}

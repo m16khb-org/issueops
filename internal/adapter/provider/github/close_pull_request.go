@@ -1,17 +1,18 @@
 package github
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
+	"issueops/internal/adapter/provider/providerutil"
 	"issueops/internal/port"
 )
 
 // ClosePullRequest는 미머지 PR을 닫는다. 머지된 PR은 닫지 않고 사실만
 // 돌려준다 — 머지 뒤의 정리는 cleanup finish가 소유한다.
-func (Provider) ClosePullRequest(req port.IssueProviderClosePullRequestRequest) (port.IssueProviderClosePullRequestResult, error) {
+func (Provider) ClosePullRequest(ctx context.Context, req port.IssueProviderClosePullRequestRequest) (port.IssueProviderClosePullRequestResult, error) {
 	artifactURL := strings.TrimSpace(req.ArtifactURL)
 	if !validCanonicalGitHubPullRequestURL(artifactURL) {
 		return port.IssueProviderClosePullRequestResult{OK: false, Provider: "github"}, fmt.Errorf("pull request url must be a canonical https://<host>/<owner>/<repo>/pull/<number> url")
@@ -21,7 +22,7 @@ func (Provider) ClosePullRequest(req port.IssueProviderClosePullRequestRequest) 
 		result.Preview = fmt.Sprintf("[dry-run] would execute: gh pr close %s; gh pr view %s --json state", artifactURL, artifactURL)
 		return result, nil
 	}
-	state, err := readGhPullRequestState(req.Repo, artifactURL)
+	state, err := readGhPullRequestState(ctx, req.Repo, artifactURL)
 	if err != nil {
 		return port.IssueProviderClosePullRequestResult{OK: false, Provider: "github"}, err
 	}
@@ -34,14 +35,10 @@ func (Provider) ClosePullRequest(req port.IssueProviderClosePullRequestRequest) 
 		result.Closed, result.AlreadyClosed = true, true
 		return result, nil
 	}
-	closeCmd := exec.Command("gh", "pr", "close", artifactURL)
-	if req.Repo != "" {
-		closeCmd.Dir = req.Repo
+	if _, _, err := providerutil.RunBoundedMutationContext(ctx, req.Repo, "gh", "pr", "close", artifactURL); err != nil {
+		return port.IssueProviderClosePullRequestResult{OK: false, Provider: "github"}, fmt.Errorf("gh pr close failed: %w", err)
 	}
-	if err := closeCmd.Run(); err != nil {
-		return port.IssueProviderClosePullRequestResult{OK: false, Provider: "github"}, fmt.Errorf("gh pr close failed: %s", ghExecStderr(err))
-	}
-	state, err = readGhPullRequestState(req.Repo, artifactURL)
+	state, err = readGhPullRequestState(ctx, req.Repo, artifactURL)
 	if err != nil {
 		return port.IssueProviderClosePullRequestResult{OK: false, Provider: "github"}, err
 	}
@@ -54,14 +51,10 @@ func (Provider) ClosePullRequest(req port.IssueProviderClosePullRequestRequest) 
 	return result, nil
 }
 
-func readGhPullRequestState(repo, artifactURL string) (string, error) {
-	cmd := exec.Command("gh", "pr", "view", artifactURL, "--json", "state")
-	if repo != "" {
-		cmd.Dir = repo
-	}
-	out, err := cmd.Output()
+func readGhPullRequestState(ctx context.Context, repo, artifactURL string) (string, error) {
+	out, err := providerutil.RunBoundedReadbackContext(ctx, repo, "gh", "pr", "view", artifactURL, "--json", "state")
 	if err != nil {
-		return "", fmt.Errorf("gh pr view failed: %s", ghExecStderr(err))
+		return "", fmt.Errorf("gh pr view failed: %w", err)
 	}
 	var payload struct {
 		State string `json:"state"`
