@@ -166,9 +166,7 @@ func (repository *SQLiteRepository) MarkInvoking(ctx context.Context, state prep
 	if err := validateIntentState(state); err != nil {
 		return state, err
 	}
-	updated := state.Intent
-	updated.InvocationState = preparationcontract.InvocationUnknown
-	updated.InvocationAttempts++
+	updated := preparationapp.MarkOrcaInvoking(state.Intent)
 	data, err := (preparationcontract.IntentCodec{}).Encode(updated)
 	if err != nil {
 		return state, err
@@ -184,19 +182,13 @@ func (repository *SQLiteRepository) RecordFailure(ctx context.Context, state pre
 	if err := validateIntentState(state); err != nil {
 		return err
 	}
-	if strings.TrimSpace(state.FailureAt) == "" {
-		return fmt.Errorf("Orca intent failure timestamp is required")
-	}
-	intent := state.Intent
-	intent.InvocationState = invocation
-	intentData, err := (preparationcontract.IntentCodec{}).Encode(intent)
+	record, intent, err := preparationapp.ApplyOrcaFailure(state, invocation, func() string { return repository.boundedDiagnostic(cause) })
 	if err != nil {
 		return err
 	}
-	record := state.Snapshot.Record
-	record.Execution.Failure = &leasecontract.FailureDetail{
-		OperationID: intent.OperationID, Code: "external_operation_ambiguous",
-		Message: repository.boundedDiagnostic(cause), At: state.FailureAt,
+	intentData, err := (preparationcontract.IntentCodec{}).Encode(intent)
+	if err != nil {
+		return err
 	}
 	recordData, err := recordcodec.EncodeLease(record)
 	if err != nil {

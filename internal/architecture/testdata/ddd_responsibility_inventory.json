@@ -11368,6 +11368,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopspreparation/orca_invocation.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyOrcaFailure",
+        "func MarkOrcaInvoking"
+      ]
+    },
+    {
       "path": "internal/application/issueopspreparation/ports.go",
       "owner": "application",
       "task": "T20",
@@ -18023,8 +18032,37 @@
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ApplyOrcaBegin",
       "task": "T05",
-      "entrypoints": ["issueops execution prepare --mode orca"],
-      "evidence_tests": ["internal/application/issueopspreparation/orca_begin_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
+      "entrypoints": [
+        "issueops execution prepare --mode orca"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopspreparation/orca_begin_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "orca-invocation-transition",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func (*SQLiteRepository).MarkInvoking",
+      "responsibility": "persist the application-owned invocation state and attempt count with raw CAS",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func MarkOrcaInvoking",
+      "task": "T05",
+      "entrypoints": ["issueops execution prepare --mode orca", "issueops execution reconcile"],
+      "evidence_tests": ["internal/application/issueopspreparation/orca_invocation_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
+      "status": "retain"
+    },
+    {
+      "id": "orca-failure-transition",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func (*SQLiteRepository).RecordFailure",
+      "responsibility": "redact the diagnostic and persist application-owned failure state with record and intent CAS",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func ApplyOrcaFailure",
+      "task": "T05",
+      "entrypoints": ["issueops execution prepare --mode orca", "issueops execution reconcile"],
+      "evidence_tests": ["internal/application/issueopspreparation/orca_invocation_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
       "status": "retain"
     }
   ]
