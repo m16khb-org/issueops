@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"issueops/internal/contract/issueops"
-	abandondomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -35,7 +34,7 @@ func cleanupAbandonObserveRemote(
 	ctx context.Context,
 	record issueops.IssueOpsRecord,
 	req CleanupAbandonRequest,
-	deps CleanupAbandonDeps,
+	deps CleanupAbandonRuntime,
 	inventory issueops.CleanupAbandonInventory,
 	result *CleanupAbandonResult,
 ) (issueops.CleanupAbandonInventory, []string) {
@@ -120,88 +119,6 @@ func cleanupAbandonObserveRemote(
 		result.RemoteEffects = effects
 	}
 	return inventory, missing
-}
-
-// cleanupAbandonApplyRemote는 로컬 삭제보다 먼저 실행된다. 여기서 멈추면
-// 레코드와 워크트리가 그대로 남아 사람이 다시 결정할 수 있다.
-func cleanupAbandonApplyRemote(
-	ctx context.Context,
-	stateRoot string,
-	record issueops.IssueOpsRecord,
-	req CleanupAbandonRequest,
-	deps CleanupAbandonDeps,
-	inventory issueops.CleanupAbandonInventory,
-	fingerprint string,
-	result *CleanupAbandonResult,
-) error {
-	if !cleanupAbandonRemoteRequested(req) {
-		return nil
-	}
-	applied := []string{}
-	fail := func(step string, cause error) error {
-		result.OK = false
-		result.FailedStep = step
-		result.RemoteEffects = applied
-		receiptErr := recordCleanupAbandonFailure(stateRoot, record.ID, step, cause, fingerprint, inventory)
-		result.NextCommand = abandondomain.CleanupAbandonPreviewCommand(record.ID, result.Reason, req)
-		return cleanupAbandonApplyError(
-			fmt.Sprintf("cleanup abandon %s failed (record, worktree, and remaining remote state preserved): %v", step, cause), receiptErr)
-	}
-	if req.ClosePR {
-		closer, ok := deps.Remote.(port.IssueProviderPullRequestCloser)
-		if !ok {
-			return fail(issueops.CleanupFailureStepClosePR, fmt.Errorf("provider does not support closing a pull request"))
-		}
-		closed, err := closer.ClosePullRequest(ctx, port.IssueProviderClosePullRequestRequest{
-			Repo: record.Repo, ArtifactURL: record.RemoteArtifact.URL,
-			Kind: strings.TrimSpace(record.RemoteArtifact.Kind), Confirm: true,
-		})
-		switch {
-		case err != nil:
-			return fail(issueops.CleanupFailureStepClosePR, err)
-		case closed.Merged:
-			// preview 이후 머지됐다는 뜻이다. 폐기를 계속하면 머지 증적을 가진
-			// 레코드를 지우게 된다.
-			return fail(issueops.CleanupFailureStepClosePR,
-				fmt.Errorf("pull request was merged after the preview; run reflect-completion and cleanup finish instead"))
-		case closed.AlreadyClosed:
-			applied = append(applied, cleanupAbandonEffectClosePR+cleanupAbandonEffectAlreadyClosed)
-		default:
-			applied = append(applied, cleanupAbandonEffectClosePR)
-		}
-		result.RemoteArtifactState = closed.State
-		result.PRClosed = closed.Closed
-	}
-	if req.CloseIssue {
-		closed, err := deps.Remote.CloseIssue(ctx, port.IssueProviderCloseIssueRequest{
-			Repo: record.Repo, IssueURL: record.IssueURL, Reason: "not_planned", Confirm: true,
-		})
-		if err != nil {
-			return fail(issueops.CleanupFailureStepCloseIssue, err)
-		}
-		if closed.AlreadyClosed {
-			applied = append(applied, cleanupAbandonEffectCloseIssue+cleanupAbandonEffectAlreadyClosed)
-		} else {
-			applied = append(applied, cleanupAbandonEffectCloseIssue)
-		}
-		result.IssueState = closed.State
-		result.IssueClosed = closed.Closed
-	}
-	if req.DeleteRemoteBranch {
-		if inventory.RemoteBranchOID == "" {
-			// 부재가 삭제의 목표 상태다. 멱등 성공으로 정규화한다.
-			applied = append(applied, cleanupAbandonEffectRemoteBranchDelete+cleanupAbandonEffectAbsent)
-		} else if code, out := deleteRemoteBranchRef(
-			func(args ...string) (int, string) { return deps.Git(record.Repo, args...) },
-			inventory.Branch, inventory.RemoteBranchOID); code != 0 {
-			return fail(issueops.CleanupFailureStepRemoteBranchDelete, fmt.Errorf("%s", strings.TrimSpace(out)))
-		} else {
-			applied = append(applied, cleanupAbandonEffectRemoteBranchDelete)
-			result.RemoteBranchDeleted = true
-		}
-	}
-	result.RemoteEffects = applied
-	return nil
 }
 
 // cleanupAbandonArtifactState는 provider의 body reader로 아티팩트 상태만 읽는다.

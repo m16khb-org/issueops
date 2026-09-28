@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-func TestCleanupOperationCodecBindsBothOperations(t *testing.T) {
-	for _, operation := range []string{"finish", "remote-branch"} {
+func TestCleanupOperationCodecBindsSupportedOperations(t *testing.T) {
+	for _, operation := range []string{"finish", "remote-branch", "abandon"} {
 		t.Run(operation, func(t *testing.T) {
 			raw := []byte(fmt.Sprintf(`{"schema_version":1,"id":"io-shared-cleanup","phase":"done","cleanup_attempt":{"operation":%q,"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z"}}`, operation))
 			record, err := Decode("io-shared-cleanup", raw)
@@ -51,7 +51,7 @@ func TestCleanupAttemptRejectsRetiredDraftField(t *testing.T) {
 }
 
 func TestCleanupOperationCodecRejectsMissingAndUnknownOperation(t *testing.T) {
-	for _, operation := range []string{"", `"operation":"",`, `"operation":"abandon",`, `"operation":null,`} {
+	for _, operation := range []string{"", `"operation":"",`, `"operation":"unknown",`, `"operation":null,`} {
 		raw := []byte(`{"schema_version":1,"id":"io-operation-invalid","phase":"done","cleanup_attempt":{` + operation + `"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z"}}`)
 		if _, err := Decode("io-operation-invalid", raw); err == nil {
 			t.Errorf("cycle accepted %q", operation)

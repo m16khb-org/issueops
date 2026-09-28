@@ -420,10 +420,7 @@ func runCleanupRemoteBranch(args []string, deps Deps) error {
 	return nil
 }
 
-// runCleanupAbandon은 폐기된 비-done 사이클의 로컬 worktree, branch, record
-// 수명을 종료한다.
-// finish와 달리 provider를 resolve조차 하지 않는다 — 이 경로는 원격(이슈 본문·
-// PR/MR·원격 브랜치)을 어떤 단계에서도 읽거나 쓰지 않는다(#106).
+// runCleanupAbandon parses and renders; the executor owns all observations.
 func runCleanupAbandon(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops cleanup abandon", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
@@ -447,37 +444,16 @@ func runCleanupAbandon(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup abandon requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	// provider는 원격 효과가 요청됐을 때만 해석한다. 플래그 없는 폐기는
-	// provider 없이도 성립해야 한다 — 원격 정체가 없는 사이클이 정리되지 못하면
-	// 출구가 사라진다.
-	var prov port.IssueProvider
-	if *closePR || *closeIssue || *deleteRemoteBranch {
-		record, readErr := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), *id)
-		if readErr != nil {
-			return printCleanupFinishError(deps, *jsonOut, readErr)
-		}
-		providerName := cleanupDeps.ResolveRecordProvider(record)
-		if providerName == "" {
-			return printCleanupFinishError(deps, *jsonOut,
-				fmt.Errorf("cannot determine provider from IssueOps record; remote abandon effects need one"))
-		}
-		resolved, provErr := deps.Provider(providerName)
-		if provErr != nil {
-			return printCleanupFinishError(deps, *jsonOut, provErr)
-		}
-		prov = resolved
-	}
 	result, err := cleanupDeps.CleanupAbandon(context.Background(), cleanupDeps.IssueOpsStateRoot(), issueopscontract.CleanupAbandonRequest{
 		ID:                 *id,
 		Reason:             *reason,
 		Apply:              *apply,
 		Confirm:            *confirm,
 		Fingerprint:        *fingerprint,
-		ArtifactUnmerged:   cleanupArtifactUnmerged(*id, deps),
 		ClosePR:            *closePR,
 		CloseIssue:         *closeIssue,
 		DeleteRemoteBranch: *deleteRemoteBranch,
-	}, deps, prov)
+	}, deps)
 	if result.NextCommand != "" {
 		record, readErr := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), *id)
 		if readErr != nil {
@@ -547,25 +523,6 @@ func printCleanupFinishError(deps Deps, jsonOut bool, err error) error {
 		}
 	}
 	return err
-}
-
-// cleanupArtifactUnmerged는 레코드의 remote artifact가 병합되지 않았음을 실제로
-// 관측했을 때만 true다. artifact가 없으면 abandon의 artifact 게이트 자체가
-// 적용되지 않으므로 값은 무의미하고, 조회 수단이 없거나 조회가 실패하면 false로
-// 남아 게이트가 닫힌 채 유지된다(#342).
-func cleanupArtifactUnmerged(id string, deps Deps) bool {
-	if deps.ObserveArtifactMerged == nil {
-		return false
-	}
-	record, err := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), id)
-	if err != nil || record.RemoteArtifact == nil {
-		return false
-	}
-	merged, err := deps.ObserveArtifactMerged(*record.RemoteArtifact)
-	if err != nil {
-		return false
-	}
-	return !merged
 }
 
 // runCleanupLinkedBranch는 `createLinkedBranch`가 남긴 ref-null 고아 레코드를

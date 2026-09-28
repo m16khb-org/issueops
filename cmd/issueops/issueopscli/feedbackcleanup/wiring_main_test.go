@@ -48,10 +48,13 @@ func TestMain(m *testing.M) {
 			return service.Status(ctx, id, merged)
 		},
 		AddIssueOpsFeedbackWithActor: issueopscore.AddIssueOpsFeedbackWithActor,
-		CleanupAbandon: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupAbandonResult, error) {
-			return issueopscore.CleanupAbandon(ctx, stateRoot, req, issueopscore.CleanupAbandonDeps{
-				Orca: d.OrcaIntent, OrcaOwner: d.OrcaOwner, Remote: prov,
-			})
+		CleanupAbandon: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d Deps) (issueopscontract.CleanupAbandonResult, error) {
+			runtime := issueopscore.CleanupAbandonRuntime{StateRoot: stateRoot, Git: d.CleanupFinishGit, Orca: d.OrcaIntent, OrcaOwner: d.OrcaOwner, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
+			return (cleanupapp.AbandonExecutor{
+				Records: issueopscore.CleanupRecordStore{StateRoot: stateRoot}, Acquire: (issueopscore.CleanupLifetimeLock{StateRoot: stateRoot}).Acquire,
+				Provider: d.Provider, Observe: cleanupapp.ObserveAbandonArtifact, Plan: runtime.Plan,
+				NewAttempt: issueopscore.NewCleanupAttempt, Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Command, Now: time.Now,
+			}).Run(ctx, req)
 		},
 		CleanupFinish: finish,
 		CleanupRemoteBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {

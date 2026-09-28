@@ -14,9 +14,9 @@ import (
 )
 
 func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
-	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch} {
+	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(cleanupOperation), func(t *testing.T) {
-			for _, operation := range []string{"stale write", "delete", "span", "abandon bypass", "execution write", "raw execution write", "parent pair write", "child pair write", "publication"} {
+			for _, operation := range []string{"stale write", "delete", "span", "execution write", "raw execution write", "parent pair write", "child pair write", "publication"} {
 				t.Run(operation, func(t *testing.T) {
 					root := filepath.Join(t.TempDir(), "state")
 					stale := model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-fence", Phase: model.IssueOpsPhaseDone}
@@ -59,8 +59,6 @@ func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
 						err = deleteIssueOps(root, armed.ID)
 					case "span":
 						err = withIssueOpsLock(context.Background(), root, armed.ID, callback)
-					case "abandon bypass":
-						err = withCleanupAbandonLock(context.Background(), root, armed.ID, callback)
 					}
 					if err == nil || !strings.Contains(err.Error(), "cleanup "+string(cleanupOperation)) || called {
 						t.Fatalf("armed record reached legacy writer: called=%v err=%v", called, err)
@@ -91,7 +89,7 @@ func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
 }
 
 func TestOrdinaryWritersCannotRestoreDrainedFinishAttempt(t *testing.T) {
-	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch} {
+	for _, cleanupOperation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(cleanupOperation), func(t *testing.T) {
 			for _, operation := range []string{"write", "execution", "raw execution", "parent pair", "child pair", "publication"} {
 				t.Run(operation, func(t *testing.T) {

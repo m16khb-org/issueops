@@ -2185,7 +2185,6 @@
       "symbols": [
         "func RunCleanup",
         "func RunFeedback",
-        "func cleanupArtifactUnmerged",
         "func cleanupExecutionGeneration",
         "func localActor",
         "func printCleanupAbandonRemoteEffects",
@@ -6934,6 +6933,16 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/cleanup_abandon_records.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CleanupRecordStore.ArmAbandon",
+        "func CleanupRecordStore.DeleteAbandoned",
+        "func CleanupRecordStore.FailAbandon"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/cleanup_branch_ref.go",
       "owner": "adapter",
       "task": "T08",
@@ -7805,9 +7814,9 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func CleanupAbandon",
-        "func armCleanupAbandon",
-        "func cleanupAbandonApplyError",
+        "func CleanupAbandonRuntime.Command",
+        "func CleanupAbandonRuntime.Plan",
+        "func CleanupAbandonRuntime.Stop",
         "func cleanupAbandonBranchCheckoutPath",
         "func cleanupAbandonGates",
         "func cleanupAbandonInspectWorktree",
@@ -7816,9 +7825,7 @@
         "func cleanupAbandonPendingRecovery",
         "func cleanupAbandonPendingSafe",
         "func cleanupAbandonResolvedChildren",
-        "func deleteAbandonedIssueOps",
-        "func recordCleanupAbandonFailure",
-        "type CleanupAbandonDeps"
+        "type CleanupAbandonRuntime"
       ]
     },
     {
@@ -7826,7 +7833,6 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func cleanupAbandonApplyRemote",
         "func cleanupAbandonArtifactState",
         "func cleanupAbandonObserveRemote",
         "func cleanupAbandonRemoteRequested",
@@ -7892,9 +7898,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func withCleanupAbandonLock",
-        "func withIssueOpsLock",
-        "type cleanupAbandonLockKey"
+        "func withIssueOpsLock"
       ]
     },
     {
@@ -10987,6 +10991,18 @@
         "func CleanupAbandonFailureSeal",
         "func CleanupAbandonFingerprint",
         "func CleanupAbandonRecordSHA"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/abandon_executor.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func AbandonExecutor.Run",
+        "func AbandonExecutor.applyRemote",
+        "func ObserveAbandonArtifact",
+        "func abandonFailure",
+        "type AbandonExecutor"
       ]
     },
     {
@@ -14475,6 +14491,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/cleanup_abandon_transition.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ApplyCleanupAbandonFailure",
+        "func ArmCleanupAbandon"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/cleanup_attempt.go",
       "owner": "domain",
       "task": "T08",
@@ -17357,6 +17382,14 @@
         "func QueueStats",
         "func Start",
         "func ValidID"
+      ]
+    },
+    {
+      "path": "internal/port/cleanup_abandon.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type CleanupAbandonRecords"
       ]
     },
     {

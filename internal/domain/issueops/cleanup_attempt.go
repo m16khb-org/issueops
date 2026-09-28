@@ -31,7 +31,7 @@ func ArmCleanup(record model.IssueOpsRecord, attempt model.IssueOpsCleanupAttemp
 	if err := ValidateCleanupOperationAccess(record, attempt.Operation); err != nil {
 		return record, err
 	}
-	if record.CleanupAbandonFailure != nil && record.CleanupAbandonFailure.Step == model.CleanupFailureStepApplying {
+	if attempt.Operation != model.CleanupOperationAbandon && record.CleanupAbandonFailure != nil && record.CleanupAbandonFailure.Step == model.CleanupFailureStepApplying {
 		return record, fmt.Errorf("cleanup abandon apply is in progress")
 	}
 	if record.CleanupAttempt != nil && record.CleanupAttempt.Token == attempt.Token {

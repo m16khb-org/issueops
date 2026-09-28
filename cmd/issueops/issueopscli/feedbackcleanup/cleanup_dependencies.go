@@ -19,7 +19,7 @@ var cleanupDeps CleanupDeps
 type CleanupDeps struct {
 	Status                                            func(context.Context, string, string, bool, Deps) (issueopscontract.IssueOpsCleanupStatus, error)
 	AddIssueOpsFeedbackWithActor                      func(stateRoot, id, source, body, classification string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
-	CleanupAbandon                                    func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, deps Deps, prov port.IssueProvider) (issueopscontract.CleanupAbandonResult, error)
+	CleanupAbandon                                    func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, deps Deps) (issueopscontract.CleanupAbandonResult, error)
 	CleanupFinish                                     func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, deps Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error)
 	CleanupRemoteBranch                               func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, deps Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error)
 	CleanupLinkedBranch                               func(ctx context.Context, stateRoot string, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error)
@@ -43,7 +43,7 @@ func neutralCleanupDeps() CleanupDeps {
 		AddIssueOpsFeedbackWithActor: func(string, string, string, string, string, issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return issueopscontract.IssueOpsRecord{}, errCleanupNotConfigured
 		},
-		CleanupAbandon: func(context.Context, string, issueopscontract.CleanupAbandonRequest, Deps, port.IssueProvider) (issueopscontract.CleanupAbandonResult, error) {
+		CleanupAbandon: func(context.Context, string, issueopscontract.CleanupAbandonRequest, Deps) (issueopscontract.CleanupAbandonResult, error) {
 			return issueopscontract.CleanupAbandonResult{}, errCleanupNotConfigured
 		},
 		CleanupFinish: func(context.Context, string, issueopscontract.CleanupFinishRequest, Deps, port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {

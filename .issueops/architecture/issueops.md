@@ -194,12 +194,13 @@ Post-merge cleanup ordering is a contract: `reflect-completion`(completion
 레코드를 나이와 무관하게 보존한다(보존 불변식). staged artifact의 수명은
 레코드와 같다(deleteIssueOps가 스테이지 버킷을 동반 삭제).
 
-Cleanup `finish`와 `remote-branch`는 같은 cycle의 실행 잠금과 `cleanup_attempt`를
+Cleanup `finish`, `remote-branch`, `abandon`은 같은 cycle의 실행 잠금과 `cleanup_attempt`를
 공유한다. attempt의 operation·token과 관측 당시의 원본 레코드를 CAS로 결속하며,
 일반 writer는 attempt가 있는 레코드를 변경할 수 없다. 각 외부 효과 직전에
 소유권을 확인하고, provider 감사 반영 뒤에도 같은 레코드에만 receipt를 기록한다.
 상속된 자식 프로세스가 모두 종료됐음을 drain으로 확인한 뒤 finish는 레코드를
-삭제하고 remote-branch는 attempt만 해제한다. 다른 operation의 attempt는 인계받지
+삭제하고 remote-branch는 attempt만 해제한다. abandon은 소유한 intent 행·staged artifact·
+레코드를 한 트랜잭션으로 삭제한다. 다른 operation의 attempt는 인계받지
 않으며, 해당 정리 명령으로 복구해야 한다. 원격 ref가 이미 없으면 preview는
 레코드를 쓰지 않는다. 같은 operation의 중단된 attempt가 남아 있을 때는 명시적인
 apply가 새 token으로 인계받아 drain·해제하며, 삭제나 감사 반영을 했다고 기록하지
@@ -212,3 +213,12 @@ apply가 새 token으로 인계받아 drain·해제하며, 삭제나 감사 반�
 fingerprint와 실패 기록의 봉인은 `internal/application/issueopscleanup`에서 만든다.
 `close_pr`, `close_issue`, `remote_branch_delete` 실패는 로컬 삭제 전이므로,
 봉인된 로컬 자원의 존재 여부와 OID가 그대로일 때만 새 preview로 재시도할 수 있다.
+
+`AbandonExecutor`는 provider 선택과 artifact 조회 전에 공용 실행 잠금을 얻고,
+그 뒤 읽은 원본 레코드에 관측 결과와 attempt를 CAS로 결속한다. CLI가 전달한
+`ArtifactUnmerged` 값은 승인 근거로 쓰지 않는다. 원격 효과 → 점유 프로세스 종료 →
+워크트리 제거 → 브랜치 CAS 삭제 → drain → 레코드 삭제 순서를 application이 소유하며,
+각 외부 효과 전에 같은 레코드의 소유권을 확인한다. 봉인된 과거 `applying` 실패 기록은
+복구 판단의 근거일 뿐, 실행 중인 다른 abandon을 통과시키는 권한이 아니다.
+취소된 로컬 Git 명령은 실제 삭제를 끝냈을 수 있으므로 `applying` 실패 기록을 보존하고,
+새 preview가 남은 자원을 다시 관측하게 한다. 취소된 조회의 exit code를 부재로 해석하지 않는다.

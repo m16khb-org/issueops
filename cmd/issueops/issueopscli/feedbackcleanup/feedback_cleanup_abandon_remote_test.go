@@ -20,7 +20,7 @@ func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest
 	wired.IssueOpsStateRoot = issueopscore.IssueOpsStateRoot
 	wired.ReadIssueOps = issueopscore.ReadIssueOps
 	wired.ResolveRecordProvider = issuedomain.ResolveRecordProvider
-	wired.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps, _ port.IssueProvider) (issueopscontract.CleanupAbandonResult, error) {
+	wired.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps) (issueopscontract.CleanupAbandonResult, error) {
 		*requests = append(*requests, req)
 		return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID, RemoteEffects: []string{"close_issue"}}, nil
 	}
@@ -57,8 +57,8 @@ func TestRunCleanupAbandonForwardsRemoteEffectFlags(t *testing.T) {
 	if !got.ClosePR || !got.CloseIssue || !got.DeleteRemoteBranch {
 		t.Fatalf("remote effect flags did not reach the adapter: %#v", got)
 	}
-	if *providerCalls != 1 {
-		t.Fatalf("a remote effect must resolve exactly one provider, got %d", *providerCalls)
+	if *providerCalls != 0 {
+		t.Fatalf("transport must not resolve the provider before executor ownership, got %d", *providerCalls)
 	}
 }
 

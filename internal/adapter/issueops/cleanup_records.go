@@ -37,6 +37,9 @@ func (s CleanupRecordStore) Load(ctx context.Context, id string) (model.CleanupS
 }
 
 func (s CleanupRecordStore) Arm(ctx context.Context, expected model.CleanupSnapshot, attempt model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error) {
+	if attempt.Operation == model.CleanupOperationAbandon {
+		return model.CleanupSnapshot{}, fmt.Errorf("abandon requires its sealed inventory arm")
+	}
 	record, err := cleanupSnapshotRecord(expected, false)
 	if err != nil {
 		return model.CleanupSnapshot{}, err
@@ -69,6 +72,9 @@ func (s CleanupRecordStore) MarkAuditReflected(ctx context.Context, expected mod
 	record, err := cleanupSnapshotRecord(expected, true)
 	if err != nil {
 		return model.CleanupSnapshot{}, err
+	}
+	if record.CleanupAttempt.Operation == model.CleanupOperationAbandon {
+		return model.CleanupSnapshot{}, fmt.Errorf("abandon does not own post-merge audit reflection")
 	}
 	return s.save(ctx, expected, domain.MarkRemoteCompletionReflected(record, now))
 }

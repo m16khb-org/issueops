@@ -11,6 +11,7 @@ type CleanupOperation string
 
 const (
 	CleanupOperationFinish       CleanupOperation = "finish"
+	CleanupOperationAbandon      CleanupOperation = "abandon"
 	CleanupOperationRemoteBranch CleanupOperation = "remote-branch"
 )
 
@@ -26,7 +27,7 @@ func ValidateCleanupAttempt(attempt *IssueOpsCleanupAttempt) error {
 	if attempt == nil {
 		return nil
 	}
-	if attempt.Operation != CleanupOperationFinish && attempt.Operation != CleanupOperationRemoteBranch {
+	if attempt.Operation != CleanupOperationFinish && attempt.Operation != CleanupOperationRemoteBranch && attempt.Operation != CleanupOperationAbandon {
 		return fmt.Errorf("issueops cleanup attempt operation is invalid")
 	}
 	if len(attempt.Token) != 64 || strings.ToLower(attempt.Token) != attempt.Token {
