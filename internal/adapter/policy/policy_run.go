@@ -14,21 +14,33 @@ import (
 )
 
 func FakeRunCommand(request policycontract.CommandPolicyRequest) policycontract.CommandFakeRunResult {
-	return policyService().FakeRun(request)
+	return (Evaluator{}).FakeRun(request)
 }
 
 func RunReadOnlyCommand(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
-	return policyService().RunReadOnly(request)
+	return (Evaluator{}).RunReadOnly(request)
 }
 
 // RunCommand executes argv under the requested write/network permissions.
 // The application always clears shell permission before evaluating the request.
 func RunCommand(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
-	return policyService().Run(request)
+	return (Evaluator{}).Run(request)
 }
 
-func policyService() policyapp.Service {
-	return policyapp.Service{Observer: commandObserver{}, Executor: commandExecutor{}, Clock: systemClock{}}
+func (e Evaluator) FakeRun(request policycontract.CommandPolicyRequest) policycontract.CommandFakeRunResult {
+	return e.service().FakeRun(request)
+}
+
+func (e Evaluator) RunReadOnly(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
+	return e.service().RunReadOnly(request)
+}
+
+func (e Evaluator) Run(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
+	return e.service().Run(request)
+}
+
+func (e Evaluator) service() policyapp.Service {
+	return policyapp.Service{Observer: commandObserver{lookup: e.lookup}, Executor: commandExecutor{}, Clock: systemClock{}}
 }
 
 type systemClock struct{}

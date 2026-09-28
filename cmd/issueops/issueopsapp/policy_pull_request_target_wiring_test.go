@@ -3,7 +3,8 @@ package issueopsapp
 import (
 	"testing"
 
-	policyadapter "issueops/internal/adapter/policy"
+	policycli "issueops/cmd/issueops/policycli"
+	policycontract "issueops/internal/contract/policy"
 )
 
 // TestPolicyPullRequestTargetLookupIsWired는 PR/MR target 가드가 composition
@@ -16,17 +17,27 @@ import (
 // 남아 CI가 매번 초록을 보고했다. 다음 날 자식 Task MR이 부모 작업 브랜치가
 // 아니라 release/stg를 타겟해 열렸다.
 //
-// 여기서 확인하는 것은 "설치되었는가" 하나다. 설치된 뒤의 판정은
-// internal/adapter/policy의 EvaluateCommandPolicy 통합 테스트가 맡는다.
+// 여기서 composition root가 주입한 조회 함수까지 실제 판정에 쓰이는지 확인한다.
 func TestPolicyPullRequestTargetLookupIsWired(t *testing.T) {
-	original := policyadapter.PreparedBaseBranchLookup
-	policyadapter.PreparedBaseBranchLookup = nil
-	t.Cleanup(func() { policyadapter.PreparedBaseBranchLookup = original })
+	original := policycli.EvaluateCommandPolicy
+	t.Cleanup(func() { policycli.EvaluateCommandPolicy = original })
+	root := t.TempDir()
+	lookupPath := ""
+	configurePolicyAndGitObserversWithLookup(func(path string) (string, bool) {
+		lookupPath = path
+		return "parent/umbrella-work", true
+	})
 
-	configurePolicyAndGitObservers()
-
-	if policyadapter.PreparedBaseBranchLookup == nil {
+	if policycli.EvaluateCommandPolicy == nil {
 		t.Fatal("composition root가 policy PR/MR target lookup을 설치하지 않았다; " +
 			"설치가 빠지면 잘못된 타겟의 PR/MR이 사전 거부 없이 열린다")
+	}
+	result := policycli.EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
+		WorkspaceRoot: root, CWD: root,
+		Argv:    []string{"glab", "mr", "create", "--target-branch", "release/stg"},
+		Timeout: "30s", WriteAllowed: true, NetworkAllowed: true,
+	})
+	if lookupPath != root || !containsString(result.DenyReasons, "pr_target_branch_mismatch") {
+		t.Fatalf("lookup path = %q, deny reasons = %v", lookupPath, result.DenyReasons)
 	}
 }

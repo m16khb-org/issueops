@@ -25,12 +25,16 @@ import (
 // 두 기능 모두 프로세스를 띄운다. 어떤 실행기를 쓸지는 composition root의
 // 결정이고, 소비자는 요청과 결과 형식만 안다.
 func configurePolicyAndGitObservers() {
-	auditdeps.EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
-	policyadapter.PreparedBaseBranchLookup = issueopsdeps.PreparedBaseBranchForWorkspace
+	configurePolicyAndGitObserversWithLookup(issueopsdeps.PreparedBaseBranchForWorkspace)
+}
+
+func configurePolicyAndGitObserversWithLookup(lookup policyadapter.PreparedBaseBranchLookup) {
+	evaluator := policyadapter.NewEvaluator(lookup)
+	auditdeps.EvaluateCommandPolicy = evaluator.Evaluate
 	cleanupstatusdeps.GitCmd = preflightadapter.GitCmd
 	cleanupstatusdeps.GitOut = preflightadapter.GitOut
-	gatesdeps.EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
-	gatesdeps.RunCommand = policyadapter.RunCommand
+	gatesdeps.EvaluateCommandPolicy = evaluator.Evaluate
+	gatesdeps.RunCommand = evaluator.Run
 	gitworktreedeps.GitCmd = preflightadapter.GitCmd
 	gitworktreedeps.GitOut = preflightadapter.GitOut
 	implementationdeps.GitCmd = preflightadapter.GitCmd
@@ -38,12 +42,12 @@ func configurePolicyAndGitObservers() {
 	issueopsdeps.GitCmd = preflightadapter.GitCmd
 	issueopsdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsdeps.GitOut = preflightadapter.GitOut
-	mcpclideps.EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
-	mcpclideps.FakeRunCommand = policyadapter.FakeRunCommand
+	mcpclideps.EvaluateCommandPolicy = evaluator.Evaluate
+	mcpclideps.FakeRunCommand = evaluator.FakeRun
 	orphancleanupdeps.GitCmd = preflightadapter.GitCmd
-	policyclideps.EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
-	policyclideps.FakeRunCommand = policyadapter.FakeRunCommand
-	policyclideps.RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
+	policyclideps.EvaluateCommandPolicy = evaluator.Evaluate
+	policyclideps.FakeRunCommand = evaluator.FakeRun
+	policyclideps.RunReadOnlyCommand = evaluator.RunReadOnly
 	preflightfuzzdeps.GitCmd = preflightadapter.GitCmd
 	resourcesdeps.CommandPolicySummary = policyadapter.CommandPolicySummary
 	reviewfilesdeps.GitCmd = preflightadapter.GitCmd
@@ -57,6 +61,6 @@ func configurePolicyAndGitObservers() {
 		Normalize:   reviewfilesdeps.Normalize,
 		Evidence:    reviewfilesdeps.Evidence,
 	})
-	statusclideps.RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
-	workerdeps.RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
+	statusclideps.RunReadOnlyCommand = evaluator.RunReadOnly
+	workerdeps.RunReadOnlyCommand = evaluator.RunReadOnly
 }

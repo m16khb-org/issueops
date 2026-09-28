@@ -1549,7 +1549,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configurePolicyAndGitObservers"
+        "func configurePolicyAndGitObservers",
+        "func configurePolicyAndGitObserversWithLookup"
       ]
     },
     {
@@ -9750,8 +9751,11 @@
       "task": "T09",
       "symbols": [
         "func EvaluateCommandPolicy",
+        "func Evaluator.Evaluate",
+        "func NewEvaluator",
         "func commandObserver.Observe",
         "func isDirectory",
+        "type Evaluator",
         "type commandObserver"
       ]
     },
@@ -9775,7 +9779,8 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func pullRequestTargetDeny"
+        "func pullRequestTargetDeny",
+        "type PreparedBaseBranchLookup"
       ]
     },
     {
@@ -9783,12 +9788,15 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
+        "func Evaluator.FakeRun",
+        "func Evaluator.Run",
+        "func Evaluator.RunReadOnly",
+        "func Evaluator.service",
         "func FakeRunCommand",
         "func RunCommand",
         "func RunReadOnlyCommand",
         "func commandEnv",
         "func commandExecutor.Execute",
-        "func policyService",
         "func systemClock.Now",
         "type commandExecutor",
         "type systemClock"
@@ -15466,6 +15474,15 @@
       ]
     },
     {
+      "path": "internal/domain/policy/pull_request_target.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func DecidePullRequestTarget",
+        "type PullRequestTargetFacts"
+      ]
+    },
+    {
       "path": "internal/domain/policy/redaction.go",
       "owner": "domain",
       "task": "T09",
@@ -17256,6 +17273,24 @@
         "internal/domain/policy/command_decision_test.go",
         "internal/adapter/policy/policy_test.go",
         "internal/adapter/policy/policy_catalog_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "pr-target-guard",
+      "source_path": "internal/adapter/policy/policy_pull_request_target.go",
+      "source_symbol": "func pullRequestTargetDeny",
+      "responsibility": "parse a PR create command and observe its prepared base before domain decides the target gate",
+      "target": "internal/domain/policy",
+      "target_symbol": "func DecidePullRequestTarget",
+      "task": "T09",
+      "entrypoints": [
+        "issueops policy check",
+        "issueops policy run"
+      ],
+      "evidence_tests": [
+        "internal/domain/policy/pull_request_target_test.go",
+        "internal/adapter/policy/policy_pull_request_target_test.go"
       ],
       "status": "retain"
     },

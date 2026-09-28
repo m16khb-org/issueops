@@ -12,12 +12,22 @@ import (
 )
 
 func EvaluateCommandPolicy(req policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
-	return (policyapp.Service{Observer: commandObserver{}}).Evaluate(req)
+	return (Evaluator{}).Evaluate(req)
 }
 
-type commandObserver struct{}
+type Evaluator struct {
+	lookup PreparedBaseBranchLookup
+}
 
-func (commandObserver) Observe(req policycontract.CommandPolicyRequest) policyapp.Observation {
+func NewEvaluator(lookup PreparedBaseBranchLookup) Evaluator { return Evaluator{lookup: lookup} }
+
+func (e Evaluator) Evaluate(req policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
+	return (policyapp.Service{Observer: commandObserver{lookup: e.lookup}}).Evaluate(req)
+}
+
+type commandObserver struct{ lookup PreparedBaseBranchLookup }
+
+func (observer commandObserver) Observe(req policycontract.CommandPolicyRequest) policyapp.Observation {
 	root := absOrOriginal(req.WorkspaceRoot)
 	cwd := absOrOriginal(req.CWD)
 	catalog, catalogWarnings := policyCatalogForWorkspace(root)
@@ -48,7 +58,7 @@ func (commandObserver) Observe(req policycontract.CommandPolicyRequest) policyap
 		facts.UsesNetwork = classification.UsesNetwork
 		facts.Writes = classification.Writes
 		facts.ReadOnlyAllowed = classification.ReadOnlyAllowed
-		facts.PRTargetDeny, facts.PRTargetExpected = pullRequestTargetDeny(root, cwd, argv)
+		facts.PRTargetDeny, facts.PRTargetExpected = pullRequestTargetDeny(root, cwd, argv, observer.lookup)
 	}
 	return policyapp.Observation{
 		Root: root, CWD: cwd, Timeout: timeout, AuditLogID: auditID,
