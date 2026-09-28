@@ -14558,6 +14558,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueopslease/resume_begin.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ValidateResumeBeginAuthority",
+        "type ResumeBeginAuthority"
+      ]
+    },
+    {
       "path": "internal/domain/issueopslease/writer.go",
       "owner": "domain",
       "task": "T20",
@@ -18670,6 +18679,23 @@
         "internal/adapter/issueops/execution_orca_intent_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "resume-begin-authority",
+      "source_path": "internal/adapter/issueops/execution_resume.go",
+      "source_symbol": "func beginOrcaExecutionResumeIntentWithExpectedRaw",
+      "responsibility": "require unchanged lease, owner binding, and empty pending slot before persisting a resume intent",
+      "target": "internal/domain/issueopslease",
+      "target_symbol": "func ValidateResumeBeginAuthority",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution resume --confirm"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopslease/resume_begin_test.go",
+        "internal/adapter/issueops/execution_api_resume_test.go"
+      ],
+      "status": "retain"
     }
   ]
 }

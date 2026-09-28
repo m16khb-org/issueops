@@ -11,6 +11,7 @@ import (
 
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
 )
 
@@ -236,10 +237,12 @@ func beginOrcaExecutionResumeIntentWithExpectedRaw(stateRoot string, record issu
 		if err != nil {
 			return err
 		}
-		if current.Execution.Pending != nil ||
-			!reflect.DeepEqual(current.Execution.Lease, lease) ||
-			!reflect.DeepEqual(current.Execution.Orca, &binding) {
-			return fmt.Errorf("execution resume authority changed before intent persistence")
+		if err := leasedomain.ValidateResumeBeginAuthority(leasedomain.ResumeBeginAuthority{
+			Pending: current.Execution.Pending != nil,
+			LeaseSame: reflect.DeepEqual(current.Execution.Lease, lease),
+			BindingSame: reflect.DeepEqual(current.Execution.Orca, &binding),
+		}); err != nil {
+			return err
 		}
 		if err := validateOrcaIntentRecordIdentity(current, payload); err != nil {
 			return err
