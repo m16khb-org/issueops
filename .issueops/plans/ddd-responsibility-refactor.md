@@ -254,10 +254,10 @@
 
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T07. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/issueops/{start,branchprepare,linking,delegation,cleanupchildren,cleanupstatus,orphancleanup}/`; `issueops_{umbrella_topology,delegation,child_gate,cleanup_*}.go`; `cleanup_workspace_*.go`; `issueops_linked_branch_observation.go`
-- **변경/신규 파일:** 신규 `internal/domain/issueopsbranch/`, `internal/application/issueopsbranch/`, `internal/domain/issueopsdelegation/`, `internal/application/issueopsdelegation/`, `internal/domain/issueopscleanup/`, `internal/application/issueopscleanup/`; 기술 outbound adapters.
+- **변경/신규 파일:** aggregate 규칙은 기존 `internal/domain/issueops/`와 `internal/domain/issueopsremote/`, 봉인 identity는 `internal/domain/issueopspreparation/`, orphan 규칙은 `internal/domain/issueopsorphancleanup/`에 둔다. 조율은 `internal/application/issueopsbranch/`, `internal/application/issueopsdelegation/`, `internal/application/issueopscleanup/`이 맡고 기술 outbound adapter와 CLI composition root를 연결한다.
 - **구현:** 8a: start/branch prepare/retarget/link의 relation/topology 규칙 이전. 8b: parent/child preconditions/profile/acceptance를 이전하고 related rows를 하나의 transaction으로 유지. 8c: cleanup inventory→eligibility→fingerprinted plan을 domain으로, preview/apply/reprobe/effects/failure receipt를 application으로 이전한다. 각 소작업은 독립 검증·통합 지점을 갖는다.
 - **경계·보존:** cleanup applying fence와 expected raw state를 유지하고 실제 삭제 효과는 fixture Git/worktree/process에 한정한다. operationalhealth/linkedbranch 판단은 재사용한다. live process identity·inode·digest 검사는 adapter에 남긴다. 새 destructive recovery/cleanup 명령을 추가하지 않는다.
 - **CHECK:** `go test ./internal/adapter/issueops/... ./internal/adapter/outbound/issueopsrecord ./internal/architecture -count=1`; 신규 branch/delegation/cleanup domain·application suite와 관련 `-race`.
@@ -287,6 +287,10 @@
 - **정리 회귀 수정:** 브랜치 삭제 실패 뒤 `show-ref` 조회 오류를 부재로 해석해 record까지 삭제하던 결함을 수정했다. 종료 코드 `1`만 부재로 인정한다. finish·abandon의 오류 코드 `2`·`128`·`-1` 회귀 테스트 여섯 건이 수정 전 실패하고 수정 후 통과했다. 실제 CLI와 임시 Git 저장소에서도 오류 시 브랜치·record·재시도 영수증 보존을 확인했다. 전체 일반·race 테스트 각각 292개 패키지, vet·build가 통과했다(`T08-ref-observation-*`). 정리 use case의 계층 이전은 계속 남아 있다.
 
 - **부분 진행 — 정리 preview:** 정리 대상 구성과 phase·lease·머지·자식 종료·base 재타깃·원격 브랜치 유지 판정을 domain으로, 원격 artifact·Git·파일·점유자 조회 조율을 `FinishPreviewer`로 옮겼다. 기존 adapter의 판정 함수와 base 정규화 함수를 제거했고 strict PR readiness도 같은 domain 정규화를 사용한다. 브랜치 최초 조회 오류와 읽을 수 없거나 디렉터리가 아닌 워크트리 경로는 부재로 취급하지 않는다. 관련 회귀·architecture 검사, 전체 일반·race 테스트(각 292개 패키지), vet·build가 통과했다. 실제 CLI의 정상 preview 출력과 fingerprint가 기준 구현과 같았고, 조회 오류·파일·심볼릭 링크 거부와 DB 무변경을 확인했다. 세 가지 domain 판정 우회도 기존 실행 경로 테스트에서 검출했다. 삭제 실행의 application 이전, 조회 중 artifact 변경 차단, 공유 workspace gate·stop 경계 이전은 남아 있다.
+
+- **최종 검증 — `c6c819ec`:** finish·remote-branch·abandon·orphan 정리 실행과 소유권 재확인, 봉인 intent 구성·hydration, 자식 게이트, 활성 cycle 선택 및 branch await-link까지 이전했다. 이전 adapter의 production 흐름과 호환 facade는 삭제했고, 일부 기존 통합 테스트의 조립 helper는 `_test.go`에만 둔다. 명시된 state root를 무시하던 브랜치 준비 경로도 수정했다. Git/provider 실행·응답 해석, SQLite CAS·writer exclusion, private 파일·process 관측은 adapter에 유지한다. 전체 wiring의 잔여 전역 의존성·조립 facade 제거는 T20에서 계속 추적한다.
+- **완료 근거:** `T08-ownership.json`에 이전 정책 91개, 소스 해시 107개와 composition root를 기록했다. `T08-task-check.jsonl`의 지정 CHECK는 20개 패키지와 2,063개 테스트 pass event(하위 사례 포함), 실패 0을 기록한다. `T08-success.txt`·`T08-failure.txt`는 이 실행의 부모자식 동시 처리·stop→remove 순서·artifact drift·authority CAS·새 terminal/owner 차단 근거다. `T08-await-binary-smoke.json`은 실제 CLI·Git·SQLite로 remote-only branch readback과 모든 경로의 원본 row 보존을 확인한다. `T08-await-self-verify.json`은 전체 race·vet를 포함한 26개 검사, 최소 점수 100을 기록한다.
+- **검증 보완:** await-link 상한을 제거한 변형이 기존 테스트를 통과해, 잘못된 timeout은 조회·대기 0회로 즉시 거부해야 한다는 assertion을 추가했다. 보완 후 provider gate·상한·원격 조회 오류 처리를 각각 깨뜨린 세 변형을 모두 검출했다. 전체 목표는 여전히 미완료이며 T01·T09·T18–T22를 유지한다.
 
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
