@@ -7474,6 +7474,12 @@
         "func executionSyncBaseAuthorityMissing",
         "func executionSyncBaseCommandPrefix",
         "func executionSyncBaseFail",
+        "func executionSyncBaseFinalizeEffects.CheckStaged",
+        "func executionSyncBaseFinalizeEffects.Commit",
+        "func executionSyncBaseFinalizeEffects.ConflictCount",
+        "func executionSyncBaseFinalizeEffects.Head",
+        "func executionSyncBaseFinalizeEffects.Now",
+        "func executionSyncBaseFinalizeEffects.UnmergedPaths",
         "func executionSyncBaseFingerprint",
         "func executionSyncBaseGates",
         "func executionSyncBaseMergeInProgress",
@@ -7491,6 +7497,7 @@
         "func pushExecutionSyncBase",
         "func startExecutionSyncBaseResolution",
         "type executionSyncBaseAbortEffects",
+        "type executionSyncBaseFinalizeEffects",
         "type executionSyncBaseInventory",
         "type executionSyncBasePushEffects"
       ]
@@ -10948,6 +10955,16 @@
         "func Abort",
         "type AbortRequest",
         "type AbortResult"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbasesync/finalize.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Finalize",
+        "type FinalizeRequest",
+        "type FinalizeResult"
       ]
     },
     {
@@ -16188,6 +16205,7 @@
       "task": "T20",
       "symbols": [
         "type BaseSyncAbortEffects",
+        "type BaseSyncFinalizeEffects",
         "type BaseSyncPushEffects"
       ]
     },
@@ -18547,8 +18565,25 @@
       "target": "internal/application/issueopsbasesync",
       "target_symbol": "func Abort",
       "task": "T06",
-      "entrypoints": ["issueops execution sync-base --abort"],
-      "evidence_tests": ["internal/application/issueopsbasesync/abort_test.go", "internal/adapter/issueops/execution_sync_base_test.go"],
+      "entrypoints": [
+        "issueops execution sync-base --abort"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbasesync/abort_test.go",
+        "internal/adapter/issueops/execution_sync_base_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "base-sync-finalize-order",
+      "source_path": "internal/adapter/issueops/execution_sync_base.go",
+      "source_symbol": "func finalizeExecutionSyncBase",
+      "responsibility": "check unresolved conflicts and staged markers before committing, pushing, and recording success",
+      "target": "internal/application/issueopsbasesync",
+      "target_symbol": "func Finalize",
+      "task": "T06",
+      "entrypoints": ["issueops execution sync-base --finalize"],
+      "evidence_tests": ["internal/application/issueopsbasesync/finalize_test.go", "internal/adapter/issueops/execution_sync_base_test.go"],
       "status": "retain"
     }
   ]

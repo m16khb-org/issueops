@@ -15,3 +15,13 @@ type BaseSyncAbortEffects interface {
 	AbortMerge(context.Context, string) (int, string)
 	ClearResolution(context.Context, string) error
 }
+
+type BaseSyncFinalizeEffects interface {
+	BaseSyncPushEffects
+	ConflictCount(context.Context, string) int
+	UnmergedPaths(context.Context, string) []string
+	CheckStaged(context.Context, string) (int, string)
+	Commit(context.Context, string) (int, string)
+	Head(context.Context, string) (int, string)
+	Now() string
+}

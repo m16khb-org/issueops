@@ -344,28 +344,53 @@ func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueo
 func finalizeExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, actor issueops.NativeActor,
 	inventory executionSyncBaseInventory, deps ExecutionSyncBaseDeps, result *ExecutionSyncBaseResult) (ExecutionSyncBaseResult, error) {
 	fail := executionSyncBaseFail(record, result)
-	conflictCount := executionSyncBaseMergeMsgConflictCount(ctx, inventory.Root, deps)
-	if unmerged := executionSyncBaseUnmergedPaths(ctx, inventory.Root, deps); len(unmerged) > 0 {
-		result.OK, result.ConflictFiles = false, unmerged
-		result.Missing = append(result.Missing, "conflict_resolution_complete")
-		return *result, fmt.Errorf("execution sync-base finalize is blocked by unresolved paths: %s", strings.Join(unmerged, ", "))
+	outcome, err := basesyncapp.Finalize(ctx, basesyncapp.FinalizeRequest{Push: basesyncapp.PushRequest{
+		ID: record.ID, Root: inventory.Root, Branch: inventory.Branch,
+		Mode: issueops.ExecutionSyncBaseEventFinalize, BaseBranch: inventory.BaseBranch, BaseOID: inventory.BaseOID,
+		Actor: executionSyncBaseActorLabel(actor),
+	}}, &executionSyncBaseFinalizeEffects{executionSyncBasePushEffects{stateRoot: stateRoot, deps: deps}})
+	result.ConflictFiles = outcome.ConflictFiles
+	result.MergeCommit = outcome.MergeCommit
+	result.Merged = outcome.Merged
+	if outcome.Merged {
+		result.MergeInProgress = false
 	}
-	// 해소했다고 스테이징만 하고 마커를 지우지 않은 상태를 거부한다.
-	if code, out := deps.Git(ctx, inventory.Root, "diff", "--cached", "--check"); code != 0 {
-		result.OK = false
-		result.Missing = append(result.Missing, "conflict_markers_absent")
-		return *result, fmt.Errorf("conflict markers remain in the staged merge result: %s", strings.TrimSpace(out))
+	result.Pushed, result.PushRetryRequired = outcome.Pushed, outcome.PushRetryRequired
+	if err != nil {
+		if outcome.DirectError {
+			result.OK = false
+			result.Missing = append(result.Missing, outcome.Missing)
+			return *result, err
+		}
+		return fail(outcome.FailedStep, err)
 	}
-	if code, out := deps.Git(ctx, inventory.Root, "commit", "--no-edit"); code != 0 {
-		return fail("merge_commit", fmt.Errorf("git commit --no-edit: %s", strings.TrimSpace(out)))
-	}
-	code, head := deps.Git(ctx, inventory.Root, "rev-parse", "HEAD")
-	if code != 0 || strings.TrimSpace(head) == "" {
-		return fail("head", fmt.Errorf("git rev-parse HEAD: %s", strings.TrimSpace(head)))
-	}
-	result.MergeCommit = strings.TrimSpace(head)
-	result.Merged, result.MergeInProgress = true, false
-	return pushExecutionSyncBase(ctx, stateRoot, record, actor, inventory, issueops.ExecutionSyncBaseEventFinalize, conflictCount, deps, result, fail)
+	return *result, nil
+}
+
+type executionSyncBaseFinalizeEffects struct{ executionSyncBasePushEffects }
+
+func (e *executionSyncBaseFinalizeEffects) ConflictCount(ctx context.Context, root string) int {
+	return executionSyncBaseMergeMsgConflictCount(ctx, root, e.deps)
+}
+
+func (e *executionSyncBaseFinalizeEffects) UnmergedPaths(ctx context.Context, root string) []string {
+	return executionSyncBaseUnmergedPaths(ctx, root, e.deps)
+}
+
+func (e *executionSyncBaseFinalizeEffects) CheckStaged(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "diff", "--cached", "--check")
+}
+
+func (e *executionSyncBaseFinalizeEffects) Commit(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "commit", "--no-edit")
+}
+
+func (e *executionSyncBaseFinalizeEffects) Head(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "rev-parse", "HEAD")
+}
+
+func (e *executionSyncBaseFinalizeEffects) Now() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
 // abortExecutionSyncBase는 진행 중 머지를 명시적으로 철회한다. 되돌림이므로
