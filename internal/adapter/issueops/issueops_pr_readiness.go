@@ -14,7 +14,7 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 	if strings.TrimSpace(record.WorktreePath) == "" {
 		missing = append(missing, "worktree_path")
 	}
-	if strings.TrimSpace(record.PlanPath) != "" && !issueOpsPlanPathExists(issueOpsPlanExistenceRoot(record), record.PlanPath) {
+	if strings.TrimSpace(record.PlanPath) != "" && !issueOpsPlanPathExists(issueopsdomain.PlanExistenceRoot(record), record.PlanPath) {
 		missing = append(missing, "plan_exists")
 	}
 	if !issueOpsPlanInLinkedWorktree(record) {
@@ -51,11 +51,4 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 		WorktreePath:   record.WorktreePath,
 		Branch:         record.Branch,
 	}
-}
-
-func issueOpsPlanExistenceRoot(record issueops.IssueOpsRecord) string {
-	if worktree := strings.TrimSpace(record.WorktreePath); worktree != "" {
-		return worktree
-	}
-	return strings.TrimSpace(record.Repo)
 }

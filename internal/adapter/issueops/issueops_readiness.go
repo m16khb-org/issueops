@@ -10,6 +10,7 @@ import (
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
+	cycleport "issueops/internal/port/issueopscycle"
 )
 
 func IssueOpsPlanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
@@ -31,27 +32,7 @@ func IssueOpsAISlopCleanReadiness(record issueops.IssueOpsRecord) issueops.Issue
 }
 
 func IssueOpsCompatibilityReviewReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := cycleapp.BaseImplementationMissing(record)
-	if path := strings.TrimSpace(record.WorktreePath); path == "" {
-		missing = append(missing, "worktree_path")
-	} else if !issueOpsWorktreePathValid(path) {
-		missing = append(missing, "worktree_exists")
-	}
-	if strings.TrimSpace(record.PlanPath) != "" && !issueOpsPlanPathExists(issueOpsPlanExistenceRoot(record), record.PlanPath) {
-		missing = append(missing, "plan_exists")
-	}
-	if !issueOpsPlanInLinkedWorktree(record) {
-		missing = append(missing, "plan_in_worktree")
-	}
-	return issueops.IssueOpsReadiness{
-		OK:           true,
-		Ready:        len(missing) == 0,
-		Missing:      stringlist.UniqueSorted(missing),
-		IssueURL:     record.IssueURL,
-		PlanPath:     record.PlanPath,
-		WorktreePath: record.WorktreePath,
-		Branch:       record.Branch,
-	}
+	return issueOpsReadinessFrom(record, cycleapp.CompatibilityReadinessMissing(record, issueOpsReadinessObservations()))
 }
 
 func IssueOpsImplementationReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
@@ -59,33 +40,16 @@ func IssueOpsImplementationReadiness(record issueops.IssueOpsRecord) issueops.Is
 }
 
 func issueOpsImplementationReadiness(record issueops.IssueOpsRecord, checkPlanBinding bool) issueops.IssueOpsReadiness {
-	missing := cycleapp.BaseImplementationMissing(record)
-	if path := strings.TrimSpace(record.WorktreePath); path == "" {
-		missing = append(missing, "worktree_path")
-	} else if !issueOpsWorktreePathValid(path) {
-		missing = append(missing, "worktree_exists")
-	}
-	if strings.TrimSpace(record.PlanPath) != "" && !issueOpsPlanPathExists(issueOpsPlanExistenceRoot(record), record.PlanPath) {
-		missing = append(missing, "plan_exists")
-	}
-	if !issueOpsPlanInLinkedWorktree(record) {
-		missing = append(missing, "plan_in_worktree")
-	}
-	missing = append(missing, cycleapp.CompatibilityReviewMissing(record)...)
-	missing = append(missing, cycleapp.DevilsAdvocateReviewMissing(record, checkPlanBinding, issueOpsLinkedPlanDigest)...)
-	workspaceMatches := false
-	if record.Execution != nil {
-		workspaceMatches = samePath(record.WorktreePath, record.Execution.Workspace.Root)
-	}
-	missing = append(missing, issueopsdomain.ExecutionReadinessMissing(record, workspaceMatches)...)
-	return issueops.IssueOpsReadiness{
-		OK:           true,
-		Ready:        len(missing) == 0,
-		Missing:      stringlist.UniqueSorted(missing),
-		IssueURL:     record.IssueURL,
-		PlanPath:     record.PlanPath,
-		WorktreePath: record.WorktreePath,
-		Branch:       record.Branch,
+	return issueOpsReadinessFrom(record, cycleapp.ImplementationReadinessMissing(record, checkPlanBinding, issueOpsReadinessObservations()))
+}
+
+func issueOpsReadinessObservations() cycleport.ReadinessObservations {
+	return cycleport.ReadinessObservations{
+		WorktreePathValid:    issueOpsWorktreePathValid,
+		PlanPathExists:       issueOpsPlanPathExists,
+		PlanInLinkedWorktree: issueOpsPlanInLinkedWorktree,
+		WorkspaceMatches:     samePath,
+		LinkedPlanDigest:     issueOpsLinkedPlanDigest,
 	}
 }
 

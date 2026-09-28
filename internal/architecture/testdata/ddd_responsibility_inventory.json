@@ -7942,8 +7942,7 @@
       "owner": "adapter",
       "task": "T04",
       "symbols": [
-        "func IssueOpsPRReadiness",
-        "func issueOpsPlanExistenceRoot"
+        "func IssueOpsPRReadiness"
       ]
     },
     {
@@ -7993,6 +7992,7 @@
         "func issueOpsPlanPathExists",
         "func issueOpsPlanPathInsideWorktree",
         "func issueOpsPlanSectionsMissing",
+        "func issueOpsReadinessObservations",
         "func issueOpsStrictGitRoot",
         "func issueOpsWorktreePathValid"
       ]
@@ -11033,6 +11033,16 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/implementation_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func CompatibilityReadinessMissing",
+        "func ImplementationReadinessMissing",
+        "func worktreePlanMissing"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/phase_entry.go",
       "owner": "application",
       "task": "T20",
@@ -13922,6 +13932,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/worktree_plan_readiness.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PlanExistenceRoot",
+        "func WorktreePlanReadinessMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsartifact/artifact.go",
       "owner": "domain",
       "task": "T20",
@@ -15916,6 +15935,14 @@
       ]
     },
     {
+      "path": "internal/port/issueopscycle/readiness.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type ReadinessObservations"
+      ]
+    },
+    {
       "path": "internal/port/issueopsintent/store.go",
       "owner": "port",
       "task": "T20",
@@ -17537,6 +17564,24 @@
       "evidence_tests": [
         "internal/application/issueopscycle/base_implementation_readiness_test.go",
         "internal/adapter/issueops/issueops_readiness_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-existence-root",
+      "source_path": "internal/adapter/issueops/issueops_pr_readiness.go",
+      "source_symbol": "func issueOpsPlanExistenceRoot",
+      "responsibility": "the linked worktree takes precedence over the source repository when resolving a plan path",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PlanExistenceRoot",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to implement",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/worktree_plan_readiness_test.go",
+        "internal/application/issueopscycle/implementation_readiness_test.go"
       ],
       "status": "migrated"
     }
