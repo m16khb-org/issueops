@@ -133,7 +133,44 @@ func (r *ReconcileRepository) RecordFailure(ctx context.Context, intent leaseapp
 }
 
 func (r *ReconcileRepository) ApplyReceipt(ctx context.Context, intent leaseapp.ReconcileIntentState, receipt leasecontract.ReconcileStageReceipt) (leaseapp.ReconcileProgress, error) {
-	if r == nil || r.effects == nil {
+	if r == nil || r.store == nil {
+		return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile record store is required")
+	}
+	payload, err := (preparationcontract.IntentCodec{}).Decode(intent.OperationID, intent.IntentRaw)
+	if err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
+	if payload.Purpose == preparationcontract.PurposeResume {
+		if intent.Progress.Record.Execution == nil {
+			return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile execution is required")
+		}
+		nextStage, complete, err := preparationdomain.NextOrcaReceiptStage(payload.Stage)
+		if err != nil {
+			return leaseapp.ReconcileProgress{}, err
+		}
+		resume := leaseapp.ResumeIntentState{
+			Progress: leaseapp.ResumeProgress{
+				Record: toApplicationRecord(intent.Progress.Record), Execution: *intent.Progress.Record.Execution,
+				Pending: intent.Progress.Pending,
+			},
+			OperationID: intent.OperationID, Stage: intent.Stage, InvocationState: intent.InvocationState,
+			InvocationAttempts: intent.InvocationAttempts, RecordRaw: intent.RecordRaw, IntentRaw: intent.IntentRaw,
+		}
+		progress, err := NewResumeRepository(r.store).ApplyReceipt(ctx, resume, leasecontract.ResumeStageReceipt{
+			TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle,
+			RunID: receipt.RunID, RunBound: receipt.RunBound, TaskID: receipt.TaskID,
+			DispatchID: receipt.DispatchID, RequestID: receipt.RequestID, PromptReceipt: receipt.PromptReceipt,
+		})
+		if err != nil {
+			return leaseapp.ReconcileProgress{}, err
+		}
+		result := leaseapp.ReconcileProgress{Record: progress.Record.Stable, Pending: progress.Pending}
+		if !complete {
+			result.NextStage = string(nextStage)
+		}
+		return result, nil
+	}
+	if r.effects == nil {
 		return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile persistence bridge is required")
 	}
 	state, err := r.effects.ApplyReceipt(ctx, reconcileEffectState(intent), receipt)

@@ -76,6 +76,26 @@ func TestReconcileRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
 	}
 }
 
+func TestReconcileRepositoryAppliesResumeReceiptWithoutBridge(t *testing.T) {
+	_, sealed, store := seededResumeIntent(t)
+	repository := NewReconcileRepository(store, nil)
+	intent := leaseapp.ReconcileIntentState{
+		Progress:    leaseapp.ReconcileProgress{Record: sealed.Progress.Record.Stable, Pending: true, NextStage: sealed.Stage},
+		OperationID: sealed.OperationID, Stage: sealed.Stage, InvocationState: sealed.InvocationState,
+		RecordRaw: sealed.RecordRaw, IntentRaw: sealed.IntentRaw,
+	}
+	progress, err := repository.ApplyReceipt(context.Background(), intent, leasecontract.ReconcileStageReceipt{TerminalPTYID: "pty-recovered"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !progress.Pending || progress.NextStage != "run_create" || progress.Record.Execution.Pending.Kind != "owner_launch" {
+		t.Fatalf("reconcile progress=%+v", progress)
+	}
+	if _, err := repository.ApplyReceipt(context.Background(), intent, leasecontract.ReconcileStageReceipt{TerminalPTYID: "pty-again"}); err == nil {
+		t.Fatal("stale reconcile receipt was accepted")
+	}
+}
+
 func TestReconcileRepositoryRecordFailureUsesRawCAS(t *testing.T) {
 	_, state, store := seededResumeIntent(t)
 	repository := NewReconcileRepository(store, nil)
