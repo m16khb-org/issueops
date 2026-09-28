@@ -7,6 +7,7 @@ import (
 	"issueops/internal/adapter/issueops/delegation"
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/adapter/issueops/readinesspaths"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
@@ -71,7 +72,7 @@ func issueOpsImplementationReadiness(record issueops.IssueOpsRecord, checkPlanBi
 	if !issueOpsPlanInLinkedWorktree(record) {
 		missing = append(missing, "plan_in_worktree")
 	}
-	missing = append(missing, issueOpsCompatibilityReviewMissing(record)...)
+	missing = append(missing, cycleapp.CompatibilityReviewMissing(record)...)
 	missing = append(missing, issueOpsDevilsAdvocateReviewMissing(record, checkPlanBinding)...)
 	if record.Execution == nil {
 		missing = append(missing, "execution")
@@ -131,33 +132,6 @@ func issueOpsDevilsAdvocateReviewMissing(record issueops.IssueOpsRecord, checkPl
 // plan, so plan binding does not apply to it.
 func issueOpsDevilsAdvocateDigestExempt(review issueops.IssueOpsDevilsAdvocateReview) bool {
 	return review.ReviewerPattern == delegation.ParentReviewPattern
-}
-
-func issueOpsCompatibilityReviewMissing(record issueops.IssueOpsRecord) []string {
-	review := record.CompatibilityReview
-	if review == nil {
-		return []string{"compatibility_review"}
-	}
-	missing := []string{}
-	if len(cleanIssueOpsTextValues(review.BackwardCompatibility)) == 0 {
-		missing = append(missing, "backward_compatibility")
-	}
-	if len(cleanIssueOpsTextValues(review.SideEffects)) == 0 {
-		missing = append(missing, "side_effects")
-	}
-	if strings.TrimSpace(review.RollbackPlan) == "" {
-		missing = append(missing, "rollback_plan")
-	}
-	if len(cleanIssueOpsTextValues(review.Verification)) == 0 {
-		missing = append(missing, "compatibility_verification")
-	}
-	if len(cleanIssueOpsTextValues(review.Blockers)) > 0 {
-		missing = append(missing, "compatibility_blockers")
-	}
-	if !review.Approved {
-		missing = append(missing, "compatibility_approval")
-	}
-	return missing
 }
 
 func issueOpsStrictGitRoot(record issueops.IssueOpsRecord) string {

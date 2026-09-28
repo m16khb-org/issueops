@@ -42,7 +42,7 @@ func issueOpsPlanCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsRea
 }
 
 func issueOpsCompatibilityReviewCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	return issueOpsReadinessFrom(record, issueOpsCompatibilityReviewMissing(record))
+	return issueOpsReadinessFrom(record, cycleapp.CompatibilityReviewMissing(record))
 }
 
 func issueOpsImplementCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {

@@ -7990,7 +7990,6 @@
         "func IssueOpsCompatibilityReviewReadiness",
         "func IssueOpsImplementationReadiness",
         "func IssueOpsPlanReadiness",
-        "func issueOpsCompatibilityReviewMissing",
         "func issueOpsCurrentHead",
         "func issueOpsDevilsAdvocateDigestExempt",
         "func issueOpsDevilsAdvocateReviewMissing",
@@ -10994,6 +10993,14 @@
       "task": "T20",
       "symbols": [
         "func RefreshAISlopClean"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/compatibility_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func CompatibilityReviewMissing"
       ]
     },
     {
@@ -14553,6 +14560,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreview/compatibility_readiness.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func CompatibilityReviewMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsreview/design.go",
       "owner": "domain",
       "task": "T03",
@@ -17373,6 +17388,24 @@
       "evidence_tests": [
         "internal/domain/issueopsreview/design_readiness_test.go",
         "internal/adapter/issueops/issueops_readiness_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "compatibility-review-readiness",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func issueOpsCompatibilityReviewMissing",
+      "responsibility": "compatibility review requires backwards compatibility, side effects, rollback, verification, no blockers, and approval",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func CompatibilityReviewMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to implement",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreview/compatibility_readiness_test.go",
+        "internal/adapter/issueops/issueops_compatibility_review_test.go"
       ],
       "status": "migrated"
     }
