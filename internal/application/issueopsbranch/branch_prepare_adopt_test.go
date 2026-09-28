@@ -1,4 +1,4 @@
-package branchprepare
+package issueopsbranch_test
 
 import (
 	"strings"
@@ -27,7 +27,7 @@ func TestPrepareAdoptsBranchOntoBranchlessRecord(t *testing.T) {
 		IssueURL: "https://github.com/example/repo/issues/77",
 	})
 
-	record, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-adopt", model.IssueOpsBranchPrepareRequest{
+	record, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-adopt", model.IssueOpsBranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/77",
 		Branch:     "77-adopt-branch",
@@ -60,12 +60,12 @@ func TestPrepareRejectsBranchMismatchOnAdoptedRecord(t *testing.T) {
 		Branch:     "77-adopt-branch",
 		BaseBranch: "main",
 	}
-	if _, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-adopt-twice", base); err != nil {
+	if _, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-adopt-twice", base); err != nil {
 		t.Fatalf("first prepare must adopt: %v", err)
 	}
 	second := base
 	second.Branch = "77-different-branch"
-	_, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-adopt-twice", second)
+	_, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-adopt-twice", second)
 	if err == nil || !strings.Contains(err.Error(), "does not match") {
 		t.Fatalf("adopted branch must be immutable afterwards; err=%v", err)
 	}
@@ -79,7 +79,7 @@ func TestPrepareRejectsAdoptionWithoutLinkedIssue(t *testing.T) {
 		OK:   true,
 		Repo: "/repo/example",
 	})
-	_, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-adopt-noissue", model.IssueOpsBranchPrepareRequest{
+	_, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-adopt-noissue", model.IssueOpsBranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/77",
 		Branch:     "77-adopt-branch",

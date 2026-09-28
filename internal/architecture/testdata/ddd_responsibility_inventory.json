@@ -1180,6 +1180,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring.go",
+      "owner": "composition",
+      "task": "T08",
+      "symbols": [
+        "func newBranchPreparer"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_branch_retarget_wiring.go",
       "owner": "composition",
       "task": "T08",
@@ -6870,21 +6878,29 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/branchprepare/branch_prepare.go",
+      "path": "internal/adapter/issueops/branch_preparation_environment.go",
       "owner": "adapter",
       "task": "T08",
       "symbols": [
-        "func Prepare",
+        "func BranchPreparationEnvironment.CleanParentPath",
+        "func BranchPreparationEnvironment.ObserveCodeProjectKey",
+        "func BranchPreparationEnvironment.ResolveBaseCommit",
+        "func BranchPreparationEnvironment.UmbrellaForChildIssue",
+        "type BranchPreparationEnvironment"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/branchinstructions/steps.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
         "func Steps",
         "func githubIssueAPIPath",
         "func githubIssueCoordinates",
         "func githubLinkedBranchReadbackQuery",
         "func githubLinkedBranchReadbackSteps",
         "func githubSteps",
-        "func gitlabSteps",
-        "func resolveCodeProjectKey",
-        "func umbrellaBaseBranchMismatch",
-        "type Store"
+        "func gitlabSteps"
       ]
     },
     {
@@ -8196,8 +8212,6 @@
         "func LinkIssueOpsWorktree",
         "func LinkIssueOpsWorktreeWithActor",
         "func OriginBranchPresent",
-        "func PrepareIssueOpsBranch",
-        "func PrepareIssueOpsBranchWithActor",
         "func RecordIssueOpsCompatibilityReview",
         "func RecordIssueOpsCompatibilityReviewWithActor",
         "func RecordIssueOpsDesignReview",
@@ -8211,7 +8225,6 @@
         "func StartIssueOps",
         "func cleanIssueOpsTextValues",
         "func issueOpsActiveStore",
-        "func issueOpsBranchPrepareStore",
         "func issueOpsCompatibilityReviewStore",
         "func issueOpsIntentDesignStore",
         "func issueOpsLinkingStore",
@@ -8222,7 +8235,6 @@
         "func linkIssueOpsRelated",
         "func linkIssueOpsWorktree",
         "func normalizeIssueOpsRepo",
-        "func prepareIssueOpsBranch",
         "func recordIssueOpsCompatibilityReview",
         "func recordIssueOpsDesignReview",
         "func recordIssueOpsDevilsAdvocateReview",
@@ -10946,6 +10958,15 @@
         "func Service.recordBaseline",
         "func Service.verifyChild",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbranch/prepare.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func Preparer.Prepare",
+        "type Preparer"
       ]
     },
     {
@@ -14092,6 +14113,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/branch_prepare.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func AdoptPreparedBranch",
+        "func ApplyBranchPreparation",
+        "func ValidatePreparationNames",
+        "func ValidatePreparationParentPath",
+        "func ValidatePreparationUmbrella"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/branch_retarget.go",
       "owner": "domain",
       "task": "T08",
@@ -15373,6 +15406,16 @@
         "func ProjectArtifact",
         "type Artifact",
         "type ArtifactAuthority"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/branch_prepare.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func PreparationCodeProject",
+        "func PreparationProvider",
+        "func ValidatePreparationIssueNumber"
       ]
     },
     {
@@ -21038,7 +21081,7 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/branch_test.go",
-        "internal/adapter/issueops/branchprepare/branch_prepare_test.go"
+        "internal/application/issueopsbranch/branch_prepare_test.go"
       ],
       "status": "migrated"
     },
@@ -21149,6 +21192,126 @@
         "internal/application/issueopsbranch/retarget_actor_test.go",
         "internal/adapter/issueops/span_network_guard_test.go",
         "cmd/issueops/issueopsapp/issueops_branch_retarget_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-prepare-adoption",
+      "source_path": "internal/adapter/issueops/branchprepare/branch_prepare.go",
+      "source_symbol": "func Prepare",
+      "responsibility": "verify issue identity before one-time branch adoption and preserve identity thereafter",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func AdoptPreparedBranch",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch prepare"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/branch_prepare_test.go",
+        "internal/application/issueopsbranch/branch_prepare_adopt_test.go",
+        "internal/application/issueopsbranch/branch_prepare_umbrella_test.go",
+        "internal/application/issueopsbranch/code_project_key_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-prepare-request-invariants",
+      "source_path": "internal/adapter/issueops/branchprepare/branch_prepare.go",
+      "source_symbol": "func Prepare",
+      "responsibility": "validate issue URL, provider, branch naming and issue number before observing or saving branch preparation",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func ValidatePreparationIssueNumber",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch prepare"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/branch_prepare_test.go",
+        "internal/application/issueopsbranch/branch_prepare_adopt_test.go",
+        "internal/application/issueopsbranch/branch_prepare_umbrella_test.go",
+        "internal/application/issueopsbranch/code_project_key_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-prepare-projection",
+      "source_path": "internal/adapter/issueops/branchprepare/branch_prepare.go",
+      "source_symbol": "func Prepare",
+      "responsibility": "construct preparation state from verified branch, resolved fork commit and provider instructions",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ApplyBranchPreparation",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch prepare"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/branch_prepare_test.go",
+        "internal/application/issueopsbranch/branch_prepare_adopt_test.go",
+        "internal/application/issueopsbranch/branch_prepare_umbrella_test.go",
+        "internal/application/issueopsbranch/code_project_key_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-prepare-umbrella",
+      "source_path": "internal/adapter/issueops/branchprepare/branch_prepare.go",
+      "source_symbol": "func umbrellaBaseBranchMismatch",
+      "responsibility": "require a found umbrella with an assigned branch to be the child base, retaining missing-parent tolerance",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidatePreparationUmbrella",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch prepare"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/branch_prepare_test.go",
+        "internal/application/issueopsbranch/branch_prepare_adopt_test.go",
+        "internal/application/issueopsbranch/branch_prepare_umbrella_test.go",
+        "internal/application/issueopsbranch/code_project_key_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-prepare-code-project",
+      "source_path": "internal/adapter/issueops/branchprepare/branch_prepare.go",
+      "source_symbol": "func resolveCodeProjectKey",
+      "responsibility": "prefer a canonical explicit code project, seal only a cross-project key, tolerate failed or invalid origin observation",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func PreparationCodeProject",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch prepare"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/branch_prepare_test.go",
+        "internal/application/issueopsbranch/branch_prepare_adopt_test.go",
+        "internal/application/issueopsbranch/branch_prepare_umbrella_test.go",
+        "internal/application/issueopsbranch/code_project_key_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-prepare-transaction",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func prepareIssueOpsBranch",
+      "responsibility": "own the locked read, authority validation, ordered technical observations and preparation persistence",
+      "target": "internal/application/issueopsbranch",
+      "target_symbol": "func Preparer.Prepare",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch prepare"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/branch_prepare_test.go",
+        "internal/application/issueopsbranch/branch_prepare_adopt_test.go",
+        "internal/application/issueopsbranch/branch_prepare_umbrella_test.go",
+        "internal/application/issueopsbranch/code_project_key_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go"
       ],
       "status": "migrated"
     }

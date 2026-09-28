@@ -1,4 +1,4 @@
-package branchprepare
+package issueopsbranch_test
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ func TestPrepareRecordsProviderFallbackOrder(t *testing.T) {
 		IssueURL: "https://gitlab.example/group/project/-/issues/123",
 	})
 
-	record, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-1", model.IssueOpsBranchPrepareRequest{
+	record, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-1", model.IssueOpsBranchPrepareRequest{
 		Provider:        "gitlab",
 		IssueURL:        "https://gitlab.example/group/project/-/issues/123",
 		Branch:          "123-provider-linked-branch",
@@ -59,7 +59,7 @@ func TestPrepareUsesGitHubDevelopFallback(t *testing.T) {
 		IssueURL: "https://github.com/example/repo/issues/456",
 	})
 
-	record, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-2", model.IssueOpsBranchPrepareRequest{
+	record, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-2", model.IssueOpsBranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/456",
 		Branch:     "456-provider-linked-branch",
@@ -90,7 +90,7 @@ func TestPreparePersistsExplicitParentWorktree(t *testing.T) {
 		IssueURL: "https://github.com/example/repo/issues/456",
 	})
 
-	record, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-4", model.IssueOpsBranchPrepareRequest{
+	record, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-4", model.IssueOpsBranchPrepareRequest{
 		Provider:       "github",
 		IssueURL:       "https://github.com/example/repo/issues/456",
 		Branch:         "456-provider-linked-branch",
@@ -114,7 +114,7 @@ func TestPrepareRejectsRelativeParentWorktree(t *testing.T) {
 		IssueURL: "https://github.com/example/repo/issues/456",
 	})
 
-	_, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-5", model.IssueOpsBranchPrepareRequest{
+	_, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-5", model.IssueOpsBranchPrepareRequest{
 		Provider:       "github",
 		IssueURL:       "https://github.com/example/repo/issues/456",
 		Branch:         "456-provider-linked-branch",
@@ -135,7 +135,7 @@ func TestPrepareRejectsUnlinkedGitLabBranchName(t *testing.T) {
 		IssueURL: "https://gitlab.example/group/project/-/issues/123",
 	})
 
-	_, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-3", model.IssueOpsBranchPrepareRequest{
+	_, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-3", model.IssueOpsBranchPrepareRequest{
 		Provider:   "gitlab",
 		IssueURL:   "https://gitlab.example/group/project/-/issues/123",
 		Branch:     "456-provider-linked-branch",
@@ -162,7 +162,7 @@ func TestPrepareRejectsBaseSHAThatDoesNotResolveToCommit(t *testing.T) {
 		return "", fmt.Errorf("commit does not exist")
 	}
 
-	_, err := Prepare(deps, t.TempDir(), "io-invalid-base", model.IssueOpsBranchPrepareRequest{
+	_, err := prepareForTest(deps, t.TempDir(), "io-invalid-base", model.IssueOpsBranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/123",
 		Branch:     "123-invalid-base",
@@ -194,14 +194,16 @@ func (s *branchPrepareTestStore) issueOpsStore() Store {
 			s.record = record
 			return record, nil
 		},
-		ValidateIssueURL: func(issueURL string) error {
-			if strings.TrimSpace(issueURL) == "" {
-				return fmt.Errorf("issue_url is required")
-			}
-			return nil
-		},
 		ResolveBaseCommit: func(_ string, revision string) (string, error) {
 			return revision, nil
 		},
+	}
+}
+
+func TestPrepareRejectsInvalidURLBeforeAdoption(t *testing.T) {
+	store := newBranchPrepareTestStore(model.IssueOpsRecord{ID: "io-invalid", Repo: "/repo", IssueURL: "file:///tmp/issue"})
+	_, err := prepareForTest(store.issueOpsStore(), "state", store.record.ID, model.IssueOpsBranchPrepareRequest{Provider: "github", Branch: "123-work", BaseBranch: "main"})
+	if err == nil || !strings.Contains(err.Error(), "http(s)") || store.record.Branch != "" || store.record.BranchPrepare != nil {
+		t.Fatalf("invalid URL accepted: error=%v record=%+v", err, store.record)
 	}
 }

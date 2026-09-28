@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops/active"
-	"issueops/internal/adapter/issueops/branchprepare"
 	"issueops/internal/adapter/issueops/cleanupchildren"
 	"issueops/internal/adapter/issueops/cleanupstatus"
 	"issueops/internal/adapter/issueops/compatibilityreview"
@@ -20,7 +19,6 @@ import (
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsintent"
-	remote "issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/repoidentity"
 	"issueops/internal/domain/stringlist"
 	"issueops/internal/port"
@@ -77,31 +75,6 @@ func issueOpsRemoteArtifactMissing(record issueops.IssueOpsRecord) []string {
 	return cleanupstatus.RemoteArtifactMissing(record)
 }
 
-func PrepareIssueOpsBranch(stateRoot, id string, req issueops.IssueOpsBranchPrepareRequest) (issueops.IssueOpsRecord, error) {
-	return prepareIssueOpsBranch(stateRoot, id, req, nil)
-}
-
-func PrepareIssueOpsBranchWithActor(stateRoot, id string, req issueops.IssueOpsBranchPrepareRequest, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return prepareIssueOpsBranch(stateRoot, id, req, &actor)
-}
-
-func prepareIssueOpsBranch(stateRoot, id string, req issueops.IssueOpsBranchPrepareRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validateWorkspacePreparationMutation(record, actor); actorErr != nil {
-			return actorErr
-		}
-		var e error
-		rec, e = branchprepare.Prepare(issueOpsBranchPrepareStore(), stateRoot, id, req)
-		return e
-	})
-	return rec, err
-}
-
 // OriginBranchPresent는 origin에 branch가 있는지 본다. 네트워크 호출이라
 // span 밖에서만 부른다. 사용자의 SSH·자격 증명 설정(core.sshCommand 등)을 그대로
 // 쓰도록 주입된 GitCmd로 실행한다.
@@ -111,46 +84,6 @@ func OriginBranchPresent(repo, branch string) (bool, error) {
 		return false, fmt.Errorf("git ls-remote failed: %s", strings.TrimSpace(stderr))
 	}
 	return len(strings.Fields(strings.TrimSpace(stdout))) > 0, nil
-}
-
-func issueOpsBranchPrepareStore() branchprepare.Store {
-	return branchprepare.Store{
-		Read:             ReadIssueOps,
-		TouchWrite:       touchAndWriteIssueOps,
-		ValidateIssueURL: issueopsdomain.ValidateIssueURL,
-		ResolveBaseCommit: func(repo, revision string) (string, error) {
-			code, stdout, stderr := GitCmd(
-				repo,
-				"rev-parse",
-				"--verify",
-				"--end-of-options",
-				strings.TrimSpace(revision)+"^{commit}",
-			)
-			if code != 0 {
-				return "", fmt.Errorf("git rev-parse failed: %s", strings.TrimSpace(stderr))
-			}
-			resolved := strings.TrimSpace(stdout)
-			if resolved == "" {
-				return "", fmt.Errorf("git rev-parse returned an empty commit OID")
-			}
-			return resolved, nil
-		},
-		UmbrellaForChildIssue: func(repo, childIssueURL string) (issueops.IssueOpsRecord, bool) {
-			return active.UmbrellaCycleForChildIssue(issueOpsActiveStore(), repo, childIssueURL)
-		},
-		ObserveCodeProjectKey: func(repo, provider string) (string, error) {
-			// GitCmd는 주입되는 의존이다. 없으면 관찰할 수 없다는 뜻이고,
-			// resolveCodeProjectKey가 이슈 프로젝트로 되돌린다.
-			if GitCmd == nil {
-				return "", fmt.Errorf("git command adapter is unavailable")
-			}
-			code, stdout, stderr := GitCmd(repo, "remote", "get-url", "origin")
-			if code != 0 {
-				return "", fmt.Errorf("git remote get-url origin failed: %s", strings.TrimSpace(stderr))
-			}
-			return remote.ProjectKeyFromGitRemoteURL(strings.TrimSpace(stdout), provider)
-		},
-	}
 }
 
 func normalizeIssueOpsRepo(repo string) string {

@@ -116,7 +116,7 @@ func wireIssueOpsRuntimeForTests() {
 			})
 		},
 		ObserveNativeProcessAncestry:                issueopscore.ObserveNativeProcessAncestry,
-		PrepareIssueOpsBranchWithActor:              issueopscore.PrepareIssueOpsBranchWithActor,
+		PrepareIssueOpsBranchWithActor:              prepareBranchWithActorForTest,
 		PruneIssueOps:                               issueopsretentioninbound.NewPruneHandler(retention),
 		ReadIssueOps:                                issueopscore.ReadIssueOps,
 		RecordIssueOpsAISlopCleanEvidenceWithActor:  issueopscore.RecordIssueOpsAISlopCleanEvidenceWithActor,

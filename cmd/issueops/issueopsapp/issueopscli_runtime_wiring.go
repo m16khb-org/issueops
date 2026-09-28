@@ -39,8 +39,10 @@ func configureIssueOpsCLIRuntime() {
 				ListCycleIDs: issueOpsCycleIDLister(observer),
 			})
 		},
-		ObserveNativeProcessAncestry:   issueopscore.ObserveNativeProcessAncestry,
-		PrepareIssueOpsBranchWithActor: issueopscore.PrepareIssueOpsBranchWithActor,
+		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
+		PrepareIssueOpsBranchWithActor: func(root, id string, req issueopscontract.IssueOpsBranchPrepareRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newBranchPreparer(root).Prepare(context.Background(), id, req, &actor)
+		},
 		RetargetIssueOpsBranchWithActor: func(stateRoot, id string, req issueopscontract.IssueOpsBranchRetargetRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newBranchRetargeter(stateRoot, remoteverify.ObserveRemoteArtifactTargetLive).Retarget(context.Background(), id, req, actor)
 		},

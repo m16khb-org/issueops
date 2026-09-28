@@ -621,7 +621,7 @@ func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.IssueOpsRec
 	if err != nil {
 		t.Fatalf("LinkIssueOpsIssue: %v", err)
 	}
-	record, err = issueopscore.PrepareIssueOpsBranch(issueopscore.IssueOpsStateRoot(), record.ID, issueopscontract.IssueOpsBranchPrepareRequest{
+	record, err = prepareBranchForTest(issueopscore.IssueOpsStateRoot(), record.ID, issueopscontract.IssueOpsBranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/acme/repo/issues/1234",
 		Branch:       record.Branch,

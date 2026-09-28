@@ -1,7 +1,6 @@
-package branchprepare
+package issueopsbranch_test
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
@@ -24,12 +23,6 @@ func (s *umbrellaStore) store() Store {
 		TouchWrite: func(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 			s.child = record
 			return record, nil
-		},
-		ValidateIssueURL: func(issueURL string) error {
-			if strings.TrimSpace(issueURL) == "" {
-				return fmt.Errorf("issue_url is required")
-			}
-			return nil
 		},
 		UmbrellaForChildIssue: func(repo, childIssueURL string) (model.IssueOpsRecord, bool) {
 			s.lookups = append(s.lookups, repo+" "+childIssueURL)
@@ -68,7 +61,7 @@ func newUmbrellaStore() *umbrellaStore {
 func TestPrepareRejectsChildBaseBranchOutsideUmbrella(t *testing.T) {
 	store := newUmbrellaStore()
 
-	_, err := Prepare(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
+	_, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/79",
 		Branch:     "79-child-task",
@@ -88,7 +81,7 @@ func TestPrepareRejectsChildBaseBranchOutsideUmbrella(t *testing.T) {
 func TestPrepareAcceptsChildBaseBranchOnUmbrella(t *testing.T) {
 	store := newUmbrellaStore()
 
-	record, err := Prepare(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
+	record, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/79",
 		Branch:     "79-child-task",
@@ -108,7 +101,7 @@ func TestPrepareAllowsCycleWithoutUmbrella(t *testing.T) {
 	store := newUmbrellaStore()
 	store.umbrella.IssueLinks = nil
 
-	if _, err := Prepare(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
+	if _, err := prepareForTest(store.store(), t.TempDir(), "io-child", model.IssueOpsBranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/79",
 		Branch:     "79-child-task",
@@ -128,7 +121,7 @@ func TestPrepareWithoutUmbrellaLookupIsUnchanged(t *testing.T) {
 		IssueURL: "https://github.com/example/repo/issues/456",
 	})
 
-	if _, err := Prepare(store.issueOpsStore(), t.TempDir(), "io-plain", model.IssueOpsBranchPrepareRequest{
+	if _, err := prepareForTest(store.issueOpsStore(), t.TempDir(), "io-plain", model.IssueOpsBranchPrepareRequest{
 		Provider:   "github",
 		IssueURL:   "https://github.com/example/repo/issues/456",
 		Branch:     "456-plain-cycle",
