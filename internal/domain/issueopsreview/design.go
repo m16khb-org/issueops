@@ -70,6 +70,16 @@ func HasDesignReviewEvidence(values []string) bool {
 	return false
 }
 
+func NonPlanPrepMissing(missing []string) []string {
+	out := []string{}
+	for _, item := range missing {
+		if !strings.HasPrefix(item, "plan_prep_") {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
 func cleanDesignValues(values []string) []string {
 	seen := map[string]bool{}
 	out := []string{}

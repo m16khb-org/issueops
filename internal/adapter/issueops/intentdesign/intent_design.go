@@ -7,11 +7,13 @@ import (
 	"strings"
 	"time"
 
+	reviewapp "issueops/internal/application/issueopsreview"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
 	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/policy"
 	"issueops/internal/domain/secretdetection"
+	reviewport "issueops/internal/port/issueopsreview"
 )
 
 type Store struct {
@@ -71,43 +73,16 @@ func RecordIntent(store Store, stateRoot, id string, req model.IssueOpsIntentRec
 }
 
 func RecordDesignReview(store Store, stateRoot, id string, req model.IssueOpsDesignReviewRequest) (model.IssueOpsRecord, error) {
-	review, err := reviewdomain.PrepareDesignReview(req)
-	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
-	}
-	record, err := store.Read(stateRoot, id)
-	if err != nil {
-		return record, err
-	}
-	// Design review only requires the intent contract (and issue link). The
-	// plan-prep evidence gate is enforced at plan-phase entry, not here: design
-	// review happens inside the plan phase, by which point plan-prep is already
-	// satisfied. Ignore plan_prep_* missing keys so the design-review prerequisite
-	// stays "intent contract exists".
-	if ready := store.PlanReadiness(record); !ready.Ready {
-		if blocking := nonPlanPrepMissing(ready.Missing); len(blocking) > 0 {
-			return model.IssueOpsRecord{OK: false}, fmt.Errorf("cannot record design review before intent contract: missing %s", strings.Join(blocking, ", "))
-		}
-	}
-	review, err = reviewdomain.FinalizeDesignReview(review, time.Now().UTC().Format(time.RFC3339Nano))
+	record, err := reviewapp.RecordDesignReview(reviewport.DesignReviewStore{
+		Read:          store.Read,
+		PlanReadiness: store.PlanReadiness,
+		TouchWrite:    store.TouchWrite,
+		Now:           func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
+	}, stateRoot, id, req)
 	if errors.Is(err, reviewdomain.ErrMissingDesignReviewEvidence) {
 		return model.IssueOpsRecord{OK: false}, errors.New(designReviewEvidenceGuidance)
 	}
-	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
-	}
-	record.DesignReview = &review
-	return store.TouchWrite(stateRoot, record)
-}
-
-func nonPlanPrepMissing(missing []string) []string {
-	out := []string{}
-	for _, m := range missing {
-		if !strings.HasPrefix(m, "plan_prep_") {
-			out = append(out, m)
-		}
-	}
-	return out
+	return record, err
 }
 
 // IntentDocument는 record.intent를 봉인 intent artifact의 렌더 입력으로 옮긴다.

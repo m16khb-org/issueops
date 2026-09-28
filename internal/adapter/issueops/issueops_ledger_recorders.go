@@ -1,14 +1,9 @@
 package issueops
 
 import (
-	"fmt"
-	"strings"
-	"time"
-
-	"context"
-
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
+	reviewport "issueops/internal/port/issueopsreview"
 )
 
 // RecordIssueOpsDomainReview persists the grill-phase domain review
@@ -42,43 +37,10 @@ func RecordIssueOpsAISlopCleanEvidenceWithActor(stateRoot, id string, categories
 }
 
 func recordIssueOpsAISlopCleanEvidence(stateRoot, id string, categories, verification []string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, err := ReadIssueOps(stateRoot, id)
-		if err != nil {
-			return err
-		}
-		if err := validatePostTransferMutation(record, actor); err != nil {
-			return err
-		}
-		var e error
-		rec, e = recordIssueOpsAISlopCleanEvidenceLocked(stateRoot, id, categories, verification)
-		return e
-	})
-	return rec, err
-}
-
-func recordIssueOpsAISlopCleanEvidenceLocked(stateRoot, id string, categories, verification []string) (issueops.IssueOpsRecord, error) {
-	cats := cleanIssueOpsTextValues(categories)
-	ver := cleanIssueOpsTextValues(verification)
-	if len(cats) == 0 {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("ai-slop-clean evidence requires at least one cleanup category")
-	}
-	if len(ver) == 0 {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("ai-slop-clean evidence requires at least one verification entry")
-	}
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return record, err
-	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	record.AISlopCleanCategories = cats
-	record.AISlopCleanVerification = ver
-	if strings.TrimSpace(record.AISlopCleanAt) != "" && issueOpsPhaseRank(record.Phase) >= issueOpsPhaseRank(IssueOpsPhaseAISlopClean) {
-		return refreshIssueOpsAISlopClean(stateRoot, record)
-	}
-	record.UpdatedAt = now
-	return writeIssueOps(stateRoot, record)
+	return reviewapp.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{
+		ReviewMutationStore: reviewMutationStore(actor),
+		Refresh:             refreshIssueOpsAISlopClean,
+	}, stateRoot, id, categories, verification)
 }
 
 // ResolveIssueOpsFeedback records the outcome of a feedback item by index — the

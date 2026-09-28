@@ -7549,7 +7549,6 @@
         "func IntentDocument",
         "func RecordDesignReview",
         "func RecordIntent",
-        "func nonPlanPrepMissing",
         "type Store"
       ]
     },
@@ -7877,7 +7876,6 @@
         "func ResolveIssueOpsFeedback",
         "func ResolveIssueOpsFeedbackWithActor",
         "func recordIssueOpsAISlopCleanEvidence",
-        "func recordIssueOpsAISlopCleanEvidenceLocked",
         "func recordIssueOpsDomainReview",
         "func resolveIssueOpsFeedback"
       ]
@@ -11318,6 +11316,22 @@
       ]
     },
     {
+      "path": "internal/application/issueopsreview/ai_slop_clean.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func RecordAISlopCleanEvidence"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreview/design_review.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func RecordDesignReview"
+      ]
+    },
+    {
       "path": "internal/application/issueopsreview/domain_review.go",
       "owner": "application",
       "task": "T03",
@@ -14406,6 +14420,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreview/ai_slop_clean.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func ValidateAISlopCleanEvidence"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsreview/change_observation.go",
       "owner": "domain",
       "task": "T03",
@@ -14430,6 +14452,7 @@
       "symbols": [
         "func FinalizeDesignReview",
         "func HasDesignReviewEvidence",
+        "func NonPlanPrepMissing",
         "func PrepareDesignReview",
         "func cleanDesignValues"
       ]
@@ -15687,7 +15710,9 @@
       "owner": "port",
       "task": "T03",
       "symbols": [
+        "type AISlopCleanStore",
         "type CompatibilityStore",
+        "type DesignReviewStore",
         "type DevilsAdvocateStore",
         "type EvidenceReviewStore",
         "type ProjectDocsReviewStore",

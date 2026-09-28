@@ -45,3 +45,15 @@ type ReviewMutationStore struct {
 	Write            func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 	Now              func() string
 }
+
+type AISlopCleanStore struct {
+	ReviewMutationStore
+	Refresh func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+}
+
+type DesignReviewStore struct {
+	Read          func(string, string) (model.IssueOpsRecord, error)
+	PlanReadiness func(model.IssueOpsRecord) model.IssueOpsReadiness
+	TouchWrite    func(string, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Now           func() string
+}
