@@ -153,7 +153,7 @@ func Run(args []string, deps Deps) error {
 	case "create-child":
 		return runRemoteCreateChild(args[1:], deps)
 	case "create-pr":
-		return runRemoteCreatePR(args[1:], deps)
+		return runRemotePublication(args[1:], deps)
 	case "sync-graph":
 		return runRemoteSyncGraph(args[1:], deps)
 	case "sync-issue":

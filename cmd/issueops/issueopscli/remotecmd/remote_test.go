@@ -593,22 +593,6 @@ func TestReflectDevilsAdvocateAcceptsHolderActorFlags(t *testing.T) {
 	}
 }
 
-func TestRemoteNativeActorIncludesCurrentProcessAncestry(t *testing.T) {
-	actor, err := (Deps{}).remoteNativeActor("codex", "session-1", "agent-1", 42, "2026-07-23T00:00:00Z", "/bin/codex", true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if actor.Host != "codex" || actor.SessionID != "session-1" || actor.AgentID != "agent-1" {
-		t.Fatalf("native actor identity was not preserved: %#v", actor)
-	}
-	if actor.SessionProcess == nil || actor.SessionProcess.PID != 42 {
-		t.Fatalf("native actor process receipt was not preserved: %#v", actor.SessionProcess)
-	}
-	if len(actor.ProcessAncestry) == 0 || actor.ProcessAncestry[0].PID != os.Getpid() {
-		t.Fatalf("native actor did not capture the current process ancestry: %#v", actor.ProcessAncestry)
-	}
-}
-
 func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	t.Helper()
 	record := remoteIssueOpsRecordWithoutChild(t)

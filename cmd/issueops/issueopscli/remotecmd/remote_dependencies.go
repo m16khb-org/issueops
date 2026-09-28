@@ -27,7 +27,7 @@ type RemoteDeps struct {
 	ReadScoreSummaryFile               func(string) (string, error)
 	ReconcileIssueCreate               func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error)
 	CreateRemoteChild                  func(req port.IssueProviderCreateChildRequest, prov port.IssueProvider) (port.IssueProviderCreateChildResult, error)
-	CreateRemotePullRequestWithHandler func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error)
+	CreatePublication                  func(context.Context, string, remoteapp.PublicationInput, issueopscontract.RemotePullRequestCreateHandler, remoteapp.AncestryObserver) (port.IssueProviderCreatePullRequestResult, error)
 	DecodeIssueOpsRemoteJudgeJSON      func(out []byte) (issueopsremote.IssueOpsRemoteScoringResult, error)
 	DecodeIssueOpsRemoteScoringRequest func(data []byte) (issueopsremote.IssueOpsRemoteScoringRequest, error)
 	IssueOpsStateRoot                  func() string
@@ -38,7 +38,7 @@ type RemoteDeps struct {
 	RenderIssueOpsRemoteJudgePrompt    func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error)
 	ResolveRecordProvider              func(record issueopscontract.IssueOpsRecord) string
 	ScoreIssueOpsRemoteCandidates      func(req issueopsremote.IssueOpsRemoteScoringRequest) (issueopsremote.IssueOpsRemoteScoringResult, error)
-	SyncRemoteArtifactBody             func(ctx context.Context, stateRoot, id string, cmd bodysynccontract.Command, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error)
+	SyncRemoteBody                     func(context.Context, string, remoteapp.BodySyncInput, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error)
 	SyncRemoteIssueGraph               func(record issueopscontract.IssueOpsRecord) (map[string]any, error)
 	UmbrellaBranchGateReason           func(record issueopscontract.IssueOpsRecord) string
 	ValidateIssueOpsMutationActor      func(stateRoot, id string, actor issueopscontract.IssueOpsActor) error
@@ -67,8 +67,8 @@ func ConfigureRemote(deps RemoteDeps) {
 	if deps.CreateRemoteChild != nil {
 		remoteDeps.CreateRemoteChild = deps.CreateRemoteChild
 	}
-	if deps.CreateRemotePullRequestWithHandler != nil {
-		remoteDeps.CreateRemotePullRequestWithHandler = deps.CreateRemotePullRequestWithHandler
+	if deps.CreatePublication != nil {
+		remoteDeps.CreatePublication = deps.CreatePublication
 	}
 	if deps.DecodeIssueOpsRemoteJudgeJSON != nil {
 		remoteDeps.DecodeIssueOpsRemoteJudgeJSON = deps.DecodeIssueOpsRemoteJudgeJSON
@@ -100,8 +100,8 @@ func ConfigureRemote(deps RemoteDeps) {
 	if deps.ScoreIssueOpsRemoteCandidates != nil {
 		remoteDeps.ScoreIssueOpsRemoteCandidates = deps.ScoreIssueOpsRemoteCandidates
 	}
-	if deps.SyncRemoteArtifactBody != nil {
-		remoteDeps.SyncRemoteArtifactBody = deps.SyncRemoteArtifactBody
+	if deps.SyncRemoteBody != nil {
+		remoteDeps.SyncRemoteBody = deps.SyncRemoteBody
 	}
 	if deps.SyncRemoteIssueGraph != nil {
 		remoteDeps.SyncRemoteIssueGraph = deps.SyncRemoteIssueGraph
@@ -137,7 +137,7 @@ func neutralRemoteDeps() RemoteDeps {
 		CreateRemoteChild: func(req port.IssueProviderCreateChildRequest, prov port.IssueProvider) (port.IssueProviderCreateChildResult, error) {
 			return port.IssueProviderCreateChildResult{}, errRemoteNotConfigured
 		},
-		CreateRemotePullRequestWithHandler: func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error) {
+		CreatePublication: func(context.Context, string, remoteapp.PublicationInput, issueopscontract.RemotePullRequestCreateHandler, remoteapp.AncestryObserver) (port.IssueProviderCreatePullRequestResult, error) {
 			return port.IssueProviderCreatePullRequestResult{}, errRemoteNotConfigured
 		},
 		DecodeIssueOpsRemoteJudgeJSON: func(out []byte) (issueopsremote.IssueOpsRemoteScoringResult, error) {
@@ -164,7 +164,7 @@ func neutralRemoteDeps() RemoteDeps {
 		ScoreIssueOpsRemoteCandidates: func(req issueopsremote.IssueOpsRemoteScoringRequest) (issueopsremote.IssueOpsRemoteScoringResult, error) {
 			return issueopsremote.IssueOpsRemoteScoringResult{}, errRemoteNotConfigured
 		},
-		SyncRemoteArtifactBody: func(ctx context.Context, stateRoot, id string, cmd bodysynccontract.Command, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error) {
+		SyncRemoteBody: func(context.Context, string, remoteapp.BodySyncInput, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error) {
 			return issueopscontract.IssueOpsRecord{}, bodysynccontract.Result{}, errRemoteNotConfigured
 		},
 		SyncRemoteIssueGraph: func(record issueopscontract.IssueOpsRecord) (map[string]any, error) {

@@ -421,6 +421,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueops/issue_create_lifecycle", "T07"},
 		{"internal/domain/issueops/issue_create_request.go", "T07"},
 		{"internal/domain/issueops/record_provider.go", "T07"},
+		{"internal/domain/issueops/remote_command_defaults.go", "T07"},
 		{"internal/domain/issueops/remote_completion.go", "T07"},
 		{"internal/domain/issueops/review_reflection.go", "T07"},
 		{"internal/adapter/issueops/review_plan_source.go", "T07"},

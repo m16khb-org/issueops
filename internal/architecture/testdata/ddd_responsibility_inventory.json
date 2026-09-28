@@ -1400,6 +1400,17 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_remote_commands.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func createPublication",
+        "func newBodySyncCommand",
+        "func newPublicationCommand",
+        "func syncRemoteBody"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_remote_completion_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -2465,7 +2476,7 @@
       "task": "T20",
       "symbols": [
         "func printBodySyncResult",
-        "func runRemoteBodySync",
+        "func runBodySyncCommand",
         "func runRemoteSyncIssue",
         "func runRemoteSyncPR"
       ]
@@ -2476,9 +2487,7 @@
       "task": "T20",
       "symbols": [
         "func Deps.observeNativeProcessAncestry",
-        "func Deps.remoteNativeActor",
         "func runRemoteCreateChild",
-        "func runRemoteCreatePR",
         "func runRemoteSyncGraph",
         "func validateCreateChildInputs"
       ]
@@ -2516,6 +2525,14 @@
       "task": "T20",
       "symbols": [
         "func runRemoteReconcileIssue"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_publication.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func runRemotePublication"
       ]
     },
     {
@@ -11555,6 +11572,19 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/body_sync_command.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func BodySyncCommandService.Sync",
+        "func NewBodySyncCommandService",
+        "type BodySyncCommandService",
+        "type BodySyncInput",
+        "type BodySyncOperation",
+        "type BodySyncResolver"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/completion_evidence.go",
       "owner": "application",
       "task": "T07",
@@ -11641,6 +11671,18 @@
         "type PublicationStore",
         "type RecordStore",
         "type RecordTransition"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/publication_command.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewPublicationCommandService",
+        "func PublicationCommandService.Create",
+        "type PublicationCommandService",
+        "type PublicationInput",
+        "type PublicationInvoker"
       ]
     },
     {
@@ -14399,6 +14441,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/remote_command_defaults.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ResolveBodySyncProvider",
+        "func ResolvePublicationDefaults"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/remote_completion.go",
       "owner": "domain",
       "task": "T07",
@@ -14682,6 +14733,14 @@
         "func ValidateWrite",
         "func containsManagedMarker",
         "func shortSHA"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbodysync/command.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ValidateCommandBody"
       ]
     },
     {
@@ -20478,15 +20537,17 @@
       "source_symbol": "func runRemoteBodySync",
       "responsibility": "resolve cycle provider and replacement body, validate remote inputs and observe actor ancestry before body synchronization",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func BodySyncCommandService.Sync",
       "task": "T07",
       "entrypoints": [
         "issueops remote sync-issue",
         "issueops remote sync-pr"
       ],
       "evidence_tests": [
-        "cmd/issueops/issueopsapp/issueops_body_sync_wiring_test.go"
+        "cmd/issueops/issueopsapp/issueops_body_sync_wiring_test.go",
+        "cmd/issueops/issueopsapp/issueops_remote_commands_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "remote-publication-command-preparation",
@@ -20494,14 +20555,17 @@
       "source_symbol": "func runRemoteCreatePR",
       "responsibility": "resolve provider and branch defaults, render publication body, validate metadata and observe actor before publication",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationCommandService.Create",
       "task": "T07",
       "entrypoints": [
         "issueops remote create-pr"
       ],
       "evidence_tests": [
-        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go",
+        "cmd/issueops/issueopsapp/issueops_remote_commands_test.go",
+        "internal/domain/issueops/remote_command_defaults_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "remote-issue-graph-sync",
@@ -20515,6 +20579,22 @@
       ],
       "evidence_tests": [
         "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "remote-publication-handler-dispatch",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func CreateRemotePullRequest",
+      "responsibility": "reject missing publication handler and normalize confirmed native actor before invoking publication",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go",
+        "cmd/issueops/issueopsapp/issueops_remote_commands_test.go"
       ],
       "status": "migrate"
     }

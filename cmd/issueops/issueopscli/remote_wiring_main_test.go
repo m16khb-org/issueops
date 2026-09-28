@@ -46,8 +46,11 @@ func wireRemoteForTests() {
 		},
 
 		CreateRemoteChild: issueopscore.CreateRemoteChild,
-		CreateRemotePullRequestWithHandler: func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error) {
-			return issueopscore.CreateRemotePullRequestWithHandler(ctx, stateRoot, req, handler)
+		CreatePublication: func(ctx context.Context, root string, input remoteapp.PublicationInput, handler issueopscontract.RemotePullRequestCreateHandler, observe remoteapp.AncestryObserver) (port.IssueProviderCreatePullRequestResult, error) {
+			service := remoteapp.NewPublicationCommandService(issueopscore.RemoteRecordStore{StateRoot: root}, remoteapp.NewTemplateBodyResolver(os.ReadFile), observe, func(ctx context.Context, req issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+				return issueopscore.CreateRemotePullRequestWithHandler(ctx, root, req, handler)
+			})
+			return service.Create(ctx, input)
 		},
 		DecodeIssueOpsRemoteJudgeJSON:      issueopscore.DecodeIssueOpsRemoteJudgeJSON,
 		DecodeIssueOpsRemoteScoringRequest: issueopscore.DecodeIssueOpsRemoteScoringRequest,

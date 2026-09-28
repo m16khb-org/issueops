@@ -237,6 +237,8 @@
 
 - **부분 진행 — 원격 artifact 검증과 기록:** `ArtifactVerificationService`가 잠금 안 사전 검증, 원격 readback, ancestry 관측, 최신 record의 권한·metadata 재검사와 저장을 조율한다. CLI에는 parse/render만 남겼고 `artifactverify` 패키지와 기존 facade 함수를 삭제했다. 발행 검증도 같은 domain projection 매핑을 재사용한다. SQLite composition 테스트로 원격 오류·ancestry 오류의 무기록, 원격 조회 중 holder·phase·프로젝트 변경의 거부, 동시 증거 보존과 정상 receipt 저장을 확인했다. holder 검사와 ancestry 전달을 각각 제거한 overlay에서 테스트가 실패했다(`artifact-holder-recheck-mutation.txt`, `artifact-ancestry-mutation.txt`). 실제 바이너리는 잘못된 phase에서 provider를 호출하지 않고, 원격 라벨 누락 시 무기록이며 정상 readback 결과를 저장했다(`artifact-verification-binary-smoke.json`). 전체 Go suite(`full-suite-artifact-verification.txt`), 관련 race·vet·build·architecture가 통과했다. 소스 재점검에서 PR 생성 입력 준비, 본문 동기화 CLI 진입부, issue graph 반영의 조율이 남아 있음을 확인해 세 정책을 `migrate`로 추가했다. T07은 미완료다.
 
+- **부분 진행 — PR 생성·본문 동기화 입력 준비:** `PublicationCommandService`와 `BodySyncCommandService`가 record 조회, 본문 파일·template 준비, 입력 검증과 ancestry 관측을 조율한다. provider·head·base 기본값과 필수 본문 판정은 domain으로 옮겼다. CLI에는 옵션 파싱·요청 매핑·출력만 남겼으며, PR 생성 코드를 별도 transport 파일로 분리하고 기존 `remoteNativeActor`를 삭제했다. SQLite composition 테스트로 provider 오류 우선순위, 빈 본문·민감정보 거부, preview의 ancestry 생략, confirm의 정규화된 actor 전달, body-file과 준비된 브랜치 기본값을 확인했다. 민감정보 검사와 ancestry 관측을 제거한 overlay에서 테스트가 실패했다(`body-command-secret-mutation.txt`, `publication-command-ancestry-mutation.txt`). 실제 바이너리에서 PR preview 기본값, 민감정보의 provider 호출 전 거부, 두 preview의 상태 무변경, 본문 confirm의 readback·baseline 저장과 managed section 보존을 확인했다(`remote-commands-binary-smoke.json`). 전체 Go suite(`full-suite-remote-commands.txt`), 관련 race·vet·build·architecture가 통과했다. 실제 발행 handler 호출 전 native actor를 정규화하는 기존 adapter 조율은 별도 `migrate` 항목으로 기록했다. 이 경로와 issue graph 반영이 남아 있으므로 T07은 미완료다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료
