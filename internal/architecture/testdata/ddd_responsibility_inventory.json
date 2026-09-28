@@ -7914,8 +7914,8 @@
         "func applyIssueOpsPhaseTransitionAt",
         "func issueOpsPhaseRank",
         "func knownIssueOpsPhase",
-        "func prefetchIssueOpsUpstreamForPhase",
-        "func validateIssueOpsPhaseTransition"
+        "func phaseEntryReadiness",
+        "func prefetchIssueOpsUpstreamForPhase"
       ]
     },
     {
@@ -11002,6 +11002,14 @@
       "task": "T20",
       "symbols": [
         "func RefreshAISlopClean"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/phase_entry.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ValidatePhaseEntry"
       ]
     },
     {
@@ -15752,6 +15760,14 @@
       ]
     },
     {
+      "path": "internal/port/issueopscycle/phase_entry.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type PhaseEntryReadiness"
+      ]
+    },
+    {
       "path": "internal/port/issueopsintent/store.go",
       "owner": "port",
       "task": "T20",
@@ -17113,6 +17129,25 @@
       "evidence_tests": [
         "internal/domain/issueops/ai_slop_completion_test.go",
         "internal/adapter/issueops/issueops_phase_refresh_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "phase-entry-readiness-order",
+      "source_path": "internal/adapter/issueops/issueops_phase.go",
+      "source_symbol": "func validateIssueOpsPhaseTransition",
+      "responsibility": "phase entry applies progression and ordered readiness gates to prefetched observations",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func ValidatePhaseEntry",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to plan",
+        "issueops advance --to pr",
+        "issueops advance --to done"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/phase_entry_test.go",
+        "internal/adapter/issueops/span_network_guard_test.go"
       ],
       "status": "migrated"
     }

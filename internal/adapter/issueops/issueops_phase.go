@@ -8,10 +8,11 @@ import (
 	"context"
 
 	"issueops/internal/adapter/issueops/implementation"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
-	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
+	cycleport "issueops/internal/port/issueopscycle"
 )
 
 func knownIssueOpsPhase(phase issueops.IssueOpsPhase) bool {
@@ -89,7 +90,7 @@ func advanceIssueOpsPhaseLocked(stateRoot, id, to string, upstream issueOpsUpstr
 	if issueopsdomain.ShouldRefreshAISlopClean(record, phase) {
 		return refreshIssueOpsAISlopClean(stateRoot, record)
 	}
-	if err := validateIssueOpsPhaseTransition(stateRoot, record, phase, upstream); err != nil {
+	if err := cycleapp.ValidatePhaseEntry(phaseEntryReadiness(stateRoot, upstream), record, phase); err != nil {
 		return issueops.IssueOpsRecord{OK: false}, err
 	}
 	record = applyIssueOpsPhaseTransition(record, phase)
@@ -99,71 +100,24 @@ func advanceIssueOpsPhaseLocked(stateRoot, id, to string, upstream issueOpsUpstr
 // validateIssueOpsPhaseTransition은 span 안에서 불린다. pr 진입 판정은 upstream
 // fetch 결과가 필요하지만 fetch 자체는 호출자가 span 밖에서 끝낸 것만 쓴다.
 // 결과가 없으면 fetch하지 않은 것으로 보고 upstream_fetch로 거부한다.
-func validateIssueOpsPhaseTransition(stateRoot string, record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase, upstream issueOpsUpstreamFetcher) error {
-	if err := issueopsdomain.ValidatePhaseProgression(record.Phase, phase); err != nil {
-		return err
-	}
-	// Fail-closed (rules 1/8): problem and grill have no other readiness gate, so
-	// these are the only enforcement of the problem/grill completion contracts.
-	// grill entry requires problem complete; plan entry requires grill complete.
-	// Downstream phases keep their own readiness gates (which transitively require
-	// plan, and thus grill, on the normal sequential path).
-	if phase == IssueOpsPhaseGrill {
-		if ready := IssueOpsProblemReadiness(record); !ready.Ready {
-			return fmt.Errorf("cannot enter grill phase: missing %s", strings.Join(ready.Missing, ", "))
-		}
-	}
-	if phase == IssueOpsPhasePlan {
-		// Plan readiness first: it carries intent_contract/issue_url/plan_prep, so
-		// the most fundamental missing key surfaces before the grill-completion
-		// delta (split_decision/domain_review/branch).
-		if ready := IssueOpsPlanReadiness(record); !ready.Ready {
-			return fmt.Errorf("cannot enter plan phase: missing %s", strings.Join(ready.Missing, ", "))
-		}
-		if ready := IssueOpsGrillReadiness(record); !ready.Ready {
-			return fmt.Errorf("cannot enter plan phase: grill incomplete: missing %s", strings.Join(ready.Missing, ", "))
-		}
-	}
-	if phase == IssueOpsPhaseCompatibilityReview {
-		if ready := IssueOpsCompatibilityReviewReadiness(record); !ready.Ready {
-			return fmt.Errorf("cannot enter compatibility-review phase: missing %s", strings.Join(ready.Missing, ", "))
-		}
-	}
-	if phase == IssueOpsPhaseImplement {
-		if ready := IssueOpsImplementationReadiness(record); !ready.Ready {
-			return fmt.Errorf("cannot enter implement phase: missing %s", strings.Join(ready.Missing, ", "))
-		}
-	}
-	if phase == IssueOpsPhaseAISlopClean {
-		if ready := IssueOpsAISlopCleanReadiness(record); !ready.Ready {
-			return fmt.Errorf("cannot enter ai-slop-clean phase: missing %s", strings.Join(ready.Missing, ", "))
-		}
-	}
-	if phase == IssueOpsPhaseFeedback && strings.TrimSpace(record.AISlopCleanAt) == "" {
-		return fmt.Errorf("cannot enter feedback phase before ai-slop-clean phase")
-	}
-	if phase == IssueOpsPhasePR {
-		if upstream == nil {
-			upstream = func(gitRoot string) issueOpsUpstreamFetch {
-				return issueOpsUpstreamFetch{gitRoot: gitRoot, failed: true, stderr: "upstream was not fetched before the pr transition; retry the command"}
+func phaseEntryReadiness(stateRoot string, upstream issueOpsUpstreamFetcher) cycleport.PhaseEntryReadiness {
+	return cycleport.PhaseEntryReadiness{
+		Problem:       IssueOpsProblemReadiness,
+		Grill:         IssueOpsGrillReadiness,
+		Plan:          IssueOpsPlanReadiness,
+		Compatibility: IssueOpsCompatibilityReviewReadiness,
+		Implement:     IssueOpsImplementationReadiness,
+		AISlopClean:   IssueOpsAISlopCleanReadiness,
+		StrictPR: func(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
+			if upstream == nil {
+				upstream = func(gitRoot string) issueOpsUpstreamFetch {
+					return issueOpsUpstreamFetch{gitRoot: gitRoot, failed: true, stderr: "upstream was not fetched before the pr transition; retry the command"}
+				}
 			}
-		}
-		if ready := issueOpsStrictPRReadinessWithStateUsing(stateRoot, record, upstream); !ready.Ready {
-			return fmt.Errorf("cannot enter pr phase: missing %s", strings.Join(ready.Missing, ", "))
-		}
+			return issueOpsStrictPRReadinessWithStateUsing(stateRoot, record, upstream)
+		},
+		RemoteArtifactMissing: issueOpsRemoteArtifactMissing,
 	}
-	if phase == IssueOpsPhaseDone && record.Phase != IssueOpsPhasePR {
-		return fmt.Errorf("cannot enter done phase before pr phase")
-	}
-	if phase == IssueOpsPhaseDone {
-		if missing := issueOpsRemoteArtifactMissing(record); len(missing) > 0 {
-			return fmt.Errorf("cannot enter done phase before remote artifact verification: missing %s", strings.Join(missing, ", "))
-		}
-		if record.Execution == nil || record.Execution.Completion == nil || record.Execution.Lease.Status != issueopscontract.LeaseStatusReleased {
-			return fmt.Errorf("cannot enter done phase before issueops execution completion")
-		}
-	}
-	return nil
 }
 
 func applyIssueOpsPhaseTransition(record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase) issueops.IssueOpsRecord {
