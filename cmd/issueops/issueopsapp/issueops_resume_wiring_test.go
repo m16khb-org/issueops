@@ -196,7 +196,12 @@ func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 			run: func(t *testing.T, stateRoot string, effects *coreResumeEffects, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts) {
 				resumeWiringDriftRecord(t, stateRoot, record.ID)
 				beforeRecord := resumeWiringRawRow(t, stateRoot, resumeWiringRecordBucket, record.ID)
-				_, err := effects.Begin(context.Background(), record, raw, artifacts, leasedomain.ResumePlan{RuntimeID: "runtime"}, strings.Repeat("a", 32))
+				store, err := sqlstore.Open(stateRoot)
+				if err != nil {
+					t.Fatal(err)
+				}
+				repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(store, effects, nil, effects.now)
+				_, err = repository.BeginIntent(context.Background(), leaseapp.ResumeSnapshot{Record: leaseapp.Record{ID: record.ID, Stable: record}, Raw: raw}, artifacts, leasedomain.ResumePlan{RuntimeID: "runtime"}, strings.Repeat("a", 32))
 				resumeWiringRequireStale(t, err, "stale raw record snapshot")
 				resumeWiringAssertRows(t, stateRoot, record.ID, strings.Repeat("a", 32), beforeRecord, nil)
 			},
@@ -335,11 +340,24 @@ func TestResumeReceiptPreservesAndValidatesBaselineWorkingSequencePresence(t *te
 
 func resumeWiringBegin(t *testing.T, stateRoot string, effects *coreResumeEffects, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts, operationID string) leaseoutbound.ResumeEffectState {
 	t.Helper()
-	state, err := effects.Begin(context.Background(), record, raw, artifacts, leasedomain.ResumePlan{RuntimeID: "runtime"}, operationID)
+	store, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return state
+	repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(store, effects, nil, effects.now)
+	progress, err := repository.BeginIntent(context.Background(), leaseapp.ResumeSnapshot{Record: leaseapp.Record{ID: record.ID, Stable: record}, Raw: raw}, artifacts, leasedomain.ResumePlan{RuntimeID: "runtime"}, operationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := repository.LoadIntent(context.Background(), progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return leaseoutbound.ResumeEffectState{
+		Record: state.Progress.Record.Stable, RecordRaw: state.RecordRaw, IntentRaw: state.IntentRaw,
+		OperationID: state.OperationID, Stage: state.Stage, InvocationState: state.InvocationState,
+		InvocationAttempts: state.InvocationAttempts, Pending: state.Progress.Pending,
+	}
 }
 
 func resumeWiringDriftRecord(t *testing.T, stateRoot, id string) {

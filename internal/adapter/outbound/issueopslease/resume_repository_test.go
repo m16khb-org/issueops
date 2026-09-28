@@ -2,7 +2,7 @@ package issueopslease
 
 import (
 	"context"
-	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -29,16 +29,36 @@ func TestResumeRepositoryLoadsExactGenerationSnapshot(t *testing.T) {
 	}
 }
 
-func TestResumeRepositoryPropagatesBridgeBeginFailure(t *testing.T) {
-	_, store := newResumeRepositoryStore(t, resumeRepositoryRecord(t, 4))
-	repository := NewResumeRepository(store, resumeEffectsFake{beginErr: fmt.Errorf("stale raw record snapshot")})
-	snapshot, err := repository.LoadSnapshot(context.Background(), "io-resume-repository", 4)
+func TestResumeRepositoryBeginIntentPersistsSealedPendingStateWithRawCAS(t *testing.T) {
+	record := resumeRepositoryRecord(t, 4)
+	repo := filepath.Join(t.TempDir(), "repo")
+	record.Repo, record.Branch = repo, "193-resume"
+	record.BranchPrepare = []byte(`{"provider":"github","issue_url":"https://github.com/m16khb/issueops/issues/193","link_verified":true,"base_branch":"main","base_sha":"base"}`)
+	record.Execution.Workspace.SourceRoot = repo
+	record.Execution.Workspace.Root = filepath.Join(repo+".worktrees", record.Branch)
+	record.Execution.Workspace.Branch = record.Branch
+	record.Execution.Workspace.BaseHead = "base"
+	_, store := newResumeRepositoryStore(t, record)
+	repository := NewResumeRepository(store, nil)
+	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 15, 0, 0, time.UTC) }
+	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = repository.BeginIntent(context.Background(), snapshot, leasecontract.ResumeArtifacts{}, resumeRepositoryPlan(), strings.Repeat("a", 32))
-	if err == nil || !strings.Contains(err.Error(), "stale raw record snapshot") {
-		t.Fatalf("begin error=%v", err)
+	operationID := strings.Repeat("e", 32)
+	artifacts := leasecontract.ResumeArtifacts{IssueBodySHA256: strings.Repeat("a", 64), OwnerPromptPath: filepath.Join(record.Execution.Workspace.Root, "prompt"), OwnerPromptSHA256: strings.Repeat("c", 64), ContextPacketPath: filepath.Join(record.Execution.Workspace.Root, "packet"), ContextPacketSHA256: strings.Repeat("d", 64)}
+	progress, err := repository.BeginIntent(context.Background(), snapshot, artifacts, resumeRepositoryPlan(), operationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !progress.Pending || progress.Execution.Pending == nil || progress.Execution.Pending.OperationID != operationID || progress.Execution.Pending.Kind != "owner_launch" {
+		t.Fatalf("progress=%+v", progress)
+	}
+	if _, ok, err := store.Get("external_intent_v1", operationID); err != nil || !ok {
+		t.Fatalf("intent persisted=%v err=%v", ok, err)
+	}
+	if _, err := repository.BeginIntent(context.Background(), snapshot, artifacts, resumeRepositoryPlan(), strings.Repeat("f", 32)); err == nil {
+		t.Fatal("stale raw snapshot was accepted")
 	}
 }
 
@@ -206,11 +226,8 @@ func resumeRepositoryPlan() leasedomain.ResumePlan {
 	return leasedomain.ResumePlan{Disposition: leasedomain.ResumeCreateTerminal, RuntimeID: "runtime"}
 }
 
-type resumeEffectsFake struct{ beginErr error }
+type resumeEffectsFake struct{}
 
-func (f resumeEffectsFake) Begin(context.Context, leasecontract.Record, []byte, leasecontract.ResumeArtifacts, leasedomain.ResumePlan, string) (ResumeEffectState, error) {
-	return ResumeEffectState{}, f.beginErr
-}
 func (resumeEffectsFake) ApplyReceipt(context.Context, ResumeEffectState, leasecontract.ResumeStageReceipt) (ResumeEffectState, error) {
 	return ResumeEffectState{}, nil
 }

@@ -51,14 +51,6 @@ func ExecutionResumeIntentRequest(expected ExecutionResumeIntentState) (port.Exe
 	return executionOrcaIntentRequest(expected.Record, payload)
 }
 
-func BeginExecutionResumeIntent(stateRoot string, record issueops.IssueOpsRecord, expectedRecordRaw []byte, artifacts ExecutionResumeArtifactsReceipt, runtimeID, reusedTerminalPTYID, operationID string, now func() time.Time) (ExecutionResumeIntentState, error) {
-	persisted, payload, err := beginOrcaExecutionResumeIntentWithExpectedRaw(stateRoot, record, expectedRecordRaw, executionResumeArtifactsFromReceipt(artifacts), runtimeID, reusedTerminalPTYID, operationID, now)
-	if err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	return executionResumeIntentStateFromPayload(stateRoot, persisted, payload)
-}
-
 func ReadExecutionResumeIntent(stateRoot, id, operationID string) (ExecutionResumeIntentState, error) {
 	record, raw, err := readExecutionResumeRecordRaw(stateRoot, id)
 	if err != nil {
@@ -100,10 +92,6 @@ func ApplyExecutionResumeIntentReceipt(ctx context.Context, stateRoot string, ex
 
 func executionResumeArtifactsReceipt(artifacts executionResumeArtifacts) ExecutionResumeArtifactsReceipt {
 	return ExecutionResumeArtifactsReceipt{ClaimTokenPath: artifacts.claimTokenPath, IssueBodySHA256: artifacts.issueBodySHA256, ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256, OwnerPromptPath: artifacts.promptPath, OwnerPromptSHA256: artifacts.promptSHA256}
-}
-
-func executionResumeArtifactsFromReceipt(artifacts ExecutionResumeArtifactsReceipt) executionResumeArtifacts {
-	return executionResumeArtifacts{claimTokenPath: artifacts.ClaimTokenPath, issueBodySHA256: artifacts.IssueBodySHA256, packetPath: artifacts.ContextPacketPath, packetSHA256: artifacts.ContextPacketSHA256, promptPath: artifacts.OwnerPromptPath, promptSHA256: artifacts.OwnerPromptSHA256}
 }
 
 func executionResumeIntentStateFromPayload(stateRoot string, record issueops.IssueOpsRecord, payload externalOrcaIntentPayload) (ExecutionResumeIntentState, error) {

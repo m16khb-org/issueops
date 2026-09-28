@@ -64,18 +64,6 @@ type coreResumeEffects struct {
 	now         func() time.Time
 }
 
-func (e *coreResumeEffects) Begin(_ context.Context, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts, plan leasedomain.ResumePlan, operationID string) (leaseoutbound.ResumeEffectState, error) {
-	coreRecord, err := resumeCoreRecord(record)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	state, err := issueops.BeginExecutionResumeIntent(e.stateRoot, coreRecord, raw, resumeCoreArtifacts(artifacts), plan.RuntimeID, plan.ReusedTerminalPTYID, operationID, e.now)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	return resumeEffectStateFromCore(state)
-}
-
 func (e *coreResumeEffects) ApplyReceipt(ctx context.Context, state leaseoutbound.ResumeEffectState, receipt leasecontract.ResumeStageReceipt) (leaseoutbound.ResumeEffectState, error) {
 	coreState, err := resumeCoreIntentState(state)
 	if err != nil {
@@ -168,10 +156,6 @@ func resumeCoreRecord(record leasecontract.Record) (issueopscontract.IssueOpsRec
 		return issueopscontract.IssueOpsRecord{}, err
 	}
 	return result, nil
-}
-
-func resumeCoreArtifacts(artifacts leasecontract.ResumeArtifacts) issueops.ExecutionResumeArtifactsReceipt {
-	return issueops.ExecutionResumeArtifactsReceipt{ClaimTokenPath: artifacts.ClaimTokenPath, IssueBodySHA256: artifacts.IssueBodySHA256, ContextPacketPath: artifacts.ContextPacketPath, ContextPacketSHA256: artifacts.ContextPacketSHA256, OwnerPromptPath: artifacts.OwnerPromptPath, OwnerPromptSHA256: artifacts.OwnerPromptSHA256}
 }
 
 func resumeEffectStateFromCore(state issueops.ExecutionResumeIntentState) (leaseoutbound.ResumeEffectState, error) {
