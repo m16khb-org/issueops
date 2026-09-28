@@ -19796,7 +19796,7 @@
     {
       "id": "direct-preparation-assembly",
       "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func (*SQLiteRepository).CommitDirect",
+      "source_symbol": "func SQLiteRepository.CommitDirect",
       "responsibility": "run an atomic record and holder-index write; application constructs the direct execution and result from the current record",
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ApplyDirectCommit",
@@ -19813,7 +19813,7 @@
     {
       "id": "orca-preparation-intent-assembly",
       "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func (*SQLiteRepository).BeginIntent",
+      "source_symbol": "func SQLiteRepository.BeginIntent",
       "responsibility": "run the atomic record and intent write; application validates owner identity and seals the pending Orca execution",
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ApplyOrcaBegin",
@@ -19830,7 +19830,7 @@
     {
       "id": "orca-invocation-transition",
       "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func (*SQLiteRepository).MarkInvoking",
+      "source_symbol": "func SQLiteRepository.MarkInvoking",
       "responsibility": "persist the application-owned invocation state and attempt count with raw CAS",
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func MarkOrcaInvoking",
@@ -19848,7 +19848,7 @@
     {
       "id": "orca-failure-transition",
       "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func (*SQLiteRepository).RecordFailure",
+      "source_symbol": "func SQLiteRepository.RecordFailure",
       "responsibility": "redact the diagnostic and persist application-owned failure state with record and intent CAS",
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ApplyOrcaFailure",
@@ -19866,7 +19866,7 @@
     {
       "id": "orca-receipt-stage-transition",
       "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
-      "source_symbol": "func (*SQLiteRepository).ApplyReceipt",
+      "source_symbol": "func SQLiteRepository.ApplyReceipt",
       "responsibility": "validate external delivery and persist application-owned receipt stage changes with record and intent raw CAS",
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ApplyOrcaReceipt",
@@ -19991,7 +19991,7 @@
       "id": "cleanup-lease-writer-status",
       "source_path": "internal/adapter/issueops/issueops_cleanup_abandon.go",
       "source_symbol": "func cleanupAbandonLeaseHoldsWriter",
-      "responsibility": "delegate the fail-closed writer status rule shared by cleanup and mode switch to the lease domain",
+      "responsibility": "classify writerless cleanup through the lease domain directly from application observation",
       "target": "internal/domain/issueopslease",
       "target_symbol": "func LeaseHoldsWriter",
       "task": "T08",
@@ -20003,7 +20003,7 @@
         "internal/domain/issueopslease/writer_test.go",
         "internal/adapter/issueops/issueops_cleanup_abandon_residual_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "base-sync-merge-state-gates",
@@ -23102,6 +23102,61 @@
       "evidence_tests": [
         "TestCleanupRemoteBranchAcceptsAVerifiedSupersedingArtifact",
         "TestCleanupRemoteBranchRejectsUnverifiableSupersedingArtifacts"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "sealed-intent-record-identity",
+      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
+      "source_symbol": "func validateOrcaIntentRecordIdentity",
+      "responsibility": "share verified issue identity and sealed workspace matching across preparation, resume and cleanup",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func ValidateIntentRecordIdentity",
+      "task": "T08",
+      "entrypoints": [
+        "issueops execution prepare",
+        "issueops execution resume",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/orca_intent_files_test.go",
+        "internal/domain/issueopspreparation/intent_authority_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "sealed-intent-request-assembly",
+      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
+      "source_symbol": "func executionOrcaIntentRequest",
+      "responsibility": "inspect sealed metadata then validate current authority and private artifact digests before invocation",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func IntentRequestBuilder.Build",
+      "task": "T08",
+      "entrypoints": [
+        "issueops execution prepare",
+        "issueops execution resume",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/orca_intent_files_test.go",
+        "internal/domain/issueopspreparation/intent_authority_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "sealed-launch-hydration",
+      "source_path": "internal/adapter/issueops/execution_prepare_bridge.go",
+      "source_symbol": "func HydrateExecutionPreparationLaunch",
+      "responsibility": "read the current record and sealed intent before filling a matching launch request without mutating the caller",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func LaunchHydrator.Hydrate",
+      "task": "T08",
+      "entrypoints": [
+        "issueops execution prepare"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/orca_intent_files_test.go",
+        "internal/domain/issueopspreparation/intent_authority_test.go"
       ],
       "status": "migrated"
     }

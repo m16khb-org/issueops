@@ -108,7 +108,7 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 		if policy.Status != "migrate" && policy.Status != "migrated" && policy.Status != "retain" {
 			t.Errorf("%s has invalid status %q", policy.ID, policy.Status)
 		}
-		if policy.Status == "migrate" && !slicesContains(byPath[policy.SourcePath].Symbols, policy.SourceSymbol) {
+		if (policy.Status == "migrate" || policy.Status == "retain") && !slicesContains(byPath[policy.SourcePath].Symbols, policy.SourceSymbol) {
 			t.Errorf("%s source symbol %s is absent from %s", policy.ID, policy.SourceSymbol, policy.SourcePath)
 		}
 		if policy.Status == "migrated" {
