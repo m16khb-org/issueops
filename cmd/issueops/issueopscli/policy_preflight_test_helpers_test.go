@@ -7,7 +7,6 @@ import (
 	auditppdeps "issueops/internal/adapter/audit"
 	issueopsppdeps "issueops/internal/adapter/issueops"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
-	orphancleanupppdeps "issueops/internal/adapter/issueops/orphancleanup"
 	reviewfilesppdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
@@ -24,7 +23,6 @@ func init() {
 	issueopsppdeps.GitOut = preflightadapter.GitOut
 	mcpclippdeps.EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
 	mcpclippdeps.FakeRunCommand = policyadapter.FakeRunCommand
-	orphancleanupppdeps.GitCmd = preflightadapter.GitCmd
 	resourcesppdeps.CommandPolicySummary = policyadapter.CommandPolicySummary
 	reviewfilesppdeps.GitCmd = preflightadapter.GitCmd
 	apidoccli.ConfigureReviewFiles(apidoccli.ReviewFileEffects{

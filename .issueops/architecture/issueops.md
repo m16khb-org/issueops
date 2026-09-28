@@ -235,3 +235,13 @@ fingerprint와 실패 기록의 봉인은 `internal/application/issueopscleanup`
 순서를 결정하고, application은 그 결과를 lifecycle domain의 신원·부재 판정과 조합한다.
 앞선 단계의 자원이 남았거나 부재 관측에 권위가 없으면 폐기를 거부한다. 실제 터미널은
 점유 종료 단계에서 도달 가능한 경우에만 허용하며, 런타임 전환 관측 권한은 holderless일 때만 연다.
+
+`cleanup orphan`의 요청 검증·삭제 허용 조건은 `internal/domain/issueopsorphancleanup`이,
+preview·fingerprint·삭제 순서는 `OrphanCleaner`가 소유한다. 원격 병합과 Orca 관측은
+잠금 밖에서 끝내고, apply는 sqlstore 쓰기 배제 잠금 아래에서 레코드·lease index와
+로컬 Git 상태를 다시 읽는다. 새 소유자·잘못된 행·HEAD 변경이 있으면 삭제하지 않는다.
+대상이 상태 저장소와 잠금 파일을 포함하면 symlink 경로도 정규화해 preview와 apply에서
+거부한다. Git 자식은 배제 잠금을 상속하며, 취소 후 다음 삭제를 시작하지 않는다.
+워크트리 제거 후 브랜치 삭제가 실패하면 부분 완료 필드를 보존한다. 성공은 drain 뒤에만
+반환하며 임시 lifecycle이나 attempt를 만들지 않는다. CLI/MCP DTO와 정상 preview의
+fingerprint 형식은 유지하고, 기존 orphan adapter 실행 함수·DTO 별칭·전역 Git 실행기는 제거했다.

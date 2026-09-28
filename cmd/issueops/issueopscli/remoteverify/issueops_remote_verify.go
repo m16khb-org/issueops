@@ -81,8 +81,8 @@ func VerifyRemoteArtifactLiveContext(ctx context.Context, req issueopscontract.I
 	return nil
 }
 
-func VerifyRemoteArtifactMergedLive(artifact issueopscontract.IssueOpsRemoteArtifactVerification) error {
-	_, err := VerifyRemoteArtifactMergedHeadLive(artifact)
+func VerifyRemoteArtifactMergedLive(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) error {
+	_, err := VerifyRemoteArtifactMergedHeadLive(ctx, artifact)
 	return err
 }
 
@@ -97,7 +97,7 @@ func VerifyRemoteArtifactMergedLive(artifact issueopscontract.IssueOpsRemoteArti
 // 따라서 여기서는 관측에 성공한 경우에만 (merged, nil)을 돌려주고, 조회가
 // 실패하면 병합 여부를 미상으로 두고 error를 그대로 올린다.
 func ObserveRemoteArtifactMergedLive(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (bool, error) {
-	live, err := fetchRemoteArtifactLive(artifact)
+	live, err := fetchRemoteArtifactLive(context.Background(), artifact)
 	if err != nil {
 		return false, err
 	}
@@ -108,14 +108,14 @@ func ObserveRemoteArtifactMergedLive(artifact issueopscontract.IssueOpsRemoteArt
 // 관측한다. 머지 여부와 무관하게 provider가 지금 보여주는 값이며, branch
 // retarget이 요청된 base를 대조하는 유일한 근거다.
 func ObserveRemoteArtifactTargetLive(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (string, error) {
-	live, err := fetchRemoteArtifactLive(artifact)
+	live, err := fetchRemoteArtifactLive(context.Background(), artifact)
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(live.BaseRefName), nil
 }
 
-func fetchRemoteArtifactLive(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (liveRemoteArtifact, error) {
+func fetchRemoteArtifactLive(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) (liveRemoteArtifact, error) {
 	provider := strings.ToLower(strings.TrimSpace(artifact.Provider))
 	kind := strings.ToLower(strings.TrimSpace(artifact.Kind))
 	switch kind {
@@ -126,9 +126,9 @@ func fetchRemoteArtifactLive(artifact issueopscontract.IssueOpsRemoteArtifactVer
 	}
 	switch provider + ":" + kind {
 	case "github:pr":
-		return fetchGitHubPullRequestArtifact(strings.TrimSpace(artifact.URL))
+		return fetchGitHubPullRequestArtifactContext(ctx, strings.TrimSpace(artifact.URL))
 	case "gitlab:mr":
-		return fetchGitLabMergeRequestArtifact(strings.TrimSpace(artifact.URL))
+		return fetchGitLabMergeRequestArtifactContext(ctx, strings.TrimSpace(artifact.URL))
 	default:
 		return liveRemoteArtifact{},
 			fmt.Errorf("unsupported remote artifact for merge verification: %s:%s", provider, kind)
@@ -138,8 +138,8 @@ func fetchRemoteArtifactLive(artifact issueopscontract.IssueOpsRemoteArtifactVer
 // VerifyRemoteArtifactMergedHeadLive는 머지 검증과 head ref 관측을 한 번의
 // readback으로 수행한다. 두 값이 다른 시점의 관측이면 cleanup remote-branch의
 // OID CAS가 무의미해지므로 분리된 조회 표면을 두지 않는다(#116).
-func VerifyRemoteArtifactMergedHeadLive(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscore.CleanupRemoteBranchArtifactHead, error) {
-	live, err := fetchRemoteArtifactLive(artifact)
+func VerifyRemoteArtifactMergedHeadLive(ctx context.Context, artifact issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscore.CleanupRemoteBranchArtifactHead, error) {
+	live, err := fetchRemoteArtifactLive(ctx, artifact)
 	if err != nil {
 		return issueopscore.CleanupRemoteBranchArtifactHead{}, err
 	}

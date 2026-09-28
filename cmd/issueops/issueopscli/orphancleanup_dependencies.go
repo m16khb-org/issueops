@@ -15,7 +15,7 @@ var errOrphanNotConfigured = errors.New("issueops orphan cleanup is not configur
 // 타입 대신 같은 필드를 여기서 선언해 CLI가 어댑터를 알지 않게 한다.
 type OrphanDependencies struct {
 	Collect      func(context.Context, string) (corehealth.Snapshot, error)
-	VerifyMerged func(issueopscontract.IssueOpsRemoteArtifactVerification) error
+	VerifyMerged func(context.Context, issueopscontract.IssueOpsRemoteArtifactVerification) error
 }
 
 // 고아 워크트리 정리는 파일시스템과 원격 제공자를 다루는 I/O다. CLI는 그 구현을

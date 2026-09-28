@@ -20,11 +20,11 @@ func verifyIssueOpsRemoteArtifactLiveContext(ctx context.Context, req issueopsco
 }
 
 func verifyIssueOpsRemoteArtifactMergedLive(artifact issueopscontract.IssueOpsRemoteArtifactVerification) error {
-	return remoteverify.VerifyRemoteArtifactMergedLive(artifact)
+	return remoteverify.VerifyRemoteArtifactMergedLive(context.Background(), artifact)
 }
 
 func verifyIssueOpsRemoteArtifactMergedHeadLive(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscore.CleanupRemoteBranchArtifactHead, error) {
-	return remoteverify.VerifyRemoteArtifactMergedHeadLive(artifact)
+	return remoteverify.VerifyRemoteArtifactMergedHeadLive(context.Background(), artifact)
 }
 
 func observeIssueOpsRemoteArtifactMergedLive(artifact issueopscontract.IssueOpsRemoteArtifactVerification) (bool, error) {

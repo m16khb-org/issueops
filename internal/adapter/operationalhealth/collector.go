@@ -108,7 +108,7 @@ func (collector Collector) Collect(ctx context.Context, repo string) corehealth.
 	orcaSnapshot := corehealth.Snapshot{RepoRoot: repo, Messages: corehealth.MessagePresence{Empty: true}}
 	reads, readCtx := errgroup.WithContext(ctx)
 	reads.Go(func() error {
-		collector.collectGit(readCtx, &gitSnapshot)
+		collector.collectGit(readCtx, &gitSnapshot, true)
 		return nil
 	})
 	reads.Go(func() error {
@@ -138,7 +138,17 @@ func (collector Collector) Collect(ctx context.Context, repo string) corehealth.
 	return snapshot
 }
 
-func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.Snapshot) {
+// CollectLocal refreshes strict persisted ownership and local Git facts only.
+// It performs no provider, remote-ref or Orca requests and takes no SQLite span.
+func (collector Collector) CollectLocal(ctx context.Context, repo string) corehealth.Snapshot {
+	snapshot := corehealth.Snapshot{RepoRoot: canonicalInventoryPath(repo)}
+	collector.collectIssueOps(&snapshot)
+	collector.collectGit(ctx, &snapshot, false)
+	sortSnapshot(&snapshot)
+	return snapshot
+}
+
+func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.Snapshot, includeRemote bool) {
 	if collector.Git == nil {
 		addProblem(snapshot, "git", "git_runner_missing", "Git inventory reader is unavailable")
 		return
@@ -208,6 +218,9 @@ func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.
 		},
 	}
 	for _, command := range commands {
+		if !includeRemote && command.source == "git_remote_refs" {
+			continue
+		}
 		output, err := collector.Git.Run(ctx, snapshot.RepoRoot, command.args...)
 		if err != nil {
 			addProblem(snapshot, command.source, command.code, command.source+" inventory failed")

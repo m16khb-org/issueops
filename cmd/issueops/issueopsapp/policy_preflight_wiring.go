@@ -12,7 +12,6 @@ import (
 	gitworktreedeps "issueops/internal/adapter/gitworktree"
 	issueopsdeps "issueops/internal/adapter/issueops"
 	implementationdeps "issueops/internal/adapter/issueops/implementation"
-	orphancleanupdeps "issueops/internal/adapter/issueops/orphancleanup"
 	reviewfilesdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
@@ -41,7 +40,6 @@ func configurePolicyAndGitObserversWithLookup(lookup policyadapter.PreparedBaseB
 	issueopsdeps.GitOut = preflightadapter.GitOut
 	mcpclideps.EvaluateCommandPolicy = evaluator.Evaluate
 	mcpclideps.FakeRunCommand = evaluator.FakeRun
-	orphancleanupdeps.GitCmd = preflightadapter.GitCmd
 	policyclideps.EvaluateCommandPolicy = evaluator.Evaluate
 	policyclideps.FakeRunCommand = evaluator.FakeRun
 	policyclideps.RunReadOnlyCommand = evaluator.RunReadOnly

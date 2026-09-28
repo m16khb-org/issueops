@@ -107,14 +107,14 @@ func TestVerifyIssueOpsRemoteArtifactLiveRequiresRemoteLabelsAndAssignees(t *tes
 
 func TestVerifyIssueOpsRemoteArtifactMergedLiveRequiresMergedGitHubPR(t *testing.T) {
 	installFakeGHForRemoteArtifactTest(t)
-	if err := VerifyRemoteArtifactMergedLive(issueopscontract.IssueOpsRemoteArtifactVerification{
+	if err := VerifyRemoteArtifactMergedLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
 		Provider: "github",
 		Kind:     "pr",
 		URL:      "https://github.com/example/repo/pull/2",
 	}); err == nil || !strings.Contains(err.Error(), "not verified merged") {
 		t.Fatalf("expected closed unmerged GitHub PR to fail cleanup merge verification, got %v", err)
 	}
-	if err := VerifyRemoteArtifactMergedLive(issueopscontract.IssueOpsRemoteArtifactVerification{
+	if err := VerifyRemoteArtifactMergedLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
 		Provider: "github",
 		Kind:     "pr",
 		URL:      "https://github.com/example/repo/pull/3",
@@ -174,7 +174,7 @@ printf '%s\n' '{"url":"https://github.com/example/repo/pull/3","state":"MERGED",
 	t.Setenv("ISSUEOPS_FAKE_GH_LOG", logPath)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	head, err := VerifyRemoteArtifactMergedHeadLive(issueopscontract.IssueOpsRemoteArtifactVerification{
+	head, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/repo/pull/3",
 	})
 	if err != nil {
@@ -205,7 +205,7 @@ printf '%s\n' '{"web_url":"https://gitlab.example.com/group/project/-/merge_requ
 `)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 
-	head, err := VerifyRemoteArtifactMergedHeadLive(issueopscontract.IssueOpsRemoteArtifactVerification{
+	head, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
 		Provider: "gitlab", Kind: "mr", URL: "https://gitlab.example.com/group/project/-/merge_requests/42",
 	})
 	if err != nil {
@@ -221,7 +221,7 @@ printf '%s\n' '{"web_url":"https://gitlab.example.com/group/project/-/merge_requ
 
 func TestVerifyRemoteArtifactMergedHeadLiveRejectsUnmerged(t *testing.T) {
 	installFakeGHForRemoteArtifactTest(t)
-	if _, err := VerifyRemoteArtifactMergedHeadLive(issueopscontract.IssueOpsRemoteArtifactVerification{
+	if _, err := VerifyRemoteArtifactMergedHeadLive(context.Background(), issueopscontract.IssueOpsRemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/repo/pull/2",
 	}); err == nil || !strings.Contains(err.Error(), "not verified merged") {
 		t.Fatalf("unmerged PR must fail head verification: %v", err)
@@ -262,4 +262,27 @@ printf '%s\n' '{invalid'
 			t.Fatalf("expected decode error, got %v", err)
 		}
 	})
+}
+
+func TestVerifyRemoteArtifactMergedHonorsCancellation(t *testing.T) {
+	bin := t.TempDir()
+	marker := filepath.Join(t.TempDir(), "invoked")
+	writeFakeCommand(t, filepath.Join(bin, "gh"), "#!/bin/sh\ntouch \"$VERIFY_MARKER\"\n")
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("VERIFY_MARKER", marker)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := VerifyRemoteArtifactMergedLive(ctx, issueopscontract.IssueOpsRemoteArtifactVerification{
+		Provider: "github",
+		Kind:     "pr",
+		URL:      "https://github.com/acme/repo/pull/1",
+	})
+
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error = %v, want context.Canceled", err)
+	}
+	if _, statErr := os.Stat(marker); !os.IsNotExist(statErr) {
+		t.Fatalf("verification command ran after cancellation: %v", statErr)
+	}
 }

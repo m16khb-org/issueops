@@ -8,6 +8,7 @@ import (
 	"issueops/cmd/issueops/issueopscli/benchmarkcmd"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
+	"issueops/cmd/issueops/issueopscli/remoteverify"
 	orphancontract "issueops/internal/contract/issueopsorphancleanup"
 	corehealth "issueops/internal/domain/operationalhealth"
 	"issueops/internal/port"
@@ -277,6 +278,6 @@ func issueOpsOrphanCleanupDeps() OrphanDependencies {
 		Collect: func(ctx context.Context, repo string) (corehealth.Snapshot, error) {
 			return CollectOperationalHealth(ctx, repo), nil
 		},
-		VerifyMerged: verifyIssueOpsRemoteArtifactMergedLive,
+		VerifyMerged: remoteverify.VerifyRemoteArtifactMergedLive,
 	}
 }

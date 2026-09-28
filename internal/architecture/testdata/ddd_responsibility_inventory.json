@@ -1348,7 +1348,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsOrphanAndLoopGate"
+        "func configureIssueOpsOrphanAndLoopGate",
+        "func orphanCleaner"
       ]
     },
     {
@@ -8095,43 +8096,19 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/issueops/orphancleanup/adapter_dependencies.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/issueops/orphancleanup/contract_alias.go",
+      "path": "internal/adapter/issueops/orphan_environment.go",
       "owner": "adapter",
       "task": "T08",
       "symbols": [
-        "type ApplyRequest",
-        "type Request",
-        "type Result"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/orphancleanup/orphan_cleanup.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func Apply",
-        "func Preview",
-        "func blocked",
-        "func boundedGitFailure",
-        "func canonicalPath",
-        "func fingerprint",
-        "func finish",
-        "func inspectInventory",
-        "func inspectWorktreeCleanliness",
-        "func missing",
-        "func normalizeRequest",
-        "func resultForRequest",
-        "func samePath",
-        "func uniqueSorted",
-        "func validGitOID",
-        "func verifyMergedArtifact",
-        "type Dependencies"
+        "func OrphanEnvironment.CanonicalPath",
+        "func OrphanEnvironment.Clean",
+        "func OrphanEnvironment.CollectLocal",
+        "func OrphanEnvironment.DeleteBranch",
+        "func OrphanEnvironment.ExcludeWrites",
+        "func OrphanEnvironment.RemoveWorktree",
+        "func OrphanEnvironment.Run",
+        "func OrphanEnvironment.StateOutsideTarget",
+        "type OrphanEnvironment"
       ]
     },
     {
@@ -8467,6 +8444,7 @@
       "task": "T15",
       "symbols": [
         "func Collector.Collect",
+        "func Collector.CollectLocal",
         "func Collector.collectGit",
         "func Collector.collectIssueOps",
         "func Collector.collectOrca",
@@ -11141,6 +11119,29 @@
         "func LinkedBranchAuditRecorder.Record",
         "type LinkedBranchAuditRecorder",
         "type LinkedBranchAuditRecords"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/orphan.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func OrphanCleaner.Apply",
+        "func OrphanCleaner.Preview",
+        "func OrphanCleaner.canonicalize",
+        "func OrphanCleaner.localPreview",
+        "func OrphanCleaner.normalize",
+        "func finishOrphan",
+        "type OrphanCleaner",
+        "type OrphanEnvironment"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/orphan_fingerprint.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func orphanFingerprint"
       ]
     },
     {
@@ -15773,6 +15774,25 @@
         "func designReviewCommand",
         "func executionStatusCommand",
         "func statusCommand"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsorphancleanup/preview.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func Finish",
+        "func InspectInventory",
+        "func LocalPreview",
+        "func MergeEvidence",
+        "func Missing",
+        "func NormalizeRequest",
+        "func ResultForRequest",
+        "func missing",
+        "func samePath",
+        "func uniqueSorted",
+        "func validGitOID",
+        "type LocalObservation"
       ]
     },
     {

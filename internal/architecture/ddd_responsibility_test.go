@@ -490,6 +490,8 @@ func dddTask(path string) string {
 		{"internal/domain/issueops/cleanup_children.go", "T08"},
 		{"internal/domain/issueopsremote/cleanup_child.go", "T08"},
 		{"internal/application/issueopscleanup/", "T08"},
+		{"internal/domain/issueopsorphancleanup/", "T08"},
+		{"internal/adapter/issueops/orphan_environment.go", "T08"},
 		{"internal/adapter/issueops/cleanup_status_environment.go", "T08"},
 		{"internal/domain/issueops/child_verdict.go", "T08"},
 		{"internal/domain/issueops/umbrella_topology.go", "T08"},

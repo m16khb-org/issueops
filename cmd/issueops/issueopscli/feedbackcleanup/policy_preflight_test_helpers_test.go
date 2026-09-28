@@ -3,7 +3,6 @@ package feedbackcleanup
 import (
 	issueopsppdeps "issueops/internal/adapter/issueops"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
-	orphancleanupppdeps "issueops/internal/adapter/issueops/orphancleanup"
 	preflightadapter "issueops/internal/adapter/preflight"
 )
 
@@ -15,5 +14,4 @@ func init() {
 	issueopsppdeps.GitCmd = preflightadapter.GitCmd
 	issueopsppdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsppdeps.GitOut = preflightadapter.GitOut
-	orphancleanupppdeps.GitCmd = preflightadapter.GitCmd
 }
