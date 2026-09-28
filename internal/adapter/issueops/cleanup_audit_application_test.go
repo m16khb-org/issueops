@@ -16,7 +16,7 @@ type cleanupAuditUpdatingProvider struct {
 	update func(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
 }
 
-func (p cleanupAuditUpdatingProvider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (p cleanupAuditUpdatingProvider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return p.update(req)
 }
 

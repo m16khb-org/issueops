@@ -14,7 +14,7 @@ import (
 	"issueops/internal/port"
 )
 
-func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	hostname, projectPath, iid, err := parseGitLabIssueURL(req.IssueURL)
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
@@ -31,7 +31,7 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 			Preview: fmt.Sprintf("[dry-run] would execute: glab api %s --hostname %s; then --method PUT -f description=<merged %s section>", endpoint, hostname, req.Section),
 		}, nil
 	}
-	current, err := runGlabAPI(req.Repo, hostname, endpoint)
+	current, err := runGlabAPIContext(ctx, req.Repo, hostname, endpoint)
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
@@ -52,7 +52,7 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
 	merged := issuebody.MergeManagedSection(payload.Description, section, start, end)
-	if _, err := runGlabAPI(req.Repo, hostname, endpoint, "--method", "PUT", "-f", "description="+merged); err != nil {
+	if _, err := runGlabAPIContext(ctx, req.Repo, hostname, endpoint, "--method", "PUT", "-f", "description="+merged); err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
 	return port.IssueProviderUpdateIssueBodySectionResult{OK: true, URL: providerutil.FirstNonEmpty(payload.WebURL, req.IssueURL), Updated: true}, nil
@@ -79,7 +79,7 @@ func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueP
 	if strings.EqualFold(state, "closed") {
 		return port.IssueProviderCloseIssueResult{OK: true, Provider: "gitlab", IssueURL: req.IssueURL, Closed: true, AlreadyClosed: true, State: state}, nil
 	}
-	if _, err := runGlabAPI(req.Repo, hostname, endpoint, "--method", "PUT", "-f", "state_event=close"); err != nil {
+	if _, err := runGlabAPIContext(context.Background(), req.Repo, hostname, endpoint, "--method", "PUT", "-f", "state_event=close"); err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "gitlab"}, err
 	}
 	state, err = readGlabIssueState(req.Repo, hostname, endpoint)
@@ -93,7 +93,7 @@ func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueP
 }
 
 func readGlabIssueState(repo, hostname, endpoint string) (string, error) {
-	out, err := runGlabAPI(repo, hostname, endpoint)
+	out, err := runGlabAPIContext(context.Background(), repo, hostname, endpoint)
 	if err != nil {
 		return "", err
 	}
@@ -106,12 +106,8 @@ func readGlabIssueState(repo, hostname, endpoint string) (string, error) {
 	return payload.State, nil
 }
 
-// runGlabAPI runs a REST `glab api <endpoint> --hostname <host> [extra...]` call,
+// runGlabAPIContext runs a REST `glab api <endpoint> --hostname <host> [extra...]` call,
 // mirroring the hostname/order shape the verify layer uses for issue reads.
-func runGlabAPI(repo, hostname, endpoint string, extra ...string) ([]byte, error) {
-	return runGlabAPIContext(context.Background(), repo, hostname, endpoint, extra...)
-}
-
 func runGlabAPIContext(ctx context.Context, repo, hostname, endpoint string, extra ...string) ([]byte, error) {
 	if _, err := exec.LookPath("glab"); err != nil {
 		return nil, fmt.Errorf("glab CLI is not installed; install it from https://gitlab.com/gitlab-org/cli")

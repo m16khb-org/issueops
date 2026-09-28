@@ -1295,7 +1295,7 @@ func legacyEdges(edges []dependencyEdge) []dependencyEdge {
 		if (isCore(edge.importer) && isLegacyInfrastructure(edge.imported)) ||
 			(isAdapter(edge.importer) && isCore(edge.imported) && !isMigratedInboundAdapter(edge.importer)) ||
 			(isConcreteAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
-				!isSharedStorageEngineEdge(edge.importer, edge.imported)) {
+				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported)) {
 			legacy = append(legacy, edge)
 		}
 	}
@@ -1400,6 +1400,21 @@ func isSharedStorageEngineEdge(importer, imported string) bool {
 			importer == "internal/adapter/issueops"
 	}
 	return false
+}
+
+// The OS lifetime descriptor is shared by these concrete command runners only.
+// It carries no capability policy or durable state; application code reaches it
+// through an injected lifetime port, never by importing the implementation.
+func isProcessLifetimeEdge(importer, imported string) bool {
+	if imported != "internal/adapter/outbound/processlease" {
+		return false
+	}
+	switch importer {
+	case "internal/adapter/issueops", "internal/adapter/orca", "internal/adapter/provider/providerutil":
+		return true
+	default:
+		return false
+	}
 }
 
 func isInboundAdapter(path string) bool {

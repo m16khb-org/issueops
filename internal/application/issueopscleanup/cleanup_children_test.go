@@ -1,6 +1,7 @@
 package issueopscleanup_test
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -213,7 +214,7 @@ func (p *fakeCloseChildProvider) CreateChild(port.IssueProviderCreateChildReques
 	return port.IssueProviderCreateChildResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (p *fakeCloseChildProvider) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
 

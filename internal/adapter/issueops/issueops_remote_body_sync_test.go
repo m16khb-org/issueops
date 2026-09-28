@@ -48,7 +48,7 @@ func (f *fakeBodySyncProvider) CloseChild(port.IssueProviderCloseChildRequest) (
 func (f *fakeBodySyncProvider) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, nil
 }
-func (f *fakeBodySyncProvider) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (f *fakeBodySyncProvider) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
 

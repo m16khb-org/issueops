@@ -119,3 +119,40 @@ func TestFoundationOwnershipRejectsNestedCoreModelPrefix(t *testing.T) {
 		t.Fatalf("nested model prefix was not rejected: %v", violations)
 	}
 }
+
+// A process lifetime is an OS primitive shared only by the command runners.
+// It must not become a route from application policy to concrete execution.
+func TestProcessLifetimePrimitiveHasNarrowConsumers(t *testing.T) {
+	const primitive = "internal/adapter/outbound/processlease"
+	for _, importer := range []string{
+		"internal/adapter/issueops",
+		"internal/adapter/orca",
+		"internal/adapter/provider/providerutil",
+	} {
+		edge := dependencyEdge{importer, primitive}
+		if got := legacyEdges([]dependencyEdge{edge}); len(got) != 0 {
+			t.Errorf("command runner cannot share process lifetime: %s", formatEdge(edge))
+		}
+	}
+	for _, importer := range []string{
+		"internal/application/issueopscleanup",
+		"internal/domain/issueops",
+		"internal/port/issueopscleanup",
+		"internal/contract/issueops",
+		"internal/adapter/inbound/issueopslease",
+		"internal/adapter/outbound/state",
+		"internal/adapter/provider/github",
+		"internal/adapter/issueops/unrelated",
+		"cmd/issueops/issueopscli/feedbackcleanup",
+	} {
+		edge := dependencyEdge{importer, primitive}
+		if got := legacyEdges([]dependencyEdge{edge}); len(got) != 1 {
+			t.Errorf("non-runner gained concrete process lifetime access: %s", formatEdge(edge))
+		}
+	}
+	for _, edge := range loadProductionEdges(t) {
+		if edge.importer == primitive && strings.HasPrefix(edge.imported, "internal/") {
+			t.Errorf("process lifetime primitive depends on project capability: %s", formatEdge(edge))
+		}
+	}
+}

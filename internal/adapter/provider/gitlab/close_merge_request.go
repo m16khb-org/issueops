@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -37,7 +38,7 @@ func (Provider) ClosePullRequest(req port.IssueProviderClosePullRequestRequest) 
 		result.Closed, result.AlreadyClosed = true, true
 		return result, nil
 	}
-	if _, err := runGlabAPI(req.Repo, hostname, endpoint, "--method", "PUT", "-f", "state_event=close"); err != nil {
+	if _, err := runGlabAPIContext(context.Background(), req.Repo, hostname, endpoint, "--method", "PUT", "-f", "state_event=close"); err != nil {
 		return port.IssueProviderClosePullRequestResult{OK: false, Provider: "gitlab"}, err
 	}
 	state, err = readGlabMergeRequestState(req.Repo, hostname, endpoint)
@@ -54,7 +55,7 @@ func (Provider) ClosePullRequest(req port.IssueProviderClosePullRequestRequest) 
 }
 
 func readGlabMergeRequestState(repo, hostname, endpoint string) (string, error) {
-	out, err := runGlabAPI(repo, hostname, endpoint)
+	out, err := runGlabAPIContext(context.Background(), repo, hostname, endpoint)
 	if err != nil {
 		return "", err
 	}

@@ -665,7 +665,7 @@ func githubAssigneeLogins(assignees []githubAssignee) []string {
 // section budget is computed against the merged body, not the section alone.
 const gitHubIssueBodyLimit = 60000
 
-func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	issueURL := strings.TrimSpace(req.IssueURL)
 	if issueURL == "" {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, fmt.Errorf("issue url is required")
@@ -682,7 +682,7 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 			Preview: fmt.Sprintf("[dry-run] would execute: gh issue view %s --json body; gh issue edit %s --body <merged %s section>", issueURL, issueURL, req.Section),
 		}, nil
 	}
-	body, err := readGhIssueBody(req.Repo, issueURL)
+	body, err := readGhIssueBody(ctx, req.Repo, issueURL)
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
@@ -695,7 +695,7 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
-	if err := runGhIssueEdit(req.Repo, issueURL, issuebody.MergeManagedSection(body, section, start, end)); err != nil {
+	if err := runGhIssueEdit(ctx, req.Repo, issueURL, issuebody.MergeManagedSection(body, section, start, end)); err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
 	return port.IssueProviderUpdateIssueBodySectionResult{OK: true, URL: issueURL, Updated: true}, nil
@@ -783,17 +783,13 @@ func readGhIssueState(repo, issueURL string) (string, error) {
 	return payload.State, nil
 }
 
-func readGhIssueBody(repo, issueURL string) (string, error) {
+func readGhIssueBody(ctx context.Context, repo, issueURL string) (string, error) {
 	if _, err := exec.LookPath("gh"); err != nil {
 		return "", fmt.Errorf("gh CLI is not installed; install it from https://cli.github.com")
 	}
-	cmd := exec.Command("gh", "issue", "view", issueURL, "--json", "body")
-	if repo != "" {
-		cmd.Dir = repo
-	}
-	out, err := cmd.Output()
+	out, err := providerutil.RunBoundedReadbackContext(ctx, repo, "gh", "issue", "view", issueURL, "--json", "body")
 	if err != nil {
-		return "", fmt.Errorf("gh issue view failed: %s", ghExecStderr(err))
+		return "", fmt.Errorf("gh issue view failed: %w", err)
 	}
 	var payload struct {
 		Body string `json:"body"`
@@ -804,13 +800,10 @@ func readGhIssueBody(repo, issueURL string) (string, error) {
 	return payload.Body, nil
 }
 
-func runGhIssueEdit(repo, issueURL, body string) error {
-	cmd := exec.Command("gh", "issue", "edit", issueURL, "--body", body)
-	if repo != "" {
-		cmd.Dir = repo
-	}
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("gh issue edit failed: %s", ghExecStderr(err))
+func runGhIssueEdit(ctx context.Context, repo, issueURL, body string) error {
+	_, _, err := providerutil.RunBoundedMutationContext(ctx, repo, "gh", "issue", "edit", issueURL, "--body", body)
+	if err != nil {
+		return fmt.Errorf("gh issue edit failed: %w", err)
 	}
 	return nil
 }

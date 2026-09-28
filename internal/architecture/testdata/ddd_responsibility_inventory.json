@@ -9392,6 +9392,35 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/processlease/acquire_other.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func Acquire"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/processlease/acquire_unix.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func Acquire"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/processlease/lease.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func Attach",
+        "func Lease.Close",
+        "func Lease.Context",
+        "func Lease.Drain",
+        "type Lease",
+        "type contextKey"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/quality/coverage.go",
       "owner": "adapter",
       "task": "T20",
@@ -10309,7 +10338,6 @@
         "func Provider.CloseIssue",
         "func Provider.UpdateIssueBodySection",
         "func readGlabIssueState",
-        "func runGlabAPI",
         "func runGlabAPIContext"
       ]
     },

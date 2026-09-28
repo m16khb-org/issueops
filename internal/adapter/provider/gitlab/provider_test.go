@@ -805,7 +805,7 @@ exit 2
 
 func TestGitLabUpdateIssueBodySectionDryRun(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
+	res, err := NewProvider().UpdateIssueBodySection(context.Background(), port.IssueProviderUpdateIssueBodySectionRequest{
 		Section:  completionmodel.IssueBodySectionDevilsAdvocate,
 		IssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
 		Findings: []string{"gold-plating"},
@@ -841,7 +841,7 @@ exit 0
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
+	res, err := NewProvider().UpdateIssueBodySection(context.Background(), port.IssueProviderUpdateIssueBodySectionRequest{
 		Section:  completionmodel.IssueBodySectionDevilsAdvocate,
 		Repo:     repo,
 		IssueURL: "https://gitlab.example.com/acme/repo/-/issues/12",
@@ -1009,7 +1009,7 @@ func TestParseGitLabWorkItemURLRejectsNonWorkItem(t *testing.T) {
 // completion_reflected 게이트가 열린다.
 func TestGitLabUpdateIssueBodySectionAcceptsWorkItemsIssueURL(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
+	res, err := NewProvider().UpdateIssueBodySection(context.Background(), port.IssueProviderUpdateIssueBodySectionRequest{
 		Section:  completionmodel.IssueBodySectionDevilsAdvocate,
 		IssueURL: "https://gitlab.example.com/acme/repo/-/work_items/105",
 		Findings: []string{"gold-plating"},

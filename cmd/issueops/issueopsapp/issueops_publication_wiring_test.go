@@ -34,7 +34,7 @@ func (*publicationProviderFake) CloseChild(port.IssueProviderCloseChildRequest) 
 func (*publicationProviderFake) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, nil
 }
-func (*publicationProviderFake) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (*publicationProviderFake) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
 func (*publicationProviderFake) ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {

@@ -259,7 +259,7 @@ type IssueProvider interface {
 	CreateChild(req IssueProviderCreateChildRequest) (IssueProviderCreateChildResult, error)
 	CloseChild(req IssueProviderCloseChildRequest) (IssueProviderCloseChildResult, error)
 	CloseIssue(req IssueProviderCloseIssueRequest) (IssueProviderCloseIssueResult, error)
-	UpdateIssueBodySection(req IssueProviderUpdateIssueBodySectionRequest) (IssueProviderUpdateIssueBodySectionResult, error)
+	UpdateIssueBodySection(ctx context.Context, req IssueProviderUpdateIssueBodySectionRequest) (IssueProviderUpdateIssueBodySectionResult, error)
 }
 
 // Artifact-body sync capabilities.

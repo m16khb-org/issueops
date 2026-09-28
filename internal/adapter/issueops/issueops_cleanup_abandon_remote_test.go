@@ -34,7 +34,7 @@ func (p *fakeAbandonRemote) CreateChild(port.IssueProviderCreateChildRequest) (p
 func (p *fakeAbandonRemote) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
-func (p *fakeAbandonRemote) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (p *fakeAbandonRemote) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
 func (p *fakeAbandonRemote) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {

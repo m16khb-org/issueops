@@ -107,6 +107,6 @@ func (fakeCleanupAbandonProvider) CloseChild(port.IssueProviderCloseChildRequest
 func (fakeCleanupAbandonProvider) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, nil
 }
-func (fakeCleanupAbandonProvider) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (fakeCleanupAbandonProvider) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }

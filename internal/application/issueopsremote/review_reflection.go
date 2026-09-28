@@ -18,7 +18,7 @@ type ReviewReflectionAuthority interface {
 	Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error
 }
 type ReviewReflectionProvider interface {
-	UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
+	UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
 }
 type ReviewProviderResolver func(string) (ReviewReflectionProvider, error)
 type AncestryObserver func() ([]model.NativeProcessReceipt, error)
@@ -66,7 +66,7 @@ func (s *ReviewReflectionService) Reflect(ctx context.Context, id, providerOverr
 	if err := domain.ValidateReviewReflection(record); err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}
-	result, err = provider.UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionDevilsAdvocate, Findings: record.DevilsAdvocateReview.Findings, Confirm: confirm})
+	result, err = provider.UpdateIssueBodySection(ctx, port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionDevilsAdvocate, Findings: record.DevilsAdvocateReview.Findings, Confirm: confirm})
 	if err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}

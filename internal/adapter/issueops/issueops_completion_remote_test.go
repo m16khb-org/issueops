@@ -41,7 +41,7 @@ func (p *fakeCompletionProvider) CloseIssue(req port.IssueProviderCloseIssueRequ
 	p.closeReq = &req
 	return p.closeRes, p.closeError
 }
-func (p *fakeCompletionProvider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (p *fakeCompletionProvider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	p.updateReq = &req
 	return p.updateRes, p.updateErr
 }

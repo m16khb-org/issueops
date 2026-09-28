@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/processlease"
 	basesyncapp "issueops/internal/application/issueopsbasesync"
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
@@ -715,6 +716,7 @@ func defaultExecutionSyncBaseGit(ctx context.Context, dir string, args ...string
 	ctx, cancel := context.WithTimeout(ctx, executionSyncBaseGitTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", args...)
+	processlease.Attach(ctx, cmd)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
 		"GIT_TERMINAL_PROMPT=0",

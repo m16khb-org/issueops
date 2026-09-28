@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -48,7 +49,7 @@ esac
 `)
 			t.Setenv("PATH", bin)
 			completion := model.RemoteCompletionSection{FinalHead: "abc123", PlanBody: strings.Repeat("p", 900000+1000), SpecBody: "preserved-spec", VerificationSummary: []string{strings.Repeat("v", 2000)}}
-			result, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{Repo: repo, IssueURL: "https://gitlab.example.com/acme/repo/-/issues/12", Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: true})
+			result, err := NewProvider().UpdateIssueBodySection(context.Background(), port.IssueProviderUpdateIssueBodySectionRequest{Repo: repo, IssueURL: "https://gitlab.example.com/acme/repo/-/issues/12", Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: true})
 			path := filepath.Join(repo, "edited.body")
 			if exhausted {
 				if err == nil || !strings.Contains(err.Error(), "even after truncation") || result.Updated {

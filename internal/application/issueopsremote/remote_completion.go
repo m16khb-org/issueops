@@ -10,7 +10,7 @@ import (
 )
 
 type CompletionProvider interface {
-	UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
+	UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error)
 	CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error)
 }
 type CompletionProviderResolver func(string) (CompletionProvider, error)
@@ -70,7 +70,7 @@ func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverr
 		return model.IssueOpsRecord{}, result, err
 	}
 	completion := s.collector.Collect(record)
-	result, err = provider.UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: confirm})
+	result, err = provider.UpdateIssueBodySection(ctx, port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: confirm})
 	if err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/processlease"
 	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
@@ -72,6 +73,7 @@ func (ExecRunner) Run(ctx context.Context, cwd string, timeout time.Duration, ar
 
 func runOrcaCommand(ctx context.Context, cwd string, argv []string, environ []string) (CommandOutput, error) {
 	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	processlease.Attach(ctx, cmd)
 	cmd.Dir = strings.TrimSpace(cwd)
 	if environ != nil {
 		cmd.Env = environ

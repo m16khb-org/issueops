@@ -553,7 +553,7 @@ func (p *cleanupStatusProvider) CloseChild(port.IssueProviderCloseChildRequest) 
 func (p *cleanupStatusProvider) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, errors.New("unexpected close issue")
 }
-func (p *cleanupStatusProvider) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (p *cleanupStatusProvider) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, errors.New("unexpected update issue body")
 }
 func (p *cleanupStatusProvider) ReadIssueSnapshot(context.Context, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {

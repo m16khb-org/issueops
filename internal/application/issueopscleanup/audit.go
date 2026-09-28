@@ -21,7 +21,7 @@ func (s AuditReflector) Reflect(ctx context.Context, record model.IssueOpsRecord
 		return fmt.Errorf("no issue provider configured")
 	}
 	completion.CleanupAudit = audit
-	result, err := prov.UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
+	result, err := prov.UpdateIssueBodySection(ctx, port.IssueProviderUpdateIssueBodySectionRequest{
 		Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: true,
 	})
 	if err != nil {

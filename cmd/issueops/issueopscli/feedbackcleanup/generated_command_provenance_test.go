@@ -204,6 +204,6 @@ type liveCleanupProvider struct {
 	cleanupStatusProvider
 }
 
-func (p *liveCleanupProvider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (p *liveCleanupProvider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{OK: true, URL: req.IssueURL, Updated: true}, nil
 }
