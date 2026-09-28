@@ -13775,6 +13775,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/gate_ledger_duplicate.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DuplicateGateLedgerMissing",
+        "type GateLedgerFile"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/gate_ledger_scope.go",
       "owner": "domain",
       "task": "T20",
@@ -17750,6 +17759,24 @@
         "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "duplicate-gate-ledger",
+      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
+      "source_symbol": "func withDuplicateIssueArtifactGate",
+      "responsibility": "canonical and compatible ledgers for one issue fail PR readiness closed",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func DuplicateGateLedgerMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/gate_ledger_duplicate_test.go",
+        "internal/adapter/issueops/gatesgate/gates_gate_test.go"
+      ],
+      "status": "migrate"
     }
   ]
 }

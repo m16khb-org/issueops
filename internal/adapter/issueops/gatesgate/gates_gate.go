@@ -69,15 +69,13 @@ func withDuplicateIssueArtifactGate(ready issueopscontract.IssueOpsReadiness, ro
 	if err != nil {
 		return ready
 	}
+	legacyEntries := make([]issueopsdomain.GateLedgerFile, 0, len(entries))
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
-			continue
-		}
-		if issueopsdomain.LegacyGateLedgerIssueNumber(entry.Name(), issueopsdomain.GateLedgerCompatibilitySchemaVersion) == issueNumber {
-			ready.Missing = uniqSorted(append(append([]string{}, ready.Missing...), "duplicate_issue_artifact:"+issueNumber))
-			ready.Ready = false
-			return ready
-		}
+		legacyEntries = append(legacyEntries, issueopsdomain.GateLedgerFile{Name: entry.Name(), Directory: entry.IsDir()})
+	}
+	if missing := issueopsdomain.DuplicateGateLedgerMissing(issueNumber, true, legacyEntries); len(missing) > 0 {
+		ready.Missing = uniqSorted(append(append([]string{}, ready.Missing...), missing...))
+		ready.Ready = false
 	}
 	return ready
 }
