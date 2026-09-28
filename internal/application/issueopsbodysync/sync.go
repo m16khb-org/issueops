@@ -1,9 +1,8 @@
-package issueops
+package issueopsbodysync
 
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"issueops/internal/contract/issueops"
@@ -12,40 +11,27 @@ import (
 	"issueops/internal/port"
 )
 
-// SyncRemoteArtifactBody refreshes the body of an artifact this cycle already
-// published, for the case the cycle moved on and the remote text did not.
-//
-// The write is fail-closed in three independent ways: the caller has to name
-// the exact live body its proposal was built on, an artifact edited outside the
-// harness needs a separate acknowledgement, and every managed block the harness
-// maintains is spliced back in rather than replaced.
-func SyncRemoteArtifactBody(
-	ctx context.Context,
-	stateRoot, id string,
-	cmd bodysynccontract.Command,
-	prov port.IssueProvider,
-	actor IssueOpsActor,
-) (issueops.IssueOpsRecord, bodysynccontract.Result, error) {
-	if prov == nil {
-		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, fmt.Errorf("no issue provider configured")
-	}
-	reader, ok := prov.(port.IssueProviderArtifactBodyReader)
-	if !ok {
-		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, fmt.Errorf("provider %q cannot read artifact bodies", prov.Name())
-	}
-	replacer, ok := prov.(port.IssueProviderArtifactBodyReplacer)
-	if !ok {
-		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, fmt.Errorf("provider %q cannot replace artifact bodies", prov.Name())
-	}
+type Service struct {
+	repository Repository
+	provider   Provider
+	authority  Authority
+	now        func() time.Time
+}
+
+func NewService(repository Repository, provider Provider, authority Authority, now func() time.Time) *Service {
+	return &Service{repository: repository, provider: provider, authority: authority, now: now}
+}
+
+func (s *Service) Sync(ctx context.Context, id string, cmd bodysynccontract.Command, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, bodysynccontract.Result, error) {
 	// 쓸 수 없는 본문은 원격을 읽기 전에 거부한다. provider 왕복은 공짜가 아니다.
 	if err := bodysync.ValidateProposal(cmd.ProposedBody); err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	record, err := ReadIssueOps(stateRoot, id)
+	record, err := s.repository.Read(ctx, id)
 	if err != nil {
 		return record, bodysynccontract.Result{}, err
 	}
-	if err := validateExecutionMutation(record, &actor); err != nil {
+	if err := s.authority.Authorize(ctx, record, actor); err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
 	target := bodysync.TargetSnapshot{IssueURL: record.IssueURL}
@@ -66,11 +52,11 @@ func SyncRemoteArtifactBody(
 		}
 	}
 	if kind == bodysynccontract.KindChild {
-		if err := verifyBodySyncChildHierarchy(ctx, prov, record, url); err != nil {
+		if err := s.verifyChild(ctx, record, url); err != nil {
 			return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 		}
 	}
-	live, err := reader.ReadArtifactBody(ctx, port.IssueProviderArtifactBodyRequest{
+	live, err := s.provider.ReadArtifactBody(ctx, port.IssueProviderArtifactBodyRequest{
 		Repo: record.Repo, Kind: kind, URL: url,
 	})
 	if err != nil {
@@ -97,7 +83,7 @@ func SyncRemoteArtifactBody(
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
 	result := bodysynccontract.Result{
-		OK: true, ID: record.ID, Provider: prov.Name(), Kind: kind, URL: url,
+		OK: true, ID: record.ID, Provider: s.provider.Name(), Kind: kind, URL: url,
 		Confirm:            cmd.Confirm,
 		Drift:              plan.Drift,
 		RecordedBodySHA256: baselineSHA,
@@ -106,11 +92,11 @@ func SyncRemoteArtifactBody(
 		ExpectedBodySHA256: plan.RemoteBodySHA256,
 		PreservedSections:  plan.PreservedSections,
 		RecordedAt:         baselineAt,
-		AgeDays:            bodysync.AgeDays(baselineAt, time.Now()),
+		AgeDays:            bodysync.AgeDays(baselineAt, s.now()),
 		AcceptRemoteEdits:  cmd.AcceptRemoteEdits,
 	}
 	if !cmd.Confirm {
-		preview, err := replacer.ReplaceArtifactBody(ctx, port.IssueProviderReplaceArtifactBodyRequest{
+		preview, err := s.provider.ReplaceArtifactBody(ctx, port.IssueProviderReplaceArtifactBodyRequest{
 			Repo: record.Repo, Kind: kind, URL: url, Body: plan.MergedBody,
 		})
 		if err != nil {
@@ -126,19 +112,14 @@ func SyncRemoteArtifactBody(
 		}
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	written, err := replacer.ReplaceArtifactBody(ctx, port.IssueProviderReplaceArtifactBodyRequest{
+	written, err := s.provider.ReplaceArtifactBody(ctx, port.IssueProviderReplaceArtifactBodyRequest{
 		Repo: record.Repo, Kind: kind, URL: url, Body: plan.MergedBody, Confirm: true,
 	})
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	if !written.Updated {
-		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, fmt.Errorf("provider did not report the body replacement as applied")
-	}
-	if written.VerifiedBodySHA256 != plan.MergedBodySHA256 {
-		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, fmt.Errorf(
-			"remote body readback does not match what was written (readback %s, intended %s)",
-			written.VerifiedBodySHA256, plan.MergedBodySHA256)
+	if err := bodysync.ValidateReadback(written.Updated, written.VerifiedBodySHA256, plan.MergedBodySHA256); err != nil {
+		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
 	result.Updated = true
 	result.RemoteBodySHA256 = written.VerifiedBodySHA256
@@ -150,46 +131,30 @@ func SyncRemoteArtifactBody(
 		Kind: kind, URL: url,
 		FromSHA256: plan.RemoteBodySHA256,
 		ToSHA256:   written.VerifiedBodySHA256,
-		SyncedAt:   time.Now().UTC().Format(time.RFC3339Nano),
+		SyncedAt:   s.now().UTC().Format(time.RFC3339Nano),
 	}
 	if bodysync.IsPublicationKind(kind) {
 		entry.Generation = cmd.ExpectedGeneration
 	}
-	stamped, err := recordBodySync(ctx, stateRoot, id, entry, &actor)
+	stamped, err := s.recordBaseline(ctx, id, entry, actor)
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, result, err
 	}
 	return stamped, result, nil
 }
 
-func verifyBodySyncChildHierarchy(ctx context.Context, prov port.IssueProvider, record issueops.IssueOpsRecord, childURL string) error {
-	verifier, ok := prov.(port.IssueProviderChildHierarchyVerifier)
-	if !ok {
-		return fmt.Errorf("provider %q cannot verify child hierarchy, so a child body cannot be synced", prov.Name())
-	}
-	result, err := verifier.VerifyChildHierarchy(ctx, port.IssueProviderChildHierarchyRequest{
-		Repo: record.Repo, ParentIssueURL: record.IssueURL, ChildURL: childURL,
-	})
+func (s *Service) verifyChild(ctx context.Context, record issueops.IssueOpsRecord, childURL string) error {
+	result, err := s.provider.VerifyChildHierarchy(ctx, port.IssueProviderChildHierarchyRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, ChildURL: childURL})
 	if err != nil {
 		return err
 	}
-	if !result.Verified {
-		return fmt.Errorf("%s is not a provider-native child of %s; sync it from the cycle that owns it", childURL, record.IssueURL)
-	}
-	return nil
+	return bodysync.ValidateChildHierarchy(result.Verified, childURL, record.IssueURL)
 }
 
-// recordBodySync stores the new baseline under the record lock, keeping one
-// entry per artifact so the list cannot grow without bound.
-func recordBodySync(ctx context.Context, stateRoot, id string, entry issueops.IssueOpsRemoteBodySync, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var stamped issueops.IssueOpsRecord
-	err := withIssueOpsLock(ctx, stateRoot, id, func(context.Context) error {
-		rec, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if err := validateExecutionMutation(rec, actor); err != nil {
-			return err
+func (s *Service) recordBaseline(ctx context.Context, id string, entry issueops.IssueOpsRemoteBodySync, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
+	return s.repository.Update(ctx, id, func(rec issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+		if err := s.authority.Authorize(ctx, rec, actor); err != nil {
+			return rec, err
 		}
 		urls := make([]string, len(rec.BodySyncs))
 		for index, existing := range rec.BodySyncs {
@@ -202,12 +167,6 @@ func recordBodySync(ctx context.Context, stateRoot, id string, entry issueops.Is
 		}
 		rec.BodySyncs = append(kept, entry)
 		rec.UpdatedAt = entry.SyncedAt
-		var writeErr error
-		stamped, writeErr = writeIssueOps(stateRoot, rec)
-		return writeErr
+		return rec, nil
 	})
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	return stamped, nil
 }

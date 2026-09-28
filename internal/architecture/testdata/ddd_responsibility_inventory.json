@@ -1163,6 +1163,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_body_sync_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func syncIssueOpsRemoteArtifactBody"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_claim_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -7587,6 +7595,29 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/issueops_body_sync_provider.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func BodySyncProvider.Name",
+        "func BodySyncProvider.VerifyChildHierarchy",
+        "func NewBodySyncProvider",
+        "type BodySyncProvider"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/issueops_body_sync_store.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func BodySyncAuthority.Authorize",
+        "func BodySyncRepository.Read",
+        "func BodySyncRepository.Update",
+        "type BodySyncAuthority",
+        "type BodySyncRepository"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/issueops_child_gate.go",
       "owner": "adapter",
       "task": "T08",
@@ -7922,16 +7953,6 @@
         "func RegressIssueOpsForReplan",
         "func RegressIssueOpsForReplanWithActor",
         "func regressIssueOpsForReplan"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_remote_body_sync.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func SyncRemoteArtifactBody",
-        "func recordBodySync",
-        "func verifyBodySyncChildHierarchy"
       ]
     },
     {
@@ -10884,6 +10905,29 @@
         "func PushAndRecord",
         "type PushRequest",
         "type PushResult"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbodysync/ports.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "type Authority",
+        "type Provider",
+        "type RecordTransition",
+        "type Repository"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbodysync/sync.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewService",
+        "func Service.Sync",
+        "func Service.recordBaseline",
+        "func Service.verifyChild",
+        "type Service"
       ]
     },
     {
@@ -14354,6 +14398,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsbodysync/receipt.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ValidateChildHierarchy",
+        "func ValidateReadback"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsbodysync/target.go",
       "owner": "domain",
       "task": "T07",
@@ -17531,9 +17584,9 @@
       "id": "body-sync-baseline-persistence",
       "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
       "source_symbol": "func recordBodySync",
-      "responsibility": "lock and persist the domain-selected body sync baseline with mutation authority",
-      "target": "internal/domain/issueopsbodysync",
-      "target_symbol": "func RetainedBaselineIndices",
+      "responsibility": "recheck mutation authority against the latest locked record, retain the domain-selected baselines, and persist the new verified baseline",
+      "target": "internal/application/issueopsbodysync",
+      "target_symbol": "func Service.recordBaseline",
       "task": "T07",
       "entrypoints": [
         "issueops remote sync-pr",
@@ -17541,9 +17594,10 @@
       ],
       "evidence_tests": [
         "internal/domain/issueopsbodysync/baseline_test.go",
-        "internal/adapter/issueops/issueops_remote_body_sync_test.go"
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go",
+        "cmd/issueops/issueopsapp/issueops_body_sync_wiring_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "loop-start",
@@ -19407,6 +19461,168 @@
         "internal/domain/issueopspublication/intent_transition_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "body-sync-orchestration",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func SyncRemoteArtifactBody",
+      "responsibility": "orchestrate target and generation checks, managed body merge, provider replacement, readback verification, and baseline persistence",
+      "target": "internal/application/issueopsbodysync",
+      "target_symbol": "func Service.Sync",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr",
+        "issueops remote sync-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/receipt_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go",
+        "cmd/issueops/issueopsapp/issueops_body_sync_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "body-sync-readback",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func SyncRemoteArtifactBody",
+      "responsibility": "require the provider to report an applied replacement and a matching readback digest before recording success",
+      "target": "internal/domain/issueopsbodysync",
+      "target_symbol": "func ValidateReadback",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr",
+        "issueops remote sync-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/receipt_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go",
+        "cmd/issueops/issueopsapp/issueops_body_sync_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "body-sync-child-hierarchy",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func verifyBodySyncChildHierarchy",
+      "responsibility": "reject an artifact that is not a verified provider-native child of the cycle issue",
+      "target": "internal/domain/issueopsbodysync",
+      "target_symbol": "func ValidateChildHierarchy",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr",
+        "issueops remote sync-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/receipt_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go",
+        "cmd/issueops/issueopsapp/issueops_body_sync_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-create-intent-begin",
+      "source_path": "internal/adapter/issueops/issue_create_intent.go",
+      "source_symbol": "func BeginIssueCreateIntent",
+      "responsibility": "begin or retry exactly the sealed issue create request only after proven non-invocation",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issue_create_intent_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "issue-create-intent-outcome",
+      "source_path": "internal/adapter/issueops/issue_create_intent.go",
+      "source_symbol": "func RecordIssueCreateOutcome",
+      "responsibility": "validate create outcome transitions and sealed project authority before recording provider evidence",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issue_create_intent_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "issue-create-intent-complete",
+      "source_path": "internal/adapter/issueops/issue_create_intent.go",
+      "source_symbol": "func CompleteIssueCreateIntent",
+      "responsibility": "atomically link the canonical created issue, complete its intent, and advance ready planning state",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issue_create_intent_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "remote-completion-reflection",
+      "source_path": "internal/adapter/issueops/issueops_completion_remote.go",
+      "source_symbol": "func ReflectIssueCompletion",
+      "responsibility": "require linked issue, verified artifact and merge evidence before reflecting completion and stamping the receipt",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_completion_remote_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "remote-issue-closure",
+      "source_path": "internal/adapter/issueops/issueops_completion_remote.go",
+      "source_symbol": "func CloseIssueOpsRemoteIssue",
+      "responsibility": "require verified merge evidence before closing the linked issue and preserve the first close timestamp",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_completion_remote_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "remote-review-findings-reflection",
+      "source_path": "internal/adapter/issueops/issueops_devilsadvocate_reflect.go",
+      "source_symbol": "func reflectDevilsAdvocateFindings",
+      "responsibility": "authorize the holder before reflecting review findings and recheck authority before stamping local evidence",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_devilsadvocate_reflect_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "execution-completion-identical-retry",
+      "source_path": "internal/application/issueopscompletion/complete.go",
+      "source_symbol": "func terminalCompletionMatches",
+      "responsibility": "accept an identical completion retry only for the released generation and matching completion evidence",
+      "target": "internal/domain/issueopscompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "migrate"
     }
   ]
 }

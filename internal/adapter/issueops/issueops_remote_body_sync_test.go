@@ -1,12 +1,17 @@
 package issueops
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"issueops/internal/adapter/outbound/sqlstore"
+	application "issueops/internal/application/issueopsbodysync"
 	"issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
 	bodysync "issueops/internal/domain/issueopsbodysync"
@@ -137,7 +142,7 @@ func TestSyncIssueBodyPreviewReportsDriftAndDoesNotWrite(t *testing.T) {
 	saveBodySyncRecord(t, stateRoot, record)
 	prov := &fakeBodySyncProvider{body: live, state: "OPEN"}
 
-	_, result, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	_, result, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n새 본문\n",
 	}, prov, actor)
 	if err != nil {
@@ -189,7 +194,7 @@ func TestSyncIssueBodyConfirmIsFailClosed(t *testing.T) {
 			saveBodySyncRecord(t, stateRoot, record)
 			prov := &fakeBodySyncProvider{body: live, state: "OPEN"}
 
-			_, _, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+			_, _, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 				Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n새 본문\n",
 				ExpectedBodySHA256: tt.expected(live), AcceptRemoteEdits: tt.accept, Confirm: true,
 			}, prov, actor)
@@ -210,7 +215,7 @@ func TestSyncIssueBodyConfirmWritesPreservesAndRecordsBaseline(t *testing.T) {
 	saveBodySyncRecord(t, stateRoot, record)
 	prov := &fakeBodySyncProvider{body: live, state: "OPEN"}
 
-	updated, result, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	updated, result, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n새 본문\n",
 		ExpectedBodySHA256: bodysync.SHA256Body(live), Confirm: true,
 	}, prov, actor)
@@ -230,7 +235,7 @@ func TestSyncIssueBodyConfirmWritesPreservesAndRecordsBaseline(t *testing.T) {
 	}
 
 	// 같은 본문을 다시 동기화하면 provider를 건드리지 않는다.
-	_, second, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	_, second, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n새 본문\n",
 		ExpectedBodySHA256: bodysync.SHA256Body(prov.body), Confirm: true,
 	}, prov, actor)
@@ -249,7 +254,7 @@ func TestSyncChildBodyRequiresVerifiedHierarchy(t *testing.T) {
 
 	inner := &fakeBodySyncProvider{body: "## scope\n옛 본문\n", state: "OPEN"}
 	prov := fakeHierarchyProvider{fakeBodySyncProvider: inner}
-	if _, _, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	if _, _, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, URL: child, ProposedBody: "## scope\n새 본문\n",
 	}, prov, actor); err == nil || !strings.Contains(err.Error(), "not a provider-native child") {
 		t.Fatalf("an unverified child must be refused, got %v", err)
@@ -259,7 +264,7 @@ func TestSyncChildBodyRequiresVerifiedHierarchy(t *testing.T) {
 	}
 
 	prov.verified = true
-	_, result, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	_, result, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, URL: child, ProposedBody: "## scope\n새 본문\n",
 	}, prov, actor)
 	if err != nil {
@@ -275,7 +280,7 @@ func TestSyncChildBodyRefusedWhenProviderCannotVerifyHierarchy(t *testing.T) {
 	saveBodySyncRecord(t, stateRoot, record)
 	prov := &fakeBodySyncProvider{body: "본문", state: "OPEN"}
 
-	_, _, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	_, _, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, URL: "https://github.com/acme/repo/issues/500", ProposedBody: "새 본문",
 	}, prov, actor)
 	if err == nil || !strings.Contains(err.Error(), "cannot verify child hierarchy") {
@@ -305,7 +310,7 @@ func TestSyncPullRequestBodyFencesGenerationAndLifecycle(t *testing.T) {
 			saveBodySyncRecord(t, stateRoot, record)
 			prov := &fakeBodySyncProvider{body: "## 의도\n옛 본문\n", state: tt.state}
 
-			_, _, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+			_, _, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 				Kind: bodysynccontract.KindPR, ProposedBody: "## 의도\n새 본문\n", ExpectedGeneration: tt.generation,
 			}, prov, actor)
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
@@ -326,7 +331,7 @@ func TestSyncPullRequestBodyRejectsForeignURL(t *testing.T) {
 	saveBodySyncRecord(t, stateRoot, record)
 	prov := &fakeBodySyncProvider{body: "본문", state: "OPEN"}
 
-	_, _, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	_, _, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindPR, URL: "https://github.com/acme/repo/pull/999",
 		ProposedBody: "새 본문", ExpectedGeneration: 1,
 	}, prov, actor)
@@ -342,7 +347,7 @@ func TestSyncBodyRequiresCurrentLeaseHolder(t *testing.T) {
 	foreign := issueOpsActorForTest(record.WorktreePath)
 	foreign.SessionID = "other-session"
 
-	_, _, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	_, _, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, ProposedBody: "새 본문",
 	}, prov, foreign)
 	if err == nil || !strings.Contains(err.Error(), "current write lease holder") {
@@ -358,7 +363,7 @@ func TestSyncBodyRejectsManagedMarkersBeforeAnyProviderCall(t *testing.T) {
 	saveBodySyncRecord(t, stateRoot, record)
 	prov := &fakeBodySyncProvider{body: "## 문제\n옛 본문\n", state: "OPEN"}
 
-	_, _, err := SyncRemoteArtifactBody(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
+	_, _, err := syncBodyForTest(context.Background(), stateRoot, record.ID, bodysynccontract.Command{
 		Kind: bodysynccontract.KindIssue, ProposedBody: "## 문제\n본문\n\n" + syncCompletionBlock,
 	}, prov, actor)
 	if err == nil || !strings.Contains(err.Error(), "managed section marker") {
@@ -366,5 +371,78 @@ func TestSyncBodyRejectsManagedMarkersBeforeAnyProviderCall(t *testing.T) {
 	}
 	if prov.reads != 0 {
 		t.Fatalf("an unusable proposal must not cost a provider round trip")
+	}
+}
+
+func syncBodyForTest(ctx context.Context, stateRoot, id string, command bodysynccontract.Command, provider port.IssueProvider, actor IssueOpsActor) (issueops.IssueOpsRecord, bodysynccontract.Result, error) {
+	gateway, err := NewBodySyncProvider(provider)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
+	}
+	return application.NewService(BodySyncRepository{StateRoot: stateRoot}, gateway, BodySyncAuthority{}, time.Now).Sync(ctx, id, command, actor)
+}
+
+type bodySyncConcurrentProvider struct {
+	*fakeBodySyncProvider
+	afterWrite func()
+}
+
+func (p bodySyncConcurrentProvider) ReplaceArtifactBody(ctx context.Context, req port.IssueProviderReplaceArtifactBodyRequest) (port.IssueProviderReplaceArtifactBodyResult, error) {
+	result, err := p.fakeBodySyncProvider.ReplaceArtifactBody(ctx, req)
+	if err == nil && req.Confirm {
+		p.afterWrite()
+	}
+	return result, err
+}
+
+func TestSyncBodyBaselineUsesLatestRecordAndRechecksHolder(t *testing.T) {
+	for _, changeHolder := range []bool{false, true} {
+		t.Run(fmt.Sprintf("change holder=%v", changeHolder), func(t *testing.T) {
+			root, record, actor := bodySyncFixture(t)
+			db, err := sqlstore.Open(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var concurrentRaw []byte
+			provider := bodySyncConcurrentProvider{fakeBodySyncProvider: &fakeBodySyncProvider{body: "old body", state: "OPEN"}, afterWrite: func() {
+				latest, err := ReadIssueOps(root, record.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				latest.SourceMisdirectWarnings++
+				if changeHolder {
+					latest.Execution.Lease.Holder.SessionID = "new-holder"
+				}
+				saveBodySyncRecord(t, root, latest)
+				var exists bool
+				concurrentRaw, exists, err = db.Get(issueOpsBucket, record.ID)
+				if err != nil || !exists {
+					t.Fatalf("concurrent row: exists=%v err=%v", exists, err)
+				}
+			}}
+			_, result, err := syncBodyForTest(context.Background(), root, record.ID, bodysynccontract.Command{
+				Kind: bodysynccontract.KindIssue, ProposedBody: "new body", ExpectedBodySHA256: bodysync.SHA256Body("old body"), AcceptRemoteEdits: true, Confirm: true,
+			}, provider, actor)
+			if !result.Updated {
+				t.Fatal("provider write outcome was lost")
+			}
+			if changeHolder {
+				after, exists, readErr := db.Get(issueOpsBucket, record.ID)
+				if err == nil || !strings.Contains(err.Error(), "current write lease holder") || readErr != nil || !exists || !bytes.Equal(concurrentRaw, after) {
+					t.Fatalf("late authority failure changed baseline: err=%v readErr=%v exists=%v", err, readErr, exists)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			stored, err := ReadIssueOps(root, record.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if stored.SourceMisdirectWarnings != 1 || len(stored.BodySyncs) != 1 {
+				t.Fatalf("lost concurrent state or baseline: warnings=%d baselines=%+v", stored.SourceMisdirectWarnings, stored.BodySyncs)
+			}
+		})
 	}
 }
