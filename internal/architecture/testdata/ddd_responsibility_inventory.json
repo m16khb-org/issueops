@@ -6990,6 +6990,30 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/cleanup_path.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func cleanupStrictSamePath"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/cleanup_process_control.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CleanupProcessController.Hangup",
+        "func CleanupProcessController.Kill",
+        "func CleanupProcessController.Observe",
+        "func CleanupProcessController.RequesterPID",
+        "func CleanupProcessController.Terminate",
+        "func CleanupProcessController.Wait",
+        "func NewCleanupProcessController",
+        "func NewCleanupWorkspaceCleaner",
+        "type CleanupProcessController"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/cleanup_status_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -6998,27 +7022,6 @@
         "func CleanupStatusEnvironment.Git",
         "func CleanupStatusEnvironment.GitOutput",
         "type CleanupStatusEnvironment"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/cleanup_workspace_gates.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func cleanupOccupantReceipts",
-        "func cleanupOrcaGates",
-        "func cleanupRequesterEnv.hosted",
-        "func cleanupRequesterOccupancyMissing",
-        "func cleanupRequesterTerminal",
-        "func cleanupRequesterTerminalMissing",
-        "func cleanupRequireNoOrcaTerminals",
-        "func cleanupStopWorkspace",
-        "func cleanupStrictSamePath",
-        "func cleanupTerminalHandles",
-        "func cleanupWorkspaceGates",
-        "func cleanupWorkspaceGatesForRecord",
-        "type cleanupRequesterEnv",
-        "type cleanupWorkspaceObservation"
       ]
     },
     {
@@ -7034,20 +7037,6 @@
         "func cleanupOccupantPIDs",
         "func observeCleanupWorkspaceOccupancy",
         "type CleanupProcessDeps"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/cleanup_workspace_stop.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func cleanupAwaitRelease",
-        "func cleanupOccupantBound",
-        "func cleanupReceiptMatches",
-        "func cleanupSignal",
-        "func cleanupStopTargets",
-        "func describeCleanupProcesses",
-        "func stopCleanupWorkspaceProcesses"
       ]
     },
     {
@@ -11094,6 +11083,35 @@
       ]
     },
     {
+      "path": "internal/application/issueopscleanup/workspace.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func WorkspaceCleaner.Observe",
+        "func WorkspaceCleaner.Stop",
+        "func WorkspaceCleaner.observe",
+        "func WorkspaceCleaner.orcaGates",
+        "func WorkspaceCleaner.requesterTerminalMissing",
+        "func WorkspaceCleaner.requireNoTerminals",
+        "func WorkspaceCleaner.terminalHandles",
+        "func cleanupRequesterEnv.hosted",
+        "func cleanupTerminalIdentities",
+        "type WorkspaceCleaner",
+        "type cleanupRequesterEnv"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/workspace_process_stop.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func WorkspaceProcessStopper.Stop",
+        "func WorkspaceProcessStopper.awaitRelease",
+        "type WorkspaceProcessControl",
+        "type WorkspaceProcessStopper"
+      ]
+    },
+    {
       "path": "internal/application/issueopscompletion/complete.go",
       "owner": "application",
       "task": "T07",
@@ -14455,6 +14473,23 @@
         "func hasCleanupMetadata",
         "func hasUnverifiedChildClose",
         "type CleanupStatusObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_workspace.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func CleanupOccupantReceipts",
+        "func CleanupRequesterOccupancyMissing",
+        "func CleanupRequesterTerminal",
+        "func CleanupStopTargets",
+        "func CleanupWorkspaceOrcaBound",
+        "func DescribeCleanupProcesses",
+        "func RemainingCleanupProcesses",
+        "func cleanupOccupantBound",
+        "func cleanupReceiptMatches",
+        "type CleanupTerminalIdentity"
       ]
     },
     {
@@ -22629,6 +22664,132 @@
       "evidence_tests": [
         "internal/application/issueopscleanup/finish_evidence_test.go",
         "cmd/issueops/issueopscli/feedbackcleanup/finish_error_contract_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-workspace-stop-targets",
+      "source_path": "internal/adapter/issueops/cleanup_workspace_stop.go",
+      "source_symbol": "func cleanupStopTargets",
+      "responsibility": "reject unobserved requester, protected PID, reused receipt and unbound descendant before signals",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CleanupStopTargets",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_workspace_test.go",
+        "internal/adapter/issueops/cleanup_workspace_processes_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-workspace-process-stop",
+      "source_path": "internal/adapter/issueops/cleanup_workspace_stop.go",
+      "source_symbol": "func stopCleanupWorkspaceProcesses",
+      "responsibility": "order HUP and TERM, bounded occupancy polling, KILL and final reobservation",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func WorkspaceProcessStopper.Stop",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/cleanup_workspace_processes_test.go",
+        "internal/adapter/issueops/issueops_cleanup_finish_processes_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-workspace-observation",
+      "source_path": "internal/adapter/issueops/cleanup_workspace_gates.go",
+      "source_symbol": "func cleanupWorkspaceGatesForRecord",
+      "responsibility": "observe source identity, requester occupancy and bound Orca readiness before cleanup",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func WorkspaceCleaner.Observe",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_cleanup_finish_processes_test.go",
+        "internal/adapter/issueops/cleanup_workspace_processes_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-workspace-stop-order",
+      "source_path": "internal/adapter/issueops/cleanup_workspace_gates.go",
+      "source_symbol": "func cleanupStopWorkspace",
+      "responsibility": "close previewed terminals before process stop and reobserve late terminals before deletion",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func WorkspaceCleaner.Stop",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_cleanup_finish_processes_test.go",
+        "internal/adapter/issueops/cleanup_workspace_processes_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-workspace-requester-occupancy",
+      "source_path": "internal/adapter/issueops/cleanup_workspace_gates.go",
+      "source_symbol": "func cleanupRequesterOccupancyMissing",
+      "responsibility": "refuse requester and ancestor workspace occupants",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CleanupRequesterOccupancyMissing",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_cleanup_finish_processes_test.go",
+        "internal/adapter/issueops/cleanup_workspace_processes_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-workspace-requester-terminal",
+      "source_path": "internal/adapter/issueops/cleanup_workspace_gates.go",
+      "source_symbol": "func cleanupRequesterTerminal",
+      "responsibility": "prefer unique pane identity, fall back to a unique terminal handle and reject ambiguity",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CleanupRequesterTerminal",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_cleanup_finish_processes_test.go",
+        "internal/adapter/issueops/cleanup_workspace_processes_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-workspace-receipts",
+      "source_path": "internal/adapter/issueops/cleanup_workspace_gates.go",
+      "source_symbol": "func cleanupOccupantReceipts",
+      "responsibility": "derive stable sorted PID/start/executable cleanup receipts",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CleanupOccupantReceipts",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup abandon"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_cleanup_finish_processes_test.go",
+        "internal/adapter/issueops/cleanup_workspace_processes_test.go"
       ],
       "status": "migrated"
     }

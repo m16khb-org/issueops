@@ -71,9 +71,8 @@ func (r CleanupFinishRuntime) Git(ctx context.Context, dir string, args ...strin
 	return defaultExecutionSyncBaseGit(ctx, dir, args...)
 }
 func (r CleanupFinishRuntime) Workspace(ctx context.Context, record model.IssueOpsRecord, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
-	observed, missing := cleanupWorkspaceGatesForRecord(ctx, record, root, r.Processes, r.OrcaTerminals)
-	return cleanupapp.FinishWorkspaceObservation{Occupants: observed.Occupants, Receipts: observed.Receipts, Terminals: observed.Terminals, RuntimeReady: observed.RuntimeReady, AppPID: observed.AppPID}, missing
+	return NewCleanupWorkspaceCleaner(r.Processes, r.OrcaTerminals).Observe(ctx, record, root)
 }
 func (r CleanupFinishRuntime) Stop(ctx context.Context, inventory model.CleanupFinishInventory, processes []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error) {
-	return cleanupStopWorkspace(ctx, inventory.WorktreeRoot, processes, inventory.OrcaTerminals, inventory.OrcaRuntimeReady, inventory.OrcaAppPID, r.Processes, r.OrcaTerminals)
+	return NewCleanupWorkspaceCleaner(r.Processes, r.OrcaTerminals).Stop(ctx, inventory.WorktreeRoot, processes, inventory.OrcaTerminals, inventory.OrcaRuntimeReady, inventory.OrcaAppPID)
 }

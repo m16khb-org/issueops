@@ -159,7 +159,7 @@ func CleanupAbandon(ctx context.Context, stateRoot string, req CleanupAbandonReq
 	// ①′ 워크트리 점유 프로세스·Orca 터미널 종료(finish와 같은 계약). 재관측으로
 	// 점유 0을 증명하지 못하면 워크트리를 건드리지 않고 멈춘다(#477).
 	if inventory.WorktreePresent && (len(result.WorkspaceProcesses) > 0 || len(inventory.OrcaTerminals) > 0 || inventory.OrcaRuntimeReady) {
-		stopped, terminals, stopErr := cleanupStopWorkspace(ctx, inventory.WorktreeRoot, result.WorkspaceProcesses, inventory.OrcaTerminals, inventory.OrcaRuntimeReady, inventory.OrcaAppPID, deps.Processes, deps.OrcaTerminals)
+		stopped, terminals, stopErr := NewCleanupWorkspaceCleaner(deps.Processes, deps.OrcaTerminals).Stop(ctx, inventory.WorktreeRoot, result.WorkspaceProcesses, inventory.OrcaTerminals, inventory.OrcaRuntimeReady, inventory.OrcaAppPID)
 		result.WorkspaceProcessesStopped = stopped
 		result.OrcaTerminalsStopped = terminals
 		if stopErr != nil {
@@ -349,7 +349,7 @@ func cleanupAbandonGates(ctx context.Context, stateRoot string, record issueops.
 		inventory, missing = cleanupAbandonInspectWorktree(inventory, deps, missing)
 		// abandon에는 CWD 게이트가 없고 worktree_canonical은 소스 체크아웃 자체에도
 		// 통과하므로, 공유 게이트가 소스 체크아웃을 먼저 거부한다(#477).
-		observation, workspaceMissing := cleanupWorkspaceGatesForRecord(ctx, record, inventory.WorktreeRoot, deps.Processes, deps.OrcaTerminals)
+		observation, workspaceMissing := NewCleanupWorkspaceCleaner(deps.Processes, deps.OrcaTerminals).Observe(ctx, record, inventory.WorktreeRoot)
 		missing = append(missing, workspaceMissing...)
 		inventory.WorkspaceProcesses = observation.Receipts
 		inventory.OrcaTerminals = observation.Terminals
