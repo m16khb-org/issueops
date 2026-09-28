@@ -208,7 +208,7 @@ func TestSealExternalOrcaIntentPayloadUsesTheVerifiedRecordIdentity(t *testing.T
 	}
 }
 
-func TestBeginOrcaExecutionIntentRejectsRecordIdentityDriftBeforePersistence(t *testing.T) {
+func TestPreparationRepositoryRejectsRecordIdentityDriftBeforePersistence(t *testing.T) {
 	stateRoot, record := orcaPrepareRecord(t)
 	workspace, err := executionWorkspaceRequest(record, true)
 	if err != nil {
@@ -226,7 +226,7 @@ func TestBeginOrcaExecutionIntentRejectsRecordIdentityDriftBeforePersistence(t *
 	}
 	snapshot := executionOwnerSnapshot{issue: executionOwnerIssue{BodySHA256: strings.Repeat("a", 64)}}
 
-	_, _, err = beginOrcaExecutionIntent(stateRoot, passed, workspace, probe, ExecutionPrepareRequest{
+	_, _, err = beginOrcaIntentViaRepository(stateRoot, passed, workspace, probe, ExecutionPrepareRequest{
 		OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh",
 	}, snapshot, nil)
 	if err == nil || !strings.Contains(err.Error(), "identity") {

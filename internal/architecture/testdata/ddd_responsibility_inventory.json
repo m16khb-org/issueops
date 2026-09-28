@@ -7124,20 +7124,12 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func advanceOrcaIntentReceipt",
-        "func advanceOrcaIntentReceiptWithExpectedRaw",
-        "func beginOrcaExecutionIntent",
-        "func beginOrcaExecutionIntentWithID",
         "func createOrAdoptClaimToken",
         "func executionOrcaIntentInspectionRequest",
         "func executionOrcaIntentRequest",
         "func intentContractBinding",
         "func intentContractBindingPointer",
         "func intentContractLease",
-        "func intentContractOrcaWorkspaceReceiptPointer",
-        "func intentContractProbeRequest",
-        "func intentContractStage",
-        "func intentContractWorkspaceRequest",
         "func intentPortOrcaWorkspaceReceiptPointer",
         "func intentPortProbeRequest",
         "func intentPortStage",
@@ -7146,7 +7138,6 @@
         "func normalizedOrcaIntentPurpose",
         "func pendingKindForOrcaStage",
         "func persistOrcaIntentTransition",
-        "func readAndMatchOrcaIntent",
         "func readExternalOrcaIntentPayload",
         "func readExternalOrcaIntentPayloadShape",
         "func recordOrcaIntentFailureFromRawState",
@@ -18580,6 +18571,24 @@
       "status": "migrated"
     },
     {
+      "id": "orca-prepare-begin-path",
+      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
+      "source_symbol": "func beginOrcaExecutionIntentWithID",
+      "responsibility": "seal a prepare intent and persist its pending record before worktree provisioning",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func ApplyOrcaBegin",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution prepare --mode orca"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_orca_intent_test.go",
+        "internal/adapter/issueops/execution_orca_marker_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
       "id": "orca-receipt-stage-progression",
       "source_path": "internal/adapter/issueops/execution_orca_intent.go",
       "source_symbol": "func advanceOrcaIntentReceiptWithExpectedRaw",
@@ -18597,7 +18606,7 @@
         "internal/application/issueopspreparation/orca_receipt_test.go",
         "internal/adapter/issueops/execution_orca_intent_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "mode-switch-effect-order",

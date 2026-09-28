@@ -30,74 +30,6 @@ type externalOrcaIntentPayload = preparationcontract.Intent
 
 var preparationIntentCodec preparationcontract.IntentCodec
 
-func beginOrcaExecutionIntent(stateRoot string, record issueops.IssueOpsRecord, workspace port.ExecutionWorkspaceRequest, probe port.ExecutionOrcaProbeRequest, req ExecutionPrepareRequest, snapshot executionOwnerSnapshot, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	return beginOrcaExecutionIntentWithID(stateRoot, record, workspace, probe, req, snapshot, "", now)
-}
-
-func beginOrcaExecutionIntentWithID(stateRoot string, record issueops.IssueOpsRecord, workspace port.ExecutionWorkspaceRequest, probe port.ExecutionOrcaProbeRequest, req ExecutionPrepareRequest, snapshot executionOwnerSnapshot, operationID string, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	var err error
-	if strings.TrimSpace(operationID) == "" {
-		operationID, err = newExecutionOperationID()
-		if err != nil {
-			return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, err
-		}
-	}
-	startedAt := executionNow(now)
-	payload := externalOrcaIntentPayload{
-		SchemaVersion: issueops.IssueOpsSchemaVersion, OperationID: operationID, LifecycleID: record.ID,
-		Generation: 1, Stage: preparationcontract.IntentStageWorktree, StartedAt: startedAt,
-		Purpose: orcaIntentPurposePrepare, InvocationState: orcaIntentNotInvoked,
-		Workspace: intentContractWorkspaceRequest(workspace), Probe: intentContractProbeRequest(probe),
-		IssueBodySHA256: snapshot.issue.BodySHA256,
-	}
-	if strings.ToLower(strings.TrimSpace(req.OwnerHost)) != probe.Host || strings.TrimSpace(req.OwnerModel) != probe.Model || strings.TrimSpace(req.OwnerEffort) != probe.Effort {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, fmt.Errorf("owner profile changed before Orca intent persistence")
-	}
-	payload, err = sealExternalOrcaPrepareIntentPayload(record, payload)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, err
-	}
-	data, err := preparationIntentCodec.Encode(payload)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, err
-	}
-	var persisted issueops.IssueOpsRecord
-	err = withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		current, err := ReadIssueOps(stateRoot, record.ID)
-		if err != nil {
-			return err
-		}
-		if current.Execution != nil {
-			return fmt.Errorf("IssueOps execution already exists; reconcile or inspect its current state")
-		}
-		if err := validateOrcaIntentIssueIdentity(current, payload); err != nil {
-			return err
-		}
-		// 위 검사는 자기 ID의 Execution만 본다 — 다른 레코드가 같은 canonical
-		// root를 주장하는 레코드 수준 레이스는 이 임계구역 재검사로만 봉합된다.
-		if err := ensureExecutionRootUnclaimed(stateRoot, current.ID, workspace.Root); err != nil {
-			return err
-		}
-		current.Execution = &issueops.Execution{
-			Mode: issueops.ExecutionModeOrca,
-			Workspace: issueops.Workspace{
-				SourceRoot: workspace.SourceRoot, Root: workspace.Root, Branch: workspace.Branch,
-				BaseHead: workspace.BaseHead, ParentWorktree: workspace.ParentWorktree,
-				Driver: "orca", LinkedAt: startedAt,
-			},
-			Lease: issueops.WriteLease{Generation: payload.Generation, Status: issueops.LeaseStatusReleased},
-			Pending: &issueops.ExternalIntent{
-				OperationID: operationID, Kind: string(port.ExecutionOrcaIntentWorktree), Marker: payload.Marker, StartedAt: startedAt,
-			},
-		}
-		persisted, err = persistExecutionTransitionWithMutations(stateRoot, current, nil, []port.RecordMutation{{
-			Bucket: externalIntentBucket, ID: operationID, Data: data, RequireAbsent: true,
-		}})
-		return err
-	})
-	return persisted, payload, err
-}
-
 func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, expectedRecordRaw, expectedIntentRaw []byte, invocation string, cause error, now func() time.Time) error {
 	return withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
 		if err := validateOrcaIntentExpectedRecord(record, expected); err != nil {
@@ -124,155 +56,6 @@ func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.Issue
 	})
 }
 
-func advanceOrcaIntentReceipt(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	return advanceOrcaIntentReceiptWithExpectedRaw(ctx, stateRoot, record, expected, nil, nil, receipt, readIssue, now)
-}
-
-func advanceOrcaIntentReceiptWithExpectedRaw(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, expectedRecordRaw, expectedIntentRaw []byte, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	nextStage, _, err := preparationdomain.NextOrcaReceiptStage(expected.Stage)
-	if err != nil {
-		return record, expected, err
-	}
-	updated := expected
-	ownerPlanPath := ""
-	updated.Stage = nextStage
-	updated.InvocationState = orcaIntentNotInvoked
-	updated.InvocationAttempts = 0
-	switch expected.Stage {
-	case preparationcontract.IntentStageWorktree:
-		if receipt.Workspace == nil || validateExecutionOrcaWorkspaceReceipt(intentPortWorkspaceRequest(expected.Workspace), *receipt.Workspace) != nil {
-			return record, expected, fmt.Errorf("Orca worktree candidate does not match the sealed intent")
-		}
-		prepared := record
-		prepared.WorktreePath = receipt.Workspace.Workspace.Root
-		prepared.Execution.Workspace = workspaceFromReceipt(prepared, receipt.Workspace.Workspace, expected.StartedAt)
-		snapshot, err := readExecutionOwnerSnapshot(ctx, prepared, readIssue)
-		if err != nil {
-			return record, expected, err
-		}
-		if snapshot.issue.BodySHA256 != expected.IssueBodySHA256 {
-			return record, expected, fmt.Errorf("remote issue body drifted before owner launch recovery")
-		}
-		tokenHash, err := createOrAdoptClaimToken(prepared)
-		if err != nil {
-			return record, expected, err
-		}
-		plan, artifactManifest, err := materializeExecutionOwnerArtifacts(stateRoot, prepared)
-		if err != nil {
-			return record, expected, err
-		}
-		prepared.PlanPath = plan.Path
-		ownerPlanPath = plan.Path
-		artifacts, err := buildExecutionOwnerArtifacts(prepared, ExecutionPrepareRequest{
-			ID: prepared.ID, Mode: string(issueops.ExecutionModeOrca), OwnerHost: expected.Probe.Host,
-			OwnerModel: expected.Probe.Model, OwnerEffort: expected.Probe.Effort,
-		}, snapshot, artifactManifest)
-		if err != nil {
-			return record, expected, err
-		}
-		updated.Prepared = intentContractOrcaWorkspaceReceiptPointer(receipt.Workspace)
-		updated.Launch = &externalOrcaLaunchIdentity{
-			PromptPath: artifacts.promptPath, PromptSHA256: artifacts.promptSHA256,
-			ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256,
-		}
-		updated.ClaimTokenSHA256 = tokenHash
-	case preparationcontract.IntentStageTerminal:
-		if strings.TrimSpace(receipt.TerminalPTYID) == "" {
-			return record, expected, fmt.Errorf("Orca terminal candidate is incomplete")
-		}
-		updated.TerminalPTYID = strings.TrimSpace(receipt.TerminalPTYID)
-	case preparationcontract.IntentStageRun:
-		if strings.TrimSpace(receipt.RunID) == "" {
-			return record, expected, fmt.Errorf("Orca Run candidate is incomplete")
-		}
-		updated.RunID = strings.TrimSpace(receipt.RunID)
-	case preparationcontract.IntentStageRunBind:
-		if strings.TrimSpace(receipt.RunID) != expected.RunID || !receipt.RunBound {
-			return record, expected, fmt.Errorf("Orca Run binding candidate is incomplete")
-		}
-		updated.RunBound = true
-	case preparationcontract.IntentStageTask:
-		if strings.TrimSpace(receipt.TaskID) == "" {
-			return record, expected, fmt.Errorf("Orca task candidate is incomplete")
-		}
-		updated.TaskID = strings.TrimSpace(receipt.TaskID)
-	case preparationcontract.IntentStageDispatch:
-		if err := port.ValidateExecutionOrcaDeliveryReceipt(receipt, port.OrcaDeliveryReceiptExpectation{
-			Host: expected.Probe.Host, TaskID: expected.TaskID, TerminalPTYID: expected.TerminalPTYID,
-			DispatchRequestID: expected.OrcaRequestID, PromptRequestID: expected.OrcaPromptRequestID,
-		}); err != nil {
-			return record, expected, fmt.Errorf("Orca dispatch candidate is incomplete: %w", err)
-		}
-		updated.OrcaRequestID = strings.TrimSpace(receipt.RequestID)
-		if receipt.PromptReceipt != nil {
-			updated.OrcaPromptRequestID = strings.TrimSpace(receipt.PromptReceipt.RequestID)
-		}
-	}
-
-	var persisted issueops.IssueOpsRecord
-	err = withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		current := record
-		if expectedRecordRaw == nil && expectedIntentRaw == nil {
-			matched, stored, err := readAndMatchOrcaIntent(stateRoot, record.ID, expected)
-			if err != nil {
-				return err
-			}
-			current = matched
-			if !reflect.DeepEqual(stored, expected) {
-				return fmt.Errorf("Orca intent payload changed before receipt CAS")
-			}
-		} else if err := validateOrcaIntentExpectedRecord(current, expected); err != nil {
-			return err
-		}
-		if expected.Stage == preparationcontract.IntentStageWorktree {
-			current.WorktreePath = updated.Prepared.Workspace.Root
-			current.PlanPath = ownerPlanPath
-			current.Execution.Workspace = workspaceFromReceipt(current, intentPortWorkspaceReceipt(updated.Prepared.Workspace), expected.StartedAt)
-		}
-		if expected.Stage == preparationcontract.IntentStageDispatch {
-			if expected.Launch == nil {
-				return fmt.Errorf("Orca sealed owner artifact identity is missing")
-			}
-			if normalizedOrcaIntentPurpose(expected) == orcaIntentPurposeResume {
-				if expected.ResumeLease == nil || !reflect.DeepEqual(intentContractLease(current.Execution.Lease), *expected.ResumeLease) {
-					return fmt.Errorf("resume lease changed before dispatch receipt CAS")
-				}
-			} else {
-				current.Execution.Lease = issueops.WriteLease{
-					Generation: expected.Generation, Status: issueops.LeaseStatusClaimable, ClaimTokenSHA256: expected.ClaimTokenSHA256,
-				}
-			}
-			current.Execution.Orca = &issueops.OrcaBinding{
-				RuntimeID: expected.Prepared.RuntimeID, RepoID: expected.Prepared.RepoID, WorktreeID: expected.Prepared.WorktreeID,
-				WorktreeInstanceID: expected.Prepared.WorktreeInstanceID, LeaseGeneration: expected.Generation, OwnerHost: expected.Probe.Host,
-				ArtifactIdentityVersion: issueops.OrcaArtifactIdentityVersion,
-				IssueBodySHA256:         expected.IssueBodySHA256, ContextPacketSHA256: expected.Launch.ContextPacketSHA256,
-				OwnerPromptSHA256: expected.Launch.PromptSHA256,
-				OwnerModel:        expected.Probe.Model, OwnerEffort: expected.Probe.Effort, RunID: expected.RunID, TaskID: expected.TaskID,
-				DispatchID: receipt.DispatchID, TerminalPTYID: expected.TerminalPTYID,
-			}
-			current.Execution.Pending = nil
-			current.Execution.Failure = nil
-			var persistErr error
-			persisted, persistErr = persistOrcaIntentTransition(stateRoot, current, expected.OperationID, expectedRecordRaw, expectedIntentRaw, []port.RecordMutation{{Bucket: externalIntentBucket, ID: expected.OperationID, Delete: true}})
-			return persistErr
-		}
-		current.Execution.Pending.Kind = pendingKindForOrcaStage(updated.Stage)
-		current.Execution.Failure = nil
-		data, err := preparationIntentCodec.Encode(updated)
-		if err != nil {
-			return err
-		}
-		var persistErr error
-		persisted, persistErr = persistOrcaIntentTransition(stateRoot, current, expected.OperationID, expectedRecordRaw, expectedIntentRaw, []port.RecordMutation{{Bucket: externalIntentBucket, ID: expected.OperationID, Data: data}})
-		return persistErr
-	})
-	if err != nil {
-		return record, expected, err
-	}
-	return persisted, updated, nil
-}
-
 func persistOrcaIntentTransition(stateRoot string, record issueops.IssueOpsRecord, operationID string, expectedRecordRaw, expectedIntentRaw []byte, extra []port.RecordMutation) (issueops.IssueOpsRecord, error) {
 	if expectedRecordRaw == nil && expectedIntentRaw == nil {
 		return persistExecutionTransitionWithMutations(stateRoot, record, nil, extra)
@@ -285,18 +68,6 @@ func persistOrcaIntentTransition(stateRoot string, record issueops.IssueOpsRecor
 		expected = append(expected, port.ExpectedRecord{Bucket: externalIntentBucket, ID: operationID, Data: expectedIntentRaw})
 	}
 	return persistExecutionTransitionWithRawCAS(stateRoot, record, expected, extra)
-}
-
-func readAndMatchOrcaIntent(stateRoot, id string, expected externalOrcaIntentPayload) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return issueops.IssueOpsRecord{}, externalOrcaIntentPayload{}, err
-	}
-	if err := validateOrcaIntentExpectedRecord(record, expected); err != nil {
-		return record, externalOrcaIntentPayload{}, err
-	}
-	stored, err := readExternalOrcaIntentPayload(stateRoot, expected.OperationID)
-	return record, stored, err
 }
 
 func validateOrcaIntentExpectedRecord(record issueops.IssueOpsRecord, expected externalOrcaIntentPayload) error {
@@ -505,14 +276,6 @@ func intentContractBindingPointer(binding *issueops.OrcaBinding) *preparationcon
 	return &result
 }
 
-func intentContractWorkspaceRequest(workspace port.ExecutionWorkspaceRequest) preparationcontract.WorkspaceRequest {
-	return preparationcontract.WorkspaceRequest{
-		LifecycleID: workspace.LifecycleID, SourceRoot: workspace.SourceRoot, Root: workspace.Root,
-		Branch: workspace.Branch, BaseBranch: workspace.BaseBranch, BaseHead: workspace.BaseHead,
-		ParentWorktree: workspace.ParentWorktree, Confirm: workspace.Confirm,
-	}
-}
-
 func intentPortWorkspaceRequest(workspace preparationcontract.WorkspaceRequest) port.ExecutionWorkspaceRequest {
 	return port.ExecutionWorkspaceRequest{
 		LifecycleID: workspace.LifecycleID, SourceRoot: workspace.SourceRoot, Root: workspace.Root,
@@ -521,34 +284,11 @@ func intentPortWorkspaceRequest(workspace preparationcontract.WorkspaceRequest) 
 	}
 }
 
-func intentContractProbeRequest(probe port.ExecutionOrcaProbeRequest) preparationcontract.ProbeRequest {
-	return preparationcontract.ProbeRequest{
-		Repo: probe.Repo, Host: probe.Host, Model: probe.Model, Effort: probe.Effort,
-		Provider: probe.Provider, Issue: probe.Issue, Marker: probe.Marker,
-	}
-}
-
 func intentPortProbeRequest(probe preparationcontract.ProbeRequest) port.ExecutionOrcaProbeRequest {
 	return port.ExecutionOrcaProbeRequest{
 		Repo: probe.Repo, Host: probe.Host, Model: probe.Model, Effort: probe.Effort,
 		Provider: probe.Provider, Issue: probe.Issue, Marker: probe.Marker,
 	}
-}
-
-func intentContractOrcaWorkspaceReceiptPointer(receipt *port.ExecutionOrcaWorkspaceReceipt) *preparationcontract.OrcaWorkspaceReceipt {
-	if receipt == nil {
-		return nil
-	}
-	result := preparationcontract.OrcaWorkspaceReceipt{
-		Workspace: preparationcontract.WorkspaceReceipt{
-			SourceRoot: receipt.Workspace.SourceRoot, Root: receipt.Workspace.Root, Branch: receipt.Workspace.Branch,
-			BaseHead: receipt.Workspace.BaseHead, ParentWorktree: receipt.Workspace.ParentWorktree,
-			Driver: receipt.Workspace.Driver, Exists: receipt.Workspace.Exists,
-		},
-		RuntimeID: receipt.RuntimeID, RepoID: receipt.RepoID, WorktreeID: receipt.WorktreeID,
-		WorktreeInstanceID: receipt.WorktreeInstanceID,
-	}
-	return &result
 }
 
 func intentPortWorkspaceReceipt(receipt preparationcontract.WorkspaceReceipt) port.ExecutionWorkspaceReceipt {
@@ -570,8 +310,4 @@ func intentPortOrcaWorkspaceReceiptPointer(receipt *preparationcontract.OrcaWork
 
 func intentPortStage(stage preparationcontract.IntentStage) port.ExecutionOrcaIntentStage {
 	return port.ExecutionOrcaIntentStage(stage)
-}
-
-func intentContractStage(stage port.ExecutionOrcaIntentStage) preparationcontract.IntentStage {
-	return preparationcontract.IntentStage(stage)
 }

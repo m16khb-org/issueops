@@ -31,7 +31,7 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 	snapshot := executionOwnerSnapshot{issue: executionOwnerIssue{
 		URL: record.IssueURL, Body: issueBody, BodySHA256: digestExecutionOwnerBytes([]byte(issueBody)),
 	}}
-	prepared, intent, err := beginOrcaExecutionIntent(
+	prepared, intent, err := beginOrcaIntentViaRepository(
 		stateRoot, record, workspace, probe,
 		ExecutionPrepareRequest{ID: record.ID, Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh"},
 		snapshot, func() time.Time { return time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC) },
@@ -53,7 +53,7 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 		return port.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
 	}
 
-	advanced, next, err := advanceOrcaIntentReceipt(context.Background(), stateRoot, prepared, intent, receipt, readIssue, nil)
+	advanced, next, err := advanceOrcaIntentReceiptViaRepository(context.Background(), stateRoot, prepared, intent, receipt, readIssue, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestRecordOrcaIntentTerminalSendFailurePreservesDispatchAndPromptRequestIDs
 		default:
 			t.Fatalf("unexpected stage before dispatch: %s", payload.Stage)
 		}
-		record, payload, err = advanceOrcaIntentReceipt(context.Background(), stateRoot, record, payload, receipt, nil, nil)
+		record, payload, err = advanceOrcaIntentReceiptViaRepository(context.Background(), stateRoot, record, payload, receipt, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -211,7 +211,7 @@ func resumeDispatchIntentState(t *testing.T) (string, ExecutionResumeIntentState
 			t.Fatalf("unexpected stage before dispatch: %s", payload.Stage)
 		}
 		var err error
-		record, payload, err = advanceOrcaIntentReceipt(context.Background(), stateRoot, record, payload, receipt, nil, nil)
+		record, payload, err = advanceOrcaIntentReceiptViaRepository(context.Background(), stateRoot, record, payload, receipt, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -151,7 +151,7 @@ func TestResumeDispatchRetainsDurableArtifactIdentity(t *testing.T) {
 	}
 	var err error
 	for _, receipt := range steps {
-		record, payload, err = advanceOrcaIntentReceipt(context.Background(), stateRoot, record, payload, receipt, nil, nil)
+		record, payload, err = advanceOrcaIntentReceiptViaRepository(context.Background(), stateRoot, record, payload, receipt, nil, nil)
 		if err != nil {
 			t.Fatalf("advance resume stage: %v", err)
 		}
