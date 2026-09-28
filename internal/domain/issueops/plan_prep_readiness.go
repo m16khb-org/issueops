@@ -34,15 +34,19 @@ func PlanPrepMissing(prep *model.IssueOpsPlanPrep) []string {
 func planPrepItemValid(item model.IssueOpsPlanPrepItem) bool {
 	switch strings.TrimSpace(item.Status) {
 	case "evidence":
-		for _, value := range item.Evidence {
-			if strings.TrimSpace(value) != "" && !strings.Contains(value, "\x00") {
-				return true
-			}
-		}
-		return false
+		return hasUsableEvidence(item.Evidence)
 	case "waived":
 		return strings.TrimSpace(item.WaiveReason) != ""
 	default:
 		return false
 	}
+}
+
+func hasUsableEvidence(values []string) bool {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" && !strings.Contains(value, "\x00") {
+			return true
+		}
+	}
+	return false
 }

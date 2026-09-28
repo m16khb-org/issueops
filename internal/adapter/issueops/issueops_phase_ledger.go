@@ -64,26 +64,6 @@ func issueOpsImplementCompletion(record issueops.IssueOpsRecord) issueops.IssueO
 	return IssueOpsAISlopCleanReadiness(record)
 }
 
-func issueOpsAISlopCleanCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := []string{}
-	if strings.TrimSpace(record.AISlopCleanAt) == "" {
-		missing = append(missing, "ai_slop_clean_at")
-	}
-	if strings.TrimSpace(record.AISlopCleanHead) == "" {
-		missing = append(missing, "ai_slop_clean_head")
-	}
-	if strings.TrimSpace(record.AISlopCleanFingerprint) == "" {
-		missing = append(missing, "ai_slop_clean_fingerprint")
-	}
-	if len(cleanIssueOpsTextValues(record.AISlopCleanCategories)) == 0 {
-		missing = append(missing, "cleanup_evidence")
-	}
-	if len(cleanIssueOpsTextValues(record.AISlopCleanVerification)) == 0 {
-		missing = append(missing, "verification_evidence")
-	}
-	return issueOpsReadinessFrom(record, missing)
-}
-
 func issueOpsFeedbackCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
 	missing := []string{}
 	for _, item := range record.Feedback {
@@ -144,7 +124,7 @@ func IssueOpsPhaseCompletion(record issueops.IssueOpsRecord, phase issueops.Issu
 	case IssueOpsPhaseImplement:
 		return issueOpsImplementCompletion(record)
 	case IssueOpsPhaseAISlopClean:
-		return issueOpsAISlopCleanCompletion(record)
+		return issueOpsReadinessFrom(record, issueopsdomain.AISlopCleanCompletionMissing(record))
 	case IssueOpsPhaseFeedback:
 		return issueOpsFeedbackCompletion(record)
 	case IssueOpsPhasePR:

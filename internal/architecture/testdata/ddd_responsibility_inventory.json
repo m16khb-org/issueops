@@ -7926,7 +7926,6 @@
         "func IssueOpsGrillReadiness",
         "func IssueOpsPhaseCompletion",
         "func IssueOpsProblemReadiness",
-        "func issueOpsAISlopCleanCompletion",
         "func issueOpsCompatibilityReviewCompletion",
         "func issueOpsDoneCompletion",
         "func issueOpsFeedbackCompletion",
@@ -13572,6 +13571,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/ai_slop_completion.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func AISlopCleanCompletionMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/ai_slop_refresh.go",
       "owner": "domain",
       "task": "T20",
@@ -13747,6 +13754,7 @@
       "symbols": [
         "func PlanPrepGateApplies",
         "func PlanPrepMissing",
+        "func hasUsableEvidence",
         "func planPrepItemValid"
       ]
     },
@@ -17087,6 +17095,24 @@
       "evidence_tests": [
         "internal/domain/issueops/plan_prep_readiness_test.go",
         "internal/adapter/issueops/issueops_readiness_planprep_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "ai-slop-clean-completion",
+      "source_path": "internal/adapter/issueops/issueops_phase_ledger.go",
+      "source_symbol": "func issueOpsAISlopCleanCompletion",
+      "responsibility": "cleanup phase completion requires a stamp, head, fingerprint, category, and verification evidence",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func AISlopCleanCompletionMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops next",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/ai_slop_completion_test.go",
+        "internal/adapter/issueops/issueops_phase_refresh_test.go"
       ],
       "status": "migrated"
     }
