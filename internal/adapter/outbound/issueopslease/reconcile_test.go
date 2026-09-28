@@ -16,11 +16,13 @@ import (
 )
 
 type reconcileEffectsFake struct {
-	state ReconcileEffectState
+	artifacts preparationcontract.OwnerArtifacts
+	calls     int
 }
 
-func (f *reconcileEffectsFake) ApplyReceipt(context.Context, ReconcileEffectState, leasecontract.ReconcileStageReceipt) (ReconcileEffectState, error) {
-	return f.state, nil
+func (f *reconcileEffectsFake) PrepareWorktree(context.Context, preparationcontract.Snapshot, preparationcontract.Command, preparationcontract.Intent, preparationcontract.IntentReceipt) (preparationcontract.OwnerArtifacts, error) {
+	f.calls++
+	return f.artifacts, nil
 }
 
 func TestReconcileRepositoryPreservesRawCASState(t *testing.T) {
@@ -183,6 +185,77 @@ func TestReconcileRepositoryAdvancesPreparedOwnerReceiptWithoutBridge(t *testing
 	}
 	if _, ok, err := store.Get("external_intent_v1", payload.OperationID); err != nil || ok {
 		t.Fatalf("completed prepare intent remains: present=%v err=%v", ok, err)
+	}
+}
+
+func TestReconcileRepositoryWorktreeReceiptPersistsPreparedArtifacts(t *testing.T) {
+	_, sealed, store := seededResumeIntent(t)
+	record := sealed.Progress.Record.Stable
+	record.Execution.Lease.Generation = 1
+	record.Execution.Lease.Status = "released"
+	record.Execution.Lease.ClaimTokenSHA256 = ""
+	record.Execution.Orca = nil
+	payload, err := (preparationcontract.IntentCodec{}).Decode(sealed.OperationID, sealed.IntentRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload.Purpose, payload.Generation, payload.Stage = preparationcontract.PurposePrepare, 1, preparationcontract.IntentStageWorktree
+	payload.Prepared, payload.Launch, payload.PriorBinding, payload.ResumeLease = nil, nil, nil, nil
+	payload.ClaimTokenSHA256 = ""
+	payload, err = preparationdomain.SealIntent(payload, preparationcontract.IssueIdentity{Provider: "github", Issue: 193})
+	if err != nil {
+		t.Fatal(err)
+	}
+	record.Execution.Pending.Kind = preparationdomain.PendingKind(payload.Stage)
+	record.Execution.Pending.Marker = payload.Marker
+	recordRaw, err := leasecontract.Encode(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intentRaw, err := (preparationcontract.IntentCodec{}).Encode(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Apply(context.Background(), []port.RecordMutation{
+		{Bucket: recordBucket, ID: record.ID, Data: recordRaw},
+		{Bucket: "external_intent_v1", ID: payload.OperationID, Data: intentRaw},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	fake := &reconcileEffectsFake{artifacts: preparationcontract.OwnerArtifacts{
+		PlanPath: "/worktree/plan.md", ClaimTokenSHA256: strings.Repeat("b", 64),
+		ContextPacketPath: "/worktree/context.json", ContextPacketSHA256: strings.Repeat("c", 64),
+		OwnerPromptPath: "/worktree/owner.md", OwnerPromptSHA256: strings.Repeat("d", 64),
+	}}
+	repository := NewReconcileRepository(store, fake)
+	state := leaseapp.ReconcileIntentState{
+		Progress:    leaseapp.ReconcileProgress{Record: record, Pending: true, NextStage: string(payload.Stage)},
+		OperationID: payload.OperationID, Stage: string(payload.Stage), InvocationState: payload.InvocationState,
+		RecordRaw: recordRaw, IntentRaw: intentRaw,
+	}
+	progress, err := repository.ApplyReceipt(context.Background(), state, leasecontract.ReconcileStageReceipt{
+		Workspace: &leasecontract.ReconcilePreparedReceipt{
+			Workspace: leasecontract.ReconcileWorkspaceReceipt{
+				SourceRoot: payload.Workspace.SourceRoot, Root: payload.Workspace.Root,
+				Branch: payload.Workspace.Branch, BaseHead: payload.Workspace.BaseHead,
+				Driver: "orca", Exists: true,
+			},
+			RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fake.calls != 1 || !progress.Pending || progress.NextStage != string(preparationcontract.IntentStageTerminal) || progress.Record.PlanPath != fake.artifacts.PlanPath || progress.Record.Execution.Pending.Kind != "owner_launch" {
+		t.Fatalf("worktree progress=%+v effects=%d", progress, fake.calls)
+	}
+	data, ok, err := store.Get("external_intent_v1", payload.OperationID)
+	if err != nil || !ok {
+		t.Fatalf("advanced intent: present=%v err=%v", ok, err)
+	}
+	advanced, err := (preparationcontract.IntentCodec{}).Decode(payload.OperationID, data)
+	if err != nil || advanced.Launch == nil || advanced.ClaimTokenSHA256 != fake.artifacts.ClaimTokenSHA256 {
+		t.Fatalf("advanced intent=%+v err=%v", advanced, err)
 	}
 }
 

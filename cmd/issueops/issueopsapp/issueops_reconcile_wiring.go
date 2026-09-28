@@ -15,6 +15,7 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	statecontract "issueops/internal/contract/state"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/domain/policy"
@@ -42,7 +43,7 @@ func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrc
 		}
 		expected = &record
 	}
-	effects := &coreReconcileEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, now), readIssue: readIssue, now: now}
+	effects := &coreReconcileEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, now), readIssue: readIssue}
 	return leaseapp.NewReconcileService(
 		leaseoutbound.NewReconcileRepositoryWithSnapshot(db, effects, expected, policy.RedactDiagnostic, now),
 		leaseoutbound.NewReconcileStageExecutor(effects.inspectStage, effects.invokeStage),
@@ -53,23 +54,10 @@ type coreReconcileEffects struct {
 	stateRoot   string
 	provisioner port.ExecutionOrcaProvisioner
 	readIssue   issueops.ExecutionIssueSnapshotReadFunc
-	now         func() time.Time
 }
 
-func (e *coreReconcileEffects) ApplyReceipt(ctx context.Context, state leaseoutbound.ReconcileEffectState, receipt leasecontract.ReconcileStageReceipt) (leaseoutbound.ReconcileEffectState, error) {
-	coreState, err := reconcileCoreIntentState(state)
-	if err != nil {
-		return leaseoutbound.ReconcileEffectState{}, err
-	}
-	portReceipt, err := reconcilePortReceipt(receipt)
-	if err != nil {
-		return leaseoutbound.ReconcileEffectState{}, err
-	}
-	next, err := issueops.ApplyExecutionReconcileIntentReceipt(ctx, e.stateRoot, coreState, portReceipt, e.readIssue, e.now)
-	if err != nil {
-		return leaseoutbound.ReconcileEffectState{}, err
-	}
-	return reconcileEffectStateFromCore(next)
+func (e *coreReconcileEffects) PrepareWorktree(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt) (preparationcontract.OwnerArtifacts, error) {
+	return issueops.PrepareExecutionPreparationOwner(ctx, e.stateRoot, snapshot, command, intent, receipt, e.readIssue)
 }
 
 func (e *coreReconcileEffects) inspectStage(ctx context.Context, intent leaseapp.ReconcileIntentState) (leasecontract.ReconcileStageInventory, bool, error) {
@@ -116,38 +104,22 @@ func (e *coreReconcileEffects) invokeStage(ctx context.Context, intent leaseapp.
 }
 
 func (e *coreReconcileEffects) reconcileRequest(intent leaseapp.ReconcileIntentState) (port.ExecutionOrcaIntentRequest, error) {
-	state, err := reconcileCoreIntentState(leaseoutbound.ReconcileEffectState{
-		Record: intent.Progress.Record, RecordRaw: intent.RecordRaw, IntentRaw: intent.IntentRaw,
-		OperationID: intent.OperationID, Stage: intent.Stage, InvocationState: intent.InvocationState,
-		InvocationAttempts: intent.InvocationAttempts, Pending: intent.Progress.Pending,
-	})
+	state, err := reconcileCoreIntentState(intent)
 	if err != nil {
 		return port.ExecutionOrcaIntentRequest{}, err
 	}
 	return issueops.ExecutionReconcileIntentRequest(state)
 }
 
-func reconcileEffectStateFromCore(state issueops.ExecutionReconcileIntentState) (leaseoutbound.ReconcileEffectState, error) {
-	record, err := reconcileContractRecord(state.Record)
-	if err != nil {
-		return leaseoutbound.ReconcileEffectState{}, err
-	}
-	return leaseoutbound.ReconcileEffectState{
-		Record: record, RecordRaw: append([]byte(nil), state.RecordRaw...), IntentRaw: append([]byte(nil), state.IntentRaw...),
-		OperationID: state.OperationID, Stage: string(state.Stage), InvocationState: state.InvocationState,
-		InvocationAttempts: state.InvocationAttempts, Pending: state.Pending,
-	}, nil
-}
-
-func reconcileCoreIntentState(state leaseoutbound.ReconcileEffectState) (issueops.ExecutionReconcileIntentState, error) {
-	record, err := resumeCoreRecord(state.Record)
+func reconcileCoreIntentState(state leaseapp.ReconcileIntentState) (issueops.ExecutionReconcileIntentState, error) {
+	record, err := resumeCoreRecord(state.Progress.Record)
 	if err != nil {
 		return issueops.ExecutionReconcileIntentState{}, err
 	}
 	return issueops.ExecutionReconcileIntentState{
 		Record: record, RecordRaw: append([]byte(nil), state.RecordRaw...), IntentRaw: append([]byte(nil), state.IntentRaw...),
 		OperationID: state.OperationID, Stage: port.ExecutionOrcaIntentStage(state.Stage), InvocationState: state.InvocationState,
-		InvocationAttempts: state.InvocationAttempts, Pending: state.Pending,
+		InvocationAttempts: state.InvocationAttempts, Pending: state.Progress.Pending,
 	}, nil
 }
 
@@ -168,10 +140,6 @@ func reconcileContractRecord(record issueopscontract.IssueOpsRecord) (leasecontr
 
 func reconcileContractReceipt(receipt port.ExecutionOrcaIntentReceipt) (leasecontract.ReconcileStageReceipt, error) {
 	return convertReconcileReceipt[leasecontract.ReconcileStageReceipt](receipt)
-}
-
-func reconcilePortReceipt(receipt leasecontract.ReconcileStageReceipt) (port.ExecutionOrcaIntentReceipt, error) {
-	return convertReconcileReceipt[port.ExecutionOrcaIntentReceipt](receipt)
 }
 
 func convertReconcileReceipt[T any](source any) (T, error) {

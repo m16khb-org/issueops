@@ -1,11 +1,6 @@
 package issueops
 
 import (
-	"context"
-	"fmt"
-	"reflect"
-	"time"
-
 	"issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -32,52 +27,6 @@ func ExecutionReconcileIntentRequest(expected ExecutionReconcileIntentState) (po
 		return port.ExecutionOrcaIntentRequest{}, err
 	}
 	return executionOrcaIntentRequest(expected.Record, payload)
-}
-
-func ApplyExecutionReconcileIntentReceipt(ctx context.Context, stateRoot string, expected ExecutionReconcileIntentState, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, now func() time.Time) (ExecutionReconcileIntentState, error) {
-	payload, err := executionReconcileIntentPayload(expected)
-	if err != nil {
-		return ExecutionReconcileIntentState{}, err
-	}
-	persisted, nextPayload, err := advanceOrcaIntentReceiptWithExpectedRaw(ctx, stateRoot, expected.Record, payload, expected.RecordRaw, expected.IntentRaw, receipt, readIssue, now)
-	if err != nil {
-		return ExecutionReconcileIntentState{}, err
-	}
-	if persisted.Execution == nil || persisted.Execution.Pending == nil {
-		raw, err := readExecutionResumeRecordRawOnly(stateRoot, persisted.ID)
-		if err != nil {
-			return ExecutionReconcileIntentState{}, err
-		}
-		return ExecutionReconcileIntentState{Record: persisted, RecordRaw: raw, OperationID: expected.OperationID}, nil
-	}
-	return executionReconcileIntentStateFromPayload(stateRoot, persisted, nextPayload)
-}
-
-func executionReconcileIntentStateFromPayload(stateRoot string, record issueops.IssueOpsRecord, payload externalOrcaIntentPayload) (ExecutionReconcileIntentState, error) {
-	partial := executionReconcileIntentState(record, nil, payload, nil)
-	currentRecord, recordRaw, err := readExecutionResumeRecordRaw(stateRoot, record.ID)
-	if err != nil {
-		return partial, err
-	}
-	if !reflect.DeepEqual(currentRecord, record) {
-		return partial, fmt.Errorf("IssueOps record snapshot changed before reconcile raw capture")
-	}
-	currentPayload, intentRaw, err := readExecutionResumeIntentRaw(stateRoot, payload.OperationID)
-	if err != nil {
-		return partial, err
-	}
-	if !reflect.DeepEqual(currentPayload, payload) {
-		return partial, fmt.Errorf("Orca intent snapshot changed before reconcile raw capture")
-	}
-	return executionReconcileIntentState(record, recordRaw, payload, intentRaw), nil
-}
-
-func executionReconcileIntentState(record issueops.IssueOpsRecord, recordRaw []byte, payload externalOrcaIntentPayload, intentRaw []byte) ExecutionReconcileIntentState {
-	return ExecutionReconcileIntentState{
-		Record: record, RecordRaw: append([]byte(nil), recordRaw...), IntentRaw: append([]byte(nil), intentRaw...),
-		OperationID: payload.OperationID, Stage: intentPortStage(payload.Stage), InvocationState: payload.InvocationState,
-		InvocationAttempts: payload.InvocationAttempts, Pending: record.Execution != nil && record.Execution.Pending != nil,
-	}
 }
 
 func executionReconcileIntentPayload(expected ExecutionReconcileIntentState) (externalOrcaIntentPayload, error) {

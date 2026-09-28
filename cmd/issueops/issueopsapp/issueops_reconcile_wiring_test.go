@@ -441,20 +441,21 @@ func reconcileSuccessfulReceipt(request port.ExecutionOrcaIntentRequest) port.Ex
 	}
 }
 
-func TestReconcileReceiptRoundTripPreservesWorktreeIdentity(t *testing.T) {
+func TestReconcileReceiptConversionPreservesWorktreeIdentity(t *testing.T) {
 	want := port.ExecutionOrcaIntentReceipt{Workspace: &port.ExecutionOrcaWorkspaceReceipt{
 		Workspace: port.ExecutionWorkspaceReceipt{SourceRoot: "/source", Root: "/worktree", Branch: "194", BaseHead: "abc", ParentWorktree: "/parent", Driver: "orca", Exists: true},
 		RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", WorktreeInstanceID: "instance",
 	}}
-	contractReceipt, err := reconcileContractReceipt(want)
+	got, err := reconcileContractReceipt(want)
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := reconcilePortReceipt(contractReceipt)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Workspace == nil || *got.Workspace != *want.Workspace {
+	if got.Workspace == nil || got.Workspace.Workspace.SourceRoot != want.Workspace.Workspace.SourceRoot ||
+		got.Workspace.Workspace.Root != want.Workspace.Workspace.Root || got.Workspace.Workspace.Branch != want.Workspace.Workspace.Branch ||
+		got.Workspace.Workspace.BaseHead != want.Workspace.Workspace.BaseHead || got.Workspace.Workspace.ParentWorktree != want.Workspace.Workspace.ParentWorktree ||
+		got.Workspace.Workspace.Driver != want.Workspace.Workspace.Driver || got.Workspace.Workspace.Exists != want.Workspace.Workspace.Exists ||
+		got.Workspace.RuntimeID != want.Workspace.RuntimeID || got.Workspace.RepoID != want.Workspace.RepoID ||
+		got.Workspace.WorktreeID != want.Workspace.WorktreeID || got.Workspace.WorktreeInstanceID != want.Workspace.WorktreeInstanceID {
 		t.Fatalf("receipt=%#v", got)
 	}
 }

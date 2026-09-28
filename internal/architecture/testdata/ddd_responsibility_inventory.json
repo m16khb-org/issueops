@@ -1356,7 +1356,7 @@
       "task": "T06",
       "symbols": [
         "func convertReconcileReceipt",
-        "func coreReconcileEffects.ApplyReceipt",
+        "func coreReconcileEffects.PrepareWorktree",
         "func coreReconcileEffects.inspectStage",
         "func coreReconcileEffects.invokeStage",
         "func coreReconcileEffects.reconcileRequest",
@@ -1365,8 +1365,6 @@
         "func reconcileContractReceipt",
         "func reconcileContractRecord",
         "func reconcileCoreIntentState",
-        "func reconcileEffectStateFromCore",
-        "func reconcilePortReceipt",
         "type coreReconcileEffects"
       ]
     },
@@ -7306,11 +7304,8 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func ApplyExecutionReconcileIntentReceipt",
         "func ExecutionReconcileIntentRequest",
         "func executionReconcileIntentPayload",
-        "func executionReconcileIntentState",
-        "func executionReconcileIntentStateFromPayload",
         "type ExecutionReconcileIntentState"
       ]
     },
@@ -9103,9 +9098,7 @@
         "func ReconcileRepository.Latest",
         "func ReconcileRepository.MarkInvoking",
         "func ReconcileRepository.RecordFailure",
-        "func reconcileEffectState",
-        "func reconcileProgress",
-        "type ReconcileEffectState",
+        "func reconcilePreparationReceipt",
         "type ReconcileEffects",
         "type ReconcileRepository"
       ]
@@ -18484,6 +18477,23 @@
         "internal/adapter/issueops/execution_sync_base_test.go"
       ],
       "status": "retain"
+    },
+    {
+      "id": "reconcile-receipt-raw-cas",
+      "source_path": "internal/adapter/issueops/execution_reconcile_bridge.go",
+      "source_symbol": "func ApplyExecutionReconcileIntentReceipt",
+      "responsibility": "apply recovered prepare receipts and persist record and intent with the captured raw CAS snapshots",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func ApplyOrcaReceipt",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution reconcile --confirm"
+      ],
+      "evidence_tests": [
+        "internal/adapter/outbound/issueopslease/reconcile_test.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"
+      ],
+      "status": "migrated"
     },
     {
       "id": "reconcile-pending-route",
