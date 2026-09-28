@@ -89,7 +89,10 @@ func SwitchExecutionMode(ctx context.Context, stateRoot string, req ExecutionSwi
 		result.OK = false
 		return result, fmt.Errorf("stale switch-mode fingerprint; run the preview again and retry with the new value")
 	}
-	expectedSHA := cleanupAbandonRecordSHA(record)
+	expectedSHA, err := hashJSON(record)
+	if err != nil {
+		return ExecutionSwitchModeResult{OK: false, ID: record.ID}, err
+	}
 	err = modeswitchapp.Apply(ctx, modeswitchapp.ApplyRequest{
 		ID: record.ID, Repo: record.Repo, WorktreeRoot: inventory.WorktreeRoot,
 		WorktreePresent: inventory.WorktreePresent, Branch: inventory.Branch,
@@ -213,7 +216,11 @@ func (e *switchModeEffects) ResetExecution(ctx context.Context, id, expectedSHA 
 		if err != nil {
 			return err
 		}
-		if cleanupAbandonRecordSHA(current) != expectedSHA {
+		currentSHA, err := hashJSON(current)
+		if err != nil {
+			return err
+		}
+		if currentSHA != expectedSHA {
 			return fmt.Errorf("execution switch-mode authority changed before record mutation")
 		}
 		current.Execution = nil

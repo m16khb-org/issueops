@@ -13,6 +13,7 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
+	abandondomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -329,7 +330,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 			name: "reason over the byte limit",
 			request: func(id string) CleanupAbandonRequest {
 				r := abandonRequest(id, false, "")
-				r.Reason = strings.Repeat("a", cleanupAbandonReasonLimit+1)
+				r.Reason = strings.Repeat("a", abandondomain.CleanupAbandonReasonLimit+1)
 				return r
 			},
 			missing: "reason_required",

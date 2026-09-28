@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"issueops/internal/contract/issueops"
+	abandondomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -35,9 +36,9 @@ func cleanupAbandonObserveRemote(
 	record issueops.IssueOpsRecord,
 	req CleanupAbandonRequest,
 	deps CleanupAbandonDeps,
-	inventory cleanupAbandonInventory,
+	inventory issueops.CleanupAbandonInventory,
 	result *CleanupAbandonResult,
-) (cleanupAbandonInventory, []string) {
+) (issueops.CleanupAbandonInventory, []string) {
 	if !cleanupAbandonRemoteRequested(req) {
 		return inventory, nil
 	}
@@ -129,7 +130,7 @@ func cleanupAbandonApplyRemote(
 	record issueops.IssueOpsRecord,
 	req CleanupAbandonRequest,
 	deps CleanupAbandonDeps,
-	inventory cleanupAbandonInventory,
+	inventory issueops.CleanupAbandonInventory,
 	fingerprint string,
 	result *CleanupAbandonResult,
 ) error {
@@ -142,7 +143,7 @@ func cleanupAbandonApplyRemote(
 		result.FailedStep = step
 		result.RemoteEffects = applied
 		receiptErr := recordCleanupAbandonFailure(stateRoot, record.ID, step, cause, fingerprint, inventory)
-		result.NextCommand = cleanupAbandonPreviewCommand(record.ID, result.Reason, req)
+		result.NextCommand = abandondomain.CleanupAbandonPreviewCommand(record.ID, result.Reason, req)
 		return cleanupAbandonApplyError(
 			fmt.Sprintf("cleanup abandon %s failed (record, worktree, and remaining remote state preserved): %v", step, cause), receiptErr)
 	}

@@ -7809,30 +7809,16 @@
         "func armCleanupAbandon",
         "func cleanupAbandonApplyError",
         "func cleanupAbandonBranchCheckoutPath",
-        "func cleanupAbandonFailureInventoryMatches",
-        "func cleanupAbandonFailureSeal",
-        "func cleanupAbandonFingerprint",
         "func cleanupAbandonGates",
         "func cleanupAbandonInspectWorktree",
         "func cleanupAbandonIntentInspectionRequests",
-        "func cleanupAbandonIntentOperationIDs",
-        "func cleanupAbandonLeaseHoldsWriter",
         "func cleanupAbandonOrcaResourcesAbsent",
-        "func cleanupAbandonPartialBranchRetry",
         "func cleanupAbandonPendingRecovery",
         "func cleanupAbandonPendingSafe",
-        "func cleanupAbandonPreviewCommand",
-        "func cleanupAbandonRecordSHA",
-        "func cleanupAbandonRemoteFlags",
-        "func cleanupAbandonRemovalPlan",
         "func cleanupAbandonResolvedChildren",
-        "func cleanupAbandonUnresolvedChildren",
-        "func cleanupAbandonValidFingerprint",
         "func deleteAbandonedIssueOps",
         "func recordCleanupAbandonFailure",
-        "func validateCleanupAbandonReason",
-        "type CleanupAbandonDeps",
-        "type cleanupAbandonInventory"
+        "type CleanupAbandonDeps"
       ]
     },
     {
@@ -10994,6 +10980,16 @@
       ]
     },
     {
+      "path": "internal/application/issueopscleanup/abandon_evidence.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func CleanupAbandonFailureSeal",
+        "func CleanupAbandonFingerprint",
+        "func CleanupAbandonRecordSHA"
+      ]
+    },
+    {
       "path": "internal/application/issueopscleanup/audit.go",
       "owner": "application",
       "task": "T08",
@@ -12786,6 +12782,14 @@
       ]
     },
     {
+      "path": "internal/contract/issueops/cleanup_abandon_inventory.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type CleanupAbandonInventory"
+      ]
+    },
+    {
       "path": "internal/contract/issueops/cleanup_attempt.go",
       "owner": "contract",
       "task": "T08",
@@ -14441,6 +14445,33 @@
         "func ValidateChildForVerdict",
         "func ValidateChildValidationIDs",
         "func childVerdictReceipt"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_abandon.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CleanupAbandonFailureInventoryMatches",
+        "func CleanupAbandonIntentOperationIDs",
+        "func CleanupAbandonPartialBranchRetry",
+        "func CleanupAbandonPreviewCommand",
+        "func CleanupAbandonRemoteFlags",
+        "func CleanupAbandonRemovalPlan",
+        "func CleanupAbandonTargets",
+        "func CleanupAbandonUnresolvedChildren",
+        "func ValidateCleanupAbandonReason",
+        "func cleanupAbandonValidFingerprint",
+        "type CleanupAbandonFailureEvidence"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_abandon_preview.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BuildCleanupAbandonPreview",
+        "type CleanupAbandonObservation"
       ]
     },
     {

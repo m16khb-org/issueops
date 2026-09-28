@@ -2,8 +2,6 @@ package issueops
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,24 +10,15 @@ import (
 
 	"issueops/internal/adapter/issueops/pathutil"
 	"issueops/internal/adapter/outbound/sqlstore"
+	abandonapp "issueops/internal/application/issueopscleanup"
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	abandondomain "issueops/internal/domain/issueops"
 	leasedomain "issueops/internal/domain/issueopslease"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 	reconciledomain "issueops/internal/domain/issueopsreconcile"
 	"issueops/internal/port"
 )
-
-// cleanupAbandonReasonLimit는 --reason 상한이다. 감사 문자열의 표현력 한계가
-// 아니라, lease 가드의 exact-command 파싱(commandparse)이 명령 전체를 토큰
-// 단위로 재구성한다는 사실에서 오는 보수적 여유값이다.
-const cleanupAbandonReasonLimit = 512
-
-// cleanupAbandonReasonForbidden은 exact-command 파서가 "활성 셸 구성"으로
-// 판정하는 문자 집합이다. 이 문자가 --reason에 들어가면 명령이 가드 단계에서
-// 거부되므로, core가 먼저 거부해 진단을 앞당긴다(사유 없는 unsafe_mutation
-// 거부보다 reason_required가 훨씬 읽기 쉽다).
-const cleanupAbandonReasonForbidden = "\"'`$\\|&;<>()*?~"
 
 // CleanupAbandonDeps는 게이트 평가의 외부 표면이다.
 //
@@ -59,44 +48,6 @@ type CleanupAbandonDeps struct {
 	Remote port.IssueProvider
 }
 
-// cleanupAbandonInventory는 fingerprint 입력이 되는 현재 관측 상태다.
-// cleanupFinishInventory와 달리 원격 completion 권한을 다루지 않고, 레코드가
-// 지목한 로컬 worktree와 branch의 삭제 권한만 봉인한다.
-type cleanupAbandonInventory struct {
-	ID                 string `json:"id"`
-	Repo               string `json:"repo"`
-	Branch             string `json:"branch"`
-	WorktreeRoot       string `json:"worktree_root"`
-	WorktreePresent    bool   `json:"worktree_present"`
-	WorktreeCanonical  bool   `json:"worktree_canonical"`
-	WorktreeBranch     string `json:"worktree_branch"`
-	WorktreeClean      bool   `json:"worktree_clean"`
-	WorktreeHead       string `json:"worktree_head"`
-	BranchOID          string `json:"branch_oid"`
-	BranchCheckoutPath string `json:"branch_checkout_path"`
-	RecordSHA          string `json:"record_sha"`
-	Phase              string `json:"phase"`
-	LeaseStatus        string `json:"lease_status"`
-	PendingOperationID string `json:"pending_operation_id"`
-	// WorkspaceProcesses와 OrcaTerminals는 apply ①′가 종료할 집합이며 fingerprint
-	// 입력이다(#477).
-	WorkspaceProcesses []issueops.NativeProcessReceipt `json:"workspace_processes,omitempty"`
-	OrcaTerminals      []string                        `json:"orca_terminals,omitempty"`
-	// OrcaAppPID는 ①′가 시그널에서 제외할 Orca 앱 pid다(finish와 같은 계약).
-	OrcaAppPID       int  `json:"orca_app_pid,omitempty"`
-	OrcaRuntimeReady bool `json:"orca_runtime_ready,omitempty"`
-	// 아래 넷은 원격 효과가 요청됐을 때만 채워진다. 전부 omitempty이므로
-	// 플래그 없는 폐기의 fingerprint는 이 확장 전과 같은 값이다.
-	//
-	// 관측한 원격 *상태*는 여기 넣지 않는다(ArtifactUnmerged와 같은 규율).
-	// RemoteBranchOID만 예외인데, 삭제가 force-with-lease CAS로 그 값을
-	// 사용하므로 승인 대상의 일부이기 때문이다.
-	ClosePR            bool   `json:"close_pr,omitempty"`
-	CloseIssue         bool   `json:"close_issue,omitempty"`
-	DeleteRemoteBranch bool   `json:"delete_remote_branch,omitempty"`
-	RemoteBranchOID    string `json:"remote_branch_oid,omitempty"`
-}
-
 // CleanupAbandon은 게이트를 평가하고, apply에서 원격을 건드리지 않은 채 로컬
 // worktree와 branch를 먼저 제거한 뒤 레코드와 intent 행을 원자 삭제한다.
 func CleanupAbandon(ctx context.Context, stateRoot string, req CleanupAbandonRequest, deps CleanupAbandonDeps) (CleanupAbandonResult, error) {
@@ -123,17 +74,17 @@ func CleanupAbandon(ctx context.Context, stateRoot string, req CleanupAbandonReq
 		result.OK = false
 		return result, fmt.Errorf("cleanup abandon is not ready: %s", strings.Join(missing, ", "))
 	}
-	fingerprint, err := cleanupAbandonFingerprint(inventory)
+	fingerprint, err := abandonapp.CleanupAbandonFingerprint(inventory)
 	if err != nil {
 		return CleanupAbandonResult{OK: false, ID: record.ID}, err
 	}
 	result.Fingerprint = fingerprint
-	result.RemovalPlan = cleanupAbandonRemovalPlan(record, inventory)
+	result.RemovalPlan = abandondomain.CleanupAbandonRemovalPlan(record, inventory)
 	snapshot := record
 	result.Record = &snapshot
 	if !req.Apply {
 		result.NextCommand = fmt.Sprintf("issueops cleanup abandon --id %s --reason %q%s --apply --confirm --fingerprint %s --json",
-			record.ID, result.Reason, cleanupAbandonRemoteFlags(req), fingerprint)
+			record.ID, result.Reason, abandondomain.CleanupAbandonRemoteFlags(req), fingerprint)
 		return result, nil
 	}
 	if !req.Confirm {
@@ -166,7 +117,7 @@ func CleanupAbandon(ctx context.Context, stateRoot string, req CleanupAbandonReq
 			result.OK = false
 			result.FailedStep = issueops.CleanupFailureStepWorkspaceProcessesStop
 			receiptErr := recordCleanupAbandonFailure(stateRoot, record.ID, result.FailedStep, stopErr, fingerprint, inventory)
-			result.NextCommand = cleanupAbandonPreviewCommand(record.ID, result.Reason, req)
+			result.NextCommand = abandondomain.CleanupAbandonPreviewCommand(record.ID, result.Reason, req)
 			return result, cleanupAbandonApplyError(fmt.Sprintf("cleanup abandon workspace stop failed (record and worktree preserved): %v", stopErr), receiptErr)
 		}
 	}
@@ -176,7 +127,7 @@ func CleanupAbandon(ctx context.Context, stateRoot string, req CleanupAbandonReq
 				result.OK = false
 				result.FailedStep = issueops.CleanupFailureStepWorktreeRemove
 				receiptErr := recordCleanupAbandonFailure(stateRoot, record.ID, result.FailedStep, fmt.Errorf("%s", out), fingerprint, inventory)
-				result.NextCommand = cleanupAbandonPreviewCommand(record.ID, result.Reason, req)
+				result.NextCommand = abandondomain.CleanupAbandonPreviewCommand(record.ID, result.Reason, req)
 				return result, cleanupAbandonApplyError(fmt.Sprintf("cleanup abandon worktree removal failed (record preserved): %s", out), receiptErr)
 			}
 		}
@@ -191,17 +142,17 @@ func CleanupAbandon(ctx context.Context, stateRoot string, req CleanupAbandonReq
 			result.OK = false
 			result.FailedStep = issueops.CleanupFailureStepBranchDelete
 			receiptErr := recordCleanupAbandonFailure(stateRoot, record.ID, result.FailedStep, fmt.Errorf("%s", out), fingerprint, inventory)
-			result.NextCommand = cleanupAbandonPreviewCommand(record.ID, result.Reason, req)
+			result.NextCommand = abandondomain.CleanupAbandonPreviewCommand(record.ID, result.Reason, req)
 			return result, cleanupAbandonApplyError(fmt.Sprintf("cleanup abandon branch deletion failed (record preserved): %s", out), receiptErr)
 		}
 		result.BranchDeleted = true
 	}
-	deleted, err := deleteAbandonedIssueOps(ctx, stateRoot, record, cleanupAbandonIntentOperationIDs(record))
+	deleted, err := deleteAbandonedIssueOps(ctx, stateRoot, record, abandondomain.CleanupAbandonIntentOperationIDs(record))
 	if err != nil {
 		result.OK = false
 		result.FailedStep = issueops.CleanupFailureStepRecordDelete
 		receiptErr := recordCleanupAbandonFailure(stateRoot, record.ID, result.FailedStep, err, fingerprint, inventory)
-		result.NextCommand = cleanupAbandonPreviewCommand(record.ID, result.Reason, req)
+		result.NextCommand = abandondomain.CleanupAbandonPreviewCommand(record.ID, result.Reason, req)
 		return result, cleanupAbandonApplyError(fmt.Sprintf("cleanup abandon deletion failed (record preserved): %v", err), receiptErr)
 	}
 	result.IntentRowsDeleted = deleted
@@ -210,29 +161,7 @@ func CleanupAbandon(ctx context.Context, stateRoot string, req CleanupAbandonReq
 	return result, nil
 }
 
-// cleanupAbandonRemoteFlags는 승인 대상과 재실행 명령이 같은 효과를 가리키게
-// 한다. preview가 렌더한 명령에서 플래그가 빠지면 사용자가 승인한 것과 실행될
-// 것이 달라진다.
-func cleanupAbandonRemoteFlags(req CleanupAbandonRequest) string {
-	flags := ""
-	if req.ClosePR {
-		flags += " --close-pr"
-	}
-	if req.CloseIssue {
-		flags += " --close-issue"
-	}
-	if req.DeleteRemoteBranch {
-		flags += " --delete-remote-branch"
-	}
-	return flags
-}
-
-func cleanupAbandonPreviewCommand(id, reason string, req CleanupAbandonRequest) string {
-	return fmt.Sprintf("issueops cleanup abandon --id %s --reason %q%s --preview --json",
-		id, reason, cleanupAbandonRemoteFlags(req))
-}
-
-func recordCleanupAbandonFailure(stateRoot, id, step string, stepErr error, fingerprint string, inventory cleanupAbandonInventory) error {
+func recordCleanupAbandonFailure(stateRoot, id, step string, stepErr error, fingerprint string, inventory issueops.CleanupAbandonInventory) error {
 	return withCleanupAbandonLock(context.Background(), stateRoot, id, func(context.Context) error {
 		record, err := ReadIssueOps(stateRoot, id)
 		if err != nil {
@@ -248,7 +177,7 @@ func recordCleanupAbandonFailure(stateRoot, id, step string, stepErr error, fing
 			WorktreePath: inventory.WorktreeRoot, Branch: inventory.Branch,
 			WorktreeHead: inventory.WorktreeHead, BranchOID: inventory.BranchOID, At: now,
 		}
-		failure.InventorySHA256 = cleanupAbandonFailureSeal(record, failure)
+		failure.InventorySHA256 = abandonapp.CleanupAbandonFailureSeal(record, failure)
 		record.CleanupAbandonFailure = failure
 		record.UpdatedAt = now
 		_, err = writeIssueOps(stateRoot, record)
@@ -263,280 +192,74 @@ func cleanupAbandonApplyError(message string, receiptErr error) error {
 	return fmt.Errorf("%s; failure receipt update failed: %v", message, receiptErr)
 }
 
-// cleanupAbandonGates는 모든 게이트를 평가하고 missing을 나열한다(첫 실패에
-// 멈추지 않는다 — 운영자가 한 번의 preview로 모든 결격 사유를 본다).
-func cleanupAbandonGates(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, req CleanupAbandonRequest, deps CleanupAbandonDeps, result *CleanupAbandonResult) (cleanupAbandonInventory, []string) {
-	missing := []string{}
-	// ① 사유 필수. 삭제 근거 없는 수명 종료는 감사 불가능하다.
-	if err := validateCleanupAbandonReason(req.Reason); err != nil {
-		missing = append(missing, "reason_required")
-		result.ReasonError = err.Error()
-	}
-	// ② 보존해야 할 것은 phase 이름이 아니라 머지 증적이다.
-	//
-	// 원래 이 게이트는 done을 통째로 거부했다. abandon이 done을 삼키면 머지 증적
-	// 보존 경로(reflect→finish)를 우회하는 탈출구가 된다는 우려였고, 그 우려의
-	// 실체는 게이트 ④가 이미 막는다. done 자체를 거부하면 finish가 성립하지 않는
-	// 결말 — artifact가 없거나 병합되지 않은 채 완료된 사이클 — 이 어느 경로로도
-	// 은퇴하지 못한다(#342에서 실측: 6건이 이 사유로 차단).
-	//
-	// finish는 remote_artifact_merged를 요구하므로 미머지 레코드에 쓸 수 없고,
-	// 그 요구를 완화하는 것은 잘못된 정리를 여는 일이다. 따라서 판정을 ④로 옮긴다.
-	// ③ lease allowlist: 홀더가 없는 상태만 통과한다.
-	//
-	// 판정 기준은 상태 이름이 아니라 writer의 유무다. validateWriteLease가
-	// claimable에 홀더 부재를 강제하므로(model/execution.go) claimable과
-	// released는 같은 성질이고, 거부해야 할 것은 살아 있는 writer를 가진
-	// active와 fenced holder를 여전히 보유한 revoking이다(design-review F5).
-	//
-	// claimable을 함께 거부하던 것은 안전한 기본값이었지만 정리 경로를 막았다.
-	// 운영자는 claim→release로 lease를 한 바퀴 돌려야 했고 그 두 단계는
-	// 아무것도 정리하지 않았다(#140, #139에서 실측). claimable을 허용해도
-	// pending intent(⑤), 워크트리·브랜치 잔여(⑥·⑦), orca 자원 잔여(⑨)가
-	// 각각 막으므로 실제로 열리는 것은 홀더도 자원도 없는 레코드뿐이다.
-	if record.Execution != nil && cleanupAbandonLeaseHoldsWriter(record.Execution.Lease.Status) {
-		missing = append(missing, "lease_terminal")
-	}
-	// ④ 머지 증적을 가진 레코드의 정답은 reflect→finish다. artifact가 있는데
-	// 미병합을 관측하지 못했다면 — 조회 실패든 미관측이든 — 닫힌 채로 둔다.
-	if record.RemoteArtifact != nil && !req.ArtifactUnmerged {
-		missing = append(missing, "remote_artifact_unmerged")
-	}
-	// ⑧ 자식 고아 방지(finish의 child_tasks_closed 대응물, design-review F6).
-	//
-	// 해소되지 않은 자식만 센다. 모두 끝난 자식까지 차단 사유로 세면 epic을
-	// 완주할수록 그 기록이 영구히 남는다 — 일을 끝낼수록 정리가 어려워지면
-	// 계약이 뒤집힌 것이다(#437).
-	if unresolved := cleanupAbandonUnresolvedChildren(record, cleanupAbandonResolvedChildren(stateRoot, record)); len(unresolved) > 0 {
-		missing = append(missing, "no_children")
-		result.UnresolvedChildren = unresolved
-	}
-
-	inventory := cleanupAbandonInventory{
-		ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(record.Branch),
-		Phase: string(record.Phase), LeaseStatus: "none",
-	}
-	inventory.RecordSHA = cleanupAbandonRecordSHA(record)
+// cleanupAbandonGates observes resources; the domain decides whether those facts
+// permit abandonment and preserves the published diagnostic order.
+func cleanupAbandonGates(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, req CleanupAbandonRequest, deps CleanupAbandonDeps, result *CleanupAbandonResult) (issueops.CleanupAbandonInventory, []string) {
+	inventory := abandondomain.CleanupAbandonTargets(record)
+	inventory.RecordSHA = abandonapp.CleanupAbandonRecordSHA(record)
+	observed := abandondomain.CleanupAbandonObservation{ResolvedChildren: cleanupAbandonResolvedChildren(stateRoot, record)}
 	if record.Execution != nil {
-		inventory.LeaseStatus = string(record.Execution.Lease.Status)
-		inventory.WorktreeRoot = strings.TrimSpace(record.Execution.Workspace.Root)
-		if branch := strings.TrimSpace(record.Execution.Workspace.Branch); branch != "" {
-			inventory.Branch = branch
-		}
-		if record.Execution.Pending != nil {
-			inventory.PendingOperationID = strings.TrimSpace(record.Execution.Pending.OperationID)
-		}
+		observed.LeaseHolderless = !leasedomain.LeaseHoldsWriter(string(record.Execution.Lease.Status))
 	}
-	// 레거시/직접 사이클은 record.WorktreePath만 가질 수 있다. 폴백하되, 두 값이
-	// 모두 있고 다르면 어느 쪽도 신뢰하지 않는다(C2-F7 준용).
 	if linked := strings.TrimSpace(record.WorktreePath); linked != "" {
-		if inventory.WorktreeRoot == "" {
-			inventory.WorktreeRoot = linked
-		} else if pathutil.CleanAbsPath(inventory.WorktreeRoot) != pathutil.CleanAbsPath(linked) {
-			missing = append(missing, "worktree_identity_conflict")
-		}
+		observed.WorktreeIdentityConflict = pathutil.CleanAbsPath(inventory.WorktreeRoot) != pathutil.CleanAbsPath(linked)
 	}
 	if inventory.WorktreeRoot != "" {
 		info, err := os.Lstat(inventory.WorktreeRoot)
 		switch {
 		case os.IsNotExist(err):
 		case err != nil:
-			missing = append(missing, "worktree_observable")
+			observed.WorktreeUnobservable = true
 		case !info.IsDir():
-			missing = append(missing, "worktree_observable")
+			observed.WorktreeUnobservable = true
 		default:
 			inventory.WorktreePresent = true
 		}
 	}
-	result.WorktreePath = inventory.WorktreeRoot
-	result.Branch = inventory.Branch
-	result.WorktreePresent = inventory.WorktreePresent
-	result.PendingOperationID = inventory.PendingOperationID
 	if inventory.WorktreePresent {
-		inventory, missing = cleanupAbandonInspectWorktree(inventory, deps, missing)
-		// abandon에는 CWD 게이트가 없고 worktree_canonical은 소스 체크아웃 자체에도
-		// 통과하므로, 공유 게이트가 소스 체크아웃을 먼저 거부한다(#477).
-		observation, workspaceMissing := NewCleanupWorkspaceCleaner(deps.Processes, deps.OrcaTerminals).Observe(ctx, record, inventory.WorktreeRoot)
-		missing = append(missing, workspaceMissing...)
-		inventory.WorkspaceProcesses = observation.Receipts
-		inventory.OrcaTerminals = observation.Terminals
-		inventory.OrcaAppPID = observation.AppPID
-		inventory.OrcaRuntimeReady = observation.RuntimeReady
-		result.WorkspaceProcesses = observation.Occupants
-		result.OrcaTerminals = observation.Terminals
+		inventory, observed.WorktreeHeadObservable = cleanupAbandonInspectWorktree(inventory, deps)
+		workspace, missing := NewCleanupWorkspaceCleaner(deps.Processes, deps.OrcaTerminals).Observe(ctx, record, inventory.WorktreeRoot)
+		observed.WorkspaceMissing = missing
+		observed.Occupants = workspace.Occupants
+		inventory.WorkspaceProcesses = workspace.Receipts
+		inventory.OrcaTerminals = workspace.Terminals
+		inventory.OrcaAppPID = workspace.AppPID
+		inventory.OrcaRuntimeReady = workspace.RuntimeReady
 	}
-	result.WorktreeCanonical = inventory.WorktreeCanonical
-	result.WorktreeClean = inventory.WorktreeClean
-	result.WorktreeHead = inventory.WorktreeHead
 	if inventory.Branch != "" {
 		code, out := deps.Git(record.Repo, "rev-parse", "--verify", "--quiet", "refs/heads/"+inventory.Branch)
-		switch {
-		case code == 0 && strings.TrimSpace(out) != "":
+		observed.BranchObservable = code == 1 || (code == 0 && strings.TrimSpace(out) != "")
+		if code == 0 {
 			inventory.BranchOID = strings.TrimSpace(out)
-			result.BranchPresent = true
-		case code == 1:
-		default:
-			missing = append(missing, "local_branch_observable")
 		}
 	}
-	result.BranchOID = inventory.BranchOID
-	if result.BranchPresent {
-		if code, out := deps.Git(record.Repo, "worktree", "list", "--porcelain"); code != 0 {
-			missing = append(missing, "worktree_registry_observable")
-		} else {
+	if inventory.BranchOID != "" {
+		code, out := deps.Git(record.Repo, "worktree", "list", "--porcelain")
+		observed.RegistryObservable = code == 0
+		if code == 0 {
 			inventory.BranchCheckoutPath = cleanupAbandonBranchCheckoutPath(out, inventory.Branch)
-			result.BranchCheckoutPath = inventory.BranchCheckoutPath
-			if inventory.BranchCheckoutPath != "" && !samePath(inventory.BranchCheckoutPath, inventory.WorktreeRoot) {
-				missing = append(missing, "branch_checked_out_elsewhere")
-			}
+			observed.BranchCheckedOutElsewhere = inventory.BranchCheckoutPath != "" && !samePath(inventory.BranchCheckoutPath, inventory.WorktreeRoot)
 		}
 	}
-	receiptMatches := cleanupAbandonFailureInventoryMatches(record, inventory, result.BranchPresent)
-	if record.CleanupAbandonFailure != nil && !receiptMatches {
-		missing = append(missing, "cleanup_failure_inventory")
+	if failure := record.CleanupAbandonFailure; failure != nil {
+		observed.FailureEvidence.SameWorktree = samePath(failure.WorktreePath, inventory.WorktreeRoot)
+		observed.FailureEvidence.SealMatches = failure.InventorySHA256 == abandonapp.CleanupAbandonFailureSeal(record, failure)
 	}
-	partialBranchRetry := receiptMatches && cleanupAbandonPartialBranchRetry(record, inventory, result.BranchPresent)
-	if partialBranchRetry {
-		inventory.WorktreeHead = record.CleanupAbandonFailure.WorktreeHead
-		result.WorktreeHead = inventory.WorktreeHead
-	}
-	// ⑥ 잔여물의 소유 근거. execution workspace receipt가 없어도 record가
-	// link한 워크트리(record.WorktreePath)는 격리 경로·브랜치 일치가 검증된
-	// record 소유 잔여물이다. 위 canonical/branch/head/clean 검사와 fingerprint·
-	// confirm이 그대로 적용되므로 abandon 대상으로 인정한다. record가 아무
-	// 워크트리도 link하지 않았는데 잔여물이 있으면 무엇을 지우는지 설명할 수
-	// 없으므로 계속 막는다.
-	//
-	// 실측(io-2fb20438b925, 2026-08-26): execution prepare 없이 진행된 사이클이
-	// MR 머지·이슈 종료까지 끝난 뒤, finish는 기록된 artifact를, orphan은 record
-	// 부재를, abandon은 이 게이트를 요구해 typed 출구가 하나도 없었다.
-	if (inventory.WorktreePresent || result.BranchPresent) && record.Execution == nil && strings.TrimSpace(record.WorktreePath) == "" {
-		missing = append(missing, "local_residue_execution")
-	}
-	// 비대칭 잔여물(한쪽만 남음)은 거부하지 않는다(#433).
-	//
-	// 예전에는 이 비대칭 자체가 거부 사유였고, abandon 자신이 남긴 retry
-	// receipt가 있을 때만 예외가 열렸다. 그래서 worktree가 **다른 경로로**
-	// 사라진 lifecycle에는 typed 출구가 없었다 — cleanup finish는 머지 증거를,
-	// cleanup orphan은 worktree를 요구하므로 둘 다 해당되지 않았다.
-	// 실측: io-268bd6ac6e7a가 다른 모든 게이트를 통과하고도 이 하나로 영구히
-	// 막혔다.
-	//
-	// 완화해도 안전한 근거는 각 축의 검사가 따로 서 있기 때문이다. worktree는
-	// canonical·clean·head로, branch는 다른 곳에 체크아웃되지 않았는지로 각각
-	// 검증되고, fingerprint가 두 축의 관측(존재 여부와 값)을 모두 결속하므로
-	// apply 직전에 없던 쪽이 생기면 stale로 멈춘다.
-	//
-	// 쌍이 온전할 때의 head 일치 요구는 아래에서 그대로 유지한다 — 그것은
-	// 비대칭 문제가 아니라 두 관측이 서로 모순되는 경우다.
-	if inventory.WorktreePresent && result.BranchPresent && inventory.WorktreeHead != inventory.BranchOID {
-		missing = append(missing, "local_branch_head")
-	}
-	// ⑤ pending external intent.
 	if record.Execution != nil && record.Execution.Pending != nil {
 		if err := cleanupAbandonPendingSafe(ctx, stateRoot, record, inventory, deps); err != nil {
-			missing = append(missing, "pending_intent_safe")
-			result.PendingIntentError = cleanupAbandonPendingRecovery(record.ID, err)
+			observed.PendingIntentError = cleanupAbandonPendingRecovery(record.ID, err)
 		}
 	}
-	// ⑨ orca 자원 잔여. 게이트 ⑥은 로컬 디렉터리만 보므로 orca 레지스트리에
-	// 남은 task를 놓친다. 살아 있는 터미널은 apply ①′가 실제로 닫을 수 있을 때만
-	// 통과한다(pr-review #478 F4).
-	terminalsReachable := inventory.WorktreePresent && len(inventory.OrcaTerminals) > 0
-	if err := cleanupAbandonOrcaResourcesAbsent(ctx, record, deps, terminalsReachable); err != nil {
-		missing = append(missing, "orca_resources_absent")
-		result.OrcaResidueError = err.Error()
+	if err := cleanupAbandonOrcaResourcesAbsent(ctx, record, deps, inventory.WorktreePresent && len(inventory.OrcaTerminals) > 0); err != nil {
+		observed.OrcaResidueError = err.Error()
 	}
-	// ⑩ 원격 효과. 요청된 것만 관측하며, 플래그가 없으면 provider를 호출하지
-	// 않는다.
-	inventory, remoteMissing := cleanupAbandonObserveRemote(ctx, record, req, deps, inventory, result)
-	missing = append(missing, remoteMissing...)
-	return inventory, missing
-}
-
-func cleanupAbandonPartialBranchRetry(record issueops.IssueOpsRecord, inventory cleanupAbandonInventory, branchPresent bool) bool {
-	failure := record.CleanupAbandonFailure
-	return !inventory.WorktreePresent && branchPresent && failure != nil &&
-		(failure.Step == "applying" || failure.Step == "branch_delete") &&
-		samePath(failure.WorktreePath, inventory.WorktreeRoot) &&
-		failure.Branch == inventory.Branch && failure.BranchOID == inventory.BranchOID &&
-		failure.WorktreeHead == inventory.BranchOID
-}
-
-func cleanupAbandonFailureInventoryMatches(record issueops.IssueOpsRecord, inventory cleanupAbandonInventory, branchPresent bool) bool {
-	failure := record.CleanupAbandonFailure
-	if failure == nil {
-		return true
-	}
-	if !cleanupAbandonValidFingerprint(failure.Fingerprint) || !cleanupAbandonValidFingerprint(failure.RecordSHA) ||
-		!cleanupAbandonValidFingerprint(failure.InventorySHA256) ||
-		failure.InventorySHA256 != cleanupAbandonFailureSeal(record, failure) || failure.Branch != inventory.Branch ||
-		!samePath(failure.WorktreePath, inventory.WorktreeRoot) {
-		return false
-	}
-	// receipt는 arm 시점의 자원 모양을 담는다: paired(둘 다), worktree-only,
-	// branch-only(#433 비대칭 잔여), absent. 둘 다 있었다면 같은 OID여야 한다.
-	origWorktree := failure.WorktreeHead != ""
-	origBranch := failure.BranchOID != ""
-	if origWorktree && origBranch && failure.WorktreeHead != failure.BranchOID {
-		return false
-	}
-	// 남아 있는 자원은 receipt의 OID와 같아야 하고, 사라진 자원은 원래 없었거나
-	// apply가 그 단계까지 갔을 때만 사라질 수 있다. 삭제 순서는 worktree → branch다.
-	worktreeMatches := func(mayBeRemoved bool) bool {
-		if inventory.WorktreePresent {
-			return origWorktree && inventory.WorktreeHead == failure.WorktreeHead
-		}
-		return !origWorktree || mayBeRemoved
-	}
-	branchMatches := func(mayBeRemoved bool) bool {
-		if branchPresent {
-			return origBranch && inventory.BranchOID == failure.BranchOID
-		}
-		return !origBranch || mayBeRemoved
-	}
-	switch failure.Step {
-	case "applying":
-		branchRemoved := origBranch && !branchPresent
-		return worktreeMatches(true) && branchMatches(true) && !(branchRemoved && inventory.WorktreePresent)
-	case "workspace_processes_stop", "worktree_remove":
-		// ①′/③ 실패는 아직 아무것도 지우지 않은 상태다.
-		return origWorktree && inventory.WorktreePresent && worktreeMatches(false) && branchMatches(false)
-	case "branch_delete":
-		// ④ 실패는 worktree 제거 뒤다. 다시 나타난 worktree는 외부 변경이므로 거부한다.
-		return origBranch && branchPresent && !inventory.WorktreePresent && branchMatches(false)
-	case "record_delete":
-		return !inventory.WorktreePresent && !branchPresent && worktreeMatches(true) && branchMatches(true)
-	}
-	return false
-}
-
-func cleanupAbandonValidFingerprint(value string) bool {
-	if len(value) != sha256.Size*2 {
-		return false
-	}
-	_, err := hex.DecodeString(value)
-	return err == nil
-}
-
-func cleanupAbandonFailureSeal(record issueops.IssueOpsRecord, failure *issueops.IssueOpsCleanupAbandonFailure) string {
-	sealed := struct {
-		ID           string `json:"id"`
-		Repo         string `json:"repo"`
-		Fingerprint  string `json:"fingerprint"`
-		RecordSHA    string `json:"record_sha"`
-		WorktreePath string `json:"worktree_path"`
-		Branch       string `json:"branch"`
-		WorktreeHead string `json:"worktree_head"`
-		BranchOID    string `json:"branch_oid"`
-	}{
-		ID: record.ID, Repo: record.Repo, Fingerprint: failure.Fingerprint,
-		RecordSHA: failure.RecordSHA, WorktreePath: failure.WorktreePath,
-		Branch: failure.Branch, WorktreeHead: failure.WorktreeHead, BranchOID: failure.BranchOID,
-	}
-	data, _ := json.Marshal(sealed)
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
+	remote := CleanupAbandonResult{}
+	inventory, observed.RemoteMissing = cleanupAbandonObserveRemote(ctx, record, req, deps, inventory, &remote)
+	observed.RemoteEffects = remote.RemoteEffects
+	observed.RemoteArtifactState = remote.RemoteArtifactState
+	observed.IssueState = remote.IssueState
+	inventory, *result = abandondomain.BuildCleanupAbandonPreview(record, req, inventory, observed)
+	return inventory, result.Missing
 }
 
 func cleanupAbandonBranchCheckoutPath(output, branch string) string {
@@ -552,45 +275,22 @@ func cleanupAbandonBranchCheckoutPath(output, branch string) string {
 	return ""
 }
 
-func cleanupAbandonInspectWorktree(inventory cleanupAbandonInventory, deps CleanupAbandonDeps, missing []string) (cleanupAbandonInventory, []string) {
-	if code, out := deps.Git(inventory.WorktreeRoot, "rev-parse", "--show-toplevel"); code == 0 &&
-		samePath(out, inventory.WorktreeRoot) {
-		inventory.WorktreeCanonical = true
-	} else {
-		missing = append(missing, "worktree_canonical")
+func cleanupAbandonInspectWorktree(inventory issueops.CleanupAbandonInventory, deps CleanupAbandonDeps) (issueops.CleanupAbandonInventory, bool) {
+	if code, out := deps.Git(inventory.WorktreeRoot, "rev-parse", "--show-toplevel"); code == 0 {
+		inventory.WorktreeCanonical = samePath(out, inventory.WorktreeRoot)
 	}
 	if code, out := deps.Git(inventory.WorktreeRoot, "symbolic-ref", "--quiet", "--short", "HEAD"); code == 0 {
 		inventory.WorktreeBranch = strings.TrimSpace(out)
 	}
-	if inventory.WorktreeBranch != inventory.Branch {
-		missing = append(missing, "worktree_branch_match")
-	}
-	if code, out := deps.Git(inventory.WorktreeRoot, "rev-parse", "HEAD"); code == 0 {
+	code, out := deps.Git(inventory.WorktreeRoot, "rev-parse", "HEAD")
+	headObservable := code == 0
+	if headObservable {
 		inventory.WorktreeHead = strings.TrimSpace(out)
-	} else {
-		missing = append(missing, "worktree_head")
 	}
-	if code, out := deps.Git(inventory.WorktreeRoot, "status", "--porcelain=v1"); code == 0 && strings.TrimSpace(out) == "" {
-		inventory.WorktreeClean = true
-	} else {
-		missing = append(missing, "worktree_clean")
+	if code, out := deps.Git(inventory.WorktreeRoot, "status", "--porcelain=v1"); code == 0 {
+		inventory.WorktreeClean = strings.TrimSpace(out) == ""
 	}
-	return inventory, missing
-}
-
-func cleanupAbandonRemovalPlan(record issueops.IssueOpsRecord, inventory cleanupAbandonInventory) []string {
-	plan := []string{}
-	if inventory.WorktreePresent {
-		plan = append(plan, "local_worktree:"+inventory.WorktreeRoot)
-	}
-	if inventory.BranchOID != "" {
-		plan = append(plan, "local_branch:"+inventory.Branch+"@"+inventory.BranchOID)
-	}
-	plan = append(plan, "record:"+record.ID)
-	for _, operationID := range cleanupAbandonIntentOperationIDs(record) {
-		plan = append(plan, "intent:"+operationID)
-	}
-	return plan
+	return inventory, headObservable
 }
 
 // cleanupAbandonPendingRecovery는 pending intent가 안전하다고 증명되지 않았을 때
@@ -602,13 +302,6 @@ func cleanupAbandonPendingRecovery(id string, cause error) string {
 	}
 	return fmt.Sprintf("%s; run `issueops execution reconcile --id %s --preview --json` until it settles, then reclaim the Orca worktree with `orca worktree remove` before retrying abandon",
 		detail, id)
-}
-
-// cleanupAbandonLeaseHoldsWriter는 lease가 아직 writer를 붙들고 있는지 본다.
-// 알 수 없는 상태는 writer 보유로 다룬다 — 모르는 상태를 통과시키면 게이트가
-// fail-open이 된다.
-func cleanupAbandonLeaseHoldsWriter(status issueops.LeaseStatus) bool {
-	return leasedomain.LeaseHoldsWriter(string(status))
 }
 
 // cleanupAbandonOrcaResourcesAbsent는 레코드를 지워도 orca 자원이 소유자를 잃지
@@ -641,7 +334,7 @@ func cleanupAbandonOrcaResourcesAbsent(ctx context.Context, record issueops.Issu
 	// 권한은 holderless에서만 연다. 살아 있는 writer가 있으면 이전 런타임의 자원
 	// 부재를 증명할 수 없기 때문이다. 게이트 ③이 같은 판정으로 active/revoking을
 	// 이미 거부하므로 두 게이트는 같은 방향으로 닫힌다.
-	allowRuntimeRollover := !cleanupAbandonLeaseHoldsWriter(record.Execution.Lease.Status) &&
+	allowRuntimeRollover := !leasedomain.LeaseHoldsWriter(string(record.Execution.Lease.Status)) &&
 		record.Execution.Lease.Holder == nil
 	inventory, err := deps.OrcaOwner.InspectOwner(ctx, port.ExecutionOrcaOwnerInventoryRequest{
 		RuntimeID: binding.RuntimeID, WorktreeID: binding.WorktreeID, RunID: binding.RunID, TaskID: binding.TaskID,
@@ -669,7 +362,7 @@ func cleanupAbandonOrcaResourcesAbsent(ctx context.Context, record issueops.Issu
 // 없더라도 terminal/task가 남을 수 있다. 따라서 worktree부터 현재 단계까지
 // 봉인된 인벤토리를 모두 authoritative zero로 확인하고, 별도 게이트 ⑨에서
 // 이전 generation의 owner binding도 확인한다.
-func cleanupAbandonPendingSafe(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, inventory cleanupAbandonInventory, deps CleanupAbandonDeps) error {
+func cleanupAbandonPendingSafe(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, inventory issueops.CleanupAbandonInventory, deps CleanupAbandonDeps) error {
 	pending := record.Execution.Pending
 	// (a) kind allowlist — 로컬 orca mutation 한정. remote PR/MR 계열 kind는
 	// 원격 고아 PR을 남길 수 있으므로 무조건 거부하고 reconcile로 보낸다.
@@ -768,34 +461,6 @@ func cleanupAbandonIntentInspectionRequests(record issueops.IssueOpsRecord, payl
 	return append(requests, current), nil
 }
 
-// cleanupAbandonIntentOperationIDs는 삭제 대상 external intent 행 키를
-// {Pending.OperationID} ∪ {Failure.OperationID}로 모은다(공백·중복 제거).
-// Failure는 Pending과 같은 operation을 가리키는 것이 보통이지만, 실패 접수 후
-// pending이 정리된 레코드에서는 Failure만 행을 참조할 수 있다.
-func cleanupAbandonIntentOperationIDs(record issueops.IssueOpsRecord) []string {
-	if record.Execution == nil {
-		return nil
-	}
-	candidates := []string{}
-	if record.Execution.Pending != nil {
-		candidates = append(candidates, record.Execution.Pending.OperationID)
-	}
-	if record.Execution.Failure != nil {
-		candidates = append(candidates, record.Execution.Failure.OperationID)
-	}
-	out := []string{}
-	seen := map[string]bool{}
-	for _, id := range candidates {
-		id = strings.TrimSpace(id)
-		if id == "" || seen[id] {
-			continue
-		}
-		seen[id] = true
-		out = append(out, id)
-	}
-	return out
-}
-
 // deleteAbandonedIssueOps는 abandon 전용 원자 삭제다. deleteIssueOps는
 // finish/prune의 계약이므로 건드리지 않고, external intent 행 삭제는 여기서만
 // 같은 sqlstore.Apply 배치에 넣는다 — 레코드만 지우고 intent 행이 남으면 그
@@ -821,7 +486,7 @@ func deleteAbandonedIssueOps(ctx context.Context, stateRoot string, record issue
 		if err != nil {
 			return err
 		}
-		if cleanupAbandonRecordSHA(current) != cleanupAbandonRecordSHA(record) {
+		if abandonapp.CleanupAbandonRecordSHA(current) != abandonapp.CleanupAbandonRecordSHA(record) {
 			return fmt.Errorf("abandon authority changed before deletion CAS")
 		}
 		rows := []string{}
@@ -863,33 +528,6 @@ func deleteAbandonedIssueOps(ctx context.Context, stateRoot string, record issue
 	return deleted, nil
 }
 
-// cleanupAbandonUnresolvedChildren는 아직 해소되지 않은 자식을 지목한다.
-//
-// 두 경로가 같은 질문에 같은 답을 하게 한다. 예전에는 IssueLinks만
-// CloseVerifiedAt을 보고 ChildCycles는 기록 존재만으로 차단했다 — 같은 함수
-// 안에서 기준이 갈렸다(#437).
-//
-// 어느 자식이 남았는지 돌려주는 이유는, 개수만 알려주면 사용자가 무엇을 먼저
-// 끝내야 할지 알 수 없기 때문이다.
-func cleanupAbandonUnresolvedChildren(record issueops.IssueOpsRecord, resolved map[string]bool) []string {
-	var unresolved []string
-	for _, child := range record.ChildCycles {
-		id := strings.TrimSpace(child.CycleID)
-		if id == "" || resolved[id] {
-			continue
-		}
-		unresolved = append(unresolved, id)
-	}
-	issueURL := strings.TrimSpace(record.IssueURL)
-	for _, link := range record.IssueLinks {
-		if link.Type == "child" && strings.TrimSpace(link.CloseVerifiedAt) == "" &&
-			(issueURL == "" || strings.TrimSpace(link.URL) != issueURL) {
-			unresolved = append(unresolved, strings.TrimSpace(link.URL))
-		}
-	}
-	return unresolved
-}
-
 // cleanupAbandonResolvedChildren는 자식 cycle이 끝났음을 **관측**으로 확인한다.
 //
 // 해소의 근거는 record가 실재하고 phase가 done인 것 하나다. record 부재는
@@ -918,33 +556,14 @@ func cleanupAbandonResolvedChildren(stateRoot string, record issueops.IssueOpsRe
 	return resolved
 }
 
-func validateCleanupAbandonReason(reason string) error {
-	trimmed := strings.TrimSpace(reason)
-	if trimmed == "" {
-		return fmt.Errorf("--reason is required")
-	}
-	if len(trimmed) > cleanupAbandonReasonLimit {
-		return fmt.Errorf("--reason must not exceed %d bytes", cleanupAbandonReasonLimit)
-	}
-	for _, r := range trimmed {
-		if r < 0x20 || r == 0x7f {
-			return fmt.Errorf("--reason must not contain control characters")
-		}
-		if strings.ContainsRune(cleanupAbandonReasonForbidden, r) {
-			return fmt.Errorf("--reason must not contain %q; the lease guard parses this command exactly and rejects active shell characters", r)
-		}
-	}
-	return nil
-}
-
-func armCleanupAbandon(ctx context.Context, stateRoot string, expected issueops.IssueOpsRecord, fingerprint string, inventory cleanupAbandonInventory) (issueops.IssueOpsRecord, error) {
+func armCleanupAbandon(ctx context.Context, stateRoot string, expected issueops.IssueOpsRecord, fingerprint string, inventory issueops.CleanupAbandonInventory) (issueops.IssueOpsRecord, error) {
 	var armed issueops.IssueOpsRecord
 	err := withCleanupAbandonLock(ctx, stateRoot, expected.ID, func(context.Context) error {
 		current, err := ReadIssueOps(stateRoot, expected.ID)
 		if err != nil {
 			return err
 		}
-		if cleanupAbandonRecordSHA(current) != cleanupAbandonRecordSHA(expected) {
+		if abandonapp.CleanupAbandonRecordSHA(current) != abandonapp.CleanupAbandonRecordSHA(expected) {
 			return fmt.Errorf("abandon authority changed before local cleanup CAS")
 		}
 		now := time.Now().UTC().Format(time.RFC3339Nano)
@@ -954,7 +573,7 @@ func armCleanupAbandon(ctx context.Context, stateRoot string, expected issueops.
 			WorktreePath: inventory.WorktreeRoot, Branch: inventory.Branch,
 			WorktreeHead: inventory.WorktreeHead, BranchOID: inventory.BranchOID, At: now,
 		}
-		failure.InventorySHA256 = cleanupAbandonFailureSeal(current, failure)
+		failure.InventorySHA256 = abandonapp.CleanupAbandonFailureSeal(current, failure)
 		current.CleanupAbandonFailure = failure
 		if current.Execution != nil && current.Execution.Lease.Status == issueops.LeaseStatusClaimable {
 			current.Execution.Lease.Status = issueops.LeaseStatusReleased
@@ -966,22 +585,4 @@ func armCleanupAbandon(ctx context.Context, stateRoot string, expected issueops.
 		return err
 	})
 	return armed, err
-}
-
-func cleanupAbandonRecordSHA(record issueops.IssueOpsRecord) string {
-	data, err := json.Marshal(record)
-	if err != nil {
-		return ""
-	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
-}
-
-func cleanupAbandonFingerprint(inventory cleanupAbandonInventory) (string, error) {
-	data, err := json.Marshal(inventory)
-	if err != nil {
-		return "", err
-	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
 }

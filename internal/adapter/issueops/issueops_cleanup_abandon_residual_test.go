@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/preflight"
+	abandonapp "issueops/internal/application/issueopscleanup"
 	"issueops/internal/contract/issueops"
 )
 
@@ -187,7 +188,7 @@ func TestCleanupAbandonApplyingReceiptForOriginallyAbsentExecutionIsRetryable(t 
 		t.Fatal(err)
 	}
 	head := strings.TrimSpace(preflight.GitOut(fixture.worktree, "rev-parse", "HEAD"))
-	originalRecordSHA := cleanupAbandonRecordSHA(fixture.record)
+	originalRecordSHA := abandonapp.CleanupAbandonRecordSHA(fixture.record)
 	if code, _, stderr := preflight.GitCmd(fixture.record.Repo, "worktree", "remove", fixture.worktree); code != 0 {
 		t.Fatalf("remove absent fixture worktree: %s", stderr)
 	}
@@ -201,7 +202,7 @@ func TestCleanupAbandonApplyingReceiptForOriginallyAbsentExecutionIsRetryable(t 
 			WorktreePath: fixture.worktree, Branch: current.Branch,
 			At: "2026-08-04T00:00:00Z",
 		}
-		current.CleanupAbandonFailure.InventorySHA256 = cleanupAbandonFailureSeal(*current, current.CleanupAbandonFailure)
+		current.CleanupAbandonFailure.InventorySHA256 = abandonapp.CleanupAbandonFailureSeal(*current, current.CleanupAbandonFailure)
 	})
 
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(fixture.record.ID, false, ""), CleanupAbandonDeps{Processes: quietCleanupProcesses()})
@@ -251,7 +252,7 @@ func TestCleanupAbandonRecordDeletePartialStateIsRetryable(t *testing.T) {
 		t.Fatal(err)
 	}
 	head := strings.TrimSpace(preflight.GitOut(fixture.worktree, "rev-parse", "HEAD"))
-	originalRecordSHA := cleanupAbandonRecordSHA(fixture.record)
+	originalRecordSHA := abandonapp.CleanupAbandonRecordSHA(fixture.record)
 	if code, _, stderr := preflight.GitCmd(fixture.record.Repo, "worktree", "remove", fixture.worktree); code != 0 {
 		t.Fatalf("remove partial worktree: %s", stderr)
 	}
@@ -276,7 +277,7 @@ func TestCleanupAbandonRecordDeletePartialStateIsRetryable(t *testing.T) {
 		current.CleanupAbandonFailure.WorktreeHead = head
 		current.CleanupAbandonFailure.BranchOID = head
 		current.CleanupAbandonFailure.RecordSHA = originalRecordSHA
-		current.CleanupAbandonFailure.InventorySHA256 = cleanupAbandonFailureSeal(*current, current.CleanupAbandonFailure)
+		current.CleanupAbandonFailure.InventorySHA256 = abandonapp.CleanupAbandonFailureSeal(*current, current.CleanupAbandonFailure)
 	})
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(fixture.record.ID, false, ""), CleanupAbandonDeps{Processes: quietCleanupProcesses()})
 	if err != nil {

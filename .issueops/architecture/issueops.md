@@ -205,3 +205,10 @@ Cleanup `finish`와 `remote-branch`는 같은 cycle의 실행 잠금과 `cleanup
 apply가 새 token으로 인계받아 drain·해제하며, 삭제나 감사 반영을 했다고 기록하지
 않는다. [공용 cleanup 소유권 결정](../adr/2026-09-29-cleanup-ownership-binds-the-operation-and-exact-record-revis.md)이
 이 경계의 정규 근거다.
+
+`abandon`의 대상 선택·사유 검증·폐기 허용 조건·자식 미완료 판정·실패 후 재시도
+규칙은 `internal/domain/issueops`가 소유한다. 파일·Git·프로세스 관측은 외부에서
+전달하며, 관측 실패를 자원 부재로 바꾸지 않는다. 승인 inventory는 contract DTO로,
+fingerprint와 실패 기록의 봉인은 `internal/application/issueopscleanup`에서 만든다.
+`close_pr`, `close_issue`, `remote_branch_delete` 실패는 로컬 삭제 전이므로,
+봉인된 로컬 자원의 존재 여부와 OID가 그대로일 때만 새 preview로 재시도할 수 있다.
