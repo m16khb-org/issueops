@@ -13702,6 +13702,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/execution_readiness.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ExecutionReadinessMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/execution_validation.go",
       "owner": "domain",
       "task": "T02",

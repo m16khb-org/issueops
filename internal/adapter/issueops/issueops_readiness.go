@@ -73,19 +73,11 @@ func issueOpsImplementationReadiness(record issueops.IssueOpsRecord, checkPlanBi
 	}
 	missing = append(missing, cycleapp.CompatibilityReviewMissing(record)...)
 	missing = append(missing, cycleapp.DevilsAdvocateReviewMissing(record, checkPlanBinding, issueOpsLinkedPlanDigest)...)
-	if record.Execution == nil {
-		missing = append(missing, "execution")
-	} else {
-		if err := issueopsdomain.ValidateExecution(*record.Execution); err != nil {
-			missing = append(missing, "execution_valid")
-		}
-		if !samePath(record.WorktreePath, record.Execution.Workspace.Root) {
-			missing = append(missing, "execution_worktree_match")
-		}
-		if record.Execution.Lease.Status != issueops.LeaseStatusActive || record.Execution.Lease.Holder == nil {
-			missing = append(missing, "execution_write_lease")
-		}
+	workspaceMatches := false
+	if record.Execution != nil {
+		workspaceMatches = samePath(record.WorktreePath, record.Execution.Workspace.Root)
 	}
+	missing = append(missing, issueopsdomain.ExecutionReadinessMissing(record, workspaceMatches)...)
 	return issueops.IssueOpsReadiness{
 		OK:           true,
 		Ready:        len(missing) == 0,
