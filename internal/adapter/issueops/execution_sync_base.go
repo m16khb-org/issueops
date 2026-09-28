@@ -373,16 +373,28 @@ func finalizeExecutionSyncBase(ctx context.Context, stateRoot string, record iss
 func abortExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, inventory executionSyncBaseInventory,
 	deps ExecutionSyncBaseDeps, result *ExecutionSyncBaseResult) (ExecutionSyncBaseResult, error) {
 	fail := executionSyncBaseFail(record, result)
-	if code, out := deps.Git(ctx, inventory.Root, "merge", "--abort"); code != 0 {
-		return fail("merge_abort", fmt.Errorf("git merge --abort: %s", strings.TrimSpace(out)))
+	outcome, err := basesyncapp.Abort(ctx, basesyncapp.AbortRequest{
+		ID: record.ID, Root: inventory.Root,
+		Released: record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased,
+	}, &executionSyncBaseAbortEffects{stateRoot: stateRoot, deps: deps})
+	if err != nil {
+		return fail(outcome.FailedStep, err)
 	}
-	if record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased {
-		if err := clearExecutionSyncBaseResolution(ctx, stateRoot, record.ID); err != nil {
-			return fail("clear_resolution", err)
-		}
-	}
-	result.Aborted, result.MergeInProgress = true, false
+	result.Aborted, result.MergeInProgress = outcome.Aborted, false
 	return *result, nil
+}
+
+type executionSyncBaseAbortEffects struct {
+	stateRoot string
+	deps      ExecutionSyncBaseDeps
+}
+
+func (e *executionSyncBaseAbortEffects) AbortMerge(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "merge", "--abort")
+}
+
+func (e *executionSyncBaseAbortEffects) ClearResolution(ctx context.Context, id string) error {
+	return clearExecutionSyncBaseResolution(ctx, e.stateRoot, id)
 }
 
 // pushExecutionSyncBase는 비강제 push를 수행하고 성공 시에만 durable 이벤트를
