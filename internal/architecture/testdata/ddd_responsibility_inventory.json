@@ -7294,10 +7294,6 @@
         "func prepareRemotePullRequest",
         "func readExternalRemotePRPayload",
         "func recordRemotePullRequestFailure",
-        "func remotePullRequestCandidateDraftMatches",
-        "func remotePullRequestCandidateTitle",
-        "func remotePullRequestReconcileRequest",
-        "func sameCanonicalRemoteSet",
         "func validExecutionHead",
         "func validRemotePullRequestOperationID",
         "func validateRemotePullRequestCandidate",
@@ -10934,7 +10930,7 @@
     {
       "path": "internal/application/issueopscompletion/complete.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T07",
       "symbols": [
         "func NewService",
         "func Service.Complete",
@@ -10954,7 +10950,7 @@
     {
       "path": "internal/application/issueopscompletion/ports.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T07",
       "symbols": [
         "type Clock",
         "type Environment",
@@ -11465,7 +11461,7 @@
     {
       "path": "internal/application/issueopspublication/create.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T07",
       "symbols": [
         "func CreateService.Create",
         "func NewCreateService",
@@ -11475,7 +11471,7 @@
     {
       "path": "internal/application/issueopspublication/ports.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T07",
       "symbols": [
         "type Provider",
         "type Repository",
@@ -11485,7 +11481,7 @@
     {
       "path": "internal/application/issueopspublication/reconcile.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T07",
       "symbols": [
         "func NewReconcileService",
         "func ReconcileService.Reconcile",
@@ -14310,7 +14306,7 @@
     {
       "path": "internal/domain/issueopsbodysync/bodysync.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T07",
       "symbols": [
         "func BuildPlan",
         "func ClassifyDrift",
@@ -14748,9 +14744,22 @@
       ]
     },
     {
+      "path": "internal/domain/issueopspublication/candidate.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func BodySHA256",
+        "func CandidateDraftMatches",
+        "func CandidateTitle",
+        "func ValidateCandidate",
+        "func canonicalSet",
+        "func sameCanonicalSet"
+      ]
+    },
+    {
       "path": "internal/domain/issueopspublication/decision.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T07",
       "symbols": [
         "func DecideReconcile",
         "func DecideRetryOutcome",
@@ -17218,6 +17227,39 @@
         "internal/domain/policy/command_decision_test.go",
         "internal/adapter/policy/policy_test.go",
         "internal/adapter/policy/policy_catalog_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "remote-publication-candidate-match",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func sameCanonicalRemoteSet",
+      "responsibility": "match observed PR or MR fields against the exact durable create intent",
+      "target": "internal/domain/issueopspublication",
+      "target_symbol": "func ValidateCandidate",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspublication/candidate_test.go",
+        "internal/adapter/issueops/execution_remote_candidate_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-provider-identity",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func validateRemotePullRequestCandidate",
+      "responsibility": "map provider candidate and verify URL syntax and provider project after the domain match",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func ValidateArtifactMatchesProject",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_remote_candidate_test.go"
       ],
       "status": "retain"
     },

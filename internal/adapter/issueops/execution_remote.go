@@ -2,7 +2,6 @@ package issueops
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -14,6 +13,8 @@ import (
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
+	publicationcontract "issueops/internal/contract/issueopspublication"
+	publicationdomain "issueops/internal/domain/issueopspublication"
 	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/policy"
 	"issueops/internal/port"
@@ -305,64 +306,21 @@ func readExternalRemotePRPayload(stateRoot, operationID string) (externalRemoteP
 	return payload, nil
 }
 
-func remotePullRequestReconcileRequest(payload externalRemotePRPayload) port.IssueProviderReconcilePullRequestRequest {
-	req := payload.Request
-	sum := sha256.Sum256([]byte(req.Body))
-	return port.IssueProviderReconcilePullRequestRequest{
-		Repo: req.Repo, ProjectKey: req.ProjectKey, HeadBranch: req.HeadBranch, BaseBranch: req.BaseBranch,
-		ExpectedHeadSHA: req.ExpectedHeadSHA, Title: req.Title, BodySHA256: hex.EncodeToString(sum[:]),
-		Labels: append([]string(nil), req.Labels...), Assignees: append([]string(nil), req.Assignees...), Draft: req.Draft,
-	}
-}
-
-// remotePullRequestCandidateTitle는 provider가 draft 상태를 제목 접두사로 표현하는
-// 것을 되돌린다. GitLab은 draft MR의 제목을 "Draft: <title>"로 저장하고 목록 API도
-// 접두사를 포함해 반환하므로, 봉인된 의도의 제목과 그대로 비교하면 자기 자신이
-// 만든 draft MR조차 채택할 수 없다.
-func remotePullRequestCandidateTitle(candidate port.IssueProviderReconcilePullRequestCandidate) string {
-	title := strings.TrimSpace(candidate.Title)
-	if !candidate.Draft {
-		return title
-	}
-	for _, prefix := range []string{"Draft:", "WIP:"} {
-		if len(title) >= len(prefix) && strings.EqualFold(title[:len(prefix)], prefix) {
-			return strings.TrimSpace(title[len(prefix):])
-		}
-	}
-	return title
-}
-
-// remotePullRequestCandidateDraftMatches는 draft 의도와 관측된 draft 상태를 비교한다.
-// 이미 merged 또는 closed된 아티팩트는 draft일 수 없으므로, draft로 만들어 달라던
-// 의도와 "draft가 해제된 뒤 머지된" 관측은 모순이 아니다. 아직 열려 있는 아티팩트는
-// 기존대로 정확히 일치해야 한다.
-func remotePullRequestCandidateDraftMatches(candidate port.IssueProviderReconcilePullRequestCandidate, expectedDraft bool) bool {
-	if candidate.Draft == expectedDraft {
-		return true
-	}
-	if !expectedDraft || candidate.Draft {
-		return false
-	}
-	switch strings.ToLower(strings.TrimSpace(candidate.State)) {
-	case "merged", "closed":
-		return true
-	default:
-		return false
-	}
-}
-
 func validateRemotePullRequestCandidate(record issueops.IssueOpsRecord, payload externalRemotePRPayload, candidate port.IssueProviderReconcilePullRequestCandidate) error {
-	expected := remotePullRequestReconcileRequest(payload)
-	if strings.TrimSpace(candidate.ProjectKey) != expected.ProjectKey || strings.TrimSpace(candidate.SourceProjectKey) != expected.ProjectKey ||
-		strings.TrimSpace(candidate.HeadBranch) != expected.HeadBranch || strings.TrimSpace(candidate.BaseBranch) != expected.BaseBranch ||
-		strings.TrimSpace(candidate.HeadSHA) != expected.ExpectedHeadSHA || remotePullRequestCandidateTitle(candidate) != expected.Title ||
-		strings.TrimSpace(candidate.BodySHA256) != expected.BodySHA256 ||
-		!remotePullRequestCandidateDraftMatches(candidate, expected.Draft) ||
-		!sameCanonicalRemoteSet(candidate.Labels, expected.Labels) || !sameCanonicalRemoteSet(candidate.Assignees, expected.Assignees) {
-		return fmt.Errorf("remote reconcile candidate does not match the exact durable intent")
+	request := publicationcontract.ProviderCreateRequest{
+		ProjectKey: payload.Request.ProjectKey, Title: payload.Request.Title, Body: payload.Request.Body,
+		HeadBranch: payload.Request.HeadBranch, BaseBranch: payload.Request.BaseBranch,
+		ExpectedHeadSHA: payload.Request.ExpectedHeadSHA, Labels: payload.Request.Labels,
+		Assignees: payload.Request.Assignees, Draft: payload.Request.Draft,
 	}
-	if payload.KnownURL != "" && strings.TrimSpace(candidate.URL) != payload.KnownURL {
-		return fmt.Errorf("remote reconcile candidate URL differs from the durable known URL")
+	observed := publicationcontract.Candidate{
+		URL: candidate.URL, ProjectKey: candidate.ProjectKey, SourceProjectKey: candidate.SourceProjectKey,
+		HeadBranch: candidate.HeadBranch, BaseBranch: candidate.BaseBranch, HeadSHA: candidate.HeadSHA,
+		Title: candidate.Title, BodySHA256: candidate.BodySHA256, Labels: candidate.Labels,
+		Assignees: candidate.Assignees, Draft: candidate.Draft, State: candidate.State,
+	}
+	if err := publicationdomain.ValidateCandidate(request, observed, payload.KnownURL); err != nil {
+		return err
 	}
 	if err := remote.ValidateArtifactURL(candidate.URL, payload.Provider, payload.Kind); err != nil {
 		return err
@@ -388,26 +346,6 @@ func verifyRemotePullRequestResult(record issueops.IssueOpsRecord, payload exter
 		return verify(req)
 	}
 	return nil
-}
-
-func sameCanonicalRemoteSet(left, right []string) bool {
-	left, right = remote.CleanValues(left), remote.CleanValues(right)
-	if len(left) != len(right) {
-		return false
-	}
-	seen := make(map[string]struct{}, len(left))
-	for _, value := range left {
-		seen[value] = struct{}{}
-	}
-	if len(seen) != len(right) {
-		return false
-	}
-	for _, value := range right {
-		if _, ok := seen[value]; !ok {
-			return false
-		}
-	}
-	return true
 }
 
 func validExecutionHead(value string) bool {
