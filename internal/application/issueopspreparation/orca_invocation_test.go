@@ -29,3 +29,24 @@ func TestOrcaInvocationAndFailureTransition(t *testing.T) {
 		t.Fatal("missing failure timestamp accepted")
 	}
 }
+
+func TestApplyOrcaNoResourceClearsPendingWithoutMutatingSnapshot(t *testing.T) {
+	state := IntentState{
+		Intent: preparationcontract.Intent{OperationID: "op"}, FailureAt: "now",
+		Snapshot: preparationcontract.Snapshot{Record: leasecontract.Record{ID: "id", Execution: &leasecontract.Execution{Pending: &leasecontract.ExternalIntent{OperationID: "op"}}}},
+	}
+	record, err := ApplyOrcaNoResource(state, func() string { return "redacted" })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if record.Execution.Pending != nil || record.Execution.Failure == nil || record.Execution.Failure.Code != "external_operation_left_no_resource" || record.Execution.Failure.Message != "redacted" {
+		t.Fatalf("record=%+v", record)
+	}
+	if state.Snapshot.Record.Execution.Pending == nil || state.Snapshot.Record.Execution.Failure != nil {
+		t.Fatalf("snapshot mutated=%+v", state.Snapshot.Record)
+	}
+	state.FailureAt = ""
+	if _, err := ApplyOrcaNoResource(state, func() string { t.Fatal("diagnostic observed before timestamp validation"); return "" }); err == nil {
+		t.Fatal("missing timestamp accepted")
+	}
+}

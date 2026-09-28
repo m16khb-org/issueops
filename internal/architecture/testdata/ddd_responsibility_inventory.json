@@ -1358,7 +1358,6 @@
         "func convertReconcileReceipt",
         "func coreReconcileEffects.ApplyReceipt",
         "func coreReconcileEffects.Canonicalize",
-        "func coreReconcileEffects.ClearIntent",
         "func coreReconcileEffects.inspectStage",
         "func coreReconcileEffects.invokeStage",
         "func coreReconcileEffects.reconcileRequest",
@@ -7132,7 +7131,6 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func ClearOrcaIntentWithNoResource",
         "func advanceOrcaIntentReceipt",
         "func advanceOrcaIntentReceiptWithExpectedRaw",
         "func beginOrcaExecutionIntent",
@@ -7316,7 +7314,6 @@
       "symbols": [
         "func ApplyExecutionReconcileIntentReceipt",
         "func CanonicalizeExecutionReconcileIntent",
-        "func ClearExecutionReconcileIntent",
         "func ExecutionReconcileIntentRequest",
         "func executionReconcileIntentPayload",
         "func executionReconcileIntentState",
@@ -11458,6 +11455,7 @@
       "task": "T20",
       "symbols": [
         "func ApplyOrcaFailure",
+        "func ApplyOrcaNoResource",
         "func MarkOrcaInvoking"
       ]
     },
@@ -18706,6 +18704,23 @@
         "internal/adapter/issueops/execution_api_resume_test.go"
       ],
       "status": "retain"
+    },
+    {
+      "id": "orca-no-resource-clear",
+      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
+      "source_symbol": "func ClearOrcaIntentWithNoResource",
+      "responsibility": "clear a pending external intent and retain a redacted no-resource receipt after authoritative zero",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func ApplyOrcaNoResource",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution reconcile --confirm"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopspreparation/orca_invocation_test.go",
+        "internal/adapter/outbound/issueopslease/reconcile_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }

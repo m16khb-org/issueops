@@ -29,3 +29,18 @@ func ApplyOrcaFailure(state IntentState, invocation string, diagnostic func() st
 	}
 	return record, intent, nil
 }
+
+func ApplyOrcaNoResource(state IntentState, diagnostic func() string) (leasecontract.Record, error) {
+	if strings.TrimSpace(state.FailureAt) == "" {
+		return leasecontract.Record{}, fmt.Errorf("Orca intent failure timestamp is required")
+	}
+	record := state.Snapshot.Record
+	execution := *record.Execution
+	record.Execution = &execution
+	record.Execution.Pending = nil
+	record.Execution.Failure = &leasecontract.FailureDetail{
+		OperationID: state.Intent.OperationID, Code: "external_operation_left_no_resource",
+		Message: diagnostic(), At: state.FailureAt,
+	}
+	return record, nil
+}

@@ -13,9 +13,7 @@ import (
 )
 
 type reconcileEffectsFake struct {
-	state          ReconcileEffectState
-	clearedIntent  bool
-	clearIntentErr error
+	state ReconcileEffectState
 }
 
 func (f *reconcileEffectsFake) Canonicalize(context.Context, string) (ReconcileEffectState, error) {
@@ -102,6 +100,34 @@ func TestReconcileRepositoryRecordFailureUsesRawCAS(t *testing.T) {
 	}
 }
 
+func TestReconcileRepositoryClearIntentDeletesOnlySealedPendingIntent(t *testing.T) {
+	_, state, store := seededResumeIntent(t)
+	repository := NewReconcileRepository(store, nil)
+	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 10, 0, 0, time.UTC) }
+	repository.redact = func(string) string { return "no resource observed" }
+	intent := leaseapp.ReconcileIntentState{
+		Progress:    leaseapp.ReconcileProgress{Record: state.Progress.Record.Stable, Pending: true, NextStage: state.Stage},
+		OperationID: state.OperationID, Stage: state.Stage, InvocationState: state.InvocationState,
+		InvocationAttempts: state.InvocationAttempts, RecordRaw: state.RecordRaw, IntentRaw: state.IntentRaw,
+	}
+	progress, err := repository.ClearIntent(context.Background(), intent, errors.New("sensitive detail"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if progress.Pending || progress.Record.Execution.Pending != nil {
+		t.Fatalf("progress=%+v", progress)
+	}
+	if got := progress.Record.Execution.Failure; got == nil || got.Code != "external_operation_left_no_resource" || got.Message != "no resource observed" || got.At != "2026-07-31T03:10:00Z" {
+		t.Fatalf("failure=%+v", got)
+	}
+	if _, ok, err := store.Get("external_intent_v1", intent.OperationID); err != nil || ok {
+		t.Fatalf("intent still present=%v err=%v", ok, err)
+	}
+	if _, err := repository.ClearIntent(context.Background(), intent, errors.New("retry")); err == nil {
+		t.Fatal("stale raw snapshot was accepted")
+	}
+}
+
 func TestReconcileStageExecutorPreservesAttemptDisclosure(t *testing.T) {
 	wantErr := errors.New("transport")
 	executor := NewReconcileStageExecutor(
@@ -114,10 +140,4 @@ func TestReconcileStageExecutorPreservesAttemptDisclosure(t *testing.T) {
 	if !attempted || !errors.Is(err, wantErr) {
 		t.Fatalf("attempted=%t err=%v", attempted, err)
 	}
-}
-
-func (f *reconcileEffectsFake) ClearIntent(_ context.Context, state ReconcileEffectState, _ error) (ReconcileEffectState, error) {
-	f.clearedIntent = true
-	state.Pending = false
-	return state, f.clearIntentErr
 }

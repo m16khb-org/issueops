@@ -104,21 +104,3 @@ func executionReconcileIntentState(record issueops.IssueOpsRecord, recordRaw []b
 func executionReconcileIntentPayload(expected ExecutionReconcileIntentState) (externalOrcaIntentPayload, error) {
 	return executionResumeIntentPayload(ExecutionResumeIntentState(expected))
 }
-
-// ClearExecutionReconcileIntent는 authoritative zero로 확인된 reconcile intent를
-// 제거한다(#280). 재시도가 아니라 기록 정리이므로 stage를 전진시키지 않는다.
-func ClearExecutionReconcileIntent(stateRoot string, expected ExecutionReconcileIntentState, cause error, now func() time.Time) (ExecutionReconcileIntentState, error) {
-	payload, err := executionReconcileIntentPayload(expected)
-	if err != nil {
-		return ExecutionReconcileIntentState{}, err
-	}
-	record, err := ClearOrcaIntentWithNoResource(stateRoot, expected.Record, payload, expected.RecordRaw, expected.IntentRaw, cause, now)
-	if err != nil {
-		return ExecutionReconcileIntentState{}, err
-	}
-	cleared := expected
-	cleared.Record = record
-	cleared.RecordRaw, cleared.IntentRaw = nil, nil
-	cleared.Pending = false
-	return cleared, nil
-}
