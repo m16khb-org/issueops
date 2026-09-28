@@ -80,3 +80,18 @@ func TestCleanupAbandonRejectsUnknownRefAfterDeleteFailure(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanupFinishRejectsUnknownBranchInventory(t *testing.T) {
+	stateRoot, record, _ := finishTestRecord(t, false)
+	git := &realErrorFinishGit{branchOID: "abc123"}
+	deps := CleanupFinishDeps{Processes: quietCleanupProcesses(), Git: func(dir string, args ...string) (int, string) {
+		if args[0] == "rev-parse" {
+			return 128, "repository observation failed"
+		}
+		return git.run(dir, args...)
+	}}
+	result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
+	if err == nil || result.OK || result.Fingerprint != "" {
+		t.Fatalf("unknown branch inventory issued cleanup approval: err=%v result=%+v", err, result)
+	}
+}

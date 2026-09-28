@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"issueops/internal/adapter/issueops/pathutil"
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	completionapp "issueops/internal/application/issueopsremote"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
@@ -72,31 +72,6 @@ func keptRemoteBranchAudit(kept *issueops.CleanupKeptRemoteBranch) string {
 	return fmt.Sprintf(" remote_branch_kept=%s@%s", kept.Branch, tip)
 }
 
-// cleanupFinishInventory는 fingerprint 입력이 되는 현재 관측 상태다. 부분
-// 정리로 상태가 바뀌면 fingerprint도 바뀌므로 이전 preview의 값은 무효가
-// 된다(5차 m3: 재실행 전 preview 재발급).
-type cleanupFinishInventory struct {
-	ID              string `json:"id"`
-	Repo            string `json:"repo"`
-	Branch          string `json:"branch"`
-	WorktreeRoot    string `json:"worktree_root"`
-	WorktreePresent bool   `json:"worktree_present"`
-	BranchOID       string `json:"branch_oid"`
-	OrcaWorktreeID  string `json:"orca_worktree_id"`
-	RemoteURL       string `json:"remote_url"`
-	// SupersededBy는 replacement 증거를 fingerprint 입력에 포함시킨다. 증거가
-	// 바뀌면 preview는 무효가 되어야 한다.
-	SupersededBy string `json:"superseded_by,omitempty"`
-	// WorkspaceProcesses와 OrcaTerminals는 apply ①′가 종료할 집합이다. preview 뒤
-	// 집합이 바뀌면 fingerprint가 달라져 apply가 멈춘다(#477).
-	WorkspaceProcesses []issueops.NativeProcessReceipt `json:"workspace_processes,omitempty"`
-	OrcaTerminals      []string                        `json:"orca_terminals,omitempty"`
-	// OrcaAppPID는 ①′가 시그널에서 제외할 Orca 앱 pid다. fingerprint 입력이므로
-	// preview 뒤 런타임이 사라지거나 재시작되면 apply가 멈춘다.
-	OrcaAppPID       int  `json:"orca_app_pid,omitempty"`
-	OrcaRuntimeReady bool `json:"orca_runtime_ready,omitempty"`
-}
-
 // CleanupFinish는 preview 게이트를 평가하고, apply에서 orca→git 순의 멱등
 // 정리 후 레코드를 삭제한다. ②~④ 중 실패하면 레코드를 삭제하지 않고 실패
 // 지점을 record에 남긴 채 반환한다(resumable).
@@ -113,9 +88,14 @@ func CleanupFinish(ctx context.Context, stateRoot string, req CleanupFinishReque
 	if err != nil {
 		return CleanupFinishResult{OK: false, ID: req.ID}, err
 	}
-	result := CleanupFinishResult{OK: true, ID: record.ID, Preview: !req.Apply}
-	inventory, missing := cleanupFinishGates(ctx, record, req, deps, &result)
-	result.Missing = missing
+	inventory, result := (cleanupapp.FinishPreviewer{
+		Environment: CleanupFinishEnvironment{RunGit: deps.Git}, ObserveArtifact: deps.ObserveArtifact,
+		Workspace: func(ctx context.Context, record issueops.IssueOpsRecord, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
+			observed, missing := cleanupWorkspaceGatesForRecord(ctx, record, root, deps.Processes, deps.OrcaTerminals)
+			return cleanupapp.FinishWorkspaceObservation{Occupants: observed.Occupants, Receipts: observed.Receipts, Terminals: observed.Terminals, RuntimeReady: observed.RuntimeReady, AppPID: observed.AppPID}, missing
+		},
+	}).Plan(ctx, record, req)
+	missing := result.Missing
 	if len(missing) > 0 {
 		result.OK = false
 		result.NextCommand = cleanupFinishRemedyCommand(record.ID, missing)
@@ -230,242 +210,7 @@ func CleanupFinish(ctx context.Context, stateRoot string, req CleanupFinishReque
 	return result, nil
 }
 
-func cleanupFinishGates(ctx context.Context, record issueops.IssueOpsRecord, req CleanupFinishRequest, deps CleanupFinishDeps, result *CleanupFinishResult) (cleanupFinishInventory, []string) {
-	missing := []string{}
-	if record.Phase != IssueOpsPhaseDone {
-		missing = append(missing, "phase_done")
-	}
-	if record.Execution != nil && record.Execution.Lease.Status != issueops.LeaseStatusReleased {
-		missing = append(missing, "lease_released")
-	}
-	if !req.Merged {
-		// 원래 artifact가 unmerged여도, 후속 artifact가 그 변경을 명시적으로
-		// 대체해 머지됐다면 정리할 수 있어야 한다. 그 경로가 없어서 finish도
-		// abandon도 받지 않는 record가 실제로 생겼다(#283).
-		if err := verifySupersedingArtifact(record, req, deps); err != nil {
-			result.SupersedeError = err.Error()
-			missing = append(missing, "remote_artifact_merged")
-		} else {
-			result.SupersededBy = strings.TrimSpace(req.SupersededBy)
-		}
-	}
-	if !req.CompletionReflected {
-		missing = append(missing, "completion_reflected")
-	}
-	if !req.IssueClosed {
-		missing = append(missing, "issue_closed")
-	}
-	// base_branch_drifted: finish는 레코드를 지우므로 여기서 통과하면 준비된
-	// base가 아닌 브랜치로 머지된 사실을 다시 확인할 근거가 사라진다. 관측
-	// 불가는 통과가 아니라 거부다. 이 관측은 fingerprint 입력이 아니다 —
-	// 네트워크 관측을 인벤토리에 섞으면 일시적 원격 오류가 preview 재발급
-	// 루프를 만든다(remote_branch_absent와 같은 규율).
-	if preparedBase := preparedBaseBranch(record); preparedBase != "" {
-		observedBase := strings.TrimSpace(req.MergedBaseBranch)
-		switch {
-		case observedBase == "":
-			missing = append(missing, "merged_base_branch_unobserved")
-		// A verified replacement is a different artifact and may intentionally
-		// target the parent branch's base. Its provider-observed base must exist,
-		// but comparing it to the original child PR base is a category error.
-		case result.SupersededBy != "":
-		default:
-			defaultBranch, basePresent, observed := observeMergedBaseRefs(record, preparedBase, deps)
-			if slugs := classifyMergedBase(preparedBase, observedBase, defaultBranch, basePresent, observed); len(slugs) > 0 {
-				missing = append(missing, slugs...)
-			} else if observedBase != preparedBase {
-				result.RetargetedBase = &issueops.CleanupRetargetedBase{
-					PreparedBase: preparedBase, ObservedBase: observedBase,
-					DefaultBranch: defaultBranch, PreparedBaseRemoteAbsent: true,
-				}
-			}
-		}
-	}
-	for _, link := range record.IssueLinks {
-		if link.Type == "child" && strings.TrimSpace(link.CloseVerifiedAt) == "" {
-			missing = append(missing, "child_tasks_closed")
-			break
-		}
-	}
-	inventory := cleanupFinishInventory{
-		ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(record.Branch),
-		// replacement 증거는 fingerprint 입력이다. 증거가 바뀌면 preview는
-		// 무효가 되어야 한다.
-		SupersededBy: result.SupersededBy,
-	}
-	if record.RemoteArtifact != nil {
-		inventory.RemoteURL = record.RemoteArtifact.URL
-	}
-	if record.Execution != nil {
-		inventory.WorktreeRoot = strings.TrimSpace(record.Execution.Workspace.Root)
-		if branch := strings.TrimSpace(record.Execution.Workspace.Branch); branch != "" {
-			inventory.Branch = branch
-		}
-		if record.Execution.Orca != nil {
-			inventory.OrcaWorktreeID = record.Execution.Orca.WorktreeID
-		}
-	}
-	// 레거시/직접 사이클은 record.WorktreePath만 가질 수 있다. 폴백하되, 두
-	// 값이 모두 있고 다르면 어느 쪽도 신뢰하지 않고 거부한다(C2-F7).
-	if linked := strings.TrimSpace(record.WorktreePath); linked != "" {
-		if inventory.WorktreeRoot == "" {
-			inventory.WorktreeRoot = linked
-		} else if pathutil.CleanAbsPath(inventory.WorktreeRoot) != pathutil.CleanAbsPath(linked) {
-			missing = append(missing, "worktree_identity_conflict")
-		}
-	}
-	if inventory.WorktreeRoot != "" {
-		if info, err := os.Lstat(inventory.WorktreeRoot); err == nil && info.IsDir() {
-			inventory.WorktreePresent = true
-		}
-	}
-	result.WorktreePath = inventory.WorktreeRoot
-	result.Branch = inventory.Branch
-	result.WorktreePresent = inventory.WorktreePresent
-	result.OrcaWorktreeID = inventory.OrcaWorktreeID
-	// 자기파괴 방지: CWD가 대상 워크트리 안이면 거부. CWD를 해석하지 못한
-	// 경우(Getwd 실패 등)는 fail-closed로 거부한다 — 그 실패의 대표 원인이
-	// 바로 "서 있던 워크트리가 삭제됨"이다(C2-F4).
-	if inventory.WorktreePresent {
-		cwd := strings.TrimSpace(req.CWD)
-		if cwd == "" {
-			missing = append(missing, "cwd_unresolved")
-		} else if pathutil.PathWithin(cwd, inventory.WorktreeRoot) {
-			missing = append(missing, "cwd_outside_worktree")
-		}
-	}
-	// 부분 정리 상태는 정상 입력: 워크트리 부재 = clean 충족, 브랜치 부재 = ④ 생략.
-	if inventory.WorktreePresent {
-		// 점유 프로세스는 차단 사유가 아니라 apply ①′의 종료 대상이다. 관측 불가,
-		// 요청자 점유, 소스 체크아웃만 fail-closed로 남는다(#154, #477).
-		observation, workspaceMissing := cleanupWorkspaceGatesForRecord(ctx, record, inventory.WorktreeRoot, deps.Processes, deps.OrcaTerminals)
-		missing = append(missing, workspaceMissing...)
-		inventory.WorkspaceProcesses = observation.Receipts
-		inventory.OrcaTerminals = observation.Terminals
-		inventory.OrcaAppPID = observation.AppPID
-		inventory.OrcaRuntimeReady = observation.RuntimeReady
-		result.WorkspaceProcesses = observation.Occupants
-		result.OrcaTerminals = observation.Terminals
-		if code, out := deps.Git(inventory.WorktreeRoot, "status", "--porcelain=v1"); code != 0 || strings.TrimSpace(out) != "" {
-			missing = append(missing, "worktree_clean")
-		}
-	}
-	if inventory.Branch != "" {
-		if code, out := deps.Git(record.Repo, "rev-parse", "--verify", "--quiet", "refs/heads/"+inventory.Branch); code == 0 {
-			inventory.BranchOID = strings.TrimSpace(out)
-			result.BranchPresent = true
-		}
-		// remote_branch_absent(design-review H8): finish는 레코드를 지우므로, 원격
-		// 브랜치가 남은 채로 통과하면 typed 삭제 경로(cleanup remote-branch)가
-		// 그 브랜치에 영원히 닿지 못한다. 관측만 하고 원격은 건드리지 않으며,
-		// 관측 불가는 fail-closed다. 이 관측은 fingerprint 입력이 아니다.
-		//
-		// KeepRemoteBranch는 그 대가를 알고 받는 명시적 선택이다. 원격 tip이
-		// 머지된 head보다 전진했고 후속 artifact도 없으면 remote-branch 게이트 ⑩이
-		// 삭제를 막는데, 그때 이 게이트까지 남기기를 막으면 사이클을 끝낼 경로가
-		// 하나도 남지 않는다. H8의 대가는 면제하는 대신 기록으로 갚는다: 무엇이
-		// 남았는지를 결과와 ④' 감사 라인에 적어 레코드 삭제 뒤에도 찾을 수 있게 한다.
-		code, out := deps.Git(record.Repo, "ls-remote", "--heads", "origin", "refs/heads/"+inventory.Branch)
-		readable, fields := code == 0, strings.Fields(strings.TrimSpace(out))
-		switch {
-		case readable && len(fields) == 0:
-			// 원격 브랜치 부재 — finish의 정상 전제다.
-		case !req.KeepRemoteBranch:
-			missing = append(missing, "remote_branch_absent")
-		case readable:
-			result.KeptRemoteBranch = &issueops.CleanupKeptRemoteBranch{
-				Branch: inventory.Branch, RemoteOID: fields[0],
-				State: issueops.CleanupKeptRemoteBranchPresent,
-			}
-		default:
-			result.KeptRemoteBranch = &issueops.CleanupKeptRemoteBranch{
-				Branch: inventory.Branch, State: issueops.CleanupKeptRemoteBranchUnreadable,
-			}
-		}
-	}
-	return inventory, missing
-}
-
-// classifyMergedBase는 준비 base와 관측 base의 관계를 판정한다. 빈 문자열이면
-// 통과다.
-//
-// stacked PR의 부모 브랜치가 머지되어 삭제되면 provider는 자식 PR을 기본
-// 브랜치로 재타깃한다. 그 흐름은 drift가 아니지만, 삭제된 브랜치의 base는
-// 사후에 관측할 수 없다. 그래서 "준비 base가 원격에 없다 + 관측 base가 기본
-// 브랜치다"라는 두 관측으로만 정상 재타깃을 인정한다(#490). 준비 base가 아직
-// 살아 있거나 기본 브랜치가 아닌 곳으로 머지됐으면 그대로 drift이며, 관측
-// 자체가 실패하면 통과가 아니라 거부다 — 자기주장 승인 플래그는 두지 않는다.
-func classifyMergedBase(preparedBase, observedBase, defaultBranch string, preparedBaseRemotePresent, observed bool) []string {
-	if preparedBase == "" || observedBase == preparedBase {
-		return nil
-	}
-	// 관측 실패는 drift를 지우지 않는다. 준비 base와 다른 곳으로 머지된 것은
-	// provider readback이 이미 관측한 사실이고, 관측하지 못한 것은 면제 조건뿐
-	// 이므로 두 사실을 모두 보고한다.
-	if !observed || strings.TrimSpace(defaultBranch) == "" {
-		return []string{"base_branch_drifted", "merged_base_remote_unobserved"}
-	}
-	if !preparedBaseRemotePresent && observedBase == defaultBranch {
-		return nil
-	}
-	return []string{"base_branch_drifted"}
-}
-
-// observeMergedBaseRefs는 준비 base의 원격 존재 여부와 저장소 기본 브랜치를
-// 읽는다. remote_branch_absent와 같은 관측 표면(ls-remote)이며, 결과는
-// fingerprint 입력이 아니다. 어떤 단계든 실패하면 observed=false로 돌려
-// 판정을 fail-closed로 만든다.
-func observeMergedBaseRefs(record issueops.IssueOpsRecord, preparedBase string, deps CleanupFinishDeps) (defaultBranch string, preparedBaseRemotePresent, observed bool) {
-	if deps.Git == nil {
-		return "", false, false
-	}
-	code, out := deps.Git(record.Repo, "ls-remote", "--heads", "origin", "refs/heads/"+preparedBase)
-	if code != 0 {
-		return "", false, false
-	}
-	preparedBaseRemotePresent = len(strings.Fields(strings.TrimSpace(out))) > 0
-	code, out = deps.Git(record.Repo, "ls-remote", "--symref", "origin", "HEAD")
-	if code != 0 {
-		return "", preparedBaseRemotePresent, false
-	}
-	// `ref: refs/heads/<name>\tHEAD` 첫 줄만 유효하다. 원격 HEAD가 설정되지
-	// 않았거나 형식이 다르면 관측 실패다.
-	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
-		rest, found := strings.CutPrefix(strings.TrimSpace(line), "ref: refs/heads/")
-		if !found {
-			continue
-		}
-		if name := strings.TrimSpace(strings.SplitN(rest, "\t", 2)[0]); name != "" {
-			return name, preparedBaseRemotePresent, true
-		}
-	}
-	return "", preparedBaseRemotePresent, false
-}
-
-// preparedBaseBranch는 base drift 비교의 기준값이다. 비어 있으면 비교 대상이
-// 없다는 뜻이며(레거시 레코드), 그 경우 게이트는 적용되지 않는다. execution
-// complete가 base_branch 없는 done 전이를 거부하므로 현재 계약을 지나온
-// 사이클에서는 항상 값이 있다.
-func preparedBaseBranch(record issueops.IssueOpsRecord) string {
-	if record.BranchPrepare == nil {
-		return ""
-	}
-	return strings.TrimSpace(record.BranchPrepare.BaseBranch)
-}
-
-// preparedBaseRef는 봉인된 base branch 이름을 `origin/<name>` 비교에 쓸 수 있게
-// 정규화한다. BranchPrepare.BaseBranch는 TrimSpace만 거쳐 저장되므로
-// `refs/heads/main`이나 `origin/main` 형태가 들어올 수 있다. 정규화 뒤에도 로컬
-// tracking ref가 없으면(한 번도 fetch하지 않은 워크트리) 호출자가 조용히
-// 건너뛴다 — 문서화된 false negative이며 sync-base preview가 그 공백을 메운다.
-func preparedBaseRef(record issueops.IssueOpsRecord) string {
-	base := preparedBaseBranch(record)
-	base = strings.TrimPrefix(base, "refs/heads/")
-	base = strings.TrimPrefix(base, "origin/")
-	return strings.TrimSpace(base)
-}
-
-func cleanupFinishFingerprint(inventory cleanupFinishInventory) (string, error) {
+func cleanupFinishFingerprint(inventory issueops.CleanupFinishInventory) (string, error) {
 	data, err := json.Marshal(inventory)
 	if err != nil {
 		return "", err
@@ -510,31 +255,4 @@ func branchRefPresent(git func(dir string, args ...string) (int, string), repo, 
 	}
 	code, _ := git(repo, "show-ref", "--verify", "--quiet", "refs/heads/"+branch)
 	return code != 1
-}
-
-// verifySupersedingArtifact는 replacement 증거를 provider readback으로 검증한다.
-//
-// 증거가 없으면 조용히 실패한다 — 기존 merged 게이트가 그대로 남는다는 뜻이다.
-// 증거가 있는데 관측을 못 하거나 검증에 실패하면 그 사유를 돌려주어 결과에
-// 표면화한다. 무흔적 실패는 사용자를 다시 dead-end로 보낸다.
-func verifySupersedingArtifact(record issueops.IssueOpsRecord, req CleanupFinishRequest, deps CleanupFinishDeps) error {
-	candidate := strings.TrimSpace(req.SupersededBy)
-	if candidate == "" {
-		return fmt.Errorf("no superseding artifact was provided")
-	}
-	if deps.ObserveArtifact == nil {
-		return fmt.Errorf("superseding artifact cannot be verified: provider observation is not configured")
-	}
-	if record.RemoteArtifact == nil || strings.TrimSpace(record.RemoteArtifact.URL) == "" {
-		return fmt.Errorf("original artifact URL is unknown; cannot verify a supersede relation")
-	}
-	replacement, err := deps.ObserveArtifact(candidate)
-	if err != nil {
-		return fmt.Errorf("superseding artifact %s could not be observed: %w", candidate, err)
-	}
-	original := issueopsdomain.ArtifactObservation{
-		URL:      record.RemoteArtifact.URL,
-		Provider: record.RemoteArtifact.Provider,
-	}
-	return issueopsdomain.ValidateSupersedingArtifact(original, replacement)
 }

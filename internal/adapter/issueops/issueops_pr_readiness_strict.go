@@ -92,7 +92,7 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 		// base drift는 경고다. missing에 넣지 않으므로 PR 게이트 정책은 그대로다.
 		// fetch하지 않고 로컬 tracking ref만 본다 — 진실은 `execution sync-base
 		// --preview`가 fetch해서 확인한다.
-		if base := preparedBaseRef(record); base != "" {
+		if base := issueopsdomain.PreparedBaseRef(record); base != "" {
 			remoteRef := "origin/" + base
 			if code, _, _ := GitCmd(gitRoot, "rev-parse", "--verify", "--end-of-options", remoteRef+"^{commit}"); code == 0 {
 				if code, _, _ := GitCmd(gitRoot, "merge-base", "--is-ancestor", remoteRef, "HEAD"); code != 0 {

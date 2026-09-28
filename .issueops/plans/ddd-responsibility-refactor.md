@@ -286,6 +286,8 @@
 
 - **정리 회귀 수정:** 브랜치 삭제 실패 뒤 `show-ref` 조회 오류를 부재로 해석해 record까지 삭제하던 결함을 수정했다. 종료 코드 `1`만 부재로 인정한다. finish·abandon의 오류 코드 `2`·`128`·`-1` 회귀 테스트 여섯 건이 수정 전 실패하고 수정 후 통과했다. 실제 CLI와 임시 Git 저장소에서도 오류 시 브랜치·record·재시도 영수증 보존을 확인했다. 전체 일반·race 테스트 각각 292개 패키지, vet·build가 통과했다(`T08-ref-observation-*`). 정리 use case의 계층 이전은 계속 남아 있다.
 
+- **부분 진행 — 정리 preview:** 정리 대상 구성과 phase·lease·머지·자식 종료·base 재타깃·원격 브랜치 유지 판정을 domain으로, 원격 artifact·Git·파일·점유자 조회 조율을 `FinishPreviewer`로 옮겼다. 기존 adapter의 판정 함수와 base 정규화 함수를 제거했고 strict PR readiness도 같은 domain 정규화를 사용한다. 브랜치 최초 조회 오류와 읽을 수 없거나 디렉터리가 아닌 워크트리 경로는 부재로 취급하지 않는다. 관련 회귀·architecture 검사, 전체 일반·race 테스트(각 292개 패키지), vet·build가 통과했다. 실제 CLI의 정상 preview 출력과 fingerprint가 기준 구현과 같았고, 조회 오류·파일·심볼릭 링크 거부와 DB 무변경을 확인했다. 세 가지 domain 판정 우회도 기존 실행 경로 테스트에서 검출했다. 삭제 실행의 application 이전, 조회 중 artifact 변경 차단, 공유 workspace gate·stop 경계 이전은 남아 있다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료

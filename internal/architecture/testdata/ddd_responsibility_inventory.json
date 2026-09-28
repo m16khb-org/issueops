@@ -6935,6 +6935,18 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/cleanup_finish_environment.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CleanupFinishEnvironment.Directory",
+        "func CleanupFinishEnvironment.Git",
+        "func CleanupFinishEnvironment.PathWithin",
+        "func CleanupFinishEnvironment.SamePath",
+        "type CleanupFinishEnvironment"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/cleanup_status_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -7789,20 +7801,13 @@
       "symbols": [
         "func CleanupFinish",
         "func branchRefPresent",
-        "func classifyMergedBase",
         "func cleanupFinishFingerprint",
-        "func cleanupFinishGates",
         "func cleanupFinishRemedyCommand",
         "func keepRemoteBranchFlag",
         "func keptRemoteBranchAudit",
-        "func observeMergedBaseRefs",
         "func orNone",
-        "func preparedBaseBranch",
-        "func preparedBaseRef",
         "func recordCleanupFinishFailure",
-        "func verifySupersedingArtifact",
-        "type CleanupFinishDeps",
-        "type cleanupFinishInventory"
+        "type CleanupFinishDeps"
       ]
     },
     {
@@ -10963,6 +10968,19 @@
       ]
     },
     {
+      "path": "internal/application/issueopscleanup/finish_preview.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func FinishPreviewer.Plan",
+        "func FinishPreviewer.observeMergedBaseRefs",
+        "func FinishPreviewer.verifySupersedingArtifact",
+        "type FinishEnvironment",
+        "type FinishPreviewer",
+        "type FinishWorkspaceObservation"
+      ]
+    },
+    {
       "path": "internal/application/issueopscleanup/status.go",
       "owner": "application",
       "task": "T08",
@@ -12617,6 +12635,14 @@
       ]
     },
     {
+      "path": "internal/contract/issueops/cleanup_finish_inventory.go",
+      "owner": "contract",
+      "task": "T08",
+      "symbols": [
+        "type CleanupFinishInventory"
+      ]
+    },
+    {
       "path": "internal/contract/issueops/cleanup_types.go",
       "owner": "contract",
       "task": "T02",
@@ -14251,6 +14277,20 @@
         "func ValidateChildCleanupMergeObservation",
         "func ValidateChildCloseConfirmation",
         "func ValidateClosedChildObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_finish.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func BuildCleanupFinishPreview",
+        "func ClassifyCleanupMergedBase",
+        "func CleanupFinishTargets",
+        "func PreparedBaseBranch",
+        "func PreparedBaseRef",
+        "func ValidateCleanupSupersedeInput",
+        "type CleanupFinishObservation"
       ]
     },
     {
@@ -22205,6 +22245,96 @@
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "cleanup-finish-eligibility",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_finish.go",
+      "source_symbol": "func cleanupFinishGates",
+      "responsibility": "classify phase, lease, merge, child closure, worktree and branch observations before cleanup",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func BuildCleanupFinishPreview",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_finish_test.go",
+        "internal/application/issueopscleanup/finish_preview_test.go",
+        "internal/adapter/issueops/issueops_cleanup_finish_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-finish-preview-observation",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_finish.go",
+      "source_symbol": "func cleanupFinishGates",
+      "responsibility": "coordinate replacement, base, filesystem, workspace and Git observations for a read-only cleanup preview",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func FinishPreviewer.Plan",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_finish_test.go",
+        "internal/application/issueopscleanup/finish_preview_test.go",
+        "internal/adapter/issueops/issueops_cleanup_finish_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-finish-base-classification",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_finish.go",
+      "source_symbol": "func classifyMergedBase",
+      "responsibility": "accept automatic retarget only with absent prepared base and observed default branch",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ClassifyCleanupMergedBase",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_finish_test.go",
+        "internal/application/issueopscleanup/finish_preview_test.go",
+        "internal/adapter/issueops/issueops_cleanup_finish_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-finish-prepared-base-reference",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_finish.go",
+      "source_symbol": "func preparedBaseRef",
+      "responsibility": "normalize the prepared branch shared by cleanup and PR readiness",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PreparedBaseRef",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_finish_test.go",
+        "internal/application/issueopscleanup/finish_preview_test.go",
+        "internal/adapter/issueops/issueops_cleanup_finish_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-finish-supersede-readback",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_finish.go",
+      "source_symbol": "func verifySupersedingArtifact",
+      "responsibility": "observe replacement only after domain input validation and pass both artifact identities to the domain",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func FinishPreviewer.verifySupersedingArtifact",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_finish_test.go",
+        "internal/application/issueopscleanup/finish_preview_test.go",
+        "internal/adapter/issueops/issueops_cleanup_finish_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }
