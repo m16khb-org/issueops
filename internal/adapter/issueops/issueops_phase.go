@@ -11,7 +11,6 @@ import (
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
-	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
@@ -93,7 +92,11 @@ func advanceIssueOpsPhaseLocked(stateRoot, id, to string, upstream issueOpsUpstr
 	if err := cycleapp.ValidatePhaseEntry(phaseEntryReadiness(stateRoot, upstream), record, phase); err != nil {
 		return issueops.IssueOpsRecord{OK: false}, err
 	}
-	record = applyIssueOpsPhaseTransition(record, phase)
+	record = cycleapp.ApplyPhaseTransition(cycleport.PhaseTransitionObservations{
+		Now:         func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
+		Head:        issueOpsCurrentHead,
+		Fingerprint: implementation.ChangeFingerprint,
+	}, record, phase)
 	return touchAndWriteIssueOps(stateRoot, record)
 }
 
@@ -118,23 +121,4 @@ func phaseEntryReadiness(stateRoot string, upstream issueOpsUpstreamFetcher) cyc
 		},
 		RemoteArtifactMissing: issueOpsRemoteArtifactMissing,
 	}
-}
-
-func applyIssueOpsPhaseTransition(record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase) issueops.IssueOpsRecord {
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	return applyIssueOpsPhaseTransitionAt(record, phase, now)
-}
-
-func applyIssueOpsPhaseTransitionAt(record issueops.IssueOpsRecord, phase issueops.IssueOpsPhase, now string) issueops.IssueOpsRecord {
-	prevPhase := record.Phase
-	record.Phase = phase
-	if phase == IssueOpsPhaseAISlopClean && strings.TrimSpace(record.AISlopCleanAt) == "" {
-		record.AISlopCleanAt = now
-	}
-	if phase == IssueOpsPhaseAISlopClean {
-		record.AISlopCleanHead = issueOpsCurrentHead(record)
-		record.AISlopCleanFingerprint = implementation.ChangeFingerprint(record)
-	}
-	record.PhaseLedger = issueopsdomain.StampForwardTransition(record.PhaseLedger, prevPhase, phase, now, issueopsstatusdomain.ArtifactKeys(prevPhase))
-	return record
 }

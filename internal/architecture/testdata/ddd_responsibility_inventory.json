@@ -7910,8 +7910,6 @@
         "func AdvanceIssueOpsPhaseWithActor",
         "func advanceIssueOpsPhaseLocked",
         "func advanceIssueOpsPhaseWithActor",
-        "func applyIssueOpsPhaseTransition",
-        "func applyIssueOpsPhaseTransitionAt",
         "func issueOpsPhaseRank",
         "func knownIssueOpsPhase",
         "func phaseEntryReadiness",
@@ -11013,6 +11011,14 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/phase_transition.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyPhaseTransition"
+      ]
+    },
+    {
       "path": "internal/application/issueopsdecision/ports.go",
       "owner": "application",
       "task": "T20",
@@ -13756,6 +13762,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/phase_transition.go",
+      "owner": "domain",
+      "task": "T04",
+      "symbols": [
+        "func ApplyPhaseTransition"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/plan_prep_readiness.go",
       "owner": "domain",
       "task": "T20",
@@ -15768,6 +15782,14 @@
       ]
     },
     {
+      "path": "internal/port/issueopscycle/phase_transition.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type PhaseTransitionObservations"
+      ]
+    },
+    {
       "path": "internal/port/issueopsintent/store.go",
       "owner": "port",
       "task": "T20",
@@ -17148,6 +17170,44 @@
       "evidence_tests": [
         "internal/application/issueopscycle/phase_entry_test.go",
         "internal/adapter/issueops/span_network_guard_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "phase-transition-observation",
+      "source_path": "internal/adapter/issueops/issueops_phase.go",
+      "source_symbol": "func applyIssueOpsPhaseTransition",
+      "responsibility": "capture time and cleanup Git observations before applying a phase transition",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func ApplyPhaseTransition",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to ai-slop-clean",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/phase_transition_test.go",
+        "internal/domain/issueops/phase_transition_test.go",
+        "internal/adapter/issueops/issueops_phase_refresh_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "phase-transition-ledger",
+      "source_path": "internal/adapter/issueops/issueops_phase.go",
+      "source_symbol": "func applyIssueOpsPhaseTransitionAt",
+      "responsibility": "advance phase and stamp cleanup and phase ledger fields atomically in the record",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ApplyPhaseTransition",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to ai-slop-clean",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/phase_transition_test.go",
+        "internal/domain/issueops/phase_transition_test.go",
+        "internal/adapter/issueops/issueops_phase_refresh_test.go"
       ],
       "status": "migrated"
     }
