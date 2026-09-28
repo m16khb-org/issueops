@@ -61,7 +61,7 @@ func TestMain(m *testing.M) {
 		DecodeIssueOpsRemoteJudgeJSON:      remotedomain.DecodeIssueOpsRemoteJudgeJSON,
 		DecodeIssueOpsRemoteScoringRequest: remotedomain.DecodeIssueOpsRemoteScoringRequest,
 		IssueOpsStateRoot:                  issueopscore.IssueOpsStateRoot,
-		LinkIssueOpsChildWithActor:         issueopscore.LinkIssueOpsChildWithActor,
+		LinkIssueOpsChildWithActor:         LinkIssueOpsChildWithActorForTest,
 		ObserveNativeProcessAncestry:       issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                       issueopscore.ReadIssueOps,
 		ReflectReviewFindings: func(ctx context.Context, root, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {

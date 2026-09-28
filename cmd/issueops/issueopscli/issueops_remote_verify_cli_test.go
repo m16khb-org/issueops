@@ -64,7 +64,7 @@ func TestRunIssueOpsRemoteVerifyArtifactValidationErrors(t *testing.T) {
 func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueopscontract.IssueOpsRecord, issueopscore.IssueOpsActor) {
 	t.Helper()
 	recordIssueOpsCoreIntentForCLITest(t, id)
-	if _, err := issueopscore.LinkIssueOpsIssue(issueopscore.IssueOpsStateRoot(), id, "https://github.com/example/repo/issues/75"); err != nil {
+	if _, err := LinkIssueOpsIssueForTest(issueopscore.IssueOpsStateRoot(), id, "https://github.com/example/repo/issues/75"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := prepareBranchForTest(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsBranchPrepareRequest{

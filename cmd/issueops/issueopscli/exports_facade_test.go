@@ -37,7 +37,7 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = issueops.LinkIssueOpsIssue(issueops.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/195")
+	record, err = LinkIssueOpsIssueForTest(issueops.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/195")
 	if err != nil {
 		t.Fatal(err)
 	}

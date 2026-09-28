@@ -11,6 +11,8 @@ import (
 	"context"
 
 	"issueops/internal/adapter/issueops/delegation"
+	branchapp "issueops/internal/application/issueopsbranch"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 )
@@ -65,12 +67,8 @@ func startIssueOpsChild(stateRoot string, req issueops.IssueOpsChildStartRequest
 		Guidance:  "base_branch=" + parent.Branch + "; create an isolated worktree for " + child.Branch + " and export ISSUEOPS_EXPECTED_WORKTREE after linking it",
 	}
 	if req.ChildIssueURL != "" {
-		var linkErr error
-		if actor == nil {
-			_, linkErr = LinkIssueOpsChild(stateRoot, parent.ID, req.ChildIssueURL, req.Title)
-		} else {
-			_, linkErr = LinkIssueOpsChildWithActor(stateRoot, parent.ID, req.ChildIssueURL, req.Title, *actor)
-		}
+		linker := branchapp.Linker{Records: CycleRecordStore{StateRoot: stateRoot}, Authority: cycleapp.NewMutationAuthority(samePath), Now: time.Now}
+		_, linkErr := linker.Child(context.Background(), parent.ID, req.ChildIssueURL, req.Title, actor)
 		if linkErr != nil {
 			result.ChildLinkWarning = linkErr.Error()
 		}

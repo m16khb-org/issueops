@@ -28,7 +28,7 @@ func seedPlannerGates(t *testing.T, stateRoot, id string) {
 		if record.BranchPrepare != nil && strings.TrimSpace(record.BranchPrepare.IssueURL) != "" {
 			url = record.BranchPrepare.IssueURL
 		}
-		if _, err := issueopscore.LinkIssueOpsIssue(stateRoot, id, url); err != nil {
+		if _, err := LinkIssueOpsIssueForTest(stateRoot, id, url); err != nil {
 			t.Fatalf("seed link issue: %v", err)
 		}
 	}

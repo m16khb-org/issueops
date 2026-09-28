@@ -189,31 +189,6 @@ func issueOpsIntentDesignStore() intentdesign.Store {
 	}
 }
 
-func LinkIssueOpsIssue(stateRoot, id, issueURL string) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsIssue(stateRoot, id, issueURL, nil)
-}
-
-func LinkIssueOpsIssueWithActor(stateRoot, id, issueURL string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsIssue(stateRoot, id, issueURL, &actor)
-}
-
-func linkIssueOpsIssue(stateRoot, id, issueURL string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validateWorkspacePreparationMutation(record, actor); actorErr != nil {
-			return actorErr
-		}
-		var e error
-		rec, e = linking.LinkIssue(issueOpsLinkingStore(), stateRoot, id, issueURL)
-		return e
-	})
-	return rec, err
-}
-
 func LinkIssueOpsPlan(stateRoot, id, planPath string) (issueops.IssueOpsRecord, error) {
 	return linkIssueOpsPlan(stateRoot, id, planPath, nil)
 }
@@ -323,58 +298,10 @@ func recordIssueOpsDevilsAdvocateReview(stateRoot, id string, req issueops.Issue
 	return rec, err
 }
 
-func LinkIssueOpsChild(stateRoot, id, childURL, title string) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsChild(stateRoot, id, childURL, title, nil)
-}
-
-func LinkIssueOpsChildWithActor(stateRoot, id, childURL, title string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsChild(stateRoot, id, childURL, title, &actor)
-}
-
-func linkIssueOpsChild(stateRoot, id, childURL, title string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validateWorkspacePreparationMutation(record, actor); actorErr != nil {
-			return actorErr
-		}
-		var e error
-		rec, e = linking.LinkChild(issueOpsLinkingStore(), stateRoot, id, childURL, title)
-		return e
-	})
-	return rec, err
-}
-
-func LinkIssueOpsRelatedWithActor(stateRoot, id, linkType, relatedURL, title string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsRelated(stateRoot, id, linkType, relatedURL, title, &actor)
-}
-
-func linkIssueOpsRelated(stateRoot, id, linkType, relatedURL, title string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validateWorkspacePreparationMutation(record, actor); actorErr != nil {
-			return actorErr
-		}
-		var e error
-		rec, e = linking.LinkRelated(issueOpsLinkingStore(), stateRoot, id, linkType, relatedURL, title)
-		return e
-	})
-	return rec, err
-}
-
 func issueOpsLinkingStore() linking.Store {
 	return linking.Store{
 		Read:                   ReadIssueOps,
 		TouchWrite:             touchAndWriteIssueOps,
-		PlanReadiness:          IssueOpsPlanReadiness,
-		PhaseRank:              issueOpsPhaseRank,
 		BranchEvidenceMissing:  issueopsdomain.BranchEvidenceMissing,
 		DesignReviewMissing:    cycleapp.DesignReviewMissing,
 		PlanPathExists:         issueOpsPlanPathExists,

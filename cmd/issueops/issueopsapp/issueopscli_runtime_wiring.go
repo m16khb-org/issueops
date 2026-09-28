@@ -20,18 +20,24 @@ func configureIssueOpsCLIRuntime() {
 	decisions := issueOpsDecisionHandlers(observer)
 	routing := issueOpsRoutingHandlers(observer)
 	issueopscli.ConfigureIssueOpsRuntime2(issueopscli.IssueOpsCLIDeps{
-		AcceptIssueOpsChildWithActor:  issueopscore.AcceptIssueOpsChildWithActor,
-		AddIssueOpsDecisionWithActor:  decisions.AddWithActor,
-		DropIssueOpsChildWithActor:    issueopscore.DropIssueOpsChildWithActor,
-		IssueOpsChildStatusWithActor:  issueopscore.IssueOpsChildStatusWithActor,
-		IssueOpsPRReadiness:           issueopscore.IssueOpsPRReadiness,
-		IssueOpsNext:                  issueOpsNextHandler(artifacts.Names, observer),
-		IssueOpsStateRoot:             issueopscore.IssueOpsStateRoot,
-		IssueOpsStatus:                issueOpsStatusHandler(observer),
-		LinkIssueOpsChildWithActor:    issueopscore.LinkIssueOpsChildWithActor,
-		LinkIssueOpsIssueWithActor:    issueopscore.LinkIssueOpsIssueWithActor,
-		LinkIssueOpsPlanWithActor:     issueopscore.LinkIssueOpsPlanWithActor,
-		LinkIssueOpsRelatedWithActor:  issueopscore.LinkIssueOpsRelatedWithActor,
+		AcceptIssueOpsChildWithActor: issueopscore.AcceptIssueOpsChildWithActor,
+		AddIssueOpsDecisionWithActor: decisions.AddWithActor,
+		DropIssueOpsChildWithActor:   issueopscore.DropIssueOpsChildWithActor,
+		IssueOpsChildStatusWithActor: issueopscore.IssueOpsChildStatusWithActor,
+		IssueOpsPRReadiness:          issueopscore.IssueOpsPRReadiness,
+		IssueOpsNext:                 issueOpsNextHandler(artifacts.Names, observer),
+		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
+		IssueOpsStatus:               issueOpsStatusHandler(observer),
+		LinkIssueOpsChildWithActor: func(root, id, childURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newIssueLinker(root).Child(context.Background(), id, childURL, title, &actor)
+		},
+		LinkIssueOpsIssueWithActor: func(root, id, issueURL string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newIssueLinker(root).Issue(context.Background(), id, issueURL, &actor)
+		},
+		LinkIssueOpsPlanWithActor: issueopscore.LinkIssueOpsPlanWithActor,
+		LinkIssueOpsRelatedWithActor: func(root, id, linkType, relatedURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newIssueLinker(root).Related(context.Background(), id, linkType, relatedURL, title, &actor)
+		},
 		LinkIssueOpsWorktreeWithActor: issueopscore.LinkIssueOpsWorktreeWithActor,
 		ListIssueOpsCycles:            issueOpsInventoryListHandler(observer),
 		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {

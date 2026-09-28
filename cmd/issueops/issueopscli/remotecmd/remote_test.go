@@ -598,7 +598,7 @@ func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	t.Helper()
 	record := remoteIssueOpsRecordWithoutChild(t)
 	var err error
-	record, err = issueopscore.LinkIssueOpsChild(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/1235", "child")
+	record, err = LinkIssueOpsChildForTest(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/1235", "child")
 	if err != nil {
 		t.Fatalf("LinkIssueOpsChild: %v", err)
 	}
@@ -617,7 +617,7 @@ func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.IssueOpsRec
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
-	record, err = issueopscore.LinkIssueOpsIssue(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/1234")
+	record, err = LinkIssueOpsIssueForTest(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/1234")
 	if err != nil {
 		t.Fatalf("LinkIssueOpsIssue: %v", err)
 	}

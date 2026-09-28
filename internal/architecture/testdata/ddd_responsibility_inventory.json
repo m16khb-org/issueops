@@ -1310,6 +1310,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_link_wiring.go",
+      "owner": "composition",
+      "task": "T08",
+      "symbols": [
+        "func newIssueLinker"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_next_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -8115,12 +8123,8 @@
       "owner": "adapter",
       "task": "T08",
       "symbols": [
-        "func LinkChild",
-        "func LinkIssue",
         "func LinkPlan",
-        "func LinkRelated",
         "func LinkWorktree",
-        "func isValidLinkType",
         "type Store"
       ]
     },
@@ -8202,13 +8206,8 @@
         "func IssueOpsCleanupStatusForRecord",
         "func IssueOpsRemoteArtifactMissing",
         "func LastActiveAt",
-        "func LinkIssueOpsChild",
-        "func LinkIssueOpsChildWithActor",
-        "func LinkIssueOpsIssue",
-        "func LinkIssueOpsIssueWithActor",
         "func LinkIssueOpsPlan",
         "func LinkIssueOpsPlanWithActor",
-        "func LinkIssueOpsRelatedWithActor",
         "func LinkIssueOpsWorktree",
         "func LinkIssueOpsWorktreeWithActor",
         "func OriginBranchPresent",
@@ -8229,10 +8228,7 @@
         "func issueOpsIntentDesignStore",
         "func issueOpsLinkingStore",
         "func issueOpsRemoteArtifactMissing",
-        "func linkIssueOpsChild",
-        "func linkIssueOpsIssue",
         "func linkIssueOpsPlan",
-        "func linkIssueOpsRelated",
         "func linkIssueOpsWorktree",
         "func normalizeIssueOpsRepo",
         "func recordIssueOpsCompatibilityReview",
@@ -10958,6 +10954,18 @@
         "func Service.recordBaseline",
         "func Service.verifyChild",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbranch/link.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func Linker.Child",
+        "func Linker.Issue",
+        "func Linker.Related",
+        "func Linker.mutate",
+        "type Linker"
       ]
     },
     {
@@ -14379,6 +14387,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/issue_link.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func AppendIssueRelation",
+        "func ApplyIssueLink",
+        "func ValidateChildLinkParent",
+        "func ValidateRelatedLinkType",
+        "func ValidateRelationURL"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/issue_reconcile.go",
       "owner": "domain",
       "task": "T07",
@@ -15416,6 +15436,14 @@
         "func PreparationCodeProject",
         "func PreparationProvider",
         "func ValidatePreparationIssueNumber"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/child_link.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ValidateChildLinkProvider"
       ]
     },
     {
@@ -21312,6 +21340,106 @@
         "internal/application/issueopsbranch/branch_prepare_umbrella_test.go",
         "internal/application/issueopsbranch/code_project_key_test.go",
         "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-link-plan-readiness",
+      "source_path": "internal/adapter/issueops/linking/link.go",
+      "source_symbol": "func LinkIssue",
+      "responsibility": "advance issue linking only when actual intent and plan preparation readiness allows it, without regressing later phases",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ApplyIssueLink",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-issue",
+        "issueops link-child",
+        "issueops link-related"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/link_test.go",
+        "internal/domain/issueops/issue_link_test.go",
+        "cmd/issueops/issueopsapp/issueops_link_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-link-related-kind",
+      "source_path": "internal/adapter/issueops/linking/link.go",
+      "source_symbol": "func isValidLinkType",
+      "responsibility": "restrict related issue edges to the seven supported non-topology relations",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateRelatedLinkType",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-issue",
+        "issueops link-child",
+        "issueops link-related"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/link_test.go",
+        "internal/domain/issueops/issue_link_test.go",
+        "cmd/issueops/issueopsapp/issueops_link_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-link-relation-projection",
+      "source_path": "internal/adapter/issueops/linking/link.go",
+      "source_symbol": "func LinkRelated",
+      "responsibility": "reject duplicate type and URL edges and append immutable timestamped relation state",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func AppendIssueRelation",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-issue",
+        "issueops link-child",
+        "issueops link-related"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/link_test.go",
+        "internal/domain/issueops/issue_link_test.go",
+        "cmd/issueops/issueopsapp/issueops_link_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-link-child-provider",
+      "source_path": "internal/adapter/issueops/linking/link.go",
+      "source_symbol": "func LinkChild",
+      "responsibility": "reject child issue provider mismatch before project identity validation",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func ValidateChildLinkProvider",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-issue",
+        "issueops link-child",
+        "issueops link-related"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/link_test.go",
+        "internal/domain/issueops/issue_link_test.go",
+        "cmd/issueops/issueopsapp/issueops_link_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-link-transaction",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func linkIssueOpsIssue",
+      "responsibility": "lock and load current record, authorize before input validation, apply domain transition and persist under the same lock",
+      "target": "internal/application/issueopsbranch",
+      "target_symbol": "func Linker.mutate",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-issue",
+        "issueops link-child",
+        "issueops link-related"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/link_test.go",
+        "internal/domain/issueops/issue_link_test.go",
+        "cmd/issueops/issueopsapp/issueops_link_wiring_test.go"
       ],
       "status": "migrated"
     }

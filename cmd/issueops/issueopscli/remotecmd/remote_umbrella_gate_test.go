@@ -17,7 +17,7 @@ func TestCreateChildRequiresPreparedUmbrellaBranch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
-	record, err = issueopscore.LinkIssueOpsIssue(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/78")
+	record, err = LinkIssueOpsIssueForTest(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/78")
 	if err != nil {
 		t.Fatalf("LinkIssueOpsIssue: %v", err)
 	}

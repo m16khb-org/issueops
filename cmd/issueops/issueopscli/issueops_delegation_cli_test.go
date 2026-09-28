@@ -249,7 +249,7 @@ func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (
 
 func prepareIssueOpsCLIParentImplementationSurface(t *testing.T, id, branch, worktree string) {
 	t.Helper()
-	if _, err := issueopscore.LinkIssueOpsIssue(issueopscore.IssueOpsStateRoot(), id, "https://github.com/example/repo/issues/123"); err != nil {
+	if _, err := LinkIssueOpsIssueForTest(issueopscore.IssueOpsStateRoot(), id, "https://github.com/example/repo/issues/123"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := prepareBranchForTest(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsBranchPrepareRequest{

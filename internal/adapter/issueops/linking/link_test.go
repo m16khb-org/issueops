@@ -25,8 +25,6 @@ func newLinkStoreForTest(records ...model.IssueOpsRecord) (*linkStoreForTest, St
 	return store, Store{
 		Read:                   store.read,
 		TouchWrite:             store.touchWrite,
-		PlanReadiness:          store.planReadiness,
-		PhaseRank:              issueopsdomain.IssueOpsPhaseRank,
 		BranchEvidenceMissing:  store.branchEvidenceMissingFor,
 		DesignReviewMissing:    store.designReviewMissingFor,
 		PlanPathExists:         store.planPathExists,
@@ -50,10 +48,6 @@ func (s *linkStoreForTest) touchWrite(_ string, record model.IssueOpsRecord) (mo
 	record.OK = true
 	s.records[record.ID] = record
 	return record, nil
-}
-
-func (s *linkStoreForTest) planReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
-	return model.IssueOpsReadiness{OK: true, Ready: strings.TrimSpace(record.IssueURL) != ""}
 }
 
 func (s *linkStoreForTest) branchEvidenceMissingFor(model.IssueOpsRecord) []string {
@@ -105,37 +99,6 @@ func uniqueSortedForTest(values []string) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-func TestLinkIssuePersistsURLAndAdvancesReadyRecord(t *testing.T) {
-	record := model.IssueOpsRecord{
-		ID:     "io-link-issue",
-		Repo:   "/repo/example",
-		Branch: "feature/link-issue",
-		Phase:  model.IssueOpsPhaseProblem,
-	}
-	linkStore, store := newLinkStoreForTest(record)
-
-	got, err := LinkIssue(store, t.TempDir(), record.ID, " https://github.com/example/repo/issues/10 ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.IssueURL != "https://github.com/example/repo/issues/10" {
-		t.Fatalf("IssueURL=%q", got.IssueURL)
-	}
-	if got.Phase != model.IssueOpsPhasePlan {
-		t.Fatalf("Phase=%q, want %q", got.Phase, model.IssueOpsPhasePlan)
-	}
-	if reloaded := linkStore.records[record.ID]; reloaded.IssueURL != got.IssueURL || reloaded.Phase != got.Phase {
-		t.Fatalf("persisted record mismatch: %+v", reloaded)
-	}
-}
-
-func TestLinkIssueRejectsInvalidURL(t *testing.T) {
-	_, store := newLinkStoreForTest(model.IssueOpsRecord{ID: "io-bad-url"})
-	if _, err := LinkIssue(store, t.TempDir(), "io-bad-url", "not-a-url"); err == nil || !strings.Contains(err.Error(), "http(s) URL") {
-		t.Fatalf("expected issue URL validation error, got %v", err)
-	}
 }
 
 func TestLinkPlanValidatesReadinessAndPersistsAbsolutePath(t *testing.T) {
@@ -365,129 +328,6 @@ func TestLinkWorktreeRejectsBoundaryViolations(t *testing.T) {
 	}
 }
 
-func TestLinkChildPersistsProviderNeutralGraph(t *testing.T) {
-	parent := model.IssueOpsRecord{
-		ID:       "io-parent",
-		Repo:     "/repo/example",
-		Branch:   "1-demo",
-		Phase:    model.IssueOpsPhasePlan,
-		IssueURL: "https://github.com/example/repo/issues/10",
-	}
-	gitlab := model.IssueOpsRecord{
-		ID:       "io-gitlab",
-		Repo:     "/repo/gitlab",
-		Branch:   "20-gitlab",
-		Phase:    model.IssueOpsPhasePlan,
-		IssueURL: "https://gitlab.example/group/project/-/issues/20",
-	}
-	generic := model.IssueOpsRecord{
-		ID:       "io-generic",
-		Repo:     "/repo/generic",
-		Branch:   "10-generic",
-		Phase:    model.IssueOpsPhasePlan,
-		IssueURL: "https://tracker.example/acme/repo/issues/10",
-	}
-	linkStore, store := newLinkStoreForTest(parent, gitlab, generic)
-	stateRoot := t.TempDir()
-
-	record, err := LinkChild(store, stateRoot, parent.ID, "https://github.com/example/repo/issues/11", "write child graph tests")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(record.IssueLinks) != 1 {
-		t.Fatalf("expected one child issue link, got %+v", record.IssueLinks)
-	}
-	link := record.IssueLinks[0]
-	if link.Type != "child" || link.URL != "https://github.com/example/repo/issues/11" || link.Title != "write child graph tests" || link.Provider != "github" {
-		t.Fatalf("unexpected child issue link: %+v", link)
-	}
-	if link.CreatedAt == "" {
-		t.Fatalf("child issue link should record created_at: %+v", link)
-	}
-
-	reloaded := linkStore.records[parent.ID]
-	if len(reloaded.IssueLinks) != 1 || reloaded.IssueLinks[0].URL != link.URL {
-		t.Fatalf("reloaded child issue links mismatch: %+v", reloaded.IssueLinks)
-	}
-	if _, err := LinkChild(store, stateRoot, parent.ID, link.URL, "duplicate"); err == nil || !strings.Contains(err.Error(), "already linked") {
-		t.Fatalf("expected duplicate child link rejection, got %v", err)
-	}
-	if _, err := LinkChild(store, stateRoot, parent.ID, "https://tracker.example/acme/repo/issues/12", "generic tracker child"); err == nil || !strings.Contains(err.Error(), "provider") {
-		t.Fatalf("generic child under GitHub parent should be rejected as provider mismatch, got %v", err)
-	}
-	if _, err := LinkChild(store, stateRoot, parent.ID, "https://github.com/other/repo/issues/12", "other repo child"); err == nil || !strings.Contains(err.Error(), "parent issue project") {
-		t.Fatalf("GitHub child from another repo should be rejected, got %v", err)
-	}
-	if _, err := LinkChild(store, stateRoot, parent.ID, "https://github.com/example/repo/issues/not-a-number", "bad child"); err == nil || !strings.Contains(err.Error(), "numeric github issue or work item URL") {
-		t.Fatalf("GitHub child with nonnumeric issue should be rejected, got %v", err)
-	}
-	if _, err := LinkChild(store, stateRoot, gitlab.ID, "https://gitlab.example/other/project/-/issues/21", "other project child"); err == nil || !strings.Contains(err.Error(), "parent issue project") {
-		t.Fatalf("GitLab child from another project should be rejected, got %v", err)
-	}
-	if _, err := LinkChild(store, stateRoot, gitlab.ID, "https://gitlab.example/group/project/-/issues/not-a-number", "bad child"); err == nil || !strings.Contains(err.Error(), "numeric gitlab issue or work item URL") {
-		t.Fatalf("GitLab child with nonnumeric issue should be rejected, got %v", err)
-	}
-	if _, err := LinkChild(store, stateRoot, gitlab.ID, "https://gitlab.example/group/project/-/issues/21", "same project child"); err != nil {
-		t.Fatalf("GitLab child in same project should be accepted: %v", err)
-	}
-	gitlabWorkItem := model.IssueOpsRecord{
-		ID:       "io-gitlab-work-item",
-		Repo:     "/repo/gitlab",
-		Branch:   "21-gitlab",
-		Phase:    model.IssueOpsPhasePlan,
-		IssueURL: "https://gitlab.example/group/project/-/issues/20",
-	}
-	_, workItemStore := newLinkStoreForTest(gitlabWorkItem)
-	if _, err := LinkChild(workItemStore, stateRoot, gitlabWorkItem.ID, "https://gitlab.example/group/project/-/work_items/22", "same project work item child"); err != nil {
-		t.Fatalf("GitLab child work item in same project should be accepted: %v", err)
-	}
-	generic, err = LinkChild(store, stateRoot, generic.ID, "https://tracker.example/acme/repo/issues/12", "generic tracker child")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := generic.IssueLinks[0].Provider; got != "" {
-		t.Fatalf("generic issue URL should not infer a provider, got %q", got)
-	}
-	if _, err := LinkChild(store, stateRoot, parent.ID, "not-a-url", "bad"); err == nil || !strings.Contains(err.Error(), "child_url") {
-		t.Fatalf("expected child URL validation error, got %v", err)
-	}
-}
-
-func TestLinkRelatedPersistsProviderAndRejectsDuplicates(t *testing.T) {
-	record := model.IssueOpsRecord{
-		ID:       "io-related",
-		Repo:     "/repo/example",
-		Branch:   "feature/related",
-		Phase:    model.IssueOpsPhasePlan,
-		IssueURL: "https://github.com/example/repo/issues/10",
-	}
-	_, store := newLinkStoreForTest(record)
-
-	got, err := LinkRelated(store, t.TempDir(), record.ID, " follows-up ", " https://github.com/example/repo/issues/11 ", " follow up ")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got.IssueLinks) != 1 {
-		t.Fatalf("IssueLinks=%+v", got.IssueLinks)
-	}
-	link := got.IssueLinks[0]
-	if link.Type != "follows-up" || link.URL != "https://github.com/example/repo/issues/11" || link.Title != "follow up" || link.Provider != "github" {
-		t.Fatalf("unexpected related link: %+v", link)
-	}
-	if link.CreatedAt == "" {
-		t.Fatalf("related link should include CreatedAt: %+v", link)
-	}
-	if _, err := LinkRelated(store, t.TempDir(), record.ID, "follows-up", link.URL, "duplicate"); err == nil || !strings.Contains(err.Error(), "already linked") {
-		t.Fatalf("expected duplicate related link rejection, got %v", err)
-	}
-	if _, err := LinkRelated(store, t.TempDir(), record.ID, "parent", "https://github.com/example/repo/issues/12", "bad type"); err == nil || !strings.Contains(err.Error(), "invalid link type") {
-		t.Fatalf("expected invalid link type rejection, got %v", err)
-	}
-	if _, err := LinkRelated(store, t.TempDir(), record.ID, "blocks", "not-a-url", "bad url"); err == nil || !strings.Contains(err.Error(), "related_url") {
-		t.Fatalf("expected related URL validation error, got %v", err)
-	}
-}
-
 func TestValidateIssueURL(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -573,20 +413,5 @@ func writeGitHeadForTest(t *testing.T, path, branch string) {
 	}
 	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/"+branch+"\n"), 0o600); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func TestIsValidLinkType(t *testing.T) {
-	valid := []string{"depends-on", "blocks", "supersedes", "follows-up", "duplicates", "splits-from", "implements"}
-	for _, lt := range valid {
-		if !isValidLinkType(lt) {
-			t.Errorf("expected %q to be valid", lt)
-		}
-	}
-	invalid := []string{"", "parent", "child", "related", "unknown"}
-	for _, lt := range invalid {
-		if isValidLinkType(lt) {
-			t.Errorf("expected %q to be invalid", lt)
-		}
 	}
 }

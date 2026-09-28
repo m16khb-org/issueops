@@ -4679,7 +4679,7 @@
           "title": "Cover IssueOps link issue and link plan boundaries",
           "verify_with": [
             "go test ./internal/application/issueopslease ./internal/application/issueopspreparation -count=1",
-            "go test -cover ./internal/adapter/issueops/linking"
+            "go test -cover ./internal/application/issueopsbranch ./internal/adapter/issueops/linking"
           ],
           "why_now": [
             "IssueOps durable state gates are easy to regress with boundary paths",
@@ -8053,7 +8053,7 @@
                 "title": "Cover IssueOps link issue and link plan boundaries",
                 "verify_with": [
                   "go test ./internal/application/issueopslease ./internal/application/issueopspreparation -count=1",
-                  "go test -cover ./internal/adapter/issueops/linking"
+                  "go test -cover ./internal/application/issueopsbranch ./internal/adapter/issueops/linking"
                 ],
                 "why_now": [
                   "IssueOps durable state gates are easy to regress with boundary paths",

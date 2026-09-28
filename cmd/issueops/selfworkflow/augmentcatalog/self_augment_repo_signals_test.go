@@ -79,11 +79,12 @@ func TestQualitySignalHarvesterIsSatisfiedByQualityInspectCLIAndSignals(t *testi
 
 func TestIssueOpsLinkingCoverageIsSatisfiedByBoundaryTests(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "issueops", "linking", "link_test.go"), `package linking
-
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "application", "issueopsbranch", "link_test.go"), `package issueopsbranch
 func TestLinkIssueRejectsInvalidURL() {
 	_ = "http(s) URL"
 }
+`)
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "issueops", "linking", "link_test.go"), `package linking
 
 func TestLinkPlanRejectsBoundaryViolations() {
 	_ = "plan_path does not exist"

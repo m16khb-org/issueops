@@ -89,7 +89,7 @@ func repoSignalRules() []repoSignalRule {
 				fileContainsTerm(root, filepath.Join("internal", "domain", "judgement", "structured_test.go"), "TestDecodeStructuredJSONObjectBoundsLargeErrorOutput")
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {
-			signals.HasIssueOpsLinkingBoundaryCoverage = fileContainsTerm(root, filepath.Join("internal", "adapter", "issueops", "linking", "link_test.go"), "TestLinkIssueRejectsInvalidURL") &&
+			signals.HasIssueOpsLinkingBoundaryCoverage = fileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "link_test.go"), "TestLinkIssueRejectsInvalidURL") &&
 				fileContainsTerm(root, filepath.Join("internal", "adapter", "issueops", "linking", "link_test.go"), "TestLinkPlanRejectsBoundaryViolations") &&
 				fileContainsTerm(root, filepath.Join("internal", "adapter", "issueops", "linking", "link_test.go"), "plan_path does not exist") &&
 				fileContainsTerm(root, filepath.Join("internal", "adapter", "issueops", "linking", "link_test.go"), "plan_path must be inside linked worktree") &&

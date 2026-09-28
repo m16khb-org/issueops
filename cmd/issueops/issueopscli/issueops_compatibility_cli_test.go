@@ -21,7 +21,7 @@ func TestIssueOpsCompatibilityReviewCLIRecordsReview(t *testing.T) {
 	}
 	id := record["id"].(string)
 	recordIssueOpsCoreIntentForCLITest(t, id)
-	if _, err := issueopscore.LinkIssueOpsIssue(issueopscore.IssueOpsStateRoot(), id, "https://github.com/example/repo/issues/123"); err != nil {
+	if _, err := LinkIssueOpsIssueForTest(issueopscore.IssueOpsStateRoot(), id, "https://github.com/example/repo/issues/123"); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := prepareBranchForTest(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsBranchPrepareRequest{
