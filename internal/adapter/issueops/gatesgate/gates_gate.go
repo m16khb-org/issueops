@@ -11,15 +11,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/issueops/loopgate"
+	cycleapp "issueops/internal/application/issueopscycle"
 	gatescontract "issueops/internal/contract/gates"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	issueopsremote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/stringlist"
+	cycleport "issueops/internal/port/issueopscycle"
 )
 
 // gates ledger 조회·평가는 composition root가 설치한다. gatesgate는 gates
@@ -74,7 +76,7 @@ func withDuplicateIssueArtifactGate(ready issueopscontract.IssueOpsReadiness, ro
 		legacyEntries = append(legacyEntries, issueopsdomain.GateLedgerFile{Name: entry.Name(), Directory: entry.IsDir()})
 	}
 	if missing := issueopsdomain.DuplicateGateLedgerMissing(issueNumber, true, legacyEntries); len(missing) > 0 {
-		ready.Missing = uniqSorted(append(append([]string{}, ready.Missing...), missing...))
+		ready.Missing = stringlist.UniqueSorted(append(append([]string{}, ready.Missing...), missing...))
 		ready.Ready = false
 	}
 	return ready
@@ -123,74 +125,7 @@ func guardPRPhase(stateRoot, id, to string) error {
 }
 
 func withGatesGate(ready issueopscontract.IssueOpsReadiness, root, issueNumber string) issueopscontract.IssueOpsReadiness {
-	root = strings.TrimSpace(root)
-	if root == "" {
-		return ready
-	}
-	files, err := DiscoverGateFiles(root)
-	if err != nil || len(files) == 0 {
-		return ready
-	}
-	files, skipped := issueopsdomain.ScopeGateLedgers(root, files, issueNumber)
-	missing := append([]string{}, ready.Missing...)
-	warnings := []string{}
-	if len(skipped) > 0 {
-		rels := make([]string, 0, len(skipped))
-		for _, file := range skipped {
-			rels = append(rels, relPath(root, file))
-		}
-		warnings = append(warnings, fmt.Sprintf("gates_skipped:%d (%s)", len(skipped), strings.Join(rels, ", ")))
-	}
-	for _, file := range files {
-		result, err := CheckGateLedger(gatescontract.CheckRequest{
-			WorkspaceRoot: root,
-			CWD:           root,
-			Files:         []string{file},
-			StatusOnly:    true,
-		})
-		if err != nil {
-			warnings = append(warnings, fmt.Sprintf("gates %s: %v", relPath(root, file), err))
-			continue
-		}
-		if result.Complete {
-			continue
-		}
-		missing = append(missing, "gates_incomplete:"+relPath(root, file))
-		for _, fileResult := range result.Files {
-			for _, gate := range fileResult.Gates {
-				if gate.State == "unchecked" || gate.State == "evidence_pending" {
-					warnings = append(warnings, fmt.Sprintf("gate %s (%s): %s", gate.ID, gate.State, gate.Title))
-				}
-			}
-		}
-	}
-	if len(missing) == len(ready.Missing) && len(warnings) == 0 {
-		return ready
-	}
-	ready.Missing = uniqSorted(missing)
-	ready.Warnings = append(ready.Warnings, warnings...)
-	ready.Ready = len(ready.Missing) == 0
-	return ready
-}
-
-func relPath(root, file string) string {
-	rel := strings.TrimPrefix(file, root)
-	rel = strings.TrimPrefix(rel, "/")
-	if rel == "" {
-		return file
-	}
-	return rel
-}
-
-func uniqSorted(in []string) []string {
-	seen := map[string]bool{}
-	out := []string{}
-	for _, v := range in {
-		if v != "" && !seen[v] {
-			seen[v] = true
-			out = append(out, v)
-		}
-	}
-	sort.Strings(out)
-	return out
+	return cycleapp.ApplyGateLedgers(ready, root, issueNumber, cycleport.GateLedgerReadiness{
+		Discover: DiscoverGateFiles, Check: CheckGateLedger,
+	})
 }

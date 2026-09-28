@@ -7498,8 +7498,6 @@
         "func StrictPRReadinessWithState",
         "func guardPRPhase",
         "func linkedIssueNumber",
-        "func relPath",
-        "func uniqSorted",
         "func withDuplicateIssueArtifactGate",
         "func withGatesGate"
       ]
@@ -11025,6 +11023,14 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/gate_ledger_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyGateLedgers"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/implementation_readiness.go",
       "owner": "application",
       "task": "T20",
@@ -13784,6 +13790,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/gate_ledger_readiness.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func GateLedgerFileReadiness",
+        "func GateLedgerRelativePath",
+        "type GateLedgerStatus"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/gate_ledger_scope.go",
       "owner": "domain",
       "task": "T20",
@@ -15976,6 +15992,14 @@
       ]
     },
     {
+      "path": "internal/port/issueopscycle/gate_ledger_readiness.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type GateLedgerReadiness"
+      ]
+    },
+    {
       "path": "internal/port/issueopscycle/phase_completion.go",
       "owner": "port",
       "task": "T20",
@@ -17774,6 +17798,43 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/gate_ledger_duplicate_test.go",
+        "internal/adapter/issueops/gatesgate/gates_gate_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "gate-ledger-relative-path",
+      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
+      "source_symbol": "func relPath",
+      "responsibility": "gate ledger warnings and missing keys use a stable path relative to the selected root",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func GateLedgerRelativePath",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/gate_ledger_readiness_test.go",
+        "internal/application/issueopscycle/gate_ledger_readiness_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-ledger-readiness",
+      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
+      "source_symbol": "func withGatesGate",
+      "responsibility": "discovered gate ledgers are scoped, checked, and composed into PR readiness",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func ApplyGateLedgers",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/gate_ledger_readiness_test.go",
+        "internal/application/issueopscycle/gate_ledger_readiness_test.go",
         "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
       "status": "migrate"
