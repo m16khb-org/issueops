@@ -65,30 +65,6 @@ func issueOpsImplementCompletion(record issueops.IssueOpsRecord) issueops.IssueO
 	return IssueOpsAISlopCleanReadiness(record)
 }
 
-func issueOpsPRCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	// 완료/파생에는 git fetch를 하지 않는 non-strict readiness를 사용한다. network
-	// 부수효과 없이 status 표시용 ledger를 파생하기 위해서다. 실제 pr-phase entry
-	// gate는 계속 IssueOpsStrictPRReadiness를 사용한다.
-	ready := IssueOpsPRReadiness(record)
-	missing := append([]string{}, ready.Missing...)
-	if record.RemoteArtifact == nil || strings.TrimSpace(record.RemoteArtifact.URL) == "" {
-		missing = append(missing, "remote_artifact")
-	}
-	missing = append(missing, issueopsdomain.TargetBranchMatchMissing(record)...)
-	ready.Missing = stringlist.UniqueSorted(missing)
-	ready.Ready = len(ready.Missing) == 0
-	return ready
-}
-
-func issueOpsDoneCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := []string{}
-	if issueOpsPhaseRank(record.Phase) < issueOpsPhaseRank(IssueOpsPhasePR) {
-		missing = append(missing, "prior_phase_pr")
-	}
-	missing = append(missing, issueOpsRemoteArtifactMissing(record)...)
-	return issueOpsReadinessFrom(record, missing)
-}
-
 // IssueOpsPhaseCompletion은 기존 source-of-truth 필드에서 phase 완료 여부를
 // 계산해 ready/artifacts(missing)를 반환한다. 기존 readiness 함수를 색인할 뿐,
 // 스스로 source of truth가 되지는 않는다.
@@ -109,9 +85,13 @@ func IssueOpsPhaseCompletion(record issueops.IssueOpsRecord, phase issueops.Issu
 	case IssueOpsPhaseFeedback:
 		return issueOpsReadinessFrom(record, cycleapp.FeedbackCompletionMissing(record))
 	case IssueOpsPhasePR:
-		return issueOpsPRCompletion(record)
+		// Completion uses the local readiness projection; entry uses strict upstream observation.
+		ready := IssueOpsPRReadiness(record)
+		ready.Missing = stringlist.UniqueSorted(issueopsdomain.PRCompletionMissing(record, ready.Missing))
+		ready.Ready = len(ready.Missing) == 0
+		return ready
 	case IssueOpsPhaseDone:
-		return issueOpsDoneCompletion(record)
+		return issueOpsReadinessFrom(record, issueopsdomain.DoneCompletionMissing(record, issueOpsRemoteArtifactMissing(record)))
 	default:
 		return issueops.IssueOpsReadiness{OK: true, Ready: false, Missing: []string{"unknown_phase"}}
 	}

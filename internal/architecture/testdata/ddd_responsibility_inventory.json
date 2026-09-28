@@ -7925,9 +7925,7 @@
         "func IssueOpsPhaseCompletion",
         "func IssueOpsProblemReadiness",
         "func issueOpsCompatibilityReviewCompletion",
-        "func issueOpsDoneCompletion",
         "func issueOpsImplementCompletion",
-        "func issueOpsPRCompletion",
         "func issueOpsPlanCompletion",
         "func issueOpsReadinessFrom"
       ]
@@ -13752,6 +13750,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/phase_completion.go",
+      "owner": "domain",
+      "task": "T04",
+      "symbols": [
+        "func DoneCompletionMissing",
+        "func PRCompletionMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/phase_ledger.go",
       "owner": "domain",
       "task": "T04",
@@ -17262,6 +17269,42 @@
       "evidence_tests": [
         "internal/domain/issueopsreview/feedback_completion_test.go",
         "internal/application/issueopscycle/feedback_completion_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "pr-phase-completion",
+      "source_path": "internal/adapter/issueops/issueops_phase_ledger.go",
+      "source_symbol": "func issueOpsPRCompletion",
+      "responsibility": "local PR completion requires remote artifact and matching target branch",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PRCompletionMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops next",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/phase_completion_test.go",
+        "internal/adapter/issueops/issueops_phase_ledger_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "done-phase-completion",
+      "source_path": "internal/adapter/issueops/issueops_phase_ledger.go",
+      "source_symbol": "func issueOpsDoneCompletion",
+      "responsibility": "done completion requires prior PR phase and remote artifact evidence",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func DoneCompletionMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops next",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/phase_completion_test.go",
+        "internal/adapter/issueops/issueops_phase_ledger_test.go"
       ],
       "status": "migrated"
     }
