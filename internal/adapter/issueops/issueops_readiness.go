@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	"issueops/internal/adapter/issueops/delegation"
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/adapter/issueops/readinesspaths"
 	cycleapp "issueops/internal/application/issueopscycle"
@@ -73,7 +72,7 @@ func issueOpsImplementationReadiness(record issueops.IssueOpsRecord, checkPlanBi
 		missing = append(missing, "plan_in_worktree")
 	}
 	missing = append(missing, cycleapp.CompatibilityReviewMissing(record)...)
-	missing = append(missing, issueOpsDevilsAdvocateReviewMissing(record, checkPlanBinding)...)
+	missing = append(missing, cycleapp.DevilsAdvocateReviewMissing(record, checkPlanBinding, issueOpsLinkedPlanDigest)...)
 	if record.Execution == nil {
 		missing = append(missing, "execution")
 	} else {
@@ -96,42 +95,6 @@ func issueOpsImplementationReadiness(record issueops.IssueOpsRecord, checkPlanBi
 		WorktreePath: record.WorktreePath,
 		Branch:       record.Branch,
 	}
-}
-
-// issueOpsDevilsAdvocateReviewMissing is the fail-closed implement-entry gate for
-// the design-review devil's advocate: a review must be recorded, a stop/revise verdict
-// must be explicitly waived, and (when checkPlanBinding) the verdict must have
-// been recorded against the plan content that is about to be implemented —
-// otherwise `devils_advocate_review_stale` blocks entry until a fresh review is
-// recorded on the final plan.
-func issueOpsDevilsAdvocateReviewMissing(record issueops.IssueOpsRecord, checkPlanBinding bool) []string {
-	review := record.DevilsAdvocateReview
-	if review == nil || strings.TrimSpace(review.RecordedAt) == "" {
-		return []string{"devils_advocate_review"}
-	}
-	missing := []string{}
-	if (review.Verdict == "stop" || review.Verdict == "revise") && !review.Waived {
-		missing = append(missing, "devils_advocate_review")
-	}
-	if checkPlanBinding && strings.TrimSpace(record.PlanPath) != "" && !issueOpsDevilsAdvocateDigestExempt(*review) {
-		if strings.TrimSpace(review.ReviewedPlanDigest) == "" {
-			missing = append(missing, "devils_advocate_review_stale")
-		} else if digest, err := issueOpsLinkedPlanDigest(record); err != nil || !strings.EqualFold(digest, review.ReviewedPlanDigest) {
-			// A plan that cannot be identified (symlink, empty file, unreadable) is
-			// not the plan that was reviewed either — fail closed, same as Record
-			// and the owner preflight do. plan_exists is weaker (Stat follows
-			// symlinks), so this is not a duplicate report.
-			missing = append(missing, "devils_advocate_review_stale")
-		}
-	}
-	return missing
-}
-
-// issueOpsDevilsAdvocateDigestExempt: a delegated child inherits the parent's
-// verdict by policy (delegation.ParentReviewPattern) and never reviewed its own
-// plan, so plan binding does not apply to it.
-func issueOpsDevilsAdvocateDigestExempt(review issueops.IssueOpsDevilsAdvocateReview) bool {
-	return review.ReviewerPattern == delegation.ParentReviewPattern
 }
 
 func issueOpsStrictGitRoot(record issueops.IssueOpsRecord) string {

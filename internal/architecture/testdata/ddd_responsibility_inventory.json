@@ -7991,8 +7991,6 @@
         "func IssueOpsImplementationReadiness",
         "func IssueOpsPlanReadiness",
         "func issueOpsCurrentHead",
-        "func issueOpsDevilsAdvocateDigestExempt",
-        "func issueOpsDevilsAdvocateReviewMissing",
         "func issueOpsImplementationReadiness",
         "func issueOpsPlanInLinkedWorktree",
         "func issueOpsPlanPathExists",
@@ -11009,6 +11007,14 @@
       "task": "T20",
       "symbols": [
         "func DesignReviewMissing"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/devils_advocate_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func DevilsAdvocateReviewMissing"
       ]
     },
     {
@@ -14601,6 +14607,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreview/devils_advocate_readiness.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func DevilsAdvocateDigestExempt",
+        "func DevilsAdvocatePlanDigestRequired",
+        "func DevilsAdvocateReviewMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsreview/feedback.go",
       "owner": "domain",
       "task": "T03",
@@ -17406,6 +17422,25 @@
       "evidence_tests": [
         "internal/domain/issueopsreview/compatibility_readiness_test.go",
         "internal/adapter/issueops/issueops_compatibility_review_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "devils-advocate-readiness",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func issueOpsDevilsAdvocateReviewMissing",
+      "responsibility": "recorded verdict, waiver, inherited review exemption, and linked plan digest determine implement entry",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func DevilsAdvocateReviewMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to implement",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreview/devils_advocate_readiness_test.go",
+        "internal/application/issueopscycle/devils_advocate_readiness_test.go",
+        "internal/adapter/issueops/issueops_devilsadvocate_gate_test.go"
       ],
       "status": "migrated"
     }

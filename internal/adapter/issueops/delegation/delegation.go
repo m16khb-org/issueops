@@ -4,12 +4,13 @@ import (
 	"strings"
 
 	model "issueops/internal/contract/issueops"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
 // ParentReviewPattern marks a child cycle's synthesized devil's-advocate verdict
 // that inherits the parent's pass. Plan-binding gates exempt it explicitly: the
 // child never had its own review, so there is no reviewed digest to compare.
-const ParentReviewPattern = "delegated-parent-review"
+const ParentReviewPattern = reviewdomain.ParentReviewPattern
 
 func MissingPreconditions(parent model.IssueOpsRecord, req model.IssueOpsChildStartRequest) []string {
 	var missing []string

@@ -12,6 +12,7 @@ import (
 	"issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
 	remote "issueops/internal/domain/issueopsremote"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/secretdetection"
 )
 
@@ -126,7 +127,7 @@ func (e *devilsAdvocateStaleError) IssueOpsErrorFields() map[string]any {
 // 않는다 — ai-slop-clean 진입이 plan binding을 보지 않는 것과 같은 이유다.
 func requireDevilsAdvocateBoundToPlan(record issueops.IssueOpsRecord, stagedDigest string) error {
 	review := record.DevilsAdvocateReview
-	if review == nil || issueOpsDevilsAdvocateDigestExempt(*review) {
+	if review == nil || reviewdomain.DevilsAdvocateDigestExempt(*review) {
 		return nil
 	}
 	if issueOpsPhaseRank(record.Phase) >= issueOpsPhaseRank(IssueOpsPhaseImplement) {
