@@ -9739,10 +9739,11 @@
       "task": "T09",
       "symbols": [
         "func commandPolicyCatalog",
-        "func policyCatalogForWorkspace",
+        "func policyOverrideLoader.Load",
         "func policyOverrideWarning",
         "func readPolicyOverrides",
-        "type PolicyOverrides"
+        "type PolicyOverrides",
+        "type policyOverrideLoader"
       ]
     },
     {
@@ -11719,6 +11720,8 @@
         "func Service.Evaluate",
         "type Observation",
         "type Observer",
+        "type OverrideLoader",
+        "type OverrideSnapshot",
         "type Service"
       ]
     },

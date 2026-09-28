@@ -2,6 +2,7 @@ package policy
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -13,6 +14,47 @@ type observeFunc func(policycontract.CommandPolicyRequest) Observation
 
 func (fn observeFunc) Observe(request policycontract.CommandPolicyRequest) Observation {
 	return fn(request)
+}
+
+type overrideFunc func(string) OverrideSnapshot
+
+func (fn overrideFunc) Load(root string) OverrideSnapshot { return fn(root) }
+
+func TestServiceLoadsAndClassifiesWorkspaceOverridePerEvaluation(t *testing.T) {
+	loads := 0
+	service := Service{
+		Observer: observeFunc(func(request policycontract.CommandPolicyRequest) Observation {
+			return Observation{
+				Root: request.WorkspaceRoot, CWD: request.CWD, Timeout: 30 * time.Second,
+				Facts: policydomain.CommandFacts{
+					RootDirectory: true, CWDDirectory: true, CWDWithinRoot: true,
+					Timeout: 30 * time.Second, TimeoutValid: true,
+				},
+			}
+		}),
+		Overrides: overrideFunc(func(root string) OverrideSnapshot {
+			if root != "/repo" {
+				t.Fatalf("override root = %q", root)
+			}
+			loads++
+			if loads == 1 {
+				return OverrideSnapshot{Values: &policycontract.PolicyOverrides{AdditionalReadOnlyCommands: []string{"repo-tool"}}}
+			}
+			return OverrideSnapshot{Warning: "policy_override_parse_failed"}
+		}),
+	}
+	request := policycontract.CommandPolicyRequest{
+		WorkspaceRoot: "/repo", CWD: "/repo", Argv: []string{"repo-tool"}, Timeout: "30s",
+	}
+	first := service.Evaluate(request)
+	if !first.Allowed {
+		t.Fatalf("first evaluation did not apply override: %+v", first)
+	}
+	second := service.Evaluate(request)
+	if second.Allowed || !slices.Contains(second.DenyReasons, "command_not_in_read_only_allowlist") ||
+		!slices.Contains(second.Warnings, "policy_override_parse_failed") || loads != 2 {
+		t.Fatalf("second evaluation reused override: %+v, loads=%d", second, loads)
+	}
 }
 
 func TestServiceEvaluatesOneObservedSnapshot(t *testing.T) {

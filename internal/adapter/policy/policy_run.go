@@ -40,7 +40,7 @@ func (e Evaluator) Run(request policycontract.CommandPolicyRequest) policycontra
 }
 
 func (e Evaluator) service() policyapp.Service {
-	return policyapp.Service{Observer: commandObserver{lookup: e.lookup}, Executor: commandExecutor{}, Clock: systemClock{}}
+	return policyapp.Service{Observer: commandObserver{lookup: e.lookup}, Overrides: policyOverrideLoader{}, Executor: commandExecutor{}, Clock: systemClock{}}
 }
 
 type systemClock struct{}

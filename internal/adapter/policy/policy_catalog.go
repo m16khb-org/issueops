@@ -7,22 +7,21 @@ import (
 	"path/filepath"
 	"strings"
 
+	policyapp "issueops/internal/application/policy"
 	policycontract "issueops/internal/contract/policy"
 	policydomain "issueops/internal/domain/policy"
 )
 
 type PolicyOverrides = policycontract.PolicyOverrides
 
-func policyCatalogForWorkspace(repoRoot string) (policydomain.Catalog, []string) {
-	catalog := policydomain.BuiltinCatalog()
+type policyOverrideLoader struct{}
+
+func (policyOverrideLoader) Load(repoRoot string) policyapp.OverrideSnapshot {
 	overrides, err := readPolicyOverrides(repoRoot)
 	if err != nil {
-		return catalog, []string{policyOverrideWarning(err)}
+		return policyapp.OverrideSnapshot{Warning: policyOverrideWarning(err)}
 	}
-	if overrides != nil {
-		catalog.Apply(*overrides)
-	}
-	return catalog, []string{}
+	return policyapp.OverrideSnapshot{Values: overrides}
 }
 
 func readPolicyOverrides(repoRoot string) (*PolicyOverrides, error) {

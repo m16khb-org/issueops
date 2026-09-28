@@ -22,7 +22,7 @@ type Evaluator struct {
 func NewEvaluator(lookup PreparedBaseBranchLookup) Evaluator { return Evaluator{lookup: lookup} }
 
 func (e Evaluator) Evaluate(req policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
-	return (policyapp.Service{Observer: commandObserver{lookup: e.lookup}}).Evaluate(req)
+	return (policyapp.Service{Observer: commandObserver{lookup: e.lookup}, Overrides: policyOverrideLoader{}}).Evaluate(req)
 }
 
 type commandObserver struct{ lookup PreparedBaseBranchLookup }
@@ -30,7 +30,6 @@ type commandObserver struct{ lookup PreparedBaseBranchLookup }
 func (observer commandObserver) Observe(req policycontract.CommandPolicyRequest) policyapp.Observation {
 	root := absOrOriginal(req.WorkspaceRoot)
 	cwd := absOrOriginal(req.CWD)
-	catalog, catalogWarnings := policyCatalogForWorkspace(root)
 	canonicalRoot := canonicalPotentialPath(root)
 	canonicalCWD := canonicalPotentialPath(cwd)
 	argv := append([]string{}, req.Argv...)
@@ -49,15 +48,9 @@ func (observer commandObserver) Observe(req policycontract.CommandPolicyRequest)
 		CWDWithinRoot:   sameOrWithin(canonicalRoot, canonicalCWD),
 		Timeout:         timeout,
 		TimeoutValid:    timeoutErr == nil,
-		Warnings:        catalogWarnings,
 		PathOutsideRoot: commandReferencesOutsideWorkspace(canonicalRoot, canonicalCWD, argv),
 	}
 	if len(argv) > 0 {
-		classification := catalog.Classify(argv)
-		facts.ShellCommand = classification.ShellCommand
-		facts.UsesNetwork = classification.UsesNetwork
-		facts.Writes = classification.Writes
-		facts.ReadOnlyAllowed = classification.ReadOnlyAllowed
 		facts.PRTargetDeny, facts.PRTargetExpected = pullRequestTargetDeny(root, cwd, argv, observer.lookup)
 	}
 	return policyapp.Observation{
