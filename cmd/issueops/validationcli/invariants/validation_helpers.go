@@ -35,7 +35,7 @@ func ValidateHarnessInvariants(root string) StepResult {
 		filepath.Join("internal", "adapter", "policy", "policy_evaluate.go"),
 		filepath.Join("internal", "adapter", "policy", "policy_paths.go"),
 		filepath.Join("internal", "adapter", "preflight", "preflight.go"),
-		filepath.Join("internal", "adapter", "preflight", "package_helpers.go"),
+		filepath.Join("internal", "adapter", "preflight", "helpers.go"),
 		filepath.Join("internal", "adapter", "outbound", "state", "state_io.go"),
 		filepath.Join("internal", "contract", "state", "record.go"),
 		filepath.Join("internal", "contract", "state", "results.go"),

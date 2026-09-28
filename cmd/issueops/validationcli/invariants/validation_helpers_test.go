@@ -196,7 +196,7 @@ func makeValidationIssueOpsRoot(t *testing.T) string {
 		filepath.Join("internal", "adapter", "policy", "policy_evaluate.go"),
 		filepath.Join("internal", "adapter", "policy", "policy_paths.go"),
 		filepath.Join("internal", "adapter", "preflight", "preflight.go"),
-		filepath.Join("internal", "adapter", "preflight", "package_helpers.go"),
+		filepath.Join("internal", "adapter", "preflight", "helpers.go"),
 		filepath.Join("internal", "adapter", "outbound", "state", "state_io.go"),
 		filepath.Join("internal", "contract", "state", "record.go"),
 		filepath.Join("internal", "contract", "state", "results.go"),
@@ -223,5 +223,17 @@ func writeValidationFile(t *testing.T, path string, body string) {
 	}
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestValidateHarnessInvariantsRejectsMissingPreflightHelpers(t *testing.T) {
+	root := makeValidationIssueOpsRoot(t)
+	path := filepath.Join("internal", "adapter", "preflight", "helpers.go")
+	if err := os.Remove(filepath.Join(root, path)); err != nil {
+		t.Fatal(err)
+	}
+	result := ValidateHarnessInvariants(root)
+	if result.OK || !strings.Contains(result.Error, "missing "+path) {
+		t.Fatalf("missing helper accepted: %+v", result)
 	}
 }

@@ -157,7 +157,7 @@ func TestPolicyEvaluatorsKeepPreparedBasesIsolated(t *testing.T) {
 	root := t.TempDir()
 	request := policydomain.CommandPolicyRequest{
 		WorkspaceRoot: root, CWD: root,
-		Argv: []string{"glab", "mr", "create", "--target-branch", "parent/one"},
+		Argv:    []string{"glab", "mr", "create", "--target-branch", "parent/one"},
 		Timeout: "30s", WriteAllowed: true, NetworkAllowed: true,
 	}
 	one := NewEvaluator(preparedBaseBranch("parent/one", true))
