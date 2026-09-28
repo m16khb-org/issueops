@@ -11358,6 +11358,16 @@
       ]
     },
     {
+      "path": "internal/application/issueopspreparation/orca_begin.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyOrcaBegin",
+        "func EnsureOrcaBeginUnprepared",
+        "func ValidateOrcaBegin"
+      ]
+    },
+    {
       "path": "internal/application/issueopspreparation/ports.go",
       "owner": "application",
       "task": "T20",
@@ -17996,8 +18006,25 @@
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ApplyDirectCommit",
       "task": "T05",
-      "entrypoints": ["issueops execution prepare --mode direct"],
-      "evidence_tests": ["internal/application/issueopspreparation/direct_commit_test.go", "internal/adapter/outbound/issueopspreparation/repository_test.go"],
+      "entrypoints": [
+        "issueops execution prepare --mode direct"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopspreparation/direct_commit_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "orca-preparation-intent-assembly",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func (*SQLiteRepository).BeginIntent",
+      "responsibility": "run the atomic record and intent write; application validates owner identity and seals the pending Orca execution",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func ApplyOrcaBegin",
+      "task": "T05",
+      "entrypoints": ["issueops execution prepare --mode orca"],
+      "evidence_tests": ["internal/application/issueopspreparation/orca_begin_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
       "status": "retain"
     }
   ]

@@ -118,7 +118,7 @@ func (repository *SQLiteRepository) BeginIntent(ctx context.Context, begin prepa
 	if repository.store == nil {
 		return preparationapp.IntentState{}, fmt.Errorf("preparation record store is unavailable")
 	}
-	if err := preparationdomain.ValidateSelectionReceipt(begin.Selection, begin.Command, begin.Probe, preparationcontract.ModeOrca); err != nil {
+	if err := preparationapp.ValidateOrcaBegin(begin); err != nil {
 		return preparationapp.IntentState{}, err
 	}
 	var state preparationapp.IntentState
@@ -127,53 +127,20 @@ func (repository *SQLiteRepository) BeginIntent(ctx context.Context, begin prepa
 		if err != nil {
 			return err
 		}
-		if current.Record.Execution != nil {
-			return fmt.Errorf("IssueOps execution already exists; reconcile or inspect its current state")
+		if err := preparationapp.EnsureOrcaBeginUnprepared(current.Record); err != nil {
+			return err
 		}
 		if err := ensureRootUnclaimed(repository.store, current.Record.ID, begin.Workspace.Root); err != nil {
 			return err
 		}
 		codec := preparationcontract.IntentCodec{}
-		issue, err := preparationdomain.PrepareIssueIdentity(current.Record.IssueURL, preparationcontract.DecodeIssueLinkEvidence(current.Record.BranchPrepare))
-		if err != nil {
-			return err
-		}
-		if begin.Owner.Provider != issue.Provider || begin.Owner.Issue != issue.Issue || begin.Probe.Provider != issue.Provider || begin.Probe.Issue != issue.Issue {
-			return fmt.Errorf("owner issue identity changed before Orca intent persistence")
-		}
-		if begin.Command.OwnerHost != begin.Probe.Host || begin.Command.OwnerModel != begin.Probe.Model || begin.Command.OwnerEffort != begin.Probe.Effort {
-			return fmt.Errorf("owner profile changed before Orca intent persistence")
-		}
-		intent := preparationcontract.Intent{
-			SchemaVersion: leasecontract.SchemaVersion, Purpose: preparationcontract.PurposePrepare,
-			OperationID: begin.OperationID, LifecycleID: current.Record.ID, Generation: 1,
-			Stage: preparationcontract.IntentStageWorktree, StartedAt: begin.StartedAt,
-			InvocationState: preparationcontract.InvocationNotInvoked,
-			Workspace:       begin.Workspace, Probe: begin.Probe, IssueBodySHA256: begin.Owner.BodySHA256,
-		}
-		intent, err = preparationdomain.SealIntent(intent, issue)
+		record, intent, err := preparationapp.ApplyOrcaBegin(current.Record, begin, remote.IssueArtifactDir(current.Record.IssueURL))
 		if err != nil {
 			return err
 		}
 		intentData, err := codec.Encode(intent)
 		if err != nil {
 			return err
-		}
-		record := current.Record
-		selection := begin.Selection
-		record.Execution = &leasecontract.Execution{
-			Mode:      preparationcontract.ModeOrca,
-			Selection: &selection,
-			Workspace: leasecontract.Workspace{
-				SourceRoot: begin.Workspace.SourceRoot, Root: begin.Workspace.Root,
-				Branch: begin.Workspace.Branch, BaseHead: begin.Workspace.BaseHead,
-				ParentWorktree: begin.Workspace.ParentWorktree, Driver: "orca", LinkedAt: begin.StartedAt,
-				ArtifactDir: remote.IssueArtifactDir(record.IssueURL),
-			},
-			Lease: leasecontract.Lease{Generation: 1, Status: "released"},
-			Pending: &leasecontract.ExternalIntent{
-				OperationID: begin.OperationID, Kind: preparationdomain.PendingKind(intent.Stage), Marker: intent.Marker, StartedAt: begin.StartedAt,
-			},
 		}
 		recordData, err := recordcodec.EncodeLease(record)
 		if err != nil {
