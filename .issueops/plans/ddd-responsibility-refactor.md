@@ -247,6 +247,8 @@
 
 - **부분 진행 — 관리 본문 규칙:** provider 공용 `issuebody` 패키지를 삭제하고 완료 본문 구성·절단 우선순위·관리 구역 예산·병합·payload 검증을 `domain/issueops/managed_body.go`로 이전했다. 공유 section 어휘는 contract가 소유하고 port의 기존 상수와 adapter alias는 제거했다. provider는 요청을 순수 `SectionInput`으로 매핑하고 조회·쓰기만 수행한다. 같은 capability contract 의존성 규칙을 유지했다. GitHub/GitLab subprocess 테스트에서 주변 authored bytes 보존, plan 우선 절단, 남은 예산 초과 시 쓰기 0회를 확인했다. 예산 계산과 주변 bytes 보존을 각각 깨뜨린 overlay에서 두 provider 테스트가 모두 실패했다. 전체 Go suite(`full-suite-managed-body.txt`), 관련 race·vet·build·architecture가 통과했다. 원격 점수 요약의 순수 projection과 scoring facade는 후속 소스 점검 대상으로 남아 있다.
 
+- **부분 진행 — 점수 요약과 scoring facade 제거:** JSON 파일 조회와 해석은 application에 두고 선택/거절 집합의 요약, 표시 이름 우선순위와 점수 표시는 `domain/issueopsremote.RenderScoreSummary`로 이전했다. `issueops_remote_scoring_facade.go`의 함수 래퍼 6개와 타입 별칭 8개를 삭제하고 root와 CLI 테스트를 domain 함수에 직접 연결했다. 파일 부재, 일반 텍스트, 빈 JSON과 null의 기존 계약을 유지한다. 선택 라벨을 누락한 overlay에서 domain과 application 테스트가 모두 실패했다. 실제 CLI의 score와 render-template 연계 및 일반 텍스트 요약 smoke가 통과했다(`remote-scoring-binary-smoke.json`). 전체 Go suite(`full-suite-remote-scoring.txt`), 관련 race, vet, build, architecture 및 T07 성공 9개와 실패 12개 시나리오가 통과했다. 최종 task CHECK와 소유권 증거를 마감한다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료

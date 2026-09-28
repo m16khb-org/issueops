@@ -13,6 +13,7 @@ import (
 	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
 	issuedomain "issueops/internal/domain/issueops"
+	remotedomain "issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 )
 
@@ -57,8 +58,8 @@ func TestMain(m *testing.M) {
 			}, invoke)
 			return service.Create(ctx, input)
 		},
-		DecodeIssueOpsRemoteJudgeJSON:      issueopscore.DecodeIssueOpsRemoteJudgeJSON,
-		DecodeIssueOpsRemoteScoringRequest: issueopscore.DecodeIssueOpsRemoteScoringRequest,
+		DecodeIssueOpsRemoteJudgeJSON:      remotedomain.DecodeIssueOpsRemoteJudgeJSON,
+		DecodeIssueOpsRemoteScoringRequest: remotedomain.DecodeIssueOpsRemoteScoringRequest,
 		IssueOpsStateRoot:                  issueopscore.IssueOpsStateRoot,
 		LinkIssueOpsChildWithActor:         issueopscore.LinkIssueOpsChildWithActor,
 		ObserveNativeProcessAncestry:       issueopscore.ObserveNativeProcessAncestry,
@@ -67,9 +68,9 @@ func TestMain(m *testing.M) {
 			service := remoteapp.NewReviewReflectionService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(name string) (remoteapp.ReviewReflectionProvider, error) { return provider.Resolve(name) }, observe, time.Now)
 			return service.Reflect(ctx, id, providerOverride, confirm, actor)
 		},
-		RenderIssueOpsRemoteJudgePrompt: issueopscore.RenderIssueOpsRemoteJudgePrompt,
+		RenderIssueOpsRemoteJudgePrompt: remotedomain.RenderIssueOpsRemoteJudgePrompt,
 		ResolveRecordProvider:           issuedomain.ResolveRecordProvider,
-		ScoreIssueOpsRemoteCandidates:   issueopscore.ScoreIssueOpsRemoteCandidates,
+		ScoreIssueOpsRemoteCandidates:   remotedomain.ScoreIssueOpsRemoteCandidates,
 		SyncIssueGraph: func(ctx context.Context, root, id string, confirm bool) (map[string]any, error) {
 			return remoteapp.NewIssueGraphSyncService(issueopscore.RemoteRecordStore{StateRoot: root}, issueopscore.IssueGraphPoster{}).Sync(ctx, id, confirm)
 		},

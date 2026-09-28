@@ -17,6 +17,7 @@ import (
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	issuedomain "issueops/internal/domain/issueops"
+	remotedomain "issueops/internal/domain/issueopsremote"
 	port "issueops/internal/port"
 )
 
@@ -539,8 +540,8 @@ func TestRemoteHelpersAndBoundaries(t *testing.T) {
 	if !slices.Equal(assignees, repeatedFlag{"@me", "octocat"}) {
 		t.Fatalf("assignees were not canonicalized: %v", assignees)
 	}
-	item := issueopscore.IssueOpsRemoteScoredItem{ID: "1", URL: "url", Title: "Title", Score: 0.9}
-	if formatIssueOpsRemoteIssueRef(item) != "1 (Title)" || formatIssueOpsRemoteIssueRef(issueopscore.IssueOpsRemoteScoredItem{Title: "Title"}) != "Title" {
+	item := remotedomain.IssueOpsRemoteScoredItem{ID: "1", URL: "url", Title: "Title", Score: 0.9}
+	if formatIssueOpsRemoteIssueRef(item) != "1 (Title)" || formatIssueOpsRemoteIssueRef(remotedomain.IssueOpsRemoteScoredItem{Title: "Title"}) != "Title" {
 		t.Fatal("unexpected issue ref formatting")
 	}
 	if firstNonEmptyMain("", " a ") != "a" {

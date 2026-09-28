@@ -449,6 +449,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueopsremote/create_metadata.go", "T07"},
 		{"internal/domain/issueopsremote/issue_create_failure.go", "T07"},
 		{"internal/domain/issueopsremote/publication_diagnostic.go", "T07"},
+		{"internal/domain/issueopsremote/score_summary.go", "T07"},
 		{"internal/domain/policy/remote_create_inputs.go", "T07"},
 		{"internal/adapter/issueops/issue_creation_environment.go", "T07"},
 		{"internal/domain/issueops/issue_url.go", "T08"},

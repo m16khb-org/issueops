@@ -2,13 +2,15 @@ package issueopscli
 
 import (
 	"encoding/json"
-	issueopscore "issueops/internal/adapter/issueops"
 	"os"
 	"path/filepath"
 	"testing"
+
+	issueopscore "issueops/internal/adapter/issueops"
+	remotedomain "issueops/internal/domain/issueopsremote"
 )
 
-func writeIssueOpsRemoteScoreRequestForCLITest(t *testing.T, req issueopscore.IssueOpsRemoteScoringRequest) string {
+func writeIssueOpsRemoteScoreRequestForCLITest(t *testing.T, req remotedomain.IssueOpsRemoteScoringRequest) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "remote-score.json")
 	b, err := json.Marshal(req)

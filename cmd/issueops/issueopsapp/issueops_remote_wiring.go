@@ -7,6 +7,7 @@ import (
 	issueopscore "issueops/internal/adapter/issueops"
 	remoteapp "issueops/internal/application/issueopsremote"
 	issuedomain "issueops/internal/domain/issueops"
+	remotedomain "issueops/internal/domain/issueopsremote"
 )
 
 // remote CLI는 원격 연산 구현을 알지 않는다. 어댑터를 아는 곳은 composition
@@ -23,16 +24,16 @@ func configureIssueOpsRemote() {
 		ReconcileIssueCreate:               reconcileIssueCreate,
 		CreateRemoteChild:                  issueopscore.CreateRemoteChild,
 		CreatePublication:                  createPublication,
-		DecodeIssueOpsRemoteJudgeJSON:      issueopscore.DecodeIssueOpsRemoteJudgeJSON,
-		DecodeIssueOpsRemoteScoringRequest: issueopscore.DecodeIssueOpsRemoteScoringRequest,
+		DecodeIssueOpsRemoteJudgeJSON:      remotedomain.DecodeIssueOpsRemoteJudgeJSON,
+		DecodeIssueOpsRemoteScoringRequest: remotedomain.DecodeIssueOpsRemoteScoringRequest,
 		IssueOpsStateRoot:                  issueopscore.IssueOpsStateRoot,
 		LinkIssueOpsChildWithActor:         issueopscore.LinkIssueOpsChildWithActor,
 		ObserveNativeProcessAncestry:       issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                       issueopscore.ReadIssueOps,
 		ReflectReviewFindings:              reflectReviewFindings,
-		RenderIssueOpsRemoteJudgePrompt:    issueopscore.RenderIssueOpsRemoteJudgePrompt,
+		RenderIssueOpsRemoteJudgePrompt:    remotedomain.RenderIssueOpsRemoteJudgePrompt,
 		ResolveRecordProvider:              issuedomain.ResolveRecordProvider,
-		ScoreIssueOpsRemoteCandidates:      issueopscore.ScoreIssueOpsRemoteCandidates,
+		ScoreIssueOpsRemoteCandidates:      remotedomain.ScoreIssueOpsRemoteCandidates,
 		SyncRemoteBody:                     syncRemoteBody,
 		SyncIssueGraph:                     syncIssueGraph,
 		UmbrellaBranchGateReason:           issueopscore.UmbrellaBranchGateReason,

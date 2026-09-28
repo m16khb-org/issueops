@@ -8019,27 +8019,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_remote_scoring_facade.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func DecodeIssueOpsRemoteJudgeJSON",
-        "func DecodeIssueOpsRemoteScoringRequest",
-        "func RenderIssueOpsRemoteJudgePrompt",
-        "func RenderIssueOpsRemoteLLMJudgePrompt",
-        "func RunIssueOpsRemoteLLMJudge",
-        "func ScoreIssueOpsRemoteCandidates",
-        "type IssueOpsRemoteArtifact",
-        "type IssueOpsRemoteIssueCandidate",
-        "type IssueOpsRemoteJudgePromptResult",
-        "type IssueOpsRemoteLLMJudgeRequest",
-        "type IssueOpsRemoteLabelCandidate",
-        "type IssueOpsRemoteScoredItem",
-        "type IssueOpsRemoteScoringRequest",
-        "type IssueOpsRemoteScoringResult"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_review_metrics.go",
       "owner": "adapter",
       "task": "T20",
@@ -11773,7 +11752,6 @@
         "func TemplateBodyResolver.Resolve",
         "func TemplateBodyResolver.ScoreSummary",
         "func firstNonEmpty",
-        "func joinScoredItems",
         "type TemplateBodyRequest",
         "type TemplateBodyResolver"
       ]
@@ -15514,6 +15492,15 @@
       "task": "T07",
       "symbols": [
         "func PublicationFailureDiagnostic"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/score_summary.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func RenderScoreSummary",
+        "func joinScoredItems"
       ]
     },
     {
@@ -20931,6 +20918,26 @@
         "internal/adapter/provider/gitlab/managed_body_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "remote-score-summary-projection",
+      "source_path": "internal/application/issueopsremote/template_body.go",
+      "source_symbol": "func TemplateBodyResolver.ScoreSummary",
+      "responsibility": "render selected and rejected issue and label scores using stable name precedence, unknown fallback and two-decimal score formatting",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func RenderScoreSummary",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote render-template",
+        "issueops remote create-issue",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsremote/score_summary_test.go",
+        "internal/application/issueopsremote/template_body_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
     }
   ]
 }
