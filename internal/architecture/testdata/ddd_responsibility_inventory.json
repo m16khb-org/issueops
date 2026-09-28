@@ -7496,13 +7496,9 @@
         "func AdvancePhaseWithActor",
         "func GatesRootFor",
         "func StrictPRReadinessWithState",
-        "func allDigits",
         "func guardPRPhase",
-        "func legacyLedgerIssueNumber",
-        "func legacyLedgerIssueNumberForSchema",
         "func linkedIssueNumber",
         "func relPath",
-        "func scopeLedgers",
         "func uniqSorted",
         "func withDuplicateIssueArtifactGate",
         "func withGatesGate"
@@ -13779,6 +13775,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/gate_ledger_scope.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func LegacyGateLedgerIssueNumber",
+        "func ScopeGateLedgers",
+        "func gateLedgerAllDigits"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/handoff.go",
       "owner": "domain",
       "task": "T20",
@@ -17706,6 +17712,42 @@
       "evidence_tests": [
         "internal/application/issueopscycle/phase_completion_test.go",
         "internal/adapter/issueops/issueops_phase_ledger_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-ledger-scope",
+      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
+      "source_symbol": "func scopeLedgers",
+      "responsibility": "PR readiness judges own and anonymous gate ledgers while skipping other numbered issues",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ScopeGateLedgers",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/gate_ledger_scope_test.go",
+        "internal/adapter/issueops/gatesgate/gates_gate_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "legacy-gate-ledger-number",
+      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
+      "source_symbol": "func legacyLedgerIssueNumberForSchema",
+      "responsibility": "schema v1 compatibility ledger filenames identify their owning issue",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func LegacyGateLedgerIssueNumber",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/gate_ledger_scope_test.go",
+        "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
       "status": "migrated"
     }

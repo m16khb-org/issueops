@@ -10,6 +10,7 @@ import (
 	"issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/issueops/implementation"
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 func initGatesGateRepo(t *testing.T) string {
@@ -303,7 +304,7 @@ func TestScopeLedgersJudgesOwnAndAnonymousOnly(t *testing.T) {
 		"/repo/.issueops/gates/notes.md",
 		"/repo/gates/legacy.md",
 	}
-	judged, skipped := scopeLedgers(root, files, "21")
+	judged, skipped := issueopsdomain.ScopeGateLedgers(root, files, "21")
 	wantJudged := []string{
 		"/repo/.issueops/issues/21/gates.md",
 		"/repo/.issueops/issues/_unnumbered/gates.md",
@@ -324,7 +325,7 @@ func TestScopeLedgersJudgesOwnAndAnonymousOnly(t *testing.T) {
 	if strings.Join(skipped, ",") != strings.Join(wantSkipped, ",") {
 		t.Fatalf("skipped = %v, want %v", skipped, wantSkipped)
 	}
-	allJudged, none := scopeLedgers(root, files, "")
+	allJudged, none := issueopsdomain.ScopeGateLedgers(root, files, "")
 	if len(allJudged) != len(files) || len(none) != 0 {
 		t.Fatalf("no issue number must judge every ledger: %v / %v", allJudged, none)
 	}
@@ -370,10 +371,10 @@ func TestStrictPRReadinessWithoutIssueNumberJudgesEverything(t *testing.T) {
 }
 
 func TestLegacyLedgerCompatibilityExpiresAfterSchemaV1(t *testing.T) {
-	if got := legacyLedgerIssueNumberForSchema("issue-21-old.md", 1); got != "21" {
+	if got := issueopsdomain.LegacyGateLedgerIssueNumber("issue-21-old.md", 1); got != "21" {
 		t.Fatalf("schema v1 legacy ledger issue=%q, want 21", got)
 	}
-	if got := legacyLedgerIssueNumberForSchema("issue-21-old.md", 2); got != "" {
+	if got := issueopsdomain.LegacyGateLedgerIssueNumber("issue-21-old.md", 2); got != "" {
 		t.Fatalf("schema v2 accepted legacy ledger issue=%q", got)
 	}
 }

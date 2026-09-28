@@ -18,6 +18,7 @@ import (
 	"issueops/internal/adapter/issueops/loopgate"
 	gatescontract "issueops/internal/contract/gates"
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	issueopsremote "issueops/internal/domain/issueopsremote"
 )
 
@@ -72,85 +73,13 @@ func withDuplicateIssueArtifactGate(ready issueopscontract.IssueOpsReadiness, ro
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
 			continue
 		}
-		if legacyLedgerIssueNumber(entry.Name()) == issueNumber {
+		if issueopsdomain.LegacyGateLedgerIssueNumber(entry.Name(), issueopsdomain.GateLedgerCompatibilitySchemaVersion) == issueNumber {
 			ready.Missing = uniqSorted(append(append([]string{}, ready.Missing...), "duplicate_issue_artifact:"+issueNumber))
 			ready.Ready = false
 			return ready
 		}
 	}
 	return ready
-}
-
-// scopeLedgers는 발견된 원장을 현재 사이클이 판정할 것(judged)과 다른 이슈의
-// 것(skipped)으로 가른다(#483). issueNumber가 비면 전부 판정한다(fail-closed).
-// 판정: issues/<issueNumber>/gates.md(폴더명 문자열 완전일치 — `021`·`210`은
-// `21`이 아니다), 전부 숫자가 아닌 폴더(소유자 불명), `.issueops/gates/`의
-// 같은 번호 또는 번호 없는 파일, 그 밖의 호환 원장(root GATES.md, gates/*.md).
-// 제외: 다른 숫자 폴더의 gates.md와 다른 번호 접두의 `.issueops/gates/` 파일.
-func scopeLedgers(root string, files []string, issueNumber string) (judged, skipped []string) {
-	issueNumber = strings.TrimSpace(issueNumber)
-	if issueNumber == "" {
-		return files, nil
-	}
-	issuesDir := filepath.Join(root, ".issueops", "issues") + string(filepath.Separator)
-	legacyDir := filepath.Join(root, ".issueops", "gates") + string(filepath.Separator)
-	for _, file := range files {
-		switch {
-		case strings.HasPrefix(file, issuesDir):
-			folder := strings.SplitN(strings.TrimPrefix(file, issuesDir), string(filepath.Separator), 2)[0]
-			if folder != issueNumber && allDigits(folder) {
-				skipped = append(skipped, file)
-				continue
-			}
-		case strings.HasPrefix(file, legacyDir):
-			if n := legacyLedgerIssueNumber(filepath.Base(file)); n != "" && n != issueNumber {
-				skipped = append(skipped, file)
-				continue
-			}
-		}
-		judged = append(judged, file)
-	}
-	return judged, skipped
-}
-
-func allDigits(name string) bool {
-	if name == "" {
-		return false
-	}
-	for _, r := range name {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-const gatesLedgerCompatibilitySchemaVersion = 1
-
-// legacyLedgerIssueNumber는 schema v1 persisted state의 호환 원장 파일명
-// `issue-<n>*.md` 또는 `<n>-*.md`에서 번호를 뽑는다. state migration이
-// canonical issue folder로 이름을 옮긴 뒤 schema가 올라가면 이 경로는 닫힌다.
-func legacyLedgerIssueNumber(name string) string {
-	return legacyLedgerIssueNumberForSchema(name, gatesLedgerCompatibilitySchemaVersion)
-}
-
-func legacyLedgerIssueNumberForSchema(name string, schemaVersion int) string {
-	if schemaVersion != gatesLedgerCompatibilitySchemaVersion {
-		return ""
-	}
-	name = strings.TrimSuffix(name, ".md")
-	name = strings.TrimPrefix(name, "issue-")
-	digits := 0
-	for digits < len(name) && name[digits] >= '0' && name[digits] <= '9' {
-		digits++
-	}
-	if digits == 0 {
-		return ""
-	}
-	if digits == len(name) || name[digits] == '-' {
-		return name[:digits]
-	}
-	return ""
 }
 
 // AdvancePhaseWithActor는 pr 단계 진입 전에 게이트 ledger까지 포함한 strict
@@ -204,7 +133,7 @@ func withGatesGate(ready issueopscontract.IssueOpsReadiness, root, issueNumber s
 	if err != nil || len(files) == 0 {
 		return ready
 	}
-	files, skipped := scopeLedgers(root, files, issueNumber)
+	files, skipped := issueopsdomain.ScopeGateLedgers(root, files, issueNumber)
 	missing := append([]string{}, ready.Missing...)
 	warnings := []string{}
 	if len(skipped) > 0 {
