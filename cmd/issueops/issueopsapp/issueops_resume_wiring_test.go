@@ -26,6 +26,17 @@ const (
 	resumeWiringIntentBucket = "external_intent_v1"
 )
 
+type resumeCoreState struct {
+	Record             leasecontract.Record
+	RecordRaw          []byte
+	IntentRaw          []byte
+	OperationID        string
+	Stage              string
+	InvocationState    string
+	InvocationAttempts int
+	Pending            bool
+}
+
 func TestResumePlanIdentityFailureStopsBeforeOperationAndOrcaMutation(t *testing.T) {
 	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
 	record.PlanPath = filepath.Join(record.Execution.Workspace.Root, "plans", "missing.md")

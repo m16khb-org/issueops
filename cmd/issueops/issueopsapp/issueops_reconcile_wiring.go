@@ -104,23 +104,7 @@ func (e *coreReconcileEffects) invokeStage(ctx context.Context, intent leaseapp.
 }
 
 func (e *coreReconcileEffects) reconcileRequest(intent leaseapp.ReconcileIntentState) (port.ExecutionOrcaIntentRequest, error) {
-	state, err := reconcileCoreIntentState(intent)
-	if err != nil {
-		return port.ExecutionOrcaIntentRequest{}, err
-	}
-	return issueops.ExecutionReconcileIntentRequest(state)
-}
-
-func reconcileCoreIntentState(state leaseapp.ReconcileIntentState) (issueops.ExecutionReconcileIntentState, error) {
-	record, err := resumeCoreRecord(state.Progress.Record)
-	if err != nil {
-		return issueops.ExecutionReconcileIntentState{}, err
-	}
-	return issueops.ExecutionReconcileIntentState{
-		Record: record, RecordRaw: append([]byte(nil), state.RecordRaw...), IntentRaw: append([]byte(nil), state.IntentRaw...),
-		OperationID: state.OperationID, Stage: port.ExecutionOrcaIntentStage(state.Stage), InvocationState: state.InvocationState,
-		InvocationAttempts: state.InvocationAttempts, Pending: state.Progress.Pending,
-	}, nil
+	return issueOpsOrcaIntentRequest(intent.Progress.Record, intent.OperationID, intent.IntentRaw)
 }
 
 func reconcileContractRecord(record issueopscontract.IssueOpsRecord) (leasecontract.Record, error) {

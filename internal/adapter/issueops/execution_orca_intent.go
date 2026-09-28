@@ -87,6 +87,13 @@ func normalizedOrcaIntentPurpose(payload externalOrcaIntentPayload) string {
 	return strings.TrimSpace(payload.Purpose)
 }
 
+func BuildExecutionOrcaIntentRequest(record issueops.IssueOpsRecord, intent preparationcontract.Intent) (port.ExecutionOrcaIntentRequest, error) {
+	if err := validateOrcaIntentExpectedRecord(record, intent); err != nil {
+		return port.ExecutionOrcaIntentRequest{}, err
+	}
+	return executionOrcaIntentRequest(record, intent)
+}
+
 func executionOrcaIntentRequest(record issueops.IssueOpsRecord, payload externalOrcaIntentPayload) (port.ExecutionOrcaIntentRequest, error) {
 	request, err := executionOrcaIntentInspectionRequest(record, payload)
 	if err != nil {

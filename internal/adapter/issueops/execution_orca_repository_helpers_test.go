@@ -64,6 +64,21 @@ type reconcileWorktreeTestEffects struct {
 	readIssue ExecutionIssueSnapshotReadFunc
 }
 
+type ExecutionResumeIntentState struct {
+	Record             issueops.IssueOpsRecord
+	RecordRaw          []byte
+	IntentRaw          []byte
+	OperationID        string
+	Stage              port.ExecutionOrcaIntentStage
+	InvocationState    string
+	InvocationAttempts int
+	Pending            bool
+}
+
+func executionResumeIntentPayload(expected ExecutionResumeIntentState) (externalOrcaIntentPayload, error) {
+	return (preparationcontract.IntentCodec{}).Decode(expected.OperationID, expected.IntentRaw)
+}
+
 func intentContractWorkspaceRequest(workspace port.ExecutionWorkspaceRequest) preparationcontract.WorkspaceRequest {
 	return preparationcontract.WorkspaceRequest{
 		LifecycleID: workspace.LifecycleID, SourceRoot: workspace.SourceRoot, Root: workspace.Root,

@@ -18,6 +18,29 @@ type executionResumeArtifacts struct {
 	promptSHA256    string
 }
 
+type ExecutionResumeArtifactsReceipt struct {
+	ClaimTokenPath      string
+	IssueBodySHA256     string
+	ContextPacketPath   string
+	ContextPacketSHA256 string
+	OwnerPromptPath     string
+	OwnerPromptSHA256   string
+}
+
+func ReadExecutionResumeArtifacts(record issueops.IssueOpsRecord) (ExecutionResumeArtifactsReceipt, error) {
+	artifacts, err := readExecutionResumeArtifacts(record)
+	if err != nil {
+		return ExecutionResumeArtifactsReceipt{}, err
+	}
+	return ExecutionResumeArtifactsReceipt{
+		ClaimTokenPath: artifacts.claimTokenPath, IssueBodySHA256: artifacts.issueBodySHA256,
+		ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256,
+		OwnerPromptPath: artifacts.promptPath, OwnerPromptSHA256: artifacts.promptSHA256,
+	}, nil
+}
+
+func NewExecutionResumeOperationID() (string, error) { return newExecutionOperationID() }
+
 func readExecutionResumeArtifacts(record issueops.IssueOpsRecord) (executionResumeArtifacts, error) {
 	tokenPath := claimTokenPath(record)
 	token, err := readExecutionResumeClaimToken(record, tokenPath)

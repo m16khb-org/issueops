@@ -1364,7 +1364,6 @@
         "func newIssueOpsReconcileService",
         "func reconcileContractReceipt",
         "func reconcileContractRecord",
-        "func reconcileCoreIntentState",
         "type coreReconcileEffects"
       ]
     },
@@ -1408,18 +1407,16 @@
       "owner": "composition",
       "task": "T06",
       "symbols": [
+        "func issueOpsOrcaIntentRequest",
         "func issueOpsResumeHandler",
         "func newIssueOpsResumeService",
         "func resumeContractReceipt",
-        "func resumeCoreIntentState",
         "func resumeCoreRecord",
-        "func resumeEffectState",
         "func resumeHostAdapter.inspectStage",
         "func resumeHostAdapter.invokeStage",
         "func resumeHostAdapter.observeOwner",
         "func resumeHostAdapter.readArtifacts",
         "func resumeOperationIDs.New",
-        "type resumeCoreState",
         "type resumeHostAdapter",
         "type resumeOperationIDs"
       ]
@@ -7124,6 +7121,7 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
+        "func BuildExecutionOrcaIntentRequest",
         "func createOrAdoptClaimToken",
         "func executionOrcaIntentInspectionRequest",
         "func executionOrcaIntentRequest",
@@ -7289,16 +7287,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/execution_reconcile_bridge.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func ExecutionReconcileIntentRequest",
-        "func executionReconcileIntentPayload",
-        "type ExecutionReconcileIntentState"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/execution_remote.go",
       "owner": "adapter",
       "task": "T07",
@@ -7367,26 +7355,15 @@
       "symbols": [
         "func ExecutionResumeNextCommand",
         "func ExecutionResumeRecoveryCommand",
+        "func NewExecutionResumeOperationID",
+        "func ReadExecutionResumeArtifacts",
         "func completeOrcaArtifactIdentity",
         "func readExecutionResumeArtifacts",
         "func readExecutionResumeClaimToken",
         "func validExecutionOwnerDigest",
         "func validateExecutionResumePacket",
-        "type executionResumeArtifacts"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_resume_bridge.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func ExecutionResumeIntentRequest",
-        "func NewExecutionResumeOperationID",
-        "func ReadExecutionResumeArtifacts",
-        "func executionResumeArtifactsReceipt",
-        "func executionResumeIntentPayload",
         "type ExecutionResumeArtifactsReceipt",
-        "type ExecutionResumeIntentState"
+        "type executionResumeArtifacts"
       ]
     },
     {
