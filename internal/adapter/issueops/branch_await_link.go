@@ -126,7 +126,10 @@ func awaitBranchLinkObserve(ctx context.Context, record issueopscontract.IssueOp
 		return linkedbranch.StateAmbiguous, linkedbranch.Node{}, "linked branch readback failed: " + err.Error()
 	}
 	observation.IssueURL, observation.RequestedBranch, observation.SealedBase = prepare.IssueURL, prepare.Branch, prepare.BaseSHA
-	observation.RemoteOID = cleanupLinkedBranchRemoteOID(ctx, record.Repo, prepare.Branch, CleanupLinkedBranchDeps{Git: deps.Git})
+	observation.RemoteOID, err = (LinkedBranchRemoteRef{RunGit: deps.Git}).Observe(ctx, record.Repo, prepare.Branch)
+	if err != nil {
+		return linkedbranch.StateAmbiguous, linkedbranch.Node{}, err.Error()
+	}
 	return linkedbranch.Classify(observation)
 }
 

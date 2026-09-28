@@ -65,10 +65,13 @@ func configureIssueOpsCleanup() {
 			})
 		},
 		CleanupLinkedBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error) {
-			return issueopscore.CleanupLinkedBranch(ctx, stateRoot, req, issueopscore.CleanupLinkedBranchDeps{
+			return (cleanupapp.LinkedBranchCleaner{
+				Records:               issueopscore.CycleRecordStore{StateRoot: stateRoot},
+				RemoteRef:             issueopscore.LinkedBranchRemoteRef{}.Observe,
+				Now:                   time.Now,
 				ObserveLinkedBranches: issueopscore.ObserveGitHubLinkedBranches(issueopscore.LiveProviderCLI),
 				DeleteLinkedBranch:    issueopscore.DeleteGitHubLinkedBranch(issueopscore.LiveProviderCLI),
-			})
+			}).Run(ctx, req)
 		},
 		CloseIssueOpsChildren: func(root, id string, req issueopscontract.IssueOpsCloseChildrenRequest, d feedbackcleanup.Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: d.Provider, VerifyMerged: d.VerifyMerged, Now: time.Now}).Close(context.Background(), id, req.MergeEvidenceRequested, req.Confirm)

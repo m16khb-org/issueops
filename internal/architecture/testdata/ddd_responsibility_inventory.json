@@ -7811,19 +7811,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_cleanup_linked_branch.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func CleanupLinkedBranch",
-        "func cleanupLinkedBranchFingerprint",
-        "func cleanupLinkedBranchGates",
-        "func cleanupLinkedBranchRemoteOID",
-        "type CleanupLinkedBranchDeps",
-        "type cleanupLinkedBranchInventory"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_cleanup_remote_branch.go",
       "owner": "adapter",
       "task": "T20",
@@ -8076,6 +8063,15 @@
         "func LinkEnvironment.WorktreeBranch",
         "func LinkEnvironment.WorktreeDirectory",
         "type LinkEnvironment"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/linked_branch_remote_ref.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func LinkedBranchRemoteRef.Observe",
+        "type LinkedBranchRemoteRef"
       ]
     },
     {
@@ -10977,6 +10973,17 @@
         "type FinishEnvironment",
         "type FinishPreviewer",
         "type FinishWorkspaceObservation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/linked_branch.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func LinkedBranchCleaner.Run",
+        "func cleanupLinkedBranchFingerprint",
+        "type LinkedBranchCleaner",
+        "type cleanupLinkedBranchInventory"
       ]
     },
     {
@@ -14561,6 +14568,15 @@
       "task": "T08",
       "symbols": [
         "func ApplyLinkedBranchCleanupAudit"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/linked_branch_cleanup.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func LinkedBranchCleanupGates",
+        "func ValidateLinkedBranchCleanupApply"
       ]
     },
     {
@@ -22384,6 +22400,57 @@
       "evidence_tests": [
         "internal/domain/issueops/linked_branch_audit_test.go",
         "internal/adapter/issueops/linked_branch_audit_concurrency_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-linked-branch-eligibility",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_linked_branch.go",
+      "source_symbol": "func cleanupLinkedBranchGates",
+      "responsibility": "require GitHub prepared branch identity before linked-branch cleanup observations",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func LinkedBranchCleanupGates",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup linked-branch"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_cleanup_linked_branch_test.go",
+        "internal/adapter/issueops/linked_branch_observation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-linked-branch-apply",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_linked_branch.go",
+      "source_symbol": "func CleanupLinkedBranch",
+      "responsibility": "require confirmation and exact fresh fingerprint before deleting a linked node",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateLinkedBranchCleanupApply",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup linked-branch"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_cleanup_linked_branch_test.go",
+        "internal/adapter/issueops/linked_branch_observation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-linked-branch-orchestration",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_linked_branch.go",
+      "source_symbol": "func CleanupLinkedBranch",
+      "responsibility": "coordinate record and provider/ref observations, classification, fingerprinted deletion and best-effort audit",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func LinkedBranchCleaner.Run",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup linked-branch"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_cleanup_linked_branch_test.go",
+        "internal/adapter/issueops/linked_branch_observation_test.go"
       ],
       "status": "migrated"
     }
