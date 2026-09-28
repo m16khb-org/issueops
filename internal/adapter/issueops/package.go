@@ -18,6 +18,7 @@ import (
 	"issueops/internal/adapter/issueops/linking"
 	"issueops/internal/adapter/issueops/start"
 	cycleapp "issueops/internal/application/issueopscycle"
+	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsintent"
@@ -560,7 +561,7 @@ func recordIssueOpsDevilsAdvocateReview(stateRoot, id string, req issueops.Issue
 			return actorErr
 		}
 		var e error
-		rec, e = devilsadvocate.Record(devilsadvocate.Store{Read: ReadIssueOps, TouchWrite: touchAndWriteIssueOps, PlanDigest: issueOpsReviewedPlanDigest}, stateRoot, id, req)
+		rec, e = devilsadvocate.Record(devilsadvocate.Store{Read: ReadIssueOps, TouchWrite: touchAndWriteIssueOps, PlanDigest: reviewapp.NewPlanDigestResolver(ReviewPlanSource{}).Digest}, stateRoot, id, req)
 		return e
 	})
 	return rec, err

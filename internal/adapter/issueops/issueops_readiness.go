@@ -49,7 +49,7 @@ func issueOpsReadinessObservations() cycleport.ReadinessObservations {
 		PlanPathExists:       issueOpsPlanPathExists,
 		PlanInLinkedWorktree: issueOpsPlanInLinkedWorktree,
 		WorkspaceMatches:     samePath,
-		LinkedPlanDigest:     issueOpsLinkedPlanDigest,
+		LinkedPlanDigest:     ReviewPlanSource{}.LinkedDigest,
 	}
 }
 

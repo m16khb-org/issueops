@@ -94,13 +94,13 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 			}
 			provider := &publicationCreateProvider{t: t, root: root, id: record.ID}
 			verified := 0
-			verifier := RemotePublicationVerifier{StateRoot: root, Verify: func(req model.IssueOpsRemoteArtifactVerificationRequest) error {
+			verifier := remoteapp.NewPublicationVerifier(RemotePublicationStore{StateRoot: root}, func(req model.IssueOpsRemoteArtifactVerificationRequest) error {
 				verified++
 				if req.URL != "https://github.com/example/issueops/pull/197" {
 					t.Fatalf("wrong verification: %+v", req)
 				}
 				return nil
-			}}
+			})
 			service := publicationapp.NewCreateService(remoteapp.NewCreatePreparation(RemotePublicationObserver{StateRoot: root}), repository, provider, verifier)
 			result, err := service.Create(context.Background(), command)
 			after, readErr := ReadIssueOps(root, record.ID)

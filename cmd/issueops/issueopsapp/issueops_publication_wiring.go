@@ -57,7 +57,7 @@ func newIssueOpsPublicationServices(stateRoot string, deps issueOpsPublicationCo
 	repository := remoteapp.NewPublicationJournal(issueops.RemotePublicationStore{StateRoot: stateRoot}, observer)
 	providerAdapter := &publicationProviderAdapter{deps: deps}
 	gateway := publicationoutbound.NewProviderGateway(providerAdapter.create, providerAdapter.inspect)
-	verifier := issueops.RemotePublicationVerifier{StateRoot: stateRoot, Verify: deps.VerifyLive}
+	verifier := remoteapp.NewPublicationVerifier(issueops.RemotePublicationStore{StateRoot: stateRoot}, deps.VerifyLive)
 	preparer := remoteapp.NewCreatePreparation(observer)
 	return publicationapp.NewCreateService(preparer, repository, gateway, verifier), publicationapp.NewReconcileService(repository, gateway, verifier)
 }

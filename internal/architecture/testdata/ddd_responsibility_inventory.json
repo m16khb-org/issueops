@@ -7314,8 +7314,6 @@
       "owner": "adapter",
       "task": "T07",
       "symbols": [
-        "func clonePublicationStrings",
-        "func portPublicationCandidate",
         "func publicationActor",
         "func publicationIntentSnapshot"
       ]
@@ -7353,16 +7351,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/execution_publication_verifier.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func RemotePublicationVerifier.VerifyCandidate",
-        "func RemotePublicationVerifier.VerifyLive",
-        "type RemotePublicationVerifier"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/execution_reconcile.go",
       "owner": "adapter",
       "task": "T06",
@@ -7378,8 +7366,6 @@
       "task": "T07",
       "symbols": [
         "func CreateRemotePullRequest",
-        "func validateRemotePullRequestCandidate",
-        "func verifyRemotePullRequestResult",
         "type RemoteArtifactVerifyFunc",
         "type RemotePullRequestDependencies"
       ]
@@ -8289,12 +8275,13 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/review_plan_digest.go",
+      "path": "internal/adapter/issueops/review_plan_source.go",
       "owner": "adapter",
       "task": "T07",
       "symbols": [
-        "func issueOpsLinkedPlanDigest",
-        "func issueOpsReviewedPlanDigest"
+        "func ReviewPlanSource.LinkedDigest",
+        "func ReviewPlanSource.StagedPlans",
+        "type ReviewPlanSource"
       ]
     },
     {
@@ -11666,6 +11653,19 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/publication_verifier.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewPublicationVerifier",
+        "func PublicationVerifier.VerifyCandidate",
+        "func PublicationVerifier.VerifyLive",
+        "func PublicationVerifier.current",
+        "type PublicationVerificationReader",
+        "type PublicationVerifier"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/remote_completion.go",
       "owner": "application",
       "task": "T07",
@@ -11771,6 +11771,17 @@
         "func changeObservationIdentity",
         "func cleanReviewValues",
         "func validateCurrentChangeObservation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreview/plan_binding.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewPlanDigestResolver",
+        "func PlanDigestResolver.Digest",
+        "type PlanDigestResolver",
+        "type PlanDigestSource"
       ]
     },
     {
@@ -15485,6 +15496,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreview/plan_binding.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func HasLinkedReviewPlan",
+        "func StagedReviewPlanDigest"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsreview/record_validation.go",
       "owner": "domain",
       "task": "T03",
@@ -17731,16 +17751,16 @@
       "source_path": "internal/adapter/issueops/execution_remote.go",
       "source_symbol": "func validateRemotePullRequestCandidate",
       "responsibility": "map provider candidate and verify URL syntax and provider project after the domain match",
-      "target": "internal/domain/issueopsremote",
-      "target_symbol": "func ValidateArtifactMatchesProject",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationVerifier.VerifyCandidate",
       "task": "T07",
       "entrypoints": [
         "issueops execution reconcile"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/execution_remote_candidate_test.go"
+        "internal/adapter/issueops/execution_publication_verifier_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "remote-publication-operation-id",
@@ -20393,12 +20413,48 @@
       "source_symbol": "func issueOpsReviewedPlanDigest",
       "responsibility": "prefer the linked plan identity over staged plan content and reject a review with neither source",
       "target": "internal/application/issueopsreview",
+      "target_symbol": "func PlanDigestResolver.Digest",
       "task": "T07",
       "entrypoints": [
         "issueops devils-advocate review"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/issueops_devilsadvocate_gate_test.go"
+        "internal/adapter/issueops/issueops_devilsadvocate_gate_test.go",
+        "internal/application/issueopsreview/plan_binding_test.go",
+        "internal/domain/issueopsreview/plan_binding_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-live-verification",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func verifyRemotePullRequestResult",
+      "responsibility": "read latest cycle authority and validate artifact metadata before provider live readback",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationVerifier.VerifyLive",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-pr",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_verifier_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-artifact-verification-recording",
+      "source_path": "internal/adapter/issueops/artifactverify/issueops_remote_artifact.go",
+      "source_symbol": "func Verify",
+      "responsibility": "read the cycle, project verified artifact metadata and persist the verification record",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote verify-artifact"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/artifactverify/issueops_remote_artifact_test.go"
       ],
       "status": "migrate"
     }

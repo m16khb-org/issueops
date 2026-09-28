@@ -389,6 +389,8 @@ func dddTask(path string) string {
 		prefix string
 		task   string
 	}{
+		{"internal/application/issueopsreview/plan_binding.go", "T07"},
+		{"internal/domain/issueopsreview/plan_binding.go", "T07"},
 		{"internal/contract/issueopsreview/", "T03"},
 		{"internal/domain/issueopsreview/", "T03"},
 		{"internal/application/issueopsreview/", "T03"},
@@ -421,7 +423,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueops/record_provider.go", "T07"},
 		{"internal/domain/issueops/remote_completion.go", "T07"},
 		{"internal/domain/issueops/review_reflection.go", "T07"},
-		{"internal/adapter/issueops/review_plan_digest.go", "T07"},
+		{"internal/adapter/issueops/review_plan_source.go", "T07"},
 		{"internal/application/issueopscycle/mutation_authority.go", "T05"},
 		{"internal/domain/issueopsauthorization/", "T05"},
 		{"internal/contract/issueops/remote_completion.go", "T07"},

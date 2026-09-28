@@ -6,7 +6,6 @@ import (
 
 	"issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopspublication"
-	"issueops/internal/port"
 )
 
 func publicationActor(actor contract.Actor) issueops.NativeActor {
@@ -25,23 +24,6 @@ func publicationActor(actor contract.Actor) issueops.NativeActor {
 		}
 	}
 	return result
-}
-
-func portPublicationCandidate(candidate contract.Candidate) port.IssueProviderReconcilePullRequestCandidate {
-	return port.IssueProviderReconcilePullRequestCandidate{
-		URL: candidate.URL, ProjectKey: candidate.ProjectKey, SourceProjectKey: candidate.SourceProjectKey,
-		HeadBranch: candidate.HeadBranch, BaseBranch: candidate.BaseBranch, HeadSHA: candidate.HeadSHA,
-		Title: candidate.Title, BodySHA256: candidate.BodySHA256,
-		Labels: clonePublicationStrings(candidate.Labels), Assignees: clonePublicationStrings(candidate.Assignees),
-		Draft: candidate.Draft, State: candidate.State,
-	}
-}
-
-func clonePublicationStrings(values []string) []string {
-	if values == nil {
-		return nil
-	}
-	return append([]string{}, values...)
 }
 
 func publicationIntentSnapshot(intent contract.Intent) (issueops.IssueOpsRecord, contract.IntentPayload, error) {

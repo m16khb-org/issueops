@@ -3,13 +3,9 @@ package issueops
 import (
 	"context"
 	"fmt"
-	"strings"
 
-	"issueops/internal/adapter/issueops/artifactverify"
 	"issueops/internal/contract/issueops"
 	publicationcontract "issueops/internal/contract/issueopspublication"
-	publicationdomain "issueops/internal/domain/issueopspublication"
-	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 )
 
@@ -40,46 +36,4 @@ func CreateRemotePullRequest(ctx context.Context, stateRoot string, req RemotePu
 		req.Actor = actor
 	}
 	return deps.Handler(ctx, stateRoot, req)
-}
-
-func validateRemotePullRequestCandidate(record issueops.IssueOpsRecord, payload publicationcontract.IntentPayload, candidate port.IssueProviderReconcilePullRequestCandidate) error {
-	request := publicationcontract.ProviderCreateRequest{
-		ProjectKey: payload.Request.ProjectKey, Title: payload.Request.Title, Body: payload.Request.Body,
-		HeadBranch: payload.Request.HeadBranch, BaseBranch: payload.Request.BaseBranch,
-		ExpectedHeadSHA: payload.Request.ExpectedHeadSHA, Labels: payload.Request.Labels,
-		Assignees: payload.Request.Assignees, Draft: payload.Request.Draft,
-	}
-	observed := publicationcontract.Candidate{
-		URL: candidate.URL, ProjectKey: candidate.ProjectKey, SourceProjectKey: candidate.SourceProjectKey,
-		HeadBranch: candidate.HeadBranch, BaseBranch: candidate.BaseBranch, HeadSHA: candidate.HeadSHA,
-		Title: candidate.Title, BodySHA256: candidate.BodySHA256, Labels: candidate.Labels,
-		Assignees: candidate.Assignees, Draft: candidate.Draft, State: candidate.State,
-	}
-	if err := publicationdomain.ValidateCandidate(request, observed, payload.KnownURL); err != nil {
-		return err
-	}
-	if err := remote.ValidateArtifactURL(candidate.URL, payload.Provider, payload.Kind); err != nil {
-		return err
-	}
-	codeProjectKey := ""
-	if record.BranchPrepare != nil {
-		codeProjectKey = record.BranchPrepare.CodeProjectKey
-	}
-	return remote.ValidateArtifactMatchesProject(
-		remote.EffectiveProjectKey(codeProjectKey, record.IssueURL, payload.Provider),
-		candidate.URL, payload.Provider, payload.Kind)
-}
-
-func verifyRemotePullRequestResult(record issueops.IssueOpsRecord, payload publicationcontract.IntentPayload, url string, verify RemoteArtifactVerifyFunc) error {
-	req := issueops.IssueOpsRemoteArtifactVerificationRequest{
-		Provider: payload.Provider, Kind: payload.Kind, URL: strings.TrimSpace(url),
-		Labels: payload.Request.Labels, Assignees: payload.Request.Assignees, TargetBranch: payload.Request.BaseBranch,
-	}
-	if _, err := artifactverify.Projection(record, req); err != nil {
-		return err
-	}
-	if verify != nil {
-		return verify(req)
-	}
-	return nil
 }
