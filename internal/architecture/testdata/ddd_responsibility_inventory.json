@@ -7014,6 +7014,19 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/cleanup_remote_branch_environment.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CleanupRemoteBranchEnvironment.Delete",
+        "func CleanupRemoteBranchEnvironment.OriginURL",
+        "func CleanupRemoteBranchEnvironment.RemoteRef",
+        "func CleanupRemoteBranchEnvironment.TipReachedBase",
+        "func CleanupRemoteBranchEnvironment.git",
+        "type CleanupRemoteBranchEnvironment"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/cleanup_status_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -7824,24 +7837,6 @@
         "func cleanupAbandonRemoteRequested",
         "func cleanupAbandonStateIs",
         "func deleteRemoteBranchRef"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_cleanup_remote_branch.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func CleanupRemoteBranch",
-        "func cleanupRemoteBranchArtifactGates",
-        "func cleanupRemoteBranchArtifactKind",
-        "func cleanupRemoteBranchFingerprint",
-        "func cleanupRemoteBranchGates",
-        "func cleanupRemoteBranchIdentityMatch",
-        "func cleanupRemoteTipReachedBase",
-        "func cleanupSupersededByFlag",
-        "func verifyRemoteBranchSupersedingArtifact",
-        "type CleanupRemoteBranchDeps",
-        "type cleanupRemoteBranchInventory"
       ]
     },
     {
@@ -11070,6 +11065,29 @@
       ]
     },
     {
+      "path": "internal/application/issueopscleanup/remote_branch.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func RemoteBranchCleaner.Run",
+        "func cleanupRemoteBranchFingerprint",
+        "func cleanupSupersededByFlag",
+        "type RemoteBranchCleaner",
+        "type RemoteBranchRecords"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/remote_branch_preview.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func RemoteBranchPreviewer.Plan",
+        "func RemoteBranchPreviewer.verifySuperseding",
+        "type RemoteBranchEnvironment",
+        "type RemoteBranchPreviewer"
+      ]
+    },
+    {
       "path": "internal/application/issueopscleanup/status.go",
       "owner": "application",
       "task": "T08",
@@ -12778,6 +12796,14 @@
       ]
     },
     {
+      "path": "internal/contract/issueops/cleanup_remote_branch_inventory.go",
+      "owner": "contract",
+      "task": "T08",
+      "symbols": [
+        "type CleanupRemoteBranchInventory"
+      ]
+    },
+    {
       "path": "internal/contract/issueops/cleanup_types.go",
       "owner": "contract",
       "task": "T02",
@@ -14458,6 +14484,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/cleanup_remote_branch.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func BuildCleanupRemoteBranchPreview",
+        "func CleanupRemoteBranchNeedsTipEvidence",
+        "func CleanupRemoteBranchTargets",
+        "func ValidateCleanupRemoteBranchApply",
+        "type CleanupRemoteBranchObservation"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/cleanup_status.go",
       "owner": "domain",
       "task": "T08",
@@ -15808,6 +15846,15 @@
       "task": "T08",
       "symbols": [
         "func ValidateChildLinkProvider"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/cleanup_branch_identity.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func CleanupBranchArtifactProject",
+        "func ValidateCleanupBranchOrigin"
       ]
     },
     {
@@ -22790,6 +22837,75 @@
       "evidence_tests": [
         "internal/adapter/issueops/issueops_cleanup_finish_processes_test.go",
         "internal/adapter/issueops/cleanup_workspace_processes_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-remote-branch-gates",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_remote_branch.go",
+      "source_symbol": "func cleanupRemoteBranchGates",
+      "responsibility": "Remote branch deletion eligibility: target, base, phase, lease, children, merge, identity and tip evidence.",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func BuildCleanupRemoteBranchPreview",
+      "task": "T08",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestCleanupRemoteBranchFailsClosed",
+        "TestRemoteBranchCleanupCollectsAllAggregateGates",
+        "TestCleanupRemoteBranchRejectsMalformedRefAdvertisement"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-remote-branch-identity",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_remote_branch.go",
+      "source_symbol": "func cleanupRemoteBranchIdentityMatch",
+      "responsibility": "Artifact and origin project identity agreement.",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func ValidateCleanupBranchOrigin",
+      "task": "T08",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestCleanupRemoteBranchFailsClosed"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-remote-branch-executor",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_remote_branch.go",
+      "source_symbol": "func CleanupRemoteBranch",
+      "responsibility": "Observe, classify, confirm fingerprint, collect completion, delete with observed OID and reflect audit.",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func RemoteBranchCleaner.Run",
+      "task": "T08",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestCleanupRemoteBranchPreviewApplyDeletesAndRerunIsIdempotent",
+        "TestCleanupRemoteBranchApplyRejectsStaleFingerprint",
+        "TestCleanupRemoteBranchApplyReflectsAuditLine"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-remote-branch-supersede",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_remote_branch.go",
+      "source_symbol": "func verifyRemoteBranchSupersedingArtifact",
+      "responsibility": "Observe replacement and validate the explicit supersede relation.",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func RemoteBranchPreviewer.verifySuperseding",
+      "task": "T08",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestCleanupRemoteBranchAcceptsAVerifiedSupersedingArtifact",
+        "TestCleanupRemoteBranchRejectsUnverifiableSupersedingArtifacts"
       ],
       "status": "migrated"
     }

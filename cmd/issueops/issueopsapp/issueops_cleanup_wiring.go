@@ -61,13 +61,15 @@ func configureIssueOpsCleanup() {
 		},
 		CleanupFinish: finish,
 		CleanupRemoteBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d feedbackcleanup.Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
-			return issueopscore.CleanupRemoteBranch(ctx, stateRoot, req, issueopscore.CleanupRemoteBranchDeps{
-				VerifyMergedArtifact: d.VerifyMergedHead,
-				ObserveArtifact:      issueopscore.ObserveRemoteArtifact,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
+			return (cleanupapp.RemoteBranchCleaner{
+				Records:    issueopscore.CycleRecordStore{StateRoot: stateRoot},
+				Preview:    cleanupapp.RemoteBranchPreviewer{Environment: issueopscore.CleanupRemoteBranchEnvironment{}, VerifyMergedArtifact: d.VerifyMergedHead, ObserveArtifact: issueopscore.ObserveRemoteArtifact},
+				Completion: completionapp.NewCompletionCollector(issueopscore.CompletionArtifacts{}).Collect,
+				Now:        time.Now,
+				ReflectAudit: func(ctx context.Context, rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
 					return reflectAudit(ctx, stateRoot, rec, completion, audit, prov)
 				},
-			})
+			}).Run(ctx, req)
 		},
 		CleanupLinkedBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error) {
 			return (cleanupapp.LinkedBranchCleaner{

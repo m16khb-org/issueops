@@ -311,9 +311,10 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 func TestCleanupRemoteBranchGatesRejectUnrecordedBranch(t *testing.T) {
 	git := remoteBranchGit()
 	result := CleanupRemoteBranchResult{}
-	_, missing := cleanupRemoteBranchGates(context.Background(), issueops.IssueOpsRecord{
+	_, result = remoteBranchPreviewer(remoteBranchDeps(git)).Plan(context.Background(), issueops.IssueOpsRecord{
 		ID: "io-test", Repo: t.TempDir(), Phase: IssueOpsPhaseDone,
-	}, CleanupRemoteBranchRequest{ID: "io-test"}, remoteBranchDeps(git), &result)
+	}, CleanupRemoteBranchRequest{ID: "io-test"})
+	missing := result.Missing
 	if !containsString(missing, "branch_recorded") {
 		t.Fatalf("an unrecorded branch must block: %v", missing)
 	}
@@ -403,5 +404,35 @@ func TestCleanupRemoteBranchApplyReflectsAuditLine(t *testing.T) {
 	}
 	if !result2.Deleted || result2.AuditReflected || !strings.Contains(result2.AuditError, "provider unavailable") {
 		t.Fatalf("audit failure must be surfaced without undoing the deletion: %+v", result2)
+	}
+}
+
+func TestCleanupRemoteBranchRejectsMalformedRefAdvertisement(t *testing.T) {
+	for name, out := range map[string]string{
+		"missing ref":   remoteBranchTestHeadOID,
+		"wrong ref":     remoteBranchTestHeadOID + "\trefs/tags/" + remoteBranchTestBranch,
+		"multiple refs": remoteBranchTestHeadOID + "\trefs/heads/" + remoteBranchTestBranch + "\n" + remoteBranchTestHeadOID + "\trefs/heads/other",
+	} {
+		t.Run(name, func(t *testing.T) {
+			root, record := remoteBranchTestRecord(t)
+			git := remoteBranchGit()
+			deps := remoteBranchDeps(git)
+			preview, err := CleanupRemoteBranch(context.Background(), root, remoteBranchRequest(record.ID, false, ""), deps)
+			if err != nil {
+				t.Fatal(err)
+			}
+			deps.Git = func(ctx context.Context, dir string, args ...string) (int, string) {
+				if args[0] == "ls-remote" {
+					return 0, out
+				}
+				return git.run(ctx, dir, args...)
+			}
+			for _, apply := range []bool{false, true} {
+				got, err := CleanupRemoteBranch(context.Background(), root, remoteBranchRequest(record.ID, apply, preview.Fingerprint), deps)
+				if err == nil || !containsString(got.Missing, "remote_branch_readable") || got.AlreadyAbsent || got.Deleted || git.pushes != 0 {
+					t.Errorf("unreadable advertisement authorized cleanup: apply=%v result=%+v err=%v pushes=%d", apply, got, err, git.pushes)
+				}
+			}
+		})
 	}
 }

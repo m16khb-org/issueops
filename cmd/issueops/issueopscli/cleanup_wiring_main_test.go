@@ -55,12 +55,15 @@ func wireCleanupForTests() {
 		},
 		CleanupFinish: finish,
 		CleanupRemoteBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d feedbackcleanup.Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
-			return issueopscore.CleanupRemoteBranch(ctx, stateRoot, req, issueopscore.CleanupRemoteBranchDeps{
-				VerifyMergedArtifact: d.VerifyMergedHead,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
+			return (cleanupapp.RemoteBranchCleaner{
+				Records:    issueopscore.CycleRecordStore{StateRoot: stateRoot},
+				Preview:    cleanupapp.RemoteBranchPreviewer{Environment: issueopscore.CleanupRemoteBranchEnvironment{}, VerifyMergedArtifact: d.VerifyMergedHead},
+				Completion: completionapp.NewCompletionCollector(issueopscore.CompletionArtifacts{}).Collect,
+				Now:        time.Now,
+				ReflectAudit: func(ctx context.Context, rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
 					return reflectAudit(ctx, stateRoot, rec, completion, audit, prov)
 				},
-			})
+			}).Run(ctx, req)
 		},
 		CloseIssueOpsChildren: func(root, id string, req issueopscontract.IssueOpsCloseChildrenRequest, d feedbackcleanup.Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: d.Provider, VerifyMerged: d.VerifyMerged, Now: time.Now}).Close(context.Background(), id, req.MergeEvidenceRequested, req.Confirm)
