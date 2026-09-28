@@ -1,106 +1,77 @@
-package linking
+package issueopsbranch_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
+	"time"
 
+	core "issueops/internal/adapter/issueops"
+	authorizationoutbound "issueops/internal/adapter/outbound/issueopsauthorization"
+	branchapp "issueops/internal/application/issueopsbranch"
+	cycleapp "issueops/internal/application/issueopscycle"
 	model "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 type linkStoreForTest struct {
-	records               map[string]model.IssueOpsRecord
-	branchEvidenceMissing []string
-	designReviewMissing   []string
+	records map[string]model.IssueOpsRecord
+	locked  bool
+	writes  int
 }
 
-func newLinkStoreForTest(records ...model.IssueOpsRecord) (*linkStoreForTest, Store) {
-	store := &linkStoreForTest{records: map[string]model.IssueOpsRecord{}}
-	for _, record := range records {
-		store.records[record.ID] = record
-	}
-	return store, Store{
-		Read:                   store.read,
-		TouchWrite:             store.touchWrite,
-		BranchEvidenceMissing:  store.branchEvidenceMissingFor,
-		DesignReviewMissing:    store.designReviewMissingFor,
-		PlanPathExists:         store.planPathExists,
-		PlanSectionsMissing:    planSectionsMissingForTest,
-		PlanPathInsideWorktree: store.planPathInsideWorktree,
-		WorktreePathValid:      store.worktreePathValid,
-		UniqueSorted:           uniqueSortedForTest,
-	}
+func (s *linkStoreForTest) WithinLock(_ context.Context, _ string, fn func() error) error {
+	s.locked = true
+	defer func() { s.locked = false }()
+	return fn()
 }
-
-func (s *linkStoreForTest) read(_ string, id string) (model.IssueOpsRecord, error) {
-	record, ok := s.records[id]
+func (s *linkStoreForTest) Load(id string) (model.IssueOpsRecord, error) {
+	if !s.locked {
+		panic("read outside lock")
+	}
+	r, ok := s.records[id]
 	if !ok {
-		return model.IssueOpsRecord{OK: false, ID: id}, os.ErrNotExist
+		return r, os.ErrNotExist
 	}
-	record.OK = true
-	return record, nil
+	return r, nil
 }
-
-func (s *linkStoreForTest) touchWrite(_ string, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
-	record.OK = true
-	s.records[record.ID] = record
-	return record, nil
-}
-
-func (s *linkStoreForTest) branchEvidenceMissingFor(model.IssueOpsRecord) []string {
-	return append([]string(nil), s.branchEvidenceMissing...)
-}
-
-func (s *linkStoreForTest) designReviewMissingFor(model.IssueOpsRecord) []string {
-	return append([]string(nil), s.designReviewMissing...)
-}
-
-func planSectionsMissingForTest(path string) []string {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return []string{"unreadable"}
+func (s *linkStoreForTest) Save(r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+	if !s.locked {
+		panic("write outside lock")
 	}
-	return issueopsdomain.MissingPlanSections(string(raw))
+	s.records[r.ID] = r
+	s.writes++
+	return r, nil
 }
-
-// planBodyForTest는 issueops-plan 스킬이 요구하는 네 절을 모두 가진 최소 계획이다.
-func planBodyForTest() []byte {
-	return []byte("# plan\n" + strings.Join(issueopsdomain.RequiredPlanSections, "\n본문\n") + "\n본문\n")
-}
-
-func (s *linkStoreForTest) planPathExists(_ string, path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
-}
-
-func (s *linkStoreForTest) planPathInsideWorktree(worktree, planPath string) bool {
-	rel, err := filepath.Rel(worktree, planPath)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
-
-func (s *linkStoreForTest) worktreePathValid(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && info.IsDir()
-}
-
-func uniqueSortedForTest(values []string) []string {
-	seen := map[string]bool{}
-	out := []string{}
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" || seen[value] {
-			continue
+func newLinkStoreForTest(records ...model.IssueOpsRecord) (*linkStoreForTest, branchapp.WorkspaceLinker) {
+	s := &linkStoreForTest{records: map[string]model.IssueOpsRecord{}}
+	for _, r := range records {
+		if r.IssueURL == "" {
+			r.IssueURL = "https://github.com/example/repo/issues/10"
 		}
-		seen[value] = true
-		out = append(out, value)
+		r.BranchPrepare = &model.IssueOpsBranchPrepare{LinkVerified: true}
+		r.DesignReview = &model.IssueOpsDesignReview{ProblemSummary: "problem", ProposedDesign: "design", Verification: []string{"design review checked alternatives and risks"}, Approved: true, RefactorPlan: "plan", Alternatives: []string{"alternative"}, Risks: []string{"risk"}}
+		s.records[r.ID] = r
 	}
-	sort.Strings(out)
-	return out
+	return s, branchapp.WorkspaceLinker{Records: s, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Files: core.LinkEnvironment{}, Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}
 }
-
+func LinkPlan(s branchapp.WorkspaceLinker, _ string, id, path string) (model.IssueOpsRecord, error) {
+	return s.Plan(context.Background(), id, path, nil)
+}
+func LinkWorktree(s branchapp.WorkspaceLinker, _ string, id, path string) (model.IssueOpsRecord, error) {
+	return s.Worktree(context.Background(), id, path, nil)
+}
+func ValidateIsolatedWorktreePath(record model.IssueOpsRecord, path string) error {
+	return issueopsdomain.ValidateWorktreeLocation((core.LinkEnvironment{}).ObserveWorktree(record.Repo, path))
+}
+func ValidateWorktreeBranch(record model.IssueOpsRecord, path string) error {
+	return issueopsdomain.ValidateLinkedWorktreeBranch(record.Branch, (core.LinkEnvironment{}).WorktreeBranch(path))
+}
+func planBodyForTest() []byte {
+	return []byte("# plan\n" + strings.Join(issueopsdomain.RequiredPlanSections, "\nbody\n") + "\nbody\n")
+}
 func TestLinkPlanValidatesReadinessAndPersistsAbsolutePath(t *testing.T) {
 	repo, worktree := issueOpsRepoAndWorktreeFixture(t, "feature/plan")
 	planDir := filepath.Join(worktree, "docs")
@@ -192,11 +163,15 @@ func TestLinkPlanRejectsBoundaryViolations(t *testing.T) {
 		{name: "empty path", path: " ", wantErr: "plan_path is required"},
 		{name: "path traversal", path: "../plan.md", wantErr: "path traversal"},
 		{name: "missing branch evidence", path: "plan.md", mutate: func(s *linkStoreForTest) {
-			s.branchEvidenceMissing = []string{"branch_exists"}
+			r := s.records[record.ID]
+			r.BranchPrepare = nil
+			s.records[record.ID] = r
 		}, wantErr: "before branch evidence"},
 		{name: "missing design review", path: "plan.md", mutate: func(s *linkStoreForTest) {
-			s.designReviewMissing = []string{"risks", "design_approval", "risks"}
-		}, wantErr: "design_approval, risks"},
+			r := s.records[record.ID]
+			r.DesignReview.Approved = false
+			s.records[record.ID] = r
+		}, wantErr: "design_approval"},
 		{name: "missing file", path: "missing.md", wantErr: "plan_path does not exist"},
 		{name: "absolute path outside worktree", path: outsidePlanPath, wantErr: "plan_path must be inside linked worktree"},
 	} {
@@ -301,7 +276,9 @@ func TestLinkWorktreeRejectsBoundaryViolations(t *testing.T) {
 		{name: "empty path", path: " ", wantErr: "worktree_path is required"},
 		{name: "path traversal", path: "../worktree", wantErr: "path traversal"},
 		{name: "missing branch evidence", path: worktree, mutate: func(s *linkStoreForTest) {
-			s.branchEvidenceMissing = []string{"branch_head"}
+			r := s.records[record.ID]
+			r.BranchPrepare = nil
+			s.records[record.ID] = r
 		}, wantErr: "before branch evidence"},
 		{name: "missing directory", path: filepath.Join(filepath.Dir(worktree), "missing"), wantErr: "does not exist or is not a directory"},
 	} {
@@ -413,5 +390,48 @@ func writeGitHeadForTest(t *testing.T, path, branch string) {
 	}
 	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/"+branch+"\n"), 0o600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestPlanRelinkKeepsIdentityBeforeReadingSectionsAndDoesNotWrite(t *testing.T) {
+	repo, worktree := issueOpsRepoAndWorktreeFixture(t, "63-plan")
+	plan := filepath.Join(worktree, "plan.md")
+	if err := os.WriteFile(plan, []byte("in-progress edit without sections"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	before := model.IssueOpsRecord{ID: "id", Repo: repo, Branch: "63-plan", WorktreePath: worktree, PlanPath: "plan.md", UpdatedAt: "before"}
+	store, s := newLinkStoreForTest(before)
+	got, err := s.Plan(context.Background(), "id", plan, nil)
+	if err != nil || got.PlanPath != "plan.md" || got.UpdatedAt != "before" || store.writes != 0 {
+		t.Fatalf("relink changed identity or required sections: %+v, %v", got, err)
+	}
+	replacement := filepath.Join(worktree, "replacement.md")
+	if err := os.WriteFile(replacement, []byte("no sections"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Plan(context.Background(), "id", replacement, nil); err == nil || !strings.Contains(err.Error(), "already linked") {
+		t.Fatalf("identity must be checked before sections: %v", err)
+	}
+	if store.writes != 0 {
+		t.Fatal("replacement wrote record")
+	}
+}
+
+func TestWorktreeLinkRejectsResolvedSiblingEscape(t *testing.T) {
+	root := t.TempDir()
+	repo := filepath.Join(root, "repo")
+	outside := filepath.Join(root, "outside")
+	worktree := filepath.Join(root, "repo.worktrees", "63-plan")
+	writeGitHeadForTest(t, repo, "main")
+	writeGitHeadForTest(t, filepath.Join(outside, "63-plan"), "63-plan")
+	if err := os.Symlink(outside, filepath.Dir(worktree)); err != nil {
+		t.Fatal(err)
+	}
+	store, s := newLinkStoreForTest(model.IssueOpsRecord{ID: "id", Repo: repo, Branch: "63-plan"})
+	if _, err := s.Worktree(context.Background(), "id", worktree, nil); err == nil || !strings.Contains(err.Error(), "resolve under sibling") {
+		t.Fatalf("resolved escape accepted: %v", err)
+	}
+	if store.writes != 0 {
+		t.Fatal("escape wrote record")
 	}
 }

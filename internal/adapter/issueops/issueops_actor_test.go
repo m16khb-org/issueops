@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 )
 
@@ -88,7 +89,7 @@ func TestReleasedOrcaPlanLinkAllowsOmoCoordinatorInCanonicalWorktree(t *testing.
 			PID: 42, StartedAt: "2026-08-12T00:00:00Z", Executable: "omo",
 		}},
 	}
-	if err := validatePlanLinkMutation(record, &actor); err != nil {
+	if err := cycleapp.NewMutationAuthority(samePath).ValidatePlanLink(record, &actor); err != nil {
 		t.Fatalf("Omo coordinator must link a released Orca plan: %v", err)
 	}
 }

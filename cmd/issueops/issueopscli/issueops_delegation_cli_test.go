@@ -261,7 +261,7 @@ func prepareIssueOpsCLIParentImplementationSurface(t *testing.T, id, branch, wor
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.LinkIssueOpsWorktree(issueopscore.IssueOpsStateRoot(), id, worktree); err != nil {
+	if _, err := LinkIssueOpsWorktreeForTest(issueopscore.IssueOpsStateRoot(), id, worktree); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -271,7 +271,7 @@ func recordIssueOpsCLIParentDelegationPrereqs(t *testing.T, id, planPath string)
 	recordIssueOpsCoreIntentForCLITest(t, id)
 	recordIssueOpsCLIPlanPrepForTest(t, id)
 	recordIssueOpsCoreDesignForCLITest(t, id)
-	if _, err := issueopscore.LinkIssueOpsPlan(issueopscore.IssueOpsStateRoot(), id, planPath); err != nil {
+	if _, err := LinkIssueOpsPlanForTest(issueopscore.IssueOpsStateRoot(), id, planPath); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := issueopscore.RecordIssueOpsDomainReview(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsDomainReviewRequest{

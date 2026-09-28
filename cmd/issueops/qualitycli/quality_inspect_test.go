@@ -504,7 +504,7 @@ func TestInspectQualityCandidatesCanUseProjectedStatuses(t *testing.T) {
 		Candidates: func(string) []QualityCandidate {
 			return []QualityCandidate{
 				{ID: "quality-signal-harvester", Status: "already_satisfied", Score: 0, VerifyWith: []string{"issueops quality inspect --json"}, Evidence: []string{"quality inspect CLI"}},
-				{ID: "coverage-issueops-linking", Status: "open", Score: 77.4, VerifyWith: []string{"go test ./internal/adapter/issueops/linking -count=1"}, Evidence: []string{"PROJECT_AUDIT"}},
+				{ID: "coverage-issueops-linking", Status: "open", Score: 77.4, VerifyWith: []string{"go test ./internal/application/issueopsbranch -count=1"}, Evidence: []string{"PROJECT_AUDIT"}},
 			}
 		},
 	})

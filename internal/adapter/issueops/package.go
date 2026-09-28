@@ -12,15 +12,11 @@ import (
 	"issueops/internal/adapter/issueops/compatibilityreview"
 	"issueops/internal/adapter/issueops/devilsadvocate"
 	"issueops/internal/adapter/issueops/intentdesign"
-	"issueops/internal/adapter/issueops/linking"
 	branchapp "issueops/internal/application/issueopsbranch"
-	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
-	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsintent"
 	"issueops/internal/domain/repoidentity"
-	"issueops/internal/domain/stringlist"
 	"issueops/internal/port"
 )
 
@@ -189,56 +185,6 @@ func issueOpsIntentDesignStore() intentdesign.Store {
 	}
 }
 
-func LinkIssueOpsPlan(stateRoot, id, planPath string) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsPlan(stateRoot, id, planPath, nil)
-}
-
-func LinkIssueOpsPlanWithActor(stateRoot, id, planPath string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsPlan(stateRoot, id, planPath, &actor)
-}
-
-func linkIssueOpsPlan(stateRoot, id, planPath string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validatePlanLinkMutation(record, actor); actorErr != nil {
-			return actorErr
-		}
-		var writeErr error
-		rec, writeErr = linking.LinkPlan(issueOpsLinkingStore(), stateRoot, id, planPath)
-		return writeErr
-	})
-	return rec, err
-}
-
-func LinkIssueOpsWorktree(stateRoot, id, worktreePath string) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsWorktree(stateRoot, id, worktreePath, nil)
-}
-
-func LinkIssueOpsWorktreeWithActor(stateRoot, id, worktreePath string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return linkIssueOpsWorktree(stateRoot, id, worktreePath, &actor)
-}
-
-func linkIssueOpsWorktree(stateRoot, id, worktreePath string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var rec issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		record, readErr := ReadIssueOps(stateRoot, id)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validateWorkspacePreparationMutation(record, actor); actorErr != nil {
-			return actorErr
-		}
-		var e error
-		rec, e = linking.LinkWorktree(issueOpsLinkingStore(), stateRoot, id, worktreePath)
-		return e
-	})
-	return rec, err
-}
-
 func RecordIssueOpsCompatibilityReview(stateRoot, id string, req issueops.IssueOpsCompatibilityReviewRequest) (issueops.IssueOpsRecord, error) {
 	return recordIssueOpsCompatibilityReview(stateRoot, id, req, nil)
 }
@@ -296,20 +242,6 @@ func recordIssueOpsDevilsAdvocateReview(stateRoot, id string, req issueops.Issue
 		return e
 	})
 	return rec, err
-}
-
-func issueOpsLinkingStore() linking.Store {
-	return linking.Store{
-		Read:                   ReadIssueOps,
-		TouchWrite:             touchAndWriteIssueOps,
-		BranchEvidenceMissing:  issueopsdomain.BranchEvidenceMissing,
-		DesignReviewMissing:    cycleapp.DesignReviewMissing,
-		PlanPathExists:         issueOpsPlanPathExists,
-		PlanSectionsMissing:    issueOpsPlanSectionsMissing,
-		PlanPathInsideWorktree: issueOpsPlanPathInsideWorktree,
-		WorktreePathValid:      issueOpsWorktreePathValid,
-		UniqueSorted:           stringlist.UniqueSorted,
-	}
 }
 
 // LastActiveAt returns the latest durable lifecycle timestamp.

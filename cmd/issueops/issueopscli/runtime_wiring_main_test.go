@@ -96,9 +96,9 @@ func wireIssueOpsRuntimeForTests() {
 		IssueOpsStatus:                issueopsstatusinbound.NewStatusHandler(status),
 		LinkIssueOpsChildWithActor:    LinkIssueOpsChildWithActorForTest,
 		LinkIssueOpsIssueWithActor:    LinkIssueOpsIssueWithActorForTest,
-		LinkIssueOpsPlanWithActor:     issueopscore.LinkIssueOpsPlanWithActor,
+		LinkIssueOpsPlanWithActor:     LinkIssueOpsPlanWithActorForTest,
 		LinkIssueOpsRelatedWithActor:  LinkIssueOpsRelatedWithActorForTest,
-		LinkIssueOpsWorktreeWithActor: issueopscore.LinkIssueOpsWorktreeWithActor,
+		LinkIssueOpsWorktreeWithActor: LinkIssueOpsWorktreeWithActorForTest,
 		ListIssueOpsCycles:            listCycles,
 		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
 			return issueopscore.ReviewMetrics(stateRoot, id, repo, issueopscore.ReviewMetricsDeps{

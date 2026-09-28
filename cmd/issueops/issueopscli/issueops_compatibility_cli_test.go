@@ -34,12 +34,12 @@ func TestIssueOpsCompatibilityReviewCLIRecordsReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	worktree := makeIssueOpsCLIWorktreeForTest(t, repo, "123-compatibility-review")
-	if _, err := issueopscore.LinkIssueOpsWorktree(issueopscore.IssueOpsStateRoot(), id, worktree); err != nil {
+	if _, err := LinkIssueOpsWorktreeForTest(issueopscore.IssueOpsStateRoot(), id, worktree); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreDesignForCLITest(t, id)
 	writeIssueOpsCLIFileForTest(t, worktree, "plans/demo.md", planBodyForCLITest())
-	if _, err := issueopscore.LinkIssueOpsPlan(issueopscore.IssueOpsStateRoot(), id, filepath.Join(worktree, "plans/demo.md")); err != nil {
+	if _, err := LinkIssueOpsPlanForTest(issueopscore.IssueOpsStateRoot(), id, filepath.Join(worktree, "plans/demo.md")); err != nil {
 		t.Fatal(err)
 	}
 

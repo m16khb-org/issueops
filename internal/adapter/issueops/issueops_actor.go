@@ -1,12 +1,8 @@
 package issueops
 
 import (
-	"fmt"
-	"strings"
-
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
-	issueopsartifactdomain "issueops/internal/domain/issueopsartifact"
 )
 
 // validateExecutionMutation binds every durable IssueOps mutation to the
@@ -14,22 +10,6 @@ import (
 // intentionally actor-optional until the execution record exists.
 func validateExecutionMutation(record issueops.IssueOpsRecord, actor *IssueOpsActor) error {
 	return cycleapp.NewMutationAuthority(samePath).Validate(record, actor)
-}
-
-func validatePlanLinkMutation(record issueops.IssueOpsRecord, actor *IssueOpsActor) error {
-	if record.Execution == nil || !issueopsartifactdomain.CanStage(record, "plan") {
-		return validateExecutionMutation(record, actor)
-	}
-	host := ""
-	if actor != nil {
-		host = strings.ToLower(strings.TrimSpace(actor.Host))
-	}
-	if actor == nil || (host != "codex" && host != "claude" && host != "omo") ||
-		strings.TrimSpace(actor.SessionID) == "" || len(actor.NativeProcessAncestry) == 0 ||
-		!samePath(actor.CWD, record.Execution.Workspace.Root) {
-		return fmt.Errorf("released Orca plan linking requires a native coordinator in the canonical worktree")
-	}
-	return nil
 }
 
 func validateWorkspacePreparationMutation(record issueops.IssueOpsRecord, actor *IssueOpsActor) error {

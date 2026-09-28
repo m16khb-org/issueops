@@ -1,7 +1,6 @@
 package issueops
 
 import (
-	"os"
 	"strings"
 
 	"issueops/internal/adapter/issueops/implementation"
@@ -63,16 +62,6 @@ func issueOpsWorktreePathValid(path string) bool {
 
 func issueOpsPlanPathExists(repo, path string) bool {
 	return readinesspaths.PlanPathExists(repo, path)
-}
-
-// issueOpsPlanSectionsMissing은 link-plan이 계획 본문에서 빠진 필수 절을 찾는
-// 경로다. 읽을 수 없는 계획은 절이 전부 없는 것으로 본다.
-func issueOpsPlanSectionsMissing(path string) []string {
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		return append([]string(nil), issueopsdomain.RequiredPlanSections...)
-	}
-	return issueopsdomain.MissingPlanSections(string(raw))
 }
 
 func issueOpsPlanInLinkedWorktree(record issueops.IssueOpsRecord) bool {

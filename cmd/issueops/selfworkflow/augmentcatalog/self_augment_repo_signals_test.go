@@ -84,7 +84,7 @@ func TestLinkIssueRejectsInvalidURL() {
 	_ = "http(s) URL"
 }
 `)
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "issueops", "linking", "link_test.go"), `package linking
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "application", "issueopsbranch", "workspace_link_test.go"), `package issueopsbranch_test
 
 func TestLinkPlanRejectsBoundaryViolations() {
 	_ = "plan_path does not exist"

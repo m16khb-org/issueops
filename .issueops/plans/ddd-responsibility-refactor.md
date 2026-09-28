@@ -272,6 +272,8 @@
 
 - **부분 진행 — 이슈 관계 연결:** 이슈 URL 연결, 자식 이슈 연결, 관련 이슈 연결의 잠금·최신 record 조회·권한 확인·저장을 `application/issueopsbranch.Linker`로 옮겼다. 실제 intent/plan-prep 준비 조건에 따른 phase 전이, 허용 관계 유형, 중복 거부와 immutable 관계 추가는 aggregate domain이 맡고 provider 일치 규칙은 remote domain이 맡는다. 기존 production `LinkIssueOpsIssue`, `LinkIssueOpsChild`, `LinkIssueOpsRelatedWithActor` 계열 래퍼와 linking 패키지의 해당 구현을 삭제했다. CLI·remote root는 새 application을 직접 구성하며, 아직 이전 중인 child-start도 새 application을 호출한다. 실제 SQLite와 CLI에서 동시 연결 12건 보존, 중복·다른 프로젝트 거부, 실패 시 raw row 불변을 확인했다. 중복·권한 검사를 무력화한 overlay는 모두 실패했다. 전체 일반·race suite 각각 295개 패키지, vet·build·architecture·응답 golden이 통과했다(`T08-relations-*`). 초기 검증에서 발견한 설계 리뷰 callback 누락을 복구하고 자가 증강 검사 경로와 검증 명령 golden 두 곳을 갱신했다. 계획·워크트리 연결, 부모자식 실행, 정리 경로가 남아 있어 T08은 미완료다.
 
+- **부분 진행 — 계획·워크트리 연결:** `WorkspaceLinker`가 잠금·조회·권한·파일/Git 관측·저장을 조율한다. branch/design 준비 조건, 계획 경로 고정·필수 절, 워크트리의 원본 checkout 분리·sibling 경로·symlink·해석된 경로·브랜치 일치 규칙은 domain으로 옮겼다. released Orca 계획 연결은 application이 staging 가능 여부를 판정하고 authorization domain이 native coordinator와 작업 경로 조건을 검증한다. 기술 관측은 `LinkEnvironment`에 남겼다. 기존 `linking` 패키지, production 계획·워크트리 연결 래퍼, adapter의 계획 권한·필수 절 검사 함수를 삭제했다. 테스트의 준비 조건 대역도 실제 record와 domain 규칙으로 교체했다. 전체 일반·race suite 각각 294개 패키지, vet·build·architecture·응답 golden이 통과했다(`T08-workspace-link-*`). 계획 identity·해석된 경로 격리·coordinator 경로 검사를 무력화한 overlay가 각각 실패했다. 실제 CLI와 Git worktree에서 정상 연결, source checkout·symlink·다른 branch 거부, 설계 리뷰·필수 절 요구, 계획 파일 교체 거부, 편집 중 같은 계획 재연결 시 raw row 불변을 확인했다. 자가 증강 검사와 검증 명령은 새 테스트 경로로 갱신했다. 부모자식 실행과 정리 경로가 남아 있어 T08은 미완료다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료

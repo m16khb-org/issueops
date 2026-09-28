@@ -90,10 +90,10 @@ func repoSignalRules() []repoSignalRule {
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {
 			signals.HasIssueOpsLinkingBoundaryCoverage = fileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "link_test.go"), "TestLinkIssueRejectsInvalidURL") &&
-				fileContainsTerm(root, filepath.Join("internal", "adapter", "issueops", "linking", "link_test.go"), "TestLinkPlanRejectsBoundaryViolations") &&
-				fileContainsTerm(root, filepath.Join("internal", "adapter", "issueops", "linking", "link_test.go"), "plan_path does not exist") &&
-				fileContainsTerm(root, filepath.Join("internal", "adapter", "issueops", "linking", "link_test.go"), "plan_path must be inside linked worktree") &&
-				fileContainsTerm(root, filepath.Join("internal", "adapter", "issueops", "linking", "link_test.go"), "TestValidateIssueURL")
+				fileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "TestLinkPlanRejectsBoundaryViolations") &&
+				fileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "plan_path does not exist") &&
+				fileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "plan_path must be inside linked worktree") &&
+				fileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "TestValidateIssueURL")
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {
 			signals.HasStateWriteLocking = fileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "func (service *Service) Write(key, content string)") &&

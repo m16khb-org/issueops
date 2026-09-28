@@ -1314,7 +1314,8 @@
       "owner": "composition",
       "task": "T08",
       "symbols": [
-        "func newIssueLinker"
+        "func newIssueLinker",
+        "func newWorkspaceLinker"
       ]
     },
     {
@@ -7636,7 +7637,6 @@
       "symbols": [
         "func ValidateIssueOpsMutationActor",
         "func validateExecutionMutation",
-        "func validatePlanLinkMutation",
         "func validatePostTransferMutation",
         "func validateWorkspacePreparationMutation"
       ]
@@ -8038,7 +8038,6 @@
         "func issueOpsPlanInLinkedWorktree",
         "func issueOpsPlanPathExists",
         "func issueOpsPlanPathInsideWorktree",
-        "func issueOpsPlanSectionsMissing",
         "func issueOpsReadinessObservations",
         "func issueOpsStrictGitRoot",
         "func issueOpsWorktreePathValid"
@@ -8119,22 +8118,19 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/linking/link.go",
+      "path": "internal/adapter/issueops/link_environment.go",
       "owner": "adapter",
       "task": "T08",
       "symbols": [
-        "func LinkPlan",
-        "func LinkWorktree",
-        "type Store"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/linking/worktree.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func ValidateIsolatedWorktreePath",
-        "func ValidateWorktreeBranch"
+        "func LinkEnvironment.ObserveWorktree",
+        "func LinkEnvironment.PlanExists",
+        "func LinkEnvironment.PlanInside",
+        "func LinkEnvironment.PlanPath",
+        "func LinkEnvironment.ReadPlan",
+        "func LinkEnvironment.SamePlan",
+        "func LinkEnvironment.WorktreeBranch",
+        "func LinkEnvironment.WorktreeDirectory",
+        "type LinkEnvironment"
       ]
     },
     {
@@ -8206,10 +8202,6 @@
         "func IssueOpsCleanupStatusForRecord",
         "func IssueOpsRemoteArtifactMissing",
         "func LastActiveAt",
-        "func LinkIssueOpsPlan",
-        "func LinkIssueOpsPlanWithActor",
-        "func LinkIssueOpsWorktree",
-        "func LinkIssueOpsWorktreeWithActor",
         "func OriginBranchPresent",
         "func RecordIssueOpsCompatibilityReview",
         "func RecordIssueOpsCompatibilityReviewWithActor",
@@ -8226,10 +8218,7 @@
         "func issueOpsActiveStore",
         "func issueOpsCompatibilityReviewStore",
         "func issueOpsIntentDesignStore",
-        "func issueOpsLinkingStore",
         "func issueOpsRemoteArtifactMissing",
-        "func linkIssueOpsPlan",
-        "func linkIssueOpsWorktree",
         "func normalizeIssueOpsRepo",
         "func recordIssueOpsCompatibilityReview",
         "func recordIssueOpsDesignReview",
@@ -11001,6 +10990,17 @@
       ]
     },
     {
+      "path": "internal/application/issueopsbranch/workspace_link.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func WorkspaceLinker.Plan",
+        "func WorkspaceLinker.Worktree",
+        "type WorkspaceLinkFiles",
+        "type WorkspaceLinker"
+      ]
+    },
+    {
       "path": "internal/application/issueopscompletion/complete.go",
       "owner": "application",
       "task": "T07",
@@ -11176,6 +11176,14 @@
       "task": "T20",
       "symbols": [
         "func ApplyPhaseTransition"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/plan_link_authority.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func MutationAuthority.ValidatePlanLink"
       ]
     },
     {
@@ -14631,6 +14639,26 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/workspace_link.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ApplyPlanLink",
+        "func ApplyWorktreeLink",
+        "func PlanLinkIsUnchanged",
+        "func ValidateLinkBranchEvidence",
+        "func ValidateLinkedPlanContainment",
+        "func ValidateLinkedPlanSections",
+        "func ValidateLinkedWorktreeBranch",
+        "func ValidatePlanLinkLocation",
+        "func ValidatePlanLinkReadiness",
+        "func ValidateWorkspaceLinkPath",
+        "func ValidateWorktreeDirectory",
+        "func ValidateWorktreeLocation",
+        "type WorktreeLocation"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/worktree_plan_readiness.go",
       "owner": "domain",
       "task": "T20",
@@ -14656,6 +14684,14 @@
       "symbols": [
         "func ValidateCWD",
         "func ValidateHolder"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsauthorization/plan_link.go",
+      "owner": "domain",
+      "task": "T05",
+      "symbols": [
+        "func ValidatePlanCoordinator"
       ]
     },
     {
@@ -21440,6 +21476,166 @@
         "internal/application/issueopsbranch/link_test.go",
         "internal/domain/issueops/issue_link_test.go",
         "cmd/issueops/issueopsapp/issueops_link_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-link-readiness",
+      "source_path": "internal/adapter/issueops/linking/link.go",
+      "source_symbol": "func LinkPlan",
+      "responsibility": "require branch evidence, linked worktree and approved design review before plan linking",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidatePlanLinkReadiness",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-plan",
+        "issueops link-worktree"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/workspace_link_test.go",
+        "internal/application/issueopscycle/plan_link_authority_test.go",
+        "internal/adapter/issueops/issueops_worktree_plan_test.go",
+        "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-link-identity",
+      "source_path": "internal/adapter/issueops/linking/link.go",
+      "source_symbol": "func LinkPlan",
+      "responsibility": "allow identical path relinking without write or section validation and reject identity replacement",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PlanLinkIsUnchanged",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-plan",
+        "issueops link-worktree"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/workspace_link_test.go",
+        "internal/application/issueopscycle/plan_link_authority_test.go",
+        "internal/adapter/issueops/issueops_worktree_plan_test.go",
+        "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-link-sections",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func issueOpsPlanSectionsMissing",
+      "responsibility": "read the plan only after identity is resolved and apply domain section validation with unreadable content treated as missing all sections",
+      "target": "internal/application/issueopsbranch",
+      "target_symbol": "func WorkspaceLinker.Plan",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-plan",
+        "issueops link-worktree"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/workspace_link_test.go",
+        "internal/application/issueopscycle/plan_link_authority_test.go",
+        "internal/adapter/issueops/issueops_worktree_plan_test.go",
+        "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-link-coordinator",
+      "source_path": "internal/adapter/issueops/issueops_actor.go",
+      "source_symbol": "func validatePlanLinkMutation",
+      "responsibility": "require supported native host, session, process ancestry and canonical workspace for released Orca plan staging",
+      "target": "internal/domain/issueopsauthorization",
+      "target_symbol": "func ValidatePlanCoordinator",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-plan",
+        "issueops link-worktree"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/workspace_link_test.go",
+        "internal/application/issueopscycle/plan_link_authority_test.go",
+        "internal/adapter/issueops/issueops_worktree_plan_test.go",
+        "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-link-authority-orchestration",
+      "source_path": "internal/adapter/issueops/issueops_actor.go",
+      "source_symbol": "func validatePlanLinkMutation",
+      "responsibility": "select released plan staging authority or ordinary write lease authority using domain staging eligibility",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func MutationAuthority.ValidatePlanLink",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-plan",
+        "issueops link-worktree"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/workspace_link_test.go",
+        "internal/application/issueopscycle/plan_link_authority_test.go",
+        "internal/adapter/issueops/issueops_worktree_plan_test.go",
+        "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "worktree-link-isolation",
+      "source_path": "internal/adapter/issueops/linking/worktree.go",
+      "source_symbol": "func ValidateIsolatedWorktreePath",
+      "responsibility": "validate lexical and resolved sibling isolation, symlink rejection and path resolution facts in existing error order",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateWorktreeLocation",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-plan",
+        "issueops link-worktree"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/workspace_link_test.go",
+        "internal/application/issueopscycle/plan_link_authority_test.go",
+        "internal/adapter/issueops/issueops_worktree_plan_test.go",
+        "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "worktree-link-branch",
+      "source_path": "internal/adapter/issueops/linking/worktree.go",
+      "source_symbol": "func ValidateWorktreeBranch",
+      "responsibility": "require observed worktree branch to match the linked cycle branch",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateLinkedWorktreeBranch",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-plan",
+        "issueops link-worktree"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/workspace_link_test.go",
+        "internal/application/issueopscycle/plan_link_authority_test.go",
+        "internal/adapter/issueops/issueops_worktree_plan_test.go",
+        "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "workspace-link-transaction",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func linkIssueOpsWorktree",
+      "responsibility": "lock, load, authorize, observe filesystem and Git facts, apply domain validation and save",
+      "target": "internal/application/issueopsbranch",
+      "target_symbol": "func WorkspaceLinker.Worktree",
+      "task": "T08",
+      "entrypoints": [
+        "issueops link-plan",
+        "issueops link-worktree"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/workspace_link_test.go",
+        "internal/application/issueopscycle/plan_link_authority_test.go",
+        "internal/adapter/issueops/issueops_worktree_plan_test.go",
+        "internal/adapter/issueops/issueops_artifact_stage_test.go"
       ],
       "status": "migrated"
     }

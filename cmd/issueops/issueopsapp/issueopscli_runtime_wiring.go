@@ -34,12 +34,16 @@ func configureIssueOpsCLIRuntime() {
 		LinkIssueOpsIssueWithActor: func(root, id, issueURL string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newIssueLinker(root).Issue(context.Background(), id, issueURL, &actor)
 		},
-		LinkIssueOpsPlanWithActor: issueopscore.LinkIssueOpsPlanWithActor,
+		LinkIssueOpsPlanWithActor: func(root, id, planPath string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newWorkspaceLinker(root).Plan(context.Background(), id, planPath, &actor)
+		},
 		LinkIssueOpsRelatedWithActor: func(root, id, linkType, relatedURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newIssueLinker(root).Related(context.Background(), id, linkType, relatedURL, title, &actor)
 		},
-		LinkIssueOpsWorktreeWithActor: issueopscore.LinkIssueOpsWorktreeWithActor,
-		ListIssueOpsCycles:            issueOpsInventoryListHandler(observer),
+		LinkIssueOpsWorktreeWithActor: func(root, id, worktreePath string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newWorkspaceLinker(root).Worktree(context.Background(), id, worktreePath, &actor)
+		},
+		ListIssueOpsCycles: issueOpsInventoryListHandler(observer),
 		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
 			return issueopscore.ReviewMetrics(stateRoot, id, repo, issueopscore.ReviewMetricsDeps{
 				ListCycleIDs: issueOpsCycleIDLister(observer),

@@ -89,13 +89,13 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	if code, _, stderr := preflight.GitCmd(repo, "worktree", "add", "-q", worktree, "75-remote-verify-cli"); code != 0 {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
-	if _, err := issueopscore.LinkIssueOpsWorktree(issueopscore.IssueOpsStateRoot(), id, worktree); err != nil {
+	if _, err := LinkIssueOpsWorktreeForTest(issueopscore.IssueOpsStateRoot(), id, worktree); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreDesignForCLITest(t, id)
 	planPath := filepath.Join(worktree, "plans", "remote-verify.md")
 	writeIssueOpsCLIFileForTest(t, worktree, "plans/remote-verify.md", planBodyForCLITest())
-	if _, err := issueopscore.LinkIssueOpsPlan(issueopscore.IssueOpsStateRoot(), id, planPath); err != nil {
+	if _, err := LinkIssueOpsPlanForTest(issueopscore.IssueOpsStateRoot(), id, planPath); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := issueopscore.RecordIssueOpsCompatibilityReview(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsCompatibilityReviewRequest{

@@ -172,8 +172,8 @@ func TestLegacyEdgesClassifyConcreteAdapterOutsideCompositionRoot(t *testing.T) 
 
 func TestLegacyEdgesExcludeSameCapabilityAdapterPackages(t *testing.T) {
 	inside := []dependencyEdge{
-		{"internal/adapter/issueops", "internal/adapter/issueops/linking"},
-		{"internal/adapter/issueops/linking", "internal/adapter/issueops/pathutil"},
+		{"internal/adapter/issueops", "internal/adapter/issueops/readinesspaths"},
+		{"internal/adapter/issueops/readinesspaths", "internal/adapter/issueops/pathutil"},
 		{"internal/adapter/lifecycle/compact", "internal/adapter/lifecycle/model"},
 	}
 	for _, edge := range inside {

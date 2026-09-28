@@ -154,7 +154,7 @@ func CandidateSpecs() []CandidateSpec {
 			Impact: 84, Feasibility: 82, Novelty: 54, Risk: 16,
 			WhyNow:       []string{"IssueOps durable state gates are easy to regress with boundary paths"},
 			ExpectedGain: []string{"invalid URLs, missing files, and path boundaries are pinned"},
-			VerifyWith:   []string{"go test ./internal/application/issueopslease ./internal/application/issueopspreparation -count=1", "go test -cover ./internal/application/issueopsbranch ./internal/adapter/issueops/linking"},
+			VerifyWith:   []string{"go test ./internal/application/issueopslease ./internal/application/issueopspreparation -count=1", "go test -cover ./internal/application/issueopsbranch"},
 			Evidence:     []string{"go test -cover low package signal"},
 		},
 		{
