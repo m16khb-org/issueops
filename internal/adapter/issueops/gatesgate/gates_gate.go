@@ -18,8 +18,6 @@ import (
 	gatescontract "issueops/internal/contract/gates"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
-	issueopsremote "issueops/internal/domain/issueopsremote"
-	"issueops/internal/domain/stringlist"
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
@@ -37,19 +35,9 @@ var (
 // strict readiness다.
 func StrictPRReadinessWithState(stateRoot string, record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
 	ready := loopgate.StrictPRReadinessWithState(stateRoot, record)
-	ready = withGatesGate(ready, GatesRootFor(record), linkedIssueNumber(record))
-	return withDuplicateIssueArtifactGate(ready, GatesRootFor(record), linkedIssueNumber(record))
-}
-
-// linkedIssueNumber는 레코드가 가리키는 provider 이슈 번호다. 없으면 빈 문자열.
-func linkedIssueNumber(record issueopscontract.IssueOpsRecord) string {
-	if n := issueopsremote.IssueNumber(record.IssueURL); n != "" {
-		return n
-	}
-	if record.BranchPrepare != nil {
-		return issueopsremote.IssueNumber(record.BranchPrepare.IssueURL)
-	}
-	return ""
+	root, issueNumber := issueopsdomain.PlanExistenceRoot(record), cycleapp.GateLedgerIssueNumber(record)
+	ready = withGatesGate(ready, root, issueNumber)
+	return withDuplicateIssueArtifactGate(ready, root, issueNumber)
 }
 
 // withDuplicateIssueArtifactGate는 현재 사이클의 이슈 원장이 canonical
@@ -74,11 +62,7 @@ func withDuplicateIssueArtifactGate(ready issueopscontract.IssueOpsReadiness, ro
 	for _, entry := range entries {
 		legacyEntries = append(legacyEntries, issueopsdomain.GateLedgerFile{Name: entry.Name(), Directory: entry.IsDir()})
 	}
-	if missing := issueopsdomain.DuplicateGateLedgerMissing(issueNumber, true, legacyEntries); len(missing) > 0 {
-		ready.Missing = stringlist.UniqueSorted(append(append([]string{}, ready.Missing...), missing...))
-		ready.Ready = false
-	}
-	return ready
+	return cycleapp.ApplyDuplicateGateLedger(ready, issueNumber, true, legacyEntries)
 }
 
 // AdvancePhaseWithActor는 pr 단계 진입 전에 게이트 ledger까지 포함한 strict
@@ -90,15 +74,6 @@ func AdvancePhaseWithActor(stateRoot, id, to string, actor issueops.IssueOpsActo
 	return issueops.AdvanceIssueOpsPhaseWithActor(stateRoot, id, to, actor)
 }
 
-// GatesRootFor는 게이트 파일을 찾을 루트다. worktree가 있으면 worktree, 없으면
-// 레코드 repo를 쓴다.
-func GatesRootFor(record issueopscontract.IssueOpsRecord) string {
-	if path := strings.TrimSpace(record.WorktreePath); path != "" {
-		return path
-	}
-	return strings.TrimSpace(record.Repo)
-}
-
 // guardPRPhase는 이미 pr 단계인 레코드는 통과시킨다(복구 경로 보존). core
 // readiness는 AdvanceIssueOpsPhaseWithActor가 upstream을 span 밖에서 fetch한 뒤
 // span 안에서 판정하므로, 여기서는 이 package가 합성하는 loop·게이트 ledger·
@@ -108,8 +83,9 @@ func guardPRPhase(stateRoot, id, to string) error {
 		Read: issueops.ReadIssueOps,
 		Gate: func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
 			ready := loopgate.WithLoopGate(issueopscontract.IssueOpsReadiness{Ready: true}, record.Repo)
-			ready = withGatesGate(ready, GatesRootFor(record), linkedIssueNumber(record))
-			return withDuplicateIssueArtifactGate(ready, GatesRootFor(record), linkedIssueNumber(record))
+			root, issueNumber := issueopsdomain.PlanExistenceRoot(record), cycleapp.GateLedgerIssueNumber(record)
+			ready = withGatesGate(ready, root, issueNumber)
+			return withDuplicateIssueArtifactGate(ready, root, issueNumber)
 		},
 	})
 }

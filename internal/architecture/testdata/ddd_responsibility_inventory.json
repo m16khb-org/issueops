@@ -7494,10 +7494,8 @@
       "task": "T04",
       "symbols": [
         "func AdvancePhaseWithActor",
-        "func GatesRootFor",
         "func StrictPRReadinessWithState",
         "func guardPRPhase",
-        "func linkedIssueNumber",
         "func withDuplicateIssueArtifactGate",
         "func withGatesGate"
       ]
@@ -11012,6 +11010,14 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/duplicate_gate_ledger.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyDuplicateGateLedger"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/feedback_completion.go",
       "owner": "application",
       "task": "T20",
@@ -11019,6 +11025,14 @@
         "func FeedbackCompletionMissing",
         "func HasUnresolvedContractFeedback",
         "func feedbackSnapshots"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/gate_ledger_issue.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func GateLedgerIssueNumber"
       ]
     },
     {
@@ -17801,10 +17815,44 @@
       "status": "migrated"
     },
     {
+      "id": "gate-ledger-linked-issue",
+      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
+      "source_symbol": "func linkedIssueNumber",
+      "responsibility": "gate ledger scope prefers the linked issue over branch preparation evidence",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func GateLedgerIssueNumber",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/gate_ledger_issue_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-ledger-root",
+      "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
+      "source_symbol": "func GatesRootFor",
+      "responsibility": "gate ledger lookup selects the worktree path before the repository path",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PlanExistenceRoot",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/worktree_plan_readiness_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
       "id": "duplicate-gate-ledger",
       "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
       "source_symbol": "func withDuplicateIssueArtifactGate",
-      "responsibility": "canonical and compatible ledgers for one issue fail PR readiness closed",
+      "responsibility": "observe canonical and compatible ledger files; application composes the domain duplicate decision into PR readiness",
       "target": "internal/domain/issueops",
       "target_symbol": "func DuplicateGateLedgerMissing",
       "task": "T04",
@@ -17814,9 +17862,10 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/gate_ledger_duplicate_test.go",
+        "internal/application/issueopscycle/duplicate_gate_ledger_test.go",
         "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
-      "status": "migrate"
+      "status": "retain"
     },
     {
       "id": "gate-ledger-relative-path",
@@ -17840,7 +17889,7 @@
       "id": "gate-ledger-readiness",
       "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
       "source_symbol": "func withGatesGate",
-      "responsibility": "discovered gate ledgers are scoped, checked, and composed into PR readiness",
+      "responsibility": "bind the discovered ledger and evaluator adapter callbacks to application readiness coordination",
       "target": "internal/application/issueopscycle",
       "target_symbol": "func ApplyGateLedgers",
       "task": "T04",
@@ -17853,7 +17902,7 @@
         "internal/application/issueopscycle/gate_ledger_readiness_test.go",
         "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
-      "status": "migrate"
+      "status": "retain"
     }
   ]
 }
