@@ -7,7 +7,6 @@ import (
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
-	"issueops/internal/domain/stringlist"
 )
 
 // IssueOpsLocalPRReadiness는 네트워크를 건드리지 않는 판정이다. strict에서
@@ -73,7 +72,6 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 	syncUpstream := fetchUpstream != nil
 	ready := IssueOpsPRReadiness(record)
 	ready.Strict = syncUpstream
-	missing := append([]string{}, ready.Missing...)
 	currentHead := ""
 	currentFingerprint := ""
 	changeObservation := implementation.LocalChangeObservation{}
@@ -109,8 +107,6 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 			facts.UpstreamCounts = GitOut(gitRoot, "rev-list", "--left-right", "--count", "HEAD...@{u}")
 		}
 	}
-	gitMissing, warnings := issueopsdomain.PRGitReadiness(record, facts)
-	missing = append(missing, gitMissing...)
 	// local은 검증된 관측을 공유한다. strict는 fetch가 fallback ref를 바꿀 수
 	// 있으므로 기존 순서대로 fetch 뒤 변경 경로를 새로 관측한다.
 	schemaMissing := cycleapp.ObservedSchemaEvidenceMissing(record, syncUpstream, changeObservation.Paths, currentFingerprint, implementation.ChangedPaths)
@@ -122,15 +118,9 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 	if path := strings.TrimSpace(record.WorktreePath); path != "" {
 		factsForPR.WorktreeValid = issueOpsWorktreePathValid(path)
 	}
-	missing = append(missing, cycleapp.ObservedPRReadinessMissing(record, factsForPR)...)
-
-	ready.Missing = stringlist.UniqueSorted(missing)
-	ready.Warnings = warnings
-	ready.AISlopCleanHead = record.AISlopCleanHead
-	ready.CurrentHead = currentHead
-	ready.AISlopCleanFingerprint = record.AISlopCleanFingerprint
-	ready.CurrentFingerprint = currentFingerprint
-	ready.Ready = len(ready.Missing) == 0
+	ready = cycleapp.ComposeObservedPRReadiness(record, ready, cycleapp.ObservedPRReadinessFacts{
+		Git: facts, Artifact: factsForPR, CurrentHead: currentHead, CurrentFingerprint: currentFingerprint,
+	})
 	return ready, changeObservation
 }
 
@@ -144,10 +134,7 @@ func issueOpsStrictPRReadinessWithStateUsing(stateRoot string, record issueops.I
 	if len(childMissing) == 0 && len(childWarnings) == 0 {
 		return ready
 	}
-	ready.Missing = stringlist.UniqueSorted(append(append([]string{}, ready.Missing...), childMissing...))
-	ready.Warnings = append(ready.Warnings, childWarnings...)
-	ready.Ready = len(ready.Missing) == 0
-	return ready
+	return cycleapp.ApplyChildPRGate(ready, childMissing, childWarnings)
 }
 
 func IssueOpsStrictPRReadinessWithState(stateRoot string, record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {

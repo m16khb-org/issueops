@@ -10994,6 +10994,16 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/compose_pr_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyChildPRGate",
+        "func ComposeObservedPRReadiness",
+        "type ObservedPRReadinessFacts"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/design_readiness.go",
       "owner": "application",
       "task": "T20",
@@ -17708,9 +17718,9 @@
       "id": "strict-pr-git-readiness",
       "source_path": "internal/adapter/issueops/issueops_pr_readiness_strict.go",
       "source_symbol": "func issueOpsObservedPRReadiness",
-      "responsibility": "strict PR readiness combines Git observations, upstream fetch, review and schema evidence, and final missing keys",
+      "responsibility": "observe Git and local change evidence in adapter order; application composes the domain and review decisions into PR readiness",
       "target": "internal/application/issueopscycle",
-      "target_symbol": "func LocalPRReadinessMissing",
+      "target_symbol": "func ComposeObservedPRReadiness",
       "task": "T04",
       "entrypoints": [
         "issueops advance --to pr",
@@ -17719,10 +17729,11 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/pr_git_readiness_test.go",
+        "internal/application/issueopscycle/compose_pr_readiness_test.go",
         "internal/adapter/issueops/issueops_pr_readiness_local_test.go",
         "internal/adapter/issueops/issueops_readiness_test.go"
       ],
-      "status": "migrate"
+      "status": "retain"
     },
     {
       "id": "plan-phase-completion",
