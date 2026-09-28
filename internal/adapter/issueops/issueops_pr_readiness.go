@@ -5,12 +5,11 @@ import (
 
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
-	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
 )
 
 func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := issueOpsBaseImplementationMissing(record)
+	missing := cycleapp.BaseImplementationMissing(record)
 	if strings.TrimSpace(record.WorktreePath) == "" {
 		missing = append(missing, "worktree_path")
 	}
@@ -67,35 +66,9 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 	}
 }
 
-func issueOpsBaseImplementationMissing(record issueops.IssueOpsRecord) []string {
-	missing := issueOpsBranchEvidenceMissing(record)
-	missing = append(missing, issueopsdomain.IntentMissing(record)...)
-	missing = append(missing, cycleapp.DesignReviewMissing(record)...)
-	if strings.TrimSpace(record.PlanPath) == "" {
-		missing = append(missing, "plan_path")
-	}
-	return missing
-}
-
 func issueOpsPlanExistenceRoot(record issueops.IssueOpsRecord) string {
 	if worktree := strings.TrimSpace(record.WorktreePath); worktree != "" {
 		return worktree
 	}
 	return strings.TrimSpace(record.Repo)
-}
-
-func issueOpsBranchEvidenceMissing(record issueops.IssueOpsRecord) []string {
-	missing := []string{}
-	if strings.TrimSpace(record.IssueURL) == "" {
-		missing = append(missing, "issue_url")
-	}
-	if strings.TrimSpace(record.Branch) == "" {
-		missing = append(missing, "branch")
-	}
-	if record.BranchPrepare == nil {
-		missing = append(missing, "branch_prepare")
-	} else if !record.BranchPrepare.LinkVerified {
-		missing = append(missing, "branch_link_verified")
-	}
-	return missing
 }

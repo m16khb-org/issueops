@@ -19,6 +19,7 @@ import (
 	"issueops/internal/adapter/issueops/start"
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsintent"
 	remote "issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/repoidentity"
@@ -617,7 +618,7 @@ func issueOpsLinkingStore() linking.Store {
 		TouchWrite:             touchAndWriteIssueOps,
 		PlanReadiness:          IssueOpsPlanReadiness,
 		PhaseRank:              issueOpsPhaseRank,
-		BranchEvidenceMissing:  issueOpsBranchEvidenceMissing,
+		BranchEvidenceMissing:  issueopsdomain.BranchEvidenceMissing,
 		DesignReviewMissing:    cycleapp.DesignReviewMissing,
 		PlanPathExists:         issueOpsPlanPathExists,
 		PlanSectionsMissing:    issueOpsPlanSectionsMissing,

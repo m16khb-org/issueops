@@ -7943,8 +7943,6 @@
       "task": "T04",
       "symbols": [
         "func IssueOpsPRReadiness",
-        "func issueOpsBaseImplementationMissing",
-        "func issueOpsBranchEvidenceMissing",
         "func issueOpsPlanExistenceRoot"
       ]
     },
@@ -10993,6 +10991,14 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/base_implementation_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func BaseImplementationMissing"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/compatibility_readiness.go",
       "owner": "application",
       "task": "T20",
@@ -13674,6 +13680,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func BranchEvidenceMissing",
         "func GrillReadinessMissing",
         "func PlanReadinessMissing"
       ]
@@ -17468,6 +17475,44 @@
         "internal/domain/issueopsreview/devils_advocate_readiness_test.go",
         "internal/application/issueopscycle/staged_plan_binding_test.go",
         "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-evidence-readiness",
+      "source_path": "internal/adapter/issueops/issueops_pr_readiness.go",
+      "source_symbol": "func issueOpsBranchEvidenceMissing",
+      "responsibility": "issue URL, branch, and verified branch preparation are required before implementation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func BranchEvidenceMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to implement",
+        "issueops next",
+        "issueops link-plan"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/branch_evidence_test.go",
+        "internal/application/issueopscycle/base_implementation_readiness_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "base-implementation-readiness",
+      "source_path": "internal/adapter/issueops/issueops_pr_readiness.go",
+      "source_symbol": "func issueOpsBaseImplementationMissing",
+      "responsibility": "branch, intent, design review, and plan are composed as implementation prerequisites",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func BaseImplementationMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to implement",
+        "issueops next",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/base_implementation_readiness_test.go",
+        "internal/adapter/issueops/issueops_readiness_test.go"
       ],
       "status": "migrated"
     }

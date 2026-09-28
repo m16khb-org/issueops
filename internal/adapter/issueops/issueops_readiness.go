@@ -31,7 +31,7 @@ func IssueOpsAISlopCleanReadiness(record issueops.IssueOpsRecord) issueops.Issue
 }
 
 func IssueOpsCompatibilityReviewReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := issueOpsBaseImplementationMissing(record)
+	missing := cycleapp.BaseImplementationMissing(record)
 	if path := strings.TrimSpace(record.WorktreePath); path == "" {
 		missing = append(missing, "worktree_path")
 	} else if !issueOpsWorktreePathValid(path) {
@@ -59,7 +59,7 @@ func IssueOpsImplementationReadiness(record issueops.IssueOpsRecord) issueops.Is
 }
 
 func issueOpsImplementationReadiness(record issueops.IssueOpsRecord, checkPlanBinding bool) issueops.IssueOpsReadiness {
-	missing := issueOpsBaseImplementationMissing(record)
+	missing := cycleapp.BaseImplementationMissing(record)
 	if path := strings.TrimSpace(record.WorktreePath); path == "" {
 		missing = append(missing, "worktree_path")
 	} else if !issueOpsWorktreePathValid(path) {
