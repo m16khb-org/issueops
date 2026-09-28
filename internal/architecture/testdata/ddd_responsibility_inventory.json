@@ -7926,7 +7926,6 @@
         "func IssueOpsProblemReadiness",
         "func issueOpsCompatibilityReviewCompletion",
         "func issueOpsDoneCompletion",
-        "func issueOpsFeedbackCompletion",
         "func issueOpsImplementCompletion",
         "func issueOpsPRCompletion",
         "func issueOpsPlanCompletion",
@@ -7949,7 +7948,6 @@
         "func IssueOpsPRReadiness",
         "func issueOpsBaseImplementationMissing",
         "func issueOpsBranchEvidenceMissing",
-        "func issueOpsHasUnresolvedContractFeedback",
         "func issueOpsPlanExistenceRoot"
       ]
     },
@@ -11000,6 +10998,16 @@
       "task": "T20",
       "symbols": [
         "func RefreshAISlopClean"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/feedback_completion.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func FeedbackCompletionMissing",
+        "func HasUnresolvedContractFeedback",
+        "func feedbackSnapshots"
       ]
     },
     {
@@ -14550,6 +14558,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreview/feedback_completion.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func FeedbackCompletionMissing",
+        "func HasUnresolvedContractFeedback",
+        "type FeedbackSnapshot"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsreview/gates.go",
       "owner": "domain",
       "task": "T03",
@@ -17208,6 +17226,42 @@
         "internal/application/issueopscycle/phase_transition_test.go",
         "internal/domain/issueops/phase_transition_test.go",
         "internal/adapter/issueops/issueops_phase_refresh_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "feedback-phase-completion",
+      "source_path": "internal/adapter/issueops/issueops_phase_ledger.go",
+      "source_symbol": "func issueOpsFeedbackCompletion",
+      "responsibility": "ordered feedback classification, issue update, and resolution completion gates",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func FeedbackCompletionMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops next",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreview/feedback_completion_test.go",
+        "internal/application/issueopscycle/feedback_completion_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "contract-feedback-update-gate",
+      "source_path": "internal/adapter/issueops/issueops_pr_readiness.go",
+      "source_symbol": "func issueOpsHasUnresolvedContractFeedback",
+      "responsibility": "contract change feedback requires a linked issue update before PR readiness",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func HasUnresolvedContractFeedback",
+      "task": "T04",
+      "entrypoints": [
+        "issueops next",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreview/feedback_completion_test.go",
+        "internal/application/issueopscycle/feedback_completion_test.go"
       ],
       "status": "migrated"
     }

@@ -3,6 +3,7 @@ package issueops
 import (
 	"strings"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
@@ -64,26 +65,6 @@ func issueOpsImplementCompletion(record issueops.IssueOpsRecord) issueops.IssueO
 	return IssueOpsAISlopCleanReadiness(record)
 }
 
-func issueOpsFeedbackCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := []string{}
-	for _, item := range record.Feedback {
-		if strings.TrimSpace(item.Classification) == "" {
-			missing = append(missing, "feedback_classification")
-			break
-		}
-	}
-	if issueOpsHasUnresolvedContractFeedback(record) {
-		missing = append(missing, "contract_feedback_issue_update")
-	}
-	for _, item := range record.Feedback {
-		if strings.TrimSpace(item.Resolution) == "" {
-			missing = append(missing, "feedback_resolution")
-			break
-		}
-	}
-	return issueOpsReadinessFrom(record, missing)
-}
-
 func issueOpsPRCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
 	// 완료/파생에는 git fetch를 하지 않는 non-strict readiness를 사용한다. network
 	// 부수효과 없이 status 표시용 ledger를 파생하기 위해서다. 실제 pr-phase entry
@@ -126,7 +107,7 @@ func IssueOpsPhaseCompletion(record issueops.IssueOpsRecord, phase issueops.Issu
 	case IssueOpsPhaseAISlopClean:
 		return issueOpsReadinessFrom(record, issueopsdomain.AISlopCleanCompletionMissing(record))
 	case IssueOpsPhaseFeedback:
-		return issueOpsFeedbackCompletion(record)
+		return issueOpsReadinessFrom(record, cycleapp.FeedbackCompletionMissing(record))
 	case IssueOpsPhasePR:
 		return issueOpsPRCompletion(record)
 	case IssueOpsPhaseDone:

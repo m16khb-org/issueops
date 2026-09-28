@@ -3,8 +3,8 @@ package issueops
 import (
 	"strings"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
-	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/stringlist"
 )
 
@@ -33,7 +33,7 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 	}
 	// schema_evidence는 변경 집합을 읽어야 활성 여부를 알 수 있다. 이 표면은
 	// record만으로 판정하는 경량 경로이므로 그 게이트는 strict가 소유한다.
-	if issueOpsHasUnresolvedContractFeedback(record) {
+	if cycleapp.HasUnresolvedContractFeedback(record) {
 		missing = append(missing, "contract_feedback_issue_update")
 	}
 	missing = stringlist.UniqueSorted(missing)
@@ -64,15 +64,6 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 		WorktreePath:   record.WorktreePath,
 		Branch:         record.Branch,
 	}
-}
-
-func issueOpsHasUnresolvedContractFeedback(record issueops.IssueOpsRecord) bool {
-	for _, item := range record.Feedback {
-		if reviewdomain.FeedbackRequiresIssueUpdate(item.Classification, item.IssueUpdatedAt) {
-			return true
-		}
-	}
-	return false
 }
 
 func issueOpsBaseImplementationMissing(record issueops.IssueOpsRecord) []string {
