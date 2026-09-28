@@ -461,6 +461,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueops/child_status.go", "T08"},
 		{"internal/domain/issueops/cleanup_status.go", "T08"},
 		{"internal/domain/issueops/cleanup_finish.go", "T08"},
+		{"internal/domain/issueops/linked_branch_audit.go", "T08"},
 		{"internal/contract/issueops/cleanup_finish_inventory.go", "T08"},
 		{"internal/adapter/issueops/cleanup_finish_environment.go", "T08"},
 		{"internal/domain/issueops/cleanup_children.go", "T08"},

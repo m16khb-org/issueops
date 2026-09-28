@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	linkedbranch "issueops/internal/domain/issueopslinkedbranch"
 )
@@ -52,6 +53,7 @@ func CleanupLinkedBranch(ctx context.Context, stateRoot string, req issueopscont
 		return issueopscontract.CleanupLinkedBranchResult{OK: false, ID: req.ID}, err
 	}
 	result := issueopscontract.CleanupLinkedBranchResult{OK: true, ID: record.ID, Preview: !req.Apply}
+	audit := issueopscleanup.LinkedBranchAuditRecorder{Records: CycleRecordStore{StateRoot: stateRoot}, Now: time.Now}
 
 	missing := cleanupLinkedBranchGates(record, deps)
 	if len(missing) > 0 {
@@ -78,14 +80,14 @@ func CleanupLinkedBranch(ctx context.Context, stateRoot string, req issueopscont
 	// (remote-branch 정리의 같은 판단을 따른다).
 	if state == linkedbranch.StateAbsent {
 		result.AlreadyAbsent = true
-		result.AuditRecorded, result.AuditError = recordLinkedBranchCleanupAudit(stateRoot, record, result)
+		result.AuditRecorded, result.AuditError = audit.Record(ctx, record, result)
 		return result, nil
 	}
 	if !linkedbranch.Deletable(state) {
 		// 지울 수 없는 이유를 관측과 함께 남긴다. 이 진단이 없으면 사용자는
 		// raw GraphQL 삭제로 우회하게 되고, 그것이 이 이슈가 막으려는 것이다.
 		result.OK, result.FailedStep = false, "classify_linked_branch"
-		result.AuditRecorded, result.AuditError = recordLinkedBranchCleanupAudit(stateRoot, record, result)
+		result.AuditRecorded, result.AuditError = audit.Record(ctx, record, result)
 		return result, fmt.Errorf("linked branch cleanup refuses state %s: %s", state, reason)
 	}
 	result.LinkedBranchID = target.ID
@@ -113,16 +115,16 @@ func CleanupLinkedBranch(ctx context.Context, stateRoot string, req issueopscont
 	// 다르면 preview 이후 외부 상태가 움직인 것이다(AC-05).
 	if req.Fingerprint != fingerprint {
 		result.OK, result.FailedStep = false, "stale_fingerprint"
-		result.AuditRecorded, result.AuditError = recordLinkedBranchCleanupAudit(stateRoot, record, result)
+		result.AuditRecorded, result.AuditError = audit.Record(ctx, record, result)
 		return result, fmt.Errorf("cleanup linked-branch fingerprint is stale: rerun the preview")
 	}
 	if err := deps.DeleteLinkedBranch(ctx, prepare.IssueURL, target.ID); err != nil {
 		result.OK, result.FailedStep = false, "delete_linked_branch"
-		result.AuditRecorded, result.AuditError = recordLinkedBranchCleanupAudit(stateRoot, record, result)
+		result.AuditRecorded, result.AuditError = audit.Record(ctx, record, result)
 		return result, err
 	}
 	result.Deleted, result.DeletedAt = true, time.Now().UTC().Format(time.RFC3339)
-	result.AuditRecorded, result.AuditError = recordLinkedBranchCleanupAudit(stateRoot, record, result)
+	result.AuditRecorded, result.AuditError = audit.Record(ctx, record, result)
 	return result, nil
 }
 
@@ -183,28 +185,4 @@ func cleanupLinkedBranchFingerprint(inventory cleanupLinkedBranchInventory) (str
 	}
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:]), nil
-}
-
-// recordLinkedBranchCleanupAudit은 처분을 durable record에 남긴다(AC-06).
-//
-// 성공만이 아니라 이미 부재, 모호성, stale fingerprint도 남긴다. 다음 사람이
-// "왜 아직 안 지워졌나"를 처음부터 다시 조사하지 않으려면 거절도 기록이어야
-// 한다. 기록 실패는 이미 끝난 외부 삭제를 되돌리지 않으므로 best-effort다.
-func recordLinkedBranchCleanupAudit(stateRoot string, record issueopscontract.IssueOpsRecord, result issueopscontract.CleanupLinkedBranchResult) (bool, string) {
-	record.LinkedBranchCleanup = &issueopscontract.IssueOpsLinkedBranchCleanup{
-		State:          result.State,
-		StateReason:    result.StateReason,
-		LinkedBranchID: result.LinkedBranchID,
-		LinkedCount:    result.LinkedCount,
-		RemoteRefOID:   result.RemoteRefOID,
-		Fingerprint:    result.Fingerprint,
-		Deleted:        result.Deleted,
-		AlreadyAbsent:  result.AlreadyAbsent,
-		FailedStep:     result.FailedStep,
-		ObservedAt:     time.Now().UTC().Format(time.RFC3339),
-	}
-	if _, err := WriteIssueOps(stateRoot, record); err != nil {
-		return false, err.Error()
-	}
-	return true, ""
 }

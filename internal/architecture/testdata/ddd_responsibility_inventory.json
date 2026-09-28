@@ -7819,7 +7819,6 @@
         "func cleanupLinkedBranchFingerprint",
         "func cleanupLinkedBranchGates",
         "func cleanupLinkedBranchRemoteOID",
-        "func recordLinkedBranchCleanupAudit",
         "type CleanupLinkedBranchDeps",
         "type cleanupLinkedBranchInventory"
       ]
@@ -10978,6 +10977,16 @@
         "type FinishEnvironment",
         "type FinishPreviewer",
         "type FinishWorkspaceObservation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/linked_branch_audit.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func LinkedBranchAuditRecorder.Record",
+        "type LinkedBranchAuditRecorder",
+        "type LinkedBranchAuditRecords"
       ]
     },
     {
@@ -14544,6 +14553,14 @@
       "task": "T08",
       "symbols": [
         "func ValidateIssueURL"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/linked_branch_audit.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ApplyLinkedBranchCleanupAudit"
       ]
     },
     {
@@ -22333,6 +22350,40 @@
         "internal/domain/issueops/cleanup_finish_test.go",
         "internal/application/issueopscleanup/finish_preview_test.go",
         "internal/adapter/issueops/issueops_cleanup_finish_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-linked-branch-audit-identity",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_linked_branch.go",
+      "source_symbol": "func recordLinkedBranchCleanupAudit",
+      "responsibility": "bind linked-branch audit to the observed cycle and prepared target while preserving current metadata",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ApplyLinkedBranchCleanupAudit",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup linked-branch"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/linked_branch_audit_test.go",
+        "internal/adapter/issueops/linked_branch_audit_concurrency_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-linked-branch-audit-persistence",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_linked_branch.go",
+      "source_symbol": "func recordLinkedBranchCleanupAudit",
+      "responsibility": "reload and validate current record under cycle lock before best-effort audit persistence",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func LinkedBranchAuditRecorder.Record",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup linked-branch"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/linked_branch_audit_test.go",
+        "internal/adapter/issueops/linked_branch_audit_concurrency_test.go"
       ],
       "status": "migrated"
     }
