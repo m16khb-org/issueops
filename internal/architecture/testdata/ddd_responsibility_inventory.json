@@ -1359,8 +1359,6 @@
         "func coreReconcileEffects.ApplyReceipt",
         "func coreReconcileEffects.Canonicalize",
         "func coreReconcileEffects.ClearIntent",
-        "func coreReconcileEffects.Latest",
-        "func coreReconcileEffects.MarkInvoking",
         "func coreReconcileEffects.RecordFailure",
         "func coreReconcileEffects.inspectStage",
         "func coreReconcileEffects.invokeStage",
@@ -7155,7 +7153,6 @@
         "func intentPortStage",
         "func intentPortWorkspaceReceipt",
         "func intentPortWorkspaceRequest",
-        "func markOrcaIntentInvokingFromRawState",
         "func normalizedOrcaIntentPurpose",
         "func pendingKindForOrcaStage",
         "func persistOrcaIntentTransition",
@@ -7322,13 +7319,10 @@
         "func CanonicalizeExecutionReconcileIntent",
         "func ClearExecutionReconcileIntent",
         "func ExecutionReconcileIntentRequest",
-        "func MarkExecutionReconcileIntentInvoking",
-        "func ReadExecutionReconcileRecord",
         "func RecordExecutionReconcileIntentFailure",
         "func executionReconcileIntentPayload",
         "func executionReconcileIntentState",
         "func executionReconcileIntentStateFromPayload",
-        "func readExecutionReconcileIntent",
         "type ExecutionReconcileIntentState"
       ]
     },
@@ -9066,6 +9060,14 @@
       "symbols": [
         "func FilesystemPathMatcher.Matches",
         "type FilesystemPathMatcher"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/issueopslease/orca_invoking.go",
+      "owner": "adapter",
+      "task": "T05",
+      "symbols": [
+        "func markOrcaIntentInvoking"
       ]
     },
     {

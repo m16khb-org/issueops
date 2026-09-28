@@ -55,17 +55,6 @@ func ExecutionReconcileIntentRequest(expected ExecutionReconcileIntentState) (po
 	return executionOrcaIntentRequest(expected.Record, payload)
 }
 
-func MarkExecutionReconcileIntentInvoking(stateRoot string, expected ExecutionReconcileIntentState) (ExecutionReconcileIntentState, error) {
-	payload, err := executionReconcileIntentPayload(expected)
-	if err != nil {
-		return ExecutionReconcileIntentState{}, err
-	}
-	if _, err := markOrcaIntentInvokingFromRawState(stateRoot, expected.Record, payload, expected.RecordRaw, expected.IntentRaw); err != nil {
-		return ExecutionReconcileIntentState{}, err
-	}
-	return readExecutionReconcileIntent(stateRoot, expected.Record.ID, expected.OperationID)
-}
-
 func RecordExecutionReconcileIntentFailure(stateRoot string, expected ExecutionReconcileIntentState, invocationState string, cause error, now func() time.Time) error {
 	payload, err := executionReconcileIntentPayload(expected)
 	if err != nil {
@@ -91,22 +80,6 @@ func ApplyExecutionReconcileIntentReceipt(ctx context.Context, stateRoot string,
 		return ExecutionReconcileIntentState{Record: persisted, RecordRaw: raw, OperationID: expected.OperationID}, nil
 	}
 	return executionReconcileIntentStateFromPayload(stateRoot, persisted, nextPayload)
-}
-
-func ReadExecutionReconcileRecord(stateRoot, id string) (issueops.IssueOpsRecord, error) {
-	return ReadIssueOps(stateRoot, id)
-}
-
-func readExecutionReconcileIntent(stateRoot, id, operationID string) (ExecutionReconcileIntentState, error) {
-	record, recordRaw, err := readExecutionResumeRecordRaw(stateRoot, id)
-	if err != nil {
-		return ExecutionReconcileIntentState{}, err
-	}
-	payload, intentRaw, err := readExecutionResumeIntentRaw(stateRoot, operationID)
-	if err != nil {
-		return ExecutionReconcileIntentState{}, err
-	}
-	return executionReconcileIntentState(record, recordRaw, payload, intentRaw), nil
 }
 
 func executionReconcileIntentStateFromPayload(stateRoot string, record issueops.IssueOpsRecord, payload externalOrcaIntentPayload) (ExecutionReconcileIntentState, error) {

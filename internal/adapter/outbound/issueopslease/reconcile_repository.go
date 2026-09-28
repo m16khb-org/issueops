@@ -6,17 +6,16 @@ import (
 
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	"issueops/internal/port"
 )
 
 type ReconcileEffects interface {
 	Canonicalize(context.Context, string) (ReconcileEffectState, error)
-	MarkInvoking(context.Context, ReconcileEffectState) (ReconcileEffectState, error)
 	RecordFailure(context.Context, ReconcileEffectState, string, error) error
 	ApplyReceipt(context.Context, ReconcileEffectState, leasecontract.ReconcileStageReceipt) (ReconcileEffectState, error)
 	// ClearIntent는 외부 자원이 없음이 authoritative하게 확인된 intent를
 	// 제거한다. 재시도가 아니라 기록 정리다(#280).
 	ClearIntent(context.Context, ReconcileEffectState, error) (ReconcileEffectState, error)
-	Latest(context.Context, string) (leasecontract.Record, error)
 }
 
 type ReconcileEffectState struct {
@@ -30,10 +29,13 @@ type ReconcileEffectState struct {
 	Pending            bool
 }
 
-type ReconcileRepository struct{ effects ReconcileEffects }
+type ReconcileRepository struct {
+	store   port.TransactionalRecordStore
+	effects ReconcileEffects
+}
 
-func NewReconcileRepository(effects ReconcileEffects) *ReconcileRepository {
-	return &ReconcileRepository{effects: effects}
+func NewReconcileRepository(store port.TransactionalRecordStore, effects ReconcileEffects) *ReconcileRepository {
+	return &ReconcileRepository{store: store, effects: effects}
 }
 
 func (r *ReconcileRepository) Canonicalize(ctx context.Context, id string) (leaseapp.ReconcileIntentState, error) {
@@ -45,11 +47,17 @@ func (r *ReconcileRepository) Canonicalize(ctx context.Context, id string) (leas
 }
 
 func (r *ReconcileRepository) MarkInvoking(ctx context.Context, intent leaseapp.ReconcileIntentState) (leaseapp.ReconcileIntentState, error) {
-	if r == nil || r.effects == nil {
-		return leaseapp.ReconcileIntentState{}, fmt.Errorf("reconcile persistence bridge is required")
+	if r == nil {
+		return leaseapp.ReconcileIntentState{}, fmt.Errorf("reconcile record store is required")
 	}
-	state, err := r.effects.MarkInvoking(ctx, reconcileEffectState(intent))
-	return reconcileIntentState(state), err
+	updated, data, err := markOrcaIntentInvoking(ctx, r.store, intent.Progress.Record, intent.OperationID, intent.RecordRaw, intent.IntentRaw)
+	if err != nil {
+		return leaseapp.ReconcileIntentState{}, err
+	}
+	intent.IntentRaw = data
+	intent.InvocationState = updated.InvocationState
+	intent.InvocationAttempts = updated.InvocationAttempts
+	return intent, nil
 }
 
 func (r *ReconcileRepository) RecordFailure(ctx context.Context, intent leaseapp.ReconcileIntentState, invocation string, cause error) error {
@@ -67,11 +75,18 @@ func (r *ReconcileRepository) ApplyReceipt(ctx context.Context, intent leaseapp.
 	return reconcileProgress(state), err
 }
 
-func (r *ReconcileRepository) Latest(ctx context.Context, id string) (leasecontract.Record, error) {
-	if r == nil || r.effects == nil {
-		return leasecontract.Record{}, fmt.Errorf("reconcile persistence bridge is required")
+func (r *ReconcileRepository) Latest(_ context.Context, id string) (leasecontract.Record, error) {
+	if r == nil || r.store == nil {
+		return leasecontract.Record{}, fmt.Errorf("reconcile record store is required")
 	}
-	return r.effects.Latest(ctx, id)
+	data, ok, err := r.store.Get(recordBucket, id)
+	if err != nil {
+		return leasecontract.Record{}, err
+	}
+	if !ok {
+		return leasecontract.Record{}, fmt.Errorf("issueops record %s not found", id)
+	}
+	return decodeLeaseRecord(id, data)
 }
 
 func reconcileProgress(state ReconcileEffectState) leaseapp.ReconcileProgress {

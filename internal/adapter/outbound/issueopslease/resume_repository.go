@@ -124,37 +124,11 @@ func (r *ResumeRepository) MarkInvoking(ctx context.Context, intent leaseapp.Res
 	if r == nil || r.store == nil {
 		return leaseapp.ResumeIntentState{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
 	}
-	store, ok := r.store.(port.RecordRawCASStore)
-	if !ok {
+	if _, ok := r.store.(port.RecordRawCASStore); !ok {
 		return leaseapp.ResumeIntentState{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume record store does not support raw CAS"))
 	}
-	if len(intent.RecordRaw) == 0 || len(intent.IntentRaw) == 0 {
-		return leaseapp.ResumeIntentState{}, fmt.Errorf("Orca intent raw CAS evidence is required")
-	}
-	codec := preparationcontract.IntentCodec{}
-	current, err := codec.Decode(intent.OperationID, intent.IntentRaw)
+	updated, data, err := markOrcaIntentInvoking(ctx, r.store, intent.Progress.Record.Stable, intent.OperationID, intent.RecordRaw, intent.IntentRaw)
 	if err != nil {
-		return leaseapp.ResumeIntentState{}, err
-	}
-	if err := preparationdomain.ValidateIntentRecord(intent.Progress.Record.Stable, current); err != nil {
-		return leaseapp.ResumeIntentState{}, err
-	}
-	updated := preparationapp.MarkOrcaInvoking(current)
-	data, err := codec.Encode(updated)
-	if err != nil {
-		return leaseapp.ResumeIntentState{}, err
-	}
-	err = store.CompareAndApply(ctx, []port.ExpectedRecord{
-		{Bucket: recordBucket, ID: intent.Progress.Record.ID, Data: intent.RecordRaw},
-		{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intent.IntentRaw},
-	}, []port.RecordMutation{{Bucket: "external_intent_v1", ID: intent.OperationID, Data: data}})
-	if err != nil {
-		if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
-			if stale.FailedBucket() == recordBucket {
-				return leaseapp.ResumeIntentState{}, fmt.Errorf("stale raw record snapshot")
-			}
-			return leaseapp.ResumeIntentState{}, fmt.Errorf("stale raw intent snapshot")
-		}
 		return leaseapp.ResumeIntentState{}, err
 	}
 	intent.IntentRaw = data

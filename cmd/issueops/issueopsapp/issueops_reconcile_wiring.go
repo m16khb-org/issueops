@@ -12,6 +12,7 @@ import (
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
 	"issueops/internal/adapter/issueops"
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
+	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	statecontract "issueops/internal/contract/state"
@@ -20,16 +21,23 @@ import (
 )
 
 func issueOpsReconcileHandler(ctx context.Context, stateRoot string, request issueops.ExecutionReconcileRequest, deps issueops.ExecutionReconcileDependencies) (issueops.ExecutionReconcileResult, error) {
-	service := newIssueOpsReconcileService(stateRoot, deps.Orca, deps.ReadIssue, request.Snapshot, deps.Now)
+	service, err := newIssueOpsReconcileService(stateRoot, deps.Orca, deps.ReadIssue, request.Snapshot, deps.Now)
+	if err != nil {
+		return issueops.ExecutionReconcileResult{ID: request.ID}, err
+	}
 	return leaseinbound.NewReconcileHandler(service)(ctx, stateRoot, request, deps)
 }
 
-func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrcaProvisioner, readIssue issueops.ExecutionIssueSnapshotReadFunc, snapshot *issueopscontract.IssueOpsRecord, now func() time.Time) *leaseapp.ReconcileService {
+func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrcaProvisioner, readIssue issueops.ExecutionIssueSnapshotReadFunc, snapshot *issueopscontract.IssueOpsRecord, now func() time.Time) (*leaseapp.ReconcileService, error) {
+	db, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		return nil, err
+	}
 	effects := &coreReconcileEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, now), readIssue: readIssue, snapshot: snapshot, now: now}
 	return leaseapp.NewReconcileService(
-		leaseoutbound.NewReconcileRepository(effects),
+		leaseoutbound.NewReconcileRepository(db, effects),
 		leaseoutbound.NewReconcileStageExecutor(effects.inspectStage, effects.invokeStage),
-	)
+	), nil
 }
 
 type coreReconcileEffects struct {
@@ -47,18 +55,6 @@ func (e *coreReconcileEffects) Canonicalize(_ context.Context, id string) (lease
 		return leaseoutbound.ReconcileEffectState{}, convertErr
 	}
 	return converted, err
-}
-
-func (e *coreReconcileEffects) MarkInvoking(_ context.Context, state leaseoutbound.ReconcileEffectState) (leaseoutbound.ReconcileEffectState, error) {
-	coreState, err := reconcileCoreIntentState(state)
-	if err != nil {
-		return leaseoutbound.ReconcileEffectState{}, err
-	}
-	next, err := issueops.MarkExecutionReconcileIntentInvoking(e.stateRoot, coreState)
-	if err != nil {
-		return leaseoutbound.ReconcileEffectState{}, err
-	}
-	return reconcileEffectStateFromCore(next)
 }
 
 func (e *coreReconcileEffects) RecordFailure(_ context.Context, state leaseoutbound.ReconcileEffectState, invocation string, cause error) error {
@@ -95,14 +91,6 @@ func (e *coreReconcileEffects) ClearIntent(_ context.Context, state leaseoutboun
 		return leaseoutbound.ReconcileEffectState{}, err
 	}
 	return reconcileEffectStateFromCore(next)
-}
-
-func (e *coreReconcileEffects) Latest(_ context.Context, id string) (leasecontract.Record, error) {
-	record, err := issueops.ReadExecutionReconcileRecord(e.stateRoot, id)
-	if err != nil {
-		return leasecontract.Record{}, err
-	}
-	return reconcileContractRecord(record)
 }
 
 func (e *coreReconcileEffects) inspectStage(ctx context.Context, intent leaseapp.ReconcileIntentState) (leasecontract.ReconcileStageInventory, bool, error) {

@@ -101,24 +101,6 @@ func beginOrcaExecutionIntentWithID(stateRoot string, record issueops.IssueOpsRe
 	return persisted, payload, err
 }
 
-func markOrcaIntentInvokingFromRawState(stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, expectedRecordRaw, expectedIntentRaw []byte) (externalOrcaIntentPayload, error) {
-	updated := expected
-	updated.InvocationState = orcaIntentUnknown
-	updated.InvocationAttempts++
-	data, err := preparationIntentCodec.Encode(updated)
-	if err != nil {
-		return externalOrcaIntentPayload{}, err
-	}
-	err = withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		if err := validateOrcaIntentExpectedRecord(record, expected); err != nil {
-			return err
-		}
-		_, err := persistOrcaIntentTransition(stateRoot, record, expected.OperationID, expectedRecordRaw, expectedIntentRaw, []port.RecordMutation{{Bucket: externalIntentBucket, ID: expected.OperationID, Data: data}})
-		return err
-	})
-	return updated, err
-}
-
 func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, expectedRecordRaw, expectedIntentRaw []byte, invocation string, cause error, now func() time.Time) error {
 	return withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
 		if err := validateOrcaIntentExpectedRecord(record, expected); err != nil {
