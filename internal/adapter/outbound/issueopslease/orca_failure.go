@@ -23,6 +23,9 @@ type orcaFailureState struct {
 }
 
 func recordOrcaIntentFailure(ctx context.Context, store port.RecordRawCASStore, state orcaFailureState, invocation string, cause error, now func() time.Time, redact func(string) string) error {
+	if err := recordcodec.RequireMutableLeaseSnapshot(state.Record, state.RecordRaw); err != nil {
+		return err
+	}
 	if len(state.RecordRaw) == 0 || len(state.IntentRaw) == 0 {
 		return fmt.Errorf("Orca intent raw CAS evidence is required")
 	}

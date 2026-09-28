@@ -7,6 +7,7 @@ import (
 	"io/fs"
 
 	"issueops/internal/adapter/outbound/sqlstore"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 type cleanupAbandonLockKey struct{}
@@ -27,13 +28,16 @@ func withIssueOpsLock(ctx context.Context, stateRoot, id string, fn func(context
 		return err
 	}
 	return db.WithSpan(ctx, func(spanCtx context.Context) error {
-		if bypass, _ := ctx.Value(cleanupAbandonLockKey{}).(bool); !bypass {
-			record, readErr := ReadIssueOps(stateRoot, id)
-			switch {
-			case readErr == nil && record.CleanupAbandonFailure != nil && record.CleanupAbandonFailure.Step == "applying":
+		record, readErr := ReadIssueOps(stateRoot, id)
+		if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
+			return readErr
+		}
+		if readErr == nil {
+			if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+				return err
+			}
+			if bypass, _ := ctx.Value(cleanupAbandonLockKey{}).(bool); !bypass && record.CleanupAbandonFailure != nil && record.CleanupAbandonFailure.Step == "applying" {
 				return fmt.Errorf("cleanup abandon apply is in progress")
-			case readErr != nil && !errors.Is(readErr, fs.ErrNotExist):
-				return readErr
 			}
 		}
 		return fn(spanCtx)

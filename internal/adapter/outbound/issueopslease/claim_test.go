@@ -13,6 +13,7 @@ import (
 	"time"
 
 	leaseapp "issueops/internal/application/issueopslease"
+	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
@@ -245,4 +246,25 @@ func (s *claimStore) Apply(_ context.Context, mutations []port.RecordMutation) e
 		s.records[key] = append([]byte(nil), mutation.Data...)
 	}
 	return nil
+}
+
+func TestClaimRefusesFinishAttemptBeforeConsumingToken(t *testing.T) {
+	actor := leasecontract.Actor{Host: "codex", SessionID: "claim-session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "2026-07-30T00:00:00Z", Executable: "/usr/bin/codex"}}
+	record := claimableRecord(t, actor, "claim-token")
+	record.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	store := newClaimStore(t, record)
+	before := append([]byte(nil), store.records[recordBucket+"\x00"+record.ID]...)
+	path := writeClaimToken(t, record, "claim-token")
+	_, err := NewSQLiteRepository(store).Claim(context.Background(), leaseapp.ClaimRepositoryRequest{ID: record.ID, Generation: record.Execution.Lease.Generation,
+		Actor: leasedomain.Actor{Host: actor.Host, SessionID: actor.SessionID, Process: &leasedomain.ProcessReceipt{PID: 42, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}},
+		CWD:   record.Execution.Workspace.Root, TokenFile: path, Clock: fixedClaimClock{at: time.Date(2026, 9, 29, 0, 0, 1, 0, time.UTC)}, ValidateRecord: func(leaseapp.Record) error { return nil }})
+	if err == nil || !strings.Contains(err.Error(), "cleanup finish") {
+		t.Fatalf("claim accepted finish attempt: %v", err)
+	}
+	if !bytes.Equal(before, store.records[recordBucket+"\x00"+record.ID]) || len(store.records) != 1 {
+		t.Fatal("fenced claim changed record or index")
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("fenced claim consumed token: %v", err)
+	}
 }

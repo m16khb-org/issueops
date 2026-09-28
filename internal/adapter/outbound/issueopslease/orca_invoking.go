@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
@@ -13,6 +14,9 @@ import (
 )
 
 func markOrcaIntentInvoking(ctx context.Context, store port.TransactionalRecordStore, record leasecontract.Record, operationID string, recordRaw, intentRaw []byte) (preparationcontract.Intent, []byte, error) {
+	if err := recordcodec.RequireMutableLeaseSnapshot(record, recordRaw); err != nil {
+		return preparationcontract.Intent{}, nil, err
+	}
 	if store == nil {
 		return preparationcontract.Intent{}, nil, fmt.Errorf("transactional record store is required")
 	}

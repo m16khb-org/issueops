@@ -9,6 +9,7 @@ import (
 	"time"
 
 	leaseapp "issueops/internal/application/issueopslease"
+	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
@@ -233,6 +234,39 @@ func TestReconcileRepositoryWorktreeReceiptPersistsPreparedArtifacts(t *testing.
 		OperationID: payload.OperationID, Stage: string(payload.Stage), InvocationState: payload.InvocationState,
 		RecordRaw: recordRaw, IntentRaw: intentRaw,
 	}
+
+	for _, source := range []string{"raw", "typed", "both"} {
+		t.Run("finish-fenced-"+source, func(t *testing.T) {
+			guarded := state
+			stored := record
+			attempt := &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+			if source != "typed" {
+				stored.CleanupFinishAttempt = attempt
+			}
+			if source != "raw" {
+				guarded.Progress.Record.CleanupFinishAttempt = attempt
+			}
+			raw, err := leasecontract.Encode(stored)
+			if err != nil {
+				t.Fatal(err)
+			}
+			guarded.RecordRaw = raw
+			if err := store.Put(recordBucket, record.ID, raw); err != nil {
+				t.Fatal(err)
+			}
+			_, err = repository.ApplyReceipt(context.Background(), guarded, leasecontract.ReconcileStageReceipt{})
+			if err == nil || !strings.Contains(err.Error(), "cleanup finish") || fake.calls != 0 {
+				t.Fatalf("finish allowed worktree effect: calls=%d err=%v", fake.calls, err)
+			}
+			got, found, err := store.Get(recordBucket, record.ID)
+			if err != nil || !found || !bytes.Equal(got, raw) {
+				t.Fatalf("armed state changed: %v", err)
+			}
+			if err := store.Put(recordBucket, record.ID, recordRaw); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 	progress, err := repository.ApplyReceipt(context.Background(), state, leasecontract.ReconcileStageReceipt{
 		Workspace: &leasecontract.ReconcilePreparedReceipt{
 			Workspace: leasecontract.ReconcileWorkspaceReceipt{
@@ -277,7 +311,7 @@ func TestReconcileRepositoryRecordFailureUsesRawCAS(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("record: present=%v err=%v", ok, err)
 	}
-	record, err := decodeLeaseRecord(intent.Progress.Record.ID, data)
+	record, err := decodeMutableLeaseRecord(intent.Progress.Record.ID, data)
 	if err != nil {
 		t.Fatal(err)
 	}

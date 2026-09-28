@@ -56,7 +56,7 @@ func (r *ReconcileRepository) Canonicalize(ctx context.Context, id string) (leas
 		if !ok {
 			return fmt.Errorf("issueops record %s not found", id)
 		}
-		record, err := decodeLeaseRecord(id, recordRaw)
+		record, err := decodeMutableLeaseRecord(id, recordRaw)
 		if err != nil {
 			return err
 		}
@@ -123,6 +123,9 @@ func (r *ReconcileRepository) RecordFailure(ctx context.Context, intent leaseapp
 }
 
 func (r *ReconcileRepository) ApplyReceipt(ctx context.Context, intent leaseapp.ReconcileIntentState, receipt leasecontract.ReconcileStageReceipt) (leaseapp.ReconcileProgress, error) {
+	if err := recordcodec.RequireMutableLeaseSnapshot(intent.Progress.Record, intent.RecordRaw); err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
 	if r == nil || r.store == nil {
 		return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile record store is required")
 	}
@@ -243,7 +246,7 @@ func (r *ReconcileRepository) Latest(_ context.Context, id string) (leasecontrac
 	if !ok {
 		return leasecontract.Record{}, fmt.Errorf("issueops record %s not found", id)
 	}
-	return decodeLeaseRecord(id, data)
+	return decodeMutableLeaseRecord(id, data)
 }
 
 func reconcilePreparationReceipt(receipt leasecontract.ReconcileStageReceipt, stage leasecontract.ResumeStageReceipt) preparationcontract.IntentReceipt {
@@ -266,6 +269,9 @@ func reconcilePreparationReceipt(receipt leasecontract.ReconcileStageReceipt, st
 // ClearIntent는 authoritative zero로 확인된 intent를 제거하고 진행 상태를
 // 돌려준다. stage를 전진시키지 않으므로 Pending은 false다.
 func (r *ReconcileRepository) ClearIntent(ctx context.Context, state leaseapp.ReconcileIntentState, cause error) (leaseapp.ReconcileProgress, error) {
+	if err := recordcodec.RequireMutableLeaseSnapshot(state.Progress.Record, state.RecordRaw); err != nil {
+		return leaseapp.ReconcileProgress{}, err
+	}
 	if r == nil || r.store == nil {
 		return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile record store is required")
 	}

@@ -14,6 +14,7 @@ import (
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	statecontract "issueops/internal/contract/state"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -82,7 +83,7 @@ func (transaction claimTransaction) Load(id string) (leaseapp.Record, error) {
 	if !ok {
 		return leaseapp.Record{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", id))
 	}
-	record, err := decodeLeaseRecord(id, data)
+	record, err := decodeMutableLeaseRecord(id, data)
 	if err != nil {
 		return leaseapp.Record{}, err
 	}
@@ -157,7 +158,7 @@ func updateWithinSpan(
 	if !ok {
 		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", id))
 	}
-	record, err := decodeLeaseRecord(id, data)
+	record, err := decodeMutableLeaseRecord(id, data)
 	if err != nil {
 		return leaseapp.RepositoryResult{}, err
 	}
@@ -219,9 +220,12 @@ func toApplicationRecord(record leasecontract.Record) leaseapp.Record {
 	return leaseapp.Record{ID: record.ID, SourceRoot: record.Execution.Workspace.SourceRoot, CanonicalRoot: record.Execution.Workspace.Root, Lease: record.Execution.Lease, Stable: record}
 }
 
-func decodeLeaseRecord(id string, data []byte) (leasecontract.Record, error) {
+func decodeMutableLeaseRecord(id string, data []byte) (leasecontract.Record, error) {
 	record, err := recordcodec.DecodeLease(id, data)
 	if err == nil {
+		if guardErr := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); guardErr != nil {
+			return leasecontract.Record{}, guardErr
+		}
 		return record, nil
 	}
 	if errors.Is(err, statecontract.ErrInvalidState) {

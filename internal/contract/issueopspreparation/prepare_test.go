@@ -3,6 +3,7 @@ package issueopspreparation
 import (
 	"testing"
 
+	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
@@ -49,5 +50,15 @@ func TestPrepareContractClonesMutableAuthority(t *testing.T) {
 		snapshot.Record.Execution.SyncBaseResolution.ConflictFiles[0] != "internal/a.go" || snapshot.Record.Execution.SyncBaseEvents[0].Mode != "apply" ||
 		snapshot.RootConflict.LifecycleID != "io-other" {
 		t.Fatal("a preparation clone mutated its source")
+	}
+}
+
+func TestPreparationClonePreservesIndependentFinishAttempt(t *testing.T) {
+	original := Snapshot{Record: leasecontract.Record{CleanupFinishAttempt: &model.IssueOpsCleanupFinishAttempt{Token: "original", StartedAt: "2026-09-29T00:00:00Z"}}}
+	cloned := original.Clone()
+	cloned.Record.CleanupFinishAttempt.Token = "replacement"
+	cloned.Record.CleanupFinishAttempt.StartedAt = "2026-09-29T01:00:00Z"
+	if original.Record.CleanupFinishAttempt.Token != "original" || original.Record.CleanupFinishAttempt.StartedAt != "2026-09-29T00:00:00Z" {
+		t.Fatal("preparation clone changed the observed finish attempt")
 	}
 }

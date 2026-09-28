@@ -42,7 +42,7 @@ func (p *ClaimContextPreflight) Preflight(ctx context.Context, request leaseapp.
 	if !ok {
 		return nil, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", request.ID))
 	}
-	record, err := decodeLeaseRecord(request.ID, data)
+	record, err := decodeMutableLeaseRecord(request.ID, data)
 	if err != nil {
 		return nil, err
 	}

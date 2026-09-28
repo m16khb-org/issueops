@@ -18,3 +18,14 @@ func TestMissingPreconditionsAcceptsReviewedParent(t *testing.T) {
 		t.Fatalf("reviewed parent should satisfy delegation gate, got %#v", missing)
 	}
 }
+
+func TestChildMutationRetainsFinishAuthority(t *testing.T) {
+	record := model.IssueOpsRecord{CleanupFinishAttempt: &model.IssueOpsCleanupFinishAttempt{Token: "pending", StartedAt: "2026-09-29T00:00:00Z"}}
+	if err := ValidateChildMutation(record); err == nil {
+		t.Fatal("child mutation bypassed finish attempt")
+	}
+	record.CleanupFinishAttempt = nil
+	if err := ValidateChildMutation(record); err != nil {
+		t.Fatal(err)
+	}
+}

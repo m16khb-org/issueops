@@ -8,11 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
+	issueopscontract "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -58,6 +59,9 @@ func persistExecutionTransition(stateRoot string, record issueops.IssueOpsRecord
 }
 
 func persistExecutionTransitionWithMutations(stateRoot string, record issueops.IssueOpsRecord, previousHolder *issueops.NativeActor, extra []port.RecordMutation) (issueops.IssueOpsRecord, error) {
+	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
+	}
 	encoded, data, err := encodeIssueOpsRecord(record)
 	if err != nil {
 		return encoded, err
@@ -66,7 +70,15 @@ func persistExecutionTransitionWithMutations(stateRoot string, record issueops.I
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
 	}
-	mutations := []port.RecordMutation{{Bucket: issueOpsBucket, ID: encoded.ID, Data: data}}
+	raw, found, err := mutableIssueOpsRaw(db, encoded.ID)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
+	}
+	expected := []port.ExpectedRecord{}
+	if found {
+		expected = append(expected, port.ExpectedRecord{Bucket: issueOpsBucket, ID: encoded.ID, Data: raw})
+	}
+	mutations := []port.RecordMutation{{Bucket: issueOpsBucket, ID: encoded.ID, Data: data, RequireAbsent: !found}}
 	if previousHolder != nil {
 		mutation, err := leaseIndexDeleteMutation(db, encoded.ID, *previousHolder)
 		if err != nil {
@@ -104,7 +116,7 @@ func persistExecutionTransitionWithMutations(stateRoot string, record issueops.I
 		}
 	}
 	mutations = append(mutations, extra...)
-	if err := db.Apply(context.Background(), mutations); err != nil {
+	if err := db.CompareAndApply(context.Background(), expected, mutations); err != nil {
 		return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
 	}
 	return encoded, nil
@@ -115,10 +127,21 @@ func persistExecutionTransitionWithMutations(stateRoot string, record issueops.I
 // holderless claimable 상태를 유지하므로 lease-holder reverse index transition을
 // 여기로 옮기지 않는다.
 func persistExecutionTransitionWithRawCAS(stateRoot string, record issueops.IssueOpsRecord, expected []port.ExpectedRecord, extra []port.RecordMutation) (issueops.IssueOpsRecord, error) {
+	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
+	}
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
 	}
+	raw, found, err := mutableIssueOpsRaw(db, record.ID)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, err
+	}
+	if !found {
+		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, fmt.Errorf("stale raw record snapshot")
+	}
+	expected = append(append([]port.ExpectedRecord(nil), expected...), port.ExpectedRecord{Bucket: issueOpsBucket, ID: record.ID, Data: raw})
 	var encoded issueops.IssueOpsRecord
 	if err := db.CompareAndApplyFunc(context.Background(), expected, func() ([]port.RecordMutation, error) {
 		var data []byte

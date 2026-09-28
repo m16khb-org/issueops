@@ -362,6 +362,7 @@ type IssueOpsRecord struct {
 	Execution               *Execution                          `json:"execution,omitempty"`
 	RemoteCompletion        *IssueOpsRemoteCompletion           `json:"remote_completion,omitempty"`
 	SourceMisdirectWarnings int                                 `json:"source_misdirect_warnings,omitempty"`
+	CleanupFinishAttempt    *IssueOpsCleanupFinishAttempt       `json:"cleanup_finish_attempt,omitempty"`
 	CleanupFinishFailure    *IssueOpsCleanupFinishFailure       `json:"cleanup_finish_failure,omitempty"`
 	LinkedBranchCleanup     *IssueOpsLinkedBranchCleanup        `json:"linked_branch_cleanup,omitempty"`
 	CleanupAbandonFailure   *IssueOpsCleanupAbandonFailure      `json:"cleanup_abandon_failure,omitempty"`

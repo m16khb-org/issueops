@@ -14,6 +14,7 @@ import (
 	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	issueopsdomain "issueops/internal/domain/issueops"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
@@ -52,6 +53,9 @@ func (repository *SQLiteRepository) Load(_ context.Context, id string) (preparat
 	}
 	record, err := recordcodec.DecodeLease(id, data)
 	if err != nil {
+		return preparationcontract.Snapshot{}, err
+	}
+	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
 		return preparationcontract.Snapshot{}, err
 	}
 	return preparationcontract.Snapshot{
@@ -266,6 +270,9 @@ func preparationDeliveryReceipt(receipt preparationcontract.IntentReceipt) port.
 }
 
 func (repository *SQLiteRepository) compareAndApply(ctx context.Context, state preparationapp.IntentState, mutations []port.RecordMutation) error {
+	if err := recordcodec.RequireMutableLeaseSnapshot(state.Snapshot.Record, state.Snapshot.RecordRaw); err != nil {
+		return err
+	}
 	store, ok := repository.store.(port.RecordCASStore)
 	if !ok {
 		return fmt.Errorf("preparation record store does not support raw CAS")

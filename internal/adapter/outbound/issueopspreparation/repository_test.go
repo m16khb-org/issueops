@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	preparationapp "issueops/internal/application/issueopspreparation"
+	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
@@ -208,4 +209,23 @@ func (store *preparationStore) seedRecord(t *testing.T, record leasecontract.Rec
 
 func (store *preparationStore) mustGet(bucket, id string) []byte {
 	return append([]byte(nil), store.rows[bucket][id]...)
+}
+
+func TestPreparationRefusesExistingFinishAttempt(t *testing.T) {
+	store := newPreparationStore()
+	record := repositoryRecord("io-prepare", "/repo", "199-prepare")
+	record.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	store.seedRecord(t, record)
+	before := append([]byte(nil), store.mustGet(recordBucket, record.ID)...)
+	repository := NewSQLiteRepository(store)
+	if _, err := repository.Load(context.Background(), record.ID); err == nil || !strings.Contains(err.Error(), "cleanup finish") {
+		t.Errorf("loaded armed preparation: %v", err)
+	}
+	commit := directRepositoryCommit(preparationcontract.Snapshot{Record: record, RecordRaw: before})
+	if _, err := repository.CommitDirect(context.Background(), commit); err == nil || !strings.Contains(err.Error(), "cleanup finish") {
+		t.Errorf("committed armed preparation: %v", err)
+	}
+	if !reflect.DeepEqual(before, store.mustGet(recordBucket, record.ID)) || len(store.applies) != 0 {
+		t.Fatal("preparation changed record or index")
+	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
+	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	"issueops/internal/port"
 )
@@ -206,3 +207,54 @@ func reseedRepositoryRecord() leasecontract.Record {
 }
 
 var _ leaseapp.ReseedRepository = (*ReseedRepository)(nil)
+
+func TestReseedRefusesFreshlyReadFinishAttempt(t *testing.T) {
+	db, err := sqlstore.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := reseedRepositoryRecord()
+	record.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	raw, err := leasecontract.Encode(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Put(recordBucket, record.ID, raw); err != nil {
+		t.Fatal(err)
+	}
+	repository := NewReseedRepository(db)
+	if _, err := repository.LoadSnapshot(context.Background(), record.ID); err == nil || !strings.Contains(err.Error(), "cleanup finish") {
+		t.Errorf("loaded armed mutation snapshot: %v", err)
+	}
+	snapshot := leaseapp.ReseedSnapshot{Record: toApplicationRecord(record), Raw: raw}
+	next := snapshot.Record
+	next.Stable.Execution.Lease.Generation = 2
+	next.Lease = next.Stable.Execution.Lease
+	if _, err := repository.CommitReseed(context.Background(), snapshot, next); err == nil || !strings.Contains(err.Error(), "cleanup finish") {
+		t.Errorf("fresh armed CAS accepted: %v", err)
+	}
+	got, found, err := db.Get(recordBucket, record.ID)
+	if err != nil || !found || !bytes.Equal(got, raw) {
+		t.Fatal("reseed changed armed record")
+	}
+}
+
+func TestReseedCannotRestoreDrainedFinishAttempt(t *testing.T) {
+	record := reseedRepositoryRecord()
+	_, db := newResumeRepositoryStore(t, record)
+	repository := NewReseedRepository(db)
+	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	next := snapshot.Record
+	next.Stable.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	_, err = repository.CommitReseed(context.Background(), snapshot, next)
+	if err == nil || !strings.Contains(err.Error(), "cleanup finish") {
+		t.Fatalf("restored attempt: %v", err)
+	}
+	got, found, err := db.Get(recordBucket, record.ID)
+	if err != nil || !found || !bytes.Equal(got, snapshot.Raw) {
+		t.Fatalf("record changed: %v", err)
+	}
+}

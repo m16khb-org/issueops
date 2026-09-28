@@ -8,6 +8,7 @@ import (
 	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	issueopsdomain "issueops/internal/domain/issueops"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
 )
@@ -35,7 +36,7 @@ func (r *ReseedRepository) LoadSnapshot(_ context.Context, id string) (leaseapp.
 	if !ok {
 		return leaseapp.ReseedSnapshot{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", id))
 	}
-	record, err := decodeLeaseRecord(id, data)
+	record, err := decodeMutableLeaseRecord(id, data)
 	if err != nil {
 		return leaseapp.ReseedSnapshot{}, err
 	}
@@ -48,6 +49,9 @@ func (r *ReseedRepository) LoadSnapshot(_ context.Context, id string) (leaseapp.
 func (r *ReseedRepository) CommitReseed(ctx context.Context, snapshot leaseapp.ReseedSnapshot, next leaseapp.Record) (leaseapp.RepositoryResult, error) {
 	if r == nil || r.store == nil {
 		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
+	}
+	if err := issueopsdomain.RequireNoFinishAttempt(next.Stable.CleanupFinishAttempt); err != nil {
+		return leaseapp.RepositoryResult{}, err
 	}
 	var result leaseapp.RepositoryResult
 	var operationErr error
@@ -65,7 +69,7 @@ func (r *ReseedRepository) CommitReseed(ctx context.Context, snapshot leaseapp.R
 			operationErr = fmt.Errorf("stale raw record snapshot")
 			return operationErr
 		}
-		current, err := decodeLeaseRecord(snapshot.Record.ID, data)
+		current, err := decodeMutableLeaseRecord(snapshot.Record.ID, data)
 		if err != nil {
 			operationErr = err
 			return err

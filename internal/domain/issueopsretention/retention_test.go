@@ -24,3 +24,15 @@ func TestIsPrunableRequiresResolvedIssueCreateIntent(t *testing.T) {
 		t.Fatal("completed issue-create intent may be pruned after the cutoff")
 	}
 }
+
+func TestPruneRetainsFinishAttemptRegardlessOfAge(t *testing.T) {
+	cutoff := time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC)
+	record := issueopscontract.IssueOpsRecord{Phase: issueopscontract.IssueOpsPhaseDone, UpdatedAt: "2000-01-01T00:00:00Z", CleanupFinishAttempt: &issueopscontract.IssueOpsCleanupFinishAttempt{Token: "pending", StartedAt: "2000-01-01T00:00:00Z"}}
+	if IsPrunable(record, cutoff) {
+		t.Fatal("retention discarded finish recovery authority")
+	}
+	record.CleanupFinishAttempt = nil
+	if !IsPrunable(record, cutoff) {
+		t.Fatal("drained old record cannot be pruned")
+	}
+}

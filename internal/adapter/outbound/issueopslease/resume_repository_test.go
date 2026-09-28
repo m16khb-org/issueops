@@ -204,7 +204,7 @@ func TestResumeRepositoryRecordFailureUsesRawCASAndAdoptsRequestIDs(t *testing.T
 	if err != nil || !ok {
 		t.Fatalf("record: present=%v err=%v", ok, err)
 	}
-	record, err := decodeLeaseRecord(state.Progress.Record.ID, data)
+	record, err := decodeMutableLeaseRecord(state.Progress.Record.ID, data)
 	if err != nil {
 		t.Fatal(err)
 	}

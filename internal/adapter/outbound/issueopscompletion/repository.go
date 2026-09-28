@@ -12,6 +12,7 @@ import (
 	completionapp "issueops/internal/application/issueopscompletion"
 	completioncontract "issueops/internal/contract/issueopscompletion"
 	leasecontract "issueops/internal/contract/issueopslease"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -53,6 +54,9 @@ func updateWithinSpan(ctx context.Context, store port.TransactionalRecordStore, 
 	}
 	record, err := recordcodec.DecodeLease(id, data)
 	if err != nil {
+		return completionapp.RepositoryResult{}, err
+	}
+	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
 		return completionapp.RepositoryResult{}, err
 	}
 	before, err := snapshot(record)

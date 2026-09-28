@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	leasecontract "issueops/internal/contract/issueopslease"
+	issueopsdomain "issueops/internal/domain/issueops"
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
@@ -15,6 +16,9 @@ func ClaimWithinTransaction(ctx context.Context, transaction ClaimTransaction, r
 	}
 	if before.Stable.Execution == nil {
 		return RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
+	}
+	if err := issueopsdomain.RequireNoFinishAttempt(before.Stable.CleanupFinishAttempt); err != nil {
+		return RepositoryResult{}, leasedomain.Deny(leasedomain.DenyLeaseClaimable, err)
 	}
 	lease := toDomainLease(before.Lease)
 	if leasedomain.IsClaimRetry(lease, request.Generation, request.Actor) {

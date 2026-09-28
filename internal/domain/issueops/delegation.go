@@ -148,6 +148,9 @@ func PrepareChildStart(req model.IssueOpsChildStartRequest) (model.IssueOpsChild
 }
 
 func ValidateChildMutation(child model.IssueOpsRecord) error {
+	if err := RequireNoFinishAttempt(child.CleanupFinishAttempt); err != nil {
+		return err
+	}
 	if child.CleanupAbandonFailure != nil && child.CleanupAbandonFailure.Step == "applying" {
 		return fmt.Errorf("cleanup abandon apply is in progress")
 	}

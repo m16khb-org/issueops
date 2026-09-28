@@ -44,7 +44,7 @@ func (r *ResumeRepository) LoadSnapshot(_ context.Context, id string, generation
 	if !ok {
 		return leaseapp.ResumeSnapshot{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", id))
 	}
-	record, err := decodeLeaseRecord(id, data)
+	record, err := decodeMutableLeaseRecord(id, data)
 	if err != nil {
 		return leaseapp.ResumeSnapshot{}, err
 	}
@@ -58,6 +58,9 @@ func (r *ResumeRepository) LoadSnapshot(_ context.Context, id string, generation
 }
 
 func (r *ResumeRepository) BeginIntent(ctx context.Context, snapshot leaseapp.ResumeSnapshot, artifacts leasecontract.ResumeArtifacts, plan leasedomain.ResumePlan, operationID string) (leaseapp.ResumeProgress, error) {
+	if err := recordcodec.RequireMutableLeaseSnapshot(snapshot.Record.Stable, snapshot.Raw); err != nil {
+		return leaseapp.ResumeProgress{}, err
+	}
 	if r == nil || r.store == nil {
 		return leaseapp.ResumeProgress{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
 	}
@@ -98,7 +101,7 @@ func (r *ResumeRepository) BeginIntent(ctx context.Context, snapshot leaseapp.Re
 	if !ok {
 		return leaseapp.ResumeProgress{}, fmt.Errorf("issueops record %s not found", record.ID)
 	}
-	current, err := decodeLeaseRecord(record.ID, currentRaw)
+	current, err := decodeMutableLeaseRecord(record.ID, currentRaw)
 	if err != nil {
 		return leaseapp.ResumeProgress{}, err
 	}
@@ -154,7 +157,7 @@ func (r *ResumeRepository) LoadIntent(_ context.Context, progress leaseapp.Resum
 	if !ok {
 		return leaseapp.ResumeIntentState{}, fmt.Errorf("issueops record %s not found", progress.Record.ID)
 	}
-	record, err := decodeLeaseRecord(progress.Record.ID, recordRaw)
+	record, err := decodeMutableLeaseRecord(progress.Record.ID, recordRaw)
 	if err != nil {
 		return leaseapp.ResumeIntentState{}, err
 	}
@@ -212,6 +215,9 @@ func (r *ResumeRepository) RecordFailure(ctx context.Context, intent leaseapp.Re
 }
 
 func (r *ResumeRepository) ApplyReceipt(ctx context.Context, intent leaseapp.ResumeIntentState, receipt leasecontract.ResumeStageReceipt) (leaseapp.ResumeProgress, error) {
+	if err := recordcodec.RequireMutableLeaseSnapshot(intent.Progress.Record.Stable, intent.RecordRaw); err != nil {
+		return leaseapp.ResumeProgress{}, err
+	}
 	if r == nil || r.store == nil {
 		return leaseapp.ResumeProgress{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
 	}

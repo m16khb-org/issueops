@@ -8031,6 +8031,7 @@
         "func decodeIssueOpsRecord",
         "func deleteIssueOps",
         "func encodeIssueOpsRecord",
+        "func mutableIssueOpsRaw",
         "func newIndependentIssueOpsID",
         "func newIssueOpsID",
         "func normalizeIssueOpsID",
@@ -9149,7 +9150,7 @@
         "func claimTransaction.Persist",
         "func claimTransaction.ReadToken",
         "func claimTransaction.RemoveToken",
-        "func decodeLeaseRecord",
+        "func decodeMutableLeaseRecord",
         "func holderIndexKey",
         "func toApplicationRecord",
         "func updateWithinSpan",
@@ -9258,6 +9259,14 @@
         "func Decode",
         "func Encode",
         "func NormalizeID"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/issueopsrecord/finish_fence.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func RequireMutableLeaseSnapshot"
       ]
     },
     {
@@ -12679,6 +12688,15 @@
       ]
     },
     {
+      "path": "internal/contract/issueops/cleanup_finish_attempt.go",
+      "owner": "contract",
+      "task": "T08",
+      "symbols": [
+        "func ValidateCleanupFinishAttempt",
+        "type IssueOpsCleanupFinishAttempt"
+      ]
+    },
+    {
       "path": "internal/contract/issueops/cleanup_finish_inventory.go",
       "owner": "contract",
       "task": "T08",
@@ -14335,6 +14353,14 @@
         "func PreparedBaseRef",
         "func ValidateCleanupSupersedeInput",
         "type CleanupFinishObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_finish_attempt.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func RequireNoFinishAttempt"
       ]
     },
     {

@@ -50,6 +50,11 @@
     "role": "codec"
   },
   {
+    "path": "internal/contract/issueops/cleanup_finish_attempt.go",
+    "symbol": "func ValidateCleanupFinishAttempt",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/issueops/execution_base_sync_error.go",
     "symbol": "func BaseSyncRequiredError.Error",
     "role": "error"
