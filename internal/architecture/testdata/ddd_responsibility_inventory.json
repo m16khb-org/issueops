@@ -1269,6 +1269,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_issue_reconcile_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newIssueReconciler",
+        "func reconcileIssueCreate"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_next_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -2410,7 +2419,6 @@
         "func Deps.printResult",
         "func Deps.verifyLive",
         "func Run",
-        "func durableIssueCreateFailure",
         "func firstNonEmptyMain",
         "func formatIssueOpsRemoteIssueRef",
         "func normalizeRemoteCreateMetadata",
@@ -2474,7 +2482,14 @@
       "task": "T20",
       "symbols": [
         "func rejectSecretLikeRemoteCreateInputs",
-        "func runRemoteCreateIssue",
+        "func runRemoteCreateIssue"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_issue_reconcile.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
         "func runRemoteReconcileIssue"
       ]
     },
@@ -7504,10 +7519,20 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/issue_create_candidates.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func IssueCreateCandidateSource.Find",
+        "type IssueCreateCandidateSource"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/issue_create_intent_store.go",
       "owner": "adapter",
       "task": "T07",
       "symbols": [
+        "func IssueCreateIntentStore.Read",
         "func IssueCreateIntentStore.Update",
         "type IssueCreateIntentStore"
       ]
@@ -11513,6 +11538,14 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/issue_create_failure.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func IssueCreateFailure"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/issue_create_intents.go",
       "owner": "application",
       "task": "T07",
@@ -11524,6 +11557,20 @@
         "func NewIssueCreateIntents",
         "func issueCreateProject",
         "type IssueCreateIntents"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/issue_reconcile.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func IssueReconciler.Reconcile",
+        "func IssueReconciler.recordFailure",
+        "func NewIssueReconciler",
+        "type IssueCandidateSource",
+        "type IssueLiveVerifier",
+        "type IssueReconciler",
+        "type IssueRecordReader"
       ]
     },
     {
@@ -14067,6 +14114,16 @@
       "task": "T02",
       "symbols": [
         "func ValidateIssueCreateTransition"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/issue_reconcile.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ValidateIssueReconcileCandidate",
+        "func ValidateIssueReconcileIntent",
+        "func ValidateIssueReconcileSearch"
       ]
     },
     {
@@ -19739,14 +19796,50 @@
       "source_symbol": "func runRemoteReconcileIssue",
       "responsibility": "locate and verify an existing provider issue before adopting a pending creation intent without duplicate creation",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func IssueReconciler.Reconcile",
       "task": "T07",
       "entrypoints": [
         "issueops remote reconcile-issue"
       ],
       "evidence_tests": [
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go",
+        "cmd/issueops/issueopsapp/issueops_issue_reconcile_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-reconcile-candidate-rules",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_issue.go",
+      "source_symbol": "func runRemoteReconcileIssue",
+      "responsibility": "require sealed project authority, title and body digest before adopting a unique complete candidate search",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateIssueReconcileCandidate",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reconcile-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/issue_reconcile_test.go",
         "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
+    },
+    {
+      "id": "issue-create-durable-failure",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote.go",
+      "source_symbol": "func durableIssueCreateFailure",
+      "responsibility": "redact and bound provider diagnostics before persisting issue creation failure evidence",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func IssueCreateFailure",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reconcile-issue"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsremote/issue_create_failure_test.go",
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }

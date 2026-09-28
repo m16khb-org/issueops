@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+	"issueops/internal/adapter/provider"
 	"time"
 
 	"issueops/cmd/issueops/issueopscli/remotecmd"
@@ -16,6 +17,11 @@ import (
 func wireRemoteForTests() {
 
 	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
+		ReconcileIssueCreate: func(ctx context.Context, root, id string, confirm bool, verify remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error) {
+			store := issueopscore.IssueCreateIntentStore{StateRoot: root}
+			return remoteapp.NewIssueReconciler(store, issueopscore.IssueCreateCandidateSource{Resolve: provider.Resolve}, newIssueIntentsForTest(root), verify, time.Now).Reconcile(ctx, id, confirm)
+		},
+
 		BeginIssueCreateIntent: func(root, id string, request issueopscontract.IssueOpsIssueCreateIntentRequest) (issueopscontract.IssueOpsRecord, error) {
 			return newIssueIntentsForTest(root).Begin(context.Background(), id, request)
 		},

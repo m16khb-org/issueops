@@ -223,6 +223,8 @@
 
 - **부분 진행 — 이슈 생성 intent:** 시작·결과 기록·완료의 상태 전이와 봉인된 요청 비교를 `domain/issueops`로 이전했다. 기존 생성 전이 정책도 같은 aggregate 패키지로 옮겼으며 URL 검증은 연결과 생성 완료가 공유한다. `application/issueopsremote.IssueCreateIntents`가 typed Update를 통해 최신 record의 전이와 시간을 조율하고, adapter는 잠금·조회·codec·저장만 맡는다. 기존 adapter lifecycle 함수는 삭제했다. 실제 SQLite에서 6개 동시 시작 중 1회만 성공, 변경된 요청 재시도 거부 시 원본 보존, encoding 실패 시 부분 연결 방지를 확인했다. root wiring과 CLI create/reconcile 테스트, 전체 Go suite, 관련 race·vet·build 및 architecture가 통과했다(`full-suite-issue-create-intents.txt`). 봉인 요청 비교를 우회한 overlay에서 실제 저장소 테스트가 실패했다(`issue-create-sealed-retry-mutation.txt`). CLI의 생성·재조정 조율은 아직 남아 있어 정책 원장에 별도 `migrate` 항목으로 기록했으며 T07은 미완료다.
 
+- **부분 진행 — 이슈 생성 재조정:** `IssueReconciler`가 후보 조회·실물 검증·실패 기록·완료 저장을 조율하고, `domain/issueops`가 미완료 intent, 완전한 단일 후보 검색, 봉인된 프로젝트·제목·본문 digest 일치를 판정한다. 기존 CLI 조율 코드는 삭제하고 별도 transport 파일에 옵션 파싱·출력만 남겼다. provider resolver와 후보 조회 capability는 adapter가 맡으며, 생성·재조정 실패 진단의 redaction/길이 제한은 application의 한 함수로 통합했다. 실제 SQLite composition 테스트로 미리보기 무변경, 검증 실패의 민감정보 제거, 후속 복구와 완료 후 재조회 방지를 확인했다. 실제 CLI/provider subprocess 테스트로 변경된 제목·본문을 실물 검증 전에 거부하고 confirm 여부에 따라 실패 기록을 구분하는 것을 확인했다. 내용 비교를 우회한 overlay에서 두 CLI 시나리오가 실패했다(`issue-reconcile-content-mutation.txt`). 초기 architecture 검사가 발견한 다른 domain 계약 의존성을 제거한 뒤 architecture, 전체 Go suite, 관련 race·vet·build가 통과했다(`full-suite-issue-reconcile.txt`). 생성 명령의 봉인·호출·실패 분류·영수증 조율과 원격 완료 반영은 남아 있으므로 T07은 미완료다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료

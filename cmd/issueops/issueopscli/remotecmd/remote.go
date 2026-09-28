@@ -7,7 +7,6 @@ import (
 	"fmt"
 	artifacttemplate "issueops/internal/domain/artifacttemplate"
 	issueopsremote "issueops/internal/domain/issueopsremote"
-	policydomain "issueops/internal/domain/policy"
 	port "issueops/internal/port"
 	"os"
 	"strings"
@@ -358,18 +357,6 @@ func (deps Deps) verifyLive(ctx context.Context, req issueopscontract.IssueOpsRe
 		return deps.VerifyLive(req)
 	}
 	return fmt.Errorf("live remote artifact verifier is not configured")
-}
-
-func durableIssueCreateFailure(err error) string {
-	if err == nil {
-		return ""
-	}
-	const maxBytes = 2048
-	diagnostic := policydomain.RedactDiagnostic(strings.TrimSpace(err.Error()))
-	if len(diagnostic) > maxBytes {
-		diagnostic = diagnostic[:maxBytes]
-	}
-	return diagnostic
 }
 
 func parseFlags(fs *flag.FlagSet, args []string) (bool, error) {

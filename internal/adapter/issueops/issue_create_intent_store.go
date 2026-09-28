@@ -9,6 +9,10 @@ import (
 
 type IssueCreateIntentStore struct{ StateRoot string }
 
+func (s IssueCreateIntentStore) Read(_ context.Context, id string) (model.IssueOpsRecord, error) {
+	return ReadIssueOps(s.StateRoot, id)
+}
+
 func (s IssueCreateIntentStore) Update(ctx context.Context, id string, transition application.IssueIntentTransition) (model.IssueOpsRecord, error) {
 	var persisted model.IssueOpsRecord
 	err := withIssueOpsLock(ctx, s.StateRoot, id, func(context.Context) error {

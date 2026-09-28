@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	remoteapp "issueops/internal/application/issueopsremote"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
@@ -19,6 +20,7 @@ var remoteDeps = neutralRemoteDeps()
 
 // RemoteDeps는 composition root가 실제 어댑터를 꽂는 진입점이다.
 type RemoteDeps struct {
+	ReconcileIssueCreate               func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error)
 	BeginIssueCreateIntent             func(stateRoot, id string, request issueopscontract.IssueOpsIssueCreateIntentRequest) (issueopscontract.IssueOpsRecord, error)
 	CloseIssueOpsRemoteIssue           func(stateRoot, id string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error)
 	CompleteIssueCreateIntent          func(stateRoot, id, issueURL, completedAt string) (issueopscontract.IssueOpsRecord, error)
@@ -52,6 +54,9 @@ type RemoteDeps struct {
 
 // ConfigureRemote는 composition root가 실제 구현을 꽂는 진입점이다.
 func ConfigureRemote(deps RemoteDeps) {
+	if deps.ReconcileIssueCreate != nil {
+		remoteDeps.ReconcileIssueCreate = deps.ReconcileIssueCreate
+	}
 	if deps.BeginIssueCreateIntent != nil {
 		remoteDeps.BeginIssueCreateIntent = deps.BeginIssueCreateIntent
 	}
@@ -138,6 +143,9 @@ func ConfigureRemote(deps RemoteDeps) {
 // 배선 누락이 패닉이 아니라 명시적 오류로 드러나도록 중립 기본값을 둔다.
 func neutralRemoteDeps() RemoteDeps {
 	return RemoteDeps{
+		ReconcileIssueCreate: func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error) {
+			return issueopscontract.IssueOpsIssueCreateReconcileResult{}, errRemoteNotConfigured
+		},
 		BeginIssueCreateIntent: func(stateRoot, id string, request issueopscontract.IssueOpsIssueCreateIntentRequest) (issueopscontract.IssueOpsRecord, error) {
 			return issueopscontract.IssueOpsRecord{}, errRemoteNotConfigured
 		},

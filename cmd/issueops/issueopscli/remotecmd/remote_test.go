@@ -571,19 +571,6 @@ func TestRemoteHelpersAndBoundaries(t *testing.T) {
 	}
 }
 
-func TestDurableIssueCreateFailureRedactsAndCapsDiagnostics(t *testing.T) {
-	got := durableIssueCreateFailure(errors.New(
-		"token=super-secret https://internal.example/path " + strings.Repeat("x", 4096),
-	))
-
-	if strings.Contains(got, "super-secret") || strings.Contains(got, "internal.example") {
-		t.Fatalf("durable diagnostic was not redacted: %q", got)
-	}
-	if len(got) > 2048 {
-		t.Fatalf("durable diagnostic length = %d, want <= 2048", len(got))
-	}
-}
-
 func TestReflectDevilsAdvocateAcceptsHolderActorFlags(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	err := Run([]string{
@@ -932,6 +919,49 @@ func TestRunRemoteReconcileIssueRejectsTruncatedAndForeignProjectCandidates(t *t
 		},
 	}); err == nil || !strings.Contains(err.Error(), "sealed authority") {
 		t.Fatalf("error = %v, want foreign project rejection", err)
+	}
+}
+
+func TestRunRemoteReconcileIssueRejectsChangedContentBeforeVerification(t *testing.T) {
+	for _, field := range []string{"title", "body"} {
+		t.Run(field, func(t *testing.T) {
+			t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+			record, body := remoteIssueOpsRecordWithCreateIntent(t)
+			binDir := t.TempDir()
+			writeFakeGhForReconcileIssue(t, binDir)
+			t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+			row := map[string]string{"url": "https://github.com/acme/repo/issues/77", "title": "Title", "body": body}
+			row[field] += " edited"
+			raw, err := json.Marshal([]map[string]string{row})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("RECONCILE_JSON", string(raw))
+			for _, confirm := range []bool{false, true} {
+				args := []string{"reconcile-issue", "--id", record.ID, "--json"}
+				if confirm {
+					args = append(args, "--confirm")
+				}
+				err := Run(args, Deps{PrintError: func(error) error { return nil }, VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+					t.Fatal("modified candidate verified")
+					return nil
+				}})
+				if err == nil || !strings.Contains(err.Error(), "title and body digest") {
+					t.Fatalf("confirm=%t: %v", confirm, err)
+				}
+				stored, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := issueopscontract.IssueCreateIntentPending
+				if confirm {
+					want = issueopscontract.IssueCreateIntentVerificationFailed
+				}
+				if stored.IssueURL != "" || stored.IssueCreateIntent.Status != want {
+					t.Fatalf("confirm=%t: %+v", confirm, stored.IssueCreateIntent)
+				}
+			}
+		})
 	}
 }
 

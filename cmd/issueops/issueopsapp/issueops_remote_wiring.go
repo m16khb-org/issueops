@@ -13,6 +13,7 @@ import (
 // root 하나뿐이다.
 func configureIssueOpsRemote() {
 	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
+		ReconcileIssueCreate:      reconcileIssueCreate,
 		BeginIssueCreateIntent:    beginIssueCreateIntent,
 		CloseIssueOpsRemoteIssue:  issueopscore.CloseIssueOpsRemoteIssue,
 		CompleteIssueCreateIntent: completeIssueCreateIntent,
