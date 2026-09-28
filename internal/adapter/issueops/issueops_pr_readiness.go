@@ -70,7 +70,7 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 func issueOpsBaseImplementationMissing(record issueops.IssueOpsRecord) []string {
 	missing := issueOpsBranchEvidenceMissing(record)
 	missing = append(missing, issueopsdomain.IntentMissing(record)...)
-	missing = append(missing, issueOpsDesignReviewMissing(record)...)
+	missing = append(missing, cycleapp.DesignReviewMissing(record)...)
 	if strings.TrimSpace(record.PlanPath) == "" {
 		missing = append(missing, "plan_path")
 	}

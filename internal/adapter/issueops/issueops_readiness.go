@@ -9,7 +9,6 @@ import (
 	"issueops/internal/adapter/issueops/readinesspaths"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
-	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/stringlist"
 )
 
@@ -204,41 +203,6 @@ func issueOpsPlanInLinkedWorktree(record issueops.IssueOpsRecord) bool {
 
 func issueOpsPlanPathInsideWorktree(worktree, planPath string) bool {
 	return readinesspaths.PlanPathInsideWorktree(worktree, planPath)
-}
-
-func issueOpsDesignReviewMissing(record issueops.IssueOpsRecord) []string {
-	if record.DesignReview == nil {
-		return []string{"design_review"}
-	}
-	missing := []string{}
-	if strings.TrimSpace(record.DesignReview.ProblemSummary) == "" {
-		missing = append(missing, "problem_summary")
-	}
-	if strings.TrimSpace(record.DesignReview.ProposedDesign) == "" {
-		missing = append(missing, "proposed_design")
-	}
-	if len(cleanIssueOpsTextValues(record.DesignReview.Verification)) == 0 {
-		missing = append(missing, "design_verification")
-	}
-	if record.DesignReview.Approved && !reviewdomain.HasDesignReviewEvidence(record.DesignReview.Verification) {
-		missing = append(missing, "design_review_evidence")
-	}
-	if !record.DesignReview.Approved {
-		missing = append(missing, "design_approval")
-	}
-	if len(cleanIssueOpsTextValues(record.DesignReview.OpenQuestions)) > 0 {
-		missing = append(missing, "design_open_questions")
-	}
-	if record.DesignReview.Approved && strings.TrimSpace(record.DesignReview.RefactorPlan) == "" {
-		missing = append(missing, "refactor_plan")
-	}
-	if record.DesignReview.Approved && len(cleanIssueOpsTextValues(record.DesignReview.Alternatives)) == 0 {
-		missing = append(missing, "alternatives")
-	}
-	if record.DesignReview.Approved && len(cleanIssueOpsTextValues(record.DesignReview.Risks)) == 0 {
-		missing = append(missing, "risks")
-	}
-	return missing
 }
 
 func issueOpsCurrentHead(record issueops.IssueOpsRecord) string {

@@ -17,6 +17,7 @@ import (
 	"issueops/internal/adapter/issueops/intentdesign"
 	"issueops/internal/adapter/issueops/linking"
 	"issueops/internal/adapter/issueops/start"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
 	remote "issueops/internal/domain/issueopsremote"
@@ -617,7 +618,7 @@ func issueOpsLinkingStore() linking.Store {
 		PlanReadiness:          IssueOpsPlanReadiness,
 		PhaseRank:              issueOpsPhaseRank,
 		BranchEvidenceMissing:  issueOpsBranchEvidenceMissing,
-		DesignReviewMissing:    issueOpsDesignReviewMissing,
+		DesignReviewMissing:    cycleapp.DesignReviewMissing,
 		PlanPathExists:         issueOpsPlanPathExists,
 		PlanSectionsMissing:    issueOpsPlanSectionsMissing,
 		PlanPathInsideWorktree: issueOpsPlanPathInsideWorktree,

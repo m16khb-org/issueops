@@ -7992,7 +7992,6 @@
         "func IssueOpsPlanReadiness",
         "func issueOpsCompatibilityReviewMissing",
         "func issueOpsCurrentHead",
-        "func issueOpsDesignReviewMissing",
         "func issueOpsDevilsAdvocateDigestExempt",
         "func issueOpsDevilsAdvocateReviewMissing",
         "func issueOpsImplementationReadiness",
@@ -10995,6 +10994,14 @@
       "task": "T20",
       "symbols": [
         "func RefreshAISlopClean"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/design_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func DesignReviewMissing"
       ]
     },
     {
@@ -14549,6 +14556,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreview/design_readiness.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func DesignReviewMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsreview/devils_advocate.go",
       "owner": "domain",
       "task": "T03",
@@ -17331,6 +17346,24 @@
       "evidence_tests": [
         "internal/domain/issueops/intent_readiness_test.go",
         "internal/adapter/issueops/issueops_intent_design_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "design-review-readiness",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func issueOpsDesignReviewMissing",
+      "responsibility": "design review completion requires meaningful evidence, approval, resolved questions, plan, alternatives and risks",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func DesignReviewMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to implement",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreview/design_readiness_test.go",
+        "internal/adapter/issueops/issueops_readiness_test.go"
       ],
       "status": "migrated"
     }
