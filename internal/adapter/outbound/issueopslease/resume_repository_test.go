@@ -56,6 +56,23 @@ func TestResumeRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
 	}
 }
 
+func TestResumeRepositoryLoadsPendingIntentFromStore(t *testing.T) {
+	repository, state, store := seededResumeIntent(t)
+	loaded, err := repository.LoadIntent(context.Background(), state.Progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.OperationID != state.OperationID || loaded.Stage != state.Stage || string(loaded.RecordRaw) != string(state.RecordRaw) || string(loaded.IntentRaw) != string(state.IntentRaw) {
+		t.Fatalf("loaded=%+v", loaded)
+	}
+	if err := store.Apply(context.Background(), []port.RecordMutation{{Bucket: "external_intent_v1", ID: state.OperationID, Delete: true}}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.LoadIntent(context.Background(), state.Progress); err == nil || !strings.Contains(err.Error(), "Orca external intent payload is missing") {
+		t.Fatalf("missing intent error=%v", err)
+	}
+}
+
 func TestResumeRepositoryRecordFailureUsesRawCASAndAdoptsRequestIDs(t *testing.T) {
 	repository, state, store := seededResumeIntent(t)
 	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 0, 0, 0, time.UTC) }
@@ -193,9 +210,6 @@ type resumeEffectsFake struct{ beginErr error }
 
 func (f resumeEffectsFake) Begin(context.Context, leasecontract.Record, []byte, leasecontract.ResumeArtifacts, leasedomain.ResumePlan, string) (ResumeEffectState, error) {
 	return ResumeEffectState{}, f.beginErr
-}
-func (resumeEffectsFake) Read(context.Context, string, string) (ResumeEffectState, error) {
-	return ResumeEffectState{}, nil
 }
 func (resumeEffectsFake) ApplyReceipt(context.Context, ResumeEffectState, leasecontract.ResumeStageReceipt) (ResumeEffectState, error) {
 	return ResumeEffectState{}, nil

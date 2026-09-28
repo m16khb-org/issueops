@@ -19,7 +19,6 @@ import (
 
 type ResumeEffects interface {
 	Begin(context.Context, leasecontract.Record, []byte, leasecontract.ResumeArtifacts, leasedomain.ResumePlan, string) (ResumeEffectState, error)
-	Read(context.Context, string, string) (ResumeEffectState, error)
 	ApplyReceipt(context.Context, ResumeEffectState, leasecontract.ResumeStageReceipt) (ResumeEffectState, error)
 }
 
@@ -84,15 +83,41 @@ func (r *ResumeRepository) BeginIntent(ctx context.Context, snapshot leaseapp.Re
 	return resumeProgress(state), nil
 }
 
-func (r *ResumeRepository) LoadIntent(ctx context.Context, progress leaseapp.ResumeProgress) (leaseapp.ResumeIntentState, error) {
-	if r == nil || r.effects == nil || progress.Execution.Pending == nil {
+func (r *ResumeRepository) LoadIntent(_ context.Context, progress leaseapp.ResumeProgress) (leaseapp.ResumeIntentState, error) {
+	if r == nil || r.store == nil || progress.Execution.Pending == nil {
 		return leaseapp.ResumeIntentState{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume pending intent is required"))
 	}
-	state, err := r.effects.Read(ctx, progress.Record.ID, progress.Execution.Pending.OperationID)
+	recordRaw, ok, err := r.store.Get(recordBucket, progress.Record.ID)
 	if err != nil {
 		return leaseapp.ResumeIntentState{}, err
 	}
-	return resumeIntentState(state), nil
+	if !ok {
+		return leaseapp.ResumeIntentState{}, fmt.Errorf("issueops record %s not found", progress.Record.ID)
+	}
+	record, err := decodeLeaseRecord(progress.Record.ID, recordRaw)
+	if err != nil {
+		return leaseapp.ResumeIntentState{}, err
+	}
+	operationID := progress.Execution.Pending.OperationID
+	intentRaw, ok, err := r.store.Get("external_intent_v1", operationID)
+	if err != nil {
+		return leaseapp.ResumeIntentState{}, err
+	}
+	if !ok {
+		return leaseapp.ResumeIntentState{}, fmt.Errorf("Orca external intent payload is missing")
+	}
+	intent, err := (preparationcontract.IntentCodec{}).Decode(operationID, intentRaw)
+	if err != nil {
+		return leaseapp.ResumeIntentState{}, err
+	}
+	if err := preparationdomain.ValidateIntentRecord(record, intent); err != nil {
+		return leaseapp.ResumeIntentState{}, err
+	}
+	return leaseapp.ResumeIntentState{
+		Progress:    leaseapp.ResumeProgress{Record: toApplicationRecord(record), Execution: *record.Execution, Pending: record.Execution.Pending != nil},
+		OperationID: operationID, Stage: string(intent.Stage), InvocationState: intent.InvocationState,
+		InvocationAttempts: intent.InvocationAttempts, RecordRaw: append([]byte(nil), recordRaw...), IntentRaw: append([]byte(nil), intentRaw...),
+	}, nil
 }
 
 func (r *ResumeRepository) MarkInvoking(ctx context.Context, intent leaseapp.ResumeIntentState) (leaseapp.ResumeIntentState, error) {
@@ -222,10 +247,6 @@ func (r *ResumeRepository) ApplyReceipt(ctx context.Context, intent leaseapp.Res
 
 func resumeProgress(state ResumeEffectState) leaseapp.ResumeProgress {
 	return leaseapp.ResumeProgress{Record: toApplicationRecord(state.Record), Execution: *state.Record.Execution, Pending: state.Pending}
-}
-
-func resumeIntentState(state ResumeEffectState) leaseapp.ResumeIntentState {
-	return leaseapp.ResumeIntentState{Progress: resumeProgress(state), OperationID: state.OperationID, Stage: state.Stage, InvocationState: state.InvocationState, InvocationAttempts: state.InvocationAttempts, RecordRaw: append([]byte(nil), state.RecordRaw...), IntentRaw: append([]byte(nil), state.IntentRaw...)}
 }
 
 func resumeEffectState(intent leaseapp.ResumeIntentState) ResumeEffectState {

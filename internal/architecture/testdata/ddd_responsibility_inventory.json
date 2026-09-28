@@ -1417,7 +1417,6 @@
       "symbols": [
         "func coreResumeEffects.ApplyReceipt",
         "func coreResumeEffects.Begin",
-        "func coreResumeEffects.Read",
         "func coreResumeEffects.inspectStage",
         "func coreResumeEffects.invokeStage",
         "func coreResumeEffects.observeOwner",
@@ -9220,7 +9219,6 @@
         "func ResumeRepository.RecordFailure",
         "func ResumeRepository.boundedDiagnostic",
         "func resumeEffectState",
-        "func resumeIntentState",
         "func resumeProgress",
         "type ResumeEffectState",
         "type ResumeEffects",

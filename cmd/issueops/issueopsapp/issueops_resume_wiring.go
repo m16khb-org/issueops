@@ -76,14 +76,6 @@ func (e *coreResumeEffects) Begin(_ context.Context, record leasecontract.Record
 	return resumeEffectStateFromCore(state)
 }
 
-func (e *coreResumeEffects) Read(_ context.Context, id, operationID string) (leaseoutbound.ResumeEffectState, error) {
-	state, err := issueops.ReadExecutionResumeIntent(e.stateRoot, id, operationID)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	return resumeEffectStateFromCore(state)
-}
-
 func (e *coreResumeEffects) ApplyReceipt(ctx context.Context, state leaseoutbound.ResumeEffectState, receipt leasecontract.ResumeStageReceipt) (leaseoutbound.ResumeEffectState, error) {
 	coreState, err := resumeCoreIntentState(state)
 	if err != nil {
