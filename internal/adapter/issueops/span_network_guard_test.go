@@ -11,7 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	branchapp "issueops/internal/application/issueopsbranch"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 
 	_ "modernc.org/sqlite"
@@ -234,10 +237,10 @@ func TestBranchRetargetObservesRemoteOutsideTheSpan(t *testing.T) {
 	log := installSpanProbingGit(t, stateRoot, false)
 
 	readbackState := ""
-	updated, err := RetargetIssueOpsBranchWithActor(stateRoot, record.ID, issueops.IssueOpsBranchRetargetRequest{
+	updated, err := retargetForTest(stateRoot, record.ID, issueops.IssueOpsBranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "child MR retargeted to the umbrella",
-	}, IssueOpsActor{}, BranchRetargetDeps{
-		ObserveArtifactTargetBranch: func(issueops.IssueOpsRemoteArtifactVerification) (string, error) {
+	}, IssueOpsActor{}, branchapp.Retargeter{
+		TargetBranch: func(issueops.IssueOpsRemoteArtifactVerification) (string, error) {
 			readbackState = spanLockState(lockDB)
 			return "2803-umbrella", nil
 		},
@@ -263,10 +266,10 @@ func TestBranchRetargetRejectsAnArtifactThatChangedAfterObservation(t *testing.T
 		t.Fatalf("create the retarget branch on origin: %s", stderr)
 	}
 	record := retargetReadyRecord(t, stateRoot, repo)
-	_, err := RetargetIssueOpsBranchWithActor(stateRoot, record.ID, issueops.IssueOpsBranchRetargetRequest{
+	_, err := retargetForTest(stateRoot, record.ID, issueops.IssueOpsBranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "child MR retargeted to the umbrella",
-	}, IssueOpsActor{}, BranchRetargetDeps{
-		ObserveArtifactTargetBranch: func(issueops.IssueOpsRemoteArtifactVerification) (string, error) {
+	}, IssueOpsActor{}, branchapp.Retargeter{
+		TargetBranch: func(issueops.IssueOpsRemoteArtifactVerification) (string, error) {
 			// 관측 도중 다른 쓰기가 artifact를 바꾼다.
 			changed, readErr := ReadIssueOps(stateRoot, record.ID)
 			if readErr != nil {
@@ -342,4 +345,12 @@ func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.IssueOps
 		t.Fatal(err)
 	}
 	return written
+}
+
+func retargetForTest(root, id string, req issueops.IssueOpsBranchRetargetRequest, actor IssueOpsActor, service branchapp.Retargeter) (issueops.IssueOpsRecord, error) {
+	service.Records = CycleRecordStore{StateRoot: root}
+	service.Authority = cycleapp.NewMutationAuthority(samePath)
+	service.OriginPresent = OriginBranchPresent
+	service.Now = time.Now
+	return service.Retarget(context.Background(), id, req, actor)
 }

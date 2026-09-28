@@ -42,9 +42,7 @@ func configureIssueOpsCLIRuntime() {
 		ObserveNativeProcessAncestry:   issueopscore.ObserveNativeProcessAncestry,
 		PrepareIssueOpsBranchWithActor: issueopscore.PrepareIssueOpsBranchWithActor,
 		RetargetIssueOpsBranchWithActor: func(stateRoot, id string, req issueopscontract.IssueOpsBranchRetargetRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return issueopscore.RetargetIssueOpsBranchWithActor(stateRoot, id, req, actor, issueopscore.BranchRetargetDeps{
-				ObserveArtifactTargetBranch: remoteverify.ObserveRemoteArtifactTargetLive,
-			})
+			return newBranchRetargeter(stateRoot, remoteverify.ObserveRemoteArtifactTargetLive).Retarget(context.Background(), id, req, actor)
 		},
 		AwaitIssueOpsBranchLink: func(ctx context.Context, stateRoot string, req issueopscontract.AwaitBranchLinkRequest) (issueopscontract.AwaitBranchLinkResult, error) {
 			return issueopscore.AwaitBranchLink(ctx, stateRoot, req, issueopscore.AwaitBranchLinkDeps{
@@ -71,7 +69,7 @@ func configureIssueOpsCLIRuntime() {
 		StageIssueOpsArtifact:                       artifacts.Stage,
 		StagedIssueOpsArtifactNames:                 artifacts.Names,
 		StartIssueOps: func(stateRoot string, req issueopscontract.IssueOpsStartRequest) (issueopscontract.IssueOpsRecord, error) {
-			return (branchapp.Starter{Records: issueopscore.CycleStartStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{}, Now: time.Now}).Start(context.Background(), req)
+			return (branchapp.Starter{Records: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{}, Now: time.Now}).Start(context.Background(), req)
 		},
 		StartIssueOpsChildWithActor: issueopscore.StartIssueOpsChildWithActor,
 		UnstageIssueOpsArtifact:     artifacts.Unstage,

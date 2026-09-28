@@ -1180,6 +1180,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_branch_retarget_wiring.go",
+      "owner": "composition",
+      "task": "T08",
+      "symbols": [
+        "func newBranchRetargeter"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_claim_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -6880,14 +6888,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/branchprepare/branch_retarget.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func Retarget"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/cleanup_workspace_gates.go",
       "owner": "adapter",
       "task": "T08",
@@ -7044,18 +7044,18 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/cycle_start_store.go",
+      "path": "internal/adapter/issueops/cycle_record_store.go",
       "owner": "adapter",
       "task": "T08",
       "symbols": [
+        "func CycleRecordStore.Load",
+        "func CycleRecordStore.Save",
+        "func CycleRecordStore.WithinLock",
         "func CycleStartIdentity.CanonicalRepo",
         "func CycleStartIdentity.IndependentID",
         "func CycleStartIdentity.StableID",
-        "func CycleStartStore.Load",
-        "func CycleStartStore.Save",
-        "func CycleStartStore.WithinLock",
-        "type CycleStartIdentity",
-        "type CycleStartStore"
+        "type CycleRecordStore",
+        "type CycleStartIdentity"
       ]
     },
     {
@@ -7614,7 +7614,6 @@
         "func validateExecutionMutation",
         "func validatePlanLinkMutation",
         "func validatePostTransferMutation",
-        "func validateRetargetMutation",
         "func validateWorkspacePreparationMutation"
       ]
     },
@@ -8196,6 +8195,7 @@
         "func LinkIssueOpsRelatedWithActor",
         "func LinkIssueOpsWorktree",
         "func LinkIssueOpsWorktreeWithActor",
+        "func OriginBranchPresent",
         "func PrepareIssueOpsBranch",
         "func PrepareIssueOpsBranchWithActor",
         "func RecordIssueOpsCompatibilityReview",
@@ -8208,17 +8208,13 @@
         "func RecordIssueOpsIntentWithActor",
         "func RecordIssueOpsPlanPrep",
         "func RecordIssueOpsPlanPrepWithActor",
-        "func RetargetIssueOpsBranchWithActor",
         "func StartIssueOps",
-        "func branchRetargetObservation.artifactTargetBranch",
-        "func branchRetargetObservation.remoteBranchPresent",
         "func cleanIssueOpsTextValues",
         "func issueOpsActiveStore",
         "func issueOpsBranchPrepareStore",
         "func issueOpsCompatibilityReviewStore",
         "func issueOpsIntentDesignStore",
         "func issueOpsLinkingStore",
-        "func issueOpsOriginBranchPresent",
         "func issueOpsRemoteArtifactMissing",
         "func linkIssueOpsChild",
         "func linkIssueOpsIssue",
@@ -8226,15 +8222,12 @@
         "func linkIssueOpsRelated",
         "func linkIssueOpsWorktree",
         "func normalizeIssueOpsRepo",
-        "func observeBranchRetarget",
         "func prepareIssueOpsBranch",
         "func recordIssueOpsCompatibilityReview",
         "func recordIssueOpsDesignReview",
         "func recordIssueOpsDevilsAdvocateReview",
         "func recordIssueOpsIntent",
-        "func recordIssueOpsPlanPrep",
-        "type BranchRetargetDeps",
-        "type branchRetargetObservation"
+        "func recordIssueOpsPlanPrep"
       ]
     },
     {
@@ -10956,13 +10949,25 @@
       ]
     },
     {
+      "path": "internal/application/issueopsbranch/retarget.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func Retargeter.Retarget",
+        "func Retargeter.authorize",
+        "func Retargeter.observe",
+        "type Retargeter",
+        "type retargetObservation"
+      ]
+    },
+    {
       "path": "internal/application/issueopsbranch/start.go",
       "owner": "application",
       "task": "T08",
       "symbols": [
         "func Starter.Start",
+        "type CycleRecords",
         "type StartIdentity",
-        "type StartRepository",
         "type Starter"
       ]
     },
@@ -14084,6 +14089,20 @@
       "symbols": [
         "func ValidateBranch",
         "func isDecimalString"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/branch_retarget.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ApplyBranchRetarget",
+        "func RetargetRequiresHolder",
+        "func ValidateRetargetArtifact",
+        "func ValidateRetargetOrigin",
+        "func ValidateRetargetRecord",
+        "func ValidateRetargetRequest",
+        "func ValidateRetargetTarget"
       ]
     },
     {
@@ -21037,6 +21056,101 @@
         "internal/adapter/issueops/issueops_start_repo_test.go"
       ],
       "status": "migrate"
+    },
+    {
+      "id": "branch-retarget-record-invariants",
+      "source_path": "internal/adapter/issueops/branchprepare/branch_retarget.go",
+      "source_symbol": "func Retarget",
+      "responsibility": "require prepared branch and verified artifact, reject unchanged target and retain the sealed fork point",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ApplyBranchRetarget",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch retarget"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/retarget_test.go",
+        "internal/application/issueopsbranch/retarget_actor_test.go",
+        "internal/adapter/issueops/span_network_guard_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_retarget_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-retarget-active-holder",
+      "source_path": "internal/adapter/issueops/issueops_actor.go",
+      "source_symbol": "func validateRetargetMutation",
+      "responsibility": "require a valid active write-lease holder while allowing released cycles to retarget from live observations",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RetargetRequiresHolder",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch retarget"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/retarget_test.go",
+        "internal/application/issueopsbranch/retarget_actor_test.go",
+        "internal/adapter/issueops/span_network_guard_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_retarget_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-retarget-artifact-binding",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func branchRetargetObservation.artifactTargetBranch",
+      "responsibility": "reject observed artifact evidence when the current artifact snapshot differs",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateRetargetArtifact",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch retarget"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/retarget_test.go",
+        "internal/application/issueopsbranch/retarget_actor_test.go",
+        "internal/adapter/issueops/span_network_guard_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_retarget_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-retarget-origin-binding",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func branchRetargetObservation.remoteBranchPresent",
+      "responsibility": "bind the origin presence result to the observed repo and branch before considering transport errors or absence",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateRetargetOrigin",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch retarget"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/retarget_test.go",
+        "internal/application/issueopsbranch/retarget_actor_test.go",
+        "internal/adapter/issueops/span_network_guard_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_retarget_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "branch-retarget-transaction-orchestration",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func RetargetIssueOpsBranchWithActor",
+      "responsibility": "authorize before remote I/O, observe outside lock, then reauthorize and bind evidence before saving the transition inside lock",
+      "target": "internal/application/issueopsbranch",
+      "target_symbol": "func Retargeter.Retarget",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch retarget"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/retarget_test.go",
+        "internal/application/issueopsbranch/retarget_actor_test.go",
+        "internal/adapter/issueops/span_network_guard_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_retarget_wiring_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }

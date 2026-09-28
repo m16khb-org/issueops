@@ -1,4 +1,4 @@
-package issueops
+package issueopsbranch
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 )
 
@@ -31,24 +32,25 @@ func retargetActorRecord(t *testing.T, status issueops.LeaseStatus, holder *issu
 // (remote reflect-completion, cleanup finish)과 같이 lease가 아니라 provider
 // readback과 origin 관측이 보호한다.
 func TestRetargetMutationBindsToHolderOnlyWhileTheLeaseIsActive(t *testing.T) {
+	service := Retargeter{Authority: cycleapp.NewMutationAuthority(func(a, b string) bool { return a == b })}
 	holder := issueops.NativeActor{
 		Host: "codex", SessionID: "session-1",
 		SessionProcess: &issueops.NativeProcessReceipt{PID: 42, StartedAt: "2026-08-28T00:00:00Z", Executable: "/usr/bin/codex"},
 	}
 	active, root := retargetActorRecord(t, issueops.LeaseStatusActive, &holder)
-	exact := IssueOpsActor{Host: "codex", SessionID: "session-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
-	if err := validateRetargetMutation(active, &exact); err != nil {
+	exact := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
+	if err := service.authorize(active, &exact); err != nil {
 		t.Fatalf("the active lease holder must be allowed to retarget: %v", err)
 	}
-	if err := validateRetargetMutation(active, nil); err == nil {
+	if err := service.authorize(active, nil); err == nil {
 		t.Fatal("a non-holder must not move the base while the lease is active")
 	}
 
 	released, _ := retargetActorRecord(t, issueops.LeaseStatusReleased, nil)
-	if err := validateRetargetMutation(released, nil); err != nil {
+	if err := service.authorize(released, nil); err != nil {
 		t.Fatalf("a released cycle must stay retargetable at cleanup time: %v", err)
 	}
-	if err := validateRetargetMutation(issueops.IssueOpsRecord{}, nil); err != nil {
+	if err := service.authorize(issueops.IssueOpsRecord{}, nil); err != nil {
 		t.Fatalf("a cycle without execution must stay retargetable: %v", err)
 	}
 }

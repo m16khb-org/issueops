@@ -12,7 +12,7 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
-type StartRepository interface {
+type CycleRecords interface {
 	WithinLock(context.Context, string, func() error) error
 	Load(string) (model.IssueOpsRecord, error)
 	Save(model.IssueOpsRecord) (model.IssueOpsRecord, error)
@@ -25,7 +25,7 @@ type StartIdentity interface {
 }
 
 type Starter struct {
-	Records  StartRepository
+	Records  CycleRecords
 	Identity StartIdentity
 	Now      func() time.Time
 }

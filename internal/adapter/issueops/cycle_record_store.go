@@ -6,17 +6,17 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-type CycleStartStore struct{ StateRoot string }
+type CycleRecordStore struct{ StateRoot string }
 
-func (s CycleStartStore) WithinLock(ctx context.Context, id string, fn func() error) error {
+func (s CycleRecordStore) WithinLock(ctx context.Context, id string, fn func() error) error {
 	return withIssueOpsLock(ctx, s.StateRoot, id, func(context.Context) error { return fn() })
 }
 
-func (s CycleStartStore) Load(id string) (model.IssueOpsRecord, error) {
+func (s CycleRecordStore) Load(id string) (model.IssueOpsRecord, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
 
-func (s CycleStartStore) Save(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s CycleRecordStore) Save(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	return writeIssueOps(s.StateRoot, record)
 }
 
