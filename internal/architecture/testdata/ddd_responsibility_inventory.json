@@ -7996,7 +7996,6 @@
         "func issueOpsDevilsAdvocateDigestExempt",
         "func issueOpsDevilsAdvocateReviewMissing",
         "func issueOpsImplementationReadiness",
-        "func issueOpsIntentMissing",
         "func issueOpsPlanInLinkedWorktree",
         "func issueOpsPlanPathExists",
         "func issueOpsPlanPathInsideWorktree",
@@ -13732,6 +13731,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/intent_readiness.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func IntentMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/issue_create_invariants.go",
       "owner": "domain",
       "task": "T02",
@@ -17305,6 +17312,25 @@
       "evidence_tests": [
         "internal/domain/issueops/phase_completion_test.go",
         "internal/adapter/issueops/issueops_phase_ledger_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "intent-readiness",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func issueOpsIntentMissing",
+      "responsibility": "intent contract must provide raw request, interpreted intent, and success criteria before phase progression",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func IntentMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to grill",
+        "issueops advance --to plan",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/intent_readiness_test.go",
+        "internal/adapter/issueops/issueops_intent_design_test.go"
       ],
       "status": "migrated"
     }

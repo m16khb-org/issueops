@@ -14,7 +14,7 @@ import (
 )
 
 func IssueOpsPlanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := issueOpsIntentMissing(record)
+	missing := issueopsdomain.IntentMissing(record)
 	if strings.TrimSpace(record.IssueURL) == "" {
 		missing = append(missing, "issue_url")
 	}
@@ -204,23 +204,6 @@ func issueOpsPlanInLinkedWorktree(record issueops.IssueOpsRecord) bool {
 
 func issueOpsPlanPathInsideWorktree(worktree, planPath string) bool {
 	return readinesspaths.PlanPathInsideWorktree(worktree, planPath)
-}
-
-func issueOpsIntentMissing(record issueops.IssueOpsRecord) []string {
-	if record.Intent == nil {
-		return []string{"intent_contract"}
-	}
-	missing := []string{}
-	if strings.TrimSpace(record.Intent.RawRequest) == "" {
-		missing = append(missing, "raw_request")
-	}
-	if strings.TrimSpace(record.Intent.InterpretedIntent) == "" {
-		missing = append(missing, "interpreted_intent")
-	}
-	if len(cleanIssueOpsTextValues(record.Intent.SuccessCriteria)) == 0 {
-		missing = append(missing, "success_criteria")
-	}
-	return missing
 }
 
 func issueOpsDesignReviewMissing(record issueops.IssueOpsRecord) []string {

@@ -26,7 +26,7 @@ func issueOpsReadinessFrom(record issueops.IssueOpsRecord, missing []string) iss
 // 생기기 전의 자유로운 problem -> grill 전이와 초기 탐색을 보존하기 위해서다.
 // issue_url/branch는 grill artifact다.
 func IssueOpsProblemReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	return issueOpsReadinessFrom(record, issueOpsIntentMissing(record))
+	return issueOpsReadinessFrom(record, issueopsdomain.IntentMissing(record))
 }
 
 // IssueOpsGrillReadiness는 grill phase 완료 여부를 보고한다. 필요한 것은

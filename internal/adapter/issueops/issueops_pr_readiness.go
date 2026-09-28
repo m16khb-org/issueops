@@ -5,6 +5,7 @@ import (
 
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
 )
 
@@ -68,7 +69,7 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 
 func issueOpsBaseImplementationMissing(record issueops.IssueOpsRecord) []string {
 	missing := issueOpsBranchEvidenceMissing(record)
-	missing = append(missing, issueOpsIntentMissing(record)...)
+	missing = append(missing, issueopsdomain.IntentMissing(record)...)
 	missing = append(missing, issueOpsDesignReviewMissing(record)...)
 	if strings.TrimSpace(record.PlanPath) == "" {
 		missing = append(missing, "plan_path")
