@@ -100,7 +100,7 @@ func TestAbandonResolvedChildrenRefusesToInferFromAbsence(t *testing.T) {
 	stateRoot := t.TempDir()
 	record := issueops.IssueOpsRecord{ChildCycles: childRefs("io-gone1", "io-gone2")}
 
-	if resolved := cleanupAbandonResolvedChildren(stateRoot, record); len(resolved) != 0 {
+	if resolved := abandonPreviewerForTests(CleanupAbandonRuntime{StateRoot: stateRoot}, CleanupAbandonDeps{}).ResolvedChildren(record); len(resolved) != 0 {
 		t.Fatalf("부재는 해소의 근거가 아니다: %v", resolved)
 	}
 	if unresolved := abandondomain.CleanupAbandonUnresolvedChildren(record, nil); len(unresolved) != 2 {
@@ -125,7 +125,7 @@ func TestAbandonResolvedChildrenRequiresDoneForLiveRecords(t *testing.T) {
 		}
 	}
 	record := issueops.IssueOpsRecord{ChildCycles: childRefs("io-live1", "io-live2")}
-	resolved := cleanupAbandonResolvedChildren(stateRoot, record)
+	resolved := abandonPreviewerForTests(CleanupAbandonRuntime{StateRoot: stateRoot}, CleanupAbandonDeps{}).ResolvedChildren(record)
 	if resolved["io-live1"] {
 		t.Fatal("implement 단계의 자식은 해소가 아니다")
 	}

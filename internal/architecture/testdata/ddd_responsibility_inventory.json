@@ -7814,17 +7814,19 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func CleanupAbandonRuntime.BranchCheckoutPath",
+        "func CleanupAbandonRuntime.BranchOID",
         "func CleanupAbandonRuntime.Command",
-        "func CleanupAbandonRuntime.Plan",
+        "func CleanupAbandonRuntime.Directory",
+        "func CleanupAbandonRuntime.InspectionRequest",
+        "func CleanupAbandonRuntime.ReadChild",
+        "func CleanupAbandonRuntime.ReadIntent",
+        "func CleanupAbandonRuntime.SameLinkedPath",
+        "func CleanupAbandonRuntime.SamePath",
         "func CleanupAbandonRuntime.Stop",
+        "func CleanupAbandonRuntime.Workspace",
+        "func CleanupAbandonRuntime.Worktree",
         "func cleanupAbandonBranchCheckoutPath",
-        "func cleanupAbandonGates",
-        "func cleanupAbandonInspectWorktree",
-        "func cleanupAbandonIntentInspectionRequests",
-        "func cleanupAbandonOrcaResourcesAbsent",
-        "func cleanupAbandonPendingRecovery",
-        "func cleanupAbandonPendingSafe",
-        "func cleanupAbandonResolvedChildren",
         "type CleanupAbandonRuntime"
       ]
     },
@@ -10991,6 +10993,29 @@
         "func ObserveAbandonArtifact",
         "func abandonFailure",
         "type AbandonExecutor"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/abandon_orca.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func AbandonOrcaObserver.PendingSafe",
+        "func AbandonOrcaObserver.ResourcesAbsent",
+        "func abandonInspectionRequest",
+        "type AbandonOrcaObserver"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/abandon_preview.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func AbandonPreviewer.Plan",
+        "func AbandonPreviewer.ResolvedChildren",
+        "type AbandonEnvironment",
+        "type AbandonPreviewer",
+        "type AbandonWorktreeObservation"
       ]
     },
     {
@@ -14471,11 +14496,28 @@
         "func CleanupAbandonPreviewCommand",
         "func CleanupAbandonRemoteFlags",
         "func CleanupAbandonRemovalPlan",
+        "func CleanupAbandonResolvedChildren",
         "func CleanupAbandonTargets",
         "func CleanupAbandonUnresolvedChildren",
         "func ValidateCleanupAbandonReason",
         "func cleanupAbandonValidFingerprint",
         "type CleanupAbandonFailureEvidence"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_abandon_orca.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CleanupAbandonAllowsRuntimeRollover",
+        "func CleanupAbandonOrcaTarget",
+        "func CleanupAbandonPendingRecovery",
+        "func ValidateCleanupAbandonIntent",
+        "func ValidateCleanupAbandonIntentObservation",
+        "func ValidateCleanupAbandonOrcaObservation",
+        "func ValidateCleanupAbandonPending",
+        "type CleanupAbandonIntentIdentity",
+        "type CleanupAbandonOrcaObservation"
       ]
     },
     {
@@ -15696,6 +15738,14 @@
         "func designReviewCommand",
         "func executionStatusCommand",
         "func statusCommand"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopspreparation/cleanup_abandon.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func CleanupAbandonIntentStages"
       ]
     },
     {

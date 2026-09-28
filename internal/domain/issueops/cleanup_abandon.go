@@ -213,3 +213,15 @@ func CleanupAbandonTargets(record issueops.IssueOpsRecord) issueops.CleanupAband
 	}
 	return inventory
 }
+
+// Only an observed done record resolves a child. Missing or unreadable child
+// records provide no completion evidence.
+func CleanupAbandonResolvedChildren(children []issueops.IssueOpsRecord) map[string]bool {
+	resolved := map[string]bool{}
+	for _, child := range children {
+		if child.Phase == issueops.IssueOpsPhaseDone {
+			resolved[child.ID] = true
+		}
+	}
+	return resolved
+}

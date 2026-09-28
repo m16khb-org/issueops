@@ -413,6 +413,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueopslease/resume", "T06"},
 		{"internal/domain/issueopslease/reconcile", "T06"},
 		{"internal/domain/issueopslease/reseed", "T06"},
+		{"internal/domain/issueopspreparation/cleanup_abandon", "T08"},
 		{"internal/domain/issueopspreparation/resume_", "T06"},
 		{"internal/domain/issueopspreparation/reconcile_", "T06"},
 		{"internal/application/issueopslease/resume", "T06"},

@@ -228,3 +228,10 @@ fingerprint와 실패 기록의 봉인은 `internal/application/issueopscleanup`
 `LinkedBranchRemoteRef`를 재사용해 `ls-remote`가 반환한 ref가 요청한 브랜치와 정확히
 일치하는 단일 행인지 확인한다. 성공한 빈 결과만 부재이며, 다른 ref·여러 행·불완전한
 행은 `remote_branch_readable`로 거부해 fingerprint와 삭제 권한을 발급하지 않는다.
+
+`AbandonPreviewer`가 로컬 자원·자식 cycle·pending intent·Orca owner 관측을 조합한다.
+워크트리·브랜치·DB 읽기와 경로 해석은 adapter에 두고, 자식의 완료 여부와 Orca 잔여물
+허용 조건은 domain에서 판정한다. preparation domain은 봉인된 단계까지 확인할 자원
+순서를 결정하고, application은 그 결과를 lifecycle domain의 신원·부재 판정과 조합한다.
+앞선 단계의 자원이 남았거나 부재 관측에 권위가 없으면 폐기를 거부한다. 실제 터미널은
+점유 종료 단계에서 도달 가능한 경우에만 허용하며, 런타임 전환 관측 권한은 holderless일 때만 연다.

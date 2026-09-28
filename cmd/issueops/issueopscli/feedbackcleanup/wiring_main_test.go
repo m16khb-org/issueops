@@ -49,10 +49,15 @@ func TestMain(m *testing.M) {
 		},
 		AddIssueOpsFeedbackWithActor: issueopscore.AddIssueOpsFeedbackWithActor,
 		CleanupAbandon: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d Deps) (issueopscontract.CleanupAbandonResult, error) {
-			runtime := issueopscore.CleanupAbandonRuntime{StateRoot: stateRoot, Git: d.CleanupFinishGit, Orca: d.OrcaIntent, OrcaOwner: d.OrcaOwner, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
+			runtime := issueopscore.CleanupAbandonRuntime{StateRoot: stateRoot, Git: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
 			return (cleanupapp.AbandonExecutor{
 				Records: issueopscore.CleanupRecordStore{StateRoot: stateRoot}, Acquire: (issueopscore.CleanupLifetimeLock{StateRoot: stateRoot}).Acquire,
-				Provider: d.Provider, Observe: cleanupapp.ObserveAbandonArtifact, Plan: runtime.Plan,
+				Provider: d.Provider, Observe: cleanupapp.ObserveAbandonArtifact,
+				Plan: (cleanupapp.AbandonPreviewer{
+					Environment: runtime, ReadChild: runtime.ReadChild, Workspace: runtime.Workspace,
+					Orca:   cleanupapp.AbandonOrcaObserver{ReadIntent: runtime.ReadIntent, InspectionRequest: runtime.InspectionRequest, Orca: d.OrcaIntent, Owner: d.OrcaOwner},
+					Remote: cleanupapp.AbandonRemoteObserver{RemoteRef: (issueopscore.LinkedBranchRemoteRef{RunGit: runtime.Command}).Observe},
+				}).Plan,
 				NewAttempt: issueopscore.NewCleanupAttempt, Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Command, Now: time.Now,
 			}).Run(ctx, req)
 		},
