@@ -2,11 +2,10 @@ package issueops
 
 import (
 	"issueops/internal/adapter/issueops/implementation"
+	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
-	reviewcontract "issueops/internal/contract/issueopsreview"
 	issueopsdomain "issueops/internal/domain/issueops"
-	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
 // RecordIssueOpsSchemaEvidence는 스키마·마이그레이션·엔티티 변경 사이클의
@@ -30,22 +29,11 @@ func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEviden
 // schemaEvidenceMissing은 변경 집합에 스키마 파일이 있을 때만 활성화되는
 // 조건부 게이트다. DB를 쓰지 않는 사이클에서는 아무것도 요구하지 않는다.
 func schemaEvidenceMissing(record issueops.IssueOpsRecord, currentFingerprint string) string {
-	if record.Execution == nil {
-		return ""
-	}
-	return schemaEvidenceMissingForPaths(record, implementation.ChangedPaths(record), currentFingerprint)
+	return cycleapp.ObservedSchemaEvidenceMissing(record, true, nil, currentFingerprint, implementation.ChangedPaths)
 }
 
 func schemaEvidenceMissingForPaths(record issueops.IssueOpsRecord, changed []string, currentFingerprint string) string {
-	evidence := reviewcontract.SchemaGateEvidence{}
-	if recorded := record.SchemaEvidence; recorded != nil {
-		evidence = reviewcontract.SchemaGateEvidence{
-			Present: true, Waived: recorded.Waived, WaiverRationale: recorded.WaiverRationale,
-			MeasurementCount: len(recorded.Measurements), SourceCount: len(recorded.Sources),
-			ReviewedFingerprint: recorded.ReviewedFingerprint,
-		}
-	}
-	return reviewdomain.SchemaEvidenceMissing(reviewdomain.ChangeSetTouchesSchema(changed), evidence, currentFingerprint)
+	return cycleapp.SchemaEvidenceMissingForPaths(record, changed, currentFingerprint)
 }
 
 // pathIsSchemaChange는 도메인 규칙에 위임한다. 같은 경로 판정을 리뷰 티어

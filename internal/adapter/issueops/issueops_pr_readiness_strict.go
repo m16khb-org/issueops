@@ -113,12 +113,7 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 	missing = append(missing, gitMissing...)
 	// local은 검증된 관측을 공유한다. strict는 fetch가 fallback ref를 바꿀 수
 	// 있으므로 기존 순서대로 fetch 뒤 변경 경로를 새로 관측한다.
-	schemaMissing := ""
-	if syncUpstream {
-		schemaMissing = schemaEvidenceMissing(record, currentFingerprint)
-	} else if record.Execution != nil {
-		schemaMissing = schemaEvidenceMissingForPaths(record, changeObservation.Paths, currentFingerprint)
-	}
+	schemaMissing := cycleapp.ObservedSchemaEvidenceMissing(record, syncUpstream, changeObservation.Paths, currentFingerprint, implementation.ChangedPaths)
 	factsForPR := cycleapp.ObservedPRFacts{CurrentFingerprint: currentFingerprint, SchemaMissing: schemaMissing}
 	if path := strings.TrimSpace(record.PlanPath); path != "" {
 		factsForPR.PlanExists = issueOpsPlanPathExists(gitRoot, path)

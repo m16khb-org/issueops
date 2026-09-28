@@ -11078,6 +11078,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/schema_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ObservedSchemaEvidenceMissing",
+        "func SchemaEvidenceMissingForPaths"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/staged_plan_binding.go",
       "owner": "application",
       "task": "T20",
