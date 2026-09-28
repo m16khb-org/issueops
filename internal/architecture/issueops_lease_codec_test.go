@@ -17,7 +17,6 @@ func TestPersistedLeaseCodecHasNoUnreviewedBypass(t *testing.T) {
 	allowed := map[string][]string{
 		"internal/adapter/outbound/issueopsrecord/lease_codec.go": {"Decode", "Encode"},
 		"cmd/issueops/issueopsapp/issueops_reconcile_wiring.go":   {"Decode"},
-		"cmd/issueops/issueopsapp/issueops_resume_wiring.go":      {"Decode"},
 	}
 	actual := map[string][]string{}
 	for _, source := range collectDDDInventory(t, root).Sources {

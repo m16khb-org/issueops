@@ -15,7 +15,6 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
-	statecontract "issueops/internal/contract/state"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/domain/policy"
 	"issueops/internal/port"
@@ -39,8 +38,8 @@ func newIssueOpsResumeService(stateRoot string, provisioner port.ExecutionOrcaPr
 	if err != nil {
 		return nil, err
 	}
-	effects := &coreResumeEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, time.Now), owner: owner, now: time.Now}
-	repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(db, effects, policy.RedactDiagnostic, time.Now)
+	effects := &resumeHostAdapter{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, time.Now), owner: owner}
+	repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(db, policy.RedactDiagnostic, time.Now)
 	return leaseapp.NewResumeService(
 		fence,
 		repository,
@@ -57,26 +56,24 @@ type resumeOperationIDs struct{}
 
 func (resumeOperationIDs) New() (string, error) { return issueops.NewExecutionResumeOperationID() }
 
-type coreResumeEffects struct {
+type resumeHostAdapter struct {
 	stateRoot   string
 	provisioner port.ExecutionOrcaProvisioner
 	owner       port.ExecutionOrcaOwnerInspector
-	now         func() time.Time
 }
 
-func (e *coreResumeEffects) ApplyReceipt(ctx context.Context, state leaseoutbound.ResumeEffectState, receipt leasecontract.ResumeStageReceipt) (leaseoutbound.ResumeEffectState, error) {
-	coreState, err := resumeCoreIntentState(state)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	next, err := issueops.ApplyExecutionResumeIntentReceipt(ctx, e.stateRoot, coreState, resumePortReceipt(state.Stage, receipt), e.now)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	return resumeEffectStateFromCore(next)
+type resumeCoreState struct {
+	Record             leasecontract.Record
+	RecordRaw          []byte
+	IntentRaw          []byte
+	OperationID        string
+	Stage              string
+	InvocationState    string
+	InvocationAttempts int
+	Pending            bool
 }
 
-func (e *coreResumeEffects) readArtifacts(_ context.Context, record leasecontract.Record) (leasecontract.ResumeArtifacts, error) {
+func (e *resumeHostAdapter) readArtifacts(_ context.Context, record leasecontract.Record) (leasecontract.ResumeArtifacts, error) {
 	coreRecord, err := resumeCoreRecord(record)
 	if err != nil {
 		return leasecontract.ResumeArtifacts{}, err
@@ -88,7 +85,7 @@ func (e *coreResumeEffects) readArtifacts(_ context.Context, record leasecontrac
 	return leasecontract.ResumeArtifacts{ClaimTokenPath: artifacts.ClaimTokenPath, IssueBodySHA256: artifacts.IssueBodySHA256, ContextPacketPath: artifacts.ContextPacketPath, ContextPacketSHA256: artifacts.ContextPacketSHA256, OwnerPromptPath: artifacts.OwnerPromptPath, OwnerPromptSHA256: artifacts.OwnerPromptSHA256}, nil
 }
 
-func (e *coreResumeEffects) observeOwner(ctx context.Context, record leasecontract.Record) (leasedomain.ResumeInventory, error) {
+func (e *resumeHostAdapter) observeOwner(ctx context.Context, record leasecontract.Record) (leasedomain.ResumeInventory, error) {
 	if e.owner == nil || record.Execution == nil || record.Execution.Orca == nil {
 		return leasedomain.ResumeInventory{}, fmt.Errorf("resume owner inspector is required")
 	}
@@ -104,7 +101,7 @@ func (e *coreResumeEffects) observeOwner(ctx context.Context, record leasecontra
 	}, nil
 }
 
-func (e *coreResumeEffects) inspectStage(ctx context.Context, intent leaseapp.ResumeIntentState) (leasecontract.ResumeStageInventory, error) {
+func (e *resumeHostAdapter) inspectStage(ctx context.Context, intent leaseapp.ResumeIntentState) (leasecontract.ResumeStageInventory, error) {
 	if e.provisioner == nil {
 		return leasecontract.ResumeStageInventory{}, fmt.Errorf("resume Orca provisioner is required")
 	}
@@ -127,7 +124,7 @@ func (e *coreResumeEffects) inspectStage(ctx context.Context, intent leaseapp.Re
 	return result, nil
 }
 
-func (e *coreResumeEffects) invokeStage(ctx context.Context, intent leaseapp.ResumeIntentState) (leasecontract.ResumeStageReceipt, error) {
+func (e *resumeHostAdapter) invokeStage(ctx context.Context, intent leaseapp.ResumeIntentState) (leasecontract.ResumeStageReceipt, error) {
 	if e.provisioner == nil {
 		return leasecontract.ResumeStageReceipt{}, fmt.Errorf("resume Orca provisioner is required")
 	}
@@ -158,22 +155,7 @@ func resumeCoreRecord(record leasecontract.Record) (issueopscontract.IssueOpsRec
 	return result, nil
 }
 
-func resumeEffectStateFromCore(state issueops.ExecutionResumeIntentState) (leaseoutbound.ResumeEffectState, error) {
-	data, err := json.Marshal(state.Record)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	record, err := leasecontract.Decode(state.Record.ID, data)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	if err := leasedomain.ValidatePersistedRecord(record); err != nil {
-		return leaseoutbound.ResumeEffectState{}, statecontract.Invalid("")
-	}
-	return leaseoutbound.ResumeEffectState{Record: record, RecordRaw: append([]byte(nil), state.RecordRaw...), IntentRaw: append([]byte(nil), state.IntentRaw...), OperationID: state.OperationID, Stage: string(state.Stage), InvocationState: state.InvocationState, InvocationAttempts: state.InvocationAttempts, Pending: state.Pending}, nil
-}
-
-func resumeCoreIntentState(state leaseoutbound.ResumeEffectState) (issueops.ExecutionResumeIntentState, error) {
+func resumeCoreIntentState(state resumeCoreState) (issueops.ExecutionResumeIntentState, error) {
 	record, err := resumeCoreRecord(state.Record)
 	if err != nil {
 		return issueops.ExecutionResumeIntentState{}, err
@@ -181,33 +163,8 @@ func resumeCoreIntentState(state leaseoutbound.ResumeEffectState) (issueops.Exec
 	return issueops.ExecutionResumeIntentState{Record: record, RecordRaw: append([]byte(nil), state.RecordRaw...), IntentRaw: append([]byte(nil), state.IntentRaw...), OperationID: state.OperationID, Stage: port.ExecutionOrcaIntentStage(state.Stage), InvocationState: state.InvocationState, InvocationAttempts: state.InvocationAttempts, Pending: state.Pending}, nil
 }
 
-func resumeEffectState(intent leaseapp.ResumeIntentState) leaseoutbound.ResumeEffectState {
-	return leaseoutbound.ResumeEffectState{Record: intent.Progress.Record.Stable, RecordRaw: append([]byte(nil), intent.RecordRaw...), IntentRaw: append([]byte(nil), intent.IntentRaw...), OperationID: intent.OperationID, Stage: intent.Stage, InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts, Pending: intent.Progress.Pending}
-}
-
-func resumePortReceipt(stage string, receipt leasecontract.ResumeStageReceipt) port.ExecutionOrcaIntentReceipt {
-	result := port.ExecutionOrcaIntentReceipt{}
-	switch port.ExecutionOrcaIntentStage(stage) {
-	case port.ExecutionOrcaIntentTerminal:
-		result.TerminalPTYID = receipt.TerminalPTYID
-	case port.ExecutionOrcaIntentRun:
-		result.RunID = receipt.RunID
-	case port.ExecutionOrcaIntentRunBind:
-		result.RunID, result.RunBound = receipt.RunID, receipt.RunBound
-	case port.ExecutionOrcaIntentTask:
-		result.TaskID = receipt.TaskID
-	case port.ExecutionOrcaIntentDispatch:
-		result.TerminalPTYID, result.TerminalHandle = receipt.TerminalPTYID, receipt.TerminalHandle
-		result.TaskID, result.DispatchID, result.RequestID = receipt.TaskID, receipt.DispatchID, receipt.RequestID
-		if receipt.PromptReceipt != nil {
-			result.PromptReceipt = &port.OrcaPromptReceipt{
-				RequestID: receipt.PromptReceipt.RequestID, Stages: append([]string(nil), receipt.PromptReceipt.Stages...), Provider: receipt.PromptReceipt.Provider,
-				Observation: receipt.PromptReceipt.Observation, ProcessIncarnation: receipt.PromptReceipt.ProcessIncarnation,
-				Generation: receipt.PromptReceipt.Generation, BaselineWorkingSequence: receipt.PromptReceipt.BaselineWorkingSequence,
-			}
-		}
-	}
-	return result
+func resumeEffectState(intent leaseapp.ResumeIntentState) resumeCoreState {
+	return resumeCoreState{Record: intent.Progress.Record.Stable, RecordRaw: append([]byte(nil), intent.RecordRaw...), IntentRaw: append([]byte(nil), intent.IntentRaw...), OperationID: intent.OperationID, Stage: intent.Stage, InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts, Pending: intent.Progress.Pending}
 }
 
 func resumeContractReceipt(receipt port.ExecutionOrcaIntentReceipt) leasecontract.ResumeStageReceipt {

@@ -16,37 +16,21 @@ import (
 	"issueops/internal/port"
 )
 
-type ResumeEffects interface {
-	ApplyReceipt(context.Context, ResumeEffectState, leasecontract.ResumeStageReceipt) (ResumeEffectState, error)
-}
-
-type ResumeEffectState struct {
-	Record             leasecontract.Record
-	RecordRaw          []byte
-	IntentRaw          []byte
-	OperationID        string
-	Stage              string
-	InvocationState    string
-	InvocationAttempts int
-	Pending            bool
-}
-
 type ResumeRepository struct {
-	store   port.TransactionalRecordStore
-	effects ResumeEffects
-	now     func() time.Time
-	redact  func(string) string
+	store  port.TransactionalRecordStore
+	now    func() time.Time
+	redact func(string) string
 }
 
-func NewResumeRepository(store port.TransactionalRecordStore, effects ResumeEffects) *ResumeRepository {
-	return NewResumeRepositoryWithDiagnosticRedactor(store, effects, nil, time.Now)
+func NewResumeRepository(store port.TransactionalRecordStore) *ResumeRepository {
+	return NewResumeRepositoryWithDiagnosticRedactor(store, nil, time.Now)
 }
 
-func NewResumeRepositoryWithDiagnosticRedactor(store port.TransactionalRecordStore, effects ResumeEffects, redact func(string) string, now func() time.Time) *ResumeRepository {
+func NewResumeRepositoryWithDiagnosticRedactor(store port.TransactionalRecordStore, redact func(string) string, now func() time.Time) *ResumeRepository {
 	if now == nil {
 		now = time.Now
 	}
-	return &ResumeRepository{store: store, effects: effects, redact: redact, now: now}
+	return &ResumeRepository{store: store, redact: redact, now: now}
 }
 
 func (r *ResumeRepository) LoadSnapshot(_ context.Context, id string, generation uint64) (leaseapp.ResumeSnapshot, error) {
@@ -228,20 +212,88 @@ func (r *ResumeRepository) RecordFailure(ctx context.Context, intent leaseapp.Re
 }
 
 func (r *ResumeRepository) ApplyReceipt(ctx context.Context, intent leaseapp.ResumeIntentState, receipt leasecontract.ResumeStageReceipt) (leaseapp.ResumeProgress, error) {
-	if r == nil || r.effects == nil {
-		return leaseapp.ResumeProgress{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume persistence bridge is required"))
+	if r == nil || r.store == nil {
+		return leaseapp.ResumeProgress{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
 	}
-	state, err := r.effects.ApplyReceipt(ctx, resumeEffectState(intent), receipt)
+	store, ok := r.store.(port.RecordRawCASStore)
+	if !ok {
+		return leaseapp.ResumeProgress{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume record store does not support raw CAS"))
+	}
+	payload, err := (preparationcontract.IntentCodec{}).Decode(intent.OperationID, intent.IntentRaw)
 	if err != nil {
 		return leaseapp.ResumeProgress{}, err
 	}
-	return resumeProgress(state), nil
+	var deliveryErr error
+	if payload.Stage == preparationcontract.IntentStageDispatch {
+		deliveryErr = port.ValidateExecutionOrcaDeliveryReceipt(resumePortReceipt(receipt), port.OrcaDeliveryReceiptExpectation{
+			Host: payload.Probe.Host, TaskID: payload.TaskID, TerminalPTYID: payload.TerminalPTYID,
+			DispatchRequestID: payload.OrcaRequestID, PromptRequestID: payload.OrcaPromptRequestID,
+		})
+	}
+	decision, err := preparationdomain.ApplyResumeReceipt(intent.Progress.Record.Stable, payload, resumePreparationReceipt(receipt), deliveryErr)
+	if err != nil {
+		return leaseapp.ResumeProgress{}, err
+	}
+	recordData, err := recordcodec.EncodeLease(decision.Record)
+	if err != nil {
+		return leaseapp.ResumeProgress{}, err
+	}
+	mutations := []port.RecordMutation{{Bucket: recordBucket, ID: decision.Record.ID, Data: recordData}}
+	if decision.Complete {
+		mutations = append(mutations, port.RecordMutation{Bucket: "external_intent_v1", ID: intent.OperationID, Delete: true})
+	} else {
+		intentData, err := (preparationcontract.IntentCodec{}).Encode(decision.Intent)
+		if err != nil {
+			return leaseapp.ResumeProgress{}, err
+		}
+		mutations = append(mutations, port.RecordMutation{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intentData})
+	}
+	err = store.CompareAndApply(ctx, []port.ExpectedRecord{
+		{Bucket: recordBucket, ID: decision.Record.ID, Data: intent.RecordRaw},
+		{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intent.IntentRaw},
+	}, mutations)
+	if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
+		if stale.FailedBucket() == recordBucket {
+			return leaseapp.ResumeProgress{}, fmt.Errorf("stale raw record snapshot")
+		}
+		return leaseapp.ResumeProgress{}, fmt.Errorf("stale raw intent snapshot")
+	}
+	if err != nil {
+		return leaseapp.ResumeProgress{}, err
+	}
+	return leaseapp.ResumeProgress{Record: toApplicationRecord(decision.Record), Execution: *decision.Record.Execution, Pending: !decision.Complete}, nil
 }
 
-func resumeProgress(state ResumeEffectState) leaseapp.ResumeProgress {
-	return leaseapp.ResumeProgress{Record: toApplicationRecord(state.Record), Execution: *state.Record.Execution, Pending: state.Pending}
+func resumePreparationReceipt(receipt leasecontract.ResumeStageReceipt) preparationcontract.IntentReceipt {
+	result := preparationcontract.IntentReceipt{
+		TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle,
+		RunID: receipt.RunID, RunBound: receipt.RunBound, TaskID: receipt.TaskID,
+		DispatchID: receipt.DispatchID, RequestID: receipt.RequestID,
+	}
+	if receipt.PromptReceipt != nil {
+		result.PromptReceipt = &preparationcontract.PromptReceipt{
+			RequestID: receipt.PromptReceipt.RequestID, Stages: append([]string(nil), receipt.PromptReceipt.Stages...),
+			Provider: receipt.PromptReceipt.Provider, Observation: receipt.PromptReceipt.Observation,
+			ProcessIncarnation: receipt.PromptReceipt.ProcessIncarnation, Generation: receipt.PromptReceipt.Generation,
+			BaselineWorkingSequence: receipt.PromptReceipt.BaselineWorkingSequence,
+		}
+	}
+	return result
 }
 
-func resumeEffectState(intent leaseapp.ResumeIntentState) ResumeEffectState {
-	return ResumeEffectState{Record: intent.Progress.Record.Stable, RecordRaw: append([]byte(nil), intent.RecordRaw...), IntentRaw: append([]byte(nil), intent.IntentRaw...), OperationID: intent.OperationID, Stage: intent.Stage, InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts, Pending: intent.Progress.Pending}
+func resumePortReceipt(receipt leasecontract.ResumeStageReceipt) port.ExecutionOrcaIntentReceipt {
+	result := port.ExecutionOrcaIntentReceipt{
+		TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle,
+		RunID: receipt.RunID, RunBound: receipt.RunBound, TaskID: receipt.TaskID,
+		DispatchID: receipt.DispatchID, RequestID: receipt.RequestID,
+	}
+	if receipt.PromptReceipt != nil {
+		result.PromptReceipt = &port.OrcaPromptReceipt{
+			RequestID: receipt.PromptReceipt.RequestID, Stages: append([]string(nil), receipt.PromptReceipt.Stages...),
+			Provider: receipt.PromptReceipt.Provider, Observation: receipt.PromptReceipt.Observation,
+			ProcessIncarnation: receipt.PromptReceipt.ProcessIncarnation, Generation: receipt.PromptReceipt.Generation,
+			BaselineWorkingSequence: receipt.PromptReceipt.BaselineWorkingSequence,
+		}
+	}
+	return result
 }

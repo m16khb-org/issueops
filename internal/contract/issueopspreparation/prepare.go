@@ -23,6 +23,7 @@ type ResumeArtifacts = leasecontract.ResumeArtifacts
 type ExternalIntent = leasecontract.ExternalIntent
 
 const SchemaVersion = leasecontract.SchemaVersion
+const OrcaArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
 
 type Command struct {
 	ID                           string `json:"id"`

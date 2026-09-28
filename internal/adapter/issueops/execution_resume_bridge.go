@@ -1,7 +1,6 @@
 package issueops
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -71,39 +70,8 @@ func RecordExecutionResumeIntentFailure(stateRoot string, expected ExecutionResu
 	return recordOrcaIntentFailureFromRawState(stateRoot, expected.Record, payload, expected.RecordRaw, expected.IntentRaw, invocationState, cause, now)
 }
 
-func ApplyExecutionResumeIntentReceipt(ctx context.Context, stateRoot string, expected ExecutionResumeIntentState, receipt port.ExecutionOrcaIntentReceipt, now func() time.Time) (ExecutionResumeIntentState, error) {
-	payload, err := executionResumeIntentPayload(expected)
-	if err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	persisted, next, err := advanceOrcaIntentReceiptWithExpectedRaw(ctx, stateRoot, expected.Record, payload, expected.RecordRaw, expected.IntentRaw, receipt, nil, now)
-	if err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	if persisted.Execution == nil || persisted.Execution.Pending == nil {
-		raw, err := readExecutionResumeRecordRawOnly(stateRoot, persisted.ID)
-		if err != nil {
-			return ExecutionResumeIntentState{}, err
-		}
-		return ExecutionResumeIntentState{Record: persisted, RecordRaw: raw, OperationID: expected.OperationID}, nil
-	}
-	return executionResumeIntentStateFromPayload(stateRoot, persisted, next)
-}
-
 func executionResumeArtifactsReceipt(artifacts executionResumeArtifacts) ExecutionResumeArtifactsReceipt {
 	return ExecutionResumeArtifactsReceipt{ClaimTokenPath: artifacts.claimTokenPath, IssueBodySHA256: artifacts.issueBodySHA256, ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256, OwnerPromptPath: artifacts.promptPath, OwnerPromptSHA256: artifacts.promptSHA256}
-}
-
-func executionResumeIntentStateFromPayload(stateRoot string, record issueops.IssueOpsRecord, payload externalOrcaIntentPayload) (ExecutionResumeIntentState, error) {
-	raw, err := readExecutionResumeRecordRawOnly(stateRoot, record.ID)
-	if err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	intentRaw, err := preparationIntentCodec.Encode(payload)
-	if err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	return executionResumeIntentState(record, raw, payload, intentRaw), nil
 }
 
 func executionResumeIntentState(record issueops.IssueOpsRecord, recordRaw []byte, payload externalOrcaIntentPayload, intentRaw []byte) ExecutionResumeIntentState {

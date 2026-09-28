@@ -189,18 +189,18 @@ func (fake *resumePlanMutationFake) InspectOwner(context.Context, port.Execution
 func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *testing.T) {
 	tests := []struct {
 		name string
-		run  func(t *testing.T, stateRoot string, effects *coreResumeEffects, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts)
+		run  func(t *testing.T, stateRoot string, effects *resumeHostAdapter, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts)
 	}{
 		{
 			name: "begin_record",
-			run: func(t *testing.T, stateRoot string, effects *coreResumeEffects, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts) {
+			run: func(t *testing.T, stateRoot string, effects *resumeHostAdapter, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts) {
 				resumeWiringDriftRecord(t, stateRoot, record.ID)
 				beforeRecord := resumeWiringRawRow(t, stateRoot, resumeWiringRecordBucket, record.ID)
 				store, err := sqlstore.Open(stateRoot)
 				if err != nil {
 					t.Fatal(err)
 				}
-				repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(store, effects, nil, effects.now)
+				repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(store, nil, resumeWiringNow)
 				_, err = repository.BeginIntent(context.Background(), leaseapp.ResumeSnapshot{Record: leaseapp.Record{ID: record.ID, Stable: record}, Raw: raw}, artifacts, leasedomain.ResumePlan{RuntimeID: "runtime"}, strings.Repeat("a", 32))
 				resumeWiringRequireStale(t, err, "stale raw record snapshot")
 				resumeWiringAssertRows(t, stateRoot, record.ID, strings.Repeat("a", 32), beforeRecord, nil)
@@ -208,8 +208,8 @@ func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 		},
 		{
 			name: "mark_intent",
-			run: func(t *testing.T, stateRoot string, effects *coreResumeEffects, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts) {
-				state := resumeWiringBegin(t, stateRoot, effects, record, raw, artifacts, strings.Repeat("b", 32))
+			run: func(t *testing.T, stateRoot string, effects *resumeHostAdapter, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts) {
+				state := resumeWiringBegin(t, stateRoot, record, raw, artifacts, strings.Repeat("b", 32))
 				resumeWiringDriftIntent(t, stateRoot, state.OperationID)
 				beforeRecord := resumeWiringRawRow(t, stateRoot, resumeWiringRecordBucket, record.ID)
 				beforeIntent := resumeWiringRawRow(t, stateRoot, resumeWiringIntentBucket, state.OperationID)
@@ -217,7 +217,7 @@ func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 				if err != nil {
 					t.Fatal(err)
 				}
-				repository := leaseoutbound.NewResumeRepository(store, effects)
+				repository := leaseoutbound.NewResumeRepository(store)
 				_, err = repository.MarkInvoking(context.Background(), leaseapp.ResumeIntentState{
 					Progress: leaseapp.ResumeProgress{
 						Record: leaseapp.Record{ID: record.ID, Stable: state.Record}, Execution: *state.Record.Execution, Pending: true,
@@ -231,12 +231,17 @@ func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 		},
 		{
 			name: "apply_record",
-			run: func(t *testing.T, stateRoot string, effects *coreResumeEffects, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts) {
-				state := resumeWiringBegin(t, stateRoot, effects, record, raw, artifacts, strings.Repeat("c", 32))
+			run: func(t *testing.T, stateRoot string, effects *resumeHostAdapter, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts) {
+				state := resumeWiringBegin(t, stateRoot, record, raw, artifacts, strings.Repeat("c", 32))
 				resumeWiringDriftRecord(t, stateRoot, record.ID)
 				beforeRecord := resumeWiringRawRow(t, stateRoot, resumeWiringRecordBucket, record.ID)
 				beforeIntent := resumeWiringRawRow(t, stateRoot, resumeWiringIntentBucket, state.OperationID)
-				_, err := effects.ApplyReceipt(context.Background(), state, leasecontract.ResumeStageReceipt{TerminalPTYID: "pty-resume"})
+				store, err := sqlstore.Open(stateRoot)
+				if err != nil {
+					t.Fatal(err)
+				}
+				repository := leaseoutbound.NewResumeRepository(store)
+				_, err = repository.ApplyReceipt(context.Background(), resumeWiringApplicationState(state), leasecontract.ResumeStageReceipt{TerminalPTYID: "pty-resume"})
 				resumeWiringRequireStale(t, err, "stale raw record snapshot")
 				resumeWiringAssertRows(t, stateRoot, record.ID, state.OperationID, beforeRecord, beforeIntent)
 			},
@@ -270,29 +275,29 @@ func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 				OwnerPromptPath:   strings.TrimSuffix(issueops.SealedOwnerContextPacketPath(coreRecord), "context.json") + "owner-prompt.txt",
 				OwnerPromptSHA256: strings.Repeat("d", 64),
 			}
-			effects := &coreResumeEffects{stateRoot: stateRoot, now: func() time.Time { return time.Date(2026, time.July, 31, 2, 20, 0, 0, time.UTC) }}
+			effects := &resumeHostAdapter{stateRoot: stateRoot}
 			tt.run(t, stateRoot, effects, record, raw, artifacts)
 		})
 	}
 }
 
-func TestResumePortReceiptPreservesRunStages(t *testing.T) {
-	created := resumePortReceipt(string(port.ExecutionOrcaIntentRun), leasecontract.ResumeStageReceipt{RunID: "run-resume"})
+func TestResumeContractReceiptPreservesRunStages(t *testing.T) {
+	created := resumeContractReceipt(port.ExecutionOrcaIntentReceipt{RunID: "run-resume"})
 	if created.RunID != "run-resume" || created.RunBound {
 		t.Fatalf("Run create receipt=%#v", created)
 	}
-	bound := resumePortReceipt(string(port.ExecutionOrcaIntentRunBind), leasecontract.ResumeStageReceipt{RunID: "run-resume", RunBound: true})
+	bound := resumeContractReceipt(port.ExecutionOrcaIntentReceipt{RunID: "run-resume", RunBound: true})
 	if bound.RunID != "run-resume" || !bound.RunBound {
 		t.Fatalf("Run bind receipt=%#v", bound)
 	}
 }
 
-func TestResumePortReceiptPreservesDispatchAndPromptRequestIDs(t *testing.T) {
-	receipt := leasecontract.ResumeStageReceipt{
+func TestResumeContractReceiptPreservesDispatchAndPromptRequestIDs(t *testing.T) {
+	receipt := port.ExecutionOrcaIntentReceipt{
 		TaskID: "task-resume", DispatchID: "dispatch-resume", RequestID: "11111111-1111-4111-8111-111111111111",
-		PromptReceipt: &leasecontract.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-resume", Stages: []string{"input_accepted"}, BaselineWorkingSequence: handoffTestUint64(0)},
+		PromptReceipt: &port.OrcaPromptReceipt{RequestID: "22222222-2222-4222-8222-222222222222", ProcessIncarnation: "process-resume", Stages: []string{"input_accepted"}, BaselineWorkingSequence: handoffTestUint64(0)},
 	}
-	got := resumePortReceipt(string(port.ExecutionOrcaIntentDispatch), receipt)
+	got := resumeContractReceipt(receipt)
 	if got.RequestID != receipt.RequestID || got.PromptReceipt == nil || got.PromptReceipt.RequestID != receipt.PromptReceipt.RequestID || got.PromptReceipt.ProcessIncarnation != "process-resume" {
 		t.Fatalf("resume dispatch receipt lost durable IDs: %+v", got)
 	}
@@ -314,19 +319,18 @@ func TestResumeReceiptPreservesAndValidatesBaselineWorkingSequencePresence(t *te
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			raw := `{"terminal_pty_id":"pty-resume","terminal_handle":"term-resume","task_id":"task-resume","dispatch_id":"dispatch-resume","request_id":"` + dispatchID + `","prompt_receipt":{"request_id":"` + promptID + `","stages":["input_accepted"],"provider":"omo","process_incarnation":"process-resume","generation":1` + test.field + `}}`
-			var receipt leasecontract.ResumeStageReceipt
+			var receipt port.ExecutionOrcaIntentReceipt
 			if err := json.Unmarshal([]byte(raw), &receipt); err != nil {
 				t.Fatal(err)
 			}
-			got := resumePortReceipt(string(port.ExecutionOrcaIntentDispatch), receipt)
-			err := port.ValidateExecutionOrcaDeliveryReceipt(got, port.OrcaDeliveryReceiptExpectation{
+			err := port.ValidateExecutionOrcaDeliveryReceipt(receipt, port.OrcaDeliveryReceiptExpectation{
 				Host: "omo", TaskID: "task-resume", TerminalPTYID: "pty-resume", TerminalHandle: "term-resume",
 				DispatchRequestID: dispatchID, PromptRequestID: promptID, PromptProcessIncarnation: "process-resume",
 			})
 			if (err != nil) != test.wantErr {
-				t.Fatalf("resume receipt validation err=%v wantErr=%v receipt=%+v", err, test.wantErr, got)
+				t.Fatalf("resume receipt validation err=%v wantErr=%v receipt=%+v", err, test.wantErr, receipt)
 			}
-			encoded, err := json.Marshal(resumeContractReceipt(got))
+			encoded, err := json.Marshal(resumeContractReceipt(receipt))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -338,13 +342,13 @@ func TestResumeReceiptPreservesAndValidatesBaselineWorkingSequencePresence(t *te
 	}
 }
 
-func resumeWiringBegin(t *testing.T, stateRoot string, effects *coreResumeEffects, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts, operationID string) leaseoutbound.ResumeEffectState {
+func resumeWiringBegin(t *testing.T, stateRoot string, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts, operationID string) resumeCoreState {
 	t.Helper()
 	store, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
-	repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(store, effects, nil, effects.now)
+	repository := leaseoutbound.NewResumeRepositoryWithDiagnosticRedactor(store, nil, resumeWiringNow)
 	progress, err := repository.BeginIntent(context.Background(), leaseapp.ResumeSnapshot{Record: leaseapp.Record{ID: record.ID, Stable: record}, Raw: raw}, artifacts, leasedomain.ResumePlan{RuntimeID: "runtime"}, operationID)
 	if err != nil {
 		t.Fatal(err)
@@ -353,11 +357,25 @@ func resumeWiringBegin(t *testing.T, stateRoot string, effects *coreResumeEffect
 	if err != nil {
 		t.Fatal(err)
 	}
-	return leaseoutbound.ResumeEffectState{
+	return resumeCoreState{
 		Record: state.Progress.Record.Stable, RecordRaw: state.RecordRaw, IntentRaw: state.IntentRaw,
 		OperationID: state.OperationID, Stage: state.Stage, InvocationState: state.InvocationState,
 		InvocationAttempts: state.InvocationAttempts, Pending: state.Progress.Pending,
 	}
+}
+
+func resumeWiringApplicationState(state resumeCoreState) leaseapp.ResumeIntentState {
+	return leaseapp.ResumeIntentState{
+		Progress: leaseapp.ResumeProgress{
+			Record: leaseapp.Record{ID: state.Record.ID, Stable: state.Record}, Execution: *state.Record.Execution, Pending: state.Pending,
+		},
+		OperationID: state.OperationID, Stage: state.Stage, InvocationState: state.InvocationState,
+		InvocationAttempts: state.InvocationAttempts, RecordRaw: state.RecordRaw, IntentRaw: state.IntentRaw,
+	}
+}
+
+func resumeWiringNow() time.Time {
+	return time.Date(2026, time.July, 31, 2, 20, 0, 0, time.UTC)
 }
 
 func resumeWiringDriftRecord(t *testing.T, stateRoot, id string) {

@@ -1353,7 +1353,7 @@
     {
       "path": "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
       "owner": "composition",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func convertReconcileReceipt",
         "func coreReconcileEffects.ApplyReceipt",
@@ -1408,23 +1408,21 @@
     {
       "path": "cmd/issueops/issueopsapp/issueops_resume_wiring.go",
       "owner": "composition",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
-        "func coreResumeEffects.ApplyReceipt",
-        "func coreResumeEffects.inspectStage",
-        "func coreResumeEffects.invokeStage",
-        "func coreResumeEffects.observeOwner",
-        "func coreResumeEffects.readArtifacts",
         "func issueOpsResumeHandler",
         "func newIssueOpsResumeService",
         "func resumeContractReceipt",
         "func resumeCoreIntentState",
         "func resumeCoreRecord",
         "func resumeEffectState",
-        "func resumeEffectStateFromCore",
+        "func resumeHostAdapter.inspectStage",
+        "func resumeHostAdapter.invokeStage",
+        "func resumeHostAdapter.observeOwner",
+        "func resumeHostAdapter.readArtifacts",
         "func resumeOperationIDs.New",
-        "func resumePortReceipt",
-        "type coreResumeEffects",
+        "type resumeCoreState",
+        "type resumeHostAdapter",
         "type resumeOperationIDs"
       ]
     },
@@ -7401,7 +7399,6 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func ApplyExecutionResumeIntentReceipt",
         "func ExecutionResumeIntentRequest",
         "func NewExecutionResumeOperationID",
         "func ReadExecutionResumeArtifacts",
@@ -7410,7 +7407,6 @@
         "func executionResumeArtifactsReceipt",
         "func executionResumeIntentPayload",
         "func executionResumeIntentState",
-        "func executionResumeIntentStateFromPayload",
         "func readExecutionResumeIntentRaw",
         "func readExecutionResumeRecordRaw",
         "func readExecutionResumeRecordRawOnly",
@@ -9083,7 +9079,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/reconcile_orca.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewReconcileStageExecutor",
         "func ReconcileStageExecutor.Inspect",
@@ -9096,7 +9092,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/reconcile_repository.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewReconcileRepository",
         "func NewReconcileRepositoryWithDiagnosticRedactor",
@@ -9117,7 +9113,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/reseed_artifacts.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewReseedArtifacts",
         "func ReseedArtifacts.CleanupSuperseded",
@@ -9139,7 +9135,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/reseed_fence.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewSQLiteReseedFence",
         "func SQLiteReseedFence.Within",
@@ -9150,7 +9146,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/reseed_inventory.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewReseedInventory",
         "func ReseedInventory.Observe",
@@ -9167,7 +9163,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/reseed_repository.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewReseedRepository",
         "func ReseedInventoryFunc.Observe",
@@ -9180,7 +9176,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/resume_artifacts.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewResumeArtifacts",
         "func ResumeArtifacts.ReadAndVerify",
@@ -9191,7 +9187,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/resume_orca.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewResumeOwnerInventory",
         "func NewResumeStageExecutor",
@@ -9208,7 +9204,7 @@
     {
       "path": "internal/adapter/outbound/issueopslease/resume_repository.go",
       "owner": "adapter",
-      "task": "T05",
+      "task": "T06",
       "symbols": [
         "func NewResumeRepository",
         "func NewResumeRepositoryWithDiagnosticRedactor",
@@ -9218,10 +9214,8 @@
         "func ResumeRepository.LoadSnapshot",
         "func ResumeRepository.MarkInvoking",
         "func ResumeRepository.RecordFailure",
-        "func resumeEffectState",
-        "func resumeProgress",
-        "type ResumeEffectState",
-        "type ResumeEffects",
+        "func resumePortReceipt",
+        "func resumePreparationReceipt",
         "type ResumeRepository"
       ]
     },
@@ -11310,7 +11304,7 @@
     {
       "path": "internal/application/issueopslease/reconcile.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func NewReconcileService",
         "func ReconcileService.Reconcile",
@@ -11340,7 +11334,7 @@
     {
       "path": "internal/application/issueopslease/reseed.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func NewReseedService",
         "func ReseedService.Reseed",
@@ -11360,7 +11354,7 @@
     {
       "path": "internal/application/issueopslease/resume.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func NewResumeService",
         "func ResumeService.Resume",
@@ -14483,7 +14477,7 @@
     {
       "path": "internal/domain/issueopslease/reconcile.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func PlanReconcileStage",
         "type ReconcileStageAction",
@@ -14530,7 +14524,7 @@
     {
       "path": "internal/domain/issueopslease/reseed.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func ApplyReseed",
         "func ValidateReseed",
@@ -14542,7 +14536,7 @@
     {
       "path": "internal/domain/issueopslease/resume.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func PlanResume",
         "func PlanResumeStage",
@@ -14563,7 +14557,7 @@
     {
       "path": "internal/domain/issueopslease/resume_begin.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func ValidateResumeBeginAuthority",
         "type ResumeBeginAuthority"
@@ -14753,7 +14747,7 @@
     {
       "path": "internal/domain/issueopspreparation/reconcile_authority.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func ValidateReconcileIntentIssueIdentity",
         "func ValidateReconcileSnapshot",
@@ -14763,7 +14757,7 @@
     {
       "path": "internal/domain/issueopspreparation/resume_begin.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func ApplyResumeIntent",
         "func BuildResumeIntent",
@@ -14771,9 +14765,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueopspreparation/resume_receipt.go",
+      "owner": "domain",
+      "task": "T06",
+      "symbols": [
+        "func ApplyResumeReceipt",
+        "type ResumeReceiptDecision"
+      ]
+    },
+    {
       "path": "internal/domain/issueopspreparation/resume_workspace.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T06",
       "symbols": [
         "func ResumeWorkspace",
         "type ResumeWorkspacePlan"
@@ -18793,6 +18796,24 @@
       ],
       "evidence_tests": [
         "internal/domain/issueopspreparation/resume_begin_test.go",
+        "internal/adapter/outbound/issueopslease/resume_repository_test.go",
+        "cmd/issueops/issueopsapp/issueops_resume_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "resume-receipt-transition",
+      "source_path": "internal/adapter/issueops/execution_resume_bridge.go",
+      "source_symbol": "func ApplyExecutionResumeIntentReceipt",
+      "responsibility": "validate and advance resumed Orca receipt stages while preserving the original lease and replacing the owner binding",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func ApplyResumeReceipt",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution resume --confirm"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspreparation/resume_receipt_test.go",
         "internal/adapter/outbound/issueopslease/resume_repository_test.go",
         "cmd/issueops/issueopsapp/issueops_resume_wiring_test.go"
       ],

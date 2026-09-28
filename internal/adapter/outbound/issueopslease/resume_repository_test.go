@@ -18,7 +18,7 @@ import (
 
 func TestResumeRepositoryLoadsExactGenerationSnapshot(t *testing.T) {
 	_, store := newResumeRepositoryStore(t, resumeRepositoryRecord(t, 4))
-	repository := NewResumeRepository(store, resumeEffectsFake{})
+	repository := NewResumeRepository(store)
 
 	snapshot, err := repository.LoadSnapshot(context.Background(), "io-resume-repository", 4)
 	if err != nil {
@@ -39,7 +39,7 @@ func TestResumeRepositoryBeginIntentPersistsSealedPendingStateWithRawCAS(t *test
 	record.Execution.Workspace.Branch = record.Branch
 	record.Execution.Workspace.BaseHead = "base"
 	_, store := newResumeRepositoryStore(t, record)
-	repository := NewResumeRepository(store, nil)
+	repository := NewResumeRepository(store)
 	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 15, 0, 0, time.UTC) }
 	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID, 4)
 	if err != nil {
@@ -73,6 +73,105 @@ func TestResumeRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
 	}
 	if _, err := repository.MarkInvoking(context.Background(), state); err == nil {
 		t.Fatal("stale raw intent was accepted")
+	}
+}
+
+func TestResumeRepositoryApplyReceiptAdvancesIntentWithRawCAS(t *testing.T) {
+	repository, state, store := seededResumeIntent(t)
+	progress, err := repository.ApplyReceipt(context.Background(), state, leasecontract.ResumeStageReceipt{TerminalPTYID: "pty-new"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !progress.Pending || progress.Execution.Pending == nil || progress.Execution.Pending.Kind != preparationdomain.PendingKind(preparationcontract.IntentStageRun) {
+		t.Fatalf("progress=%+v", progress)
+	}
+	loaded, err := repository.LoadIntent(context.Background(), progress)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Stage != string(preparationcontract.IntentStageRun) {
+		t.Fatalf("stage=%s", loaded.Stage)
+	}
+	if _, err := repository.ApplyReceipt(context.Background(), state, leasecontract.ResumeStageReceipt{TerminalPTYID: "pty-again"}); err == nil {
+		t.Fatal("stale receipt snapshot was accepted")
+	}
+	data, ok, err := store.Get("external_intent_v1", state.OperationID)
+	if err != nil || !ok || string(data) != string(loaded.IntentRaw) {
+		t.Fatalf("persisted intent: present=%v err=%v", ok, err)
+	}
+}
+
+func TestResumeRepositoryApplyDispatchReceiptPreservesLeaseAndDeletesIntent(t *testing.T) {
+	repository, state, store := seededResumeIntent(t)
+	payload, err := (preparationcontract.IntentCodec{}).Decode(state.OperationID, state.IntentRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload.Stage = preparationcontract.IntentStageDispatch
+	payload.TerminalPTYID, payload.RunID, payload.RunBound, payload.TaskID = "pty-new", "run-new", true, "task-new"
+	intentRaw, err := (preparationcontract.IntentCodec{}).Encode(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := state.Progress.Record.Stable
+	record.Execution.Pending.Kind = preparationdomain.PendingKind(payload.Stage)
+	recordRaw, err := leasecontract.Encode(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Apply(context.Background(), []port.RecordMutation{
+		{Bucket: recordBucket, ID: record.ID, Data: recordRaw},
+		{Bucket: "external_intent_v1", ID: state.OperationID, Data: intentRaw},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	state.Progress.Record = toApplicationRecord(record)
+	state.Progress.Execution = *record.Execution
+	state.Stage = string(payload.Stage)
+	state.RecordRaw, state.IntentRaw = recordRaw, intentRaw
+	lease := record.Execution.Lease
+	if _, err := repository.ApplyReceipt(context.Background(), state, leasecontract.ResumeStageReceipt{TaskID: "task-new", DispatchID: "dispatch-new"}); err == nil {
+		t.Fatal("incomplete dispatch receipt was accepted")
+	}
+	if data, ok, err := store.Get(recordBucket, record.ID); err != nil || !ok || string(data) != string(recordRaw) {
+		t.Fatalf("invalid dispatch changed record: present=%v err=%v", ok, err)
+	}
+	if data, ok, err := store.Get("external_intent_v1", state.OperationID); err != nil || !ok || string(data) != string(intentRaw) {
+		t.Fatalf("invalid dispatch changed intent: present=%v err=%v", ok, err)
+	}
+	progress, err := repository.ApplyReceipt(context.Background(), state, leasecontract.ResumeStageReceipt{
+		TerminalPTYID: "pty-new", TerminalHandle: "handle-new", TaskID: "task-new",
+		DispatchID: "dispatch-new", RequestID: "11111111-1111-4111-8111-111111111111",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if progress.Pending || progress.Execution.Pending != nil || progress.Execution.Orca == nil || progress.Execution.Orca.DispatchID != "dispatch-new" || progress.Execution.Orca.RuntimeID != payload.Prepared.RuntimeID || progress.Execution.Lease != lease {
+		t.Fatalf("dispatch progress=%+v", progress)
+	}
+	if _, ok, err := store.Get("external_intent_v1", state.OperationID); err != nil || ok {
+		t.Fatalf("completed intent remains: present=%v err=%v", ok, err)
+	}
+}
+
+func TestResumeReceiptConversionPreservesPromptIdentity(t *testing.T) {
+	sequence := uint64(0)
+	receipt := leasecontract.ResumeStageReceipt{
+		TerminalPTYID: "pty", RunID: "run", RunBound: true, TaskID: "task", DispatchID: "dispatch",
+		RequestID: "11111111-1111-4111-8111-111111111111",
+		PromptReceipt: &leasecontract.OrcaPromptReceipt{
+			RequestID: "22222222-2222-4222-8222-222222222222", Provider: "omo",
+			Stages: []string{"input_accepted"}, ProcessIncarnation: "process", Generation: 4,
+			BaselineWorkingSequence: &sequence,
+		},
+	}
+	portReceipt := resumePortReceipt(receipt)
+	preparationReceipt := resumePreparationReceipt(receipt)
+	if portReceipt.RunID != receipt.RunID || !portReceipt.RunBound || portReceipt.PromptReceipt == nil || portReceipt.PromptReceipt.BaselineWorkingSequence == nil || *portReceipt.PromptReceipt.BaselineWorkingSequence != 0 {
+		t.Fatalf("port receipt=%+v", portReceipt)
+	}
+	if preparationReceipt.PromptReceipt == nil || preparationReceipt.PromptReceipt.RequestID != receipt.PromptReceipt.RequestID || preparationReceipt.PromptReceipt.BaselineWorkingSequence == nil {
+		t.Fatalf("preparation receipt=%+v", preparationReceipt)
 	}
 }
 
@@ -182,7 +281,7 @@ func seededResumeIntent(t *testing.T) (*ResumeRepository, leaseapp.ResumeIntentS
 	if err != nil || !ok {
 		t.Fatalf("record raw: present=%v err=%v", ok, err)
 	}
-	repository := NewResumeRepository(store, nil)
+	repository := NewResumeRepository(store)
 	state := leaseapp.ResumeIntentState{
 		Progress:    leaseapp.ResumeProgress{Record: toApplicationRecord(record), Execution: *record.Execution, Pending: true},
 		OperationID: operationID, Stage: string(intent.Stage), InvocationState: intent.InvocationState,
@@ -224,10 +323,4 @@ func resumeRepositoryRecord(t *testing.T, generation uint64) leasecontract.Recor
 
 func resumeRepositoryPlan() leasedomain.ResumePlan {
 	return leasedomain.ResumePlan{Disposition: leasedomain.ResumeCreateTerminal, RuntimeID: "runtime"}
-}
-
-type resumeEffectsFake struct{}
-
-func (resumeEffectsFake) ApplyReceipt(context.Context, ResumeEffectState, leasecontract.ResumeStageReceipt) (ResumeEffectState, error) {
-	return ResumeEffectState{}, nil
 }
