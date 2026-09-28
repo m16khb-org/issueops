@@ -2,7 +2,6 @@ package issueopsremote
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	publicationapp "issueops/internal/application/issueopspublication"
@@ -11,7 +10,6 @@ import (
 	cycledomain "issueops/internal/domain/issueops"
 	domain "issueops/internal/domain/issueopspublication"
 	remote "issueops/internal/domain/issueopsremote"
-	"issueops/internal/domain/policy"
 )
 
 type PublicationJournal struct {
@@ -116,7 +114,7 @@ func (j *PublicationJournal) RecordFailure(ctx context.Context, intent contract.
 			return err
 		}
 		payload = domain.FailurePayload(payload, string(invocation), expected.RetryCount, knownURL)
-		current = cycledomain.FailPublication(current, expected.OperationID, publicationDiagnostic(cause), j.environment.Timestamp(), false)
+		current = cycledomain.FailPublication(current, expected.OperationID, remote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), false)
 		_, err = j.store.Persist(tx, current, contract.IntentMutation{OperationID: payload.OperationID, Payload: &payload})
 		return err
 	})
@@ -197,7 +195,7 @@ func (j *PublicationJournal) CompleteNotInvoked(ctx context.Context, intent cont
 		if err := domain.ValidatePayloadUnchanged(stored, payload, domain.CheckpointNotInvoked); err != nil {
 			return err
 		}
-		current = cycledomain.FailPublication(current, payload.OperationID, publicationDiagnostic(cause), j.environment.Timestamp(), true)
+		current = cycledomain.FailPublication(current, payload.OperationID, remote.PublicationFailureDiagnostic(cause), j.environment.Timestamp(), true)
 		_, err = j.store.Persist(tx, current, contract.IntentMutation{OperationID: payload.OperationID, Delete: true})
 		return err
 	})
@@ -212,8 +210,13 @@ func (j *PublicationJournal) LoadIntent(ctx context.Context, id string) (contrac
 	if err != nil {
 		return contract.Intent{}, err
 	}
-	if record.Execution == nil || record.Execution.Pending == nil || record.Execution.Pending.Kind != contract.RemoteIntentKind {
-		return contract.Intent{}, fmt.Errorf("remote publication intent is not pending")
+	facts := pendingFacts(record, "")
+	kind := ""
+	if facts.Pending {
+		kind = record.Execution.Pending.Kind
+	}
+	if err := domain.ValidatePublicationPending(facts.Prepared, facts.Pending, kind); err != nil {
+		return contract.Intent{}, err
 	}
 	payload, err := j.store.ReadPayload(ctx, record.Execution.Pending.OperationID)
 	if err != nil {
@@ -253,17 +256,6 @@ func pendingFacts(record model.IssueOpsRecord, expected string) domain.PendingIn
 
 func publicationEligibility(record model.IssueOpsRecord, payload contract.IntentPayload) contract.CreateEligibility {
 	return contract.CreateEligibility{Provider: strings.ToLower(strings.TrimSpace(payload.Provider)), Kind: payload.Kind, Confirm: payload.Request.Confirm, PhasePR: record.Phase == model.IssueOpsPhasePR, ExecutionActive: record.Execution != nil && record.Execution.Lease.Status == model.LeaseStatusActive, NoPending: record.Execution == nil || record.Execution.Pending == nil, NoArtifact: record.RemoteArtifact == nil, BranchAuthority: true, CanonicalLabelsAssignees: len(payload.Request.Labels) > 0 && len(payload.Request.Assignees) > 0}
-}
-
-func publicationDiagnostic(cause error) string {
-	if cause == nil {
-		return "external operation failed"
-	}
-	message := strings.TrimSpace(policy.RedactDiagnostic(cause.Error()))
-	if len(message) > 4096 {
-		message = message[:4096]
-	}
-	return message
 }
 
 var _ publicationapp.Repository = (*PublicationJournal)(nil)

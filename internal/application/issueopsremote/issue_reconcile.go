@@ -70,6 +70,6 @@ func (s *IssueReconciler) Reconcile(ctx context.Context, id string, confirm bool
 }
 
 func (s *IssueReconciler) recordFailure(ctx context.Context, id, url string, cause error) error {
-	_, err := s.intents.Outcome(ctx, id, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentVerificationFailed, CanonicalURL: url, Failure: IssueCreateFailure(cause), ObservedAt: s.now().UTC().Format(time.RFC3339Nano)})
+	_, err := s.intents.Outcome(ctx, id, model.IssueOpsIssueCreateOutcome{Status: model.IssueCreateIntentVerificationFailed, CanonicalURL: url, Failure: remote.IssueCreateFailure(cause), ObservedAt: s.now().UTC().Format(time.RFC3339Nano)})
 	return errors.Join(cause, err)
 }

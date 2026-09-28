@@ -51,3 +51,10 @@ func FailurePayload(payload contract.IntentPayload, invocation string, retryCoun
 	}
 	return payload
 }
+
+func ValidatePublicationPending(prepared, pending bool, kind string) error {
+	if !prepared || !pending || kind != contract.RemoteIntentKind {
+		return fmt.Errorf("remote publication intent is not pending")
+	}
+	return nil
+}

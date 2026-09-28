@@ -17,21 +17,14 @@ func (e IssueCreationEnvironment) InferProvider(repo string) (string, error) {
 func (e IssueCreationEnvironment) ProjectAuthority(repo, provider string) (string, error) {
 	return ResolveProviderProjectAuthority(repo, provider)
 }
-func (e IssueCreationEnvironment) Resolve(name string) (application.IssueCreationProvider, error) {
+func (e IssueCreationEnvironment) Resolve(name string) (application.IssueCreateInvoker, error) {
 	resolved, err := e.ResolveProvider(name)
 	if err != nil {
 		return nil, err
 	}
-	return issueCreationProvider{provider: resolved}, nil
-}
-
-type issueCreationProvider struct{ provider port.IssueProvider }
-
-func (p issueCreationProvider) Create(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
-	if !req.Confirm {
-		ctx = context.Background()
-	}
-	return CreateRemoteIssueContext(ctx, req, p.provider)
+	return func(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+		return CreateRemoteIssueContext(ctx, req, resolved)
+	}, nil
 }
 
 var _ application.IssueCreationEnvironment = IssueCreationEnvironment{}

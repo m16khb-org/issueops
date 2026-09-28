@@ -7571,9 +7571,7 @@
         "func IssueCreationEnvironment.InferProvider",
         "func IssueCreationEnvironment.ProjectAuthority",
         "func IssueCreationEnvironment.Resolve",
-        "func issueCreationProvider.Create",
-        "type IssueCreationEnvironment",
-        "type issueCreationProvider"
+        "type IssueCreationEnvironment"
       ]
     },
     {
@@ -11640,17 +11638,9 @@
         "func IssueCreator.timestamp",
         "func NewIssueCreator",
         "type IssueCreateCommand",
+        "type IssueCreateInvoker",
         "type IssueCreationEnvironment",
-        "type IssueCreationProvider",
         "type IssueCreator"
-      ]
-    },
-    {
-      "path": "internal/application/issueopsremote/issue_create_failure.go",
-      "owner": "application",
-      "task": "T07",
-      "symbols": [
-        "func IssueCreateFailure"
       ]
     },
     {
@@ -11742,7 +11732,6 @@
         "func PublicationJournal.RecordFailure",
         "func PublicationJournal.loadSnapshot",
         "func pendingFacts",
-        "func publicationDiagnostic",
         "func publicationEligibility",
         "type PublicationJournal"
       ]
@@ -15331,6 +15320,7 @@
         "func RetryPayload",
         "func ValidatePayloadUnchanged",
         "func ValidatePendingIntent",
+        "func ValidatePublicationPending",
         "type IntentCheckpoint",
         "type PendingIntentFacts"
       ]
@@ -15378,6 +15368,14 @@
         "type CreateAuthority",
         "type CreateBranchAuthority",
         "type CreateRequest"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/issue_create_failure.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func IssueCreateFailure"
       ]
     },
     {
@@ -15507,6 +15505,14 @@
         "func ProviderFromRemoteURLs",
         "func providerFromRemoteURL",
         "func remoteURLHost"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/publication_diagnostic.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func PublicationFailureDiagnostic"
       ]
     },
     {
@@ -17873,7 +17879,7 @@
       ],
       "evidence_tests": [
         "internal/domain/issueopspublication/candidate_test.go",
-        "internal/adapter/issueops/execution_remote_candidate_test.go"
+        "internal/adapter/issueops/execution_publication_verifier_test.go"
       ],
       "status": "migrated"
     },
@@ -20194,14 +20200,14 @@
       "source_path": "cmd/issueops/issueopscli/remotecmd/remote.go",
       "source_symbol": "func durableIssueCreateFailure",
       "responsibility": "redact and bound provider diagnostics before persisting issue creation failure evidence",
-      "target": "internal/application/issueopsremote",
+      "target": "internal/domain/issueopsremote",
       "target_symbol": "func IssueCreateFailure",
       "task": "T07",
       "entrypoints": [
         "issueops remote reconcile-issue"
       ],
       "evidence_tests": [
-        "internal/application/issueopsremote/issue_create_failure_test.go",
+        "internal/domain/issueopsremote/issue_create_failure_test.go",
         "cmd/issueops/issueopscli/remotecmd/remote_test.go"
       ],
       "status": "migrated"
@@ -20772,6 +20778,7 @@
       "source_symbol": "func issueCreationProvider.Create",
       "responsibility": "choose uncancelled issue preview invocation in application while retaining confirmed caller context",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func IssueCreator.Create",
       "task": "T07",
       "entrypoints": [
         "issueops remote",
@@ -20780,7 +20787,7 @@
       "evidence_tests": [
         "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "publication-pending-load-eligibility",
@@ -20788,31 +20795,36 @@
       "source_symbol": "func PublicationJournal.LoadIntent",
       "responsibility": "validate pending publication kind before retrieving the payload",
       "target": "internal/domain/issueopspublication",
+      "target_symbol": "func ValidatePublicationPending",
       "task": "T07",
       "entrypoints": [
         "issueops remote",
         "issueops execution reconcile"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/execution_publication_repository_test.go"
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/domain/issueopspublication/pending_intent_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
     },
     {
       "id": "publication-failure-diagnostic",
       "source_path": "internal/application/issueopsremote/publication_journal.go",
       "source_symbol": "func publicationDiagnostic",
       "responsibility": "choose fallback and byte limit for redacted publication failure diagnostics",
-      "target": "internal/domain/issueopspublication",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func PublicationFailureDiagnostic",
       "task": "T07",
       "entrypoints": [
         "issueops remote",
         "issueops execution reconcile"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/execution_publication_repository_test.go"
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/domain/issueopsremote/publication_diagnostic_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "issue-create-failure-diagnostic-policy",
@@ -20820,13 +20832,90 @@
       "source_symbol": "func IssueCreateFailure",
       "responsibility": "bound and redact the persisted issue creation failure diagnostic",
       "target": "internal/domain/issueopsremote",
+      "target_symbol": "func IssueCreateFailure",
       "task": "T07",
       "entrypoints": [
         "issueops remote",
         "issueops execution reconcile"
       ],
       "evidence_tests": [
-        "internal/application/issueopsremote/issue_create_failure_test.go"
+        "internal/domain/issueopsremote/issue_create_failure_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "managed-completion-rendering",
+      "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
+      "source_symbol": "func RenderCompletionSection",
+      "responsibility": "render mandatory completion blocks and truncate lower-priority bodies without dropping headings",
+      "target": "internal/domain/issuebody",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reflect-completion",
+        "issueops remote reflect-review",
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/adapter/provider/issuebody/issue_body_section_test.go",
+        "internal/adapter/provider/github/provider_test.go",
+        "internal/adapter/provider/gitlab/provider_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "managed-section-budget",
+      "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
+      "source_symbol": "func SectionBudget",
+      "responsibility": "allocate provider body bytes after accounting for existing unmanaged content",
+      "target": "internal/domain/issuebody",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reflect-completion",
+        "issueops remote reflect-review",
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/adapter/provider/issuebody/issue_body_section_test.go",
+        "internal/adapter/provider/github/provider_test.go",
+        "internal/adapter/provider/gitlab/provider_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "managed-section-merge",
+      "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
+      "source_symbol": "func MergeManagedSection",
+      "responsibility": "replace one delimited managed section while preserving surrounding content",
+      "target": "internal/domain/issuebody",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reflect-completion",
+        "issueops remote reflect-review",
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/adapter/provider/issuebody/issue_body_section_test.go",
+        "internal/adapter/provider/github/provider_test.go",
+        "internal/adapter/provider/gitlab/provider_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "managed-section-selection",
+      "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
+      "source_symbol": "func RenderSection",
+      "responsibility": "validate supported managed section and required payload before provider mutation",
+      "target": "internal/domain/issuebody",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reflect-completion",
+        "issueops remote reflect-review",
+        "issueops cleanup finish"
+      ],
+      "evidence_tests": [
+        "internal/adapter/provider/issuebody/issue_body_section_test.go",
+        "internal/adapter/provider/github/provider_test.go",
+        "internal/adapter/provider/gitlab/provider_test.go"
       ],
       "status": "migrate"
     }

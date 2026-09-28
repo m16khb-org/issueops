@@ -38,16 +38,17 @@ type dddInventory struct {
 }
 
 type dddPolicy struct {
-	ID             string   `json:"id"`
-	SourcePath     string   `json:"source_path"`
-	SourceSymbol   string   `json:"source_symbol"`
-	Responsibility string   `json:"responsibility"`
-	Target         string   `json:"target"`
-	TargetSymbol   string   `json:"target_symbol,omitempty"`
-	Task           string   `json:"task"`
-	Entrypoints    []string `json:"entrypoints"`
-	EvidenceTests  []string `json:"evidence_tests"`
-	Status         string   `json:"status"`
+	ID               string   `json:"id"`
+	SourcePath       string   `json:"source_path"`
+	SourceSymbol     string   `json:"source_symbol"`
+	Responsibility   string   `json:"responsibility"`
+	Target           string   `json:"target"`
+	TargetSymbol     string   `json:"target_symbol,omitempty"`
+	Task             string   `json:"task"`
+	Entrypoints      []string `json:"entrypoints"`
+	EvidenceTests    []string `json:"evidence_tests"`
+	Status           string   `json:"status"`
+	SourceRetainedAs string   `json:"source_retained_as,omitempty"`
 }
 
 type dddContractFunction struct {
@@ -101,6 +102,9 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 			t.Errorf("incomplete or duplicate policy entry: %+v", policy)
 		}
 		ids[policy.ID] = true
+		if policy.SourceRetainedAs != "" && policy.Status != "migrated" {
+			t.Errorf("%s retained source requires a migrated domain policy", policy.ID)
+		}
 		if policy.Status != "migrate" && policy.Status != "migrated" && policy.Status != "retain" {
 			t.Errorf("%s has invalid status %q", policy.ID, policy.Status)
 		}
@@ -111,7 +115,14 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 			if policy.TargetSymbol == "" {
 				t.Errorf("%s migrated policy has no target symbol", policy.ID)
 			}
-			if slicesContains(byPath[policy.SourcePath].Symbols, policy.SourceSymbol) {
+			sourceExists := slicesContains(byPath[policy.SourcePath].Symbols, policy.SourceSymbol)
+			if policy.SourceRetainedAs != "" {
+				// A use-case method can retain I/O sequencing after its decision moves
+				// to domain. Its behavior tests must prove the domain decision is used.
+				if policy.SourceRetainedAs != "application-orchestration" || !sourceExists || byPath[policy.SourcePath].Owner != "application" || !strings.HasPrefix(policy.Target, "internal/domain/") {
+					t.Errorf("%s has invalid retained source responsibility", policy.ID)
+				}
+			} else if sourceExists {
 				t.Errorf("%s migrated policy remains in %s", policy.ID, policy.SourcePath)
 			}
 			found := false
@@ -436,6 +447,8 @@ func dddTask(path string) string {
 		{"internal/adapter/issueops/remote_record_store.go", "T07"},
 		{"internal/adapter/issueops/completion_artifacts.go", "T07"},
 		{"internal/domain/issueopsremote/create_metadata.go", "T07"},
+		{"internal/domain/issueopsremote/issue_create_failure.go", "T07"},
+		{"internal/domain/issueopsremote/publication_diagnostic.go", "T07"},
 		{"internal/domain/policy/remote_create_inputs.go", "T07"},
 		{"internal/adapter/issueops/issue_creation_environment.go", "T07"},
 		{"internal/domain/issueops/issue_url.go", "T08"},

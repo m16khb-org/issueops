@@ -23,6 +23,58 @@ func (p issueCreateProvider) CreateIssueContext(ctx context.Context, req port.Is
 	return p.create(ctx, req)
 }
 
+func TestIssueCreateCancellationPreservesPreviewAndConfirm(t *testing.T) {
+	for _, confirm := range []bool{false, true} {
+		name := "preview"
+		if confirm {
+			name = "confirm"
+		}
+		t.Run(name, func(t *testing.T) {
+			root, repo := t.TempDir(), t.TempDir()
+			for _, args := range [][]string{{"init", "-q", repo}, {"-C", repo, "remote", "add", "origin", "https://github.com/acme/repo.git"}} {
+				if out, err := exec.Command("git", args...).CombinedOutput(); err != nil {
+					t.Fatalf("git: %s %v", out, err)
+				}
+			}
+			record, err := issueops.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "74-cancel"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			calls := 0
+			provider := issueCreateProvider{create: func(ctx context.Context, req port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
+				calls++
+				if req.Confirm != confirm || (ctx.Err() != nil) != confirm {
+					t.Fatalf("confirm=%v error=%v", req.Confirm, ctx.Err())
+				}
+				if confirm {
+					return port.IssueProviderCreateIssueResult{}, &port.IssueProviderCreateError{Invoked: false, Err: ctx.Err()}
+				}
+				return port.IssueProviderCreateIssueResult{OK: true, Preview: "preview"}, nil
+			}}
+			service := newIssueCreator(root, func(string) (port.IssueProvider, error) { return provider, nil }, func(context.Context, model.IssueOpsRemoteArtifactVerificationRequest) error {
+				t.Fatal("unexpected verification")
+				return nil
+			}, time.Now)
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			_, err = service.Create(ctx, application.IssueCreateCommand{ID: record.ID, Provider: "github", Title: "Title", Body: "Body", Labels: []string{"bug"}, Assignees: []string{"owner"}, Confirm: confirm})
+			if calls != 1 || (err != nil) != confirm {
+				t.Fatalf("calls=%d error=%v", calls, err)
+			}
+			stored, err := issueops.ReadIssueOps(root, record.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !confirm && stored.IssueCreateIntent != nil {
+				t.Fatal("preview persisted intent")
+			}
+			if confirm && (stored.IssueCreateIntent == nil || stored.IssueCreateIntent.Status != model.IssueCreateIntentNotInvoked) {
+				t.Fatalf("intent=%+v", stored.IssueCreateIntent)
+			}
+		})
+	}
+}
+
 func TestIssueCreateCompositionPersistsBeforeInvocationAndBlocksAmbiguousRetry(t *testing.T) {
 	root, repo := t.TempDir(), t.TempDir()
 	for _, args := range [][]string{{"init", "-q", repo}, {"-C", repo, "remote", "add", "origin", "https://github.com/acme/repo.git"}} {

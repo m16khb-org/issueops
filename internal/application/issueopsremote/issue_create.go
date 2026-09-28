@@ -28,14 +28,12 @@ type IssueCreateCommand struct {
 	Confirm   bool
 }
 
-type IssueCreationProvider interface {
-	Create(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error)
-}
+type IssueCreateInvoker func(context.Context, port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error)
 
 type IssueCreationEnvironment interface {
 	InferProvider(string) (string, error)
 	ProjectAuthority(string, string) (string, error)
-	Resolve(string) (IssueCreationProvider, error)
+	Resolve(string) (IssueCreateInvoker, error)
 }
 
 type IssueCreator struct {
@@ -95,7 +93,11 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (port
 			return result, err
 		}
 	}
-	result, err = provider.Create(ctx, port.IssueProviderCreateIssueRequest{Repo: record.Repo, ProjectKey: authority, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
+	invokeContext := ctx
+	if !cmd.Confirm {
+		invokeContext = context.Background()
+	}
+	result, err = provider(invokeContext, port.IssueProviderCreateIssueRequest{Repo: record.Repo, ProjectKey: authority, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
 	if err != nil {
 		if cmd.Confirm {
 			createErr, typed := errors.AsType[*port.IssueProviderCreateError](err)
@@ -119,7 +121,7 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (port
 }
 
 func (s *IssueCreator) recordFailure(id, status, url string, cause error) error {
-	_, err := s.intents.Outcome(context.Background(), id, model.IssueOpsIssueCreateOutcome{Status: status, CanonicalURL: url, Failure: IssueCreateFailure(cause), ObservedAt: s.timestamp()})
+	_, err := s.intents.Outcome(context.Background(), id, model.IssueOpsIssueCreateOutcome{Status: status, CanonicalURL: url, Failure: remote.IssueCreateFailure(cause), ObservedAt: s.timestamp()})
 	if err != nil {
 		return errors.Join(cause, err)
 	}

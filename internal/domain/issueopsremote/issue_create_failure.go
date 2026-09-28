@@ -1,4 +1,4 @@
-package issueopsremote
+package remote
 
 import (
 	"strings"

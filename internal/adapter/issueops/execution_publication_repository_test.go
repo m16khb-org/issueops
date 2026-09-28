@@ -282,6 +282,37 @@ func TestPublicationJournalRechecksHolderBeforeIntentWrite(t *testing.T) {
 	}
 }
 
+func TestPublicationJournalRejectsAbsentOrOtherPendingIntent(t *testing.T) {
+	for _, mode := range []string{"unprepared", "no-intent", "other-kind"} {
+		t.Run(mode, func(t *testing.T) {
+			root, journal, record, _ := newPendingPublicationFixture(t)
+			switch mode {
+			case "unprepared":
+				record.Execution = nil
+			case "no-intent":
+				record.Execution.Pending = nil
+			case "other-kind":
+				record.Execution.Pending.Kind = "orca"
+			}
+			if _, err := writeIssueOps(root, record); err != nil {
+				t.Fatal(err)
+			}
+			before, err := journal.Latest(context.Background(), record.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = journal.LoadIntent(context.Background(), record.ID)
+			if err == nil || err.Error() != "remote publication intent is not pending" {
+				t.Fatalf("error=%v", err)
+			}
+			after, err := journal.Latest(context.Background(), record.ID)
+			if err != nil || !bytes.Equal(before.Raw, after.Raw) {
+				t.Fatalf("rejected load changed record: %v", err)
+			}
+		})
+	}
+}
+
 func TestPublicationJournalRetryAndTerminalFailureAreAtomic(t *testing.T) {
 	root, journal, record, payload := newPendingPublicationFixture(t)
 	original, err := journal.LoadIntent(context.Background(), record.ID)
