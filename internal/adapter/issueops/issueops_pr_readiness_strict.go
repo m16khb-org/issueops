@@ -1,7 +1,6 @@
 package issueops
 
 import (
-	"fmt"
 	"strings"
 
 	"issueops/internal/adapter/issueops/implementation"
@@ -74,31 +73,23 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 	ready := IssueOpsPRReadiness(record)
 	ready.Strict = syncUpstream
 	missing := append([]string{}, ready.Missing...)
-	warnings := []string{}
 	currentHead := ""
 	currentFingerprint := ""
 	changeObservation := implementation.LocalChangeObservation{}
 
 	gitRoot := issueOpsStrictGitRoot(record)
-	if gitRoot == "" {
-		missing = append(missing, "repo")
-	} else if code, out, _ := GitCmd(gitRoot, "rev-parse", "--is-inside-work-tree"); code != 0 || strings.TrimSpace(out) != "true" {
-		missing = append(missing, "repo_git")
-	} else {
+	facts := issueopsdomain.PRGitFacts{RootAvailable: gitRoot != "", SyncUpstream: syncUpstream}
+	if facts.RootAvailable {
+		code, out, _ := GitCmd(gitRoot, "rev-parse", "--is-inside-work-tree")
+		facts.GitWorktree = code == 0 && strings.TrimSpace(out) == "true"
+	}
+	if facts.GitWorktree {
 		currentHead = issueOpsCurrentHead(record)
 		changeObservation = implementation.ObserveLocalChangesAt(record, gitRoot)
 		currentFingerprint = changeObservation.Fingerprint
-		if !changeObservation.Verified {
-			missing = append(missing, "current_fingerprint")
-		}
-		branch := strings.TrimSpace(GitOut(gitRoot, "branch", "--show-current"))
-		if strings.TrimSpace(record.Branch) != "" && branch != strings.TrimSpace(record.Branch) {
-			missing = append(missing, "branch_match")
-			warnings = append(warnings, "current branch "+branch+" does not match IssueOps branch "+strings.TrimSpace(record.Branch))
-		}
-		if strings.TrimSpace(GitOut(gitRoot, "status", "--porcelain=v1")) != "" {
-			missing = append(missing, "worktree_clean")
-		}
+		facts.FingerprintVerified = changeObservation.Verified
+		facts.CurrentBranch = strings.TrimSpace(GitOut(gitRoot, "branch", "--show-current"))
+		facts.WorktreeClean = strings.TrimSpace(GitOut(gitRoot, "status", "--porcelain=v1")) == ""
 		// base drift는 경고다. missing에 넣지 않으므로 PR 게이트 정책은 그대로다.
 		// fetch하지 않고 로컬 tracking ref만 본다 — 진실은 `execution sync-base
 		// --preview`가 fetch해서 확인한다.
@@ -106,32 +97,19 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 			remoteRef := "origin/" + base
 			if code, _, _ := GitCmd(gitRoot, "rev-parse", "--verify", "--end-of-options", remoteRef+"^{commit}"); code == 0 {
 				if code, _, _ := GitCmd(gitRoot, "merge-base", "--is-ancestor", remoteRef, "HEAD"); code != 0 {
-					warnings = append(warnings, "base_advanced: "+remoteRef+" is not an ancestor of HEAD; run issueops execution sync-base --id "+record.ID+" --preview")
+					facts.BaseRemoteRef, facts.BaseAdvanced = remoteRef, true
 				}
 			}
 		}
-		upstream := strings.TrimSpace(GitOut(gitRoot, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"))
-		if upstream == "" {
-			missing = append(missing, "upstream")
-		} else if syncUpstream {
-			if fetched := fetchUpstream(gitRoot); fetched.failed {
-				missing = append(missing, "upstream_fetch")
-				if fetched.stderr != "" {
-					warnings = append(warnings, "failed to fetch upstream: "+fetched.stderr)
-				}
-			}
-			counts := strings.Fields(GitOut(gitRoot, "rev-list", "--left-right", "--count", "HEAD...@{u}"))
-			if len(counts) != 2 || counts[0] != "0" || counts[1] != "0" {
-				missing = append(missing, "upstream_synced")
-				if len(counts) == 2 {
-					warnings = append(warnings, "branch divergence against upstream: ahead="+counts[0]+" behind="+counts[1])
-				}
-			}
+		facts.Upstream = strings.TrimSpace(GitOut(gitRoot, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"))
+		if facts.Upstream != "" && syncUpstream {
+			fetched := fetchUpstream(gitRoot)
+			facts.FetchFailed, facts.FetchStderr = fetched.failed, fetched.stderr
+			facts.UpstreamCounts = GitOut(gitRoot, "rev-list", "--left-right", "--count", "HEAD...@{u}")
 		}
 	}
-	if record.SourceMisdirectWarnings > 0 {
-		warnings = append(warnings, fmt.Sprintf("source_misdirect_warnings:%d", record.SourceMisdirectWarnings))
-	}
+	gitMissing, warnings := issueopsdomain.PRGitReadiness(record, facts)
+	missing = append(missing, gitMissing...)
 	// strict는 :12에서 IssueOpsPRReadiness를 포함하므로 미기록/비-pass 미싱은
 	// 이미 들어 있다 — 여기서는 fingerprint가 필요한 stale 판정만 추가한다.
 	if reviewMissing := implementationReviewMissing(record, currentFingerprint); strings.HasSuffix(reviewMissing, "_stale") {

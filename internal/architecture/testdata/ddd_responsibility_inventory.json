@@ -13891,6 +13891,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/pr_git_readiness.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PRGitReadiness",
+        "type PRGitFacts"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/pr_readiness_warnings.go",
       "owner": "domain",
       "task": "T20",
@@ -17594,6 +17603,26 @@
         "internal/application/issueopscycle/implementation_readiness_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "strict-pr-git-readiness",
+      "source_path": "internal/adapter/issueops/issueops_pr_readiness_strict.go",
+      "source_symbol": "func issueOpsObservedPRReadiness",
+      "responsibility": "strict PR readiness combines Git observations, upstream fetch, review and schema evidence, and final missing keys",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func LocalPRReadinessMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/pr_git_readiness_test.go",
+        "internal/adapter/issueops/issueops_pr_readiness_local_test.go",
+        "internal/adapter/issueops/issueops_readiness_test.go"
+      ],
+      "status": "migrate"
     }
   ]
 }
