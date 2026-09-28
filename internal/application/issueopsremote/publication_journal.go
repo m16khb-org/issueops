@@ -17,10 +17,11 @@ import (
 type PublicationJournal struct {
 	store       PublicationStore
 	environment PublicationEnvironment
+	authority   PublicationAuthority
 }
 
-func NewPublicationJournal(store PublicationStore, environment PublicationEnvironment) *PublicationJournal {
-	return &PublicationJournal{store: store, environment: environment}
+func NewPublicationJournal(store PublicationStore, environment PublicationEnvironment, authority PublicationAuthority) *PublicationJournal {
+	return &PublicationJournal{store: store, environment: environment, authority: authority}
 }
 
 func (j *PublicationJournal) BeginCreate(ctx context.Context, prepared contract.PreparedCreate) (contract.Intent, error) {
@@ -41,7 +42,7 @@ func (j *PublicationJournal) BeginCreate(ctx context.Context, prepared contract.
 		if err != nil {
 			return err
 		}
-		if err := j.environment.Authorize(tx, current, prepared.Command); err != nil {
+		if err := j.authority.Authorize(tx, current, publicationMutationActor(prepared.Command)); err != nil {
 			return err
 		}
 		facts := domain.BeginAuthorityFacts{Prepared: current.Execution != nil, Artifact: current.RemoteArtifact != nil, ExpectedGeneration: prepared.Command.ExpectedGeneration}

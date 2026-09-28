@@ -7343,7 +7343,6 @@
       "owner": "adapter",
       "task": "T07",
       "symbols": [
-        "func publicationActor",
         "func publicationIntentSnapshot"
       ]
     },
@@ -7352,11 +7351,9 @@
       "owner": "adapter",
       "task": "T07",
       "symbols": [
-        "func RemotePublicationObserver.Authorize",
         "func RemotePublicationObserver.Fingerprint",
         "func RemotePublicationObserver.Head",
         "func RemotePublicationObserver.NewOperationID",
-        "func RemotePublicationObserver.NormalizeActor",
         "func RemotePublicationObserver.PathsMatch",
         "func RemotePublicationObserver.Read",
         "func RemotePublicationObserver.Timestamp",
@@ -8951,7 +8948,6 @@
       "symbols": [
         "func Environment.CurrentHead",
         "func Environment.PathsMatch",
-        "func Environment.VerifyArtifact",
         "func Environment.VerifyReport",
         "func NewEnvironment",
         "type Environment"
@@ -11702,10 +11698,21 @@
       "task": "T07",
       "symbols": [
         "type PreparationObserver",
+        "type PublicationAuthority",
         "type PublicationEnvironment",
         "type PublicationStore",
         "type RecordStore",
         "type RecordTransition"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/publication_actor.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func normalizePublicationActor",
+        "func publicationMutationActor",
+        "func publicationNativeActor"
       ]
     },
     {
@@ -20712,15 +20719,17 @@
       "source_symbol": "func RemotePublicationObserver.Authorize",
       "responsibility": "invoke shared mutation authority directly from publication application instead of outbound observation",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationJournal.BeginCreate",
       "task": "T07",
       "entrypoints": [
         "issueops remote create-pr",
         "issueops execution complete"
       ],
       "evidence_tests": [
-        "cmd/issueops/issueopsapp/issueops_publication_wiring_test.go"
+        "internal/adapter/issueops/execution_publication_create_test.go",
+        "internal/adapter/issueops/execution_publication_repository_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "publication-native-normalization-bridge",
@@ -20728,6 +20737,7 @@
       "source_symbol": "func RemotePublicationObserver.NormalizeActor",
       "responsibility": "normalize publication actor through shared application identity verification without adapter callback",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func normalizePublicationActor",
       "task": "T07",
       "entrypoints": [
         "issueops remote create-pr",
@@ -20736,7 +20746,7 @@
       "evidence_tests": [
         "internal/application/issueopsremote/create_preparation_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "completion-artifact-validation-bridge",
@@ -20744,13 +20754,79 @@
       "source_symbol": "func Environment.VerifyArtifact",
       "responsibility": "call pure completion artifact validation directly inside the application transaction",
       "target": "internal/domain/issueopscompletion",
+      "target_symbol": "func ValidateArtifact",
       "task": "T07",
       "entrypoints": [
         "issueops remote create-pr",
         "issueops execution complete"
       ],
       "evidence_tests": [
-        "internal/application/issueopscompletion/complete_test.go"
+        "internal/application/issueopscompletion/complete_test.go",
+        "internal/domain/issueopscompletion/artifact_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issue-create-preview-cancellation",
+      "source_path": "internal/adapter/issueops/issue_creation_environment.go",
+      "source_symbol": "func issueCreationProvider.Create",
+      "responsibility": "choose uncancelled issue preview invocation in application while retaining confirmed caller context",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "publication-pending-load-eligibility",
+      "source_path": "internal/application/issueopsremote/publication_journal.go",
+      "source_symbol": "func PublicationJournal.LoadIntent",
+      "responsibility": "validate pending publication kind before retrieving the payload",
+      "target": "internal/domain/issueopspublication",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_repository_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "publication-failure-diagnostic",
+      "source_path": "internal/application/issueopsremote/publication_journal.go",
+      "source_symbol": "func publicationDiagnostic",
+      "responsibility": "choose fallback and byte limit for redacted publication failure diagnostics",
+      "target": "internal/domain/issueopspublication",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_repository_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "issue-create-failure-diagnostic-policy",
+      "source_path": "internal/application/issueopsremote/issue_create_failure.go",
+      "source_symbol": "func IssueCreateFailure",
+      "responsibility": "bound and redact the persisted issue creation failure diagnostic",
+      "target": "internal/domain/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsremote/issue_create_failure_test.go"
       ],
       "status": "migrate"
     }

@@ -62,7 +62,7 @@ func (s *Service) Complete(ctx context.Context, request Request) (Result, error)
 		if before.Completion != nil {
 			if completiondomain.CanRetryCompletion(toDomainSnapshot(before), command) {
 				pathsMatch := s.environment.PathsMatch(before.Completion.VerificationReportPath, command.VerificationReportPath)
-				if completiondomain.MatchesRetryEvidence(*before.Completion, command, pathsMatch) && s.environment.VerifyArtifact(before, request.RemoteArtifactURL) == nil {
+				if completiondomain.MatchesRetryEvidence(*before.Completion, command, pathsMatch) && completiondomain.ValidateArtifact(before, request.RemoteArtifactURL) == nil {
 					return before, false, nil
 				}
 			}
@@ -71,7 +71,7 @@ func (s *Service) Complete(ctx context.Context, request Request) (Result, error)
 		if err := completiondomain.ValidatePhase(before.Phase); err != nil {
 			return before, false, err
 		}
-		if err := s.environment.VerifyArtifact(before, request.RemoteArtifactURL); err != nil {
+		if err := completiondomain.ValidateArtifact(before, request.RemoteArtifactURL); err != nil {
 			return before, false, err
 		}
 		canonicalCWD := s.environment.PathsMatch(request.CWD, before.CanonicalRoot)

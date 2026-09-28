@@ -241,6 +241,8 @@
 
 - **부분 진행 — 그래프 동기화와 공통 actor 검증:** `IssueGraphSyncService`가 record 조회와 provider 반영을 조율하고 domain이 실행 전제와 관계 본문을 구성한다. 기존 `issueops_remote_sync.go`를 삭제하고 Git 관측과 gh/glab 호출만 adapter에 남겼다. 공통 native actor의 host·receipt·ancestry·live identity 판정은 domain으로, process 관측 순서는 application으로 이전했다. contract의 검증 함수와 adapter의 기존 정규화·PR handler dispatch를 제거했다. SQLite composition 테스트에서 미리보기·빈 그래프·누락 URL·GitHub/GitLab·provider 오류와 저장 row 불변을 확인했다. confirm 분기와 live identity 검사를 각각 무력화한 overlay가 실패했다(`graph-confirm-mutation.txt`, `actor-live-mutation.txt`). 전체 Go suite(`full-suite-graph-actor.txt`), 관련 race·vet·build·architecture와 실제 CLI smoke(`graph-actor-binary-smoke.json`)가 통과했다. 소스 재점검에서 발행의 actor·권한 검증이 adapter callback을 경유하고 완료의 순수 artifact 검증도 adapter에 위임하는 경로가 남아 있음을 확인했다. 이 연결을 제거하기 전까지 T07은 미완료다.
 
+- **부분 진행 — 발행·완료 검증의 adapter 경유 제거:** 발행 준비가 공통 actor 정규화를 직접 호출하고, 준비 단계와 잠금 안 intent 기록이 같은 `MutationAuthority`를 직접 사용한다. `RemotePublicationObserver.NormalizeActor`·`Authorize`와 기존 actor 변환 helper를 삭제했다. 완료 application은 transaction 안에서 `ValidateArtifact`를 직접 호출하며 adapter의 `VerifyArtifact`와 port 항목을 제거했다. 기존 테스트에서 순수 검증을 성공으로 대체하던 fake를 없애고 실제 연결 이슈·artifact를 갖춘 fixture로 바꿨다. 새 테스트의 RED→GREEN, 다른 holder·잘못된 CWD의 무기록, 잠금 안 holder 재검사를 확인했다. 세 검사를 각각 우회한 overlay가 실패했고 실제 CLI에서 잘못된 발행 holder·누락 artifact 거부, 완료+release 저장, 동일 완료 재시도의 row 불변을 확인했다(`publication-direct-binary-smoke.json`). 전체 Go suite(`full-suite-publication-direct.txt`), 관련 race·vet·build·architecture가 통과했다. T07 잔여 점검 항목은 issue preview의 cancellation 선택, journal의 pending intent 판정, issue/publication 실패 진단의 길이·기본값 규칙이다. 이 정책들과 task 단위 성공·실패·소유권 증거를 정리한 뒤 T07 완료 여부를 판정한다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료

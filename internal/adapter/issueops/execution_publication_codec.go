@@ -8,24 +8,6 @@ import (
 	contract "issueops/internal/contract/issueopspublication"
 )
 
-func publicationActor(actor contract.Actor) issueops.NativeActor {
-	result := issueops.NativeActor{Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID}
-	if actor.SessionProcess != nil {
-		result.SessionProcess = &issueops.NativeProcessReceipt{
-			PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable,
-		}
-	}
-	if actor.ProcessAncestry != nil {
-		result.ProcessAncestry = make([]issueops.NativeProcessReceipt, len(actor.ProcessAncestry))
-		for index, receipt := range actor.ProcessAncestry {
-			result.ProcessAncestry[index] = issueops.NativeProcessReceipt{
-				PID: receipt.PID, StartedAt: receipt.StartedAt, Executable: receipt.Executable,
-			}
-		}
-	}
-	return result
-}
-
 func publicationIntentSnapshot(intent contract.Intent) (issueops.IssueOpsRecord, contract.IntentPayload, error) {
 	var record issueops.IssueOpsRecord
 	if len(intent.Record.Raw) == 0 {

@@ -8,9 +8,7 @@ import (
 )
 
 type PreparationObserver interface {
-	NormalizeActor(context.Context, contract.Actor) (contract.Actor, error)
 	Read(context.Context, string) (model.IssueOpsRecord, error)
-	Authorize(context.Context, model.IssueOpsRecord, contract.CreateCommand) error
 	Fingerprint(context.Context, model.IssueOpsRecord) string
 	Head(context.Context, model.IssueOpsRecord) string
 }
@@ -26,7 +24,6 @@ type PublicationStore interface {
 }
 
 type PublicationEnvironment interface {
-	Authorize(context.Context, model.IssueOpsRecord, contract.CreateCommand) error
 	PathsMatch(string, string) bool
 	Timestamp() string
 	NewOperationID() (string, error)
@@ -36,4 +33,8 @@ type RecordTransition func(model.IssueOpsRecord) (model.IssueOpsRecord, error)
 
 type RecordStore interface {
 	Update(context.Context, string, RecordTransition) (model.IssueOpsRecord, error)
+}
+
+type PublicationAuthority interface {
+	Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error
 }

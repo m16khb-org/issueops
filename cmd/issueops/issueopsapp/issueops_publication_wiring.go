@@ -10,8 +10,10 @@ import (
 	"issueops/cmd/issueops/issueopscli"
 	publicationinbound "issueops/internal/adapter/inbound/issueopspublication"
 	"issueops/internal/adapter/issueops"
+	authorizationoutbound "issueops/internal/adapter/outbound/issueopsauthorization"
 	publicationoutbound "issueops/internal/adapter/outbound/issueopspublication"
 	"issueops/internal/adapter/provider"
+	cycleapp "issueops/internal/application/issueopscycle"
 	publicationapp "issueops/internal/application/issueopspublication"
 	remoteapp "issueops/internal/application/issueopsremote"
 	publicationcontract "issueops/internal/contract/issueopspublication"
@@ -54,11 +56,12 @@ func newIssueOpsPublicationHandlers(deps issueOpsPublicationCompositionDeps) iss
 
 func newIssueOpsPublicationServices(stateRoot string, deps issueOpsPublicationCompositionDeps) (*publicationapp.CreateService, *publicationapp.ReconcileService) {
 	observer := issueops.RemotePublicationObserver{StateRoot: stateRoot, Clock: deps.Now, OperationIDFactory: deps.NewOperationID}
-	repository := remoteapp.NewPublicationJournal(issueops.RemotePublicationStore{StateRoot: stateRoot}, observer)
+	authority := cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same)
+	repository := remoteapp.NewPublicationJournal(issueops.RemotePublicationStore{StateRoot: stateRoot}, observer, authority)
 	providerAdapter := &publicationProviderAdapter{deps: deps}
 	gateway := publicationoutbound.NewProviderGateway(providerAdapter.create, providerAdapter.inspect)
 	verifier := remoteapp.NewPublicationVerifier(issueops.RemotePublicationStore{StateRoot: stateRoot}, deps.VerifyLive)
-	preparer := remoteapp.NewCreatePreparation(observer)
+	preparer := remoteapp.NewCreatePreparation(observer, authority, issueops.InspectNativeProcessReceipt)
 	return publicationapp.NewCreateService(preparer, repository, gateway, verifier), publicationapp.NewReconcileService(repository, gateway, verifier)
 }
 

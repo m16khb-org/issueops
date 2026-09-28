@@ -8,6 +8,7 @@ import (
 
 	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/adapter/outbound/sqlstore"
+	cycleapp "issueops/internal/application/issueopscycle"
 	publicationapp "issueops/internal/application/issueopspublication"
 	remoteapp "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
@@ -38,7 +39,7 @@ func (p *publicationCreateProvider) Inspect(context.Context, contract.Intent) (c
 }
 
 func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T) {
-	for _, scenario := range []string{"success", "wrong branch", "placeholder assignee", "stale review", "operation collision"} {
+	for _, scenario := range []string{"success", "wrong holder", "wrong cwd", "wrong branch", "placeholder assignee", "stale review", "operation collision"} {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()
 			fixture := newClaimableExecutionFixture(t, root, "197-create-preparation")
@@ -59,6 +60,13 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 			}
 			wantError := ""
 			switch scenario {
+			case "wrong holder":
+				command.Actor.SessionID = "other-session"
+				wantError = "holder"
+			case "wrong cwd":
+				command.CWD = t.TempDir()
+				wantError = "canonical"
+
 			case "wrong branch":
 				command.Base = "other"
 				wantError = "linked issue authority"
@@ -101,7 +109,7 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 				}
 				return nil
 			})
-			service := publicationapp.NewCreateService(remoteapp.NewCreatePreparation(RemotePublicationObserver{StateRoot: root}), repository, provider, verifier)
+			service := publicationapp.NewCreateService(remoteapp.NewCreatePreparation(RemotePublicationObserver{StateRoot: root}, cycleapp.NewMutationAuthority(samePath), inspectNativeProcessReceipt), repository, provider, verifier)
 			result, err := service.Create(context.Background(), command)
 			after, readErr := ReadIssueOps(root, record.ID)
 			if readErr != nil {

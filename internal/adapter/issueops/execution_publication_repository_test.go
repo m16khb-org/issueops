@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"issueops/internal/adapter/outbound/sqlstore"
+	cycleapp "issueops/internal/application/issueopscycle"
 	remoteapp "issueops/internal/application/issueopsremote"
 	contract "issueops/internal/contract/issueops"
 	publicationcontract "issueops/internal/contract/issueopspublication"
@@ -249,7 +250,36 @@ func TestPublicationRepositoryRejectsInvalidArtifactWithoutWrites(t *testing.T) 
 }
 
 func newPublicationJournalForTest(root string, now func() time.Time, operationID func() (string, error)) *remoteapp.PublicationJournal {
-	return remoteapp.NewPublicationJournal(RemotePublicationStore{StateRoot: root}, RemotePublicationObserver{StateRoot: root, Clock: now, OperationIDFactory: operationID})
+	return remoteapp.NewPublicationJournal(RemotePublicationStore{StateRoot: root}, RemotePublicationObserver{StateRoot: root, Clock: now, OperationIDFactory: operationID}, cycleapp.NewMutationAuthority(samePath))
+}
+
+func TestPublicationJournalRechecksHolderBeforeIntentWrite(t *testing.T) {
+	root, journal, record, _ := newPendingPublicationFixture(t)
+	record.Execution.Pending = nil
+	if _, err := writeIssueOps(root, record); err != nil {
+		t.Fatal(err)
+	}
+	before, err := journal.Latest(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actor := record.Execution.Lease.Holder
+	prepared := publicationcontract.PreparedCreate{
+		Command: publicationcontract.CreateCommand{ID: record.ID, Provider: "github", ExpectedGeneration: record.Execution.Lease.Generation, CWD: record.Execution.Workspace.Root,
+			Actor: publicationcontract.Actor{Host: actor.Host, SessionID: "different-holder", AgentID: actor.AgentID}},
+		Eligibility: publicationcontract.CreateEligibility{Kind: "pr"},
+	}
+	for _, receipt := range actor.ProcessAncestry {
+		prepared.Command.Actor.ProcessAncestry = append(prepared.Command.Actor.ProcessAncestry, publicationcontract.ProcessReceipt(receipt))
+	}
+	_, err = journal.BeginCreate(context.Background(), prepared)
+	if err == nil || !strings.Contains(err.Error(), "holder") {
+		t.Fatalf("error=%v", err)
+	}
+	after, err := journal.Latest(context.Background(), record.ID)
+	if err != nil || !bytes.Equal(before.Raw, after.Raw) {
+		t.Fatalf("rejected intent changed record: %v", err)
+	}
 }
 
 func TestPublicationJournalRetryAndTerminalFailureAreAtomic(t *testing.T) {

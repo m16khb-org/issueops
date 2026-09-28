@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopspublication"
 	reviewcontract "issueops/internal/contract/issueopsreview"
@@ -12,15 +13,19 @@ import (
 	"issueops/internal/domain/policy"
 )
 
-type CreatePreparation struct{ observer PreparationObserver }
+type CreatePreparation struct {
+	observer  PreparationObserver
+	authority PublicationAuthority
+	inspect   cycleapp.NativeProcessInspector
+}
 
-func NewCreatePreparation(observer PreparationObserver) *CreatePreparation {
-	return &CreatePreparation{observer: observer}
+func NewCreatePreparation(observer PreparationObserver, authority PublicationAuthority, inspect cycleapp.NativeProcessInspector) *CreatePreparation {
+	return &CreatePreparation{observer: observer, authority: authority, inspect: inspect}
 }
 
 func (s *CreatePreparation) Prepare(ctx context.Context, command contract.CreateCommand) (contract.PreparedCreate, error) {
 	if command.Confirm {
-		actor, err := s.observer.NormalizeActor(ctx, command.Actor)
+		actor, err := normalizePublicationActor(command.Actor, s.inspect)
 		if err != nil {
 			return contract.PreparedCreate{}, err
 		}
@@ -43,7 +48,7 @@ func (s *CreatePreparation) Prepare(ctx context.Context, command contract.Create
 		return contract.PreparedCreate{}, err
 	}
 	if command.Confirm {
-		if err := s.observer.Authorize(ctx, record, command); err != nil {
+		if err := s.authority.Authorize(ctx, record, publicationMutationActor(command)); err != nil {
 			return contract.PreparedCreate{}, err
 		}
 		if err := remote.ValidateCreatePending(record.Execution.Pending != nil); err != nil {
