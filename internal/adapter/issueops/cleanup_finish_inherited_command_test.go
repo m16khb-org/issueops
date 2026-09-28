@@ -61,7 +61,7 @@ exit 0
 		t.Fatalf("live descendant allowed finalization: result=%+v err=%v", result, err)
 	}
 	kept, err := ReadIssueOps(root, record.ID)
-	if err != nil || kept.CleanupFinishAttempt == nil {
+	if err != nil || kept.CleanupAttempt == nil {
 		t.Fatalf("undrained ownership lost: %v", err)
 	}
 	if _, err := executor.Run(context.Background(), finishRequest(record.ID, false, "")); err == nil {
@@ -70,7 +70,7 @@ exit 0
 	stopChild()
 	deadline := time.Now().Add(3 * time.Second)
 	for {
-		lease, err := (FinishLifetimeLock{StateRoot: root}).Acquire(context.Background(), record.ID)
+		lease, err := (CleanupLifetimeLock{StateRoot: root}).Acquire(context.Background(), record.ID)
 		if err == nil {
 			_ = lease.Close()
 			break

@@ -33,7 +33,7 @@ func withIssueOpsLock(ctx context.Context, stateRoot, id string, fn func(context
 			return readErr
 		}
 		if readErr == nil {
-			if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+			if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 				return err
 			}
 			if bypass, _ := ctx.Value(cleanupAbandonLockKey{}).(bool); !bypass && record.CleanupAbandonFailure != nil && record.CleanupAbandonFailure.Step == "applying" {

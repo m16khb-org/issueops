@@ -38,14 +38,14 @@ func CleanupFinish(ctx context.Context, stateRoot string, req CleanupFinishReque
 func finishExecutorForTests(stateRoot string, deps CleanupFinishDeps) cleanupapp.FinishExecutor {
 	runtime := CleanupFinishRuntime{RunGit: deps.Git, Processes: deps.Processes, OrcaTerminals: deps.OrcaTerminals}
 	executor := cleanupapp.FinishExecutor{
-		Records: FinishRecordStore{StateRoot: stateRoot}, Acquire: (FinishLifetimeLock{StateRoot: stateRoot}).Acquire,
+		Records: CleanupRecordStore{StateRoot: stateRoot}, Acquire: (CleanupLifetimeLock{StateRoot: stateRoot}).Acquire,
 		Observe: func(_ context.Context, _ issueops.IssueOpsRecord, r issueops.CleanupFinishRequest) (issueops.CleanupFinishRequest, error) {
 			return r, nil
 		},
 		Plan: func(ctx context.Context, record issueops.IssueOpsRecord, req issueops.CleanupFinishRequest) (issueops.CleanupFinishInventory, issueops.CleanupFinishResult) {
 			return (cleanupapp.FinishPreviewer{Environment: CleanupFinishEnvironment{RunGit: func(dir string, args ...string) (int, string) { return runtime.Git(ctx, dir, args...) }}, ObserveArtifact: deps.ObserveArtifact, Workspace: runtime.Workspace}).Plan(ctx, record, req)
 		},
-		Fingerprint: CleanupFinishFingerprint, NewAttempt: NewCleanupFinishAttempt,
+		Fingerprint: CleanupFinishFingerprint, NewAttempt: NewCleanupAttempt,
 		Completion: completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect,
 		Stop:       runtime.Stop, RemoveOrca: deps.RemoveOrcaWorktree, Directory: (CleanupFinishEnvironment{}).Directory, Git: runtime.Git, Now: time.Now,
 	}

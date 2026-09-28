@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-09-29 | Cleanup ownership binds the operation and exact record revision; supersedes the draft finish-only field | [record](adr/2026-09-29-cleanup-ownership-binds-the-operation-and-exact-record-revis.md) |
 | 2026-09-29 | Cleanup finish executor owns observation and attempt-bound finalization | [record](adr/2026-09-29-cleanup-finish-executor-owns-observation-and-attempt-bound-f.md) |
 | 2026-09-29 | Cleanup finish ownership is an optional record field with guarded writers | [record](adr/2026-09-29-cleanup-finish-ownership-is-an-optional-record-field-with-gu.md) |
 | 2026-09-23 | issueops mcp serves in-process; the shared daemon leaves the MCP path | [record](adr/2026-09-23-issueops-mcp-serves-in-process-the-shared-daemon-leaves-the.md) |

@@ -7,7 +7,7 @@ import (
 )
 
 func IsPrunable(record issueopsretentioncontract.Record, cutoff time.Time) bool {
-	if record.CleanupFinishAttempt != nil {
+	if record.CleanupAttempt != nil {
 		return false
 	}
 	if record.Phase != issueopsretentioncontract.PhaseDone {

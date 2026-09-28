@@ -6,16 +6,25 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-// CleanupFinishRecords is reserved for the exclusive finish executor. Arm may
-// replace a crashed attempt only while that executor holds the lifetime lease.
-// Fail(clear=true) and Delete require successful process drainage by the caller.
+// CleanupOwnershipRecords requires an exclusive lifetime lease at the caller.
+// Arm may recover only a crashed attempt of the same operation.
+type CleanupOwnershipRecords interface {
+	Load(context.Context, string) (model.CleanupSnapshot, error)
+	Arm(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error)
+	Check(context.Context, model.CleanupSnapshot) error
+	MarkAuditReflected(context.Context, model.CleanupSnapshot, string) (model.CleanupSnapshot, error)
+}
+
 type CleanupFinishRecords interface {
-	Load(context.Context, string) (model.CleanupFinishSnapshot, error)
-	Arm(context.Context, model.CleanupFinishSnapshot, model.IssueOpsCleanupFinishAttempt) (model.CleanupFinishSnapshot, error)
-	Check(context.Context, model.CleanupFinishSnapshot) error
-	Fail(context.Context, model.CleanupFinishSnapshot, model.IssueOpsCleanupFinishFailure, bool) (model.CleanupFinishSnapshot, error)
-	MarkAuditReflected(context.Context, model.CleanupFinishSnapshot, string) (model.CleanupFinishSnapshot, error)
-	Delete(context.Context, model.CleanupFinishSnapshot) error
+	CleanupOwnershipRecords
+	Fail(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupFinishFailure, bool) (model.CleanupSnapshot, error)
+	Delete(context.Context, model.CleanupSnapshot) error
+}
+
+type CleanupRemoteBranchRecords interface {
+	CleanupOwnershipRecords
+	// Release is allowed only after successful inherited-process drainage.
+	Release(context.Context, model.CleanupSnapshot, string) (model.CleanupSnapshot, error)
 }
 
 // CleanupFinishObservationError distinguishes evidence failures from a planned

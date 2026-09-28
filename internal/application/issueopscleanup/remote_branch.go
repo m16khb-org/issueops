@@ -5,20 +5,20 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	model "issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
+	"issueops/internal/port"
 )
 
-type RemoteBranchRecords interface {
-	Load(string) (model.IssueOpsRecord, error)
-}
-
 type RemoteBranchCleaner struct {
-	Records      RemoteBranchRecords
+	Records      port.CleanupRemoteBranchRecords
+	Acquire      func(context.Context, string) (CleanupLifetime, error)
+	NewAttempt   func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
 	Preview      RemoteBranchPreviewer
 	Completion   func(model.IssueOpsRecord) model.RemoteCompletionSection
 	ReflectAudit func(context.Context, model.IssueOpsRecord, model.RemoteCompletionSection, string) error
@@ -26,59 +26,114 @@ type RemoteBranchCleaner struct {
 }
 
 func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchResult, error) {
-	record, err := s.Records.Load(req.ID)
+	failed := model.CleanupRemoteBranchResult{OK: false, ID: req.ID}
+	lifetime, err := s.Acquire(ctx, req.ID)
 	if err != nil {
-		return model.CleanupRemoteBranchResult{OK: false, ID: req.ID}, err
+		return failed, err
+	}
+	defer func() {
+		if lifetime != nil {
+			_ = lifetime.Close()
+		}
+	}()
+	ctx = lifetime.Context(ctx)
+	snapshot, err := s.Records.Load(ctx, req.ID)
+	if err != nil {
+		return failed, err
+	}
+	record := snapshot.Record
+	if err := domain.ValidateCleanupOperationAccess(record, model.CleanupOperationRemoteBranch); err != nil {
+		return failed, err
 	}
 	inventory, result := s.Preview.Plan(ctx, record, req)
 	if len(result.Missing) > 0 {
-		result.OK = false
 		return result, fmt.Errorf("cleanup remote-branch is not ready: %s", strings.Join(result.Missing, ", "))
 	}
-	// 평가 순서 ②: 원격 브랜치가 이미 없으면 fingerprint stale 검사 이전에
-	// 즉시 멱등 성공이다. 성공한 삭제 뒤의 재실행이 stale로 막히면 멱등성과
-	// TOCTOU 방어가 서로를 무효화한다(design-review B1).
+	var completion model.RemoteCompletionSection
 	if !result.RemoteBranchPresent {
+		// Absence still precedes confirmation and fingerprint. Only an explicit
+		// apply may release a crashed same-operation attempt; preview never writes.
 		result.AlreadyAbsent = true
-		return result, nil
+		if record.CleanupAttempt == nil {
+			return result, nil
+		}
+		if !req.Apply {
+			result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --apply --json", record.ID)
+			return result, nil
+		}
+	} else {
+		fingerprint, err := cleanupRemoteBranchFingerprint(inventory)
+		if err != nil {
+			return failed, err
+		}
+		result.Fingerprint = fingerprint
+		if !req.Apply {
+			result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --apply --confirm --fingerprint %s%s --json", record.ID, fingerprint, cleanupSupersededByFlag(result.SupersededBy))
+			return result, nil
+		}
+		if err := domain.ValidateCleanupRemoteBranchApply(req, fingerprint); err != nil {
+			result.OK = false
+			return result, err
+		}
+		completion = s.Completion(record)
 	}
-	fingerprint, err := cleanupRemoteBranchFingerprint(inventory)
+	attempt, err := s.NewAttempt(model.CleanupOperationRemoteBranch)
 	if err != nil {
-		return model.CleanupRemoteBranchResult{OK: false, ID: record.ID}, err
+		return failed, err
 	}
-	result.Fingerprint = fingerprint
-	if !req.Apply {
-		result.NextCommand = fmt.Sprintf(
-			"issueops cleanup remote-branch --id %s --apply --confirm --fingerprint %s%s --json",
-			record.ID, fingerprint, cleanupSupersededByFlag(result.SupersededBy))
+	snapshot, err = s.Records.Arm(ctx, snapshot, attempt)
+	if err != nil {
+		result.OK = false
+		return result, err
+	}
+	finalizeCtx := context.WithoutCancel(ctx)
+	// No external calls may follow this single drainage attempt. A live child
+	// or replacement owner retains its guard even when the original call failed.
+	finalize := func(step string, cause error) (model.CleanupRemoteBranchResult, error) {
+		next, drainErr := lifetime.Drain(finalizeCtx)
+		lifetime = next
+		var releaseErr error
+		if drainErr == nil {
+			_, releaseErr = s.Records.Release(finalizeCtx, snapshot, s.Now().UTC().Format(time.RFC3339Nano))
+		}
+		if err := errors.Join(cause, drainErr, releaseErr); err != nil {
+			result.OK = false
+			if step == "" {
+				step = "record_release"
+			}
+			result.FailedStep = step
+			result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", record.ID)
+			return result, err
+		}
 		return result, nil
 	}
-	if err := domain.ValidateCleanupRemoteBranchApply(req, fingerprint); err != nil {
-		result.OK = false
-		return result, err
+	if result.AlreadyAbsent {
+		return finalize("", nil)
 	}
-	// 파괴 이전에 보존 payload를 스냅샷한다(finish C2-F1 선례).
-	completionSnapshot := s.Completion(record)
-	// fully-qualified ref는 동명 태그를 배제하고, force-with-lease는 preview→push
-	// 사이에 남은 TOCTOU를 서버측에서 원자적으로 봉쇄한다(design-review H7).
+	if err := s.Records.Check(ctx, snapshot); err != nil {
+		return finalize("record_check", err)
+	}
 	if err := s.Preview.Environment.Delete(ctx, record.Repo, inventory.Branch, inventory.RemoteOID); err != nil {
-		result.OK = false
-		result.FailedStep = "remote_branch_delete"
-		result.NextCommand = fmt.Sprintf("issueops cleanup remote-branch --id %s --preview --json", record.ID)
-		return result, err
+		return finalize("remote_branch_delete", err)
 	}
-	result.Deleted = true
-	result.DeletedAt = s.Now().UTC().Format(time.RFC3339)
+	result.Deleted, result.DeletedAt = true, s.Now().UTC().Format(time.RFC3339)
 	if s.ReflectAudit != nil {
+		if err := s.Records.Check(ctx, snapshot); err != nil {
+			return finalize("audit_receipt", err)
+		}
 		audit := fmt.Sprintf("원격 브랜치 삭제: branch=%s oid=%s at=%s", inventory.Branch, inventory.RemoteOID, result.DeletedAt)
-		if err := s.ReflectAudit(ctx, record, completionSnapshot, audit); err == nil {
-			result.AuditReflected = true
-		} else {
-			// best-effort지만 무흔적 실패는 금지 — 결과에 표면화한다.
+		if err := s.ReflectAudit(ctx, record, completion, audit); err != nil {
 			result.AuditError = err.Error()
+		} else {
+			next, err := s.Records.MarkAuditReflected(ctx, snapshot, s.Now().UTC().Format(time.RFC3339Nano))
+			if err != nil {
+				return finalize("audit_receipt", err)
+			}
+			snapshot = next
+			result.AuditReflected = true
 		}
 	}
-	return result, nil
+	return finalize("", nil)
 }
 
 func cleanupSupersededByFlag(value string) string {

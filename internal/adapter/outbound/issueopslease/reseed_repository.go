@@ -50,7 +50,7 @@ func (r *ReseedRepository) CommitReseed(ctx context.Context, snapshot leaseapp.R
 	if r == nil || r.store == nil {
 		return leaseapp.RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
 	}
-	if err := issueopsdomain.RequireNoFinishAttempt(next.Stable.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(next.Stable.CleanupAttempt); err != nil {
 		return leaseapp.RepositoryResult{}, err
 	}
 	var result leaseapp.RepositoryResult

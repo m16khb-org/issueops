@@ -26,7 +26,7 @@ func remoteBranchPreviewer(deps CleanupRemoteBranchDeps) cleanupapp.RemoteBranch
 	return cleanupapp.RemoteBranchPreviewer{Environment: CleanupRemoteBranchEnvironment{RunGit: deps.Git}, VerifyMergedArtifact: deps.VerifyMergedArtifact, ObserveArtifact: deps.ObserveArtifact}
 }
 func CleanupRemoteBranch(ctx context.Context, root string, req CleanupRemoteBranchRequest, deps CleanupRemoteBranchDeps) (CleanupRemoteBranchResult, error) {
-	s := cleanupapp.RemoteBranchCleaner{Records: CycleRecordStore{StateRoot: root}, Preview: remoteBranchPreviewer(deps), Completion: completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect, Now: time.Now}
+	s := cleanupapp.RemoteBranchCleaner{Records: CleanupRecordStore{StateRoot: root}, Acquire: (CleanupLifetimeLock{StateRoot: root}).Acquire, NewAttempt: NewCleanupAttempt, Preview: remoteBranchPreviewer(deps), Completion: completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect, Now: time.Now}
 	if deps.ReflectAudit != nil {
 		s.ReflectAudit = func(_ context.Context, rec issueops.IssueOpsRecord, completion issueops.RemoteCompletionSection, audit string) error {
 			return deps.ReflectAudit(rec, completion, audit)

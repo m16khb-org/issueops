@@ -12,21 +12,13 @@ import (
 	"issueops/internal/port"
 )
 
-// FinishLifetime stays held by the owner and every inherited command. Drain
-// transfers it to a fresh exclusive handle only after those commands have ended.
-type FinishLifetime interface {
-	Context(context.Context) context.Context
-	Close() error
-	Drain(context.Context) (FinishLifetime, error)
-}
-
 type FinishExecutor struct {
 	Records      port.CleanupFinishRecords
-	Acquire      func(context.Context, string) (FinishLifetime, error)
+	Acquire      func(context.Context, string) (CleanupLifetime, error)
 	Observe      func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishRequest, error)
 	Plan         func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult)
 	Fingerprint  func(model.CleanupFinishInventory) (string, error)
-	NewAttempt   func() (model.IssueOpsCleanupFinishAttempt, error)
+	NewAttempt   func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
 	Completion   func(model.IssueOpsRecord) model.RemoteCompletionSection
 	Stop         func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error)
 	RemoveOrca   func(context.Context, string) error
@@ -53,6 +45,9 @@ func (s FinishExecutor) Run(ctx context.Context, req model.CleanupFinishRequest)
 		return failed, err
 	}
 	record := snapshot.Record
+	if err := domain.ValidateCleanupOperationAccess(record, model.CleanupOperationFinish); err != nil {
+		return failed, err
+	}
 	req, err = s.Observe(ctx, record, req)
 	if err != nil {
 		return failed, &port.CleanupFinishObservationError{Err: err}
@@ -77,7 +72,7 @@ func (s FinishExecutor) Run(ctx context.Context, req model.CleanupFinishRequest)
 		return result, err
 	}
 	completion := s.Completion(record)
-	attempt, err := s.NewAttempt()
+	attempt, err := s.NewAttempt(model.CleanupOperationFinish)
 	if err != nil {
 		return failed, err
 	}
@@ -96,7 +91,7 @@ func (s FinishExecutor) Run(ctx context.Context, req model.CleanupFinishRequest)
 			return drainageErr
 		}
 		drainageAttempted = true
-		var next FinishLifetime
+		var next CleanupLifetime
 		next, drainageErr = lifetime.Drain(finalizeCtx)
 		lifetime = next
 		drained = drainageErr == nil

@@ -49,7 +49,7 @@ func TestCleanupFinishExcludesConcurrentApplyAndOrdinaryWriters(t *testing.T) {
 		t.Fatal(ctx.Err())
 	}
 	armed, err := ReadIssueOps(root, record.ID)
-	if err != nil || armed.CleanupFinishAttempt == nil {
+	if err != nil || armed.CleanupAttempt == nil {
 		t.Fatalf("not armed: %v", err)
 	}
 	for _, apply := range []bool{false, true} {
@@ -71,7 +71,7 @@ func TestCleanupFinishExcludesConcurrentApplyAndOrdinaryWriters(t *testing.T) {
 
 func TestCleanupFinishRecoversCrashedAttemptOnlyAfterExclusiveAcquisition(t *testing.T) {
 	root, record, _ := finishTestRecord(t, false)
-	record.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-01-01T00:00:00Z"}
+	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-01-01T00:00:00Z"}
 	_, raw, err := encodeIssueOpsRecord(record)
 	if err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestCleanupFinishRecoversCrashedAttemptOnlyAfterExclusiveAcquisition(t *tes
 	if err := db.Put(issueOpsBucket, record.ID, raw); err != nil {
 		t.Fatal(err)
 	}
-	lock, err := (FinishLifetimeLock{StateRoot: root}).Acquire(context.Background(), record.ID)
+	lock, err := (CleanupLifetimeLock{StateRoot: root}).Acquire(context.Background(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

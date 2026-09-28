@@ -12,7 +12,27 @@ import (
 
 type remoteBranchTestStore struct{ record model.IssueOpsRecord }
 
-func (s remoteBranchTestStore) Load(string) (model.IssueOpsRecord, error) { return s.record, nil }
+func (s *remoteBranchTestStore) Load(context.Context, string) (model.CleanupSnapshot, error) {
+	return model.CleanupSnapshot{Record: s.record}, nil
+}
+func (s *remoteBranchTestStore) Arm(_ context.Context, snap model.CleanupSnapshot, a model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error) {
+	snap.Record.CleanupAttempt = &a
+	return snap, nil
+}
+func (s *remoteBranchTestStore) Check(context.Context, model.CleanupSnapshot) error { return nil }
+func (s *remoteBranchTestStore) MarkAuditReflected(_ context.Context, snap model.CleanupSnapshot, _ string) (model.CleanupSnapshot, error) {
+	return snap, nil
+}
+func (s *remoteBranchTestStore) Release(_ context.Context, snap model.CleanupSnapshot, _ string) (model.CleanupSnapshot, error) {
+	snap.Record.CleanupAttempt = nil
+	return snap, nil
+}
+
+type remoteBranchTestLifetime struct{}
+
+func (l remoteBranchTestLifetime) Context(ctx context.Context) context.Context    { return ctx }
+func (l remoteBranchTestLifetime) Close() error                                   { return nil }
+func (l remoteBranchTestLifetime) Drain(context.Context) (CleanupLifetime, error) { return l, nil }
 
 type remoteBranchTestEnvironment struct {
 	t     *testing.T
@@ -58,7 +78,11 @@ func TestRemoteBranchCleanerSnapshotsCompletionBeforeDeletionAndReportsAuditFail
 	env := &remoteBranchTestEnvironment{t: t, ctx: ctx, calls: &calls, oid: "abc"}
 	record := model.IssueOpsRecord{ID: "io-test", Repo: "/repo", Branch: "123-work", Phase: model.IssueOpsPhaseDone, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/1"}}
 	s := RemoteBranchCleaner{
-		Records: remoteBranchTestStore{record},
+		Records: &remoteBranchTestStore{record},
+		Acquire: func(context.Context, string) (CleanupLifetime, error) { return remoteBranchTestLifetime{}, nil },
+		NewAttempt: func(operation model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
+			return model.IssueOpsCleanupAttempt{Operation: operation, Token: "token", StartedAt: "now"}, nil
+		},
 		Preview: RemoteBranchPreviewer{Environment: env, VerifyMergedArtifact: func(artifact model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 			calls = append(calls, "merge")
 			if artifact.URL != record.RemoteArtifact.URL {

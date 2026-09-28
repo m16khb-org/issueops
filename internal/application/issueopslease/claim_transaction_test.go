@@ -144,7 +144,7 @@ func TestClaimRetryCannotBypassFinishAttempt(t *testing.T) {
 	stub.record.Lease.Status = "active"
 	stub.record.Lease.Holder = &leasecontract.Actor{Host: "codex", SessionID: "owner"}
 	stub.record.Stable.Execution.Lease = stub.record.Lease
-	stub.record.Stable.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	stub.record.Stable.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	_, err := ClaimWithinTransaction(context.Background(), stub, ClaimRepositoryRequest{ID: "io-claim", Generation: 3, Actor: leasedomain.Actor{Host: "codex", SessionID: "owner"}})
 	if err == nil || !strings.Contains(err.Error(), "cleanup finish") || !reflect.DeepEqual(stub.events, []string{"load"}) {
 		t.Fatalf("retry bypassed finish: err=%v events=%v", err, stub.events)

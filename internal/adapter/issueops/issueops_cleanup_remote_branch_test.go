@@ -436,3 +436,26 @@ func TestCleanupRemoteBranchRejectsMalformedRefAdvertisement(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanupRemoteBranchRejectsArtifactDriftBeforeDelete(t *testing.T) {
+	root, record := remoteBranchTestRecord(t)
+	git := remoteBranchGit()
+	deps := remoteBranchDeps(git)
+	first, err := CleanupRemoteBranch(context.Background(), root, remoteBranchRequest(record.ID, false, ""), deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deps.Git = func(ctx context.Context, repo string, args ...string) (int, string) {
+		code, out := git.run(ctx, repo, args...)
+		if args[0] == "ls-remote" {
+			mutateFinishRecord(t, root, record.ID, func(current *issueops.IssueOpsRecord) {
+				current.RemoteArtifact.URL = "https://github.com/acme/repo/pull/999"
+			})
+		}
+		return code, out
+	}
+	got, err := CleanupRemoteBranch(context.Background(), root, remoteBranchRequest(record.ID, true, first.Fingerprint), deps)
+	if err == nil || got.Deleted || git.pushes != 0 {
+		t.Fatalf("artifact drift must block deletion: result=%+v err=%v pushes=%d", got, err, git.pushes)
+	}
+}

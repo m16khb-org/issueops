@@ -126,7 +126,7 @@ func (store Store) Update(
 		if err != nil || !changed {
 			return err
 		}
-		if err := issueopsdomain.RequireNoFinishAttempt(result.CleanupFinishAttempt); err != nil {
+		if err := issueopsdomain.RequireNoCleanupAttempt(result.CleanupAttempt); err != nil {
 			return err
 		}
 		data, err := Encode(result)
@@ -242,7 +242,7 @@ func (store Store) Delete(
 		if err != nil {
 			return err
 		}
-		if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+		if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 			return err
 		}
 		return database.CompareAndApply(spanContext, []port.ExpectedRecord{{Bucket: bucket, ID: id, Data: raw}}, mutations)
@@ -263,7 +263,7 @@ func (store Store) DeleteIfUnchanged(
 	if err != nil {
 		return err
 	}
-	if err := issueopsdomain.RequireNoFinishAttempt(expected.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(expected.CleanupAttempt); err != nil {
 		return err
 	}
 	expectedData, err := Encode(expected)
@@ -325,7 +325,7 @@ func readLocked(
 	if err != nil {
 		return record, err
 	}
-	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	if record.CleanupAbandonFailure != nil &&

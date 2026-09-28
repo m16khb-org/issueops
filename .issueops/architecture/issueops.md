@@ -193,3 +193,15 @@ Post-merge cleanup ordering is a contract: `reflect-completion`(completion
 전 preview 재발급이 요구된다. prune은 completion 미반영 + RemoteArtifact 보유
 레코드를 나이와 무관하게 보존한다(보존 불변식). staged artifact의 수명은
 레코드와 같다(deleteIssueOps가 스테이지 버킷을 동반 삭제).
+
+Cleanup `finish`와 `remote-branch`는 같은 cycle의 실행 잠금과 `cleanup_attempt`를
+공유한다. attempt의 operation·token과 관측 당시의 원본 레코드를 CAS로 결속하며,
+일반 writer는 attempt가 있는 레코드를 변경할 수 없다. 각 외부 효과 직전에
+소유권을 확인하고, provider 감사 반영 뒤에도 같은 레코드에만 receipt를 기록한다.
+상속된 자식 프로세스가 모두 종료됐음을 drain으로 확인한 뒤 finish는 레코드를
+삭제하고 remote-branch는 attempt만 해제한다. 다른 operation의 attempt는 인계받지
+않으며, 해당 정리 명령으로 복구해야 한다. 원격 ref가 이미 없으면 preview는
+레코드를 쓰지 않는다. 같은 operation의 중단된 attempt가 남아 있을 때는 명시적인
+apply가 새 token으로 인계받아 drain·해제하며, 삭제나 감사 반영을 했다고 기록하지
+않는다. [공용 cleanup 소유권 결정](../adr/2026-09-29-cleanup-ownership-binds-the-operation-and-exact-record-revis.md)이
+이 경계의 정규 근거다.

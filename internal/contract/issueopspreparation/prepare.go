@@ -149,9 +149,9 @@ func cloneRecord(record leasecontract.Record) leasecontract.Record {
 	cloned.Delegation = cloneRaw(record.Delegation)
 	cloned.ChildCycles = cloneRaw(record.ChildCycles)
 	cloned.RemoteCompletion = cloneRaw(record.RemoteCompletion)
-	if record.CleanupFinishAttempt != nil {
-		attempt := *record.CleanupFinishAttempt
-		cloned.CleanupFinishAttempt = &attempt
+	if record.CleanupAttempt != nil {
+		attempt := *record.CleanupAttempt
+		cloned.CleanupAttempt = &attempt
 	}
 	cloned.CleanupFinishFailure = cloneRaw(record.CleanupFinishFailure)
 	cloned.ImplementationReview = cloneRaw(record.ImplementationReview)

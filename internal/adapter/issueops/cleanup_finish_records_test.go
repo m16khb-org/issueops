@@ -16,7 +16,7 @@ func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := FinishRecordStore{StateRoot: root}
+	store := CleanupRecordStore{StateRoot: root}
 	snapshot, err := store.Load(context.Background(), record.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -29,7 +29,7 @@ func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
 		t.Fatal("stale observation armed a changed record")
 	}
 	current, err := store.Load(context.Background(), record.ID)
-	if err != nil || current.Record.Branch != "replacement" || current.Record.CleanupFinishAttempt != nil {
+	if err != nil || current.Record.Branch != "replacement" || current.Record.CleanupAttempt != nil {
 		t.Fatalf("current=%+v err=%v", current, err)
 	}
 	armed, err := store.Arm(context.Background(), current, finishRecordsAttempt("a"))
@@ -39,7 +39,7 @@ func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
 	if err := store.Check(context.Background(), armed); err != nil {
 		t.Fatal(err)
 	}
-	if current.Record.CleanupFinishAttempt != nil {
+	if current.Record.CleanupAttempt != nil {
 		t.Fatal("arm mutated its input")
 	}
 	db, err := sqlstore.Open(root)
@@ -69,7 +69,7 @@ func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			store := FinishRecordStore{StateRoot: root}
+			store := CleanupRecordStore{StateRoot: root}
 			snapshot, err := store.Load(ctx, record.ID)
 			if err != nil {
 				t.Fatal(err)
@@ -122,7 +122,7 @@ func TestFinishRecordsDrainFailureAuditAndAtomicDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := FinishRecordStore{StateRoot: root}
+	store := CleanupRecordStore{StateRoot: root}
 	snapshot, err := store.Load(ctx, record.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -135,14 +135,14 @@ func TestFinishRecordsDrainFailureAuditAndAtomicDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if retained.Record.CleanupFinishAttempt == nil || armed.Record.CleanupFinishFailure != nil {
+	if retained.Record.CleanupAttempt == nil || armed.Record.CleanupFinishFailure != nil {
 		t.Fatal("undrained failure lost ownership or mutated input")
 	}
 	drained, err := store.Fail(ctx, retained, finishRecordsFailure(), true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if drained.Record.CleanupFinishAttempt != nil {
+	if drained.Record.CleanupAttempt != nil {
 		t.Fatal("drained failure retained ownership")
 	}
 	if _, err := writeIssueOps(root, drained.Record); err != nil {
@@ -183,8 +183,8 @@ func TestFinishRecordsDrainFailureAuditAndAtomicDelete(t *testing.T) {
 	}
 }
 
-func finishRecordsAttempt(char string) model.IssueOpsCleanupFinishAttempt {
-	return model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat(char, 64), StartedAt: "2026-09-29T00:00:00Z"}
+func finishRecordsAttempt(char string) model.IssueOpsCleanupAttempt {
+	return model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat(char, 64), StartedAt: "2026-09-29T00:00:00Z"}
 }
 func finishRecordsFailure() model.IssueOpsCleanupFinishFailure {
 	return model.IssueOpsCleanupFinishFailure{Step: model.CleanupFailureStepWorktreeRemove, Message: "remove failed", At: "2026-09-29T00:00:01Z"}
@@ -197,7 +197,7 @@ func TestFinishRecordsRejectForgedAttemptProjection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := FinishRecordStore{StateRoot: root}
+	store := CleanupRecordStore{StateRoot: root}
 	snapshot, err := store.Load(ctx, record.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -208,7 +208,7 @@ func TestFinishRecordsRejectForgedAttemptProjection(t *testing.T) {
 	}
 	forged := armed
 	foreign := finishRecordsAttempt("b")
-	forged.Record.CleanupFinishAttempt = &foreign
+	forged.Record.CleanupAttempt = &foreign
 	if err := store.Check(ctx, forged); err == nil {
 		t.Fatal("foreign token passed ownership check")
 	}

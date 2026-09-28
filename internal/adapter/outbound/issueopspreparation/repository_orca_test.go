@@ -341,16 +341,16 @@ func TestPreparationIntentWritersRejectFinishSnapshots(t *testing.T) {
 					ContextPacketPath: "/repo.worktrees/199-orca/.issueops/context.json", ContextPacketSHA256: strings.Repeat("c", 64),
 					OwnerPromptPath: "/repo.worktrees/199-orca/.issueops/owner.md", OwnerPromptSHA256: strings.Repeat("b", 64),
 				}
-				attempt := &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+				attempt := &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 				persisted := state.Snapshot.Record
 				if source != "typed" {
-					persisted.CleanupFinishAttempt = attempt
+					persisted.CleanupAttempt = attempt
 				}
 				store.seedRecord(t, persisted)
 				raw := store.mustGet(recordBucket, persisted.ID)
 				state.Snapshot.RecordRaw = raw
 				if source != "raw" {
-					state.Snapshot.Record.CleanupFinishAttempt = attempt
+					state.Snapshot.Record.CleanupAttempt = attempt
 				}
 				switch operation {
 				case "invoking":

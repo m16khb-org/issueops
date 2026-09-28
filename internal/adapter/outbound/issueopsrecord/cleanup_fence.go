@@ -9,12 +9,12 @@ import (
 // bytes used by CAS. A projection may omit an attempt already present in those
 // bytes; CAS alone would then accept an overwrite of the armed record.
 func RequireMutableLeaseSnapshot(record leasecontract.Record, raw []byte) error {
-	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 		return err
 	}
 	persisted, err := DecodeLease(record.ID, raw)
 	if err != nil {
 		return err
 	}
-	return issueopsdomain.RequireNoFinishAttempt(persisted.CleanupFinishAttempt)
+	return issueopsdomain.RequireNoCleanupAttempt(persisted.CleanupAttempt)
 }

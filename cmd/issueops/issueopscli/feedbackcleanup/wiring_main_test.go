@@ -17,19 +17,17 @@ import (
 // 프로덕션에서는 issueopsapp이 주입한다. cleanup CLI 테스트는 실제 정리 경로를
 // 검증하므로 같은 배선을 재현한다.
 func TestMain(m *testing.M) {
-	reflectAudit := func(ctx context.Context, root string, record issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string, prov port.IssueProvider) error {
-		return (cleanupapp.AuditReflector{Receipts: completionapp.NewCompletionReceipts(issueopscore.RemoteRecordStore{StateRoot: root}, time.Now)}).Reflect(ctx, record, completion, audit, prov)
-	}
+
 	finish := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
 		runtime := issueopscore.CleanupFinishRuntime{RunGit: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
 		evidence := cleanupapp.FinishEvidenceReader{Provider: prov, VerifyMergedHead: d.VerifyMergedHead, ReadIssueSnapshot: issueopscore.ReadRemoteIssueSnapshot}
 		return (cleanupapp.FinishExecutor{
-			Records: issueopscore.FinishRecordStore{StateRoot: stateRoot}, Acquire: (issueopscore.FinishLifetimeLock{StateRoot: stateRoot}).Acquire,
+			Records: issueopscore.CleanupRecordStore{StateRoot: stateRoot}, Acquire: (issueopscore.CleanupLifetimeLock{StateRoot: stateRoot}).Acquire,
 			Observe: evidence.Observe,
 			Plan: func(ctx context.Context, record issueopscontract.IssueOpsRecord, request issueopscontract.CleanupFinishRequest) (issueopscontract.CleanupFinishInventory, issueopscontract.CleanupFinishResult) {
 				return (cleanupapp.FinishPreviewer{Environment: issueopscore.CleanupFinishEnvironment{RunGit: func(dir string, args ...string) (int, string) { return runtime.Git(ctx, dir, args...) }}, Workspace: runtime.Workspace}).Plan(ctx, record, request)
 			},
-			Fingerprint: issueopscore.CleanupFinishFingerprint, NewAttempt: issueopscore.NewCleanupFinishAttempt,
+			Fingerprint: issueopscore.CleanupFinishFingerprint, NewAttempt: issueopscore.NewCleanupAttempt,
 			Completion: completionapp.NewCompletionCollector(issueopscore.CompletionArtifacts{}).Collect,
 			Stop:       runtime.Stop, RemoveOrca: d.RemoveOrcaWorktree, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Git, Now: time.Now,
 			ReflectAudit: func(ctx context.Context, rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
@@ -58,12 +56,13 @@ func TestMain(m *testing.M) {
 		CleanupFinish: finish,
 		CleanupRemoteBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
 			return (cleanupapp.RemoteBranchCleaner{
-				Records:    issueopscore.CycleRecordStore{StateRoot: stateRoot},
+				Records: issueopscore.CleanupRecordStore{StateRoot: stateRoot},
+				Acquire: (issueopscore.CleanupLifetimeLock{StateRoot: stateRoot}).Acquire, NewAttempt: issueopscore.NewCleanupAttempt,
 				Preview:    cleanupapp.RemoteBranchPreviewer{Environment: issueopscore.CleanupRemoteBranchEnvironment{}, VerifyMergedArtifact: d.VerifyMergedHead},
 				Completion: completionapp.NewCompletionCollector(issueopscore.CompletionArtifacts{}).Collect,
 				Now:        time.Now,
 				ReflectAudit: func(ctx context.Context, rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
-					return reflectAudit(ctx, stateRoot, rec, completion, audit, prov)
+					return cleanupapp.WriteCleanupAudit(ctx, rec, completion, audit, prov)
 				},
 			}).Run(ctx, req)
 		},

@@ -55,7 +55,7 @@ func (repository *SQLiteRepository) Load(_ context.Context, id string) (preparat
 	if err != nil {
 		return preparationcontract.Snapshot{}, err
 	}
-	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 		return preparationcontract.Snapshot{}, err
 	}
 	return preparationcontract.Snapshot{

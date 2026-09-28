@@ -17,7 +17,7 @@ func ClaimWithinTransaction(ctx context.Context, transaction ClaimTransaction, r
 	if before.Stable.Execution == nil {
 		return RepositoryResult{}, leasecontract.Fail(leasecontract.FailurePersistence, leasecontract.ErrExecutionNotPrepared)
 	}
-	if err := issueopsdomain.RequireNoFinishAttempt(before.Stable.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(before.Stable.CleanupAttempt); err != nil {
 		return RepositoryResult{}, leasedomain.Deny(leasedomain.DenyLeaseClaimable, err)
 	}
 	lease := toDomainLease(before.Lease)

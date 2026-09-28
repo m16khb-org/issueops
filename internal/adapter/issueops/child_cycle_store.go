@@ -13,7 +13,7 @@ type ChildCycleStore struct{ CycleRecordStore }
 
 func (s ChildCycleStore) SavePair(ctx context.Context, parent, child model.IssueOpsRecord) (model.IssueOpsRecord, model.IssueOpsRecord, error) {
 	for _, record := range []model.IssueOpsRecord{parent, child} {
-		if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+		if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 			return parent, child, err
 		}
 	}

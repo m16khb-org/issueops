@@ -239,12 +239,12 @@ func TestReconcileRepositoryWorktreeReceiptPersistsPreparedArtifacts(t *testing.
 		t.Run("finish-fenced-"+source, func(t *testing.T) {
 			guarded := state
 			stored := record
-			attempt := &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+			attempt := &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 			if source != "typed" {
-				stored.CleanupFinishAttempt = attempt
+				stored.CleanupAttempt = attempt
 			}
 			if source != "raw" {
-				guarded.Progress.Record.CleanupFinishAttempt = attempt
+				guarded.Progress.Record.CleanupAttempt = attempt
 			}
 			raw, err := leasecontract.Encode(stored)
 			if err != nil {

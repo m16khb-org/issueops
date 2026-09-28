@@ -214,7 +214,7 @@ func (store *preparationStore) mustGet(bucket, id string) []byte {
 func TestPreparationRefusesExistingFinishAttempt(t *testing.T) {
 	store := newPreparationStore()
 	record := repositoryRecord("io-prepare", "/repo", "199-prepare")
-	record.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	store.seedRecord(t, record)
 	before := append([]byte(nil), store.mustGet(recordBucket, record.ID)...)
 	repository := NewSQLiteRepository(store)

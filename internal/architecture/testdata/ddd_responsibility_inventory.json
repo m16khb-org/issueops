@@ -6954,23 +6954,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/cleanup_finish_records.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func FinishRecordStore.Arm",
-        "func FinishRecordStore.Check",
-        "func FinishRecordStore.Delete",
-        "func FinishRecordStore.Fail",
-        "func FinishRecordStore.Load",
-        "func FinishRecordStore.MarkAuditReflected",
-        "func FinishRecordStore.compare",
-        "func FinishRecordStore.save",
-        "func finishSnapshotRecord",
-        "type FinishRecordStore"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/cleanup_finish_runtime.go",
       "owner": "adapter",
       "task": "T08",
@@ -6979,14 +6962,21 @@
         "func CleanupFinishRuntime.Git",
         "func CleanupFinishRuntime.Stop",
         "func CleanupFinishRuntime.Workspace",
-        "func FinishLifetimeLock.Acquire",
-        "func NewCleanupFinishAttempt",
-        "func finishLifetime.Close",
-        "func finishLifetime.Context",
-        "func finishLifetime.Drain",
-        "type CleanupFinishRuntime",
-        "type FinishLifetimeLock",
-        "type finishLifetime"
+        "type CleanupFinishRuntime"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/cleanup_lifetime.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CleanupLifetimeLock.Acquire",
+        "func NewCleanupAttempt",
+        "func cleanupLifetime.Close",
+        "func cleanupLifetime.Context",
+        "func cleanupLifetime.Drain",
+        "type CleanupLifetimeLock",
+        "type cleanupLifetime"
       ]
     },
     {
@@ -7011,6 +7001,25 @@
         "func NewCleanupProcessController",
         "func NewCleanupWorkspaceCleaner",
         "type CleanupProcessController"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/cleanup_records.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CleanupRecordStore.Arm",
+        "func CleanupRecordStore.Check",
+        "func CleanupRecordStore.Delete",
+        "func CleanupRecordStore.Fail",
+        "func CleanupRecordStore.Load",
+        "func CleanupRecordStore.MarkAuditReflected",
+        "func CleanupRecordStore.Release",
+        "func CleanupRecordStore.compare",
+        "func CleanupRecordStore.save",
+        "func cleanupOperationRecord",
+        "func cleanupSnapshotRecord",
+        "type CleanupRecordStore"
       ]
     },
     {
@@ -9263,6 +9272,14 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/issueopsrecord/cleanup_fence.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func RequireMutableLeaseSnapshot"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/issueopsrecord/codec.go",
       "owner": "adapter",
       "task": "T20",
@@ -9270,14 +9287,6 @@
         "func Decode",
         "func Encode",
         "func NormalizeID"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopsrecord/finish_fence.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func RequireMutableLeaseSnapshot"
       ]
     },
     {
@@ -11026,8 +11035,7 @@
       "task": "T08",
       "symbols": [
         "func FinishExecutor.Run",
-        "type FinishExecutor",
-        "type FinishLifetime"
+        "type FinishExecutor"
       ]
     },
     {
@@ -11041,6 +11049,14 @@
         "type FinishEnvironment",
         "type FinishPreviewer",
         "type FinishWorkspaceObservation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/lifetime.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "type CleanupLifetime"
       ]
     },
     {
@@ -11072,8 +11088,7 @@
         "func RemoteBranchCleaner.Run",
         "func cleanupRemoteBranchFingerprint",
         "func cleanupSupersededByFlag",
-        "type RemoteBranchCleaner",
-        "type RemoteBranchRecords"
+        "type RemoteBranchCleaner"
       ]
     },
     {
@@ -12771,12 +12786,13 @@
       ]
     },
     {
-      "path": "internal/contract/issueops/cleanup_finish_attempt.go",
+      "path": "internal/contract/issueops/cleanup_attempt.go",
       "owner": "contract",
       "task": "T08",
       "symbols": [
-        "func ValidateCleanupFinishAttempt",
-        "type IssueOpsCleanupFinishAttempt"
+        "func ValidateCleanupAttempt",
+        "type CleanupOperation",
+        "type IssueOpsCleanupAttempt"
       ]
     },
     {
@@ -12788,19 +12804,19 @@
       ]
     },
     {
-      "path": "internal/contract/issueops/cleanup_finish_snapshot.go",
-      "owner": "contract",
-      "task": "T08",
-      "symbols": [
-        "type CleanupFinishSnapshot"
-      ]
-    },
-    {
       "path": "internal/contract/issueops/cleanup_remote_branch_inventory.go",
       "owner": "contract",
       "task": "T08",
       "symbols": [
         "type CleanupRemoteBranchInventory"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/cleanup_snapshot.go",
+      "owner": "contract",
+      "task": "T08",
+      "symbols": [
+        "type CleanupSnapshot"
       ]
     },
     {
@@ -14428,6 +14444,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/cleanup_attempt.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ArmCleanup",
+        "func ReleaseCleanupAttempt",
+        "func RequireNoCleanupAttempt",
+        "func ValidateCleanupOperationAccess",
+        "func ValidateCleanupOwner"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/cleanup_children.go",
       "owner": "domain",
       "task": "T08",
@@ -14455,14 +14483,6 @@
       ]
     },
     {
-      "path": "internal/domain/issueops/cleanup_finish_attempt.go",
-      "owner": "domain",
-      "task": "T08",
-      "symbols": [
-        "func RequireNoFinishAttempt"
-      ]
-    },
-    {
       "path": "internal/domain/issueops/cleanup_finish_commands.go",
       "owner": "domain",
       "task": "T08",
@@ -14478,9 +14498,7 @@
       "owner": "domain",
       "task": "T08",
       "symbols": [
-        "func ApplyCleanupFinishFailure",
-        "func ArmCleanupFinish",
-        "func ValidateCleanupFinishOwner"
+        "func ApplyCleanupFinishFailure"
       ]
     },
     {
@@ -17318,7 +17336,9 @@
         "func CleanupFinishObservationError.Error",
         "func CleanupFinishObservationError.Unwrap",
         "type CleanupFinishObservationError",
-        "type CleanupFinishRecords"
+        "type CleanupFinishRecords",
+        "type CleanupOwnershipRecords",
+        "type CleanupRemoteBranchRecords"
       ]
     },
     {

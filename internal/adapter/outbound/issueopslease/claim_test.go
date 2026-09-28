@@ -251,7 +251,7 @@ func (s *claimStore) Apply(_ context.Context, mutations []port.RecordMutation) e
 func TestClaimRefusesFinishAttemptBeforeConsumingToken(t *testing.T) {
 	actor := leasecontract.Actor{Host: "codex", SessionID: "claim-session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "2026-07-30T00:00:00Z", Executable: "/usr/bin/codex"}}
 	record := claimableRecord(t, actor, "claim-token")
-	record.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	store := newClaimStore(t, record)
 	before := append([]byte(nil), store.records[recordBucket+"\x00"+record.ID]...)
 	path := writeClaimToken(t, record, "claim-token")

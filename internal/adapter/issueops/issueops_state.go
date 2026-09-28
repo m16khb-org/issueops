@@ -217,7 +217,7 @@ func writeIssueOps(stateRoot string, record issueops.IssueOpsRecord) (issueops.I
 		record.OK = false
 		return record, err
 	}
-	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 		record.OK = false
 		return record, err
 	}
@@ -301,7 +301,7 @@ func mutableIssueOpsRaw(db *sqlstore.DB, id string) ([]byte, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
-	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 		return nil, false, err
 	}
 	return raw, true, nil

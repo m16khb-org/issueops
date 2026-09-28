@@ -54,11 +54,11 @@ func TestPrepareContractClonesMutableAuthority(t *testing.T) {
 }
 
 func TestPreparationClonePreservesIndependentFinishAttempt(t *testing.T) {
-	original := Snapshot{Record: leasecontract.Record{CleanupFinishAttempt: &model.IssueOpsCleanupFinishAttempt{Token: "original", StartedAt: "2026-09-29T00:00:00Z"}}}
+	original := Snapshot{Record: leasecontract.Record{CleanupAttempt: &model.IssueOpsCleanupAttempt{Operation: "finish", Token: "original", StartedAt: "2026-09-29T00:00:00Z"}}}
 	cloned := original.Clone()
-	cloned.Record.CleanupFinishAttempt.Token = "replacement"
-	cloned.Record.CleanupFinishAttempt.StartedAt = "2026-09-29T01:00:00Z"
-	if original.Record.CleanupFinishAttempt.Token != "original" || original.Record.CleanupFinishAttempt.StartedAt != "2026-09-29T00:00:00Z" {
+	cloned.Record.CleanupAttempt.Token = "replacement"
+	cloned.Record.CleanupAttempt.StartedAt = "2026-09-29T01:00:00Z"
+	if original.Record.CleanupAttempt.Token != "original" || original.Record.CleanupAttempt.StartedAt != "2026-09-29T00:00:00Z" {
 		t.Fatal("preparation clone changed the observed finish attempt")
 	}
 }

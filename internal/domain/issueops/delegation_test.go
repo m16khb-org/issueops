@@ -20,11 +20,11 @@ func TestMissingPreconditionsAcceptsReviewedParent(t *testing.T) {
 }
 
 func TestChildMutationRetainsFinishAuthority(t *testing.T) {
-	record := model.IssueOpsRecord{CleanupFinishAttempt: &model.IssueOpsCleanupFinishAttempt{Token: "pending", StartedAt: "2026-09-29T00:00:00Z"}}
+	record := model.IssueOpsRecord{CleanupAttempt: &model.IssueOpsCleanupAttempt{Operation: "finish", Token: "pending", StartedAt: "2026-09-29T00:00:00Z"}}
 	if err := ValidateChildMutation(record); err == nil {
 		t.Fatal("child mutation bypassed finish attempt")
 	}
-	record.CleanupFinishAttempt = nil
+	record.CleanupAttempt = nil
 	if err := ValidateChildMutation(record); err != nil {
 		t.Fatal(err)
 	}

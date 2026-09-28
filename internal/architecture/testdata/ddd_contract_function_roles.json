@@ -50,8 +50,8 @@
     "role": "codec"
   },
   {
-    "path": "internal/contract/issueops/cleanup_finish_attempt.go",
-    "symbol": "func ValidateCleanupFinishAttempt",
+    "path": "internal/contract/issueops/cleanup_attempt.go",
+    "symbol": "func ValidateCleanupAttempt",
     "role": "shape"
   },
   {

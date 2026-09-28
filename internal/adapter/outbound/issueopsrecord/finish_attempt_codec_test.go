@@ -12,12 +12,12 @@ import (
 )
 
 func TestFinishAttemptCodecPreservesArmedAndDrainedRecords(t *testing.T) {
-	const attempt = `{"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z"}`
+	const attempt = `{"operation":"finish","token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z"}`
 	const failure = `{"step":"record_delete","message":"storage unavailable","at":"2026-09-29T00:01:00Z"}`
 	for _, tc := range []struct{ name, fields string }{
 		{"old schema1", ""},
-		{"armed", `,"cleanup_finish_attempt":` + attempt},
-		{"undrained failure", `,"cleanup_finish_attempt":` + attempt + `,"cleanup_finish_failure":` + failure},
+		{"armed", `,"cleanup_attempt":` + attempt},
+		{"undrained failure", `,"cleanup_attempt":` + attempt + `,"cleanup_finish_failure":` + failure},
 		{"drained failure", `,"cleanup_finish_failure":` + failure},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -47,7 +47,7 @@ func TestFinishAttemptCodecPreservesArmedAndDrainedRecords(t *testing.T) {
 				if err := json.Unmarshal(result, &got); err != nil {
 					t.Fatal(err)
 				}
-				for _, field := range []string{"cleanup_finish_attempt", "cleanup_finish_failure"} {
+				for _, field := range []string{"cleanup_attempt", "cleanup_finish_failure"} {
 					wantJSON, _ := json.Marshal(original[field])
 					gotJSON, _ := json.Marshal(got[field])
 					if string(wantJSON) != string(gotJSON) {
@@ -66,13 +66,13 @@ func TestFinishAttemptCodecPreservesArmedAndDrainedRecords(t *testing.T) {
 
 func TestFinishAttemptCodecRejectsMalformedAuthority(t *testing.T) {
 	for _, attempt := range []string{
-		`{}`, `{"token":"short","started_at":"2026-09-29T00:00:00Z"}`,
-		`{"token":"gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg","started_at":"2026-09-29T00:00:00Z"}`,
-		`{"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}`,
-		`{"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"yesterday"}`,
-		`{"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z","unknown":true}`,
+		`{}`, `{"operation":"finish","token":"short","started_at":"2026-09-29T00:00:00Z"}`,
+		`{"operation":"finish","token":"gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg","started_at":"2026-09-29T00:00:00Z"}`,
+		`{"operation":"finish","token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}`,
+		`{"operation":"finish","token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"yesterday"}`,
+		`{"operation":"finish","token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z","unknown":true}`,
 	} {
-		raw := []byte(fmt.Sprintf(`{"ok":true,"schema_version":1,"id":"io-finish-codec","phase":"done","cleanup_finish_attempt":%s}`, attempt))
+		raw := []byte(fmt.Sprintf(`{"ok":true,"schema_version":1,"id":"io-finish-codec","phase":"done","cleanup_attempt":%s}`, attempt))
 		if _, err := Decode("io-finish-codec", raw); !errors.Is(err, state.ErrInvalidState) {
 			t.Errorf("accepted malformed record %s: %v", attempt, err)
 		}
@@ -84,7 +84,7 @@ func TestFinishAttemptCodecRejectsMalformedAuthority(t *testing.T) {
 			t.Fatal(err)
 		}
 		// Unknown JSON fields are checked only by strict decoding.
-		if attempt == `{"token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z","unknown":true}` {
+		if attempt == `{"operation":"finish","token":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","started_at":"2026-09-29T00:00:00Z","unknown":true}` {
 			continue
 		}
 		if _, err := Encode(record); !errors.Is(err, state.ErrInvalidState) {

@@ -18,10 +18,10 @@ func TestIntentWritersRejectFinishInRawOrTypedSnapshot(t *testing.T) {
 		for _, operation := range []string{"resume invoking", "resume receipt", "resume failure", "reconcile invoking", "reconcile receipt", "reconcile failure", "reconcile clear"} {
 			t.Run(source+"/"+operation, func(t *testing.T) {
 				repository, state, db := seededResumeIntent(t)
-				attempt := &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+				attempt := &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 				persisted := state.Progress.Record.Stable
 				if source != "typed" {
-					persisted.CleanupFinishAttempt = attempt
+					persisted.CleanupAttempt = attempt
 				}
 				raw, err := recordcodec.EncodeLease(persisted)
 				if err != nil {
@@ -32,7 +32,7 @@ func TestIntentWritersRejectFinishInRawOrTypedSnapshot(t *testing.T) {
 				}
 				state.RecordRaw = raw
 				if source != "raw" {
-					state.Progress.Record.Stable.CleanupFinishAttempt = attempt
+					state.Progress.Record.Stable.CleanupAttempt = attempt
 				}
 				reconcile := NewReconcileRepository(db, nil)
 				rs := leaseapp.ReconcileIntentState{

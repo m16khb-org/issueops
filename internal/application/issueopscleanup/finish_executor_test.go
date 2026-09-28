@@ -12,37 +12,37 @@ import (
 )
 
 type finishTestRecords struct {
-	snapshot                                       model.CleanupFinishSnapshot
+	snapshot                                       model.CleanupSnapshot
 	events                                         *[]string
 	armErr, checkErr, auditErr, deleteErr, failErr error
 	failContextErr                                 error
 	retained                                       bool
 }
 
-func (s *finishTestRecords) Load(context.Context, string) (model.CleanupFinishSnapshot, error) {
+func (s *finishTestRecords) Load(context.Context, string) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "load")
 	return s.snapshot, nil
 }
-func (s *finishTestRecords) Arm(_ context.Context, _ model.CleanupFinishSnapshot, a model.IssueOpsCleanupFinishAttempt) (model.CleanupFinishSnapshot, error) {
+func (s *finishTestRecords) Arm(_ context.Context, _ model.CleanupSnapshot, a model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "arm")
-	s.snapshot.Record.CleanupFinishAttempt = &a
+	s.snapshot.Record.CleanupAttempt = &a
 	return s.snapshot, s.armErr
 }
-func (s *finishTestRecords) Check(context.Context, model.CleanupFinishSnapshot) error {
+func (s *finishTestRecords) Check(context.Context, model.CleanupSnapshot) error {
 	*s.events = append(*s.events, "check")
 	return s.checkErr
 }
-func (s *finishTestRecords) Fail(ctx context.Context, _ model.CleanupFinishSnapshot, _ model.IssueOpsCleanupFinishFailure, drained bool) (model.CleanupFinishSnapshot, error) {
+func (s *finishTestRecords) Fail(ctx context.Context, _ model.CleanupSnapshot, _ model.IssueOpsCleanupFinishFailure, drained bool) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "fail")
 	s.retained = !drained
 	s.failContextErr = ctx.Err()
 	return s.snapshot, s.failErr
 }
-func (s *finishTestRecords) MarkAuditReflected(context.Context, model.CleanupFinishSnapshot, string) (model.CleanupFinishSnapshot, error) {
+func (s *finishTestRecords) MarkAuditReflected(context.Context, model.CleanupSnapshot, string) (model.CleanupSnapshot, error) {
 	*s.events = append(*s.events, "receipt")
 	return s.snapshot, s.auditErr
 }
-func (s *finishTestRecords) Delete(context.Context, model.CleanupFinishSnapshot) error {
+func (s *finishTestRecords) Delete(context.Context, model.CleanupSnapshot) error {
 	*s.events = append(*s.events, "delete")
 	return s.deleteErr
 }
@@ -56,7 +56,7 @@ func (l *finishTestLease) Context(ctx context.Context) context.Context {
 	return context.WithValue(ctx, finishTestContextKey{}, true)
 }
 func (l *finishTestLease) Close() error { *l.events = append(*l.events, "close"); return nil }
-func (l *finishTestLease) Drain(context.Context) (FinishLifetime, error) {
+func (l *finishTestLease) Drain(context.Context) (CleanupLifetime, error) {
 	*l.events = append(*l.events, "drain")
 	if l.drainErr != nil {
 		return nil, l.drainErr
@@ -70,7 +70,7 @@ func finishExecutorFixture(t *testing.T) (FinishExecutor, *finishTestRecords, *f
 	t.Helper()
 	events := []string{}
 	lease := &finishTestLease{events: &events}
-	records := &finishTestRecords{events: &events, snapshot: model.CleanupFinishSnapshot{Record: model.IssueOpsRecord{ID: "io-finish", Repo: "/repo"}, Revision: "initial"}}
+	records := &finishTestRecords{events: &events, snapshot: model.CleanupSnapshot{Record: model.IssueOpsRecord{ID: "io-finish", Repo: "/repo"}, Revision: "initial"}}
 	checkContext := func(ctx context.Context) {
 		t.Helper()
 		if ctx.Value(finishTestContextKey{}) != true {
@@ -79,7 +79,7 @@ func finishExecutorFixture(t *testing.T) (FinishExecutor, *finishTestRecords, *f
 	}
 	executor := FinishExecutor{
 		Records: records,
-		Acquire: func(context.Context, string) (FinishLifetime, error) {
+		Acquire: func(context.Context, string) (CleanupLifetime, error) {
 			events = append(events, "acquire")
 			return lease, nil
 		},
@@ -94,8 +94,8 @@ func finishExecutorFixture(t *testing.T) (FinishExecutor, *finishTestRecords, *f
 			return model.CleanupFinishInventory{WorktreePresent: true, WorktreeRoot: "/worktree", Branch: "feature", BranchOID: "oid", OrcaWorktreeID: "orca", OrcaRuntimeReady: true}, model.CleanupFinishResult{OK: true, ID: r.ID, Preview: !r.Apply}
 		},
 		Fingerprint: func(model.CleanupFinishInventory) (string, error) { return "fingerprint", nil },
-		NewAttempt: func() (model.IssueOpsCleanupFinishAttempt, error) {
-			return model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
+		NewAttempt: func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
+			return model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
 		},
 		Completion: func(model.IssueOpsRecord) model.RemoteCompletionSection {
 			events = append(events, "completion")

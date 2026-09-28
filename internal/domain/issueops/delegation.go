@@ -148,7 +148,7 @@ func PrepareChildStart(req model.IssueOpsChildStartRequest) (model.IssueOpsChild
 }
 
 func ValidateChildMutation(child model.IssueOpsRecord) error {
-	if err := RequireNoFinishAttempt(child.CleanupFinishAttempt); err != nil {
+	if err := RequireNoCleanupAttempt(child.CleanupAttempt); err != nil {
 		return err
 	}
 	if child.CleanupAbandonFailure != nil && child.CleanupAbandonFailure.Step == "applying" {

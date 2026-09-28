@@ -55,7 +55,7 @@ func ValidateRecord(record IssueOpsRecord) error {
 			return fmt.Errorf("issueops child validation verdict is invalid")
 		}
 	}
-	if err := ValidateCleanupFinishAttempt(record.CleanupFinishAttempt); err != nil {
+	if err := ValidateCleanupAttempt(record.CleanupAttempt); err != nil {
 		return err
 	}
 	if record.CleanupFinishFailure != nil &&

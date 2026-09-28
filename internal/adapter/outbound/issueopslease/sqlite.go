@@ -223,7 +223,7 @@ func toApplicationRecord(record leasecontract.Record) leaseapp.Record {
 func decodeMutableLeaseRecord(id string, data []byte) (leasecontract.Record, error) {
 	record, err := recordcodec.DecodeLease(id, data)
 	if err == nil {
-		if guardErr := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); guardErr != nil {
+		if guardErr := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); guardErr != nil {
 			return leasecontract.Record{}, guardErr
 		}
 		return record, nil

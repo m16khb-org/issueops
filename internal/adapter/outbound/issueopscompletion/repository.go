@@ -56,7 +56,7 @@ func updateWithinSpan(ctx context.Context, store port.TransactionalRecordStore, 
 	if err != nil {
 		return completionapp.RepositoryResult{}, err
 	}
-	if err := issueopsdomain.RequireNoFinishAttempt(record.CleanupFinishAttempt); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
 		return completionapp.RepositoryResult{}, err
 	}
 	before, err := snapshot(record)

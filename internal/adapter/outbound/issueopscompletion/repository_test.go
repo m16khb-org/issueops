@@ -143,7 +143,7 @@ var _ completionapp.Repository = (*Repository)(nil)
 
 func TestCompletionRefusesExistingFinishAttemptBeforeTransition(t *testing.T) {
 	record, _ := completionRepositoryRecord(t)
-	record.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	raw, err := leasecontract.Encode(record)
 	if err != nil {
 		t.Fatal(err)

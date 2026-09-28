@@ -214,7 +214,7 @@ func TestReseedRefusesFreshlyReadFinishAttempt(t *testing.T) {
 		t.Fatal(err)
 	}
 	record := reseedRepositoryRecord()
-	record.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	raw, err := leasecontract.Encode(record)
 	if err != nil {
 		t.Fatal(err)
@@ -248,7 +248,7 @@ func TestReseedCannotRestoreDrainedFinishAttempt(t *testing.T) {
 		t.Fatal(err)
 	}
 	next := snapshot.Record
-	next.Stable.CleanupFinishAttempt = &model.IssueOpsCleanupFinishAttempt{Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	next.Stable.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
 	_, err = repository.CommitReseed(context.Background(), snapshot, next)
 	if err == nil || !strings.Contains(err.Error(), "cleanup finish") {
 		t.Fatalf("restored attempt: %v", err)
