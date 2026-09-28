@@ -5,6 +5,7 @@ import (
 
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
 )
 
@@ -37,26 +38,12 @@ func IssueOpsPRReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadin
 		missing = append(missing, "contract_feedback_issue_update")
 	}
 	missing = stringlist.UniqueSorted(missing)
-	var iddWarnings []string
-	if len(record.Decisions) == 0 {
-		iddWarnings = append(iddWarnings, "no_decision_records")
-	}
-	hasNonChildLink := false
-	for _, link := range record.IssueLinks {
-		if link.Type != "child" {
-			hasNonChildLink = true
-			break
-		}
-	}
-	if !hasNonChildLink && len(record.IssueLinks) == 0 {
-		iddWarnings = append(iddWarnings, "no_issue_graph_links")
-	}
 	cleanup := IssueOpsCleanupStatusForRecord(record, issueops.IssueOpsCleanupStatusRequest{Merged: false})
 	return issueops.IssueOpsReadiness{
 		OK:             true,
 		Ready:          len(missing) == 0,
 		Missing:        missing,
-		Warnings:       iddWarnings,
+		Warnings:       issueopsdomain.PRReadinessWarnings(record),
 		CleanupReady:   cleanup.Ready,
 		CleanupMissing: cleanup.Missing,
 		IssueURL:       record.IssueURL,

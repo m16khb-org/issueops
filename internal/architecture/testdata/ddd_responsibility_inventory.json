@@ -13863,6 +13863,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/pr_readiness_warnings.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PRReadinessWarnings"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/readiness_evidence.go",
       "owner": "domain",
       "task": "T04",
