@@ -7941,8 +7941,7 @@
       "owner": "adapter",
       "task": "T04",
       "symbols": [
-        "func refreshIssueOpsAISlopClean",
-        "func shouldRefreshIssueOpsAISlopClean"
+        "func refreshIssueOpsAISlopClean"
       ]
     },
     {
@@ -11002,6 +11001,14 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/ai_slop_refresh.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func RefreshAISlopClean"
+      ]
+    },
+    {
       "path": "internal/application/issueopsdecision/ports.go",
       "owner": "application",
       "task": "T20",
@@ -13568,6 +13575,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/ai_slop_refresh.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ShouldRefreshAISlopClean"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/capability_baseline.go",
       "owner": "domain",
       "task": "T20",
@@ -15714,6 +15729,14 @@
       ]
     },
     {
+      "path": "internal/port/issueopscycle/ai_slop_refresh.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type AISlopCleanRefreshStore"
+      ]
+    },
+    {
       "path": "internal/port/issueopsintent/store.go",
       "owner": "port",
       "task": "T20",
@@ -16986,6 +17009,23 @@
         "internal/application/policy/runner_test.go",
         "internal/adapter/policy/policy_test.go",
         "cmd/issueops/policycli/policy_cli_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "ai-slop-clean-refresh-decision",
+      "source_path": "internal/adapter/issueops/issueops_phase_refresh.go",
+      "source_symbol": "func shouldRefreshIssueOpsAISlopClean",
+      "responsibility": "an already stamped cleanup can be refreshed from a later phase without moving the cycle backward",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ShouldRefreshAISlopClean",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to ai-slop-clean"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/ai_slop_refresh_test.go",
+        "internal/adapter/issueops/issueops_phase_refresh_test.go"
       ],
       "status": "migrated"
     }

@@ -86,7 +86,7 @@ func advanceIssueOpsPhaseLocked(stateRoot, id, to string, upstream issueOpsUpstr
 		}
 		return record, nil
 	}
-	if shouldRefreshIssueOpsAISlopClean(record, phase) {
+	if issueopsdomain.ShouldRefreshAISlopClean(record, phase) {
 		return refreshIssueOpsAISlopClean(stateRoot, record)
 	}
 	if err := validateIssueOpsPhaseTransition(stateRoot, record, phase, upstream); err != nil {
