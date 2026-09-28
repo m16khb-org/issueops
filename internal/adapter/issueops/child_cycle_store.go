@@ -26,3 +26,7 @@ func (s ChildCycleStore) SavePair(ctx context.Context, parent, child model.Issue
 	err = db.Apply(ctx, []port.RecordMutation{{Bucket: issueOpsBucket, ID: parent.ID, Data: parentData}, {Bucket: issueOpsBucket, ID: child.ID, Data: childData}})
 	return parent, child, err
 }
+
+func (s ChildCycleStore) Scan() ([]model.IssueOpsRecord, error) {
+	return ScanReadableIssueOps(s.StateRoot)
+}

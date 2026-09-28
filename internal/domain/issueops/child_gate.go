@@ -46,7 +46,7 @@ func ChildPRGateKey(entry model.IssueOpsChildStatusEntry) string {
 }
 
 func ChildTerminal(entry model.IssueOpsChildStatusEntry) bool {
-	return entry.Phase == model.IssueOpsPhaseDone
+	return !entry.Orphaned && entry.Phase == model.IssueOpsPhaseDone
 }
 
 func ChildDropped(entry model.IssueOpsChildStatusEntry) bool {

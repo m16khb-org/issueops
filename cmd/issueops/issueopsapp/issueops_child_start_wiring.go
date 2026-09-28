@@ -18,3 +18,15 @@ func newChildStarter(root string) delegationapp.ChildStarter {
 		Now:       time.Now,
 	}
 }
+
+func newChildStatusService(root string) delegationapp.StatusService {
+	return delegationapp.StatusService{
+		Records:   core.ChildCycleStore{CycleRecordStore: core.CycleRecordStore{StateRoot: root}},
+		Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same),
+		Now:       time.Now,
+	}
+}
+
+func newChildValidator(root string) delegationapp.Validator {
+	return delegationapp.Validator{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}
+}

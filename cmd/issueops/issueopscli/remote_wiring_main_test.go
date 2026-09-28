@@ -75,7 +75,7 @@ func wireRemoteForTests() {
 		SyncIssueGraph: func(ctx context.Context, root, id string, confirm bool) (map[string]any, error) {
 			return remoteapp.NewIssueGraphSyncService(issueopscore.RemoteRecordStore{StateRoot: root}, issueopscore.IssueGraphPoster{}).Sync(ctx, id, confirm)
 		},
-		UmbrellaBranchGateReason:      issueopscore.UmbrellaBranchGateReason,
+		UmbrellaBranchGateReason:      issuedomain.UmbrellaBranchGateReason,
 		ValidateIssueOpsMutationActor: issueopscore.ValidateIssueOpsMutationActor,
 	})
 }

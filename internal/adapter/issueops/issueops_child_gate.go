@@ -37,5 +37,5 @@ func issueOpsChildStatusWithoutParentLock(stateRoot string, parent issueops.Issu
 	if err != nil {
 		return issueops.IssueOpsChildStatusResult{OK: false, ParentID: parent.ID}, nil, err
 	}
-	return buildIssueOpsChildStatus(parent, scanned), scanned, nil
+	return issueopsdomain.BuildChildStatus(parent, scanned), scanned, nil
 }

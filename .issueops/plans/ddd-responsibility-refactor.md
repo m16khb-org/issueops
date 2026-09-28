@@ -276,6 +276,8 @@
 
 - **부분 진행 — 자식 생성:** 생성 조건·상속 프로필·자식 참조의 새 실행 판정은 aggregate domain으로, 상속 리뷰 표식은 review domain으로 옮겼다. `ChildStarter`가 부모 권한 확인과 규칙 적용을 조율하고 `ChildCycleStore`가 부모·자식을 한 SQLite 트랜잭션으로 저장한다. 기존 세 차례 저장에서 발생할 수 있던 부분 생성도 제거했다. 자식의 cleanup applying 잠금과 저장 후 부가 이슈 연결 경고는 유지했다. production의 기존 생성 함수와 `adapter/issueops/delegation` 패키지를 삭제하고 CLI가 새 application을 직접 구성한다. 전체 일반·race suite 각각 293개 패키지, vet·build·architecture가 통과했다(`T08-child-start-*`). 실제 CLI 프로세스 8개의 동시 생성, DB 오류 시 두 기록 롤백, 잘못된 요청의 raw row 보존을 확인했다. 원자적 저장·자식 잠금·권한 검사를 각각 무력화한 overlay도 실패했다. 부모자식 상태 조회·검증과 정리 경로는 남아 있어 T08은 미완료다.
 
+- **부분 진행 — 부모·자식 상태와 검증:** 자식 선택·상태 집계·정리 후 승인 기록 판정·인덱스 복구·승인/거절/제외 조건·부모 참조 갱신·우산 브랜치 조건을 domain으로 옮겼다. `StatusService`와 `Validator`가 조회·현재 권한 재확인·저장을 조율한다. 기존 production `issueops_delegation.go`와 우산 topology adapter를 삭제하고 CLI가 application/domain을 직접 구성한다. 부모 저장 잠금 안에서 자식 상태를 다시 확인해 처음 관측한 뒤 다시 열린 자식, 부모/저장소가 바뀐 자식, 정리 작업 중인 자식의 승인을 거부한다. 승인 증거가 없는 삭제된 자식이 고아 상태인데도 완료 gate를 통과하던 기존 모순을 재현하고, 완료 판정에 고아 상태 제외 조건을 추가했다. 수정 후 전체 일반·race suite 각각 293개 패키지와 vet·build·architecture가 통과했다(`T08-child-verdict-final-*`). 실제 CLI에서 조회의 row 불변, 인덱스 복구의 멱등성, 동시 승인 8건 보존, 정리 후 승인/제외 기록 유지, 부적절한 승인 거부와 증거 없는 승인 기록의 PR 차단을 확인했다. 최신 자식 재조회·복구 권한·승인 기록 보존·입력 불변성을 무력화한 overlay가 각각 실패했다. cleanup과 이를 호출하는 readiness 경계의 이전은 남아 있어 T08은 미완료다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료

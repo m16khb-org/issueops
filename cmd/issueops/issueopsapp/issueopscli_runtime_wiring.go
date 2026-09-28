@@ -20,14 +20,20 @@ func configureIssueOpsCLIRuntime() {
 	decisions := issueOpsDecisionHandlers(observer)
 	routing := issueOpsRoutingHandlers(observer)
 	issueopscli.ConfigureIssueOpsRuntime2(issueopscli.IssueOpsCLIDeps{
-		AcceptIssueOpsChildWithActor: issueopscore.AcceptIssueOpsChildWithActor,
+		AcceptIssueOpsChildWithActor: func(root, parentID, childID string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+			return newChildValidator(root).Accept(context.Background(), parentID, childID, evidence, &actor)
+		},
 		AddIssueOpsDecisionWithActor: decisions.AddWithActor,
-		DropIssueOpsChildWithActor:   issueopscore.DropIssueOpsChildWithActor,
-		IssueOpsChildStatusWithActor: issueopscore.IssueOpsChildStatusWithActor,
-		IssueOpsPRReadiness:          issueopscore.IssueOpsPRReadiness,
-		IssueOpsNext:                 issueOpsNextHandler(artifacts.Names, observer),
-		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
-		IssueOpsStatus:               issueOpsStatusHandler(observer),
+		DropIssueOpsChildWithActor: func(root, parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+			return newChildValidator(root).Drop(context.Background(), parentID, childID, reason, &actor)
+		},
+		IssueOpsChildStatusWithActor: func(root, id string, repair bool, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildStatusResult, error) {
+			return newChildStatusService(root).Status(context.Background(), id, repair, &actor)
+		},
+		IssueOpsPRReadiness: issueopscore.IssueOpsPRReadiness,
+		IssueOpsNext:        issueOpsNextHandler(artifacts.Names, observer),
+		IssueOpsStateRoot:   issueopscore.IssueOpsStateRoot,
+		IssueOpsStatus:      issueOpsStatusHandler(observer),
 		LinkIssueOpsChildWithActor: func(root, id, childURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newIssueLinker(root).Child(context.Background(), id, childURL, title, &actor)
 		},
@@ -75,11 +81,13 @@ func configureIssueOpsCLIRuntime() {
 		RecordIssueOpsPlanPrepWithActor:             issueopscore.RecordIssueOpsPlanPrepWithActor,
 		RecordIssueOpsRoutingWithActor:              routing.Record,
 		RegressIssueOpsForReplanWithActor:           issueopscore.RegressIssueOpsForReplanWithActor,
-		RejectIssueOpsChildWithActor:                issueopscore.RejectIssueOpsChildWithActor,
-		ResolveIssueOpsFeedbackWithActor:            issueopscore.ResolveIssueOpsFeedbackWithActor,
-		ScoreLiveRoutingFidelity:                    routing.Score,
-		StageIssueOpsArtifact:                       artifacts.Stage,
-		StagedIssueOpsArtifactNames:                 artifacts.Names,
+		RejectIssueOpsChildWithActor: func(root, parentID, childID, reason string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
+			return newChildValidator(root).Reject(context.Background(), parentID, childID, reason, evidence, &actor)
+		},
+		ResolveIssueOpsFeedbackWithActor: issueopscore.ResolveIssueOpsFeedbackWithActor,
+		ScoreLiveRoutingFidelity:         routing.Score,
+		StageIssueOpsArtifact:            artifacts.Stage,
+		StagedIssueOpsArtifactNames:      artifacts.Names,
 		StartIssueOps: func(stateRoot string, req issueopscontract.IssueOpsStartRequest) (issueopscontract.IssueOpsRecord, error) {
 			return (branchapp.Starter{Records: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{}, Now: time.Now}).Start(context.Background(), req)
 		},

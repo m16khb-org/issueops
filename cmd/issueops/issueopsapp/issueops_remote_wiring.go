@@ -40,7 +40,7 @@ func configureIssueOpsRemote() {
 		ScoreIssueOpsRemoteCandidates:   remotedomain.ScoreIssueOpsRemoteCandidates,
 		SyncRemoteBody:                  syncRemoteBody,
 		SyncIssueGraph:                  syncIssueGraph,
-		UmbrellaBranchGateReason:        issueopscore.UmbrellaBranchGateReason,
+		UmbrellaBranchGateReason:        issuedomain.UmbrellaBranchGateReason,
 		ValidateIssueOpsMutationActor:   issueopscore.ValidateIssueOpsMutationActor,
 	})
 }

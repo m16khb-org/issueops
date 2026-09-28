@@ -65,7 +65,7 @@ func (s ChildStarter) Start(ctx context.Context, req model.IssueOpsChildStartReq
 		if errors.Is(err, fs.ErrNotExist) {
 			child = domain.NewCycleRecord(id, repo, req.Branch, now)
 		}
-		if err = domain.ValidateChildStartTarget(child); err != nil {
+		if err = domain.ValidateChildMutation(child); err != nil {
 			return err
 		}
 		child = domain.BuildDelegatedProfile(parent, child, req, now)

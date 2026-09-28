@@ -86,10 +86,10 @@ func wireIssueOpsRuntimeForTests() {
 		Now:        time.Now,
 	})
 	ConfigureIssueOpsRuntime2(IssueOpsCLIDeps{
-		AcceptIssueOpsChildWithActor:  issueopscore.AcceptIssueOpsChildWithActor,
+		AcceptIssueOpsChildWithActor:  acceptChildWithActorForTest,
 		AddIssueOpsDecisionWithActor:  decisions.AddWithActor,
-		DropIssueOpsChildWithActor:    issueopscore.DropIssueOpsChildWithActor,
-		IssueOpsChildStatusWithActor:  issueopscore.IssueOpsChildStatusWithActor,
+		DropIssueOpsChildWithActor:    dropChildWithActorForTest,
+		IssueOpsChildStatusWithActor:  childStatusWithActorForTest,
 		IssueOpsPRReadiness:           issueopscore.IssueOpsPRReadiness,
 		IssueOpsNext:                  issueopsnextinbound.NewNextHandler(next),
 		IssueOpsStateRoot:             issueopscore.IssueOpsStateRoot,
@@ -131,7 +131,7 @@ func wireIssueOpsRuntimeForTests() {
 		RecordIssueOpsPlanPrepWithActor:             issueopscore.RecordIssueOpsPlanPrepWithActor,
 		RecordIssueOpsRoutingWithActor:              routing.Record,
 		RegressIssueOpsForReplanWithActor:           issueopscore.RegressIssueOpsForReplanWithActor,
-		RejectIssueOpsChildWithActor:                issueopscore.RejectIssueOpsChildWithActor,
+		RejectIssueOpsChildWithActor:                rejectChildWithActorForTest,
 		ResolveIssueOpsFeedbackWithActor:            issueopscore.ResolveIssueOpsFeedbackWithActor,
 		ScoreLiveRoutingFidelity:                    routing.Score,
 		StageIssueOpsArtifact:                       artifacts.Stage,

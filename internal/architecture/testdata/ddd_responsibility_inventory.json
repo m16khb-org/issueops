@@ -1200,7 +1200,9 @@
       "owner": "composition",
       "task": "T08",
       "symbols": [
-        "func newChildStarter"
+        "func newChildStarter",
+        "func newChildStatusService",
+        "func newChildValidator"
       ]
     },
     {
@@ -6926,7 +6928,16 @@
       "task": "T08",
       "symbols": [
         "func ChildCycleStore.SavePair",
+        "func ChildCycleStore.Scan",
         "type ChildCycleStore"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/child_scan.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func scanIssueOpsChildrenForParent"
       ]
     },
     {
@@ -7860,35 +7871,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_delegation.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func AcceptIssueOpsChildWithActor",
-        "func DropIssueOpsChildWithActor",
-        "func IssueOpsChildStatus",
-        "func IssueOpsChildStatusWithActor",
-        "func RejectIssueOpsChildWithActor",
-        "func acceptArchivedIssueOpsChild",
-        "func acceptIssueOpsChild",
-        "func buildIssueOpsChildStatus",
-        "func childStatusEntryFromChild",
-        "func childStatusEntryFromRef",
-        "func dropArchivedIssueOpsChild",
-        "func dropIssueOpsChild",
-        "func ensureIssueOpsArchivedChildStillMissing",
-        "func issueOpsChildRefHasTerminalCleanupReceipt",
-        "func issueOpsChildStatus",
-        "func mergeChildStatusRecord",
-        "func parentRefFromChild",
-        "func readIssueOpsChildForValidation",
-        "func recordIssueOpsChildVerdict",
-        "func rejectIssueOpsChild",
-        "func repairIssueOpsChildIndex",
-        "func scanIssueOpsChildrenForParent"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_feedback.go",
       "owner": "adapter",
       "task": "T03",
@@ -8099,14 +8081,6 @@
         "func touchAndWriteIssueOps",
         "func validateIssueOpsRecord",
         "func writeIssueOps"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_umbrella_topology.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func UmbrellaBranchGateReason"
       ]
     },
     {
@@ -11254,6 +11228,28 @@
       ]
     },
     {
+      "path": "internal/application/issueopsdelegation/status.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func StatusService.Status",
+        "type ChildStatusRecords",
+        "type StatusService"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsdelegation/verdict.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func Validator.Accept",
+        "func Validator.Drop",
+        "func Validator.Reject",
+        "func Validator.validate",
+        "type Validator"
+      ]
+    },
+    {
       "path": "internal/application/issueopsintent/intent.go",
       "owner": "application",
       "task": "T20",
@@ -14215,6 +14211,35 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/child_status.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func BuildChildStatus",
+        "func ParentRefFromChild",
+        "func RepairChildIndex",
+        "func SelectChildren",
+        "func childStatusEntryFromChild",
+        "func childStatusEntryFromRef",
+        "func issueOpsChildRefHasTerminalCleanupReceipt",
+        "func mergeChildStatusRecord"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/child_verdict.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ApplyArchivedChildVerdict",
+        "func ApplyChildVerdict",
+        "func PrepareChildVerdict",
+        "func ValidateArchivedChildObservation",
+        "func ValidateChildForVerdict",
+        "func ValidateChildValidationIDs",
+        "func childVerdictReceipt"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/delegation.go",
       "owner": "domain",
       "task": "T08",
@@ -14224,7 +14249,7 @@
         "func NewChildReference",
         "func PrepareChildStart",
         "func RegisterChildReference",
-        "func ValidateChildStartTarget",
+        "func ValidateChildMutation",
         "func cleanDelegationValues"
       ]
     },
@@ -14661,6 +14686,14 @@
         "func bodyDeclaresSupersede",
         "func sameArtifactURL",
         "type ArtifactObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/umbrella_topology.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func UmbrellaBranchGateReason"
       ]
     },
     {
@@ -19195,7 +19228,7 @@
       "id": "child-terminal-gate",
       "source_path": "internal/adapter/issueops/issueops_child_gate.go",
       "source_symbol": "func issueOpsChildTerminal",
-      "responsibility": "only done children count as terminal for parent completion",
+      "responsibility": "only non-orphaned done children count as terminal for parent completion",
       "target": "internal/domain/issueops",
       "target_symbol": "func ChildTerminal",
       "task": "T04",
@@ -19205,7 +19238,8 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/child_gate_test.go",
-        "internal/adapter/issueops/issueops_delegation_gate_test.go"
+        "internal/adapter/issueops/issueops_delegation_gate_test.go",
+        "internal/domain/issueops/child_status_test.go"
       ],
       "status": "migrated"
     },
@@ -21762,13 +21796,188 @@
       "source_symbol": "func stampIssueOpsChildDelegation",
       "responsibility": "preserve the child applying fence while holding one state-root span for the paired write",
       "target": "internal/domain/issueops",
-      "target_symbol": "func ValidateChildStartTarget",
+      "target_symbol": "func ValidateChildMutation",
       "task": "T08",
       "entrypoints": [
         "issueops child start"
       ],
       "evidence_tests": [
         "internal/adapter/issueops/child_start_atomic_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-status-projection",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func buildIssueOpsChildStatus",
+      "responsibility": "combine indexed and observed children, classify terminal cleanup receipts and sort stable status",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func BuildChildStatus",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child status",
+        "issueops child accept",
+        "issueops child reject",
+        "issueops child drop"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/child_status_test.go",
+        "internal/adapter/issueops/issueops_delegation_status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-index-repair",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func repairIssueOpsChildIndex",
+      "responsibility": "append only absent child references in stable order without replacing validation receipts",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RepairChildIndex",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child status",
+        "issueops child accept",
+        "issueops child reject",
+        "issueops child drop"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/child_status_test.go",
+        "internal/adapter/issueops/child_status_authority_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-status-orchestration",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func issueOpsChildStatus",
+      "responsibility": "read and scan children, reauthorize fresh parent before optional index repair",
+      "target": "internal/application/issueopsdelegation",
+      "target_symbol": "func StatusService.Status",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child status",
+        "issueops child accept",
+        "issueops child reject",
+        "issueops child drop"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/child_status_authority_test.go",
+        "cmd/issueops/issueopscli/issueops_delegation_cli_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-verdict-input",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func rejectIssueOpsChild",
+      "responsibility": "require evidence for acceptance and substantial reasons for reject or drop",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PrepareChildVerdict",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child status",
+        "issueops child accept",
+        "issueops child reject",
+        "issueops child drop"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/child_verdict_test.go",
+        "internal/adapter/issueops/issueops_delegation_status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-verdict-receipt",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func recordIssueOpsChildVerdict",
+      "responsibility": "reject cross-repository children and preserve indexed metadata when recording a parent-owned receipt",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ApplyChildVerdict",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child status",
+        "issueops child accept",
+        "issueops child reject",
+        "issueops child drop"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/child_verdict_test.go",
+        "internal/adapter/issueops/child_verdict_concurrency_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-archived-receipt",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func acceptArchivedIssueOpsChild",
+      "responsibility": "require an indexed reference for archived child validation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ApplyArchivedChildVerdict",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child status",
+        "issueops child accept",
+        "issueops child reject",
+        "issueops child drop"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/child_verdict_test.go",
+        "internal/adapter/issueops/issueops_delegation_status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-reappeared-refusal",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func ensureIssueOpsArchivedChildStillMissing",
+      "responsibility": "reject a child that reappears between initial observation and parent receipt write",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateArchivedChildObservation",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child status",
+        "issueops child accept",
+        "issueops child reject",
+        "issueops child drop"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_delegation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-verdict-orchestration",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func acceptIssueOpsChild",
+      "responsibility": "authorize current parent and recheck current child under the parent span before recording acceptance",
+      "target": "internal/application/issueopsdelegation",
+      "target_symbol": "func Validator.validate",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child status",
+        "issueops child accept",
+        "issueops child reject",
+        "issueops child drop"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/child_verdict_concurrency_test.go",
+        "internal/adapter/issueops/issueops_delegation_status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-umbrella-topology",
+      "source_path": "internal/adapter/issueops/issueops_umbrella_topology.go",
+      "source_symbol": "func UmbrellaBranchGateReason",
+      "responsibility": "require a prepared matching umbrella branch before provider-native child creation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func UmbrellaBranchGateReason",
+      "task": "T08",
+      "entrypoints": [
+        "issueops remote child"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/umbrella_topology_test.go"
       ],
       "status": "migrated"
     }

@@ -203,7 +203,7 @@ func TestGeneratedOwnerMutationRequiresActualProcessCWD(t *testing.T) {
 	if runErr == nil || !strings.Contains(runErr.Error(), "actual process cwd") {
 		t.Fatalf("generated owner mutation from source cwd must fail before mutation: %v", runErr)
 	}
-	status, err := issueopscore.IssueOpsChildStatus(issueopscore.IssueOpsStateRoot(), parent.ID, false)
+	status, err := childStatusWithActorForTest(issueopscore.IssueOpsStateRoot(), parent.ID, false, actor)
 	if err != nil {
 		t.Fatal(err)
 	}
