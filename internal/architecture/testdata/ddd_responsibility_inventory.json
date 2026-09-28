@@ -11043,6 +11043,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/observed_pr_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ObservedPRReadinessMissing",
+        "type ObservedPRFacts"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/phase_entry.go",
       "owner": "application",
       "task": "T20",

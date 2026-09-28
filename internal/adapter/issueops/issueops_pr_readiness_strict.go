@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"issueops/internal/adapter/issueops/implementation"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/stringlist"
@@ -110,14 +111,6 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 	}
 	gitMissing, warnings := issueopsdomain.PRGitReadiness(record, facts)
 	missing = append(missing, gitMissing...)
-	// strict는 :12에서 IssueOpsPRReadiness를 포함하므로 미기록/비-pass 미싱은
-	// 이미 들어 있다 — 여기서는 fingerprint가 필요한 stale 판정만 추가한다.
-	if reviewMissing := implementationReviewMissing(record, currentFingerprint); strings.HasSuffix(reviewMissing, "_stale") {
-		missing = append(missing, reviewMissing)
-	}
-	if docsMissing := projectDocsReviewMissing(record, currentFingerprint); strings.HasSuffix(docsMissing, "_stale") {
-		missing = append(missing, docsMissing)
-	}
 	// local은 검증된 관측을 공유한다. strict는 fetch가 fallback ref를 바꿀 수
 	// 있으므로 기존 순서대로 fetch 뒤 변경 경로를 새로 관측한다.
 	schemaMissing := ""
@@ -126,23 +119,15 @@ func issueOpsObservedPRReadiness(record issueops.IssueOpsRecord, fetchUpstream i
 	} else if record.Execution != nil {
 		schemaMissing = schemaEvidenceMissingForPaths(record, changeObservation.Paths, currentFingerprint)
 	}
-	if schemaMissing != "" {
-		missing = append(missing, schemaMissing)
+	factsForPR := cycleapp.ObservedPRFacts{CurrentFingerprint: currentFingerprint, SchemaMissing: schemaMissing}
+	if path := strings.TrimSpace(record.PlanPath); path != "" {
+		factsForPR.PlanExists = issueOpsPlanPathExists(gitRoot, path)
 	}
-	missing = append(missing, issueopsdomain.AISlopCleanFingerprintReadinessMissing(record, currentFingerprint)...)
-
-	if path := strings.TrimSpace(record.PlanPath); path != "" && !issueOpsPlanPathExists(gitRoot, path) {
-		missing = append(missing, "plan_exists")
+	factsForPR.PlanInWorktree = issueOpsPlanInLinkedWorktree(record)
+	if path := strings.TrimSpace(record.WorktreePath); path != "" {
+		factsForPR.WorktreeValid = issueOpsWorktreePathValid(path)
 	}
-	if !issueOpsPlanInLinkedWorktree(record) {
-		missing = append(missing, "plan_in_worktree")
-	}
-	if path := strings.TrimSpace(record.WorktreePath); path == "" {
-		missing = append(missing, "worktree_path")
-	} else if !issueOpsWorktreePathValid(path) {
-		missing = append(missing, "worktree_exists")
-	}
-	missing = append(missing, issueopsdomain.TargetBranchMatchMissing(record)...)
+	missing = append(missing, cycleapp.ObservedPRReadinessMissing(record, factsForPR)...)
 
 	ready.Missing = stringlist.UniqueSorted(missing)
 	ready.Warnings = warnings
