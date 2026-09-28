@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"issueops/internal/contract/issueops"
+	basesyncdomain "issueops/internal/domain/issueopsbasesync"
 )
 
 // execution sync-base는 completion 이후에도 남는 typed 충돌 해소 표면이다
@@ -267,43 +268,21 @@ func executionSyncBaseAuthorityMissing(execution *issueops.Execution, req Execut
 	if execution == nil {
 		return nil
 	}
-	lease := execution.Lease
-	if lease.Status == issueops.LeaseStatusActive {
-		if mode != ExecutionSyncBasePreview && !sameNativeActor(lease.Holder, &actor) {
-			return []string{"lease_holder"}
-		}
-		return nil
+	facts := basesyncdomain.AuthorityFacts{
+		Mode: mode, LeaseStatus: string(execution.Lease.Status), LeaseGeneration: execution.Lease.Generation,
+		HolderMatches:     sameNativeActor(execution.Lease.Holder, &actor),
+		CompletionPresent: execution.Completion != nil, RequestedGeneration: req.CompletionGeneration,
 	}
-	if lease.Status != issueops.LeaseStatusReleased || execution.Completion == nil {
-		return []string{"released_completion_authority"}
+	if execution.Completion != nil {
+		facts.CompletionGeneration = execution.Completion.Generation
 	}
-	if execution.Completion.Generation == 0 {
-		return nil
-	}
-	if req.CompletionGeneration == 0 {
-		return []string{"completion_generation_present"}
-	}
-	if req.CompletionGeneration != execution.Completion.Generation {
-		return []string{"completion_generation_current"}
-	}
-	resolution := execution.SyncBaseResolution
-	switch mode {
-	case ExecutionSyncBaseApply:
-		if resolution != nil {
-			return []string{"sync_base_resolution_absent"}
-		}
-	case ExecutionSyncBaseFinalize, ExecutionSyncBaseAbort:
-		if resolution == nil {
-			return []string{"sync_base_resolution_present"}
-		}
-		if resolution.Generation != lease.Generation || resolution.CompletionGeneration != execution.Completion.Generation {
-			return []string{"sync_base_resolution_current"}
-		}
-		if !sameNativeActor(&resolution.Actor, &actor) {
-			return []string{"sync_base_resolution_actor"}
+	if resolution := execution.SyncBaseResolution; resolution != nil {
+		facts.Resolution = basesyncdomain.AuthorityResolution{
+			Present: true, LeaseGeneration: resolution.Generation, CompletionGeneration: resolution.CompletionGeneration,
+			ActorMatches: sameNativeActor(&resolution.Actor, &actor),
 		}
 	}
-	return nil
+	return basesyncdomain.MissingAuthority(facts)
 }
 
 // applyExecutionSyncBase는 무충돌이면 merge commit + push로 완결하고, 충돌이면
