@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
 const (
@@ -369,7 +368,7 @@ func TestCleanupRemoteBranchApplyReflectsAuditLine(t *testing.T) {
 	git := remoteBranchGit()
 	deps := remoteBranchDeps(git)
 	var seen string
-	deps.ReflectAudit = func(_ issueops.IssueOpsRecord, _ port.IssueProviderCompletionSection, audit string) error {
+	deps.ReflectAudit = func(_ issueops.IssueOpsRecord, _ issueops.RemoteCompletionSection, audit string) error {
 		seen = audit
 		return nil
 	}
@@ -391,7 +390,7 @@ func TestCleanupRemoteBranchApplyReflectsAuditLine(t *testing.T) {
 	stateRoot2, record2 := remoteBranchTestRecord(t)
 	git2 := remoteBranchGit()
 	deps2 := remoteBranchDeps(git2)
-	deps2.ReflectAudit = func(issueops.IssueOpsRecord, port.IssueProviderCompletionSection, string) error {
+	deps2.ReflectAudit = func(issueops.IssueOpsRecord, issueops.RemoteCompletionSection, string) error {
 		return fmt.Errorf("provider unavailable")
 	}
 	preview2, err := CleanupRemoteBranch(context.Background(), stateRoot2, remoteBranchRequest(record2.ID, false, ""), deps2)

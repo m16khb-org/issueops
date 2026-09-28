@@ -6,14 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"time"
 
+	completionapp "issueops/internal/application/issueopsremote"
 	"issueops/internal/contract/issueops"
+	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsremote"
-	"issueops/internal/port"
 )
 
 // CleanupRemoteBranchDeps는 외부 표면 주입점이다.
@@ -29,7 +29,7 @@ type CleanupRemoteBranchDeps struct {
 	// ReflectAudit는 삭제 성공 사실을 이슈 본문 completion 섹션에 멱등 병합한다
 	// (finish ④'의 CleanupAudit 병합 선례). best-effort이며 실패해도 이미 끝난
 	// 원격 삭제를 되돌리지 않는다.
-	ReflectAudit func(record issueops.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error
+	ReflectAudit func(record issueops.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error
 	// ObserveArtifact는 replacement 증거를 provider에서 읽는다. 주입되지 않으면
 	// 그 경로는 열리지 않는다 — 관측 없이 증거를 인정하지 않는다(#323).
 	ObserveArtifact func(url string) (issueopsdomain.ArtifactObservation, error)
@@ -92,7 +92,7 @@ func CleanupRemoteBranch(ctx context.Context, stateRoot string, req CleanupRemot
 		return result, fmt.Errorf("stale cleanup fingerprint; run --preview again and retry with the new value")
 	}
 	// 파괴 이전에 보존 payload를 스냅샷한다(finish C2-F1 선례).
-	completionSnapshot := gatherCompletionSection(record)
+	completionSnapshot := completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record)
 	// fully-qualified ref는 동명 태그를 배제하고, force-with-lease는 preview→push
 	// 사이에 남은 TOCTOU를 서버측에서 원자적으로 봉쇄한다(design-review H7).
 	ref := "refs/heads/" + inventory.Branch

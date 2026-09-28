@@ -9,10 +9,9 @@ import (
 	"testing"
 
 	"issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
-type portCompletionSection = port.IssueProviderCompletionSection
+type portCompletionSection = issueops.RemoteCompletionSection
 
 type fakeFinishGit struct {
 	statusOut string

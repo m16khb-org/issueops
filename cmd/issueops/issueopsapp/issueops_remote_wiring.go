@@ -16,12 +16,14 @@ import (
 // root 하나뿐이다.
 func configureIssueOpsRemote() {
 	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
-		CreateIssue:              createIssue,
-		ResolveTemplateBody:      remoteapp.NewTemplateBodyResolver(os.ReadFile).Resolve,
-		ReadScoreSummaryFile:     remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,
-		ReconcileIssueCreate:     reconcileIssueCreate,
-		CloseIssueOpsRemoteIssue: issueopscore.CloseIssueOpsRemoteIssue,
-		CreateRemoteChild:        issueopscore.CreateRemoteChild,
+		ReflectRemoteCompletion: reflectRemoteCompletion,
+		CloseRemoteIssue:        closeRemoteIssue,
+
+		CreateIssue:          createIssue,
+		ResolveTemplateBody:  remoteapp.NewTemplateBodyResolver(os.ReadFile).Resolve,
+		ReadScoreSummaryFile: remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,
+		ReconcileIssueCreate: reconcileIssueCreate,
+		CreateRemoteChild:    issueopscore.CreateRemoteChild,
 		CreateRemotePullRequestWithHandler: func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error) {
 			return issueopscore.CreateRemotePullRequestWithHandler(ctx, stateRoot, req, handler)
 		},
@@ -32,7 +34,6 @@ func configureIssueOpsRemote() {
 		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                               issueopscore.ReadIssueOps,
 		ReflectDevilsAdvocateFindingsWithActor:     issueopscore.ReflectDevilsAdvocateFindingsWithActor,
-		ReflectIssueCompletion:                     issueopscore.ReflectIssueCompletion,
 		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,
 		ResolveRecordProvider:                      issuedomain.ResolveRecordProvider,
 		ScoreIssueOpsRemoteCandidates:              issueopscore.ScoreIssueOpsRemoteCandidates,

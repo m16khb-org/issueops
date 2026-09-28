@@ -1391,6 +1391,16 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_remote_completion_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func closeRemoteIssue",
+        "func newRemoteCompletionService",
+        "func reflectRemoteCompletion"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_remote_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -2425,9 +2435,6 @@
         "func readIssueOpsRemoteScoringRequestFile",
         "func repeatedFlag.Set",
         "func repeatedFlag.String",
-        "func resolveRemoteCompletionInputs",
-        "func runRemoteCloseIssue",
-        "func runRemoteReflectCompletion",
         "func runRemoteReflectDevilsAdvocate",
         "func runRemoteRenderTemplate",
         "type Deps",
@@ -2456,6 +2463,15 @@
         "func runRemoteCreatePR",
         "func runRemoteSyncGraph",
         "func validateCreateChildInputs"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_completion.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func runRemoteCloseIssue",
+        "func runRemoteReflectCompletion"
       ]
     },
     {
@@ -6931,6 +6947,16 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/completion_artifacts.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func CompletionArtifacts.Read",
+        "func readCompletionArtifact",
+        "type CompletionArtifacts"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/contract_alias.go",
       "owner": "adapter",
       "task": "T20",
@@ -7519,16 +7545,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issue_create_intent_store.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func IssueCreateIntentStore.Read",
-        "func IssueCreateIntentStore.Update",
-        "type IssueCreateIntentStore"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issue_creation_environment.go",
       "owner": "adapter",
       "task": "T07",
@@ -7766,18 +7782,6 @@
         "func verifyRemoteBranchSupersedingArtifact",
         "type CleanupRemoteBranchDeps",
         "type cleanupRemoteBranchInventory"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_completion_remote.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func CloseIssueOpsRemoteIssue",
-        "func ReflectIssueCompletion",
-        "func gatherCompletionSection",
-        "func readCompletionArtifact",
-        "func stampRemoteCompletion"
       ]
     },
     {
@@ -8276,6 +8280,16 @@
         "func ReconcileRemotePullRequestViaProviderContext",
         "type contextPullRequestCreator",
         "type contextPullRequestReconciler"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/remote_record_store.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func RemoteRecordStore.Read",
+        "func RemoteRecordStore.Update",
+        "type RemoteRecordStore"
       ]
     },
     {
@@ -11530,6 +11544,22 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/completion_evidence.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func CompletionCollector.Collect",
+        "func CompletionReceipts.Closed",
+        "func CompletionReceipts.Reflected",
+        "func CompletionReceipts.update",
+        "func NewCompletionCollector",
+        "func NewCompletionReceipts",
+        "type CompletionArtifactReader",
+        "type CompletionCollector",
+        "type CompletionReceipts"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/create_preparation.go",
       "owner": "application",
       "task": "T07",
@@ -11595,11 +11625,11 @@
       "owner": "application",
       "task": "T07",
       "symbols": [
-        "type IssueIntentStore",
-        "type IssueIntentTransition",
         "type PreparationObserver",
         "type PublicationEnvironment",
-        "type PublicationStore"
+        "type PublicationStore",
+        "type RecordStore",
+        "type RecordTransition"
       ]
     },
     {
@@ -11620,6 +11650,21 @@
         "func publicationDiagnostic",
         "func publicationEligibility",
         "type PublicationJournal"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/remote_completion.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewRemoteCompletionService",
+        "func RemoteCompletionService.Close",
+        "func RemoteCompletionService.Reflect",
+        "func RemoteCompletionService.prepare",
+        "type CompletionProvider",
+        "type CompletionProviderResolver",
+        "type MergeVerifier",
+        "type RemoteCompletionService"
       ]
     },
     {
@@ -12623,6 +12668,15 @@
         "func knownCleanupFinishFailureStep",
         "func knownRecordPhase",
         "func knownRemoteArtifactIdentity"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/remote_completion.go",
+      "owner": "contract",
+      "task": "T07",
+      "symbols": [
+        "type CompletionArtifactDigest",
+        "type RemoteCompletionSection"
       ]
     },
     {
@@ -14292,6 +14346,22 @@
       "task": "T07",
       "symbols": [
         "func ResolveRecordProvider"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/remote_completion.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func CompletionArtifactNames",
+        "func CompletionArtifactRoot",
+        "func MarkRemoteCompletionReflected",
+        "func MarkRemoteIssueClosed",
+        "func ProjectRemoteCompletion",
+        "func ValidateCloseIssue",
+        "func ValidateCompletionMerge",
+        "func ValidateReflectCompletion",
+        "type CompletionArtifact"
       ]
     },
     {
@@ -16758,7 +16828,6 @@
         "type IssueProviderArtifactBodyReader",
         "type IssueProviderArtifactBodyReplacer",
         "type IssueProviderArtifactBodyRequest",
-        "type IssueProviderArtifactDigest",
         "type IssueProviderChildHierarchyRequest",
         "type IssueProviderChildHierarchyResult",
         "type IssueProviderChildHierarchyVerifier",
@@ -16768,7 +16837,6 @@
         "type IssueProviderCloseIssueResult",
         "type IssueProviderClosePullRequestRequest",
         "type IssueProviderClosePullRequestResult",
-        "type IssueProviderCompletionSection",
         "type IssueProviderCreateChildRequest",
         "type IssueProviderCreateChildResult",
         "type IssueProviderCreateError",
@@ -19750,14 +19818,16 @@
       "source_symbol": "func ReflectIssueCompletion",
       "responsibility": "require linked issue, verified artifact and merge evidence before reflecting completion and stamping the receipt",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func RemoteCompletionService.Reflect",
       "task": "T07",
       "entrypoints": [
         "issueops remote"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/issueops_completion_remote_test.go"
+        "internal/adapter/issueops/issueops_completion_remote_test.go",
+        "cmd/issueops/issueopsapp/issueops_remote_completion_wiring_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "remote-issue-closure",
@@ -19765,14 +19835,16 @@
       "source_symbol": "func CloseIssueOpsRemoteIssue",
       "responsibility": "require verified merge evidence before closing the linked issue and preserve the first close timestamp",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func RemoteCompletionService.Close",
       "task": "T07",
       "entrypoints": [
         "issueops remote"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/issueops_completion_remote_test.go"
+        "internal/adapter/issueops/issueops_completion_remote_test.go",
+        "cmd/issueops/issueopsapp/issueops_remote_completion_wiring_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "remote-review-findings-reflection",
@@ -19846,6 +19918,7 @@
       "source_symbol": "func runRemoteCreateIssue",
       "responsibility": "seal the issue request before provider invocation and classify failures before verifying and completing publication",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func IssueCreator.Create",
       "task": "T07",
       "entrypoints": [
         "issueops remote create-issue"
@@ -19854,8 +19927,7 @@
         "cmd/issueops/issueopscli/remotecmd/remote_test.go",
         "cmd/issueops/issueopsapp/issueops_issue_create_wiring_test.go"
       ],
-      "status": "migrated",
-      "target_symbol": "func IssueCreator.Create"
+      "status": "migrated"
     },
     {
       "id": "issue-reconcile-cli-orchestration",
@@ -20026,14 +20098,16 @@
       "source_symbol": "func resolveRemoteCompletionInputs",
       "responsibility": "require a verified remote artifact and successful provider merge readback before completion reflection or closure",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func RemoteCompletionService.prepare",
       "task": "T07",
       "entrypoints": [
         "issueops remote"
       ],
       "evidence_tests": [
-        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+        "cmd/issueops/issueopscli/remotecmd/remote_test.go",
+        "cmd/issueops/issueopsapp/issueops_remote_completion_wiring_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "execution-completion-verification-input",
@@ -20047,6 +20121,75 @@
       ],
       "evidence_tests": [
         "internal/application/issueopscompletion/complete_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "remote-completion-receipt-rules",
+      "source_path": "internal/adapter/issueops/issueops_completion_remote.go",
+      "source_symbol": "func stampRemoteCompletion",
+      "responsibility": "retain the first close timestamp and update only the reflected or closed receipt on the latest record",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func MarkRemoteIssueClosed",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reflect-completion",
+        "issueops remote close-issue",
+        "issueops cleanup"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/remote_completion_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-completion-artifact-projection",
+      "source_path": "internal/adapter/issueops/issueops_completion_remote.go",
+      "source_symbol": "func gatherCompletionSection",
+      "responsibility": "project completion evidence and sealed artifact bodies with full digests, a bounded summary and missing-plan disclosure",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ProjectRemoteCompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reflect-completion",
+        "issueops remote close-issue",
+        "issueops cleanup"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/remote_completion_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-completion-artifact-collection",
+      "source_path": "internal/adapter/issueops/issueops_completion_remote.go",
+      "source_symbol": "func gatherCompletionSection",
+      "responsibility": "collect the fixed completion artifacts from the canonical worktree through a sealed-file port",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func CompletionCollector.Collect",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote reflect-completion",
+        "issueops remote close-issue",
+        "issueops cleanup"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_completion_remote_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-completion-audit-orchestration",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_finish.go",
+      "source_symbol": "func ReflectCleanupAudit",
+      "responsibility": "reflect the pre-destruction completion snapshot and audit only after confirmed provider application, then record the local receipt",
+      "target": "internal/application/issueopscleanup",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_completion_remote_test.go"
       ],
       "status": "migrate"
     }

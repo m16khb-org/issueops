@@ -7,13 +7,13 @@ import (
 	model "issueops/internal/contract/issueops"
 )
 
-type IssueCreateIntentStore struct{ StateRoot string }
+type RemoteRecordStore struct{ StateRoot string }
 
-func (s IssueCreateIntentStore) Read(_ context.Context, id string) (model.IssueOpsRecord, error) {
+func (s RemoteRecordStore) Read(_ context.Context, id string) (model.IssueOpsRecord, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
 
-func (s IssueCreateIntentStore) Update(ctx context.Context, id string, transition application.IssueIntentTransition) (model.IssueOpsRecord, error) {
+func (s RemoteRecordStore) Update(ctx context.Context, id string, transition application.RecordTransition) (model.IssueOpsRecord, error) {
 	var persisted model.IssueOpsRecord
 	err := withIssueOpsLock(ctx, s.StateRoot, id, func(context.Context) error {
 		current, err := ReadIssueOps(s.StateRoot, id)
@@ -30,4 +30,4 @@ func (s IssueCreateIntentStore) Update(ctx context.Context, id string, transitio
 	return persisted, err
 }
 
-var _ application.IssueIntentStore = IssueCreateIntentStore{}
+var _ application.RecordStore = RemoteRecordStore{}

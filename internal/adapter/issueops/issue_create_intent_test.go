@@ -167,7 +167,7 @@ func TestCompleteIssueCreateIntentRejectsDifferentProjectAuthority(t *testing.T)
 }
 
 func newIssueCreateIntentsForTest(root string) *remoteapp.IssueCreateIntents {
-	return remoteapp.NewIssueCreateIntents(IssueCreateIntentStore{StateRoot: root}, func() time.Time { return time.Date(2026, 9, 28, 1, 2, 3, 4, time.UTC) })
+	return remoteapp.NewIssueCreateIntents(RemoteRecordStore{StateRoot: root}, func() time.Time { return time.Date(2026, 9, 28, 1, 2, 3, 4, time.UTC) })
 }
 
 func TestIssueCreateIntentRejectedRetryPreservesRawState(t *testing.T) {

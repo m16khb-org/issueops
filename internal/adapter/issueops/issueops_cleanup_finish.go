@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops/pathutil"
+	completionapp "issueops/internal/application/issueopsremote"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
@@ -27,7 +28,7 @@ type CleanupFinishDeps struct {
 	// ReflectAudit는 ②(파괴 시작) 이전에 스냅샷한 completion payload에 감사
 	// 라인을 더해 멱등 병합한다 — 삭제된 워크트리를 다시 읽어 보존 본문을
 	// 빈 값으로 덮어쓰는 사고를 구조적으로 차단한다(C2-F1 (c)).
-	ReflectAudit func(record issueops.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error
+	ReflectAudit func(record issueops.IssueOpsRecord, completion issueops.RemoteCompletionSection, audit string) error
 	// Processes는 워크트리 점유 관측·종료 표면이고 OrcaTerminals는 워크트리에 매인
 	// Orca 터미널 인벤토리·종료 표면이다. 둘 다 nil이면 기본 구현 또는 "Orca 없음"
 	// 으로 동작한다(#477).
@@ -143,7 +144,7 @@ func CleanupFinish(ctx context.Context, stateRoot string, req CleanupFinishReque
 	}
 	// C2-F1: 파괴 단계에 들어가기 전에 보존 payload를 스냅샷한다. ④'는 이
 	// 스냅샷으로만 렌더하므로 워크트리 삭제 이후에도 보존 본문이 유지된다.
-	completionSnapshot := gatherCompletionSection(record)
+	completionSnapshot := completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record)
 	fail := func(step string, stepErr error) (CleanupFinishResult, error) {
 		result.OK = false
 		result.FailedStep = step
@@ -501,10 +502,10 @@ func orNone(v string) string {
 // completion은 파괴 시작 전에 스냅샷된 payload여야 한다(C2-F1).
 //
 // 이 경로는 audit 라인만 더하는 것이 아니라 completion payload 전체를 원격에
-// 쓴다. 따라서 성공하면 ReflectIssueCompletion과 같은 효과이며 로컬 캐시도 함께
+// 쓴다. 따라서 완료 본문 반영이 성공하면 로컬 캐시도 함께
 // 채워야 한다 — 그러지 않으면 레코드를 유지하는 cleanup remote-branch 직후
 // issueops list가 원격에 반영된 사이클을 거짓으로 미반영이라 보고한다(#128).
-func ReflectCleanupAudit(stateRoot string, record issueops.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string, prov port.IssueProvider) error {
+func ReflectCleanupAudit(stateRoot string, record issueops.IssueOpsRecord, completion issueops.RemoteCompletionSection, audit string, prov port.IssueProvider) error {
 	if prov == nil {
 		return fmt.Errorf("no issue provider configured")
 	}
@@ -526,9 +527,7 @@ func ReflectCleanupAudit(stateRoot string, record issueops.IssueOpsRecord, compl
 	// 원격보다 낙관적으로 만들어서는 안 된다. finish 경로에서는 직후 레코드가
 	// 삭제되어 무해하고, 파괴 단계가 중간 실패해 레코드가 잔존하면 오히려
 	// 정확해진다.
-	_, err = stampRemoteCompletion(stateRoot, record.ID, func(rc *issueops.IssueOpsRemoteCompletion, now string) {
-		rc.ReflectedAt = now
-	})
+	_, err = completionapp.NewCompletionReceipts(RemoteRecordStore{StateRoot: stateRoot}, time.Now).Reflected(context.Background(), record.ID)
 	return err
 }
 

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	completionmodel "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -54,12 +55,12 @@ func TestSectionMarkersRejectsUnknownKind(t *testing.T) {
 	}
 }
 
-func completionFixture() port.IssueProviderCompletionSection {
-	return port.IssueProviderCompletionSection{
+func completionFixture() completionmodel.RemoteCompletionSection {
+	return completionmodel.RemoteCompletionSection{
 		FinalHead:           "abc1234",
 		RemoteArtifactURL:   "https://github.com/acme/repo/pull/9",
 		VerificationSummary: []string{"go test ./... ok", "self-verify ok"},
-		ArtifactManifest: []port.IssueProviderArtifactDigest{
+		ArtifactManifest: []completionmodel.CompletionArtifactDigest{
 			{Name: "plan", SHA256: strings.Repeat("a", 64)},
 		},
 		TuringSummary: "AC 전부 PASS",
@@ -86,7 +87,7 @@ func TestRenderCompletionSectionContainsSevenBlocks(t *testing.T) {
 		t.Fatalf("no truncation expected without a limit: %q", got)
 	}
 
-	empty := RenderCompletionSection(port.IssueProviderCompletionSection{}, "t", 0)
+	empty := RenderCompletionSection(completionmodel.RemoteCompletionSection{}, "t", 0)
 	for _, heading := range []string{"### 최종 head", "### PR/MR", "### 검증 요약", "### Artifact manifest", "### Turing 요약", "### spec 전문", "### plan 전문"} {
 		if !strings.Contains(empty, heading) {
 			t.Fatalf("empty payload must keep block %q: %q", heading, empty)
@@ -143,7 +144,7 @@ func TestRenderSectionRoutesByKind(t *testing.T) {
 		t.Fatal("completion section without payload must be rejected")
 	}
 	section, start, _, err := RenderSection(port.IssueProviderUpdateIssueBodySectionRequest{
-		Section: SectionCompletion, Completion: &port.IssueProviderCompletionSection{},
+		Section: SectionCompletion, Completion: &completionmodel.RemoteCompletionSection{},
 	}, "t", 0)
 	if err != nil || !strings.HasPrefix(section, start) || start != CompletionStartMarker {
 		t.Fatalf("completion render failed: %v %q", err, section)
@@ -172,11 +173,11 @@ func TestCompletionAndDevilsAdvocateSectionsCoexist(t *testing.T) {
 }
 
 func TestRenderCompletionSectionListsMissingSealedArtifacts(t *testing.T) {
-	section := RenderCompletionSection(port.IssueProviderCompletionSection{FinalHead: "abc", MissingArtifacts: []string{"plan"}}, "2026-08-27T00:00:00Z", 0)
+	section := RenderCompletionSection(completionmodel.RemoteCompletionSection{FinalHead: "abc", MissingArtifacts: []string{"plan"}}, "2026-08-27T00:00:00Z", 0)
 	if !strings.Contains(section, "- 봉인 아티팩트 없음: plan") {
 		t.Fatalf("missing sealed artifacts must be rendered under the manifest: %s", section)
 	}
-	plain := RenderCompletionSection(port.IssueProviderCompletionSection{FinalHead: "abc"}, "2026-08-27T00:00:00Z", 0)
+	plain := RenderCompletionSection(completionmodel.RemoteCompletionSection{FinalHead: "abc"}, "2026-08-27T00:00:00Z", 0)
 	if strings.Contains(plain, "봉인 아티팩트 없음") {
 		t.Fatalf("no missing artifacts must render no line: %s", plain)
 	}

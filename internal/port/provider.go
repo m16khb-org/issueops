@@ -3,6 +3,8 @@ package port
 import (
 	"context"
 	"fmt"
+
+	completionmodel "issueops/internal/contract/issueops"
 )
 
 type IssueProviderCreateError struct {
@@ -180,40 +182,16 @@ const (
 	IssueBodyCompletionStartMarker = "<!-- issueops:completion:start -->"
 )
 
-// IssueProviderArtifactDigest names one staged artifact and its content digest
-// for durable preservation in the issue body.
-type IssueProviderArtifactDigest struct {
-	Name   string `json:"name"`
-	SHA256 string `json:"sha256"`
-}
-
-// IssueProviderCompletionSection carries the completion payload rendered into
-// the managed completion section. Blocks with empty values still render with a
-// placeholder so the section shape stays machine-checkable.
-type IssueProviderCompletionSection struct {
-	FinalHead           string                        `json:"final_head"`
-	RemoteArtifactURL   string                        `json:"remote_artifact_url"`
-	VerificationSummary []string                      `json:"verification_summary"`
-	ArtifactManifest    []IssueProviderArtifactDigest `json:"artifact_manifest"`
-	TuringSummary       string                        `json:"turing_summary"`
-	SpecBody            string                        `json:"spec_body"`
-	PlanBody            string                        `json:"plan_body"`
-	CleanupAudit        string                        `json:"cleanup_audit,omitempty"`
-	// MissingArtifacts lists required sealed artifacts (plan) that were absent
-	// from the workspace artifact directory when the section was gathered (#482).
-	MissingArtifacts []string `json:"missing_artifacts,omitempty"`
-}
-
 // IssueProviderUpdateIssueBodySectionRequest describes reflecting one managed,
 // delimited section (devils-advocate | completion) of an existing remote issue
 // body. Exactly the payload matching Section is consumed.
 type IssueProviderUpdateIssueBodySectionRequest struct {
-	Repo       string                          `json:"repo"`                 // local repo path for provider auth context
-	IssueURL   string                          `json:"issue_url"`            // issue whose body is updated
-	Section    string                          `json:"section"`              // devils-advocate | completion
-	Findings   []string                        `json:"findings,omitempty"`   // devils-advocate payload
-	Completion *IssueProviderCompletionSection `json:"completion,omitempty"` // completion payload
-	Confirm    bool                            `json:"confirm"`              // must be true to write; false = dry-run preview
+	Repo       string                                   `json:"repo"`                 // local repo path for provider auth context
+	IssueURL   string                                   `json:"issue_url"`            // issue whose body is updated
+	Section    string                                   `json:"section"`              // devils-advocate | completion
+	Findings   []string                                 `json:"findings,omitempty"`   // devils-advocate payload
+	Completion *completionmodel.RemoteCompletionSection `json:"completion,omitempty"` // completion payload
+	Confirm    bool                                     `json:"confirm"`              // must be true to write; false = dry-run preview
 }
 
 // IssueProviderUpdateIssueBodySectionResult reports the outcome of a body update.

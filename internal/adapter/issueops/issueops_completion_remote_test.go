@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	completionapp "issueops/internal/application/issueopsremote"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -68,7 +70,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{}
 
-	if _, _, err := ReflectIssueCompletion(stateRoot, record.ID, false, true, prov); err == nil {
+	if _, _, err := completionServiceForTest(stateRoot, prov, false).Reflect(context.Background(), record.ID, "", true); err == nil {
 		t.Fatal("missing merge evidence must be rejected")
 	}
 	if prov.updateReq != nil {
@@ -76,7 +78,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	}
 
 	prov.updateRes = port.IssueProviderUpdateIssueBodySectionResult{OK: true, Preview: "[dry-run]"}
-	got, result, err := ReflectIssueCompletion(stateRoot, record.ID, true, false, prov)
+	got, result, err := completionServiceForTest(stateRoot, prov, true).Reflect(context.Background(), record.ID, "", false)
 	if err != nil || result.Preview == "" {
 		t.Fatalf("preview must pass through: %v %+v", err, result)
 	}
@@ -88,7 +90,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	}
 
 	prov.updateRes = port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true, URL: record.IssueURL}
-	got, _, err = ReflectIssueCompletion(stateRoot, record.ID, true, true, prov)
+	got, _, err = completionServiceForTest(stateRoot, prov, true).Reflect(context.Background(), record.ID, "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -104,7 +106,7 @@ func TestReflectCleanupAuditStampsTheCompletionCache(t *testing.T) {
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{updateRes: port.IssueProviderUpdateIssueBodySectionResult{OK: true, Updated: true, URL: record.IssueURL}}
 
-	if err := ReflectCleanupAudit(stateRoot, record, gatherCompletionSection(record), "cleanup 완료: 원격 브랜치 삭제", prov); err != nil {
+	if err := ReflectCleanupAudit(stateRoot, record, completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record), "cleanup 완료: 원격 브랜치 삭제", prov); err != nil {
 		t.Fatal(err)
 	}
 	if prov.updateReq == nil || prov.updateReq.Completion == nil || prov.updateReq.Completion.CleanupAudit == "" {
@@ -133,7 +135,7 @@ func TestReflectCleanupAuditDoesNotStampOnFailure(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			stateRoot, record := completionTestRecord(t)
 			prov := &fakeCompletionProvider{updateRes: tc.res, updateErr: tc.err}
-			if err := ReflectCleanupAudit(stateRoot, record, gatherCompletionSection(record), "cleanup 완료", prov); err == nil {
+			if err := ReflectCleanupAudit(stateRoot, record, completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record), "cleanup 완료", prov); err == nil {
 				t.Fatal("failed audit reflection must return an error")
 			}
 			got, readErr := ReadIssueOps(stateRoot, record.ID)
@@ -160,7 +162,7 @@ func TestReflectIssueCompletionGathersArtifactsFromDisk(t *testing.T) {
 		t.Fatal(err)
 	}
 	prov := &fakeCompletionProvider{updateRes: port.IssueProviderUpdateIssueBodySectionResult{OK: true}}
-	if _, _, err := ReflectIssueCompletion(stateRoot, record.ID, true, false, prov); err != nil {
+	if _, _, err := completionServiceForTest(stateRoot, prov, true).Reflect(context.Background(), record.ID, "", false); err != nil {
 		t.Fatal(err)
 	}
 	c := prov.updateReq.Completion
@@ -179,12 +181,12 @@ func TestCloseIssueOpsRemoteIssueGatesAndStamps(t *testing.T) {
 	stateRoot, record := completionTestRecord(t)
 	prov := &fakeCompletionProvider{}
 
-	if _, _, err := CloseIssueOpsRemoteIssue(stateRoot, record.ID, false, true, prov); err == nil {
+	if _, _, err := completionServiceForTest(stateRoot, prov, false).Close(context.Background(), record.ID, "", true); err == nil {
 		t.Fatal("missing merge evidence must be rejected")
 	}
 
 	prov.closeRes = port.IssueProviderCloseIssueResult{OK: true, Preview: "[dry-run]"}
-	got, result, err := CloseIssueOpsRemoteIssue(stateRoot, record.ID, true, false, prov)
+	got, result, err := completionServiceForTest(stateRoot, prov, true).Close(context.Background(), record.ID, "", false)
 	if err != nil || result.Preview == "" {
 		t.Fatalf("preview must pass through: %v %+v", err, result)
 	}
@@ -193,7 +195,7 @@ func TestCloseIssueOpsRemoteIssueGatesAndStamps(t *testing.T) {
 	}
 
 	prov.closeRes = port.IssueProviderCloseIssueResult{OK: true, Closed: true, IssueURL: record.IssueURL}
-	got, _, err = CloseIssueOpsRemoteIssue(stateRoot, record.ID, true, true, prov)
+	got, _, err = completionServiceForTest(stateRoot, prov, true).Close(context.Background(), record.ID, "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,4 +205,14 @@ func TestCloseIssueOpsRemoteIssueGatesAndStamps(t *testing.T) {
 	if prov.closeReq.IssueURL != record.IssueURL {
 		t.Fatalf("close must target the linked issue: %+v", prov.closeReq)
 	}
+}
+
+func completionServiceForTest(root string, prov port.IssueProvider, merged bool) *completionapp.RemoteCompletionService {
+	store := RemoteRecordStore{StateRoot: root}
+	return completionapp.NewRemoteCompletionService(store, completionapp.NewCompletionCollector(CompletionArtifacts{}), completionapp.NewCompletionReceipts(store, time.Now), func(string) (completionapp.CompletionProvider, error) { return prov, nil }, func(issueops.IssueOpsRemoteArtifactVerification) error {
+		if !merged {
+			return fmt.Errorf("missing merge evidence")
+		}
+		return nil
+	})
 }

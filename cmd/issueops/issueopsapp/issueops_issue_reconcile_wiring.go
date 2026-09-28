@@ -12,7 +12,7 @@ import (
 )
 
 func newIssueReconciler(root string, resolve func(string) (port.IssueProvider, error), verify application.IssueLiveVerifier, now func() time.Time) *application.IssueReconciler {
-	store := issueops.IssueCreateIntentStore{StateRoot: root}
+	store := issueops.RemoteRecordStore{StateRoot: root}
 	return application.NewIssueReconciler(store, issueops.IssueCreateCandidateSource{Resolve: resolve}, application.NewIssueCreateIntents(store, now), verify, now)
 }
 

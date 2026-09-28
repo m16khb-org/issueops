@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	completionapp "issueops/internal/application/issueopsremote"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -86,7 +87,7 @@ func TestMaterializeStagedArtifactsWritesIntoRecordedArtifactDir(t *testing.T) {
 func TestGatherCompletionSectionReportsMissingPlan(t *testing.T) {
 	root := t.TempDir()
 	record := issueops.IssueOpsRecord{Repo: root, Execution: &issueops.Execution{Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/480/artifact"}}}
-	completion := gatherCompletionSection(record)
+	completion := completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record)
 	if strings.Join(completion.MissingArtifacts, ",") != "plan" {
 		t.Fatalf("absent sealed plan must be reported, got %+v", completion.MissingArtifacts)
 	}
@@ -97,7 +98,7 @@ func TestGatherCompletionSectionReportsMissingPlan(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "plan.md"), []byte("# plan\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	completion = gatherCompletionSection(record)
+	completion = completionapp.NewCompletionCollector(CompletionArtifacts{}).Collect(record)
 	if len(completion.MissingArtifacts) != 0 || completion.PlanBody == "" {
 		t.Fatalf("sealed plan at the recorded dir must be read: %+v", completion)
 	}

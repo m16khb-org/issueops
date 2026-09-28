@@ -19,11 +19,12 @@ var remoteDeps = neutralRemoteDeps()
 
 // RemoteDeps는 composition root가 실제 어댑터를 꽂는 진입점이다.
 type RemoteDeps struct {
+	CloseRemoteIssue                           func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error)
+	ReflectRemoteCompletion                    func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
 	CreateIssue                                func(context.Context, string, remoteapp.IssueCreateCommand, remoteapp.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error)
 	ResolveTemplateBody                        func(remoteapp.TemplateBodyRequest) (string, error)
 	ReadScoreSummaryFile                       func(string) (string, error)
 	ReconcileIssueCreate                       func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error)
-	CloseIssueOpsRemoteIssue                   func(stateRoot, id string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error)
 	CreateRemoteChild                          func(req port.IssueProviderCreateChildRequest, prov port.IssueProvider) (port.IssueProviderCreateChildResult, error)
 	CreateRemotePullRequestWithHandler         func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error)
 	DecodeIssueOpsRemoteJudgeJSON              func(out []byte) (issueopsremote.IssueOpsRemoteScoringResult, error)
@@ -33,7 +34,6 @@ type RemoteDeps struct {
 	ObserveNativeProcessAncestry               func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
 	ReadIssueOps                               func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
 	ReflectDevilsAdvocateFindingsWithActor     func(stateRoot, id string, confirm bool, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
-	ReflectIssueCompletion                     func(stateRoot, id string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
 	RenderIssueOpsRemoteJudgePrompt            func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error)
 	ResolveRecordProvider                      func(record issueopscontract.IssueOpsRecord) string
 	ScoreIssueOpsRemoteCandidates              func(req issueopsremote.IssueOpsRemoteScoringRequest) (issueopsremote.IssueOpsRemoteScoringResult, error)
@@ -47,6 +47,12 @@ type RemoteDeps struct {
 
 // ConfigureRemote는 composition root가 실제 구현을 꽂는 진입점이다.
 func ConfigureRemote(deps RemoteDeps) {
+	if deps.CloseRemoteIssue != nil {
+		remoteDeps.CloseRemoteIssue = deps.CloseRemoteIssue
+	}
+	if deps.ReflectRemoteCompletion != nil {
+		remoteDeps.ReflectRemoteCompletion = deps.ReflectRemoteCompletion
+	}
 	if deps.CreateIssue != nil {
 		remoteDeps.CreateIssue = deps.CreateIssue
 	}
@@ -58,9 +64,6 @@ func ConfigureRemote(deps RemoteDeps) {
 	}
 	if deps.ReconcileIssueCreate != nil {
 		remoteDeps.ReconcileIssueCreate = deps.ReconcileIssueCreate
-	}
-	if deps.CloseIssueOpsRemoteIssue != nil {
-		remoteDeps.CloseIssueOpsRemoteIssue = deps.CloseIssueOpsRemoteIssue
 	}
 	if deps.CreateRemoteChild != nil {
 		remoteDeps.CreateRemoteChild = deps.CreateRemoteChild
@@ -88,9 +91,6 @@ func ConfigureRemote(deps RemoteDeps) {
 	}
 	if deps.ReflectDevilsAdvocateFindingsWithActor != nil {
 		remoteDeps.ReflectDevilsAdvocateFindingsWithActor = deps.ReflectDevilsAdvocateFindingsWithActor
-	}
-	if deps.ReflectIssueCompletion != nil {
-		remoteDeps.ReflectIssueCompletion = deps.ReflectIssueCompletion
 	}
 	if deps.RenderIssueOpsRemoteJudgePrompt != nil {
 		remoteDeps.RenderIssueOpsRemoteJudgePrompt = deps.RenderIssueOpsRemoteJudgePrompt
@@ -124,6 +124,12 @@ func ConfigureRemote(deps RemoteDeps) {
 // 배선 누락이 패닉이 아니라 명시적 오류로 드러나도록 중립 기본값을 둔다.
 func neutralRemoteDeps() RemoteDeps {
 	return RemoteDeps{
+		CloseRemoteIssue: func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {
+			return issueopscontract.IssueOpsRecord{}, port.IssueProviderCloseIssueResult{}, errRemoteNotConfigured
+		},
+		ReflectRemoteCompletion: func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+			return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, errRemoteNotConfigured
+		},
 		CreateIssue: func(context.Context, string, remoteapp.IssueCreateCommand, remoteapp.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error) {
 			return port.IssueProviderCreateIssueResult{}, errRemoteNotConfigured
 		},
@@ -131,9 +137,6 @@ func neutralRemoteDeps() RemoteDeps {
 		ReadScoreSummaryFile: func(string) (string, error) { return "", errRemoteNotConfigured },
 		ReconcileIssueCreate: func(context.Context, string, string, bool, remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error) {
 			return issueopscontract.IssueOpsIssueCreateReconcileResult{}, errRemoteNotConfigured
-		},
-		CloseIssueOpsRemoteIssue: func(stateRoot, id string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {
-			return issueopscontract.IssueOpsRecord{}, port.IssueProviderCloseIssueResult{}, errRemoteNotConfigured
 		},
 		CreateRemoteChild: func(req port.IssueProviderCreateChildRequest, prov port.IssueProvider) (port.IssueProviderCreateChildResult, error) {
 			return port.IssueProviderCreateChildResult{}, errRemoteNotConfigured
@@ -156,9 +159,6 @@ func neutralRemoteDeps() RemoteDeps {
 			return issueopscontract.IssueOpsRecord{}, errRemoteNotConfigured
 		},
 		ReflectDevilsAdvocateFindingsWithActor: func(stateRoot, id string, confirm bool, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
-			return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, errRemoteNotConfigured
-		},
-		ReflectIssueCompletion: func(stateRoot, id string, merged, confirm bool, prov port.IssueProvider) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 			return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, errRemoteNotConfigured
 		},
 		RenderIssueOpsRemoteJudgePrompt: func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error) {

@@ -12,7 +12,7 @@ import (
 )
 
 func newIssueCreator(root string, resolve func(string) (port.IssueProvider, error), verify application.IssueLiveVerifier, now func() time.Time) *application.IssueCreator {
-	store := issueops.IssueCreateIntentStore{StateRoot: root}
+	store := issueops.RemoteRecordStore{StateRoot: root}
 	return application.NewIssueCreator(store, issueops.IssueCreationEnvironment{ResolveProvider: resolve}, application.NewTemplateBodyResolver(os.ReadFile), application.NewIssueCreateIntents(store, now), verify, now)
 }
 func createIssue(ctx context.Context, root string, cmd application.IssueCreateCommand, verify application.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error) {

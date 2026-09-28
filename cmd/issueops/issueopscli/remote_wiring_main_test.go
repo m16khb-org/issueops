@@ -19,20 +19,27 @@ import (
 func wireRemoteForTests() {
 
 	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
+		ReflectRemoteCompletion: func(ctx context.Context, root, id, providerOverride string, confirm bool, verify remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+			return newRemoteCompletionForTest(root, verify).Reflect(ctx, id, providerOverride, confirm)
+		},
+
+		CloseRemoteIssue: func(ctx context.Context, root, id, providerOverride string, confirm bool, verify remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {
+			return newRemoteCompletionForTest(root, verify).Close(ctx, id, providerOverride, confirm)
+		},
+
 		CreateIssue: func(ctx context.Context, root string, cmd remoteapp.IssueCreateCommand, verify remoteapp.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error) {
-			store := issueopscore.IssueCreateIntentStore{StateRoot: root}
+			store := issueopscore.RemoteRecordStore{StateRoot: root}
 			return remoteapp.NewIssueCreator(store, issueopscore.IssueCreationEnvironment{ResolveProvider: provider.Resolve}, remoteapp.NewTemplateBodyResolver(os.ReadFile), newIssueIntentsForTest(root), verify, time.Now).Create(ctx, cmd)
 		},
 		ResolveTemplateBody:  remoteapp.NewTemplateBodyResolver(os.ReadFile).Resolve,
 		ReadScoreSummaryFile: remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,
 
 		ReconcileIssueCreate: func(ctx context.Context, root, id string, confirm bool, verify remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error) {
-			store := issueopscore.IssueCreateIntentStore{StateRoot: root}
+			store := issueopscore.RemoteRecordStore{StateRoot: root}
 			return remoteapp.NewIssueReconciler(store, issueopscore.IssueCreateCandidateSource{Resolve: provider.Resolve}, newIssueIntentsForTest(root), verify, time.Now).Reconcile(ctx, id, confirm)
 		},
 
-		CloseIssueOpsRemoteIssue: issueopscore.CloseIssueOpsRemoteIssue,
-		CreateRemoteChild:        issueopscore.CreateRemoteChild,
+		CreateRemoteChild: issueopscore.CreateRemoteChild,
 		CreateRemotePullRequestWithHandler: func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error) {
 			return issueopscore.CreateRemotePullRequestWithHandler(ctx, stateRoot, req, handler)
 		},
@@ -43,7 +50,6 @@ func wireRemoteForTests() {
 		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                               issueopscore.ReadIssueOps,
 		ReflectDevilsAdvocateFindingsWithActor:     issueopscore.ReflectDevilsAdvocateFindingsWithActor,
-		ReflectIssueCompletion:                     issueopscore.ReflectIssueCompletion,
 		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,
 		ResolveRecordProvider:                      issuedomain.ResolveRecordProvider,
 		ScoreIssueOpsRemoteCandidates:              issueopscore.ScoreIssueOpsRemoteCandidates,
@@ -56,5 +62,10 @@ func wireRemoteForTests() {
 }
 
 func newIssueIntentsForTest(root string) *remoteapp.IssueCreateIntents {
-	return remoteapp.NewIssueCreateIntents(issueopscore.IssueCreateIntentStore{StateRoot: root}, time.Now)
+	return remoteapp.NewIssueCreateIntents(issueopscore.RemoteRecordStore{StateRoot: root}, time.Now)
+}
+
+func newRemoteCompletionForTest(root string, verify remoteapp.MergeVerifier) *remoteapp.RemoteCompletionService {
+	store := issueopscore.RemoteRecordStore{StateRoot: root}
+	return remoteapp.NewRemoteCompletionService(store, remoteapp.NewCompletionCollector(issueopscore.CompletionArtifacts{}), remoteapp.NewCompletionReceipts(store, time.Now), func(name string) (remoteapp.CompletionProvider, error) { return provider.Resolve(name) }, verify)
 }

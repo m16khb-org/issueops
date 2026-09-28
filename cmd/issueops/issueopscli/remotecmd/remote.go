@@ -11,7 +11,6 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	artifacttemplate "issueops/internal/domain/artifacttemplate"
 	issueopsremote "issueops/internal/domain/issueopsremote"
-	port "issueops/internal/port"
 )
 
 type Deps struct {
@@ -224,90 +223,6 @@ func runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
 	}
 	if result.Updated {
 		fmt.Printf("reflected devil's-advocate findings: %s\n", result.URL)
-	} else {
-		fmt.Println(result.Preview)
-	}
-	return nil
-}
-
-// resolveRemoteCompletionInputs는 completion 계열 명령의 공통 전제(레코드,
-// provider, provider readback 머지 검증)를 fail-closed로 해석한다. readback
-// 실패는 "판정 불가"이며 강등 없이 에러다(설계 v5 WS3).
-func resolveRemoteCompletionInputs(deps Deps, id, providerOverride string) (issueopscontract.IssueOpsRecord, port.IssueProvider, error) {
-	record, err := remoteDeps.ReadIssueOps(remoteDeps.IssueOpsStateRoot(), id)
-	if err != nil {
-		return issueopscontract.IssueOpsRecord{}, nil, err
-	}
-	providerName := firstNonEmptyMain(providerOverride, remoteDeps.ResolveRecordProvider(record))
-	if providerName == "" {
-		return issueopscontract.IssueOpsRecord{}, nil, fmt.Errorf("cannot determine provider from IssueOps record; ensure issue_url is set")
-	}
-	prov, err := Resolve(providerName)
-	if err != nil {
-		return issueopscontract.IssueOpsRecord{}, nil, err
-	}
-	if record.RemoteArtifact == nil {
-		return issueopscontract.IssueOpsRecord{}, nil, fmt.Errorf("cannot verify merge evidence before a verified remote artifact")
-	}
-	if deps.VerifyMerged == nil {
-		return issueopscontract.IssueOpsRecord{}, nil, fmt.Errorf("merge verification is not configured")
-	}
-	if err := deps.VerifyMerged(*record.RemoteArtifact); err != nil {
-		return issueopscontract.IssueOpsRecord{}, nil, fmt.Errorf("merge evidence readback failed (refusing to continue): %w", err)
-	}
-	return record, prov, nil
-}
-
-func runRemoteReflectCompletion(args []string, deps Deps) error {
-	fs := flag.NewFlagSet("issueops remote reflect-completion", flag.ContinueOnError)
-	id := fs.String("id", "", "IssueOps id")
-	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
-	confirm := fs.Bool("confirm", false, "write to the remote issue; without this, dry-run preview only")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseFlags(fs, args); help || err != nil {
-		return err
-	}
-	_, prov, err := resolveRemoteCompletionInputs(deps, *id, *providerOverride)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	_, result, err := remoteDeps.ReflectIssueCompletion(remoteDeps.IssueOpsStateRoot(), *id, true, *confirm, prov)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	if *jsonOut {
-		return deps.printJSON(result)
-	}
-	if result.Updated {
-		fmt.Printf("reflected completion section: %s\n", result.URL)
-	} else {
-		fmt.Println(result.Preview)
-	}
-	return nil
-}
-
-func runRemoteCloseIssue(args []string, deps Deps) error {
-	fs := flag.NewFlagSet("issueops remote close-issue", flag.ContinueOnError)
-	id := fs.String("id", "", "IssueOps id")
-	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
-	confirm := fs.Bool("confirm", false, "close the remote issue; without this, dry-run preview only")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseFlags(fs, args); help || err != nil {
-		return err
-	}
-	_, prov, err := resolveRemoteCompletionInputs(deps, *id, *providerOverride)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	_, result, err := remoteDeps.CloseIssueOpsRemoteIssue(remoteDeps.IssueOpsStateRoot(), *id, true, *confirm, prov)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	if *jsonOut {
-		return deps.printJSON(result)
-	}
-	if result.Closed {
-		fmt.Printf("closed issue: %s\n", result.IssueURL)
 	} else {
 		fmt.Println(result.Preview)
 	}

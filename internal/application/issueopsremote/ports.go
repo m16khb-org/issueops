@@ -32,8 +32,8 @@ type PublicationEnvironment interface {
 	NewOperationID() (string, error)
 }
 
-type IssueIntentTransition func(model.IssueOpsRecord) (model.IssueOpsRecord, error)
+type RecordTransition func(model.IssueOpsRecord) (model.IssueOpsRecord, error)
 
-type IssueIntentStore interface {
-	Update(context.Context, string, IssueIntentTransition) (model.IssueOpsRecord, error)
+type RecordStore interface {
+	Update(context.Context, string, RecordTransition) (model.IssueOpsRecord, error)
 }

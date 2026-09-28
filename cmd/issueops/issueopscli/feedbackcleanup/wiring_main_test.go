@@ -26,7 +26,7 @@ func TestMain(m *testing.M) {
 				Git:                d.CleanupFinishGit,
 				Processes:          issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses},
 				RemoveOrcaWorktree: d.RemoveOrcaWorktree,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error {
+				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
 					return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
 				},
 			})
@@ -34,7 +34,7 @@ func TestMain(m *testing.M) {
 		CleanupRemoteBranch: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupRemoteBranchRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
 			return issueopscore.CleanupRemoteBranch(ctx, stateRoot, req, issueopscore.CleanupRemoteBranchDeps{
 				VerifyMergedArtifact: d.VerifyMergedHead,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error {
+				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
 					return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
 				},
 			})

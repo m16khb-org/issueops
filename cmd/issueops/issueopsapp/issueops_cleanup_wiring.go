@@ -31,7 +31,7 @@ func configureIssueOpsCleanup() {
 				OrcaTerminals:      orcaadapter.New(),
 				ObserveArtifact:    issueopscore.ObserveRemoteArtifact,
 				RemoveOrcaWorktree: d.RemoveOrcaWorktree,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error {
+				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
 					return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
 				},
 			})
@@ -40,7 +40,7 @@ func configureIssueOpsCleanup() {
 			return issueopscore.CleanupRemoteBranch(ctx, stateRoot, req, issueopscore.CleanupRemoteBranchDeps{
 				VerifyMergedArtifact: d.VerifyMergedHead,
 				ObserveArtifact:      issueopscore.ObserveRemoteArtifact,
-				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion port.IssueProviderCompletionSection, audit string) error {
+				ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
 					return issueopscore.ReflectCleanupAudit(issueopscore.IssueOpsStateRoot(), rec, completion, audit, prov)
 				},
 			})

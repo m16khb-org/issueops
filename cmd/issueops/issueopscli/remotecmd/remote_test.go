@@ -1022,13 +1022,13 @@ exit 2
 	}
 }
 
-// resolveRemoteCompletionInputs는 completion 계열 명령의 fail-closed 전제를
+// RemoteCompletionService는 completion 계열 명령의 fail-closed 전제를
 // 검사한다(설계 v5 WS3). 각 거부 사유가 정확한 에러로 나오는지 잠근다.
-func TestResolveRemoteCompletionInputsFailsClosed(t *testing.T) {
+func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 	t.Run("missing remote artifact", func(t *testing.T) {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 		record := remoteIssueOpsRecord(t)
-		_, _, err := resolveRemoteCompletionInputs(Deps{}, record.ID, "")
+		_, _, err := remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), record.ID, "", false, nil)
 		if err == nil || !strings.Contains(err.Error(), "before a verified remote artifact") {
 			t.Fatalf("expected missing-artifact rejection, got %v", err)
 		}
@@ -1044,7 +1044,7 @@ func TestResolveRemoteCompletionInputsFailsClosed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
-		_, _, err = resolveRemoteCompletionInputs(Deps{}, record.ID, "")
+		_, _, err = remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), record.ID, "", false, nil)
 		if err == nil || !strings.Contains(err.Error(), "merge verification is not configured") {
 			t.Fatalf("expected unconfigured-verification rejection, got %v", err)
 		}
@@ -1063,7 +1063,7 @@ func TestResolveRemoteCompletionInputsFailsClosed(t *testing.T) {
 		deps := Deps{VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
 			return errors.New("connection reset")
 		}}
-		_, _, err = resolveRemoteCompletionInputs(deps, record.ID, "")
+		_, _, err = remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), record.ID, "", false, deps.VerifyMerged)
 		if err == nil || !strings.Contains(err.Error(), "merge evidence readback failed (refusing to continue)") {
 			t.Fatalf("expected readback refusal, got %v", err)
 		}
@@ -1082,17 +1082,17 @@ func TestResolveRemoteCompletionInputsFailsClosed(t *testing.T) {
 		deps := Deps{VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
 			return nil
 		}}
-		got, prov, err := resolveRemoteCompletionInputs(deps, record.ID, "")
+		got, result, err := remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), record.ID, "", false, deps.VerifyMerged)
 		if err != nil {
 			t.Fatalf("expected resolution, got %v", err)
 		}
-		if got.ID != record.ID || prov == nil {
-			t.Fatalf("unexpected resolution: record=%+v provider=%v", got, prov)
+		if got.ID != record.ID || result.Preview == "" {
+			t.Fatalf("unexpected resolution: record=%+v result=%v", got, result)
 		}
 	})
 	t.Run("unknown record id fails closed", func(t *testing.T) {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-		_, _, err := resolveRemoteCompletionInputs(Deps{}, "io-nonexistent", "")
+		_, _, err := remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), "io-nonexistent", "", false, nil)
 		if err == nil {
 			t.Fatal("expected read error for unknown id")
 		}

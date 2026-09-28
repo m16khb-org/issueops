@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	completionmodel "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -63,7 +64,7 @@ const completionEmptyPlaceholder = "(없음)"
 // lowest-priority collapsible bodies (plan, then spec, then verified-execution summary)
 // are dropped to a placeholder and a truncation notice is included; the block
 // headings themselves always remain so the section shape stays checkable.
-func RenderCompletionSection(c port.IssueProviderCompletionSection, ts string, limit int) string {
+func RenderCompletionSection(c completionmodel.RemoteCompletionSection, ts string, limit int) string {
 	planBody, specBody, turingBody := c.PlanBody, c.SpecBody, c.TuringSummary
 	truncated := false
 	render := func() string {

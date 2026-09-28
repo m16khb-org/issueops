@@ -11,11 +11,11 @@ import (
 )
 
 type IssueCreateIntents struct {
-	store IssueIntentStore
+	store RecordStore
 	now   func() time.Time
 }
 
-func NewIssueCreateIntents(store IssueIntentStore, now func() time.Time) *IssueCreateIntents {
+func NewIssueCreateIntents(store RecordStore, now func() time.Time) *IssueCreateIntents {
 	return &IssueCreateIntents{store: store, now: now}
 }
 
@@ -37,7 +37,7 @@ func (s *IssueCreateIntents) Complete(ctx context.Context, id, issueURL, complet
 	})
 }
 
-func (s *IssueCreateIntents) update(ctx context.Context, id string, transition IssueIntentTransition) (model.IssueOpsRecord, error) {
+func (s *IssueCreateIntents) update(ctx context.Context, id string, transition RecordTransition) (model.IssueOpsRecord, error) {
 	return s.store.Update(ctx, id, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 		updated, err := transition(record)
 		if err != nil {
