@@ -9280,7 +9280,6 @@
         "func ensureRootUnclaimed",
         "func holderIndexKey",
         "func preparationDeliveryReceipt",
-        "func validateIntentState",
         "type DiagnosticRedactor",
         "type SQLiteRepository",
         "type holderIndex"
@@ -11355,6 +11354,14 @@
       "symbols": [
         "func ApplyDirectCommit",
         "func ValidateDirectCommit"
+      ]
+    },
+    {
+      "path": "internal/application/issueopspreparation/intent_state.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ValidateIntentState"
       ]
     },
     {
@@ -18094,9 +18101,27 @@
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ApplyOrcaReceipt",
       "task": "T05",
-      "entrypoints": ["issueops execution prepare --mode orca", "issueops execution reconcile"],
-      "evidence_tests": ["internal/application/issueopspreparation/orca_receipt_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
+      "entrypoints": [
+        "issueops execution prepare --mode orca",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopspreparation/orca_receipt_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
+      ],
       "status": "retain"
+    },
+    {
+      "id": "orca-intent-state-authority",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func validateIntentState",
+      "responsibility": "require raw CAS evidence before validating the current record and intent authority",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func ValidateIntentState",
+      "task": "T05",
+      "entrypoints": ["issueops execution prepare --mode orca", "issueops execution reconcile"],
+      "evidence_tests": ["internal/application/issueopspreparation/intent_state_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
+      "status": "migrated"
     }
   ]
 }

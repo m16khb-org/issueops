@@ -14,7 +14,6 @@ import (
 	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -163,7 +162,7 @@ func (repository *SQLiteRepository) BeginIntent(ctx context.Context, begin prepa
 }
 
 func (repository *SQLiteRepository) MarkInvoking(ctx context.Context, state preparationapp.IntentState) (preparationapp.IntentState, error) {
-	if err := validateIntentState(state); err != nil {
+	if err := preparationapp.ValidateIntentState(state); err != nil {
 		return state, err
 	}
 	updated := preparationapp.MarkOrcaInvoking(state.Intent)
@@ -179,7 +178,7 @@ func (repository *SQLiteRepository) MarkInvoking(ctx context.Context, state prep
 }
 
 func (repository *SQLiteRepository) RecordFailure(ctx context.Context, state preparationapp.IntentState, invocation string, cause error) error {
-	if err := validateIntentState(state); err != nil {
+	if err := preparationapp.ValidateIntentState(state); err != nil {
 		return err
 	}
 	record, intent, err := preparationapp.ApplyOrcaFailure(state, invocation, func() string { return repository.boundedDiagnostic(cause) })
@@ -201,7 +200,7 @@ func (repository *SQLiteRepository) RecordFailure(ctx context.Context, state pre
 }
 
 func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state preparationapp.IntentState, receipt preparationcontract.IntentReceipt) (preparationapp.IntentProgress, error) {
-	if err := validateIntentState(state); err != nil {
+	if err := preparationapp.ValidateIntentState(state); err != nil {
 		return preparationapp.IntentProgress{State: state, Pending: true}, err
 	}
 	decision, err := preparationapp.ApplyOrcaReceipt(state, receipt, remote.IssueArtifactDir(state.Snapshot.Record.IssueURL), func() error {
@@ -274,13 +273,6 @@ func (repository *SQLiteRepository) compareAndApply(ctx context.Context, state p
 		{Bucket: recordBucket, ID: state.Snapshot.Record.ID, Data: state.Snapshot.RecordRaw},
 		{Bucket: intentBucket, ID: state.Intent.OperationID, Data: state.IntentRaw},
 	}, mutations)
-}
-
-func validateIntentState(state preparationapp.IntentState) error {
-	if len(state.Snapshot.RecordRaw) == 0 || len(state.IntentRaw) == 0 {
-		return fmt.Errorf("Orca intent raw CAS evidence is required")
-	}
-	return preparationdomain.ValidateIntentRecord(state.Snapshot.Record, state.Intent)
 }
 
 func (repository *SQLiteRepository) boundedDiagnostic(cause error) string {
