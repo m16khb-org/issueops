@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 )
 
@@ -91,18 +92,18 @@ func TestNormalizeNativeActorRequiresReceiptInLocalProcessAncestry(t *testing.T)
 		Host: "codex", SessionID: "session", SessionProcess: &receipt,
 		ProcessAncestry: []issueops.NativeProcessReceipt{receipt},
 	}
-	if _, err := normalizeNativeActor(actor); err != nil {
+	if _, err := cycleapp.NormalizeNativeActor(actor, inspectNativeProcessReceipt); err != nil {
 		t.Fatalf("exact locally observed process receipt rejected: %v", err)
 	}
 
 	actor.ProcessAncestry = nil
-	if _, err := normalizeNativeActor(actor); err == nil {
+	if _, err := cycleapp.NormalizeNativeActor(actor, inspectNativeProcessReceipt); err == nil {
 		t.Fatal("payload receipt without local process ancestry was accepted")
 	}
 	actor.ProcessAncestry = []issueops.NativeProcessReceipt{{
 		PID: receipt.PID, StartedAt: "1970-01-01T00:00:00Z", Executable: receipt.Executable,
 	}}
-	if _, err := normalizeNativeActor(actor); err == nil {
+	if _, err := cycleapp.NormalizeNativeActor(actor, inspectNativeProcessReceipt); err == nil {
 		t.Fatal("PID reuse mismatch in local process ancestry was accepted")
 	}
 }

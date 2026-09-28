@@ -176,20 +176,6 @@ func parseNativeProcessStart(value string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("invalid process start identity %q", value)
 }
 
-func requireExactLiveNativeProcessReceipt(receipt issueops.NativeProcessReceipt) error {
-	status, observed, err := inspectNativeProcessReceipt(receipt)
-	if err != nil {
-		return err
-	}
-	if status != "live" {
-		return fmt.Errorf("native process identity is not live: pid=%d status=%s", receipt.PID, status)
-	}
-	if observed.StartedAt != receipt.StartedAt || observed.Executable != receipt.Executable {
-		return fmt.Errorf("native process identity does not match live PID %d", receipt.PID)
-	}
-	return nil
-}
-
 // InspectNativeProcessReceipt는 lease replacement이 쓰는 것과 동일한 PID
 // 재사용에 안전한 read-only 관측을 운영 inventory 수집기에 노출한다.
 func InspectNativeProcessReceipt(receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {

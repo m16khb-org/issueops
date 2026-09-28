@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops/implementation"
+	cycleapp "issueops/internal/application/issueopscycle"
 	application "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopspublication"
@@ -17,7 +18,7 @@ type RemotePublicationObserver struct {
 }
 
 func (o RemotePublicationObserver) NormalizeActor(_ context.Context, actor contract.Actor) (contract.Actor, error) {
-	normalized, err := normalizeNativeActor(publicationActor(actor))
+	normalized, err := cycleapp.NormalizeNativeActor(publicationActor(actor), inspectNativeProcessReceipt)
 	if err != nil {
 		return contract.Actor{}, err
 	}

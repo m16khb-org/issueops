@@ -111,7 +111,7 @@ func validateExecutionSyncBaseResolution(execution Execution, resolution Executi
 	if !validCommitSHA(resolution.BaseOID) || strings.TrimSpace(resolution.StartedAt) == "" || len(resolution.ConflictFiles) == 0 {
 		return fmt.Errorf("execution sync-base resolution is incomplete")
 	}
-	if err := issueopscontract.ValidateNativeActor(resolution.Actor); err != nil {
+	if err := ValidateNativeActor(resolution.Actor); err != nil {
 		return err
 	}
 	seen := map[string]bool{}
@@ -244,7 +244,7 @@ func validateWriteLease(lease WriteLease) error {
 		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" || lease.ClaimedAt == "" {
 			return fmt.Errorf("active lease requires one holder and no token hash")
 		}
-		if err := issueopscontract.ValidateNativeActor(*lease.Holder); err != nil {
+		if err := ValidateNativeActor(*lease.Holder); err != nil {
 			return err
 		}
 	case LeaseStatusRevoking:
@@ -252,7 +252,7 @@ func validateWriteLease(lease WriteLease) error {
 		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" {
 			return fmt.Errorf("revoking lease requires the fenced holder and no token hash")
 		}
-		if err := issueopscontract.ValidateNativeActor(*lease.Holder); err != nil {
+		if err := ValidateNativeActor(*lease.Holder); err != nil {
 			return err
 		}
 	case LeaseStatusReleased:

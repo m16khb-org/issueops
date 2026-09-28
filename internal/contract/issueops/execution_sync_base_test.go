@@ -5,45 +5,7 @@ import (
 	"testing"
 )
 
-func validSyncBaseNativeActor() NativeActor {
-	return NativeActor{
-		Host:           "codex",
-		SessionID:      "session-1",
-		SessionProcess: &NativeProcessReceipt{PID: 42, StartedAt: "2026-08-25T00:00:00Z", Executable: "/usr/local/bin/codex"},
-	}
-}
-
 func fullOID() string { return strings.Repeat("a", 40) }
-
-func TestValidateNativeActorRequiresReuseSafeProcessReceipt(t *testing.T) {
-	valid := validSyncBaseNativeActor()
-	if err := ValidateNativeActor(valid); err != nil {
-		t.Fatalf("valid actor rejected: %v", err)
-	}
-
-	tests := []struct {
-		name    string
-		mutate  func(*NativeActor)
-		wantErr string
-	}{
-		{"unknown host", func(a *NativeActor) { a.Host = "gemini" }, "host must be codex"},
-		{"blank session", func(a *NativeActor) { a.SessionID = "  " }, "session_id is required"},
-		{"missing process", func(a *NativeActor) { a.SessionProcess = nil }, "session_process receipt"},
-		{"non positive pid", func(a *NativeActor) { a.SessionProcess.PID = 0 }, "session_process receipt"},
-		{"missing started at", func(a *NativeActor) { a.SessionProcess.StartedAt = "" }, "session_process receipt"},
-		{"missing executable", func(a *NativeActor) { a.SessionProcess.Executable = "" }, "session_process receipt"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			actor := valid
-			tt.mutate(&actor)
-			err := ValidateNativeActor(actor)
-			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
-				t.Fatalf("err = %v, want containing %q", err, tt.wantErr)
-			}
-		})
-	}
-}
 
 func TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand(t *testing.T) {
 	err := NewBaseSyncRequiredError("io-9'x", 7)

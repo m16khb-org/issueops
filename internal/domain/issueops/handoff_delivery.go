@@ -85,7 +85,7 @@ func ValidateHandoffDeliveryObservation(observation issueopscontract.IssueOpsHan
 		if err := validateHandoffDeliveryActorBounds(*observation.OwnerActor); err != nil {
 			return err
 		}
-		if err := issueopscontract.ValidateNativeActor(*observation.OwnerActor); err != nil {
+		if err := ValidateNativeActor(*observation.OwnerActor); err != nil {
 			return err
 		}
 	}

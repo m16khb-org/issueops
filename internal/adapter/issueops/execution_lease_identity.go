@@ -7,44 +7,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
-func normalizeNativeActor(actor issueops.NativeActor) (issueops.NativeActor, error) {
-	actor.Host = strings.ToLower(strings.TrimSpace(actor.Host))
-	actor.SessionID = strings.TrimSpace(actor.SessionID)
-	actor.AgentID = strings.TrimSpace(actor.AgentID)
-	if actor.SessionProcess != nil {
-		receipt := *actor.SessionProcess
-		receipt.StartedAt = strings.TrimSpace(receipt.StartedAt)
-		receipt.Executable = strings.TrimSpace(receipt.Executable)
-		actor.SessionProcess = &receipt
-	}
-	actor.ProcessAncestry = append([]issueops.NativeProcessReceipt(nil), actor.ProcessAncestry...)
-	if err := issueops.ValidateNativeActor(actor); err != nil {
-		return actor, err
-	}
-	locallyObserved := false
-	for _, receipt := range actor.ProcessAncestry {
-		if actor.SessionProcess != nil && receipt == *actor.SessionProcess {
-			locallyObserved = true
-			break
-		}
-	}
-	if !locallyObserved {
-		return actor, fmt.Errorf("native session process receipt is not in the local process ancestry")
-	}
-	if err := requireExactLiveNativeProcessReceipt(*actor.SessionProcess); err != nil {
-		return actor, err
-	}
-	return actor, nil
-}
-
 // ValidateNativeActorProcess applies the same ancestry and live-process receipt
 // checks used by lease transitions before preparation can persist a new holder.
 func ValidateNativeActorProcess(actor issueops.NativeActor) error {
-	_, err := normalizeNativeActor(actor)
+	_, err := cycleapp.NormalizeNativeActor(actor, inspectNativeProcessReceipt)
 	return err
 }
 

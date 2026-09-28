@@ -1,10 +1,5 @@
 package issueops
 
-import (
-	"fmt"
-	"strings"
-)
-
 const (
 	IssueOpsSchemaVersion       = 1
 	OrcaArtifactIdentityVersion = 1
@@ -174,17 +169,4 @@ type ExecutionSyncBaseResolution struct {
 	Actor                NativeActor `json:"actor"`
 	ConflictFiles        []string    `json:"conflict_files"`
 	StartedAt            string      `json:"started_at"`
-}
-
-func ValidateNativeActor(actor NativeActor) error {
-	if actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo" {
-		return fmt.Errorf("native actor host must be codex, claude, or omo")
-	}
-	if strings.TrimSpace(actor.SessionID) == "" {
-		return fmt.Errorf("native actor session_id is required")
-	}
-	if actor.SessionProcess == nil || actor.SessionProcess.PID <= 0 || actor.SessionProcess.StartedAt == "" || actor.SessionProcess.Executable == "" {
-		return fmt.Errorf("native actor requires a PID reuse-safe session_process receipt")
-	}
-	return nil
 }

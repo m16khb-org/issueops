@@ -41,7 +41,7 @@ func TestValidateExecutionAcceptsOptionalOrcaLeaseGeneration(t *testing.T) {
 }
 
 func TestValidateNativeActorAcceptsOmo(t *testing.T) {
-	err := ValidateNativeActor(NativeActor{
+	err := issueopsdomain.ValidateNativeActor(NativeActor{
 		Host:      "omo",
 		SessionID: "019ff5b8-7d62-707a-a693-5e7a5e8a3187",
 		SessionProcess: &NativeProcessReceipt{

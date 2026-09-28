@@ -239,6 +239,8 @@
 
 - **부분 진행 — PR 생성·본문 동기화 입력 준비:** `PublicationCommandService`와 `BodySyncCommandService`가 record 조회, 본문 파일·template 준비, 입력 검증과 ancestry 관측을 조율한다. provider·head·base 기본값과 필수 본문 판정은 domain으로 옮겼다. CLI에는 옵션 파싱·요청 매핑·출력만 남겼으며, PR 생성 코드를 별도 transport 파일로 분리하고 기존 `remoteNativeActor`를 삭제했다. SQLite composition 테스트로 provider 오류 우선순위, 빈 본문·민감정보 거부, preview의 ancestry 생략, confirm의 정규화된 actor 전달, body-file과 준비된 브랜치 기본값을 확인했다. 민감정보 검사와 ancestry 관측을 제거한 overlay에서 테스트가 실패했다(`body-command-secret-mutation.txt`, `publication-command-ancestry-mutation.txt`). 실제 바이너리에서 PR preview 기본값, 민감정보의 provider 호출 전 거부, 두 preview의 상태 무변경, 본문 confirm의 readback·baseline 저장과 managed section 보존을 확인했다(`remote-commands-binary-smoke.json`). 전체 Go suite(`full-suite-remote-commands.txt`), 관련 race·vet·build·architecture가 통과했다. 실제 발행 handler 호출 전 native actor를 정규화하는 기존 adapter 조율은 별도 `migrate` 항목으로 기록했다. 이 경로와 issue graph 반영이 남아 있으므로 T07은 미완료다.
 
+- **부분 진행 — 그래프 동기화와 공통 actor 검증:** `IssueGraphSyncService`가 record 조회와 provider 반영을 조율하고 domain이 실행 전제와 관계 본문을 구성한다. 기존 `issueops_remote_sync.go`를 삭제하고 Git 관측과 gh/glab 호출만 adapter에 남겼다. 공통 native actor의 host·receipt·ancestry·live identity 판정은 domain으로, process 관측 순서는 application으로 이전했다. contract의 검증 함수와 adapter의 기존 정규화·PR handler dispatch를 제거했다. SQLite composition 테스트에서 미리보기·빈 그래프·누락 URL·GitHub/GitLab·provider 오류와 저장 row 불변을 확인했다. confirm 분기와 live identity 검사를 각각 무력화한 overlay가 실패했다(`graph-confirm-mutation.txt`, `actor-live-mutation.txt`). 전체 Go suite(`full-suite-graph-actor.txt`), 관련 race·vet·build·architecture와 실제 CLI smoke(`graph-actor-binary-smoke.json`)가 통과했다. 소스 재점검에서 발행의 actor·권한 검증이 adapter callback을 경유하고 완료의 순수 artifact 검증도 adapter에 위임하는 경로가 남아 있음을 확인했다. 이 연결을 제거하기 전까지 T07은 미완료다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료

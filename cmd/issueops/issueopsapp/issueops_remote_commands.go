@@ -6,6 +6,7 @@ import (
 
 	core "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/provider"
+	cycleapp "issueops/internal/application/issueopscycle"
 	application "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopsbodysync"
@@ -13,9 +14,15 @@ import (
 )
 
 func newPublicationCommand(root string, publish model.RemotePullRequestCreateHandler, observe application.AncestryObserver) *application.PublicationCommandService {
-	return application.NewPublicationCommandService(core.RemoteRecordStore{StateRoot: root}, application.NewTemplateBodyResolver(os.ReadFile), observe, func(ctx context.Context, req model.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-		return core.CreateRemotePullRequestWithHandler(ctx, root, req, publish)
-	})
+	var invoke application.PublicationInvoker
+	if publish != nil {
+		invoke = func(ctx context.Context, req model.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+			return publish(ctx, root, req)
+		}
+	}
+	return application.NewPublicationCommandService(core.RemoteRecordStore{StateRoot: root}, application.NewTemplateBodyResolver(os.ReadFile), observe, func(actor model.NativeActor) (model.NativeActor, error) {
+		return cycleapp.NormalizeNativeActor(actor, core.InspectNativeProcessReceipt)
+	}, invoke)
 }
 
 func createPublication(ctx context.Context, root string, input application.PublicationInput, publish model.RemotePullRequestCreateHandler, observe application.AncestryObserver) (port.IssueProviderCreatePullRequestResult, error) {

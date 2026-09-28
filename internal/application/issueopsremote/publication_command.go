@@ -20,14 +20,15 @@ type PublicationInput struct {
 type PublicationInvoker func(context.Context, model.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)
 
 type PublicationCommandService struct {
-	records IssueRecordReader
-	bodies  TemplateBodyResolver
-	observe AncestryObserver
-	publish PublicationInvoker
+	records   IssueRecordReader
+	bodies    TemplateBodyResolver
+	observe   AncestryObserver
+	normalize func(model.NativeActor) (model.NativeActor, error)
+	publish   PublicationInvoker
 }
 
-func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, publish PublicationInvoker) *PublicationCommandService {
-	return &PublicationCommandService{records: records, bodies: bodies, observe: observe, publish: publish}
+func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, normalize func(model.NativeActor) (model.NativeActor, error), publish PublicationInvoker) *PublicationCommandService {
+	return &PublicationCommandService{records: records, bodies: bodies, observe: observe, normalize: normalize, publish: publish}
 }
 
 func (s *PublicationCommandService) Create(ctx context.Context, input PublicationInput) (port.IssueProviderCreatePullRequestResult, error) {
@@ -54,6 +55,15 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 	}
 	if req.Confirm {
 		req.Actor.ProcessAncestry, err = s.observe()
+		if err != nil {
+			return result, err
+		}
+	}
+	if s.publish == nil {
+		return result, model.ErrRemotePullRequestCreateHandlerUnavailable
+	}
+	if req.Confirm {
+		req.Actor, err = s.normalize(req.Actor)
 		if err != nil {
 			return result, err
 		}

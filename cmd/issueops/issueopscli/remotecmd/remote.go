@@ -155,7 +155,7 @@ func Run(args []string, deps Deps) error {
 	case "create-pr":
 		return runRemotePublication(args[1:], deps)
 	case "sync-graph":
-		return runRemoteSyncGraph(args[1:], deps)
+		return runIssueGraphSync(args[1:], deps)
 	case "sync-issue":
 		return runRemoteSyncIssue(context.Background(), args[1:], deps)
 	case "sync-pr":

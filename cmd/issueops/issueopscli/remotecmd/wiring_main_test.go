@@ -46,9 +46,15 @@ func TestMain(m *testing.M) {
 
 		CreateRemoteChild: issueopscore.CreateRemoteChild,
 		CreatePublication: func(ctx context.Context, root string, input remoteapp.PublicationInput, handler issueopscontract.RemotePullRequestCreateHandler, observe remoteapp.AncestryObserver) (port.IssueProviderCreatePullRequestResult, error) {
-			service := remoteapp.NewPublicationCommandService(issueopscore.RemoteRecordStore{StateRoot: root}, remoteapp.NewTemplateBodyResolver(os.ReadFile), observe, func(ctx context.Context, req issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-				return issueopscore.CreateRemotePullRequestWithHandler(ctx, root, req, handler)
-			})
+			var invoke remoteapp.PublicationInvoker
+			if handler != nil {
+				invoke = func(ctx context.Context, req issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+					return handler(ctx, root, req)
+				}
+			}
+			service := remoteapp.NewPublicationCommandService(issueopscore.RemoteRecordStore{StateRoot: root}, remoteapp.NewTemplateBodyResolver(os.ReadFile), observe, func(actor issueopscontract.NativeActor) (issueopscontract.NativeActor, error) {
+				return cycleapp.NormalizeNativeActor(actor, issueopscore.InspectNativeProcessReceipt)
+			}, invoke)
 			return service.Create(ctx, input)
 		},
 		DecodeIssueOpsRemoteJudgeJSON:      issueopscore.DecodeIssueOpsRemoteJudgeJSON,
@@ -64,9 +70,11 @@ func TestMain(m *testing.M) {
 		RenderIssueOpsRemoteJudgePrompt: issueopscore.RenderIssueOpsRemoteJudgePrompt,
 		ResolveRecordProvider:           issuedomain.ResolveRecordProvider,
 		ScoreIssueOpsRemoteCandidates:   issueopscore.ScoreIssueOpsRemoteCandidates,
-		SyncRemoteIssueGraph:            issueopscore.SyncRemoteIssueGraph,
-		UmbrellaBranchGateReason:        issueopscore.UmbrellaBranchGateReason,
-		ValidateIssueOpsMutationActor:   issueopscore.ValidateIssueOpsMutationActor,
+		SyncIssueGraph: func(ctx context.Context, root, id string, confirm bool) (map[string]any, error) {
+			return remoteapp.NewIssueGraphSyncService(issueopscore.RemoteRecordStore{StateRoot: root}, issueopscore.IssueGraphPoster{}).Sync(ctx, id, confirm)
+		},
+		UmbrellaBranchGateReason:      issueopscore.UmbrellaBranchGateReason,
+		ValidateIssueOpsMutationActor: issueopscore.ValidateIssueOpsMutationActor,
 	})
 	os.Exit(m.Run())
 }

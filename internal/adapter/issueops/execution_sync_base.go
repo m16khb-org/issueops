@@ -15,6 +15,7 @@ import (
 	"time"
 
 	basesyncapp "issueops/internal/application/issueopsbasesync"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	basesyncdomain "issueops/internal/domain/issueopsbasesync"
 )
@@ -79,7 +80,7 @@ func SyncExecutionBase(ctx context.Context, stateRoot string, req ExecutionSyncB
 	// 요구하지 않는다. 변형 3모드만 live process receipt까지 정규화한다.
 	var actor issueops.NativeActor
 	if mutating {
-		actor, err = normalizeNativeActor(req.Actor)
+		actor, err = cycleapp.NormalizeNativeActor(req.Actor, inspectNativeProcessReceipt)
 		if err != nil {
 			result.OK = false
 			return result, err

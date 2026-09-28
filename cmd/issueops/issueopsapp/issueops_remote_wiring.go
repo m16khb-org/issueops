@@ -34,7 +34,7 @@ func configureIssueOpsRemote() {
 		ResolveRecordProvider:              issuedomain.ResolveRecordProvider,
 		ScoreIssueOpsRemoteCandidates:      issueopscore.ScoreIssueOpsRemoteCandidates,
 		SyncRemoteBody:                     syncRemoteBody,
-		SyncRemoteIssueGraph:               issueopscore.SyncRemoteIssueGraph,
+		SyncIssueGraph:                     syncIssueGraph,
 		UmbrellaBranchGateReason:           issueopscore.UmbrellaBranchGateReason,
 		ValidateIssueOpsMutationActor:      issueopscore.ValidateIssueOpsMutationActor,
 	})

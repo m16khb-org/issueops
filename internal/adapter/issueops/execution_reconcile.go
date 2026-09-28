@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	reconciledomain "issueops/internal/domain/issueopsreconcile"
 )
@@ -12,7 +13,7 @@ func ReconcileExecutionWithDependencies(ctx context.Context, stateRoot string, r
 	if req.Preview == req.Confirm {
 		return ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile requires exactly one of preview or confirm")
 	}
-	actor, err := normalizeNativeActor(req.Actor)
+	actor, err := cycleapp.NormalizeNativeActor(req.Actor, inspectNativeProcessReceipt)
 	if err != nil {
 		return ExecutionReconcileResult{OK: false, ID: req.ID}, err
 	}

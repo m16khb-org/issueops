@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
@@ -65,7 +66,7 @@ func StatusExecution(stateRoot, id string) (ExecutionResult, error) {
 }
 
 func ReplaceExecutionWithDependencies(ctx context.Context, stateRoot string, req ExecutionReplaceRequest, deps ExecutionReplaceDependencies) (ExecutionReplaceResult, error) {
-	actor, err := normalizeNativeActor(req.Actor)
+	actor, err := cycleapp.NormalizeNativeActor(req.Actor, inspectNativeProcessReceipt)
 	if err != nil {
 		return ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}

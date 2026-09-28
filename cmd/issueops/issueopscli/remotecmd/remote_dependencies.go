@@ -39,7 +39,7 @@ type RemoteDeps struct {
 	ResolveRecordProvider              func(record issueopscontract.IssueOpsRecord) string
 	ScoreIssueOpsRemoteCandidates      func(req issueopsremote.IssueOpsRemoteScoringRequest) (issueopsremote.IssueOpsRemoteScoringResult, error)
 	SyncRemoteBody                     func(context.Context, string, remoteapp.BodySyncInput, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error)
-	SyncRemoteIssueGraph               func(record issueopscontract.IssueOpsRecord) (map[string]any, error)
+	SyncIssueGraph                     func(context.Context, string, string, bool) (map[string]any, error)
 	UmbrellaBranchGateReason           func(record issueopscontract.IssueOpsRecord) string
 	ValidateIssueOpsMutationActor      func(stateRoot, id string, actor issueopscontract.IssueOpsActor) error
 }
@@ -103,8 +103,8 @@ func ConfigureRemote(deps RemoteDeps) {
 	if deps.SyncRemoteBody != nil {
 		remoteDeps.SyncRemoteBody = deps.SyncRemoteBody
 	}
-	if deps.SyncRemoteIssueGraph != nil {
-		remoteDeps.SyncRemoteIssueGraph = deps.SyncRemoteIssueGraph
+	if deps.SyncIssueGraph != nil {
+		remoteDeps.SyncIssueGraph = deps.SyncIssueGraph
 	}
 	if deps.UmbrellaBranchGateReason != nil {
 		remoteDeps.UmbrellaBranchGateReason = deps.UmbrellaBranchGateReason
@@ -167,7 +167,7 @@ func neutralRemoteDeps() RemoteDeps {
 		SyncRemoteBody: func(context.Context, string, remoteapp.BodySyncInput, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, bodysynccontract.Result, error) {
 			return issueopscontract.IssueOpsRecord{}, bodysynccontract.Result{}, errRemoteNotConfigured
 		},
-		SyncRemoteIssueGraph: func(record issueopscontract.IssueOpsRecord) (map[string]any, error) {
+		SyncIssueGraph: func(context.Context, string, string, bool) (map[string]any, error) {
 			return nil, errRemoteNotConfigured
 		},
 		UmbrellaBranchGateReason:      func(record issueopscontract.IssueOpsRecord) string { return "" },

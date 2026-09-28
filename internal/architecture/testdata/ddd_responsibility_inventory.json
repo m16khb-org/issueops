@@ -1258,6 +1258,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_graph_sync_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newIssueGraphSyncService",
+        "func syncIssueGraph"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_inventory_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -2488,7 +2497,6 @@
       "symbols": [
         "func Deps.observeNativeProcessAncestry",
         "func runRemoteCreateChild",
-        "func runRemoteSyncGraph",
         "func validateCreateChildInputs"
       ]
     },
@@ -2509,6 +2517,14 @@
         "func ConfigureRemote",
         "func neutralRemoteDeps",
         "type RemoteDeps"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_graph.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func runIssueGraphSync"
       ]
     },
     {
@@ -7123,7 +7139,6 @@
         "func executionOwnerInventory",
         "func executionQuiescenceFingerprint",
         "func inspectNativeProcessReceiptForRollover",
-        "func normalizeNativeActor",
         "func refuseSelfRevoke",
         "func sameNativeActor",
         "func sameNativeActorIdentity",
@@ -7319,7 +7334,6 @@
         "func pathWithinResolved",
         "func processField",
         "func processHasAncestorInSnapshot",
-        "func requireExactLiveNativeProcessReceipt",
         "type nativeProcessSnapshotEntry",
         "type workspaceProcess"
       ]
@@ -7380,9 +7394,7 @@
       "owner": "adapter",
       "task": "T07",
       "symbols": [
-        "func CreateRemotePullRequest",
-        "type RemoteArtifactVerifyFunc",
-        "type RemotePullRequestDependencies"
+        "type RemoteArtifactVerifyFunc"
       ]
     },
     {
@@ -7565,6 +7577,24 @@
         "func issueCreationProvider.Create",
         "type IssueCreationEnvironment",
         "type issueCreationProvider"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/issue_graph_poster.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func IssueGraphPoster.Post",
+        "type IssueGraphPoster"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/issue_provider_observation.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func InferProviderFromRepoRemotes",
+        "func ResolveProviderProjectAuthority"
       ]
     },
     {
@@ -8015,20 +8045,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_remote_sync.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func InferProviderFromRepoRemotes",
-        "func ResolveProviderProjectAuthority",
-        "func SyncRemoteIssueGraph",
-        "func getLinkCount",
-        "func linkTypeLabel",
-        "func syncGitHubGraph",
-        "func syncGitLabGraph"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_review_metrics.go",
       "owner": "adapter",
       "task": "T20",
@@ -8268,7 +8284,6 @@
         "func CreateRemoteChild",
         "func CreateRemoteIssueContext",
         "func CreateRemotePullRequestViaProviderContext",
-        "func CreateRemotePullRequestWithHandler",
         "func ReadRemoteIssueSnapshot",
         "func ReconcileRemotePullRequestViaProviderContext",
         "type contextPullRequestCreator",
@@ -11118,6 +11133,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/native_actor.go",
+      "owner": "application",
+      "task": "T05",
+      "symbols": [
+        "func NormalizeNativeActor",
+        "type NativeProcessInspector"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/observed_pr_readiness.go",
       "owner": "application",
       "task": "T20",
@@ -11645,6 +11669,17 @@
         "func NewIssueCreateIntents",
         "func issueCreateProject",
         "type IssueCreateIntents"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/issue_graph_sync.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func IssueGraphSyncService.Sync",
+        "func NewIssueGraphSyncService",
+        "type IssueGraphPoster",
+        "type IssueGraphSyncService"
       ]
     },
     {
@@ -12600,7 +12635,6 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
-        "func ValidateNativeActor",
         "type Execution",
         "type ExecutionCompletion",
         "type ExecutionCompletionHistory",
@@ -14304,6 +14338,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/issue_graph_sync.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func PlanIssueGraphSync",
+        "func issueGraphLinkLabel",
+        "type IssueGraphSyncPlan"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/issue_reconcile.go",
       "owner": "domain",
       "task": "T07",
@@ -14319,6 +14363,16 @@
       "task": "T08",
       "symbols": [
         "func ValidateIssueURL"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/native_actor.go",
+      "owner": "domain",
+      "task": "T05",
+      "symbols": [
+        "func NormalizeNativeActor",
+        "func ValidateNativeActor",
+        "func ValidateObservedNativeProcess"
       ]
     },
     {
@@ -20573,14 +20627,16 @@
       "source_symbol": "func SyncRemoteIssueGraph",
       "responsibility": "validate graph synchronization eligibility and render typed issue links before provider comment publication",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func IssueGraphSyncService.Sync",
       "task": "T07",
       "entrypoints": [
         "issueops remote sync-graph"
       ],
       "evidence_tests": [
-        "cmd/issueops/issueopscli/remotecmd/remote_test.go"
+        "cmd/issueops/issueopsapp/issueops_graph_sync_wiring_test.go",
+        "internal/domain/issueops/issue_graph_sync_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "remote-publication-handler-dispatch",
@@ -20588,6 +20644,7 @@
       "source_symbol": "func CreateRemotePullRequest",
       "responsibility": "reject missing publication handler and normalize confirmed native actor before invoking publication",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationCommandService.Create",
       "task": "T07",
       "entrypoints": [
         "issueops remote create-pr"
@@ -20595,6 +20652,105 @@
       "evidence_tests": [
         "cmd/issueops/issueopscli/remotecmd/remote_test.go",
         "cmd/issueops/issueopsapp/issueops_remote_commands_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "native-actor-shape-validation",
+      "source_path": "internal/contract/issueops/execution.go",
+      "source_symbol": "func ValidateNativeActor",
+      "responsibility": "validate supported host and reuse-safe native session identity",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateNativeActor",
+      "task": "T05",
+      "entrypoints": [
+        "issueops execution",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/native_actor_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "native-actor-normalization",
+      "source_path": "internal/adapter/issueops/execution_lease_identity.go",
+      "source_symbol": "func normalizeNativeActor",
+      "responsibility": "normalize and validate native identity and ancestry before live process observation",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func NormalizeNativeActor",
+      "task": "T05",
+      "entrypoints": [
+        "issueops execution",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/native_actor_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "native-process-live-validation",
+      "source_path": "internal/adapter/issueops/execution_process.go",
+      "source_symbol": "func requireExactLiveNativeProcessReceipt",
+      "responsibility": "reject dead or reused native process identity from observed receipt",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateObservedNativeProcess",
+      "task": "T05",
+      "entrypoints": [
+        "issueops execution",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/native_actor_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "publication-native-authority-bridge",
+      "source_path": "internal/adapter/issueops/execution_publication_observer.go",
+      "source_symbol": "func RemotePublicationObserver.Authorize",
+      "responsibility": "invoke shared mutation authority directly from publication application instead of outbound observation",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-pr",
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_publication_wiring_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "publication-native-normalization-bridge",
+      "source_path": "internal/adapter/issueops/execution_publication_observer.go",
+      "source_symbol": "func RemotePublicationObserver.NormalizeActor",
+      "responsibility": "normalize publication actor through shared application identity verification without adapter callback",
+      "target": "internal/application/issueopsremote",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-pr",
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsremote/create_preparation_test.go"
+      ],
+      "status": "migrate"
+    },
+    {
+      "id": "completion-artifact-validation-bridge",
+      "source_path": "internal/adapter/outbound/issueopscompletion/environment.go",
+      "source_symbol": "func Environment.VerifyArtifact",
+      "responsibility": "call pure completion artifact validation directly inside the application transaction",
+      "target": "internal/domain/issueopscompletion",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-pr",
+        "issueops execution complete"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscompletion/complete_test.go"
       ],
       "status": "migrate"
     }
