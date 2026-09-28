@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops/active"
-	"issueops/internal/adapter/issueops/cleanupchildren"
 	"issueops/internal/adapter/issueops/compatibilityreview"
 	"issueops/internal/adapter/issueops/devilsadvocate"
 	"issueops/internal/adapter/issueops/intentdesign"
@@ -16,7 +15,6 @@ import (
 	"issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
 	"issueops/internal/domain/repoidentity"
-	"issueops/internal/port"
 )
 
 const (
@@ -38,20 +36,6 @@ func issueOpsActiveStore() active.Store {
 		NewID:   newIssueOpsID,
 		ListIDs: ListIssueOpsIDs,
 	}
-}
-
-func CloseIssueOpsChildren(stateRoot, id string, req issueops.IssueOpsCloseChildrenRequest, provider func(string) (port.IssueProvider, error)) (issueops.IssueOpsCloseChildrenResult, error) {
-	var result issueops.IssueOpsCloseChildrenResult
-	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		var e error
-		result, e = cleanupchildren.ByID(cleanupchildren.Store{
-			Read:       ReadIssueOps,
-			TouchWrite: touchAndWriteIssueOps,
-			Provider:   provider,
-		}, stateRoot, id, req)
-		return e
-	})
-	return result, err
 }
 
 // OriginBranchPresent는 origin에 branch가 있는지 본다. 네트워크 호출이라

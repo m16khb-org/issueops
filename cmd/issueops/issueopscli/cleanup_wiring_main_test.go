@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"context"
 	"os"
+	"time"
 
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	issueopscore "issueops/internal/adapter/issueops"
@@ -50,8 +51,10 @@ func wireCleanupForTests() {
 				},
 			})
 		},
-		CloseIssueOpsChildren: issueopscore.CloseIssueOpsChildren,
-		IssueOpsStateRoot:     issueopscore.IssueOpsStateRoot,
+		CloseIssueOpsChildren: func(root, id string, req issueopscontract.IssueOpsCloseChildrenRequest, provider func(string) (port.IssueProvider, error)) (issueopscontract.IssueOpsCloseChildrenResult, error) {
+			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: provider, Now: time.Now}).Close(context.Background(), id, req)
+		},
+		IssueOpsStateRoot: issueopscore.IssueOpsStateRoot,
 		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: issueopscore.MarkIssueOpsContractFeedbackIssueUpdatedWithActor,
 		ObserveNativeProcessAncestry:                      issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                                      issueopscore.ReadIssueOps,

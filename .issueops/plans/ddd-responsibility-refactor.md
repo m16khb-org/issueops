@@ -280,6 +280,8 @@
 
 - **부분 진행 — 정리 상태 조회:** 작업 공간·브랜치·원격 산출물·자식 종료 조건과 상태 응답 구성은 domain으로 옮겼다. `StructuralStatus`는 파일/Git 관측을 조율하고 `StatusService`는 조건을 갖춘 사이클의 머지·이슈 조회와 정리 preview를 호출한다. 파일 존재 확인과 Git 실행은 기술 adapter에 남겼다. 기존 `cleanupstatus` 패키지와 production 상태 조회 래퍼, CLI의 조회 조율을 삭제했다. 전체 일반·race suite 각각 293개 패키지와 vet·build·architecture 검사가 통과했다(`T08-cleanup-status-*`). 실제 CLI와 임시 Git 저장소에서 변경 파일·원격 브랜치·브랜치 불일치·조회 실패·없는 디렉터리의 차단과 DB 기록 불변을 확인했다. 차단 조건의 극성, 머지 조회 자격, 다른 사이클의 오류 전파를 무력화한 세 변형도 테스트에서 검출했다. 실제 정리 실행과 readiness 조율의 나머지 이전은 남아 있어 T08은 미완료다.
 
+- **부분 진행 — 자식 이슈 종료:** 머지 증거·부모 이슈 연결·원격 종료 확인 규칙과 종료 영수증 갱신은 domain으로 옮겼다. `ChildrenCloser`는 잠금 안에서 조회·증거 확인·최대 네 건의 provider 호출·전체 결과 확인·저장을 조율한다. 기존 `cleanupchildren` 패키지와 production 조립 래퍼는 삭제했다. 원격 처리 일부가 실패하면 로컬 영수증을 저장하지 않으며, 최초 종료 시각과 원본 관측값을 보존한다. 전체 일반·race suite 각각 292개 패키지와 vet·build·architecture 검사가 통과했다(`T08-cleanup-children-*`). 실제 CLI와 명령 인자를 엄격히 검사하는 로컬 `gh` 대역으로 preview의 무기록, 종료 영수증 저장, 미머지 부모·열린 자식·조회 실패 거부를 확인했다. 부모 artifact 조건·종료 확인·원본 복사를 무력화한 세 변형도 검출했다. CLI의 선행 머지 조회 보조 함수와 실제 워크트리 삭제 등 나머지 cleanup 이전이 남아 있어 T08은 미완료다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료

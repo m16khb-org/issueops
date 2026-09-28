@@ -7000,22 +7000,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/cleanupchildren/cleanup_children.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func ByID",
-        "func closeChild",
-        "func closeChildrenConcurrently",
-        "func firstNonEmpty",
-        "func observeChildState",
-        "func resolveEvidenceBasis",
-        "type Store",
-        "type closeChildOutcome",
-        "type indexedChildLink"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/compatibilityreview/compatibility_review.go",
       "owner": "adapter",
       "task": "T03",
@@ -8159,7 +8143,6 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func CloseIssueOpsChildren",
         "func LastActiveAt",
         "func OriginBranchPresent",
         "func RecordIssueOpsCompatibilityReview",
@@ -10956,6 +10939,22 @@
         "func WorkspaceLinker.Worktree",
         "type WorkspaceLinkFiles",
         "type WorkspaceLinker"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/children.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func ChildrenCloser.Close",
+        "func ChildrenCloser.closeChild",
+        "func ChildrenCloser.closeConcurrently",
+        "func ChildrenCloser.evidenceBasis",
+        "func ChildrenCloser.observeChildState",
+        "func firstChildValue",
+        "type ChildCleanupRecords",
+        "type ChildrenCloser",
+        "type closeChildOutcome"
       ]
     },
     {
@@ -14237,6 +14236,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/cleanup_children.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ApplyChildCleanupReceipts",
+        "func ChildCleanupEvidenceBasis",
+        "func PrepareChildCleanup",
+        "func ValidateChildCloseConfirmation",
+        "func ValidateClosedChildObservation"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/cleanup_status.go",
       "owner": "domain",
       "task": "T08",
@@ -15553,6 +15564,14 @@
       "task": "T08",
       "symbols": [
         "func ValidateChildLinkProvider"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/cleanup_child.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func CleanupChildProvider"
       ]
     },
     {
@@ -22072,6 +22091,72 @@
       "task": "T08",
       "entrypoints": [
         "issueops cleanup status"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-child-evidence",
+      "source_path": "internal/adapter/issueops/cleanupchildren/cleanup_children.go",
+      "source_symbol": "func resolveEvidenceBasis",
+      "responsibility": "prefer verified parent merge and allow missing-artifact fallback only after every child is observed closed",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ChildCleanupEvidenceBasis",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup close-children"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/cleanup_children_test.go",
+        "internal/application/issueopscleanup/cleanup_children_legacy_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-child-confirmation",
+      "source_path": "internal/adapter/issueops/cleanupchildren/cleanup_children.go",
+      "source_symbol": "func closeChild",
+      "responsibility": "require provider verification of hierarchy and closed state before recording a confirmed close",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateChildCloseConfirmation",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup close-children"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/children_atomic_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-child-orchestration",
+      "source_path": "internal/adapter/issueops/cleanupchildren/cleanup_children.go",
+      "source_symbol": "func ByID",
+      "responsibility": "coordinate evidence, bounded provider concurrency and all-or-nothing local close receipts under the cycle lock",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func ChildrenCloser.Close",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup close-children"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/cleanup_children_test.go",
+        "internal/application/issueopscleanup/children_atomic_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-child-adapter-composition",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func CloseIssueOpsChildren",
+      "responsibility": "compose the child cleanup application directly from the CLI root",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func ChildrenCloser.Close",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup close-children"
       ],
       "evidence_tests": [
         "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"

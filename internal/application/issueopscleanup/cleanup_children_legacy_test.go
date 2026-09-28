@@ -1,4 +1,4 @@
-package cleanupchildren
+package issueopscleanup_test
 
 import (
 	"strings"
