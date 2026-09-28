@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"issueops/internal/adapter/issueops/active"
-	model "issueops/internal/contract/issueops"
 	remote "issueops/internal/domain/issueopsremote"
 )
 
@@ -26,10 +24,6 @@ func (BranchPreparationEnvironment) ResolveBaseCommit(repo, revision string) (st
 		return "", fmt.Errorf("git rev-parse returned an empty commit OID")
 	}
 	return resolved, nil
-}
-
-func (BranchPreparationEnvironment) UmbrellaForChildIssue(repo, childIssueURL string) (model.IssueOpsRecord, bool) {
-	return active.UmbrellaCycleForChildIssue(issueOpsActiveStore(), repo, childIssueURL)
 }
 
 func (BranchPreparationEnvironment) ObserveCodeProjectKey(repo, provider string) (string, error) {

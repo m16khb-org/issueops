@@ -1,12 +1,14 @@
 package issueopsapp
 
 import (
+	"bytes"
 	"context"
 	"reflect"
 	"strings"
 	"testing"
 
 	core "issueops/internal/adapter/issueops"
+	"issueops/internal/adapter/outbound/sqlstore"
 	model "issueops/internal/contract/issueops"
 )
 
@@ -54,5 +56,47 @@ func TestBranchPrepareCompositionAdoptsOnceAndSealsResolvedCommit(t *testing.T) 
 		if err != nil || !reflect.DeepEqual(after, stored) {
 			t.Fatalf("failed preparation changed persisted state: %v", err)
 		}
+	}
+}
+
+func TestBranchPrepareUsesItsExplicitStateRootForUmbrella(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	root, repo := t.TempDir(), makeGitRepoForContract(t)
+	parent, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "78-umbrella"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	child, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	child.IssueURL = "https://github.com/acme/repo/issues/79"
+	parent.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: child.IssueURL, CreatedAt: parent.CreatedAt}}
+	if _, err = core.WriteIssueOps(root, parent); err != nil {
+		t.Fatal(err)
+	}
+	child, err = core.WriteIssueOps(root, child)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := sqlstore.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, found, err := db.Get("issueops_v1", child.ID)
+	if err != nil || !found {
+		t.Fatalf("child snapshot: found=%v err=%v", found, err)
+	}
+	request := model.IssueOpsBranchPrepareRequest{Branch: child.Branch, BaseBranch: "main", CodeProjectKey: "github.com/acme/repo", LinkVerified: true}
+	if _, err = newBranchPreparer(root).Prepare(context.Background(), child.ID, request, nil); err == nil || !strings.Contains(err.Error(), parent.Branch) {
+		t.Fatalf("explicit state-root umbrella was bypassed: %v", err)
+	}
+	after, found, err := db.Get("issueops_v1", child.ID)
+	if err != nil || !found || !bytes.Equal(before, after) {
+		t.Fatalf("rejected preparation changed the child: %v", err)
+	}
+	request.BaseBranch = parent.Branch
+	if _, err = newBranchPreparer(root).Prepare(context.Background(), child.ID, request, nil); err != nil {
+		t.Fatalf("matching local umbrella rejected: %v", err)
 	}
 }

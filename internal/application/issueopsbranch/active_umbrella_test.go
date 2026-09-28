@@ -1,4 +1,4 @@
-package active
+package issueopsbranch_test
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ func TestUmbrellaCycleForChildIssueFindsLinkingParent(t *testing.T) {
 		},
 	})
 
-	got, ok := UmbrellaCycleForChildIssue(store.issueOpsStore(), repo, "https://github.com/example/repo/issues/79")
+	got, ok := store.reader().UmbrellaForChildIssue(repo, "https://github.com/example/repo/issues/79")
 	if !ok || got.Branch != "78-umbrella" {
 		t.Fatalf("UmbrellaCycleForChildIssue() = %+v, %v; want the linking umbrella cycle", got, ok)
 	}
@@ -45,7 +45,7 @@ func TestUmbrellaCycleForChildIssueDoesNotMatchItself(t *testing.T) {
 		},
 	})
 
-	if got, ok := UmbrellaCycleForChildIssue(store.issueOpsStore(), repo, "https://github.com/example/repo/issues/78"); ok {
+	if got, ok := store.reader().UmbrellaForChildIssue(repo, "https://github.com/example/repo/issues/78"); ok {
 		t.Fatalf("an umbrella cycle must not resolve as its own parent: %+v", got)
 	}
 }
@@ -66,7 +66,7 @@ func TestUmbrellaCycleForChildIssueIgnoresNonChildLinks(t *testing.T) {
 		},
 	})
 
-	if got, ok := UmbrellaCycleForChildIssue(store.issueOpsStore(), repo, "https://github.com/example/repo/issues/79"); ok {
+	if got, ok := store.reader().UmbrellaForChildIssue(repo, "https://github.com/example/repo/issues/79"); ok {
 		t.Fatalf("a depends-on link must not establish umbrella topology: %+v", got)
 	}
 }
@@ -87,14 +87,14 @@ func TestUmbrellaCycleForChildIssueSkipsDoneParents(t *testing.T) {
 		},
 	})
 
-	if got, ok := UmbrellaCycleForChildIssue(store.issueOpsStore(), repo, "https://github.com/example/repo/issues/79"); ok {
+	if got, ok := store.reader().UmbrellaForChildIssue(repo, "https://github.com/example/repo/issues/79"); ok {
 		t.Fatalf("a done umbrella must not strand its children: %+v", got)
 	}
 }
 
 func TestUmbrellaCycleForChildIssueRejectsBlankChildURL(t *testing.T) {
 	store := newActiveTestStore(t)
-	if got, ok := UmbrellaCycleForChildIssue(store.issueOpsStore(), t.TempDir(), "  "); ok {
+	if got, ok := store.reader().UmbrellaForChildIssue(t.TempDir(), "  "); ok {
 		t.Fatalf("a blank child url must not resolve an umbrella: %+v", got)
 	}
 }

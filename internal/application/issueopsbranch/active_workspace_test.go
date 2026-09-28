@@ -1,4 +1,4 @@
-package active
+package issueopsbranch_test
 
 import (
 	"path/filepath"
@@ -21,7 +21,7 @@ func TestCycleForWorkspacePrefersWorktreeOverSourceRepo(t *testing.T) {
 		Phase: model.IssueOpsPhaseImplement, WorktreePath: worktree,
 	})
 
-	got, ok := CycleForWorkspace(store.issueOpsStore(), worktree)
+	got, ok := store.reader().ForWorkspace(worktree)
 	if !ok {
 		t.Fatal("CycleForWorkspace(worktree) ok = false, want true")
 	}
@@ -38,7 +38,7 @@ func TestCycleForWorkspaceFallsBackToSourceRepo(t *testing.T) {
 		Phase: model.IssueOpsPhasePlan,
 	})
 
-	got, ok := CycleForWorkspace(store.issueOpsStore(), repo)
+	got, ok := store.reader().ForWorkspace(repo)
 	if !ok || got.ID != "io-source" {
 		t.Fatalf("CycleForWorkspace(repo) = %+v, %v; want io-source, true", got, ok)
 	}
@@ -55,14 +55,14 @@ func TestCycleForWorkspaceExcludesDoneCycles(t *testing.T) {
 		Phase: model.IssueOpsPhaseDone, WorktreePath: worktree,
 	})
 
-	if _, ok := CycleForWorkspace(store.issueOpsStore(), worktree); ok {
+	if _, ok := store.reader().ForWorkspace(worktree); ok {
 		t.Fatal("CycleForWorkspace should skip done cycles")
 	}
 }
 
 func TestCycleForWorkspaceRejectsEmptyPath(t *testing.T) {
 	store := newActiveTestStore(t)
-	if _, ok := CycleForWorkspace(store.issueOpsStore(), "   "); ok {
+	if _, ok := store.reader().ForWorkspace("   "); ok {
 		t.Fatal("CycleForWorkspace(blank) ok = true, want false")
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"issueops/internal/adapter/issueops/active"
 	"issueops/internal/adapter/issueops/compatibilityreview"
 	"issueops/internal/adapter/issueops/devilsadvocate"
 	"issueops/internal/adapter/issueops/intentdesign"
@@ -24,19 +23,6 @@ const (
 )
 
 var IssueOpsPhases = issueops.IssueOpsPhases
-
-func issueOpsActiveStore() active.Store {
-	return active.Store{
-		StateRoot: IssueOpsStateRoot,
-		// Hooks must still see a corrupt v1 record so they fail closed instead of
-		// silently dropping the execution guard. Command paths use ReadIssueOps,
-		// which validates the record before operating on it.
-		Read:    readIssueOpsUnchecked,
-		Scan:    ScanReadableIssueOps,
-		NewID:   newIssueOpsID,
-		ListIDs: ListIssueOpsIDs,
-	}
-}
 
 // OriginBranchPresent는 origin에 branch가 있는지 본다. 네트워크 호출이라
 // span 밖에서만 부른다. 사용자의 SSH·자격 증명 설정(core.sshCommand 등)을 그대로

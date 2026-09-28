@@ -1146,6 +1146,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_active_cycle_wiring.go",
+      "owner": "composition",
+      "task": "T08",
+      "symbols": [
+        "func newActiveCycleReader"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_artifact_verification_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -6694,25 +6702,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/active/issueops_active.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func NonDoneCyclesForRepo",
-        "func UmbrellaCycleForChildIssue",
-        "func scanActiveRecords",
-        "type Store"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/active/issueops_active_workspace.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func CycleForWorkspace"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/adapter_dependencies.go",
       "owner": "adapter",
       "task": "T20",
@@ -6897,7 +6886,6 @@
         "func BranchPreparationEnvironment.CleanParentPath",
         "func BranchPreparationEnvironment.ObserveCodeProjectKey",
         "func BranchPreparationEnvironment.ResolveBaseCommit",
-        "func BranchPreparationEnvironment.UmbrellaForChildIssue",
         "type BranchPreparationEnvironment"
       ]
     },
@@ -7984,14 +7972,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_workspace_cycle.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func PreparedBaseBranchForWorkspace"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/link_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -8084,7 +8064,6 @@
         "func RecordIssueOpsPlanPrepWithActor",
         "func StartIssueOps",
         "func cleanIssueOpsTextValues",
-        "func issueOpsActiveStore",
         "func issueOpsCompatibilityReviewStore",
         "func issueOpsIntentDesignStore",
         "func normalizeIssueOpsRepo",
@@ -10877,6 +10856,18 @@
         "func Service.recordBaseline",
         "func Service.verifyChild",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbranch/active_cycle.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func ActiveCycleReader.ForWorkspace",
+        "func ActiveCycleReader.PreparedBaseBranchForWorkspace",
+        "func ActiveCycleReader.UmbrellaForChildIssue",
+        "func ActiveCycleReader.observe",
+        "type ActiveCycleReader"
       ]
     },
     {
@@ -14363,6 +14354,17 @@
       "task": "T11",
       "symbols": [
         "func NormalizeSkillNames"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/active_cycle.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func PreparedCycleBase",
+        "func SelectUmbrellaCycle",
+        "func SelectWorkspaceCycle",
+        "type CyclePathMatch"
       ]
     },
     {
@@ -23184,6 +23186,82 @@
       "evidence_tests": [
         "internal/application/issueopsdelegation/gates_test.go",
         "internal/adapter/issueops/issueops_delegation_status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "active-umbrella-selection",
+      "source_path": "internal/adapter/issueops/active/issueops_active.go",
+      "source_symbol": "func UmbrellaCycleForChildIssue",
+      "responsibility": "select the first non-done same-repository cycle linking the requested child issue",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func SelectUmbrellaCycle",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch prepare"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/active_cycle_test.go",
+        "internal/domain/issueops/active_cycle_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go",
+        "cmd/issueops/issueopsapp/policy_pull_request_target_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "active-workspace-selection",
+      "source_path": "internal/adapter/issueops/active/issueops_active_workspace.go",
+      "source_symbol": "func CycleForWorkspace",
+      "responsibility": "prefer linked worktree identity over the first source-repository match while excluding done cycles",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func SelectWorkspaceCycle",
+      "task": "T08",
+      "entrypoints": [
+        "issueops policy check"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/active_cycle_test.go",
+        "internal/domain/issueops/active_cycle_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go",
+        "cmd/issueops/issueopsapp/policy_pull_request_target_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "active-workspace-base",
+      "source_path": "internal/adapter/issueops/issueops_workspace_cycle.go",
+      "source_symbol": "func PreparedBaseBranchForWorkspace",
+      "responsibility": "return only the trimmed nonempty prepared base of the selected current cycle",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PreparedCycleBase",
+      "task": "T08",
+      "entrypoints": [
+        "issueops policy check"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/active_cycle_test.go",
+        "internal/domain/issueops/active_cycle_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go",
+        "cmd/issueops/issueopsapp/policy_pull_request_target_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "active-cycle-observation",
+      "source_path": "internal/adapter/issueops/active/issueops_active.go",
+      "source_symbol": "func NonDoneCyclesForRepo",
+      "responsibility": "read a single bulk snapshot from the injected state root and supply normalized path observations to selection rules",
+      "target": "internal/application/issueopsbranch",
+      "target_symbol": "func ActiveCycleReader.observe",
+      "task": "T08",
+      "entrypoints": [
+        "issueops branch prepare"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/active_cycle_test.go",
+        "internal/domain/issueops/active_cycle_test.go",
+        "cmd/issueops/issueopsapp/issueops_branch_prepare_wiring_test.go",
+        "cmd/issueops/issueopsapp/policy_pull_request_target_wiring_test.go"
       ],
       "status": "migrated"
     }

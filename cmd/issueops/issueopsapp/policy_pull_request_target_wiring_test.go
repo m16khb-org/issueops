@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	policycli "issueops/cmd/issueops/policycli"
+	core "issueops/internal/adapter/issueops"
+	model "issueops/internal/contract/issueops"
 	policycontract "issueops/internal/contract/policy"
 )
 
@@ -39,5 +41,33 @@ func TestPolicyPullRequestTargetLookupIsWired(t *testing.T) {
 	})
 	if lookupPath != root || !containsString(result.DenyReasons, "pr_target_branch_mismatch") {
 		t.Fatalf("lookup path = %q, deny reasons = %v", lookupPath, result.DenyReasons)
+	}
+}
+
+func TestPolicyLookupReadsCurrentStateRootOnEachEvaluation(t *testing.T) {
+	original := policycli.EvaluateCommandPolicy
+	t.Cleanup(func() { policycli.EvaluateCommandPolicy = original })
+	repo := makeGitRepoForContract(t)
+	configurePolicyAndGitObservers()
+	for _, base := range []string{"78-first-parent", "80-second-parent"} {
+		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+		root := core.IssueOpsStateRoot()
+		record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		record.IssueURL = "https://github.com/acme/repo/issues/79"
+		record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: base, LinkVerified: true, CreatedAt: record.CreatedAt}
+		if _, err = core.WriteIssueOps(root, record); err != nil {
+			t.Fatal(err)
+		}
+		request := policycontract.CommandPolicyRequest{WorkspaceRoot: repo, CWD: repo, Argv: []string{"glab", "mr", "create", "--target-branch", "main"}, Timeout: "30s", WriteAllowed: true, NetworkAllowed: true}
+		if got := policycli.EvaluateCommandPolicy(request); !containsString(got.DenyReasons, "pr_target_branch_mismatch") {
+			t.Fatalf("current stored parent ignored: %+v", got.DenyReasons)
+		}
+		request.Argv[len(request.Argv)-1] = base
+		if got := policycli.EvaluateCommandPolicy(request); containsString(got.DenyReasons, "pr_target_branch_mismatch") {
+			t.Fatalf("current stored parent refused: %+v", got.DenyReasons)
+		}
 	}
 }
