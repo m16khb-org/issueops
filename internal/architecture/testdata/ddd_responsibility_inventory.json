@@ -8148,8 +8148,7 @@
         "func StrictPRReadiness",
         "func StrictPRReadinessWithState",
         "func WithLoopGate",
-        "func guardPRPhase",
-        "func uniqSorted"
+        "func guardPRPhase"
       ]
     },
     {
@@ -11072,6 +11071,15 @@
       "task": "T20",
       "symbols": [
         "func ApplyPhaseTransition"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/pr_gate.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyLoopGate",
+        "func GuardPRPhase"
       ]
     },
     {
@@ -16021,6 +16029,14 @@
       "task": "T20",
       "symbols": [
         "type PhaseTransitionObservations"
+      ]
+    },
+    {
+      "path": "internal/port/issueopscycle/pr_gate.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type PRPhaseGuard"
       ]
     },
     {

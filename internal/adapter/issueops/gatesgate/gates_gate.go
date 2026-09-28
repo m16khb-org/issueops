@@ -8,7 +8,6 @@
 package gatesgate
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -105,23 +104,14 @@ func GatesRootFor(record issueopscontract.IssueOpsRecord) string {
 // span 안에서 판정하므로, 여기서는 이 package가 합성하는 loop·게이트 ledger·
 // 중복 원장 게이트만 본다. core 판정을 여기서 다시 하면 fetch가 두 번 일어난다.
 func guardPRPhase(stateRoot, id, to string) error {
-	if issueopscontract.IssueOpsPhase(strings.TrimSpace(to)) != issueopscontract.IssueOpsPhasePR {
-		return nil
-	}
-	record, err := issueops.ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return err
-	}
-	if record.Phase == issueopscontract.IssueOpsPhasePR {
-		return nil
-	}
-	ready := loopgate.WithLoopGate(issueopscontract.IssueOpsReadiness{Ready: true}, record.Repo)
-	ready = withGatesGate(ready, GatesRootFor(record), linkedIssueNumber(record))
-	ready = withDuplicateIssueArtifactGate(ready, GatesRootFor(record), linkedIssueNumber(record))
-	if !ready.Ready {
-		return fmt.Errorf("cannot enter pr phase: missing %s", strings.Join(ready.Missing, ", "))
-	}
-	return nil
+	return cycleapp.GuardPRPhase(stateRoot, id, to, cycleport.PRPhaseGuard{
+		Read: issueops.ReadIssueOps,
+		Gate: func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
+			ready := loopgate.WithLoopGate(issueopscontract.IssueOpsReadiness{Ready: true}, record.Repo)
+			ready = withGatesGate(ready, GatesRootFor(record), linkedIssueNumber(record))
+			return withDuplicateIssueArtifactGate(ready, GatesRootFor(record), linkedIssueNumber(record))
+		},
+	})
 }
 
 func withGatesGate(ready issueopscontract.IssueOpsReadiness, root, issueNumber string) issueopscontract.IssueOpsReadiness {
