@@ -1359,7 +1359,6 @@
         "func coreReconcileEffects.ApplyReceipt",
         "func coreReconcileEffects.Canonicalize",
         "func coreReconcileEffects.ClearIntent",
-        "func coreReconcileEffects.RecordFailure",
         "func coreReconcileEffects.inspectStage",
         "func coreReconcileEffects.invokeStage",
         "func coreReconcileEffects.reconcileRequest",
@@ -7319,7 +7318,6 @@
         "func CanonicalizeExecutionReconcileIntent",
         "func ClearExecutionReconcileIntent",
         "func ExecutionReconcileIntentRequest",
-        "func RecordExecutionReconcileIntentFailure",
         "func executionReconcileIntentPayload",
         "func executionReconcileIntentState",
         "func executionReconcileIntentStateFromPayload",
@@ -9063,6 +9061,16 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/issueopslease/orca_failure.go",
+      "owner": "adapter",
+      "task": "T05",
+      "symbols": [
+        "func boundedOrcaFailureDiagnostic",
+        "func recordOrcaIntentFailure",
+        "type orcaFailureState"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/issueopslease/orca_invoking.go",
       "owner": "adapter",
       "task": "T05",
@@ -9101,6 +9109,7 @@
       "task": "T05",
       "symbols": [
         "func NewReconcileRepository",
+        "func NewReconcileRepositoryWithDiagnosticRedactor",
         "func ReconcileRepository.ApplyReceipt",
         "func ReconcileRepository.Canonicalize",
         "func ReconcileRepository.ClearIntent",
@@ -9219,7 +9228,6 @@
         "func ResumeRepository.LoadSnapshot",
         "func ResumeRepository.MarkInvoking",
         "func ResumeRepository.RecordFailure",
-        "func ResumeRepository.boundedDiagnostic",
         "func resumeEffectState",
         "func resumeProgress",
         "type ResumeEffectState",

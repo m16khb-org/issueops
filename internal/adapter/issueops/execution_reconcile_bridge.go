@@ -55,14 +55,6 @@ func ExecutionReconcileIntentRequest(expected ExecutionReconcileIntentState) (po
 	return executionOrcaIntentRequest(expected.Record, payload)
 }
 
-func RecordExecutionReconcileIntentFailure(stateRoot string, expected ExecutionReconcileIntentState, invocationState string, cause error, now func() time.Time) error {
-	payload, err := executionReconcileIntentPayload(expected)
-	if err != nil {
-		return err
-	}
-	return recordOrcaIntentFailureFromRawState(stateRoot, expected.Record, payload, expected.RecordRaw, expected.IntentRaw, invocationState, cause, now)
-}
-
 func ApplyExecutionReconcileIntentReceipt(ctx context.Context, stateRoot string, expected ExecutionReconcileIntentState, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, now func() time.Time) (ExecutionReconcileIntentState, error) {
 	payload, err := executionReconcileIntentPayload(expected)
 	if err != nil {

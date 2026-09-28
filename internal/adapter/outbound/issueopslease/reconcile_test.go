@@ -5,9 +5,11 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	"issueops/internal/port"
 )
 
 type reconcileEffectsFake struct {
@@ -18,9 +20,6 @@ type reconcileEffectsFake struct {
 
 func (f *reconcileEffectsFake) Canonicalize(context.Context, string) (ReconcileEffectState, error) {
 	return f.state, nil
-}
-func (f *reconcileEffectsFake) RecordFailure(context.Context, ReconcileEffectState, string, error) error {
-	return nil
 }
 func (f *reconcileEffectsFake) ApplyReceipt(context.Context, ReconcileEffectState, leasecontract.ReconcileStageReceipt) (ReconcileEffectState, error) {
 	return f.state, nil
@@ -70,6 +69,36 @@ func TestReconcileRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
 	}
 	if _, err := repository.MarkInvoking(context.Background(), intent); err == nil {
 		t.Fatal("stale raw intent was accepted")
+	}
+}
+
+func TestReconcileRepositoryRecordFailureUsesRawCAS(t *testing.T) {
+	_, state, store := seededResumeIntent(t)
+	repository := NewReconcileRepository(store, nil)
+	repository.now = func() time.Time { return time.Date(2026, time.July, 31, 3, 5, 0, 0, time.UTC) }
+	repository.redact = func(string) string { return "redacted failure" }
+	intent := leaseapp.ReconcileIntentState{
+		Progress:    leaseapp.ReconcileProgress{Record: state.Progress.Record.Stable, Pending: true, NextStage: state.Stage},
+		OperationID: state.OperationID, Stage: state.Stage, InvocationState: state.InvocationState,
+		InvocationAttempts: state.InvocationAttempts, RecordRaw: state.RecordRaw, IntentRaw: state.IntentRaw,
+	}
+	cause := &port.OrcaError{CallPhase: "terminal_send", DispatchRequestID: "11111111-1111-4111-8111-111111111111"}
+	if err := repository.RecordFailure(context.Background(), intent, "unknown", cause); err != nil {
+		t.Fatal(err)
+	}
+	data, ok, err := store.Get(recordBucket, intent.Progress.Record.ID)
+	if err != nil || !ok {
+		t.Fatalf("record: present=%v err=%v", ok, err)
+	}
+	record, err := decodeLeaseRecord(intent.Progress.Record.ID, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := record.Execution.Failure; got == nil || got.Message != "redacted failure" || got.At != "2026-07-31T03:05:00Z" {
+		t.Fatalf("failure=%+v", got)
+	}
+	if err := repository.RecordFailure(context.Background(), intent, "unknown", cause); err == nil {
+		t.Fatal("stale raw snapshot was accepted")
 	}
 }
 

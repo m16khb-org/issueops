@@ -3,6 +3,7 @@ package issueopslease
 import (
 	"context"
 	"fmt"
+	"time"
 
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
@@ -11,7 +12,6 @@ import (
 
 type ReconcileEffects interface {
 	Canonicalize(context.Context, string) (ReconcileEffectState, error)
-	RecordFailure(context.Context, ReconcileEffectState, string, error) error
 	ApplyReceipt(context.Context, ReconcileEffectState, leasecontract.ReconcileStageReceipt) (ReconcileEffectState, error)
 	// ClearIntent는 외부 자원이 없음이 authoritative하게 확인된 intent를
 	// 제거한다. 재시도가 아니라 기록 정리다(#280).
@@ -32,10 +32,16 @@ type ReconcileEffectState struct {
 type ReconcileRepository struct {
 	store   port.TransactionalRecordStore
 	effects ReconcileEffects
+	now     func() time.Time
+	redact  func(string) string
 }
 
 func NewReconcileRepository(store port.TransactionalRecordStore, effects ReconcileEffects) *ReconcileRepository {
-	return &ReconcileRepository{store: store, effects: effects}
+	return NewReconcileRepositoryWithDiagnosticRedactor(store, effects, nil, time.Now)
+}
+
+func NewReconcileRepositoryWithDiagnosticRedactor(store port.TransactionalRecordStore, effects ReconcileEffects, redact func(string) string, now func() time.Time) *ReconcileRepository {
+	return &ReconcileRepository{store: store, effects: effects, redact: redact, now: now}
 }
 
 func (r *ReconcileRepository) Canonicalize(ctx context.Context, id string) (leaseapp.ReconcileIntentState, error) {
@@ -61,10 +67,17 @@ func (r *ReconcileRepository) MarkInvoking(ctx context.Context, intent leaseapp.
 }
 
 func (r *ReconcileRepository) RecordFailure(ctx context.Context, intent leaseapp.ReconcileIntentState, invocation string, cause error) error {
-	if r == nil || r.effects == nil {
-		return fmt.Errorf("reconcile persistence bridge is required")
+	if r == nil || r.store == nil {
+		return fmt.Errorf("reconcile record store is required")
 	}
-	return r.effects.RecordFailure(ctx, reconcileEffectState(intent), invocation, cause)
+	store, ok := r.store.(port.RecordRawCASStore)
+	if !ok {
+		return fmt.Errorf("reconcile record store does not support raw CAS")
+	}
+	return recordOrcaIntentFailure(ctx, store, orcaFailureState{
+		Record: intent.Progress.Record, RecordRaw: intent.RecordRaw,
+		IntentRaw: intent.IntentRaw, OperationID: intent.OperationID,
+	}, invocation, cause, r.now, r.redact)
 }
 
 func (r *ReconcileRepository) ApplyReceipt(ctx context.Context, intent leaseapp.ReconcileIntentState, receipt leasecontract.ReconcileStageReceipt) (leaseapp.ReconcileProgress, error) {

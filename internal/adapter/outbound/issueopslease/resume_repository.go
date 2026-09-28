@@ -2,14 +2,10 @@ package issueopslease
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 	"time"
 
-	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	leaseapp "issueops/internal/application/issueopslease"
-	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -145,67 +141,10 @@ func (r *ResumeRepository) RecordFailure(ctx context.Context, intent leaseapp.Re
 	if !ok {
 		return leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume record store does not support raw CAS"))
 	}
-	if len(intent.RecordRaw) == 0 || len(intent.IntentRaw) == 0 {
-		return fmt.Errorf("Orca intent raw CAS evidence is required")
-	}
-	codec := preparationcontract.IntentCodec{}
-	current, err := codec.Decode(intent.OperationID, intent.IntentRaw)
-	if err != nil {
-		return err
-	}
-	state := preparationapp.IntentState{Snapshot: preparationcontract.Snapshot{Record: intent.Progress.Record.Stable, RecordRaw: intent.RecordRaw}, Intent: current, IntentRaw: intent.IntentRaw, FailureAt: r.now().UTC().Format(time.RFC3339Nano)}
-	if err := preparationapp.ValidateIntentState(state); err != nil {
-		return err
-	}
-	record, updated, err := preparationapp.ApplyOrcaFailure(state, invocation, func() string { return r.boundedDiagnostic(cause) })
-	if err != nil {
-		return err
-	}
-	if typed, ok := errors.AsType[*port.OrcaError](cause); ok {
-		updated.OrcaRequestID, updated.OrcaPromptRequestID = preparationdomain.AdoptFailureRequestIDs(preparationdomain.FailureRequestIDFacts{
-			SealedDispatch: updated.OrcaRequestID, SealedPrompt: updated.OrcaPromptRequestID,
-			CallPhase: typed.CallPhase, ObservedDispatch: typed.DispatchRequestID,
-			ObservedOrchestration: typed.OrchestrationRequestID,
-			DispatchValid:         port.ValidateOrcaRequestID(typed.DispatchRequestID) == nil,
-			OrchestrationValid:    port.ValidateOrcaRequestID(typed.OrchestrationRequestID) == nil,
-		})
-	}
-	recordData, err := recordcodec.EncodeLease(record)
-	if err != nil {
-		return err
-	}
-	intentData, err := codec.Encode(updated)
-	if err != nil {
-		return err
-	}
-	err = store.CompareAndApply(ctx, []port.ExpectedRecord{
-		{Bucket: recordBucket, ID: record.ID, Data: intent.RecordRaw},
-		{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intent.IntentRaw},
-	}, []port.RecordMutation{
-		{Bucket: recordBucket, ID: record.ID, Data: recordData},
-		{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intentData},
-	})
-	if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
-		if stale.FailedBucket() == recordBucket {
-			return fmt.Errorf("stale raw record snapshot")
-		}
-		return fmt.Errorf("stale raw intent snapshot")
-	}
-	return err
-}
-
-func (r *ResumeRepository) boundedDiagnostic(cause error) string {
-	message := "external operation failed"
-	if r.redact != nil && cause != nil {
-		message = strings.TrimSpace(r.redact(cause.Error()))
-		if message == "" {
-			message = "external operation failed"
-		}
-	}
-	if len(message) > 4096 {
-		message = message[:4096]
-	}
-	return message
+	return recordOrcaIntentFailure(ctx, store, orcaFailureState{
+		Record: intent.Progress.Record.Stable, RecordRaw: intent.RecordRaw,
+		IntentRaw: intent.IntentRaw, OperationID: intent.OperationID,
+	}, invocation, cause, r.now, r.redact)
 }
 
 func (r *ResumeRepository) ApplyReceipt(ctx context.Context, intent leaseapp.ResumeIntentState, receipt leasecontract.ResumeStageReceipt) (leaseapp.ResumeProgress, error) {

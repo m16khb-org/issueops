@@ -17,6 +17,7 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 	statecontract "issueops/internal/contract/state"
 	leasedomain "issueops/internal/domain/issueopslease"
+	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
 
@@ -35,7 +36,7 @@ func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrc
 	}
 	effects := &coreReconcileEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, now), readIssue: readIssue, snapshot: snapshot, now: now}
 	return leaseapp.NewReconcileService(
-		leaseoutbound.NewReconcileRepository(db, effects),
+		leaseoutbound.NewReconcileRepositoryWithDiagnosticRedactor(db, effects, policy.RedactDiagnostic, now),
 		leaseoutbound.NewReconcileStageExecutor(effects.inspectStage, effects.invokeStage),
 	), nil
 }
@@ -55,14 +56,6 @@ func (e *coreReconcileEffects) Canonicalize(_ context.Context, id string) (lease
 		return leaseoutbound.ReconcileEffectState{}, convertErr
 	}
 	return converted, err
-}
-
-func (e *coreReconcileEffects) RecordFailure(_ context.Context, state leaseoutbound.ReconcileEffectState, invocation string, cause error) error {
-	coreState, err := reconcileCoreIntentState(state)
-	if err != nil {
-		return err
-	}
-	return issueops.RecordExecutionReconcileIntentFailure(e.stateRoot, coreState, invocation, cause, e.now)
 }
 
 func (e *coreReconcileEffects) ApplyReceipt(ctx context.Context, state leaseoutbound.ReconcileEffectState, receipt leasecontract.ReconcileStageReceipt) (leaseoutbound.ReconcileEffectState, error) {
