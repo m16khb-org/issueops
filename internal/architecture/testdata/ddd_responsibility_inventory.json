@@ -11349,6 +11349,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopspreparation/direct_commit.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyDirectCommit",
+        "func ValidateDirectCommit"
+      ]
+    },
+    {
       "path": "internal/application/issueopspreparation/ports.go",
       "owner": "application",
       "task": "T20",
@@ -17932,8 +17941,15 @@
       "target": "internal/domain/issueops",
       "target_symbol": "func ChildPRGateKey",
       "task": "T04",
-      "entrypoints": ["issueops advance --to pr", "issueops remote create-pr", "issueops child status"],
-      "evidence_tests": ["internal/domain/issueops/child_gate_test.go", "internal/adapter/issueops/issueops_delegation_gate_test.go"],
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops remote create-pr",
+        "issueops child status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/child_gate_test.go",
+        "internal/adapter/issueops/issueops_delegation_gate_test.go"
+      ],
       "status": "migrated"
     },
     {
@@ -17944,8 +17960,14 @@
       "target": "internal/domain/issueops",
       "target_symbol": "func ChildTerminal",
       "task": "T04",
-      "entrypoints": ["issueops advance --to pr", "issueops child status"],
-      "evidence_tests": ["internal/domain/issueops/child_gate_test.go", "internal/adapter/issueops/issueops_delegation_gate_test.go"],
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops child status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/child_gate_test.go",
+        "internal/adapter/issueops/issueops_delegation_gate_test.go"
+      ],
       "status": "migrated"
     },
     {
@@ -17956,9 +17978,27 @@
       "target": "internal/domain/issueops",
       "target_symbol": "func ChildDropped",
       "task": "T04",
-      "entrypoints": ["issueops advance --to pr", "issueops child status"],
-      "evidence_tests": ["internal/domain/issueops/child_gate_test.go", "internal/adapter/issueops/issueops_delegation_gate_test.go"],
+      "entrypoints": [
+        "issueops advance --to pr",
+        "issueops child status"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/child_gate_test.go",
+        "internal/adapter/issueops/issueops_delegation_gate_test.go"
+      ],
       "status": "migrated"
+    },
+    {
+      "id": "direct-preparation-assembly",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func (*SQLiteRepository).CommitDirect",
+      "responsibility": "run an atomic record and holder-index write; application constructs the direct execution and result from the current record",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func ApplyDirectCommit",
+      "task": "T05",
+      "entrypoints": ["issueops execution prepare --mode direct"],
+      "evidence_tests": ["internal/application/issueopspreparation/direct_commit_test.go", "internal/adapter/outbound/issueopspreparation/repository_test.go"],
+      "status": "retain"
     }
   ]
 }

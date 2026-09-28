@@ -44,6 +44,7 @@ type DirectCommit struct {
 	Snapshot      preparationcontract.Snapshot
 	Command       preparationcontract.Command
 	Workspace     preparationcontract.WorkspaceReceipt
+	ArtifactDir   string
 	RequestedMode string
 	FallbackCode  string
 	LinkedAt      string

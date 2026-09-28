@@ -70,7 +70,7 @@ func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit pre
 	if repository.store == nil {
 		return preparationcontract.Result{ID: commit.Command.ID}, fmt.Errorf("preparation record store is unavailable")
 	}
-	if err := preparationdomain.ValidateSelectionReceipt(commit.Selection, commit.Command, commit.Probe, preparationcontract.ModeDirect); err != nil {
+	if err := preparationapp.ValidateDirectCommit(commit); err != nil {
 		return preparationcontract.Result{ID: commit.Command.ID}, err
 	}
 	var result preparationcontract.Result
@@ -79,29 +79,15 @@ func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit pre
 		if err != nil {
 			return err
 		}
-		if current.Record.Execution != nil {
-			return fmt.Errorf("IssueOps execution is already prepared")
+		commit.ArtifactDir = remote.IssueArtifactDir(current.Record.IssueURL)
+		record, projected, err := preparationapp.ApplyDirectCommit(current.Record, commit)
+		if err != nil {
+			return err
 		}
 		if err := ensureRootUnclaimed(repository.store, current.Record.ID, commit.Workspace.Root); err != nil {
 			return err
 		}
-		record := current.Record
-		record.WorktreePath = commit.Workspace.Root
-		actor := commit.Command.Clone().Actor
-		selection := commit.Selection
-		record.Execution = &leasecontract.Execution{
-			Mode:      preparationcontract.ModeDirect,
-			Selection: &selection,
-			Workspace: leasecontract.Workspace{
-				SourceRoot: commit.Workspace.SourceRoot, Root: commit.Workspace.Root,
-				Branch: commit.Workspace.Branch, BaseHead: commit.Workspace.BaseHead,
-				ParentWorktree: commit.Workspace.ParentWorktree, Driver: "git", LinkedAt: commit.LinkedAt,
-				ArtifactDir: remote.IssueArtifactDir(record.IssueURL),
-			},
-			Lease: leasecontract.Lease{
-				Generation: 1, Status: "active", Holder: &actor, ClaimedAt: commit.ClaimedAt,
-			},
-		}
+		actor := *record.Execution.Lease.Holder
 		data, err := recordcodec.EncodeLease(record)
 		if err != nil {
 			return err
@@ -119,14 +105,7 @@ func (repository *SQLiteRepository) CommitDirect(ctx context.Context, commit pre
 		}); err != nil {
 			return err
 		}
-		result = preparationcontract.Result{
-			OK: true, ID: record.ID, RequestedMode: commit.RequestedMode,
-			ResolvedMode: preparationcontract.ModeDirect, FallbackCode: commit.FallbackCode,
-			Workspace: record.Execution.Workspace, Execution: record.Execution,
-			ProbeAttempted: commit.Selection.ProbeAttempted, ProbeAvailable: commit.Selection.ProbeAvailable,
-			ProbeReady: commit.Selection.ProbeReady, ProbeCode: commit.Selection.ProbeCode,
-			ReadinessFingerprint: commit.Selection.ReadinessFingerprint, ExplicitDirectReason: commit.Selection.ExplicitDirectReason,
-		}.Clone()
+		result = projected
 		return nil
 	})
 	if err != nil {
