@@ -419,6 +419,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueopspublication/", "T07"},
 		{"internal/application/issueopspublication/", "T07"},
 		{"internal/domain/issueopsbodysync/", "T07"},
+		{"internal/domain/issueopsremote/artifact.go", "T07"},
 		{"internal/application/issueopsbodysync/", "T07"},
 		{"internal/application/issueopscompletion/", "T07"},
 		{"internal/domain/state/prune.go", "T14"},

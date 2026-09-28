@@ -6606,7 +6606,6 @@
         "func Projection",
         "func Validate",
         "func Verify",
-        "func verificationFromRequest",
         "type Store"
       ]
     },
@@ -14795,6 +14794,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsremote/artifact.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ProjectArtifact",
+        "type Artifact",
+        "type ArtifactAuthority"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsremote/issueops_remote.go",
       "owner": "domain",
       "task": "T20",
@@ -19095,6 +19104,27 @@
         "internal/domain/issueopspreparation/resume_receipt_test.go",
         "internal/adapter/outbound/issueopslease/resume_repository_test.go",
         "cmd/issueops/issueopsapp/issueops_resume_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-artifact-verification-projection",
+      "source_path": "internal/adapter/issueops/artifactverify/issueops_remote_artifact.go",
+      "source_symbol": "func verificationFromRequest",
+      "responsibility": "bind artifact verification to PR phase, provider and code project authority with canonical labels and real assignees",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func ProjectArtifact",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote verify-artifact",
+        "CreateRemotePullRequest",
+        "ReconcileRemotePullRequest"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsremote/artifact_test.go",
+        "internal/adapter/issueops/artifactverify/cross_project_test.go",
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "cmd/issueops/issueopscli/issueops_remote_verify_cli_test.go"
       ],
       "status": "migrated"
     }

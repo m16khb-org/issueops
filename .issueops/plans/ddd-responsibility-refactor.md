@@ -214,6 +214,7 @@
 - **EXPECT / QA:** 정상: create readback 직후에는 RemoteArtifact/receipt가 생기고 기존 lease는 active, completion은 없음. 별도 complete 호출에 필요한 증거가 충족된 경우에만 completion+release가 원자 기록. 실패: provider 생성 후 응답 유실은 reconcile 요구, 두 번째 create 0회; 다른 candidate/actor/body SHA/HEAD는 거부. managed section 밖 본문 byte 보존.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T07-success.txt`, `T07-failure.txt`, `T07-ownership.json`.
 - **부분 진행:** 발행 Effects/EffectState와 `execution_remote_bridge.go`를 제거하고 실제 저장·검증 어댑터를 composition root에 직접 연결했다. 실제 SQLite 테스트로 원본 snapshot 보존, 영수증 저장 뒤 active lease 유지, stale generation/payload 거부 시 무변경을 확인했다. 전체 Go suite, 선택한 발행 경로 race, 관련 package vet 통과. 발행 준비 정책과 트랜잭션 조율의 추가 이전은 남아 있어 T07은 미완료다.
+- **부분 진행 — 아티팩트 검증:** provider/kind/project/label/assignee와 PR phase 판정을 `issueopsremote.ProjectArtifact`로 이전했다. 어댑터의 `Projection`은 도메인 입력·출력 변환과 timestamp를 처리하며 기존 private 판정 함수는 삭제했다. domain/기존 adapter/실제 SQLite 경로와 CLI 회귀 테스트, 선택한 race, 관련 vet, build 및 전체 Go suite 통과. assignee 규칙을 무력화한 임시 Go overlay에서 저장 경로 테스트가 기대한 오류로 실패하여 실제 domain 연결을 확인했다.
 
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 

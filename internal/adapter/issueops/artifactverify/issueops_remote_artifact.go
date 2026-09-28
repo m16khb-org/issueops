@@ -1,8 +1,6 @@
 package artifactverify
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	model "issueops/internal/contract/issueops"
@@ -19,7 +17,7 @@ func Verify(store Store, stateRoot, id string, req model.IssueOpsRemoteArtifactV
 	if err != nil {
 		return record, err
 	}
-	artifact, err := verificationFromRequest(record, req)
+	artifact, err := Projection(record, req)
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
@@ -32,7 +30,7 @@ func Validate(store Store, stateRoot, id string, req model.IssueOpsRemoteArtifac
 	if err != nil {
 		return record, err
 	}
-	_, err = verificationFromRequest(record, req)
+	_, err = Projection(record, req)
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
@@ -40,66 +38,20 @@ func Validate(store Store, stateRoot, id string, req model.IssueOpsRemoteArtifac
 }
 
 func Projection(record model.IssueOpsRecord, req model.IssueOpsRemoteArtifactVerificationRequest) (model.IssueOpsRemoteArtifactVerification, error) {
-	return verificationFromRequest(record, req)
-}
-
-func verificationFromRequest(record model.IssueOpsRecord, req model.IssueOpsRemoteArtifactVerificationRequest) (model.IssueOpsRemoteArtifactVerification, error) {
-	if record.Phase != model.IssueOpsPhasePR {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("cannot verify remote artifact before pr phase")
-	}
-	provider := strings.ToLower(strings.TrimSpace(req.Provider))
-	if provider != "github" && provider != "gitlab" {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("remote artifact provider must be github or gitlab")
-	}
-	if issueProvider := remote.ProviderFromURL(record.IssueURL); issueProvider != "" && provider != issueProvider {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("remote artifact provider must match linked issue provider")
-	}
-	kind := strings.ToLower(strings.TrimSpace(req.Kind))
-	switch kind {
-	case "pull_request":
-		kind = "pr"
-	case "merge_request":
-		kind = "mr"
-	}
-	if kind != "pr" && kind != "mr" {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("remote artifact kind must be pr or mr")
-	}
-	if provider == "github" && kind != "pr" {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("github remote artifact kind must be pr")
-	}
-	if provider == "gitlab" && kind != "mr" {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("gitlab remote artifact kind must be mr")
-	}
-	artifactURL := strings.TrimSpace(req.URL)
-	if err := remote.ValidateArtifactURL(artifactURL, provider, kind); err != nil {
-		return model.IssueOpsRemoteArtifactVerification{}, err
-	}
-	codeProjectKey := ""
+	authority := remote.ArtifactAuthority{Phase: string(record.Phase), IssueURL: record.IssueURL}
 	if record.BranchPrepare != nil {
-		codeProjectKey = record.BranchPrepare.CodeProjectKey
+		authority.CodeProjectKey = record.BranchPrepare.CodeProjectKey
 	}
-	expectedProject := remote.EffectiveProjectKey(codeProjectKey, record.IssueURL, provider)
-	if err := remote.ValidateArtifactMatchesProject(expectedProject, artifactURL, provider, kind); err != nil {
+	artifact, err := remote.ProjectArtifact(authority, remote.Artifact{
+		Provider: req.Provider, Kind: req.Kind, URL: req.URL,
+		Labels: req.Labels, Assignees: req.Assignees, TargetBranch: req.TargetBranch,
+	})
+	if err != nil {
 		return model.IssueOpsRemoteArtifactVerification{}, err
-	}
-	labels := remote.CleanValues(req.Labels)
-	if len(labels) == 0 {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("remote artifact labels are required")
-	}
-	assignees := remote.CleanValues(req.Assignees)
-	if len(assignees) == 0 {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("remote artifact assignees are required")
-	}
-	if invalid := remote.InvalidAssignee(assignees); invalid != "" {
-		return model.IssueOpsRemoteArtifactVerification{}, fmt.Errorf("remote artifact assignee must be a verified provider user, not placeholder %q", invalid)
 	}
 	return model.IssueOpsRemoteArtifactVerification{
-		Provider:     provider,
-		Kind:         kind,
-		URL:          artifactURL,
-		Labels:       labels,
-		Assignees:    assignees,
-		TargetBranch: strings.TrimSpace(req.TargetBranch),
-		VerifiedAt:   time.Now().UTC().Format(time.RFC3339Nano),
+		Provider: artifact.Provider, Kind: artifact.Kind, URL: artifact.URL,
+		Labels: artifact.Labels, Assignees: artifact.Assignees, TargetBranch: artifact.TargetBranch,
+		VerifiedAt: time.Now().UTC().Format(time.RFC3339Nano),
 	}, nil
 }

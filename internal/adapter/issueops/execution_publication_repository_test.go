@@ -203,3 +203,45 @@ func TestPublicationRepositoryRejectsStaleReceiptWithoutWrites(t *testing.T) {
 		})
 	}
 }
+
+func TestPublicationRepositoryRejectsInvalidArtifactWithoutWrites(t *testing.T) {
+	for _, tc := range []struct{ name, url, assignee, want string }{
+		{"wrong project", "https://github.com/other/project/pull/196", "maintainer", "match linked issue project"},
+		{"placeholder assignee", "https://github.com/example/issueops/pull/196", "@me", "not placeholder"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, repository, record, payload := newPendingPublicationFixture(t)
+			payload.Request.Assignees = []string{tc.assignee}
+			raw, err := json.Marshal(payload)
+			if err != nil {
+				t.Fatal(err)
+			}
+			db, err := sqlstore.Open(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := db.Put(externalIntentBucket, payload.OperationID, raw); err != nil {
+				t.Fatal(err)
+			}
+			intent, err := repository.LoadIntent(context.Background(), record.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = repository.Complete(context.Background(), intent, tc.url, true)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("invalid artifact accepted: %v", err)
+			}
+			storedRecord, _, err := db.Get(issueOpsBucket, record.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			storedIntent, _, err := db.Get(externalIntentBucket, payload.OperationID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !bytes.Equal(intent.Record.Raw, storedRecord) || !bytes.Equal(raw, storedIntent) {
+				t.Fatal("rejected artifact modified storage")
+			}
+		})
+	}
+}
