@@ -11059,6 +11059,16 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/pr_readiness.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ImplementationReviewMissing",
+        "func LocalPRReadinessMissing",
+        "func ProjectDocsReviewMissing"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/staged_plan_binding.go",
       "owner": "application",
       "task": "T20",

@@ -7,10 +7,9 @@ import (
 	"strings"
 
 	"issueops/internal/adapter/issueops/implementation"
+	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
-	reviewcontract "issueops/internal/contract/issueopsreview"
-	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/projectdoc"
 	reviewport "issueops/internal/port/issueopsreview"
 )
@@ -116,9 +115,5 @@ func relativeChangePath(root, path string) string {
 // 달리 execution mode도, execution lease 유무도 가리지 않는다 — 어떤 경로로
 // implement 이후 phase에 왔든 운영 문서에 남길 결정을 만들 수 있기 때문이다.
 func projectDocsReviewMissing(record issueops.IssueOpsRecord, currentFingerprint string) string {
-	evidence := reviewcontract.ReviewGateEvidence{}
-	if review := record.ProjectDocsReview; review != nil {
-		evidence = reviewcontract.ReviewGateEvidence{Present: true, ReviewedFingerprint: review.ReviewedFingerprint}
-	}
-	return reviewdomain.ProjectDocsReviewMissing(evidence, currentFingerprint)
+	return cycleapp.ProjectDocsReviewMissing(record, currentFingerprint)
 }

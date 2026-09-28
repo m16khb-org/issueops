@@ -5,10 +5,9 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops/implementation"
+	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
-	reviewcontract "issueops/internal/contract/issueopsreview"
-	reviewdomain "issueops/internal/domain/issueopsreview"
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
@@ -55,11 +54,5 @@ func reviewEvidenceStore(actor *IssueOpsActor) reviewport.EvidenceReviewStore {
 // currentFingerprint가 비어 있지 않으면 리뷰가 봉인한 fingerprint와 비교해
 // stale 리뷰를 거부한다.
 func implementationReviewMissing(record issueops.IssueOpsRecord, currentFingerprint string) string {
-	evidence := reviewcontract.ReviewGateEvidence{}
-	if review := record.ImplementationReview; review != nil {
-		evidence = reviewcontract.ReviewGateEvidence{
-			Present: true, Verdict: review.Verdict, ReviewedFingerprint: review.ReviewedFingerprint,
-		}
-	}
-	return reviewdomain.ImplementationReviewMissing(record.Execution != nil, evidence, currentFingerprint)
+	return cycleapp.ImplementationReviewMissing(record, currentFingerprint)
 }
