@@ -222,3 +222,9 @@ fingerprint와 실패 기록의 봉인은 `internal/application/issueopscleanup`
 복구 판단의 근거일 뿐, 실행 중인 다른 abandon을 통과시키는 권한이 아니다.
 취소된 로컬 Git 명령은 실제 삭제를 끝냈을 수 있으므로 `applying` 실패 기록을 보존하고,
 새 preview가 남은 자원을 다시 관측하게 한다. 취소된 조회의 exit code를 부재로 해석하지 않는다.
+
+원격 폐기에서는 domain이 요청별 조회 전제 조건과 preview 효과 목록을 결정하고,
+`AbandonRemoteObserver`가 허용된 provider·Git 조회를 조율한다. 어댑터는 기존
+`LinkedBranchRemoteRef`를 재사용해 `ls-remote`가 반환한 ref가 요청한 브랜치와 정확히
+일치하는 단일 행인지 확인한다. 성공한 빈 결과만 부재이며, 다른 ref·여러 행·불완전한
+행은 `remote_branch_readable`로 거부해 fingerprint와 삭제 권한을 발급하지 않는다.

@@ -107,8 +107,11 @@ func cleanupAbandonGates(ctx context.Context, stateRoot string, record issueops.
 	if err := cleanupAbandonOrcaResourcesAbsent(ctx, record, deps, inventory.WorktreePresent && len(inventory.OrcaTerminals) > 0); err != nil {
 		observed.OrcaResidueError = err.Error()
 	}
-	remote := CleanupAbandonResult{}
-	inventory, observed.RemoteMissing = cleanupAbandonObserveRemote(ctx, record, req, deps, inventory, &remote)
+	remoteObserver := abandonapp.AbandonRemoteObserver{RemoteRef: (LinkedBranchRemoteRef{RunGit: func(_ context.Context, dir string, args ...string) (int, string) {
+		return deps.Git(dir, args...)
+	}}).Observe}
+	inventory, remote := remoteObserver.Observe(ctx, record, req, deps.Remote, inventory)
+	observed.RemoteMissing = remote.RemoteMissing
 	observed.RemoteEffects = remote.RemoteEffects
 	observed.RemoteArtifactState = remote.RemoteArtifactState
 	observed.IssueState = remote.IssueState

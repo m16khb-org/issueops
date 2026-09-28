@@ -7829,18 +7829,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_cleanup_abandon_remote.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func cleanupAbandonArtifactState",
-        "func cleanupAbandonObserveRemote",
-        "func cleanupAbandonRemoteRequested",
-        "func cleanupAbandonStateIs",
-        "func deleteRemoteBranchRef"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_feedback.go",
       "owner": "adapter",
       "task": "T03",
@@ -11003,6 +10991,15 @@
         "func ObserveAbandonArtifact",
         "func abandonFailure",
         "type AbandonExecutor"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/abandon_remote.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func AbandonRemoteObserver.Observe",
+        "type AbandonRemoteObserver"
       ]
     },
     {
@@ -14488,6 +14485,17 @@
       "symbols": [
         "func BuildCleanupAbandonPreview",
         "type CleanupAbandonObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_abandon_remote.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BuildCleanupAbandonRemotePreview",
+        "func PlanCleanupAbandonRemoteReads",
+        "type CleanupAbandonRemoteFacts",
+        "type CleanupAbandonRemoteReads"
       ]
     },
     {

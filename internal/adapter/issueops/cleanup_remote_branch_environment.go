@@ -31,7 +31,8 @@ func (s CleanupRemoteBranchEnvironment) TipReachedBase(ctx context.Context, repo
 	return code == 0
 }
 func (s CleanupRemoteBranchEnvironment) Delete(ctx context.Context, repo, branch, oid string) error {
-	code, out := deleteRemoteBranchRef(func(args ...string) (int, string) { return s.git(ctx, repo, args...) }, branch, oid)
+	ref := "refs/heads/" + branch
+	code, out := s.git(ctx, repo, "push", "origin", "--delete", ref, "--force-with-lease="+ref+":"+oid)
 	if code != 0 {
 		return fmt.Errorf("git push origin --delete refs/heads/%s failed (remote unchanged; re-run preview then apply): %s", branch, strings.TrimSpace(out))
 	}
