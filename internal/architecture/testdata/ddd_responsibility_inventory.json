@@ -7557,8 +7557,7 @@
       "owner": "adapter",
       "task": "T03",
       "symbols": [
-        "func RecordPlanPrep",
-        "func planPrepRecordItem"
+        "func RecordPlanPrep"
       ]
     },
     {
@@ -11020,6 +11019,24 @@
         "func NewService",
         "func Service.Add",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsintent/intent.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func IntentDocument",
+        "func RecordIntent"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsintent/plan_prep.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func RecordPlanPrep",
+        "func planPrepRecordItem"
       ]
     },
     {
@@ -15694,6 +15711,14 @@
         "type Inspector",
         "type Receipt",
         "type Request"
+      ]
+    },
+    {
+      "path": "internal/port/issueopsintent/store.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type Store"
       ]
     },
     {
