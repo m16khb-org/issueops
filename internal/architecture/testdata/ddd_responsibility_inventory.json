@@ -7137,10 +7137,8 @@
         "func intentPortWorkspaceRequest",
         "func normalizedOrcaIntentPurpose",
         "func pendingKindForOrcaStage",
-        "func persistOrcaIntentTransition",
         "func readExternalOrcaIntentPayload",
         "func readExternalOrcaIntentPayloadShape",
-        "func recordOrcaIntentFailureFromRawState",
         "func sameOptionalExecutionPath",
         "func validateExternalOrcaIntentPayload",
         "func validateOrcaIntentExpectedRecord",
@@ -7385,14 +7383,8 @@
         "func ExecutionResumeIntentRequest",
         "func NewExecutionResumeOperationID",
         "func ReadExecutionResumeArtifacts",
-        "func ReadExecutionResumeIntent",
-        "func RecordExecutionResumeIntentFailure",
         "func executionResumeArtifactsReceipt",
         "func executionResumeIntentPayload",
-        "func executionResumeIntentState",
-        "func readExecutionResumeIntentRaw",
-        "func readExecutionResumeRecordRaw",
-        "func readExecutionResumeRecordRawOnly",
         "type ExecutionResumeArtifactsReceipt",
         "type ExecutionResumeIntentState"
       ]
@@ -18745,6 +18737,24 @@
         "internal/adapter/issueops/execution_sync_base_test.go"
       ],
       "status": "retain"
+    },
+    {
+      "id": "resume-failure-raw-cas",
+      "source_path": "internal/adapter/issueops/execution_resume_bridge.go",
+      "source_symbol": "func RecordExecutionResumeIntentFailure",
+      "responsibility": "record ambiguous resume failure and adopted request identities with record and intent raw CAS",
+      "target": "internal/adapter/outbound/issueopslease",
+      "target_symbol": "func ResumeRepository.RecordFailure",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution resume --confirm",
+        "issueops execution reconcile --confirm"
+      ],
+      "evidence_tests": [
+        "internal/adapter/outbound/issueopslease/resume_repository_test.go",
+        "internal/adapter/issueops/execution_orca_intent_test.go"
+      ],
+      "status": "migrated"
     },
     {
       "id": "resume-mark-invoking-raw-cas",

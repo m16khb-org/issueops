@@ -10,6 +10,7 @@ import (
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
 	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	"issueops/internal/adapter/outbound/sqlstore"
+	leaseapp "issueops/internal/application/issueopslease"
 	preparationapp "issueops/internal/application/issueopspreparation"
 	"issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
@@ -125,4 +126,52 @@ func advanceOrcaIntentReceiptViaRepository(ctx context.Context, stateRoot string
 	}
 	next, err := (preparationcontract.IntentCodec{}).Decode(expected.OperationID, intentRaw)
 	return persisted, next, err
+}
+
+func loadResumeIntentViaRepository(stateRoot, id, operationID string) (ExecutionResumeIntentState, error) {
+	record, err := ReadIssueOps(stateRoot, id)
+	if err != nil {
+		return ExecutionResumeIntentState{}, err
+	}
+	store, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		return ExecutionResumeIntentState{}, err
+	}
+	repository := leaseoutbound.NewResumeRepository(store)
+	snapshot, err := repository.LoadSnapshot(context.Background(), id, record.Execution.Lease.Generation)
+	if err != nil {
+		return ExecutionResumeIntentState{}, err
+	}
+	progress := leaseapp.ResumeProgress{Record: snapshot.Record, Execution: *snapshot.Record.Stable.Execution, Pending: true}
+	intent, err := repository.LoadIntent(context.Background(), progress)
+	if err != nil {
+		return ExecutionResumeIntentState{}, err
+	}
+	if intent.OperationID != operationID {
+		return ExecutionResumeIntentState{}, fmt.Errorf("Orca external intent payload is missing")
+	}
+	return ExecutionResumeIntentState{
+		Record: record, RecordRaw: intent.RecordRaw, IntentRaw: intent.IntentRaw,
+		OperationID: intent.OperationID, Stage: port.ExecutionOrcaIntentStage(intent.Stage),
+		InvocationState: intent.InvocationState, InvocationAttempts: intent.InvocationAttempts, Pending: true,
+	}, nil
+}
+
+func recordResumeIntentFailureViaRepository(stateRoot string, expected ExecutionResumeIntentState, invocationState string, cause error, _ func() time.Time) error {
+	store, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		return err
+	}
+	record, err := leasecontract.Decode(expected.Record.ID, expected.RecordRaw)
+	if err != nil {
+		return err
+	}
+	return leaseoutbound.NewResumeRepository(store).RecordFailure(context.Background(), leaseapp.ResumeIntentState{
+		Progress: leaseapp.ResumeProgress{
+			Record: leaseapp.Record{ID: record.ID, Stable: record}, Execution: *record.Execution, Pending: expected.Pending,
+		},
+		OperationID: expected.OperationID, Stage: string(expected.Stage),
+		InvocationState: expected.InvocationState, InvocationAttempts: expected.InvocationAttempts,
+		RecordRaw: expected.RecordRaw, IntentRaw: expected.IntentRaw,
+	}, invocationState, cause)
 }

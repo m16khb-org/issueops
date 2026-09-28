@@ -1,10 +1,6 @@
 package issueops
 
 import (
-	"fmt"
-	"time"
-
-	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -50,83 +46,10 @@ func ExecutionResumeIntentRequest(expected ExecutionResumeIntentState) (port.Exe
 	return executionOrcaIntentRequest(expected.Record, payload)
 }
 
-func ReadExecutionResumeIntent(stateRoot, id, operationID string) (ExecutionResumeIntentState, error) {
-	record, raw, err := readExecutionResumeRecordRaw(stateRoot, id)
-	if err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	payload, intentRaw, err := readExecutionResumeIntentRaw(stateRoot, operationID)
-	if err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	return executionResumeIntentState(record, raw, payload, intentRaw), nil
-}
-
-func RecordExecutionResumeIntentFailure(stateRoot string, expected ExecutionResumeIntentState, invocationState string, cause error, now func() time.Time) error {
-	payload, err := executionResumeIntentPayload(expected)
-	if err != nil {
-		return err
-	}
-	return recordOrcaIntentFailureFromRawState(stateRoot, expected.Record, payload, expected.RecordRaw, expected.IntentRaw, invocationState, cause, now)
-}
-
 func executionResumeArtifactsReceipt(artifacts executionResumeArtifacts) ExecutionResumeArtifactsReceipt {
 	return ExecutionResumeArtifactsReceipt{ClaimTokenPath: artifacts.claimTokenPath, IssueBodySHA256: artifacts.issueBodySHA256, ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256, OwnerPromptPath: artifacts.promptPath, OwnerPromptSHA256: artifacts.promptSHA256}
 }
 
-func executionResumeIntentState(record issueops.IssueOpsRecord, recordRaw []byte, payload externalOrcaIntentPayload, intentRaw []byte) ExecutionResumeIntentState {
-	return ExecutionResumeIntentState{Record: record, RecordRaw: append([]byte(nil), recordRaw...), IntentRaw: append([]byte(nil), intentRaw...), OperationID: payload.OperationID, Stage: intentPortStage(payload.Stage), InvocationState: payload.InvocationState, InvocationAttempts: payload.InvocationAttempts, Pending: record.Execution != nil && record.Execution.Pending != nil}
-}
-
 func executionResumeIntentPayload(expected ExecutionResumeIntentState) (externalOrcaIntentPayload, error) {
 	return preparationIntentCodec.Decode(expected.OperationID, expected.IntentRaw)
-}
-
-func readExecutionResumeRecordRaw(stateRoot, id string) (issueops.IssueOpsRecord, []byte, error) {
-	raw, err := readExecutionResumeRecordRawOnly(stateRoot, id)
-	if err != nil {
-		return issueops.IssueOpsRecord{}, nil, err
-	}
-	record, err := decodeIssueOpsRecord(id, raw)
-	if err != nil {
-		return issueops.IssueOpsRecord{}, nil, err
-	}
-	if err := validateIssueOpsRecord(record); err != nil {
-		return issueops.IssueOpsRecord{}, nil, err
-	}
-	return record, raw, nil
-}
-
-func readExecutionResumeRecordRawOnly(stateRoot, id string) ([]byte, error) {
-	db, err := sqlstore.Open(stateRoot)
-	if err != nil {
-		return nil, err
-	}
-	raw, ok, err := db.Get(issueOpsBucket, id)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, fmt.Errorf("issueops record %s not found", id)
-	}
-	return raw, nil
-}
-
-func readExecutionResumeIntentRaw(stateRoot, operationID string) (externalOrcaIntentPayload, []byte, error) {
-	db, err := sqlstore.Open(stateRoot)
-	if err != nil {
-		return externalOrcaIntentPayload{}, nil, err
-	}
-	raw, ok, err := db.Get(externalIntentBucket, operationID)
-	if err != nil {
-		return externalOrcaIntentPayload{}, nil, err
-	}
-	if !ok {
-		return externalOrcaIntentPayload{}, nil, fmt.Errorf("Orca external intent payload is missing")
-	}
-	payload, err := preparationIntentCodec.Decode(operationID, raw)
-	if err != nil {
-		return externalOrcaIntentPayload{}, nil, err
-	}
-	return payload, raw, nil
 }

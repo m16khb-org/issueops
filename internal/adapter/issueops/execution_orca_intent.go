@@ -1,19 +1,16 @@
 package issueops
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
-	"time"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -29,46 +26,6 @@ type externalOrcaLaunchIdentity = preparationcontract.LaunchIdentity
 type externalOrcaIntentPayload = preparationcontract.Intent
 
 var preparationIntentCodec preparationcontract.IntentCodec
-
-func recordOrcaIntentFailureFromRawState(stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, expectedRecordRaw, expectedIntentRaw []byte, invocation string, cause error, now func() time.Time) error {
-	return withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		if err := validateOrcaIntentExpectedRecord(record, expected); err != nil {
-			return err
-		}
-		next := record
-		next.Execution.Failure = &issueops.ExecutionFailure{OperationID: expected.OperationID, Code: "external_operation_ambiguous", Message: boundedExecutionRemoteDiagnostic(cause), At: executionNow(now)}
-		expected.InvocationState = invocation
-		if typed, ok := errors.AsType[*port.OrcaError](cause); ok {
-			expected.OrcaRequestID, expected.OrcaPromptRequestID = preparationdomain.AdoptFailureRequestIDs(preparationdomain.FailureRequestIDFacts{
-				SealedDispatch: expected.OrcaRequestID, SealedPrompt: expected.OrcaPromptRequestID,
-				CallPhase: typed.CallPhase, ObservedDispatch: typed.DispatchRequestID,
-				ObservedOrchestration: typed.OrchestrationRequestID,
-				DispatchValid:         port.ValidateOrcaRequestID(typed.DispatchRequestID) == nil,
-				OrchestrationValid:    port.ValidateOrcaRequestID(typed.OrchestrationRequestID) == nil,
-			})
-		}
-		data, err := preparationIntentCodec.Encode(expected)
-		if err != nil {
-			return err
-		}
-		_, err = persistOrcaIntentTransition(stateRoot, next, expected.OperationID, expectedRecordRaw, expectedIntentRaw, []port.RecordMutation{{Bucket: externalIntentBucket, ID: expected.OperationID, Data: data}})
-		return err
-	})
-}
-
-func persistOrcaIntentTransition(stateRoot string, record issueops.IssueOpsRecord, operationID string, expectedRecordRaw, expectedIntentRaw []byte, extra []port.RecordMutation) (issueops.IssueOpsRecord, error) {
-	if expectedRecordRaw == nil && expectedIntentRaw == nil {
-		return persistExecutionTransitionWithMutations(stateRoot, record, nil, extra)
-	}
-	expected := []port.ExpectedRecord{}
-	if expectedRecordRaw != nil {
-		expected = append(expected, port.ExpectedRecord{Bucket: issueOpsBucket, ID: record.ID, Data: expectedRecordRaw})
-	}
-	if expectedIntentRaw != nil {
-		expected = append(expected, port.ExpectedRecord{Bucket: externalIntentBucket, ID: operationID, Data: expectedIntentRaw})
-	}
-	return persistExecutionTransitionWithRawCAS(stateRoot, record, expected, extra)
-}
 
 func validateOrcaIntentExpectedRecord(record issueops.IssueOpsRecord, expected externalOrcaIntentPayload) error {
 	if record.Execution == nil || record.Execution.Pending == nil || record.Execution.Pending.OperationID != expected.OperationID ||
