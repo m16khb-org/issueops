@@ -8009,10 +8009,7 @@
         "func issueOpsPlanPathInsideWorktree",
         "func issueOpsPlanSectionsMissing",
         "func issueOpsStrictGitRoot",
-        "func issueOpsWorktreePathValid",
-        "func planPrepGateApplies",
-        "func planPrepItemValid",
-        "func planPrepMissing"
+        "func issueOpsWorktreePathValid"
       ]
     },
     {
@@ -13744,6 +13741,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/plan_prep_readiness.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PlanPrepGateApplies",
+        "func PlanPrepMissing",
+        "func planPrepItemValid"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/plan_sections.go",
       "owner": "domain",
       "task": "T20",
@@ -17026,6 +17033,60 @@
       "evidence_tests": [
         "internal/domain/issueops/ai_slop_refresh_test.go",
         "internal/adapter/issueops/issueops_phase_refresh_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-prep-gate-activation",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func planPrepGateApplies",
+      "responsibility": "plan preparation is required only after a non-trivial intent exists",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PlanPrepGateApplies",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to plan",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/plan_prep_readiness_test.go",
+        "internal/adapter/issueops/issueops_readiness_planprep_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-prep-missing-keys",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func planPrepMissing",
+      "responsibility": "ordered plan preparation evidence and waiver readiness keys",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PlanPrepMissing",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to plan",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/plan_prep_readiness_test.go",
+        "internal/adapter/issueops/issueops_readiness_planprep_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-prep-item-validity",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func planPrepItemValid",
+      "responsibility": "evidence or waiver status must carry usable content",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func planPrepItemValid",
+      "task": "T04",
+      "entrypoints": [
+        "issueops advance --to plan",
+        "issueops next"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/plan_prep_readiness_test.go",
+        "internal/adapter/issueops/issueops_readiness_planprep_test.go"
       ],
       "status": "migrated"
     }

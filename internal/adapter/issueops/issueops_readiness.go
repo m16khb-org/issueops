@@ -18,8 +18,8 @@ func IssueOpsPlanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsRead
 	if strings.TrimSpace(record.IssueURL) == "" {
 		missing = append(missing, "issue_url")
 	}
-	if planPrepGateApplies(record) {
-		missing = append(missing, planPrepMissing(record.PlanPrep)...)
+	if issueopsdomain.PlanPrepGateApplies(record) {
+		missing = append(missing, issueopsdomain.PlanPrepMissing(record.PlanPrep)...)
 	}
 	return issueops.IssueOpsReadiness{
 		OK:           true,
@@ -29,47 +29,6 @@ func IssueOpsPlanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsRead
 		PlanPath:     record.PlanPath,
 		WorktreePath: record.WorktreePath,
 		Branch:       record.Branch,
-	}
-}
-
-// planPrepGateApplies reports whether the plan-prep evidence gate is active.
-// It activates only once an intent contract exists (so intent_contract is the
-// first missing key for an empty cycle) and the intent class is not trivial.
-func planPrepGateApplies(record issueops.IssueOpsRecord) bool {
-	if record.Intent == nil {
-		return false
-	}
-	return !strings.EqualFold(strings.TrimSpace(record.Intent.IntentClass), "trivial")
-}
-
-func planPrepMissing(pp *issueops.IssueOpsPlanPrep) []string {
-	if pp == nil {
-		return []string{"plan_prep_decisions", "plan_prep_related_issues", "plan_prep_web_research", "plan_prep_codebase_survey"}
-	}
-	missing := []string{}
-	if !planPrepItemValid(pp.PriorDecisions) {
-		missing = append(missing, "plan_prep_decisions")
-	}
-	if !planPrepItemValid(pp.RelatedIssues) {
-		missing = append(missing, "plan_prep_related_issues")
-	}
-	if !planPrepItemValid(pp.WebResearch) {
-		missing = append(missing, "plan_prep_web_research")
-	}
-	if !planPrepItemValid(pp.CodebaseSurvey) {
-		missing = append(missing, "plan_prep_codebase_survey")
-	}
-	return missing
-}
-
-func planPrepItemValid(item issueops.IssueOpsPlanPrepItem) bool {
-	switch strings.TrimSpace(item.Status) {
-	case "evidence":
-		return len(cleanIssueOpsTextValues(item.Evidence)) > 0
-	case "waived":
-		return strings.TrimSpace(item.WaiveReason) != ""
-	default:
-		return false
 	}
 }
 

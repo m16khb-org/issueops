@@ -40,8 +40,8 @@ func IssueOpsGrillReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsRea
 	if strings.TrimSpace(record.Branch) == "" {
 		missing = append(missing, "branch")
 	}
-	if planPrepGateApplies(record) {
-		missing = append(missing, planPrepMissing(record.PlanPrep)...)
+	if issueopsdomain.PlanPrepGateApplies(record) {
+		missing = append(missing, issueopsdomain.PlanPrepMissing(record.PlanPrep)...)
 	}
 	missing = append(missing, issueopsdomain.SplitDecisionMissing(record)...)
 	missing = append(missing, issueopsdomain.DomainReviewMissing(record)...)
