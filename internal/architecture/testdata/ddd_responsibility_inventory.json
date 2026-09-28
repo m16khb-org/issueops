@@ -17211,7 +17211,7 @@
       "id": "command-policy",
       "source_path": "internal/adapter/policy/policy_evaluate.go",
       "source_symbol": "func EvaluateCommandPolicy",
-      "responsibility": "workspace command permit or deny",
+      "responsibility": "observe workspace and command facts then delegate permit or deny decision",
       "target": "internal/domain/policy",
       "target_symbol": "func EvaluateCommandDecision",
       "task": "T09",
@@ -17223,7 +17223,7 @@
         "internal/adapter/policy/policy_test.go",
         "internal/adapter/policy/policy_catalog_test.go"
       ],
-      "status": "migrate"
+      "status": "retain"
     },
     {
       "id": "loop-start",
@@ -17332,8 +17332,9 @@
       "id": "install-orchestration",
       "source_path": "cmd/issueops/installcli/install.go",
       "source_symbol": "func executeInstall",
-      "responsibility": "host installation transaction ordering",
+      "responsibility": "present install transaction outcome through CLI text or JSON",
       "target": "internal/application/install",
+      "target_symbol": "func RunTransaction",
       "task": "T11",
       "entrypoints": [
         "issueops install"
@@ -17341,14 +17342,15 @@
       "evidence_tests": [
         "cmd/issueops/installcli/install_orchestration_test.go"
       ],
-      "status": "migrate"
+      "status": "retain"
     },
     {
       "id": "api-doc-static",
       "source_path": "cmd/issueops/apidoc/api_doc_static.go",
       "source_symbol": "func runAPIDocStaticCheckWithOptions",
-      "responsibility": "API documentation candidate and violation decision",
+      "responsibility": "bind Git and file readers to static-check application",
       "target": "internal/application/apidoc",
+      "target_symbol": "func (StaticService) Check",
       "task": "T16",
       "entrypoints": [
         "issueops api-doc static-check"
@@ -17356,7 +17358,7 @@
       "evidence_tests": [
         "cmd/issueops/apidoc/api_doc_static_test.go"
       ],
-      "status": "migrate"
+      "status": "retain"
     },
     {
       "id": "implementer-defaults",
