@@ -7938,12 +7938,7 @@
         "func SyncRemoteArtifactBody",
         "func bodySyncAgeDays",
         "func bodySyncBaseline",
-        "func isPublicationKind",
         "func recordBodySync",
-        "func rejectClosedPublication",
-        "func resolveBodySyncTarget",
-        "func sameIssueOpsArtifactURL",
-        "func validateBodySyncGeneration",
         "func verifyBodySyncChildHierarchy"
       ]
     },
@@ -14321,6 +14316,19 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsbodysync/target.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func IsPublicationKind",
+        "func RejectClosedPublication",
+        "func ResolveTarget",
+        "func SameArtifactURL",
+        "func ValidateGeneration",
+        "type TargetSnapshot"
+      ]
+    },
+    {
       "path": "internal/domain/issueopscompletion/artifact.go",
       "owner": "domain",
       "task": "T20",
@@ -17262,6 +17270,58 @@
         "internal/adapter/issueops/execution_remote_candidate_test.go"
       ],
       "status": "retain"
+    },
+    {
+      "id": "body-sync-target",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func resolveBodySyncTarget",
+      "responsibility": "bind issue, child, and publication body writes to the cycle artifact URL",
+      "target": "internal/domain/issueopsbodysync",
+      "target_symbol": "func ResolveTarget",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr",
+        "issueops remote sync-issue"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/target_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "body-sync-generation",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func validateBodySyncGeneration",
+      "responsibility": "reject missing or stale publication lease generation",
+      "target": "internal/domain/issueopsbodysync",
+      "target_symbol": "func ValidateGeneration",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/target_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "body-sync-remote-state",
+      "source_path": "internal/adapter/issueops/issueops_remote_body_sync.go",
+      "source_symbol": "func rejectClosedPublication",
+      "responsibility": "reject writes to closed or unobserved publication states",
+      "target": "internal/domain/issueopsbodysync",
+      "target_symbol": "func RejectClosedPublication",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote sync-pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbodysync/target_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go"
+      ],
+      "status": "migrated"
     },
     {
       "id": "loop-start",

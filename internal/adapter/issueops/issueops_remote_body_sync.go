@@ -49,12 +49,20 @@ func SyncRemoteArtifactBody(
 	if err := validateExecutionMutation(record, &actor); err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	kind, url, err := resolveBodySyncTarget(record, cmd)
+	target := bodysync.TargetSnapshot{IssueURL: record.IssueURL}
+	if record.RemoteArtifact != nil {
+		target.ArtifactURL, target.ArtifactKind = record.RemoteArtifact.URL, record.RemoteArtifact.Kind
+	}
+	kind, url, err := bodysync.ResolveTarget(target, cmd)
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	if isPublicationKind(kind) {
-		if err := validateBodySyncGeneration(record, cmd.ExpectedGeneration); err != nil {
+	if bodysync.IsPublicationKind(kind) {
+		current := uint64(0)
+		if record.Execution != nil {
+			current = record.Execution.Lease.Generation
+		}
+		if err := bodysync.ValidateGeneration(record.Execution != nil, current, cmd.ExpectedGeneration); err != nil {
 			return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 		}
 	}
@@ -69,7 +77,7 @@ func SyncRemoteArtifactBody(
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	if err := rejectClosedPublication(kind, live.State); err != nil {
+	if err := bodysync.RejectClosedPublication(kind, live.State); err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
 	baselineSHA, baselineAt := bodySyncBaseline(record, kind, url)
@@ -133,7 +141,7 @@ func SyncRemoteArtifactBody(
 		ToSHA256:   written.VerifiedBodySHA256,
 		SyncedAt:   time.Now().UTC().Format(time.RFC3339Nano),
 	}
-	if isPublicationKind(kind) {
+	if bodysync.IsPublicationKind(kind) {
 		entry.Generation = cmd.ExpectedGeneration
 	}
 	stamped, err := recordBodySync(ctx, stateRoot, id, entry, &actor)
@@ -141,79 +149,6 @@ func SyncRemoteArtifactBody(
 		return issueops.IssueOpsRecord{OK: false}, result, err
 	}
 	return stamped, result, nil
-}
-
-// resolveBodySyncTarget decides which artifact a sync addresses. The issue side
-// accepts a child URL so a provider-native child can be refreshed too; the
-// publication side accepts only the artifact this cycle actually verified, so a
-// stray URL cannot rewrite an unrelated PR.
-func resolveBodySyncTarget(record issueops.IssueOpsRecord, cmd bodysynccontract.Command) (kind, url string, err error) {
-	requested := strings.TrimSpace(cmd.URL)
-	switch cmd.Kind {
-	case bodysynccontract.KindIssue:
-		parent := strings.TrimSpace(record.IssueURL)
-		if parent == "" {
-			return "", "", fmt.Errorf("cannot sync an issue body before the cycle has a linked issue")
-		}
-		if requested == "" || sameIssueOpsArtifactURL(requested, parent) {
-			return bodysynccontract.KindIssue, parent, nil
-		}
-		return bodysynccontract.KindChild, requested, nil
-	case bodysynccontract.KindPR:
-		artifact := record.RemoteArtifact
-		if artifact == nil || strings.TrimSpace(artifact.URL) == "" {
-			return "", "", fmt.Errorf("cannot sync a PR/MR body before the cycle has a verified remote artifact")
-		}
-		if requested != "" && !sameIssueOpsArtifactURL(requested, artifact.URL) {
-			return "", "", fmt.Errorf("--url %s is not this cycle's verified artifact (%s)", requested, artifact.URL)
-		}
-		resolved := strings.TrimSpace(artifact.Kind)
-		if resolved != bodysynccontract.KindPR && resolved != bodysynccontract.KindMR {
-			return "", "", fmt.Errorf("verified remote artifact kind %q is not a PR or MR", artifact.Kind)
-		}
-		return resolved, strings.TrimSpace(artifact.URL), nil
-	}
-	return "", "", fmt.Errorf("unsupported body sync kind %q (want %s|%s)", cmd.Kind, bodysynccontract.KindIssue, bodysynccontract.KindPR)
-}
-
-func isPublicationKind(kind string) bool {
-	return kind == bodysynccontract.KindPR || kind == bodysynccontract.KindMR
-}
-
-// sameIssueOpsArtifactURL compares artifact URLs ignoring the trailing slash and
-// the GitLab work-item alias, which serves the same issue under a second path.
-func sameIssueOpsArtifactURL(left, right string) bool {
-	normalize := func(raw string) string {
-		trimmed := strings.TrimRight(strings.TrimSpace(raw), "/")
-		return strings.Replace(trimmed, "/-/work_items/", "/-/issues/", 1)
-	}
-	return normalize(left) == normalize(right)
-}
-
-func validateBodySyncGeneration(record issueops.IssueOpsRecord, expected uint64) error {
-	if record.Execution == nil {
-		return fmt.Errorf("cannot sync a PR/MR body without an execution lease")
-	}
-	current := record.Execution.Lease.Generation
-	if expected == 0 || current != expected {
-		return fmt.Errorf("stale lease generation: current=%d expected=%d", current, expected)
-	}
-	return nil
-}
-
-func rejectClosedPublication(kind, state string) error {
-	if !isPublicationKind(kind) {
-		return nil
-	}
-	switch normalized := strings.ToLower(strings.TrimSpace(state)); normalized {
-	case "open", "opened", "locked":
-		return nil
-	case "":
-		// 상태를 읽지 못했다면 머지 여부를 증명할 수 없다. 열려 있다고 가정하지 않는다.
-		return fmt.Errorf("refusing to rewrite a %s body without an observed artifact state", kind)
-	default:
-		return fmt.Errorf("refusing to rewrite the body of a %s artifact (state=%s)", kind, normalized)
-	}
 }
 
 func verifyBodySyncChildHierarchy(ctx context.Context, prov port.IssueProvider, record issueops.IssueOpsRecord, childURL string) error {
@@ -238,15 +173,15 @@ func verifyBodySyncChildHierarchy(ctx context.Context, prov port.IssueProvider, 
 // the only thing the harness ever wrote.
 func bodySyncBaseline(record issueops.IssueOpsRecord, kind, url string) (sha, at string) {
 	for _, entry := range record.BodySyncs {
-		if sameIssueOpsArtifactURL(entry.URL, url) {
+		if bodysync.SameArtifactURL(entry.URL, url) {
 			return entry.ToSHA256, entry.SyncedAt
 		}
 	}
 	if kind == bodysynccontract.KindIssue && record.IssueCreateIntent != nil &&
-		sameIssueOpsArtifactURL(record.IssueCreateIntent.CanonicalURL, url) {
+		bodysync.SameArtifactURL(record.IssueCreateIntent.CanonicalURL, url) {
 		return record.IssueCreateIntent.BodySHA256, record.IssueCreateIntent.UpdatedAt
 	}
-	if isPublicationKind(kind) && record.RemoteArtifact != nil {
+	if bodysync.IsPublicationKind(kind) && record.RemoteArtifact != nil {
 		// 생성 시 본문 digest는 기록되지 않으므로 기준선 없이 검증 시각만 보고한다.
 		return "", record.RemoteArtifact.VerifiedAt
 	}
@@ -279,7 +214,7 @@ func recordBodySync(ctx context.Context, stateRoot, id string, entry issueops.Is
 		}
 		kept := make([]issueops.IssueOpsRemoteBodySync, 0, len(rec.BodySyncs)+1)
 		for _, existing := range rec.BodySyncs {
-			if !sameIssueOpsArtifactURL(existing.URL, entry.URL) {
+			if !bodysync.SameArtifactURL(existing.URL, entry.URL) {
 				kept = append(kept, existing)
 			}
 		}
