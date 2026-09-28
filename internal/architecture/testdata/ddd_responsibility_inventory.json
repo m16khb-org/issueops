@@ -7478,6 +7478,7 @@
         "func executionSyncBaseMergeMsgConflictCount",
         "func executionSyncBasePredictConflicts",
         "func executionSyncBasePreviewCommand",
+        "func executionSyncBaseResolutionState",
         "func executionSyncBaseResolveGitPath",
         "func executionSyncBaseUnmergedPaths",
         "func executionSyncBaseWorktreeStatus",
@@ -14138,6 +14139,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsbasesync/record_transition.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BeginResolution",
+        "func ValidateEventAppend",
+        "func ValidateResolutionClear",
+        "type ResolutionGenerations",
+        "type ResolutionState"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsbenchmark/compare.go",
       "owner": "domain",
       "task": "T20",
@@ -18412,12 +18425,66 @@
       "target": "internal/application/issueopsmodeswitch",
       "target_symbol": "func Apply",
       "task": "T06",
-      "entrypoints": ["issueops execution switch-mode --apply"],
+      "entrypoints": [
+        "issueops execution switch-mode --apply"
+      ],
       "evidence_tests": [
         "internal/application/issueopsmodeswitch/switch_test.go",
         "internal/adapter/issueops/execution_mode_switch_provenance_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "base-sync-event-transition",
+      "source_path": "internal/adapter/issueops/execution_sync_base.go",
+      "source_symbol": "func appendExecutionSyncBaseEvent",
+      "responsibility": "require a prepared execution before appending a successful base-sync event",
+      "target": "internal/domain/issueopsbasesync",
+      "target_symbol": "func ValidateEventAppend",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution sync-base --apply",
+        "issueops execution sync-base --finalize"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbasesync/record_transition_test.go",
+        "internal/adapter/issueops/execution_sync_base_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "base-sync-resolution-start",
+      "source_path": "internal/adapter/issueops/execution_sync_base.go",
+      "source_symbol": "func startExecutionSyncBaseResolution",
+      "responsibility": "require an unoccupied resolution slot and choose current lease and completion generations",
+      "target": "internal/domain/issueopsbasesync",
+      "target_symbol": "func BeginResolution",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution sync-base --apply"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbasesync/record_transition_test.go",
+        "internal/adapter/issueops/execution_sync_base_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "base-sync-resolution-clear",
+      "source_path": "internal/adapter/issueops/execution_sync_base.go",
+      "source_symbol": "func clearExecutionSyncBaseResolution",
+      "responsibility": "require an existing conflict resolution before clearing it",
+      "target": "internal/domain/issueopsbasesync",
+      "target_symbol": "func ValidateResolutionClear",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution sync-base --abort"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbasesync/record_transition_test.go",
+        "internal/adapter/issueops/execution_sync_base_test.go"
+      ],
+      "status": "retain"
     }
   ]
 }

@@ -416,8 +416,8 @@ func appendExecutionSyncBaseEvent(ctx context.Context, stateRoot, id string, eve
 		if err != nil {
 			return err
 		}
-		if rec.Execution == nil {
-			return fmt.Errorf("IssueOps execution v1 is not prepared")
+		if err := basesyncdomain.ValidateEventAppend(rec.Execution != nil); err != nil {
+			return err
 		}
 		rec.Execution.SyncBaseEvents = append(rec.Execution.SyncBaseEvents, event)
 		rec.Execution.SyncBaseResolution = nil
@@ -434,11 +434,13 @@ func startExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string,
 		if err != nil {
 			return err
 		}
-		if record.Execution == nil || record.Execution.Completion == nil || record.Execution.SyncBaseResolution != nil {
-			return fmt.Errorf("execution sync-base resolution state changed before sealing")
+		state := executionSyncBaseResolutionState(record.Execution)
+		generations, err := basesyncdomain.BeginResolution(state)
+		if err != nil {
+			return err
 		}
 		record.Execution.SyncBaseResolution = &issueops.ExecutionSyncBaseResolution{
-			Generation: record.Execution.Lease.Generation, CompletionGeneration: record.Execution.Completion.Generation,
+			Generation: generations.Lease, CompletionGeneration: generations.Completion,
 			BaseOID: inventory.BaseOID, Actor: actor,
 			ConflictFiles: append([]string(nil), conflictFiles...), StartedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}
@@ -454,14 +456,29 @@ func clearExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string)
 		if err != nil {
 			return err
 		}
-		if record.Execution == nil || record.Execution.SyncBaseResolution == nil {
-			return fmt.Errorf("execution sync-base resolution authority is absent")
+		if err := basesyncdomain.ValidateResolutionClear(executionSyncBaseResolutionState(record.Execution)); err != nil {
+			return err
 		}
 		record.Execution.SyncBaseResolution = nil
 		record.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 		_, err = writeIssueOps(stateRoot, record)
 		return err
 	})
+}
+
+func executionSyncBaseResolutionState(execution *issueops.Execution) basesyncdomain.ResolutionState {
+	if execution == nil {
+		return basesyncdomain.ResolutionState{}
+	}
+	state := basesyncdomain.ResolutionState{
+		ExecutionPresent: true, ResolutionPresent: execution.SyncBaseResolution != nil,
+		LeaseGeneration: execution.Lease.Generation,
+	}
+	if execution.Completion != nil {
+		state.CompletionPresent = true
+		state.CompletionGeneration = execution.Completion.Generation
+	}
+	return state
 }
 
 func executionSyncBaseFail(record issueops.IssueOpsRecord, result *ExecutionSyncBaseResult) func(string, error) (ExecutionSyncBaseResult, error) {
