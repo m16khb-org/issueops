@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -491,9 +492,12 @@ func TestAppendIssueOpsChildRefResetsTerminalReceiptOnlyForNewerIncarnation(t *t
 			child := started.Child
 			child.CreatedAt = tc.childCreatedAt(existingTime, child.CreatedAt)
 			child = writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
-			now := existingTime.Add(time.Minute).Format(time.RFC3339Nano)
+			now := existingTime.Add(time.Minute)
 			actor := issueOpsActorForTest(parent.WorktreePath)
-			ref, err := appendIssueOpsChildRef(stateRoot, parent.ID, child, req, now, &actor)
+			starter := childStarterForTest(stateRoot)
+			starter.Now = func() time.Time { return now }
+			restarted, err := starter.Start(context.Background(), req, &actor)
+			ref := restarted.ParentRef
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -580,7 +584,9 @@ func TestArchivedIssueOpsChildDoesNotOverwriteReappearedIncarnation(t *testing.T
 			child.CreatedAt = existingTime.Add(time.Nanosecond).Format(time.RFC3339Nano)
 			child = writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 			actor := issueOpsActorForTest(parent.WorktreePath)
-			if _, err := appendIssueOpsChildRef(stateRoot, parent.ID, child, req, existingTime.Add(time.Minute).Format(time.RFC3339Nano), &actor); err != nil {
+			starter := childStarterForTest(stateRoot)
+			starter.Now = func() time.Time { return existingTime.Add(time.Minute) }
+			if _, err := starter.Start(context.Background(), req, &actor); err != nil {
 				t.Fatal(err)
 			}
 

@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -124,37 +125,18 @@ func TestIssueOpsDelegationStartProcessHelper(t *testing.T) {
 	}
 
 	ready := filepath.Join(readyDir, branch+".ready")
-	parent, err := ReadIssueOps(stateRoot, parentID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	child, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: parent.Repo, Branch: branch})
-	if err != nil {
-		t.Fatal(err)
-	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	child, err = stampIssueOpsChildDelegation(stateRoot, parent, child.ID, issueops.IssueOpsChildStartRequest{
-		ParentID:           parentID,
-		Branch:             branch,
-		Title:              title,
-		TaskScope:          "process sibling concurrency",
-		AcceptanceCriteria: []string{"every process sibling persists"},
-	}, now)
-	if err != nil {
-		t.Fatal(err)
-	}
 	if err := os.WriteFile(ready, []byte(branch+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	waitForChildStartGate(t, gate)
 
-	ref, err := appendIssueOpsChildRef(stateRoot, parentID, child, issueops.IssueOpsChildStartRequest{
+	result, err := childStarterForTest(stateRoot).Start(context.Background(), issueops.IssueOpsChildStartRequest{
 		ParentID:           parentID,
 		Branch:             branch,
 		Title:              title,
 		TaskScope:          "process sibling concurrency",
 		AcceptanceCriteria: []string{"every process sibling persists"},
-	}, now, &IssueOpsActor{
+	}, &IssueOpsActor{
 		Host: "codex", SessionID: "test-session", AgentID: "test-agent", CWD: parentWorktree,
 		NativeProcessAncestry: []issueops.NativeProcessReceipt{{
 			PID: 1, StartedAt: "2026-07-22T00:00:00Z", Executable: "/usr/bin/codex",
@@ -163,6 +145,7 @@ func TestIssueOpsDelegationStartProcessHelper(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ref, child := result.ParentRef, result.Child
 	if ref.Branch != branch || ref.Title != title || ref.CycleID != child.ID {
 		t.Fatalf("ref mismatch for %s: %#v", branch, ref)
 	}

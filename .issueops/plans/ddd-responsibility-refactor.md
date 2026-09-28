@@ -274,6 +274,8 @@
 
 - **부분 진행 — 계획·워크트리 연결:** `WorkspaceLinker`가 잠금·조회·권한·파일/Git 관측·저장을 조율한다. branch/design 준비 조건, 계획 경로 고정·필수 절, 워크트리의 원본 checkout 분리·sibling 경로·symlink·해석된 경로·브랜치 일치 규칙은 domain으로 옮겼다. released Orca 계획 연결은 application이 staging 가능 여부를 판정하고 authorization domain이 native coordinator와 작업 경로 조건을 검증한다. 기술 관측은 `LinkEnvironment`에 남겼다. 기존 `linking` 패키지, production 계획·워크트리 연결 래퍼, adapter의 계획 권한·필수 절 검사 함수를 삭제했다. 테스트의 준비 조건 대역도 실제 record와 domain 규칙으로 교체했다. 전체 일반·race suite 각각 294개 패키지, vet·build·architecture·응답 golden이 통과했다(`T08-workspace-link-*`). 계획 identity·해석된 경로 격리·coordinator 경로 검사를 무력화한 overlay가 각각 실패했다. 실제 CLI와 Git worktree에서 정상 연결, source checkout·symlink·다른 branch 거부, 설계 리뷰·필수 절 요구, 계획 파일 교체 거부, 편집 중 같은 계획 재연결 시 raw row 불변을 확인했다. 자가 증강 검사와 검증 명령은 새 테스트 경로로 갱신했다. 부모자식 실행과 정리 경로가 남아 있어 T08은 미완료다.
 
+- **부분 진행 — 자식 생성:** 생성 조건·상속 프로필·자식 참조의 새 실행 판정은 aggregate domain으로, 상속 리뷰 표식은 review domain으로 옮겼다. `ChildStarter`가 부모 권한 확인과 규칙 적용을 조율하고 `ChildCycleStore`가 부모·자식을 한 SQLite 트랜잭션으로 저장한다. 기존 세 차례 저장에서 발생할 수 있던 부분 생성도 제거했다. 자식의 cleanup applying 잠금과 저장 후 부가 이슈 연결 경고는 유지했다. production의 기존 생성 함수와 `adapter/issueops/delegation` 패키지를 삭제하고 CLI가 새 application을 직접 구성한다. 전체 일반·race suite 각각 293개 패키지, vet·build·architecture가 통과했다(`T08-child-start-*`). 실제 CLI 프로세스 8개의 동시 생성, DB 오류 시 두 기록 롤백, 잘못된 요청의 raw row 보존을 확인했다. 원자적 저장·자식 잠금·권한 검사를 각각 무력화한 overlay도 실패했다. 부모자식 상태 조회·검증과 정리 경로는 남아 있어 T08은 미완료다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료

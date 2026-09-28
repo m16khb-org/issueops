@@ -1196,6 +1196,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_child_start_wiring.go",
+      "owner": "composition",
+      "task": "T08",
+      "symbols": [
+        "func newChildStarter"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_claim_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -6913,6 +6921,15 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/child_cycle_store.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func ChildCycleStore.SavePair",
+        "type ChildCycleStore"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/cleanup_workspace_gates.go",
       "owner": "adapter",
       "task": "T08",
@@ -7081,17 +7098,6 @@
         "func CycleStartIdentity.StableID",
         "type CycleRecordStore",
         "type CycleStartIdentity"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/delegation/delegation.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func BuildDelegatedProfile",
-        "func MissingPreconditions",
-        "func ParentRef",
-        "func clean"
       ]
     },
     {
@@ -7863,29 +7869,23 @@
         "func IssueOpsChildStatus",
         "func IssueOpsChildStatusWithActor",
         "func RejectIssueOpsChildWithActor",
-        "func StartIssueOpsChildWithActor",
         "func acceptArchivedIssueOpsChild",
         "func acceptIssueOpsChild",
-        "func appendIssueOpsChildRef",
         "func buildIssueOpsChildStatus",
         "func childStatusEntryFromChild",
         "func childStatusEntryFromRef",
         "func dropArchivedIssueOpsChild",
         "func dropIssueOpsChild",
         "func ensureIssueOpsArchivedChildStillMissing",
-        "func issueOpsChildRefHasNewerIncarnation",
         "func issueOpsChildRefHasTerminalCleanupReceipt",
         "func issueOpsChildStatus",
         "func mergeChildStatusRecord",
         "func parentRefFromChild",
         "func readIssueOpsChildForValidation",
-        "func readIssueOpsChildParentForStart",
         "func recordIssueOpsChildVerdict",
         "func rejectIssueOpsChild",
         "func repairIssueOpsChildIndex",
-        "func scanIssueOpsChildrenForParent",
-        "func stampIssueOpsChildDelegation",
-        "func startIssueOpsChild"
+        "func scanIssueOpsChildrenForParent"
       ]
     },
     {
@@ -11243,6 +11243,17 @@
       ]
     },
     {
+      "path": "internal/application/issueopsdelegation/start.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func ChildStarter.Start",
+        "type ChildIdentity",
+        "type ChildRecords",
+        "type ChildStarter"
+      ]
+    },
+    {
       "path": "internal/application/issueopsintent/intent.go",
       "owner": "application",
       "task": "T20",
@@ -14204,6 +14215,20 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/delegation.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func BuildDelegatedProfile",
+        "func ChildStartMissingPreconditions",
+        "func NewChildReference",
+        "func PrepareChildStart",
+        "func RegisterChildReference",
+        "func ValidateChildStartTarget",
+        "func cleanDelegationValues"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/early_phase_readiness.go",
       "owner": "domain",
       "task": "T20",
@@ -15774,6 +15799,14 @@
         "func ImplementationReviewMissing",
         "func ProjectDocsReviewMissing",
         "func SchemaEvidenceMissing"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsreview/inherited_review.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func InheritedParentReview"
       ]
     },
     {
@@ -21636,6 +21669,106 @@
         "internal/application/issueopscycle/plan_link_authority_test.go",
         "internal/adapter/issueops/issueops_worktree_plan_test.go",
         "internal/adapter/issueops/issueops_artifact_stage_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-start-preconditions",
+      "source_path": "internal/adapter/issueops/delegation/delegation.go",
+      "source_symbol": "func MissingPreconditions",
+      "responsibility": "require approved parent reviews, implement phase, distinct branch and one delegation level",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ChildStartMissingPreconditions",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/delegation_test.go",
+        "internal/adapter/issueops/issueops_delegation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-start-profile",
+      "source_path": "internal/adapter/issueops/delegation/delegation.go",
+      "source_symbol": "func BuildDelegatedProfile",
+      "responsibility": "inherit parent intent and review facts while assigning child scope and acceptance criteria",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func BuildDelegatedProfile",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/delegation_profile_test.go",
+        "internal/adapter/issueops/child_start_atomic_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-start-input",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func startIssueOpsChild",
+      "responsibility": "normalize child creation input and require parent, branch, scope and acceptance",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PrepareChildStart",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_delegation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-start-reference",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func appendIssueOpsChildRef",
+      "responsibility": "register child once and clear terminal receipts only for a strictly newer incarnation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RegisterChildReference",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_delegation_test.go",
+        "internal/adapter/issueops/issueops_delegation_start_process_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-start-orchestration",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func StartIssueOpsChildWithActor",
+      "responsibility": "authorize fresh parent, apply domain delegation and persist both rows atomically; preserve optional link warning",
+      "target": "internal/application/issueopsdelegation",
+      "target_symbol": "func ChildStarter.Start",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/child_start_atomic_test.go",
+        "internal/adapter/issueops/issueops_delegation_start_process_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-start-cleanup-fence",
+      "source_path": "internal/adapter/issueops/issueops_delegation.go",
+      "source_symbol": "func stampIssueOpsChildDelegation",
+      "responsibility": "preserve the child applying fence while holding one state-root span for the paired write",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateChildStartTarget",
+      "task": "T08",
+      "entrypoints": [
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/child_start_atomic_test.go"
       ],
       "status": "migrated"
     }

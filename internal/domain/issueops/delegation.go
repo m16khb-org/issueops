@@ -1,18 +1,14 @@
-package delegation
+package issueops
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	model "issueops/internal/contract/issueops"
-	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
-// ParentReviewPattern marks a child cycle's synthesized devil's-advocate verdict
-// that inherits the parent's pass. Plan-binding gates exempt it explicitly: the
-// child never had its own review, so there is no reviewed digest to compare.
-const ParentReviewPattern = reviewdomain.ParentReviewPattern
-
-func MissingPreconditions(parent model.IssueOpsRecord, req model.IssueOpsChildStartRequest) []string {
+func ChildStartMissingPreconditions(parent model.IssueOpsRecord, req model.IssueOpsChildStartRequest) []string {
 	var missing []string
 	if parent.Phase != model.IssueOpsPhaseImplement {
 		missing = append(missing, "parent_phase_not_implement")
@@ -20,7 +16,7 @@ func MissingPreconditions(parent model.IssueOpsRecord, req model.IssueOpsChildSt
 	if parent.DesignReview == nil || !parent.DesignReview.Approved {
 		missing = append(missing, "parent_design_review_unapproved")
 	}
-	if parent.CompatibilityReview == nil || !parent.CompatibilityReview.Approved || len(clean(parent.CompatibilityReview.Blockers)) > 0 {
+	if parent.CompatibilityReview == nil || !parent.CompatibilityReview.Approved || len(cleanDelegationValues(parent.CompatibilityReview.Blockers)) > 0 {
 		missing = append(missing, "parent_compatibility_unapproved")
 	}
 	if parent.DevilsAdvocateReview == nil || strings.TrimSpace(parent.DevilsAdvocateReview.RecordedAt) == "" || ((parent.DevilsAdvocateReview.Verdict == "stop" || parent.DevilsAdvocateReview.Verdict == "revise") && !parent.DevilsAdvocateReview.Waived) {
@@ -37,7 +33,7 @@ func MissingPreconditions(parent model.IssueOpsRecord, req model.IssueOpsChildSt
 
 func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, now string) model.IssueOpsRecord {
 	taskScope := strings.TrimSpace(req.TaskScope)
-	acceptance := clean(req.AcceptanceCriteria)
+	acceptance := cleanDelegationValues(req.AcceptanceCriteria)
 	parentPlanPath := strings.TrimSpace(req.ParentPlanPath)
 	if parentPlanPath == "" {
 		parentPlanPath = strings.TrimSpace(parent.PlanPath)
@@ -104,18 +100,11 @@ func BuildDelegatedProfile(parent, child model.IssueOpsRecord, req model.IssueOp
 		cr.ReviewedAt = now
 		child.CompatibilityReview = &cr
 	}
-	child.DevilsAdvocateReview = &model.IssueOpsDevilsAdvocateReview{
-		Verdict:          "pass",
-		Waived:           true,
-		WaiverRationale:  "delegated:" + parent.ID + " parent DA verdict pass",
-		ReviewerPattern:  ParentReviewPattern,
-		RecordedAt:       now,
-		IssueReflectedAt: "",
-	}
+
 	return child
 }
 
-func ParentRef(child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, now string) model.IssueOpsChildCycleRef {
+func NewChildReference(child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, now string) model.IssueOpsChildCycleRef {
 	return model.IssueOpsChildCycleRef{
 		CycleID:       child.ID,
 		Branch:        child.Branch,
@@ -125,7 +114,7 @@ func ParentRef(child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, 
 	}
 }
 
-func clean(values []string) []string {
+func cleanDelegationValues(values []string) []string {
 	out := make([]string, 0, len(values))
 	for _, value := range values {
 		value = strings.TrimSpace(value)
@@ -134,4 +123,52 @@ func clean(values []string) []string {
 		}
 	}
 	return out
+}
+
+func PrepareChildStart(req model.IssueOpsChildStartRequest) (model.IssueOpsChildStartRequest, error) {
+	req.ParentID = strings.TrimSpace(req.ParentID)
+	if req.ParentID == "" {
+		return req, fmt.Errorf("parent_id is required")
+	}
+	req.Branch = strings.TrimSpace(req.Branch)
+	req.Title = strings.TrimSpace(req.Title)
+	req.TaskScope = strings.TrimSpace(req.TaskScope)
+	req.ParentPlanPath = strings.TrimSpace(req.ParentPlanPath)
+	req.ChildIssueURL = strings.TrimSpace(req.ChildIssueURL)
+	if req.Branch == "" {
+		return req, fmt.Errorf("branch is required")
+	}
+	if req.TaskScope == "" {
+		return req, fmt.Errorf("task_scope is required")
+	}
+	if len(cleanDelegationValues(req.AcceptanceCriteria)) == 0 {
+		return req, fmt.Errorf("acceptance_criteria requires at least one entry")
+	}
+	return req, nil
+}
+
+func ValidateChildStartTarget(child model.IssueOpsRecord) error {
+	if child.CleanupAbandonFailure != nil && child.CleanupAbandonFailure.Step == "applying" {
+		return fmt.Errorf("cleanup abandon apply is in progress")
+	}
+	return nil
+}
+
+func RegisterChildReference(parent, child model.IssueOpsRecord, req model.IssueOpsChildStartRequest, now string) (model.IssueOpsRecord, model.IssueOpsChildCycleRef, bool) {
+	ref := NewChildReference(child, req, now)
+	for i, existing := range parent.ChildCycles {
+		if existing.CycleID != ref.CycleID {
+			continue
+		}
+		childTime, childErr := time.Parse(time.RFC3339Nano, strings.TrimSpace(child.CreatedAt))
+		refTime, refErr := time.Parse(time.RFC3339Nano, strings.TrimSpace(existing.CreatedAt))
+		if childErr == nil && refErr == nil && childTime.After(refTime) {
+			parent.ChildCycles = append([]model.IssueOpsChildCycleRef(nil), parent.ChildCycles...)
+			parent.ChildCycles[i] = ref
+			return parent, ref, true
+		}
+		return parent, existing, false
+	}
+	parent.ChildCycles = append(append([]model.IssueOpsChildCycleRef(nil), parent.ChildCycles...), ref)
+	return parent, ref, true
 }

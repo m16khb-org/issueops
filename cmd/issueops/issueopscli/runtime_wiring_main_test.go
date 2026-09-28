@@ -137,7 +137,7 @@ func wireIssueOpsRuntimeForTests() {
 		StageIssueOpsArtifact:                       artifacts.Stage,
 		StagedIssueOpsArtifactNames:                 artifacts.Names,
 		StartIssueOps:                               issueopscore.StartIssueOps,
-		StartIssueOpsChildWithActor:                 issueopscore.StartIssueOpsChildWithActor,
+		StartIssueOpsChildWithActor:                 startChildWithActorForTest,
 		UnstageIssueOpsArtifact:                     artifacts.Unstage,
 	})
 }

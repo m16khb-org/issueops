@@ -1,4 +1,4 @@
-package delegation
+package issueops
 
 import (
 	"strings"
@@ -61,9 +61,6 @@ func TestBuildDelegatedProfileInheritsParentState(t *testing.T) {
 	if built.CompatibilityReview == nil || !built.CompatibilityReview.Approved || built.CompatibilityReview.Blockers != nil {
 		t.Fatalf("compatibility review must inherit approved and cleared blockers: %#v", built.CompatibilityReview)
 	}
-	if built.DevilsAdvocateReview == nil || built.DevilsAdvocateReview.Verdict != "pass" || !built.DevilsAdvocateReview.Waived {
-		t.Fatalf("devils advocate waiver wrong: %#v", built.DevilsAdvocateReview)
-	}
 
 	// 명시 child URL과 부모 plan path 지정이 우선한다.
 	req.ChildIssueURL = "https://example.com/i/6001"
@@ -87,7 +84,7 @@ func TestBuildDelegatedProfileInheritsParentState(t *testing.T) {
 func TestParentRefProjectsChildReference(t *testing.T) {
 	child := model.IssueOpsRecord{ID: "io-child", Branch: "6001-child"}
 	req := model.IssueOpsChildStartRequest{Branch: "6001-child", Title: "  child one  ", ChildIssueURL: " https://example.com/i/6001 "}
-	ref := ParentRef(child, req, "now")
+	ref := NewChildReference(child, req, "now")
 	if ref.CycleID != "io-child" || ref.Branch != "6001-child" || ref.Title != "child one" ||
 		ref.ChildIssueURL != "https://example.com/i/6001" || ref.CreatedAt != "now" {
 		t.Fatalf("parent ref wrong: %#v", ref)

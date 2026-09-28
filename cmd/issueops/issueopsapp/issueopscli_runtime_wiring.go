@@ -83,7 +83,9 @@ func configureIssueOpsCLIRuntime() {
 		StartIssueOps: func(stateRoot string, req issueopscontract.IssueOpsStartRequest) (issueopscontract.IssueOpsRecord, error) {
 			return (branchapp.Starter{Records: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{}, Now: time.Now}).Start(context.Background(), req)
 		},
-		StartIssueOpsChildWithActor: issueopscore.StartIssueOpsChildWithActor,
-		UnstageIssueOpsArtifact:     artifacts.Unstage,
+		StartIssueOpsChildWithActor: func(root string, req issueopscontract.IssueOpsChildStartRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildStartResult, error) {
+			return newChildStarter(root).Start(context.Background(), req, &actor)
+		},
+		UnstageIssueOpsArtifact: artifacts.Unstage,
 	})
 }

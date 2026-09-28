@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -8,142 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"context"
-
-	"issueops/internal/adapter/issueops/delegation"
-	branchapp "issueops/internal/application/issueopsbranch"
-	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 )
-
-func StartIssueOpsChildWithActor(stateRoot string, req issueops.IssueOpsChildStartRequest, actor IssueOpsActor) (issueops.IssueOpsChildStartResult, error) {
-	return startIssueOpsChild(stateRoot, req, &actor)
-}
-
-func startIssueOpsChild(stateRoot string, req issueops.IssueOpsChildStartRequest, actor *IssueOpsActor) (issueops.IssueOpsChildStartResult, error) {
-	parentID := strings.TrimSpace(req.ParentID)
-	if parentID == "" {
-		return issueops.IssueOpsChildStartResult{OK: false}, fmt.Errorf("parent_id is required")
-	}
-	req.ParentID = parentID
-	req.Branch = strings.TrimSpace(req.Branch)
-	req.Title = strings.TrimSpace(req.Title)
-	req.TaskScope = strings.TrimSpace(req.TaskScope)
-	req.ParentPlanPath = strings.TrimSpace(req.ParentPlanPath)
-	req.ChildIssueURL = strings.TrimSpace(req.ChildIssueURL)
-	if req.Branch == "" {
-		return issueops.IssueOpsChildStartResult{OK: false}, fmt.Errorf("branch is required")
-	}
-	if req.TaskScope == "" {
-		return issueops.IssueOpsChildStartResult{OK: false}, fmt.Errorf("task_scope is required")
-	}
-	if len(cleanIssueOpsTextValues(req.AcceptanceCriteria)) == 0 {
-		return issueops.IssueOpsChildStartResult{OK: false}, fmt.Errorf("acceptance_criteria requires at least one entry")
-	}
-
-	parent, err := readIssueOpsChildParentForStart(stateRoot, req, actor)
-	if err != nil {
-		return issueops.IssueOpsChildStartResult{OK: false}, err
-	}
-	child, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: parent.Repo, Branch: req.Branch})
-	if err != nil {
-		return issueops.IssueOpsChildStartResult{OK: false}, err
-	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	child, err = stampIssueOpsChildDelegation(stateRoot, parent, child.ID, req, now)
-	if err != nil {
-		return issueops.IssueOpsChildStartResult{OK: false}, err
-	}
-	ref, err := appendIssueOpsChildRef(stateRoot, parent.ID, child, req, now, actor)
-	if err != nil {
-		return issueops.IssueOpsChildStartResult{OK: false}, err
-	}
-	result := issueops.IssueOpsChildStartResult{
-		OK:        true,
-		ParentID:  parent.ID,
-		Child:     child,
-		ParentRef: ref,
-		Guidance:  "base_branch=" + parent.Branch + "; create an isolated worktree for " + child.Branch + " and export ISSUEOPS_EXPECTED_WORKTREE after linking it",
-	}
-	if req.ChildIssueURL != "" {
-		linker := branchapp.Linker{Records: CycleRecordStore{StateRoot: stateRoot}, Authority: cycleapp.NewMutationAuthority(samePath), Now: time.Now}
-		_, linkErr := linker.Child(context.Background(), parent.ID, req.ChildIssueURL, req.Title, actor)
-		if linkErr != nil {
-			result.ChildLinkWarning = linkErr.Error()
-		}
-	}
-	return result, nil
-}
-
-func readIssueOpsChildParentForStart(stateRoot string, req issueops.IssueOpsChildStartRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	var parent issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, req.ParentID, func(context.Context) error {
-		var readErr error
-		parent, readErr = ReadIssueOps(stateRoot, req.ParentID)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validateWorkspacePreparationMutation(parent, actor); actorErr != nil {
-			return actorErr
-		}
-		if missing := delegation.MissingPreconditions(parent, req); len(missing) > 0 {
-			return fmt.Errorf("cannot start issueops child: missing %s", strings.Join(missing, ", "))
-		}
-		return nil
-	})
-	return parent, err
-}
-
-func stampIssueOpsChildDelegation(stateRoot string, parent issueops.IssueOpsRecord, childID string, req issueops.IssueOpsChildStartRequest, now string) (issueops.IssueOpsRecord, error) {
-	var child issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, childID, func(context.Context) error {
-		var readErr error
-		child, readErr = ReadIssueOps(stateRoot, childID)
-		if readErr != nil {
-			return readErr
-		}
-		child = delegation.BuildDelegatedProfile(parent, child, req, now)
-		var writeErr error
-		child, writeErr = touchAndWriteIssueOps(stateRoot, child)
-		return writeErr
-	})
-	return child, err
-}
-
-func appendIssueOpsChildRef(stateRoot, parentID string, child issueops.IssueOpsRecord, req issueops.IssueOpsChildStartRequest, now string, actor *IssueOpsActor) (issueops.IssueOpsChildCycleRef, error) {
-	ref := delegation.ParentRef(child, req, now)
-	err := withIssueOpsLock(context.Background(), stateRoot, parentID, func(context.Context) error {
-		parent, readErr := ReadIssueOps(stateRoot, parentID)
-		if readErr != nil {
-			return readErr
-		}
-		if actorErr := validateWorkspacePreparationMutation(parent, actor); actorErr != nil {
-			return actorErr
-		}
-		for i, existing := range parent.ChildCycles {
-			if existing.CycleID == ref.CycleID {
-				if issueOpsChildRefHasNewerIncarnation(child.CreatedAt, existing.CreatedAt) {
-					parent.ChildCycles[i] = ref
-					_, writeErr := touchAndWriteIssueOps(stateRoot, parent)
-					return writeErr
-				}
-				ref = existing
-				return nil
-			}
-		}
-		parent.ChildCycles = append(parent.ChildCycles, ref)
-		_, writeErr := touchAndWriteIssueOps(stateRoot, parent)
-		return writeErr
-	})
-	return ref, err
-}
-
-func issueOpsChildRefHasNewerIncarnation(childCreatedAt, refCreatedAt string) bool {
-	childTime, childErr := time.Parse(time.RFC3339Nano, strings.TrimSpace(childCreatedAt))
-	refTime, refErr := time.Parse(time.RFC3339Nano, strings.TrimSpace(refCreatedAt))
-	return childErr == nil && refErr == nil && childTime.After(refTime)
-}
 
 func IssueOpsChildStatus(stateRoot, parentID string, repair bool) (issueops.IssueOpsChildStatusResult, error) {
 	return issueOpsChildStatus(stateRoot, parentID, repair, nil)
