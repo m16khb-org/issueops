@@ -13,6 +13,7 @@ import (
 	publicationoutbound "issueops/internal/adapter/outbound/issueopspublication"
 	"issueops/internal/adapter/provider"
 	publicationapp "issueops/internal/application/issueopspublication"
+	remoteapp "issueops/internal/application/issueopsremote"
 	publicationcontract "issueops/internal/contract/issueopspublication"
 	"issueops/internal/port"
 )
@@ -56,7 +57,8 @@ func newIssueOpsPublicationServices(stateRoot string, deps issueOpsPublicationCo
 	providerAdapter := &publicationProviderAdapter{deps: deps}
 	gateway := publicationoutbound.NewProviderGateway(providerAdapter.create, providerAdapter.inspect)
 	verifier := issueops.RemotePublicationVerifier{StateRoot: stateRoot, Verify: deps.VerifyLive}
-	return publicationapp.NewCreateService(repository, gateway, verifier), publicationapp.NewReconcileService(repository, gateway, verifier)
+	preparer := remoteapp.NewCreatePreparation(issueops.RemotePublicationObserver{StateRoot: stateRoot})
+	return publicationapp.NewCreateService(preparer, repository, gateway, verifier), publicationapp.NewReconcileService(repository, gateway, verifier)
 }
 
 type publicationProviderAdapter struct {

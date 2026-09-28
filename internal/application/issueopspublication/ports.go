@@ -6,9 +6,12 @@ import (
 	contract "issueops/internal/contract/issueopspublication"
 )
 
+type Preparer interface {
+	Prepare(context.Context, contract.CreateCommand) (contract.PreparedCreate, error)
+}
+
 type Repository interface {
-	PreviewCreate(context.Context, contract.CreateCommand) (contract.PreparedCreate, error)
-	BeginCreate(context.Context, contract.CreateCommand) (contract.Intent, error)
+	BeginCreate(context.Context, contract.PreparedCreate) (contract.Intent, error)
 	LoadIntent(context.Context, string) (contract.Intent, error)
 	MarkRetry(context.Context, contract.Intent) (contract.Intent, error)
 	RecordFailure(context.Context, contract.Intent, contract.InvocationState, string, error) error

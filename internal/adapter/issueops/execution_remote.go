@@ -2,7 +2,6 @@ package issueops
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops/artifactverify"
-	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
 	publicationcontract "issueops/internal/contract/issueopspublication"
@@ -62,102 +60,7 @@ func CreateRemotePullRequest(ctx context.Context, stateRoot string, req RemotePu
 	return deps.Handler(ctx, stateRoot, req)
 }
 
-func prepareRemotePullRequest(stateRoot string, req RemotePullRequestRequest) (issueops.IssueOpsRecord, port.IssueProviderCreatePullRequestRequest, string, error) {
-	record, err := ReadIssueOps(stateRoot, req.ID)
-	if err != nil {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", err
-	}
-	provider := strings.ToLower(strings.TrimSpace(req.Provider))
-	kind := "pr"
-	if provider == "gitlab" {
-		kind = "mr"
-	} else if provider != "github" {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote provider must be github or gitlab")
-	}
-	if record.Phase != issueops.IssueOpsPhasePR || record.RemoteArtifact != nil {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create requires phase pr and no existing remote artifact")
-	}
-	if req.Confirm {
-		if record.Execution == nil {
-			return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create requires IssueOps execution v1")
-		}
-		if req.ExpectedGeneration == 0 || record.Execution.Lease.Generation != req.ExpectedGeneration {
-			return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("stale lease generation: current=%d expected=%d", record.Execution.Lease.Generation, req.ExpectedGeneration)
-		}
-		mutationActor := IssueOpsActor{
-			Host: req.Actor.Host, SessionID: req.Actor.SessionID, AgentID: req.Actor.AgentID, CWD: req.CWD,
-			NativeProcessAncestry: req.Actor.ProcessAncestry,
-		}
-		if err := validateExecutionMutation(record, &mutationActor); err != nil {
-			return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", err
-		}
-		if record.Execution.Pending != nil {
-			return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("external intent is already pending; run execution reconcile")
-		}
-		// publication 하드 게이트: planner급 design-review 리뷰의 pass 기록 없이는
-		// publication을 열지 않는다(설계 v5 WS5). execution이 있는 모든 모드가
-		// 대상이다 — 9단계 재편에서 direct가 기본 경로가 되고 검증 단계가 이
-		// 기록을 만든다.
-		currentReviewFingerprint := implementation.ChangeFingerprint(record)
-		if missing := implementationReviewMissing(record, currentReviewFingerprint); missing != "" {
-			return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create requires a pass implementation review (%s); record it with `issueops implementation-review record --id %s ...`", missing, record.ID)
-		}
-		// ai_slop_clean 선례(strict:59-61)와 동형: 리뷰가 fingerprint를 봉인했는데
-		// 현재 값을 계산할 수 없으면 staleness 판정을 조용히 끄는 대신 거부한다.
-		if currentReviewFingerprint == "" &&
-			record.ImplementationReview != nil && record.ImplementationReview.ReviewedFingerprint != "" {
-			return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create cannot verify implementation review freshness (current_fingerprint unavailable)")
-		}
-	}
-	if record.BranchPrepare == nil {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create requires branch preparation")
-	}
-	// PR/MR은 코드가 있는 프로젝트에 만들어진다. 이슈가 다른 프로젝트에 있는
-	// 사이클은 branch prepare가 봉인한 code project key를 쓰고, 봉인이 없으면
-	// 이슈 프로젝트가 곧 코드 프로젝트다.
-	projectKey := remote.EffectiveProjectKey(record.BranchPrepare.CodeProjectKey, record.IssueURL, provider)
-	head, base := strings.TrimSpace(req.Head), strings.TrimSpace(req.Base)
-	workspaceBranch := strings.TrimSpace(record.Branch)
-	if record.Execution != nil {
-		workspaceBranch = record.Execution.Workspace.Branch
-	}
-	if projectKey == "" || provider != strings.ToLower(strings.TrimSpace(record.BranchPrepare.Provider)) || head != workspaceBranch || base != strings.TrimSpace(record.BranchPrepare.BaseBranch) {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create request does not match execution workspace and linked issue authority")
-	}
-	title, body := strings.TrimSpace(req.Title), strings.TrimSpace(req.Body)
-	if title == "" || len(title) > 1024 || len(body) > 1<<20 {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create title is required and body must not exceed 1048576 bytes")
-	}
-	if policy.RedactFreeform(title) != title || policy.RedactFreeform(body) != body {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create title or body contains secret-like content")
-	}
-	labels, assignees := remote.CleanValues(req.Labels), remote.CleanValues(req.Assignees)
-	if len(labels) == 0 || len(assignees) == 0 {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create requires canonical labels and assignees")
-	}
-	if invalid := remote.InvalidAssignee(assignees); invalid != "" {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create assignee must not be placeholder %q", invalid)
-	}
-	headSHA := ""
-	if req.Confirm {
-		headSHA = issueOpsCurrentHead(record)
-	}
-	if req.Confirm && !validExecutionHead(headSHA) {
-		return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", fmt.Errorf("remote create requires a resolvable canonical worktree HEAD")
-	}
-	workingRoot := record.Repo
-	if req.Confirm {
-		workingRoot = record.Execution.Workspace.Root
-	}
-	return record, port.IssueProviderCreatePullRequestRequest{
-		Repo: workingRoot, ProjectKey: projectKey, Title: title, Body: body,
-		HeadBranch: head, BaseBranch: base, Labels: labels, Assignees: assignees,
-		Draft: true, ExpectedHeadSHA: headSHA, Confirm: req.Confirm,
-		Host: req.Actor.Host, SessionID: req.Actor.SessionID, AgentID: req.Actor.AgentID, CWD: req.CWD,
-	}, kind, nil
-}
-
-func beginRemotePullRequestIntentWithOperationID(stateRoot string, expected issueops.IssueOpsRecord, actor issueops.NativeActor, cwd string, expectedGeneration uint64, providerReq port.IssueProviderCreatePullRequestRequest, provider, kind, operationID string, now func() time.Time) (issueops.IssueOpsRecord, externalRemotePRPayload, error) {
+func beginRemotePullRequestIntentWithOperationID(stateRoot, id string, actor issueops.NativeActor, cwd string, expectedGeneration uint64, providerReq port.IssueProviderCreatePullRequestRequest, provider, kind, operationID string, now func() time.Time) (issueops.IssueOpsRecord, externalRemotePRPayload, error) {
 	if err := publicationdomain.ValidateOperationID(operationID); err != nil {
 		return issueops.IssueOpsRecord{}, externalRemotePRPayload{}, err
 	}
@@ -168,8 +71,8 @@ func beginRemotePullRequestIntentWithOperationID(stateRoot string, expected issu
 		Request: providerReq, InvocationState: remoteInvocationUnknown,
 	}
 	var persisted issueops.IssueOpsRecord
-	err := withIssueOpsLock(context.Background(), stateRoot, expected.ID, func(context.Context) error {
-		current, err := ReadIssueOps(stateRoot, expected.ID)
+	err := withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
+		current, err := ReadIssueOps(stateRoot, id)
 		if err != nil {
 			return err
 		}
@@ -344,14 +247,6 @@ func verifyRemotePullRequestResult(record issueops.IssueOpsRecord, payload exter
 		return verify(req)
 	}
 	return nil
-}
-
-func validExecutionHead(value string) bool {
-	if len(value) != 40 && len(value) != 64 {
-		return false
-	}
-	_, err := hex.DecodeString(value)
-	return err == nil
 }
 
 func boundedExecutionRemoteDiagnostic(err error) string {

@@ -7257,8 +7257,20 @@
         "func clonePublicationStrings",
         "func portPublicationCandidate",
         "func publicationActor",
-        "func publicationCommandRequest",
         "func publicationRequest"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/execution_publication_observer.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func RemotePublicationObserver.Authorize",
+        "func RemotePublicationObserver.Fingerprint",
+        "func RemotePublicationObserver.Head",
+        "func RemotePublicationObserver.NormalizeActor",
+        "func RemotePublicationObserver.Read",
+        "type RemotePublicationObserver"
       ]
     },
     {
@@ -7273,10 +7285,8 @@
         "func RemotePublicationRepository.Latest",
         "func RemotePublicationRepository.LoadIntent",
         "func RemotePublicationRepository.MarkRetry",
-        "func RemotePublicationRepository.PreviewCreate",
         "func RemotePublicationRepository.RecordFailure",
         "func RemotePublicationRepository.loadSnapshot",
-        "func RemotePublicationRepository.prepare",
         "func publicationEligibility",
         "func publicationIntentSnapshot",
         "func publicationRecordSnapshot",
@@ -7316,10 +7326,8 @@
         "func beginRemotePullRequestIntentWithOperationID",
         "func boundedExecutionRemoteDiagnostic",
         "func finishRemotePullRequestIntent",
-        "func prepareRemotePullRequest",
         "func readExternalRemotePRPayload",
         "func recordRemotePullRequestFailure",
-        "func validExecutionHead",
         "func validateRemotePullRequestCandidate",
         "func verifyRemotePullRequestResult",
         "type RemoteArtifactVerifyFunc",
@@ -11435,6 +11443,7 @@
       "owner": "application",
       "task": "T07",
       "symbols": [
+        "type Preparer",
         "type Provider",
         "type Repository",
         "type Verifier"
@@ -11451,6 +11460,17 @@
         "func ReconcileService.preserve",
         "func reconciledResult",
         "type ReconcileService"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/create_preparation.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func CreatePreparation.Prepare",
+        "func NewCreatePreparation",
+        "type CreatePreparation",
+        "type PreparationObserver"
       ]
     },
     {
@@ -14801,6 +14821,21 @@
         "func ProjectArtifact",
         "type Artifact",
         "type ArtifactAuthority"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/create_preparation.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func PrepareCreateRequest",
+        "func ValidateCreateAuthority",
+        "func ValidateCreateHead",
+        "func ValidateCreatePending",
+        "func ValidateCreateReview",
+        "type CreateAuthority",
+        "type CreateBranchAuthority",
+        "type CreateRequest"
       ]
     },
     {
@@ -19125,6 +19160,78 @@
         "internal/adapter/issueops/artifactverify/cross_project_test.go",
         "internal/adapter/issueops/execution_publication_repository_test.go",
         "cmd/issueops/issueopscli/issueops_remote_verify_cli_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-create-preparation-orchestration",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func prepareRemotePullRequest",
+      "responsibility": "sequence actor, record, mutation authorization, review, request policy and HEAD observations before intent persistence",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func CreatePreparation.Prepare",
+      "task": "T07",
+      "entrypoints": [
+        "CreateRemotePullRequest"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsremote/create_preparation_test.go",
+        "internal/application/issueopsremote/create_preparation_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-create-request-policy",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func prepareRemotePullRequest",
+      "responsibility": "bind provider request to prepared workspace and project, enforce bounded content and canonical metadata",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func PrepareCreateRequest",
+      "task": "T07",
+      "entrypoints": [
+        "CreateRemotePullRequest"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsremote/create_preparation_test.go",
+        "internal/application/issueopsremote/create_preparation_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-create-initial-authority",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func prepareRemotePullRequest",
+      "responsibility": "reject invalid provider, publication phase, artifact, execution and generation in the established order",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func ValidateCreateAuthority",
+      "task": "T07",
+      "entrypoints": [
+        "CreateRemotePullRequest"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsremote/create_preparation_test.go",
+        "internal/application/issueopsremote/create_preparation_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-create-review-authority",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func prepareRemotePullRequest",
+      "responsibility": "require passing fresh implementation review and reject sealed review when current fingerprint is unavailable",
+      "target": "internal/domain/issueopsremote",
+      "target_symbol": "func ValidateCreateReview",
+      "task": "T07",
+      "entrypoints": [
+        "CreateRemotePullRequest"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsremote/create_preparation_test.go",
+        "internal/application/issueopsremote/create_preparation_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go"
       ],
       "status": "migrated"
     }

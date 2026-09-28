@@ -6,15 +6,6 @@ import (
 	"issueops/internal/port"
 )
 
-func publicationCommandRequest(command contract.CreateCommand) RemotePullRequestRequest {
-	return RemotePullRequestRequest{
-		ID: command.ID, Provider: command.Provider, Title: command.Title, Body: command.Body,
-		Head: command.Head, Base: command.Base, Labels: clonePublicationStrings(command.Labels),
-		Assignees: clonePublicationStrings(command.Assignees), ExpectedGeneration: command.ExpectedGeneration,
-		Actor: publicationActor(command.Actor), CWD: command.CWD, Confirm: command.Confirm,
-	}
-}
-
 func publicationActor(actor contract.Actor) issueops.NativeActor {
 	result := issueops.NativeActor{Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID}
 	if actor.SessionProcess != nil {

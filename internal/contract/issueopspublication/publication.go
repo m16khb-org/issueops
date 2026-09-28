@@ -111,12 +111,14 @@ type CreateEligibility struct {
 }
 
 type PreparedCreate struct {
+	Command     CreateCommand
 	Request     ProviderCreateRequest
 	Eligibility CreateEligibility
 }
 
 func (p PreparedCreate) Clone() PreparedCreate {
 	cloned := p
+	cloned.Command = p.Command.Clone()
 	cloned.Request = p.Request.Clone()
 	return cloned
 }

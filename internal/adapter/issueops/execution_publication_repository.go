@@ -27,45 +27,20 @@ func NewRemotePublicationRepository(stateRoot string, now func() time.Time, newO
 	return &RemotePublicationRepository{stateRoot: stateRoot, now: now, newOperationID: newOperationID}
 }
 
-func (r *RemotePublicationRepository) prepare(command contract.CreateCommand) (issueops.IssueOpsRecord, port.IssueProviderCreatePullRequestRequest, string, RemotePullRequestRequest, error) {
-	request := publicationCommandRequest(command)
-	if request.Confirm {
-		actor, err := normalizeNativeActor(request.Actor)
-		if err != nil {
-			return issueops.IssueOpsRecord{}, port.IssueProviderCreatePullRequestRequest{}, "", request, err
-		}
-		request.Actor = actor
-	}
-	record, providerRequest, kind, err := prepareRemotePullRequest(r.stateRoot, request)
-	return record, providerRequest, kind, request, err
-}
-
-func (r *RemotePublicationRepository) PreviewCreate(_ context.Context, command contract.CreateCommand) (contract.PreparedCreate, error) {
-	record, request, kind, _, err := r.prepare(command)
-	if err != nil {
-		return contract.PreparedCreate{}, err
-	}
-	return contract.PreparedCreate{Request: publicationRequest(request), Eligibility: publicationEligibility(record, command.Provider, kind, request)}, nil
-}
-
-func (r *RemotePublicationRepository) BeginCreate(_ context.Context, command contract.CreateCommand) (contract.Intent, error) {
-	record, request, kind, normalized, err := r.prepare(command)
-	if err != nil {
-		return contract.Intent{}, err
-	}
-	eligibility := publicationEligibility(record, command.Provider, kind, request)
+func (r *RemotePublicationRepository) BeginCreate(_ context.Context, prepared contract.PreparedCreate) (contract.Intent, error) {
 	operationID, err := r.newOperationID()
 	if err != nil {
 		return contract.Intent{}, err
 	}
+	command := prepared.Command
 	pending, payload, err := beginRemotePullRequestIntentWithOperationID(
-		r.stateRoot, record, normalized.Actor, normalized.CWD, normalized.ExpectedGeneration,
-		request, normalized.Provider, kind, operationID, r.now,
+		r.stateRoot, command.ID, publicationActor(command.Actor), command.CWD, command.ExpectedGeneration,
+		port.IssueProviderCreatePullRequestRequest(prepared.Request.Clone()), command.Provider, prepared.Eligibility.Kind, operationID, r.now,
 	)
 	if err != nil {
 		return contract.Intent{}, err
 	}
-	return r.loadSnapshot(pending, payload, eligibility)
+	return r.loadSnapshot(pending, payload, prepared.Eligibility)
 }
 
 func (r *RemotePublicationRepository) LoadIntent(_ context.Context, id string) (contract.Intent, error) {

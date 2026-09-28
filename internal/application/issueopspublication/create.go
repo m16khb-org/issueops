@@ -10,24 +10,25 @@ import (
 )
 
 type CreateService struct {
+	preparer   Preparer
 	repository Repository
 	provider   Provider
 	verifier   Verifier
 }
 
-func NewCreateService(repository Repository, provider Provider, verifier Verifier) *CreateService {
-	return &CreateService{repository: repository, provider: provider, verifier: verifier}
+func NewCreateService(preparer Preparer, repository Repository, provider Provider, verifier Verifier) *CreateService {
+	return &CreateService{preparer: preparer, repository: repository, provider: provider, verifier: verifier}
 }
 
 func (s *CreateService) Create(ctx context.Context, command contract.CreateCommand) (contract.ProviderCreateResult, error) {
-	if s == nil || s.repository == nil || s.provider == nil || s.verifier == nil {
+	if s == nil || s.preparer == nil || s.repository == nil || s.provider == nil || s.verifier == nil {
 		return contract.ProviderCreateResult{}, fmt.Errorf("publication create dependencies are required")
 	}
+	prepared, err := s.preparer.Prepare(ctx, command)
+	if err != nil {
+		return contract.ProviderCreateResult{}, err
+	}
 	if !command.Confirm {
-		prepared, err := s.repository.PreviewCreate(ctx, command)
-		if err != nil {
-			return contract.ProviderCreateResult{}, err
-		}
 		if _, err := domain.ValidateCreateEligibility(prepared.Eligibility); err != nil {
 			return contract.ProviderCreateResult{}, err
 		}
@@ -35,7 +36,7 @@ func (s *CreateService) Create(ctx context.Context, command contract.CreateComma
 		return result, err
 	}
 
-	intent, err := s.repository.BeginCreate(ctx, command)
+	intent, err := s.repository.BeginCreate(ctx, prepared)
 	if err != nil {
 		return contract.ProviderCreateResult{}, err
 	}
