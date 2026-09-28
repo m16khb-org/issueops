@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
@@ -148,44 +147,6 @@ func PrepareExecutionPreparationOwner(
 		ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256,
 		OwnerPromptPath: artifacts.promptPath, OwnerPromptSHA256: artifacts.promptSHA256,
 	}, nil
-}
-
-func HydrateExecutionPreparationLaunch(stateRoot, id string, request preparationcontract.IntentRequest) (preparationcontract.IntentRequest, error) {
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return preparationcontract.IntentRequest{}, err
-	}
-	if record.Execution == nil || record.Execution.Pending == nil {
-		return preparationcontract.IntentRequest{}, fmt.Errorf("sealed Orca intent is unavailable")
-	}
-	operationID := record.Execution.Pending.OperationID
-	database, err := sqlstore.Open(stateRoot)
-	if err != nil {
-		return preparationcontract.IntentRequest{}, err
-	}
-	raw, ok, err := database.Get(externalIntentBucket, operationID)
-	if err != nil || !ok {
-		return preparationcontract.IntentRequest{}, fmt.Errorf("sealed Orca intent is unavailable")
-	}
-	intent, err := preparationIntentCodec.Decode(operationID, raw)
-	if err != nil {
-		return preparationcontract.IntentRequest{}, err
-	}
-	if request.Stage != intent.Stage || request.Marker != intent.Marker || request.Launch == nil {
-		return preparationcontract.IntentRequest{}, fmt.Errorf("sealed owner launch identity changed")
-	}
-	hydrated, err := executionOrcaIntentRequest(record, intent)
-	if err != nil {
-		return preparationcontract.IntentRequest{}, err
-	}
-	if hydrated.Launch == nil || request.Launch.PromptPath != hydrated.Launch.PromptPath ||
-		request.Launch.PromptSHA256 != hydrated.Launch.PromptSHA256 ||
-		request.Launch.ContextPacketPath != hydrated.Launch.ContextPacketPath ||
-		request.Launch.ContextPacketSHA256 != hydrated.Launch.ContextPacketSHA256 {
-		return preparationcontract.IntentRequest{}, fmt.Errorf("sealed owner launch identity changed")
-	}
-	request.Launch.Prompt = hydrated.Launch.Prompt
-	return request, nil
 }
 
 func NewExecutionPreparationOperationID() (string, error) { return newExecutionOperationID() }

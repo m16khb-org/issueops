@@ -152,3 +152,35 @@ func TestResumeIntentAuthorityRejectsBindingDrift(t *testing.T) {
 		t.Fatal("stale prior binding accepted")
 	}
 }
+
+func TestPrepareIssueIdentityAcceptsVerifiedSelfHostedGitLab(t *testing.T) {
+	for _, path := range []string{"issues", "work_items"} {
+		issueURL := "https://code.example.org/group/repo/-/" + path + "/69"
+		identity, err := PrepareIssueIdentity(issueURL, &preparationcontract.IssueLinkEvidence{Provider: "gitlab", IssueURL: issueURL, LinkVerified: true})
+		if err != nil || identity.Provider != "gitlab" || identity.Issue != 69 {
+			t.Fatalf("self-hosted GitLab %s: %+v %v", path, identity, err)
+		}
+	}
+}
+
+func TestPrepareIssueIdentityRejectsUntrustedOrMalformedLinks(t *testing.T) {
+	for _, tc := range []struct {
+		name, provider, issueURL string
+		verified                 bool
+	}{
+		{"unverified self hosted", "gitlab", "https://code.example.org/group/repo/-/issues/69", false},
+		{"provider mismatch", "github", "https://code.example.org/group/repo/-/issues/69", true},
+		{"unknown host without gitlab route", "gitlab", "https://code.example.org/group/repo/issues/69", true},
+		{"no hostname", "gitlab", "/group/repo/-/issues/69", true},
+		{"nonnumeric issue", "gitlab", "https://code.example.org/group/repo/-/issues/no", true},
+		{"zero issue", "gitlab", "https://code.example.org/group/repo/-/issues/0", true},
+		{"extra path", "gitlab", "https://code.example.org/group/repo/-/issues/69/edit", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := PrepareIssueIdentity(tc.issueURL, &preparationcontract.IssueLinkEvidence{Provider: tc.provider, IssueURL: tc.issueURL, LinkVerified: tc.verified})
+			if err == nil {
+				t.Fatal("untrusted or malformed issue identity accepted")
+			}
+		})
+	}
+}

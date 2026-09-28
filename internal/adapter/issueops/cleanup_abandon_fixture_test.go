@@ -4,8 +4,11 @@ import (
 	"context"
 	"time"
 
+	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	cleanupapp "issueops/internal/application/issueopscleanup"
+	preparationapp "issueops/internal/application/issueopspreparation"
 	model "issueops/internal/contract/issueops"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -36,7 +39,14 @@ func abandonExecutorForTests(root string, deps CleanupAbandonDeps) cleanupapp.Ab
 func abandonPreviewerForTests(runtime CleanupAbandonRuntime, deps CleanupAbandonDeps) cleanupapp.AbandonPreviewer {
 	return cleanupapp.AbandonPreviewer{
 		Environment: runtime, ReadChild: runtime.ReadChild, Workspace: runtime.Workspace,
-		Orca:   cleanupapp.AbandonOrcaObserver{ReadIntent: runtime.ReadIntent, InspectionRequest: runtime.InspectionRequest, Orca: deps.Orca, Owner: deps.OrcaOwner},
+		Orca: cleanupapp.AbandonOrcaObserver{ReadIntent: runtime.ReadIntent, InspectionRequest: func(record model.IssueOpsRecord, intent preparationcontract.Intent) (port.ExecutionOrcaIntentRequest, error) {
+			projected, err := PreparationIntentRecord(record)
+			if err != nil {
+				return port.ExecutionOrcaIntentRequest{}, err
+			}
+			request, err := (preparationapp.IntentRequestBuilder{Files: OrcaIntentFiles{}}).Inspect(projected, intent)
+			return preparationoutbound.OrcaIntentRequest(request), err
+		}, Orca: deps.Orca, Owner: deps.OrcaOwner},
 		Remote: cleanupapp.AbandonRemoteObserver{RemoteRef: (LinkedBranchRemoteRef{RunGit: runtime.Command}).Observe},
 	}
 }

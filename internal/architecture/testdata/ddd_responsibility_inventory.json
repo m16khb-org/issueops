@@ -7290,48 +7290,8 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func BuildExecutionOrcaIntentRequest",
-        "func createOrAdoptClaimToken",
-        "func executionOrcaIntentInspectionRequest",
-        "func executionOrcaIntentRequest",
-        "func intentPortOrcaWorkspaceReceiptPointer",
-        "func intentPortProbeRequest",
-        "func intentPortStage",
-        "func intentPortWorkspaceReceipt",
-        "func intentPortWorkspaceRequest",
-        "func normalizedOrcaIntentPurpose",
-        "func readExternalOrcaIntentPayload",
-        "func readExternalOrcaIntentPayloadShape",
-        "func sameOptionalExecutionPath",
-        "func validateExternalOrcaIntentPayload",
-        "func validateOrcaIntentExpectedRecord",
-        "func validateOrcaIntentRecordIdentity",
-        "type externalOrcaIntentPayload",
-        "type externalOrcaLaunchIdentity"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_orca_marker.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func authoritativeOrcaIssueIdentity",
-        "func newOrcaIntentContractError",
-        "func orcaIntentContractError.Error",
-        "func orcaIntentContractError.IssueOpsErrorFields",
-        "func orcaLaunchIssueIdentity",
-        "func parseOrcaIntentMarker",
-        "func preparedOrcaIssueIdentity",
-        "func renderOrcaIntentMarker",
-        "func sealExternalOrcaIntentPayload",
-        "func sealExternalOrcaIntentPayloadWithIdentity",
-        "func sealExternalOrcaLaunchIntentPayload",
-        "func sealExternalOrcaPrepareIntentPayload",
-        "func sealExternalOrcaResumeIntentPayload",
-        "func validateOrcaIntentIssueIdentity",
-        "type orcaIntentContractError",
-        "type orcaIntentMarkerIdentity",
-        "type orcaIssueIdentity"
+        "func ReadExecutionOrcaIntent",
+        "func createOrAdoptClaimToken"
       ]
     },
     {
@@ -7400,7 +7360,6 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func HydrateExecutionPreparationLaunch",
         "func MaterializeExecutionPreparationDirect",
         "func NewExecutionPreparationOperationID",
         "func PrepareExecutionPreparationOwner",
@@ -7819,7 +7778,6 @@
         "func CleanupAbandonRuntime.BranchOID",
         "func CleanupAbandonRuntime.Command",
         "func CleanupAbandonRuntime.Directory",
-        "func CleanupAbandonRuntime.InspectionRequest",
         "func CleanupAbandonRuntime.ReadChild",
         "func CleanupAbandonRuntime.ReadIntent",
         "func CleanupAbandonRuntime.SameLinkedPath",
@@ -8094,6 +8052,20 @@
       "owner": "adapter",
       "task": "T04",
       "symbols": []
+    },
+    {
+      "path": "internal/adapter/issueops/orca_intent_files.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func OrcaIntentFiles.ArtifactPaths",
+        "func OrcaIntentFiles.ReadArtifact",
+        "func OrcaIntentFiles.ReadToken",
+        "func OrcaIntentFiles.SamePath",
+        "func PreparationIntentRecord",
+        "func intentFileRecord",
+        "type OrcaIntentFiles"
+      ]
     },
     {
       "path": "internal/adapter/issueops/orphan_environment.go",
@@ -9160,8 +9132,8 @@
         "func OrcaGatewayAdapter.Inspect",
         "func OrcaGatewayAdapter.Invoke",
         "func OrcaGatewayAdapter.Probe",
+        "func OrcaIntentRequest",
         "func fromPortIntentReceipt",
-        "func toPortIntentRequest",
         "type OrcaDependencies",
         "type OrcaGatewayAdapter"
       ]
@@ -11697,6 +11669,22 @@
       "symbols": [
         "func ApplyDirectCommit",
         "func ValidateDirectCommit"
+      ]
+    },
+    {
+      "path": "internal/application/issueopspreparation/intent_request.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func IntentRequestBuilder.Build",
+        "func IntentRequestBuilder.Inspect",
+        "func IntentRequestBuilder.optionalPath",
+        "func IntentRequestBuilder.paths",
+        "func LaunchHydrator.Hydrate",
+        "func intentDigest",
+        "type IntentFiles",
+        "type IntentRequestBuilder",
+        "type LaunchHydrator"
       ]
     },
     {
@@ -15860,8 +15848,19 @@
         "func contractError",
         "func leasesEqual",
         "func normalizedPurpose",
-        "func providerHostMatches",
+        "func providerIssueURLMatches",
         "func validProvider"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopspreparation/intent_identity.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ValidateIntentIssueIdentity",
+        "func ValidateIntentRecordIdentity",
+        "func ValidateLaunchRequest",
+        "type IntentIdentityPaths"
       ]
     },
     {

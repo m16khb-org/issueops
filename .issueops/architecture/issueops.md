@@ -101,6 +101,8 @@ cycle은 명시값이 없을 때 같은 경로를 계산해 하위 호환한다.
   sealed SHA-256 values. Token contents never enter state, prompts, logs, or
   responses.
 
+`issueopspreparation` domain은 준비·재개·폐기 조회에 공통인 이슈와 workspace 신원을 검증하며, 검증된 자체 호스팅 GitLab URL도 허용한다. `IntentRequestBuilder`의 조회는 봉인된 메타데이터만 사용하고, 실행은 현재 pending·generation과 토큰·프롬프트·컨텍스트 파일의 digest까지 검증한다. `LaunchHydrator`는 현재 레코드와 intent를 다시 읽으며, adapter는 SQL·파일 읽기와 DTO 변환만 맡는다.
+
 ### External intent and lock discipline
 
 - Workspace and remote PR/MR creation persist intent before calling the adapter.

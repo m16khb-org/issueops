@@ -13,6 +13,7 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	abandondomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
@@ -81,7 +82,7 @@ func authoritativeZeroOrca() *fakeAbandonOrca {
 	return &fakeAbandonOrca{inventory: port.ExecutionOrcaIntentInventory{AuthoritativeZero: true}}
 }
 
-func writeAbandonIntentRow(t *testing.T, stateRoot, operationID string, payload externalOrcaIntentPayload) {
+func writeAbandonIntentRow(t *testing.T, stateRoot, operationID string, payload preparationcontract.Intent) {
 	t.Helper()
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -136,18 +137,18 @@ func abandonOrcaPendingRecord(t *testing.T, kind string, writeRow bool) (string,
 		Provider: "github", IssueURL: issueURL, Branch: "106-abandon",
 		BaseBranch: "main", BaseSHA: "deadbeef", LinkVerified: true,
 	}
-	marker, err := renderOrcaIntentMarker(orcaIntentMarkerIdentity{
-		Purpose: orcaIntentPurposePrepare, LifecycleID: record.ID,
+	marker, err := (preparationcontract.IntentCodec{}).RenderMarker(preparationcontract.MarkerIdentity{
+		Purpose: preparationcontract.PurposePrepare, LifecycleID: record.ID,
 		Generation: 1, OperationID: operationID, Provider: "github", Issue: 106,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if writeRow {
-		writeAbandonIntentRow(t, stateRoot, operationID, externalOrcaIntentPayload{
+		writeAbandonIntentRow(t, stateRoot, operationID, preparationcontract.Intent{
 			SchemaVersion: issueops.IssueOpsSchemaVersion, OperationID: operationID, LifecycleID: record.ID,
 			Generation: 1, Stage: intentContractStage(port.ExecutionOrcaIntentWorktree), Marker: marker,
-			StartedAt: "2026-07-24T00:00:00Z", InvocationState: orcaIntentNotInvoked,
+			StartedAt: "2026-07-24T00:00:00Z", InvocationState: preparationcontract.InvocationNotInvoked,
 			Workspace: intentContractWorkspaceRequest(port.ExecutionWorkspaceRequest{
 				LifecycleID: record.ID, SourceRoot: record.Repo, Root: root,
 				Branch: "106-abandon", BaseBranch: "main", BaseHead: "deadbeef",
@@ -675,10 +676,10 @@ func TestCleanupAbandonTreatsAbsentIntentRowAsSuccess(t *testing.T) {
 func TestCleanupAbandonRefusesToDeleteAnotherLifecyclesIntentRow(t *testing.T) {
 	stateRoot, record, operationID, root := abandonOrcaPendingRecord(t, "worktree_create", true)
 	foreign := "op-foreign-row"
-	writeAbandonIntentRow(t, stateRoot, foreign, externalOrcaIntentPayload{
+	writeAbandonIntentRow(t, stateRoot, foreign, preparationcontract.Intent{
 		SchemaVersion: issueops.IssueOpsSchemaVersion, OperationID: foreign, LifecycleID: "io-someoneelse",
 		Generation: 1, Stage: intentContractStage(port.ExecutionOrcaIntentWorktree), Marker: "m",
-		StartedAt: "2026-07-24T00:00:00Z", InvocationState: orcaIntentNotInvoked,
+		StartedAt: "2026-07-24T00:00:00Z", InvocationState: preparationcontract.InvocationNotInvoked,
 		Workspace: intentContractWorkspaceRequest(port.ExecutionWorkspaceRequest{
 			LifecycleID: "io-someoneelse", SourceRoot: record.Repo, Root: root,
 			Branch: "other", BaseBranch: "main", BaseHead: "deadbeef",

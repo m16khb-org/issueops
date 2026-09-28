@@ -29,10 +29,7 @@ func (r CleanupAbandonRuntime) ReadChild(id string) (issueops.IssueOpsRecord, er
 	return ReadIssueOpsExisting(r.StateRoot, id)
 }
 func (r CleanupAbandonRuntime) ReadIntent(id string) (preparation.Intent, error) {
-	return readExternalOrcaIntentPayload(r.StateRoot, id)
-}
-func (CleanupAbandonRuntime) InspectionRequest(record issueops.IssueOpsRecord, intent preparation.Intent) (port.ExecutionOrcaIntentRequest, error) {
-	return executionOrcaIntentInspectionRequest(record, intent)
+	return ReadExecutionOrcaIntent(r.StateRoot, id)
 }
 func (r CleanupAbandonRuntime) Workspace(ctx context.Context, record issueops.IssueOpsRecord, root string) (cleanupapp.FinishWorkspaceObservation, []string) {
 	return NewCleanupWorkspaceCleaner(r.Processes, r.OrcaTerminals).Observe(ctx, record, root)

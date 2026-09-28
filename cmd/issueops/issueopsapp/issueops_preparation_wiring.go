@@ -78,7 +78,20 @@ func newIssueOpsPreparationService(stateRoot, id string, deps issueOpsPreparatio
 			return issueops.ValidateExecutionPreparationOrcaProbe(stateRoot, id, request)
 		},
 		HydrateLaunch: func(_ context.Context, request preparationcontract.IntentRequest) (preparationcontract.IntentRequest, error) {
-			return issueops.HydrateExecutionPreparationLaunch(stateRoot, id, request)
+			hydrator := preparationapp.LaunchHydrator{
+				ReadRecord: func(id string) (preparationcontract.Record, error) {
+					record, err := issueops.ReadIssueOpsExisting(stateRoot, id)
+					if err != nil {
+						return preparationcontract.Record{}, err
+					}
+					return issueops.PreparationIntentRecord(record)
+				},
+				ReadIntent: func(operationID string) (preparationcontract.Intent, error) {
+					return issueops.ReadExecutionOrcaIntent(stateRoot, operationID)
+				},
+				Builder: preparationapp.IntentRequestBuilder{Files: issueops.OrcaIntentFiles{}},
+			}
+			return hydrator.Hydrate(id, request)
 		},
 	})
 	evidence := preparationoutbound.NewEvidence(preparationoutbound.EvidenceDependencies{

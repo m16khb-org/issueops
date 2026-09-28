@@ -94,11 +94,11 @@ func orcaPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	return stateRoot, record
 }
 
-func resumeIntentFixture(t *testing.T, provider string, issue int) (string, issueops.IssueOpsRecord, externalOrcaIntentPayload) {
+func resumeIntentFixture(t *testing.T, provider string, issue int) (string, issueops.IssueOpsRecord, preparationcontract.Intent) {
 	return resumeIntentFixtureWithLinkVerified(t, provider, issue, true)
 }
 
-func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue int, linkVerified bool) (string, issueops.IssueOpsRecord, externalOrcaIntentPayload) {
+func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue int, linkVerified bool) (string, issueops.IssueOpsRecord, preparationcontract.Intent) {
 	t.Helper()
 	stateRoot, record := executionPrepareRecord(t)
 	root := issueOpsWorktreePathForTest(record.Repo, record.Branch)

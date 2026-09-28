@@ -76,7 +76,7 @@ func PrepareIssueIdentity(recordIssueURL string, prepared *preparationcontract.I
 		return preparationcontract.IssueIdentity{}, contractError("intent_identity_mismatch", "Orca intent issue URL does not match the verified branch identity")
 	}
 	parsed, err := url.Parse(prepared.IssueURL)
-	if err != nil || parsed.Hostname() == "" || !providerHostMatches(provider, parsed.Hostname()) {
+	if err != nil || parsed.Hostname() == "" || !providerIssueURLMatches(provider, parsed) {
 		return preparationcontract.IssueIdentity{}, contractError("intent_identity_mismatch", "Orca intent provider does not match the verified issue URL")
 	}
 	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
@@ -143,7 +143,14 @@ func bindingsEqual(left *preparationcontract.OrcaBinding, right *preparationcont
 		left.RunID == right.RunID && left.TaskID == right.TaskID && left.DispatchID == right.DispatchID && left.TerminalPTYID == right.TerminalPTYID
 }
 
-func providerHostMatches(provider, host string) bool {
-	host = strings.ToLower(strings.TrimSpace(host))
-	return (provider == "github" && host == "github.com") || (provider == "gitlab" && (host == "gitlab.com" || strings.Contains(host, "gitlab")))
+func providerIssueURLMatches(provider string, parsed *url.URL) bool {
+	host, path := strings.ToLower(parsed.Hostname()), strings.ToLower(parsed.Path)
+	switch provider {
+	case "github":
+		return host == "github.com" && strings.Contains(path, "/issues/")
+	case "gitlab":
+		return strings.Contains(host, "gitlab") || strings.Contains(path, "/-/issues/") || strings.Contains(path, "/-/work_items/")
+	default:
+		return false
+	}
 }

@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"time"
 
-	issueopscontract "issueops/internal/contract/issueops"
-
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
 	"issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/orca"
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
+	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
+	preparationapp "issueops/internal/application/issueopspreparation"
+	issueopscontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -142,11 +143,8 @@ func issueOpsOrcaIntentRequest(record leasecontract.Record, operationID string, 
 	if err != nil {
 		return port.ExecutionOrcaIntentRequest{}, err
 	}
-	coreRecord, err := resumeCoreRecord(record)
-	if err != nil {
-		return port.ExecutionOrcaIntentRequest{}, err
-	}
-	return issueops.BuildExecutionOrcaIntentRequest(coreRecord, sealed)
+	request, err := (preparationapp.IntentRequestBuilder{Files: issueops.OrcaIntentFiles{}}).Build(record, sealed)
+	return preparationoutbound.OrcaIntentRequest(request), err
 }
 
 func resumeContractReceipt(receipt port.ExecutionOrcaIntentReceipt) leasecontract.ResumeStageReceipt {

@@ -8,9 +8,12 @@ import (
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	issueopscore "issueops/internal/adapter/issueops"
 	orcaadapter "issueops/internal/adapter/orca"
+	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	cleanupapp "issueops/internal/application/issueopscleanup"
+	preparationapp "issueops/internal/application/issueopspreparation"
 	completionapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
@@ -56,7 +59,14 @@ func configureIssueOpsCleanup() {
 				Provider: d.Provider, Observe: cleanupapp.ObserveAbandonArtifact,
 				Plan: (cleanupapp.AbandonPreviewer{
 					Environment: runtime, ReadChild: runtime.ReadChild, Workspace: runtime.Workspace,
-					Orca:   cleanupapp.AbandonOrcaObserver{ReadIntent: runtime.ReadIntent, InspectionRequest: runtime.InspectionRequest, Orca: d.OrcaIntent, Owner: d.OrcaOwner},
+					Orca: cleanupapp.AbandonOrcaObserver{ReadIntent: runtime.ReadIntent, InspectionRequest: func(record issueopscontract.IssueOpsRecord, intent preparationcontract.Intent) (port.ExecutionOrcaIntentRequest, error) {
+						projected, err := issueopscore.PreparationIntentRecord(record)
+						if err != nil {
+							return port.ExecutionOrcaIntentRequest{}, err
+						}
+						request, err := (preparationapp.IntentRequestBuilder{Files: issueopscore.OrcaIntentFiles{}}).Inspect(projected, intent)
+						return preparationoutbound.OrcaIntentRequest(request), err
+					}, Orca: d.OrcaIntent, Owner: d.OrcaOwner},
 					Remote: cleanupapp.AbandonRemoteObserver{RemoteRef: (issueopscore.LinkedBranchRemoteRef{RunGit: runtime.Command}).Observe},
 				}).Plan,
 				NewAttempt: issueopscore.NewCleanupAttempt, Stop: runtime.Stop, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Command, Now: time.Now,

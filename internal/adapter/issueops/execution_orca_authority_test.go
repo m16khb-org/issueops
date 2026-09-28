@@ -1,11 +1,13 @@
 package issueops
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 )
 
 func TestOrcaIntentExpectedRecordDelegatesAuthorityAndKeepsIdentity(t *testing.T) {
@@ -32,16 +34,31 @@ func TestOrcaIntentExpectedRecordDelegatesAuthorityAndKeepsIdentity(t *testing.T
 		},
 		Probe: preparationcontract.ProbeRequest{Provider: "github", Issue: 199},
 	}
-	if err := validateOrcaIntentExpectedRecord(record, intent); err != nil {
+	if err := validateIntentAuthorityForTest(record, intent); err != nil {
 		t.Fatalf("matching intent rejected: %v", err)
 	}
 	record.Execution.Lease.Generation = 2
-	if err := validateOrcaIntentExpectedRecord(record, intent); err == nil || !strings.Contains(err.Error(), "authority changed") {
+	if err := validateIntentAuthorityForTest(record, intent); err == nil || !strings.Contains(err.Error(), "authority changed") {
 		t.Fatalf("stale generation accepted: %v", err)
 	}
 	record.Execution.Lease.Generation = 1
 	intent.Workspace.Branch = "other"
-	if err := validateOrcaIntentExpectedRecord(record, intent); err == nil || !strings.Contains(err.Error(), "record identity changed") {
+	if err := validateIntentAuthorityForTest(record, intent); err == nil || !strings.Contains(err.Error(), "record identity changed") {
 		t.Fatalf("mismatched workspace accepted: %v", err)
 	}
+}
+
+func validateIntentAuthorityForTest(record issueops.IssueOpsRecord, intent preparationcontract.Intent) error {
+	raw, err := json.Marshal(record)
+	if err != nil {
+		return err
+	}
+	var authority preparationcontract.Record
+	if err := json.Unmarshal(raw, &authority); err != nil {
+		return err
+	}
+	if err := preparationdomain.ValidateIntentRecordAuthority(authority, intent); err != nil {
+		return err
+	}
+	return preparationdomain.ValidateIntentRecordIdentity(authority, intent, preparationdomain.IntentIdentityPaths{Source: true, Root: true, Parent: true})
 }

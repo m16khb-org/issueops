@@ -19,19 +19,19 @@ import (
 	"issueops/internal/port"
 )
 
-func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsRecord, workspace port.ExecutionWorkspaceRequest, probe port.ExecutionOrcaProbeRequest, request ExecutionPrepareRequest, owner executionOwnerSnapshot, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
+func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsRecord, workspace port.ExecutionWorkspaceRequest, probe port.ExecutionOrcaProbeRequest, request ExecutionPrepareRequest, owner executionOwnerSnapshot, now func() time.Time) (issueops.IssueOpsRecord, preparationcontract.Intent, error) {
 	store, err := sqlstore.Open(stateRoot)
 	if err != nil {
-		return record, externalOrcaIntentPayload{}, err
+		return record, preparationcontract.Intent{}, err
 	}
 	repository := preparationoutbound.NewSQLiteRepository(store)
 	snapshot, err := repository.Load(context.Background(), record.ID)
 	if err != nil {
-		return record, externalOrcaIntentPayload{}, err
+		return record, preparationcontract.Intent{}, err
 	}
 	operationID, err := newExecutionOperationID()
 	if err != nil {
-		return record, externalOrcaIntentPayload{}, err
+		return record, preparationcontract.Intent{}, err
 	}
 	command := preparationcontract.Command{
 		ID: record.ID, Mode: preparationcontract.ModeOrca,
@@ -53,7 +53,7 @@ func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsReco
 		OperationID: operationID, StartedAt: executionNow(now), Selection: selection,
 	})
 	if err != nil {
-		return record, externalOrcaIntentPayload{}, err
+		return record, preparationcontract.Intent{}, err
 	}
 	persisted, err := ReadIssueOps(stateRoot, record.ID)
 	return persisted, state.Intent, err
@@ -75,7 +75,7 @@ type ExecutionResumeIntentState struct {
 	Pending            bool
 }
 
-func executionResumeIntentPayload(expected ExecutionResumeIntentState) (externalOrcaIntentPayload, error) {
+func executionResumeIntentPayload(expected ExecutionResumeIntentState) (preparationcontract.Intent, error) {
 	return (preparationcontract.IntentCodec{}).Decode(expected.OperationID, expected.IntentRaw)
 }
 
@@ -102,7 +102,7 @@ func (e reconcileWorktreeTestEffects) PrepareWorktree(ctx context.Context, snaps
 	return PrepareExecutionPreparationOwner(ctx, e.stateRoot, snapshot, command, intent, receipt, e.readIssue)
 }
 
-func advanceOrcaIntentReceiptViaRepository(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected externalOrcaIntentPayload, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, _ func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
+func advanceOrcaIntentReceiptViaRepository(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected preparationcontract.Intent, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, _ func() time.Time) (issueops.IssueOpsRecord, preparationcontract.Intent, error) {
 	store, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return record, expected, err

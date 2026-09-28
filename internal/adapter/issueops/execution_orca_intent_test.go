@@ -110,7 +110,7 @@ func TestRecordOrcaIntentTerminalSendFailurePreservesDispatchAndPromptRequestIDs
 		DispatchRequestID:      "11111111-1111-4111-8111-111111111111",
 		OrchestrationRequestID: "22222222-2222-4222-8222-222222222222",
 	}
-	if err := recordResumeIntentFailureViaRepository(stateRoot, state, orcaIntentUnknown, cause, nil); err != nil {
+	if err := recordResumeIntentFailureViaRepository(stateRoot, state, preparationcontract.InvocationUnknown, cause, nil); err != nil {
 		t.Fatal(err)
 	}
 	updated, err := loadResumeIntentViaRepository(stateRoot, record.ID, payload.OperationID)
@@ -166,7 +166,7 @@ func TestRecordOrcaIntentFailureRejectsMalformedOrMismatchedResponseIDs(t *testi
 		t.Run(test.name, func(t *testing.T) {
 			stateRoot, state := resumeDispatchIntentState(t)
 			if test.seed != nil {
-				if err := recordResumeIntentFailureViaRepository(stateRoot, state, orcaIntentUnknown, test.seed, nil); err != nil {
+				if err := recordResumeIntentFailureViaRepository(stateRoot, state, preparationcontract.InvocationUnknown, test.seed, nil); err != nil {
 					t.Fatal(err)
 				}
 				var err error
@@ -175,7 +175,7 @@ func TestRecordOrcaIntentFailureRejectsMalformedOrMismatchedResponseIDs(t *testi
 					t.Fatal(err)
 				}
 			}
-			if err := recordResumeIntentFailureViaRepository(stateRoot, state, orcaIntentUnknown, test.cause, nil); err != nil {
+			if err := recordResumeIntentFailureViaRepository(stateRoot, state, preparationcontract.InvocationUnknown, test.cause, nil); err != nil {
 				t.Fatal(err)
 			}
 			updated, err := loadResumeIntentViaRepository(stateRoot, state.Record.ID, state.OperationID)
