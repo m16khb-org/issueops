@@ -7125,7 +7125,6 @@
       "task": "T06",
       "symbols": [
         "func SwitchExecutionMode",
-        "func normalizeExecutionSwitchMode",
         "func removeSwitchModeWorkspace",
         "func switchModeGates",
         "type switchModeInventory"
@@ -14469,6 +14468,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueopslease/writer.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func LeaseHoldsWriter"
+      ]
+    },
+    {
       "path": "internal/domain/issueopslease/writerless_recovery.go",
       "owner": "domain",
       "task": "T20",
@@ -14489,6 +14496,16 @@
         "type Node",
         "type Observation",
         "type State"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsmodeswitch/decision.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func MissingGates",
+        "func NormalizeMode",
+        "type Facts"
       ]
     },
     {
@@ -18209,6 +18226,42 @@
         "internal/domain/issueopspreparation/orca_stage_test.go",
         "internal/adapter/orca/execution_test.go"
       ],
+      "status": "retain"
+    },
+    {
+      "id": "mode-switch-normalization",
+      "source_path": "internal/adapter/issueops/execution_mode_switch.go",
+      "source_symbol": "func normalizeExecutionSwitchMode",
+      "responsibility": "require an explicit direct or Orca target for a destructive mode switch",
+      "target": "internal/domain/issueopsmodeswitch",
+      "target_symbol": "func NormalizeMode",
+      "task": "T06",
+      "entrypoints": ["issueops execution switch-mode"],
+      "evidence_tests": ["internal/domain/issueopsmodeswitch/decision_test.go", "internal/adapter/issueops/execution_mode_switch_provenance_test.go"],
+      "status": "migrated"
+    },
+    {
+      "id": "mode-switch-eligibility",
+      "source_path": "internal/adapter/issueops/execution_mode_switch.go",
+      "source_symbol": "func switchModeGates",
+      "responsibility": "observe worktree and Git state; domain combines mode, writer, pending intent, cleanliness, commit, and remote-name gates in order",
+      "target": "internal/domain/issueopsmodeswitch",
+      "target_symbol": "func MissingGates",
+      "task": "T06",
+      "entrypoints": ["issueops execution switch-mode"],
+      "evidence_tests": ["internal/domain/issueopsmodeswitch/decision_test.go", "internal/adapter/issueops/execution_mode_switch_provenance_test.go"],
+      "status": "retain"
+    },
+    {
+      "id": "cleanup-lease-writer-status",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_abandon.go",
+      "source_symbol": "func cleanupAbandonLeaseHoldsWriter",
+      "responsibility": "delegate the fail-closed writer status rule shared by cleanup and mode switch to the lease domain",
+      "target": "internal/domain/issueopslease",
+      "target_symbol": "func LeaseHoldsWriter",
+      "task": "T08",
+      "entrypoints": ["issueops cleanup abandon", "issueops execution switch-mode"],
+      "evidence_tests": ["internal/domain/issueopslease/writer_test.go", "internal/adapter/issueops/issueops_cleanup_abandon_residual_test.go"],
       "status": "retain"
     }
   ]

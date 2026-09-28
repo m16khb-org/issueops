@@ -14,6 +14,7 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
 )
 
@@ -593,12 +594,7 @@ func cleanupAbandonPendingRecovery(id string, cause error) string {
 // 알 수 없는 상태는 writer 보유로 다룬다 — 모르는 상태를 통과시키면 게이트가
 // fail-open이 된다.
 func cleanupAbandonLeaseHoldsWriter(status issueops.LeaseStatus) bool {
-	switch status {
-	case issueops.LeaseStatusClaimable, issueops.LeaseStatusReleased:
-		return false
-	default:
-		return true
-	}
+	return leasedomain.LeaseHoldsWriter(string(status))
 }
 
 // cleanupAbandonOrcaResourcesAbsent는 레코드를 지워도 orca 자원이 소유자를 잃지

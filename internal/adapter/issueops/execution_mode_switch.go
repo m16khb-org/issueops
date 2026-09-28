@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"issueops/internal/contract/issueops"
+	leasedomain "issueops/internal/domain/issueopslease"
+	modeswitchdomain "issueops/internal/domain/issueopsmodeswitch"
 )
 
 // switchModeInventory는 fingerprint 입력이 되는 현재 관측 상태다.
@@ -41,7 +43,7 @@ func SwitchExecutionMode(ctx context.Context, stateRoot string, req ExecutionSwi
 			return code, stdout
 		}
 	}
-	requested, err := normalizeExecutionSwitchMode(req.Mode)
+	requested, err := modeswitchdomain.NormalizeMode(req.Mode)
 	if err != nil {
 		return ExecutionSwitchModeResult{OK: false, ID: req.ID}, err
 	}
@@ -121,7 +123,6 @@ func SwitchExecutionMode(ctx context.Context, stateRoot string, req ExecutionSwi
 // switchModeGates는 게이트 전부를 평가하고 missing을 나열한다(첫 실패에 멈추지
 // 않는다 — 운영자가 한 번의 preview로 모든 결격 사유를 본다).
 func switchModeGates(record issueops.IssueOpsRecord, requested string, deps ExecutionSwitchModeDependencies, result *ExecutionSwitchModeResult) (switchModeInventory, []string) {
-	missing := []string{}
 	execution := record.Execution
 	inventory := switchModeInventory{
 		ID: record.ID, Repo: record.Repo, Branch: strings.TrimSpace(execution.Workspace.Branch),
@@ -132,43 +133,34 @@ func switchModeGates(record issueops.IssueOpsRecord, requested string, deps Exec
 	}
 	result.WorktreeRoot = inventory.WorktreeRoot
 	result.Branch = inventory.Branch
+	facts := modeswitchdomain.Facts{
+		CurrentMode: inventory.CurrentMode, RequestedMode: requested,
+		WriterPresent: leasedomain.LeaseHoldsWriter(inventory.LeaseStatus), PendingIntent: execution.Pending != nil,
+		WorktreeClean: true, NoUnpushedCommits: true,
+	}
 
-	// ① 모드가 실제로 바뀌어야 한다. 같은 모드로의 전환은 지울 이유가 없고,
-	// 파괴 조작이 아무 일도 하지 않는 것보다 요청을 거부하는 편이 안전하다.
-	if inventory.CurrentMode == requested {
-		missing = append(missing, "mode_actually_changes")
-	}
-	// ② lease가 writer를 쥐고 있으면 안 된다. 판정 기준은 상태 이름이 아니라
-	// writer의 유무이며, cleanup abandon과 같은 함수를 쓴다 — 두 곳에 조건을
-	// 따로 쓰면 abandon은 허용하는데 switch는 막거나 그 반대가 된다.
-	if cleanupAbandonLeaseHoldsWriter(execution.Lease.Status) {
-		missing = append(missing, "lease_holds_no_writer")
-	}
-	// ③ pending intent는 외부 mutation이 미해소라는 뜻이다. 그 상태에서 지우면
-	// 무엇이 남았는지 영영 알 수 없다.
+	// Mode, writer, and pending-intent eligibility are decided together by the
+	// domain after the adapter has finished observing worktree and Git state.
 	if execution.Pending != nil {
 		inventory.PendingID = strings.TrimSpace(execution.Pending.OperationID)
-		missing = append(missing, "pending_intent_absent")
 	}
 	// ④ 잃을 작업이 없어야 한다. 워크트리가 없으면 지울 것도 없으므로 통과다.
 	if inventory.WorktreeRoot != "" {
 		if _, err := os.Stat(inventory.WorktreeRoot); err == nil {
 			inventory.WorktreePresent = true
+			facts.WorktreePresent = true
 			result.WorktreePresent = true
-			if code, out := deps.Git(inventory.WorktreeRoot, "status", "--porcelain=v1"); code != 0 || strings.TrimSpace(out) != "" {
-				missing = append(missing, "worktree_clean")
-			}
+			code, out := deps.Git(inventory.WorktreeRoot, "status", "--porcelain=v1")
+			facts.WorktreeClean = code == 0 && strings.TrimSpace(out) == ""
 			// 푸시되지 않은 커밋은 워크트리를 지우면 사라진다. upstream이 없으면
 			// 비교할 대상이 없으므로 커밋 존재 자체를 잃을 작업으로 본다.
 			if inventory.Branch != "" {
 				if code, out := deps.Git(inventory.WorktreeRoot, "rev-list", "--count", "refs/remotes/origin/"+inventory.Branch+".."+"HEAD"); code == 0 {
-					if strings.TrimSpace(out) != "0" {
-						missing = append(missing, "worktree_commits_pushed")
-					}
+					facts.NoUnpushedCommits = strings.TrimSpace(out) == "0"
 				} else if code, out := deps.Git(inventory.WorktreeRoot, "rev-list", "--count", strings.TrimSpace(execution.Workspace.BaseHead)+".."+"HEAD"); code != 0 || strings.TrimSpace(out) != "0" {
 					// upstream을 못 읽으면 base 대비로 판정한다. 둘 다 실패하면
 					// 관측 불가이므로 fail-closed다.
-					missing = append(missing, "worktree_commits_pushed")
+					facts.NoUnpushedCommits = false
 				}
 			}
 		}
@@ -194,7 +186,7 @@ func switchModeGates(record issueops.IssueOpsRecord, requested string, deps Exec
 	// 붙이는 것이 이 상태를 푸는 경로다.
 	if requested == string(issueops.ExecutionModeOrca) && inventory.Branch != "" {
 		if code, _ := deps.Git(record.Repo, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/"+inventory.Branch); code == 0 {
-			missing = append(missing, "orca_branch_name_free")
+			facts.OrcaRemoteBranchExists = true
 			result.BranchFreeError = fmt.Sprintf(
 				"branch %q still exists on origin, so Orca would take a suffixed name after the switch: "+
 					"delete the remote branch if it holds no work, run `git fetch --prune` if it is already gone, "+
@@ -202,7 +194,7 @@ func switchModeGates(record issueops.IssueOpsRecord, requested string, deps Exec
 				inventory.Branch)
 		}
 	}
-	return inventory, missing
+	return inventory, modeswitchdomain.MissingGates(facts)
 }
 
 // removeSwitchModeWorkspace는 워크트리와 로컬 브랜치를 지운다. 원격은 건드리지
@@ -220,17 +212,4 @@ func removeSwitchModeWorkspace(record issueops.IssueOpsRecord, inventory switchM
 		}
 	}
 	return nil
-}
-
-func normalizeExecutionSwitchMode(value string) (string, error) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case string(issueops.ExecutionModeDirect):
-		return string(issueops.ExecutionModeDirect), nil
-	case string(issueops.ExecutionModeOrca):
-		return string(issueops.ExecutionModeOrca), nil
-	default:
-		// auto는 "실행 가능한 모드를 골라 달라"는 요청이지 전환 대상이 아니다.
-		// 파괴 조작의 목표를 harness가 고르게 두지 않는다.
-		return "", fmt.Errorf("execution switch-mode requires an explicit --mode direct or orca")
-	}
 }
