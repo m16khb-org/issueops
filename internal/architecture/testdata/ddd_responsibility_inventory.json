@@ -14186,6 +14186,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsbasesync/record_gates.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func MissingRecordGates",
+        "type RecordGateFacts"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsbasesync/record_transition.go",
       "owner": "domain",
       "task": "T20",
@@ -18455,6 +18464,26 @@
       "evidence_tests": [
         "internal/domain/issueopslease/writer_test.go",
         "internal/adapter/issueops/issueops_cleanup_abandon_residual_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "base-sync-record-gates",
+      "source_path": "internal/adapter/issueops/execution_sync_base.go",
+      "source_symbol": "func executionSyncBaseGates",
+      "responsibility": "observe record and Git state while domain decides released completion, remote artifact, pending intent, and base branch eligibility",
+      "target": "internal/domain/issueopsbasesync",
+      "target_symbol": "func MissingRecordGates",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution sync-base --preview",
+        "issueops execution sync-base --apply",
+        "issueops execution sync-base --finalize",
+        "issueops execution sync-base --abort"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsbasesync/record_gates_test.go",
+        "internal/adapter/issueops/execution_sync_base_test.go"
       ],
       "status": "retain"
     },

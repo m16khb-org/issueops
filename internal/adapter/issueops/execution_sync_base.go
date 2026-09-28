@@ -125,28 +125,10 @@ func SyncExecutionBase(ctx context.Context, stateRoot string, req ExecutionSyncB
 // 이후 git 호출은 전부 의미가 없기 때문이다.
 func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord, req ExecutionSyncBaseRequest, mode string,
 	actor issueops.NativeActor, deps ExecutionSyncBaseDeps, result *ExecutionSyncBaseResult) (executionSyncBaseInventory, []string) {
-	missing := []string{}
 	inventory := executionSyncBaseInventory{ID: record.ID, Repo: record.Repo}
 	execution := record.Execution
 	if execution == nil {
-		return inventory, append(missing, "execution_prepared")
-	}
-	// released maintenance는 current completion과 remote artifact가 권위다.
-	// Active holder는 PR 전 parent sync에도 같은 typed path를 사용한다.
-	if execution.Lease.Status != issueops.LeaseStatusActive {
-		if execution.Completion == nil {
-			missing = append(missing, "completion_present")
-		} else if execution.Completion.Generation == 0 {
-			missing = append(missing, "current_completion_generation_present")
-		}
-		if record.RemoteArtifact == nil {
-			missing = append(missing, "remote_artifact_present")
-		}
-	}
-	// ④ pending_intent_absent: 열린 외부 intent 위에서는 어떤 변형도 금지한다
-	//    (design-review F13 — replace 선례 준용, reconcile로 안내).
-	if execution.Pending != nil {
-		missing = append(missing, "pending_intent_absent")
+		return inventory, basesyncdomain.MissingRecordGates(basesyncdomain.RecordGateFacts{})
 	}
 	inventory.PendingIntentAbsent = execution.Pending == nil
 	inventory.LeaseGeneration = execution.Lease.Generation
@@ -160,9 +142,15 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 	if record.BranchPrepare != nil {
 		inventory.BaseBranch = strings.TrimSpace(record.BranchPrepare.BaseBranch)
 	}
-	if inventory.BaseBranch == "" {
-		missing = append(missing, "base_branch_present")
+	facts := basesyncdomain.RecordGateFacts{
+		ExecutionPresent: true, LeaseActive: execution.Lease.Status == issueops.LeaseStatusActive,
+		CompletionPresent: execution.Completion != nil, RemoteArtifactPresent: record.RemoteArtifact != nil,
+		PendingIntentAbsent: inventory.PendingIntentAbsent, BaseBranchPresent: inventory.BaseBranch != "",
 	}
+	if execution.Completion != nil {
+		facts.CompletionGeneration = execution.Completion.Generation
+	}
+	missing := basesyncdomain.MissingRecordGates(facts)
 	result.Branch, result.BaseBranch = inventory.Branch, inventory.BaseBranch
 	// ⑤ worktree_present + cwd_canonical: 소스 루트 호출의 훅 사각지대를
 	//    봉쇄한다(design-review F2 — complete/claim 선례 준용).
