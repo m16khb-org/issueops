@@ -360,12 +360,12 @@ IssueOps lease나 `direct|orca` mode를 소유하지 않는다. 실제 Herdr 호
    canonical cwd와 foreground가 빈 interactive shell임을 확인한다.
    현재 native host별로 **한 경로만** 실행한다.
 
-   - Claude·Codex: `herdr agent start "$AGENT_NAME" --kind "$HOST" --pane "$PANE_ID"
-     --timeout 60000 -- "$PERMISSION_BYPASS_FLAG"`을 사용한다. Claude Code의
-     `PERMISSION_BYPASS_FLAG`는 `--dangerously-skip-permissions`, Codex는
-     `--dangerously-bypass-approvals-and-sandbox`다. 이름은 `agent list`와 대조한
-     고유한 이름이고, 모델·effort 인자는 해당 호스트의 설치된 help에서 확인한
-     경우에만 같은 `--` 뒤에 추가한다.
+   - Claude Code: `herdr agent start "$AGENT_NAME" --kind claude --pane "$PANE_ID"
+     --timeout 60000 -- --dangerously-skip-permissions`를 사용한다.
+   - Codex: `herdr agent start "$AGENT_NAME" --kind codex --pane "$PANE_ID"
+     --timeout 60000 -- --dangerously-bypass-approvals-and-sandbox`를 사용한다.
+     이름은 `agent list`와 대조한 고유한 이름이고, 모델·effort 인자는 해당
+     호스트의 설치된 help에서 확인한 경우에만 같은 `--` 뒤에 추가한다.
      성공 후에도 `herdr agent read "$AGENT_NAME" --source visible`로 입력창을 확인한 뒤
      `herdr agent prompt "$AGENT_NAME" "$HANDOFF"`로 한 번 전달한다.
    - Omo: Herdr 0.9.0의 kind 목록에는 `omo`가 없다. `pi`나 `omp`, Claude로 대체하지
