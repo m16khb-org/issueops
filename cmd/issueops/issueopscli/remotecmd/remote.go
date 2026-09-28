@@ -195,26 +195,9 @@ func runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := remoteDeps.ReadIssueOps(remoteDeps.IssueOpsStateRoot(), *id)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	providerName := firstNonEmptyMain(*providerOverride, remoteDeps.ResolveRecordProvider(record))
-	if providerName == "" {
-		err := fmt.Errorf("cannot determine provider from IssueOps record; ensure issue_url is set")
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	prov, err := Resolve(providerName)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	ancestry, err := deps.observeNativeProcessAncestry()
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	_, result, err := remoteDeps.ReflectDevilsAdvocateFindingsWithActor(remoteDeps.IssueOpsStateRoot(), *id, *confirm, prov, issueopscontract.IssueOpsActor{
-		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd, NativeProcessAncestry: ancestry,
-	})
+	_, result, err := remoteDeps.ReflectReviewFindings(context.Background(), remoteDeps.IssueOpsStateRoot(), *id, *providerOverride, *confirm, issueopscontract.IssueOpsActor{
+		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
+	}, deps.observeNativeProcessAncestry)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

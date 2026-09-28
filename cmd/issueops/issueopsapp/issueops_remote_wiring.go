@@ -33,7 +33,7 @@ func configureIssueOpsRemote() {
 		LinkIssueOpsChildWithActor:                 issueopscore.LinkIssueOpsChildWithActor,
 		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
 		ReadIssueOps:                               issueopscore.ReadIssueOps,
-		ReflectDevilsAdvocateFindingsWithActor:     issueopscore.ReflectDevilsAdvocateFindingsWithActor,
+		ReflectReviewFindings:                      reflectReviewFindings,
 		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,
 		ResolveRecordProvider:                      issuedomain.ResolveRecordProvider,
 		ScoreIssueOpsRemoteCandidates:              issueopscore.ScoreIssueOpsRemoteCandidates,

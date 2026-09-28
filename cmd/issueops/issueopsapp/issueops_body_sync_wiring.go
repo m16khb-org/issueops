@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"issueops/internal/adapter/issueops"
+	authorizationoutbound "issueops/internal/adapter/outbound/issueopsauthorization"
 	application "issueops/internal/application/issueopsbodysync"
+	cycleapp "issueops/internal/application/issueopscycle"
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopsbodysync"
 	"issueops/internal/port"
@@ -16,6 +18,6 @@ func syncIssueOpsRemoteArtifactBody(ctx context.Context, stateRoot, id string, c
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, contract.Result{}, err
 	}
-	service := application.NewService(issueops.BodySyncRepository{StateRoot: stateRoot}, gateway, issueops.BodySyncAuthority{}, time.Now)
+	service := application.NewService(issueops.BodySyncRepository{StateRoot: stateRoot}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), time.Now)
 	return service.Sync(ctx, id, command, actor)
 }

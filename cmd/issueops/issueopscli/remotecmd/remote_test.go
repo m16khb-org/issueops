@@ -1098,3 +1098,67 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 		}
 	})
 }
+
+func TestRemoteReflectReviewPreviewAndConfirmUseApplication(t *testing.T) {
+	root, repo, bin := t.TempDir(), t.TempDir(), t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", root)
+	root = issueopscore.IssueOpsStateRoot()
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	record, err := issueopscore.StartIssueOps(root, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "64-review-cli"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	record.IssueURL = "https://github.com/acme/repo/issues/64"
+	record.DevilsAdvocateReview = &issueopscontract.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"finding from review"}, RecordedAt: "then"}
+	if _, err := issueopscore.WriteIssueOps(root, record); err != nil {
+		t.Fatal(err)
+	}
+	script := `#!/bin/sh
+if [ "$1 $2" = "issue view" ]; then
+  printf '{"body":"original body"}'
+  exit 0
+fi
+if [ "$1 $2" = "issue edit" ]; then
+  printf '%s' "$*" > review-edit
+  exit 0
+fi
+exit 2
+`
+	if err := os.WriteFile(filepath.Join(bin, "gh"), []byte(script), 0700); err != nil {
+		t.Fatal(err)
+	}
+	var result port.IssueProviderUpdateIssueBodySectionResult
+	observations := 0
+	deps := Deps{PrintJSON: func(value any) error { result = value.(port.IssueProviderUpdateIssueBodySectionResult); return nil }, ObserveProcessAncestry: func(int) ([]issueopscontract.NativeProcessReceipt, error) {
+		observations++
+		return []issueopscontract.NativeProcessReceipt{{PID: 42, StartedAt: "start", Executable: "/bin/codex"}}, nil
+	}}
+	args := []string{"reflect-devils-advocate", "--id", record.ID, "--json"}
+	if err := Run(args, deps); err != nil {
+		t.Fatal(err)
+	}
+	current, err := issueopscore.ReadIssueOps(root, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Preview == "" || result.Updated || current.DevilsAdvocateReview.IssueReflectedAt != "" {
+		t.Fatal("preview mutated state")
+	}
+	if _, err := os.Stat(filepath.Join(repo, "review-edit")); !os.IsNotExist(err) {
+		t.Fatalf("preview invoked edit: %v", err)
+	}
+	if err := Run(append(args, "--confirm"), deps); err != nil {
+		t.Fatal(err)
+	}
+	current, err = issueopscore.ReadIssueOps(root, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := os.ReadFile(filepath.Join(repo, "review-edit"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Updated || current.DevilsAdvocateReview.IssueReflectedAt == "" || observations != 2 || !strings.Contains(string(body), "original body") || !strings.Contains(string(body), "finding from review") {
+		t.Fatalf("result=%+v observations=%d body=%s", result, observations, body)
+	}
+}

@@ -35,19 +35,11 @@ func TestAuthorizeRequiresExactLeaseHolderProcessAndWorkspace(t *testing.T) {
 		CWD:                   "/repo.worktrees/decision",
 		NativeProcessAncestry: []issueopscontract.NativeProcessReceipt{process},
 	}
-	if err := AuthorizeExecutionMutation(
-		record,
-		actor,
-		func(left, right string) bool { return left == right },
-	); err != nil {
+	if needsPath, err := ValidateHolder(record, actor); err != nil || !needsPath {
 		t.Fatal(err)
 	}
 	actor.NativeProcessAncestry = nil
-	if err := AuthorizeExecutionMutation(
-		record,
-		actor,
-		func(string, string) bool { return true },
-	); err == nil || !strings.Contains(err.Error(), "write lease holder") {
+	if _, err := ValidateHolder(record, actor); err == nil || !strings.Contains(err.Error(), "write lease holder") {
 		t.Fatalf("missing process receipt must fail closed: %v", err)
 	}
 }

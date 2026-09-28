@@ -10,8 +10,10 @@ import (
 	"testing"
 	"time"
 
+	authorizationoutbound "issueops/internal/adapter/outbound/issueopsauthorization"
 	"issueops/internal/adapter/outbound/sqlstore"
 	application "issueops/internal/application/issueopsbodysync"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
 	bodysync "issueops/internal/domain/issueopsbodysync"
@@ -379,7 +381,7 @@ func syncBodyForTest(ctx context.Context, stateRoot, id string, command bodysync
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	return application.NewService(BodySyncRepository{StateRoot: stateRoot}, gateway, BodySyncAuthority{}, time.Now).Sync(ctx, id, command, actor)
+	return application.NewService(BodySyncRepository{StateRoot: stateRoot}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), time.Now).Sync(ctx, id, command, actor)
 }
 
 type bodySyncConcurrentProvider struct {

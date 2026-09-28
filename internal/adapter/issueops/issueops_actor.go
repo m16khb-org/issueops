@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	issueopsartifactdomain "issueops/internal/domain/issueopsartifact"
@@ -13,41 +14,7 @@ import (
 // current write lease once execution has been prepared. Planning mutations are
 // intentionally actor-optional until the execution record exists.
 func validateExecutionMutation(record issueops.IssueOpsRecord, actor *IssueOpsActor) error {
-	if record.Execution == nil {
-		return nil
-	}
-	if err := issueopsdomain.ValidateExecution(*record.Execution); err != nil {
-		return fmt.Errorf("invalid IssueOps execution v1 record: %w", err)
-	}
-	lease := record.Execution.Lease
-	if lease.Status != issueops.LeaseStatusActive || lease.Holder == nil {
-		return fmt.Errorf("IssueOps execution generation %d has no active write lease", lease.Generation)
-	}
-	if actor == nil {
-		return fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
-	}
-	candidate := &issueops.NativeActor{
-		Host:      strings.ToLower(strings.TrimSpace(actor.Host)),
-		SessionID: strings.TrimSpace(actor.SessionID),
-		AgentID:   strings.TrimSpace(actor.AgentID),
-	}
-	if !sameNativeActorIdentity(candidate, lease.Holder) {
-		return fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
-	}
-	processMatches := false
-	for _, observed := range actor.NativeProcessAncestry {
-		if lease.Holder.SessionProcess != nil && observed == *lease.Holder.SessionProcess {
-			processMatches = true
-			break
-		}
-	}
-	if !processMatches {
-		return fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
-	}
-	if !samePath(actor.CWD, record.Execution.Workspace.Root) {
-		return fmt.Errorf("IssueOps execution mutation requires the canonical worktree cwd")
-	}
-	return nil
+	return cycleapp.NewMutationAuthority(samePath).Validate(record, actor)
 }
 
 func validatePlanLinkMutation(record issueops.IssueOpsRecord, actor *IssueOpsActor) error {

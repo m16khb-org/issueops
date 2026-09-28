@@ -7,7 +7,9 @@ import (
 	"time"
 
 	issueopscore "issueops/internal/adapter/issueops"
+	authorizationoutbound "issueops/internal/adapter/outbound/issueopsauthorization"
 	"issueops/internal/adapter/provider"
+	cycleapp "issueops/internal/application/issueopscycle"
 	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
 	issuedomain "issueops/internal/domain/issueops"
@@ -42,13 +44,16 @@ func TestMain(m *testing.M) {
 		CreateRemotePullRequestWithHandler: func(ctx context.Context, stateRoot string, req issueopscontract.RemotePullRequestRequest, handler func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)) (port.IssueProviderCreatePullRequestResult, error) {
 			return issueopscore.CreateRemotePullRequestWithHandler(ctx, stateRoot, req, handler)
 		},
-		DecodeIssueOpsRemoteJudgeJSON:              issueopscore.DecodeIssueOpsRemoteJudgeJSON,
-		DecodeIssueOpsRemoteScoringRequest:         issueopscore.DecodeIssueOpsRemoteScoringRequest,
-		IssueOpsStateRoot:                          issueopscore.IssueOpsStateRoot,
-		LinkIssueOpsChildWithActor:                 issueopscore.LinkIssueOpsChildWithActor,
-		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
-		ReadIssueOps:                               issueopscore.ReadIssueOps,
-		ReflectDevilsAdvocateFindingsWithActor:     issueopscore.ReflectDevilsAdvocateFindingsWithActor,
+		DecodeIssueOpsRemoteJudgeJSON:      issueopscore.DecodeIssueOpsRemoteJudgeJSON,
+		DecodeIssueOpsRemoteScoringRequest: issueopscore.DecodeIssueOpsRemoteScoringRequest,
+		IssueOpsStateRoot:                  issueopscore.IssueOpsStateRoot,
+		LinkIssueOpsChildWithActor:         issueopscore.LinkIssueOpsChildWithActor,
+		ObserveNativeProcessAncestry:       issueopscore.ObserveNativeProcessAncestry,
+		ReadIssueOps:                       issueopscore.ReadIssueOps,
+		ReflectReviewFindings: func(ctx context.Context, root, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+			service := remoteapp.NewReviewReflectionService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(name string) (remoteapp.ReviewReflectionProvider, error) { return provider.Resolve(name) }, observe, time.Now)
+			return service.Reflect(ctx, id, providerOverride, confirm, actor)
+		},
 		RenderIssueOpsRemoteJudgePrompt:            issueopscore.RenderIssueOpsRemoteJudgePrompt,
 		ResolveRecordProvider:                      issuedomain.ResolveRecordProvider,
 		ScoreIssueOpsRemoteCandidates:              issueopscore.ScoreIssueOpsRemoteCandidates,

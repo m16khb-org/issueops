@@ -33,7 +33,7 @@ type RemoteDeps struct {
 	LinkIssueOpsChildWithActor                 func(stateRoot, id, childURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	ObserveNativeProcessAncestry               func(pid int) ([]issueopscontract.NativeProcessReceipt, error)
 	ReadIssueOps                               func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
-	ReflectDevilsAdvocateFindingsWithActor     func(stateRoot, id string, confirm bool, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
+	ReflectReviewFindings                      func(ctx context.Context, stateRoot, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error)
 	RenderIssueOpsRemoteJudgePrompt            func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error)
 	ResolveRecordProvider                      func(record issueopscontract.IssueOpsRecord) string
 	ScoreIssueOpsRemoteCandidates              func(req issueopsremote.IssueOpsRemoteScoringRequest) (issueopsremote.IssueOpsRemoteScoringResult, error)
@@ -89,8 +89,8 @@ func ConfigureRemote(deps RemoteDeps) {
 	if deps.ReadIssueOps != nil {
 		remoteDeps.ReadIssueOps = deps.ReadIssueOps
 	}
-	if deps.ReflectDevilsAdvocateFindingsWithActor != nil {
-		remoteDeps.ReflectDevilsAdvocateFindingsWithActor = deps.ReflectDevilsAdvocateFindingsWithActor
+	if deps.ReflectReviewFindings != nil {
+		remoteDeps.ReflectReviewFindings = deps.ReflectReviewFindings
 	}
 	if deps.RenderIssueOpsRemoteJudgePrompt != nil {
 		remoteDeps.RenderIssueOpsRemoteJudgePrompt = deps.RenderIssueOpsRemoteJudgePrompt
@@ -158,7 +158,7 @@ func neutralRemoteDeps() RemoteDeps {
 		ReadIssueOps: func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error) {
 			return issueopscontract.IssueOpsRecord{}, errRemoteNotConfigured
 		},
-		ReflectDevilsAdvocateFindingsWithActor: func(stateRoot, id string, confirm bool, prov port.IssueProvider, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+		ReflectReviewFindings: func(ctx context.Context, stateRoot, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 			return issueopscontract.IssueOpsRecord{}, port.IssueProviderUpdateIssueBodySectionResult{}, errRemoteNotConfigured
 		},
 		RenderIssueOpsRemoteJudgePrompt: func(req issueopsremote.IssueOpsRemoteLLMJudgeRequest) (issueopsremote.IssueOpsRemoteJudgePromptResult, error) {

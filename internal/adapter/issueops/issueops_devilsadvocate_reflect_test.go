@@ -6,7 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	authorizationoutbound "issueops/internal/adapter/outbound/issueopsauthorization"
+	cycleapp "issueops/internal/application/issueopscycle"
+	remoteapp "issueops/internal/application/issueopsremote"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -45,7 +49,7 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	}
 	foreign := issueOpsActorForTest(worktree)
 	foreign.SessionID = "other-session"
-	if _, _, err := ReflectDevilsAdvocateFindingsWithActor(stateRoot, record.ID, false, prov, foreign); err == nil ||
+	if _, _, err := reflectReviewForTest(stateRoot, record.ID, false, prov, foreign); err == nil ||
 		!strings.Contains(err.Error(), "current write lease holder") {
 		t.Fatalf("비-holder 원격 반영은 core에서 차단돼야 한다: %v", err)
 	}
@@ -54,7 +58,7 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	}
 
 	holder := issueOpsActorForTest(worktree)
-	if _, result, err := ReflectDevilsAdvocateFindingsWithActor(stateRoot, record.ID, false, prov, holder); err != nil {
+	if _, result, err := reflectReviewForTest(stateRoot, record.ID, false, prov, holder); err != nil {
 		t.Fatalf("현재 holder preview 실패: %v", err)
 	} else if result.Preview == "" || prov.updateReq == nil || prov.updateReq.Confirm {
 		t.Fatalf("현재 holder preview 요청이 잘못 전달됐다: result=%+v request=%+v", result, prov.updateReq)
@@ -63,9 +67,14 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	prov.updateRes = port.IssueProviderUpdateIssueBodySectionResult{
 		OK: true, Updated: true, URL: record.IssueURL,
 	}
-	if got, _, err := ReflectDevilsAdvocateFindingsWithActor(stateRoot, record.ID, true, prov, holder); err != nil {
+	if got, _, err := reflectReviewForTest(stateRoot, record.ID, true, prov, holder); err != nil {
 		t.Fatalf("현재 holder confirm 실패: %v", err)
 	} else if got.DevilsAdvocateReview == nil || got.DevilsAdvocateReview.IssueReflectedAt == "" {
 		t.Fatalf("성공한 confirm이 reflected timestamp를 기록하지 않았다: %+v", got.DevilsAdvocateReview)
 	}
+}
+
+func reflectReviewForTest(root, id string, confirm bool, provider port.IssueProvider, actor IssueOpsActor) (issueops.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+	service := remoteapp.NewReviewReflectionService(RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(string) (remoteapp.ReviewReflectionProvider, error) { return provider, nil }, func() ([]issueops.NativeProcessReceipt, error) { return actor.NativeProcessAncestry, nil }, time.Now)
+	return service.Reflect(context.Background(), id, "", confirm, actor)
 }

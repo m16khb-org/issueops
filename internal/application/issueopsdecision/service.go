@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	issueopsdecisioncontract "issueops/internal/contract/issueopsdecision"
-	issueopsauthorizationdomain "issueops/internal/domain/issueopsauthorization"
 	issueopsdecisiondomain "issueops/internal/domain/issueopsdecision"
 )
 
@@ -38,7 +38,7 @@ func (service *Service) Add(
 	return service.repository.Update(ctx, stateRoot, id, func(
 		record issueopsdecisioncontract.Record,
 	) (issueopsdecisioncontract.Record, error) {
-		if err := issueopsauthorizationdomain.AuthorizeExecutionMutation(
+		if err := cycleapp.AuthorizeHolder(
 			record,
 			actor,
 			service.paths.Same,

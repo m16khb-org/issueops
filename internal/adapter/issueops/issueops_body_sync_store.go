@@ -33,11 +33,4 @@ func (r BodySyncRepository) Update(ctx context.Context, id string, transition ap
 	return persisted, nil
 }
 
-type BodySyncAuthority struct{}
-
-func (BodySyncAuthority) Authorize(_ context.Context, record model.IssueOpsRecord, actor model.IssueOpsActor) error {
-	return validateExecutionMutation(record, &actor)
-}
-
 var _ application.Repository = BodySyncRepository{}
-var _ application.Authority = BodySyncAuthority{}

@@ -1446,6 +1446,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_review_reflection_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newReviewReflectionService",
+        "func reflectReviewFindings"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_routing_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -7663,10 +7672,8 @@
       "owner": "adapter",
       "task": "T07",
       "symbols": [
-        "func BodySyncAuthority.Authorize",
         "func BodySyncRepository.Read",
         "func BodySyncRepository.Update",
-        "type BodySyncAuthority",
         "type BodySyncRepository"
       ]
     },
@@ -7817,17 +7824,6 @@
         "func scanIssueOpsChildrenForParent",
         "func stampIssueOpsChildDelegation",
         "func startIssueOpsChild"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_devilsadvocate_reflect.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func ReflectDevilsAdvocateFindingsWithActor",
-        "func issueOpsLinkedPlanDigest",
-        "func issueOpsReviewedPlanDigest",
-        "func reflectDevilsAdvocateFindings"
       ]
     },
     {
@@ -8290,6 +8286,15 @@
         "func RemoteRecordStore.Read",
         "func RemoteRecordStore.Update",
         "type RemoteRecordStore"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/review_plan_digest.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func issueOpsLinkedPlanDigest",
+        "func issueOpsReviewedPlanDigest"
       ]
     },
     {
@@ -11102,6 +11107,18 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/mutation_authority.go",
+      "owner": "application",
+      "task": "T05",
+      "symbols": [
+        "func AuthorizeHolder",
+        "func MutationAuthority.Authorize",
+        "func MutationAuthority.Validate",
+        "func NewMutationAuthority",
+        "type MutationAuthority"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/observed_pr_readiness.go",
       "owner": "application",
       "task": "T20",
@@ -11661,6 +11678,21 @@
         "type CompletionProviderResolver",
         "type MergeVerifier",
         "type RemoteCompletionService"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/review_reflection.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewReviewReflectionService",
+        "func ReviewReflectionService.Reflect",
+        "type AncestryObserver",
+        "type ReviewProviderResolver",
+        "type ReviewReflectionAuthority",
+        "type ReviewReflectionProvider",
+        "type ReviewReflectionService",
+        "type ReviewReflectionStore"
       ]
     },
     {
@@ -14372,6 +14404,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/review_reflection.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func MarkReviewReflected",
+        "func ValidateReviewReflection",
+        "func ValidateReviewReflectionStamp"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/superseding_artifact.go",
       "owner": "domain",
       "task": "T20",
@@ -14406,10 +14448,10 @@
     {
       "path": "internal/domain/issueopsauthorization/authorization.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T05",
       "symbols": [
-        "func AuthorizeExecutionMutation",
-        "type SamePath"
+        "func ValidateCWD",
+        "func ValidateHolder"
       ]
     },
     {
@@ -19880,14 +19922,17 @@
       "source_symbol": "func reflectDevilsAdvocateFindings",
       "responsibility": "authorize the holder before reflecting review findings and recheck authority before stamping local evidence",
       "target": "internal/application/issueopsremote",
+      "target_symbol": "func ReviewReflectionService.Reflect",
       "task": "T07",
       "entrypoints": [
         "issueops remote"
       ],
       "evidence_tests": [
-        "internal/adapter/issueops/issueops_devilsadvocate_reflect_test.go"
+        "internal/adapter/issueops/issueops_devilsadvocate_reflect_test.go",
+        "cmd/issueops/issueopsapp/issueops_review_reflection_wiring_test.go",
+        "internal/domain/issueops/review_reflection_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "execution-completion-identical-retry",
@@ -19895,6 +19940,7 @@
       "source_symbol": "func terminalCompletionMatches",
       "responsibility": "accept an identical completion retry only for the released generation and matching completion evidence",
       "target": "internal/domain/issueopscompletion",
+      "target_symbol": "func CanRetryCompletion",
       "task": "T07",
       "entrypoints": [
         "issueops execution complete"
@@ -19903,8 +19949,7 @@
         "internal/application/issueopscompletion/complete_test.go",
         "internal/domain/issueopscompletion/input_test.go"
       ],
-      "status": "migrated",
-      "target_symbol": "func CanRetryCompletion"
+      "status": "migrated"
     },
     {
       "id": "issue-create-intent-transaction",
@@ -20145,6 +20190,7 @@
       "source_symbol": "func normalizeVerification",
       "responsibility": "require nonempty verification evidence before accepting execution completion",
       "target": "internal/domain/issueopscompletion",
+      "target_symbol": "func PrepareEvidence",
       "task": "T07",
       "entrypoints": [
         "issueops execution complete"
@@ -20153,8 +20199,7 @@
         "internal/application/issueopscompletion/complete_test.go",
         "internal/domain/issueopscompletion/input_test.go"
       ],
-      "status": "migrated",
-      "target_symbol": "func PrepareEvidence"
+      "status": "migrated"
     },
     {
       "id": "remote-completion-receipt-rules",
@@ -20304,6 +20349,58 @@
         "internal/application/issueopscompletion/complete_test.go"
       ],
       "status": "retain"
+    },
+    {
+      "id": "mutation-authorization-path-observation",
+      "source_path": "internal/domain/issueopsauthorization/authorization.go",
+      "source_symbol": "func AuthorizeExecutionMutation",
+      "responsibility": "observe canonical path identity only after holder and ancestry checks, outside the pure domain",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func AuthorizeHolder",
+      "task": "T05",
+      "entrypoints": [
+        "issueops decision",
+        "issueops routing",
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/mutation_authority_test.go",
+        "cmd/issueops/issueopsapp/issueops_review_reflection_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "mutation-holder-identity",
+      "source_path": "internal/domain/issueopsauthorization/authorization.go",
+      "source_symbol": "func ValidateHolder",
+      "responsibility": "require active holder identity and exact process ancestry for prepared execution mutations",
+      "target": "internal/domain/issueopsauthorization",
+      "task": "T05",
+      "entrypoints": [
+        "issueops decision",
+        "issueops routing",
+        "issueops remote"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsauthorization/holder_test.go",
+        "internal/application/issueopscycle/mutation_authority_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "review-plan-digest-binding",
+      "source_path": "internal/adapter/issueops/review_plan_digest.go",
+      "source_symbol": "func issueOpsReviewedPlanDigest",
+      "responsibility": "prefer the linked plan identity over staged plan content and reject a review with neither source",
+      "target": "internal/application/issueopsreview",
+      "task": "T07",
+      "entrypoints": [
+        "issueops devils-advocate review"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_devilsadvocate_gate_test.go"
+      ],
+      "status": "migrate"
     }
   ]
 }
