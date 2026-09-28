@@ -264,6 +264,8 @@
 - **EXPECT / QA:** 정상: remote-only branch 연결, concurrent siblings create/accept, verified cleanup의 stop→remove 순서 동일. 실패: artifact 관측 후 변경, authority CAS drift, 새 terminal 유입 시 삭제 중단. `TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses`, `TestCleanupFinishFinalTerminalObservationBlocksLateTerminal` 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T08-success.txt`, `T08-failure.txt`, `T08-ownership.json`.
 
+- **부분 진행 — 사이클 시작:** 기존 `adapter/issueops/start` 패키지를 제거했다. 새 사이클의 branchless 전제, 기존 record 재사용·충돌 거부·초기 상태 구성, 브랜치 이름 검증은 `domain/issueops`가 맡는다. `application/issueopsbranch.Starter`가 정규화된 identity 선택→잠금→조회→판정→저장을 조율하며 CLI composition root가 직접 구성한다. Git 경로 관측·ID 생성·잠금·저장은 기술 adapter에 남겼다. 기존 부모자식 호출과 테스트가 사용하는 `StartIssueOps` 조립 함수는 정책 원장에 T20 제거 대상으로 명시했다. 전체 일반·race suite 각각 295개 패키지, vet·build·architecture가 통과했다(`T08-start-full-suite.txt`, `T08-start-full-race.txt`). 읽을 수 없는 상태의 거부를 무력화한 overlay에서 domain/application 테스트가 실패했고 실제 CLI에서 상대·절대·worktree 경로의 동일 record 재사용, 독립 ID 생성, branchless 전제 거부를 확인했다(`T08-start-binary-smoke.json`). 첫 smoke는 cwd와 PWD가 불일치해 macOS의 `/var`·`/private/var` 표기를 섞었다. 기존 lexical path 보존 계약을 확인하고 셸과 같은 PWD로 전체 시나리오를 다시 실행했다. T08의 다른 경로는 아직 미완료다.
+
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
 - [ ] 완료

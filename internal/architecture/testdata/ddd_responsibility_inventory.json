@@ -6868,14 +6868,12 @@
       "symbols": [
         "func Prepare",
         "func Steps",
-        "func ValidateBranch",
         "func githubIssueAPIPath",
         "func githubIssueCoordinates",
         "func githubLinkedBranchReadbackQuery",
         "func githubLinkedBranchReadbackSteps",
         "func githubSteps",
         "func gitlabSteps",
-        "func isDecimalString",
         "func resolveCodeProjectKey",
         "func umbrellaBaseBranchMismatch",
         "type Store"
@@ -7043,6 +7041,21 @@
         "type RemotePullRequestCreateHandler",
         "type RemotePullRequestReconcileHandler",
         "type RemotePullRequestRequest"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/cycle_start_store.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CycleStartIdentity.CanonicalRepo",
+        "func CycleStartIdentity.IndependentID",
+        "func CycleStartIdentity.StableID",
+        "func CycleStartStore.Load",
+        "func CycleStartStore.Save",
+        "func CycleStartStore.WithinLock",
+        "type CycleStartIdentity",
+        "type CycleStartStore"
       ]
     },
     {
@@ -8207,9 +8220,6 @@
         "func issueOpsLinkingStore",
         "func issueOpsOriginBranchPresent",
         "func issueOpsRemoteArtifactMissing",
-        "func issueOpsStartLockID",
-        "func issueOpsStartRecordID",
-        "func issueOpsStartStore",
         "func linkIssueOpsChild",
         "func linkIssueOpsIssue",
         "func linkIssueOpsPlan",
@@ -8223,7 +8233,6 @@
         "func recordIssueOpsDevilsAdvocateReview",
         "func recordIssueOpsIntent",
         "func recordIssueOpsPlanPrep",
-        "func validateIssueOpsIssueBranch",
         "type BranchRetargetDeps",
         "type branchRetargetObservation"
       ]
@@ -8283,15 +8292,6 @@
         "func ReviewPlanSource.LinkedDigest",
         "func ReviewPlanSource.StagedPlans",
         "type ReviewPlanSource"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/start/start.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func Start",
-        "type Store"
       ]
     },
     {
@@ -10953,6 +10953,17 @@
         "func Service.recordBaseline",
         "func Service.verifyChild",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbranch/start.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func Starter.Start",
+        "type StartIdentity",
+        "type StartRepository",
+        "type Starter"
       ]
     },
     {
@@ -14067,6 +14078,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/branch.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ValidateBranch",
+        "func isDecimalString"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/capability_baseline.go",
       "owner": "domain",
       "task": "T20",
@@ -14513,6 +14533,16 @@
         "func MarkReviewReflected",
         "func ValidateReviewReflection",
         "func ValidateReviewReflectionStamp"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/start.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func NewCycleRecord",
+        "func ReuseStartRecord",
+        "func ValidateNewCycleRequest"
       ]
     },
     {
@@ -20938,6 +20968,75 @@
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "cycle-start-record-selection",
+      "source_path": "internal/adapter/issueops/start/start.go",
+      "source_symbol": "func Start",
+      "responsibility": "resume existing state, refuse explicit-new collisions and unreadable state, and initialize schema-one problem cycles",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ReuseStartRecord",
+      "task": "T08",
+      "entrypoints": [
+        "issueops start",
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/start_test.go",
+        "internal/application/issueopsbranch/start_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cycle-start-independent-precondition",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func issueOpsStartRecordID",
+      "responsibility": "require an explicit-new cycle to start without a branch before selecting its independent identity",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateNewCycleRequest",
+      "task": "T08",
+      "entrypoints": [
+        "issueops start",
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/start_test.go",
+        "internal/adapter/issueops/issueops_start_repo_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cycle-branch-name",
+      "source_path": "internal/adapter/issueops/branchprepare/branch_prepare.go",
+      "source_symbol": "func ValidateBranch",
+      "responsibility": "validate issue-number branch names and preserve neutral examples and invalid-character error precedence",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateBranch",
+      "task": "T08",
+      "entrypoints": [
+        "issueops start",
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/branch_test.go",
+        "internal/adapter/issueops/branchprepare/branch_prepare_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cycle-start-adapter-composition",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func StartIssueOps",
+      "responsibility": "remove temporary adapter composition once parent-child entrypoints and test fixtures construct the application directly",
+      "target": "cmd/issueops/issueopsapp",
+      "task": "T20",
+      "entrypoints": [
+        "issueops child start"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_start_repo_test.go"
+      ],
+      "status": "migrate"
     }
   ]
 }

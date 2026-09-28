@@ -3,10 +3,12 @@ package issueopsapp
 import (
 	"context"
 	"os"
+	"time"
 
 	"issueops/cmd/issueops/issueopscli"
 	"issueops/cmd/issueops/issueopscli/remoteverify"
 	issueopscore "issueops/internal/adapter/issueops"
+	branchapp "issueops/internal/application/issueopsbranch"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -68,8 +70,10 @@ func configureIssueOpsCLIRuntime() {
 		ScoreLiveRoutingFidelity:                    routing.Score,
 		StageIssueOpsArtifact:                       artifacts.Stage,
 		StagedIssueOpsArtifactNames:                 artifacts.Names,
-		StartIssueOps:                               issueopscore.StartIssueOps,
-		StartIssueOpsChildWithActor:                 issueopscore.StartIssueOpsChildWithActor,
-		UnstageIssueOpsArtifact:                     artifacts.Unstage,
+		StartIssueOps: func(stateRoot string, req issueopscontract.IssueOpsStartRequest) (issueopscontract.IssueOpsRecord, error) {
+			return (branchapp.Starter{Records: issueopscore.CycleStartStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{}, Now: time.Now}).Start(context.Background(), req)
+		},
+		StartIssueOpsChildWithActor: issueopscore.StartIssueOpsChildWithActor,
+		UnstageIssueOpsArtifact:     artifacts.Unstage,
 	})
 }

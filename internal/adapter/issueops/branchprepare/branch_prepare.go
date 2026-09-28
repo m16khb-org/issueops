@@ -7,6 +7,7 @@ import (
 	"time"
 
 	model "issueops/internal/contract/issueops"
+	domain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsremote"
 )
 
@@ -60,7 +61,7 @@ func Prepare(store Store, stateRoot, id string, req model.IssueOpsBranchPrepareR
 	if branch == "" {
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("branch is required")
 	}
-	if err := ValidateBranch(branch); err != nil {
+	if err := domain.ValidateBranch(branch); err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
 	baseBranch := strings.TrimSpace(req.BaseBranch)
@@ -201,33 +202,6 @@ func umbrellaBaseBranchMismatch(store Store, record model.IssueOpsRecord, branch
 	return fmt.Sprintf("자식 작업 %s는 우산 사이클 %s의 브랜치 %s에서 분기해 그 브랜치로 합류해야 한다; "+
 		"base_branch %q 대신 %s로 다시 준비하라",
 		strings.TrimSpace(branch), umbrella.ID, expected, strings.TrimSpace(baseBranch), expected)
-}
-
-func ValidateBranch(branch string) error {
-	branch = strings.TrimSpace(branch)
-	if branch == "" {
-		return nil
-	}
-	if strings.ContainsAny(branch, " \t\r\n") || strings.HasPrefix(branch, "/") || strings.Contains(branch, "..") {
-		return fmt.Errorf("issueops branch contains invalid characters: %s", branch)
-	}
-	issueNumber, slug, ok := strings.Cut(branch, "-")
-	if !ok || strings.TrimSpace(slug) == "" || !isDecimalString(issueNumber) {
-		return fmt.Errorf("issueops branch must start with the issue number followed by a hyphen; use names like 123-fix-login-timeout or 456-refactor-issueops-gates")
-	}
-	return nil
-}
-
-func isDecimalString(value string) bool {
-	if value == "" {
-		return false
-	}
-	for _, r := range value {
-		if r < '0' || r > '9' {
-			return false
-		}
-	}
-	return true
 }
 
 // Steps는 provider별 브랜치 생성 안내를 만든다.

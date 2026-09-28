@@ -141,7 +141,7 @@ func cleanupRemoteBranchGates(ctx context.Context, record issueops.IssueOpsRecor
 	// 수동 편집된 레코드가 임의 ref를 지우는 경로를 막는다(design-review M11).
 	if inventory.Branch == "" {
 		missing = append(missing, "branch_recorded")
-	} else if err := validateIssueOpsIssueBranch(inventory.Branch); err != nil {
+	} else if err := issueopsdomain.ValidateBranch(inventory.Branch); err != nil {
 		missing = append(missing, "branch_name_revalidated")
 	}
 	// ③ branch_not_base — base 브랜치 삭제 방어.

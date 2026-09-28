@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"issueops/internal/adapter/issueops/active"
 	"issueops/internal/adapter/issueops/branchprepare"
@@ -15,7 +16,7 @@ import (
 	"issueops/internal/adapter/issueops/devilsadvocate"
 	"issueops/internal/adapter/issueops/intentdesign"
 	"issueops/internal/adapter/issueops/linking"
-	"issueops/internal/adapter/issueops/start"
+	branchapp "issueops/internal/application/issueopsbranch"
 	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
@@ -201,10 +202,6 @@ func issueOpsOriginBranchPresent(repo, branch string) (bool, error) {
 	return len(strings.Fields(strings.TrimSpace(stdout))) > 0, nil
 }
 
-func validateIssueOpsIssueBranch(branch string) error {
-	return branchprepare.ValidateBranch(branch)
-}
-
 func issueOpsBranchPrepareStore() branchprepare.Store {
 	return branchprepare.Store{
 		Read:             ReadIssueOps,
@@ -245,18 +242,6 @@ func issueOpsBranchPrepareStore() branchprepare.Store {
 	}
 }
 
-// issueOpsStartLockID computes the lock id used by StartIssueOps. It must
-// mirror start.Start's record-id derivation exactly: trim repo+branch and
-// abs-normalize the repo (filepath.Abs) before hashing, so that a relative and
-// the equivalent absolute repo path take the SAME lock and serialize on the
-// SAME record. newIssueOpsID does no repository normalization, so hashing the
-// raw repo here would let source-checkout and linked-worktree starts hold
-// different locks while read-modify-writing one record (lost-update TOCTOU).
-func issueOpsStartLockID(repo, branch string) string {
-	repo = normalizeIssueOpsRepo(repo)
-	return newIssueOpsID(repo, strings.TrimSpace(branch))
-}
-
 func normalizeIssueOpsRepo(repo string) string {
 	clean := repoidentity.SourceRoot(repo, "")
 	if GitCmd == nil {
@@ -270,41 +255,7 @@ func normalizeIssueOpsRepo(repo string) string {
 }
 
 func StartIssueOps(stateRoot string, req issueops.IssueOpsStartRequest) (issueops.IssueOpsRecord, error) {
-	id, err := issueOpsStartRecordID(req)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
-	}
-	var rec issueops.IssueOpsRecord
-	err = withIssueOpsLock(context.Background(), stateRoot, id, func(context.Context) error {
-		store := issueOpsStartStore()
-		if req.New {
-			store.NewID = func(string, string) string { return id }
-		}
-		var e error
-		rec, e = start.Start(store, stateRoot, req)
-		return e
-	})
-	return rec, err
-}
-
-func issueOpsStartRecordID(req issueops.IssueOpsStartRequest) (string, error) {
-	if !req.New {
-		return issueOpsStartLockID(req.Repo, req.Branch), nil
-	}
-	if strings.TrimSpace(req.Branch) != "" {
-		return "", fmt.Errorf("a new issueops cycle requires a branchless start")
-	}
-	return newIndependentIssueOpsID(normalizeIssueOpsRepo(req.Repo))
-}
-
-func issueOpsStartStore() start.Store {
-	return start.Store{
-		Read:           ReadIssueOps,
-		Write:          writeIssueOps,
-		NewID:          newIssueOpsID,
-		ValidateBranch: validateIssueOpsIssueBranch,
-		NormalizeRepo:  normalizeIssueOpsRepo,
-	}
+	return (branchapp.Starter{Records: CycleStartStore{StateRoot: stateRoot}, Identity: CycleStartIdentity{}, Now: time.Now}).Start(context.Background(), req)
 }
 
 func RecordIssueOpsIntent(stateRoot, id string, req issueops.IssueOpsIntentRecordRequest) (issueops.IssueOpsRecord, error) {
