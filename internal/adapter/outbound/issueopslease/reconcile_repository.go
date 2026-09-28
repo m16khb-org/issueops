@@ -11,11 +11,11 @@ import (
 	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
 type ReconcileEffects interface {
-	Canonicalize(context.Context, string) (ReconcileEffectState, error)
 	ApplyReceipt(context.Context, ReconcileEffectState, leasecontract.ReconcileStageReceipt) (ReconcileEffectState, error)
 }
 
@@ -31,10 +31,11 @@ type ReconcileEffectState struct {
 }
 
 type ReconcileRepository struct {
-	store   port.TransactionalRecordStore
-	effects ReconcileEffects
-	now     func() time.Time
-	redact  func(string) string
+	store    port.TransactionalRecordStore
+	effects  ReconcileEffects
+	now      func() time.Time
+	redact   func(string) string
+	snapshot *leasecontract.Record
 }
 
 func NewReconcileRepository(store port.TransactionalRecordStore, effects ReconcileEffects) *ReconcileRepository {
@@ -42,18 +43,65 @@ func NewReconcileRepository(store port.TransactionalRecordStore, effects Reconci
 }
 
 func NewReconcileRepositoryWithDiagnosticRedactor(store port.TransactionalRecordStore, effects ReconcileEffects, redact func(string) string, now func() time.Time) *ReconcileRepository {
+	return NewReconcileRepositoryWithSnapshot(store, effects, nil, redact, now)
+}
+
+func NewReconcileRepositoryWithSnapshot(store port.TransactionalRecordStore, effects ReconcileEffects, snapshot *leasecontract.Record, redact func(string) string, now func() time.Time) *ReconcileRepository {
 	if now == nil {
 		now = time.Now
 	}
-	return &ReconcileRepository{store: store, effects: effects, redact: redact, now: now}
+	return &ReconcileRepository{store: store, effects: effects, snapshot: snapshot, redact: redact, now: now}
 }
 
 func (r *ReconcileRepository) Canonicalize(ctx context.Context, id string) (leaseapp.ReconcileIntentState, error) {
-	if r == nil || r.effects == nil {
-		return leaseapp.ReconcileIntentState{}, fmt.Errorf("reconcile persistence bridge is required")
+	result := leaseapp.ReconcileIntentState{Progress: leaseapp.ReconcileProgress{Record: leasecontract.Record{ID: id}}}
+	if r == nil || r.store == nil {
+		return result, fmt.Errorf("reconcile record store is required")
 	}
-	state, err := r.effects.Canonicalize(ctx, id)
-	return reconcileIntentState(state), err
+	err := r.store.WithSpan(ctx, func(context.Context) error {
+		recordRaw, ok, err := r.store.Get(recordBucket, id)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("issueops record %s not found", id)
+		}
+		record, err := decodeLeaseRecord(id, recordRaw)
+		if err != nil {
+			return err
+		}
+		result.Progress.Record = record
+		expected := record
+		if r.snapshot != nil {
+			expected = *r.snapshot
+		}
+		if err := preparationdomain.ValidateReconcileSnapshot(record, expected); err != nil {
+			return err
+		}
+		operationID := record.Execution.Pending.OperationID
+		intentRaw, ok, err := r.store.Get("external_intent_v1", operationID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return &preparationcontract.IntentError{Code: "orca_intent_invalid", Detail: "Orca external intent payload is missing"}
+		}
+		intent, _, err := preparationdomain.CanonicalizeIntent(record, intentRaw)
+		if err != nil {
+			return err
+		}
+		if err := preparationdomain.ValidateReconcileIntentIssueIdentity(record, intent); err != nil {
+			return err
+		}
+		result = leaseapp.ReconcileIntentState{
+			Progress:    leaseapp.ReconcileProgress{Record: record, Pending: true, NextStage: string(intent.Stage)},
+			OperationID: operationID, Stage: string(intent.Stage), InvocationState: intent.InvocationState,
+			InvocationAttempts: intent.InvocationAttempts,
+			RecordRaw:          append([]byte(nil), recordRaw...), IntentRaw: append([]byte(nil), intentRaw...),
+		}
+		return nil
+	})
+	return result, err
 }
 
 func (r *ReconcileRepository) MarkInvoking(ctx context.Context, intent leaseapp.ReconcileIntentState) (leaseapp.ReconcileIntentState, error) {
@@ -108,14 +156,6 @@ func (r *ReconcileRepository) Latest(_ context.Context, id string) (leasecontrac
 
 func reconcileProgress(state ReconcileEffectState) leaseapp.ReconcileProgress {
 	return leaseapp.ReconcileProgress{Record: state.Record, Pending: state.Pending, NextStage: state.Stage}
-}
-
-func reconcileIntentState(state ReconcileEffectState) leaseapp.ReconcileIntentState {
-	return leaseapp.ReconcileIntentState{
-		Progress: reconcileProgress(state), OperationID: state.OperationID, Stage: state.Stage,
-		InvocationState: state.InvocationState, InvocationAttempts: state.InvocationAttempts,
-		RecordRaw: append([]byte(nil), state.RecordRaw...), IntentRaw: append([]byte(nil), state.IntentRaw...),
-	}
 }
 
 func reconcileEffectState(intent leaseapp.ReconcileIntentState) ReconcileEffectState {

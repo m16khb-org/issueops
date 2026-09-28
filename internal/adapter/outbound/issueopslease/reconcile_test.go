@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,25 +17,30 @@ type reconcileEffectsFake struct {
 	state ReconcileEffectState
 }
 
-func (f *reconcileEffectsFake) Canonicalize(context.Context, string) (ReconcileEffectState, error) {
-	return f.state, nil
-}
 func (f *reconcileEffectsFake) ApplyReceipt(context.Context, ReconcileEffectState, leasecontract.ReconcileStageReceipt) (ReconcileEffectState, error) {
 	return f.state, nil
 }
 
 func TestReconcileRepositoryPreservesRawCASState(t *testing.T) {
-	effects := &reconcileEffectsFake{state: ReconcileEffectState{
-		Record:    leasecontract.Record{ID: "io-1", Execution: &leasecontract.Execution{}},
-		RecordRaw: []byte("record-raw"), IntentRaw: []byte("intent-raw"), OperationID: "op-1",
-		Stage: "run_bind", InvocationState: "unknown", InvocationAttempts: 1, Pending: true,
-	}}
-	state, err := NewReconcileRepository(nil, effects).Canonicalize(context.Background(), "io-1")
+	_, sealed, store := seededResumeIntent(t)
+	state, err := NewReconcileRepository(store, nil).Canonicalize(context.Background(), sealed.Progress.Record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(state.RecordRaw, effects.state.RecordRaw) || !bytes.Equal(state.IntentRaw, effects.state.IntentRaw) {
+	if !bytes.Equal(state.RecordRaw, sealed.RecordRaw) || !bytes.Equal(state.IntentRaw, sealed.IntentRaw) || state.OperationID != sealed.OperationID {
 		t.Fatalf("state = %#v", state)
+	}
+}
+
+func TestReconcileRepositoryRejectsStaleSnapshotBeforeReadingIntent(t *testing.T) {
+	_, sealed, store := seededResumeIntent(t)
+	repository := NewReconcileRepository(store, nil)
+	snapshot := sealed.Progress.Record.Stable
+	snapshot.Execution = &leasecontract.Execution{}
+	repository.snapshot = &snapshot
+	_, err := repository.Canonicalize(context.Background(), sealed.Progress.Record.ID)
+	if err == nil || !strings.Contains(err.Error(), "orca_intent_authority_changed") {
+		t.Fatalf("stale snapshot error=%v", err)
 	}
 }
 

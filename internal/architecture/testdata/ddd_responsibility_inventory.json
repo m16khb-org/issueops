@@ -1357,7 +1357,6 @@
       "symbols": [
         "func convertReconcileReceipt",
         "func coreReconcileEffects.ApplyReceipt",
-        "func coreReconcileEffects.Canonicalize",
         "func coreReconcileEffects.inspectStage",
         "func coreReconcileEffects.invokeStage",
         "func coreReconcileEffects.reconcileRequest",
@@ -7156,7 +7155,6 @@
         "func readAndMatchOrcaIntent",
         "func readExternalOrcaIntentPayload",
         "func readExternalOrcaIntentPayloadShape",
-        "func reconcileCanonicalOrcaIntent",
         "func recordOrcaIntentFailureFromRawState",
         "func sameOptionalExecutionPath",
         "func validateExternalOrcaIntentPayload",
@@ -7313,7 +7311,6 @@
       "task": "T06",
       "symbols": [
         "func ApplyExecutionReconcileIntentReceipt",
-        "func CanonicalizeExecutionReconcileIntent",
         "func ExecutionReconcileIntentRequest",
         "func executionReconcileIntentPayload",
         "func executionReconcileIntentState",
@@ -9107,6 +9104,7 @@
       "symbols": [
         "func NewReconcileRepository",
         "func NewReconcileRepositoryWithDiagnosticRedactor",
+        "func NewReconcileRepositoryWithSnapshot",
         "func ReconcileRepository.ApplyReceipt",
         "func ReconcileRepository.Canonicalize",
         "func ReconcileRepository.ClearIntent",
@@ -9114,7 +9112,6 @@
         "func ReconcileRepository.MarkInvoking",
         "func ReconcileRepository.RecordFailure",
         "func reconcileEffectState",
-        "func reconcileIntentState",
         "func reconcileProgress",
         "type ReconcileEffectState",
         "type ReconcileEffects",
@@ -14756,6 +14753,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueopspreparation/reconcile_authority.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ValidateReconcileIntentIssueIdentity",
+        "func ValidateReconcileSnapshot",
+        "func reconcileBranchEvidenceEqual"
+      ]
+    },
+    {
       "path": "internal/domain/issueopspreparation/root_claim.go",
       "owner": "domain",
       "task": "T20",
@@ -18718,6 +18725,40 @@
       ],
       "evidence_tests": [
         "internal/application/issueopspreparation/orca_invocation_test.go",
+        "internal/adapter/outbound/issueopslease/reconcile_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "reconcile-snapshot-authority",
+      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
+      "source_symbol": "func reconcileCanonicalOrcaIntent",
+      "responsibility": "reject a reconcile snapshot after pending execution, issue URL, or branch authority changes",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func ValidateReconcileSnapshot",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspreparation/reconcile_authority_test.go",
+        "internal/adapter/outbound/issueopslease/reconcile_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "reconcile-intent-issue-identity",
+      "source_path": "internal/adapter/issueops/execution_orca_intent.go",
+      "source_symbol": "func reconcileCanonicalOrcaIntent",
+      "responsibility": "require the sealed intent provider and issue number to match current branch evidence",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func ValidateReconcileIntentIssueIdentity",
+      "task": "T06",
+      "entrypoints": [
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspreparation/reconcile_authority_test.go",
         "internal/adapter/outbound/issueopslease/reconcile_test.go"
       ],
       "status": "migrated"

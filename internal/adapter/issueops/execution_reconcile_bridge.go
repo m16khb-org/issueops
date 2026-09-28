@@ -23,27 +23,6 @@ type ExecutionReconcileIntentState struct {
 	Pending            bool
 }
 
-func CanonicalizeExecutionReconcileIntent(stateRoot, id string, snapshot *issueops.IssueOpsRecord) (ExecutionReconcileIntentState, error) {
-	var record issueops.IssueOpsRecord
-	if snapshot == nil {
-		var err error
-		record, err = ReadIssueOps(stateRoot, id)
-		if err != nil {
-			return ExecutionReconcileIntentState{Record: issueops.IssueOpsRecord{ID: id}}, err
-		}
-	} else {
-		record = *snapshot
-		if record.ID != id {
-			return ExecutionReconcileIntentState{Record: record}, fmt.Errorf("reconcile snapshot ID changed before canonicalization")
-		}
-	}
-	persisted, payload, err := reconcileCanonicalOrcaIntent(stateRoot, record)
-	if err != nil {
-		return ExecutionReconcileIntentState{Record: persisted}, err
-	}
-	return executionReconcileIntentStateFromPayload(stateRoot, persisted, payload)
-}
-
 func ExecutionReconcileIntentRequest(expected ExecutionReconcileIntentState) (port.ExecutionOrcaIntentRequest, error) {
 	payload, err := executionReconcileIntentPayload(expected)
 	if err != nil {

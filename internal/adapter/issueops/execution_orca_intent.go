@@ -2,7 +2,6 @@ package issueops
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -14,8 +13,6 @@ import (
 	"issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	statecontract "issueops/internal/contract/state"
-	leasedomain "issueops/internal/domain/issueopslease"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
@@ -349,67 +346,6 @@ func readExternalOrcaIntentPayloadShape(stateRoot, operationID string) (external
 		return externalOrcaIntentPayload{}, fmt.Errorf("Orca external intent payload is missing")
 	}
 	return preparationIntentCodec.DecodeShape(operationID, data)
-}
-
-func reconcileCanonicalOrcaIntent(
-	stateRoot string,
-	expected issueops.IssueOpsRecord,
-) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	if expected.Execution == nil || expected.Execution.Pending == nil {
-		return expected, externalOrcaIntentPayload{}, newOrcaIntentContractError("orca_intent_invalid", "Orca pending intent is missing")
-	}
-	var (
-		persisted issueops.IssueOpsRecord
-		intent    externalOrcaIntentPayload
-	)
-	err := withIssueOpsLock(context.Background(), stateRoot, expected.ID, func(context.Context) error {
-		current, err := ReadIssueOps(stateRoot, expected.ID)
-		if err != nil {
-			return err
-		}
-		persisted = current
-		if current.Execution == nil || current.Execution.Pending == nil ||
-			!reflect.DeepEqual(current.Execution, expected.Execution) ||
-			current.IssueURL != expected.IssueURL ||
-			!reflect.DeepEqual(current.BranchPrepare, expected.BranchPrepare) {
-			return newOrcaIntentContractError("orca_intent_authority_changed", "Orca intent authority changed before canonicalization")
-		}
-		pending := current.Execution.Pending
-		db, err := sqlstore.Open(stateRoot)
-		if err != nil {
-			return err
-		}
-		raw, ok, err := db.Get(externalIntentBucket, pending.OperationID)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return newOrcaIntentContractError("orca_intent_invalid", "Orca external intent payload is missing")
-		}
-		contractRaw, err := json.Marshal(current)
-		if err != nil {
-			return err
-		}
-		contractRecord, err := leasecontract.Decode(current.ID, contractRaw)
-		if err != nil {
-			return err
-		}
-		if err := leasedomain.ValidatePersistedRecord(contractRecord); err != nil {
-			return statecontract.Invalid("")
-		}
-		intent, _, err = preparationdomain.CanonicalizeIntent(contractRecord, raw)
-		if err != nil {
-			return err
-		}
-		if err := validateOrcaIntentRecordIdentity(current, intent); err != nil {
-			return err
-		}
-		return nil
-	})
-	if err != nil {
-		return persisted, intent, err
-	}
-	return persisted, intent, nil
 }
 
 func validateExternalOrcaIntentPayload(payload externalOrcaIntentPayload, operationID string) error {

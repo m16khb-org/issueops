@@ -34,9 +34,17 @@ func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrc
 	if err != nil {
 		return nil, err
 	}
-	effects := &coreReconcileEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, now), readIssue: readIssue, snapshot: snapshot, now: now}
+	var expected *leasecontract.Record
+	if snapshot != nil {
+		record, err := reconcileContractRecord(*snapshot)
+		if err != nil {
+			return nil, err
+		}
+		expected = &record
+	}
+	effects := &coreReconcileEffects{stateRoot: stateRoot, provisioner: newHandoffDeliveryProvisioner(stateRoot, provisioner, now), readIssue: readIssue, now: now}
 	return leaseapp.NewReconcileService(
-		leaseoutbound.NewReconcileRepositoryWithDiagnosticRedactor(db, effects, policy.RedactDiagnostic, now),
+		leaseoutbound.NewReconcileRepositoryWithSnapshot(db, effects, expected, policy.RedactDiagnostic, now),
 		leaseoutbound.NewReconcileStageExecutor(effects.inspectStage, effects.invokeStage),
 	), nil
 }
@@ -45,17 +53,7 @@ type coreReconcileEffects struct {
 	stateRoot   string
 	provisioner port.ExecutionOrcaProvisioner
 	readIssue   issueops.ExecutionIssueSnapshotReadFunc
-	snapshot    *issueopscontract.IssueOpsRecord
 	now         func() time.Time
-}
-
-func (e *coreReconcileEffects) Canonicalize(_ context.Context, id string) (leaseoutbound.ReconcileEffectState, error) {
-	state, err := issueops.CanonicalizeExecutionReconcileIntent(e.stateRoot, id, e.snapshot)
-	converted, convertErr := reconcileEffectStateFromCore(state)
-	if convertErr != nil {
-		return leaseoutbound.ReconcileEffectState{}, convertErr
-	}
-	return converted, err
 }
 
 func (e *coreReconcileEffects) ApplyReceipt(ctx context.Context, state leaseoutbound.ReconcileEffectState, receipt leasecontract.ReconcileStageReceipt) (leaseoutbound.ReconcileEffectState, error) {

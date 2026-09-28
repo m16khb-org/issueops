@@ -16,7 +16,6 @@ func TestPersistedLeaseCodecHasNoUnreviewedBypass(t *testing.T) {
 	root := findRepoRoot(t)
 	allowed := map[string][]string{
 		"internal/adapter/outbound/issueopsrecord/lease_codec.go": {"Decode", "Encode"},
-		"internal/adapter/issueops/execution_orca_intent.go":      {"Decode"},
 		"cmd/issueops/issueopsapp/issueops_reconcile_wiring.go":   {"Decode"},
 		"cmd/issueops/issueopsapp/issueops_resume_wiring.go":      {"Decode"},
 	}
