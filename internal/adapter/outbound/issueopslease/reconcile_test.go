@@ -10,6 +10,8 @@ import (
 
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -93,6 +95,94 @@ func TestReconcileRepositoryAppliesResumeReceiptWithoutBridge(t *testing.T) {
 	}
 	if _, err := repository.ApplyReceipt(context.Background(), intent, leasecontract.ReconcileStageReceipt{TerminalPTYID: "pty-again"}); err == nil {
 		t.Fatal("stale reconcile receipt was accepted")
+	}
+}
+
+func TestReconcileRepositoryAdvancesPreparedOwnerReceiptWithoutBridge(t *testing.T) {
+	_, sealed, store := seededResumeIntent(t)
+	record := sealed.Progress.Record.Stable
+	record.Execution.Lease.Generation = 1
+	record.Execution.Lease.Status = "released"
+	record.Execution.Lease.ClaimTokenSHA256 = ""
+	record.Execution.Orca = nil
+	payload, err := (preparationcontract.IntentCodec{}).Decode(sealed.OperationID, sealed.IntentRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	payload.Purpose = preparationcontract.PurposePrepare
+	payload.Generation = 1
+	payload.PriorBinding, payload.ResumeLease = nil, nil
+	payload, err = preparationdomain.SealIntent(payload, preparationcontract.IssueIdentity{Provider: "github", Issue: 193})
+	if err != nil {
+		t.Fatal(err)
+	}
+	record.Execution.Pending.Marker = payload.Marker
+	recordRaw, err := leasecontract.Encode(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intentRaw, err := (preparationcontract.IntentCodec{}).Encode(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Apply(context.Background(), []port.RecordMutation{
+		{Bucket: recordBucket, ID: record.ID, Data: recordRaw},
+		{Bucket: "external_intent_v1", ID: payload.OperationID, Data: intentRaw},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	repository := NewReconcileRepository(store, nil)
+	state := leaseapp.ReconcileIntentState{
+		Progress:    leaseapp.ReconcileProgress{Record: record, Pending: true, NextStage: string(payload.Stage)},
+		OperationID: payload.OperationID, Stage: string(payload.Stage), InvocationState: payload.InvocationState,
+		RecordRaw: recordRaw, IntentRaw: intentRaw,
+	}
+	progress, err := repository.ApplyReceipt(context.Background(), state, leasecontract.ReconcileStageReceipt{TerminalPTYID: "pty-prepared"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !progress.Pending || progress.NextStage != string(preparationcontract.IntentStageRun) || progress.Record.Execution.Pending.Kind != "owner_launch" || progress.Record.Execution.Lease.Status != "released" {
+		t.Fatalf("prepare receipt progress=%+v", progress)
+	}
+	if _, err := repository.ApplyReceipt(context.Background(), state, leasecontract.ReconcileStageReceipt{TerminalPTYID: "pty-again"}); err == nil {
+		t.Fatal("stale prepare receipt was accepted")
+	}
+	for _, step := range []struct {
+		receipt   leasecontract.ReconcileStageReceipt
+		nextStage preparationcontract.IntentStage
+	}{
+		{leasecontract.ReconcileStageReceipt{RunID: "run-prepared"}, preparationcontract.IntentStageRunBind},
+		{leasecontract.ReconcileStageReceipt{RunID: "run-prepared", RunBound: true}, preparationcontract.IntentStageTask},
+		{leasecontract.ReconcileStageReceipt{TaskID: "task-prepared"}, preparationcontract.IntentStageDispatch},
+	} {
+		state, err = repository.Canonicalize(context.Background(), record.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		progress, err = repository.ApplyReceipt(context.Background(), state, step.receipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !progress.Pending || progress.NextStage != string(step.nextStage) {
+			t.Fatalf("prepare stage progress=%+v", progress)
+		}
+	}
+	state, err = repository.Canonicalize(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	progress, err = repository.ApplyReceipt(context.Background(), state, leasecontract.ReconcileStageReceipt{
+		TerminalPTYID: "pty-prepared", TerminalHandle: "handle-prepared", TaskID: "task-prepared",
+		DispatchID: "dispatch-prepared", RequestID: "11111111-1111-4111-8111-111111111111",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if progress.Pending || progress.Record.Execution.Pending != nil || progress.Record.Execution.Lease.Status != "claimable" || progress.Record.Execution.Orca == nil || progress.Record.Execution.Orca.DispatchID != "dispatch-prepared" {
+		t.Fatalf("completed prepare progress=%+v", progress)
+	}
+	if _, ok, err := store.Get("external_intent_v1", payload.OperationID); err != nil || ok {
+		t.Fatalf("completed prepare intent remains: present=%v err=%v", ok, err)
 	}
 }
 

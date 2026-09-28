@@ -140,6 +140,11 @@ func (r *ReconcileRepository) ApplyReceipt(ctx context.Context, intent leaseapp.
 	if err != nil {
 		return leaseapp.ReconcileProgress{}, err
 	}
+	stageReceipt := leasecontract.ResumeStageReceipt{
+		TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle,
+		RunID: receipt.RunID, RunBound: receipt.RunBound, TaskID: receipt.TaskID,
+		DispatchID: receipt.DispatchID, RequestID: receipt.RequestID, PromptReceipt: receipt.PromptReceipt,
+	}
 	if payload.Purpose == preparationcontract.PurposeResume {
 		if intent.Progress.Record.Execution == nil {
 			return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile execution is required")
@@ -156,17 +161,67 @@ func (r *ReconcileRepository) ApplyReceipt(ctx context.Context, intent leaseapp.
 			OperationID: intent.OperationID, Stage: intent.Stage, InvocationState: intent.InvocationState,
 			InvocationAttempts: intent.InvocationAttempts, RecordRaw: intent.RecordRaw, IntentRaw: intent.IntentRaw,
 		}
-		progress, err := NewResumeRepository(r.store).ApplyReceipt(ctx, resume, leasecontract.ResumeStageReceipt{
-			TerminalPTYID: receipt.TerminalPTYID, TerminalHandle: receipt.TerminalHandle,
-			RunID: receipt.RunID, RunBound: receipt.RunBound, TaskID: receipt.TaskID,
-			DispatchID: receipt.DispatchID, RequestID: receipt.RequestID, PromptReceipt: receipt.PromptReceipt,
-		})
+		progress, err := NewResumeRepository(r.store).ApplyReceipt(ctx, resume, stageReceipt)
 		if err != nil {
 			return leaseapp.ReconcileProgress{}, err
 		}
 		result := leaseapp.ReconcileProgress{Record: progress.Record.Stable, Pending: progress.Pending}
 		if !complete {
 			result.NextStage = string(nextStage)
+		}
+		return result, nil
+	}
+	if payload.Stage != preparationcontract.IntentStageWorktree {
+		store, ok := r.store.(port.RecordRawCASStore)
+		if !ok {
+			return leaseapp.ReconcileProgress{}, fmt.Errorf("reconcile record store does not support raw CAS")
+		}
+		state := preparationapp.IntentState{
+			Snapshot: preparationcontract.Snapshot{Record: intent.Progress.Record, RecordRaw: intent.RecordRaw},
+			Intent:   payload, IntentRaw: intent.IntentRaw, Pending: true,
+		}
+		if err := preparationapp.ValidateIntentState(state); err != nil {
+			return leaseapp.ReconcileProgress{}, err
+		}
+		decision, err := preparationapp.ApplyOrcaReceipt(state, resumePreparationReceipt(stageReceipt), "", func() error {
+			return port.ValidateExecutionOrcaDeliveryReceipt(resumePortReceipt(stageReceipt), port.OrcaDeliveryReceiptExpectation{
+				Host: payload.Probe.Host, TaskID: payload.TaskID, TerminalPTYID: payload.TerminalPTYID,
+				DispatchRequestID: payload.OrcaRequestID, PromptRequestID: payload.OrcaPromptRequestID,
+			})
+		})
+		if err != nil {
+			return leaseapp.ReconcileProgress{}, err
+		}
+		recordData, err := recordcodec.EncodeLease(decision.Record)
+		if err != nil {
+			return leaseapp.ReconcileProgress{}, err
+		}
+		mutations := []port.RecordMutation{{Bucket: recordBucket, ID: decision.Record.ID, Data: recordData}}
+		if decision.Complete {
+			mutations = append(mutations, port.RecordMutation{Bucket: "external_intent_v1", ID: intent.OperationID, Delete: true})
+		} else {
+			intentData, err := (preparationcontract.IntentCodec{}).Encode(decision.Intent)
+			if err != nil {
+				return leaseapp.ReconcileProgress{}, err
+			}
+			mutations = append(mutations, port.RecordMutation{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intentData})
+		}
+		err = store.CompareAndApply(ctx, []port.ExpectedRecord{
+			{Bucket: recordBucket, ID: decision.Record.ID, Data: intent.RecordRaw},
+			{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intent.IntentRaw},
+		}, mutations)
+		if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
+			if stale.FailedBucket() == recordBucket {
+				return leaseapp.ReconcileProgress{}, fmt.Errorf("stale raw record snapshot")
+			}
+			return leaseapp.ReconcileProgress{}, fmt.Errorf("stale raw intent snapshot")
+		}
+		if err != nil {
+			return leaseapp.ReconcileProgress{}, err
+		}
+		result := leaseapp.ReconcileProgress{Record: decision.Record, Pending: !decision.Complete}
+		if !decision.Complete {
+			result.NextStage = string(decision.Intent.Stage)
 		}
 		return result, nil
 	}
