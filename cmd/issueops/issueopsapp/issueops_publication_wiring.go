@@ -53,11 +53,12 @@ func newIssueOpsPublicationHandlers(deps issueOpsPublicationCompositionDeps) iss
 }
 
 func newIssueOpsPublicationServices(stateRoot string, deps issueOpsPublicationCompositionDeps) (*publicationapp.CreateService, *publicationapp.ReconcileService) {
-	repository := issueops.NewRemotePublicationRepository(stateRoot, deps.Now, deps.NewOperationID)
+	observer := issueops.RemotePublicationObserver{StateRoot: stateRoot, Clock: deps.Now, OperationIDFactory: deps.NewOperationID}
+	repository := remoteapp.NewPublicationJournal(issueops.RemotePublicationStore{StateRoot: stateRoot}, observer)
 	providerAdapter := &publicationProviderAdapter{deps: deps}
 	gateway := publicationoutbound.NewProviderGateway(providerAdapter.create, providerAdapter.inspect)
 	verifier := issueops.RemotePublicationVerifier{StateRoot: stateRoot, Verify: deps.VerifyLive}
-	preparer := remoteapp.NewCreatePreparation(issueops.RemotePublicationObserver{StateRoot: stateRoot})
+	preparer := remoteapp.NewCreatePreparation(observer)
 	return publicationapp.NewCreateService(preparer, repository, gateway, verifier), publicationapp.NewReconcileService(repository, gateway, verifier)
 }
 

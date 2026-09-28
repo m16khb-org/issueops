@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"issueops/internal/adapter/outbound/sqlstore"
+	remoteapp "issueops/internal/application/issueopsremote"
 	contract "issueops/internal/contract/issueops"
-	"issueops/internal/port"
+	publicationcontract "issueops/internal/contract/issueopspublication"
 )
 
 func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
@@ -30,10 +32,10 @@ func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload := externalRemotePRPayload{
+	payload := publicationcontract.IntentPayload{
 		SchemaVersion: contract.IssueOpsSchemaVersion, OperationID: operationID, Generation: 1,
-		Provider: "github", Kind: "pr", InvocationState: remoteInvocationUnknown,
-		Request: port.IssueProviderCreatePullRequestRequest{Labels: []string{"enhancement"}},
+		Provider: "github", Kind: "pr", InvocationState: "unknown",
+		Request: publicationcontract.ProviderCreateRequest{Labels: []string{"enhancement"}},
 	}
 	intentRaw, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
@@ -49,7 +51,7 @@ func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
 	if err := db.Put(externalIntentBucket, operationID, intentRaw); err != nil {
 		t.Fatal(err)
 	}
-	repository := NewRemotePublicationRepository(stateRoot, nil, nil)
+	repository := newPublicationJournalForTest(stateRoot, nil, nil)
 	intent, err := repository.LoadIntent(context.Background(), record.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -68,7 +70,7 @@ func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
 	}
 }
 
-func newPendingPublicationFixture(t *testing.T) (string, *RemotePublicationRepository, contract.IssueOpsRecord, externalRemotePRPayload) {
+func newPendingPublicationFixture(t *testing.T) (string, *remoteapp.PublicationJournal, contract.IssueOpsRecord, publicationcontract.IntentPayload) {
 	t.Helper()
 	root := t.TempDir()
 	fixture := newClaimableExecutionFixture(t, root, "196-publication-receipt")
@@ -88,10 +90,10 @@ func newPendingPublicationFixture(t *testing.T) (string, *RemotePublicationRepos
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload := externalRemotePRPayload{
+	payload := publicationcontract.IntentPayload{
 		SchemaVersion: contract.IssueOpsSchemaVersion, OperationID: operationID, Generation: 1,
-		Provider: "github", Kind: "pr", InvocationState: remoteInvocationUnknown,
-		Request: port.IssueProviderCreatePullRequestRequest{
+		Provider: "github", Kind: "pr", InvocationState: "unknown",
+		Request: publicationcontract.ProviderCreateRequest{
 			Labels: []string{"enhancement"}, Assignees: []string{"maintainer"}, BaseBranch: "main",
 			Host: actor.Host, SessionID: actor.SessionID, CWD: fixture.worktree,
 		},
@@ -112,7 +114,7 @@ func newPendingPublicationFixture(t *testing.T) (string, *RemotePublicationRepos
 		t.Fatal(err)
 	}
 	now := func() time.Time { return time.Date(2026, 9, 28, 1, 2, 3, 0, time.UTC) }
-	return root, NewRemotePublicationRepository(root, now, nil), record, payload
+	return root, newPublicationJournalForTest(root, now, nil), record, payload
 }
 
 func TestPublicationRepositoryReceiptPreservesActiveLease(t *testing.T) {
@@ -243,5 +245,84 @@ func TestPublicationRepositoryRejectsInvalidArtifactWithoutWrites(t *testing.T) 
 				t.Fatal("rejected artifact modified storage")
 			}
 		})
+	}
+}
+
+func newPublicationJournalForTest(root string, now func() time.Time, operationID func() (string, error)) *remoteapp.PublicationJournal {
+	return remoteapp.NewPublicationJournal(RemotePublicationStore{StateRoot: root}, RemotePublicationObserver{StateRoot: root, Clock: now, OperationIDFactory: operationID})
+}
+
+func TestPublicationJournalRetryAndTerminalFailureAreAtomic(t *testing.T) {
+	root, journal, record, payload := newPendingPublicationFixture(t)
+	original, err := journal.LoadIntent(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retried, err := journal.MarkRetry(context.Background(), original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if retried.RetryCount != 1 || retried.InvocationState != publicationcontract.InvocationUnknown {
+		t.Fatalf("retry=%+v", retried)
+	}
+	if _, err := journal.MarkRetry(context.Background(), original); err == nil || !strings.Contains(err.Error(), "payload changed before retry CAS") {
+		t.Fatalf("stale retry accepted: %v", err)
+	}
+	if _, err := journal.CompleteNotInvoked(context.Background(), original, errors.New("failed")); err == nil || !strings.Contains(err.Error(), "payload changed before terminal pre-invocation receipt") {
+		t.Fatalf("stale terminal receipt accepted: %v", err)
+	}
+	current, err := journal.LoadIntent(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(current.Raw, retried.Raw) || !bytes.Equal(current.Record.Raw, retried.Record.Raw) {
+		t.Fatal("failed CAS changed stored state")
+	}
+	knownURL := "https://github.com/example/issueops/pull/196"
+	if err := journal.RecordFailure(context.Background(), retried, publicationcontract.InvocationUnknown, " "+knownURL+" ", errors.New(strings.Repeat("x", 5000))); err != nil {
+		t.Fatal(err)
+	}
+	current, err = journal.LoadIntent(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observed, err := ReadIssueOps(root, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.KnownURL != knownURL || current.RetryCount != 1 || observed.Execution.Pending == nil || observed.Execution.Failure.Code != "external_operation_ambiguous" || len(observed.Execution.Failure.Message) != 4096 {
+		t.Fatalf("ambiguous failure lost evidence: intent=%+v failure=%+v", current, observed.Execution.Failure)
+	}
+	if err := journal.RecordFailure(context.Background(), current, publicationcontract.InvocationUnknown, "", nil); err != nil {
+		t.Fatal(err)
+	}
+	current, err = journal.LoadIntent(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if current.KnownURL != knownURL {
+		t.Fatal("empty observation cleared known URL")
+	}
+	snapshot, err := journal.CompleteNotInvoked(context.Background(), current, errors.New("not invoked"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	observed, err = ReadIssueOps(root, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observed.Execution.Pending != nil || observed.Execution.Failure.Code != "external_operation_not_invoked" || observed.Execution.Failure.At != "2026-09-28T01:02:03Z" || !reflect.DeepEqual(observed.Execution.Lease, record.Execution.Lease) {
+		t.Fatalf("terminal failure changed execution: %+v", observed.Execution)
+	}
+	db, err := sqlstore.Open(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, exists, err := db.Get(externalIntentBucket, payload.OperationID); err != nil || exists {
+		t.Fatalf("terminal intent remains: %v %v", exists, err)
+	}
+	raw, exists, err := db.Get(issueOpsBucket, record.ID)
+	if err != nil || !exists || !bytes.Equal(raw, snapshot.Raw) {
+		t.Fatal("terminal snapshot differs from committed record")
 	}
 }

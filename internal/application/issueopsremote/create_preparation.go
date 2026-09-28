@@ -12,14 +12,6 @@ import (
 	"issueops/internal/domain/policy"
 )
 
-type PreparationObserver interface {
-	NormalizeActor(context.Context, contract.Actor) (contract.Actor, error)
-	Read(context.Context, string) (model.IssueOpsRecord, error)
-	Authorize(context.Context, model.IssueOpsRecord, contract.CreateCommand) error
-	Fingerprint(context.Context, model.IssueOpsRecord) string
-	Head(context.Context, model.IssueOpsRecord) string
-}
-
 type CreatePreparation struct{ observer PreparationObserver }
 
 func NewCreatePreparation(observer PreparationObserver) *CreatePreparation {

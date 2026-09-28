@@ -1,6 +1,9 @@
 package issueops
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopspublication"
 	"issueops/internal/port"
@@ -24,16 +27,6 @@ func publicationActor(actor contract.Actor) issueops.NativeActor {
 	return result
 }
 
-func publicationRequest(request port.IssueProviderCreatePullRequestRequest) contract.ProviderCreateRequest {
-	return contract.ProviderCreateRequest{
-		Repo: request.Repo, ProjectKey: request.ProjectKey, Title: request.Title, Body: request.Body,
-		HeadBranch: request.HeadBranch, BaseBranch: request.BaseBranch,
-		Labels: clonePublicationStrings(request.Labels), Assignees: clonePublicationStrings(request.Assignees),
-		Draft: request.Draft, ExpectedHeadSHA: request.ExpectedHeadSHA, Confirm: request.Confirm,
-		Host: request.Host, SessionID: request.SessionID, AgentID: request.AgentID, CWD: request.CWD,
-	}
-}
-
 func portPublicationCandidate(candidate contract.Candidate) port.IssueProviderReconcilePullRequestCandidate {
 	return port.IssueProviderReconcilePullRequestCandidate{
 		URL: candidate.URL, ProjectKey: candidate.ProjectKey, SourceProjectKey: candidate.SourceProjectKey,
@@ -49,4 +42,25 @@ func clonePublicationStrings(values []string) []string {
 		return nil
 	}
 	return append([]string{}, values...)
+}
+
+func publicationIntentSnapshot(intent contract.Intent) (issueops.IssueOpsRecord, contract.IntentPayload, error) {
+	var record issueops.IssueOpsRecord
+	if len(intent.Record.Raw) == 0 {
+		return record, contract.IntentPayload{}, fmt.Errorf("publication record raw bytes are required")
+	}
+	if err := json.Unmarshal(intent.Record.Raw, &record); err != nil {
+		return record, contract.IntentPayload{}, fmt.Errorf("decode publication record: %w", err)
+	}
+	if len(intent.Raw) == 0 {
+		return record, contract.IntentPayload{}, fmt.Errorf("remote publication intent raw bytes are required")
+	}
+	var payload contract.IntentPayload
+	if err := json.Unmarshal(intent.Raw, &payload); err != nil {
+		return record, payload, fmt.Errorf("decode remote publication intent: %w", err)
+	}
+	if payload.SchemaVersion != issueops.IssueOpsSchemaVersion || payload.OperationID == "" || payload.OperationID != intent.OperationID || payload.Generation == 0 {
+		return record, payload, fmt.Errorf("remote publication intent state is invalid")
+	}
+	return record, payload, nil
 }

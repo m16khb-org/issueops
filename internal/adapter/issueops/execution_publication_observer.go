@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	"time"
 
 	"issueops/internal/adapter/issueops/implementation"
 	application "issueops/internal/application/issueopsremote"
@@ -9,7 +10,11 @@ import (
 	contract "issueops/internal/contract/issueopspublication"
 )
 
-type RemotePublicationObserver struct{ StateRoot string }
+type RemotePublicationObserver struct {
+	StateRoot          string
+	Clock              func() time.Time
+	OperationIDFactory func() (string, error)
+}
 
 func (o RemotePublicationObserver) NormalizeActor(_ context.Context, actor contract.Actor) (contract.Actor, error) {
 	normalized, err := normalizeNativeActor(publicationActor(actor))
@@ -42,3 +47,14 @@ func (o RemotePublicationObserver) Head(_ context.Context, record model.IssueOps
 }
 
 var _ application.PreparationObserver = RemotePublicationObserver{}
+
+func (o RemotePublicationObserver) PathsMatch(left, right string) bool { return samePath(left, right) }
+func (o RemotePublicationObserver) Timestamp() string                  { return executionNow(o.Clock) }
+func (o RemotePublicationObserver) NewOperationID() (string, error) {
+	if o.OperationIDFactory != nil {
+		return o.OperationIDFactory()
+	}
+	return newExecutionOperationID()
+}
+
+var _ application.PublicationEnvironment = RemotePublicationObserver{}

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"issueops/internal/contract/issueops"
+	publicationcontract "issueops/internal/contract/issueopspublication"
 	publicationdomain "issueops/internal/domain/issueopspublication"
 	"issueops/internal/port"
 )
@@ -12,9 +13,9 @@ import (
 func TestRemoteCandidateValidationDelegatesExactIntentAndChecksProject(t *testing.T) {
 	const url = "https://github.com/acme/repo/pull/1"
 	record := issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/42"}
-	payload := externalRemotePRPayload{
+	payload := publicationcontract.IntentPayload{
 		Provider: "github", Kind: "pr", KnownURL: url,
-		Request: port.IssueProviderCreatePullRequestRequest{
+		Request: publicationcontract.ProviderCreateRequest{
 			ProjectKey: "acme/repo", Title: "Ship the fix", Body: "body", HeadBranch: "work", BaseBranch: "main",
 			ExpectedHeadSHA: strings.Repeat("a", 40), Labels: []string{"backend"}, Assignees: []string{"owner"}, Draft: true,
 		},

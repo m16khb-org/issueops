@@ -7257,7 +7257,7 @@
         "func clonePublicationStrings",
         "func portPublicationCandidate",
         "func publicationActor",
-        "func publicationRequest"
+        "func publicationIntentSnapshot"
       ]
     },
     {
@@ -7268,30 +7268,28 @@
         "func RemotePublicationObserver.Authorize",
         "func RemotePublicationObserver.Fingerprint",
         "func RemotePublicationObserver.Head",
+        "func RemotePublicationObserver.NewOperationID",
         "func RemotePublicationObserver.NormalizeActor",
+        "func RemotePublicationObserver.PathsMatch",
         "func RemotePublicationObserver.Read",
+        "func RemotePublicationObserver.Timestamp",
         "type RemotePublicationObserver"
       ]
     },
     {
-      "path": "internal/adapter/issueops/execution_publication_repository.go",
+      "path": "internal/adapter/issueops/execution_publication_store.go",
       "owner": "adapter",
       "task": "T07",
       "symbols": [
-        "func NewRemotePublicationRepository",
-        "func RemotePublicationRepository.BeginCreate",
-        "func RemotePublicationRepository.Complete",
-        "func RemotePublicationRepository.CompleteNotInvoked",
-        "func RemotePublicationRepository.Latest",
-        "func RemotePublicationRepository.LoadIntent",
-        "func RemotePublicationRepository.MarkRetry",
-        "func RemotePublicationRepository.RecordFailure",
-        "func RemotePublicationRepository.loadSnapshot",
-        "func publicationEligibility",
-        "func publicationIntentSnapshot",
-        "func publicationRecordSnapshot",
+        "func RemotePublicationStore.DecodeSnapshot",
+        "func RemotePublicationStore.PayloadRaw",
+        "func RemotePublicationStore.Persist",
+        "func RemotePublicationStore.Read",
+        "func RemotePublicationStore.ReadPayload",
+        "func RemotePublicationStore.RecordSnapshot",
+        "func RemotePublicationStore.WithinTransaction",
         "func readRemotePublicationRaw",
-        "type RemotePublicationRepository"
+        "type RemotePublicationStore"
       ]
     },
     {
@@ -7311,10 +7309,7 @@
       "symbols": [
         "func ReconcileExecutionWithDependencies",
         "func executionReconcileResult",
-        "func failedExecutionReconcileResult",
-        "func finishRemotePullRequestPreInvocationFailure",
-        "func jsonMarshalExecutionIntent",
-        "func markRemotePullRequestRetry"
+        "func failedExecutionReconcileResult"
       ]
     },
     {
@@ -7323,16 +7318,10 @@
       "task": "T07",
       "symbols": [
         "func CreateRemotePullRequest",
-        "func beginRemotePullRequestIntentWithOperationID",
-        "func boundedExecutionRemoteDiagnostic",
-        "func finishRemotePullRequestIntent",
-        "func readExternalRemotePRPayload",
-        "func recordRemotePullRequestFailure",
         "func validateRemotePullRequestCandidate",
         "func verifyRemotePullRequestResult",
         "type RemoteArtifactVerifyFunc",
-        "type RemotePullRequestDependencies",
-        "type externalRemotePRPayload"
+        "type RemotePullRequestDependencies"
       ]
     },
     {
@@ -11469,8 +11458,37 @@
       "symbols": [
         "func CreatePreparation.Prepare",
         "func NewCreatePreparation",
-        "type CreatePreparation",
-        "type PreparationObserver"
+        "type CreatePreparation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/ports.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "type PreparationObserver",
+        "type PublicationEnvironment",
+        "type PublicationStore"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/publication_journal.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func NewPublicationJournal",
+        "func PublicationJournal.BeginCreate",
+        "func PublicationJournal.Complete",
+        "func PublicationJournal.CompleteNotInvoked",
+        "func PublicationJournal.Latest",
+        "func PublicationJournal.LoadIntent",
+        "func PublicationJournal.MarkRetry",
+        "func PublicationJournal.RecordFailure",
+        "func PublicationJournal.loadSnapshot",
+        "func pendingFacts",
+        "func publicationDiagnostic",
+        "func publicationEligibility",
+        "type PublicationJournal"
       ]
     },
     {
@@ -12844,6 +12862,15 @@
       ]
     },
     {
+      "path": "internal/contract/issueopspublication/intent.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type IntentMutation",
+        "type IntentPayload"
+      ]
+    },
+    {
       "path": "internal/contract/issueopspublication/publication.go",
       "owner": "contract",
       "task": "T02",
@@ -14038,6 +14065,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/publication_transition.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func BeginPublication",
+        "func CompletePublication",
+        "func FailPublication"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/readiness_evidence.go",
       "owner": "domain",
       "task": "T04",
@@ -14791,6 +14828,19 @@
         "type ReconcileFacts",
         "type RetryOutcome",
         "type RetryOutcomeFacts"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopspublication/intent_transition.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func FailurePayload",
+        "func RetryPayload",
+        "func ValidatePayloadUnchanged",
+        "func ValidatePendingIntent",
+        "type IntentCheckpoint",
+        "type PendingIntentFacts"
       ]
     },
     {
@@ -17356,7 +17406,7 @@
       "id": "remote-publication-begin-authority",
       "source_path": "internal/adapter/issueops/execution_remote.go",
       "source_symbol": "func beginRemotePullRequestIntentWithOperationID",
-      "responsibility": "observe the locked record, delegate pending and generation authority, then persist intent atomically",
+      "responsibility": "reject an existing publication or pending intent and require the current execution generation before beginning publication",
       "target": "internal/domain/issueopspublication",
       "target_symbol": "func ValidateBeginAuthority",
       "task": "T07",
@@ -17365,15 +17415,17 @@
       ],
       "evidence_tests": [
         "internal/domain/issueopspublication/authority_test.go",
-        "internal/application/issueopspublication/create_test.go"
+        "internal/application/issueopspublication/create_test.go",
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "remote-publication-receipt-authority",
       "source_path": "internal/adapter/issueops/execution_remote.go",
       "source_symbol": "func finishRemotePullRequestIntent",
-      "responsibility": "observe the locked record and durable payload, delegate holder authority, then persist the receipt atomically",
+      "responsibility": "require the pending operation and original lease holder generation before recording a publication receipt",
       "target": "internal/domain/issueopspublication",
       "target_symbol": "func ValidateReceiptAuthority",
       "task": "T07",
@@ -17383,9 +17435,10 @@
       ],
       "evidence_tests": [
         "internal/domain/issueopspublication/authority_test.go",
-        "internal/application/issueopspublication/reconcile_test.go"
+        "internal/application/issueopspublication/reconcile_test.go",
+        "internal/adapter/issueops/execution_publication_repository_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "body-sync-target",
@@ -19232,6 +19285,126 @@
         "internal/domain/issueopsremote/create_preparation_test.go",
         "internal/application/issueopsremote/create_preparation_test.go",
         "internal/adapter/issueops/execution_publication_create_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-journal",
+      "source_path": "internal/adapter/issueops/execution_publication_repository.go",
+      "source_symbol": "func RemotePublicationRepository.BeginCreate",
+      "responsibility": "coordinate locked intent creation, atomic record and intent persistence, and exact raw snapshot readback",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationJournal.BeginCreate",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go",
+        "internal/domain/issueops/publication_transition_test.go",
+        "internal/domain/issueopspublication/intent_transition_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-retry",
+      "source_path": "internal/adapter/issueops/execution_reconcile.go",
+      "source_symbol": "func markRemotePullRequestRetry",
+      "responsibility": "validate the pending operation and payload before advancing retry count and persisting the intent",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationJournal.MarkRetry",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go",
+        "internal/domain/issueops/publication_transition_test.go",
+        "internal/domain/issueopspublication/intent_transition_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-failure",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func recordRemotePullRequestFailure",
+      "responsibility": "record an ambiguous provider outcome without releasing execution or losing the known artifact URL",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationJournal.RecordFailure",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go",
+        "internal/domain/issueops/publication_transition_test.go",
+        "internal/domain/issueopspublication/intent_transition_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-terminal-failure",
+      "source_path": "internal/adapter/issueops/execution_reconcile.go",
+      "source_symbol": "func finishRemotePullRequestPreInvocationFailure",
+      "responsibility": "record a proven not-invoked failure and remove the intent in one storage transaction",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func PublicationJournal.CompleteNotInvoked",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go",
+        "internal/domain/issueops/publication_transition_test.go",
+        "internal/domain/issueopspublication/intent_transition_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-payload-cas",
+      "source_path": "internal/adapter/issueops/execution_reconcile.go",
+      "source_symbol": "func markRemotePullRequestRetry",
+      "responsibility": "reject a changed stored intent payload before retry or terminal receipt",
+      "target": "internal/domain/issueopspublication",
+      "target_symbol": "func ValidatePayloadUnchanged",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go",
+        "internal/domain/issueops/publication_transition_test.go",
+        "internal/domain/issueopspublication/intent_transition_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-state-transition",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func finishRemotePullRequestIntent",
+      "responsibility": "attach the remote artifact and clear pending intent and failure while preserving the active lease and execution completion state",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CompletePublication",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_publication_repository_test.go",
+        "internal/adapter/issueops/execution_publication_create_test.go",
+        "internal/domain/issueops/publication_transition_test.go",
+        "internal/domain/issueopspublication/intent_transition_test.go"
       ],
       "status": "migrated"
     }

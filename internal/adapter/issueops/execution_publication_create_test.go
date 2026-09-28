@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/issueops/implementation"
+	"issueops/internal/adapter/outbound/sqlstore"
 	publicationapp "issueops/internal/application/issueopspublication"
 	remoteapp "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
@@ -37,7 +38,7 @@ func (p *publicationCreateProvider) Inspect(context.Context, contract.Intent) (c
 }
 
 func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T) {
-	for _, scenario := range []string{"success", "wrong branch", "placeholder assignee", "stale review"} {
+	for _, scenario := range []string{"success", "wrong branch", "placeholder assignee", "stale review", "operation collision"} {
 		t.Run(scenario, func(t *testing.T) {
 			root := t.TempDir()
 			fixture := newClaimableExecutionFixture(t, root, "197-create-preparation")
@@ -71,7 +72,22 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 			if _, err := writeIssueOps(root, record); err != nil {
 				t.Fatal(err)
 			}
-			repository := NewRemotePublicationRepository(root, nil, nil)
+			var operationID func() (string, error)
+			var collisionDB *sqlstore.DB
+			const collisionID = "0123456789abcdef0123456789abcdef"
+			if scenario == "operation collision" {
+				wantError = "already exists"
+				operationID = func() (string, error) { return collisionID, nil }
+				var openErr error
+				collisionDB, openErr = sqlstore.Open(root)
+				if openErr != nil {
+					t.Fatal(openErr)
+				}
+				if err := collisionDB.Put(externalIntentBucket, collisionID, []byte("existing intent")); err != nil {
+					t.Fatal(err)
+				}
+			}
+			repository := newPublicationJournalForTest(root, nil, operationID)
 			before, err := repository.Latest(context.Background(), record.ID)
 			if err != nil {
 				t.Fatal(err)
@@ -100,7 +116,17 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 					t.Fatal(readErr)
 				}
 				if !bytes.Equal(before.Raw, stored.Raw) {
-					t.Fatal("preparation failure wrote cycle state")
+					t.Fatal("rejected publication wrote cycle state")
+				}
+				if collisionDB != nil {
+					raw, exists, readErr := collisionDB.Get(externalIntentBucket, collisionID)
+					if readErr != nil || !exists || string(raw) != "existing intent" {
+						t.Fatalf("collision damaged existing intent: %q exists=%v err=%v", raw, exists, readErr)
+					}
+					_, exists, readErr = collisionDB.Get(leaseHolderBucket, leaseHolderIndexKey(actor))
+					if readErr != nil || exists {
+						t.Fatalf("failed intent inserted holder index: exists=%v err=%v", exists, readErr)
+					}
 				}
 				return
 			}
