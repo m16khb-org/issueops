@@ -1,16 +1,16 @@
 package issueops
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
-	"reflect"
 	"strings"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
-	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -28,24 +28,16 @@ type externalOrcaIntentPayload = preparationcontract.Intent
 var preparationIntentCodec preparationcontract.IntentCodec
 
 func validateOrcaIntentExpectedRecord(record issueops.IssueOpsRecord, expected externalOrcaIntentPayload) error {
-	if record.Execution == nil || record.Execution.Pending == nil || record.Execution.Pending.OperationID != expected.OperationID ||
-		record.Execution.Pending.Marker != expected.Marker || record.Execution.Pending.Kind != pendingKindForOrcaStage(expected.Stage) ||
-		record.Execution.Lease.Generation != expected.Generation {
-		return fmt.Errorf("Orca intent authority changed before CAS")
+	raw, err := json.Marshal(record)
+	if err != nil {
+		return err
 	}
-	switch normalizedOrcaIntentPurpose(expected) {
-	case orcaIntentPurposePrepare:
-		if record.Execution.Lease.Status != issueops.LeaseStatusReleased || record.Execution.Orca != nil {
-			return fmt.Errorf("Orca prepare intent authority changed before CAS")
-		}
-	case orcaIntentPurposeResume:
-		if expected.ResumeLease == nil || expected.PriorBinding == nil ||
-			!reflect.DeepEqual(intentContractLease(record.Execution.Lease), *expected.ResumeLease) ||
-			!reflect.DeepEqual(intentContractBindingPointer(record.Execution.Orca), expected.PriorBinding) {
-			return fmt.Errorf("Orca resume intent authority changed before CAS")
-		}
-	default:
-		return fmt.Errorf("unsupported Orca intent purpose")
+	var authorityRecord preparationcontract.Record
+	if err := json.Unmarshal(raw, &authorityRecord); err != nil {
+		return err
+	}
+	if err := preparationdomain.ValidateIntentRecordAuthority(authorityRecord, expected); err != nil {
+		return err
 	}
 	return validateOrcaIntentRecordIdentity(record, expected)
 }
@@ -177,19 +169,6 @@ func sameOptionalExecutionPath(left, right string) bool {
 	return samePath(left, right)
 }
 
-func pendingKindForOrcaStage(stage preparationcontract.IntentStage) string {
-	switch stage {
-	case preparationcontract.IntentStageWorktree:
-		return "worktree_create"
-	case preparationcontract.IntentStageTerminal, preparationcontract.IntentStageRun, preparationcontract.IntentStageRunBind, preparationcontract.IntentStageTask:
-		return "owner_launch"
-	case preparationcontract.IntentStageDispatch:
-		return "dispatch"
-	default:
-		return ""
-	}
-}
-
 func createOrAdoptClaimToken(record issueops.IssueOpsRecord) (string, error) {
 	token, _, err := createClaimToken(record)
 	if err == nil {
@@ -203,41 +182,6 @@ func createOrAdoptClaimToken(record issueops.IssueOpsRecord) (string, error) {
 		return "", fmt.Errorf("recover deterministic claim token: %w", err)
 	}
 	return tokenSHA256(token), nil
-}
-
-func intentContractLease(lease issueops.WriteLease) leasecontract.Lease {
-	result := leasecontract.Lease{
-		Generation: lease.Generation, Status: string(lease.Status), ClaimTokenSHA256: lease.ClaimTokenSHA256,
-		ClaimedAt: lease.ClaimedAt, ReleasedAt: lease.ReleasedAt, ReplacedAt: lease.ReplacedAt,
-		ReplacementReason: lease.ReplacementReason,
-	}
-	if lease.Holder != nil {
-		result.Holder = &leasecontract.Actor{Host: lease.Holder.Host, SessionID: lease.Holder.SessionID, AgentID: lease.Holder.AgentID}
-		if lease.Holder.SessionProcess != nil {
-			result.Holder.SessionProcess = &leasecontract.ProcessReceipt{
-				PID: lease.Holder.SessionProcess.PID, StartedAt: lease.Holder.SessionProcess.StartedAt,
-				Executable: lease.Holder.SessionProcess.Executable,
-			}
-		}
-	}
-	return result
-}
-
-func intentContractBinding(binding issueops.OrcaBinding) preparationcontract.ResumeBinding {
-	return preparationcontract.ResumeBinding{
-		RuntimeID: binding.RuntimeID, RepoID: binding.RepoID, WorktreeID: binding.WorktreeID,
-		WorktreeInstanceID: binding.WorktreeInstanceID, LeaseGeneration: binding.LeaseGeneration,
-		OwnerHost: binding.OwnerHost, OwnerModel: binding.OwnerModel, OwnerEffort: binding.OwnerEffort,
-		RunID: binding.RunID, TaskID: binding.TaskID, DispatchID: binding.DispatchID, TerminalPTYID: binding.TerminalPTYID,
-	}
-}
-
-func intentContractBindingPointer(binding *issueops.OrcaBinding) *preparationcontract.ResumeBinding {
-	if binding == nil {
-		return nil
-	}
-	result := intentContractBinding(*binding)
-	return &result
 }
 
 func intentPortWorkspaceRequest(workspace preparationcontract.WorkspaceRequest) port.ExecutionWorkspaceRequest {

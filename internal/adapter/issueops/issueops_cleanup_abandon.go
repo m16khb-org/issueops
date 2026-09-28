@@ -15,6 +15,7 @@ import (
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	leasedomain "issueops/internal/domain/issueopslease"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	reconciledomain "issueops/internal/domain/issueopsreconcile"
 	"issueops/internal/port"
 )
@@ -681,7 +682,7 @@ func cleanupAbandonPendingSafe(ctx context.Context, stateRoot string, record iss
 	}
 	if payload.LifecycleID != record.ID || payload.Marker != pending.Marker ||
 		payload.Generation != record.Execution.Lease.Generation ||
-		pending.Kind != pendingKindForOrcaStage(payload.Stage) {
+		pending.Kind != preparationdomain.PendingKind(payload.Stage) {
 		return fmt.Errorf("Orca external intent row does not belong to this lifecycle")
 	}
 	if deps.Orca == nil {

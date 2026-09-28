@@ -192,7 +192,7 @@
 
 ### Task 6: Resume·reconcile·reseed·base sync·mode switch 이전 (T06)
 
-- [ ] 완료
+- [x] 완료 — resume/reconcile의 구형 브리지를 제거하고 Orca 권한·pending kind 판정을 domain으로 일원화; T06 패키지·race·전체 Go 회귀 검증 완료
 - **담당/등급:** 메인 / deep. **선행:** T05. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/issueops/execution_resume*.go`, `execution_reconcile*.go`, `execution_orca_intent.go`, `execution_sync_base.go`, `execution_mode_switch.go`; `internal/adapter/orca/execution_validation.go`; 기존 lease resume/reseed domain
 - **변경/신규 파일:** 확장 lease/preparation application; 신규 `internal/domain/issueopsbasesync/`, `internal/application/issueopsbasesync/`; 대응 Git/intent port와 outbound 구현.
