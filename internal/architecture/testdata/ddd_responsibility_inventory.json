@@ -11377,6 +11377,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopspreparation/orca_receipt.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ApplyOrcaReceipt",
+        "type OrcaReceiptDecision"
+      ]
+    },
+    {
       "path": "internal/application/issueopspreparation/ports.go",
       "owner": "application",
       "task": "T20",
@@ -18049,8 +18058,14 @@
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func MarkOrcaInvoking",
       "task": "T05",
-      "entrypoints": ["issueops execution prepare --mode orca", "issueops execution reconcile"],
-      "evidence_tests": ["internal/application/issueopspreparation/orca_invocation_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
+      "entrypoints": [
+        "issueops execution prepare --mode orca",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopspreparation/orca_invocation_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
+      ],
       "status": "retain"
     },
     {
@@ -18061,8 +18076,26 @@
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ApplyOrcaFailure",
       "task": "T05",
+      "entrypoints": [
+        "issueops execution prepare --mode orca",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopspreparation/orca_invocation_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "orca-receipt-stage-transition",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func (*SQLiteRepository).ApplyReceipt",
+      "responsibility": "validate external delivery and persist application-owned receipt stage changes with record and intent raw CAS",
+      "target": "internal/application/issueopspreparation",
+      "target_symbol": "func ApplyOrcaReceipt",
+      "task": "T05",
       "entrypoints": ["issueops execution prepare --mode orca", "issueops execution reconcile"],
-      "evidence_tests": ["internal/application/issueopspreparation/orca_invocation_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
+      "evidence_tests": ["internal/application/issueopspreparation/orca_receipt_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
       "status": "retain"
     }
   ]

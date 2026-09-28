@@ -21,6 +21,8 @@ func ApplyOrcaFailure(state IntentState, invocation string, diagnostic func() st
 	intent := state.Intent
 	intent.InvocationState = invocation
 	record := state.Snapshot.Record
+	execution := *record.Execution
+	record.Execution = &execution
 	record.Execution.Failure = &leasecontract.FailureDetail{
 		OperationID: intent.OperationID, Code: "external_operation_ambiguous",
 		Message: diagnostic(), At: state.FailureAt,

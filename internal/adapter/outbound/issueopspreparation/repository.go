@@ -204,88 +204,17 @@ func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state prep
 	if err := validateIntentState(state); err != nil {
 		return preparationapp.IntentProgress{State: state, Pending: true}, err
 	}
-	intent := state.Intent
-	intent.InvocationState = preparationcontract.InvocationNotInvoked
-	intent.InvocationAttempts = 0
-	record := state.Snapshot.Record
-	switch state.Intent.Stage {
-	case preparationcontract.IntentStageWorktree:
-		if receipt.Workspace == nil {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca worktree candidate does not match the sealed intent")
-		}
-		prepared := *receipt.Workspace
-		intent.Prepared = &prepared
-		intent.Launch = &preparationcontract.LaunchIdentity{
-			PromptPath: state.OwnerArtifacts.OwnerPromptPath, PromptSHA256: state.OwnerArtifacts.OwnerPromptSHA256,
-			ContextPacketPath: state.OwnerArtifacts.ContextPacketPath, ContextPacketSHA256: state.OwnerArtifacts.ContextPacketSHA256,
-		}
-		intent.ClaimTokenSHA256 = state.OwnerArtifacts.ClaimTokenSHA256
-		intent.Stage = preparationcontract.IntentStageTerminal
-		record.WorktreePath = prepared.Workspace.Root
-		record.PlanPath = state.OwnerArtifacts.PlanPath
-		record.Execution.Workspace = leasecontract.Workspace{
-			SourceRoot: prepared.Workspace.SourceRoot, Root: prepared.Workspace.Root,
-			Branch: prepared.Workspace.Branch, BaseHead: prepared.Workspace.BaseHead,
-			ParentWorktree: prepared.Workspace.ParentWorktree, Driver: prepared.Workspace.Driver,
-			LinkedAt: state.Intent.StartedAt, ArtifactDir: remote.IssueArtifactDir(record.IssueURL),
-		}
-	case preparationcontract.IntentStageTerminal:
-		if strings.TrimSpace(receipt.TerminalPTYID) == "" {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca terminal candidate is incomplete")
-		}
-		intent.TerminalPTYID = strings.TrimSpace(receipt.TerminalPTYID)
-		intent.Stage = preparationcontract.IntentStageRun
-	case preparationcontract.IntentStageRun:
-		if strings.TrimSpace(receipt.RunID) == "" {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca Run candidate is incomplete")
-		}
-		intent.RunID = strings.TrimSpace(receipt.RunID)
-		intent.Stage = preparationcontract.IntentStageRunBind
-	case preparationcontract.IntentStageRunBind:
-		if strings.TrimSpace(receipt.RunID) != state.Intent.RunID || !receipt.RunBound {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca Run binding candidate is incomplete")
-		}
-		intent.RunBound = true
-		intent.Stage = preparationcontract.IntentStageTask
-	case preparationcontract.IntentStageTask:
-		if strings.TrimSpace(receipt.TaskID) == "" {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca task candidate is incomplete")
-		}
-		intent.TaskID = strings.TrimSpace(receipt.TaskID)
-		intent.Stage = preparationcontract.IntentStageDispatch
-	case preparationcontract.IntentStageDispatch:
-		if err := port.ValidateExecutionOrcaDeliveryReceipt(preparationDeliveryReceipt(receipt), port.OrcaDeliveryReceiptExpectation{
+	decision, err := preparationapp.ApplyOrcaReceipt(state, receipt, remote.IssueArtifactDir(state.Snapshot.Record.IssueURL), func() error {
+		return port.ValidateExecutionOrcaDeliveryReceipt(preparationDeliveryReceipt(receipt), port.OrcaDeliveryReceiptExpectation{
 			Host: state.Intent.Probe.Host, TaskID: state.Intent.TaskID, TerminalPTYID: state.Intent.TerminalPTYID,
 			DispatchRequestID: state.Intent.OrcaRequestID, PromptRequestID: state.Intent.OrcaPromptRequestID,
-		}); err != nil {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca dispatch candidate is incomplete: %w", err)
-		}
-		if state.Intent.Prepared == nil {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca prepared workspace receipt is missing")
-		}
-		if state.Intent.Launch == nil {
-			return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("Orca sealed owner artifact identity is missing")
-		}
-		intent.OrcaRequestID = strings.TrimSpace(receipt.RequestID)
-		if receipt.PromptReceipt != nil {
-			intent.OrcaPromptRequestID = strings.TrimSpace(receipt.PromptReceipt.RequestID)
-		}
-		record.Execution.Lease = leasecontract.Lease{
-			Generation: state.Intent.Generation, Status: "claimable", ClaimTokenSHA256: state.Intent.ClaimTokenSHA256,
-		}
-		record.Execution.Orca = &leasecontract.OrcaBinding{
-			RuntimeID: state.Intent.Prepared.RuntimeID, RepoID: state.Intent.Prepared.RepoID,
-			WorktreeID: state.Intent.Prepared.WorktreeID, WorktreeInstanceID: state.Intent.Prepared.WorktreeInstanceID,
-			LeaseGeneration: state.Intent.Generation, OwnerHost: state.Intent.Probe.Host,
-			ArtifactIdentityVersion: leasecontract.OrcaArtifactIdentityVersion,
-			IssueBodySHA256:         state.Intent.IssueBodySHA256, ContextPacketSHA256: state.Intent.Launch.ContextPacketSHA256,
-			OwnerPromptSHA256: state.Intent.Launch.PromptSHA256,
-			OwnerModel:        state.Intent.Probe.Model, OwnerEffort: state.Intent.Probe.Effort,
-			RunID: state.Intent.RunID, TaskID: state.Intent.TaskID, DispatchID: strings.TrimSpace(receipt.DispatchID),
-			TerminalPTYID: state.Intent.TerminalPTYID,
-		}
-		record.Execution.Pending = nil
-		record.Execution.Failure = nil
+		})
+	})
+	if err != nil {
+		return preparationapp.IntentProgress{State: state, Pending: true}, err
+	}
+	record, intent := decision.Record, decision.Intent
+	if decision.Complete {
 		recordData, err := recordcodec.EncodeLease(record)
 		if err != nil {
 			return preparationapp.IntentProgress{State: state, Pending: true}, err
@@ -298,24 +227,12 @@ func (repository *SQLiteRepository) ApplyReceipt(ctx context.Context, state prep
 		}
 		state.Snapshot = preparationcontract.Snapshot{Record: record, RecordRaw: recordData, ClaimTokenPath: state.OwnerArtifacts.ClaimTokenPath}
 		state.Pending = false
-		result := preparationcontract.Result{
-			OK: true, ID: record.ID, ResolvedMode: preparationcontract.ModeOrca,
-			Workspace: record.Execution.Workspace, Execution: record.Execution,
-			ClaimTokenPath: state.OwnerArtifacts.ClaimTokenPath, IssueBodySHA256: state.Intent.IssueBodySHA256,
-			ContextPacketPath: state.OwnerArtifacts.ContextPacketPath, ContextPacketSHA256: state.OwnerArtifacts.ContextPacketSHA256,
-			OwnerPromptPath: state.OwnerArtifacts.OwnerPromptPath, OwnerPromptSHA256: state.OwnerArtifacts.OwnerPromptSHA256,
-			IssueSnapshotSource: state.Owner.Source,
-		}
-		return preparationapp.IntentProgress{State: state, Result: result}, nil
-	default:
-		return preparationapp.IntentProgress{State: state, Pending: true}, fmt.Errorf("unsupported Orca intent stage %q", state.Intent.Stage)
+		return preparationapp.IntentProgress{State: state, Result: decision.Result}, nil
 	}
 	intentData, err := (preparationcontract.IntentCodec{}).Encode(intent)
 	if err != nil {
 		return preparationapp.IntentProgress{State: state, Pending: true}, err
 	}
-	record.Execution.Pending.Kind = preparationdomain.PendingKind(intent.Stage)
-	record.Execution.Failure = nil
 	recordData, err := recordcodec.EncodeLease(record)
 	if err != nil {
 		return preparationapp.IntentProgress{State: state, Pending: true}, err

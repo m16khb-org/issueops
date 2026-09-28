@@ -21,6 +21,9 @@ func TestOrcaInvocationAndFailureTransition(t *testing.T) {
 	if failed.InvocationState != preparationcontract.InvocationUnknown || record.Execution.Failure == nil || record.Execution.Failure.Message != "redacted" || record.Execution.Failure.OperationID != "op" {
 		t.Fatalf("record=%+v failed=%+v", record, failed)
 	}
+	if state.Snapshot.Record.Execution.Failure != nil {
+		t.Fatalf("input state changed before CAS: %+v", state.Snapshot.Record.Execution)
+	}
 	state.FailureAt = ""
 	if _, _, err := ApplyOrcaFailure(state, preparationcontract.InvocationUnknown, func() string { t.Fatal("diagnostic observed before timestamp validation"); return "" }); err == nil {
 		t.Fatal("missing failure timestamp accepted")
