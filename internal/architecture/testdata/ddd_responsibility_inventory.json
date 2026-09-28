@@ -14468,6 +14468,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueopslease/writerless_recovery.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DecideWriterlessRecovery",
+        "type WriterlessRecoveryAction"
+      ]
+    },
+    {
       "path": "internal/domain/issueopslinkedbranch/orphan.go",
       "owner": "domain",
       "task": "T20",
@@ -18145,8 +18154,25 @@
       "target": "internal/domain/issueopspreparation",
       "target_symbol": "func CanonicalRootClaimConflict",
       "task": "T05",
-      "entrypoints": ["issueops execution prepare"],
-      "evidence_tests": ["internal/domain/issueopspreparation/root_claim_test.go", "internal/adapter/outbound/issueopspreparation/repository_test.go"],
+      "entrypoints": [
+        "issueops execution prepare"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspreparation/root_claim_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "writerless-recovery-action",
+      "source_path": "internal/adapter/issueops/execution_lease.go",
+      "source_symbol": "func executionWriterAbsentRecoveryCommand",
+      "responsibility": "render the recovery command selected by the lease domain for a writerless execution",
+      "target": "internal/domain/issueopslease",
+      "target_symbol": "func DecideWriterlessRecovery",
+      "task": "T05",
+      "entrypoints": ["issueops next", "issueops execution prepare"],
+      "evidence_tests": ["internal/domain/issueopslease/writerless_recovery_test.go", "internal/adapter/issueops/execution_resume_identity_test.go"],
       "status": "retain"
     }
   ]

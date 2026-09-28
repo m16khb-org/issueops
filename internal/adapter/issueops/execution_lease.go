@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"issueops/internal/contract/issueops"
+	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
@@ -374,20 +375,18 @@ func executionWriterAbsentRecoveryCommand(record issueops.IssueOpsRecord) string
 		return ""
 	}
 	lease := record.Execution.Lease
-	switch lease.Status {
-	case issueops.LeaseStatusClaimable:
-		if record.Execution.Mode == issueops.ExecutionModeOrca {
-			if !completeOrcaArtifactIdentity(record.Execution.Orca) {
-				return executionReplacementPreviewCommand(record.ID, lease.Generation)
-			}
-			return ExecutionResumeRecoveryCommand(record.ID, lease.Generation)
-		}
-		if record.Execution.Mode == issueops.ExecutionModeDirect {
-			return executionDirectClaimCommand(record.ID, lease.Generation, claimTokenPath(record))
-		}
-	case issueops.LeaseStatusReleased:
+	identityComplete := false
+	if lease.Status == issueops.LeaseStatusClaimable && record.Execution.Mode == issueops.ExecutionModeOrca {
+		identityComplete = completeOrcaArtifactIdentity(record.Execution.Orca)
+	}
+	switch leasedomain.DecideWriterlessRecovery(string(lease.Status), string(record.Execution.Mode), identityComplete) {
+	case leasedomain.RecoveryReplacePreview:
 		return executionReplacementPreviewCommand(record.ID, lease.Generation)
-	case issueops.LeaseStatusRevoking:
+	case leasedomain.RecoveryResume:
+		return ExecutionResumeRecoveryCommand(record.ID, lease.Generation)
+	case leasedomain.RecoveryDirectClaim:
+		return executionDirectClaimCommand(record.ID, lease.Generation, claimTokenPath(record))
+	case leasedomain.RecoveryFinalizePreview:
 		return "issueops execution replace --id " + quoteExecutionOwnerArg(record.ID) +
 			" --expected-generation " + strconv.FormatUint(lease.Generation, 10) + " --finalize-preview"
 	}
