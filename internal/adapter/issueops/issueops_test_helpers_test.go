@@ -1,15 +1,21 @@
 package issueops
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
+	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/contract/issueops"
+	leasecontract "issueops/internal/contract/issueopslease"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	issueopsdomain "issueops/internal/domain/issueops"
+	leasedomain "issueops/internal/domain/issueopslease"
 )
 
 type claimableExecutionFixture struct {
@@ -133,7 +139,36 @@ func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue in
 		packetPath: packetPath, packetSHA256: strings.Repeat("b", 64),
 		promptPath: promptPath, promptSHA256: strings.Repeat("c", 64),
 	}
-	persisted, payload, err := beginOrcaExecutionResumeIntent(stateRoot, record, artifacts, record.Execution.Orca.RuntimeID, "", nil)
+	store, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository := leaseoutbound.NewResumeRepository(store)
+	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID, record.Execution.Lease.Generation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationID, err := newExecutionOperationID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = repository.BeginIntent(context.Background(), snapshot, leasecontract.ResumeArtifacts{
+		IssueBodySHA256:   artifacts.issueBodySHA256,
+		ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256,
+		OwnerPromptPath: artifacts.promptPath, OwnerPromptSHA256: artifacts.promptSHA256,
+	}, leasedomain.ResumePlan{RuntimeID: record.Execution.Orca.RuntimeID}, operationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := ReadIssueOps(stateRoot, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intentRaw, ok, err := store.Get(externalIntentBucket, operationID)
+	if err != nil || !ok {
+		t.Fatalf("resume intent present=%v err=%v", ok, err)
+	}
+	payload, err := (preparationcontract.IntentCodec{}).Decode(operationID, intentRaw)
 	if err != nil {
 		t.Fatal(err)
 	}

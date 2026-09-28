@@ -1,18 +1,12 @@
 package issueops
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"issueops/internal/contract/issueops"
-	preparationcontract "issueops/internal/contract/issueopspreparation"
-	leasedomain "issueops/internal/domain/issueopslease"
-	"issueops/internal/port"
 )
 
 type executionResumeArtifacts struct {
@@ -166,101 +160,6 @@ func validateExecutionResumePacket(record issueops.IssueOpsRecord, issueDigest, 
 		}
 	}
 	return nil
-}
-
-func beginOrcaExecutionResumeIntent(stateRoot string, record issueops.IssueOpsRecord, artifacts executionResumeArtifacts, runtimeID, terminalPTYID string, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	operationID, err := newExecutionOperationID()
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, err
-	}
-	return beginOrcaExecutionResumeIntentWithID(stateRoot, record, artifacts, runtimeID, terminalPTYID, operationID, now)
-}
-
-func beginOrcaExecutionResumeIntentWithID(stateRoot string, record issueops.IssueOpsRecord, artifacts executionResumeArtifacts, runtimeID, terminalPTYID, operationID string, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	return beginOrcaExecutionResumeIntentWithExpectedRaw(stateRoot, record, nil, artifacts, runtimeID, terminalPTYID, operationID, now)
-}
-
-func beginOrcaExecutionResumeIntentWithExpectedRaw(stateRoot string, record issueops.IssueOpsRecord, expectedRecordRaw []byte, artifacts executionResumeArtifacts, runtimeID, terminalPTYID, operationID string, now func() time.Time) (issueops.IssueOpsRecord, externalOrcaIntentPayload, error) {
-	workspace, err := executionWorkspaceRequest(record, true)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, err
-	}
-	if !samePath(workspace.Root, record.Execution.Workspace.Root) {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, fmt.Errorf("execution resume workspace is not canonical")
-	}
-	startedAt := executionNow(now)
-	binding := *record.Execution.Orca
-	lease := record.Execution.Lease
-	prepared := &preparationcontract.OrcaWorkspaceReceipt{
-		Workspace: preparationcontract.WorkspaceReceipt{
-			SourceRoot: record.Execution.Workspace.SourceRoot, Root: record.Execution.Workspace.Root,
-			Branch: record.Execution.Workspace.Branch, BaseHead: record.Execution.Workspace.BaseHead,
-			ParentWorktree: record.Execution.Workspace.ParentWorktree, Driver: "orca", Exists: true,
-		},
-		RuntimeID: runtimeID, RepoID: binding.RepoID, WorktreeID: binding.WorktreeID,
-		WorktreeInstanceID: binding.WorktreeInstanceID,
-	}
-	probe := preparationcontract.ProbeRequest{
-		Repo: record.Repo, Host: binding.OwnerHost, Model: binding.OwnerModel,
-		Effort: binding.OwnerEffort,
-	}
-	stage := preparationcontract.IntentStageTerminal
-	if terminalPTYID != "" {
-		stage = preparationcontract.IntentStageRun
-	}
-	priorBinding := intentContractBinding(binding)
-	resumeLease := intentContractLease(lease)
-	payload := externalOrcaIntentPayload{
-		SchemaVersion: issueops.IssueOpsSchemaVersion, Purpose: orcaIntentPurposeResume,
-		OperationID: operationID, LifecycleID: record.ID, Generation: lease.Generation,
-		Stage: stage, StartedAt: startedAt,
-		InvocationState: orcaIntentNotInvoked, Workspace: intentContractWorkspaceRequest(workspace), Probe: probe, Prepared: prepared,
-		Launch: &externalOrcaLaunchIdentity{
-			PromptPath: artifacts.promptPath, PromptSHA256: artifacts.promptSHA256,
-			ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256,
-		},
-		IssueBodySHA256: artifacts.issueBodySHA256, ClaimTokenSHA256: lease.ClaimTokenSHA256,
-		TerminalPTYID: strings.TrimSpace(terminalPTYID),
-		PriorBinding:  &priorBinding, ResumeLease: &resumeLease,
-	}
-	payload, err = sealExternalOrcaResumeIntentPayload(record, payload)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, err
-	}
-	data, err := preparationIntentCodec.Encode(payload)
-	if err != nil {
-		return issueops.IssueOpsRecord{OK: false, ID: record.ID}, externalOrcaIntentPayload{}, err
-	}
-	var persisted issueops.IssueOpsRecord
-	err = withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		current, err := executionRecordAtGeneration(stateRoot, record.ID, lease.Generation)
-		if err != nil {
-			return err
-		}
-		if err := leasedomain.ValidateResumeBeginAuthority(leasedomain.ResumeBeginAuthority{
-			Pending: current.Execution.Pending != nil,
-			LeaseSame: reflect.DeepEqual(current.Execution.Lease, lease),
-			BindingSame: reflect.DeepEqual(current.Execution.Orca, &binding),
-		}); err != nil {
-			return err
-		}
-		if err := validateOrcaIntentRecordIdentity(current, payload); err != nil {
-			return err
-		}
-		current.Execution.Pending = &issueops.ExternalIntent{
-			OperationID: operationID, Kind: pendingKindForOrcaStage(payload.Stage),
-			Marker: payload.Marker, StartedAt: startedAt,
-		}
-		current.Execution.Failure = nil
-		mutations := []port.RecordMutation{{Bucket: externalIntentBucket, ID: operationID, Data: data, RequireAbsent: true}}
-		if expectedRecordRaw != nil {
-			persisted, err = persistExecutionTransitionWithRawCAS(stateRoot, current, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: record.ID, Data: expectedRecordRaw}}, mutations)
-			return err
-		}
-		persisted, err = persistExecutionTransitionWithMutations(stateRoot, current, nil, mutations)
-		return err
-	})
-	return persisted, payload, err
 }
 
 func ExecutionResumeNextCommand(id string, generation uint64, _ string, issueBodySHA256, contextPacketSHA256 string) string {

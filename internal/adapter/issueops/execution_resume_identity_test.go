@@ -165,7 +165,7 @@ func TestResumeDispatchRetainsDurableArtifactIdentity(t *testing.T) {
 	}
 }
 
-func TestBeginOrcaExecutionResumeIntentAllowsUnverifiedGitHubLaunch(t *testing.T) {
+func TestResumeRepositoryAllowsUnverifiedGitHubLaunch(t *testing.T) {
 	_, record, payload := resumeIntentFixtureWithLinkVerified(t, "github", 16, false)
 	if payload.Probe.Provider != "github" || payload.Probe.Issue != 16 {
 		t.Fatalf("resume identity = provider:%q issue:%d", payload.Probe.Provider, payload.Probe.Issue)

@@ -7378,9 +7378,6 @@
       "symbols": [
         "func ExecutionResumeNextCommand",
         "func ExecutionResumeRecoveryCommand",
-        "func beginOrcaExecutionResumeIntent",
-        "func beginOrcaExecutionResumeIntentWithExpectedRaw",
-        "func beginOrcaExecutionResumeIntentWithID",
         "func completeOrcaArtifactIdentity",
         "func readExecutionResumeArtifacts",
         "func readExecutionResumeClaimToken",
@@ -18791,7 +18788,7 @@
         "internal/domain/issueopslease/resume_begin_test.go",
         "internal/adapter/issueops/execution_api_resume_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "orca-no-resource-clear",
