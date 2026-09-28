@@ -213,6 +213,7 @@
 - **CHECK:** `go test ./internal/domain/issueopspublication ./internal/domain/issueopsbodysync ./internal/application/issueopspublication ./internal/application/issueopscompletion ./internal/adapter/outbound/issueopspublication ./internal/adapter/issueops/... -count=1`.
 - **EXPECT / QA:** 정상: create readback 직후에는 RemoteArtifact/receipt가 생기고 기존 lease는 active, completion은 없음. 별도 complete 호출에 필요한 증거가 충족된 경우에만 completion+release가 원자 기록. 실패: provider 생성 후 응답 유실은 reconcile 요구, 두 번째 create 0회; 다른 candidate/actor/body SHA/HEAD는 거부. managed section 밖 본문 byte 보존.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T07-success.txt`, `T07-failure.txt`, `T07-ownership.json`.
+- **부분 진행:** 발행 Effects/EffectState와 `execution_remote_bridge.go`를 제거하고 실제 저장·검증 어댑터를 composition root에 직접 연결했다. 실제 SQLite 테스트로 원본 snapshot 보존, 영수증 저장 뒤 active lease 유지, stale generation/payload 거부 시 무변경을 확인했다. 전체 Go suite, 선택한 발행 경로 race, 관련 package vet 통과. 발행 준비 정책과 트랜잭션 조율의 추가 이전은 남아 있어 T07은 미완료다.
 
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 

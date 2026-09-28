@@ -215,7 +215,7 @@ func TestDDDOwnerRoutesKnownMigrationTargets(t *testing.T) {
 		"internal/adapter/issueops/issueops_phase.go":                    "T04",
 		"internal/adapter/outbound/issueopslease/sqlite.go":              "T05",
 		"internal/adapter/issueops/execution_sync_base.go":               "T06",
-		"internal/adapter/outbound/issueopspublication/repository.go":    "T07",
+		"internal/adapter/issueops/execution_publication_repository.go":  "T07",
 		"internal/adapter/issueops/issueops_delegation.go":               "T08",
 		"internal/adapter/policy/policy_evaluate.go":                     "T09",
 		"internal/adapter/gates/check.go":                                "T10",
@@ -472,7 +472,7 @@ func dddTask(path string) string {
 			strings.HasPrefix(part, "execution_orca_intent"), strings.HasPrefix(part, "execution_sync_base"),
 			strings.HasPrefix(part, "execution_mode_switch"):
 			return "T06"
-		case strings.HasPrefix(part, "execution_remote"), strings.HasPrefix(part, "issue_create_intent"),
+		case strings.HasPrefix(part, "execution_remote"), strings.HasPrefix(part, "execution_publication"), strings.HasPrefix(part, "issue_create_intent"),
 			strings.HasPrefix(part, "issueops_remote"), strings.HasPrefix(part, "issueops_completion_remote"),
 			strings.HasPrefix(part, "issueops_devilsadvocate_reflect"), strings.HasPrefix(part, "artifactverify/"):
 			return "T07"

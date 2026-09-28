@@ -1308,38 +1308,18 @@
       "task": "T20",
       "symbols": [
         "func clonePublicationStrings",
-        "func corePublicationActor",
-        "func corePublicationEffects.BeginCreate",
-        "func corePublicationEffects.Complete",
-        "func corePublicationEffects.CompleteNotInvoked",
-        "func corePublicationEffects.Latest",
-        "func corePublicationEffects.LoadIntent",
-        "func corePublicationEffects.MarkRetry",
-        "func corePublicationEffects.PreviewCreate",
-        "func corePublicationEffects.RecordFailure",
-        "func corePublicationEffects.create",
-        "func corePublicationEffects.inspect",
-        "func corePublicationEffects.verifyCandidate",
-        "func corePublicationEffects.verifyLive",
-        "func corePublicationIntentState",
-        "func corePublicationRequest",
         "func issueOpsPublicationCreateHandler",
         "func issueOpsPublicationReconcileHandler",
         "func newIssueOpsPublicationHandlers",
         "func newIssueOpsPublicationServices",
-        "func portPublicationCandidate",
         "func portPublicationRequest",
         "func productionIssueOpsPublicationDeps",
         "func publicationCandidate",
-        "func publicationEffectState",
-        "func publicationEligibility",
-        "func publicationIntentEffectState",
-        "func publicationIntentEligibility",
-        "func publicationPreparedEffectState",
+        "func publicationProviderAdapter.create",
+        "func publicationProviderAdapter.inspect",
         "func publicationReconcileRequest",
-        "func publicationRequest",
-        "type corePublicationEffects",
-        "type issueOpsPublicationCompositionDeps"
+        "type issueOpsPublicationCompositionDeps",
+        "type publicationProviderAdapter"
       ]
     },
     {
@@ -7271,6 +7251,51 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/execution_publication_codec.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func clonePublicationStrings",
+        "func portPublicationCandidate",
+        "func publicationActor",
+        "func publicationCommandRequest",
+        "func publicationRequest"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/execution_publication_repository.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func NewRemotePublicationRepository",
+        "func RemotePublicationRepository.BeginCreate",
+        "func RemotePublicationRepository.Complete",
+        "func RemotePublicationRepository.CompleteNotInvoked",
+        "func RemotePublicationRepository.Latest",
+        "func RemotePublicationRepository.LoadIntent",
+        "func RemotePublicationRepository.MarkRetry",
+        "func RemotePublicationRepository.PreviewCreate",
+        "func RemotePublicationRepository.RecordFailure",
+        "func RemotePublicationRepository.loadSnapshot",
+        "func RemotePublicationRepository.prepare",
+        "func publicationEligibility",
+        "func publicationIntentSnapshot",
+        "func publicationRecordSnapshot",
+        "func readRemotePublicationRaw",
+        "type RemotePublicationRepository"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/execution_publication_verifier.go",
+      "owner": "adapter",
+      "task": "T07",
+      "symbols": [
+        "func RemotePublicationVerifier.VerifyCandidate",
+        "func RemotePublicationVerifier.VerifyLive",
+        "type RemotePublicationVerifier"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/execution_reconcile.go",
       "owner": "adapter",
       "task": "T06",
@@ -7301,33 +7326,6 @@
         "type RemoteArtifactVerifyFunc",
         "type RemotePullRequestDependencies",
         "type externalRemotePRPayload"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_remote_bridge.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func BeginPreparedRemotePublicationIntent",
-        "func BeginRemotePublicationIntent",
-        "func CompleteRemotePublication",
-        "func CompleteRemotePublicationNotInvoked",
-        "func LatestRemotePublication",
-        "func LoadRemotePublicationIntent",
-        "func MarkRemotePublicationRetry",
-        "func PrepareRemotePublication",
-        "func RecordRemotePublicationFailure",
-        "func VerifyRemotePublicationCandidate",
-        "func VerifyRemotePublicationLive",
-        "func cloneRemotePublicationRequest",
-        "func loadCompletedRemotePublicationState",
-        "func loadRemotePublicationState",
-        "func readRemotePublicationRaw",
-        "func remotePublicationPayload",
-        "func remotePublicationState",
-        "type RemotePublicationBridgeDependencies",
-        "type RemotePublicationIntentState",
-        "type RemotePublicationPreparedState"
       ]
     },
     {
@@ -9267,42 +9265,6 @@
         "type ProviderCreateFunc",
         "type ProviderGateway",
         "type ProviderInspectFunc"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopspublication/repository.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func NewRepository",
-        "func Repository.BeginCreate",
-        "func Repository.Complete",
-        "func Repository.CompleteNotInvoked",
-        "func Repository.Latest",
-        "func Repository.LoadIntent",
-        "func Repository.MarkRetry",
-        "func Repository.PreviewCreate",
-        "func Repository.RecordFailure",
-        "func effectState",
-        "func intentState",
-        "func preparedCreate",
-        "func recordSnapshot",
-        "type EffectState",
-        "type Effects",
-        "type Repository"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/issueopspublication/verifier.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func NewVerifier",
-        "func Verifier.VerifyCandidate",
-        "func Verifier.VerifyLive",
-        "type Verifier",
-        "type VerifyCandidateFunc",
-        "type VerifyLiveFunc"
       ]
     },
     {
