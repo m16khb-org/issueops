@@ -13650,6 +13650,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/early_phase_readiness.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func GrillReadinessMissing",
+        "func PlanReadinessMissing"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/evidence_phase.go",
       "owner": "domain",
       "task": "T03",

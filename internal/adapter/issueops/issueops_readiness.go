@@ -13,22 +13,7 @@ import (
 )
 
 func IssueOpsPlanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := issueopsdomain.IntentMissing(record)
-	if strings.TrimSpace(record.IssueURL) == "" {
-		missing = append(missing, "issue_url")
-	}
-	if issueopsdomain.PlanPrepGateApplies(record) {
-		missing = append(missing, issueopsdomain.PlanPrepMissing(record.PlanPrep)...)
-	}
-	return issueops.IssueOpsReadiness{
-		OK:           true,
-		Ready:        len(missing) == 0,
-		Missing:      stringlist.UniqueSorted(missing),
-		IssueURL:     record.IssueURL,
-		PlanPath:     record.PlanPath,
-		WorktreePath: record.WorktreePath,
-		Branch:       record.Branch,
-	}
+	return issueOpsReadinessFrom(record, issueopsdomain.PlanReadinessMissing(record))
 }
 
 func IssueOpsAISlopCleanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {

@@ -1,8 +1,6 @@
 package issueops
 
 import (
-	"strings"
-
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
@@ -34,19 +32,7 @@ func IssueOpsProblemReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsR
 // 이는 create-issue-after-grill workflow와 현재 plan-entry gate에 맞춰 plan
 // 진입을 막는다.
 func IssueOpsGrillReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	missing := []string{}
-	if strings.TrimSpace(record.IssueURL) == "" {
-		missing = append(missing, "issue_url")
-	}
-	if strings.TrimSpace(record.Branch) == "" {
-		missing = append(missing, "branch")
-	}
-	if issueopsdomain.PlanPrepGateApplies(record) {
-		missing = append(missing, issueopsdomain.PlanPrepMissing(record.PlanPrep)...)
-	}
-	missing = append(missing, issueopsdomain.SplitDecisionMissing(record)...)
-	missing = append(missing, issueopsdomain.DomainReviewMissing(record)...)
-	return issueOpsReadinessFrom(record, missing)
+	return issueOpsReadinessFrom(record, issueopsdomain.GrillReadinessMissing(record))
 }
 
 func issueOpsPlanCompletion(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
