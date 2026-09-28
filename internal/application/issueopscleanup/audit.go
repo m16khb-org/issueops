@@ -17,6 +17,16 @@ type AuditReflector struct{ Receipts CompletionReflectionReceipts }
 // Reflect uses the completion snapshot captured before workspace deletion.
 // Only a confirmed provider update may advance the local reflection receipt.
 func (s AuditReflector) Reflect(ctx context.Context, record model.IssueOpsRecord, completion model.RemoteCompletionSection, audit string, prov port.IssueProvider) error {
+	if err := WriteCleanupAudit(ctx, record, completion, audit, prov); err != nil {
+		return err
+	}
+	_, err := s.Receipts.Reflected(ctx, record.ID)
+	return err
+}
+
+// WriteCleanupAudit confirms the provider update without stamping a local row.
+// Finish binds that receipt to its own attempt through CleanupFinishRecords.
+func WriteCleanupAudit(ctx context.Context, record model.IssueOpsRecord, completion model.RemoteCompletionSection, audit string, prov port.IssueProvider) error {
 	if prov == nil {
 		return fmt.Errorf("no issue provider configured")
 	}
@@ -30,6 +40,5 @@ func (s AuditReflector) Reflect(ctx context.Context, record model.IssueOpsRecord
 	if !result.Updated {
 		return fmt.Errorf("cleanup audit reflection was not confirmed")
 	}
-	_, err = s.Receipts.Reflected(ctx, record.ID)
-	return err
+	return nil
 }

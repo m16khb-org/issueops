@@ -21,21 +21,28 @@ func wireCleanupForTests() {
 		return (cleanupapp.AuditReflector{Receipts: completionapp.NewCompletionReceipts(issueopscore.RemoteRecordStore{StateRoot: root}, time.Now)}).Reflect(ctx, record, completion, audit, prov)
 	}
 	finish := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, d feedbackcleanup.Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
-		return issueopscore.CleanupFinish(ctx, stateRoot, req, issueopscore.CleanupFinishDeps{
-			Git:                d.CleanupFinishGit,
-			Processes:          issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses},
-			RemoveOrcaWorktree: d.RemoveOrcaWorktree,
-			ReflectAudit: func(rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
-				return reflectAudit(ctx, stateRoot, rec, completion, audit, prov)
+		runtime := issueopscore.CleanupFinishRuntime{RunGit: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
+		evidence := cleanupapp.FinishEvidenceReader{Provider: prov, VerifyMergedHead: d.VerifyMergedHead, ReadIssueSnapshot: issueopscore.ReadRemoteIssueSnapshot}
+		return (cleanupapp.FinishExecutor{
+			Records: issueopscore.FinishRecordStore{StateRoot: stateRoot}, Acquire: (issueopscore.FinishLifetimeLock{StateRoot: stateRoot}).Acquire,
+			Observe: evidence.Observe,
+			Plan: func(ctx context.Context, record issueopscontract.IssueOpsRecord, request issueopscontract.CleanupFinishRequest) (issueopscontract.CleanupFinishInventory, issueopscontract.CleanupFinishResult) {
+				return (cleanupapp.FinishPreviewer{Environment: issueopscore.CleanupFinishEnvironment{RunGit: func(dir string, args ...string) (int, string) { return runtime.Git(ctx, dir, args...) }}, Workspace: runtime.Workspace}).Plan(ctx, record, request)
 			},
-		})
+			Fingerprint: issueopscore.CleanupFinishFingerprint, NewAttempt: issueopscore.NewCleanupFinishAttempt,
+			Completion: completionapp.NewCompletionCollector(issueopscore.CompletionArtifacts{}).Collect,
+			Stop:       runtime.Stop, RemoveOrca: d.RemoveOrcaWorktree, Directory: (issueopscore.CleanupFinishEnvironment{}).Directory, Git: runtime.Git, Now: time.Now,
+			ReflectAudit: func(ctx context.Context, rec issueopscontract.IssueOpsRecord, completion issueopscontract.RemoteCompletionSection, audit string) error {
+				return cleanupapp.WriteCleanupAudit(ctx, rec, completion, audit, prov)
+			},
+		}).Run(ctx, req)
 	}
 	feedbackcleanup.ConfigureCleanup(feedbackcleanup.CleanupDeps{
 		Status: func(ctx context.Context, root, id string, merged bool, d feedbackcleanup.Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
 			service := cleanupapp.StatusService{
 				Records:    issueopscore.CycleRecordStore{StateRoot: root},
 				Structural: cleanupapp.StructuralStatus{Environment: issueopscore.CleanupStatusEnvironment{RunGit: issueopscore.GitCmd, ReadGit: issueopscore.GitOut}},
-				Provider:   d.Provider, VerifyMergedHead: d.VerifyMergedHead, ReadIssueSnapshot: issueopscore.ReadRemoteIssueSnapshot, CurrentDirectory: os.Getwd,
+				Provider:   d.Provider, CurrentDirectory: os.Getwd,
 				PreviewFinish: func(ctx context.Context, req issueopscontract.CleanupFinishRequest, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
 					return finish(ctx, root, req, d, prov)
 				},

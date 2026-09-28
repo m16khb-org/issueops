@@ -351,7 +351,7 @@ func TestRunCleanupStatusDoesNotNormalizeProviderOrIssueErrors(t *testing.T) {
 	}
 }
 
-func TestRunCleanupFinishUsesSupersedingArtifactBaseBranch(t *testing.T) {
+func TestRunCleanupFinishForwardsSupersedingArtifactToApplication(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 	replacement := "https://github.com/acme/repo/pull/454"
@@ -385,10 +385,10 @@ func TestRunCleanupFinishUsesSupersedingArtifactBaseBranch(t *testing.T) {
 	if err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--superseded-by", replacement, "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Join(observed, "\n") != record.RemoteArtifact.URL+"\n"+replacement {
+	if len(observed) != 0 {
 		t.Fatalf("merge observations = %v", observed)
 	}
-	if captured.Merged || captured.SupersededBy != replacement || captured.MergedBaseBranch != "main" {
+	if captured.Merged || captured.SupersededBy != replacement || captured.MergedBaseBranch != "" {
 		t.Fatalf("superseding finish request lost replacement merge evidence: %+v", captured)
 	}
 }

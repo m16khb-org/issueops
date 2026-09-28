@@ -2187,7 +2187,6 @@
         "func RunFeedback",
         "func cleanupArtifactUnmerged",
         "func cleanupExecutionGeneration",
-        "func cleanupFinishRequest",
         "func localActor",
         "func printCleanupAbandonRemoteEffects",
         "func printCleanupFinishError",
@@ -6935,6 +6934,14 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/cleanup_branch_ref.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func branchRefPresent"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/cleanup_finish_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -6944,6 +6951,42 @@
         "func CleanupFinishEnvironment.PathWithin",
         "func CleanupFinishEnvironment.SamePath",
         "type CleanupFinishEnvironment"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/cleanup_finish_records.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func FinishRecordStore.Arm",
+        "func FinishRecordStore.Check",
+        "func FinishRecordStore.Delete",
+        "func FinishRecordStore.Fail",
+        "func FinishRecordStore.Load",
+        "func FinishRecordStore.MarkAuditReflected",
+        "func FinishRecordStore.compare",
+        "func FinishRecordStore.save",
+        "func finishSnapshotRecord",
+        "type FinishRecordStore"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/cleanup_finish_runtime.go",
+      "owner": "adapter",
+      "task": "T08",
+      "symbols": [
+        "func CleanupFinishFingerprint",
+        "func CleanupFinishRuntime.Git",
+        "func CleanupFinishRuntime.Stop",
+        "func CleanupFinishRuntime.Workspace",
+        "func FinishLifetimeLock.Acquire",
+        "func NewCleanupFinishAttempt",
+        "func finishLifetime.Close",
+        "func finishLifetime.Context",
+        "func finishLifetime.Drain",
+        "type CleanupFinishRuntime",
+        "type FinishLifetimeLock",
+        "type finishLifetime"
       ]
     },
     {
@@ -7792,22 +7835,6 @@
         "func cleanupAbandonRemoteRequested",
         "func cleanupAbandonStateIs",
         "func deleteRemoteBranchRef"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_cleanup_finish.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func CleanupFinish",
-        "func branchRefPresent",
-        "func cleanupFinishFingerprint",
-        "func cleanupFinishRemedyCommand",
-        "func keepRemoteBranchFlag",
-        "func keptRemoteBranchAudit",
-        "func orNone",
-        "func recordCleanupFinishFailure",
-        "type CleanupFinishDeps"
       ]
     },
     {
@@ -10979,6 +11006,7 @@
       "task": "T08",
       "symbols": [
         "func AuditReflector.Reflect",
+        "func WriteCleanupAudit",
         "type AuditReflector",
         "type CompletionReflectionReceipts"
       ]
@@ -10997,6 +11025,25 @@
         "type ChildCleanupRecords",
         "type ChildrenCloser",
         "type closeChildOutcome"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/finish_evidence.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func FinishEvidenceReader.Observe",
+        "type FinishEvidenceReader"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/finish_executor.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func FinishExecutor.Run",
+        "type FinishExecutor",
+        "type FinishLifetime"
       ]
     },
     {
@@ -12705,6 +12752,14 @@
       ]
     },
     {
+      "path": "internal/contract/issueops/cleanup_finish_snapshot.go",
+      "owner": "contract",
+      "task": "T08",
+      "symbols": [
+        "type CleanupFinishSnapshot"
+      ]
+    },
+    {
       "path": "internal/contract/issueops/cleanup_types.go",
       "owner": "contract",
       "task": "T02",
@@ -14361,6 +14416,27 @@
       "task": "T08",
       "symbols": [
         "func RequireNoFinishAttempt"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_finish_commands.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func CleanupFinishApplyCommand",
+        "func CleanupFinishAudit",
+        "func CleanupFinishRemedyCommand",
+        "func ValidateCleanupFinishApply"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cleanup_finish_transition.go",
+      "owner": "domain",
+      "task": "T08",
+      "symbols": [
+        "func ApplyCleanupFinishFailure",
+        "func ArmCleanupFinish",
+        "func ValidateCleanupFinishOwner"
       ]
     },
     {
@@ -17150,6 +17226,17 @@
         "func QueueStats",
         "func Start",
         "func ValidID"
+      ]
+    },
+    {
+      "path": "internal/port/cleanup_finish.go",
+      "owner": "port",
+      "task": "T08",
+      "symbols": [
+        "func CleanupFinishObservationError.Error",
+        "func CleanupFinishObservationError.Unwrap",
+        "type CleanupFinishObservationError",
+        "type CleanupFinishRecords"
       ]
     },
     {
@@ -22505,6 +22592,43 @@
       "evidence_tests": [
         "internal/adapter/issueops/issueops_cleanup_linked_branch_test.go",
         "internal/adapter/issueops/linked_branch_observation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-finish-executor",
+      "source_path": "internal/adapter/issueops/issueops_cleanup_finish.go",
+      "source_symbol": "func CleanupFinish",
+      "responsibility": "observation, armed effect ordering, attempt-bound audit/failure and drained final deletion",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func FinishExecutor.Run",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup status"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/finish_executor_test.go",
+        "internal/adapter/issueops/cleanup_finish_inherited_command_test.go",
+        "internal/adapter/issueops/cleanup_finish_concurrency_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "cleanup-finish-evidence",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func cleanupFinishRequest",
+      "responsibility": "derive merge and issue evidence from the executor record snapshot",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func FinishEvidenceReader.Observe",
+      "task": "T08",
+      "entrypoints": [
+        "issueops cleanup finish",
+        "issueops cleanup status"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/finish_evidence_test.go",
+        "cmd/issueops/issueopscli/feedbackcleanup/finish_error_contract_test.go"
       ],
       "status": "migrated"
     }

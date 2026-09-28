@@ -80,24 +80,10 @@ func TestStatusServiceOnlyNormalizesSameCycleReadinessErrors(t *testing.T) {
 					}
 					return nil, nil
 				},
-				VerifyMergedHead: func(artifact model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
-					calls = append(calls, "merge")
-					if artifact.URL != record.RemoteArtifact.URL {
-						t.Fatal("wrong artifact")
-					}
-					return model.CleanupRemoteBranchArtifactHead{BaseRefName: "release"}, nil
-				},
-				ReadIssueSnapshot: func(got context.Context, _ port.IssueProvider, req port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-					calls = append(calls, "issue")
-					if got != ctx || req.Repo != record.Repo || req.URL != record.IssueURL {
-						t.Fatal("issue readback context or identity lost")
-					}
-					return port.ExecutionIssueSnapshot{Body: model.IssueBodyCompletionStartMarker, State: " CLOSED "}, nil
-				},
 				CurrentDirectory: func() (string, error) { calls = append(calls, "cwd"); return "/outside", nil },
 				PreviewFinish: func(got context.Context, req model.CleanupFinishRequest, _ port.IssueProvider) (model.CleanupFinishResult, error) {
 					calls = append(calls, "preview")
-					if got != ctx || req.ID != record.ID || req.CWD != "/outside" || !req.Merged || !req.CompletionReflected || !req.IssueClosed || req.MergedBaseBranch != "release" || req.Apply || req.Confirm || req.Fingerprint != "" {
+					if got != ctx || req.ID != record.ID || req.CWD != "/outside" || req.Merged || req.CompletionReflected || req.IssueClosed || req.MergedBaseBranch != "" || req.Apply || req.Confirm || req.Fingerprint != "" {
 						t.Fatalf("unexpected preview request=%+v", req)
 					}
 					return model.CleanupFinishResult{ID: tc.id, Missing: tc.missing}, failure
@@ -107,7 +93,7 @@ func TestStatusServiceOnlyNormalizesSameCycleReadinessErrors(t *testing.T) {
 			if errors.Is(err, failure) != tc.wantErr {
 				t.Fatalf("err=%v wantErr=%v", err, tc.wantErr)
 			}
-			if !reflect.DeepEqual(calls, []string{"provider", "merge", "issue", "cwd", "preview"}) {
+			if !reflect.DeepEqual(calls, []string{"provider", "cwd", "preview"}) {
 				t.Fatalf("calls=%v", calls)
 			}
 			if tc.wantErr {

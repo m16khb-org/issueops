@@ -45,13 +45,11 @@ type StatusRecords interface {
 }
 
 type StatusService struct {
-	Records           StatusRecords
-	Structural        StructuralStatus
-	Provider          func(string) (port.IssueProvider, error)
-	VerifyMergedHead  func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)
-	ReadIssueSnapshot func(context.Context, port.IssueProvider, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error)
-	CurrentDirectory  func() (string, error)
-	PreviewFinish     func(context.Context, model.CleanupFinishRequest, port.IssueProvider) (model.CleanupFinishResult, error)
+	Records          StatusRecords
+	Structural       StructuralStatus
+	Provider         func(string) (port.IssueProvider, error)
+	CurrentDirectory func() (string, error)
+	PreviewFinish    func(context.Context, model.CleanupFinishRequest, port.IssueProvider) (model.CleanupFinishResult, error)
 }
 
 func (s StatusService) Status(ctx context.Context, id string, mergedRequested bool) (model.IssueOpsCleanupStatus, error) {
@@ -72,22 +70,11 @@ func (s StatusService) Status(ctx context.Context, id string, mergedRequested bo
 	if err != nil {
 		return failed, err
 	}
-	if s.VerifyMergedHead == nil {
-		return failed, fmt.Errorf("merge verification is not configured")
-	}
-	mergedArtifact, err := s.VerifyMergedHead(*record.RemoteArtifact)
-	if err != nil {
-		return failed, fmt.Errorf("merge evidence readback failed (refusing to continue): %w", err)
-	}
-	snapshot, err := s.ReadIssueSnapshot(ctx, prov, port.ExecutionIssueSnapshotRequest{Repo: record.Repo, URL: record.IssueURL})
-	if err != nil {
-		return failed, fmt.Errorf("issue readback failed (refusing to continue): %w", err)
-	}
 	cwd, err := s.CurrentDirectory()
 	if err != nil {
 		return failed, fmt.Errorf("cannot resolve current directory (refusing cleanup status): %w", err)
 	}
-	req := domain.WithCleanupFinishEvidence(model.CleanupFinishRequest{ID: record.ID, CWD: cwd, Merged: true}, snapshot.Body, snapshot.State, mergedArtifact)
+	req := model.CleanupFinishRequest{ID: record.ID, CWD: cwd}
 	result, err := s.PreviewFinish(ctx, req, prov)
 	if err != nil && (result.ID != id || len(result.Missing) == 0) {
 		return failed, err

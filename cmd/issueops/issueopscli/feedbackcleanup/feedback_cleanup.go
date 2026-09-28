@@ -2,6 +2,7 @@ package feedbackcleanup
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -9,7 +10,6 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 	orphancontract "issueops/internal/contract/issueopsorphancleanup"
-	issuedomain "issueops/internal/domain/issueops"
 	port "issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
@@ -184,13 +184,6 @@ func RunCleanup(args []string, deps Deps) error {
 	}
 }
 
-func cleanupFinishRequest(record issueopscontract.IssueOpsRecord, snapshot port.ExecutionIssueSnapshot, mergedArtifact issueopscontract.CleanupRemoteBranchArtifactHead, cwd string, apply, confirm bool, fingerprint string, merged bool, supersededBy string, keepRemoteBranch bool) issueopscontract.CleanupFinishRequest {
-	return issuedomain.WithCleanupFinishEvidence(issueopscontract.CleanupFinishRequest{
-		ID: record.ID, CWD: cwd, Merged: merged, SupersededBy: supersededBy,
-		KeepRemoteBranch: keepRemoteBranch, Apply: apply, Confirm: confirm, Fingerprint: fingerprint,
-	}, snapshot.Body, snapshot.State, mergedArtifact)
-}
-
 func runOrphanCleanup(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops cleanup orphan", flag.ContinueOnError)
 	id := fs.String("id", "", "missing IssueOps lifecycle id expected to have no record")
@@ -312,44 +305,17 @@ func runCleanupFinish(args []string, deps Deps) error {
 	if err != nil {
 		return printCleanupFinishError(deps, *jsonOut, err)
 	}
-	if record.RemoteArtifact == nil {
-		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("cleanup finish requires a verified remote artifact"))
-	}
-	// 머지 여부와 base ref는 반드시 같은 readback에서 나와야 한다: 다른 시점의
-	// 관측을 섞으면 "머지된 시점의 base"를 판정할 근거가 사라진다.
-	if deps.VerifyMergedHead == nil {
-		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("merge verification is not configured"))
-	}
-	// 원 artifact가 머지되지 않은 것은 replacement 증거가 있을 때만 통과 후보다.
-	// 증거가 없으면 종전대로 여기서 멈춘다 — 관측 실패를 조용히 넘기지 않는다.
-	mergedArtifact, mergeErr := deps.VerifyMergedHead(*record.RemoteArtifact)
-	originalMerged := mergeErr == nil
-	supersedingURL := strings.TrimSpace(*supersededBy)
-	if mergeErr != nil && supersedingURL == "" {
-		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("merge evidence readback failed (refusing to continue): %w", mergeErr))
-	}
-	if !originalMerged {
-		replacement := *record.RemoteArtifact
-		replacement.URL = supersedingURL
-		mergedArtifact, err = deps.VerifyMergedHead(replacement)
-		if err != nil {
-			return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("superseding merge evidence readback failed (refusing to continue): %w", err))
-		}
-	}
-	snapshot, err := cleanupDeps.ReadRemoteIssueSnapshot(context.Background(), prov, port.ExecutionIssueSnapshotRequest{
-		Repo: record.Repo, URL: record.IssueURL,
-	})
-	if err != nil {
-		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("issue readback failed (refusing to continue): %w", err))
-	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		// Getwd 실패의 대표 원인이 "현재 디렉토리 삭제"다 — 자기파괴 방지
 		// 가드를 여는 대신 fail-closed로 거부한다(C2-F4).
 		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("cannot resolve current directory (refusing destructive cleanup): %w", err))
 	}
-	req := cleanupFinishRequest(record, snapshot, mergedArtifact, cwd, *apply, *confirm, *fingerprint, originalMerged, supersedingURL, *keepRemoteBranch)
+	req := issueopscontract.CleanupFinishRequest{ID: record.ID, CWD: cwd, Apply: *apply, Confirm: *confirm, Fingerprint: *fingerprint, SupersededBy: strings.TrimSpace(*supersededBy), KeepRemoteBranch: *keepRemoteBranch}
 	result, err := cleanupDeps.CleanupFinish(context.Background(), cleanupDeps.IssueOpsStateRoot(), req, deps, prov)
+	if _, evidenceError := errors.AsType[*port.CleanupFinishObservationError](err); evidenceError {
+		return printCleanupFinishError(deps, *jsonOut, err)
+	}
 	var bindErr error
 	result.NextCommand, bindErr = bindCleanupNextCommand(result.NextCommand, cleanupExecutionGeneration(record), deps.Provenance)
 	if bindErr != nil {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/preflight"
+	"issueops/internal/contract/issueops"
 )
 
 func TestCleanupFinishRejectsUnknownRefAfterDeleteFailure(t *testing.T) {
@@ -93,5 +94,28 @@ func TestCleanupFinishRejectsUnknownBranchInventory(t *testing.T) {
 	result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
 	if err == nil || result.OK || result.Fingerprint != "" {
 		t.Fatalf("unknown branch inventory issued cleanup approval: err=%v result=%+v", err, result)
+	}
+}
+
+func TestCleanupFinishRejectsRecordDriftBeforeLocalEffects(t *testing.T) {
+	stateRoot, record, _ := finishTestRecord(t, true)
+	git := &fakeFinishGit{branchOID: "abc123"}
+	drift := false
+	deps := finishDeps(git)
+	deps.Git = func(dir string, args ...string) (int, string) {
+		if drift && args[0] == "ls-remote" {
+			drift = false
+			mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.RemoteArtifact.URL = "https://github.com/acme/repo/pull/999" })
+		}
+		return git.run(dir, args...)
+	}
+	preview, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	drift = true
+	result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, true, preview.Fingerprint), deps)
+	if err == nil || result.RecordDeleted || git.removedWorktree || git.deletedBranch {
+		t.Fatalf("record drift allowed destructive effects: err=%v result=%+v git=%+v", err, result, git)
 	}
 }
