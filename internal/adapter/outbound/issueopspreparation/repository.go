@@ -14,6 +14,7 @@ import (
 	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -307,14 +308,11 @@ func ensureRootUnclaimed(store port.RecordInventoryStore, selfID, root string) e
 		if err != nil {
 			return fmt.Errorf("canonical worktree 소유권 스캔이 lifecycle %s 레코드를 읽지 못했다; 손상 레코드를 먼저 해소하라: %w", row.ID, err)
 		}
-		claims := []string{record.WorktreePath}
+		executionRoot := ""
 		if record.Execution != nil {
-			claims = append(claims, record.Execution.Workspace.Root)
+			executionRoot = record.Execution.Workspace.Root
 		}
-		for _, claimed := range claims {
-			if cleanAbsPath(claimed) == "" || cleanAbsPath(claimed) != target {
-				continue
-			}
+		if preparationdomain.CanonicalRootClaimConflict(self, target, row.ID, cleanAbsPath(record.WorktreePath), cleanAbsPath(executionRoot)) {
 			return fmt.Errorf(
 				"canonical worktree %s는 이미 lifecycle %s(브랜치 %s)가 선점했다; 먼저 그 사이클을 정리하라: issueops cleanup finish --id %s --preview --json",
 				target, row.ID, strings.TrimSpace(record.Branch), row.ID,

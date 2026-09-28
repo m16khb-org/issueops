@@ -14594,6 +14594,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueopspreparation/root_claim.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CanonicalRootClaimConflict"
+      ]
+    },
+    {
       "path": "internal/domain/issueopspublication/decision.go",
       "owner": "domain",
       "task": "T20",
@@ -18119,9 +18127,27 @@
       "target": "internal/application/issueopspreparation",
       "target_symbol": "func ValidateIntentState",
       "task": "T05",
-      "entrypoints": ["issueops execution prepare --mode orca", "issueops execution reconcile"],
-      "evidence_tests": ["internal/application/issueopspreparation/intent_state_test.go", "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"],
+      "entrypoints": [
+        "issueops execution prepare --mode orca",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopspreparation/intent_state_test.go",
+        "internal/adapter/outbound/issueopspreparation/repository_orca_test.go"
+      ],
       "status": "migrated"
+    },
+    {
+      "id": "preparation-root-claim",
+      "source_path": "internal/adapter/outbound/issueopspreparation/repository.go",
+      "source_symbol": "func ensureRootUnclaimed",
+      "responsibility": "scan and normalize persisted lifecycle roots; domain decides whether another lifecycle owns the canonical root",
+      "target": "internal/domain/issueopspreparation",
+      "target_symbol": "func CanonicalRootClaimConflict",
+      "task": "T05",
+      "entrypoints": ["issueops execution prepare"],
+      "evidence_tests": ["internal/domain/issueopspreparation/root_claim_test.go", "internal/adapter/outbound/issueopspreparation/repository_test.go"],
+      "status": "retain"
     }
   ]
 }
