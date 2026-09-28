@@ -7478,6 +7478,8 @@
         "func executionSyncBaseMergeMsgConflictCount",
         "func executionSyncBasePredictConflicts",
         "func executionSyncBasePreviewCommand",
+        "func executionSyncBasePushEffects.AppendEvent",
+        "func executionSyncBasePushEffects.Push",
         "func executionSyncBaseResolutionState",
         "func executionSyncBaseResolveGitPath",
         "func executionSyncBaseUnmergedPaths",
@@ -7486,7 +7488,8 @@
         "func parseExecutionSyncBaseMergeTreeNames",
         "func pushExecutionSyncBase",
         "func startExecutionSyncBaseResolution",
-        "type executionSyncBaseInventory"
+        "type executionSyncBaseInventory",
+        "type executionSyncBasePushEffects"
       ]
     },
     {
@@ -10932,6 +10935,16 @@
         "func Service.Stage",
         "func Service.Unstage",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsbasesync/push.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func PushAndRecord",
+        "type PushRequest",
+        "type PushResult"
       ]
     },
     {
@@ -16157,6 +16170,14 @@
       ]
     },
     {
+      "path": "internal/port/issueops_base_sync.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type BaseSyncPushEffects"
+      ]
+    },
+    {
       "path": "internal/port/issueops_mode_switch.go",
       "owner": "port",
       "task": "T20",
@@ -18484,6 +18505,18 @@
         "internal/domain/issueopsbasesync/record_transition_test.go",
         "internal/adapter/issueops/execution_sync_base_test.go"
       ],
+      "status": "retain"
+    },
+    {
+      "id": "base-sync-push-event-order",
+      "source_path": "internal/adapter/issueops/execution_sync_base.go",
+      "source_symbol": "func pushExecutionSyncBase",
+      "responsibility": "push the local branch before recording a durable base-sync success event",
+      "target": "internal/application/issueopsbasesync",
+      "target_symbol": "func PushAndRecord",
+      "task": "T06",
+      "entrypoints": ["issueops execution sync-base --apply", "issueops execution sync-base --finalize"],
+      "evidence_tests": ["internal/application/issueopsbasesync/push_test.go", "internal/adapter/issueops/execution_sync_base_test.go"],
       "status": "retain"
     }
   ]

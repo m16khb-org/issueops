@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	basesyncapp "issueops/internal/application/issueopsbasesync"
 	"issueops/internal/contract/issueops"
 	basesyncdomain "issueops/internal/domain/issueopsbasesync"
 )
@@ -390,21 +391,30 @@ func abortExecutionSyncBase(ctx context.Context, stateRoot string, record issueo
 func pushExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, actor issueops.NativeActor,
 	inventory executionSyncBaseInventory, eventMode string, conflictCount int, deps ExecutionSyncBaseDeps,
 	result *ExecutionSyncBaseResult, fail func(string, error) (ExecutionSyncBaseResult, error)) (ExecutionSyncBaseResult, error) {
-	refspec := "refs/heads/" + inventory.Branch + ":refs/heads/" + inventory.Branch
-	if code, out := deps.Git(ctx, inventory.Root, "push", "origin", refspec); code != 0 {
-		result.PushRetryRequired = true
-		return fail("push", fmt.Errorf("git push origin %s: %s", refspec, strings.TrimSpace(out)))
-	}
-	result.Pushed, result.PushRetryRequired = true, false
-	event := issueops.ExecutionSyncBaseEvent{
+	outcome, err := basesyncapp.PushAndRecord(ctx, basesyncapp.PushRequest{
+		ID: record.ID, Root: inventory.Root, Branch: inventory.Branch,
 		Mode: eventMode, BaseBranch: inventory.BaseBranch, BaseOID: inventory.BaseOID,
 		MergeCommit: result.MergeCommit, ConflictFiles: conflictCount,
 		Actor: executionSyncBaseActorLabel(actor), At: time.Now().UTC().Format(time.RFC3339Nano),
-	}
-	if err := appendExecutionSyncBaseEvent(ctx, stateRoot, record.ID, event); err != nil {
-		return fail("record_event", err)
+	}, &executionSyncBasePushEffects{stateRoot: stateRoot, deps: deps})
+	result.Pushed, result.PushRetryRequired = outcome.Pushed, outcome.PushRetryRequired
+	if err != nil {
+		return fail(outcome.FailedStep, err)
 	}
 	return *result, nil
+}
+
+type executionSyncBasePushEffects struct {
+	stateRoot string
+	deps      ExecutionSyncBaseDeps
+}
+
+func (e *executionSyncBasePushEffects) Push(ctx context.Context, root, refspec string) (int, string) {
+	return e.deps.Git(ctx, root, "push", "origin", refspec)
+}
+
+func (e *executionSyncBasePushEffects) AppendEvent(ctx context.Context, id string, event issueops.ExecutionSyncBaseEvent) error {
+	return appendExecutionSyncBaseEvent(ctx, e.stateRoot, id, event)
 }
 
 // appendExecutionSyncBaseEvent는 레코드 쓰기 락 안에서 이벤트만 append한다.
