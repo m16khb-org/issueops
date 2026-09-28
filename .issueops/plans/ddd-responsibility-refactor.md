@@ -156,7 +156,7 @@
 
 ### Task 3: 리뷰·증거 기록·재계획 규칙 이전 (T03)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T02. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/issueops/devilsadvocate/devils_advocate.go`; `intentdesign/`; `compatibilityreview/`; `issueops_regress.go`; `issueops_{implementation_review,project_docs_review,schema_evidence,ledger_recorders,feedback}.go`
 - **변경/신규 파일:** 신규 `internal/contract/issueopsreview/{types,snapshot}.go`, `internal/domain/issueopsreview/{review,regress,evidence}.go`, `internal/application/issueopsreview/{service,ports}.go`, 대응 outbound record adapter 및 root wiring. application이 기존 record를 이 capability의 snapshot으로 매핑한다.
