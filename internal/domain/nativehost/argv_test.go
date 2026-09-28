@@ -17,15 +17,15 @@ func TestBuildInteractiveArgvPinsInstalledNativeHostContracts(t *testing.T) {
 	}{
 		{
 			host: "codex", executable: "/opt/native/codex", model: "gpt-5.6-terra", effort: "high",
-			want: []string{"/opt/native/codex", "--model", "gpt-5.6-terra", "-c", "model_reasoning_effort=high", "--", prompt},
+			want: []string{"/opt/native/codex", "--model", "gpt-5.6-terra", "-c", "model_reasoning_effort=high", "--dangerously-bypass-approvals-and-sandbox", "--", prompt},
 		},
 		{
 			host: "claude", executable: "/opt/native/claude", model: "claude-sonnet-5", effort: "high",
-			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5", "--effort", "high", "--", prompt},
+			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5", "--effort", "high", "--dangerously-skip-permissions", "--", prompt},
 		},
 		{
 			host: "claude", executable: "/opt/native/claude", model: "claude-sonnet-5", effort: "xhigh",
-			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5", "--effort", "xhigh", "--", prompt},
+			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5", "--effort", "xhigh", "--dangerously-skip-permissions", "--", prompt},
 		},
 		{
 			host: "omo", executable: "/opt/native/omo", model: "openai/gpt-5.6", effort: "xhigh",

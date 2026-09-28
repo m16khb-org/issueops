@@ -42,10 +42,12 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string) ([]str
 		if effort != "" {
 			argv = append(argv, "-c", "model_reasoning_effort="+effort)
 		}
+		argv = append(argv, "--dangerously-bypass-approvals-and-sandbox")
 	case "claude":
 		if effort != "" {
 			argv = append(argv, "--effort", effort)
 		}
+		argv = append(argv, "--dangerously-skip-permissions")
 	case "omo":
 		if effort != "" {
 			argv[2] += ":" + effort

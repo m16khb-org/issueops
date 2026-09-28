@@ -27,8 +27,8 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 		host, model, effort string
 		wantPrefix          []string
 	}{
-		{host: "codex", model: "gpt-5.6-terra", effort: "high", wantPrefix: []string{"--model", "gpt-5.6-terra", "-c", "model_reasoning_effort=high", "--"}},
-		{host: "claude", model: "claude-sonnet-5", effort: "high", wantPrefix: []string{"--model", "claude-sonnet-5", "--effort", "high", "--"}},
+		{host: "codex", model: "gpt-5.6-terra", effort: "high", wantPrefix: []string{"--model", "gpt-5.6-terra", "-c", "model_reasoning_effort=high", "--dangerously-bypass-approvals-and-sandbox", "--"}},
+		{host: "claude", model: "claude-sonnet-5", effort: "high", wantPrefix: []string{"--model", "claude-sonnet-5", "--effort", "high", "--dangerously-skip-permissions", "--"}},
 		{host: "omo", model: "openai/gpt-5.6", effort: "xhigh", wantPrefix: []string{"--model", "openai/gpt-5.6:xhigh", "--"}},
 	} {
 		t.Run(test.host, func(t *testing.T) {

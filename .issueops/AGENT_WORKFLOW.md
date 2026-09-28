@@ -37,6 +37,7 @@ Orca가 없거나 unready면 Herdr의 실행 중인 서버·호환성·현재 na
 대화 근거·ID·경로·범위·종료점을 기존 decision record에 남긴다.
 새 세션 인계는 기존 holder의 release를 확인한 뒤 같은 worktree에서 수행하며,
 새 holder는 기록을 확인하고 재질문이나 재인계 없이 이어간다.
+Claude Code·Codex 새 세션은 각 native CLI의 permission bypass 인자를 사용한다.
 보류는 release 후 자원을 보존하며 구현을 허용하지 않는다. 구체적인 인계와 수동 시작
 경로는 `skills/issueops/references/session-choice.md`를 따른다.
 

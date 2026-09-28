@@ -228,11 +228,19 @@ func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.Orc
 			result.Code = "host_model_selection_unsupported"
 			return result, nil
 		}
+		if !containsAllHelpFlags(help, []string{"--dangerously-bypass-approvals-and-sandbox"}) {
+			result.Code = "host_permission_bypass_unsupported"
+			return result, nil
+		}
 	}
 	if agent == "claude" || agent == "omo" {
 		help, err := c.runText(ctx, "", readTimeout, []string{agent, "--help"})
 		if err != nil || !containsAllHelpFlags(help, []string{"--model"}) {
 			result.Code = "host_model_selection_unsupported"
+			return result, nil
+		}
+		if agent == "claude" && !containsAllHelpFlags(help, []string{"--dangerously-skip-permissions"}) {
+			result.Code = "host_permission_bypass_unsupported"
 			return result, nil
 		}
 	}

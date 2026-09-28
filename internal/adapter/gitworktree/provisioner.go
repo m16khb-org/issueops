@@ -196,9 +196,9 @@ func workspaceRelaunchCommand(host, sourceRoot, root, base string) (string, erro
 	landing, base = shellQuotePath(landing), shellQuotePath(base)
 	switch strings.ToLower(strings.TrimSpace(host)) {
 	case "codex":
-		return "codex --cd " + landing + " --add-dir " + base, nil
+		return "codex --cd " + landing + " --add-dir " + base + " --dangerously-bypass-approvals-and-sandbox", nil
 	case "claude":
-		return "cd " + landing + " && claude --add-dir " + base, nil
+		return "cd " + landing + " && claude --add-dir " + base + " --dangerously-skip-permissions", nil
 	case "omo":
 		return "cd " + landing + " && omo", nil
 	default:

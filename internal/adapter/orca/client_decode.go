@@ -235,6 +235,7 @@ func ownerAgentCommand(agent, model, reasoningEffort string, allowCodexHookTrust
 		if reasoningEffort != "" {
 			command += " -c model_reasoning_effort=" + shellSingleQuote(reasoningEffort)
 		}
+		command += " --dangerously-bypass-approvals-and-sandbox"
 		if allowCodexHookTrustBypass {
 			command += " --dangerously-bypass-hook-trust"
 		}
@@ -244,6 +245,7 @@ func ownerAgentCommand(agent, model, reasoningEffort string, allowCodexHookTrust
 		if reasoningEffort != "" {
 			command += " --effort " + shellSingleQuote(reasoningEffort)
 		}
+		command += " --dangerously-skip-permissions"
 		return command, true
 	case "omo":
 		if reasoningEffort != "" {
