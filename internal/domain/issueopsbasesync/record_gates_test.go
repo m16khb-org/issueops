@@ -24,3 +24,24 @@ func TestMissingRecordGatesPreservesBaseSyncEligibilityOrder(t *testing.T) {
 		})
 	}
 }
+
+func TestMissingMergeStateGatesPreservesModeRequirements(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		facts MergeStateFacts
+		want  []string
+	}{
+		{name: "preview with merge", facts: MergeStateFacts{Mode: "preview", MergeInProgress: true}, want: []string{}},
+		{name: "apply with merge and dirty tree", facts: MergeStateFacts{Mode: "apply", MergeInProgress: true, TrackedDirty: true}, want: []string{"merge_state_clean", "worktree_clean"}},
+		{name: "apply clean", facts: MergeStateFacts{Mode: "apply"}, want: []string{}},
+		{name: "finalize without merge", facts: MergeStateFacts{Mode: "finalize"}, want: []string{"merge_in_progress"}},
+		{name: "abort without merge", facts: MergeStateFacts{Mode: "abort"}, want: []string{"merge_in_progress"}},
+		{name: "finalize with merge", facts: MergeStateFacts{Mode: "finalize", MergeInProgress: true}, want: []string{}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := MissingMergeStateGates(test.facts); !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("missing=%v, want %v", got, test.want)
+			}
+		})
+	}
+}

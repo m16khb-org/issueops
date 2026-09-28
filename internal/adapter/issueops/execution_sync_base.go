@@ -183,23 +183,15 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 	//    (design-review F11 — apply는 거부, finalize/abort는 필수 전제).
 	inventory.MergeInProgress = executionSyncBaseMergeInProgress(ctx, inventory.Root, deps)
 	result.MergeInProgress = inventory.MergeInProgress
-	switch mode {
-	case ExecutionSyncBaseApply:
-		if inventory.MergeInProgress {
-			missing = append(missing, "merge_state_clean")
-		}
+	mergeFacts := basesyncdomain.MergeStateFacts{Mode: mode, MergeInProgress: inventory.MergeInProgress}
+	if mode == ExecutionSyncBaseApply {
 		// ⑧ worktree_clean: tracked 변경만 차단하고 untracked는 경고로
 		//    나열한다(design-review F10 — 상시 거부 방지).
 		trackedDirty, untracked := executionSyncBaseWorktreeStatus(ctx, inventory.Root, deps)
 		result.UntrackedWarnings = untracked
-		if trackedDirty {
-			missing = append(missing, "worktree_clean")
-		}
-	case ExecutionSyncBaseFinalize, ExecutionSyncBaseAbort:
-		if !inventory.MergeInProgress {
-			missing = append(missing, "merge_in_progress")
-		}
+		mergeFacts.TrackedDirty = trackedDirty
 	}
+	missing = append(missing, basesyncdomain.MissingMergeStateGates(mergeFacts)...)
 	// fetch 선행(preview·apply): stale base 머지 방지(design-review F6 —
 	// pr-readiness strict 선례). base tip은 반드시 fetch 이후 값이어야 한다.
 	switch mode {

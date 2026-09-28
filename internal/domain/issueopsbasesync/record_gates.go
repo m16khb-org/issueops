@@ -33,3 +33,27 @@ func MissingRecordGates(facts RecordGateFacts) []string {
 	}
 	return missing
 }
+
+type MergeStateFacts struct {
+	Mode            string
+	MergeInProgress bool
+	TrackedDirty    bool
+}
+
+func MissingMergeStateGates(facts MergeStateFacts) []string {
+	missing := []string{}
+	switch facts.Mode {
+	case "apply":
+		if facts.MergeInProgress {
+			missing = append(missing, "merge_state_clean")
+		}
+		if facts.TrackedDirty {
+			missing = append(missing, "worktree_clean")
+		}
+	case "finalize", "abort":
+		if !facts.MergeInProgress {
+			missing = append(missing, "merge_in_progress")
+		}
+	}
+	return missing
+}
