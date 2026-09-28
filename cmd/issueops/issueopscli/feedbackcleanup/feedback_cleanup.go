@@ -250,7 +250,7 @@ func cleanupFinishRequest(record issueopscontract.IssueOpsRecord, snapshot port.
 		CWD:                 cwd,
 		Merged:              merged,
 		SupersededBy:        supersededBy,
-		CompletionReflected: strings.Contains(snapshot.Body, port.IssueBodyCompletionStartMarker),
+		CompletionReflected: strings.Contains(snapshot.Body, issueopscontract.IssueBodyCompletionStartMarker),
 		IssueClosed:         strings.EqualFold(strings.TrimSpace(snapshot.State), "closed"),
 		MergedBaseBranch:    mergedArtifact.BaseRefName,
 		KeepRemoteBranch:    keepRemoteBranch,

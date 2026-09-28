@@ -227,7 +227,7 @@ func TestSyncIssueBodyConfirmWritesPreservesAndRecordsBaseline(t *testing.T) {
 	if !result.Updated || prov.writes != 1 {
 		t.Fatalf("confirm must write exactly once: %+v writes=%d", result, prov.writes)
 	}
-	if !strings.Contains(prov.body, "새 본문") || !strings.Contains(prov.body, port.IssueBodyCompletionStartMarker) {
+	if !strings.Contains(prov.body, "새 본문") || !strings.Contains(prov.body, issueops.IssueBodyCompletionStartMarker) {
 		t.Fatalf("the written body must carry the proposal and keep the completion block:\n%s", prov.body)
 	}
 	if len(updated.BodySyncs) != 1 ||

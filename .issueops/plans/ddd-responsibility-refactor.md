@@ -245,6 +245,8 @@
 
 - **부분 진행 — 원격 처리의 잔여 규칙:** issue preview의 uncancelled 호출 선택을 application으로 옮기고 기존 provider wrapper를 삭제했다. pending publication 판정과 issue/publication 실패 진단의 redaction·기본값·바이트 제한을 domain으로 이전했다. `LoadIntent`는 조회 순서를 맡는 application 메서드로 남기되 domain에 판정을 위임하므로 원장에 `application-orchestration` 잔존 책임을 명시했다. 기존 삭제 여부 검사는 다른 migrated 정책에 그대로 적용한다. 취소된 preview/confirm의 차이를 이동 전후 검증했고, pending kind·진단 한도·preview 취소 처리를 무력화한 overlay가 실패했다. 실제 CLI에서 preview 무호출, 불명확한 실패의 intent 보존·진단 마스킹·중복 생성 차단을 확인했다(`remote-residual-binary-smoke.json`). 전체 Go suite(`full-suite-remote-residual.txt`), T07 관련 race·vet·build·architecture, task 성공·실패 시나리오(`T07-success.txt`, `T07-failure.txt`)가 통과했다. 원장에 남은 삭제된 후보 테스트 경로는 실제 `execution_publication_verifier_test.go`로 정정했다. 추가 소스 점검에서 provider 공용 `issuebody` helper가 완료 본문 절단 우선순위·바이트 예산·관리 구역 병합을 소유하고 있음을 확인했다. 이 helper를 domain으로 이전하기 전까지 T07은 미완료다.
 
+- **부분 진행 — 관리 본문 규칙:** provider 공용 `issuebody` 패키지를 삭제하고 완료 본문 구성·절단 우선순위·관리 구역 예산·병합·payload 검증을 `domain/issueops/managed_body.go`로 이전했다. 공유 section 어휘는 contract가 소유하고 port의 기존 상수와 adapter alias는 제거했다. provider는 요청을 순수 `SectionInput`으로 매핑하고 조회·쓰기만 수행한다. 같은 capability contract 의존성 규칙을 유지했다. GitHub/GitLab subprocess 테스트에서 주변 authored bytes 보존, plan 우선 절단, 남은 예산 초과 시 쓰기 0회를 확인했다. 예산 계산과 주변 bytes 보존을 각각 깨뜨린 overlay에서 두 provider 테스트가 모두 실패했다. 전체 Go suite(`full-suite-managed-body.txt`), 관련 race·vet·build·architecture가 통과했다. 원격 점수 요약의 순수 projection과 scoring facade는 후속 소스 점검 대상으로 남아 있다.
+
 ### Task 8: 분기·부모자식·정리 capability 이전 (T08)
 
 - [ ] 완료

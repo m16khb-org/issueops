@@ -237,24 +237,24 @@ func TestRunCleanupStatusProjectsFinishReadinessParity(t *testing.T) {
 	}{
 		{
 			name:       "open issue requires issue closed without cleanup recommendation",
-			issueState: "open", issueBody: port.IssueBodyCompletionStartMarker,
+			issueState: "open", issueBody: issueopscontract.IssueBodyCompletionStartMarker,
 			mergedBase: "main", wantMissing: "issue_closed",
 		},
 		{
 			name:       "closed issue matches finish ready",
-			issueState: "closed", issueBody: port.IssueBodyCompletionStartMarker,
+			issueState: "closed", issueBody: issueopscontract.IssueBodyCompletionStartMarker,
 			mergedBase: "main", wantReady: true,
 		},
 		{
 			name:       "base drift is projected",
-			issueState: "closed", issueBody: port.IssueBodyCompletionStartMarker,
+			issueState: "closed", issueBody: issueopscontract.IssueBodyCompletionStartMarker,
 			mergedBase: "release", wantMissing: "base_branch_drifted",
 		},
 		{
 			// 점유 프로세스는 더 이상 차단 사유가 아니라 apply가 종료할 대상이다.
 			// status는 준비됨을 보고하되 무엇이 종료될지 경고로 알린다(#477).
 			name:       "workspace holder becomes a stop warning",
-			issueState: "closed", issueBody: port.IssueBodyCompletionStartMarker,
+			issueState: "closed", issueBody: issueopscontract.IssueBodyCompletionStartMarker,
 			mergedBase: "main", processes: []issueopscontract.CleanupWorkspaceProcess{{PID: 4321, Command: "codex", StartedAt: "2026-08-27T00:00:01Z", Executable: "codex"}},
 			wantReady: true, wantWarning: "4321:codex:2026-08-27T00:00:01Z",
 		},
@@ -377,7 +377,7 @@ func TestRunCleanupFinishUsesSupersedingArtifactBaseBranch(t *testing.T) {
 	record := cleanupStatusRecord(t, true, true)
 	replacement := "https://github.com/acme/repo/pull/454"
 	provider := &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
-		URL: record.IssueURL, Body: port.IssueBodyCompletionStartMarker, State: "closed",
+		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}
 	deps := cleanupStatusDeps(nil)
 	deps.Provider = func(string) (port.IssueProvider, error) { return provider, nil }

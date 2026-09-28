@@ -1,15 +1,14 @@
-package issuebody
+package issueops
 
 import (
 	"strings"
 	"testing"
 
 	completionmodel "issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
 func TestMergeManagedSectionIdempotent(t *testing.T) {
-	start, end, err := SectionMarkers(SectionDevilsAdvocate)
+	start, end, err := SectionMarkers(completionmodel.IssueBodySectionDevilsAdvocate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +37,7 @@ func TestMergeManagedSectionIdempotent(t *testing.T) {
 }
 
 func TestMergeManagedSectionEmptyBody(t *testing.T) {
-	start, end, err := SectionMarkers(SectionDevilsAdvocate)
+	start, end, err := SectionMarkers(completionmodel.IssueBodySectionDevilsAdvocate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,17 +139,17 @@ func TestRenderCompletionSectionIncludesCleanupAudit(t *testing.T) {
 }
 
 func TestRenderSectionRoutesByKind(t *testing.T) {
-	if _, _, _, err := RenderSection(port.IssueProviderUpdateIssueBodySectionRequest{Section: SectionCompletion}, "t", 0); err == nil {
+	if _, _, _, err := RenderSection(SectionInput{Section: completionmodel.IssueBodySectionCompletion}, "t", 0); err == nil {
 		t.Fatal("completion section without payload must be rejected")
 	}
-	section, start, _, err := RenderSection(port.IssueProviderUpdateIssueBodySectionRequest{
-		Section: SectionCompletion, Completion: &completionmodel.RemoteCompletionSection{},
+	section, start, _, err := RenderSection(SectionInput{
+		Section: completionmodel.IssueBodySectionCompletion, Completion: &completionmodel.RemoteCompletionSection{},
 	}, "t", 0)
-	if err != nil || !strings.HasPrefix(section, start) || start != CompletionStartMarker {
+	if err != nil || !strings.HasPrefix(section, start) || start != completionmodel.IssueBodyCompletionStartMarker {
 		t.Fatalf("completion render failed: %v %q", err, section)
 	}
-	section, start, _, err = RenderSection(port.IssueProviderUpdateIssueBodySectionRequest{
-		Section: SectionDevilsAdvocate, Findings: []string{"f"},
+	section, start, _, err = RenderSection(SectionInput{
+		Section: completionmodel.IssueBodySectionDevilsAdvocate, Findings: []string{"f"},
 	}, "t", 0)
 	if err != nil || !strings.HasPrefix(section, start) {
 		t.Fatalf("devils-advocate render failed: %v %q", err, section)
@@ -159,8 +158,8 @@ func TestRenderSectionRoutesByKind(t *testing.T) {
 
 // 두 섹션은 서로의 블록을 건드리지 않아야 한다.
 func TestCompletionAndDevilsAdvocateSectionsCoexist(t *testing.T) {
-	daStart, daEnd, _ := SectionMarkers(SectionDevilsAdvocate)
-	coStart, coEnd, _ := SectionMarkers(SectionCompletion)
+	daStart, daEnd, _ := SectionMarkers(completionmodel.IssueBodySectionDevilsAdvocate)
+	coStart, coEnd, _ := SectionMarkers(completionmodel.IssueBodySectionCompletion)
 	body := MergeManagedSection("base\n", RenderDevilsAdvocateSection([]string{"finding"}, "t"), daStart, daEnd)
 	body = MergeManagedSection(body, RenderCompletionSection(completionFixture(), "t", 0), coStart, coEnd)
 	if strings.Count(body, daStart) != 1 || strings.Count(body, coStart) != 1 {
@@ -180,5 +179,43 @@ func TestRenderCompletionSectionListsMissingSealedArtifacts(t *testing.T) {
 	plain := RenderCompletionSection(completionmodel.RemoteCompletionSection{FinalHead: "abc"}, "2026-08-27T00:00:00Z", 0)
 	if strings.Contains(plain, "봉인 아티팩트 없음") {
 		t.Fatalf("no missing artifacts must render no line: %s", plain)
+	}
+}
+
+// Replacing a managed block must not normalize authored bytes on either side.
+func TestMergeManagedSectionPreservesSurroundingBytes(t *testing.T) {
+	const body = "  사용자 본문\r\n\t<start>old\nvalue<end>\r\n  tail \n\n"
+	const want = "  사용자 본문\r\n\t<start>new<end>\r\n  tail \n\n"
+	if got := MergeManagedSection(body, "<start>new<end>", "<start>", "<end>"); got != want {
+		t.Fatalf("merged = %q, want %q", got, want)
+	}
+}
+
+func TestSectionBudgetUsesUnmanagedBytes(t *testing.T) {
+	for _, tc := range []struct {
+		name, body  string
+		limit, want int
+	}{
+		{"unlimited", "prefix", 0, 0},
+		{"replacement", "abc<s>old</s>xy", 20, 15},
+		{"absent", "abc", 20, 17},
+		{"unterminated", "abc<s>old", 20, 11},
+		{"reversed", "</s>abc<s>", 20, 10},
+		{"exhausted", "abc", 3, 1},
+		{"overflow", "abcd", 3, 1},
+		{"multibyte", "한", 10, 7},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := SectionBudget(tc.body, tc.limit, "<s>", "</s>"); got != tc.want {
+				t.Fatalf("budget = %d, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRenderSectionRejectsMandatoryContentBeyondBudget(t *testing.T) {
+	_, _, _, err := RenderSection(SectionInput{Section: "completion", Completion: &completionmodel.RemoteCompletionSection{VerificationSummary: []string{strings.Repeat("x", 2000)}}}, "t", 1000)
+	if err == nil || !strings.Contains(err.Error(), "even after truncation") {
+		t.Fatalf("oversized mandatory content: %v", err)
 	}
 }

@@ -42,7 +42,7 @@ func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatest
 	prov := &completionProvider{}
 	applied := false
 	prov.update = func(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
-		if req.Completion == nil || req.Section != port.IssueBodySectionCompletion || req.Completion.RemoteArtifactURL != record.RemoteArtifact.URL || strings.Join(req.Completion.MissingArtifacts, ",") != "plan" {
+		if req.Completion == nil || req.Section != model.IssueBodySectionCompletion || req.Completion.RemoteArtifactURL != record.RemoteArtifact.URL || strings.Join(req.Completion.MissingArtifacts, ",") != "plan" {
 			t.Fatalf("completion=%+v", req)
 		}
 		if applied {

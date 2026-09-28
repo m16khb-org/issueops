@@ -23,3 +23,14 @@ type RemoteCompletionSection struct {
 	// from the workspace artifact directory when the section was gathered (#482).
 	MissingArtifacts []string `json:"missing_artifacts,omitempty"`
 }
+
+// Managed issue-body section kinds shared by core callers and provider
+// adapters. The set is intentionally closed (no open extension point).
+const (
+	IssueBodySectionDevilsAdvocate = "devils-advocate"
+	IssueBodySectionCompletion     = "completion"
+
+	// IssueBodyCompletionStartMarker is the durable delimiter cleanup finish
+	// readback-checks before destructive local cleanup (설계 v5 WS3).
+	IssueBodyCompletionStartMarker = "<!-- issueops:completion:start -->"
+)

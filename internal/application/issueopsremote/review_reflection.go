@@ -66,7 +66,7 @@ func (s *ReviewReflectionService) Reflect(ctx context.Context, id, providerOverr
 	if err := domain.ValidateReviewReflection(record); err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}
-	result, err = provider.UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: port.IssueBodySectionDevilsAdvocate, Findings: record.DevilsAdvocateReview.Findings, Confirm: confirm})
+	result, err = provider.UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionDevilsAdvocate, Findings: record.DevilsAdvocateReview.Findings, Confirm: confirm})
 	if err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}

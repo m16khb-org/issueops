@@ -15,7 +15,7 @@ func TestRunCleanupFinishPropagatesKeepRemoteBranchExactly(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 	provider := &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
-		URL: record.IssueURL, Body: port.IssueBodyCompletionStartMarker, State: "closed",
+		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}
 	deps := cleanupStatusDeps(nil)
 	deps.Provider = func(string) (port.IssueProvider, error) { return provider, nil }

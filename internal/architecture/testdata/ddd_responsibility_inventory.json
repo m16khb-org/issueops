@@ -10409,21 +10409,6 @@
       ]
     },
     {
-      "path": "internal/adapter/provider/issuebody/issue_body_section.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func MergeManagedSection",
-        "func RenderCompletionSection",
-        "func RenderDevilsAdvocateSection",
-        "func RenderSection",
-        "func SectionBudget",
-        "func SectionMarkers",
-        "func orPlaceholder",
-        "func renderCollapsed"
-      ]
-    },
-    {
       "path": "internal/adapter/provider/providerutil/bounded_command.go",
       "owner": "adapter",
       "task": "T20",
@@ -14359,6 +14344,22 @@
       "task": "T08",
       "symbols": [
         "func ValidateIssueURL"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/managed_body.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func MergeManagedSection",
+        "func RenderCompletionSection",
+        "func RenderDevilsAdvocateSection",
+        "func RenderSection",
+        "func SectionBudget",
+        "func SectionMarkers",
+        "func orPlaceholder",
+        "func renderCollapsed",
+        "type SectionInput"
       ]
     },
     {
@@ -20848,7 +20849,8 @@
       "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
       "source_symbol": "func RenderCompletionSection",
       "responsibility": "render mandatory completion blocks and truncate lower-priority bodies without dropping headings",
-      "target": "internal/domain/issuebody",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RenderCompletionSection",
       "task": "T07",
       "entrypoints": [
         "issueops remote reflect-completion",
@@ -20856,18 +20858,21 @@
         "issueops cleanup finish"
       ],
       "evidence_tests": [
-        "internal/adapter/provider/issuebody/issue_body_section_test.go",
+        "internal/domain/issueops/managed_body_test.go",
         "internal/adapter/provider/github/provider_test.go",
-        "internal/adapter/provider/gitlab/provider_test.go"
+        "internal/adapter/provider/gitlab/provider_test.go",
+        "internal/adapter/provider/github/managed_body_test.go",
+        "internal/adapter/provider/gitlab/managed_body_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "managed-section-budget",
       "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
       "source_symbol": "func SectionBudget",
       "responsibility": "allocate provider body bytes after accounting for existing unmanaged content",
-      "target": "internal/domain/issuebody",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func SectionBudget",
       "task": "T07",
       "entrypoints": [
         "issueops remote reflect-completion",
@@ -20875,18 +20880,21 @@
         "issueops cleanup finish"
       ],
       "evidence_tests": [
-        "internal/adapter/provider/issuebody/issue_body_section_test.go",
+        "internal/domain/issueops/managed_body_test.go",
         "internal/adapter/provider/github/provider_test.go",
-        "internal/adapter/provider/gitlab/provider_test.go"
+        "internal/adapter/provider/gitlab/provider_test.go",
+        "internal/adapter/provider/github/managed_body_test.go",
+        "internal/adapter/provider/gitlab/managed_body_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "managed-section-merge",
       "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
       "source_symbol": "func MergeManagedSection",
       "responsibility": "replace one delimited managed section while preserving surrounding content",
-      "target": "internal/domain/issuebody",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func MergeManagedSection",
       "task": "T07",
       "entrypoints": [
         "issueops remote reflect-completion",
@@ -20894,18 +20902,21 @@
         "issueops cleanup finish"
       ],
       "evidence_tests": [
-        "internal/adapter/provider/issuebody/issue_body_section_test.go",
+        "internal/domain/issueops/managed_body_test.go",
         "internal/adapter/provider/github/provider_test.go",
-        "internal/adapter/provider/gitlab/provider_test.go"
+        "internal/adapter/provider/gitlab/provider_test.go",
+        "internal/adapter/provider/github/managed_body_test.go",
+        "internal/adapter/provider/gitlab/managed_body_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "managed-section-selection",
       "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
       "source_symbol": "func RenderSection",
       "responsibility": "validate supported managed section and required payload before provider mutation",
-      "target": "internal/domain/issuebody",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RenderSection",
       "task": "T07",
       "entrypoints": [
         "issueops remote reflect-completion",
@@ -20913,11 +20924,13 @@
         "issueops cleanup finish"
       ],
       "evidence_tests": [
-        "internal/adapter/provider/issuebody/issue_body_section_test.go",
+        "internal/domain/issueops/managed_body_test.go",
         "internal/adapter/provider/github/provider_test.go",
-        "internal/adapter/provider/gitlab/provider_test.go"
+        "internal/adapter/provider/gitlab/provider_test.go",
+        "internal/adapter/provider/github/managed_body_test.go",
+        "internal/adapter/provider/gitlab/managed_body_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     }
   ]
 }

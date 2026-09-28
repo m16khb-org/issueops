@@ -456,6 +456,7 @@ func dddTask(path string) string {
 		{"internal/domain/issueopspublication/", "T07"},
 		{"internal/application/issueopspublication/", "T07"},
 		{"internal/domain/issueopsbodysync/", "T07"},
+		{"internal/domain/issueops/managed_body.go", "T07"},
 		{"internal/domain/issueopsremote/artifact.go", "T07"},
 		{"internal/domain/issueopsremote/create_preparation.go", "T07"},
 		{"internal/domain/issueops/issue_reconcile.go", "T07"},

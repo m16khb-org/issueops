@@ -513,7 +513,7 @@ func ReflectCleanupAudit(stateRoot string, record issueops.IssueOpsRecord, compl
 	result, err := prov.UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
 		Repo:       record.Repo,
 		IssueURL:   record.IssueURL,
-		Section:    port.IssueBodySectionCompletion,
+		Section:    issueops.IssueBodySectionCompletion,
 		Completion: &completion,
 		Confirm:    true,
 	})

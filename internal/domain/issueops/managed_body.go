@@ -1,40 +1,34 @@
-// Package issuebody renders and idempotently splices delimited managed
-// sections into a remote issue body, shared by the github and gitlab adapters.
-package issuebody
+package issueops
 
 import (
 	"fmt"
 	"strings"
 
 	completionmodel "issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
-// Managed section kinds. Each kind owns one delimited block; merging one kind
-// never touches the other kind's block or any content outside the delimiters.
-const (
-	SectionDevilsAdvocate = port.IssueBodySectionDevilsAdvocate
-	SectionCompletion     = port.IssueBodySectionCompletion
-)
+// SectionInput carries only managed content, without provider or transport fields.
+type SectionInput struct {
+	Section    string
+	Findings   []string
+	Completion *completionmodel.RemoteCompletionSection
+}
 
 const (
 	devilsAdvocateStartMarker = "<!-- issueops:devils-advocate:start -->"
 	devilsAdvocateEndMarker   = "<!-- issueops:devils-advocate:end -->"
-	// CompletionStartMarker is exported so cleanup readiness can readback-check
-	// that the completion section was reflected before destructive cleanup.
-	CompletionStartMarker = port.IssueBodyCompletionStartMarker
-	completionEndMarker   = "<!-- issueops:completion:end -->"
+	completionEndMarker       = "<!-- issueops:completion:end -->"
 )
 
 // SectionMarkers resolves the delimiters for a managed section kind.
 func SectionMarkers(section string) (start, end string, err error) {
 	switch section {
-	case SectionDevilsAdvocate:
+	case completionmodel.IssueBodySectionDevilsAdvocate:
 		return devilsAdvocateStartMarker, devilsAdvocateEndMarker, nil
-	case SectionCompletion:
-		return CompletionStartMarker, completionEndMarker, nil
+	case completionmodel.IssueBodySectionCompletion:
+		return completionmodel.IssueBodyCompletionStartMarker, completionEndMarker, nil
 	}
-	return "", "", fmt.Errorf("unsupported issue body section %q (want %s|%s)", section, SectionDevilsAdvocate, SectionCompletion)
+	return "", "", fmt.Errorf("unsupported issue body section %q (want %s|%s)", section, completionmodel.IssueBodySectionDevilsAdvocate, completionmodel.IssueBodySectionCompletion)
 }
 
 // RenderDevilsAdvocateSection builds the delimited managed section for the
@@ -69,7 +63,7 @@ func RenderCompletionSection(c completionmodel.RemoteCompletionSection, ts strin
 	truncated := false
 	render := func() string {
 		var b strings.Builder
-		b.WriteString(CompletionStartMarker + "\n")
+		b.WriteString(completionmodel.IssueBodyCompletionStartMarker + "\n")
 		fmt.Fprintf(&b, "## 완료 기록 (%s)\n", ts)
 		fmt.Fprintf(&b, "### 최종 head\n%s\n", orPlaceholder(c.FinalHead))
 		fmt.Fprintf(&b, "### PR/MR\n%s\n", orPlaceholder(c.RemoteArtifactURL))
@@ -175,15 +169,15 @@ func MergeManagedSection(body, section, startMarker, endMarker string) string {
 
 // RenderSection renders the managed block for the requested section kind from
 // the update request payload and returns it with its delimiters.
-func RenderSection(req port.IssueProviderUpdateIssueBodySectionRequest, ts string, limit int) (section, startMarker, endMarker string, err error) {
+func RenderSection(req SectionInput, ts string, limit int) (section, startMarker, endMarker string, err error) {
 	startMarker, endMarker, err = SectionMarkers(req.Section)
 	if err != nil {
 		return "", "", "", err
 	}
 	switch req.Section {
-	case SectionDevilsAdvocate:
+	case completionmodel.IssueBodySectionDevilsAdvocate:
 		return RenderDevilsAdvocateSection(req.Findings, ts), startMarker, endMarker, nil
-	case SectionCompletion:
+	case completionmodel.IssueBodySectionCompletion:
 		if req.Completion == nil {
 			return "", "", "", fmt.Errorf("completion payload is required for the completion section")
 		}

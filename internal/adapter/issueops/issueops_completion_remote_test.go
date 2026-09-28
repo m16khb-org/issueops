@@ -85,7 +85,7 @@ func TestReflectIssueCompletionGates(t *testing.T) {
 	if got.RemoteCompletion != nil {
 		t.Fatal("preview must not stamp the local completion cache")
 	}
-	if prov.updateReq.Section != port.IssueBodySectionCompletion || prov.updateReq.Completion == nil {
+	if prov.updateReq.Section != issueops.IssueBodySectionCompletion || prov.updateReq.Completion == nil {
 		t.Fatalf("completion payload must be routed: %+v", prov.updateReq)
 	}
 

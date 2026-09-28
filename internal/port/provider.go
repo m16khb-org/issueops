@@ -171,17 +171,6 @@ type IssueProviderCloseChildResult struct {
 	Preview           string `json:"preview,omitempty"`
 }
 
-// Managed issue-body section kinds shared by core callers and provider
-// adapters. The set is intentionally closed (no open extension point).
-const (
-	IssueBodySectionDevilsAdvocate = "devils-advocate"
-	IssueBodySectionCompletion     = "completion"
-
-	// IssueBodyCompletionStartMarker is the durable delimiter cleanup finish
-	// readback-checks before destructive local cleanup (설계 v5 WS3).
-	IssueBodyCompletionStartMarker = "<!-- issueops:completion:start -->"
-)
-
 // IssueProviderUpdateIssueBodySectionRequest describes reflecting one managed,
 // delimited section (devils-advocate | completion) of an existing remote issue
 // body. Exactly the payload matching Section is consumed.

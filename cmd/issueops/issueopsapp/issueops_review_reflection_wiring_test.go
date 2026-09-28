@@ -28,7 +28,7 @@ func TestReviewReflectionCompositionRechecksHolderBeforeStamp(t *testing.T) {
 	provider := &completionProvider{}
 	mode := "preview"
 	provider.update = func(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
-		if req.Section != port.IssueBodySectionDevilsAdvocate || req.IssueURL != record.IssueURL || strings.Join(req.Findings, ",") != "review finding" {
+		if req.Section != model.IssueBodySectionDevilsAdvocate || req.IssueURL != record.IssueURL || strings.Join(req.Findings, ",") != "review finding" {
 			t.Fatalf("request=%+v", req)
 		}
 		if mode == "transfer" || mode == "disappear" || mode == "apply" {

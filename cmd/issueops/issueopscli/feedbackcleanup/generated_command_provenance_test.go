@@ -36,7 +36,7 @@ func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
 	}
 	deps.Provider = func(string) (port.IssueProvider, error) {
 		return &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
-			URL: record.IssueURL, Body: port.IssueBodyCompletionStartMarker, State: "closed",
+			URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 		}}, nil
 	}
 	deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
@@ -131,7 +131,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		ExecutablePath: binary, ExecutableSHA256: hex.EncodeToString(binaryHash[:]),
 	}}
 	provider := &liveCleanupProvider{cleanupStatusProvider: cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
-		URL: record.IssueURL, Body: port.IssueBodyCompletionStartMarker, State: "closed",
+		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}}
 	var printed any
 	removeCalls := 0
