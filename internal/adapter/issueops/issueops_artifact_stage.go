@@ -9,10 +9,10 @@ import (
 
 	"issueops/internal/adapter/issueops/intentdesign"
 	"issueops/internal/adapter/outbound/sqlstore"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
 	remote "issueops/internal/domain/issueopsremote"
-	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/secretdetection"
 )
 
@@ -90,8 +90,9 @@ func RequireStagedExecutionOwnerPlan(stateRoot string, record issueops.IssueOpsR
 		return PlanIdentity{}, newPlanArtifactRequiredError(record, true)
 	}
 	identity := PlanIdentity{Digest: digestExecutionOwnerBytes([]byte(plan))}
-	if err := requireDevilsAdvocateBoundToPlan(record, identity.Digest); err != nil {
-		return PlanIdentity{}, err
+	if !cycleapp.DevilsAdvocateStagedPlanBound(record, identity.Digest) {
+		return PlanIdentity{}, &devilsAdvocateStaleError{nextCommand: "issueops devils-advocate review --id " + quoteExecutionOwnerArg(record.ID) +
+			" --reviewer-context subagent --verdict <VERDICT> --finding <TEXT> --json"}
 	}
 	if strings.TrimSpace(record.PlanPath) == "" {
 		return identity, nil
@@ -120,24 +121,6 @@ func (e *devilsAdvocateStaleError) IssueOpsErrorFields() map[string]any {
 		"missing":      []string{"devils_advocate_review_stale"},
 		"next_command": e.nextCommand,
 	}
-}
-
-// 강제 범위는 implement 진입 전까지다: implement 이후의 owner 교체(replacement/
-// reseed)는 구현 중 편집된 플랜을 다시 봉인하는 경로라 design-review 재검토를 요구하지
-// 않는다 — ai-slop-clean 진입이 plan binding을 보지 않는 것과 같은 이유다.
-func requireDevilsAdvocateBoundToPlan(record issueops.IssueOpsRecord, stagedDigest string) error {
-	review := record.DevilsAdvocateReview
-	if review == nil || reviewdomain.DevilsAdvocateDigestExempt(*review) {
-		return nil
-	}
-	if issueOpsPhaseRank(record.Phase) >= issueOpsPhaseRank(IssueOpsPhaseImplement) {
-		return nil
-	}
-	if strings.EqualFold(strings.TrimSpace(review.ReviewedPlanDigest), stagedDigest) {
-		return nil
-	}
-	return &devilsAdvocateStaleError{nextCommand: "issueops devils-advocate review --id " + quoteExecutionOwnerArg(record.ID) +
-		" --reviewer-context subagent --verdict <VERDICT> --finding <TEXT> --json"}
 }
 
 func newPlanArtifactRequiredError(record issueops.IssueOpsRecord, allowStageCommand bool) error {

@@ -35,3 +35,12 @@ func DevilsAdvocateReviewMissing(review *reviewcontract.DevilsAdvocateReview, ch
 	}
 	return missing
 }
+
+// DevilsAdvocateStagedPlanBound requires a matching review only before implement.
+// Later owner replacement may reseal a plan edited during implementation.
+func DevilsAdvocateStagedPlanBound(review *reviewcontract.DevilsAdvocateReview, beforeImplement bool, stagedDigest string) bool {
+	if review == nil || DevilsAdvocateDigestExempt(*review) || !beforeImplement {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(review.ReviewedPlanDigest), stagedDigest)
+}

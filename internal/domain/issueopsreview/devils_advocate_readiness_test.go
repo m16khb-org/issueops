@@ -58,3 +58,20 @@ func TestDevilsAdvocatePlanDigestRequiredOnlyWhenObserved(t *testing.T) {
 		})
 	}
 }
+
+func TestDevilsAdvocateStagedPlanBoundPreservesPreImplementGate(t *testing.T) {
+	review := &reviewcontract.DevilsAdvocateReview{ReviewedPlanDigest: "AbC"}
+	if !DevilsAdvocateStagedPlanBound(nil, true, "other") || !DevilsAdvocateStagedPlanBound(review, false, "other") {
+		t.Fatal("unreviewed or post-implement plan must not be checked")
+	}
+	if !DevilsAdvocateStagedPlanBound(review, true, "abc") {
+		t.Fatal("matching digest must pass without case sensitivity")
+	}
+	if DevilsAdvocateStagedPlanBound(review, true, "other") {
+		t.Fatal("mismatched digest must fail")
+	}
+	review.ReviewerPattern = ParentReviewPattern
+	if !DevilsAdvocateStagedPlanBound(review, true, "other") {
+		t.Fatal("delegated child inherits parent review")
+	}
+}
