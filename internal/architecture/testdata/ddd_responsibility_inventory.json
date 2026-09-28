@@ -7922,11 +7922,7 @@
       "symbols": [
         "func IssueOpsGrillReadiness",
         "func IssueOpsPhaseCompletion",
-        "func IssueOpsProblemReadiness",
-        "func issueOpsCompatibilityReviewCompletion",
-        "func issueOpsImplementCompletion",
-        "func issueOpsPlanCompletion",
-        "func issueOpsReadinessFrom"
+        "func IssueOpsProblemReadiness"
       ]
     },
     {
@@ -11049,6 +11045,15 @@
       "symbols": [
         "func ObservedPRReadinessMissing",
         "type ObservedPRFacts"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/phase_completion.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func PhaseCompletion",
+        "func ReadinessFromMissing"
       ]
     },
     {
@@ -15956,6 +15961,14 @@
       ]
     },
     {
+      "path": "internal/port/issueopscycle/phase_completion.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type PhaseCompletionReadiness"
+      ]
+    },
+    {
       "path": "internal/port/issueopscycle/phase_entry.go",
       "owner": "port",
       "task": "T20",
@@ -17641,6 +17654,60 @@
         "internal/adapter/issueops/issueops_readiness_test.go"
       ],
       "status": "migrate"
+    },
+    {
+      "id": "plan-phase-completion",
+      "source_path": "internal/adapter/issueops/issueops_phase_ledger.go",
+      "source_symbol": "func issueOpsPlanCompletion",
+      "responsibility": "plan completion uses compatibility review entry readiness",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func PhaseCompletion",
+      "task": "T04",
+      "entrypoints": [
+        "issueops next",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/phase_completion_test.go",
+        "internal/adapter/issueops/issueops_phase_ledger_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "compatibility-phase-completion",
+      "source_path": "internal/adapter/issueops/issueops_phase_ledger.go",
+      "source_symbol": "func issueOpsCompatibilityReviewCompletion",
+      "responsibility": "compatibility review completion uses review evidence missing keys",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func PhaseCompletion",
+      "task": "T04",
+      "entrypoints": [
+        "issueops next",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/phase_completion_test.go",
+        "internal/adapter/issueops/issueops_phase_ledger_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "implement-phase-completion",
+      "source_path": "internal/adapter/issueops/issueops_phase_ledger.go",
+      "source_symbol": "func issueOpsImplementCompletion",
+      "responsibility": "implement completion uses ai-slop-clean entry readiness",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func PhaseCompletion",
+      "task": "T04",
+      "entrypoints": [
+        "issueops next",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscycle/phase_completion_test.go",
+        "internal/adapter/issueops/issueops_phase_ledger_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }

@@ -14,7 +14,7 @@ import (
 )
 
 func IssueOpsPlanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	return issueOpsReadinessFrom(record, issueopsdomain.PlanReadinessMissing(record))
+	return cycleapp.ReadinessFromMissing(record, issueopsdomain.PlanReadinessMissing(record))
 }
 
 func IssueOpsAISlopCleanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
@@ -32,7 +32,7 @@ func IssueOpsAISlopCleanReadiness(record issueops.IssueOpsRecord) issueops.Issue
 }
 
 func IssueOpsCompatibilityReviewReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	return issueOpsReadinessFrom(record, cycleapp.CompatibilityReadinessMissing(record, issueOpsReadinessObservations()))
+	return cycleapp.ReadinessFromMissing(record, cycleapp.CompatibilityReadinessMissing(record, issueOpsReadinessObservations()))
 }
 
 func IssueOpsImplementationReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
@@ -40,7 +40,7 @@ func IssueOpsImplementationReadiness(record issueops.IssueOpsRecord) issueops.Is
 }
 
 func issueOpsImplementationReadiness(record issueops.IssueOpsRecord, checkPlanBinding bool) issueops.IssueOpsReadiness {
-	return issueOpsReadinessFrom(record, cycleapp.ImplementationReadinessMissing(record, checkPlanBinding, issueOpsReadinessObservations()))
+	return cycleapp.ReadinessFromMissing(record, cycleapp.ImplementationReadinessMissing(record, checkPlanBinding, issueOpsReadinessObservations()))
 }
 
 func issueOpsReadinessObservations() cycleport.ReadinessObservations {
