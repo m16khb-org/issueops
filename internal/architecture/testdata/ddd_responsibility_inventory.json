@@ -6926,14 +6926,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/child_scan.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func scanIssueOpsChildrenForParent"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/cleanup_abandon_records.go",
       "owner": "adapter",
       "task": "T08",
@@ -7757,16 +7749,6 @@
         "func BodySyncRepository.Read",
         "func BodySyncRepository.Update",
         "type BodySyncRepository"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_child_gate.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func issueOpsActiveChildIDs",
-        "func issueOpsChildPRGateMissing",
-        "func issueOpsChildStatusWithoutParentLock"
       ]
     },
     {
@@ -11420,6 +11402,17 @@
         "func NewService",
         "func Service.Add",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsdelegation/gates.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func ChildGates.ActiveIDs",
+        "func ChildGates.PRMissing",
+        "func ChildGates.status",
+        "type ChildGates"
       ]
     },
     {
@@ -23157,6 +23150,40 @@
       "evidence_tests": [
         "internal/adapter/issueops/orca_intent_files_test.go",
         "internal/domain/issueopspreparation/intent_authority_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-pr-gate-observation",
+      "source_path": "internal/adapter/issueops/issueops_child_gate.go",
+      "source_symbol": "func issueOpsChildPRGateMissing",
+      "responsibility": "scan current children and compose fail-closed PR readiness without writing or acquiring a nested span",
+      "target": "internal/application/issueopsdelegation",
+      "target_symbol": "func ChildGates.PRMissing",
+      "task": "T08",
+      "entrypoints": [
+        "issueops phase"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsdelegation/gates_test.go",
+        "internal/adapter/issueops/issueops_delegation_status_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "child-regression-observation",
+      "source_path": "internal/adapter/issueops/issueops_child_gate.go",
+      "source_symbol": "func issueOpsActiveChildIDs",
+      "responsibility": "scan current children and apply domain terminal policy before allowing parent regression",
+      "target": "internal/application/issueopsdelegation",
+      "target_symbol": "func ChildGates.ActiveIDs",
+      "task": "T08",
+      "entrypoints": [
+        "issueops regress"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsdelegation/gates_test.go",
+        "internal/adapter/issueops/issueops_delegation_status_test.go"
       ],
       "status": "migrated"
     }

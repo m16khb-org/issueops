@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	delegationapp "issueops/internal/application/issueopsdelegation"
 	"issueops/internal/contract/issueops"
 )
 
@@ -127,7 +128,7 @@ func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
 	if !ok || archived.Orphaned || archived.Phase != IssueOpsPhaseDone || len(status.Orphaned) != 0 {
 		t.Fatalf("accepted cleanup receipt must stay terminal without becoming orphaned, got %#v / %#v", archived, status.Orphaned)
 	}
-	if missing, notes := issueOpsChildPRGateMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
+	if missing, notes := (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).PRMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
 		t.Fatalf("accepted cleanup receipt must not block the parent PR gate: missing=%v notes=%v", missing, notes)
 	}
 }
@@ -265,7 +266,7 @@ func TestDropIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if missing, notes := issueOpsChildPRGateMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
+	if missing, notes := (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).PRMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
 		t.Fatalf("dropped cleaned child must not block the parent PR gate: missing=%v notes=%v", missing, notes)
 	}
 
@@ -312,7 +313,7 @@ func TestDroppedCleanupReceiptWithShortReasonRemainsOrphaned(t *testing.T) {
 	if !ok || !entry.Orphaned || len(status.Orphaned) != 1 {
 		t.Fatalf("malformed dropped receipt must remain orphaned: %#v / %#v", entry, status.Orphaned)
 	}
-	if missing, notes := issueOpsChildPRGateMissing(stateRoot, parentAfter); len(missing) == 0 || len(notes) != 0 {
+	if missing, notes := (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).PRMissing(stateRoot, parentAfter); len(missing) == 0 || len(notes) != 0 {
 		t.Fatalf("malformed dropped receipt must block the parent PR gate: missing=%v notes=%v", missing, notes)
 	}
 }

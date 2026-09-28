@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	delegationapp "issueops/internal/application/issueopsdelegation"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 	reviewdomain "issueops/internal/domain/issueopsreview"
@@ -46,7 +47,7 @@ func regressIssueOpsForReplan(stateRoot, id, reason string, actor *IssueOpsActor
 		var e error
 		rec, e = reviewapp.Regress(reviewport.RegressStore{
 			Read:           ReadIssueOps,
-			ActiveChildren: issueOpsActiveChildIDs,
+			ActiveChildren: (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).ActiveIDs,
 			TouchWrite:     touchAndWriteIssueOps,
 			Now:            func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
 		}, stateRoot, id, reason)

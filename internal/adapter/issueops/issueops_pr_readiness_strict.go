@@ -5,6 +5,7 @@ import (
 
 	"issueops/internal/adapter/issueops/implementation"
 	cycleapp "issueops/internal/application/issueopscycle"
+	delegationapp "issueops/internal/application/issueopsdelegation"
 	"issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 )
@@ -130,7 +131,7 @@ func issueOpsStrictPRReadinessWithState(stateRoot string, record issueops.IssueO
 
 func issueOpsStrictPRReadinessWithStateUsing(stateRoot string, record issueops.IssueOpsRecord, fetchUpstream issueOpsUpstreamFetcher) issueops.IssueOpsReadiness {
 	ready, _ := issueOpsObservedPRReadiness(record, fetchUpstream)
-	childMissing, childWarnings := issueOpsChildPRGateMissing(stateRoot, record)
+	childMissing, childWarnings := (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).PRMissing(stateRoot, record)
 	if len(childMissing) == 0 && len(childWarnings) == 0 {
 		return ready
 	}
