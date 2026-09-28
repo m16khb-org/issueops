@@ -97,6 +97,8 @@ func (e *RawCASError) Error() string {
 	return fmt.Sprintf("sqlstore raw CAS failed for row %s/%s", e.Bucket, e.ID)
 }
 
+func (e *RawCASError) FailedBucket() string { return e.Bucket }
+
 var _ port.TransactionalRecordStore = (*DB)(nil)
 var _ stateport.TransactionalStore = (*DB)(nil)
 var _ stateport.Store = (*DB)(nil)

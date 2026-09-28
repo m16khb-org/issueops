@@ -15,6 +15,7 @@ import (
 	"issueops/internal/adapter/issueops"
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
 	"issueops/internal/adapter/outbound/sqlstore"
+	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
@@ -185,7 +186,7 @@ func (fake *resumePlanMutationFake) InspectOwner(context.Context, port.Execution
 	return port.ExecutionOrcaOwnerInventory{}, nil
 }
 
-func TestCoreResumeEffectsRejectsRawSnapshotDriftWithoutAdditionalMutation(t *testing.T) {
+func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(t *testing.T, stateRoot string, effects *coreResumeEffects, record leasecontract.Record, raw []byte, artifacts leasecontract.ResumeArtifacts)
@@ -207,7 +208,18 @@ func TestCoreResumeEffectsRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 				resumeWiringDriftIntent(t, stateRoot, state.OperationID)
 				beforeRecord := resumeWiringRawRow(t, stateRoot, resumeWiringRecordBucket, record.ID)
 				beforeIntent := resumeWiringRawRow(t, stateRoot, resumeWiringIntentBucket, state.OperationID)
-				_, err := effects.MarkInvoking(context.Background(), state)
+				store, err := sqlstore.Open(stateRoot)
+				if err != nil {
+					t.Fatal(err)
+				}
+				repository := leaseoutbound.NewResumeRepository(store, effects)
+				_, err = repository.MarkInvoking(context.Background(), leaseapp.ResumeIntentState{
+					Progress: leaseapp.ResumeProgress{
+						Record: leaseapp.Record{ID: record.ID, Stable: state.Record}, Execution: *state.Record.Execution, Pending: true,
+					},
+					OperationID: state.OperationID, Stage: string(state.Stage), InvocationState: state.InvocationState,
+					InvocationAttempts: state.InvocationAttempts, RecordRaw: state.RecordRaw, IntentRaw: state.IntentRaw,
+				})
 				resumeWiringRequireStale(t, err, "stale raw intent snapshot")
 				resumeWiringAssertRows(t, stateRoot, record.ID, state.OperationID, beforeRecord, beforeIntent)
 			},

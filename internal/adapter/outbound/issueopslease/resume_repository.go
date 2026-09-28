@@ -2,18 +2,21 @@ package issueopslease
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	leaseapp "issueops/internal/application/issueopslease"
+	preparationapp "issueops/internal/application/issueopspreparation"
 	leasecontract "issueops/internal/contract/issueopslease"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	leasedomain "issueops/internal/domain/issueopslease"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
 type ResumeEffects interface {
 	Begin(context.Context, leasecontract.Record, []byte, leasecontract.ResumeArtifacts, leasedomain.ResumePlan, string) (ResumeEffectState, error)
 	Read(context.Context, string, string) (ResumeEffectState, error)
-	MarkInvoking(context.Context, ResumeEffectState) (ResumeEffectState, error)
 	RecordFailure(context.Context, ResumeEffectState, string, error) error
 	ApplyReceipt(context.Context, ResumeEffectState, leasecontract.ResumeStageReceipt) (ResumeEffectState, error)
 }
@@ -85,14 +88,46 @@ func (r *ResumeRepository) LoadIntent(ctx context.Context, progress leaseapp.Res
 }
 
 func (r *ResumeRepository) MarkInvoking(ctx context.Context, intent leaseapp.ResumeIntentState) (leaseapp.ResumeIntentState, error) {
-	if r == nil || r.effects == nil {
-		return leaseapp.ResumeIntentState{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume persistence bridge is required"))
+	if r == nil || r.store == nil {
+		return leaseapp.ResumeIntentState{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("transactional record store is required"))
 	}
-	state, err := r.effects.MarkInvoking(ctx, resumeEffectState(intent))
+	store, ok := r.store.(port.RecordRawCASStore)
+	if !ok {
+		return leaseapp.ResumeIntentState{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("resume record store does not support raw CAS"))
+	}
+	if len(intent.RecordRaw) == 0 || len(intent.IntentRaw) == 0 {
+		return leaseapp.ResumeIntentState{}, fmt.Errorf("Orca intent raw CAS evidence is required")
+	}
+	codec := preparationcontract.IntentCodec{}
+	current, err := codec.Decode(intent.OperationID, intent.IntentRaw)
 	if err != nil {
 		return leaseapp.ResumeIntentState{}, err
 	}
-	return resumeIntentState(state), nil
+	if err := preparationdomain.ValidateIntentRecord(intent.Progress.Record.Stable, current); err != nil {
+		return leaseapp.ResumeIntentState{}, err
+	}
+	updated := preparationapp.MarkOrcaInvoking(current)
+	data, err := codec.Encode(updated)
+	if err != nil {
+		return leaseapp.ResumeIntentState{}, err
+	}
+	err = store.CompareAndApply(ctx, []port.ExpectedRecord{
+		{Bucket: recordBucket, ID: intent.Progress.Record.ID, Data: intent.RecordRaw},
+		{Bucket: "external_intent_v1", ID: intent.OperationID, Data: intent.IntentRaw},
+	}, []port.RecordMutation{{Bucket: "external_intent_v1", ID: intent.OperationID, Data: data}})
+	if err != nil {
+		if stale, ok := errors.AsType[port.RawCASFailure](err); ok {
+			if stale.FailedBucket() == recordBucket {
+				return leaseapp.ResumeIntentState{}, fmt.Errorf("stale raw record snapshot")
+			}
+			return leaseapp.ResumeIntentState{}, fmt.Errorf("stale raw intent snapshot")
+		}
+		return leaseapp.ResumeIntentState{}, err
+	}
+	intent.IntentRaw = data
+	intent.InvocationState = updated.InvocationState
+	intent.InvocationAttempts = updated.InvocationAttempts
+	return intent, nil
 }
 
 func (r *ResumeRepository) RecordFailure(ctx context.Context, intent leaseapp.ResumeIntentState, invocation string, cause error) error {

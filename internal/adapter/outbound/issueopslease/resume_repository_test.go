@@ -7,8 +7,11 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/outbound/sqlstore"
+	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	leasedomain "issueops/internal/domain/issueopslease"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
@@ -35,6 +38,77 @@ func TestResumeRepositoryPropagatesBridgeBeginFailure(t *testing.T) {
 	_, err = repository.BeginIntent(context.Background(), snapshot, leasecontract.ResumeArtifacts{}, resumeRepositoryPlan(), strings.Repeat("a", 32))
 	if err == nil || !strings.Contains(err.Error(), "stale raw record snapshot") {
 		t.Fatalf("begin error=%v", err)
+	}
+}
+
+func TestResumeRepositoryMarkInvokingUsesRawCAS(t *testing.T) {
+	const operationID = "0123456789abcdef0123456789abcdef"
+	record := resumeRepositoryRecord(t, 4)
+	lease := record.Execution.Lease
+	binding := record.Execution.Orca
+	intent := preparationcontract.Intent{
+		SchemaVersion: leasecontract.SchemaVersion, Purpose: preparationcontract.PurposeResume,
+		OperationID: operationID, LifecycleID: record.ID, Generation: lease.Generation,
+		Stage: preparationcontract.IntentStageTerminal, StartedAt: "2026-07-31T00:00:00Z",
+		InvocationState: preparationcontract.InvocationNotInvoked,
+		Workspace: preparationcontract.WorkspaceRequest{
+			LifecycleID: record.ID, SourceRoot: record.Execution.Workspace.SourceRoot,
+			Root: record.Execution.Workspace.Root, Branch: record.Execution.Workspace.Branch,
+			BaseHead: record.Execution.Workspace.BaseHead,
+		},
+		Probe: preparationcontract.ProbeRequest{Repo: record.Execution.Workspace.SourceRoot, Host: binding.OwnerHost, Model: binding.OwnerModel},
+		Prepared: &preparationcontract.OrcaWorkspaceReceipt{
+			Workspace: preparationcontract.WorkspaceReceipt{
+				SourceRoot: record.Execution.Workspace.SourceRoot, Root: record.Execution.Workspace.Root,
+				Branch: record.Execution.Workspace.Branch, BaseHead: record.Execution.Workspace.BaseHead, Driver: "orca", Exists: true,
+			},
+			RuntimeID: binding.RuntimeID, RepoID: binding.RepoID, WorktreeID: binding.WorktreeID,
+		},
+		Launch: &preparationcontract.LaunchIdentity{
+			PromptPath: "/worktree/prompt", PromptSHA256: strings.Repeat("c", 64),
+			ContextPacketPath: "/worktree/packet", ContextPacketSHA256: strings.Repeat("d", 64),
+		},
+		IssueBodySHA256: strings.Repeat("e", 64), ClaimTokenSHA256: lease.ClaimTokenSHA256,
+		ResumeLease: &lease,
+		PriorBinding: &preparationcontract.ResumeBinding{
+			RuntimeID: binding.RuntimeID, RepoID: binding.RepoID, WorktreeID: binding.WorktreeID,
+			LeaseGeneration: binding.LeaseGeneration, OwnerHost: binding.OwnerHost,
+			OwnerModel: binding.OwnerModel, OwnerEffort: binding.OwnerEffort,
+			TaskID: binding.TaskID, DispatchID: binding.DispatchID, TerminalPTYID: binding.TerminalPTYID,
+		},
+	}
+	intent, err := preparationdomain.SealIntent(intent, preparationcontract.IssueIdentity{Provider: "github", Issue: 193})
+	if err != nil {
+		t.Fatal(err)
+	}
+	record.Execution.Pending = &leasecontract.ExternalIntent{OperationID: operationID, Kind: "owner_launch", Marker: intent.Marker, StartedAt: intent.StartedAt}
+	_, store := newResumeRepositoryStore(t, record)
+	intentRaw, err := (preparationcontract.IntentCodec{}).Encode(intent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Apply(context.Background(), []port.RecordMutation{{Bucket: "external_intent_v1", ID: operationID, Data: intentRaw}}); err != nil {
+		t.Fatal(err)
+	}
+	recordRaw, ok, err := store.Get(recordBucket, record.ID)
+	if err != nil || !ok {
+		t.Fatalf("record raw: present=%v err=%v", ok, err)
+	}
+	repository := NewResumeRepository(store, nil)
+	state := leaseapp.ResumeIntentState{
+		Progress:    leaseapp.ResumeProgress{Record: toApplicationRecord(record), Execution: *record.Execution, Pending: true},
+		OperationID: operationID, Stage: string(intent.Stage), InvocationState: intent.InvocationState,
+		RecordRaw: recordRaw, IntentRaw: intentRaw,
+	}
+	next, err := repository.MarkInvoking(context.Background(), state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.InvocationState != preparationcontract.InvocationUnknown || next.InvocationAttempts != 1 {
+		t.Fatalf("next invocation=%q attempts=%d", next.InvocationState, next.InvocationAttempts)
+	}
+	if _, err := repository.MarkInvoking(context.Background(), state); err == nil {
+		t.Fatal("stale raw intent was accepted")
 	}
 }
 
@@ -79,9 +153,6 @@ func (f resumeEffectsFake) Begin(context.Context, leasecontract.Record, []byte, 
 	return ResumeEffectState{}, f.beginErr
 }
 func (resumeEffectsFake) Read(context.Context, string, string) (ResumeEffectState, error) {
-	return ResumeEffectState{}, nil
-}
-func (resumeEffectsFake) MarkInvoking(context.Context, ResumeEffectState) (ResumeEffectState, error) {
 	return ResumeEffectState{}, nil
 }
 func (resumeEffectsFake) RecordFailure(context.Context, ResumeEffectState, string, error) error {

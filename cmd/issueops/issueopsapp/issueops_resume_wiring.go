@@ -83,18 +83,6 @@ func (e *coreResumeEffects) Read(_ context.Context, id, operationID string) (lea
 	return resumeEffectStateFromCore(state)
 }
 
-func (e *coreResumeEffects) MarkInvoking(_ context.Context, state leaseoutbound.ResumeEffectState) (leaseoutbound.ResumeEffectState, error) {
-	coreState, err := resumeCoreIntentState(state)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	next, err := issueops.MarkExecutionResumeIntentInvoking(e.stateRoot, coreState)
-	if err != nil {
-		return leaseoutbound.ResumeEffectState{}, err
-	}
-	return resumeEffectStateFromCore(next)
-}
-
 func (e *coreResumeEffects) RecordFailure(_ context.Context, state leaseoutbound.ResumeEffectState, invocation string, cause error) error {
 	coreState, err := resumeCoreIntentState(state)
 	if err != nil {

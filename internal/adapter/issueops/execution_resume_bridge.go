@@ -71,17 +71,6 @@ func ReadExecutionResumeIntent(stateRoot, id, operationID string) (ExecutionResu
 	return executionResumeIntentState(record, raw, payload, intentRaw), nil
 }
 
-func MarkExecutionResumeIntentInvoking(stateRoot string, expected ExecutionResumeIntentState) (ExecutionResumeIntentState, error) {
-	payload, err := executionResumeIntentPayload(expected)
-	if err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	if _, err := markOrcaIntentInvokingFromRawState(stateRoot, expected.Record, payload, expected.RecordRaw, expected.IntentRaw); err != nil {
-		return ExecutionResumeIntentState{}, err
-	}
-	return ReadExecutionResumeIntent(stateRoot, expected.Record.ID, expected.OperationID)
-}
-
 func RecordExecutionResumeIntentFailure(stateRoot string, expected ExecutionResumeIntentState, invocationState string, cause error, now func() time.Time) error {
 	payload, err := executionResumeIntentPayload(expected)
 	if err != nil {

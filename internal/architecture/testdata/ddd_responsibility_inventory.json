@@ -1417,7 +1417,6 @@
       "symbols": [
         "func coreResumeEffects.ApplyReceipt",
         "func coreResumeEffects.Begin",
-        "func coreResumeEffects.MarkInvoking",
         "func coreResumeEffects.Read",
         "func coreResumeEffects.RecordFailure",
         "func coreResumeEffects.inspectStage",
@@ -7424,7 +7423,6 @@
         "func ApplyExecutionResumeIntentReceipt",
         "func BeginExecutionResumeIntent",
         "func ExecutionResumeIntentRequest",
-        "func MarkExecutionResumeIntentInvoking",
         "func NewExecutionResumeOperationID",
         "func ReadExecutionResumeArtifacts",
         "func ReadExecutionResumeIntent",
@@ -9626,6 +9624,7 @@
         "func NestedSpanError.Error",
         "func Open",
         "func RawCASError.Error",
+        "func RawCASError.FailedBucket",
         "func applyMutationsTx",
         "func ensurePrivateRoot",
         "func existingBuckets",
@@ -16480,9 +16479,11 @@
       "task": "T20",
       "symbols": [
         "type ExpectedRecord",
+        "type RawCASFailure",
         "type RecordCASStore",
         "type RecordInventoryStore",
         "type RecordMutation",
+        "type RecordRawCASStore",
         "type RecordRow",
         "type TransactionalRecordStore"
       ]
@@ -18617,9 +18618,29 @@
       "target": "internal/application/issueopsbasesync",
       "target_symbol": "func Apply",
       "task": "T06",
-      "entrypoints": ["issueops execution sync-base --apply"],
-      "evidence_tests": ["internal/application/issueopsbasesync/apply_test.go", "internal/adapter/issueops/execution_sync_base_test.go"],
+      "entrypoints": [
+        "issueops execution sync-base --apply"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbasesync/apply_test.go",
+        "internal/adapter/issueops/execution_sync_base_test.go"
+      ],
       "status": "retain"
+    },
+    {
+      "id": "resume-mark-invoking-raw-cas",
+      "source_path": "internal/adapter/issueops/execution_resume_bridge.go",
+      "source_symbol": "func MarkExecutionResumeIntentInvoking",
+      "responsibility": "advance the resume invocation receipt with record and intent raw-byte CAS",
+      "target": "internal/adapter/outbound/issueopslease",
+      "target_symbol": "func ResumeRepository.MarkInvoking",
+      "task": "T06",
+      "entrypoints": ["issueops execution resume --confirm"],
+      "evidence_tests": [
+        "internal/adapter/outbound/issueopslease/resume_repository_test.go",
+        "cmd/issueops/issueopsapp/issueops_resume_wiring_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }
