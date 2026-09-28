@@ -7295,7 +7295,6 @@
         "func readExternalRemotePRPayload",
         "func recordRemotePullRequestFailure",
         "func validExecutionHead",
-        "func validRemotePullRequestOperationID",
         "func validateRemotePullRequestCandidate",
         "func verifyRemotePullRequestResult",
         "type RemoteArtifactVerifyFunc",
@@ -14762,6 +14761,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueopspublication/authority.go",
+      "owner": "domain",
+      "task": "T07",
+      "symbols": [
+        "func ValidateBeginAuthority",
+        "func ValidateOperationID",
+        "func ValidateReceiptAuthority",
+        "type BeginAuthorityFacts",
+        "type ReceiptAuthorityFacts"
+      ]
+    },
+    {
       "path": "internal/domain/issueopspublication/candidate.go",
       "owner": "domain",
       "task": "T07",
@@ -17278,6 +17289,57 @@
       ],
       "evidence_tests": [
         "internal/adapter/issueops/execution_remote_candidate_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "remote-publication-operation-id",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func validRemotePullRequestOperationID",
+      "responsibility": "require a lowercase hexadecimal 32-character durable operation ID",
+      "target": "internal/domain/issueopspublication",
+      "target_symbol": "func ValidateOperationID",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspublication/authority_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-publication-begin-authority",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func beginRemotePullRequestIntentWithOperationID",
+      "responsibility": "observe the locked record, delegate pending and generation authority, then persist intent atomically",
+      "target": "internal/domain/issueopspublication",
+      "target_symbol": "func ValidateBeginAuthority",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspublication/authority_test.go",
+        "internal/application/issueopspublication/create_test.go"
+      ],
+      "status": "retain"
+    },
+    {
+      "id": "remote-publication-receipt-authority",
+      "source_path": "internal/adapter/issueops/execution_remote.go",
+      "source_symbol": "func finishRemotePullRequestIntent",
+      "responsibility": "observe the locked record and durable payload, delegate holder authority, then persist the receipt atomically",
+      "target": "internal/domain/issueopspublication",
+      "target_symbol": "func ValidateReceiptAuthority",
+      "task": "T07",
+      "entrypoints": [
+        "issueops execution remote create",
+        "issueops execution reconcile"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopspublication/authority_test.go",
+        "internal/application/issueopspublication/reconcile_test.go"
       ],
       "status": "retain"
     },

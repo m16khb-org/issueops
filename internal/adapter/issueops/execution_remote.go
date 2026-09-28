@@ -158,8 +158,8 @@ func prepareRemotePullRequest(stateRoot string, req RemotePullRequestRequest) (i
 }
 
 func beginRemotePullRequestIntentWithOperationID(stateRoot string, expected issueops.IssueOpsRecord, actor issueops.NativeActor, cwd string, expectedGeneration uint64, providerReq port.IssueProviderCreatePullRequestRequest, provider, kind, operationID string, now func() time.Time) (issueops.IssueOpsRecord, externalRemotePRPayload, error) {
-	if !validRemotePullRequestOperationID(operationID) {
-		return issueops.IssueOpsRecord{}, externalRemotePRPayload{}, fmt.Errorf("remote operation ID must be exactly 32 lowercase hexadecimal characters")
+	if err := publicationdomain.ValidateOperationID(operationID); err != nil {
+		return issueops.IssueOpsRecord{}, externalRemotePRPayload{}, err
 	}
 	marker := "<!-- issueops:issueops-v1 operation=" + operationID + " -->"
 	providerReq.Body = strings.TrimSpace(providerReq.Body) + "\n\n" + marker
@@ -180,11 +180,13 @@ func beginRemotePullRequestIntentWithOperationID(stateRoot string, expected issu
 		if err := validateExecutionMutation(current, &mutationActor); err != nil {
 			return err
 		}
-		if current.Execution == nil || current.Execution.Pending != nil || current.RemoteArtifact != nil {
-			return fmt.Errorf("remote create authority changed before intent CAS")
+		facts := publicationdomain.BeginAuthorityFacts{Prepared: current.Execution != nil, Artifact: current.RemoteArtifact != nil, ExpectedGeneration: expectedGeneration}
+		if current.Execution != nil {
+			facts.Pending = current.Execution.Pending != nil
+			facts.CurrentGeneration = current.Execution.Lease.Generation
 		}
-		if expectedGeneration == 0 || current.Execution.Lease.Generation != expectedGeneration {
-			return fmt.Errorf("stale lease generation before remote intent CAS")
+		if err := publicationdomain.ValidateBeginAuthority(facts); err != nil {
+			return err
 		}
 		payload.Generation = current.Execution.Lease.Generation
 		data, err := json.Marshal(payload)
@@ -199,18 +201,6 @@ func beginRemotePullRequestIntentWithOperationID(stateRoot string, expected issu
 		return err
 	})
 	return persisted, payload, err
-}
-
-func validRemotePullRequestOperationID(operationID string) bool {
-	if len(operationID) != 32 {
-		return false
-	}
-	for _, char := range []byte(operationID) {
-		if (char < '0' || char > '9') && (char < 'a' || char > 'f') {
-			return false
-		}
-	}
-	return true
 }
 
 func recordRemotePullRequestFailure(stateRoot, id, operationID, invocation string, retryCount int, knownURL string, cause error, now func() time.Time) error {
@@ -248,17 +238,25 @@ func finishRemotePullRequestIntent(stateRoot, id string, payload externalRemoteP
 		if err != nil {
 			return err
 		}
-		if current.Execution == nil || current.Execution.Pending == nil || current.Execution.Pending.OperationID != payload.OperationID {
-			return fmt.Errorf("external intent changed before remote receipt CAS")
-		}
-		if enforceOriginalGeneration {
-			lease := current.Execution.Lease
-			holder := lease.Holder
-			if payload.Generation == 0 || lease.Generation != payload.Generation || lease.Status != issueops.LeaseStatusActive || holder == nil ||
-				!strings.EqualFold(holder.Host, payload.Request.Host) || holder.SessionID != payload.Request.SessionID || holder.AgentID != payload.Request.AgentID ||
-				!samePath(payload.Request.CWD, current.Execution.Workspace.Root) {
-				return fmt.Errorf("remote receipt belongs to a stale execution generation; execution reconcile is required")
+		facts := publicationdomain.ReceiptAuthorityFacts{Prepared: current.Execution != nil, ExpectedOperationID: payload.OperationID, ExpectedGeneration: payload.Generation}
+		if current.Execution != nil {
+			facts.Pending = current.Execution.Pending != nil
+			if current.Execution.Pending != nil {
+				facts.PendingOperationID = current.Execution.Pending.OperationID
 			}
+			lease := current.Execution.Lease
+			facts.Generation, facts.LeaseStatus = lease.Generation, string(lease.Status)
+			facts.ExpectedHost, facts.ExpectedSessionID, facts.ExpectedAgentID = payload.Request.Host, payload.Request.SessionID, payload.Request.AgentID
+			if enforceOriginalGeneration && facts.Pending && facts.PendingOperationID == payload.OperationID {
+				facts.CWDMatches = samePath(payload.Request.CWD, current.Execution.Workspace.Root)
+			}
+			if lease.Holder != nil {
+				facts.HolderPresent = true
+				facts.HolderHost, facts.HolderSessionID, facts.HolderAgentID = lease.Holder.Host, lease.Holder.SessionID, lease.Holder.AgentID
+			}
+		}
+		if err := publicationdomain.ValidateReceiptAuthority(facts, enforceOriginalGeneration); err != nil {
+			return err
 		}
 		stored, err := readExternalRemotePRPayload(stateRoot, payload.OperationID)
 		if err != nil {
