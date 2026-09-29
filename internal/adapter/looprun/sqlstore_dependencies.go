@@ -11,10 +11,3 @@ type StateDatabase interface {
 	Put(bucket, id string, data []byte) error
 	WithSpan(ctx context.Context, fn func(context.Context) error) error
 }
-
-// 저장소 열기와 존재하는 record 조회는 composition root가 설치한다.
-var (
-	OpenStateDatabase func(dir string) (StateDatabase, error)
-	GetExisting       func(dir, bucket, id string) ([]byte, bool, error)
-	ListExisting      func(dir, bucket string) ([]string, error)
-)

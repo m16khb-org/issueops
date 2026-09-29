@@ -2,7 +2,7 @@ package doctor
 
 import (
 	issueopsstatepkg "issueops/internal/adapter/issueops"
-	looprunstatepkg "issueops/internal/adapter/looprun"
+
 	statestore "issueops/internal/adapter/outbound/state"
 )
 
@@ -12,5 +12,4 @@ func init() {
 	StateDir = statestore.StateDir
 	StateDoctor = statestore.StateDoctor
 	issueopsstatepkg.StateDir = statestore.StateDir
-	looprunstatepkg.StateDir = statestore.StateDir
 }

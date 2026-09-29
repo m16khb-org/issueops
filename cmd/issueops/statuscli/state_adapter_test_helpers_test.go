@@ -3,7 +3,7 @@ package statuscli
 import (
 	doctorstatepkg "issueops/internal/adapter/doctor"
 	issueopsstatepkg "issueops/internal/adapter/issueops"
-	looprunstatepkg "issueops/internal/adapter/looprun"
+
 	statestore "issueops/internal/adapter/outbound/state"
 )
 
@@ -13,5 +13,4 @@ func init() {
 	doctorstatepkg.StateDir = statestore.StateDir
 	doctorstatepkg.StateDoctor = statestore.StateDoctor
 	issueopsstatepkg.StateDir = statestore.StateDir
-	looprunstatepkg.StateDir = statestore.StateDir
 }

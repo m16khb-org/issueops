@@ -8,27 +8,26 @@ import (
 	"fmt"
 	"io/fs"
 	loopruncontract "issueops/internal/contract/looprun"
-	"path/filepath"
 	"strings"
-	"time"
 )
 
 const loopBucket = "loop"
 
-func StateRoot() string {
-	return filepath.Join(StateDir(), "loop")
+type Store struct {
+	Directory    string
+	OpenDatabase func(string) (StateDatabase, error)
+	GetExisting  func(dir, bucket, id string) ([]byte, bool, error)
+	ListExisting func(dir, bucket string) ([]string, error)
 }
 
-func openStore() (StateDatabase, error) {
-	return OpenStateDatabase(StateRoot())
-}
+func (store Store) open() (StateDatabase, error) { return store.OpenDatabase(store.Directory) }
 
-func ReadLoop(loopID string) (loopruncontract.LoopRun, error) {
+func (store Store) Read(loopID string) (loopruncontract.LoopRun, error) {
 	loopID, err := normalizeLoopID(loopID)
 	if err != nil {
 		return loopruncontract.LoopRun{OK: false}, err
 	}
-	db, err := openStore()
+	db, err := store.open()
 	if err != nil {
 		return loopruncontract.LoopRun{OK: false, ID: loopID}, err
 	}
@@ -42,14 +41,14 @@ func ReadLoop(loopID string) (loopruncontract.LoopRun, error) {
 	return decodeLoop(loopID, data)
 }
 
-// ReadLoopExisting reads one existing loop without creating, repairing, or
+// ReadExisting reads one existing loop without creating, repairing, or
 // changing permissions on the loop store.
-func ReadLoopExisting(loopID string) (loopruncontract.LoopRun, error) {
+func (store Store) ReadExisting(loopID string) (loopruncontract.LoopRun, error) {
 	loopID, err := normalizeLoopID(loopID)
 	if err != nil {
 		return loopruncontract.LoopRun{OK: false}, err
 	}
-	data, ok, err := GetExisting(StateRoot(), loopBucket, loopID)
+	data, ok, err := store.GetExisting(store.Directory, loopBucket, loopID)
 	if err != nil {
 		return loopruncontract.LoopRun{OK: false, ID: loopID}, err
 	}
@@ -74,7 +73,7 @@ func decodeLoop(loopID string, data []byte) (loopruncontract.LoopRun, error) {
 	return loop, nil
 }
 
-func writeLoop(loop loopruncontract.LoopRun) (loopruncontract.LoopRun, error) {
+func (store Store) Write(loop loopruncontract.LoopRun) (loopruncontract.LoopRun, error) {
 	if _, err := normalizeLoopID(loop.ID); err != nil {
 		loop.OK = false
 		return loop, err
@@ -83,7 +82,7 @@ func writeLoop(loop loopruncontract.LoopRun) (loopruncontract.LoopRun, error) {
 		loop.OK = false
 		return loop, err
 	}
-	db, err := openStore()
+	db, err := store.open()
 	if err != nil {
 		loop.OK = false
 		return loop, err
@@ -101,8 +100,8 @@ func writeLoop(loop loopruncontract.LoopRun) (loopruncontract.LoopRun, error) {
 	return loop, nil
 }
 
-func ListLoopIDs() ([]string, error) {
-	ids, err := ListExisting(StateRoot(), loopBucket)
+func (store Store) ListIDs() ([]string, error) {
+	ids, err := store.ListExisting(store.Directory, loopBucket)
 	if errors.Is(err, fs.ErrNotExist) {
 		return []string{}, nil
 	}
@@ -115,18 +114,6 @@ func ListLoopIDs() ([]string, error) {
 func newLoopID(repo, name string) string {
 	sum := sha256.Sum256([]byte(strings.TrimSpace(repo) + "\x00" + strings.TrimSpace(name)))
 	return "loop-" + hex.EncodeToString(sum[:])[:12]
-}
-
-func ResolveID(repo, name string) (string, error) {
-	repo, err := normalizeRepo(repo)
-	if err != nil {
-		return "", err
-	}
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return "", fmt.Errorf("name is required")
-	}
-	return newLoopID(repo, name), nil
 }
 
 func normalizeLoopID(id string) (string, error) {
@@ -153,9 +140,3 @@ func normalizeLoopSchemaVersion(loop *loopruncontract.LoopRun) error {
 		return fmt.Errorf("unsupported loop schema_version %d", loop.SchemaVersion)
 	}
 }
-
-func timestampNow() string {
-	return loopNow().UTC().Format(time.RFC3339Nano)
-}
-
-var loopNow = time.Now

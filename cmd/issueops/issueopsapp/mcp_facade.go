@@ -11,7 +11,6 @@ import (
 	gatesadapter "issueops/internal/adapter/gates"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/inspect"
-	"issueops/internal/adapter/looprun"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/policy"
@@ -22,10 +21,6 @@ func configureMCPCLI() {
 	mcpcli.Version = version
 	mcpcli.IssueOpsRoot = issueOpsRoot
 	mcpcli.ResolveTarget = resolveTarget
-	mcpcli.LoopStart = looprun.Start
-	mcpcli.LoopRecordAttempt = looprun.RecordAttempt
-	mcpcli.LoopStop = looprun.Stop
-	mcpcli.LoopStatus = looprun.Status
 	mcpcli.GatesCheck = gatesadapter.Check
 	mcpcli.GatesInit = gatesadapter.Init
 	mcpcli.GatesAbandon = gatesadapter.Abandon
@@ -64,6 +59,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	docsService := newProjectDocsService(resolveTarget(""))
 	return mcpcli.MCPDependencies{
 		Catalog:          mcpcatalog.Build(),
+		Loop:             newLoopService(),
 		ProjectDocs:      docsService,
 		ProjectBootstrap: newProjectBootstrapService(resolveTarget("")),
 		State:            mcpcli.StateDependencies{Write: state.Write, Read: state.Read, List: state.List, Prune: state.Prune, Doctor: state.Doctor, Maintain: state.Maintain},

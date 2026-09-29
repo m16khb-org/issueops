@@ -5,7 +5,6 @@ import (
 	channelcontract "issueops/internal/contract/channel"
 	gatescontract "issueops/internal/contract/gates"
 	inspectcontract "issueops/internal/contract/inspect"
-	loopruncontract "issueops/internal/contract/looprun"
 	preflightcontract "issueops/internal/contract/preflight"
 	"os"
 	"path/filepath"
@@ -98,15 +97,6 @@ func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
-
-// loop run 연산은 composition root가 설치한다. MCP tool router는 loop 상태를
-// 어디에 저장하는지 알지 않는다.
-var (
-	LoopStart         func(loopruncontract.StartLoopRequest) (loopruncontract.LoopRun, error)
-	LoopRecordAttempt func(loopID string, req loopruncontract.RecordAttemptRequest) (loopruncontract.LoopRun, error)
-	LoopStop          func(loopID string, success bool, reason string) (loopruncontract.LoopRun, error)
-	LoopStatus        func(loopID string) (loopruncontract.StatusResult, error)
-)
 
 // gates ledger 연산도 composition root가 설치한다. policy 게이트 실행
 // (gates_check)은 주입된 adapter 함수를 통해서만 일어난다.

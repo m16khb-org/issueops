@@ -11,7 +11,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 
 	"issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/looprun"
+
 	"issueops/internal/adapter/outbound/sqlstore"
 	loopruncontract "issueops/internal/contract/looprun"
 )
@@ -68,7 +68,7 @@ func TestIssueOpsStrictPRReadinessBlocksExhaustedLoop(t *testing.T) {
 	record := readyIssueOpsRecordForLoopGateTest(t)
 
 	loop := startCoreLoopGateLoop(t, record.Repo, "exhausted-loop", 1)
-	if _, err := looprun.RecordAttempt(loop.ID, loopruncontract.RecordAttemptRequest{
+	if _, err := testLoopService().RecordAttempt(loop.ID, loopruncontract.RecordAttemptRequest{
 		Verdict:  "fail",
 		Evidence: []string{"focused verification failed"},
 	}); err != nil {
@@ -85,7 +85,7 @@ func TestIssueOpsStrictPRReadinessClearsAfterLoopStop(t *testing.T) {
 	record := readyIssueOpsRecordForLoopGateTest(t)
 
 	loop := startCoreLoopGateLoop(t, record.Repo, "stopped-loop", 3)
-	if _, err := looprun.Stop(loop.ID, false, "operator stopped loop after explicit handoff"); err != nil {
+	if _, err := testLoopService().Stop(loop.ID, false, "operator stopped loop after explicit handoff"); err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
 	ready := StrictPRReadiness(record)
@@ -94,13 +94,13 @@ func TestIssueOpsStrictPRReadinessClearsAfterLoopStop(t *testing.T) {
 	}
 
 	successLoop := startCoreLoopGateLoop(t, record.Repo, "succeeded-loop", 3)
-	if _, err := looprun.RecordAttempt(successLoop.ID, loopruncontract.RecordAttemptRequest{
+	if _, err := testLoopService().RecordAttempt(successLoop.ID, loopruncontract.RecordAttemptRequest{
 		Verdict:  "pass",
 		Evidence: []string{"focused verification passed"},
 	}); err != nil {
 		t.Fatalf("RecordAttempt: %v", err)
 	}
-	if _, err := looprun.Stop(successLoop.ID, true, ""); err != nil {
+	if _, err := testLoopService().Stop(successLoop.ID, true, ""); err != nil {
 		t.Fatalf("Stop success: %v", err)
 	}
 	ready = StrictPRReadiness(record)
@@ -111,7 +111,7 @@ func TestIssueOpsStrictPRReadinessClearsAfterLoopStop(t *testing.T) {
 
 func startCoreLoopGateLoop(t *testing.T, repo, name string, maxAttempts int) loopruncontract.LoopRun {
 	t.Helper()
-	loop, err := looprun.Start(loopruncontract.StartLoopRequest{
+	loop, err := testLoopService().Start(loopruncontract.StartLoopRequest{
 		Repo:        repo,
 		Name:        name,
 		Goal:        "verify strict loop gate behavior",
@@ -238,10 +238,10 @@ func TestAdvancePhaseGuardsPRTransition(t *testing.T) {
 	}
 
 	// loop를 성공으로 끝내면 pr 재진입이 통과한다(복구 경로 보존).
-	if _, err := looprun.RecordAttempt(loop.ID, loopruncontract.RecordAttemptRequest{Verdict: "pass", Evidence: []string{"gate cleared"}}); err != nil {
+	if _, err := testLoopService().RecordAttempt(loop.ID, loopruncontract.RecordAttemptRequest{Verdict: "pass", Evidence: []string{"gate cleared"}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := looprun.Stop(loop.ID, true, "goal met"); err != nil {
+	if _, err := testLoopService().Stop(loop.ID, true, "goal met"); err != nil {
 		t.Fatal(err)
 	}
 	inPR, err := AdvancePhase(stateRoot, written.ID, "pr")

@@ -1478,7 +1478,11 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func loopDependencies"
+        "func loopDependencies",
+        "func newLoopIdentity",
+        "func newLoopReader",
+        "func newLoopService",
+        "func newLoopStore"
       ]
     },
     {
@@ -6323,36 +6327,17 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/looprun/gate.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": [
-        "func RepoGateMissing",
-        "func RepoGateSummaryFor"
-      ]
-    },
-    {
       "path": "internal/adapter/looprun/lifecycle.go",
       "owner": "adapter",
       "task": "T14",
       "symbols": [
-        "func RecordAttempt",
-        "func Start",
-        "func Status",
-        "func Stop",
-        "func loopClock.Now",
-        "func loopIdentity.NewID",
-        "func loopIdentity.NormalizeID",
-        "func loopIdentity.NormalizeRepo",
-        "func loopService",
-        "func loopStore.Read",
-        "func loopStore.WithLock",
-        "func loopStore.Write",
-        "func normalizeRepo",
-        "func withLoopLock",
-        "type loopClock",
-        "type loopIdentity",
-        "type loopStore"
+        "func Clock.Now",
+        "func Identity.NewID",
+        "func Identity.NormalizeID",
+        "func Identity.NormalizeRepo",
+        "func Store.WithLock",
+        "type Clock",
+        "type Identity"
       ]
     },
     {
@@ -6364,28 +6349,20 @@
       ]
     },
     {
-      "path": "internal/adapter/looprun/state_dependencies.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/looprun/store.go",
       "owner": "adapter",
       "task": "T14",
       "symbols": [
-        "func ListLoopIDs",
-        "func ReadLoop",
-        "func ReadLoopExisting",
-        "func ResolveID",
-        "func StateRoot",
+        "func Store.ListIDs",
+        "func Store.Read",
+        "func Store.ReadExisting",
+        "func Store.Write",
+        "func Store.open",
         "func decodeLoop",
         "func newLoopID",
         "func normalizeLoopID",
         "func normalizeLoopSchemaVersion",
-        "func openStore",
-        "func timestampNow",
-        "func writeLoop"
+        "type Store"
       ]
     },
     {
@@ -11085,6 +11062,20 @@
       ]
     },
     {
+      "path": "internal/application/looprun/read.go",
+      "owner": "application",
+      "task": "T14",
+      "symbols": [
+        "func Reader.RepoGateMissing",
+        "func Reader.RepoGateSummaryFor",
+        "func Reader.observeRepo",
+        "func Service.ResolveID",
+        "func Service.Status",
+        "type ReadStore",
+        "type Reader"
+      ]
+    },
+    {
       "path": "internal/application/looprun/service.go",
       "owner": "application",
       "task": "T14",
@@ -15698,6 +15689,17 @@
         "func NewProfile",
         "func RepoID",
         "func ResolveProfile"
+      ]
+    },
+    {
+      "path": "internal/domain/looprun/gate.go",
+      "owner": "domain",
+      "task": "T14",
+      "symbols": [
+        "func EvaluateRepoGate",
+        "type LoopObservation",
+        "type RepoGate",
+        "type RepoObservation"
       ]
     },
     {
@@ -23423,6 +23425,46 @@
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "loop-repo-readiness",
+      "source_path": "internal/adapter/looprun/gate.go",
+      "source_symbol": "func RepoGateMissing",
+      "responsibility": "same-repo incomplete and unreadable loops block readiness",
+      "target": "internal/domain/looprun",
+      "target_symbol": "func EvaluateRepoGate",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops next",
+        "issueops advance-phase"
+      ],
+      "evidence_tests": [
+        "internal/domain/looprun/gate_test.go",
+        "internal/adapter/issueops/loopgate/loop_gate_test.go",
+        "cmd/issueops/issueopsapp/loop_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "loop-repo-health-summary",
+      "source_path": "internal/adapter/looprun/gate.go",
+      "source_symbol": "func RepoGateSummaryFor",
+      "responsibility": "classify matching active and exhausted loops for diagnostic health",
+      "target": "internal/domain/looprun",
+      "target_symbol": "func EvaluateRepoGate",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops next",
+        "issueops advance-phase"
+      ],
+      "evidence_tests": [
+        "internal/domain/looprun/gate_test.go",
+        "internal/adapter/issueops/loopgate/loop_gate_test.go",
+        "cmd/issueops/issueopsapp/loop_instance_wiring_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }

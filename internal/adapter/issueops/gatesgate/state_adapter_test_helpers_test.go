@@ -2,7 +2,7 @@ package gatesgate
 
 import (
 	issueopsstatepkg "issueops/internal/adapter/issueops"
-	looprunstatepkg "issueops/internal/adapter/looprun"
+
 	statestore "issueops/internal/adapter/outbound/state"
 )
 
@@ -11,5 +11,4 @@ import (
 // gatesgate는 loopgate를 합성하므로 looprun 상태도 열 수 있어야 한다.
 func init() {
 	issueopsstatepkg.StateDir = statestore.StateDir
-	looprunstatepkg.StateDir = statestore.StateDir
 }

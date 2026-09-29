@@ -2,7 +2,7 @@ package loopgate
 
 import (
 	issueopsstatepkg "issueops/internal/adapter/issueops"
-	looprunstatepkg "issueops/internal/adapter/looprun"
+
 	statestore "issueops/internal/adapter/outbound/state"
 )
 
@@ -10,5 +10,4 @@ import (
 // 대상만 채운다 — 역방향으로 채우면 import 순환이 된다.
 func init() {
 	issueopsstatepkg.StateDir = statestore.StateDir
-	looprunstatepkg.StateDir = statestore.StateDir
 }

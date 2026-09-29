@@ -2,11 +2,14 @@ package issueopsapp
 
 import (
 	"issueops/internal/adapter/doctor"
-	"issueops/internal/adapter/looprun"
+	statestore "issueops/internal/adapter/outbound/state"
+	contract "issueops/internal/contract/looprun"
+	"path/filepath"
 )
 
-// configureDoctorLoopGate는 doctor가 읽는 loop gate 조회를 설치한다.
 func configureDoctorLoopGate() {
-	doctor.RepoGateSummaryFor = looprun.RepoGateSummaryFor
-	doctor.LoopStateRoot = looprun.StateRoot
+	doctor.RepoGateSummaryFor = func(repo string) (contract.RepoGateSummary, []string) {
+		return newLoopReader().RepoGateSummaryFor(repo)
+	}
+	doctor.LoopStateRoot = func() string { return filepath.Join(statestore.StateDir(), "loop") }
 }
