@@ -2,25 +2,25 @@ package trace
 
 import (
 	"fmt"
+	statecontract "issueops/internal/contract/state"
 	"os"
 )
 
-type traceAnalysisInput struct {
-	Source string
-	Body   []byte
+type Source struct {
+	ReadState func(string) (statecontract.StateResult, error)
 }
 
-func loadTraceAnalysisInput(input string) (traceAnalysisInput, error) {
+func (source Source) Load(input string) (string, []byte, error) {
 	if input == "-" {
-		b, err := os.ReadFile("/dev/stdin")
-		return traceAnalysisInput{Source: "stdin", Body: b}, err
+		body, err := os.ReadFile("/dev/stdin")
+		return "stdin", body, err
 	}
-	if b, err := os.ReadFile(input); err == nil {
-		return traceAnalysisInput{Source: "file", Body: b}, nil
+	if body, err := os.ReadFile(input); err == nil {
+		return "file", body, nil
 	}
-	state, err := StateRead(input)
+	state, err := source.ReadState(input)
 	if err != nil {
-		return traceAnalysisInput{}, fmt.Errorf("read trace input as file or state key %q: %w", input, err)
+		return "", nil, fmt.Errorf("read trace input as file or state key %q: %w", input, err)
 	}
-	return traceAnalysisInput{Source: "state", Body: []byte(state.Record.Content)}, nil
+	return "state", []byte(state.Record.Content), nil
 }

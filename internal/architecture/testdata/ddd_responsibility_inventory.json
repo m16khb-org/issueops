@@ -1615,6 +1615,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/trace_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newTraceService"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/update_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -8081,39 +8089,13 @@
       ]
     },
     {
-      "path": "internal/adapter/trace/analyze.go",
+      "path": "internal/adapter/trace/decode.go",
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func TraceAnalyze",
-        "func traceEffects.Analyze",
-        "func traceEffects.Load",
-        "type traceEffects"
+        "func Source.Decode",
+        "func observeDocument"
       ]
-    },
-    {
-      "path": "internal/adapter/trace/bytes.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func analyzeTraceBytes"
-      ]
-    },
-    {
-      "path": "internal/adapter/trace/doc_upkeep.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func docUpkeepEventFromMap",
-        "func docUpkeepFindings",
-        "type docUpkeepEvent"
-      ]
-    },
-    {
-      "path": "internal/adapter/trace/failurecause_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
     },
     {
       "path": "internal/adapter/trace/fields.go",
@@ -8121,27 +8103,10 @@
       "task": "T15",
       "symbols": [
         "func boolField",
-        "func dedupeTraceFindings",
-        "func failureCauseEvidenceField",
-        "func failureCauseField",
-        "func firstString",
         "func intField",
         "func nestedMap",
-        "func normalizedFailureCause",
-        "func redactStringSlice",
-        "func redactedFailureCauseEvidence",
         "func stringField",
-        "func stringSliceField",
-        "func traceSortedIntKeys",
-        "func uniqSortedTraceStrings"
-      ]
-    },
-    {
-      "path": "internal/adapter/trace/guard.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func guardFindings"
+        "func stringSliceField"
       ]
     },
     {
@@ -8149,32 +8114,9 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func loadTraceAnalysisInput",
-        "type traceAnalysisInput"
+        "func Source.Load",
+        "type Source"
       ]
-    },
-    {
-      "path": "internal/adapter/trace/jsonl.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func analyzeTraceJSONL"
-      ]
-    },
-    {
-      "path": "internal/adapter/trace/self_verify.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func selfVerifySummaryFindings",
-        "func traceTypesForJSON"
-      ]
-    },
-    {
-      "path": "internal/adapter/trace/state_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
     },
     {
       "path": "internal/adapter/update/runtime.go",
@@ -16557,6 +16499,67 @@
       ]
     },
     {
+      "path": "internal/domain/trace/analysis.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Analyze",
+        "func analyzeLines"
+      ]
+    },
+    {
+      "path": "internal/domain/trace/findings.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func NormalizeCause",
+        "func NormalizeEvidence",
+        "func dedupeTraceFindings",
+        "func traceSortedIntKeys",
+        "func uniqSortedTraceStrings"
+      ]
+    },
+    {
+      "path": "internal/domain/trace/guard.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func guardFindings"
+      ]
+    },
+    {
+      "path": "internal/domain/trace/observation.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "type Analysis",
+        "type Cluster",
+        "type Document",
+        "type Evidence",
+        "type Finding",
+        "type Input",
+        "type Summary",
+        "type Upkeep"
+      ]
+    },
+    {
+      "path": "internal/domain/trace/summary.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func selfVerifySummaryFindings",
+        "func traceTypesForJSON"
+      ]
+    },
+    {
+      "path": "internal/domain/trace/upkeep.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func docUpkeepFindings"
+      ]
+    },
+    {
       "path": "internal/domain/traceclassification/classification.go",
       "owner": "domain",
       "task": "T20",
@@ -23614,6 +23617,120 @@
         "cmd/issueops/updatecli/update_bootstrap_process_test.go",
         "internal/application/update/daemon_test.go",
         "cmd/issueops/issueopsapp/update_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "trace-supported-input-and-fallback",
+      "source_path": "internal/adapter/trace/bytes.go",
+      "source_symbol": "func analyzeTraceBytes",
+      "responsibility": "Select supported document or JSONL findings, fallback validity, warning and result normalization",
+      "target": "internal/domain/trace",
+      "target_symbol": "func Analyze",
+      "task": "T20",
+      "entrypoints": [
+        "issueops trace analyze"
+      ],
+      "evidence_tests": [
+        "internal/domain/trace/analysis_test.go",
+        "internal/domain/trace/findings_test.go",
+        "internal/adapter/trace/analyze_test.go",
+        "cmd/issueops/issueopsapp/trace_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "trace-failed-step-and-upkeep-priority",
+      "source_path": "internal/adapter/trace/jsonl.go",
+      "source_symbol": "func analyzeTraceJSONL",
+      "responsibility": "Prefer upkeep events to progress, count failed steps, select progress findings and verification commands",
+      "target": "internal/domain/trace",
+      "target_symbol": "func analyzeLines",
+      "task": "T20",
+      "entrypoints": [
+        "issueops trace analyze"
+      ],
+      "evidence_tests": [
+        "internal/domain/trace/analysis_test.go",
+        "internal/domain/trace/findings_test.go",
+        "internal/adapter/trace/analyze_test.go",
+        "cmd/issueops/issueopsapp/trace_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "trace-summary-finding",
+      "source_path": "internal/adapter/trace/self_verify.go",
+      "source_symbol": "func selfVerifySummaryFindings",
+      "responsibility": "Select failed summary defaults, cluster pattern, explicit rerun override, cause evidence and knob",
+      "target": "internal/domain/trace",
+      "target_symbol": "func selfVerifySummaryFindings",
+      "task": "T20",
+      "entrypoints": [
+        "issueops trace analyze"
+      ],
+      "evidence_tests": [
+        "internal/domain/trace/analysis_test.go",
+        "internal/domain/trace/findings_test.go",
+        "internal/adapter/trace/analyze_test.go",
+        "cmd/issueops/issueopsapp/trace_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "trace-guard-grouping",
+      "source_path": "internal/adapter/trace/guard.go",
+      "source_symbol": "func guardFindings",
+      "responsibility": "Group guard findings by normalized rule and select deterministic remediation and current verification package",
+      "target": "internal/domain/trace",
+      "target_symbol": "func guardFindings",
+      "task": "T20",
+      "entrypoints": [
+        "issueops trace analyze"
+      ],
+      "evidence_tests": [
+        "internal/domain/trace/analysis_test.go",
+        "internal/domain/trace/findings_test.go",
+        "internal/adapter/trace/analyze_test.go",
+        "cmd/issueops/issueopsapp/trace_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "trace-upkeep-grouping",
+      "source_path": "internal/adapter/trace/doc_upkeep.go",
+      "source_symbol": "func docUpkeepFindings",
+      "responsibility": "Group upkeep events by target/kind and select lifecycle remediation and current verification package",
+      "target": "internal/domain/trace",
+      "target_symbol": "func docUpkeepFindings",
+      "task": "T20",
+      "entrypoints": [
+        "issueops trace analyze"
+      ],
+      "evidence_tests": [
+        "internal/domain/trace/analysis_test.go",
+        "internal/domain/trace/findings_test.go",
+        "internal/adapter/trace/analyze_test.go",
+        "cmd/issueops/issueopsapp/trace_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "trace-finding-normalization",
+      "source_path": "internal/adapter/trace/fields.go",
+      "source_symbol": "func dedupeTraceFindings",
+      "responsibility": "Normalize causes/evidence, redact, deduplicate findings without losing distinct causes, and sort deterministically",
+      "target": "internal/domain/trace",
+      "target_symbol": "func dedupeTraceFindings",
+      "task": "T20",
+      "entrypoints": [
+        "issueops trace analyze"
+      ],
+      "evidence_tests": [
+        "internal/domain/trace/analysis_test.go",
+        "internal/domain/trace/findings_test.go",
+        "internal/adapter/trace/analyze_test.go",
+        "cmd/issueops/issueopsapp/trace_instance_wiring_test.go"
       ],
       "status": "migrated"
     }

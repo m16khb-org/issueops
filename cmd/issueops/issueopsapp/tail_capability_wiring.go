@@ -9,7 +9,6 @@ import (
 	webfetchadapter "issueops/internal/adapter/outbound/webfetch"
 	provideradapter "issueops/internal/adapter/provider"
 	toolconformancetaildeps "issueops/internal/adapter/toolconformance"
-	tracetaildeps "issueops/internal/adapter/trace"
 	webfetchtaildeps "issueops/internal/adapter/verification/probe/webfetch"
 )
 
@@ -20,7 +19,6 @@ func configureTailCapabilities() {
 	mcpclitaildeps.Fetch = webfetchadapter.Fetch
 	remotecmdtaildeps.Resolve = provideradapter.Resolve
 	toolconformancetaildeps.ClassifyFailureCause = failurecauseadapter.Classify
-	tracetaildeps.Classify = failurecauseadapter.Classify
 	webfetchclitaildeps.DeterministicFixtures = webfetchadapter.DeterministicFixtures
 	webfetchclitaildeps.Fetch = webfetchadapter.Fetch
 	webfetchclitaildeps.RunBenchmark = webfetchadapter.RunBenchmark

@@ -6,7 +6,6 @@ import (
 	issueopsstatepkg "issueops/internal/adapter/issueops"
 
 	statestore "issueops/internal/adapter/outbound/state"
-	tracestatepkg "issueops/internal/adapter/trace"
 )
 
 // production wiring과 같은 state store를 설치한다. 이 package가 실제로 의존하는
@@ -15,5 +14,4 @@ func init() {
 	auditstatepkg.StateDir = statestore.StateDir
 	auditstatepkg.WithKeyLock = statestore.WithKeyLock
 	issueopsstatepkg.StateDir = statestore.StateDir
-	tracestatepkg.StateRead = statestore.StateRead
 }

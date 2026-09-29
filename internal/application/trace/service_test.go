@@ -1,6 +1,7 @@
 package trace
 
 import (
+	tracedomain "issueops/internal/domain/trace"
 	"testing"
 
 	tracecontract "issueops/internal/contract/trace"
@@ -15,9 +16,9 @@ func (f *fakeEffects) Load(string) (string, []byte, error) {
 	f.loaded = true
 	return "state", []byte("{}"), nil
 }
-func (f *fakeEffects) Analyze([]byte) ([]tracecontract.TraceAnalysisFinding, []string, []string) {
+func (f *fakeEffects) Decode([]byte) tracedomain.Input {
 	f.analyzed = true
-	return []tracecontract.TraceAnalysisFinding{{FailureClass: "failure"}}, []string{"state"}, nil
+	return tracedomain.Input{Document: &tracedomain.Document{Summary: tracedomain.Summary{FailedSteps: 1, FailureClass: "failure"}}}
 }
 
 func TestAnalyzeRejectsMissingInputBeforeEffects(t *testing.T) {

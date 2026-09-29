@@ -5,7 +5,6 @@ import (
 	channel "issueops/internal/adapter/channel"
 	issueops "issueops/internal/adapter/issueops"
 	statestore "issueops/internal/adapter/outbound/state"
-	trace "issueops/internal/adapter/trace"
 )
 
 // configureAdapterStateAccess는 outbound state를 쓰는 adapter들에 접근자를 설치한다.
@@ -17,5 +16,4 @@ func configureAdapterStateAccess() {
 	audit.WithKeyLock = statestore.WithKeyLock
 	issueops.StateDir = statestore.StateDir
 	channel.StateDir = statestore.StateDir
-	trace.StateRead = statestore.StateRead
 }

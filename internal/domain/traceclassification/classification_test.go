@@ -52,8 +52,8 @@ func TestDefaultVerificationCommand(t *testing.T) {
 		step     string
 		contains string
 	}{
-		{"contract golden", "go test ./cmd/issueops -run Golden"},
-		{"policy guard", "go test ./internal/core"},
+		{"contract golden", "go test ./cmd/issueops/contractgolden -run Golden"},
+		{"policy guard", "go test ./internal/domain/policy ./internal/domain/guard ./internal/application/policy ./internal/application/guard"},
 		{"build fix", "go build -o bin/issueops"},
 		{"unknown", "go test ./... -count=1"},
 	}

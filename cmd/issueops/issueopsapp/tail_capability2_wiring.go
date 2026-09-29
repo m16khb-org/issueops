@@ -7,7 +7,6 @@ import (
 	commitsuggestadapter "issueops/internal/adapter/commitsuggest"
 	guardadapter "issueops/internal/adapter/guard"
 	lintdiagnoseadapter "issueops/internal/adapter/lintdiagnose"
-	traceadapter "issueops/internal/adapter/trace"
 	issueopscontract "issueops/internal/contract/issueops"
 	tracecontract "issueops/internal/contract/trace"
 )
@@ -16,7 +15,9 @@ import (
 // 설치한다. 모두 저장소를 읽거나 외부 명령을 부른다.
 func configureTailCapabilities2() {
 	basicclit2deps.GuardCheck = guardadapter.GuardCheck
-	basicclit2deps.TraceAnalyze = traceadapter.TraceAnalyze
+	basicclit2deps.TraceAnalyze = func(req tracecontract.TraceAnalyzeRequest) (tracecontract.TraceAnalyzeResult, error) {
+		return newTraceService().Analyze(req)
+	}
 	basicclit2deps.TraceHandoffDeliveryObserve = func(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (tracecontract.HandoffDeliveryObserveResult, error) {
 		record, err := auditManualHandoffDeliveryObservation(observation)
 		return tracecontract.HandoffDeliveryObserveResult{OK: err == nil, Kind: record.Kind, AuditLogID: record.AuditLogID, Observation: record.Observation}, err

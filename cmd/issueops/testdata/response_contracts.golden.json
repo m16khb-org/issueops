@@ -6270,7 +6270,7 @@
           "overfit_risk": "low: append-only lifecycle reminders should not alter task execution",
           "proposed_knob": "route pending upkeep into completion evidence instead of leaving lifecycle queue stale",
           "recurring_pattern": "OPERATIONS.md queued 1 time(s)",
-          "verification_command": "go test ./internal/core -run Lifecycle -count=1"
+          "verification_command": "go test ./internal/adapter/lifecycle -run Lifecycle -count=1"
         }
       ],
       "input": "$WORKSPACE/trace.jsonl",

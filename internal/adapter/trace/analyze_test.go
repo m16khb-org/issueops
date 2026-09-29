@@ -176,34 +176,6 @@ func TestTraceAnalyzeInvalidJSONAndJSONLFallback(t *testing.T) {
 	}
 }
 
-func TestDedupeTraceFindingsKeepsDistinctFailureCauses(t *testing.T) {
-	findings := dedupeTraceFindings([]tracecontract.TraceAnalysisFinding{
-		{
-			FailureClass:     "shared_failure",
-			FailureCause:     failurecause.Transport,
-			RecurringPattern: "same pattern",
-			ProposedKnob:     "same knob",
-		},
-		{
-			FailureClass:     "shared_failure",
-			FailureCause:     failurecause.Model,
-			RecurringPattern: "same pattern",
-			ProposedKnob:     "same knob",
-		},
-	})
-	if len(findings) != 2 {
-		t.Fatalf("distinct failure causes were deduped: %+v", findings)
-	}
-	if findings[0].FailureCause != failurecause.Model || findings[1].FailureCause != failurecause.Transport {
-		t.Fatalf("findings were not deterministically sorted by failure cause: %+v", findings)
-	}
-	for _, finding := range findings {
-		if finding.FailureCauseEvidence == nil {
-			t.Fatalf("failure cause evidence must serialize as an array: %+v", finding)
-		}
-	}
-}
-
 func TestTraceAnalyzeRedactsFailureCauseEvidence(t *testing.T) {
 	input := filepath.Join(t.TempDir(), "summary.json")
 	body := `{
@@ -291,4 +263,25 @@ func containsStringPrefix(items []string, prefix string) bool {
 		}
 	}
 	return false
+}
+
+func TestTraceRecommendedCommandsReferenceCurrentOwners(t *testing.T) {
+	for _, tc := range []struct{ body, want string }{
+		{`{"kind":"code_change"}`, "go test ./internal/adapter/lifecycle -run Lifecycle -count=1"},
+		{`{"guard":{"findings":[{"rule":"x"}]}}`, "go test ./internal/domain/guard ./internal/application/guard ./internal/adapter/guard -count=1"},
+		{`{"failed_steps":1,"failed_step":"policy check"}`, "go test ./internal/domain/policy ./internal/domain/guard ./internal/application/policy ./internal/application/guard -count=1"},
+		{`{"failed_steps":1,"failed_step":"contract golden"}`, "go test ./cmd/issueops/contractgolden -run Golden -count=1"},
+	} {
+		p := filepath.Join(t.TempDir(), "trace.json")
+		if err := os.WriteFile(p, []byte(tc.body), 0600); err != nil {
+			t.Fatal(err)
+		}
+		result, err := TraceAnalyze(tracecontract.TraceAnalyzeRequest{Input: p})
+		if err != nil || len(result.Findings) != 1 {
+			t.Fatalf("result=%+v err=%v", result, err)
+		}
+		if got := result.Findings[0].VerificationCommand; got != tc.want {
+			t.Errorf("verification command=%q want %q", got, tc.want)
+		}
+	}
 }
