@@ -3,8 +3,10 @@ package selfworkflow
 import (
 	augmentation "issueops/internal/adapter/augmentation"
 	docs "issueops/internal/adapter/docs"
+	docsapp "issueops/internal/application/docs"
 	augmentapp "issueops/internal/application/selfaugment"
 	domain "issueops/internal/domain/selfaugment"
+	"time"
 )
 
 func allSelfAugmentGoalsPassed(goals []SelfAugmentGoal) bool {
@@ -28,7 +30,7 @@ func CollectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string
 }
 
 func collectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) SelfAugmentRepoSignals {
-	return (augmentation.Repository{ListDocs: docs.ListDocs}).CollectSignals(root, docsIndexed, skills, geniusText)
+	return (augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}).CollectSignals(root, docsIndexed, skills, geniusText)
 }
 
 func DocsContainTerm(root, term string) bool {
@@ -36,7 +38,7 @@ func DocsContainTerm(root, term string) bool {
 }
 
 func docsContainTerm(root, term string) bool {
-	return (augmentation.Repository{ListDocs: docs.ListDocs}).DocsContainTerm(root, term)
+	return (augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}).DocsContainTerm(root, term)
 }
 
 func DirContainsTerm(root, relDir, term string) bool {

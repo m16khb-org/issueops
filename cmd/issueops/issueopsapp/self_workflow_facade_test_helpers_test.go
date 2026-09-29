@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	docsapp "issueops/internal/application/docs"
 	"time"
 
 	augmentation "issueops/internal/adapter/augmentation"
@@ -37,7 +38,7 @@ func nonNilSlowStepSlice(items []SelfAugmentSlowStep) []SelfAugmentSlowStep {
 }
 
 func collectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) SelfAugmentRepoSignals {
-	return (augmentation.Repository{ListDocs: docs.ListDocs}).CollectSignals(root, docsIndexed, skills, geniusText)
+	return (augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}).CollectSignals(root, docsIndexed, skills, geniusText)
 }
 
 func selfAugmentCandidates(signals SelfAugmentRepoSignals) []SelfAugmentCandidate {
@@ -57,7 +58,7 @@ func selectedCandidateID(candidate *SelfAugmentCandidate) string {
 }
 
 func docsContainTerm(root, term string) bool {
-	return (augmentation.Repository{ListDocs: docs.ListDocs}).DocsContainTerm(root, term)
+	return (augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}).DocsContainTerm(root, term)
 }
 
 func fileContainsTerm(root, relPath, term string) bool {

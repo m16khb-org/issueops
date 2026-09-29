@@ -2,6 +2,7 @@ package mcpcli
 
 import (
 	"encoding/json"
+	docsapp "issueops/internal/application/docs"
 	"time"
 
 	"issueops/internal/adapter/augmentation"
@@ -16,7 +17,7 @@ import (
 
 func planningForTest(root, dir, version string) SelfPlanningDependencies {
 
-	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: docs.ListDocs}, DocsIndex: docs.DocsIndex, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}
+	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}
 	plan := func(req contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult {
 		return planner.Plan(req, root, version)
 	}

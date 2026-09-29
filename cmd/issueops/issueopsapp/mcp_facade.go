@@ -6,7 +6,6 @@ import (
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/mcpcli/resources"
 	"issueops/cmd/issueops/pathutil"
-	"issueops/internal/adapter/docs"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/inspect"
 	issueopsadapter "issueops/internal/adapter/issueops"
@@ -63,7 +62,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		Resources: resources.Config{
 			IssueOpsRoot: root, Version: version, SkillName: skillName,
 			ReadHarnessFile: func(parts ...string) (string, error) { return pathutil.ReadHarnessFile(root, parts...) },
-			StateList:       state.List, RouteProjectDocs: docsService.Route, DocsIndex: docs.DocsIndex, CommandPolicySummary: policy.CommandPolicySummary,
+			StateList:       state.List, RouteProjectDocs: docsService.Route, DocsIndex: newDocsService().Index, CommandPolicySummary: policy.CommandPolicySummary,
 		},
 		SelfHistory:  newSelfWorkflowHistory(statestore.StateDir()),
 		SelfState:    newSelfWorkflowState(statestore.StateDir()),

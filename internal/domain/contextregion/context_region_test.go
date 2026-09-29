@@ -3,10 +3,12 @@ package contextregion_test
 import (
 	"encoding/json"
 	docs "issueops/internal/adapter/docs"
+	docsapp "issueops/internal/application/docs"
 	"issueops/internal/domain/contextregion"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func contextToAny(t *testing.T, v any) any {
@@ -135,13 +137,13 @@ func TestDocsIndexImmutablePrefixIsByteDeterministic(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	first := contextMarshal(t, contextregion.StableProjection(contextToAny(t, docs.DocsIndex(root, "0.1.0"))))
-	second := contextMarshal(t, contextregion.StableProjection(contextToAny(t, docs.DocsIndex(root, "0.1.0"))))
+	first := contextMarshal(t, contextregion.StableProjection(contextToAny(t, (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index(root, "0.1.0"))))
+	second := contextMarshal(t, contextregion.StableProjection(contextToAny(t, (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index(root, "0.1.0"))))
 	if first != second {
 		t.Fatalf("docs_index immutable prefix drifted across builds:\nfirst=%s\nsecond=%s", first, second)
 	}
 
-	raw, ok := contextToAny(t, docs.DocsIndex(root, "0.1.0")).(map[string]any)
+	raw, ok := contextToAny(t, (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index(root, "0.1.0")).(map[string]any)
 	if !ok {
 		t.Fatalf("expected docs_index to serialize as an object")
 	}

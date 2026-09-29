@@ -1,7 +1,9 @@
 package basiccli
 
 import (
+	docsapp "issueops/internal/application/docs"
 	"os"
+	"time"
 
 	docsadapter "issueops/internal/adapter/docs"
 	guardadapter "issueops/internal/adapter/guard"
@@ -20,12 +22,12 @@ func testBasicCommand() Command {
 	target := testResolveTarget("")
 	home, _ := os.UserHomeDir()
 	cwd, _ := os.Getwd()
-	return Command{IssueOpsRoot: root, DefaultTarget: target, Version: "0.1.0", DocsIndex: docsadapter.DocsIndex,
+	return Command{IssueOpsRoot: root, DefaultTarget: target, Version: "0.1.0", DocsIndex: (docsapp.Service{Observer: docsadapter.Observer{}, Now: time.Now}).Index,
 		InspectHarness: func(repo string) inspectcontract.InspectInfo {
 			if repo == "" {
 				repo = target
 			}
-			return (inspectadapter.Observer{ListDocs: docsadapter.ListDocs}).Inspect(root, repo, home, "0.1.0", "atomic-commit-push")
+			return (inspectadapter.Observer{ListDocs: (docsapp.Service{Observer: docsadapter.Observer{}, Now: time.Now}).List}).Inspect(root, repo, home, "0.1.0", "atomic-commit-push")
 		},
 		Preflight: preflightapp.Service{Observer: preflightadapter.GitObserver{}}, Guard: guardapp.Service{Source: guardadapter.Source{BaseDir: cwd}}, Trace: traceapp.Service{Effects: traceadapter.Source{ReadState: statestore.StateRead}}}
 }

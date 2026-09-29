@@ -1,11 +1,13 @@
 package docs
 
 import (
+	docsapp "issueops/internal/application/docs"
 	docscontract "issueops/internal/contract/docs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // In a real git repo, an UNTRACKED .md (e.g. a session research artifact) must
@@ -33,7 +35,7 @@ func TestListDocsExcludesUntrackedInGitRepo(t *testing.T) {
 	gitRun("commit", "-m", "seed")
 	mustWrite(t, filepath.Join(root, ".issueops", "research", "untracked-research.md"), "# Untracked\n")
 
-	index := DocsIndex(root, "test")
+	index := (docsapp.Service{Observer: Observer{}, Now: time.Now}).Index(root, "test")
 	for _, want := range []string{"AGENTS.md", ".issueops/CONVENTIONS.md", ".issueops/research/tracked-note.md"} {
 		if !docIndexContains(index.Docs, want) {
 			t.Fatalf("tracked doc %s must stay in the hermetic index: %+v", want, index.Docs)
@@ -70,7 +72,7 @@ func TestListDocsIncludesUntrackedCanonicalProjectDocs(t *testing.T) {
 		`{"schema_version":1,"families":[{"root":".issueops/TESTING.md","module_dir":".issueops/testing","responsibility":"testing"}]}`,
 	)
 
-	index := DocsIndex(root, "test")
+	index := (docsapp.Service{Observer: Observer{}, Now: time.Now}).Index(root, "test")
 	for _, want := range []string{
 		".issueops/TESTING.md",
 		".issueops/testing/unit.md",
@@ -89,7 +91,7 @@ func TestDocsIndexIncludesAgentDocs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	index := DocsIndex(root, "test")
+	index := (docsapp.Service{Observer: Observer{}, Now: time.Now}).Index(root, "test")
 	if !index.OK {
 		t.Fatalf("DocsIndex ok=false: %+v", index)
 	}
@@ -111,7 +113,7 @@ func TestDocsIndexExcludesDraftWiki(t *testing.T) {
 	mustWrite(t, filepath.Join(root, ".issueops", "CAUTIONS.md"), "# Cautions\n")
 	mustWrite(t, filepath.Join(root, ".issueops", "draft-wiki", "draft", "candidate.md"), "# Draft candidate\n")
 
-	index := DocsIndex(root, "test")
+	index := (docsapp.Service{Observer: Observer{}, Now: time.Now}).Index(root, "test")
 	if !docIndexContains(index.Docs, "AGENTS.md") {
 		t.Fatalf("DocsIndex missing AGENTS.md: %+v", index.Docs)
 	}
@@ -131,7 +133,7 @@ func TestDocsIndexExcludesEvidence(t *testing.T) {
 	// It must never enter the docs index, or the response-contract golden becomes non-hermetic.
 	mustWrite(t, filepath.Join(root, ".issueops", "evidence", "pioneer-skills-quality", "baseline.md"), "# Baseline\n")
 
-	index := DocsIndex(root, "test")
+	index := (docsapp.Service{Observer: Observer{}, Now: time.Now}).Index(root, "test")
 	if !docIndexContains(index.Docs, "AGENTS.md") {
 		t.Fatalf("DocsIndex missing AGENTS.md: %+v", index.Docs)
 	}

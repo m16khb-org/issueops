@@ -8,6 +8,7 @@ import (
 	"issueops/internal/adapter/install"
 	state "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/verification"
+	docsapp "issueops/internal/application/docs"
 	app "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
 	contract "issueops/internal/contract/selfaugment"
@@ -17,7 +18,7 @@ import (
 )
 
 func planSelfAugmentation(req SelfAugmentPlanRequest) SelfAugmentPlanResult {
-	return (app.Planner{Repository: augmentation.Repository{ListDocs: docs.ListDocs}, DocsIndex: docs.DocsIndex, ListSkillNames: install.ListSkillNames, StateList: state.StateList, StateRead: state.StateRead, Now: time.Now}).Plan(req, IssueOpsRoot(), Version)
+	return (app.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: state.StateList, StateRead: state.StateRead, Now: time.Now}).Plan(req, IssueOpsRoot(), Version)
 }
 func PlanSelfAugmentation(req SelfAugmentPlanRequest) SelfAugmentPlanResult {
 	return planSelfAugmentation(req)

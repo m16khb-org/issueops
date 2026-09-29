@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 
-	"issueops/internal/adapter/docs"
 	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 	inspect "issueops/internal/adapter/inspect"
 	inspectcontract "issueops/internal/contract/inspect"
@@ -32,7 +31,7 @@ func newHarnessInspector() func(string) inspectcontract.InspectInfo {
 	root := issueOpsRoot()
 	home, _ := os.UserHomeDir()
 	defaultTarget := resolveTarget("")
-	observer := inspect.Observer{ListDocs: docs.ListDocs}
+	observer := inspect.Observer{ListDocs: newDocsService().List}
 	return func(target string) inspectcontract.InspectInfo {
 		if target == "" {
 			target = defaultTarget

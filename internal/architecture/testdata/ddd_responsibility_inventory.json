@@ -654,6 +654,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/docs_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newDocsService"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/doctor_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -3258,10 +3266,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func authoringScope.includes",
-        "func isAgentHarnessSubdirectory",
-        "func loadAuthoringScope",
-        "type authoringScope",
+        "func Observer.ModuleDirectories",
         "type projectDocsFamily",
         "type projectDocsManifest"
       ]
@@ -3271,12 +3276,11 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func DocsIndex",
-        "func ListDocs",
+        "func Observer.Candidates",
+        "func Observer.ReadDocument",
+        "func Observer.TrackedPaths",
         "func ReadHeadings",
-        "func gitTrackedRelPaths",
-        "func hermeticTrackedDocs",
-        "func isExcludedDoc"
+        "type Observer"
       ]
     },
     {
@@ -8280,6 +8284,16 @@
       ]
     },
     {
+      "path": "internal/application/docs/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Index",
+        "func Service.List",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/doctor/contract_alias.go",
       "owner": "application",
       "task": "T20",
@@ -10921,6 +10935,14 @@
       ]
     },
     {
+      "path": "internal/contract/docs/observation.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type Candidate"
+      ]
+    },
+    {
       "path": "internal/contract/docs/types.go",
       "owner": "contract",
       "task": "T02",
@@ -12766,6 +12788,19 @@
         "func NewFilteringHandler",
         "func isRoutineShutdownErrorText",
         "type FilteringHandler"
+      ]
+    },
+    {
+      "path": "internal/domain/docs/selection.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Roots",
+        "func Select",
+        "func authoringScope.includes",
+        "func excluded",
+        "func newAuthoringScope",
+        "type authoringScope"
       ]
     },
     {
@@ -16730,6 +16765,14 @@
         "type DirectoryPin",
         "type MutationError",
         "type RootEnvironment"
+      ]
+    },
+    {
+      "path": "internal/port/docs/observer.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type Observer"
       ]
     },
     {
@@ -26098,6 +26141,128 @@
         "internal/adapter/orca/remove_normalize_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "docs-index-discovery",
+      "source_path": "internal/adapter/docs/docs.go",
+      "source_symbol": "func ListDocs",
+      "responsibility": "Observe candidates and Git before applying shared inclusion policy",
+      "target": "internal/application/docs",
+      "target_symbol": "func Service.List",
+      "task": "T20",
+      "entrypoints": [
+        "docs",
+        "MCP docs_index",
+        "self-workflow planning",
+        "inspect"
+      ],
+      "evidence_tests": [
+        "internal/domain/docs/selection_test.go",
+        "internal/application/docs/service_test.go",
+        "internal/adapter/docs/docs_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "docs-index-projection",
+      "source_path": "internal/adapter/docs/docs.go",
+      "source_symbol": "func DocsIndex",
+      "responsibility": "Read selected documents and assemble ordered versioned index",
+      "target": "internal/application/docs",
+      "target_symbol": "func Service.Index",
+      "task": "T20",
+      "entrypoints": [
+        "docs",
+        "MCP docs_index",
+        "self-workflow planning",
+        "inspect"
+      ],
+      "evidence_tests": [
+        "internal/domain/docs/selection_test.go",
+        "internal/application/docs/service_test.go",
+        "internal/adapter/docs/docs_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "docs-index-inclusion",
+      "source_path": "internal/adapter/docs/docs.go",
+      "source_symbol": "func hermeticTrackedDocs",
+      "responsibility": "Tracked and canonical inclusion with standalone and zero-match fallback",
+      "target": "internal/domain/docs",
+      "target_symbol": "func Select",
+      "task": "T20",
+      "entrypoints": [
+        "docs",
+        "MCP docs_index",
+        "self-workflow planning",
+        "inspect"
+      ],
+      "evidence_tests": [
+        "internal/domain/docs/selection_test.go",
+        "internal/application/docs/service_test.go",
+        "internal/adapter/docs/docs_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "docs-index-exclusion",
+      "source_path": "internal/adapter/docs/docs.go",
+      "source_symbol": "func isExcludedDoc",
+      "responsibility": "Exclude draft wiki and runtime evidence independently of Git tracking",
+      "target": "internal/domain/docs",
+      "target_symbol": "func excluded",
+      "task": "T20",
+      "entrypoints": [
+        "docs",
+        "MCP docs_index",
+        "self-workflow planning",
+        "inspect"
+      ],
+      "evidence_tests": [
+        "internal/domain/docs/selection_test.go",
+        "internal/application/docs/service_test.go",
+        "internal/adapter/docs/docs_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "docs-index-authoring",
+      "source_path": "internal/adapter/docs/authoring_scope.go",
+      "source_symbol": "func loadAuthoringScope",
+      "responsibility": "Normalize and validate canonical authoring module directories",
+      "target": "internal/domain/docs",
+      "target_symbol": "func newAuthoringScope",
+      "task": "T20",
+      "entrypoints": [
+        "docs",
+        "MCP docs_index",
+        "self-workflow planning",
+        "inspect"
+      ],
+      "evidence_tests": [
+        "internal/domain/docs/selection_test.go",
+        "internal/application/docs/service_test.go",
+        "internal/adapter/docs/docs_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "inspect-technical-observation",
+      "source_path": "internal/adapter/inspect/inspect.go",
+      "source_symbol": "func Observer.Inspect",
+      "responsibility": "Observe installed skill/config paths and filesystem metadata; root injects application document listing",
+      "target": "internal/adapter/inspect",
+      "task": "T20",
+      "entrypoints": [
+        "inspect",
+        "MCP harness_inspect"
+      ],
+      "evidence_tests": [
+        "internal/adapter/inspect/inspect_test.go",
+        "cmd/issueops/basiccli/basic_composition_test.go"
+      ],
+      "status": "retain"
     }
   ]
 }

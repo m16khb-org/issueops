@@ -3,12 +3,14 @@ package augmentcatalog
 import (
 	"issueops/internal/adapter/augmentation"
 	"issueops/internal/adapter/docs"
+	docsapp "issueops/internal/application/docs"
+	"time"
 )
 
 // production wiring과 같은 문서 reader를 설치한다. augmentplan이 이 package를
 // import하므로 여기서 역방향으로 채우면 순환이 된다 — 자기 것만 설치한다.
 func init() {
-	repo := augmentation.Repository{ListDocs: docs.ListDocs}
+	repo := augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}
 	CollectSelfAugmentRepoSignals = repo.CollectSignals
 	DocsContainTerm = repo.DocsContainTerm
 	FileContainsTerm = augmentation.FileContainsTerm

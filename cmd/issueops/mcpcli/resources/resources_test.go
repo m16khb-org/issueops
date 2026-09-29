@@ -6,11 +6,13 @@ import (
 	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/policy"
+	docsapp "issueops/internal/application/docs"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHandleResourceReadReturnsJSONResources(t *testing.T) {
@@ -32,7 +34,7 @@ func TestHandleResourceReadReturnsJSONResources(t *testing.T) {
 		IssueOpsRoot:         issueOpsRoot,
 		Version:              "test-version",
 		StateList:            statestore.StateList,
-		DocsIndex:            docs.DocsIndex,
+		DocsIndex:            (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index,
 	}
 	for _, uri := range []string{
 		"issueops://docs",

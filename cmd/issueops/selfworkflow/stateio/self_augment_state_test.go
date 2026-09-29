@@ -2,6 +2,7 @@ package stateio
 
 import (
 	"encoding/json"
+	docsapp "issueops/internal/application/docs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -61,5 +62,5 @@ func TestSaveSelfAugmentPlanRejectsInvalidStateKey(t *testing.T) {
 }
 
 func planForStateTest(req augmentcontract.SelfAugmentPlanRequest, root, version string) augmentcontract.SelfAugmentPlanResult {
-	return (app.Planner{Repository: augmentation.Repository{ListDocs: docs.ListDocs}, DocsIndex: docs.DocsIndex, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}).Plan(req, root, version)
+	return (app.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}).Plan(req, root, version)
 }

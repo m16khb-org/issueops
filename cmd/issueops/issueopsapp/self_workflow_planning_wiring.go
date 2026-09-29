@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/internal/adapter/augmentation"
-	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/install"
 	"issueops/internal/adapter/verification"
 	augmentapp "issueops/internal/application/selfaugment"
@@ -15,7 +14,7 @@ import (
 
 func newSelfWorkflowPlanning(root, dir, version string) mcpcli.SelfPlanningDependencies {
 	state := newStateService(dir)
-	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: docs.ListDocs}, DocsIndex: docs.DocsIndex, ListSkillNames: install.ListSkillNames, StateList: state.List, StateRead: state.Read, Now: time.Now}
+	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: newDocsService().List}, DocsIndex: newDocsService().Index, ListSkillNames: install.ListSkillNames, StateList: state.List, StateRead: state.Read, Now: time.Now}
 	plan := func(req contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult {
 		return planner.Plan(req, root, version)
 	}

@@ -8,6 +8,7 @@ import (
 	"issueops/internal/adapter/verification/probe/qagate"
 	"issueops/internal/adapter/verification/probe/stateroundtrip"
 	"issueops/internal/adapter/verification/probe/stepbudget"
+	docsapp "issueops/internal/application/docs"
 	app "issueops/internal/application/selfaugment"
 	stateapp "issueops/internal/application/state"
 	statecontract "issueops/internal/contract/state"
@@ -32,7 +33,7 @@ func writeSelfAugmentSnapshotRecord(dir, key string, snapshot SelfAugmentStateSn
 	return testSnapshotStore().Write(dir, key, snapshot)
 }
 func testDocsValidator() qagate.Validator {
-	return qagate.Validator{ListDocs: docs.ListDocs, ListSkills: install.ListSkillNames}
+	return qagate.Validator{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List, ListSkills: install.ListSkillNames}
 }
 func ValidateQAGate(root string) StepResult    { return testDocsValidator().Validate(root) }
 func validateQAGate(root string) StepResult    { return ValidateQAGate(root) }

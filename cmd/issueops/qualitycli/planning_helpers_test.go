@@ -8,6 +8,7 @@ import (
 	"issueops/internal/adapter/install"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/verification"
+	docsapp "issueops/internal/application/docs"
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
 	contract "issueops/internal/contract/selfaugment"
@@ -16,7 +17,7 @@ import (
 
 func planningForTest(root, dir, version string) mcpcli.SelfPlanningDependencies {
 
-	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: docs.ListDocs}, DocsIndex: docs.DocsIndex, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}
+	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}, DocsIndex: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}
 	plan := func(req contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult {
 		return planner.Plan(req, root, version)
 	}

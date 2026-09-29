@@ -1,7 +1,6 @@
 package issueopsapp
 
 import (
-	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/install"
 	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
@@ -23,5 +22,5 @@ func newStepBudgetProbe() stepbudget.StepBudgetValidationDeps {
 	return stepbudget.StepBudgetValidationDeps{WriteSnapshot: newProbeSnapshotStore().Write}
 }
 func newDocsQAProbe() qagate.Validator {
-	return qagate.Validator{ListDocs: docs.ListDocs, ListSkills: install.ListSkillNames}
+	return qagate.Validator{ListDocs: newDocsService().List, ListSkills: install.ListSkillNames}
 }
