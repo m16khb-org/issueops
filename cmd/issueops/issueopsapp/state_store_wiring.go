@@ -5,7 +5,6 @@ import (
 
 	benchmarkcmd "issueops/cmd/issueops/issueopscli/benchmarkcmd"
 
-	statuscli "issueops/cmd/issueops/statuscli"
 	statestore "issueops/internal/adapter/outbound/state"
 	probe "issueops/internal/adapter/verification/probe"
 	stateroundtrip "issueops/internal/adapter/verification/probe/stateroundtrip"
@@ -28,5 +27,4 @@ func configureStateStores() {
 
 	stateroundtrip.StateRead = statestore.StateRead
 	stateroundtrip.WriteStateRecord = statestore.WriteStateRecord
-	statuscli.StateList = statestore.StateList
 }

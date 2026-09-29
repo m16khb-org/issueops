@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/inspect"
 	"issueops/internal/adapter/verification/probe/qagate"
 )
 
@@ -14,5 +13,4 @@ import (
 func configureDocsReaders() {
 	mcpcli.DocsIndex = docs.DocsIndex
 	qagate.ListDocs = docs.ListDocs
-	inspect.ListDocs = docs.ListDocs
 }

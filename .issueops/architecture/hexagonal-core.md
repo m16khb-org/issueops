@@ -115,13 +115,19 @@ bootstrap은 별도 `application/projectbootstrap.Service`가 경로 정규화�
 
 doctor의 파일·프로세스·HTTP 관측은 adapter가 수행하고, 문서 누락·저장소 내부 runtime 상태·loop 미완료·pipe 용량·MCP 연결 및 FD 압박·native hook 누락·binary 변경 여부는 `internal/domain/doctor`가 판정한다. lifecycle 진단과 전체 health 집계, operational 진단과 중복되는 state artifact의 분류도 같은 domain에 둔다. 관측값에는 읽기 실패와 미관측 상태를 유지하며 판정 함수는 filesystem이나 process를 호출하지 않는다.
 
-`application/doctor.Service`는 기존 순서로 관측값을 모아 domain 결과를 합치고 출력 순서를 정한다. `--static-only`는 pipe·MCP live 관측을 호출하지 않는다. 실제 CLI의 진단 결과, 오류·종료 코드와 저장 파일 변화를 이전 binary와 비교한다. root의 doctor factory는 state·lifecycle·loop 조회를 인스턴스마다 조립한다. CLI의 `basiccli.Doctor`는 application과 경로 정규화, home·harness 경로·version, live 관측 함수를 명시적으로 받는다. adapter의 실행 facade·DTO 재노출·전역 setter와 CLI의 doctor setter는 제거했으며 gateway 관측도 별도 probe 인스턴스를 사용한다. status는 같은 doctor application을 명시적으로 받지만 status의 집계 로직·worker 조회 등 나머지 경계는 후속 범위다.
+`application/doctor.Service`는 기존 순서로 관측값을 모아 domain 결과를 합치고 출력 순서를 정한다. `--static-only`는 pipe·MCP live 관측을 호출하지 않는다. 실제 CLI의 진단 결과, 오류·종료 코드와 저장 파일 변화를 이전 binary와 비교한다. root의 doctor factory는 state·lifecycle·loop 조회를 인스턴스마다 조립한다. CLI의 `basiccli.Doctor`는 application과 경로 정규화, home·harness 경로·version, live 관측 함수를 명시적으로 받는다. adapter의 실행 facade·DTO 재노출·전역 setter와 CLI의 doctor setter는 제거했으며 gateway 관측도 별도 probe 인스턴스를 사용한다. status application도 같은 doctor application을 명시적으로 받으며 집계 책임은 아래 status 경계를 따른다.
 
 ### Verify-work boundary
 
 `verify-work`의 JSON DTO는 `internal/contract/verifywork`, 증거별 성공·실패·생략 상태와 전체 판정·추천 명령 규칙은 `internal/domain/verifywork`가 소유한다. `application/verifywork.Service`는 Git status → preflight → guard → 선택한 read-only 명령 → 프로젝트 신호 조회 순서로 관측한 뒤 domain을 호출한다. Git 오류가 있어도 후속 검사를 수행하며 오류 문구·stdout의 끝 개행·빈 배열을 보존한다.
 
-root가 실제 preflight·guard application과 정책 실행기, Git·프로젝트 신호 adapter를 조립해 CLI에 전달한다. CLI는 flag 해석·출력·실패 종료만 담당한다. verify-work의 전역 콜백, CLI DTO 별칭과 결과 builder는 제거했다. 상대 경로와 정책 파일의 매 평가 재조회는 기존 동작을 유지하며 status의 집계 로직은 별도 후속 범위다.
+root가 실제 preflight·guard application과 정책 실행기, Git·프로젝트 신호 adapter를 조립해 CLI에 전달한다. CLI는 flag 해석·출력·실패 종료만 담당한다. verify-work의 전역 콜백, CLI DTO 별칭과 결과 builder는 제거했다. 상대 경로와 정책 파일의 매 평가 재조회는 기존 동작을 유지한다.
+
+### Status aggregation and inspect boundary
+
+`internal/contract/status`가 전체 status 응답을, `internal/domain/status`가 관측 성공 여부·경고 순서·self-verify 기록 선택과 daemon admission 관측 조건을 소유한다. 전체 성공은 doctor의 `Healthy`가 아닌 `OK`와 state·worker의 `OK`, 조회 오류 여부로 판정한다. self-verify는 입력 목록에서 처음 일치한 prefix 기록을 선택하며 최신 시각이나 `self-verify-latest` 키를 우선하지 않는다.
+
+`application/status.Service`는 inspect → daemon → doctor → state → worker 순서로 조회하며 오류가 있어도 뒤의 조회를 수행한다. root는 home·harness 경로, state·worker application과 inspect 관측 함수를 조립하고 CLI는 flag·출력만 담당한다. status CLI의 전역 setter·state 콜백·결과 builder·DTO 별칭은 제거했다. `adapter/inspect.Observer`는 문서 조회 함수를 인스턴스로 받아 파일 관측을 수행한다. 기존 daemon 조회의 CLI 내부 정책·경로 관측과 다른 basic/MCP 진입점의 전역 연결은 후속 이전 대상이다.
 
 ### Worker runtime boundary
 

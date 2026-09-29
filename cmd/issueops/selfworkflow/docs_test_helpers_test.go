@@ -2,7 +2,6 @@ package selfworkflow
 
 import (
 	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/inspect"
 	qagatecli "issueops/internal/adapter/verification/probe/qagate"
 )
 
@@ -10,7 +9,6 @@ import (
 // package를 거쳐 문서 조회에 닿으므로 간접 의존까지 함께 채운다. fitness graph는
 // test import를 수집하지 않으므로 여기서는 concrete를 써도 된다.
 func init() {
-	inspect.ListDocs = docs.ListDocs
 
 	qagatecli.ListDocs = docs.ListDocs
 }

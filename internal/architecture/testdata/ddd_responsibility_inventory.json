@@ -873,6 +873,7 @@
         "func fprintString",
         "func fprintUsage",
         "func inspectHarness",
+        "func newHarnessInspector",
         "func printJSON",
         "func usage"
       ]
@@ -1687,6 +1688,14 @@
         "func newStateDependencies",
         "func newStateService",
         "func stateDependencies"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/status_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newStatusService"
       ]
     },
     {
@@ -3164,40 +3173,16 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Configure",
-        "func defaultDeps",
-        "func defaultIssueOpsRoot",
-        "func defaultResolveTarget",
-        "func printJSON",
-        "type Deps"
+        "func printJSON"
       ]
-    },
-    {
-      "path": "cmd/issueops/statuscli/exports.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func BuildStatus",
-        "func RunStatus",
-        "type SelfVerificationStatus",
-        "type Status"
-      ]
-    },
-    {
-      "path": "cmd/issueops/statuscli/state_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/statuscli/status_verify.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func buildHarnessStatus",
-        "func runStatus",
-        "type HarnessStatus",
-        "type SelfVerifyStatus"
+        "func Command.Run",
+        "type Command"
       ]
     },
     {
@@ -4485,21 +4470,16 @@
       ]
     },
     {
-      "path": "internal/adapter/inspect/docs_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/inspect/inspect.go",
       "owner": "adapter",
       "task": "T20",
       "symbols": [
         "func CodexMCPConfigured",
         "func Exists",
-        "func InspectHarness",
         "func ListSkills",
-        "func readSkillDescription"
+        "func Observer.Inspect",
+        "func readSkillDescription",
+        "type Observer"
       ]
     },
     {
@@ -11385,6 +11365,15 @@
       ]
     },
     {
+      "path": "internal/application/status/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Run",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/toolconformance/benchmark.go",
       "owner": "application",
       "task": "T20",
@@ -13015,6 +13004,15 @@
       "task": "T02",
       "symbols": [
         "func ParseTime"
+      ]
+    },
+    {
+      "path": "internal/contract/status/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type Result",
+        "type SelfVerifyStatus"
       ]
     },
     {
@@ -16510,6 +16508,19 @@
       "task": "T20",
       "symbols": [
         "func NormalizeKey"
+      ]
+    },
+    {
+      "path": "internal/domain/status/result.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DaemonAdmissionObserved",
+        "func Evaluate",
+        "type Decision",
+        "type Observation",
+        "type Outcome",
+        "type Record"
       ]
     },
     {
@@ -23390,6 +23401,63 @@
       "evidence_tests": [
         "TestServicePreservesCheckOrderAndFailureEvidence",
         "TestVerifyWorkInstancesKeepHarnessContextAndReloadPolicy"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "status-aggregate-outcome",
+      "source_path": "cmd/issueops/statuscli/status_verify.go",
+      "source_symbol": "func buildHarnessStatus",
+      "responsibility": "Combine observation errors in doctor/state/worker order and require successful observation flags without substituting doctor health.",
+      "target": "internal/domain/status",
+      "target_symbol": "func Evaluate",
+      "task": "T20",
+      "entrypoints": [
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/status/result_test.go",
+        "internal/application/status/service_test.go",
+        "cmd/issueops/issueopsapp/status_instance_wiring_test.go",
+        "cmd/issueops/statuscli/status_verify_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "status-selfverify-selection",
+      "source_path": "cmd/issueops/statuscli/status_verify.go",
+      "source_symbol": "func buildHarnessStatus",
+      "responsibility": "Select first self-verify prefix record in source order, without preferring latest key or timestamp.",
+      "target": "internal/domain/status",
+      "target_symbol": "func Evaluate",
+      "task": "T20",
+      "entrypoints": [
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/status/result_test.go",
+        "internal/application/status/service_test.go",
+        "cmd/issueops/issueopsapp/status_instance_wiring_test.go",
+        "cmd/issueops/statuscli/status_verify_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "status-daemon-admission-observed",
+      "source_path": "cmd/issueops/statuscli/status_verify.go",
+      "source_symbol": "func buildHarnessStatus",
+      "responsibility": "Accept daemon admission telemetry only when running, reachable and identity verified.",
+      "target": "internal/domain/status",
+      "target_symbol": "func DaemonAdmissionObserved",
+      "task": "T20",
+      "entrypoints": [
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/status/result_test.go",
+        "internal/application/status/service_test.go",
+        "cmd/issueops/issueopsapp/status_instance_wiring_test.go",
+        "cmd/issueops/statuscli/status_verify_test.go"
       ],
       "status": "migrated"
     }

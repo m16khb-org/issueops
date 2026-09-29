@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-func InspectHarness(root, target, home, version, skillName string) inspectcontract.InspectInfo {
+type Observer struct{ ListDocs func(string) []string }
+
+func (observer Observer) Inspect(root, target, home, version, skillName string) inspectcontract.InspectInfo {
 	codexSkill := filepath.Join(home, ".codex", "skills", skillName)
 	claudeSkill := filepath.Join(home, ".claude", "skills", skillName)
 	projectClaudeSkill := filepath.Join(root, ".claude", "skills", skillName)
@@ -20,7 +22,7 @@ func InspectHarness(root, target, home, version, skillName string) inspectcontra
 		IssueOpsRoot: root,
 		TargetRepo:   target,
 		Skills:       ListSkills(root, skillName),
-		Docs:         ListDocs(root),
+		Docs:         observer.ListDocs(root),
 		Integration: inspectcontract.IntegrationStatus{
 			CodexSkillPath:         codexSkill,
 			CodexSkillInstalled:    Exists(filepath.Join(codexSkill, "SKILL.md")),

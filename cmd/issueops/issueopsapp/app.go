@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"issueops/internal/adapter/docs"
 	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 	inspect "issueops/internal/adapter/inspect"
 	inspectcontract "issueops/internal/contract/inspect"
@@ -28,10 +29,20 @@ func fprintString(w io.Writer, text string) {
 }
 
 func inspectHarness(repoArg string) inspectcontract.InspectInfo {
+	return newHarnessInspector()(repoArg)
+}
+
+func newHarnessInspector() func(string) inspectcontract.InspectInfo {
 	root := issueOpsRoot()
-	target := resolveTarget(repoArg)
 	home, _ := os.UserHomeDir()
-	return inspect.InspectHarness(root, target, home, version, skillName)
+	defaultTarget := resolveTarget("")
+	observer := inspect.Observer{ListDocs: docs.ListDocs}
+	return func(target string) inspectcontract.InspectInfo {
+		if target == "" {
+			target = defaultTarget
+		}
+		return observer.Inspect(root, target, home, version, skillName)
+	}
 }
 
 func printJSON(v any) error {

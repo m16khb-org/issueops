@@ -3,7 +3,6 @@ package augmentplan
 import (
 	"issueops/internal/adapter/augmentation"
 	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/inspect"
 	qagatecli "issueops/internal/adapter/verification/probe/qagate"
 )
 
@@ -13,7 +12,6 @@ import (
 func init() {
 	Repository = augmentation.Repository{ListDocs: docs.ListDocs}
 	DocsIndex = docs.DocsIndex
-	inspect.ListDocs = docs.ListDocs
 
 	qagatecli.ListDocs = docs.ListDocs
 }

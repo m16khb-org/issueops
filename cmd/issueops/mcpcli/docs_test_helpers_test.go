@@ -2,7 +2,6 @@ package mcpcli
 
 import (
 	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/inspect"
 	qagatecli "issueops/internal/adapter/verification/probe/qagate"
 )
 
@@ -11,7 +10,6 @@ import (
 // test import를 수집하지 않으므로 여기서는 concrete를 써도 된다.
 func init() {
 	DocsIndex = docs.DocsIndex
-	inspect.ListDocs = docs.ListDocs
 
 	qagatecli.ListDocs = docs.ListDocs
 }

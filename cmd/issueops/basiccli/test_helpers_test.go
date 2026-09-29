@@ -26,7 +26,7 @@ func init() {
 		InspectHarness: func(repo string) inspectcontract.InspectInfo {
 			target := testResolveTarget(repo)
 			home, _ := os.UserHomeDir()
-			return inspect.InspectHarness(root, target, home, "0.1.0", "atomic-commit-push")
+			return (inspect.Observer{ListDocs: docs.ListDocs}).Inspect(root, target, home, "0.1.0", "atomic-commit-push")
 		},
 	})
 }

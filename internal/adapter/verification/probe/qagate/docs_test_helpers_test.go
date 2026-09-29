@@ -2,7 +2,6 @@ package qagate
 
 import (
 	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/inspect"
 )
 
 // production wiring과 같은 문서 reader를 설치한다. 이 package의 테스트는 다른
@@ -10,6 +9,5 @@ import (
 // test import를 수집하지 않으므로 여기서는 concrete를 써도 된다.
 func init() {
 	ListDocs = docs.ListDocs
-	inspect.ListDocs = docs.ListDocs
 
 }

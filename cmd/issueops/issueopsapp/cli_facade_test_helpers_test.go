@@ -12,7 +12,7 @@ import (
 	"issueops/cmd/issueops/projectcli"
 	"issueops/cmd/issueops/qualitycli"
 	"issueops/cmd/issueops/statecli"
-	"issueops/cmd/issueops/statuscli"
+	statuscontract "issueops/internal/contract/status"
 	"issueops/internal/port"
 )
 
@@ -99,7 +99,7 @@ func runStateDoctor(args []string) error {
 }
 
 func buildHarnessStatus(repo string) HarnessStatus {
-	return statuscli.BuildStatus(newDoctorService(), newWorkerService(), repo)
+	return newStatusService().Run(repo)
 }
 
 func buildVerifyWork(repo string, all bool, argv []string) VerifyWorkResult {
@@ -126,6 +126,6 @@ func runWorkerCancel(args []string) error {
 	return newWorkerCommand().RunCancel(args)
 }
 
-type HarnessStatus = statuscli.Status
+type HarnessStatus = statuscontract.Result
 
 type VerifyWorkResult = verifyworkcontract.Result

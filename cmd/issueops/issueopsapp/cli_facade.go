@@ -51,13 +51,7 @@ func wireBasicCLIDeps() {
 		DocsIndex:      docs.DocsIndex,
 	})
 	installcli.Configure(installDependencies())
-	statuscli.Configure(statuscli.Deps{
-		IssueOpsRoot:      issueOpsRoot,
-		ResolveTarget:     resolveTarget,
-		Version:           version,
-		InspectHarness:    inspectHarness,
-		CheckDaemonStatus: checkDaemonStatus,
-	})
+
 }
 
 func runDocs(args []string) error {
@@ -101,7 +95,7 @@ func runState(args []string) error {
 }
 
 func runStatus(args []string) error {
-	return statuscli.RunStatus(newDoctorService(), newWorkerService(), args)
+	return (statuscli.Command{Service: newStatusService()}).Run(args)
 }
 
 func runVerifyWork(args []string) error {

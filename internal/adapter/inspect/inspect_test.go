@@ -1,6 +1,7 @@
 package inspect
 
 import (
+	"issueops/internal/adapter/docs"
 	inspectcontract "issueops/internal/contract/inspect"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,7 @@ func TestInspectHarnessIndexesSkillsAndDocs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	info := InspectHarness(root, root, t.TempDir(), "test-version", "atomic-commit-push")
+	info := (Observer{ListDocs: docs.ListDocs}).Inspect(root, root, t.TempDir(), "test-version", "atomic-commit-push")
 	if !info.OK {
 		t.Fatalf("InspectHarness ok=false: %+v", info)
 	}
