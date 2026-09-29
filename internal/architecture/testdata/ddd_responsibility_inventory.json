@@ -3413,7 +3413,6 @@
       "symbols": [
         "func SaveSelfAugmentLesson",
         "func StateKeySlug",
-        "func validateLessonCandidateID",
         "type Deps"
       ]
     },
@@ -4082,12 +4081,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/selfworkflow/stateio/failurecause_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/selfworkflow/stateio/self_augment_state.go",
       "owner": "inbound",
       "task": "T18",
@@ -4122,7 +4115,8 @@
         "func IsSelfVerificationSummaryKind",
         "func NormalizeSelfAugmentSnapshotFailureCause",
         "func ReadSelfAugmentStateSnapshot",
-        "func WriteSelfAugmentSnapshotRecord"
+        "func WriteSelfAugmentSnapshotRecord",
+        "func snapshotStore"
       ]
     },
     {
@@ -12364,6 +12358,44 @@
       ]
     },
     {
+      "path": "internal/application/selfaugment/promote.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func PromoteBaseline",
+        "type PromoteDeps"
+      ]
+    },
+    {
+      "path": "internal/application/selfaugment/save_lesson.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func SaveLesson",
+        "type SaveLessonDeps"
+      ]
+    },
+    {
+      "path": "internal/application/selfaugment/save_plan.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func SavePlan",
+        "type SavePlanDeps"
+      ]
+    },
+    {
+      "path": "internal/application/selfaugment/snapshot.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func NormalizeSnapshotFailureCause",
+        "func SnapshotStore.Read",
+        "func SnapshotStore.Write",
+        "type SnapshotStore"
+      ]
+    },
+    {
       "path": "internal/application/selfverify/format.go",
       "owner": "application",
       "task": "T20",
@@ -13791,6 +13823,28 @@
       "task": "T02",
       "symbols": [
         "type SelfAugmentIteration"
+      ]
+    },
+    {
+      "path": "internal/contract/selfaugment/plan.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfAugmentInfluence",
+        "type SelfAugmentLessonRequest",
+        "type SelfAugmentLessonResult",
+        "type SelfAugmentLessonStateSnapshot",
+        "type SelfAugmentPlanRequest",
+        "type SelfAugmentPlanResult",
+        "type SelfAugmentPlanStateSnapshot"
+      ]
+    },
+    {
+      "path": "internal/contract/selfaugment/promote.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfAugmentPromoteResult"
       ]
     },
     {
@@ -17137,6 +17191,26 @@
       ]
     },
     {
+      "path": "internal/domain/selfaugment/lesson_capture.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func LessonSnapshot",
+        "func PrepareLesson",
+        "func StateKeySlug",
+        "func validateLessonCandidateID"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/plan_snapshot.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func CandidateIDsByStatus",
+        "func NewPlanSnapshot"
+      ]
+    },
+    {
       "path": "internal/domain/selfaugment/priority.go",
       "owner": "domain",
       "task": "T20",
@@ -17147,6 +17221,24 @@
         "func ScoreBool",
         "func SelectedCandidate",
         "func SelectedCandidateID"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/promote.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func ObservePromotionSource",
+        "func PreparePromotion"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/snapshot.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func IsSelfVerificationSummaryKind",
+        "func ValidateSummarySnapshot"
       ]
     },
     {
@@ -23421,6 +23513,110 @@
         "internal/application/preflight/service_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "lesson-candidate-validation",
+      "source_path": "cmd/issueops/selfworkflow/augmentlesson/self_augment_lesson_state.go",
+      "source_symbol": "func validateLessonCandidateID",
+      "responsibility": "reject empty, oversized and unsafe lesson candidate identifiers before storage",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func PrepareLesson",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-augment",
+        "issueops self-augment lesson",
+        "issueops self-verify promote"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/state_test.go",
+        "internal/domain/selfaugment/state_policy_test.go",
+        "cmd/issueops/selfworkflow/stateio/self_verify_promote_gate_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "plan-snapshot-projection",
+      "source_path": "internal/application/selfaugment/save_plan.go",
+      "source_symbol": "func SavePlan",
+      "responsibility": "preserve plan snapshot schema, candidate status order and non-nil empty lists",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func NewPlanSnapshot",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-augment",
+        "issueops self-augment lesson",
+        "issueops self-verify promote"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/state_test.go",
+        "internal/domain/selfaugment/state_policy_test.go",
+        "cmd/issueops/selfworkflow/stateio/self_verify_promote_gate_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "baseline-promotion-gate",
+      "source_path": "internal/application/selfaugment/promote.go",
+      "source_symbol": "func PromoteBaseline",
+      "responsibility": "keep dry-run diagnostic and require passing source or explicit override before baseline writes",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func ObservePromotionSource",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-augment",
+        "issueops self-augment lesson",
+        "issueops self-verify promote"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/state_test.go",
+        "internal/domain/selfaugment/state_policy_test.go",
+        "cmd/issueops/selfworkflow/stateio/self_verify_promote_gate_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "lesson-snapshot-identity",
+      "source_path": "internal/application/selfaugment/save_lesson.go",
+      "source_symbol": "func SaveLesson",
+      "responsibility": "preserve explicit keys and nanosecond lesson identity within the same second",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func LessonSnapshot",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-augment",
+        "issueops self-augment lesson",
+        "issueops self-verify promote"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/state_test.go",
+        "internal/domain/selfaugment/state_policy_test.go",
+        "cmd/issueops/selfworkflow/stateio/self_verify_promote_gate_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "summary-snapshot-admission",
+      "source_path": "internal/application/selfaugment/snapshot.go",
+      "source_symbol": "func SnapshotStore.Read",
+      "responsibility": "reject unsupported summary schemas and retired kinds before normalization",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func ValidateSummarySnapshot",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-augment",
+        "issueops self-augment lesson",
+        "issueops self-verify promote"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/state_test.go",
+        "internal/domain/selfaugment/state_policy_test.go",
+        "cmd/issueops/selfworkflow/stateio/self_verify_promote_gate_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
     }
   ]
 }

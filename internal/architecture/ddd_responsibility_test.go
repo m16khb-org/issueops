@@ -552,6 +552,14 @@ func dddTask(path string) string {
 		{"internal/contract/policy/overrides.go", "T09"},
 		{"internal/domain/riskqa/", "T16"},
 		{"internal/domain/selfverify/goal_score.go", "T17"},
+		{"internal/application/selfaugment/save_plan.go", "T18"},
+		{"internal/application/selfaugment/save_lesson.go", "T18"},
+		{"internal/application/selfaugment/promote.go", "T18"},
+		{"internal/application/selfaugment/snapshot.go", "T18"},
+		{"internal/domain/selfaugment/plan_snapshot.go", "T18"},
+		{"internal/domain/selfaugment/lesson_capture.go", "T18"},
+		{"internal/domain/selfaugment/promote.go", "T18"},
+		{"internal/domain/selfaugment/snapshot.go", "T18"},
 	} {
 		if strings.HasPrefix(path, routed.prefix) {
 			return routed.task
