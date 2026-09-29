@@ -16,6 +16,7 @@ type Service struct {
 	ObserveProcesses func() port.ReplacementProcessSnapshot
 	OrcaOwner        port.ExecutionOrcaOwnerInspector
 	PID              int
+	ResealOwner      func(context.Context, issueops.IssueOpsRecord) (issueops.ReplacementArtifacts, error)
 	Artifacts        port.ReplacementArtifacts
 	BaseSync         basesyncport.Inspector
 	InspectProcess   func(issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error)
@@ -203,7 +204,7 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 			*lease = domain.FinalizeReplacement(*lease, false, token)
 			// revoking 세대의 durable 상태는 재봉인이 모두 성공한 뒤에만
 			// claimable로 바뀐다. 실패한 token은 즉시 지워 재시도 경로만 남긴다.
-			reseal, err := s.Artifacts.Reseal(ctx, record)
+			reseal, err := s.ResealOwner(ctx, record)
 			if err != nil {
 				return s.cleanupFailure(record, err)
 			}

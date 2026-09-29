@@ -62,10 +62,7 @@ func (s replacementProcessSnapshot) HasAncestor(pid int, owners map[int]bool) bo
 	return processHasAncestorInSnapshot(s.entries, pid, owners)
 }
 
-type ReplacementArtifacts struct {
-	StateRoot string
-	ReadIssue ExecutionIssueSnapshotReadFunc
-}
+type ReplacementArtifacts struct{}
 
 func (s ReplacementArtifacts) Cleanup(record issueops.IssueOpsRecord) error {
 	return cleanupReplacementGeneration(record)
@@ -77,8 +74,4 @@ func (s ReplacementArtifacts) CreateToken(record issueops.IssueOpsRecord) (strin
 		return "", "", err
 	}
 	return tokenSHA256(token), path, nil
-}
-func (s ReplacementArtifacts) Reseal(ctx context.Context, record issueops.IssueOpsRecord) (issueops.ReplacementArtifacts, error) {
-	result, err := resealOwnerContextForReplacement(ctx, s.StateRoot, record, s.ReadIssue)
-	return issueops.ReplacementArtifacts{IssueBodySHA256: result.issueBodySHA256, ContextPacketPath: result.packetPath, ContextPacketSHA256: result.packetSHA256, OwnerPromptPath: result.promptPath, OwnerPromptSHA256: result.promptSHA256}, err
 }

@@ -946,6 +946,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newIssueOpsOwnerContext"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_policy_facade.go",
       "owner": "composition",
       "task": "T20",
@@ -4425,12 +4433,9 @@
       "symbols": [
         "func ExecutionWriterAbsentRecoveryCommand",
         "func StatusExecution",
-        "func executionRecordAtGeneration",
         "func executionReplacementPreviewCommand",
         "func executionResult",
-        "func executionWriterAbsentRecoveryCommand",
-        "func resealOwnerContextForReplacement",
-        "type executionOwnerReseal"
+        "func executionWriterAbsentRecoveryCommand"
       ]
     },
     {
@@ -4498,31 +4503,17 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func ExecutionOwnerPromptTemplate",
         "func SealedOwnerContextPacketPath",
-        "func buildExecutionOwnerArtifacts",
         "func digestExecutionOwnerBytes",
         "func ensureExecutionOwnerArtifactDirectory",
         "func ensureExecutionOwnerArtifactIgnore",
         "func executionOwnerArtifactPaths",
-        "func executionOwnerCommandsFor",
-        "func executionOwnerIssueProvider",
-        "func executionOwnerRequiredDocs",
+        "func executionOwnerRegularFiles",
         "func executionOwnerVerificationReportPath",
-        "func extractExecutionOwnerVerification",
         "func quoteExecutionOwnerArg",
         "func readExecutionOwnerArtifact",
-        "func readExecutionOwnerSnapshot",
-        "func renderExecutionOwnerLines",
-        "func renderExecutionOwnerPrompt",
-        "func uniqueExecutionOwnerValues",
-        "func validateExecutionOwnerCatalog",
-        "func validateExecutionOwnerPromptInputs",
-        "func writeExecutionOwnerArtifact",
-        "type executionOwnerArtifacts",
-        "type executionOwnerCommands",
-        "type executionOwnerContextPacket",
-        "type executionOwnerIssue",
-        "type executionOwnerSnapshot"
+        "func writeExecutionOwnerArtifact"
       ]
     },
     {
@@ -4547,9 +4538,7 @@
         "func executionRecordWorkspaceRoot",
         "func executionWorkspaceRequest",
         "func newExecutionOperationID",
-        "func renderExecutionOwnerReportContract",
-        "func validateExecutionOrcaWorkspaceReceipt",
-        "func workspaceFromReceipt"
+        "func renderExecutionOwnerReportContract"
       ]
     },
     {
@@ -4559,8 +4548,6 @@
       "symbols": [
         "func MaterializeExecutionPreparationDirect",
         "func NewExecutionPreparationOperationID",
-        "func PrepareExecutionPreparationOwner",
-        "func ReadExecutionPreparationOwnerEvidence",
         "func ResolveExecutionPreparationWorkspace",
         "func executionPreparationCoreRecord"
       ]
@@ -4655,7 +4642,6 @@
         "func ObserveReplacementProcesses",
         "func ReplacementArtifacts.Cleanup",
         "func ReplacementArtifacts.CreateToken",
-        "func ReplacementArtifacts.Reseal",
         "func ReplacementArtifacts.WorkspaceAbsent",
         "func ReplacementRecords.Load",
         "func ReplacementRecords.Persist",
@@ -4678,9 +4664,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func ExecutionReseedNextCommand",
-        "func PrepareExecutionReseedOwnerArtifacts",
-        "type ExecutionReseedArtifacts"
+        "func ExecutionReseedNextCommand"
       ]
     },
     {
@@ -4887,24 +4871,12 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func RequireStagedExecutionOwnerPlan",
-        "func devilsAdvocateStaleError.Error",
-        "func devilsAdvocateStaleError.IssueOpsErrorFields",
-        "func issueArtifactDirFor",
-        "func materializeExecutionOwnerArtifacts",
         "func materializeStagedArtifacts",
-        "func newPlanArtifactRequiredError",
         "func newPlanResumeArtifactRequiredError",
-        "func planArtifactRequiredError.Error",
-        "func planArtifactRequiredError.IssueOpsErrorFields",
         "func readLinkedPlanIdentity",
         "func readStagedArtifacts",
         "func sealedArtifactDir",
-        "func sealedArtifactPath",
-        "type OwnerPlanIdentity",
-        "type PlanIdentity",
-        "type devilsAdvocateStaleError",
-        "type planArtifactRequiredError"
+        "func sealedArtifactPath"
       ]
     },
     {
@@ -5102,6 +5074,23 @@
         "func OrphanEnvironment.Run",
         "func OrphanEnvironment.StateOutsideTarget",
         "type OrphanEnvironment"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/owner_context_files.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func OwnerContextFiles.CreateOrAdoptToken",
+        "func OwnerContextFiles.Materialize",
+        "func OwnerContextFiles.Paths",
+        "func OwnerContextFiles.ReadLinkedPlan",
+        "func OwnerContextFiles.ReadStaged",
+        "func OwnerContextFiles.RegularFiles",
+        "func OwnerContextFiles.SamePath",
+        "func OwnerContextFiles.TokenPath",
+        "func OwnerContextFiles.Write",
+        "type OwnerContextFiles"
       ]
     },
     {
@@ -9519,6 +9508,57 @@
       ]
     },
     {
+      "path": "internal/application/issueopsowner/plan.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.MaterializePlan",
+        "func Service.RequirePlan",
+        "func Service.planRequiredError",
+        "func quoteArg"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsowner/policy.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func OwnerArtifactDir",
+        "func PolicyContext",
+        "func ValidateOwnerCatalog"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsowner/preparation.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Prepare",
+        "func Service.ReadPreparationEvidence",
+        "func executionPreparationCoreRecord"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsowner/reseal.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Reseal",
+        "func Service.Reseed"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsowner/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Build",
+        "func Service.ReadSnapshot",
+        "func digest",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/issueopspreparation/direct_commit.go",
       "owner": "application",
       "task": "T20",
@@ -11319,6 +11359,21 @@
       "symbols": [
         "func ValidateOrcaRequestID",
         "func ValidateOrcaRetryRequestID"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/owner_context.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type OwnerArtifacts",
+        "type OwnerCommands",
+        "type OwnerContextPacket",
+        "type OwnerIssue",
+        "type OwnerPaths",
+        "type OwnerPlanIdentity",
+        "type OwnerPolicyContext",
+        "type OwnerSnapshot"
       ]
     },
     {
@@ -13693,6 +13748,46 @@
       "symbols": [
         "func OrcaBranchScopes",
         "func ValidateOrcaBranchRef"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/owner_context.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func OwnerAcceptanceIDs",
+        "func OwnerCommandsFor",
+        "func OwnerIssueProvider",
+        "func OwnerRequiredDocCandidates",
+        "func OwnerVerificationCommands",
+        "func OwnerWorkspaceMatches",
+        "func RenderOwnerPrompt",
+        "func ValidOwnerDigest",
+        "func ValidateOwnerSnapshot",
+        "func renderExecutionOwnerLines",
+        "func uniqueExecutionOwnerValues",
+        "func validateExecutionOwnerPromptInputs"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/owner_packet.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func OwnerPacket"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/owner_plan_errors.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func OwnerPlanRequiredError.Error",
+        "func OwnerPlanRequiredError.IssueOpsErrorFields",
+        "func OwnerPlanReviewStaleError.Error",
+        "func OwnerPlanReviewStaleError.IssueOpsErrorFields",
+        "type OwnerPlanRequiredError",
+        "type OwnerPlanReviewStaleError"
       ]
     },
     {
@@ -16672,6 +16767,14 @@
       "symbols": [
         "type ModeSwitchRecords",
         "type ModeSwitchWorkspace"
+      ]
+    },
+    {
+      "path": "internal/port/issueops_owner_context.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type OwnerContextFiles"
       ]
     },
     {
@@ -25238,6 +25341,130 @@
       "evidence_tests": [
         "internal/application/issueopsbranch/orca_precheck_test.go",
         "cmd/issueops/issueopsapp/orca_branch_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-owner-prompt",
+      "source_path": "internal/adapter/issueops/execution_owner_context.go",
+      "source_symbol": "func renderExecutionOwnerPrompt",
+      "responsibility": "owner prompt substitutions and validation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RenderOwnerPrompt",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_owner_instance_test.go",
+        "internal/adapter/issueops/execution_owner_packet_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-owner-command-catalog",
+      "source_path": "internal/adapter/issueops/execution_owner_context.go",
+      "source_symbol": "func executionOwnerCommandsFor",
+      "responsibility": "owner command construction and role defaults",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func OwnerCommandsFor",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_owner_packet_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-owner-snapshot",
+      "source_path": "internal/adapter/issueops/execution_owner_context.go",
+      "source_symbol": "func readExecutionOwnerSnapshot",
+      "responsibility": "remote issue read, snapshot validation and local document observations",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func Service.ReadSnapshot",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/owner_snapshot_test.go",
+        "internal/application/issueopsowner/service_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-owner-plan-binding",
+      "source_path": "internal/adapter/issueops/issueops_artifact_stage.go",
+      "source_symbol": "func RequireStagedExecutionOwnerPlan",
+      "responsibility": "staged plan review and durable identity validation before materialization",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func Service.RequirePlan",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_artifact_stage_test.go",
+        "internal/application/issueopsowner/service_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-owner-preparation",
+      "source_path": "internal/adapter/issueops/execution_prepare_bridge.go",
+      "source_symbol": "func PrepareExecutionPreparationOwner",
+      "responsibility": "workspace receipt, issue drift, token then plan and owner packet publication",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func Service.Prepare",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsowner/service_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-owner-reseal",
+      "source_path": "internal/adapter/issueops/execution_lease.go",
+      "source_symbol": "func resealOwnerContextForReplacement",
+      "responsibility": "revalidate current issue and plan before replacement packet publication",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func Service.Reseal",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_replacement_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsowner/service_test.go",
+        "internal/adapter/issueops/execution_replace_test.go"
       ],
       "status": "migrated"
     }

@@ -25,7 +25,6 @@ type ReplacementArtifacts interface {
 	Cleanup(model.IssueOpsRecord) error
 	WorkspaceAbsent(string) bool
 	CreateToken(model.IssueOpsRecord) (string, string, error)
-	Reseal(context.Context, model.IssueOpsRecord) (model.ReplacementArtifacts, error)
 }
 
 type ReplacementInvocation struct {

@@ -36,12 +36,13 @@ func issueOpsReseedHandlerWithOwner(ctx context.Context, stateRoot string, reque
 	if readIssue == nil {
 		readIssue = provider.ReadExecutionIssueSnapshot
 	}
+	ownerContext := newIssueOpsOwnerContext(stateRoot, readIssue)
 	artifacts := leaseoutbound.NewReseedArtifacts(func(ctx context.Context, record leasecontract.Record) (leasecontract.ReseedReceipt, error) {
 		execution, err := issueOpsReseedExecution(record)
 		if err != nil {
 			return leasecontract.ReseedReceipt{}, err
 		}
-		prepared, err := issueops.PrepareExecutionReseedOwnerArtifacts(ctx, stateRoot, record.ID, execution, readIssue)
+		prepared, err := ownerContext.Reseed(ctx, record.ID, execution)
 		if err != nil {
 			return leasecontract.ReseedReceipt{}, err
 		}

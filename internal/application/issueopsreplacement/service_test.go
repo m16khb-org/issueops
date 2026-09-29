@@ -87,7 +87,7 @@ func fixtureService() (Service, *replacementFixture, model.ExecutionReplaceReque
 	oldProcess := model.NativeProcessReceipt{PID: 41, StartedAt: "old", Executable: "/old-host"}
 	holder := model.NativeActor{Host: "codex", SessionID: "previous", SessionProcess: &oldProcess}
 	fixture := &replacementFixture{record: model.IssueOpsRecord{ID: "io-test", Execution: &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{Root: "/workspace", SourceRoot: "/source"}, Lease: model.WriteLease{Generation: 7, Status: model.LeaseStatusActive, Holder: &holder}}}}
-	service := Service{Records: fixture, Workspace: fixture, Artifacts: fixture, PID: 43, ObserveProcesses: func() port.ReplacementProcessSnapshot { return deadProcesses{} }, InspectProcess: func(p model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) { return "live", p, nil }, Now: func() string { return "now" }}
+	service := Service{Records: fixture, Workspace: fixture, Artifacts: fixture, ResealOwner: fixture.Reseal, PID: 43, ObserveProcesses: func() port.ReplacementProcessSnapshot { return deadProcesses{} }, InspectProcess: func(p model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) { return "live", p, nil }, Now: func() string { return "now" }}
 	request := model.ExecutionReplaceRequest{ID: "io-test", Action: model.ExecutionReplacePreview, Actor: actor, CWD: "/workspace", ExpectedGeneration: 7, Confirm: true, Reason: " recovery "}
 	return service, fixture, request
 }

@@ -57,7 +57,7 @@ type coreReconcileEffects struct {
 }
 
 func (e *coreReconcileEffects) PrepareWorktree(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt) (preparationcontract.OwnerArtifacts, error) {
-	return issueops.PrepareExecutionPreparationOwner(ctx, e.stateRoot, snapshot, command, intent, receipt, e.readIssue)
+	return newIssueOpsOwnerContext(e.stateRoot, e.readIssue).Prepare(ctx, snapshot, command, intent, receipt)
 }
 
 func (e *coreReconcileEffects) inspectStage(ctx context.Context, intent leaseapp.ReconcileIntentState) (leasecontract.ReconcileStageInventory, bool, error) {

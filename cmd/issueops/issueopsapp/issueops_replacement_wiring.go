@@ -18,8 +18,8 @@ func newIssueOpsReplacementHandler() port.ExecutionReplaceHandler {
 			PID: os.Getpid(), OrcaOwner: invocation.OrcaOwner, ObserveProcesses: adapter.ObserveReplacementProcesses,
 			Records:   adapter.ReplacementRecords{StateRoot: stateRoot},
 			Workspace: adapter.ReplacementWorkspace{Snapshot: snapshot},
-			Artifacts: adapter.ReplacementArtifacts{StateRoot: stateRoot, ReadIssue: req.ReadIssue},
-			BaseSync:  invocation.BaseSync, InspectProcess: adapter.InspectNativeProcessReceipt,
+			Artifacts: adapter.ReplacementArtifacts{}, ResealOwner: newIssueOpsOwnerContext(stateRoot, req.ReadIssue).Reseal,
+			BaseSync: invocation.BaseSync, InspectProcess: adapter.InspectNativeProcessReceipt,
 			Now: func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
 		}
 		return service.Run(ctx, req)

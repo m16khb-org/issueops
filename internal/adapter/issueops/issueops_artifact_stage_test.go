@@ -16,7 +16,7 @@ func TestRequireStagedExecutionOwnerPlanArtifact(t *testing.T) {
 		name          string
 		stage         map[string]string
 		configure     func(*testing.T, *issueopscontract.IssueOpsRecord)
-		wantIdentity  PlanIdentity
+		wantIdentity  issueopscontract.OwnerPlanIdentity
 		wantError     bool
 		wantNext      bool
 		wantExactNext bool
@@ -26,7 +26,7 @@ func TestRequireStagedExecutionOwnerPlanArtifact(t *testing.T) {
 		{
 			name:         "fresh staged plan needs no durable path",
 			stage:        map[string]string{"plan": "# Plan\n"},
-			wantIdentity: PlanIdentity{Digest: digestExecutionOwnerBytes([]byte("# Plan\n"))},
+			wantIdentity: issueopscontract.OwnerPlanIdentity{Digest: digestExecutionOwnerBytes([]byte("# Plan\n"))},
 		},
 		{
 			name:  "prelinked plan is missing",
@@ -74,7 +74,7 @@ func TestRequireStagedExecutionOwnerPlanArtifact(t *testing.T) {
 				record.PlanPath = filepath.Join(record.WorktreePath, "plan.md")
 				writePlanArtifactTestFile(t, record.PlanPath, "# Plan\n")
 			},
-			wantIdentity: PlanIdentity{Digest: digestExecutionOwnerBytes([]byte("# Plan\n"))},
+			wantIdentity: issueopscontract.OwnerPlanIdentity{Digest: digestExecutionOwnerBytes([]byte("# Plan\n"))},
 		},
 		{
 			name: "delegation parent plan alone does not satisfy readiness",

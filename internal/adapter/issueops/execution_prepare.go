@@ -13,15 +13,6 @@ import (
 	"issueops/internal/port"
 )
 
-func validateExecutionOrcaWorkspaceReceipt(workspace port.ExecutionWorkspaceRequest, receipt port.ExecutionOrcaWorkspaceReceipt) error {
-	got := receipt.Workspace
-	if !samePath(got.SourceRoot, workspace.SourceRoot) || !samePath(got.Root, workspace.Root) || got.Branch != workspace.Branch || got.BaseHead != workspace.BaseHead || got.Driver != "orca" ||
-		strings.TrimSpace(receipt.RuntimeID) == "" || strings.TrimSpace(receipt.RepoID) == "" || strings.TrimSpace(receipt.WorktreeID) == "" {
-		return fmt.Errorf("Orca workspace receipt does not match the sealed execution identity")
-	}
-	return nil
-}
-
 func newExecutionOperationID() (string, error) {
 	var raw [16]byte
 	if _, err := rand.Read(raw[:]); err != nil {
@@ -155,16 +146,6 @@ func renderExecutionOwnerReportContract(record issueops.IssueOpsRecord, req Exec
 		lines = append(lines, "- "+label+": "+values[index])
 	}
 	return strings.Join(lines, "\n")
-}
-
-// workspaceFromReceipt는 receipt를 Workspace로 옮기고, 이 레코드의 봉인
-// 디렉터리(artifact_dir)를 linked issue 번호로 한 번 결정해 함께 기록한다(#482).
-func workspaceFromReceipt(record issueops.IssueOpsRecord, receipt port.ExecutionWorkspaceReceipt, linkedAt string) issueops.Workspace {
-	return issueops.Workspace{
-		SourceRoot: receipt.SourceRoot, Root: receipt.Root, Branch: receipt.Branch,
-		BaseHead: receipt.BaseHead, ParentWorktree: receipt.ParentWorktree,
-		Driver: receipt.Driver, LinkedAt: linkedAt, ArtifactDir: issueArtifactDirFor(record),
-	}
 }
 
 func executionNow(now func() time.Time) string {

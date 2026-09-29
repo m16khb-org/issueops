@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"issueops/internal/contract/issueops"
+	domain "issueops/internal/domain/issueops"
 )
 
 type executionResumeArtifacts struct {
@@ -63,7 +64,7 @@ func readExecutionResumeArtifacts(record issueops.IssueOpsRecord) (executionResu
 	if packetSHA256 != binding.ContextPacketSHA256 {
 		return executionResumeArtifacts{}, fmt.Errorf("sealed context packet identity changed")
 	}
-	var packet executionOwnerContextPacket
+	var packet issueops.OwnerContextPacket
 	if err := json.Unmarshal(packetData, &packet); err != nil {
 		return executionResumeArtifacts{}, fmt.Errorf("parse sealed context packet: %w", err)
 	}
@@ -99,7 +100,7 @@ func completeOrcaArtifactIdentity(binding *issueops.OrcaBinding) bool {
 }
 
 func validExecutionOwnerDigest(value string) bool {
-	return executionSHA256.MatchString(strings.TrimSpace(value))
+	return domain.ValidOwnerDigest(value)
 }
 
 // readExecutionResumeClaimToken은 owner를 다시 띄우기 전에 현재 generation의
@@ -140,7 +141,7 @@ func validateExecutionResumePacket(record issueops.IssueOpsRecord, issueDigest, 
 	if observed := digestExecutionOwnerBytes(data); observed != packetDigest {
 		return fmt.Errorf("sealed context packet digest mismatch: expected=%s observed=%s path=%s", packetDigest, observed, packetPath)
 	}
-	var packet executionOwnerContextPacket
+	var packet issueops.OwnerContextPacket
 	if err := json.Unmarshal(data, &packet); err != nil {
 		return fmt.Errorf("parse sealed context packet: %w", err)
 	}

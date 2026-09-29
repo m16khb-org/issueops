@@ -23,8 +23,8 @@ func ReplaceExecutionWithDependencies(ctx context.Context, stateRoot string, req
 		PID: os.Getpid(), OrcaOwner: deps.OrcaOwner, ObserveProcesses: ObserveReplacementProcesses,
 		Records:   ReplacementRecords{StateRoot: stateRoot},
 		Workspace: ReplacementWorkspace{Snapshot: LeaseWorkspaceSnapshot{GitCmd: GitCmd, GitCmdRaw: GitCmdRaw}, inspectWorkspace: deps.inspectWorkspace},
-		Artifacts: ReplacementArtifacts{StateRoot: stateRoot, ReadIssue: deps.ReadIssue},
-		BaseSync:  deps.BaseSync, InspectProcess: inspectNativeProcessReceipt,
+		Artifacts: ReplacementArtifacts{}, ResealOwner: ownerContextForTest(stateRoot, deps.ReadIssue).Reseal,
+		BaseSync: deps.BaseSync, InspectProcess: inspectNativeProcessReceipt,
 		Now: func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
 	}
 	return service.Run(ctx, req)
