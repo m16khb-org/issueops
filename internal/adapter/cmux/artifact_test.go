@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"issueops/internal/adapter/hostprotocol"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/hostprotocol"
+	cmuxcontract "issueops/internal/contract/cmux"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -39,7 +40,7 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 			if err := os.WriteFile(host, []byte(hostSource), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			prepared, err := prepareTestLauncher(ArtifactRequest{
+			prepared, err := prepareTestLauncher(cmuxcontract.ArtifactRequest{
 				Root: filepath.Join(root, "artifacts"), CWD: worktree,
 				WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 				Host: test.host, HostExecutable: host, Model: test.model, Effort: test.effort,
@@ -117,7 +118,7 @@ func TestPrepareLauncherUsesPortableSingleArgumentBoundary(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			prompt := []byte(strings.Repeat("p", test.size))
-			prepared, err := prepareTestLauncher(ArtifactRequest{
+			prepared, err := prepareTestLauncher(cmuxcontract.ArtifactRequest{
 				Root: filepath.Join(root, "artifacts-"+strings.ReplaceAll(test.name, " ", "-")), CWD: worktree,
 				WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 				Host: "codex", HostExecutable: host, Model: "model", Prompt: prompt,
@@ -125,7 +126,7 @@ func TestPrepareLauncherUsesPortableSingleArgumentBoundary(t *testing.T) {
 			})
 			if test.wantErr {
 				if err == nil {
-					_ = prepared.Cleanup()
+					_ = CleanupLauncher(prepared)
 					t.Fatalf("launcher accepted prompt size %d", test.size)
 				}
 				return
@@ -139,7 +140,7 @@ func TestPrepareLauncherUsesPortableSingleArgumentBoundary(t *testing.T) {
 			if output, err := command.CombinedOutput(); err != nil {
 				t.Fatalf("launcher rejected prompt argv size %d: %v\n%s", test.size, err, output)
 			}
-			if err := prepared.Cleanup(); err != nil {
+			if err := CleanupLauncher(prepared); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -162,7 +163,7 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 		t.Fatal(err)
 	}
 	prompt := []byte("prompt")
-	prepared, err := prepareTestLauncher(ArtifactRequest{
+	prepared, err := prepareTestLauncher(cmuxcontract.ArtifactRequest{
 		Root: filepath.Join(root, "artifacts"), CWD: worktree, WindowID: testWindow, WorkspaceID: testWorkspace,
 		SurfaceID: testSurface, SocketPath: socketPath, Host: "codex", HostExecutable: host, Model: "model",
 		Prompt: prompt, PromptSHA256: digestBytes(prompt), MaterialSHA256: strings.Repeat("b", 64),
@@ -188,7 +189,7 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 	if err != nil || receipt.Status != "identity_mismatch" || receipt.CWD != wrong {
 		t.Fatalf("receipt=%+v err=%v", receipt, err)
 	}
-	if err := prepared.Cleanup(); err != nil {
+	if err := CleanupLauncher(prepared); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(prepared.Directory); !os.IsNotExist(err) {
@@ -208,7 +209,7 @@ func TestPrivateLauncherRejectsWrongAmbientCmuxScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	prompt := []byte("prompt")
-	prepared, err := prepareTestLauncher(ArtifactRequest{
+	prepared, err := prepareTestLauncher(cmuxcontract.ArtifactRequest{
 		Root: filepath.Join(root, "artifacts"), CWD: worktree, WindowID: testWindow, WorkspaceID: testWorkspace,
 		SurfaceID: testSurface, SocketPath: socketPath, Host: "codex", HostExecutable: host, Model: "model",
 		Prompt: prompt, PromptSHA256: digestBytes(prompt), MaterialSHA256: strings.Repeat("b", 64),
@@ -236,7 +237,7 @@ func TestPrivateLauncherRejectsWrongAmbientCmuxScope(t *testing.T) {
 }
 
 func TestValidateBootstrapReceiptRequiresExactProcessCorrelation(t *testing.T) {
-	expected := BootstrapExpectation{
+	expected := cmuxcontract.BootstrapExpectation{
 		CWD: "/repo/worktree", WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 		HostExecutable: "/opt/native/codex", HostArgvSHA256: strings.Repeat("c", 64), PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
 	}
@@ -332,6 +333,6 @@ func canonicalTempDir(t *testing.T) string {
 	return root
 }
 
-func prepareTestLauncher(request ArtifactRequest) (PreparedLauncher, error) {
+func prepareTestLauncher(request cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
 	return PrepareLauncher(request, hostprotocol.BuildInteractiveArgv)
 }

@@ -17,6 +17,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	cmuxcontract "issueops/internal/contract/cmux"
+	cmuxport "issueops/internal/port/cmux"
 )
 
 const commandTimeout = 5 * time.Second
@@ -55,129 +58,70 @@ type Client struct {
 	UID             int
 }
 
-type PreflightRequest struct {
-	Executable      string
-	ExpectedVersion string
-	ExpectedBuild   string
-	SocketPath      string
-	WindowID        string
-}
-
-type PreflightResult struct {
-	Executable string
-	Version    string
-	Build      string
-	SocketPath string
-	WindowID   string
-	Endpoint   EndpointIncarnation
-}
-
-type CreateRequest struct {
-	Preflight PreflightResult
-	AttemptID string
-	CWD       string
-}
-
-type CreatedWorkspace struct {
-	Preflight   PreflightResult
-	WindowID    string
-	WorkspaceID string
-	PaneID      string
-	SurfaceID   string
-	CWD         string
-	CreateMS    uint64
-	ResolveMS   uint64
-}
-
-type SendRequest struct {
-	Created CreatedWorkspace
-	Command string
-}
-
-type SendReceipt struct {
-	Accepted bool
-	SendMS   uint64
-}
-
-type MutationError struct {
-	Phase     string
-	Ambiguous bool
-	Cause     error
-}
-
-func (err *MutationError) Error() string {
-	if err == nil {
-		return ""
-	}
-	return fmt.Sprintf("cmux %s failed: %v", err.Phase, err.Cause)
-}
-
-func (err *MutationError) Unwrap() error { return err.Cause }
-
-func (client Client) Preflight(ctx context.Context, request PreflightRequest) (PreflightResult, error) {
+func (client Client) Preflight(ctx context.Context, request cmuxcontract.PreflightRequest) (cmuxcontract.PreflightResult, error) {
 	if err := requireSupportedPlatform(); err != nil {
-		return PreflightResult{}, err
+		return cmuxcontract.PreflightResult{}, err
 	}
 	if client.Runner == nil || client.ObserveEndpoint == nil {
-		return PreflightResult{}, fmt.Errorf("cmux preflight dependencies are unavailable")
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux preflight dependencies are unavailable")
 	}
 	if !filepath.IsAbs(request.Executable) || filepath.Clean(request.Executable) != request.Executable {
-		return PreflightResult{}, fmt.Errorf("cmux executable must be an absolute clean path")
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux executable must be an absolute clean path")
 	}
 	if request.ExpectedVersion != SupportedVersion || request.ExpectedBuild != SupportedBuildIdentity ||
 		request.SocketPath == "" || strings.ContainsRune(request.SocketPath, 0) || !validUUID(request.WindowID) {
-		return PreflightResult{}, fmt.Errorf("cmux preflight identity is incomplete")
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux preflight identity is incomplete")
 	}
 	before, err := client.ObserveEndpoint(request.SocketPath, client.UID)
 	if err != nil {
-		return PreflightResult{}, err
+		return cmuxcontract.PreflightResult{}, err
 	}
 	versionOutput, err := client.run(ctx, request.Executable, request.SocketPath, "version")
 	if err != nil {
-		return PreflightResult{}, fmt.Errorf("cmux version preflight failed: %w", err)
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux version preflight failed: %w", err)
 	}
 	versionIdentity := string(versionOutput.Stdout)
 	if versionIdentity != request.ExpectedBuild && versionIdentity != request.ExpectedBuild+"\n" {
-		return PreflightResult{}, fmt.Errorf("cmux version/build mismatch: expected %s", request.ExpectedBuild)
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux version/build mismatch: expected %s", request.ExpectedBuild)
 	}
 	ping, err := client.run(ctx, request.Executable, request.SocketPath, "ping")
 	if err != nil || strings.TrimSpace(string(ping.Stdout)) != "PONG" {
-		return PreflightResult{}, fmt.Errorf("cmux ping preflight failed")
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux ping preflight failed")
 	}
 	capabilityOutput, err := client.run(ctx, request.Executable, request.SocketPath, "capabilities")
 	if err != nil {
-		return PreflightResult{}, fmt.Errorf("cmux capabilities preflight failed: %w", err)
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux capabilities preflight failed: %w", err)
 	}
 	if err := validateCapabilities(capabilityOutput.Stdout, request.SocketPath); err != nil {
-		return PreflightResult{}, err
+		return cmuxcontract.PreflightResult{}, err
 	}
 	identifyOutput, err := client.run(ctx, request.Executable, request.SocketPath,
 		"--id-format", "uuids", "identify", "--window", request.WindowID, "--no-caller")
 	if err != nil {
-		return PreflightResult{}, fmt.Errorf("cmux identify preflight failed: %w", err)
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux identify preflight failed: %w", err)
 	}
 	if err := validateIdentify(identifyOutput.Stdout, request.SocketPath, request.WindowID, "", "", false); err != nil {
-		return PreflightResult{}, err
+		return cmuxcontract.PreflightResult{}, err
 	}
 	after, err := client.ObserveEndpoint(request.SocketPath, client.UID)
 	if err != nil {
-		return PreflightResult{}, err
+		return cmuxcontract.PreflightResult{}, err
 	}
 	if !SameEndpoint(before, after) {
-		return PreflightResult{}, fmt.Errorf("cmux socket endpoint incarnation changed during preflight")
+		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux socket endpoint incarnation changed during preflight")
 	}
-	return PreflightResult{Executable: request.Executable, Version: request.ExpectedVersion, Build: request.ExpectedBuild, SocketPath: request.SocketPath, WindowID: request.WindowID, Endpoint: before}, nil
+	return cmuxcontract.PreflightResult{Executable: request.Executable, Version: request.ExpectedVersion, Build: request.ExpectedBuild, SocketPath: request.SocketPath, WindowID: request.WindowID, Endpoint: before}, nil
 }
 
-func (client Client) CreateWorkspace(ctx context.Context, request CreateRequest) (CreatedWorkspace, error) {
+func (client Client) CreateWorkspace(ctx context.Context, request cmuxcontract.CreateRequest) (cmuxcontract.CreatedWorkspace, error) {
 	if err := requireSupportedPlatform(); err != nil {
-		return CreatedWorkspace{}, err
+		return cmuxcontract.CreatedWorkspace{}, err
 	}
 	if !validUUID(request.Preflight.WindowID) || !filepath.IsAbs(request.CWD) || filepath.Clean(request.CWD) != request.CWD || strings.TrimSpace(request.AttemptID) == "" {
-		return CreatedWorkspace{}, fmt.Errorf("cmux create request identity is invalid")
+		return cmuxcontract.CreatedWorkspace{}, fmt.Errorf("cmux create request identity is invalid")
 	}
 	if err := client.ensureEndpoint(request.Preflight); err != nil {
-		return CreatedWorkspace{}, err
+		return cmuxcontract.CreatedWorkspace{}, err
 	}
 	name := workspaceName(request.AttemptID)
 	createStarted := time.Now()
@@ -185,42 +129,42 @@ func (client Client) CreateWorkspace(ctx context.Context, request CreateRequest)
 		"new-workspace", "--name", name, "--cwd", request.CWD, "--window", request.Preflight.WindowID, "--focus", "false")
 	createMS := elapsedMS(createStarted)
 	if err != nil {
-		return CreatedWorkspace{}, &MutationError{Phase: "workspace_create", Ambiguous: output.Invoked, Cause: err}
+		return cmuxcontract.CreatedWorkspace{}, &cmuxport.MutationError{Phase: "workspace_create", Ambiguous: output.Invoked, Cause: err}
 	}
 	createdHandle, err := parseCreatedWorkspaceHandle(output.Stdout)
 	if err != nil {
-		return CreatedWorkspace{}, &MutationError{Phase: "workspace_create", Ambiguous: true, Cause: fmt.Errorf("malformed create response")}
+		return cmuxcontract.CreatedWorkspace{}, &cmuxport.MutationError{Phase: "workspace_create", Ambiguous: true, Cause: fmt.Errorf("malformed create response")}
 	}
-	result := CreatedWorkspace{Preflight: request.Preflight, WindowID: request.Preflight.WindowID, CWD: request.CWD, CreateMS: createMS}
+	result := cmuxcontract.CreatedWorkspace{Preflight: request.Preflight, WindowID: request.Preflight.WindowID, CWD: request.CWD, CreateMS: createMS}
 	resolveStarted := time.Now()
 	if err := client.resolveCreatedTarget(ctx, name, createdHandle, &result); err != nil {
-		return result, &MutationError{Phase: "target_resolve", Ambiguous: true, Cause: err}
+		return result, &cmuxport.MutationError{Phase: "target_resolve", Ambiguous: true, Cause: err}
 	}
 	result.ResolveMS = elapsedMS(resolveStarted)
 	if err := client.ensureEndpoint(request.Preflight); err != nil {
-		return result, &MutationError{Phase: "target_resolve", Ambiguous: true, Cause: err}
+		return result, &cmuxport.MutationError{Phase: "target_resolve", Ambiguous: true, Cause: err}
 	}
 	return result, nil
 }
 
-func (client Client) Send(ctx context.Context, request SendRequest) (SendReceipt, error) {
+func (client Client) Send(ctx context.Context, request cmuxcontract.SendRequest) (cmuxcontract.SendReceipt, error) {
 	if err := requireSupportedPlatform(); err != nil {
-		return SendReceipt{}, err
+		return cmuxcontract.SendReceipt{}, err
 	}
 	created := request.Created
 	if !validUUID(created.WindowID) || !validUUID(created.WorkspaceID) || !validUUID(created.SurfaceID) || strings.TrimSpace(request.Command) == "" {
-		return SendReceipt{}, fmt.Errorf("cmux send target is incomplete")
+		return cmuxcontract.SendReceipt{}, fmt.Errorf("cmux send target is incomplete")
 	}
 	if err := client.ensureEndpoint(created.Preflight); err != nil {
-		return SendReceipt{}, err
+		return cmuxcontract.SendReceipt{}, err
 	}
 	started := time.Now()
 	output, err := client.run(ctx, created.Preflight.Executable, created.Preflight.SocketPath,
 		"--json", "--id-format", "uuids", "send", "--window", created.WindowID,
 		"--workspace", created.WorkspaceID, "--surface", created.SurfaceID, "--", request.Command+`\n`)
-	receipt := SendReceipt{SendMS: elapsedMS(started)}
+	receipt := cmuxcontract.SendReceipt{SendMS: elapsedMS(started)}
 	if err != nil {
-		return receipt, &MutationError{Phase: "input_send", Ambiguous: output.Invoked, Cause: err}
+		return receipt, &cmuxport.MutationError{Phase: "input_send", Ambiguous: output.Invoked, Cause: err}
 	}
 	var accepted struct {
 		WindowID    string `json:"window_id"`
@@ -229,20 +173,20 @@ func (client Client) Send(ctx context.Context, request SendRequest) (SendReceipt
 		Queued      *bool  `json:"queued"`
 	}
 	if err := decodeStrict(output.Stdout, &accepted); err != nil {
-		return receipt, &MutationError{Phase: "input_send", Ambiguous: true, Cause: fmt.Errorf("malformed send response: %w", err)}
+		return receipt, &cmuxport.MutationError{Phase: "input_send", Ambiguous: true, Cause: fmt.Errorf("malformed send response: %w", err)}
 	}
 	if accepted.WindowID != created.WindowID || accepted.WorkspaceID != created.WorkspaceID ||
 		accepted.SurfaceID != created.SurfaceID || accepted.Queued == nil {
-		return receipt, &MutationError{Phase: "input_send", Ambiguous: true, Cause: fmt.Errorf("cmux send receipt target identity is incomplete or mismatched")}
+		return receipt, &cmuxport.MutationError{Phase: "input_send", Ambiguous: true, Cause: fmt.Errorf("cmux send receipt target identity is incomplete or mismatched")}
 	}
 	if err := client.ensureEndpoint(created.Preflight); err != nil {
-		return receipt, &MutationError{Phase: "input_send", Ambiguous: true, Cause: err}
+		return receipt, &cmuxport.MutationError{Phase: "input_send", Ambiguous: true, Cause: err}
 	}
 	receipt.Accepted = true
 	return receipt, nil
 }
 
-func (client Client) resolveCreatedTarget(ctx context.Context, name, createdHandle string, result *CreatedWorkspace) error {
+func (client Client) resolveCreatedTarget(ctx context.Context, name, createdHandle string, result *cmuxcontract.CreatedWorkspace) error {
 	workspaceOutput, err := client.run(ctx, result.Preflight.Executable, result.Preflight.SocketPath,
 		"--json", "--id-format", "both", "list-workspaces", "--window", result.WindowID)
 	if err != nil {
@@ -313,7 +257,7 @@ func parseCreatedWorkspaceHandle(data []byte) (string, error) {
 	return fields[1], nil
 }
 
-func (client Client) ensureEndpoint(preflight PreflightResult) error {
+func (client Client) ensureEndpoint(preflight cmuxcontract.PreflightResult) error {
 	current, err := client.ObserveEndpoint(preflight.SocketPath, client.UID)
 	if err != nil {
 		return err

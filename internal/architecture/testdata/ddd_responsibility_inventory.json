@@ -824,30 +824,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func awaitCmuxBootstrapReceipt",
-        "func cmuxCanonicalDirectory",
-        "func cmuxCanonicalPromptPath",
-        "func cmuxCanonicalRootFence.Check",
-        "func cmuxCanonicalRootFence.Close",
-        "func cmuxDigest",
-        "func cmuxElapsedMS",
-        "func cmuxGitTop",
-        "func cmuxMutationAmbiguous",
-        "func cmuxNotObserved",
-        "func cmuxObserved",
-        "func cmuxRequestContainsNUL",
-        "func cmuxResult",
-        "func cmuxShellProcess",
         "func issueOpsCmuxHandoffHandler",
-        "func issueOpsCmuxHandoffHandlerWithDeps",
-        "func newCmuxCanonicalRootFence",
-        "func prepareCmuxLauncher",
-        "func sameCmuxDirectory",
-        "func sameCmuxPath",
-        "func validateCmuxHostExecutable",
-        "func validateCmuxReleasedDirectRecord",
-        "type cmuxCanonicalRootFence",
-        "type cmuxClient",
+        "func newCmuxHandoffService",
         "type cmuxHandoffDependencies"
       ]
     },
@@ -2976,8 +2954,8 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func CleanupLauncher",
         "func PrepareLauncher",
-        "func PreparedLauncher.Cleanup",
         "func ReadBootstrapReceipt",
         "func ValidateBootstrapReceipt",
         "func digest",
@@ -2987,10 +2965,7 @@
         "func shellQuote",
         "func splitReceipt",
         "func validDigest",
-        "type ArtifactRequest",
-        "type BootstrapExpectation",
-        "type BootstrapReceipt",
-        "type PreparedLauncher"
+        "type BootstrapReceipt"
       ]
     },
     {
@@ -3005,8 +2980,6 @@
         "func Client.resolveCreatedTarget",
         "func Client.run",
         "func ExecRunner.Run",
-        "func MutationError.Error",
-        "func MutationError.Unwrap",
         "func boundedBuffer.Write",
         "func commandEnvironment",
         "func decodeJSONValue",
@@ -3020,16 +2993,9 @@
         "type Client",
         "type CommandOutput",
         "type CommandRequest",
-        "type CreateRequest",
-        "type CreatedWorkspace",
         "type EndpointObserver",
         "type ExecRunner",
-        "type MutationError",
-        "type PreflightRequest",
-        "type PreflightResult",
         "type Runner",
-        "type SendReceipt",
-        "type SendRequest",
         "type boundedBuffer",
         "type capabilitiesResponse",
         "type identifyResponse"
@@ -3084,6 +3050,27 @@
       "task": "T20",
       "symbols": [
         "func readPromptPlatform"
+      ]
+    },
+    {
+      "path": "internal/adapter/cmux/runtime.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func AwaitBootstrapReceipt",
+        "func GitTop",
+        "func ObserveDirectory",
+        "func SamePath",
+        "func ValidateHostExecutable",
+        "func cmuxCanonicalDirectory",
+        "func cmuxShellProcess",
+        "func directory.Path",
+        "func directory.Pin",
+        "func directory.SamePath",
+        "func directoryPin.Close",
+        "func directoryPin.Matches",
+        "type directory",
+        "type directoryPin"
       ]
     },
     {
@@ -8861,6 +8848,29 @@
       ]
     },
     {
+      "path": "internal/application/issueopscmux/root_fence.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func openRootFence",
+        "func rootFence.Check",
+        "func rootFence.Close",
+        "func validateReleasedRoot",
+        "type rootFence"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscmux/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Handoff",
+        "func cmuxElapsedMS",
+        "func cmuxMutationAmbiguous",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/issueopscompletion/complete.go",
       "owner": "application",
       "task": "T07",
@@ -10841,6 +10851,22 @@
       "task": "T19",
       "symbols": [
         "func LifecycleCommands"
+      ]
+    },
+    {
+      "path": "internal/contract/cmux/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type ArtifactRequest",
+        "type BootstrapExpectation",
+        "type CreateRequest",
+        "type CreatedWorkspace",
+        "type PreflightRequest",
+        "type PreflightResult",
+        "type PreparedLauncher",
+        "type SendReceipt",
+        "type SendRequest"
       ]
     },
     {
@@ -13309,6 +13335,21 @@
         "func cleanupOccupantBound",
         "func cleanupReceiptMatches",
         "type CleanupTerminalIdentity"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/cmux_handoff.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CmuxCanonicalPromptPath",
+        "func CmuxNotObserved",
+        "func CmuxObserved",
+        "func CmuxRequestContainsNUL",
+        "func CmuxResult",
+        "func ValidCmuxDigest",
+        "func ValidateCmuxAttempt",
+        "func ValidateCmuxReleasedRecord"
       ]
     },
     {
@@ -16645,6 +16686,20 @@
       "task": "T20",
       "symbols": [
         "type CleanupWorkspaceOccupancy"
+      ]
+    },
+    {
+      "path": "internal/port/cmux/client.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "func MutationError.Error",
+        "func MutationError.Unwrap",
+        "type Client",
+        "type Directory",
+        "type DirectoryPin",
+        "type MutationError",
+        "type RootEnvironment"
       ]
     },
     {
@@ -25711,6 +25766,186 @@
       ],
       "evidence_tests": [
         "internal/adapter/issueops/issueops_regress_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-handoff-usecase",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func issueOpsCmuxHandoffHandlerWithDeps",
+      "responsibility": "audit staging, fenced external calls, ambiguity and recovery sequencing",
+      "target": "internal/application/issueopscmux",
+      "target_symbol": "func Service.Handoff",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-root-fence",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func newCmuxCanonicalRootFence",
+      "responsibility": "read released generation then pin directory and revalidate durable state",
+      "target": "internal/application/issueopscmux",
+      "target_symbol": "func openRootFence",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-root-recheck",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func cmuxCanonicalRootFence.Check",
+      "responsibility": "revalidate durable paths and pinned filesystem identity before each external effect",
+      "target": "internal/application/issueopscmux",
+      "target_symbol": "func rootFence.Check",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-released-generation",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func validateCmuxReleasedDirectRecord",
+      "responsibility": "require exact released direct execution generation before filesystem observations",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateCmuxReleasedRecord",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-prompt-root",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func cmuxCanonicalPromptPath",
+      "responsibility": "bind absolute clean prompt file to canonical root or durable aliases",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CmuxCanonicalPromptPath",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-result-authority",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func cmuxResult",
+      "responsibility": "project observed authority without promoting accepted input into native turn or owner claim",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CmuxResult",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-input-identity",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func cmuxRequestContainsNUL",
+      "responsibility": "reject NUL identity before records and filesystem observations",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CmuxRequestContainsNUL",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-material-digest",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func cmuxDigest",
+      "responsibility": "require lowercase sha256 identity before host or cmux calls",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidCmuxDigest",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-bootstrap-io",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func awaitCmuxBootstrapReceipt",
+      "responsibility": "bounded receipt polling with process observation and shell exclusion",
+      "target": "internal/adapter/cmux",
+      "target_symbol": "func AwaitBootstrapReceipt",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cmux-host-io",
+      "source_path": "cmd/issueops/issueopsapp/issueops_cmux_wiring.go",
+      "source_symbol": "func validateCmuxHostExecutable",
+      "responsibility": "observe absolute executable path and permission bits",
+      "target": "internal/adapter/cmux",
+      "target_symbol": "func ValidateHostExecutable",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
+        "internal/application/issueopscmux/service_test.go",
+        "internal/domain/issueops/cmux_handoff_test.go"
       ],
       "status": "migrated"
     }

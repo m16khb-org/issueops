@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	issueopsdomain "issueops/internal/domain/issueops"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +13,10 @@ import (
 
 	cmuxadapter "issueops/internal/adapter/cmux"
 	issueopsadapter "issueops/internal/adapter/issueops"
+	cmuxcontract "issueops/internal/contract/cmux"
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
+	cmuxport "issueops/internal/port/cmux"
 )
 
 const (
@@ -43,10 +45,10 @@ func TestCmuxHandoffStagesBeforeCreateAndEnrichesOneNonAuthoritativeLineage(t *t
 		Client: fake, Now: clock, Getwd: func() (string, error) { return record.WorktreePath, nil },
 		GitTop:                 func(root string) (string, error) { return root, nil },
 		ValidateHostExecutable: func(string) error { return nil },
-		Prepare: func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
-			return cmuxadapter.PreparedLauncher{Directory: artifactDir, LauncherPath: filepath.Join(artifactDir, "launch.sh"), Command: "/bin/sh '/tmp/launch.sh'"}, nil
+		Prepare: func(cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
+			return cmuxcontract.PreparedLauncher{Directory: artifactDir, LauncherPath: filepath.Join(artifactDir, "launch.sh"), Command: "/bin/sh '/tmp/launch.sh'"}, nil
 		},
-		AwaitReceipt: func(context.Context, cmuxadapter.PreparedLauncher, cmuxadapter.BootstrapExpectation) (issueopscontract.NativeProcessReceipt, error) {
+		AwaitReceipt: func(context.Context, cmuxcontract.PreparedLauncher, cmuxcontract.BootstrapExpectation) (issueopscontract.NativeProcessReceipt, error) {
 			return process, nil
 		},
 	})
@@ -225,8 +227,8 @@ func TestCmuxHandoffRejectsCanonicalRootReplacementAfterCreateBeforeSend(t *test
 			Client: fake, Now: cmuxTestClock(time.Now().UTC()), Getwd: func() (string, error) { return record.WorktreePath, nil },
 			GitTop:                 func(root string) (string, error) { return root, nil },
 			ValidateHostExecutable: func(string) error { return nil },
-			Prepare: func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
-				return cmuxadapter.PreparedLauncher{Directory: t.TempDir(), Command: "/bin/sh '/tmp/launch.sh'"}, nil
+			Prepare: func(cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
+				return cmuxcontract.PreparedLauncher{Directory: t.TempDir(), Command: "/bin/sh '/tmp/launch.sh'"}, nil
 			},
 		})
 	if err == nil || !strings.Contains(err.Error(), "canonical worktree") {
@@ -254,9 +256,9 @@ func TestCmuxHandoffRejectsPromptAbovePortableSingleArgumentBoundBeforePreflight
 			Client: fake, Now: time.Now, Getwd: func() (string, error) { return record.WorktreePath, nil },
 			GitTop:                 func(root string) (string, error) { return root, nil },
 			ValidateHostExecutable: func(string) error { return nil },
-			Prepare: func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
+			Prepare: func(cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
 				prepareCalls++
-				return cmuxadapter.PreparedLauncher{}, nil
+				return cmuxcontract.PreparedLauncher{}, nil
 			},
 		})
 	if err == nil || !strings.Contains(err.Error(), "maximum") {
@@ -398,7 +400,7 @@ func TestCmuxHandoffCreateAndSendAmbiguityNeverRetries(t *testing.T) {
 			promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
 			fake := &cmuxClientFake{t: t, stateRoot: stateRoot, recordID: record.ID, preflight: cmuxPreflightFixture(), created: cmuxCreatedFixture()}
 			fake.created.CWD = record.WorktreePath
-			mutation := &cmuxadapter.MutationError{Phase: phase, Ambiguous: true, Cause: errors.New("response lost")}
+			mutation := &cmuxport.MutationError{Phase: phase, Ambiguous: true, Cause: errors.New("response lost")}
 			if phase == "workspace_create" || phase == "target_resolve" {
 				fake.createErr = mutation
 			} else {
@@ -410,8 +412,8 @@ func TestCmuxHandoffCreateAndSendAmbiguityNeverRetries(t *testing.T) {
 			}
 			_, err := issueOpsCmuxHandoffHandlerWithDeps(context.Background(), stateRoot, cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest), cmuxHandoffDependencies{
 				Client: fake, Now: cmuxTestClock(time.Now().UTC()), Getwd: func() (string, error) { return record.WorktreePath, nil }, GitTop: func(root string) (string, error) { return root, nil }, ValidateHostExecutable: func(string) error { return nil },
-				Prepare: func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
-					return cmuxadapter.PreparedLauncher{Directory: artifactDir, Command: "/bin/sh '/tmp/launch.sh'"}, nil
+				Prepare: func(cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
+					return cmuxcontract.PreparedLauncher{Directory: artifactDir, Command: "/bin/sh '/tmp/launch.sh'"}, nil
 				},
 			})
 			if err == nil || fake.createCalls != 1 || fake.sendCalls > 1 {
@@ -440,7 +442,7 @@ func TestCmuxHandoffNonAmbiguousMutationFailureIsNotAcceptedResponseLost(t *test
 	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
 	fake := &cmuxClientFake{t: t, stateRoot: stateRoot, recordID: record.ID, preflight: cmuxPreflightFixture(), created: cmuxCreatedFixture()}
 	fake.created.CWD = record.WorktreePath
-	fake.createErr = &cmuxadapter.MutationError{Phase: "workspace_create", Ambiguous: false, Cause: errors.New("rejected before invocation")}
+	fake.createErr = &cmuxport.MutationError{Phase: "workspace_create", Ambiguous: false, Cause: errors.New("rejected before invocation")}
 	_, err := issueOpsCmuxHandoffHandlerWithDeps(context.Background(), stateRoot,
 		cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest), cmuxHandoffDependencies{
 			Client: fake, Now: cmuxTestClock(time.Now().UTC()), Getwd: func() (string, error) { return record.WorktreePath, nil },
@@ -474,13 +476,13 @@ func TestCmuxHandoffSurfacesCleanupFailureAfterAcceptedInput(t *testing.T) {
 		cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest), cmuxHandoffDependencies{
 			Client: fake, Now: cmuxTestClock(time.Now().UTC()), Getwd: func() (string, error) { return record.WorktreePath, nil },
 			GitTop: func(root string) (string, error) { return root, nil }, ValidateHostExecutable: func(string) error { return nil },
-			Prepare: func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
-				return cmuxadapter.PreparedLauncher{Directory: artifactDir, Command: "/bin/sh '/tmp/launch.sh'", HostArgvSHA256: strings.Repeat("c", 64)}, nil
+			Prepare: func(cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
+				return cmuxcontract.PreparedLauncher{Directory: artifactDir, Command: "/bin/sh '/tmp/launch.sh'", HostArgvSHA256: strings.Repeat("c", 64)}, nil
 			},
-			AwaitReceipt: func(context.Context, cmuxadapter.PreparedLauncher, cmuxadapter.BootstrapExpectation) (issueopscontract.NativeProcessReceipt, error) {
+			AwaitReceipt: func(context.Context, cmuxcontract.PreparedLauncher, cmuxcontract.BootstrapExpectation) (issueopscontract.NativeProcessReceipt, error) {
 				return process, nil
 			},
-			Cleanup: func(cmuxadapter.PreparedLauncher) error { return errors.New("cleanup denied") },
+			Cleanup: func(cmuxcontract.PreparedLauncher) error { return errors.New("cleanup denied") },
 		})
 	if err == nil || !strings.Contains(err.Error(), "cleanup") || !result.OK || result.Status != "input_accepted_cleanup_failed" || result.RecoveryArtifactDir != artifactDir {
 		t.Fatalf("cleanup failure result=%+v err=%v", result, err)
@@ -508,13 +510,13 @@ func TestCmuxHandoffPostCreateFailuresStayInLineageAndPreserveRecovery(t *testin
 			}
 			result, err := issueOpsCmuxHandoffHandlerWithDeps(context.Background(), stateRoot, cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest), cmuxHandoffDependencies{
 				Client: fake, Now: cmuxTestClock(time.Now().UTC()), Getwd: func() (string, error) { return record.WorktreePath, nil }, GitTop: func(root string) (string, error) { return root, nil }, ValidateHostExecutable: func(string) error { return nil },
-				Prepare: func(cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
+				Prepare: func(cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
 					if test.prepareErr != nil {
-						return cmuxadapter.PreparedLauncher{}, test.prepareErr
+						return cmuxcontract.PreparedLauncher{}, test.prepareErr
 					}
-					return cmuxadapter.PreparedLauncher{Directory: artifactDir, Command: "/bin/sh '/tmp/launch.sh'"}, nil
+					return cmuxcontract.PreparedLauncher{Directory: artifactDir, Command: "/bin/sh '/tmp/launch.sh'"}, nil
 				},
-				AwaitReceipt: func(context.Context, cmuxadapter.PreparedLauncher, cmuxadapter.BootstrapExpectation) (issueopscontract.NativeProcessReceipt, error) {
+				AwaitReceipt: func(context.Context, cmuxcontract.PreparedLauncher, cmuxcontract.BootstrapExpectation) (issueopscontract.NativeProcessReceipt, error) {
 					return issueopscontract.NativeProcessReceipt{}, test.receiptErr
 				},
 			})
@@ -549,15 +551,15 @@ func TestCmuxHandoffPostCreateFailuresStayInLineageAndPreserveRecovery(t *testin
 type cmuxClientFake struct {
 	t                                      *testing.T
 	stateRoot, recordID                    string
-	preflight                              cmuxadapter.PreflightResult
-	created                                cmuxadapter.CreatedWorkspace
-	createRequest                          cmuxadapter.CreateRequest
+	preflight                              cmuxcontract.PreflightResult
+	created                                cmuxcontract.CreatedWorkspace
+	createRequest                          cmuxcontract.CreateRequest
 	preflightCalls, createCalls, sendCalls int
 	createErr, sendErr                     error
 	afterPreflight, afterCreate            func()
 }
 
-func (fake *cmuxClientFake) Preflight(context.Context, cmuxadapter.PreflightRequest) (cmuxadapter.PreflightResult, error) {
+func (fake *cmuxClientFake) Preflight(context.Context, cmuxcontract.PreflightRequest) (cmuxcontract.PreflightResult, error) {
 	fake.preflightCalls++
 	if fake.afterPreflight != nil {
 		fake.afterPreflight()
@@ -565,7 +567,7 @@ func (fake *cmuxClientFake) Preflight(context.Context, cmuxadapter.PreflightRequ
 	return fake.preflight, nil
 }
 
-func (fake *cmuxClientFake) CreateWorkspace(_ context.Context, request cmuxadapter.CreateRequest) (cmuxadapter.CreatedWorkspace, error) {
+func (fake *cmuxClientFake) CreateWorkspace(_ context.Context, request cmuxcontract.CreateRequest) (cmuxcontract.CreatedWorkspace, error) {
 	fake.createCalls++
 	fake.createRequest = request
 	if fake.stateRoot != "" {
@@ -580,7 +582,7 @@ func (fake *cmuxClientFake) CreateWorkspace(_ context.Context, request cmuxadapt
 	return fake.created, fake.createErr
 }
 
-func (fake *cmuxClientFake) Send(context.Context, cmuxadapter.SendRequest) (cmuxadapter.SendReceipt, error) {
+func (fake *cmuxClientFake) Send(context.Context, cmuxcontract.SendRequest) (cmuxcontract.SendReceipt, error) {
 	fake.sendCalls++
 	if fake.stateRoot != "" {
 		observations, err := newHandoffDeliveryAudit(fake.stateRoot).Read()
@@ -588,13 +590,13 @@ func (fake *cmuxClientFake) Send(context.Context, cmuxadapter.SendRequest) (cmux
 			fake.t.Fatalf("input sent before target enrichment audit: observations=%+v err=%v", observations, err)
 		}
 	}
-	return cmuxadapter.SendReceipt{Accepted: fake.sendErr == nil, SendMS: 6}, fake.sendErr
+	return cmuxcontract.SendReceipt{Accepted: fake.sendErr == nil, SendMS: 6}, fake.sendErr
 }
 
 func cmuxHandoffRequestFixture(id, promptPath, promptDigest string) issueopscontract.ExecutionCmuxHandoffRequest {
 	return issueopscontract.ExecutionCmuxHandoffRequest{
 		ID: id, Generation: 1, CmuxExecutable: cmuxPath, CmuxVersion: cmuxadapter.SupportedVersion, CmuxBuild: cmuxadapter.SupportedBuildIdentity, SocketPath: socketPath,
-		WindowID: testWindow, CWD: filepath.Dir(promptPath), Host: "codex", HostExecutable: "/opt/native/codex", Model: "gpt-5.6-terra", Effort: "high",
+		WindowID: testWindow, CWD: filepath.Dir(promptPath), Host: "codex", HostExecutable: "/opt/native/codex", Model: "gpt-6-sol", Effort: "high",
 		PromptFile: promptPath, PromptSHA256: promptDigest, MaterialSHA256: strings.Repeat("b", 64),
 	}
 }
@@ -634,12 +636,12 @@ func rewriteCmuxRecordWorktree(t *testing.T, stateRoot, id, root string) {
 	}
 }
 
-func cmuxPreflightFixture() cmuxadapter.PreflightResult {
-	return cmuxadapter.PreflightResult{Executable: cmuxPath, Version: cmuxadapter.SupportedVersion, Build: cmuxadapter.SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow, Endpoint: *cmuxEndpointFixture()}
+func cmuxPreflightFixture() cmuxcontract.PreflightResult {
+	return cmuxcontract.PreflightResult{Executable: cmuxPath, Version: cmuxadapter.SupportedVersion, Build: cmuxadapter.SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow, Endpoint: *cmuxEndpointFixture()}
 }
 
-func cmuxCreatedFixture() cmuxadapter.CreatedWorkspace {
-	return cmuxadapter.CreatedWorkspace{Preflight: cmuxPreflightFixture(), WindowID: testWindow, WorkspaceID: testWorkspace, PaneID: testPane, SurfaceID: testSurface, CWD: "/placeholder", CreateMS: 31, ResolveMS: 8}
+func cmuxCreatedFixture() cmuxcontract.CreatedWorkspace {
+	return cmuxcontract.CreatedWorkspace{Preflight: cmuxPreflightFixture(), WindowID: testWindow, WorkspaceID: testWorkspace, PaneID: testPane, SurfaceID: testSurface, CWD: "/placeholder", CreateMS: 31, ResolveMS: 8}
 }
 
 func cmuxEndpointFixture() *issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation {
@@ -662,4 +664,8 @@ func cmuxTestClock(start time.Time) func() time.Time {
 func digestBytes(value []byte) string {
 	sum := sha256.Sum256(value)
 	return hex.EncodeToString(sum[:])
+}
+
+func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, root string, request issueopscontract.ExecutionCmuxHandoffRequest, deps cmuxHandoffDependencies) (issueopscontract.ExecutionCmuxHandoffResult, error) {
+	return newCmuxHandoffService(root, deps).Handoff(ctx, root, request)
 }

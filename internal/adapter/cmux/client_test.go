@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	cmuxcontract "issueops/internal/contract/cmux"
+	cmuxport "issueops/internal/port/cmux"
 )
 
 const (
@@ -37,7 +40,7 @@ func TestPreflightUsesBoundedReadOnlyCmuxCommandsAndExactObservedIdentity(t *tes
 		},
 		UID: 501,
 	}
-	result, err := client.Preflight(context.Background(), PreflightRequest{
+	result, err := client.Preflight(context.Background(), cmuxcontract.PreflightRequest{
 		Executable: cmuxPath, ExpectedVersion: SupportedVersion, ExpectedBuild: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow,
 	})
 	if err != nil {
@@ -76,7 +79,7 @@ func TestPreflightFailsClosedOnMalformedOrIncompleteCmuxEvidence(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			runner := &queueRunner{t: t, steps: test.steps}
 			client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-			_, err := client.Preflight(context.Background(), PreflightRequest{Executable: cmuxPath, ExpectedVersion: SupportedVersion, ExpectedBuild: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow})
+			_, err := client.Preflight(context.Background(), cmuxcontract.PreflightRequest{Executable: cmuxPath, ExpectedVersion: SupportedVersion, ExpectedBuild: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow})
 			if err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("error=%v want=%q", err, test.want)
 			}
@@ -97,7 +100,7 @@ func TestPreflightRejectsOtherBuildAndTrailingVersionJunk(t *testing.T) {
 				{args: []string{"--id-format", "uuids", "identify", "--window", testWindow, "--no-caller"}, stdout: identifyFixture(testWindow, "", "")},
 			}}
 			client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-			if _, err := client.Preflight(context.Background(), PreflightRequest{Executable: cmuxPath, ExpectedVersion: SupportedVersion, ExpectedBuild: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow}); err == nil {
+			if _, err := client.Preflight(context.Background(), cmuxcontract.PreflightRequest{Executable: cmuxPath, ExpectedVersion: SupportedVersion, ExpectedBuild: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow}); err == nil {
 				t.Fatalf("unsupported cmux build accepted: %q", version)
 			}
 		})
@@ -114,7 +117,7 @@ func TestCreateWorkspaceResolvesOneExactWorkspaceSurfaceWithoutFocusDefaults(t *
 		{args: []string{"--id-format", "uuids", "identify", "--window", testWindow, "--workspace", testWorkspace, "--surface", testSurface}, stdout: identifyFixture(testWindow, testWorkspace, testSurface)},
 	}}
 	client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-	created, err := client.CreateWorkspace(context.Background(), CreateRequest{
+	created, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{
 		Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree",
 	})
 	if err != nil {
@@ -132,10 +135,10 @@ func TestCreateWorkspaceRejectsReturnedWorkspaceRefMismatchAsAmbiguous(t *testin
 		{args: []string{"--json", "--id-format", "both", "list-workspaces", "--window", testWindow}, stdout: `{"workspaces":[{"id":"` + testWorkspace + `","ref":"workspace:7","title":"` + name + `"}]}`},
 	}}
 	client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-	_, err := client.CreateWorkspace(context.Background(), CreateRequest{
+	_, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{
 		Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree",
 	})
-	var mutation *MutationError
+	var mutation *cmuxport.MutationError
 	if !errors.As(err, &mutation) || !mutation.Ambiguous || mutation.Phase != "target_resolve" || len(runner.seen) != 2 {
 		t.Fatalf("returned workspace mismatch error=%v calls=%d", err, len(runner.seen))
 	}
@@ -155,9 +158,9 @@ func TestSendTargetsExactSurfaceOnceAndTreatsResponseLossAsAmbiguous(t *testing.
 		t.Run(test.name, func(t *testing.T) {
 			runner := &queueRunner{t: t, steps: []runnerStep{test.step}}
 			client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-			_, err := client.Send(context.Background(), SendRequest{Created: createdFixture(), Command: "/bin/sh '/tmp/io-cmux/launch.sh'"})
+			_, err := client.Send(context.Background(), cmuxcontract.SendRequest{Created: createdFixture(), Command: "/bin/sh '/tmp/io-cmux/launch.sh'"})
 			if test.ambiguous {
-				var mutation *MutationError
+				var mutation *cmuxport.MutationError
 				if !errors.As(err, &mutation) || !mutation.Ambiguous || mutation.Phase != "input_send" || len(runner.seen) != 1 {
 					t.Fatalf("ambiguous error=%v calls=%d", err, len(runner.seen))
 				}
@@ -174,8 +177,8 @@ func TestCreateWorkspaceResponseLossAndEndpointRestartNeverRetry(t *testing.T) {
 	t.Run("create response loss", func(t *testing.T) {
 		runner := &queueRunner{t: t, steps: []runnerStep{{args: []string{"new-workspace", "--name", workspaceName("attempt-1"), "--cwd", "/repo/worktree", "--window", testWindow, "--focus", "false"}, invoked: true, err: errors.New("EOF")}}}
 		client := Client{Runner: runner, ObserveEndpoint: stableEndpointObserver, UID: 501}
-		_, err := client.CreateWorkspace(context.Background(), CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
-		var mutation *MutationError
+		_, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
+		var mutation *cmuxport.MutationError
 		if !errors.As(err, &mutation) || !mutation.Ambiguous || len(runner.seen) != 1 {
 			t.Fatalf("error=%v calls=%d", err, len(runner.seen))
 		}
@@ -200,8 +203,8 @@ func TestCreateWorkspaceResponseLossAndEndpointRestartNeverRetry(t *testing.T) {
 			return endpoint, nil
 		}
 		client := Client{Runner: runner, ObserveEndpoint: observer, UID: 501}
-		_, err := client.CreateWorkspace(context.Background(), CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
-		var mutation *MutationError
+		_, err := client.CreateWorkspace(context.Background(), cmuxcontract.CreateRequest{Preflight: preflightFixture(), AttemptID: "attempt-1", CWD: "/repo/worktree"})
+		var mutation *cmuxport.MutationError
 		if !errors.As(err, &mutation) || !mutation.Ambiguous || !strings.Contains(err.Error(), "endpoint incarnation changed") {
 			t.Fatalf("error=%v", err)
 		}
@@ -239,12 +242,12 @@ func (runner *queueRunner) Run(_ context.Context, request CommandRequest) (Comma
 
 func stableEndpointObserver(string, int) (EndpointIncarnation, error) { return endpointFixture(), nil }
 
-func preflightFixture() PreflightResult {
-	return PreflightResult{Executable: cmuxPath, Version: SupportedVersion, Build: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow, Endpoint: endpointFixture()}
+func preflightFixture() cmuxcontract.PreflightResult {
+	return cmuxcontract.PreflightResult{Executable: cmuxPath, Version: SupportedVersion, Build: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow, Endpoint: endpointFixture()}
 }
 
-func createdFixture() CreatedWorkspace {
-	return CreatedWorkspace{Preflight: preflightFixture(), WindowID: testWindow, WorkspaceID: testWorkspace, PaneID: testPane, SurfaceID: testSurface, CWD: "/repo/worktree"}
+func createdFixture() cmuxcontract.CreatedWorkspace {
+	return cmuxcontract.CreatedWorkspace{Preflight: preflightFixture(), WindowID: testWindow, WorkspaceID: testWorkspace, PaneID: testPane, SurfaceID: testSurface, CWD: "/repo/worktree"}
 }
 
 func capabilitiesFixture() string {
