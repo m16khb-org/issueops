@@ -4,9 +4,9 @@ import (
 	agyadapter "issueops/internal/adapter/agy"
 	claudeadapter "issueops/internal/adapter/claude"
 	codexadapter "issueops/internal/adapter/codex"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	installutiladapter "issueops/internal/adapter/installutil"
 	omoadapter "issueops/internal/adapter/omo"
-	mcpdomain "issueops/internal/domain/mcp"
 )
 
 // production wiring과 같은 설치 유틸을 설치한다. 이 테스트는 네 host adapter의
@@ -62,7 +62,7 @@ func init() {
 			omoadapter.PlanHostSkillLinks = installutiladapter.PlanHostSkillLinks
 			omoadapter.SemanticSHA256 = installutiladapter.SemanticSHA256
 			omoadapter.MCPCatalogSHA256 = func() (string, error) {
-				return installutiladapter.SemanticSHA256(mcpdomain.AdvertisedTools())
+				return installutiladapter.SemanticSHA256(mcpcatalog.AdvertisedTools())
 			}
 		},
 		func() {
@@ -71,7 +71,7 @@ func init() {
 			agyadapter.PlanHostSkillLinks = installutiladapter.PlanHostSkillLinks
 			agyadapter.SemanticSHA256 = installutiladapter.SemanticSHA256
 			agyadapter.MCPCatalogSHA256 = func() (string, error) {
-				return installutiladapter.SemanticSHA256(mcpdomain.AdvertisedTools())
+				return installutiladapter.SemanticSHA256(mcpcatalog.AdvertisedTools())
 			}
 		},
 	} {

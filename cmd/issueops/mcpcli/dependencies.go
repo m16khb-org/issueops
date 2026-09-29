@@ -76,13 +76,7 @@ var DaemonStatus = func() any {
 }
 
 var CompatibilityContract = func() any {
-	toolNames := []string{}
-	for _, tool := range MCPTools() {
-		if name, ok := tool["name"].(string); ok {
-			toolNames = append(toolNames, name)
-		}
-	}
-	return map[string]any{"ok": true, "name": "issueops_cli_mcp_compatibility", "mcp_tools": toolNames}
+	return map[string]any{"ok": false, "error": "compatibility contract dependency is not configured"}
 }
 
 var SelfVerify = func(selfworkflow.SelfVerifyRequest) (selfworkflow.SelfAugmentResult, error) {

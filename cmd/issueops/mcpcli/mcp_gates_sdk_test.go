@@ -15,7 +15,7 @@ import (
 // 달리 이 테스트는 tools/list 스키마 검증과 실세션 round-trip을 잠근다.
 func TestServeMCPStreamAdvertisesAndRunsGatesTools(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog()})
 
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil {

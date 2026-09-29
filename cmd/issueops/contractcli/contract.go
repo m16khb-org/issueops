@@ -10,14 +10,13 @@ import (
 	"sort"
 	"strings"
 
-	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow"
+	mcpcontract "issueops/internal/contract/mcp"
 	cliadapter "issueops/internal/domain/cli"
-	mcpadapter "issueops/internal/domain/mcp"
 )
 
 var MCPTools = func() []map[string]any {
-	return mcpcli.MCPTools()
+	return nil
 }
 
 type CompatibilityContract struct {
@@ -29,7 +28,7 @@ type CompatibilityContract struct {
 	MCPTools       []string             `json:"mcp_tools"`
 	ResponseFields map[string][]string  `json:"response_fields"`
 	Warnings       []string             `json:"warnings"`
-	AdapterTools   []mcpadapter.Tool    `json:"adapter_tools"`
+	AdapterTools   []mcpcontract.Tool   `json:"adapter_tools"`
 	Verification   []string             `json:"verification"`
 }
 
@@ -144,7 +143,7 @@ func BuildCompatibilityContract() CompatibilityContract {
 			"web_fetch":                       {"ok", "url", "final_url", "category", "stop_reason", "grid_exhausted", "attempted_routes", "untried_routes", "content", "metadata", "warnings", "retrieved_at", "duration_ms"},
 		},
 		Warnings:     []string{},
-		AdapterTools: mcpadapter.AdapterOwnedTools(),
+		AdapterTools: mcpcontract.AdapterOwnedTools(),
 		Verification: []string{"go test ./... -count=1", "go test ./cmd/issueops/contractgolden ./cmd/issueops/issueopsapp -run Golden -count=1", "issueops contract conformance baseline --json", "issueops contract check --json"},
 	}
 	for _, want := range []string{"contract_schema", "worker_enqueue", "command_fake_run"} {

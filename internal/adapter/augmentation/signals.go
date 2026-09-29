@@ -81,8 +81,8 @@ func (repo Repository) signalRules() []repoSignalRule {
 				qualityInspectContainsTerm(root, "low_coverage_packages")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasMCPResourceCoverage = FileContainsTerm(root, filepath.Join("internal", "domain", "mcp", "resource_catalog_test.go"), "TestResourcesExposeStableDescriptors") &&
-				FileContainsTerm(root, filepath.Join("internal", "domain", "mcp", "catalog_test.go"), "TestResourceMapsPreserveDescriptorShape") &&
+			signals.HasMCPResourceCoverage = FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp", "resource_catalog_test.go"), "TestResourcesExposeStableDescriptors") &&
+				FileContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp", "catalog_assembly_test.go"), "TestResourceMapsPreserveDescriptorShape") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "resources_test.go"), "TestHandleResourceReadReportsInvalidUnknownAndReadErrors") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "resources_test.go"), "TestHandleResourceReadUsesCatalogSkillNameWhenConfigSkillNameIsEmpty") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli", "resources", "context_determinism_test.go"), "TestResourcesContextIsByteDeterministic")
@@ -218,10 +218,9 @@ func readmeContainsTerm(root, term string) bool {
 }
 
 func hasMCPAdapterCatalog(root string) bool {
-	return DirContainsTerm(root, filepath.Join("internal", "domain", "mcp"), "AdapterOwnedTools") &&
-		(DirContainsTerm(root, filepath.Join("cmd", "issueops"), "mcpadapter.AdapterOwnedTools") ||
-			DirContainsTerm(root, filepath.Join("cmd", "issueops", "mcpcli"), "mcpadapter.AdapterOwnedTools") ||
-			DirContainsTerm(root, filepath.Join("cmd", "issueops", "contractcli"), "mcpadapter.AdapterOwnedTools"))
+	return DirContainsTerm(root, filepath.Join("internal", "contract", "mcp"), "AdapterOwnedTools") &&
+		DirContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp"), "contract.AdapterOwnedTools") &&
+		DirContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp"), "Catalog: mcpcatalog.Build()")
 }
 
 func qualityInspectContainsTerm(root, term string) bool {

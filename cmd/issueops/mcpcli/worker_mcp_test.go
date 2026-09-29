@@ -73,7 +73,7 @@ func callMCPWorkerRunReadOnlyForTest(t *testing.T, args map[string]any) workerco
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, rpcErr := HandleToolCall(params)
+	result, rpcErr := testHandleToolCall(params)
 	if rpcErr != nil {
 		t.Fatalf("worker_run_read_only rpc error: %+v", rpcErr)
 	}

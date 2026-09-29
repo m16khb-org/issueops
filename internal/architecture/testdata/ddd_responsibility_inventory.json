@@ -2693,14 +2693,6 @@
       "symbols": []
     },
     {
-      "path": "cmd/issueops/mcpcli/catalog/tools.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func Tools"
-      ]
-    },
-    {
       "path": "cmd/issueops/mcpcli/commitsuggest_dependencies.go",
       "owner": "inbound",
       "task": "T20",
@@ -2764,7 +2756,6 @@
       "task": "T20",
       "symbols": [
         "func HandleResourceRead",
-        "func MCPResources",
         "func initSDKServer",
         "func initSDKServerWithDiagnostics",
         "func initSDKServerWithLogger",
@@ -2813,14 +2804,6 @@
       "task": "T20",
       "symbols": [
         "func handleAssistantWorkerMCPToolCall"
-      ]
-    },
-    {
-      "path": "cmd/issueops/mcpcli/mcp_tool_catalog.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func MCPTools"
       ]
     },
     {
@@ -2918,7 +2901,6 @@
       "task": "T20",
       "symbols": [
         "func ErrorTextResult",
-        "func HandleToolCall",
         "func HandleToolCallWithDependencies",
         "func TextResult",
         "func mcpToolDirect",
@@ -2938,7 +2920,6 @@
       "task": "T20",
       "symbols": [
         "func RunMCPWithDependencies",
-        "func ServeMCPStreamContext",
         "func ServeMCPStreamContextWithDependencies",
         "func ServeMCPStreamWithDependencies"
       ]
@@ -2971,7 +2952,6 @@
       "task": "T20",
       "symbols": [
         "func HandleResourceRead",
-        "func MCPResources",
         "func apiDocGuidanceText",
         "func content",
         "func harnessFileResource",
@@ -5394,6 +5374,21 @@
         "type contract",
         "type message",
         "type rule"
+      ]
+    },
+    {
+      "path": "internal/adapter/inbound/catalog/mcp/catalog.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func AdvertisedTools",
+        "func AllTools",
+        "func Build",
+        "func DispatchMap",
+        "func ResourceMaps",
+        "func ToolMaps",
+        "func catalogSections",
+        "type catalogSection"
       ]
     },
     {
@@ -13720,9 +13715,106 @@
       ]
     },
     {
+      "path": "internal/contract/mcp/adapter_owned_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func AdapterOwnedTools"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/catalog_types.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "type Catalog",
+        "type DispatchGroup",
+        "type Resource",
+        "type Tool"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/channel_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func ChannelTools"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/command_policy_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func CommandPolicyAuditTools",
+        "func CommandPolicyInputSchema",
+        "func CommandPolicyTools"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/gates_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func GatesTools"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/issueops_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func IssueOpsBasicTools",
+        "func issueOpsExecutionSchema"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/local_assistant_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func LocalAssistantTools"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/loop_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func LoopTools"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/resource_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func Resources"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/state_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func StateTools"
+      ]
+    },
+    {
+      "path": "internal/contract/mcp/tool_schemas.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func CoreProjectTools",
+        "func DaemonStatusTool",
+        "func SelfLoopAdvertisedTools",
+        "func SelfLoopAliasTools"
+      ]
+    },
+    {
       "path": "internal/contract/mcp/types.go",
       "owner": "contract",
-      "task": "T02",
+      "task": "T19",
       "symbols": [
         "type ConformanceProbeConfig"
       ]
@@ -16599,102 +16691,6 @@
         "func redactFreeform",
         "type Attempt",
         "type Start"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/adapter_owned_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func AdapterOwnedTools"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func AdvertisedTools",
-        "func AllTools",
-        "func DaemonStatusTool",
-        "func DispatchMap",
-        "func ResourceMaps",
-        "func ToolMaps",
-        "func catalogSections",
-        "func coreProjectTools",
-        "func selfLoopAdvertisedTools",
-        "func selfLoopAliasTools",
-        "type DispatchGroup",
-        "type Resource",
-        "type Tool",
-        "type catalogSection"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/channel_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func ChannelTools"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/command_policy_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func CommandPolicyAuditTools",
-        "func CommandPolicyInputSchema",
-        "func CommandPolicyTools"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/gates_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func GatesTools"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/issueops_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func IssueOpsBasicTools",
-        "func issueOpsExecutionSchema"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/local_assistant_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func LocalAssistantTools"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/loop_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func LoopTools"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/resource_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func Resources"
-      ]
-    },
-    {
-      "path": "internal/domain/mcp/state_catalog.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func StateTools"
       ]
     },
     {

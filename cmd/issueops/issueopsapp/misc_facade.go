@@ -10,6 +10,7 @@ import (
 	"issueops/cmd/issueops/contractcli"
 	"issueops/cmd/issueops/pathutil"
 	"issueops/cmd/issueops/selfworkflow"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	statecontract "issueops/internal/contract/state"
 )
 
@@ -27,7 +28,7 @@ var (
 
 func configureContractCLI() {
 	contractcli.MCPTools = mcpTools
-	contractcli.ConfigureConformance(contractcli.ConformanceDependencies{Root: issueOpsRoot, RunProcess: runToolConformanceLive})
+	contractcli.ConfigureConformance(contractcli.ConformanceDependencies{Catalog: mcpcatalog.AdvertisedTools, Root: issueOpsRoot, RunProcess: runToolConformanceLive})
 }
 
 func runContract(args []string) error {

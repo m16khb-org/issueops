@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/installutil"
-	mcpdomain "issueops/internal/domain/mcp"
 	"issueops/internal/port"
 )
 
@@ -23,7 +23,7 @@ func init() {
 	PlanHostSkillLinks = installutil.PlanHostSkillLinks
 	SemanticSHA256 = installutil.SemanticSHA256
 	MCPCatalogSHA256 = func() (string, error) {
-		return SemanticSHA256(mcpdomain.AdvertisedTools())
+		return SemanticSHA256(mcpcatalog.AdvertisedTools())
 	}
 }
 

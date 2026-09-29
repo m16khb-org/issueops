@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	mcpcontract "issueops/internal/contract/mcp"
-	mcpdomain "issueops/internal/domain/mcp"
 )
 
 type LiveRequest struct {
@@ -40,7 +39,7 @@ type ReplayOutcome struct {
 }
 
 type ConformanceDependencies struct {
-	Catalog          func() []mcpdomain.Tool
+	Catalog          func() []mcpcontract.Tool
 	Root             func() string
 	RunProcess       func(context.Context, LiveRequest) (toolconformancecontract.BenchmarkReport, error)
 	EvaluateBaseline func() (caseCount int, ok bool, err error)
@@ -53,7 +52,7 @@ func init() { conformanceDependencies = defaultConformanceDependencies() }
 
 func defaultConformanceDependencies() ConformanceDependencies {
 	return ConformanceDependencies{
-		Catalog: mcpdomain.AdvertisedTools,
+		Catalog: func() []mcpcontract.Tool { return nil },
 		Root: func() string {
 			root, err := os.Getwd()
 			if err != nil {

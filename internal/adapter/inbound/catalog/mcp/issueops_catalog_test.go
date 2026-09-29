@@ -1,12 +1,14 @@
 package mcp
 
+import contract "issueops/internal/contract/mcp"
+
 import (
 	"reflect"
 	"testing"
 )
 
 func TestIssueOpsAdvertisesOnlyExecutionActionTool(t *testing.T) {
-	tools := IssueOpsBasicTools()
+	tools := contract.IssueOpsBasicTools()
 	if len(tools) != 1 || tools[0].Name != "issueops_execution" {
 		t.Fatalf("IssueOps MCP tools = %#v, want only issueops_execution", tools)
 	}
@@ -51,7 +53,7 @@ func TestIssueOpsAdvertisesOnlyExecutionActionTool(t *testing.T) {
 }
 
 func TestIssueOpsExecutionSnapshotSchemaIsClosedAndPortable(t *testing.T) {
-	tools := IssueOpsBasicTools()
+	tools := contract.IssueOpsBasicTools()
 	properties := tools[0].InputSchema["properties"].(map[string]any)
 	snapshot, ok := properties["issue_snapshot"].(map[string]any)
 	if !ok {
@@ -81,7 +83,7 @@ func TestIssueOpsExecutionSnapshotSchemaIsClosedAndPortable(t *testing.T) {
 
 func TestIssueOpsDispatchContainsNoLegacyTools(t *testing.T) {
 	dispatch := DispatchMap()
-	if got := dispatch["issueops_execution"]; got != DispatchIssueOps {
+	if got := dispatch["issueops_execution"]; got != contract.DispatchIssueOps {
 		t.Fatalf("issueops_execution dispatch = %q", got)
 	}
 	for name := range dispatch {

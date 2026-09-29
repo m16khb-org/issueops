@@ -12,7 +12,7 @@ import (
 	"issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
 	omoadapter "issueops/internal/adapter/omo"
-	mcpadapter "issueops/internal/domain/mcp"
+	mcpcontract "issueops/internal/contract/mcp"
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
 )
@@ -58,7 +58,7 @@ func (readback hostActivationReadback) Verify(_ context.Context, issueOpsRoot, t
 	if err != nil {
 		return activationport.Readback{}, err
 	}
-	tools := mcpadapter.IssueOpsBasicTools()
+	tools := mcpcontract.IssueOpsBasicTools()
 	if len(tools) != 1 || tools[0].Name != "issueops_execution" {
 		return activationport.Readback{}, fmt.Errorf("IssueOps v1 MCP activation catalog must contain exactly issueops_execution")
 	}

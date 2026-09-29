@@ -41,7 +41,7 @@ export class UsersController {
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload, rpcErr := HandleToolCall(params)
+	payload, rpcErr := testHandleToolCall(params)
 	if rpcErr != nil {
 		t.Fatalf("quality gate failure should be a normal MCP payload, got rpc error: %+v", rpcErr)
 	}

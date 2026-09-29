@@ -7,6 +7,7 @@ import (
 	claudet4deps "issueops/internal/adapter/claude"
 	codext4deps "issueops/internal/adapter/codex"
 	"issueops/internal/adapter/hostprotocol"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	installadapter "issueops/internal/adapter/install"
 	installutiladapter "issueops/internal/adapter/installutil"
 	fingerprintt4deps "issueops/internal/adapter/lifecycle/fingerprint"
@@ -15,7 +16,6 @@ import (
 	projectdocsadapter "issueops/internal/adapter/projectdocs"
 	nativeintegrationt4deps "issueops/internal/adapter/verification/probe/nativeintegration"
 	installcontract "issueops/internal/contract/install"
-	mcpdomain "issueops/internal/domain/mcp"
 )
 
 // configureAdapterTail은 설치 계획 수립과 프로젝트 문서 관측을 설치한다.
@@ -52,14 +52,14 @@ func configureAdapterTail() {
 	omot4deps.PlanHostSkillLinks = installutiladapter.PlanHostSkillLinks
 	omot4deps.SemanticSHA256 = installutiladapter.SemanticSHA256
 	omot4deps.MCPCatalogSHA256 = func() (string, error) {
-		return installutiladapter.SemanticSHA256(mcpdomain.AdvertisedTools())
+		return installutiladapter.SemanticSHA256(mcpcatalog.AdvertisedTools())
 	}
 	agyt4deps.CaptureNativeActivationEvidence = installutiladapter.CaptureNativeActivationEvidence
 	agyt4deps.EnsureSymlinkPlan = installutiladapter.EnsureSymlinkPlan
 	agyt4deps.PlanHostSkillLinks = installutiladapter.PlanHostSkillLinks
 	agyt4deps.SemanticSHA256 = installutiladapter.SemanticSHA256
 	agyt4deps.MCPCatalogSHA256 = func() (string, error) {
-		return installutiladapter.SemanticSHA256(mcpdomain.AdvertisedTools())
+		return installutiladapter.SemanticSHA256(mcpcatalog.AdvertisedTools())
 	}
 	fingerprintt4deps.ReadGitOriginURL = projectdocsadapter.ReadGitOriginURL
 	installclit4deps.EnsureSymlinkPlan = installutiladapter.EnsureSymlinkPlan

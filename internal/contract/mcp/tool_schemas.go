@@ -1,65 +1,5 @@
 package mcp
 
-// Tool describes a stable MCP tool schema fragment owned by the MCP adapter.
-type Tool struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	InputSchema map[string]any `json:"inputSchema"`
-}
-
-type Resource struct {
-	URI         string `json:"uri"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	MimeType    string `json:"mimeType"`
-}
-
-// DispatchGroup names the handler group that owns a set of MCP tools.
-// The MCP server uses this to route tool calls to the correct handler.
-type DispatchGroup string
-
-const (
-	DispatchProject         DispatchGroup = "project"
-	DispatchPolicyState     DispatchGroup = "policy_state"
-	DispatchIssueOps        DispatchGroup = "issueops"
-	DispatchLoop            DispatchGroup = "loop"
-	DispatchGates           DispatchGroup = "gates"
-	DispatchChannel         DispatchGroup = "channel"
-	DispatchAssistantWorker DispatchGroup = "assistant_worker"
-	DispatchSelfLoop        DispatchGroup = "self_loop"
-)
-
-// catalogSection binds one catalog function to its dispatch handler group and
-// records whether its tools are advertised in the tools/list response.
-type catalogSection struct {
-	group      DispatchGroup
-	advertised bool
-	tools      func() []Tool
-}
-
-// catalogSections is the single ordered source of truth for the MCP tool
-// catalog. Both the advertised tools/list (AdvertisedTools) and the
-// name->handler routing table (DispatchMap) derive from this slice, so adding a
-// tool means editing exactly one catalog function referenced here. The
-// advertised order matches the stable mcp_tools.golden.json snapshot.
-func catalogSections() []catalogSection {
-	return []catalogSection{
-		{DispatchProject, true, coreProjectTools},
-		{DispatchPolicyState, true, CommandPolicyTools},
-		{DispatchPolicyState, true, StateTools},
-		{DispatchIssueOps, true, IssueOpsBasicTools},
-		{DispatchLoop, true, LoopTools},
-		{DispatchGates, true, GatesTools},
-		{DispatchChannel, true, ChannelTools},
-		{DispatchAssistantWorker, true, func() []Tool { return []Tool{DaemonStatusTool()} }},
-		{DispatchSelfLoop, true, selfLoopAdvertisedTools},
-		{DispatchAssistantWorker, true, AdapterOwnedTools},
-		{DispatchPolicyState, true, CommandPolicyAuditTools},
-		{DispatchAssistantWorker, true, LocalAssistantTools},
-		{DispatchSelfLoop, false, selfLoopAliasTools},
-	}
-}
-
 // DaemonStatusTool returns the standalone daemon-status assistant-worker tool.
 // It lives in no sub-catalog, so it is declared once here and flows into both
 // the advertised list and DispatchMap via catalogSections.
@@ -71,44 +11,10 @@ func DaemonStatusTool() Tool {
 	}
 }
 
-// AdvertisedTools returns every MCP tool advertised in tools/list, in the
-// stable order pinned by mcp_tools.golden.json.
-func AdvertisedTools() []Tool {
-	var out []Tool
-	for _, s := range catalogSections() {
-		if s.advertised {
-			out = append(out, s.tools()...)
-		}
-	}
-	return out
-}
-
-// AllTools returns every MCP tool known to the catalog, advertised or not.
-func AllTools() []Tool {
-	var out []Tool
-	for _, s := range catalogSections() {
-		out = append(out, s.tools()...)
-	}
-	return out
-}
-
-// DispatchMap returns a map from every MCP tool name to its handler group.
-// It derives from catalogSections so routing can never drift from the catalog:
-// adding a tool to a section makes it both routable and (if advertised) listed.
-func DispatchMap() map[string]DispatchGroup {
-	out := make(map[string]DispatchGroup)
-	for _, s := range catalogSections() {
-		for _, t := range s.tools() {
-			out[t.Name] = s.group
-		}
-	}
-	return out
-}
-
-// coreProjectTools returns the issueops project-management tools. This is their
+// CoreProjectTools returns the issueops project-management tools. This is their
 // single authoritative definition: the CLI catalog package derives its
 // tools/list payload from AdvertisedTools rather than re-declaring them.
-func coreProjectTools() []Tool {
+func CoreProjectTools() []Tool {
 	return []Tool{
 		{
 			Name:        "harness_inspect",
@@ -210,9 +116,9 @@ func coreProjectTools() []Tool {
 	}
 }
 
-// selfLoopAdvertisedTools returns the self-improvement loop tools advertised in
+// SelfLoopAdvertisedTools returns the self-improvement loop tools advertised in
 // tools/list: the self-augment plan/lesson tools and the self-verify family.
-func selfLoopAdvertisedTools() []Tool {
+func SelfLoopAdvertisedTools() []Tool {
 	return []Tool{
 		{
 			Name:        "self_augment",
@@ -287,11 +193,11 @@ func selfLoopAdvertisedTools() []Tool {
 	}
 }
 
-// selfLoopAliasTools returns the self-augment-prefixed aliases of the
+// SelfLoopAliasTools returns the self-augment-prefixed aliases of the
 // self-verify history/compare/promote tools. They route to the self-loop
 // handler but are not advertised in tools/list, keeping the catalog free of
 // duplicate-looking names.
-func selfLoopAliasTools() []Tool {
+func SelfLoopAliasTools() []Tool {
 	return []Tool{
 		{
 			Name:        "self_augment_history",
@@ -324,29 +230,4 @@ func selfLoopAliasTools() []Tool {
 			}},
 		},
 	}
-}
-
-func ToolMaps(tools []Tool) []map[string]any {
-	out := make([]map[string]any, 0, len(tools))
-	for _, tool := range tools {
-		out = append(out, map[string]any{
-			"name":        tool.Name,
-			"description": tool.Description,
-			"inputSchema": tool.InputSchema,
-		})
-	}
-	return out
-}
-
-func ResourceMaps(resources []Resource) []map[string]any {
-	out := make([]map[string]any, 0, len(resources))
-	for _, resource := range resources {
-		out = append(out, map[string]any{
-			"uri":         resource.URI,
-			"name":        resource.Name,
-			"description": resource.Description,
-			"mimeType":    resource.MimeType,
-		})
-	}
-	return out
 }

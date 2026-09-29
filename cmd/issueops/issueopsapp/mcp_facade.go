@@ -14,6 +14,7 @@ import (
 
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
@@ -70,11 +71,11 @@ func serveMCPStreamContext(ctx context.Context, input io.Reader, output io.Write
 }
 
 func mcpTools() []map[string]any {
-	return mcpcli.MCPTools()
+	return mcpcatalog.Build().Tools
 }
 
 func mcpResources() []map[string]any {
-	return mcpcli.MCPResources()
+	return mcpcatalog.Build().Resources
 }
 
 func handleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
@@ -88,6 +89,7 @@ func handleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
 func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	return mcpcli.MCPDependencies{
+		Catalog: mcpcatalog.Build(),
 		Prepare: execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner, ReadIssue: execution.ReadIssue,
 		Claim: issueOpsClaimHandler, Release: issueOpsReleaseHandler, Reseed: issueOpsReseedHandler,
 		Resume: issueOpsResumeHandler, Reconcile: issueOpsReconcileHandler, Complete: issueOpsCompleteHandler,

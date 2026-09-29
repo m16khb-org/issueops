@@ -6,6 +6,7 @@ import (
 
 	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
+	mcpcontract "issueops/internal/contract/mcp"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
@@ -30,6 +31,7 @@ type MCPToolOutcome struct {
 // MCPDependencies는 server 생성 시 고정된다. 요청 간 package-global dependency
 // cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
+	Catalog     mcpcontract.Catalog
 	Prepare     issueopscontract.ExecutionPrepareHandler
 	Orca        port.ExecutionOrcaProvisioner
 	OrcaOwner   port.ExecutionOrcaOwnerInspector
@@ -73,10 +75,6 @@ func newProtocolError(code int64, message string, data any) *jsonrpc.Error {
 	return &jsonrpc.Error{Code: code, Message: message, Data: raw}
 }
 
-func HandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
-	return HandleToolCallWithDependencies(params, MCPDependencies{})
-}
-
 func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies) (any, *jsonrpc.Error) {
 	var call MCPToolCall
 	if err := json.Unmarshal(params, &call); err != nil {
@@ -85,7 +83,7 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 	if call.Arguments == nil {
 		call.Arguments = map[string]any{}
 	}
-	if validationErr := validateMCPToolArguments(call.Name, call.Arguments); validationErr != nil {
+	if validationErr := validateMCPToolArguments(deps.Catalog, call.Name, call.Arguments); validationErr != nil {
 		return nil, validationErr
 	}
 	for _, handler := range []func(MCPToolCall) MCPToolOutcome{
@@ -119,8 +117,8 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 	return nil, newProtocolError(-32602, "Unknown tool", call.Name)
 }
 
-func validateMCPToolArguments(name string, arguments map[string]any) *jsonrpc.Error {
-	for _, tool := range MCPTools() {
+func validateMCPToolArguments(catalog mcpcontract.Catalog, name string, arguments map[string]any) *jsonrpc.Error {
+	for _, tool := range catalog.Tools {
 		toolName, _ := tool["name"].(string)
 		if toolName != name {
 			continue

@@ -1,5 +1,7 @@
 package mcp
 
+import contract "issueops/internal/contract/mcp"
+
 import "testing"
 
 type toolDescriptorExpectation struct {
@@ -9,15 +11,15 @@ type toolDescriptorExpectation struct {
 	properties          []string
 }
 
-func toolsByName(tools []Tool) map[string]Tool {
-	byName := make(map[string]Tool, len(tools))
+func toolsByName(tools []contract.Tool) map[string]contract.Tool {
+	byName := make(map[string]contract.Tool, len(tools))
 	for _, tool := range tools {
 		byName[tool.Name] = tool
 	}
 	return byName
 }
 
-func assertToolDescriptors(t *testing.T, label string, tools []Tool, expectations []toolDescriptorExpectation) map[string]Tool {
+func assertToolDescriptors(t *testing.T, label string, tools []contract.Tool, expectations []toolDescriptorExpectation) map[string]contract.Tool {
 	t.Helper()
 	if len(tools) != len(expectations) {
 		t.Fatalf("expected %d %s tools, got %d", len(expectations), label, len(tools))

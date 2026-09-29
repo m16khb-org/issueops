@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	mcp "issueops/internal/adapter/inbound/catalog/mcp"
 	core "issueops/internal/adapter/toolconformance"
-	mcp "issueops/internal/domain/mcp"
 )
 
 func TestFixtureManifestPinsRepresentativeCatalogSchemas(t *testing.T) {

@@ -1,5 +1,7 @@
 package mcp
 
+import contract "issueops/internal/contract/mcp"
+
 import (
 	"strings"
 	"testing"
@@ -7,7 +9,7 @@ import (
 
 func TestAdapterOwnedToolsHaveWriteSemantics(t *testing.T) {
 	seen := map[string]bool{}
-	for _, tool := range AdapterOwnedTools() {
+	for _, tool := range contract.AdapterOwnedTools() {
 		if tool.Name == "" || tool.Description == "" || tool.InputSchema == nil {
 			t.Fatalf("incomplete tool descriptor: %+v", tool)
 		}
@@ -22,7 +24,7 @@ func TestAdapterOwnedToolsHaveWriteSemantics(t *testing.T) {
 }
 
 func TestToolMapsPreserveDescriptorShape(t *testing.T) {
-	tools := ToolMaps([]Tool{
+	tools := ToolMaps([]contract.Tool{
 		{
 			Name:        "example_tool",
 			Description: "Example tool.",
@@ -65,15 +67,15 @@ func TestDispatchMapCoversAllCatalogTools(t *testing.T) {
 	}
 
 	// Every entry in DispatchMap must have a valid group.
-	validGroups := map[DispatchGroup]bool{
-		DispatchProject:         true,
-		DispatchPolicyState:     true,
-		DispatchIssueOps:        true,
-		DispatchLoop:            true,
-		DispatchGates:           true,
-		DispatchChannel:         true,
-		DispatchAssistantWorker: true,
-		DispatchSelfLoop:        true,
+	validGroups := map[contract.DispatchGroup]bool{
+		contract.DispatchProject:         true,
+		contract.DispatchPolicyState:     true,
+		contract.DispatchIssueOps:        true,
+		contract.DispatchLoop:            true,
+		contract.DispatchGates:           true,
+		contract.DispatchChannel:         true,
+		contract.DispatchAssistantWorker: true,
+		contract.DispatchSelfLoop:        true,
 	}
 	for name, group := range dm {
 		if !validGroups[group] {
@@ -89,9 +91,9 @@ func TestDispatchMapCoversAllCatalogTools(t *testing.T) {
 
 func TestDispatchMapHasNoUnknownGroup(t *testing.T) {
 	dm := DispatchMap()
-	valid := map[DispatchGroup]bool{
-		DispatchProject: true, DispatchPolicyState: true, DispatchIssueOps: true, DispatchLoop: true,
-		DispatchGates: true, DispatchChannel: true, DispatchAssistantWorker: true, DispatchSelfLoop: true,
+	valid := map[contract.DispatchGroup]bool{
+		contract.DispatchProject: true, contract.DispatchPolicyState: true, contract.DispatchIssueOps: true, contract.DispatchLoop: true,
+		contract.DispatchGates: true, contract.DispatchChannel: true, contract.DispatchAssistantWorker: true, contract.DispatchSelfLoop: true,
 	}
 	for name, group := range dm {
 		if !valid[group] {
@@ -117,12 +119,12 @@ func TestCatalogOmitsRetiredPoolTools(t *testing.T) {
 // collectAllCatalogTools gathers every tool declared across all catalog
 // functions. It delegates to AllTools so the test stays bound to the
 // catalogSections single source of truth and cannot drift from it.
-func collectAllCatalogTools() []Tool {
+func collectAllCatalogTools() []contract.Tool {
 	return AllTools()
 }
 
 func TestResourceMapsPreserveDescriptorShape(t *testing.T) {
-	resources := ResourceMaps([]Resource{
+	resources := ResourceMaps([]contract.Resource{
 		{
 			URI:         "issueops://example",
 			Name:        "Example",

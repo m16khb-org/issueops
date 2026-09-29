@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/toolconformance"
-	mcpadapter "issueops/internal/domain/mcp"
+	mcpcontract "issueops/internal/contract/mcp"
 )
 
 func TestConformanceBaselineFailsWithJSONWhenInjectedCaseFails(t *testing.T) {
@@ -204,7 +204,7 @@ func TestConformanceServeParsesRequiredFlags(t *testing.T) {
 }
 
 func TestProductionCatalogDoesNotAdvertiseConformanceProbe(t *testing.T) {
-	for _, tool := range mcpadapter.AdvertisedTools() {
+	for _, tool := range testConformanceCatalog() {
 		if len(tool.Name) >= len("harness_probe_") && tool.Name[:len("harness_probe_")] == "harness_probe_" {
 			t.Fatalf("production catalog advertises probe %q", tool.Name)
 		}
@@ -213,7 +213,7 @@ func TestProductionCatalogDoesNotAdvertiseConformanceProbe(t *testing.T) {
 
 func TestConformanceSourceSchemaCopiesConfiguredCatalogSource(t *testing.T) {
 	source := map[string]any{"type": "object", "properties": map[string]any{"value": map[string]any{"type": "string"}}}
-	restore := ConfigureConformance(ConformanceDependencies{Catalog: func() []mcpadapter.Tool { return []mcpadapter.Tool{{Name: "source", InputSchema: source}} }})
+	restore := ConfigureConformance(ConformanceDependencies{Catalog: func() []mcpcontract.Tool { return []mcpcontract.Tool{{Name: "source", InputSchema: source}} }})
 	defer restore()
 	copy := sourceSchema("source")
 	copy["properties"].(map[string]any)["later"] = map[string]any{"type": "boolean"}

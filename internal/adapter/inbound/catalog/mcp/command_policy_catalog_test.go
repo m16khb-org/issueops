@@ -1,9 +1,11 @@
 package mcp
 
+import contract "issueops/internal/contract/mcp"
+
 import "testing"
 
 func TestCommandPolicyInputSchemaPreservesPolicyFields(t *testing.T) {
-	schema := CommandPolicyInputSchema()
+	schema := contract.CommandPolicyInputSchema()
 	for _, name := range []string{"workspace_root", "cwd", "argv"} {
 		if !schemaRequires(schema, name) {
 			t.Fatalf("command policy schema must require %q: %#v", name, schema["required"])
@@ -26,7 +28,7 @@ func TestCommandPolicyInputSchemaPreservesPolicyFields(t *testing.T) {
 }
 
 func TestCommandPolicyToolsExposeStableDescriptors(t *testing.T) {
-	assertToolDescriptors(t, "command policy", CommandPolicyTools(), []toolDescriptorExpectation{
+	assertToolDescriptors(t, "command policy", contract.CommandPolicyTools(), []toolDescriptorExpectation{
 		{
 			name:                "command_policy_check",
 			descriptionContains: "without executing it",
@@ -41,7 +43,7 @@ func TestCommandPolicyToolsExposeStableDescriptors(t *testing.T) {
 }
 
 func TestCommandPolicyAuditToolsExposeStableDescriptor(t *testing.T) {
-	tools := CommandPolicyAuditTools()
+	tools := contract.CommandPolicyAuditTools()
 	if len(tools) != 1 {
 		t.Fatalf("expected one command policy audit tool, got %d", len(tools))
 	}

@@ -5,7 +5,6 @@ import (
 	docscontract "issueops/internal/contract/docs"
 	projectdocscontract "issueops/internal/contract/projectdocs"
 	statecontract "issueops/internal/contract/state"
-	mcpadapter "issueops/internal/domain/mcp"
 )
 
 type Config struct {
@@ -25,10 +24,6 @@ type ReadError struct {
 	Code    int
 	Message string
 	Data    any
-}
-
-func MCPResources() []map[string]any {
-	return mcpadapter.ResourceMaps(mcpadapter.Resources())
 }
 
 func apiDocGuidanceText() string {

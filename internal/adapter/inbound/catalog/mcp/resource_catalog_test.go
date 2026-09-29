@@ -1,14 +1,16 @@
 package mcp
 
+import contract "issueops/internal/contract/mcp"
+
 import "testing"
 
 func TestResourcesExposeStableDescriptors(t *testing.T) {
-	resources := Resources()
+	resources := contract.Resources()
 	if len(resources) == 0 {
 		t.Fatal("expected MCP resources")
 	}
 
-	byURI := map[string]Resource{}
+	byURI := map[string]contract.Resource{}
 	for _, resource := range resources {
 		if resource.URI == "" {
 			t.Fatalf("resource missing uri: %+v", resource)

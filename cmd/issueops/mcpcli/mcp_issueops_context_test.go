@@ -33,7 +33,7 @@ func TestIssueOpsMCPExecutionPropagatesRequestCancellation(t *testing.T) {
 			Name:      "issueops_execution",
 			Arguments: map[string]any{"action": "status", "id": "io-context"},
 		},
-		MCPDependencies{},
+		MCPDependencies{Catalog: testMCPCatalog()},
 	)
 
 	if observed == nil || !errors.Is(observed.Err(), context.Canceled) {

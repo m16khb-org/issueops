@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"issueops/cmd/issueops/mcpcli"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	cliadapter "issueops/internal/domain/cli"
 )
 
@@ -20,11 +20,11 @@ func TestCLIUsageGolden(t *testing.T) {
 }
 
 func TestMCPToolsGolden(t *testing.T) {
-	assertJSONGolden(t, "mcp_tools.golden.json", mcpcli.MCPTools())
+	assertJSONGolden(t, "mcp_tools.golden.json", mcpcatalog.Build().Tools)
 }
 
 func TestMCPResourcesGolden(t *testing.T) {
-	assertJSONGolden(t, "mcp_resources.golden.json", mcpcli.MCPResources())
+	assertJSONGolden(t, "mcp_resources.golden.json", mcpcatalog.Build().Resources)
 }
 
 func assertJSONGolden(t *testing.T, name string, value any) {

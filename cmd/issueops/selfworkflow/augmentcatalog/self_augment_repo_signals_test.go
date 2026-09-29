@@ -32,14 +32,14 @@ func TestTransportCoverageSignalFollowsExecutionDomainTests(t *testing.T) {
 	}
 }
 
-func TestCollectSelfAugmentRepoSignalsFindsMCPAdapterCatalogInContractCLI(t *testing.T) {
+func TestCollectSelfAugmentRepoSignalsFindsMCPAdapterCatalogInCompositionRoot(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "mcp", "catalog.go"), "package mcp\nfunc AdapterOwnedTools() {}\n")
-	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "contractcli", "contract.go"), "package contractcli\nconst marker = \"mcpadapter.AdapterOwnedTools\"\n")
-
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "contract", "mcp", "catalog.go"), "package mcp\nfunc AdapterOwnedTools() {}\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "inbound", "catalog", "mcp", "catalog.go"), "package mcp\nfunc Build(){contract.AdapterOwnedTools()}\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "issueopsapp", "mcp_facade.go"), "package issueopsapp\nfunc dependencies() mcpcli.MCPDependencies { return mcpcli.MCPDependencies{Catalog: mcpcatalog.Build()} }\n")
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasMCPAdapterCatalog {
-		t.Fatalf("contractcli MCP adapter catalog signal was not detected: %+v", signals)
+		t.Fatalf("root MCP catalog signal was not detected: %+v", signals)
 	}
 }
 
@@ -239,11 +239,11 @@ func TestRunDaemonAcceptLoopExpires64IdleSessionsAndAdmitsInitialize() {}
 
 func TestMCPResourceCoverageIsSatisfiedByCatalogAndReadEdgeTests(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "mcp", "resource_catalog_test.go"), `package mcp
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "inbound", "catalog", "mcp", "resource_catalog_test.go"), `package mcp
 
 func TestResourcesExposeStableDescriptors() {}
 `)
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "mcp", "catalog_test.go"), `package mcp
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "inbound", "catalog", "mcp", "catalog_assembly_test.go"), `package mcp
 
 func TestResourceMapsPreserveDescriptorShape() {}
 `)

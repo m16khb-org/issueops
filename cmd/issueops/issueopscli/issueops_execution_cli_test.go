@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"issueops/cmd/issueops/mcpcli"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	issueopscore "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/preflight"
 	commandparsecontract "issueops/internal/contract/commandparse"
@@ -302,7 +303,7 @@ func executionMCPText(t *testing.T, arguments map[string]any) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, rpcErr := mcpcli.HandleToolCall(raw)
+	result, rpcErr := mcpcli.HandleToolCallWithDependencies(raw, mcpcli.MCPDependencies{Catalog: mcpcatalog.Build()})
 	if rpcErr != nil {
 		t.Fatalf("MCP execution call failed at protocol layer: %#v", rpcErr)
 	}

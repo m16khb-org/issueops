@@ -1,9 +1,11 @@
 package mcp
 
+import contract "issueops/internal/contract/mcp"
+
 import "testing"
 
 func TestLocalAssistantToolsExposeStableDescriptors(t *testing.T) {
-	assertToolDescriptors(t, "local assistant", LocalAssistantTools(), []toolDescriptorExpectation{
+	assertToolDescriptors(t, "local assistant", contract.LocalAssistantTools(), []toolDescriptorExpectation{
 		{
 			name:                "commit_suggest",
 			descriptionContains: "Conventional + Lore Hybrid",

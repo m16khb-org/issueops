@@ -1,12 +1,14 @@
 package mcp
 
+import contract "issueops/internal/contract/mcp"
+
 import (
 	"strings"
 	"testing"
 )
 
 func TestStateToolsExposeStableDescriptors(t *testing.T) {
-	tools := StateTools()
+	tools := contract.StateTools()
 	if len(tools) != 6 {
 		t.Fatalf("expected six current state tools, got %d", len(tools))
 	}

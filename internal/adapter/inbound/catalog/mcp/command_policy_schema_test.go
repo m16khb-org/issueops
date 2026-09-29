@@ -1,9 +1,11 @@
 package mcp
 
+import contract "issueops/internal/contract/mcp"
+
 import "testing"
 
 func TestCommandPolicyInputSchemaStableBoundary(t *testing.T) {
-	schema := CommandPolicyInputSchema()
+	schema := contract.CommandPolicyInputSchema()
 	if schema["type"] != "object" {
 		t.Fatalf("schema type drifted: %#v", schema["type"])
 	}

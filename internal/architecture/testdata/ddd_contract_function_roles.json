@@ -420,6 +420,86 @@
     "role": "clone"
   },
   {
+    "path": "internal/contract/mcp/adapter_owned_catalog.go",
+    "symbol": "func AdapterOwnedTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/channel_catalog.go",
+    "symbol": "func ChannelTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/command_policy_catalog.go",
+    "symbol": "func CommandPolicyAuditTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/command_policy_catalog.go",
+    "symbol": "func CommandPolicyInputSchema",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/command_policy_catalog.go",
+    "symbol": "func CommandPolicyTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/gates_catalog.go",
+    "symbol": "func GatesTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/issueops_catalog.go",
+    "symbol": "func IssueOpsBasicTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/issueops_catalog.go",
+    "symbol": "func issueOpsExecutionSchema",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/local_assistant_catalog.go",
+    "symbol": "func LocalAssistantTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/loop_catalog.go",
+    "symbol": "func LoopTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/resource_catalog.go",
+    "symbol": "func Resources",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/state_catalog.go",
+    "symbol": "func StateTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/tool_schemas.go",
+    "symbol": "func CoreProjectTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/tool_schemas.go",
+    "symbol": "func DaemonStatusTool",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/tool_schemas.go",
+    "symbol": "func SelfLoopAdvertisedTools",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/tool_schemas.go",
+    "symbol": "func SelfLoopAliasTools",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/policy/command_types.go",
     "symbol": "func IsPolicyDenied",
     "role": "error"

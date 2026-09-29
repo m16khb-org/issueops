@@ -9,8 +9,8 @@ import (
 
 	"issueops/cmd/issueops/contractcli"
 	"issueops/internal/adapter/hostprobe"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/toolconformance"
-	mcpadapter "issueops/internal/domain/mcp"
 	"issueops/internal/port"
 )
 
@@ -23,8 +23,8 @@ func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest
 	if err != nil {
 		return toolconformance.BenchmarkReport{}, err
 	}
-	descriptors := make([]toolconformance.ToolDescriptor, 0, len(mcpadapter.AdvertisedTools()))
-	for _, tool := range mcpadapter.AdvertisedTools() {
+	descriptors := make([]toolconformance.ToolDescriptor, 0, len(mcpcatalog.AdvertisedTools()))
+	for _, tool := range mcpcatalog.AdvertisedTools() {
 		descriptors = append(descriptors, toolconformance.ToolDescriptor{Name: tool.Name, InputSchema: tool.InputSchema})
 	}
 	runners := toolConformanceRunners(binary)

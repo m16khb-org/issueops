@@ -12,7 +12,7 @@ import (
 // 수발신이 실제로 동작하는지 검증한다.
 func TestServeMCPStreamAdvertisesAndRunsChannelTools(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog()})
 
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil {
