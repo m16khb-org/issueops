@@ -36,7 +36,7 @@ func TestServiceRunsInstallerBeforeDaemonRefresh(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fake := &fakeInstaller{installErr: tc.installErr}
-			err := (Service{Installer: fake}).Run(tc.options)
+			err := (Service{Installer: fake, RefreshDaemon: fake.RefreshDaemon}).Run(tc.options)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("error = %v", err)
 			}

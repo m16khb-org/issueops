@@ -26,9 +26,21 @@ func TestRefreshRunningMCPProxiesAfterInstallDoesNotInspectProcesses(t *testing.
 	})
 	defer restoreList()
 
-	count, err := refreshRunningMCPProxiesAfterInstall()
-	if count != 0 || err != nil {
-		t.Fatalf("refreshRunningMCPProxiesAfterInstall count=%d err=%v, want 0 nil", count, err)
+	root := t.TempDir()
+	t.Setenv("ISSUEOPS_ROOT", root)
+	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "scripts", "install-native.sh"), []byte("#!/bin/sh\nexit 0\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	restoreInstall := stubInstallScriptCommandRunner(t, func(string, ...string) error { return nil })
+	defer restoreInstall()
+	restoreDaemon := stubPostInstallDaemonRefresh(t, func() (bool, error) { return true, nil })
+	defer restoreDaemon()
+	err := runInstallScriptCommand("update", nil)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

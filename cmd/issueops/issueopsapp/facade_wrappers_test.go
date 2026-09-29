@@ -6,8 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	updatecli "issueops/cmd/issueops/updatecli"
+	updateadapter "issueops/internal/adapter/update"
 	qualityapp "issueops/internal/application/quality"
+	updateapp "issueops/internal/application/update"
 	qualitycontract "issueops/internal/contract/quality"
+	updatecontract "issueops/internal/contract/update"
 	"net"
 	"os"
 	"path/filepath"
@@ -93,16 +97,9 @@ func TestAppAndRootCommandFacadeWrappers(t *testing.T) {
 }
 
 func TestRunMCPCommandCleanupJSONUsesDryRunByDefaultAndApplyWhenRequested(t *testing.T) {
-	previousLister := mcpProxyProcessLister
-	previousTerminator := mcpProxyTerminator
-	t.Cleanup(func() {
-		mcpProxyProcessLister = previousLister
-		mcpProxyTerminator = previousTerminator
-		resetUpdateFacadeDeps()
-	})
 	binary := "/repo/bin/issueops"
-	mcpProxyProcessLister = func() ([]mcpProxyProcess, error) {
-		return []mcpProxyProcess{{
+	list := func() ([]updatecontract.MCPProxyProcess, error) {
+		return []updatecontract.MCPProxyProcess{{
 			PID:              44,
 			ParentPID:        1,
 			Command:          binary + " mcp",
@@ -112,19 +109,21 @@ func TestRunMCPCommandCleanupJSONUsesDryRunByDefaultAndApplyWhenRequested(t *tes
 		}}, nil
 	}
 	var terminated []int
-	mcpProxyTerminator = func(pid int) error {
+	terminate := func(pid int) error {
 		terminated = append(terminated, pid)
 		return nil
 	}
 
-	if err := runMCPCommand([]string{"cleanup", "--json"}); err != nil {
+	command := updatecli.CleanupCommand{Effects: rootCleanupEffects{list: list, terminate: terminate}}
+
+	if err := command.Run([]string{"--json"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(terminated) != 0 {
 		t.Fatalf("dry-run cleanup terminated processes: %#v", terminated)
 	}
 
-	if err := runMCPCommand([]string{"cleanup", "--apply", "--json"}); err != nil {
+	if err := command.Run([]string{"--apply", "--json"}); err != nil {
 		t.Fatal(err)
 	}
 	expectedTerminated := []int(nil)
@@ -184,64 +183,33 @@ func TestUpdateAndAPIDocFacadeWrappers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	previousRunner := installScriptCommandRunner
-	previousDaemonRefresh := postInstallDaemonRefresh
-	previousMCPRefresh := postInstallMCPProxyRefresh
-	previousDaemonLister := daemonProcessLister
-	previousDaemonTerminator := daemonProcessTerminator
-	previousMCPProxyLister := mcpProxyProcessLister
-	previousMCPProxyTerminator := mcpProxyTerminator
-	t.Cleanup(func() {
-		installScriptCommandRunner = previousRunner
-		postInstallDaemonRefresh = previousDaemonRefresh
-		postInstallMCPProxyRefresh = previousMCPRefresh
-		daemonProcessLister = previousDaemonLister
-		daemonProcessTerminator = previousDaemonTerminator
-		mcpProxyProcessLister = previousMCPProxyLister
-		mcpProxyTerminator = previousMCPProxyTerminator
-		resetUpdateFacadeDeps()
-	})
-	installScriptCommandRunner = func(string, ...string) error { return nil }
-	postInstallDaemonRefresh = func() (bool, error) { return true, nil }
-	postInstallMCPProxyRefresh = func() (int, error) { return 0, nil }
-	daemonProcessLister = func() ([]daemonProcess, error) { return []daemonProcess{{PID: 11, Command: "daemon"}}, nil }
-	daemonProcessTerminator = func(pid int) error { return nil }
-	mcpProxyProcessLister = func() ([]mcpProxyProcess, error) { return []mcpProxyProcess{{PID: 22, Command: "mcp"}}, nil }
-	mcpProxyTerminator = func(pid int) error { return nil }
-
-	if err := runUpdate([]string{"--dry-run"}); err != nil {
+	command := newUpdateCommand()
+	if err := command.Run("update", []string{"--dry-run"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := runBootstrap([]string{"--dry-run"}); err != nil {
+	if err := command.Run("bootstrap", []string{"--dry-run"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := runInstallScriptCommand("update", []string{"--dry-run"}); err != nil {
+	if err := command.Run("update", []string{"--dry-run"}); err != nil {
 		t.Fatal(err)
 	}
-	if terminated, err := terminateStaleDaemonProcesses(); err != nil || terminated != 1 {
-		t.Fatalf("terminateStaleDaemonProcesses = %d err=%v", terminated, err)
+	stale := updateapp.StaleDaemons{List: func() ([]updatecontract.DaemonProcess, error) {
+		return []updatecontract.DaemonProcess{{PID: 11, Command: "daemon"}}, nil
+	}, Terminate: func(pid int) error {
+		if pid != 11 {
+			t.Fatalf("unexpected daemon PID %d", pid)
+		}
+		return nil
+	}, CurrentPID: os.Getpid}
+	if count, err := stale.Run(); err != nil || count != 1 {
+		t.Fatalf("stale cleanup %d %v", count, err)
 	}
 	binary := filepath.Join(root, "bin", "issueops")
-	if err := os.MkdirAll(filepath.Dir(binary), 0o755); err != nil {
-		t.Fatal(err)
+	if parsed, ok := updateadapter.ParseDaemonProcess("11 "+binary+" daemon --internal", binary); !ok || parsed.PID != 11 {
+		t.Fatalf("daemon parse %+v %v", parsed, ok)
 	}
-	if err := os.WriteFile(binary, []byte("fixture"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if parsed, ok := parseDaemonProcess("11 "+binary+" daemon --internal", binary); !ok || parsed.PID != 11 {
-		t.Fatalf("parseDaemonProcess = %#v %v", parsed, ok)
-	}
-	if refreshed, err := refreshRunningMCPProxiesAfterInstall(); err != nil || refreshed != 0 {
-		t.Fatalf("refreshRunningMCPProxiesAfterInstall = %d err=%v", refreshed, err)
-	}
-	if parsed, ok := parseMCPProxyProcess("22 "+binary+" mcp", binary); !ok || parsed.PID != 22 {
-		t.Fatalf("parseMCPProxyProcess = %#v %v", parsed, ok)
-	}
-	if _, err := listDaemonProcesses(); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := listMCPProxyProcesses(); err != nil {
-		t.Fatal(err)
+	if parsed, ok := updateadapter.ParseMCPProxyProcessSnapshot("22 1 "+binary+" mcp", binary); !ok || parsed.PID != 22 {
+		t.Fatalf("proxy parse %+v %v", parsed, ok)
 	}
 
 	var buf bytes.Buffer
@@ -612,3 +580,13 @@ func qualityInspectDepsForIssueOpsAppTest() qualityapp.InspectDeps {
 		},
 	}
 }
+
+type rootCleanupEffects struct {
+	list      func() ([]updatecontract.MCPProxyProcess, error)
+	terminate func(int) error
+}
+
+func (e rootCleanupEffects) List() ([]updatecontract.MCPProxyProcess, error) { return e.list() }
+func (e rootCleanupEffects) Terminate(pid int) error                         { return e.terminate(pid) }
+func (rootCleanupEffects) CurrentPID() int                                   { return os.Getpid() }
+func (rootCleanupEffects) SupportsOrphanTermination() bool                   { return runtime.GOOS == "darwin" }

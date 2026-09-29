@@ -785,6 +785,7 @@
         "func newDaemonCommand",
         "func newDaemonReader",
         "func newDaemonServer",
+        "func newProcessInspector",
         "func runDaemon"
       ]
     },
@@ -856,26 +857,20 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/hook_facade.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func configureHookCLI",
+        "func runHook"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/hookprompt_wiring.go",
       "owner": "composition",
       "task": "T20",
       "symbols": [
         "func configureHookPrompts"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/host_facade.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureHookCLI",
-        "func resetUpdateFacadeDeps",
-        "func runBootstrap",
-        "func runHook",
-        "func runUpdate",
-        "func wireHostCLIDeps",
-        "type daemonProcess",
-        "type mcpProxyProcess"
       ]
     },
     {
@@ -1608,6 +1603,18 @@
       "task": "T20",
       "symbols": [
         "func newContractConformance"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/update_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newMCPCleanupCommand",
+        "func newUpdateCommand",
+        "func newUpdateRuntime",
+        "func runBootstrap",
+        "func runUpdate"
       ]
     },
     {
@@ -3048,45 +3055,13 @@
       ]
     },
     {
-      "path": "cmd/issueops/updatecli/dependencies.go",
+      "path": "cmd/issueops/updatecli/mcp_cleanup.go",
       "owner": "inbound",
       "task": "T12",
       "symbols": [
-        "func Configure",
-        "func Reset",
-        "func defaultDeps",
-        "func defaultIssueOpsRoot",
-        "type Deps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/updatecli/exports.go",
-      "owner": "inbound",
-      "task": "T12",
-      "symbols": [
-        "func CleanupMCPProxies",
-        "func ListDaemonProcesses",
-        "func ListMCPProxyProcesses",
-        "func ParseDaemonProcess",
-        "func ParseMCPProxyProcess",
-        "func RefreshRunningDaemonAfterInstall",
-        "func RefreshRunningMCPProxiesAfterInstall",
-        "func RunBootstrap",
-        "func RunInstallScriptCommand",
-        "func RunInstallScriptExec",
-        "func RunUpdate",
-        "func SetDaemonProcessLister",
-        "func SetDaemonProcessTerminator",
-        "func SetInstallScriptCommandRunner",
-        "func SetMCPProxyProcessLister",
-        "func SetMCPProxyTerminator",
-        "func SetPostInstallDaemonRefresh",
-        "func SetPostInstallMCPProxyRefresh",
-        "func TerminateDaemonProcess",
-        "func TerminateMCPProxyProcess",
-        "func TerminateStaleDaemonProcesses",
-        "type DaemonProcess",
-        "type MCPProxyProcess"
+        "func CleanupCommand.Run",
+        "func printJSON",
+        "type CleanupCommand"
       ]
     },
     {
@@ -3094,55 +3069,8 @@
       "owner": "inbound",
       "task": "T12",
       "symbols": [
-        "func runBootstrap",
-        "func runInstallScriptCommand",
-        "func runInstallScriptExec",
-        "func runUpdate"
-      ]
-    },
-    {
-      "path": "cmd/issueops/updatecli/update_bootstrap_daemon.go",
-      "owner": "inbound",
-      "task": "T12",
-      "symbols": [
-        "func listDaemonProcesses",
-        "func parseDaemonProcess",
-        "func refreshRunningDaemonAfterInstall",
-        "func runInstalledDaemonCommand",
-        "func terminateDaemonProcess",
-        "func terminateStaleDaemonProcesses",
-        "type daemonProcess"
-      ]
-    },
-    {
-      "path": "cmd/issueops/updatecli/update_bootstrap_mcp.go",
-      "owner": "inbound",
-      "task": "T12",
-      "symbols": [
-        "func cleanupMCPProxies",
-        "func listMCPProxyProcesses",
-        "func mcpProxyCleanupEffects.CurrentPID",
-        "func mcpProxyCleanupEffects.List",
-        "func mcpProxyCleanupEffects.SupportsOrphanTermination",
-        "func mcpProxyCleanupEffects.Terminate",
-        "func parseMCPProxyProcess",
-        "func parseMCPProxyProcessSnapshot",
-        "func refreshRunningMCPProxiesAfterInstall",
-        "func terminateMCPProxyProcess",
-        "type MCPCleanupProcess",
-        "type MCPCleanupResult",
-        "type mcpProxyCleanupEffects",
-        "type mcpProxyProcess"
-      ]
-    },
-    {
-      "path": "cmd/issueops/updatecli/update_effects.go",
-      "owner": "inbound",
-      "task": "T12",
-      "symbols": [
-        "func updateInstaller.Install",
-        "func updateInstaller.RefreshDaemon",
-        "type updateInstaller"
+        "func Command.Run",
+        "type Command"
       ]
     },
     {
@@ -3751,7 +3679,15 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func InspectProcess"
+        "func ProcessInspector.Inspect"
+      ]
+    },
+    {
+      "path": "internal/adapter/daemon/process_inspector.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "type ProcessInspector"
       ]
     },
     {
@@ -3759,7 +3695,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func InspectProcess",
+        "func ProcessInspector.Inspect",
         "func linuxBootTime",
         "func linuxClockTicksPerSecond",
         "func linuxNativeWord",
@@ -3772,7 +3708,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func InspectProcess"
+        "func ProcessInspector.Inspect"
       ]
     },
     {
@@ -3780,7 +3716,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func processFieldWithCLocale"
+        "func ProcessInspector.processFieldWithCLocale"
       ]
     },
     {
@@ -8282,6 +8218,26 @@
       "symbols": []
     },
     {
+      "path": "internal/adapter/update/runtime.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ParseDaemonProcess",
+        "func ParseMCPProxyProcessSnapshot",
+        "func ProcessTable.Read",
+        "func Runtime.CurrentPID",
+        "func Runtime.Daemons",
+        "func Runtime.Install",
+        "func Runtime.List",
+        "func Runtime.RunInstalledDaemon",
+        "func Runtime.StopDaemon",
+        "func Runtime.SupportsOrphanTermination",
+        "func Runtime.Terminate",
+        "type ProcessTable",
+        "type Runtime"
+      ]
+    },
+    {
       "path": "internal/adapter/verification/candidate_source.go",
       "owner": "adapter",
       "task": "T18",
@@ -11414,6 +11370,17 @@
       ]
     },
     {
+      "path": "internal/application/update/daemon.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func DaemonRefresh.Run",
+        "func StaleDaemons.Run",
+        "type DaemonRefresh",
+        "type StaleDaemons"
+      ]
+    },
+    {
       "path": "internal/application/update/service.go",
       "owner": "application",
       "task": "T20",
@@ -13051,6 +13018,14 @@
       ]
     },
     {
+      "path": "internal/contract/update/daemon.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type DaemonProcess"
+      ]
+    },
+    {
       "path": "internal/contract/upstream/upstream.go",
       "owner": "contract",
       "task": "T02",
@@ -13463,6 +13438,14 @@
         "func MCPProxyCleanupAction",
         "func SameMCPProxyIdentity",
         "type MCPProxyIdentity"
+      ]
+    },
+    {
+      "path": "internal/domain/install/daemon.go",
+      "owner": "domain",
+      "task": "T11",
+      "symbols": [
+        "func MayTerminateDaemon"
       ]
     },
     {
@@ -23653,6 +23636,25 @@
       "evidence_tests": [
         "cmd/issueops/issueopsapp/daemon_instance_wiring_test.go",
         "cmd/issueops/daemoncli/daemon_server_loop_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "update-daemon-current-process-eligibility",
+      "source_path": "cmd/issueops/updatecli/update_bootstrap_daemon.go",
+      "source_symbol": "func terminateStaleDaemonProcesses",
+      "responsibility": "Exclude the updating process from stale daemon termination while preserving ordered fail-fast cleanup",
+      "target": "internal/domain/install",
+      "target_symbol": "func MayTerminateDaemon",
+      "task": "T20",
+      "entrypoints": [
+        "issueops update",
+        "issueops bootstrap"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/updatecli/update_bootstrap_process_test.go",
+        "internal/application/update/daemon_test.go",
+        "cmd/issueops/issueopsapp/update_instance_wiring_test.go"
       ],
       "status": "migrated"
     }

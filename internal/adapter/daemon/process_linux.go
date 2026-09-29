@@ -19,7 +19,7 @@ const (
 	maxRepresentableTicksPerSecond = uint64(time.Second)
 )
 
-func InspectProcess(pid int) (contract.ProcessIdentity, error) {
+func (observer ProcessInspector) Inspect(pid int) (contract.ProcessIdentity, error) {
 	if pid <= 0 {
 		return contract.ProcessIdentity{}, fmt.Errorf("pid must be positive")
 	}

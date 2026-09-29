@@ -3,6 +3,7 @@ package daemon
 import (
 	domain "issueops/internal/domain/daemon"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -40,11 +41,11 @@ func TestReadInstanceAcceptsStructuredInstanceRejectsLegacyPID(t *testing.T) {
 }
 
 func TestInspectProcessReturnsStableCurrentIdentity(t *testing.T) {
-	first, err := InspectProcess(os.Getpid())
+	first, err := testProcessInspector().Inspect(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := InspectProcess(os.Getpid())
+	second, err := testProcessInspector().Inspect(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,4 +74,9 @@ func TestProcessStartTimeEqualPreservesFractionalIdentity(t *testing.T) {
 	if domain.ProcessStartTimeEqual(recorded, observed, time.Local) {
 		t.Fatalf("different process start ticks must not match: recorded=%q observed=%q", recorded, observed)
 	}
+}
+
+func testProcessInspector() ProcessInspector {
+	ps, err := exec.LookPath("ps")
+	return ProcessInspector{PSExecutable: ps, PSLookupError: err, Environment: os.Environ()}
 }

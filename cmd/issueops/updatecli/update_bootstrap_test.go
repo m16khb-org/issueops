@@ -30,13 +30,6 @@ func stubInstalledDaemonCommandRunner(t *testing.T, fn func(string, ...string) e
 	return func() { installedDaemonCommandRunner = previous }
 }
 
-func stubPostInstallMCPProxyRefresh(t *testing.T, fn func() (int, error)) func() {
-	t.Helper()
-	previous := postInstallMCPProxyRefresh
-	postInstallMCPProxyRefresh = fn
-	return func() { postInstallMCPProxyRefresh = previous }
-}
-
 func stubDaemonProcessLister(t *testing.T, fn func() ([]daemonProcess, error)) func() {
 	t.Helper()
 	previous := daemonProcessLister
@@ -88,11 +81,6 @@ func TestRunInstallScriptCommandRefreshesDaemonWithoutTouchingMCPProcesses(t *te
 		return daemonWasRunning, nil
 	})
 	defer restoreDaemon()
-	restoreMCPProxy := stubPostInstallMCPProxyRefresh(t, func() (int, error) {
-		t.Fatal("update must preserve active Codex, Claude, and external MCP processes")
-		return 0, nil
-	})
-	defer restoreMCPProxy()
 
 	if err := runInstallScriptCommand("update", nil); err != nil {
 		t.Fatal(err)
@@ -183,11 +171,6 @@ func TestRunUpdateAndBootstrapForwardToInstallScript(t *testing.T) {
 		return false, nil
 	})
 	defer restoreDaemon()
-	restoreMCPProxy := stubPostInstallMCPProxyRefresh(t, func() (int, error) {
-		t.Fatal("dry-run wrapper must not refresh MCP proxies")
-		return 0, nil
-	})
-	defer restoreMCPProxy()
 
 	if err := runUpdate([]string{"--dry-run", "--json"}); err != nil {
 		t.Fatal(err)
@@ -234,8 +217,6 @@ func TestRunUpdateUsesResolvedIssueOpsRootOutsideCheckout(t *testing.T) {
 	defer restore()
 	restoreDaemon := stubPostInstallDaemonRefresh(t, func() (bool, error) { return false, nil })
 	defer restoreDaemon()
-	restoreMCP := stubPostInstallMCPProxyRefresh(t, func() (int, error) { return 0, nil })
-	defer restoreMCP()
 
 	if err := runUpdate([]string{"--dry-run", "--path-mode=skip"}); err != nil {
 		t.Fatal(err)
@@ -263,111 +244,12 @@ func TestRunInstallScriptCommandSkipsRuntimeProcessRefreshOnDryRun(t *testing.T)
 		return true, nil
 	})
 	defer restoreDaemon()
-	restoreMCPProxy := stubPostInstallMCPProxyRefresh(t, func() (int, error) {
-		refreshed = true
-		return 1, nil
-	})
-	defer restoreMCPProxy()
 
 	if err := runInstallScriptCommand("update", []string{"--dry-run"}); err != nil {
 		t.Fatal(err)
 	}
 	if refreshed {
 		t.Fatal("dry-run update must not refresh runtime processes")
-	}
-}
-
-func TestExportedUpdateFacadesForwardToConfiguredDependencies(t *testing.T) {
-	root := t.TempDir()
-	t.Setenv("ISSUEOPS_ROOT", root)
-	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "scripts", "install-native.sh"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	restoreRunner := stubInstallScriptCommandRunner(t, installScriptCommandRunner)
-	defer restoreRunner()
-	restoreDaemon := stubPostInstallDaemonRefresh(t, postInstallDaemonRefresh)
-	defer restoreDaemon()
-	restoreMCPProxy := stubPostInstallMCPProxyRefresh(t, postInstallMCPProxyRefresh)
-	defer restoreMCPProxy()
-	restoreDaemonList := stubDaemonProcessLister(t, daemonProcessLister)
-	defer restoreDaemonList()
-	restoreDaemonTerm := stubDaemonProcessTerminator(t, daemonProcessTerminator)
-	defer restoreDaemonTerm()
-	restoreMCPProxyList := stubMCPProxyProcessLister(t, mcpProxyProcessLister)
-	defer restoreMCPProxyList()
-	restoreMCPProxyTerm := stubMCPProxyTerminator(t, mcpProxyTerminator)
-	defer restoreMCPProxyTerm()
-
-	var commands [][]string
-	SetInstallScriptCommandRunner(func(name string, args ...string) error {
-		commands = append(commands, append([]string{name}, args...))
-		return nil
-	})
-	SetPostInstallDaemonRefresh(func() (bool, error) { return true, nil })
-	SetPostInstallMCPProxyRefresh(func() (int, error) { return 2, nil })
-
-	if err := RunUpdate([]string{"--dry-run"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := RunBootstrap([]string{"--dry-run", "--path-mode=skip"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := RunInstallScriptCommand("update", []string{"--dry-run"}); err != nil {
-		t.Fatal(err)
-	}
-	if got := len(commands); got != 3 {
-		t.Fatalf("expected three exported install wrapper calls, got %d: %#v", got, commands)
-	}
-
-	SetDaemonProcessLister(func() ([]DaemonProcess, error) {
-		return []DaemonProcess{{PID: 11, Command: "issueops daemon serve"}}, nil
-	})
-	SetDaemonProcessTerminator(func(pid int) error {
-		if pid != 11 {
-			t.Fatalf("daemon pid = %d", pid)
-		}
-		return nil
-	})
-	terminated, err := TerminateStaleDaemonProcesses()
-	if err != nil || terminated != 1 {
-		t.Fatalf("TerminateStaleDaemonProcesses = %d err=%v", terminated, err)
-	}
-	if _, err := ListDaemonProcesses(); err != nil {
-		t.Fatalf("ListDaemonProcesses err=%v", err)
-	}
-	binary := filepath.Join(root, "bin", "issueops")
-	if err := os.MkdirAll(filepath.Dir(binary), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(binary, []byte("fixture"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if parsed, ok := ParseDaemonProcess("11 "+binary+" daemon --internal", binary); !ok || parsed.PID != 11 {
-		t.Fatalf("ParseDaemonProcess = %#v ok=%v", parsed, ok)
-	}
-
-	SetMCPProxyProcessLister(func() ([]MCPProxyProcess, error) {
-		return []MCPProxyProcess{{PID: 22, Command: "issueops mcp serve"}}, nil
-	})
-	SetMCPProxyTerminator(func(pid int) error {
-		if pid != 22 {
-			t.Fatalf("mcp proxy pid = %d", pid)
-		}
-		return nil
-	})
-	refreshed, err := RefreshRunningMCPProxiesAfterInstall()
-	if err != nil || refreshed != 0 {
-		t.Fatalf("RefreshRunningMCPProxiesAfterInstall = %d err=%v", refreshed, err)
-	}
-	if _, err := ListMCPProxyProcesses(); err != nil {
-		t.Fatalf("ListMCPProxyProcesses err=%v", err)
-	}
-	if parsed, ok := ParseMCPProxyProcess("22 "+binary+" mcp", binary); !ok || parsed.PID != 22 {
-		t.Fatalf("ParseMCPProxyProcess = %#v ok=%v", parsed, ok)
 	}
 }
 

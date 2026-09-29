@@ -145,6 +145,14 @@ daemon의 준비 완료·시작 차단·종료 허용과 OS 프로세스 신원 
 
 MCP 직접 호출·SDK, doctor, status는 조립 시 고정한 daemon reader를 사용한다. daemon 서버도 MCP 의존성을 한 번 받아 각 연결에 전달하므로 다른 서버의 환경 설정으로 바뀌지 않는다. CLI의 전역 함수 setter·서버 factory·실행 facade·DTO 별칭은 제거했다. 테스트용 callback fixture는 실제 application과 adapter를 호출한다. socket accept, admission 동시성, 첫 바이트 재생, idle deadline은 inbound transport 책임으로 유지한다. 실제 Unix 소켓의 두 서버와 MCP 호출로 경로·연결 한도 분리를 검증한다.
 
+### Update and explicit MCP cleanup boundary
+
+update/bootstrap CLI는 root에서 조립한 `updatecli.Command`로 flag를 해석하고 `application/update.Service`를 호출한다. 설치 성공 뒤의 daemon stop → stale 목록 조회 → 순차 종료는 `DaemonRefresh`와 `StaleDaemons`가 담당한다. dry-run과 설치 실패는 갱신 전에 끝나며, stop 실패 뒤에는 목록을 조회하지 않는다. 현재 프로세스 제외는 `domain/install.MayTerminateDaemon`이 판정한다.
+
+`adapter/update.Runtime`은 설치 script·installed binary 실행, 파일 조회, 프로세스 목록과 신호를 처리한다. root가 harness 경로·환경·ps 실행 경로·프로세스 신원 관측을 고정하므로 다른 명령이 환경변수나 cwd를 바꿔도 설정이 섞이지 않는다. script는 요청한 root에서 실행한다. 기존 daemon 목록 조회 실패의 빈 목록 처리와 MCP 목록 실패의 오류 반환 차이를 유지한다.
+
+활성 MCP 세션은 설치 후 정리 대상이 아니다. 명시적 `mcp cleanup`만 `application/update.CleanupMCPProxies`를 호출하며, domain의 exact command·parent·플랫폼·신원 판정과 종료 직전 재조회를 유지한다. 전역 callback/setter, 호환 facade, 사용하지 않는 PID-only parser와 설치 후 MCP no-op은 제거했다. 기존 no-op 테스트는 실제 update application 호출에서 MCP 조회·종료가 없음을 검증하도록 바꿨고, 격리된 프로세스의 실제 script·ps fixture로 두 root의 CLI 실행을 확인한다.
+
 ### Loop runtime boundary
 
 loop의 생성·시도 기록·종료·status는 root가 조립한 `application/looprun.Service`를 호출한다. CLI와 MCP 직접 호출·SDK는 각 인스턴스에 고정한 저장소 경로와 작업 디렉터리를 사용한다. adapter의 `Store`는 SQL 읽기·쓰기와 기존 span 잠금만 수행하며 전역 저장소 setter와 lifecycle 실행 facade는 제거했다.

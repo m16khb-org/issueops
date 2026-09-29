@@ -9,6 +9,7 @@ import (
 	domain "issueops/internal/domain/daemon"
 	"net"
 	"os"
+	"os/exec"
 	"time"
 )
 
@@ -33,7 +34,7 @@ func probeDaemonStatus(socket string) (contract.IdentityResponse, error) {
 func newDaemonIdentityToken() (string, error)      { return adapter.NewIdentityToken() }
 func daemonExecutableSHA(p string) (string, error) { return adapter.ExecutableSHA(p) }
 func checkDaemonStatus() daemonStatus {
-	return (app.Reader{Paths: currentDaemonPaths, ReadInstance: adapter.ReadInstance, ProbeStatus: probeDaemonStatus, ProcessAlive: processAlive, InspectProcess: adapter.InspectProcess, IsNotExist: os.IsNotExist, MaxConnections: maxConnections, Location: time.Local}).Run()
+	return (app.Reader{Paths: currentDaemonPaths, ReadInstance: adapter.ReadInstance, ProbeStatus: probeDaemonStatus, ProcessAlive: processAlive, InspectProcess: testProcessInspector().Inspect, IsNotExist: os.IsNotExist, MaxConnections: maxConnections, Location: time.Local}).Run()
 }
 func daemonWaiter() app.Waiter {
 	return app.Waiter{Now: time.Now, CheckStatus: checkDaemonStatus, SleepContext: adapter.SleepContext}
@@ -43,7 +44,7 @@ func startDaemonProcess(exe string, paths daemonPaths) error {
 	return (adapter.Launcher{Environment: os.Environ(), HarnessRoot: "."}).Start(exe, paths)
 }
 func stopDaemon() (daemonStatus, error) {
-	stopper := app.Stopper{CheckStatus: checkDaemonStatus, FindProcess: adapter.FindProcess, InspectProcess: adapter.InspectProcess, ProcessAlive: processAlive, Remove: os.Remove, Now: time.Now, Sleep: time.Sleep, Location: time.Local}
+	stopper := app.Stopper{CheckStatus: checkDaemonStatus, FindProcess: adapter.FindProcess, InspectProcess: testProcessInspector().Inspect, ProcessAlive: processAlive, Remove: os.Remove, Now: time.Now, Sleep: time.Sleep, Location: time.Local}
 	return (app.StopCoordinator{Paths: currentDaemonPaths, EnsureDir: adapter.EnsureDirectory, AcquireLock: adapter.AcquireLock, Remove: os.Remove, Stop: stopper.Run}).Run()
 }
 func runDaemon(args []string) error {
@@ -56,3 +57,8 @@ func serveDaemonConnection(conn net.Conn, logFile LogFile, instance daemonInstan
 }
 
 func daemonStatusForMCP() daemonStatus { return checkDaemonStatus() }
+
+func testProcessInspector() adapter.ProcessInspector {
+	ps, err := exec.LookPath("ps")
+	return adapter.ProcessInspector{PSExecutable: ps, PSLookupError: err, Environment: os.Environ()}
+}

@@ -3,7 +3,6 @@ package update
 // Installer owns the host process and filesystem boundary for a binary update.
 type Installer interface {
 	Install(root string, args []string) error
-	RefreshDaemon() error
 }
 
 type Options struct {
@@ -16,7 +15,10 @@ type Options struct {
 	SkipBuild    bool
 }
 
-type Service struct{ Installer Installer }
+type Service struct {
+	Installer     Installer
+	RefreshDaemon func() error
+}
 
 func (service Service) Run(options Options) error {
 	args := make([]string, 0, 6)
@@ -44,5 +46,5 @@ func (service Service) Run(options Options) error {
 	if options.DryRun {
 		return nil
 	}
-	return service.Installer.RefreshDaemon()
+	return service.RefreshDaemon()
 }

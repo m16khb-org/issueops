@@ -3,23 +3,16 @@ package updatecli
 import (
 	"flag"
 	"fmt"
-	"os"
-	"os/exec"
 
 	updateapp "issueops/internal/application/update"
 )
 
-var installScriptCommandRunner = runInstallScriptExec
-
-func runUpdate(args []string) error {
-	return runInstallScriptCommand("update", args)
+type Command struct {
+	Root    string
+	Service updateapp.Service
 }
 
-func runBootstrap(args []string) error {
-	return runInstallScriptCommand("bootstrap", args)
-}
-
-func runInstallScriptCommand(commandName string, args []string) error {
+func (command Command) Run(commandName string, args []string) error {
 	fs := flag.NewFlagSet(commandName, flag.ContinueOnError)
 	projectLocal := fs.Bool("project-local", false, "also write explicit project-local files")
 	dryRun := fs.Bool("dry-run", false, "show install plan without writing")
@@ -37,17 +30,8 @@ func runInstallScriptCommand(commandName string, args []string) error {
 		return fmt.Errorf("unexpected arguments: %v", fs.Args())
 	}
 
-	return (updateapp.Service{Installer: updateInstaller{}}).Run(updateapp.Options{
-		Root: deps.IssueOpsRoot(), ProjectLocal: *projectLocal, DryRun: *dryRun,
+	return command.Service.Run(updateapp.Options{
+		Root: command.Root, ProjectLocal: *projectLocal, DryRun: *dryRun,
 		PathMode: *pathMode, Interactive: *interactive, JSON: *jsonOut, SkipBuild: *skipBuild,
 	})
-}
-
-func runInstallScriptExec(script string, args ...string) error {
-	cmd := exec.Command(script, args...)
-	cmd.Dir = deps.IssueOpsRoot()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()
 }

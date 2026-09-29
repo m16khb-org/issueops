@@ -9,15 +9,15 @@ import (
 	"time"
 )
 
-func InspectProcess(pid int) (contract.ProcessIdentity, error) {
+func (observer ProcessInspector) Inspect(pid int) (contract.ProcessIdentity, error) {
 	if pid <= 0 {
 		return contract.ProcessIdentity{}, fmt.Errorf("pid must be positive")
 	}
-	startOut, err := processFieldWithCLocale(pid, "lstart=")
+	startOut, err := observer.processFieldWithCLocale(pid, "lstart=")
 	if err != nil {
 		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
 	}
-	exeOut, err := processFieldWithCLocale(pid, "comm=")
+	exeOut, err := observer.processFieldWithCLocale(pid, "comm=")
 	if err != nil {
 		return contract.ProcessIdentity{}, fmt.Errorf("read process executable: %w", err)
 	}

@@ -482,7 +482,7 @@ func TestStopDaemonLeavesUnrelatedLiveProcessAlive(t *testing.T) {
 			return daemonStatus{OK: true, Running: true, Reachable: true, IdentityVerified: true, PID: instance.PID, Code: daemonStatusReady, Instance: &instance}
 		},
 		findProcess:    func(pid int) (daemonProcess, error) { return os.FindProcess(pid) },
-		inspectProcess: daemonpaths.InspectProcess,
+		inspectProcess: testProcessInspector().Inspect,
 		processAlive:   processAlive,
 	})
 
@@ -660,7 +660,7 @@ func startVerifiedDaemonTestSocket(t *testing.T, paths daemonPaths) daemonInstan
 
 func writeVerifiedDaemonTestInstance(t *testing.T, paths daemonPaths) daemonInstance {
 	t.Helper()
-	process, err := daemonpaths.InspectProcess(os.Getpid())
+	process, err := testProcessInspector().Inspect(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
 	}
