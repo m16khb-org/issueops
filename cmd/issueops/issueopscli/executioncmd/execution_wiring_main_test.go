@@ -1,24 +1,23 @@
 package executioncmd
 
-import (
-	issueopscore "issueops/internal/adapter/issueops"
-	"os"
-	"testing"
-)
+import core "issueops/internal/adapter/issueops"
 
-// 프로덕션에서는 issueopsapp이 주입한다. 실행 CLI 테스트는 실제 액션 경로를
-// 검증하므로 같은 배선을 재현한다.
-func wireExecutionForTests() {
-	ConfigureExecution(ExecutionDeps{
-		ExecuteExecution:             issueopscore.ExecuteExecution,
-		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
-		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
-		SyncExecutionBase:            issueopscore.SyncExecutionBase,
-	})
+func testExecutionRuntime() ExecutionDeps {
+	return ExecutionDeps{ExecuteExecution: core.ExecuteExecution, ObserveNativeProcessAncestry: core.ObserveNativeProcessAncestry, SwitchExecutionMode: core.SwitchExecutionMode, SyncExecutionBase: core.SyncExecutionBase}
 }
-
-func TestMain(m *testing.M) {
-	wireExecutionForTests()
-	os.Exit(m.Run())
+func runExecutionForTest(args []string, deps Deps) error {
+	defaults := testExecutionRuntime()
+	if deps.Runtime.ExecuteExecution == nil {
+		deps.Runtime.ExecuteExecution = defaults.ExecuteExecution
+	}
+	if deps.Runtime.ObserveNativeProcessAncestry == nil {
+		deps.Runtime.ObserveNativeProcessAncestry = defaults.ObserveNativeProcessAncestry
+	}
+	if deps.Runtime.SwitchExecutionMode == nil {
+		deps.Runtime.SwitchExecutionMode = defaults.SwitchExecutionMode
+	}
+	if deps.Runtime.SyncExecutionBase == nil {
+		deps.Runtime.SyncExecutionBase = defaults.SyncExecutionBase
+	}
+	return Run(args, deps)
 }

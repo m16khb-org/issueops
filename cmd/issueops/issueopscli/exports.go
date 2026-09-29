@@ -1,6 +1,7 @@
 package issueopscli
 
 import (
+	"issueops/cmd/issueops/issueopscli/executioncmd"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	"issueops/cmd/issueops/issueopscli/remoteverify"
 	executionissue "issueops/internal/contract/executionissue"
@@ -11,6 +12,7 @@ import (
 )
 
 type Dependencies struct {
+	Execution   executioncmd.ExecutionDeps
 	Runtime     IssueOpsCLIDeps
 	Gates       LoopGateDeps
 	Usage       string

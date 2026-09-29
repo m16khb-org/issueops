@@ -10,6 +10,7 @@ func (cli command) runIssueOpsExecutionWithDependencies(args []string, deps Depe
 
 func (cli command) issueOpsExecutionDeps(deps Dependencies) executioncmd.Deps {
 	return executioncmd.Deps{
+		Runtime:     deps.Execution,
 		StateRoot:   cli.Runtime.IssueOpsStateRoot,
 		Prepare:     deps.Prepare,
 		Orca:        deps.Orca,

@@ -67,7 +67,7 @@ func TestIssueOpsExecutionPrepareCLIAndStatusShareSchemaProjection(t *testing.T)
 	}
 
 	preparedJSON := captureStdoutForContract(t, func() error {
-		return testIssueOpsCommand().runIssueOpsWithDependencies(append([]string{
+		return runIssueOpsForTest(append([]string{
 			"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--confirm", "--json",
 		}, actorFlags...), deps)
 	})
@@ -189,7 +189,7 @@ func TestIssueOpsExecutionPrepareCLIAndMCPStatusAndErrorsAreIdentical(t *testing
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo, id, actorFlags := executionCLIRecord(t)
 	_ = captureStdoutForContract(t, func() error {
-		return testIssueOpsCommand().runIssueOpsWithDependencies(
+		return runIssueOpsForTest(
 			append([]string{"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--confirm", "--json"}, actorFlags...),
 			Dependencies{Prepare: executionCLIPrepareHandler(t)},
 		)
@@ -247,7 +247,7 @@ func TestIssueOpsExecutionPrepareCLIFailsClosedWithoutHandler(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo, id, actorFlags := executionCLIRecord(t)
 	_, err := captureStdoutAndErrorForIssueOps(t, func() error {
-		return testIssueOpsCommand().runIssueOpsWithDependencies(
+		return runIssueOpsForTest(
 			append([]string{"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--json"}, actorFlags...),
 			Dependencies{},
 		)

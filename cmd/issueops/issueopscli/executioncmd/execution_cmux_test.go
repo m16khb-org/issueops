@@ -32,7 +32,7 @@ func TestExecutionHandoffCmuxCLIRequiresExplicitCompleteIdentity(t *testing.T) {
 		"--prompt-file", "/repo/worktree/.issueops/cmux-prompt", "--prompt-sha256", strings.Repeat("a", 64),
 		"--material-sha256", strings.Repeat("b", 64), "--json",
 	}
-	if err := Run(args, deps); err != nil {
+	if err := runExecutionForTest(args, deps); err != nil {
 		t.Fatal(err)
 	}
 	want := issueopscontract.ExecutionCmuxHandoffRequest{
@@ -56,7 +56,7 @@ func TestExecutionHandoffCmuxCLIDoesNotInvokeOnIncompleteOrInventedIdentity(t *t
 		{"handoff-cmux", "--id", "io-13"},
 		{"handoff-cmux", "--id", "io-13", "--generation", "1", "--runtime-id", "invented"},
 	} {
-		if err := Run(args, deps); err == nil {
+		if err := runExecutionForTest(args, deps); err == nil {
 			t.Fatalf("incomplete cmux command accepted: %q", args)
 		}
 	}

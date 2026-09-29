@@ -35,7 +35,7 @@ func TestExecutionSnapshotFileFlagMapsToPrepareRequest(t *testing.T) {
 	}
 	path := writeExecutionSnapshotTestFile(t, validExecutionSnapshotJSON(), 0o600)
 	var output any
-	err = Run([]string{
+	err = runExecutionForTest([]string{
 		"prepare", "--id", id, "--mode", "direct", "--owner-host", "claude",
 		"--issue-snapshot-file", path,
 		"--host", "codex", "--session-id", "snapshot-cli",

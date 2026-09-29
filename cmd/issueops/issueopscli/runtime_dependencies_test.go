@@ -13,5 +13,8 @@ func runIssueOpsForTest(args []string, deps Dependencies) error {
 	if deps.Gates.AdvancePhaseWithActor == nil {
 		deps.Gates = testIssueOpsGates
 	}
+	if deps.Execution.ExecuteExecution == nil {
+		deps.Execution = testCLIExecutionRuntime()
+	}
 	return RunIssueOpsWithDependencies(args, deps)
 }

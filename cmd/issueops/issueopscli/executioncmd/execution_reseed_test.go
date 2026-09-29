@@ -10,7 +10,7 @@ import (
 func TestExecutionReseedCLIMapsCompletionGeneration(t *testing.T) {
 	stateRoot := t.TempDir()
 	calls := 0
-	err := Run([]string{
+	err := runExecutionForTest([]string{
 		"replace", "--id", "io-aaaaaaaaaaaa", "--expected-generation", "5",
 		"--completion-generation", "4", "--inventory-fingerprint", "inventory",
 		"--reason", "functional HEAD moved", "--reseed", "--confirm", "--json",

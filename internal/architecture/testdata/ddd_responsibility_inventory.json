@@ -1012,7 +1012,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsExecutionRunners"
+        "func newIssueOpsExecutionRunners"
       ]
     },
     {
@@ -1090,6 +1090,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func issueOpsCLIDependencies",
         "func runIssueOps"
       ]
     },
@@ -1766,7 +1767,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ConfigureExecution",
         "type ExecutionDeps"
       ]
     },

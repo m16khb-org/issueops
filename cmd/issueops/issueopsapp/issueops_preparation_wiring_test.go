@@ -131,6 +131,7 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	}
 	var raw any
 	err = executioncmd.Run(tokens[2:], executioncmd.Deps{
+		Runtime:   newIssueOpsExecutionRunners(),
 		StateRoot: func() string { return stateRoot }, Prepare: handler, ReadIssue: fallback,
 		PrintJSON: func(value any) error { raw = value; return nil },
 	})

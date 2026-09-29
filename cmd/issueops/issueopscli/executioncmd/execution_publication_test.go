@@ -37,7 +37,7 @@ func TestRunPublicationReconcilePreservesCLITextProjection(t *testing.T) {
 	stateRoot, record, receipt := publicationReconcileCLIRecord(t)
 	calls := 0
 	output := capturePublicationCLIStdout(t, func() {
-		err := Run([]string{
+		err := runExecutionForTest([]string{
 			"reconcile", "--id", record.ID, "--confirm",
 			"--host", "codex", "--session-id", "publication-cli-session",
 			"--session-pid", strconv.Itoa(receipt.PID), "--session-started-at", receipt.StartedAt,

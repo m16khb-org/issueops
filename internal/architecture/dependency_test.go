@@ -716,18 +716,20 @@ func productionPreparationRoutingViolations(repoRoot string) ([]string, error) {
 	}
 
 	for _, wiring := range []struct {
-		path     string
-		function string
+		path        string
+		function    string
+		constructor string
 	}{
-		{path: filepath.Join("cmd", "issueops", "issueopsapp", "issueops_policy_facade.go"), function: "runIssueOps"},
-		{path: filepath.Join("cmd", "issueops", "issueopsapp", "mcp_facade.go"), function: "issueOpsMCPDependencies"},
+		{path: filepath.Join("cmd", "issueops", "issueopsapp", "issueops_policy_facade.go"), function: "runIssueOps", constructor: "issueOpsCLIDependencies"},
+		{path: filepath.Join("cmd", "issueops", "issueopsapp", "issueops_policy_facade.go"), function: "issueOpsCLIDependencies", constructor: "productionIssueOpsExecutionDependencies"},
+		{path: filepath.Join("cmd", "issueops", "issueopsapp", "mcp_facade.go"), function: "issueOpsMCPDependencies", constructor: "productionIssueOpsExecutionDependencies"},
 	} {
 		file, err := parseProductionFile(filepath.Join(repoRoot, wiring.path))
 		if err != nil {
 			return nil, err
 		}
-		if count := functionCallCount(file, wiring.function, "productionIssueOpsExecutionDependencies"); count != 1 {
-			violations = append(violations, fmt.Sprintf("%s:%s must call the shared execution composition constructor exactly once, found %d", filepath.ToSlash(wiring.path), wiring.function, count))
+		if count := functionCallCount(file, wiring.function, wiring.constructor); count != 1 {
+			violations = append(violations, fmt.Sprintf("%s:%s must call %s exactly once, found %d", filepath.ToSlash(wiring.path), wiring.function, wiring.constructor, count))
 		}
 	}
 	sort.Strings(violations)

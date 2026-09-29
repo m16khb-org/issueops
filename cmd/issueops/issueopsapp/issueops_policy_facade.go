@@ -10,8 +10,13 @@ import (
 )
 
 func runIssueOps(args []string) error {
+	return issueopscli.RunIssueOpsWithDependencies(args, issueOpsCLIDependencies())
+}
+
+func issueOpsCLIDependencies() issueopscli.Dependencies {
 	execution := productionIssueOpsExecutionDependencies()
-	return issueopscli.RunIssueOpsWithDependencies(args, issueopscli.Dependencies{
+	return issueopscli.Dependencies{
+		Execution: newIssueOpsExecutionRunners(), HandoffCmux: issueOpsCmuxHandoffHandler,
 		Runtime: newIssueOpsCLIRuntime(issueops.IssueOpsStateRoot()), Gates: newIssueOpsCLIGates(),
 		Usage: clicatalog.LifecycleUsage(), ChildUsage: clicatalog.ChildUsage(),
 		Prepare: execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner,
@@ -24,5 +29,5 @@ func runIssueOps(args []string) error {
 			Create:    issueops.RemotePullRequestCreateHandler(issueOpsPublicationCreateHandler),
 			Reconcile: issueops.RemotePullRequestReconcileHandler(issueOpsPublicationReconcileHandler),
 		},
-	})
+	}
 }

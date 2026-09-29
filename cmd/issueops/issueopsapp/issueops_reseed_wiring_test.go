@@ -94,6 +94,7 @@ func TestExecutionReseedCLIDogfoodDirectAndOrca(t *testing.T) {
 			}
 			var result issueops.ExecutionReplaceResult
 			deps := executioncmd.Deps{
+				Runtime:    newIssueOpsExecutionRunners(),
 				StateRoot:  func() string { return stateRoot },
 				Provenance: reseedProvenanceObserver{},
 				Reseed: func(ctx context.Context, root string, request issueops.ExecutionReseedRequest) (issueops.ExecutionReplaceResult, error) {
@@ -323,6 +324,7 @@ func TestExecutionReseedPreviewNextCommandRunsWithoutCallerRepair(t *testing.T) 
 		t.Fatalf("preview did not emit canonical worktree cwd: %q", preview.NextCommand)
 	}
 	if err := executioncmd.Run(tokens[2:], executioncmd.Deps{
+		Runtime:    newIssueOpsExecutionRunners(),
 		StateRoot:  func() string { return stateRoot },
 		Provenance: reseedProvenanceObserver{},
 		ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {

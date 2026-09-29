@@ -10,17 +10,17 @@ import (
 
 func TestExecutionSyncBaseCLIMapsCompletionGeneration(t *testing.T) {
 	var captured issueops.ExecutionSyncBaseRequest
-	err := Run([]string{
+	err := runExecutionForTest([]string{
 		"sync-base", "--id", "io-sync-base-cli", "--completion-generation", "7", "--preview", "--cwd", "/worktree", "--json",
 	}, Deps{
 		StateRoot: func() string { return "/state" },
-		syncBase: func(_ context.Context, stateRoot string, request issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, stateRoot string, request issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
 			if stateRoot != "/state" {
 				t.Fatalf("state root=%q", stateRoot)
 			}
 			captured = request
 			return issueops.ExecutionSyncBaseResult{OK: true, ID: request.ID, Mode: request.Mode}, nil
-		},
+		}},
 		PrintJSON: func(any) error { return nil },
 	})
 	if err != nil {
@@ -36,7 +36,7 @@ func TestExecutionSyncBaseCLIMutationRequiresProcessCWD(t *testing.T) {
 	requested := t.TempDir()
 	t.Chdir(actual)
 	calls := 0
-	err := Run([]string{
+	err := runExecutionForTest([]string{
 		"sync-base", "--id", "io-sync-base-cli", "--completion-generation", "7",
 		"--apply", "--confirm", "--fingerprint", strings.Repeat("a", 64),
 		"--host", "codex", "--session-id", "session", "--session-pid", "42",
@@ -44,10 +44,10 @@ func TestExecutionSyncBaseCLIMutationRequiresProcessCWD(t *testing.T) {
 		"--cwd", requested, "--json",
 	}, Deps{
 		StateRoot: func() string { return "/state" },
-		syncBase: func(_ context.Context, _ string, _ issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, _ string, _ issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
 			calls++
 			return issueops.ExecutionSyncBaseResult{OK: true}, nil
-		},
+		}},
 		PrintJSON:  func(any) error { return nil },
 		PrintError: func(err error) error { return err },
 	})
@@ -63,7 +63,7 @@ func TestExecutionSyncBaseCLIMutationAcceptsMatchingProcessCWD(t *testing.T) {
 	requested := t.TempDir()
 	t.Chdir(requested)
 	calls := 0
-	err := Run([]string{
+	err := runExecutionForTest([]string{
 		"sync-base", "--id", "io-sync-base-cli", "--completion-generation", "7",
 		"--apply", "--confirm", "--fingerprint", strings.Repeat("a", 64),
 		"--host", "codex", "--session-id", "session", "--session-pid", "42",
@@ -71,13 +71,13 @@ func TestExecutionSyncBaseCLIMutationAcceptsMatchingProcessCWD(t *testing.T) {
 		"--cwd", requested, "--json",
 	}, Deps{
 		StateRoot: func() string { return "/state" },
-		syncBase: func(_ context.Context, _ string, request issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, _ string, request issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
 			calls++
 			if request.CWD != requested {
 				t.Fatalf("sync-base request cwd=%q", request.CWD)
 			}
 			return issueops.ExecutionSyncBaseResult{OK: true}, nil
-		},
+		}},
 		PrintJSON: func(any) error { return nil },
 	})
 	if err != nil || calls != 1 {

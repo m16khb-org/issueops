@@ -33,7 +33,6 @@ func wireBasicCLIDeps() {
 	configureIssueOpsRemote()
 	configureIssueOpsOrphanCleanup()
 	configureIssueOpsLeaseNextCommands()
-	configureIssueOpsExecutionRunners()
 	installcli.Configure(installDependencies())
 
 }
