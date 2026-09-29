@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 )
@@ -168,7 +169,17 @@ func ReplayRegression(fixture RegressionFixture, descriptors []ToolDescriptor, s
 }
 
 func jsonDeepEqual(left, right any) bool {
-	leftJSON, leftErr := json.Marshal(left)
-	rightJSON, rightErr := json.Marshal(right)
-	return leftErr == nil && rightErr == nil && string(leftJSON) == string(rightJSON)
+	var normalized [2]any
+	for i, value := range []any{left, right} {
+		data, err := json.Marshal(value)
+		if err != nil {
+			return false
+		}
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.UseNumber()
+		if err := decoder.Decode(&normalized[i]); err != nil {
+			return false
+		}
+	}
+	return reflect.DeepEqual(normalized[0], normalized[1])
 }

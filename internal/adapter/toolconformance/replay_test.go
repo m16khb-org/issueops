@@ -52,7 +52,13 @@ func TestReplayRegressionRejectsInvalidArgumentsBeforeHandlerAndPreservesState(t
 		ExpectedFinalResult:         core.InvalidToolArgumentsResult(fixture.SourceTool, classified.Diagnostics),
 		ExpectedStateUnchanged:      true,
 	}
-	replayed, err := core.ReplayRegression(regression, descriptors, t.TempDir())
+	path := t.TempDir() + "/regression.json"
+	writeJSONFile(t, path, regression)
+	loaded, err := core.LoadRegressionFixture(path)
+	if err != nil {
+		t.Fatalf("valid regression rejected after JSON roundtrip: %v", err)
+	}
+	replayed, err := core.ReplayRegression(loaded, descriptors, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
