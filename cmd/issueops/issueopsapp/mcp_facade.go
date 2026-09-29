@@ -12,7 +12,6 @@ import (
 	issueopsadapter "issueops/internal/adapter/issueops"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 	statestore "issueops/internal/adapter/outbound/state"
-	webfetchadapter "issueops/internal/adapter/outbound/webfetch"
 	"issueops/internal/adapter/policy"
 	"issueops/internal/adapter/preflight"
 	preflightapp "issueops/internal/application/preflight"
@@ -48,7 +47,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		Compatibility: func() any { return compatibility },
 		Commit:        newCommitService(resolveTarget("")),
 		Lint:          newLintService(resolveTarget("")),
-		Fetch:         webfetchadapter.Fetch,
+		Fetch:         newWebFetch(),
 		Execution:     mcpcli.ExecutionDeps{ExecuteExecution: issueopsadapter.ExecuteExecution, ObserveNativeProcessAncestry: issueopsadapter.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return stateRoot }},
 
 		Gates:   newGatesService(),

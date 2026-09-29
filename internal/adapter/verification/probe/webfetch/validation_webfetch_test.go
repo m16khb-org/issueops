@@ -3,7 +3,7 @@ package webfetch
 import "testing"
 
 func TestValidateWebFetchBatteryPassesDeterministicBenchmark(t *testing.T) {
-	step := Validate("/tmp/issueops", "/repo", 100)
+	step := testValidator().Validate("/tmp/issueops", "/repo", 100)
 	if !step.OK {
 		t.Fatalf("Validate returned non-ok step: %#v", step)
 	}

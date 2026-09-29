@@ -85,5 +85,5 @@ func runChannel(args []string) error {
 }
 
 func runWebFetch(args []string) error {
-	return webfetchcli.Run(args)
+	return webfetchcli.RunWithDeps(args, webFetchDependencies())
 }

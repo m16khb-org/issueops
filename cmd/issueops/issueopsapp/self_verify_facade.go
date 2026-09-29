@@ -102,7 +102,7 @@ func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
 		ValidateParallelTempIsolation:   validateParallelTempIsolation,
 		ValidateDaemonRestartResilience: validateDaemonRestartResilience,
 		ValidatePreflightFuzz:           validatePreflightFuzz,
-		ValidateWebFetchBattery:         validateWebFetchBattery,
+		ValidateWebFetchBattery:         newWebFetchProbe().Validate,
 		ValidateNativeIntegration:       newNativeIntegrationProbe().Validate,
 		ValidateRedactionAudit:          docsProbe.RedactionAudit,
 		ValidateQAGate:                  docsProbe.Validate,

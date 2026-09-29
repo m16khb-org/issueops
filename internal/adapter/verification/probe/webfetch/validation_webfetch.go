@@ -14,10 +14,10 @@ import (
 
 type StepResult = verifycontract.StepResult
 
-func Validate(binary, root string, seed int64) StepResult {
+func (v Validator) Validate(binary, root string, seed int64) StepResult {
 	started := time.Now()
-	result, err := RunBenchmark(context.Background(), webfetchcontract.BenchmarkRequest{
-		Fixtures: DeterministicFixtures(),
+	result, err := v.RunBenchmark(context.Background(), webfetchcontract.BenchmarkRequest{
+		Fixtures: v.DeterministicFixtures(),
 		Timeout:  time.Second,
 	})
 	if err != nil {

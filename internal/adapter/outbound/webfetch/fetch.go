@@ -2,38 +2,12 @@ package webfetch
 
 import (
 	"context"
+	webfetchport "issueops/internal/port/webfetch"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-
-	webfetchapplication "issueops/internal/application/webfetch"
-	webfetchcontract "issueops/internal/contract/webfetch"
-	webfetchport "issueops/internal/port/webfetch"
 )
-
-type Options struct {
-	HTTPClient webfetchport.HTTPClient
-	Resolver   webfetchport.Resolver
-	Now        func() time.Time
-}
-
-func Fetch(ctx context.Context, request webfetchcontract.Request) (webfetchcontract.Result, error) {
-	return FetchWithOptions(ctx, request, Options{})
-}
-
-func FetchWithOptions(ctx context.Context, request webfetchcontract.Request, options Options) (webfetchcontract.Result, error) {
-	client := options.HTTPClient
-	if client == nil {
-		client = newHTTPClient(http.DefaultClient)
-	}
-	return webfetchapplication.Fetch(ctx, request, webfetchapplication.Dependencies{
-		HTTPClient: client,
-		URLPolicy:  urlPolicy{resolver: options.Resolver},
-		Now:        options.Now,
-		RetryAfter: parseRetryAfter,
-	})
-}
 
 func cloneNoRedirectClient(client *http.Client) *http.Client {
 	clone := *client
@@ -47,7 +21,7 @@ type netHTTPClient struct {
 	client *http.Client
 }
 
-func newHTTPClient(client *http.Client) webfetchport.HTTPClient {
+func NewHTTPClient(client *http.Client) webfetchport.HTTPClient {
 	return netHTTPClient{client: cloneNoRedirectClient(client)}
 }
 
@@ -70,7 +44,7 @@ func (client netHTTPClient) Do(ctx context.Context, request webfetchport.HTTPReq
 	}, nil
 }
 
-func parseRetryAfter(value string) time.Duration {
+func ParseRetryAfter(value string) time.Duration {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return 0

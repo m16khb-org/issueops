@@ -3,7 +3,6 @@ package probe
 import (
 	"issueops/internal/adapter/verification/probe/goformat"
 	"issueops/internal/adapter/verification/probe/nativeintegration"
-	webfetchvalidation "issueops/internal/adapter/verification/probe/webfetch"
 )
 
 func ValidateCommandPolicy(binary, root string) StepResult {
@@ -32,10 +31,6 @@ func ValidateDaemonRestartResilience(binary, root string, seed int64) StepResult
 
 func ValidatePreflightFuzz(binary, root string, seed int64) StepResult {
 	return validatePreflightFuzz(binary, root, seed)
-}
-
-func ValidateWebFetchBattery(binary, root string, seed int64) StepResult {
-	return webfetchvalidation.Validate(binary, root, seed)
 }
 
 func ValidateInspect(binary, root string) StepResult {

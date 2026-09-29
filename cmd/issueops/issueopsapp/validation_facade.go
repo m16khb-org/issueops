@@ -40,10 +40,6 @@ func validatePreflightFuzz(binary, root string, seed int64) StepResult {
 	return probe.ValidatePreflightFuzz(binary, root, seed)
 }
 
-func validateWebFetchBattery(binary, root string, seed int64) StepResult {
-	return probe.ValidateWebFetchBattery(binary, root, seed)
-}
-
 func validateCommandAudit(binary, root string, seed int64) StepResult {
 	return probe.ValidateCommandAudit(binary, root, seed)
 }

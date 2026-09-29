@@ -1435,7 +1435,6 @@
         "func validatePreflightFuzz",
         "func validateSelfVerifyCandidateExport",
         "func validateToolConformance",
-        "func validateWebFetchBattery",
         "func validateWorkerLifecycle"
       ]
     },
@@ -1445,6 +1444,17 @@
       "task": "T20",
       "symbols": [
         "func newVerifyWorkService"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/webfetch_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newWebFetch",
+        "func newWebFetchBenchmark",
+        "func newWebFetchProbe",
+        "func webFetchDependencies"
       ]
     },
     {
@@ -2643,7 +2653,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Run",
         "func RunWithDeps",
         "func loadFixtureFile",
         "func loadFixtures",
@@ -2652,12 +2661,6 @@
         "func runFetch",
         "type Deps"
       ]
-    },
-    {
-      "path": "cmd/issueops/webfetchcli/webfetch_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/workercli/dependencies.go",
@@ -6763,17 +6766,12 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func CheckComparator",
         "func DeterministicFixtures",
-        "func RunBenchmark",
-        "func categoryAllowed",
-        "func compareBaseline",
+        "func FixtureRunner.Run",
+        "func RunComparator",
         "func gzipString",
-        "func isFalseStrongOKFixture",
-        "func percent",
-        "func percentileLatency",
-        "func runFixture",
-        "func runLiveBenchmark",
-        "func scoreBenchmark"
+        "type FixtureRunner"
       ]
     },
     {
@@ -6781,13 +6779,10 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func Fetch",
-        "func FetchWithOptions",
+        "func NewHTTPClient",
+        "func ParseRetryAfter",
         "func cloneNoRedirectClient",
         "func netHTTPClient.Do",
-        "func newHTTPClient",
-        "func parseRetryAfter",
-        "type Options",
         "type netHTTPClient"
       ]
     },
@@ -6796,14 +6791,8 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func isMetadataIP",
-        "func isReservedIP",
-        "func isUnsafeHost",
-        "func netResolver.LookupIPAddr",
-        "func urlPolicy.Validate",
-        "func validateFetchURL",
-        "type netResolver",
-        "type urlPolicy"
+        "func NetResolver.LookupIPAddr",
+        "type NetResolver"
       ]
     },
     {
@@ -7702,7 +7691,6 @@
         "func ValidateInstallDryRunSmoke",
         "func ValidateParallelTempIsolation",
         "func ValidatePreflightFuzz",
-        "func ValidateWebFetchBattery",
         "func ValidateWorkerLifecycleSmoke"
       ]
     },
@@ -8314,7 +8302,7 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func Validate",
+        "func Validator.Validate",
         "type StepResult"
       ]
     },
@@ -8322,7 +8310,9 @@
       "path": "internal/adapter/verification/probe/webfetch/webfetch_dependencies.go",
       "owner": "adapter",
       "task": "T18",
-      "symbols": []
+      "symbols": [
+        "type Validator"
+      ]
     },
     {
       "path": "internal/adapter/verification/process.go",
@@ -10768,6 +10758,17 @@
       ]
     },
     {
+      "path": "internal/application/webfetch/benchmark.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Benchmark.Run",
+        "func Benchmark.compareBaseline",
+        "func Benchmark.runLiveBenchmark",
+        "type Benchmark"
+      ]
+    },
+    {
       "path": "internal/application/webfetch/fetch.go",
       "owner": "application",
       "task": "T20",
@@ -10785,6 +10786,15 @@
       "symbols": [
         "func FinalizeResult",
         "func SkippedRoutes"
+      ]
+    },
+    {
+      "path": "internal/application/webfetch/url_policy.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func URLValidator.Validate",
+        "type URLValidator"
       ]
     },
     {
@@ -16329,6 +16339,38 @@
         "func verifyWorkEvidenceItemWithCommand",
         "type Decision",
         "type Observation"
+      ]
+    },
+    {
+      "path": "internal/domain/webfetch/benchmark.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BenchmarkTimeout",
+        "func CategoryAllowed",
+        "func CompleteBenchmark",
+        "func CompleteOfflineBenchmark",
+        "func EvaluateBenchmarkFixture",
+        "func HasLiveBenchmarkURL",
+        "func IsFalseStrongOKFixture",
+        "func NewBenchmarkResult",
+        "func Percent",
+        "func PercentileLatency",
+        "func ScoreBenchmark",
+        "func ValidateLiveBenchmark"
+      ]
+    },
+    {
+      "path": "internal/domain/webfetch/safety.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func IsIPAddress",
+        "func IsUnsafeHost",
+        "func ParseFetchURL",
+        "func isMetadataIP",
+        "func isReservedIP",
+        "func parseIPAddress"
       ]
     },
     {
@@ -24508,6 +24550,134 @@
       "evidence_tests": [
         "TestVerificationChecksEvidenceBeforeSuccess",
         "TestChildVerificationRemainsBoundToCommand"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "webfetch-url-policy",
+      "source_path": "internal/adapter/outbound/webfetch/safety.go",
+      "source_symbol": "func validateFetchURL",
+      "responsibility": "URL scheme, credentials and host admissibility; DNS validation is sequenced by application URLValidator",
+      "target": "internal/domain/webfetch",
+      "target_symbol": "func ParseFetchURL",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/webfetch_wiring.go",
+        "cmd/issueops/issueopsapp/mcp_facade.go",
+        "cmd/issueops/issueopsapp/self_verify_facade.go"
+      ],
+      "evidence_tests": [
+        "TestFetchURLPolicyKeepsReservedNetworksBlocked",
+        "TestFetchRejectsUnsafeURLsBeforeNetwork"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "webfetch-ip-policy",
+      "source_path": "internal/adapter/outbound/webfetch/safety.go",
+      "source_symbol": "func isUnsafeHost",
+      "responsibility": "Private-network exception and unconditional metadata/reserved address rejection",
+      "target": "internal/domain/webfetch",
+      "target_symbol": "func IsUnsafeHost",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/webfetch_wiring.go",
+        "cmd/issueops/issueopsapp/mcp_facade.go",
+        "cmd/issueops/issueopsapp/self_verify_facade.go"
+      ],
+      "evidence_tests": [
+        "TestFetchURLPolicyKeepsReservedNetworksBlocked"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "webfetch-benchmark-orchestration",
+      "source_path": "internal/adapter/outbound/webfetch/benchmark.go",
+      "source_symbol": "func RunBenchmark",
+      "responsibility": "Offline/live fixture iteration, effects and comparator error ordering",
+      "target": "internal/application/webfetch",
+      "target_symbol": "func Benchmark.Run",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/webfetch_wiring.go",
+        "cmd/issueops/issueopsapp/mcp_facade.go",
+        "cmd/issueops/issueopsapp/self_verify_facade.go"
+      ],
+      "evidence_tests": [
+        "TestBenchmarkContinuesAfterReplayFailureAndAppliesDomainRules",
+        "TestBenchmarkBaselinePreservesPartialFailureAndMetricDenominators"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "webfetch-live-benchmark-preconditions",
+      "source_path": "internal/adapter/outbound/webfetch/benchmark.go",
+      "source_symbol": "func runLiveBenchmark",
+      "responsibility": "Explicit live opt-in, URL fixture presence and completion classification",
+      "target": "internal/domain/webfetch",
+      "target_symbol": "func ValidateLiveBenchmark",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/webfetch_wiring.go",
+        "cmd/issueops/issueopsapp/mcp_facade.go",
+        "cmd/issueops/issueopsapp/self_verify_facade.go"
+      ],
+      "evidence_tests": [
+        "TestBenchmarkRefusesLiveBeforeAnyEffects"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "webfetch-benchmark-score",
+      "source_path": "internal/adapter/outbound/webfetch/benchmark.go",
+      "source_symbol": "func scoreBenchmark",
+      "responsibility": "Hard-failure score deduction, floor, safety and false-strong acceptance gate",
+      "target": "internal/domain/webfetch",
+      "target_symbol": "func CompleteBenchmark",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/webfetch_wiring.go",
+        "cmd/issueops/issueopsapp/mcp_facade.go",
+        "cmd/issueops/issueopsapp/self_verify_facade.go"
+      ],
+      "evidence_tests": [
+        "TestBenchmarkCompletionEnforcesHardFailuresAndSafety"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "webfetch-benchmark-category",
+      "source_path": "internal/adapter/outbound/webfetch/benchmark.go",
+      "source_symbol": "func categoryAllowed",
+      "responsibility": "Expected-category, body length and false-strong precedence",
+      "target": "internal/domain/webfetch",
+      "target_symbol": "func EvaluateBenchmarkFixture",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/webfetch_wiring.go",
+        "cmd/issueops/issueopsapp/mcp_facade.go",
+        "cmd/issueops/issueopsapp/self_verify_facade.go"
+      ],
+      "evidence_tests": [
+        "TestBenchmarkFixtureDecisionPreservesFailurePriority"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "webfetch-baseline-effects",
+      "source_path": "internal/adapter/outbound/webfetch/benchmark.go",
+      "source_symbol": "func compareBaseline",
+      "responsibility": "Comparator availability, execution and decode ordering with partial failures",
+      "target": "internal/application/webfetch",
+      "target_symbol": "func Benchmark.compareBaseline",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/webfetch_wiring.go",
+        "cmd/issueops/issueopsapp/mcp_facade.go",
+        "cmd/issueops/issueopsapp/self_verify_facade.go"
+      ],
+      "evidence_tests": [
+        "TestBenchmarkBaselinePreservesPartialFailureAndMetricDenominators"
       ],
       "status": "migrated"
     }

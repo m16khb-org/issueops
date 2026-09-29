@@ -36,7 +36,7 @@ func TestFetchRejectsUnsafeURLsBeforeNetwork(t *testing.T) {
 		"http://[::1]/private",
 		"http://user:secret@example.com/private",
 	} {
-		result, err := FetchWithOptions(context.Background(), webfetchcontract.Request{URL: rawURL, Timeout: time.Second}, Options{HTTPClient: newHTTPClient(client)})
+		result, err := FetchWithOptions(context.Background(), webfetchcontract.Request{URL: rawURL, Timeout: time.Second}, Options{HTTPClient: NewHTTPClient(client)})
 		if err != nil {
 			t.Fatalf("Fetch(%q) returned unexpected error: %v", rawURL, err)
 		}
@@ -67,7 +67,7 @@ func TestFetchRejectsUnsafeResolvedHostBeforeNetwork(t *testing.T) {
 	result, err := FetchWithOptions(context.Background(), webfetchcontract.Request{
 		URL:     "http://public.example/resource",
 		Timeout: time.Second,
-	}, Options{HTTPClient: newHTTPClient(client), Resolver: resolver})
+	}, Options{HTTPClient: NewHTTPClient(client), Resolver: resolver})
 	if err != nil {
 		t.Fatalf("Fetch returned unexpected error: %v", err)
 	}
