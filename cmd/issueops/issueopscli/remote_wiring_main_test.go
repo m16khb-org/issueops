@@ -12,16 +12,23 @@ import (
 	cycleapp "issueops/internal/application/issueopscycle"
 	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
-	issuedomain "issueops/internal/domain/issueops"
-	remotedomain "issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
 )
 
 // 프로덕션에서는 issueopsapp이 주입한다. 원격 CLI 계약 테스트는 실제 연산 경로를
 // 검증하므로 같은 배선을 재현한다.
-func wireRemoteForTests() {
+func testRemoteCommand() remotecmd.Command {
 
-	remotecmd.ConfigureRemote(remotecmd.RemoteDeps{
+	return remotecmd.Command{Operations: remotecmd.RemoteDeps{
+		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (port.IssueProviderCreateChildResult, error) {
+			service := remoteapp.ChildCreator{Records: issueopscore.RemoteRecordStore{StateRoot: root}, Resolve: func(name string) (remoteapp.ChildProvider, error) { return provider.Resolve(name) }, Bodies: remoteapp.NewTemplateBodyResolver(os.ReadFile), Authorize: func(_ context.Context, id string, actor issueopscontract.IssueOpsActor) error {
+				return issueopscore.ValidateIssueOpsMutationActor(root, id, actor)
+			}, Link: func(ctx context.Context, id, url, title string, actor issueopscontract.IssueOpsActor) error {
+				_, err := issueLinkerForTest(root).Child(ctx, id, url, title, &actor)
+				return err
+			}}
+			return service.Create(ctx, cmd, observe)
+		},
 		VerifyRemoteArtifact: func(ctx context.Context, root, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest, actor issueopscontract.IssueOpsActor, verify remoteapp.ArtifactLiveVerifier, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error) {
 			service := remoteapp.NewArtifactVerificationService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), verify, observe, time.Now)
 			return service.Verify(ctx, id, req, actor)
@@ -38,7 +45,6 @@ func wireRemoteForTests() {
 			store := issueopscore.RemoteRecordStore{StateRoot: root}
 			return remoteapp.NewIssueCreator(store, issueopscore.IssueCreationEnvironment{ResolveProvider: provider.Resolve}, remoteapp.NewTemplateBodyResolver(os.ReadFile), newIssueIntentsForTest(root), verify, time.Now).Create(ctx, cmd)
 		},
-		ResolveTemplateBody:  remoteapp.NewTemplateBodyResolver(os.ReadFile).Resolve,
 		ReadScoreSummaryFile: remoteapp.NewTemplateBodyResolver(os.ReadFile).ScoreSummary,
 
 		ReconcileIssueCreate: func(ctx context.Context, root, id string, confirm bool, verify remoteapp.IssueLiveVerifier) (issueopscontract.IssueOpsIssueCreateReconcileResult, error) {
@@ -46,7 +52,6 @@ func wireRemoteForTests() {
 			return remoteapp.NewIssueReconciler(store, issueopscore.IssueCreateCandidateSource{Resolve: provider.Resolve}, newIssueIntentsForTest(root), verify, time.Now).Reconcile(ctx, id, confirm)
 		},
 
-		CreateRemoteChild: issueopscore.CreateRemoteChild,
 		CreatePublication: func(ctx context.Context, root string, input remoteapp.PublicationInput, handler issueopscontract.RemotePullRequestCreateHandler, observe remoteapp.AncestryObserver) (port.IssueProviderCreatePullRequestResult, error) {
 			var invoke remoteapp.PublicationInvoker
 			if handler != nil {
@@ -59,25 +64,16 @@ func wireRemoteForTests() {
 			}, invoke)
 			return service.Create(ctx, input)
 		},
-		DecodeIssueOpsRemoteJudgeJSON:      remotedomain.DecodeIssueOpsRemoteJudgeJSON,
-		DecodeIssueOpsRemoteScoringRequest: remotedomain.DecodeIssueOpsRemoteScoringRequest,
-		IssueOpsStateRoot:                  issueopscore.IssueOpsStateRoot,
-		LinkIssueOpsChildWithActor:         LinkIssueOpsChildWithActorForTest,
-		ObserveNativeProcessAncestry:       issueopscore.ObserveNativeProcessAncestry,
-		ReadIssueOps:                       issueopscore.ReadIssueOps,
+		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
+		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
 		ReflectReviewFindings: func(ctx context.Context, root, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 			service := remoteapp.NewReviewReflectionService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(name string) (remoteapp.ReviewReflectionProvider, error) { return provider.Resolve(name) }, observe, time.Now)
 			return service.Reflect(ctx, id, providerOverride, confirm, actor)
 		},
-		RenderIssueOpsRemoteJudgePrompt: remotedomain.RenderIssueOpsRemoteJudgePrompt,
-		ResolveRecordProvider:           issuedomain.ResolveRecordProvider,
-		ScoreIssueOpsRemoteCandidates:   remotedomain.ScoreIssueOpsRemoteCandidates,
 		SyncIssueGraph: func(ctx context.Context, root, id string, confirm bool) (map[string]any, error) {
 			return remoteapp.NewIssueGraphSyncService(issueopscore.RemoteRecordStore{StateRoot: root}, issueopscore.IssueGraphPoster{}).Sync(ctx, id, confirm)
 		},
-		UmbrellaBranchGateReason:      issuedomain.UmbrellaBranchGateReason,
-		ValidateIssueOpsMutationActor: issueopscore.ValidateIssueOpsMutationActor,
-	})
+	}}
 }
 
 func newIssueIntentsForTest(root string) *remoteapp.IssueCreateIntents {

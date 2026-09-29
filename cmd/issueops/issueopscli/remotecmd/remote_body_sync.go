@@ -13,17 +13,17 @@ import (
 
 // runRemoteSyncIssue refreshes a linked issue's body, or the body of one of its
 // provider-native children when --url names one.
-func runRemoteSyncIssue(ctx context.Context, args []string, deps Deps) error {
-	return runBodySyncCommand(ctx, "issueops remote sync-issue", bodysynccontract.KindIssue, args, deps)
+func (command Command) runRemoteSyncIssue(ctx context.Context, args []string, deps Deps) error {
+	return command.runBodySyncCommand(ctx, "issueops remote sync-issue", bodysynccontract.KindIssue, args, deps)
 }
 
 // runRemoteSyncPR refreshes the body of the PR/MR this cycle published. It is
 // fenced by the execution lease generation, like create-pr.
-func runRemoteSyncPR(ctx context.Context, args []string, deps Deps) error {
-	return runBodySyncCommand(ctx, "issueops remote sync-pr", bodysynccontract.KindPR, args, deps)
+func (command Command) runRemoteSyncPR(ctx context.Context, args []string, deps Deps) error {
+	return command.runBodySyncCommand(ctx, "issueops remote sync-pr", bodysynccontract.KindPR, args, deps)
 }
 
-func runBodySyncCommand(ctx context.Context, name, kind string, args []string, deps Deps) error {
+func (command Command) runBodySyncCommand(ctx context.Context, name, kind string, args []string, deps Deps) error {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
@@ -57,7 +57,7 @@ func runBodySyncCommand(ctx context.Context, name, kind string, args []string, d
 	if expectedGeneration != nil {
 		cmd.ExpectedGeneration = *expectedGeneration
 	}
-	_, result, err := remoteDeps.SyncRemoteBody(ctx, remoteDeps.IssueOpsStateRoot(), remoteapp.BodySyncInput{
+	_, result, err := command.Operations.SyncRemoteBody(ctx, command.Operations.IssueOpsStateRoot(), remoteapp.BodySyncInput{
 		Provider: *providerOverride, BodyFile: *bodyFile, Command: cmd,
 		Actor: issueopscontract.IssueOpsActor{Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd},
 	}, deps.observeNativeProcessAncestry)

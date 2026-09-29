@@ -23,7 +23,6 @@ func wireBasicCLIDeps() {
 	configureInstallReaders()
 	configurePolicyAndGitObservers()
 	configureAdapterStateAccess()
-	configureIssueOpsRemote()
 
 }
 

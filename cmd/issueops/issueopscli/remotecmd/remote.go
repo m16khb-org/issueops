@@ -24,7 +24,10 @@ type Deps struct {
 	Publication            PublicationHandlers
 }
 
-func Run(args []string, deps Deps) error {
+func (command Command) Run(args []string, deps Deps) error {
+	if deps.ObserveProcessAncestry == nil {
+		deps.ObserveProcessAncestry = command.Operations.ObserveNativeProcessAncestry
+	}
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage:")
 		fmt.Println("  issueops remote score --input PATH [--judge none|prompt|file] [--judge-file PATH] [--json]")
@@ -68,7 +71,7 @@ func Run(args []string, deps Deps) error {
 			return err
 		}
 		if *judge == "prompt" {
-			result, promptErr := remoteDeps.RenderIssueOpsRemoteJudgePrompt(issueopsremote.IssueOpsRemoteLLMJudgeRequest{Request: req})
+			result, promptErr := issueopsremote.RenderIssueOpsRemoteJudgePrompt(issueopsremote.IssueOpsRemoteLLMJudgeRequest{Request: req})
 			if promptErr != nil {
 				if *jsonOut {
 					if printErr := deps.printError(promptErr); printErr != nil {
@@ -88,7 +91,7 @@ func Run(args []string, deps Deps) error {
 		case "file":
 			result, err = readIssueOpsRemoteJudgeFile(*judgeFile)
 		case "none":
-			result, err = remoteDeps.ScoreIssueOpsRemoteCandidates(req)
+			result, err = issueopsremote.ScoreIssueOpsRemoteCandidates(req)
 		default:
 			err = fmt.Errorf("unsupported issueops remote score judge %q", *judge)
 		}
@@ -140,38 +143,38 @@ func Run(args []string, deps Deps) error {
 			Labels:       labels,
 			Assignees:    assignees,
 		}
-		record, err := remoteDeps.VerifyRemoteArtifact(context.Background(), remoteDeps.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
+		record, err := command.Operations.VerifyRemoteArtifact(context.Background(), command.Operations.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
 			Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
 		}, deps.verifyLive, deps.observeNativeProcessAncestry)
 		return deps.printResult(record, *jsonOut, err)
 	case "render-template":
-		return runRemoteRenderTemplate(args[1:], deps)
+		return command.runRemoteRenderTemplate(args[1:], deps)
 	case "create-issue":
-		return runRemoteCreateIssue(context.Background(), args[1:], deps)
+		return command.runRemoteCreateIssue(context.Background(), args[1:], deps)
 	case "reconcile-issue":
-		return runRemoteReconcileIssue(context.Background(), args[1:], deps)
+		return command.runRemoteReconcileIssue(context.Background(), args[1:], deps)
 	case "create-child":
-		return runRemoteCreateChild(args[1:], deps)
+		return command.runRemoteCreateChild(args[1:], deps)
 	case "create-pr":
-		return runRemotePublication(args[1:], deps)
+		return command.runRemotePublication(args[1:], deps)
 	case "sync-graph":
-		return runIssueGraphSync(args[1:], deps)
+		return command.runIssueGraphSync(args[1:], deps)
 	case "sync-issue":
-		return runRemoteSyncIssue(context.Background(), args[1:], deps)
+		return command.runRemoteSyncIssue(context.Background(), args[1:], deps)
 	case "sync-pr":
-		return runRemoteSyncPR(context.Background(), args[1:], deps)
+		return command.runRemoteSyncPR(context.Background(), args[1:], deps)
 	case "reflect-devils-advocate":
-		return runRemoteReflectDevilsAdvocate(args[1:], deps)
+		return command.runRemoteReflectDevilsAdvocate(args[1:], deps)
 	case "reflect-completion":
-		return runRemoteReflectCompletion(args[1:], deps)
+		return command.runRemoteReflectCompletion(args[1:], deps)
 	case "close-issue":
-		return runRemoteCloseIssue(args[1:], deps)
+		return command.runRemoteCloseIssue(args[1:], deps)
 	default:
 		return fmt.Errorf("unknown issueops remote subcommand %q", args[0])
 	}
 }
 
-func runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
+func (command Command) runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote reflect-devils-advocate", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
@@ -184,7 +187,7 @@ func runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	_, result, err := remoteDeps.ReflectReviewFindings(context.Background(), remoteDeps.IssueOpsStateRoot(), *id, *providerOverride, *confirm, issueopscontract.IssueOpsActor{
+	_, result, err := command.Operations.ReflectReviewFindings(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *providerOverride, *confirm, issueopscontract.IssueOpsActor{
 		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
 	}, deps.observeNativeProcessAncestry)
 	if err != nil {
@@ -267,10 +270,6 @@ func (f *repeatedFlag) Set(value string) error {
 	return nil
 }
 
-func normalizeRemoteCreateMetadata(labels, assignees repeatedFlag) (repeatedFlag, repeatedFlag) {
-	return repeatedFlag(issueopsremote.CleanValues(labels)), repeatedFlag(issueopsremote.CleanValues(assignees))
-}
-
 func formatIssueOpsRemoteIssueRef(issue issueopsremote.IssueOpsRemoteScoredItem) string {
 	ref := firstNonEmptyMain(issue.ID, issue.URL)
 	title := strings.TrimSpace(issue.Title)
@@ -293,7 +292,7 @@ func readIssueOpsRemoteScoringRequestFile(path string) (issueopsremote.IssueOpsR
 		return issueopsremote.IssueOpsRemoteScoringRequest{}, err
 	}
 	var req issueopsremote.IssueOpsRemoteScoringRequest
-	req, err = remoteDeps.DecodeIssueOpsRemoteScoringRequest(b)
+	req, err = issueopsremote.DecodeIssueOpsRemoteScoringRequest(b)
 	if err != nil {
 		return issueopsremote.IssueOpsRemoteScoringRequest{}, fmt.Errorf("parse input file %s: %w", path, err)
 	}
@@ -309,14 +308,14 @@ func readIssueOpsRemoteJudgeFile(path string) (issueopsremote.IssueOpsRemoteScor
 	if err != nil {
 		return issueopsremote.IssueOpsRemoteScoringResult{}, err
 	}
-	result, err := remoteDeps.DecodeIssueOpsRemoteJudgeJSON(b)
+	result, err := issueopsremote.DecodeIssueOpsRemoteJudgeJSON(b)
 	if err != nil {
 		return issueopsremote.IssueOpsRemoteScoringResult{}, fmt.Errorf("parse judge file %s: %w", path, err)
 	}
 	return result, nil
 }
 
-func runRemoteRenderTemplate(args []string, deps Deps) error {
+func (command Command) runRemoteRenderTemplate(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote render-template", flag.ContinueOnError)
 	kind := fs.String("kind", "", "artifact kind: issue, child, or pr")
 	template := fs.String("template", "", "template kind")
@@ -333,7 +332,7 @@ func runRemoteRenderTemplate(args []string, deps Deps) error {
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	scoreSummary, err := remoteDeps.ReadScoreSummaryFile(*scoreFile)
+	scoreSummary, err := command.Operations.ReadScoreSummaryFile(*scoreFile)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

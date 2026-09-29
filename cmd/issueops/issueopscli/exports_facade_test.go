@@ -47,7 +47,7 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 		t.Fatalf("zero dependency wrapper err=%v", err)
 	}
 	handlerCalls := 0
-	err = runIssueOpsForTest(args, Dependencies{Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueops.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+	err = runIssueOpsForTest(args, Dependencies{Remote: testRemoteCommand(), Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueops.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 		handlerCalls++
 		if request.ID != record.ID || request.Confirm {
 			t.Fatalf("request=%#v", request)

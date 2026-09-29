@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func runIssueGraphSync(args []string, deps Deps) error {
+func (command Command) runIssueGraphSync(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote sync-graph", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	confirm := fs.Bool("confirm", false, "execute sync; without this, dry-run preview only")
@@ -14,7 +14,7 @@ func runIssueGraphSync(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := remoteDeps.SyncIssueGraph(context.Background(), remoteDeps.IssueOpsStateRoot(), *id, *confirm)
+	result, err := command.Operations.SyncIssueGraph(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *confirm)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

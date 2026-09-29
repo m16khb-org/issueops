@@ -9,7 +9,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func runRemotePublication(args []string, deps Deps) error {
+func (command Command) runRemotePublication(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote create-pr", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	title := fs.String("title", "", "PR title")
@@ -39,7 +39,7 @@ func runRemotePublication(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := remoteDeps.CreatePublication(context.Background(), remoteDeps.IssueOpsStateRoot(), remoteapp.PublicationInput{
+	result, err := command.Operations.CreatePublication(context.Background(), command.Operations.IssueOpsStateRoot(), remoteapp.PublicationInput{
 		Request: issueopscontract.RemotePullRequestRequest{ID: *id, Provider: *providerOverride, Title: *title, Body: *body, Head: *head, Base: *base, Labels: labels, Assignees: assignees, ExpectedGeneration: *expectedGeneration, CWD: *cwd, Confirm: *confirm,
 			Actor: issueopscontract.NativeActor{Host: *host, SessionID: *sessionID, AgentID: *agentID, SessionProcess: &issueopscontract.NativeProcessReceipt{PID: *sessionPID, StartedAt: *sessionStartedAt, Executable: *sessionExecutable}}},
 		BodyFile: *bodyFile, Template: *template, ScoreFile: *scoreFile, Fields: fields,

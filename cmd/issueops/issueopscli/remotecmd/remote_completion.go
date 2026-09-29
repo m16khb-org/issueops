@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func runRemoteReflectCompletion(args []string, deps Deps) error {
+func (command Command) runRemoteReflectCompletion(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote reflect-completion", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
@@ -15,7 +15,7 @@ func runRemoteReflectCompletion(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	_, result, err := remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), *id, *providerOverride, *confirm, deps.VerifyMerged)
+	_, result, err := command.Operations.ReflectRemoteCompletion(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *providerOverride, *confirm, deps.VerifyMerged)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
@@ -30,7 +30,7 @@ func runRemoteReflectCompletion(args []string, deps Deps) error {
 	return nil
 }
 
-func runRemoteCloseIssue(args []string, deps Deps) error {
+func (command Command) runRemoteCloseIssue(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote close-issue", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
@@ -39,7 +39,7 @@ func runRemoteCloseIssue(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	_, result, err := remoteDeps.CloseRemoteIssue(context.Background(), remoteDeps.IssueOpsStateRoot(), *id, *providerOverride, *confirm, deps.VerifyMerged)
+	_, result, err := command.Operations.CloseRemoteIssue(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *providerOverride, *confirm, deps.VerifyMerged)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

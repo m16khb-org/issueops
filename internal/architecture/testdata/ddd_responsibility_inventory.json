@@ -797,6 +797,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_child_create_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newChildCreator"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_child_start_wiring.go",
       "owner": "composition",
       "task": "T08",
@@ -1062,7 +1070,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsRemote"
+        "func newIssueOpsRemote"
       ]
     },
     {
@@ -1888,12 +1896,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopscli/remotecmd/provider_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/issueopscli/remotecmd/publication_handlers.go",
       "owner": "inbound",
       "task": "T20",
@@ -1906,22 +1908,21 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func Command.Run",
+        "func Command.runRemoteReflectDevilsAdvocate",
+        "func Command.runRemoteRenderTemplate",
         "func Deps.printError",
         "func Deps.printErrorResult",
         "func Deps.printJSON",
         "func Deps.printResult",
         "func Deps.verifyLive",
-        "func Run",
         "func firstNonEmptyMain",
         "func formatIssueOpsRemoteIssueRef",
-        "func normalizeRemoteCreateMetadata",
         "func parseFlags",
         "func readIssueOpsRemoteJudgeFile",
         "func readIssueOpsRemoteScoringRequestFile",
         "func repeatedFlag.Set",
         "func repeatedFlag.String",
-        "func runRemoteReflectDevilsAdvocate",
-        "func runRemoteRenderTemplate",
         "type Deps",
         "type repeatedFlag"
       ]
@@ -1931,10 +1932,10 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func printBodySyncResult",
-        "func runBodySyncCommand",
-        "func runRemoteSyncIssue",
-        "func runRemoteSyncPR"
+        "func Command.runBodySyncCommand",
+        "func Command.runRemoteSyncIssue",
+        "func Command.runRemoteSyncPR",
+        "func printBodySyncResult"
       ]
     },
     {
@@ -1942,9 +1943,8 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Deps.observeNativeProcessAncestry",
-        "func runRemoteCreateChild",
-        "func validateCreateChildInputs"
+        "func Command.runRemoteCreateChild",
+        "func Deps.observeNativeProcessAncestry"
       ]
     },
     {
@@ -1952,8 +1952,8 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runRemoteCloseIssue",
-        "func runRemoteReflectCompletion"
+        "func Command.runRemoteCloseIssue",
+        "func Command.runRemoteReflectCompletion"
       ]
     },
     {
@@ -1961,8 +1961,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ConfigureRemote",
-        "func neutralRemoteDeps",
+        "type Command",
         "type RemoteDeps"
       ]
     },
@@ -1971,7 +1970,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runIssueGraphSync"
+        "func Command.runIssueGraphSync"
       ]
     },
     {
@@ -1979,7 +1978,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runRemoteCreateIssue"
+        "func Command.runRemoteCreateIssue"
       ]
     },
     {
@@ -1987,7 +1986,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runRemoteReconcileIssue"
+        "func Command.runRemoteReconcileIssue"
       ]
     },
     {
@@ -1995,7 +1994,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runRemotePublication"
+        "func Command.runRemotePublication"
       ]
     },
     {
@@ -5370,7 +5369,6 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func CreateRemoteChild",
         "func CreateRemoteIssueContext",
         "func CreateRemotePullRequestViaProviderContext",
         "func ReadRemoteIssueSnapshot",
@@ -9875,6 +9873,17 @@
       ]
     },
     {
+      "path": "internal/application/issueopsremote/child_create.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func ChildCreator.Create",
+        "type ChildCreateCommand",
+        "type ChildCreator",
+        "type ChildProvider"
+      ]
+    },
+    {
       "path": "internal/application/issueopsremote/completion_evidence.go",
       "owner": "application",
       "task": "T07",
@@ -13120,6 +13129,15 @@
         "func pathIsDocument",
         "func pathTouchesAuth",
         "type ChangeTier"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/child_creation.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ValidateChildCreation",
+        "func ValidateCreatedChild"
       ]
     },
     {
@@ -24376,6 +24394,57 @@
       "evidence_tests": [
         "TestValidateJudgeProvenanceFailsClosed",
         "TestRunRejectsJudgeBeforeSave"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-child-prerequisites",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_child_pr.go",
+      "source_symbol": "func runRemoteCreateChild",
+      "responsibility": "parent issue, prepared umbrella branch and required child metadata before provider resolution",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateChildCreation",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_remote_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestChildCreatorOrdersValidationAuthorityCreationAndLink",
+        "TestRemoteChildCreationUsesRootApplicationAndPersistsLink"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-child-hierarchy",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_child_pr.go",
+      "source_symbol": "func runRemoteCreateChild",
+      "responsibility": "confirmed provider result must verify hierarchy and contain a child URL before local linking",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateCreatedChild",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_remote_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestChildCreatorOrdersValidationAuthorityCreationAndLink",
+        "TestRemoteChildCreationUsesRootApplicationAndPersistsLink"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-child-create-orchestration",
+      "source_path": "cmd/issueops/issueopscli/remotecmd/remote_child_pr.go",
+      "source_symbol": "func runRemoteCreateChild",
+      "responsibility": "record read, metadata and body validation, actor authorization, creation, verified hierarchy and persisted child link in order",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func ChildCreator.Create",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_remote_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestChildCreatorOrdersValidationAuthorityCreationAndLink",
+        "TestRemoteChildCreationUsesRootApplicationAndPersistsLink"
       ],
       "status": "migrated"
     }

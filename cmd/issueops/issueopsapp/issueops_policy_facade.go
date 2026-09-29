@@ -16,6 +16,7 @@ func runIssueOps(args []string) error {
 func issueOpsCLIDependencies() issueopscli.Dependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	return issueopscli.Dependencies{
+		Remote:         newIssueOpsRemote(issueops.IssueOpsStateRoot()),
 		Benchmark:      newBenchmarkCommand(),
 		Cleanup:        newIssueOpsCleanup(issueops.IssueOpsStateRoot()),
 		CleanupRuntime: newIssueOpsCleanupRuntime(issueops.IssueOpsStateRoot()),

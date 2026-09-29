@@ -31,7 +31,7 @@ func TestCreateChildRequiresPreparedUmbrellaBranch(t *testing.T) {
 		},
 	}
 
-	err = Run([]string{"create-child", "--id", record.ID, "--title", "자식 작업", "--body", "본문",
+	err = testRemoteCommand().Run([]string{"create-child", "--id", record.ID, "--title", "자식 작업", "--body", "본문",
 		"--label", "bug", "--assignee", "octocat", "--json"}, deps)
 	if err == nil {
 		t.Fatal("create-child must be blocked until the umbrella cycle prepares its own branch")
@@ -55,7 +55,7 @@ func TestCreateChildProceedsWithPreparedUmbrellaBranch(t *testing.T) {
 		PrintError: func(error) error { return nil },
 	}
 
-	if err := Run([]string{"create-child", "--id", record.ID, "--title", "자식 작업", "--body", "본문",
+	if err := testRemoteCommand().Run([]string{"create-child", "--id", record.ID, "--title", "자식 작업", "--body", "본문",
 		"--label", "bug", "--assignee", "octocat", "--json"}, deps); err != nil {
 		t.Fatalf("a prepared umbrella branch must not block child creation: %v", err)
 	}

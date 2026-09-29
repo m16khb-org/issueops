@@ -8,7 +8,7 @@ import (
 	remoteapp "issueops/internal/application/issueopsremote"
 )
 
-func runRemoteCreateIssue(ctx context.Context, args []string, deps Deps) error {
+func (command Command) runRemoteCreateIssue(ctx context.Context, args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote create-issue", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	title := fs.String("title", "", "issue title")
@@ -28,7 +28,7 @@ func runRemoteCreateIssue(ctx context.Context, args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := remoteDeps.CreateIssue(ctx, remoteDeps.IssueOpsStateRoot(), remoteapp.IssueCreateCommand{ID: *id, Provider: *providerOverride, Title: *title, Body: *body, BodyFile: *bodyFile, Template: *template, ScoreFile: *scoreFile, Fields: fields, Labels: labels, Assignees: assignees, Confirm: *confirm}, deps.verifyLive)
+	result, err := command.Operations.CreateIssue(ctx, command.Operations.IssueOpsStateRoot(), remoteapp.IssueCreateCommand{ID: *id, Provider: *providerOverride, Title: *title, Body: *body, BodyFile: *bodyFile, Template: *template, ScoreFile: *scoreFile, Fields: fields, Labels: labels, Assignees: assignees, Confirm: *confirm}, deps.verifyLive)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

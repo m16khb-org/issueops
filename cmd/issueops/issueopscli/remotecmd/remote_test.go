@@ -38,22 +38,22 @@ func TestRunScoreWithJudgeNoneAndErrorPaths(t *testing.T) {
 			return nil
 		},
 	}
-	if err := Run([]string{"score", "--input", input, "--judge", "none", "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"score", "--input", input, "--judge", "none", "--json"}, deps); err != nil {
 		t.Fatalf("score json returned error: %v", err)
 	}
-	if err := Run([]string{"remote-score", "--input", input, "--judge", "none"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"remote-score", "--input", input, "--judge", "none"}, deps); err != nil {
 		t.Fatalf("score text returned error: %v", err)
 	}
 	if len(printed) != 1 {
 		t.Fatalf("expected one JSON result, got %d", len(printed))
 	}
-	if err := Run([]string{"score", "--input", filepath.Join(t.TempDir(), "missing"), "--judge", "none", "--json"}, deps); err == nil {
+	if err := testRemoteCommand().Run([]string{"score", "--input", filepath.Join(t.TempDir(), "missing"), "--judge", "none", "--json"}, deps); err == nil {
 		t.Fatal("expected missing input error")
 	}
 	if len(printedErrors) != 1 {
 		t.Fatalf("expected printed error, got %d", len(printedErrors))
 	}
-	if err := Run([]string{"score", "--input", input, "--judge", "bad"}, deps); err == nil || !strings.Contains(err.Error(), "unsupported") {
+	if err := testRemoteCommand().Run([]string{"score", "--input", input, "--judge", "bad"}, deps); err == nil || !strings.Contains(err.Error(), "unsupported") {
 		t.Fatalf("expected unsupported judge error, got %v", err)
 	}
 }
@@ -85,19 +85,19 @@ func TestRunVerifyArtifactAndRemoteCreateDryRuns(t *testing.T) {
 			return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 		}},
 	}
-	if err := Run([]string{"create-issue", "--id", record.ID, "--title", "Title", "--body", "Body", "--label", "bug", "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"create-issue", "--id", record.ID, "--title", "Title", "--body", "Body", "--label", "bug", "--json"}, deps); err != nil {
 		t.Fatalf("create-issue dry-run returned error: %v", err)
 	}
-	if err := Run([]string{"create-child", "--id", record.ID, "--title", "Child", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"create-child", "--id", record.ID, "--title", "Child", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--json"}, deps); err != nil {
 		t.Fatalf("create-child dry-run returned error: %v", err)
 	}
-	if err := Run([]string{"create-pr", "--id", record.ID, "--title", "PR", "--body", "Body", "--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "octocat", "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"create-pr", "--id", record.ID, "--title", "PR", "--body", "Body", "--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "octocat", "--json"}, deps); err != nil {
 		t.Fatalf("create-pr dry-run returned error: %v", err)
 	}
-	if err := Run([]string{"verify-artifact", "--id", record.ID, "--provider", "github", "--kind", "pr", "--url", "https://github.com/acme/repo/pull/1", "--target-branch", "main", "--label", "bug", "--assignee", "octocat", "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"verify-artifact", "--id", record.ID, "--provider", "github", "--kind", "pr", "--url", "https://github.com/acme/repo/pull/1", "--target-branch", "main", "--label", "bug", "--assignee", "octocat", "--json"}, deps); err != nil {
 		t.Fatalf("verify-artifact returned error: %v", err)
 	}
-	if err := Run([]string{"sync-graph", "--id", record.ID, "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"sync-graph", "--id", record.ID, "--json"}, deps); err != nil {
 		t.Fatalf("sync-graph dry-run returned error: %v", err)
 	}
 	if len(records) != 1 {
@@ -142,7 +142,7 @@ func TestRunRemoteCreateIssueRejectsSecretLikeFields(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			args := append([]string{"create-issue", "--id", record.ID}, test.args...)
-			err := Run(args, Deps{})
+			err := testRemoteCommand().Run(args, Deps{})
 			if err == nil || !strings.Contains(err.Error(), "issue create "+test.name+" contains secret-like content") {
 				t.Fatalf("error = %v", err)
 			}
@@ -168,7 +168,7 @@ func TestRunRenderTemplateAndCreateIssueBodyFileTemplateValidation(t *testing.T)
 		},
 	}
 
-	if err := Run([]string{
+	if err := testRemoteCommand().Run([]string{
 		"render-template",
 		"--kind", "issue",
 		"--template", "feature",
@@ -190,10 +190,10 @@ func TestRunRenderTemplateAndCreateIssueBodyFileTemplateValidation(t *testing.T)
 		t.Fatalf("expected render-template JSON output, got %d", len(printed))
 	}
 
-	if err := Run([]string{"create-issue", "--id", record.ID, "--title", "Title", "--body", "Body", "--body-file", bodyFile}, deps); err == nil || !strings.Contains(err.Error(), "body and body-file are mutually exclusive") {
+	if err := testRemoteCommand().Run([]string{"create-issue", "--id", record.ID, "--title", "Title", "--body", "Body", "--body-file", bodyFile}, deps); err == nil || !strings.Contains(err.Error(), "body and body-file are mutually exclusive") {
 		t.Fatalf("expected mutual exclusion error, got %v", err)
 	}
-	if err := Run([]string{"create-issue", "--id", record.ID, "--title", "Title", "--template", "feature", "--body-file", bodyFile, "--label", "bug", "--assignee", "octocat", "--confirm"}, deps); err == nil || !strings.Contains(err.Error(), "plan_link_section_forbidden") {
+	if err := testRemoteCommand().Run([]string{"create-issue", "--id", record.ID, "--title", "Title", "--template", "feature", "--body-file", bodyFile, "--label", "bug", "--assignee", "octocat", "--confirm"}, deps); err == nil || !strings.Contains(err.Error(), "plan_link_section_forbidden") {
 		t.Fatalf("expected template validation error for forbidden Plan Link, got %v", err)
 	}
 }
@@ -208,7 +208,7 @@ func TestRunRemoteCreateIssueValidatesTitleBeforeProviderInference(t *testing.T)
 		t.Fatal(err)
 	}
 
-	err = Run([]string{"create-issue", "--id", record.ID}, Deps{})
+	err = testRemoteCommand().Run([]string{"create-issue", "--id", record.ID}, Deps{})
 
 	if err == nil || !strings.Contains(err.Error(), "issue title is required") {
 		t.Fatalf("error = %v, want title validation before provider inference", err)
@@ -224,7 +224,7 @@ func TestRunRemoteCreatePRConfirmRequiresLabelAndAssignee(t *testing.T) {
 		{"create-pr", "--id", record.ID, "--title", "PR", "--head", record.Branch, "--base", "main", "--label", "bug", "--confirm"},
 	}
 	for _, args := range tests {
-		if err := Run(args, deps); err == nil {
+		if err := testRemoteCommand().Run(args, deps); err == nil {
 			t.Fatalf("expected confirm validation error for args %v", args)
 		}
 	}
@@ -241,7 +241,7 @@ func TestRunRemoteCreatePRDryRunRejectsSecretLikeContentBeforeProviderCall(t *te
 			return port.IssueProviderCreatePullRequestResult{OK: true}, nil
 		}},
 	}
-	err := Run([]string{"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", secret, "--head", record.Branch, "--base", "main", "--json"}, deps)
+	err := testRemoteCommand().Run([]string{"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", secret, "--head", record.Branch, "--base", "main", "--json"}, deps)
 	if err == nil || !strings.Contains(err.Error(), "secret-like") {
 		t.Fatalf("error=%v", err)
 	}
@@ -273,7 +273,7 @@ func TestRunRemoteCreatePRRejectsSecretLikeMetadataBeforeProviderCall(t *testing
 				"create-pr", "--id", record.ID, "--provider", "github",
 				"--title", "PR", "--body", "Body", "--head", record.Branch, "--base", "main",
 			}
-			err := Run(append(args, test.args...), deps)
+			err := testRemoteCommand().Run(append(args, test.args...), deps)
 			if err == nil || !strings.Contains(err.Error(), "pr create "+test.name+" contains secret-like content") {
 				t.Fatalf("error = %v", err)
 			}
@@ -326,7 +326,7 @@ func TestRunRemoteCreatePRUsesPublicationHandlerForPreviewAndConfirm(t *testing.
 		"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", "Body",
 		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "octocat", "--json",
 	}
-	if err := Run(baseArgs, deps); err != nil {
+	if err := testRemoteCommand().Run(baseArgs, deps); err != nil {
 		t.Fatal(err)
 	}
 	confirmArgs := append(append([]string{}, baseArgs...),
@@ -334,7 +334,7 @@ func TestRunRemoteCreatePRUsesPublicationHandlerForPreviewAndConfirm(t *testing.
 		"--session-started-at", process.StartedAt, "--session-executable", process.Executable,
 		"--cwd", record.Repo, "--confirm",
 	)
-	if err := Run(confirmArgs, deps); err != nil {
+	if err := testRemoteCommand().Run(confirmArgs, deps); err != nil {
 		t.Fatal(err)
 	}
 	if handlerCalls != 2 || len(printed) != 2 {
@@ -350,7 +350,7 @@ func TestRunRemoteCreatePRUsesPublicationHandlerForPreviewAndConfirm(t *testing.
 func TestRunRemoteCreatePRFailsClosedWithoutPublicationHandler(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := remoteIssueOpsRecord(t)
-	err := Run([]string{
+	err := testRemoteCommand().Run([]string{
 		"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", "Body",
 		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "octocat",
 	}, Deps{})
@@ -380,7 +380,7 @@ func TestRunRemoteCreatePRObservesAncestryOnlyForConfirmedMutation(t *testing.T)
 		"--host", "codex", "--session-id", "session-1", "--session-pid", "42",
 		"--session-started-at", "2026-07-23T00:00:00Z", "--session-executable", "/bin/codex", "--cwd", record.Repo,
 	}
-	if err := Run(baseArgs, deps); err != nil {
+	if err := testRemoteCommand().Run(baseArgs, deps); err != nil {
 		t.Fatalf("create-pr dry-run must not require process observation: %v", err)
 	}
 	if observeCalls != 0 {
@@ -388,7 +388,7 @@ func TestRunRemoteCreatePRObservesAncestryOnlyForConfirmedMutation(t *testing.T)
 	}
 	providerCalls = 0
 
-	err := Run(append(append([]string{}, baseArgs...), "--confirm"), deps)
+	err := testRemoteCommand().Run(append(append([]string{}, baseArgs...), "--confirm"), deps)
 	if err == nil || !strings.Contains(err.Error(), "observe native process ancestry") || !strings.Contains(err.Error(), "ps unavailable") {
 		t.Fatalf("create-pr confirm did not propagate process observation failure: %v", err)
 	}
@@ -414,7 +414,7 @@ func TestRunRemoteCreateChildConfirmRecordsChildLink(t *testing.T) {
 		},
 	}
 
-	if err := Run([]string{"create-child", "--id", record.ID, "--title", "Child", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"create-child", "--id", record.ID, "--title", "Child", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
 		t.Fatalf("create-child confirm returned error: %v", err)
 	}
 	updated, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
@@ -437,7 +437,7 @@ func TestRunRemoteCreateChildConfirmUsesActiveLeaseActor(t *testing.T) {
 	binDir := t.TempDir()
 	writeFakeGhForCreateChild(t, binDir)
 	t.Setenv("PATH", binDir)
-	err := Run([]string{
+	err := testRemoteCommand().Run([]string{
 		"create-child", "--id", record.ID, "--title", "Child", "--body", "Body",
 		"--label", "bug", "--assignee", "octocat", "--host", "codex",
 		"--session-id", "session-1", "--cwd", worktree, "--confirm", "--json",
@@ -465,7 +465,7 @@ func TestRunRemoteCreateChildRejectsWrongActorBeforeProviderCall(t *testing.T) {
 	worktree, ancestry := activateRemoteIssueOpsRecordForCurrentProcess(t, &record)
 	t.Setenv("PATH", t.TempDir())
 
-	err := Run([]string{
+	err := testRemoteCommand().Run([]string{
 		"create-child", "--id", record.ID, "--title", "Child", "--body", "Body",
 		"--label", "bug", "--assignee", "octocat", "--host", "codex",
 		"--session-id", "wrong-session", "--cwd", worktree, "--confirm", "--json",
@@ -488,7 +488,7 @@ func TestRunRemoteCreateChildRequiresParentLabelsAndAssignees(t *testing.T) {
 		{"create-child", "--id", record.ID, "--title", "Child", "--label", "bug"},
 	}
 	for _, args := range tests {
-		if err := Run(args, Deps{}); err == nil {
+		if err := testRemoteCommand().Run(args, Deps{}); err == nil {
 			t.Fatalf("expected validation error for args %v", args)
 		}
 	}
@@ -498,7 +498,7 @@ func TestRunRemoteCreateChildRejectsSecretLikeBody(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := remoteIssueOpsRecordWithoutChild(t)
 
-	err := Run([]string{
+	err := testRemoteCommand().Run([]string{
 		"create-child", "--id", record.ID, "--title", "Child",
 		"--body", "password=private-value", "--label", "bug", "--assignee", "octocat",
 	}, Deps{})
@@ -566,17 +566,17 @@ func TestRemoteHelpersAndBoundaries(t *testing.T) {
 	if issuedomain.ResolveRecordProvider(issueopscontract.IssueOpsRecord{IssueURL: "https://gitlab.com/acme/repo/-/issues/1"}) != "gitlab" {
 		t.Fatal("gitlab issue URL should infer provider")
 	}
-	if err := Run(nil, deps); err != nil {
+	if err := testRemoteCommand().Run(nil, deps); err != nil {
 		t.Fatalf("help returned error: %v", err)
 	}
-	if err := Run([]string{"unknown"}, deps); err == nil || !strings.Contains(err.Error(), "unknown issueops remote") {
+	if err := testRemoteCommand().Run([]string{"unknown"}, deps); err == nil || !strings.Contains(err.Error(), "unknown issueops remote") {
 		t.Fatalf("expected unknown command error, got %v", err)
 	}
 }
 
 func TestReflectDevilsAdvocateAcceptsHolderActorFlags(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	err := Run([]string{
+	err := testRemoteCommand().Run([]string{
 		"reflect-devils-advocate",
 		"--id", "io-missing",
 		"--provider", "gitlab",
@@ -732,7 +732,7 @@ func TestRunRemoteCreateIssueConfirmVerifiesLiveIssue(t *testing.T) {
 			return nil
 		},
 	}
-	if err := Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
 		t.Fatalf("create-issue confirm returned error: %v", err)
 	}
 	if len(verified) != 1 {
@@ -767,7 +767,7 @@ func TestRunRemoteCreateIssueConfirmFailsWhenLiveVerificationFails(t *testing.T)
 			return errors.New("remote artifact missing verified label(s): bug")
 		},
 	}
-	if err := Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm"}, deps); err == nil || !strings.Contains(err.Error(), "missing verified label") {
+	if err := testRemoteCommand().Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm"}, deps); err == nil || !strings.Contains(err.Error(), "missing verified label") {
 		t.Fatalf("expected live verification failure to propagate, got %v", err)
 	}
 	stored, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
@@ -787,7 +787,7 @@ func TestRunRemoteReconcileIssueRequiresExactlyOneMatchingCandidate(t *testing.T
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	t.Setenv("RECONCILE_JSON", `[]`)
-	if err := Run([]string{"reconcile-issue", "--id", record.ID, "--json"}, Deps{}); err == nil || !strings.Contains(err.Error(), "found 0 live candidates") {
+	if err := testRemoteCommand().Run([]string{"reconcile-issue", "--id", record.ID, "--json"}, Deps{}); err == nil || !strings.Contains(err.Error(), "found 0 live candidates") {
 		t.Fatalf("expected zero-candidate block, got %v", err)
 	}
 
@@ -797,7 +797,7 @@ func TestRunRemoteReconcileIssueRequiresExactlyOneMatchingCandidate(t *testing.T
 		t.Fatal(err)
 	}
 	t.Setenv("RECONCILE_JSON", string(rows))
-	if err := Run([]string{"reconcile-issue", "--id", record.ID, "--json"}, Deps{}); err == nil || !strings.Contains(err.Error(), "found 2 live candidates") {
+	if err := testRemoteCommand().Run([]string{"reconcile-issue", "--id", record.ID, "--json"}, Deps{}); err == nil || !strings.Contains(err.Error(), "found 2 live candidates") {
 		t.Fatalf("expected many-candidate block, got %v", err)
 	}
 }
@@ -810,7 +810,7 @@ func TestRunRemoteReconcileIssueAdoptsDelayedUniqueVerifiedCandidate(t *testing.
 	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 
 	t.Setenv("RECONCILE_JSON", `[]`)
-	if err := Run([]string{"reconcile-issue", "--id", record.ID}, Deps{}); err == nil {
+	if err := testRemoteCommand().Run([]string{"reconcile-issue", "--id", record.ID}, Deps{}); err == nil {
 		t.Fatal("expected delayed zero-candidate result to remain unresolved")
 	}
 	rows, err := json.Marshal([]map[string]string{{
@@ -834,10 +834,10 @@ func TestRunRemoteReconcileIssueAdoptsDelayedUniqueVerifiedCandidate(t *testing.
 			return nil
 		},
 	}
-	if err := Run([]string{"reconcile-issue", "--id", record.ID, "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"reconcile-issue", "--id", record.ID, "--json"}, deps); err != nil {
 		t.Fatalf("preview unique candidate: %v", err)
 	}
-	if err := Run([]string{"reconcile-issue", "--id", record.ID, "--confirm", "--json"}, deps); err != nil {
+	if err := testRemoteCommand().Run([]string{"reconcile-issue", "--id", record.ID, "--confirm", "--json"}, deps); err != nil {
 		t.Fatalf("reconcile unique candidate: %v", err)
 	}
 	if len(printed) != 2 {
@@ -886,7 +886,7 @@ func TestRunRemoteReconcileIssueRejectsTruncatedAndForeignProjectCandidates(t *t
 		t.Fatal(err)
 	}
 	t.Setenv("RECONCILE_JSON", string(raw))
-	if err := Run([]string{"reconcile-issue", "--id", record.ID}, Deps{}); err == nil || !strings.Contains(err.Error(), "truncated") {
+	if err := testRemoteCommand().Run([]string{"reconcile-issue", "--id", record.ID}, Deps{}); err == nil || !strings.Contains(err.Error(), "truncated") {
 		t.Fatalf("error = %v, want truncated search rejection", err)
 	}
 
@@ -899,7 +899,7 @@ func TestRunRemoteReconcileIssueRejectsTruncatedAndForeignProjectCandidates(t *t
 		t.Fatal(err)
 	}
 	t.Setenv("RECONCILE_JSON", string(raw))
-	if err := Run([]string{"reconcile-issue", "--id", record.ID, "--confirm"}, Deps{
+	if err := testRemoteCommand().Run([]string{"reconcile-issue", "--id", record.ID, "--confirm"}, Deps{
 		VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
 			t.Fatal("foreign project candidate reached live verification")
 			return nil
@@ -929,7 +929,7 @@ func TestRunRemoteReconcileIssueRejectsChangedContentBeforeVerification(t *testi
 				if confirm {
 					args = append(args, "--confirm")
 				}
-				err := Run(args, Deps{PrintError: func(error) error { return nil }, VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
+				err := testRemoteCommand().Run(args, Deps{PrintError: func(error) error { return nil }, VerifyLive: func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
 					t.Fatal("modified candidate verified")
 					return nil
 				}})
@@ -1013,7 +1013,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 	t.Run("missing remote artifact", func(t *testing.T) {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 		record := remoteIssueOpsRecord(t)
-		_, _, err := remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), record.ID, "", false, nil)
+		_, _, err := testRemoteCommand().Operations.ReflectRemoteCompletion(context.Background(), testRemoteCommand().Operations.IssueOpsStateRoot(), record.ID, "", false, nil)
 		if err == nil || !strings.Contains(err.Error(), "before a verified remote artifact") {
 			t.Fatalf("expected missing-artifact rejection, got %v", err)
 		}
@@ -1029,7 +1029,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
-		_, _, err = remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), record.ID, "", false, nil)
+		_, _, err = testRemoteCommand().Operations.ReflectRemoteCompletion(context.Background(), testRemoteCommand().Operations.IssueOpsStateRoot(), record.ID, "", false, nil)
 		if err == nil || !strings.Contains(err.Error(), "merge verification is not configured") {
 			t.Fatalf("expected unconfigured-verification rejection, got %v", err)
 		}
@@ -1048,7 +1048,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 		deps := Deps{VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
 			return errors.New("connection reset")
 		}}
-		_, _, err = remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), record.ID, "", false, deps.VerifyMerged)
+		_, _, err = testRemoteCommand().Operations.ReflectRemoteCompletion(context.Background(), testRemoteCommand().Operations.IssueOpsStateRoot(), record.ID, "", false, deps.VerifyMerged)
 		if err == nil || !strings.Contains(err.Error(), "merge evidence readback failed (refusing to continue)") {
 			t.Fatalf("expected readback refusal, got %v", err)
 		}
@@ -1067,7 +1067,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 		deps := Deps{VerifyMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) error {
 			return nil
 		}}
-		got, result, err := remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), record.ID, "", false, deps.VerifyMerged)
+		got, result, err := testRemoteCommand().Operations.ReflectRemoteCompletion(context.Background(), testRemoteCommand().Operations.IssueOpsStateRoot(), record.ID, "", false, deps.VerifyMerged)
 		if err != nil {
 			t.Fatalf("expected resolution, got %v", err)
 		}
@@ -1077,7 +1077,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 	})
 	t.Run("unknown record id fails closed", func(t *testing.T) {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-		_, _, err := remoteDeps.ReflectRemoteCompletion(context.Background(), remoteDeps.IssueOpsStateRoot(), "io-nonexistent", "", false, nil)
+		_, _, err := testRemoteCommand().Operations.ReflectRemoteCompletion(context.Background(), testRemoteCommand().Operations.IssueOpsStateRoot(), "io-nonexistent", "", false, nil)
 		if err == nil {
 			t.Fatal("expected read error for unknown id")
 		}
@@ -1119,7 +1119,7 @@ exit 2
 		return []issueopscontract.NativeProcessReceipt{{PID: 42, StartedAt: "start", Executable: "/bin/codex"}}, nil
 	}}
 	args := []string{"reflect-devils-advocate", "--id", record.ID, "--json"}
-	if err := Run(args, deps); err != nil {
+	if err := testRemoteCommand().Run(args, deps); err != nil {
 		t.Fatal(err)
 	}
 	current, err := issueopscore.ReadIssueOps(root, record.ID)
@@ -1132,7 +1132,7 @@ exit 2
 	if _, err := os.Stat(filepath.Join(repo, "review-edit")); !os.IsNotExist(err) {
 		t.Fatalf("preview invoked edit: %v", err)
 	}
-	if err := Run(append(args, "--confirm"), deps); err != nil {
+	if err := testRemoteCommand().Run(append(args, "--confirm"), deps); err != nil {
 		t.Fatal(err)
 	}
 	current, err = issueopscore.ReadIssueOps(root, record.ID)

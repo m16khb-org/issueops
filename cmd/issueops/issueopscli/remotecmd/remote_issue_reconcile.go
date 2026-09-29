@@ -6,7 +6,7 @@ import (
 	"fmt"
 )
 
-func runRemoteReconcileIssue(ctx context.Context, args []string, deps Deps) error {
+func (command Command) runRemoteReconcileIssue(ctx context.Context, args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote reconcile-issue", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	confirm := fs.Bool("confirm", false, "adopt the unique live verified issue")
@@ -14,7 +14,7 @@ func runRemoteReconcileIssue(ctx context.Context, args []string, deps Deps) erro
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := remoteDeps.ReconcileIssueCreate(ctx, remoteDeps.IssueOpsStateRoot(), *id, *confirm, deps.verifyLive)
+	result, err := command.Operations.ReconcileIssueCreate(ctx, command.Operations.IssueOpsStateRoot(), *id, *confirm, deps.verifyLive)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

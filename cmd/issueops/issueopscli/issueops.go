@@ -49,10 +49,10 @@ func (cli command) issueOpsSubcommands(deps Dependencies) map[string]func([]stri
 		"cleanup":               func(args []string) error { return runIssueOpsCleanupWithDependencies(args, deps) },
 		"benchmark":             func(args []string) error { return deps.Benchmark.Run(args) },
 		"remote": func(args []string) error {
-			return remotecmd.Run(args, issueOpsRemoteDepsWithPublication(deps.Publication))
+			return deps.Remote.Run(args, issueOpsRemoteDepsWithPublication(deps.Publication))
 		},
 		"remote-score": func(args []string) error {
-			return remotecmd.Run(append([]string{"score"}, args...), issueOpsRemoteDepsWithPublication(deps.Publication))
+			return deps.Remote.Run(append([]string{"score"}, args...), issueOpsRemoteDepsWithPublication(deps.Publication))
 		},
 		"prune":        cli.runIssueOpsPrune,
 		"pr-readiness": cli.runIssueOpsPRReadiness,

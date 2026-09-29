@@ -14,6 +14,7 @@ import (
 )
 
 type Dependencies struct {
+	Remote         remotecmd.Command
 	Cleanup        feedbackcleanup.Command
 	CleanupRuntime feedbackcleanup.Deps
 	Benchmark      benchmarkcmd.Command
