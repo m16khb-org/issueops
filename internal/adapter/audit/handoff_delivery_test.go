@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	auditcontract "issueops/internal/contract/audit"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +42,7 @@ func TestAuditHandoffDeliveryObservationWritesBounded0600JSONL(t *testing.T) {
 	if strings.Contains(string(data), "secret-value") || strings.Contains(strings.ToLower(string(data)), "claim_token") {
 		t.Fatalf("handoff delivery audit leaked sensitive data: %s", data)
 	}
-	var decoded HandoffDeliveryAuditRecord
+	var decoded auditcontract.HandoffDeliveryAuditRecord
 	if err := json.Unmarshal([]byte(strings.TrimSpace(string(data))), &decoded); err != nil {
 		t.Fatalf("decode audit record: %v\n%s", err, data)
 	}
@@ -187,7 +188,7 @@ func TestFoldHandoffDeliveryAuditCorruptionIsScopedToItsLineage(t *testing.T) {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSuffix(string(data), "\n"), "\n")
-	var corrupted HandoffDeliveryAuditRecord
+	var corrupted auditcontract.HandoffDeliveryAuditRecord
 	if err := json.Unmarshal([]byte(lines[1]), &corrupted); err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +243,7 @@ func TestReadHandoffDeliveryAuditObservationsFailsClosedOnBadJSONL(t *testing.T)
 		{
 			name: "unknown observation schema",
 			line: func() string {
-				record := HandoffDeliveryAuditRecord{
+				record := auditcontract.HandoffDeliveryAuditRecord{
 					OK: true, Kind: "handoff_delivery_observation",
 					Observation: auditDeliveryObservationFixture(),
 				}

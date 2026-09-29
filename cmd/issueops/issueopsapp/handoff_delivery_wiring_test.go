@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"context"
 	"errors"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"os"
 	"path/filepath"
 	"strings"
@@ -479,14 +480,14 @@ func TestManualHandoffDeliveryRejectsClaimForgeryAndUsesIsolatedLineage(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	observation.AttemptID = handoffDeliveryManualLineagePrefix + request.Workspace.LifecycleID + ":1:orca:attempt-1"
-	observation.LineageID = handoffDeliveryManualLineagePrefix + observation.LineageID
+	observation.AttemptID = "manual-direct:" + request.Workspace.LifecycleID + ":1:orca:attempt-1"
+	observation.LineageID = "manual-direct:" + observation.LineageID
 	observation.CallStaged = handoffDeliveryObserved(eventNow, "external_call_staged")
 	record := issueopscontract.IssueOpsRecord{
 		ID:        request.Workspace.LifecycleID,
 		Execution: &issueopscontract.Execution{Mode: issueopscontract.ExecutionModeDirect, Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased}},
 	}
-	if err := validateManualHandoffDeliveryObservation(record, observation); err != nil {
+	if err := issueopsdomain.ValidateManualHandoffDeliveryObservation(record, observation); err != nil {
 		t.Fatal(err)
 	}
 	for _, mutate := range []func(*issueopscontract.IssueOpsHandoffDeliveryObservation){
@@ -502,14 +503,14 @@ func TestManualHandoffDeliveryRejectsClaimForgeryAndUsesIsolatedLineage(t *testi
 	} {
 		forged := observation
 		mutate(&forged)
-		if err := validateManualHandoffDeliveryObservation(record, forged); err == nil {
+		if err := issueopsdomain.ValidateManualHandoffDeliveryObservation(record, forged); err == nil {
 			t.Fatal("public manual observation accepted forged owner claim fields")
 		}
 	}
 	if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
 		t.Fatal(err)
 	}
-	standardLineage := strings.TrimPrefix(observation.LineageID, handoffDeliveryManualLineagePrefix)
+	standardLineage := strings.TrimPrefix(observation.LineageID, "manual-direct:")
 	folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, standardLineage)
 	if err != nil || len(folded) != 0 {
 		t.Fatalf("manual observation entered execution recovery lineage: folded=%+v err=%v", folded, err)
@@ -525,18 +526,18 @@ func TestManualCmuxHandoffDeliveryAllowsOnlyReleasedDirectStaging(t *testing.T) 
 		},
 	}
 	observation := manualCmuxHandoffObservation(record.ID, 3)
-	if err := validateManualHandoffDeliveryObservation(record, observation); err != nil {
+	if err := issueopsdomain.ValidateManualHandoffDeliveryObservation(record, observation); err != nil {
 		t.Fatalf("valid cmux staging rejected: %v", err)
 	}
 
 	wrongGeneration := observation
 	wrongGeneration.SourceGeneration++
-	if err := validateManualHandoffDeliveryObservation(record, wrongGeneration); err == nil || !strings.Contains(err.Error(), "exact released direct execution generation") {
+	if err := issueopsdomain.ValidateManualHandoffDeliveryObservation(record, wrongGeneration); err == nil || !strings.Contains(err.Error(), "exact released direct execution generation") {
 		t.Fatalf("wrong generation accepted: %v", err)
 	}
 	active := record
 	active.Execution = &issueopscontract.Execution{Mode: issueopscontract.ExecutionModeDirect, Lease: issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusActive}}
-	if err := validateManualHandoffDeliveryObservation(active, observation); err == nil || !strings.Contains(err.Error(), "exact released direct execution generation") {
+	if err := issueopsdomain.ValidateManualHandoffDeliveryObservation(active, observation); err == nil || !strings.Contains(err.Error(), "exact released direct execution generation") {
 		t.Fatalf("active generation accepted: %v", err)
 	}
 }
@@ -554,8 +555,8 @@ func TestPublicManualHandoffProducerRejectsEveryOwnerClaimField(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	observation.AttemptID = handoffDeliveryManualLineagePrefix + record.ID + ":1:orca:attempt-1"
-	observation.LineageID = handoffDeliveryManualLineagePrefix + observation.LineageID
+	observation.AttemptID = "manual-direct:" + record.ID + ":1:orca:attempt-1"
+	observation.LineageID = "manual-direct:" + observation.LineageID
 	observation.CallStaged = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged)
 	for name, mutate := range map[string]func(*issueopscontract.IssueOpsHandoffDeliveryObservation){
 		"owner_actor": func(value *issueopscontract.IssueOpsHandoffDeliveryObservation) {
@@ -571,12 +572,12 @@ func TestPublicManualHandoffProducerRejectsEveryOwnerClaimField(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			forged := observation
 			mutate(&forged)
-			if _, err := auditManualHandoffDeliveryObservation(forged); err == nil || !strings.Contains(err.Error(), "cannot produce owner claim evidence") {
+			if _, err := newHandoffDeliveryService(issueopsadapter.IssueOpsStateRoot()).ObserveManual(forged); err == nil || !strings.Contains(err.Error(), "cannot produce owner claim evidence") {
 				t.Fatalf("public producer accepted forged %s: %v", name, err)
 			}
 		})
 	}
-	if _, err := auditManualHandoffDeliveryObservation(observation); err != nil {
+	if _, err := newHandoffDeliveryService(issueopsadapter.IssueOpsStateRoot()).ObserveManual(observation); err != nil {
 		t.Fatalf("valid manual observation: %v", err)
 	}
 }
@@ -594,11 +595,11 @@ func TestPublicManualHandoffProducerUsesIssueOpsStateNamespace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	observation.AttemptID = handoffDeliveryManualLineagePrefix + record.ID + ":1:orca:namespace"
-	observation.LineageID = handoffDeliveryManualLineagePrefix + observation.LineageID
+	observation.AttemptID = "manual-direct:" + record.ID + ":1:orca:namespace"
+	observation.LineageID = "manual-direct:" + observation.LineageID
 	observation.CallStaged = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged)
 
-	if _, err := auditManualHandoffDeliveryObservation(observation); err != nil {
+	if _, err := newHandoffDeliveryService(issueopsadapter.IssueOpsStateRoot()).ObserveManual(observation); err != nil {
 		t.Fatalf("audit manual observation through production namespace: %v", err)
 	}
 	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
@@ -615,8 +616,8 @@ func manualCmuxHandoffObservation(lifecycleID string, generation uint64) issueop
 	created := "2026-09-20T10:00:01Z"
 	return issueopscontract.IssueOpsHandoffDeliveryObservation{
 		SchemaVersion:  issueopscontract.IssueOpsHandoffDeliverySchemaVersion,
-		AttemptID:      handoffDeliveryManualLineagePrefix + lifecycleID + ":3:cmux:attempt",
-		LineageID:      handoffDeliveryManualLineagePrefix + "generation:3:cmux:window:window-1",
+		AttemptID:      "manual-direct:" + lifecycleID + ":3:cmux:attempt",
+		LineageID:      "manual-direct:" + "generation:3:cmux:window:window-1",
 		LifecycleID:    lifecycleID,
 		PromptSHA256:   strings.Repeat("a", 64),
 		MaterialSHA256: strings.Repeat("b", 64),

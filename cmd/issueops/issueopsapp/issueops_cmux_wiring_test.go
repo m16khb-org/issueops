@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"os"
 	"path/filepath"
 	"strings"
@@ -94,7 +95,7 @@ func TestCmuxHandoffDuplicateAttemptFailsBeforeAnyCmuxCall(t *testing.T) {
 	promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
 	request := cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest)
 	observation := manualCmuxHandoffObservation(record.ID, 1)
-	observation.AttemptID, observation.LineageID = cmuxHandoffIDs(request)
+	observation.AttemptID, observation.LineageID = issueopsdomain.ManualCmuxHandoffIDs(request)
 	observation.Target.CWD = record.WorktreePath
 	observation.Target.WindowID = request.WindowID
 	observation.Launcher.EndpointIncarnation = cmuxEndpointFixture()
@@ -288,7 +289,7 @@ func TestCmuxHandoffRejectsSecondAttemptForGenerationBeforeAnyCmuxCall(t *testin
 			promptPath, promptDigest := writeCmuxPromptFixture(t, record.WorktreePath)
 			first := cmuxHandoffRequestFixture(record.ID, promptPath, promptDigest)
 			observation := manualCmuxHandoffObservation(record.ID, first.Generation)
-			observation.AttemptID, observation.LineageID = cmuxHandoffIDs(first)
+			observation.AttemptID, observation.LineageID = issueopsdomain.ManualCmuxHandoffIDs(first)
 			observation.Target.CWD = record.WorktreePath
 			observation.Target.WindowID = first.WindowID
 			observation.Launcher.EndpointIncarnation = cmuxEndpointFixture()

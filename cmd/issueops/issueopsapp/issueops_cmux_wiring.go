@@ -2,7 +2,6 @@ package issueopsapp
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -18,6 +17,7 @@ import (
 	"issueops/internal/adapter/hostprotocol"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 type cmuxClient interface {
@@ -81,7 +81,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	}
 	defer fence.Close()
 	root := fence.canonicalRoot
-	attemptID, lineageID := cmuxHandoffIDs(request)
+	attemptID, lineageID := issueopsdomain.ManualCmuxHandoffIDs(request)
 	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
 	if err != nil {
 		return result, err
@@ -145,7 +145,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		InputAccepted: cmuxNotObserved(), NativeTurnObserved: cmuxNotObserved(), OwnerClaimed: cmuxNotObserved(), Ambiguous: cmuxNotObserved(),
 		Timing: &issueopscontract.IssueOpsHandoffDeliveryTiming{PreflightMS: preflightMS},
 	}
-	audited, err := auditCmuxObservation(stateRoot, record, observation)
+	audited, err := newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 	if err != nil {
 		return result, err
 	}
@@ -173,7 +173,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		if cmuxMutationAmbiguous(createErr) {
 			observation.Ambiguous = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
 		}
-		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		audited, auditErr := newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 		if auditErr != nil {
 			return result, errors.Join(createErr, auditErr)
 		}
@@ -184,10 +184,10 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		return cmuxResult(request, audited.Observation, status, ""), createErr
 	}
 	if observation.Target.WorkspaceID == "" || observation.Target.SurfaceID == "" {
-		terminal, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		terminal, auditErr := newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 		return cmuxResult(request, terminal.Observation, "failed", ""), errors.Join(fmt.Errorf("cmux created target identity is incomplete"), auditErr)
 	}
-	audited, err = auditCmuxObservation(stateRoot, record, observation)
+	audited, err = newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 	if err != nil {
 		return result, err
 	}
@@ -205,14 +205,14 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	})
 	if err != nil {
 		observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
-		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		audited, auditErr := newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 		return cmuxResult(request, audited.Observation, "pre_send_failed", ""), errors.Join(err, auditErr)
 	}
 	sendRequest := cmuxadapter.SendRequest{Created: created, Command: prepared.Command}
 	checkedRecord, fenceErr := fence.Check()
 	if fenceErr != nil {
 		observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
-		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		audited, auditErr := newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 		return cmuxResult(request, audited.Observation, "pre_send_failed", prepared.Directory), errors.Join(fenceErr, auditErr)
 	}
 	record = checkedRecord
@@ -223,7 +223,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		if cmuxMutationAmbiguous(sendErr) {
 			observation.Ambiguous = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceAcceptedResponseLost)
 		}
-		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		audited, auditErr := newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 		status := "failed"
 		if cmuxMutationAmbiguous(sendErr) {
 			status = "ambiguous"
@@ -231,11 +231,11 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		return cmuxResult(request, audited.Observation, status, prepared.Directory), errors.Join(sendErr, auditErr)
 	}
 	if !sendReceipt.Accepted {
-		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		audited, auditErr := newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 		return cmuxResult(request, audited.Observation, "failed", prepared.Directory), errors.Join(fmt.Errorf("cmux send returned no accepted receipt"), auditErr)
 	}
 	observation.InputAccepted = cmuxObserved(observation.UpdatedAt, issueopscontract.IssueOpsHandoffDeliveryEvidenceRawInput)
-	audited, err = auditCmuxObservation(stateRoot, record, observation)
+	audited, err = newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 	if err != nil {
 		return cmuxResult(request, observation, "input_accepted", prepared.Directory), err
 	}
@@ -252,7 +252,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	})
 	observation.UpdatedAt = deps.Now().UTC().Format(time.RFC3339Nano)
 	if receiptErr != nil {
-		audited, auditErr := auditCmuxObservation(stateRoot, record, observation)
+		audited, auditErr := newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 		if auditErr != nil {
 			return cmuxResult(request, observation, "input_accepted_receiver_unverified", prepared.Directory), auditErr
 		}
@@ -261,7 +261,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	observation.Target.Process = &process
 	observation.Target.ProcessIncarnation = strconv.Itoa(process.PID) + ":" + process.StartedAt + ":" + process.Executable
 	observation.Timing.ReceiverReceiptMS = cmuxElapsedMS(receiptStarted)
-	audited, err = auditCmuxObservation(stateRoot, record, observation)
+	audited, err = newHandoffDeliveryService(stateRoot).ObserveManualSnapshot(record, observation)
 	if err != nil {
 		return cmuxResult(request, observation, "input_accepted", prepared.Directory), err
 	}
@@ -272,22 +272,6 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 		return cmuxResult(request, audited.Observation, "input_accepted_cleanup_failed", prepared.Directory), fmt.Errorf("cleanup cmux recovery artifact: %w", cleanupErr)
 	}
 	return cmuxResult(request, audited.Observation, "input_accepted", ""), nil
-}
-
-func auditCmuxObservation(stateRoot string, record issueopscontract.IssueOpsRecord, observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditadapter.HandoffDeliveryAuditRecord, error) {
-	if err := validateManualHandoffDeliveryObservation(record, observation); err != nil {
-		return auditadapter.HandoffDeliveryAuditRecord{}, err
-	}
-	return auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation)
-}
-
-func cmuxHandoffIDs(request issueopscontract.ExecutionCmuxHandoffRequest) (string, string) {
-	identity := strings.Join([]string{request.ID, strconv.FormatUint(request.Generation, 10), request.WindowID, request.PromptSHA256, request.MaterialSHA256}, "\x00")
-	sum := sha256.Sum256([]byte(identity))
-	suffix := hex.EncodeToString(sum[:12])
-	attempt := handoffDeliveryManualLineagePrefix + request.ID + ":" + strconv.FormatUint(request.Generation, 10) + ":cmux:" + suffix
-	lineage := strings.Join([]string{handoffDeliveryManualLineagePrefix + "generation", strconv.FormatUint(request.Generation, 10), "cmux", "window", request.WindowID, "prompt", request.PromptSHA256, "material", request.MaterialSHA256}, ":")
-	return attempt, lineage
 }
 
 func newCmuxCanonicalRootFence(stateRoot string, request issueopscontract.ExecutionCmuxHandoffRequest, getwd func() (string, error), gitTop func(string) (string, error)) (*cmuxCanonicalRootFence, issueopscontract.IssueOpsRecord, error) {

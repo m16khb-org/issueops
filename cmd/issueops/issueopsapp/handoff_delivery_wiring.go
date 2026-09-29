@@ -9,48 +9,10 @@ import (
 	"time"
 
 	auditadapter "issueops/internal/adapter/audit"
-	issueopsadapter "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
-
-const handoffDeliveryManualLineagePrefix = "manual-direct:"
-
-func auditManualHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditadapter.HandoffDeliveryAuditRecord, error) {
-	stateRoot := issueopsadapter.IssueOpsStateRoot()
-	record, err := issueopsadapter.ReadIssueOps(stateRoot, observation.LifecycleID)
-	if err != nil {
-		return auditadapter.HandoffDeliveryAuditRecord{}, err
-	}
-	if err := validateManualHandoffDeliveryObservation(record, observation); err != nil {
-		return auditadapter.HandoffDeliveryAuditRecord{}, err
-	}
-	return auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation)
-}
-
-func validateManualHandoffDeliveryObservation(record issueopscontract.IssueOpsRecord, observation issueopscontract.IssueOpsHandoffDeliveryObservation) error {
-	if record.Execution == nil || record.Execution.Mode != issueopscontract.ExecutionModeDirect || record.Execution.Lease.Status != issueopscontract.LeaseStatusReleased ||
-		record.Execution.Lease.Generation != observation.SourceGeneration || record.ID != observation.LifecycleID {
-		return fmt.Errorf("manual handoff delivery observation requires the exact released direct execution generation")
-	}
-	if !strings.HasPrefix(observation.AttemptID, handoffDeliveryManualLineagePrefix+record.ID+":") ||
-		!strings.HasPrefix(observation.LineageID, handoffDeliveryManualLineagePrefix) {
-		return fmt.Errorf("manual handoff delivery observation requires an isolated manual-direct namespace")
-	}
-	if observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherOrca &&
-		observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherHerdr &&
-		observation.Launcher.Name != issueopscontract.IssueOpsHandoffDeliveryLauncherCmux {
-		return fmt.Errorf("manual handoff delivery observation launcher must be Orca, Herdr, or cmux")
-	}
-	if observation.OwnerActor != nil || observation.OwnerClaimed.Status != issueopscontract.IssueOpsHandoffDeliveryStateNotObserved ||
-		observation.OwnerClaim.Claimed || observation.OwnerClaim.Generation != 0 || observation.OwnerClaim.ClaimedAt != "" ||
-		observation.OwnerClaim.Actor.Host != "" || observation.OwnerClaim.Actor.SessionID != "" || observation.OwnerClaim.Actor.AgentID != "" ||
-		observation.OwnerClaim.Actor.SessionProcess != nil || len(observation.OwnerClaim.Actor.ProcessAncestry) != 0 {
-		return fmt.Errorf("manual handoff delivery observation cannot produce owner claim evidence")
-	}
-	return nil
-}
 
 type handoffDeliveryProvisioner struct {
 	stateRoot string

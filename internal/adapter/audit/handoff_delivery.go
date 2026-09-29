@@ -12,22 +12,12 @@ import (
 	"os"
 	"time"
 
+	auditcontract "issueops/internal/contract/audit"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/domain/auditid"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/policy"
 )
-
-type HandoffDeliveryAuditRecord struct {
-	OK            bool                                                `json:"ok"`
-	Kind          string                                              `json:"kind"`
-	SchemaVersion int                                                 `json:"schema_version"`
-	AuditLogID    string                                              `json:"audit_log_id"`
-	GeneratedAt   string                                              `json:"generated_at"`
-	LogPath       string                                              `json:"log_path,omitempty"`
-	RecordDigest  string                                              `json:"record_digest"`
-	Observation   issueopscontract.IssueOpsHandoffDeliveryObservation `json:"observation"`
-}
 
 var (
 	handoffDeliveryAuditBeforeStateRootOpen = func() {}
@@ -62,18 +52,18 @@ func (handle *handoffDeliveryAuditHandle) VerifyPath() error {
 	return handle.verifyPath()
 }
 
-func AuditHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (HandoffDeliveryAuditRecord, error) {
+func AuditHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 	return AuditHandoffDeliveryObservationAt(StateDir(), observation)
 }
 
-func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscontract.IssueOpsHandoffDeliveryObservation) (HandoffDeliveryAuditRecord, error) {
+func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 	auditLogID := auditid.Generate(observation.LifecycleID, observation.AttemptID, []string{observation.PromptSHA256, observation.Launcher.Name})
 	observation = redactedHandoffDeliveryObservation(observation)
 	observation.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{
 		Location: "audit/handoff-delivery.jsonl#audit_log_id=" + auditLogID,
 		Digest:   handoffDeliveryReceiptDigest(auditLogID, observation),
 	}
-	record := HandoffDeliveryAuditRecord{
+	record := auditcontract.HandoffDeliveryAuditRecord{
 		OK:            true,
 		Kind:          "handoff_delivery_observation",
 		SchemaVersion: 1,
@@ -83,7 +73,7 @@ func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscon
 		Observation:   observation,
 	}
 	if err := issueopsdomain.ValidateHandoffDeliveryObservation(record.Observation); err != nil {
-		return HandoffDeliveryAuditRecord{}, err
+		return auditcontract.HandoffDeliveryAuditRecord{}, err
 	}
 	record.RecordDigest = handoffDeliveryRecordDigest(record)
 	if err := appendHandoffDeliveryAudit(stateRoot, record); err != nil {
@@ -138,7 +128,7 @@ func scanHandoffDeliveryAudit(file *os.File, lifecycleID, lineageID string, acce
 			return readErr
 		}
 		line = line[:len(line)-1]
-		var record HandoffDeliveryAuditRecord
+		var record auditcontract.HandoffDeliveryAuditRecord
 		if err := json.Unmarshal(line, &record); err != nil {
 			return err
 		}
@@ -174,7 +164,7 @@ func scanHandoffDeliveryAudit(file *os.File, lifecycleID, lineageID string, acce
 	}
 }
 
-func handoffDeliveryAuditErrorAffects(record HandoffDeliveryAuditRecord, lifecycleID, lineageID string) bool {
+func handoffDeliveryAuditErrorAffects(record auditcontract.HandoffDeliveryAuditRecord, lifecycleID, lineageID string) bool {
 	if lifecycleID == "" {
 		return true
 	}
@@ -198,7 +188,7 @@ func FoldHandoffDeliveryAuditObservationsForAt(stateRoot, lifecycleID, lineageID
 	return folded, decisions, err
 }
 
-func appendHandoffDeliveryAudit(stateRoot string, record HandoffDeliveryAuditRecord) error {
+func appendHandoffDeliveryAudit(stateRoot string, record auditcontract.HandoffDeliveryAuditRecord) error {
 	line, err := json.Marshal(record)
 	if err != nil {
 		return err
@@ -243,7 +233,7 @@ func appendHandoffDeliveryAudit(stateRoot string, record HandoffDeliveryAuditRec
 	})
 }
 
-func handoffDeliveryRecordDigest(record HandoffDeliveryAuditRecord) string {
+func handoffDeliveryRecordDigest(record auditcontract.HandoffDeliveryAuditRecord) string {
 	record.RecordDigest = ""
 	data, _ := json.Marshal(record)
 	sum := sha256.Sum256(data)

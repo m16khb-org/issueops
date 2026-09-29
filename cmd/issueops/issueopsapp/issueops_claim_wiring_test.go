@@ -141,8 +141,8 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 				t.Fatal(err)
 			}
 			if test.manualLineage {
-				observation.AttemptID = fmt.Sprintf("%s%s:%d:orca:claim", handoffDeliveryManualLineagePrefix, request.Workspace.LifecycleID, test.sourceGeneration)
-				observation.LineageID = handoffDeliveryManualLineagePrefix + observation.LineageID
+				observation.AttemptID = fmt.Sprintf("%s%s:%d:orca:claim", "manual-direct:", request.Workspace.LifecycleID, test.sourceGeneration)
+				observation.LineageID = "manual-direct:" + observation.LineageID
 			}
 			actor := claimWiringActor(t)
 			process := *actor.SessionProcess
@@ -159,7 +159,7 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 				Mode:  issueopscontract.ExecutionModeDirect,
 				Lease: issueopscontract.WriteLease{Generation: test.claimGeneration, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
 			}}
-			if err := observeSuccessfulIssueOpsClaim(stateRoot, result); err != nil {
+			if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err != nil {
 				t.Fatal(err)
 			}
 			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
@@ -215,7 +215,7 @@ func TestSuccessfulDirectClaimUsesCmuxOnlyAfterRawInputAndExactReceiverCorrelati
 				Mode:  issueopscontract.ExecutionModeDirect,
 				Lease: issueopscontract.WriteLease{Generation: 2, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
 			}}
-			if err := observeSuccessfulIssueOpsClaim(stateRoot, result); err != nil {
+			if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err != nil {
 				t.Fatal(err)
 			}
 			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
@@ -242,8 +242,8 @@ func TestSuccessfulDirectClaimRejectsAmbiguousManualLineages(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		observation.AttemptID = handoffDeliveryManualLineagePrefix + request.Workspace.LifecycleID + ":1:orca:" + suffix
-		observation.LineageID = handoffDeliveryManualLineagePrefix + suffix + ":" + observation.LineageID
+		observation.AttemptID = "manual-direct:" + request.Workspace.LifecycleID + ":1:orca:" + suffix
+		observation.LineageID = "manual-direct:" + suffix + ":" + observation.LineageID
 		process := *actor.SessionProcess
 		observation.Target.Process = &process
 		observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
@@ -258,7 +258,7 @@ func TestSuccessfulDirectClaimRejectsAmbiguousManualLineages(t *testing.T) {
 			ClaimedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		},
 	}}
-	if err := observeSuccessfulIssueOpsClaim(stateRoot, result); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+	if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err == nil || !strings.Contains(err.Error(), "ambiguous") {
 		t.Fatalf("ambiguous manual lineages were accepted: %v", err)
 	}
 }
@@ -286,8 +286,8 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	observation.AttemptID = handoffDeliveryManualLineagePrefix + record.ID + ":1:orca:reseed-claim"
-	observation.LineageID = handoffDeliveryManualLineagePrefix + observation.LineageID
+	observation.AttemptID = "manual-direct:" + record.ID + ":1:orca:reseed-claim"
+	observation.LineageID = "manual-direct:" + observation.LineageID
 	process := *actor.SessionProcess
 	observation.Target.Process = &process
 	observation.CallStaged = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged)

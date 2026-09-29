@@ -6,6 +6,7 @@ import (
 	projectclit2deps "issueops/cmd/issueops/projectcli"
 	commitsuggestadapter "issueops/internal/adapter/commitsuggest"
 	guardadapter "issueops/internal/adapter/guard"
+	issueopsadapter "issueops/internal/adapter/issueops"
 	lintdiagnoseadapter "issueops/internal/adapter/lintdiagnose"
 	issueopscontract "issueops/internal/contract/issueops"
 	tracecontract "issueops/internal/contract/trace"
@@ -19,7 +20,7 @@ func configureTailCapabilities2() {
 		return newTraceService().Analyze(req)
 	}
 	basicclit2deps.TraceHandoffDeliveryObserve = func(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (tracecontract.HandoffDeliveryObserveResult, error) {
-		record, err := auditManualHandoffDeliveryObservation(observation)
+		record, err := newHandoffDeliveryService(issueopsadapter.IssueOpsStateRoot()).ObserveManual(observation)
 		return tracecontract.HandoffDeliveryObserveResult{OK: err == nil, Kind: record.Kind, AuditLogID: record.AuditLogID, Observation: record.Observation}, err
 	}
 	mcpclit2deps.DiagnoseCommand = lintdiagnoseadapter.DiagnoseCommand

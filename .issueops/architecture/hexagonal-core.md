@@ -209,3 +209,5 @@ self-verify 실행은 root가 저장소 경로와 step adapter를 고정해 `app
 - `issueops contract schema|check`는 CLI/MCP command list, MCP tool name, required response field를 검증하는 DTO compatibility 표면이다.
 - `issueops policy audit`는 redacted command-policy decision을 append-only JSONL로 기록하며 command를 실행하지 않는다.
 - `issueops worker`는 lifecycle job record(`enqueue/status/list/cancel/cleanup-stuck`)와 policy-gated `run --read-only`(MCP `worker_run_read_only`)를 제공한다. 장기 상주 job daemon은 없다.
+
+- 수동 세션 인계의 released direct generation·namespace·launcher·owner claim 거부 규칙과 cmux 인계 ID는 `internal/domain/issueops`가 소유한다. 같은 domain이 확정된 lease와 연결할 인계 증거를 선택하고 owner claim observation을 구성한다. `internal/application/handoffdelivery.Service`는 명시적으로 주입된 record reader와 audit store로 조회·판정·기록을 조율하며, cmux가 전달한 fenced snapshot은 다시 조회하지 않는다. root는 state root를 고정해 서비스를 조립한다. 감사 record DTO는 `internal/contract/audit`에 두고, JSONL·digest·receipt·파일 잠금은 audit adapter가 처리한다. Orca provisioner의 인계 복구 조율과 basic CLI의 전역 연결은 T20 잔여 범위다.
