@@ -3964,13 +3964,6 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func checkBinaryDrift",
-        "func checkLoopContracts",
-        "func checkMCPGateways",
-        "func checkNativeIntegrations",
-        "func checkPipeCapacity",
-        "func checkProjectDocs",
-        "func checkRepoLocalRuntimeState",
         "func countMCPGatewayFDsViaLsof",
         "func loopbackMCPEndpoints",
         "func measureSystemPipeCapacity",
@@ -4008,19 +4001,7 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func HarnessDoctor",
-        "func addCheck",
-        "func addIssue",
-        "func checkDaemonAdmission",
-        "func doctorHealthy"
-      ]
-    },
-    {
-      "path": "internal/adapter/doctor/helpers.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func shellQuote"
+        "func HarnessDoctor"
       ]
     },
     {
@@ -4028,6 +4009,19 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": []
+    },
+    {
+      "path": "internal/adapter/doctor/observations.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func observeBinaryDrift",
+        "func observeLoopContracts",
+        "func observeMCPGateways",
+        "func observeNativeIntegrations",
+        "func observeProjectDocs",
+        "func observeRuntimeState"
+      ]
     },
     {
       "path": "internal/adapter/doctor/repopath_dependencies.go",
@@ -9583,10 +9577,8 @@
         "func AddCheck",
         "func AddIssue",
         "func CheckDaemonAdmission",
-        "func DoctorHealthy",
         "func Service.Run",
-        "func cloneOperationalSnapshot",
-        "func isUnexpectedStateArtifact"
+        "func cloneOperationalSnapshot"
       ]
     },
     {
@@ -9595,7 +9587,6 @@
       "task": "T20",
       "symbols": [
         "func severityRank",
-        "func shellQuote",
         "type Effects",
         "type Service"
       ]
@@ -13457,6 +13448,45 @@
         "func NewFilteringHandler",
         "func isRoutineShutdownErrorText",
         "type FilteringHandler"
+      ]
+    },
+    {
+      "path": "internal/domain/doctor/diagnosis.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Evaluate",
+        "func EvaluateLifecycle",
+        "func Healthy",
+        "func IsUnexpectedStateArtifact",
+        "func evaluateBinary",
+        "func evaluateGateways",
+        "func evaluateLoop",
+        "func evaluateNative",
+        "func evaluatePipe",
+        "func evaluateProjectDocs",
+        "func evaluateRuntimeState",
+        "func shellQuote"
+      ]
+    },
+    {
+      "path": "internal/domain/doctor/observations.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Findings.check",
+        "func Findings.issue",
+        "type BinaryObservation",
+        "type Findings",
+        "type GatewayEndpoint",
+        "type GatewayFD",
+        "type GatewayObservation",
+        "type LoopObservation",
+        "type NativeObservation",
+        "type Observations",
+        "type PipeObservation",
+        "type ProjectDocsObservation",
+        "type RuntimeStateObservation"
       ]
     },
     {
@@ -23200,6 +23230,199 @@
         "cmd/issueops/issueopsapp/project_bootstrap_wiring_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "doctor-project-docs",
+      "source_path": "internal/adapter/doctor/checks.go",
+      "source_symbol": "func checkProjectDocs",
+      "responsibility": "missing required project document health",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func evaluateProjectDocs",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/doctor/diagnosis_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-runtime-residue",
+      "source_path": "internal/adapter/doctor/checks.go",
+      "source_symbol": "func checkRepoLocalRuntimeState",
+      "responsibility": "repo-local runtime files and STATE document residue",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func evaluateRuntimeState",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/doctor/diagnosis_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-loop-health",
+      "source_path": "internal/adapter/doctor/checks.go",
+      "source_symbol": "func checkLoopContracts",
+      "responsibility": "loop incompleteness and unreadable-state precedence",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func evaluateLoop",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/doctor/diagnosis_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-pipe-health",
+      "source_path": "internal/adapter/doctor/checks.go",
+      "source_symbol": "func checkPipeCapacity",
+      "responsibility": "pipe capacity threshold and unavailable observations",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func evaluatePipe",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/doctor/diagnosis_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go",
+        "internal/adapter/doctor/pipe_capacity_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-gateway-health",
+      "source_path": "internal/adapter/doctor/checks.go",
+      "source_symbol": "func checkMCPGateways",
+      "responsibility": "gateway reachability and file descriptor pressure",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func evaluateGateways",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/doctor/diagnosis_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go",
+        "internal/adapter/doctor/mcp_gateway_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-native-health",
+      "source_path": "internal/adapter/doctor/checks.go",
+      "source_symbol": "func checkNativeIntegrations",
+      "responsibility": "missing native integration diagnosis",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func evaluateNative",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/doctor/diagnosis_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-binary-drift",
+      "source_path": "internal/adapter/doctor/checks.go",
+      "source_symbol": "func checkBinaryDrift",
+      "responsibility": "source modification versus binary build health",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func evaluateBinary",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/doctor/diagnosis_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-aggregate-health",
+      "source_path": "internal/adapter/doctor/doctor.go",
+      "source_symbol": "func doctorHealthy",
+      "responsibility": "aggregate checks and issue severity into health",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func Healthy",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/adapter/doctor/doctor_health_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-artifact-deduplication",
+      "source_path": "internal/application/doctor/doctor.go",
+      "source_symbol": "func isUnexpectedStateArtifact",
+      "responsibility": "state artifact findings owned by operational diagnosis",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func IsUnexpectedStateArtifact",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/adapter/doctor/doctor_health_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "doctor-lifecycle-health",
+      "source_path": "internal/application/doctor/doctor.go",
+      "source_symbol": "func Service.Run",
+      "responsibility": "lifecycle missing, namespace mismatch and observation failure diagnosis",
+      "target": "internal/domain/doctor",
+      "target_symbol": "func EvaluateLifecycle",
+      "task": "T20",
+      "entrypoints": [
+        "issueops doctor",
+        "issueops status"
+      ],
+      "evidence_tests": [
+        "internal/domain/doctor/diagnosis_test.go",
+        "internal/adapter/doctor/doctor_test.go",
+        "cmd/issueops/issueopsapp/doctor_policy_wiring_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
     }
   ]
 }

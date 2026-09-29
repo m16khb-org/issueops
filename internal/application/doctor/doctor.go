@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	doctordomain "issueops/internal/domain/doctor"
 	"issueops/internal/domain/operationalhealth"
 )
 
@@ -39,7 +40,7 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 	} else {
 		AddCheck(&result, "state_store", stateDoctor.Healthy, stateDoctor.StateDir)
 		for _, issue := range stateDoctor.Issues {
-			if req.OperationalSnapshot != nil && isUnexpectedStateArtifact(issue.Code) {
+			if req.OperationalSnapshot != nil && doctordomain.IsUnexpectedStateArtifact(issue.Code) {
 				continue
 			}
 			AddIssue(&result, "state_"+issue.Code, issue.Severity, issue.Message, issue.Path, &HarnessDoctorFix{Command: "issueops state doctor --json", Description: "Inspect state-store integrity details with the narrow state doctor."})
@@ -49,7 +50,7 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 		snapshot := cloneOperationalSnapshot(*req.OperationalSnapshot)
 		if stateDoctorErr == nil {
 			for _, issue := range stateDoctor.Issues {
-				if isUnexpectedStateArtifact(issue.Code) {
+				if doctordomain.IsUnexpectedStateArtifact(issue.Code) {
 					snapshot.StateArtifacts = append(snapshot.StateArtifacts, operationalhealth.StateArtifact{Path: issue.Path, Code: issue.Code})
 				}
 			}
@@ -71,27 +72,28 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 	}
 
 	lifecycle, err := service.Effects.ValidateLifecycle(root)
-	if err != nil {
-		AddIssue(&result, "lifecycle_state_error", "error", "project lifecycle state could not be resolved", root, &HarnessDoctorFix{Command: "issueops project bootstrap --repo " + shellQuote(root), Description: "Initialize project lifecycle state and repo metadata through project bootstrap."})
-	} else {
+	if err == nil {
 		result.LifecycleState = lifecycle
-		AddCheck(&result, "project_lifecycle_state", lifecycle.Exists && lifecycle.NamespaceValid, lifecycle.ProjectStateDir)
-		if !lifecycle.Exists {
-			AddIssue(&result, "lifecycle_state_missing", "warning", "project lifecycle namespace has not been initialized", lifecycle.ProjectStateDir, &HarnessDoctorFix{Command: "issueops project bootstrap --repo " + shellQuote(root), Description: "Create the repo-scoped lifecycle namespace and profile metadata in user-state."})
-		} else if !lifecycle.NamespaceValid {
-			AddIssue(&result, "lifecycle_namespace_mismatch", "error", "project lifecycle state fingerprint does not match this repo", lifecycle.ProjectJSONPath, &HarnessDoctorFix{Command: "issueops doctor --repo " + shellQuote(root) + " --json", Description: "Review the namespace mismatch before migrating or deleting stale state."})
-		}
 	}
-
-	service.Effects.CheckProjectDocs(&result, root)
-	service.Effects.CheckRepoLocalRuntimeState(&result, root)
-	service.Effects.CheckLoopContracts(&result, root)
+	lifecycleFindings := doctordomain.EvaluateLifecycle(root, lifecycle, err != nil)
+	result.Checks = append(result.Checks, lifecycleFindings.Checks...)
+	result.Issues = append(result.Issues, lifecycleFindings.Issues...)
+	observations := doctordomain.Observations{Root: root}
+	observations.ProjectDocs = service.Effects.ProjectDocs(root)
+	observations.RuntimeState = service.Effects.RuntimeState(root)
+	observations.Loop = service.Effects.LoopContracts(root)
 	if !req.StaticOnly {
-		service.Effects.CheckPipeCapacity(&result)
-		service.Effects.CheckMCPGateways(&result, req.Home)
+		capacity, err := service.Effects.PipeCapacity()
+		observations.Pipe = &doctordomain.PipeObservation{Capacity: capacity, Error: err}
+		gateways := service.Effects.MCPGateways(req.Home)
+		observations.Gateways = &gateways
 	}
-	service.Effects.CheckNativeIntegrations(&result, req.Home)
-	service.Effects.CheckBinaryDrift(&result, req.IssueOpsRoot)
+	observations.Native = service.Effects.NativeIntegrations(req.Home)
+	observations.Binary = service.Effects.BinaryDrift(req.IssueOpsRoot)
+	findings := doctordomain.Evaluate(observations)
+	result.Checks = append(result.Checks, findings.Checks...)
+	result.Issues = append(result.Issues, findings.Issues...)
+	result.PipeCapacityBytes = findings.PipeCapacityBytes
 
 	sort.Slice(result.Issues, func(i, j int) bool {
 		if result.Issues[i].Severity != result.Issues[j].Severity {
@@ -102,22 +104,8 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 		}
 		return result.Issues[i].Path < result.Issues[j].Path
 	})
-	result.Healthy = DoctorHealthy(result.Checks, result.Issues)
+	result.Healthy = doctordomain.Healthy(result.Checks, result.Issues)
 	return result, nil
-}
-
-func DoctorHealthy(checks []HarnessDoctorCheck, issues []HarnessDoctorIssue) bool {
-	for _, check := range checks {
-		if !check.Healthy {
-			return false
-		}
-	}
-	for _, issue := range issues {
-		if issue.Severity == "error" || issue.Severity == "warning" {
-			return false
-		}
-	}
-	return true
 }
 
 func CheckDaemonAdmission(r *HarnessDoctorResult, admission HarnessDoctorDaemonAdmission) {
@@ -151,10 +139,6 @@ func AddCheck(r *HarnessDoctorResult, name string, healthy bool, summary string)
 
 func AddIssue(r *HarnessDoctorResult, code, severity, summary, path string, fix *HarnessDoctorFix) {
 	r.Issues = append(r.Issues, HarnessDoctorIssue{Code: code, Severity: severity, Summary: summary, Path: path, Fix: fix})
-}
-
-func isUnexpectedStateArtifact(code string) bool {
-	return code == "unexpected_file" || code == "unexpected_directory"
 }
 
 func cloneOperationalSnapshot(snapshot operationalhealth.Snapshot) operationalhealth.Snapshot {
