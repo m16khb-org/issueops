@@ -2,34 +2,14 @@ package workercli
 
 import (
 	"encoding/json"
+	workerapp "issueops/internal/application/worker"
 	"os"
 	"strings"
 )
 
-// Deps holds host-provided dependencies for the worker CLI. The composition root
-// injects implementations via Configure; defaults support standalone use/tests.
-type Deps struct {
+type Command struct {
+	Service       workerapp.Service
 	ResolveTarget func(string) string
-}
-
-var deps = defaultDeps()
-
-// Configure installs host-provided dependencies called once by the composition root.
-func Configure(d Deps) { deps = d }
-
-func defaultDeps() Deps {
-	return Deps{ResolveTarget: defaultResolveTarget}
-}
-
-func defaultResolveTarget(target string) string {
-	if target != "" {
-		return target
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "."
-	}
-	return cwd
 }
 
 func printJSON(value any) error {

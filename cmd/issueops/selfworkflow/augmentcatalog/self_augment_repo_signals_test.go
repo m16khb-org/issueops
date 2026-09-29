@@ -143,9 +143,9 @@ func TestStateWriteWaitsForKeyLock() {}
 
 func TestWorkerStuckRunningDetectionIsSatisfiedByCoreAndCLI(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "worker", "store.go"), `package worker
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "application", "worker", "service.go"), `package worker
 
-func DetectStuckWorkerJobs() (WorkerListResult, error) {
+func (service Service) DetectStuck() (WorkerListResult, error) {
 	current.SafetyNotice = "worker job was stuck in running status with dead PID; auto-marked as failed"
 	return result, nil
 }
@@ -158,18 +158,18 @@ func TestWorkerDetectStuckJobsSkipsAlivePID() {}
 `)
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "workercli", "worker.go"), `package workercli
 
-func runWorker(args []string) error {
+func (command Command) Run(args []string) error {
 	switch args[0] {
 	case "cleanup-stuck":
-		return runWorkerCleanupStuck(args[1:])
+		return command.RunCleanupStuck(args[1:])
 	}
 	return nil
 }
 `)
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "workercli", "worker_queue_cli.go"), `package workercli
 
-func runWorkerCleanupStuck(args []string) error {
-	result, err := core.DetectStuckWorkerJobs()
+func (command Command) RunCleanupStuck(args []string) error {
+	result, err := command.Service.DetectStuck()
 	_ = result
 	return err
 }
@@ -188,6 +188,36 @@ func TestRunWorkerCleanupStuckMarksDeadPIDJobsFailed() {}
 	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
 	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("worker stuck-running candidate was not marked satisfied: %+v", candidate)
+	}
+
+	if err := os.Remove(filepath.Join(root, "internal", "application", "worker", "service.go")); err != nil {
+		t.Fatal(err)
+	}
+	if CollectSelfAugmentRepoSignals(root, 0, nil, "").HasWorkerStuckRunningDetection {
+		t.Fatal("stuck-job detection accepted without its application owner")
+	}
+}
+
+func TestWorkerMVPSignalRequiresApplicationAndCLI(t *testing.T) {
+	root := t.TempDir()
+	appPath := filepath.Join(root, "internal", "application", "worker", "service.go")
+	cliPath := filepath.Join(root, "cmd", "issueops", "workercli", "worker_queue_cli.go")
+	app := "package worker\nfunc (service Service) Enqueue(kind, payload string) {}\n"
+	cli := "package workercli\nfunc (command Command) RunEnqueue(args []string) error {}\n"
+	writeFileForRepoSignalTest(t, appPath, app)
+	writeFileForRepoSignalTest(t, cliPath, cli)
+	if !CollectSelfAugmentRepoSignals(root, 0, nil, "").HasWorkerMVP {
+		t.Fatal("worker application and CLI were not detected")
+	}
+	for _, missing := range []string{appPath, cliPath} {
+		if err := os.Remove(missing); err != nil {
+			t.Fatal(err)
+		}
+		if CollectSelfAugmentRepoSignals(root, 0, nil, "").HasWorkerMVP {
+			t.Fatalf("worker signal accepted without %s", missing)
+		}
+		writeFileForRepoSignalTest(t, appPath, app)
+		writeFileForRepoSignalTest(t, cliPath, cli)
 	}
 }
 

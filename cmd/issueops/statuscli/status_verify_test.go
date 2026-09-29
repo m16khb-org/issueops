@@ -10,7 +10,6 @@ import (
 
 	"issueops/cmd/issueops/daemoncli"
 	statestore "issueops/internal/adapter/outbound/state"
-	worker "issueops/internal/adapter/worker"
 	inspect "issueops/internal/contract/inspect"
 	"issueops/internal/testsupport"
 )
@@ -24,11 +23,11 @@ func TestBuildHarnessStatusReportsStateWorkerAndSelfVerify(t *testing.T) {
 	if _, err := statestore.StateWrite("self-verify-latest", `{"ok":true}`); err != nil {
 		t.Fatalf("write self verify state: %v", err)
 	}
-	if _, err := worker.EnqueueWorkerJob("smoke", "payload"); err != nil {
+	if _, err := testWorkerService().Enqueue("smoke", "payload"); err != nil {
 		t.Fatalf("enqueue worker job: %v", err)
 	}
 
-	status := BuildStatus(testDoctorService(), repo)
+	status := BuildStatus(testDoctorService(), testWorkerService(), repo)
 
 	if status.Kind != "harness_status" || status.Repo != repo {
 		t.Fatalf("unexpected status identity: %#v", status)
@@ -70,7 +69,7 @@ func TestBuildHarnessStatusSharesDaemonAdmissionWithDoctor(t *testing.T) {
 		CheckDaemonStatus: func() daemoncli.Status { return want },
 	})
 
-	status := BuildStatus(testDoctorService(), repo)
+	status := BuildStatus(testDoctorService(), testWorkerService(), repo)
 	if status.Daemon != want {
 		t.Fatalf("unexpected daemon status: %#v", status.Daemon)
 	}
@@ -91,14 +90,14 @@ func TestRunStatusWritesTextAndJSON(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", t.TempDir())
 
 	text := captureStatusVerifyStdout(t, func() error {
-		return RunStatus(testDoctorService(), []string{"--repo", repo})
+		return RunStatus(testDoctorService(), testWorkerService(), []string{"--repo", repo})
 	})
 	if !strings.Contains(text, "issueops system-status:") || !strings.Contains(text, "daemon running:") {
 		t.Fatalf("unexpected status text output:\n%s", text)
 	}
 
 	jsonText := captureStatusVerifyStdout(t, func() error {
-		return RunStatus(testDoctorService(), []string{"--repo", repo, "--json"})
+		return RunStatus(testDoctorService(), testWorkerService(), []string{"--repo", repo, "--json"})
 	})
 	var decoded Status
 	if err := json.Unmarshal([]byte(jsonText), &decoded); err != nil {

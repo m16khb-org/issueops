@@ -112,12 +112,12 @@ func (repo Repository) signalRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_test.go"), "TestStateWriteWaitsForKeyLock")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasWorkerStuckRunningDetection = FileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "store.go"), "func DetectStuckWorkerJobs") &&
+			signals.HasWorkerStuckRunningDetection = FileContainsTerm(root, filepath.Join("internal", "application", "worker", "service.go"), "func (service Service) DetectStuck()") &&
 				FileContainsTerm(root, filepath.Join("internal", "domain", "worker", "lifecycle.go"), "WorkerStatusFailed") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "worker_test.go"), "TestWorkerDetectStuckJobsMarksDeadPIDAsFailed") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "worker_test.go"), "TestWorkerDetectStuckJobsSkipsAlivePID") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "workercli", "worker.go"), `"cleanup-stuck"`) &&
-				FileContainsTerm(root, filepath.Join("cmd", "issueops", "workercli", "worker_queue_cli.go"), "runWorkerCleanupStuck") &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "workercli", "worker_queue_cli.go"), "func (command Command) RunCleanupStuck(") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "workercli", "worker_test.go"), "TestRunWorkerCleanupStuckMarksDeadPIDJobsFailed")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
@@ -176,8 +176,8 @@ func (repo Repository) signalRules() []repoSignalRule {
 				DirContainsTerm(root, filepath.Join("cmd", "issueops", "policycli"), "policy audit")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasWorkerMVP = FileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "worker.go"), "EnqueueWorkerJob") &&
-				DirContainsTerm(root, filepath.Join("cmd", "issueops", "workercli"), "runWorkerEnqueue")
+			signals.HasWorkerMVP = FileContainsTerm(root, filepath.Join("internal", "application", "worker", "service.go"), "func (service Service) Enqueue(") &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "workercli", "worker_queue_cli.go"), "func (command Command) RunEnqueue(")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasReleaseReproPack = FileContainsTerm(root, filepath.Join("scripts", "release-repro-smoke.sh"), "install --dry-run --project-local --json") &&

@@ -58,6 +58,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	root := issueOpsRoot()
 	docsService := newProjectDocsService(resolveTarget(""))
 	return mcpcli.MCPDependencies{
+		Worker:           newWorkerService(),
 		Catalog:          mcpcatalog.Build(),
 		Loop:             newLoopService(),
 		ProjectDocs:      docsService,

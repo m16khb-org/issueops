@@ -2,34 +2,50 @@ package worker
 
 import (
 	"context"
-	"os"
-	"time"
-
-	workerapp "issueops/internal/application/worker"
 	policycontract "issueops/internal/contract/policy"
-	workercontract "issueops/internal/contract/worker"
+	"os"
+	"path/filepath"
+	"time"
 )
 
-type workerEffects struct{}
+// Store keeps public paths and filesystem paths fixed for one worker instance.
+// Directory preserves the existing response path when the state override is relative.
+type Store struct {
+	Directory           string
+	DirectoryError      error
+	FilesystemDirectory string
+	OpenDatabase        func(string) (StateDatabase, error)
+	RunCommand          func(policycontract.CommandPolicyRequest) policycontract.CommandRunResult
+}
 
-func workerService() workerapp.Service           { return workerapp.Service{Effects: workerEffects{}} }
-func (workerEffects) Dir() (string, error)       { return workerDir() }
-func (workerEffects) EnsureDir(dir string) error { return os.MkdirAll(dir, 0o700) }
-func (workerEffects) WithLock(ctx context.Context, dir, id string, fn func(context.Context) error) error {
-	return withWorkerJobLock(ctx, dir, id, fn)
+func (store Store) Dir() (string, error) { return store.Directory, store.DirectoryError }
+func (store Store) EnsureDir(_ string) error {
+	err := os.MkdirAll(store.FilesystemDirectory, 0o700)
+	// Keep the response path relative while executing against the captured directory.
+	if pathErr, ok := err.(*os.PathError); ok && !filepath.IsAbs(store.Directory) {
+		if rel, relErr := filepath.Rel(store.FilesystemDirectory, pathErr.Path); relErr == nil {
+			return &os.PathError{Op: pathErr.Op, Path: filepath.Join(store.Directory, rel), Err: pathErr.Err}
+		}
+	}
+	return err
 }
-func (workerEffects) Read(id string) (workercontract.WorkerJob, error) { return ReadWorkerJob(id) }
-func (workerEffects) Write(job workercontract.WorkerJob) error         { return writeWorkerJob(job) }
-func (workerEffects) Now() time.Time                                   { return time.Now() }
-func (workerEffects) PID() int                                         { return os.Getpid() }
-func (workerEffects) Run(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
-	return RunReadOnlyCommand(request)
+func (store Store) WithLock(ctx context.Context, _, _ string, fn func(context.Context) error) error {
+	db, err := store.open()
+	if err != nil {
+		return err
+	}
+	return db.WithSpan(ctx, fn)
 }
-func (workerEffects) ListIDs(dir string) ([]string, error) {
-	db, err := openWorkerDB(dir)
+func (Store) Now() time.Time { return time.Now() }
+func (Store) PID() int       { return os.Getpid() }
+func (store Store) Run(request policycontract.CommandPolicyRequest) policycontract.CommandRunResult {
+	return store.RunCommand(request)
+}
+func (store Store) ListIDs(_ string) ([]string, error) {
+	db, err := store.open()
 	if err != nil {
 		return nil, err
 	}
 	return db.List(workerBucket)
 }
-func (workerEffects) PIDAlive(pid int) bool { return isPIDAlive(pid) }
+func (Store) PIDAlive(pid int) bool { return isPIDAlive(pid) }

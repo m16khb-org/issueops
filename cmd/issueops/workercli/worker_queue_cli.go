@@ -5,7 +5,7 @@ import (
 	"fmt"
 )
 
-func runWorkerEnqueue(args []string) error {
+func (command Command) RunEnqueue(args []string) error {
 	fs := flag.NewFlagSet("worker enqueue", flag.ContinueOnError)
 	kind := fs.String("kind", "", "job kind")
 	payload := fs.String("payload", "", "redacted job payload")
@@ -13,7 +13,7 @@ func runWorkerEnqueue(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	job, err := EnqueueWorkerJob(*kind, *payload)
+	job, err := command.Service.Enqueue(*kind, *payload)
 	if *jsonOut {
 		_ = printJSON(job)
 	}
@@ -23,14 +23,14 @@ func runWorkerEnqueue(args []string) error {
 	return err
 }
 
-func runWorkerStatus(args []string) error {
+func (command Command) RunStatus(args []string) error {
 	fs := flag.NewFlagSet("worker status", flag.ContinueOnError)
 	id := fs.String("id", "", "job id")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	job, err := ReadWorkerJob(*id)
+	job, err := command.Service.Read(*id)
 	if *jsonOut {
 		_ = printJSON(job)
 	}
@@ -40,13 +40,13 @@ func runWorkerStatus(args []string) error {
 	return err
 }
 
-func runWorkerList(args []string) error {
+func (command Command) RunList(args []string) error {
 	fs := flag.NewFlagSet("worker list", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := ListWorkerJobs()
+	result, err := command.Service.List()
 	if *jsonOut {
 		_ = printJSON(result)
 	}
@@ -58,13 +58,13 @@ func runWorkerList(args []string) error {
 	return err
 }
 
-func runWorkerCleanupStuck(args []string) error {
+func (command Command) RunCleanupStuck(args []string) error {
 	fs := flag.NewFlagSet("worker cleanup-stuck", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := DetectStuckWorkerJobs()
+	result, err := command.Service.DetectStuck()
 	if *jsonOut {
 		_ = printJSON(result)
 	}
@@ -76,14 +76,14 @@ func runWorkerCleanupStuck(args []string) error {
 	return err
 }
 
-func runWorkerCancel(args []string) error {
+func (command Command) RunCancel(args []string) error {
 	fs := flag.NewFlagSet("worker cancel", flag.ContinueOnError)
 	id := fs.String("id", "", "job id")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	job, err := CancelWorkerJob(*id)
+	job, err := command.Service.Cancel(*id)
 	if *jsonOut {
 		_ = printJSON(job)
 	}

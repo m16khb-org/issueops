@@ -13,7 +13,6 @@ import (
 	"issueops/cmd/issueops/qualitycli"
 	"issueops/cmd/issueops/statecli"
 	"issueops/cmd/issueops/statuscli"
-	"issueops/cmd/issueops/workercli"
 	"issueops/internal/port"
 )
 
@@ -100,7 +99,7 @@ func runStateDoctor(args []string) error {
 }
 
 func buildHarnessStatus(repo string) HarnessStatus {
-	return statuscli.BuildStatus(newDoctorService(), repo)
+	return statuscli.BuildStatus(newDoctorService(), newWorkerService(), repo)
 }
 
 func buildVerifyWork(repo string, all bool, argv []string) VerifyWorkResult {
@@ -108,23 +107,23 @@ func buildVerifyWork(repo string, all bool, argv []string) VerifyWorkResult {
 }
 
 func runWorkerEnqueue(args []string) error {
-	return workercli.RunEnqueue(args)
+	return newWorkerCommand().RunEnqueue(args)
 }
 
 func runWorkerRun(args []string) error {
-	return workercli.RunReadOnly(args)
+	return newWorkerCommand().RunReadOnly(args)
 }
 
 func runWorkerStatus(args []string) error {
-	return workercli.RunStatus(args)
+	return newWorkerCommand().RunStatus(args)
 }
 
 func runWorkerList(args []string) error {
-	return workercli.RunList(args)
+	return newWorkerCommand().RunList(args)
 }
 
 func runWorkerCancel(args []string) error {
-	return workercli.RunCancel(args)
+	return newWorkerCommand().RunCancel(args)
 }
 
 type HarnessStatus = statuscli.Status

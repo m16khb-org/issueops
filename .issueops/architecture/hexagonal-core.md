@@ -123,6 +123,12 @@ doctor의 파일·프로세스·HTTP 관측은 adapter가 수행하고, 문서 �
 
 root가 실제 preflight·guard application과 정책 실행기, Git·프로젝트 신호 adapter를 조립해 CLI에 전달한다. CLI는 flag 해석·출력·실패 종료만 담당한다. verify-work의 전역 콜백, CLI DTO 별칭과 결과 builder는 제거했다. 상대 경로와 정책 파일의 매 평가 재조회는 기존 동작을 유지하며 status의 집계 로직은 별도 후속 범위다.
 
+### Worker runtime boundary
+
+worker의 enqueue·read·list·cancel·read-only 실행·stuck 정리는 root가 조립한 `application/worker.Service`를 사용한다. CLI의 `workercli.Command`와 MCP의 직접 호출·SDK handler는 같은 인스턴스를 받으며 status도 worker application을 명시적으로 전달받는다. 전역 저장소·명령 실행 콜백과 adapter의 실행 facade는 제거했다.
+
+adapter의 `Store`는 조립 시 고정한 경로로 SQL·파일·프로세스 관측을 수행한다. 상대 state 경로는 기존 응답과 오류 메시지에 유지하고, 실제 파일 접근 경로는 작업 디렉터리가 바뀌어도 고정한다. application은 기존처럼 읽을 수 없는 작업을 목록에서 제외하고 생성 시각 내림차순으로 정렬하며 queue 집계는 domain이 판정한다. 읽기·수정·쓰기 전체의 SQL span 잠금과 명령 실행 중 잠금 해제, 취소 및 dead PID 재확인은 유지한다. 기본 read·list의 저장소 생성 동작도 기존 계약을 따른다.
+
 ### Loop runtime boundary
 
 loop의 생성·시도 기록·종료·status는 root가 조립한 `application/looprun.Service`를 호출한다. CLI와 MCP 직접 호출·SDK는 각 인스턴스에 고정한 저장소 경로와 작업 디렉터리를 사용한다. adapter의 `Store`는 SQL 읽기·쓰기와 기존 span 잠금만 수행하며 전역 저장소 setter와 lifecycle 실행 facade는 제거했다.

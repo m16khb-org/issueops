@@ -3,9 +3,7 @@ package statuscli
 import (
 	issueopsppdeps "issueops/internal/adapter/issueops"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
-	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
-	workerppdeps "issueops/internal/adapter/worker"
 )
 
 // production wiring과 같은 실행기를 설치한다. 이 package가 실제로 의존하는
@@ -16,5 +14,4 @@ func init() {
 	issueopsppdeps.GitCmd = preflightadapter.GitCmd
 	issueopsppdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsppdeps.GitOut = preflightadapter.GitOut
-	workerppdeps.RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
 }

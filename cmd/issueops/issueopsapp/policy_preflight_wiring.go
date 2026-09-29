@@ -13,7 +13,6 @@ import (
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
 	preflightfuzzdeps "issueops/internal/adapter/verification/probe/preflightfuzz"
-	workerdeps "issueops/internal/adapter/worker"
 	policyapp "issueops/internal/application/policy"
 )
 
@@ -56,5 +55,4 @@ func configurePolicyAndGitObserversWithLookup(lookup policyapp.PreparedBaseBranc
 		Normalize:   reviewfilesdeps.Normalize,
 		Evidence:    reviewfilesdeps.Evidence,
 	})
-	workerdeps.RunReadOnlyCommand = evaluator.RunReadOnly
 }

@@ -158,3 +158,28 @@ func (service Service) DetectStuck() (workercontract.WorkerListResult, error) {
 	sort.Slice(result.Jobs, func(i, j int) bool { return result.Jobs[i].CreatedAt > result.Jobs[j].CreatedAt })
 	return result, nil
 }
+
+func (service Service) Read(id string) (workercontract.WorkerJob, error) {
+	return service.Effects.Read(id)
+}
+
+func (service Service) List() (workercontract.WorkerListResult, error) {
+	dir, err := service.Effects.Dir()
+	if err != nil {
+		return workercontract.WorkerListResult{OK: false}, err
+	}
+	result := workercontract.WorkerListResult{OK: true, WorkerDir: dir, Jobs: []workercontract.WorkerJob{}}
+	ids, err := service.Effects.ListIDs(dir)
+	if err != nil {
+		return result, err
+	}
+	for _, id := range ids {
+		job, err := service.Effects.Read(id)
+		if err == nil {
+			result.Jobs = append(result.Jobs, job)
+		}
+	}
+	sort.Slice(result.Jobs, func(i, j int) bool { return result.Jobs[i].CreatedAt > result.Jobs[j].CreatedAt })
+	result.Queue = workerdomain.QueueStats(result.Jobs)
+	return result, nil
+}

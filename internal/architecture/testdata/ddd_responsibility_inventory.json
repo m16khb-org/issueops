@@ -1796,7 +1796,9 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureWorkerJobs"
+        "func newWorkerCommand",
+        "func newWorkerService",
+        "func newWorkerStore"
       ]
     },
     {
@@ -2784,12 +2786,6 @@
       "symbols": []
     },
     {
-      "path": "cmd/issueops/mcpcli/worker_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/pathutil/path_helpers.go",
       "owner": "inbound",
       "task": "T20",
@@ -3213,12 +3209,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/statuscli/worker_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/updatecli/dependencies.go",
       "owner": "inbound",
       "task": "T12",
@@ -3342,25 +3332,9 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Configure",
-        "func defaultDeps",
-        "func defaultResolveTarget",
         "func printJSON",
         "func splitCSV",
-        "type Deps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/workercli/exports.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func Run",
-        "func RunCancel",
-        "func RunEnqueue",
-        "func RunList",
-        "func RunReadOnly",
-        "func RunStatus"
+        "type Command"
       ]
     },
     {
@@ -3368,27 +3342,21 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runWorker",
-        "func runWorkerRun",
+        "func Command.Run",
+        "func Command.RunReadOnly",
         "func workerUsage"
       ]
-    },
-    {
-      "path": "cmd/issueops/workercli/worker_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/workercli/worker_queue_cli.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runWorkerCancel",
-        "func runWorkerCleanupStuck",
-        "func runWorkerEnqueue",
-        "func runWorkerList",
-        "func runWorkerStatus"
+        "func Command.RunCancel",
+        "func Command.RunCleanupStuck",
+        "func Command.RunEnqueue",
+        "func Command.RunList",
+        "func Command.RunStatus"
       ]
     },
     {
@@ -9290,36 +9258,19 @@
       ]
     },
     {
-      "path": "internal/adapter/worker/adapter_dependencies.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/worker/effects.go",
       "owner": "adapter",
       "task": "T14",
       "symbols": [
-        "func workerEffects.Dir",
-        "func workerEffects.EnsureDir",
-        "func workerEffects.ListIDs",
-        "func workerEffects.Now",
-        "func workerEffects.PID",
-        "func workerEffects.PIDAlive",
-        "func workerEffects.Read",
-        "func workerEffects.Run",
-        "func workerEffects.WithLock",
-        "func workerEffects.Write",
-        "func workerService",
-        "type workerEffects"
-      ]
-    },
-    {
-      "path": "internal/adapter/worker/read_only.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": [
-        "func RunReadOnlyWorkerJob"
+        "func Store.Dir",
+        "func Store.EnsureDir",
+        "func Store.ListIDs",
+        "func Store.Now",
+        "func Store.PID",
+        "func Store.PIDAlive",
+        "func Store.Run",
+        "func Store.WithLock",
+        "type Store"
       ]
     },
     {
@@ -9335,31 +9286,10 @@
       "owner": "adapter",
       "task": "T14",
       "symbols": [
-        "func DetectStuckWorkerJobs",
-        "func ListWorkerJobs",
-        "func ReadWorkerJob",
-        "func makeWorkerJobID",
-        "func openWorkerDB",
-        "func summarizeWorkerQueue",
-        "func workerDir",
-        "func writeWorkerJob"
-      ]
-    },
-    {
-      "path": "internal/adapter/worker/worker.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": [
-        "func CancelWorkerJob",
-        "func EnqueueWorkerJob"
-      ]
-    },
-    {
-      "path": "internal/adapter/worker/worker_lock.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": [
-        "func withWorkerJobLock"
+        "func ResolveDirectory",
+        "func Store.Read",
+        "func Store.Write",
+        "func Store.open"
       ]
     },
     {
@@ -11581,6 +11511,8 @@
         "func Service.Cancel",
         "func Service.DetectStuck",
         "func Service.Enqueue",
+        "func Service.List",
+        "func Service.Read",
         "func Service.RunReadOnly",
         "type Effects",
         "type Service"

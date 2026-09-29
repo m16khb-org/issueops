@@ -8,7 +8,6 @@ import (
 	reviewfilesppdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
-	workerppdeps "issueops/internal/adapter/worker"
 )
 
 // production wiring과 같은 실행기를 설치한다. 이 package가 실제로 의존하는
@@ -33,5 +32,4 @@ func init() {
 		Normalize:   reviewfilesppdeps.Normalize,
 		Evidence:    reviewfilesppdeps.Evidence,
 	})
-	workerppdeps.RunReadOnlyCommand = policyadapter.RunReadOnlyCommand
 }

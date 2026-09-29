@@ -11,7 +11,6 @@ import (
 	"issueops/cmd/issueops/statecli"
 	"issueops/cmd/issueops/statuscli"
 	"issueops/cmd/issueops/webfetchcli"
-	"issueops/cmd/issueops/workercli"
 	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/preflight"
@@ -35,7 +34,6 @@ func wireBasicCLIDeps() {
 	configurePolicyAndGitObservers()
 	configureGatesGate()
 	configureAdapterStateAccess()
-	configureWorkerJobs()
 	configureRepoPathResolvers()
 	configureIssueOpsBenchmark()
 	configureIssueOpsCleanup()
@@ -60,7 +58,6 @@ func wireBasicCLIDeps() {
 		InspectHarness:    inspectHarness,
 		CheckDaemonStatus: checkDaemonStatus,
 	})
-	workercli.Configure(workercli.Deps{ResolveTarget: resolveTarget})
 }
 
 func runDocs(args []string) error {
@@ -104,7 +101,7 @@ func runState(args []string) error {
 }
 
 func runStatus(args []string) error {
-	return statuscli.RunStatus(newDoctorService(), args)
+	return statuscli.RunStatus(newDoctorService(), newWorkerService(), args)
 }
 
 func runVerifyWork(args []string) error {
@@ -112,7 +109,7 @@ func runVerifyWork(args []string) error {
 }
 
 func runWorker(args []string) error {
-	return workercli.Run(args)
+	return newWorkerCommand().Run(args)
 }
 
 func runLoop(args []string) error {
