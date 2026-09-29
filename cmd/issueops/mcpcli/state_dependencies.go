@@ -5,13 +5,12 @@ import (
 	"time"
 )
 
-// issueops state 접근은 composition root가 설치한다. transport는 state를 어디에
-// 어떻게 저장하는지 알지 않는다.
-var (
-	StateDoctor   func() (statecontract.StateDoctorResult, error)
-	StateList     func() (statecontract.StateListResult, error)
-	StateMaintain func() (statecontract.StateMaintainResult, error)
-	StatePrune    func(maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error)
-	StateRead     func(key string) (statecontract.StateResult, error)
-	StateWrite    func(key, content string) (statecontract.StateResult, error)
-)
+// StateDependencies는 서버별 state application 연산이다.
+type StateDependencies struct {
+	Doctor   func() (statecontract.StateDoctorResult, error)
+	List     func() (statecontract.StateListResult, error)
+	Maintain func() (statecontract.StateMaintainResult, error)
+	Prune    func(maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error)
+	Read     func(key string) (statecontract.StateResult, error)
+	Write    func(key, content string) (statecontract.StateResult, error)
+}

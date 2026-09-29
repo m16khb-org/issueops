@@ -1660,8 +1660,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func newSelfWorkflowState",
-        "func newSelfWorkflowStateService"
+        "func newSelfWorkflowState"
       ]
     },
     {
@@ -1693,6 +1692,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func newStateDependencies",
+        "func newStateService",
         "func stateDependencies"
       ]
     },
@@ -2747,12 +2748,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/mcpcli/resources/adapter_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/mcpcli/resources/resources.go",
       "owner": "inbound",
       "task": "T20",
@@ -2786,7 +2781,9 @@
       "path": "cmd/issueops/mcpcli/state_dependencies.go",
       "owner": "inbound",
       "task": "T20",
-      "symbols": []
+      "symbols": [
+        "type StateDependencies"
+      ]
     },
     {
       "path": "cmd/issueops/mcpcli/webfetch_dependencies.go",
@@ -7656,6 +7653,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func Doctor",
         "func StateDoctor",
         "func failedDoctorResult"
       ]
@@ -7695,13 +7693,12 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func StateMaintain",
-        "func allStoreRoots",
-        "func knownStoreRoots",
-        "func maintainStore",
-        "func maintenanceService",
-        "func projectStoreRoots",
-        "func storeExists"
+        "func MaintenanceStores.Exists",
+        "func MaintenanceStores.Maintain",
+        "func MaintenanceStores.Roots",
+        "func MaintenanceStores.projectRoots",
+        "func NewMaintenanceStores",
+        "type MaintenanceStores"
       ]
     },
     {

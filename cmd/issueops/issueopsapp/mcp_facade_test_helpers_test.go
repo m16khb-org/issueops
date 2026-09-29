@@ -23,7 +23,7 @@ func handleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
 }
 
 func handleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
-	return mcpcli.HandleResourceRead(params)
+	return mcpcli.HandleResourceRead(params, issueOpsMCPDependencies().Resources)
 }
 
 func textResult(text string) map[string]any {

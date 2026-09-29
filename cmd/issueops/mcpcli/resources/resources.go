@@ -8,6 +8,7 @@ import (
 )
 
 type Config struct {
+	CommandPolicySummary func() map[string]any
 	// RouteProjectDocs는 composition root가 주입한다.
 	RouteProjectDocs func(repoRoot, task string) (projectdocscontract.ProjectDocsRouteResult, error)
 	// DocsIndex는 composition root가 주입한다.
@@ -91,7 +92,7 @@ func HandleResourceRead(params json.RawMessage, config Config) (any, *ReadError)
 		return content(req.URI, "text/markdown", apiDocGuidanceText()), nil
 	}
 	if req.URI == "issueops://command-policy" {
-		b, _ := json.MarshalIndent(CommandPolicySummary(), "", "  ")
+		b, _ := json.MarshalIndent(config.CommandPolicySummary(), "", "  ")
 		return content(req.URI, "application/json", string(b)), nil
 	}
 	if req.URI == "issueops://state" {

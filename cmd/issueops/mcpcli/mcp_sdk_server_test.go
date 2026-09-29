@@ -44,7 +44,7 @@ func TestSDKToolHandlerRejectsInvalidRawArguments(t *testing.T) {
 }
 
 func TestSDKResourceHandlerReadsHarnessResource(t *testing.T) {
-	result, err := sdkResourceHandler()(context.Background(), &mcp.ReadResourceRequest{
+	result, err := sdkResourceHandler(resourceConfigForTest())(context.Background(), &mcp.ReadResourceRequest{
 		Params: &mcp.ReadResourceParams{URI: "issueops://commit-policy"},
 	})
 	if err != nil {
@@ -169,7 +169,7 @@ func TestSDKServerHandshakeOmitsLoggingAndKeepsCatalogCapabilities(t *testing.T)
 		sdkServerOptions(),
 	)
 	registerAllTools(server, MCPDependencies{Catalog: testMCPCatalog()})
-	registerAllResources(server, testMCPCatalog())
+	registerAllResources(server, MCPDependencies{Catalog: testMCPCatalog(), Resources: resourceConfigForTest()})
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "0"}, nil)
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 	ctx, cancel := context.WithCancel(context.Background())

@@ -18,7 +18,7 @@ func TestServeMCPStreamContextCancelsIdleSDKSession(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		done <- ServeMCPStreamContextWithDependencies(ctx, server, server, io.Discard, MCPDependencies{Catalog: testMCPCatalog()})
+		done <- ServeMCPStreamContextWithDependencies(ctx, server, server, io.Discard, MCPDependencies{Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
 	}()
 	cancel()
 
@@ -30,7 +30,7 @@ func TestServeMCPStreamContextCancelsIdleSDKSession(t *testing.T) {
 }
 
 func TestServeMCPStreamListsHarnessTools(t *testing.T) {
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog()})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil || len(tools.Tools) == 0 {
 		t.Fatalf("stream tool listing failed: tools=%#v err=%v", tools, err)

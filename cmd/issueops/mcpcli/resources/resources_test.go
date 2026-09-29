@@ -5,6 +5,7 @@ import (
 	"errors"
 	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
+	"issueops/internal/adapter/policy"
 	"issueops/internal/adapter/projectdocs"
 	"os"
 	"path/filepath"
@@ -27,11 +28,12 @@ func TestHandleResourceReadReturnsJSONResources(t *testing.T) {
 	}
 
 	config := Config{
-		RouteProjectDocs: projectdocs.RouteProjectDocs,
-		IssueOpsRoot:     issueOpsRoot,
-		Version:          "test-version",
-		StateList:        statestore.StateList,
-		DocsIndex:        docs.DocsIndex,
+		RouteProjectDocs:     projectdocs.RouteProjectDocs,
+		CommandPolicySummary: policy.CommandPolicySummary,
+		IssueOpsRoot:         issueOpsRoot,
+		Version:              "test-version",
+		StateList:            statestore.StateList,
+		DocsIndex:            docs.DocsIndex,
 	}
 	for _, uri := range []string{
 		"issueops://docs",

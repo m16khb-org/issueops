@@ -1,17 +1,26 @@
 package mcpcli
 
 import (
+	"encoding/json"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"issueops/cmd/issueops/mcpcli/resources"
 	statestore "issueops/internal/adapter/outbound/state"
+	"issueops/internal/adapter/policy"
+	stateapp "issueops/internal/application/state"
+	"os"
 )
 
-// production wiring과 같은 state store를 설치한다. 이 package가 실제로 의존하는
-// 대상만 채운다 — 역방향으로 채우면 import 순환이 된다.
-func init() {
-	StateDoctor = statestore.StateDoctor
-	StateList = statestore.StateList
-	StateMaintain = statestore.StateMaintain
-	StatePrune = statestore.StatePrune
-	StateRead = statestore.StateRead
-	StateWrite = statestore.StateWrite
-
+func publicStateForTest() StateDependencies {
+	stores := statestore.NewMaintenanceStores(statestore.StateDir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
+	maintenance := stateapp.NewMaintenanceService(stateapp.MaintenanceDependencies{AllRoots: stores.Roots, StoreExists: stores.Exists, MaintainStore: stores.Maintain})
+	return StateDependencies{Write: statestore.StateWrite, Read: statestore.StateRead, List: statestore.StateList, Prune: statestore.StatePrune, Doctor: statestore.StateDoctor, Maintain: maintenance.Maintain}
+}
+func testHandlePolicyStateMCPToolCall(call MCPToolCall) MCPToolOutcome {
+	return handlePolicyStateMCPToolCall(call, publicStateForTest())
+}
+func resourceConfigForTest() resources.Config {
+	return resources.Config{IssueOpsRoot: IssueOpsRoot(), Version: Version, SkillName: skillName, ReadHarnessFile: ReadHarnessFile, StateList: publicStateForTest().List, RouteProjectDocs: RouteProjectDocs, DocsIndex: DocsIndex, CommandPolicySummary: policy.CommandPolicySummary}
+}
+func testHandleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
+	return HandleResourceRead(params, resourceConfigForTest())
 }

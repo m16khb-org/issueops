@@ -3,7 +3,6 @@ package issueopscli
 import (
 	apidoccli "issueops/cmd/issueops/apidoc"
 	mcpclippdeps "issueops/cmd/issueops/mcpcli"
-	resourcesppdeps "issueops/cmd/issueops/mcpcli/resources"
 	auditppdeps "issueops/internal/adapter/audit"
 	issueopsppdeps "issueops/internal/adapter/issueops"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
@@ -23,7 +22,6 @@ func init() {
 	issueopsppdeps.GitOut = preflightadapter.GitOut
 	mcpclippdeps.EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
 	mcpclippdeps.FakeRunCommand = policyadapter.FakeRunCommand
-	resourcesppdeps.CommandPolicySummary = policyadapter.CommandPolicySummary
 	reviewfilesppdeps.GitCmd = preflightadapter.GitCmd
 	apidoccli.ConfigureReviewFiles(apidoccli.ReviewFileEffects{
 		ExtraPrompt: reviewfilesppdeps.ExtraPrompt,

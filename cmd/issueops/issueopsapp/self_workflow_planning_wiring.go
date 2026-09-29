@@ -14,7 +14,7 @@ import (
 )
 
 func newSelfWorkflowPlanning(root, dir, version string) mcpcli.SelfPlanningDependencies {
-	state := newSelfWorkflowStateService(dir)
+	state := newStateService(dir)
 	planner := augmentapp.Planner{Repository: augmentation.Repository{ListDocs: docs.ListDocs}, DocsIndex: docs.DocsIndex, ListSkillNames: install.ListSkillNames, StateList: state.List, StateRead: state.Read, Now: time.Now}
 	plan := func(req contract.SelfAugmentPlanRequest) contract.SelfAugmentPlanResult {
 		return planner.Plan(req, root, version)

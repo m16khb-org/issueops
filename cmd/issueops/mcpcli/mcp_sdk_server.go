@@ -24,11 +24,11 @@ func initSDKServerWithDiagnostics(deps MCPDependencies, diagnostics io.Writer) *
 		diagnostics = io.Discard
 	}
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "issueops", Version: Version},
+		&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version},
 		sdkServerOptionsWithDiagnostics(diagnostics),
 	)
 	registerAllTools(server, deps)
-	registerAllResources(server, deps.Catalog)
+	registerAllResources(server, deps)
 	return server
 }
 
@@ -39,11 +39,11 @@ func initSDKServerWithLogger(deps MCPDependencies, logger *slog.Logger) *mcp.Ser
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "issueops", Version: Version},
+		&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version},
 		sdkServerOptionsWithLogger(logger),
 	)
 	registerAllTools(server, deps)
-	registerAllResources(server, deps.Catalog)
+	registerAllResources(server, deps)
 	return server
 }
 
@@ -153,7 +153,6 @@ func issueOpsExecutionSDKToolHandler(deps MCPDependencies) mcp.ToolHandler {
 // lookup stays stable as long as no new handler group is introduced.
 var handlerGroupLookup = map[mcpcontract.DispatchGroup]func(MCPToolCall) MCPToolOutcome{
 	mcpcontract.DispatchProject:         handleProjectMCPToolCall,
-	mcpcontract.DispatchPolicyState:     handlePolicyStateMCPToolCall,
 	mcpcontract.DispatchIssueOps:        handleIssueOpsMCPToolCall,
 	mcpcontract.DispatchLoop:            handleLoopMCPToolCall,
 	mcpcontract.DispatchGates:           handleGatesMCPToolCall,
@@ -168,6 +167,9 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 			return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
 		}
 	}
+	if group == mcpcontract.DispatchPolicyState {
+		return func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps.State) }
+	}
 	if group == mcpcontract.DispatchSelfLoop {
 		return func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) }
 	}
@@ -179,42 +181,34 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 	}
 }
 
-func HandleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
-	result, readErr := resources.HandleResourceRead(params, resources.Config{
-		IssueOpsRoot:     IssueOpsRoot(),
-		Version:          Version,
-		SkillName:        skillName,
-		ReadHarnessFile:  ReadHarnessFile,
-		StateList:        StateList,
-		RouteProjectDocs: RouteProjectDocs,
-		DocsIndex:        DocsIndex,
-	})
+func HandleResourceRead(params json.RawMessage, config resources.Config) (any, *jsonrpc.Error) {
+	result, readErr := resources.HandleResourceRead(params, config)
 	if readErr != nil {
 		return nil, newProtocolError(int64(readErr.Code), readErr.Message, readErr.Data)
 	}
 	return result, nil
 }
 
-func registerAllResources(server *mcp.Server, catalog mcpcontract.Catalog) {
-	for _, r := range catalog.Resources {
+func registerAllResources(server *mcp.Server, deps MCPDependencies) {
+	for _, r := range deps.Catalog.Resources {
 		uri, _ := r["uri"].(string)
 		name, _ := r["name"].(string)
 		desc, _ := r["description"].(string)
 		mime, _ := r["mimeType"].(string)
 		server.AddResource(
 			&mcp.Resource{URI: uri, Name: name, Description: desc, MIMEType: mime},
-			sdkResourceHandler(),
+			sdkResourceHandler(deps.Resources),
 		)
 	}
 }
 
-func sdkResourceHandler() mcp.ResourceHandler {
+func sdkResourceHandler(config resources.Config) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		params, err := json.Marshal(map[string]string{"uri": req.Params.URI})
 		if err != nil {
 			return nil, fmt.Errorf("marshal resource params: %w", err)
 		}
-		result, readErr := HandleResourceRead(params)
+		result, readErr := HandleResourceRead(params, config)
 		if readErr != nil {
 			return nil, readErr
 		}

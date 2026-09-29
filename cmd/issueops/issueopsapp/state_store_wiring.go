@@ -4,7 +4,6 @@ import (
 	"time"
 
 	benchmarkcmd "issueops/cmd/issueops/issueopscli/benchmarkcmd"
-	mcpcli "issueops/cmd/issueops/mcpcli"
 
 	statuscli "issueops/cmd/issueops/statuscli"
 	statestore "issueops/internal/adapter/outbound/state"
@@ -27,12 +26,6 @@ func configureStateStores() {
 
 	benchmarkcmd.StateDir = statestore.StateDir
 
-	mcpcli.StateDoctor = statestore.StateDoctor
-	mcpcli.StateList = statestore.StateList
-	mcpcli.StateMaintain = statestore.StateMaintain
-	mcpcli.StatePrune = statestore.StatePrune
-	mcpcli.StateRead = statestore.StateRead
-	mcpcli.StateWrite = statestore.StateWrite
 	stateroundtrip.StateRead = statestore.StateRead
 	stateroundtrip.WriteStateRecord = statestore.WriteStateRecord
 	statuscli.StateList = statestore.StateList

@@ -14,7 +14,7 @@ import (
 )
 
 func newQualityDependencies(root, dir string) qualitycli.Deps {
-	state := newSelfWorkflowStateService(dir)
+	state := newStateService(dir)
 	baseline := app.SNRBaselineStore{CanonicalRepository: outbound.CanonicalRepository, ReadState: state.Read, WriteState: state.Write}
 	return qualitycli.Deps{Root: root, PrintJSON: printJSON, ReadSNRBaseline: baseline.Read, SaveSNRBaseline: baseline.Save, Inspect: func(target string) contract.InspectResult {
 		if target == "" {

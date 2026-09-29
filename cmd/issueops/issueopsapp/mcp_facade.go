@@ -2,11 +2,15 @@ package issueopsapp
 
 import (
 	"io"
+	"issueops/cmd/issueops/mcpcli/resources"
+	"issueops/cmd/issueops/pathutil"
 	channeladapter "issueops/internal/adapter/channel"
+	"issueops/internal/adapter/docs"
 	gatesadapter "issueops/internal/adapter/gates"
 	"issueops/internal/adapter/inspect"
 	"issueops/internal/adapter/looprun"
 	statestore "issueops/internal/adapter/outbound/state"
+	"issueops/internal/adapter/policy"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/adapter/projectdocs"
 
@@ -60,8 +64,16 @@ func mcpTools() []map[string]any {
 
 func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	execution := productionIssueOpsExecutionDependencies()
+	state := stateDependencies()
+	root := issueOpsRoot()
 	return mcpcli.MCPDependencies{
-		Catalog:      mcpcatalog.Build(),
+		Catalog: mcpcatalog.Build(),
+		State:   mcpcli.StateDependencies{Write: state.Write, Read: state.Read, List: state.List, Prune: state.Prune, Doctor: state.Doctor, Maintain: state.Maintain},
+		Resources: resources.Config{
+			IssueOpsRoot: root, Version: version, SkillName: skillName,
+			ReadHarnessFile: func(parts ...string) (string, error) { return pathutil.ReadHarnessFile(root, parts...) },
+			StateList:       state.List, RouteProjectDocs: projectdocs.RouteProjectDocs, DocsIndex: docs.DocsIndex, CommandPolicySummary: policy.CommandPolicySummary,
+		},
 		SelfHistory:  newSelfWorkflowHistory(statestore.StateDir()),
 		SelfState:    newSelfWorkflowState(statestore.StateDir()),
 		SelfPlanning: newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version),

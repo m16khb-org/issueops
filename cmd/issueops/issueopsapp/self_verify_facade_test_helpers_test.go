@@ -71,7 +71,7 @@ func promoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFaile
 }
 
 func readSelfAugmentStateSnapshot(key string) (SelfAugmentStateSnapshot, error) {
-	return (app.SnapshotStore{ReadState: newSelfWorkflowStateService(statestore.StateDir()).Read}).Read(key)
+	return (app.SnapshotStore{ReadState: newStateService(statestore.StateDir()).Read}).Read(key)
 }
 
 func isSelfVerificationSummaryKind(kind string) bool {
@@ -79,7 +79,7 @@ func isSelfVerificationSummaryKind(kind string) bool {
 }
 
 func writeSelfAugmentSnapshotRecord(dir, key string, snapshot SelfAugmentStateSnapshot) error {
-	return (app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: newSelfWorkflowStateService(dir).WriteRecord, Now: time.Now}).Write(dir, key, snapshot)
+	return (app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: newStateService(dir).WriteRecord, Now: time.Now}).Write(dir, key, snapshot)
 }
 
 func boolPtr(value bool) *bool {

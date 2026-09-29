@@ -12,7 +12,10 @@ import (
 )
 
 func StateDoctor() (statecontract.StateDoctorResult, error) {
-	dir := StateDir()
+	return Doctor(StateDir())
+}
+
+func Doctor(dir string) (statecontract.StateDoctorResult, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil && !os.IsNotExist(err) {
 		return failedDoctorResult(dir), err

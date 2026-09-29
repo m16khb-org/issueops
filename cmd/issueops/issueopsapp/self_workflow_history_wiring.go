@@ -8,7 +8,7 @@ import (
 
 func newSelfWorkflowHistory(dir string) augmentapp.HistoryService {
 	stateDir := func() string { return dir }
-	state := newSelfWorkflowStateService(dir)
+	state := newStateService(dir)
 	return augmentapp.HistoryService{StateDir: stateDir, List: state.List, Read: state.Read, Delete: state.Delete}
 }
 

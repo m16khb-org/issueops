@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	apidoccli "issueops/cmd/issueops/apidoc"
 	mcpclideps "issueops/cmd/issueops/mcpcli"
-	resourcesdeps "issueops/cmd/issueops/mcpcli/resources"
 	policyclideps "issueops/cmd/issueops/policycli"
 	statusclideps "issueops/cmd/issueops/statuscli"
 	auditdeps "issueops/internal/adapter/audit"
@@ -47,7 +46,6 @@ func configurePolicyAndGitObserversWithLookup(lookup policyapp.PreparedBaseBranc
 	policyclideps.FakeRunCommand = evaluator.FakeRun
 	policyclideps.RunReadOnlyCommand = evaluator.RunReadOnly
 	preflightfuzzdeps.GitCmd = preflightadapter.GitCmd
-	resourcesdeps.CommandPolicySummary = policyadapter.CommandPolicySummary
 	reviewfilesdeps.GitCmd = preflightadapter.GitCmd
 	apidoccli.ConfigureReviewFiles(apidoccli.ReviewFileEffects{
 		ExtraPrompt: reviewfilesdeps.ExtraPrompt,

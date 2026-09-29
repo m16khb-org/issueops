@@ -212,7 +212,7 @@ func TestQualityBaselineRefusesUnknownSchemaWithoutMutation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := newSelfWorkflowStateService(dir).Write(key, string(content)); err != nil {
+	if _, err := newStateService(dir).Write(key, string(content)); err != nil {
 		t.Fatal(err)
 	}
 	before, _, err := sqlstore.GetExisting(dir, "state", key)

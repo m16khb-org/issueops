@@ -3,27 +3,15 @@ package issueopsapp
 import (
 	"encoding/json"
 	"issueops/cmd/issueops/mcpcli"
-	"issueops/internal/adapter/outbound/sqlstore"
-	statestore "issueops/internal/adapter/outbound/state"
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
-	stateapp "issueops/internal/application/state"
 	contract "issueops/internal/contract/selfaugment"
 	"issueops/internal/domain/statepath"
-	stateport "issueops/internal/port/state"
 	"time"
 )
 
-func newSelfWorkflowStateService(dir string) *stateapp.Service {
-	return stateapp.NewService(stateapp.Dependencies{
-		StateDir: func() string { return dir }, StatePath: statepath.Path,
-		OpenStore:       func(dir string) (stateport.Store, error) { return sqlstore.Open(dir) },
-		ExistingRecords: statestore.ExistingRecords{},
-	})
-}
-
 func newSelfWorkflowState(dir string) mcpcli.SelfStateDependencies {
-	state := newSelfWorkflowStateService(dir)
+	state := newStateService(dir)
 	stateDir := func() string { return dir }
 	snapshots := augmentapp.SnapshotStore{ReadState: state.Read, NormalizeKey: statepath.NormalizeKey, WriteRecord: state.WriteRecord, Now: time.Now}
 	return mcpcli.SelfStateDependencies{

@@ -109,7 +109,7 @@ func TestMCPResourceReadCoversGuidanceStateAndErrors(t *testing.T) {
 		{uri: "issueops://unknown", wantError: true},
 	} {
 		t.Run(tc.uri, func(t *testing.T) {
-			result, rpcErr := HandleResourceRead(mustMarshalMCPTest(t, map[string]any{"uri": tc.uri}))
+			result, rpcErr := testHandleResourceRead(mustMarshalMCPTest(t, map[string]any{"uri": tc.uri}))
 			if tc.wantError {
 				if rpcErr == nil || !strings.Contains(rpcErr.Message, "Unknown resource") {
 					t.Fatalf("expected unknown resource error, got result=%#v err=%+v", result, rpcErr)
@@ -117,7 +117,7 @@ func TestMCPResourceReadCoversGuidanceStateAndErrors(t *testing.T) {
 				return
 			}
 			if rpcErr != nil {
-				t.Fatalf("HandleResourceRead(%s): %+v", tc.uri, rpcErr)
+				t.Fatalf("testHandleResourceRead(%s): %+v", tc.uri, rpcErr)
 			}
 			content := singleMCPResourceContent(t, result)
 			if content["mimeType"] != tc.wantType || !strings.Contains(content["text"].(string), tc.wantText) {
@@ -126,7 +126,7 @@ func TestMCPResourceReadCoversGuidanceStateAndErrors(t *testing.T) {
 		})
 	}
 
-	_, rpcErr := HandleResourceRead(json.RawMessage(`{bad json}`))
+	_, rpcErr := testHandleResourceRead(json.RawMessage(`{bad json}`))
 	if rpcErr == nil || rpcErr.Code != -32602 {
 		t.Fatalf("expected invalid params error, got %+v", rpcErr)
 	}
