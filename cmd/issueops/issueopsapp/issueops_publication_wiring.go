@@ -54,7 +54,7 @@ func newIssueOpsPublicationHandlers(deps issueOpsPublicationCompositionDeps) iss
 }
 
 func newIssueOpsPublicationServices(stateRoot string, deps issueOpsPublicationCompositionDeps) (*publicationapp.CreateService, *publicationapp.ReconcileService) {
-	observer := issueops.RemotePublicationObserver{StateRoot: stateRoot, Clock: deps.Now, OperationIDFactory: deps.NewOperationID}
+	observer := issueops.RemotePublicationObserver{CurrentFingerprint: newChangeReader().ChangeFingerprint, CurrentHead: newReadinessGit().Head, StateRoot: stateRoot, Clock: deps.Now, OperationIDFactory: deps.NewOperationID}
 	authority := cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same)
 	repository := remoteapp.NewPublicationJournal(issueops.RemotePublicationStore{StateRoot: stateRoot}, observer, authority)
 	providerAdapter := &publicationProviderAdapter{deps: deps}

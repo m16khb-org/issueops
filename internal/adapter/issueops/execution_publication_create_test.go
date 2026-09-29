@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/issueops/implementation"
 	"issueops/internal/adapter/outbound/sqlstore"
 	cycleapp "issueops/internal/application/issueopscycle"
 	publicationapp "issueops/internal/application/issueopspublication"
@@ -48,7 +47,7 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 			record.Phase = model.IssueOpsPhasePR
 			record.IssueURL = "https://github.com/example/issueops/issues/69"
 			record.Execution.Lease = model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &actor, ClaimedAt: "2026-09-28T00:00:00Z"}
-			record.ImplementationReview = &model.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: implementation.ChangeFingerprint(record)}
+			record.ImplementationReview = &model.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: testChangeReader().ChangeFingerprint(record)}
 			if record.ImplementationReview.ReviewedFingerprint == "" {
 				t.Fatal("fixture fingerprint is missing")
 			}
@@ -109,7 +108,7 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 				}
 				return nil
 			})
-			service := publicationapp.NewCreateService(remoteapp.NewCreatePreparation(RemotePublicationObserver{StateRoot: root}, cycleapp.NewMutationAuthority(samePath), inspectNativeProcessReceipt), repository, provider, verifier)
+			service := publicationapp.NewCreateService(remoteapp.NewCreatePreparation(RemotePublicationObserver{CurrentFingerprint: testChangeReader().ChangeFingerprint, CurrentHead: testReadinessGit().Head, StateRoot: root}, cycleapp.NewMutationAuthority(samePath), inspectNativeProcessReceipt), repository, provider, verifier)
 			result, err := service.Create(context.Background(), command)
 			after, readErr := ReadIssueOps(root, record.ID)
 			if readErr != nil {

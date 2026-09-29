@@ -25,25 +25,29 @@ func TestIssueOpsStatusVerticalOwnsStatusProjection(t *testing.T) {
 		}
 	}
 
-	legacyPath := filepath.Join(
-		findRepoRoot(t),
-		"internal",
-		"adapter",
-		"issueops",
-		"issueops_phase_ledger.go",
-	)
-	file, err := parser.ParseFile(token.NewFileSet(), legacyPath, nil, 0)
-	if err != nil {
-		t.Fatal(err)
+	// Check the entire adapter package so a removed legacy file cannot hide a
+	// projection copied into a sibling file.
+	paths, err := filepath.Glob(filepath.Join(findRepoRoot(t), "internal", "adapter", "issueops", "*.go"))
+	if err != nil || len(paths) == 0 {
+		t.Fatalf("find IssueOps adapter sources: %v", err)
 	}
-	for _, declaration := range file.Decls {
-		function, ok := declaration.(*ast.FuncDecl)
-		if !ok {
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		switch function.Name.Name {
-		case "IssueOpsStatus", "DeriveIssueOpsPhaseLedger", "issueOpsPhaseArtifactKeys":
-			t.Errorf("legacy status projection symbol remains: %s", function.Name.Name)
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, declaration := range file.Decls {
+			function, ok := declaration.(*ast.FuncDecl)
+			if !ok {
+				continue
+			}
+			switch function.Name.Name {
+			case "IssueOpsStatus", "DeriveIssueOpsPhaseLedger", "issueOpsPhaseArtifactKeys":
+				t.Errorf("legacy status projection symbol remains in %s: %s", path, function.Name.Name)
+			}
 		}
 	}
 

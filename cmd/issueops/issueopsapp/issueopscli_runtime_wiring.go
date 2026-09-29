@@ -7,7 +7,6 @@ import (
 	"time"
 
 	issueopscore "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/implementation"
 	branchapp "issueops/internal/application/issueopsbranch"
 	reviewapp "issueops/internal/application/issueopsreview"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -18,6 +17,8 @@ import (
 // composition root 하나뿐이다.
 func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 	observer := issueOpsRecordObserver(os.Stderr)
+	readiness := newCycleReadiness()
+	changes := newChangeReader()
 	artifacts := issueOpsArtifactHandlers(observer)
 	decisions := issueOpsDecisionHandlers(observer)
 	routing := issueOpsRoutingHandlers(observer)
@@ -32,7 +33,7 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		IssueOpsChildStatusWithActor: func(root, id string, repair bool, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildStatusResult, error) {
 			return newChildStatusService(root).Status(context.Background(), id, repair, &actor)
 		},
-		IssueOpsPRReadiness: issueopscore.IssueOpsPRReadiness,
+		IssueOpsPRReadiness: readiness.PR,
 		IssueOpsNext:        issueOpsNextHandler(artifacts.Names, observer),
 		IssueOpsStateRoot:   func() string { return stateRoot },
 		IssueOpsStatus:      issueOpsStatusHandler(observer),
@@ -76,19 +77,21 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		},
 		PruneIssueOps: issueOpsRetentionPruneHandler(observer),
 		ReadIssueOps:  issueopscore.ReadIssueOps,
-		RecordIssueOpsAISlopCleanEvidenceWithActor:  issueopscore.RecordIssueOpsAISlopCleanEvidenceWithActor,
+		RecordIssueOpsAISlopCleanEvidenceWithActor: func(root, id string, categories, verification []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{ReviewMutationStore: issueopscore.NewReviewMutationStore(&actor), Refresh: newCyclePhaseService(&actor).Refresh}, root, id, categories, verification)
+		},
 		RecordIssueOpsCompatibilityReviewWithActor:  issueopscore.RecordIssueOpsCompatibilityReviewWithActor,
 		RecordIssueOpsDesignReviewWithActor:         issueopscore.RecordIssueOpsDesignReviewWithActor,
 		RecordIssueOpsDevilsAdvocateReviewWithActor: issueopscore.RecordIssueOpsDevilsAdvocateReviewWithActor,
 		RecordIssueOpsDomainReviewWithActor:         issueopscore.RecordIssueOpsDomainReviewWithActor,
 		RecordIssueOpsImplementationReviewWithActor: func(root, id string, req issueopscontract.IssueOpsImplementationReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return reviewapp.RecordImplementationReview(issueopscore.NewEvidenceReviewStore(&actor, implementation.ChangeFingerprint), root, id, req)
+			return reviewapp.RecordImplementationReview(issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), root, id, req)
 		},
 		RecordIssueOpsProjectDocsReviewWithActor: func(root, id string, req issueopscontract.IssueOpsProjectDocsReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return reviewapp.RecordProjectDocsReview(reviewport.ProjectDocsReviewStore{EvidenceReviewStore: issueopscore.NewEvidenceReviewStore(&actor, implementation.ChangeFingerprint), ChangedPaths: implementation.ChangedPaths, Root: issueopscore.ReviewDocumentPaths{}.Root, RelativePath: issueopscore.ReviewDocumentPaths{}.RelativePath, FileExists: issueopscore.ReviewDocumentPaths{}.FileExists}, root, id, req)
+			return reviewapp.RecordProjectDocsReview(reviewport.ProjectDocsReviewStore{EvidenceReviewStore: issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), ChangedPaths: changes.ChangedPaths, Root: issueopscore.ReviewDocumentPaths{}.Root, RelativePath: issueopscore.ReviewDocumentPaths{}.RelativePath, FileExists: issueopscore.ReviewDocumentPaths{}.FileExists}, root, id, req)
 		},
 		RecordIssueOpsSchemaEvidenceWithActor: func(root, id string, req issueopscontract.IssueOpsSchemaEvidenceRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return reviewapp.RecordSchemaEvidence(issueopscore.NewEvidenceReviewStore(&actor, implementation.ChangeFingerprint), root, id, req)
+			return reviewapp.RecordSchemaEvidence(issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), root, id, req)
 		},
 		RecordIssueOpsIntentWithActor:     issueopscore.RecordIssueOpsIntentWithActor,
 		RecordIssueOpsPlanPrepWithActor:   issueopscore.RecordIssueOpsPlanPrepWithActor,

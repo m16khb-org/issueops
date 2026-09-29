@@ -9,12 +9,12 @@ import (
 
 // StrictPRReadiness는 레코드 기반 strict readiness에 loop gate를 더한다.
 func StrictPRReadiness(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
-	return WithLoopGate(issueops.IssueOpsStrictPRReadiness(record), record.Repo)
+	return WithLoopGate(testCycleReadiness().StrictPR(record), record.Repo)
 }
 
 // StrictPRReadinessWithState는 state까지 읽는 strict readiness에 loop gate를 더한다.
 func StrictPRReadinessWithState(stateRoot string, record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness {
-	return WithLoopGate(issueops.IssueOpsStrictPRReadinessWithState(stateRoot, record), record.Repo)
+	return WithLoopGate(testCycleReadiness().StrictPRWithState(stateRoot, record), record.Repo)
 }
 
 // AdvancePhase는 pr 단계 진입 전에 strict readiness를 강제한다.
@@ -22,7 +22,7 @@ func AdvancePhase(stateRoot, id, to string) (issueopscontract.IssueOpsRecord, er
 	if err := guardPRPhase(stateRoot, id, to); err != nil {
 		return issueopscontract.IssueOpsRecord{OK: false}, err
 	}
-	return issueops.AdvanceIssueOpsPhase(stateRoot, id, to)
+	return advancePhaseForTest(stateRoot, id, to)
 }
 
 // AdvancePhaseWithActor는 AdvancePhase와 같은 gate를 actor 경로에 적용한다.
@@ -30,7 +30,7 @@ func AdvancePhaseWithActor(stateRoot, id, to string, actor issueops.IssueOpsActo
 	if err := guardPRPhase(stateRoot, id, to); err != nil {
 		return issueopscontract.IssueOpsRecord{OK: false}, err
 	}
-	return issueops.AdvanceIssueOpsPhaseWithActor(stateRoot, id, to, actor)
+	return advancePhaseWithActorForTest(stateRoot, id, to, actor)
 }
 
 // guardPRPhase는 이미 pr 단계인 레코드는 통과시킨다. 재진입까지 막으면 복구 경로가

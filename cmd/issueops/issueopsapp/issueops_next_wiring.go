@@ -10,7 +10,6 @@ import (
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	issueopsnextinbound "issueops/internal/adapter/inbound/issueopsnext"
 	issueopscore "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/implementation"
 	issueopsinventoryoutbound "issueops/internal/adapter/outbound/issueopsinventory"
 	"issueops/internal/adapter/outbound/issueopsrecord"
 	preflightadapter "issueops/internal/adapter/preflight"
@@ -18,6 +17,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"issueops/internal/domain/agentmodel"
 )
 
@@ -32,17 +32,19 @@ func issueOpsNextHandler(
 	string,
 ) (issueopsnextcontract.Result, error) {
 	listCycles := issueOpsInventoryListHandler(observers...)
+	readiness := newCycleReadiness()
+	changes := newChangeReader()
 	return func(stateRoot, cwd, id string) (issueopsnextcontract.Result, error) {
 		localObservation := nextLocalReadinessObservation{
-			observe:  issueopscore.ObserveIssueOpsLocalPRReadiness,
-			fallback: implementation.ObservedChangedPaths,
+			observe:  readiness.ObserveLocalPR,
+			fallback: changes.ObservedChangedPaths,
 		}
 		service := issueopsnextapplication.NewService(issueopsnextapplication.Ports{
 			ListCycles: func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
 				return listCycles(stateRoot, repo)
 			},
 			ReadRecord:          issueopscore.ReadIssueOps,
-			Completion:          issueopscore.IssueOpsPhaseCompletion,
+			Completion:          readiness.Completion,
 			LocalReadiness:      localObservation.localReadiness,
 			WriterlessCommand:   issueopscore.ExecutionWriterAbsentRecoveryCommand,
 			PlannerDefaults:     agentmodel.PlannerDefaults,
@@ -68,10 +70,10 @@ func issueOpsNextHandler(
 }
 
 type nextLocalReadinessObservation struct {
-	observe  func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, implementation.LocalChangeObservation)
+	observe  func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, reviewcontract.LocalChangeObservation)
 	fallback func(issueopscontract.IssueOpsRecord) ([]string, bool)
 	record   nextObservationRecord
-	changes  implementation.LocalChangeObservation
+	changes  reviewcontract.LocalChangeObservation
 	set      bool
 }
 

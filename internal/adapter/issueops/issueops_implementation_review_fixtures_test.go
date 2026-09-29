@@ -1,7 +1,6 @@
 package issueops
 
 import (
-	"issueops/internal/adapter/issueops/implementation"
 	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
@@ -21,7 +20,7 @@ func RecordIssueOpsImplementationReviewWithActor(stateRoot, id string, req Issue
 }
 
 func recordIssueOpsImplementationReview(stateRoot, id string, req IssueOpsImplementationReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.RecordImplementationReview(NewEvidenceReviewStore(actor, implementation.ChangeFingerprint), stateRoot, id, req)
+	return reviewapp.RecordImplementationReview(NewEvidenceReviewStore(actor, testChangeReader().ChangeFingerprint), stateRoot, id, req)
 }
 
 // implementationReviewMissing은 publication 게이트 판정이며 execution이 있는

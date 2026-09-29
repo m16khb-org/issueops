@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/issueops/implementation"
 	preflightadapter "issueops/internal/adapter/preflight"
 	"issueops/internal/contract/issueops"
 )
@@ -107,7 +106,7 @@ func TestIssueOpsStrictPRReadinessReobservesSchemaPathsAfterFetch(t *testing.T) 
 	record.BranchPrepare.Branch = branch
 	record.BranchPrepare.BaseSHA = strings.Repeat("f", 40)
 	record.Execution = &issueops.Execution{Mode: issueops.ExecutionModeDirect}
-	before := implementation.ObserveLocalChangesAt(record, repo)
+	before := testCycleReadiness().ObserveChanges(record, repo)
 	if !before.Verified || !reflect.DeepEqual(before.Paths, []string{"feature.go"}) || before.Fingerprint == "" {
 		t.Fatalf("pre-fetch fallback observation = %+v", before)
 	}
@@ -129,7 +128,7 @@ func TestIssueOpsStrictPRReadinessReobservesSchemaPathsAfterFetch(t *testing.T) 
 	if hasBaseAdvancedWarning(ready) {
 		t.Fatalf("base warning must preserve its pre-fetch ordering: %v", ready.Warnings)
 	}
-	after := implementation.ChangedPaths(record)
+	after := testChangeReader().ChangedPaths(record)
 	if !reflect.DeepEqual(after, []string{"db/migrations/001_remote.sql", "feature.go"}) {
 		t.Fatalf("post-fetch fallback paths = %v", after)
 	}
@@ -147,19 +146,18 @@ func TestIssueOpsLocalPRReadinessSharesOneVerifiedChangeObservationWithSchemaGat
 		Execution:     &issueops.Execution{Mode: issueops.ExecutionModeDirect},
 		AISlopCleanAt: "2026-01-01T00:00:00Z",
 	}
-	previousCmd, previousRaw := implementation.GitCmd, implementation.GitCmdRaw
+	reader := testChangeReader()
 	var commands []string
-	implementation.GitCmd = func(dir string, args ...string) (int, string, string) {
+	reader.GitCmd = func(dir string, args ...string) (int, string, string) {
 		commands = append(commands, strings.Join(args, " "))
 		return preflightadapter.GitCmd(dir, args...)
 	}
-	implementation.GitCmdRaw = func(dir string, args ...string) (int, string, string) {
+	reader.GitCmdRaw = func(dir string, args ...string) (int, string, string) {
 		commands = append(commands, strings.Join(args, " "))
 		return preflightadapter.GitCmdRaw(dir, args...)
 	}
-	t.Cleanup(func() { implementation.GitCmd, implementation.GitCmdRaw = previousCmd, previousRaw })
 
-	ready := IssueOpsLocalPRReadiness(record)
+	ready := testCycleReadinessWithChanges(reader).LocalPR(record)
 
 	if !containsString(ready.Missing, "schema_evidence") {
 		t.Fatalf("schema change must keep the schema evidence gate: %v", ready.Missing)

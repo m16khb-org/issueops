@@ -58,7 +58,7 @@ func wireIssueOpsRuntimeForTests() {
 	)
 	status := issueopsstatusapplication.NewService(
 		issueopsstatusoutbound.Repository{},
-		issueopsstatusdomain.NewProjector(issueopscore.IssueOpsPhaseCompletion),
+		issueopsstatusdomain.NewProjector(testCycleReadiness().Completion),
 	)
 	routing := issueopsroutinginbound.NewHandlers(issueopsroutingapplication.NewService(
 		issueopsroutingoutbound.Repository{},
@@ -71,8 +71,8 @@ func wireIssueOpsRuntimeForTests() {
 			return listCycles(stateRoot, repo)
 		},
 		ReadRecord:        issueopscore.ReadIssueOps,
-		Completion:        issueopscore.IssueOpsPhaseCompletion,
-		LocalReadiness:    issueopscore.IssueOpsLocalPRReadiness,
+		Completion:        testCycleReadiness().Completion,
+		LocalReadiness:    testCycleReadiness().LocalPR,
 		WriterlessCommand: issueopscore.ExecutionWriterAbsentRecoveryCommand,
 		PlannerDefaults:   agentmodel.PlannerDefaults,
 		StagedArtifacts:   artifacts.Names,
@@ -90,7 +90,7 @@ func wireIssueOpsRuntimeForTests() {
 		AddIssueOpsDecisionWithActor:  decisions.AddWithActor,
 		DropIssueOpsChildWithActor:    dropChildWithActorForTest,
 		IssueOpsChildStatusWithActor:  childStatusWithActorForTest,
-		IssueOpsPRReadiness:           issueopscore.IssueOpsPRReadiness,
+		IssueOpsPRReadiness:           testCycleReadiness().PR,
 		IssueOpsNext:                  issueopsnextinbound.NewNextHandler(next),
 		IssueOpsStateRoot:             issueOpsStateRootForTest,
 		IssueOpsStatus:                issueopsstatusinbound.NewStatusHandler(status),
@@ -119,7 +119,7 @@ func wireIssueOpsRuntimeForTests() {
 		PrepareIssueOpsBranchWithActor:              prepareBranchWithActorForTest,
 		PruneIssueOps:                               issueopsretentioninbound.NewPruneHandler(retention),
 		ReadIssueOps:                                issueopscore.ReadIssueOps,
-		RecordIssueOpsAISlopCleanEvidenceWithActor:  issueopscore.RecordIssueOpsAISlopCleanEvidenceWithActor,
+		RecordIssueOpsAISlopCleanEvidenceWithActor:  recordAISlopEvidenceForTest,
 		RecordIssueOpsCompatibilityReviewWithActor:  issueopscore.RecordIssueOpsCompatibilityReviewWithActor,
 		RecordIssueOpsDesignReviewWithActor:         issueopscore.RecordIssueOpsDesignReviewWithActor,
 		RecordIssueOpsDevilsAdvocateReviewWithActor: issueopscore.RecordIssueOpsDevilsAdvocateReviewWithActor,

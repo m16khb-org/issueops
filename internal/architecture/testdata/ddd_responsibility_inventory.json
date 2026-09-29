@@ -632,6 +632,17 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/cycle_readiness_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newChangeReader",
+        "func newCyclePhaseService",
+        "func newCycleReadiness",
+        "func newReadinessGit"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/daemon_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -4749,36 +4760,28 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/implementation/adapter_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/issueops/implementation/evidence.go",
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func ChangeFingerprint",
-        "func ChangedPaths",
-        "func HasEvidence",
-        "func ObserveLocalChangesAt",
-        "func ObservedChangedPaths",
+        "func FingerprintSnapshot",
         "func PathMatchesPlan",
         "func PorcelainPath",
-        "func changeGitRoot",
-        "func changedPathsIn",
+        "func Reader.ChangeFingerprint",
+        "func Reader.ChangedPaths",
+        "func Reader.DiffBaseRef",
+        "func Reader.HasEvidence",
+        "func Reader.ObservedChangedPaths",
+        "func Reader.ObservedPathsIn",
+        "func Reader.changeGitRoot",
+        "func Reader.changedPathsIn",
+        "func Reader.gitHeadDiffersFromBase",
+        "func Reader.gitStatusHasImplementationChange",
+        "func Reader.gitStatusPorcelain",
         "func cleanRelativePath",
-        "func diffBaseRef",
         "func fileTreeHasImplementationChange",
         "func fingerprintPaths",
-        "func fullGitObjectID",
-        "func gitHeadDiffersFromBase",
-        "func gitStatusHasImplementationChange",
-        "func gitStatusPorcelain",
-        "func observeLocalChangesAt",
-        "func observedPathsIn",
-        "type LocalChangeObservation"
+        "type Reader"
       ]
     },
     {
@@ -4931,13 +4934,10 @@
       "owner": "adapter",
       "task": "T03",
       "symbols": [
-        "func RecordIssueOpsAISlopCleanEvidence",
-        "func RecordIssueOpsAISlopCleanEvidenceWithActor",
         "func RecordIssueOpsDomainReview",
         "func RecordIssueOpsDomainReviewWithActor",
         "func ResolveIssueOpsFeedback",
         "func ResolveIssueOpsFeedbackWithActor",
-        "func recordIssueOpsAISlopCleanEvidence",
         "func recordIssueOpsDomainReview",
         "func resolveIssueOpsFeedback"
       ]
@@ -4967,58 +4967,7 @@
       "owner": "adapter",
       "task": "T04",
       "symbols": [
-        "func AdvanceIssueOpsPhase",
-        "func AdvanceIssueOpsPhaseWithActor",
-        "func advanceIssueOpsPhaseLocked",
-        "func advanceIssueOpsPhaseWithActor",
-        "func issueOpsPhaseRank",
-        "func knownIssueOpsPhase",
-        "func phaseEntryReadiness",
-        "func prefetchIssueOpsUpstreamForPhase"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_phase_ledger.go",
-      "owner": "adapter",
-      "task": "T04",
-      "symbols": [
-        "func IssueOpsGrillReadiness",
-        "func IssueOpsPhaseCompletion",
-        "func IssueOpsProblemReadiness"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_phase_refresh.go",
-      "owner": "adapter",
-      "task": "T04",
-      "symbols": [
-        "func refreshIssueOpsAISlopClean"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_pr_readiness.go",
-      "owner": "adapter",
-      "task": "T04",
-      "symbols": [
-        "func IssueOpsPRReadiness"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_pr_readiness_strict.go",
-      "owner": "adapter",
-      "task": "T04",
-      "symbols": [
-        "func IssueOpsLocalPRReadiness",
-        "func IssueOpsStrictPRReadiness",
-        "func IssueOpsStrictPRReadinessWithState",
-        "func ObserveIssueOpsLocalPRReadiness",
-        "func fetchIssueOpsUpstream",
-        "func issueOpsObservedPRReadiness",
-        "func issueOpsStrictPRReadinessWithState",
-        "func issueOpsStrictPRReadinessWithStateUsing",
-        "func prefetchIssueOpsUpstream",
-        "type issueOpsUpstreamFetch",
-        "type issueOpsUpstreamFetcher"
+        "func issueOpsPhaseRank"
       ]
     },
     {
@@ -5026,16 +4975,12 @@
       "owner": "adapter",
       "task": "T04",
       "symbols": [
-        "func IssueOpsAISlopCleanReadiness",
         "func IssueOpsCompatibilityReviewReadiness",
-        "func IssueOpsImplementationReadiness",
         "func IssueOpsPlanReadiness",
-        "func issueOpsCurrentHead",
-        "func issueOpsImplementationReadiness",
+        "func ReadinessPathObservations",
         "func issueOpsPlanInLinkedWorktree",
         "func issueOpsPlanPathExists",
         "func issueOpsPlanPathInsideWorktree",
-        "func issueOpsReadinessObservations",
         "func issueOpsStrictGitRoot",
         "func issueOpsWorktreePathValid"
       ]
@@ -5176,6 +5121,23 @@
         "func CleanAbsPath",
         "func GitBranchFromHead",
         "func PathWithin"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/readiness_git.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ReadinessGit.BaseAdvanced",
+        "func ReadinessGit.Branch",
+        "func ReadinessGit.Clean",
+        "func ReadinessGit.Counts",
+        "func ReadinessGit.Fetch",
+        "func ReadinessGit.Head",
+        "func ReadinessGit.IsWorktree",
+        "func ReadinessGit.Root",
+        "func ReadinessGit.Upstream",
+        "type ReadinessGit"
       ]
     },
     {
@@ -9157,6 +9119,22 @@
       ]
     },
     {
+      "path": "internal/application/issueopscycle/phase_service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func GrillReadiness",
+        "func PhaseService.Advance",
+        "func PhaseService.Refresh",
+        "func PhaseService.advanceLocked",
+        "func PhaseService.entryReadiness",
+        "func PhaseService.prefetchForPhase",
+        "func PhaseService.touchWrite",
+        "func ProblemReadiness",
+        "type PhaseService"
+      ]
+    },
+    {
       "path": "internal/application/issueopscycle/phase_transition.go",
       "owner": "application",
       "task": "T20",
@@ -9189,6 +9167,27 @@
         "func ImplementationReviewMissing",
         "func LocalPRReadinessMissing",
         "func ProjectDocsReviewMissing"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/readiness_service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Readiness.AISlopClean",
+        "func Readiness.Compatibility",
+        "func Readiness.Completion",
+        "func Readiness.Implementation",
+        "func Readiness.LocalPR",
+        "func Readiness.ObserveLocalPR",
+        "func Readiness.PR",
+        "func Readiness.Plan",
+        "func Readiness.PrefetchUpstream",
+        "func Readiness.StrictPR",
+        "func Readiness.StrictPRWithFetch",
+        "func Readiness.StrictPRWithState",
+        "func Readiness.observePR",
+        "type Readiness"
       ]
     },
     {
@@ -9928,6 +9927,15 @@
         "func changeObservationIdentity",
         "func cleanReviewValues",
         "func validateCurrentChangeObservation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreview/local_changes.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func LocalChangeObserver.Observe",
+        "type LocalChangeObserver"
       ]
     },
     {
@@ -11725,6 +11733,16 @@
         "type ChangeObservationIdentity",
         "type ReviewGateEvidence",
         "type SchemaGateEvidence"
+      ]
+    },
+    {
+      "path": "internal/contract/issueopsreview/local_changes.go",
+      "owner": "contract",
+      "task": "T03",
+      "symbols": [
+        "type ChangeBaseCandidate",
+        "type LocalChangeObservation",
+        "type UpstreamFetch"
       ]
     },
     {
@@ -14892,6 +14910,18 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsreview/change_snapshot.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func ChangeBaseCandidates",
+        "func FullGitObjectID",
+        "func ImplementationChange",
+        "func ImplementationEvidenceMissing",
+        "func SameChangeSnapshot"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsreview/compatibility.go",
       "owner": "domain",
       "task": "T03",
@@ -16536,6 +16566,15 @@
       ]
     },
     {
+      "path": "internal/port/issueopscycle/pr_observations.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type PRGitObservations",
+        "type PhaseStore"
+      ]
+    },
+    {
       "path": "internal/port/issueopscycle/readiness.go",
       "owner": "port",
       "task": "T20",
@@ -16558,6 +16597,14 @@
       "symbols": [
         "type Observer",
         "type Receipt"
+      ]
+    },
+    {
+      "path": "internal/port/issueopsreview/local_changes.go",
+      "owner": "port",
+      "task": "T03",
+      "symbols": [
+        "type LocalChangeSource"
       ]
     },
     {
@@ -18455,9 +18502,9 @@
       "id": "strict-pr-git-readiness",
       "source_path": "internal/adapter/issueops/issueops_pr_readiness_strict.go",
       "source_symbol": "func issueOpsObservedPRReadiness",
-      "responsibility": "observe Git and local change evidence in adapter order; application composes the domain and review decisions into PR readiness",
+      "responsibility": "Sequence bound Git observations and reuse verified local changes; fetch only on strict readiness, then observe strict schema paths",
       "target": "internal/application/issueopscycle",
-      "target_symbol": "func ComposeObservedPRReadiness",
+      "target_symbol": "func Readiness.observePR",
       "task": "T04",
       "entrypoints": [
         "issueops advance --to pr",
@@ -18470,7 +18517,7 @@
         "internal/adapter/issueops/issueops_pr_readiness_local_test.go",
         "internal/adapter/issueops/issueops_readiness_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "plan-phase-completion",
@@ -24788,6 +24835,160 @@
         "internal/domain/issueopsreview/project_docs_paths_test.go",
         "internal/application/issueopsreview/project_docs_ownership_test.go",
         "cmd/issueops/issueopsapp/issueops_evidence_review_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "change-base-priority",
+      "source_path": "internal/adapter/issueops/implementation/evidence.go",
+      "source_symbol": "func diffBaseRef",
+      "responsibility": "Prefer the prepared full commit object, origin base, then local base and refuse malformed literal hashes",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func ChangeBaseCandidates",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops phase",
+        "issueops pr-readiness",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/implementation/reader_isolation_test.go",
+        "internal/domain/issueopsreview/change_snapshot_test.go",
+        "internal/application/issueopscycle/readiness_service_test.go",
+        "cmd/issueops/issueopsapp/cycle_readiness_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "change-snapshot-acceptance",
+      "source_path": "internal/adapter/issueops/implementation/evidence.go",
+      "source_symbol": "func observeLocalChangesAt",
+      "responsibility": "Accept only identical path sets and content fingerprints from two observations",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func SameChangeSnapshot",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops phase",
+        "issueops pr-readiness",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/implementation/reader_isolation_test.go",
+        "internal/domain/issueopsreview/change_snapshot_test.go",
+        "internal/application/issueopscycle/readiness_service_test.go",
+        "cmd/issueops/issueopsapp/cycle_readiness_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "change-snapshot-retry",
+      "source_path": "internal/adapter/issueops/implementation/evidence.go",
+      "source_symbol": "func ObserveLocalChangesAt",
+      "responsibility": "Bound snapshot observation to two attempts and retain paths without a verified fingerprint on instability",
+      "target": "internal/application/issueopsreview",
+      "target_symbol": "func LocalChangeObserver.Observe",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops phase",
+        "issueops pr-readiness",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/implementation/reader_isolation_test.go",
+        "internal/domain/issueopsreview/change_snapshot_test.go",
+        "internal/application/issueopscycle/readiness_service_test.go",
+        "cmd/issueops/issueopsapp/cycle_readiness_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "implementation-plan-exclusion",
+      "source_path": "internal/adapter/issueops/implementation/evidence.go",
+      "source_symbol": "func gitStatusHasImplementationChange",
+      "responsibility": "Plan edits alone are not implementation evidence",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func ImplementationChange",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops phase",
+        "issueops pr-readiness",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/implementation/reader_isolation_test.go",
+        "internal/domain/issueopsreview/change_snapshot_test.go",
+        "internal/application/issueopscycle/readiness_service_test.go",
+        "cmd/issueops/issueopsapp/cycle_readiness_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "implementation-evidence-readiness",
+      "source_path": "internal/adapter/issueops/issueops_readiness.go",
+      "source_symbol": "func IssueOpsAISlopCleanReadiness",
+      "responsibility": "Refuse cleanup phase without actual implementation changes",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func ImplementationEvidenceMissing",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops phase",
+        "issueops pr-readiness",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/implementation/reader_isolation_test.go",
+        "internal/domain/issueopsreview/change_snapshot_test.go",
+        "internal/application/issueopscycle/readiness_service_test.go",
+        "cmd/issueops/issueopsapp/cycle_readiness_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "phase-advance-effects",
+      "source_path": "internal/adapter/issueops/issueops_phase.go",
+      "source_symbol": "func advanceIssueOpsPhaseWithActor",
+      "responsibility": "Authorize before upstream prefetch, authorize again under lock, and persist only after readiness and transition rules",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func PhaseService.Advance",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops phase",
+        "issueops pr-readiness",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/implementation/reader_isolation_test.go",
+        "internal/domain/issueopsreview/change_snapshot_test.go",
+        "internal/application/issueopscycle/readiness_service_test.go",
+        "cmd/issueops/issueopsapp/cycle_readiness_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "phase-clean-refresh-effects",
+      "source_path": "internal/adapter/issueops/issueops_phase_refresh.go",
+      "source_symbol": "func refreshIssueOpsAISlopClean",
+      "responsibility": "Refresh cleanup evidence from bound head and change observations using actor-fenced persistence",
+      "target": "internal/application/issueopscycle",
+      "target_symbol": "func PhaseService.Refresh",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops phase",
+        "issueops pr-readiness",
+        "issueops remote create-pr"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/implementation/reader_isolation_test.go",
+        "internal/domain/issueopsreview/change_snapshot_test.go",
+        "internal/application/issueopscycle/readiness_service_test.go",
+        "cmd/issueops/issueopsapp/cycle_readiness_wiring_test.go"
       ],
       "status": "migrated"
     }

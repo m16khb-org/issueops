@@ -1,7 +1,6 @@
 package issueops
 
 import (
-	"issueops/internal/adapter/issueops/implementation"
 	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
@@ -23,13 +22,13 @@ func RecordIssueOpsSchemaEvidenceWithActor(stateRoot, id string, req IssueOpsSch
 }
 
 func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEvidenceRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.RecordSchemaEvidence(NewEvidenceReviewStore(actor, implementation.ChangeFingerprint), stateRoot, id, req)
+	return reviewapp.RecordSchemaEvidence(NewEvidenceReviewStore(actor, testChangeReader().ChangeFingerprint), stateRoot, id, req)
 }
 
 // schemaEvidenceMissing은 변경 집합에 스키마 파일이 있을 때만 활성화되는
 // 조건부 게이트다. DB를 쓰지 않는 사이클에서는 아무것도 요구하지 않는다.
 func schemaEvidenceMissing(record issueops.IssueOpsRecord, currentFingerprint string) string {
-	return cycleapp.ObservedSchemaEvidenceMissing(record, true, nil, currentFingerprint, implementation.ChangedPaths)
+	return cycleapp.ObservedSchemaEvidenceMissing(record, true, nil, currentFingerprint, testChangeReader().ChangedPaths)
 }
 
 func schemaEvidenceMissingForPaths(record issueops.IssueOpsRecord, changed []string, currentFingerprint string) string {

@@ -4,9 +4,8 @@ import (
 	"reflect"
 	"testing"
 
-	issueopscore "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/implementation"
 	issueopscontract "issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 )
 
 func TestNextLocalReadinessObservationReusesOnlyTheSameRecord(t *testing.T) {
@@ -19,9 +18,9 @@ func TestNextLocalReadinessObservationReusesOnlyTheSameRecord(t *testing.T) {
 	recordB.WorktreePath = "/repo-b.worktrees/feature"
 	observeCalls, fallbackCalls := 0, 0
 	observer := nextLocalReadinessObservation{
-		observe: func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, implementation.LocalChangeObservation) {
+		observe: func(record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, reviewcontract.LocalChangeObservation) {
 			observeCalls++
-			return issueopscontract.IssueOpsReadiness{OK: true, Ready: true}, implementation.LocalChangeObservation{
+			return issueopscontract.IssueOpsReadiness{OK: true, Ready: true}, reviewcontract.LocalChangeObservation{
 				Paths: []string{"db/migrations/001.sql"}, Verified: true,
 			}
 		},
@@ -55,8 +54,8 @@ func TestNextLocalReadinessObservationDoesNotPromoteUnverifiedPaths(t *testing.T
 	record := issueopscontract.IssueOpsRecord{ID: "io-unverified", Repo: "/repo"}
 	fallbackCalls := 0
 	observer := nextLocalReadinessObservation{
-		observe: func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, implementation.LocalChangeObservation) {
-			return issueopscontract.IssueOpsReadiness{OK: true, Ready: false}, implementation.LocalChangeObservation{
+		observe: func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, reviewcontract.LocalChangeObservation) {
+			return issueopscontract.IssueOpsReadiness{OK: true, Ready: false}, reviewcontract.LocalChangeObservation{
 				Paths: []string{"changing.go"}, Verified: false,
 			}
 		},
@@ -81,7 +80,7 @@ func TestNextLocalReadinessObservationFallsBackWithoutSameRequestEvidence(t *tes
 	record := issueopscontract.IssueOpsRecord{ID: "io-implement", Repo: "/repo"}
 	fallbackCalls := 0
 	observer := nextLocalReadinessObservation{
-		observe: issueopscore.ObserveIssueOpsLocalPRReadiness,
+		observe: newCycleReadiness().ObserveLocalPR,
 		fallback: func(issueopscontract.IssueOpsRecord) ([]string, bool) {
 			fallbackCalls++
 			return []string{"implementation.go"}, true

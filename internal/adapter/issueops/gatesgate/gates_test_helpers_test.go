@@ -16,7 +16,7 @@ func readinessServiceForTest() cycleapp.GateService {
 		LoopReadiness: func(repo string) model.IssueOpsReadiness {
 			return withLoopGateForTest(model.IssueOpsReadiness{Ready: true}, repo)
 		},
-		ReadRecord: issueops.ReadIssueOps, AdvanceRecord: issueops.AdvanceIssueOpsPhaseWithActor,
+		ReadRecord: issueops.ReadIssueOps, AdvanceRecord: advancePhaseWithActorForTest,
 		Ledger: cycleport.GateLedgerReadiness{Discover: adapter.DiscoverGateFiles, Check: gates.Check}, DuplicateFiles: Observer{}.DuplicateFiles}
 }
 func StrictPRReadinessWithState(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {

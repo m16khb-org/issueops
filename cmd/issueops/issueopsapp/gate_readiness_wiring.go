@@ -12,12 +12,15 @@ import (
 func newGateReadiness() app.GateService {
 	gates := newGatesService()
 	loops := newLoopReader()
+	readiness := newCycleReadiness()
 	return app.GateService{BaseReadiness: func(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
-		return app.ApplyLoopGate(issueopsadapter.IssueOpsStrictPRReadinessWithState(root, record), record.Repo, loops.RepoGateMissing)
+		return app.ApplyLoopGate(readiness.StrictPRWithState(root, record), record.Repo, loops.RepoGateMissing)
 	},
 		LoopReadiness: func(repo string) model.IssueOpsReadiness {
 			return app.ApplyLoopGate(model.IssueOpsReadiness{Ready: true}, repo, loops.RepoGateMissing)
 		},
-		ReadRecord: issueopsadapter.ReadIssueOps, AdvanceRecord: issueopsadapter.AdvanceIssueOpsPhaseWithActor,
+		ReadRecord: issueopsadapter.ReadIssueOps, AdvanceRecord: func(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+			return newCyclePhaseService(&actor).Advance(root, id, to)
+		},
 		Ledger: cycleport.GateLedgerReadiness{Discover: gatesadapter.DiscoverGateFiles, Check: gates.Check}, DuplicateFiles: gatesgate.Observer{}.DuplicateFiles}
 }

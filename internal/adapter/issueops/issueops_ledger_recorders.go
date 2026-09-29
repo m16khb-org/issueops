@@ -3,7 +3,6 @@ package issueops
 import (
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
-	reviewport "issueops/internal/port/issueopsreview"
 )
 
 // RecordIssueOpsDomainReview persists the grill-phase domain review
@@ -23,24 +22,6 @@ func recordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomai
 		return validateWorkspacePreparationMutation(record, actor)
 	}
 	return reviewapp.RecordDomainReview(store, stateRoot, id, req)
-}
-
-// RecordIssueOpsAISlopCleanEvidence persists which cleanup categories were
-// checked/cleaned and which verifications were rerun — the source of truth
-// backing the ai-slop-clean cleanup_evidence and verification_evidence artifacts.
-func RecordIssueOpsAISlopCleanEvidence(stateRoot, id string, categories, verification []string) (issueops.IssueOpsRecord, error) {
-	return recordIssueOpsAISlopCleanEvidence(stateRoot, id, categories, verification, nil)
-}
-
-func RecordIssueOpsAISlopCleanEvidenceWithActor(stateRoot, id string, categories, verification []string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return recordIssueOpsAISlopCleanEvidence(stateRoot, id, categories, verification, &actor)
-}
-
-func recordIssueOpsAISlopCleanEvidence(stateRoot, id string, categories, verification []string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{
-		ReviewMutationStore: NewReviewMutationStore(actor),
-		Refresh:             refreshIssueOpsAISlopClean,
-	}, stateRoot, id, categories, verification)
 }
 
 // ResolveIssueOpsFeedback records the outcome of a feedback item by index — the

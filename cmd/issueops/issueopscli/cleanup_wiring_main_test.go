@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+	preflightadapter "issueops/internal/adapter/preflight"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"os"
 	"time"
@@ -43,7 +44,7 @@ func testCleanupCommand() feedbackcleanup.Command {
 		Status: func(ctx context.Context, root, id string, merged bool, d feedbackcleanup.Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
 			service := cleanupapp.StatusService{
 				Records:    issueopscore.CycleRecordStore{StateRoot: root},
-				Structural: cleanupapp.StructuralStatus{Environment: issueopscore.CleanupStatusEnvironment{RunGit: issueopscore.GitCmd, ReadGit: issueopscore.GitOut}},
+				Structural: cleanupapp.StructuralStatus{Environment: issueopscore.CleanupStatusEnvironment{RunGit: preflightadapter.GitCmd, ReadGit: preflightadapter.GitOut}},
 				Provider:   d.Provider, CurrentDirectory: os.Getwd,
 				PreviewFinish: func(ctx context.Context, req issueopscontract.CleanupFinishRequest, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
 					return finish(ctx, root, req, d, prov)

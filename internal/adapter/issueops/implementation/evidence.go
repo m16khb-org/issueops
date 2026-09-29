@@ -5,34 +5,30 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 
 	"issueops/internal/adapter/issueops/pathutil"
 	"issueops/internal/adapter/issueops/readinesspaths"
 	model "issueops/internal/contract/issueops"
+	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
-// LocalChangeObservation binds one readiness evaluation to a verified path
-// set and the fingerprint derived from that exact content snapshot. Callers
-// must not use an unverified observation to clear a readiness gate.
-type LocalChangeObservation struct {
-	Paths       []string
-	Fingerprint string
-	Verified    bool
+type Reader struct {
+	GitCmd    func(string, ...string) (int, string, string)
+	GitCmdRaw func(string, ...string) (int, string, string)
 }
 
-func HasEvidence(record model.IssueOpsRecord) bool {
+func (r Reader) HasEvidence(record model.IssueOpsRecord) bool {
 	worktree := strings.TrimSpace(record.WorktreePath)
 	if worktree == "" || !readinesspaths.WorktreePathValid(worktree) {
 		return false
 	}
-	if code, out, _ := GitCmd(worktree, "rev-parse", "--is-inside-work-tree"); code == 0 && strings.TrimSpace(out) == "true" {
-		if gitStatusHasImplementationChange(record, worktree) {
+	if code, out, _ := r.GitCmd(worktree, "rev-parse", "--is-inside-work-tree"); code == 0 && strings.TrimSpace(out) == "true" {
+		if r.gitStatusHasImplementationChange(record, worktree) {
 			return true
 		}
-		return gitHeadDiffersFromBase(record, worktree)
+		return r.gitHeadDiffersFromBase(record, worktree)
 	}
 	return fileTreeHasImplementationChange(record, worktree)
 }
@@ -40,36 +36,36 @@ func HasEvidence(record model.IssueOpsRecord) bool {
 // ChangedPaths는 현재 변경 집합의 repo-상대 경로를 정렬해 반환한다.
 // ChangeFingerprint가 해시하는 것과 같은 집합이므로, fingerprint를 봉인하는
 // 게이트가 "어떤 파일이 그 fingerprint에 들어 있는지"를 되물을 수 있다.
-func ChangedPaths(record model.IssueOpsRecord) []string {
-	gitRoot := changeGitRoot(record)
+func (r Reader) ChangedPaths(record model.IssueOpsRecord) []string {
+	gitRoot := r.changeGitRoot(record)
 	if gitRoot == "" {
 		return nil
 	}
-	return changedPathsIn(record, gitRoot)
+	return r.changedPathsIn(record, gitRoot)
 }
 
-func changeGitRoot(record model.IssueOpsRecord) string {
+func (r Reader) changeGitRoot(record model.IssueOpsRecord) string {
 	gitRoot := readinesspaths.StrictGitRoot(record)
 	if gitRoot == "" {
 		return ""
 	}
-	if code, out, _ := GitCmd(gitRoot, "rev-parse", "--is-inside-work-tree"); code != 0 || strings.TrimSpace(out) != "true" {
+	if code, out, _ := r.GitCmd(gitRoot, "rev-parse", "--is-inside-work-tree"); code != 0 || strings.TrimSpace(out) != "true" {
 		return ""
 	}
 	return gitRoot
 }
 
-func changedPathsIn(record model.IssueOpsRecord, gitRoot string) []string {
+func (r Reader) changedPathsIn(record model.IssueOpsRecord, gitRoot string) []string {
 	paths := map[string]bool{}
-	if base := diffBaseRef(record, gitRoot); base != "" {
-		_, names, _ := GitCmd(gitRoot, "diff", "--name-only", base+"..HEAD", "--")
+	if base := r.DiffBaseRef(record, gitRoot); base != "" {
+		_, names, _ := r.GitCmd(gitRoot, "diff", "--name-only", base+"..HEAD", "--")
 		for _, name := range strings.Split(names, "\n") {
 			if path := cleanRelativePath(name); path != "" {
 				paths[path] = true
 			}
 		}
 	}
-	status := gitStatusPorcelain(gitRoot)
+	status := r.gitStatusPorcelain(gitRoot)
 	for _, line := range strings.Split(status, "\n") {
 		if path := cleanRelativePath(PorcelainPath(line)); path != "" {
 			paths[path] = true
@@ -83,12 +79,12 @@ func changedPathsIn(record model.IssueOpsRecord, gitRoot string) []string {
 	return ordered
 }
 
-func ChangeFingerprint(record model.IssueOpsRecord) string {
-	gitRoot := changeGitRoot(record)
+func (r Reader) ChangeFingerprint(record model.IssueOpsRecord) string {
+	gitRoot := r.changeGitRoot(record)
 	if gitRoot == "" {
 		return ""
 	}
-	ordered := changedPathsIn(record, gitRoot)
+	ordered := r.changedPathsIn(record, gitRoot)
 	if len(ordered) == 0 {
 		return ""
 	}
@@ -99,58 +95,10 @@ func ChangeFingerprint(record model.IssueOpsRecord) string {
 	return fingerprint
 }
 
-// ObserveLocalChangesAt observes paths and content twice inside one readiness
-// evaluation. One retry tolerates a single concurrent file update; a snapshot
-// that keeps changing is returned as unverified with no fingerprint.
-//
-// gitRoot is already selected and validated by the readiness caller. Keeping
-// that root avoids re-running root selection while preserving the caller's
-// worktree-first fallback.
-func ObserveLocalChangesAt(record model.IssueOpsRecord, gitRoot string) LocalChangeObservation {
-	return observeLocalChangesAt(record, gitRoot, os.ReadFile)
-}
-
-func observeLocalChangesAt(
-	record model.IssueOpsRecord,
-	gitRoot string,
-	readFile func(string) ([]byte, error),
-) LocalChangeObservation {
-	if strings.TrimSpace(gitRoot) == "" || readFile == nil {
-		return LocalChangeObservation{}
-	}
-	base := diffBaseRef(record, gitRoot)
-	var lastPaths []string
-	for range 2 {
-		firstPaths, ok := observedPathsIn(gitRoot, base)
-		if !ok {
-			return LocalChangeObservation{Paths: lastPaths}
-		}
-		lastPaths = firstPaths
-		firstFingerprint, ok := fingerprintPaths(gitRoot, firstPaths, readFile)
-		if !ok {
-			continue
-		}
-		secondPaths, ok := observedPathsIn(gitRoot, base)
-		if !ok {
-			continue
-		}
-		lastPaths = secondPaths
-		secondFingerprint, ok := fingerprintPaths(gitRoot, secondPaths, readFile)
-		if ok && slices.Equal(firstPaths, secondPaths) && firstFingerprint == secondFingerprint {
-			return LocalChangeObservation{
-				Paths:       append([]string{}, firstPaths...),
-				Fingerprint: firstFingerprint,
-				Verified:    true,
-			}
-		}
-	}
-	return LocalChangeObservation{Paths: append([]string{}, lastPaths...)}
-}
-
-func observedPathsIn(gitRoot, base string) ([]string, bool) {
+func (r Reader) ObservedPathsIn(gitRoot, base string) ([]string, bool) {
 	paths := map[string]bool{}
 	if base != "" {
-		code, names, _ := GitCmd(gitRoot, "diff", "--name-only", base+"..HEAD", "--")
+		code, names, _ := r.GitCmd(gitRoot, "diff", "--name-only", base+"..HEAD", "--")
 		if code != 0 {
 			return nil, false
 		}
@@ -160,7 +108,7 @@ func observedPathsIn(gitRoot, base string) ([]string, bool) {
 			}
 		}
 	}
-	code, status, _ := GitCmdRaw(gitRoot, "status", "--porcelain=v1", "--untracked-files=all")
+	code, status, _ := r.GitCmdRaw(gitRoot, "status", "--porcelain=v1", "--untracked-files=all")
 	if code != 0 {
 		return nil, false
 	}
@@ -236,37 +184,37 @@ func PathMatchesPlan(record model.IssueOpsRecord, worktree, path string) bool {
 	return path == planPath
 }
 
-func gitStatusHasImplementationChange(record model.IssueOpsRecord, worktree string) bool {
-	out := gitStatusPorcelain(worktree)
+func (r Reader) gitStatusHasImplementationChange(record model.IssueOpsRecord, worktree string) bool {
+	out := r.gitStatusPorcelain(worktree)
 	for _, line := range strings.Split(out, "\n") {
 		path := PorcelainPath(line)
 		if path == "" {
 			continue
 		}
-		if !PathMatchesPlan(record, worktree, path) {
+		if reviewdomain.ImplementationChange(path, PathMatchesPlan(record, worktree, path)) {
 			return true
 		}
 	}
 	return false
 }
 
-func gitStatusPorcelain(worktree string) string {
-	code, out, _ := GitCmdRaw(worktree, "status", "--porcelain=v1", "--untracked-files=all")
+func (r Reader) gitStatusPorcelain(worktree string) string {
+	code, out, _ := r.GitCmdRaw(worktree, "status", "--porcelain=v1", "--untracked-files=all")
 	if code != 0 {
 		return ""
 	}
 	return out
 }
 
-func gitHeadDiffersFromBase(record model.IssueOpsRecord, worktree string) bool {
-	ref := diffBaseRef(record, worktree)
+func (r Reader) gitHeadDiffersFromBase(record model.IssueOpsRecord, worktree string) bool {
+	ref := r.DiffBaseRef(record, worktree)
 	if ref == "" {
 		return false
 	}
-	_, names, _ := GitCmd(worktree, "diff", "--name-only", ref+"..HEAD", "--")
+	_, names, _ := r.GitCmd(worktree, "diff", "--name-only", ref+"..HEAD", "--")
 	for _, name := range strings.Split(names, "\n") {
 		name = strings.TrimSpace(name)
-		if name != "" && !PathMatchesPlan(record, worktree, name) {
+		if reviewdomain.ImplementationChange(name, PathMatchesPlan(record, worktree, name)) {
 			return true
 		}
 	}
@@ -285,7 +233,7 @@ func fileTreeHasImplementationChange(record model.IssueOpsRecord, worktree strin
 			}
 			return nil
 		}
-		if !PathMatchesPlan(record, worktree, path) {
+		if reviewdomain.ImplementationChange(path, PathMatchesPlan(record, worktree, path)) {
 			found = true
 		}
 		return nil
@@ -293,39 +241,26 @@ func fileTreeHasImplementationChange(record model.IssueOpsRecord, worktree strin
 	return found
 }
 
-func diffBaseRef(record model.IssueOpsRecord, gitRoot string) string {
-	if record.BranchPrepare == nil {
-		return ""
+func (r Reader) DiffBaseRef(record model.IssueOpsRecord, root string) string {
+	sha, branch := "", ""
+	if record.BranchPrepare != nil {
+		sha, branch = record.BranchPrepare.BaseSHA, record.BranchPrepare.BaseBranch
 	}
-	if baseSHA := strings.TrimSpace(record.BranchPrepare.BaseSHA); fullGitObjectID(baseSHA) {
-		if code, _, _ := GitCmd(gitRoot, "rev-parse", "--verify", "--end-of-options", baseSHA+"^{commit}"); code == 0 {
-			return baseSHA
+	for _, candidate := range reviewdomain.ChangeBaseCandidates(record.BranchPrepare != nil, sha, branch) {
+		args := []string{"rev-parse", "--verify"}
+		if candidate.LiteralObject {
+			args = append(args, "--end-of-options")
 		}
-	}
-	base := strings.TrimSpace(record.BranchPrepare.BaseBranch)
-	if base == "" {
-		return ""
-	}
-	for _, ref := range []string{"origin/" + base, base} {
-		if code, _, _ := GitCmd(gitRoot, "rev-parse", "--verify", ref+"^{commit}"); code == 0 {
-			return ref
+		args = append(args, candidate.Ref+"^{commit}")
+		if code, _, _ := r.GitCmd(root, args...); code == 0 {
+			return candidate.Ref
 		}
 	}
 	return ""
 }
 
-func fullGitObjectID(value string) bool {
-	if len(value) != 40 && len(value) != 64 {
-		return false
-	}
-	for _, r := range value {
-		if r < '0' || r > '9' {
-			if r < 'a' || r > 'f' {
-				return false
-			}
-		}
-	}
-	return true
+func FingerprintSnapshot(root string, paths []string) (string, bool) {
+	return fingerprintPaths(root, paths, os.ReadFile)
 }
 
 func cleanRelativePath(path string) string {
@@ -338,10 +273,10 @@ func cleanRelativePath(path string) string {
 
 // ObservedChangedPaths는 ChangedPaths와 같은 관측이되 git 루트를 찾았는지를 함께
 // 돌려준다. 호출자가 nil과 빈 슬라이스 구분에 기대지 않도록 명시 값으로 넘긴다.
-func ObservedChangedPaths(record model.IssueOpsRecord) ([]string, bool) {
-	gitRoot := changeGitRoot(record)
+func (r Reader) ObservedChangedPaths(record model.IssueOpsRecord) ([]string, bool) {
+	gitRoot := r.changeGitRoot(record)
 	if gitRoot == "" {
 		return nil, false
 	}
-	return changedPathsIn(record, gitRoot), true
+	return r.changedPathsIn(record, gitRoot), true
 }

@@ -11,7 +11,7 @@ func withLoopGateForTest(ready model.IssueOpsReadiness, repo string) model.Issue
 	return app.ApplyLoopGate(ready, repo, testLoopRepoGateMissing)
 }
 func strictLoopReadinessForTest(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
-	return withLoopGateForTest(core.IssueOpsStrictPRReadinessWithState(root, record), record.Repo)
+	return withLoopGateForTest(testCycleReadiness().StrictPRWithState(root, record), record.Repo)
 }
 func advanceLoopPhaseForTest(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
 	if err := app.GuardPRPhase(root, id, to, cycleport.PRPhaseGuard{Read: core.ReadIssueOps, Gate: func(record model.IssueOpsRecord) model.IssueOpsReadiness {
@@ -19,5 +19,5 @@ func advanceLoopPhaseForTest(root, id, to string, actor model.IssueOpsActor) (mo
 	}}); err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
-	return core.AdvanceIssueOpsPhaseWithActor(root, id, to, actor)
+	return advancePhaseWithActorForTest(root, id, to, actor)
 }

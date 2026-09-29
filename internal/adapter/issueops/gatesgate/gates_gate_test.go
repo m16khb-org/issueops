@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/implementation"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
 )
@@ -87,7 +86,7 @@ func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
 		ProjectDocsReview: &issueopscontract.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
-	record.AISlopCleanFingerprint = implementation.ChangeFingerprint(record)
+	record.AISlopCleanFingerprint = testChangeReader().ChangeFingerprint(record)
 	if _, err := issueops.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}

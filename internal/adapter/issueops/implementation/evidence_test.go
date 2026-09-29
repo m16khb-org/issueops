@@ -110,7 +110,7 @@ func TestPathMatchesPlan(t *testing.T) {
 func TestDiffBaseRef(t *testing.T) {
 	t.Run("nil branch prepare", func(t *testing.T) {
 		rec := model.IssueOpsRecord{}
-		got := diffBaseRef(rec, "/tmp")
+		got := testReader().DiffBaseRef(rec, "/tmp")
 		if got != "" {
 			t.Errorf("expected empty, got %q", got)
 		}
@@ -119,7 +119,7 @@ func TestDiffBaseRef(t *testing.T) {
 		rec := model.IssueOpsRecord{
 			BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: ""},
 		}
-		got := diffBaseRef(rec, "/tmp")
+		got := testReader().DiffBaseRef(rec, "/tmp")
 		if got != "" {
 			t.Errorf("expected empty, got %q", got)
 		}
@@ -128,26 +128,26 @@ func TestDiffBaseRef(t *testing.T) {
 
 func TestHasEvidenceForGitAndFileTreeChanges(t *testing.T) {
 	t.Run("invalid worktree", func(t *testing.T) {
-		if HasEvidence(model.IssueOpsRecord{}) {
+		if testReader().HasEvidence(model.IssueOpsRecord{}) {
 			t.Fatal("empty worktree should not have implementation evidence")
 		}
 	})
 	t.Run("non git worktree falls back to file tree", func(t *testing.T) {
 		worktree := t.TempDir()
 		record := model.IssueOpsRecord{WorktreePath: worktree, PlanPath: "plan.md"}
-		if HasEvidence(record) {
+		if testReader().HasEvidence(record) {
 			t.Fatal("empty non-git worktree should not have implementation evidence")
 		}
 		if err := os.WriteFile(filepath.Join(worktree, "plan.md"), []byte("plan"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if HasEvidence(record) {
+		if testReader().HasEvidence(record) {
 			t.Fatal("plan-only file should not count as implementation evidence")
 		}
 		if err := os.WriteFile(filepath.Join(worktree, "impl.go"), []byte("package impl\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if !HasEvidence(record) {
+		if !testReader().HasEvidence(record) {
 			t.Fatal("non-plan file should count as implementation evidence")
 		}
 	})
@@ -160,24 +160,24 @@ func TestHasEvidenceForGitAndFileTreeChanges(t *testing.T) {
 				BaseBranch: "main",
 			},
 		}
-		if HasEvidence(record) {
+		if testReader().HasEvidence(record) {
 			t.Fatal("clean git worktree at base should not have implementation evidence")
 		}
-		if got := ChangeFingerprint(record); got != "" {
+		if got := testReader().ChangeFingerprint(record); got != "" {
 			t.Fatalf("clean worktree fingerprint = %q", got)
 		}
 		if err := os.WriteFile(filepath.Join(repo, "impl.go"), []byte("package impl\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if !HasEvidence(record) {
+		if !testReader().HasEvidence(record) {
 			t.Fatal("non-plan git status should count as implementation evidence")
 		}
-		if got := ChangeFingerprint(record); got == "" {
+		if got := testReader().ChangeFingerprint(record); got == "" {
 			t.Fatal("dirty implementation change should produce fingerprint")
 		}
 		runGit(t, repo, "add", "impl.go")
 		runGit(t, repo, "commit", "-m", "add impl")
-		if !gitHeadDiffersFromBase(record, repo) {
+		if !testReader().gitHeadDiffersFromBase(record, repo) {
 			t.Fatal("feature commit should differ from base")
 		}
 	})
@@ -202,24 +202,24 @@ func TestImplementationEvidenceUsesImmutableBranchPrepareBaseSHA(t *testing.T) {
 			BaseSHA:    baseSHA,
 		},
 	}
-	if !HasEvidence(record) {
+	if !testReader().HasEvidence(record) {
 		t.Fatal("feature change disappeared after origin/main moved to feature HEAD")
 	}
-	if got := ChangeFingerprint(record); got == "" {
+	if got := testReader().ChangeFingerprint(record); got == "" {
 		t.Fatal("immutable base change did not produce a fingerprint")
 	}
 
 	record.BranchPrepare.BaseSHA = featureSHA
-	if HasEvidence(record) {
+	if testReader().HasEvidence(record) {
 		t.Fatal("HEAD equal to immutable base SHA reported implementation evidence")
 	}
 	record.BranchPrepare.BaseSHA = "not-a-full-sha"
 	runGit(t, repo, "update-ref", "refs/remotes/origin/main", baseSHA)
-	if !HasEvidence(record) {
+	if !testReader().HasEvidence(record) {
 		t.Fatal("malformed base SHA did not preserve moving-ref compatibility fallback")
 	}
 	record.BranchPrepare.BaseSHA = ""
-	if !HasEvidence(record) {
+	if !testReader().HasEvidence(record) {
 		t.Fatal("missing base SHA did not preserve moving-ref compatibility fallback")
 	}
 }
@@ -243,14 +243,14 @@ func TestChangeFingerprintPreservesLeadingPorcelainStatusSpaceAcrossCommit(t *te
 			BaseSHA:    baseSHA,
 		},
 	}
-	dirtyFingerprint := ChangeFingerprint(record)
+	dirtyFingerprint := testReader().ChangeFingerprint(record)
 	if dirtyFingerprint == "" {
 		t.Fatal("tracked dirty change should produce a fingerprint")
 	}
 
 	runGit(t, repo, "add", "impl.go")
 	runGit(t, repo, "commit", "-m", "update impl")
-	if committedFingerprint := ChangeFingerprint(record); committedFingerprint != dirtyFingerprint {
+	if committedFingerprint := testReader().ChangeFingerprint(record); committedFingerprint != dirtyFingerprint {
 		t.Fatalf("same content changed fingerprint across commit: dirty=%q committed=%q", dirtyFingerprint, committedFingerprint)
 	}
 }
@@ -267,7 +267,7 @@ func TestHasEvidenceIgnoresTrackedPlanAsFirstPorcelainEntry(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, "plan.md"), []byte("updated plan"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if HasEvidence(record) {
+	if testReader().HasEvidence(record) {
 		t.Fatal("tracked plan-only change should not count as implementation evidence")
 	}
 }

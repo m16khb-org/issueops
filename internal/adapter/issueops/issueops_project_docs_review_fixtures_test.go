@@ -1,7 +1,6 @@
 package issueops
 
 import (
-	"issueops/internal/adapter/issueops/implementation"
 	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
@@ -23,8 +22,8 @@ func RecordIssueOpsProjectDocsReviewWithActor(stateRoot, id string, req IssueOps
 
 func recordIssueOpsProjectDocsReview(stateRoot, id string, req IssueOpsProjectDocsReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return reviewapp.RecordProjectDocsReview(reviewport.ProjectDocsReviewStore{
-		EvidenceReviewStore: NewEvidenceReviewStore(actor, implementation.ChangeFingerprint),
-		ChangedPaths:        implementation.ChangedPaths,
+		EvidenceReviewStore: NewEvidenceReviewStore(actor, testChangeReader().ChangeFingerprint),
+		ChangedPaths:        testChangeReader().ChangedPaths,
 		Root:                ReviewDocumentPaths{}.Root,
 		RelativePath:        ReviewDocumentPaths{}.RelativePath,
 		FileExists:          ReviewDocumentPaths{}.FileExists,

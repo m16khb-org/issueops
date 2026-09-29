@@ -389,7 +389,7 @@ type IssueOpsImplementationReview struct {
 	Findings []string `json:"findings"`
 	Evidence []string `json:"evidence"`
 	// ReviewedFingerprint는 리뷰가 검토한 변경 집합의 content fingerprint다
-	// (implementation.ChangeFingerprint — 커밋 후에도 안정). 게이트는 현재
+	// (implementation.Reader.ChangeFingerprint — 커밋 후에도 안정). 게이트는 현재
 	// fingerprint와 비교해 stale 리뷰를 거부한다(C4b-F1, ai_slop_clean 선례).
 	ReviewedFingerprint string `json:"reviewed_fingerprint"`
 	ReviewerHost        string `json:"reviewer_host,omitempty"`

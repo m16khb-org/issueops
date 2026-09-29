@@ -250,7 +250,7 @@ func TestPublicationRepositoryRejectsInvalidArtifactWithoutWrites(t *testing.T) 
 }
 
 func newPublicationJournalForTest(root string, now func() time.Time, operationID func() (string, error)) *remoteapp.PublicationJournal {
-	return remoteapp.NewPublicationJournal(RemotePublicationStore{StateRoot: root}, RemotePublicationObserver{StateRoot: root, Clock: now, OperationIDFactory: operationID}, cycleapp.NewMutationAuthority(samePath))
+	return remoteapp.NewPublicationJournal(RemotePublicationStore{StateRoot: root}, RemotePublicationObserver{CurrentFingerprint: testChangeReader().ChangeFingerprint, CurrentHead: testReadinessGit().Head, StateRoot: root, Clock: now, OperationIDFactory: operationID}, cycleapp.NewMutationAuthority(samePath))
 }
 
 func TestPublicationJournalRechecksHolderBeforeIntentWrite(t *testing.T) {

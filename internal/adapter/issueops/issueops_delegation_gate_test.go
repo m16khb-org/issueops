@@ -20,7 +20,7 @@ func TestIssueOpsStrictPRReadinessBlocksIncompleteChildren(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ready := issueOpsStrictPRReadinessWithState(stateRoot, parent)
+	ready := IssueOpsStrictPRReadinessWithState(stateRoot, parent)
 	if !containsString(ready.Missing, "child_incomplete:"+started.Child.ID) {
 		t.Fatalf("parent pr gate should block incomplete child, got %#v", ready.Missing)
 	}
@@ -28,7 +28,7 @@ func TestIssueOpsStrictPRReadinessBlocksIncompleteChildren(t *testing.T) {
 	child := started.Child
 	child.Phase = IssueOpsPhaseDone
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
-	ready = issueOpsStrictPRReadinessWithState(stateRoot, parent)
+	ready = IssueOpsStrictPRReadinessWithState(stateRoot, parent)
 	if containsString(ready.Missing, "child_incomplete:"+child.ID) || !containsString(ready.Missing, "child_unvalidated:"+child.ID) {
 		t.Fatalf("done child without verdict should be unvalidated only, got %#v", ready.Missing)
 	}
@@ -40,7 +40,7 @@ func TestIssueOpsStrictPRReadinessBlocksIncompleteChildren(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ready = issueOpsStrictPRReadinessWithState(stateRoot, parentAfter)
+	ready = IssueOpsStrictPRReadinessWithState(stateRoot, parentAfter)
 	if containsString(ready.Missing, "child_incomplete:"+child.ID) || containsString(ready.Missing, "child_unvalidated:"+child.ID) {
 		t.Fatalf("accepted done child should clear child pr gate keys, got %#v", ready.Missing)
 	}
@@ -69,7 +69,7 @@ func TestIssueOpsStrictPRReadinessRejectedAndDroppedVerdicts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ready := issueOpsStrictPRReadinessWithState(stateRoot, parentAfter)
+	ready := IssueOpsStrictPRReadinessWithState(stateRoot, parentAfter)
 	if !containsString(ready.Missing, "child_rejected_unresolved:"+child.ID) {
 		t.Fatalf("rejected child should keep parent pr gate blocked, got %#v", ready.Missing)
 	}
@@ -81,7 +81,7 @@ func TestIssueOpsStrictPRReadinessRejectedAndDroppedVerdicts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ready = issueOpsStrictPRReadinessWithState(stateRoot, parentAfter)
+	ready = IssueOpsStrictPRReadinessWithState(stateRoot, parentAfter)
 	if containsString(ready.Missing, "child_rejected_unresolved:"+child.ID) || containsString(ready.Missing, "child_unvalidated:"+child.ID) {
 		t.Fatalf("dropped child should clear child pr gate keys, got %#v", ready.Missing)
 	}
@@ -90,7 +90,7 @@ func TestIssueOpsStrictPRReadinessRejectedAndDroppedVerdicts(t *testing.T) {
 func TestIssueOpsParentWithoutChildrenUnaffected(t *testing.T) {
 	stateRoot := t.TempDir()
 	parent := createDelegationReadyParentForTest(t, stateRoot)
-	ready := issueOpsStrictPRReadinessWithState(stateRoot, parent)
+	ready := IssueOpsStrictPRReadinessWithState(stateRoot, parent)
 	for _, missing := range ready.Missing {
 		if len(missing) >= len("child_") && missing[:len("child_")] == "child_" {
 			t.Fatalf("parent with no child cycles should not gain child gate keys, got %#v", ready.Missing)

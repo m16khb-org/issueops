@@ -5,5 +5,4 @@ package issueops
 var (
 	GitCmd    func(dir string, args ...string) (int, string, string)
 	GitCmdRaw func(dir string, args ...string) (int, string, string)
-	GitOut    func(dir string, args ...string) string
 )

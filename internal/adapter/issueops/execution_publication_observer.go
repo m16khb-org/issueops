@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
-	"issueops/internal/adapter/issueops/implementation"
 	application "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
 )
 
 type RemotePublicationObserver struct {
+	CurrentFingerprint func(model.IssueOpsRecord) string
+	CurrentHead        func(model.IssueOpsRecord) string
 	StateRoot          string
 	Clock              func() time.Time
 	OperationIDFactory func() (string, error)
@@ -20,10 +21,10 @@ func (o RemotePublicationObserver) Read(_ context.Context, id string) (model.Iss
 }
 
 func (o RemotePublicationObserver) Fingerprint(_ context.Context, record model.IssueOpsRecord) string {
-	return implementation.ChangeFingerprint(record)
+	return o.CurrentFingerprint(record)
 }
 func (o RemotePublicationObserver) Head(_ context.Context, record model.IssueOpsRecord) string {
-	return issueOpsCurrentHead(record)
+	return o.CurrentHead(record)
 }
 
 var _ application.PreparationObserver = RemotePublicationObserver{}
