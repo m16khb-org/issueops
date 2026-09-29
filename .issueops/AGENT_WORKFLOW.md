@@ -160,7 +160,7 @@ merge and destructive cleanup require separate authority.
 Orca, Herdr 순서로 사용 가능 여부를 확인하며 둘 다 사용 불가면 현재 세션에서 이어간다.
 실행 방식은 묻지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다.
 명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다.
-4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` →
+4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-slop-clean` →
 `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` →
 `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며
 reflect-completion→close-issue→cleanup finish 순서를 지킨다(OPERATIONS.md 참조).

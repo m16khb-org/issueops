@@ -17198,11 +17198,6 @@
       "task": "T21"
     },
     {
-      "path": "skills/issueops-clean/SKILL.md",
-      "owner": "skill-contract",
-      "task": "T21"
-    },
-    {
       "path": "skills/issueops-cleanup/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"
@@ -17254,6 +17249,11 @@
     },
     {
       "path": "skills/issueops-review/SKILL.md",
+      "owner": "skill-contract",
+      "task": "T21"
+    },
+    {
+      "path": "skills/issueops-slop-clean/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"
     },

@@ -462,7 +462,7 @@
 
 ## Final Verification Wave
 - [ ] F1. Plan Compliance Audit — T1–T8의 What to do가 diff에 그대로 있는가. `git log --oneline -8`의 제목이 Commit 항목과 일치하는가.
-- [ ] F2. Code Quality Review — `issueops-clean` 절차로 AI slop 정리, `code-quality-metrics` 전후 비교, 죽은 코드·중복 판정(도메인 vs adapter, 코드 vs 스킬) 없음.
+- [ ] F2. Code Quality Review — `issueops-slop-clean` 절차로 AI slop 정리, `code-quality-metrics` 전후 비교, 죽은 코드·중복 판정(도메인 vs adapter, 코드 vs 스킬) 없음.
 - [ ] F3. Real Manual QA — 각 태스크 QA 시나리오를 실행하고 evidence 파일 존재 확인: `ls .issueops/evidence/task-*`가 16개.
 - [ ] F4. Scope Fidelity Check — Must NOT Have 일곱 항목이 diff에 없는가: `rg -n "PostToolUse|PreToolUse" configs/` 0건, fingerprint 분리 코드 없음, 스킬에 모델 이름 없음, `gates add` 없음, `parallel-allowed`가 프로덕션 코드와 스킬 본문에 없음(부재 단언 테스트는 예외).
 

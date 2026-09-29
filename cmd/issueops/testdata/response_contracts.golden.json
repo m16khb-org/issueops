@@ -982,7 +982,7 @@
           "path": "$ISSUEOPS_ROOT/skills/fluent-korean"
         },
         {
-          "description": "Create, check, and report task gate ledgers with the issueops gates CLI. Turns acceptance criteria into G-numbered CHECK and EXPECT gates in .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/\u003cscope\u003e.md, fills EVIDENCE by running the checks through the command policy, and abandons gates honestly. Use when issueops-plan, issueops-implement, issueops-clean, issueops-verify, or verified-execution needs a gate ledger, or when the user says \"게이트 원장\", \"gates 만들어줘\", \"수용 기준 체크\".",
+          "description": "Create, check, and report task gate ledgers with the issueops gates CLI. Turns acceptance criteria into G-numbered CHECK and EXPECT gates in .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/\u003cscope\u003e.md, fills EVIDENCE by running the checks through the command policy, and abandons gates honestly. Use when issueops-plan, issueops-implement, issueops-slop-clean, issueops-verify, or verified-execution needs a gate ledger, or when the user says \"게이트 원장\", \"gates 만들어줘\", \"수용 기준 체크\".",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "gates-ledger",
@@ -1029,13 +1029,6 @@
           "has_skill_md": true,
           "name": "issueops-abandon",
           "path": "$ISSUEOPS_ROOT/skills/issueops-abandon"
-        },
-        {
-          "description": "Run the IssueOps ai-slop-clean stage on the canonical worktree. Confirm the phase, remove lazy agent residue from the task diff one pass at a time while preserving behavior, measure before and after with code-quality-metrics, re-run the gate ledger and the focused verification, and record the cleanup evidence that seals the change fingerprint. Use when \"issueops next\" reports clean, or when the user says \"AI slop 정리\", \"slop 치워줘\", \"정리 단계\".",
-          "has_openai_yaml": true,
-          "has_skill_md": true,
-          "name": "issueops-clean",
-          "path": "$ISSUEOPS_ROOT/skills/issueops-clean"
         },
         {
           "description": "Safely finish a merged IssueOps cycle by closing its linked issue, removing its local worktree, and deleting its local branch. Use when the user asks for IssueOps cleanup, post-merge cleanup, worktree/branch deletion plus issue closure, or says \"이슈옵스 정리\", \"워크트리 지우고 브랜치 지우고 이슈 닫아줘\".",
@@ -1113,6 +1106,13 @@
           "has_skill_md": true,
           "name": "issueops-review",
           "path": "$ISSUEOPS_ROOT/skills/issueops-review"
+        },
+        {
+          "description": "Run the IssueOps ai-slop-clean stage on the canonical worktree. Confirm the phase, remove lazy agent residue from the task diff one pass at a time while preserving behavior, measure before and after with code-quality-metrics, re-run the gate ledger and the focused verification, and record the cleanup evidence that seals the change fingerprint. Use when \"issueops next\" reports clean, or when the user says \"AI slop 정리\", \"slop 치워줘\", \"정리 단계\".",
+          "has_openai_yaml": true,
+          "has_skill_md": true,
+          "name": "issueops-slop-clean",
+          "path": "$ISSUEOPS_ROOT/skills/issueops-slop-clean"
         },
         {
           "description": "Refresh the body of an issue or provider-native child this cycle already published, with drift classification, managed-section preservation, a fail-closed body compare-and-swap, and explicit good and bad examples. Use when a linked issue's text no longer matches the cycle it describes.",
@@ -5448,7 +5448,6 @@
           "io-update",
           "issueops",
           "issueops-abandon",
-          "issueops-clean",
           "issueops-cleanup",
           "issueops-complete",
           "issueops-create-issue",
@@ -5460,6 +5459,7 @@
           "issueops-prepare",
           "issueops-remote-write",
           "issueops-review",
+          "issueops-slop-clean",
           "issueops-sync-issue",
           "issueops-sync-pr",
           "issueops-verify",
@@ -7549,7 +7549,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/fluent-korean"
               },
               {
-                "description": "Create, check, and report task gate ledgers with the issueops gates CLI. Turns acceptance criteria into G-numbered CHECK and EXPECT gates in .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/\u003cscope\u003e.md, fills EVIDENCE by running the checks through the command policy, and abandons gates honestly. Use when issueops-plan, issueops-implement, issueops-clean, issueops-verify, or verified-execution needs a gate ledger, or when the user says \"게이트 원장\", \"gates 만들어줘\", \"수용 기준 체크\".",
+                "description": "Create, check, and report task gate ledgers with the issueops gates CLI. Turns acceptance criteria into G-numbered CHECK and EXPECT gates in .issueops/issues/\u003cn\u003e/gates.md or .issueops/gates/\u003cscope\u003e.md, fills EVIDENCE by running the checks through the command policy, and abandons gates honestly. Use when issueops-plan, issueops-implement, issueops-slop-clean, issueops-verify, or verified-execution needs a gate ledger, or when the user says \"게이트 원장\", \"gates 만들어줘\", \"수용 기준 체크\".",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "gates-ledger",
@@ -7596,13 +7596,6 @@
                 "has_skill_md": true,
                 "name": "issueops-abandon",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-abandon"
-              },
-              {
-                "description": "Run the IssueOps ai-slop-clean stage on the canonical worktree. Confirm the phase, remove lazy agent residue from the task diff one pass at a time while preserving behavior, measure before and after with code-quality-metrics, re-run the gate ledger and the focused verification, and record the cleanup evidence that seals the change fingerprint. Use when \"issueops next\" reports clean, or when the user says \"AI slop 정리\", \"slop 치워줘\", \"정리 단계\".",
-                "has_openai_yaml": true,
-                "has_skill_md": true,
-                "name": "issueops-clean",
-                "path": "$ISSUEOPS_ROOT/skills/issueops-clean"
               },
               {
                 "description": "Safely finish a merged IssueOps cycle by closing its linked issue, removing its local worktree, and deleting its local branch. Use when the user asks for IssueOps cleanup, post-merge cleanup, worktree/branch deletion plus issue closure, or says \"이슈옵스 정리\", \"워크트리 지우고 브랜치 지우고 이슈 닫아줘\".",
@@ -7680,6 +7673,13 @@
                 "has_skill_md": true,
                 "name": "issueops-review",
                 "path": "$ISSUEOPS_ROOT/skills/issueops-review"
+              },
+              {
+                "description": "Run the IssueOps ai-slop-clean stage on the canonical worktree. Confirm the phase, remove lazy agent residue from the task diff one pass at a time while preserving behavior, measure before and after with code-quality-metrics, re-run the gate ledger and the focused verification, and record the cleanup evidence that seals the change fingerprint. Use when \"issueops next\" reports clean, or when the user says \"AI slop 정리\", \"slop 치워줘\", \"정리 단계\".",
+                "has_openai_yaml": true,
+                "has_skill_md": true,
+                "name": "issueops-slop-clean",
+                "path": "$ISSUEOPS_ROOT/skills/issueops-slop-clean"
               },
               {
                 "description": "Refresh the body of an issue or provider-native child this cycle already published, with drift classification, managed-section preservation, a fail-closed body compare-and-swap, and explicit good and bad examples. Use when a linked issue's text no longer matches the cycle it describes.",
@@ -8822,7 +8822,6 @@
                 "io-update",
                 "issueops",
                 "issueops-abandon",
-                "issueops-clean",
                 "issueops-cleanup",
                 "issueops-complete",
                 "issueops-create-issue",
@@ -8834,6 +8833,7 @@
                 "issueops-prepare",
                 "issueops-remote-write",
                 "issueops-review",
+                "issueops-slop-clean",
                 "issueops-sync-issue",
                 "issueops-sync-pr",
                 "issueops-verify",

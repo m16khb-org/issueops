@@ -66,7 +66,7 @@ issueops next --json
 | 2 브랜치 준비 | [`issueops-prepare`](../issueops-prepare/SKILL.md) | — |
 | 3 문서 확인·계획·검토·인계 | [`issueops-plan`](../issueops-plan/SKILL.md) | `implementation-planning`, `issueops-review`, `database-design`, `algorithm-optimization`, `prompt-engineering` |
 | 4 구현 | [`issueops-implement`](../issueops-implement/SKILL.md) | `issueops-debugging`, `verified-execution`, `ui-ux-craft`(frontend 신호), `rebase-onto-parent`(base drift 사유) |
-| 5 AI slop 정리 | [`issueops-clean`](../issueops-clean/SKILL.md) | `code-quality-metrics`, `verified-execution` |
+| 5 AI slop 정리 | [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md) | `code-quality-metrics`, `verified-execution` |
 | 6 프로젝트 문서 반영 | [`issueops-docs`](../issueops-docs/SKILL.md) | `project-docs-update` |
 | 7 검증 | [`issueops-verify`](../issueops-verify/SKILL.md) | `database-design`, `verified-execution`, `aside-web-qa`(frontend 신호) |
 | 8 커밋·푸시 | [`atomic-commit-push`](../atomic-commit-push/SKILL.md) | `git-operations`(history 수술) |
@@ -173,7 +173,7 @@ reply, merge, cleanup을 hook에 맡기지 않는다.
 | `plan.write`, `plan.design`, `plan.review`, `plan.handoff` | `issueops-plan` | 문서 확인·계획·검토·인계 |
 | `claim` | 스킬 없음. Orca가 띄운 세션은 자기 프롬프트의 봉인된 claim을 정확히 한 번 실행하고, 그 밖의 세션은 `next_command`가 돌려주는 체인을 lease가 active(self)가 될 때까지 따라간 뒤 `next`를 다시 실행한다 | 현재 index의 label |
 | `implement.enter`, `implement` | `issueops-implement` | 구현 |
-| `clean` | `issueops-clean` | AI slop 정리 |
+| `clean` | `issueops-slop-clean` | AI slop 정리 |
 | `docs` | `issueops-docs` | 프로젝트 문서 반영 |
 | `verify` | `issueops-verify` | 검증 |
 | `commit-push` | `atomic-commit-push` | 커밋·푸시 |

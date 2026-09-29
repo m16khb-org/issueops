@@ -144,7 +144,7 @@ issueops start --repo "$PWD" --new --json
 | 2 브랜치 준비 | `issueops-prepare` | base SHA를 봉인하고 브랜치를 이슈에 연결합니다 |
 | 3 문서 확인·계획·검토·인계 | `issueops-plan` | 운영 문서를 읽고 계획을 쓰고 검토를 통과한 뒤 실행 세션을 자동으로 정합니다 |
 | 4 구현 | `issueops-implement` | canonical worktree에서 TDD로 구현합니다 |
-| 5 AI slop 정리 | `issueops-clean` | 찌꺼기를 걷어 내고 변경 집합을 봉인합니다 |
+| 5 AI slop 정리 | `issueops-slop-clean` | 찌꺼기를 걷어 내고 변경 집합을 봉인합니다 |
 | 6 프로젝트 문서 반영 | `issueops-docs` | 결정과 함정을 운영 문서에 남기고 재봉인합니다 |
 | 7 검증 | `issueops-verify` | 파일을 만지지 않고 재검증·리뷰·readiness를 확인합니다 |
 | 8 커밋·푸시 | `atomic-commit-push` | 봉인된 변경을 커밋하고 푸시합니다 |
@@ -261,7 +261,7 @@ issueops contract check --json
 - 실행과 검증: `verified-execution`, `issueops-debugging`, `algorithm-optimization`, `database-design`, `code-quality-metrics`
 - 조사와 팀 협업: `web-research`, `meeting-notes`, `slack-delegate`, `sharing-backend-work`
 - Git과 작업 운영: `git-operations`, `atomic-commit-push`, `rebase-onto-parent`, `gitlab-usecase`
-- IssueOps 단계: `issueops`(라우터), `issueops-create-issue`, `issueops-prepare`, `issueops-plan`, `issueops-implement`, `issueops-clean`, `issueops-docs`, `issueops-verify`, `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, `issueops-abandon`
+- IssueOps 단계: `issueops`(라우터), `issueops-create-issue`, `issueops-prepare`, `issueops-plan`, `issueops-implement`, `issueops-slop-clean`, `issueops-docs`, `issueops-verify`, `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, `issueops-abandon`
 - IssueOps 공용: `issueops-review`, `gates-ledger`, `issueops-remote-write`, `issueops-sync-issue`, `issueops-sync-pr`
 - Project docs: `project-bootstrap`, `project-docs-bootstrap`, `project-docs-update`, `project-docs-optimize`
 - UI/UX와 브라우저 QA: `ui-ux-craft`, `aside-functional-qa`, `aside-visual-qa`, `aside-web-qa`, `read-public-artifact`. 이 중 `ui-ux-craft`와 `aside-web-qa`가 `next.review.frontend`가 켜진 사이클의 4·7단계에서 호출됩니다. 나머지 두 QA 스킬은 그 오케스트레이터가 부르며 사이클이 직접 부르지 않습니다

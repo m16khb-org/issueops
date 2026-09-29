@@ -121,7 +121,7 @@ func TestIssueOpsRouterPinsStageContract(t *testing.T) {
 		"issueops-create-issue", "issueops-prepare", "issueops-plan",
 		"issueops-implement", "issueops-create-pr", "issueops-complete",
 		"issueops-cleanup", "issueops-abandon",
-		"issueops-clean", "issueops-docs", "issueops-verify",
+		"issueops-slop-clean", "issueops-docs", "issueops-verify",
 		"issueops-review", "gates-ledger", "issueops-remote-write",
 		"## 공통 불변식", "## 단계 표",
 	})

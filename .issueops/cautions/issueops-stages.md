@@ -97,4 +97,4 @@ create-pr이 막힌다.
 단계가 `ai-slop-clean record`로 재봉인한 뒤 판정을 기록한다. 7단계 검증은 파일을
 만지지 않는다. 되돌아온 것은 오류가 아니라 의도된 회귀다.
 
-근거: `internal/adapter/issueops/implementation/evidence.go`, `skills/issueops-clean/SKILL.md` 기록 절.
+근거: `internal/adapter/issueops/implementation/evidence.go`, `skills/issueops-slop-clean/SKILL.md` 기록 절.

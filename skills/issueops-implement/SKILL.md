@@ -13,7 +13,7 @@ TDD로 구현하고, execution lease를 지키고, 증거를 남기고, ai-slop-
 - 브랜치 정체성 준비: [`issueops-prepare`](../issueops-prepare/SKILL.md)
 - lease 준비·회복 체인 전문: [`execution.md`](../issueops/references/execution.md)
 - 게이트 원장: [`gates-ledger`](../gates-ledger/SKILL.md)
-- 다음 단계: [`issueops-clean`](../issueops-clean/SKILL.md)
+- 다음 단계: [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)
 - delegated child 전문: [`orchestration.md`](../issueops/references/orchestration.md)
 - PR/MR publication: [`issueops-create-pr`](../issueops-create-pr/SKILL.md)
 
@@ -43,7 +43,7 @@ issueops next --id "$ISSUEOPS_ID" --json
   봉인된 `execution claim --claim-current-token` 명령을 정확히 한 번 실행하고 `next`를
   다시 돌린다. 아니면 `next_command`가 돌려주는 회복 체인을 따른다.
 - `plan.*`이면 [`issueops-plan`](../issueops-plan/SKILL.md)이, `clean`이면
-  [`issueops-clean`](../issueops-clean/SKILL.md)이 맞다.
+  [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)이 맞다.
 - `none`이면 사이클이 아직 없다. [`issueops-create-issue`](../issueops-create-issue/SKILL.md)로
   시작한다. 상태만 보고하고 "진행 방향은 사용자 결정"으로 멈추는 것은 게이트 통과가
   아니라 라우팅 누락이다.
@@ -235,7 +235,7 @@ implement 단계의 출구는 ai-slop-clean 전이다.
    [`issueops-complete`](../issueops-complete/SKILL.md)가 요구하는 워크트리 내부 상대
    경로다. 최종 확정은 5단계 정리가 한다.
 3. `issueops phase --id ID --to ai-slop-clean $RECORD_ACTOR_FLAGS --json`
-   으로 전이한다. 다음은 [`issueops-clean`](../issueops-clean/SKILL.md)이다.
+   으로 전이한다. 다음은 [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)이다.
 4. 이 단계에서는 커밋·푸시하지 않는다. 커밋은 8단계다.
 
 `execution complete`는 이 단계의 명령이 아니다. complete는 pr phase에서 검증된 remote

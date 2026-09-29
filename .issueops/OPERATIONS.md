@@ -45,7 +45,7 @@ instead of duplicating their content here or in a guide.
    `project-bootstrap`, `self-verify`, `stability-audit`, plus the named
    specialist skills in `skills/`. The IssueOps stage skills are
    `issueops-create-issue`, `issueops-prepare`, `issueops-plan`,
-   `issueops-implement`, `issueops-clean`, `issueops-docs`, `issueops-verify`,
+   `issueops-implement`, `issueops-slop-clean`, `issueops-docs`, `issueops-verify`,
    `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, and
    `issueops-abandon`; the shared ones are `issueops-review`, `gates-ledger`,
    and `issueops-remote-write`. `issueops next` decides which stage

@@ -40,7 +40,7 @@
 ## TL;DR
 
 > **Summary**: 스킬 9개를 10단계 기준 17개(라우터 1, 단계 10, 탈출 1, 동기화 2, 공용 3)로 재편하고, 단계 판별 명령 `issueops next`를 추가하며, `cleanup abandon`에 draft PR/MR 닫기·이슈 닫기·원격 브랜치 삭제를 선택 효과로 넓히고, 단계마다 반복되던 절차(적대 리뷰, 게이트 원장, 원격 쓰기)를 공용 스킬 3개로 뽑고, 계획 전 프로젝트 문서 확인과 구현 후 문서 반영을 단계로 두고, 대체된 스킬 1개와 레퍼런스 4개와 문서 절 2개를 삭제한다.
-> **Deliverables**: `issueops next` CLI, `cleanup abandon` 원격 효과, 단계 스킬 `issueops-prepare`·`issueops-plan`·`issueops-clean`·`issueops-docs`·`issueops-verify`·`issueops-abandon` 신설, 공용 스킬 `issueops-review`·`gates-ledger`·`issueops-remote-write` 신설, `issueops`·`issueops-create-issue`·`issueops-implement` 재작성, `issueops-branch-worktree`와 레퍼런스 4개 삭제, ADR·AGENT_WORKFLOW·운영 가이드·아키텍처·CAUTIONS·README·골든 갱신, 일회용 저장소 E2E 프로브 통과.
+> **Deliverables**: `issueops next` CLI, `cleanup abandon` 원격 효과, 단계 스킬 `issueops-prepare`·`issueops-plan`·`issueops-slop-clean`·`issueops-docs`·`issueops-verify`·`issueops-abandon` 신설, 공용 스킬 `issueops-review`·`gates-ledger`·`issueops-remote-write` 신설, `issueops`·`issueops-create-issue`·`issueops-implement` 재작성, `issueops-branch-worktree`와 레퍼런스 4개 삭제, ADR·AGENT_WORKFLOW·운영 가이드·아키텍처·CAUTIONS·README·골든 갱신, 일회용 저장소 E2E 프로브 통과.
 > **Effort**: Large
 > **Parallel**: YES, 9 waves (wave당 4개 이하)
 > **Critical Path**: T0 → T0b → T1 → T6 → T7 → T11 → T15 → T16 → T17
@@ -121,7 +121,7 @@
 | 2 브랜치 준비 | `issueops-prepare` (신설, `issueops-branch-worktree` 삭제) | `branch prepare`(base SHA 봉인), provider 링크, `phase --to plan` | 워크트리를 만들지 않는다. 워크트리 provisioning은 `execution prepare`가 소유한다(direct는 git, orca는 `orca worktree create`). lease도 부여하지 않는다 |
 | 3 문서 확인·계획·검토·인계 | `issueops-plan` (신설) | `project_docs_route`·`project_docs_read`, `artifact stage --name plan`, `design review`, `issueops-review --target plan` → `devils-advocate review`, `regress`, `execution prepare --mode auto` | source checkout의 준비 세션이 수행한다. 계획은 워크트리가 없으므로 source 밖 임시 파일에 쓰고 `artifact stage`한다. 마지막 `execution prepare --mode auto`가 모드를 고른다: Orca가 준비돼 있으면 Orca가 워크트리와 구현 세션을 만들고, 없으면 direct로 같은 세션이 generation 1 홀더가 된다 |
 | 4 구현 | `issueops-implement` (재작성) | (orca면) sealed `claim`, `link-plan`, `compatibility review`, `phase --to implement`, `gates-ledger`, TDD, child 위임, `phase --to ai-slop-clean` | canonical worktree의 구현 세션이 수행한다. Orca 세션이면 봉인된 claim 명령으로 시작하고, direct면 3단계 세션이 그대로 이어간다 |
-| 5 AI slop 정리 | `issueops-clean` (신설) | 정리 pass, `code-quality-metrics` 측정, `gates check --write`, verified-execution report 확정, focused 재검증, `ai-slop-clean record` | 코드와 증거 파일을 바꾸는 작업을 여기서 끝내고 마지막에 `ai-slop-clean record`로 봉인한다. fingerprint는 변경·untracked 파일 전체의 내용 해시라(`implementation/evidence.go:52-106`) 봉인 뒤 어떤 파일이라도 바뀌면 `ai_slop_clean_stale`이 되고 `next`가 이 단계로 되돌린다. 그것이 의도된 회귀다 |
+| 5 AI slop 정리 | `issueops-slop-clean` (신설) | 정리 pass, `code-quality-metrics` 측정, `gates check --write`, verified-execution report 확정, focused 재검증, `ai-slop-clean record` | 코드와 증거 파일을 바꾸는 작업을 여기서 끝내고 마지막에 `ai-slop-clean record`로 봉인한다. fingerprint는 변경·untracked 파일 전체의 내용 해시라(`implementation/evidence.go:52-106`) 봉인 뒤 어떤 파일이라도 바뀌면 `ai_slop_clean_stale`이 되고 `next`가 이 단계로 되돌린다. 그것이 의도된 회귀다 |
 | 6 프로젝트 문서 반영 | `issueops-docs` (신설) | `project_docs_route`, `project_docs_read`, `project_docs_append`(kind=adr·caution), `project_docs_revise`(기존 `project-docs-update` 스킬), `ai-slop-clean record`(재봉인), `project-docs-review record` | 구현 diff를 운영 문서와 양방향으로 대조해 ADR·CAUTIONS·CONVENTIONS 등을 고친 뒤, 문서 수정으로 바뀐 fingerprint를 `ai-slop-clean record`로 다시 봉인하고 `project-docs-review record --verdict updated|no-change`를 기록한다. 이 기록이 durable 게이트이며 이후 diff가 바뀌면 `project_docs_review_stale`이다 |
 | 7 검증 | `issueops-verify` (신설) | 읽기 전용 검증 battery 재실행, `schema-evidence record`, `implementation-review record`(`issueops-review`), `compatibility review` 재기록, `pr-readiness --strict` | 파일을 만지지 않는다. 기록 명령만 실행한다. 고칠 것이 생기면 5단계로 돌아간다 |
 | 8 커밋·푸시 | `atomic-commit-push` | `phase --to pr` | 검증이 봉인한 파일을 더 고치지 않고 plan.md, gates.md, verified-execution report, 문서, 구현을 커밋·푸시한 뒤 `next`가 렌더한 `phase --to pr`를 실행한다 |
@@ -264,7 +264,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
 | `.issueops/AGENT_WORKFLOW.md`의 "이원 구조 흐름 요약" 절 | "10단계 운영 흐름"으로 교체 |
 | `.issueops/operations/guides/issueops-execution.md:169-178` "IssueOps 이원 구조 운영" 절 | "10단계 운영과 세션 경계"로 교체. "Orca owner sequence" 절은 유지 |
 | `skills/issueops-cleanup/SKILL.md`의 "Do not use `cleanup abandon`" 문단 | `issueops-abandon` 안내로 교체 |
-| `skills/issueops/references/ai-slop-clean.md` | 삭제. 프롬프트는 `issueops-clean`이 흡수하고 `skills/verified-execution/SKILL.md:396`의 링크를 `skills/issueops-clean/SKILL.md`로 바꾼다 |
+| `skills/issueops/references/ai-slop-clean.md` | 삭제. 프롬프트는 `issueops-slop-clean`이 흡수하고 `skills/verified-execution/SKILL.md:396`의 링크를 `skills/issueops-slop-clean/SKILL.md`로 바꾼다 |
 | `skills/issueops/references/remote-issue.md`의 "Korean Remote Artifact Gate"·"Remote Artifact Writing Quality" 절과 `skills/issueops/scripts/remote_artifact_gate.py` | `issueops-remote-write`로 이동. 레퍼런스에는 provider 관계·hierarchy 절만 남는다 |
 | `skills/issueops/SKILL.md`의 "Remote write 공통 게이트" 절 | `issueops-remote-write`로 이동. 라우터에는 한 줄 링크만 남는다 |
 | `skills/issueops-implement/SKILL.md`의 "Publication evidence gates"·"Implementation review gate" 절 | `issueops-verify`와 `issueops-review`로 이동 |
@@ -326,7 +326,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
 | `plan.write`, `plan.design`, `plan.review`, `plan.handoff` | `issueops-plan` | 문서 확인·계획·검토·인계 |
 | `claim` | 스킬 없음. Orca가 띄운 세션은 자기 프롬프트의 봉인된 claim을 정확히 한 번 실행하고, 그 밖의 세션은 `next_command`(status)가 돌려주는 체인을 lease가 active(self)가 될 때까지 따라간 뒤 `next`를 다시 실행한다 | 현재 index의 label |
 | `implement.enter`, `implement` | `issueops-implement` | 구현 |
-| `clean` | `issueops-clean` | AI slop 정리 |
+| `clean` | `issueops-slop-clean` | AI slop 정리 |
 | `docs` | `issueops-docs` | 프로젝트 문서 반영 |
 | `verify` | `issueops-verify` | 검증 |
 | `commit-push` | `atomic-commit-push` | 커밋·푸시 |
@@ -377,7 +377,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
 ### Deliverables
 
 - Go: `issueopsnext` vertical(contract, domain, application, inbound, issueopsapp wiring, CLI `issueops next`, catalog, goldens, architecture ratchet)과 fetch 없는 `IssueOpsLocalPRReadiness` 분리, `cleanup abandon` 원격 효과(port `ClosePullRequest`·`CloseIssue.Reason`, GitHub·GitLab adapter, abandon inventory·gates·apply 단계, CLI 플래그, catalog, goldens), implementation review 게이트의 전 모드 확장, provisioner relaunch cwd 수정과 워크트리 채택 회귀 테스트.
-- 스킬: `issueops`(재작성), `issueops-create-issue`(재작성), `issueops-prepare`(신설), `issueops-plan`(신설), `issueops-implement`(재작성), `issueops-clean`(신설), `issueops-docs`(신설), `issueops-verify`(신설), `issueops-abandon`(신설), 공용 `issueops-review`·`gates-ledger`·`issueops-remote-write`(신설), `issueops-create-pr`·`issueops-complete`·`issueops-cleanup`·`issueops-sync-issue`·`issueops-sync-pr`(cross-link와 중복 절 삭제), 삭제 5건(스킬 1, 레퍼런스 4), 절 이동 4건.
+- 스킬: `issueops`(재작성), `issueops-create-issue`(재작성), `issueops-prepare`(신설), `issueops-plan`(신설), `issueops-implement`(재작성), `issueops-slop-clean`(신설), `issueops-docs`(신설), `issueops-verify`(신설), `issueops-abandon`(신설), 공용 `issueops-review`·`gates-ledger`·`issueops-remote-write`(신설), `issueops-create-pr`·`issueops-complete`·`issueops-cleanup`·`issueops-sync-issue`·`issueops-sync-pr`(cross-link와 중복 절 삭제), 삭제 5건(스킬 1, 레퍼런스 4), 절 이동 4건.
 - 문서: 새 ADR, `ADR.md` 색인, `AGENT_WORKFLOW.md`, `operations/guides/issueops-execution.md`, `architecture/issueops.md`, `OPERATIONS.md`, `testing/issueops-execution.md`, `cautions/issueops-stages.md`(신규 모듈), `CAUTIONS.md` 색인, `TECH_STACK.md`, `README.md`, `README.en.md`, 골든 2개.
 - 검증: 전체 게이트 배터리 통과, 일회용 저장소 E2E 프로브 통과 증거.
 
@@ -1212,14 +1212,14 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
   - Modify: `skills/issueops-implement/agents/openai.yaml`
 
   **What to do**:
-  1. `## 시작 게이트`를 다시 쓴다: 첫 줄은 `issueops next --json`. `stage.key`가 `implement.enter` 또는 `implement`일 때 진행한다. `claim`이면 이 세션이 Orca가 띄운 구현 세션인지 확인하고, 맞으면 자기 프롬프트의 봉인된 `execution claim --claim-current-token`을 정확히 한 번 실행한 뒤 `next`를 다시 돌린다. `plan.*`이면 `issueops-plan`으로, `clean`이면 `issueops-clean`으로, 나머지는 라우터 `## 단계 표`의 스킬로 안내한다. "record가 없으면 `issueops`를 실행한다" 문단은 "`next`가 `none`이면 `issueops-create-issue`"로 바꾼다.
+  1. `## 시작 게이트`를 다시 쓴다: 첫 줄은 `issueops next --json`. `stage.key`가 `implement.enter` 또는 `implement`일 때 진행한다. `claim`이면 이 세션이 Orca가 띄운 구현 세션인지 확인하고, 맞으면 자기 프롬프트의 봉인된 `execution claim --claim-current-token`을 정확히 한 번 실행한 뒤 `next`를 다시 돌린다. `plan.*`이면 `issueops-plan`으로, `clean`이면 `issueops-slop-clean`으로, 나머지는 라우터 `## 단계 표`의 스킬로 안내한다. "record가 없으면 `issueops`를 실행한다" 문단은 "`next`가 `none`이면 `issueops-create-issue`"로 바꾼다.
   1b. `## 진입 절차`(새 절, `implement.enter`가 가리키는 것): `link-plan --plan-path <워크트리 안의 materialized plan>`(prepare가 스테이징한 계획을 워크트리에 풀어 두고 `plan_path`를 채웠으면 생략), `compatibility review --approved`(backward compatibility, side effect, rollback, verification, blocker 없음), `gates-ledger`로 `.issueops/issues/<n>/gates.md` 생성, `phase --to implement`. Orca 세션이든 direct 세션이든 이 절차는 같다.
   2. `## 구현 루프`, `## Lease fencing`, `## 회복은 next_command 체인만`(표는 유지하되 "holder 교체·회수" 행을 `issueops-abandon` 참조로 바꾼다), `## Child 위임`은 유지한다. 라우터에서 삭제되는 "Child와 delegation" 문단(세 조건, verdict 셋)을 `## Child 위임` 앞에 합친다. `## Publication evidence gates`와 `## Implementation review gate`는 이 스킬에서 삭제한다(T20 `issueops-verify`와 T21 `issueops-review`가 소유한다). `## 구현 루프`에는 RED/GREEN 증거를 `gates-ledger`(T22)로 `.issueops/issues/<n>/gates.md`에 기록한다는 한 문장과 코드베이스 존중 규칙 네 줄을 넣는다: 기존 함수·패키지·테스트 헬퍼 확장을 새 파일·새 추상화보다 우선한다(plan의 `## 재사용하는 기존 구현`에 없는 새 추상화는 만들지 않는다); 계약 표면(CLI JSON, MCP schema, golden, record schema, provider body) 변경은 이슈와 plan이 명시한 것만 한다; hot path를 건드리면 전후 측정을 evidence로 남긴다; 파일·원격·상태에 미치는 side effect를 verified-execution report에 목록으로 적는다. 출처는 `AGENTS.md` §2·§3이다. `## Lease fencing`은 라우터 `## 공통 불변식`을 링크하는 두 줄로 줄인다.
   3. `## 종료 게이트`를 다시 쓴다:
      ```text
      1. focused verification 증거가 명령·결과로 남아 있고, 위임한 child가 전부 accepted 또는 dropped다.
      2. verified-execution report 초안을 워크트리 안에 쓴다(경로는 issueops-complete가 요구하는 워크트리 내부 상대 경로). 최종 확정은 4단계 정리가 한다.
-     3. issueops phase --id ID --to ai-slop-clean ... → "다음: issueops-clean".
+     3. issueops phase --id ID --to ai-slop-clean ... → "다음: issueops-slop-clean".
      4. 이 단계에서는 커밋·푸시하지 않는다. 커밋은 7단계다.
      ```
   4. `## 나쁜 예` 표에서 "record가 없는데 게이트 표만 보고" 행을 "`next`를 안 돌리고 phase를 추정" 행으로 바꾸고, "구현 직후 커밋·푸시" 행과 "구현 스킬 안에서 ai-slop-clean·implementation review 기록" 행을 추가한다.
@@ -1241,7 +1241,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
 
   **Acceptance Criteria**:
   - [ ] 검사기 2개 통과.
-  - [ ] `rg -n "issueops next" skills/issueops-implement/SKILL.md` 1건 이상, `rg -n "issueops-clean|compatibility review|link-plan|claim-current-token" skills/issueops-implement/SKILL.md` 각 1건 이상.
+  - [ ] `rg -n "issueops next" skills/issueops-implement/SKILL.md` 1건 이상, `rg -n "issueops-slop-clean|compatibility review|link-plan|claim-current-token" skills/issueops-implement/SKILL.md` 각 1건 이상.
   - [ ] `rg -n "재사용|하위 호환|side effect|측정" skills/issueops-implement/SKILL.md` 각 1건 이상.
   - [ ] `rg -n "Child와 delegation|issueops-branch-worktree|## Publication evidence gates|## Implementation review gate|implementation-review record|project-docs-review record" skills/issueops-implement/SKILL.md` 0건.
   - [ ] `wc -l skills/issueops-implement/SKILL.md`가 220 이하.
@@ -1250,7 +1250,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
   ```
   Scenario: 종료 절이 ai-slop-clean 전이로 끝남
     Channel: bash
-    Steps: sed -n '/## 종료 게이트/,/## 나쁜 예/p' skills/issueops-implement/SKILL.md | rg -n "phase --id ID --to ai-slop-clean|issueops-clean|커밋·푸시하지 않는다"
+    Steps: sed -n '/## 종료 게이트/,/## 나쁜 예/p' skills/issueops-implement/SKILL.md | rg -n "phase --id ID --to ai-slop-clean|issueops-slop-clean|커밋·푸시하지 않는다"
     Expected: 세 항목 각 1건 이상
     Evidence: .issueops/evidence/task-9-exit.txt
   Scenario: 시작 게이트가 next를 요구
@@ -1346,7 +1346,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
              "issueops-create-issue", "issueops-prepare", "issueops-plan",
              "issueops-implement", "issueops-create-pr", "issueops-complete",
              "issueops-cleanup", "issueops-abandon",
-             "issueops-clean", "issueops-docs", "issueops-verify",
+             "issueops-slop-clean", "issueops-docs", "issueops-verify",
              "issueops-review", "gates-ledger", "issueops-remote-write",
              "## 공통 불변식", "## 단계 표",
          })
@@ -1399,7 +1399,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
   **실행 결과와 계획 대비 편차**: `.gitlab/issue_templates/implementation_task.md`는 `issueops-create-issue` 경로를 그대로 가리키므로 고치지 않았다(계획이 예상한 대로). TECH_STACK은 T4에서 이미 고쳤다.
 
   **Files:**
-  - Modify: `README.md:122-131`(cycle 시작 절을 10단계 요약으로), `:237-262`(IssueOps 절: `next`, 10단계, 공용 스킬, abandon 한 문단씩), `:270`(스킬 목록: `issueops-branch-worktree` 제거, `issueops-prepare`·`issueops-plan`·`issueops-clean`·`issueops-docs`·`issueops-verify`·`issueops-abandon`·`issueops-review`·`issueops-remote-write`·`gates-ledger` 추가)
+  - Modify: `README.md:122-131`(cycle 시작 절을 10단계 요약으로), `:237-262`(IssueOps 절: `next`, 10단계, 공용 스킬, abandon 한 문단씩), `:270`(스킬 목록: `issueops-branch-worktree` 제거, `issueops-prepare`·`issueops-plan`·`issueops-slop-clean`·`issueops-docs`·`issueops-verify`·`issueops-abandon`·`issueops-review`·`issueops-remote-write`·`gates-ledger` 추가)
   - Modify: `README.en.md:123-132,241-273,282` (같은 내용 영어)
   - Modify: `.issueops/OPERATIONS.md:44-46` (Native skills 목록에 위 아홉 스킬 추가; 라인 예산 250 유지)
   - Modify: `.issueops/TECH_STACK.md:72` (`issueops-branch-worktree` 언급을 `issueops-prepare`로)
@@ -1417,7 +1417,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
 
   **Acceptance Criteria**:
   - [ ] `rg -n "issueops-branch-worktree" README.md README.en.md .issueops/OPERATIONS.md` 0건.
-  - [ ] `for s in issueops-prepare issueops-plan issueops-clean issueops-docs issueops-verify issueops-abandon issueops-review issueops-remote-write gates-ledger; do rg -l "$s" README.md README.en.md .issueops/OPERATIONS.md | wc -l; done` 결과가 모두 3.
+  - [ ] `for s in issueops-prepare issueops-plan issueops-slop-clean issueops-docs issueops-verify issueops-abandon issueops-review issueops-remote-write gates-ledger; do rg -l "$s" README.md README.en.md .issueops/OPERATIONS.md | wc -l; done` 결과가 모두 3.
   - [ ] `rg -n "issueops-branch-worktree" .issueops/TECH_STACK.md` 0건.
   - [ ] `go test ./internal/architecture -run Documentation -count=1` 통과.
 
@@ -1491,7 +1491,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
   - Modify: `.issueops/testing/issueops-execution.md` ("Execution tests must cover" 목록에 `issueops next` 분류표 table test와 fetch 미호출 단언, `cleanup abandon` 원격 효과의 순서·멱등·부분 실패 케이스, direct 모드의 implementation review 게이트를 추가)
   - Modify: `.issueops/OPERATIONS.md:24` (가이드 색인 설명의 "planner/implementer"를 "10단계 운영"으로)
 
-  **What to do**: 각 위치를 고친다. 이원 구조 요약을 대체하는 새 문단은 다음 골격이다: "1·2단계는 source checkout의 세션이 `issueops-create-issue`, `issueops-prepare`로 수행하고 lease를 갖지 않는다. 3단계부터는 워크트리에서 띄운 세션이 `issueops-plan`으로 워크트리를 채택해 generation 1 홀더가 되고, `issueops-implement`, `issueops-clean`, `issueops-verify`, `atomic-commit-push`, `issueops-create-pr`, `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 `issueops-cleanup`. 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이 일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은 `gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다."
+  **What to do**: 각 위치를 고친다. 이원 구조 요약을 대체하는 새 문단은 다음 골격이다: "1·2단계는 source checkout의 세션이 `issueops-create-issue`, `issueops-prepare`로 수행하고 lease를 갖지 않는다. 3단계부터는 워크트리에서 띄운 세션이 `issueops-plan`으로 워크트리를 채택해 generation 1 홀더가 되고, `issueops-implement`, `issueops-slop-clean`, `issueops-verify`, `atomic-commit-push`, `issueops-create-pr`, `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 `issueops-cleanup`. 어느 단계든 `issueops next`가 현재 단계를 판별하고, `issueops-abandon`이 일시 중단·재개·인수·폐기를 맡는다. 적대 리뷰는 `issueops-review`, 게이트 원장은 `gates-ledger`, 원격 쓰기는 `issueops-remote-write`가 단계와 무관하게 소유한다."
 
   **Must NOT do**: hook 절 수정, Orca owner sequence 삭제.
 
@@ -1606,7 +1606,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
   Scenario: 설치본 갱신 뒤 스킬 링크
     Channel: bash
     Steps: ./scripts/install-native.sh && ls ~/.claude/skills | grep -E '^issueops|^gates-ledger'
-    Expected: gates-ledger, issueops, issueops-abandon, issueops-clean, issueops-cleanup, issueops-complete, issueops-create-issue, issueops-create-pr, issueops-docs, issueops-implement, issueops-plan, issueops-prepare, issueops-remote-write, issueops-review, issueops-sync-issue, issueops-sync-pr, issueops-verify 만 있고 issueops-branch-worktree 없음
+    Expected: gates-ledger, issueops, issueops-abandon, issueops-slop-clean, issueops-cleanup, issueops-complete, issueops-create-issue, issueops-create-pr, issueops-docs, issueops-implement, issueops-plan, issueops-prepare, issueops-remote-write, issueops-review, issueops-sync-issue, issueops-sync-pr, issueops-verify 만 있고 issueops-branch-worktree 없음
     Evidence: .issueops/evidence/task-16-links.txt
   Scenario: race 통과
     Channel: bash
@@ -1631,7 +1631,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
   # 시드 커밋 후:
   ```
   시나리오는 네 개다. T0b 스파이크가 채택·권한·fingerprint를 이미 실측했으므로 여기서는 새 스킬로 전 구간을 돌린다.
-  1. **정방향 10단계와 일시 중단·재개**: planner 세션(이 세션)에서 `issueops-create-issue` → `issueops-prepare`(출력된 실행 명령 확보) → tmux로 두 번째 세션을 워크트리에서 `claude -p --permission-mode bypassPermissions --model sonnet`로 띄워 프롬프트 "issueops 스킬을 실행하고 next가 제안하는 대로 진행" → `issueops-plan`(`## 프로젝트 문서 확인`, `issueops-review` 1라운드 이상, `gates-ledger` 원장 생성) → `issueops-implement` 중간에 `issueops-abandon` 일시 중단 → 세 번째 tmux 세션(가능하면 `codex` 호스트, 없으면 claude)이 `next`의 `resume`대로 `next_command` 체인을 따라 이어받아 구현을 마친다 → `issueops-clean` → `issueops-docs`(`updated` 또는 `no-change`) → `issueops-verify`(`issueops-review --target diff`) → `atomic-commit-push` → `issueops-create-pr` → `issueops-complete` → `gh pr ready` + `gh pr merge --squash` → planner 세션에서 `issueops-cleanup`. 각 경계에서 `next`의 `stage.key`가 표대로 바뀌는지 기록한다.
+  1. **정방향 10단계와 일시 중단·재개**: planner 세션(이 세션)에서 `issueops-create-issue` → `issueops-prepare`(출력된 실행 명령 확보) → tmux로 두 번째 세션을 워크트리에서 `claude -p --permission-mode bypassPermissions --model sonnet`로 띄워 프롬프트 "issueops 스킬을 실행하고 next가 제안하는 대로 진행" → `issueops-plan`(`## 프로젝트 문서 확인`, `issueops-review` 1라운드 이상, `gates-ledger` 원장 생성) → `issueops-implement` 중간에 `issueops-abandon` 일시 중단 → 세 번째 tmux 세션(가능하면 `codex` 호스트, 없으면 claude)이 `next`의 `resume`대로 `next_command` 체인을 따라 이어받아 구현을 마친다 → `issueops-slop-clean` → `issueops-docs`(`updated` 또는 `no-change`) → `issueops-verify`(`issueops-review --target diff`) → `atomic-commit-push` → `issueops-create-pr` → `issueops-complete` → `gh pr ready` + `gh pr merge --squash` → planner 세션에서 `issueops-cleanup`. 각 경계에서 `next`의 `stage.key`가 표대로 바뀌는지 기록한다.
   2. **죽은 홀더 인수**: 두 번째 사이클에서 홀더 세션을 `tmux kill-session`으로 죽인 뒤 다른 세션이 `next`에서 `takeover`를 받고 revoke → finalize-preview → finalize → claim 체인을 완주한다.
   3. **dirty 워크트리 폐기와 draft PR 폐기**: 같은 두 번째 사이클에서 파일을 고친 상태로 `issueops-abandon` 폐기 → 세 선택지 제시 → "WIP 커밋·푸시 후 폐기" 선택 → release → `cleanup abandon --close-issue --delete-remote-branch --preview` → apply → record·워크트리·로컬 브랜치 삭제, 이슈 closed, 원격 브랜치 부재 readback. 세 번째 사이클은 pr phase까지 간 뒤 `cleanup abandon --close-pr --close-issue --delete-remote-branch --preview`가 `remote_effects` 세 개와 관측값을 보여 주고 apply 뒤 PR state CLOSED를 readback한다.
   4. **모호·새 사이클·무관 위치**: source root에 active 사이클이 둘인 상태에서 `next` → `ambiguous`와 candidates → 라우터 선택지 4로 새 사이클 시작이 `issueops-create-issue`로 이어지는지; `/tmp`에서 `next` → `none` + warning.
@@ -1702,12 +1702,12 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
 
   **Commit**: NO (저장소 밖)
 
-- [x] **T19. `issueops-clean` 신설 (5단계: AI slop 정리)** — 완료(2026-09-05). 증거: `.issueops/evidence/task-19-prompt.txt`(Step 1~5 이동), `task-19-verified-execution.txt`. 정리 프롬프트 전체를 옮기고 원본 레퍼런스를 지웠으며, 라우터의 레퍼런스 표에서도 그 행을 뺐다. 스킬 목록이 골든에 들어 있어 골든도 재생성했다.
+- [x] **T19. `issueops-slop-clean` 신설 (5단계: AI slop 정리)** — 완료(2026-09-05). 증거: `.issueops/evidence/task-19-prompt.txt`(Step 1~5 이동), `task-19-verified-execution.txt`. 정리 프롬프트 전체를 옮기고 원본 레퍼런스를 지웠으며, 라우터의 레퍼런스 표에서도 그 행을 뺐다. 스킬 목록이 골든에 들어 있어 골든도 재생성했다.
 
   **Files:**
-  - Create: `skills/issueops-clean/SKILL.md`
-  - Create: `skills/issueops-clean/agents/openai.yaml`
-  - Modify: `skills/verified-execution/SKILL.md:396` (`skills/issueops/references/ai-slop-clean.md` 링크를 `skills/issueops-clean/SKILL.md`로)
+  - Create: `skills/issueops-slop-clean/SKILL.md`
+  - Create: `skills/issueops-slop-clean/agents/openai.yaml`
+  - Modify: `skills/verified-execution/SKILL.md:396` (`skills/issueops/references/ai-slop-clean.md` 링크를 `skills/issueops-slop-clean/SKILL.md`로)
   - Delete: `skills/issueops/references/ai-slop-clean.md` (`git rm`)
 
   **What to do**:
@@ -1737,25 +1737,25 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
   - `skills/code-quality-metrics/SKILL.md`, `skills/verified-execution/SKILL.md:390-400`.
 
   **Acceptance Criteria**:
-  - [ ] `python3 scripts/validate-skill.py skills/issueops-clean`와 `verify-skill-shell.py` 통과.
-  - [ ] `rg -n "ai-slop-clean record|code-quality-metrics|gates-ledger|issueops-docs|CLEANUP_BOUNDARY|stale|verified-execution report" skills/issueops-clean/SKILL.md` 각 1건 이상, `rg -n "issueops-verify" skills/issueops-clean/SKILL.md` 0건.
+  - [ ] `python3 scripts/validate-skill.py skills/issueops-slop-clean`와 `verify-skill-shell.py` 통과.
+  - [ ] `rg -n "ai-slop-clean record|code-quality-metrics|gates-ledger|issueops-docs|CLEANUP_BOUNDARY|stale|verified-execution report" skills/issueops-slop-clean/SKILL.md` 각 1건 이상, `rg -n "issueops-verify" skills/issueops-slop-clean/SKILL.md` 0건.
   - [ ] `test ! -f skills/issueops/references/ai-slop-clean.md`, `rg -n "references/ai-slop-clean" skills/ .issueops --glob '!.issueops/verified-execution/**' --glob '!.issueops/issues/**' --glob '!.issueops/plans/**'` 0건.
 
   **QA Scenarios**:
   ```
   Scenario: 프롬프트 다섯 단계가 이동됨
     Channel: bash
-    Steps: rg -c "Step 1|Step 2|Step 3|Step 4|Step 5" skills/issueops-clean/SKILL.md
+    Steps: rg -c "Step 1|Step 2|Step 3|Step 4|Step 5" skills/issueops-slop-clean/SKILL.md
     Expected: 5
     Evidence: .issueops/evidence/task-19-prompt.txt
   Scenario: verified-execution 링크 교체
     Channel: bash
-    Steps: rg -n "issueops-clean/SKILL.md" skills/verified-execution/SKILL.md
+    Steps: rg -n "issueops-slop-clean/SKILL.md" skills/verified-execution/SKILL.md
     Expected: 1건
     Evidence: .issueops/evidence/task-19-verified-execution.txt
   ```
 
-  **Commit**: YES | `feat(skill): add issueops-clean as the AI slop cleanup stage` | Files: 위 파일
+  **Commit**: YES | `feat(skill): add issueops-slop-clean as the AI slop cleanup stage` | Files: 위 파일
 
 - [x] **T20. `issueops-verify` 신설 (7단계: 검증)** — 완료(2026-09-05). 증거: `.issueops/evidence/task-20-order.txt`, `task-20-exit.txt`. 절 1~4가 번호 순서대로 있고 금지 문자열은 0건이다.
 
@@ -1943,7 +1943,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
   - Create: `skills/gates-ledger/agents/openai.yaml`
 
   **What to do**:
-  1. frontmatter description: "Create, check, and report task gate ledgers with the issueops gates CLI: turn acceptance criteria into G-numbered CHECK and EXPECT gates in `.issueops/issues/<n>/gates.md` or `.issueops/gates/<scope>.md`, fill EVIDENCE by running the checks through the command policy, and abandon gates honestly. Use when `issueops-plan`, `issueops-implement`, `issueops-clean`, `issueops-verify`, or `verified-execution` needs a gate ledger, or when the user says '게이트 원장', 'gates 만들어줘', '수용 기준 체크'."
+  1. frontmatter description: "Create, check, and report task gate ledgers with the issueops gates CLI: turn acceptance criteria into G-numbered CHECK and EXPECT gates in `.issueops/issues/<n>/gates.md` or `.issueops/gates/<scope>.md`, fill EVIDENCE by running the checks through the command policy, and abandon gates honestly. Use when `issueops-plan`, `issueops-implement`, `issueops-slop-clean`, `issueops-verify`, or `verified-execution` needs a gate ledger, or when the user says '게이트 원장', 'gates 만들어줘', '수용 기준 체크'."
   2. 절 순서: `## 경로 규칙` → `## 만들기` → `## 검사` → `## 상태와 보고` → `## 포기` → `## IssueOps와의 관계` → `## 나쁜 예` → `## 검증`.
   3. `## 경로 규칙`: issue 번호가 있으면 `<worktree>/.issueops/issues/<n>/gates.md`, 없으면 `.issueops/gates/<scope>.md`. 같은 번호의 canonical·legacy 원장이 함께 있으면 pr 진입이 `duplicate_issue_artifact:<n>`으로 막힌다(ADR 2026-08-22).
   4. `## 만들기` 코드 블록:
@@ -2161,7 +2161,7 @@ usage: `issueops cleanup abandon --id ID --reason TEXT [--close-pr] [--close-iss
 
 > 전부 APPROVE여야 한다. 결과를 사용자에게 모아 보고하고 명시적 "okay"를 받은 뒤 완료한다.
 
-- [x] F1. Plan Compliance Audit — APPROVE. 미완료 TODO 0건(T18만 사용자 승인 대기로 `[~]`). `ls skills | grep -E '^issueops|^gates-ledger'`가 설계 요약 1·7의 17개와 정확히 일치한다: gates-ledger, issueops, issueops-abandon, issueops-clean, issueops-cleanup, issueops-complete, issueops-create-issue, issueops-create-pr, issueops-docs, issueops-implement, issueops-plan, issueops-prepare, issueops-remote-write, issueops-review, issueops-sync-issue, issueops-sync-pr, issueops-verify.
+- [x] F1. Plan Compliance Audit — APPROVE. 미완료 TODO 0건(T18만 사용자 승인 대기로 `[~]`). `ls skills | grep -E '^issueops|^gates-ledger'`가 설계 요약 1·7의 17개와 정확히 일치한다: gates-ledger, issueops, issueops-abandon, issueops-slop-clean, issueops-cleanup, issueops-complete, issueops-create-issue, issueops-create-pr, issueops-docs, issueops-implement, issueops-plan, issueops-prepare, issueops-remote-write, issueops-review, issueops-sync-issue, issueops-sync-pr, issueops-verify.
 - [x] F2. Code Quality Review — APPROVE. `issueopsnext` vertical 네 층과 CLI·wiring 합계 1,828줄(테스트 포함). 정의만 있고 호출되지 않는 헬퍼 0건, `go vet` 무경고, contract 상수 전부 참조됨. close-pr diff는 두 provider가 각각 하나의 파일(`close_pull_request.go`, `close_merge_request.go`)이며 공통 로직은 기존 `readGh*State`/`runGlabAPI` 층을 재사용한다. `code-quality-metrics` 측정은 생략했다 — 전후 비교 대상인 "정리 전 diff"가 없는 신규 코드이고, 대신 위 세 지표를 관측했다.
 - [x] F3. Real Manual QA — APPROVE. T0b 스파이크 증거 3개(`task-0b-adopt.json`, `task-0b-access.txt`, `task-0b-fingerprint.json`)와 T17 시나리오 4개 로그 모두 존재하고 마지막 줄이 PASS다.
 - [x] F4. Scope Fidelity Check — APPROVE. `git diff main --stat -- internal/contract/issueops/execution.go internal/domain/issueopslease cmd/issueops/hookcli internal/domain/mcp` 0건. `IssueOpsSchemaVersion`은 1 그대로다. record 구조체에 필드를 추가하지 않았고, `types.go`의 변경은 abandon 실패 단계 상수 세 개뿐이다(기존 문자열 필드에 들어가는 값).
