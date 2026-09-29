@@ -45,7 +45,7 @@ Mermaid는 보조 자료다. 규칙·경계·검증 명령은 아래 텍스트�
 
 설치와 host 통합은 SOLID 경계로 나눈다.
 
-- `internal/adapter/install.InstallNative`: 현재 host-neutral 설치 engine. 공통 입력과 skill 목록을 정규화하고 `port.HostInstaller`만 호출한다. 검증된 설치 계약을 유지하면서 신규 use case는 `internal/application/<capability>` vertical을 우선한다.
+- `internal/application/install.Service`: host-neutral 설치 use case. 공통 입력과 skill 목록을 정규화하고 `port.HostInstaller`를 호출한다. root가 `adapter/install.Environment`와 호스트 설치기를 명시적으로 연결한다.
 - `internal/port`: `NativeInstallRequest`, `NativeInstallResult`, `HostInstaller` interface를 정의한다. port는 contract DTO 외의 concrete 내부 구현을 모른다.
 - `internal/adapter/codex`: Codex 구현체. user skill symlink, `~/.codex/config.toml` MCP 등록, `~/.codex/hooks.json` lifecycle hook을 기본 갱신한다.
 - `internal/adapter/claude`: Claude Code 구현체. user skill symlink, user-scope MCP 등록 경로, `~/.claude/settings.json`의 `SessionStart` context hook만 기본 갱신한다.
@@ -201,7 +201,7 @@ self-verify 실행은 root가 저장소 경로와 step adapter를 고정해 `app
 
 ## 현재 hardening 추가 사항
 
-- `internal/port`는 Orca probe/run/worktree/terminal/task/dispatch 역할 interface와 공용 `InstallPlan`을 소유한다. 기존 `OrcaClient` aggregate와 `omo.InstallPlan` alias는 내부 소비자의 type/method-set 호환을 위한 명시적 예외다.
+- `internal/port`는 Orca probe/run/worktree/terminal/task/dispatch 역할 interface와 공용 `InstallPlan`을 소유한다. 기존 `OrcaClient` aggregate는 내부 소비자의 type/method-set 호환을 위한 명시적 예외다. 호스트 설치기는 공용 `InstallPlan`을 직접 사용한다.
 - gates legacy ledger 이름은 persisted schema v1 migration 전까지 유지한다. Orca task payload에는 version 필드가 없으므로 legacy UTC timestamp는 지원 대상 Orca CLI 전부의 `completed_at` readback이 RFC3339Nano임을 확인하고 release contract에서 legacy layout이 제거된 때에만 소스 상수를 올려 닫는다. 시간 경과만으로 호환 경로를 제거하지 않는다.
 - Orca/operational-health fan-out은 bounded `errgroup`을 쓰되 indexed error와 partial finding을 보존한다. `quality inspect`의 5-collector fan-out은 모든 read-only 결과를 오류와 함께 끝까지 회수해야 하므로 조기 취소하지 않는 명시적 예외다. 각 collector는 공유 쓰기 없이 버퍼 1 채널에 정확히 한 번 전송해 수신 순서와 무관하게 종료하며, 한 collector 오류도 나머지 진단을 버리지 않는다. channel wait는 append-only immutable record ID를 한 호출 안에서만 기억하며, cross-process writer 때문에 process-global cache나 in-process notification을 authority로 삼지 않는다.
 - `internal/contract/cli`가 command descriptor와 canonical usage 원문을 소유한다. `internal/adapter/inbound/catalog/cli`는 명령 목록과 도움말을 조합하고 root가 `issueopscli.Dependencies`에 lifecycle·child 도움말을 전달한다. `internal/domain/cli`에는 명령 허용 여부와 usage key를 해석하는 순수 규칙만 둔다. `cmd/issueops/*cli`는 flag/출력/dispatch를 담당하며 `contractcli`는 root가 넘긴 CLI/MCP 목록으로 호환성 계약을 만든다.
@@ -229,3 +229,5 @@ self-verify 실행은 root가 저장소 경로와 step adapter를 고정해 `app
 - API 문서 검사의 root는 `reviewfiles.Files`에 Git 실행기를 연결하고 `application/apidoc.Service`를 CLI `Command`와 `MCPDependencies.APIDoc`에 전달한다. application은 정적 검사 후 리뷰를 실행하며 정적 실패 시 리뷰를 건너뛴다. CLI는 flag·출력을, MCP는 품질 게이트 실패와 I/O 오류의 응답 구분을 담당한다. 파일 모드·리뷰 결과 읽기는 outbound adapter로 옮기고 전역 파일 effect·Git runner·경로 resolver와 runtime 중계 alias를 제거했다. CLI 기본 경로는 구성 시 cwd를 고정하며 host 환경변수로 대체하지 않는다. 명시적 repo는 그대로 전달하고, result 파일은 repo 기준, 명시적 diff·prompt 파일은 프로세스 cwd 기준으로 읽는 기존 계약을 유지한다. staticcheck 중계 패키지는 테스트 전용이며 production은 기존 domain 검사를 직접 사용한다.
 
 - native 설치는 root가 `application/install.Service`와 네 호스트 `Installer` 인스턴스를 직접 구성한다. 각 설치기는 필요한 파일·hook·digest 의존성을 보관하며 같은 인스턴스가 활성화 readback을 수행한다. 전역 host callback·설치 CLI 설정·중복 조립 facade와 사용하지 않는 dependency 필드는 제거했다. `installcli.Command`는 구성 시 고정한 harness/state 경로와 명시적 실행 파일 관측을 사용하고, 준비된 경로 트랜잭션은 적용 시 사용할 symlink 함수를 캡처한다. 기존 명령 파일 채택, host 파일 snapshot, 링크 복구·디렉터리 정리, 단계별 활성화와 upstream 실패의 비치명적 처리는 유지한다. 테스트는 별도의 홈·소스·state 경로에서 네 호스트 설치와 readback, 준비 후 의존성 변경 및 rollback을 검증한다.
+
+- lease inbound의 `ResumeHandler`와 `ReseedHandler`는 application service와 안내 명령 렌더러를 생성자에서 받는다. root가 CLI와 MCP의 공통 실행 핸들러를 구성하며 전역 next-command setter와 초기화 코드는 제거했다. 렌더러가 빠진 구성은 상태 변경 전에 기존 handler-unavailable 오류로 거부한다. 응답의 generation·artifact 전달과 claim token 경로를 노출하지 않는 기존 명령 형식은 유지한다.

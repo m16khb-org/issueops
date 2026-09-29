@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	issueopsadapter "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -19,12 +20,12 @@ func TestNilHandlersFailClosedWithConfiguredErrors(t *testing.T) {
 		t.Fatalf("claim handler err = %v, want ErrClaimHandlerUnavailable", claimErr)
 	}
 
-	_, resumeErr := NewResumeHandler(nil)(ctx, "", issueopscontract.ExecutionResumeRequest{ID: "io-1"})
+	_, resumeErr := NewResumeHandler(nil, nil)(ctx, "", issueopscontract.ExecutionResumeRequest{ID: "io-1"})
 	if !errors.Is(resumeErr, issueopscontract.ErrResumeHandlerUnavailable) {
 		t.Fatalf("resume handler err = %v, want ErrResumeHandlerUnavailable", resumeErr)
 	}
 
-	_, reseedErr := NewReseedHandler(nil)(ctx, "", issueopscontract.ExecutionReseedRequest{ID: "io-1"})
+	_, reseedErr := NewReseedHandler(nil, nil)(ctx, "", issueopscontract.ExecutionReseedRequest{ID: "io-1"})
 	if !errors.Is(reseedErr, issueopscontract.ErrReseedHandlerUnavailable) {
 		t.Fatalf("reseed handler err = %v, want ErrReseedHandlerUnavailable", reseedErr)
 	}
@@ -116,7 +117,7 @@ func TestToCoreLeaseCopiesHolderAndProcessSafely(t *testing.T) {
 }
 
 func TestResumeNextCommandReferencesCycleAndArtifacts(t *testing.T) {
-	command := resumeNextCommand("io-12", 4, leasecontract.ResumeArtifacts{
+	command := (ResumeHandler{nextCommand: issueopsadapter.ExecutionResumeNextCommand}).resumeNextCommand("io-12", 4, leasecontract.ResumeArtifacts{
 		ClaimTokenPath:      "/state/io-12/token",
 		IssueBodySHA256:     "abc",
 		ContextPacketSHA256: "def",

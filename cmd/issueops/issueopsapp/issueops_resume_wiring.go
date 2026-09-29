@@ -28,7 +28,7 @@ func issueOpsResumeHandler(ctx context.Context, stateRoot string, request issueo
 	if err != nil {
 		return issueops.ExecutionResumeResult{ID: request.ID}, err
 	}
-	return leaseinbound.NewResumeHandler(service)(ctx, stateRoot, request)
+	return leaseinbound.NewResumeHandler(service, issueops.ExecutionResumeNextCommand)(ctx, stateRoot, request)
 }
 
 func newIssueOpsResumeService(stateRoot string, provisioner port.ExecutionOrcaProvisioner, owner port.ExecutionOrcaOwnerInspector) (*leaseapp.ResumeService, error) {

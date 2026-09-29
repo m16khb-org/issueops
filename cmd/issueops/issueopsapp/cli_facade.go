@@ -29,7 +29,6 @@ func wireBasicCLIDeps() {
 	configureIssueOpsCleanup()
 	configureIssueOpsRemote()
 	configureIssueOpsOrphanCleanup()
-	configureIssueOpsLeaseNextCommands()
 
 }
 

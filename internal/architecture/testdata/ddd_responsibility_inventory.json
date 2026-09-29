@@ -1128,14 +1128,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/issueopslease_nextcommand_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureIssueOpsLeaseNextCommands"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/loop_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -3867,15 +3859,6 @@
       ]
     },
     {
-      "path": "internal/adapter/inbound/issueopslease/next_command_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ConfigureNextCommands",
-        "type NextCommandDeps"
-      ]
-    },
-    {
       "path": "internal/adapter/inbound/issueopslease/reconcile.go",
       "owner": "adapter",
       "task": "T20",
@@ -3918,8 +3901,8 @@
       "symbols": [
         "func NewResumeHandler",
         "func ResumeHandler.Handle",
+        "func ResumeHandler.resumeNextCommand",
         "func publicResumeError",
-        "func resumeNextCommand",
         "type ResumeHandler"
       ]
     },

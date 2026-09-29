@@ -49,7 +49,7 @@ func issueOpsReseedHandlerWithOwner(ctx context.Context, stateRoot string, reque
 	})
 	baseSync := basesyncoutbound.NewInspector(basesyncoutbound.RunGit)
 	service := leaseapp.NewReseedService(fence, leaseoutbound.NewReseedRepository(db), inventory, baseSync, artifacts, leaseoutbound.UTCClock{}, leaseoutbound.InspectNativeProcess, leaseoutbound.FilesystemPathMatcher{})
-	return leaseinbound.NewReseedHandler(service)(ctx, stateRoot, request)
+	return leaseinbound.NewReseedHandler(service, issueops.ExecutionReseedNextCommand)(ctx, stateRoot, request)
 }
 
 func issueOpsReseedExecution(record leasecontract.Record) (model.Execution, error) {

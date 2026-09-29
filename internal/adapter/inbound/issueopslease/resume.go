@@ -10,14 +10,17 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-type ResumeHandler struct{ service *leaseapp.ResumeService }
+type ResumeHandler struct {
+	service     *leaseapp.ResumeService
+	nextCommand func(id string, generation uint64, claimTokenPath, issueBodySHA256, contextPacketSHA256 string) string
+}
 
-func NewResumeHandler(service *leaseapp.ResumeService) issueopscontract.ExecutionResumeHandler {
-	return ResumeHandler{service: service}.Handle
+func NewResumeHandler(service *leaseapp.ResumeService, nextCommand func(id string, generation uint64, claimTokenPath, issueBodySHA256, contextPacketSHA256 string) string) issueopscontract.ExecutionResumeHandler {
+	return ResumeHandler{service: service, nextCommand: nextCommand}.Handle
 }
 
 func (h ResumeHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
-	if h.service == nil {
+	if h.service == nil || h.nextCommand == nil {
 		return issueopscontract.ExecutionResumeResult{ID: request.ID}, issueopscontract.ErrResumeHandlerUnavailable
 	}
 	result, err := h.service.Resume(ctx, leaseapp.ResumeRequest{ID: request.ID, ExpectedGeneration: request.ExpectedGeneration, Actor: toDomainActor(request.Actor), Ancestry: toProcessAncestry(request.Actor), CWD: request.CWD, Confirm: request.Confirm})
@@ -25,7 +28,7 @@ func (h ResumeHandler) Handle(ctx context.Context, _ string, request issueopscon
 		return issueopscontract.ExecutionResumeResult{ID: request.ID}, publicResumeError(err)
 	}
 	artifacts := result.Receipt.Artifacts
-	return issueopscontract.ExecutionResumeResult{OK: result.OK, ID: result.ID, ResumeDisposition: string(result.Disposition), Execution: toCoreExecution(result.Receipt.Execution), ClaimTokenPath: artifacts.ClaimTokenPath, IssueBodySHA256: artifacts.IssueBodySHA256, ContextPacketPath: artifacts.ContextPacketPath, ContextPacketSHA256: artifacts.ContextPacketSHA256, OwnerPromptPath: artifacts.OwnerPromptPath, OwnerPromptSHA256: artifacts.OwnerPromptSHA256, NextCommand: resumeNextCommand(result.ID, result.Receipt.Execution.Lease.Generation, artifacts)}, nil
+	return issueopscontract.ExecutionResumeResult{OK: result.OK, ID: result.ID, ResumeDisposition: string(result.Disposition), Execution: toCoreExecution(result.Receipt.Execution), ClaimTokenPath: artifacts.ClaimTokenPath, IssueBodySHA256: artifacts.IssueBodySHA256, ContextPacketPath: artifacts.ContextPacketPath, ContextPacketSHA256: artifacts.ContextPacketSHA256, OwnerPromptPath: artifacts.OwnerPromptPath, OwnerPromptSHA256: artifacts.OwnerPromptSHA256, NextCommand: h.resumeNextCommand(result.ID, result.Receipt.Execution.Lease.Generation, artifacts)}, nil
 }
 
 func publicResumeError(err error) error {
@@ -41,6 +44,6 @@ func publicResumeError(err error) error {
 	return failure.Cause
 }
 
-func resumeNextCommand(id string, generation uint64, artifacts leasecontract.ResumeArtifacts) string {
-	return executionResumeNextCommand(id, generation, artifacts.ClaimTokenPath, artifacts.IssueBodySHA256, artifacts.ContextPacketSHA256)
+func (h ResumeHandler) resumeNextCommand(id string, generation uint64, artifacts leasecontract.ResumeArtifacts) string {
+	return h.nextCommand(id, generation, artifacts.ClaimTokenPath, artifacts.IssueBodySHA256, artifacts.ContextPacketSHA256)
 }
