@@ -61,7 +61,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCo
 		return s.fail("self-verify history retention confirm left too many matching summaries")
 	}
 
-	db, err := OpenStateDatabase(input.tempState)
+	db, err := input.deps.openDatabase(input.tempState)
 	if err != nil {
 		return s.fail(err.Error())
 	}

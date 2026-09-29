@@ -51,7 +51,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 	if !promoteDryResult.OK || !promoteDryResult.DryRun || promoteDryResult.Promoted {
 		return session.fail("self-verify promote dry-run mutated state or did not report dry-run")
 	}
-	if _, err := input.deps.stateRead(promotedBaselineKey); err == nil {
+	if _, err := input.deps.stateRead(input.tempState, promotedBaselineKey); err == nil {
 		return session.fail("self-verify promote dry-run wrote baseline unexpectedly")
 	}
 

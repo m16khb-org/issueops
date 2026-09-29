@@ -64,7 +64,15 @@ func (runner ExecGitRunner) Run(ctx context.Context, repo string, args ...string
 }
 
 func canonicalInventoryPath(path string) string {
-	abs := CleanAbsPath(path)
+	abs := strings.TrimSpace(path)
+	if abs != "" && !filepath.IsAbs(abs) {
+		if resolved, err := filepath.Abs(abs); err == nil {
+			abs = resolved
+		}
+	}
+	if abs != "" {
+		abs = filepath.Clean(abs)
+	}
 	if abs == "" {
 		return ""
 	}

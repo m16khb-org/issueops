@@ -14,10 +14,6 @@ import (
 )
 
 func wireBasicCLIDeps() {
-	configureDocsReaders()
-	configureStateStores()
-	configureStateDatabases()
-	configureTail5()
 	configureAdapterTail()
 	configureTailCapabilities()
 	configureInstallReaders()

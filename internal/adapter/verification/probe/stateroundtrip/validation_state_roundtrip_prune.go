@@ -17,7 +17,7 @@ func (s *stateRoundtripStateSession) validatePrune() StepResult {
 		return s.fail(err.Error())
 	}
 	oldWriteResult.Record.UpdatedAt = "2000-01-01T00:00:00Z"
-	if _, err := WriteStateRecord(s.input.tempState, oldKey, oldWriteResult.Record); err != nil {
+	if _, err := s.input.deps.writeRecord(s.input.tempState, oldKey, oldWriteResult.Record); err != nil {
 		return s.fail(err.Error())
 	}
 

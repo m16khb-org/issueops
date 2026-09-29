@@ -13,7 +13,7 @@ func TestValidateStateRoundtripWrapperUsesDefaultSurfaces(t *testing.T) {
 	root := t.TempDir()
 	binary := writeStateRoundtripFakeBinary(t, t.TempDir(), 909)
 
-	step := validateStateRoundtrip(binary, root, 909)
+	step := testValidator().Validate(binary, root, 909)
 	if !step.OK || step.Label != "state roundtrip" {
 		t.Fatalf("expected state roundtrip wrapper success, got %#v", step)
 	}

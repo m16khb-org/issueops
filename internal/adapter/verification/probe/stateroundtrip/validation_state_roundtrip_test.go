@@ -24,7 +24,7 @@ func TestValidateStateRoundtripWithDepsCoversSuccessAndSetupFailure(t *testing.T
 			writes = append(writes, path)
 			return nil
 		},
-		stateRead: func(key string) (statecontract.StateResult, error) {
+		stateRead: func(_ string, key string) (statecontract.StateResult, error) {
 			if strings.HasSuffix(key, "-promoted-baseline") {
 				return statecontract.StateResult{}, errors.New("missing")
 			}
@@ -37,7 +37,7 @@ func TestValidateStateRoundtripWithDepsCoversSuccessAndSetupFailure(t *testing.T
 		},
 	}
 
-	step := validateStateRoundtripWithDeps("bin/issueops", root, 123, deps)
+	step := validateStateRoundtripWithTestDeps("bin/issueops", root, 123, deps)
 	if !step.OK || step.Label != "state roundtrip" || len(calls) != 17 || !strings.Contains(step.Command, "state write") || !strings.Contains(step.Command, "self-verify history") {
 		t.Fatalf("unexpected success step: %#v calls=%v", step, calls)
 	}
@@ -49,7 +49,7 @@ func TestValidateStateRoundtripWithDepsCoversSuccessAndSetupFailure(t *testing.T
 	}
 
 	deps.mkdirTemp = func(_, _ string) (string, error) { return "", errors.New("no temp") }
-	failed := validateStateRoundtripWithDeps("bin", root, 123, deps)
+	failed := validateStateRoundtripWithTestDeps("bin", root, 123, deps)
 	if failed.OK || failed.Label != "state roundtrip" || !strings.Contains(failed.Error, "no temp") {
 		t.Fatalf("expected setup failure, got %#v", failed)
 	}
@@ -64,7 +64,7 @@ func TestValidateStateRoundtripWithDepsCoversCommandParseAndContractFailures(t *
 		}
 		return stateRoundtripStep(t, label, command, validStateRoundtripPayload(t, label, 456))
 	}
-	commandFailure := validateStateRoundtripWithDeps("bin", root, 456, deps)
+	commandFailure := validateStateRoundtripWithTestDeps("bin", root, 456, deps)
 	if commandFailure.OK || !strings.Contains(commandFailure.Error, "read failed") || !strings.Contains(commandFailure.Command, "state read") {
 		t.Fatalf("expected command failure, got %#v", commandFailure)
 	}
@@ -76,7 +76,7 @@ func TestValidateStateRoundtripWithDepsCoversCommandParseAndContractFailures(t *
 		}
 		return stateRoundtripStep(t, label, command, validStateRoundtripPayload(t, label, 456))
 	}
-	parseFailure := validateStateRoundtripWithDeps("bin", root, 456, deps)
+	parseFailure := validateStateRoundtripWithTestDeps("bin", root, 456, deps)
 	if parseFailure.OK || !strings.Contains(parseFailure.Error, "invalid character") {
 		t.Fatalf("expected parse failure, got %#v", parseFailure)
 	}
@@ -89,14 +89,16 @@ func TestValidateStateRoundtripWithDepsCoversCommandParseAndContractFailures(t *
 		}
 		return stateRoundtripStep(t, label, command, payload)
 	}
-	contractFailure := validateStateRoundtripWithDeps("bin", root, 456, deps)
+	contractFailure := validateStateRoundtripWithTestDeps("bin", root, 456, deps)
 	if contractFailure.OK || !strings.Contains(contractFailure.Error, "state prune dry-run did not classify old/fresh keys") {
 		t.Fatalf("expected contract failure, got %#v", contractFailure)
 	}
 
 	deps = stateRoundtripTestDeps(t, 456)
-	deps.stateRead = func(string) (statecontract.StateResult, error) { return statecontract.StateResult{OK: true}, nil }
-	dryRunMutation := validateStateRoundtripWithDeps("bin", root, 456, deps)
+	deps.stateRead = func(string, string) (statecontract.StateResult, error) {
+		return statecontract.StateResult{OK: true}, nil
+	}
+	dryRunMutation := validateStateRoundtripWithTestDeps("bin", root, 456, deps)
 	if dryRunMutation.OK || !strings.Contains(dryRunMutation.Error, "promote dry-run wrote baseline unexpectedly") {
 		t.Fatalf("expected dry-run mutation failure, got %#v", dryRunMutation)
 	}
@@ -143,7 +145,7 @@ func stateRoundtripTestDeps(t *testing.T, seed int64) stateRoundtripValidationDe
 		mkdirTemp: func(_, _ string) (string, error) { return tempState, nil },
 		removeAll: func(string) error { return nil },
 		writeFile: func(string, []byte, os.FileMode) error { return nil },
-		stateRead: func(string) (statecontract.StateResult, error) {
+		stateRead: func(string, string) (statecontract.StateResult, error) {
 			return statecontract.StateResult{}, errors.New("missing")
 		},
 		writeSnapshot: func(string, string, SelfAugmentStateSnapshot) error { return nil },
@@ -225,7 +227,7 @@ func TestValidateStateRoundtripPruneConfirmAndResidueFailures(t *testing.T) {
 		}
 		return stateRoundtripStep(t, label, command, payload)
 	}
-	confirmFailure := validateStateRoundtripWithDeps("bin", root, 789, deps)
+	confirmFailure := validateStateRoundtripWithTestDeps("bin", root, 789, deps)
 	if confirmFailure.OK || !strings.Contains(confirmFailure.Error, "state prune confirm did not delete old key") {
 		t.Fatalf("expected confirm contract failure, got %#v", confirmFailure)
 	}
@@ -239,7 +241,7 @@ func TestValidateStateRoundtripPruneConfirmAndResidueFailures(t *testing.T) {
 		}
 		return stateRoundtripStep(t, label, command, payload)
 	}
-	residue := validateStateRoundtripWithDeps("bin", root, 789, deps)
+	residue := validateStateRoundtripWithTestDeps("bin", root, 789, deps)
 	if residue.OK || !strings.Contains(residue.Error, "state prune did not preserve fresh key and remove old key") {
 		t.Fatalf("expected prune residue failure, got %#v", residue)
 	}

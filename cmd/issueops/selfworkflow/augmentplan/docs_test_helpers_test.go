@@ -3,7 +3,6 @@ package augmentplan
 import (
 	"issueops/internal/adapter/augmentation"
 	"issueops/internal/adapter/docs"
-	qagatecli "issueops/internal/adapter/verification/probe/qagate"
 )
 
 // production wiring과 같은 문서 reader를 설치한다. 이 package의 테스트는 다른
@@ -13,5 +12,4 @@ func init() {
 	Repository = augmentation.Repository{ListDocs: docs.ListDocs}
 	DocsIndex = docs.DocsIndex
 
-	qagatecli.ListDocs = docs.ListDocs
 }

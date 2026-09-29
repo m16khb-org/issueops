@@ -1,7 +1,6 @@
 package probe
 
 import (
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -60,13 +59,6 @@ func failedStep(label string, err error) StepResult {
 	return verifydomain.FailedStep(label, err)
 }
 
-func writeSelfAugmentSnapshotRecord(dir, key string, snapshot SelfAugmentStateSnapshot) error {
-	if WriteSnapshot == nil {
-		return fmt.Errorf("self-verification snapshot writer dependency is required")
-	}
-	return WriteSnapshot(dir, key, snapshot)
-}
-
 func tailWithBudget(s string, max int) (string, bool, int) {
 	return verifydomain.TailWithBudget(s, max)
 }
@@ -92,6 +84,3 @@ func splitLines(s string) []string {
 	}
 	return strings.Split(trimmed, "\n")
 }
-
-// WriteSnapshot is installed by the composition root.
-var WriteSnapshot func(string, string, SelfAugmentStateSnapshot) error

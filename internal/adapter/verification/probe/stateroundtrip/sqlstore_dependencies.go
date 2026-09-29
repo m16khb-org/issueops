@@ -5,8 +5,3 @@ package stateroundtrip
 type StateDatabase interface {
 	Put(bucket, id string, data []byte) error
 }
-
-// 저장소 열기와 존재하는 record 조회는 composition root가 설치한다.
-var (
-	OpenStateDatabase func(dir string) (StateDatabase, error)
-)

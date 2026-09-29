@@ -30,10 +30,12 @@ type SelfAugmentSummary = augmentcontract.SelfAugmentSummary
 type stateRoundtripCommandRunner func(root, label string, timeout time.Duration, input string, env []string, command ...string) StepResult
 
 type stateRoundtripValidationDeps struct {
+	writeRecord   func(string, string, statecontract.RecordEnvelope) (string, error)
+	openDatabase  func(string) (StateDatabase, error)
 	mkdirTemp     func(string, string) (string, error)
 	removeAll     func(string) error
 	writeFile     func(string, []byte, os.FileMode) error
-	stateRead     func(string) (statecontract.StateResult, error)
+	stateRead     func(string, string) (statecontract.StateResult, error)
 	writeSnapshot func(string, string, SelfAugmentStateSnapshot) error
 	run           stateRoundtripCommandRunner
 }
@@ -47,12 +49,6 @@ func (deps stateRoundtripValidationDeps) withDefaults() stateRoundtripValidation
 	}
 	if deps.writeFile == nil {
 		deps.writeFile = os.WriteFile
-	}
-	if deps.stateRead == nil {
-		deps.stateRead = StateRead
-	}
-	if deps.writeSnapshot == nil {
-		deps.writeSnapshot = WriteSnapshot
 	}
 	if deps.run == nil {
 		deps.run = func(root, label string, timeout time.Duration, input string, env []string, command ...string) StepResult {
@@ -93,6 +89,3 @@ func containsString(values []string, want string) bool {
 	}
 	return false
 }
-
-// WriteSnapshot is installed by the composition root.
-var WriteSnapshot func(string, string, SelfAugmentStateSnapshot) error

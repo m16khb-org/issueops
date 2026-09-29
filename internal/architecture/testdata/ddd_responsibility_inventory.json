@@ -652,14 +652,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/docs_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureDocsReaders"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/doctor_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -1220,6 +1212,17 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/probe_state_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newDocsQAProbe",
+        "func newProbeSnapshotStore",
+        "func newStateRoundtripProbe",
+        "func newStepBudgetProbe"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/project_docs_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -1342,27 +1345,11 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/sqlstore_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureStateDatabases"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/state_adapter_wiring.go",
       "owner": "composition",
       "task": "T20",
       "symbols": [
         "func configureAdapterStateAccess"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/state_store_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureStateStores"
       ]
     },
     {
@@ -1381,14 +1368,6 @@
       "task": "T20",
       "symbols": [
         "func newStatusService"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/tail5_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureTail5"
       ]
     },
     {
@@ -1463,11 +1442,7 @@
         "func validateNativeIntegration",
         "func validateParallelTempIsolation",
         "func validatePreflightFuzz",
-        "func validateQAGate",
-        "func validateRedactionAudit",
         "func validateSelfVerifyCandidateExport",
-        "func validateStateRoundtrip",
-        "func validateStepBudgetBaseline",
         "func validateToolConformance",
         "func validateWebFetchBattery",
         "func validateWorkerLifecycle"
@@ -5544,12 +5519,6 @@
       ]
     },
     {
-      "path": "internal/adapter/operationalhealth/tail5_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/operationalhealth/task_timestamp.go",
       "owner": "adapter",
       "task": "T15",
@@ -6506,6 +6475,7 @@
         "func CoverageCachePath",
         "func CoverageFingerprint",
         "func DefaultCoverageCacheBase",
+        "func ExecuteGoTestCoverage",
         "func NewBoundedQualityBuffer",
         "func RunGoTestCoverage",
         "func coverageEnvironmentFingerprint",
@@ -7708,7 +7678,6 @@
         "func runCommandStepEnvWithBudget",
         "func splitLines",
         "func tailWithBudget",
-        "func writeSelfAugmentSnapshotRecord",
         "type SelfAugmentCompareResult",
         "type SelfAugmentSlowStepRegression",
         "type SelfAugmentStateCheckpoint",
@@ -7740,13 +7709,9 @@
         "func ValidateHarnessInvariants",
         "func ValidateInspect",
         "func ValidateInstallDryRunSmoke",
-        "func ValidateMermaidDocs",
         "func ValidateNativeIntegration",
         "func ValidateParallelTempIsolation",
         "func ValidatePreflightFuzz",
-        "func ValidateQAGate",
-        "func ValidateRedactionAudit",
-        "func ValidateStateRoundtrip",
         "func ValidateWebFetchBattery",
         "func ValidateWorkerLifecycleSmoke"
       ]
@@ -8019,13 +7984,12 @@
       "path": "internal/adapter/verification/probe/qagate/docs_dependencies.go",
       "owner": "adapter",
       "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/verification/probe/qagate/install_dependencies.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": []
+      "symbols": [
+        "func Validator.MermaidDocs",
+        "func Validator.RedactionAudit",
+        "func Validator.Validate",
+        "type Validator"
+      ]
     },
     {
       "path": "internal/adapter/verification/probe/qagate/validation_docs_deps.go",
@@ -8045,7 +8009,6 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func ValidateMermaidDocs",
         "func validateMermaidDocsWithDeps"
       ]
     },
@@ -8063,7 +8026,6 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func ValidateQAGate",
         "func validateQAGateWithDeps"
       ]
     },
@@ -8073,10 +8035,8 @@
       "task": "T18",
       "symbols": [
         "func FindUnredactedSecretLike",
-        "func ValidateRedactionAudit",
         "func findUnredactedSecretLike",
         "func lineContainsAllowedSecretPlaceholder",
-        "func redactionAuditFiles",
         "func redactionAuditFilesWithDeps",
         "func validateRedactionAuditWithDeps"
       ]
@@ -8124,15 +8084,16 @@
       "path": "internal/adapter/verification/probe/stateroundtrip/state_dependencies.go",
       "owner": "adapter",
       "task": "T18",
-      "symbols": []
+      "symbols": [
+        "func Validator.Validate",
+        "type Validator"
+      ]
     },
     {
       "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip.go",
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func Validate",
-        "func validateStateRoundtrip",
         "func validateStateRoundtripWithDeps"
       ]
     },
@@ -8232,7 +8193,6 @@
         "func StepBudgetStateSnapshot",
         "func StepBudgetValidationDeps.withDefaults",
         "func StepBudgetValidationErrors",
-        "func ValidateStepBudgetBaseline",
         "func ValidateStepBudgetBaselineWithDeps",
         "func containsString",
         "type SelfAugmentCompareResult",
@@ -8353,10 +8313,7 @@
       "task": "T18",
       "symbols": [
         "func findUnredactedSecretLike",
-        "func lintMermaidBlocks",
-        "func validateMermaidDocs",
-        "func validateQAGate",
-        "func validateRedactionAudit"
+        "func lintMermaidBlocks"
       ]
     },
     {
@@ -8366,27 +8323,6 @@
       "symbols": [
         "func validateDocsIndex",
         "func validateInspect"
-      ]
-    },
-    {
-      "path": "internal/adapter/verification/probe/validation_state_roundtrip_facade.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": [
-        "func validateStateRoundtrip"
-      ]
-    },
-    {
-      "path": "internal/adapter/verification/probe/validation_step_budget_facade.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": [
-        "func StepBudgetBaselineSummaries",
-        "func StepBudgetStateSnapshot",
-        "func StepBudgetValidationErrors",
-        "func ValidateStepBudgetBaseline",
-        "func ValidateStepBudgetBaselineWithDeps",
-        "type StepBudgetValidationDeps"
       ]
     },
     {

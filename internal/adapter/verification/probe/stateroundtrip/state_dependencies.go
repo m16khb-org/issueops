@@ -1,12 +1,14 @@
 package stateroundtrip
 
-import (
-	statecontract "issueops/internal/contract/state"
-)
+import statecontract "issueops/internal/contract/state"
 
-// issueops state 접근은 composition root가 설치한다. transport는 state를 어디에
-// 어떻게 저장하는지 알지 않는다.
-var (
-	StateRead        func(key string) (statecontract.StateResult, error)
-	WriteStateRecord func(dir, key string, record statecontract.RecordEnvelope) (string, error)
-)
+type Validator struct {
+	StateRead     func(string, string) (statecontract.StateResult, error)
+	WriteRecord   func(string, string, statecontract.RecordEnvelope) (string, error)
+	WriteSnapshot func(string, string, SelfAugmentStateSnapshot) error
+	OpenDatabase  func(string) (StateDatabase, error)
+}
+
+func (v Validator) Validate(binary, root string, seed int64) StepResult {
+	return validateStateRoundtripWithDeps(binary, root, seed, stateRoundtripValidationDeps{stateRead: v.StateRead, writeRecord: v.WriteRecord, writeSnapshot: v.WriteSnapshot, openDatabase: v.OpenDatabase})
+}

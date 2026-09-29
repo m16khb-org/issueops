@@ -3,6 +3,7 @@ package augmentplan
 import (
 	"time"
 
+	"issueops/internal/adapter/install"
 	app "issueops/internal/application/selfaugment"
 	contract "issueops/internal/contract/selfaugment"
 	port "issueops/internal/port/selfaugment"
@@ -14,6 +15,6 @@ type Result = contract.SelfAugmentPlanResult
 var Repository port.PlanRepository
 
 func planner() app.Planner {
-	return app.Planner{Repository: Repository, DocsIndex: DocsIndex, ListSkillNames: ListSkillNames, StateList: StateList, StateRead: StateRead, Now: time.Now}
+	return app.Planner{Repository: Repository, DocsIndex: DocsIndex, ListSkillNames: install.ListSkillNames, StateList: StateList, StateRead: StateRead, Now: time.Now}
 }
 func Plan(req Request, root, version string) Result { return planner().Plan(req, root, version) }

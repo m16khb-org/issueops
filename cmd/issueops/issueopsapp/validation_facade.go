@@ -24,10 +24,6 @@ func validateMCP(binary, root string) StepResult {
 	return probe.ValidateMCP(binary, root)
 }
 
-func validateStateRoundtrip(binary, root string, seed int64) StepResult {
-	return probe.ValidateStateRoundtrip(binary, root, seed)
-}
-
 func validateInstallDryRunSmoke(binary, root string, seed int64) StepResult {
 	return probe.ValidateInstallDryRunSmoke(binary, root, seed)
 }
@@ -68,24 +64,12 @@ func validateSelfVerifyCandidateExport(binary, root string, seed int64) StepResu
 	return probe.ValidateSelfVerifyCandidateExport(binary, root, seed)
 }
 
-func validateStepBudgetBaseline(binary, root string, seed int64) StepResult {
-	return probe.ValidateStepBudgetBaseline(binary, root, seed)
-}
-
-func validateRedactionAudit(root string) StepResult {
-	return probe.ValidateRedactionAudit(root)
-}
-
 func validateGoFormat(root string) StepResult {
 	return selfverifyapp.ValidateFormat(root, selfverifyapp.FormatDeps{
 		ListTrackedGoFiles: verification.ListTrackedGoFiles,
 		ListUnformatted:    verification.ListUnformatted,
 		Now:                time.Now,
 	})
-}
-
-func validateQAGate(root string) StepResult {
-	return probe.ValidateQAGate(root)
 }
 
 func validateHarnessInvariants(root string) StepResult {

@@ -24,12 +24,6 @@ func (deps docsValidationDeps) withDefaults() docsValidationDeps {
 	if deps.readFile == nil {
 		deps.readFile = os.ReadFile
 	}
-	if deps.listDocs == nil {
-		deps.listDocs = ListDocs
-	}
-	if deps.listSkills == nil {
-		deps.listSkills = ListSkillNames
-	}
 	if deps.exists == nil {
 		deps.exists = exists
 	}

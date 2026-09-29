@@ -20,10 +20,6 @@ var secretMaterialPatterns = []struct {
 	{name: "secret_assignment", re: regexp.MustCompile(`(?i)\b(token|secret|password|api[_-]?key|access[_-]?key)\s*[:=]\s*["']?([^\s"',}]+)`)},
 }
 
-func ValidateRedactionAudit(root string) StepResult {
-	return validateRedactionAuditWithDeps(root, docsValidationDeps{})
-}
-
 func validateRedactionAuditWithDeps(root string, deps docsValidationDeps) StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
@@ -43,10 +39,6 @@ func validateRedactionAuditWithDeps(root string, deps docsValidationDeps) StepRe
 		}
 	}
 	return assertionStep("redaction audit", started, errs)
-}
-
-func redactionAuditFiles(root string) []string {
-	return redactionAuditFilesWithDeps(root, docsValidationDeps{})
 }
 
 func redactionAuditFilesWithDeps(root string, deps docsValidationDeps) []string {

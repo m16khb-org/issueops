@@ -2,10 +2,6 @@ package qagate
 
 import "path/filepath"
 
-func ValidateMermaidDocs(root string) []string {
-	return validateMermaidDocsWithDeps(root, docsValidationDeps{})
-}
-
 func validateMermaidDocsWithDeps(root string, deps docsValidationDeps) []string {
 	deps = deps.withDefaults()
 	errs := []string{}

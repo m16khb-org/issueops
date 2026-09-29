@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"fmt"
+	"issueops/internal/adapter/verification/probe/stepbudget"
 	"os"
 	"path/filepath"
 	"time"
@@ -75,16 +76,21 @@ func selfVerifyLoopDeps(root string) app.LoopDeps {
 }
 
 func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
+	stateProbe := newStateRoundtripProbe()
+	budgetProbe := newStepBudgetProbe()
+	docsProbe := newDocsQAProbe()
 	return app.SelfVerifyStepDeps{
-		IssueOpsRoot:                    func() string { return root },
-		RunCommandStep:                  runCommandStepAdapter,
-		ValidateHarnessInvariants:       validateHarnessInvariants,
-		ValidateGoFormat:                validateGoFormat,
-		ValidateRiskQATier:              validateRiskQATierEvidence,
-		ValidateInspect:                 validateInspect,
-		ValidateDocsIndex:               validateDocsIndex,
-		ValidateSelfVerifyCandidate:     validateSelfVerifyCandidateExport,
-		ValidateStepBudgetBaseline:      validateStepBudgetBaseline,
+		IssueOpsRoot:                func() string { return root },
+		RunCommandStep:              runCommandStepAdapter,
+		ValidateHarnessInvariants:   validateHarnessInvariants,
+		ValidateGoFormat:            validateGoFormat,
+		ValidateRiskQATier:          validateRiskQATierEvidence,
+		ValidateInspect:             validateInspect,
+		ValidateDocsIndex:           validateDocsIndex,
+		ValidateSelfVerifyCandidate: validateSelfVerifyCandidateExport,
+		ValidateStepBudgetBaseline: func(binary, root string, seed int64) StepResult {
+			return stepbudget.ValidateStepBudgetBaselineWithDeps(binary, root, seed, budgetProbe)
+		},
 		ValidateInstallDryRunSmoke:      validateInstallDryRunSmoke,
 		ValidateCommandPolicy:           validateCommandPolicy,
 		ValidateCommandAudit:            validateCommandAudit,
@@ -92,14 +98,14 @@ func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
 		ValidateToolConformance:         validateToolConformance,
 		ValidateWorkerLifecycle:         validateWorkerLifecycle,
 		ValidateMCP:                     validateMCP,
-		ValidateStateRoundtrip:          validateStateRoundtrip,
+		ValidateStateRoundtrip:          stateProbe.Validate,
 		ValidateParallelTempIsolation:   validateParallelTempIsolation,
 		ValidateDaemonRestartResilience: validateDaemonRestartResilience,
 		ValidatePreflightFuzz:           validatePreflightFuzz,
 		ValidateWebFetchBattery:         validateWebFetchBattery,
 		ValidateNativeIntegration:       validateNativeIntegration,
-		ValidateRedactionAudit:          validateRedactionAudit,
-		ValidateQAGate:                  validateQAGate,
+		ValidateRedactionAudit:          docsProbe.RedactionAudit,
+		ValidateQAGate:                  docsProbe.Validate,
 	}
 }
 

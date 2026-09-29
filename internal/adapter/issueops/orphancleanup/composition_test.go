@@ -3,7 +3,6 @@ package orphancleanup
 import (
 	"context"
 	adapter "issueops/internal/adapter/issueops"
-	pathadapter "issueops/internal/adapter/issueops/pathutil"
 	healthadapter "issueops/internal/adapter/operationalhealth"
 	app "issueops/internal/application/issueopscleanup"
 	model "issueops/internal/contract/issueops"
@@ -20,9 +19,6 @@ type Dependencies struct {
 	VerifyMerged func(model.IssueOpsRemoteArtifactVerification) error
 }
 
-func init() {
-	healthadapter.CleanAbsPath = pathadapter.CleanAbsPath
-}
 func cleaner(deps Dependencies) app.OrphanCleaner {
 	environment := adapter.OrphanEnvironment{StateRoot: adapter.IssueOpsStateRoot()}
 	collector := healthadapter.Collector{Git: environment, IssueOps: healthadapter.IssueOpsReader{StateRoot: environment.StateRoot, ListIDs: adapter.ListIssueOpsIDs, ListLeaseHolders: adapter.ListLeaseHolderIndexes, Read: adapter.ReadIssueOpsExisting}, InspectNativeProcess: adapter.InspectNativeProcessReceipt}

@@ -47,19 +47,12 @@ func (deps StepBudgetValidationDeps) withDefaults() StepBudgetValidationDeps {
 	if deps.RemoveAll == nil {
 		deps.RemoveAll = os.RemoveAll
 	}
-	if deps.WriteSnapshot == nil {
-		deps.WriteSnapshot = WriteSnapshot
-	}
 	if deps.Run == nil {
 		deps.Run = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
 			return verification.RunEnv(dir, label, timeout, stdin, env, commandOutputBudgetBytes, name, args...)
 		}
 	}
 	return deps
-}
-
-func ValidateStepBudgetBaseline(binary, root string, seed int64) StepResult {
-	return ValidateStepBudgetBaselineWithDeps(binary, root, seed, StepBudgetValidationDeps{})
 }
 
 func ValidateStepBudgetBaselineWithDeps(binary, root string, seed int64, deps StepBudgetValidationDeps) StepResult {
@@ -184,6 +177,3 @@ func StepBudgetValidationErrors(result SelfAugmentCompareResult) []string {
 	}
 	return errs
 }
-
-// WriteSnapshot is installed by the composition root.
-var WriteSnapshot func(string, string, SelfAugmentStateSnapshot) error

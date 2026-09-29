@@ -18,10 +18,6 @@ func ValidateWorkerLifecycleSmoke(binary, root string, seed int64) StepResult {
 	return ValidateWorkerLifecycle(binary, root, seed)
 }
 
-func ValidateStateRoundtrip(binary, root string, seed int64) StepResult {
-	return validateStateRoundtrip(binary, root, seed)
-}
-
 func ValidateParallelTempIsolation(binary, root string, seed int64) StepResult {
 	return validateParallelTempIsolation(binary, root, seed)
 }
@@ -50,16 +46,8 @@ func ValidateDocsIndex(binary, root string) StepResult {
 	return validateDocsIndex(binary, root)
 }
 
-func ValidateRedactionAudit(root string) StepResult {
-	return validateRedactionAudit(root)
-}
-
 func ValidateGoFormat(root string) StepResult {
 	return goformat.Validate(root)
-}
-
-func ValidateQAGate(root string) StepResult {
-	return validateQAGate(root)
 }
 
 func ValidateNativeIntegration(root string) StepResult {
@@ -72,10 +60,6 @@ func DetectClaudeMCPDuplicateWarnings(output string) []ClaudeMCPDuplicateWarning
 
 func ClaudeMCPDuplicateWarningFixture() string {
 	return nativeintegration.ClaudeMCPDuplicateWarningFixture()
-}
-
-func ValidateMermaidDocs(root string) []string {
-	return validateMermaidDocs(root)
 }
 
 func LintMermaidBlocks(relPath, text string) []string {

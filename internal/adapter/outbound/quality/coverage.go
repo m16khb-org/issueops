@@ -45,7 +45,7 @@ const coverageFingerprintFileLimit = 64 * 1024 * 1024
 const coverageFingerprintTotalFileLimit = 512 * 1024 * 1024
 const coverageFingerprintFileCountLimit = 10_000
 
-var ExecuteGoTestCoverage = func(ctx context.Context, root string) (string, error) {
+func ExecuteGoTestCoverage(ctx context.Context, root string) (string, error) {
 	cmd := exec.CommandContext(ctx, "go", "test", "-cover", "./...")
 	cmd.Dir = root
 	out := NewBoundedQualityBuffer(CoverageCommandOutputLimit)
