@@ -7,8 +7,11 @@ import (
 	"time"
 
 	issueopscore "issueops/internal/adapter/issueops"
+	"issueops/internal/adapter/issueops/implementation"
 	branchapp "issueops/internal/application/issueopsbranch"
+	reviewapp "issueops/internal/application/issueopsreview"
 	issueopscontract "issueops/internal/contract/issueops"
+	reviewport "issueops/internal/port/issueopsreview"
 )
 
 // IssueOps CLI는 사이클 저장소 구현을 알지 않는다. 어댑터를 아는 곳은
@@ -78,13 +81,19 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		RecordIssueOpsDesignReviewWithActor:         issueopscore.RecordIssueOpsDesignReviewWithActor,
 		RecordIssueOpsDevilsAdvocateReviewWithActor: issueopscore.RecordIssueOpsDevilsAdvocateReviewWithActor,
 		RecordIssueOpsDomainReviewWithActor:         issueopscore.RecordIssueOpsDomainReviewWithActor,
-		RecordIssueOpsImplementationReviewWithActor: issueopscore.RecordIssueOpsImplementationReviewWithActor,
-		RecordIssueOpsProjectDocsReviewWithActor:    issueopscore.RecordIssueOpsProjectDocsReviewWithActor,
-		RecordIssueOpsSchemaEvidenceWithActor:       issueopscore.RecordIssueOpsSchemaEvidenceWithActor,
-		RecordIssueOpsIntentWithActor:               issueopscore.RecordIssueOpsIntentWithActor,
-		RecordIssueOpsPlanPrepWithActor:             issueopscore.RecordIssueOpsPlanPrepWithActor,
-		RecordIssueOpsRoutingWithActor:              routing.Record,
-		RegressIssueOpsForReplanWithActor:           issueopscore.RegressIssueOpsForReplanWithActor,
+		RecordIssueOpsImplementationReviewWithActor: func(root, id string, req issueopscontract.IssueOpsImplementationReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.RecordImplementationReview(issueopscore.NewEvidenceReviewStore(&actor, implementation.ChangeFingerprint), root, id, req)
+		},
+		RecordIssueOpsProjectDocsReviewWithActor: func(root, id string, req issueopscontract.IssueOpsProjectDocsReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.RecordProjectDocsReview(reviewport.ProjectDocsReviewStore{EvidenceReviewStore: issueopscore.NewEvidenceReviewStore(&actor, implementation.ChangeFingerprint), ChangedPaths: implementation.ChangedPaths, Root: issueopscore.ReviewDocumentPaths{}.Root, RelativePath: issueopscore.ReviewDocumentPaths{}.RelativePath, FileExists: issueopscore.ReviewDocumentPaths{}.FileExists}, root, id, req)
+		},
+		RecordIssueOpsSchemaEvidenceWithActor: func(root, id string, req issueopscontract.IssueOpsSchemaEvidenceRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.RecordSchemaEvidence(issueopscore.NewEvidenceReviewStore(&actor, implementation.ChangeFingerprint), root, id, req)
+		},
+		RecordIssueOpsIntentWithActor:     issueopscore.RecordIssueOpsIntentWithActor,
+		RecordIssueOpsPlanPrepWithActor:   issueopscore.RecordIssueOpsPlanPrepWithActor,
+		RecordIssueOpsRoutingWithActor:    routing.Record,
+		RegressIssueOpsForReplanWithActor: issueopscore.RegressIssueOpsForReplanWithActor,
 		RejectIssueOpsChildWithActor: func(root, parentID, childID, reason string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
 			return newChildValidator(root).Reject(context.Background(), parentID, childID, reason, evidence, &actor)
 		},

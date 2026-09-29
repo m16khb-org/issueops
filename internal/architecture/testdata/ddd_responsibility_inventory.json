@@ -4927,18 +4927,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_implementation_review.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func RecordIssueOpsImplementationReview",
-        "func RecordIssueOpsImplementationReviewWithActor",
-        "func implementationReviewMissing",
-        "func recordIssueOpsImplementationReview",
-        "func reviewEvidenceStore"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_ledger_recorders.go",
       "owner": "adapter",
       "task": "T03",
@@ -5034,20 +5022,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_project_docs_review.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func RecordIssueOpsProjectDocsReview",
-        "func RecordIssueOpsProjectDocsReviewWithActor",
-        "func normalizeProjectDocPaths",
-        "func normalizeReviewedDocPaths",
-        "func projectDocsReviewMissing",
-        "func recordIssueOpsProjectDocsReview",
-        "func relativeChangePath"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_readiness.go",
       "owner": "adapter",
       "task": "T04",
@@ -5083,19 +5057,6 @@
       "symbols": [
         "func ReviewMetrics",
         "type ReviewMetricsDeps"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_schema_evidence.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func RecordIssueOpsSchemaEvidence",
-        "func RecordIssueOpsSchemaEvidenceWithActor",
-        "func pathIsSchemaChange",
-        "func recordIssueOpsSchemaEvidence",
-        "func schemaEvidenceMissing",
-        "func schemaEvidenceMissingForPaths"
       ]
     },
     {
@@ -5251,6 +5212,25 @@
         "func RemoteRecordStore.Update",
         "func RemoteRecordStore.WithinTransaction",
         "type RemoteRecordStore"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/review_document_paths.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ReviewDocumentPaths.FileExists",
+        "func ReviewDocumentPaths.RelativePath",
+        "func ReviewDocumentPaths.Root",
+        "type ReviewDocumentPaths"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/review_evidence_store.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func NewEvidenceReviewStore"
       ]
     },
     {
@@ -9966,7 +9946,9 @@
       "owner": "application",
       "task": "T03",
       "symbols": [
-        "func RecordProjectDocsReview"
+        "func RecordProjectDocsReview",
+        "func normalizeReviewedDocuments",
+        "func normalizeUpdatedDocuments"
       ]
     },
     {
@@ -15016,6 +14998,16 @@
       "symbols": [
         "func HasLinkedReviewPlan",
         "func StagedReviewPlanDigest"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsreview/project_docs_paths.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func ValidateReviewedDocumentExists",
+        "func ValidateReviewedDocumentPath",
+        "func ValidateUpdatedDocumentPath"
       ]
     },
     {
@@ -24742,6 +24734,60 @@
         "TestCanonicalWorktreeLocationAndIdentityPolicy",
         "TestWorktreeBranchPriorityAndShortCircuit",
         "TestPrepareCreatesCanonicalWorktreeOnConfirm"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "review-document-path-updated",
+      "source_path": "internal/adapter/issueops/issueops_project_docs_review.go",
+      "source_symbol": "func normalizeProjectDocPaths",
+      "responsibility": "Require updated documents to be normalized inside the worktree and present in the observed change set",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func ValidateUpdatedDocumentPath",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project-docs-review record"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreview/project_docs_paths_test.go",
+        "internal/application/issueopsreview/project_docs_ownership_test.go",
+        "cmd/issueops/issueopsapp/issueops_evidence_review_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "review-document-path-reviewed",
+      "source_path": "internal/adapter/issueops/issueops_project_docs_review.go",
+      "source_symbol": "func normalizeReviewedDocPaths",
+      "responsibility": "Require reviewed paths to be project documents inside a known worktree before filesystem access",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func ValidateReviewedDocumentPath",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project-docs-review record"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreview/project_docs_paths_test.go",
+        "internal/application/issueopsreview/project_docs_ownership_test.go",
+        "cmd/issueops/issueopsapp/issueops_evidence_review_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "review-document-path-exists",
+      "source_path": "internal/adapter/issueops/issueops_project_docs_review.go",
+      "source_symbol": "func normalizeReviewedDocPaths",
+      "responsibility": "Reject missing or directory-only reviewed documents",
+      "target": "internal/domain/issueopsreview",
+      "target_symbol": "func ValidateReviewedDocumentExists",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project-docs-review record"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsreview/project_docs_paths_test.go",
+        "internal/application/issueopsreview/project_docs_ownership_test.go",
+        "cmd/issueops/issueopsapp/issueops_evidence_review_wiring_test.go"
       ],
       "status": "migrated"
     }

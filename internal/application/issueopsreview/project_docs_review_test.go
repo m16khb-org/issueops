@@ -25,14 +25,13 @@ func TestRecordProjectDocsReviewObservesPathsBeforeLockAndWritesOnce(t *testing.
 			},
 			Now: func() string { return at },
 		},
-		NormalizeDocs: func(_ model.IssueOpsRecord, docs []string) ([]string, error) {
-			order = append(order, "docs")
-			return docs, nil
+		ChangedPaths: func(model.IssueOpsRecord) []string {
+			t.Fatal("no-change review must not enumerate changed paths")
+			return nil
 		},
-		NormalizeReviewedDocs: func(_ model.IssueOpsRecord, docs []string) ([]string, error) {
-			order = append(order, "reviewed")
-			return docs, nil
-		},
+		Root:         func(model.IssueOpsRecord) string { return "/repo.worktrees/run" },
+		RelativePath: func(_ string, path string) string { order = append(order, "reviewed"); return path },
+		FileExists:   func(string, string) bool { order = append(order, "file"); return true },
 	}
 	out, err := RecordProjectDocsReview(store, "state", record.ID, model.IssueOpsProjectDocsReviewRequest{
 		Verdict: " NO-CHANGE ", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{" read "},
@@ -40,7 +39,7 @@ func TestRecordProjectDocsReviewObservesPathsBeforeLockAndWritesOnce(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.Join(order, ","); got != "read,observe,docs,reviewed,lock,read,authority,write" {
+	if got := strings.Join(order, ","); got != "read,observe,reviewed,file,lock,read,authority,write" {
 		t.Fatalf("effect order = %q", got)
 	}
 	if out.ProjectDocsReview == nil || out.ProjectDocsReview.Verdict != "no-change" ||
@@ -51,7 +50,6 @@ func TestRecordProjectDocsReviewObservesPathsBeforeLockAndWritesOnce(t *testing.
 
 func TestRecordProjectDocsReviewDefersPathErrorUntilAfterAuthority(t *testing.T) {
 	record := model.IssueOpsRecord{ID: "io-docs", Phase: model.IssueOpsPhaseImplement, WorktreePath: "/repo.worktrees/run"}
-	pathErr := errors.New("path outside worktree")
 	authorityErr := errors.New("no current holder")
 	writes := 0
 	store := reviewport.ProjectDocsReviewStore{
@@ -63,8 +61,10 @@ func TestRecordProjectDocsReviewDefersPathErrorUntilAfterAuthority(t *testing.T)
 			Write:            func(_ string, next model.IssueOpsRecord) (model.IssueOpsRecord, error) { writes++; return next, nil },
 			Now:              func() string { return "2026-09-25T00:00:00Z" },
 		},
-		NormalizeDocs:         func(_ model.IssueOpsRecord, docs []string) ([]string, error) { return nil, pathErr },
-		NormalizeReviewedDocs: func(_ model.IssueOpsRecord, docs []string) ([]string, error) { return docs, nil },
+		ChangedPaths: func(model.IssueOpsRecord) []string { return nil },
+		Root:         func(model.IssueOpsRecord) string { return "/repo.worktrees/run" },
+		RelativePath: func(string, string) string { return "" },
+		FileExists:   func(string, string) bool { t.Fatal("invalid path must not touch filesystem"); return false },
 	}
 	_, err := RecordProjectDocsReview(store, "state", record.ID, model.IssueOpsProjectDocsReviewRequest{
 		Verdict: "updated", Docs: []string{"../outside"}, Evidence: []string{"updated"},

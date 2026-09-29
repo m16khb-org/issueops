@@ -209,7 +209,7 @@ func recordIssueOpsCoreProjectDocsReviewForCLITest(t *testing.T, id string) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := issueopscore.RecordIssueOpsProjectDocsReviewWithActor(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsProjectDocsReviewRequest{
+	if _, err := recordProjectDocsReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsProjectDocsReviewRequest{
 		Verdict:      "no-change",
 		ReviewedDocs: []string{".issueops/CAUTIONS.md"},
 		Evidence:     []string{"이 변경은 운영 문서에 남길 결정을 만들지 않는다"},
@@ -226,7 +226,7 @@ func recordIssueOpsCoreImplementationReviewForCLITest(t *testing.T, id string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsImplementationReviewWithActor(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsImplementationReviewRequest{
+	if _, err := recordImplementationReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsImplementationReviewRequest{
 		Verdict:      "pass",
 		Findings:     []string{"변경 범위가 이슈 계약을 넘지 않는다"},
 		Evidence:     []string{"go test ./cmd/issueops/issueopscli -count=1"},

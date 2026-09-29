@@ -23,7 +23,7 @@ func RecordIssueOpsSchemaEvidenceWithActor(stateRoot, id string, req IssueOpsSch
 }
 
 func recordIssueOpsSchemaEvidence(stateRoot, id string, req IssueOpsSchemaEvidenceRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.RecordSchemaEvidence(reviewEvidenceStore(actor), stateRoot, id, req)
+	return reviewapp.RecordSchemaEvidence(NewEvidenceReviewStore(actor, implementation.ChangeFingerprint), stateRoot, id, req)
 }
 
 // schemaEvidenceMissing은 변경 집합에 스키마 파일이 있을 때만 활성화되는

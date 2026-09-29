@@ -34,8 +34,10 @@ type EvidenceReviewStore struct {
 
 type ProjectDocsReviewStore struct {
 	EvidenceReviewStore
-	NormalizeDocs         func(model.IssueOpsRecord, []string) ([]string, error)
-	NormalizeReviewedDocs func(model.IssueOpsRecord, []string) ([]string, error)
+	ChangedPaths func(model.IssueOpsRecord) []string
+	Root         func(model.IssueOpsRecord) string
+	RelativePath func(string, string) string
+	FileExists   func(string, string) bool
 }
 
 type ReviewMutationStore struct {
