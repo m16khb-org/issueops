@@ -29,19 +29,6 @@ func ResolveExecutionPreparationWorkspace(snapshot preparationcontract.Snapshot,
 	}, nil
 }
 
-// ValidateExecutionPreparationOrcaProbe keeps branch authority validation on
-// the current durable record immediately before external preparation.
-func ValidateExecutionPreparationOrcaProbe(stateRoot, id string, request preparationcontract.ProbeRequest) (string, error) {
-	record, err := ReadIssueOps(stateRoot, id)
-	if err != nil {
-		return "orca_branch_precheck_failed", err
-	}
-	if err := ensureOrcaBranchIsFree(record, request.Workspace.Branch); err != nil {
-		return "orca_branch_name_taken", err
-	}
-	return "", nil
-}
-
 func ReadExecutionPreparationOwnerEvidence(ctx context.Context, stateRoot string, snapshot preparationcontract.Snapshot, readIssue ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerEvidence, error) {
 	record, err := executionPreparationCoreRecord(snapshot)
 	if err != nil {

@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+	branchpreflight "issueops/internal/adapter/preflight"
 	"time"
 
 	core "issueops/internal/adapter/issueops"
@@ -14,7 +15,7 @@ import (
 func startChildWithActorForTest(root string, req model.IssueOpsChildStartRequest, actor model.IssueOpsActor) (model.IssueOpsChildStartResult, error) {
 	starter := delegationapp.ChildStarter{
 		Records:   core.ChildCycleStore{CycleRecordStore: core.CycleRecordStore{StateRoot: root}},
-		Identity:  core.CycleStartIdentity{},
+		Identity:  core.CycleStartIdentity{RunGit: branchpreflight.GitCmd},
 		Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same),
 		Links:     issueLinkerForTest(root),
 		Now:       time.Now,

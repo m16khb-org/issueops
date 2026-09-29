@@ -8,5 +8,5 @@ import (
 )
 
 func startIssueOpsFixture(stateRoot string, req contract.IssueOpsStartRequest) (contract.IssueOpsRecord, error) {
-	return (app.Starter{Records: CycleRecordStore{StateRoot: stateRoot}, Identity: CycleStartIdentity{}, Now: time.Now}).Start(context.Background(), req)
+	return (app.Starter{Records: CycleRecordStore{StateRoot: stateRoot}, Identity: CycleStartIdentity{RunGit: GitCmd}, Now: time.Now}).Start(context.Background(), req)
 }

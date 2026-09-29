@@ -73,10 +73,11 @@ func newIssueOpsPreparationService(stateRoot, id string, deps issueOpsPreparatio
 	}
 	repository := preparationoutbound.NewSQLiteRepositoryWithDiagnosticRedactor(database, policy.RedactDiagnostic)
 	direct := preparationoutbound.NewDirectWorkspace(deps.Direct)
+	branchCheck := newOrcaBranchPrecheck(stateRoot)
 	gateway := preparationoutbound.NewOrcaGateway(preparationoutbound.OrcaDependencies{
 		Provisioner: newHandoffDeliveryProvisioner(stateRoot, deps.Orca, deps.Now),
 		ValidateProbe: func(_ context.Context, request preparationcontract.ProbeRequest) (string, error) {
-			return issueops.ValidateExecutionPreparationOrcaProbe(stateRoot, id, request)
+			return branchCheck.Check(id, request.Workspace.Branch)
 		},
 		HydrateLaunch: func(_ context.Context, request preparationcontract.IntentRequest) (preparationcontract.IntentRequest, error) {
 			hydrator := preparationapp.LaunchHydrator{

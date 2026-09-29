@@ -109,6 +109,6 @@ func TestStartIssueOpsRelativeThenAbsoluteShareOneRecordAndLock(t *testing.T) {
 // raw repo here would let source-checkout and linked-worktree starts hold
 // different locks while read-modify-writing one record (lost-update TOCTOU).
 func issueOpsStartLockID(repo, branch string) string {
-	repo = normalizeIssueOpsRepo(repo)
+	repo = (CycleStartIdentity{RunGit: GitCmd}).CanonicalRepo(repo)
 	return newIssueOpsID(repo, strings.TrimSpace(branch))
 }

@@ -13,69 +13,6 @@ import (
 	"issueops/internal/port"
 )
 
-// ensureOrcaBranchIsFree는 Orca가 워크트리를 만들기 전에 대상 브랜치 이름이
-// 비어 있는지 확인한다.
-//
-// Orca `worktree create`는 언제나 새 브랜치를 만든다. 기존 브랜치를 체크아웃하는
-// 옵션이 없다(`--base-branch`는 시작 ref, `--name`이 새 브랜치 이름). 그래서 이름이
-// 이미 쓰이고 있으면 Orca가 `<branch>-2`처럼 접미사를 붙이고, 그 결과를
-// CanonicalizeWorktreeBranch가 `worktree_branch_mismatch`로 거부한다. 그 거부는
-// `Invoked: true`라 pending intent와 실제 Orca 워크트리를 남기며, 실측에서 그
-// 잔여물이 abandon까지 막았다(#149).
-//
-// IssueOps는 linked branch를 먼저 만들도록 요구하므로 정식 순서를 따를수록 이
-// 충돌이 확실해진다. mutation 이전에 막아 잔여물 자체를 없앤다.
-//
-// 로컬과 원격을 모두 본다. #149는 로컬 refs만 봤는데, `gh issue develop`은 원격에만
-// 브랜치를 만들므로 정식 순서에서는 그 검사가 **언제나** 통과했다 — 실환경 dogfood가
-// 그 구멍으로 접미사 브랜치를 만들어냈다(#154). Orca가 원격 브랜치를 보고 이름을
-// 정하므로 사전 확인의 시야도 거기까지여야 한다.
-//
-// 원격은 remote-tracking ref로 판정한다. `git ls-remote`는 prepare를 네트워크에 묶어
-// 오프라인에서 정상 경로를 막는다. 대신 낡은 ref가 이미 삭제된 브랜치를 있다고
-// 보고할 수 있어 메시지가 fetch를 안내한다.
-func ensureOrcaBranchIsFree(record issueops.IssueOpsRecord, branch string) error {
-	branch = strings.TrimSpace(branch)
-	if branch == "" {
-		return fmt.Errorf("Orca prepare requires a branch name")
-	}
-	for _, scope := range []struct {
-		ref    string
-		where  string
-		remedy string
-	}{
-		{ref: "refs/heads/" + branch, where: "locally", remedy: "delete the local branch if it holds no work"},
-		{ref: "refs/remotes/origin/" + branch, where: "on origin",
-			remedy: "delete the remote branch if it holds no work, or run `git fetch --prune` if it is already gone"},
-	} {
-		code, output, _ := GitCmd(record.Repo, "rev-parse", "--verify", "--quiet", scope.ref)
-		if code != 0 {
-			continue
-		}
-		// GitLab branch prepare가 봉인된 base에 빈 원격 브랜치를 먼저 만드는
-		// 순서를 보존한다. 로컬 브랜치나 다른 SHA의 원격 브랜치는 기존처럼
-		// 차단하고, 이 정확한 원격 ref만 adapter의 안전한 정규화에 맡긴다.
-		if scope.where == "on origin" && exactGitLabPreparedRemote(record, branch, output) {
-			continue
-		}
-		return fmt.Errorf(
-			"branch %q already exists %s, so Orca cannot prepare this execution: Orca always creates a new branch, so it would take a different name (observed: a numeric suffix) and fail as worktree_branch_mismatch only after the worktree exists; "+
-				"use --mode direct with an explicit --direct-reason, which adopts the existing branch, or %s",
-			branch, scope.where, scope.remedy)
-	}
-	return nil
-}
-
-func exactGitLabPreparedRemote(record issueops.IssueOpsRecord, branch, observedOID string) bool {
-	prepared := record.BranchPrepare
-	return prepared != nil &&
-		strings.EqualFold(strings.TrimSpace(prepared.Provider), "gitlab") &&
-		prepared.LinkVerified &&
-		strings.TrimSpace(prepared.Branch) == strings.TrimSpace(branch) &&
-		strings.TrimSpace(prepared.BaseSHA) != "" &&
-		strings.EqualFold(strings.TrimSpace(observedOID), strings.TrimSpace(prepared.BaseSHA))
-}
-
 func validateExecutionOrcaWorkspaceReceipt(workspace port.ExecutionWorkspaceRequest, receipt port.ExecutionOrcaWorkspaceReceipt) error {
 	got := receipt.Workspace
 	if !samePath(got.SourceRoot, workspace.SourceRoot) || !samePath(got.Root, workspace.Root) || got.Branch != workspace.Branch || got.BaseHead != workspace.BaseHead || got.Driver != "orca" ||

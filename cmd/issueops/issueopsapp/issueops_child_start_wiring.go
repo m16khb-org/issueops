@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	branchpreflight "issueops/internal/adapter/preflight"
 	"time"
 
 	core "issueops/internal/adapter/issueops"
@@ -12,7 +13,7 @@ import (
 func newChildStarter(root string) delegationapp.ChildStarter {
 	return delegationapp.ChildStarter{
 		Records:   core.ChildCycleStore{CycleRecordStore: core.CycleRecordStore{StateRoot: root}},
-		Identity:  core.CycleStartIdentity{},
+		Identity:  core.CycleStartIdentity{RunGit: branchpreflight.GitCmd},
 		Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same),
 		Links:     newIssueLinker(root),
 		Now:       time.Now,

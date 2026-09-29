@@ -2,7 +2,6 @@ package issueops
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"issueops/internal/adapter/issueops/compatibilityreview"
@@ -11,7 +10,6 @@ import (
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
-	"issueops/internal/domain/repoidentity"
 )
 
 const (
@@ -21,29 +19,6 @@ const (
 )
 
 var IssueOpsPhases = issueops.IssueOpsPhases
-
-// OriginBranchPresent는 origin에 branch가 있는지 본다. 네트워크 호출이라
-// span 밖에서만 부른다. 사용자의 SSH·자격 증명 설정(core.sshCommand 등)을 그대로
-// 쓰도록 주입된 GitCmd로 실행한다.
-func OriginBranchPresent(repo, branch string) (bool, error) {
-	code, stdout, stderr := GitCmd(repo, "ls-remote", "--heads", "origin", "refs/heads/"+strings.TrimSpace(branch))
-	if code != 0 {
-		return false, fmt.Errorf("git ls-remote failed: %s", strings.TrimSpace(stderr))
-	}
-	return len(strings.Fields(strings.TrimSpace(stdout))) > 0, nil
-}
-
-func normalizeIssueOpsRepo(repo string) string {
-	clean := repoidentity.SourceRoot(repo, "")
-	if GitCmd == nil {
-		return clean
-	}
-	code, commonDir, _ := GitCmd(clean, "rev-parse", "--path-format=relative", "--git-common-dir")
-	if code != 0 {
-		commonDir = ""
-	}
-	return repoidentity.SourceRoot(clean, commonDir)
-}
 
 func RecordIssueOpsIntent(stateRoot, id string, req issueops.IssueOpsIntentRecordRequest) (issueops.IssueOpsRecord, error) {
 	return recordIssueOpsIntent(stateRoot, id, req, nil)

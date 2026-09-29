@@ -7,11 +7,21 @@ import (
 	"testing"
 
 	core "issueops/internal/adapter/issueops"
+	"issueops/internal/adapter/preflight"
 	model "issueops/internal/contract/issueops"
 )
 
 func TestBranchRetargetCompositionPersistsObservedTargetAndForkPoint(t *testing.T) {
-	root, repo := t.TempDir(), t.TempDir()
+	root, repo := t.TempDir(), makeGitRepoForContract(t)
+	remote := makeGitRepoForContract(t)
+	for _, command := range []struct {
+		root string
+		args []string
+	}{{remote, []string{"branch", "50-parent"}}, {repo, []string{"remote", "add", "origin", remote}}} {
+		if code, _, stderr := preflight.GitCmd(command.root, command.args...); code != 0 {
+			t.Fatal(stderr)
+		}
+	}
 	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "51-child"})
 	if err != nil {
 		t.Fatal(err)
@@ -23,16 +33,6 @@ func TestBranchRetargetCompositionPersistsObservedTargetAndForkPoint(t *testing.
 	if err := store.WithinLock(context.Background(), record.ID, func() error { var saveErr error; record, saveErr = store.Save(record); return saveErr }); err != nil {
 		t.Fatal(err)
 	}
-	previousGit := core.GitCmd
-	t.Cleanup(func() { core.GitCmd = previousGit })
-	originCalls := 0
-	core.GitCmd = func(dir string, args ...string) (int, string, string) {
-		if dir != repo || !reflect.DeepEqual(args, []string{"ls-remote", "--heads", "origin", "refs/heads/50-parent"}) {
-			t.Fatalf("unexpected Git request: %s %v", dir, args)
-		}
-		originCalls++
-		return 0, strings.Repeat("b", 40) + "\trefs/heads/50-parent\n", ""
-	}
 	providerCalls := 0
 	service := newBranchRetargeter(root, func(artifact model.IssueOpsRemoteArtifactVerification) (string, error) {
 		providerCalls++
@@ -41,6 +41,21 @@ func TestBranchRetargetCompositionPersistsObservedTargetAndForkPoint(t *testing.
 		}
 		return "50-parent", nil
 	})
+	previousGit := core.GitCmd
+	t.Cleanup(func() { core.GitCmd = previousGit })
+	core.GitCmd = func(string, ...string) (int, string, string) {
+		t.Error("prepared retargeter used ambient Git")
+		return 1, "", "ambient"
+	}
+	originCalls := 0
+	boundOrigin := service.OriginPresent
+	service.OriginPresent = func(dir, branch string) (bool, error) {
+		originCalls++
+		if dir != repo || branch != "50-parent" {
+			t.Fatalf("unexpected origin observation: %s %s", dir, branch)
+		}
+		return boundOrigin(dir, branch)
+	}
 	updated, err := service.Retarget(context.Background(), record.ID, model.IssueOpsBranchRetargetRequest{BaseBranch: "50-parent", Reason: "merged into parent"}, model.IssueOpsActor{})
 	if err != nil {
 		t.Fatal(err)

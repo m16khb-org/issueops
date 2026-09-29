@@ -350,7 +350,7 @@ func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.IssueOps
 func retargetForTest(root, id string, req issueops.IssueOpsBranchRetargetRequest, actor IssueOpsActor, service branchapp.Retargeter) (issueops.IssueOpsRecord, error) {
 	service.Records = CycleRecordStore{StateRoot: root}
 	service.Authority = cycleapp.NewMutationAuthority(samePath)
-	service.OriginPresent = OriginBranchPresent
+	service.OriginPresent = (BranchGit{Run: GitCmd}).OriginPresent
 	service.Now = time.Now
 	return service.Retarget(context.Background(), id, req, actor)
 }

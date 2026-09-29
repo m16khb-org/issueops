@@ -1205,6 +1205,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/orca_branch_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newOrcaBranchPrecheck"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/policy_preflight_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -4101,6 +4109,16 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/branch_git.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func BranchGit.OriginPresent",
+        "func BranchGit.RefOID",
+        "type BranchGit"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/branch_preparation_environment.go",
       "owner": "adapter",
       "task": "T08",
@@ -4553,8 +4571,6 @@
       "task": "T05",
       "symbols": [
         "func ensureExecutionRootUnclaimed",
-        "func ensureOrcaBranchIsFree",
-        "func exactGitLabPreparedRemote",
         "func executionNow",
         "func executionRecordWorkspaceRoot",
         "func executionWorkspaceRequest",
@@ -4574,7 +4590,6 @@
         "func PrepareExecutionPreparationOwner",
         "func ReadExecutionPreparationOwnerEvidence",
         "func ResolveExecutionPreparationWorkspace",
-        "func ValidateExecutionPreparationOrcaProbe",
         "func executionPreparationCoreRecord"
       ]
     },
@@ -5098,7 +5113,6 @@
       "task": "T20",
       "symbols": [
         "func LastActiveAt",
-        "func OriginBranchPresent",
         "func RecordIssueOpsCompatibilityReview",
         "func RecordIssueOpsCompatibilityReviewWithActor",
         "func RecordIssueOpsDesignReview",
@@ -5112,7 +5126,6 @@
         "func cleanIssueOpsTextValues",
         "func issueOpsCompatibilityReviewStore",
         "func issueOpsIntentDesignStore",
-        "func normalizeIssueOpsRepo",
         "func recordIssueOpsCompatibilityReview",
         "func recordIssueOpsDesignReview",
         "func recordIssueOpsDevilsAdvocateReview",
@@ -8690,6 +8703,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopsbranch/orca_precheck.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func OrcaBranchPrecheck.Check",
+        "type OrcaBranchPrecheck"
+      ]
+    },
+    {
       "path": "internal/application/issueopsbranch/prepare.go",
       "owner": "application",
       "task": "T08",
@@ -11245,6 +11267,14 @@
       ]
     },
     {
+      "path": "internal/contract/issueops/orca_branch_scope.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type OrcaBranchScope"
+      ]
+    },
+    {
       "path": "internal/contract/issueops/orca_request_id.go",
       "owner": "contract",
       "task": "T02",
@@ -13619,6 +13649,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/orca_branch.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func OrcaBranchScopes",
+        "func ValidateOrcaBranchRef"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/phase.go",
       "owner": "domain",
       "task": "T20",
@@ -15710,8 +15749,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
-        "func SourceRoot",
-        "func cleanAbsolute"
+        "func SourceRoot"
       ]
     },
     {
@@ -16572,6 +16610,14 @@
       "symbols": [
         "type Files",
         "type Runs"
+      ]
+    },
+    {
+      "path": "internal/port/issueopsbranch/orca_precheck.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type OrcaBranchObservations"
       ]
     },
     {
@@ -25064,6 +25110,40 @@
         "internal/application/issueopsmodeswitch/service_test.go",
         "cmd/issueops/issueopsapp/mode_switch_wiring_test.go",
         "internal/adapter/issueops/issueops_cleanup_abandon_residual_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-branch-collision-before-provisioning",
+      "source_path": "internal/adapter/issueops/execution_prepare.go",
+      "source_symbol": "func ensureOrcaBranchIsFree",
+      "responsibility": "check local name before remote tracking name and allow only the exact verified GitLab prepared remote base",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateOrcaBranchRef",
+      "task": "T20",
+      "entrypoints": [
+        "issueops execution prepare --mode orca"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/orca_branch_test.go",
+        "internal/application/issueopsbranch/orca_precheck_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-branch-precheck-record-observation",
+      "source_path": "internal/adapter/issueops/execution_prepare_bridge.go",
+      "source_symbol": "func ValidateExecutionPreparationOrcaProbe",
+      "responsibility": "load current durable record before name validation and scoped Git observations without network fetch",
+      "target": "internal/application/issueopsbranch",
+      "target_symbol": "func OrcaBranchPrecheck.Check",
+      "task": "T20",
+      "entrypoints": [
+        "issueops execution prepare --mode orca"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsbranch/orca_precheck_test.go",
+        "cmd/issueops/issueopsapp/orca_branch_wiring_test.go"
       ],
       "status": "migrated"
     }

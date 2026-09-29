@@ -2,6 +2,8 @@ package issueops
 
 import (
 	"context"
+	"issueops/internal/adapter/issueops/pathutil"
+	"issueops/internal/domain/repoidentity"
 
 	model "issueops/internal/contract/issueops"
 )
@@ -20,9 +22,21 @@ func (s CycleRecordStore) Save(record model.IssueOpsRecord) (model.IssueOpsRecor
 	return writeIssueOps(s.StateRoot, record)
 }
 
-type CycleStartIdentity struct{}
+type CycleStartIdentity struct {
+	RunGit func(string, ...string) (int, string, string)
+}
 
-func (CycleStartIdentity) CanonicalRepo(repo string) string    { return normalizeIssueOpsRepo(repo) }
+func (identity CycleStartIdentity) CanonicalRepo(repo string) string {
+	clean := pathutil.CleanAbsPath(repo)
+	if identity.RunGit == nil {
+		return clean
+	}
+	code, commonDir, _ := identity.RunGit(clean, "rev-parse", "--path-format=relative", "--git-common-dir")
+	if code != 0 {
+		commonDir = ""
+	}
+	return repoidentity.SourceRoot(clean, commonDir)
+}
 func (CycleStartIdentity) StableID(repo, branch string) string { return newIssueOpsID(repo, branch) }
 func (CycleStartIdentity) IndependentID(repo string) (string, error) {
 	return newIndependentIssueOpsID(repo)
