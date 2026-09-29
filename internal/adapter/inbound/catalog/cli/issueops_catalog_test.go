@@ -1,6 +1,7 @@
 package cli
 
 import (
+	clidomain "issueops/internal/domain/cli"
 	"sort"
 	"strings"
 	"testing"
@@ -25,13 +26,13 @@ func TestTopLevelUsageRendersExactlyTheLifecycleCatalog(t *testing.T) {
 		if !strings.HasPrefix(trimmed, "issueops ") {
 			continue
 		}
-		if key := IssueOpsUsageKey("  " + trimmed); key != "" {
+		if key := clidomain.IssueOpsUsageKey("  " + trimmed); key != "" {
 			rendered[key] = true
 		}
 	}
 	want := map[string]bool{}
 	for _, line := range IssueOpsUsageLines() {
-		want[IssueOpsUsageKey(line)] = true
+		want[clidomain.IssueOpsUsageKey(line)] = true
 	}
 	var extra, absent []string
 	for key := range rendered {

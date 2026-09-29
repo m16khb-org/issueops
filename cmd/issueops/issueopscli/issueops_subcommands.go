@@ -110,9 +110,9 @@ func runIssueOpsLinkRelated(args []string) error {
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsChild(args []string) error {
+func runIssueOpsChild(args []string, usage string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println(issueOpsChildUsageText())
+		fmt.Println(usage)
 		return nil
 	}
 	switch args[0] {

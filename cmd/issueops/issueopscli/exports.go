@@ -10,11 +10,9 @@ import (
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
 
-func RunIssueOps(args []string) error {
-	return RunIssueOpsWithDependencies(args, Dependencies{})
-}
-
 type Dependencies struct {
+	Usage       string
+	ChildUsage  string
 	Prepare     issueopscontract.ExecutionPrepareHandler
 	Orca        port.ExecutionOrcaProvisioner
 	OrcaOwner   port.ExecutionOrcaOwnerInspector
@@ -33,24 +31,6 @@ type Dependencies struct {
 
 func RunIssueOpsWithDependencies(args []string, deps Dependencies) error {
 	return runIssueOpsWithDependencies(args, deps)
-}
-
-func RunIssueOpsWithExecutionHandlers(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler) error {
-	return RunIssueOpsWithExecutionHandlersAndReseed(args, claim, release, nil)
-}
-
-func RunIssueOpsWithExecutionHandlersAndReseed(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler, reseed issueopscontract.ExecutionReseedHandler) error {
-	return RunIssueOpsWithExecutionHandlersAndReseedAndResume(args, claim, release, reseed, nil)
-}
-
-func RunIssueOpsWithExecutionHandlersAndReseedAndResume(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler, reseed issueopscontract.ExecutionReseedHandler, resume issueopscontract.ExecutionResumeHandler) error {
-	return RunIssueOpsWithExecutionHandlersAndReseedResumeAndReconcile(args, claim, release, reseed, resume, nil)
-}
-
-func RunIssueOpsWithExecutionHandlersAndReseedResumeAndReconcile(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler, reseed issueopscontract.ExecutionReseedHandler, resume issueopscontract.ExecutionResumeHandler, reconcile port.ExecutionReconcileHandler) error {
-	return RunIssueOpsWithDependencies(args, Dependencies{
-		Claim: claim, Release: release, Reseed: reseed, Resume: resume, Reconcile: reconcile,
-	})
 }
 
 func VerifyChildIssueBeforeLink(childURL string) error {

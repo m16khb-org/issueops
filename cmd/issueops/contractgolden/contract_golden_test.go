@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
-	cliadapter "issueops/internal/domain/cli"
 )
 
 const version = "0.1.0"

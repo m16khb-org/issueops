@@ -1,12 +1,13 @@
 package issueopscli
 
 import (
+	cliparse "issueops/internal/domain/cli"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
-	cliadapter "issueops/internal/domain/cli"
+	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 )
 
 // issueOpsNamespaceHelpText는 `issueops <namespace> --help`가 실제로 출력하는
@@ -65,7 +66,7 @@ func TestIssueOpsNamespaceUsageExistsInCatalog(t *testing.T) {
 	catalog := map[string]string{}
 	for _, line := range cliadapter.IssueOpsUsageLines() {
 		trimmed := strings.TrimSpace(line)
-		catalog[cliadapter.IssueOpsUsageKey(trimmed)] = trimmed
+		catalog[cliparse.IssueOpsUsageKey(trimmed)] = trimmed
 	}
 	if len(catalog) == 0 {
 		t.Fatal("canonical catalog exposes no issueops lines; parity test inputs are broken")
@@ -78,7 +79,7 @@ func TestIssueOpsNamespaceUsageExistsInCatalog(t *testing.T) {
 			if !strings.HasPrefix(trimmed, prefix) {
 				continue
 			}
-			key := cliadapter.IssueOpsUsageKey(trimmed)
+			key := cliparse.IssueOpsUsageKey(trimmed)
 			if key == "" {
 				continue
 			}

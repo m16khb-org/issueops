@@ -20,7 +20,7 @@ func TestRunContractRejectsMissingAndUnknownSubcommands(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			stderr, err := captureProjectCLIStderr(t, func() error {
-				return Run(tt.args)
+				return testRunContract(tt.args)
 			})
 
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
@@ -35,14 +35,14 @@ func TestRunContractRejectsMissingAndUnknownSubcommands(t *testing.T) {
 
 func TestRunContractSchemaPrintsTextAndJSON(t *testing.T) {
 	text := captureStdoutForContract(t, func() error {
-		return Run([]string{"schema"})
+		return testRunContract([]string{"schema"})
 	})
 	if !strings.Contains(text, "issueops_cli_mcp_compatibility v3 ") {
 		t.Fatalf("expected schema text summary, got:\n%s", text)
 	}
 
 	jsonOut := captureStdoutForContract(t, func() error {
-		return Run([]string{"schema", "--json"})
+		return testRunContract([]string{"schema", "--json"})
 	})
 	var contract CompatibilityContract
 	if err := json.Unmarshal([]byte(jsonOut), &contract); err != nil {
@@ -71,14 +71,14 @@ func TestRunContractSchemaPrintsTextAndJSON(t *testing.T) {
 
 func TestRunContractCheckPrintsTextAndJSON(t *testing.T) {
 	text := captureStdoutForContract(t, func() error {
-		return Run([]string{"check"})
+		return testRunContract([]string{"check"})
 	})
 	if !strings.Contains(text, "contract ok: ") {
 		t.Fatalf("expected contract check text summary, got:\n%s", text)
 	}
 
 	jsonOut := captureStdoutForContract(t, func() error {
-		return Run([]string{"check", "--json"})
+		return testRunContract([]string{"check", "--json"})
 	})
 	var contract CompatibilityContract
 	if err := json.Unmarshal([]byte(jsonOut), &contract); err != nil {
@@ -100,7 +100,7 @@ func TestRunContractSchemaAndCheckRejectInvalidFlags(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := captureProjectCLIStderr(t, func() error {
-				return Run(tt.args)
+				return testRunContract(tt.args)
 			})
 			if err == nil || !strings.Contains(err.Error(), "flag provided but not defined") {
 				t.Fatalf("expected invalid flag error, got %v", err)

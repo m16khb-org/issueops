@@ -40,7 +40,7 @@ func TestIssueOpsListDispatchesThroughRegistry(t *testing.T) {
 func TestIssueOpsUsageRegistryBidirectionalParity(t *testing.T) {
 	const prefix = "issueops "
 	usageKeys := map[string]bool{}
-	for _, line := range strings.Split(issueOpsUsageText(), "\n") {
+	for _, line := range strings.Split(testLifecycleUsage(), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, prefix) {
 			continue
@@ -51,13 +51,13 @@ func TestIssueOpsUsageRegistryBidirectionalParity(t *testing.T) {
 		}
 		usageKeys[fields[0]] = true
 	}
-	for key := range issueOpsSubcommands {
+	for key := range issueOpsSubcommands(testCLIUsageDependencies()) {
 		if !usageKeys[key] {
-			t.Errorf("registry subcommand %q is missing from issueOpsUsageText()", key)
+			t.Errorf("registry subcommand %q is missing from testLifecycleUsage()", key)
 		}
 	}
 	for key := range usageKeys {
-		if _, ok := issueOpsSubcommands[key]; !ok {
+		if _, ok := issueOpsSubcommands(testCLIUsageDependencies())[key]; !ok {
 			t.Errorf("usage subcommand %q is not registered in issueOpsSubcommands", key)
 		}
 	}

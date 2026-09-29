@@ -2145,12 +2145,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func RunIssueOps",
         "func RunIssueOpsWithDependencies",
-        "func RunIssueOpsWithExecutionHandlers",
-        "func RunIssueOpsWithExecutionHandlersAndReseed",
-        "func RunIssueOpsWithExecutionHandlersAndReseedAndResume",
-        "func RunIssueOpsWithExecutionHandlersAndReseedResumeAndReconcile",
         "func SetChildIssueVerifier",
         "func VerifyChildIssueBeforeLink",
         "func VerifyRemoteArtifactLive",
@@ -2221,10 +2216,10 @@
         "func issueOpsOrphanCleanupDeps",
         "func issueOpsRemoteDeps",
         "func issueOpsRemoteDepsWithPublication",
+        "func issueOpsSubcommands",
         "func normalizeOrcaRemoveWorktreeErr",
         "func parseIssueOpsFlags",
         "func requireGeneratedOwnerProcessCWD",
-        "func runIssueOps",
         "func runIssueOpsCleanup",
         "func runIssueOpsCleanupWithDependencies",
         "func runIssueOpsFeedback",
@@ -2259,9 +2254,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func issueOpsChildUsageText",
         "func issueOpsUsage",
-        "func issueOpsUsageText",
         "func printIssueOpsErrorJSON",
         "func printIssueOpsResult",
         "func runIssueOpsBranch",
@@ -5374,6 +5367,25 @@
         "type contract",
         "type message",
         "type rule"
+      ]
+    },
+    {
+      "path": "internal/adapter/inbound/catalog/cli/catalog.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func ChildUsage",
+        "func Commands",
+        "func IssueOpsUsageLines",
+        "func LifecycleUsage"
+      ]
+    },
+    {
+      "path": "internal/adapter/inbound/catalog/cli/usage.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func Usage"
       ]
     },
     {
@@ -12735,6 +12747,23 @@
       ]
     },
     {
+      "path": "internal/contract/cli/commands.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func RootCommands",
+        "type Command"
+      ]
+    },
+    {
+      "path": "internal/contract/cli/issueops_catalog.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func LifecycleCommands"
+      ]
+    },
+    {
       "path": "internal/contract/commandparse/generated_command_provenance.go",
       "owner": "contract",
       "task": "T02",
@@ -14364,24 +14393,12 @@
       ]
     },
     {
-      "path": "internal/domain/cli/issueops_catalog.go",
+      "path": "internal/domain/cli/commands.go",
       "owner": "domain",
       "task": "T19",
       "symbols": [
         "func IsLifecycleCommand",
-        "func IssueOpsUsageKey",
-        "func IssueOpsUsageLines",
-        "func LifecycleCommands"
-      ]
-    },
-    {
-      "path": "internal/domain/cli/usage.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func Commands",
-        "func Usage",
-        "type Command"
+        "func IssueOpsUsageKey"
       ]
     },
     {

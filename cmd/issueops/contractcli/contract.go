@@ -11,37 +11,33 @@ import (
 	"strings"
 
 	"issueops/cmd/issueops/selfworkflow"
+	clicontract "issueops/internal/contract/cli"
 	mcpcontract "issueops/internal/contract/mcp"
-	cliadapter "issueops/internal/domain/cli"
 )
 
-var MCPTools = func() []map[string]any {
-	return nil
-}
-
 type CompatibilityContract struct {
-	OK             bool                 `json:"ok"`
-	Name           string               `json:"name"`
-	Version        int                  `json:"version"`
-	Hash           string               `json:"hash"`
-	CLICommands    []cliadapter.Command `json:"cli_commands"`
-	MCPTools       []string             `json:"mcp_tools"`
-	ResponseFields map[string][]string  `json:"response_fields"`
-	Warnings       []string             `json:"warnings"`
-	AdapterTools   []mcpcontract.Tool   `json:"adapter_tools"`
-	Verification   []string             `json:"verification"`
+	OK             bool                  `json:"ok"`
+	Name           string                `json:"name"`
+	Version        int                   `json:"version"`
+	Hash           string                `json:"hash"`
+	CLICommands    []clicontract.Command `json:"cli_commands"`
+	MCPTools       []string              `json:"mcp_tools"`
+	ResponseFields map[string][]string   `json:"response_fields"`
+	Warnings       []string              `json:"warnings"`
+	AdapterTools   []mcpcontract.Tool    `json:"adapter_tools"`
+	Verification   []string              `json:"verification"`
 }
 
-func Run(args []string) error {
+func Run(args []string, commands []clicontract.Command, tools []map[string]any) error {
 	if len(args) == 0 {
 		contractUsage()
 		return fmt.Errorf("missing contract subcommand")
 	}
 	switch args[0] {
 	case "schema":
-		return runContractSchema(args[1:])
+		return runContractSchema(args[1:], commands, tools)
 	case "check":
-		return runContractCheck(args[1:])
+		return runContractCheck(args[1:], commands, tools)
 	case "conformance":
 		return runConformance(args[1:])
 	default:
@@ -58,13 +54,13 @@ func contractUsage() {
 `)
 }
 
-func runContractSchema(args []string) error {
+func runContractSchema(args []string, commands []clicontract.Command, tools []map[string]any) error {
 	fs := flag.NewFlagSet("contract schema", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	contract := BuildCompatibilityContract()
+	contract := BuildCompatibilityContract(commands, tools)
 	if *jsonOut {
 		return printJSON(contract)
 	}
@@ -75,13 +71,13 @@ func runContractSchema(args []string) error {
 	return nil
 }
 
-func runContractCheck(args []string) error {
+func runContractCheck(args []string, commands []clicontract.Command, tools []map[string]any) error {
 	fs := flag.NewFlagSet("contract check", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	contract := BuildCompatibilityContract()
+	contract := BuildCompatibilityContract(commands, tools)
 	if *jsonOut {
 		return printJSON(contract)
 	}
@@ -95,9 +91,9 @@ func runContractCheck(args []string) error {
 	return fmt.Errorf("contract check failed")
 }
 
-func BuildCompatibilityContract() CompatibilityContract {
+func BuildCompatibilityContract(commands []clicontract.Command, tools []map[string]any) CompatibilityContract {
 	toolNames := []string{}
-	for _, tool := range MCPTools() {
+	for _, tool := range tools {
 		if name, ok := tool["name"].(string); ok {
 			toolNames = append(toolNames, name)
 		}
@@ -107,7 +103,7 @@ func BuildCompatibilityContract() CompatibilityContract {
 		OK:          true,
 		Name:        "issueops_cli_mcp_compatibility",
 		Version:     3,
-		CLICommands: cliadapter.Commands(),
+		CLICommands: commands,
 		MCPTools:    toolNames,
 		ResponseFields: map[string][]string{
 			"self_verification_summary":       selfworkflow.BuildSelfVerificationContract().RequiredFields,
@@ -163,11 +159,11 @@ func BuildCompatibilityContract() CompatibilityContract {
 		contract.Warnings = append(contract.Warnings, "issueops_mcp_surface_mismatch:"+strings.Join(issueOpsTools, ","))
 	}
 	b, _ := json.Marshal(struct {
-		Name           string               `json:"name"`
-		Version        int                  `json:"version"`
-		CLICommands    []cliadapter.Command `json:"cli_commands"`
-		MCPTools       []string             `json:"mcp_tools"`
-		ResponseFields map[string][]string  `json:"response_fields"`
+		Name           string                `json:"name"`
+		Version        int                   `json:"version"`
+		CLICommands    []clicontract.Command `json:"cli_commands"`
+		MCPTools       []string              `json:"mcp_tools"`
+		ResponseFields map[string][]string   `json:"response_fields"`
 	}{contract.Name, contract.Version, contract.CLICommands, contract.MCPTools, contract.ResponseFields})
 	sum := sha256.Sum256(b)
 	contract.Hash = hex.EncodeToString(sum[:])

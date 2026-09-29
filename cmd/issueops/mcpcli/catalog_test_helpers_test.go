@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/cmd/issueops/contractcli"
+	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	mcpcontract "issueops/internal/contract/mcp"
 )
@@ -15,6 +16,7 @@ func testHandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
 }
 
 func init() {
-	contractcli.MCPTools = func() []map[string]any { return testMCPCatalog().Tools }
-	CompatibilityContract = func() any { return contractcli.BuildCompatibilityContract() }
+	CompatibilityContract = func() any {
+		return contractcli.BuildCompatibilityContract(clicatalog.Commands(), testMCPCatalog().Tools)
+	}
 }

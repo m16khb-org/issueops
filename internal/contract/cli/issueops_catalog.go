@@ -1,8 +1,6 @@
 package cli
 
-import "strings"
-
-// issueOpsUsageCatalog는 `issueops` 명령 usage 줄의 **유일한 원본**이다.
+// IssueOpsUsageCatalog는 `issueops` 명령 usage 줄의 **유일한 원본**이다.
 //
 // 전에는 같은 줄이 두 곳에 있었다 — 여기의 최상위 축약 카탈로그와
 // `cmd/issueops/issueopscli`의 전체 목록. 한쪽 누락은 parity 테스트가 잡았지만
@@ -11,14 +9,14 @@ import "strings"
 //
 // 두 표면은 이제 이 카탈로그의 서로 다른 투영이다:
 //
-//   - `Usage()` — 최상위 lifecycle 명령 전체를 렌더하는 카탈로그
-//   - `issueopscli.issueOpsUsageText()` — 전체 렌더
+//   - `catalog.Usage()` — 최상위 lifecycle 명령 전체를 렌더하는 카탈로그
+//   - `catalog.LifecycleUsage()` — 전체 렌더
 //
 // 줄 순서가 곧 렌더 순서다. 새 명령은 여기 한 곳에만 추가하고, 최상위에도 노출할
 // 것이면 축약 키에 그 명령 경로를 더한다. 각 줄이 handler의 FlagSet, commandparse의
 // exact spec과 같은 flag 집합인지는 issueopscli의
 // TestIssueOpsCommandGrammarAgreesAcrossCatalogFlagSetAndSpec가 검사한다.
-const issueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --new] [--json]
+const IssueOpsUsageCatalog = `  issueops start --repo PATH [--branch NAME | --new] [--json]
   issueops status --id ID [--json]
   issueops list [--repo PATH] [--json]
   issueops review-metrics (--id ID | --repo PATH) [--json]
@@ -106,36 +104,6 @@ call as a non-holder. execution claim accepts either no actor flags and observes
 native session receipt, or one complete ACTOR_FLAGS set; partial actor flags fail closed. Other execution
 lease transitions and generation-fenced publication verify the live session process with ACTOR_FLAGS.`
 
-// IssueOpsUsageLines는 카탈로그를 줄 단위로 돌려준다. 각 줄은 선행 두 칸을 포함한다.
-func IssueOpsUsageLines() []string {
-	return strings.Split(issueOpsUsageCatalog, "\n")
-}
-
-// IssueOpsUsageKey는 usage 줄에서 `issueops ` 뒤의 명령 경로를 뽑는다.
-// 선택적 플래그는 `[--repo PATH]`, 배타 그룹은 `(--preview|...)`로 표기되므로 그
-// 문자로 시작하는 필드도 경로의 끝이다 — 끊지 않으면 `list [--repo`가 경로가 된다.
-func IssueOpsUsageKey(line string) string {
-	fields := strings.Fields(line)
-	if len(fields) < 2 || fields[0] != "issueops" {
-		return ""
-	}
-	if !IsLifecycleCommand(fields[1]) {
-		return ""
-	}
-	fields = fields[1:]
-	limit := len(fields)
-	if limit > 2 {
-		limit = 2
-	}
-	for index, field := range fields[:limit] {
-		if strings.HasPrefix(field, "-") || strings.HasPrefix(field, "[") || strings.HasPrefix(field, "(") {
-			limit = index
-			break
-		}
-	}
-	return strings.Join(fields[:limit], " ")
-}
-
 // LifecycleCommands lists the root commands owned by the guarded lifecycle dispatcher.
 func LifecycleCommands() []Command {
 	return []Command{
@@ -176,13 +144,4 @@ func LifecycleCommands() []Command {
 		{Name: "start", Description: "IssueOps start"},
 		{Name: "status", Description: "IssueOps status"},
 	}
-}
-
-func IsLifecycleCommand(name string) bool {
-	for _, command := range LifecycleCommands() {
-		if command.Name == name {
-			return true
-		}
-	}
-	return false
 }

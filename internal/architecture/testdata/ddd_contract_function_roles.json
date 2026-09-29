@@ -1,5 +1,15 @@
 [
   {
+    "path": "internal/contract/cli/commands.go",
+    "symbol": "func RootCommands",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/cli/issueops_catalog.go",
+    "symbol": "func LifecycleCommands",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/commandparse/generated_command_provenance.go",
     "symbol": "func BindGeneratedCommand",
     "role": "codec"

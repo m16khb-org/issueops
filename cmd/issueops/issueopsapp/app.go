@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 
+	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 	inspect "issueops/internal/adapter/inspect"
 	inspectcontract "issueops/internal/contract/inspect"
-	cliadapter "issueops/internal/domain/cli"
 )
 
 const version = "0.1.0"

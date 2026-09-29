@@ -13,7 +13,7 @@ import (
 )
 
 func TestExportedIssueOpsFacades(t *testing.T) {
-	if err := RunIssueOps([]string{"unknown"}); err == nil {
+	if err := runIssueOps([]string{"unknown"}); err == nil {
 		t.Fatal("unknown issueops subcommand should fail")
 	}
 	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
@@ -42,7 +42,7 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 		"remote", "create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", "Body",
 		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "maintainer",
 	}
-	if err := RunIssueOps(args); !errors.Is(err, issueops.ErrRemotePullRequestCreateHandlerUnavailable) {
+	if err := runIssueOps(args); !errors.Is(err, issueops.ErrRemotePullRequestCreateHandlerUnavailable) {
 		t.Fatalf("zero dependency wrapper err=%v", err)
 	}
 	handlerCalls := 0
@@ -124,7 +124,7 @@ func TestIssueOpsSubcommandSuggestions(t *testing.T) {
 		{"totally-bogus", "", true},
 	}
 	for _, tc := range cases {
-		err := RunIssueOps([]string{tc.input})
+		err := runIssueOps([]string{tc.input})
 		if err == nil {
 			t.Fatalf("input %q should fail", tc.input)
 		}

@@ -239,6 +239,8 @@ func TestDDDOwnerRoutesKnownMigrationTargets(t *testing.T) {
 		"cmd/issueops/selfworkflow/steps/self_verify_steps.go":           "T18",
 		"internal/adapter/inbound/catalog/mcp/catalog.go":                "T19",
 		"internal/contract/mcp/tool_schemas.go":                          "T19",
+		"internal/contract/cli/commands.go":                              "T19",
+		"internal/adapter/inbound/catalog/cli/usage.go":                  "T19",
 		"cmd/issueops/issueopsapp/issueops_next_wiring.go":               "T20",
 	}
 	for path, want := range cases {
@@ -401,6 +403,7 @@ func dddTask(path string) string {
 		task   string
 	}{
 		{"internal/contract/mcp/", "T19"},
+		{"internal/contract/cli/", "T19"},
 		{"internal/application/issueopsreview/plan_binding.go", "T07"},
 		{"internal/domain/issueopsreview/plan_binding.go", "T07"},
 		{"internal/contract/issueopsreview/", "T03"},
@@ -662,7 +665,7 @@ func dddTask(path string) string {
 		{"cmd/issueops/selfworkflow/candidateexport/", "T17"},
 		{"cmd/issueops/selfworkflow/", "T18"},
 		{"internal/adapter/verification/probe/", "T18"},
-		{"internal/adapter/inbound/catalog/mcp/", "T19"}, {"internal/domain/cli/", "T19"},
+		{"internal/adapter/inbound/catalog/", "T19"}, {"internal/domain/cli/", "T19"},
 		{"internal/domain/nativehost/", "T19"},
 		{"internal/adapter/hostprotocol/", "T19"},
 	} {

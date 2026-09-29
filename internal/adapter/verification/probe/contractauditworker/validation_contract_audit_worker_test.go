@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/contractcli"
+	"issueops/internal/contract/cli"
 	workercontract "issueops/internal/contract/worker"
-	"issueops/internal/domain/cli"
 )
 
 func TestValidateCommandAuditWithDepsCoversSuccessCommandReadAndContractFailures(t *testing.T) {

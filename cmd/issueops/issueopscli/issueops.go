@@ -23,57 +23,55 @@ import (
 // issueOpsSubcommands는 `issueops <subcommand>`의 디스패치 레지스트리다.
 // 라우팅은 단일 map 조회이므로 subcommand 추가는 분기가 많은 switch를 키우는
 // 대신 항목 하나와 핸들러 하나를 더하는 것으로 끝난다.
-var issueOpsSubcommands = map[string]func([]string) error{
-	"start":                 runIssueOpsStart,
-	"status":                runIssueOpsStatus,
-	"list":                  runIssueOpsList,
-	"review-metrics":        runIssueOpsReviewMetrics,
-	"next":                  runIssueOpsNext,
-	"intent":                runIssueOpsIntent,
-	"plan-prep":             runIssueOpsPlanPrep,
-	"design":                runIssueOpsDesign,
-	"compatibility":         runIssueOpsCompatibility,
-	"devils-advocate":       runIssueOpsDevilsAdvocate,
-	"domain-review":         runIssueOpsDomainReview,
-	"ai-slop-clean":         runIssueOpsAISlopClean,
-	"regress":               runIssueOpsRegress,
-	"link-issue":            runIssueOpsLinkIssue,
-	"link-plan":             runIssueOpsLinkPlan,
-	"link-worktree":         runIssueOpsLinkWorktree,
-	"link-child":            runIssueOpsLinkChild,
-	"link-related":          runIssueOpsLinkRelated,
-	"child":                 runIssueOpsChild,
-	"artifact":              runIssueOpsArtifact,
-	"implementation-review": runIssueOpsImplementationReview,
-	"project-docs-review":   runIssueOpsProjectDocsReview,
-	"schema-evidence":       runIssueOpsSchemaEvidence,
-	"branch":                runIssueOpsBranch,
-	"phase":                 runIssueOpsPhase,
-	"record-routing":        runIssueOpsRecordRouting,
-	"routing-score":         runIssueOpsRoutingScore,
-	"feedback":              runIssueOpsFeedback,
-	"cleanup":               runIssueOpsCleanup,
-	"benchmark":             func(args []string) error { return benchmarkcmd.Run(args) },
-	"remote":                func(args []string) error { return remotecmd.Run(args, issueOpsRemoteDeps()) },
-	"remote-score": func(args []string) error {
-		return remotecmd.Run(append([]string{"score"}, args...), issueOpsRemoteDeps())
-	},
-	"prune":        runIssueOpsPrune,
-	"pr-readiness": runIssueOpsPRReadiness,
-	"decision":     runIssueOpsDecision,
-	"execution":    runIssueOpsExecution,
+func issueOpsSubcommands(deps Dependencies) map[string]func([]string) error {
+	return map[string]func([]string) error{
+		"start":                 runIssueOpsStart,
+		"status":                runIssueOpsStatus,
+		"list":                  runIssueOpsList,
+		"review-metrics":        runIssueOpsReviewMetrics,
+		"next":                  runIssueOpsNext,
+		"intent":                runIssueOpsIntent,
+		"plan-prep":             runIssueOpsPlanPrep,
+		"design":                runIssueOpsDesign,
+		"compatibility":         runIssueOpsCompatibility,
+		"devils-advocate":       runIssueOpsDevilsAdvocate,
+		"domain-review":         runIssueOpsDomainReview,
+		"ai-slop-clean":         runIssueOpsAISlopClean,
+		"regress":               runIssueOpsRegress,
+		"link-issue":            runIssueOpsLinkIssue,
+		"link-plan":             runIssueOpsLinkPlan,
+		"link-worktree":         runIssueOpsLinkWorktree,
+		"link-child":            runIssueOpsLinkChild,
+		"link-related":          runIssueOpsLinkRelated,
+		"child":                 func(args []string) error { return runIssueOpsChild(args, deps.ChildUsage) },
+		"artifact":              runIssueOpsArtifact,
+		"implementation-review": runIssueOpsImplementationReview,
+		"project-docs-review":   runIssueOpsProjectDocsReview,
+		"schema-evidence":       runIssueOpsSchemaEvidence,
+		"branch":                runIssueOpsBranch,
+		"phase":                 runIssueOpsPhase,
+		"record-routing":        runIssueOpsRecordRouting,
+		"routing-score":         runIssueOpsRoutingScore,
+		"feedback":              runIssueOpsFeedback,
+		"cleanup":               runIssueOpsCleanup,
+		"benchmark":             func(args []string) error { return benchmarkcmd.Run(args) },
+		"remote":                func(args []string) error { return remotecmd.Run(args, issueOpsRemoteDeps()) },
+		"remote-score": func(args []string) error {
+			return remotecmd.Run(append([]string{"score"}, args...), issueOpsRemoteDeps())
+		},
+		"prune":        runIssueOpsPrune,
+		"pr-readiness": runIssueOpsPRReadiness,
+		"decision":     runIssueOpsDecision,
+		"execution":    runIssueOpsExecution,
+	}
 }
 
-func runIssueOps(args []string) error {
-	return runIssueOpsWithDependencies(args, Dependencies{})
-}
-
-func dispatchIssueOps(args []string) error {
+func dispatchIssueOps(args []string, deps Dependencies) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		issueOpsUsage()
+		issueOpsUsage(deps.Usage)
 		return nil
 	}
-	handler, ok := issueOpsSubcommands[args[0]]
+	handler, ok := issueOpsSubcommands(deps)[args[0]]
 	if !ok {
 		return fmt.Errorf("unknown issueops subcommand %q%s", args[0], suggestIssueOpsSubcommand(args[0]))
 	}
@@ -108,7 +106,7 @@ func runIssueOpsWithDependencies(args []string, deps Dependencies) error {
 			return remotecmd.Run(append([]string{"score"}, args[1:]...), issueOpsRemoteDepsWithPublication(deps.Publication))
 		}
 	}
-	return dispatchIssueOps(args)
+	return dispatchIssueOps(args, deps)
 }
 
 func requireGeneratedOwnerProcessCWD(args []string) error {
@@ -165,7 +163,7 @@ func suggestIssueOpsSubcommand(input string) string {
 		return "; " + hint
 	}
 	var matches []string
-	for name := range issueOpsSubcommands {
+	for name := range issueOpsSubcommands(Dependencies{}) {
 		if strings.HasPrefix(name, input) {
 			matches = append(matches, name)
 		}
