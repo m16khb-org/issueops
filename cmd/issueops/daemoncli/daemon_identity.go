@@ -12,6 +12,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	daemondomain "issueops/internal/domain/daemon"
 )
 
 const (
@@ -71,7 +73,7 @@ func probeDaemonStatus(socket string) (daemonIdentityResponse, error) {
 	if !response.OK {
 		return daemonIdentityResponse{}, fmt.Errorf("daemon identity probe was rejected")
 	}
-	if err := response.Instance.Validate(); err != nil {
+	if err := daemondomain.ValidateInstance(response.Instance); err != nil {
 		return daemonIdentityResponse{}, fmt.Errorf("invalid daemon identity: %w", err)
 	}
 	// admission health 이전 daemon은 이 additive 필드들을 생략한다. 그런 응답은

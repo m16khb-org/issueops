@@ -1,10 +1,10 @@
 package issueopsapp
 
 import (
-	"issueops/cmd/issueops/validationcli/stateroundtrip"
 	channeladapter "issueops/internal/adapter/channel"
 	"issueops/internal/adapter/looprun"
 	"issueops/internal/adapter/outbound/sqlstore"
+	"issueops/internal/adapter/verification/probe/stateroundtrip"
 	"issueops/internal/adapter/worker"
 )
 

@@ -7,27 +7,14 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/daemoncli/daemonpaths"
+	contract "issueops/internal/contract/daemon"
 )
 
 type daemonPaths = daemonpaths.Paths
 type daemonInstance = daemonpaths.InstanceRecord
 type daemonProcessIdentity = daemonpaths.ProcessIdentity
 
-type daemonStatus struct {
-	OK                bool            `json:"ok"`
-	Running           bool            `json:"running"`
-	Reachable         bool            `json:"reachable"`
-	IdentityVerified  bool            `json:"identity_verified"`
-	ActiveConnections int             `json:"active_connections"`
-	MaxConnections    int             `json:"max_connections"`
-	Accepting         bool            `json:"accepting"`
-	Draining          bool            `json:"draining"`
-	PID               int             `json:"pid,omitempty"`
-	Code              string          `json:"code"`
-	Paths             daemonPaths     `json:"paths"`
-	Instance          *daemonInstance `json:"instance,omitempty"`
-	Message           string          `json:"message,omitempty"`
-}
+type daemonStatus = contract.Status
 
 const daemonReadyTimeout = 15 * time.Second
 

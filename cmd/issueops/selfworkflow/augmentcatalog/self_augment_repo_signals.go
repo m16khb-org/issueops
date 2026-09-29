@@ -46,7 +46,7 @@ func repoSignalRules() []repoSignalRule {
 				fileContainsTerm(root, filepath.Join("internal", "adapter", "testdata", "native_install_contract_matrix.golden.json"), "project-local-opt-in")
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {
-			signals.HasRiskQATier = dirContainsTerm(root, filepath.Join("cmd", "issueops", "riskqa"), "Validate") &&
+			signals.HasRiskQATier = dirContainsTerm(root, filepath.Join("internal", "adapter", "verification", "riskqa"), "Validate") &&
 				dirContainsTerm(root, filepath.Join("cmd", "issueops", "selfworkflow"), "risk_qa")
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {
@@ -56,8 +56,8 @@ func repoSignalRules() []repoSignalRule {
 		{func(root string, signals *SelfAugmentRepoSignals) {
 			signals.HasRepoLocalSandbox = dirContainsTerm(root, filepath.Join("internal", "adapter", "policy"), "path_outside_workspace") &&
 				fileContainsTerm(root, filepath.Join("internal", "adapter", "policy", "policy_test.go"), "TestCommandPolicyDeniesPathArgsOutsideWorkspace") &&
-				(dirContainsTerm(root, filepath.Join("cmd", "issueops", "validationcli"), "policy deny outside path arg") ||
-					dirContainsTerm(root, filepath.Join("cmd", "issueops", "validationcli", "commandpolicy"), "policy deny outside path arg"))
+				(dirContainsTerm(root, filepath.Join("internal", "adapter", "verification", "probe"), "policy deny outside path arg") ||
+					dirContainsTerm(root, filepath.Join("internal", "adapter", "verification", "probe", "commandpolicy"), "policy deny outside path arg"))
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {
 			signals.HasPerformanceBaseline = dirContainsTerm(root, filepath.Join("cmd", "issueops", "selfworkflow"), "SlowStepRegressions") &&
@@ -137,8 +137,8 @@ func repoSignalRules() []repoSignalRule {
 				fileContainsTerm(root, filepath.Join("internal", "contract", "issueops", "execution_sync_base_test.go"), "TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand")
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {
-			signals.HasGeniusMermaidLint = dirContainsTerm(root, filepath.Join("cmd", "issueops", "validationcli"), "lintMermaidBlocks") &&
-				fileContainsTerm(root, filepath.Join("cmd", "issueops", "validationcli", "validation_mcp_mermaid_native_wrappers_test.go"), "TestLintMermaidBlocksEnforcesGeniusThinkRules") &&
+			signals.HasGeniusMermaidLint = dirContainsTerm(root, filepath.Join("internal", "adapter", "verification", "probe"), "lintMermaidBlocks") &&
+				fileContainsTerm(root, filepath.Join("internal", "adapter", "verification", "probe", "validation_mcp_mermaid_native_wrappers_test.go"), "TestLintMermaidBlocksEnforcesGeniusThinkRules") &&
 				!fileContainsTerm(root, filepath.Join(".issueops", "ARCHITECTURE.md"), `\n`)
 		}},
 		{func(root string, signals *SelfAugmentRepoSignals) {

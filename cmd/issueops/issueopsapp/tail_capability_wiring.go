@@ -6,7 +6,6 @@ import (
 	mcpclitaildeps "issueops/cmd/issueops/mcpcli"
 	policyclitaildeps "issueops/cmd/issueops/policycli"
 	summarytaildeps "issueops/cmd/issueops/selfworkflow/summary"
-	webfetchtaildeps "issueops/cmd/issueops/validationcli/webfetch"
 	webfetchclitaildeps "issueops/cmd/issueops/webfetchcli"
 	auditadapter "issueops/internal/adapter/audit"
 	failurecauseadapter "issueops/internal/adapter/failurecause"
@@ -14,6 +13,7 @@ import (
 	provideradapter "issueops/internal/adapter/provider"
 	toolconformancetaildeps "issueops/internal/adapter/toolconformance"
 	tracetaildeps "issueops/internal/adapter/trace"
+	webfetchtaildeps "issueops/internal/adapter/verification/probe/webfetch"
 )
 
 // configureTailCapabilities는 실패 원인 분류, 정책 감사, 웹 조회, provider 해석을

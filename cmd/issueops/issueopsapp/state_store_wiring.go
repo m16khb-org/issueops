@@ -1,6 +1,8 @@
 package issueopsapp
 
 import (
+	"time"
+
 	benchmarkcmd "issueops/cmd/issueops/issueopscli/benchmarkcmd"
 	mcpcli "issueops/cmd/issueops/mcpcli"
 	augmentlesson "issueops/cmd/issueops/selfworkflow/augmentlesson"
@@ -9,8 +11,11 @@ import (
 	historycompare "issueops/cmd/issueops/selfworkflow/historycompare"
 	stateio "issueops/cmd/issueops/selfworkflow/stateio"
 	statuscli "issueops/cmd/issueops/statuscli"
-	stateroundtrip "issueops/cmd/issueops/validationcli/stateroundtrip"
 	statestore "issueops/internal/adapter/outbound/state"
+	probe "issueops/internal/adapter/verification/probe"
+	stateroundtrip "issueops/internal/adapter/verification/probe/stateroundtrip"
+	stepbudget "issueops/internal/adapter/verification/probe/stepbudget"
+	selfaugmentapp "issueops/internal/application/selfaugment"
 )
 
 // configureStateStores는 issueops state 접근을 설치한다.
@@ -19,6 +24,11 @@ import (
 // composition root의 결정이다. CLI/MCP transport와 self-workflow는 key와 결과
 // 형식만 안다.
 func configureStateStores() {
+	snapshotStore := selfaugmentapp.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: statestore.WriteStateRecord, Now: time.Now}
+	probe.WriteSnapshot = snapshotStore.Write
+	stateroundtrip.WriteSnapshot = snapshotStore.Write
+	stepbudget.WriteSnapshot = snapshotStore.Write
+
 	augmentlesson.StateDir = statestore.StateDir
 	augmentlesson.StatePrunePrefix = statestore.StatePrunePrefix
 	augmentlesson.StateWrite = statestore.StateWrite

@@ -6,41 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	contract "issueops/internal/contract/daemon"
+	domain "issueops/internal/domain/daemon"
 )
 
 // InstanceRecord는 daemon 생명주기 동작을 정확히 하나의 OS 프로세스와 정확히
 // 하나의 daemon protocol 인스턴스에 묶는다.
-type InstanceRecord struct {
-	PID              int    `json:"pid"`
-	ProcessStartTime string `json:"process_start_time"`
-	Executable       string `json:"executable"`
-	InstanceNonce    string `json:"instance_nonce"`
-	BuildSHA         string `json:"build_sha"`
-	ProtocolVersion  string `json:"protocol_version"`
-	Generation       string `json:"generation"`
-}
-
-func (r InstanceRecord) Validate() error {
-	if r.PID <= 0 {
-		return fmt.Errorf("pid must be positive")
-	}
-	for name, value := range map[string]string{
-		"process_start_time": r.ProcessStartTime,
-		"executable":         r.Executable,
-		"instance_nonce":     r.InstanceNonce,
-		"build_sha":          r.BuildSHA,
-		"protocol_version":   r.ProtocolVersion,
-		"generation":         r.Generation,
-	} {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("%s is required", name)
-		}
-	}
-	if !filepath.IsAbs(r.Executable) {
-		return fmt.Errorf("executable must be absolute")
-	}
-	return nil
-}
+type InstanceRecord = contract.InstanceRecord
 
 func ReadInstance(path string) (record InstanceRecord, err error) {
 	b, err := os.ReadFile(path)
@@ -50,14 +23,14 @@ func ReadInstance(path string) (record InstanceRecord, err error) {
 	if err := json.Unmarshal(b, &record); err != nil {
 		return InstanceRecord{}, fmt.Errorf("decode daemon instance record: %w", err)
 	}
-	if err := record.Validate(); err != nil {
+	if err := domain.ValidateInstance(record); err != nil {
 		return InstanceRecord{}, fmt.Errorf("invalid daemon instance record: %w", err)
 	}
 	return record, nil
 }
 
 func WriteInstance(path string, record InstanceRecord) error {
-	if err := record.Validate(); err != nil {
+	if err := domain.ValidateInstance(record); err != nil {
 		return err
 	}
 	b, err := json.Marshal(record)

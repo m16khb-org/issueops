@@ -4,9 +4,9 @@ import (
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/augmentplan"
-	"issueops/cmd/issueops/validationcli/qagate"
 	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/inspect"
+	"issueops/internal/adapter/verification/probe/qagate"
 )
 
 // configureDocsReaders는 문서 색인·목록·heading 읽기를 설치한다.

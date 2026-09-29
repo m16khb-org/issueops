@@ -3,9 +3,9 @@ package stateio
 import (
 	augmentcatalogcli "issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	augmentplancli "issueops/cmd/issueops/selfworkflow/augmentplan"
-	qagatecli "issueops/cmd/issueops/validationcli/qagate"
 	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/inspect"
+	qagatecli "issueops/internal/adapter/verification/probe/qagate"
 )
 
 // production wiring과 같은 문서 reader를 설치한다. 이 package의 테스트는 다른

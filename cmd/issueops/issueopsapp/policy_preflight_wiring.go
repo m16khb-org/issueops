@@ -6,7 +6,6 @@ import (
 	resourcesdeps "issueops/cmd/issueops/mcpcli/resources"
 	policyclideps "issueops/cmd/issueops/policycli"
 	statusclideps "issueops/cmd/issueops/statuscli"
-	preflightfuzzdeps "issueops/cmd/issueops/validationcli/preflightfuzz"
 	auditdeps "issueops/internal/adapter/audit"
 	gatesdeps "issueops/internal/adapter/gates"
 	gitworktreedeps "issueops/internal/adapter/gitworktree"
@@ -15,6 +14,7 @@ import (
 	reviewfilesdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
+	preflightfuzzdeps "issueops/internal/adapter/verification/probe/preflightfuzz"
 	workerdeps "issueops/internal/adapter/worker"
 	policyapp "issueops/internal/application/policy"
 )

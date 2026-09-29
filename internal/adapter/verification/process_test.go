@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"issueops/cmd/issueops/commandstep"
 	contract "issueops/internal/contract/selfverify"
 )
 
-func TestRunPreservesLegacyCommandStepContract(t *testing.T) {
+func TestRunPreservesCommandStepContract(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
 		stdin  string
@@ -24,11 +23,28 @@ func TestRunPreservesLegacyCommandStepContract(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
-			legacy := commandstep.Run(root, tc.name, time.Second, tc.stdin, tc.budget, "sh", "-c", tc.script)
+			want := contract.StepResult{Label: tc.name, Command: "sh -c " + tc.script, OK: tc.ok}
+			switch tc.name {
+			case "success":
+				want.Stdout = "prefixinput"
+				want.StdoutBytes = 11
+				want.Stderr = "stderr"
+				want.StderrBytes = 6
+			case "truncated":
+				want.Stdout = "[truncated: original_bytes=48 om"
+				want.StdoutBytes = 48
+				want.StdoutTruncated = true
+			case "failure":
+				want.Stderr = "failure"
+				want.StderrBytes = 7
+				want.Error = "exit status 7"
+			default:
+				t.Fatalf("unknown fixture %q", tc.name)
+			}
 			actual := Run(root, tc.name, time.Second, tc.stdin, tc.budget, "sh", "-c", tc.script)
-			legacy.DurationMS, actual.DurationMS = 0, 0
-			if !reflect.DeepEqual(actual, legacy) || actual.OK != tc.ok {
-				t.Fatalf("adapter=%+v legacy=%+v", actual, legacy)
+			actual.DurationMS = 0
+			if !reflect.DeepEqual(actual, want) || actual.OK != tc.ok {
+				t.Fatalf("adapter=%+v want=%+v", actual, want)
 			}
 		})
 	}
@@ -48,13 +64,13 @@ func TestRunUnknownExecutableFails(t *testing.T) {
 	}
 }
 
-func TestRunEnvPreservesLegacyOverridesAndBudget(t *testing.T) {
+func TestRunEnvPreservesOverridesAndBudget(t *testing.T) {
 	root := t.TempDir()
 	env := []string{"ISSUEOPS_VERIFICATION_TEST=overridden"}
-	legacy := commandstep.RunEnv(root, "env", time.Second, "", env, 28, "sh", "-c", "printf '%s' \"$ISSUEOPS_VERIFICATION_TEST\"; printf error >&2")
+	want := contract.StepResult{Label: "env", Command: "sh -c printf '%s' \"$ISSUEOPS_VERIFICATION_TEST\"; printf error >&2", OK: true, Stdout: "overridden", StdoutBytes: 10, Stderr: "error", StderrBytes: 5}
 	actual := RunEnv(root, "env", time.Second, "", env, 28, "sh", "-c", "printf '%s' \"$ISSUEOPS_VERIFICATION_TEST\"; printf error >&2")
-	legacy.DurationMS, actual.DurationMS = 0, 0
-	if !reflect.DeepEqual(actual, legacy) || !actual.OK || actual.Stdout != "overridden" {
-		t.Fatalf("adapter=%+v legacy=%+v", actual, legacy)
+	actual.DurationMS = 0
+	if !reflect.DeepEqual(actual, want) || !actual.OK || actual.Stdout != "overridden" {
+		t.Fatalf("adapter=%+v want=%+v", actual, want)
 	}
 }

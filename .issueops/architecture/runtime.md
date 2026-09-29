@@ -64,6 +64,14 @@ Project docs bootstrap:
 기존 보존 기간·개수로 정리하며, 정리 실패가 저장 성공을 뒤집지는 않는다. 상태 저장과 잠금은
 기존 outbound state adapter를 사용한다. CLI/MCP는 같은 application을 호출한다.
 
+자가 검증 단계 순서·성공 증거 재사용·실패 후 계속 여부는 `domain/selfverify`,
+실행과 저장 순서는 `application/selfverify`가 맡는다. 실제 CLI·MCP·daemon·Git
+검증 driver는 `adapter/verification/probe`, risk tier 실행은 같은 adapter의
+`riskqa`에 둔다. process 실행과 Go 파일 관측은 기존 verification 구현을 공유한다.
+후보 목록 저장은 application이 조율하며, snapshot schema·필드 구성은
+`domain/selfaugment`가 소유한다. probe의 snapshot writer는 composition root에서
+주입하고, 누락되면 process를 실행하기 전에 실패 결과를 반환한다.
+
 Unix의 sqlstore record 쓰기는 state root의 공용 파일에 shared lease를 얻은 뒤 실행한다.
 `ExcludeWrites`는 같은 파일의 exclusive lease로 모든 bucket의 쓰기를 거부하며 읽기는
 허용한다. `Put`, `Delete`, `DeleteBucket`, `Apply`, `CompareAndApplyFunc`가 이 경계를

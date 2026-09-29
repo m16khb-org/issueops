@@ -412,7 +412,7 @@
 - **변경/신규 파일:** 확장 application/selfverify·selfaugment; 신규 `internal/adapter/verification/`에 실제 fixture/build/process/SDK smoke driver; contract에 StepResult/run DTO. progress 렌더는 inbound.
 - **구현:** 단계 선택·retry/종료·evidence reuse 결정은 domain, 단계 실행/저장/취소 조율은 application으로 이동한다. validationcli의 각 자식 package를 기술 probe와 판단으로 분류해 probe 실행은 verification adapter로 옮긴다. probe가 자기 자신을 다시 실행하는 순환을 만들지 않는다.
 - **경계·보존:** risk race 결과가 full go test를 대체하는 조건과 golden reuse, step label/timeout/order, finite attempt cap를 그대로 유지한다. 기존 출력을 baseline으로 고정한 뒤 wiring을 바꾼다.
-- **CHECK:** `go test ./cmd/issueops/selfworkflow/... ./cmd/issueops/validationcli/... ./cmd/issueops/commandstep -count=1`; 신규 application/verification adapter suites.
+- **CHECK:** `go test ./cmd/issueops/selfworkflow/... ./internal/adapter/verification/... ./cmd/issueops/commandstep -count=1`; 신규 application/verification adapter suites.
 - **EXPECT / QA:** 정상: 성공한 full-suite evidence만 해당 run에서 reuse. 실패: 한 step 실패/cancel/timeout 시 후속 동작과 최종 OK가 기존 계약과 동일; 다른 run의 partial 성공 합성 금지. fake runner가 모르는 argv를 성공 처리하지 않음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T18-success.txt`, `T18-failure.txt`, `T18-ownership.json`.
 

@@ -6,15 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	contract "issueops/internal/contract/daemon"
 )
 
-type Paths struct {
-	Dir    string `json:"dir"`
-	Socket string `json:"socket"`
-	PID    string `json:"pid_file"`
-	Lock   string `json:"lock_file"`
-	Log    string `json:"log_file"`
-}
+type Paths = contract.Paths
 
 func Current() (Paths, error) {
 	dir := strings.TrimSpace(os.Getenv("ISSUEOPS_DAEMON_DIR"))

@@ -357,16 +357,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/commandstep/run.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func Run",
-        "func RunEnv",
-        "func RunEnvWithBudget"
-      ]
-    },
-    {
       "path": "cmd/issueops/commandstep/types.go",
       "owner": "inbound",
       "task": "T20",
@@ -563,7 +553,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func InstanceRecord.Validate",
         "func ReadInstance",
         "func WriteInstance",
         "func canonicalExecutable",
@@ -3276,38 +3265,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/riskqa/risk_qa.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func Validate",
-        "func ValidateForSelfVerify",
-        "func ValidateWithDeps",
-        "func defaultDeps",
-        "type Deps",
-        "type RiskQATierPlan",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/riskqa/risk_qa_git.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func ParseGitStatusPath",
-        "func gitChangedPaths"
-      ]
-    },
-    {
-      "path": "cmd/issueops/riskqa/risk_qa_plan.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func Plan",
-        "func PlanJSON"
-      ]
-    },
-    {
       "path": "cmd/issueops/rootcmd/root_command.go",
       "owner": "inbound",
       "task": "T20",
@@ -4469,837 +4426,6 @@
         "func updateInstaller.RefreshDaemon",
         "type updateInstaller"
       ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/candidateexport/validation_candidate_export.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func CandidateExportValidationDeps.withDefaults",
-        "func CandidateExportValidationErrors",
-        "func ValidateSelfVerifyCandidateExport",
-        "func ValidateSelfVerifyCandidateExportWithDeps",
-        "func containsString",
-        "type CandidateExportCommandRunner",
-        "type CandidateExportValidationDeps",
-        "type SelfAugmentStateCheckpoint",
-        "type SelfVerificationCandidate",
-        "type SelfVerificationCandidateExportResult",
-        "type SelfVerificationCandidateExportStateSnapshot",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/commandpolicy/validation_command_policy.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Validate",
-        "func commandPolicyValidationDeps.withDefaults",
-        "func exists",
-        "func validateCommandPolicy",
-        "func validateCommandPolicyWithDeps",
-        "type StepResult",
-        "type commandPolicyCommandRunner",
-        "type commandPolicyValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/commandpolicy/validation_command_policy_checks.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func commandPolicyChecks",
-        "func containsString",
-        "type commandPolicyValidationCheck"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/contractauditworker/validation_command_audit.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateCommandAudit",
-        "func ValidateCommandAuditWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/contractauditworker/validation_contract_audit_worker_deps.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidationDeps.withDefaults",
-        "type StepResult",
-        "type ValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/contractauditworker/validation_contract_check.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateContractCheck",
-        "func ValidateContractCheckWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/contractauditworker/validation_tool_conformance.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateToolConformance",
-        "func ValidateToolConformanceWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/contractauditworker/validation_worker_lifecycle.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateWorkerLifecycle",
-        "func ValidateWorkerLifecycleWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/daemonresilience/validation_daemon_resilience.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Validate",
-        "func validateDaemonRestartResilience",
-        "func validateDaemonRestartResilienceWithDeps",
-        "type StepResult",
-        "type daemonPaths",
-        "type daemonResilienceCommandRunner",
-        "type daemonStatus"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/daemonresilience/validation_daemon_resilience_deps.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func daemonResilienceValidationDeps.withDefaults",
-        "func exists",
-        "func runDaemonResilienceCommand",
-        "type daemonResilienceValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func assertionStep",
-        "func assertionStepWithOutput",
-        "func combineFailedStep",
-        "func containsString",
-        "func exists",
-        "func failedStep",
-        "func runCommandStep",
-        "func runCommandStepEnv",
-        "func runCommandStepEnvWithBudget",
-        "func splitLines",
-        "func tailWithBudget",
-        "func writeSelfAugmentSnapshotRecord",
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentSlowStepRegression",
-        "type SelfAugmentStateCheckpoint",
-        "type SelfAugmentStateSnapshot",
-        "type SelfAugmentStepBudgetRegression",
-        "type SelfAugmentSummary",
-        "type SelfVerificationCandidate",
-        "type SelfVerificationCandidateExportResult",
-        "type SelfVerificationCandidateExportStateSnapshot",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/exports.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ClaudeMCPDuplicateWarningFixture",
-        "func ContainsForbiddenLegacyOutsideRuntimePaths",
-        "func DetectClaudeMCPDuplicateWarnings",
-        "func FindUnredactedSecretLike",
-        "func ForbiddenNameHits",
-        "func LintMermaidBlocks",
-        "func ValidateCommandPolicy",
-        "func ValidateContractCheckSmoke",
-        "func ValidateDaemonRestartResilience",
-        "func ValidateDocsIndex",
-        "func ValidateGoFormat",
-        "func ValidateHarnessInvariants",
-        "func ValidateInspect",
-        "func ValidateInstallDryRunSmoke",
-        "func ValidateMermaidDocs",
-        "func ValidateNativeIntegration",
-        "func ValidateParallelTempIsolation",
-        "func ValidatePreflightFuzz",
-        "func ValidateQAGate",
-        "func ValidateRedactionAudit",
-        "func ValidateStateRoundtrip",
-        "func ValidateWebFetchBattery",
-        "func ValidateWorkerLifecycleSmoke"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/goformat/validation_go_format.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Deps.withDefaults",
-        "func Validate",
-        "func ValidateWithDeps",
-        "func commandError",
-        "func listTrackedGoFiles",
-        "func listUnformatted",
-        "func nonEmptyLines",
-        "type Deps",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/installdryrun/validation_install_dry_run.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Validate",
-        "func validateInstallDryRunSmoke",
-        "func validateInstallDryRunSmokeWithDeps",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/installdryrun/validation_install_dry_run_contract.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func containsString",
-        "func installDryRunValidationErrors"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/installdryrun/validation_install_dry_run_deps.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func exists",
-        "func installDryRunValidationDeps.withDefaults",
-        "type installDryRunCommandRunner",
-        "type installDryRunValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/installdryrun/validation_install_dry_run_types.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "type installDryRunSmokeFile",
-        "type installDryRunSmokeHost",
-        "type installDryRunSmokeLink",
-        "type installDryRunSmokeResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/invariants/validation_helpers.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateHarnessInvariants",
-        "func exists",
-        "func validateHarnessInvariants",
-        "func validateSkillShape",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/invariants/validation_legacy_names.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ContainsForbiddenLegacyOutsideRuntimePaths",
-        "func ForbiddenNameHits",
-        "func allowCurrentOwnerHandle",
-        "func containsForbiddenLegacyOutsideRuntimePaths",
-        "func currentOwnerHandle",
-        "func firstForbiddenLegacyNeedle",
-        "func forbiddenLegacyNeedles",
-        "func forbiddenNameHits",
-        "func shouldSkipForbiddenNameScanDir"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/mcpsmoke/validation_mcp.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateMCP",
-        "func ValidateMCPWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/mcpsmoke/validation_mcp_contract.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func MCPSmokeExpectedMarkers",
-        "func MCPSmokeHasExpectedMarkers",
-        "func ValidateMCPSmokeContract"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/mcpsmoke/validation_mcp_deps.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func MCPValidationDeps.withDefaults",
-        "func failedStep",
-        "func runCommandStepEnv",
-        "func splitLines",
-        "func tailWithBudget",
-        "type MCPValidationDeps",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/mcpsmoke/validation_mcp_sdk.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func runSDKSmoke",
-        "func sdkSmokeFailure"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/nativeintegration/adapter_tail_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/validationcli/nativeintegration/install_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/validationcli/nativeintegration/validation_native_duplicate_warning.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ClaudeMCPDuplicateWarningFixture",
-        "func DetectClaudeMCPDuplicateWarnings",
-        "func claudeMCPDuplicateWarningFixture",
-        "func detectClaudeMCPDuplicateWarnings",
-        "type ClaudeMCPDuplicateWarning"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/nativeintegration/validation_native_integration.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Validate",
-        "func validateNativeIntegration",
-        "func validateNativeIntegrationWithDeps",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/nativeintegration/validation_native_integration_contract.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func canonicalHarnessBinary",
-        "func canonicalStableNativeRoot",
-        "func hasCanonicalOmoMCP",
-        "func hasThinCodexContextHooks",
-        "func nativeIntegrationCodexConfigErrors",
-        "func nativeIntegrationDuplicateWarningOutput",
-        "func nativeIntegrationOmoConfigErrors",
-        "func nativeIntegrationPathErrors",
-        "func nativeIntegrationRequiredPaths"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/nativeintegration/validation_native_integration_deps.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func exists",
-        "func nativeIntegrationValidationDeps.withDefaults",
-        "type nativeIntegrationValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/parallelisolation/validation_parallel_isolation.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Validate",
-        "func validateParallelTempIsolationWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/parallelisolation/validation_parallel_isolation_result.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func parallelIsolationCommands",
-        "func parallelIsolationErrors",
-        "func parallelIsolationOutput",
-        "func parallelIsolationResult",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/parallelisolation/validation_parallel_isolation_types.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func parallelIsolationValidationDeps.withDefaults",
-        "type parallelIsolationProbe",
-        "type parallelIsolationValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/parallelisolation/validation_parallel_probe.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func parallelIsolationProbeDeps.withDefaults",
-        "func runCommandStepEnv",
-        "func runParallelIsolationProbe",
-        "func runParallelIsolationProbeWithDeps",
-        "type parallelIsolationProbeDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/preflightfuzz/adapter_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/validationcli/preflightfuzz/validation_preflight_fuzz.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Validate",
-        "func validatePreflightFuzzWithDeps",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/preflightfuzz/validation_preflight_fuzz_contract.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func preflightFuzzValidationErrors"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/preflightfuzz/validation_preflight_fuzz_deps.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func preflightFuzzValidationDeps.withDefaults",
-        "func runPreflightFuzzCommand",
-        "type preflightFuzzCommandRunner",
-        "type preflightFuzzGitRunner",
-        "type preflightFuzzValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/qagate/docs_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/validationcli/qagate/install_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/validationcli/qagate/validation_docs_deps.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func assertionStep",
-        "func containsString",
-        "func docsValidationDeps.withDefaults",
-        "func exists",
-        "type StepResult",
-        "type docsValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/qagate/validation_mermaid.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateMermaidDocs",
-        "func validateMermaidDocsWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/qagate/validation_mermaid_lint.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func LintMermaidBlocks",
-        "func lintMermaidBlocks"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/qagate/validation_qa_gate.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateQAGate",
-        "func validateQAGateWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/qagate/validation_redaction_audit.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func FindUnredactedSecretLike",
-        "func ValidateRedactionAudit",
-        "func findUnredactedSecretLike",
-        "func lineContainsAllowedSecretPlaceholder",
-        "func redactionAuditFiles",
-        "func redactionAuditFilesWithDeps",
-        "func validateRedactionAuditWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/smoke/validation_smoke.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateDocsIndex",
-        "func ValidateInspect",
-        "func rejectTruncatedCapture",
-        "func runCommandStep",
-        "func validateDocsIndex",
-        "func validateDocsIndexWithDeps",
-        "func validateInspect",
-        "func validateInspectWithDeps",
-        "type StepResult",
-        "type validationCommandRunner"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/smoke/validation_smoke_contract.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func allowCurrentOwnerHandle",
-        "func containsForbiddenLegacyOutsideRuntimePaths",
-        "func currentOwnerHandle",
-        "func docIndexContains",
-        "func docsIndexSmokeValidationErrors",
-        "func forbiddenLegacyNeedles",
-        "func inspectSmokeValidationErrors"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/sqlstore_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "type StateDatabase"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/state_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/validation_state_roundtrip.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Validate",
-        "func validateStateRoundtrip",
-        "func validateStateRoundtripWithDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/validation_state_roundtrip_deps.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func assertionStepWithOutput",
-        "func combineFailedStep",
-        "func containsString",
-        "func failedStep",
-        "func runCommandStepEnv",
-        "func stateRoundtripValidationDeps.withDefaults",
-        "func tailWithBudget",
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentHistoryEntry",
-        "type SelfAugmentHistoryResult",
-        "type SelfAugmentHistoryRetention",
-        "type SelfAugmentPromoteResult",
-        "type SelfAugmentSlowStep",
-        "type SelfAugmentStateSnapshot",
-        "type SelfAugmentSummary",
-        "type StepResult",
-        "type stateRoundtripCommandRunner",
-        "type stateRoundtripValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/validation_state_roundtrip_prune.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func stateRoundtripStateSession.validatePrune"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/validation_state_roundtrip_self_verify.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validateStateRoundtripSelfVerifyDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/validation_state_roundtrip_self_verify_history.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func stateDoctorHasIssueCode",
-        "func stateRoundtripSelfVerifySession.validateHistoryAndRetention"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/validation_state_roundtrip_self_verify_session.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func newStateRoundtripSelfVerifySession",
-        "func stateRoundtripSelfVerifySession.combineFailed",
-        "func stateRoundtripSelfVerifySession.fail",
-        "func stateRoundtripSelfVerifySession.run",
-        "type stateRoundtripSelfVerifySession",
-        "type validateStateRoundtripSelfVerifyInput"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/validation_state_roundtrip_self_verify_snapshots.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func stateRoundtripSelfVerifySession.writeCompareSnapshots"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stateroundtrip/validation_state_roundtrip_state_cli.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func stateRoundtripStateSession.combineFailed",
-        "func stateRoundtripStateSession.fail",
-        "func stateRoundtripStateSession.result",
-        "func stateRoundtripStateSession.run",
-        "func stateRoundtripStateSession.validateWriteReadList",
-        "func validateStateRoundtripStateCLI",
-        "type stateRoundtripStateSession",
-        "type validateStateRoundtripStateInput",
-        "type validateStateRoundtripStateResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/stepbudget/validation_step_budget.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func StepBudgetBaselineSummaries",
-        "func StepBudgetStateSnapshot",
-        "func StepBudgetValidationDeps.withDefaults",
-        "func StepBudgetValidationErrors",
-        "func ValidateStepBudgetBaseline",
-        "func ValidateStepBudgetBaselineWithDeps",
-        "func containsString",
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentSlowStep",
-        "type SelfAugmentSlowStepRegression",
-        "type SelfAugmentStateSnapshot",
-        "type SelfAugmentStepBudgetRegression",
-        "type SelfAugmentStepDurationStat",
-        "type SelfAugmentSummary",
-        "type StepBudgetCommandRunner",
-        "type StepBudgetSnapshotWriter",
-        "type StepBudgetValidationDeps",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_candidate_export_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func CandidateExportValidationErrors",
-        "func ValidateSelfVerifyCandidateExport",
-        "func ValidateSelfVerifyCandidateExportWithDeps",
-        "type CandidateExportValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_command_policy_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validateCommandPolicy"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_contract_audit_worker_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func ValidateCommandAudit",
-        "func ValidateCommandAuditWithDeps",
-        "func ValidateContractCheck",
-        "func ValidateContractCheckWithDeps",
-        "func ValidateToolConformance",
-        "func ValidateToolConformanceWithDeps",
-        "func ValidateWorkerLifecycle",
-        "func ValidateWorkerLifecycleWithDeps",
-        "type ContractAuditWorkerValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_daemon_resilience_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validateDaemonRestartResilience"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_install_dry_run_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validateInstallDryRunSmoke"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_invariants_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func containsForbiddenLegacyOutsideRuntimePaths",
-        "func forbiddenNameHits",
-        "func validateHarnessInvariants"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_mcp_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func MCPSmokeExpectedMarkers",
-        "func MCPSmokeHasExpectedMarkers",
-        "func ValidateMCP",
-        "func ValidateMCPSmokeContract",
-        "func ValidateMCPWithDeps",
-        "type MCPValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_native_integration_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validateNativeIntegration",
-        "type ClaudeMCPDuplicateWarning"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_parallel_isolation_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validateParallelTempIsolation"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_preflight_fuzz_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validatePreflightFuzz"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_qa_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func findUnredactedSecretLike",
-        "func lintMermaidBlocks",
-        "func validateMermaidDocs",
-        "func validateQAGate",
-        "func validateRedactionAudit"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_smoke_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validateDocsIndex",
-        "func validateInspect"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_state_roundtrip_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func validateStateRoundtrip"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/validation_step_budget_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func StepBudgetBaselineSummaries",
-        "func StepBudgetStateSnapshot",
-        "func StepBudgetValidationErrors",
-        "func ValidateStepBudgetBaseline",
-        "func ValidateStepBudgetBaselineWithDeps",
-        "type StepBudgetValidationDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/webfetch/validation_webfetch.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Validate",
-        "type StepResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/validationcli/webfetch/webfetch_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/webfetchcli/webfetch.go",
@@ -10496,12 +9622,871 @@
       ]
     },
     {
+      "path": "internal/adapter/verification/probe/candidateexport/validation_candidate_export.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func CandidateExportValidationDeps.withDefaults",
+        "func CandidateExportValidationErrors",
+        "func ValidateSelfVerifyCandidateExport",
+        "func ValidateSelfVerifyCandidateExportWithDeps",
+        "func containsString",
+        "type CandidateExportCommandRunner",
+        "type CandidateExportValidationDeps",
+        "type SelfAugmentStateCheckpoint",
+        "type SelfVerificationCandidate",
+        "type SelfVerificationCandidateExportResult",
+        "type SelfVerificationCandidateExportStateSnapshot",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/commandpolicy/validation_command_policy.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validate",
+        "func commandPolicyValidationDeps.withDefaults",
+        "func exists",
+        "func validateCommandPolicy",
+        "func validateCommandPolicyWithDeps",
+        "type StepResult",
+        "type commandPolicyCommandRunner",
+        "type commandPolicyValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/commandpolicy/validation_command_policy_checks.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func commandPolicyChecks",
+        "func containsString",
+        "type commandPolicyValidationCheck"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/contractauditworker/validation_command_audit.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateCommandAudit",
+        "func ValidateCommandAuditWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/contractauditworker/validation_contract_audit_worker_deps.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidationDeps.withDefaults",
+        "type StepResult",
+        "type ValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/contractauditworker/validation_contract_check.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateContractCheck",
+        "func ValidateContractCheckWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/contractauditworker/validation_tool_conformance.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateToolConformance",
+        "func ValidateToolConformanceWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/contractauditworker/validation_worker_lifecycle.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateWorkerLifecycle",
+        "func ValidateWorkerLifecycleWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/daemonresilience/validation_daemon_resilience.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validate",
+        "func validateDaemonRestartResilience",
+        "func validateDaemonRestartResilienceWithDeps",
+        "type StepResult",
+        "type daemonPaths",
+        "type daemonResilienceCommandRunner",
+        "type daemonStatus"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/daemonresilience/validation_daemon_resilience_deps.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func daemonResilienceValidationDeps.withDefaults",
+        "func exists",
+        "func runDaemonResilienceCommand",
+        "type daemonResilienceValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func assertionStep",
+        "func assertionStepWithOutput",
+        "func combineFailedStep",
+        "func containsString",
+        "func exists",
+        "func failedStep",
+        "func runCommandStep",
+        "func runCommandStepEnv",
+        "func runCommandStepEnvWithBudget",
+        "func splitLines",
+        "func tailWithBudget",
+        "func writeSelfAugmentSnapshotRecord",
+        "type SelfAugmentCompareResult",
+        "type SelfAugmentSlowStepRegression",
+        "type SelfAugmentStateCheckpoint",
+        "type SelfAugmentStateSnapshot",
+        "type SelfAugmentStepBudgetRegression",
+        "type SelfAugmentSummary",
+        "type SelfVerificationCandidate",
+        "type SelfVerificationCandidateExportResult",
+        "type SelfVerificationCandidateExportStateSnapshot",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/exports.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ClaudeMCPDuplicateWarningFixture",
+        "func ContainsForbiddenLegacyOutsideRuntimePaths",
+        "func DetectClaudeMCPDuplicateWarnings",
+        "func FindUnredactedSecretLike",
+        "func ForbiddenNameHits",
+        "func LintMermaidBlocks",
+        "func ValidateCommandPolicy",
+        "func ValidateContractCheckSmoke",
+        "func ValidateDaemonRestartResilience",
+        "func ValidateDocsIndex",
+        "func ValidateGoFormat",
+        "func ValidateHarnessInvariants",
+        "func ValidateInspect",
+        "func ValidateInstallDryRunSmoke",
+        "func ValidateMermaidDocs",
+        "func ValidateNativeIntegration",
+        "func ValidateParallelTempIsolation",
+        "func ValidatePreflightFuzz",
+        "func ValidateQAGate",
+        "func ValidateRedactionAudit",
+        "func ValidateStateRoundtrip",
+        "func ValidateWebFetchBattery",
+        "func ValidateWorkerLifecycleSmoke"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/goformat/validation_go_format.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Deps.withDefaults",
+        "func Validate",
+        "func ValidateWithDeps",
+        "type Deps",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/installdryrun/validation_install_dry_run.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validate",
+        "func validateInstallDryRunSmoke",
+        "func validateInstallDryRunSmokeWithDeps",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/installdryrun/validation_install_dry_run_contract.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func containsString",
+        "func installDryRunValidationErrors"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/installdryrun/validation_install_dry_run_deps.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func exists",
+        "func installDryRunValidationDeps.withDefaults",
+        "type installDryRunCommandRunner",
+        "type installDryRunValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/installdryrun/validation_install_dry_run_types.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "type installDryRunSmokeFile",
+        "type installDryRunSmokeHost",
+        "type installDryRunSmokeLink",
+        "type installDryRunSmokeResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/invariants/validation_helpers.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateHarnessInvariants",
+        "func exists",
+        "func validateHarnessInvariants",
+        "func validateSkillShape",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/invariants/validation_legacy_names.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ContainsForbiddenLegacyOutsideRuntimePaths",
+        "func ForbiddenNameHits",
+        "func allowCurrentOwnerHandle",
+        "func containsForbiddenLegacyOutsideRuntimePaths",
+        "func currentOwnerHandle",
+        "func firstForbiddenLegacyNeedle",
+        "func forbiddenLegacyNeedles",
+        "func forbiddenNameHits",
+        "func shouldSkipForbiddenNameScanDir"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/mcpsmoke/validation_mcp.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateMCP",
+        "func ValidateMCPWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/mcpsmoke/validation_mcp_contract.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func MCPSmokeExpectedMarkers",
+        "func MCPSmokeHasExpectedMarkers",
+        "func ValidateMCPSmokeContract"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/mcpsmoke/validation_mcp_deps.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func MCPValidationDeps.withDefaults",
+        "func failedStep",
+        "func runCommandStepEnv",
+        "func splitLines",
+        "func tailWithBudget",
+        "type MCPValidationDeps",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/mcpsmoke/validation_mcp_sdk.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func runSDKSmoke",
+        "func sdkSmokeFailure"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/nativeintegration/adapter_tail_dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": []
+    },
+    {
+      "path": "internal/adapter/verification/probe/nativeintegration/install_dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": []
+    },
+    {
+      "path": "internal/adapter/verification/probe/nativeintegration/validation_native_duplicate_warning.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ClaudeMCPDuplicateWarningFixture",
+        "func DetectClaudeMCPDuplicateWarnings",
+        "func claudeMCPDuplicateWarningFixture",
+        "func detectClaudeMCPDuplicateWarnings",
+        "type ClaudeMCPDuplicateWarning"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/nativeintegration/validation_native_integration.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validate",
+        "func validateNativeIntegration",
+        "func validateNativeIntegrationWithDeps",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/nativeintegration/validation_native_integration_contract.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func canonicalHarnessBinary",
+        "func canonicalStableNativeRoot",
+        "func hasCanonicalOmoMCP",
+        "func hasThinCodexContextHooks",
+        "func nativeIntegrationCodexConfigErrors",
+        "func nativeIntegrationDuplicateWarningOutput",
+        "func nativeIntegrationOmoConfigErrors",
+        "func nativeIntegrationPathErrors",
+        "func nativeIntegrationRequiredPaths"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/nativeintegration/validation_native_integration_deps.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func exists",
+        "func nativeIntegrationValidationDeps.withDefaults",
+        "type nativeIntegrationValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/parallelisolation/validation_parallel_isolation.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validate",
+        "func validateParallelTempIsolationWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/parallelisolation/validation_parallel_isolation_result.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func parallelIsolationCommands",
+        "func parallelIsolationErrors",
+        "func parallelIsolationOutput",
+        "func parallelIsolationResult",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/parallelisolation/validation_parallel_isolation_types.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func parallelIsolationValidationDeps.withDefaults",
+        "type parallelIsolationProbe",
+        "type parallelIsolationValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/parallelisolation/validation_parallel_probe.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func parallelIsolationProbeDeps.withDefaults",
+        "func runCommandStepEnv",
+        "func runParallelIsolationProbe",
+        "func runParallelIsolationProbeWithDeps",
+        "type parallelIsolationProbeDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/preflightfuzz/adapter_dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": []
+    },
+    {
+      "path": "internal/adapter/verification/probe/preflightfuzz/validation_preflight_fuzz.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validate",
+        "func validatePreflightFuzzWithDeps",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/preflightfuzz/validation_preflight_fuzz_contract.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func preflightFuzzValidationErrors"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/preflightfuzz/validation_preflight_fuzz_deps.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func preflightFuzzValidationDeps.withDefaults",
+        "func runPreflightFuzzCommand",
+        "type preflightFuzzCommandRunner",
+        "type preflightFuzzGitRunner",
+        "type preflightFuzzValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/qagate/docs_dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": []
+    },
+    {
+      "path": "internal/adapter/verification/probe/qagate/install_dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": []
+    },
+    {
+      "path": "internal/adapter/verification/probe/qagate/validation_docs_deps.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func assertionStep",
+        "func containsString",
+        "func docsValidationDeps.withDefaults",
+        "func exists",
+        "type StepResult",
+        "type docsValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/qagate/validation_mermaid.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateMermaidDocs",
+        "func validateMermaidDocsWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/qagate/validation_mermaid_lint.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func LintMermaidBlocks",
+        "func lintMermaidBlocks"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/qagate/validation_qa_gate.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateQAGate",
+        "func validateQAGateWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/qagate/validation_redaction_audit.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func FindUnredactedSecretLike",
+        "func ValidateRedactionAudit",
+        "func findUnredactedSecretLike",
+        "func lineContainsAllowedSecretPlaceholder",
+        "func redactionAuditFiles",
+        "func redactionAuditFilesWithDeps",
+        "func validateRedactionAuditWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/smoke/validation_smoke.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateDocsIndex",
+        "func ValidateInspect",
+        "func rejectTruncatedCapture",
+        "func runCommandStep",
+        "func validateDocsIndex",
+        "func validateDocsIndexWithDeps",
+        "func validateInspect",
+        "func validateInspectWithDeps",
+        "type StepResult",
+        "type validationCommandRunner"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/smoke/validation_smoke_contract.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func allowCurrentOwnerHandle",
+        "func containsForbiddenLegacyOutsideRuntimePaths",
+        "func currentOwnerHandle",
+        "func docIndexContains",
+        "func docsIndexSmokeValidationErrors",
+        "func forbiddenLegacyNeedles",
+        "func inspectSmokeValidationErrors"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/sqlstore_dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "type StateDatabase"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/state_dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": []
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validate",
+        "func validateStateRoundtrip",
+        "func validateStateRoundtripWithDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip_deps.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func assertionStepWithOutput",
+        "func combineFailedStep",
+        "func containsString",
+        "func failedStep",
+        "func runCommandStepEnv",
+        "func stateRoundtripValidationDeps.withDefaults",
+        "func tailWithBudget",
+        "type SelfAugmentCompareResult",
+        "type SelfAugmentHistoryEntry",
+        "type SelfAugmentHistoryResult",
+        "type SelfAugmentHistoryRetention",
+        "type SelfAugmentPromoteResult",
+        "type SelfAugmentSlowStep",
+        "type SelfAugmentStateSnapshot",
+        "type SelfAugmentSummary",
+        "type StepResult",
+        "type stateRoundtripCommandRunner",
+        "type stateRoundtripValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip_prune.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func stateRoundtripStateSession.validatePrune"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip_self_verify.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validateStateRoundtripSelfVerifyDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip_self_verify_history.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func stateDoctorHasIssueCode",
+        "func stateRoundtripSelfVerifySession.validateHistoryAndRetention"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip_self_verify_session.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func newStateRoundtripSelfVerifySession",
+        "func stateRoundtripSelfVerifySession.combineFailed",
+        "func stateRoundtripSelfVerifySession.fail",
+        "func stateRoundtripSelfVerifySession.run",
+        "type stateRoundtripSelfVerifySession",
+        "type validateStateRoundtripSelfVerifyInput"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip_self_verify_snapshots.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func stateRoundtripSelfVerifySession.writeCompareSnapshots"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stateroundtrip/validation_state_roundtrip_state_cli.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func stateRoundtripStateSession.combineFailed",
+        "func stateRoundtripStateSession.fail",
+        "func stateRoundtripStateSession.result",
+        "func stateRoundtripStateSession.run",
+        "func stateRoundtripStateSession.validateWriteReadList",
+        "func validateStateRoundtripStateCLI",
+        "type stateRoundtripStateSession",
+        "type validateStateRoundtripStateInput",
+        "type validateStateRoundtripStateResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/stepbudget/validation_step_budget.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func StepBudgetBaselineSummaries",
+        "func StepBudgetStateSnapshot",
+        "func StepBudgetValidationDeps.withDefaults",
+        "func StepBudgetValidationErrors",
+        "func ValidateStepBudgetBaseline",
+        "func ValidateStepBudgetBaselineWithDeps",
+        "func containsString",
+        "type SelfAugmentCompareResult",
+        "type SelfAugmentSlowStep",
+        "type SelfAugmentSlowStepRegression",
+        "type SelfAugmentStateSnapshot",
+        "type SelfAugmentStepBudgetRegression",
+        "type SelfAugmentStepDurationStat",
+        "type SelfAugmentSummary",
+        "type StepBudgetCommandRunner",
+        "type StepBudgetSnapshotWriter",
+        "type StepBudgetValidationDeps",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_candidate_export_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func CandidateExportValidationErrors",
+        "func ValidateSelfVerifyCandidateExport",
+        "func ValidateSelfVerifyCandidateExportWithDeps",
+        "type CandidateExportValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_command_policy_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validateCommandPolicy"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_contract_audit_worker_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func ValidateCommandAudit",
+        "func ValidateCommandAuditWithDeps",
+        "func ValidateContractCheck",
+        "func ValidateContractCheckWithDeps",
+        "func ValidateToolConformance",
+        "func ValidateToolConformanceWithDeps",
+        "func ValidateWorkerLifecycle",
+        "func ValidateWorkerLifecycleWithDeps",
+        "type ContractAuditWorkerValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_daemon_resilience_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validateDaemonRestartResilience"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_install_dry_run_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validateInstallDryRunSmoke"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_invariants_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func containsForbiddenLegacyOutsideRuntimePaths",
+        "func forbiddenNameHits",
+        "func validateHarnessInvariants"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_mcp_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func MCPSmokeExpectedMarkers",
+        "func MCPSmokeHasExpectedMarkers",
+        "func ValidateMCP",
+        "func ValidateMCPSmokeContract",
+        "func ValidateMCPWithDeps",
+        "type MCPValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_native_integration_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validateNativeIntegration",
+        "type ClaudeMCPDuplicateWarning"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_parallel_isolation_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validateParallelTempIsolation"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_preflight_fuzz_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validatePreflightFuzz"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_qa_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func findUnredactedSecretLike",
+        "func lintMermaidBlocks",
+        "func validateMermaidDocs",
+        "func validateQAGate",
+        "func validateRedactionAudit"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_smoke_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validateDocsIndex",
+        "func validateInspect"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_state_roundtrip_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func validateStateRoundtrip"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/validation_step_budget_facade.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func StepBudgetBaselineSummaries",
+        "func StepBudgetStateSnapshot",
+        "func StepBudgetValidationErrors",
+        "func ValidateStepBudgetBaseline",
+        "func ValidateStepBudgetBaselineWithDeps",
+        "type StepBudgetValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/webfetch/validation_webfetch.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validate",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/webfetch/webfetch_dependencies.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": []
+    },
+    {
       "path": "internal/adapter/verification/process.go",
       "owner": "adapter",
       "task": "T20",
       "symbols": [
         "func Run",
         "func RunEnv"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/riskqa/risk_qa.go",
+      "owner": "adapter",
+      "task": "T16",
+      "symbols": [
+        "func Validate",
+        "func ValidateForSelfVerify",
+        "func ValidateWithDeps",
+        "func defaultDeps",
+        "type Deps",
+        "type RiskQATierPlan",
+        "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/riskqa/risk_qa_git.go",
+      "owner": "adapter",
+      "task": "T16",
+      "symbols": [
+        "func ParseGitStatusPath",
+        "func gitChangedPaths"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/riskqa/risk_qa_plan.go",
+      "owner": "adapter",
+      "task": "T16",
+      "symbols": [
+        "func Plan",
+        "func PlanJSON"
       ]
     },
     {
@@ -12398,7 +12383,7 @@
     {
       "path": "internal/application/selfverify/format.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func ValidateFormat",
         "func failedFormat",
@@ -12408,7 +12393,7 @@
     {
       "path": "internal/application/selfverify/loop.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func ExecuteLoop",
         "func NewLoopResult",
@@ -12423,7 +12408,7 @@
     {
       "path": "internal/application/selfverify/run.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func Run",
         "type RunDeps",
@@ -12433,16 +12418,25 @@
     {
       "path": "internal/application/selfverify/save.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func SaveSummary",
         "type SaveSummaryDeps"
       ]
     },
     {
+      "path": "internal/application/selfverify/save_candidates.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func SaveCandidateExport",
+        "type SaveCandidateExportDeps"
+      ]
+    },
+    {
       "path": "internal/application/selfverify/steps.go",
       "owner": "application",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func CachedContractGoldenStep",
         "func PlannedSteps",
@@ -12686,6 +12680,16 @@
       "symbols": [
         "type CommitSuggestRequest",
         "type CommitSuggestResult"
+      ]
+    },
+    {
+      "path": "internal/contract/daemon/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type InstanceRecord",
+        "type Paths",
+        "type Status"
       ]
     },
     {
@@ -13808,6 +13812,15 @@
       ]
     },
     {
+      "path": "internal/contract/selfaugment/candidate_export.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SelfVerificationCandidateExportResult",
+        "type SelfVerificationCandidateExportStateSnapshot"
+      ]
+    },
+    {
       "path": "internal/contract/selfaugment/history_summary_types.go",
       "owner": "contract",
       "task": "T02",
@@ -14240,6 +14253,14 @@
         "func ContextSerializationStable",
         "func StableProjection",
         "func StableProjectionJSON"
+      ]
+    },
+    {
+      "path": "internal/domain/daemon/instance.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func ValidateInstance"
       ]
     },
     {
@@ -17126,6 +17147,14 @@
       ]
     },
     {
+      "path": "internal/domain/selfaugment/candidate_snapshot.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func NewCandidateExportSnapshot"
+      ]
+    },
+    {
       "path": "internal/domain/selfaugment/candidates.go",
       "owner": "domain",
       "task": "T20",
@@ -19005,7 +19034,7 @@
       ],
       "evidence_tests": [
         "internal/domain/riskqa/plan_test.go",
-        "cmd/issueops/riskqa/risk_qa_wrapper_test.go"
+        "internal/adapter/verification/riskqa/risk_qa_wrapper_test.go"
       ],
       "status": "migrated"
     },
@@ -23617,6 +23646,42 @@
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "candidate-export-snapshot",
+      "source_path": "internal/application/selfverify/save_candidates.go",
+      "source_symbol": "func SaveCandidateExport",
+      "responsibility": "preserve candidate export snapshot schema, supplied candidate order and save timestamp",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func NewCandidateExportSnapshot",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-verify candidates"
+      ],
+      "evidence_tests": [
+        "internal/application/selfverify/save_candidates_test.go",
+        "cmd/issueops/selfworkflow/selfworkflow_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "daemon-instance-admission",
+      "source_path": "cmd/issueops/daemoncli/daemonpaths/instance.go",
+      "source_symbol": "func InstanceRecord.Validate",
+      "responsibility": "validate daemon instance identity and absolute paths independently of filesystem observations",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func ValidateInstance",
+      "task": "T18",
+      "entrypoints": [
+        "issueops daemon",
+        "issueops self-verify"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/daemoncli/daemonpaths/instance_test.go",
+        "cmd/issueops/daemoncli/daemon_identity_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }

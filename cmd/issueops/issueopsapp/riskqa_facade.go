@@ -1,8 +1,8 @@
 package issueopsapp
 
 import (
-	"issueops/cmd/issueops/riskqa"
 	"issueops/cmd/issueops/selfworkflow"
+	"issueops/internal/adapter/verification/riskqa"
 	riskqadomain "issueops/internal/domain/riskqa"
 )
 

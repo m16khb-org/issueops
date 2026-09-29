@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	installclit4deps "issueops/cmd/issueops/installcli"
 	projectclit4deps "issueops/cmd/issueops/projectcli"
-	nativeintegrationt4deps "issueops/cmd/issueops/validationcli/nativeintegration"
 	agyt4deps "issueops/internal/adapter/agy"
 	claudet4deps "issueops/internal/adapter/claude"
 	codext4deps "issueops/internal/adapter/codex"
@@ -13,6 +12,7 @@ import (
 	omot4deps "issueops/internal/adapter/omo"
 	projectbootstrapt4deps "issueops/internal/adapter/projectbootstrap"
 	projectdocsadapter "issueops/internal/adapter/projectdocs"
+	nativeintegrationt4deps "issueops/internal/adapter/verification/probe/nativeintegration"
 	installcontract "issueops/internal/contract/install"
 	mcpdomain "issueops/internal/domain/mcp"
 )
