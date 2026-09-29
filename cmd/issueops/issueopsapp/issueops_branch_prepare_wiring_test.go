@@ -17,7 +17,7 @@ func TestBranchPrepareCompositionAdoptsOnceAndSealsResolvedCommit(t *testing.T) 
 	root, repo := core.IssueOpsStateRoot(), makeGitRepoForContract(t)
 	runGitForContract(t, repo, "remote", "add", "origin", "https://github.com/acme/code.git")
 	head := strings.TrimSpace(claimWiringGit(t, repo, "rev-parse", "HEAD"))
-	record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,11 +62,11 @@ func TestBranchPrepareCompositionAdoptsOnceAndSealsResolvedCommit(t *testing.T) 
 func TestBranchPrepareUsesItsExplicitStateRootForUmbrella(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root, repo := t.TempDir(), makeGitRepoForContract(t)
-	parent, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "78-umbrella"})
+	parent, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "78-umbrella"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	child, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
+	child, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
 	if err != nil {
 		t.Fatal(err)
 	}

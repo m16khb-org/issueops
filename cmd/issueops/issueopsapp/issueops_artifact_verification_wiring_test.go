@@ -16,7 +16,7 @@ func TestArtifactVerificationCompositionRechecksLatestAuthority(t *testing.T) {
 	for _, mode := range []string{"invalid-phase", "live-failure", "ancestry-failure", "holder-transfer", "phase-change", "project-change", "success"} {
 		t.Run(mode, func(t *testing.T) {
 			root, repo, worktree := t.TempDir(), t.TempDir(), t.TempDir()
-			record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "68-artifact"})
+			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "68-artifact"})
 			if err != nil {
 				t.Fatal(err)
 			}

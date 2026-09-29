@@ -897,53 +897,24 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func appendShellPathLinePlan",
-        "func buildHarnessStatus",
-        "func buildVerifyWork",
-        "func preferredShellRC",
-        "func printInstallNativeResult",
         "func runChannel",
         "func runDocs",
-        "func runDocsWithRoot",
         "func runDoctor",
         "func runGates",
         "func runGuard",
-        "func runGuardCheck",
         "func runInspect",
         "func runInstall",
         "func runLoop",
         "func runPreflight",
         "func runProject",
-        "func runProjectAppend",
-        "func runProjectBootstrap",
-        "func runProjectCommitSuggest",
-        "func runProjectDocs",
-        "func runProjectLintDiagnose",
-        "func runProjectRouteDocs",
         "func runQuality",
-        "func runQualityInspectWithDeps",
         "func runState",
-        "func runStateDoctor",
-        "func runStateList",
-        "func runStatePrune",
-        "func runStateRead",
-        "func runStateWrite",
         "func runStatus",
         "func runTrace",
-        "func runTraceAnalyze",
         "func runVerifyWork",
         "func runWebFetch",
         "func runWorker",
-        "func runWorkerCancel",
-        "func runWorkerEnqueue",
-        "func runWorkerList",
-        "func runWorkerRun",
-        "func runWorkerStatus",
-        "func shellRCAlreadyAddsLocalBin",
-        "func validateInteractiveInstallInput",
-        "func wireBasicCLIDeps",
-        "type HarnessStatus",
-        "type VerifyWorkResult"
+        "func wireBasicCLIDeps"
       ]
     },
     {
@@ -951,20 +922,9 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func assertionStep",
-        "func assertionStepWithOutput",
-        "func budgetCommandOutput",
-        "func combineFailedStep",
-        "func envEntryKey",
         "func failedStep",
-        "func indentLines",
-        "func mergeEnvOverrides",
         "func printStep",
         "func runCommandStep",
-        "func runCommandStepEnv",
-        "func runCommandStepEnvWithBudget",
-        "func tail",
-        "func tailWithBudget",
         "type StepResult"
       ]
     },
@@ -1068,17 +1028,10 @@
       "task": "T20",
       "symbols": [
         "func configureHookCLI",
-        "func listDaemonProcesses",
-        "func listMCPProxyProcesses",
-        "func parseDaemonProcess",
-        "func parseMCPProxyProcess",
-        "func refreshRunningMCPProxiesAfterInstall",
         "func resetUpdateFacadeDeps",
         "func runBootstrap",
         "func runHook",
-        "func runInstallScriptCommand",
         "func runUpdate",
-        "func terminateStaleDaemonProcesses",
         "func wireHostCLIDeps",
         "type daemonProcess",
         "type mcpProxyProcess"
@@ -1132,8 +1085,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func issueOpsArtifactHandlers",
-        "func stageIssueOpsArtifact"
+        "func issueOpsArtifactHandlers"
       ]
     },
     {
@@ -1331,11 +1283,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func parseCommandPolicyFlags",
-        "func parseCommandPolicyRunFlags",
         "func runIssueOps",
         "func runPolicy",
-        "func verifyIssueOpsRemoteArtifactLive",
         "func wirePolicyCLIDeps"
       ]
     },
@@ -1555,15 +1504,10 @@
       "task": "T20",
       "symbols": [
         "func configureMCPCLI",
-        "func handleResourceRead",
-        "func handleToolCall",
         "func issueOpsMCPDependencies",
-        "func mcpResources",
         "func mcpTools",
         "func runMCP",
-        "func serveMCPStream",
-        "func serveMCPStreamContext",
-        "func textResult"
+        "func serveMCPStream"
       ]
     },
     {
@@ -1571,31 +1515,16 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func apiDocReviewEvidence",
-        "func apiDocReviewSchema",
-        "func buildAPIDocReviewPrompt",
-        "func checkNestControllerStatic",
-        "func checkNestDTOStatic",
         "func compatibilityContract",
-        "func containsString",
         "func exists",
-        "func findUp",
-        "func isAPIDocCandidate",
-        "func isAPIDocReviewGateError",
-        "func isAPIDocStaticGateError",
         "func isSelfVerificationGateError",
         "func issueOpsRoot",
-        "func normalizeAPIDocFiles",
         "func printJSONTo",
         "func readHarnessFile",
         "func resolveTarget",
         "func runAPIDoc",
         "func runContract",
-        "func splitCSV",
-        "func splitLines",
-        "func stateDoctorHasIssueCode",
-        "type CompatibilityContract",
-        "type apiDocStaticViolation"
+        "type CompatibilityContract"
       ]
     },
     {
@@ -1661,15 +1590,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func parseGitStatusPath",
-        "func planRiskQATier",
-        "func planRiskQATierFromPaths",
-        "func riskQATierPlanJSON",
-        "func validateRiskQATier",
-        "func validateRiskQATierEvidence",
-        "func validateRiskQATierWithDeps",
-        "type RiskQATierPlan",
-        "type riskQATierDeps"
+        "func validateRiskQATierEvidence"
       ]
     },
     {
@@ -1699,66 +1620,15 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func boolPtr",
-        "func cachedContractGoldenStep",
-        "func compareSelfAugmentSummaries",
-        "func compareSelfAugmentSummariesFromSnapshots",
-        "func emitSelfVerifyLoopEnd",
-        "func emitSelfVerifyLoopStart",
-        "func exportSelfVerificationCandidates",
-        "func isSelfVerificationSummaryKind",
-        "func newSelfAugmentCompareResult",
-        "func newSelfVerificationSummarySnapshot",
-        "func newSelfVerifyLoopResult",
-        "func plannedSelfVerifySteps",
-        "func promoteSelfAugmentBaseline",
-        "func readSelfAugmentStateSnapshot",
         "func runCommandStepAdapter",
         "func runSelfVerify",
         "func runSelfVerifyCandidates",
-        "func runSelfVerifyCandidatesWithDeps",
         "func runSelfVerifyCompare",
         "func runSelfVerifyHistory",
         "func runSelfVerifyPromote",
-        "func runSelfVerifyPromoteWithDeps",
-        "func saveSelfAugmentSummary",
-        "func saveSelfVerificationCandidateExport",
-        "func saveSelfVerificationSummary",
-        "func selectedSelfVerificationCandidateID",
-        "func selfAugmentHistory",
-        "func selfVerificationCandidateCatalog",
-        "func selfVerificationCandidateIDsByStatus",
         "func selfVerify",
         "func selfVerifyLoopDeps",
-        "func selfVerifyStepDeps",
-        "func writeSelfAugmentSnapshotRecord",
-        "type SelfVerificationCandidate",
-        "type SelfVerificationCandidateExportResult",
-        "type selfVerifyCandidatesDeps",
-        "type selfVerifyPlannedStep",
-        "type selfVerifyPromoteDeps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/self_verify_llm_facade.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func applySelfVerifyLLMEval",
-        "func applySelfVerifyLLMGate",
-        "func boundedLLMEvalError",
-        "func buildSelfVerifyLLMEvalPrompt",
-        "func decodeSelfVerifyLLMEval",
-        "func decodeSelfVerifyLLMEvalStrict",
-        "func extractSelfVerifyLLMEvalJSON",
-        "func normalizeSelfVerifyLLMEvalMode",
-        "func parseSelfVerifyLLMEvalEnv",
-        "func resolveSelfVerifyLLMEvalConfig",
-        "func selfVerifyLLMResponseFieldTypes",
-        "func selfVerifyLLMResponseSchemaExample",
-        "func validateSelfVerifyLLMEvalMode",
-        "type SelfVerifyLLMEvalConfig",
-        "type SelfVerifyLLMEvalOptions"
+        "func selfVerifyStepDeps"
       ]
     },
     {
@@ -1767,72 +1637,6 @@
       "task": "T20",
       "symbols": [
         "type selfVerifyProgressReporter"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/self_workflow_facade.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func allSelfAugmentGoalsPassed",
-        "func applySelfAugmentHistoryRetention",
-        "func buildStepDurationStats",
-        "func classifySelfVerificationFailure",
-        "func collectSelfAugmentRepoSignals",
-        "func compareSlowestStepRegressions",
-        "func compareStepBudgetRegressions",
-        "func dirContainsTerm",
-        "func docsContainTerm",
-        "func fileContainsTerm",
-        "func formatScore",
-        "func markSatisfiedSelfAugmentCandidate",
-        "func maxSlowStepDurationByLabel",
-        "func missingStrings",
-        "func nonNilSlowStepSlice",
-        "func nonNilStringSlice",
-        "func parseSelfAugmentTimestamp",
-        "func scoreBool",
-        "func scoreSelfVerificationGoals",
-        "func selectGeniusFormulas",
-        "func selectedCandidateID",
-        "func selfAugmentCandidateScore",
-        "func selfAugmentCandidates",
-        "func selfAugmentResearchInfluences",
-        "func selfVerificationContract",
-        "func selfVerificationCoverage",
-        "func selfVerificationCoverageDefinitions",
-        "func selfVerificationFailureClusters",
-        "func selfVerifyRerunCommands",
-        "func selfVerifyStepRerunCommand",
-        "func stepDurationStatByLabel",
-        "func stepDurationStatsForCompare",
-        "func summarizeSelfAugment",
-        "func summarizeSelfVerification",
-        "type SelfAugmentCandidate",
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentGoal",
-        "type SelfAugmentHistoryEntry",
-        "type SelfAugmentHistoryResult",
-        "type SelfAugmentInfluence",
-        "type SelfAugmentIteration",
-        "type SelfAugmentPlanRequest",
-        "type SelfAugmentPlanResult",
-        "type SelfAugmentPromoteResult",
-        "type SelfAugmentRepoSignals",
-        "type SelfAugmentResult",
-        "type SelfAugmentSlowStep",
-        "type SelfAugmentSlowStepRegression",
-        "type SelfAugmentStateSnapshot",
-        "type SelfAugmentStepBudgetRegression",
-        "type SelfAugmentStepDurationStat",
-        "type SelfAugmentSummary",
-        "type SelfVerificationContract",
-        "type SelfVerificationCoverage",
-        "type SelfVerificationFailureCluster",
-        "type SelfVerificationGoalScore",
-        "type SelfVerifyLLMEvalResult",
-        "type selfAugmentHistoryRetentionOptions",
-        "type selfVerificationCoverageDefinition"
       ]
     },
     {
@@ -7160,7 +6964,6 @@
         "func RecordIssueOpsIntentWithActor",
         "func RecordIssueOpsPlanPrep",
         "func RecordIssueOpsPlanPrepWithActor",
-        "func StartIssueOps",
         "func cleanIssueOpsTextValues",
         "func issueOpsCompatibilityReviewStore",
         "func issueOpsIntentDesignStore",
@@ -22035,8 +21838,9 @@
       "id": "cycle-start-adapter-composition",
       "source_path": "internal/adapter/issueops/package.go",
       "source_symbol": "func StartIssueOps",
-      "responsibility": "remove temporary adapter composition once parent-child entrypoints and test fixtures construct the application directly",
+      "responsibility": "compose cycle start application at the root; test fixtures construct application with record and identity ports directly",
       "target": "cmd/issueops/issueopsapp",
+      "target_symbol": "func configureIssueOpsCLIRuntime",
       "task": "T20",
       "entrypoints": [
         "issueops child start"
@@ -22044,7 +21848,7 @@
       "evidence_tests": [
         "internal/adapter/issueops/issueops_start_repo_test.go"
       ],
-      "status": "migrate"
+      "status": "migrated"
     },
     {
       "id": "branch-retarget-record-invariants",

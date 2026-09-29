@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"issueops/internal/adapter/issueops/compatibilityreview"
 	"issueops/internal/adapter/issueops/devilsadvocate"
 	"issueops/internal/adapter/issueops/intentdesign"
-	branchapp "issueops/internal/application/issueopsbranch"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
@@ -45,10 +43,6 @@ func normalizeIssueOpsRepo(repo string) string {
 		commonDir = ""
 	}
 	return repoidentity.SourceRoot(clean, commonDir)
-}
-
-func StartIssueOps(stateRoot string, req issueops.IssueOpsStartRequest) (issueops.IssueOpsRecord, error) {
-	return (branchapp.Starter{Records: CycleRecordStore{StateRoot: stateRoot}, Identity: CycleStartIdentity{}, Now: time.Now}).Start(context.Background(), req)
 }
 
 func RecordIssueOpsIntent(stateRoot, id string, req issueops.IssueOpsIntentRecordRequest) (issueops.IssueOpsRecord, error) {

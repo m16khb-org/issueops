@@ -27,7 +27,7 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 	claimWiringGit(t, repo, "config", "user.email", "issueops@example.invalid")
 	claimWiringGit(t, repo, "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(preflight.GitOut(repo, "rev-parse", "HEAD"))
-	record, err := issueopscore.StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-wiring"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-wiring"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +72,7 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	claimWiringGit(t, repo, "init", "-q", "-b", "main")
 	claimWiringGit(t, repo, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(preflight.GitOut(repo, "rev-parse", "HEAD"))
-	record, err := issueopscore.StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-snapshot"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-snapshot"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -11,7 +11,7 @@ import (
 // top of the existing intent/issue_url/plan_prep readiness.
 func issueOpsGrillGateBaseRecord(t *testing.T, stateRoot, repo, branch string) string {
 	t.Helper()
-	rec, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}

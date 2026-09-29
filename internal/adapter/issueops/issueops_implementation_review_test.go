@@ -17,7 +17,7 @@ func preflightGitForReviewTest(dir string, args ...string) (int, string, string)
 func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitInitedRepoForReviewTest(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "83-review"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "83-review"})
 	if err != nil {
 		t.Fatal(err)
 	}

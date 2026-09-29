@@ -8,8 +8,6 @@ import (
 	"issueops/internal/adapter/issueops"
 	basesyncoutbound "issueops/internal/adapter/outbound/issueopsbasesync"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
-	issueopscontract "issueops/internal/contract/issueops"
-	policy "issueops/internal/contract/policy"
 )
 
 func wirePolicyCLIDeps() {
@@ -33,18 +31,6 @@ func runIssueOps(args []string) error {
 	})
 }
 
-func verifyIssueOpsRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
-	return issueopscli.VerifyRemoteArtifactLive(req)
-}
-
 func runPolicy(args []string) error {
 	return policycli.Run(args)
-}
-
-func parseCommandPolicyFlags(name string, args []string) (policy.CommandPolicyRequest, bool, error) {
-	return policycli.ParseFlags(name, args)
-}
-
-func parseCommandPolicyRunFlags(args []string) (policy.CommandPolicyRequest, bool, bool, error) {
-	return policycli.ParseRunFlags(args)
 }

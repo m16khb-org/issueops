@@ -30,7 +30,7 @@ func TestGraphSyncCompositionPreservesPreviewAndProviderContracts(t *testing.T) 
 			}
 			t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 			t.Setenv("GRAPH_BODY_FILE", bodyFile)
-			record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "72-graph"})
+			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "72-graph"})
 			if err != nil {
 				t.Fatal(err)
 			}

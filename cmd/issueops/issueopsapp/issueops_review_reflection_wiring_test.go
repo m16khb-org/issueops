@@ -13,7 +13,7 @@ import (
 
 func TestReviewReflectionCompositionRechecksHolderBeforeStamp(t *testing.T) {
 	root, repo, worktree := t.TempDir(), t.TempDir(), t.TempDir()
-	record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "63-review-reflection"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "63-review-reflection"})
 	if err != nil {
 		t.Fatal(err)
 	}

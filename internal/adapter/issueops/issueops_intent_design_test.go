@@ -14,7 +14,7 @@ import (
 func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-intent-design"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-intent-design"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	if record.Intent == nil || len(record.Intent.SuccessCriteria) != 2 {
 		t.Fatalf("intent contract should be persisted: %+v", record.Intent)
 	}
-	recordWithoutIssue, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "2-no-issue"})
+	recordWithoutIssue, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "2-no-issue"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +204,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 func TestIssueOpsIntentAndDesignRedactSecretLikeFreeform(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-redaction"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-redaction"})
 	if err != nil {
 		t.Fatal(err)
 	}

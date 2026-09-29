@@ -43,7 +43,7 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 		t.Fatalf("git worktree add: %s", stderr)
 	}
 	baseHead := strings.TrimSpace(preflight.GitOut(worktree, "rev-parse", "HEAD"))
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}

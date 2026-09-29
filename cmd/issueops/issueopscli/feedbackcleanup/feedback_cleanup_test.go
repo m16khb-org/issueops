@@ -440,7 +440,7 @@ func TestRunCleanupOrphanDefaultsToPreviewAndGatesApply(t *testing.T) {
 
 func feedbackCleanupIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	t.Helper()
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "1234-feedback-cleanup"})
+	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "1234-feedback-cleanup"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}

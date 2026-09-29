@@ -1,9 +1,8 @@
 package issueopsapp
 
-import "issueops/cmd/issueops/selfworkflow"
-
-type SelfVerifyLLMEvalConfig = selfworkflow.SelfVerifyLLMEvalConfig
-type SelfVerifyLLMEvalOptions = selfworkflow.SelfVerifyLLMEvalOptions
+import (
+	"issueops/cmd/issueops/selfworkflow"
+)
 
 func applySelfVerifyLLMEval(result SelfAugmentResult, opts SelfVerifyLLMEvalOptions) (SelfAugmentResult, error) {
 	return selfworkflow.ApplySelfVerifyLLMEval(result, opts)
@@ -56,3 +55,7 @@ func selfVerifyLLMResponseSchemaExample() string {
 func selfVerifyLLMResponseFieldTypes() []string {
 	return selfworkflow.SelfVerifyLLMResponseFieldTypes()
 }
+
+type SelfVerifyLLMEvalConfig = selfworkflow.SelfVerifyLLMEvalConfig
+
+type SelfVerifyLLMEvalOptions = selfworkflow.SelfVerifyLLMEvalOptions

@@ -16,7 +16,7 @@ func TestStartIssueOpsStoresAbsoluteRepoWhenRelativePathProvided(t *testing.T) {
 	}
 	t.Chdir(repo)
 
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: ".", Branch: "12-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: ".", Branch: "12-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -29,11 +29,11 @@ func TestStartIssueOpsExplicitNewCreatesDistinctBranchlessCycles(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
 
-	first, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
+	first, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
+	second, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,15 +59,15 @@ func TestStartIssueOpsDefaultStillResumesBranchlessCycle(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
 
-	first, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo})
+	first, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo})
 	if err != nil {
 		t.Fatal(err)
 	}
-	newCycle, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
+	newCycle, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, New: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	resumed, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo})
+	resumed, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func TestStartIssueOpsDefaultStillResumesBranchlessCycle(t *testing.T) {
 }
 
 func TestStartIssueOpsExplicitNewRequiresBranchlessRequest(t *testing.T) {
-	if _, err := StartIssueOps(t.TempDir(), issueops.IssueOpsStartRequest{
+	if _, err := startIssueOpsFixture(t.TempDir(), issueops.IssueOpsStartRequest{
 		Repo: t.TempDir(), Branch: "123-already-named", New: true,
 	}); err == nil {
 		t.Fatal("explicit new start with a branch must fail closed")

@@ -52,7 +52,7 @@ func TestPolicyLookupReadsCurrentStateRootOnEachEvaluation(t *testing.T) {
 	for _, base := range []string{"78-first-parent", "80-second-parent"} {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 		root := core.IssueOpsStateRoot()
-		record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
+		record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
 		if err != nil {
 			t.Fatal(err)
 		}

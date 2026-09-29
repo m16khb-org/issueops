@@ -6,34 +6,6 @@ import (
 	"issueops/cmd/issueops/selfworkflow"
 )
 
-const selfVerificationSummaryKind = selfworkflow.SelfVerificationSummaryKind
-
-type SelfAugmentPromoteResult = selfworkflow.SelfAugmentPromoteResult
-type SelfAugmentIteration = selfworkflow.SelfAugmentIteration
-type SelfAugmentCompareResult = selfworkflow.SelfAugmentCompareResult
-type SelfAugmentSlowStepRegression = selfworkflow.SelfAugmentSlowStepRegression
-type SelfAugmentStepBudgetRegression = selfworkflow.SelfAugmentStepBudgetRegression
-type SelfAugmentHistoryResult = selfworkflow.SelfAugmentHistoryResult
-type selfAugmentHistoryRetentionOptions = selfworkflow.SelfAugmentHistoryRetentionOptions
-type SelfAugmentHistoryEntry = selfworkflow.SelfAugmentHistoryEntry
-type SelfAugmentPlanRequest = selfworkflow.SelfAugmentPlanRequest
-type SelfAugmentPlanResult = selfworkflow.SelfAugmentPlanResult
-type SelfAugmentInfluence = selfworkflow.SelfAugmentInfluence
-type SelfAugmentGoal = selfworkflow.SelfAugmentGoal
-type SelfAugmentCandidate = selfworkflow.SelfAugmentCandidate
-type SelfAugmentRepoSignals = selfworkflow.SelfAugmentRepoSignals
-type SelfAugmentStateSnapshot = selfworkflow.SelfAugmentStateSnapshot
-type SelfAugmentResult = selfworkflow.SelfAugmentResult
-type SelfAugmentSummary = selfworkflow.SelfAugmentSummary
-type SelfVerifyLLMEvalResult = selfworkflow.SelfVerifyLLMEvalResult
-type SelfVerificationContract = selfworkflow.SelfVerificationContract
-type selfVerificationCoverageDefinition = selfworkflow.SelfVerificationCoverageDefinition
-type SelfVerificationGoalScore = selfworkflow.SelfVerificationGoalScore
-type SelfVerificationCoverage = selfworkflow.SelfVerificationCoverage
-type SelfVerificationFailureCluster = selfworkflow.SelfVerificationFailureCluster
-type SelfAugmentSlowStep = selfworkflow.SelfAugmentSlowStep
-type SelfAugmentStepDurationStat = selfworkflow.SelfAugmentStepDurationStat
-
 func applySelfAugmentHistoryRetention(result *SelfAugmentHistoryResult, options selfAugmentHistoryRetentionOptions) error {
 	return selfworkflow.ApplySelfAugmentHistoryRetention(result, options)
 }
@@ -169,3 +141,54 @@ func selfVerificationCoverage(stepLabels []string) ([]SelfVerificationCoverage, 
 func selfVerificationCoverageDefinitions() []selfVerificationCoverageDefinition {
 	return selfworkflow.SelfVerificationCoverageDefinitions()
 }
+
+type selfAugmentHistoryRetentionOptions = selfworkflow.SelfAugmentHistoryRetentionOptions
+
+type selfVerificationCoverageDefinition = selfworkflow.SelfVerificationCoverageDefinition
+
+type SelfAugmentPromoteResult = selfworkflow.SelfAugmentPromoteResult
+
+type SelfAugmentIteration = selfworkflow.SelfAugmentIteration
+
+type SelfAugmentCompareResult = selfworkflow.SelfAugmentCompareResult
+
+type SelfAugmentSlowStepRegression = selfworkflow.SelfAugmentSlowStepRegression
+
+type SelfAugmentStepBudgetRegression = selfworkflow.SelfAugmentStepBudgetRegression
+
+type SelfAugmentHistoryResult = selfworkflow.SelfAugmentHistoryResult
+
+type SelfAugmentHistoryEntry = selfworkflow.SelfAugmentHistoryEntry
+
+type SelfAugmentInfluence = selfworkflow.SelfAugmentInfluence
+
+type SelfAugmentGoal = selfworkflow.SelfAugmentGoal
+
+type SelfAugmentCandidate = selfworkflow.SelfAugmentCandidate
+
+type SelfAugmentRepoSignals = selfworkflow.SelfAugmentRepoSignals
+
+type SelfAugmentStateSnapshot = selfworkflow.SelfAugmentStateSnapshot
+
+type SelfAugmentSummary = selfworkflow.SelfAugmentSummary
+
+type SelfVerifyLLMEvalResult = selfworkflow.SelfVerifyLLMEvalResult
+
+type SelfVerificationContract = selfworkflow.SelfVerificationContract
+
+type SelfVerificationGoalScore = selfworkflow.SelfVerificationGoalScore
+
+type SelfVerificationCoverage = selfworkflow.SelfVerificationCoverage
+
+type SelfVerificationFailureCluster = selfworkflow.SelfVerificationFailureCluster
+
+type SelfAugmentSlowStep = selfworkflow.SelfAugmentSlowStep
+
+type SelfAugmentStepDurationStat = selfworkflow.SelfAugmentStepDurationStat
+
+const selfVerificationSummaryKind = selfworkflow.SelfVerificationSummaryKind
+
+type SelfAugmentPlanRequest = selfworkflow.SelfAugmentPlanRequest
+type SelfAugmentPlanResult = selfworkflow.SelfAugmentPlanResult
+
+type SelfAugmentResult = selfworkflow.SelfAugmentResult

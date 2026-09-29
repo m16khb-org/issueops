@@ -353,7 +353,7 @@ func TestStaleResetPreservesDelegationGraph(t *testing.T) {
 	if err := os.RemoveAll(parentWorktree); err != nil {
 		t.Fatal(err)
 	}
-	resetParent, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: parent.Repo, Branch: parent.Branch})
+	resetParent, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: parent.Repo, Branch: parent.Branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +369,7 @@ func TestStaleResetPreservesDelegationGraph(t *testing.T) {
 	if err := os.RemoveAll(childWorktree); err != nil {
 		t.Fatal(err)
 	}
-	resetChild, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: child.Repo, Branch: child.Branch})
+	resetChild, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: child.Repo, Branch: child.Branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -782,7 +782,7 @@ func createDelegationReadyParentForTest(t *testing.T, stateRoot string) issueops
 	repo := initIssueOpsRepo(t)
 	branch := "123-parent"
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, branch)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}

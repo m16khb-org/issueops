@@ -11,7 +11,7 @@ import (
 
 func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {
 	t.Helper()
-	record, err := issueops.StartIssueOps(issueops.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(issueops.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}

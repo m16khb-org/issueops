@@ -110,7 +110,7 @@ func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.IssueOpsReco
 	claimWiringGit(t, source, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "-q", "-m", "test: transition fixture")
 	claimWiringGit(t, source, "worktree", "add", "-q", "-b", branch, worktree, "main")
 	baseHead := strings.TrimSpace(claimWiringGit(t, worktree, "rev-parse", "HEAD"))
-	record, err := issueops.StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: source, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: source, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}

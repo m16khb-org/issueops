@@ -26,7 +26,7 @@ func TestIssueOpsRefreshesAISlopCleanEvidenceFromFeedback(t *testing.T) {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
 
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}

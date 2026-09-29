@@ -13,7 +13,7 @@ import (
 func TestCLIIssueOpsReviewMetricsReadsRoundsAndRejectsAmbiguousScope(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIGitRepoForRemoteVerifyTest(t)
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{
 		Repo:   repo,
 		Branch: "77-review-metrics",
 	})

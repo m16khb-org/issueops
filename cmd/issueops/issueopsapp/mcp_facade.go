@@ -1,8 +1,6 @@
 package issueopsapp
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	channeladapter "issueops/internal/adapter/channel"
@@ -16,8 +14,6 @@ import (
 	"issueops/cmd/issueops/selfworkflow"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
-
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
 func configureMCPCLI() {
@@ -66,24 +62,8 @@ func serveMCPStream(input io.Reader, output io.Writer, diagnostics io.Writer) er
 	return mcpcli.ServeMCPStreamWithDependencies(input, output, diagnostics, issueOpsMCPDependencies())
 }
 
-func serveMCPStreamContext(ctx context.Context, input io.Reader, output io.Writer, diagnostics io.Writer) error {
-	return mcpcli.ServeMCPStreamContextWithDependencies(ctx, input, output, diagnostics, issueOpsMCPDependencies())
-}
-
 func mcpTools() []map[string]any {
 	return mcpcatalog.Build().Tools
-}
-
-func mcpResources() []map[string]any {
-	return mcpcatalog.Build().Resources
-}
-
-func handleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
-	return mcpcli.HandleToolCallWithDependencies(params, issueOpsMCPDependencies())
-}
-
-func handleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
-	return mcpcli.HandleResourceRead(params)
 }
 
 func issueOpsMCPDependencies() mcpcli.MCPDependencies {
@@ -98,8 +78,4 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 			Create: issueOpsPublicationCreateHandler, Reconcile: issueOpsPublicationReconcileHandler,
 		},
 	}
-}
-
-func textResult(text string) map[string]any {
-	return mcpcli.TextResult(text)
 }

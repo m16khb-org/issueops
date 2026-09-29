@@ -32,7 +32,7 @@ func (p *issueReconcileProvider) FindIssueCreateCandidates(_ context.Context, re
 
 func TestIssueReconcileCompositionPreservesPreviewAndRecoversVerificationFailure(t *testing.T) {
 	root := t.TempDir()
-	record, err := issueops.StartIssueOps(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "51-reconcile"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "51-reconcile"})
 	if err != nil {
 		t.Fatal(err)
 	}

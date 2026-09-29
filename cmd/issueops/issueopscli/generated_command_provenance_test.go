@@ -25,7 +25,7 @@ func (s issueOpsProvenanceObserverStub) Observe(context.Context) (provenanceport
 func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-command-provenance")
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-provenance"})
+	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-provenance"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-command-exact-binary")
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-exact-binary"})
+	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-exact-binary"})
 	if err != nil {
 		t.Fatal(err)
 	}

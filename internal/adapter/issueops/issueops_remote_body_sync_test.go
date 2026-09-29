@@ -111,7 +111,7 @@ func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.IssueOpsRe
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "412-body-sync"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "412-body-sync"})
 	if err != nil {
 		t.Fatal(err)
 	}

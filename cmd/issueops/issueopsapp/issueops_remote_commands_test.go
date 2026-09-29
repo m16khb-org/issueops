@@ -17,7 +17,7 @@ import (
 
 func TestBodySyncCommandCompositionValidatesBeforeProviderEffects(t *testing.T) {
 	root := t.TempDir()
-	record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "69-body-command"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "69-body-command"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestBodySyncCommandCompositionValidatesBeforeProviderEffects(t *testing.T) 
 
 func TestPublicationCommandCompositionPreservesDefaultsAndActor(t *testing.T) {
 	root := t.TempDir()
-	record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "70-command"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "70-command"})
 	if err != nil {
 		t.Fatal(err)
 	}

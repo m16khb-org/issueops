@@ -44,7 +44,7 @@ func writeRepoFileForTest(t *testing.T, repo, rel, body string) {
 func TestRecordIssueOpsProjectDocsReviewValidation(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "90-docs"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "90-docs"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestRecordIssueOpsProjectDocsReviewValidation(t *testing.T) {
 func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "91-docs"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "91-docs"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestRecordIssueOpsProjectDocsReviewNoChangeRequiresReviewedDocs(t *testing.
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
 	writeRepoFileForTest(t, repo, "AGENTS.md", "# agents\n")
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "92-docs"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "92-docs"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestRecordIssueOpsProjectDocsReviewNoChangeRequiresReviewedDocs(t *testing.
 func TestRecordIssueOpsProjectDocsReviewUpdatedAcceptsReviewedDocs(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "93-docs"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "93-docs"})
 	if err != nil {
 		t.Fatal(err)
 	}

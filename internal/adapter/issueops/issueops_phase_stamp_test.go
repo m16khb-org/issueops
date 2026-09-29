@@ -12,7 +12,7 @@ import (
 func TestAdvanceStampsPhaseLedgerOnTransition(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-stamp"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-stamp"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}

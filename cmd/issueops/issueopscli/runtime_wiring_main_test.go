@@ -136,7 +136,7 @@ func wireIssueOpsRuntimeForTests() {
 		ScoreLiveRoutingFidelity:                    routing.Score,
 		StageIssueOpsArtifact:                       artifacts.Stage,
 		StagedIssueOpsArtifactNames:                 artifacts.Names,
-		StartIssueOps:                               issueopscore.StartIssueOps,
+		StartIssueOps:                               startIssueOpsFixture,
 		StartIssueOpsChildWithActor:                 startChildWithActorForTest,
 		UnstageIssueOpsArtifact:                     artifacts.Unstage,
 	})

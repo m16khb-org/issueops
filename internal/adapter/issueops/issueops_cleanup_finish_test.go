@@ -83,7 +83,7 @@ func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOp
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "80-finish"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "80-finish"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +339,7 @@ func TestCleanupFinishResumableConvergesAndRecordDeleted(t *testing.T) {
 	}
 
 	// 레코드 삭제 후 동일 (repo, branch) start → 새 problem-phase 사이클.
-	fresh, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "80-finish"})
+	fresh, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "80-finish"})
 	if err != nil {
 		t.Fatal(err)
 	}

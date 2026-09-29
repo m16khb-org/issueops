@@ -6,7 +6,6 @@ import (
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/adapter/projectdocs"
-	"os"
 
 	"issueops/cmd/issueops/basiccli"
 	"issueops/cmd/issueops/channelcli"
@@ -21,12 +20,6 @@ import (
 	"issueops/cmd/issueops/workercli"
 	"issueops/internal/adapter/operationalhealth"
 	"issueops/internal/adapter/orca"
-	"issueops/internal/port"
-)
-
-type (
-	HarnessStatus    = statuscli.Status
-	VerifyWorkResult = statuscli.WorkResult
 )
 
 func wireBasicCLIDeps() {
@@ -104,10 +97,6 @@ func runDocs(args []string) error {
 	return basiccli.RunDocs(args)
 }
 
-func runDocsWithRoot(args []string, root string) error {
-	return basiccli.RunDocsWithRoot(args, root)
-}
-
 func runPreflight(args []string) error {
 	return basiccli.RunPreflight(args)
 }
@@ -116,24 +105,12 @@ func runTrace(args []string) error {
 	return basiccli.RunTrace(args)
 }
 
-func runTraceAnalyze(args []string) error {
-	return basiccli.RunTraceAnalyze(args)
-}
-
 func runGuard(args []string) error {
 	return basiccli.RunGuard(args)
 }
 
-func runGuardCheck(args []string) error {
-	return basiccli.RunGuardCheck(args)
-}
-
 func runQuality(args []string) error {
 	return qualitycli.Run(args)
-}
-
-func runQualityInspectWithDeps(args []string, deps qualitycli.InspectDeps) error {
-	return qualitycli.RunInspectWithDeps(args, deps)
 }
 
 func runInspect(args []string) error {
@@ -148,92 +125,20 @@ func runInstall(args []string) error {
 	return installcli.RunInstall(args)
 }
 
-func validateInteractiveInstallInput(stdin *os.File) error {
-	return installcli.ValidateInteractiveInput(stdin)
-}
-
-func printInstallNativeResult(result port.NativeInstallResult) {
-	installcli.PrintNativeResult(result)
-}
-
-func preferredShellRC(home string) string {
-	return installcli.PreferredShellRC(home)
-}
-
-func appendShellPathLinePlan(path string, dryRun bool) (port.InstallFile, error) {
-	return installcli.AppendShellPathLinePlan(path, dryRun)
-}
-
-func shellRCAlreadyAddsLocalBin(path, home string) bool {
-	return installcli.ShellRCAlreadyAddsLocalBin(path, home)
-}
-
 func runProject(args []string) error {
 	return projectcli.Run(args)
-}
-
-func runProjectBootstrap(args []string) error {
-	return projectcli.RunBootstrap(args)
-}
-
-func runProjectDocs(args []string) error {
-	return projectcli.RunDocs(args)
-}
-
-func runProjectRouteDocs(args []string) error {
-	return projectcli.RunRouteDocs(args)
-}
-
-func runProjectAppend(args []string) error {
-	return projectcli.RunRecord(args)
-}
-
-func runProjectCommitSuggest(args []string) error {
-	return projectcli.RunCommitSuggest(args)
-}
-
-func runProjectLintDiagnose(args []string) error {
-	return projectcli.RunLintDiagnose(args)
 }
 
 func runState(args []string) error {
 	return statecli.Run(stateDependencies(), args)
 }
 
-func runStateWrite(args []string) error {
-	return statecli.RunWrite(stateDependencies(), args)
-}
-
-func runStateRead(args []string) error {
-	return statecli.RunRead(stateDependencies(), args)
-}
-
-func runStateList(args []string) error {
-	return statecli.RunList(stateDependencies(), args)
-}
-
-func runStatePrune(args []string) error {
-	return statecli.RunPrune(stateDependencies(), args)
-}
-
-func runStateDoctor(args []string) error {
-	return statecli.RunDoctor(stateDependencies(), args)
-}
-
 func runStatus(args []string) error {
 	return statuscli.RunStatus(args)
 }
 
-func buildHarnessStatus(repo string) HarnessStatus {
-	return statuscli.BuildStatus(repo)
-}
-
 func runVerifyWork(args []string) error {
 	return statuscli.RunVerifyWork(args)
-}
-
-func buildVerifyWork(repo string, all bool, argv []string) VerifyWorkResult {
-	return statuscli.BuildVerifyWork(repo, all, argv)
 }
 
 func runWorker(args []string) error {
@@ -254,24 +159,4 @@ func runChannel(args []string) error {
 
 func runWebFetch(args []string) error {
 	return webfetchcli.Run(args)
-}
-
-func runWorkerEnqueue(args []string) error {
-	return workercli.RunEnqueue(args)
-}
-
-func runWorkerRun(args []string) error {
-	return workercli.RunReadOnly(args)
-}
-
-func runWorkerStatus(args []string) error {
-	return workercli.RunStatus(args)
-}
-
-func runWorkerList(args []string) error {
-	return workercli.RunList(args)
-}
-
-func runWorkerCancel(args []string) error {
-	return workercli.RunCancel(args)
 }

@@ -200,7 +200,7 @@ func TestRunRenderTemplateAndCreateIssueBodyFileTemplateValidation(t *testing.T)
 
 func TestRunRemoteCreateIssueValidatesTitleBeforeProviderInference(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{
 		Repo:   t.TempDir(),
 		Branch: "1234-title-validation",
 	})
@@ -613,7 +613,7 @@ func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.IssueOpsRecord {
 	t.Helper()
 	repo := t.TempDir()
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-cmd"})
+	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-cmd"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
@@ -646,7 +646,7 @@ func remoteIssueOpsRecordForCreate(t *testing.T) issueopscontract.IssueOpsRecord
 			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 		}
 	}
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-create"})
+	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-create"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
@@ -1089,7 +1089,7 @@ func TestRemoteReflectReviewPreviewAndConfirmUseApplication(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", root)
 	root = issueopscore.IssueOpsStateRoot()
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	record, err := issueopscore.StartIssueOps(root, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "64-review-cli"})
+	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "64-review-cli"})
 	if err != nil {
 		t.Fatal(err)
 	}

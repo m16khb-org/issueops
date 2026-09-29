@@ -1,0 +1,126 @@
+package issueopsapp
+
+import (
+	"os"
+
+	"issueops/cmd/issueops/basiccli"
+	"issueops/cmd/issueops/installcli"
+	"issueops/cmd/issueops/projectcli"
+	"issueops/cmd/issueops/qualitycli"
+	"issueops/cmd/issueops/statecli"
+	"issueops/cmd/issueops/statuscli"
+	"issueops/cmd/issueops/workercli"
+	"issueops/internal/port"
+)
+
+func runDocsWithRoot(args []string, root string) error {
+	return basiccli.RunDocsWithRoot(args, root)
+}
+
+func runTraceAnalyze(args []string) error {
+	return basiccli.RunTraceAnalyze(args)
+}
+
+func runGuardCheck(args []string) error {
+	return basiccli.RunGuardCheck(args)
+}
+
+func runQualityInspectWithDeps(args []string, deps qualitycli.InspectDeps) error {
+	return qualitycli.RunInspectWithDeps(args, deps)
+}
+
+func validateInteractiveInstallInput(stdin *os.File) error {
+	return installcli.ValidateInteractiveInput(stdin)
+}
+
+func printInstallNativeResult(result port.NativeInstallResult) {
+	installcli.PrintNativeResult(result)
+}
+
+func preferredShellRC(home string) string {
+	return installcli.PreferredShellRC(home)
+}
+
+func appendShellPathLinePlan(path string, dryRun bool) (port.InstallFile, error) {
+	return installcli.AppendShellPathLinePlan(path, dryRun)
+}
+
+func shellRCAlreadyAddsLocalBin(path, home string) bool {
+	return installcli.ShellRCAlreadyAddsLocalBin(path, home)
+}
+
+func runProjectBootstrap(args []string) error {
+	return projectcli.RunBootstrap(args)
+}
+
+func runProjectDocs(args []string) error {
+	return projectcli.RunDocs(args)
+}
+
+func runProjectRouteDocs(args []string) error {
+	return projectcli.RunRouteDocs(args)
+}
+
+func runProjectAppend(args []string) error {
+	return projectcli.RunRecord(args)
+}
+
+func runProjectCommitSuggest(args []string) error {
+	return projectcli.RunCommitSuggest(args)
+}
+
+func runProjectLintDiagnose(args []string) error {
+	return projectcli.RunLintDiagnose(args)
+}
+
+func runStateWrite(args []string) error {
+	return statecli.RunWrite(stateDependencies(), args)
+}
+
+func runStateRead(args []string) error {
+	return statecli.RunRead(stateDependencies(), args)
+}
+
+func runStateList(args []string) error {
+	return statecli.RunList(stateDependencies(), args)
+}
+
+func runStatePrune(args []string) error {
+	return statecli.RunPrune(stateDependencies(), args)
+}
+
+func runStateDoctor(args []string) error {
+	return statecli.RunDoctor(stateDependencies(), args)
+}
+
+func buildHarnessStatus(repo string) HarnessStatus {
+	return statuscli.BuildStatus(repo)
+}
+
+func buildVerifyWork(repo string, all bool, argv []string) VerifyWorkResult {
+	return statuscli.BuildVerifyWork(repo, all, argv)
+}
+
+func runWorkerEnqueue(args []string) error {
+	return workercli.RunEnqueue(args)
+}
+
+func runWorkerRun(args []string) error {
+	return workercli.RunReadOnly(args)
+}
+
+func runWorkerStatus(args []string) error {
+	return workercli.RunStatus(args)
+}
+
+func runWorkerList(args []string) error {
+	return workercli.RunList(args)
+}
+
+func runWorkerCancel(args []string) error {
+	return workercli.RunCancel(args)
+}
+
+type HarnessStatus = statuscli.Status
+
+type VerifyWorkResult = statuscli.WorkResult

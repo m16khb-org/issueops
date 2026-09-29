@@ -12,7 +12,7 @@ import (
 func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemoval(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-switch-provenance"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-switch-provenance"})
 	if err != nil {
 		t.Fatal(err)
 	}

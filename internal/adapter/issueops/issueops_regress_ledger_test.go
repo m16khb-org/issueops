@@ -16,7 +16,7 @@ import (
 func TestRegressIssueOpsForReplanStatusBackfillsAllPhases(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-empty-ledger"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-empty-ledger"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}

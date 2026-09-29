@@ -12,7 +12,7 @@ import (
 
 func TestBranchRetargetCompositionPersistsObservedTargetAndForkPoint(t *testing.T) {
 	root, repo := t.TempDir(), t.TempDir()
-	record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "51-child"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "51-child"})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -36,7 +36,7 @@ func TestIssueCreateCancellationPreservesPreviewAndConfirm(t *testing.T) {
 					t.Fatalf("git: %s %v", out, err)
 				}
 			}
-			record, err := issueops.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "74-cancel"})
+			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "74-cancel"})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -82,7 +82,7 @@ func TestIssueCreateCompositionPersistsBeforeInvocationAndBlocksAmbiguousRetry(t
 			t.Fatalf("git: %s %v", out, err)
 		}
 	}
-	record, err := issueops.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "52-issue-create"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "52-issue-create"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,7 +153,7 @@ func TestIssueCreateCompositionLinksReadyCycleAfterLiveVerification(t *testing.T
 			t.Fatalf("git: %s %v", out, err)
 		}
 	}
-	record, err := issueops.StartIssueOps(root, model.IssueOpsStartRequest{Repo: repo, Branch: "53-create-ready"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo, Branch: "53-create-ready"})
 	if err != nil {
 		t.Fatal(err)
 	}

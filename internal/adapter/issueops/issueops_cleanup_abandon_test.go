@@ -60,7 +60,7 @@ func abandonTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "106-abandon"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "106-abandon"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func TestCleanupAbandonPreviewThenApplyDeletesRecord(t *testing.T) {
 	if _, err := ReadIssueOps(stateRoot, record.ID); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("record must be gone after abandon: %v", err)
 	}
-	fresh, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "106-abandon"})
+	fresh, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "106-abandon"})
 	if err != nil {
 		t.Fatal(err)
 	}

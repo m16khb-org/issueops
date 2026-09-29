@@ -15,7 +15,7 @@ import (
 
 func TestIssueOpsUsesOnlySchemaOneAndDedicatedNamespace(t *testing.T) {
 	stateRoot := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "69-v1-namespace"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "69-v1-namespace"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestIssueOpsReaderRejectsMissingAndZeroSchema(t *testing.T) {
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
 			stateRoot := t.TempDir()
-			record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "901-legacy-schema-" + testCase.name})
+			record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "901-legacy-schema-" + testCase.name})
 			if err != nil {
 				t.Fatal(err)
 			}

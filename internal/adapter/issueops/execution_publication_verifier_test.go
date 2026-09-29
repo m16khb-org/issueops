@@ -14,7 +14,7 @@ import (
 
 func TestPublicationVerifierUsesLatestProjectAndPhaseBeforeLiveReadback(t *testing.T) {
 	root := t.TempDir()
-	record, err := StartIssueOps(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "66-verification"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "66-verification"})
 	if err != nil {
 		t.Fatal(err)
 	}

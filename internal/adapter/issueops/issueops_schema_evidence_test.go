@@ -71,7 +71,7 @@ func TestSchemaEvidenceGateActivatesOnSchemaChange(t *testing.T) {
 func TestRecordIssueOpsSchemaEvidenceValidation(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitRepoWithProjectDocsForTest(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "92-schema"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "92-schema"})
 	if err != nil {
 		t.Fatal(err)
 	}

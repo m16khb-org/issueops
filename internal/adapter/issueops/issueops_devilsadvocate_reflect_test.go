@@ -24,7 +24,7 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	if err := os.MkdirAll(worktree, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{
 		Repo: repo, Branch: "2626-vertex-breaker-observability",
 	})
 	if err != nil {

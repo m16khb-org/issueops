@@ -14,7 +14,7 @@ import (
 func TestIssueLinkCompositionPreservesConcurrentRelationsAndRefusedState(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := core.IssueOpsStateRoot()
-	record, err := core.StartIssueOps(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "63-links"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "63-links"})
 	if err != nil {
 		t.Fatal(err)
 	}

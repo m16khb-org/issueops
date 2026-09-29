@@ -87,7 +87,7 @@ func TestEvidenceRecordersRequireTheActiveLeaseHolder(t *testing.T) {
 func TestEvidenceRecordersStayOpenBeforeExecutionPreparation(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "995-pre-execution"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "995-pre-execution"})
 	if err != nil {
 		t.Fatal(err)
 	}

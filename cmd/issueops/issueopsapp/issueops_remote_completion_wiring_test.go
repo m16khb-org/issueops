@@ -30,7 +30,7 @@ func (p *completionProvider) CloseIssue(_ context.Context, req port.IssueProvide
 
 func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatestRecord(t *testing.T) {
 	root := t.TempDir()
-	record, err := issueops.StartIssueOps(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "61-remote-completion"})
+	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "61-remote-completion"})
 	if err != nil {
 		t.Fatal(err)
 	}

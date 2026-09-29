@@ -11,18 +11,18 @@ import (
 func TestIssueOpsStartRequiresIssueBranch(t *testing.T) {
 	stateRoot := t.TempDir()
 	for _, branch := range []string{"main", "development", "feature/2387-fix-grpc-ai-dmm-tag-replication-lag"} {
-		if _, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: branch}); err == nil || !strings.Contains(err.Error(), "issue number") {
+		if _, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: branch}); err == nil || !strings.Contains(err.Error(), "issue number") {
 			t.Fatalf("start should reject non-IssueOps branch %q, got %v", branch, err)
 		}
 	}
-	if _, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "2387-fix-grpc-ai-dmm-tag-replication-lag"}); err != nil {
+	if _, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "2387-fix-grpc-ai-dmm-tag-replication-lag"}); err != nil {
 		t.Fatalf("start should accept GitLab-linked IssueOps branch: %v", err)
 	}
 }
 
 func TestIssueOpsImplementationLinksRequireBranchEvidence(t *testing.T) {
 	stateRoot := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestIssueOpsImplementationLinksRequireBranchEvidence(t *testing.T) {
 
 func TestIssueOpsBranchPrepareRequiresLinkedIssue(t *testing.T) {
 	stateRoot := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestIssueOpsBranchPrepareRequiresResolvableLocalBaseCommit(t *testing.T) {
 	}
 	head := preflight.GitOut(repo, "rev-parse", "HEAD")
 	stateRoot := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "194-base-commit"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "194-base-commit"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestIssueOpsBranchPrepareRequiresResolvableLocalBaseCommit(t *testing.T) {
 
 func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 	stateRoot := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "123-provider-linked-branch"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "123-provider-linked-branch"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 		t.Fatalf("gitlab branch with issue number prefix should pass, got %v", err)
 	}
 
-	record, err = StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "456-provider-linked-branch"})
+	record, err = startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "456-provider-linked-branch"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestIssueOpsBranchPrepareRequiresLinkedIssueNumberPrefix(t *testing.T) {
 
 func TestIssueOpsChildLinkRequiresLinkedParentIssue(t *testing.T) {
 	stateRoot := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example", Branch: "1-demo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,10 +209,10 @@ func TestIssueOpsChildLinkRequiresLinkedParentIssue(t *testing.T) {
 
 func TestIssueOpsRejectsUnsafeInputs(t *testing.T) {
 	stateRoot := t.TempDir()
-	if _, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{}); err == nil || !strings.Contains(err.Error(), "repo") {
+	if _, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{}); err == nil || !strings.Contains(err.Error(), "repo") {
 		t.Fatalf("expected repo validation error, got %v", err)
 	}
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: "/repo/example"})
 	if err != nil {
 		t.Fatal(err)
 	}

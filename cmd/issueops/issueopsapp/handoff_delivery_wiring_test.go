@@ -649,7 +649,7 @@ func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscon
 	claimWiringGit(t, repo, "init", "-q", "-b", "main")
 	claimWiringGit(t, repo, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(claimWiringGit(t, repo, "rev-parse", "HEAD"))
-	record, err := issueopsadapter.StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "11-manual-handoff"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "11-manual-handoff"})
 	if err != nil {
 		t.Fatal(err)
 	}

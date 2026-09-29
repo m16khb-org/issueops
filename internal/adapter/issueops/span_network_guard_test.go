@@ -186,7 +186,7 @@ func requireGitCallsOutsideSpan(t *testing.T, log string, wantSubcommand string)
 func TestSpanLockStateDetectsAHeldSpan(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "997-probe"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "997-probe"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestSpanLockStateDetectsAHeldSpan(t *testing.T) {
 func TestPRPhaseEntryFetchesUpstreamOutsideTheSpan(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "998-pr-entry"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "998-pr-entry"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -325,7 +325,7 @@ func TestEvidenceRecordersObserveTheChangeSetOutsideTheSpan(t *testing.T) {
 
 func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.IssueOpsRecord {
 	t.Helper()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "2819-child"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "2819-child"})
 	if err != nil {
 		t.Fatal(err)
 	}
