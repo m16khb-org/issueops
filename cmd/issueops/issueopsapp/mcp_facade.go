@@ -7,6 +7,7 @@ import (
 	gatesadapter "issueops/internal/adapter/gates"
 	"issueops/internal/adapter/inspect"
 	"issueops/internal/adapter/looprun"
+	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/adapter/projectdocs"
 
@@ -69,8 +70,9 @@ func mcpTools() []map[string]any {
 func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	return mcpcli.MCPDependencies{
-		Catalog: mcpcatalog.Build(),
-		Prepare: execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner, ReadIssue: execution.ReadIssue,
+		Catalog:     mcpcatalog.Build(),
+		SelfHistory: newSelfWorkflowHistory(statestore.StateDir()),
+		Prepare:     execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner, ReadIssue: execution.ReadIssue,
 		Claim: issueOpsClaimHandler, Release: issueOpsReleaseHandler, Reseed: issueOpsReseedHandler,
 		Resume: issueOpsResumeHandler, Reconcile: issueOpsReconcileHandler, Complete: issueOpsCompleteHandler,
 		Provenance: provenanceadapter.NewExecutableObserver(),

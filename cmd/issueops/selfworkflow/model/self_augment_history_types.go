@@ -1,9 +1,0 @@
-package model
-
-import contract "issueops/internal/contract/selfaugment"
-
-type SelfAugmentHistoryResult = contract.SelfAugmentHistoryResult
-type SelfAugmentHistoryRetention = contract.SelfAugmentHistoryRetention
-type SelfAugmentHistoryRetentionOptions = contract.SelfAugmentHistoryRetentionOptions
-type SelfAugmentHistoryEntry = contract.SelfAugmentHistoryEntry
-type SelfAugmentHistorySkipped = contract.SelfAugmentHistorySkipped

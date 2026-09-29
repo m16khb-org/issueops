@@ -1,16 +1,9 @@
 package selfworkflow
 
 import (
-	"time"
-
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/augmentplan"
-	"issueops/cmd/issueops/selfworkflow/historycompare"
 )
-
-func ApplySelfAugmentHistoryRetention(result *SelfAugmentHistoryResult, options SelfAugmentHistoryRetentionOptions) error {
-	return historycompare.ApplySelfAugmentHistoryRetention(result, options)
-}
 
 func allSelfAugmentGoalsPassed(goals []SelfAugmentGoal) bool {
 	return augmentcatalog.AllSelfAugmentGoalsPassed(goals)
@@ -34,14 +27,6 @@ func CollectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string
 
 func collectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) SelfAugmentRepoSignals {
 	return augmentcatalog.CollectSelfAugmentRepoSignals(root, docsIndexed, skills, geniusText)
-}
-
-func CompareSlowestStepRegressions(baseline, candidate []SelfAugmentSlowStep, maxRegressionPct float64) []SelfAugmentSlowStepRegression {
-	return compareSlowestStepRegressions(baseline, candidate, maxRegressionPct)
-}
-
-func CompareStepBudgetRegressions(baseline, candidate []SelfAugmentStepDurationStat, maxRegressionPct float64) []SelfAugmentStepBudgetRegression {
-	return compareStepBudgetRegressions(baseline, candidate, maxRegressionPct)
 }
 
 func DocsContainTerm(root, term string) bool {
@@ -82,22 +67,6 @@ func markSatisfiedSelfAugmentCandidate(candidate *SelfAugmentCandidate, signals 
 
 func MaxSlowStepDurationByLabel(steps []SelfAugmentSlowStep) map[string]int64 {
 	return maxSlowStepDurationByLabel(steps)
-}
-
-func MissingStrings(want, have []string) []string {
-	return missingStrings(want, have)
-}
-
-func NonNilSlowStepSlice(items []SelfAugmentSlowStep) []SelfAugmentSlowStep {
-	return nonNilSlowStepSlice(items)
-}
-
-func NonNilStringSlice(items []string) []string {
-	return nonNilStringSlice(items)
-}
-
-func ParseSelfAugmentTimestamp(value string) (time.Time, bool) {
-	return parseSelfAugmentTimestamp(value)
 }
 
 func PlanSelfAugmentation(req SelfAugmentPlanRequest) SelfAugmentPlanResult {

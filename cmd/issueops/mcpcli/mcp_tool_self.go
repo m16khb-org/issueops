@@ -7,9 +7,10 @@ import (
 	"issueops/cmd/issueops/selfworkflow"
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
-func handleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
+func handleSelfLoopMCPToolCall(call MCPToolCall, history augmentapp.HistoryService) MCPToolOutcome {
 	switch call.Name {
 	case "self_augment":
 		selfworkflow.Version = Version
@@ -62,10 +63,10 @@ func handleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
 		}
 		return mcpToolPayload(result)
 	case "self_verify_history", "self_augment_history":
-		result, err := selfworkflow.SelfAugmentHistory(
+		result, err := history.History(
 			argmap.StringDefault(call.Arguments, "prefix", "self-verify"),
 			argmap.Int(call.Arguments, "limit", 20),
-			selfworkflow.SelfAugmentHistoryRetentionOptions{
+			augmentcontract.SelfAugmentHistoryRetentionOptions{
 				Limit:          argmap.Int(call.Arguments, "retention_limit", 0),
 				PruneRequested: argmap.Bool(call.Arguments, "prune_retention"),
 				Confirm:        argmap.Bool(call.Arguments, "confirm"),
@@ -76,7 +77,7 @@ func handleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
 		}
 		return mcpToolPayload(result)
 	case "self_verify_compare", "self_augment_compare":
-		result, err := selfworkflow.CompareSelfAugmentSummaries(
+		result, err := history.Compare(
 			argmap.String(call.Arguments, "baseline_key"),
 			argmap.String(call.Arguments, "candidate_key"),
 			argmap.Float(call.Arguments, "max_elapsed_regression_pct", 20),

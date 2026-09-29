@@ -134,7 +134,7 @@ func registerAllTools(server *mcp.Server, deps MCPDependencies) {
 			)
 			continue
 		}
-		handler := resolveHandlerGroup(deps.Catalog, name)
+		handler := resolveHandlerGroup(deps, name)
 		server.AddTool(
 			&mcp.Tool{Name: name, Description: desc, InputSchema: inputSchema},
 			sdkToolHandler(deps.Catalog, handler, name),
@@ -159,15 +159,17 @@ var handlerGroupLookup = map[mcpcontract.DispatchGroup]func(MCPToolCall) MCPTool
 	mcpcontract.DispatchGates:           handleGatesMCPToolCall,
 	mcpcontract.DispatchChannel:         handleChannelMCPToolCall,
 	mcpcontract.DispatchAssistantWorker: handleAssistantWorkerMCPToolCall,
-	mcpcontract.DispatchSelfLoop:        handleSelfLoopMCPToolCall,
 }
 
-func resolveHandlerGroup(catalog mcpcontract.Catalog, name string) func(MCPToolCall) MCPToolOutcome {
-	group, ok := catalog.Dispatch[name]
+func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MCPToolOutcome {
+	group, ok := deps.Catalog.Dispatch[name]
 	if !ok {
 		return func(call MCPToolCall) MCPToolOutcome {
 			return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
 		}
+	}
+	if group == mcpcontract.DispatchSelfLoop {
+		return func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps.SelfHistory) }
 	}
 	if fn, ok := handlerGroupLookup[group]; ok {
 		return fn

@@ -61,7 +61,7 @@ func TestHandleSelfLoopMCPToolCallCoversLocalPayloads(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handleSelfLoopMCPToolCall(tc.call)
+			outcome := testHandleSelfLoopMCPToolCall(tc.call)
 			if !outcome.Handled || outcome.Err != nil {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
@@ -108,14 +108,14 @@ func TestHandleSelfLoopMCPToolCallCoversBoundaryErrorsAndUnknownTool(t *testing.
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handleSelfLoopMCPToolCall(tc.call)
+			outcome := testHandleSelfLoopMCPToolCall(tc.call)
 			if !outcome.Handled || outcome.Err == nil || outcome.Err.Message != tc.wantMsg {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
 		})
 	}
 
-	unknown := handleSelfLoopMCPToolCall(MCPToolCall{Name: "not_self_loop", Arguments: map[string]any{}})
+	unknown := testHandleSelfLoopMCPToolCall(MCPToolCall{Name: "not_self_loop", Arguments: map[string]any{}})
 	if unknown.Handled {
 		t.Fatalf("unknown self-loop tool should pass through: %#v", unknown)
 	}
@@ -134,7 +134,7 @@ func TestSelfPlanAndCandidatesReturnFailedCheckpointOnSaveError(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	for _, tool := range []string{"self_augment", "self_verify_candidates"} {
 		t.Run(tool, func(t *testing.T) {
-			outcome := handleSelfLoopMCPToolCall(MCPToolCall{Name: tool, Arguments: map[string]any{"save_state": true, "state_key": "!invalid-key"}})
+			outcome := testHandleSelfLoopMCPToolCall(MCPToolCall{Name: tool, Arguments: map[string]any{"save_state": true, "state_key": "!invalid-key"}})
 			if !outcome.Handled || outcome.Err == nil || outcome.Err.Code != -32000 {
 				t.Fatalf("outcome=%+v", outcome)
 			}

@@ -1640,6 +1640,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/self_workflow_history_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newSelfWorkflowHistory",
+        "func selfWorkflowHistoryCLI"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/sqlstore_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -3194,13 +3203,7 @@
         "func fileExists",
         "func printJSON",
         "type SelfAugmentCandidate",
-        "type SelfAugmentCompareResult",
         "type SelfAugmentGoal",
-        "type SelfAugmentHistoryEntry",
-        "type SelfAugmentHistoryResult",
-        "type SelfAugmentHistoryRetention",
-        "type SelfAugmentHistoryRetentionOptions",
-        "type SelfAugmentHistorySkipped",
         "type SelfAugmentInfluence",
         "type SelfAugmentIteration",
         "type SelfAugmentLessonRequest",
@@ -3213,10 +3216,8 @@
         "type SelfAugmentRepoSignals",
         "type SelfAugmentResult",
         "type SelfAugmentSlowStep",
-        "type SelfAugmentSlowStepRegression",
         "type SelfAugmentStateCheckpoint",
         "type SelfAugmentStateSnapshot",
-        "type SelfAugmentStepBudgetRegression",
         "type SelfAugmentStepDurationStat",
         "type SelfAugmentSummary",
         "type SelfVerificationContract",
@@ -3246,22 +3247,15 @@
       "task": "T18",
       "symbols": [
         "func AllSelfAugmentGoalsPassed",
-        "func ApplySelfAugmentHistoryRetention",
         "func BuildStepDurationStats",
         "func ClassifySelfVerificationFailure",
         "func CollectSelfAugmentRepoSignals",
-        "func CompareSlowestStepRegressions",
-        "func CompareStepBudgetRegressions",
         "func DirContainsTerm",
         "func DocsContainTerm",
         "func FileContainsTerm",
         "func FormatScore",
         "func MarkSatisfiedSelfAugmentCandidate",
         "func MaxSlowStepDurationByLabel",
-        "func MissingStrings",
-        "func NonNilSlowStepSlice",
-        "func NonNilStringSlice",
-        "func ParseSelfAugmentTimestamp",
         "func PlanSelfAugmentation",
         "func RunSelfAugmentLesson",
         "func SaveSelfAugmentLesson",
@@ -3317,63 +3311,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/selfworkflow/historycompare/dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentHistoryEntry",
-        "type SelfAugmentHistoryResult",
-        "type SelfAugmentHistoryRetention",
-        "type SelfAugmentHistoryRetentionOptions",
-        "type SelfAugmentHistorySkipped",
-        "type SelfAugmentSlowStep",
-        "type SelfAugmentSlowStepRegression",
-        "type SelfAugmentStateSnapshot",
-        "type SelfAugmentStepBudgetRegression",
-        "type SelfAugmentStepDurationStat",
-        "type SelfAugmentSummary"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/historycompare/self_augment_history_helpers.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func NonNilSlowStepSlice",
-        "func NonNilStringSlice",
-        "func ParseSelfAugmentTimestamp"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/historycompare/self_augment_history_retention.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func ApplySelfAugmentHistoryRetention"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/historycompare/self_verify_compare_core.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func CompareSelfAugmentSummaries",
-        "func CompareSelfAugmentSummariesFromSnapshots",
-        "func NewSelfAugmentCompareResult"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/historycompare/self_verify_compare_regressions.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func CompareSlowestStepRegressions",
-        "func CompareStepBudgetRegressions",
-        "func MissingStrings"
-      ]
-    },
-    {
       "path": "cmd/issueops/selfworkflow/historycompare/self_verify_history_compare_cli.go",
       "owner": "inbound",
       "task": "T17",
@@ -3382,21 +3319,6 @@
         "func RunSelfVerifyHistory",
         "type CLIDeps"
       ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/historycompare/self_verify_history_core.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func SelfAugmentHistory",
-        "func historyService"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/historycompare/state_dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/selfworkflow/llmeval/self_verify_llm_eval.go",
@@ -3466,28 +3388,6 @@
         "func EmitStart",
         "func New",
         "func boolPtr"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/model/self_augment_compare_types.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentSlowStepRegression",
-        "type SelfAugmentStepBudgetRegression"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/model/self_augment_history_types.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "type SelfAugmentHistoryEntry",
-        "type SelfAugmentHistoryResult",
-        "type SelfAugmentHistoryRetention",
-        "type SelfAugmentHistoryRetentionOptions",
-        "type SelfAugmentHistorySkipped"
       ]
     },
     {
@@ -3686,26 +3586,6 @@
         "func stepDurationStatsForCompare",
         "func summarizeSelfAugment",
         "func summarizeSelfVerification"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/self_workflow_history_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func CompareSelfAugmentSummaries",
-        "func CompareSelfAugmentSummariesFromSnapshots",
-        "func NewSelfAugmentCompareResult",
-        "func RunSelfVerifyCompare",
-        "func RunSelfVerifyHistory",
-        "func SelfAugmentHistory",
-        "func compareSlowestStepRegressions",
-        "func compareStepBudgetRegressions",
-        "func historyCLIDeps",
-        "func missingStrings",
-        "func nonNilSlowStepSlice",
-        "func nonNilStringSlice",
-        "func parseSelfAugmentTimestamp"
       ]
     },
     {
@@ -4387,6 +4267,7 @@
         "func hasMCPAdapterCatalog",
         "func qualityInspectContainsTerm",
         "func readmeContainsTerm",
+        "func rootWiresMCPCatalog",
         "type repoSignalRule"
       ]
     },
@@ -8405,6 +8286,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func ExistingRecords.GetExisting",
         "func NormalizeStateKey",
         "func StateDelete",
         "func StateDir",
@@ -8412,12 +8294,11 @@
         "func StateRead",
         "func StateWrite",
         "func WriteStateRecord",
-        "func existingRecords.GetExisting",
         "func openStateDB",
         "func openStateStore",
         "func service",
         "func statePath",
-        "type existingRecords"
+        "type ExistingRecords"
       ]
     },
     {

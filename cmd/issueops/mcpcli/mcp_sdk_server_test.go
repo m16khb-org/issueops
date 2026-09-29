@@ -14,7 +14,7 @@ import (
 )
 
 func TestSDKToolHandlerDispatchesCatalogTool(t *testing.T) {
-	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(testMCPCatalog(), "contract_schema"), "contract_schema")
+	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(MCPDependencies{Catalog: testMCPCatalog()}, "contract_schema"), "contract_schema")
 	result, err := handler(context.Background(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)},
 	})
@@ -34,7 +34,7 @@ func TestSDKToolHandlerDispatchesCatalogTool(t *testing.T) {
 }
 
 func TestSDKToolHandlerRejectsInvalidRawArguments(t *testing.T) {
-	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(testMCPCatalog(), "contract_schema"), "contract_schema")
+	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(MCPDependencies{Catalog: testMCPCatalog()}, "contract_schema"), "contract_schema")
 	_, err := handler(context.Background(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{not json`)},
 	})

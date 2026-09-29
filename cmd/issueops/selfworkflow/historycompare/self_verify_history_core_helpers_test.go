@@ -1,9 +1,12 @@
 package historycompare
 
-import app "issueops/internal/application/selfaugment"
+import (
+	statestore "issueops/internal/adapter/outbound/state"
+	app "issueops/internal/application/selfaugment"
+)
 
 func historyService() app.HistoryService {
-	return app.HistoryService{StateDir: StateDir, List: StateList, Read: StateRead, Delete: StateDelete}
+	return app.HistoryService{StateDir: statestore.StateDir, List: statestore.StateList, Read: statestore.StateRead, Delete: statestore.StateDelete}
 }
 
 func SelfAugmentHistory(prefix string, limit int, retentionOptions ...SelfAugmentHistoryRetentionOptions) (SelfAugmentHistoryResult, error) {

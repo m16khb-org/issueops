@@ -4,7 +4,6 @@ import (
 	augmentlessonpkg "issueops/cmd/issueops/selfworkflow/augmentlesson"
 	augmentplanpkg "issueops/cmd/issueops/selfworkflow/augmentplan"
 	candidateexportpkg "issueops/cmd/issueops/selfworkflow/candidateexport"
-	historycomparepkg "issueops/cmd/issueops/selfworkflow/historycompare"
 	stateiopkg "issueops/cmd/issueops/selfworkflow/stateio"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/verification"
@@ -21,10 +20,6 @@ func init() {
 	candidateexportpkg.ObserveSource = verification.CandidateSource
 	candidateexportpkg.StateDir = statestore.StateDir
 	candidateexportpkg.StateWrite = statestore.StateWrite
-	historycomparepkg.StateDelete = statestore.StateDelete
-	historycomparepkg.StateDir = statestore.StateDir
-	historycomparepkg.StateList = statestore.StateList
-	historycomparepkg.StateRead = statestore.StateRead
 	stateiopkg.NormalizeStateKey = statestore.NormalizeStateKey
 	stateiopkg.StateDir = statestore.StateDir
 	stateiopkg.StateRead = statestore.StateRead

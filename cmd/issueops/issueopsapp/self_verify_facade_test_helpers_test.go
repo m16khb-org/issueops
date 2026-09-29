@@ -1,6 +1,9 @@
 package issueopsapp
 
 import (
+	statestore "issueops/internal/adapter/outbound/state"
+	app "issueops/internal/application/selfaugment"
+	domain "issueops/internal/domain/selfaugment"
 	"time"
 
 	"issueops/cmd/issueops/selfworkflow"
@@ -35,23 +38,23 @@ func saveSelfVerificationCandidateExport(result *SelfVerificationCandidateExport
 }
 
 func compareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (SelfAugmentCompareResult, error) {
-	return selfworkflow.CompareSelfAugmentSummaries(baselineKey, candidateKey, maxElapsedRegressionPct)
+	return newSelfWorkflowHistory(statestore.StateDir()).Compare(baselineKey, candidateKey, maxElapsedRegressionPct)
 }
 
 func compareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate SelfAugmentStateSnapshot) SelfAugmentCompareResult {
-	return selfworkflow.CompareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate)
+	return app.CompareSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate, statestore.StateDir())
 }
 
 func newSelfAugmentCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64) SelfAugmentCompareResult {
-	return selfworkflow.NewSelfAugmentCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct)
+	return domain.NewCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct, statestore.StateDir())
 }
 
 func selfAugmentHistory(prefix string, limit int, retentionOptions ...selfAugmentHistoryRetentionOptions) (SelfAugmentHistoryResult, error) {
-	options := []selfworkflow.SelfAugmentHistoryRetentionOptions{}
-	for _, option := range retentionOptions {
-		options = append(options, selfworkflow.SelfAugmentHistoryRetentionOptions(option))
+	options := selfAugmentHistoryRetentionOptions{}
+	if len(retentionOptions) > 0 {
+		options = retentionOptions[0]
 	}
-	return selfworkflow.SelfAugmentHistory(prefix, limit, options...)
+	return newSelfWorkflowHistory(statestore.StateDir()).History(prefix, limit, options)
 }
 
 func runSelfVerifyPromoteWithDeps(args []string, deps selfVerifyPromoteDeps) error {

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/selfworkflow"
+	"issueops/cmd/issueops/selfworkflow/historycompare"
 )
 
 func runSelfVerify(args []string) error {
@@ -33,11 +34,11 @@ func runSelfVerifyCandidates(args []string) error {
 }
 
 func runSelfVerifyCompare(args []string) error {
-	return selfworkflow.RunSelfVerifyCompare(args)
+	return historycompare.RunSelfVerifyCompare(args, selfWorkflowHistoryCLI())
 }
 
 func runSelfVerifyHistory(args []string) error {
-	return selfworkflow.RunSelfVerifyHistory(args)
+	return historycompare.RunSelfVerifyHistory(args, selfWorkflowHistoryCLI())
 }
 
 func runSelfVerifyPromote(args []string) error {

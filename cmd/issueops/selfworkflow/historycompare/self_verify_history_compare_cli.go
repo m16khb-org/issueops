@@ -3,10 +3,13 @@ package historycompare
 import (
 	"flag"
 	"fmt"
+	contract "issueops/internal/contract/selfaugment"
 )
 
 type CLIDeps struct {
 	PrintJSON func(any) error
+	History   func(string, int, contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error)
+	Compare   func(string, string, float64) (contract.SelfAugmentCompareResult, error)
 }
 
 func RunSelfVerifyCompare(args []string, deps CLIDeps) error {
@@ -19,7 +22,7 @@ func RunSelfVerifyCompare(args []string, deps CLIDeps) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := CompareSelfAugmentSummaries(*baselineKey, *candidateKey, *maxElapsedRegressionPct)
+	result, err := deps.Compare(*baselineKey, *candidateKey, *maxElapsedRegressionPct)
 	if err != nil {
 		return err
 	}
@@ -57,7 +60,7 @@ func RunSelfVerifyHistory(args []string, deps CLIDeps) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := SelfAugmentHistory(*prefix, *limit, SelfAugmentHistoryRetentionOptions{
+	result, err := deps.History(*prefix, *limit, contract.SelfAugmentHistoryRetentionOptions{
 		Limit:          *retentionLimit,
 		PruneRequested: *pruneRetention,
 		Confirm:        *confirm,

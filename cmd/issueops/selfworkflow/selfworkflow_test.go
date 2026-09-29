@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	domain "issueops/internal/domain/selfaugment"
 	"os"
 	"path/filepath"
 	"testing"
@@ -111,16 +112,16 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if fileExists(filepath.Join(t.TempDir(), "missing")) {
 		t.Fatal("missing file should not exist")
 	}
-	if _, ok := ParseSelfAugmentTimestamp(time.Now().UTC().Format(time.RFC3339Nano)); !ok {
+	if _, ok := domain.ParseHistoryTimestamp(time.Now().UTC().Format(time.RFC3339Nano)); !ok {
 		t.Fatal("timestamp should parse")
 	}
-	if _, ok := ParseSelfAugmentTimestamp("bad"); ok {
+	if _, ok := domain.ParseHistoryTimestamp("bad"); ok {
 		t.Fatal("bad timestamp should not parse")
 	}
-	if got := MissingStrings([]string{"a", "b"}, []string{"b"}); len(got) != 1 || got[0] != "a" {
+	if got := domain.MissingStrings([]string{"a", "b"}, []string{"b"}); len(got) != 1 || got[0] != "a" {
 		t.Fatalf("MissingStrings = %#v", got)
 	}
-	if NonNilStringSlice(nil) == nil || NonNilSlowStepSlice(nil) == nil {
+	if nonNilStringSliceForTest(nil) == nil || nonNilSlowStepSliceForTest(nil) == nil {
 		t.Fatal("non-nil wrappers should return empty slices")
 	}
 	slow := []SelfAugmentSlowStep{{Label: "test", DurationMS: 10}, {Label: "test", DurationMS: 20}}
@@ -134,7 +135,7 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if StepDurationStatByLabel(stats)["test"].MaxDurationMS != 30 {
 		t.Fatal("step duration lookup mismatch")
 	}
-	regressions := CompareStepBudgetRegressions(
+	regressions := domain.CompareStepBudgetRegressions(
 		[]SelfAugmentStepDurationStat{{Label: "test", Count: 1, P95DurationMS: 100}},
 		[]SelfAugmentStepDurationStat{{Label: "test", Count: 1, P95DurationMS: 140}},
 		10,
@@ -142,7 +143,7 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if len(regressions) != 1 {
 		t.Fatalf("expected budget regression, got %#v", regressions)
 	}
-	slowRegressions := CompareSlowestStepRegressions(
+	slowRegressions := domain.CompareSlowestStepRegressions(
 		[]SelfAugmentSlowStep{{Label: "test", DurationMS: 10}},
 		[]SelfAugmentSlowStep{{Label: "test", DurationMS: 20}},
 		10,
@@ -330,4 +331,17 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 	if err != nil || !promote.DryRun {
 		t.Fatalf("PromoteSelfAugmentBaseline dry-run: %#v err=%v", promote, err)
 	}
+}
+
+func nonNilStringSliceForTest(items []string) []string {
+	if items == nil {
+		return []string{}
+	}
+	return items
+}
+func nonNilSlowStepSliceForTest(items []SelfAugmentSlowStep) []SelfAugmentSlowStep {
+	if items == nil {
+		return []SelfAugmentSlowStep{}
+	}
+	return items
 }

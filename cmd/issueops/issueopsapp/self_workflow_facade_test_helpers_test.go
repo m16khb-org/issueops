@@ -1,25 +1,34 @@
 package issueopsapp
 
 import (
+	statestore "issueops/internal/adapter/outbound/state"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	domain "issueops/internal/domain/selfaugment"
 	"time"
 
 	"issueops/cmd/issueops/selfworkflow"
 )
 
 func applySelfAugmentHistoryRetention(result *SelfAugmentHistoryResult, options selfAugmentHistoryRetentionOptions) error {
-	return selfworkflow.ApplySelfAugmentHistoryRetention(result, options)
+	return newSelfWorkflowHistory(statestore.StateDir()).ApplyRetention(result, options)
 }
 
 func parseSelfAugmentTimestamp(value string) (time.Time, bool) {
-	return selfworkflow.ParseSelfAugmentTimestamp(value)
+	return domain.ParseHistoryTimestamp(value)
 }
 
 func nonNilStringSlice(items []string) []string {
-	return selfworkflow.NonNilStringSlice(items)
+	if items == nil {
+		return []string{}
+	}
+	return items
 }
 
 func nonNilSlowStepSlice(items []SelfAugmentSlowStep) []SelfAugmentSlowStep {
-	return selfworkflow.NonNilSlowStepSlice(items)
+	if items == nil {
+		return []SelfAugmentSlowStep{}
+	}
+	return items
 }
 
 func collectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) SelfAugmentRepoSignals {
@@ -71,15 +80,15 @@ func selfAugmentCandidateScore(candidate SelfAugmentCandidate) float64 {
 }
 
 func compareSlowestStepRegressions(baseline, candidate []SelfAugmentSlowStep, maxRegressionPct float64) []SelfAugmentSlowStepRegression {
-	return selfworkflow.CompareSlowestStepRegressions(baseline, candidate, maxRegressionPct)
+	return domain.CompareSlowestStepRegressions(baseline, candidate, maxRegressionPct)
 }
 
 func compareStepBudgetRegressions(baseline, candidate []SelfAugmentStepDurationStat, maxRegressionPct float64) []SelfAugmentStepBudgetRegression {
-	return selfworkflow.CompareStepBudgetRegressions(baseline, candidate, maxRegressionPct)
+	return domain.CompareStepBudgetRegressions(baseline, candidate, maxRegressionPct)
 }
 
 func missingStrings(want, have []string) []string {
-	return selfworkflow.MissingStrings(want, have)
+	return domain.MissingStrings(want, have)
 }
 
 func stepDurationStatByLabel(stats []SelfAugmentStepDurationStat) map[string]SelfAugmentStepDurationStat {
@@ -142,7 +151,7 @@ func selfVerificationCoverageDefinitions() []selfVerificationCoverageDefinition 
 	return selfworkflow.SelfVerificationCoverageDefinitions()
 }
 
-type selfAugmentHistoryRetentionOptions = selfworkflow.SelfAugmentHistoryRetentionOptions
+type selfAugmentHistoryRetentionOptions = augmentcontract.SelfAugmentHistoryRetentionOptions
 
 type selfVerificationCoverageDefinition = selfworkflow.SelfVerificationCoverageDefinition
 
@@ -150,15 +159,15 @@ type SelfAugmentPromoteResult = selfworkflow.SelfAugmentPromoteResult
 
 type SelfAugmentIteration = selfworkflow.SelfAugmentIteration
 
-type SelfAugmentCompareResult = selfworkflow.SelfAugmentCompareResult
+type SelfAugmentCompareResult = augmentcontract.SelfAugmentCompareResult
 
-type SelfAugmentSlowStepRegression = selfworkflow.SelfAugmentSlowStepRegression
+type SelfAugmentSlowStepRegression = augmentcontract.SelfAugmentSlowStepRegression
 
-type SelfAugmentStepBudgetRegression = selfworkflow.SelfAugmentStepBudgetRegression
+type SelfAugmentStepBudgetRegression = augmentcontract.SelfAugmentStepBudgetRegression
 
-type SelfAugmentHistoryResult = selfworkflow.SelfAugmentHistoryResult
+type SelfAugmentHistoryResult = augmentcontract.SelfAugmentHistoryResult
 
-type SelfAugmentHistoryEntry = selfworkflow.SelfAugmentHistoryEntry
+type SelfAugmentHistoryEntry = augmentcontract.SelfAugmentHistoryEntry
 
 type SelfAugmentInfluence = selfworkflow.SelfAugmentInfluence
 

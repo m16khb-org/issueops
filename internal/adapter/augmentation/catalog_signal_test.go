@@ -27,6 +27,15 @@ func TestMCPCatalogSignalRequiresSchemaAssemblyAndRootWiring(t *testing.T) {
 	if !hasMCPAdapterCatalog(root) {
 		t.Fatal("current schema, assembly and root wiring not observed")
 	}
+	write("cmd/issueops/issueopsapp/mcp_facade.go", "package issueopsapp\nfunc issueOpsMCPDependencies() mcpcli.MCPDependencies { return mcpcli.MCPDependencies{\nCatalog:     mcpcatalog.Build(),\nSelfHistory: history,\n} }")
+	if !hasMCPAdapterCatalog(root) {
+		t.Fatal("formatted multi-field dependency wiring not observed")
+	}
+	write("cmd/issueops/issueopsapp/mcp_facade.go", "package issueopsapp\n// Catalog: mcpcatalog.Build()\nfunc issueOpsMCPDependencies() mcpcli.MCPDependencies { return mcpcli.MCPDependencies{} }")
+	if hasMCPAdapterCatalog(root) {
+		t.Fatal("comment counted as runtime wiring")
+	}
+	write("cmd/issueops/issueopsapp/mcp_facade.go", "package issueopsapp\nfunc issueOpsMCPDependencies() mcpcli.MCPDependencies { return mcpcli.MCPDependencies{Catalog: mcpcatalog.Build()} }")
 	if err := os.Remove(filepath.Join(root, "internal/contract/mcp/adapter_owned_catalog.go")); err != nil {
 		t.Fatal(err)
 	}

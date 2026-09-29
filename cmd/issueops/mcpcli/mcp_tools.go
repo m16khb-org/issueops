@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	augmentapp "issueops/internal/application/selfaugment"
 	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
 	mcpcontract "issueops/internal/contract/mcp"
@@ -32,6 +33,7 @@ type MCPToolOutcome struct {
 // cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
 	Catalog     mcpcontract.Catalog
+	SelfHistory augmentapp.HistoryService
 	Prepare     issueopscontract.ExecutionPrepareHandler
 	Orca        port.ExecutionOrcaProvisioner
 	OrcaOwner   port.ExecutionOrcaOwnerInspector
@@ -96,7 +98,7 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 		handleGatesMCPToolCall,
 		handleChannelMCPToolCall,
 		handleAssistantWorkerMCPToolCall,
-		handleSelfLoopMCPToolCall,
+		func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps.SelfHistory) },
 	} {
 		outcome := handler(call)
 		if !outcome.Handled {

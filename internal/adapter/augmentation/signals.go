@@ -1,6 +1,9 @@
 package augmentation
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -220,11 +223,54 @@ func readmeContainsTerm(root, term string) bool {
 func hasMCPAdapterCatalog(root string) bool {
 	return DirContainsTerm(root, filepath.Join("internal", "contract", "mcp"), "AdapterOwnedTools") &&
 		DirContainsTerm(root, filepath.Join("internal", "adapter", "inbound", "catalog", "mcp"), "contract.AdapterOwnedTools") &&
-		DirContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp"), "Catalog: mcpcatalog.Build()")
+		rootWiresMCPCatalog(root)
 }
 
 func qualityInspectContainsTerm(root, term string) bool {
 	return DirContainsTerm(root, filepath.Join("cmd", "issueops", "qualitycli"), term) ||
 		DirContainsTerm(root, filepath.Join("internal", "contract", "quality"), term) ||
 		DirContainsTerm(root, filepath.Join("internal", "core", "qualityinspect"), term)
+}
+
+// Observe the field assignment, not gofmt's alignment or a comment mentioning it.
+func rootWiresMCPCatalog(root string) bool {
+	file, err := parser.ParseFile(token.NewFileSet(), filepath.Join(root, "cmd", "issueops", "issueopsapp", "mcp_facade.go"), nil, 0)
+	if err != nil {
+		return false
+	}
+	found := false
+	ast.Inspect(file, func(node ast.Node) bool {
+		literal, ok := node.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+		typ, ok := literal.Type.(*ast.SelectorExpr)
+		if !ok || typ.Sel.Name != "MCPDependencies" {
+			return true
+		}
+		for _, element := range literal.Elts {
+			field, ok := element.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := field.Key.(*ast.Ident)
+			if !ok || key.Name != "Catalog" {
+				continue
+			}
+			call, ok := field.Value.(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+			selector, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || selector.Sel.Name != "Build" {
+				continue
+			}
+			pkg, ok := selector.X.(*ast.Ident)
+			if ok && pkg.Name == "mcpcatalog" {
+				found = true
+			}
+		}
+		return true
+	})
+	return found
 }

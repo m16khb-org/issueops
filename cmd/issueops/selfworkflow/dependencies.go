@@ -26,13 +26,7 @@ const (
 type StepResult = commandstep.StepResult
 
 type SelfAugmentCandidate = model.SelfAugmentCandidate
-type SelfAugmentCompareResult = model.SelfAugmentCompareResult
 type SelfAugmentGoal = model.SelfAugmentGoal
-type SelfAugmentHistoryEntry = model.SelfAugmentHistoryEntry
-type SelfAugmentHistoryResult = model.SelfAugmentHistoryResult
-type SelfAugmentHistoryRetention = model.SelfAugmentHistoryRetention
-type SelfAugmentHistoryRetentionOptions = model.SelfAugmentHistoryRetentionOptions
-type SelfAugmentHistorySkipped = model.SelfAugmentHistorySkipped
 type SelfAugmentInfluence = model.SelfAugmentInfluence
 type SelfAugmentIteration = model.SelfAugmentIteration
 type SelfAugmentLessonRequest = model.SelfAugmentLessonRequest
@@ -47,10 +41,8 @@ type SelfAugmentResult = model.SelfAugmentResult
 type SelfAugmentSlowStep = model.SelfAugmentSlowStep
 type SelfAugmentStateCheckpoint = model.SelfAugmentStateCheckpoint
 type SelfAugmentStateSnapshot = model.SelfAugmentStateSnapshot
-type SelfAugmentStepBudgetRegression = model.SelfAugmentStepBudgetRegression
 type SelfAugmentStepDurationStat = model.SelfAugmentStepDurationStat
 type SelfAugmentSummary = model.SelfAugmentSummary
-type SelfAugmentSlowStepRegression = model.SelfAugmentSlowStepRegression
 type SelfVerificationContract = model.SelfVerificationContract
 type SelfVerificationCoverage = model.SelfVerificationCoverage
 type SelfVerificationCoverageDefinition = model.SelfVerificationCoverageDefinition
