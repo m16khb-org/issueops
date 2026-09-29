@@ -2,8 +2,8 @@ package feedbackcleanup
 
 import (
 	"context"
+	reviewapp "issueops/internal/application/issueopsreview"
 	"os"
-	"testing"
 	"time"
 
 	issueopscore "issueops/internal/adapter/issueops"
@@ -19,7 +19,7 @@ import (
 
 // 프로덕션에서는 issueopsapp이 주입한다. cleanup CLI 테스트는 실제 정리 경로를
 // 검증하므로 같은 배선을 재현한다.
-func TestMain(m *testing.M) {
+func testCleanupCommand() Command {
 
 	finish := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, d Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
 		runtime := issueopscore.CleanupFinishRuntime{RunGit: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
@@ -38,19 +38,21 @@ func TestMain(m *testing.M) {
 			},
 		}).Run(ctx, req)
 	}
-	ConfigureCleanup(CleanupDeps{
+	return Command{Operations: CleanupDeps{
 		Status: func(ctx context.Context, root, id string, merged bool, d Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
 			service := cleanupapp.StatusService{
 				Records:    issueopscore.CycleRecordStore{StateRoot: root},
 				Structural: cleanupapp.StructuralStatus{Environment: issueopscore.CleanupStatusEnvironment{RunGit: issueopscore.GitCmd, ReadGit: issueopscore.GitOut}},
 				Provider:   d.Provider, CurrentDirectory: os.Getwd,
 				PreviewFinish: func(ctx context.Context, req issueopscontract.CleanupFinishRequest, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
-					return cleanupDeps.CleanupFinish(ctx, root, req, d, prov)
+					return finish(ctx, root, req, d, prov)
 				},
 			}
 			return service.Status(ctx, id, merged)
 		},
-		AddIssueOpsFeedbackWithActor: issueopscore.AddIssueOpsFeedbackWithActor,
+		AddIssueOpsFeedbackWithActor: func(root, id, source, body, classification string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.AddFeedback(issueopscore.NewReviewMutationStore(&actor), root, id, source, body, classification)
+		},
 		CleanupAbandon: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d Deps) (issueopscontract.CleanupAbandonResult, error) {
 			runtime := issueopscore.CleanupAbandonRuntime{StateRoot: stateRoot, Git: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}}
 			return (cleanupapp.AbandonExecutor{
@@ -88,11 +90,11 @@ func TestMain(m *testing.M) {
 			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: d.Provider, VerifyMerged: d.VerifyMerged, Now: time.Now}).Close(context.Background(), id, req.MergeEvidenceRequested, req.Confirm)
 		},
 		IssueOpsStateRoot: issueopscore.IssueOpsStateRoot,
-		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: issueopscore.MarkIssueOpsContractFeedbackIssueUpdatedWithActor,
-		ObserveNativeProcessAncestry:                      issueopscore.ObserveNativeProcessAncestry,
-		ReadIssueOps:                                      issueopscore.ReadIssueOps,
-		ReadRemoteIssueSnapshot:                           issueopscore.ReadRemoteIssueSnapshot,
-		ResolveRecordProvider:                             issuedomain.ResolveRecordProvider,
-	})
-	os.Exit(m.Run())
+		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: func(root, id string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.MarkContractFeedbackIssueUpdated(issueopscore.NewReviewMutationStore(&actor), root, id)
+		},
+		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
+		ReadIssueOps:                 issueopscore.ReadIssueOps,
+		ResolveRecordProvider:        issuedomain.ResolveRecordProvider,
+	}}
 }

@@ -17,6 +17,7 @@ import (
 )
 
 func TestRunFeedbackAddAndMarkIssueUpdated(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
 	var printed []issueopscontract.IssueOpsRecord
@@ -30,10 +31,10 @@ func TestRunFeedbackAddAndMarkIssueUpdated(t *testing.T) {
 			return nil
 		},
 	}
-	if err := RunFeedback([]string{"add", "--id", record.ID, "--source", "review", "--body", "fix this", "--classification", "contract_change", "--json"}, deps); err != nil {
+	if err := command.RunFeedback([]string{"add", "--id", record.ID, "--source", "review", "--body", "fix this", "--classification", "contract_change", "--json"}, deps); err != nil {
 		t.Fatalf("RunFeedback add returned error: %v", err)
 	}
-	if err := RunFeedback([]string{"mark-issue-updated", "--id", record.ID}, deps); err != nil {
+	if err := command.RunFeedback([]string{"mark-issue-updated", "--id", record.ID}, deps); err != nil {
 		t.Fatalf("RunFeedback mark returned error: %v", err)
 	}
 	if len(printed) != 2 {
@@ -48,6 +49,7 @@ func TestRunFeedbackAddAndMarkIssueUpdated(t *testing.T) {
 }
 
 func TestRunCleanupStatusAndJSONError(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
 	var statuses []any
@@ -66,13 +68,13 @@ func TestRunCleanupStatusAndJSONError(t *testing.T) {
 			return nil
 		},
 	}
-	if err := RunCleanup([]string{"status", "--id", record.ID, "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"status", "--id", record.ID, "--json"}, deps); err != nil {
 		t.Fatalf("RunCleanup status returned error: %v", err)
 	}
 	if len(statuses) != 1 {
 		t.Fatalf("expected one status output, got %d", len(statuses))
 	}
-	if err := RunCleanup([]string{"status", "--id", "missing", "--json"}, deps); err == nil {
+	if err := command.RunCleanup([]string{"status", "--id", "missing", "--json"}, deps); err == nil {
 		t.Fatal("expected missing status error")
 	}
 	if len(printedErrors) != 1 {
@@ -81,25 +83,27 @@ func TestRunCleanupStatusAndJSONError(t *testing.T) {
 }
 
 func TestCleanupCommandBoundaries(t *testing.T) {
+	command := testCleanupCommand()
 	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintResult: func(issueopscontract.IssueOpsRecord, bool, error) error { return nil }}
-	if err := RunFeedback(nil, deps); err != nil {
+	if err := command.RunFeedback(nil, deps); err != nil {
 		t.Fatalf("help feedback returned error: %v", err)
 	}
-	if err := RunCleanup(nil, deps); err != nil {
+	if err := command.RunCleanup(nil, deps); err != nil {
 		t.Fatalf("help cleanup returned error: %v", err)
 	}
-	if err := RunFeedback([]string{"unknown"}, deps); err == nil || !strings.Contains(err.Error(), "unknown issueops feedback") {
+	if err := command.RunFeedback([]string{"unknown"}, deps); err == nil || !strings.Contains(err.Error(), "unknown issueops feedback") {
 		t.Fatalf("expected unknown feedback error, got %v", err)
 	}
-	if err := RunCleanup([]string{"unknown"}, deps); err == nil || !strings.Contains(err.Error(), "unknown issueops cleanup") {
+	if err := command.RunCleanup([]string{"unknown"}, deps); err == nil || !strings.Contains(err.Error(), "unknown issueops cleanup") {
 		t.Fatalf("expected unknown cleanup error, got %v", err)
 	}
-	if err := RunFeedback([]string{"add", "--bad"}, deps); err == nil {
+	if err := command.RunFeedback([]string{"add", "--bad"}, deps); err == nil {
 		t.Fatal("expected parse flag error")
 	}
 }
 
 func TestRunCleanupStatusSkipsRemoteObservationUntilFinishEligible(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 
 	cases := []struct {
@@ -156,7 +160,7 @@ func TestRunCleanupStatusSkipsRemoteObservationUntilFinishEligible(t *testing.T)
 				return &cleanupStatusProvider{}, nil
 			}
 
-			if err := RunCleanup(tc.args(record), deps); err != nil {
+			if err := command.RunCleanup(tc.args(record), deps); err != nil {
 				t.Fatalf("RunCleanup status: %v", err)
 			}
 			if mergeCalls != 0 || providerCalls != 0 {
@@ -171,6 +175,7 @@ func TestRunCleanupStatusSkipsRemoteObservationUntilFinishEligible(t *testing.T)
 }
 
 func TestRunCleanupStatusFailsClosedOnMergedReadbackErrors(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 
@@ -192,7 +197,7 @@ func TestRunCleanupStatusFailsClosedOnMergedReadbackErrors(t *testing.T) {
 				return issueopscontract.CleanupRemoteBranchArtifactHead{}, tc.err
 			}
 
-			err := RunCleanup([]string{"status", "--id", record.ID, "--merged"}, deps)
+			err := command.RunCleanup([]string{"status", "--id", record.ID, "--merged"}, deps)
 			if err == nil || !strings.Contains(err.Error(), tc.err.Error()) {
 				t.Fatalf("merged readback must remain a real error: %v", err)
 			}
@@ -204,6 +209,7 @@ func TestRunCleanupStatusFailsClosedOnMergedReadbackErrors(t *testing.T) {
 }
 
 func TestRunCleanupStatusProjectsFinishReadinessParity(t *testing.T) {
+	command := testCleanupCommand()
 	for _, tc := range []struct {
 		name        string
 		issueState  string
@@ -285,7 +291,7 @@ func TestRunCleanupStatusProjectsFinishReadinessParity(t *testing.T) {
 				return port.CleanupWorkspaceOccupancy{Occupants: tc.processes, Ancestry: ancestry}, nil
 			}
 
-			if err := RunCleanup([]string{"status", "--id", record.ID, "--merged", "--json"}, deps); err != nil {
+			if err := command.RunCleanup([]string{"status", "--id", record.ID, "--merged", "--json"}, deps); err != nil {
 				t.Fatalf("ordinary finish preview block must normalize to status: %v", err)
 			}
 			status := printedCleanupStatus(t, printed)
@@ -315,6 +321,7 @@ func TestRunCleanupStatusProjectsFinishReadinessParity(t *testing.T) {
 }
 
 func TestRunCleanupStatusDoesNotNormalizeProviderOrIssueErrors(t *testing.T) {
+	command := testCleanupCommand()
 	for _, tc := range []struct {
 		name     string
 		provider func(string) (port.IssueProvider, error)
@@ -343,7 +350,7 @@ func TestRunCleanupStatusDoesNotNormalizeProviderOrIssueErrors(t *testing.T) {
 			deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 				return issueopscontract.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 			}
-			err := RunCleanup([]string{"status", "--id", record.ID, "--merged"}, deps)
+			err := command.RunCleanup([]string{"status", "--id", record.ID, "--merged"}, deps)
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("error must not normalize into blocked status: %v", err)
 			}
@@ -352,6 +359,7 @@ func TestRunCleanupStatusDoesNotNormalizeProviderOrIssueErrors(t *testing.T) {
 }
 
 func TestRunCleanupFinishForwardsSupersedingArtifactToApplication(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 	replacement := "https://github.com/acme/repo/pull/454"
@@ -372,17 +380,15 @@ func TestRunCleanupFinishForwardsSupersedingArtifactToApplication(t *testing.T) 
 		return issueopscontract.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 	}
 
-	previous := cleanupDeps
-	t.Cleanup(func() { cleanupDeps = previous })
-	wired := cleanupDeps
+	wired := command.Operations
 	var captured issueopscontract.CleanupFinishRequest
 	wired.CleanupFinish = func(_ context.Context, _ string, req issueopscontract.CleanupFinishRequest, _ Deps, _ port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
 		captured = req
 		return issueopscontract.CleanupFinishResult{OK: true, ID: req.ID, Preview: true}, nil
 	}
-	ConfigureCleanup(wired)
+	command.Operations = wired
 
-	if err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--superseded-by", replacement, "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--superseded-by", replacement, "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
 	if len(observed) != 0 {
@@ -394,6 +400,7 @@ func TestRunCleanupFinishForwardsSupersedingArtifactToApplication(t *testing.T) 
 }
 
 func TestRunCleanupOrphanDefaultsToPreviewAndGatesApply(t *testing.T) {
+	command := testCleanupCommand()
 	var printed []any
 	var previews []orphancontract.Request
 	var applies []orphancontract.ApplyRequest
@@ -417,7 +424,7 @@ func TestRunCleanupOrphanDefaultsToPreviewAndGatesApply(t *testing.T) {
 		"orphan", "--id", "io-f4e347fe9827", "--repo", "/repo", "--worktree", "/repo.worktrees/merged-feature",
 		"--branch", "merged-feature", "--provider", "github", "--kind", "pr", "--artifact-url", "https://github.com/example/repo/pull/42", "--json",
 	}
-	if err := RunCleanup(args, deps); err != nil {
+	if err := command.RunCleanup(args, deps); err != nil {
 		t.Fatalf("recordless orphan preview: %v", err)
 	}
 	if len(previews) != 1 || len(applies) != 0 || len(printed) != 1 {
@@ -427,10 +434,10 @@ func TestRunCleanupOrphanDefaultsToPreviewAndGatesApply(t *testing.T) {
 		t.Fatalf("orphan preview request = %#v", previews[0])
 	}
 
-	if err := RunCleanup(append(args[:len(args)-1], "--apply"), deps); err == nil || !strings.Contains(err.Error(), "--confirm") {
+	if err := command.RunCleanup(append(args[:len(args)-1], "--apply"), deps); err == nil || !strings.Contains(err.Error(), "--confirm") {
 		t.Fatalf("apply without confirm error = %v", err)
 	}
-	if err := RunCleanup(append(args[:len(args)-1], "--apply", "--confirm", "--fingerprint", "preview-fingerprint", "--json"), deps); err != nil {
+	if err := command.RunCleanup(append(args[:len(args)-1], "--apply", "--confirm", "--fingerprint", "preview-fingerprint", "--json"), deps); err != nil {
 		t.Fatalf("confirmed orphan apply: %v", err)
 	}
 	if len(applies) != 1 || !applies[0].Confirm || applies[0].Fingerprint != "preview-fingerprint" {
@@ -574,14 +581,13 @@ func parseFeedbackCleanupFlags(fs *flag.FlagSet, args []string) (bool, error) {
 // RunCleanup의 close-children 디스패치 경로를 잠근다: merged 확인 플래그가
 // 어댑터 요청으로 전달되고, JSON/텍스트 출력과 에러 경로가 계약대로 나간다.
 func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
 	var printed []any
 	var printedErrors []error
 	var requests []issueopscontract.IssueOpsCloseChildrenRequest
-	previous := cleanupDeps
-	t.Cleanup(func() { cleanupDeps = previous })
-	wired := cleanupDeps
+	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
 	wired.ReadIssueOps = func(string, string) (issueopscontract.IssueOpsRecord, error) {
 		t.Fatal("CLI dispatch must not read the record before application locking")
@@ -591,7 +597,7 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 		requests = append(requests, req)
 		return issueopscontract.IssueOpsCloseChildrenResult{ClosedCount: 1, Children: []issueopscontract.IssueOpsCloseChildResult{{URL: "https://example.com/i/1", Closed: true, State: "closed"}}}, nil
 	}
-	ConfigureCleanup(wired)
+	command.Operations = wired
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
@@ -600,7 +606,7 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 			return nil
 		},
 	}
-	if err := RunCleanup([]string{"close-children", "--id", record.ID, "--merged", "--confirm", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"close-children", "--id", record.ID, "--merged", "--confirm", "--json"}, deps); err != nil {
 		t.Fatalf("close-children json: %v", err)
 	}
 	// CLI는 요청 플래그만 전달한다. 머지 확인 결과는 application이 채운다.
@@ -611,14 +617,14 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 		t.Fatalf("json output missing: %d", len(printed))
 	}
 	// 에러 경로: 어댑터가 실패하면 JSON 에러 프린트 후 원본 에러 복귀.
-	failing := cleanupDeps
+	failing := command.Operations
 	failing.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
 	failing.ReadIssueOps = issueopscore.ReadIssueOps
 	failing.CloseIssueOpsChildren = func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 		return issueopscontract.IssueOpsCloseChildrenResult{}, errors.New("provider refused")
 	}
-	ConfigureCleanup(failing)
-	if err := RunCleanup([]string{"close-children", "--id", record.ID, "--merged", "--json"}, deps); err == nil || err.Error() != "provider refused" {
+	command.Operations = failing
+	if err := command.RunCleanup([]string{"close-children", "--id", record.ID, "--merged", "--json"}, deps); err == nil || err.Error() != "provider refused" {
 		t.Fatalf("adapter error must propagate: %v", err)
 	}
 	if len(printedErrors) != 1 {
@@ -628,48 +634,49 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 
 // 도움말 진입과 알 수 없는 하위명령 경로.
 func TestRunCleanupHelpAndUnknownSubcommand(t *testing.T) {
-	if err := RunCleanup([]string{"--help"}, Deps{ParseFlags: parseFeedbackCleanupFlags}); err != nil {
+	command := testCleanupCommand()
+	if err := command.RunCleanup([]string{"--help"}, Deps{ParseFlags: parseFeedbackCleanupFlags}); err != nil {
 		t.Fatalf("help must not error: %v", err)
 	}
-	if err := RunCleanup([]string{"nonexistent"}, Deps{ParseFlags: parseFeedbackCleanupFlags}); err == nil || !strings.Contains(err.Error(), "unknown issueops cleanup subcommand") {
+	if err := command.RunCleanup([]string{"nonexistent"}, Deps{ParseFlags: parseFeedbackCleanupFlags}); err == nil || !strings.Contains(err.Error(), "unknown issueops cleanup subcommand") {
 		t.Fatalf("unknown subcommand must fail closed: %v", err)
 	}
 }
 
 // cleanup abandon CLI의 모드 배타/조합 검증 경로를 잠근다.
 func TestRunCleanupAbandonModeDiscipline(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	deps := Deps{ParseFlags: parseFeedbackCleanupFlags}
-	if err := RunCleanup([]string{"abandon", "--id", "io-x", "--reason", "stale cycle", "--preview", "--apply", "--json"}, deps); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+	if err := command.RunCleanup([]string{"abandon", "--id", "io-x", "--reason", "stale cycle", "--preview", "--apply", "--json"}, deps); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Fatalf("preview+apply must be rejected: %v", err)
 	}
-	if err := RunCleanup([]string{"abandon", "--id", "io-x", "--reason", "stale cycle"}, deps); err == nil || !strings.Contains(err.Error(), "exactly one mode") {
+	if err := command.RunCleanup([]string{"abandon", "--id", "io-x", "--reason", "stale cycle"}, deps); err == nil || !strings.Contains(err.Error(), "exactly one mode") {
 		t.Fatalf("modeless abandon must be rejected: %v", err)
 	}
 }
 
 // abandon 요청이 어댑터로 정확히 전달되는지 잠근다(성공 프린트 경로 포함).
 func TestRunCleanupAbandonDispatchesToAdapter(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
 	var printed []any
 	var requests []issueopscontract.CleanupAbandonRequest
-	previous := cleanupDeps
-	t.Cleanup(func() { cleanupDeps = previous })
-	wired := cleanupDeps
+	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
 	wired.ReadIssueOps = issueopscore.ReadIssueOps
 	wired.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps) (issueopscontract.CleanupAbandonResult, error) {
 		requests = append(requests, req)
 		return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID}, nil
 	}
-	ConfigureCleanup(wired)
+	command.Operations = wired
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
 		PrintError: func(err error) error { return nil },
 	}
-	if err := RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "dogfood verification", "--preview", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "dogfood verification", "--preview", "--json"}, deps); err != nil {
 		t.Fatalf("abandon preview: %v", err)
 	}
 	if len(requests) != 1 || requests[0].ID != record.ID || requests[0].Reason != "dogfood verification" || requests[0].Apply {
@@ -682,22 +689,21 @@ func TestRunCleanupAbandonDispatchesToAdapter(t *testing.T) {
 
 // cleanup remote-branch CLI의 모드 배타 규율과 어댑터 디스패치를 잠근다.
 func TestRunCleanupRemoteBranchDisciplineAndDispatch(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
 	deps := Deps{ParseFlags: parseFeedbackCleanupFlags}
-	if err := RunCleanup([]string{"remote-branch", "--id", record.ID, "--preview", "--apply", "--json"}, deps); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+	if err := command.RunCleanup([]string{"remote-branch", "--id", record.ID, "--preview", "--apply", "--json"}, deps); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Fatalf("preview+apply must be rejected: %v", err)
 	}
-	if err := RunCleanup([]string{"remote-branch", "--id", record.ID}, deps); err == nil || !strings.Contains(err.Error(), "exactly one mode") {
+	if err := command.RunCleanup([]string{"remote-branch", "--id", record.ID}, deps); err == nil || !strings.Contains(err.Error(), "exactly one mode") {
 		t.Fatalf("modeless remote-branch must be rejected: %v", err)
 	}
 
 	var requests []issueopscontract.CleanupRemoteBranchRequest
 	var printed []any
 	var printedErrors []error
-	previous := cleanupDeps
-	t.Cleanup(func() { cleanupDeps = previous })
-	wired := cleanupDeps
+	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
 	wired.ReadIssueOps = func(string, string) (issueopscontract.IssueOpsRecord, error) {
 		return record, nil
@@ -707,7 +713,7 @@ func TestRunCleanupRemoteBranchDisciplineAndDispatch(t *testing.T) {
 		requests = append(requests, req)
 		return issueopscontract.CleanupRemoteBranchResult{OK: true, ID: req.ID, Fingerprint: "abc"}, nil
 	}
-	ConfigureCleanup(wired)
+	command.Operations = wired
 	printDeps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
@@ -717,7 +723,7 @@ func TestRunCleanupRemoteBranchDisciplineAndDispatch(t *testing.T) {
 			return issueopscontract.CleanupRemoteBranchArtifactHead{}, nil
 		},
 	}
-	if err := RunCleanup([]string{"remote-branch", "--id", record.ID, "--preview", "--json"}, printDeps); err != nil {
+	if err := command.RunCleanup([]string{"remote-branch", "--id", record.ID, "--preview", "--json"}, printDeps); err != nil {
 		t.Fatalf("remote-branch preview: %v", err)
 	}
 	if len(requests) != 1 || requests[0].ID != record.ID || requests[0].Apply || requests[0].SupersededBy != "" {
@@ -730,21 +736,20 @@ func TestRunCleanupRemoteBranchDisciplineAndDispatch(t *testing.T) {
 
 // cleanup linked-branch CLI의 모드 배타와 어댑터 디스패치를 잠근다.
 func TestRunCleanupLinkedBranchDisciplineAndDispatch(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
 	deps := Deps{ParseFlags: parseFeedbackCleanupFlags}
-	if err := RunCleanup([]string{"linked-branch", "--id", record.ID, "--preview", "--apply", "--json"}, deps); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
+	if err := command.RunCleanup([]string{"linked-branch", "--id", record.ID, "--preview", "--apply", "--json"}, deps); err == nil || !strings.Contains(err.Error(), "mutually exclusive") {
 		t.Fatalf("preview+apply must be rejected: %v", err)
 	}
-	if err := RunCleanup([]string{"linked-branch", "--id", record.ID}, deps); err == nil || !strings.Contains(err.Error(), "exactly one mode") {
+	if err := command.RunCleanup([]string{"linked-branch", "--id", record.ID}, deps); err == nil || !strings.Contains(err.Error(), "exactly one mode") {
 		t.Fatalf("modeless linked-branch must be rejected: %v", err)
 	}
 
 	var requests []issueopscontract.CleanupLinkedBranchRequest
 	var printed []any
-	previous := cleanupDeps
-	t.Cleanup(func() { cleanupDeps = previous })
-	wired := cleanupDeps
+	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
 	wired.ReadIssueOps = func(string, string) (issueopscontract.IssueOpsRecord, error) {
 		return record, nil
@@ -753,12 +758,12 @@ func TestRunCleanupLinkedBranchDisciplineAndDispatch(t *testing.T) {
 		requests = append(requests, req)
 		return issueopscontract.CleanupLinkedBranchResult{OK: true, ID: req.ID, State: "absent"}, nil
 	}
-	ConfigureCleanup(wired)
+	command.Operations = wired
 	printDeps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
 	}
-	if err := RunCleanup([]string{"linked-branch", "--id", record.ID, "--preview", "--json"}, printDeps); err != nil {
+	if err := command.RunCleanup([]string{"linked-branch", "--id", record.ID, "--preview", "--json"}, printDeps); err != nil {
 		t.Fatalf("linked-branch preview: %v", err)
 	}
 	if len(requests) != 1 || requests[0].ID != record.ID || requests[0].Apply || requests[0].Confirm {

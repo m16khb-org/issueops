@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"issueops/cmd/issueops/issueopscli/benchmarkcmd"
 	"issueops/cmd/issueops/issueopscli/executioncmd"
+	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	"issueops/cmd/issueops/issueopscli/remoteverify"
 	executionissue "issueops/internal/contract/executionissue"
@@ -13,26 +14,28 @@ import (
 )
 
 type Dependencies struct {
-	Benchmark   benchmarkcmd.Command
-	Execution   executioncmd.ExecutionDeps
-	Runtime     IssueOpsCLIDeps
-	Gates       LoopGateDeps
-	Usage       string
-	ChildUsage  string
-	Prepare     issueopscontract.ExecutionPrepareHandler
-	Orca        port.ExecutionOrcaProvisioner
-	OrcaOwner   port.ExecutionOrcaOwnerInspector
-	BaseSync    basesyncport.Inspector
-	ReadIssue   executionissue.ExecutionIssueSnapshotReadFunc
-	Claim       issueopscontract.ExecutionClaimHandler
-	Release     issueopscontract.ExecutionReleaseHandler
-	Reseed      issueopscontract.ExecutionReseedHandler
-	Resume      issueopscontract.ExecutionResumeHandler
-	Reconcile   port.ExecutionReconcileHandler
-	Complete    issueopscontract.ExecutionCompleteHandler
-	Publication remotecmd.PublicationHandlers
-	Provenance  provenanceport.Observer
-	HandoffCmux issueopscontract.ExecutionCmuxHandoffHandler
+	Cleanup        feedbackcleanup.Command
+	CleanupRuntime feedbackcleanup.Deps
+	Benchmark      benchmarkcmd.Command
+	Execution      executioncmd.ExecutionDeps
+	Runtime        IssueOpsCLIDeps
+	Gates          LoopGateDeps
+	Usage          string
+	ChildUsage     string
+	Prepare        issueopscontract.ExecutionPrepareHandler
+	Orca           port.ExecutionOrcaProvisioner
+	OrcaOwner      port.ExecutionOrcaOwnerInspector
+	BaseSync       basesyncport.Inspector
+	ReadIssue      executionissue.ExecutionIssueSnapshotReadFunc
+	Claim          issueopscontract.ExecutionClaimHandler
+	Release        issueopscontract.ExecutionReleaseHandler
+	Reseed         issueopscontract.ExecutionReseedHandler
+	Resume         issueopscontract.ExecutionResumeHandler
+	Reconcile      port.ExecutionReconcileHandler
+	Complete       issueopscontract.ExecutionCompleteHandler
+	Publication    remotecmd.PublicationHandlers
+	Provenance     provenanceport.Observer
+	HandoffCmux    issueopscontract.ExecutionCmuxHandoffHandler
 }
 
 func RunIssueOpsWithDependencies(args []string, deps Dependencies) error {

@@ -23,6 +23,7 @@ type cleanupProvenanceObserverStub struct {
 }
 
 func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 	var printed any
@@ -42,7 +43,7 @@ func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
 	deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{HeadRefName: record.Branch, HeadRefOID: "abc123", BaseRefName: "main"}, nil
 	}
-	if err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
 	result, ok := printed.(issueopscore.CleanupFinishResult)
@@ -90,6 +91,7 @@ func TestBindCleanupNextCommandMissingObserverHasNoFallback(t *testing.T) {
 }
 
 func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
+	command := testCleanupCommand()
 	binary := os.Getenv("ISSUEOPS_CURRENT_RELAY_DOGFOOD_BINARY")
 	lifecycleID := os.Getenv("ISSUEOPS_CURRENT_RELAY_DOGFOOD_ID")
 	if binary == "" || lifecycleID == "" {
@@ -168,7 +170,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		}
 		return err
 	}
-	if err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
 	preview, ok := printed.(issueopscore.CleanupFinishResult)
@@ -189,7 +191,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	if err := commandparse.ValidateGeneratedCommandInvocation(provenance, observed, 1); err != nil {
 		t.Fatal(err)
 	}
-	if err := RunCleanup(clean[1:], deps); err != nil {
+	if err := command.RunCleanup(clean[1:], deps); err != nil {
 		t.Fatal(err)
 	}
 	if removeCalls != 1 {

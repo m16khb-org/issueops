@@ -30,7 +30,7 @@ func TestAbandonCLIObservesOnlyAfterOwnershipAndBindsLoadedArtifact(t *testing.T
 			root := t.TempDir()
 			t.Setenv("ISSUEOPS_STATE_DIR", root)
 			root = core.IssueOpsStateRoot()
-			configureIssueOpsCleanup()
+			command := newIssueOpsCleanup(root)
 			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "991-abandon-wiring"})
 			if err != nil {
 				t.Fatal(err)
@@ -99,7 +99,7 @@ func TestAbandonCLIObservesOnlyAfterOwnershipAndBindsLoadedArtifact(t *testing.T
 				},
 			}
 			args := []string{"abandon", "--id", record.ID, "--reason", "ownership wiring", "--preview", "--json"}
-			err = feedbackcleanup.RunCleanup(args, deps)
+			err = command.RunCleanup(args, deps)
 			if mode != "artifact drift" {
 				if err == nil || providers != 0 || reads != 0 || effects != 0 {
 					t.Fatalf("ownership refusal observed externally: providers=%d reads=%d effects=%d err=%v", providers, reads, effects, err)
@@ -111,7 +111,7 @@ func TestAbandonCLIObservesOnlyAfterOwnershipAndBindsLoadedArtifact(t *testing.T
 			}
 			drift = true
 			args = []string{"abandon", "--id", record.ID, "--reason", "ownership wiring", "--apply", "--confirm", "--fingerprint", output.Fingerprint, "--json"}
-			if err := feedbackcleanup.RunCleanup(args, deps); err == nil {
+			if err := command.RunCleanup(args, deps); err == nil {
 				t.Fatal("artifact replacement accepted")
 			}
 			kept, err := core.ReadIssueOps(root, record.ID)

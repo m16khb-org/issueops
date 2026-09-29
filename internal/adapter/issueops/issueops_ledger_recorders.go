@@ -18,7 +18,7 @@ func RecordIssueOpsDomainReviewWithActor(stateRoot, id string, req issueops.Issu
 }
 
 func recordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	store := reviewMutationStore(actor)
+	store := NewReviewMutationStore(actor)
 	store.ValidateMutation = func(record issueops.IssueOpsRecord) error {
 		return validateWorkspacePreparationMutation(record, actor)
 	}
@@ -38,7 +38,7 @@ func RecordIssueOpsAISlopCleanEvidenceWithActor(stateRoot, id string, categories
 
 func recordIssueOpsAISlopCleanEvidence(stateRoot, id string, categories, verification []string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return reviewapp.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{
-		ReviewMutationStore: reviewMutationStore(actor),
+		ReviewMutationStore: NewReviewMutationStore(actor),
 		Refresh:             refreshIssueOpsAISlopClean,
 	}, stateRoot, id, categories, verification)
 }
@@ -54,5 +54,5 @@ func ResolveIssueOpsFeedbackWithActor(stateRoot, id string, index int, resolutio
 }
 
 func resolveIssueOpsFeedback(stateRoot, id string, index int, resolution string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	return reviewapp.ResolveFeedback(reviewMutationStore(actor), stateRoot, id, index, resolution)
+	return reviewapp.ResolveFeedback(NewReviewMutationStore(actor), stateRoot, id, index, resolution)
 }

@@ -16,8 +16,10 @@ func runIssueOps(args []string) error {
 func issueOpsCLIDependencies() issueopscli.Dependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	return issueopscli.Dependencies{
-		Benchmark: newBenchmarkCommand(),
-		Execution: newIssueOpsExecutionRunners(), HandoffCmux: issueOpsCmuxHandoffHandler,
+		Benchmark:      newBenchmarkCommand(),
+		Cleanup:        newIssueOpsCleanup(issueops.IssueOpsStateRoot()),
+		CleanupRuntime: newIssueOpsCleanupRuntime(issueops.IssueOpsStateRoot()),
+		Execution:      newIssueOpsExecutionRunners(), HandoffCmux: issueOpsCmuxHandoffHandler,
 		Runtime: newIssueOpsCLIRuntime(issueops.IssueOpsStateRoot()), Gates: newIssueOpsCLIGates(),
 		Usage: clicatalog.LifecycleUsage(), ChildUsage: clicatalog.ChildUsage(),
 		Prepare: execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner,

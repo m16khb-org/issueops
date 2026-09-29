@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	reviewapp "issueops/internal/application/issueopsreview"
 	"os"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 
 // cleanup CLI는 정리 구현과 의존 조립을 알지 않는다. 어댑터를 아는 곳은
 // composition root 하나뿐이다.
-func configureIssueOpsCleanup() {
+func newIssueOpsCleanup(root string) feedbackcleanup.Command {
 
 	finish := func(ctx context.Context, stateRoot string, req issueopscontract.CleanupFinishRequest, d feedbackcleanup.Deps, prov port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
 		runtime := issueopscore.CleanupFinishRuntime{RunGit: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}, OrcaTerminals: orcaadapter.New()}
@@ -39,7 +40,7 @@ func configureIssueOpsCleanup() {
 			},
 		}).Run(ctx, req)
 	}
-	feedbackcleanup.ConfigureCleanup(feedbackcleanup.CleanupDeps{
+	return feedbackcleanup.Command{Operations: feedbackcleanup.CleanupDeps{
 		Status: func(ctx context.Context, root, id string, merged bool, d feedbackcleanup.Deps) (issueopscontract.IssueOpsCleanupStatus, error) {
 			service := cleanupapp.StatusService{
 				Records:    issueopscore.CycleRecordStore{StateRoot: root},
@@ -51,7 +52,9 @@ func configureIssueOpsCleanup() {
 			}
 			return service.Status(ctx, id, merged)
 		},
-		AddIssueOpsFeedbackWithActor: issueopscore.AddIssueOpsFeedbackWithActor,
+		AddIssueOpsFeedbackWithActor: func(root, id, source, body, classification string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.AddFeedback(issueopscore.NewReviewMutationStore(&actor), root, id, source, body, classification)
+		},
 		CleanupAbandon: func(ctx context.Context, stateRoot string, req issueopscontract.CleanupAbandonRequest, d feedbackcleanup.Deps) (issueopscontract.CleanupAbandonResult, error) {
 			runtime := issueopscore.CleanupAbandonRuntime{StateRoot: stateRoot, Git: d.CleanupFinishGit, Processes: issueopscore.CleanupProcessDeps{Observe: d.InspectCleanupProcesses}, OrcaTerminals: orcaadapter.New()}
 			return (cleanupapp.AbandonExecutor{
@@ -97,11 +100,12 @@ func configureIssueOpsCleanup() {
 		CloseIssueOpsChildren: func(root, id string, req issueopscontract.IssueOpsCloseChildrenRequest, d feedbackcleanup.Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: d.Provider, VerifyMerged: d.VerifyMerged, Now: time.Now}).Close(context.Background(), id, req.MergeEvidenceRequested, req.Confirm)
 		},
-		IssueOpsStateRoot: issueopscore.IssueOpsStateRoot,
-		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: issueopscore.MarkIssueOpsContractFeedbackIssueUpdatedWithActor,
-		ObserveNativeProcessAncestry:                      issueopscore.ObserveNativeProcessAncestry,
-		ReadIssueOps:                                      issueopscore.ReadIssueOps,
-		ReadRemoteIssueSnapshot:                           issueopscore.ReadRemoteIssueSnapshot,
-		ResolveRecordProvider:                             issuedomain.ResolveRecordProvider,
-	})
+		IssueOpsStateRoot: func() string { return root },
+		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: func(root, id string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.MarkContractFeedbackIssueUpdated(issueopscore.NewReviewMutationStore(&actor), root, id)
+		},
+		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
+		ReadIssueOps:                 issueopscore.ReadIssueOps,
+		ResolveRecordProvider:        issuedomain.ResolveRecordProvider,
+	}}
 }

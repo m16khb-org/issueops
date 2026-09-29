@@ -595,6 +595,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/cleanup_runtime_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newIssueOpsCleanupRuntime",
+        "func normalizeOrcaRemoveWorktreeErr"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/cli_facade.go",
       "owner": "composition",
       "task": "T20",
@@ -811,7 +820,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsCleanup"
+        "func newIssueOpsCleanup"
       ]
     },
     {
@@ -936,7 +945,6 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsOrphanCleanup",
         "func newIssueOpsCLIGates",
         "func orphanCleaner"
       ]
@@ -991,7 +999,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsReaders"
+        "func newOperationalHealthCollector"
       ]
     },
     {
@@ -1367,14 +1375,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/tail9_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureIssueOpsRuntime"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/tail_capability_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -1627,10 +1627,8 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ConfigureCleanup",
-        "func init",
-        "func neutralCleanupDeps",
-        "type CleanupDeps"
+        "type CleanupDeps",
+        "type Command"
       ]
     },
     {
@@ -1638,18 +1636,18 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func RunCleanup",
-        "func RunFeedback",
+        "func Command.RunCleanup",
+        "func Command.RunFeedback",
+        "func Command.localActor",
+        "func Command.runCleanupAbandon",
+        "func Command.runCleanupFinish",
+        "func Command.runCleanupLinkedBranch",
+        "func Command.runCleanupRemoteBranch",
         "func cleanupExecutionGeneration",
-        "func localActor",
         "func printCleanupAbandonRemoteEffects",
         "func printCleanupFinishError",
         "func printCleanupLinkedBranchResult",
         "func printOrphanCleanupResult",
-        "func runCleanupAbandon",
-        "func runCleanupFinish",
-        "func runCleanupLinkedBranch",
-        "func runCleanupRemoteBranch",
         "func runOrphanCleanup",
         "type Deps"
       ]
@@ -1681,15 +1679,13 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func cleanupTransport",
         "func command.dispatchIssueOps",
         "func command.issueOpsSubcommands",
         "func command.runIssueOpsFeedbackWithDependencies",
         "func command.runIssueOpsWithDependencies",
         "func command.suggestIssueOpsSubcommand",
-        "func issueOpsFeedbackCleanupDeps",
-        "func issueOpsOrphanCleanupDeps",
         "func issueOpsRemoteDepsWithPublication",
-        "func normalizeOrcaRemoveWorktreeErr",
         "func parseIssueOpsFlags",
         "func requireGeneratedOwnerProcessCWD",
         "func runIssueOpsCleanupWithDependencies",
@@ -1884,34 +1880,12 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopscli/orca_health_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/issueopscli/orphancleanup_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ConfigureOrphanCleanup",
-        "type OrphanCleanupDeps",
-        "type OrphanDependencies"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopscli/output.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
         "func printJSON"
       ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/provider_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/issueopscli/remotecmd/provider_dependencies.go",
@@ -5088,19 +5062,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_feedback.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func AddIssueOpsFeedback",
-        "func AddIssueOpsFeedbackWithActor",
-        "func MarkIssueOpsContractFeedbackIssueUpdatedWithActor",
-        "func addIssueOpsFeedback",
-        "func markIssueOpsContractFeedbackIssueUpdated",
-        "func reviewMutationStore"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_implementation_review.go",
       "owner": "adapter",
       "task": "T03",
@@ -5430,6 +5391,14 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/review_mutation_store.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func NewReviewMutationStore"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/review_plan_source.go",
       "owner": "adapter",
       "task": "T07",
@@ -5611,7 +5580,6 @@
         "func Collector.collectGit",
         "func Collector.collectIssueOps",
         "func Collector.collectOrca",
-        "func Collector.nativeProcessInspector",
         "func ExecGitRunner.Run",
         "func addProblem",
         "func canonicalInventoryPath",
@@ -5640,7 +5608,9 @@
       "path": "internal/adapter/operationalhealth/issueops_dependencies.go",
       "owner": "adapter",
       "task": "T15",
-      "symbols": []
+      "symbols": [
+        "type IssueOpsReader"
+      ]
     },
     {
       "path": "internal/adapter/operationalhealth/tail5_dependencies.go",

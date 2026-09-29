@@ -88,6 +88,7 @@ func canonicalInventoryPath(path string) string {
 }
 
 type Collector struct {
+	IssueOps             IssueOpsReader
 	Git                  GitRunner
 	Orca                 OrcaInventory
 	InspectNativeProcess NativeProcessInspector
@@ -241,8 +242,8 @@ func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.
 }
 
 func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]issueopscontract.IssueOpsRecord, bool) {
-	stateRoot := IssueOpsStateRoot()
-	ids, err := ListIssueOpsIDs(stateRoot)
+	stateRoot := collector.IssueOps.StateRoot
+	ids, err := collector.IssueOps.ListIDs(stateRoot)
 	if err != nil {
 		addProblem(snapshot, "issueops", "issueops_list_failed", "IssueOps ID inventory failed")
 		return nil, false
@@ -250,18 +251,18 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]iss
 	records := make([]issueopscontract.IssueOpsRecord, 0, len(ids))
 	orcaOwned := false
 	for _, id := range ids {
-		record, err := ReadIssueOpsExisting(stateRoot, id)
+		record, err := collector.IssueOps.Read(stateRoot, id)
 		if err != nil {
 			addProblem(snapshot, "issueops_record", "issueops_read_failed", "could not read IssueOps record "+strings.TrimSpace(id))
 			continue
 		}
 		records = append(records, record)
-		cycle, problems := cycleFromRecord(record, collector.nativeProcessInspector())
+		cycle, problems := cycleFromRecord(record, collector.InspectNativeProcess)
 		snapshot.Cycles = append(snapshot.Cycles, cycle)
 		snapshot.InventoryProblems = append(snapshot.InventoryProblems, problems...)
 		orcaOwned = orcaOwned || recordOwnsOrca(record)
 	}
-	indexes, err := ListLeaseHolderIndexes(stateRoot)
+	indexes, err := collector.IssueOps.ListLeaseHolders(stateRoot)
 	if err != nil {
 		addProblem(snapshot, "issueops_lease_holder", "issueops_lease_holder_list_failed", "IssueOps active lease-holder index inventory failed")
 	} else {
@@ -273,13 +274,6 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]iss
 		}
 	}
 	return records, orcaOwned
-}
-
-func (collector Collector) nativeProcessInspector() NativeProcessInspector {
-	if collector.InspectNativeProcess != nil {
-		return collector.InspectNativeProcess
-	}
-	return InspectNativeProcessReceipt
 }
 
 func (collector Collector) collectOrca(ctx context.Context, snapshot *corehealth.Snapshot, owned bool) {

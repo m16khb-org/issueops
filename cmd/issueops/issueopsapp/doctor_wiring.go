@@ -7,6 +7,7 @@ import (
 
 	"issueops/cmd/issueops/basiccli"
 	adapter "issueops/internal/adapter/doctor"
+	issueopsadapter "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/operationalhealth"
 	"issueops/internal/adapter/orca"
 	statestore "issueops/internal/adapter/outbound/state"
@@ -36,7 +37,7 @@ func newDoctorService() app.Service {
 
 func newDoctorCommand() basiccli.Doctor {
 	home, _ := os.UserHomeDir()
-	collector := operationalhealth.Collector{Git: operationalhealth.ExecGitRunner{}, Orca: orca.New()}
+	collector := newOperationalHealthCollector(issueopsadapter.IssueOpsStateRoot(), operationalhealth.ExecGitRunner{}, orca.New())
 	return basiccli.Doctor{Service: newDoctorService(), NormalizeRepoRoot: newRepoRootResolver("."),
 		IssueOpsRoot: issueOpsRoot(), Home: home, Version: version, Now: time.Now,
 		CollectOperationalHealth: collector.Collect, CheckDaemonStatus: newDaemonReader().Run}

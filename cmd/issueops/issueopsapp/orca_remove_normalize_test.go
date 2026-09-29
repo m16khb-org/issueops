@@ -1,4 +1,4 @@
-package issueopscli
+package issueopsapp
 
 import (
 	"errors"

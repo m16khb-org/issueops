@@ -9,6 +9,7 @@ import (
 )
 
 func TestCleanupFinishEvidenceFailurePreservesErrorRendering(t *testing.T) {
+	command := testCleanupCommand()
 	for _, mode := range []string{"merge", "issue"} {
 		t.Run(mode, func(t *testing.T) {
 			t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
@@ -29,7 +30,7 @@ func TestCleanupFinishEvidenceFailurePreservesErrorRendering(t *testing.T) {
 				provider.readErr = failure
 			}
 			deps.PrintError = func(err error) error { rendered = append(rendered, err); return nil }
-			err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps)
+			err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps)
 			if !errors.Is(err, failure) || len(rendered) != 1 || len(results) != 0 {
 				t.Fatalf("error contract changed: err=%v errors=%v results=%+v", err, rendered, results)
 			}

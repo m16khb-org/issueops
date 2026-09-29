@@ -51,7 +51,7 @@ type Deps struct {
 	Provenance provenanceport.Observer
 }
 
-func RunFeedback(args []string, deps Deps) error {
+func (command Command) RunFeedback(args []string, deps Deps) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops feedback add --id ID --source TEXT --body TEXT --host HOST --session-id SESSION --cwd PATH [--agent-id ID] [--classification TEXT] [--json]\n       issueops feedback mark-issue-updated --id ID --host HOST --session-id SESSION --cwd PATH [--agent-id ID] [--json]")
 		return nil
@@ -71,7 +71,7 @@ func RunFeedback(args []string, deps Deps) error {
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		record, err := cleanupDeps.AddIssueOpsFeedbackWithActor(cleanupDeps.IssueOpsStateRoot(), *id, *source, *body, *classification, localActor(*host, *sessionID, *agentID, *cwd))
+		record, err := command.Operations.AddIssueOpsFeedbackWithActor(command.Operations.IssueOpsStateRoot(), *id, *source, *body, *classification, command.localActor(*host, *sessionID, *agentID, *cwd))
 		return deps.PrintResult(record, *jsonOut, err)
 	case "mark-issue-updated":
 		fs := flag.NewFlagSet("issueops feedback mark-issue-updated", flag.ContinueOnError)
@@ -84,22 +84,22 @@ func RunFeedback(args []string, deps Deps) error {
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		record, err := cleanupDeps.MarkIssueOpsContractFeedbackIssueUpdatedWithActor(cleanupDeps.IssueOpsStateRoot(), *id, localActor(*host, *sessionID, *agentID, *cwd))
+		record, err := command.Operations.MarkIssueOpsContractFeedbackIssueUpdatedWithActor(command.Operations.IssueOpsStateRoot(), *id, command.localActor(*host, *sessionID, *agentID, *cwd))
 		return deps.PrintResult(record, *jsonOut, err)
 	default:
 		return fmt.Errorf("unknown issueops feedback subcommand")
 	}
 }
 
-func localActor(host, sessionID, agentID, cwd string) issueopscontract.IssueOpsActor {
-	ancestry, _ := cleanupDeps.ObserveNativeProcessAncestry(os.Getpid())
+func (command Command) localActor(host, sessionID, agentID, cwd string) issueopscontract.IssueOpsActor {
+	ancestry, _ := command.Operations.ObserveNativeProcessAncestry(os.Getpid())
 	return issueopscontract.IssueOpsActor{
 		Host: host, SessionID: sessionID, AgentID: agentID, CWD: cwd,
 		NativeProcessAncestry: ancestry,
 	}
 }
 
-func RunCleanup(args []string, deps Deps) error {
+func (command Command) RunCleanup(args []string, deps Deps) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops cleanup status --id ID [--merged] [--json]\n       issueops cleanup close-children --id ID --merged [--confirm] [--json]\n       issueops cleanup orphan --id ID --repo ROOT --worktree PATH --branch NAME --provider github|gitlab --kind pr|mr --artifact-url URL [--apply --confirm --fingerprint SHA256] [--json]\n       issueops cleanup remote-branch --id ID (--preview | --apply --confirm --fingerprint SHA256) [--superseded-by URL] [--json]\n       issueops cleanup linked-branch --id ID (--preview | --apply --confirm --fingerprint SHA256) [--json]\n       issueops cleanup finish --id ID [--provider github|gitlab] (--preview | --apply --confirm --fingerprint SHA256) [--superseded-by URL] [--keep-remote-branch] [--json]\n       issueops cleanup abandon --id ID --reason TEXT (--preview | --apply --confirm --fingerprint SHA256) [--json]")
 		return nil
@@ -113,7 +113,7 @@ func RunCleanup(args []string, deps Deps) error {
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		status, err := cleanupDeps.Status(context.Background(), cleanupDeps.IssueOpsStateRoot(), *id, *merged, deps)
+		status, err := command.Operations.Status(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *merged, deps)
 		if err != nil {
 			if *jsonOut {
 				if printErr := deps.PrintError(err); printErr != nil {
@@ -137,13 +137,13 @@ func RunCleanup(args []string, deps Deps) error {
 		}
 		return nil
 	case "remote-branch":
-		return runCleanupRemoteBranch(args[1:], deps)
+		return command.runCleanupRemoteBranch(args[1:], deps)
 	case "linked-branch":
-		return runCleanupLinkedBranch(args[1:], deps)
+		return command.runCleanupLinkedBranch(args[1:], deps)
 	case "finish":
-		return runCleanupFinish(args[1:], deps)
+		return command.runCleanupFinish(args[1:], deps)
 	case "abandon":
-		return runCleanupAbandon(args[1:], deps)
+		return command.runCleanupAbandon(args[1:], deps)
 	case "close-children":
 		fs := flag.NewFlagSet("issueops cleanup close-children", flag.ContinueOnError)
 		id := fs.String("id", "", "issueops id")
@@ -153,7 +153,7 @@ func RunCleanup(args []string, deps Deps) error {
 		if help, err := deps.ParseFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		result, err := cleanupDeps.CloseIssueOpsChildren(cleanupDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCloseChildrenRequest{
+		result, err := command.Operations.CloseIssueOpsChildren(command.Operations.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCloseChildrenRequest{
 			MergeEvidenceRequested: *merged,
 			Confirm:                *confirm,
 		}, deps)
@@ -266,7 +266,7 @@ func printOrphanCleanupResult(result orphancontract.Result) {
 // runCleanupFinish는 record-backed 머지 후 정리를 실행한다. merged·completion
 // 반영·이슈 close는 전부 원격 readback으로 판정하고, readback 실패는 강등 없이
 // 거부한다(fail-closed — 설계 v5 WS3).
-func runCleanupFinish(args []string, deps Deps) error {
+func (command Command) runCleanupFinish(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops cleanup finish", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
@@ -290,13 +290,13 @@ func runCleanupFinish(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup finish requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	record, err := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), *id)
+	record, err := command.Operations.ReadIssueOps(command.Operations.IssueOpsStateRoot(), *id)
 	if err != nil {
 		return printCleanupFinishError(deps, *jsonOut, err)
 	}
 	providerName := *providerOverride
 	if providerName == "" {
-		providerName = cleanupDeps.ResolveRecordProvider(record)
+		providerName = command.Operations.ResolveRecordProvider(record)
 	}
 	if providerName == "" {
 		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("cannot determine provider from IssueOps record; pass --provider"))
@@ -312,7 +312,7 @@ func runCleanupFinish(args []string, deps Deps) error {
 		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("cannot resolve current directory (refusing destructive cleanup): %w", err))
 	}
 	req := issueopscontract.CleanupFinishRequest{ID: record.ID, CWD: cwd, Apply: *apply, Confirm: *confirm, Fingerprint: *fingerprint, SupersededBy: strings.TrimSpace(*supersededBy), KeepRemoteBranch: *keepRemoteBranch}
-	result, err := cleanupDeps.CleanupFinish(context.Background(), cleanupDeps.IssueOpsStateRoot(), req, deps, prov)
+	result, err := command.Operations.CleanupFinish(context.Background(), command.Operations.IssueOpsStateRoot(), req, deps, prov)
 	if _, evidenceError := errors.AsType[*port.CleanupFinishObservationError](err); evidenceError {
 		return printCleanupFinishError(deps, *jsonOut, err)
 	}
@@ -349,7 +349,7 @@ func runCleanupFinish(args []string, deps Deps) error {
 // runCleanupRemoteBranch는 머지 검증된 사이클의 원격 브랜치를 typed 경로로
 // 삭제한다. 원격 삭제 자체는 git 직접 호출이고, provider는 감사 라인 반영에만
 // 쓰인다(#116 부속 변경 — design-review M12).
-func runCleanupRemoteBranch(args []string, deps Deps) error {
+func (command Command) runCleanupRemoteBranch(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops cleanup remote-branch", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	preview := fs.Bool("preview", false, "evaluate gates and issue a fingerprint without mutating")
@@ -368,11 +368,11 @@ func runCleanupRemoteBranch(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup remote-branch requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	record, err := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), *id)
+	record, err := command.Operations.ReadIssueOps(command.Operations.IssueOpsStateRoot(), *id)
 	if err != nil {
 		return printCleanupFinishError(deps, *jsonOut, err)
 	}
-	providerName := cleanupDeps.ResolveRecordProvider(record)
+	providerName := command.Operations.ResolveRecordProvider(record)
 	if providerName == "" {
 		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("cannot determine provider from IssueOps record"))
 	}
@@ -383,7 +383,7 @@ func runCleanupRemoteBranch(args []string, deps Deps) error {
 	if deps.VerifyMergedHead == nil {
 		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("merge verification is not configured"))
 	}
-	result, err := cleanupDeps.CleanupRemoteBranch(context.Background(), cleanupDeps.IssueOpsStateRoot(), issueopscontract.CleanupRemoteBranchRequest{
+	result, err := command.Operations.CleanupRemoteBranch(context.Background(), command.Operations.IssueOpsStateRoot(), issueopscontract.CleanupRemoteBranchRequest{
 		ID:           *id,
 		SupersededBy: strings.TrimSpace(*supersededBy),
 		Apply:        *apply,
@@ -421,7 +421,7 @@ func runCleanupRemoteBranch(args []string, deps Deps) error {
 }
 
 // runCleanupAbandon parses and renders; the executor owns all observations.
-func runCleanupAbandon(args []string, deps Deps) error {
+func (command Command) runCleanupAbandon(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops cleanup abandon", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	reason := fs.String("reason", "", "why this cycle is abandoned (required, max 512 bytes); control characters and active shell characters are rejected because the lease guard parses this command exactly")
@@ -444,7 +444,7 @@ func runCleanupAbandon(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup abandon requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	result, err := cleanupDeps.CleanupAbandon(context.Background(), cleanupDeps.IssueOpsStateRoot(), issueopscontract.CleanupAbandonRequest{
+	result, err := command.Operations.CleanupAbandon(context.Background(), command.Operations.IssueOpsStateRoot(), issueopscontract.CleanupAbandonRequest{
 		ID:                 *id,
 		Reason:             *reason,
 		Apply:              *apply,
@@ -455,7 +455,7 @@ func runCleanupAbandon(args []string, deps Deps) error {
 		DeleteRemoteBranch: *deleteRemoteBranch,
 	}, deps)
 	if result.NextCommand != "" {
-		record, readErr := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), *id)
+		record, readErr := command.Operations.ReadIssueOps(command.Operations.IssueOpsStateRoot(), *id)
 		if readErr != nil {
 			return printCleanupFinishError(deps, *jsonOut, readErr)
 		}
@@ -532,7 +532,7 @@ func printCleanupFinishError(deps Deps, jsonOut bool, err error) error {
 // 레코드는 이름이 없으므로 사람이 지목하면 오지목을 검증할 방법이 없다.
 // preview가 관측으로 후보를 하나로 확정했을 때만 노드 id가 결속된 fingerprint를
 // 발급하고, apply는 다시 관측해 같은 fingerprint가 나올 때만 진행한다.
-func runCleanupLinkedBranch(args []string, deps Deps) error {
+func (command Command) runCleanupLinkedBranch(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops cleanup linked-branch", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	preview := fs.Bool("preview", false, "observe and classify without mutating")
@@ -549,11 +549,11 @@ func runCleanupLinkedBranch(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup linked-branch requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	record, err := cleanupDeps.ReadIssueOps(cleanupDeps.IssueOpsStateRoot(), *id)
+	record, err := command.Operations.ReadIssueOps(command.Operations.IssueOpsStateRoot(), *id)
 	if err != nil {
 		return printCleanupFinishError(deps, *jsonOut, err)
 	}
-	result, err := cleanupDeps.CleanupLinkedBranch(context.Background(), cleanupDeps.IssueOpsStateRoot(), issueopscontract.CleanupLinkedBranchRequest{
+	result, err := command.Operations.CleanupLinkedBranch(context.Background(), command.Operations.IssueOpsStateRoot(), issueopscontract.CleanupLinkedBranchRequest{
 		ID: *id, Apply: *apply, Confirm: *confirm, Fingerprint: *fingerprint,
 	})
 	var bindErr error

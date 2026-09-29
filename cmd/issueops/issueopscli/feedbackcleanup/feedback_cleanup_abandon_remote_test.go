@@ -10,13 +10,12 @@ import (
 	"issueops/internal/port"
 )
 
-func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest, *int) {
+func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest, *int, Command) {
+	command := testCleanupCommand()
 	t.Helper()
 	requests := &[]issueopscontract.CleanupAbandonRequest{}
 	providerCalls := new(int)
-	previous := cleanupDeps
-	t.Cleanup(func() { cleanupDeps = previous })
-	wired := cleanupDeps
+	wired := command.Operations
 	wired.IssueOpsStateRoot = issueopscore.IssueOpsStateRoot
 	wired.ReadIssueOps = issueopscore.ReadIssueOps
 	wired.ResolveRecordProvider = issuedomain.ResolveRecordProvider
@@ -24,16 +23,16 @@ func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest
 		*requests = append(*requests, req)
 		return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID, RemoteEffects: []string{"close_issue"}}, nil
 	}
-	ConfigureCleanup(wired)
+	command.Operations = wired
 	_ = providerCalls
-	return requests, providerCalls
+	return requests, providerCalls, command
 }
 
 // 세 플래그가 요청으로 그대로 전달돼야 어댑터의 게이트가 의미를 갖는다.
 func TestRunCleanupAbandonForwardsRemoteEffectFlags(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, false, true)
-	requests, providerCalls := wireAbandonCapture(t)
+	requests, providerCalls, command := wireAbandonCapture(t)
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(any) error { return nil },
@@ -43,7 +42,7 @@ func TestRunCleanupAbandonForwardsRemoteEffectFlags(t *testing.T) {
 			return &fakeCleanupAbandonProvider{}, nil
 		},
 	}
-	err := RunCleanup([]string{
+	err := command.RunCleanup([]string{
 		"abandon", "--id", record.ID, "--reason", "폐기 검증",
 		"--close-pr", "--close-issue", "--delete-remote-branch", "--preview", "--json",
 	}, deps)
@@ -67,7 +66,7 @@ func TestRunCleanupAbandonForwardsRemoteEffectFlags(t *testing.T) {
 func TestRunCleanupAbandonWithoutFlagsNeedsNoProvider(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
-	requests, providerCalls := wireAbandonCapture(t)
+	requests, providerCalls, command := wireAbandonCapture(t)
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(any) error { return nil },
@@ -77,7 +76,7 @@ func TestRunCleanupAbandonWithoutFlagsNeedsNoProvider(t *testing.T) {
 			return nil, context.DeadlineExceeded
 		},
 	}
-	if err := RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "플래그 없는 폐기", "--preview", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "플래그 없는 폐기", "--preview", "--json"}, deps); err != nil {
 		t.Fatalf("abandon preview: %v", err)
 	}
 	got := (*requests)[0]

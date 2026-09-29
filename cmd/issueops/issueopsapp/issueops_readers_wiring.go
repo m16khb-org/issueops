@@ -1,18 +1,11 @@
 package issueopsapp
 
 import (
-	issueopsadapter "issueops/internal/adapter/issueops"
-	operationalhealthiodeps "issueops/internal/adapter/operationalhealth"
+	adapter "issueops/internal/adapter/issueops"
+	health "issueops/internal/adapter/operationalhealth"
 )
 
-// configureIssueOpsReaders는 IssueOps 상태 조회와 native process 관측을 설치한다.
-//
-// install CLI와 operational health는 lifecycle을 읽기만 한다. 상태를 어디에 저장하고
-// process를 어떻게 관측하는지는 composition root의 결정이다.
-func configureIssueOpsReaders() {
-	operationalhealthiodeps.InspectNativeProcessReceipt = issueopsadapter.InspectNativeProcessReceipt
-	operationalhealthiodeps.IssueOpsStateRoot = issueopsadapter.IssueOpsStateRoot
-	operationalhealthiodeps.ListIssueOpsIDs = issueopsadapter.ListIssueOpsIDs
-	operationalhealthiodeps.ListLeaseHolderIndexes = issueopsadapter.ListLeaseHolderIndexes
-	operationalhealthiodeps.ReadIssueOpsExisting = issueopsadapter.ReadIssueOpsExisting
+func newOperationalHealthCollector(root string, git health.GitRunner, orca health.OrcaInventory) health.Collector {
+	return health.Collector{Git: git, Orca: orca, InspectNativeProcess: adapter.InspectNativeProcessReceipt,
+		IssueOps: health.IssueOpsReader{StateRoot: root, ListIDs: adapter.ListIssueOpsIDs, ListLeaseHolders: adapter.ListLeaseHolderIndexes, Read: adapter.ReadIssueOpsExisting}}
 }

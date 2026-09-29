@@ -14,7 +14,6 @@ func TestMain(m *testing.M) {
 	// 빈 stdout을 JSON으로 파싱하려다 실패한다(#395).
 	hookenv.ClearInheritedOperatorSwitches()
 
-	wireCleanupForTests()
 	wireRemoteForTests()
 	wireOrphanAndLoopGateForTests()
 	wireIssueOpsRuntimeForTests()

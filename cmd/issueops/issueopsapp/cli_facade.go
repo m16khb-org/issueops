@@ -16,18 +16,14 @@ import (
 func wireBasicCLIDeps() {
 	configureDocsReaders()
 	configureStateStores()
-	configureIssueOpsRuntime()
 	configureStateDatabases()
 	configureTail5()
 	configureAdapterTail()
 	configureTailCapabilities()
-	configureIssueOpsReaders()
 	configureInstallReaders()
 	configurePolicyAndGitObservers()
 	configureAdapterStateAccess()
-	configureIssueOpsCleanup()
 	configureIssueOpsRemote()
-	configureIssueOpsOrphanCleanup()
 
 }
 

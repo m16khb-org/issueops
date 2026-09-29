@@ -1,16 +1,10 @@
 package issueopscli
 
 import (
-	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	"issueops/cmd/issueops/issueopscli/remoteverify"
-	orphancontract "issueops/internal/contract/issueopsorphancleanup"
-	corehealth "issueops/internal/domain/operationalhealth"
-	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 	"os"
 	"path/filepath"
@@ -187,70 +181,18 @@ func (cli command) runIssueOpsFeedbackWithDependencies(args []string, deps Depen
 	if len(args) > 0 && args[0] == "resolve" {
 		return cli.runIssueOpsFeedbackResolve(args[1:])
 	}
-	return feedbackcleanup.RunFeedback(args, issueOpsFeedbackCleanupDeps(deps.Provenance))
+	return deps.Cleanup.RunFeedback(args, cleanupTransport(deps.CleanupRuntime, deps.Provenance))
 }
 
 func runIssueOpsCleanupWithDependencies(args []string, deps Dependencies) error {
-	return feedbackcleanup.RunCleanup(args, issueOpsFeedbackCleanupDeps(deps.Provenance))
+	return deps.Cleanup.RunCleanup(args, cleanupTransport(deps.CleanupRuntime, deps.Provenance))
 }
 
-// normalizeOrcaRemoveWorktreeErr는 orca 워크트리 회수 오류를 멱등 계약으로
-// 정규화한다: "이미 없음"(typed not_found 계열)은 제거 목표가 이미 달성된
-// 상태이므로 성공이다(#97 — cleanup finish 재실행 수렴의 전제).
-func normalizeOrcaRemoveWorktreeErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	if orcaErr, ok := errors.AsType[*port.OrcaError](err); ok && strings.Contains(strings.ToLower(orcaErr.Code), "not_found") {
-		return nil
-	}
-	// 폴백: orca CLI 산문 메시지 매칭. 문구/로캘 변경에 취약하므로
-	// 타입드 코드가 항상 우선이다(C2-F5).
-	if strings.Contains(strings.ToLower(err.Error()), "not found") || strings.Contains(strings.ToLower(err.Error()), "unknown worktree") {
-		return nil
-	}
-	return err
-}
-
-func issueOpsFeedbackCleanupDeps(provenance provenanceport.Observer) feedbackcleanup.Deps {
-	orphanDeps := issueOpsOrphanCleanupDeps()
-	return feedbackcleanup.Deps{
-		// cleanup finish ② 단계: orca 회수. "이미 없음"은 멱등 계약상 성공.
-		RemoveOrcaWorktree: func(ctx context.Context, worktreeID string) error {
-			return normalizeOrcaRemoveWorktreeErr(RemoveOrcaWorktree(ctx, worktreeID, false))
-		},
-		// cleanup abandon pending_intent_safe 게이트: sealed marker로 orca
-		// 인벤토리를 실조회한다. 조회 전용이며 mutation은 부르지 않는다.
-		OrcaIntent: NewOrcaExecutionIntent(),
-		// cleanup abandon orca_resources_absent 게이트: orca 자원 잔여를
-		// 실조회한다. 같은 provisioner가 owner 인벤토리도 제공한다(#136).
-		OrcaOwner:    NewOrcaExecutionOwner(),
-		Provenance:   provenance,
-		ParseFlags:   parseIssueOpsFlags,
-		PrintResult:  printIssueOpsResult,
-		PrintJSON:    printJSON,
-		PrintError:   printIssueOpsErrorJSON,
-		VerifyMerged: verifyIssueOpsRemoteArtifactMergedLive,
-		// cleanup remote-branch 게이트 ⑧·⑨·⑩의 단일 readback 표면.
-		VerifyMergedHead: verifyIssueOpsRemoteArtifactMergedHeadLive,
-		// cleanup abandon의 artifact 게이트는 미병합을 요구하므로 조회 실패와
-		// 미병합을 구분하는 별도 관측 표면을 쓴다(#342).
-		ObserveArtifactMerged: observeIssueOpsRemoteArtifactMergedLive,
-		Provider:              Resolve,
-		OrphanPreview: func(ctx context.Context, request orphancontract.Request) (orphancontract.Result, error) {
-			return orphanPreview(ctx, request, orphanDeps)
-		},
-		OrphanApply: func(ctx context.Context, request orphancontract.Request, apply orphancontract.ApplyRequest) (orphancontract.Result, error) {
-			return orphanApply(ctx, request, apply, orphanDeps)
-		},
-	}
-}
-
-func issueOpsOrphanCleanupDeps() OrphanDependencies {
-	return OrphanDependencies{
-		Collect: func(ctx context.Context, repo string) (corehealth.Snapshot, error) {
-			return CollectOperationalHealth(ctx, repo), nil
-		},
-		VerifyMerged: remoteverify.VerifyRemoteArtifactMergedLive,
-	}
+func cleanupTransport(runtime feedbackcleanup.Deps, provenance provenanceport.Observer) feedbackcleanup.Deps {
+	runtime.Provenance = provenance
+	runtime.ParseFlags = parseIssueOpsFlags
+	runtime.PrintResult = printIssueOpsResult
+	runtime.PrintJSON = printJSON
+	runtime.PrintError = printIssueOpsErrorJSON
+	return runtime
 }
