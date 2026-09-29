@@ -29,7 +29,7 @@ func TestBuildHarnessStatusReportsStateWorkerAndSelfVerify(t *testing.T) {
 		t.Fatalf("enqueue worker job: %v", err)
 	}
 
-	status := BuildStatus(repo)
+	status := BuildStatus(testDoctorService(), repo)
 
 	if status.Kind != "harness_status" || status.Repo != repo {
 		t.Fatalf("unexpected status identity: %#v", status)
@@ -72,7 +72,7 @@ func TestBuildHarnessStatusSharesDaemonAdmissionWithDoctor(t *testing.T) {
 		CheckDaemonStatus: func() daemoncli.Status { return want },
 	})
 
-	status := BuildStatus(repo)
+	status := BuildStatus(testDoctorService(), repo)
 	if status.Daemon != want {
 		t.Fatalf("unexpected daemon status: %#v", status.Daemon)
 	}
@@ -93,14 +93,14 @@ func TestRunStatusWritesTextAndJSON(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", t.TempDir())
 
 	text := captureStatusVerifyStdout(t, func() error {
-		return RunStatus([]string{"--repo", repo})
+		return RunStatus(testDoctorService(), []string{"--repo", repo})
 	})
 	if !strings.Contains(text, "issueops system-status:") || !strings.Contains(text, "daemon running:") {
 		t.Fatalf("unexpected status text output:\n%s", text)
 	}
 
 	jsonText := captureStatusVerifyStdout(t, func() error {
-		return RunStatus([]string{"--repo", repo, "--json"})
+		return RunStatus(testDoctorService(), []string{"--repo", repo, "--json"})
 	})
 	var decoded Status
 	if err := json.Unmarshal([]byte(jsonText), &decoded); err != nil {

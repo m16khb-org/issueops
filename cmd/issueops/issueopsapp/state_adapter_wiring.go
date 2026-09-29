@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	audit "issueops/internal/adapter/audit"
 	channel "issueops/internal/adapter/channel"
-	doctor "issueops/internal/adapter/doctor"
 	issueops "issueops/internal/adapter/issueops"
 	statestore "issueops/internal/adapter/outbound/state"
 	trace "issueops/internal/adapter/trace"
@@ -16,8 +15,6 @@ import (
 func configureAdapterStateAccess() {
 	audit.StateDir = statestore.StateDir
 	audit.WithKeyLock = statestore.WithKeyLock
-	doctor.StateDir = statestore.StateDir
-	doctor.StateDoctor = statestore.StateDoctor
 	issueops.StateDir = statestore.StateDir
 	channel.StateDir = statestore.StateDir
 	trace.StateRead = statestore.StateRead

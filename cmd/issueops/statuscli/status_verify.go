@@ -3,6 +3,7 @@ package statuscli
 import (
 	"flag"
 	"fmt"
+	doctorapp "issueops/internal/application/doctor"
 	doctorcontract "issueops/internal/contract/doctor"
 	"os"
 	"strings"
@@ -34,7 +35,7 @@ type SelfVerifyStatus struct {
 	Bytes     int    `json:"bytes,omitempty"`
 }
 
-func runStatus(args []string) error {
+func runStatus(diagnostics doctorapp.Service, args []string) error {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -44,7 +45,7 @@ func runStatus(args []string) error {
 	if fs.NArg() > 0 {
 		*repo = fs.Arg(0)
 	}
-	status := buildHarnessStatus(*repo)
+	status := buildHarnessStatus(diagnostics, *repo)
 	if *jsonOut {
 		return printJSON(status)
 	}
@@ -59,11 +60,11 @@ func runStatus(args []string) error {
 	return nil
 }
 
-func buildHarnessStatus(repo string) HarnessStatus {
+func buildHarnessStatus(diagnostics doctorapp.Service, repo string) HarnessStatus {
 	home, _ := os.UserHomeDir()
 	inspect := deps.InspectHarness(repo)
 	daemon := deps.CheckDaemonStatus()
-	doctor, doctorErr := harnessDoctor(doctorcontract.HarnessDoctorRequest{
+	doctor, doctorErr := diagnostics.Run(doctorcontract.HarnessDoctorRequest{
 		RepoRoot:     repo,
 		IssueOpsRoot: deps.IssueOpsRoot(),
 		Home:         home,

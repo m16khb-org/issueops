@@ -1,13 +1,43 @@
 package issueopsapp
 
 import (
+	"os"
+	"path/filepath"
+	"time"
+
 	"issueops/cmd/issueops/basiccli"
-	"issueops/cmd/issueops/statuscli"
-	"issueops/internal/adapter/doctor"
+	adapter "issueops/internal/adapter/doctor"
+	"issueops/internal/adapter/operationalhealth"
+	"issueops/internal/adapter/orca"
+	statestore "issueops/internal/adapter/outbound/state"
+	app "issueops/internal/application/doctor"
+	statecontract "issueops/internal/contract/state"
+	domain "issueops/internal/domain/doctor"
 )
 
-// CLI는 진단 구현을 알지 않는다. 어댑터를 아는 곳은 composition root 하나뿐이다.
-func configureDoctorRunner() {
-	basiccli.ConfigureDoctor(doctor.HarnessDoctor)
-	statuscli.ConfigureDoctor(doctor.HarnessDoctor)
+func newDoctorService() app.Service {
+	stateDir := statestore.StateDir()
+	lifecycle := newProjectLifecycleService()
+	loops := newLoopReader()
+	gateways := adapter.Gateways{Probe: adapter.ProbeGatewayHTTP, CountFDs: adapter.CountGatewayFDsViaLsof}
+	return app.Service{Effects: app.Effects{
+		NormalizeRoot: newRepoRootResolver("."), StateDir: func() string { return stateDir },
+		StateDoctor:       func() (statecontract.StateDoctorResult, error) { return statestore.Doctor(stateDir) },
+		ValidateLifecycle: lifecycle.Resolve,
+		ProjectDocs:       adapter.ObserveProjectDocs, RuntimeState: adapter.ObserveRuntimeState,
+		LoopContracts: func(root string) domain.LoopObservation {
+			summary, warnings := loops.RepoGateSummaryFor(root)
+			return domain.LoopObservation{Active: summary.Active, Exhausted: summary.Exhausted, Warnings: warnings, StateRoot: filepath.Join(stateDir, "loop")}
+		},
+		PipeCapacity: adapter.MeasurePipeCapacity, MCPGateways: gateways.Observe,
+		NativeIntegrations: adapter.ObserveNativeIntegrations, BinaryDrift: adapter.ObserveBinaryDrift, Now: time.Now,
+	}}
+}
+
+func newDoctorCommand() basiccli.Doctor {
+	home, _ := os.UserHomeDir()
+	collector := operationalhealth.Collector{Git: operationalhealth.ExecGitRunner{}, Orca: orca.New()}
+	return basiccli.Doctor{Service: newDoctorService(), NormalizeRepoRoot: newRepoRootResolver("."),
+		IssueOpsRoot: issueOpsRoot(), Home: home, Version: version, Now: time.Now,
+		CollectOperationalHealth: collector.Collect, CheckDaemonStatus: checkDaemonStatus}
 }

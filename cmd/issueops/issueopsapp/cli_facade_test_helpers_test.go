@@ -99,7 +99,7 @@ func runStateDoctor(args []string) error {
 }
 
 func buildHarnessStatus(repo string) HarnessStatus {
-	return statuscli.BuildStatus(repo)
+	return statuscli.BuildStatus(newDoctorService(), repo)
 }
 
 func buildVerifyWork(repo string, all bool, argv []string) VerifyWorkResult {

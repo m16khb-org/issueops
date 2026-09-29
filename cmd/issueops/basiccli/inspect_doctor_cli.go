@@ -7,10 +7,8 @@ import (
 	"issueops/cmd/issueops/daemoncli"
 	doctorcontract "issueops/internal/contract/doctor"
 	"issueops/internal/domain/operationalhealth"
-	"os"
 	"sort"
 	"strings"
-	"time"
 )
 
 type doctorRepeatedFlag []string
@@ -50,7 +48,7 @@ func runInspect(args []string) error {
 	return nil
 }
 
-func runDoctor(args []string) error {
+func (command Doctor) Run(args []string) error {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -78,27 +76,26 @@ func runDoctor(args []string) error {
 	if err != nil {
 		return err
 	}
-	root, err := NormalizeRepoRoot(*repo)
+	root, err := command.NormalizeRepoRoot(*repo)
 	if err != nil {
 		return err
 	}
 	var snapshot *operationalhealth.Snapshot
 	var daemon daemoncli.Status
 	if !*staticOnly {
-		observed := deps.CollectOperationalHealth(context.Background(), root)
+		observed := command.CollectOperationalHealth(context.Background(), root)
 		snapshot = &observed
-		daemon = deps.CheckDaemonStatus()
+		daemon = command.CheckDaemonStatus()
 	}
-	home, _ := os.UserHomeDir()
-	result, err := harnessDoctor(doctorcontract.HarnessDoctorRequest{
+	result, err := command.Service.Run(doctorcontract.HarnessDoctorRequest{
 		RepoRoot:            root,
-		IssueOpsRoot:        deps.IssueOpsRoot(),
-		Home:                home,
-		Version:             deps.Version,
+		IssueOpsRoot:        command.IssueOpsRoot,
+		Home:                command.Home,
+		Version:             command.Version,
 		StaticOnly:          *staticOnly,
 		OperationalSnapshot: snapshot,
 		OperationalOptions: operationalhealth.Options{
-			Now:                     time.Now().UTC(),
+			Now:                     command.Now().UTC(),
 			Profile:                 doctorProfile(*sealed),
 			PreserveCycleIDs:        cycleIDs,
 			PreserveTerminalHandles: terminalHandles,

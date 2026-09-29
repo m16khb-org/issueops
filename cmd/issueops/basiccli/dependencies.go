@@ -1,15 +1,12 @@
 package basiccli
 
 import (
-	"context"
 	"encoding/json"
 	docscontract "issueops/internal/contract/docs"
 	preflightcontract "issueops/internal/contract/preflight"
 	"os"
 
-	"issueops/cmd/issueops/daemoncli"
 	inspect "issueops/internal/contract/inspect"
-	"issueops/internal/domain/operationalhealth"
 )
 
 // Deps는 basic CLI 명령들이 의존하는, 호스트가 제공하는 구현을 담는다.
@@ -17,13 +14,11 @@ import (
 // 기본값으로 대체한다.
 type Deps struct {
 	// GitPreflight는 composition root가 주입한다. git 실행은 CLI의 일이 아니다.
-	GitPreflight             func(target, issueOpsRoot string) preflightcontract.PreflightResult
-	IssueOpsRoot             func() string
-	ResolveTarget            func(string) string
-	Version                  string
-	InspectHarness           func(string) inspect.InspectInfo
-	CheckDaemonStatus        func() daemoncli.Status
-	CollectOperationalHealth func(context.Context, string) operationalhealth.Snapshot
+	GitPreflight   func(target, issueOpsRoot string) preflightcontract.PreflightResult
+	IssueOpsRoot   func() string
+	ResolveTarget  func(string) string
+	Version        string
+	InspectHarness func(string) inspect.InspectInfo
 
 	// DocsIndex는 composition root가 주입한다. 문서 색인은 파일시스템을 읽으므로
 	// CLI가 그 구현을 알 필요가 없다.
@@ -40,19 +35,10 @@ func Configure(d Deps) { deps = d }
 
 func defaultDeps() Deps {
 	return Deps{
-		IssueOpsRoot:      defaultIssueOpsRoot,
-		ResolveTarget:     defaultResolveTarget,
-		Version:           "dev",
-		InspectHarness:    func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
-		CheckDaemonStatus: daemoncli.CheckDaemonStatus,
-		CollectOperationalHealth: func(_ context.Context, repo string) operationalhealth.Snapshot {
-			return operationalhealth.Snapshot{
-				RepoRoot: repo,
-				InventoryProblems: []operationalhealth.InventoryProblem{{
-					Source: "doctor", Code: "operational_collector_unconfigured", Detail: "operational inventory collector is not configured",
-				}},
-			}
-		},
+		IssueOpsRoot:   defaultIssueOpsRoot,
+		ResolveTarget:  defaultResolveTarget,
+		Version:        "dev",
+		InspectHarness: func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
 	}
 }
 

@@ -1,5 +1,7 @@
 package statuscli
 
+import doctorapp "issueops/internal/application/doctor"
+
 type (
 	Status                 = HarnessStatus
 	SelfVerificationStatus = SelfVerifyStatus
@@ -8,12 +10,12 @@ type (
 	WorkSuggestedCommand   = VerifyWorkSuggestedCommand
 )
 
-func RunStatus(args []string) error {
-	return runStatus(args)
+func RunStatus(diagnostics doctorapp.Service, args []string) error {
+	return runStatus(diagnostics, args)
 }
 
-func BuildStatus(repo string) Status {
-	return buildHarnessStatus(repo)
+func BuildStatus(diagnostics doctorapp.Service, repo string) Status {
+	return buildHarnessStatus(diagnostics, repo)
 }
 
 func RunVerifyWork(args []string) error {

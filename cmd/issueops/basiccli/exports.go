@@ -35,7 +35,3 @@ func RunGuardCheck(args []string) error {
 func RunInspect(args []string) error {
 	return runInspect(args)
 }
-
-func RunDoctor(args []string) error {
-	return runDoctor(args)
-}

@@ -15,14 +15,7 @@ import (
 	"time"
 )
 
-var measurePipeCapacity = measureSystemPipeCapacity
-
-var (
-	probeMCPGateway    = probeMCPGatewayHTTP
-	countMCPGatewayFDs = countMCPGatewayFDsViaLsof
-)
-
-func measureSystemPipeCapacity() (int, error) {
+func MeasurePipeCapacity() (int, error) {
 	r, w, err := os.Pipe()
 	if err != nil {
 		return 0, err
@@ -144,7 +137,7 @@ func uniqueMCPGatewayPorts(endpoints []mcpGatewayEndpoint) []int {
 	return ports
 }
 
-func probeMCPGatewayHTTP(target string) error {
+func ProbeGatewayHTTP(target string) error {
 	body := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"issueops-doctor","version":"0"}}}`
 	req, err := http.NewRequest(http.MethodPost, target, strings.NewReader(body))
 	if err != nil {
@@ -162,7 +155,7 @@ func probeMCPGatewayHTTP(target string) error {
 	return resp.Body.Close()
 }
 
-func countMCPGatewayFDsViaLsof(port int) (int, error) {
+func CountGatewayFDsViaLsof(port int) (int, error) {
 	pidOut, err := exec.Command("lsof", "-nP", fmt.Sprintf("-iTCP:%d", port), "-sTCP:LISTEN", "-t").Output()
 	if err != nil {
 		return 0, fmt.Errorf("listener pid lookup failed: %w", err)

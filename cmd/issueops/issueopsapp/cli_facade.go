@@ -13,8 +13,6 @@ import (
 	"issueops/cmd/issueops/webfetchcli"
 	"issueops/cmd/issueops/workercli"
 	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/operationalhealth"
-	"issueops/internal/adapter/orca"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/adapter/projectdocs"
@@ -25,7 +23,6 @@ func wireBasicCLIDeps() {
 	configureStateStores()
 	configureIssueOpsRuntime()
 	configureTail8()
-	configureDoctorLoopGate()
 	configureHookPrompts()
 	configureInstallPlans()
 	configureStateDatabases()
@@ -41,8 +38,6 @@ func wireBasicCLIDeps() {
 	configureAdapterStateAccess()
 	configureWorkerJobs()
 	configureRepoPathResolvers()
-	configureDoctorLifecycle()
-	configureDoctorRunner()
 	configureIssueOpsBenchmark()
 	configureIssueOpsCleanup()
 	configureIssueOpsRemote()
@@ -50,16 +45,13 @@ func wireBasicCLIDeps() {
 	configureIssueOpsLeaseNextCommands()
 	configureIssueOpsExecutionRunners()
 	configureIssueOpsCLIRuntime()
-	operationalCollector := operationalhealth.Collector{Git: operationalhealth.ExecGitRunner{}, Orca: orca.New()}
 	basiccli.Configure(basiccli.Deps{
-		GitPreflight:             preflight.GitPreflight,
-		IssueOpsRoot:             issueOpsRoot,
-		ResolveTarget:            resolveTarget,
-		Version:                  version,
-		InspectHarness:           inspectHarness,
-		CheckDaemonStatus:        checkDaemonStatus,
-		CollectOperationalHealth: operationalCollector.Collect,
-		DocsIndex:                docs.DocsIndex,
+		GitPreflight:   preflight.GitPreflight,
+		IssueOpsRoot:   issueOpsRoot,
+		ResolveTarget:  resolveTarget,
+		Version:        version,
+		InspectHarness: inspectHarness,
+		DocsIndex:      docs.DocsIndex,
 	})
 	installcli.Configure(installDependencies())
 	statuscli.Configure(statuscli.Deps{
@@ -99,7 +91,7 @@ func runInspect(args []string) error {
 }
 
 func runDoctor(args []string) error {
-	return basiccli.RunDoctor(args)
+	return newDoctorCommand().Run(args)
 }
 
 func runInstall(args []string) error {
@@ -115,7 +107,7 @@ func runState(args []string) error {
 }
 
 func runStatus(args []string) error {
-	return statuscli.RunStatus(args)
+	return statuscli.RunStatus(newDoctorService(), args)
 }
 
 func runVerifyWork(args []string) error {

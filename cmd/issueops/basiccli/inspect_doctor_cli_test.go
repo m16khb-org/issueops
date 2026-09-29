@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/preflight"
 	bootstrapcontract "issueops/internal/contract/projectbootstrap"
 	"os"
 	"path/filepath"
@@ -15,7 +13,7 @@ import (
 	"testing"
 
 	"issueops/cmd/issueops/daemoncli"
-	doctor "issueops/internal/adapter/doctor"
+	doctor "issueops/internal/contract/doctor"
 	inspect "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
 	"issueops/internal/testsupport"
@@ -68,7 +66,7 @@ func TestRunDoctor_printsHealthyText_whenProjectDocsAreInitialized(t *testing.T)
 
 	// 실행
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo})
+		return testRunDoctor([]string{"--repo", repo})
 	})
 
 	// 검증
@@ -86,7 +84,7 @@ func TestRunDoctor_printsIssuesText_whenProjectDocsAreMissing(t *testing.T) {
 
 	// 실행
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{repo})
+		return testRunDoctor([]string{repo})
 	})
 
 	// 검증
@@ -105,7 +103,7 @@ func TestRunDoctor_printsJSON_whenJSONFlagIsSet(t *testing.T) {
 
 	// 실행
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo, "--json"})
+		return testRunDoctor([]string{"--repo", repo, "--json"})
 	})
 
 	// 검증
@@ -125,19 +123,14 @@ func TestRunDoctorStaticOnlySkipsLiveOperationalChecks(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	t.Setenv("HOME", t.TempDir())
 	repo := t.TempDir()
-	oldDeps := deps
-	t.Cleanup(func() { Configure(oldDeps) })
-	next := deps
-	next.CheckDaemonStatus = func() daemoncli.Status {
-		panic("static doctor must not inspect daemon admission")
-	}
-	next.CollectOperationalHealth = func(context.Context, string) operationalhealth.Snapshot {
+	command := testDoctorCommand()
+	command.CheckDaemonStatus = func() daemoncli.Status { panic("static doctor must not inspect daemon admission") }
+	command.CollectOperationalHealth = func(context.Context, string) operationalhealth.Snapshot {
 		panic("static doctor must not collect live operational health")
 	}
-	Configure(next)
 
 	out, err := testsupport.CaptureStdoutAndError(t, func() error {
-		return RunDoctor([]string{"--static-only", "--json", "--repo", repo})
+		return command.Run([]string{"--static-only", "--json", "--repo", repo})
 	})
 	if err != nil {
 		t.Fatalf("static doctor failed: %v\n%s", err, out)
@@ -161,30 +154,18 @@ func TestRunDoctorStaticOnlySkipsLiveOperationalChecks(t *testing.T) {
 func TestRunDoctor_printsLiveDaemonAdmissionHealth(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	oldDeps := deps
-	t.Cleanup(func() { Configure(oldDeps) })
-	Configure(Deps{
-		GitPreflight:   preflight.GitPreflight,
-		DocsIndex:      docs.DocsIndex,
-		IssueOpsRoot:   func() string { return repo },
-		ResolveTarget:  func(target string) string { return target },
-		Version:        "test",
-		InspectHarness: func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
-		CheckDaemonStatus: func() daemoncli.Status {
-			return daemoncli.Status{
-				ActiveConnections: 64,
-				MaxConnections:    64,
-				Accepting:         false,
-				Draining:          false,
-			}
-		},
-		CollectOperationalHealth: func(_ context.Context, root string) operationalhealth.Snapshot {
-			return healthyCLIOperationalSnapshot(root)
-		},
-	})
+	command := testDoctorCommand()
+	command.IssueOpsRoot = repo
+	command.Version = "test"
+	command.CheckDaemonStatus = func() daemoncli.Status {
+		return daemoncli.Status{ActiveConnections: 64, MaxConnections: 64, Accepting: false, Draining: false}
+	}
+	command.CollectOperationalHealth = func(_ context.Context, root string) operationalhealth.Snapshot {
+		return healthyCLIOperationalSnapshot(root)
+	}
 
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo, "--json"})
+		return command.Run([]string{"--repo", repo, "--json"})
 	})
 	var result doctor.HarnessDoctorResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
@@ -209,7 +190,7 @@ func TestRunDoctorOperationalPreserveFlagsAreRepeatableAndInvocationScoped(t *te
 	})
 
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{
+		return testRunDoctor([]string{
 			"--repo", repo, "--sealed",
 			"--preserve-cycle", " io-z ", "--preserve-cycle", "io-a", "--preserve-cycle", "io-a",
 			"--preserve-terminal", " term-z ", "--preserve-terminal", "term-a", "--preserve-terminal", "term-a",
@@ -226,7 +207,7 @@ func TestRunDoctorOperationalPreserveFlagsAreRepeatableAndInvocationScoped(t *te
 	}
 
 	withoutPreserve := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo, "--sealed", "--json"})
+		return testRunDoctor([]string{"--repo", repo, "--sealed", "--json"})
 	})
 	if err := json.Unmarshal([]byte(withoutPreserve), &result); err != nil {
 		t.Fatalf("decode unpreserved doctor json: %v\n%s", err, withoutPreserve)
@@ -247,7 +228,7 @@ func TestRunDoctorDefaultsToInteractiveProfileForUserTerminals(t *testing.T) {
 		return snapshot
 	})
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo, "--json"})
+		return testRunDoctor([]string{"--repo", repo, "--json"})
 	})
 	var result doctor.HarnessDoctorResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
@@ -279,7 +260,7 @@ func TestRunDoctorPreserveValuesNormalizeAndRejectBlank(t *testing.T) {
 		{"--repo", repo, "--preserve-cycle", " "},
 		{"--repo", repo, "--preserve-terminal="},
 	} {
-		if err := RunDoctor(args); err == nil {
+		if err := testRunDoctor(args); err == nil {
 			t.Fatalf("blank preserve args were accepted: %#v", args)
 		}
 	}
@@ -298,7 +279,7 @@ func TestRunDoctorOperationalInventoryFailureHasJSONTextParity(t *testing.T) {
 	})
 
 	jsonOut := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo, "--json"})
+		return testRunDoctor([]string{"--repo", repo, "--json"})
 	})
 	var result doctor.HarnessDoctorResult
 	if err := json.Unmarshal([]byte(jsonOut), &result); err != nil {
@@ -308,7 +289,7 @@ func TestRunDoctorOperationalInventoryFailureHasJSONTextParity(t *testing.T) {
 		t.Fatalf("inventory failure JSON projection = %#v", result)
 	}
 	textOut := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo})
+		return testRunDoctor([]string{"--repo", repo})
 	})
 	if !strings.Contains(textOut, operationalhealth.FindingInventoryUnknown) {
 		t.Fatalf("text output lost operational code:\n%s", textOut)
@@ -317,7 +298,7 @@ func TestRunDoctorOperationalInventoryFailureHasJSONTextParity(t *testing.T) {
 
 func TestRunDoctorOperationalHelpListsPreserveFlags(t *testing.T) {
 	out, err := testsupport.CaptureStderrAndError(t, func() error {
-		return RunDoctor([]string{"--help"})
+		return testRunDoctor([]string{"--help"})
 	})
 	if !errors.Is(err, flag.ErrHelp) {
 		t.Fatalf("doctor help error = %v, want flag.ErrHelp", err)
@@ -338,7 +319,7 @@ func TestRunDoctorOperationalDoesNotWriteEmptyState(t *testing.T) {
 	})
 
 	_ = captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo, "--json"})
+		return testRunDoctor([]string{"--repo", repo, "--json"})
 	})
 
 	entries, err := os.ReadDir(stateRoot)
@@ -359,7 +340,7 @@ func TestRunDoctor_returnsError_whenRepoPathIsInvalid(t *testing.T) {
 	badRepo := filepath.Join(t.TempDir(), "missing")
 
 	// 실행
-	err := RunDoctor([]string{"--repo", badRepo})
+	err := testRunDoctor([]string{"--repo", badRepo})
 
 	// 검증
 	if err == nil || !strings.Contains(err.Error(), badRepo) {
@@ -397,7 +378,7 @@ func TestRunDoctor_doesNotRequireRealHome(t *testing.T) {
 
 	// 실행
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunDoctor([]string{"--repo", repo})
+		return testRunDoctor([]string{"--repo", repo})
 	})
 
 	// 검증

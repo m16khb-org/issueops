@@ -6,11 +6,12 @@ import (
 	"strings"
 
 	doctordomain "issueops/internal/domain/doctor"
+	"issueops/internal/domain/projectdoc"
 )
 
-func observeProjectDocs(root string) doctordomain.ProjectDocsObservation {
-	observation := doctordomain.ProjectDocsObservation{Directory: filepath.Join(root, ProjectDocsDir)}
-	for _, name := range ProjectDocNames() {
+func ObserveProjectDocs(root string) doctordomain.ProjectDocsObservation {
+	observation := doctordomain.ProjectDocsObservation{Directory: filepath.Join(root, projectdoc.ProjectDocsDir)}
+	for _, name := range projectdoc.ProjectDocNames() {
 		if _, err := os.Stat(filepath.Join(observation.Directory, name)); os.IsNotExist(err) {
 			observation.Missing = append(observation.Missing, name)
 		}
@@ -18,9 +19,9 @@ func observeProjectDocs(root string) doctordomain.ProjectDocsObservation {
 	return observation
 }
 
-func observeRuntimeState(root string) doctordomain.RuntimeStateObservation {
-	observation := doctordomain.RuntimeStateObservation{DocumentPath: filepath.Join(root, ProjectDocsDir, "STATE.md")}
-	for _, path := range []string{filepath.Join(root, ProjectDocsDir, "state"), filepath.Join(root, ProjectDocsDir, "state.schema.json")} {
+func ObserveRuntimeState(root string) doctordomain.RuntimeStateObservation {
+	observation := doctordomain.RuntimeStateObservation{DocumentPath: filepath.Join(root, projectdoc.ProjectDocsDir, "STATE.md")}
+	for _, path := range []string{filepath.Join(root, projectdoc.ProjectDocsDir, "state"), filepath.Join(root, projectdoc.ProjectDocsDir, "state.schema.json")} {
 		if _, err := os.Stat(path); err == nil {
 			observation.Paths = append(observation.Paths, path)
 		}
@@ -31,12 +32,12 @@ func observeRuntimeState(root string) doctordomain.RuntimeStateObservation {
 	return observation
 }
 
-func observeLoopContracts(root string) doctordomain.LoopObservation {
-	summary, warnings := RepoGateSummaryFor(root)
-	return doctordomain.LoopObservation{Active: summary.Active, Exhausted: summary.Exhausted, Warnings: warnings, StateRoot: LoopStateRoot()}
+type Gateways struct {
+	Probe    func(string) error
+	CountFDs func(int) (int, error)
 }
 
-func observeMCPGateways(home string) doctordomain.GatewayObservation {
+func (gateways Gateways) Observe(home string) doctordomain.GatewayObservation {
 	observation := doctordomain.GatewayObservation{Home: home}
 	if home == "" {
 		return observation
@@ -48,16 +49,16 @@ func observeMCPGateways(home string) doctordomain.GatewayObservation {
 	}
 	for _, endpoint := range endpoints {
 		target := endpoint.URL.String()
-		observation.Endpoints = append(observation.Endpoints, doctordomain.GatewayEndpoint{Name: endpoint.Name, URL: target, Error: probeMCPGateway(target)})
+		observation.Endpoints = append(observation.Endpoints, doctordomain.GatewayEndpoint{Name: endpoint.Name, URL: target, Error: gateways.Probe(target)})
 	}
 	for _, port := range uniqueMCPGatewayPorts(endpoints) {
-		count, err := countMCPGatewayFDs(port)
+		count, err := gateways.CountFDs(port)
 		observation.FDs = append(observation.FDs, doctordomain.GatewayFD{Port: port, Count: count, Available: err == nil})
 	}
 	return observation
 }
 
-func observeNativeIntegrations(home string) doctordomain.NativeObservation {
+func ObserveNativeIntegrations(home string) doctordomain.NativeObservation {
 	observation := doctordomain.NativeObservation{Home: home}
 	if home == "" {
 		return observation
@@ -68,7 +69,7 @@ func observeNativeIntegrations(home string) doctordomain.NativeObservation {
 	return observation
 }
 
-func observeBinaryDrift(root string) doctordomain.BinaryObservation {
+func ObserveBinaryDrift(root string) doctordomain.BinaryObservation {
 	observation := doctordomain.BinaryObservation{Root: root}
 	if root == "" {
 		return observation

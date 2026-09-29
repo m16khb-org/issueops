@@ -8,7 +8,6 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
 	loopapp "issueops/internal/application/looprun"
-	loopcontract "issueops/internal/contract/looprun"
 )
 
 func testLoopStateRoot() string { return filepath.Join(statestore.StateDir(), "loop") }
@@ -22,8 +21,4 @@ func testLoopIdentity() loopadapter.Identity {
 
 func testLoopReader() loopapp.Reader {
 	return loopapp.Reader{Store: testLoopStore(), Identity: testLoopIdentity()}
-}
-
-func testLoopRepoGateSummaryFor(repo string) (loopcontract.RepoGateSummary, []string) {
-	return testLoopReader().RepoGateSummaryFor(repo)
 }

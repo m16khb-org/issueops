@@ -233,7 +233,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ConfigureDoctor"
+        "type Doctor"
       ]
     },
     {
@@ -243,7 +243,6 @@
       "symbols": [
         "func RunDocs",
         "func RunDocsWithRoot",
-        "func RunDoctor",
         "func RunGuard",
         "func RunGuardCheck",
         "func RunInspect",
@@ -274,11 +273,11 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func Doctor.Run",
         "func doctorProfile",
         "func doctorRepeatedFlag.Set",
         "func doctorRepeatedFlag.String",
         "func normalizeDoctorPreserve",
-        "func runDoctor",
         "func runInspect",
         "type doctorRepeatedFlag"
       ]
@@ -290,12 +289,6 @@
       "symbols": [
         "func runPreflight"
       ]
-    },
-    {
-      "path": "cmd/issueops/basiccli/repopath_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/basiccli/trace.go",
@@ -949,19 +942,12 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/doctor_lifecycle_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureDoctorLifecycle"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/doctor_wiring.go",
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureDoctorRunner"
+        "func newDoctorCommand",
+        "func newDoctorService"
       ]
     },
     {
@@ -1483,14 +1469,6 @@
         "func newLoopReader",
         "func newLoopService",
         "func newLoopStore"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/looprun_doctor_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureDoctorLoopGate"
       ]
     },
     {
@@ -3197,14 +3175,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/statuscli/doctor_dependency.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ConfigureDoctor"
-      ]
-    },
-    {
       "path": "cmd/issueops/statuscli/exports.go",
       "owner": "inbound",
       "task": "T20",
@@ -3968,76 +3938,26 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func countMCPGatewayFDsViaLsof",
+        "func CountGatewayFDsViaLsof",
+        "func MeasurePipeCapacity",
+        "func ProbeGatewayHTTP",
         "func loopbackMCPEndpoints",
-        "func measureSystemPipeCapacity",
-        "func probeMCPGatewayHTTP",
         "func uniqueMCPGatewayPorts",
         "type mcpGatewayEndpoint"
       ]
-    },
-    {
-      "path": "internal/adapter/doctor/contract_alias.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "type HarnessDoctorCheck",
-        "type HarnessDoctorDaemonAdmission",
-        "type HarnessDoctorFix",
-        "type HarnessDoctorIssue",
-        "type HarnessDoctorRequest",
-        "type HarnessDoctorResult"
-      ]
-    },
-    {
-      "path": "internal/adapter/doctor/dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func ConfigureLifecycle",
-        "func ProjectDocNames",
-        "func ValidateProjectLifecycleState",
-        "type ProjectLifecycleStatePlan"
-      ]
-    },
-    {
-      "path": "internal/adapter/doctor/doctor.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func HarnessDoctor"
-      ]
-    },
-    {
-      "path": "internal/adapter/doctor/looprun_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
     },
     {
       "path": "internal/adapter/doctor/observations.go",
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func observeBinaryDrift",
-        "func observeLoopContracts",
-        "func observeMCPGateways",
-        "func observeNativeIntegrations",
-        "func observeProjectDocs",
-        "func observeRuntimeState"
+        "func Gateways.Observe",
+        "func ObserveBinaryDrift",
+        "func ObserveNativeIntegrations",
+        "func ObserveProjectDocs",
+        "func ObserveRuntimeState",
+        "type Gateways"
       ]
-    },
-    {
-      "path": "internal/adapter/doctor/repopath_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/doctor/state_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
     },
     {
       "path": "internal/adapter/failurecause/cause.go",

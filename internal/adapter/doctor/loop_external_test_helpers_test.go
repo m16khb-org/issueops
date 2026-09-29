@@ -22,3 +22,7 @@ func testLoopIdentity() loopadapter.Identity {
 func testLoopService() loopapp.Service {
 	return loopapp.Service{Store: testLoopStore(), Identity: testLoopIdentity(), Clock: loopadapter.Clock{Time: time.Now}, SchemaVersion: loopadapter.LoopRunCurrentSchemaVersion}
 }
+
+func testLoopReader() loopapp.Reader {
+	return loopapp.Reader{Store: testLoopStore(), Identity: testLoopIdentity()}
+}

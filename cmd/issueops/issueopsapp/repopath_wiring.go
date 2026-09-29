@@ -1,9 +1,7 @@
 package issueopsapp
 
 import (
-	"issueops/cmd/issueops/basiccli"
 	"issueops/internal/adapter/commitsuggest"
-	"issueops/internal/adapter/doctor"
 	"issueops/internal/adapter/lintdiagnose"
 	"issueops/internal/adapter/repopath"
 )
@@ -13,8 +11,6 @@ import (
 // NormalizeRoot는 filepath.Abs로 끝나지 않고 os.Stat으로 디렉터리인지 확인한다.
 // 순수 경로 계산이 아니므로 domain으로 내릴 수 없고, 조립 지점을 root로 모은다.
 func configureRepoPathResolvers() {
-	basiccli.NormalizeRepoRoot = repopath.NormalizeRoot
-	doctor.NormalizeRepoRoot = repopath.NormalizeRoot
 	lintdiagnose.NormalizeRepoRoot = repopath.NormalizeRoot
 	commitsuggest.NormalizeRepoRoot = repopath.NormalizeRoot
 }
