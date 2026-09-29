@@ -33,3 +33,26 @@ type Status struct {
 	Instance          *InstanceRecord `json:"instance,omitempty"`
 	Message           string          `json:"message,omitempty"`
 }
+
+const (
+	StatusReady              = "ready"
+	StatusStopped            = "stopped"
+	StatusSocketUnreachable  = "socket_unreachable"
+	StatusIdentityMismatch   = "instance_identity_mismatch"
+	StatusInstanceUnreadable = "instance_record_unreadable"
+)
+
+type ProcessIdentity struct {
+	StartTime            string
+	Executable           string
+	ExecutablePathStable bool
+}
+
+type IdentityResponse struct {
+	OK                bool           `json:"ok"`
+	Instance          InstanceRecord `json:"instance"`
+	ActiveConnections int            `json:"active_connections"`
+	MaxConnections    int            `json:"max_connections"`
+	Accepting         bool           `json:"accepting"`
+	Draining          bool           `json:"draining"`
+}

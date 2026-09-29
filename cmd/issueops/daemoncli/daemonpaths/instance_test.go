@@ -1,6 +1,7 @@
 package daemonpaths
 
 import (
+	domain "issueops/internal/domain/daemon"
 	"os"
 	"path/filepath"
 	"testing"
@@ -58,10 +59,10 @@ func TestInspectProcessReturnsStableCurrentIdentity(t *testing.T) {
 func TestProcessStartTimeEqualSupportsLegacyKoreanReceipt(t *testing.T) {
 	recorded := "2026년  7월 31일 금요일 16시 14분 57초"
 	observed := "Fri Jul 31 16:14:57 2026"
-	if !ProcessStartTimeEqual(recorded, observed) {
+	if !domain.ProcessStartTimeEqual(recorded, observed, time.Local) {
 		t.Fatalf("expected equivalent localized start identities: recorded=%q observed=%q", recorded, observed)
 	}
-	if ProcessStartTimeEqual(recorded, "Fri Jul 31 16:14:58 2026") {
+	if domain.ProcessStartTimeEqual(recorded, "Fri Jul 31 16:14:58 2026", time.Local) {
 		t.Fatal("different process start seconds must not match")
 	}
 }
@@ -69,7 +70,7 @@ func TestProcessStartTimeEqualSupportsLegacyKoreanReceipt(t *testing.T) {
 func TestProcessStartTimeEqualPreservesFractionalIdentity(t *testing.T) {
 	recorded := "2026-07-31T07:14:57.50Z"
 	observed := "2026-07-31T07:14:57.51Z"
-	if ProcessStartTimeEqual(recorded, observed) {
+	if domain.ProcessStartTimeEqual(recorded, observed, time.Local) {
 		t.Fatalf("different process start ticks must not match: recorded=%q observed=%q", recorded, observed)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	daemondomain "issueops/internal/domain/daemon"
 	"net"
 	"os"
 	"os/exec"
@@ -503,11 +504,11 @@ func TestDaemonProcessIdentityMatchesLegacyLocalizedStartTime(t *testing.T) {
 		StartTime:  legacyWallTime.Format(time.RFC3339),
 		Executable: "/tmp/issueops",
 	}
-	if !daemonProcessIdentityMatches(instance, process) {
+	if !daemondomain.ProcessIdentityMatches(instance, process, time.Local) {
 		t.Fatalf("equivalent legacy and canonical identities must match: instance=%#v process=%#v", instance, process)
 	}
 	process.StartTime = legacyWallTime.Add(time.Second).Format(time.RFC3339)
-	if daemonProcessIdentityMatches(instance, process) {
+	if daemondomain.ProcessIdentityMatches(instance, process, time.Local) {
 		t.Fatal("different process start identities must not match")
 	}
 }

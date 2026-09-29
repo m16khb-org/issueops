@@ -3,8 +3,8 @@ package daemoncli
 import (
 	"flag"
 	"fmt"
+	daemondomain "issueops/internal/domain/daemon"
 	"os"
-	"time"
 
 	"issueops/cmd/issueops/daemoncli/daemonpaths"
 	contract "issueops/internal/contract/daemon"
@@ -12,11 +12,9 @@ import (
 
 type daemonPaths = daemonpaths.Paths
 type daemonInstance = daemonpaths.InstanceRecord
-type daemonProcessIdentity = daemonpaths.ProcessIdentity
+type daemonProcessIdentity = contract.ProcessIdentity
 
 type daemonStatus = contract.Status
-
-const daemonReadyTimeout = 15 * time.Second
 
 func currentDaemonPaths() (daemonPaths, error) {
 	return daemonpaths.Current()
@@ -59,7 +57,7 @@ func runDaemon(args []string) error {
 		if *jsonOut {
 			return printJSON(status)
 		}
-		if daemonStatusIsReady(status) {
+		if daemondomain.IsReady(status) {
 			fmt.Printf("running pid=%d socket=%s\n", status.PID, status.Paths.Socket)
 		} else if status.Running || status.Reachable || status.PID > 0 {
 			fmt.Printf("unverified code=%s pid=%d socket=%s\n", status.Code, status.PID, status.Paths.Socket)

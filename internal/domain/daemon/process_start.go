@@ -1,4 +1,4 @@
-package daemonpaths
+package daemon
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func canonicalProcessStartTime(value string) (string, error) {
+func CanonicalProcessStartTime(value string, location *time.Location) (string, error) {
 	value = strings.TrimSpace(value)
 	if value == "" {
 		return "", fmt.Errorf("process start time is empty")
@@ -18,7 +18,7 @@ func canonicalProcessStartTime(value string) (string, error) {
 		return parsed.UTC().Format(time.RFC3339Nano), nil
 	}
 	for _, layout := range []string{"Mon Jan _2 15:04:05 2006", "Mon Jan 2 15:04:05 2006"} {
-		if parsed, err := time.ParseInLocation(layout, value, time.Local); err == nil {
+		if parsed, err := time.ParseInLocation(layout, value, location); err == nil {
 			return parsed.UTC().Format(time.RFC3339), nil
 		}
 	}
@@ -36,7 +36,7 @@ func canonicalProcessStartTime(value string) (string, error) {
 		&minute,
 		&second,
 	); err == nil && count == 7 {
-		parsed := time.Date(year, time.Month(month), day, hour, minute, second, 0, time.Local)
+		parsed := time.Date(year, time.Month(month), day, hour, minute, second, 0, location)
 		if parsed.Year() == year &&
 			int(parsed.Month()) == month &&
 			parsed.Day() == day &&
@@ -51,14 +51,14 @@ func canonicalProcessStartTime(value string) (string, error) {
 
 // ProcessStartTimeEqual은 로케일이 달랐던 구버전 daemon receipt와 현재의
 // 로케일 독립 receipt가 같은 OS 프로세스를 가리키는지 비교한다.
-func ProcessStartTimeEqual(recorded, observed string) bool {
+func ProcessStartTimeEqual(recorded, observed string, location *time.Location) bool {
 	if recorded == observed {
 		return true
 	}
-	recordedCanonical, err := canonicalProcessStartTime(recorded)
+	recordedCanonical, err := CanonicalProcessStartTime(recorded, location)
 	if err != nil {
 		return false
 	}
-	observedCanonical, err := canonicalProcessStartTime(observed)
+	observedCanonical, err := CanonicalProcessStartTime(observed, location)
 	return err == nil && recordedCanonical == observedCanonical
 }

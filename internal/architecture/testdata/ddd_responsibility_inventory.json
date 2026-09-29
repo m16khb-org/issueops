@@ -454,7 +454,6 @@
         "func rejectDaemonConnection",
         "func serveDaemonConnection",
         "func serveDaemonConnectionWithAdmission",
-        "type daemonIdentityResponse",
         "type daemonReplayConn"
       ]
     },
@@ -480,16 +479,11 @@
       "task": "T20",
       "symbols": [
         "func acquireDaemonLock",
+        "func daemonWaiter",
         "func ensureDaemonRunning",
         "func ensureDaemonRunningContext",
-        "func ensureDaemonRunningWithDeps",
         "func startDaemonProcess",
-        "func waitForDaemon",
-        "func waitForDaemonContext",
-        "func waitForDaemonWithDeps",
-        "type daemonStartDeps",
-        "type daemonStartLock",
-        "type daemonWaitDeps"
+        "func waitForDaemonContext"
       ]
     },
     {
@@ -497,24 +491,11 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func applyDaemonAdmissionStatus",
         "func checkDaemonStatus",
-        "func checkDaemonStatusWithDeps",
-        "func daemonIdentityMismatchStatus",
-        "func daemonProcessIdentityMatches",
-        "func daemonStatusBlocksStart",
-        "func daemonStatusCanStop",
+        "func daemonProcessHandle.Terminate",
         "func daemonStatusForMCP",
-        "func daemonStatusIsReady",
-        "func daemonStoppedStatus",
-        "func probeDaemonStatusWithDeps",
         "func stopDaemon",
-        "func stopDaemonCoordinatedWithDeps",
-        "func stopDaemonWithDeps",
-        "type daemonProcess",
-        "type daemonStatusDeps",
-        "type daemonStopCoordinatorDeps",
-        "type daemonStopDeps"
+        "type daemonProcessHandle"
       ]
     },
     {
@@ -534,8 +515,7 @@
         "func ReadInstance",
         "func WriteInstance",
         "func canonicalExecutable",
-        "type InstanceRecord",
-        "type ProcessIdentity"
+        "type InstanceRecord"
       ]
     },
     {
@@ -584,15 +564,6 @@
       "task": "T20",
       "symbols": [
         "func processFieldWithCLocale"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemonpaths/process_start.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ProcessStartTimeEqual",
-        "func canonicalProcessStartTime"
       ]
     },
     {
@@ -9356,6 +9327,40 @@
       ]
     },
     {
+      "path": "internal/application/daemon/reader.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Reader.Run",
+        "func applyAdmissionStatus",
+        "type Reader"
+      ]
+    },
+    {
+      "path": "internal/application/daemon/start.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Starter.Run",
+        "func Waiter.Run",
+        "type Starter",
+        "type Waiter"
+      ]
+    },
+    {
+      "path": "internal/application/daemon/stop.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func StopCoordinator.Run",
+        "func Stopper.Run",
+        "func stoppedStatus",
+        "type Process",
+        "type StopCoordinator",
+        "type Stopper"
+      ]
+    },
+    {
       "path": "internal/application/doctor/contract_alias.go",
       "owner": "application",
       "task": "T20",
@@ -11588,8 +11593,10 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
+        "type IdentityResponse",
         "type InstanceRecord",
         "type Paths",
+        "type ProcessIdentity",
         "type Status"
       ]
     },
@@ -13285,6 +13292,27 @@
       "task": "T18",
       "symbols": [
         "func ValidateInstance"
+      ]
+    },
+    {
+      "path": "internal/domain/daemon/process_start.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func CanonicalProcessStartTime",
+        "func ProcessStartTimeEqual"
+      ]
+    },
+    {
+      "path": "internal/domain/daemon/status.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func BlocksStart",
+        "func CanStop",
+        "func IdentityMismatchStatus",
+        "func IsReady",
+        "func ProcessIdentityMatches"
       ]
     },
     {
@@ -23458,6 +23486,160 @@
         "internal/application/status/service_test.go",
         "cmd/issueops/issueopsapp/status_instance_wiring_test.go",
         "cmd/issueops/statuscli/status_verify_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-process-identity",
+      "source_path": "cmd/issueops/daemoncli/daemon_status.go",
+      "source_symbol": "func daemonProcessIdentityMatches",
+      "responsibility": "Match precise process start identity and require executable equality only for stable OS projections.",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func ProcessIdentityMatches",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "issueops status",
+        "issueops doctor",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "internal/domain/daemon/status_test.go",
+        "cmd/issueops/daemoncli/daemon_identity_test.go",
+        "cmd/issueops/daemoncli/daemon_ensure_test.go",
+        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-ready",
+      "source_path": "cmd/issueops/daemoncli/daemon_status.go",
+      "source_symbol": "func daemonStatusIsReady",
+      "responsibility": "Require successful running reachable verified daemon identity with matching instance PID.",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func IsReady",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "issueops status",
+        "issueops doctor",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "internal/domain/daemon/status_test.go",
+        "cmd/issueops/daemoncli/daemon_identity_test.go",
+        "cmd/issueops/daemoncli/daemon_ensure_test.go",
+        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-start-admission",
+      "source_path": "cmd/issueops/daemoncli/daemon_status.go",
+      "source_symbol": "func daemonStatusBlocksStart",
+      "responsibility": "Block start for observed conflicting or unverified instance while allowing verified ready or clean stopped state.",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func BlocksStart",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "issueops status",
+        "issueops doctor",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "internal/domain/daemon/status_test.go",
+        "cmd/issueops/daemoncli/daemon_identity_test.go",
+        "cmd/issueops/daemoncli/daemon_ensure_test.go",
+        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-stop-admission",
+      "source_path": "cmd/issueops/daemoncli/daemon_status.go",
+      "source_symbol": "func daemonStatusCanStop",
+      "responsibility": "Allow verified ready instance or recorded matching live PID with unreachable socket before mandatory OS recheck.",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func CanStop",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "issueops status",
+        "issueops doctor",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "internal/domain/daemon/status_test.go",
+        "cmd/issueops/daemoncli/daemon_identity_test.go",
+        "cmd/issueops/daemoncli/daemon_ensure_test.go",
+        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-identity-mismatch",
+      "source_path": "cmd/issueops/daemoncli/daemon_status.go",
+      "source_symbol": "func daemonIdentityMismatchStatus",
+      "responsibility": "Invalidate identity observation with the canonical mismatch code and preserved partial fields.",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func IdentityMismatchStatus",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "issueops status",
+        "issueops doctor",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "internal/domain/daemon/status_test.go",
+        "cmd/issueops/daemoncli/daemon_identity_test.go",
+        "cmd/issueops/daemoncli/daemon_ensure_test.go",
+        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-start-time-equality",
+      "source_path": "cmd/issueops/daemoncli/daemonpaths/process_start.go",
+      "source_symbol": "func ProcessStartTimeEqual",
+      "responsibility": "Compare canonical process start times with explicit location and preserve fractional tick differences.",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func ProcessStartTimeEqual",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "issueops status",
+        "issueops doctor",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "internal/domain/daemon/status_test.go",
+        "cmd/issueops/daemoncli/daemon_identity_test.go",
+        "cmd/issueops/daemoncli/daemon_ensure_test.go",
+        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-start-time-normalization",
+      "source_path": "cmd/issueops/daemoncli/daemonpaths/process_start.go",
+      "source_symbol": "func canonicalProcessStartTime",
+      "responsibility": "Normalize supported localized process start observations and reject invalid calendar dates.",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func CanonicalProcessStartTime",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "issueops status",
+        "issueops doctor",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "internal/domain/daemon/status_test.go",
+        "cmd/issueops/daemoncli/daemon_identity_test.go",
+        "cmd/issueops/daemoncli/daemon_ensure_test.go",
+        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
       ],
       "status": "migrated"
     }

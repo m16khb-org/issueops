@@ -49,12 +49,6 @@ func WriteInstance(path string, record InstanceRecord) error {
 	return os.Chmod(path, 0o600)
 }
 
-type ProcessIdentity struct {
-	StartTime            string
-	Executable           string
-	ExecutablePathStable bool
-}
-
 func canonicalExecutable(path string) (string, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {

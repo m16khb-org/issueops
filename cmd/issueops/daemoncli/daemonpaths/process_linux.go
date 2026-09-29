@@ -5,6 +5,7 @@ package daemonpaths
 import (
 	"encoding/binary"
 	"fmt"
+	contract "issueops/internal/contract/daemon"
 	"math"
 	"os"
 	"path/filepath"
@@ -18,37 +19,37 @@ const (
 	maxRepresentableTicksPerSecond = uint64(time.Second)
 )
 
-func InspectProcess(pid int) (ProcessIdentity, error) {
+func InspectProcess(pid int) (contract.ProcessIdentity, error) {
 	if pid <= 0 {
-		return ProcessIdentity{}, fmt.Errorf("pid must be positive")
+		return contract.ProcessIdentity{}, fmt.Errorf("pid must be positive")
 	}
 	procDir := filepath.Join("/proc", strconv.Itoa(pid))
 	executable, err := os.Readlink(filepath.Join(procDir, "exe"))
 	if err != nil {
-		return ProcessIdentity{}, fmt.Errorf("read process executable: %w", err)
+		return contract.ProcessIdentity{}, fmt.Errorf("read process executable: %w", err)
 	}
 	executable = strings.TrimSuffix(executable, " (deleted)")
 	executable, err = canonicalExecutable(executable)
 	if err != nil {
-		return ProcessIdentity{}, err
+		return contract.ProcessIdentity{}, err
 	}
 	stat, err := os.ReadFile(filepath.Join(procDir, "stat"))
 	if err != nil {
-		return ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
+		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
 	}
 	systemStat, err := os.ReadFile("/proc/stat")
 	if err != nil {
-		return ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
+		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
 	}
 	auxv, err := os.ReadFile("/proc/self/auxv")
 	if err != nil {
-		return ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
+		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
 	}
 	startTime, err := linuxProcessStartTime(stat, systemStat, auxv)
 	if err != nil {
-		return ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
+		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
 	}
-	return ProcessIdentity{StartTime: startTime, Executable: executable, ExecutablePathStable: true}, nil
+	return contract.ProcessIdentity{StartTime: startTime, Executable: executable, ExecutablePathStable: true}, nil
 }
 
 func linuxProcessStartTime(stat, systemStat, auxv []byte) (string, error) {

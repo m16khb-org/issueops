@@ -135,6 +135,14 @@ worker의 enqueue·read·list·cancel·read-only 실행·stuck 정리는 root가
 
 adapter의 `Store`는 조립 시 고정한 경로로 SQL·파일·프로세스 관측을 수행한다. 상대 state 경로는 기존 응답과 오류 메시지에 유지하고, 실제 파일 접근 경로는 작업 디렉터리가 바뀌어도 고정한다. application은 기존처럼 읽을 수 없는 작업을 목록에서 제외하고 생성 시각 내림차순으로 정렬하며 queue 집계는 domain이 판정한다. 읽기·수정·쓰기 전체의 SQL span 잠금과 명령 실행 중 잠금 해제, 취소 및 dead PID 재확인은 유지한다. 기본 read·list의 저장소 생성 동작도 기존 계약을 따른다.
 
+### Daemon lifecycle decision boundary
+
+daemon의 준비 완료·시작 차단·종료 허용과 OS 프로세스 신원 비교는 `internal/domain/daemon`이 판정한다. 프로세스 시작 시각 비교는 관측한 시간대를 명시적으로 받아 기존 로케일 형식과 소수 초 정밀도를 보존한다. Linux처럼 실행 파일 경로가 안정된 관측에서만 경로 불일치를 다른 프로세스의 증거로 쓰며, Darwin의 symlink 변경에 따른 경로 차이는 시작 시각·file/socket 신원 확인과 함께 처리한다.
+
+`application/daemon.Reader`는 instance 파일·socket·OS 관측 순서를, `Starter`와 `Waiter`는 시작 잠금·준비 대기·취소를, `StopCoordinator`와 `Stopper`는 잠금 안에서 종료·재확인·파일 정리 순서를 담당한다. 최초 instance 읽기 실패 후 socket이 응답하면 파일을 다시 읽는 기존 시작 경쟁 처리를 유지한다. TERM 전과 강제 종료 직전에 OS 신원을 다시 확인하고, 강제 종료 직전 신원 조회가 실패하면 생존 여부를 재확인해 이미 종료한 프로세스를 오인하지 않는다. 파일·프로세스·잠금·clock 효과는 명시적으로 받는다.
+
+상태 코드·프로세스 관측·socket 응답 DTO는 `contract/daemon`으로 모았다. 기존 CLI의 판정·순서 구현과 중복 DTO는 제거했으며, 테스트용 callback fixture는 실제 application을 호출한다. daemon의 기술 I/O·서버 admission·환경변수 조립과 root/CLI/MCP 전역 연결은 후속 이전 대상이다.
+
 ### Loop runtime boundary
 
 loop의 생성·시도 기록·종료·status는 root가 조립한 `application/looprun.Service`를 호출한다. CLI와 MCP 직접 호출·SDK는 각 인스턴스에 고정한 저장소 경로와 작업 디렉터리를 사용한다. adapter의 `Store`는 SQL 읽기·쓰기와 기존 span 잠금만 수행하며 전역 저장소 setter와 lifecycle 실행 facade는 제거했다.

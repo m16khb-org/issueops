@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	daemoncontract "issueops/internal/contract/daemon"
 	"net"
 	"os"
 	"time"
@@ -23,15 +24,6 @@ const (
 	// health probe를 구분할 수 있다.
 	daemonIdentityRequest = "\x00issueops-daemon-identity/1\n"
 )
-
-type daemonIdentityResponse struct {
-	OK                bool           `json:"ok"`
-	Instance          daemonInstance `json:"instance"`
-	ActiveConnections int            `json:"active_connections"`
-	MaxConnections    int            `json:"max_connections"`
-	Accepting         bool           `json:"accepting"`
-	Draining          bool           `json:"draining"`
-}
 
 func newDaemonIdentityToken() (string, error) {
 	b := make([]byte, 16)
@@ -54,27 +46,27 @@ func daemonExecutableSHA(path string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func probeDaemonStatus(socket string) (daemonIdentityResponse, error) {
+func probeDaemonStatus(socket string) (daemoncontract.IdentityResponse, error) {
 	conn, err := net.DialTimeout("unix", socket, 150*time.Millisecond)
 	if err != nil {
-		return daemonIdentityResponse{}, err
+		return daemoncontract.IdentityResponse{}, err
 	}
 	defer conn.Close()
 	if err := conn.SetDeadline(time.Now().Add(500 * time.Millisecond)); err != nil {
-		return daemonIdentityResponse{}, err
+		return daemoncontract.IdentityResponse{}, err
 	}
 	if _, err := io.WriteString(conn, daemonIdentityRequest); err != nil {
-		return daemonIdentityResponse{}, err
+		return daemoncontract.IdentityResponse{}, err
 	}
-	var response daemonIdentityResponse
+	var response daemoncontract.IdentityResponse
 	if err := json.NewDecoder(conn).Decode(&response); err != nil {
-		return daemonIdentityResponse{}, fmt.Errorf("decode daemon identity: %w", err)
+		return daemoncontract.IdentityResponse{}, fmt.Errorf("decode daemon identity: %w", err)
 	}
 	if !response.OK {
-		return daemonIdentityResponse{}, fmt.Errorf("daemon identity probe was rejected")
+		return daemoncontract.IdentityResponse{}, fmt.Errorf("daemon identity probe was rejected")
 	}
 	if err := daemondomain.ValidateInstance(response.Instance); err != nil {
-		return daemonIdentityResponse{}, fmt.Errorf("invalid daemon identity: %w", err)
+		return daemoncontract.IdentityResponse{}, fmt.Errorf("invalid daemon identity: %w", err)
 	}
 	// admission health 이전 daemon은 이 additive 필드들을 생략한다. 그런 응답은
 	// 과거의 고정 capacity, accepting 상태로 취급한다.
@@ -130,7 +122,7 @@ func serveDaemonConnectionWithAdmission(conn net.Conn, logFile daemonServerLogFi
 		session = nil
 	}
 	snapshot := admission.snapshot()
-	return json.NewEncoder(conn).Encode(daemonIdentityResponse{
+	return json.NewEncoder(conn).Encode(daemoncontract.IdentityResponse{
 		OK:                true,
 		Instance:          instance,
 		ActiveConnections: snapshot.ActiveConnections,
