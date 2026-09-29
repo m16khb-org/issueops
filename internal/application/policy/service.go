@@ -1,8 +1,6 @@
 package policy
 
 import (
-	"time"
-
 	policycontract "issueops/internal/contract/policy"
 	policydomain "issueops/internal/domain/policy"
 )
@@ -10,7 +8,6 @@ import (
 type Observation struct {
 	Root        string
 	CWD         string
-	Timeout     time.Duration
 	AuditLogID  string
 	GeneratedAt string
 	Facts       policydomain.CommandFacts
@@ -30,15 +27,18 @@ type OverrideLoader interface {
 }
 
 type Service struct {
-	Observer  Observer
-	Overrides OverrideLoader
-	Executor  Executor
-	Clock     Clock
+	PreparedBaseBranch PreparedBaseBranchLookup
+	Observer           Observer
+	Overrides          OverrideLoader
+	Executor           Executor
+	Clock              Clock
 }
 
 func (service Service) Evaluate(request policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
 	observation := service.Observer.Observe(request)
 	facts := observation.Facts
+	facts.Timeout, facts.TimeoutValid = policydomain.CommandTimeout(request.Timeout)
+	facts.PRTargetDeny, facts.PRTargetExpected = pullRequestTargetDeny(observation.Root, observation.CWD, request.Argv, service.PreparedBaseBranch)
 	catalog := policydomain.BuiltinCatalog()
 	if service.Overrides != nil {
 		overrides := service.Overrides.Load(observation.Root)
@@ -60,7 +60,7 @@ func (service Service) Evaluate(request policycontract.CommandPolicyRequest) pol
 	return policycontract.CommandPolicyEvaluation{
 		OK: true, Allowed: decision.Allowed, AuditLogID: observation.AuditLogID,
 		WorkspaceRoot: observation.Root, CWD: observation.CWD,
-		Argv: policydomain.RedactArgv(request.Argv), Timeout: observation.Timeout.String(),
+		Argv: policydomain.RedactArgv(request.Argv), Timeout: facts.Timeout.String(),
 		EnvAllowlist:   policydomain.CleanEnvAllowlist(request.EnvAllowlist),
 		NetworkAllowed: request.NetworkAllowed, WriteAllowed: request.WriteAllowed,
 		ShellAllowed: request.ShellAllowed, ShellReason: policydomain.RedactFreeform(request.ShellReason),

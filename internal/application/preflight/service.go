@@ -18,7 +18,9 @@ type Observation struct {
 	Remotes          []preflightcontract.RemoteInfo
 	LastCommit       string
 	RecentCommits    []preflightcontract.CommitInfo
-	CommitStyleHints map[string]any
+	StyleCommits     []preflightcontract.CommitInfo
+	CommitBodies     []string
+	CommitPolicyPath string
 }
 
 type Observer interface {
@@ -46,7 +48,7 @@ func (service Service) Check(target, issueOpsRoot string) preflightcontract.Pref
 		Remotes:          facts.Remotes,
 		LastCommit:       facts.LastCommit,
 		RecentCommits:    facts.RecentCommits,
-		CommitStyleHints: facts.CommitStyleHints,
+		CommitStyleHints: preflightdomain.CommitStyleHints(facts.StyleCommits, facts.CommitBodies, facts.CommitPolicyPath),
 		StagedFiles:      status.Staged,
 		UnstagedFiles:    status.Unstaged,
 		UntrackedFiles:   status.Untracked,

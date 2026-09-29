@@ -73,10 +73,7 @@ func (service Service) run(request policycontract.CommandPolicyRequest, tier str
 		result.Stderr = "run denied by policy: " + strings.Join(policy.DenyReasons, "; ") + "\n"
 		return result
 	}
-	timeout := 30 * time.Second
-	if parsed, err := time.ParseDuration(request.Timeout); err == nil && parsed > 0 {
-		timeout = parsed
-	}
+	timeout, _ := policydomain.CommandTimeout(request.Timeout)
 	execution := service.Executor.Execute(request, timeout)
 	finished := service.Clock.Now()
 	result.Executed = true

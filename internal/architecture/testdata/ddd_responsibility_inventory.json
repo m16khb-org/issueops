@@ -9659,7 +9659,6 @@
         "func policyOverrideLoader.Load",
         "func policyOverrideWarning",
         "func readPolicyOverrides",
-        "type PolicyOverrides",
         "type policyOverrideLoader"
       ]
     },
@@ -9685,20 +9684,8 @@
         "func absOrOriginal",
         "func canonicalPotentialPath",
         "func commandReferencesOutsideWorkspace",
-        "func looksLikeRemoteOrURL",
-        "func policyArgLooksPathLike",
-        "func policyPathCandidates",
         "func resolvePolicyPathCandidate",
         "func sameOrWithin"
-      ]
-    },
-    {
-      "path": "internal/adapter/policy/policy_pull_request_target.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": [
-        "func pullRequestTargetDeny",
-        "type PreparedBaseBranchLookup"
       ]
     },
     {
@@ -9713,7 +9700,6 @@
         "func FakeRunCommand",
         "func RunCommand",
         "func RunReadOnlyCommand",
-        "func commandEnv",
         "func commandExecutor.Execute",
         "func systemClock.Now",
         "type commandExecutor",
@@ -9745,7 +9731,6 @@
       "task": "T09",
       "symbols": [
         "func atoi",
-        "func commitStyleHints",
         "func listRemotes",
         "func recentCommits",
         "func redactRemote",
@@ -12240,6 +12225,15 @@
         "func validateBackendResult",
         "func validateReadback",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/policy/pull_request_target.go",
+      "owner": "application",
+      "task": "T09",
+      "symbols": [
+        "func pullRequestTargetDeny",
+        "type PreparedBaseBranchLookup"
       ]
     },
     {
@@ -16769,6 +16763,25 @@
       ]
     },
     {
+      "path": "internal/domain/policy/execution.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func CommandEnvironment",
+        "func CommandTimeout"
+      ]
+    },
+    {
+      "path": "internal/domain/policy/path_candidates.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func PathCandidates",
+        "func argLooksPathLike",
+        "func looksLikeRemoteOrURL"
+      ]
+    },
+    {
       "path": "internal/domain/policy/pull_request_target.go",
       "owner": "domain",
       "task": "T09",
@@ -16797,6 +16810,14 @@
       "task": "T07",
       "symbols": [
         "func ValidateRemoteCreateInputs"
+      ]
+    },
+    {
+      "path": "internal/domain/preflight/commit_style.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func CommitStyleHints"
       ]
     },
     {
@@ -18602,7 +18623,7 @@
       "id": "pr-target-guard",
       "source_path": "internal/adapter/policy/policy_pull_request_target.go",
       "source_symbol": "func pullRequestTargetDeny",
-      "responsibility": "parse a PR create command and observe its prepared base before domain decides the target gate",
+      "responsibility": "application parses PR creation and observes the current prepared base before domain decides the target gate",
       "target": "internal/domain/policy",
       "target_symbol": "func DecidePullRequestTarget",
       "task": "T09",
@@ -18612,9 +18633,10 @@
       ],
       "evidence_tests": [
         "internal/domain/policy/pull_request_target_test.go",
-        "internal/adapter/policy/policy_pull_request_target_test.go"
+        "internal/adapter/policy/policy_pull_request_target_test.go",
+        "internal/application/policy/pull_request_target_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "remote-publication-candidate-match",
@@ -23326,6 +23348,77 @@
       "evidence_tests": [
         "internal/adapter/issueops/branch_await_link_test.go",
         "internal/adapter/issueops/linked_branch_observation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "command-timeout-contract",
+      "source_path": "internal/application/policy/service.go",
+      "source_symbol": "func Service.Evaluate",
+      "responsibility": "parse and default timeout in core before domain admission, preserving omitted timeout refusal",
+      "target": "internal/domain/policy",
+      "target_symbol": "func CommandTimeout",
+      "task": "T09",
+      "entrypoints": [
+        "issueops policy check",
+        "issueops policy run"
+      ],
+      "evidence_tests": [
+        "internal/adapter/policy/policy_test.go",
+        "internal/application/policy/runner_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "command-environment-selection",
+      "source_path": "internal/adapter/policy/policy_run.go",
+      "source_symbol": "func commandEnv",
+      "responsibility": "select only explicitly allowlisted process environment entries",
+      "target": "internal/domain/policy",
+      "target_symbol": "func CommandEnvironment",
+      "task": "T09",
+      "entrypoints": [
+        "issueops policy check",
+        "issueops policy run"
+      ],
+      "evidence_tests": [
+        "internal/adapter/policy/policy_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "command-path-candidates",
+      "source_path": "internal/adapter/policy/policy_paths.go",
+      "source_symbol": "func policyPathCandidates",
+      "responsibility": "classify local path arguments while excluding URL and remote references",
+      "target": "internal/domain/policy",
+      "target_symbol": "func PathCandidates",
+      "task": "T09",
+      "entrypoints": [
+        "issueops policy check",
+        "issueops policy run"
+      ],
+      "evidence_tests": [
+        "internal/domain/policy/path_candidates_test.go",
+        "internal/adapter/policy/policy_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "preflight-commit-style",
+      "source_path": "internal/adapter/preflight/helpers.go",
+      "source_symbol": "func commitStyleHints",
+      "responsibility": "classify Conventional Commit subjects and count Lore bodies once per commit",
+      "target": "internal/domain/preflight",
+      "target_symbol": "func CommitStyleHints",
+      "task": "T09",
+      "entrypoints": [
+        "issueops preflight"
+      ],
+      "evidence_tests": [
+        "internal/adapter/preflight/preflight_test.go",
+        "internal/application/preflight/service_test.go"
       ],
       "status": "migrated"
     }

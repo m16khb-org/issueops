@@ -24,9 +24,9 @@ func TestRunPreservesTimeoutExitAndFakeRunNeverExecutes(t *testing.T) {
 	service := Service{
 		Clock: runnerClock{at: time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)},
 		Observer: observeFunc(func(policycontract.CommandPolicyRequest) Observation {
-			return Observation{Root: "/repo", CWD: "/repo", Timeout: time.Second,
+			return Observation{Root: "/repo", CWD: "/repo",
 				Facts: policydomain.CommandFacts{RootDirectory: true, CWDDirectory: true, CWDWithinRoot: true,
-					Timeout: time.Second, TimeoutValid: true, ReadOnlyAllowed: true}}
+					ReadOnlyAllowed: true}}
 		}),
 		Executor: executeFunc(func(policycontract.CommandPolicyRequest, time.Duration) Execution {
 			return Execution{Stderr: "partial", ExitCode: -1, TimedOut: true, Err: errors.New("deadline")}
@@ -55,9 +55,9 @@ func TestReadOnlyRunDeniesBeforeExecution(t *testing.T) {
 			if request.WriteAllowed || request.NetworkAllowed || request.ShellAllowed {
 				t.Fatalf("read-only flags were not cleared: %+v", request)
 			}
-			return Observation{Root: "/repo", CWD: "/repo", Timeout: 30 * time.Second,
+			return Observation{Root: "/repo", CWD: "/repo",
 				Facts: policydomain.CommandFacts{RootDirectory: true, CWDDirectory: true, CWDWithinRoot: true,
-					Timeout: 30 * time.Second, TimeoutValid: true, Writes: true}}
+					Writes: true}}
 		}),
 		Executor: executeFunc(func(policycontract.CommandPolicyRequest, time.Duration) Execution {
 			t.Fatal("denied request reached executor")
@@ -75,9 +75,9 @@ func TestAllowedRunUsesBoundedExecutorAndRedactsOutput(t *testing.T) {
 	service := Service{
 		Clock: runnerClock{at: time.Date(2026, 9, 25, 0, 0, 0, 0, time.UTC)},
 		Observer: observeFunc(func(policycontract.CommandPolicyRequest) Observation {
-			return Observation{Root: "/repo", CWD: "/repo", Timeout: 5 * time.Second,
+			return Observation{Root: "/repo", CWD: "/repo",
 				Facts: policydomain.CommandFacts{RootDirectory: true, CWDDirectory: true, CWDWithinRoot: true,
-					Timeout: 5 * time.Second, TimeoutValid: true, ReadOnlyAllowed: true}}
+					ReadOnlyAllowed: true}}
 		}),
 		Executor: executeFunc(func(request policycontract.CommandPolicyRequest, timeout time.Duration) Execution {
 			if timeout != 5*time.Second || request.Argv[0] != "cat" {

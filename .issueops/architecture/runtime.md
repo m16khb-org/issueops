@@ -93,7 +93,9 @@ actor model live in [`issueops.md`](issueops.md).
 - MCP: `command_policy_check`, `command_fake_run`, `command_policy_audit`, `worker_run_read_only`
 - Resource: `issueops://command-policy`
 - fake runner는 policy 결과와 audit id만 반환하며 명령을 실행하지 않는다.
-- allow/deny 목록은 `internal/adapter/policy/policy_catalog.go`의 catalog table이 source of truth이며, `CommandPolicySummary()`의 `catalog` 필드로 노출된다.
+- allow/deny 목록은 `internal/domain/policy/catalog.go`의 catalog이 source of truth이며, `CommandPolicySummary()`의 `catalog` 필드로 노출된다.
+
+`application/policy.Service`가 경로 관측, 매 평가의 workspace override 로드, PR/MR 생성 명령의 준비된 base 조회와 domain 판정을 조율한다. timeout 해석·환경변수 선택·로컬 경로 인자 분류·대상 브랜치 판정은 domain이 맡는다. 실제 경로와 심볼릭 링크 확인, 환경변수 조회와 process 실행은 adapter에 남는다. 실행은 기존 허용 환경변수만 전달하며, 감사 로그는 `application/audit.Service`가 평가→로그 경로 조회→append 순서를 맡는다. preflight의 커밋 형식 판정은 `domain/preflight.CommitStyleHints`가 소유하고 application이 관측 결과를 조합한다.
 
 필수 필드:
 

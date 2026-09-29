@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"slices"
 	"testing"
-	"time"
 
 	policycontract "issueops/internal/contract/policy"
 	policydomain "issueops/internal/domain/policy"
@@ -25,10 +24,9 @@ func TestServiceLoadsAndClassifiesWorkspaceOverridePerEvaluation(t *testing.T) {
 	service := Service{
 		Observer: observeFunc(func(request policycontract.CommandPolicyRequest) Observation {
 			return Observation{
-				Root: request.WorkspaceRoot, CWD: request.CWD, Timeout: 30 * time.Second,
+				Root: request.WorkspaceRoot, CWD: request.CWD,
 				Facts: policydomain.CommandFacts{
 					RootDirectory: true, CWDDirectory: true, CWDWithinRoot: true,
-					Timeout: 30 * time.Second, TimeoutValid: true,
 				},
 			}
 		}),
@@ -65,11 +63,11 @@ func TestServiceEvaluatesOneObservedSnapshot(t *testing.T) {
 			t.Fatalf("request changed before observation: %+v", request)
 		}
 		return Observation{
-			Root: "/repo", CWD: "/repo", Timeout: 30 * time.Second,
+			Root: "/repo", CWD: "/repo",
 			AuditLogID: "audit-1", GeneratedAt: "2026-09-25T00:00:00Z",
 			Facts: policydomain.CommandFacts{
 				RootDirectory: true, CWDDirectory: true, CWDWithinRoot: true,
-				Timeout: 30 * time.Second, TimeoutValid: true, ReadOnlyAllowed: true,
+				ReadOnlyAllowed: true,
 			},
 		}
 	})}

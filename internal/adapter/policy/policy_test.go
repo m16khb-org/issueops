@@ -96,21 +96,6 @@ func TestCommandPolicyDeniesPathArgsOutsideWorkspace(t *testing.T) {
 	}
 }
 
-func TestPolicyPathCandidatesIgnoreRemoteReferences(t *testing.T) {
-	for _, arg := range []string{
-		"https://github.com/example/repo",
-		"ssh://git@github.com/example/repo",
-		"git@github.com:example/repo",
-	} {
-		if got := policyPathCandidates(arg); len(got) != 0 {
-			t.Fatalf("remote reference %q should not be treated as a local path: %+v", arg, got)
-		}
-	}
-	if got := policyPathCandidates("--file=/tmp/outside"); len(got) != 1 || got[0] != "/tmp/outside" {
-		t.Fatalf("flag path candidate not detected: %+v", got)
-	}
-}
-
 func TestCommandFakeRunDoesNotExecute(t *testing.T) {
 	root := t.TempDir()
 	result := FakeRunCommand(policydomain.CommandPolicyRequest{
@@ -181,5 +166,20 @@ func TestRunReadOnlyCommandUsesEmptyEnvUnlessAllowlisted(t *testing.T) {
 	})
 	if !allowlisted.OK || allowlisted.Stdout != "leaked\n" {
 		t.Fatalf("allowlisted env was not exposed: %+v", allowlisted)
+	}
+}
+
+func TestPolicyTimeoutContract(t *testing.T) {
+	root := t.TempDir()
+	for _, tc := range []struct{ input, duration, deny string }{
+		{"30s", "30s", ""}, {"15m", "15m0s", ""}, {"15m1s", "15m1s", "timeout_exceeds_15m"},
+		{"", "30s", "invalid_timeout"}, {"bad", "0s", "invalid_timeout"}, {"0s", "0s", "invalid_timeout"}, {"-1s", "-1s", "invalid_timeout"},
+	} {
+		t.Run(tc.input, func(t *testing.T) {
+			got := EvaluateCommandPolicy(policydomain.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"git", "status"}, Timeout: tc.input})
+			if got.Timeout != tc.duration || got.Allowed != (tc.deny == "") || (tc.deny != "" && !containsString(got.DenyReasons, tc.deny)) {
+				t.Fatalf("timeout %q: %+v", tc.input, got)
+			}
+		})
 	}
 }

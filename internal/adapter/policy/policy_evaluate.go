@@ -16,16 +16,18 @@ func EvaluateCommandPolicy(req policycontract.CommandPolicyRequest) policycontra
 }
 
 type Evaluator struct {
-	lookup PreparedBaseBranchLookup
+	lookup policyapp.PreparedBaseBranchLookup
 }
 
-func NewEvaluator(lookup PreparedBaseBranchLookup) Evaluator { return Evaluator{lookup: lookup} }
+func NewEvaluator(lookup policyapp.PreparedBaseBranchLookup) Evaluator {
+	return Evaluator{lookup: lookup}
+}
 
 func (e Evaluator) Evaluate(req policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
-	return (policyapp.Service{Observer: commandObserver{lookup: e.lookup}, Overrides: policyOverrideLoader{}}).Evaluate(req)
+	return e.service().Evaluate(req)
 }
 
-type commandObserver struct{ lookup PreparedBaseBranchLookup }
+type commandObserver struct{}
 
 func (observer commandObserver) Observe(req policycontract.CommandPolicyRequest) policyapp.Observation {
 	root := absOrOriginal(req.WorkspaceRoot)
@@ -33,10 +35,6 @@ func (observer commandObserver) Observe(req policycontract.CommandPolicyRequest)
 	canonicalRoot := canonicalPotentialPath(root)
 	canonicalCWD := canonicalPotentialPath(cwd)
 	argv := append([]string{}, req.Argv...)
-	timeout, timeoutErr := time.ParseDuration(req.Timeout)
-	if req.Timeout == "" {
-		timeout = 30 * time.Second
-	}
 	auditID := req.AuditLogID
 	if auditID == "" {
 		auditID = auditid.Generate(req.WorkspaceRoot, req.CWD, req.Argv)
@@ -46,15 +44,10 @@ func (observer commandObserver) Observe(req policycontract.CommandPolicyRequest)
 		RootDirectory:   isDirectory(root),
 		CWDDirectory:    isDirectory(cwd),
 		CWDWithinRoot:   sameOrWithin(canonicalRoot, canonicalCWD),
-		Timeout:         timeout,
-		TimeoutValid:    timeoutErr == nil,
 		PathOutsideRoot: commandReferencesOutsideWorkspace(canonicalRoot, canonicalCWD, argv),
 	}
-	if len(argv) > 0 {
-		facts.PRTargetDeny, facts.PRTargetExpected = pullRequestTargetDeny(root, cwd, argv, observer.lookup)
-	}
 	return policyapp.Observation{
-		Root: root, CWD: cwd, Timeout: timeout, AuditLogID: auditID,
+		Root: root, CWD: cwd, AuditLogID: auditID,
 		GeneratedAt: generatedAt, Facts: facts,
 	}
 }

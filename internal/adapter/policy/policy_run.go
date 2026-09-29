@@ -5,7 +5,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	policyapp "issueops/internal/application/policy"
@@ -40,7 +39,7 @@ func (e Evaluator) Run(request policycontract.CommandPolicyRequest) policycontra
 }
 
 func (e Evaluator) service() policyapp.Service {
-	return policyapp.Service{Observer: commandObserver{lookup: e.lookup}, Overrides: policyOverrideLoader{}, Executor: commandExecutor{}, Clock: systemClock{}}
+	return policyapp.Service{Observer: commandObserver{}, PreparedBaseBranch: e.lookup, Overrides: policyOverrideLoader{}, Executor: commandExecutor{}, Clock: systemClock{}}
 }
 
 type systemClock struct{}
@@ -54,7 +53,7 @@ func (commandExecutor) Execute(request policycontract.CommandPolicyRequest, time
 	defer cancel()
 	cmd := exec.CommandContext(ctx, request.Argv[0], request.Argv[1:]...)
 	cmd.Dir = request.CWD
-	cmd.Env = commandEnv(request.EnvAllowlist)
+	cmd.Env = policydomain.CommandEnvironment(os.Environ(), request.EnvAllowlist)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -67,19 +66,4 @@ func (commandExecutor) Execute(request policycontract.CommandPolicyRequest, time
 		}
 	}
 	return result
-}
-
-func commandEnv(allowlist []string) []string {
-	allowed := map[string]bool{}
-	for _, name := range policydomain.CleanEnvAllowlist(allowlist) {
-		allowed[name] = true
-	}
-	env := []string{}
-	for _, entry := range os.Environ() {
-		name, _, ok := strings.Cut(entry, "=")
-		if ok && allowed[name] {
-			env = append(env, entry)
-		}
-	}
-	return env
 }

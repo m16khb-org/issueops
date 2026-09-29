@@ -16,6 +16,7 @@ import (
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
 	workerdeps "issueops/internal/adapter/worker"
+	policyapp "issueops/internal/application/policy"
 )
 
 // configurePolicyAndGitObservers는 명령 정책 평가·실행과 git 관측을 설치한다.
@@ -28,7 +29,7 @@ func configurePolicyAndGitObservers() {
 	})
 }
 
-func configurePolicyAndGitObserversWithLookup(lookup policyadapter.PreparedBaseBranchLookup) {
+func configurePolicyAndGitObserversWithLookup(lookup policyapp.PreparedBaseBranchLookup) {
 	evaluator := policyadapter.NewEvaluator(lookup)
 	auditdeps.EvaluateCommandPolicy = evaluator.Evaluate
 	gatesdeps.EvaluateCommandPolicy = evaluator.Evaluate

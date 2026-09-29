@@ -3,12 +3,9 @@ package preflight
 import (
 	"fmt"
 	preflightcontract "issueops/internal/contract/preflight"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
-
-var conventionalSubjectRe = regexp.MustCompile(`^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([^)]+\))?!?: .+`)
 
 func listRemotes(root string) []preflightcontract.RemoteInfo {
 	lines := splitLines(GitOut(root, "remote", "-v"))
@@ -32,34 +29,6 @@ func recentCommits(root string, limit int) []preflightcontract.CommitInfo {
 		}
 	}
 	return out
-}
-
-func commitStyleHints(root, issueOpsRoot string, limit int) map[string]any {
-	recent := recentCommits(root, limit)
-	conv := 0
-	for _, c := range recent {
-		if conventionalSubjectRe.MatchString(c.Subject) {
-			conv++
-		}
-	}
-	bodies := strings.Split(GitOut(root, "log", fmt.Sprintf("-%d", limit), "--pretty=format:%B%x1e"), "\x1e")
-	lore := 0
-	for _, body := range bodies {
-		for _, line := range strings.Split(body, "\n") {
-			line = strings.TrimSpace(line)
-			if line == "Lore:" || strings.HasPrefix(line, "Lore-") {
-				lore++
-				break
-			}
-		}
-	}
-	return map[string]any{
-		"recent_count":            len(recent),
-		"conventional_subjects":   conv,
-		"lore_bodies":             lore,
-		"recommended":             "conventional_subject_plus_lore_body",
-		"message_policy_doc_path": filepath.Join(issueOpsRoot, ".issueops", "COMMIT_POLICY.md"),
-	}
 }
 
 func redactRemote(url string) string {

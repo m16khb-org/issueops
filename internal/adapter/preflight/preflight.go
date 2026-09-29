@@ -1,6 +1,7 @@
 package preflight
 
 import (
+	"path/filepath"
 	"strings"
 
 	preflightapp "issueops/internal/application/preflight"
@@ -49,6 +50,8 @@ func (gitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation
 		Remotes:          listRemotes(root),
 		LastCommit:       GitOut(root, "log", "-1", "--pretty=format:%h %s"),
 		RecentCommits:    recentCommits(root, 5),
-		CommitStyleHints: commitStyleHints(root, issueOpsRoot, 10),
+		StyleCommits:     recentCommits(root, 10),
+		CommitBodies:     strings.Split(GitOut(root, "log", "-10", "--pretty=format:%B%x1e"), "\x1e"),
+		CommitPolicyPath: filepath.Join(issueOpsRoot, ".issueops", "COMMIT_POLICY.md"),
 	}
 }
