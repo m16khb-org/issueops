@@ -702,10 +702,18 @@
       "symbols": [
         "func fprintString",
         "func fprintUsage",
-        "func inspectHarness",
         "func newHarnessInspector",
         "func printJSON",
         "func usage"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/assistant_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newCommitService",
+        "func newLintService"
       ]
     },
     {
@@ -1295,7 +1303,6 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureMCPCLI",
         "func issueOpsMCPDependencies",
         "func mcpTools",
         "func runMCP",
@@ -1378,14 +1385,6 @@
       "task": "T20",
       "symbols": [
         "func newQualityDependencies"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/repopath_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureRepoPathResolvers"
       ]
     },
     {
@@ -1531,14 +1530,6 @@
       "task": "T20",
       "symbols": [
         "func configureIssueOpsRuntime"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/tail_capability2_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureTailCapabilities2"
       ]
     },
     {
@@ -2330,34 +2321,18 @@
       ]
     },
     {
-      "path": "cmd/issueops/mcpcli/commitsuggest_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/mcpcli/dependencies.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func fileExists",
-        "func isAPIDocReviewGateError",
-        "func isAPIDocStaticGateError",
         "func isSelfVerificationGateError"
       ]
-    },
-    {
-      "path": "cmd/issueops/mcpcli/docs_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/mcpcli/execution_dependencies.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ConfigureExecution",
         "type ExecutionDeps"
       ]
     },
@@ -2370,12 +2345,6 @@
         "func bindMCPIssueOpsExecutionNextCommand",
         "func mcpExecutionNextCommand"
       ]
-    },
-    {
-      "path": "cmd/issueops/mcpcli/lintdiagnose_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/mcpcli/mcp_daemon_logfilter.go",
@@ -2474,7 +2443,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func handleIssueOpsMCPToolCall",
         "func handleIssueOpsMCPToolCallWithContext",
         "func handleIssueOpsMCPToolCallWithDependencies"
       ]
@@ -2487,9 +2455,7 @@
         "func executionActionRequestFromMCP",
         "func executionActionRequestFromMCPWithAncestry",
         "func executionIssueSnapshotFromMCP",
-        "func handleMCPIssueOpsExecution",
         "func handleMCPIssueOpsExecutionWithContext",
-        "func handleMCPIssueOpsExecutionWithDependencies",
         "func issueOpsExecutionActionDependencies",
         "func issueOpsMCPErrorPayload"
       ]
@@ -2539,6 +2505,7 @@
       "symbols": [
         "func ErrorTextResult",
         "func HandleToolCallWithDependencies",
+        "func MCPDependencies.resolveTarget",
         "func TextResult",
         "func mcpToolDirect",
         "func mcpToolErrorPayload",
@@ -2608,12 +2575,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/mcpcli/webfetch_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/pathutil/path_helpers.go",
       "owner": "inbound",
       "task": "T20",
@@ -2664,12 +2625,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/projectcli/commitsuggest_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/projectcli/dependencies.go",
       "owner": "inbound",
       "task": "T20",
@@ -2691,12 +2646,6 @@
         "func RunRouteDocs",
         "type Dependencies"
       ]
-    },
-    {
-      "path": "cmd/issueops/projectcli/lintdiagnose_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/projectcli/project_cli.go",
@@ -3535,18 +3484,10 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func BuildPrompt",
-        "func SuggestCommit",
-        "func commitEffects.Diff",
-        "func commitEffects.NormalizeRoot",
-        "type commitEffects"
+        "func Effects.Diff",
+        "func Effects.NormalizeRoot",
+        "type Effects"
       ]
-    },
-    {
-      "path": "internal/adapter/commitsuggest/repopath_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
     },
     {
       "path": "internal/adapter/daemon/instance.go",
@@ -5926,18 +5867,10 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func BuildPrompt",
-        "func DiagnoseCommand",
-        "func lintEffects.NormalizeRoot",
-        "func lintEffects.Run",
-        "type lintEffects"
+        "func Effects.NormalizeRoot",
+        "func Effects.Run",
+        "type Effects"
       ]
-    },
-    {
-      "path": "internal/adapter/lintdiagnose/repopath_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
     },
     {
       "path": "internal/adapter/looprun/lifecycle.go",
@@ -13143,6 +13076,14 @@
       ]
     },
     {
+      "path": "internal/domain/commitsuggest/decision.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func NeedsSuggestion"
+      ]
+    },
+    {
       "path": "internal/domain/contextregion/context_region.go",
       "owner": "domain",
       "task": "T20",
@@ -15613,6 +15554,15 @@
         "func NewProfile",
         "func RepoID",
         "func ResolveProfile"
+      ]
+    },
+    {
+      "path": "internal/domain/lintdiagnose/decision.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func FailureTail",
+        "func ValidateCommand"
       ]
     },
     {
@@ -24589,6 +24539,63 @@
       "evidence_tests": [
         "internal/domain/issueops/pr_gate_test.go",
         "internal/application/issueopscycle/pr_gate_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "commit-prompt-eligibility",
+      "source_path": "internal/application/commitsuggest/service.go",
+      "source_symbol": "func Service.Suggest",
+      "responsibility": "only non-whitespace diffs require a host-agent commit prompt",
+      "target": "internal/domain/commitsuggest",
+      "target_symbol": "func NeedsSuggestion",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project",
+        "MCP commit_suggest"
+      ],
+      "evidence_tests": [
+        "internal/domain/commitsuggest/decision_test.go",
+        "cmd/issueops/mcpcli/instance_services_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "lint-command-admission",
+      "source_path": "internal/application/lintdiagnose/service.go",
+      "source_symbol": "func Service.Diagnose",
+      "responsibility": "a command is required after repository resolution and before process execution",
+      "target": "internal/domain/lintdiagnose",
+      "target_symbol": "func ValidateCommand",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project",
+        "MCP lint_diagnose"
+      ],
+      "evidence_tests": [
+        "internal/domain/lintdiagnose/decision_test.go",
+        "cmd/issueops/mcpcli/instance_services_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "lint-failure-tail",
+      "source_path": "internal/application/lintdiagnose/service.go",
+      "source_symbol": "func Service.Diagnose",
+      "responsibility": "failure prompt retains the last 150 log lines including trailing newline semantics",
+      "target": "internal/domain/lintdiagnose",
+      "target_symbol": "func FailureTail",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project",
+        "MCP lint_diagnose"
+      ],
+      "evidence_tests": [
+        "internal/domain/lintdiagnose/decision_test.go",
+        "cmd/issueops/mcpcli/instance_services_test.go"
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"

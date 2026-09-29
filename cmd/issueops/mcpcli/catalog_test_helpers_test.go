@@ -3,8 +3,6 @@ package mcpcli
 import (
 	"encoding/json"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
-	"issueops/cmd/issueops/contractcli"
-	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	statestore "issueops/internal/adapter/outbound/state"
 	augmentapp "issueops/internal/application/selfaugment"
@@ -17,13 +15,19 @@ import (
 func testMCPCatalog() mcpcontract.Catalog { return mcpcatalog.Build() }
 
 func testHandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
-	return HandleToolCallWithDependencies(params, MCPDependencies{Gates: testGatesService(), Channel: testChannelService(), Policy: testPolicyService(), Audit: testAuditService(), Daemon: testDaemonReader(), Worker: testWorkerService(), Loop: testLoopService(), Catalog: testMCPCatalog(), ProjectDocs: testProjectDocsService(), ProjectBootstrap: testBootstrapService(), State: publicStateForTest(), Resources: resourceConfigForTest(), SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
-}
-
-func init() {
-	CompatibilityContract = func() any {
-		return contractcli.BuildCompatibilityContract(clicatalog.Commands(), testMCPCatalog().Tools)
-	}
+	deps := testTransportServices()
+	deps.Gates = testGatesService()
+	deps.Channel = testChannelService()
+	deps.Policy = testPolicyService()
+	deps.Audit = testAuditService()
+	deps.Loop = testLoopService()
+	deps.ProjectDocs = testProjectDocsService()
+	deps.ProjectBootstrap = testBootstrapService()
+	deps.State = publicStateForTest()
+	deps.SelfHistory = historyServiceForTest()
+	deps.SelfState = selfStateForTest()
+	deps.SelfPlanning = planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)
+	return HandleToolCallWithDependencies(params, deps)
 }
 
 func historyServiceForTest() augmentapp.HistoryService {

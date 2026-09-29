@@ -303,7 +303,7 @@ func executionMCPText(t *testing.T, arguments map[string]any) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, rpcErr := mcpcli.HandleToolCallWithDependencies(raw, mcpcli.MCPDependencies{Catalog: mcpcatalog.Build()})
+	result, rpcErr := mcpcli.HandleToolCallWithDependencies(raw, mcpcli.MCPDependencies{Execution: testMCPExecutionDeps(), Catalog: mcpcatalog.Build()})
 	if rpcErr != nil {
 		t.Fatalf("MCP execution call failed at protocol layer: %#v", rpcErr)
 	}

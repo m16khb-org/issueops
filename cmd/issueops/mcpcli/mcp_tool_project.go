@@ -10,19 +10,19 @@ import (
 func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
 	case "harness_inspect":
-		return mcpToolPayload(InspectHarness(argmap.String(call.Arguments, "repo")))
+		return mcpToolPayload(deps.Inspect(argmap.String(call.Arguments, "repo")))
 	case "atomic_commit_preflight":
-		return mcpToolPayload(GitPreflight(ResolveTarget(argmap.String(call.Arguments, "path")), IssueOpsRoot()))
+		return mcpToolPayload(deps.Preflight.Check(deps.resolveTarget(argmap.String(call.Arguments, "path")), deps.Resources.IssueOpsRoot))
 	case "commit_policy":
-		text, err := ReadHarnessFile(".issueops", "COMMIT_POLICY.md")
+		text, err := deps.Resources.ReadHarnessFile(".issueops", "COMMIT_POLICY.md")
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32000, "Cannot read commit policy", err.Error()))
 		}
 		return mcpToolDirect(TextResult(text))
 	case "skill_manifest":
-		return mcpToolPayload(ListSkills(IssueOpsRoot(), skillName))
+		return mcpToolPayload(deps.Skills(deps.Resources.IssueOpsRoot, deps.Resources.SkillName))
 	case "docs_index":
-		return mcpToolPayload(DocsIndex(IssueOpsRoot(), Version))
+		return mcpToolPayload(deps.Resources.DocsIndex(deps.Resources.IssueOpsRoot, deps.Resources.Version))
 	case "project_docs_route":
 		result, err := deps.ProjectDocs.Route(argmap.String(call.Arguments, "repo"), argmap.StringDefault(call.Arguments, "task", "general"))
 		if err != nil {
@@ -75,7 +75,7 @@ func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOut
 		return mcpToolPayload(result)
 	case "api_doc_review":
 		result, err := apidoc.RunReviewWithOptions(apidoc.ReviewOptions{
-			Repo:       ResolveTarget(argmap.String(call.Arguments, "repo")),
+			Repo:       deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 			Files:      argmap.StringSlice(call.Arguments, "files"),
 			All:        argmap.Bool(call.Arguments, "all"),
 			DiffFile:   argmap.String(call.Arguments, "diff_file"),
@@ -89,7 +89,7 @@ func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOut
 		return mcpToolPayload(result)
 	case "api_doc_static_check":
 		result, err := apidoc.RunStaticCheckWithOptions(apidoc.StaticOptions{
-			Repo:  ResolveTarget(argmap.String(call.Arguments, "repo")),
+			Repo:  deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 			Files: argmap.StringSlice(call.Arguments, "files"),
 			All:   argmap.Bool(call.Arguments, "all"),
 			JSON:  true,

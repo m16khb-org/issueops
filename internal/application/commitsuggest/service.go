@@ -2,7 +2,7 @@ package commitsuggest
 
 import (
 	"fmt"
-	"strings"
+	domain "issueops/internal/domain/commitsuggest"
 
 	commitsuggestcontract "issueops/internal/contract/commitsuggest"
 )
@@ -24,7 +24,7 @@ func (service Service) Suggest(req commitsuggestcontract.CommitSuggestRequest) (
 		return commitsuggestcontract.CommitSuggestResult{}, fmt.Errorf("git diff failed: %w", err)
 	}
 	result := commitsuggestcontract.CommitSuggestResult{OK: true, RepoRoot: root, Staged: req.Staged}
-	if strings.TrimSpace(diff) == "" {
+	if !domain.NeedsSuggestion(diff) {
 		return result, nil
 	}
 	result.Executed = true

@@ -1,10 +1,8 @@
 package lintdiagnose
 
 import (
-	"fmt"
-	"strings"
-
 	lintdiagnosecontract "issueops/internal/contract/lintdiagnose"
+	domain "issueops/internal/domain/lintdiagnose"
 )
 
 type Effects interface {
@@ -19,8 +17,8 @@ func (service Service) Diagnose(req lintdiagnosecontract.LintDiagnoseRequest) (l
 	if err != nil {
 		return lintdiagnosecontract.LintDiagnoseResult{}, err
 	}
-	if len(req.CommandArgv) == 0 {
-		return lintdiagnosecontract.LintDiagnoseResult{}, fmt.Errorf("missing command to execute")
+	if err := domain.ValidateCommand(req.CommandArgv); err != nil {
+		return lintdiagnosecontract.LintDiagnoseResult{}, err
 	}
 	output, exitCode, failed := service.Effects.Run(root, req.CommandArgv)
 	result := lintdiagnosecontract.LintDiagnoseResult{
@@ -29,11 +27,7 @@ func (service Service) Diagnose(req lintdiagnosecontract.LintDiagnoseRequest) (l
 	if !failed {
 		return result, nil
 	}
-	lines := strings.Split(output, "\n")
-	if len(lines) > 150 {
-		lines = lines[len(lines)-150:]
-	}
-	result.Prompt = BuildPrompt(exitCode, strings.Join(lines, "\n"))
+	result.Prompt = BuildPrompt(exitCode, domain.FailureTail(output))
 	result.Diagnosis = "command failed; prompt contains the host-agent judgement request"
 	return result, nil
 }

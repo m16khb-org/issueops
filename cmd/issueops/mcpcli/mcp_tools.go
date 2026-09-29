@@ -1,25 +1,31 @@
 package mcpcli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/cmd/issueops/mcpcli/resources"
 	auditapp "issueops/internal/application/audit"
 	channelapp "issueops/internal/application/channel"
+	commitapp "issueops/internal/application/commitsuggest"
 	daemonapp "issueops/internal/application/daemon"
 	gatesapp "issueops/internal/application/gates"
+	lintapp "issueops/internal/application/lintdiagnose"
 	loopapp "issueops/internal/application/looprun"
 	policyapp "issueops/internal/application/policy"
+	preflightapp "issueops/internal/application/preflight"
 	bootstrapapp "issueops/internal/application/projectbootstrap"
 	docsapp "issueops/internal/application/projectdocs"
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
 	workerapp "issueops/internal/application/worker"
 	executionissue "issueops/internal/contract/executionissue"
+	inspectmodel "issueops/internal/contract/inspect"
 	issueopscontract "issueops/internal/contract/issueops"
 	mcpcontract "issueops/internal/contract/mcp"
 	augmentcontract "issueops/internal/contract/selfaugment"
+	webfetchmodel "issueops/internal/contract/webfetch"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
@@ -42,6 +48,16 @@ type MCPToolOutcome struct {
 // MCPDependencies는 server 생성 시 고정된다. 요청 간 package-global dependency
 // cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
+	DefaultTarget string
+	Inspect       func(string) any
+	Preflight     preflightapp.Service
+	Skills        func(string, string) []inspectmodel.SkillInfo
+	Compatibility func() any
+	Commit        commitapp.Service
+	Lint          lintapp.Service
+	Fetch         func(context.Context, webfetchmodel.Request) (webfetchmodel.Result, error)
+	Execution     ExecutionDeps
+
 	Gates            gatesapp.Service
 	Channel          channelapp.Service
 	Policy           policyapp.Service
@@ -122,7 +138,7 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 		func(call MCPToolCall) MCPToolOutcome { return handleGatesMCPToolCall(call, deps.Gates) },
 		func(call MCPToolCall) MCPToolOutcome { return handleChannelMCPToolCall(call, deps.Channel) },
 		func(call MCPToolCall) MCPToolOutcome {
-			return handleAssistantWorkerMCPToolCall(call, deps.Worker, deps.Daemon)
+			return handleAssistantWorkerMCPToolCall(call, deps)
 		},
 		func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) },
 	} {
@@ -184,4 +200,11 @@ func ErrorTextResult(text string) map[string]any {
 	result := TextResult(text)
 	result["isError"] = true
 	return result
+}
+
+func (deps MCPDependencies) resolveTarget(target string) string {
+	if target != "" {
+		return target
+	}
+	return deps.DefaultTarget
 }

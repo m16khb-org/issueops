@@ -47,7 +47,7 @@ func TestMCPIssueOpsExecutionHandlerBindsBaseSyncRequiredErrorNextCommand(t *tes
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/318", "confirm": true,
-	}, MCPDependencies{Catalog: testMCPCatalog(),
+	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(),
 		Resume: func(context.Context, string, issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
 			return issueops.ExecutionResumeResult{}, issueopscontract.NewBaseSyncRequiredError("io-aaaaaaaaaaaa", 7)
 		},
@@ -69,7 +69,7 @@ func TestMCPIssueOpsExecutionTypedErrorObservationFailureHasNoUnboundFallback(t 
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/318", "confirm": true,
-	}, MCPDependencies{Catalog: testMCPCatalog(),
+	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(),
 		Resume: func(context.Context, string, issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
 			return issueops.ExecutionResumeResult{}, issueopscontract.NewBaseSyncRequiredError("io-aaaaaaaaaaaa", 7)
 		},
@@ -93,7 +93,7 @@ func TestMCPIssueOpsExecutionHandlerBindsGeneratedNextCommand(t *testing.T) {
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/303", "confirm": true,
-	}, MCPDependencies{Catalog: testMCPCatalog(),
+	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(),
 		Resume: func(context.Context, string, issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
 			return issueops.ExecutionResumeResult{
 				OK: true, ID: "io-aaaaaaaaaaaa",
@@ -115,7 +115,7 @@ func TestMCPIssueOpsExecutionHandlerObservationFailureHasNoUnboundPayload(t *tes
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/303", "confirm": true,
-	}, MCPDependencies{Catalog: testMCPCatalog(),
+	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(),
 		Resume: func(context.Context, string, issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
 			return issueops.ExecutionResumeResult{
 				OK: true, ID: "io-aaaaaaaaaaaa",
@@ -139,7 +139,7 @@ func TestMCPIssueOpsExecutionHandlerMissingObserverHasNoUnboundPayload(t *testin
 		"host": "codex", "session_id": "session-1", "session_pid": float64(42),
 		"session_started_at": "2026-08-04T00:00:00Z", "session_executable": "/bin/codex",
 		"cwd": "/repo.worktrees/303", "confirm": true,
-	}, MCPDependencies{Catalog: testMCPCatalog(),
+	}, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(),
 		Resume: func(context.Context, string, issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
 			return issueops.ExecutionResumeResult{
 				OK: true, ID: "io-aaaaaaaaaaaa",

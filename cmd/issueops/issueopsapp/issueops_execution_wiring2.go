@@ -2,7 +2,6 @@ package issueopsapp
 
 import (
 	"issueops/cmd/issueops/issueopscli/executioncmd"
-	"issueops/cmd/issueops/mcpcli"
 	issueopscore "issueops/internal/adapter/issueops"
 )
 
@@ -16,12 +15,5 @@ func configureIssueOpsExecutionRunners() {
 		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
 		SyncExecutionBase:            issueopscore.SyncExecutionBase,
 		HandoffCmux:                  issueOpsCmuxHandoffHandler,
-	})
-	mcpcli.ConfigureExecution(mcpcli.ExecutionDeps{
-		ExecuteExecution:             issueopscore.ExecuteExecution,
-		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
-		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
-		SyncExecutionBase:            issueopscore.SyncExecutionBase,
 	})
 }

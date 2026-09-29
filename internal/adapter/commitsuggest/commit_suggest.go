@@ -1,22 +1,12 @@
 package commitsuggest
 
-import (
-	commitsuggestapp "issueops/internal/application/commitsuggest"
-	commitsuggestcontract "issueops/internal/contract/commitsuggest"
-	"os/exec"
-)
+import "os/exec"
 
-func SuggestCommit(req commitsuggestcontract.CommitSuggestRequest) (commitsuggestcontract.CommitSuggestResult, error) {
-	return (commitsuggestapp.Service{Effects: commitEffects{}}).Suggest(req)
-}
+type Effects struct{ Normalize func(string) (string, error) }
 
-func BuildPrompt(diff string) string { return commitsuggestapp.BuildPrompt(diff) }
+func (effects Effects) NormalizeRoot(root string) (string, error) { return effects.Normalize(root) }
 
-type commitEffects struct{}
-
-func (commitEffects) NormalizeRoot(root string) (string, error) { return NormalizeRepoRoot(root) }
-
-func (commitEffects) Diff(root string, staged bool) (string, error) {
+func (Effects) Diff(root string, staged bool) (string, error) {
 	args := []string{"-C", root, "diff"}
 	if staged {
 		args = append(args, "--cached")

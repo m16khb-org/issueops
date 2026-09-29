@@ -9,27 +9,14 @@ import (
 	"issueops/internal/adapter/docs"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/inspect"
+	issueopsadapter "issueops/internal/adapter/issueops"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 	statestore "issueops/internal/adapter/outbound/state"
+	webfetchadapter "issueops/internal/adapter/outbound/webfetch"
 	"issueops/internal/adapter/policy"
 	"issueops/internal/adapter/preflight"
+	preflightapp "issueops/internal/application/preflight"
 )
-
-func configureMCPCLI() {
-	mcpcli.Version = version
-	mcpcli.IssueOpsRoot = issueOpsRoot
-	mcpcli.ResolveTarget = resolveTarget
-	mcpcli.GitPreflight = preflight.GitPreflight
-	mcpcli.ListSkills = inspect.ListSkills
-	mcpcli.ReadHarnessFile = readHarnessFile
-	mcpcli.InspectHarness = func(repo string) any {
-		return inspectHarness(repo)
-	}
-
-	mcpcli.CompatibilityContract = func() any {
-		return compatibilityContract()
-	}
-}
 
 func runMCP() error {
 	return mcpcli.RunMCPWithDependencies(issueOpsMCPDependencies())
@@ -49,7 +36,20 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	root := issueOpsRoot()
 	docsService := newProjectDocsService(resolveTarget(""))
 	policyService := newPolicyService()
+	inspector := newHarnessInspector()
+	compatibility := compatibilityContract()
+	stateRoot := issueopsadapter.IssueOpsStateRoot()
 	return mcpcli.MCPDependencies{
+		DefaultTarget: resolveTarget(""),
+		Inspect:       func(repo string) any { return inspector(repo) },
+		Preflight:     preflightapp.Service{Observer: preflight.GitObserver{}},
+		Skills:        inspect.ListSkills,
+		Compatibility: func() any { return compatibility },
+		Commit:        newCommitService(resolveTarget("")),
+		Lint:          newLintService(resolveTarget("")),
+		Fetch:         webfetchadapter.Fetch,
+		Execution:     mcpcli.ExecutionDeps{ExecuteExecution: issueopsadapter.ExecuteExecution, ObserveNativeProcessAncestry: issueopsadapter.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return stateRoot }},
+
 		Gates:   newGatesService(),
 		Channel: newChannelService(statestore.StateDir()),
 		Policy:  policyService, Audit: newCommandAuditService(policyService),

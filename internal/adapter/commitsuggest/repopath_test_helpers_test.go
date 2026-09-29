@@ -2,10 +2,10 @@ package commitsuggest
 
 import (
 	"issueops/internal/adapter/repopath"
+	app "issueops/internal/application/commitsuggest"
+	model "issueops/internal/contract/commitsuggest"
 )
 
-// production wiring과 같은 repo path resolver를 설치한다. 다른 adapter까지 채우면
-// import 순환이 되므로 자기 것만 설치한다.
-func init() {
-	NormalizeRepoRoot = repopath.NormalizeRoot
+func SuggestCommit(req model.CommitSuggestRequest) (model.CommitSuggestResult, error) {
+	return (app.Service{Effects: Effects{Normalize: repopath.NormalizeRoot}}).Suggest(req)
 }

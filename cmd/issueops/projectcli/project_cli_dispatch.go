@@ -20,9 +20,9 @@ func runProject(deps Dependencies, args []string) error {
 	case "append":
 		return runProjectAppend(deps.Docs, args[1:])
 	case "commit-suggest":
-		return runProjectCommitSuggest(args[1:])
+		return runProjectCommitSuggest(deps.Commit, args[1:])
 	case "lint-diagnose":
-		return runProjectLintDiagnose(args[1:])
+		return runProjectLintDiagnose(deps.Lint, args[1:])
 	default:
 		projectUsage()
 		return fmt.Errorf("unknown project subcommand %q", args[0])

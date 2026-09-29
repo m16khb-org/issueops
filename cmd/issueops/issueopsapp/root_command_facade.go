@@ -27,7 +27,6 @@ func RunRootCommand(args []string) int {
 func wireDependencies() {
 	dependencyWiring.Do(func() {
 		wireBasicCLIDeps()
-		configureMCPCLI()
 	})
 }
 

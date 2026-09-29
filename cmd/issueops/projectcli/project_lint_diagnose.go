@@ -3,11 +3,12 @@ package projectcli
 import (
 	"flag"
 	"fmt"
+	app "issueops/internal/application/lintdiagnose"
 	lintdiagnosecontract "issueops/internal/contract/lintdiagnose"
 	"os"
 )
 
-func runProjectLintDiagnose(args []string) error {
+func runProjectLintDiagnose(service app.Service, args []string) error {
 	fs := flag.NewFlagSet("project lint-diagnose", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -21,7 +22,7 @@ func runProjectLintDiagnose(args []string) error {
 		return fmt.Errorf("missing command to run. Usage: issueops project lint-diagnose [flags] -- <command_to_run...>")
 	}
 
-	result, err := DiagnoseCommand(lintdiagnosecontract.LintDiagnoseRequest{
+	result, err := service.Diagnose(lintdiagnosecontract.LintDiagnoseRequest{
 		RepoRoot:    *repo,
 		CommandArgv: commandArgv,
 	})

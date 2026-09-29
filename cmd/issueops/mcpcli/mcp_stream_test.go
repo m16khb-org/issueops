@@ -18,7 +18,7 @@ func TestServeMCPStreamContextCancelsIdleSDKSession(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		done <- ServeMCPStreamContextWithDependencies(ctx, server, server, io.Discard, MCPDependencies{Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
+		done <- ServeMCPStreamContextWithDependencies(ctx, server, server, io.Discard, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
 	}()
 	cancel()
 
@@ -30,7 +30,7 @@ func TestServeMCPStreamContextCancelsIdleSDKSession(t *testing.T) {
 }
 
 func TestServeMCPStreamListsHarnessTools(t *testing.T) {
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil || len(tools.Tools) == 0 {
 		t.Fatalf("stream tool listing failed: tools=%#v err=%v", tools, err)
@@ -43,7 +43,7 @@ func TestServeMCPStreamListsHarnessTools(t *testing.T) {
 
 func TestServeMCPStreamCarriesPublicationReconcileWithoutInvokingOnHandshake(t *testing.T) {
 	invoked := 0
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(),
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(),
 		Publication: PublicationHandlers{Reconcile: func(context.Context, string, issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
 			invoked++
 			return issueops.ExecutionReconcileResult{}, nil

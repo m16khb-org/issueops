@@ -383,7 +383,6 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 		t.Fatal("unknown policy subcommand should fail")
 	}
 
-	configureMCPCLI()
 	if len(mcpTools()) == 0 || len(mcpResources()) == 0 {
 		t.Fatal("MCP catalog wrappers empty")
 	}

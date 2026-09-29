@@ -28,10 +28,6 @@ func fprintString(w io.Writer, text string) {
 	_, _ = fmt.Fprint(w, text)
 }
 
-func inspectHarness(repoArg string) inspectcontract.InspectInfo {
-	return newHarnessInspector()(repoArg)
-}
-
 func newHarnessInspector() func(string) inspectcontract.InspectInfo {
 	root := issueOpsRoot()
 	home, _ := os.UserHomeDir()

@@ -1,12 +1,16 @@
 package mcpcli
 
 import (
-	commitsuggestadapter "issueops/internal/adapter/commitsuggest"
-	lintdiagnoseadapter "issueops/internal/adapter/lintdiagnose"
+	commitadapter "issueops/internal/adapter/commitsuggest"
+	lintadapter "issueops/internal/adapter/lintdiagnose"
+	"issueops/internal/adapter/repopath"
+	commitapp "issueops/internal/application/commitsuggest"
+	lintapp "issueops/internal/application/lintdiagnose"
 )
 
-// production wiring과 같은 구현을 설치한다.
-func init() {
-	DiagnoseCommand = lintdiagnoseadapter.DiagnoseCommand
-	SuggestCommit = commitsuggestadapter.SuggestCommit
+func testCommitService() commitapp.Service {
+	return commitapp.Service{Effects: commitadapter.Effects{Normalize: repopath.NormalizeRoot}}
+}
+func testLintService() lintapp.Service {
+	return lintapp.Service{Effects: lintadapter.Effects{Normalize: repopath.NormalizeRoot}}
 }

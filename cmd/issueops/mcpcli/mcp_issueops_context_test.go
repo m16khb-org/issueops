@@ -10,12 +10,9 @@ import (
 )
 
 func TestIssueOpsMCPExecutionPropagatesRequestCancellation(t *testing.T) {
-	previous := execDeps
-	defer func() {
-		execDeps = previous
-	}()
+	execution := testExecutionDeps()
 	var observed context.Context
-	execDeps.ExecuteExecution = func(
+	execution.ExecuteExecution = func(
 		ctx context.Context,
 		_ string,
 		_ issueopscontract.ExecutionActionRequest,
@@ -33,7 +30,7 @@ func TestIssueOpsMCPExecutionPropagatesRequestCancellation(t *testing.T) {
 			Name:      "issueops_execution",
 			Arguments: map[string]any{"action": "status", "id": "io-context"},
 		},
-		MCPDependencies{Catalog: testMCPCatalog()},
+		MCPDependencies{Execution: execution, Catalog: testMCPCatalog()},
 	)
 
 	if observed == nil || !errors.Is(observed.Err(), context.Canceled) {

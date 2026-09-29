@@ -148,13 +148,6 @@ func issueOpsExecutionSDKToolHandler(deps MCPDependencies) mcp.ToolHandler {
 	}, "issueops_execution")
 }
 
-// handlerGroupLookup maps each dispatch group to its handler function.
-// New tools only need to be added to the adapter catalog DispatchMap; this
-// lookup stays stable as long as no new handler group is introduced.
-var handlerGroupLookup = map[mcpcontract.DispatchGroup]func(MCPToolCall) MCPToolOutcome{
-	mcpcontract.DispatchIssueOps: handleIssueOpsMCPToolCall,
-}
-
 func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MCPToolOutcome {
 	group, ok := deps.Catalog.Dispatch[name]
 	if !ok {
@@ -164,7 +157,7 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 	}
 	if group == mcpcontract.DispatchAssistantWorker {
 		return func(call MCPToolCall) MCPToolOutcome {
-			return handleAssistantWorkerMCPToolCall(call, deps.Worker, deps.Daemon)
+			return handleAssistantWorkerMCPToolCall(call, deps)
 		}
 	}
 	if group == mcpcontract.DispatchGates {
@@ -185,8 +178,8 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 	if group == mcpcontract.DispatchSelfLoop {
 		return func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) }
 	}
-	if fn, ok := handlerGroupLookup[group]; ok {
-		return fn
+	if group == mcpcontract.DispatchIssueOps {
+		return func(call MCPToolCall) MCPToolOutcome { return handleIssueOpsMCPToolCallWithDependencies(call, deps) }
 	}
 	return func(call MCPToolCall) MCPToolOutcome {
 		return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}

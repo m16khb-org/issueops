@@ -16,11 +16,8 @@ func wireExecutionRunnersForTests() {
 		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
 		SyncExecutionBase:            issueopscore.SyncExecutionBase,
 	})
-	mcpcli.ConfigureExecution(mcpcli.ExecutionDeps{
-		ExecuteExecution:             issueopscore.ExecuteExecution,
-		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
-		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
-		SyncExecutionBase:            issueopscore.SyncExecutionBase,
-	})
+}
+func testMCPExecutionDeps() mcpcli.ExecutionDeps {
+	root := issueopscore.IssueOpsStateRoot()
+	return mcpcli.ExecutionDeps{ExecuteExecution: issueopscore.ExecuteExecution, ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return root }}
 }

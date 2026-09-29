@@ -72,11 +72,11 @@ func runProjectAppend(args []string) error {
 }
 
 func runProjectCommitSuggest(args []string) error {
-	return projectcli.RunCommitSuggest(args)
+	return projectcli.RunCommitSuggest(newCommitService("."), args)
 }
 
 func runProjectLintDiagnose(args []string) error {
-	return projectcli.RunLintDiagnose(args)
+	return projectcli.RunLintDiagnose(newLintService("."), args)
 }
 
 func runStateWrite(args []string) error {

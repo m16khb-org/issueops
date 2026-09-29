@@ -1,9 +1,9 @@
 package prompt_test
 
 import (
-	"issueops/internal/adapter/commitsuggest"
 	"issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/lintdiagnose"
+	"issueops/internal/application/commitsuggest"
+	"issueops/internal/application/lintdiagnose"
 	"issueops/internal/domain/prompt"
 	"os"
 	"path/filepath"

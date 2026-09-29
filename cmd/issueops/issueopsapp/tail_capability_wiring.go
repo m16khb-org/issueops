@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	issueopsclitaildeps "issueops/cmd/issueops/issueopscli"
 	remotecmdtaildeps "issueops/cmd/issueops/issueopscli/remotecmd"
-	mcpclitaildeps "issueops/cmd/issueops/mcpcli"
 	webfetchclitaildeps "issueops/cmd/issueops/webfetchcli"
 	failurecauseadapter "issueops/internal/adapter/failurecause"
 	webfetchadapter "issueops/internal/adapter/outbound/webfetch"
@@ -16,7 +15,6 @@ import (
 // 설치한다. 모두 파일·네트워크·프로세스에 닿는 연산이다.
 func configureTailCapabilities() {
 	issueopsclitaildeps.Resolve = provideradapter.Resolve
-	mcpclitaildeps.Fetch = webfetchadapter.Fetch
 	remotecmdtaildeps.Resolve = provideradapter.Resolve
 	toolconformancetaildeps.ClassifyFailureCause = failurecauseadapter.Classify
 	webfetchclitaildeps.DeterministicFixtures = webfetchadapter.DeterministicFixtures

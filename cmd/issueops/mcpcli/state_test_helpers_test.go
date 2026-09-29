@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/cmd/issueops/mcpcli/resources"
+	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/policy"
 	stateapp "issueops/internal/application/state"
@@ -19,7 +20,7 @@ func testHandlePolicyStateMCPToolCall(call MCPToolCall) MCPToolOutcome {
 	return handlePolicyStateMCPToolCall(call, MCPDependencies{Policy: testPolicyService(), Audit: testAuditService(), State: publicStateForTest()})
 }
 func resourceConfigForTest() resources.Config {
-	return resources.Config{IssueOpsRoot: IssueOpsRoot(), Version: Version, SkillName: skillName, ReadHarnessFile: ReadHarnessFile, StateList: publicStateForTest().List, RouteProjectDocs: testProjectDocsService().Route, DocsIndex: DocsIndex, CommandPolicySummary: policy.CommandPolicySummary}
+	return resources.Config{IssueOpsRoot: IssueOpsRoot(), Version: Version, SkillName: skillName, ReadHarnessFile: ReadHarnessFile, StateList: publicStateForTest().List, RouteProjectDocs: testProjectDocsService().Route, DocsIndex: docs.DocsIndex, CommandPolicySummary: policy.CommandPolicySummary}
 }
 func testHandleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
 	return HandleResourceRead(params, resourceConfigForTest())

@@ -32,5 +32,8 @@ func testBootstrapService() bootstrapapp.Service {
 }
 
 func testProjectDependencies() MCPDependencies {
-	return MCPDependencies{ProjectDocs: testProjectDocsService(), ProjectBootstrap: testBootstrapService()}
+	deps := testTransportServices()
+	deps.ProjectDocs = testProjectDocsService()
+	deps.ProjectBootstrap = testBootstrapService()
+	return deps
 }

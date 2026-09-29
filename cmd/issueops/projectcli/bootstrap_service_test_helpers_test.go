@@ -32,5 +32,5 @@ func testBootstrapService() bootstrapapp.Service {
 }
 
 func testProjectDependencies() Dependencies {
-	return Dependencies{Docs: testProjectDocsService(), Bootstrap: testBootstrapService()}
+	return Dependencies{Commit: testCommitService(), Lint: testLintService(), Docs: testProjectDocsService(), Bootstrap: testBootstrapService()}
 }

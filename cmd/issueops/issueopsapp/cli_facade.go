@@ -22,14 +22,12 @@ func wireBasicCLIDeps() {
 	configureStateDatabases()
 	configureTail5()
 	configureAdapterTail()
-	configureTailCapabilities2()
 	configureTailCapabilities()
 	configureIssueOpsReaders()
 	configureInstallReaders()
 	configureProjectDocReaders()
 	configurePolicyAndGitObservers()
 	configureAdapterStateAccess()
-	configureRepoPathResolvers()
 	configureIssueOpsBenchmark()
 	configureIssueOpsCleanup()
 	configureIssueOpsRemote()
@@ -74,7 +72,7 @@ func runInstall(args []string) error {
 }
 
 func runProject(args []string) error {
-	return projectcli.Run(projectcli.Dependencies{Docs: newProjectDocsService("."), Bootstrap: newProjectBootstrapService(".")}, args)
+	return projectcli.Run(projectcli.Dependencies{Commit: newCommitService("."), Lint: newLintService("."), Docs: newProjectDocsService("."), Bootstrap: newProjectBootstrapService(".")}, args)
 }
 
 func runState(args []string) error {

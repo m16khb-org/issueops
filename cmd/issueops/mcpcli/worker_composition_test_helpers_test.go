@@ -20,5 +20,5 @@ func testWorkerStore() workeradapter.Store {
 func testWorkerService() workerapp.Service { return workerapp.Service{Effects: testWorkerStore()} }
 
 func testHandleAssistantWorkerMCPToolCall(call MCPToolCall) MCPToolOutcome {
-	return handleAssistantWorkerMCPToolCall(call, testWorkerService(), testDaemonReader())
+	return handleAssistantWorkerMCPToolCall(call, testTransportServices())
 }

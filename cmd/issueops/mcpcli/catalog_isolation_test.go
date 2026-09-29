@@ -20,7 +20,7 @@ func TestMCPCatalogValidationIsInstanceScopedAndPrecedesEffects(t *testing.T) {
 			var calls [2]atomic.Int32
 			deps := [2]MCPDependencies{}
 			for i, kind := range []string{"string", "integer"} {
-				deps[i] = MCPDependencies{
+				deps[i] = MCPDependencies{Execution: testExecutionDeps(),
 					Catalog: catalogForReleaseTest(kind),
 					Release: func(_ context.Context, _ string, request issueops.ExecutionReleaseRequest) (issueops.ExecutionResult, error) {
 						calls[i].Add(1)

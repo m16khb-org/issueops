@@ -2,6 +2,7 @@ package mcpcli
 
 import (
 	"encoding/json"
+	"issueops/cmd/issueops/apidoc"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,10 +53,10 @@ export class UsersController {
 }
 
 func TestQualityGateSentinelsAreRecognizedAsNormalMCPOutcomes(t *testing.T) {
-	if !isAPIDocReviewGateError(errAPIDocReviewGateFailed) {
+	if !apidoc.IsReviewGateError(apidoc.ErrReviewGateFailed) {
 		t.Fatal("api doc review gate sentinel should be recognized")
 	}
-	if !isAPIDocStaticGateError(errAPIDocStaticGateFailed) {
+	if !apidoc.IsStaticGateError(apidoc.ErrStaticGateFailed) {
 		t.Fatal("api doc static gate sentinel should be recognized")
 	}
 	if !isSelfVerificationGateError(errSelfVerificationGateFailed) {
