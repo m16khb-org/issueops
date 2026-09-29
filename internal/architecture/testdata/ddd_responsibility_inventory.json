@@ -1230,6 +1230,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/planning_recorder_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newPlanningRecorder"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/policy_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -4303,16 +4311,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/compatibilityreview/compatibility_review.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func Record",
-        "func Validate",
-        "type Store"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/completion_artifacts.go",
       "owner": "adapter",
       "task": "T07",
@@ -4383,16 +4381,6 @@
         "func CycleStartIdentity.StableID",
         "type CycleRecordStore",
         "type CycleStartIdentity"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/devilsadvocate/devils_advocate.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func Record",
-        "func Validate",
-        "type Store"
       ]
     },
     {
@@ -4522,10 +4510,7 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func ensureExecutionRootUnclaimed",
         "func executionNow",
-        "func executionRecordWorkspaceRoot",
-        "func executionWorkspaceRequest",
         "func newExecutionOperationID",
         "func renderExecutionOwnerReportContract"
       ]
@@ -4535,10 +4520,7 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func MaterializeExecutionPreparationDirect",
-        "func NewExecutionPreparationOperationID",
-        "func ResolveExecutionPreparationWorkspace",
-        "func executionPreparationCoreRecord"
+        "func NewExecutionPreparationOperationID"
       ]
     },
     {
@@ -4759,25 +4741,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/intentdesign/intent_design.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func IntentDocument",
-        "func RecordDesignReview",
-        "func RecordIntent",
-        "type Store"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/intentdesign/plan_prep.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func RecordPlanPrep"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issue_create_candidates.go",
       "owner": "adapter",
       "task": "T07",
@@ -4891,19 +4854,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_ledger_recorders.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func RecordIssueOpsDomainReview",
-        "func RecordIssueOpsDomainReviewWithActor",
-        "func ResolveIssueOpsFeedback",
-        "func ResolveIssueOpsFeedbackWithActor",
-        "func recordIssueOpsDomainReview",
-        "func resolveIssueOpsFeedback"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_linked_branch_observation.go",
       "owner": "adapter",
       "task": "T08",
@@ -4944,16 +4894,6 @@
         "func issueOpsPlanPathInsideWorktree",
         "func issueOpsStrictGitRoot",
         "func issueOpsWorktreePathValid"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_regress.go",
-      "owner": "adapter",
-      "task": "T03",
-      "symbols": [
-        "func RegressIssueOpsForReplan",
-        "func RegressIssueOpsForReplanWithActor",
-        "func regressIssueOpsForReplan"
       ]
     },
     {
@@ -5069,27 +5009,7 @@
       "path": "internal/adapter/issueops/package.go",
       "owner": "adapter",
       "task": "T20",
-      "symbols": [
-        "func LastActiveAt",
-        "func RecordIssueOpsCompatibilityReview",
-        "func RecordIssueOpsCompatibilityReviewWithActor",
-        "func RecordIssueOpsDesignReview",
-        "func RecordIssueOpsDesignReviewWithActor",
-        "func RecordIssueOpsDevilsAdvocateReview",
-        "func RecordIssueOpsDevilsAdvocateReviewWithActor",
-        "func RecordIssueOpsIntent",
-        "func RecordIssueOpsIntentWithActor",
-        "func RecordIssueOpsPlanPrep",
-        "func RecordIssueOpsPlanPrepWithActor",
-        "func cleanIssueOpsTextValues",
-        "func issueOpsCompatibilityReviewStore",
-        "func issueOpsIntentDesignStore",
-        "func recordIssueOpsCompatibilityReview",
-        "func recordIssueOpsDesignReview",
-        "func recordIssueOpsDevilsAdvocateReview",
-        "func recordIssueOpsIntent",
-        "func recordIssueOpsPlanPrep"
-      ]
+      "symbols": []
     },
     {
       "path": "internal/adapter/issueops/pathutil/path_helpers.go",
@@ -9552,6 +9472,15 @@
       ]
     },
     {
+      "path": "internal/application/issueopsowner/workspace.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.MaterializeDirect",
+        "func Service.ResolveWorkspace"
+      ]
+    },
+    {
       "path": "internal/application/issueopspreparation/direct_commit.go",
       "owner": "application",
       "task": "T20",
@@ -10051,6 +9980,22 @@
         "func PlanDigestResolver.Digest",
         "type PlanDigestResolver",
         "type PlanDigestSource"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreview/planning_recorder.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func PlanningRecorder.Compatibility",
+        "func PlanningRecorder.Design",
+        "func PlanningRecorder.DevilsAdvocate",
+        "func PlanningRecorder.Intent",
+        "func PlanningRecorder.PlanPrep",
+        "func PlanningRecorder.Regress",
+        "func PlanningRecorder.record",
+        "func PlanningRecorder.touchWrite",
+        "type PlanningRecorder"
       ]
     },
     {
@@ -11367,7 +11312,8 @@
         "type OwnerPlanIdentity",
         "type OwnerPolicyContext",
         "type OwnerResumeArtifacts",
-        "type OwnerSnapshot"
+        "type OwnerSnapshot",
+        "type OwnerWorkspaceLayout"
       ]
     },
     {
@@ -13803,6 +13749,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/owner_workspace.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func OwnerWorkspaceLayout",
+        "func ValidateOwnerWorkspaceParent"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/phase.go",
       "owner": "domain",
       "task": "T20",
@@ -14469,6 +14424,15 @@
       "symbols": [
         "func BuildPlanPrepItem",
         "type PlanPrepItem"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsintent/prepare.go",
+      "owner": "domain",
+      "task": "T03",
+      "symbols": [
+        "func PrepareIntent",
+        "type IntentDraft"
       ]
     },
     {
@@ -25586,6 +25550,167 @@
       ],
       "evidence_tests": [
         "internal/adapter/issueops/execution_api_reseed_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-workspace-layout",
+      "source_path": "internal/adapter/issueops/execution_prepare.go",
+      "source_symbol": "func executionWorkspaceRequest",
+      "responsibility": "derive delegated workspace layout before parent path observation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func OwnerWorkspaceLayout",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsowner/workspace_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-workspace-resolution",
+      "source_path": "internal/adapter/issueops/execution_prepare_bridge.go",
+      "source_symbol": "func ResolveExecutionPreparationWorkspace",
+      "responsibility": "decode preparation snapshot and compose path observations with domain validation",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func Service.ResolveWorkspace",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsowner/workspace_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-direct-materialization",
+      "source_path": "internal/adapter/issueops/execution_prepare_bridge.go",
+      "source_symbol": "func MaterializeExecutionPreparationDirect",
+      "responsibility": "project direct artifacts without requiring owner-context publication",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func Service.MaterializeDirect",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsowner/workspace_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-intent-request-policy",
+      "source_path": "internal/application/issueopsintent/intent.go",
+      "source_symbol": "func RecordIntent",
+      "responsibility": "validate required intent fields and material difference and normalize criteria",
+      "target": "internal/domain/issueopsintent",
+      "target_symbol": "func PrepareIntent",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueopscli_runtime_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopsintent/prepare_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "T20-planning-intent",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func recordIssueOpsIntent",
+      "responsibility": "lock and authorize before request validation, second read and persistence; preserve error guidance",
+      "target": "internal/application/issueopsreview",
+      "target_symbol": "func PlanningRecorder.Intent",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueopscli_runtime_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsreview/planning_recorder_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-planning-planprep",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func recordIssueOpsPlanPrep",
+      "responsibility": "lock and authorize before request validation, second read and persistence; preserve error guidance",
+      "target": "internal/application/issueopsreview",
+      "target_symbol": "func PlanningRecorder.PlanPrep",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueopscli_runtime_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsreview/planning_recorder_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-planning-design",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func recordIssueOpsDesignReview",
+      "responsibility": "lock and authorize before request validation, second read and persistence; preserve error guidance",
+      "target": "internal/application/issueopsreview",
+      "target_symbol": "func PlanningRecorder.Design",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueopscli_runtime_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsreview/planning_recorder_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-planning-compatibility",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func recordIssueOpsCompatibilityReview",
+      "responsibility": "lock and authorize before request validation, second read and persistence; preserve error guidance",
+      "target": "internal/application/issueopsreview",
+      "target_symbol": "func PlanningRecorder.Compatibility",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueopscli_runtime_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsreview/planning_recorder_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-planning-devilsadvocate",
+      "source_path": "internal/adapter/issueops/package.go",
+      "source_symbol": "func recordIssueOpsDevilsAdvocateReview",
+      "responsibility": "lock and authorize before request validation, second read and persistence; preserve error guidance",
+      "target": "internal/application/issueopsreview",
+      "target_symbol": "func PlanningRecorder.DevilsAdvocate",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueopscli_runtime_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsreview/planning_recorder_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-planning-regress",
+      "source_path": "internal/adapter/issueops/issueops_regress.go",
+      "source_symbol": "func regressIssueOpsForReplan",
+      "responsibility": "validate reason before lock then authorize and check children before transition",
+      "target": "internal/application/issueopsreview",
+      "target_symbol": "func PlanningRecorder.Regress",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueopscli_runtime_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_regress_test.go"
       ],
       "status": "migrated"
     }

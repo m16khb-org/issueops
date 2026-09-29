@@ -81,10 +81,18 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		RecordIssueOpsAISlopCleanEvidenceWithActor: func(root, id string, categories, verification []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return reviewapp.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{ReviewMutationStore: issueopscore.NewReviewMutationStore(&actor), Refresh: newCyclePhaseService(&actor).Refresh}, root, id, categories, verification)
 		},
-		RecordIssueOpsCompatibilityReviewWithActor:  issueopscore.RecordIssueOpsCompatibilityReviewWithActor,
-		RecordIssueOpsDesignReviewWithActor:         issueopscore.RecordIssueOpsDesignReviewWithActor,
-		RecordIssueOpsDevilsAdvocateReviewWithActor: issueopscore.RecordIssueOpsDevilsAdvocateReviewWithActor,
-		RecordIssueOpsDomainReviewWithActor:         issueopscore.RecordIssueOpsDomainReviewWithActor,
+		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req issueopscontract.IssueOpsCompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newPlanningRecorder(&actor).Compatibility(root, id, req)
+		},
+		RecordIssueOpsDesignReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newPlanningRecorder(&actor).Design(root, id, req)
+		},
+		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newPlanningRecorder(&actor).DevilsAdvocate(root, id, req)
+		},
+		RecordIssueOpsDomainReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDomainReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.RecordDomainReview(issueopscore.NewReviewMutationStore(&actor), root, id, req)
+		},
 		RecordIssueOpsImplementationReviewWithActor: func(root, id string, req issueopscontract.IssueOpsImplementationReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return reviewapp.RecordImplementationReview(issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), root, id, req)
 		},
@@ -94,17 +102,25 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		RecordIssueOpsSchemaEvidenceWithActor: func(root, id string, req issueopscontract.IssueOpsSchemaEvidenceRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return reviewapp.RecordSchemaEvidence(issueopscore.NewEvidenceReviewStore(&actor, changes.ChangeFingerprint), root, id, req)
 		},
-		RecordIssueOpsIntentWithActor:     issueopscore.RecordIssueOpsIntentWithActor,
-		RecordIssueOpsPlanPrepWithActor:   issueopscore.RecordIssueOpsPlanPrepWithActor,
-		RecordIssueOpsRoutingWithActor:    routing.Record,
-		RegressIssueOpsForReplanWithActor: issueopscore.RegressIssueOpsForReplanWithActor,
+		RecordIssueOpsIntentWithActor: func(root, id string, req issueopscontract.IssueOpsIntentRecordRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newPlanningRecorder(&actor).Intent(root, id, req)
+		},
+		RecordIssueOpsPlanPrepWithActor: func(root, id string, req issueopscontract.IssueOpsPlanPrepRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newPlanningRecorder(&actor).PlanPrep(root, id, req)
+		},
+		RecordIssueOpsRoutingWithActor: routing.Record,
+		RegressIssueOpsForReplanWithActor: func(root, id, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return newPlanningRecorder(&actor).Regress(root, id, reason)
+		},
 		RejectIssueOpsChildWithActor: func(root, parentID, childID, reason string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
 			return newChildValidator(root).Reject(context.Background(), parentID, childID, reason, evidence, &actor)
 		},
-		ResolveIssueOpsFeedbackWithActor: issueopscore.ResolveIssueOpsFeedbackWithActor,
-		ScoreLiveRoutingFidelity:         routing.Score,
-		StageIssueOpsArtifact:            artifacts.Stage,
-		StagedIssueOpsArtifactNames:      artifacts.Names,
+		ResolveIssueOpsFeedbackWithActor: func(root, id string, index int, resolution string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.ResolveFeedback(issueopscore.NewReviewMutationStore(&actor), root, id, index, resolution)
+		},
+		ScoreLiveRoutingFidelity:    routing.Score,
+		StageIssueOpsArtifact:       artifacts.Stage,
+		StagedIssueOpsArtifactNames: artifacts.Names,
 		StartIssueOps: func(stateRoot string, req issueopscontract.IssueOpsStartRequest) (issueopscontract.IssueOpsRecord, error) {
 			return (branchapp.Starter{Records: issueopscore.CycleRecordStore{StateRoot: stateRoot}, Identity: issueopscore.CycleStartIdentity{RunGit: branchpreflight.GitCmd}, Now: time.Now}).Start(context.Background(), req)
 		},

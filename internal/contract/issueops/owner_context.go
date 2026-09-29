@@ -96,3 +96,7 @@ type OwnerResumeArtifacts struct {
 	OwnerPromptPath     string
 	OwnerPromptSHA256   string
 }
+
+type OwnerWorkspaceLayout struct {
+	Root, Branch, BaseBranch, BaseHead, ParentWorktree, ExpectedParent string
+}

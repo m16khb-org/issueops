@@ -97,7 +97,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	if _, err := LinkIssueOpsPlanForTest(issueOpsStateRootForTest(), id, planPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsCompatibilityReview(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsCompatibilityReviewRequest{
+	if _, err := planningRecorderForTest(nil).Compatibility(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsCompatibilityReviewRequest{
 		BackwardCompatibility: []string{"existing IssueOps JSON records remain readable"},
 		SideEffects:           []string{"phase ordering changes are limited to IssueOps lifecycle gates"},
 		RollbackPlan:          "Revert compatibility-review phase and readiness gate.",
@@ -106,7 +106,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsDevilsAdvocateReview(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
+	if _, err := planningRecorderForTest(nil).DevilsAdvocate(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
 		t.Fatal(err)
 	}
 	writeIssueOpsCLIFileForTest(t, worktree, "internal/demo.go", "package demo\n")

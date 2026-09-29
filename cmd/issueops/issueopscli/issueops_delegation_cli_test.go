@@ -273,13 +273,13 @@ func recordIssueOpsCLIParentDelegationPrereqs(t *testing.T, id, planPath string)
 	if _, err := LinkIssueOpsPlanForTest(issueOpsStateRootForTest(), id, planPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsDomainReview(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDomainReviewRequest{
+	if _, err := recordDomainReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDomainReviewRequest{
 		ModelFit:    "delegation cli fixture follows IssueOps domain model",
 		Terminology: []string{"parent cycle", "child cycle"},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsCompatibilityReview(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsCompatibilityReviewRequest{
+	if _, err := planningRecorderForTest(nil).Compatibility(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsCompatibilityReviewRequest{
 		BackwardCompatibility: []string{"existing IssueOps records remain readable"},
 		SideEffects:           []string{"child CLI writes only IssueOps state"},
 		RollbackPlan:          "Revert child CLI dispatch.",
@@ -288,7 +288,7 @@ func recordIssueOpsCLIParentDelegationPrereqs(t *testing.T, id, planPath string)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsDevilsAdvocateReview(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
+	if _, err := planningRecorderForTest(nil).DevilsAdvocate(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
 		t.Fatal(err)
 	}
 }

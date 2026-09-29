@@ -2,11 +2,13 @@ package issueops
 
 import (
 	"context"
+	"encoding/json"
 	app "issueops/internal/application/issueopsowner"
 	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	domain "issueops/internal/domain/issueops"
+	"issueops/internal/port"
 )
 
 type executionOwnerIssue = model.OwnerIssue
@@ -57,4 +59,13 @@ func readExecutionResumeArtifacts(record model.IssueOpsRecord) (executionResumeA
 
 func executionWriterAbsentRecoveryCommand(record model.IssueOpsRecord) string {
 	return app.WriterlessCommand(record)
+}
+
+func executionWorkspaceRequest(record model.IssueOpsRecord, confirm bool) (port.ExecutionWorkspaceRequest, error) {
+	raw, err := json.Marshal(record)
+	if err != nil {
+		return port.ExecutionWorkspaceRequest{}, err
+	}
+	out, err := ownerContextForTest("", nil).ResolveWorkspace(preparationcontract.Snapshot{RecordRaw: raw}, confirm)
+	return port.ExecutionWorkspaceRequest{LifecycleID: out.LifecycleID, SourceRoot: out.SourceRoot, Root: out.Root, Branch: out.Branch, BaseBranch: out.BaseBranch, BaseHead: out.BaseHead, ParentWorktree: out.ParentWorktree, Confirm: out.Confirm}, err
 }

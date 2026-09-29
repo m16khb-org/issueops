@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"issueops/internal/adapter/issueops/intentdesign"
 	"issueops/internal/adapter/outbound/sqlstore"
+	intentapp "issueops/internal/application/issueopsintent"
 	"issueops/internal/contract/issueops"
 	"issueops/internal/domain/issueopsintent"
 	"issueops/internal/domain/secretdetection"
@@ -120,7 +120,7 @@ func materializeStagedArtifacts(stateRoot string, record issueops.IssueOpsRecord
 	// 기록 시각을 넣지 않으므로 같은 내용의 재기록은 같은 바이트가 되고, 내용이
 	// 달라진 재봉인은 plan과 똑같이 불변 writer가 거부한다.
 	if record.Intent != nil {
-		content := []byte(issueopsintent.Render(intentdesign.IntentDocument(record)))
+		content := []byte(issueopsintent.Render(intentapp.IntentDocument(record)))
 		if secretdetection.Contains(string(content)) {
 			// 오류가 staging 표면을 가리키면 사용자가 엉뚱한 곳을 고치므로 record 쪽 명령을 안내한다.
 			return nil, fmt.Errorf("materialize artifact intent: record.intent contains secret-like values; rerun `issueops intent record` with the value redacted, then rerun execution prepare")

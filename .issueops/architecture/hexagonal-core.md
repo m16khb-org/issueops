@@ -245,3 +245,7 @@ self-verify 실행은 root가 저장소 경로와 step adapter를 고정해 `app
 - native 설치 검증은 root가 구성한 `nativeintegration.Validator`를 사용한다. 스킬 목록·호스트별 선택·stable root·Codex hook·Omo extension·hook 활성화 검증 함수를 인스턴스에 보관하며, 전역 setter와 중계 검증 함수는 제거했다. 서로 다른 저장소의 검증기를 준비해도 앞선 검증기의 경로와 설정 비교 기준을 유지한다. 기존 파일 누락·canonical 설정·타사 hook 허용·legacy managed hook 거부·중복 MCP 경고 검사는 그대로 수행한다.
 
 - 웹 조회의 URL·IP 허용 규칙과 벤치마크의 live 사전 조건·fixture 수락·오판 우선순위·채점은 `domain/webfetch`가 소유한다. 주소 판정은 네트워크 실행 기능이 없는 `net/netip`을 사용하며 IPv4-mapped 주소와 zone 주소의 기존 처리를 유지한다. `application/webfetch.URLValidator`는 DNS 조회 후 주소 판정을 적용하고, `Benchmark`는 fixture 재생·live 조회·비교 프로그램 호출과 부분 실패 집계를 조율한다. outbound에는 HTTP·DNS·fixture 서버·비교 프로그램 실행만 둔다. root가 조회 application과 벤치마크를 CLI·MCP·자기 검증에 명시적으로 연결하며, 기존 전역 웹 조회 setter와 outbound 조립 facade를 제거했다. CLI·MCP 직접 호출·SDK는 각각 준비한 HTTP client를 유지한다.
+
+- 실행 준비의 workspace 배치와 부모 경로 일치 조건은 `domain/issueops`가 판단한다. `application/issueopsowner.Service`는 snapshot 해석 후 필요한 경우에만 경로를 관측하고, direct 실행에서는 owner packet 발행 없이 artifact를 구성한다. CLI root는 이 서비스를 준비 흐름에 직접 연결한다. 사용하지 않는 adapter의 root 점유 검사 중복 구현은 제거했으며, 실제 점유 검사는 preparation repository가 계속 수행한다.
+
+- 의도·계획 준비·설계·호환성·악마의 변호인 리뷰와 재계획 기록은 `application/issueopsreview.PlanningRecorder`가 조율한다. 잠금 안에서 권한을 먼저 검사하고 기존 두 번의 조회와 저장 결과를 보존한다. 재계획 사유 검증은 잠금 전에 수행한다. 의도 요청의 필수 내용·실질적인 차이·성공 조건은 `domain/issueopsintent.PrepareIntent`가 검증하며, domain 전용 입력을 사용한다. root는 domain 리뷰와 피드백 해결도 application에 직접 연결하고, adapter의 production 기록 facade는 제거했다. 기존 통합 테스트의 조립 helper는 테스트 파일에만 둔다.

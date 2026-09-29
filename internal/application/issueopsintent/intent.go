@@ -2,33 +2,17 @@ package issueopsintent
 
 import (
 	"fmt"
-	"strings"
 
 	model "issueops/internal/contract/issueops"
 	intentdomain "issueops/internal/domain/issueopsintent"
-	"issueops/internal/domain/policy"
 	"issueops/internal/domain/secretdetection"
 	intentport "issueops/internal/port/issueopsintent"
 )
 
 func RecordIntent(store intentport.Store, stateRoot, id string, req model.IssueOpsIntentRecordRequest) (model.IssueOpsRecord, error) {
-	rawRequest := strings.TrimSpace(req.RawRequest)
-	if rawRequest == "" {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("raw_request is required")
-	}
-	interpretedIntent := strings.TrimSpace(req.InterpretedIntent)
-	if interpretedIntent == "" {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("interpreted_intent is required")
-	}
-	if interpretedIntent == rawRequest {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("interpreted_intent must differ from raw_request")
-	}
-	if !intentdomain.MateriallyDifferentIntent(rawRequest, interpretedIntent) {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("interpreted_intent must materially differ from raw_request")
-	}
-	successCriteria := intentdomain.CleanTextValues(req.SuccessCriteria)
-	if len(successCriteria) == 0 {
-		return model.IssueOpsRecord{OK: false}, fmt.Errorf("success_criteria is required")
+	intent, err := intentdomain.PrepareIntent(intentdomain.IntentDraft{RawRequest: req.RawRequest, InterpretedIntent: req.InterpretedIntent, SuccessCriteria: req.SuccessCriteria, Constraints: req.Constraints, Ambiguities: req.Ambiguities, NonGoals: req.NonGoals})
+	if err != nil {
+		return model.IssueOpsRecord{OK: false}, err
 	}
 	intentClass, err := model.NormalizeIntentClass(req.IntentClass)
 	if err != nil {
@@ -38,16 +22,7 @@ func RecordIntent(store intentport.Store, stateRoot, id string, req model.IssueO
 	if err != nil {
 		return record, err
 	}
-	record.Intent = &model.IssueOpsIntentContract{
-		RawRequest:        policy.RedactFreeform(rawRequest),
-		InterpretedIntent: policy.RedactFreeform(interpretedIntent),
-		SuccessCriteria:   successCriteria,
-		Constraints:       intentdomain.CleanTextValues(req.Constraints),
-		Ambiguities:       intentdomain.CleanTextValues(req.Ambiguities),
-		NonGoals:          intentdomain.CleanTextValues(req.NonGoals),
-		IntentClass:       intentClass,
-		RecordedAt:        store.Now(),
-	}
+	record.Intent = &model.IssueOpsIntentContract{RawRequest: intent.RawRequest, InterpretedIntent: intent.InterpretedIntent, SuccessCriteria: intent.SuccessCriteria, Constraints: intent.Constraints, Ambiguities: intent.Ambiguities, NonGoals: intent.NonGoals, IntentClass: intentClass, RecordedAt: store.Now()}
 	if secretdetection.Contains(intentdomain.Render(IntentDocument(record))) {
 		return model.IssueOpsRecord{OK: false}, fmt.Errorf("intent contains secret-like values; redact them before recording")
 	}

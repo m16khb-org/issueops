@@ -32,20 +32,20 @@ func seedPlannerGates(t *testing.T, stateRoot, id string) {
 			t.Fatalf("seed link issue: %v", err)
 		}
 	}
-	if _, err := issueopscore.RecordIssueOpsIntent(stateRoot, id, issueopscontract.IssueOpsIntentRecordRequest{
+	if _, err := planningRecorderForTest(nil).Intent(stateRoot, id, issueopscontract.IssueOpsIntentRecordRequest{
 		RawRequest: "wiring fixture", InterpretedIntent: "verify the prepare wiring",
 		SuccessCriteria: []string{"prepare returns a bound next command"},
 	}); err != nil {
 		t.Fatalf("seed intent: %v", err)
 	}
-	if _, err := issueopscore.RecordIssueOpsDesignReview(stateRoot, id, issueopscontract.IssueOpsDesignReviewRequest{
+	if _, err := planningRecorderForTest(nil).Design(stateRoot, id, issueopscontract.IssueOpsDesignReviewRequest{
 		ProblemSummary: "wiring fixture", ProposedDesign: "exercise the prepare path",
 		Verification: []string{"design review checked alternatives and risks"}, Approved: true,
 		RefactorPlan: "none", Alternatives: []string{"none"}, Risks: []string{"none"},
 	}); err != nil {
 		t.Fatalf("seed design review: %v", err)
 	}
-	if _, err := issueopscore.RecordIssueOpsDevilsAdvocateReview(stateRoot, id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{
+	if _, err := planningRecorderForTest(nil).DevilsAdvocate(stateRoot, id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{
 		Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"fixture"},
 	}); err != nil {
 		t.Fatalf("seed devils advocate review: %v", err)

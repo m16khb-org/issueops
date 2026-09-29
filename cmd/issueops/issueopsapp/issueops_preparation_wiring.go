@@ -98,12 +98,12 @@ func newIssueOpsPreparationService(stateRoot, id string, deps issueOpsPreparatio
 	})
 	ownerContext := newIssueOpsOwnerContext(stateRoot, deps.ReadIssue)
 	evidence := preparationoutbound.NewEvidence(preparationoutbound.EvidenceDependencies{
-		Workspace: issueops.ResolveExecutionPreparationWorkspace,
+		Workspace: ownerContext.ResolveWorkspace,
 		ReadOwner: func(ctx context.Context, snapshot preparationcontract.Snapshot, _ preparationcontract.Command) (preparationcontract.OwnerEvidence, error) {
 			return ownerContext.ReadPreparationEvidence(ctx, snapshot)
 		},
 		MaterializeDirect: func(_ context.Context, snapshot preparationcontract.Snapshot, receipt preparationcontract.WorkspaceReceipt) error {
-			return issueops.MaterializeExecutionPreparationDirect(stateRoot, snapshot, receipt)
+			return ownerContext.MaterializeDirect(snapshot, receipt)
 		},
 		PrepareOwner: func(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt) (preparationcontract.OwnerArtifacts, error) {
 			return ownerContext.Prepare(ctx, snapshot, command, intent, receipt)
