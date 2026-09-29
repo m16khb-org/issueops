@@ -2,16 +2,12 @@ package channel
 
 import (
 	"errors"
-	"fmt"
 	"io/fs"
-	"sort"
-	"strings"
 	"time"
 
 	channelcontract "issueops/internal/contract/channel"
+	channeldomain "issueops/internal/domain/channel"
 )
-
-var ErrFromRequired = errors.New("from_required")
 
 type Writer interface {
 	Write(channelcontract.Message) error
@@ -29,18 +25,8 @@ type Effects interface {
 type Service struct{ Effects Effects }
 
 func (service Service) Send(req channelcontract.SendRequest) (channelcontract.SendResult, error) {
-	result := channelcontract.SendResult{SchemaVersion: channelcontract.SchemaVersion, Channel: strings.TrimSpace(req.Channel)}
-	req.Channel = strings.TrimSpace(req.Channel)
-	req.From = strings.TrimSpace(req.From)
-	var err error
-	switch {
-	case req.Channel == "":
-		err = errors.New("channel_required")
-	case req.From == "":
-		err = ErrFromRequired
-	case strings.TrimSpace(req.Body) == "":
-		err = errors.New("body_required")
-	}
+	req, err := channeldomain.NormalizeSend(req)
+	result := channelcontract.SendResult{SchemaVersion: channelcontract.SchemaVersion, Channel: req.Channel}
 	if err != nil {
 		result.Error = err.Error()
 		return result, err
@@ -50,15 +36,7 @@ func (service Service) Send(req channelcontract.SendRequest) (channelcontract.Se
 		result.Error = err.Error()
 		return result, err
 	}
-	msg := channelcontract.Message{
-		OK:            true,
-		SchemaVersion: channelcontract.SchemaVersion,
-		ID:            service.Effects.NewID(),
-		Channel:       req.Channel,
-		From:          req.From,
-		Body:          req.Body,
-		CreatedAt:     service.Effects.Now().UTC().Format(time.RFC3339Nano),
-	}
+	msg := channeldomain.SentMessage(req, service.Effects.NewID(), service.Effects.Now())
 	if err := writer.Write(msg); err != nil {
 		result.Error = err.Error()
 		return result, err
@@ -69,11 +47,11 @@ func (service Service) Send(req channelcontract.SendRequest) (channelcontract.Se
 }
 
 func (service Service) Recv(req channelcontract.RecvRequest) (channelcontract.RecvResult, error) {
-	result := channelcontract.RecvResult{SchemaVersion: channelcontract.SchemaVersion, Channel: strings.TrimSpace(req.Channel)}
-	req.Channel = strings.TrimSpace(req.Channel)
-	if req.Channel == "" {
-		result.Error = "channel_required"
-		return result, fmt.Errorf("channel_required")
+	req, err := channeldomain.NormalizeRecv(req)
+	result := channelcontract.RecvResult{SchemaVersion: channelcontract.SchemaVersion, Channel: req.Channel}
+	if err != nil {
+		result.Error = err.Error()
+		return result, err
 	}
 	if !req.Wait {
 		messages, err := service.read(req, nil)
@@ -81,15 +59,11 @@ func (service Service) Recv(req channelcontract.RecvRequest) (channelcontract.Re
 			result.Error = err.Error()
 			return result, err
 		}
-		fillResult(&result, messages)
+		result = channeldomain.Received(result, messages)
 		return result, nil
 	}
-	timeout := channelcontract.DefaultWaitTimeoutSeconds
-	if req.TimeoutSeconds > 0 {
-		timeout = req.TimeoutSeconds
-	}
 	result.Waited = true
-	deadline := service.Effects.Now().Add(time.Duration(timeout) * time.Second)
+	deadline := service.Effects.Now().Add(channeldomain.WaitTimeout(req.TimeoutSeconds))
 	observed := map[string]struct{}{}
 	for {
 		messages, err := service.read(req, observed)
@@ -98,7 +72,7 @@ func (service Service) Recv(req channelcontract.RecvRequest) (channelcontract.Re
 			return result, err
 		}
 		if len(messages) > 0 {
-			fillResult(&result, messages)
+			result = channeldomain.Received(result, messages)
 			return result, nil
 		}
 		if !service.Effects.Now().Before(deadline) {
@@ -106,22 +80,10 @@ func (service Service) Recv(req channelcontract.RecvRequest) (channelcontract.Re
 			result.TimedOut = true
 			return result, nil
 		}
-		remaining := deadline.Sub(service.Effects.Now())
-		poll := time.Millisecond * time.Duration(channelcontract.WaitPollIntervalMS)
-		if remaining < poll {
-			poll = remaining
-		}
+		poll := channeldomain.PollDelay(deadline, service.Effects.Now())
 		if poll > 0 {
 			service.Effects.Wait(poll)
 		}
-	}
-}
-
-func fillResult(result *channelcontract.RecvResult, messages []channelcontract.Message) {
-	result.OK = true
-	result.Messages = messages
-	if len(messages) > 0 {
-		result.LastID = messages[len(messages)-1].ID
 	}
 }
 
@@ -133,19 +95,9 @@ func (service Service) read(req channelcontract.RecvRequest, observed map[string
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(ids)
-	startAt := 0
-	if trimmed := strings.TrimSpace(req.SinceID); trimmed != "" {
-		for i, id := range ids {
-			if id == trimmed {
-				startAt = i + 1
-				break
-			}
-		}
-	}
 	messages := []channelcontract.Message{}
-	for _, id := range ids[startAt:] {
-		if _, alreadyObserved := observed[id]; alreadyObserved {
+	for _, id := range channeldomain.IDsAfter(ids, req.SinceID) {
+		if _, seen := observed[id]; seen {
 			continue
 		}
 		msg, ok, err := service.Effects.Get(id)
@@ -155,13 +107,13 @@ func (service Service) read(req channelcontract.RecvRequest, observed map[string
 		if observed != nil {
 			observed[id] = struct{}{}
 		}
-		if msg.Channel != req.Channel {
-			continue
-		}
-		if req.Limit > 0 && len(messages) >= req.Limit {
+		include, stop := channeldomain.SelectReceived(req, len(messages), msg)
+		if stop {
 			break
 		}
-		messages = append(messages, msg)
+		if include {
+			messages = append(messages, msg)
+		}
 	}
 	return messages, nil
 }

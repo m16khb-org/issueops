@@ -721,7 +721,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func channelDependencies"
+        "func channelDependencies",
+        "func newChannelService"
       ]
     },
     {
@@ -3243,19 +3244,16 @@
       "owner": "adapter",
       "task": "T14",
       "symbols": [
-        "func Recv",
-        "func Send",
-        "func StateRoot",
-        "func channelEffects.Get",
-        "func channelEffects.ListIDs",
-        "func channelEffects.NewID",
-        "func channelEffects.Now",
-        "func channelEffects.Open",
-        "func channelEffects.Wait",
+        "func Store.Get",
+        "func Store.ListIDs",
+        "func Store.NewID",
+        "func Store.Now",
+        "func Store.Open",
+        "func Store.Wait",
         "func messageWriter.Write",
         "func newMessageID",
         "type StateDatabase",
-        "type channelEffects",
+        "type Store",
         "type messageWriter"
       ]
     },
@@ -9065,7 +9063,6 @@
         "func Service.Recv",
         "func Service.Send",
         "func Service.read",
-        "func fillResult",
         "type Effects",
         "type Service",
         "type Writer"
@@ -11359,6 +11356,12 @@
       ]
     },
     {
+      "path": "internal/contract/channel/errors.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": []
+    },
+    {
       "path": "internal/contract/channel/types.go",
       "owner": "contract",
       "task": "T02",
@@ -13081,6 +13084,21 @@
       "task": "T20",
       "symbols": [
         "func Generate"
+      ]
+    },
+    {
+      "path": "internal/domain/channel/messages.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func IDsAfter",
+        "func NormalizeRecv",
+        "func NormalizeSend",
+        "func PollDelay",
+        "func Received",
+        "func SelectReceived",
+        "func SentMessage",
+        "func WaitTimeout"
       ]
     },
     {
@@ -24128,6 +24146,197 @@
         "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
         "internal/domain/issueops/handoff_recovery_test.go",
         "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "channel-send-admission",
+      "source_path": "internal/application/channel/service.go",
+      "source_symbol": "func Service.Send",
+      "responsibility": "Normalize channel and sender, preserve body bytes, and reject in channel/from/body order before opening storage",
+      "target": "internal/domain/channel",
+      "target_symbol": "func NormalizeSend",
+      "task": "T20",
+      "entrypoints": [
+        "channel send",
+        "channel recv",
+        "MCP channel_send",
+        "MCP channel_recv"
+      ],
+      "evidence_tests": [
+        "internal/domain/channel/messages_test.go",
+        "internal/application/channel/service_test.go",
+        "internal/adapter/channel/store_test.go",
+        "cmd/issueops/issueopsapp/channel_instance_wiring_test.go",
+        "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "channel-recv-admission",
+      "source_path": "internal/application/channel/service.go",
+      "source_symbol": "func Service.Recv",
+      "responsibility": "Normalize and require a receive channel before storage access",
+      "target": "internal/domain/channel",
+      "target_symbol": "func NormalizeRecv",
+      "task": "T20",
+      "entrypoints": [
+        "channel send",
+        "channel recv",
+        "MCP channel_send",
+        "MCP channel_recv"
+      ],
+      "evidence_tests": [
+        "internal/domain/channel/messages_test.go",
+        "internal/application/channel/service_test.go",
+        "internal/adapter/channel/store_test.go",
+        "cmd/issueops/issueopsapp/channel_instance_wiring_test.go",
+        "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "channel-message-projection",
+      "source_path": "internal/application/channel/service.go",
+      "source_symbol": "func Service.Send",
+      "responsibility": "Construct schema-versioned accepted messages from the assigned ID and timestamp",
+      "target": "internal/domain/channel",
+      "target_symbol": "func SentMessage",
+      "task": "T20",
+      "entrypoints": [
+        "channel send",
+        "channel recv",
+        "MCP channel_send",
+        "MCP channel_recv"
+      ],
+      "evidence_tests": [
+        "internal/domain/channel/messages_test.go",
+        "internal/application/channel/service_test.go",
+        "internal/adapter/channel/store_test.go",
+        "cmd/issueops/issueopsapp/channel_instance_wiring_test.go",
+        "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "channel-wait-timeout",
+      "source_path": "internal/application/channel/service.go",
+      "source_symbol": "func Service.Recv",
+      "responsibility": "Apply the default wait timeout only for non-positive values",
+      "target": "internal/domain/channel",
+      "target_symbol": "func WaitTimeout",
+      "task": "T20",
+      "entrypoints": [
+        "channel send",
+        "channel recv",
+        "MCP channel_send",
+        "MCP channel_recv"
+      ],
+      "evidence_tests": [
+        "internal/domain/channel/messages_test.go",
+        "internal/application/channel/service_test.go",
+        "internal/adapter/channel/store_test.go",
+        "cmd/issueops/issueopsapp/channel_instance_wiring_test.go",
+        "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "channel-poll-deadline",
+      "source_path": "internal/application/channel/service.go",
+      "source_symbol": "func Service.Recv",
+      "responsibility": "Cap polling delay by the remaining deadline",
+      "target": "internal/domain/channel",
+      "target_symbol": "func PollDelay",
+      "task": "T20",
+      "entrypoints": [
+        "channel send",
+        "channel recv",
+        "MCP channel_send",
+        "MCP channel_recv"
+      ],
+      "evidence_tests": [
+        "internal/domain/channel/messages_test.go",
+        "internal/application/channel/service_test.go",
+        "internal/adapter/channel/store_test.go",
+        "cmd/issueops/issueopsapp/channel_instance_wiring_test.go",
+        "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "channel-cursor-order",
+      "source_path": "internal/application/channel/service.go",
+      "source_symbol": "func Service.read",
+      "responsibility": "Sort IDs and select after an exact cursor; missing cursor restarts from the beginning",
+      "target": "internal/domain/channel",
+      "target_symbol": "func IDsAfter",
+      "task": "T20",
+      "entrypoints": [
+        "channel send",
+        "channel recv",
+        "MCP channel_send",
+        "MCP channel_recv"
+      ],
+      "evidence_tests": [
+        "internal/domain/channel/messages_test.go",
+        "internal/application/channel/service_test.go",
+        "internal/adapter/channel/store_test.go",
+        "cmd/issueops/issueopsapp/channel_instance_wiring_test.go",
+        "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "channel-channel-limit",
+      "source_path": "internal/application/channel/service.go",
+      "source_symbol": "func Service.read",
+      "responsibility": "Select channel membership before applying the positive receive limit",
+      "target": "internal/domain/channel",
+      "target_symbol": "func SelectReceived",
+      "task": "T20",
+      "entrypoints": [
+        "channel send",
+        "channel recv",
+        "MCP channel_send",
+        "MCP channel_recv"
+      ],
+      "evidence_tests": [
+        "internal/domain/channel/messages_test.go",
+        "internal/application/channel/service_test.go",
+        "internal/adapter/channel/store_test.go",
+        "cmd/issueops/issueopsapp/channel_instance_wiring_test.go",
+        "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "channel-receive-result",
+      "source_path": "internal/application/channel/service.go",
+      "source_symbol": "func fillResult",
+      "responsibility": "Preserve the receive message slice and set last ID to the final selected message",
+      "target": "internal/domain/channel",
+      "target_symbol": "func Received",
+      "task": "T20",
+      "entrypoints": [
+        "channel send",
+        "channel recv",
+        "MCP channel_send",
+        "MCP channel_recv"
+      ],
+      "evidence_tests": [
+        "internal/domain/channel/messages_test.go",
+        "internal/application/channel/service_test.go",
+        "internal/adapter/channel/store_test.go",
+        "cmd/issueops/issueopsapp/channel_instance_wiring_test.go",
+        "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
       ],
       "status": "migrated"
     }

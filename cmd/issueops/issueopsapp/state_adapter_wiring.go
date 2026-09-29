@@ -2,7 +2,6 @@ package issueopsapp
 
 import (
 	audit "issueops/internal/adapter/audit"
-	channel "issueops/internal/adapter/channel"
 	issueops "issueops/internal/adapter/issueops"
 	statestore "issueops/internal/adapter/outbound/state"
 )
@@ -15,5 +14,4 @@ func configureAdapterStateAccess() {
 	audit.StateDir = statestore.StateDir
 	audit.WithKeyLock = statestore.WithKeyLock
 	issueops.StateDir = statestore.StateDir
-	channel.StateDir = statestore.StateDir
 }

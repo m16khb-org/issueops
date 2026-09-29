@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
+	channelapp "issueops/internal/application/channel"
 	channelcontract "issueops/internal/contract/channel"
 	"os"
 	"path/filepath"
@@ -11,26 +12,25 @@ import (
 	"time"
 )
 
-// production wiring과 같은 저장소를 설치한다.
-func init() {
-	StateDir = statestore.StateDir
-	GetExisting = sqlstore.GetExisting
-	ListExisting = sqlstore.ListExisting
-	OpenStateDatabase = func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }
+func storeForTest() Store {
+	return Store{Root: filepath.Join(statestore.StateDir(), "channel"), Clock: time.Now, Sleep: time.Sleep, GetExisting: sqlstore.GetExisting, ListExisting: sqlstore.ListExisting, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
 }
 
 func TestSendRecvRoundTripAcrossChannelIsolation(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := Send(channelcontract.SendRequest{Channel: "contract", From: "server", Body: "GET /users -> 200 {id,name}"}); err != nil {
+
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "server", Body: "GET /users -> 200 {id,name}"}); err != nil {
 		t.Fatalf("send 1: %v", err)
 	}
-	if _, err := Send(channelcontract.SendRequest{Channel: "contract", From: "front", Body: "need email too"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "front", Body: "need email too"}); err != nil {
 		t.Fatalf("send 2: %v", err)
 	}
-	if _, err := Send(channelcontract.SendRequest{Channel: "other", From: "server", Body: "noise"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "other", From: "server", Body: "noise"}); err != nil {
 		t.Fatalf("send 3: %v", err)
 	}
-	recv, err := Recv(channelcontract.RecvRequest{Channel: "contract"})
+	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "contract"})
 	if err != nil {
 		t.Fatalf("recv: %v", err)
 	}
@@ -52,11 +52,14 @@ func TestSendRecvRoundTripAcrossChannelIsolation(t *testing.T) {
 
 func TestRecvSinceIDReturnsOnlyNewMessages(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	first, _ := Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "1"})
-	if _, err := Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "2"}); err != nil {
+
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
+	first, _ := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "1"})
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: "2"}); err != nil {
 		t.Fatal(err)
 	}
-	recv, err := Recv(channelcontract.RecvRequest{Channel: "c", SinceID: first.Message.ID})
+	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "c", SinceID: first.Message.ID})
 	if err != nil {
 		t.Fatalf("recv since: %v", err)
 	}
@@ -64,7 +67,7 @@ func TestRecvSinceIDReturnsOnlyNewMessages(t *testing.T) {
 		t.Fatalf("since filter wrong: %+v", recv.Messages)
 	}
 	// 사라진 sinceID는 "처음부터"로 해석한다(위치를 알 근거가 없음).
-	all, err := Recv(channelcontract.RecvRequest{Channel: "c", SinceID: "msg-does-not-exist"})
+	all, err := service.Recv(channelcontract.RecvRequest{Channel: "c", SinceID: "msg-does-not-exist"})
 	if err != nil {
 		t.Fatalf("recv missing-since: %v", err)
 	}
@@ -75,12 +78,15 @@ func TestRecvSinceIDReturnsOnlyNewMessages(t *testing.T) {
 
 func TestRecvLimitBoundsResult(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
 	for _, body := range []string{"1", "2", "3"} {
-		if _, err := Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: body}); err != nil {
+		if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "a", Body: body}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	recv, err := Recv(channelcontract.RecvRequest{Channel: "c", Limit: 2})
+	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "c", Limit: 2})
 	if err != nil {
 		t.Fatalf("recv limit: %v", err)
 	}
@@ -91,11 +97,14 @@ func TestRecvLimitBoundsResult(t *testing.T) {
 
 func TestRecvWaitReturnsImmediatelyWhenMessageExists(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := Send(channelcontract.SendRequest{Channel: "c", From: "server", Body: "ready"}); err != nil {
+
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "c", From: "server", Body: "ready"}); err != nil {
 		t.Fatal(err)
 	}
 	started := time.Now()
-	recv, err := Recv(channelcontract.RecvRequest{Channel: "c", Wait: true, TimeoutSeconds: 5})
+	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "c", Wait: true, TimeoutSeconds: 5})
 	if err != nil {
 		t.Fatalf("recv wait: %v", err)
 	}
@@ -109,15 +118,13 @@ func TestRecvWaitReturnsImmediatelyWhenMessageExists(t *testing.T) {
 
 func TestRecvWaitTimesOutEmpty(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
 	now := time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)
-	previousNow, previousWait := channelNow, channelWait
-	channelNow = func() time.Time { return now }
-	channelWait = func(duration time.Duration) { now = now.Add(duration) }
-	t.Cleanup(func() {
-		channelNow = previousNow
-		channelWait = previousWait
-	})
-	recv, err := Recv(channelcontract.RecvRequest{Channel: "c", Wait: true, TimeoutSeconds: 1})
+	effects.Clock = func() time.Time { return now }
+	effects.Sleep = func(duration time.Duration) { now = now.Add(duration) }
+	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "c", Wait: true, TimeoutSeconds: 1})
 	if err != nil {
 		t.Fatalf("recv wait timeout: %v", err)
 	}
@@ -128,17 +135,18 @@ func TestRecvWaitTimesOutEmpty(t *testing.T) {
 
 func TestRecvWaitBlocksUntilConcurrentSend(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
 	waitStarted := make(chan struct{}, 1)
 	resume := make(chan struct{})
-	previousWait := channelWait
-	channelWait = func(time.Duration) {
+	effects.Sleep = func(time.Duration) {
 		waitStarted <- struct{}{}
 		<-resume
 	}
-	t.Cleanup(func() { channelWait = previousWait })
 	arrived := make(chan channelcontract.RecvResult, 1)
 	go func() {
-		recv, err := Recv(channelcontract.RecvRequest{Channel: "contract", Wait: true, TimeoutSeconds: 15})
+		recv, err := service.Recv(channelcontract.RecvRequest{Channel: "contract", Wait: true, TimeoutSeconds: 15})
 		if err != nil {
 			t.Errorf("wait recv: %v", err)
 		}
@@ -149,7 +157,7 @@ func TestRecvWaitBlocksUntilConcurrentSend(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("receiver did not enter the exact wait seam")
 	}
-	if _, err := Send(channelcontract.SendRequest{Channel: "contract", From: "server", Body: "contract v1"}); err != nil {
+	if _, err := service.Send(channelcontract.SendRequest{Channel: "contract", From: "server", Body: "contract v1"}); err != nil {
 		t.Fatalf("send: %v", err)
 	}
 	close(resume)
@@ -164,14 +172,8 @@ func TestRecvWaitBlocksUntilConcurrentSend(t *testing.T) {
 }
 
 func TestRecvWaitDoesNotRereadObservedRecords(t *testing.T) {
-	previousList, previousGet := ListExisting, GetExisting
-	previousNow, previousWait := channelNow, channelWait
-	t.Cleanup(func() {
-		ListExisting = previousList
-		GetExisting = previousGet
-		channelNow = previousNow
-		channelWait = previousWait
-	})
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
 
 	ids := []string{"msg-old"}
 	records := map[string]channelcontract.Message{
@@ -179,19 +181,19 @@ func TestRecvWaitDoesNotRereadObservedRecords(t *testing.T) {
 		"msg-new": {OK: true, SchemaVersion: channelcontract.SchemaVersion, ID: "msg-new", Channel: "target", From: "b", Body: "new"},
 	}
 	reads := map[string]int{}
-	ListExisting = func(string, string) ([]string, error) {
+	effects.ListExisting = func(string, string) ([]string, error) {
 		return append([]string(nil), ids...), nil
 	}
-	GetExisting = func(_, _, id string) ([]byte, bool, error) {
+	effects.GetExisting = func(_, _, id string) ([]byte, bool, error) {
 		reads[id]++
 		data, err := json.Marshal(records[id])
 		return data, err == nil, err
 	}
 	now := time.Date(2026, 8, 30, 0, 0, 0, 0, time.UTC)
-	channelNow = func() time.Time { return now }
-	channelWait = func(time.Duration) { ids = append(ids, "msg-new") }
+	effects.Clock = func() time.Time { return now }
+	effects.Sleep = func(time.Duration) { ids = append(ids, "msg-new") }
 
-	recv, err := Recv(channelcontract.RecvRequest{Channel: "target", Wait: true, TimeoutSeconds: 1})
+	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "target", Wait: true, TimeoutSeconds: 1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -205,6 +207,9 @@ func TestRecvWaitDoesNotRereadObservedRecords(t *testing.T) {
 
 func TestSendValidation(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
 	cases := []struct {
 		name string
 		req  channelcontract.SendRequest
@@ -214,12 +219,12 @@ func TestSendValidation(t *testing.T) {
 		{"empty body", channelcontract.SendRequest{Channel: "c", From: "a"}},
 	}
 	for _, tc := range cases {
-		result, err := Send(tc.req)
+		result, err := service.Send(tc.req)
 		if err == nil || result.OK {
 			t.Fatalf("%s must fail: %+v %v", tc.name, result, err)
 		}
 	}
-	if _, err := Recv(channelcontract.RecvRequest{}); err == nil {
+	if _, err := service.Recv(channelcontract.RecvRequest{}); err == nil {
 		t.Fatal("recv without channel must fail")
 	}
 }
@@ -229,9 +234,12 @@ func jsonMarshal(v any) ([]byte, error) { return json.MarshalIndent(v, "", "  ")
 func TestMessageIDsSortChronologically(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
+
+	effects := storeForTest()
+	service := channelapp.Service{Effects: &effects}
 	// 저장소에 직접 ID 순서를 강제하는 메시지를 써서 정렬 가정을 검증한다.
 	ids := []string{"msg-000000000000000a-01", "msg-000000000000000b-01", "msg-000000000000000c-01"}
-	db, err := OpenStateDatabase(StateRoot())
+	db, err := effects.OpenDatabase(effects.Root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +251,7 @@ func TestMessageIDsSortChronologically(t *testing.T) {
 		}
 	}
 	_ = filepath.Join(dir)
-	recv, err := Recv(channelcontract.RecvRequest{Channel: "sort"})
+	recv, err := service.Recv(channelcontract.RecvRequest{Channel: "sort"})
 	if err != nil {
 		t.Fatal(err)
 	}

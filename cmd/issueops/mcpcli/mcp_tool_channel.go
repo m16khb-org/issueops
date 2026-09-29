@@ -4,20 +4,21 @@ import (
 	"fmt"
 
 	"issueops/cmd/issueops/mcpcli/argmap"
+	channelapp "issueops/internal/application/channel"
 	channelcontract "issueops/internal/contract/channel"
 )
 
-var channelMCPHandlers = map[string]func(map[string]any) MCPToolOutcome{
+var channelMCPHandlers = map[string]func(map[string]any, channelapp.Service) MCPToolOutcome{
 	"channel_send": handleMCPChannelSend,
 	"channel_recv": handleMCPChannelRecv,
 }
 
-func handleChannelMCPToolCall(call MCPToolCall) MCPToolOutcome {
+func handleChannelMCPToolCall(call MCPToolCall, service channelapp.Service) MCPToolOutcome {
 	handler, ok := channelMCPHandlers[call.Name]
 	if !ok {
 		return MCPToolOutcome{}
 	}
-	return handler(call.Arguments)
+	return handler(call.Arguments, service)
 }
 
 func channelMCPOutcome(payload any, err error, message string) MCPToolOutcome {
@@ -30,8 +31,8 @@ func channelMCPOutcome(payload any, err error, message string) MCPToolOutcome {
 	return mcpToolPayload(payload)
 }
 
-func handleMCPChannelSend(args map[string]any) MCPToolOutcome {
-	result, err := ChannelSend(channelcontract.SendRequest{
+func handleMCPChannelSend(args map[string]any, service channelapp.Service) MCPToolOutcome {
+	result, err := service.Send(channelcontract.SendRequest{
 		Channel: argmap.String(args, "channel"),
 		From:    argmap.String(args, "from"),
 		Body:    argmap.String(args, "body"),
@@ -39,8 +40,8 @@ func handleMCPChannelSend(args map[string]any) MCPToolOutcome {
 	return channelMCPOutcome(result, err, "Channel send failed")
 }
 
-func handleMCPChannelRecv(args map[string]any) MCPToolOutcome {
-	result, err := ChannelRecv(channelcontract.RecvRequest{
+func handleMCPChannelRecv(args map[string]any, service channelapp.Service) MCPToolOutcome {
+	result, err := service.Recv(channelcontract.RecvRequest{
 		Channel:        argmap.String(args, "channel"),
 		SinceID:        argmap.String(args, "since_id"),
 		Wait:           argmap.Bool(args, "wait"),

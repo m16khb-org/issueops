@@ -6,7 +6,6 @@ import (
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/mcpcli/resources"
 	"issueops/cmd/issueops/pathutil"
-	channeladapter "issueops/internal/adapter/channel"
 	"issueops/internal/adapter/docs"
 	gatesadapter "issueops/internal/adapter/gates"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
@@ -24,8 +23,6 @@ func configureMCPCLI() {
 	mcpcli.GatesCheck = gatesadapter.Check
 	mcpcli.GatesInit = gatesadapter.Init
 	mcpcli.GatesAbandon = gatesadapter.Abandon
-	mcpcli.ChannelSend = channeladapter.Send
-	mcpcli.ChannelRecv = channeladapter.Recv
 	mcpcli.GitPreflight = preflight.GitPreflight
 	mcpcli.ListSkills = inspect.ListSkills
 	mcpcli.ReadHarnessFile = readHarnessFile
@@ -57,7 +54,8 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	docsService := newProjectDocsService(resolveTarget(""))
 	policyService := newPolicyService()
 	return mcpcli.MCPDependencies{
-		Policy: policyService, Audit: newCommandAuditService(policyService),
+		Channel: newChannelService(statestore.StateDir()),
+		Policy:  policyService, Audit: newCommandAuditService(policyService),
 		Worker:           newWorkerService(),
 		Daemon:           newDaemonReader(),
 		Catalog:          mcpcatalog.Build(),

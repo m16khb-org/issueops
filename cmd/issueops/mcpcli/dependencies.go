@@ -2,7 +2,6 @@ package mcpcli
 
 import (
 	"errors"
-	channelcontract "issueops/internal/contract/channel"
 	gatescontract "issueops/internal/contract/gates"
 	inspectcontract "issueops/internal/contract/inspect"
 	preflightcontract "issueops/internal/contract/preflight"
@@ -100,12 +99,6 @@ var (
 	GatesCheck   func(gatescontract.CheckRequest) (gatescontract.CheckResult, error)
 	GatesInit    func(gatescontract.InitRequest) (gatescontract.InitResult, error)
 	GatesAbandon func(gatescontract.AbandonRequest) (gatescontract.AbandonResult, error)
-)
-
-// channel 연산도 composition root가 설치한다.
-var (
-	ChannelSend func(channelcontract.SendRequest) (channelcontract.SendResult, error)
-	ChannelRecv func(channelcontract.RecvRequest) (channelcontract.RecvResult, error)
 )
 
 // GitPreflight와 ListSkills는 composition root가 설치한다. MCP tool router는

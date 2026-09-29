@@ -154,7 +154,6 @@ func issueOpsExecutionSDKToolHandler(deps MCPDependencies) mcp.ToolHandler {
 var handlerGroupLookup = map[mcpcontract.DispatchGroup]func(MCPToolCall) MCPToolOutcome{
 	mcpcontract.DispatchIssueOps: handleIssueOpsMCPToolCall,
 	mcpcontract.DispatchGates:    handleGatesMCPToolCall,
-	mcpcontract.DispatchChannel:  handleChannelMCPToolCall,
 }
 
 func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MCPToolOutcome {
@@ -168,6 +167,9 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 		return func(call MCPToolCall) MCPToolOutcome {
 			return handleAssistantWorkerMCPToolCall(call, deps.Worker, deps.Daemon)
 		}
+	}
+	if group == mcpcontract.DispatchChannel {
+		return func(call MCPToolCall) MCPToolOutcome { return handleChannelMCPToolCall(call, deps.Channel) }
 	}
 	if group == mcpcontract.DispatchLoop {
 		return func(call MCPToolCall) MCPToolOutcome { return handleLoopMCPToolCall(call, deps.Loop) }
