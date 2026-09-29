@@ -1,11 +1,6 @@
 package issueopsapp
 
 import (
-	"issueops/internal/adapter/docs"
-	statestore "issueops/internal/adapter/outbound/state"
-	"issueops/internal/adapter/preflight"
-	"issueops/internal/adapter/projectdocs"
-
 	"issueops/cmd/issueops/basiccli"
 	"issueops/cmd/issueops/channelcli"
 	"issueops/cmd/issueops/gatescli"
@@ -17,8 +12,12 @@ import (
 	"issueops/cmd/issueops/statuscli"
 	"issueops/cmd/issueops/webfetchcli"
 	"issueops/cmd/issueops/workercli"
+	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/operationalhealth"
 	"issueops/internal/adapter/orca"
+	statestore "issueops/internal/adapter/outbound/state"
+	"issueops/internal/adapter/preflight"
+	"issueops/internal/adapter/projectdocs"
 )
 
 func wireBasicCLIDeps() {
@@ -109,7 +108,7 @@ func runInstall(args []string) error {
 }
 
 func runProject(args []string) error {
-	return projectcli.Run(args)
+	return projectcli.Run(newProjectDocsService("."), args)
 }
 
 func runState(args []string) error {

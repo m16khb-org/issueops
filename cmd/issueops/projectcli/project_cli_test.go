@@ -18,7 +18,7 @@ func TestRunProject_dispatchesBootstrapText_whenRepoIsPositional(t *testing.T) {
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return Run([]string{"bootstrap", "--dry-run", repo})
+		return Run(testProjectDocsService(), []string{"bootstrap", "--dry-run", repo})
 	})
 
 	// Then
@@ -36,7 +36,7 @@ func TestRunProjectDocs_printsRouteJSON_whenJSONFlagIsSet(t *testing.T) {
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return Run([]string{"docs", "--repo", repo, "--json"})
+		return Run(testProjectDocsService(), []string{"docs", "--repo", repo, "--json"})
 	})
 
 	// Then
@@ -58,7 +58,7 @@ func TestRunProjectRouteDocs_joinsTaskArgs_whenTaskFlagIsOmitted(t *testing.T) {
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunRouteDocs([]string{"--repo", repo, "--json", "architecture", "test"})
+		return RunRouteDocs(testProjectDocsService(), []string{"--repo", repo, "--json", "architecture", "test"})
 	})
 
 	// Then
@@ -77,7 +77,7 @@ func TestRunProjectRouteDocs_joinsTaskArgs_whenTaskFlagIsOmitted(t *testing.T) {
 func TestRunProjectRouteDocs_routesProfilingWithoutCommitReasons(t *testing.T) {
 	repo := t.TempDir()
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunRouteDocs([]string{"--repo", repo, "--task", "performance profiling", "--json"})
+		return RunRouteDocs(testProjectDocsService(), []string{"--repo", repo, "--task", "performance profiling", "--json"})
 	})
 	var result projectdocs.ProjectDocsRouteResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
@@ -101,7 +101,7 @@ func TestRunProjectRecord_recordsADR_whenRequiredFieldsAreProvided(t *testing.T)
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunRecord([]string{
+		return RunRecord(testProjectDocsService(), []string{
 			"--repo", repo,
 			"--kind", "adr",
 			"--title", "Keep project CLI thin",
@@ -141,7 +141,7 @@ func TestRunProject_rejectsMissingAndUnknownSubcommands(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// When
 			stderr, err := captureProjectCLIStderr(t, func() error {
-				return Run(tt.args)
+				return Run(testProjectDocsService(), tt.args)
 			})
 
 			// Then
@@ -160,7 +160,7 @@ func TestRunProjectRecord_returnsValidationError_whenTitleIsMissing(t *testing.T
 	repo := t.TempDir()
 
 	// When
-	err := RunRecord([]string{"--repo", repo, "--kind", "caution", "--summary", "summary"})
+	err := RunRecord(testProjectDocsService(), []string{"--repo", repo, "--kind", "caution", "--summary", "summary"})
 
 	// Then
 	if err == nil || !strings.Contains(err.Error(), "title is required") {

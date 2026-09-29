@@ -10,20 +10,12 @@ const behavioralGuidelines = projectdocdomain.BehavioralGuidelines
 const solidDesignPatternGuidance = projectdocdomain.SolidDesignPatternGuidance
 const engineeringStandardsChecklist = projectdocdomain.EngineeringStandardsChecklist
 
-func normalizeProjectDocRelPath(relPath string) (string, error) {
-	return projectdocdomain.NormalizeRelPath(relPath)
-}
-
 func nonEmptyStrings(values []string) []string {
 	return projectdocdomain.NonEmptyStrings(values)
 }
 
 func appendUnique(values []string, value string) []string {
 	return projectdocdomain.AppendUnique(values, value)
-}
-
-func plannedFileAction(path, content string) string {
-	return PlannedFileAction(path, content)
 }
 
 func sha256Hex(content string) string {

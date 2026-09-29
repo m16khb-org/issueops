@@ -1,10 +1,11 @@
 package projectdocs
 
 import (
-	projectdocadapter "issueops/internal/adapter/projectdoc"
+	"issueops/internal/adapter/projectdoc"
+	docdomain "issueops/internal/domain/projectdoc"
 )
 
-// production wiring과 같은 문서 reader를 설치한다.
-func init() {
-	PlannedFileAction = projectdocadapter.PlannedFileAction
+func plannedFileAction(path, content string) string {
+	return projectdoc.PlannedFileAction(path, content)
 }
+func normalizeProjectDocRelPath(rel string) (string, error) { return docdomain.NormalizeRelPath(rel) }

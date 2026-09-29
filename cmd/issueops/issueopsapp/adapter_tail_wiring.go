@@ -2,7 +2,6 @@ package issueopsapp
 
 import (
 	installclit4deps "issueops/cmd/issueops/installcli"
-	projectclit4deps "issueops/cmd/issueops/projectcli"
 	agyt4deps "issueops/internal/adapter/agy"
 	claudet4deps "issueops/internal/adapter/claude"
 	codext4deps "issueops/internal/adapter/codex"
@@ -81,6 +80,4 @@ func configureAdapterTail() {
 	projectbootstrapt4deps.AnalyzeProjectSignals = projectdocsadapter.AnalyzeProjectSignals
 	projectbootstrapt4deps.RenderAgentsWithBlock = projectdocsadapter.RenderAgentsWithBlock
 	projectbootstrapt4deps.RenderProjectDocs = projectdocsadapter.RenderProjectDocs
-	projectclit4deps.AppendProjectDocsEntry = projectdocsadapter.AppendProjectDocsEntry
-	projectclit4deps.RouteProjectDocs = projectdocsadapter.RouteProjectDocs
 }

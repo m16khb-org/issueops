@@ -8,8 +8,7 @@ import (
 
 // production wiring과 같은 구현을 설치한다.
 func init() {
-	AppendProjectDocsEntry = projectdocsadapter.AppendProjectDocsEntry
-	RouteProjectDocs = projectdocsadapter.RouteProjectDocs
+
 	fingerprintt4d.ReadGitOriginURL = projectdocsadapter.ReadGitOriginURL
 	projectbootstrapt4d.AnalyzeProjectSignals = projectdocsadapter.AnalyzeProjectSignals
 	projectbootstrapt4d.RenderAgentsWithBlock = projectdocsadapter.RenderAgentsWithBlock

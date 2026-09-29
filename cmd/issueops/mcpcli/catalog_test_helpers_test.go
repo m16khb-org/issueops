@@ -17,7 +17,7 @@ import (
 func testMCPCatalog() mcpcontract.Catalog { return mcpcatalog.Build() }
 
 func testHandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
-	return HandleToolCallWithDependencies(params, MCPDependencies{Catalog: testMCPCatalog(), State: publicStateForTest(), Resources: resourceConfigForTest(), SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
+	return HandleToolCallWithDependencies(params, MCPDependencies{Catalog: testMCPCatalog(), ProjectDocs: testProjectDocsService(), State: publicStateForTest(), Resources: resourceConfigForTest(), SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
 }
 
 func init() {

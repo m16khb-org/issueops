@@ -2,31 +2,26 @@ package issueopsapp
 
 import (
 	"io"
+
+	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/mcpcli/resources"
 	"issueops/cmd/issueops/pathutil"
 	channeladapter "issueops/internal/adapter/channel"
 	"issueops/internal/adapter/docs"
 	gatesadapter "issueops/internal/adapter/gates"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/inspect"
 	"issueops/internal/adapter/looprun"
+	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/policy"
 	"issueops/internal/adapter/preflight"
-	"issueops/internal/adapter/projectdocs"
-
-	"issueops/cmd/issueops/mcpcli"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
-	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 )
 
 func configureMCPCLI() {
 	mcpcli.Version = version
 	mcpcli.IssueOpsRoot = issueOpsRoot
 	mcpcli.ResolveTarget = resolveTarget
-	mcpcli.RouteProjectDocs = projectdocs.RouteProjectDocs
-	mcpcli.ReadProjectDoc = projectdocs.ReadProjectDoc
-	mcpcli.ReviseProjectDoc = projectdocs.ReviseProjectDoc
-	mcpcli.AppendProjectDocsEntry = projectdocs.AppendProjectDocsEntry
 	mcpcli.LoopStart = looprun.Start
 	mcpcli.LoopRecordAttempt = looprun.RecordAttempt
 	mcpcli.LoopStop = looprun.Stop
@@ -66,13 +61,15 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	state := stateDependencies()
 	root := issueOpsRoot()
+	docsService := newProjectDocsService(resolveTarget(""))
 	return mcpcli.MCPDependencies{
-		Catalog: mcpcatalog.Build(),
-		State:   mcpcli.StateDependencies{Write: state.Write, Read: state.Read, List: state.List, Prune: state.Prune, Doctor: state.Doctor, Maintain: state.Maintain},
+		Catalog:     mcpcatalog.Build(),
+		ProjectDocs: docsService,
+		State:       mcpcli.StateDependencies{Write: state.Write, Read: state.Read, List: state.List, Prune: state.Prune, Doctor: state.Doctor, Maintain: state.Maintain},
 		Resources: resources.Config{
 			IssueOpsRoot: root, Version: version, SkillName: skillName,
 			ReadHarnessFile: func(parts ...string) (string, error) { return pathutil.ReadHarnessFile(root, parts...) },
-			StateList:       state.List, RouteProjectDocs: projectdocs.RouteProjectDocs, DocsIndex: docs.DocsIndex, CommandPolicySummary: policy.CommandPolicySummary,
+			StateList:       state.List, RouteProjectDocs: docsService.Route, DocsIndex: docs.DocsIndex, CommandPolicySummary: policy.CommandPolicySummary,
 		},
 		SelfHistory:  newSelfWorkflowHistory(statestore.StateDir()),
 		SelfState:    newSelfWorkflowState(statestore.StateDir()),

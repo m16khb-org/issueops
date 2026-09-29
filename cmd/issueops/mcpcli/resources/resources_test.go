@@ -6,7 +6,6 @@ import (
 	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/policy"
-	"issueops/internal/adapter/projectdocs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -28,7 +27,7 @@ func TestHandleResourceReadReturnsJSONResources(t *testing.T) {
 	}
 
 	config := Config{
-		RouteProjectDocs:     projectdocs.RouteProjectDocs,
+		RouteProjectDocs:     testProjectDocsService().Route,
 		CommandPolicySummary: policy.CommandPolicySummary,
 		IssueOpsRoot:         issueOpsRoot,
 		Version:              "test-version",

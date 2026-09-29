@@ -1,23 +1,25 @@
 package projectcli
 
-func Run(args []string) error {
-	return runProject(args)
+import docsapp "issueops/internal/application/projectdocs"
+
+func Run(docs docsapp.Service, args []string) error {
+	return runProject(docs, args)
 }
 
 func RunBootstrap(args []string) error {
 	return runProjectBootstrap(args)
 }
 
-func RunDocs(args []string) error {
-	return runProjectDocs(args)
+func RunDocs(docs docsapp.Service, args []string) error {
+	return runProjectDocs(docs, args)
 }
 
-func RunRouteDocs(args []string) error {
-	return runProjectRouteDocs(args)
+func RunRouteDocs(docs docsapp.Service, args []string) error {
+	return runProjectRouteDocs(docs, args)
 }
 
-func RunRecord(args []string) error {
-	return runProjectAppend(args)
+func RunRecord(docs docsapp.Service, args []string) error {
+	return runProjectAppend(docs, args)
 }
 
 func RunCommitSuggest(args []string) error {

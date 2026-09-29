@@ -7,7 +7,6 @@ import (
 	"issueops/internal/adapter/lifecycle"
 	"issueops/internal/adapter/lintdiagnose"
 	"issueops/internal/adapter/projectbootstrap"
-	"issueops/internal/adapter/projectdocs"
 	"issueops/internal/adapter/repopath"
 )
 
@@ -22,5 +21,4 @@ func configureRepoPathResolvers() {
 	lintdiagnose.NormalizeRepoRoot = repopath.NormalizeRoot
 	commitsuggest.NormalizeRepoRoot = repopath.NormalizeRoot
 	projectbootstrap.NormalizeRepoRoot = repopath.NormalizeRoot
-	projectdocs.NormalizeRepoRoot = repopath.NormalizeRoot
 }

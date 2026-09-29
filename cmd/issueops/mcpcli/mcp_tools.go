@@ -3,19 +3,18 @@ package mcpcli
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/cmd/issueops/mcpcli/resources"
-	verifyapp "issueops/internal/application/selfverify"
-	augmentcontract "issueops/internal/contract/selfaugment"
-
+	docsapp "issueops/internal/application/projectdocs"
 	augmentapp "issueops/internal/application/selfaugment"
+	verifyapp "issueops/internal/application/selfverify"
 	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
 	mcpcontract "issueops/internal/contract/mcp"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
-
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
 type MCPToolCall struct {
@@ -35,6 +34,7 @@ type MCPToolOutcome struct {
 // MCPDependencies는 server 생성 시 고정된다. 요청 간 package-global dependency
 // cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
+	ProjectDocs  docsapp.Service
 	State        StateDependencies
 	Resources    resources.Config
 	SelfVerify   func(verifyapp.LoopRequest) (augmentcontract.SelfAugmentResult, error)
@@ -97,7 +97,7 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 		return nil, validationErr
 	}
 	for _, handler := range []func(MCPToolCall) MCPToolOutcome{
-		handleProjectMCPToolCall,
+		func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps.ProjectDocs) },
 		func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps.State) },
 		func(call MCPToolCall) MCPToolOutcome {
 			return handleIssueOpsMCPToolCallWithDependencies(call, deps)

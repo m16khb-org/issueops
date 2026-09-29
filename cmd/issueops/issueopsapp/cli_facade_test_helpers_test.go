@@ -59,15 +59,15 @@ func runProjectBootstrap(args []string) error {
 }
 
 func runProjectDocs(args []string) error {
-	return projectcli.RunDocs(args)
+	return projectcli.RunDocs(newProjectDocsService("."), args)
 }
 
 func runProjectRouteDocs(args []string) error {
-	return projectcli.RunRouteDocs(args)
+	return projectcli.RunRouteDocs(newProjectDocsService("."), args)
 }
 
 func runProjectAppend(args []string) error {
-	return projectcli.RunRecord(args)
+	return projectcli.RunRecord(newProjectDocsService("."), args)
 }
 
 func runProjectCommitSuggest(args []string) error {

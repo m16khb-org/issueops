@@ -7,7 +7,6 @@ import (
 	inspectcontract "issueops/internal/contract/inspect"
 	loopruncontract "issueops/internal/contract/looprun"
 	preflightcontract "issueops/internal/contract/preflight"
-	projectdocscontract "issueops/internal/contract/projectdocs"
 	"os"
 	"path/filepath"
 
@@ -121,14 +120,6 @@ var (
 var (
 	ChannelSend func(channelcontract.SendRequest) (channelcontract.SendResult, error)
 	ChannelRecv func(channelcontract.RecvRequest) (channelcontract.RecvResult, error)
-)
-
-// project docs 연산은 composition root가 설치한다.
-var (
-	RouteProjectDocs       func(repoRoot, task string) (projectdocscontract.ProjectDocsRouteResult, error)
-	ReadProjectDoc         func(repoRoot, relPath string) (projectdocscontract.ProjectDocsReadResult, error)
-	ReviseProjectDoc       func(projectdocscontract.ProjectDocsReviseRequest) (projectdocscontract.ProjectDocsReviseResult, error)
-	AppendProjectDocsEntry func(projectdocscontract.ProjectDocsAppendRequest) (projectdocscontract.ProjectDocsAppendResult, error)
 )
 
 // GitPreflight와 ListSkills는 composition root가 설치한다. MCP tool router는

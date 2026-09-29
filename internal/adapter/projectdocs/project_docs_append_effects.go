@@ -8,20 +8,20 @@ import (
 	projectdocscontract "issueops/internal/contract/projectdocs"
 )
 
-type appendFileEffects struct{}
+type AppendFiles struct{}
 
-func (appendFileEffects) Path(root, rel string) string {
+func (AppendFiles) Path(root, rel string) string {
 	return filepath.Join(root, filepath.FromSlash(rel))
 }
-func (appendFileEffects) Exists(path string) bool {
+func (AppendFiles) Exists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
 }
-func (appendFileEffects) EnsureDir(path string) error { return os.MkdirAll(path, 0o755) }
-func (appendFileEffects) Write(path, content string) error {
+func (AppendFiles) EnsureDir(path string) error { return os.MkdirAll(path, 0o755) }
+func (AppendFiles) Write(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0o644)
 }
-func (appendFileEffects) Render(kind, name, description string, request projectdocscontract.ProjectDocsAppendRequest, now time.Time) string {
+func (AppendFiles) Render(kind, name, description string, request projectdocscontract.ProjectDocsAppendRequest, now time.Time) string {
 	return renderProjectDocsAppendRecordFile(kind, name, description, request, now)
 }
-func (appendFileEffects) Now() time.Time { return time.Now() }
+func (AppendFiles) Now() time.Time { return time.Now() }

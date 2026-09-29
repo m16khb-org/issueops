@@ -4,7 +4,6 @@ import (
 	"issueops/internal/adapter/hookprompt"
 	"issueops/internal/adapter/projectbootstrap"
 	"issueops/internal/adapter/projectdoc"
-	"issueops/internal/adapter/projectdocs"
 )
 
 // configureProjectDocReaders는 프로젝트 문서 탐색과 파일 상태 판정을 설치한다.
@@ -15,5 +14,4 @@ func configureProjectDocReaders() {
 	hookprompt.DiscoverProjectDocs = projectdoc.DiscoverProjectDocs
 	hookprompt.FormatProjectDocCatalog = projectdoc.FormatProjectDocCatalog
 	projectbootstrap.PlannedFileAction = projectdoc.PlannedFileAction
-	projectdocs.PlannedFileAction = projectdoc.PlannedFileAction
 }

@@ -1,11 +1,16 @@
 package projectdocs
 
-import (
-	"issueops/internal/adapter/repopath"
-)
+import docscontract "issueops/internal/contract/projectdocs"
 
-// production wiring과 같은 repo path resolver를 설치한다. 다른 adapter까지 채우면
-// import 순환이 되므로 자기 것만 설치한다.
-func init() {
-	NormalizeRepoRoot = repopath.NormalizeRoot
+func ReadProjectDoc(root, rel string) (docscontract.ProjectDocsReadResult, error) {
+	return testProjectDocsService().Read(root, rel)
+}
+func ReviseProjectDoc(request docscontract.ProjectDocsReviseRequest) (docscontract.ProjectDocsReviseResult, error) {
+	return testProjectDocsService().Revise(request)
+}
+func RouteProjectDocs(root, task string) (docscontract.ProjectDocsRouteResult, error) {
+	return testProjectDocsService().Route(root, task)
+}
+func AppendProjectDocsEntry(request docscontract.ProjectDocsAppendRequest) (docscontract.ProjectDocsAppendResult, error) {
+	return testProjectDocsService().Append(request)
 }

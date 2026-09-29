@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/projectdocs"
 	projectdoc "issueops/internal/domain/projectdoc"
 	projectdocdomain "issueops/internal/domain/projectdoc"
 )
@@ -134,7 +133,7 @@ func TestRouteProjectDocsForPreciseTasks(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.task, func(t *testing.T) {
-			got, err := projectdocs.RouteProjectDocs(root, tc.task)
+			got, err := testProjectDocsService().Route(root, tc.task)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -6,14 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/projectdocs"
 	projectdocscontract "issueops/internal/contract/projectdocs"
 	projectdoc "issueops/internal/domain/projectdoc"
 )
 
 func TestAppendProjectDocsEntryWritesCautionsAndADR(t *testing.T) {
 	root := t.TempDir()
-	caution, err := projectdocs.AppendProjectDocsEntry(projectdocscontract.ProjectDocsAppendRequest{
+	caution, err := testProjectDocsService().Append(projectdocscontract.ProjectDocsAppendRequest{
 		RepoRoot:   root,
 		Kind:       "caution",
 		Title:      "MCP route over-read fixed",
@@ -36,7 +35,7 @@ func TestAppendProjectDocsEntryWritesCautionsAndADR(t *testing.T) {
 		}
 	}
 
-	adr, err := projectdocs.AppendProjectDocsEntry(projectdocscontract.ProjectDocsAppendRequest{
+	adr, err := testProjectDocsService().Append(projectdocscontract.ProjectDocsAppendRequest{
 		RepoRoot:     root,
 		Kind:         "adr",
 		Title:        "Use task-routed project docs",
@@ -74,7 +73,7 @@ func TestReadAndReviseProjectDocRequireSHAConsensus(t *testing.T) {
 	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
-	read, err := projectdocs.ReadProjectDoc(root, ".issueops/TESTING.md")
+	read, err := testProjectDocsService().Read(root, ".issueops/TESTING.md")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +81,7 @@ func TestReadAndReviseProjectDocRequireSHAConsensus(t *testing.T) {
 		t.Fatalf("unexpected read result: %+v", read)
 	}
 	content := read.Content + "\n## Repo-specific evidence\n\n- Evidence: test updated through project_docs_revise.\n"
-	if _, err := projectdocs.ReviseProjectDoc(projectdocscontract.ProjectDocsReviseRequest{
+	if _, err := testProjectDocsService().Revise(projectdocscontract.ProjectDocsReviseRequest{
 		RepoRoot: root,
 		RelPath:  "TESTING.md",
 		Content:  content,
@@ -91,7 +90,7 @@ func TestReadAndReviseProjectDocRequireSHAConsensus(t *testing.T) {
 	}); err == nil || !strings.Contains(err.Error(), "expected_sha256 is required") {
 		t.Fatalf("expected missing sha error, got %v", err)
 	}
-	dry, err := projectdocs.ReviseProjectDoc(projectdocscontract.ProjectDocsReviseRequest{
+	dry, err := testProjectDocsService().Revise(projectdocscontract.ProjectDocsReviseRequest{
 		RepoRoot:       root,
 		RelPath:        "TESTING.md",
 		Content:        content,
@@ -108,7 +107,7 @@ func TestReadAndReviseProjectDocRequireSHAConsensus(t *testing.T) {
 	if strings.Contains(mustRead(t, filepath.Join(root, projectdoc.ProjectDocsDir, "TESTING.md")), "Repo-specific evidence") {
 		t.Fatalf("dry-run wrote the document")
 	}
-	written, err := projectdocs.ReviseProjectDoc(projectdocscontract.ProjectDocsReviseRequest{
+	written, err := testProjectDocsService().Revise(projectdocscontract.ProjectDocsReviseRequest{
 		RepoRoot:       root,
 		RelPath:        ".issueops/TESTING.md",
 		Content:        content,
@@ -138,7 +137,7 @@ func TestAppendWritesRecordFileAndPreservesRootIndex(t *testing.T) {
 	adrRoot := filepath.Join(root, projectdoc.ProjectDocsDir, "ADR.md")
 	rootSHA := projectdoc.SHA256Hex(mustRead(t, adrRoot))
 
-	res, err := projectdocs.AppendProjectDocsEntry(projectdocscontract.ProjectDocsAppendRequest{
+	res, err := testProjectDocsService().Append(projectdocscontract.ProjectDocsAppendRequest{
 		RepoRoot: root,
 		Kind:     "adr",
 		Title:    "Folder-first project docs",
@@ -163,7 +162,7 @@ func TestAppendWritesRecordFileAndPreservesRootIndex(t *testing.T) {
 		t.Fatalf("modular append modified the family root index")
 	}
 	// Same-title collision must produce a distinct file, not overwrite.
-	second, err := projectdocs.AppendProjectDocsEntry(projectdocscontract.ProjectDocsAppendRequest{
+	second, err := testProjectDocsService().Append(projectdocscontract.ProjectDocsAppendRequest{
 		RepoRoot: root,
 		Kind:     "adr",
 		Title:    "Folder-first project docs",
@@ -185,7 +184,7 @@ func TestRouteAttachesFamilyOverviewInModularRepo(t *testing.T) {
 	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
-	route, err := projectdocs.RouteProjectDocs(root, "test")
+	route, err := testProjectDocsService().Route(root, "test")
 	if err != nil {
 		t.Fatal(err)
 	}

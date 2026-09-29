@@ -2,7 +2,6 @@ package projectbootstrap
 
 import (
 	lifecyclepkg "issueops/internal/adapter/lifecycle"
-	projectdocspkg "issueops/internal/adapter/projectdocs"
 	"issueops/internal/adapter/repopath"
 )
 
@@ -11,5 +10,4 @@ import (
 func init() {
 	NormalizeRepoRoot = repopath.NormalizeRoot
 	lifecyclepkg.NormalizeRepoRoot = repopath.NormalizeRoot
-	projectdocspkg.NormalizeRepoRoot = repopath.NormalizeRoot
 }

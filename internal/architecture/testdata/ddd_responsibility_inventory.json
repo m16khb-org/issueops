@@ -1545,6 +1545,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/project_docs_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newProjectDocsService"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/projectbootstrap_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -2876,12 +2884,6 @@
         "func parseCommandPolicyFlags",
         "func parseCommandPolicyRunFlags"
       ]
-    },
-    {
-      "path": "cmd/issueops/projectcli/adapter_tail_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/projectcli/commitsuggest_dependencies.go",
@@ -8027,8 +8029,6 @@
         "func appendUnique",
         "func ensureDocMetaFrontmatter",
         "func nonEmptyStrings",
-        "func normalizeProjectDocRelPath",
-        "func plannedFileAction",
         "func sha256Hex"
       ]
     },
@@ -8043,25 +8043,17 @@
       ]
     },
     {
-      "path": "internal/adapter/projectdocs/project_docs_append.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": [
-        "func AppendProjectDocsEntry"
-      ]
-    },
-    {
       "path": "internal/adapter/projectdocs/project_docs_append_effects.go",
       "owner": "adapter",
       "task": "T13",
       "symbols": [
-        "func appendFileEffects.EnsureDir",
-        "func appendFileEffects.Exists",
-        "func appendFileEffects.Now",
-        "func appendFileEffects.Path",
-        "func appendFileEffects.Render",
-        "func appendFileEffects.Write",
-        "type appendFileEffects"
+        "func AppendFiles.EnsureDir",
+        "func AppendFiles.Exists",
+        "func AppendFiles.Now",
+        "func AppendFiles.Path",
+        "func AppendFiles.Render",
+        "func AppendFiles.Write",
+        "type AppendFiles"
       ]
     },
     {
@@ -8160,23 +8152,14 @@
       ]
     },
     {
-      "path": "internal/adapter/projectdocs/project_docs_revise.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": [
-        "func ReadProjectDoc",
-        "func ReviseProjectDoc"
-      ]
-    },
-    {
       "path": "internal/adapter/projectdocs/project_docs_revise_effects.go",
       "owner": "adapter",
       "task": "T13",
       "symbols": [
-        "func revisionFileEffects.Now",
-        "func revisionFileEffects.Read",
-        "func revisionFileEffects.Write",
-        "type revisionFileEffects"
+        "func RevisionFiles.Now",
+        "func RevisionFiles.Read",
+        "func RevisionFiles.Write",
+        "type RevisionFiles"
       ]
     },
     {
@@ -8184,11 +8167,10 @@
       "owner": "adapter",
       "task": "T13",
       "symbols": [
-        "func RouteProjectDocs",
-        "func routeFileEffects.Exists",
-        "func routeFileEffects.Now",
-        "func routeFileEffects.Path",
-        "type routeFileEffects"
+        "func RouteFiles.Exists",
+        "func RouteFiles.Now",
+        "func RouteFiles.Path",
+        "type RouteFiles"
       ]
     },
     {
@@ -8201,18 +8183,6 @@
     },
     {
       "path": "internal/adapter/projectdocs/project_docs_update_types.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/projectdocs/projectdoc_dependencies.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/projectdocs/repopath_dependencies.go",
       "owner": "adapter",
       "task": "T13",
       "symbols": []
@@ -11341,6 +11311,18 @@
       "symbols": [
         "func Route",
         "type RouteEffects"
+      ]
+    },
+    {
+      "path": "internal/application/projectdocs/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Append",
+        "func Service.Read",
+        "func Service.Revise",
+        "func Service.Route",
+        "type Service"
       ]
     },
     {
@@ -18240,11 +18222,50 @@
       "target_symbol": "func RouteDocsForTask",
       "task": "T13",
       "entrypoints": [
-        "issueops project-docs route"
+        "issueops project route-docs",
+        "project_docs_route",
+        "issueops://project-docs"
       ],
       "evidence_tests": [
         "internal/domain/projectdoc/route_test.go",
         "internal/adapter/projectdocs/projectdocs_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "project-doc-append",
+      "source_path": "internal/adapter/projectdocs/project_docs_append.go",
+      "source_symbol": "func AppendProjectDocsEntry",
+      "responsibility": "record kind normalization, required fields and target module selection",
+      "target": "internal/domain/projectdoc",
+      "target_symbol": "func PlanAppend",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project append",
+        "project_docs_append"
+      ],
+      "evidence_tests": [
+        "internal/domain/projectdoc/append_test.go",
+        "internal/application/projectdocs/append_test.go",
+        "cmd/issueops/issueopsapp/project_docs_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "project-doc-revision",
+      "source_path": "internal/adapter/projectdocs/project_docs_revise.go",
+      "source_symbol": "func ReviseProjectDoc",
+      "responsibility": "document content validation, expected SHA precondition and confirmed revision decision",
+      "target": "internal/domain/projectdoc",
+      "target_symbol": "func PlanRevision",
+      "task": "T20",
+      "entrypoints": [
+        "project_docs_revise"
+      ],
+      "evidence_tests": [
+        "internal/domain/projectdoc/revision_test.go",
+        "internal/application/projectdocs/revise_test.go",
+        "cmd/issueops/issueopsapp/project_docs_wiring_test.go"
       ],
       "status": "migrated"
     },

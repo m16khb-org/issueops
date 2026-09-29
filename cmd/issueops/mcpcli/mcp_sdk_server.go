@@ -8,11 +8,11 @@ import (
 	"io"
 	"log/slog"
 
-	"issueops/cmd/issueops/mcpcli/resources"
-	mcpcontract "issueops/internal/contract/mcp"
-
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"issueops/cmd/issueops/mcpcli/resources"
+	mcpcontract "issueops/internal/contract/mcp"
 )
 
 func initSDKServer(deps MCPDependencies) *mcp.Server {
@@ -152,7 +152,6 @@ func issueOpsExecutionSDKToolHandler(deps MCPDependencies) mcp.ToolHandler {
 // New tools only need to be added to the adapter catalog DispatchMap; this
 // lookup stays stable as long as no new handler group is introduced.
 var handlerGroupLookup = map[mcpcontract.DispatchGroup]func(MCPToolCall) MCPToolOutcome{
-	mcpcontract.DispatchProject:         handleProjectMCPToolCall,
 	mcpcontract.DispatchIssueOps:        handleIssueOpsMCPToolCall,
 	mcpcontract.DispatchLoop:            handleLoopMCPToolCall,
 	mcpcontract.DispatchGates:           handleGatesMCPToolCall,
@@ -166,6 +165,9 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 		return func(call MCPToolCall) MCPToolOutcome {
 			return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
 		}
+	}
+	if group == mcpcontract.DispatchProject {
+		return func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps.ProjectDocs) }
 	}
 	if group == mcpcontract.DispatchPolicyState {
 		return func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps.State) }

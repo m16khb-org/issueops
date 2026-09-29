@@ -3,7 +3,6 @@ package doctor
 import (
 	lifecyclepkg "issueops/internal/adapter/lifecycle"
 	projectbootstrappkg "issueops/internal/adapter/projectbootstrap"
-	projectdocspkg "issueops/internal/adapter/projectdocs"
 	"issueops/internal/adapter/repopath"
 )
 
@@ -13,5 +12,4 @@ func init() {
 	NormalizeRepoRoot = repopath.NormalizeRoot
 	lifecyclepkg.NormalizeRepoRoot = repopath.NormalizeRoot
 	projectbootstrappkg.NormalizeRepoRoot = repopath.NormalizeRoot
-	projectdocspkg.NormalizeRepoRoot = repopath.NormalizeRoot
 }

@@ -2,10 +2,11 @@ package projectcli
 
 import (
 	"fmt"
+	docsapp "issueops/internal/application/projectdocs"
 	"os"
 )
 
-func runProject(args []string) error {
+func runProject(docs docsapp.Service, args []string) error {
 	if len(args) == 0 {
 		projectUsage()
 		return fmt.Errorf("missing project subcommand")
@@ -14,11 +15,11 @@ func runProject(args []string) error {
 	case "bootstrap":
 		return runProjectBootstrap(args[1:])
 	case "docs":
-		return runProjectDocs(args[1:])
+		return runProjectDocs(docs, args[1:])
 	case "route-docs":
-		return runProjectRouteDocs(args[1:])
+		return runProjectRouteDocs(docs, args[1:])
 	case "append":
-		return runProjectAppend(args[1:])
+		return runProjectAppend(docs, args[1:])
 	case "commit-suggest":
 		return runProjectCommitSuggest(args[1:])
 	case "lint-diagnose":
