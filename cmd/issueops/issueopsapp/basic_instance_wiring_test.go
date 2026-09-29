@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	auditadapter "issueops/internal/adapter/audit"
-	issueopsadapter "issueops/internal/adapter/issueops"
 	guardcontract "issueops/internal/contract/guard"
 	tracecontract "issueops/internal/contract/trace"
 	"issueops/internal/testsupport"
@@ -23,7 +21,7 @@ func TestBasicCommandsKeepCapturedRootsAndStores(t *testing.T) {
 	if _, err := newStateService(state).Write("basic-trace", `{"failed_steps":1,"failed_step":"policy"}`); err != nil {
 		t.Fatal(err)
 	}
-	stateRoot := issueopsadapter.IssueOpsStateRoot()
+	stateRoot := issueOpsStateRoot()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	first := newBasicCommand()
 	other := t.TempDir()
@@ -48,11 +46,11 @@ func TestBasicCommandsKeepCapturedRootsAndStores(t *testing.T) {
 	if _, err := first.Handoff.ObserveManual(manualCmuxHandoffObservation(record.ID, record.Execution.Lease.Generation)); err != nil {
 		t.Fatal(err)
 	}
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, err := newHandoffDeliveryAudit(stateRoot).Read()
 	if err != nil || len(observations) != 1 {
 		t.Fatalf("handoff namespace records=%d err=%v", len(observations), err)
 	}
-	ambient, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(issueopsadapter.IssueOpsStateRoot())
+	ambient, err := newHandoffDeliveryAudit(issueOpsStateRoot()).Read()
 	if err != nil || len(ambient) != 0 {
 		t.Fatalf("ambient state touched: %d %v", len(ambient), err)
 	}

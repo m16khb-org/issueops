@@ -14,7 +14,7 @@ import (
 
 func TestBranchPrepareCompositionAdoptsOnceAndSealsResolvedCommit(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	root, repo := core.IssueOpsStateRoot(), makeGitRepoForContract(t)
+	root, repo := issueOpsStateRoot(), makeGitRepoForContract(t)
 	runGitForContract(t, repo, "remote", "add", "origin", "https://github.com/acme/code.git")
 	head := strings.TrimSpace(claimWiringGit(t, repo, "rev-parse", "HEAD"))
 	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo})

@@ -3,7 +3,7 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
-	issueopsadapter "issueops/internal/adapter/issueops"
+
 	installapp "issueops/internal/application/install"
 	installcontract "issueops/internal/contract/install"
 	"os"
@@ -25,7 +25,7 @@ import (
 // 어떤 host를 설치하고 어떤 증적을 읽을지는 composition root의 결정이다.
 // CLI는 flag 해석과 출력만 소유한다.
 func installDependencies() installcli.Deps {
-	root, stateRoot := issueOpsRoot(), issueopsadapter.IssueOpsStateRoot()
+	root, stateRoot := issueOpsRoot(), issueOpsStateRoot()
 	codex, claude, omo, agy := newCodexInstaller(), newClaudeInstaller(), newOmoInstaller(), newAgyInstaller()
 	return installcli.Deps{
 		IssueOpsRoot:      func() string { return root },

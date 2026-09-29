@@ -5,14 +5,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	auditadapter "issueops/internal/adapter/audit"
 	issueopsadapter "issueops/internal/adapter/issueops"
 )
 
 func TestManualHandoffServiceKeepsCapturedStateAndSnapshot(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	stateRoot := issueopsadapter.IssueOpsStateRoot()
+	stateRoot := issueOpsStateRoot()
 	record := seedReleasedDirectHandoffRecord(t, stateRoot)
 	service := newHandoffDeliveryService(stateRoot)
 	observation := manualCmuxHandoffObservation(record.ID, record.Execution.Lease.Generation)
@@ -36,11 +35,11 @@ func TestManualHandoffServiceKeepsCapturedStateAndSnapshot(t *testing.T) {
 	if _, err := service.ObserveManualSnapshot(record, observation); err != nil {
 		t.Fatal(err)
 	}
-	records, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	records, err := newHandoffDeliveryAudit(stateRoot).Read()
 	if err != nil || len(records) != 2 {
 		t.Fatalf("records=%d err=%v", len(records), err)
 	}
-	if _, err := os.Stat(filepath.Join(issueopsadapter.IssueOpsStateRoot(), "audit", "handoff-delivery.jsonl")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(issueOpsStateRoot(), "audit", "handoff-delivery.jsonl")); !os.IsNotExist(err) {
 		t.Fatalf("ambient state was written: %v", err)
 	}
 }

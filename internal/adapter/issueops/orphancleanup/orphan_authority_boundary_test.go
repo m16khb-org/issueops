@@ -16,7 +16,7 @@ import (
 func TestOrphanApplyPreservesOwnerCreatedDuringMergeObservation(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	fixture := newOrphanCleanupGitFixture(t)
-	stateRoot := coreissueops.IssueOpsStateRoot()
+	stateRoot := issueOpsStateRootForTest()
 	request := fixture.request()
 	collect := func(context.Context, string) (corehealth.Snapshot, error) {
 		snapshot := fixture.snapshot()
@@ -98,7 +98,7 @@ func TestOrphanCleanupPreservesContainedStateStore(t *testing.T) {
 			if err := os.WriteFile(exclude, []byte(".orphan-state/\n"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			stateRoot := coreissueops.IssueOpsStateRoot()
+			stateRoot := issueOpsStateRootForTest()
 			unrelated := domain.NewCycleRecord("io-unrelated", fixture.repo, "77-another-cycle", "2026-09-29T00:00:00Z")
 			if _, err := coreissueops.WriteIssueOps(stateRoot, unrelated); err != nil {
 				t.Fatal(err)

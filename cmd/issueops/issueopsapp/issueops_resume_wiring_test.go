@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	auditadapter "issueops/internal/adapter/audit"
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
 	"issueops/internal/adapter/issueops"
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
@@ -139,7 +138,7 @@ func TestIssueOpsResumeProductionWiringObservesDispatch(t *testing.T) {
 	if result.NextCommand != wantCommand || strings.Contains(result.NextCommand, result.ClaimTokenPath) {
 		t.Fatalf("resume command=%q want=%q", result.NextCommand, wantCommand)
 	}
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, err := newHandoffDeliveryAudit(stateRoot).Read()
 	if err != nil || len(observations) < 2 {
 		t.Fatalf("resume dispatch observations=%d err=%v", len(observations), err)
 	}

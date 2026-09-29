@@ -23,7 +23,7 @@ func TestLifecycleCLIInstancesKeepCapturedState(t *testing.T) {
 	var instances []instance
 	for range 2 {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-		root := core.IssueOpsStateRoot()
+		root := issueOpsStateRoot()
 		instances = append(instances, instance{root, issueopscli.Dependencies{Runtime: newIssueOpsCLIRuntime(root), Gates: newIssueOpsCLIGates()}})
 	}
 	ambient := t.TempDir()
@@ -64,10 +64,10 @@ func TestLifecyclePRGateKeepsCapturedLoopState(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rootA := core.IssueOpsStateRoot()
+	rootA := issueOpsStateRoot()
 	a := newIssueOpsCLIGates()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	rootB := core.IssueOpsStateRoot()
+	rootB := issueOpsStateRoot()
 	b := newIssueOpsCLIGates()
 	record := model.IssueOpsRecord{Repo: repo}
 	for _, item := range []struct {

@@ -35,11 +35,11 @@ func TestExportedIssueOpsFacades(t *testing.T) {
 
 func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := startIssueOpsFixture(issueops.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "195-publication-wrapper"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "195-publication-wrapper"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = LinkIssueOpsIssueForTest(issueops.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/195")
+	record, err = LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), record.ID, "https://github.com/acme/repo/issues/195")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestIssueOpsBenchmarkArtifactFacades(t *testing.T) {
 
 func TestIssueOpsDecisionAndCleanupCLIBranches(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := startIssueOpsFixture(issueops.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "123-decision"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "123-decision"})
 	if err != nil {
 		t.Fatal(err)
 	}

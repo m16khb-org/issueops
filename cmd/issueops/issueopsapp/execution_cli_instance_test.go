@@ -21,7 +21,7 @@ func TestExecutionCLIInstancesReadTheirCapturedGeneration(t *testing.T) {
 	var instances []instance
 	for _, generation := range []uint64{7, 11} {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-		root := core.IssueOpsStateRoot()
+		root := issueOpsStateRoot()
 		record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: repo})
 		if err != nil {
 			t.Fatal(err)

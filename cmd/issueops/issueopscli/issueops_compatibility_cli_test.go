@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -21,10 +20,10 @@ func TestIssueOpsCompatibilityReviewCLIRecordsReview(t *testing.T) {
 	}
 	id := record["id"].(string)
 	recordIssueOpsCoreIntentForCLITest(t, id)
-	if _, err := LinkIssueOpsIssueForTest(issueopscore.IssueOpsStateRoot(), id, "https://github.com/example/repo/issues/123"); err != nil {
+	if _, err := LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), id, "https://github.com/example/repo/issues/123"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := prepareBranchForTest(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsBranchPrepareRequest{
+	if _, err := prepareBranchForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsBranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/example/repo/issues/123",
 		Branch:       "123-compatibility-review",
@@ -34,12 +33,12 @@ func TestIssueOpsCompatibilityReviewCLIRecordsReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	worktree := makeIssueOpsCLIWorktreeForTest(t, repo, "123-compatibility-review")
-	if _, err := LinkIssueOpsWorktreeForTest(issueopscore.IssueOpsStateRoot(), id, worktree); err != nil {
+	if _, err := LinkIssueOpsWorktreeForTest(issueOpsStateRootForTest(), id, worktree); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreDesignForCLITest(t, id)
 	writeIssueOpsCLIFileForTest(t, worktree, "plans/demo.md", planBodyForCLITest())
-	if _, err := LinkIssueOpsPlanForTest(issueopscore.IssueOpsStateRoot(), id, filepath.Join(worktree, "plans/demo.md")); err != nil {
+	if _, err := LinkIssueOpsPlanForTest(issueOpsStateRootForTest(), id, filepath.Join(worktree, "plans/demo.md")); err != nil {
 		t.Fatal(err)
 	}
 

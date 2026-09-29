@@ -20,7 +20,7 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 	if _, err := statestore.StateWrite("maintain-smoke", "content"); err != nil {
 		t.Fatalf("seed state: %v", err)
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsRecord{
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), issueopscontract.IssueOpsRecord{
 		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            issueopscore.NewIssueOpsID("/repo/maintain", "1-maintain"),
 		Repo:          "/repo/maintain",

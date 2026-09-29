@@ -37,7 +37,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	policyService := newPolicyService()
 	inspector := newHarnessInspector()
 	compatibility := compatibilityContract()
-	stateRoot := issueopsadapter.IssueOpsStateRoot()
+	stateRoot := issueOpsStateRoot()
 	return mcpcli.MCPDependencies{
 		APIDoc:        newAPIDocService(),
 		DefaultTarget: resolveTarget(""),

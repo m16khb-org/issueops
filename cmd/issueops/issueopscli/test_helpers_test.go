@@ -64,7 +64,7 @@ func recordIssueOpsCLIDesignForTest(t *testing.T, id string) {
 
 func recordIssueOpsCoreIntentForCLITest(t *testing.T, id string) {
 	t.Helper()
-	if _, err := issueopscore.RecordIssueOpsIntent(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsIntentRecordRequest{
+	if _, err := issueopscore.RecordIssueOpsIntent(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsIntentRecordRequest{
 		RawRequest:        "refactor issueops flow",
 		InterpretedIntent: "keep intent and design evidence before implementation",
 		SuccessCriteria:   []string{"intent is recorded", "design is reviewed"},
@@ -76,7 +76,7 @@ func recordIssueOpsCoreIntentForCLITest(t *testing.T, id string) {
 func recordIssueOpsCLIPlanPrepForTest(t *testing.T, id string) {
 	t.Helper()
 	waived := issueopscontract.IssueOpsPlanPrepItemRequest{WaiveReason: "cli lifecycle test"}
-	if _, err := issueopscore.RecordIssueOpsPlanPrep(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsPlanPrepRequest{
+	if _, err := issueopscore.RecordIssueOpsPlanPrep(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsPlanPrepRequest{
 		PriorDecisions: waived,
 		RelatedIssues:  waived,
 		WebResearch:    waived,
@@ -88,7 +88,7 @@ func recordIssueOpsCLIPlanPrepForTest(t *testing.T, id string) {
 
 func recordIssueOpsCoreDesignForCLITest(t *testing.T, id string) {
 	t.Helper()
-	if _, err := issueopscore.RecordIssueOpsDesignReview(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsDesignReviewRequest{
+	if _, err := issueopscore.RecordIssueOpsDesignReview(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDesignReviewRequest{
 		ProblemSummary: "IssueOps must preserve the work contract",
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
@@ -128,7 +128,7 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 			},
 		},
 	}
-	written, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record)
+	written, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

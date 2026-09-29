@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"issueops/cmd/issueops/basiccli"
-	adapter "issueops/internal/adapter/issueops"
+
 	model "issueops/internal/contract/issueops"
 )
 
@@ -28,7 +28,7 @@ func TestOperationalHealthInstancesKeepCapturedState(t *testing.T) {
 	var records [2]model.IssueOpsRecord
 	for i := range commands {
 		t.Setenv("ISSUEOPS_STATE_DIR", roots[i])
-		records[i], err = startIssueOpsFixture(adapter.IssueOpsStateRoot(), model.IssueOpsStartRequest{Repo: repo, Branch: "991-health-isolation"})
+		records[i], err = startIssueOpsFixture(issueOpsStateRoot(), model.IssueOpsStartRequest{Repo: repo, Branch: "991-health-isolation"})
 		if err != nil {
 			t.Fatal(err)
 		}

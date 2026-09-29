@@ -447,7 +447,7 @@ func TestRunCleanupOrphanDefaultsToPreviewAndGatesApply(t *testing.T) {
 
 func feedbackCleanupIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	t.Helper()
-	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "1234-feedback-cleanup"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "1234-feedback-cleanup"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
@@ -484,7 +484,7 @@ func cleanupStatusRecord(t *testing.T, done, withArtifact bool) issueopscontract
 		},
 		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 	}
-	written, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record)
+	written, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
 	if err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}

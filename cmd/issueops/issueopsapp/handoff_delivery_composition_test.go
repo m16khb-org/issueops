@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"time"
 
-	auditadapter "issueops/internal/adapter/audit"
 	deliveryapp "issueops/internal/application/handoffdelivery"
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsdomain "issueops/internal/domain/issueops"
@@ -11,16 +10,16 @@ import (
 )
 
 func observeHandoffDeliveryStaged(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, callKind string, receipt port.ExecutionOrcaIntentReceipt, now func() time.Time) error {
-	return deliveryapp.ObserveStaged(auditadapter.HandoffDeliveryStore{StateRoot: stateRoot}, request, identity, callKind, receipt, now)
+	return deliveryapp.ObserveStaged(newHandoffDeliveryAudit(stateRoot), request, identity, callKind, receipt, now)
 }
 func observeHandoffDeliveryCompleted(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, callKind string, receipt port.ExecutionOrcaIntentReceipt, now func() time.Time) error {
-	return deliveryapp.ObserveCompleted(auditadapter.HandoffDeliveryStore{StateRoot: stateRoot}, request, identity, callKind, receipt, now)
+	return deliveryapp.ObserveCompleted(newHandoffDeliveryAudit(stateRoot), request, identity, callKind, receipt, now)
 }
 func observeHandoffDeliveryFailure(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, err error, now func() time.Time) error {
-	return deliveryapp.ObserveFailure(auditadapter.HandoffDeliveryStore{StateRoot: stateRoot}, request, identity, err, now)
+	return deliveryapp.ObserveFailure(newHandoffDeliveryAudit(stateRoot), request, identity, err, now)
 }
 func handoffDeliveryObservation(stateRoot string, request port.ExecutionOrcaIntentRequest, identity port.ExecutionOrcaDeliveryIdentity, receipt port.ExecutionOrcaIntentReceipt, durableID, callKind string, now func() time.Time) (issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	return deliveryapp.Observation(auditadapter.HandoffDeliveryStore{StateRoot: stateRoot}, request, identity, receipt, durableID, callKind, now)
+	return deliveryapp.Observation(newHandoffDeliveryAudit(stateRoot), request, identity, receipt, durableID, callKind, now)
 }
 func handoffDeliveryEventClock(now func() time.Time) func() time.Time {
 	timestamp := now()
@@ -31,7 +30,7 @@ func handoffDeliveryObserved(now func() time.Time, evidence string) issueopscont
 }
 
 func foldHandoffAuditForTest(stateRoot, lifecycleID, lineageID string) (map[string]issueopscontract.IssueOpsHandoffDeliveryObservation, []issueopscontract.IssueOpsHandoffDeliveryDecision, error) {
-	observations, err := (auditadapter.HandoffDeliveryStore{StateRoot: stateRoot}).ReadFor(lifecycleID, lineageID)
+	observations, err := (newHandoffDeliveryAudit(stateRoot)).ReadFor(lifecycleID, lineageID)
 	folded, decisions := issueopsdomain.FoldHandoffDeliveryObservations(observations)
 	return folded, decisions, err
 }

@@ -21,12 +21,12 @@ const (
 // every observed reparse component before and after each nested OpenRoot/OpenFile
 // and bind the opened handle with os.SameFile, so a race is never accepted as a
 // different state, audit, or leaf object.
-func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (*handoffDeliveryAuditHandle, error) {
+func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode, hooks handoffDeliveryOpenHooks) (*handoffDeliveryAuditHandle, error) {
 	stateRoot, err := handoffDeliveryStateRootPath(stateRoot)
 	if err != nil {
 		return nil, err
 	}
-	statePathRoots, statePathNames, err := openHandoffDeliveryStateRootWindows(stateRoot)
+	statePathRoots, statePathNames, err := openHandoffDeliveryStateRootWindows(stateRoot, hooks.beforeStateRootOpen)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,9 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 	if beforeErr == nil && !validHandoffDeliveryWindowsInfo(before, false) {
 		return nil, errors.New("handoff delivery audit log has unsafe type")
 	}
-	handoffDeliveryAuditBeforeLeafOpen()
+	if hooks.beforeLeafOpen != nil {
+		hooks.beforeLeafOpen()
+	}
 	if mode == handoffDeliveryAuditAppend && errors.Is(beforeErr, os.ErrNotExist) {
 		flags |= os.O_EXCL
 	}
@@ -82,7 +84,9 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 		_ = file.Close()
 		return nil, errors.New("handoff delivery audit log changed while opening")
 	}
-	handoffDeliveryAuditAfterLeafOpen()
+	if hooks.afterLeafOpen != nil {
+		hooks.afterLeafOpen()
+	}
 
 	handle := &handoffDeliveryAuditHandle{file: file}
 	handle.verifyPath = func() error {
@@ -110,7 +114,7 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 	return handle, nil
 }
 
-func openHandoffDeliveryStateRootWindows(stateRoot string) ([]*os.Root, []string, error) {
+func openHandoffDeliveryStateRootWindows(stateRoot string, beforeStateRootOpen func()) ([]*os.Root, []string, error) {
 	volume := filepath.VolumeName(stateRoot)
 	if volume == "" {
 		return nil, nil, errors.New("handoff delivery state root has no volume")
@@ -128,7 +132,7 @@ func openHandoffDeliveryStateRootWindows(stateRoot string) ([]*os.Root, []string
 	for index, part := range parts {
 		var beforeOpen func()
 		if index == len(parts)-1 {
-			beforeOpen = handoffDeliveryAuditBeforeStateRootOpen
+			beforeOpen = beforeStateRootOpen
 		}
 		next, err := openHandoffDeliveryWindowsDirectory(current, part, beforeOpen)
 		if err != nil {

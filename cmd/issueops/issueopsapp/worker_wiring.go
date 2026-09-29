@@ -2,7 +2,7 @@ package issueopsapp
 
 import (
 	"issueops/cmd/issueops/workercli"
-	issueopsadapter "issueops/internal/adapter/issueops"
+
 	"issueops/internal/adapter/outbound/sqlstore"
 	policyadapter "issueops/internal/adapter/policy"
 	workeradapter "issueops/internal/adapter/worker"
@@ -16,7 +16,7 @@ func newWorkerStore() workeradapter.Store {
 	if absolute, absErr := filepath.Abs(directory); absErr == nil {
 		filesystemDirectory = absolute
 	}
-	reader := newActiveCycleReader(issueopsadapter.IssueOpsStateRoot())
+	reader := newActiveCycleReader(issueOpsStateRoot())
 	policy := policyadapter.NewEvaluator(reader.PreparedBaseBranchForWorkspace)
 	return workeradapter.Store{
 		Directory: directory, DirectoryError: err, FilesystemDirectory: filesystemDirectory,

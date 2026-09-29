@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	auditadapter "issueops/internal/adapter/audit"
 	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
@@ -168,7 +167,7 @@ func TestIssueOpsReconcileVerticalAdvancesRemainingStagesOneCallAtATime(t *testi
 			t.Fatalf("stage %d result=%#v inspect=%d", index, result, fake.inspectCalls-beforeInspects)
 		}
 	}
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, err := newHandoffDeliveryAudit(stateRoot).Read()
 	if err != nil || len(observations) == 0 {
 		t.Fatalf("reconcile dispatch bypassed delivery observation: observations=%d err=%v", len(observations), err)
 	}

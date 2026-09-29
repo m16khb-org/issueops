@@ -112,7 +112,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"devils-advocate", "review", "--id", id, "--verdict", "pass", "--reviewer-context", "subagent", "--finding", "attacked gate 3: no second caller exists", "--json"})
 	})
-	current, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), id)
+	current, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 	if err != nil {
 		t.Fatal(err)
 	}

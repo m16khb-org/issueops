@@ -2,7 +2,7 @@ package issueopsapp
 
 import (
 	guardadapter "issueops/internal/adapter/guard"
-	issueopsadapter "issueops/internal/adapter/issueops"
+
 	policyadapter "issueops/internal/adapter/policy"
 	preflightadapter "issueops/internal/adapter/preflight"
 	projectdocsadapter "issueops/internal/adapter/projectdocs"
@@ -15,7 +15,7 @@ import (
 
 func newVerifyWorkService() verifyworkapp.Service {
 	harnessRoot := issueOpsRoot()
-	reader := newActiveCycleReader(issueopsadapter.IssueOpsStateRoot())
+	reader := newActiveCycleReader(issueOpsStateRoot())
 	policy := policyadapter.NewEvaluator(reader.PreparedBaseBranchForWorkspace)
 	preflight := preflightapp.Service{Observer: preflightadapter.GitObserver{}}
 	guard := guardapp.Service{Source: guardadapter.Source{}}

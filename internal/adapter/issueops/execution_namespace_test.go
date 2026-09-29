@@ -131,7 +131,7 @@ func TestIssueOpsRejectsLegacyExecutionAuthorityPayload(t *testing.T) {
 
 func TestIssueOpsDefaultStateRootIsSchemaSpecific(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if filepath.Base(IssueOpsStateRoot()) != "issueops_v1" {
-		t.Fatalf("default state root is not the dedicated v1 namespace: %s", IssueOpsStateRoot())
+	if filepath.Base(issueOpsStateRootForTest()) != "issueops_v1" {
+		t.Fatalf("default state root is not the dedicated v1 namespace: %s", issueOpsStateRootForTest())
 	}
 }

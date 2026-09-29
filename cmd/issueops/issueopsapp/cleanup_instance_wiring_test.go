@@ -19,7 +19,7 @@ func TestCleanupCLIInstancesKeepCapturedState(t *testing.T) {
 	repo := makeGitRepoForContract(t)
 	for i := range deps {
 		t.Setenv("ISSUEOPS_STATE_DIR", roots[i])
-		stateRoots[i] = adapter.IssueOpsStateRoot()
+		stateRoots[i] = issueOpsStateRoot()
 		var err error
 		records[i], err = startIssueOpsFixture(stateRoots[i], model.IssueOpsStartRequest{Repo: repo, Branch: "991-cleanup-instance"})
 		if err != nil {

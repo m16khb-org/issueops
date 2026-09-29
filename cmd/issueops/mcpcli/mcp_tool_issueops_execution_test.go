@@ -49,7 +49,7 @@ func TestMCPExecutionDependenciesPropagateCompletionWithoutInvocation(t *testing
 
 func TestMCPPublicationReconcilePreservesToolErrorClassification(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, receipt := publicationReconcileMCPRecord(t, issueops.IssueOpsStateRoot())
+	record, receipt := publicationReconcileMCPRecord(t, issueOpsStateRootForTest())
 	for _, test := range []struct {
 		name        string
 		handlerErr  error

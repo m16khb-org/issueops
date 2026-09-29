@@ -16,7 +16,7 @@ func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest
 	requests := &[]issueopscontract.CleanupAbandonRequest{}
 	providerCalls := new(int)
 	wired := command.Operations
-	wired.IssueOpsStateRoot = issueopscore.IssueOpsStateRoot
+	wired.IssueOpsStateRoot = issueOpsStateRootForTest
 	wired.ReadIssueOps = issueopscore.ReadIssueOps
 	wired.ResolveRecordProvider = issuedomain.ResolveRecordProvider
 	wired.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps) (issueopscontract.CleanupAbandonResult, error) {

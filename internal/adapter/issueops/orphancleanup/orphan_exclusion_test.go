@@ -42,7 +42,7 @@ func TestOrphanEffectsExcludeNewOwnersAndCompetingCleanup(t *testing.T) {
 	if err != nil || !preview.Ready {
 		t.Fatalf("preview=%+v err=%v", preview, err)
 	}
-	root := adapter.IssueOpsStateRoot()
+	root := issueOpsStateRootForTest()
 	owner := domain.NewCycleRecord("io-concurrent-owner", fixture.repo, fixture.branch, "2026-09-29T00:00:00Z")
 	owner.WorktreePath = fixture.worktree
 	gitRun(t, fixture.repo, "remote", "set-url", "origin", filepath.Join(t.TempDir(), "missing-remote"))
@@ -107,7 +107,7 @@ func TestOrphanLocalRefreshRefusesInvalidRecordsAndChangedHead(t *testing.T) {
 					gitRun(t, fixture.worktree, "commit", "--allow-empty", "-m", "late head")
 					return nil
 				}
-				db, err := sqlstore.Open(adapter.IssueOpsStateRoot())
+				db, err := sqlstore.Open(issueOpsStateRootForTest())
 				if err != nil {
 					return err
 				}

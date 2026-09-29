@@ -3,14 +3,14 @@ package issueopsapp
 import (
 	"issueops/cmd/issueops/policycli"
 	auditadapter "issueops/internal/adapter/audit"
-	issueopsadapter "issueops/internal/adapter/issueops"
+
 	policyadapter "issueops/internal/adapter/policy"
 	auditapp "issueops/internal/application/audit"
 	policyapp "issueops/internal/application/policy"
 )
 
 func newPolicyService() policyapp.Service {
-	reader := newActiveCycleReader(issueopsadapter.IssueOpsStateRoot())
+	reader := newActiveCycleReader(issueOpsStateRoot())
 	return policyapp.Service{
 		PreparedBaseBranch: reader.PreparedBaseBranchForWorkspace,
 		Observer:           policyadapter.CommandObserver{}, Overrides: policyadapter.OverrideLoader{},

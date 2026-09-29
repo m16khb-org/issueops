@@ -15,7 +15,6 @@ import (
 
 func wireBasicCLIDeps() {
 	configurePolicyAndGitObservers()
-	configureAdapterStateAccess()
 
 }
 

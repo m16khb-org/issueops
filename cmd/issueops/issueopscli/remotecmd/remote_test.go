@@ -200,7 +200,7 @@ func TestRunRenderTemplateAndCreateIssueBodyFileTemplateValidation(t *testing.T)
 
 func TestRunRemoteCreateIssueValidatesTitleBeforeProviderInference(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{
 		Repo:   t.TempDir(),
 		Branch: "1234-title-validation",
 	})
@@ -306,7 +306,7 @@ func TestRunRemoteCreatePRUsesPublicationHandlerForPreviewAndConfirm(t *testing.
 	deps := Deps{
 		Publication: PublicationHandlers{Create: func(_ context.Context, stateRoot string, request issueopscore.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 			handlerCalls++
-			if stateRoot != issueopscore.IssueOpsStateRoot() || request.ID != record.ID || request.Provider != "github" || request.Title != "PR" {
+			if stateRoot != issueOpsStateRootForTest() || request.ID != record.ID || request.Provider != "github" || request.Title != "PR" {
 				t.Fatalf("stateRoot=%q request=%#v", stateRoot, request)
 			}
 			if request.Confirm {
@@ -417,7 +417,7 @@ func TestRunRemoteCreateChildConfirmRecordsChildLink(t *testing.T) {
 	if err := testRemoteCommand().Run([]string{"create-child", "--id", record.ID, "--title", "Child", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps); err != nil {
 		t.Fatalf("create-child confirm returned error: %v", err)
 	}
-	updated, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
+	updated, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -450,7 +450,7 @@ func TestRunRemoteCreateChildConfirmUsesActiveLeaseActor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create-child confirm with current lease actor returned error: %v", err)
 	}
-	updated, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
+	updated, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -598,12 +598,12 @@ func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	t.Helper()
 	record := remoteIssueOpsRecordWithoutChild(t)
 	var err error
-	record, err = LinkIssueOpsChildForTest(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/1235", "child")
+	record, err = LinkIssueOpsChildForTest(issueOpsStateRootForTest(), record.ID, "https://github.com/acme/repo/issues/1235", "child")
 	if err != nil {
 		t.Fatalf("LinkIssueOpsChild: %v", err)
 	}
 	record.Phase = issueopscore.IssueOpsPhasePR
-	record, err = issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record)
+	record, err = issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
 	if err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}
@@ -613,15 +613,15 @@ func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 func remoteIssueOpsRecordWithoutChild(t *testing.T) issueopscontract.IssueOpsRecord {
 	t.Helper()
 	repo := t.TempDir()
-	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-cmd"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-cmd"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
-	record, err = LinkIssueOpsIssueForTest(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/1234")
+	record, err = LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), record.ID, "https://github.com/acme/repo/issues/1234")
 	if err != nil {
 		t.Fatalf("LinkIssueOpsIssue: %v", err)
 	}
-	record, err = prepareBranchForTest(issueopscore.IssueOpsStateRoot(), record.ID, issueopscontract.IssueOpsBranchPrepareRequest{
+	record, err = prepareBranchForTest(issueOpsStateRootForTest(), record.ID, issueopscontract.IssueOpsBranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/acme/repo/issues/1234",
 		Branch:       record.Branch,
@@ -646,7 +646,7 @@ func remoteIssueOpsRecordForCreate(t *testing.T) issueopscontract.IssueOpsRecord
 			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 		}
 	}
-	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-create"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "1234-remote-create"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
@@ -682,7 +682,7 @@ func activateRemoteIssueOpsRecordForCurrentProcess(t *testing.T, record *issueop
 			Holder: &issueopscontract.NativeActor{Host: "codex", SessionID: "session-1", SessionProcess: &process},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), *record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), *record); err != nil {
 		t.Fatal(err)
 	}
 	return worktree, ancestry
@@ -745,7 +745,7 @@ func TestRunRemoteCreateIssueConfirmVerifiesLiveIssue(t *testing.T) {
 	if strings.Join(got.Labels, ",") != "bug" || strings.Join(got.Assignees, ",") != "octocat" {
 		t.Fatalf("labels/assignees not forwarded to verification: %+v", got)
 	}
-	stored, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
+	stored, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -770,7 +770,7 @@ func TestRunRemoteCreateIssueConfirmFailsWhenLiveVerificationFails(t *testing.T)
 	if err := testRemoteCommand().Run([]string{"create-issue", "--id", record.ID, "--provider", "github", "--title", "Title", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm"}, deps); err == nil || !strings.Contains(err.Error(), "missing verified label") {
 		t.Fatalf("expected live verification failure to propagate, got %v", err)
 	}
-	stored, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
+	stored, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -857,7 +857,7 @@ func TestRunRemoteReconcileIssueAdoptsDelayedUniqueVerifiedCandidate(t *testing.
 	if verified != 1 {
 		t.Fatalf("expected one live verification, got %d", verified)
 	}
-	stored, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
+	stored, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -936,7 +936,7 @@ func TestRunRemoteReconcileIssueRejectsChangedContentBeforeVerification(t *testi
 				if err == nil || !strings.Contains(err.Error(), "title and body digest") {
 					t.Fatalf("confirm=%t: %v", confirm, err)
 				}
-				stored, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
+				stored, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -959,7 +959,7 @@ func remoteIssueOpsRecordWithCreateIntent(t *testing.T) (issueopscontract.IssueO
 	marker := "<!-- issueops:issue-create:" + operationID + " -->"
 	body := "Body\n\n" + marker
 	digest := sha256.Sum256([]byte(body))
-	updated, err := newIssueIntentsForTest(issueopscore.IssueOpsStateRoot()).Begin(context.Background(), record.ID, issueopscontract.IssueOpsIssueCreateIntentRequest{
+	updated, err := newIssueIntentsForTest(issueOpsStateRootForTest()).Begin(context.Background(), record.ID, issueopscontract.IssueOpsIssueCreateIntentRequest{
 		OperationID:      operationID,
 		Provider:         "github",
 		ProjectAuthority: "github.com/acme/repo",
@@ -1025,7 +1025,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
-		record, err = issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record)
+		record, err = issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
@@ -1041,7 +1041,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
-		record, err = issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record)
+		record, err = issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
@@ -1060,7 +1060,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 			Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 		}
 		var err error
-		record, err = issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record)
+		record, err = issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
 		if err != nil {
 			t.Fatalf("WriteIssueOps: %v", err)
 		}
@@ -1087,7 +1087,7 @@ func TestRemoteCompletionApplicationFailsClosed(t *testing.T) {
 func TestRemoteReflectReviewPreviewAndConfirmUseApplication(t *testing.T) {
 	root, repo, bin := t.TempDir(), t.TempDir(), t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", root)
-	root = issueopscore.IssueOpsStateRoot()
+	root = issueOpsStateRootForTest()
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
 	record, err := startIssueOpsFixture(root, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "64-review-cli"})
 	if err != nil {

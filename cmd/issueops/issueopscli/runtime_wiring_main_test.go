@@ -92,7 +92,7 @@ func wireIssueOpsRuntimeForTests() {
 		IssueOpsChildStatusWithActor:  childStatusWithActorForTest,
 		IssueOpsPRReadiness:           issueopscore.IssueOpsPRReadiness,
 		IssueOpsNext:                  issueopsnextinbound.NewNextHandler(next),
-		IssueOpsStateRoot:             issueopscore.IssueOpsStateRoot,
+		IssueOpsStateRoot:             issueOpsStateRootForTest,
 		IssueOpsStatus:                issueopsstatusinbound.NewStatusHandler(status),
 		LinkIssueOpsChildWithActor:    LinkIssueOpsChildWithActorForTest,
 		LinkIssueOpsIssueWithActor:    LinkIssueOpsIssueWithActorForTest,

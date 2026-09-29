@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	auditadapter "issueops/internal/adapter/audit"
 	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
@@ -148,7 +147,7 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 			process := *actor.SessionProcess
 			observation.Target.Process = &process
 			observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
-			if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+			if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 				t.Fatal(err)
 			}
 			if test.mutateActor != nil {
@@ -207,7 +206,7 @@ func TestSuccessfulDirectClaimUsesCmuxOnlyAfterRawInputAndExactReceiverCorrelati
 				observation.Target.Process = &process
 				observation.Target.ProcessIncarnation = fmt.Sprintf("%d:%s:%s", process.PID, process.StartedAt, process.Executable)
 			}
-			if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+			if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 				t.Fatal(err)
 			}
 			claimedAt := time.Now().UTC().Format(time.RFC3339Nano)
@@ -247,7 +246,7 @@ func TestSuccessfulDirectClaimRejectsAmbiguousManualLineages(t *testing.T) {
 		process := *actor.SessionProcess
 		observation.Target.Process = &process
 		observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
-		if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+		if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -292,7 +291,7 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	observation.Target.Process = &process
 	observation.CallStaged = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged)
 	observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
-	if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+	if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 		t.Fatal(err)
 	}
 
@@ -426,7 +425,7 @@ func seedClaimDeliveryObservation(t *testing.T, stateRoot string, record issueop
 		OwnerClaimed:       issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
 		Ambiguous:          issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
 	}
-	if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+	if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 		t.Fatal(err)
 	}
 }

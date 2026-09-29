@@ -2,7 +2,6 @@ package audit
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	auditcontract "issueops/internal/contract/audit"
 	"os"
@@ -15,12 +14,11 @@ import (
 
 func TestAuditHandoffDeliveryObservationWritesBounded0600JSONL(t *testing.T) {
 	stateDir := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateDir)
 
 	observation := auditDeliveryObservationFixture()
 	observation.Receipt.Location = "audit/orca/token=secret-value.json"
-	record, err := AuditHandoffDeliveryObservation(observation)
+	record, err := store.Append(observation)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,31 +51,29 @@ func TestAuditHandoffDeliveryObservationWritesBounded0600JSONL(t *testing.T) {
 
 func TestAuditHandoffDeliveryObservationAcceptsUnknownProcessPreCall(t *testing.T) {
 	stateDir := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateDir)
 
 	observation := auditDeliveryObservationFixture()
 	observation.Target.Process = nil
 	observation.Target.ProcessIncarnation = ""
-	if _, err := AuditHandoffDeliveryObservation(observation); err != nil {
+	if _, err := store.Append(observation); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestAuditHandoffDeliveryObservationAppendsDistinctAttempts(t *testing.T) {
 	stateDir := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateDir)
 
 	first := auditDeliveryObservationFixture()
 	second := auditDeliveryObservationFixture()
 	second.AttemptID = "attempt-2"
 	second.Target.PaneID = "pane-2"
 
-	if _, err := AuditHandoffDeliveryObservation(first); err != nil {
+	if _, err := store.Append(first); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AuditHandoffDeliveryObservation(second); err != nil {
+	if _, err := store.Append(second); err != nil {
 		t.Fatal(err)
 	}
 	file, err := os.Open(filepath.Join(stateDir, "audit", "handoff-delivery.jsonl"))
@@ -100,8 +96,7 @@ func TestAuditHandoffDeliveryObservationAppendsDistinctAttempts(t *testing.T) {
 
 func TestReadAndFoldHandoffDeliveryAuditObservations(t *testing.T) {
 	stateDir := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateDir)
 
 	first := auditDeliveryObservationFixture()
 	second := auditDeliveryObservationFixture()
@@ -110,21 +105,21 @@ func TestReadAndFoldHandoffDeliveryAuditObservations(t *testing.T) {
 		ObservedAt: "2026-09-20T10:01:00Z",
 		Evidence:   issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt,
 	}
-	if _, err := AuditHandoffDeliveryObservation(first); err != nil {
+	if _, err := store.Append(first); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AuditHandoffDeliveryObservation(second); err != nil {
+	if _, err := store.Append(second); err != nil {
 		t.Fatal(err)
 	}
 
-	observations, err := ReadHandoffDeliveryAuditObservations()
+	observations, err := store.Read()
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(observations) != 2 {
 		t.Fatalf("observations=%d", len(observations))
 	}
-	folded, decisions, err := FoldHandoffDeliveryAuditObservations()
+	folded, decisions, err := foldHandoffDeliveryForTest(store, "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,10 +134,9 @@ func TestReadAndFoldHandoffDeliveryAuditObservations(t *testing.T) {
 
 func TestFoldHandoffDeliveryAuditObservationsPreservesVerifiedPrefixOnTruncatedTail(t *testing.T) {
 	stateDir := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateDir)
 
-	if _, err := AuditHandoffDeliveryObservation(auditDeliveryObservationFixture()); err != nil {
+	if _, err := store.Append(auditDeliveryObservationFixture()); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(stateDir, "audit", "handoff-delivery.jsonl")
@@ -157,11 +151,11 @@ func TestFoldHandoffDeliveryAuditObservationsPreservesVerifiedPrefixOnTruncatedT
 		t.Fatal(err)
 	}
 
-	observations, err := ReadHandoffDeliveryAuditObservations()
+	observations, err := store.Read()
 	if err == nil || len(observations) != 1 {
 		t.Fatalf("observations=%d err=%v", len(observations), err)
 	}
-	folded, decisions, err := FoldHandoffDeliveryAuditObservations()
+	folded, decisions, err := foldHandoffDeliveryForTest(store, "", "")
 	if err == nil || len(folded) != 1 || len(decisions) != 1 || !decisions[0].Accepted {
 		t.Fatalf("folded=%d decisions=%+v err=%v", len(folded), decisions, err)
 	}
@@ -169,17 +163,16 @@ func TestFoldHandoffDeliveryAuditObservationsPreservesVerifiedPrefixOnTruncatedT
 
 func TestFoldHandoffDeliveryAuditCorruptionIsScopedToItsLineage(t *testing.T) {
 	stateDir := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateDir)
 
 	current := auditDeliveryObservationFixture()
 	unrelated := auditDeliveryObservationFixture()
 	unrelated.LifecycleID = "io-unrelated"
 	unrelated.LineageID = "lineage-unrelated"
-	if _, err := AuditHandoffDeliveryObservation(current); err != nil {
+	if _, err := store.Append(current); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AuditHandoffDeliveryObservation(unrelated); err != nil {
+	if _, err := store.Append(unrelated); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(stateDir, "audit", "handoff-delivery.jsonl")
@@ -202,21 +195,20 @@ func TestFoldHandoffDeliveryAuditCorruptionIsScopedToItsLineage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	folded, _, err := FoldHandoffDeliveryAuditObservationsForAt(stateDir, current.LifecycleID, current.LineageID)
+	folded, _, err := foldHandoffDeliveryForTest(store, current.LifecycleID, current.LineageID)
 	if err != nil || len(folded) != 1 {
 		t.Fatalf("unrelated corruption blocked current lineage: folded=%d err=%v", len(folded), err)
 	}
-	if _, _, err := FoldHandoffDeliveryAuditObservationsForAt(stateDir, unrelated.LifecycleID, unrelated.LineageID); err == nil {
+	if _, _, err := foldHandoffDeliveryForTest(store, unrelated.LifecycleID, unrelated.LineageID); err == nil {
 		t.Fatal("current-lineage corruption did not fail closed")
 	}
 }
 
 func TestAuditHandoffDeliveryObservationDoesNotTouchIssueOpsState(t *testing.T) {
 	stateDir := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateDir)
 
-	if _, err := AuditHandoffDeliveryObservation(auditDeliveryObservationFixture()); err != nil {
+	if _, err := store.Append(auditDeliveryObservationFixture()); err != nil {
 		t.Fatal(err)
 	}
 	entries, err := os.ReadDir(stateDir)
@@ -263,8 +255,7 @@ func TestReadHandoffDeliveryAuditObservationsFailsClosedOnBadJSONL(t *testing.T)
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			stateDir := t.TempDir()
-			t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-			installAuditStateDepsForTest(t)
+			store := auditStoreForTest(stateDir)
 			path := filepath.Join(stateDir, "audit", "handoff-delivery.jsonl")
 			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 				t.Fatal(err)
@@ -272,7 +263,7 @@ func TestReadHandoffDeliveryAuditObservationsFailsClosedOnBadJSONL(t *testing.T)
 			if err := os.WriteFile(path, []byte(test.line()), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := ReadHandoffDeliveryAuditObservations(); err == nil {
+			if _, err := store.Read(); err == nil {
 				t.Fatal("bad handoff delivery JSONL was accepted")
 			}
 		})
@@ -326,17 +317,16 @@ func TestHandoffDeliveryAuditFailsClosedOnUnsafeLogFile(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			stateDir := t.TempDir()
-			t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-			installAuditStateDepsForTest(t)
+			store := auditStoreForTest(stateDir)
 			path := filepath.Join(stateDir, "audit", "handoff-delivery.jsonl")
 			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 				t.Fatal(err)
 			}
 			test.setup(t, path)
-			if _, err := ReadHandoffDeliveryAuditObservations(); err == nil {
+			if _, err := store.Read(); err == nil {
 				t.Fatal("unsafe handoff delivery audit log was readable")
 			}
-			if _, err := AuditHandoffDeliveryObservation(auditDeliveryObservationFixture()); err == nil {
+			if _, err := store.Append(auditDeliveryObservationFixture()); err == nil {
 				t.Fatal("unsafe handoff delivery audit log was appendable")
 			}
 		})
@@ -375,16 +365,4 @@ func auditDeliveryObservationFixture() issueopscontract.IssueOpsHandoffDeliveryO
 		OwnerClaimed:       issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
 		Ambiguous:          issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
 	}
-}
-
-func installAuditStateDepsForTest(t *testing.T) {
-	t.Helper()
-	oldStateDir, oldWithKeyLock := StateDir, WithKeyLock
-	StateDir = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
-	WithKeyLock = func(ctx context.Context, dir, key string, fn func(context.Context) error) error {
-		return fn(ctx)
-	}
-	t.Cleanup(func() {
-		StateDir, WithKeyLock = oldStateDir, oldWithKeyLock
-	})
 }

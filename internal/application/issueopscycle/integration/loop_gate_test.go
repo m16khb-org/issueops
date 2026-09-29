@@ -164,7 +164,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
 		ProjectDocsReview: &issueopscontract.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
-	if _, err := issueops.WriteIssueOps(issueops.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueops.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}
 	return record
@@ -217,7 +217,7 @@ func containsLoopGateString(values []string, target string) bool {
 func TestAdvancePhaseGuardsPRTransition(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := readyIssueOpsRecordForLoopGateTest(t)
-	stateRoot := issueops.IssueOpsStateRoot()
+	stateRoot := issueOpsStateRootForTest()
 	written, err := issueops.WriteIssueOps(stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
@@ -257,7 +257,7 @@ func TestAdvancePhaseGuardsPRTransition(t *testing.T) {
 
 func TestAdvancePhaseRejectsUnknownRecord(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := AdvancePhase(issueops.IssueOpsStateRoot(), "io-missing", "pr"); err == nil {
+	if _, err := AdvancePhase(issueOpsStateRootForTest(), "io-missing", "pr"); err == nil {
 		t.Fatal("unknown record must fail before any transition")
 	}
 }
@@ -266,7 +266,7 @@ func TestStrictPRReadinessWithStateAppliesLoopGate(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := readyIssueOpsRecordForLoopGateTest(t)
 	startCoreLoopGateLoop(t, record.Repo, "state-loop", 3)
-	ready := StrictPRReadinessWithState(issueops.IssueOpsStateRoot(), record)
+	ready := StrictPRReadinessWithState(issueOpsStateRootForTest(), record)
 	if ready.Ready {
 		t.Fatalf("with-state readiness must honor the loop gate: %+v", ready)
 	}

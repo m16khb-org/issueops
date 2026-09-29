@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	auditadapter "issueops/internal/adapter/audit"
 	cmuxadapter "issueops/internal/adapter/cmux"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -60,7 +59,7 @@ func TestCmuxHandoffStagesBeforeCreateAndEnrichesOneNonAuthoritativeLineage(t *t
 	if fake.createCalls != 1 || fake.sendCalls != 1 {
 		t.Fatalf("create=%d send=%d", fake.createCalls, fake.sendCalls)
 	}
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, err := newHandoffDeliveryAudit(stateRoot).Read()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +98,7 @@ func TestCmuxHandoffDuplicateAttemptFailsBeforeAnyCmuxCall(t *testing.T) {
 	observation.Target.CWD = record.WorktreePath
 	observation.Target.WindowID = request.WindowID
 	observation.Launcher.EndpointIncarnation = cmuxEndpointFixture()
-	if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+	if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 		t.Fatal(err)
 	}
 	fake := &cmuxClientFake{t: t, preflight: cmuxPreflightFixture()}
@@ -293,7 +292,7 @@ func TestCmuxHandoffRejectsSecondAttemptForGenerationBeforeAnyCmuxCall(t *testin
 			observation.Target.CWD = record.WorktreePath
 			observation.Target.WindowID = first.WindowID
 			observation.Launcher.EndpointIncarnation = cmuxEndpointFixture()
-			if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+			if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 				t.Fatal(err)
 			}
 
@@ -382,7 +381,7 @@ func TestCmuxHandoffIncompleteCreatedTargetAuditsExistingLineage(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "incomplete") {
 		t.Fatalf("incomplete target accepted: %v", err)
 	}
-	observations, readErr := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, readErr := newHandoffDeliveryAudit(stateRoot).Read()
 	if readErr != nil {
 		t.Fatal(readErr)
 	}
@@ -418,7 +417,7 @@ func TestCmuxHandoffCreateAndSendAmbiguityNeverRetries(t *testing.T) {
 			if err == nil || fake.createCalls != 1 || fake.sendCalls > 1 {
 				t.Fatalf("error=%v create=%d send=%d", err, fake.createCalls, fake.sendCalls)
 			}
-			observations, readErr := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+			observations, readErr := newHandoffDeliveryAudit(stateRoot).Read()
 			if readErr != nil {
 				t.Fatal(readErr)
 			}
@@ -450,7 +449,7 @@ func TestCmuxHandoffNonAmbiguousMutationFailureIsNotAcceptedResponseLost(t *test
 	if err == nil || fake.createCalls != 1 || fake.sendCalls != 0 {
 		t.Fatalf("error=%v create=%d send=%d", err, fake.createCalls, fake.sendCalls)
 	}
-	observations, readErr := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, readErr := newHandoffDeliveryAudit(stateRoot).Read()
 	if readErr != nil {
 		t.Fatal(readErr)
 	}
@@ -525,7 +524,7 @@ func TestCmuxHandoffPostCreateFailuresStayInLineageAndPreserveRecovery(t *testin
 			if test.receiptErr != nil && (!result.OK || result.Status != "input_accepted_receiver_unverified" || result.Target.Process != nil) {
 				t.Fatalf("unverified receiver result=%+v", result)
 			}
-			observations, readErr := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+			observations, readErr := newHandoffDeliveryAudit(stateRoot).Read()
 			if readErr != nil {
 				t.Fatal(readErr)
 			}
@@ -570,7 +569,7 @@ func (fake *cmuxClientFake) CreateWorkspace(_ context.Context, request cmuxadapt
 	fake.createCalls++
 	fake.createRequest = request
 	if fake.stateRoot != "" {
-		observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(fake.stateRoot)
+		observations, err := newHandoffDeliveryAudit(fake.stateRoot).Read()
 		if err != nil || len(observations) != 1 || observations[0].CallStaged.Status != "observed" || observations[0].Target.WorkspaceID != "" {
 			fake.t.Fatalf("workspace created before stage audit: observations=%+v err=%v", observations, err)
 		}
@@ -584,7 +583,7 @@ func (fake *cmuxClientFake) CreateWorkspace(_ context.Context, request cmuxadapt
 func (fake *cmuxClientFake) Send(context.Context, cmuxadapter.SendRequest) (cmuxadapter.SendReceipt, error) {
 	fake.sendCalls++
 	if fake.stateRoot != "" {
-		observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(fake.stateRoot)
+		observations, err := newHandoffDeliveryAudit(fake.stateRoot).Read()
 		if err != nil || len(observations) != 2 || observations[1].Target.WorkspaceID == "" {
 			fake.t.Fatalf("input sent before target enrichment audit: observations=%+v err=%v", observations, err)
 		}

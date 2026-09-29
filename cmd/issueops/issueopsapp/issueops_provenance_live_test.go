@@ -32,7 +32,7 @@ func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 	}
 	binaryDigest := sha256.Sum256(binaryBytes)
 
-	live, err := issueops.ReadIssueOps(issueops.IssueOpsStateRoot(), lifecycleID)
+	live, err := issueops.ReadIssueOps(issueOpsStateRoot(), lifecycleID)
 	if err != nil {
 		t.Fatal(err)
 	}

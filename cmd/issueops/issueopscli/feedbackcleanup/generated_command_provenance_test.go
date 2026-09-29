@@ -106,7 +106,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		t.Fatal(err)
 	}
 	binaryHash := sha256.Sum256(binaryBytes)
-	live, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), lifecycleID)
+	live, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), lifecycleID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,7 +125,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	record.Execution.Mode = issueopscontract.ExecutionModeOrca
 	record.Execution.Workspace.Driver = "orca"
 	record.Execution.Orca = &binding
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -197,7 +197,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	if removeCalls != 1 {
 		t.Fatalf("current relay remove calls = %d, want 1", removeCalls)
 	}
-	if _, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID); !errors.Is(err, os.ErrNotExist) {
+	if _, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("cleanup dogfood record was not deleted: %v", err)
 	}
 }

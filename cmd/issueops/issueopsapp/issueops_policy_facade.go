@@ -17,12 +17,12 @@ func issueOpsCLIDependencies() issueopscli.Dependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	return issueopscli.Dependencies{
 		Verification:   newRemoteVerificationHandlers(),
-		Remote:         newIssueOpsRemote(issueops.IssueOpsStateRoot()),
+		Remote:         newIssueOpsRemote(issueOpsStateRoot()),
 		Benchmark:      newBenchmarkCommand(),
-		Cleanup:        newIssueOpsCleanup(issueops.IssueOpsStateRoot()),
-		CleanupRuntime: newIssueOpsCleanupRuntime(issueops.IssueOpsStateRoot()),
+		Cleanup:        newIssueOpsCleanup(issueOpsStateRoot()),
+		CleanupRuntime: newIssueOpsCleanupRuntime(issueOpsStateRoot()),
 		Execution:      newIssueOpsExecutionRunners(), HandoffCmux: issueOpsCmuxHandoffHandler,
-		Runtime: newIssueOpsCLIRuntime(issueops.IssueOpsStateRoot()), Gates: newIssueOpsCLIGates(),
+		Runtime: newIssueOpsCLIRuntime(issueOpsStateRoot()), Gates: newIssueOpsCLIGates(),
 		Usage: clicatalog.LifecycleUsage(), ChildUsage: clicatalog.ChildUsage(),
 		Prepare: execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner,
 		BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit), ReadIssue: execution.ReadIssue,

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/issueopscli/executioncmd"
-	auditadapter "issueops/internal/adapter/audit"
 	issueopscore "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/preflight"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -145,7 +144,7 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	if fallbackCalls != 0 {
 		t.Fatalf("validated request snapshot called provider fallback %d times", fallbackCalls)
 	}
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, err := newHandoffDeliveryAudit(stateRoot).Read()
 	if err != nil || len(observations) == 0 {
 		t.Fatalf("fresh preparation bypassed delivery observation: observations=%d err=%v", len(observations), err)
 	}

@@ -682,6 +682,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func newHandoffDeliveryAudit",
         "func newHandoffDeliveryProvisioner"
       ]
     },
@@ -1104,6 +1105,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_state_root.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func issueOpsStateRoot"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_status_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -1334,14 +1343,6 @@
       "task": "T20",
       "symbols": [
         "func newSelfWorkflowState"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/state_adapter_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureAdapterStateAccess"
       ]
     },
     {
@@ -2743,18 +2744,20 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func AuditHandoffDeliveryObservationAt",
-        "func ReadHandoffDeliveryAuditObservationsAt",
-        "func appendHandoffDeliveryAudit",
+        "func HandoffDeliveryStore.Append",
+        "func HandoffDeliveryStore.Read",
+        "func HandoffDeliveryStore.ReadFor",
+        "func HandoffDeliveryStore.append",
+        "func boundedHandoffDeliveryField",
         "func handoffDeliveryAuditErrorAffects",
         "func handoffDeliveryAuditHandle.Close",
         "func handoffDeliveryAuditHandle.VerifyPath",
         "func handoffDeliveryReceiptDigest",
         "func handoffDeliveryRecordDigest",
-        "func readHandoffDeliveryAuditObservationsAt",
         "func redactedHandoffDeliveryObservation",
         "func scanHandoffDeliveryAudit",
-        "type handoffDeliveryAuditHandle"
+        "type handoffDeliveryAuditHandle",
+        "type handoffDeliveryOpenHooks"
       ]
     },
     {
@@ -2817,31 +2820,8 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func HandoffDeliveryStore.Append",
-        "func HandoffDeliveryStore.Read",
-        "func HandoffDeliveryStore.ReadFor",
         "type HandoffDeliveryStore"
       ]
-    },
-    {
-      "path": "internal/adapter/audit/process.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": [
-        "func AuditProcessExecution",
-        "func appendProcessAudit",
-        "func boundedProcessDiagnostic",
-        "func boundedProcessField",
-        "func validateProcessExecutionRequest",
-        "type ProcessExecutionRecord",
-        "type ProcessExecutionRequest"
-      ]
-    },
-    {
-      "path": "internal/adapter/audit/state_dependencies.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": []
     },
     {
       "path": "internal/adapter/augmentation/repository.go",
@@ -5130,7 +5110,6 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func IssueOpsStateRoot",
         "func ListIssueOpsIDs",
         "func NewIssueOpsID",
         "func ReadIssueOps",
@@ -5298,12 +5277,6 @@
         "func ReviewPlanSource.StagedPlans",
         "type ReviewPlanSource"
       ]
-    },
-    {
-      "path": "internal/adapter/issueops/state_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "internal/adapter/lifecycle/fingerprint/fingerprint.go",
@@ -24675,6 +24648,41 @@
       "evidence_tests": [
         "TestPreparedValidatorsKeepTheirGitRunner",
         "TestValidatePreflightFuzzRealBinary"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "handoff-audit-store-capabilities",
+      "source_path": "internal/adapter/audit/handoff_delivery.go",
+      "source_symbol": "func AuditHandoffDeliveryObservationAt",
+      "responsibility": "Append and verify a handoff receipt using the store-owned state root, key lock and pinned file handles",
+      "target": "internal/adapter/audit",
+      "target_symbol": "func HandoffDeliveryStore.Append",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestHandoffStoresKeepTheirLockCapability",
+        "TestHandoffDeliveryAuditLeafReplacementKeepsWriteAndReadOnPinnedFile"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "issueops-state-root-composition",
+      "source_path": "internal/adapter/issueops/issueops_state.go",
+      "source_symbol": "func IssueOpsStateRoot",
+      "responsibility": "Choose the schema-scoped state path at the composition root before constructing CLI and MCP capabilities",
+      "target": "cmd/issueops/issueopsapp",
+      "target_symbol": "func issueOpsStateRoot",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_policy_facade.go",
+        "cmd/issueops/issueopsapp/mcp_facade.go"
+      ],
+      "evidence_tests": [
+        "TestBasicCommandsKeepCapturedRootsAndStores",
+        "TestManualHandoffServiceKeepsCapturedStateAndSnapshot"
       ],
       "status": "migrated"
     }

@@ -11,7 +11,7 @@ import (
 
 func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {
 	t.Helper()
-	record, err := startIssueOpsFixture(issueops.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(issueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {
 			Generation: 1, Status: issueopscontract.LeaseStatusClaimable, ClaimTokenSHA256: strings.Repeat("b", 64),
 		},
 	}
-	if _, err := issueops.WriteIssueOps(issueops.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueops.WriteIssueOps(issueOpsStateRoot(), record); err != nil {
 		t.Fatal(err)
 	}
 	return record.ID

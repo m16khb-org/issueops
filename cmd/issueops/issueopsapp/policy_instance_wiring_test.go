@@ -77,13 +77,13 @@ func TestPolicyMCPInstancesKeepStateAndReloadOverrides(t *testing.T) {
 		state := t.TempDir()
 		t.Setenv("ISSUEOPS_STATE_DIR", state)
 		t.Setenv("ISSUEOPS_AUDIT_LOG", filepath.Join(state, "command.jsonl"))
-		record, err := startIssueOpsFixture(core.IssueOpsStateRoot(), model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
+		record, err := startIssueOpsFixture(issueOpsStateRoot(), model.IssueOpsStartRequest{Repo: repo, Branch: "79-child"})
 		if err != nil {
 			t.Fatal(err)
 		}
 		record.IssueURL = "https://github.com/acme/repo/issues/79"
 		record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: base, LinkVerified: true, CreatedAt: record.CreatedAt}
-		if _, err = core.WriteIssueOps(core.IssueOpsStateRoot(), record); err != nil {
+		if _, err = core.WriteIssueOps(issueOpsStateRoot(), record); err != nil {
 			t.Fatal(err)
 		}
 		deps[i] = issueOpsMCPDependencies()

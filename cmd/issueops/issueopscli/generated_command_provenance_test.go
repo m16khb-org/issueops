@@ -25,7 +25,7 @@ func (s issueOpsProvenanceObserverStub) Observe(context.Context) (provenanceport
 func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-command-provenance")
-	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-provenance"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-provenance"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 			}},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -80,7 +80,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-command-exact-binary")
-	record, err := startIssueOpsFixture(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-exact-binary"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-exact-binary"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 			}},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{
@@ -147,10 +147,10 @@ func TestGeneratedDelegatedChildBootstrapUsesParentExecutionProvenance(t *testin
 	parent.ChildCycles = append(parent.ChildCycles, issueopscontract.IssueOpsChildCycleRef{
 		CycleID: child.ID, Branch: child.Branch, CreatedAt: "2026-08-04T00:00:00Z",
 	})
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), parent); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), parent); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), child); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), child); err != nil {
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{
@@ -203,7 +203,7 @@ func TestGeneratedOwnerMutationRequiresActualProcessCWD(t *testing.T) {
 	if runErr == nil || !strings.Contains(runErr.Error(), "actual process cwd") {
 		t.Fatalf("generated owner mutation from source cwd must fail before mutation: %v", runErr)
 	}
-	status, err := childStatusWithActorForTest(issueopscore.IssueOpsStateRoot(), parent.ID, false, actor)
+	status, err := childStatusWithActorForTest(issueOpsStateRootForTest(), parent.ID, false, actor)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -90,7 +90,7 @@ func testCleanupCommand() feedbackcleanup.Command {
 		CloseIssueOpsChildren: func(root, id string, req issueopscontract.IssueOpsCloseChildrenRequest, d feedbackcleanup.Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 			return (cleanupapp.ChildrenCloser{Records: issueopscore.CycleRecordStore{StateRoot: root}, Provider: d.Provider, VerifyMerged: d.VerifyMerged, Now: time.Now}).Close(context.Background(), id, req.MergeEvidenceRequested, req.Confirm)
 		},
-		IssueOpsStateRoot: issueopscore.IssueOpsStateRoot,
+		IssueOpsStateRoot: issueOpsStateRootForTest,
 		MarkIssueOpsContractFeedbackIssueUpdatedWithActor: func(root, id string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return reviewapp.MarkContractFeedbackIssueUpdated(issueopscore.NewReviewMutationStore(&actor), root, id)
 		},

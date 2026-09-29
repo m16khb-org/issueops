@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	auditadapter "issueops/internal/adapter/audit"
 	cmuxadapter "issueops/internal/adapter/cmux"
 	"issueops/internal/adapter/hostprotocol"
 	issueopsadapter "issueops/internal/adapter/issueops"
@@ -82,7 +81,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	defer fence.Close()
 	root := fence.canonicalRoot
 	attemptID, lineageID := issueopsdomain.ManualCmuxHandoffIDs(request)
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, err := newHandoffDeliveryAudit(stateRoot).Read()
 	if err != nil {
 		return result, err
 	}

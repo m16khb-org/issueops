@@ -23,7 +23,7 @@ func wireOrphanAndLoopGateForTests() {
 }
 
 func orphanCleaner() cleanupapp.OrphanCleaner {
-	environment := issueopsadapter.OrphanEnvironment{StateRoot: issueopsadapter.IssueOpsStateRoot()}
+	environment := issueopsadapter.OrphanEnvironment{StateRoot: issueOpsStateRootForTest()}
 	collector := healthadapter.Collector{Git: environment, IssueOps: healthadapter.IssueOpsReader{StateRoot: environment.StateRoot, ListIDs: issueopsadapter.ListIssueOpsIDs, ListLeaseHolders: issueopsadapter.ListLeaseHolderIndexes, Read: issueopsadapter.ReadIssueOpsExisting}, InspectNativeProcess: issueopsadapter.InspectNativeProcessReceipt}
 	environment.LocalInventory = func(ctx context.Context, repo string) (health.Snapshot, error) {
 		return collector.CollectLocal(ctx, repo), nil

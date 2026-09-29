@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	statestore "issueops/internal/adapter/outbound/state"
 	"time"
 
 	auditadapter "issueops/internal/adapter/audit"
@@ -15,5 +16,9 @@ func newHandoffDeliveryProvisioner(stateRoot string, next port.ExecutionOrcaProv
 	if now == nil {
 		now = time.Now
 	}
-	return &deliveryapp.Provisioner{Audit: auditadapter.HandoffDeliveryStore{StateRoot: stateRoot}, Next: next, Now: now}
+	return &deliveryapp.Provisioner{Audit: newHandoffDeliveryAudit(stateRoot), Next: next, Now: now}
+}
+
+func newHandoffDeliveryAudit(stateRoot string) auditadapter.HandoffDeliveryStore {
+	return auditadapter.HandoffDeliveryStore{StateRoot: stateRoot, WithKeyLock: statestore.WithKeyLock}
 }

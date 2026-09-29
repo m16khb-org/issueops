@@ -62,7 +62,7 @@ func testRemoteCommand() Command {
 			}, invoke)
 			return service.Create(ctx, input)
 		},
-		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
+		IssueOpsStateRoot:            issueOpsStateRootForTest,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
 		ReflectReviewFindings: func(ctx context.Context, root, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 			service := remoteapp.NewReviewReflectionService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(name string) (remoteapp.ReviewReflectionProvider, error) { return provider.Resolve(name) }, observe, time.Now)

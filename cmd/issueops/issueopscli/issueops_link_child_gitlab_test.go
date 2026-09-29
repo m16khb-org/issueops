@@ -63,7 +63,7 @@ esac
 		})
 	})
 
-	record, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), started.ID)
+	record, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), started.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

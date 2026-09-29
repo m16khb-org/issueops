@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	auditcontract "issueops/internal/contract/audit"
@@ -19,11 +20,22 @@ import (
 	"issueops/internal/domain/policy"
 )
 
-var (
-	handoffDeliveryAuditBeforeStateRootOpen = func() {}
-	handoffDeliveryAuditBeforeLeafOpen      = func() {}
-	handoffDeliveryAuditAfterLeafOpen       = func() {}
-)
+const handoffDeliveryAuditTimeout = 2 * time.Second
+const handoffDeliveryFieldLimit = 1024
+
+type handoffDeliveryOpenHooks struct {
+	beforeStateRootOpen func()
+	beforeLeafOpen      func()
+	afterLeafOpen       func()
+}
+
+func boundedHandoffDeliveryField(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) > handoffDeliveryFieldLimit {
+		return value[:handoffDeliveryFieldLimit] + "..."
+	}
+	return value
+}
 
 type handoffDeliveryAuditHandle struct {
 	file       *os.File
@@ -52,7 +64,7 @@ func (handle *handoffDeliveryAuditHandle) VerifyPath() error {
 	return handle.verifyPath()
 }
 
-func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
+func (store HandoffDeliveryStore) Append(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 	auditLogID := auditid.Generate(observation.LifecycleID, observation.AttemptID, []string{observation.PromptSHA256, observation.Launcher.Name})
 	observation = redactedHandoffDeliveryObservation(observation)
 	observation.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{
@@ -72,22 +84,22 @@ func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscon
 		return auditcontract.HandoffDeliveryAuditRecord{}, err
 	}
 	record.RecordDigest = handoffDeliveryRecordDigest(record)
-	if err := appendHandoffDeliveryAudit(stateRoot, record); err != nil {
+	if err := store.append(record); err != nil {
 		return record, err
 	}
 	return record, nil
 }
 
-func ReadHandoffDeliveryAuditObservationsAt(stateRoot string) ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	return readHandoffDeliveryAuditObservationsAt(stateRoot, "", "")
+func (store HandoffDeliveryStore) Read() ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
+	return store.ReadFor("", "")
 }
 
-func readHandoffDeliveryAuditObservationsAt(stateRoot, lifecycleID, lineageID string) ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
+func (store HandoffDeliveryStore) ReadFor(lifecycleID, lineageID string) ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
 	observations := []issueopscontract.IssueOpsHandoffDeliveryObservation{}
-	ctx, cancel := context.WithTimeout(context.Background(), processAuditTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), handoffDeliveryAuditTimeout)
 	defer cancel()
-	err := WithKeyLock(ctx, stateRoot, "handoff-delivery-audit", func(context.Context) error {
-		handle, err := openHandoffDeliveryAudit(stateRoot, handoffDeliveryAuditRead)
+	err := store.WithKeyLock(ctx, store.StateRoot, "handoff-delivery-audit", func(context.Context) error {
+		handle, err := openHandoffDeliveryAudit(store.StateRoot, handoffDeliveryAuditRead, store.openHooks)
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
@@ -164,7 +176,7 @@ func handoffDeliveryAuditErrorAffects(record auditcontract.HandoffDeliveryAuditR
 		(record.Observation.LifecycleID == lifecycleID && record.Observation.LineageID == lineageID)
 }
 
-func appendHandoffDeliveryAudit(stateRoot string, record auditcontract.HandoffDeliveryAuditRecord) error {
+func (store HandoffDeliveryStore) append(record auditcontract.HandoffDeliveryAuditRecord) error {
 	line, err := json.Marshal(record)
 	if err != nil {
 		return err
@@ -172,10 +184,10 @@ func appendHandoffDeliveryAudit(stateRoot string, record auditcontract.HandoffDe
 	if len(line)+1 > 256*1024 {
 		return fmt.Errorf("handoff delivery audit record exceeds reader limit")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), processAuditTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), handoffDeliveryAuditTimeout)
 	defer cancel()
-	return WithKeyLock(ctx, stateRoot, "handoff-delivery-audit", func(context.Context) error {
-		handle, err := openHandoffDeliveryAudit(stateRoot, handoffDeliveryAuditAppend)
+	return store.WithKeyLock(ctx, store.StateRoot, "handoff-delivery-audit", func(context.Context) error {
+		handle, err := openHandoffDeliveryAudit(store.StateRoot, handoffDeliveryAuditAppend, store.openHooks)
 		if err != nil {
 			return err
 		}
@@ -227,22 +239,22 @@ func handoffDeliveryReceiptDigest(auditLogID string, observation issueopscontrac
 }
 
 func redactedHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-	observation.Launcher.Path = boundedProcessField(policy.RedactFreeform(observation.Launcher.Path))
+	observation.Launcher.Path = boundedHandoffDeliveryField(policy.RedactFreeform(observation.Launcher.Path))
 	if observation.Target.Process != nil {
 		process := *observation.Target.Process
-		process.Executable = boundedProcessField(policy.RedactFreeform(process.Executable))
+		process.Executable = boundedHandoffDeliveryField(policy.RedactFreeform(process.Executable))
 		observation.Target.Process = &process
 	}
 	if observation.OwnerActor != nil && observation.OwnerActor.SessionProcess != nil {
 		process := *observation.OwnerActor.SessionProcess
-		process.Executable = boundedProcessField(policy.RedactFreeform(process.Executable))
+		process.Executable = boundedHandoffDeliveryField(policy.RedactFreeform(process.Executable))
 		actor := *observation.OwnerActor
 		actor.SessionProcess = &process
 		observation.OwnerActor = &actor
 	}
 	if observation.OwnerClaim.Actor.SessionProcess != nil {
 		process := *observation.OwnerClaim.Actor.SessionProcess
-		process.Executable = boundedProcessField(policy.RedactFreeform(process.Executable))
+		process.Executable = boundedHandoffDeliveryField(policy.RedactFreeform(process.Executable))
 		observation.OwnerClaim.Actor.SessionProcess = &process
 	}
 	return observation

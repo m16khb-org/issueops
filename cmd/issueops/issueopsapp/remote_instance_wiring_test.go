@@ -21,7 +21,7 @@ func TestRemoteCLIInstancesKeepCapturedState(t *testing.T) {
 	for i := range deps {
 		t.Setenv("ISSUEOPS_STATE_DIR", roots[i])
 		var err error
-		records[i], err = startIssueOpsFixture(adapter.IssueOpsStateRoot(), model.IssueOpsStartRequest{Repo: repo, Branch: "991-remote-state"})
+		records[i], err = startIssueOpsFixture(issueOpsStateRoot(), model.IssueOpsStartRequest{Repo: repo, Branch: "991-remote-state"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -45,7 +45,7 @@ func TestRemoteCLIInstancesKeepCapturedState(t *testing.T) {
 
 func TestRemoteChildCreationUsesRootApplicationAndPersistsLink(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	root := adapter.IssueOpsStateRoot()
+	root := issueOpsStateRoot()
 	record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "1234-child-root"})
 	if err != nil {
 		t.Fatal(err)

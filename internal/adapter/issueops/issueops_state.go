@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -177,10 +176,6 @@ func deleteIssueOps(stateRoot, id string) error {
 		{Bucket: artifactStageBucket, ID: id, Delete: true},
 		{Bucket: issueOpsBucket, ID: id, Delete: true},
 	})
-}
-
-func IssueOpsStateRoot() string {
-	return filepath.Join(StateDir(), issueOpsBucket)
 }
 
 func newIssueOpsID(repo, branch string) string {

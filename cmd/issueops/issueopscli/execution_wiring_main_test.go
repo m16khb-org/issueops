@@ -17,6 +17,6 @@ func testCLIExecutionRuntime() executioncmd.ExecutionDeps {
 	}
 }
 func testMCPExecutionDeps() mcpcli.ExecutionDeps {
-	root := issueopscore.IssueOpsStateRoot()
+	root := issueOpsStateRootForTest()
 	return mcpcli.ExecutionDeps{ExecuteExecution: issueopscore.ExecuteExecution, ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return root }}
 }

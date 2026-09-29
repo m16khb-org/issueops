@@ -8,7 +8,7 @@ import (
 // 프로덕션에서는 issueopsapp이 주입한다. 실행 CLI 테스트는 실제 액션 경로를
 // 검증하므로 같은 배선을 재현한다.
 func testExecutionDeps() ExecutionDeps {
-	root := issueopscore.IssueOpsStateRoot()
+	root := issueOpsStateRootForTest()
 	return ExecutionDeps{ExecuteExecution: issueopscore.ExecuteExecution, ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return root }}
 }
 

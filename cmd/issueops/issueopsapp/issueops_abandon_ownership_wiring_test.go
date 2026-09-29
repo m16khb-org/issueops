@@ -29,7 +29,7 @@ func TestAbandonCLIObservesOnlyAfterOwnershipAndBindsLoadedArtifact(t *testing.T
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			t.Setenv("ISSUEOPS_STATE_DIR", root)
-			root = core.IssueOpsStateRoot()
+			root = issueOpsStateRoot()
 			command := newIssueOpsCleanup(root)
 			record, err := startIssueOpsFixture(root, model.IssueOpsStartRequest{Repo: makeGitRepoForContract(t), Branch: "991-abandon-wiring"})
 			if err != nil {
