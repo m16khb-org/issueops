@@ -40,6 +40,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	compatibility := compatibilityContract()
 	stateRoot := issueopsadapter.IssueOpsStateRoot()
 	return mcpcli.MCPDependencies{
+		APIDoc:        newAPIDocService(),
 		DefaultTarget: resolveTarget(""),
 		Inspect:       func(repo string) any { return inspector(repo) },
 		Preflight:     preflightapp.Service{Observer: preflight.GitObserver{}},

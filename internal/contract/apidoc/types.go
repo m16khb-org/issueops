@@ -35,3 +35,10 @@ type ReviewResult struct {
 	Schema     map[string]any  `json:"schema,omitempty"`
 	ResultFile string          `json:"result_file,omitempty"`
 }
+
+type CheckResult struct {
+	OK     bool         `json:"ok"`
+	Static StaticResult `json:"static"`
+	Review ReviewResult `json:"review"`
+	Reason string       `json:"reason,omitempty"`
+}

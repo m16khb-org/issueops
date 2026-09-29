@@ -2,7 +2,6 @@ package mcpcli
 
 import (
 	"encoding/json"
-	"issueops/cmd/issueops/apidoc"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,11 +52,24 @@ export class UsersController {
 }
 
 func TestQualityGateSentinelsAreRecognizedAsNormalMCPOutcomes(t *testing.T) {
-	if !apidoc.IsReviewGateError(apidoc.ErrReviewGateFailed) {
-		t.Fatal("api doc review gate sentinel should be recognized")
-	}
-	if !apidoc.IsStaticGateError(apidoc.ErrStaticGateFailed) {
-		t.Fatal("api doc static gate sentinel should be recognized")
+	for _, mode := range []string{"pending", "review-fail", "static-fail"} {
+		deps := apiDocOutcomeDeps(t, "gate", mode)
+		tool := "api_doc_review"
+		if mode == "static-fail" {
+			tool = "api_doc_static_check"
+		}
+		args := map[string]any{}
+		if mode == "review-fail" {
+			args["result_file"] = "result"
+		}
+		raw, _ := json.Marshal(map[string]any{"name": tool, "arguments": args})
+		payload, rpcErr := HandleToolCallWithDependencies(raw, deps)
+		if rpcErr != nil {
+			t.Fatalf("%s gate became protocol error: %v", mode, rpcErr)
+		}
+		if text := extractSingleTextResult(t, payload); !strings.Contains(text, `"ok": false`) {
+			t.Fatalf("%s gate outcome=%s", mode, text)
+		}
 	}
 	if !isSelfVerificationGateError(errSelfVerificationGateFailed) {
 		t.Fatal("self-verification gate sentinel should be recognized")

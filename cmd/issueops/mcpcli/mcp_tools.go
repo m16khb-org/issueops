@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/cmd/issueops/mcpcli/resources"
+	apidocapp "issueops/internal/application/apidoc"
 	auditapp "issueops/internal/application/audit"
 	channelapp "issueops/internal/application/channel"
 	commitapp "issueops/internal/application/commitsuggest"
@@ -48,6 +49,7 @@ type MCPToolOutcome struct {
 // MCPDependencies는 server 생성 시 고정된다. 요청 간 package-global dependency
 // cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
+	APIDoc        apidocapp.Service
 	DefaultTarget string
 	Inspect       func(string) any
 	Preflight     preflightapp.Service

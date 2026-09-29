@@ -24,24 +24,24 @@ func ExtraPrompt(repo, promptFile string) (string, error) {
 	return "", nil
 }
 
-func Diff(repo string, files []string, diffFile string) (string, error) {
+func (f Files) Diff(repo string, files []string, diffFile string) (string, error) {
 	if diffFile != "" {
 		b, err := os.ReadFile(diffFile)
 		return string(b), err
 	}
 	args := append([]string{"diff", "--cached", "--"}, files...)
-	code, out, stderr := GitCmd(repo, args...)
+	code, out, stderr := f.GitCmd(repo, args...)
 	if code != 0 {
 		return "", fmt.Errorf("git diff failed: %s", stderr)
 	}
 	return out, nil
 }
 
-func Input(repo string, files []string, diffFile string, all bool) (string, error) {
+func (f Files) Input(repo string, files []string, diffFile string, all bool) (string, error) {
 	if all && diffFile == "" {
 		return FullContent(repo, files)
 	}
-	return Diff(repo, files, diffFile)
+	return f.Diff(repo, files, diffFile)
 }
 
 func FullContent(repo string, files []string) (string, error) {
@@ -66,23 +66,23 @@ func FullContent(repo string, files []string) (string, error) {
 	return b.String(), nil
 }
 
-func Staged(repo string) []string {
-	code, out, _ := GitCmd(repo, "diff", "--cached", "--name-only", "--diff-filter=ACMR", "--")
+func (f Files) Staged(repo string) []string {
+	code, out, _ := f.GitCmd(repo, "diff", "--cached", "--name-only", "--diff-filter=ACMR", "--")
 	if code != 0 {
 		return nil
 	}
 	return Normalize(repo, splitLines(out))
 }
 
-func Tracked(repo string) []string {
-	code, out, _ := GitCmd(repo, "ls-files")
+func (f Files) Tracked(repo string) []string {
+	code, out, _ := f.GitCmd(repo, "ls-files")
 	if code != 0 {
 		return nil
 	}
 	var files []string
 	for _, line := range strings.Split(out, "\n") {
 		file := strings.TrimSpace(line)
-		if file == "" || !IsCandidate(file) {
+		if file == "" || !domain.IsCandidate(file) {
 			continue
 		}
 		files = append(files, file)
@@ -96,7 +96,7 @@ func Normalize(repo string, files []string) []string {
 	seen := map[string]bool{}
 	for _, file := range files {
 		file = strings.TrimSpace(file)
-		if file == "" || !IsCandidate(file) {
+		if file == "" || !domain.IsCandidate(file) {
 			continue
 		}
 		if filepath.IsAbs(file) {
@@ -113,10 +113,6 @@ func Normalize(repo string, files []string) []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-func IsCandidate(file string) bool {
-	return domain.IsCandidate(file)
 }
 
 func splitLines(text string) []string {

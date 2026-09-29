@@ -1,36 +1,10 @@
 package apidoc
 
-import (
-	"errors"
-)
+import app "issueops/internal/application/apidoc"
 
-type (
-	ReviewOptions = apiDocReviewOptions
-	ReviewResult  = apiDocReviewResult
-	StaticOptions = apiDocStaticOptions
-	StaticResult  = apiDocStaticResult
-)
-
-func Run(args []string) error {
-	return runAPIDoc(args)
+type Command struct {
+	Service       app.Service
+	ResolveTarget func(string) string
 }
 
-func RunReviewWithOptions(options ReviewOptions) (ReviewResult, error) {
-	return runAPIDocReviewWithOptions(options)
-}
-
-func RunStaticCheckWithOptions(options StaticOptions) (StaticResult, error) {
-	return runAPIDocStaticCheckWithOptions(options)
-}
-
-func Evidence(repo string, files []string) string {
-	return reviewFileEffects.Evidence(repo, files)
-}
-
-func IsReviewGateError(err error) bool {
-	return errors.Is(err, ErrReviewGateFailed) || errors.Is(err, ErrReviewResultRequired)
-}
-
-func IsStaticGateError(err error) bool {
-	return errors.Is(err, ErrStaticGateFailed)
-}
+func (c Command) Run(args []string) error { return c.runAPIDoc(args) }

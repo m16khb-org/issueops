@@ -1,11 +1,9 @@
 package issueopsapp
 
 import (
-	apidoccli "issueops/cmd/issueops/apidoc"
 	gitworktreedeps "issueops/internal/adapter/gitworktree"
 	issueopsdeps "issueops/internal/adapter/issueops"
 	implementationdeps "issueops/internal/adapter/issueops/implementation"
-	reviewfilesdeps "issueops/internal/adapter/outbound/apidoc/reviewfiles"
 	preflightadapter "issueops/internal/adapter/preflight"
 	preflightfuzzdeps "issueops/internal/adapter/verification/probe/preflightfuzz"
 )
@@ -23,15 +21,4 @@ func configurePolicyAndGitObservers() {
 	issueopsdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsdeps.GitOut = preflightadapter.GitOut
 	preflightfuzzdeps.GitCmd = preflightadapter.GitCmd
-	reviewfilesdeps.GitCmd = preflightadapter.GitCmd
-	apidoccli.ConfigureReviewFiles(apidoccli.ReviewFileEffects{
-		ExtraPrompt: reviewfilesdeps.ExtraPrompt,
-		Diff:        reviewfilesdeps.Diff,
-		Input:       reviewfilesdeps.Input,
-		FullContent: reviewfilesdeps.FullContent,
-		Staged:      reviewfilesdeps.Staged,
-		Tracked:     reviewfilesdeps.Tracked,
-		Normalize:   reviewfilesdeps.Normalize,
-		Evidence:    reviewfilesdeps.Evidence,
-	})
 }

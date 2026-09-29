@@ -3,9 +3,13 @@ package issueopsapp
 import (
 	"errors"
 
-	"issueops/cmd/issueops/apidoc"
+	"issueops/cmd/issueops/apidoc/reviewprompt"
 	"issueops/cmd/issueops/pathutil"
+	"issueops/internal/adapter/outbound/apidoc/reviewfiles"
+	app "issueops/internal/application/apidoc"
+	contract "issueops/internal/contract/apidoc"
 	statecontract "issueops/internal/contract/state"
+	domain "issueops/internal/domain/apidoc"
 )
 
 func isAPIDocReviewGateError(err error) bool {
@@ -37,34 +41,34 @@ func stateDoctorHasIssueCode(issues []statecontract.StateDoctorIssue, want strin
 }
 
 func checkNestControllerStatic(file, text string) []apiDocStaticViolation {
-	return apidoc.CheckNestControllerStatic(file, text)
+	return domain.CheckNestController(file, text)
 }
 
 func checkNestDTOStatic(file, text string) []apiDocStaticViolation {
-	return apidoc.CheckNestDTOStatic(file, text)
+	return domain.CheckNestDTO(file, text)
 }
 
 func buildAPIDocReviewPrompt(files []string, diff, extraPrompt, evidence string) string {
-	return apidoc.BuildReviewPrompt(files, diff, extraPrompt, evidence)
+	return reviewprompt.Build(files, diff, extraPrompt, evidence)
 }
 
 func apiDocReviewEvidence(repo string, files []string) string {
-	return apidoc.Evidence(repo, files)
+	return reviewfiles.Evidence(repo, files)
 }
 
 func apiDocReviewSchema() map[string]any {
-	return apidoc.ReviewSchema()
+	return reviewprompt.Schema()
 }
 
 func normalizeAPIDocFiles(repo string, files []string) []string {
-	return apidoc.NormalizeFiles(repo, files)
+	return reviewfiles.Normalize(repo, files)
 }
 
 func isAPIDocCandidate(file string) bool {
-	return apidoc.IsCandidate(file)
+	return domain.IsCandidate(file)
 }
 
-type apiDocStaticViolation = apidoc.StaticViolation
+type apiDocStaticViolation = contract.Violation
 
-var errAPIDocReviewGateFailed = apidoc.ErrReviewGateFailed
-var errAPIDocStaticGateFailed = apidoc.ErrStaticGateFailed
+var errAPIDocReviewGateFailed = app.ErrReviewGateFailed
+var errAPIDocStaticGateFailed = app.ErrStaticGateFailed

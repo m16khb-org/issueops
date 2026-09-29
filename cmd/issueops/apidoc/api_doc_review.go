@@ -6,25 +6,20 @@ import (
 	"os"
 
 	app "issueops/internal/application/apidoc"
-	contract "issueops/internal/contract/apidoc"
 )
 
-type apiDocReviewFinding = contract.ReviewFinding
-type apiDocReviewResult = contract.ReviewResult
-type apiDocReviewOptions = app.ReviewOptions
-
-func runAPIDoc(args []string) error {
+func (c Command) runAPIDoc(args []string) error {
 	if len(args) == 0 {
 		apiDocUsage()
 		return fmt.Errorf("missing api-doc subcommand")
 	}
 	switch args[0] {
 	case "check":
-		return runAPIDocCheck(args[1:])
+		return c.runAPIDocCheck(args[1:])
 	case "review":
-		return runAPIDocReview(args[1:])
+		return c.runAPIDocReview(args[1:])
 	case "static-check":
-		return runAPIDocStaticCheck(args[1:])
+		return c.runAPIDocStaticCheck(args[1:])
 	default:
 		apiDocUsage()
 		return fmt.Errorf("unknown api-doc subcommand %q", args[0])
@@ -39,7 +34,7 @@ func apiDocUsage() {
 `)
 }
 
-func runAPIDocReview(args []string) error {
+func (c Command) runAPIDocReview(args []string) error {
 	fs := flag.NewFlagSet("api-doc review", flag.ContinueOnError)
 	repo := fs.String("repo", "", "target git repository; defaults to current working directory")
 	all := fs.Bool("all", false, "review all tracked API documentation candidate files instead of staged changes")
@@ -50,31 +45,13 @@ func runAPIDocReview(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	root := ResolveTarget(*repo)
-	options := apiDocReviewOptions{Repo: root, Files: fs.Args(), All: *all, DiffFile: *diffFile, PromptFile: *promptFile, ResultFile: *resultFile, JSON: *jsonOut}
-	result, err := runAPIDocReviewWithOptions(options)
+	root := c.ResolveTarget(*repo)
+	options := app.ReviewOptions{Repo: root, Files: fs.Args(), All: *all, DiffFile: *diffFile, PromptFile: *promptFile, ResultFile: *resultFile, JSON: *jsonOut}
+	result, err := c.Service.Reviewer.Review(options)
 	if *jsonOut {
 		_ = printJSON(result)
 		return err
 	}
 	printAPIDocReview(result)
 	return err
-}
-
-func runAPIDocReviewWithOptions(options apiDocReviewOptions) (apiDocReviewResult, error) {
-	return (app.ReviewService{Effects: app.ReviewEffects{
-		NormalizeFiles: normalizeAPIDocFiles,
-		TrackedFiles:   trackedAPIDocFiles,
-		StagedFiles:    stagedAPIDocFiles,
-		Input:          apiDocInput,
-		ExtraPrompt:    apiDocReviewExtraPrompt,
-		Evidence:       apiDocReviewEvidence,
-		BuildPrompt:    buildAPIDocReviewPrompt,
-		Schema:         apiDocReviewSchema,
-		ReadResult: func(repo, file string) (string, []byte, error) {
-			path := resolveAPIDocReviewResultPath(repo, file)
-			data, err := os.ReadFile(path)
-			return path, data, err
-		},
-	}}).Review(options)
 }

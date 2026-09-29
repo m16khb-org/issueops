@@ -3,6 +3,7 @@ package apidoc
 import (
 	"encoding/json"
 	"fmt"
+	contract "issueops/internal/contract/apidoc"
 )
 
 func mustJSON(value any) []byte {
@@ -13,7 +14,7 @@ func mustJSON(value any) []byte {
 	return b
 }
 
-func printAPIDocReview(result apiDocReviewResult) {
+func printAPIDocReview(result contract.ReviewResult) {
 	fmt.Printf("API doc review verdict: %s\n", result.Verdict)
 	if result.Summary != "" {
 		fmt.Println(result.Summary)

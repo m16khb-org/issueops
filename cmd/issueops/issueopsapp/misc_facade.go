@@ -6,7 +6,6 @@ import (
 	"io"
 	"path/filepath"
 
-	"issueops/cmd/issueops/apidoc"
 	"issueops/cmd/issueops/contractcli"
 	"issueops/cmd/issueops/pathutil"
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
@@ -54,5 +53,5 @@ func exists(path string) bool {
 }
 
 func runAPIDoc(args []string) error {
-	return apidoc.Run(args)
+	return newAPIDocCommand().Run(args)
 }

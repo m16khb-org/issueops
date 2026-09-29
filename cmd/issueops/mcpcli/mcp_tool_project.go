@@ -1,8 +1,9 @@
 package mcpcli
 
 import (
-	"issueops/cmd/issueops/apidoc"
+	"errors"
 	"issueops/cmd/issueops/mcpcli/argmap"
+	apidoc "issueops/internal/application/apidoc"
 	projectbootstrapcontract "issueops/internal/contract/projectbootstrap"
 	projectdocscontract "issueops/internal/contract/projectdocs"
 )
@@ -74,7 +75,7 @@ func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOut
 		}
 		return mcpToolPayload(result)
 	case "api_doc_review":
-		result, err := apidoc.RunReviewWithOptions(apidoc.ReviewOptions{
+		result, err := deps.APIDoc.Reviewer.Review(apidoc.ReviewOptions{
 			Repo:       deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 			Files:      argmap.StringSlice(call.Arguments, "files"),
 			All:        argmap.Bool(call.Arguments, "all"),
@@ -83,18 +84,18 @@ func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOut
 			ResultFile: argmap.String(call.Arguments, "result_file"),
 			JSON:       true,
 		})
-		if err != nil && !apidoc.IsReviewGateError(err) {
+		if err != nil && !errors.Is(err, apidoc.ErrReviewGateFailed) && !errors.Is(err, apidoc.ErrReviewResultRequired) {
 			return mcpToolFailure(newProtocolError(-32000, "API doc review failed", result))
 		}
 		return mcpToolPayload(result)
 	case "api_doc_static_check":
-		result, err := apidoc.RunStaticCheckWithOptions(apidoc.StaticOptions{
+		result, err := deps.APIDoc.Static.Check(apidoc.StaticOptions{
 			Repo:  deps.resolveTarget(argmap.String(call.Arguments, "repo")),
 			Files: argmap.StringSlice(call.Arguments, "files"),
 			All:   argmap.Bool(call.Arguments, "all"),
 			JSON:  true,
 		})
-		if err != nil && !apidoc.IsStaticGateError(err) {
+		if err != nil && !errors.Is(err, apidoc.ErrStaticGateFailed) {
 			return mcpToolFailure(newProtocolError(-32000, "API doc static check failed", result))
 		}
 		return mcpToolPayload(result)
