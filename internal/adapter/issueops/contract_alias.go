@@ -21,7 +21,6 @@ type (
 	ExecutionResumeHandler            = issueopscontract.ExecutionResumeHandler
 	ExecutionResumeRequest            = issueopscontract.ExecutionResumeRequest
 	ExecutionResumeResult             = issueopscontract.ExecutionResumeResult
-	ExecutionSwitchModeDependencies   = issueopscontract.ExecutionSwitchModeDependencies
 	ExecutionSwitchModeRequest        = issueopscontract.ExecutionSwitchModeRequest
 	ExecutionSwitchModeResult         = issueopscontract.ExecutionSwitchModeResult
 	ExecutionSyncBaseDeps             = issueopscontract.ExecutionSyncBaseDeps

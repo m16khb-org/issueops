@@ -1189,6 +1189,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/mode_switch_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newModeSwitcher"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/native_activation_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -4326,7 +4334,6 @@
         "type ExecutionResumeHandler",
         "type ExecutionResumeRequest",
         "type ExecutionResumeResult",
-        "type ExecutionSwitchModeDependencies",
         "type ExecutionSwitchModeRequest",
         "type ExecutionSwitchModeResult",
         "type ExecutionSyncBaseDeps",
@@ -4478,13 +4485,13 @@
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func SwitchExecutionMode",
-        "func switchModeEffects.RemoveBranch",
-        "func switchModeEffects.RemoveWorktree",
-        "func switchModeEffects.ResetExecution",
-        "func switchModeGates",
-        "type switchModeEffects",
-        "type switchModeInventory"
+        "func ModeSwitchWorkspace.BranchOID",
+        "func ModeSwitchWorkspace.Clean",
+        "func ModeSwitchWorkspace.CommitCount",
+        "func ModeSwitchWorkspace.Present",
+        "func ModeSwitchWorkspace.RemoveBranch",
+        "func ModeSwitchWorkspace.RemoveWorktree",
+        "type ModeSwitchWorkspace"
       ]
     },
     {
@@ -9438,6 +9445,20 @@
       ]
     },
     {
+      "path": "internal/application/issueopsmodeswitch/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.RemoveBranch",
+        "func Service.RemoveWorktree",
+        "func Service.ResetExecution",
+        "func Service.Run",
+        "func Service.observe",
+        "func inventoryFor",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/issueopsmodeswitch/switch.go",
       "owner": "application",
       "task": "T20",
@@ -11137,7 +11158,6 @@
         "type ExecutionResumeHandler",
         "type ExecutionResumeRequest",
         "type ExecutionResumeResult",
-        "type ExecutionSwitchModeDependencies",
         "type ExecutionSwitchModeRequest",
         "type ExecutionSwitchModeResult",
         "type ExecutionSyncBaseDeps",
@@ -11516,6 +11536,14 @@
         "type ResumeReceipt",
         "type ResumeStageInventory",
         "type ResumeStageReceipt"
+      ]
+    },
+    {
+      "path": "internal/contract/issueopsmodeswitch/inventory.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type Inventory"
       ]
     },
     {
@@ -13261,6 +13289,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/execution_mode_switch.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ModeSwitchRecordFingerprint",
+        "func ResetExecutionForModeSwitch"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/execution_readiness.go",
       "owner": "domain",
       "task": "T20",
@@ -14369,6 +14406,17 @@
         "func MissingGates",
         "func NormalizeMode",
         "type Facts"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsmodeswitch/transition.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ComparisonRefs",
+        "func InventoryFingerprint",
+        "func ValidateApply",
+        "func hashJSON"
       ]
     },
     {
@@ -16496,6 +16544,15 @@
       "task": "T20",
       "symbols": [
         "type ModeSwitchEffects"
+      ]
+    },
+    {
+      "path": "internal/port/issueops_mode_switch_service.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type ModeSwitchRecords",
+        "type ModeSwitchWorkspace"
       ]
     },
     {
@@ -18936,7 +18993,7 @@
       "id": "mode-switch-eligibility",
       "source_path": "internal/adapter/issueops/execution_mode_switch.go",
       "source_symbol": "func switchModeGates",
-      "responsibility": "observe worktree and Git state; domain combines mode, writer, pending intent, cleanliness, commit, and remote-name gates in order",
+      "responsibility": "domain combines mode, writer, pending intent, cleanliness, commit and remote-name gates; application sequences observations",
       "target": "internal/domain/issueopsmodeswitch",
       "target_symbol": "func MissingGates",
       "task": "T06",
@@ -18947,7 +19004,7 @@
         "internal/domain/issueopsmodeswitch/decision_test.go",
         "internal/adapter/issueops/execution_mode_switch_provenance_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "cleanup-lease-writer-status",
@@ -24989,6 +25046,24 @@
         "internal/domain/issueopsreview/change_snapshot_test.go",
         "internal/application/issueopscycle/readiness_service_test.go",
         "cmd/issueops/issueopsapp/cycle_readiness_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "mode-switch-preview-reset-orchestration",
+      "source_path": "internal/adapter/issueops/execution_mode_switch.go",
+      "source_symbol": "func SwitchExecutionMode",
+      "responsibility": "load and observe mode-switch preview, validate fingerprint before external deletion, re-read under lock before resetting execution",
+      "target": "internal/application/issueopsmodeswitch",
+      "target_symbol": "func Service.Run",
+      "task": "T20",
+      "entrypoints": [
+        "issueops execution switch-mode"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsmodeswitch/service_test.go",
+        "cmd/issueops/issueopsapp/mode_switch_wiring_test.go",
+        "internal/adapter/issueops/issueops_cleanup_abandon_residual_test.go"
       ],
       "status": "migrated"
     }

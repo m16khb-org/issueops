@@ -711,7 +711,7 @@ func runSwitchMode(args []string, deps Deps) error {
 	result, err := deps.Runtime.SwitchExecutionMode(context.Background(), deps.StateRoot(), model.ExecutionSwitchModeRequest{
 		ID: *id, Mode: *mode, CWD: *actor.cwd, Apply: *apply, Confirm: *confirm,
 		Fingerprint: *fingerprint, Actor: actor.actor(),
-	}, model.ExecutionSwitchModeDependencies{})
+	})
 	return output(result, *jsonOut, err, deps)
 }
 

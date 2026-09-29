@@ -87,11 +87,6 @@ type ExecutionSwitchModeRequest struct {
 	Actor       NativeActor
 }
 
-// ExecutionSwitchModeDependencies는 게이트 평가와 정리의 외부 표면이다.
-// Git이 nil이면 preflight를 쓴다 — cleanup 경로와 같은 관례다.
-type ExecutionSwitchModeDependencies struct {
-	Git func(dir string, args ...string) (int, string)
-}
 type ExecutionSwitchModeResult struct {
 	OK              bool     `json:"ok"`
 	ID              string   `json:"id"`

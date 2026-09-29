@@ -50,7 +50,7 @@ func TestExecutionCommandsKeepRunnerAndActorOwnership(t *testing.T) {
 				events = append(events, owner+":sync")
 				return model.ExecutionSyncBaseResult{OK: true, ID: req.ID}, nil
 			},
-			SwitchExecutionMode: func(_ context.Context, root string, req model.ExecutionSwitchModeRequest, _ model.ExecutionSwitchModeDependencies) (model.ExecutionSwitchModeResult, error) {
+			SwitchExecutionMode: func(_ context.Context, root string, req model.ExecutionSwitchModeRequest) (model.ExecutionSwitchModeResult, error) {
 				check(root, req.Actor)
 				if req.Mode != "direct" || req.Apply || req.Confirm {
 					t.Fatalf("switch preview changed: %+v", req)

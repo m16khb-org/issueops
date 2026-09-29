@@ -12,7 +12,7 @@ func testCLIExecutionRuntime() executioncmd.ExecutionDeps {
 	return executioncmd.ExecutionDeps{
 		ExecuteExecution:             issueopscore.ExecuteExecution,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
+		SwitchExecutionMode:          testModeSwitcher(),
 		SyncExecutionBase:            issueopscore.SyncExecutionBase,
 	}
 }
