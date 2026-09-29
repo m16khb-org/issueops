@@ -30,9 +30,6 @@ func (deps preflightFuzzValidationDeps) withDefaults() preflightFuzzValidationDe
 	if deps.writeFile == nil {
 		deps.writeFile = os.WriteFile
 	}
-	if deps.git == nil {
-		deps.git = GitCmd
-	}
 	if deps.run == nil {
 		deps.run = runPreflightFuzzCommand
 	}

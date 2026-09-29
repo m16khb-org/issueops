@@ -52,7 +52,7 @@ func validateRegressionFixture(fixture RegressionFixture) error {
 		fixture.HostVersion == "" || fixture.ModelLabel == "" || fixture.CanonicalArguments == nil {
 		return fmt.Errorf("invalid_regression_fixture")
 	}
-	if !validEvidenceID(fixture.SourceSchemaSHA256) || !validEvidenceID(fixture.RawArgumentsSHA256) {
+	if !toolconformancedomain.ValidEvidenceID(fixture.SourceSchemaSHA256) || !toolconformancedomain.ValidEvidenceID(fixture.RawArgumentsSHA256) {
 		return fmt.Errorf("invalid_regression_fixture_digest")
 	}
 	if !toolconformancedomain.SchemaDriftClassification(fixture.ExpectedClassification) {
@@ -61,12 +61,12 @@ func validateRegressionFixture(fixture RegressionFixture) error {
 	diagnostics := append([]Diagnostic(nil), fixture.ExpectedDiagnostics...)
 	sortDiagnostics(diagnostics)
 	if !jsonDeepEqual(diagnostics, fixture.ExpectedDiagnostics) ||
-		fixture.ExpectedDiagnosticSignature != DiagnosticSignature(fixture.ExpectedClassification, diagnostics) {
+		fixture.ExpectedDiagnosticSignature != toolconformancedomain.DiagnosticSignature(fixture.ExpectedClassification, diagnostics) {
 		return fmt.Errorf("regression_diagnostic_signature_mismatch")
 	}
 	distinctEvidence := map[string]bool{}
 	for _, id := range fixture.ConfirmedEvidenceIDs {
-		if !validEvidenceID(id) {
+		if !toolconformancedomain.ValidEvidenceID(id) {
 			return fmt.Errorf("invalid_regression_evidence_id")
 		}
 		distinctEvidence[id] = true
@@ -154,7 +154,7 @@ func ReplayRegression(fixture RegressionFixture, descriptors []ToolDescriptor, s
 	replay := ReplayResult{
 		Classification:      result.Classification,
 		Diagnostics:         result.Diagnostics,
-		DiagnosticSignature: DiagnosticSignature(result.Classification, result.Diagnostics),
+		DiagnosticSignature: toolconformancedomain.DiagnosticSignature(result.Classification, result.Diagnostics),
 		HandlerCalls:        handlerCalls,
 		FinalResult:         finalResult,
 		StateBeforeSHA256:   hex.EncodeToString(before[:]),

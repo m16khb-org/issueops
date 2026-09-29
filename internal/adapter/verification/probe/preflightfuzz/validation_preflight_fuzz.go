@@ -17,8 +17,12 @@ const commandOutputBudgetBytes = 32 * 1024
 
 type StepResult = verifycontract.StepResult
 
-func Validate(binary, root string, seed int64) StepResult {
-	return validatePreflightFuzzWithDeps(binary, root, seed, preflightFuzzValidationDeps{})
+type Validator struct {
+	Git func(string, ...string) (int, string, string)
+}
+
+func (v Validator) Validate(binary, root string, seed int64) StepResult {
+	return validatePreflightFuzzWithDeps(binary, root, seed, preflightFuzzValidationDeps{git: v.Git})
 }
 
 func validatePreflightFuzzWithDeps(binary, root string, seed int64, deps preflightFuzzValidationDeps) StepResult {

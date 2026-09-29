@@ -4,7 +4,6 @@ import (
 	issueopsppdeps "issueops/internal/adapter/issueops"
 	implementationppdeps "issueops/internal/adapter/issueops/implementation"
 	preflightadapter "issueops/internal/adapter/preflight"
-	preflightfuzzppdeps "issueops/internal/adapter/verification/probe/preflightfuzz"
 )
 
 // production wiring과 같은 실행기를 설치한다. 이 package가 실제로 의존하는
@@ -15,5 +14,4 @@ func init() {
 	issueopsppdeps.GitCmd = preflightadapter.GitCmd
 	issueopsppdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsppdeps.GitOut = preflightadapter.GitOut
-	preflightfuzzppdeps.GitCmd = preflightadapter.GitCmd
 }

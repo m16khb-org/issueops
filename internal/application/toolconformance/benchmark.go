@@ -285,7 +285,7 @@ func (policy benchmarkPolicy) classifyHostResult(result port.HostProbeResult, fi
 		return policy.incompleteHostResult(result, fixture, result.Cause, result.Code, result.EvidenceSource)
 	}
 	classification, err := ParseClassification(result.Classification)
-	if err != nil || result.EvidenceID == "" || !ValidEvidenceID(result.EvidenceID) {
+	if err != nil || result.EvidenceID == "" || !toolconformancedomain.ValidEvidenceID(result.EvidenceID) {
 		return policy.incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	if result.CallCount == 0 || classification == Classification(NoCall) {
@@ -346,7 +346,7 @@ func (policy benchmarkPolicy) classifyHostResult(result port.HostProbeResult, fi
 		AdvertisedValid:      result.AdvertisedValid,
 		CanonicalValid:       result.CanonicalValid,
 		Diagnostics:          diagnostics,
-		DiagnosticSignature:  DiagnosticSignature(classification, diagnostics),
+		DiagnosticSignature:  toolconformancedomain.DiagnosticSignature(classification, diagnostics),
 		FailureCause:         causeResult.Cause,
 		FailureCauseReason:   causeResult.Reason,
 		FailureCauseEvidence: causeResult.Evidence,
@@ -365,8 +365,6 @@ func (policy benchmarkPolicy) incompleteHostResult(result port.HostProbeResult, 
 	episode.ExitCode = result.ExitCode
 	return episode
 }
-
-func ValidEvidenceID(value string) bool { return toolconformancedomain.ValidEvidenceID(value) }
 
 type completedEpisodeExpectation = toolconformancedomain.CompletedEpisodeExpectation
 
@@ -397,10 +395,6 @@ func (policy benchmarkPolicy) incompleteEpisode(host, version string, fixture Fi
 		FailureCauseReason:   result.Reason,
 		FailureCauseEvidence: result.Evidence,
 	}
-}
-
-func DiagnosticSignature(classification Classification, diagnostics []Diagnostic) string {
-	return toolconformancedomain.DiagnosticSignature(classification, diagnostics)
 }
 
 func countReport(report BenchmarkReport) BenchmarkCounts {

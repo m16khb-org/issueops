@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	core "issueops/internal/adapter/toolconformance"
+	domain "issueops/internal/domain/toolconformance"
 )
 
 func TestReplayRegressionRejectsInvalidArgumentsBeforeHandlerAndPreservesState(t *testing.T) {
@@ -32,7 +33,7 @@ func TestReplayRegressionRejectsInvalidArgumentsBeforeHandlerAndPreservesState(t
 	rawSHA := sha256.Sum256([]byte(`{"requireUnique":true}`))
 	evidenceOne := sha256.Sum256([]byte("episode-1"))
 	evidenceTwo := sha256.Sum256([]byte("episode-2"))
-	diagnosticSignature := core.DiagnosticSignature(classified.Classification, classified.Diagnostics)
+	diagnosticSignature := domain.DiagnosticSignature(classified.Classification, classified.Diagnostics)
 	regression := core.RegressionFixture{
 		SchemaVersion:               1,
 		FixtureID:                   fixture.ID,

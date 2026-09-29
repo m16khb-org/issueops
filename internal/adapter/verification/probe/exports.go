@@ -29,10 +29,6 @@ func ValidateDaemonRestartResilience(binary, root string, seed int64) StepResult
 	return validateDaemonRestartResilience(binary, root, seed)
 }
 
-func ValidatePreflightFuzz(binary, root string, seed int64) StepResult {
-	return validatePreflightFuzz(binary, root, seed)
-}
-
 func ValidateInspect(binary, root string) StepResult {
 	return validateInspect(binary, root)
 }

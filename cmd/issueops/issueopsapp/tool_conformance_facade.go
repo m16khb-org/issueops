@@ -3,9 +3,12 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
+	failurecause "issueops/internal/adapter/failurecause"
 	"issueops/internal/adapter/hostprotocol"
+	app "issueops/internal/application/toolconformance"
 	"os"
 	"strings"
+	"time"
 
 	"issueops/cmd/issueops/contractcli"
 	"issueops/internal/adapter/hostprobe"
@@ -28,11 +31,11 @@ func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest
 		descriptors = append(descriptors, toolconformance.ToolDescriptor{Name: tool.Name, InputSchema: tool.InputSchema})
 	}
 	runners := toolConformanceRunners(binary)
-	return toolconformance.RunLiveBenchmark(ctx, toolconformance.LiveBenchmarkRequest{
+	return app.RunLiveBenchmark(ctx, app.LiveBenchmarkRequest{
 		Hosts: request.Hosts, Models: models,
 		Profile: request.Profile, Only: request.Only, TargetCompleted: request.TargetCompleted,
 		MaxAttemptsPerCase: request.MaxAttemptsPerCase, HarnessBinary: binary, Previous: request.Previous,
-	}, descriptors, toolconformance.LiveBenchmarkDependencies{Runners: runners})
+	}, descriptors, app.LiveBenchmarkDependencies{Runners: runners, Now: time.Now, Token: toolconformance.RandomToken, LoadManifest: toolconformance.LoadManifest, Classify: failurecause.Classify})
 }
 
 func toolConformanceRunners(binary string) map[string]port.HostProbeRunner {

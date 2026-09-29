@@ -5,7 +5,6 @@ import (
 	issueopsdeps "issueops/internal/adapter/issueops"
 	implementationdeps "issueops/internal/adapter/issueops/implementation"
 	preflightadapter "issueops/internal/adapter/preflight"
-	preflightfuzzdeps "issueops/internal/adapter/verification/probe/preflightfuzz"
 )
 
 // configurePolicyAndGitObservers는 명령 정책 평가·실행과 git 관측을 설치한다.
@@ -20,5 +19,4 @@ func configurePolicyAndGitObservers() {
 	issueopsdeps.GitCmd = preflightadapter.GitCmd
 	issueopsdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsdeps.GitOut = preflightadapter.GitOut
-	preflightfuzzdeps.GitCmd = preflightadapter.GitCmd
 }

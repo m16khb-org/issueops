@@ -17,25 +17,20 @@ func TestValidatePreflightFuzzRealBinary(t *testing.T) {
 	if testing.Short() {
 		t.Skip("live preflight fuzz skipped in short mode")
 	}
-	binary, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "bin", "issueops"))
+	binary, err := filepath.Abs(filepath.Join("..", "..", "..", "..", "..", "bin", "issueops"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(binary); err != nil {
 		t.Skipf("prebuilt binary unavailable: %v", err)
 	}
-	root, err := filepath.Abs(filepath.Join("..", "..", "..", ".."))
+	root, err := filepath.Abs(filepath.Join("..", "..", "..", "..", ".."))
 	if err != nil {
 		t.Fatal(err)
 	}
-	// 프로덕션 wiring(composition root)과 동일한 GitCmd를 설치한다.
-	// GitCmd는 process-spawning observer로 composition root의 결정이다.
-	if GitCmd == nil {
-		GitCmd = preflightadapter.GitCmd
-		t.Cleanup(func() { GitCmd = nil })
-	}
+	validator := Validator{Git: preflightadapter.GitCmd}
 	for _, seed := range []int64{7, 100} {
-		step := Validate(binary, root, seed)
+		step := validator.Validate(binary, root, seed)
 		if !step.OK {
 			t.Fatalf("seed %d live fuzz failed: %s stdout=%s", seed, step.Error, step.Stdout)
 		}

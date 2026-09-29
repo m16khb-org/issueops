@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	preflightadapter "issueops/internal/adapter/preflight"
+	"issueops/internal/adapter/verification/probe/preflightfuzz"
 	preflightcontract "issueops/internal/contract/preflight"
 )
 
@@ -22,7 +24,7 @@ func TestValidationParallelPreflightWrappersUseDefaultSurfaces(t *testing.T) {
 		t.Fatalf("expected wrapper to exercise state CLI surface, got command=%q stdout=%q", parallel.Command, parallel.Stdout)
 	}
 
-	preflight := ValidatePreflightFuzz(binary, root, 607)
+	preflight := (preflightfuzz.Validator{Git: preflightadapter.GitCmd}).Validate(binary, root, 607)
 	if !preflight.OK || preflight.Label != "preflight fuzz" {
 		t.Fatalf("expected preflight fuzz wrapper success, got %#v", preflight)
 	}

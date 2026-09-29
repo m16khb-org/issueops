@@ -1363,14 +1363,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/tail_capability_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureTailCapabilities"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/tool_conformance_facade.go",
       "owner": "composition",
       "task": "T20",
@@ -1432,7 +1424,6 @@
         "func validateInstallDryRunSmoke",
         "func validateMCP",
         "func validateParallelTempIsolation",
-        "func validatePreflightFuzz",
         "func validateSelfVerifyCandidateExport",
         "func validateToolConformance",
         "func validateWorkerLifecycle"
@@ -7388,20 +7379,6 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/toolconformance/benchmark.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func BuildEpisodePrompt",
-        "func DiagnosticSignature",
-        "func RunLiveBenchmark",
-        "func randomToken",
-        "func validEvidenceID",
-        "type LiveBenchmarkDependencies",
-        "type LiveBenchmarkRequest"
-      ]
-    },
-    {
       "path": "internal/adapter/toolconformance/contract_alias.go",
       "owner": "adapter",
       "task": "T15",
@@ -7429,12 +7406,6 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/toolconformance/failurecause_dependencies.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/toolconformance/fixtures.go",
       "owner": "adapter",
       "task": "T15",
@@ -7456,6 +7427,14 @@
         "func ReplayRegression",
         "func jsonDeepEqual",
         "func validateRegressionFixture"
+      ]
+    },
+    {
+      "path": "internal/adapter/toolconformance/token.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func RandomToken"
       ]
     },
     {
@@ -7690,7 +7669,6 @@
         "func ValidateInspect",
         "func ValidateInstallDryRunSmoke",
         "func ValidateParallelTempIsolation",
-        "func ValidatePreflightFuzz",
         "func ValidateWorkerLifecycleSmoke"
       ]
     },
@@ -7918,19 +7896,14 @@
       ]
     },
     {
-      "path": "internal/adapter/verification/probe/preflightfuzz/adapter_dependencies.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/verification/probe/preflightfuzz/validation_preflight_fuzz.go",
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func Validate",
+        "func Validator.Validate",
         "func validatePreflightFuzzWithDeps",
-        "type StepResult"
+        "type StepResult",
+        "type Validator"
       ]
     },
     {
@@ -8269,14 +8242,6 @@
       "task": "T18",
       "symbols": [
         "func validateParallelTempIsolation"
-      ]
-    },
-    {
-      "path": "internal/adapter/verification/probe/validation_preflight_fuzz_facade.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": [
-        "func validatePreflightFuzz"
       ]
     },
     {
@@ -10653,9 +10618,7 @@
       "task": "T20",
       "symbols": [
         "func BuildEpisodePrompt",
-        "func DiagnosticSignature",
         "func RunLiveBenchmark",
-        "func ValidEvidenceID",
         "func benchmarkPolicy.classifyHostResult",
         "func benchmarkPolicy.incompleteEpisode",
         "func benchmarkPolicy.incompleteHostResult",
@@ -24678,6 +24641,40 @@
       ],
       "evidence_tests": [
         "TestBenchmarkBaselinePreservesPartialFailureAndMetricDenominators"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "tool-conformance-live-composition",
+      "source_path": "internal/adapter/toolconformance/benchmark.go",
+      "source_symbol": "func RunLiveBenchmark",
+      "responsibility": "Live host benchmark sequencing with explicitly composed manifest, classifier, runner, clock and token capabilities",
+      "target": "internal/application/toolconformance",
+      "target_symbol": "func RunLiveBenchmark",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/tool_conformance_facade.go"
+      ],
+      "evidence_tests": [
+        "TestLiveBenchmarksKeepTheirFailureClassifier",
+        "TestLiveGateIncompleteEpisodeFailsClosed"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "preflight-fuzz-git-instance",
+      "source_path": "internal/adapter/verification/probe/preflightfuzz/validation_preflight_fuzz.go",
+      "source_symbol": "func Validate",
+      "responsibility": "Per-validator Git observation for seeded preflight fixture execution",
+      "target": "internal/adapter/verification/probe/preflightfuzz",
+      "target_symbol": "func Validator.Validate",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/self_verify_facade.go"
+      ],
+      "evidence_tests": [
+        "TestPreparedValidatorsKeepTheirGitRunner",
+        "TestValidatePreflightFuzzRealBinary"
       ],
       "status": "migrated"
     }

@@ -2,6 +2,8 @@ package issueopsapp
 
 import (
 	"fmt"
+	preflightadapter "issueops/internal/adapter/preflight"
+	"issueops/internal/adapter/verification/probe/preflightfuzz"
 	"issueops/internal/adapter/verification/probe/stepbudget"
 	"os"
 	"path/filepath"
@@ -101,7 +103,7 @@ func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
 		ValidateStateRoundtrip:          stateProbe.Validate,
 		ValidateParallelTempIsolation:   validateParallelTempIsolation,
 		ValidateDaemonRestartResilience: validateDaemonRestartResilience,
-		ValidatePreflightFuzz:           validatePreflightFuzz,
+		ValidatePreflightFuzz:           (preflightfuzz.Validator{Git: preflightadapter.GitCmd}).Validate,
 		ValidateWebFetchBattery:         newWebFetchProbe().Validate,
 		ValidateNativeIntegration:       newNativeIntegrationProbe().Validate,
 		ValidateRedactionAudit:          docsProbe.RedactionAudit,

@@ -36,10 +36,6 @@ func validateDaemonRestartResilience(binary, root string, seed int64) StepResult
 	return probe.ValidateDaemonRestartResilience(binary, root, seed)
 }
 
-func validatePreflightFuzz(binary, root string, seed int64) StepResult {
-	return probe.ValidatePreflightFuzz(binary, root, seed)
-}
-
 func validateCommandAudit(binary, root string, seed int64) StepResult {
 	return probe.ValidateCommandAudit(binary, root, seed)
 }
