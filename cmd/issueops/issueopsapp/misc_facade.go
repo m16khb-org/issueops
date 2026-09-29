@@ -9,14 +9,14 @@ import (
 	"issueops/cmd/issueops/apidoc"
 	"issueops/cmd/issueops/contractcli"
 	"issueops/cmd/issueops/pathutil"
-	"issueops/cmd/issueops/selfworkflow"
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
+	app "issueops/internal/application/selfverify"
 )
 
 type CompatibilityContract = contractcli.CompatibilityContract
 
 var (
-	errSelfVerificationGateFailed = selfworkflow.ErrSelfVerificationGateFailed
+	errSelfVerificationGateFailed = app.ErrSelfVerificationGateFailed
 )
 
 func runContract(args []string) error {

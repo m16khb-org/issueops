@@ -1627,13 +1627,13 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func newSelfWorkflowExecutor",
         "func runCommandStepAdapter",
         "func runSelfVerify",
         "func runSelfVerifyCandidates",
         "func runSelfVerifyCompare",
         "func runSelfVerifyHistory",
         "func runSelfVerifyPromote",
-        "func selfVerify",
         "func selfVerifyLoopDeps",
         "func selfVerifyStepDeps"
       ]
@@ -3380,16 +3380,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/selfworkflow/self_verify_loop.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func SelfVerify",
-        "type SelfVerifyLoopDeps",
-        "type SelfVerifyRequest"
-      ]
-    },
-    {
       "path": "cmd/issueops/selfworkflow/self_verify_summary_facade.go",
       "owner": "inbound",
       "task": "T18",
@@ -3497,17 +3487,6 @@
         "func Run",
         "func flagSetVisited",
         "type Deps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/verifyloop/loop.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func Deps.withDefaults",
-        "func SelfVerify",
-        "type Deps",
-        "type Request"
       ]
     },
     {

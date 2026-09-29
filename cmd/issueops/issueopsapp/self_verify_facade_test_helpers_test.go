@@ -114,11 +114,11 @@ func newSelfVerificationSummarySnapshot(result SelfAugmentResult, generatedAt ti
 }
 
 func plannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *StepResult) []selfVerifyPlannedStep {
-	return selfworkflow.PlannedSelfVerifySteps(root, tempBin, seed, goTestStep, selfVerifyStepDeps())
+	return selfworkflow.PlannedSelfVerifySteps(root, tempBin, seed, goTestStep, selfVerifyStepDeps(issueOpsRoot()))
 }
 
 func cachedContractGoldenStep(goTestStep StepResult) StepResult {
-	return selfworkflow.CachedContractGoldenStep(goTestStep, selfVerifyStepDeps())
+	return selfworkflow.CachedContractGoldenStep(goTestStep, selfVerifyStepDeps(issueOpsRoot()))
 }
 
 type selfVerifyPlannedStep = selfworkflow.SelfVerifyPlannedStep

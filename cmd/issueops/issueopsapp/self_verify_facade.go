@@ -1,16 +1,18 @@
 package issueopsapp
 
 import (
-	augmentcontract "issueops/internal/contract/selfaugment"
+	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
-	"issueops/cmd/issueops/selfworkflow"
 	"issueops/cmd/issueops/selfworkflow/candidatescmd"
 	"issueops/cmd/issueops/selfworkflow/historycompare"
 	"issueops/cmd/issueops/selfworkflow/promotecmd"
 	"issueops/cmd/issueops/selfworkflow/verifycmd"
-	"issueops/cmd/issueops/selfworkflow/verifyloop"
 	statestore "issueops/internal/adapter/outbound/state"
+	app "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func runSelfVerify(args []string) error {
@@ -29,9 +31,7 @@ func runSelfVerify(args []string) error {
 	return verifycmd.Run(args, verifycmd.Deps{
 		SaveSummary: newSelfWorkflowState(statestore.StateDir()).SaveSummary,
 		PrintJSON:   printJSON,
-		Verify: func(request selfworkflow.SelfVerifyRequest) (augmentcontract.SelfAugmentResult, error) {
-			return selfVerify(request)
-		},
+		Verify:      newSelfWorkflowExecutor(issueOpsRoot()),
 	})
 }
 
@@ -52,22 +52,31 @@ func runSelfVerifyPromote(args []string) error {
 	return promotecmd.Run(args, promotecmd.Deps{Promote: newSelfWorkflowState(statestore.StateDir()).Promote, PrintJSON: printJSON})
 }
 
-func selfVerify(request selfworkflow.SelfVerifyRequest) (augmentcontract.SelfAugmentResult, error) {
-	return verifyloop.SelfVerify(request, selfVerifyLoopDeps())
-}
-
-func selfVerifyLoopDeps() selfworkflow.SelfVerifyLoopDeps {
-	return selfworkflow.SelfVerifyLoopDeps{
-		IssueOpsRoot: issueOpsRoot,
-		StepDeps:     selfVerifyStepDeps(),
-		FailedStep:   failedStep,
-		PrintStep:    printStep,
+func newSelfWorkflowExecutor(root string) func(app.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+	deps := selfVerifyLoopDeps(root)
+	return func(request app.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+		return app.ExecuteLoop(request, deps)
 	}
 }
 
-func selfVerifyStepDeps() selfworkflow.SelfVerifyStepDeps {
-	return selfworkflow.SelfVerifyStepDeps{
-		IssueOpsRoot:                    issueOpsRoot,
+func selfVerifyLoopDeps(root string) app.LoopDeps {
+	return app.LoopDeps{
+		IssueOpsRoot:   func() string { return root },
+		StepDeps:       selfVerifyStepDeps(root),
+		Printf:         fmt.Printf,
+		Summarize:      app.SummarizeSelfVerification,
+		MkdirTemp:      func() (string, error) { return os.MkdirTemp("", "issueops-self-verify-*") },
+		RemoveAll:      os.RemoveAll,
+		TempBinaryPath: func(dir string) string { return filepath.Join(dir, "issueops") },
+		Now:            time.Now,
+		FailedStep:     failedStep,
+		PrintStep:      printStep,
+	}
+}
+
+func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
+	return app.SelfVerifyStepDeps{
+		IssueOpsRoot:                    func() string { return root },
 		RunCommandStep:                  runCommandStepAdapter,
 		ValidateHarnessInvariants:       validateHarnessInvariants,
 		ValidateGoFormat:                validateGoFormat,

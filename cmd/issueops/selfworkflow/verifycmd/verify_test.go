@@ -10,7 +10,7 @@ import (
 
 	"issueops/cmd/issueops/selfworkflow/llmeval"
 	"issueops/cmd/issueops/selfworkflow/model"
-	"issueops/cmd/issueops/selfworkflow/verifyloop"
+	verifyloop "issueops/internal/application/selfverify"
 	"issueops/internal/testsupport"
 )
 
@@ -20,7 +20,7 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 	var saveCalled bool
 	deps := Deps{
 		LookupEnv: func(string) (string, bool) { return "", false },
-		Verify: func(request verifyloop.Request) (model.SelfAugmentResult, error) {
+		Verify: func(request verifyloop.LoopRequest) (model.SelfAugmentResult, error) {
 			verifyCalled = true
 			if request.BaseSeed != 42 ||
 				request.TargetScore != 95 ||
@@ -88,7 +88,7 @@ func TestRunReturnsSaveErrorAfterSuccessfulVerification(t *testing.T) {
 	out, err := captureStdoutAllowError(t, func() error {
 		return Run([]string{"--save-state", "--state-key", "bad-key", "--json"}, Deps{
 			LookupEnv: func(string) (string, bool) { return "", false },
-			Verify: func(verifyloop.Request) (model.SelfAugmentResult, error) {
+			Verify: func(verifyloop.LoopRequest) (model.SelfAugmentResult, error) {
 				return model.SelfAugmentResult{OK: true, LoopKind: "self_verification", Summary: model.SelfAugmentSummary{MinimumGoalScore: 100}}, nil
 			},
 			SaveSummary: func(result *model.SelfAugmentResult, key string) error {

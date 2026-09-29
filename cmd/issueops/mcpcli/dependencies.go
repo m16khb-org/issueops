@@ -2,7 +2,6 @@ package mcpcli
 
 import (
 	"errors"
-	"fmt"
 	channelcontract "issueops/internal/contract/channel"
 	gatescontract "issueops/internal/contract/gates"
 	inspectcontract "issueops/internal/contract/inspect"
@@ -13,7 +12,7 @@ import (
 	"path/filepath"
 
 	"issueops/cmd/issueops/apidoc"
-	"issueops/cmd/issueops/selfworkflow"
+	app "issueops/internal/application/selfverify"
 )
 
 const skillName = "atomic-commit-push"
@@ -79,16 +78,9 @@ var CompatibilityContract = func() any {
 	return map[string]any{"ok": false, "error": "compatibility contract dependency is not configured"}
 }
 
-var SelfVerify = func(selfworkflow.SelfVerifyRequest) (selfworkflow.SelfAugmentResult, error) {
-	return selfworkflow.SelfAugmentResult{}, fmt.Errorf("self-verify dependency is not configured")
-}
-
-var ErrSelfVerificationGateFailed = errors.New("self-verification quality gate failed")
-
 var (
-	errAPIDocReviewGateFailed     = apidoc.ErrReviewGateFailed
-	errAPIDocStaticGateFailed     = apidoc.ErrStaticGateFailed
-	errSelfVerificationGateFailed = ErrSelfVerificationGateFailed
+	errAPIDocReviewGateFailed = apidoc.ErrReviewGateFailed
+	errAPIDocStaticGateFailed = apidoc.ErrStaticGateFailed
 )
 
 func isAPIDocReviewGateError(err error) bool {
@@ -100,7 +92,7 @@ func isAPIDocStaticGateError(err error) bool {
 }
 
 func isSelfVerificationGateError(err error) bool {
-	return errors.Is(err, ErrSelfVerificationGateFailed)
+	return errors.Is(err, app.ErrSelfVerificationGateFailed)
 }
 
 func fileExists(path string) bool {

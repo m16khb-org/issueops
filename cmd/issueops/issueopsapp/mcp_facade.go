@@ -1,7 +1,6 @@
 package issueopsapp
 
 import (
-	"fmt"
 	"io"
 	channeladapter "issueops/internal/adapter/channel"
 	gatesadapter "issueops/internal/adapter/gates"
@@ -12,7 +11,6 @@ import (
 	"issueops/internal/adapter/projectdocs"
 
 	"issueops/cmd/issueops/mcpcli"
-	"issueops/cmd/issueops/selfworkflow"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 )
@@ -46,13 +44,6 @@ func configureMCPCLI() {
 	mcpcli.CompatibilityContract = func() any {
 		return compatibilityContract()
 	}
-	mcpcli.SelfVerify = func(request selfworkflow.SelfVerifyRequest) (selfworkflow.SelfAugmentResult, error) {
-		result, err := selfVerify(request)
-		if err != nil && isSelfVerificationGateError(err) {
-			return result, fmt.Errorf("%w: %w", mcpcli.ErrSelfVerificationGateFailed, err)
-		}
-		return result, err
-	}
 }
 
 func runMCP() error {
@@ -74,6 +65,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		SelfHistory:  newSelfWorkflowHistory(statestore.StateDir()),
 		SelfState:    newSelfWorkflowState(statestore.StateDir()),
 		SelfPlanning: newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version),
+		SelfVerify:   newSelfWorkflowExecutor(issueOpsRoot()),
 		Prepare:      execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner, ReadIssue: execution.ReadIssue,
 		Claim: issueOpsClaimHandler, Release: issueOpsReleaseHandler, Reseed: issueOpsReseedHandler,
 		Resume: issueOpsResumeHandler, Reconcile: issueOpsReconcileHandler, Complete: issueOpsCompleteHandler,

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/mcpcli/argmap"
-	"issueops/cmd/issueops/selfworkflow"
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
 	augmentcontract "issueops/internal/contract/selfaugment"
@@ -13,16 +12,16 @@ import (
 func handleSelfLoopMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
 	case "self_augment":
-		result, err := augmentapp.PlanAndSave(selfworkflow.SelfAugmentPlanRequest{
+		result, err := augmentapp.PlanAndSave(augmentcontract.SelfAugmentPlanRequest{
 			Cycles:      argmap.Int(call.Arguments, "cycles", 1),
-			TargetScore: argmap.Float(call.Arguments, "target_score", selfworkflow.DefaultLoopTargetScoreExclusive),
+			TargetScore: argmap.Float(call.Arguments, "target_score", 95),
 		}, argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-augment-latest"), augmentapp.PlanAndSaveDeps{Plan: deps.SelfPlanning.Plan, Save: deps.SelfState.SavePlan})
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32000, "Self-augmentation plan save failed", result))
 		}
 		return mcpToolPayload(result)
 	case "self_augment_lesson":
-		result, err := deps.SelfPlanning.SaveLesson(selfworkflow.SelfAugmentLessonRequest{
+		result, err := deps.SelfPlanning.SaveLesson(augmentcontract.SelfAugmentLessonRequest{
 			CandidateID: argmap.String(call.Arguments, "candidate_id"),
 			Lesson:      argmap.String(call.Arguments, "lesson"),
 			NextAction:  argmap.String(call.Arguments, "next_action"),
@@ -36,15 +35,13 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOu
 		return mcpToolPayload(result)
 	case "self_verify":
 		seed := argmap.Int64(call.Arguments, "seed", time.Now().Unix())
-		targetScore := argmap.Float(call.Arguments, "target_score", selfworkflow.DefaultLoopTargetScoreExclusive)
+		targetScore := argmap.Float(call.Arguments, "target_score", 95)
 		result, err := verifyapp.Execute(verifyapp.ExecuteRequest{
 			Loop:      verifyapp.LoopRequest{BaseSeed: seed, TargetScore: targetScore},
 			SaveState: argmap.Bool(call.Arguments, "save_state"),
 			StateKey:  argmap.StringDefault(call.Arguments, "state_key", "self-verify-latest"),
 		}, verifyapp.ExecuteDeps{
-			Verify: func(req verifyapp.LoopRequest) (selfworkflow.SelfAugmentResult, error) {
-				return SelfVerify(selfworkflow.SelfVerifyRequest{BaseSeed: req.BaseSeed, TargetScore: req.TargetScore})
-			},
+			Verify:      deps.SelfVerify,
 			SaveSummary: deps.SelfState.SaveSummary,
 		})
 		if err != nil && !isSelfVerificationGateError(err) {

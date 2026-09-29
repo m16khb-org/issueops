@@ -578,8 +578,8 @@ func TestSelfVerifyFacadeWrappers(t *testing.T) {
 	_ = newSelfVerificationSummarySnapshot(result, time.Now())
 	_ = plannedSelfVerifySteps(t.TempDir(), "", 100, nil)
 	_ = cachedContractGoldenStep(StepResult{OK: false, Label: "go test"})
-	_ = selfVerifyLoopDeps()
-	_ = selfVerifyStepDeps()
+	_ = selfVerifyLoopDeps(issueOpsRoot())
+	_ = selfVerifyStepDeps(issueOpsRoot())
 	step := runCommandStepAdapter("", "adapter", time.Second, "", "sh", "-c", "printf ok")
 	if !step.OK {
 		t.Fatalf("runCommandStepAdapter = %#v", step)
