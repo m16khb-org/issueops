@@ -13,10 +13,12 @@ import (
 	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
+	ownerapp "issueops/internal/application/issueopsowner"
 	preparationapp "issueops/internal/application/issueopspreparation"
 	issueopscontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	ownerdomain "issueops/internal/domain/issueops"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/domain/policy"
 	"issueops/internal/port"
@@ -28,7 +30,7 @@ func issueOpsResumeHandler(ctx context.Context, stateRoot string, request issueo
 	if err != nil {
 		return issueops.ExecutionResumeResult{ID: request.ID}, err
 	}
-	return leaseinbound.NewResumeHandler(service, issueops.ExecutionResumeNextCommand)(ctx, stateRoot, request)
+	return leaseinbound.NewResumeHandler(service, ownerdomain.OwnerResumeNextCommand)(ctx, stateRoot, request)
 }
 
 func newIssueOpsResumeService(stateRoot string, provisioner port.ExecutionOrcaProvisioner, owner port.ExecutionOrcaOwnerInspector) (*leaseapp.ResumeService, error) {
@@ -69,7 +71,7 @@ func (e *resumeHostAdapter) readArtifacts(_ context.Context, record leasecontrac
 	if err != nil {
 		return leasecontract.ResumeArtifacts{}, err
 	}
-	artifacts, err := issueops.ReadExecutionResumeArtifacts(coreRecord)
+	artifacts, err := (ownerapp.ResumeReader{Files: issueops.OwnerContextFiles{StateRoot: e.stateRoot}}).Read(coreRecord)
 	if err != nil {
 		return leasecontract.ResumeArtifacts{}, err
 	}

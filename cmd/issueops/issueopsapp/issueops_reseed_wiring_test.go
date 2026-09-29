@@ -189,7 +189,7 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	if result.Execution.Completion != nil || len(result.Execution.CompletionHistory) != 1 || result.Execution.CompletionHistory[0].Completion.FinalHead != oldHead || result.Execution.CompletionHistory[0].Completion.Verification[0] != "old verification" {
 		t.Fatalf("reseed projection=%+v", result.Execution)
 	}
-	status, err := issueops.StatusExecution(stateRoot, record.ID)
+	status, err := issueOpsExecutionStatusHandler(context.Background(), stateRoot, record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

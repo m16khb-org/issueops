@@ -34,7 +34,7 @@ func handleMCPIssueOpsExecutionWithContext(
 func issueOpsExecutionActionDependencies(deps MCPDependencies) port.ExecutionActionDependencies {
 	return port.ExecutionActionDependencies{
 		Prepare: deps.Prepare, Orca: deps.Orca, OrcaOwner: deps.OrcaOwner, ReadIssue: deps.ReadIssue,
-		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Replace: deps.Replace, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
+		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Status: deps.Status, Replace: deps.Replace, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
 		RemoteReconcile: deps.Publication.Reconcile,
 	}
 }

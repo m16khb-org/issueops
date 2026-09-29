@@ -3,6 +3,7 @@ package issueops
 import (
 	"context"
 	"errors"
+	ownerdomain "issueops/internal/domain/issueops"
 	"strings"
 	"testing"
 )
@@ -47,7 +48,7 @@ func TestExecuteExecutionReseedUsesInjectedHandlerOnce(t *testing.T) {
 }
 
 func TestExecutionReseedNextCommandRendersModeSpecificRecovery(t *testing.T) {
-	direct := ExecutionReseedNextCommand("io-direct", 2, "direct", "/tmp/lease-2.token")
+	direct := ownerdomain.OwnerReseedNextCommand("io-direct", 2, "direct", "/tmp/lease-2.token")
 	for _, want := range []string{"execution claim", "--generation 2", "--claim-current-token"} {
 		if !strings.Contains(direct, want) {
 			t.Fatalf("direct reseed next command %q does not contain %q", direct, want)
@@ -56,11 +57,11 @@ func TestExecutionReseedNextCommandRendersModeSpecificRecovery(t *testing.T) {
 	if strings.Contains(direct, "/tmp/lease-2.token") {
 		t.Fatalf("direct reseed next command exposes token path: %q", direct)
 	}
-	orca := ExecutionReseedNextCommand("io-orca", 3, "orca", "/tmp/ignored.token")
+	orca := ownerdomain.OwnerReseedNextCommand("io-orca", 3, "orca", "/tmp/ignored.token")
 	if !strings.Contains(orca, "execution resume") || strings.Contains(orca, "/tmp/ignored.token") {
 		t.Fatalf("Orca reseed next command = %q", orca)
 	}
-	if got := ExecutionReseedNextCommand("io-unknown", 1, "unknown", "/tmp/token"); got != "" {
+	if got := ownerdomain.OwnerReseedNextCommand("io-unknown", 1, "unknown", "/tmp/token"); got != "" {
 		t.Fatalf("unknown mode next command = %q, want empty", got)
 	}
 }

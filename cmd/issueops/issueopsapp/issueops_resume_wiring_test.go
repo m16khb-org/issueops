@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	ownerdomain "issueops/internal/domain/issueops"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,7 +48,7 @@ func TestResumePlanIdentityFailureStopsBeforeOperationAndOrcaMutation(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler := leaseinbound.NewResumeHandler(service, issueops.ExecutionResumeNextCommand)
+	handler := leaseinbound.NewResumeHandler(service, ownerdomain.OwnerResumeNextCommand)
 	result, err := handler(context.Background(), stateRoot, issueops.ExecutionResumeRequest{
 		ID: record.ID, ExpectedGeneration: 1, Actor: claimWiringActor(t),
 		CWD: record.Execution.Workspace.Root, Confirm: true,
@@ -128,13 +129,13 @@ func TestIssueOpsResumeProductionWiringObservesDispatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := leaseinbound.NewResumeHandler(service, issueops.ExecutionResumeNextCommand)(context.Background(), stateRoot, issueops.ExecutionResumeRequest{
+	result, err := leaseinbound.NewResumeHandler(service, ownerdomain.OwnerResumeNextCommand)(context.Background(), stateRoot, issueops.ExecutionResumeRequest{
 		ID: record.ID, ExpectedGeneration: 1, Actor: claimWiringActor(t), CWD: record.Execution.Workspace.Root, Confirm: true,
 	})
 	if err != nil || !result.OK {
 		t.Fatalf("resume result=%+v err=%v", result, err)
 	}
-	wantCommand := issueops.ExecutionResumeNextCommand(result.ID, result.Execution.Lease.Generation, result.ClaimTokenPath, result.IssueBodySHA256, result.ContextPacketSHA256)
+	wantCommand := ownerdomain.OwnerResumeNextCommand(result.ID, result.Execution.Lease.Generation, result.ClaimTokenPath, result.IssueBodySHA256, result.ContextPacketSHA256)
 	if result.NextCommand != wantCommand || strings.Contains(result.NextCommand, result.ClaimTokenPath) {
 		t.Fatalf("resume command=%q want=%q", result.NextCommand, wantCommand)
 	}

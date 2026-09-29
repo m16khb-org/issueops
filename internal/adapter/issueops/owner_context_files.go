@@ -33,3 +33,10 @@ func (f OwnerContextFiles) CreateOrAdoptToken(record model.IssueOpsRecord) (stri
 func (f OwnerContextFiles) TokenPath(record model.IssueOpsRecord) string {
 	return claimTokenPath(record)
 }
+
+func (f OwnerContextFiles) ReadArtifact(root, path string) ([]byte, error) {
+	return readExecutionOwnerArtifact(root, path)
+}
+func (f OwnerContextFiles) ArtifactPath(record model.IssueOpsRecord, name string) string {
+	return sealedArtifactPath(record, record.Execution.Workspace.Root, name)
+}

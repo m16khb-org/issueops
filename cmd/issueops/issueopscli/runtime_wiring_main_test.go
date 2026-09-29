@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+	ownerapp "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"time"
@@ -73,7 +74,7 @@ func wireIssueOpsRuntimeForTests() {
 		ReadRecord:        issueopscore.ReadIssueOps,
 		Completion:        testCycleReadiness().Completion,
 		LocalReadiness:    testCycleReadiness().LocalPR,
-		WriterlessCommand: issueopscore.ExecutionWriterAbsentRecoveryCommand,
+		WriterlessCommand: ownerapp.WriterlessCommand,
 		PlannerDefaults:   agentmodel.PlannerDefaults,
 		StagedArtifacts:   artifacts.Names,
 		Actor: func() (string, string, error) {

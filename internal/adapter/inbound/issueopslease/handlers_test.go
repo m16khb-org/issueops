@@ -3,10 +3,10 @@ package issueopslease
 import (
 	"context"
 	"errors"
+	ownerdomain "issueops/internal/domain/issueops"
 	"strings"
 	"testing"
 
-	issueopsadapter "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
@@ -117,7 +117,7 @@ func TestToCoreLeaseCopiesHolderAndProcessSafely(t *testing.T) {
 }
 
 func TestResumeNextCommandReferencesCycleAndArtifacts(t *testing.T) {
-	command := (ResumeHandler{nextCommand: issueopsadapter.ExecutionResumeNextCommand}).resumeNextCommand("io-12", 4, leasecontract.ResumeArtifacts{
+	command := (ResumeHandler{nextCommand: ownerdomain.OwnerResumeNextCommand}).resumeNextCommand("io-12", 4, leasecontract.ResumeArtifacts{
 		ClaimTokenPath:      "/state/io-12/token",
 		IssueBodySHA256:     "abc",
 		ContextPacketSHA256: "def",

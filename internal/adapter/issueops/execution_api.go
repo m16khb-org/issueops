@@ -37,7 +37,10 @@ func executeExecutionAction(ctx context.Context, stateRoot string, req Execution
 			DirectReason:      req.DirectReason, ExpectedReadinessFingerprint: req.ExpectedReadinessFingerprint, Confirm: req.Confirm,
 		}, ExecutionPrepareInvocation{ReadIssue: deps.ReadIssue}, deps.Prepare)
 	case ExecutionActionStatus:
-		return StatusExecution(stateRoot, req.ID)
+		if deps.Status == nil {
+			return ExecutionResult{OK: false, ID: req.ID}, fmt.Errorf("issueops execution status handler is not configured")
+		}
+		return deps.Status(ctx, stateRoot, req.ID)
 	case ExecutionActionClaim:
 		if deps.Claim == nil {
 			return ExecutionResult{OK: false, ID: req.ID}, ErrClaimHandlerUnavailable

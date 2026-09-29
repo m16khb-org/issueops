@@ -70,8 +70,8 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		SelfPlanning: newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version),
 		SelfVerify:   newSelfWorkflowExecutor(issueOpsRoot()),
 		Prepare:      execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner, ReadIssue: execution.ReadIssue,
-		Replace: newIssueOpsReplacementHandler(),
-		Claim:   issueOpsClaimHandler, Release: issueOpsReleaseHandler, Reseed: issueOpsReseedHandler,
+		Status: issueOpsExecutionStatusHandler, Replace: newIssueOpsReplacementHandler(),
+		Claim: issueOpsClaimHandler, Release: issueOpsReleaseHandler, Reseed: issueOpsReseedHandler,
 		Resume: issueOpsResumeHandler, Reconcile: issueOpsReconcileHandler, Complete: issueOpsCompleteHandler,
 		Provenance: provenanceadapter.NewExecutableObserver(),
 		Publication: mcpcli.PublicationHandlers{

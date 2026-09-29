@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
+	ownerdomain "issueops/internal/domain/issueops"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -135,7 +136,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 	if err := json.Unmarshal([]byte(statusJSON), &status); err != nil {
 		t.Fatalf("execution status should return JSON: %v\n%s", err, statusJSON)
 	}
-	want := issueopscore.ExecutionResumeRecoveryCommand(id, 3)
+	want := ownerdomain.ReplacementResumeCommand(id, 3)
 	if !sameGeneratedExecutionCommand(status.NextCommand, want, 3) {
 		t.Fatalf("status next command = %q, want %q", status.NextCommand, want)
 	}
@@ -303,7 +304,7 @@ func executionMCPText(t *testing.T, arguments map[string]any) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, rpcErr := mcpcli.HandleToolCallWithDependencies(raw, mcpcli.MCPDependencies{Execution: testMCPExecutionDeps(), Catalog: mcpcatalog.Build()})
+	result, rpcErr := mcpcli.HandleToolCallWithDependencies(raw, mcpcli.MCPDependencies{Execution: testMCPExecutionDeps(), Status: executionStatusForTest, Catalog: mcpcatalog.Build()})
 	if rpcErr != nil {
 		t.Fatalf("MCP execution call failed at protocol layer: %#v", rpcErr)
 	}

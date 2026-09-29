@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	ownerdomain "issueops/internal/domain/issueops"
 
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
 	"issueops/internal/adapter/issueops"
@@ -50,7 +51,7 @@ func issueOpsReseedHandlerWithOwner(ctx context.Context, stateRoot string, reque
 	})
 	baseSync := basesyncoutbound.NewInspector(basesyncoutbound.RunGit)
 	service := leaseapp.NewReseedService(fence, leaseoutbound.NewReseedRepository(db), inventory, baseSync, artifacts, leaseoutbound.UTCClock{}, leaseoutbound.InspectNativeProcess, leaseoutbound.FilesystemPathMatcher{})
-	return leaseinbound.NewReseedHandler(service, issueops.ExecutionReseedNextCommand)(ctx, stateRoot, request)
+	return leaseinbound.NewReseedHandler(service, ownerdomain.OwnerReseedNextCommand)(ctx, stateRoot, request)
 }
 
 func issueOpsReseedExecution(record leasecontract.Record) (model.Execution, error) {

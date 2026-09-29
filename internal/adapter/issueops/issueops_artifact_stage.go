@@ -10,7 +10,6 @@ import (
 	"issueops/internal/adapter/issueops/intentdesign"
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
-	domain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/issueopsintent"
 	"issueops/internal/domain/secretdetection"
 )
@@ -39,14 +38,6 @@ func sealedArtifactDir(record issueops.IssueOpsRecord) string {
 // sealedArtifactPath는 워크트리 root 아래 봉인 아티팩트 name.md의 절대 경로다.
 func sealedArtifactPath(record issueops.IssueOpsRecord, root, name string) string {
 	return filepath.Join(root, filepath.FromSlash(sealedArtifactDir(record)), name+".md")
-}
-
-func newPlanResumeArtifactRequiredError(record issueops.IssueOpsRecord) error {
-	typed := &domain.OwnerPlanRequiredError{}
-	if record.Execution != nil && record.Execution.Lease.Generation > 0 {
-		typed.NextCommand = executionReplacementPreviewCommand(record.ID, record.Execution.Lease.Generation)
-	}
-	return typed
 }
 
 func readLinkedPlanIdentity(record issueops.IssueOpsRecord) (issueops.OwnerPlanIdentity, error) {

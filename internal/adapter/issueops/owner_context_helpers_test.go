@@ -47,3 +47,14 @@ func materializeExecutionOwnerArtifacts(root string, record model.IssueOpsRecord
 	return ownerContextForTest(root, nil).MaterializePlan(record)
 }
 func issueArtifactDirFor(record model.IssueOpsRecord) string { return app.OwnerArtifactDir(record) }
+
+type executionResumeArtifacts struct{ claimTokenPath, issueBodySHA256, packetPath, packetSHA256, promptPath, promptSHA256 string }
+
+func readExecutionResumeArtifacts(record model.IssueOpsRecord) (executionResumeArtifacts, error) {
+	out, err := (app.ResumeReader{Files: OwnerContextFiles{}}).Read(record)
+	return executionResumeArtifacts{out.ClaimTokenPath, out.IssueBodySHA256, out.ContextPacketPath, out.ContextPacketSHA256, out.OwnerPromptPath, out.OwnerPromptSHA256}, err
+}
+
+func executionWriterAbsentRecoveryCommand(record model.IssueOpsRecord) string {
+	return app.WriterlessCommand(record)
+}

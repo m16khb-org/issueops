@@ -1,5 +1,12 @@
 package issueopscli
 
+import (
+	"context"
+	adapter "issueops/internal/adapter/issueops"
+	ownerapp "issueops/internal/application/issueopsowner"
+	model "issueops/internal/contract/issueops"
+)
+
 var testIssueOpsRuntime IssueOpsCLIDeps
 
 func testIssueOpsCommand() command {
@@ -13,6 +20,9 @@ func runIssueOpsForTest(args []string, deps Dependencies) error {
 	if deps.Gates.AdvancePhaseWithActor == nil {
 		deps.Gates = testIssueOpsGates
 	}
+	if deps.Status == nil {
+		deps.Status = executionStatusForTest
+	}
 	if deps.Execution.ExecuteExecution == nil {
 		deps.Execution = testCLIExecutionRuntime()
 	}
@@ -24,4 +34,8 @@ func runIssueOpsForTest(args []string, deps Dependencies) error {
 		}
 	}
 	return RunIssueOpsWithDependencies(args, deps)
+}
+
+func executionStatusForTest(_ context.Context, root, id string) (model.ExecutionResult, error) {
+	return (ownerapp.ExecutionStatus{ReadRecord: (adapter.CycleRecordStore{StateRoot: root}).Load}).Read(id)
 }

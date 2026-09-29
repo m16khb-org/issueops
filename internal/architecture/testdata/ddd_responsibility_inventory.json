@@ -950,6 +950,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func issueOpsExecutionStatusHandler",
         "func newIssueOpsOwnerContext"
       ]
     },
@@ -4427,18 +4428,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/execution_lease.go",
-      "owner": "adapter",
-      "task": "T05",
-      "symbols": [
-        "func ExecutionWriterAbsentRecoveryCommand",
-        "func StatusExecution",
-        "func executionReplacementPreviewCommand",
-        "func executionResult",
-        "func executionWriterAbsentRecoveryCommand"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/execution_lease_identity.go",
       "owner": "adapter",
       "task": "T05",
@@ -4660,29 +4649,11 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/execution_reseed_adapter.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ExecutionReseedNextCommand"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/execution_resume.go",
       "owner": "adapter",
       "task": "T06",
       "symbols": [
-        "func ExecutionResumeNextCommand",
-        "func ExecutionResumeRecoveryCommand",
-        "func NewExecutionResumeOperationID",
-        "func ReadExecutionResumeArtifacts",
-        "func completeOrcaArtifactIdentity",
-        "func readExecutionResumeArtifacts",
-        "func readExecutionResumeClaimToken",
-        "func validExecutionOwnerDigest",
-        "func validateExecutionResumePacket",
-        "type ExecutionResumeArtifactsReceipt",
-        "type executionResumeArtifacts"
+        "func NewExecutionResumeOperationID"
       ]
     },
     {
@@ -4872,7 +4843,6 @@
       "task": "T20",
       "symbols": [
         "func materializeStagedArtifacts",
-        "func newPlanResumeArtifactRequiredError",
         "func readLinkedPlanIdentity",
         "func readStagedArtifacts",
         "func sealedArtifactDir",
@@ -5081,9 +5051,11 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func OwnerContextFiles.ArtifactPath",
         "func OwnerContextFiles.CreateOrAdoptToken",
         "func OwnerContextFiles.Materialize",
         "func OwnerContextFiles.Paths",
+        "func OwnerContextFiles.ReadArtifact",
         "func OwnerContextFiles.ReadLinkedPlan",
         "func OwnerContextFiles.ReadStaged",
         "func OwnerContextFiles.RegularFiles",
@@ -9548,6 +9520,17 @@
       ]
     },
     {
+      "path": "internal/application/issueopsowner/resume.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ResumeReader.Read",
+        "func ResumeReader.readToken",
+        "func ResumeReader.validatePacket",
+        "type ResumeReader"
+      ]
+    },
+    {
       "path": "internal/application/issueopsowner/service.go",
       "owner": "application",
       "task": "T20",
@@ -9556,6 +9539,16 @@
         "func Service.ReadSnapshot",
         "func digest",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsowner/status.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func ExecutionStatus.Read",
+        "func WriterlessCommand",
+        "type ExecutionStatus"
       ]
     },
     {
@@ -11373,6 +11366,7 @@
         "type OwnerPaths",
         "type OwnerPlanIdentity",
         "type OwnerPolicyContext",
+        "type OwnerResumeArtifacts",
         "type OwnerSnapshot"
       ]
     },
@@ -13788,6 +13782,24 @@
         "func OwnerPlanReviewStaleError.IssueOpsErrorFields",
         "type OwnerPlanRequiredError",
         "type OwnerPlanReviewStaleError"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/owner_resume.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CompleteOwnerArtifactIdentity",
+        "func OwnerReseedNextCommand",
+        "func OwnerResumeNextCommand",
+        "func OwnerResumePacketPrefixMatches",
+        "func OwnerResumePlanRequired",
+        "func ParseOwnerResumeToken",
+        "func ReplacementFinalizePreviewCommand",
+        "func ReplacementPreviewCommand",
+        "func ValidateOwnerResumeGeneration",
+        "func ValidateOwnerResumePacket",
+        "func ValidateOwnerResumeProfile"
       ]
     },
     {
@@ -16678,7 +16690,8 @@
       "symbols": [
         "type ExecutionActionDependencies",
         "type ExecutionReconcileDependencies",
-        "type ExecutionReconcileHandler"
+        "type ExecutionReconcileHandler",
+        "type ExecutionStatusHandler"
       ]
     },
     {
@@ -16775,6 +16788,14 @@
       "task": "T20",
       "symbols": [
         "type OwnerContextFiles"
+      ]
+    },
+    {
+      "path": "internal/port/issueops_owner_resume.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type OwnerResumeFiles"
       ]
     },
     {
@@ -19194,7 +19215,7 @@
         "internal/domain/issueopslease/writerless_recovery_test.go",
         "internal/adapter/issueops/execution_resume_identity_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "orca-intent-stage-receipts",
@@ -25465,6 +25486,106 @@
       "evidence_tests": [
         "internal/application/issueopsowner/service_test.go",
         "internal/adapter/issueops/execution_replace_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-owner-resume",
+      "source_path": "internal/adapter/issueops/execution_resume.go",
+      "source_symbol": "func readExecutionResumeArtifacts",
+      "responsibility": "ordered immutable token, packet double-read, plan and prompt validation",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func ResumeReader.Read",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_resume_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_next_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsowner/resume_test.go",
+        "internal/adapter/issueops/execution_resume_identity_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-owner-resume-packet",
+      "source_path": "internal/adapter/issueops/execution_resume.go",
+      "source_symbol": "func validateExecutionResumePacket",
+      "responsibility": "generation and sealed issue body identity rules",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateOwnerResumePacket",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_resume_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_next_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/owner_resume_test.go",
+        "internal/adapter/issueops/execution_resume_identity_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-execution-status",
+      "source_path": "internal/adapter/issueops/execution_lease.go",
+      "source_symbol": "func StatusExecution",
+      "responsibility": "read-only execution status and writerless recovery projection",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func ExecutionStatus.Read",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_resume_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_next_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsowner/status_test.go",
+        "internal/adapter/issueops/execution_api_status_test.go",
+        "cmd/issueops/issueopsapp/execution_cli_instance_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-writerless-command",
+      "source_path": "internal/adapter/issueops/execution_lease.go",
+      "source_symbol": "func executionWriterAbsentRecoveryCommand",
+      "responsibility": "compose lease recovery classification with canonical domain commands",
+      "target": "internal/application/issueopsowner",
+      "target_symbol": "func WriterlessCommand",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_resume_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_next_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsowner/status_test.go",
+        "internal/adapter/issueops/execution_resume_identity_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-reseed-command",
+      "source_path": "internal/adapter/issueops/execution_reseed_adapter.go",
+      "source_symbol": "func ExecutionReseedNextCommand",
+      "responsibility": "mode-specific resume or claim next command",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func OwnerReseedNextCommand",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_resume_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_owner_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_next_wiring.go",
+        "cmd/issueops/issueopsapp/issueops_reseed_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_api_reseed_test.go"
       ],
       "status": "migrated"
     }

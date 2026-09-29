@@ -11,7 +11,10 @@ import (
 
 // 실행 의존 묶음은 port 인터페이스를 필드로 갖는다. DTO가 아니라 주입 묶음이므로
 // 계약이 아니라 port 계층이 소유한다 — 계약은 인터페이스를 물지 않는다.
+type ExecutionStatusHandler func(context.Context, string, string) (issueopscontract.ExecutionResult, error)
+
 type ExecutionActionDependencies struct {
+	Status    ExecutionStatusHandler
 	Prepare   issueopscontract.ExecutionPrepareHandler
 	Orca      ExecutionOrcaProvisioner
 	OrcaOwner ExecutionOrcaOwnerInspector

@@ -473,7 +473,7 @@ func route(req request, deps dependencies) {
 }
 
 func TestReseedOwnerArtifactPreparationDoesNotReapplyLeaseTransition(t *testing.T) {
-	path := filepath.Join(findRepoRoot(t), "internal", "adapter", "issueops", "execution_reseed_adapter.go")
+	path := filepath.Join(findRepoRoot(t), "internal", "application", "issueopsowner", "reseal.go")
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)

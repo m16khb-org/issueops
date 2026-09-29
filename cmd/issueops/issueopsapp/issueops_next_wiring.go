@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	ownerapp "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +47,7 @@ func issueOpsNextHandler(
 			ReadRecord:          issueopscore.ReadIssueOps,
 			Completion:          readiness.Completion,
 			LocalReadiness:      localObservation.localReadiness,
-			WriterlessCommand:   issueopscore.ExecutionWriterAbsentRecoveryCommand,
+			WriterlessCommand:   ownerapp.WriterlessCommand,
 			PlannerDefaults:     agentmodel.PlannerDefaults,
 			ChangedPaths:        localObservation.changedPaths,
 			ReviewEffortForTier: agentmodel.ReviewEffortForTier,

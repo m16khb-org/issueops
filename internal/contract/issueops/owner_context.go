@@ -87,3 +87,12 @@ type OwnerPolicyContext struct {
 	ReviewerModel, ReviewerEffort, ResearchModel, ResearchEffort string
 	ProjectKey, IssueNumber                                      string
 }
+
+type OwnerResumeArtifacts struct {
+	ClaimTokenPath      string
+	IssueBodySHA256     string
+	ContextPacketPath   string
+	ContextPacketSHA256 string
+	OwnerPromptPath     string
+	OwnerPromptSHA256   string
+}
