@@ -19,7 +19,7 @@ func TestSaveSelfAugmentLesson(t *testing.T) {
 		Source:      "unit-test",
 		Severity:    "warning",
 		StateKey:    "self-augment-lesson-test",
-	}, Deps{})
+	}, lessonTestDeps{})
 	if err != nil {
 		t.Fatalf("SaveSelfAugmentLesson: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 		Lesson:      "old lessons should not grow forever",
 		NextAction:  "keep only recent lesson state",
 		Severity:    "error",
-	}, Deps{}); err != nil {
+	}, lessonTestDeps{}); err != nil {
 		t.Fatalf("SaveSelfAugmentLesson: %v", err)
 	}
 
@@ -70,10 +70,10 @@ func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 func TestSaveSelfAugmentLessonRejectsMissingRequiredFields(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 
-	if result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{CandidateID: "candidate-one"}, Deps{}); err == nil || !strings.Contains(err.Error(), "lesson is required") || result.OK {
+	if result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{CandidateID: "candidate-one"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "lesson is required") || result.OK {
 		t.Fatalf("expected missing lesson error, result=%#v err=%v", result, err)
 	}
-	if result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{CandidateID: "candidate-one", Lesson: "learned"}, Deps{}); err == nil || !strings.Contains(err.Error(), "next-action is required") || result.OK {
+	if result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{CandidateID: "candidate-one", Lesson: "learned"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "next-action is required") || result.OK {
 		t.Fatalf("expected missing next-action error, result=%#v err=%v", result, err)
 	}
 }
@@ -103,7 +103,7 @@ func TestStateKeySlugNormalizesUnsafeText(t *testing.T) {
 
 func TestSaveSelfAugmentLessonAcceptsFreeSlugWhenCurriculumIsExhausted(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	deps := Deps{SelectCandidate: func() *model.SelfAugmentCandidate { return nil }}
+	deps := lessonTestDeps{SelectCandidate: func() *model.SelfAugmentCandidate { return nil }}
 	result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{
 		CandidateID: "issueops-whoami-record-flags",
 		Lesson:      "whoami must advertise both actor flag vectors",
@@ -119,7 +119,7 @@ func TestSaveSelfAugmentLessonAcceptsFreeSlugWhenCurriculumIsExhausted(t *testin
 
 func TestSaveSelfAugmentLessonRejectsInvalidFreeSlug(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	deps := Deps{SelectCandidate: func() *model.SelfAugmentCandidate { return nil }}
+	deps := lessonTestDeps{SelectCandidate: func() *model.SelfAugmentCandidate { return nil }}
 	for _, candidateID := range []string{"IssueOps Whoami", "issueops/whoami", "whoami:record"} {
 		if result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{
 			CandidateID: candidateID, Lesson: "l", NextAction: "n",

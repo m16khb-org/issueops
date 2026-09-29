@@ -5,43 +5,26 @@ import (
 	"strings"
 
 	"issueops/cmd/issueops/selfworkflow"
+	statestore "issueops/internal/adapter/outbound/state"
 	quality "issueops/internal/domain/quality"
 	"issueops/internal/domain/qualitycatalog"
+	verifydomain "issueops/internal/domain/selfverify"
 )
 
 func collectSelfAugmentOpenCount(root string) (int, error) {
-	oldRoot := selfworkflow.IssueOpsRoot
-	oldVersion := selfworkflow.Version
-	selfworkflow.IssueOpsRoot = func() string { return root }
-	selfworkflow.Version = hostDeps.Version
-	defer func() {
-		selfworkflow.IssueOpsRoot = oldRoot
-		selfworkflow.Version = oldVersion
-	}()
-	plan := selfworkflow.PlanSelfAugmentation(selfworkflow.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
+	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(selfworkflow.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
 	return len(selfworkflow.SelfAugmentCandidateIDsByStatus(plan.Candidates, selfworkflow.SelfAugmentCandidateStatusOpen)), nil
 }
 
 func collectSelfVerifyOpenCount(root string) (int, error) {
-	oldRoot := selfworkflow.IssueOpsRoot
-	selfworkflow.IssueOpsRoot = func() string { return root }
-	defer func() { selfworkflow.IssueOpsRoot = oldRoot }()
-	result := selfworkflow.ExportSelfVerificationCandidates()
-	return len(selfworkflow.SelfVerificationCandidateIDsByStatus(result.Candidates, selfworkflow.SelfAugmentCandidateStatusOpen)), nil
+	result := planningForTest(root, statestore.StateDir(), hostDeps.Version).ExportCandidates()
+	return len(verifydomain.CandidateIDsByStatus(result.Candidates, selfworkflow.SelfAugmentCandidateStatusOpen)), nil
 }
 
 func collectQualityCandidates(root string) []QualityCandidate {
 	candidates := qualitycatalog.Candidates()
-	oldRoot := selfworkflow.IssueOpsRoot
-	oldVersion := selfworkflow.Version
-	selfworkflow.IssueOpsRoot = func() string { return root }
-	selfworkflow.Version = hostDeps.Version
-	defer func() {
-		selfworkflow.IssueOpsRoot = oldRoot
-		selfworkflow.Version = oldVersion
-	}()
 
-	plan := selfworkflow.PlanSelfAugmentation(selfworkflow.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
+	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(selfworkflow.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
 	statusByID := map[string]selfworkflow.SelfAugmentCandidate{}
 	for _, candidate := range plan.Candidates {
 		statusByID[candidate.ID] = candidate

@@ -70,10 +70,11 @@ func mcpTools() []map[string]any {
 func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	return mcpcli.MCPDependencies{
-		Catalog:     mcpcatalog.Build(),
-		SelfHistory: newSelfWorkflowHistory(statestore.StateDir()),
-		SelfState:   newSelfWorkflowState(statestore.StateDir()),
-		Prepare:     execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner, ReadIssue: execution.ReadIssue,
+		Catalog:      mcpcatalog.Build(),
+		SelfHistory:  newSelfWorkflowHistory(statestore.StateDir()),
+		SelfState:    newSelfWorkflowState(statestore.StateDir()),
+		SelfPlanning: newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version),
+		Prepare:      execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner, ReadIssue: execution.ReadIssue,
 		Claim: issueOpsClaimHandler, Release: issueOpsReleaseHandler, Reseed: issueOpsReseedHandler,
 		Resume: issueOpsResumeHandler, Reconcile: issueOpsReconcileHandler, Complete: issueOpsCompleteHandler,
 		Provenance: provenanceadapter.NewExecutableObserver(),

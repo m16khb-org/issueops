@@ -1,24 +1,9 @@
 package selfworkflow
 
-import (
-	augmentlessonpkg "issueops/cmd/issueops/selfworkflow/augmentlesson"
-	augmentplanpkg "issueops/cmd/issueops/selfworkflow/augmentplan"
-	candidateexportpkg "issueops/cmd/issueops/selfworkflow/candidateexport"
-
-	statestore "issueops/internal/adapter/outbound/state"
-	"issueops/internal/adapter/verification"
-)
+import ()
 
 // production wiring과 같은 state store를 설치한다. 이 package가 실제로 의존하는
 // 대상만 채운다 — 역방향으로 채우면 import 순환이 된다.
 func init() {
-	augmentlessonpkg.StateDir = statestore.StateDir
-	augmentlessonpkg.StatePrunePrefix = statestore.StatePrunePrefix
-	augmentlessonpkg.StateWrite = statestore.StateWrite
-	augmentplanpkg.StateList = statestore.StateList
-	augmentplanpkg.StateRead = statestore.StateRead
-	candidateexportpkg.ObserveSource = verification.CandidateSource
-	candidateexportpkg.StateDir = statestore.StateDir
-	candidateexportpkg.StateWrite = statestore.StateWrite
 
 }

@@ -17,7 +17,7 @@ import (
 func testMCPCatalog() mcpcontract.Catalog { return mcpcatalog.Build() }
 
 func testHandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
-	return HandleToolCallWithDependencies(params, MCPDependencies{Catalog: testMCPCatalog(), SelfHistory: historyServiceForTest(), SelfState: selfStateForTest()})
+	return HandleToolCallWithDependencies(params, MCPDependencies{Catalog: testMCPCatalog(), SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
 }
 
 func init() {
@@ -30,7 +30,7 @@ func historyServiceForTest() augmentapp.HistoryService {
 	return augmentapp.HistoryService{StateDir: statestore.StateDir, List: statestore.StateList, Read: statestore.StateRead, Delete: statestore.StateDelete}
 }
 func testHandleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
-	return handleSelfLoopMCPToolCall(call, MCPDependencies{SelfHistory: historyServiceForTest(), SelfState: selfStateForTest()})
+	return handleSelfLoopMCPToolCall(call, MCPDependencies{SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
 }
 
 func selfStateForTest() SelfStateDependencies {

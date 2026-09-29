@@ -8,34 +8,35 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/selfworkflow"
+	"issueops/cmd/issueops/selfworkflow/candidatescmd"
+	verifydomain "issueops/internal/domain/selfverify"
 )
 
 func exportSelfVerificationCandidates() SelfVerificationCandidateExportResult {
-	selfworkflow.IssueOpsRoot = issueOpsRoot
-	return selfworkflow.ExportSelfVerificationCandidates()
+	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).ExportCandidates()
 }
 
 func selfVerificationCandidateCatalog() []SelfVerificationCandidate {
-	return selfworkflow.SelfVerificationCandidateCatalog()
+	return verifydomain.CandidateCatalog()
 }
 
 func selfVerificationCandidateIDsByStatus(candidates []SelfVerificationCandidate, status string) []string {
-	return selfworkflow.SelfVerificationCandidateIDsByStatus(candidates, status)
+	return verifydomain.CandidateIDsByStatus(candidates, status)
 }
 
 func selectedSelfVerificationCandidateID(candidate *SelfVerificationCandidate) string {
-	return selfworkflow.SelectedSelfVerificationCandidateID(candidate)
+	return verifydomain.SelectedCandidateID(candidate)
 }
 
 func runSelfVerifyCandidatesWithDeps(args []string, deps selfVerifyCandidatesDeps) error {
-	return selfworkflow.RunSelfVerifyCandidatesWithDeps(args, selfworkflow.SelfVerifyCandidatesDeps{
+	return candidatescmd.Run(args, candidatescmd.Deps{PrintJSON: printJSON,
 		Export: deps.export,
 		Save:   deps.save,
 	})
 }
 
 func saveSelfVerificationCandidateExport(result *SelfVerificationCandidateExportResult, key string) error {
-	return selfworkflow.SaveSelfVerificationCandidateExport(result, key)
+	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).SaveCandidates(result, key)
 }
 
 func compareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (SelfAugmentCompareResult, error) {
@@ -83,7 +84,6 @@ func boolPtr(value bool) *bool {
 }
 
 func newSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) SelfAugmentResult {
-	selfworkflow.IssueOpsRoot = issueOpsRoot
 	return selfworkflow.NewSelfVerifyLoopResult(iterations, baseSeed, targetScore)
 }
 

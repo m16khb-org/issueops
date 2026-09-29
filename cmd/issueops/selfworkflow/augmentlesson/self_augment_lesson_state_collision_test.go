@@ -8,7 +8,7 @@ import (
 
 func TestSaveSelfAugmentLessonSameSecondKeysDoNotCollide(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	deps := Deps{IssueOpsRoot: func() string { return t.TempDir() }}
+	deps := lessonTestDeps{IssueOpsRoot: func() string { return t.TempDir() }}
 
 	req := model.SelfAugmentLessonRequest{
 		CandidateID: "collision-cand",

@@ -38,7 +38,8 @@ func (repo Repository) signalRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join("internal", "application", "selfverify", "loop.go"), "SelfVerificationKoreanName")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasSelfAugmentPlanner = DirContainsTerm(root, filepath.Join("cmd", "issueops", "selfworkflow"), "planSelfAugmentation")
+			signals.HasSelfAugmentPlanner = FileContainsTerm(root, filepath.Join("internal", "application", "selfaugment", "planner.go"), "func (planner Planner) Plan(") &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "self_workflow_planning_wiring.go"), "planner.Plan(")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasSelfAugmentStateCapture = FileContainsTerm(root, filepath.Join("internal", "application", "selfaugment", "save_plan.go"), "func SavePlan(") &&
@@ -46,7 +47,8 @@ func (repo Repository) signalRules() []repoSignalRule {
 				repo.DocsContainTerm(root, "--save-state")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasSelfAugmentLessonCapture = DirContainsTerm(root, filepath.Join("cmd", "issueops", "selfworkflow"), "saveSelfAugmentLesson")
+			signals.HasSelfAugmentLessonCapture = FileContainsTerm(root, filepath.Join("internal", "application", "selfaugment", "save_lesson.go"), "func SaveLesson(") &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "self_workflow_planning_wiring.go"), "augmentapp.SaveLesson(")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasAdapterContractMatrix = FileContainsTerm(root, filepath.Join("internal", "adapter", "install_contract_matrix_test.go"), "TestNativeInstallAdapterContractMatrix") &&

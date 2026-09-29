@@ -1561,6 +1561,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/quality_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newQualityDependencies"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/repopath_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -1645,6 +1653,14 @@
       "symbols": [
         "func newSelfWorkflowHistory",
         "func selfWorkflowHistoryCLI"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/self_workflow_planning_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newSelfWorkflowPlanning"
       ]
     },
     {
@@ -2759,6 +2775,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/mcpcli/self_planning_dependencies.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "type SelfPlanningDependencies"
+      ]
+    },
+    {
       "path": "cmd/issueops/mcpcli/self_state_dependencies.go",
       "owner": "inbound",
       "task": "T20",
@@ -2953,47 +2977,7 @@
       "owner": "inbound",
       "task": "T16",
       "symbols": [
-        "func Configure",
-        "func Reset",
-        "func defaultDeps",
-        "func defaultIssueOpsRoot",
-        "func defaultPrintJSON",
         "type Deps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/qualitycli/quality_collectors.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func ConfigureSourceCollectors",
-        "func auditEvidence",
-        "func branchEvidence",
-        "func collectAuditItems",
-        "func collectBranchFunctions",
-        "func collectQualityCandidates",
-        "func collectSelfAugmentOpenCount",
-        "func collectSelfVerifyOpenCount",
-        "func coverageEvidence",
-        "func firstQualityWarning",
-        "func parseCoveragePackages",
-        "func pioneerIsolatedEvidence",
-        "func pioneerIsolatedStatus",
-        "func renderCoveragePackages",
-        "func statusForCollector",
-        "func statusForCount"
-      ]
-    },
-    {
-      "path": "cmd/issueops/qualitycli/quality_coverage.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func ConfigureCoverage",
-        "func coverageCachePath",
-        "func coverageFingerprint",
-        "func runGoTestCoverage",
-        "type CoverageEffects"
       ]
     },
     {
@@ -3001,45 +2985,8 @@
       "owner": "inbound",
       "task": "T16",
       "symbols": [
-        "func Inspect",
-        "func InspectDeps.withDefaults",
         "func Run",
-        "func RunInspectWithDeps",
-        "func addQualityCollectorFailure",
-        "func addSNRRegressionFinding",
-        "func boundedEvidence",
-        "func collectPioneerCoverage",
-        "func collectQualityFindings",
-        "func qualityStatuses",
-        "func resolveRoot",
-        "func successfulSignalValue",
-        "type AuditItem",
-        "type BranchFunction",
-        "type CoveragePackage",
-        "type Finding",
-        "type InspectDeps",
-        "type InspectResult",
-        "type PioneerBlockedCase",
-        "type PioneerCoverage",
-        "type QualityCandidate",
-        "type Signal",
-        "type Summary"
-      ]
-    },
-    {
-      "path": "cmd/issueops/qualitycli/quality_snr.go",
-      "owner": "inbound",
-      "task": "T16",
-      "symbols": [
-        "func ConfigureSNRScanner",
-        "func computeCodeSNR",
-        "func readSNRBaseline",
-        "func saveSNRBaseline",
-        "func snrBaselineIdentity",
-        "func snrEvidence",
-        "func validSNRRatio",
-        "type SNRResult",
-        "type snrBaselineRecord"
+        "func RunInspect"
       ]
     },
     {
@@ -3118,88 +3065,9 @@
       "owner": "inbound",
       "task": "T18",
       "symbols": [
-        "func RunSelfAugmentLesson"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentlesson/self_augment_lesson_state.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func SaveSelfAugmentLesson",
-        "func StateKeySlug",
+        "func Run",
         "type Deps"
       ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentlesson/state_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentplan/docs_dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentplan/install_dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentplan/plan.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func Plan",
-        "func planner",
-        "type Request",
-        "type Result"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentplan/state_dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/candidateexport/self_verify_candidates.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func ExportSelfVerificationCandidates",
-        "func SelectedSelfVerificationCandidateID",
-        "func SelfVerificationCandidateIDsByStatus",
-        "type SelfVerificationCandidate",
-        "type SelfVerificationCandidateExportResult",
-        "type SelfVerificationCandidateExportStateSnapshot"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/candidateexport/self_verify_candidates_catalog.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func SelfVerificationCandidateCatalog"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/candidateexport/self_verify_candidates_state.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func SaveSelfVerificationCandidateExport"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/candidateexport/state_dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/selfworkflow/candidatescmd/candidates.go",
@@ -3268,9 +3136,6 @@
         "func FormatScore",
         "func MarkSatisfiedSelfAugmentCandidate",
         "func MaxSlowStepDurationByLabel",
-        "func PlanSelfAugmentation",
-        "func RunSelfAugmentLesson",
-        "func SaveSelfAugmentLesson",
         "func ScoreBool",
         "func ScoreSelfVerificationGoals",
         "func SelectGeniusFormulas",
@@ -3279,7 +3144,6 @@
         "func SelfAugmentCandidateScore",
         "func SelfAugmentCandidates",
         "func SelfAugmentResearchInfluences",
-        "func StateKeySlug",
         "func StepDurationStatByLabel",
         "func StepDurationStatsForCompare",
         "func SummarizeSelfAugment",
@@ -3290,7 +3154,6 @@
         "func docsContainTerm",
         "func fileContainsTerm",
         "func markSatisfiedSelfAugmentCandidate",
-        "func planSelfAugmentation",
         "func scoreBool",
         "func selectGeniusFormulas",
         "func selectedCandidateID",
@@ -3308,12 +3171,7 @@
         "func BuildSelfVerificationCoverage",
         "func EmitSelfVerifyLoopEnd",
         "func EmitSelfVerifyLoopStart",
-        "func ExportSelfVerificationCandidates",
         "func NewSelfVerifyLoopResult",
-        "func SaveSelfVerificationCandidateExport",
-        "func SelectedSelfVerificationCandidateID",
-        "func SelfVerificationCandidateCatalog",
-        "func SelfVerificationCandidateIDsByStatus",
         "func SelfVerificationCoverageDefinitions",
         "func SelfVerificationFailureClusters",
         "func SelfVerificationGoalDefinitions",
@@ -3483,28 +3341,6 @@
         "func FormatScore",
         "func SelfVerifyRerunCommands",
         "func SelfVerifyStepRerunCommand"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/self_augment_lesson_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func runSelfAugmentLesson",
-        "func saveSelfAugmentLesson",
-        "func selfAugmentLessonDeps",
-        "func stateKeySlug"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/self_verify_cli.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func RunSelfVerifyCandidates",
-        "func RunSelfVerifyCandidatesWithDeps",
-        "func SelfVerifyCandidatesDeps.withDefaults",
-        "type SelfVerifyCandidatesDeps"
       ]
     },
     {
@@ -8029,6 +7865,14 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/quality/baseline.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CanonicalRepository"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/quality/coverage.go",
       "owner": "adapter",
       "task": "T20",
@@ -11878,6 +11722,25 @@
       ]
     },
     {
+      "path": "internal/application/quality/baseline.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func SNRBaselineStore.Read",
+        "func SNRBaselineStore.Save",
+        "func SNRBaselineStore.identity",
+        "type SNRBaselineStore"
+      ]
+    },
+    {
+      "path": "internal/application/quality/candidates.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func CandidatesForPlan"
+      ]
+    },
+    {
       "path": "internal/application/quality/inspect.go",
       "owner": "application",
       "task": "T20",
@@ -11891,6 +11754,16 @@
         "type SNRResult",
         "type Signal",
         "type Summary"
+      ]
+    },
+    {
+      "path": "internal/application/quality/inspect_baseline.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func InspectWithBaseline",
+        "type InspectBaselineDeps",
+        "type InspectRequest"
       ]
     },
     {
@@ -13544,6 +13417,14 @@
         "type ProjectDocsReviseRequest",
         "type ProjectDocsReviseResult",
         "type ProjectDocsRouteResult"
+      ]
+    },
+    {
+      "path": "internal/contract/quality/baseline.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type SNRBaselineRecord"
       ]
     },
     {
@@ -16699,6 +16580,15 @@
       ]
     },
     {
+      "path": "internal/domain/quality/baseline.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func SNRBaselineKey",
+        "func ValidSNRBaseline"
+      ]
+    },
+    {
       "path": "internal/domain/quality/policy.go",
       "owner": "domain",
       "task": "T20",
@@ -16744,6 +16634,14 @@
         "type Candidate",
         "type CandidateSpec",
         "type VerificationKind"
+      ]
+    },
+    {
+      "path": "internal/domain/qualitycatalog/projection.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ApplyPlanStatus"
       ]
     },
     {
@@ -23574,6 +23472,103 @@
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "quality-baseline-validity",
+      "source_path": "cmd/issueops/qualitycli/quality_snr.go",
+      "source_symbol": "func readSNRBaseline",
+      "responsibility": "reject baseline schema, repository identity or ratio mismatch",
+      "target": "internal/domain/quality",
+      "target_symbol": "func ValidSNRBaseline",
+      "task": "T20",
+      "entrypoints": [
+        "issueops quality inspect"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/self_workflow_planning_wiring_test.go",
+        "cmd/issueops/qualitycli/quality_inspect_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "quality-baseline-read",
+      "source_path": "cmd/issueops/qualitycli/quality_snr.go",
+      "source_symbol": "func readSNRBaseline",
+      "responsibility": "read and decode the baseline and apply domain validity before returning a trend baseline",
+      "target": "internal/application/quality",
+      "target_symbol": "func SNRBaselineStore.Read",
+      "task": "T20",
+      "entrypoints": [
+        "issueops quality inspect"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/self_workflow_planning_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "quality-baseline-save",
+      "source_path": "cmd/issueops/qualitycli/quality_snr.go",
+      "source_symbol": "func saveSNRBaseline",
+      "responsibility": "validate ratio before repository observation and write the versioned baseline",
+      "target": "internal/application/quality",
+      "target_symbol": "func SNRBaselineStore.Save",
+      "task": "T20",
+      "entrypoints": [
+        "issueops quality inspect"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/self_workflow_planning_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "quality-baseline-key",
+      "source_path": "cmd/issueops/qualitycli/quality_snr.go",
+      "source_symbol": "func snrBaselineIdentity",
+      "responsibility": "derive stable repository-scoped baseline key from canonical repository identity",
+      "target": "internal/domain/quality",
+      "target_symbol": "func SNRBaselineKey",
+      "task": "T20",
+      "entrypoints": [
+        "issueops quality inspect"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/self_workflow_planning_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "quality-baseline-workflow",
+      "source_path": "cmd/issueops/qualitycli/quality_inspect.go",
+      "source_symbol": "func RunInspectWithDeps",
+      "responsibility": "read previous baseline before saving the current signal and classify regression against the previous baseline",
+      "target": "internal/application/quality",
+      "target_symbol": "func InspectWithBaseline",
+      "task": "T20",
+      "entrypoints": [
+        "issueops quality inspect"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/qualitycli/quality_inspect_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "quality-candidate-plan-status",
+      "source_path": "cmd/issueops/qualitycli/quality_collectors.go",
+      "source_symbol": "func collectQualityCandidates",
+      "responsibility": "overlay matching candidate status and score without changing catalog identity or mutating the input",
+      "target": "internal/domain/qualitycatalog",
+      "target_symbol": "func ApplyPlanStatus",
+      "task": "T20",
+      "entrypoints": [
+        "issueops quality inspect"
+      ],
+      "evidence_tests": [
+        "internal/domain/qualitycatalog/projection_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }

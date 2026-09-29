@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/selfworkflow"
+	"issueops/cmd/issueops/selfworkflow/candidatescmd"
 	"issueops/cmd/issueops/selfworkflow/historycompare"
 	"issueops/cmd/issueops/selfworkflow/promotecmd"
 	"issueops/cmd/issueops/selfworkflow/verifycmd"
@@ -35,8 +36,8 @@ func runSelfVerify(args []string) error {
 }
 
 func runSelfVerifyCandidates(args []string) error {
-	selfworkflow.IssueOpsRoot = issueOpsRoot
-	return selfworkflow.RunSelfVerifyCandidates(args)
+	planning := newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version)
+	return candidatescmd.Run(args, candidatescmd.Deps{Export: planning.ExportCandidates, Save: planning.SaveCandidates, PrintJSON: printJSON})
 }
 
 func runSelfVerifyCompare(args []string) error {

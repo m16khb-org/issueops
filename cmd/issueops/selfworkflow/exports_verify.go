@@ -1,29 +1,8 @@
 package selfworkflow
 
 import (
-	"issueops/cmd/issueops/selfworkflow/candidateexport"
 	"issueops/cmd/issueops/selfworkflow/loopresult"
 )
-
-func ExportSelfVerificationCandidates() SelfVerificationCandidateExportResult {
-	return candidateexport.ExportSelfVerificationCandidates(IssueOpsRoot())
-}
-
-func SaveSelfVerificationCandidateExport(result *SelfVerificationCandidateExportResult, key string) error {
-	return candidateexport.SaveSelfVerificationCandidateExport(result, key)
-}
-
-func SelectedSelfVerificationCandidateID(candidate *SelfVerificationCandidate) string {
-	return candidateexport.SelectedSelfVerificationCandidateID(candidate)
-}
-
-func SelfVerificationCandidateCatalog() []SelfVerificationCandidate {
-	return candidateexport.SelfVerificationCandidateCatalog()
-}
-
-func SelfVerificationCandidateIDsByStatus(candidates []SelfVerificationCandidate, status string) []string {
-	return candidateexport.SelfVerificationCandidateIDsByStatus(candidates, status)
-}
 
 func BuildSelfVerificationContract() SelfVerificationContract {
 	return selfVerificationContract()

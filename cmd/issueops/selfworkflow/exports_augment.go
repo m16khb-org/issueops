@@ -2,7 +2,6 @@ package selfworkflow
 
 import (
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
-	"issueops/cmd/issueops/selfworkflow/augmentplan"
 	domain "issueops/internal/domain/selfaugment"
 )
 
@@ -70,24 +69,12 @@ func MaxSlowStepDurationByLabel(steps []SelfAugmentSlowStep) map[string]int64 {
 	return maxSlowStepDurationByLabel(steps)
 }
 
-func PlanSelfAugmentation(req SelfAugmentPlanRequest) SelfAugmentPlanResult {
-	return planSelfAugmentation(req)
-}
-
-func planSelfAugmentation(req SelfAugmentPlanRequest) SelfAugmentPlanResult {
-	return augmentplan.Plan(req, IssueOpsRoot(), Version)
-}
-
 func ScoreBool(ok bool) float64 {
 	return scoreBool(ok)
 }
 
 func scoreBool(ok bool) float64 {
 	return augmentcatalog.ScoreBool(ok)
-}
-
-func SaveSelfAugmentLesson(req SelfAugmentLessonRequest) (SelfAugmentLessonResult, error) {
-	return saveSelfAugmentLesson(req)
 }
 
 func ScoreSelfVerificationGoals(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
@@ -144,14 +131,6 @@ func StepDurationStatByLabel(stats []SelfAugmentStepDurationStat) map[string]Sel
 
 func StepDurationStatsForCompare(summary SelfAugmentSummary) []SelfAugmentStepDurationStat {
 	return stepDurationStatsForCompare(summary)
-}
-
-func RunSelfAugmentLesson(args []string) error {
-	return runSelfAugmentLesson(args)
-}
-
-func StateKeySlug(s string) string {
-	return stateKeySlug(s)
 }
 
 func SummarizeSelfAugment(result SelfAugmentResult) SelfAugmentSummary {

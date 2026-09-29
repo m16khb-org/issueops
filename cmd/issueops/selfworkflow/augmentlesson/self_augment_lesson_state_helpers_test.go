@@ -9,13 +9,13 @@ import (
 	domain "issueops/internal/domain/selfaugment"
 )
 
-type Deps struct {
+type lessonTestDeps struct {
 	IssueOpsRoot    func() string
 	PrintJSON       func(any) error
 	SelectCandidate func() *model.SelfAugmentCandidate
 }
 
-func SaveSelfAugmentLesson(req model.SelfAugmentLessonRequest, deps Deps) (model.SelfAugmentLessonResult, error) {
+func SaveSelfAugmentLesson(req model.SelfAugmentLessonRequest, deps lessonTestDeps) (model.SelfAugmentLessonResult, error) {
 	return application.SaveLesson(req, application.SaveLessonDeps{
 		IssueOpsRoot: deps.IssueOpsRoot, SelectCandidate: deps.SelectCandidate,
 		Now: time.Now,

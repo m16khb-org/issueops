@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	qualityapp "issueops/internal/application/quality"
+	qualitycontract "issueops/internal/contract/quality"
 	"net"
 	"os"
 	"path/filepath"
@@ -17,7 +19,6 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 
-	"issueops/cmd/issueops/qualitycli"
 	statecontract "issueops/internal/contract/state"
 	"issueops/internal/port"
 
@@ -590,14 +591,14 @@ func TestSelfVerifyFacadeWrappers(t *testing.T) {
 	_ = runSelfVerify([]string{"candidates", "--json"})
 }
 
-func qualityInspectDepsForIssueOpsAppTest() qualitycli.InspectDeps {
-	return qualitycli.InspectDeps{
+func qualityInspectDepsForIssueOpsAppTest() qualityapp.InspectDeps {
+	return qualityapp.InspectDeps{
 		Now:                  func() string { return "2026-01-01T00:00:00Z" },
 		Coverage:             func(string) (string, error) { return "ok\tpkg\tcoverage: 100.0% of statements\n", nil },
 		SelfAugmentOpenCount: func(string) (int, error) { return 0, nil },
 		SelfVerifyOpenCount:  func(string) (int, error) { return 0, nil },
-		PioneerCoverage: func(string) (qualitycli.PioneerCoverage, error) {
-			return qualitycli.PioneerCoverage{
+		PioneerCoverage: func(string) (qualitycontract.PioneerCoverage, error) {
+			return qualitycontract.PioneerCoverage{
 				Expected:             12,
 				BenchmarkObserved:    12,
 				ReproductionObserved: 12,
@@ -606,8 +607,8 @@ func qualityInspectDepsForIssueOpsAppTest() qualitycli.InspectDeps {
 				IsolatedPassed:       12,
 			}, nil
 		},
-		CodeSNR: func(string) (qualitycli.SNRResult, error) {
-			return qualitycli.SNRResult{SignalLines: 70, NoiseLines: 30, TotalLines: 100, Ratio: 0.7}, nil
+		CodeSNR: func(string) (qualitycontract.SNRResult, error) {
+			return qualitycontract.SNRResult{SignalLines: 70, NoiseLines: 30, TotalLines: 100, Ratio: 0.7}, nil
 		},
 	}
 }

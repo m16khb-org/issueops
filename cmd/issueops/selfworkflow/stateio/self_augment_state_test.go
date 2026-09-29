@@ -7,9 +7,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/augmentplan"
 	"issueops/cmd/issueops/selfworkflow/model"
+	"issueops/internal/adapter/augmentation"
+	"issueops/internal/adapter/docs"
+	"issueops/internal/adapter/install"
 	statestore "issueops/internal/adapter/outbound/state"
+	app "issueops/internal/application/selfaugment"
+	"time"
 )
 
 func TestSaveSelfAugmentPlan(t *testing.T) {
@@ -20,7 +24,7 @@ func TestSaveSelfAugmentPlan(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := filepath.Clean(filepath.Join(cwd, "..", "..", "..", ".."))
-	result := augmentplan.Plan(model.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}, root, "test")
+	result := planForStateTest(model.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}, root, "test")
 	if err := SaveSelfAugmentPlan(&result, "self-augment-plan-test"); err != nil {
 		t.Fatalf("SaveSelfAugmentPlan: %v", err)
 	}
@@ -48,11 +52,15 @@ func TestSaveSelfAugmentPlan(t *testing.T) {
 
 func TestSaveSelfAugmentPlanRejectsInvalidStateKey(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	result := augmentplan.Plan(model.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 99}, ".", "test")
+	result := planForStateTest(model.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 99}, ".", "test")
 	if err := SaveSelfAugmentPlan(&result, "!bad-key"); err == nil {
 		t.Fatal("expected self-augment plan save to reject invalid state key")
 	}
 	if result.StateCheckpoint == nil || result.StateCheckpoint.OK || result.StateCheckpoint.Error == "" {
 		t.Fatalf("unexpected plan checkpoint after invalid save: %#v", result.StateCheckpoint)
 	}
+}
+
+func planForStateTest(req model.SelfAugmentPlanRequest, root, version string) model.SelfAugmentPlanResult {
+	return (app.Planner{Repository: augmentation.Repository{ListDocs: docs.ListDocs}, DocsIndex: docs.DocsIndex, ListSkillNames: install.ListSkillNames, StateList: statestore.StateList, StateRead: statestore.StateRead, Now: time.Now}).Plan(req, root, version)
 }

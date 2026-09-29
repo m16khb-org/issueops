@@ -1,6 +1,9 @@
 package issueopsapp
 
 import (
+	statestore "issueops/internal/adapter/outbound/state"
+	qualityapp "issueops/internal/application/quality"
+	qualitycontract "issueops/internal/contract/quality"
 	"os"
 
 	"issueops/cmd/issueops/basiccli"
@@ -25,8 +28,10 @@ func runGuardCheck(args []string) error {
 	return basiccli.RunGuardCheck(args)
 }
 
-func runQualityInspectWithDeps(args []string, deps qualitycli.InspectDeps) error {
-	return qualitycli.RunInspectWithDeps(args, deps)
+func runQualityInspectWithDeps(args []string, deps qualityapp.InspectDeps) error {
+	cli := newQualityDependencies(issueOpsRoot(), statestore.StateDir())
+	cli.Inspect = func(root string) qualitycontract.InspectResult { return inspectQualityForTest(root, deps) }
+	return qualitycli.RunInspect(args, cli)
 }
 
 func validateInteractiveInstallInput(stdin *os.File) error {

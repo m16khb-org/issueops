@@ -106,14 +106,14 @@ func TestRunRoutesQualityCommands(t *testing.T) {
 		{name: "unknown subcommand", args: []string{"unknown"}, wantErr: `unknown quality command "unknown"`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := Run(tc.args)
+			err := runForTest(tc.args)
 			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
 				t.Fatalf("error=%v, want substring %q", err, tc.wantErr)
 			}
 		})
 	}
 
-	out := captureQualityStdout(t, func() error { return Run([]string{"help"}) })
+	out := captureQualityStdout(t, func() error { return runForTest([]string{"help"}) })
 	if !strings.Contains(out, "issueops quality inspect") {
 		t.Fatalf("help output=%q", out)
 	}

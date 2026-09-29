@@ -81,3 +81,34 @@ func TestStateCaptureSignalFollowsApplicationAndRootWiring(t *testing.T) {
 		t.Fatal("application state capture wiring was not observed")
 	}
 }
+
+func TestPlanningSignalsFollowApplicationsAndRootWiring(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, content string) {
+		t.Helper()
+		path := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo := Repository{ListDocs: func(string) []string { return nil }}
+	write("cmd/issueops/selfworkflow/old.go", "package selfworkflow\nfunc planSelfAugmentation(){}\nfunc saveSelfAugmentLesson(){}")
+	got := repo.CollectSignals(root, 0, nil, "")
+	if got.HasSelfAugmentPlanner || got.HasSelfAugmentLessonCapture {
+		t.Fatal("old wrappers must not count as runtime capabilities")
+	}
+	write("internal/application/selfaugment/planner.go", "package selfaugment\nfunc (planner Planner) Plan(){}")
+	write("internal/application/selfaugment/save_lesson.go", "package selfaugment\nfunc SaveLesson(){}")
+	got = repo.CollectSignals(root, 0, nil, "")
+	if got.HasSelfAugmentPlanner || got.HasSelfAugmentLessonCapture {
+		t.Fatal("unwired applications must not count as runtime capabilities")
+	}
+	write("cmd/issueops/issueopsapp/self_workflow_planning_wiring.go", "package issueopsapp\nfunc build(){planner.Plan();augmentapp.SaveLesson()}")
+	got = repo.CollectSignals(root, 0, nil, "")
+	if !got.HasSelfAugmentPlanner || !got.HasSelfAugmentLessonCapture {
+		t.Fatal("actual planning and lesson wiring were not observed")
+	}
+}

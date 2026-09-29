@@ -2,7 +2,7 @@ package stateio
 
 import (
 	augmentcatalogcli "issueops/cmd/issueops/selfworkflow/augmentcatalog"
-	augmentplancli "issueops/cmd/issueops/selfworkflow/augmentplan"
+
 	"issueops/internal/adapter/augmentation"
 	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/inspect"
@@ -19,7 +19,6 @@ func init() {
 	augmentcatalogcli.DocsContainTerm = repo.DocsContainTerm
 	augmentcatalogcli.FileContainsTerm = augmentation.FileContainsTerm
 	augmentcatalogcli.DirContainsTerm = augmentation.DirContainsTerm
-	augmentplancli.Repository = augmentation.Repository{ListDocs: docs.ListDocs}
-	augmentplancli.DocsIndex = docs.DocsIndex
+
 	qagatecli.ListDocs = docs.ListDocs
 }

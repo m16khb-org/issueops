@@ -2,16 +2,17 @@ package selfworkflow
 
 import (
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
-	"issueops/cmd/issueops/selfworkflow/candidateexport"
+	contract "issueops/internal/contract/selfaugment"
+	verifycontract "issueops/internal/contract/selfverify"
 )
 
-const SelfVerificationCandidateExportKind = candidateexport.SelfVerificationCandidateExportKind
+const SelfVerificationCandidateExportKind = contract.SelfVerificationCandidateExportKind
 
 const (
 	selfAugmentCandidateStatusOpen      = augmentcatalog.SelfAugmentCandidateStatusOpen
 	selfAugmentCandidateStatusSatisfied = augmentcatalog.SelfAugmentCandidateStatusSatisfied
 )
 
-type SelfVerificationCandidate = candidateexport.SelfVerificationCandidate
-type SelfVerificationCandidateExportResult = candidateexport.SelfVerificationCandidateExportResult
-type SelfVerificationCandidateExportStateSnapshot = candidateexport.SelfVerificationCandidateExportStateSnapshot
+type SelfVerificationCandidate = verifycontract.SelfVerificationCandidate
+type SelfVerificationCandidateExportResult = contract.SelfVerificationCandidateExportResult
+type SelfVerificationCandidateExportStateSnapshot = contract.SelfVerificationCandidateExportStateSnapshot

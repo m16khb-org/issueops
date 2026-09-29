@@ -4,13 +4,14 @@ import (
 	"flag"
 	"fmt"
 
-	"issueops/cmd/issueops/selfworkflow/candidateexport"
 	app "issueops/internal/application/selfverify"
+	contract "issueops/internal/contract/selfaugment"
+	domain "issueops/internal/domain/selfverify"
 )
 
 type Deps struct {
-	Export    func() candidateexport.SelfVerificationCandidateExportResult
-	Save      func(result *candidateexport.SelfVerificationCandidateExportResult, key string) error
+	Export    func() contract.SelfVerificationCandidateExportResult
+	Save      func(result *contract.SelfVerificationCandidateExportResult, key string) error
 	PrintJSON func(any) error
 }
 
@@ -29,7 +30,7 @@ func Run(args []string, deps Deps) error {
 	if *jsonOut {
 		return deps.PrintJSON(result)
 	}
-	fmt.Printf("%s candidates: %d candidate(s), selected=%s\n", result.KoreanName, result.CandidateCount, candidateexport.SelectedSelfVerificationCandidateID(result.SelectedCandidate))
+	fmt.Printf("%s candidates: %d candidate(s), selected=%s\n", result.KoreanName, result.CandidateCount, domain.SelectedCandidateID(result.SelectedCandidate))
 	for _, candidate := range result.Candidates {
 		fmt.Printf("- %s %s score=%.1f status=%s\n", candidate.ID, candidate.Category, candidate.Score, candidate.Status)
 	}

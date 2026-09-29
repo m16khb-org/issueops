@@ -5,9 +5,7 @@ import (
 
 	benchmarkcmd "issueops/cmd/issueops/issueopscli/benchmarkcmd"
 	mcpcli "issueops/cmd/issueops/mcpcli"
-	augmentlesson "issueops/cmd/issueops/selfworkflow/augmentlesson"
-	augmentplan "issueops/cmd/issueops/selfworkflow/augmentplan"
-	candidateexport "issueops/cmd/issueops/selfworkflow/candidateexport"
+
 	statuscli "issueops/cmd/issueops/statuscli"
 	statestore "issueops/internal/adapter/outbound/state"
 	probe "issueops/internal/adapter/verification/probe"
@@ -27,14 +25,8 @@ func configureStateStores() {
 	stateroundtrip.WriteSnapshot = snapshotStore.Write
 	stepbudget.WriteSnapshot = snapshotStore.Write
 
-	augmentlesson.StateDir = statestore.StateDir
-	augmentlesson.StatePrunePrefix = statestore.StatePrunePrefix
-	augmentlesson.StateWrite = statestore.StateWrite
-	augmentplan.StateList = statestore.StateList
-	augmentplan.StateRead = statestore.StateRead
 	benchmarkcmd.StateDir = statestore.StateDir
-	candidateexport.StateDir = statestore.StateDir
-	candidateexport.StateWrite = statestore.StateWrite
+
 	mcpcli.StateDoctor = statestore.StateDoctor
 	mcpcli.StateList = statestore.StateList
 	mcpcli.StateMaintain = statestore.StateMaintain

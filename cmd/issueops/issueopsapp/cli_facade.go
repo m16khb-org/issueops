@@ -2,7 +2,6 @@ package issueopsapp
 
 import (
 	"issueops/internal/adapter/docs"
-	qualitycoverage "issueops/internal/adapter/outbound/quality"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/adapter/projectdocs"
@@ -65,22 +64,6 @@ func wireBasicCLIDeps() {
 		DocsIndex:                docs.DocsIndex,
 	})
 	installcli.Configure(installDependencies())
-	qualitycli.ConfigureCoverage(qualitycli.CoverageEffects{
-		Run:         qualitycoverage.RunGoTestCoverage,
-		Execute:     qualitycoverage.ExecuteGoTestCoverage,
-		CacheBase:   qualitycoverage.DefaultCoverageCacheBase,
-		Fingerprint: qualitycoverage.CoverageFingerprint,
-		CachePath:   qualitycoverage.CoverageCachePath,
-	})
-	qualitycli.ConfigureSNRScanner(qualitycoverage.ComputeCodeSNR)
-	qualitycli.ConfigureSourceCollectors(qualitycoverage.CollectBranchFunctions, qualitycoverage.CollectAuditItems, qualitycoverage.CollectPioneerCoverage)
-	qualitycli.Configure(qualitycli.Deps{
-		IssueOpsRoot: issueOpsRoot,
-		Version:      version,
-		PrintJSON:    printJSON,
-		StateRead:    statestore.StateRead,
-		StateWrite:   statestore.StateWrite,
-	})
 	statuscli.Configure(statuscli.Deps{
 		AnalyzeProjectSignals: projectdocs.AnalyzeProjectSignals,
 		IssueOpsRoot:          issueOpsRoot,
@@ -110,7 +93,7 @@ func runGuard(args []string) error {
 }
 
 func runQuality(args []string) error {
-	return qualitycli.Run(args)
+	return qualitycli.Run(args, newQualityDependencies(issueOpsRoot(), statestore.StateDir()))
 }
 
 func runInspect(args []string) error {
