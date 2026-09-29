@@ -19,12 +19,7 @@ func TestOrcaBranchPrecheckKeepsCapturedGitCapabilities(t *testing.T) {
 		t.Fatal(err)
 	}
 	check := newOrcaBranchPrecheck(root)
-	original := core.GitCmd
-	t.Cleanup(func() { core.GitCmd = original })
-	core.GitCmd = func(string, ...string) (int, string, string) {
-		t.Error("prepared precheck used ambient Git")
-		return 1, "", ""
-	}
+	t.Chdir(t.TempDir())
 	code, err := check.Check(record.ID, "occupied")
 	if code != "orca_branch_name_taken" || err == nil || !strings.Contains(err.Error(), "locally") {
 		t.Fatalf("code=%q err=%v", code, err)

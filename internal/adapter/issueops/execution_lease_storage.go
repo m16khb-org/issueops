@@ -17,7 +17,12 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-func workspaceSnapshot(workspace issueops.Workspace) (string, error) {
+type LeaseWorkspaceSnapshot struct {
+	GitCmd    func(string, ...string) (int, string, string)
+	GitCmdRaw func(string, ...string) (int, string, string)
+}
+
+func (reader LeaseWorkspaceSnapshot) Snapshot(workspace issueops.Workspace) (string, error) {
 	info, err := os.Lstat(workspace.Root)
 	if errors.Is(err, os.ErrNotExist) {
 		// 부재는 quiescence의 약한 증거가 아니라 가장 강한 증거다. 존재하지
@@ -36,23 +41,23 @@ func workspaceSnapshot(workspace issueops.Workspace) (string, error) {
 		// symlink나 파일이 그 경로를 차지한 것은 부재가 아니라 정체 불명이다.
 		return "", fmt.Errorf("canonical worktree must be a real directory")
 	}
-	top, err := gitOutput(workspace.Root, "rev-parse", "--show-toplevel")
+	top, err := reader.gitOutput(workspace.Root, "rev-parse", "--show-toplevel")
 	if err != nil || !samePath(top, workspace.Root) {
 		return "", fmt.Errorf("canonical worktree root does not match Git top-level")
 	}
-	branch, err := gitOutput(workspace.Root, "branch", "--show-current")
+	branch, err := reader.gitOutput(workspace.Root, "branch", "--show-current")
 	if err != nil || branch != workspace.Branch {
 		return "", fmt.Errorf("canonical worktree branch mismatch")
 	}
-	head, err := gitOutput(workspace.Root, "rev-parse", "HEAD")
+	head, err := reader.gitOutput(workspace.Root, "rev-parse", "HEAD")
 	if err != nil {
 		return "", err
 	}
-	commonDir, err := gitOutput(workspace.Root, "rev-parse", "--git-common-dir")
+	commonDir, err := reader.gitOutput(workspace.Root, "rev-parse", "--git-common-dir")
 	if err != nil {
 		return "", err
 	}
-	indexPath, err := gitOutput(workspace.Root, "rev-parse", "--git-path", "index")
+	indexPath, err := reader.gitOutput(workspace.Root, "rev-parse", "--git-path", "index")
 	if err != nil {
 		return "", err
 	}
@@ -63,15 +68,15 @@ func workspaceSnapshot(workspace issueops.Workspace) (string, error) {
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err
 	}
-	code, tracked, stderr := GitCmdRaw(workspace.Root, "diff", "--binary", "--no-ext-diff", "--")
+	code, tracked, stderr := reader.GitCmdRaw(workspace.Root, "diff", "--binary", "--no-ext-diff", "--")
 	if code != 0 {
 		return "", fmt.Errorf("read tracked diff: %s", strings.TrimSpace(stderr))
 	}
-	code, staged, stderr := GitCmdRaw(workspace.Root, "diff", "--cached", "--binary", "--no-ext-diff", "--")
+	code, staged, stderr := reader.GitCmdRaw(workspace.Root, "diff", "--cached", "--binary", "--no-ext-diff", "--")
 	if code != 0 {
 		return "", fmt.Errorf("read staged diff: %s", strings.TrimSpace(stderr))
 	}
-	code, untrackedRaw, stderr := GitCmdRaw(workspace.Root, "ls-files", "--others", "--exclude-standard", "-z")
+	code, untrackedRaw, stderr := reader.GitCmdRaw(workspace.Root, "ls-files", "--others", "--exclude-standard", "-z")
 	if code != 0 {
 		return "", fmt.Errorf("list untracked files: %s", strings.TrimSpace(stderr))
 	}
@@ -106,8 +111,8 @@ func workspaceSnapshot(workspace issueops.Workspace) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func gitOutput(root string, args ...string) (string, error) {
-	code, stdout, stderr := GitCmd(root, args...)
+func (reader LeaseWorkspaceSnapshot) gitOutput(root string, args ...string) (string, error) {
+	code, stdout, stderr := reader.GitCmd(root, args...)
 	if code != 0 {
 		return "", fmt.Errorf("git %s: %s", strings.Join(args, " "), stderr)
 	}
@@ -245,13 +250,6 @@ func cleanupReplacementGeneration(record issueops.IssueOpsRecord) error {
 		}
 	}
 	return nil
-}
-
-func cleanupReplacementFailure(record issueops.IssueOpsRecord, cause error) error {
-	if cleanupErr := cleanupReplacementGeneration(record); cleanupErr != nil {
-		return fmt.Errorf("%w; replacement residue cleanup failed: %v", cause, cleanupErr)
-	}
-	return cause
 }
 
 func removeReplacementRuntimeFile(root, path string) error {

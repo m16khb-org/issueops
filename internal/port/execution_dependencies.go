@@ -19,6 +19,7 @@ type ExecutionActionDependencies struct {
 	ReadIssue executionissue.ExecutionIssueSnapshotReadFunc
 	Claim     issueopscontract.ExecutionClaimHandler
 	Release   issueopscontract.ExecutionReleaseHandler
+	Replace   ExecutionReplaceHandler
 	Reseed    issueopscontract.ExecutionReseedHandler
 	Resume    issueopscontract.ExecutionResumeHandler
 	Reconcile ExecutionReconcileHandler

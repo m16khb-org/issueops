@@ -328,29 +328,6 @@ func nativeProcessAncestryPIDsFromSnapshot(
 	return pids
 }
 
-// dropRequesterOwnedProcesses는 요청자 세션이 직접 띄운 자손 프로세스(MCP 서버,
-// 테스트 러너, 툴 셸 등)를 quiescence 후보에서 제외한다. 이들은 워크트리를 다투는
-// 다른 holder가 아니라 승계를 요청한 세션 자신의 실행 컨텍스트이므로, 이를 근거로
-// finalize를 막으면 direct 모드 승계가 성립하지 않는다. 외부 세션의 잔여
-// 프로세스는 요청자 조상에 걸리지 않으므로 원래의 fail-closed 계약은 유지된다.
-func dropRequesterOwnedProcessesFromSnapshot(
-	processes []workspaceProcess,
-	owners map[int]bool,
-	snapshot map[int]nativeProcessSnapshotEntry,
-) []workspaceProcess {
-	if len(processes) == 0 || len(owners) == 0 {
-		return processes
-	}
-	kept := make([]workspaceProcess, 0, len(processes))
-	for _, process := range processes {
-		if processHasAncestorInSnapshot(snapshot, process.PID, owners) {
-			continue
-		}
-		kept = append(kept, process)
-	}
-	return kept
-}
-
 // processHasAncestorIn은 pid 자신 또는 그 조상이 owners에 속하는지 본다. 관측에
 // 실패하면 false를 반환해 판정을 fail-closed로 유지한다.
 func processHasAncestorInSnapshot(

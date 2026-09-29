@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
+	replacementmodel "issueops/internal/contract/issueops"
 	"os"
 	"strings"
 	"testing"
@@ -39,9 +40,9 @@ func TestIssueOpsReseedHandlerUsesResolvedSnapshotReader(t *testing.T) {
 	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
 	actor := claimWiringActor(t)
 	owner := reseedWiringOwner{}
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner})
+	}, port.ReplacementInvocation{OrcaOwner: owner})
 	if err != nil {
 		t.Fatalf("preview reseed inventory: %v", err)
 	}
@@ -86,9 +87,9 @@ func TestExecutionReseedCLIDogfoodDirectAndOrca(t *testing.T) {
 			}
 			actor := claimWiringActor(t)
 			owner := reseedWiringOwner{}
-			preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
+			preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 				ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
-			}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner})
+			}, port.ReplacementInvocation{OrcaOwner: owner})
 			if err != nil {
 				t.Fatalf("preview: %v", err)
 			}
@@ -172,7 +173,7 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	}
 	actor := claimWiringActor(t)
 	owner := reseedWiringOwner{}
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,10 +219,10 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 
 func TestCompletedReplacementPreviewRequiresSyncBaseBeforeReseedWhenParentDrifted(t *testing.T) {
 	stateRoot, record, actor, owner := completedReplacementPreviewFixture(t, true)
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err == nil {
 		t.Fatalf("drifted completed preview emitted reseed instead of sync-base: %+v", preview)
 	}
@@ -241,10 +242,10 @@ func TestCompletedReplacementPreviewRequiresSyncBaseBeforeReseedWhenParentDrifte
 
 func TestCompletedReplacementPreviewKeepsNoDriftReseed(t *testing.T) {
 	stateRoot, record, actor, owner := completedReplacementPreviewFixture(t, false)
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err != nil {
 		t.Fatalf("no-drift completed preview: %v", err)
 	}
@@ -259,10 +260,10 @@ func TestCompletedReplacementPreviewRejectsMissingStampedCompletionGeneration(t 
 	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
-	_, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
+	_, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err == nil || err.Error() != "invalid or missing stamped completion generation" {
 		t.Fatalf("zero-generation preview error=%v", err)
 	}
@@ -302,9 +303,9 @@ func TestExecutionReseedPreviewNextCommandRunsWithoutCallerRepair(t *testing.T) 
 	actor := claimWiringActor(t)
 	actor.SessionID = "claim wiring's session"
 	owner := reseedWiringOwner{}
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.SourceRoot,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner})
+	}, port.ReplacementInvocation{OrcaOwner: owner})
 	if err != nil {
 		t.Fatalf("preview: %v", err)
 	}

@@ -1062,6 +1062,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/issueops_replacement_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newIssueOpsReplacementHandler"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/issueops_reseed_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -1210,14 +1218,6 @@
       "task": "T20",
       "symbols": [
         "func newOrcaBranchPrecheck"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/policy_preflight_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configurePolicyAndGitObservers"
       ]
     },
     {
@@ -4055,12 +4055,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/adapter_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/issueops/benchmark/files.go",
       "owner": "adapter",
       "task": "T17",
@@ -4429,27 +4423,14 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func ExecutionReplaceDependencies.workspaceInspector",
         "func ExecutionWriterAbsentRecoveryCommand",
-        "func ReplaceExecutionWithDependencies",
         "func StatusExecution",
-        "func executionDirectClaimCommand",
         "func executionRecordAtGeneration",
         "func executionReplacementPreviewCommand",
-        "func executionReseedCommand",
         "func executionResult",
-        "func executionRevokeCommand",
         "func executionWriterAbsentRecoveryCommand",
-        "func mutateExecutionReplacement",
-        "func observeCompletedExecutionBase",
-        "func previewExecutionFinalization",
-        "func previewExecutionReplacement",
-        "func replaceResult",
         "func resealOwnerContextForReplacement",
-        "type ExecutionReplaceDependencies",
-        "type ExecutionReplaceRequest",
-        "type executionOwnerReseal",
-        "type executionWorkspaceProcessInspector"
+        "type executionOwnerReseal"
       ]
     },
     {
@@ -4458,20 +4439,11 @@
       "task": "T05",
       "symbols": [
         "func ValidateNativeActorProcess",
-        "func allowExecutionRuntimeRollover",
-        "func deadOwnerRuntimeRollover",
-        "func executionInventoryFingerprint",
-        "func executionOrcaOwnerInventory",
-        "func executionOwnerInventory",
-        "func executionQuiescenceFingerprint",
         "func inspectNativeProcessReceiptForRollover",
-        "func refuseSelfRevoke",
         "func sameNativeActor",
         "func sameNativeActorIdentity",
         "func sameNativeProcessReceipt",
-        "func samePath",
-        "func validateExecutionReplacementCWD",
-        "func validateExecutionRuntimeRolloverWithProcess"
+        "func samePath"
       ]
     },
     {
@@ -4479,11 +4451,11 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
+        "func LeaseWorkspaceSnapshot.Snapshot",
+        "func LeaseWorkspaceSnapshot.gitOutput",
         "func claimTokenPath",
-        "func cleanupReplacementFailure",
         "func cleanupReplacementGeneration",
         "func createClaimToken",
-        "func gitOutput",
         "func hashJSON",
         "func readExecutionLeaseToken",
         "func removeReplacementRuntimeFile",
@@ -4491,10 +4463,10 @@
         "func tokenSHA256",
         "func workspaceAbsenceSnapshot",
         "func workspaceRootAbsent",
-        "func workspaceSnapshot",
         "func writeFingerprintBytes",
         "func writeFingerprintFile",
         "func writeFingerprintPart",
+        "type LeaseWorkspaceSnapshot",
         "type fingerprintWriter"
       ]
     },
@@ -4601,7 +4573,6 @@
         "func InspectNativeProcessReceipt",
         "func ObserveNativeProcessAncestry",
         "func ObserveNativeProcessReceipt",
-        "func dropRequesterOwnedProcessesFromSnapshot",
         "func inspectNativeProcessReceipt",
         "func inspectNativeProcessReceiptFromSnapshot",
         "func inspectWorkspaceProcesses",
@@ -4674,6 +4645,32 @@
       "task": "T07",
       "symbols": [
         "type RemoteArtifactVerifyFunc"
+      ]
+    },
+    {
+      "path": "internal/adapter/issueops/execution_replacement_adapter.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ObserveReplacementProcesses",
+        "func ReplacementArtifacts.Cleanup",
+        "func ReplacementArtifacts.CreateToken",
+        "func ReplacementArtifacts.Reseal",
+        "func ReplacementArtifacts.WorkspaceAbsent",
+        "func ReplacementRecords.Load",
+        "func ReplacementRecords.Persist",
+        "func ReplacementRecords.WithinLock",
+        "func ReplacementWorkspace.SamePath",
+        "func ReplacementWorkspace.WorkspaceProcesses",
+        "func ReplacementWorkspace.WorkspaceSnapshot",
+        "func replacementProcessSnapshot.AncestryPIDs",
+        "func replacementProcessSnapshot.HasAncestor",
+        "func replacementProcessSnapshot.Inspect",
+        "type ReplacementArtifacts",
+        "type ReplacementRecords",
+        "type ReplacementWorkspace",
+        "type executionWorkspaceProcessInspector",
+        "type replacementProcessSnapshot"
       ]
     },
     {
@@ -9909,6 +9906,37 @@
       ]
     },
     {
+      "path": "internal/application/issueopsreplacement/inventory.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.inventory",
+        "func Service.orcaOwnerInventory",
+        "func Service.ownerInventory",
+        "func Service.quiescence",
+        "func Service.refuseSelfRevoke",
+        "func Service.validateCWD",
+        "func hashJSON",
+        "func runtimeFacts"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreplacement/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Run",
+        "func Service.cleanupFailure",
+        "func Service.mutateExecutionReplacement",
+        "func Service.previewExecutionFinalization",
+        "func Service.previewExecutionReplacement",
+        "func Service.recordAtGeneration",
+        "func observeCompletedExecutionBase",
+        "func replaceResult",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/issueopsretention/ports.go",
       "owner": "application",
       "task": "T20",
@@ -11214,6 +11242,16 @@
         "type ExecutionCmuxHandoffHandler",
         "type ExecutionCmuxHandoffRequest",
         "type ExecutionCmuxHandoffResult"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/execution_replacement.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type ExecutionReplaceRequest",
+        "type ReplacementArtifacts",
+        "type ReplacementWorkspaceProcess"
       ]
     },
     {
@@ -13811,6 +13849,49 @@
         "func ValidateCompletionMerge",
         "func ValidateReflectCompletion",
         "type CompletionArtifact"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/replacement.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CompletedReplacementBase",
+        "func FinalizeReplacement",
+        "func RevokeReplacement",
+        "func SealReplacementOwner",
+        "func ValidateReplacementGeneration",
+        "func ValidateReplacementPreview",
+        "func ValidateReplacementRevoke"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/replacement_commands.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ReplacementClaimCommand",
+        "func ReplacementReseedCommand",
+        "func ReplacementResumeCommand",
+        "func ReplacementRevokeCommand",
+        "func quoteReplacementArg"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/replacement_owner.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func AllowReplacementRuntimeRollover",
+        "func DeadReplacementOwnerRuntimeRollover",
+        "func ReplacementSelfHolder",
+        "func ValidateReplacementCWD",
+        "func ValidateReplacementHolderProcess",
+        "func ValidateReplacementOwnerQuiescence",
+        "func ValidateReplacementQuiescence",
+        "func ValidateReplacementRuntimeRollover",
+        "func ValidateReplacementSelfRevoke",
+        "type ReplacementRuntimeFacts"
       ]
     },
     {
@@ -16591,6 +16672,19 @@
       "symbols": [
         "type ModeSwitchRecords",
         "type ModeSwitchWorkspace"
+      ]
+    },
+    {
+      "path": "internal/port/issueops_replacement.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type ExecutionReplaceHandler",
+        "type ReplacementArtifacts",
+        "type ReplacementInvocation",
+        "type ReplacementProcessSnapshot",
+        "type ReplacementRecords",
+        "type ReplacementWorkspace"
       ]
     },
     {

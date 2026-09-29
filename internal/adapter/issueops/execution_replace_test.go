@@ -66,7 +66,7 @@ func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
 				return port.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
 			}
 
-			reseal, err := resealOwnerContextForReplacement(context.Background(), stateRoot, record, ExecutionReplaceDependencies{ReadIssue: readIssue})
+			reseal, err := resealOwnerContextForReplacement(context.Background(), stateRoot, record, readIssue)
 			if test.wantError {
 				if err == nil {
 					t.Fatalf("reseal=%+v, want plan identity failure", reseal)

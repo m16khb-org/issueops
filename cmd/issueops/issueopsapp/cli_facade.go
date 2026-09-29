@@ -14,7 +14,6 @@ import (
 )
 
 func wireBasicCLIDeps() {
-	configurePolicyAndGitObservers()
 
 }
 

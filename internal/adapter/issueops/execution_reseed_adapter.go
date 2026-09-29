@@ -3,6 +3,7 @@ package issueops
 import (
 	"context"
 	"fmt"
+	domain "issueops/internal/domain/issueops"
 
 	"issueops/internal/contract/issueops"
 )
@@ -19,7 +20,7 @@ func PrepareExecutionReseedOwnerArtifacts(ctx context.Context, stateRoot, id str
 		return ExecutionReseedArtifacts{}, fmt.Errorf("reseed owner artifacts require an Orca execution")
 	}
 	record.Execution = &execution
-	reseal, err := resealOwnerContextForReplacement(ctx, stateRoot, record, ExecutionReplaceDependencies{ReadIssue: readIssue})
+	reseal, err := resealOwnerContextForReplacement(ctx, stateRoot, record, readIssue)
 	if err != nil {
 		return ExecutionReseedArtifacts{}, err
 	}
@@ -39,7 +40,7 @@ func ExecutionReseedNextCommand(id string, generation uint64, mode, claimTokenPa
 	case issueops.ExecutionModeOrca:
 		return ExecutionResumeRecoveryCommand(id, generation)
 	case issueops.ExecutionModeDirect:
-		return executionDirectClaimCommand(id, generation, claimTokenPath)
+		return domain.ReplacementClaimCommand(id, generation, claimTokenPath)
 	default:
 		return ""
 	}

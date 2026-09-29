@@ -2,13 +2,14 @@ package issueops
 
 import (
 	preflightadapter "issueops/internal/adapter/preflight"
+	model "issueops/internal/contract/issueops"
 )
 
 var GitOut = preflightadapter.GitOut
 
-// production wiring과 같은 실행기를 설치한다. 이 package가 실제로 의존하는
-// 대상만 채운다.
-func init() {
-	GitCmd = preflightadapter.GitCmd
-	GitCmdRaw = preflightadapter.GitCmdRaw
+var GitCmd = preflightadapter.GitCmd
+var GitCmdRaw = preflightadapter.GitCmdRaw
+
+func workspaceSnapshot(workspace model.Workspace) (string, error) {
+	return (LeaseWorkspaceSnapshot{GitCmd: GitCmd, GitCmdRaw: GitCmdRaw}).Snapshot(workspace)
 }

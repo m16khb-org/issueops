@@ -1,7 +1,6 @@
 package issueopsapp
 
 import (
-	core "issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
 	"os"
 	"path/filepath"
@@ -14,12 +13,7 @@ func TestCycleReadinessKeepsCapturedGitCapabilities(t *testing.T) {
 		t.Fatal(err)
 	}
 	readiness := newCycleReadiness()
-	originalRun := core.GitCmd
-	t.Cleanup(func() { core.GitCmd = originalRun })
-	core.GitCmd = func(string, ...string) (int, string, string) {
-		t.Error("captured readiness used ambient Git runner")
-		return 1, "", "ambient"
-	}
+	t.Chdir(t.TempDir())
 	_, changes := readiness.ObserveLocalPR(model.IssueOpsRecord{Repo: repo, WorktreePath: repo})
 	if !changes.Verified || changes.Fingerprint == "" {
 		t.Fatalf("captured readiness lost actual snapshot: %+v", changes)

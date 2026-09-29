@@ -41,12 +41,7 @@ func TestBranchRetargetCompositionPersistsObservedTargetAndForkPoint(t *testing.
 		}
 		return "50-parent", nil
 	})
-	previousGit := core.GitCmd
-	t.Cleanup(func() { core.GitCmd = previousGit })
-	core.GitCmd = func(string, ...string) (int, string, string) {
-		t.Error("prepared retargeter used ambient Git")
-		return 1, "", "ambient"
-	}
+	t.Chdir(t.TempDir())
 	originCalls := 0
 	boundOrigin := service.OriginPresent
 	service.OriginPresent = func(dir, branch string) (bool, error) {

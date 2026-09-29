@@ -38,6 +38,7 @@ type Dependencies struct {
 	ReadIssue      executionissue.ExecutionIssueSnapshotReadFunc
 	Claim          issueopscontract.ExecutionClaimHandler
 	Release        issueopscontract.ExecutionReleaseHandler
+	Replace        port.ExecutionReplaceHandler
 	Reseed         issueopscontract.ExecutionReseedHandler
 	Resume         issueopscontract.ExecutionResumeHandler
 	Reconcile      port.ExecutionReconcileHandler

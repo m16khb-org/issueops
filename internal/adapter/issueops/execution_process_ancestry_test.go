@@ -50,20 +50,11 @@ func TestQuiescenceProcessOwnershipReusesOneSnapshot(t *testing.T) {
 	if !ancestry[100] || !ancestry[50] || !ancestry[1] {
 		t.Fatalf("requester ancestry = %+v", ancestry)
 	}
-	processes := []workspaceProcess{
-		{PID: 200, Command: "child"},
-		{PID: 300, Command: "external"},
+	observed := replacementProcessSnapshot{entries: snapshot}
+	if !observed.HasAncestor(200, map[int]bool{100: true}) || observed.HasAncestor(300, map[int]bool{100: true}) {
+		t.Fatal("captured process tree did not distinguish requester child and external process")
 	}
 
-	got := dropRequesterOwnedProcessesFromSnapshot(
-		processes,
-		map[int]bool{100: true},
-		snapshot,
-	)
-
-	if len(got) != 1 || got[0].PID != 300 {
-		t.Fatalf("remaining processes = %+v", got)
-	}
 }
 
 func TestObserveNativeProcessAncestryIncludesCurrentExactReceipt(t *testing.T) {

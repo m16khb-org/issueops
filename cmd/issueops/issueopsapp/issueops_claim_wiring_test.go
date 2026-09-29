@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	replacementmodel "issueops/internal/contract/issueops"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -296,9 +297,9 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	}
 
 	owner := reseedWiringOwner{}
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner})
+	}, port.ReplacementInvocation{OrcaOwner: owner})
 	if err != nil {
 		t.Fatalf("preview released direct reseed: %v", err)
 	}

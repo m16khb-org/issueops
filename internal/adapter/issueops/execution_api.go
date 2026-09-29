@@ -3,6 +3,8 @@ package issueops
 import (
 	"context"
 	"fmt"
+	model "issueops/internal/contract/issueops"
+	"issueops/internal/port"
 )
 
 func invokeExecutionPrepareHandler(ctx context.Context, stateRoot string, request ExecutionPrepareRequest, invocation ExecutionPrepareInvocation, handler ExecutionPrepareHandler) (ExecutionPrepareResult, error) {
@@ -62,13 +64,16 @@ func executeExecutionAction(ctx context.Context, stateRoot string, req Execution
 				ReadIssue: deps.ReadIssue,
 			})
 		}
-		return ReplaceExecutionWithDependencies(ctx, stateRoot, ExecutionReplaceRequest{
+		if deps.Replace == nil {
+			return ExecutionReplaceResult{ID: req.ID, Action: req.ReplaceAction}, fmt.Errorf("issueops execution replace handler is not configured")
+		}
+		return deps.Replace(ctx, stateRoot, model.ExecutionReplaceRequest{
 			ID: req.ID, Action: req.ReplaceAction, ExpectedGeneration: req.ExpectedGeneration, CompletionGeneration: req.CompletionGeneration,
 			InventoryFingerprint: req.InventoryFingerprint, QuiescenceFingerprint: req.QuiescenceFingerprint,
-			Reason: req.Reason, Actor: req.Actor, CWD: req.CWD, Confirm: req.Confirm,
+			Reason: req.Reason, Actor: req.Actor, CWD: req.CWD, Confirm: req.Confirm, ReadIssue: deps.ReadIssue,
 			// finalize/reseed 재봉인이 현재 이슈 본문을 다시 읽어야 하므로
 			// prepare/claim과 같은 리더를 함께 넘긴다.
-		}, ExecutionReplaceDependencies{OrcaOwner: deps.OrcaOwner, BaseSync: deps.BaseSync, ReadIssue: deps.ReadIssue})
+		}, port.ReplacementInvocation{OrcaOwner: deps.OrcaOwner, BaseSync: deps.BaseSync})
 	case ExecutionActionResume:
 		if !req.Confirm {
 			return ExecutionResumeResult{OK: false, ID: req.ID}, fmt.Errorf("execution resume requires confirm")

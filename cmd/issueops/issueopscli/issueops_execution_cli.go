@@ -19,6 +19,7 @@ func (cli command) issueOpsExecutionDeps(deps Dependencies) executioncmd.Deps {
 		ReadIssue:   deps.ReadIssue,
 		Claim:       deps.Claim,
 		Release:     deps.Release,
+		Replace:     deps.Replace,
 		Reseed:      deps.Reseed,
 		Resume:      deps.Resume,
 		Reconcile:   deps.Reconcile,

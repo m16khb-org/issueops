@@ -19,12 +19,7 @@ func TestModeSwitchKeepsCapturedGitCapabilities(t *testing.T) {
 		t.Fatal(err)
 	}
 	runners := newIssueOpsExecutionRunners()
-	original := core.GitCmd
-	t.Cleanup(func() { core.GitCmd = original })
-	core.GitCmd = func(string, ...string) (int, string, string) {
-		t.Error("prepared mode switch used ambient Git runner")
-		return 1, "", "ambient"
-	}
+	t.Chdir(t.TempDir())
 	got, err := runners.SwitchExecutionMode(context.Background(), stateRoot, model.ExecutionSwitchModeRequest{ID: record.ID, Mode: "orca"})
 	if err != nil || !got.OK || got.Fingerprint == "" {
 		t.Fatalf("preview=%+v err=%v", got, err)

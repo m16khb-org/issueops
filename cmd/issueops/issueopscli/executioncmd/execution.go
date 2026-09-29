@@ -26,6 +26,7 @@ type Deps struct {
 	ReadIssue              executionissue.ExecutionIssueSnapshotReadFunc
 	Claim                  model.ExecutionClaimHandler
 	Release                model.ExecutionReleaseHandler
+	Replace                port.ExecutionReplaceHandler
 	Reseed                 model.ExecutionReseedHandler
 	Resume                 model.ExecutionResumeHandler
 	Reconcile              port.ExecutionReconcileHandler
@@ -41,7 +42,7 @@ type Deps struct {
 func (deps Deps) actionDeps() port.ExecutionActionDependencies {
 	actionDeps := port.ExecutionActionDependencies{
 		Prepare: deps.Prepare, Orca: deps.Orca, OrcaOwner: deps.OrcaOwner, BaseSync: deps.BaseSync, ReadIssue: deps.ReadIssue,
-		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
+		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Replace: deps.Replace, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
 		RemoteReconcile: deps.Publication.Reconcile,
 	}
 	if actionDeps.OrcaOwner == nil {
