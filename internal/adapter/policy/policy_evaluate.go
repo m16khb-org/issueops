@@ -27,9 +27,9 @@ func (e Evaluator) Evaluate(req policycontract.CommandPolicyRequest) policycontr
 	return e.service().Evaluate(req)
 }
 
-type commandObserver struct{}
+type CommandObserver struct{}
 
-func (observer commandObserver) Observe(req policycontract.CommandPolicyRequest) policyapp.Observation {
+func (observer CommandObserver) Observe(req policycontract.CommandPolicyRequest) policyapp.Observation {
 	root := absOrOriginal(req.WorkspaceRoot)
 	cwd := absOrOriginal(req.CWD)
 	canonicalRoot := canonicalPotentialPath(root)

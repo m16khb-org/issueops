@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"testing"
 
-	policycli "issueops/cmd/issueops/policycli"
 	core "issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
 	policycontract "issueops/internal/contract/policy"
@@ -21,34 +20,32 @@ import (
 //
 // 여기서 composition root가 주입한 조회 함수까지 실제 판정에 쓰이는지 확인한다.
 func TestPolicyPullRequestTargetLookupIsWired(t *testing.T) {
-	original := policycli.EvaluateCommandPolicy
-	t.Cleanup(func() { policycli.EvaluateCommandPolicy = original })
-	root := t.TempDir()
-	lookupPath := ""
-	configurePolicyAndGitObserversWithLookup(func(path string) (string, bool) {
-		lookupPath = path
-		return "parent/umbrella-work", true
-	})
-
-	if policycli.EvaluateCommandPolicy == nil {
-		t.Fatal("composition root가 policy PR/MR target lookup을 설치하지 않았다; " +
-			"설치가 빠지면 잘못된 타겟의 PR/MR이 사전 거부 없이 열린다")
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	root := makeGitRepoForContract(t)
+	record, err := startIssueOpsFixture(core.IssueOpsStateRoot(), model.IssueOpsStartRequest{Repo: root, Branch: "79-child"})
+	if err != nil {
+		t.Fatal(err)
 	}
-	result := policycli.EvaluateCommandPolicy(policycontract.CommandPolicyRequest{
-		WorkspaceRoot: root, CWD: root,
-		Argv:    []string{"glab", "mr", "create", "--target-branch", "release/stg"},
-		Timeout: "30s", WriteAllowed: true, NetworkAllowed: true,
-	})
+	record.IssueURL = "https://github.com/acme/repo/issues/79"
+	record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "parent/umbrella-work", LinkVerified: true, CreatedAt: record.CreatedAt}
+	if _, err = core.WriteIssueOps(core.IssueOpsStateRoot(), record); err != nil {
+		t.Fatal(err)
+	}
+	service := newPolicyService()
+	lookupPath := ""
+	lookup := service.PreparedBaseBranch
+	if lookup == nil {
+		t.Fatal("composition root did not wire prepared branch reader")
+	}
+	service.PreparedBaseBranch = func(path string) (string, bool) { lookupPath = path; return lookup(path) }
+	result := service.Evaluate(policycontract.CommandPolicyRequest{WorkspaceRoot: root, CWD: root, Argv: []string{"glab", "mr", "create", "--target-branch", "release/stg"}, Timeout: "30s", WriteAllowed: true, NetworkAllowed: true})
 	if lookupPath != root || !containsString(result.DenyReasons, "pr_target_branch_mismatch") {
 		t.Fatalf("lookup path = %q, deny reasons = %v", lookupPath, result.DenyReasons)
 	}
 }
 
 func TestPolicyLookupReadsCurrentStateRootOnEachEvaluation(t *testing.T) {
-	original := policycli.EvaluateCommandPolicy
-	t.Cleanup(func() { policycli.EvaluateCommandPolicy = original })
 	repo := makeGitRepoForContract(t)
-	configurePolicyAndGitObservers()
 	for _, base := range []string{"78-first-parent", "80-second-parent"} {
 		t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 		root := core.IssueOpsStateRoot()
@@ -61,12 +58,13 @@ func TestPolicyLookupReadsCurrentStateRootOnEachEvaluation(t *testing.T) {
 		if _, err = core.WriteIssueOps(root, record); err != nil {
 			t.Fatal(err)
 		}
+		service := newPolicyService()
 		request := policycontract.CommandPolicyRequest{WorkspaceRoot: repo, CWD: repo, Argv: []string{"glab", "mr", "create", "--target-branch", "main"}, Timeout: "30s", WriteAllowed: true, NetworkAllowed: true}
-		if got := policycli.EvaluateCommandPolicy(request); !containsString(got.DenyReasons, "pr_target_branch_mismatch") {
+		if got := service.Evaluate(request); !containsString(got.DenyReasons, "pr_target_branch_mismatch") {
 			t.Fatalf("current stored parent ignored: %+v", got.DenyReasons)
 		}
 		request.Argv[len(request.Argv)-1] = base
-		if got := policycli.EvaluateCommandPolicy(request); containsString(got.DenyReasons, "pr_target_branch_mismatch") {
+		if got := service.Evaluate(request); containsString(got.DenyReasons, "pr_target_branch_mismatch") {
 			t.Fatalf("current stored parent refused: %+v", got.DenyReasons)
 		}
 	}

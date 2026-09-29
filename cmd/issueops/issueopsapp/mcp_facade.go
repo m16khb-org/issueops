@@ -55,7 +55,9 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	state := stateDependencies()
 	root := issueOpsRoot()
 	docsService := newProjectDocsService(resolveTarget(""))
+	policyService := newPolicyService()
 	return mcpcli.MCPDependencies{
+		Policy: policyService, Audit: newCommandAuditService(policyService),
 		Worker:           newWorkerService(),
 		Daemon:           newDaemonReader(),
 		Catalog:          mcpcatalog.Build(),

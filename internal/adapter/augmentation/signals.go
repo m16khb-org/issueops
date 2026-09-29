@@ -173,8 +173,8 @@ func (repo Repository) signalRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join("internal", "domain", "selfaugment", "candidates.go"), "release-repro-pack")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasCommandAuditLog = FileContainsTerm(root, filepath.Join("internal", "adapter", "audit", "audit.go"), "AuditCommandPolicy") &&
-				DirContainsTerm(root, filepath.Join("cmd", "issueops", "policycli"), "policy audit")
+			signals.HasCommandAuditLog = FileContainsTerm(root, filepath.Join("internal", "application", "audit", "service.go"), "func (service Service) Audit(") &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "policycli", "policy_cli.go"), "command.Audit.Audit(")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasWorkerMVP = FileContainsTerm(root, filepath.Join("internal", "application", "worker", "service.go"), "func (service Service) Enqueue(") &&

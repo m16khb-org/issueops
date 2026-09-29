@@ -117,6 +117,12 @@ doctor의 파일·프로세스·HTTP 관측은 adapter가 수행하고, 문서 �
 
 `application/doctor.Service`는 기존 순서로 관측값을 모아 domain 결과를 합치고 출력 순서를 정한다. `--static-only`는 pipe·MCP live 관측을 호출하지 않는다. 실제 CLI의 진단 결과, 오류·종료 코드와 저장 파일 변화를 이전 binary와 비교한다. root의 doctor factory는 state·lifecycle·loop 조회를 인스턴스마다 조립한다. CLI의 `basiccli.Doctor`는 application과 경로 정규화, home·harness 경로·version, live 관측 함수를 명시적으로 받는다. adapter의 실행 facade·DTO 재노출·전역 setter와 CLI의 doctor setter는 제거했으며 gateway 관측도 별도 probe 인스턴스를 사용한다. status application도 같은 doctor application을 명시적으로 받으며 집계 책임은 아래 status 경계를 따른다.
 
+### Command policy and audit boundary
+
+`policycli.Command`는 기본 workspace와 `application/policy.Service`, `application/audit.Service`를 명시적으로 받는다. root는 활성 cycle 조회에 사용할 state root와 감사 로그 경로를 조립 시 선택한다. MCP 직접 호출과 SDK도 서버별 `MCPDependencies.Policy`·`Audit`를 사용한다. CLI·MCP의 정책/감사 전역 콜백과 audit adapter의 application 실행 facade는 제거했다.
+
+정책 application은 매 요청마다 workspace의 override를 읽어 domain 판정에 반영하며 파일 손상 경고와 기본 catalog의 거부 동작을 유지한다. audit application은 평가 → 경로 확인 → JSONL append 순서를 담당하고, adapter의 `CommandWriter`는 파일 생성·추가만 수행한다. CLI는 기존 JSON/text·종료 오류를, MCP는 기존 payload/protocol 오류를 유지한다. 서로 다른 state root의 PR 대상 판정과 감사 경로, override 재조회는 실제 root 조립과 두 MCP 호출 경로로 검증한다. 다른 policy 소비자의 adapter 조립 facade와 basic/MCP의 나머지 전역 의존성은 T20 후속 범위다.
+
 ### Verify-work boundary
 
 `verify-work`의 JSON DTO는 `internal/contract/verifywork`, 증거별 성공·실패·생략 상태와 전체 판정·추천 명령 규칙은 `internal/domain/verifywork`가 소유한다. `application/verifywork.Service`는 Git status → preflight → guard → 선택한 read-only 명령 → 프로젝트 신호 조회 순서로 관측한 뒤 domain을 호출한다. Git 오류가 있어도 후속 검사를 수행하며 오류 문구·stdout의 끝 개행·빈 배열을 보존한다.

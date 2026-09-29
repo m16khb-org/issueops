@@ -22,14 +22,15 @@ func commandPolicyRequestFromArgs(args map[string]any) policydomain.CommandPolic
 	}
 }
 
-func handlePolicyStateMCPToolCall(call MCPToolCall, state StateDependencies) MCPToolOutcome {
+func handlePolicyStateMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+	state := deps.State
 	switch call.Name {
 	case "command_policy_check":
-		return mcpToolPayload(EvaluateCommandPolicy(commandPolicyRequestFromArgs(call.Arguments)))
+		return mcpToolPayload(deps.Policy.Evaluate(commandPolicyRequestFromArgs(call.Arguments)))
 	case "command_fake_run":
-		return mcpToolPayload(FakeRunCommand(commandPolicyRequestFromArgs(call.Arguments)))
+		return mcpToolPayload(deps.Policy.FakeRun(commandPolicyRequestFromArgs(call.Arguments)))
 	case "command_policy_audit":
-		result, err := AuditCommandPolicy(commandPolicyRequestFromArgs(call.Arguments))
+		result, err := deps.Audit.Audit(commandPolicyRequestFromArgs(call.Arguments))
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32000, "command_policy_audit failed", err.Error()))
 		}

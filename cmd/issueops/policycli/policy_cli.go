@@ -6,20 +6,20 @@ import (
 	"os"
 )
 
-func runPolicy(args []string) error {
+func (command Command) Run(args []string) error {
 	if len(args) == 0 {
 		policyUsage()
 		return fmt.Errorf("missing policy subcommand")
 	}
 	switch args[0] {
 	case "check":
-		return runPolicyCheck(args[1:])
+		return command.Check(args[1:])
 	case "fake-run":
-		return runPolicyFakeRun(args[1:])
+		return command.FakeRun(args[1:])
 	case "run":
-		return runPolicyRun(args[1:])
+		return command.RunReadOnly(args[1:])
 	case "audit":
-		return runPolicyAudit(args[1:])
+		return command.AuditPolicy(args[1:])
 	default:
 		policyUsage()
 		return fmt.Errorf("unknown policy subcommand %q", args[0])
@@ -35,12 +35,12 @@ func policyUsage() {
 `)
 }
 
-func runPolicyCheck(args []string) error {
-	req, jsonOut, err := parseCommandPolicyFlags("policy check", args)
+func (command Command) Check(args []string) error {
+	req, jsonOut, err := command.ParseFlags("policy check", args)
 	if err != nil {
 		return err
 	}
-	result := EvaluateCommandPolicy(req)
+	result := command.Policy.Evaluate(req)
 	if jsonOut {
 		return printJSON(result)
 	}
@@ -48,12 +48,12 @@ func runPolicyCheck(args []string) error {
 	return nil
 }
 
-func runPolicyFakeRun(args []string) error {
-	req, jsonOut, err := parseCommandPolicyFlags("policy fake-run", args)
+func (command Command) FakeRun(args []string) error {
+	req, jsonOut, err := command.ParseFlags("policy fake-run", args)
 	if err != nil {
 		return err
 	}
-	result := FakeRunCommand(req)
+	result := command.Policy.FakeRun(req)
 	if jsonOut {
 		if err := printJSON(result); err != nil {
 			return err
@@ -73,15 +73,15 @@ func runPolicyFakeRun(args []string) error {
 	return nil
 }
 
-func runPolicyRun(args []string) error {
-	req, jsonOut, readOnly, err := parseCommandPolicyRunFlags(args)
+func (command Command) RunReadOnly(args []string) error {
+	req, jsonOut, readOnly, err := command.ParseRunFlags(args)
 	if err != nil {
 		return err
 	}
 	if !readOnly {
 		return fmt.Errorf("policy run currently requires --read-only")
 	}
-	result := RunReadOnlyCommand(req)
+	result := command.Policy.RunReadOnly(req)
 	if jsonOut {
 		if err := printJSON(result); err != nil {
 			return err
@@ -104,12 +104,12 @@ func runPolicyRun(args []string) error {
 	return nil
 }
 
-func runPolicyAudit(args []string) error {
-	req, jsonOut, err := parseCommandPolicyFlags("policy audit", args)
+func (command Command) AuditPolicy(args []string) error {
+	req, jsonOut, err := command.ParseFlags("policy audit", args)
 	if err != nil {
 		return err
 	}
-	result, err := AuditCommandPolicy(req)
+	result, err := command.Audit.Audit(req)
 	if jsonOut {
 		if printErr := printJSON(result); printErr != nil {
 			return printErr

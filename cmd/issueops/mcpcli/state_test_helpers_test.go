@@ -16,7 +16,7 @@ func publicStateForTest() StateDependencies {
 	return StateDependencies{Write: statestore.StateWrite, Read: statestore.StateRead, List: statestore.StateList, Prune: statestore.StatePrune, Doctor: statestore.StateDoctor, Maintain: maintenance.Maintain}
 }
 func testHandlePolicyStateMCPToolCall(call MCPToolCall) MCPToolOutcome {
-	return handlePolicyStateMCPToolCall(call, publicStateForTest())
+	return handlePolicyStateMCPToolCall(call, MCPDependencies{Policy: testPolicyService(), Audit: testAuditService(), State: publicStateForTest()})
 }
 func resourceConfigForTest() resources.Config {
 	return resources.Config{IssueOpsRoot: IssueOpsRoot(), Version: Version, SkillName: skillName, ReadHarnessFile: ReadHarnessFile, StateList: publicStateForTest().List, RouteProjectDocs: testProjectDocsService().Route, DocsIndex: DocsIndex, CommandPolicySummary: policy.CommandPolicySummary}

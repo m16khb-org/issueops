@@ -4,9 +4,7 @@ import (
 	issueopsclitaildeps "issueops/cmd/issueops/issueopscli"
 	remotecmdtaildeps "issueops/cmd/issueops/issueopscli/remotecmd"
 	mcpclitaildeps "issueops/cmd/issueops/mcpcli"
-	policyclitaildeps "issueops/cmd/issueops/policycli"
 	webfetchclitaildeps "issueops/cmd/issueops/webfetchcli"
-	auditadapter "issueops/internal/adapter/audit"
 	failurecauseadapter "issueops/internal/adapter/failurecause"
 	webfetchadapter "issueops/internal/adapter/outbound/webfetch"
 	provideradapter "issueops/internal/adapter/provider"
@@ -19,9 +17,7 @@ import (
 // 설치한다. 모두 파일·네트워크·프로세스에 닿는 연산이다.
 func configureTailCapabilities() {
 	issueopsclitaildeps.Resolve = provideradapter.Resolve
-	mcpclitaildeps.AuditCommandPolicy = auditadapter.AuditCommandPolicy
 	mcpclitaildeps.Fetch = webfetchadapter.Fetch
-	policyclitaildeps.AuditCommandPolicy = auditadapter.AuditCommandPolicy
 	remotecmdtaildeps.Resolve = provideradapter.Resolve
 	toolconformancetaildeps.ClassifyFailureCause = failurecauseadapter.Classify
 	tracetaildeps.Classify = failurecauseadapter.Classify

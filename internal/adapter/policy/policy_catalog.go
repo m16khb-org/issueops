@@ -12,9 +12,9 @@ import (
 	policydomain "issueops/internal/domain/policy"
 )
 
-type policyOverrideLoader struct{}
+type OverrideLoader struct{}
 
-func (policyOverrideLoader) Load(repoRoot string) policyapp.OverrideSnapshot {
+func (OverrideLoader) Load(repoRoot string) policyapp.OverrideSnapshot {
 	overrides, err := readPolicyOverrides(repoRoot)
 	if err != nil {
 		return policyapp.OverrideSnapshot{Warning: policyOverrideWarning(err)}

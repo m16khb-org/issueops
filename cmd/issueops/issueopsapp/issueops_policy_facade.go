@@ -3,16 +3,11 @@ package issueopsapp
 import (
 	"issueops/cmd/issueops/issueopscli"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	"issueops/cmd/issueops/policycli"
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	"issueops/internal/adapter/issueops"
 	basesyncoutbound "issueops/internal/adapter/outbound/issueopsbasesync"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 )
-
-func wirePolicyCLIDeps() {
-	policycli.Configure(policycli.Deps{ResolveTarget: resolveTarget})
-}
 
 func runIssueOps(args []string) error {
 	execution := productionIssueOpsExecutionDependencies()
@@ -29,8 +24,4 @@ func runIssueOps(args []string) error {
 			Reconcile: issueops.RemotePullRequestReconcileHandler(issueOpsPublicationReconcileHandler),
 		},
 	})
-}
-
-func runPolicy(args []string) error {
-	return policycli.Run(args)
 }

@@ -1119,9 +1119,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func runIssueOps",
-        "func runPolicy",
-        "func wirePolicyCLIDeps"
+        "func runIssueOps"
       ]
     },
     {
@@ -1374,6 +1372,17 @@
       "symbols": [
         "func configurePolicyAndGitObservers",
         "func configurePolicyAndGitObserversWithLookup"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/policy_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newCommandAuditService",
+        "func newPolicyCommand",
+        "func newPolicyService",
+        "func runPolicy"
       ]
     },
     {
@@ -2344,12 +2353,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/mcpcli/adapter_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/mcpcli/argmap/args.go",
       "owner": "inbound",
       "task": "T20",
@@ -2364,12 +2367,6 @@
         "func StringSlice",
         "func splitCSV"
       ]
-    },
-    {
-      "path": "cmd/issueops/mcpcli/audit_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/mcpcli/commitsuggest_dependencies.go",
@@ -2673,43 +2670,13 @@
       ]
     },
     {
-      "path": "cmd/issueops/policycli/adapter_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/policycli/audit_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/policycli/dependencies.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Configure",
-        "func Reset",
-        "func defaultDeps",
-        "func defaultResolveTarget",
         "func printJSON",
         "func splitCSV",
-        "type Deps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/policycli/exports.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ParseFlags",
-        "func ParseRunFlags",
-        "func Run",
-        "func RunAudit",
-        "func RunCheck",
-        "func RunFakeRun",
-        "func RunReadOnly"
+        "type Command"
       ]
     },
     {
@@ -2717,13 +2684,13 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func Command.AuditPolicy",
+        "func Command.Check",
+        "func Command.FakeRun",
+        "func Command.Run",
+        "func Command.RunReadOnly",
         "func policyUsage",
-        "func printPolicyEvaluation",
-        "func runPolicy",
-        "func runPolicyAudit",
-        "func runPolicyCheck",
-        "func runPolicyFakeRun",
-        "func runPolicyRun"
+        "func printPolicyEvaluation"
       ]
     },
     {
@@ -2731,8 +2698,8 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func parseCommandPolicyFlags",
-        "func parseCommandPolicyRunFlags"
+        "func Command.ParseFlags",
+        "func Command.ParseRunFlags"
       ]
     },
     {
@@ -3166,25 +3133,17 @@
       ]
     },
     {
-      "path": "internal/adapter/audit/adapter_dependencies.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/audit/audit.go",
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func AuditCommandPolicy",
-        "func auditClock.Now",
+        "func Clock.Now",
+        "func CommandWriter.Append",
+        "func CommandWriter.Path",
+        "func NewCommandWriter",
         "func commandAuditLogPath",
-        "func commandAuditWriter.Append",
-        "func commandAuditWriter.Path",
-        "func policyEvaluator.Evaluate",
-        "type auditClock",
-        "type commandAuditWriter",
-        "type policyEvaluator"
+        "type Clock",
+        "type CommandWriter"
       ]
     },
     {
@@ -7463,11 +7422,11 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
+        "func OverrideLoader.Load",
         "func commandPolicyCatalog",
-        "func policyOverrideLoader.Load",
         "func policyOverrideWarning",
         "func readPolicyOverrides",
-        "type policyOverrideLoader"
+        "type OverrideLoader"
       ]
     },
     {
@@ -7475,13 +7434,13 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
+        "func CommandObserver.Observe",
         "func EvaluateCommandPolicy",
         "func Evaluator.Evaluate",
         "func NewEvaluator",
-        "func commandObserver.Observe",
         "func isDirectory",
-        "type Evaluator",
-        "type commandObserver"
+        "type CommandObserver",
+        "type Evaluator"
       ]
     },
     {
@@ -7501,6 +7460,8 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
+        "func Clock.Now",
+        "func CommandExecutor.Execute",
         "func Evaluator.FakeRun",
         "func Evaluator.Run",
         "func Evaluator.RunReadOnly",
@@ -7508,10 +7469,8 @@
         "func FakeRunCommand",
         "func RunCommand",
         "func RunReadOnlyCommand",
-        "func commandExecutor.Execute",
-        "func systemClock.Now",
-        "type commandExecutor",
-        "type systemClock"
+        "type Clock",
+        "type CommandExecutor"
       ]
     },
     {

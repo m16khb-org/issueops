@@ -112,3 +112,32 @@ func TestPlanningSignalsFollowApplicationsAndRootWiring(t *testing.T) {
 		t.Fatal("actual planning and lesson wiring were not observed")
 	}
 }
+
+func TestCommandAuditSignalFollowsApplicationAndCLI(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, content string) {
+		t.Helper()
+		path := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo := Repository{ListDocs: func(string) []string { return nil }}
+	write("internal/application/audit/service.go", "package audit\nfunc (service Service) Audit(){}")
+	if repo.CollectSignals(root, 0, nil, "").HasCommandAuditLog {
+		t.Fatal("unwired audit application counted")
+	}
+	write("cmd/issueops/policycli/policy_cli.go", "package policycli\nfunc audit(){command.Audit.Audit(req)}")
+	if !repo.CollectSignals(root, 0, nil, "").HasCommandAuditLog {
+		t.Fatal("current application and CLI not observed")
+	}
+	if err := os.Remove(filepath.Join(root, "internal/application/audit/service.go")); err != nil {
+		t.Fatal(err)
+	}
+	if repo.CollectSignals(root, 0, nil, "").HasCommandAuditLog {
+		t.Fatal("missing audit owner counted")
+	}
+}

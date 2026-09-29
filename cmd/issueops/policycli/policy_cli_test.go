@@ -16,7 +16,6 @@ func TestParseCommandPolicyFlagsUsesDefaultRootCWDAndEnvAllowlist(t *testing.T) 
 	root := t.TempDir()
 	t.Setenv("CLAUDE_PROJECT_DIR", "")
 	t.Setenv("PWD", root)
-	t.Cleanup(setPolicyCLITestResolveTarget())
 
 	req, jsonOut, err := parseCommandPolicyFlags("policy check", []string{"--json", "--env", "HOME, PATH,,ISSUEOPS_STATE_DIR", "--", "git", "status"})
 	if err != nil {
@@ -134,35 +133,4 @@ func containsString(items []string, want string) bool {
 		}
 	}
 	return false
-}
-
-func setPolicyCLITestResolveTarget() func() {
-	Configure(Deps{ResolveTarget: func(arg string) string {
-		if arg != "" {
-			abs, err := filepath.Abs(arg)
-			if err != nil {
-				return arg
-			}
-			return abs
-		}
-		if env := testEnv("CLAUDE_PROJECT_DIR"); env != "" {
-			arg = env
-		} else if env := testEnv("PWD"); env != "" {
-			arg = env
-		}
-		abs, err := filepath.Abs(arg)
-		if err != nil {
-			return arg
-		}
-		return abs
-	}})
-	return Reset
-}
-
-func testEnv(name string) string {
-	value, ok := os.LookupEnv(name)
-	if !ok {
-		return ""
-	}
-	return value
 }

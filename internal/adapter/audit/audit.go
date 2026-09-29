@@ -7,34 +7,25 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-
-	auditapp "issueops/internal/application/audit"
-	policycontract "issueops/internal/contract/policy"
 )
 
-// AuditCommandPolicy는 명령 요청을 평가해 redacted policy 결정을 JSONL audit
-// log에 append한다. 명령 자체를 실행하지는 않는다.
-func AuditCommandPolicy(req policycontract.CommandPolicyRequest) (auditcontract.CommandAuditRecord, error) {
-	return (auditapp.Service{Evaluator: policyEvaluator{EvaluateCommandPolicy}, Writer: commandAuditWriter{}, Clock: auditClock{}}).Audit(req)
+type Clock struct{}
+
+func (Clock) Now() time.Time { return time.Now() }
+
+type CommandWriter struct {
+	Filename     string
+	ResolveError error
 }
 
-type policyEvaluator struct {
-	evaluate func(policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation
+func NewCommandWriter() CommandWriter {
+	path, err := commandAuditLogPath()
+	return CommandWriter{Filename: path, ResolveError: err}
 }
 
-func (evaluator policyEvaluator) Evaluate(req policycontract.CommandPolicyRequest) policycontract.CommandPolicyEvaluation {
-	return evaluator.evaluate(req)
-}
+func (writer CommandWriter) Path() (string, error) { return writer.Filename, writer.ResolveError }
 
-type auditClock struct{}
-
-func (auditClock) Now() time.Time { return time.Now() }
-
-type commandAuditWriter struct{}
-
-func (commandAuditWriter) Path() (string, error) { return commandAuditLogPath() }
-
-func (commandAuditWriter) Append(path string, record auditcontract.CommandAuditRecord) error {
+func (CommandWriter) Append(path string, record auditcontract.CommandAuditRecord) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}

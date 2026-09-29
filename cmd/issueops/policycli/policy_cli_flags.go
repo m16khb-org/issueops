@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func parseCommandPolicyFlags(name string, args []string) (policy.CommandPolicyRequest, bool, error) {
+func (command Command) ParseFlags(name string, args []string) (policy.CommandPolicyRequest, bool, error) {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	workspaceRoot := fs.String("workspace-root", "", "workspace root boundary")
 	cwd := fs.String("cwd", "", "command working directory")
@@ -22,7 +22,7 @@ func parseCommandPolicyFlags(name string, args []string) (policy.CommandPolicyRe
 	}
 	root := *workspaceRoot
 	if root == "" {
-		root = deps.ResolveTarget("")
+		root = command.DefaultRoot
 	}
 	workDir := *cwd
 	if workDir == "" {
@@ -42,7 +42,7 @@ func parseCommandPolicyFlags(name string, args []string) (policy.CommandPolicyRe
 	return req, *jsonOut, nil
 }
 
-func parseCommandPolicyRunFlags(args []string) (policy.CommandPolicyRequest, bool, bool, error) {
+func (command Command) ParseRunFlags(args []string) (policy.CommandPolicyRequest, bool, bool, error) {
 	fs := flag.NewFlagSet("policy run", flag.ContinueOnError)
 	workspaceRoot := fs.String("workspace-root", "", "workspace root boundary")
 	cwd := fs.String("cwd", "", "command working directory")
@@ -55,7 +55,7 @@ func parseCommandPolicyRunFlags(args []string) (policy.CommandPolicyRequest, boo
 	}
 	root := *workspaceRoot
 	if root == "" {
-		root = deps.ResolveTarget("")
+		root = command.DefaultRoot
 	}
 	workDir := *cwd
 	if workDir == "" {

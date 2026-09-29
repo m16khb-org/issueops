@@ -2,10 +2,11 @@ package audit
 
 import (
 	policyadapter "issueops/internal/adapter/policy"
+	auditapp "issueops/internal/application/audit"
+	auditcontract "issueops/internal/contract/audit"
+	policycontract "issueops/internal/contract/policy"
 )
 
-// production wiring과 같은 실행기를 설치한다. 이 package가 실제로 의존하는
-// 대상만 채운다.
-func init() {
-	EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
+func AuditCommandPolicy(req policycontract.CommandPolicyRequest) (auditcontract.CommandAuditRecord, error) {
+	return (auditapp.Service{Evaluator: policyadapter.NewEvaluator(nil), Writer: NewCommandWriter(), Clock: Clock{}}).Audit(req)
 }

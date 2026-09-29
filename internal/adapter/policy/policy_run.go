@@ -39,16 +39,16 @@ func (e Evaluator) Run(request policycontract.CommandPolicyRequest) policycontra
 }
 
 func (e Evaluator) service() policyapp.Service {
-	return policyapp.Service{Observer: commandObserver{}, PreparedBaseBranch: e.lookup, Overrides: policyOverrideLoader{}, Executor: commandExecutor{}, Clock: systemClock{}}
+	return policyapp.Service{Observer: CommandObserver{}, PreparedBaseBranch: e.lookup, Overrides: OverrideLoader{}, Executor: CommandExecutor{}, Clock: Clock{}}
 }
 
-type systemClock struct{}
+type Clock struct{}
 
-func (systemClock) Now() time.Time { return time.Now() }
+func (Clock) Now() time.Time { return time.Now() }
 
-type commandExecutor struct{}
+type CommandExecutor struct{}
 
-func (commandExecutor) Execute(request policycontract.CommandPolicyRequest, timeout time.Duration) policyapp.Execution {
+func (CommandExecutor) Execute(request policycontract.CommandPolicyRequest, timeout time.Duration) policyapp.Execution {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, request.Argv[0], request.Argv[1:]...)

@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/cmd/issueops/mcpcli/resources"
+	auditapp "issueops/internal/application/audit"
 	daemonapp "issueops/internal/application/daemon"
 	loopapp "issueops/internal/application/looprun"
+	policyapp "issueops/internal/application/policy"
 	bootstrapapp "issueops/internal/application/projectbootstrap"
 	docsapp "issueops/internal/application/projectdocs"
 	augmentapp "issueops/internal/application/selfaugment"
@@ -38,6 +40,8 @@ type MCPToolOutcome struct {
 // MCPDependencies는 server 생성 시 고정된다. 요청 간 package-global dependency
 // cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
+	Policy           policyapp.Service
+	Audit            auditapp.Service
 	Daemon           daemonapp.Reader
 	Worker           workerapp.Service
 	Loop             loopapp.Service
@@ -106,7 +110,7 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 	}
 	for _, handler := range []func(MCPToolCall) MCPToolOutcome{
 		func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) },
-		func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps.State) },
+		func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps) },
 		func(call MCPToolCall) MCPToolOutcome {
 			return handleIssueOpsMCPToolCallWithDependencies(call, deps)
 		},

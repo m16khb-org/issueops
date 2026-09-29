@@ -2,9 +2,6 @@ package issueopsapp
 
 import (
 	apidoccli "issueops/cmd/issueops/apidoc"
-	mcpclideps "issueops/cmd/issueops/mcpcli"
-	policyclideps "issueops/cmd/issueops/policycli"
-	auditdeps "issueops/internal/adapter/audit"
 	gatesdeps "issueops/internal/adapter/gates"
 	gitworktreedeps "issueops/internal/adapter/gitworktree"
 	issueopsdeps "issueops/internal/adapter/issueops"
@@ -28,7 +25,6 @@ func configurePolicyAndGitObservers() {
 
 func configurePolicyAndGitObserversWithLookup(lookup policyapp.PreparedBaseBranchLookup) {
 	evaluator := policyadapter.NewEvaluator(lookup)
-	auditdeps.EvaluateCommandPolicy = evaluator.Evaluate
 	gatesdeps.EvaluateCommandPolicy = evaluator.Evaluate
 	gatesdeps.RunCommand = evaluator.Run
 	gitworktreedeps.GitCmd = preflightadapter.GitCmd
@@ -38,11 +34,6 @@ func configurePolicyAndGitObserversWithLookup(lookup policyapp.PreparedBaseBranc
 	issueopsdeps.GitCmd = preflightadapter.GitCmd
 	issueopsdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsdeps.GitOut = preflightadapter.GitOut
-	mcpclideps.EvaluateCommandPolicy = evaluator.Evaluate
-	mcpclideps.FakeRunCommand = evaluator.FakeRun
-	policyclideps.EvaluateCommandPolicy = evaluator.Evaluate
-	policyclideps.FakeRunCommand = evaluator.FakeRun
-	policyclideps.RunReadOnlyCommand = evaluator.RunReadOnly
 	preflightfuzzdeps.GitCmd = preflightadapter.GitCmd
 	reviewfilesdeps.GitCmd = preflightadapter.GitCmd
 	apidoccli.ConfigureReviewFiles(apidoccli.ReviewFileEffects{
