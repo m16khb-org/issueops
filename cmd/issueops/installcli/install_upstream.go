@@ -17,14 +17,14 @@ const upstreamSyncTimeout = 5 * time.Minute
 // records the outcome as install messages. It never changes install success:
 // the issueops install path must stay independent of third-party CLIs and
 // network reachability, so upstream problems are reported, not fatal.
-func appendUpstreamMessages(result *port.NativeInstallResult, root string, dryRun bool) {
-	if deps.SyncUpstream == nil {
+func (c Command) appendUpstreamMessages(result *port.NativeInstallResult, root string, dryRun bool) {
+	if c.SyncUpstream == nil {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), upstreamSyncTimeout)
 	defer cancel()
 
-	report, err := deps.SyncUpstream(ctx, root, dryRun)
+	report, err := c.SyncUpstream(ctx, root, dryRun)
 	if err != nil {
 		result.Messages = append(result.Messages, "upstream sync did not run: "+err.Error())
 		return

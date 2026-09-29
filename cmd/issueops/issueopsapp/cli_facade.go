@@ -17,7 +17,6 @@ func wireBasicCLIDeps() {
 	configureDocsReaders()
 	configureStateStores()
 	configureIssueOpsRuntime()
-	configureInstallPlans()
 	configureStateDatabases()
 	configureTail5()
 	configureAdapterTail()
@@ -31,7 +30,6 @@ func wireBasicCLIDeps() {
 	configureIssueOpsRemote()
 	configureIssueOpsOrphanCleanup()
 	configureIssueOpsLeaseNextCommands()
-	installcli.Configure(installDependencies())
 
 }
 
@@ -64,7 +62,7 @@ func runDoctor(args []string) error {
 }
 
 func runInstall(args []string) error {
-	return installcli.RunInstall(args)
+	return (installcli.Command{Deps: installDependencies()}).RunInstall(args)
 }
 
 func runProject(args []string) error {

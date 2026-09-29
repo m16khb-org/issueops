@@ -6,24 +6,24 @@ import (
 )
 
 // installTransactionEffects connects the application workflow to host files and CLIs.
-type installTransactionEffects struct{}
+type installTransactionEffects struct{ command Command }
 
-func (installTransactionEffects) PreparePath(result *port.NativeInstallResult, request port.NativeInstallRequest, candidate, mode string) (installapp.PathTransaction, error) {
-	return prepareInstallPathPlanForCandidate(result, request, candidate, mode)
+func (effects installTransactionEffects) PreparePath(result *port.NativeInstallResult, request port.NativeInstallRequest, candidate, mode string) (installapp.PathTransaction, error) {
+	return effects.command.prepareInstallPathPlanForCandidate(result, request, candidate, mode)
 }
 
-func (installTransactionEffects) Install(request port.NativeInstallRequest) (port.NativeInstallResult, error) {
-	return deps.InstallNative(request)
+func (effects installTransactionEffects) Install(request port.NativeInstallRequest) (port.NativeInstallResult, error) {
+	return effects.command.InstallNative(request)
 }
 
-func (installTransactionEffects) PlanShell(result *port.NativeInstallResult, request port.NativeInstallRequest, mode string) error {
+func (effects installTransactionEffects) PlanShell(result *port.NativeInstallResult, request port.NativeInstallRequest, mode string) error {
 	return planShellPath(result, request, mode)
 }
 
-func (installTransactionEffects) PrepareHost(plan port.NativeInstallResult) (installapp.HostTransaction, error) {
+func (effects installTransactionEffects) PrepareHost(plan port.NativeInstallResult) (installapp.HostTransaction, error) {
 	return prepareInstallHostTransaction(plan)
 }
 
-func (installTransactionEffects) AppendUpstream(result *port.NativeInstallResult, root string, dryRun bool) {
-	appendUpstreamMessages(result, root, dryRun)
+func (effects installTransactionEffects) AppendUpstream(result *port.NativeInstallResult, root string, dryRun bool) {
+	effects.command.appendUpstreamMessages(result, root, dryRun)
 }

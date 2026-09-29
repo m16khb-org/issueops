@@ -3,7 +3,10 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
-	"issueops/internal/adapter/hostprotocol"
+	issueopsadapter "issueops/internal/adapter/issueops"
+	installapp "issueops/internal/application/install"
+	installcontract "issueops/internal/contract/install"
+	"os"
 
 	"issueops/cmd/issueops/installcli"
 	agyadapter "issueops/internal/adapter/agy"
@@ -22,39 +25,55 @@ import (
 // 어떤 host를 설치하고 어떤 증적을 읽을지는 composition root의 결정이다.
 // CLI는 flag 해석과 출력만 소유한다.
 func installDependencies() installcli.Deps {
+	root, stateRoot := issueOpsRoot(), issueopsadapter.IssueOpsStateRoot()
+	codex, claude, omo, agy := newCodexInstaller(), newClaudeInstaller(), newOmoInstaller(), newAgyInstaller()
 	return installcli.Deps{
-		IssueOpsRoot:         issueOpsRoot,
+		IssueOpsRoot:      func() string { return root },
+		StateRoot:         stateRoot,
+		ExecutablePath:    os.Executable,
+		EnsureSymlinkPlan: installutil.EnsureSymlinkPlan,
+		PrepareManagedCommandPathCandidate: func(target, candidate, path string, adopt, dry bool) (installcli.ManagedCommandPathTransaction, installcontract.ManagedCommandPathPlan, error) {
+			tx, plan, err := installutil.PrepareManagedCommandPathCandidate(target, candidate, path, adopt, dry)
+			if tx == nil {
+				return nil, plan, err
+			}
+			return tx, plan, err
+		},
 		ActivationBackend:    nativeActivationBackend(),
 		NativeInstallRequest: install.DefaultNativeInstallRequest,
-		InstallNative: func(req port.NativeInstallRequest) (port.NativeInstallResult, error) {
-			return install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(hostprotocol.OmoLifecycleExtension), agyadapter.NewInstaller())
-		},
+		InstallNative:        (installapp.Service{Environment: install.Environment{}, Installers: []port.HostInstaller{codex, claude, omo, agy}}).Install,
 		ActivationReadback: func(req port.NativeInstallRequest) activationport.ReadbackVerifier {
-			return hostActivationReadback{request: req}
+			return hostActivationReadback{request: req, codex: codex, claude: claude, omo: omo, agy: agy}
 		},
 		SyncUpstream: syncUpstream,
 	}
 }
 
-type hostActivationReadback struct{ request port.NativeInstallRequest }
+type hostActivationReadback struct {
+	request port.NativeInstallRequest
+	codex   codexadapter.Installer
+	claude  claudeadapter.Installer
+	omo     omoadapter.Installer
+	agy     agyadapter.Installer
+}
 
 func (readback hostActivationReadback) Verify(_ context.Context, issueOpsRoot, targetBinary string) (activationport.Readback, error) {
 	if readback.request.Root != issueOpsRoot || readback.request.BinPath != targetBinary {
 		return activationport.Readback{}, fmt.Errorf("native activation readback target changed")
 	}
-	codexEvidence, err := codexadapter.VerifyActivation(readback.request)
+	codexEvidence, err := readback.codex.VerifyActivation(readback.request)
 	if err != nil {
 		return activationport.Readback{}, err
 	}
-	claudeEvidence, err := claudeadapter.VerifyActivation(readback.request)
+	claudeEvidence, err := readback.claude.VerifyActivation(readback.request)
 	if err != nil {
 		return activationport.Readback{}, err
 	}
-	omoEvidence, err := omoadapter.VerifyActivation(readback.request, hostprotocol.OmoLifecycleExtension)
+	omoEvidence, err := readback.omo.VerifyActivation(readback.request)
 	if err != nil {
 		return activationport.Readback{}, err
 	}
-	agyEvidence, err := agyadapter.VerifyActivation(readback.request)
+	agyEvidence, err := readback.agy.VerifyActivation(readback.request)
 	if err != nil {
 		return activationport.Readback{}, err
 	}

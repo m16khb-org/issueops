@@ -6,16 +6,16 @@ import (
 	"issueops/internal/port"
 )
 
-type Installer struct{}
+type Installer struct{ deps Dependencies }
 
-func NewInstaller() Installer { return Installer{} }
+func NewInstaller(deps Dependencies) Installer { return Installer{deps: deps} }
 
 func (Installer) Name() string { return "agy" }
 
-func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
-	plan := NewInstallPlan("agy", req.DryRun)
+func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
+	plan := installer.deps.NewInstallPlan("agy", req.DryRun)
 	geminiRoot := filepath.Join(req.Home, ".gemini", "config")
-	_, links, messages, skillErrs := PlanHostSkillLinks(
+	_, links, messages, skillErrs := installer.deps.PlanHostSkillLinks(
 		req.Root,
 		filepath.Join(geminiRoot, "skills"),
 		req.SkillNames,
@@ -26,15 +26,15 @@ func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult,
 	plan.Links(links)
 	plan.Errs(skillErrs)
 
-	plan.File(writeAgyUserMCP(filepath.Join(geminiRoot, "mcp_config.json"), req))
-	plan.File(writeAgyProjectMCP(
+	plan.File(installer.writeAgyUserMCP(filepath.Join(geminiRoot, "mcp_config.json"), req))
+	plan.File(installer.writeAgyProjectMCP(
 		filepath.Join(req.Root, "configs", "agy", "mcp_config.json"),
 		"agy_project_mcp_template",
 		req.DryRun,
 	))
 
 	if req.ProjectLocal {
-		plan.File(writeAgyProjectMCP(
+		plan.File(installer.writeAgyProjectMCP(
 			filepath.Join(req.Root, ".agents", "mcp_config.json"),
 			"agy_project_mcp_config",
 			req.DryRun,

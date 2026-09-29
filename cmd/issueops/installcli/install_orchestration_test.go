@@ -144,10 +144,10 @@ func (preflightFailureInstallerFixture) Install(request port.NativeInstallReques
 func TestInstallOrchestrationRollsBackAndAbortsAfterHostFailure(t *testing.T) {
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
+	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
 	})
 	if err == nil {
 		t.Fatal("host failure was accepted")
@@ -164,10 +164,10 @@ func TestInstallOrchestrationRemovesNewCommandShimsAfterHostFailure(t *testing.T
 		t.Fatal(err)
 	}
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
+	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--path-mode=skip", "--json"})
 	})
 	if err == nil {
 		t.Fatal("host failure was accepted")
@@ -193,10 +193,10 @@ func TestInstallOrchestrationPreservesExistingEmptyCommandDirectories(t *testing
 		t.Fatal(err)
 	}
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
+	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--path-mode=skip", "--json"})
 	})
 	if err == nil {
 		t.Fatal("host failure was accepted")
@@ -219,10 +219,10 @@ func TestInstallOrchestrationRestoresReplacedCommandSymlink(t *testing.T) {
 		t.Fatal(err)
 	}
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
+	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--path-mode=skip", "--json"})
 	})
 	if err == nil {
 		t.Fatal("host failure was accepted")
@@ -258,7 +258,7 @@ func TestInstallOrchestrationRestoresHostPathsAfterWriteFailure(t *testing.T) {
 	newFile := filepath.Join(root, "configs", "omo", "mcp.json")
 	newLink := filepath.Join(root, ".omo", "skills", "fixture")
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, mutatingInstallerFixture{
+	cli := installOrchestrationCommand(t, root, home, backend, mutatingInstallerFixture{
 		existingFile: existingFile,
 		existingLink: existingLink,
 		newFile:      newFile,
@@ -268,7 +268,7 @@ func TestInstallOrchestrationRestoresHostPathsAfterWriteFailure(t *testing.T) {
 	})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
 	})
 	if err == nil {
 		t.Fatal("host write failure was accepted")
@@ -299,10 +299,10 @@ func TestInstallOrchestrationRestoresShellPathAfterSealFailure(t *testing.T) {
 	t.Setenv("SHELL", "/bin/zsh")
 	t.Setenv("PATH", "/usr/bin:/bin")
 	backend := &activationBackendFixture{sealErr: errors.New("injected seal failure")}
-	configureInstallOrchestrationFixture(t, root, home, backend, installerFixture{})
+	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--adopt-command-file", "--path-mode=auto", "--json"})
+		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=auto", "--json"})
 	})
 	if err == nil {
 		t.Fatal("seal failure was accepted")
@@ -322,10 +322,10 @@ func TestInstallOrchestrationPreflightRefusalDoesNotBeginActivation(t *testing.T
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
 	installCalls := 0
-	configureInstallOrchestrationFixture(t, root, home, backend, installerFixture{calls: &installCalls})
+	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{calls: &installCalls})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--dry-run", "--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--dry-run", "--path-mode=skip", "--json"})
 	})
 	if err == nil || len(backend.calls) != 0 || installCalls != 0 {
 		t.Fatalf("preflight err=%v activation calls=%v installer calls=%d", err, backend.calls, installCalls)
@@ -336,10 +336,10 @@ func TestInstallOrchestrationPreflightRefusalDoesNotBeginActivation(t *testing.T
 func TestInstallOrchestrationHostPreflightFailureDoesNotBeginActivation(t *testing.T) {
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, preflightFailureInstallerFixture{})
+	cli := installOrchestrationCommand(t, root, home, backend, preflightFailureInstallerFixture{})
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
 	})
 	if err == nil || len(backend.calls) != 0 {
 		t.Fatalf("host preflight err=%v activation calls=%v", err, backend.calls)
@@ -350,12 +350,12 @@ func TestInstallOrchestrationHostPreflightFailureDoesNotBeginActivation(t *testi
 func TestInstallOrchestrationExplicitSealPreflightFailureRequiresAbort(t *testing.T) {
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, preflightFailureInstallerFixture{})
+	cli := installOrchestrationCommand(t, root, home, backend, preflightFailureInstallerFixture{})
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_STEP", "seal")
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID", validTransitionID)
 
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
 	})
 	if err == nil {
 		t.Fatal("explicit seal preflight failure was accepted")
@@ -375,12 +375,12 @@ func TestInstallOrchestrationExplicitSealPreflightFailureRequiresAbort(t *testin
 func TestInstallOrchestrationExplicitSealRollsBackAndLeavesAbortToCaller(t *testing.T) {
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
+	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{err: errors.New("injected host failure")})
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_STEP", "seal")
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID", validTransitionID)
 
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
 	})
 	if err == nil {
 		t.Fatal("host failure was accepted")
@@ -399,10 +399,10 @@ func TestInstallOrchestrationExplicitSealRollsBackAndLeavesAbortToCaller(t *test
 func TestInstallOrchestrationFinalizesOnlyAfterSeal(t *testing.T) {
 	root, home, target, command := installOrchestrationFixture(t)
 	backend := &activationBackendFixture{}
-	configureInstallOrchestrationFixture(t, root, home, backend, installerFixture{})
+	cli := installOrchestrationCommand(t, root, home, backend, installerFixture{})
 
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--adopt-command-file", "--path-mode=skip", "--json"})
 	})
 	if err != nil {
 		t.Fatalf("install failed: %v\n%s", err, out)
@@ -434,13 +434,13 @@ func installOrchestrationFixture(t *testing.T) (string, string, string, string) 
 	return root, home, target, command
 }
 
-func configureInstallOrchestrationFixture(t *testing.T, root, home string, backend *activationBackendFixture, installer port.HostInstaller) {
+func installOrchestrationCommand(t *testing.T, root, home string, backend *activationBackendFixture, installer port.HostInstaller) Command {
 	t.Helper()
 	t.Setenv("HOME", home)
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
 	t.Setenv("ISSUEOPS_ROOT", root)
 	t.Setenv("ISSUEOPS_NATIVE_ACTIVATION_STEP", "")
-	Configure(Deps{
+	return testInstallCommand(t, Deps{
 		IssueOpsRoot: func() string { return root }, ExecutablePath: func() (string, error) { return filepath.Join(root, "bin", "issueops"), nil },
 		ActivationBackend: backend,
 		ActivationReadback: func(port.NativeInstallRequest) activationport.ReadbackVerifier {
@@ -448,10 +448,9 @@ func configureInstallOrchestrationFixture(t *testing.T, root, home string, backe
 		},
 		NativeInstallRequest: install.DefaultNativeInstallRequest,
 		InstallNative: func(req port.NativeInstallRequest) (port.NativeInstallResult, error) {
-			return install.InstallNative(req, installer)
+			return installNativeForTest(req, installer)
 		},
 	})
-	t.Cleanup(Reset)
 }
 
 func assertRegularCommandBytes(t *testing.T, path, expected string) {

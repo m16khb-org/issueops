@@ -14,10 +14,10 @@ func TestVerifyActivationRejectsClaudeStaleTarget(t *testing.T) {
 	writeAdapterTestSkill(t, root, "alpha")
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
-	evidence, err := VerifyActivation(req)
+	evidence, err := testInstaller().VerifyActivation(req)
 	if err != nil || len(evidence) != 2 {
 		t.Fatalf("evidence=%#v err=%v", evidence, err)
 	}
@@ -39,7 +39,7 @@ func TestVerifyActivationRejectsClaudeStaleTarget(t *testing.T) {
 	if err := os.WriteFile(path, changed, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := VerifyActivation(req); err == nil {
+	if _, err := testInstaller().VerifyActivation(req); err == nil {
 		t.Fatal("stale Claude MCP target was accepted")
 	}
 }
@@ -49,7 +49,7 @@ func TestVerifyActivationRejectsClaudeWorktreeHookTarget(t *testing.T) {
 	writeAdapterTestSkill(t, root, "alpha")
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
 	hooksPath := filepath.Join(home, ".claude", "settings.json")
@@ -63,7 +63,7 @@ func TestVerifyActivationRejectsClaudeWorktreeHookTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = VerifyActivation(req)
+	_, err = testInstaller().VerifyActivation(req)
 	if err == nil {
 		t.Fatal("worktree Claude hook target was accepted")
 	}

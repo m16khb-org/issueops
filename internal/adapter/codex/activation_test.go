@@ -13,10 +13,10 @@ func TestVerifyActivationRejectsStaleCodexTarget(t *testing.T) {
 	writeAdapterTestSkill(t, root, "alpha")
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
-	evidence, err := VerifyActivation(req)
+	evidence, err := testInstaller().VerifyActivation(req)
 	if err != nil || len(evidence) != 2 {
 		t.Fatalf("evidence=%#v err=%v", evidence, err)
 	}
@@ -37,14 +37,14 @@ func TestVerifyActivationRejectsStaleCodexTarget(t *testing.T) {
 	if err := os.WriteFile(hooksPath, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := VerifyActivation(req); err != nil {
+	if _, err := testInstaller().VerifyActivation(req); err != nil {
 		t.Fatalf("canonical semantic readback rejected formatting-only change: %v", err)
 	}
 	configPath := filepath.Join(req.CodexHome, "config.toml")
 	if err := os.WriteFile(configPath, []byte("[mcp_servers.issueops]\ncommand = \"/old/bin\"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := VerifyActivation(req); err == nil {
+	if _, err := testInstaller().VerifyActivation(req); err == nil {
 		t.Fatal("stale Codex MCP target was accepted")
 	}
 }
@@ -54,7 +54,7 @@ func TestVerifyActivationRejectsCodexWorktreeHookTarget(t *testing.T) {
 	writeAdapterTestSkill(t, root, "alpha")
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
 	hooksPath := filepath.Join(req.CodexHome, "hooks.json")
@@ -68,7 +68,7 @@ func TestVerifyActivationRejectsCodexWorktreeHookTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = VerifyActivation(req)
+	_, err = testInstaller().VerifyActivation(req)
 	if err == nil {
 		t.Fatal("worktree Codex hook target was accepted")
 	}

@@ -16,10 +16,10 @@ import (
 
 func TestInstallCommandDryRunJSONDispatches(t *testing.T) {
 	home := t.TempDir()
-	root := configureInstallCommandTest(t, home)
+	cli, root := installCommandFixture(t, home)
 
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--dry-run", "--json"})
+		return cli.RunInstall([]string{"--dry-run", "--json"})
 	})
 	if err != nil {
 		t.Fatalf("install --dry-run --json failed: %v\n%s", err, out)
@@ -53,19 +53,18 @@ func TestInstallCommandDryRunAllowsSelfVerifyBinaryOutsideIssueOpsRoot(t *testin
 	t.Setenv("HOME", home)
 	t.Setenv("CODEX_HOME", filepath.Join(home, ".codex"))
 	t.Setenv("ISSUEOPS_ROOT", root)
-	Configure(Deps{
+	cli := testInstallCommand(t, Deps{
 		IssueOpsRoot:         func() string { return root },
 		ExecutablePath:       func() (string, error) { return executable, nil },
 		NativeInstallRequest: install.DefaultNativeInstallRequest,
 		InstallNative: func(req port.NativeInstallRequest) (port.NativeInstallResult, error) {
-			return install.InstallNative(req, installerFixture{})
+			return installNativeForTest(req, installerFixture{})
 		},
 		ActivationReadback: func(port.NativeInstallRequest) activationport.ReadbackVerifier { return nil },
 	})
-	t.Cleanup(Reset)
 
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--dry-run", "--project-local", "--path-mode=skip", "--json"})
+		return cli.RunInstall([]string{"--dry-run", "--project-local", "--path-mode=skip", "--json"})
 	})
 	if err != nil {
 		t.Fatalf("self-verify install dry-run failed with executable outside ISSUEOPS_ROOT: %v\n%s", err, out)
@@ -87,7 +86,7 @@ func TestNativeInstallCandidatePathRejectsExternalBinaryForApply(t *testing.T) {
 
 func TestInstallCommandDryRunAutoPathModePlansShimAndShellRC(t *testing.T) {
 	home := t.TempDir()
-	root := configureInstallCommandTest(t, home)
+	_, root := installCommandFixture(t, home)
 	result := runInstallDryRunJSON(t, home, "auto")
 	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "issueops"), filepath.Join(root, "bin", "issueops"), true) {
 		t.Fatalf("auto path mode did not plan command shim link: %+v", result.Links)
@@ -102,7 +101,7 @@ func TestInstallCommandDryRunAutoPathModePlansShimAndShellRC(t *testing.T) {
 
 func TestInstallCommandDryRunManualPathModePlansShimWithoutShellRC(t *testing.T) {
 	home := t.TempDir()
-	root := configureInstallCommandTest(t, home)
+	_, root := installCommandFixture(t, home)
 	result := runInstallDryRunJSON(t, home, "manual")
 	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "issueops"), filepath.Join(root, "bin", "issueops"), true) {
 		t.Fatalf("manual path mode did not plan command shim link: %+v", result.Links)
@@ -120,11 +119,11 @@ func TestInstallCommandDryRunManualPathModePlansShimWithoutShellRC(t *testing.T)
 
 func TestInstallCommandInteractiveDryRunSelectsProjectLocalAndManualPathMode(t *testing.T) {
 	home := t.TempDir()
-	configureInstallCommandTest(t, home)
+	cli, _ := installCommandFixture(t, home)
 	t.Setenv("ISSUEOPS_INSTALL_HELPER", "1")
 
 	stdout, stderr, err := captureInstallCommandOutput(t, strings.NewReader("y\n2\n"), func() error {
-		return RunInstall([]string{"--interactive", "--dry-run", "--json"})
+		return cli.RunInstall([]string{"--interactive", "--dry-run", "--json"})
 	})
 	if err != nil {
 		t.Fatalf("interactive install dry-run failed: %v\nstdout=%s\nstderr=%s", err, stdout, stderr)
@@ -149,7 +148,7 @@ func TestInstallCommandInteractiveDryRunSelectsProjectLocalAndManualPathMode(t *
 
 func TestInstallCommandInteractiveDryRunClosedStdinFailsBeforeDeadline(t *testing.T) {
 	home := t.TempDir()
-	configureInstallCommandTest(t, home)
+	cli, _ := installCommandFixture(t, home)
 	t.Setenv("ISSUEOPS_INSTALL_HELPER", "1")
 
 	type result struct {
@@ -160,7 +159,7 @@ func TestInstallCommandInteractiveDryRunClosedStdinFailsBeforeDeadline(t *testin
 	done := make(chan result, 1)
 	go func() {
 		stdout, stderr, err := captureInstallCommandOutput(t, strings.NewReader(""), func() error {
-			return RunInstall([]string{"--interactive", "--dry-run", "--json"})
+			return cli.RunInstall([]string{"--interactive", "--dry-run", "--json"})
 		})
 		done <- result{stdout: stdout, stderr: stderr, err: err}
 	}()
@@ -190,7 +189,7 @@ func TestValidateInteractiveInstallInputRejectsPipe(t *testing.T) {
 
 func TestInstallCommandDryRunSkipPathModeDoesNotPlanShellRC(t *testing.T) {
 	home := t.TempDir()
-	root := configureInstallCommandTest(t, home)
+	_, root := installCommandFixture(t, home)
 	result := runInstallDryRunJSON(t, home, "skip")
 	if !hasInstallLink(result.Links, filepath.Join(home, ".local", "bin", "issueops"), filepath.Join(root, "bin", "issueops"), true) {
 		t.Fatalf("skip path mode did not plan command shim link: %+v", result.Links)
@@ -205,7 +204,7 @@ func TestInstallCommandDryRunSkipPathModeDoesNotPlanShellRC(t *testing.T) {
 
 func TestInstallCommandShortShimKeepsMatchingLink(t *testing.T) {
 	home := t.TempDir()
-	configureInstallCommandTest(t, home)
+	installCommandFixture(t, home)
 	canonical := filepath.Join(home, ".local", "bin", "issueops")
 	short := filepath.Join(home, ".local", "bin", "io")
 	if err := os.MkdirAll(filepath.Dir(short), 0o755); err != nil {
@@ -223,7 +222,7 @@ func TestInstallCommandShortShimKeepsMatchingLink(t *testing.T) {
 
 func TestInstallCommandShortShimRefusesExistingFile(t *testing.T) {
 	home := t.TempDir()
-	configureInstallCommandTest(t, home)
+	cli, _ := installCommandFixture(t, home)
 	short := filepath.Join(home, ".local", "bin", "io")
 	if err := os.MkdirAll(filepath.Dir(short), 0o755); err != nil {
 		t.Fatal(err)
@@ -233,7 +232,7 @@ func TestInstallCommandShortShimRefusesExistingFile(t *testing.T) {
 	}
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--dry-run", "--json", "--path-mode=skip"})
+		return cli.RunInstall([]string{"--dry-run", "--json", "--path-mode=skip"})
 	})
 	if err == nil || !strings.Contains(err.Error(), "refusing to replace existing io command") {
 		t.Fatalf("existing io file error = %v", err)
@@ -246,7 +245,7 @@ func TestInstallCommandShortShimRefusesExistingFile(t *testing.T) {
 
 func TestInstallCommandShortShimRefusesUnrelatedSymlink(t *testing.T) {
 	home := t.TempDir()
-	configureInstallCommandTest(t, home)
+	cli, _ := installCommandFixture(t, home)
 	short := filepath.Join(home, ".local", "bin", "io")
 	if err := os.MkdirAll(filepath.Dir(short), 0o755); err != nil {
 		t.Fatal(err)
@@ -260,7 +259,7 @@ func TestInstallCommandShortShimRefusesUnrelatedSymlink(t *testing.T) {
 	}
 
 	_, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--dry-run", "--json", "--path-mode=skip"})
+		return cli.RunInstall([]string{"--dry-run", "--json", "--path-mode=skip"})
 	})
 	if err == nil || !strings.Contains(err.Error(), "refusing to replace existing io command") {
 		t.Fatalf("unrelated io symlink error = %v", err)
@@ -281,7 +280,7 @@ func TestInstallCommandRefusesManagedRegularCommandWithoutApproval(t *testing.T)
 		t.Fatal(err)
 	}
 	result := port.NativeInstallResult{}
-	_, err = prepareInstallPathPlan(&result, port.NativeInstallRequest{Home: home, BinPath: target, DryRun: true}, "skip")
+	_, err = prepareInstallPathPlanForTest(t, &result, port.NativeInstallRequest{Home: home, BinPath: target, DryRun: true}, "skip")
 	if err == nil || !strings.Contains(err.Error(), "--adopt-command-file") {
 		t.Fatalf("regular command refusal error = %v", err)
 	}
@@ -301,7 +300,7 @@ func TestInstallCommandApprovedDryRunReportsManagedAdoptionWithoutWriting(t *tes
 		t.Fatal(err)
 	}
 	result := port.NativeInstallResult{}
-	_, err = prepareInstallPathPlan(&result, port.NativeInstallRequest{Home: home, BinPath: target, DryRun: true, AdoptCommandFile: true}, "skip")
+	_, err = prepareInstallPathPlanForTest(t, &result, port.NativeInstallRequest{Home: home, BinPath: target, DryRun: true, AdoptCommandFile: true}, "skip")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,7 +332,7 @@ func TestInstallCommandApprovedDryRunValidatesStagedCandidate(t *testing.T) {
 	}
 
 	result := port.NativeInstallResult{}
-	_, err := prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{
+	_, err := testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(&result, port.NativeInstallRequest{
 		Home: home, BinPath: target, DryRun: true, AdoptCommandFile: true,
 	}, candidate, "skip")
 	if err != nil {
@@ -370,4 +369,8 @@ func copyTestCommand(t *testing.T, source, destination string) {
 	if err := os.WriteFile(destination, body, 0o755); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func prepareInstallPathPlanForTest(t *testing.T, result *port.NativeInstallResult, req port.NativeInstallRequest, mode string) (*installPathTransaction, error) {
+	return testInstallCommand(t, Deps{}).prepareInstallPathPlanForCandidate(result, req, req.BinPath, mode)
 }

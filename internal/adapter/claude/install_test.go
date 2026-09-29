@@ -10,7 +10,7 @@ import (
 )
 
 func TestClaudeInstallerDefaultsToUserScopeOnly(t *testing.T) {
-	if got := NewInstaller().Name(); got != "claude" {
+	if got := testInstaller().Name(); got != "claude" {
 		t.Fatalf("installer name = %q, want claude", got)
 	}
 	root := t.TempDir()
@@ -18,7 +18,7 @@ func TestClaudeInstallerDefaultsToUserScopeOnly(t *testing.T) {
 	writeAdapterTestSkill(t, root, "alpha")
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
-	result, err := NewInstaller().Install(req)
+	result, err := testInstaller().Install(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestClaudeInstallerProjectLocalIsExplicit(t *testing.T) {
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
 	req.ProjectLocal = true
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
 	if !exists(filepath.Join(root, ".mcp.json")) {
@@ -110,10 +110,10 @@ func TestClaudeInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 `)
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
 	var settings map[string]any
@@ -162,7 +162,7 @@ func TestClaudeInstallerReportsInvalidExistingSettings(t *testing.T) {
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
 
-	result, err := NewInstaller().Install(req)
+	result, err := testInstaller().Install(req)
 	if err == nil {
 		t.Fatalf("invalid existing settings should fail")
 	}
@@ -188,7 +188,7 @@ func TestClaudeInstallerRejectsMalformedHookConfigWithoutWriting(t *testing.T) {
 			req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 			req.SkillNames = []string{"alpha"}
 
-			result, err := NewInstaller().Install(req)
+			result, err := testInstaller().Install(req)
 			if err == nil || result.OK {
 				t.Fatalf("malformed hook config must fail without replacement: result=%+v err=%v", result, err)
 			}
@@ -212,7 +212,7 @@ func TestClaudeInstallerReportsStaleHookTarget(t *testing.T) {
 			req.SkillNames = []string{"alpha"}
 			req.DryRun = dryRun
 
-			result, err := NewInstaller().Install(req)
+			result, err := testInstaller().Install(req)
 			if err != nil {
 				t.Fatal(err)
 			}

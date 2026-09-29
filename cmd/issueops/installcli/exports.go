@@ -8,8 +8,8 @@ import (
 
 const ShellPathRCMarker = shellPathRCMarker
 
-func RunInstall(args []string) error {
-	return runInstall(args)
+func (c Command) RunInstall(args []string) error {
+	return c.runInstall(args)
 }
 
 func ValidateInteractiveInput(stdin *os.File) error {

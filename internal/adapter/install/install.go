@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	installapp "issueops/internal/application/install"
 	"issueops/internal/port"
 )
 
@@ -40,18 +39,13 @@ func DefaultNativeInstallRequest(root, home, codexHome, binPath string) port.Nat
 	}
 }
 
-// InstallNative supplies host filesystem observations to the shared use case.
-func InstallNative(req port.NativeInstallRequest, installers ...port.HostInstaller) (port.NativeInstallResult, error) {
-	return (installapp.Service{Environment: nativeEnvironment{}, Installers: installers}).Install(req)
-}
+type Environment struct{}
 
-type nativeEnvironment struct{}
-
-func (nativeEnvironment) AbsClean(path string) string { return absClean(path) }
-func (nativeEnvironment) ResolveStableRoot(root string) (string, error) {
+func (Environment) AbsClean(path string) string { return absClean(path) }
+func (Environment) ResolveStableRoot(root string) (string, error) {
 	return ResolveStableNativeRoot(root)
 }
-func (nativeEnvironment) ValidateRuntime(root, binary string) error {
+func (Environment) ValidateRuntime(root, binary string) error {
 	return ValidateStableNativeRuntime(root, binary)
 }
-func (nativeEnvironment) ListSkills(root string) ([]string, error) { return ListSkillNames(root) }
+func (Environment) ListSkills(root string) ([]string, error) { return ListSkillNames(root) }

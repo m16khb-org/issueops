@@ -1,21 +1,17 @@
 package omo
 
 import (
-	"os"
-
 	"issueops/internal/port"
+	"os"
 )
 
-type InstallPlan = port.InstallPlan
-
-var (
-	NewInstallPlan func(host string, dryRun bool) InstallPlan
-	WriteJSONPlan  func(path, kind string, value any, perm os.FileMode, dryRun bool) (port.InstallFile, error)
-	WriteTextPlan  func(path, kind, content string, perm os.FileMode, dryRun bool) (port.InstallFile, error)
-
+// Dependencies contains the file and host capabilities used by one installer.
+type Dependencies struct {
 	CaptureNativeActivationEvidence func(host, surface, path, semanticSHA256 string) (port.NativeActivationEvidence, error)
-	EnsureSymlinkPlan               func(target, path string, dryRun bool) (port.InstallLink, error)
+	MCPCatalogSHA256                func() (string, error)
+	NewInstallPlan                  func(host string, dryRun bool) port.InstallPlan
 	PlanHostSkillLinks              func(root, destRoot string, skillNames []string, host string, dryRun bool) ([]string, []port.InstallLink, []string, []error)
 	SemanticSHA256                  func(value any) (string, error)
-	MCPCatalogSHA256                func() (string, error)
-)
+	WriteJSONPlan                   func(path, kind string, value any, perm os.FileMode, dryRun bool) (port.InstallFile, error)
+	WriteTextPlan                   func(path, kind, content string, perm os.FileMode, dryRun bool) (port.InstallFile, error)
+}

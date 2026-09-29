@@ -423,11 +423,8 @@
       "owner": "inbound",
       "task": "T11",
       "symbols": [
-        "func Configure",
-        "func Reset",
-        "func defaultDeps",
-        "func defaultIssueOpsRoot",
         "func printJSON",
+        "type Command",
         "type Deps"
       ]
     },
@@ -437,9 +434,9 @@
       "task": "T11",
       "symbols": [
         "func AppendShellPathLinePlan",
+        "func Command.RunInstall",
         "func PreferredShellRC",
         "func PrintNativeResult",
-        "func RunInstall",
         "func ShellRCAlreadyAddsLocalBin",
         "func ValidateInteractiveInput"
       ]
@@ -449,12 +446,12 @@
       "owner": "inbound",
       "task": "T11",
       "symbols": [
-        "func executeInstall",
+        "func Command.executeInstall",
+        "func Command.runInstall",
         "func installUserHomeDir",
         "func nativeActivationStep",
         "func nativeInstallCandidatePath",
         "func outputInstallResult",
-        "func runInstall",
         "func validInstallPathMode"
       ]
     },
@@ -502,6 +499,7 @@
       "owner": "inbound",
       "task": "T11",
       "symbols": [
+        "func Command.prepareInstallPathPlanForCandidate",
         "func appendShellPathLinePlan",
         "func ensureShortCommandShimPlan",
         "func installPathDirectoryExists",
@@ -515,8 +513,6 @@
         "func managedCommandPathResult",
         "func planShellPath",
         "func preferredShellRC",
-        "func prepareInstallPathPlan",
-        "func prepareInstallPathPlanForCandidate",
         "func shellRCAlreadyAddsLocalBin",
         "type installPathTransaction"
       ]
@@ -539,15 +535,9 @@
       "owner": "inbound",
       "task": "T11",
       "symbols": [
-        "func appendUpstreamMessages",
+        "func Command.appendUpstreamMessages",
         "func formatUpstreamItem"
       ]
-    },
-    {
-      "path": "cmd/issueops/installcli/issueops_dependencies.go",
-      "owner": "inbound",
-      "task": "T11",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/issueopsapp/adapter_tail_wiring.go",
@@ -712,6 +702,17 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/host_installers.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newAgyInstaller",
+        "func newClaudeInstaller",
+        "func newCodexInstaller",
+        "func newOmoInstaller"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/install_readers_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -727,14 +728,6 @@
         "func hostActivationReadback.Verify",
         "func installDependencies",
         "type hostActivationReadback"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/installplan_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureInstallPlans"
       ]
     },
     {
@@ -2858,7 +2851,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func VerifyActivation"
+        "func Installer.VerifyActivation"
       ]
     },
     {
@@ -2866,7 +2859,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "type InstallPlan"
+        "type Dependencies"
       ]
     },
     {
@@ -2885,11 +2878,11 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func agyMCPServer",
-        "func agyProjectMCPConfig",
-        "func agyUserMCPServer",
-        "func writeAgyProjectMCP",
-        "func writeAgyUserMCP"
+        "func Installer.agyMCPServer",
+        "func Installer.agyProjectMCPConfig",
+        "func Installer.agyUserMCPServer",
+        "func Installer.writeAgyProjectMCP",
+        "func Installer.writeAgyUserMCP"
       ]
     },
     {
@@ -3068,14 +3061,16 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func VerifyActivation"
+        "func Installer.VerifyActivation"
       ]
     },
     {
-      "path": "internal/adapter/claude/adapter_tail_dependencies.go",
+      "path": "internal/adapter/claude/dependencies.go",
       "owner": "adapter",
       "task": "T20",
-      "symbols": []
+      "symbols": [
+        "type Dependencies"
+      ]
     },
     {
       "path": "internal/adapter/claude/install.go",
@@ -3095,12 +3090,12 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func Installer.claudeSettingsConfig",
+        "func Installer.mergeClaudeHookConfig",
+        "func Installer.writeClaudeSettings",
         "func claudeHookCommand",
         "func claudeHookGroup",
         "func claudeLifecycleHookSpecs",
-        "func claudeSettingsConfig",
-        "func mergeClaudeHookConfig",
-        "func writeClaudeSettings",
         "type claudeLifecycleHookSpec"
       ]
     },
@@ -3109,16 +3104,8 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func claudeUserMCPServer",
-        "func writeClaudeUserMCP"
-      ]
-    },
-    {
-      "path": "internal/adapter/claude/installplan_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "type InstallPlan"
+        "func Installer.writeClaudeUserMCP",
+        "func claudeUserMCPServer"
       ]
     },
     {
@@ -3266,14 +3253,16 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func VerifyActivation"
+        "func Installer.VerifyActivation"
       ]
     },
     {
-      "path": "internal/adapter/codex/adapter_tail_dependencies.go",
+      "path": "internal/adapter/codex/dependencies.go",
       "owner": "adapter",
       "task": "T20",
-      "symbols": []
+      "symbols": [
+        "type Dependencies"
+      ]
     },
     {
       "path": "internal/adapter/codex/install.go",
@@ -3291,10 +3280,10 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func codexGlobalBlock",
+        "func Installer.codexGlobalBlock",
+        "func Installer.writeGlobalConfig",
         "func codexTemplate",
-        "func removeTOMLSection",
-        "func writeGlobalConfig"
+        "func removeTOMLSection"
       ]
     },
     {
@@ -3311,22 +3300,14 @@
       "task": "T20",
       "symbols": [
         "func HooksConfig",
+        "func Installer.mergeHookConfig",
+        "func Installer.writeCodexHooks",
         "func codexHookCommand",
         "func codexHookGroup",
         "func codexHooksConfig",
         "func codexLifecycleHookSpecs",
         "func hookGroupHasHooks",
-        "func mergeHookConfig",
-        "func writeCodexHooks",
         "type codexLifecycleHookSpec"
-      ]
-    },
-    {
-      "path": "internal/adapter/codex/installplan_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "type InstallPlan"
       ]
     },
     {
@@ -4035,12 +4016,11 @@
       "task": "T11",
       "symbols": [
         "func DefaultNativeInstallRequest",
-        "func InstallNative",
-        "func nativeEnvironment.AbsClean",
-        "func nativeEnvironment.ListSkills",
-        "func nativeEnvironment.ResolveStableRoot",
-        "func nativeEnvironment.ValidateRuntime",
-        "type nativeEnvironment"
+        "func Environment.AbsClean",
+        "func Environment.ListSkills",
+        "func Environment.ResolveStableRoot",
+        "func Environment.ValidateRuntime",
+        "type Environment"
       ]
     },
     {
@@ -5773,7 +5753,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func VerifyActivation"
+        "func Installer.VerifyActivation"
       ]
     },
     {
@@ -5781,7 +5761,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "type InstallPlan"
+        "type Dependencies"
       ]
     },
     {
@@ -5800,11 +5780,11 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func omoMCPServer",
-        "func omoProjectMCPConfig",
-        "func omoUserMCPServer",
-        "func writeOmoProjectMCP",
-        "func writeOmoUserMCP"
+        "func Installer.omoMCPServer",
+        "func Installer.omoProjectMCPConfig",
+        "func Installer.omoUserMCPServer",
+        "func Installer.writeOmoProjectMCP",
+        "func Installer.writeOmoUserMCP"
       ]
     },
     {
@@ -18080,7 +18060,7 @@
     {
       "id": "install-orchestration",
       "source_path": "cmd/issueops/installcli/install.go",
-      "source_symbol": "func executeInstall",
+      "source_symbol": "func Command.executeInstall",
       "responsibility": "present install transaction outcome through CLI text or JSON",
       "target": "internal/application/install",
       "target_symbol": "func RunTransaction",
@@ -24488,6 +24468,23 @@
         "TestCombinedCheckStopsBeforeReviewOnStaticFailure",
         "TestCombinedCheckPassesReviewOptionsAfterStaticSuccess",
         "TestAPIDocCommandsKeepIndependentServices"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "native-install-assembly",
+      "source_path": "internal/adapter/install/install.go",
+      "source_symbol": "func InstallNative",
+      "responsibility": "compose host installers and technical environment at root; native installation application owns execution order and result aggregation",
+      "target": "internal/application/install",
+      "target_symbol": "func Service.Install",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/install_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestInstallNativeDelegatesThroughHostInstaller",
+        "TestInstallRootsAndAllHostReadbacksStayIsolated"
       ],
       "status": "migrated"
     }

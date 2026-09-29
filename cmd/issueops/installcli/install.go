@@ -15,7 +15,7 @@ import (
 	"issueops/internal/port"
 )
 
-func runInstall(args []string) error {
+func (c Command) runInstall(args []string) error {
 	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	projectLocal := fs.Bool("project-local", false, "also write project-local .mcp.json/.claude settings and project skill links; default is user/global only")
 	dryRun := fs.Bool("dry-run", false, "plan files and links without writing them")
@@ -49,40 +49,40 @@ func runInstall(args []string) error {
 	if !validInstallPathMode(*pathMode) {
 		return fmt.Errorf("invalid --path-mode %q: expected auto, manual, or skip", *pathMode)
 	}
-	root := deps.IssueOpsRoot()
-	if deps.NativeInstallRequest == nil || deps.InstallNative == nil {
+	root := c.IssueOpsRoot()
+	if c.NativeInstallRequest == nil || c.InstallNative == nil {
 		return fmt.Errorf("native installer is not configured")
 	}
-	req := deps.NativeInstallRequest(root, home, codexHome, filepath.Join(root, "bin", "issueops"))
+	req := c.NativeInstallRequest(root, home, codexHome, filepath.Join(root, "bin", "issueops"))
 	req.ProjectLocal = *projectLocal
 	req.DryRun = *dryRun
 	req.AdoptCommandFile = *adoptCommandFile
-	candidatePath, err := nativeInstallCandidatePath(req.BinPath, req.DryRun, deps.ExecutablePath)
+	candidatePath, err := nativeInstallCandidatePath(req.BinPath, req.DryRun, c.ExecutablePath)
 	if err != nil {
 		return err
 	}
-	stateDir := filepath.Dir(IssueOpsStateRoot())
+	stateDir := filepath.Dir(c.StateRoot)
 	activationRequest := activationcontract.Request{StateRoot: stateDir, IssueOpsRoot: req.Root, TargetBinary: req.BinPath}
-	if !req.DryRun && deps.ActivationBackend == nil {
+	if !req.DryRun && c.ActivationBackend == nil {
 		return fmt.Errorf("native activation backend is unavailable")
 	}
 	activationStep, err := nativeActivationStep(req.DryRun, os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_STEP"))
 	if err != nil {
 		return err
 	}
-	if deps.ActivationReadback == nil {
+	if c.ActivationReadback == nil {
 		return fmt.Errorf("native activation readback is not configured")
 	}
-	readback := deps.ActivationReadback(req)
-	activationService := activationapp.NewService(deps.ActivationBackend, readback)
-	return executeInstall(req, candidatePath, *pathMode, activationStep, *jsonOut, activationService, activationRequest)
+	readback := c.ActivationReadback(req)
+	activationService := activationapp.NewService(c.ActivationBackend, readback)
+	return c.executeInstall(req, candidatePath, *pathMode, activationStep, *jsonOut, activationService, activationRequest)
 }
 
-func executeInstall(req port.NativeInstallRequest, candidatePath, pathMode, activationStep string, jsonOut bool, activationService *activationapp.Service, activationRequest activationcontract.Request) error {
+func (c Command) executeInstall(req port.NativeInstallRequest, candidatePath, pathMode, activationStep string, jsonOut bool, activationService *activationapp.Service, activationRequest activationcontract.Request) error {
 	outcome, err := installapp.RunTransaction(context.Background(), installapp.TransactionRequest{
 		Install: req, CandidatePath: candidatePath, PathMode: pathMode, Step: activationStep,
 		TransitionID: os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_TRANSITION_ID"), Activation: activationRequest,
-	}, installTransactionEffects{}, activationService)
+	}, installTransactionEffects{command: c}, activationService)
 	if outcome.Install != nil {
 		return outputInstallResult(*outcome.Install, err, jsonOut)
 	}

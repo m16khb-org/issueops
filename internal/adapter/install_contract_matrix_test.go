@@ -14,11 +14,8 @@ import (
 	"syscall"
 	"testing"
 
-	agyadapter "issueops/internal/adapter/agy"
-	claudeadapter "issueops/internal/adapter/claude"
-	codexadapter "issueops/internal/adapter/codex"
 	install "issueops/internal/adapter/install"
-	omoadapter "issueops/internal/adapter/omo"
+
 	"issueops/internal/port"
 )
 
@@ -86,7 +83,7 @@ func TestNativeInstallAdapterContractMatrix(t *testing.T) {
 
 			req := install.DefaultNativeInstallRequest(root, home, codexHome, binPath)
 			req.ProjectLocal = tc.projectLocal
-			result, err := install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(hostprotocol.OmoLifecycleExtension), agyadapter.NewInstaller())
+			result, err := installNativeForTest(req, testCodexInstaller(), testClaudeInstaller(), testOmoInstaller(), testAgyInstaller())
 			if err != nil {
 				t.Fatalf("InstallNative returned error: %v\n%+v", err, result)
 			}
@@ -108,7 +105,7 @@ func TestNativeInstallDryRunDoesNotWrite(t *testing.T) {
 	req := install.DefaultNativeInstallRequest(root, home, codexHome, binPath)
 	req.ProjectLocal = true
 	req.DryRun = true
-	result, err := install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(hostprotocol.OmoLifecycleExtension), agyadapter.NewInstaller())
+	result, err := installNativeForTest(req, testCodexInstaller(), testClaudeInstaller(), testOmoInstaller(), testAgyInstaller())
 	if err != nil {
 		t.Fatalf("dry-run InstallNative returned error: %v\n%+v", err, result)
 	}

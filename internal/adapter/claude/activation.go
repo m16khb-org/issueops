@@ -9,7 +9,7 @@ import (
 	"issueops/internal/port"
 )
 
-func VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvidence, error) {
+func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvidence, error) {
 	mcpPath := filepath.Join(req.Home, ".claude.json")
 	raw, err := os.ReadFile(mcpPath)
 	if err != nil {
@@ -27,11 +27,11 @@ func VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvi
 	if !ok {
 		return nil, fmt.Errorf("Claude MCP readback has no issueops server")
 	}
-	actualDigest, err := SemanticSHA256(actual)
+	actualDigest, err := installer.deps.SemanticSHA256(actual)
 	if err != nil {
 		return nil, err
 	}
-	expectedDigest, err := SemanticSHA256(claudeUserMCPServer(req))
+	expectedDigest, err := installer.deps.SemanticSHA256(claudeUserMCPServer(req))
 	if err != nil {
 		return nil, err
 	}
@@ -39,15 +39,15 @@ func VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvi
 		return nil, fmt.Errorf("Claude MCP readback does not target the canonical binary and ISSUEOPS_ROOT")
 	}
 	hooksPath := filepath.Join(req.Home, ".claude", "settings.json")
-	hooksDigest, err := VerifyHookActivation(hooksPath, claudeSettingsConfig(req.BinPath))
+	hooksDigest, err := installer.deps.VerifyHookActivation(hooksPath, installer.claudeSettingsConfig(req.BinPath))
 	if err != nil {
 		return nil, fmt.Errorf("Claude hook readback failed: %w", err)
 	}
-	mcpEvidence, err := CaptureNativeActivationEvidence("claude", "mcp", mcpPath, expectedDigest)
+	mcpEvidence, err := installer.deps.CaptureNativeActivationEvidence("claude", "mcp", mcpPath, expectedDigest)
 	if err != nil {
 		return nil, err
 	}
-	hookEvidence, err := CaptureNativeActivationEvidence("claude", "hooks", hooksPath, hooksDigest)
+	hookEvidence, err := installer.deps.CaptureNativeActivationEvidence("claude", "hooks", hooksPath, hooksDigest)
 	if err != nil {
 		return nil, err
 	}

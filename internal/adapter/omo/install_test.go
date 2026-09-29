@@ -3,30 +3,16 @@ package omo
 import (
 	"encoding/json"
 	"issueops/internal/adapter/hostprotocol"
+	"issueops/internal/adapter/installutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
-	"issueops/internal/adapter/installutil"
+
 	"issueops/internal/port"
 )
-
-func init() {
-	NewInstallPlan = func(host string, dryRun bool) InstallPlan {
-		return installutil.NewPlan(host, dryRun)
-	}
-	WriteJSONPlan = installutil.WriteJSONPlan
-	WriteTextPlan = installutil.WriteTextPlan
-	CaptureNativeActivationEvidence = installutil.CaptureNativeActivationEvidence
-	EnsureSymlinkPlan = installutil.EnsureSymlinkPlan
-	PlanHostSkillLinks = installutil.PlanHostSkillLinks
-	SemanticSHA256 = installutil.SemanticSHA256
-	MCPCatalogSHA256 = func() (string, error) {
-		return SemanticSHA256(mcpcatalog.AdvertisedTools())
-	}
-}
 
 func TestInstallerWritesNativeOmoSurfaces(t *testing.T) {
 	req := omoTestRequest(t)
@@ -37,7 +23,7 @@ func TestInstallerWritesNativeOmoSurfaces(t *testing.T) {
 		},
 	})
 
-	result, err := NewInstaller(hostprotocol.OmoLifecycleExtension).Install(req)
+	result, err := testInstaller().Install(req)
 	if err != nil {
 		t.Fatalf("Install returned error: %v\n%+v", err, result)
 	}
@@ -88,7 +74,7 @@ func TestInstallerDryRunPlansWithoutWriting(t *testing.T) {
 	req.ProjectLocal = true
 	req.DryRun = true
 
-	result, err := NewInstaller(hostprotocol.OmoLifecycleExtension).Install(req)
+	result, err := testInstaller().Install(req)
 	if err != nil {
 		t.Fatalf("dry-run returned error: %v\n%+v", err, result)
 	}
@@ -108,10 +94,10 @@ func TestInstallerDryRunPlansWithoutWriting(t *testing.T) {
 
 func TestVerifyActivationRejectsTamperedExtension(t *testing.T) {
 	req := omoTestRequest(t)
-	if _, err := NewInstaller(hostprotocol.OmoLifecycleExtension).Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
-	evidence, err := VerifyActivation(req, hostprotocol.OmoLifecycleExtension)
+	evidence, err := testInstaller().VerifyActivation(req)
 	if err != nil {
 		t.Fatalf("VerifyActivation returned error: %v", err)
 	}
@@ -124,7 +110,7 @@ func TestVerifyActivationRejectsTamperedExtension(t *testing.T) {
 	if err := os.WriteFile(extensionPath, []byte("export default function () {}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := VerifyActivation(req, hostprotocol.OmoLifecycleExtension); err == nil || !strings.Contains(err.Error(), "lifecycle extension") {
+	if _, err := testInstaller().VerifyActivation(req); err == nil || !strings.Contains(err.Error(), "lifecycle extension") {
 		t.Fatalf("tampered extension must fail strict readback, got %v", err)
 	}
 }
@@ -136,15 +122,15 @@ func TestTrackedTemplatesMatchGeneratedContent(t *testing.T) {
 		t.Fatal("tracked Omo lifecycle extension drifted from generated template")
 	}
 	config := readOmoTestJSON(t, filepath.Join(root, "configs", "omo", "mcp.json"))
-	got, err := SemanticSHA256(config)
+	got, err := installutil.SemanticSHA256(config)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectedConfig, err := omoProjectMCPConfig()
+	expectedConfig, err := testInstaller().omoProjectMCPConfig()
 	if err != nil {
 		t.Fatal(err)
 	}
-	want, err := SemanticSHA256(expectedConfig)
+	want, err := installutil.SemanticSHA256(expectedConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +208,7 @@ func assertOmoTestMCPServer(t *testing.T, config map[string]any, name, command, 
 	if !ok || env["ISSUEOPS_ROOT"] != root {
 		t.Fatalf("server %q ISSUEOPS_ROOT drifted: %+v", name, server)
 	}
-	wantCatalogSHA256, err := SemanticSHA256(mcpcatalog.AdvertisedTools())
+	wantCatalogSHA256, err := installutil.SemanticSHA256(mcpcatalog.AdvertisedTools())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,7 +10,7 @@ import (
 	"issueops/internal/port"
 )
 
-func writeCodexHooks(path string, req port.NativeInstallRequest) (port.InstallFile, []string, error) {
+func (installer Installer) writeCodexHooks(path string, req port.NativeInstallRequest) (port.InstallFile, []string, error) {
 	file := port.InstallFile{Path: path, Kind: "codex_user_hooks_config"}
 	config := map[string]any{}
 	if b, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(b))) > 0 {
@@ -20,16 +20,16 @@ func writeCodexHooks(path string, req port.NativeInstallRequest) (port.InstallFi
 	} else if err != nil && !os.IsNotExist(err) && !req.DryRun {
 		return file, nil, err
 	}
-	if err := ValidateHookConfigForMerge(config, codexLifecycleHookEvents); err != nil {
+	if err := installer.deps.ValidateHookConfigForMerge(config, codexLifecycleHookEvents); err != nil {
 		return file, nil, err
 	}
-	messages := HookTargetDriftMessages(config, "codex", req.BinPath)
+	messages := installer.deps.HookTargetDriftMessages(config, "codex", req.BinPath)
 	// 경로가 같아도 빌드 세대가 갈리면 이전 세대 hook이 새 typed command를
 	// 모른 채 차단해 복구가 교착된다(#328). 그 축을 여기서 함께 보고한다.
-	if HookTargetGenerationMessages != nil && RunningBuildGenerationString != nil && FileBuildGenerationString != nil {
-		messages = append(messages, HookTargetGenerationMessages(config, "codex", req.BinPath, RunningBuildGenerationString(), FileBuildGenerationString)...)
+	if installer.deps.HookTargetGenerationMessages != nil && installer.deps.RunningBuildGenerationString != nil && installer.deps.FileBuildGenerationString != nil {
+		messages = append(messages, installer.deps.HookTargetGenerationMessages(config, "codex", req.BinPath, installer.deps.RunningBuildGenerationString(), installer.deps.FileBuildGenerationString)...)
 	}
-	merged := mergeHookConfig(config, req.BinPath)
+	merged := installer.mergeHookConfig(config, req.BinPath)
 	b, err := json.MarshalIndent(merged, "", "  ")
 	if err != nil {
 		return file, messages, err
@@ -103,7 +103,7 @@ func codexHookCommand(binPath, subcommand string) string {
 	return cmd
 }
 
-func mergeHookConfig(config map[string]any, binPath string) map[string]any {
+func (installer Installer) mergeHookConfig(config map[string]any, binPath string) map[string]any {
 	if config == nil {
 		config = map[string]any{}
 	}
@@ -124,7 +124,7 @@ func mergeHookConfig(config map[string]any, binPath string) map[string]any {
 				if !hookGroupHasHooks(group) {
 					continue
 				}
-				if HookGroupContainsAgentHarness(group) || HookGroupContainsCommand(group, shellQuote(binPath)+" hook ") {
+				if installer.deps.HookGroupContainsAgentHarness(group) || installer.deps.HookGroupContainsCommand(group, shellQuote(binPath)+" hook ") {
 					if spec, desiredEvent := desired[event]; desiredEvent && !replaced {
 						groups = append(groups, codexHookGroup(spec))
 						replaced = true
