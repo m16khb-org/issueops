@@ -13,14 +13,6 @@ const aggregateOutputBudgetBytes = 8 * 1024
 
 type StepResult = verifycontract.StepResult
 
-func Validate(root string) StepResult {
-	return validateNativeIntegration(root)
-}
-
-func validateNativeIntegration(root string) StepResult {
-	return validateNativeIntegrationWithDeps(root, nativeIntegrationValidationDeps{})
-}
-
 func validateNativeIntegrationWithDeps(root string, deps nativeIntegrationValidationDeps) StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
@@ -30,13 +22,13 @@ func validateNativeIntegrationWithDeps(root string, deps nativeIntegrationValida
 	}
 	errs := []string{}
 	stdoutParts := []string{}
-	nativeSkills, err := deps.listSkills(root)
+	nativeSkills, err := deps.ListSkillNames(root)
 	if err != nil {
 		errs = append(errs, "list native skills: "+err.Error())
 	}
-	codexSkills, _ := deps.skillNamesForHost(root, nativeSkills, "codex")
-	claudeSkills, _ := deps.skillNamesForHost(root, nativeSkills, "claude")
-	omoSkills, _ := deps.skillNamesForHost(root, nativeSkills, "omo")
+	codexSkills, _ := deps.SkillNamesForHost(root, nativeSkills, "codex")
+	claudeSkills, _ := deps.SkillNamesForHost(root, nativeSkills, "claude")
+	omoSkills, _ := deps.SkillNamesForHost(root, nativeSkills, "omo")
 	paths := nativeIntegrationRequiredPaths(root, home, codexSkills, claudeSkills, omoSkills)
 	errs = append(errs, nativeIntegrationPathErrors(paths, deps)...)
 	errs = append(errs, nativeIntegrationCodexConfigErrors(root, home, deps)...)

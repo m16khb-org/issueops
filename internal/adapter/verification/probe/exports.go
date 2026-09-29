@@ -50,10 +50,6 @@ func ValidateGoFormat(root string) StepResult {
 	return goformat.Validate(root)
 }
 
-func ValidateNativeIntegration(root string) StepResult {
-	return validateNativeIntegration(root)
-}
-
 func DetectClaudeMCPDuplicateWarnings(output string) []ClaudeMCPDuplicateWarning {
 	return nativeintegration.DetectClaudeMCPDuplicateWarnings(output)
 }

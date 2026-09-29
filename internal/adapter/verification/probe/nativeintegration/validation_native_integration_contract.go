@@ -42,31 +42,31 @@ func nativeIntegrationCodexConfigErrors(root, home string, deps nativeIntegratio
 	if b, err := deps.readFile(filepath.Join(home, ".codex", "config.toml")); err != nil || !strings.Contains(string(b), "[mcp_servers.issueops]") {
 		errs = append(errs, "Codex MCP config missing issueops")
 	}
-	expectedBinary, err := canonicalHarnessBinary(root)
+	expectedBinary, err := deps.canonicalHarnessBinary(root)
 	if err != nil {
 		errs = append(errs, "resolve stable native root: "+err.Error())
 		return errs
 	}
-	if b, err := deps.readFile(filepath.Join(home, ".codex", "hooks.json")); err != nil || !hasThinCodexContextHooks(string(b), expectedBinary) {
+	if b, err := deps.readFile(filepath.Join(home, ".codex", "hooks.json")); err != nil || !deps.hasThinCodexContextHooks(string(b), expectedBinary) {
 		errs = append(errs, "Codex thin context hooks missing issueops SessionStart surface")
 	}
 	return errs
 }
 
-func hasThinCodexContextHooks(config, expectedBinary string) bool {
-	if CodexHooksConfig == nil || VerifyHookConfigActivation == nil {
+func (deps nativeIntegrationValidationDeps) hasThinCodexContextHooks(config, expectedBinary string) bool {
+	if deps.CodexHooksConfig == nil || deps.VerifyHookConfigActivation == nil {
 		return false
 	}
 	var actual map[string]any
 	if json.Unmarshal([]byte(config), &actual) != nil {
 		return false
 	}
-	_, err := VerifyHookConfigActivation(actual, CodexHooksConfig(expectedBinary))
+	_, err := deps.VerifyHookConfigActivation(actual, deps.CodexHooksConfig(expectedBinary))
 	return err == nil
 }
 
 func nativeIntegrationOmoConfigErrors(root, home string, deps nativeIntegrationValidationDeps) []string {
-	stableRoot, err := canonicalStableNativeRoot(root)
+	stableRoot, err := deps.canonicalStableNativeRoot(root)
 	if err != nil {
 		return []string{"resolve stable native root for Omo: " + err.Error()}
 	}
@@ -77,9 +77,9 @@ func nativeIntegrationOmoConfigErrors(root, home string, deps nativeIntegrationV
 		errs = append(errs, "Omo MCP config missing canonical issueops server")
 	}
 	extensionPath := filepath.Join(home, ".omo", "extensions", "issueops.js")
-	if OmoLifecycleExtension == nil {
+	if deps.OmoLifecycleExtension == nil {
 		errs = append(errs, "Omo lifecycle extension renderer is unavailable")
-	} else if body, readErr := deps.readFile(extensionPath); readErr != nil || string(body) != OmoLifecycleExtension(expectedBinary) {
+	} else if body, readErr := deps.readFile(extensionPath); readErr != nil || string(body) != deps.OmoLifecycleExtension(expectedBinary) {
 		errs = append(errs, "Omo lifecycle extension missing canonical session_start/session_compact surface")
 	}
 	return errs
@@ -106,19 +106,19 @@ func hasCanonicalOmoMCP(body []byte, expectedBinary, root string) bool {
 	return ok && env["ISSUEOPS_ROOT"] == root
 }
 
-func canonicalHarnessBinary(root string) (string, error) {
-	stableRoot, err := canonicalStableNativeRoot(root)
+func (deps nativeIntegrationValidationDeps) canonicalHarnessBinary(root string) (string, error) {
+	stableRoot, err := deps.canonicalStableNativeRoot(root)
 	if err != nil {
 		return "", err
 	}
 	return filepath.Join(stableRoot, "bin", "issueops"), nil
 }
 
-func canonicalStableNativeRoot(root string) (string, error) {
-	if ResolveStableNativeRoot == nil {
+func (deps nativeIntegrationValidationDeps) canonicalStableNativeRoot(root string) (string, error) {
+	if deps.ResolveStableNativeRoot == nil {
 		return "", fmt.Errorf("stable native root resolver is unavailable")
 	}
-	return ResolveStableNativeRoot(root)
+	return deps.ResolveStableNativeRoot(root)
 }
 
 func nativeIntegrationDuplicateWarningOutput(fixture string) ([]string, string) {

@@ -540,14 +540,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/adapter_tail_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureAdapterTail"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/apidoc_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -711,14 +703,6 @@
         "func newClaudeInstaller",
         "func newCodexInstaller",
         "func newOmoInstaller"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/install_readers_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureInstallReaders"
       ]
     },
     {
@@ -1212,6 +1196,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/probe_native_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newNativeIntegrationProbe"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/probe_state_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -1439,7 +1431,6 @@
         "func validateInspect",
         "func validateInstallDryRunSmoke",
         "func validateMCP",
-        "func validateNativeIntegration",
         "func validateParallelTempIsolation",
         "func validatePreflightFuzz",
         "func validateSelfVerifyCandidateExport",
@@ -7709,7 +7700,6 @@
         "func ValidateHarnessInvariants",
         "func ValidateInspect",
         "func ValidateInstallDryRunSmoke",
-        "func ValidateNativeIntegration",
         "func ValidateParallelTempIsolation",
         "func ValidatePreflightFuzz",
         "func ValidateWebFetchBattery",
@@ -7841,18 +7831,6 @@
       ]
     },
     {
-      "path": "internal/adapter/verification/probe/nativeintegration/adapter_tail_dependencies.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/verification/probe/nativeintegration/install_dependencies.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/verification/probe/nativeintegration/validation_native_duplicate_warning.go",
       "owner": "adapter",
       "task": "T18",
@@ -7869,8 +7847,6 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func Validate",
-        "func validateNativeIntegration",
         "func validateNativeIntegrationWithDeps",
         "type StepResult"
       ]
@@ -7880,15 +7856,15 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func canonicalHarnessBinary",
-        "func canonicalStableNativeRoot",
         "func hasCanonicalOmoMCP",
-        "func hasThinCodexContextHooks",
         "func nativeIntegrationCodexConfigErrors",
         "func nativeIntegrationDuplicateWarningOutput",
         "func nativeIntegrationOmoConfigErrors",
         "func nativeIntegrationPathErrors",
-        "func nativeIntegrationRequiredPaths"
+        "func nativeIntegrationRequiredPaths",
+        "func nativeIntegrationValidationDeps.canonicalHarnessBinary",
+        "func nativeIntegrationValidationDeps.canonicalStableNativeRoot",
+        "func nativeIntegrationValidationDeps.hasThinCodexContextHooks"
       ]
     },
     {
@@ -7899,6 +7875,15 @@
         "func exists",
         "func nativeIntegrationValidationDeps.withDefaults",
         "type nativeIntegrationValidationDeps"
+      ]
+    },
+    {
+      "path": "internal/adapter/verification/probe/nativeintegration/validator.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Validator.Validate",
+        "type Validator"
       ]
     },
     {
@@ -8287,7 +8272,6 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func validateNativeIntegration",
         "type ClaudeMCPDuplicateWarning"
       ]
     },

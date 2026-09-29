@@ -3,6 +3,7 @@ package nativeintegration
 import (
 	"errors"
 	"fmt"
+	"issueops/internal/adapter/hostprotocol"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,33 +12,35 @@ import (
 
 func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testing.T) {
 	root := t.TempDir()
-	stubStableNativeRoot(t, func(string) (string, error) { return root, nil })
+	validator := testNativeValidator()
+	validator.ResolveStableNativeRoot = func(string) (string, error) { return root, nil }
 	home := t.TempDir()
 	existing := nativeIntegrationExpectedPaths(root, home)
+	validator.ListSkillNames = func(string) ([]string, error) {
+		return []string{"shared", "codex-only", "claude-only", "omo-only"}, nil
+	}
+	validator.SkillNamesForHost = func(_ string, _ []string, host string) ([]string, []string) {
+		switch host {
+		case "codex":
+			return []string{"shared", "codex-only"}, nil
+		case "claude":
+			return []string{"shared", "claude-only"}, nil
+		case "omo":
+			return []string{"shared", "omo-only"}, nil
+		default:
+			return nil, nil
+		}
+	}
 	deps := nativeIntegrationValidationDeps{
+		Validator:   validator,
 		userHomeDir: func() (string, error) { return home, nil },
-		listSkills: func(string) ([]string, error) {
-			return []string{"shared", "codex-only", "claude-only", "omo-only"}, nil
-		},
-		skillNamesForHost: func(_ string, _ []string, host string) ([]string, []string) {
-			switch host {
-			case "codex":
-				return []string{"shared", "codex-only"}, nil
-			case "claude":
-				return []string{"shared", "claude-only"}, nil
-			case "omo":
-				return []string{"shared", "omo-only"}, nil
-			default:
-				return nil, nil
-			}
-		},
-		exists: func(path string) bool { return existing[path] },
+		exists:      func(path string) bool { return existing[path] },
 		readFile: func(path string) ([]byte, error) {
 			switch {
 			case path == filepath.Join(home, ".omo", "mcp.json"):
 				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, filepath.Join(root, "bin", "issueops"), root)), nil
 			case path == filepath.Join(home, ".omo", "extensions", "issueops.js"):
-				return []byte(OmoLifecycleExtension(filepath.Join(root, "bin", "issueops"))), nil
+				return []byte(hostprotocol.OmoLifecycleExtension(filepath.Join(root, "bin", "issueops"))), nil
 			}
 			switch filepath.Base(path) {
 			case "config.toml":
@@ -68,15 +71,17 @@ func TestNativeIntegrationOmoConfigAcceptsStableRootFromWorktree(t *testing.T) {
 	worktreeRoot := t.TempDir()
 	stableRoot := t.TempDir()
 	home := t.TempDir()
-	stubStableNativeRoot(t, func(string) (string, error) { return stableRoot, nil })
+	validator := testNativeValidator()
+	validator.ResolveStableNativeRoot = func(string) (string, error) { return stableRoot, nil }
 	expectedBinary := filepath.Join(stableRoot, "bin", "issueops")
 	deps := nativeIntegrationValidationDeps{
+		Validator: validator,
 		readFile: func(path string) ([]byte, error) {
 			switch path {
 			case filepath.Join(home, ".omo", "mcp.json"):
 				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, expectedBinary, stableRoot)), nil
 			case filepath.Join(home, ".omo", "extensions", "issueops.js"):
-				return []byte(OmoLifecycleExtension(expectedBinary)), nil
+				return []byte(hostprotocol.OmoLifecycleExtension(expectedBinary)), nil
 			default:
 				return nil, errors.New("unexpected read")
 			}
@@ -90,16 +95,18 @@ func TestNativeIntegrationOmoConfigAcceptsStableRootFromWorktree(t *testing.T) {
 
 func TestValidateNativeIntegrationWithDepsCoversSkillConfigAndWarningFailures(t *testing.T) {
 	root := t.TempDir()
-	stubStableNativeRoot(t, func(string) (string, error) { return root, nil })
+	validator := testNativeValidator()
+	validator.ResolveStableNativeRoot = func(string) (string, error) { return root, nil }
 	home := t.TempDir()
 	existing := nativeIntegrationExpectedPaths(root, home)
+	validator.ListSkillNames = func(string) ([]string, error) { return nil, errors.New("skill list failed") }
+	validator.SkillNamesForHost = func(string, []string, string) ([]string, []string) {
+		return nil, nil
+	}
 	deps := nativeIntegrationValidationDeps{
+		Validator:   validator,
 		userHomeDir: func() (string, error) { return home, nil },
-		listSkills:  func(string) ([]string, error) { return nil, errors.New("skill list failed") },
-		skillNamesForHost: func(string, []string, string) ([]string, []string) {
-			return nil, nil
-		},
-		exists: func(path string) bool { return existing[path] },
+		exists:      func(path string) bool { return existing[path] },
 		readFile: func(path string) ([]byte, error) {
 			if strings.HasSuffix(path, "config.toml") {
 				return []byte("[mcp_servers.other]\n"), nil
@@ -129,19 +136,21 @@ func TestValidateNativeIntegrationWithDepsCoversSkillConfigAndWarningFailures(t 
 
 func TestValidateNativeIntegrationReportsStableRootResolutionError(t *testing.T) {
 	root := t.TempDir()
-	stubStableNativeRoot(t, func(string) (string, error) { return "", errors.New("stable root unavailable") })
+	validator := testNativeValidator()
+	validator.ResolveStableNativeRoot = func(string) (string, error) { return "", errors.New("stable root unavailable") }
 	home := t.TempDir()
 	existing := nativeIntegrationExpectedPaths(root, home)
+	validator.ListSkillNames = func(string) ([]string, error) { return []string{"shared", "codex-only", "claude-only"}, nil }
+	validator.SkillNamesForHost = func(_ string, _ []string, host string) ([]string, []string) {
+		if host == "codex" {
+			return []string{"shared", "codex-only"}, nil
+		}
+		return []string{"shared", "claude-only"}, nil
+	}
 	deps := nativeIntegrationValidationDeps{
+		Validator:   validator,
 		userHomeDir: func() (string, error) { return home, nil },
-		listSkills:  func(string) ([]string, error) { return []string{"shared", "codex-only", "claude-only"}, nil },
-		skillNamesForHost: func(_ string, _ []string, host string) ([]string, []string) {
-			if host == "codex" {
-				return []string{"shared", "codex-only"}, nil
-			}
-			return []string{"shared", "claude-only"}, nil
-		},
-		exists: func(path string) bool { return existing[path] },
+		exists:      func(path string) bool { return existing[path] },
 		readFile: func(path string) ([]byte, error) {
 			switch filepath.Base(path) {
 			case "config.toml":
@@ -174,7 +183,7 @@ func TestHasThinCodexContextHooksPermitsThirdPartyLifecycleEvents(t *testing.T) 
 			"PermissionRequest": [{"hooks": [{"type": "command", "command": "third-party permission", "timeout": 10}]}]
 		}
 	}`
-	if !hasThinCodexContextHooks(config, "/source/bin/issueops") {
+	if !(nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, "/source/bin/issueops") {
 		t.Fatal("third-party lifecycle hooks must not invalidate the managed context hook")
 	}
 }
@@ -186,7 +195,7 @@ func TestHasThinCodexContextHooksRejectsLegacyManagedEvent(t *testing.T) {
 			"PreToolUse": [{"hooks": [{"type": "command", "command": "'/source/bin/issueops' hook pre-tool-use --host codex --enforce-worktree", "timeout": 5}]}]
 		}
 	}`
-	if hasThinCodexContextHooks(config, "/source/bin/issueops") {
+	if (nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, "/source/bin/issueops") {
 		t.Fatal("legacy issueops enforcement event must invalidate the managed context-hook surface")
 	}
 }
@@ -231,12 +240,12 @@ func TestHasThinCodexContextHooksUsesCanonicalGroupsForManagedCommands(t *testin
 			expectedBinary := "/source/bin/issueops"
 			if name == "quoted canonical path with spaces" {
 				expectedBinary = "/source with spaces/bin/issueops"
-				if !hasThinCodexContextHooks(config, expectedBinary) {
+				if !(nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, expectedBinary) {
 					t.Fatal("quoted canonical path must validate")
 				}
 				return
 			}
-			if hasThinCodexContextHooks(config, expectedBinary) {
+			if (nativeIntegrationValidationDeps{Validator: testNativeValidator()}).hasThinCodexContextHooks(config, expectedBinary) {
 				t.Fatal("non-canonical managed hook config was accepted")
 			}
 		})
@@ -264,13 +273,6 @@ func nativeIntegrationExpectedPaths(root, home string) map[string]bool {
 	return out
 }
 
-func stubStableNativeRoot(t *testing.T, resolver func(string) (string, error)) {
-	t.Helper()
-	previous := ResolveStableNativeRoot
-	ResolveStableNativeRoot = resolver
-	t.Cleanup(func() { ResolveStableNativeRoot = previous })
-}
-
 func TestValidateNativeIntegrationWithDepsCoversHomeFailure(t *testing.T) {
 	step := validateNativeIntegrationWithDeps(t.TempDir(), nativeIntegrationValidationDeps{
 		userHomeDir: func() (string, error) { return "", os.ErrNotExist },
@@ -293,5 +295,31 @@ func TestDetectClaudeMCPDuplicateWarnings(t *testing.T) {
 	}
 	if got := detectClaudeMCPDuplicateWarnings("issueops: ./bin/issueops mcp - ✓ Connected\n"); len(got) != 0 {
 		t.Fatalf("non-conflicting output produced warnings: %+v", got)
+	}
+}
+
+func TestNativeIntegrationKeepsPreparedStableRoot(t *testing.T) {
+	firstRoot, secondRoot, home := t.TempDir(), t.TempDir(), t.TempDir()
+	prepare := func(root string) nativeIntegrationValidationDeps {
+		validator := testNativeValidator()
+		validator.ResolveStableNativeRoot = func(string) (string, error) { return root, nil }
+		binary := filepath.Join(root, "bin", "issueops")
+		return (nativeIntegrationValidationDeps{Validator: validator, readFile: func(path string) ([]byte, error) {
+			switch path {
+			case filepath.Join(home, ".omo", "mcp.json"):
+				return []byte(fmt.Sprintf(`{"mcpServers":{"issueops":{"command":%q,"args":["mcp"],"env":{"ISSUEOPS_ROOT":%q}}}}`, binary, root)), nil
+			case filepath.Join(home, ".omo", "extensions", "issueops.js"):
+				return []byte(hostprotocol.OmoLifecycleExtension(binary)), nil
+			default:
+				return nil, errors.New("unexpected read")
+			}
+		}}).withDefaults()
+	}
+	first := prepare(firstRoot)
+	second := prepare(secondRoot)
+	for _, deps := range []nativeIntegrationValidationDeps{first, second, first} {
+		if errs := nativeIntegrationOmoConfigErrors("worktree", home, deps); len(errs) != 0 {
+			t.Fatalf("prepared native root overwritten: %v", errs)
+		}
 	}
 }

@@ -14,9 +14,7 @@ import (
 )
 
 func wireBasicCLIDeps() {
-	configureAdapterTail()
 	configureTailCapabilities()
-	configureInstallReaders()
 	configurePolicyAndGitObservers()
 	configureAdapterStateAccess()
 

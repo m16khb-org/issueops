@@ -75,7 +75,3 @@ func validateGoFormat(root string) StepResult {
 func validateHarnessInvariants(root string) StepResult {
 	return probe.ValidateHarnessInvariants(root)
 }
-
-func validateNativeIntegration(root string) StepResult {
-	return probe.ValidateNativeIntegration(root)
-}
