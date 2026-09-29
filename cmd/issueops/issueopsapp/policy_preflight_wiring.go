@@ -1,7 +1,6 @@
 package issueopsapp
 
 import (
-	gitworktreedeps "issueops/internal/adapter/gitworktree"
 	issueopsdeps "issueops/internal/adapter/issueops"
 	implementationdeps "issueops/internal/adapter/issueops/implementation"
 	preflightadapter "issueops/internal/adapter/preflight"
@@ -12,8 +11,6 @@ import (
 // 두 기능 모두 프로세스를 띄운다. 어떤 실행기를 쓸지는 composition root의
 // 결정이고, 소비자는 요청과 결과 형식만 안다.
 func configurePolicyAndGitObservers() {
-	gitworktreedeps.GitCmd = preflightadapter.GitCmd
-	gitworktreedeps.GitOut = preflightadapter.GitOut
 	implementationdeps.GitCmd = preflightadapter.GitCmd
 	implementationdeps.GitCmdRaw = preflightadapter.GitCmdRaw
 	issueopsdeps.GitCmd = preflightadapter.GitCmd

@@ -8,14 +8,16 @@ import (
 	remote "issueops/internal/domain/issueopsremote"
 )
 
-type BranchPreparationEnvironment struct{}
+type BranchPreparationEnvironment struct {
+	RunGit func(string, ...string) (int, string, string)
+}
 
-func (BranchPreparationEnvironment) CleanParentPath(path string) (string, bool) {
+func (e BranchPreparationEnvironment) CleanParentPath(path string) (string, bool) {
 	return filepath.Clean(path), filepath.IsAbs(path)
 }
 
-func (BranchPreparationEnvironment) ResolveBaseCommit(repo, revision string) (string, error) {
-	code, stdout, stderr := GitCmd(repo, "rev-parse", "--verify", "--end-of-options", strings.TrimSpace(revision)+"^{commit}")
+func (e BranchPreparationEnvironment) ResolveBaseCommit(repo, revision string) (string, error) {
+	code, stdout, stderr := e.RunGit(repo, "rev-parse", "--verify", "--end-of-options", strings.TrimSpace(revision)+"^{commit}")
 	if code != 0 {
 		return "", fmt.Errorf("git rev-parse failed: %s", strings.TrimSpace(stderr))
 	}
@@ -26,11 +28,11 @@ func (BranchPreparationEnvironment) ResolveBaseCommit(repo, revision string) (st
 	return resolved, nil
 }
 
-func (BranchPreparationEnvironment) ObserveCodeProjectKey(repo, provider string) (string, error) {
-	if GitCmd == nil {
+func (e BranchPreparationEnvironment) ObserveCodeProjectKey(repo, provider string) (string, error) {
+	if e.RunGit == nil {
 		return "", fmt.Errorf("git command adapter is unavailable")
 	}
-	code, stdout, stderr := GitCmd(repo, "remote", "get-url", "origin")
+	code, stdout, stderr := e.RunGit(repo, "remote", "get-url", "origin")
 	if code != 0 {
 		return "", fmt.Errorf("git remote get-url origin failed: %s", strings.TrimSpace(stderr))
 	}

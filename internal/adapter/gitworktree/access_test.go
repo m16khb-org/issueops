@@ -30,7 +30,7 @@ func TestProbeAccessReturnsHostSpecificRelaunchWithoutWorktreeMutation(t *testin
 		{"codex", "codex --cd '" + repo + "'"},
 		{"claude", "cd '" + repo + "' && claude "},
 	} {
-		got, err := New().ProbeAccess(context.Background(), req, tt.host)
+		got, err := testProvisioner().ProbeAccess(context.Background(), req, tt.host)
 		if err != nil {
 			t.Fatal(err)
 		}

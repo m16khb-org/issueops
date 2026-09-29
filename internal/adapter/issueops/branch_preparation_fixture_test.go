@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	preflightadapter "issueops/internal/adapter/preflight"
 	"time"
 
 	"issueops/internal/adapter/issueops/branchinstructions"
@@ -13,7 +14,7 @@ import (
 )
 
 func branchPreparerForTest(root string) branchapp.Preparer {
-	environment := BranchPreparationEnvironment{}
+	environment := BranchPreparationEnvironment{RunGit: preflightadapter.GitCmd}
 	return branchapp.Preparer{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), CleanParentPath: environment.CleanParentPath, ResolveBaseCommit: environment.ResolveBaseCommit, UmbrellaForChildIssue: (branchapp.ActiveCycleReader{Scan: func() ([]model.IssueOpsRecord, error) { return ScanReadableIssueOps(root) }, CleanPath: pathutil.CleanAbsPath}).UmbrellaForChildIssue, ObserveCodeProjectKey: environment.ObserveCodeProjectKey, Steps: branchinstructions.Steps, Now: time.Now}
 }
 func PrepareIssueOpsBranch(root, id string, req model.IssueOpsBranchPrepareRequest) (model.IssueOpsRecord, error) {

@@ -10,6 +10,7 @@ import (
 	"issueops/internal/adapter/orca"
 	preparationoutbound "issueops/internal/adapter/outbound/issueopspreparation"
 	"issueops/internal/adapter/outbound/sqlstore"
+	preflightadapter "issueops/internal/adapter/preflight"
 	"issueops/internal/adapter/provider"
 	preparationapp "issueops/internal/application/issueopspreparation"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -39,7 +40,7 @@ func productionIssueOpsExecutionDependencies() issueOpsExecutionCompositionDeps 
 	readIssue := provider.ReadExecutionIssueSnapshot
 	return issueOpsExecutionCompositionDeps{
 		Prepare: newIssueOpsPreparationHandler(issueOpsPreparationCompositionDeps{
-			Direct: gitworktree.New(), Orca: orcaExecution, ReadIssue: readIssue,
+			Direct: gitworktree.Provisioner{GitCmd: preflightadapter.GitCmd, GitOut: preflightadapter.GitOut}, Orca: orcaExecution, ReadIssue: readIssue,
 			ValidateActor: issueops.ValidateNativeActorProcess,
 		}),
 		Orca: orcaExecution, OrcaOwner: orcaExecution, ReadIssue: readIssue,

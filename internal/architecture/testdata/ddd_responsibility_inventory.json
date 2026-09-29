@@ -3311,28 +3311,21 @@
       ]
     },
     {
-      "path": "internal/adapter/gitworktree/adapter_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/gitworktree/provisioner.go",
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func New",
         "func Provisioner.Prepare",
         "func Provisioner.ProbeAccess",
+        "func Provisioner.inspectExisting",
+        "func Provisioner.validateRequest",
+        "func Provisioner.worktreeAddArgs",
         "func createRealDirectories",
         "func ensureProbeBase",
-        "func inspectExisting",
         "func probeDirectoryReadWrite",
         "func sameResolvedPath",
         "func shellQuotePath",
-        "func validateRequest",
         "func workspaceRelaunchCommand",
-        "func worktreeAddArgs",
         "type Provisioner"
       ]
     },
@@ -12777,6 +12770,18 @@
         "func ValidateCreate",
         "func gateFileSlug",
         "func renderGateSpec"
+      ]
+    },
+    {
+      "path": "internal/domain/gitworktree/policy.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BranchCandidates",
+        "func ValidateExistingIdentity",
+        "func ValidateLocation",
+        "func ValidateRequired",
+        "type BranchCandidate"
       ]
     },
     {
@@ -24683,6 +24688,60 @@
       "evidence_tests": [
         "TestBasicCommandsKeepCapturedRootsAndStores",
         "TestManualHandoffServiceKeepsCapturedStateAndSnapshot"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "worktree-request-location",
+      "source_path": "internal/adapter/gitworktree/provisioner.go",
+      "source_symbol": "func validateRequest",
+      "responsibility": "Canonical sibling worktree location and isolation after source Git identity observation",
+      "target": "internal/domain/gitworktree",
+      "target_symbol": "func ValidateLocation",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestCanonicalWorktreeLocationAndIdentityPolicy",
+        "TestWorktreeBranchPriorityAndShortCircuit",
+        "TestPrepareCreatesCanonicalWorktreeOnConfirm"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "worktree-existing-identity",
+      "source_path": "internal/adapter/gitworktree/provisioner.go",
+      "source_symbol": "func inspectExisting",
+      "responsibility": "Existing worktree must match resolved path, requested branch and base head",
+      "target": "internal/domain/gitworktree",
+      "target_symbol": "func ValidateExistingIdentity",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestCanonicalWorktreeLocationAndIdentityPolicy",
+        "TestWorktreeBranchPriorityAndShortCircuit",
+        "TestPrepareCreatesCanonicalWorktreeOnConfirm"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "worktree-branch-priority",
+      "source_path": "internal/adapter/gitworktree/provisioner.go",
+      "source_symbol": "func worktreeAddArgs",
+      "responsibility": "Prefer existing local branch, origin remote, upstream remote, then prepared base",
+      "target": "internal/domain/gitworktree",
+      "target_symbol": "func BranchCandidates",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_preparation_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestCanonicalWorktreeLocationAndIdentityPolicy",
+        "TestWorktreeBranchPriorityAndShortCircuit",
+        "TestPrepareCreatesCanonicalWorktreeOnConfirm"
       ],
       "status": "migrated"
     }

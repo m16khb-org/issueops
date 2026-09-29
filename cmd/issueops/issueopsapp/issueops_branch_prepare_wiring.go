@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	preflightadapter "issueops/internal/adapter/preflight"
 	"time"
 
 	core "issueops/internal/adapter/issueops"
@@ -11,7 +12,7 @@ import (
 )
 
 func newBranchPreparer(root string) branchapp.Preparer {
-	environment := core.BranchPreparationEnvironment{}
+	environment := core.BranchPreparationEnvironment{RunGit: preflightadapter.GitCmd}
 	return branchapp.Preparer{
 		Records:               core.CycleRecordStore{StateRoot: root},
 		Authority:             cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same),
