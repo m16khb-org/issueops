@@ -591,8 +591,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func newIssueOpsCleanupRuntime",
-        "func normalizeOrcaRemoveWorktreeErr"
+        "func newIssueOpsCleanupRuntime"
       ]
     },
     {
@@ -1648,21 +1647,12 @@
         "func Command.runCleanupFinish",
         "func Command.runCleanupLinkedBranch",
         "func Command.runCleanupRemoteBranch",
-        "func cleanupExecutionGeneration",
         "func printCleanupAbandonRemoteEffects",
         "func printCleanupFinishError",
         "func printCleanupLinkedBranchResult",
         "func printOrphanCleanupResult",
         "func runOrphanCleanup",
         "type Deps"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/feedbackcleanup/generated_command_provenance.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func bindCleanupNextCommand"
       ]
     },
     {
@@ -5516,6 +5506,14 @@
       ]
     },
     {
+      "path": "internal/adapter/orca/remove_normalize.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func NormalizeRemoveWorktreeError"
+      ]
+    },
+    {
       "path": "internal/adapter/orca/runner.go",
       "owner": "adapter",
       "task": "T20",
@@ -8729,6 +8727,19 @@
         "type FinishEnvironment",
         "type FinishPreviewer",
         "type FinishWorkspaceObservation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscleanup/invocation.go",
+      "owner": "application",
+      "task": "T08",
+      "symbols": [
+        "func BindNextCommand",
+        "func Invocation.Abandon",
+        "func Invocation.Finish",
+        "func Invocation.LinkedBranch",
+        "func Invocation.RemoteBranch",
+        "type Invocation"
       ]
     },
     {
@@ -13258,6 +13269,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/cleanup_command.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CleanupCommandGeneration",
+        "func CleanupCommandNeedsProvenance"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/cleanup_finish.go",
       "owner": "domain",
       "task": "T08",
@@ -16678,6 +16698,16 @@
         "type CleanupFinishRecords",
         "type CleanupOwnershipRecords",
         "type CleanupRemoteBranchRecords"
+      ]
+    },
+    {
+      "path": "internal/port/cleanup_invocation.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "func CleanupInvocationError.Error",
+        "func CleanupInvocationError.Unwrap",
+        "type CleanupInvocationError"
       ]
     },
     {
@@ -25946,6 +25976,126 @@
         "cmd/issueops/issueopsapp/issueops_cmux_wiring_test.go",
         "internal/application/issueopscmux/service_test.go",
         "internal/domain/issueops/cmux_handoff_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cleanup-invocation-finish",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func Command.runCleanupFinish",
+      "responsibility": "move record/provider observations, executor invocation and generation-bound next-command sequencing to application; retain flag grammar and response rendering",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func Invocation.Finish",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/invocation_test.go",
+        "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "inbound-transport"
+    },
+    {
+      "id": "T20-cleanup-invocation-remotebranch",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func Command.runCleanupRemoteBranch",
+      "responsibility": "move record/provider observations, executor invocation and generation-bound next-command sequencing to application; retain flag grammar and response rendering",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func Invocation.RemoteBranch",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/invocation_test.go",
+        "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "inbound-transport"
+    },
+    {
+      "id": "T20-cleanup-invocation-abandon",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func Command.runCleanupAbandon",
+      "responsibility": "move record/provider observations, executor invocation and generation-bound next-command sequencing to application; retain flag grammar and response rendering",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func Invocation.Abandon",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/invocation_test.go",
+        "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "inbound-transport"
+    },
+    {
+      "id": "T20-cleanup-invocation-linkedbranch",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func Command.runCleanupLinkedBranch",
+      "responsibility": "move record/provider observations, executor invocation and generation-bound next-command sequencing to application; retain flag grammar and response rendering",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func Invocation.LinkedBranch",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/invocation_test.go",
+        "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "inbound-transport"
+    },
+    {
+      "id": "T20-cleanup-command-binding",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/generated_command_provenance.go",
+      "source_symbol": "func bindCleanupNextCommand",
+      "responsibility": "bind nonempty next command only when a lease generation exists",
+      "target": "internal/application/issueopscleanup",
+      "target_symbol": "func BindNextCommand",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopscli/feedbackcleanup/generated_command_provenance_generation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cleanup-generation",
+      "source_path": "cmd/issueops/issueopscli/feedbackcleanup/feedback_cleanup.go",
+      "source_symbol": "func cleanupExecutionGeneration",
+      "responsibility": "project generation zero for cycles without an execution lease",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CleanupCommandGeneration",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopscleanup/invocation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "T20-cleanup-orca-error",
+      "source_path": "cmd/issueops/issueopsapp/cleanup_runtime_wiring.go",
+      "source_symbol": "func normalizeOrcaRemoveWorktreeErr",
+      "responsibility": "normalize typed missing-resource and legacy CLI prose for idempotent cleanup",
+      "target": "internal/adapter/orca",
+      "target_symbol": "func NormalizeRemoveWorktreeError",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_cleanup_wiring.go"
+      ],
+      "evidence_tests": [
+        "internal/adapter/orca/remove_normalize_test.go"
       ],
       "status": "migrated"
     }

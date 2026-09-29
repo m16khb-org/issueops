@@ -38,7 +38,7 @@ type Deps struct {
 	OrphanPreview           func(context.Context, orphancontract.Request) (orphancontract.Result, error)
 	OrphanApply             func(context.Context, orphancontract.Request, orphancontract.ApplyRequest) (orphancontract.Result, error)
 	// RemoveOrcaWorktree는 cleanup finish의 ② 단계(orca 회수, force=false)다.
-	// "이미 없음"은 wiring에서 성공으로 정규화한다(멱등 계약).
+	// "이미 없음"은 Orca adapter에서 성공으로 정규화한다(멱등 계약).
 	RemoveOrcaWorktree func(ctx context.Context, worktreeID string) error
 	// OrcaIntent는 cleanup abandon의 pending_intent_safe 게이트가 sealed
 	// marker로 orca 인벤토리를 실조회하는 표면이다. nil이면 그 게이트는 통과가
@@ -290,36 +290,9 @@ func (command Command) runCleanupFinish(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup finish requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	record, err := command.Operations.ReadIssueOps(command.Operations.IssueOpsStateRoot(), *id)
-	if err != nil {
-		return printCleanupFinishError(deps, *jsonOut, err)
-	}
-	providerName := *providerOverride
-	if providerName == "" {
-		providerName = command.Operations.ResolveRecordProvider(record)
-	}
-	if providerName == "" {
-		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("cannot determine provider from IssueOps record; pass --provider"))
-	}
-	prov, err := deps.Provider(providerName)
-	if err != nil {
-		return printCleanupFinishError(deps, *jsonOut, err)
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		// Getwd 실패의 대표 원인이 "현재 디렉토리 삭제"다 — 자기파괴 방지
-		// 가드를 여는 대신 fail-closed로 거부한다(C2-F4).
-		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("cannot resolve current directory (refusing destructive cleanup): %w", err))
-	}
-	req := issueopscontract.CleanupFinishRequest{ID: record.ID, CWD: cwd, Apply: *apply, Confirm: *confirm, Fingerprint: *fingerprint, SupersededBy: strings.TrimSpace(*supersededBy), KeepRemoteBranch: *keepRemoteBranch}
-	result, err := command.Operations.CleanupFinish(context.Background(), command.Operations.IssueOpsStateRoot(), req, deps, prov)
-	if _, evidenceError := errors.AsType[*port.CleanupFinishObservationError](err); evidenceError {
-		return printCleanupFinishError(deps, *jsonOut, err)
-	}
-	var bindErr error
-	result.NextCommand, bindErr = bindCleanupNextCommand(result.NextCommand, cleanupExecutionGeneration(record), deps.Provenance)
-	if bindErr != nil {
-		return printCleanupFinishError(deps, *jsonOut, bindErr)
+	result, err := command.Invoke(deps).Finish(context.Background(), issueopscontract.CleanupFinishRequest{ID: *id, Apply: *apply, Confirm: *confirm, Fingerprint: *fingerprint, SupersededBy: strings.TrimSpace(*supersededBy), KeepRemoteBranch: *keepRemoteBranch}, *providerOverride)
+	if failure, ok := errors.AsType[*port.CleanupInvocationError](err); ok {
+		return printCleanupFinishError(deps, *jsonOut, failure.Err)
 	}
 	if err != nil {
 		if *jsonOut {
@@ -368,32 +341,9 @@ func (command Command) runCleanupRemoteBranch(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup remote-branch requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	record, err := command.Operations.ReadIssueOps(command.Operations.IssueOpsStateRoot(), *id)
-	if err != nil {
-		return printCleanupFinishError(deps, *jsonOut, err)
-	}
-	providerName := command.Operations.ResolveRecordProvider(record)
-	if providerName == "" {
-		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("cannot determine provider from IssueOps record"))
-	}
-	prov, err := deps.Provider(providerName)
-	if err != nil {
-		return printCleanupFinishError(deps, *jsonOut, err)
-	}
-	if deps.VerifyMergedHead == nil {
-		return printCleanupFinishError(deps, *jsonOut, fmt.Errorf("merge verification is not configured"))
-	}
-	result, err := command.Operations.CleanupRemoteBranch(context.Background(), command.Operations.IssueOpsStateRoot(), issueopscontract.CleanupRemoteBranchRequest{
-		ID:           *id,
-		SupersededBy: strings.TrimSpace(*supersededBy),
-		Apply:        *apply,
-		Confirm:      *confirm,
-		Fingerprint:  *fingerprint,
-	}, deps, prov)
-	var bindErr error
-	result.NextCommand, bindErr = bindCleanupNextCommand(result.NextCommand, cleanupExecutionGeneration(record), deps.Provenance)
-	if bindErr != nil {
-		return printCleanupFinishError(deps, *jsonOut, bindErr)
+	result, err := command.Invoke(deps).RemoteBranch(context.Background(), issueopscontract.CleanupRemoteBranchRequest{ID: *id, Apply: *apply, Confirm: *confirm, Fingerprint: *fingerprint, SupersededBy: strings.TrimSpace(*supersededBy)})
+	if failure, ok := errors.AsType[*port.CleanupInvocationError](err); ok {
+		return printCleanupFinishError(deps, *jsonOut, failure.Err)
 	}
 	if err != nil {
 		if *jsonOut {
@@ -444,7 +394,7 @@ func (command Command) runCleanupAbandon(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup abandon requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	result, err := command.Operations.CleanupAbandon(context.Background(), command.Operations.IssueOpsStateRoot(), issueopscontract.CleanupAbandonRequest{
+	result, err := command.Invoke(deps).Abandon(context.Background(), issueopscontract.CleanupAbandonRequest{
 		ID:                 *id,
 		Reason:             *reason,
 		Apply:              *apply,
@@ -453,16 +403,9 @@ func (command Command) runCleanupAbandon(args []string, deps Deps) error {
 		ClosePR:            *closePR,
 		CloseIssue:         *closeIssue,
 		DeleteRemoteBranch: *deleteRemoteBranch,
-	}, deps)
-	if result.NextCommand != "" {
-		record, readErr := command.Operations.ReadIssueOps(command.Operations.IssueOpsStateRoot(), *id)
-		if readErr != nil {
-			return printCleanupFinishError(deps, *jsonOut, readErr)
-		}
-		result.NextCommand, readErr = bindCleanupNextCommand(result.NextCommand, cleanupExecutionGeneration(record), deps.Provenance)
-		if readErr != nil {
-			return printCleanupFinishError(deps, *jsonOut, readErr)
-		}
+	})
+	if failure, ok := errors.AsType[*port.CleanupInvocationError](err); ok {
+		return printCleanupFinishError(deps, *jsonOut, failure.Err)
 	}
 	if err != nil {
 		if *jsonOut {
@@ -509,13 +452,6 @@ func printCleanupAbandonRemoteEffects(result issueopscontract.CleanupAbandonResu
 	}
 }
 
-func cleanupExecutionGeneration(record issueopscontract.IssueOpsRecord) uint64 {
-	if record.Execution == nil {
-		return 0
-	}
-	return record.Execution.Lease.Generation
-}
-
 func printCleanupFinishError(deps Deps, jsonOut bool, err error) error {
 	if jsonOut {
 		if printErr := deps.PrintError(err); printErr != nil {
@@ -549,17 +485,9 @@ func (command Command) runCleanupLinkedBranch(args []string, deps Deps) error {
 	if !*preview && !*apply {
 		return fmt.Errorf("cleanup linked-branch requires exactly one mode: --preview or --apply --confirm --fingerprint SHA256")
 	}
-	record, err := command.Operations.ReadIssueOps(command.Operations.IssueOpsStateRoot(), *id)
-	if err != nil {
-		return printCleanupFinishError(deps, *jsonOut, err)
-	}
-	result, err := command.Operations.CleanupLinkedBranch(context.Background(), command.Operations.IssueOpsStateRoot(), issueopscontract.CleanupLinkedBranchRequest{
-		ID: *id, Apply: *apply, Confirm: *confirm, Fingerprint: *fingerprint,
-	})
-	var bindErr error
-	result.NextCommand, bindErr = bindCleanupNextCommand(result.NextCommand, cleanupExecutionGeneration(record), deps.Provenance)
-	if bindErr != nil {
-		return printCleanupFinishError(deps, *jsonOut, bindErr)
+	result, err := command.Invoke(deps).LinkedBranch(context.Background(), issueopscontract.CleanupLinkedBranchRequest{ID: *id, Apply: *apply, Confirm: *confirm, Fingerprint: *fingerprint})
+	if failure, ok := errors.AsType[*port.CleanupInvocationError](err); ok {
+		return printCleanupFinishError(deps, *jsonOut, failure.Err)
 	}
 	if err != nil {
 		if *jsonOut {

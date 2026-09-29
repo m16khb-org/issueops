@@ -103,7 +103,7 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 		}
 		ids[policy.ID] = true
 		if policy.SourceRetainedAs != "" && policy.Status != "migrated" {
-			t.Errorf("%s retained source requires a migrated domain policy", policy.ID)
+			t.Errorf("%s retained source requires a migrated policy", policy.ID)
 		}
 		if policy.Status != "migrate" && policy.Status != "migrated" && policy.Status != "retain" {
 			t.Errorf("%s has invalid status %q", policy.ID, policy.Status)
@@ -117,9 +117,9 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 			}
 			sourceExists := slicesContains(byPath[policy.SourcePath].Symbols, policy.SourceSymbol)
 			if policy.SourceRetainedAs != "" {
-				// A use-case method can retain I/O sequencing after its decision moves
-				// to domain. Its behavior tests must prove the domain decision is used.
-				if policy.SourceRetainedAs != "application-orchestration" || !sourceExists || byPath[policy.SourcePath].Owner != "application" || !strings.HasPrefix(policy.Target, "internal/domain/") {
+				// Keep only the source layer's own responsibility after migration:
+				// application sequencing or inbound parsing/presentation.
+				if !validRetainedDDDSource(policy, byPath[policy.SourcePath].Owner, sourceExists) {
 					t.Errorf("%s has invalid retained source responsibility", policy.ID)
 				}
 			} else if sourceExists {
@@ -716,4 +716,39 @@ func dddArtifactOwner(path string) (dddArtifactEntry, bool) {
 		}
 	}
 	return entry, entry.Owner != "" && entry.Task != ""
+}
+
+func TestRetainedDDDSourceKeepsLayerResponsibilities(t *testing.T) {
+	for _, tc := range []struct {
+		name, role, owner, target string
+		exists, want              bool
+	}{
+		{"application owns orchestration", "application-orchestration", "application", "internal/domain/issueops", true, true},
+		{"inbound owns transport", "inbound-transport", "inbound", "internal/application/issueopscleanup", true, true},
+		{"adapter cannot retain business orchestration", "application-orchestration", "adapter", "internal/domain/issueops", true, false},
+		{"inbound cannot target concrete adapter", "inbound-transport", "inbound", "internal/adapter/issueops", true, false},
+		{"application cannot claim transport", "inbound-transport", "application", "internal/application/issueopscleanup", true, false},
+		{"missing source", "inbound-transport", "inbound", "internal/application/issueopscleanup", false, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			policy := dddPolicy{SourceRetainedAs: tc.role, Target: tc.target}
+			if got := validRetainedDDDSource(policy, tc.owner, tc.exists); got != tc.want {
+				t.Fatalf("valid=%v want=%v", got, tc.want)
+			}
+		})
+	}
+}
+
+func validRetainedDDDSource(policy dddPolicy, owner string, exists bool) bool {
+	if !exists {
+		return false
+	}
+	switch policy.SourceRetainedAs {
+	case "application-orchestration":
+		return owner == "application" && strings.HasPrefix(policy.Target, "internal/domain/")
+	case "inbound-transport":
+		return owner == "inbound" && strings.HasPrefix(policy.Target, "internal/application/")
+	default:
+		return false
+	}
 }

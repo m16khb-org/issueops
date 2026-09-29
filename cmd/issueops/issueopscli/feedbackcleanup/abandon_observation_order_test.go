@@ -2,8 +2,10 @@ package feedbackcleanup
 
 import (
 	"context"
-	issueopscontract "issueops/internal/contract/issueops"
 	"testing"
+
+	cleanupapp "issueops/internal/application/issueopscleanup"
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func TestAbandonOwnershipRefusalPrecedesArtifactObservation(t *testing.T) {
@@ -12,12 +14,13 @@ func TestAbandonOwnershipRefusalPrecedesArtifactObservation(t *testing.T) {
 	_, _, command := wireAbandonCapture(t)
 	observed := 0
 	entered := false
-	configured := command.Operations
-	configured.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps) (issueopscontract.CleanupAbandonResult, error) {
-		entered = true
-		return issueopscontract.CleanupAbandonResult{OK: false, ID: req.ID}, context.Canceled
-	}
-	command.Operations = configured
+
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.RunAbandon = func(_ context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
+			entered = true
+			return issueopscontract.CleanupAbandonResult{OK: false, ID: req.ID}, context.Canceled
+		}
+	})
 	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintJSON: func(any) error { return nil }, PrintError: func(error) error { return nil }, ObserveArtifactMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) (bool, error) { observed++; return false, nil }}
 	err := command.RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "ownership-test", "--preview", "--json"}, deps)
 	if err == nil || !entered {

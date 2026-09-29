@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	issueopscore "issueops/internal/adapter/issueops"
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	orphancontract "issueops/internal/contract/issueopsorphancleanup"
 	issuedomain "issueops/internal/domain/issueops"
@@ -380,13 +381,14 @@ func TestRunCleanupFinishForwardsSupersedingArtifactToApplication(t *testing.T) 
 		return issueopscontract.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 	}
 
-	wired := command.Operations
 	var captured issueopscontract.CleanupFinishRequest
-	wired.CleanupFinish = func(_ context.Context, _ string, req issueopscontract.CleanupFinishRequest, _ Deps, _ port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
-		captured = req
-		return issueopscontract.CleanupFinishResult{OK: true, ID: req.ID, Preview: true}, nil
-	}
-	command.Operations = wired
+
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.RunFinish = func(_ context.Context, req issueopscontract.CleanupFinishRequest, _ port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
+			captured = req
+			return issueopscontract.CleanupFinishResult{OK: true, ID: req.ID, Preview: true}, nil
+		}
+	})
 
 	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--superseded-by", replacement, "--json"}, deps); err != nil {
 		t.Fatal(err)
@@ -589,15 +591,18 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 	var requests []issueopscontract.IssueOpsCloseChildrenRequest
 	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
-	wired.ReadIssueOps = func(string, string) (issueopscontract.IssueOpsRecord, error) {
-		t.Fatal("CLI dispatch must not read the record before application locking")
-		return issueopscontract.IssueOpsRecord{}, nil
-	}
+
 	wired.CloseIssueOpsChildren = func(_ string, _ string, req issueopscontract.IssueOpsCloseChildrenRequest, _ Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 		requests = append(requests, req)
 		return issueopscontract.IssueOpsCloseChildrenResult{ClosedCount: 1, Children: []issueopscontract.IssueOpsCloseChildResult{{URL: "https://example.com/i/1", Closed: true, State: "closed"}}}, nil
 	}
 	command.Operations = wired
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
+			t.Fatal("CLI dispatch must not read the record before application locking")
+			return issueopscontract.IssueOpsRecord{}, nil
+		}
+	})
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
@@ -619,11 +624,16 @@ func TestRunCleanupCloseChildrenDispatch(t *testing.T) {
 	// 에러 경로: 어댑터가 실패하면 JSON 에러 프린트 후 원본 에러 복귀.
 	failing := command.Operations
 	failing.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
-	failing.ReadIssueOps = issueopscore.ReadIssueOps
+
 	failing.CloseIssueOpsChildren = func(string, string, issueopscontract.IssueOpsCloseChildrenRequest, Deps) (issueopscontract.IssueOpsCloseChildrenResult, error) {
 		return issueopscontract.IssueOpsCloseChildrenResult{}, errors.New("provider refused")
 	}
 	command.Operations = failing
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
+			return issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
+		}
+	})
 	if err := command.RunCleanup([]string{"close-children", "--id", record.ID, "--merged", "--json"}, deps); err == nil || err.Error() != "provider refused" {
 		t.Fatalf("adapter error must propagate: %v", err)
 	}
@@ -665,12 +675,17 @@ func TestRunCleanupAbandonDispatchesToAdapter(t *testing.T) {
 	var requests []issueopscontract.CleanupAbandonRequest
 	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
-	wired.ReadIssueOps = issueopscore.ReadIssueOps
-	wired.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps) (issueopscontract.CleanupAbandonResult, error) {
-		requests = append(requests, req)
-		return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID}, nil
-	}
+
 	command.Operations = wired
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
+			return issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
+		}
+		service.RunAbandon = func(_ context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
+			requests = append(requests, req)
+			return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID}, nil
+		}
+	})
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
@@ -705,15 +720,18 @@ func TestRunCleanupRemoteBranchDisciplineAndDispatch(t *testing.T) {
 	var printedErrors []error
 	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
-	wired.ReadIssueOps = func(string, string) (issueopscontract.IssueOpsRecord, error) {
-		return record, nil
-	}
-	wired.ResolveRecordProvider = func(issueopscontract.IssueOpsRecord) string { return "github" }
-	wired.CleanupRemoteBranch = func(_ context.Context, _ string, req issueopscontract.CleanupRemoteBranchRequest, _ Deps, _ port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
-		requests = append(requests, req)
-		return issueopscontract.CleanupRemoteBranchResult{OK: true, ID: req.ID, Fingerprint: "abc"}, nil
-	}
+	record.IssueURL = "https://github.com/example/repo/issues/1"
+
 	command.Operations = wired
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
+			return record, nil
+		}
+		service.RunRemoteBranch = func(_ context.Context, req issueopscontract.CleanupRemoteBranchRequest, _ port.IssueProvider) (issueopscontract.CleanupRemoteBranchResult, error) {
+			requests = append(requests, req)
+			return issueopscontract.CleanupRemoteBranchResult{OK: true, ID: req.ID, Fingerprint: "abc"}, nil
+		}
+	})
 	printDeps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },
@@ -751,14 +769,17 @@ func TestRunCleanupLinkedBranchDisciplineAndDispatch(t *testing.T) {
 	var printed []any
 	wired := command.Operations
 	wired.IssueOpsStateRoot = func() string { return os.Getenv("ISSUEOPS_STATE_DIR") }
-	wired.ReadIssueOps = func(string, string) (issueopscontract.IssueOpsRecord, error) {
-		return record, nil
-	}
-	wired.CleanupLinkedBranch = func(_ context.Context, _ string, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error) {
-		requests = append(requests, req)
-		return issueopscontract.CleanupLinkedBranchResult{OK: true, ID: req.ID, State: "absent"}, nil
-	}
+
 	command.Operations = wired
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.Read = func(string) (issueopscontract.IssueOpsRecord, error) {
+			return record, nil
+		}
+		service.RunLinkedBranch = func(_ context.Context, req issueopscontract.CleanupLinkedBranchRequest) (issueopscontract.CleanupLinkedBranchResult, error) {
+			requests = append(requests, req)
+			return issueopscontract.CleanupLinkedBranchResult{OK: true, ID: req.ID, State: "absent"}, nil
+		}
+	})
 	printDeps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(value any) error { printed = append(printed, value); return nil },

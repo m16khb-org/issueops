@@ -1,4 +1,4 @@
-package issueopsapp
+package orca
 
 import (
 	"errors"
@@ -27,9 +27,9 @@ func TestNormalizeOrcaRemoveWorktreeErr(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := normalizeOrcaRemoveWorktreeErr(tc.err)
+			got := NormalizeRemoveWorktreeError(tc.err)
 			if (got == nil) != tc.wantNil {
-				t.Fatalf("normalizeOrcaRemoveWorktreeErr(%v) = %v, wantNil=%v", tc.err, got, tc.wantNil)
+				t.Fatalf("NormalizeRemoveWorktreeError(%v) = %v, wantNil=%v", tc.err, got, tc.wantNil)
 			}
 		})
 	}

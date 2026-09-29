@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	issueopscore "issueops/internal/adapter/issueops"
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
-	issuedomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -17,13 +17,17 @@ func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest
 	providerCalls := new(int)
 	wired := command.Operations
 	wired.IssueOpsStateRoot = issueOpsStateRootForTest
-	wired.ReadIssueOps = issueopscore.ReadIssueOps
-	wired.ResolveRecordProvider = issuedomain.ResolveRecordProvider
-	wired.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps) (issueopscontract.CleanupAbandonResult, error) {
-		*requests = append(*requests, req)
-		return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID, RemoteEffects: []string{"close_issue"}}, nil
-	}
+
 	command.Operations = wired
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
+			return issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
+		}
+		service.RunAbandon = func(_ context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
+			*requests = append(*requests, req)
+			return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID, RemoteEffects: []string{"close_issue"}}, nil
+		}
+	})
 	_ = providerCalls
 	return requests, providerCalls, command
 }

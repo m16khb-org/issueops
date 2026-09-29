@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -24,13 +25,14 @@ func TestRunCleanupFinishPropagatesKeepRemoteBranchExactly(t *testing.T) {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 	}
 
-	wired := command.Operations
 	var captured issueopscontract.CleanupFinishRequest
-	wired.CleanupFinish = func(_ context.Context, _ string, req issueopscontract.CleanupFinishRequest, _ Deps, _ port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
-		captured = req
-		return issueopscontract.CleanupFinishResult{OK: true, ID: req.ID, Preview: true}, nil
-	}
-	command.Operations = wired
+
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.RunFinish = func(_ context.Context, req issueopscontract.CleanupFinishRequest, _ port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
+			captured = req
+			return issueopscontract.CleanupFinishResult{OK: true, ID: req.ID, Preview: true}, nil
+		}
+	})
 
 	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--keep-remote-branch", "--json"}, deps); err != nil {
 		t.Fatal(err)
