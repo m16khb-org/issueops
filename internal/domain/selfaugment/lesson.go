@@ -55,3 +55,7 @@ func ApplyLessonPenalties(candidates []contract.SelfAugmentCandidate, severeCoun
 	}
 	return warnings
 }
+
+func LessonPenalizesCandidate(snapshot contract.SelfAugmentLessonStateSnapshot, now time.Time) bool {
+	return snapshot.Kind == contract.SelfAugmentationLessonKind && snapshot.CandidateID != "" && SevereLessonSeverity(snapshot.Severity) && RecentLesson(snapshot.GeneratedAt, now)
+}

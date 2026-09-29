@@ -4,6 +4,7 @@ import (
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/augmentplan"
+	"issueops/internal/adapter/augmentation"
 	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/inspect"
 	"issueops/internal/adapter/verification/probe/qagate"
@@ -16,8 +17,13 @@ import (
 // Deps를 중간 package로 전달하면 그 package가 대신 문서 구현을 알게 된다.
 func configureDocsReaders() {
 	mcpcli.DocsIndex = docs.DocsIndex
+	augmentplan.Repository = augmentation.Repository{ListDocs: docs.ListDocs}
 	augmentplan.DocsIndex = docs.DocsIndex
-	augmentcatalog.ListDocs = docs.ListDocs
+	repo := augmentation.Repository{ListDocs: docs.ListDocs}
+	augmentcatalog.CollectSelfAugmentRepoSignals = repo.CollectSignals
+	augmentcatalog.DocsContainTerm = repo.DocsContainTerm
+	augmentcatalog.FileContainsTerm = augmentation.FileContainsTerm
+	augmentcatalog.DirContainsTerm = augmentation.DirContainsTerm
 	qagate.ListDocs = docs.ListDocs
 	inspect.ListDocs = docs.ListDocs
 }

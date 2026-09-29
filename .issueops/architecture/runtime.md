@@ -64,6 +64,12 @@ Project docs bootstrap:
 기존 보존 기간·개수로 정리하며, 정리 실패가 저장 성공을 뒤집지는 않는다. 상태 저장과 잠금은
 기존 outbound state adapter를 사용한다. CLI/MCP는 같은 application을 호출한다.
 
+자가 증강 계획은 `application/selfaugment.Planner`가 문서·스킬·상태 조회를 조율하고,
+`domain/selfaugment.NewPlan`이 목표 점수, lesson 감점, 후보 정렬·선택을 결정한다.
+각 목표의 점수와 설명은 같은 관측값을 사용한다. 검증 목표는 현재 kind/schema를 통과한
+`self-verify-latest`만 증거로 인정한다. 파일·Git·소스 검색은 `adapter/augmentation`이
+맡으며, 후보 감지는 검색어 자체가 들어 있는 observer 대신 실제 구현 파일을 확인한다.
+
 자가 검증 단계 순서·성공 증거 재사용·실패 후 계속 여부는 `domain/selfverify`,
 실행과 저장 순서는 `application/selfverify`가 맡는다. 실제 CLI·MCP·daemon·Git
 검증 driver는 `adapter/verification/probe`, risk tier 실행은 같은 adapter의

@@ -11,12 +11,12 @@ func TestDirContainsTermIgnoresTestOnlySignals(t *testing.T) {
 	relDir := filepath.Join("cmd", "issueops")
 	writeFileForRepoSignalTest(t, filepath.Join(root, relDir, "signal_test.go"), "package main\nconst marker = \"production-only-signal\"\n")
 
-	if dirContainsTerm(root, relDir, "production-only-signal") {
+	if DirContainsTerm(root, relDir, "production-only-signal") {
 		t.Fatalf("test-only source was accepted as production repo signal")
 	}
 
 	writeFileForRepoSignalTest(t, filepath.Join(root, relDir, "signal.go"), "package main\nconst marker = \"production-only-signal\"\n")
-	if !dirContainsTerm(root, relDir, "production-only-signal") {
+	if !DirContainsTerm(root, relDir, "production-only-signal") {
 		t.Fatalf("production source was not accepted as repo signal")
 	}
 }
@@ -45,7 +45,7 @@ func TestCollectSelfAugmentRepoSignalsFindsMCPAdapterCatalogInContractCLI(t *tes
 
 func TestSelfAugmentSignalTableIsSatisfiedByRepoSignalRules(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "selfworkflow", "augmentcatalog", "self_augment_repo_signals.go"), "package augmentcatalog\ntype repoSignalRule struct{}\nfunc repoSignalRules() []repoSignalRule { return nil }\nfunc CollectSelfAugmentRepoSignals() { for _, rule := range repoSignalRules() { _ = rule } }\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "augmentation", "signals.go"), "package augmentcatalog\ntype repoSignalRule struct{}\nfunc (repo Repository) signalRules() []repoSignalRule { return nil }\nfunc CollectSelfAugmentRepoSignals() { for _, rule := range repo.signalRules() { _ = rule } }\n")
 
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasSelfAugmentSignalTable {

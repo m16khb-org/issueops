@@ -3284,21 +3284,11 @@
       "owner": "inbound",
       "task": "T17",
       "symbols": [
-        "func containsString",
-        "func dirContainsTerm",
-        "func docsContainTerm",
-        "func fileContainsTerm",
         "type SelfAugmentCandidate",
         "type SelfAugmentGoal",
         "type SelfAugmentInfluence",
         "type SelfAugmentRepoSignals"
       ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentcatalog/docs_dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/selfworkflow/augmentcatalog/self_augment_candidate_status.go",
@@ -3321,14 +3311,7 @@
       "path": "cmd/issueops/selfworkflow/augmentcatalog/self_augment_repo_signals.go",
       "owner": "inbound",
       "task": "T17",
-      "symbols": [
-        "func CollectSelfAugmentRepoSignals",
-        "func hasMCPAdapterCatalog",
-        "func qualityInspectContainsTerm",
-        "func readmeContainsTerm",
-        "func repoSignalRules",
-        "type repoSignalRule"
-      ]
+      "symbols": []
     },
     {
       "path": "cmd/issueops/selfworkflow/augmentcatalog/self_augment_signals.go",
@@ -3336,9 +3319,6 @@
       "task": "T17",
       "symbols": [
         "func AllSelfAugmentGoalsPassed",
-        "func DirContainsTerm",
-        "func DocsContainTerm",
-        "func FileContainsTerm",
         "func ScoreBool",
         "func SelectGeniusFormulas",
         "func SelectedCandidateID",
@@ -3397,33 +3377,9 @@
       "task": "T17",
       "symbols": [
         "func Plan",
+        "func planner",
         "type Request",
         "type Result"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentplan/plan_evidence.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func hasImplementationDelta",
-        "func implementationEvidence",
-        "func learningEvidence",
-        "func lessonsCaptured",
-        "func selfVerificationPassed",
-        "func verificationEvidence"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/augmentplan/plan_lesson_penalty.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func applyLessonPenalties",
-        "func recentLesson",
-        "func severeLessonCounts",
-        "func severeLessonCountsAt",
-        "func severeLessonSeverity"
       ]
     },
     {
@@ -4663,6 +4619,39 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": []
+    },
+    {
+      "path": "internal/adapter/augmentation/repository.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Repository.HasImplementationDelta",
+        "func Repository.ReadGeniusThink",
+        "type Repository"
+      ]
+    },
+    {
+      "path": "internal/adapter/augmentation/search.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func DirContainsTerm",
+        "func FileContainsTerm",
+        "func Repository.DocsContainTerm"
+      ]
+    },
+    {
+      "path": "internal/adapter/augmentation/signals.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func Repository.CollectSignals",
+        "func Repository.signalRules",
+        "func hasMCPAdapterCatalog",
+        "func qualityInspectContainsTerm",
+        "func readmeContainsTerm",
+        "type repoSignalRule"
+      ]
     },
     {
       "path": "internal/adapter/channel/store.go",
@@ -12356,6 +12345,25 @@
       ]
     },
     {
+      "path": "internal/application/selfaugment/plan_lessons.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func Planner.LessonsCaptured",
+        "func Planner.SevereLessonCountsAt"
+      ]
+    },
+    {
+      "path": "internal/application/selfaugment/planner.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func Planner.Plan",
+        "func Planner.SelfVerificationPassed",
+        "type Planner"
+      ]
+    },
+    {
       "path": "internal/application/selfaugment/promote.go",
       "owner": "application",
       "task": "T18",
@@ -17239,6 +17247,7 @@
       "task": "T20",
       "symbols": [
         "func ApplyLessonPenalties",
+        "func LessonPenalizesCandidate",
         "func RecentLesson",
         "func SevereLessonSeverity"
       ]
@@ -17252,6 +17261,25 @@
         "func PrepareLesson",
         "func StateKeySlug",
         "func validateLessonCandidateID"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/plan.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func NewPlan",
+        "type PlanFacts"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/plan_evidence.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func ImplementationEvidence",
+        "func LearningEvidence",
+        "func VerificationEvidence"
       ]
     },
     {
@@ -17283,6 +17311,14 @@
       "symbols": [
         "func ObservePromotionSource",
         "func PreparePromotion"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/research.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func ResearchInfluences"
       ]
     },
     {
@@ -18000,6 +18036,14 @@
         "type IssueProviderReplaceArtifactBodyResult",
         "type IssueProviderUpdateIssueBodySectionRequest",
         "type IssueProviderUpdateIssueBodySectionResult"
+      ]
+    },
+    {
+      "path": "internal/port/selfaugment/repository.go",
+      "owner": "port",
+      "task": "T18",
+      "symbols": [
+        "type PlanRepository"
       ]
     },
     {
@@ -23791,6 +23835,44 @@
         "internal/application/selfaugment/history_test.go",
         "internal/domain/selfaugment/history_retention_test.go",
         "cmd/issueops/selfworkflow/historycompare/self_augment_history_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "augmentation-plan-decisions",
+      "source_path": "internal/application/selfaugment/planner.go",
+      "source_symbol": "func Planner.Plan",
+      "responsibility": "score goals from one observation each and apply severe-lesson penalties before candidate selection",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func NewPlan",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-augment",
+        "self_augment_plan"
+      ],
+      "evidence_tests": [
+        "internal/domain/selfaugment/plan_test.go",
+        "internal/application/selfaugment/planner_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "augmentation-lesson-eligibility",
+      "source_path": "internal/application/selfaugment/plan_lessons.go",
+      "source_symbol": "func Planner.SevereLessonCountsAt",
+      "responsibility": "classify recent severe lessons with valid kind and candidate identity before counting penalties",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func LessonPenalizesCandidate",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-augment",
+        "self_augment_plan"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/planner_test.go",
+        "cmd/issueops/selfworkflow/augmentplan/plan_lesson_penalty_test.go"
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"

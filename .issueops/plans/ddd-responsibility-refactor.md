@@ -416,6 +416,13 @@
 - **EXPECT / QA:** 정상: 성공한 full-suite evidence만 해당 run에서 reuse. 실패: 한 step 실패/cancel/timeout 시 후속 동작과 최종 OK가 기존 계약과 동일; 다른 run의 partial 성공 합성 금지. fake runner가 모르는 argv를 성공 처리하지 않음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T18-success.txt`, `T18-failure.txt`, `T18-ownership.json`.
 
+T18 계획 구성 이전: `application/selfaugment.Planner`가 조회 순서를 소유하고,
+`domain/selfaugment.NewPlan`이 점수·감점·후보 선택을 소유한다. 파일·Git·소스
+관측은 `adapter/augmentation`으로 이전했다. summary kind/schema 누락과 같은
+목표의 중복 조회에 따른 점수/근거 불일치를 회귀 테스트로 고정한다. source observer의
+자기 검색어 감지는 실제 domain 구현 파일 조회로 교체한다. 후보 export와 잔여
+책임 점검이 남아 있으므로 T18 완료 표시는 유지하지 않는다.
+
 ### Task 19: CLI·MCP catalog·host protocol 위치 정합화 (T19)
 
 - [ ] 완료
