@@ -11,16 +11,16 @@ import (
 	"os"
 )
 
-func runTrace(args []string) error {
+func (command Command) RunTrace(args []string) error {
 	if len(args) == 0 {
 		traceUsage()
 		return fmt.Errorf("missing trace subcommand")
 	}
 	switch args[0] {
 	case "analyze":
-		return runTraceAnalyze(args[1:])
+		return command.runTraceAnalyze(args[1:])
 	case "handoff-delivery":
-		return runTraceHandoffDeliveryObserve(args[1:])
+		return command.runTraceHandoffDeliveryObserve(args[1:])
 	default:
 		traceUsage()
 		return fmt.Errorf("unknown trace subcommand %q", args[0])
@@ -34,7 +34,7 @@ func traceUsage() {
 `)
 }
 
-func runTraceHandoffDeliveryObserve(args []string) error {
+func (command Command) runTraceHandoffDeliveryObserve(args []string) error {
 	fs := flag.NewFlagSet("trace handoff-delivery", flag.ContinueOnError)
 	input := fs.String("input", "", "delivery observation JSON path or '-' for stdin")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -44,7 +44,7 @@ func runTraceHandoffDeliveryObserve(args []string) error {
 	if *input == "" && fs.NArg() > 0 {
 		*input = fs.Arg(0)
 	}
-	if *input == "" || TraceHandoffDeliveryObserve == nil {
+	if *input == "" || command.Handoff == nil {
 		return fmt.Errorf("handoff delivery observation input and adapter are required")
 	}
 	var reader io.Reader
@@ -75,7 +75,8 @@ func runTraceHandoffDeliveryObserve(args []string) error {
 	if err := decoder.Decode(&trailing); err != io.EOF {
 		return fmt.Errorf("handoff delivery observation contains trailing JSON")
 	}
-	result, err := TraceHandoffDeliveryObserve(observation)
+	record, err := command.Handoff.ObserveManual(observation)
+	result := tracecontract.HandoffDeliveryObserveResult{OK: err == nil, Kind: record.Kind, AuditLogID: record.AuditLogID, Observation: record.Observation}
 	if err != nil {
 		return err
 	}
@@ -86,7 +87,7 @@ func runTraceHandoffDeliveryObserve(args []string) error {
 	return nil
 }
 
-func runTraceAnalyze(args []string) error {
+func (command Command) runTraceAnalyze(args []string) error {
 	fs := flag.NewFlagSet("trace analyze", flag.ContinueOnError)
 	input := fs.String("input", "", "trace input path, '-' for stdin, or issueops state key")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -96,7 +97,7 @@ func runTraceAnalyze(args []string) error {
 	if *input == "" && fs.NArg() > 0 {
 		*input = fs.Arg(0)
 	}
-	result, err := TraceAnalyze(tracecontract.TraceAnalyzeRequest{Input: *input})
+	result, err := command.Trace.Analyze(tracecontract.TraceAnalyzeRequest{Input: *input})
 	if err != nil {
 		if *jsonOut {
 			_ = printJSON(result)

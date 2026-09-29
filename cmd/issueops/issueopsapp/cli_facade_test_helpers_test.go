@@ -7,7 +7,6 @@ import (
 	verifyworkcontract "issueops/internal/contract/verifywork"
 	"os"
 
-	"issueops/cmd/issueops/basiccli"
 	"issueops/cmd/issueops/installcli"
 	"issueops/cmd/issueops/projectcli"
 	"issueops/cmd/issueops/qualitycli"
@@ -17,15 +16,17 @@ import (
 )
 
 func runDocsWithRoot(args []string, root string) error {
-	return basiccli.RunDocsWithRoot(args, root)
+	command := newBasicCommand()
+	command.IssueOpsRoot = root
+	return command.RunDocs(args)
 }
 
 func runTraceAnalyze(args []string) error {
-	return basiccli.RunTraceAnalyze(args)
+	return newBasicCommand().RunTrace(append([]string{"analyze"}, args...))
 }
 
 func runGuardCheck(args []string) error {
-	return basiccli.RunGuardCheck(args)
+	return newBasicCommand().RunGuard(append([]string{"check"}, args...))
 }
 
 func runQualityInspectWithDeps(args []string, deps qualityapp.InspectDeps) error {

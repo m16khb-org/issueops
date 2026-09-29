@@ -1,7 +1,6 @@
 package issueopsapp
 
 import (
-	"issueops/cmd/issueops/basiccli"
 	"issueops/cmd/issueops/channelcli"
 	"issueops/cmd/issueops/gatescli"
 	"issueops/cmd/issueops/installcli"
@@ -11,16 +10,13 @@ import (
 	"issueops/cmd/issueops/statecli"
 	"issueops/cmd/issueops/statuscli"
 	"issueops/cmd/issueops/webfetchcli"
-	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
-	"issueops/internal/adapter/preflight"
 )
 
 func wireBasicCLIDeps() {
 	configureDocsReaders()
 	configureStateStores()
 	configureIssueOpsRuntime()
-	configureTail8()
 	configureHookPrompts()
 	configureInstallPlans()
 	configureStateDatabases()
@@ -42,32 +38,24 @@ func wireBasicCLIDeps() {
 	configureIssueOpsLeaseNextCommands()
 	configureIssueOpsExecutionRunners()
 	configureIssueOpsCLIRuntime()
-	basiccli.Configure(basiccli.Deps{
-		GitPreflight:   preflight.GitPreflight,
-		IssueOpsRoot:   issueOpsRoot,
-		ResolveTarget:  resolveTarget,
-		Version:        version,
-		InspectHarness: inspectHarness,
-		DocsIndex:      docs.DocsIndex,
-	})
 	installcli.Configure(installDependencies())
 
 }
 
 func runDocs(args []string) error {
-	return basiccli.RunDocs(args)
+	return newBasicCommand().RunDocs(args)
 }
 
 func runPreflight(args []string) error {
-	return basiccli.RunPreflight(args)
+	return newBasicCommand().RunPreflight(args)
 }
 
 func runTrace(args []string) error {
-	return basiccli.RunTrace(args)
+	return newBasicCommand().RunTrace(args)
 }
 
 func runGuard(args []string) error {
-	return basiccli.RunGuard(args)
+	return newBasicCommand().RunGuard(args)
 }
 
 func runQuality(args []string) error {
@@ -75,7 +63,7 @@ func runQuality(args []string) error {
 }
 
 func runInspect(args []string) error {
-	return basiccli.RunInspect(args)
+	return newBasicCommand().RunInspect(args)
 }
 
 func runDoctor(args []string) error {

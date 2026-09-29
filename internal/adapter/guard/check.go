@@ -1,17 +1,16 @@
 package guard
 
 import (
-	guardapp "issueops/internal/application/guard"
 	guardcontract "issueops/internal/contract/guard"
+	"path/filepath"
 )
 
-func GuardCheck(req guardcontract.GuardCheckRequest) guardcontract.GuardCheckResult {
-	return (guardapp.Service{Source: Source{}}).Check(req)
-}
+type Source struct{ BaseDir string }
 
-type Source struct{}
-
-func (Source) ResolveRoot(path string) string {
+func (source Source) ResolveRoot(path string) string {
+	if source.BaseDir != "" && !filepath.IsAbs(path) {
+		path = filepath.Join(source.BaseDir, path)
+	}
 	root := absOrOriginal(path)
 	if root == "" {
 		root = absOrOriginal(".")

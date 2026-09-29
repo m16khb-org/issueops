@@ -60,6 +60,16 @@
     "role": "codec"
   },
   {
+    "path": "internal/contract/guard/error.go",
+    "symbol": "func GuardBlockedError.Error",
+    "role": "error"
+  },
+  {
+    "path": "internal/contract/guard/error.go",
+    "symbol": "func IsGuardBlocked",
+    "role": "error"
+  },
+  {
     "path": "internal/contract/issueops/cleanup_attempt.go",
     "symbol": "func ValidateCleanupAttempt",
     "role": "shape"

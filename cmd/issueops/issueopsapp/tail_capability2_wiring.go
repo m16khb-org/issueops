@@ -1,28 +1,15 @@
 package issueopsapp
 
 import (
-	basicclit2deps "issueops/cmd/issueops/basiccli"
 	mcpclit2deps "issueops/cmd/issueops/mcpcli"
 	projectclit2deps "issueops/cmd/issueops/projectcli"
 	commitsuggestadapter "issueops/internal/adapter/commitsuggest"
-	guardadapter "issueops/internal/adapter/guard"
-	issueopsadapter "issueops/internal/adapter/issueops"
 	lintdiagnoseadapter "issueops/internal/adapter/lintdiagnose"
-	issueopscontract "issueops/internal/contract/issueops"
-	tracecontract "issueops/internal/contract/trace"
 )
 
-// configureTailCapabilities2는 commit 제안, lint 진단, guard 검사, trace 분석을
+// configureTailCapabilities2는 commit 제안과 lint 진단을
 // 설치한다. 모두 저장소를 읽거나 외부 명령을 부른다.
 func configureTailCapabilities2() {
-	basicclit2deps.GuardCheck = guardadapter.GuardCheck
-	basicclit2deps.TraceAnalyze = func(req tracecontract.TraceAnalyzeRequest) (tracecontract.TraceAnalyzeResult, error) {
-		return newTraceService().Analyze(req)
-	}
-	basicclit2deps.TraceHandoffDeliveryObserve = func(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (tracecontract.HandoffDeliveryObserveResult, error) {
-		record, err := newHandoffDeliveryService(issueopsadapter.IssueOpsStateRoot()).ObserveManual(observation)
-		return tracecontract.HandoffDeliveryObserveResult{OK: err == nil, Kind: record.Kind, AuditLogID: record.AuditLogID, Observation: record.Observation}, err
-	}
 	mcpclit2deps.DiagnoseCommand = lintdiagnoseadapter.DiagnoseCommand
 	mcpclit2deps.SuggestCommit = commitsuggestadapter.SuggestCommit
 	projectclit2deps.DiagnoseCommand = lintdiagnoseadapter.DiagnoseCommand

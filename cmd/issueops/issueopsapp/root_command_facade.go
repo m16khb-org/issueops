@@ -9,8 +9,8 @@ import (
 	"issueops/cmd/issueops/channelcli"
 	"issueops/cmd/issueops/gatescli"
 	"issueops/cmd/issueops/rootcmd"
-	guard "issueops/internal/adapter/guard"
 	clicontract "issueops/internal/contract/cli"
+	guard "issueops/internal/contract/guard"
 )
 
 var dependencyWiring sync.Once

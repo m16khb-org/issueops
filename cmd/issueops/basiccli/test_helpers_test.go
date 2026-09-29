@@ -2,34 +2,14 @@ package basiccli
 
 import (
 	"context"
-	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/preflight"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
-	inspect "issueops/internal/adapter/inspect"
-	inspectcontract "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
 	"issueops/internal/testsupport"
 )
-
-func init() {
-	root := testIssueOpsRoot()
-	Configure(Deps{
-		GitPreflight:  preflight.GitPreflight,
-		DocsIndex:     docs.DocsIndex,
-		IssueOpsRoot:  func() string { return root },
-		ResolveTarget: testResolveTarget,
-		Version:       "0.1.0",
-		InspectHarness: func(repo string) inspectcontract.InspectInfo {
-			target := testResolveTarget(repo)
-			home, _ := os.UserHomeDir()
-			return (inspect.Observer{ListDocs: docs.ListDocs}).Inspect(root, target, home, "0.1.0", "atomic-commit-push")
-		},
-	})
-}
 
 func configureOperationalCollectorTest(t *testing.T, collect func(context.Context, string) operationalhealth.Snapshot) {
 	t.Helper()

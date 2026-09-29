@@ -33,3 +33,8 @@ func (service Service) Check(request guardcontract.GuardCheckRequest) guardcontr
 		Findings: analysis.Findings, Summary: analysis.Summary, Warnings: []string{},
 	}
 }
+
+func (service Service) CheckForCommand(request guardcontract.GuardCheckRequest) (guardcontract.GuardCheckResult, error) {
+	result := service.Check(request)
+	return result, guarddomain.BlockingError(result)
+}

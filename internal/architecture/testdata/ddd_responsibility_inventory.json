@@ -207,16 +207,12 @@
       ]
     },
     {
-      "path": "cmd/issueops/basiccli/dependencies.go",
+      "path": "cmd/issueops/basiccli/command.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Configure",
-        "func defaultDeps",
-        "func defaultIssueOpsRoot",
-        "func defaultResolveTarget",
-        "func printJSON",
-        "type Deps"
+        "type Command",
+        "type HandoffObserver"
       ]
     },
     {
@@ -224,8 +220,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runDocs",
-        "func runDocsWithRoot"
+        "func Command.RunDocs"
       ]
     },
     {
@@ -237,49 +232,35 @@
       ]
     },
     {
-      "path": "cmd/issueops/basiccli/exports.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func RunDocs",
-        "func RunDocsWithRoot",
-        "func RunGuard",
-        "func RunGuardCheck",
-        "func RunInspect",
-        "func RunPreflight",
-        "func RunTrace",
-        "func RunTraceAnalyze",
-        "func RunTraceHandoffDeliveryObserve"
-      ]
-    },
-    {
       "path": "cmd/issueops/basiccli/guard.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func guardUsage",
-        "func runGuard",
-        "func runGuardCheck"
+        "func Command.RunGuard",
+        "func Command.runGuardCheck",
+        "func guardUsage"
       ]
-    },
-    {
-      "path": "cmd/issueops/basiccli/guard_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/basiccli/inspect_doctor_cli.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func Command.RunInspect",
         "func Doctor.Run",
         "func doctorProfile",
         "func doctorRepeatedFlag.Set",
         "func doctorRepeatedFlag.String",
         "func normalizeDoctorPreserve",
-        "func runInspect",
         "type doctorRepeatedFlag"
+      ]
+    },
+    {
+      "path": "cmd/issueops/basiccli/json.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func printJSON"
       ]
     },
     {
@@ -287,7 +268,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runPreflight"
+        "func Command.RunPreflight"
       ]
     },
     {
@@ -295,17 +276,11 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runTrace",
-        "func runTraceAnalyze",
-        "func runTraceHandoffDeliveryObserve",
+        "func Command.RunTrace",
+        "func Command.runTraceAnalyze",
+        "func Command.runTraceHandoffDeliveryObserve",
         "func traceUsage"
       ]
-    },
-    {
-      "path": "cmd/issueops/basiccli/trace_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/channelcli/channel.go",
@@ -731,6 +706,14 @@
         "func newHarnessInspector",
         "func printJSON",
         "func usage"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/basic_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newBasicCommand"
       ]
     },
     {
@@ -1563,14 +1546,6 @@
       "task": "T20",
       "symbols": [
         "func configureTail5"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/tail8_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureTail8"
       ]
     },
     {
@@ -3828,7 +3803,6 @@
       "owner": "adapter",
       "task": "T10",
       "symbols": [
-        "func GuardCheck",
         "func Source.ExistingSymbols",
         "func Source.ReadFile",
         "func Source.ResolveRoot",
@@ -3865,16 +3839,6 @@
         "func cleanGuardFiles",
         "func guardReadFile",
         "func guardTargetFiles"
-      ]
-    },
-    {
-      "path": "internal/adapter/guard/types.go",
-      "owner": "adapter",
-      "task": "T10",
-      "symbols": [
-        "func GuardBlockedError.Error",
-        "func IsGuardBlocked",
-        "type GuardBlockedError"
       ]
     },
     {
@@ -9251,6 +9215,7 @@
       "task": "T10",
       "symbols": [
         "func Service.Check",
+        "func Service.CheckForCommand",
         "type Service",
         "type Source"
       ]
@@ -11529,6 +11494,16 @@
       ]
     },
     {
+      "path": "internal/contract/guard/error.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "func GuardBlockedError.Error",
+        "func IsGuardBlocked",
+        "type GuardBlockedError"
+      ]
+    },
+    {
       "path": "internal/contract/guard/types.go",
       "owner": "contract",
       "task": "T02",
@@ -13314,6 +13289,14 @@
         "func Mode",
         "type Analysis",
         "type FileObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/guard/block.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func BlockingError"
       ]
     },
     {
@@ -23851,6 +23834,25 @@
       ],
       "evidence_tests": [
         "cmd/issueops/issueopsapp/issueops_claim_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "guard-command-blocking-error",
+      "source_path": "cmd/issueops/basiccli/guard.go",
+      "source_symbol": "func runGuardCheck",
+      "responsibility": "Preserve result authority and select ordered block findings for command refusal",
+      "target": "internal/domain/guard",
+      "target_symbol": "func BlockingError",
+      "task": "T20",
+      "entrypoints": [
+        "guard check"
+      ],
+      "evidence_tests": [
+        "internal/domain/guard/block_test.go",
+        "internal/contract/guard/error_test.go",
+        "cmd/issueops/basiccli/trace_guard_cli_test.go",
+        "cmd/issueops/issueopsapp/basic_instance_wiring_test.go"
       ],
       "status": "migrated"
     }

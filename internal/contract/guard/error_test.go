@@ -2,7 +2,6 @@ package guard
 
 import (
 	"fmt"
-	guardcontract "issueops/internal/contract/guard"
 	"testing"
 )
 
@@ -12,7 +11,7 @@ func TestGuardBlockedErrorFormatsDefaultAndFirstFindingRule(t *testing.T) {
 		t.Fatalf("empty GuardBlockedError = %q, want %q", got, want)
 	}
 
-	blocked := GuardBlockedError{Findings: []guardcontract.GuardFinding{
+	blocked := GuardBlockedError{Findings: []GuardFinding{
 		{Rule: "no-secrets"},
 		{Rule: "no-large-file"},
 	}}

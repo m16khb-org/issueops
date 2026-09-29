@@ -22,7 +22,7 @@ func (values *doctorRepeatedFlag) Set(value string) error {
 	return nil
 }
 
-func runInspect(args []string) error {
+func (command Command) RunInspect(args []string) error {
 	fs := flag.NewFlagSet("inspect", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	repo := fs.String("repo", "", "target repo/workspace")
@@ -32,7 +32,7 @@ func runInspect(args []string) error {
 	if *repo == "" && fs.NArg() > 0 {
 		*repo = fs.Arg(0)
 	}
-	info := deps.InspectHarness(*repo)
+	info := command.InspectHarness(*repo)
 	if *jsonOut {
 		return printJSON(info)
 	}
