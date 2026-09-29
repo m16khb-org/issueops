@@ -427,7 +427,7 @@ forwarding facade·package-global 조립 제거는 T20에서 마감한다.
 
 ### Task 19: CLI·MCP catalog·host protocol 위치 정합화 (T19)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T18,T12. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/domain/{cli,mcp,nativehost,omolifecycle,hook}/`; `internal/contract/mcp/`; `cmd/issueops/{mcpcli,hookcli,rootcmd}/`; `configs/`; `skills/`
 - **변경/신규 파일:** 공개 static schema/descriptor는 contract, catalog assembly와 render는 신규 `internal/adapter/inbound/catalog/`, host argv/extension code 생성은 신규 `internal/adapter/hostprotocol/`. host별 소비자는 root에서 주입한다.
@@ -436,6 +436,12 @@ forwarding facade·package-global 조립 제거는 T20에서 마감한다.
 - **CHECK:** `go test ./internal/architecture ./cmd/issueops/contractgolden ./cmd/issueops/mcpcli ./cmd/issueops/hookcli ./internal/adapter/omo ./internal/adapter/codex ./internal/adapter/claude -count=1`; 이동한 catalog/hostprotocol 전체 test.
 - **EXPECT / QA:** 정상: MCP SDK/legacy handshake의 advertised catalog와 extension 생성 bytes 동일. 실패: invalid arguments는 application effect 전에 거부, SessionStart에 mutation 추가 없음. project-local opt-in 없는 install의 repo 쓰기 0.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T19-success.txt`, `T19-failure.txt`, `T19-ownership.json`.
+
+완료 근거: host protocol `ce2bb5b8`, MCP catalog `de937658`, CLI catalog
+`fd3853fa`에서 정적 descriptor·렌더링·순수 규칙의 소유권을 분리했다.
+최종 후보에서 전체 검증 26/26, 최소 점수 100과 실제 race·vet가 통과했다.
+CLI 72개 실행, MCP 계약, hook 40개 실행, host argv·Omo 출력의 동일성을
+확인했다. T19 CHECK와 성공·거부·소유권 근거는 지정 evidence에 기록했다.
 
 ### Task 20: 전체 production wiring 전환과 잔여 facade 제거 (T20)
 
