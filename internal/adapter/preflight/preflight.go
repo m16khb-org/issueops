@@ -9,12 +9,12 @@ import (
 )
 
 func GitPreflight(target, issueOpsRoot string) preflightcontract.PreflightResult {
-	return (preflightapp.Service{Observer: gitObserver{}}).Check(target, issueOpsRoot)
+	return (preflightapp.Service{Observer: GitObserver{}}).Check(target, issueOpsRoot)
 }
 
-type gitObserver struct{}
+type GitObserver struct{}
 
-func (gitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation {
+func (GitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation {
 	code, root, stderr := GitCmd(target, "rev-parse", "--show-toplevel")
 	if code != 0 {
 		return preflightapp.Observation{ErrorDetail: stderr}

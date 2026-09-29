@@ -1784,6 +1784,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/verify_work_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newVerifyWorkService"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/worker_wiring.go",
       "owner": "composition",
       "task": "T20",
@@ -3156,12 +3164,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/statuscli/adapter_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/statuscli/dependencies.go",
       "owner": "inbound",
       "task": "T20",
@@ -3180,21 +3182,10 @@
       "task": "T20",
       "symbols": [
         "func BuildStatus",
-        "func BuildVerifyWork",
         "func RunStatus",
-        "func RunVerifyWork",
         "type SelfVerificationStatus",
-        "type Status",
-        "type WorkEvidenceItem",
-        "type WorkResult",
-        "type WorkSuggestedCommand"
+        "type Status"
       ]
-    },
-    {
-      "path": "cmd/issueops/statuscli/guard_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/statuscli/state_dependencies.go",
@@ -3218,14 +3209,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func buildVerifyWork",
-        "func buildVerifyWorkSuggestedCommands",
-        "func runVerifyWork",
-        "func verifyWorkEvidenceItem",
-        "func verifyWorkEvidenceItemWithCommand",
-        "type VerifyWorkEvidenceItem",
-        "type VerifyWorkResult",
-        "type VerifyWorkSuggestedCommand"
+        "func RunVerifyWork"
       ]
     },
     {
@@ -4039,11 +4023,11 @@
       "task": "T10",
       "symbols": [
         "func GuardCheck",
-        "func guardSource.ExistingSymbols",
-        "func guardSource.ReadFile",
-        "func guardSource.ResolveRoot",
-        "func guardSource.TargetFiles",
-        "type guardSource"
+        "func Source.ExistingSymbols",
+        "func Source.ReadFile",
+        "func Source.ResolveRoot",
+        "func Source.TargetFiles",
+        "type Source"
       ]
     },
     {
@@ -7743,9 +7727,9 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
+        "func GitObserver.Observe",
         "func GitPreflight",
-        "func gitObserver.Observe",
-        "type gitObserver"
+        "type GitObserver"
       ]
     },
     {
@@ -9295,6 +9279,14 @@
       "symbols": [
         "func Plan",
         "func PlanJSON"
+      ]
+    },
+    {
+      "path": "internal/adapter/verifywork/git.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func GitStatus"
       ]
     },
     {
@@ -11553,6 +11545,15 @@
       ]
     },
     {
+      "path": "internal/application/verifywork/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Run",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/webfetch/fetch.go",
       "owner": "application",
       "task": "T20",
@@ -13157,6 +13158,16 @@
         "type PluginEntry",
         "type Report",
         "type SkillEntry"
+      ]
+    },
+    {
+      "path": "internal/contract/verifywork/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type EvidenceItem",
+        "type Result",
+        "type SuggestedCommand"
       ]
     },
     {
@@ -16685,6 +16696,19 @@
         "func normalizePlugin",
         "func normalizeSkill",
         "func plan"
+      ]
+    },
+    {
+      "path": "internal/domain/verifywork/result.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Evaluate",
+        "func suggestedCommands",
+        "func verifyWorkEvidenceItem",
+        "func verifyWorkEvidenceItemWithCommand",
+        "type Decision",
+        "type Observation"
       ]
     },
     {
@@ -23383,6 +23407,57 @@
         "internal/domain/looprun/gate_test.go",
         "internal/adapter/issueops/loopgate/loop_gate_test.go",
         "cmd/issueops/issueopsapp/loop_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "verify-work-evidence",
+      "source_path": "cmd/issueops/statuscli/status_verify_work.go",
+      "source_symbol": "func buildVerifyWork",
+      "responsibility": "Aggregate git, preflight, guard and optional command evidence without hiding failures",
+      "target": "internal/domain/verifywork",
+      "target_symbol": "func Evaluate",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/cli_facade.go:runVerifyWork"
+      ],
+      "evidence_tests": [
+        "TestEvaluateRequiresEveryEvidenceSource",
+        "TestVerifyWorkInstancesKeepHarnessContextAndReloadPolicy"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "verify-work-suggestions",
+      "source_path": "cmd/issueops/statuscli/status_verify_work.go",
+      "source_symbol": "func buildVerifyWorkSuggestedCommands",
+      "responsibility": "Order inferred verification commands and preserve their source evidence and confidence",
+      "target": "internal/domain/verifywork",
+      "target_symbol": "func suggestedCommands",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/cli_facade.go:runVerifyWork"
+      ],
+      "evidence_tests": [
+        "TestSuggestionsPreserveSignalOrderAndSparseNames",
+        "TestVerifyWorkInstancesKeepHarnessContextAndReloadPolicy"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "verify-work-evidence-status",
+      "source_path": "cmd/issueops/statuscli/status_verify_work.go",
+      "source_symbol": "func verifyWorkEvidenceItemWithCommand",
+      "responsibility": "Classify each verification evidence item as passed or failed and preserve skipped command state",
+      "target": "internal/domain/verifywork",
+      "target_symbol": "func verifyWorkEvidenceItemWithCommand",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/cli_facade.go:runVerifyWork"
+      ],
+      "evidence_tests": [
+        "TestServicePreservesCheckOrderAndFailureEvidence",
+        "TestVerifyWorkInstancesKeepHarnessContextAndReloadPolicy"
       ],
       "status": "migrated"
     }

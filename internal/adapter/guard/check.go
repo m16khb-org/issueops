@@ -6,12 +6,12 @@ import (
 )
 
 func GuardCheck(req guardcontract.GuardCheckRequest) guardcontract.GuardCheckResult {
-	return (guardapp.Service{Source: guardSource{}}).Check(req)
+	return (guardapp.Service{Source: Source{}}).Check(req)
 }
 
-type guardSource struct{}
+type Source struct{}
 
-func (guardSource) ResolveRoot(path string) string {
+func (Source) ResolveRoot(path string) string {
 	root := absOrOriginal(path)
 	if root == "" {
 		root = absOrOriginal(".")
@@ -19,12 +19,12 @@ func (guardSource) ResolveRoot(path string) string {
 	return root
 }
 
-func (guardSource) TargetFiles(root string, request guardcontract.GuardCheckRequest) []string {
+func (Source) TargetFiles(root string, request guardcontract.GuardCheckRequest) []string {
 	return guardTargetFiles(root, request)
 }
-func (guardSource) ExistingSymbols(root string, files []string) map[string][]string {
+func (Source) ExistingSymbols(root string, files []string) map[string][]string {
 	return guardExistingSymbols(root, files)
 }
-func (guardSource) ReadFile(root, rel string, staged bool) (string, bool) {
+func (Source) ReadFile(root, rel string, staged bool) (string, bool) {
 	return guardReadFile(root, rel, staged)
 }

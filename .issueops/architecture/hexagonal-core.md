@@ -117,6 +117,12 @@ doctor의 파일·프로세스·HTTP 관측은 adapter가 수행하고, 문서 �
 
 `application/doctor.Service`는 기존 순서로 관측값을 모아 domain 결과를 합치고 출력 순서를 정한다. `--static-only`는 pipe·MCP live 관측을 호출하지 않는다. 실제 CLI의 진단 결과, 오류·종료 코드와 저장 파일 변화를 이전 binary와 비교한다. root의 doctor factory는 state·lifecycle·loop 조회를 인스턴스마다 조립한다. CLI의 `basiccli.Doctor`는 application과 경로 정규화, home·harness 경로·version, live 관측 함수를 명시적으로 받는다. adapter의 실행 facade·DTO 재노출·전역 setter와 CLI의 doctor setter는 제거했으며 gateway 관측도 별도 probe 인스턴스를 사용한다. status는 같은 doctor application을 명시적으로 받지만 status의 집계 로직·worker 조회 등 나머지 경계는 후속 범위다.
 
+### Verify-work boundary
+
+`verify-work`의 JSON DTO는 `internal/contract/verifywork`, 증거별 성공·실패·생략 상태와 전체 판정·추천 명령 규칙은 `internal/domain/verifywork`가 소유한다. `application/verifywork.Service`는 Git status → preflight → guard → 선택한 read-only 명령 → 프로젝트 신호 조회 순서로 관측한 뒤 domain을 호출한다. Git 오류가 있어도 후속 검사를 수행하며 오류 문구·stdout의 끝 개행·빈 배열을 보존한다.
+
+root가 실제 preflight·guard application과 정책 실행기, Git·프로젝트 신호 adapter를 조립해 CLI에 전달한다. CLI는 flag 해석·출력·실패 종료만 담당한다. verify-work의 전역 콜백, CLI DTO 별칭과 결과 builder는 제거했다. 상대 경로와 정책 파일의 매 평가 재조회는 기존 동작을 유지하며 status의 집계 로직은 별도 후속 범위다.
+
 ### Loop runtime boundary
 
 loop의 생성·시도 기록·종료·status는 root가 조립한 `application/looprun.Service`를 호출한다. CLI와 MCP 직접 호출·SDK는 각 인스턴스에 고정한 저장소 경로와 작업 디렉터리를 사용한다. adapter의 `Store`는 SQL 읽기·쓰기와 기존 span 잠금만 수행하며 전역 저장소 setter와 lifecycle 실행 facade는 제거했다.

@@ -2,7 +2,6 @@ package statuscli
 
 import (
 	"encoding/json"
-	"issueops/internal/adapter/preflight"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,7 +63,6 @@ func TestBuildHarnessStatusSharesDaemonAdmissionWithDoctor(t *testing.T) {
 		Draining:          false,
 	}
 	Configure(Deps{
-		GitPreflight:      preflight.GitPreflight,
 		IssueOpsRoot:      func() string { return repo },
 		ResolveTarget:     func(target string) string { return target },
 		Version:           "test",

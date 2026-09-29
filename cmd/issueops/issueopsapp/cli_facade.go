@@ -15,7 +15,6 @@ import (
 	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/preflight"
-	"issueops/internal/adapter/projectdocs"
 )
 
 func wireBasicCLIDeps() {
@@ -55,13 +54,11 @@ func wireBasicCLIDeps() {
 	})
 	installcli.Configure(installDependencies())
 	statuscli.Configure(statuscli.Deps{
-		AnalyzeProjectSignals: projectdocs.AnalyzeProjectSignals,
-		IssueOpsRoot:          issueOpsRoot,
-		ResolveTarget:         resolveTarget,
-		Version:               version,
-		InspectHarness:        inspectHarness,
-		CheckDaemonStatus:     checkDaemonStatus,
-		GitPreflight:          preflight.GitPreflight,
+		IssueOpsRoot:      issueOpsRoot,
+		ResolveTarget:     resolveTarget,
+		Version:           version,
+		InspectHarness:    inspectHarness,
+		CheckDaemonStatus: checkDaemonStatus,
 	})
 	workercli.Configure(workercli.Deps{ResolveTarget: resolveTarget})
 }
@@ -111,7 +108,7 @@ func runStatus(args []string) error {
 }
 
 func runVerifyWork(args []string) error {
-	return statuscli.RunVerifyWork(args)
+	return statuscli.RunVerifyWork(newVerifyWorkService(), args)
 }
 
 func runWorker(args []string) error {

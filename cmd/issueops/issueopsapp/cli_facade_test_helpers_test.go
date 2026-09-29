@@ -4,6 +4,7 @@ import (
 	statestore "issueops/internal/adapter/outbound/state"
 	qualityapp "issueops/internal/application/quality"
 	qualitycontract "issueops/internal/contract/quality"
+	verifyworkcontract "issueops/internal/contract/verifywork"
 	"os"
 
 	"issueops/cmd/issueops/basiccli"
@@ -103,7 +104,7 @@ func buildHarnessStatus(repo string) HarnessStatus {
 }
 
 func buildVerifyWork(repo string, all bool, argv []string) VerifyWorkResult {
-	return statuscli.BuildVerifyWork(repo, all, argv)
+	return newVerifyWorkService().Run(repo, all, argv)
 }
 
 func runWorkerEnqueue(args []string) error {
@@ -128,4 +129,4 @@ func runWorkerCancel(args []string) error {
 
 type HarnessStatus = statuscli.Status
 
-type VerifyWorkResult = statuscli.WorkResult
+type VerifyWorkResult = verifyworkcontract.Result

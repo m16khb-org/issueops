@@ -4,7 +4,6 @@ import (
 	apidoccli "issueops/cmd/issueops/apidoc"
 	mcpclideps "issueops/cmd/issueops/mcpcli"
 	policyclideps "issueops/cmd/issueops/policycli"
-	statusclideps "issueops/cmd/issueops/statuscli"
 	auditdeps "issueops/internal/adapter/audit"
 	gatesdeps "issueops/internal/adapter/gates"
 	gitworktreedeps "issueops/internal/adapter/gitworktree"
@@ -57,6 +56,5 @@ func configurePolicyAndGitObserversWithLookup(lookup policyapp.PreparedBaseBranc
 		Normalize:   reviewfilesdeps.Normalize,
 		Evidence:    reviewfilesdeps.Evidence,
 	})
-	statusclideps.RunReadOnlyCommand = evaluator.RunReadOnly
 	workerdeps.RunReadOnlyCommand = evaluator.RunReadOnly
 }

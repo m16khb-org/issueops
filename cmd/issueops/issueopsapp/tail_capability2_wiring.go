@@ -4,7 +4,6 @@ import (
 	basicclit2deps "issueops/cmd/issueops/basiccli"
 	mcpclit2deps "issueops/cmd/issueops/mcpcli"
 	projectclit2deps "issueops/cmd/issueops/projectcli"
-	statusclit2deps "issueops/cmd/issueops/statuscli"
 	commitsuggestadapter "issueops/internal/adapter/commitsuggest"
 	guardadapter "issueops/internal/adapter/guard"
 	lintdiagnoseadapter "issueops/internal/adapter/lintdiagnose"
@@ -26,5 +25,4 @@ func configureTailCapabilities2() {
 	mcpclit2deps.SuggestCommit = commitsuggestadapter.SuggestCommit
 	projectclit2deps.DiagnoseCommand = lintdiagnoseadapter.DiagnoseCommand
 	projectclit2deps.SuggestCommit = commitsuggestadapter.SuggestCommit
-	statusclit2deps.GuardCheck = guardadapter.GuardCheck
 }
