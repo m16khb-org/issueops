@@ -3,6 +3,7 @@ package selfworkflow
 import (
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/augmentplan"
+	domain "issueops/internal/domain/selfaugment"
 )
 
 func allSelfAugmentGoalsPassed(goals []SelfAugmentGoal) bool {
@@ -89,10 +90,6 @@ func SaveSelfAugmentLesson(req SelfAugmentLessonRequest) (SelfAugmentLessonResul
 	return saveSelfAugmentLesson(req)
 }
 
-func SaveSelfAugmentPlan(result *SelfAugmentPlanResult, key string) error {
-	return saveSelfAugmentPlan(result, key)
-}
-
 func ScoreSelfVerificationGoals(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
 	return scoreSelfVerificationGoals(result, targetScore)
 }
@@ -130,7 +127,7 @@ func selfAugmentCandidateScore(candidate SelfAugmentCandidate) float64 {
 }
 
 func SelfAugmentCandidateIDsByStatus(candidates []SelfAugmentCandidate, status string) []string {
-	return selfAugmentCandidateIDsByStatus(candidates, status)
+	return domain.CandidateIDsByStatus(candidates, status)
 }
 
 func SelfAugmentResearchInfluences() []SelfAugmentInfluence {

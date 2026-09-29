@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"issueops/cmd/issueops/selfworkflow/model"
-	"issueops/cmd/issueops/selfworkflow/stateio"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/testsupport"
 )
@@ -104,7 +103,7 @@ func TestRunSelfVerifyCompareJSONOutput(t *testing.T) {
 
 func writeSelfVerifyCLISnapshotForTest(t *testing.T, dir, key string, elapsedMS int64, ok bool, totalSteps, passedSteps int, generatedAt string) {
 	t.Helper()
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, key, SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, key, SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          model.SelfVerificationSummaryKind,
 		OK:            ok,

@@ -4,11 +4,11 @@ import (
 	"flag"
 	"fmt"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	contract "issueops/internal/contract/selfaugment"
 )
 
 type Deps struct {
-	Promote   func(fromKey, baselineKey string, confirm, allowFailedSource bool) (model.SelfAugmentPromoteResult, error)
+	Promote   func(fromKey, baselineKey string, confirm, allowFailedSource bool) (contract.SelfAugmentPromoteResult, error)
 	PrintJSON func(any) error
 }
 

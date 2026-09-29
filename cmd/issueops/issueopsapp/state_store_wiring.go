@@ -8,7 +8,6 @@ import (
 	augmentlesson "issueops/cmd/issueops/selfworkflow/augmentlesson"
 	augmentplan "issueops/cmd/issueops/selfworkflow/augmentplan"
 	candidateexport "issueops/cmd/issueops/selfworkflow/candidateexport"
-	stateio "issueops/cmd/issueops/selfworkflow/stateio"
 	statuscli "issueops/cmd/issueops/statuscli"
 	statestore "issueops/internal/adapter/outbound/state"
 	probe "issueops/internal/adapter/verification/probe"
@@ -42,11 +41,6 @@ func configureStateStores() {
 	mcpcli.StatePrune = statestore.StatePrune
 	mcpcli.StateRead = statestore.StateRead
 	mcpcli.StateWrite = statestore.StateWrite
-	stateio.NormalizeStateKey = statestore.NormalizeStateKey
-	stateio.StateDir = statestore.StateDir
-	stateio.StateRead = statestore.StateRead
-	stateio.StateWrite = statestore.StateWrite
-	stateio.WriteStateRecord = statestore.WriteStateRecord
 	stateroundtrip.StateRead = statestore.StateRead
 	stateroundtrip.WriteStateRecord = statestore.WriteStateRecord
 	statuscli.StateList = statestore.StateList

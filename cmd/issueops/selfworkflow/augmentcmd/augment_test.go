@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"strings"
 	"testing"
 
@@ -157,7 +158,7 @@ func TestRunSavesPlanStateAsJSON(t *testing.T) {
 			},
 			SavePlan: func(result *model.SelfAugmentPlanResult, key string) error {
 				savedKey = key
-				result.StateCheckpoint = &model.SelfAugmentStateCheckpoint{OK: true, Key: key}
+				result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: true, Key: key}
 				return nil
 			},
 			PrintJSON: printJSONForTest,

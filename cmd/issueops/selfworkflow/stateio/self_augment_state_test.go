@@ -2,6 +2,7 @@ package stateio
 
 import (
 	"encoding/json"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"os"
 	"path/filepath"
 	"testing"
@@ -33,7 +34,7 @@ func TestSaveSelfAugmentPlan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}
-	var snapshot model.SelfAugmentPlanStateSnapshot
+	var snapshot augmentcontract.SelfAugmentPlanStateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("unmarshal saved plan snapshot: %v", err)
 	}

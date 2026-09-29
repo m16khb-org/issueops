@@ -10,7 +10,7 @@ import (
 	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
-func handleSelfLoopMCPToolCall(call MCPToolCall, history augmentapp.HistoryService) MCPToolOutcome {
+func handleSelfLoopMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
 	case "self_augment":
 		selfworkflow.Version = Version
@@ -18,7 +18,7 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, history augmentapp.HistoryServi
 		result, err := augmentapp.PlanAndSave(selfworkflow.SelfAugmentPlanRequest{
 			Cycles:      argmap.Int(call.Arguments, "cycles", 1),
 			TargetScore: argmap.Float(call.Arguments, "target_score", selfworkflow.DefaultLoopTargetScoreExclusive),
-		}, argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-augment-latest"), augmentapp.PlanAndSaveDeps{Plan: selfworkflow.PlanSelfAugmentation, Save: selfworkflow.SaveSelfAugmentPlan})
+		}, argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-augment-latest"), augmentapp.PlanAndSaveDeps{Plan: selfworkflow.PlanSelfAugmentation, Save: deps.SelfState.SavePlan})
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32000, "Self-augmentation plan save failed", result))
 		}
@@ -49,7 +49,7 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, history augmentapp.HistoryServi
 			Verify: func(req verifyapp.LoopRequest) (selfworkflow.SelfAugmentResult, error) {
 				return SelfVerify(selfworkflow.SelfVerifyRequest{BaseSeed: req.BaseSeed, TargetScore: req.TargetScore})
 			},
-			SaveSummary: selfworkflow.SaveSelfVerificationSummary,
+			SaveSummary: deps.SelfState.SaveSummary,
 		})
 		if err != nil && !isSelfVerificationGateError(err) {
 			return mcpToolFailure(newProtocolError(-32000, "Self-verification failed", result))
@@ -63,7 +63,7 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, history augmentapp.HistoryServi
 		}
 		return mcpToolPayload(result)
 	case "self_verify_history", "self_augment_history":
-		result, err := history.History(
+		result, err := deps.SelfHistory.History(
 			argmap.StringDefault(call.Arguments, "prefix", "self-verify"),
 			argmap.Int(call.Arguments, "limit", 20),
 			augmentcontract.SelfAugmentHistoryRetentionOptions{
@@ -77,7 +77,7 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, history augmentapp.HistoryServi
 		}
 		return mcpToolPayload(result)
 	case "self_verify_compare", "self_augment_compare":
-		result, err := history.Compare(
+		result, err := deps.SelfHistory.Compare(
 			argmap.String(call.Arguments, "baseline_key"),
 			argmap.String(call.Arguments, "candidate_key"),
 			argmap.Float(call.Arguments, "max_elapsed_regression_pct", 20),
@@ -87,7 +87,7 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, history augmentapp.HistoryServi
 		}
 		return mcpToolPayload(result)
 	case "self_verify_promote", "self_augment_promote":
-		result, err := selfworkflow.PromoteSelfAugmentBaseline(
+		result, err := deps.SelfState.Promote(
 			argmap.String(call.Arguments, "from_key"),
 			argmap.String(call.Arguments, "baseline_key"),
 			argmap.Bool(call.Arguments, "confirm"),

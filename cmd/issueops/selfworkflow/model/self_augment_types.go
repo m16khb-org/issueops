@@ -9,8 +9,4 @@ const (
 	DefaultLoopTargetScoreExclusive = 95.0
 )
 
-type SelfAugmentStateCheckpoint = contract.SelfAugmentStateCheckpoint
-
-type SelfAugmentPromoteResult = contract.SelfAugmentPromoteResult
-
 type SelfAugmentIteration = contract.SelfAugmentIteration

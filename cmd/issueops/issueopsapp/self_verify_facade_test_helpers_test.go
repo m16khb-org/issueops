@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"issueops/cmd/issueops/selfworkflow/promotecmd"
 	statestore "issueops/internal/adapter/outbound/state"
 	app "issueops/internal/application/selfaugment"
 	domain "issueops/internal/domain/selfaugment"
@@ -58,23 +59,23 @@ func selfAugmentHistory(prefix string, limit int, retentionOptions ...selfAugmen
 }
 
 func runSelfVerifyPromoteWithDeps(args []string, deps selfVerifyPromoteDeps) error {
-	return selfworkflow.RunSelfVerifyPromoteWithDeps(args, selfworkflow.SelfVerifyPromoteDeps{Promote: deps.promote})
+	return promotecmd.Run(args, promotecmd.Deps{Promote: deps.promote, PrintJSON: printJSON})
 }
 
 func promoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error) {
-	return selfworkflow.PromoteSelfAugmentBaseline(fromKey, baselineKey, confirm, allowFailedSource)
+	return newSelfWorkflowState(statestore.StateDir()).Promote(fromKey, baselineKey, confirm, allowFailedSource)
 }
 
 func readSelfAugmentStateSnapshot(key string) (SelfAugmentStateSnapshot, error) {
-	return selfworkflow.ReadSelfAugmentStateSnapshot(key)
+	return (app.SnapshotStore{ReadState: newSelfWorkflowStateService(statestore.StateDir()).Read}).Read(key)
 }
 
 func isSelfVerificationSummaryKind(kind string) bool {
-	return selfworkflow.IsSelfVerificationSummaryKind(kind)
+	return domain.IsSelfVerificationSummaryKind(kind)
 }
 
 func writeSelfAugmentSnapshotRecord(dir, key string, snapshot SelfAugmentStateSnapshot) error {
-	return selfworkflow.WriteSelfAugmentSnapshotRecord(dir, key, snapshot)
+	return (app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: newSelfWorkflowStateService(dir).WriteRecord, Now: time.Now}).Write(dir, key, snapshot)
 }
 
 func boolPtr(value bool) *bool {
@@ -101,15 +102,15 @@ func emitSelfVerifyLoopEnd(progress *selfVerifyProgressReporter, loopKind string
 }
 
 func saveSelfVerificationSummary(result *SelfAugmentResult, key string) error {
-	return selfworkflow.SaveSelfVerificationSummary(result, key)
+	return newSelfWorkflowState(statestore.StateDir()).SaveSummary(result, key)
 }
 
 func saveSelfAugmentSummary(result *SelfAugmentResult, key string) error {
-	return selfworkflow.SaveSelfAugmentSummary(result, key)
+	return newSelfWorkflowState(statestore.StateDir()).SaveSummary(result, key)
 }
 
 func newSelfVerificationSummarySnapshot(result SelfAugmentResult, generatedAt time.Time) SelfAugmentStateSnapshot {
-	return selfworkflow.NewSelfVerificationSummarySnapshot(result, generatedAt)
+	return domain.NewSelfVerificationSummarySnapshot(result, generatedAt)
 }
 
 func plannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *StepResult) []selfVerifyPlannedStep {
@@ -134,3 +135,7 @@ type selfVerifyPromoteDeps struct {
 type SelfVerificationCandidateExportResult = selfworkflow.SelfVerificationCandidateExportResult
 
 type SelfVerificationCandidate = selfworkflow.SelfVerificationCandidate
+
+func saveSelfAugmentPlan(result *selfworkflow.SelfAugmentPlanResult, key string) error {
+	return newSelfWorkflowState(statestore.StateDir()).SavePlan(result, key)
+}

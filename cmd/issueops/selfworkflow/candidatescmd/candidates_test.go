@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"strings"
 	"testing"
 
@@ -37,7 +38,7 @@ func TestRunSavesAndPrintsJSON(t *testing.T) {
 			},
 			Save: func(result *candidateexport.SelfVerificationCandidateExportResult, key string) error {
 				savedKey = key
-				result.StateCheckpoint = &model.SelfAugmentStateCheckpoint{OK: true, Key: key}
+				result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: true, Key: key}
 				return nil
 			},
 			PrintJSON: printJSONForTest,

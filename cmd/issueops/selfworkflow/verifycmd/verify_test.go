@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"strings"
 	"testing"
 
@@ -51,7 +52,7 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 			if key != "verify-latest" || result.LLMEval == nil {
 				t.Fatalf("unexpected saved result key=%q result=%+v", key, result)
 			}
-			result.StateCheckpoint = &model.SelfAugmentStateCheckpoint{OK: true, Key: key}
+			result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: true, Key: key}
 			return nil
 		},
 		PrintJSON: printJSONForTest,
@@ -91,7 +92,7 @@ func TestRunReturnsSaveErrorAfterSuccessfulVerification(t *testing.T) {
 				return model.SelfAugmentResult{OK: true, LoopKind: "self_verification", Summary: model.SelfAugmentSummary{MinimumGoalScore: 100}}, nil
 			},
 			SaveSummary: func(result *model.SelfAugmentResult, key string) error {
-				result.StateCheckpoint = &model.SelfAugmentStateCheckpoint{OK: false, Key: key, Error: saveErr.Error()}
+				result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: false, Key: key, Error: saveErr.Error()}
 				return saveErr
 			},
 			PrintJSON: printJSONForTest,

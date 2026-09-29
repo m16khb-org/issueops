@@ -4,13 +4,12 @@ import (
 	"testing"
 
 	"issueops/cmd/issueops/selfworkflow/model"
-	"issueops/cmd/issueops/selfworkflow/stateio"
 )
 
 func TestSelfAugmentHistoryCoversInvalidTimestampSchemaSkipAndNilSlices(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, "self-verify-invalid-time", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-invalid-time", SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          model.SelfVerificationSummaryKind,
 		OK:            true,
@@ -19,7 +18,7 @@ func TestSelfAugmentHistoryCoversInvalidTimestampSchemaSkipAndNilSlices(t *testi
 	}); err != nil {
 		t.Fatalf("write invalid time: %v", err)
 	}
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, "self-verify-bad-schema", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-bad-schema", SelfAugmentStateSnapshot{
 		SchemaVersion: 2,
 		Kind:          model.SelfVerificationSummaryKind,
 		Summary:       SelfAugmentSummary{TotalRuns: 1},

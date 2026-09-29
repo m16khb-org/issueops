@@ -3,6 +3,7 @@ package stateio
 import (
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 const (
@@ -14,8 +15,8 @@ const (
 
 type SelfAugmentCandidate = model.SelfAugmentCandidate
 type SelfAugmentPlanResult = model.SelfAugmentPlanResult
-type SelfAugmentPlanStateSnapshot = model.SelfAugmentPlanStateSnapshot
-type SelfAugmentPromoteResult = model.SelfAugmentPromoteResult
+type SelfAugmentPlanStateSnapshot = augmentcontract.SelfAugmentPlanStateSnapshot
+type SelfAugmentPromoteResult = augmentcontract.SelfAugmentPromoteResult
 type SelfAugmentResult = model.SelfAugmentResult
-type SelfAugmentStateCheckpoint = model.SelfAugmentStateCheckpoint
-type SelfAugmentStateSnapshot = model.SelfAugmentStateSnapshot
+type SelfAugmentStateCheckpoint = augmentcontract.SelfAugmentStateCheckpoint
+type SelfAugmentStateSnapshot = augmentcontract.SelfAugmentStateSnapshot

@@ -41,7 +41,8 @@ func (repo Repository) signalRules() []repoSignalRule {
 			signals.HasSelfAugmentPlanner = DirContainsTerm(root, filepath.Join("cmd", "issueops", "selfworkflow"), "planSelfAugmentation")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasSelfAugmentStateCapture = DirContainsTerm(root, filepath.Join("cmd", "issueops", "selfworkflow"), "saveSelfAugmentPlan") &&
+			signals.HasSelfAugmentStateCapture = FileContainsTerm(root, filepath.Join("internal", "application", "selfaugment", "save_plan.go"), "func SavePlan(") &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "self_workflow_state_wiring.go"), "augmentapp.SavePlan(") &&
 				repo.DocsContainTerm(root, "--save-state")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {

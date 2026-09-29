@@ -1611,8 +1611,7 @@
       "symbols": [
         "func planSelfAugmentation",
         "func runSelfAugment",
-        "func runSelfAugmentLesson",
-        "func saveSelfAugmentPlan"
+        "func runSelfAugmentLesson"
       ]
     },
     {
@@ -1646,6 +1645,15 @@
       "symbols": [
         "func newSelfWorkflowHistory",
         "func selfWorkflowHistoryCLI"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/self_workflow_state_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newSelfWorkflowState",
+        "func newSelfWorkflowStateService"
       ]
     },
     {
@@ -2751,6 +2759,14 @@
       ]
     },
     {
+      "path": "cmd/issueops/mcpcli/self_state_dependencies.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "type SelfStateDependencies"
+      ]
+    },
+    {
       "path": "cmd/issueops/mcpcli/state_dependencies.go",
       "owner": "inbound",
       "task": "T20",
@@ -3211,13 +3227,9 @@
         "type SelfAugmentLessonStateSnapshot",
         "type SelfAugmentPlanRequest",
         "type SelfAugmentPlanResult",
-        "type SelfAugmentPlanStateSnapshot",
-        "type SelfAugmentPromoteResult",
         "type SelfAugmentRepoSignals",
         "type SelfAugmentResult",
         "type SelfAugmentSlowStep",
-        "type SelfAugmentStateCheckpoint",
-        "type SelfAugmentStateSnapshot",
         "type SelfAugmentStepDurationStat",
         "type SelfAugmentSummary",
         "type SelfVerificationContract",
@@ -3259,7 +3271,6 @@
         "func PlanSelfAugmentation",
         "func RunSelfAugmentLesson",
         "func SaveSelfAugmentLesson",
-        "func SaveSelfAugmentPlan",
         "func ScoreBool",
         "func ScoreSelfVerificationGoals",
         "func SelectGeniusFormulas",
@@ -3403,16 +3414,7 @@
         "type SelfAugmentLessonStateSnapshot",
         "type SelfAugmentPlanRequest",
         "type SelfAugmentPlanResult",
-        "type SelfAugmentPlanStateSnapshot",
         "type SelfAugmentRepoSignals"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/model/self_augment_state_types.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "type SelfAugmentStateSnapshot"
       ]
     },
     {
@@ -3420,9 +3422,7 @@
       "owner": "inbound",
       "task": "T18",
       "symbols": [
-        "type SelfAugmentIteration",
-        "type SelfAugmentPromoteResult",
-        "type SelfAugmentStateCheckpoint"
+        "type SelfAugmentIteration"
       ]
     },
     {
@@ -3497,29 +3497,14 @@
       ]
     },
     {
-      "path": "cmd/issueops/selfworkflow/self_augment_loop.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func RunSelfAugmentWithDeps",
-        "type SelfAugmentRunDeps"
-      ]
-    },
-    {
       "path": "cmd/issueops/selfworkflow/self_verify_cli.go",
       "owner": "inbound",
       "task": "T18",
       "symbols": [
         "func RunSelfVerifyCandidates",
         "func RunSelfVerifyCandidatesWithDeps",
-        "func RunSelfVerifyPromote",
-        "func RunSelfVerifyPromoteWithDeps",
-        "func RunSelfVerifyWithDeps",
         "func SelfVerifyCandidatesDeps.withDefaults",
-        "func SelfVerifyPromoteDeps.withDefaults",
-        "type SelfVerifyCandidatesDeps",
-        "type SelfVerifyPromoteDeps",
-        "type SelfVerifyRunDeps"
+        "type SelfVerifyCandidatesDeps"
       ]
     },
     {
@@ -3587,81 +3572,6 @@
         "func summarizeSelfAugment",
         "func summarizeSelfVerification"
       ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/self_workflow_state_facade.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func IsSelfVerificationSummaryKind",
-        "func NewSelfVerificationSummarySnapshot",
-        "func PromoteSelfAugmentBaseline",
-        "func ReadSelfAugmentStateSnapshot",
-        "func SaveSelfAugmentSummary",
-        "func SaveSelfVerificationSummary",
-        "func WriteSelfAugmentSnapshotRecord",
-        "func saveSelfAugmentPlan",
-        "func selfAugmentCandidateIDsByStatus"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/stateio/dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "type SelfAugmentCandidate",
-        "type SelfAugmentPlanResult",
-        "type SelfAugmentPlanStateSnapshot",
-        "type SelfAugmentPromoteResult",
-        "type SelfAugmentResult",
-        "type SelfAugmentStateCheckpoint",
-        "type SelfAugmentStateSnapshot"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/stateio/self_augment_state.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func SaveSelfAugmentPlan",
-        "func SelfAugmentCandidateIDsByStatus"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/stateio/self_verify_promote_core.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func PromoteSelfAugmentBaseline"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/stateio/self_verify_save_summary.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func NewSelfVerificationSummarySnapshot",
-        "func SaveSelfAugmentSummary",
-        "func SaveSelfVerificationSummary"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/stateio/self_verify_state_snapshot.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "func IsSelfVerificationSummaryKind",
-        "func NormalizeSelfAugmentSnapshotFailureCause",
-        "func ReadSelfAugmentStateSnapshot",
-        "func WriteSelfAugmentSnapshotRecord",
-        "func snapshotStore"
-      ]
-    },
-    {
-      "path": "cmd/issueops/selfworkflow/stateio/state_dependencies.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/selfworkflow/steps/self_verify_steps.go",

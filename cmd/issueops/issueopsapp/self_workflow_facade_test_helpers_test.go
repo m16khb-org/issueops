@@ -155,7 +155,7 @@ type selfAugmentHistoryRetentionOptions = augmentcontract.SelfAugmentHistoryRete
 
 type selfVerificationCoverageDefinition = selfworkflow.SelfVerificationCoverageDefinition
 
-type SelfAugmentPromoteResult = selfworkflow.SelfAugmentPromoteResult
+type SelfAugmentPromoteResult = augmentcontract.SelfAugmentPromoteResult
 
 type SelfAugmentIteration = selfworkflow.SelfAugmentIteration
 
@@ -177,7 +177,7 @@ type SelfAugmentCandidate = selfworkflow.SelfAugmentCandidate
 
 type SelfAugmentRepoSignals = selfworkflow.SelfAugmentRepoSignals
 
-type SelfAugmentStateSnapshot = selfworkflow.SelfAugmentStateSnapshot
+type SelfAugmentStateSnapshot = augmentcontract.SelfAugmentStateSnapshot
 
 type SelfAugmentSummary = selfworkflow.SelfAugmentSummary
 

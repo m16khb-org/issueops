@@ -169,7 +169,7 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 		}
 	}
 	if group == mcpcontract.DispatchSelfLoop {
-		return func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps.SelfHistory) }
+		return func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) }
 	}
 	if fn, ok := handlerGroupLookup[group]; ok {
 		return fn

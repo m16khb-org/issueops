@@ -2,6 +2,7 @@ package stateio
 
 import (
 	"encoding/json"
+	statestore "issueops/internal/adapter/outbound/state"
 	"time"
 
 	application "issueops/internal/application/selfaugment"
@@ -14,8 +15,8 @@ func SaveSelfAugmentPlan(result *SelfAugmentPlanResult, key string) error {
 		Encode: func(snapshot SelfAugmentPlanStateSnapshot) ([]byte, error) {
 			return json.MarshalIndent(snapshot, "", "  ")
 		},
-		Write:    StateWrite,
-		StateDir: StateDir,
+		Write:    statestore.StateWrite,
+		StateDir: statestore.StateDir,
 	})
 }
 

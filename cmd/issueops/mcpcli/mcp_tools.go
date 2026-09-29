@@ -34,6 +34,7 @@ type MCPToolOutcome struct {
 type MCPDependencies struct {
 	Catalog     mcpcontract.Catalog
 	SelfHistory augmentapp.HistoryService
+	SelfState   SelfStateDependencies
 	Prepare     issueopscontract.ExecutionPrepareHandler
 	Orca        port.ExecutionOrcaProvisioner
 	OrcaOwner   port.ExecutionOrcaOwnerInspector
@@ -98,7 +99,7 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 		handleGatesMCPToolCall,
 		handleChannelMCPToolCall,
 		handleAssistantWorkerMCPToolCall,
-		func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps.SelfHistory) },
+		func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) },
 	} {
 		outcome := handler(call)
 		if !outcome.Handled {

@@ -53,3 +53,31 @@ func TestSignalRulesRequireCurrentOwnersInsteadOfTheirOwnSearchLiterals(t *testi
 		t.Fatalf("current implementations not observed: %+v", got)
 	}
 }
+
+func TestStateCaptureSignalFollowsApplicationAndRootWiring(t *testing.T) {
+	root := t.TempDir()
+	write := func(rel, content string) {
+		t.Helper()
+		path := filepath.Join(root, rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("evidence.md", "--save-state")
+	repo := Repository{ListDocs: func(string) []string { return []string{filepath.Join(root, "evidence.md")} }}
+	write("cmd/issueops/selfworkflow/old.go", "package selfworkflow\nfunc saveSelfAugmentPlan() {}")
+	if repo.CollectSignals(root, 0, nil, "").HasSelfAugmentStateCapture {
+		t.Fatal("removed facade alone must not satisfy state capture")
+	}
+	write("internal/application/selfaugment/save_plan.go", "package selfaugment\nfunc SavePlan() {}")
+	if repo.CollectSignals(root, 0, nil, "").HasSelfAugmentStateCapture {
+		t.Fatal("unwired application must not satisfy state capture")
+	}
+	write("cmd/issueops/issueopsapp/self_workflow_state_wiring.go", "package issueopsapp\nfunc save() { augmentapp.SavePlan() }")
+	if !repo.CollectSignals(root, 0, nil, "").HasSelfAugmentStateCapture {
+		t.Fatal("application state capture wiring was not observed")
+	}
+}

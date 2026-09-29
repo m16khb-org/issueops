@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"issueops/cmd/issueops/selfworkflow/promotecmd"
+	"issueops/cmd/issueops/selfworkflow/verifycmd"
 	domain "issueops/internal/domain/selfaugment"
 	"os"
 	"path/filepath"
@@ -251,7 +253,7 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 		IssueOpsRoot:        t.TempDir(),
 		Summary:             SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true},
 	}
-	if err := RunSelfVerifyWithDeps([]string{"--json", "--save-state", "--state-key", "verify-latest", "--seed", "100"}, SelfVerifyRunDeps{
+	if err := verifycmd.Run([]string{"--json", "--save-state", "--state-key", "verify-latest", "--seed", "100"}, verifycmd.Deps{
 		LookupEnv:      func(string) (string, bool) { return "", false },
 		ProgressWriter: &bytes.Buffer{},
 		Verify: func(request SelfVerifyRequest) (SelfAugmentResult, error) {
@@ -287,7 +289,7 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 	if !savedCandidate {
 		t.Fatal("candidate export was not saved through deps")
 	}
-	if err := RunSelfVerifyPromoteWithDeps([]string{"--from-key", "verify-latest", "--baseline-key", "baseline", "--json"}, SelfVerifyPromoteDeps{
+	if err := promotecmd.Run([]string{"--from-key", "verify-latest", "--baseline-key", "baseline", "--json"}, promotecmd.Deps{PrintJSON: printJSON,
 		Promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error) {
 			return SelfAugmentPromoteResult{OK: true, FromKey: fromKey, BaselineKey: baselineKey, Confirm: confirm, DryRun: !confirm, SourcePassed: true}, nil
 		},

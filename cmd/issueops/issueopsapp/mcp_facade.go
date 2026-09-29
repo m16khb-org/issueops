@@ -72,6 +72,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	return mcpcli.MCPDependencies{
 		Catalog:     mcpcatalog.Build(),
 		SelfHistory: newSelfWorkflowHistory(statestore.StateDir()),
+		SelfState:   newSelfWorkflowState(statestore.StateDir()),
 		Prepare:     execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner, ReadIssue: execution.ReadIssue,
 		Claim: issueOpsClaimHandler, Release: issueOpsReleaseHandler, Reseed: issueOpsReseedHandler,
 		Resume: issueOpsResumeHandler, Reconcile: issueOpsReconcileHandler, Complete: issueOpsCompleteHandler,

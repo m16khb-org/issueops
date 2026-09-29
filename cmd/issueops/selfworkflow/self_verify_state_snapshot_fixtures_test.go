@@ -1,6 +1,7 @@
-package stateio
+package selfworkflow
 
 import (
+	statestore "issueops/internal/adapter/outbound/state"
 	"time"
 
 	application "issueops/internal/application/selfaugment"
@@ -8,7 +9,7 @@ import (
 )
 
 func snapshotStore() application.SnapshotStore {
-	return application.SnapshotStore{ReadState: StateRead, NormalizeKey: NormalizeStateKey, WriteRecord: WriteStateRecord, Now: time.Now}
+	return application.SnapshotStore{ReadState: statestore.StateRead, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: statestore.WriteStateRecord, Now: time.Now}
 }
 
 func ReadSelfAugmentStateSnapshot(key string) (SelfAugmentStateSnapshot, error) {
@@ -19,7 +20,4 @@ func WriteSelfAugmentSnapshotRecord(dir, key string, snapshot SelfAugmentStateSn
 }
 func IsSelfVerificationSummaryKind(kind string) bool {
 	return domain.IsSelfVerificationSummaryKind(kind)
-}
-func NormalizeSelfAugmentSnapshotFailureCause(snapshot *SelfAugmentStateSnapshot) {
-	application.NormalizeSnapshotFailureCause(snapshot)
 }

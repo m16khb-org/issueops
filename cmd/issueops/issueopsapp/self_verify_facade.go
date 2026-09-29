@@ -6,6 +6,10 @@ import (
 
 	"issueops/cmd/issueops/selfworkflow"
 	"issueops/cmd/issueops/selfworkflow/historycompare"
+	"issueops/cmd/issueops/selfworkflow/promotecmd"
+	"issueops/cmd/issueops/selfworkflow/verifycmd"
+	"issueops/cmd/issueops/selfworkflow/verifyloop"
+	statestore "issueops/internal/adapter/outbound/state"
 )
 
 func runSelfVerify(args []string) error {
@@ -21,7 +25,9 @@ func runSelfVerify(args []string) error {
 	if len(args) > 0 && args[0] == "candidates" {
 		return runSelfVerifyCandidates(args[1:])
 	}
-	return selfworkflow.RunSelfVerifyWithDeps(args, selfworkflow.SelfVerifyRunDeps{
+	return verifycmd.Run(args, verifycmd.Deps{
+		SaveSummary: newSelfWorkflowState(statestore.StateDir()).SaveSummary,
+		PrintJSON:   printJSON,
 		Verify: func(request selfworkflow.SelfVerifyRequest) (augmentcontract.SelfAugmentResult, error) {
 			return selfVerify(request)
 		},
@@ -42,18 +48,19 @@ func runSelfVerifyHistory(args []string) error {
 }
 
 func runSelfVerifyPromote(args []string) error {
-	return selfworkflow.RunSelfVerifyPromote(args)
+	return promotecmd.Run(args, promotecmd.Deps{Promote: newSelfWorkflowState(statestore.StateDir()).Promote, PrintJSON: printJSON})
 }
 
 func selfVerify(request selfworkflow.SelfVerifyRequest) (augmentcontract.SelfAugmentResult, error) {
-	return selfworkflow.SelfVerify(request, selfVerifyLoopDeps())
+	return verifyloop.SelfVerify(request, selfVerifyLoopDeps())
 }
 
 func selfVerifyLoopDeps() selfworkflow.SelfVerifyLoopDeps {
 	return selfworkflow.SelfVerifyLoopDeps{
-		StepDeps:   selfVerifyStepDeps(),
-		FailedStep: failedStep,
-		PrintStep:  printStep,
+		IssueOpsRoot: issueOpsRoot,
+		StepDeps:     selfVerifyStepDeps(),
+		FailedStep:   failedStep,
+		PrintStep:    printStep,
 	}
 }
 
