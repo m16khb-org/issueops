@@ -406,7 +406,7 @@
 
 ### Task 18: 검증 실행기·risk step·저장 orchestration 이전 (T18)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T17. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/selfworkflow/{steps,verifycmd,augmentcmd,stateio,progress}/`; `cmd/issueops/validationcli/`; `cmd/issueops/commandstep/`; `cmd/issueops/selfworkflow/self_augment_loop.go`
 - **변경/신규 파일:** 확장 application/selfverify·selfaugment; 신규 `internal/adapter/verification/`에 실제 fixture/build/process/SDK smoke driver; contract에 StepResult/run DTO. progress 렌더는 inbound.
@@ -416,12 +416,14 @@
 - **EXPECT / QA:** 정상: 성공한 full-suite evidence만 해당 run에서 reuse. 실패: 한 step 실패/cancel/timeout 시 후속 동작과 최종 OK가 기존 계약과 동일; 다른 run의 partial 성공 합성 금지. fake runner가 모르는 argv를 성공 처리하지 않음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T18-success.txt`, `T18-failure.txt`, `T18-ownership.json`.
 
-T18 계획 구성 이전: `application/selfaugment.Planner`가 조회 순서를 소유하고,
-`domain/selfaugment.NewPlan`이 점수·감점·후보 선택을 소유한다. 파일·Git·소스
-관측은 `adapter/augmentation`으로 이전했다. summary kind/schema 누락과 같은
-목표의 중복 조회에 따른 점수/근거 불일치를 회귀 테스트로 고정한다. source observer의
-자기 검색어 감지는 실제 domain 구현 파일 조회로 교체한다. 후보 export와 잔여
-책임 점검이 남아 있으므로 T18 완료 표시는 유지하지 않는다.
+T18 완료 근거: 상태 저장·probe·이력·계획 구성·결과 집계·후보 export와
+CLI/MCP 공통 저장 순서를 application으로 이전했다. 순수 판정은 domain,
+파일·Git·process 관측은 adapter가 맡는다. 최종 커밋 `1eeec1a3`에서
+CHECK 45개 패키지, 전체 self-verify 26/26(최소 점수 100), 실제 race·vet가
+통과했다. 기존 버전과 CLI·SQLite·summary·LLM 결과가 일치하고 6개 변이를
+테스트가 거부했다. 상세는 T18-success.txt, T18-failure.txt, T18-ownership.json에
+기록했다. transport 렌더링은 유지하며, host protocol 정합화는 T19,
+forwarding facade·package-global 조립 제거는 T20에서 마감한다.
 
 ### Task 19: CLI·MCP catalog·host protocol 위치 정합화 (T19)
 
