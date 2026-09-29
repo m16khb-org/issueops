@@ -9,6 +9,7 @@ import (
 
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	"issueops/internal/domain/agentmodel"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 )
 
@@ -58,8 +59,8 @@ func TestOrcaPreviewAcceptsOmoOwner(t *testing.T) {
 	fixture := newOrcaApplicationFixture()
 	command := orcaCommand(false, preparationcontract.ModeOrca)
 	command.OwnerHost = "omo"
-	command.OwnerModel = preparationdomain.ImplementerModelOmo
-	command.OwnerEffort = preparationdomain.ImplementerEffortOmo
+	command.OwnerModel = agentmodel.ImplementerModelOmo
+	command.OwnerEffort = agentmodel.ImplementerEffortOmo
 
 	result, err := fixture.service.Prepare(context.Background(), command)
 	if err != nil {
@@ -248,7 +249,7 @@ func newOrcaApplicationFixture() *orcaApplicationFixture {
 
 func orcaCommand(confirm bool, mode string) preparationcontract.Command {
 	command := preparationcontract.Command{
-		ID: "io-orca", Mode: mode, CWD: "/repo", OwnerHost: "codex", OwnerModel: preparationdomain.ImplementerModelCodex, OwnerEffort: preparationdomain.ImplementerEffortCodex, Confirm: confirm,
+		ID: "io-orca", Mode: mode, CWD: "/repo", OwnerHost: "codex", OwnerModel: agentmodel.ImplementerModelCodex, OwnerEffort: agentmodel.ImplementerEffortCodex, Confirm: confirm,
 		Actor: leasecontract.Actor{Host: "codex", SessionID: "session", SessionProcess: &leasecontract.ProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"}},
 	}
 	if confirm {
@@ -467,4 +468,28 @@ func countTracePrefix(trace []string, prefix string) int {
 		}
 	}
 	return count
+}
+
+func TestPreparationPreviewPinsModelDefaultsAndPreservesOverrides(t *testing.T) {
+	for _, tc := range []struct{ host, model, effort, inputModel, inputEffort string }{
+		{" Codex ", "gpt-6-sol", "high", "", ""},
+		{"claude", "claude-sonnet-5-5", "high", "", ""},
+		{"omo", "chatgpt-subscription/gpt-6-sol", "max", "", ""},
+		{"codex", "explicit-model", "low", " explicit-model ", " low "},
+		{"codex", "explicit-model", "high", "explicit-model", ""},
+		{"codex", "gpt-6-sol", "low", "", "low"},
+	} {
+		t.Run(tc.host+tc.inputModel+tc.inputEffort, func(t *testing.T) {
+			fixture := newOrcaApplicationFixture()
+			command := orcaCommand(false, preparationcontract.ModeOrca)
+			command.OwnerHost, command.OwnerModel, command.OwnerEffort = tc.host, tc.inputModel, tc.inputEffort
+			result, err := fixture.service.Prepare(context.Background(), command)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.Preview || !strings.Contains(result.NextCommand, "--owner-model '"+tc.model+"'") || !strings.Contains(result.NextCommand, "--owner-effort '"+tc.effort+"'") {
+				t.Fatalf("preview=%+v", result)
+			}
+		})
+	}
 }

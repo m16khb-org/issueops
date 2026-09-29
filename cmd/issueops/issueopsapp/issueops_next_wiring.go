@@ -18,7 +18,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
-	"issueops/internal/port"
+	"issueops/internal/domain/agentmodel"
 )
 
 // issueOpsNextHandler는 단계 분류에 필요한 관측을 꽂는다. 전부 읽기 전용이며,
@@ -45,9 +45,9 @@ func issueOpsNextHandler(
 			Completion:          issueopscore.IssueOpsPhaseCompletion,
 			LocalReadiness:      localObservation.localReadiness,
 			WriterlessCommand:   issueopscore.ExecutionWriterAbsentRecoveryCommand,
-			PlannerDefaults:     port.IssueOpsPlannerDefaults,
+			PlannerDefaults:     agentmodel.PlannerDefaults,
 			ChangedPaths:        localObservation.changedPaths,
-			ReviewEffortForTier: port.IssueOpsReviewEffortForTier,
+			ReviewEffortForTier: agentmodel.ReviewEffortForTier,
 			StagedArtifacts:     stagedArtifactNames,
 			Actor: func() (string, string, error) {
 				host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)

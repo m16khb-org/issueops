@@ -15,6 +15,7 @@ import (
 
 	"issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
+	"issueops/internal/domain/agentmodel"
 	"issueops/internal/domain/commandparse"
 	"issueops/internal/domain/issueopsremote"
 	"issueops/internal/port"
@@ -73,6 +74,8 @@ type executionOwnerContextPacket struct {
 	OwnerEffort            string                 `json:"owner_effort,omitempty"`
 	ReviewerModel          string                 `json:"reviewer_model,omitempty"`
 	ReviewerEffort         string                 `json:"reviewer_effort,omitempty"`
+	ResearchModel          string                 `json:"research_model,omitempty"`
+	ResearchEffort         string                 `json:"research_effort,omitempty"`
 	RequiredDocs           []string               `json:"required_docs"`
 	RequiredSkills         []string               `json:"required_skills"`
 	AcceptanceIDs          []string               `json:"acceptance_ids"`
@@ -174,7 +177,8 @@ func buildExecutionOwnerArtifacts(record issueops.IssueOpsRecord, req ExecutionP
 	packetPath, promptPath := executionOwnerArtifactPaths(record)
 	// 구현 diff의 design-review 리뷰는 planner급 모델이 수행한다(설계 v5 WS5). 값은
 	// 감사 기록이자 owner 프롬프트 지시일 뿐 게이트 조건이 아니다.
-	reviewerModel, reviewerEffort, _ := port.IssueOpsPlannerDefaults(strings.ToLower(strings.TrimSpace(req.OwnerHost)))
+	reviewerModel, reviewerEffort, _ := agentmodel.PlannerDefaults(strings.ToLower(strings.TrimSpace(req.OwnerHost)))
+	researchModel, researchEffort, _ := agentmodel.ResearchDefaults(strings.ToLower(strings.TrimSpace(req.OwnerHost)))
 	commands := executionOwnerCommandsFor(record, req, snapshot.issue.BodySHA256)
 	packet := executionOwnerContextPacket{
 		SchemaVersion: issueops.IssueOpsSchemaVersion, LifecycleID: record.ID, Mode: record.Execution.Mode,
@@ -184,6 +188,7 @@ func buildExecutionOwnerArtifacts(record issueops.IssueOpsRecord, req ExecutionP
 		LeaseGeneration: record.Execution.Lease.Generation, Issue: snapshot.issue,
 		OwnerHost: strings.ToLower(strings.TrimSpace(req.OwnerHost)), OwnerModel: strings.TrimSpace(req.OwnerModel), OwnerEffort: strings.TrimSpace(req.OwnerEffort),
 		ReviewerModel: reviewerModel, ReviewerEffort: reviewerEffort,
+		ResearchModel: researchModel, ResearchEffort: researchEffort,
 		RequiredDocs: snapshot.requiredDocs, RequiredSkills: snapshot.requiredSkills, AcceptanceIDs: snapshot.acceptanceIDs,
 		Verification: snapshot.verificationCommands, VerificationReportPath: executionOwnerVerificationReportPath(record), Commands: commands,
 		ArtifactManifest: artifactManifest,
@@ -229,6 +234,7 @@ func renderExecutionOwnerPrompt(packet executionOwnerContextPacket, packetPath, 
 		"PACKET_PATH": packetPath, "PACKET_SHA256": packetDigest,
 		"OWNER_HOST": packet.OwnerHost, "OWNER_MODEL": packet.OwnerModel, "OWNER_EFFORT": packet.OwnerEffort,
 		"REVIEWER_MODEL": packet.ReviewerModel, "REVIEWER_EFFORT": packet.ReviewerEffort,
+		"RESEARCH_MODEL": packet.ResearchModel, "RESEARCH_EFFORT": packet.ResearchEffort,
 		"AWAIT_BRANCH_LINK_COMMAND":       packet.Commands.AwaitBranchLink,
 		"RELEASE_COMMAND":                 packet.Commands.Release,
 		"VERIFY_BRANCH_LINK_READ_COMMAND": packet.Commands.VerifyBranchLinkRead,
@@ -282,6 +288,7 @@ func validateExecutionOwnerPromptInputs(packet executionOwnerContextPacket, pack
 		{"ai_slop_clean_record_command", packet.Commands.AISlopCleanRecord}, {"enter_ai_slop_clean_command", packet.Commands.EnterAISlopClean},
 		{"remote_create_command", packet.Commands.RemoteCreate}, {"complete_command", packet.Commands.Complete},
 		{"reviewer_model", packet.ReviewerModel}, {"reviewer_effort", packet.ReviewerEffort},
+		{"research_model", packet.ResearchModel}, {"research_effort", packet.ResearchEffort},
 		{"implementation_review_command", packet.Commands.ImplementationReview},
 		{"project_docs_review_command", packet.Commands.ProjectDocsReview},
 		{"schema_evidence_command", packet.Commands.SchemaEvidence},
@@ -395,7 +402,7 @@ func executionOwnerCommandsFor(record issueops.IssueOpsRecord, req ExecutionPrep
 	complete := "issueops execution complete --id " + quoteExecutionOwnerArg(record.ID) +
 		" --generation " + strconv.FormatUint(generation, 10) + " --final-head <FINAL_HEAD> --verification-report " + quoteExecutionOwnerArg(executionOwnerVerificationReportPath(record)) +
 		" --remote-artifact-url <DRAFT_PR_OR_MR_URL> --verification <VERIFICATION_EVIDENCE> " + actorFlags + " --confirm --json"
-	plannerModel, plannerEffort, _ := port.IssueOpsPlannerDefaults(strings.ToLower(strings.TrimSpace(req.OwnerHost)))
+	plannerModel, plannerEffort, _ := agentmodel.PlannerDefaults(strings.ToLower(strings.TrimSpace(req.OwnerHost)))
 	implementationReview := "issueops implementation-review record --id " + quoteExecutionOwnerArg(record.ID) +
 		" --verdict <VERDICT> --finding <FINDING> --evidence <EVIDENCE> --reviewer-host " + strings.ToLower(strings.TrimSpace(req.OwnerHost)) +
 		" --reviewer-model " + quoteExecutionOwnerArg(plannerModel)

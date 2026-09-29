@@ -1,6 +1,6 @@
 # issueops-v1-owner-execution-v1
 
-대상: Codex 또는 Claude Code native owner session  
+대상: Codex, Claude Code 또는 Omo native owner session
 용도: IssueOps schema v1의 `direct|orca` execution owner에게 한 lifecycle/worktree 구현을 인계  
 상태: 설계 검토용 v1  
 작성일: 2026-07-22
@@ -26,11 +26,13 @@ adapter는 아래 placeholder를 모두 결정적 문자열로 치환한 뒤 pro
 | `{ISSUE_BODY_SHA256}` | sealed issue body digest |
 | `{PACKET_PATH}` | worktree 안의 bounded context snapshot path |
 | `{PACKET_SHA256}` | packet digest |
-| `{OWNER_HOST}` | `codex` 또는 `claude` |
+| `{OWNER_HOST}` | `codex`, `claude` 또는 `omo` |
 | `{OWNER_MODEL}` | coordinator가 명시한 실제 launch model; direct이면 현재 model 설명 |
 | `{OWNER_EFFORT}` | host-supported effort 또는 빈 문자열 |
 | `{REVIEWER_MODEL}` | 구현 diff design-review 리뷰 전용 planner급 모델(host별 기본값) |
 | `{REVIEWER_EFFORT}` | planner급 리뷰 effort 또는 빈 문자열 |
+| `{RESEARCH_MODEL}` | 허용된 읽기 전용 조사 모델 또는 빈 문자열. 구현·계획 확정·게이트 판정에 사용하지 않음 |
+| `{RESEARCH_EFFORT}` | 조사 모델 effort 또는 빈 문자열 |
 | `{VERIFY_BRANCH_LINK_COMMAND}` | provider branch link 확인 후 봉인 topology를 보존하며 link_verified를 기록하는 exact governed command |
 | `{LINK_PLAN_COMMAND}` | staged plan을 lifecycle에 연결하는 exact governed command |
 | `{COMPATIBILITY_REVIEW_COMMAND}` | 구현 전 backward compatibility, side effect, rollback, verification을 기록하는 exact governed command |
@@ -90,6 +92,8 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
 - owner_effort={OWNER_EFFORT}
 - reviewer_model={REVIEWER_MODEL} (구현 diff design-review 리뷰 전용 planner급 모델)
 - reviewer_effort={REVIEWER_EFFORT}
+- research_model={RESEARCH_MODEL}
+- research_effort={RESEARCH_EFFORT}
 - source_root={SOURCE_ROOT}
 - worktree_root={WORKTREE_ROOT}
 - observable_worktree_base={WORKTREE_BASE}
@@ -97,6 +101,13 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
 - base_head={BASE_HEAD}
 - lifecycle={LIFECYCLE_ID}
 - lease_generation={LEASE_GENERATION}
+
+모델 역할:
+- 구현은 위 owner_model이 맡고, 계획과 독립 리뷰는 reviewer_model을 사용한다.
+- research_model이 지정돼 있고 사용자·저장소 지침이 위임을 허용한 경우에만, 범위가 좁고
+  독립적인 읽기 전용 탐색·자료 요약에 해당 모델과 research_effort를 사용한다.
+- 조사 모델에 구현, 계획 확정, 승인·리뷰 게이트 판정을 맡기지 않는다. 조사 결과는 owner가
+  근거를 확인한 뒤 사용한다. 모델 기본값 자체가 서브에이전트 실행을 승인하지는 않는다.
 
 시작 절차:
 1. cwd와 `git rev-parse --show-toplevel`, `git branch --show-current`, `git rev-parse HEAD`,

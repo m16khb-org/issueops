@@ -139,8 +139,8 @@ func TestOwnerCommandsIncludeImplementationReviewWithPlannerModel(t *testing.T) 
 		model  string
 		effort string
 	}{
-		{host: "codex", model: "gpt-5.6-sol", effort: "xhigh"},
-		{host: "claude", model: "claude-opus-5", effort: "high"},
+		{host: "codex", model: "gpt-6-astra", effort: "xhigh"},
+		{host: "claude", model: "claude-opus-5-5", effort: "high"},
 	} {
 		t.Run(tc.host, func(t *testing.T) {
 			commands := executionOwnerCommandsFor(record, ExecutionPrepareRequest{OwnerHost: tc.host}, strings.Repeat("a", 64))

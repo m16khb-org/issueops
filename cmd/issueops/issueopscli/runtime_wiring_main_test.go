@@ -27,8 +27,8 @@ import (
 	issueopsretentionapplication "issueops/internal/application/issueopsretention"
 	issueopsroutingapplication "issueops/internal/application/issueopsrouting"
 	issueopsstatusapplication "issueops/internal/application/issueopsstatus"
+	"issueops/internal/domain/agentmodel"
 	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
-	"issueops/internal/port"
 
 	issueopsnextinbound "issueops/internal/adapter/inbound/issueopsnext"
 	issueopsnextapplication "issueops/internal/application/issueopsnext"
@@ -74,7 +74,7 @@ func wireIssueOpsRuntimeForTests() {
 		Completion:        issueopscore.IssueOpsPhaseCompletion,
 		LocalReadiness:    issueopscore.IssueOpsLocalPRReadiness,
 		WriterlessCommand: issueopscore.ExecutionWriterAbsentRecoveryCommand,
-		PlannerDefaults:   port.IssueOpsPlannerDefaults,
+		PlannerDefaults:   agentmodel.PlannerDefaults,
 		StagedArtifacts:   artifacts.Names,
 		Actor: func() (string, string, error) {
 			host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)

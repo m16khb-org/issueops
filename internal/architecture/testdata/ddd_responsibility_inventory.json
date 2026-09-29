@@ -13390,6 +13390,17 @@
       ]
     },
     {
+      "path": "internal/domain/agentmodel/defaults.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ImplementerDefaults",
+        "func PlannerDefaults",
+        "func ResearchDefaults",
+        "func ReviewEffortForTier"
+      ]
+    },
+    {
       "path": "internal/domain/apidoc/candidates.go",
       "owner": "domain",
       "task": "T20",
@@ -15151,14 +15162,6 @@
         "type Denial",
         "type DenialReason",
         "type OrcaReadiness"
-      ]
-    },
-    {
-      "path": "internal/domain/issueopspreparation/defaults.go",
-      "owner": "domain",
-      "task": "T20",
-      "symbols": [
-        "func ImplementerDefaults"
       ]
     },
     {
@@ -17117,8 +17120,6 @@
       "owner": "port",
       "task": "T20",
       "symbols": [
-        "func IssueOpsPlannerDefaults",
-        "func IssueOpsReviewEffortForTier",
         "func OrcaError.Error",
         "func ValidateExecutionOrcaDeliveryReceipt",
         "func ValidateOrcaDurableRequestID",
@@ -18335,15 +18336,15 @@
       "source_path": "internal/contract/issueopspreparation/prepare.go",
       "source_symbol": "func ImplementerDefaults",
       "responsibility": "host implementer model and effort defaults",
-      "target": "internal/domain/issueopspreparation",
+      "target": "internal/domain/agentmodel",
       "target_symbol": "func ImplementerDefaults",
       "task": "T02",
       "entrypoints": [
         "issueops execution prepare"
       ],
       "evidence_tests": [
-        "internal/domain/issueopspreparation/defaults_test.go",
-        "internal/application/issueopspreparation/prepare_test.go"
+        "internal/domain/agentmodel/defaults_test.go",
+        "internal/application/issueopspreparation/orca_test.go"
       ],
       "status": "migrated"
     },
@@ -23189,6 +23190,41 @@
       ],
       "evidence_tests": [
         "internal/domain/qualitycatalog/projection_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "planner-model-defaults",
+      "source_path": "internal/port/orca.go",
+      "source_symbol": "func IssueOpsPlannerDefaults",
+      "responsibility": "host planner and independent gate-review model and effort defaults",
+      "target": "internal/domain/agentmodel",
+      "target_symbol": "func PlannerDefaults",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops execution prepare"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/execution_owner_packet_test.go",
+        "internal/adapter/issueops/issueops_implementation_review_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "review-effort-by-tier",
+      "source_path": "internal/port/orca.go",
+      "source_symbol": "func IssueOpsReviewEffortForTier",
+      "responsibility": "documentation-only review effort reduction with other tiers retaining planner effort",
+      "target": "internal/domain/agentmodel",
+      "target_symbol": "func ReviewEffortForTier",
+      "task": "T20",
+      "entrypoints": [
+        "issueops next",
+        "issueops execution prepare"
+      ],
+      "evidence_tests": [
+        "internal/domain/agentmodel/review_effort_test.go"
       ],
       "status": "migrated"
     }

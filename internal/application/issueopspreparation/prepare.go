@@ -11,6 +11,7 @@ import (
 
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
+	"issueops/internal/domain/agentmodel"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 )
 
@@ -368,7 +369,7 @@ func normalizeOwnerDefaults(command preparationcontract.Command) preparationcont
 	command.OwnerHost = strings.ToLower(strings.TrimSpace(command.OwnerHost))
 	command.OwnerModel = strings.TrimSpace(command.OwnerModel)
 	command.OwnerEffort = strings.TrimSpace(command.OwnerEffort)
-	if model, effort, ok := preparationdomain.ImplementerDefaults(command.OwnerHost); ok {
+	if model, effort, ok := agentmodel.ImplementerDefaults(command.OwnerHost); ok {
 		if command.OwnerModel == "" {
 			command.OwnerModel = model
 		}

@@ -34,6 +34,8 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
 - owner_effort={OWNER_EFFORT}
 - reviewer_model={REVIEWER_MODEL} (구현 diff design-review 리뷰 전용 planner급 모델)
 - reviewer_effort={REVIEWER_EFFORT}
+- research_model={RESEARCH_MODEL}
+- research_effort={RESEARCH_EFFORT}
 - source_root={SOURCE_ROOT}
 - worktree_root={WORKTREE_ROOT}
 - observable_worktree_base={WORKTREE_BASE}
@@ -41,6 +43,13 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
 - base_head={BASE_HEAD}
 - lifecycle={LIFECYCLE_ID}
 - lease_generation={LEASE_GENERATION}
+
+모델 역할:
+- 구현은 위 owner_model이 맡고, 계획과 독립 리뷰는 reviewer_model을 사용한다.
+- research_model이 지정돼 있고 사용자·저장소 지침이 위임을 허용한 경우에만, 범위가 좁고
+  독립적인 읽기 전용 탐색·자료 요약에 해당 모델과 research_effort를 사용한다.
+- 조사 모델에 구현, 계획 확정, 승인·리뷰 게이트 판정을 맡기지 않는다. 조사 결과는 owner가
+  근거를 확인한 뒤 사용한다. 모델 기본값 자체가 서브에이전트 실행을 승인하지는 않는다.
 
 시작 절차:
 1. cwd와 `git rev-parse --show-toplevel`, `git branch --show-current`, `git rev-parse HEAD`,

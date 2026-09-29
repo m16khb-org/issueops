@@ -1101,7 +1101,7 @@ func evaluateEdges(edges []dependencyEdge) []violation {
 		if isPreparationDomain(edge.importer) && strings.HasPrefix(edge.imported, "internal/") && !isPreparationContract(edge.imported) && !isLeaseContract(edge.imported) {
 			violations = append(violations, violation{"preparation_domain_must_only_import_contract", edge})
 		}
-		if isPreparationApplication(edge.importer) && strings.HasPrefix(edge.imported, "internal/") && !isPreparationDomain(edge.imported) && !isPreparationContract(edge.imported) && !isLeaseContract(edge.imported) {
+		if isPreparationApplication(edge.importer) && strings.HasPrefix(edge.imported, "internal/") && !isPreparationDomain(edge.imported) && !isPreparationContract(edge.imported) && !isLeaseContract(edge.imported) && edge.imported != "internal/domain/agentmodel" {
 			violations = append(violations, violation{"preparation_application_must_only_import_domain_or_contract", edge})
 		}
 		if isPreparationOutboundAdapter(edge.importer) && isCore(edge.imported) {
