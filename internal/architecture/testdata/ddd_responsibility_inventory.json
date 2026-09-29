@@ -3688,7 +3688,8 @@
       "owner": "inbound",
       "task": "T17",
       "symbols": [
-        "func SelfAugmentHistory"
+        "func SelfAugmentHistory",
+        "func historyService"
       ]
     },
     {
@@ -12343,6 +12344,18 @@
       ]
     },
     {
+      "path": "internal/application/selfaugment/history.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func CompareSnapshots",
+        "func HistoryService.ApplyRetention",
+        "func HistoryService.Compare",
+        "func HistoryService.History",
+        "type HistoryService"
+      ]
+    },
+    {
       "path": "internal/application/selfaugment/promote.go",
       "owner": "application",
       "task": "T18",
@@ -17199,9 +17212,20 @@
       ]
     },
     {
+      "path": "internal/domain/selfaugment/history_request.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func HistorySnapshotDiagnostics",
+        "func NewHistoryEntry",
+        "func ValidateComparisonRequest",
+        "func ValidateHistoryRequest"
+      ]
+    },
+    {
       "path": "internal/domain/selfaugment/history_retention.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func DeletedHistoryRecommendation",
         "func PlanHistoryRetention",
@@ -23682,6 +23706,94 @@
         "cmd/issueops/daemoncli/daemon_identity_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "history-request-admission",
+      "source_path": "internal/application/selfaugment/history.go",
+      "source_symbol": "func HistoryService.History",
+      "responsibility": "reject invalid history limit and retention options before listing state",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func ValidateHistoryRequest",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-verify history",
+        "issueops self-verify compare",
+        "self_verify_history",
+        "self_verify_compare"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/history_test.go",
+        "internal/domain/selfaugment/history_retention_test.go",
+        "cmd/issueops/selfworkflow/historycompare/self_augment_history_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "history-snapshot-classification",
+      "source_path": "internal/application/selfaugment/history.go",
+      "source_symbol": "func HistoryService.History",
+      "responsibility": "preserve kind/schema skip precedence and timestamp warnings while retaining valid summary metadata",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func HistorySnapshotDiagnostics",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-verify history",
+        "issueops self-verify compare",
+        "self_verify_history",
+        "self_verify_compare"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/history_test.go",
+        "internal/domain/selfaugment/history_retention_test.go",
+        "cmd/issueops/selfworkflow/historycompare/self_augment_history_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "history-retention-authority",
+      "source_path": "internal/application/selfaugment/history.go",
+      "source_symbol": "func HistoryService.ApplyRetention",
+      "responsibility": "require explicit prune and confirmation for deletion while preserving newest-first candidate order",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func PlanHistoryRetention",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-verify history",
+        "issueops self-verify compare",
+        "self_verify_history",
+        "self_verify_compare"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/history_test.go",
+        "internal/domain/selfaugment/history_retention_test.go",
+        "cmd/issueops/selfworkflow/historycompare/self_augment_history_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "summary-comparison-admission",
+      "source_path": "internal/application/selfaugment/history.go",
+      "source_symbol": "func HistoryService.Compare",
+      "responsibility": "validate baseline/candidate identity and regression threshold before sequential reads",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func ValidateComparisonRequest",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-verify history",
+        "issueops self-verify compare",
+        "self_verify_history",
+        "self_verify_compare"
+      ],
+      "evidence_tests": [
+        "internal/application/selfaugment/history_test.go",
+        "internal/domain/selfaugment/history_retention_test.go",
+        "cmd/issueops/selfworkflow/historycompare/self_augment_history_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
     }
   ]
 }

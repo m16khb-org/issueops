@@ -21,3 +21,14 @@ func TestPlanHistoryRetentionKeepsOrderAndRequiresConfirmationToPrune(t *testing
 		t.Fatal("confirmation without prune must fail")
 	}
 }
+
+func TestHistoryDeletionRequiresBothRequestAndConfirmation(t *testing.T) {
+	for _, tc := range []struct{ request, confirm, apply bool }{
+		{false, false, false}, {false, true, false}, {true, false, false}, {true, true, true},
+	} {
+		got := PlanHistoryRetention([]string{"new", "old"}, 1, tc.request, tc.confirm)
+		if got.Apply != tc.apply {
+			t.Fatalf("request=%v confirm=%v decision=%+v", tc.request, tc.confirm, got)
+		}
+	}
+}

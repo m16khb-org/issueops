@@ -3,6 +3,7 @@ package selfaugment
 import "fmt"
 
 type HistoryRetentionDecision struct {
+	Apply          bool
 	RetainedKeys   []string
 	CandidateKeys  []string
 	PruneRequested bool
@@ -14,6 +15,7 @@ type HistoryRetentionDecision struct {
 
 func PlanHistoryRetention(keys []string, limit int, pruneRequested, confirm bool) HistoryRetentionDecision {
 	decision := HistoryRetentionDecision{
+		Apply:          pruneRequested && confirm,
 		RetainedKeys:   []string{},
 		CandidateKeys:  []string{},
 		PruneRequested: pruneRequested,

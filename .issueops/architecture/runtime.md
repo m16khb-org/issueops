@@ -72,6 +72,13 @@ Project docs bootstrap:
 `domain/selfaugment`가 소유한다. probe의 snapshot writer는 composition root에서
 주입하고, 누락되면 process를 실행하기 전에 실패 결과를 반환한다.
 
+검증 이력 조회·비교·보존 삭제는 `application/selfaugment.HistoryService`가 조율한다.
+입력 허용 조건, snapshot kind/schema 분류와 보존 대상·삭제 허용 결정은 domain이 맡는다.
+조회는 개별 읽기 실패·잘못된 snapshot을 skipped로 남기며, 전체 이력에서 보존 대상을
+결정한 뒤 표시 개수를 제한한다. 삭제는 요청과 confirm이 모두 있어야 실행하고,
+후보마다 다시 읽은 뒤 삭제한다. 중간 실패 시 다음 후보를 처리하지 않는다.
+비교는 입력을 검사한 뒤 baseline, candidate 순으로 읽으며 저장소 오류 원인을 보존한다.
+
 Unix의 sqlstore record 쓰기는 state root의 공용 파일에 shared lease를 얻은 뒤 실행한다.
 `ExcludeWrites`는 같은 파일의 exclusive lease로 모든 bucket의 쓰기를 거부하며 읽기는
 허용한다. `Put`, `Delete`, `DeleteBucket`, `Apply`, `CompareAndApplyFunc`가 이 경계를
