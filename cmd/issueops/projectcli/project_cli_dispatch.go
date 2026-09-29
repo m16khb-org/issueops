@@ -2,24 +2,23 @@ package projectcli
 
 import (
 	"fmt"
-	docsapp "issueops/internal/application/projectdocs"
 	"os"
 )
 
-func runProject(docs docsapp.Service, args []string) error {
+func runProject(deps Dependencies, args []string) error {
 	if len(args) == 0 {
 		projectUsage()
 		return fmt.Errorf("missing project subcommand")
 	}
 	switch args[0] {
 	case "bootstrap":
-		return runProjectBootstrap(args[1:])
+		return runProjectBootstrap(deps.Bootstrap, args[1:])
 	case "docs":
-		return runProjectDocs(docs, args[1:])
+		return runProjectDocs(deps.Docs, args[1:])
 	case "route-docs":
-		return runProjectRouteDocs(docs, args[1:])
+		return runProjectRouteDocs(deps.Docs, args[1:])
 	case "append":
-		return runProjectAppend(docs, args[1:])
+		return runProjectAppend(deps.Docs, args[1:])
 	case "commit-suggest":
 		return runProjectCommitSuggest(args[1:])
 	case "lint-diagnose":

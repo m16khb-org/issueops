@@ -18,7 +18,7 @@ func TestRunProject_dispatchesBootstrapText_whenRepoIsPositional(t *testing.T) {
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return Run(testProjectDocsService(), []string{"bootstrap", "--dry-run", repo})
+		return Run(testProjectDependencies(), []string{"bootstrap", "--dry-run", repo})
 	})
 
 	// Then
@@ -36,7 +36,7 @@ func TestRunProjectDocs_printsRouteJSON_whenJSONFlagIsSet(t *testing.T) {
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return Run(testProjectDocsService(), []string{"docs", "--repo", repo, "--json"})
+		return Run(testProjectDependencies(), []string{"docs", "--repo", repo, "--json"})
 	})
 
 	// Then
@@ -141,7 +141,7 @@ func TestRunProject_rejectsMissingAndUnknownSubcommands(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// When
 			stderr, err := captureProjectCLIStderr(t, func() error {
-				return Run(testProjectDocsService(), tt.args)
+				return Run(testProjectDependencies(), tt.args)
 			})
 
 			// Then

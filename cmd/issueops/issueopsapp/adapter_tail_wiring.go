@@ -9,10 +9,7 @@ import (
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	installadapter "issueops/internal/adapter/install"
 	installutiladapter "issueops/internal/adapter/installutil"
-	fingerprintt4deps "issueops/internal/adapter/lifecycle/fingerprint"
 	omot4deps "issueops/internal/adapter/omo"
-	projectbootstrapt4deps "issueops/internal/adapter/projectbootstrap"
-	projectdocsadapter "issueops/internal/adapter/projectdocs"
 	nativeintegrationt4deps "issueops/internal/adapter/verification/probe/nativeintegration"
 	installcontract "issueops/internal/contract/install"
 )
@@ -60,7 +57,6 @@ func configureAdapterTail() {
 	agyt4deps.MCPCatalogSHA256 = func() (string, error) {
 		return installutiladapter.SemanticSHA256(mcpcatalog.AdvertisedTools())
 	}
-	fingerprintt4deps.ReadGitOriginURL = projectdocsadapter.ReadGitOriginURL
 	installclit4deps.EnsureSymlinkPlan = installutiladapter.EnsureSymlinkPlan
 	// 관리 대상 명령 파일 채택은 파일시스템 트랜잭션이다. 구현을 아는 곳은
 	// composition root 하나뿐이다.
@@ -77,7 +73,4 @@ func configureAdapterTail() {
 	nativeintegrationt4deps.CodexHooksConfig = codext4deps.HooksConfig
 	nativeintegrationt4deps.OmoLifecycleExtension = hostprotocol.OmoLifecycleExtension
 	nativeintegrationt4deps.VerifyHookConfigActivation = installutiladapter.VerifyHookConfigActivation
-	projectbootstrapt4deps.AnalyzeProjectSignals = projectdocsadapter.AnalyzeProjectSignals
-	projectbootstrapt4deps.RenderAgentsWithBlock = projectdocsadapter.RenderAgentsWithBlock
-	projectbootstrapt4deps.RenderProjectDocs = projectdocsadapter.RenderProjectDocs
 }

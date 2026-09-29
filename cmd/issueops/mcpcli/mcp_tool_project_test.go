@@ -36,7 +36,7 @@ func TestHandleProjectMCPToolCallCoversLocalProjectPayloads(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handleProjectMCPToolCall(tc.call, testProjectDocsService())
+			outcome := handleProjectMCPToolCall(tc.call, testProjectDependencies())
 			if !outcome.Handled || outcome.Err != nil || outcome.Direct {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
@@ -75,7 +75,7 @@ func TestHandleProjectMCPToolCallCoversProjectErrorBranches(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handleProjectMCPToolCall(tc.call, testProjectDocsService())
+			outcome := handleProjectMCPToolCall(tc.call, testProjectDependencies())
 			if !outcome.Handled || outcome.Err == nil {
 				t.Fatalf("expected handled MCP failure, got %#v", outcome)
 			}
@@ -87,7 +87,7 @@ func TestHandleProjectMCPToolCallCoversProjectErrorBranches(t *testing.T) {
 }
 
 func TestHandleProjectMCPToolCallIgnoresUnknownProjectTool(t *testing.T) {
-	outcome := handleProjectMCPToolCall(MCPToolCall{Name: "not_project_tool", Arguments: map[string]any{}}, testProjectDocsService())
+	outcome := handleProjectMCPToolCall(MCPToolCall{Name: "not_project_tool", Arguments: map[string]any{}}, testProjectDependencies())
 	if outcome.Handled {
 		t.Fatalf("unknown project tool should be ignored: %#v", outcome)
 	}

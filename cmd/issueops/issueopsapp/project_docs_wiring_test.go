@@ -126,19 +126,21 @@ func TestProjectDocCLIInstancesPinRelativeRootsAndRejectInvalidAppend(t *testing
 	second := newProjectDocsService(".")
 	t.Chdir(t.TempDir())
 	for i, service := range []docsapp.Service{first, second} {
-		if err := projectcli.Run(service, []string{"append", "--kind", "invalid", "--title", "Title", "--summary", "Summary"}); err == nil {
+		if err := projectcli.Run(projectcli.Dependencies{Docs: service}, []string{"append", "--kind", "invalid", "--title", "Title", "--summary", "Summary"}); err == nil {
 			t.Fatal("invalid append accepted")
 		}
 		if _, err := os.Stat(filepath.Join(roots[i], ".issueops")); !os.IsNotExist(err) {
 			t.Fatalf("invalid append created docs: %v", err)
 		}
-		routeJSON := captureStdoutForContract(t, func() error { return projectcli.Run(service, []string{"route-docs", "--task", "test", "--json"}) })
+		routeJSON := captureStdoutForContract(t, func() error {
+			return projectcli.Run(projectcli.Dependencies{Docs: service}, []string{"route-docs", "--task", "test", "--json"})
+		})
 		var route docscontract.ProjectDocsRouteResult
 		if err := json.Unmarshal([]byte(routeJSON), &route); err != nil || route.RepoRoot != roots[i] {
 			t.Fatalf("route %d: %+v %v", i, route, err)
 		}
 		raw := captureStdoutForContract(t, func() error {
-			return projectcli.Run(service, []string{"append", "--kind", "adr", "--title", "Instance decision", "--summary", fmt.Sprintf("owner-%d", i), "--json"})
+			return projectcli.Run(projectcli.Dependencies{Docs: service}, []string{"append", "--kind", "adr", "--title", "Instance decision", "--summary", fmt.Sprintf("owner-%d", i), "--json"})
 		})
 		var appended docscontract.ProjectDocsAppendResult
 		if err := json.Unmarshal([]byte(raw), &appended); err != nil || appended.RepoRoot != roots[i] {

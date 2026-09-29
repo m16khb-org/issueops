@@ -167,7 +167,7 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 		}
 	}
 	if group == mcpcontract.DispatchProject {
-		return func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps.ProjectDocs) }
+		return func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) }
 	}
 	if group == mcpcontract.DispatchPolicyState {
 		return func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps.State) }

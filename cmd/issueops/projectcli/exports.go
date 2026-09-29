@@ -1,13 +1,21 @@
 package projectcli
 
-import docsapp "issueops/internal/application/projectdocs"
+import (
+	bootstrapapp "issueops/internal/application/projectbootstrap"
+	docsapp "issueops/internal/application/projectdocs"
+)
 
-func Run(docs docsapp.Service, args []string) error {
-	return runProject(docs, args)
+type Dependencies struct {
+	Docs      docsapp.Service
+	Bootstrap bootstrapapp.Service
 }
 
-func RunBootstrap(args []string) error {
-	return runProjectBootstrap(args)
+func Run(deps Dependencies, args []string) error {
+	return runProject(deps, args)
+}
+
+func RunBootstrap(bootstrap bootstrapapp.Service, args []string) error {
+	return runProjectBootstrap(bootstrap, args)
 }
 
 func RunDocs(docs docsapp.Service, args []string) error {

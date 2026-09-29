@@ -41,7 +41,6 @@ func wireBasicCLIDeps() {
 	configureAdapterStateAccess()
 	configureWorkerJobs()
 	configureRepoPathResolvers()
-	configureProjectBootstrap()
 	configureDoctorLifecycle()
 	configureDoctorRunner()
 	configureIssueOpsBenchmark()
@@ -108,7 +107,7 @@ func runInstall(args []string) error {
 }
 
 func runProject(args []string) error {
-	return projectcli.Run(newProjectDocsService("."), args)
+	return projectcli.Run(projectcli.Dependencies{Docs: newProjectDocsService("."), Bootstrap: newProjectBootstrapService(".")}, args)
 }
 
 func runState(args []string) error {

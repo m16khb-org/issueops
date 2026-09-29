@@ -3,7 +3,6 @@ package issueopscli
 import (
 	auditstatepkg "issueops/internal/adapter/audit"
 	issueopsstatepkg "issueops/internal/adapter/issueops"
-	lifecyclestatepkg "issueops/internal/adapter/lifecycle"
 	looprunstatepkg "issueops/internal/adapter/looprun"
 	statestore "issueops/internal/adapter/outbound/state"
 )
@@ -14,7 +13,5 @@ func init() {
 	auditstatepkg.StateDir = statestore.StateDir
 	auditstatepkg.WithKeyLock = statestore.WithKeyLock
 	issueopsstatepkg.StateDir = statestore.StateDir
-	lifecyclestatepkg.StateDir = statestore.StateDir
-	lifecyclestatepkg.WithKeyLock = statestore.WithKeyLock
 	looprunstatepkg.StateDir = statestore.StateDir
 }

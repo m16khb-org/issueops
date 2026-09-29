@@ -24,6 +24,16 @@ func TestValidateHarnessInvariantsCoversHealthyMissingAndLegacyHits(t *testing.T
 		t.Fatalf("expected missing doc invariant, got %+v", missing)
 	}
 
+	bootstrapRoot := makeValidationIssueOpsRoot(t)
+	owner := filepath.Join("internal", "application", "projectbootstrap", "service.go")
+	if err := os.Remove(filepath.Join(bootstrapRoot, owner)); err != nil {
+		t.Fatal(err)
+	}
+	bootstrapMissing := validateHarnessInvariants(bootstrapRoot)
+	if bootstrapMissing.OK || !strings.Contains(bootstrapMissing.Error, "missing "+owner) {
+		t.Fatalf("missing application owner accepted: %+v", bootstrapMissing)
+	}
+
 	legacyRoot := makeValidationIssueOpsRoot(t)
 	if err := os.WriteFile(filepath.Join(legacyRoot, "AGENTS.md"), []byte("legacy m"+"16kh owner\n"), 0o644); err != nil {
 		t.Fatal(err)
@@ -190,7 +200,7 @@ func makeValidationIssueOpsRoot(t *testing.T) string {
 		filepath.Join("skills", "self-verify", "CANDIDATES.md"),
 		filepath.Join("skills", "project-bootstrap", "SKILL.md"),
 		filepath.Join("internal", "adapter", "docs", "docs.go"),
-		filepath.Join("internal", "adapter", "projectbootstrap", "project_docs_bootstrap.go"),
+		filepath.Join("internal", "application", "projectbootstrap", "service.go"),
 		filepath.Join("internal", "adapter", "projectdocs", "project_docs_render.go"),
 		filepath.Join("internal", "adapter", "inspect", "inspect.go"),
 		filepath.Join("internal", "adapter", "policy", "policy_evaluate.go"),

@@ -3,9 +3,7 @@ package basiccli
 import (
 	commitsuggestpkg "issueops/internal/adapter/commitsuggest"
 	doctorpkg "issueops/internal/adapter/doctor"
-	lifecyclepkg "issueops/internal/adapter/lifecycle"
 	lintdiagnosepkg "issueops/internal/adapter/lintdiagnose"
-	projectbootstrappkg "issueops/internal/adapter/projectbootstrap"
 	"issueops/internal/adapter/repopath"
 )
 
@@ -15,8 +13,6 @@ import (
 func init() {
 	NormalizeRepoRoot = repopath.NormalizeRoot
 	doctorpkg.NormalizeRepoRoot = repopath.NormalizeRoot
-	lifecyclepkg.NormalizeRepoRoot = repopath.NormalizeRoot
 	lintdiagnosepkg.NormalizeRepoRoot = repopath.NormalizeRoot
 	commitsuggestpkg.NormalizeRepoRoot = repopath.NormalizeRoot
-	projectbootstrappkg.NormalizeRepoRoot = repopath.NormalizeRoot
 }

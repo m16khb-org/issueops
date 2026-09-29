@@ -5,7 +5,6 @@ import (
 	channel "issueops/internal/adapter/channel"
 	doctor "issueops/internal/adapter/doctor"
 	issueops "issueops/internal/adapter/issueops"
-	lifecycle "issueops/internal/adapter/lifecycle"
 	looprun "issueops/internal/adapter/looprun"
 	statestore "issueops/internal/adapter/outbound/state"
 	trace "issueops/internal/adapter/trace"
@@ -21,8 +20,6 @@ func configureAdapterStateAccess() {
 	doctor.StateDir = statestore.StateDir
 	doctor.StateDoctor = statestore.StateDoctor
 	issueops.StateDir = statestore.StateDir
-	lifecycle.StateDir = statestore.StateDir
-	lifecycle.WithKeyLock = statestore.WithKeyLock
 	looprun.StateDir = statestore.StateDir
 	channel.StateDir = statestore.StateDir
 	trace.StateRead = statestore.StateRead

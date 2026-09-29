@@ -1,7 +1,6 @@
 package hookprompt
 
 import (
-	projectbootstrappddeps "issueops/internal/adapter/projectbootstrap"
 	projectdocadapter "issueops/internal/adapter/projectdoc"
 )
 
@@ -9,5 +8,4 @@ import (
 func init() {
 	DiscoverProjectDocs = projectdocadapter.DiscoverProjectDocs
 	FormatProjectDocCatalog = projectdocadapter.FormatProjectDocCatalog
-	projectbootstrappddeps.PlannedFileAction = projectdocadapter.PlannedFileAction
 }

@@ -1549,7 +1549,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func newProjectDocsService"
+        "func newProjectDocsService",
+        "func newRepoRootResolver"
       ]
     },
     {
@@ -1557,7 +1558,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureProjectBootstrap"
+        "func newProjectBootstrapService",
+        "func newProjectLifecycleService"
       ]
     },
     {
@@ -2740,14 +2742,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/mcpcli/projectbootstrap_dependency.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ConfigureProjectBootstrap"
-      ]
-    },
-    {
       "path": "cmd/issueops/mcpcli/publication_handlers.go",
       "owner": "inbound",
       "task": "T20",
@@ -2910,7 +2904,8 @@
         "func RunDocs",
         "func RunLintDiagnose",
         "func RunRecord",
-        "func RunRouteDocs"
+        "func RunRouteDocs",
+        "type Dependencies"
       ]
     },
     {
@@ -2953,14 +2948,6 @@
       "task": "T20",
       "symbols": [
         "func runProjectLintDiagnose"
-      ]
-    },
-    {
-      "path": "cmd/issueops/projectcli/projectbootstrap_dependency.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ConfigureProjectBootstrap"
       ]
     },
     {
@@ -6290,29 +6277,11 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/lifecycle/dependencies.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": [
-        "type ProjectLifecycleProfile",
-        "type ProjectLifecycleStatePlan",
-        "type ProjectProfile"
-      ]
-    },
-    {
-      "path": "internal/adapter/lifecycle/fingerprint/adapter_tail_dependencies.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/lifecycle/fingerprint/fingerprint.go",
       "owner": "adapter",
       "task": "T14",
       "symbols": [
-        "func Equal",
-        "func ForRoot",
-        "func RepoID"
+        "func ForRoot"
       ]
     },
     {
@@ -6320,39 +6289,23 @@
       "owner": "adapter",
       "task": "T14",
       "symbols": [
-        "func InitProjectLifecycleState",
-        "func ResolveProjectLifecycleState",
-        "func ValidateProjectLifecycleState",
+        "func ProfileFiles.Create",
+        "func ProfileFiles.Fingerprint",
+        "func ProfileFiles.Mkdir",
+        "func ProfileFiles.NormalizeRoot",
+        "func ProfileFiles.Now",
+        "func ProfileFiles.Paths",
+        "func ProfileFiles.ReadProfile",
+        "func ProfileFiles.StateRoot",
+        "func ProfileFiles.Write",
         "func createJSONAtomic",
-        "func lifecycleEffects.Create",
-        "func lifecycleEffects.Fingerprint",
-        "func lifecycleEffects.Mkdir",
-        "func lifecycleEffects.NormalizeRoot",
-        "func lifecycleEffects.Now",
-        "func lifecycleEffects.Paths",
-        "func lifecycleEffects.ReadProfile",
-        "func lifecycleEffects.StateRoot",
-        "func lifecycleEffects.Write",
-        "func lifecycleService",
         "func readProjectLifecycleProfile",
         "func writeJSONAtomic",
-        "type lifecycleEffects"
+        "type ProfileFiles"
       ]
     },
     {
       "path": "internal/adapter/lifecycle/model/types.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/lifecycle/repopath_dependencies.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/lifecycle/state_dependencies.go",
       "owner": "adapter",
       "task": "T14",
       "symbols": []
@@ -7911,72 +7864,23 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/projectbootstrap/adapter_tail_dependencies.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/projectbootstrap/contract_alias.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": [
-        "type ProjectDocsBootstrapRequest",
-        "type ProjectDocsBootstrapResult"
-      ]
-    },
-    {
-      "path": "internal/adapter/projectbootstrap/dependencies.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": [
-        "func ConfigureLifecycle"
-      ]
-    },
-    {
-      "path": "internal/adapter/projectbootstrap/project_docs_bootstrap.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": [
-        "func BootstrapProjectDocs"
-      ]
-    },
-    {
       "path": "internal/adapter/projectbootstrap/project_docs_bootstrap_effects.go",
       "owner": "adapter",
       "task": "T13",
       "symbols": [
-        "func bootstrapEffects.Action",
-        "func bootstrapEffects.Analyze",
-        "func bootstrapEffects.Exists",
-        "func bootstrapEffects.InitLifecycle",
-        "func bootstrapEffects.JoinPath",
-        "func bootstrapEffects.Now",
-        "func bootstrapEffects.Read",
-        "func bootstrapEffects.Render",
-        "func bootstrapEffects.RenderAgents",
-        "func bootstrapEffects.ToSlash",
-        "func bootstrapEffects.Write",
-        "type bootstrapEffects"
+        "func Files.Action",
+        "func Files.Analyze",
+        "func Files.Exists",
+        "func Files.InitLifecycle",
+        "func Files.JoinPath",
+        "func Files.Now",
+        "func Files.Read",
+        "func Files.Render",
+        "func Files.RenderAgents",
+        "func Files.ToSlash",
+        "func Files.Write",
+        "type Files"
       ]
-    },
-    {
-      "path": "internal/adapter/projectbootstrap/project_docs_bootstrap_types.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/projectbootstrap/projectdoc_dependencies.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/projectbootstrap/repopath_dependencies.go",
-      "owner": "adapter",
-      "task": "T13",
-      "symbols": []
     },
     {
       "path": "internal/adapter/projectdoc/catalog.go",
@@ -11264,6 +11168,15 @@
         "func Service.Check",
         "type Observation",
         "type Observer",
+        "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/projectbootstrap/instance.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Run",
         "type Service"
       ]
     },
@@ -23246,6 +23159,45 @@
       ],
       "evidence_tests": [
         "internal/domain/agentmodel/review_effort_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "project-doc-bootstrap-file",
+      "source_path": "internal/adapter/projectbootstrap/project_docs_bootstrap.go",
+      "source_symbol": "func BootstrapProjectDocs",
+      "responsibility": "bootstrap write, sync and curated family document preservation decision",
+      "target": "internal/domain/projectdoc",
+      "target_symbol": "func DecideBootstrapFile",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project bootstrap",
+        "project_docs_bootstrap_plan"
+      ],
+      "evidence_tests": [
+        "internal/domain/projectdoc/bootstrap_test.go",
+        "internal/adapter/projectbootstrap/project_docs_test.go",
+        "cmd/issueops/issueopsapp/project_bootstrap_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "lifecycle-profile-authority",
+      "source_path": "internal/adapter/lifecycle/lifecycle_project_state_store.go",
+      "source_symbol": "func ResolveProjectLifecycleState",
+      "responsibility": "persisted lifecycle profile namespace and schema authority",
+      "target": "internal/domain/lifecycle",
+      "target_symbol": "func ResolveProfile",
+      "task": "T20",
+      "entrypoints": [
+        "issueops project bootstrap",
+        "project_docs_bootstrap_plan",
+        "issueops doctor"
+      ],
+      "evidence_tests": [
+        "internal/domain/lifecycle/profile_test.go",
+        "internal/adapter/lifecycle/lifecycle_project_state_store_test.go",
+        "cmd/issueops/issueopsapp/project_bootstrap_wiring_test.go"
       ],
       "status": "migrated"
     }

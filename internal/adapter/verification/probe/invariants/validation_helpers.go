@@ -30,7 +30,7 @@ func ValidateHarnessInvariants(root string) StepResult {
 		filepath.Join("skills", "self-verify", "CANDIDATES.md"),
 		filepath.Join("skills", "project-bootstrap", "SKILL.md"),
 		filepath.Join("internal", "adapter", "docs", "docs.go"),
-		filepath.Join("internal", "adapter", "projectbootstrap", "project_docs_bootstrap.go"),
+		filepath.Join("internal", "application", "projectbootstrap", "service.go"),
 		filepath.Join("internal", "adapter", "projectdocs", "project_docs_render.go"),
 		filepath.Join("internal", "adapter", "inspect", "inspect.go"),
 		filepath.Join("internal", "adapter", "policy", "policy_evaluate.go"),

@@ -3,10 +3,10 @@ package doctor_test
 import (
 	"encoding/json"
 	"issueops/internal/adapter/doctor"
-	lifecycle "issueops/internal/adapter/lifecycle"
 	"issueops/internal/adapter/looprun"
-	projectbootstrap "issueops/internal/adapter/projectbootstrap"
+	lifecyclecontract "issueops/internal/contract/lifecycle"
 	loopruncontract "issueops/internal/contract/looprun"
+	bootstrapcontract "issueops/internal/contract/projectbootstrap"
 	"issueops/internal/domain/operationalhealth"
 	"os"
 	"path/filepath"
@@ -100,7 +100,7 @@ func TestHarnessDoctorHealthyBaseline(t *testing.T) {
 	stateRoot := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateRoot)
 	repo := t.TempDir()
-	if _, err := projectbootstrap.BootstrapProjectDocs(projectbootstrap.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
+	if _, err := testBootstrapService().Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
@@ -236,11 +236,11 @@ func TestHarnessDoctorReportsRepoLocalRuntimeState(t *testing.T) {
 func TestHarnessDoctorReportsLifecycleNamespaceMismatch(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	plan, err := lifecycle.InitProjectLifecycleState(repo, true)
+	plan, err := testLifecycleService().Init(repo, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var profile lifecycle.ProjectLifecycleProfile
+	var profile lifecyclecontract.ProjectLifecycleProfile
 	b, err := os.ReadFile(plan.ProjectJSONPath)
 	if err != nil {
 		t.Fatal(err)
@@ -268,7 +268,7 @@ func TestHarnessDoctorReportsLifecycleNamespaceMismatch(t *testing.T) {
 func TestHarnessDoctorReportsLoopContracts(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	if _, err := projectbootstrap.BootstrapProjectDocs(projectbootstrap.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
+	if _, err := testBootstrapService().Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	loop, err := looprun.Start(loopruncontract.StartLoopRequest{
@@ -296,7 +296,7 @@ func TestHarnessDoctorReportsLoopContracts(t *testing.T) {
 func TestHarnessDoctorLoopContractsHealthyWhenNoIncompleteLoops(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	if _, err := projectbootstrap.BootstrapProjectDocs(projectbootstrap.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
+	if _, err := testBootstrapService().Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})

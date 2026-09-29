@@ -2,7 +2,6 @@ package issueopsapp
 
 import (
 	"issueops/internal/adapter/hookprompt"
-	"issueops/internal/adapter/projectbootstrap"
 	"issueops/internal/adapter/projectdoc"
 )
 
@@ -13,5 +12,4 @@ import (
 func configureProjectDocReaders() {
 	hookprompt.DiscoverProjectDocs = projectdoc.DiscoverProjectDocs
 	hookprompt.FormatProjectDocCatalog = projectdoc.FormatProjectDocCatalog
-	projectbootstrap.PlannedFileAction = projectdoc.PlannedFileAction
 }

@@ -7,6 +7,7 @@ import (
 	"flag"
 	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/preflight"
+	bootstrapcontract "issueops/internal/contract/projectbootstrap"
 	"os"
 	"path/filepath"
 	"slices"
@@ -15,7 +16,6 @@ import (
 
 	"issueops/cmd/issueops/daemoncli"
 	doctor "issueops/internal/adapter/doctor"
-	projectbootstrap "issueops/internal/adapter/projectbootstrap"
 	inspect "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
 	"issueops/internal/testsupport"
@@ -62,7 +62,7 @@ func TestRunDoctor_printsHealthyText_whenProjectDocsAreInitialized(t *testing.T)
 	// 준비
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	if _, err := projectbootstrap.BootstrapProjectDocs(projectbootstrap.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
+	if _, err := testBootstrapService().Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
 		t.Fatalf("bootstrap project docs: %v", err)
 	}
 

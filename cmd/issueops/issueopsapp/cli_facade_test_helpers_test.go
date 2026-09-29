@@ -55,7 +55,7 @@ func shellRCAlreadyAddsLocalBin(path, home string) bool {
 }
 
 func runProjectBootstrap(args []string) error {
-	return projectcli.RunBootstrap(args)
+	return projectcli.RunBootstrap(newProjectBootstrapService("."), args)
 }
 
 func runProjectDocs(args []string) error {

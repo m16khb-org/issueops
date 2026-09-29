@@ -4,7 +4,6 @@ import (
 	auditstatepkg "issueops/internal/adapter/audit"
 	doctorstatepkg "issueops/internal/adapter/doctor"
 	issueopsstatepkg "issueops/internal/adapter/issueops"
-	lifecyclestatepkg "issueops/internal/adapter/lifecycle"
 	looprunstatepkg "issueops/internal/adapter/looprun"
 	statestore "issueops/internal/adapter/outbound/state"
 	tracestatepkg "issueops/internal/adapter/trace"
@@ -18,8 +17,6 @@ func init() {
 	doctorstatepkg.StateDir = statestore.StateDir
 	doctorstatepkg.StateDoctor = statestore.StateDoctor
 	issueopsstatepkg.StateDir = statestore.StateDir
-	lifecyclestatepkg.StateDir = statestore.StateDir
-	lifecyclestatepkg.WithKeyLock = statestore.WithKeyLock
 	looprunstatepkg.StateDir = statestore.StateDir
 	tracestatepkg.StateRead = statestore.StateRead
 }

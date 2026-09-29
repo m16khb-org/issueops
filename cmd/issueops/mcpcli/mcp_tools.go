@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"issueops/cmd/issueops/mcpcli/resources"
+	bootstrapapp "issueops/internal/application/projectbootstrap"
 	docsapp "issueops/internal/application/projectdocs"
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
@@ -34,26 +35,27 @@ type MCPToolOutcome struct {
 // MCPDependencies는 server 생성 시 고정된다. 요청 간 package-global dependency
 // cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
-	ProjectDocs  docsapp.Service
-	State        StateDependencies
-	Resources    resources.Config
-	SelfVerify   func(verifyapp.LoopRequest) (augmentcontract.SelfAugmentResult, error)
-	Catalog      mcpcontract.Catalog
-	SelfHistory  augmentapp.HistoryService
-	SelfState    SelfStateDependencies
-	SelfPlanning SelfPlanningDependencies
-	Prepare      issueopscontract.ExecutionPrepareHandler
-	Orca         port.ExecutionOrcaProvisioner
-	OrcaOwner    port.ExecutionOrcaOwnerInspector
-	ReadIssue    executionissue.ExecutionIssueSnapshotReadFunc
-	Claim        issueopscontract.ExecutionClaimHandler
-	Release      issueopscontract.ExecutionReleaseHandler
-	Reseed       issueopscontract.ExecutionReseedHandler
-	Resume       issueopscontract.ExecutionResumeHandler
-	Reconcile    port.ExecutionReconcileHandler
-	Complete     issueopscontract.ExecutionCompleteHandler
-	Publication  PublicationHandlers
-	Provenance   provenanceport.Observer
+	ProjectBootstrap bootstrapapp.Service
+	ProjectDocs      docsapp.Service
+	State            StateDependencies
+	Resources        resources.Config
+	SelfVerify       func(verifyapp.LoopRequest) (augmentcontract.SelfAugmentResult, error)
+	Catalog          mcpcontract.Catalog
+	SelfHistory      augmentapp.HistoryService
+	SelfState        SelfStateDependencies
+	SelfPlanning     SelfPlanningDependencies
+	Prepare          issueopscontract.ExecutionPrepareHandler
+	Orca             port.ExecutionOrcaProvisioner
+	OrcaOwner        port.ExecutionOrcaOwnerInspector
+	ReadIssue        executionissue.ExecutionIssueSnapshotReadFunc
+	Claim            issueopscontract.ExecutionClaimHandler
+	Release          issueopscontract.ExecutionReleaseHandler
+	Reseed           issueopscontract.ExecutionReseedHandler
+	Resume           issueopscontract.ExecutionResumeHandler
+	Reconcile        port.ExecutionReconcileHandler
+	Complete         issueopscontract.ExecutionCompleteHandler
+	Publication      PublicationHandlers
+	Provenance       provenanceport.Observer
 }
 
 func mcpToolPayload(payload any) MCPToolOutcome {
@@ -97,7 +99,7 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 		return nil, validationErr
 	}
 	for _, handler := range []func(MCPToolCall) MCPToolOutcome{
-		func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps.ProjectDocs) },
+		func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) },
 		func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps.State) },
 		func(call MCPToolCall) MCPToolOutcome {
 			return handleIssueOpsMCPToolCallWithDependencies(call, deps)

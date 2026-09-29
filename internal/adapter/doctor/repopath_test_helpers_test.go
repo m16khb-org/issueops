@@ -1,8 +1,6 @@
 package doctor
 
 import (
-	lifecyclepkg "issueops/internal/adapter/lifecycle"
-	projectbootstrappkg "issueops/internal/adapter/projectbootstrap"
 	"issueops/internal/adapter/repopath"
 )
 
@@ -10,6 +8,4 @@ import (
 // 방향을 따라 실제로 거쳐 가는 대상만 채운다 — 역방향으로 채우면 순환이 된다.
 func init() {
 	NormalizeRepoRoot = repopath.NormalizeRoot
-	lifecyclepkg.NormalizeRepoRoot = repopath.NormalizeRoot
-	projectbootstrappkg.NormalizeRepoRoot = repopath.NormalizeRoot
 }

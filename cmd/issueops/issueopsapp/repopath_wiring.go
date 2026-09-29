@@ -4,9 +4,7 @@ import (
 	"issueops/cmd/issueops/basiccli"
 	"issueops/internal/adapter/commitsuggest"
 	"issueops/internal/adapter/doctor"
-	"issueops/internal/adapter/lifecycle"
 	"issueops/internal/adapter/lintdiagnose"
-	"issueops/internal/adapter/projectbootstrap"
 	"issueops/internal/adapter/repopath"
 )
 
@@ -17,8 +15,6 @@ import (
 func configureRepoPathResolvers() {
 	basiccli.NormalizeRepoRoot = repopath.NormalizeRoot
 	doctor.NormalizeRepoRoot = repopath.NormalizeRoot
-	lifecycle.NormalizeRepoRoot = repopath.NormalizeRoot
 	lintdiagnose.NormalizeRepoRoot = repopath.NormalizeRoot
 	commitsuggest.NormalizeRepoRoot = repopath.NormalizeRoot
-	projectbootstrap.NormalizeRepoRoot = repopath.NormalizeRoot
 }

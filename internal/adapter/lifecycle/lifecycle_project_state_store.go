@@ -6,73 +6,60 @@ import (
 	"path/filepath"
 	"time"
 
-	"issueops/internal/adapter/lifecycle/fingerprint"
-	lifecycleapp "issueops/internal/application/lifecycle"
+	"issueops/internal/adapter/lifecycle/model"
 	lifecyclecontract "issueops/internal/contract/lifecycle"
 	lifecycledomain "issueops/internal/domain/lifecycle"
 )
 
-func lifecycleService() lifecycleapp.Service {
-	return lifecycleapp.Service{Effects: lifecycleEffects{}, SchemaVersion: ProjectLifecycleSchemaVersion}
+type ProfileFiles struct {
+	Normalize          func(string) (string, error)
+	StateDir           string
+	ObserveFingerprint func(string) lifecyclecontract.ProjectFingerprint
 }
 
-func ResolveProjectLifecycleState(repoRoot string) (ProjectLifecycleStatePlan, error) {
-	return lifecycleService().Resolve(repoRoot)
+func (files ProfileFiles) NormalizeRoot(root string) (string, error) { return files.Normalize(root) }
+func (files ProfileFiles) StateRoot() string                         { return files.StateDir }
+func (files ProfileFiles) Fingerprint(root string) lifecyclecontract.ProjectFingerprint {
+	return files.ObserveFingerprint(root)
 }
-
-func InitProjectLifecycleState(repoRoot string, confirm bool, metadata ...ProjectProfile) (ProjectLifecycleStatePlan, error) {
-	return lifecycleService().Init(repoRoot, confirm, metadata...)
-}
-
-func ValidateProjectLifecycleState(repoRoot string) (ProjectLifecycleStatePlan, error) {
-	return ResolveProjectLifecycleState(repoRoot)
-}
-
-type lifecycleEffects struct{}
-
-func (lifecycleEffects) NormalizeRoot(root string) (string, error) { return NormalizeRepoRoot(root) }
-func (lifecycleEffects) StateRoot() string                         { return StateDir() }
-func (lifecycleEffects) Fingerprint(root string) lifecyclecontract.ProjectFingerprint {
-	return fingerprint.ForRoot(root)
-}
-func (lifecycleEffects) Paths(root string, projectFingerprint lifecyclecontract.ProjectFingerprint) lifecyclecontract.ProjectLifecycleStatePlan {
+func (files ProfileFiles) Paths(root string, projectFingerprint lifecyclecontract.ProjectFingerprint) lifecyclecontract.ProjectLifecycleStatePlan {
 	repoID := lifecycledomain.RepoID(projectFingerprint)
-	stateRoot := StateDir()
+	stateRoot := files.StateDir
 	projectDir := filepath.Join(stateRoot, "projects", repoID)
-	return ProjectLifecycleStatePlan{
+	return lifecyclecontract.ProjectLifecycleStatePlan{
 		OK:              true,
-		SchemaVersion:   ProjectLifecycleSchemaVersion,
+		SchemaVersion:   model.ProjectLifecycleSchemaVersion,
 		RepoRoot:        root,
 		RepoID:          repoID,
 		StateRoot:       stateRoot,
 		ProjectStateDir: projectDir,
-		ProjectJSONPath: filepath.Join(projectDir, projectLifecycleProfileFile),
-		QueuePath:       filepath.Join(projectDir, docUpkeepQueueFile),
-		CompactPath:     filepath.Join(projectDir, compactCapsuleFile),
+		ProjectJSONPath: filepath.Join(projectDir, model.ProjectLifecycleProfileFile),
+		QueuePath:       filepath.Join(projectDir, model.DocUpkeepQueueFile),
+		CompactPath:     filepath.Join(projectDir, model.CompactCapsuleFile),
 		Fingerprint:     projectFingerprint,
 		Warnings:        []string{},
 	}
 }
-func (lifecycleEffects) ReadProfile(path string) (ProjectLifecycleProfile, error) {
+func (files ProfileFiles) ReadProfile(path string) (lifecyclecontract.ProjectLifecycleProfile, error) {
 	return readProjectLifecycleProfile(path)
 }
-func (lifecycleEffects) Mkdir(path string) error { return os.MkdirAll(path, 0o700) }
-func (lifecycleEffects) Create(path string, profile ProjectLifecycleProfile) error {
+func (files ProfileFiles) Mkdir(path string) error { return os.MkdirAll(path, 0o700) }
+func (files ProfileFiles) Create(path string, profile lifecyclecontract.ProjectLifecycleProfile) error {
 	return createJSONAtomic(path, profile, 0o600)
 }
-func (lifecycleEffects) Write(path string, profile ProjectLifecycleProfile) error {
+func (files ProfileFiles) Write(path string, profile lifecyclecontract.ProjectLifecycleProfile) error {
 	return writeJSONAtomic(path, profile, 0o600)
 }
-func (lifecycleEffects) Now() time.Time { return time.Now() }
+func (files ProfileFiles) Now() time.Time { return time.Now() }
 
-func readProjectLifecycleProfile(path string) (ProjectLifecycleProfile, error) {
+func readProjectLifecycleProfile(path string) (lifecyclecontract.ProjectLifecycleProfile, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return ProjectLifecycleProfile{}, err
+		return lifecyclecontract.ProjectLifecycleProfile{}, err
 	}
-	var profile ProjectLifecycleProfile
+	var profile lifecyclecontract.ProjectLifecycleProfile
 	if err := json.Unmarshal(b, &profile); err != nil {
-		return ProjectLifecycleProfile{}, err
+		return lifecyclecontract.ProjectLifecycleProfile{}, err
 	}
 	return profile, nil
 }

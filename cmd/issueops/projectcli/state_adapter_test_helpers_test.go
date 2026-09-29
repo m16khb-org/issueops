@@ -2,7 +2,6 @@ package projectcli
 
 import (
 	issueopsstatepkg "issueops/internal/adapter/issueops"
-	lifecyclestatepkg "issueops/internal/adapter/lifecycle"
 	statestore "issueops/internal/adapter/outbound/state"
 )
 
@@ -10,6 +9,4 @@ import (
 // 대상만 채운다 — 역방향으로 채우면 import 순환이 된다.
 func init() {
 	issueopsstatepkg.StateDir = statestore.StateDir
-	lifecyclestatepkg.StateDir = statestore.StateDir
-	lifecyclestatepkg.WithKeyLock = statestore.WithKeyLock
 }

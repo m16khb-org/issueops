@@ -63,9 +63,10 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	root := issueOpsRoot()
 	docsService := newProjectDocsService(resolveTarget(""))
 	return mcpcli.MCPDependencies{
-		Catalog:     mcpcatalog.Build(),
-		ProjectDocs: docsService,
-		State:       mcpcli.StateDependencies{Write: state.Write, Read: state.Read, List: state.List, Prune: state.Prune, Doctor: state.Doctor, Maintain: state.Maintain},
+		Catalog:          mcpcatalog.Build(),
+		ProjectDocs:      docsService,
+		ProjectBootstrap: newProjectBootstrapService(resolveTarget("")),
+		State:            mcpcli.StateDependencies{Write: state.Write, Read: state.Read, List: state.List, Prune: state.Prune, Doctor: state.Doctor, Maintain: state.Maintain},
 		Resources: resources.Config{
 			IssueOpsRoot: root, Version: version, SkillName: skillName,
 			ReadHarnessFile: func(parts ...string) (string, error) { return pathutil.ReadHarnessFile(root, parts...) },

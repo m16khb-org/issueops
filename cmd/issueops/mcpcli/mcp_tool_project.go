@@ -3,12 +3,11 @@ package mcpcli
 import (
 	"issueops/cmd/issueops/apidoc"
 	"issueops/cmd/issueops/mcpcli/argmap"
-	docsapp "issueops/internal/application/projectdocs"
 	projectbootstrapcontract "issueops/internal/contract/projectbootstrap"
 	projectdocscontract "issueops/internal/contract/projectdocs"
 )
 
-func handleProjectMCPToolCall(call MCPToolCall, docs docsapp.Service) MCPToolOutcome {
+func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
 	case "harness_inspect":
 		return mcpToolPayload(InspectHarness(argmap.String(call.Arguments, "repo")))
@@ -25,25 +24,25 @@ func handleProjectMCPToolCall(call MCPToolCall, docs docsapp.Service) MCPToolOut
 	case "docs_index":
 		return mcpToolPayload(DocsIndex(IssueOpsRoot(), Version))
 	case "project_docs_route":
-		result, err := docs.Route(argmap.String(call.Arguments, "repo"), argmap.StringDefault(call.Arguments, "task", "general"))
+		result, err := deps.ProjectDocs.Route(argmap.String(call.Arguments, "repo"), argmap.StringDefault(call.Arguments, "task", "general"))
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32602, "Project docs route failed", err.Error()))
 		}
 		return mcpToolPayload(result)
 	case "project_docs_bootstrap_plan":
-		result, err := bootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: ResolveTarget(argmap.String(call.Arguments, "repo")), Write: false})
+		result, err := deps.ProjectBootstrap.Run(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: argmap.String(call.Arguments, "repo"), Write: false})
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32602, "Project docs bootstrap plan failed", err.Error()))
 		}
 		return mcpToolPayload(result)
 	case "project_docs_read":
-		result, err := docs.Read(argmap.String(call.Arguments, "repo"), argmap.String(call.Arguments, "rel_path"))
+		result, err := deps.ProjectDocs.Read(argmap.String(call.Arguments, "repo"), argmap.String(call.Arguments, "rel_path"))
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32602, "Project docs read failed", err.Error()))
 		}
 		return mcpToolPayload(result)
 	case "project_docs_revise":
-		result, err := docs.Revise(projectdocscontract.ProjectDocsReviseRequest{
+		result, err := deps.ProjectDocs.Revise(projectdocscontract.ProjectDocsReviseRequest{
 			RepoRoot:       argmap.String(call.Arguments, "repo"),
 			RelPath:        argmap.String(call.Arguments, "rel_path"),
 			Content:        argmap.String(call.Arguments, "content"),
@@ -57,7 +56,7 @@ func handleProjectMCPToolCall(call MCPToolCall, docs docsapp.Service) MCPToolOut
 		}
 		return mcpToolPayload(result)
 	case "project_docs_append":
-		result, err := docs.Append(projectdocscontract.ProjectDocsAppendRequest{
+		result, err := deps.ProjectDocs.Append(projectdocscontract.ProjectDocsAppendRequest{
 			RepoRoot:     argmap.String(call.Arguments, "repo"),
 			Kind:         argmap.String(call.Arguments, "kind"),
 			Title:        argmap.String(call.Arguments, "title"),
