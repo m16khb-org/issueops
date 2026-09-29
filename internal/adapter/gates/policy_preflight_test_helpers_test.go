@@ -2,10 +2,16 @@ package gates
 
 import (
 	policyadapter "issueops/internal/adapter/policy"
+	app "issueops/internal/application/gates"
+	model "issueops/internal/contract/gates"
 )
 
-// production wiring과 같은 실행기를 설치한다.
-func init() {
-	EvaluateCommandPolicy = policyadapter.EvaluateCommandPolicy
-	RunCommand = policyadapter.RunCommand
+func gateServiceForTest() app.Service {
+	return app.Service{Store: FileStore{}, Clock: Clock{}, Runner: app.CommandRunner{Evaluate: policyadapter.EvaluateCommandPolicy, Execute: policyadapter.RunCommand}}
+}
+
+func Check(req model.CheckRequest) (model.CheckResult, error) { return gateServiceForTest().Check(req) }
+func Init(req model.InitRequest) (model.InitResult, error)    { return gateServiceForTest().Init(req) }
+func Abandon(req model.AbandonRequest) (model.AbandonResult, error) {
+	return gateServiceForTest().Abandon(req)
 }

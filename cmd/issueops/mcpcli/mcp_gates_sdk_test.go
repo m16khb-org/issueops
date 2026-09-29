@@ -2,6 +2,10 @@ package mcpcli
 
 import (
 	"context"
+	"encoding/json"
+	app "issueops/internal/application/gates"
+	model "issueops/internal/contract/gates"
+	policy "issueops/internal/contract/policy"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,7 +19,7 @@ import (
 // 달리 이 테스트는 tools/list 스키마 검증과 실세션 round-trip을 잠근다.
 func TestServeMCPStreamAdvertisesAndRunsGatesTools(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog()})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Gates: testGatesService()})
 
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -97,4 +101,47 @@ func toolResultText(result *mcp.CallToolResult) string {
 		}
 	}
 	return strings.Join(parts, "\n")
+}
+
+func TestGatesSDKServersKeepTheirOwnPolicyRunner(t *testing.T) {
+	roots := []string{t.TempDir(), t.TempDir()}
+	calls := [2]int{}
+	sessions := make([]*mcp.ClientSession, 2)
+	for i, root := range roots {
+		service := testGatesService()
+		service.Runner = app.CommandRunner{Evaluate: func(policy.CommandPolicyRequest) policy.CommandPolicyEvaluation {
+			return policy.CommandPolicyEvaluation{Allowed: i == 1, DenyReasons: []string{"instance denied"}}
+		}, Execute: func(policy.CommandPolicyRequest) policy.CommandRunResult {
+			calls[i]++
+			return policy.CommandRunResult{Stdout: "ok"}
+		}}
+		_, err := service.Init(model.InitRequest{File: filepath.Join(root, "GATES.md"), Scope: "scope", Gates: []string{"G1: proof | CHECK: printf ok | EXPECT: ok"}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		sessions[i] = startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Gates: service})
+	}
+	for i, session := range sessions {
+		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "gates_check", Arguments: map[string]any{"workspace_root": roots[i], "cwd": roots[i]}})
+		if err != nil || result.IsError {
+			t.Fatalf("result=%+v err=%v", result, err)
+		}
+		var check model.CheckResult
+		if err := json.Unmarshal([]byte(toolResultText(result)), &check); err != nil {
+			t.Fatal(err)
+		}
+		if check.Complete != (i == 1) || len(check.Files) != 1 || len(check.Files[0].Gates) != 1 || check.Files[0].Gates[0].PolicyDenied != (i == 0) {
+			t.Fatalf("server %d result=%+v", i, check)
+		}
+		data, err := os.ReadFile(filepath.Join(roots[i], "GATES.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(data), "- [x] G1") != (i == 1) {
+			t.Fatalf("server %d wrote wrong ledger: %s", i, data)
+		}
+	}
+	if calls != [2]int{0, 1} {
+		t.Fatalf("executions=%v", calls)
+	}
 }

@@ -4,10 +4,11 @@ import (
 	"fmt"
 
 	"issueops/cmd/issueops/mcpcli/argmap"
+	gatesapp "issueops/internal/application/gates"
 	gatescontract "issueops/internal/contract/gates"
 )
 
-var gatesMCPHandlers = map[string]func(map[string]any) MCPToolOutcome{
+var gatesMCPHandlers = map[string]func(map[string]any, gatesapp.Service) MCPToolOutcome{
 	"gates_check":   handleMCPGatesCheck,
 	"gates_status":  handleMCPGatesStatus,
 	"gates_report":  handleMCPGatesReport,
@@ -15,12 +16,12 @@ var gatesMCPHandlers = map[string]func(map[string]any) MCPToolOutcome{
 	"gates_init":    handleMCPGatesInit,
 }
 
-func handleGatesMCPToolCall(call MCPToolCall) MCPToolOutcome {
+func handleGatesMCPToolCall(call MCPToolCall, service gatesapp.Service) MCPToolOutcome {
 	handler, ok := gatesMCPHandlers[call.Name]
 	if !ok {
 		return MCPToolOutcome{}
 	}
-	return handler(call.Arguments)
+	return handler(call.Arguments, service)
 }
 
 func gatesMCPOutcome(payload any, err error, message string) MCPToolOutcome {
@@ -51,29 +52,29 @@ func gatesBaseCheckRequest(args map[string]any) gatescontract.CheckRequest {
 	}
 }
 
-func handleMCPGatesCheck(args map[string]any) MCPToolOutcome {
+func handleMCPGatesCheck(args map[string]any, service gatesapp.Service) MCPToolOutcome {
 	req := gatesBaseCheckRequest(args)
 	req.TimeoutSeconds = argmap.Int(args, "timeout_seconds", 0)
-	result, err := GatesCheck(req)
+	result, err := service.Check(req)
 	return gatesMCPOutcome(result, err, "Gates check failed")
 }
 
-func handleMCPGatesStatus(args map[string]any) MCPToolOutcome {
+func handleMCPGatesStatus(args map[string]any, service gatesapp.Service) MCPToolOutcome {
 	req := gatesBaseCheckRequest(args)
 	req.StatusOnly = true
-	result, err := GatesCheck(req)
+	result, err := service.Check(req)
 	return gatesMCPOutcome(result, err, "Gates status failed")
 }
 
-func handleMCPGatesReport(args map[string]any) MCPToolOutcome {
+func handleMCPGatesReport(args map[string]any, service gatesapp.Service) MCPToolOutcome {
 	req := gatesBaseCheckRequest(args)
 	req.StatusOnly = true
-	result, err := GatesCheck(req)
+	result, err := service.Check(req)
 	return gatesMCPOutcome(result, err, "Gates report failed")
 }
 
-func handleMCPGatesAbandon(args map[string]any) MCPToolOutcome {
-	result, err := GatesAbandon(gatescontract.AbandonRequest{
+func handleMCPGatesAbandon(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+	result, err := service.Abandon(gatescontract.AbandonRequest{
 		File:   argmap.String(args, "file"),
 		GateID: argmap.String(args, "gate_id"),
 		Reason: argmap.String(args, "reason"),
@@ -81,8 +82,8 @@ func handleMCPGatesAbandon(args map[string]any) MCPToolOutcome {
 	return gatesMCPOutcome(result, err, "Gates abandon failed")
 }
 
-func handleMCPGatesInit(args map[string]any) MCPToolOutcome {
-	result, err := GatesInit(gatescontract.InitRequest{
+func handleMCPGatesInit(args map[string]any, service gatesapp.Service) MCPToolOutcome {
+	result, err := service.Init(gatescontract.InitRequest{
 		File:  argmap.String(args, "file"),
 		Scope: argmap.String(args, "scope"),
 		Gates: argmap.StringSlice(args, "gates"),

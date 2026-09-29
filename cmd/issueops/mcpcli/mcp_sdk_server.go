@@ -153,7 +153,6 @@ func issueOpsExecutionSDKToolHandler(deps MCPDependencies) mcp.ToolHandler {
 // lookup stays stable as long as no new handler group is introduced.
 var handlerGroupLookup = map[mcpcontract.DispatchGroup]func(MCPToolCall) MCPToolOutcome{
 	mcpcontract.DispatchIssueOps: handleIssueOpsMCPToolCall,
-	mcpcontract.DispatchGates:    handleGatesMCPToolCall,
 }
 
 func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MCPToolOutcome {
@@ -167,6 +166,9 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 		return func(call MCPToolCall) MCPToolOutcome {
 			return handleAssistantWorkerMCPToolCall(call, deps.Worker, deps.Daemon)
 		}
+	}
+	if group == mcpcontract.DispatchGates {
+		return func(call MCPToolCall) MCPToolOutcome { return handleGatesMCPToolCall(call, deps.Gates) }
 	}
 	if group == mcpcontract.DispatchChannel {
 		return func(call MCPToolCall) MCPToolOutcome { return handleChannelMCPToolCall(call, deps.Channel) }

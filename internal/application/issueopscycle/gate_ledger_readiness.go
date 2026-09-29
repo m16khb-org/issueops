@@ -7,7 +7,6 @@ import (
 	gatescontract "issueops/internal/contract/gates"
 	model "issueops/internal/contract/issueops"
 	cycledomain "issueops/internal/domain/issueops"
-	"issueops/internal/domain/stringlist"
 	cycleport "issueops/internal/port/issueopscycle"
 )
 
@@ -21,7 +20,7 @@ func ApplyGateLedgers(ready model.IssueOpsReadiness, root, issueNumber string, p
 		return ready
 	}
 	files, skipped := cycledomain.ScopeGateLedgers(root, files, issueNumber)
-	missing := append([]string{}, ready.Missing...)
+	missing := []string{}
 	warnings := []string{}
 	if len(skipped) > 0 {
 		relative := make([]string, 0, len(skipped))
@@ -49,11 +48,5 @@ func ApplyGateLedgers(ready model.IssueOpsReadiness, root, issueNumber string, p
 		missing = append(missing, fileMissing...)
 		warnings = append(warnings, fileWarnings...)
 	}
-	if len(missing) == len(ready.Missing) && len(warnings) == 0 {
-		return ready
-	}
-	ready.Missing = stringlist.UniqueSorted(missing)
-	ready.Warnings = append(ready.Warnings, warnings...)
-	ready.Ready = len(ready.Missing) == 0
-	return ready
+	return cycledomain.MergeGateReadiness(ready, missing, warnings)
 }

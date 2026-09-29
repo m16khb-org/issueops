@@ -22,3 +22,8 @@ func DuplicateGateLedgerMissing(issueNumber string, canonicalExists bool, legacy
 	}
 	return nil
 }
+
+func DuplicateGateLedgerProbe(root, number string) (string, string, bool) {
+	root, number = strings.TrimSpace(root), strings.TrimSpace(number)
+	return root, number, root != "" && number != ""
+}

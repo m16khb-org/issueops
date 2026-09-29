@@ -791,12 +791,20 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/gate_readiness_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newGateReadiness"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/gates_wiring.go",
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureGatesGate",
-        "func gatesDependencies"
+        "func gatesDependencies",
+        "func newGatesService"
       ]
     },
     {
@@ -1324,8 +1332,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configurePolicyAndGitObservers",
-        "func configurePolicyAndGitObserversWithLookup"
+        "func configurePolicyAndGitObservers"
       ]
     },
     {
@@ -3699,39 +3706,17 @@
       "owner": "adapter",
       "task": "T10",
       "symbols": [
-        "func Check",
+        "func Clock.Now",
         "func DiscoverGateFiles",
-        "func ErrUnmetGates.Error",
+        "func FileStore.Create",
+        "func FileStore.Discover",
+        "func FileStore.ExistsFile",
+        "func FileStore.Read",
+        "func FileStore.WritePreservingMode",
         "func appendIssueFolderGateFiles",
         "func appendMarkdownGateFiles",
-        "func gateClock.Now",
-        "func issueFolderNumber",
-        "func ledgerFileStore.Discover",
-        "func ledgerFileStore.Read",
-        "func ledgerFileStore.WritePreservingMode",
-        "func policyGateRunner.Run",
-        "func runGateCheck",
-        "type ErrUnmetGates",
-        "type gateClock",
-        "type ledgerFileStore",
-        "type policyGateRunner"
-      ]
-    },
-    {
-      "path": "internal/adapter/gates/dependencies.go",
-      "owner": "adapter",
-      "task": "T10",
-      "symbols": []
-    },
-    {
-      "path": "internal/adapter/gates/init.go",
-      "owner": "adapter",
-      "task": "T10",
-      "symbols": [
-        "func Abandon",
-        "func Init",
-        "func gateFileSlug",
-        "func renderGateSpec"
+        "type Clock",
+        "type FileStore"
       ]
     },
     {
@@ -5302,11 +5287,8 @@
       "owner": "adapter",
       "task": "T04",
       "symbols": [
-        "func AdvancePhaseWithActor",
-        "func StrictPRReadinessWithState",
-        "func guardPRPhase",
-        "func withDuplicateIssueArtifactGate",
-        "func withGatesGate"
+        "func Observer.DuplicateFiles",
+        "type Observer"
       ]
     },
     {
@@ -9157,6 +9139,24 @@
       ]
     },
     {
+      "path": "internal/application/gates/command.go",
+      "owner": "application",
+      "task": "T10",
+      "symbols": [
+        "func CommandRunner.Run",
+        "type CommandRunner"
+      ]
+    },
+    {
+      "path": "internal/application/gates/mutation.go",
+      "owner": "application",
+      "task": "T10",
+      "symbols": [
+        "func Service.Abandon",
+        "func Service.Init"
+      ]
+    },
+    {
       "path": "internal/application/gates/service.go",
       "owner": "application",
       "task": "T10",
@@ -9165,7 +9165,6 @@
         "func Service.checkFile",
         "type Clock",
         "type LedgerStore",
-        "type Outcome",
         "type Runner",
         "type Service"
       ]
@@ -9718,14 +9717,6 @@
       ]
     },
     {
-      "path": "internal/application/issueopscycle/duplicate_gate_ledger.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func ApplyDuplicateGateLedger"
-      ]
-    },
-    {
       "path": "internal/application/issueopscycle/feedback_completion.go",
       "owner": "application",
       "task": "T20",
@@ -9736,19 +9727,22 @@
       ]
     },
     {
-      "path": "internal/application/issueopscycle/gate_ledger_issue.go",
-      "owner": "application",
-      "task": "T20",
-      "symbols": [
-        "func GateLedgerIssueNumber"
-      ]
-    },
-    {
       "path": "internal/application/issueopscycle/gate_ledger_readiness.go",
       "owner": "application",
       "task": "T20",
       "symbols": [
         "func ApplyGateLedgers"
+      ]
+    },
+    {
+      "path": "internal/application/issueopscycle/gate_service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func GateService.AdvancePhaseWithActor",
+        "func GateService.StrictPRReadinessWithState",
+        "func GateService.apply",
+        "type GateService"
       ]
     },
     {
@@ -13271,6 +13265,31 @@
       ]
     },
     {
+      "path": "internal/domain/gates/check_result.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func AddFileResult",
+        "func ApplyCheck",
+        "func CompletedCheck",
+        "func DeniedCheck",
+        "func NormalizeCheck",
+        "func ShouldCheck",
+        "func SummarizeFile",
+        "func ValidateLedger",
+        "type CheckOutcome"
+      ]
+    },
+    {
+      "path": "internal/domain/gates/discovery.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func SortIssueFolders",
+        "func gateIssueFolderNumber"
+      ]
+    },
+    {
       "path": "internal/domain/gates/evaluate.go",
       "owner": "domain",
       "task": "T10",
@@ -13300,6 +13319,22 @@
         "func stripGateIDPrefix",
         "type Gate",
         "type Ledger"
+      ]
+    },
+    {
+      "path": "internal/domain/gates/mutation.go",
+      "owner": "domain",
+      "task": "T10",
+      "symbols": [
+        "func AbandonLedger",
+        "func CreatedLedger",
+        "func PrepareAbandon",
+        "func PrepareInit",
+        "func RecordedAbandon",
+        "func RenderInitialLedger",
+        "func ValidateCreate",
+        "func gateFileSlug",
+        "func renderGateSpec"
       ]
     },
     {
@@ -13744,6 +13779,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/duplicate_gate_ledger.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ApplyDuplicateGateLedger"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/early_phase_readiness.go",
       "owner": "domain",
       "task": "T20",
@@ -13801,6 +13844,7 @@
       "task": "T20",
       "symbols": [
         "func DuplicateGateLedgerMissing",
+        "func DuplicateGateLedgerProbe",
         "type GateLedgerFile"
       ]
     },
@@ -14144,6 +14188,18 @@
       "symbols": [
         "func MissingPlanSections",
         "func collapseHeading"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/pr_gate.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func MergeGateReadiness",
+        "func NeedsPRGateEvaluation",
+        "func NeedsPRGateRead",
+        "func PRGateError",
+        "func gateMissingKeys"
       ]
     },
     {
@@ -15189,6 +15245,14 @@
         "type CreateAuthority",
         "type CreateBranchAuthority",
         "type CreateRequest"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsremote/gate_ledger_issue.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func GateLedgerIssueNumber"
       ]
     },
     {
@@ -18958,7 +19022,7 @@
       "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
       "source_symbol": "func linkedIssueNumber",
       "responsibility": "gate ledger scope prefers the linked issue over branch preparation evidence",
-      "target": "internal/application/issueopscycle",
+      "target": "internal/domain/issueopsremote",
       "target_symbol": "func GateLedgerIssueNumber",
       "task": "T04",
       "entrypoints": [
@@ -18966,7 +19030,7 @@
         "issueops remote create-pr"
       ],
       "evidence_tests": [
-        "internal/application/issueopscycle/gate_ledger_issue_test.go"
+        "internal/domain/issueopsremote/gate_ledger_issue_test.go"
       ],
       "status": "migrated"
     },
@@ -18991,7 +19055,7 @@
       "id": "duplicate-gate-ledger",
       "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
       "source_symbol": "func withDuplicateIssueArtifactGate",
-      "responsibility": "observe canonical and compatible ledger files; application composes the domain duplicate decision into PR readiness",
+      "responsibility": "domain selects duplicate-ledger fail-closed keys from observed file facts",
       "target": "internal/domain/issueops",
       "target_symbol": "func DuplicateGateLedgerMissing",
       "task": "T04",
@@ -19001,10 +19065,10 @@
       ],
       "evidence_tests": [
         "internal/domain/issueops/gate_ledger_duplicate_test.go",
-        "internal/application/issueopscycle/duplicate_gate_ledger_test.go",
+        "internal/domain/issueops/duplicate_gate_ledger_test.go",
         "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "gate-ledger-relative-path",
@@ -19028,7 +19092,7 @@
       "id": "gate-ledger-readiness",
       "source_path": "internal/adapter/issueops/gatesgate/gates_gate.go",
       "source_symbol": "func withGatesGate",
-      "responsibility": "bind the discovered ledger and evaluator adapter callbacks to application readiness coordination",
+      "responsibility": "application coordinates discovery and status checks through explicit per-instance ports",
       "target": "internal/application/issueopscycle",
       "target_symbol": "func ApplyGateLedgers",
       "task": "T04",
@@ -19041,7 +19105,7 @@
         "internal/application/issueopscycle/gate_ledger_readiness_test.go",
         "internal/adapter/issueops/gatesgate/gates_gate_test.go"
       ],
-      "status": "retain"
+      "status": "migrated"
     },
     {
       "id": "child-pr-gate-key",
@@ -24339,6 +24403,195 @@
         "cmd/issueops/mcpcli/mcp_channel_sdk_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "gate-init-admission",
+      "source_path": "internal/adapter/gates/init.go",
+      "source_symbol": "func Init",
+      "responsibility": "scope and default filename validation precede existing-file and spec checks",
+      "target": "internal/domain/gates",
+      "target_symbol": "func PrepareInit",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/gates/mutation_test.go",
+        "internal/application/gates/mutation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-init-render",
+      "source_path": "internal/adapter/gates/init.go",
+      "source_symbol": "func renderGateSpec",
+      "responsibility": "ledger syntax, evidence default and unquoted shell-control refusal",
+      "target": "internal/domain/gates",
+      "target_symbol": "func RenderInitialLedger",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/gates/mutation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-abandon-admission",
+      "source_path": "internal/adapter/gates/init.go",
+      "source_symbol": "func Abandon",
+      "responsibility": "matching gate existence and already-abandoned refusal before persistence",
+      "target": "internal/domain/gates",
+      "target_symbol": "func AbandonLedger",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/application/gates/mutation_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-check-normalize",
+      "source_path": "internal/application/gates/service.go",
+      "source_symbol": "func Service.Check",
+      "responsibility": "root and cwd fallback with default timeout",
+      "target": "internal/domain/gates",
+      "target_symbol": "func NormalizeCheck",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/application/gates/service_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "gate-check-transition",
+      "source_path": "internal/application/gates/service.go",
+      "source_symbol": "func Service.checkFile",
+      "responsibility": "run eligibility, pass evidence, policy denial and file summary",
+      "target": "internal/domain/gates",
+      "target_symbol": "func ApplyCheck",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/application/gates/service_test.go",
+        "internal/adapter/gates/check_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "gate-check-command",
+      "source_path": "internal/adapter/gates/check.go",
+      "source_symbol": "func runGateCheck",
+      "responsibility": "argv parsing and execution result determine error, pass and evidence",
+      "target": "internal/domain/gates",
+      "target_symbol": "func CompletedCheck",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/application/gates/mutation_test.go",
+        "internal/adapter/gates/check_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-discovery-order",
+      "source_path": "internal/adapter/gates/check.go",
+      "source_symbol": "func gateIssueFolderNumber",
+      "responsibility": "canonical issue folders ordered numerically before nonnumeric names",
+      "target": "internal/domain/gates",
+      "target_symbol": "func SortIssueFolders",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/adapter/gates/check_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-duplicate-readiness",
+      "source_path": "internal/application/issueopscycle/duplicate_gate_ledger.go",
+      "source_symbol": "func ApplyDuplicateGateLedger",
+      "responsibility": "duplicate ledger evidence adds sorted fail-closed readiness key",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ApplyDuplicateGateLedger",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/duplicate_gate_ledger_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "gate-pr-phase-admission",
+      "source_path": "internal/application/issueopscycle/pr_gate.go",
+      "source_symbol": "func GuardPRPhase",
+      "responsibility": "only entering a new PR phase requires readiness evaluation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func NeedsPRGateEvaluation",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/pr_gate_test.go",
+        "internal/application/issueopscycle/pr_gate_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "gate-readiness-merge",
+      "source_path": "internal/application/issueopscycle/pr_gate.go",
+      "source_symbol": "func ApplyLoopGate",
+      "responsibility": "preserve no-op readiness and merge missing keys and warnings in contract order",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func MergeGateReadiness",
+      "task": "T20",
+      "entrypoints": [
+        "issueops gates",
+        "MCP gates_*",
+        "issueops advance --to pr"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueops/pr_gate_test.go",
+        "internal/application/issueopscycle/pr_gate_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
     }
   ]
 }

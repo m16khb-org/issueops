@@ -2,7 +2,6 @@ package mcpcli
 
 import (
 	"errors"
-	gatescontract "issueops/internal/contract/gates"
 	inspectcontract "issueops/internal/contract/inspect"
 	preflightcontract "issueops/internal/contract/preflight"
 	"os"
@@ -92,14 +91,6 @@ func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
-
-// gates ledger 연산도 composition root가 설치한다. policy 게이트 실행
-// (gates_check)은 주입된 adapter 함수를 통해서만 일어난다.
-var (
-	GatesCheck   func(gatescontract.CheckRequest) (gatescontract.CheckResult, error)
-	GatesInit    func(gatescontract.InitRequest) (gatescontract.InitResult, error)
-	GatesAbandon func(gatescontract.AbandonRequest) (gatescontract.AbandonResult, error)
-)
 
 // GitPreflight와 ListSkills는 composition root가 설치한다. MCP tool router는
 // git 실행이나 skill 디렉터리 탐색을 스스로 하지 않는다.

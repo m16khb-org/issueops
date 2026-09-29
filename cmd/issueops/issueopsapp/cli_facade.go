@@ -28,7 +28,6 @@ func wireBasicCLIDeps() {
 	configureInstallReaders()
 	configureProjectDocReaders()
 	configurePolicyAndGitObservers()
-	configureGatesGate()
 	configureAdapterStateAccess()
 	configureRepoPathResolvers()
 	configureIssueOpsBenchmark()

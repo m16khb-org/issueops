@@ -2,7 +2,6 @@ package gates
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	gatescontract "issueops/internal/contract/gates"
@@ -10,21 +9,15 @@ import (
 )
 
 type LedgerStore interface {
+	ExistsFile(file string) bool
+	Create(file string, data []byte) error
 	Discover(cwd string) ([]string, error)
 	Read(file string) ([]byte, error)
 	WritePreservingMode(file string, data []byte) error
 }
 
-type Outcome struct {
-	Passed       bool
-	Evidence     string
-	CheckError   string
-	PolicyDenied bool
-	AuditLogID   string
-}
-
 type Runner interface {
-	Run(root, cwd string, request gatescontract.CheckRequest, gate gatesdomain.Gate) Outcome
+	Run(root, cwd string, request gatescontract.CheckRequest, gate gatesdomain.Gate) gatesdomain.CheckOutcome
 }
 
 type Clock interface{ Now() time.Time }
@@ -36,17 +29,8 @@ type Service struct {
 }
 
 func (service Service) Check(request gatescontract.CheckRequest) (gatescontract.CheckResult, error) {
-	root := strings.TrimSpace(request.WorkspaceRoot)
-	cwd := strings.TrimSpace(request.CWD)
-	if root == "" {
-		root = cwd
-	}
-	if cwd == "" {
-		cwd = root
-	}
-	if request.TimeoutSeconds <= 0 {
-		request.TimeoutSeconds = gatescontract.TimeoutDefaultSeconds
-	}
+	request = gatesdomain.NormalizeCheck(request)
+	root, cwd := request.WorkspaceRoot, request.CWD
 	files := request.Files
 	if len(files) == 0 {
 		var err error
@@ -64,17 +48,8 @@ func (service Service) Check(request gatescontract.CheckRequest) (gatescontract.
 	}
 	for _, file := range files {
 		fileResult, warnings := service.checkFile(root, cwd, request, file)
-		result.Files = append(result.Files, fileResult)
-		result.Warnings = append(result.Warnings, warnings...)
-		result.TotalGates += fileResult.GateCount
-		result.TotalMet += fileResult.Met
-		result.TotalUnmet += fileResult.Unmet
-		result.TotalAbandoned += fileResult.Abandoned
-		if fileResult.Error != "" {
-			result.OK = false
-		}
+		result = gatesdomain.AddFileResult(result, fileResult, warnings)
 	}
-	result.Complete = result.TotalUnmet == 0 && result.OK
 	return result, nil
 }
 
@@ -87,43 +62,23 @@ func (service Service) checkFile(root, cwd string, request gatescontract.CheckRe
 		return fileResult, warnings
 	}
 	ledger := gatesdomain.Parse(string(data))
-	if len(ledger.Gates) == 0 {
-		fileResult.Error = "no gates found"
+	if err := gatesdomain.ValidateLedger(ledger); err != nil {
+		fileResult.Error = err.Error()
 		return fileResult, warnings
 	}
 	changed := false
 	for i := range ledger.Gates {
-		gate := &ledger.Gates[i]
-		gateResult := gatescontract.GateResult{
-			ID: gate.ID, Title: gate.Title, Checked: gate.Checked,
-			HasCheck: strings.TrimSpace(gate.CheckCmd) != "", Evidence: gate.Evidence, AbandonReason: gate.AbandonReason,
+		var outcome *gatesdomain.CheckOutcome
+		if gatesdomain.ShouldCheck(ledger.Gates[i], request.StatusOnly) {
+			run := service.Runner.Run(root, cwd, request, ledger.Gates[i])
+			outcome = &run
 		}
-		if !gate.Abandoned && !request.StatusOnly && gateResult.HasCheck && gatesdomain.ShouldRun(*gate) {
-			outcome := service.Runner.Run(root, cwd, request, *gate)
-			gateResult.PolicyDenied = outcome.PolicyDenied
-			gateResult.AuditLogID = outcome.AuditLogID
-			if outcome.Passed {
-				gatesdomain.MarkPass(&ledger, i, outcome.Evidence)
-				gate.Evidence = outcome.Evidence
-				changed = true
-			} else {
-				gateResult.CheckError = outcome.CheckError
-				if outcome.PolicyDenied {
-					warnings = append(warnings, fmt.Sprintf("%s %s: check command denied by policy", file, gate.ID))
-				}
-			}
-		}
-		gateResult.State = gatesdomain.State(*gate)
-		gateResult.Checked = gate.Checked
-		gateResult.Evidence = gate.Evidence
-		fileResult.Gates = append(fileResult.Gates, gateResult)
+		result, gateWarnings, updated := gatesdomain.ApplyCheck(&ledger, i, outcome, file)
+		fileResult.Gates = append(fileResult.Gates, result)
+		warnings = append(warnings, gateWarnings...)
+		changed = changed || updated
 	}
-	summary := gatesdomain.Summarize(ledger.Gates)
-	fileResult.GateCount = summary.Total
-	fileResult.Met = summary.Met
-	fileResult.Unmet = summary.Unmet
-	fileResult.Abandoned = summary.Abandoned
-	fileResult.Complete = summary.Complete
+	fileResult = gatesdomain.SummarizeFile(fileResult, ledger)
 	if changed {
 		if writeErr := service.Store.WritePreservingMode(file, []byte(gatesdomain.Render(ledger))); writeErr != nil {
 			fileResult.Error = writeErr.Error()
