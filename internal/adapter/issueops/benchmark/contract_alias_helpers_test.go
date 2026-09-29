@@ -6,13 +6,11 @@ import issueopscontract "issueops/internal/contract/issueops"
 type (
 	IssueOpsDimensionScore          = issueopscontract.IssueOpsDimensionScore
 	IssueOpsBenchmarkScore          = issueopscontract.IssueOpsBenchmarkScore
-	IssueOpsBenchmarkRunRequest     = issueopscontract.IssueOpsBenchmarkRunRequest
 	IssueOpsBenchmarkRunResult      = issueopscontract.IssueOpsBenchmarkRunResult
 	IssueOpsBenchmarkCompareResult  = issueopscontract.IssueOpsBenchmarkCompareResult
 	IssueOpsAutoresearchCandidate   = issueopscontract.IssueOpsAutoresearchCandidate
 	IssueOpsAutoresearchGateRequest = issueopscontract.IssueOpsAutoresearchGateRequest
 	IssueOpsAutoresearchGateResult  = issueopscontract.IssueOpsAutoresearchGateResult
-	IssueOpsLLMJudgeRequest         = issueopscontract.IssueOpsLLMJudgeRequest
 	IssueOpsJudgeMap                = issueopscontract.IssueOpsJudgeMap
 	RecordedRun                     = issueopscontract.RecordedRun
 	RecordedOutcomes                = issueopscontract.RecordedOutcomes
@@ -23,3 +21,10 @@ type (
 	JudgeSample                     = issueopscontract.JudgeSample
 	ConsensusVerdict                = issueopscontract.ConsensusVerdict
 )
+
+// Test fixture for the retired adapter runner; production uses application.Service.
+type IssueOpsBenchmarkRunRequest struct {
+	StateRoot string
+	Fixtures  []issueopscontract.IssueOpsBenchmarkFixture
+	Artifacts map[string]issueopscontract.IssueOpsBenchmarkArtifact
+}

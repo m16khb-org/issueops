@@ -3,8 +3,6 @@ package issueopsapp
 import (
 	"time"
 
-	benchmarkcmd "issueops/cmd/issueops/issueopscli/benchmarkcmd"
-
 	statestore "issueops/internal/adapter/outbound/state"
 	probe "issueops/internal/adapter/verification/probe"
 	stateroundtrip "issueops/internal/adapter/verification/probe/stateroundtrip"
@@ -22,8 +20,6 @@ func configureStateStores() {
 	probe.WriteSnapshot = snapshotStore.Write
 	stateroundtrip.WriteSnapshot = snapshotStore.Write
 	stepbudget.WriteSnapshot = snapshotStore.Write
-
-	benchmarkcmd.StateDir = statestore.StateDir
 
 	stateroundtrip.StateRead = statestore.StateRead
 	stateroundtrip.WriteStateRecord = statestore.WriteStateRecord

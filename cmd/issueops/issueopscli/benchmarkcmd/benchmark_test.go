@@ -2,7 +2,8 @@ package benchmarkcmd
 
 import (
 	"flag"
-	issueopscore "issueops/internal/adapter/issueops"
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
+
 	statestore "issueops/internal/adapter/outbound/state"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ func TestRunBenchmarkRunCompareAndGate(t *testing.T) {
 	}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := issueopscore.SaveIssueOpsBenchmarkRun(statestore.StateDir(), issueopscore.IssueOpsBenchmarkRunResult{ID: "judge-source", FixtureCount: 1}); err != nil {
+	if err := saveBenchmarkRunForTest(statestore.StateDir(), benchmarkcontract.IssueOpsBenchmarkRunResult{ID: "judge-source", FixtureCount: 1}); err != nil {
 		t.Fatalf("save judge source run: %v", err)
 	}
 	judgePath := filepath.Join(t.TempDir(), "judge.json")
@@ -49,7 +50,7 @@ func TestRunBenchmarkRunCompareAndGate(t *testing.T) {
 	}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run([]string{"run", "--fixtures", fixturesDir, "--judge", "file", "--judge-file", judgePath, "--json"}); err != nil {
+	if err := testBenchmarkCommand().Run([]string{"run", "--fixtures", fixturesDir, "--judge", "file", "--judge-file", judgePath, "--json"}); err != nil {
 		t.Fatalf("run returned error: %v", err)
 	}
 	runs := benchmarkRunIDs(t)
@@ -64,13 +65,13 @@ func TestRunBenchmarkRunCompareAndGate(t *testing.T) {
 	}
 	baseline := benchmarkRunResult("baseline", 90, true)
 	candidate := benchmarkRunResult("candidate", 100, true)
-	if err := issueopscore.SaveIssueOpsBenchmarkRun(statestore.StateDir(), baseline); err != nil {
+	if err := saveBenchmarkRunForTest(statestore.StateDir(), baseline); err != nil {
 		t.Fatalf("save baseline: %v", err)
 	}
-	if err := issueopscore.SaveIssueOpsBenchmarkRun(statestore.StateDir(), candidate); err != nil {
+	if err := saveBenchmarkRunForTest(statestore.StateDir(), candidate); err != nil {
 		t.Fatalf("save candidate: %v", err)
 	}
-	if err := Run([]string{"compare", "--baseline", baseline.ID, "--candidate", candidate.ID, "--json"}); err != nil {
+	if err := testBenchmarkCommand().Run([]string{"compare", "--baseline", baseline.ID, "--candidate", candidate.ID, "--json"}); err != nil {
 		t.Fatalf("compare returned error: %v", err)
 	}
 	candidatePath := filepath.Join(t.TempDir(), "candidate.json")
@@ -82,13 +83,13 @@ func TestRunBenchmarkRunCompareAndGate(t *testing.T) {
 	}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run([]string{"gate", "--baseline", baseline.ID, "--candidate", candidate.ID, "--candidate-file", candidatePath, "--changed-path", "cmd/issueops/issueopscli/benchmarkcmd/benchmark.go", "--json"}); err != nil {
+	if err := testBenchmarkCommand().Run([]string{"gate", "--baseline", baseline.ID, "--candidate", candidate.ID, "--candidate-file", candidatePath, "--changed-path", "cmd/issueops/issueopscli/benchmarkcmd/benchmark.go", "--json"}); err != nil {
 		t.Fatalf("gate returned error: %v", err)
 	}
 }
 
 func TestBenchmarkHelpersAndErrors(t *testing.T) {
-	fixtures := []issueopscore.IssueOpsBenchmarkFixture{{ID: "known"}}
+	fixtures := []benchmarkcontract.IssueOpsBenchmarkFixture{{ID: "known"}}
 	scorePath := filepath.Join(t.TempDir(), "scores.json")
 	if err := os.WriteFile(scorePath, []byte(`{"source_run_id":"src","provenance":"recorded judge","scores":{"known":{"ok":true,"fixture_id":"known","average_score":100,"minimum_score":100,"dimension_scores":[{"dimension":"intent_understanding","score":100,"evidence":"ok"}],"passed":true}}}`), 0o600); err != nil {
 		t.Fatal(err)
@@ -146,13 +147,13 @@ func TestBenchmarkHelpersAndErrors(t *testing.T) {
 	if !help || err != nil {
 		t.Fatalf("expected help without error, got help=%v err=%v", help, err)
 	}
-	if err := Run(nil); err != nil {
+	if err := testBenchmarkCommand().Run(nil); err != nil {
 		t.Fatalf("help returned error: %v", err)
 	}
-	if err := Run([]string{"run", "--fixtures", t.TempDir(), "--judge", "bad"}); err == nil || !strings.Contains(err.Error(), "no issueops benchmark fixtures") {
+	if err := testBenchmarkCommand().Run([]string{"run", "--fixtures", t.TempDir(), "--judge", "bad"}); err == nil || !strings.Contains(err.Error(), "no issueops benchmark fixtures") {
 		t.Fatalf("expected fixtures error before judge validation, got %v", err)
 	}
-	if err := Run([]string{"unknown"}); err == nil || !strings.Contains(err.Error(), "unknown issueops benchmark") {
+	if err := testBenchmarkCommand().Run([]string{"unknown"}); err == nil || !strings.Contains(err.Error(), "unknown issueops benchmark") {
 		t.Fatalf("expected unknown command error, got %v", err)
 	}
 }
@@ -168,10 +169,10 @@ func TestRunBenchmarkReliability(t *testing.T) {
 	}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run([]string{"reliability", "--outcomes", outcomesPath, "--json"}); err != nil {
+	if err := testBenchmarkCommand().Run([]string{"reliability", "--outcomes", outcomesPath, "--json"}); err != nil {
 		t.Fatalf("reliability --json returned error: %v", err)
 	}
-	if err := Run([]string{"reliability", "--outcomes", outcomesPath}); err != nil {
+	if err := testBenchmarkCommand().Run([]string{"reliability", "--outcomes", outcomesPath}); err != nil {
 		t.Fatalf("reliability text output returned error: %v", err)
 	}
 
@@ -184,7 +185,7 @@ func TestRunBenchmarkReliability(t *testing.T) {
 	]}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run([]string{"reliability", "--outcomes", dupPath, "--json"}); err == nil {
+	if err := testBenchmarkCommand().Run([]string{"reliability", "--outcomes", dupPath, "--json"}); err == nil {
 		t.Fatal("duplicate run_id must surface as a CLI error")
 	}
 
@@ -192,7 +193,7 @@ func TestRunBenchmarkReliability(t *testing.T) {
 	if err := os.WriteFile(badParse, []byte("{bad"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := Run([]string{"reliability", "--outcomes", badParse}); err == nil {
+	if err := testBenchmarkCommand().Run([]string{"reliability", "--outcomes", badParse}); err == nil {
 		t.Fatal("malformed outcomes JSON must error")
 	}
 }
@@ -212,20 +213,20 @@ func benchmarkRunIDs(t *testing.T) []string {
 	return ids
 }
 
-func benchmarkRunResult(id string, score float64, ok bool) issueopscore.IssueOpsBenchmarkRunResult {
-	return issueopscore.IssueOpsBenchmarkRunResult{
+func benchmarkRunResult(id string, score float64, ok bool) benchmarkcontract.IssueOpsBenchmarkRunResult {
+	return benchmarkcontract.IssueOpsBenchmarkRunResult{
 		OK:                   ok,
 		ID:                   id,
 		FixtureCount:         1,
 		AverageScore:         score,
 		MinimumScore:         score,
 		CriticalFailureCount: 0,
-		Scores: []issueopscore.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
 			OK:           ok,
 			FixtureID:    "fixture-1",
 			AverageScore: score,
 			MinimumScore: score,
-			DimensionScores: []issueopscore.IssueOpsDimensionScore{{
+			DimensionScores: []benchmarkcontract.IssueOpsDimensionScore{{
 				Dimension: "intent_understanding",
 				Score:     score,
 				Evidence:  "evidence",

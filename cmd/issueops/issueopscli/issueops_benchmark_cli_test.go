@@ -1,7 +1,9 @@
 package issueopscli
 
 import (
-	issueopscore "issueops/internal/adapter/issueops"
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
+	benchmarkdomain "issueops/internal/domain/issueopsbenchmark"
+
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,13 +15,13 @@ func TestRunIssueOpsBenchmarkCompareAndGateTextBranches(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
 	baseline := benchmarkRunForCLITest("baseline", 80, "baseline evidence")
 	candidate := benchmarkRunForCLITest("candidate", 95, "candidate evidence")
-	if err := issueopscore.SaveIssueOpsBenchmarkRun(stateDir, baseline); err != nil {
+	if err := saveBenchmarkRunForTest(stateDir, baseline); err != nil {
 		t.Fatal(err)
 	}
-	if err := issueopscore.SaveIssueOpsBenchmarkRun(stateDir, candidate); err != nil {
+	if err := saveBenchmarkRunForTest(stateDir, candidate); err != nil {
 		t.Fatal(err)
 	}
-	candidatePath := writeIssueOpsCandidateForCLITest(t, issueopscore.IssueOpsAutoresearchCandidate{
+	candidatePath := writeIssueOpsCandidateForCLITest(t, benchmarkcontract.IssueOpsAutoresearchCandidate{
 		ID:               "issueops-benchmark-cli",
 		Hypothesis:       "Benchmark CLI text output should be stable.",
 		TargetDimensions: []string{"issue_quality"},
@@ -71,15 +73,15 @@ func TestRunIssueOpsBenchmarkUsageAndErrorBranches(t *testing.T) {
 	}
 }
 
-func benchmarkRunForCLITest(id string, score float64, evidence string) issueopscore.IssueOpsBenchmarkRunResult {
-	return issueopscore.FinalizeIssueOpsBenchmarkRunResult(issueopscore.IssueOpsBenchmarkRunResult{
+func benchmarkRunForCLITest(id string, score float64, evidence string) benchmarkcontract.IssueOpsBenchmarkRunResult {
+	return benchmarkdomain.FinalizeRun(benchmarkcontract.IssueOpsBenchmarkRunResult{
 		ID: id,
-		Scores: []issueopscore.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
 			OK:           true,
 			FixtureID:    "fixture",
 			AverageScore: score,
 			MinimumScore: score,
-			DimensionScores: []issueopscore.IssueOpsDimensionScore{
+			DimensionScores: []benchmarkcontract.IssueOpsDimensionScore{
 				{Dimension: "issue_quality", Score: score, Evidence: evidence},
 			},
 			Passed: true,

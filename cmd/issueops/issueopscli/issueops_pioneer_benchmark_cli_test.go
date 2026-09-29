@@ -2,12 +2,12 @@ package issueopscli
 
 import (
 	"encoding/json"
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"issueops/cmd/issueops/issueopscli/benchmarkartifact"
-	issueopscore "issueops/internal/adapter/issueops"
 )
 
 // 모든 repo fixture에 대해 실제 CLI 디스패치 경로(benchmarkcmd run -> FromFixture
@@ -21,7 +21,7 @@ func TestRunIssueOpsBenchmarkRunCoversPioneerFixturesViaCLI(t *testing.T) {
 		return runIssueOps([]string{"benchmark", "run", "--fixtures", fixturesPath, "--judge", "none", "--json"})
 	})
 
-	var result issueopscore.IssueOpsBenchmarkRunResult
+	var result benchmarkcontract.IssueOpsBenchmarkRunResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("parse benchmark run output: %v\n%s", err, out)
 	}
@@ -56,11 +56,11 @@ func TestRunIssueOpsBenchmarkRunCoversPioneerFixturesViaCLI(t *testing.T) {
 }
 
 func TestFromFixturePioneerEvidenceWiring(t *testing.T) {
-	target := benchmarkartifact.FromFixture(issueopscore.IssueOpsBenchmarkFixture{ID: "pioneer-algorithm-optimization", PioneerSkillTarget: "algorithm-optimization"})
+	target := benchmarkartifact.FromFixture(benchmarkcontract.IssueOpsBenchmarkFixture{ID: "pioneer-algorithm-optimization", PioneerSkillTarget: "algorithm-optimization"})
 	if strings.TrimSpace(target.PioneerSkillEvidence) == "" {
 		t.Fatal("targeted fixture must produce pioneer evidence")
 	}
-	nonTarget := benchmarkartifact.FromFixture(issueopscore.IssueOpsBenchmarkFixture{ID: "ambiguous-intent"})
+	nonTarget := benchmarkartifact.FromFixture(benchmarkcontract.IssueOpsBenchmarkFixture{ID: "ambiguous-intent"})
 	if nonTarget.PioneerSkillEvidence != "" {
 		t.Fatalf("non-targeted fixture must not fabricate pioneer evidence, got %q", nonTarget.PioneerSkillEvidence)
 	}

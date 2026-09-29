@@ -3,16 +3,13 @@ package benchmarkcmd
 import (
 	"flag"
 	"fmt"
-	issueopscontract "issueops/internal/contract/issueops"
-
-	"issueops/cmd/issueops/issueopscli/benchmarkartifact"
 )
 
 // One handler per `issueops benchmark <subcommand>`. Run (benchmark.go) routes
-// through the benchmarkSubcommands registry, keeping the router low-branch and
+// through handlers bound to its service, keeping the router low-branch and
 // each subcommand independently testable.
 
-func runBenchmarkRun(args []string) error {
+func (c Command) runBenchmarkRun(args []string) error {
 	fs := flag.NewFlagSet("issueops benchmark run", flag.ContinueOnError)
 	fixturesPath := fs.String("fixtures", "", "benchmark fixtures path")
 	judge := fs.String("judge", "none", "judge backend: none or file")
@@ -21,27 +18,8 @@ func runBenchmarkRun(args []string) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	fixtures, err := benchmarkDeps.LoadIssueOpsBenchmarkFixtures(*fixturesPath)
+	result, err := c.Service.Run(*fixturesPath, *judge, *judgeFile)
 	if err != nil {
-		return err
-	}
-	artifacts := make(map[string]issueopscontract.IssueOpsBenchmarkArtifact, len(fixtures))
-	for _, fixture := range fixtures {
-		artifacts[fixture.ID] = benchmarkartifact.FromFixture(fixture)
-	}
-	result, err := benchmarkDeps.RunIssueOpsBenchmark(issueopscontract.IssueOpsBenchmarkRunRequest{
-		StateRoot: "",
-		Fixtures:  fixtures,
-		Artifacts: artifacts,
-	})
-	if err != nil {
-		return err
-	}
-	if err := applyBenchmarkJudge(*judge, *judgeFile, result, fixtures); err != nil {
-		return err
-	}
-	result = benchmarkDeps.FinalizeIssueOpsBenchmarkRunResult(result)
-	if err := benchmarkDeps.SaveIssueOpsBenchmarkRun(StateDir(), result); err != nil {
 		return err
 	}
 	if *jsonOut {
@@ -51,34 +29,7 @@ func runBenchmarkRun(args []string) error {
 	return nil
 }
 
-// applyBenchmarkJudge augments the deterministic run result with judge scores
-// from a provenance-checked host-agent result file. Scores merge in place
-// through the shared result.Scores backing array.
-func applyBenchmarkJudge(judge, judgeFile string, result issueopscontract.IssueOpsBenchmarkRunResult, fixtures []issueopscontract.IssueOpsBenchmarkFixture) error {
-	switch judge {
-	case "file":
-		judgeMap, judgeScores, err := readIssueOpsJudgeMap(judgeFile, fixtures)
-		if err != nil {
-			return err
-		}
-		// Provenance is validated BEFORE merge and fails closed: a judge map
-		// self-attributed to this run (or naming a non-existent source run) is
-		// rejected. This is a self-reference guard, not a proof of judge
-		// independence.
-		if err := benchmarkDeps.ValidateJudgeProvenance(judgeMap, result.ID, StateDir()); err != nil {
-			return err
-		}
-		for i, fixture := range fixtures {
-			result.Scores[i] = benchmarkDeps.MergeIssueOpsBenchmarkScoreWithJudge(result.Scores[i], judgeScores[fixture.ID])
-		}
-	case "none":
-	default:
-		return fmt.Errorf("unsupported issueops benchmark judge %q", judge)
-	}
-	return nil
-}
-
-func runBenchmarkCompare(args []string) error {
+func (c Command) runBenchmarkCompare(args []string) error {
 	fs := flag.NewFlagSet("issueops benchmark compare", flag.ContinueOnError)
 	baselineID := fs.String("baseline", "", "baseline benchmark id")
 	candidateID := fs.String("candidate", "", "candidate benchmark id")
@@ -86,15 +37,10 @@ func runBenchmarkCompare(args []string) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	baseline, err := benchmarkDeps.ReadIssueOpsBenchmarkRun(StateDir(), *baselineID)
+	result, err := c.Service.Compare(*baselineID, *candidateID)
 	if err != nil {
 		return err
 	}
-	candidate, err := benchmarkDeps.ReadIssueOpsBenchmarkRun(StateDir(), *candidateID)
-	if err != nil {
-		return err
-	}
-	result := benchmarkDeps.CompareIssueOpsBenchmarkRuns(baseline, candidate)
 	if *jsonOut {
 		return printJSON(result)
 	}
@@ -102,7 +48,7 @@ func runBenchmarkCompare(args []string) error {
 	return nil
 }
 
-func runBenchmarkGate(args []string) error {
+func (c Command) runBenchmarkGate(args []string) error {
 	fs := flag.NewFlagSet("issueops benchmark gate", flag.ContinueOnError)
 	baselineID := fs.String("baseline", "", "baseline benchmark id")
 	candidateID := fs.String("candidate", "", "candidate benchmark id")
@@ -113,24 +59,10 @@ func runBenchmarkGate(args []string) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	candidate, err := readIssueOpsAutoresearchCandidateFile(*candidateFile)
+	result, err := c.Service.Gate(*candidateFile, *baselineID, *candidateID, changedPaths)
 	if err != nil {
 		return err
 	}
-	baseline, err := benchmarkDeps.ReadIssueOpsBenchmarkRun(StateDir(), *baselineID)
-	if err != nil {
-		return err
-	}
-	candidateRun, err := benchmarkDeps.ReadIssueOpsBenchmarkRun(StateDir(), *candidateID)
-	if err != nil {
-		return err
-	}
-	result := benchmarkDeps.EvaluateIssueOpsAutoresearchGate(issueopscontract.IssueOpsAutoresearchGateRequest{
-		Candidate:    candidate,
-		BaselineRun:  baseline,
-		CandidateRun: candidateRun,
-		ChangedPaths: changedPaths,
-	})
 	if *jsonOut {
 		return printJSON(result)
 	}
@@ -141,7 +73,7 @@ func runBenchmarkGate(args []string) error {
 	return nil
 }
 
-func runBenchmarkReliability(args []string) error {
+func (c Command) runBenchmarkReliability(args []string) error {
 	fs := flag.NewFlagSet("issueops benchmark reliability", flag.ContinueOnError)
 	outcomesPath := fs.String("outcomes", "", "recorded offline outcomes JSON path ({\"runs\":[{\"run_id\":..,\"provenance\":..,\"outcomes\":{\"<fixtureID>\":<bool>}}]}); reads stdin when empty")
 	alpha := fs.Float64("alpha", 0.05, "confidence level alpha for Clopper-Pearson intervals (0<alpha<1)")
@@ -149,11 +81,7 @@ func runBenchmarkReliability(args []string) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	rec, err := readRecordedOutcomes(*outcomesPath)
-	if err != nil {
-		return err
-	}
-	report, err := benchmarkDeps.ComputeReliability(rec, *alpha)
+	report, err := c.Service.Reliability(*outcomesPath, *alpha)
 	if err != nil {
 		return err
 	}
@@ -167,18 +95,14 @@ func runBenchmarkReliability(args []string) error {
 	return nil
 }
 
-func runBenchmarkConsensus(args []string) error {
+func (c Command) runBenchmarkConsensus(args []string) error {
 	fs := flag.NewFlagSet("issueops benchmark consensus", flag.ContinueOnError)
 	samplesPath := fs.String("samples", "", "offline-recorded judge samples JSON ({\"samples\":[{\"sample_id\":..,\"provenance\":..,\"score\":<IssueOpsBenchmarkScore>}]}); reads stdin when empty")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	samples, err := readJudgeSamples(*samplesPath)
-	if err != nil {
-		return err
-	}
-	verdict, err := benchmarkDeps.ConsensusJudgeVerdict(samples)
+	verdict, err := c.Service.Consensus(*samplesPath)
 	if err != nil {
 		return err
 	}

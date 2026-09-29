@@ -1,6 +1,7 @@
 package issueopscli
 
 import (
+	"issueops/cmd/issueops/issueopscli/benchmarkcmd"
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	"issueops/cmd/issueops/issueopscli/remoteverify"
@@ -12,6 +13,7 @@ import (
 )
 
 type Dependencies struct {
+	Benchmark   benchmarkcmd.Command
 	Execution   executioncmd.ExecutionDeps
 	Runtime     IssueOpsCLIDeps
 	Gates       LoopGateDeps

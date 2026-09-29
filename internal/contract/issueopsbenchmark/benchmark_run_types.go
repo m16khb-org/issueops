@@ -19,11 +19,6 @@ type IssueOpsBenchmarkScore struct {
 	CriticalFailures      []string                 `json:"critical_failures"`
 	Passed                bool                     `json:"passed"`
 }
-type IssueOpsBenchmarkRunRequest struct {
-	StateRoot string
-	Fixtures  []IssueOpsBenchmarkFixture
-	Artifacts map[string]IssueOpsBenchmarkArtifact
-}
 type IssueOpsBenchmarkRunResult struct {
 	OK                   bool                     `json:"ok"`
 	ID                   string                   `json:"id"`
@@ -67,10 +62,6 @@ type IssueOpsAutoresearchGateResult struct {
 	EditSurfaceViolations      []string                       `json:"edit_surface_violations,omitempty"`
 	TargetDimensionRegressions []string                       `json:"target_dimension_regressions,omitempty"`
 	DiscardReasons             []string                       `json:"discard_reasons,omitempty"`
-}
-type IssueOpsLLMJudgeRequest struct {
-	Fixture  IssueOpsBenchmarkFixture
-	Artifact IssueOpsBenchmarkArtifact
 }
 
 // A7 — judge-map provenance. The --judge file backend merges externally-produced

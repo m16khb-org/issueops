@@ -25,7 +25,6 @@ func wireBasicCLIDeps() {
 	configureInstallReaders()
 	configurePolicyAndGitObservers()
 	configureAdapterStateAccess()
-	configureIssueOpsBenchmark()
 	configureIssueOpsCleanup()
 	configureIssueOpsRemote()
 	configureIssueOpsOrphanCleanup()

@@ -4,13 +4,11 @@ import benchmark "issueops/internal/contract/issueopsbenchmark"
 
 type IssueOpsDimensionScore = benchmark.IssueOpsDimensionScore
 type IssueOpsBenchmarkScore = benchmark.IssueOpsBenchmarkScore
-type IssueOpsBenchmarkRunRequest = benchmark.IssueOpsBenchmarkRunRequest
 type IssueOpsBenchmarkRunResult = benchmark.IssueOpsBenchmarkRunResult
 type IssueOpsBenchmarkCompareResult = benchmark.IssueOpsBenchmarkCompareResult
 type IssueOpsAutoresearchCandidate = benchmark.IssueOpsAutoresearchCandidate
 type IssueOpsAutoresearchGateRequest = benchmark.IssueOpsAutoresearchGateRequest
 type IssueOpsAutoresearchGateResult = benchmark.IssueOpsAutoresearchGateResult
-type IssueOpsLLMJudgeRequest = benchmark.IssueOpsLLMJudgeRequest
 type IssueOpsJudgeMap = benchmark.IssueOpsJudgeMap
 type RecordedRun = benchmark.RecordedRun
 type RecordedOutcomes = benchmark.RecordedOutcomes

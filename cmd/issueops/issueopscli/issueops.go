@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"issueops/cmd/issueops/issueopscli/benchmarkcmd"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	"issueops/cmd/issueops/issueopscli/remoteverify"
@@ -54,7 +53,7 @@ func (cli command) issueOpsSubcommands(deps Dependencies) map[string]func([]stri
 		"routing-score":         cli.runIssueOpsRoutingScore,
 		"feedback":              func(args []string) error { return cli.runIssueOpsFeedbackWithDependencies(args, deps) },
 		"cleanup":               func(args []string) error { return runIssueOpsCleanupWithDependencies(args, deps) },
-		"benchmark":             func(args []string) error { return benchmarkcmd.Run(args) },
+		"benchmark":             func(args []string) error { return deps.Benchmark.Run(args) },
 		"remote": func(args []string) error {
 			return remotecmd.Run(args, issueOpsRemoteDepsWithPublication(deps.Publication))
 		},

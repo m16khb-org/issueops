@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
 	"strings"
 	"testing"
 
@@ -59,7 +60,7 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 }
 
 func TestIssueOpsBenchmarkArtifactFacades(t *testing.T) {
-	fixture := issueops.IssueOpsBenchmarkFixture{
+	fixture := benchmarkcontract.IssueOpsBenchmarkFixture{
 		Title:         "Fix quality gate",
 		UserPrompt:    "raise coverage",
 		RepoContext:   "issueops",

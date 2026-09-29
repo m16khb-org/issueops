@@ -16,6 +16,7 @@ func runIssueOps(args []string) error {
 func issueOpsCLIDependencies() issueopscli.Dependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	return issueopscli.Dependencies{
+		Benchmark: newBenchmarkCommand(),
 		Execution: newIssueOpsExecutionRunners(), HandoffCmux: issueOpsCmuxHandoffHandler,
 		Runtime: newIssueOpsCLIRuntime(issueops.IssueOpsStateRoot()), Gates: newIssueOpsCLIGates(),
 		Usage: clicatalog.LifecycleUsage(), ChildUsage: clicatalog.ChildUsage(),

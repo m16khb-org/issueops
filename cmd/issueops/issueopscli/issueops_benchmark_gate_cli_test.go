@@ -2,21 +2,23 @@ package issueopscli
 
 import (
 	"encoding/json"
-	issueopscore "issueops/internal/adapter/issueops"
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
+	benchmarkdomain "issueops/internal/domain/issueopsbenchmark"
+
 	"testing"
 )
 
 func TestRunIssueOpsBenchmarkGateCLIKeepsCandidate(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	baseline := issueopscore.IssueOpsBenchmarkRunResult{
+	baseline := benchmarkcontract.IssueOpsBenchmarkRunResult{
 		ID: "baseline",
-		Scores: []issueopscore.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
 			OK:           true,
 			FixtureID:    "fixture",
 			AverageScore: 100,
 			MinimumScore: 100,
-			DimensionScores: []issueopscore.IssueOpsDimensionScore{
+			DimensionScores: []benchmarkcontract.IssueOpsDimensionScore{
 				{Dimension: "issue_quality", Score: 100, Evidence: "baseline"},
 			},
 			Passed: true,
@@ -24,13 +26,13 @@ func TestRunIssueOpsBenchmarkGateCLIKeepsCandidate(t *testing.T) {
 	}
 	candidateRun := baseline
 	candidateRun.ID = "candidate"
-	if err := issueopscore.SaveIssueOpsBenchmarkRun(stateDir, issueopscore.FinalizeIssueOpsBenchmarkRunResult(baseline)); err != nil {
+	if err := saveBenchmarkRunForTest(stateDir, benchmarkdomain.FinalizeRun(baseline)); err != nil {
 		t.Fatal(err)
 	}
-	if err := issueopscore.SaveIssueOpsBenchmarkRun(stateDir, issueopscore.FinalizeIssueOpsBenchmarkRunResult(candidateRun)); err != nil {
+	if err := saveBenchmarkRunForTest(stateDir, benchmarkdomain.FinalizeRun(candidateRun)); err != nil {
 		t.Fatal(err)
 	}
-	candidatePath := writeIssueOpsCandidateForCLITest(t, issueopscore.IssueOpsAutoresearchCandidate{
+	candidatePath := writeIssueOpsCandidateForCLITest(t, benchmarkcontract.IssueOpsAutoresearchCandidate{
 		ID:               "issueops-autoresearch-loop",
 		Hypothesis:       "Bounded IssueOps changes should pass the gate.",
 		TargetDimensions: []string{"issue_quality"},
@@ -40,7 +42,7 @@ func TestRunIssueOpsBenchmarkGateCLIKeepsCandidate(t *testing.T) {
 	out := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"benchmark", "gate", "--baseline", "baseline", "--candidate", "candidate", "--candidate-file", candidatePath, "--changed-path", "skills/issueops/SKILL.md", "--json"})
 	})
-	var result issueopscore.IssueOpsAutoresearchGateResult
+	var result benchmarkcontract.IssueOpsAutoresearchGateResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("gate should return JSON: %v\n%s", err, out)
 	}
@@ -52,23 +54,23 @@ func TestRunIssueOpsBenchmarkGateCLIKeepsCandidate(t *testing.T) {
 func TestRunIssueOpsBenchmarkGateCLIDiscardsOutsideEditSurface(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	run := issueopscore.FinalizeIssueOpsBenchmarkRunResult(issueopscore.IssueOpsBenchmarkRunResult{
+	run := benchmarkdomain.FinalizeRun(benchmarkcontract.IssueOpsBenchmarkRunResult{
 		ID: "baseline",
-		Scores: []issueopscore.IssueOpsBenchmarkScore{{
+		Scores: []benchmarkcontract.IssueOpsBenchmarkScore{{
 			OK:           true,
 			FixtureID:    "fixture",
 			AverageScore: 100,
 			MinimumScore: 100,
-			DimensionScores: []issueopscore.IssueOpsDimensionScore{
+			DimensionScores: []benchmarkcontract.IssueOpsDimensionScore{
 				{Dimension: "issue_quality", Score: 100, Evidence: "baseline"},
 			},
 			Passed: true,
 		}},
 	})
-	if err := issueopscore.SaveIssueOpsBenchmarkRun(stateDir, run); err != nil {
+	if err := saveBenchmarkRunForTest(stateDir, run); err != nil {
 		t.Fatal(err)
 	}
-	candidatePath := writeIssueOpsCandidateForCLITest(t, issueopscore.IssueOpsAutoresearchCandidate{
+	candidatePath := writeIssueOpsCandidateForCLITest(t, benchmarkcontract.IssueOpsAutoresearchCandidate{
 		ID:               "issueops-autoresearch-loop",
 		Hypothesis:       "Only skill changes are allowed.",
 		TargetDimensions: []string{"issue_quality"},
@@ -78,7 +80,7 @@ func TestRunIssueOpsBenchmarkGateCLIDiscardsOutsideEditSurface(t *testing.T) {
 	out := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"benchmark", "gate", "--baseline", "baseline", "--candidate", "baseline", "--candidate-file", candidatePath, "--changed-path", "cmd/issueops/issueops.go", "--json"})
 	})
-	var result issueopscore.IssueOpsAutoresearchGateResult
+	var result benchmarkcontract.IssueOpsAutoresearchGateResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("gate should return JSON: %v\n%s", err, out)
 	}

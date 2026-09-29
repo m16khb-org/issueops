@@ -2,7 +2,8 @@ package skillcontract
 
 import (
 	"fmt"
-	issueopscore "issueops/internal/adapter/issueops"
+	benchmarkadapter "issueops/internal/adapter/issueops/benchmark"
+
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -91,7 +92,7 @@ func TestP1PioneerCorrectnessContracts(t *testing.T) {
 		t.Fatal("algorithm-optimization SKILL.md must keep scaling-test interpretation inside its fenced block")
 	}
 
-	fixtures, err := issueopscore.LoadIssueOpsBenchmarkFixtures(filepath.Join("..", "..", "..", "testdata", "issueops", "fixtures"))
+	fixtures, err := (benchmarkadapter.Files{}).LoadFixtures(filepath.Join("..", "..", "..", "testdata", "issueops", "fixtures"))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -760,7 +760,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsBenchmark"
+        "func newBenchmarkCommand"
       ]
     },
     {
@@ -1515,25 +1515,13 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func Run",
+        "func Command.Run",
         "func parseFlags",
         "func printJSON",
-        "func readIssueOpsAutoresearchCandidateFile",
-        "func readIssueOpsJudgeMap",
-        "func readJudgeSamples",
-        "func readRecordedOutcomes",
         "func repeatedFlag.Set",
         "func repeatedFlag.String",
+        "type Command",
         "type repeatedFlag"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/benchmarkcmd/benchmark_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ConfigureBenchmark",
-        "type BenchmarkDeps"
       ]
     },
     {
@@ -1541,19 +1529,12 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func applyBenchmarkJudge",
-        "func runBenchmarkCompare",
-        "func runBenchmarkConsensus",
-        "func runBenchmarkGate",
-        "func runBenchmarkReliability",
-        "func runBenchmarkRun"
+        "func Command.runBenchmarkCompare",
+        "func Command.runBenchmarkConsensus",
+        "func Command.runBenchmarkGate",
+        "func Command.runBenchmarkReliability",
+        "func Command.runBenchmarkRun"
       ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/benchmarkcmd/state_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/issueopscli/executioncmd/execution.go",
@@ -4214,51 +4195,23 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/issueops/benchmark/contract_alias.go",
+      "path": "internal/adapter/issueops/benchmark/files.go",
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "type ConsensusVerdict",
-        "type FixtureReliability",
-        "type IssueOpsAutoresearchCandidate",
-        "type IssueOpsAutoresearchGateRequest",
-        "type IssueOpsAutoresearchGateResult",
-        "type IssueOpsBenchmarkCompareResult",
-        "type IssueOpsBenchmarkRunRequest",
-        "type IssueOpsBenchmarkRunResult",
-        "type IssueOpsBenchmarkScore",
-        "type IssueOpsDimensionScore",
-        "type IssueOpsJudgeMap",
-        "type IssueOpsLLMJudgeRequest",
-        "type JudgeSample",
-        "type PassPowKPoint",
-        "type RecordedOutcomes",
-        "type RecordedRun",
-        "type ReliabilityReport",
-        "type RoutingFidelityResult"
+        "func Files.ReadCandidate",
+        "func Files.ReadJudgeMap",
+        "func Files.ReadOutcomes",
+        "func Files.ReadSamples",
+        "type Files"
       ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_benchmark.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": []
     },
     {
       "path": "internal/adapter/issueops/benchmark/issueops_benchmark_fixtures.go",
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "func LoadIssueOpsBenchmarkFixtures",
-        "func validateIssueOpsBenchmarkFixture"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_benchmark_gate.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func EvaluateIssueOpsAutoresearchGate"
+        "func Files.LoadFixtures"
       ]
     },
     {
@@ -4266,10 +4219,7 @@
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "func DecodeIssueOpsBenchmarkJudgeJSON",
-        "func RenderIssueOpsLLMJudgePrompt",
-        "func RunIssueOpsLLMJudge",
-        "func decodeStrictIssueOpsBenchmarkScore"
+        "func DecodeJudgeScore"
       ]
     },
     {
@@ -4278,96 +4228,18 @@
       "task": "T17",
       "symbols": [
         "func BuildIssueOpsLLMJudgePrompt",
-        "func buildIssueOpsLLMJudgePrompt",
         "func issueOpsBenchmarkScoreFieldTypes",
         "func issueOpsBenchmarkScoreResponseSchemaExample"
       ]
     },
     {
-      "path": "internal/adapter/issueops/benchmark/issueops_benchmark_run.go",
+      "path": "internal/adapter/issueops/benchmark/store.go",
       "owner": "adapter",
       "task": "T17",
       "symbols": [
-        "func CompareIssueOpsBenchmarkRuns",
-        "func FinalizeIssueOpsBenchmarkRunResult",
-        "func MergeIssueOpsBenchmarkScoreWithJudge",
-        "func ReadIssueOpsBenchmarkRun",
-        "func RunIssueOpsBenchmark",
-        "func SaveIssueOpsBenchmarkRun",
-        "func persistIssueOpsBenchmarkRun"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_benchmark_score.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func ScoreIssueOpsBenchmarkArtifact"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_benchmark_summary.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func summarizeIssueOpsDimensionScores",
-        "func summarizeIssueOpsRunScores"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_judge_provenance.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func JudgeDownwardOverrideRate",
-        "func ValidateJudgeProvenance",
-        "func validateJudgeProvenance",
-        "type runReader"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_pioneer_checks.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func issueOpsPioneerSkillEvidenceComplete"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_reliability.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func ComputeReliability",
-        "func ScoreSpread",
-        "func clopperPearson",
-        "func passPowK",
-        "func round4"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_routing_checks.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func RoutingFidelity",
-        "func issueOpsSkillRoutingFidelityComplete"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_self_consistency.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func ConsensusJudgeVerdict"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/benchmark/issueops_text_match.go",
-      "owner": "adapter",
-      "task": "T17",
-      "symbols": [
-        "func containsFold"
+        "func Store.Read",
+        "func Store.Save",
+        "type Store"
       ]
     },
     {
@@ -5172,47 +5044,6 @@
         "type PlanIdentity",
         "type devilsAdvocateStaleError",
         "type planArtifactRequiredError"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/issueops_benchmark_facade.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func BuildIssueOpsLLMJudgePrompt",
-        "func CompareIssueOpsBenchmarkRuns",
-        "func ComputeReliability",
-        "func ConsensusJudgeVerdict",
-        "func DecodeIssueOpsBenchmarkJudgeJSON",
-        "func EvaluateIssueOpsAutoresearchGate",
-        "func FinalizeIssueOpsBenchmarkRunResult",
-        "func JudgeDownwardOverrideRate",
-        "func LoadIssueOpsBenchmarkFixtures",
-        "func MergeIssueOpsBenchmarkScoreWithJudge",
-        "func ReadIssueOpsBenchmarkRun",
-        "func RenderIssueOpsLLMJudgePrompt",
-        "func RunIssueOpsBenchmark",
-        "func RunIssueOpsLLMJudge",
-        "func SaveIssueOpsBenchmarkRun",
-        "func ScoreIssueOpsBenchmarkArtifact",
-        "func ScoreSpread",
-        "func ValidateJudgeProvenance",
-        "type ConsensusVerdict",
-        "type IssueOpsAutoresearchCandidate",
-        "type IssueOpsAutoresearchGateRequest",
-        "type IssueOpsAutoresearchGateResult",
-        "type IssueOpsBenchmarkArtifact",
-        "type IssueOpsBenchmarkCompareResult",
-        "type IssueOpsBenchmarkFixture",
-        "type IssueOpsBenchmarkRunRequest",
-        "type IssueOpsBenchmarkRunResult",
-        "type IssueOpsBenchmarkScore",
-        "type IssueOpsDimensionScore",
-        "type IssueOpsJudgeMap",
-        "type IssueOpsLLMJudgeRequest",
-        "type JudgeSample",
-        "type RecordedOutcomes",
-        "type ReliabilityReport"
       ]
     },
     {
@@ -9058,6 +8889,20 @@
       ]
     },
     {
+      "path": "internal/application/issueopsbenchmark/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Compare",
+        "func Service.Consensus",
+        "func Service.Gate",
+        "func Service.Reliability",
+        "func Service.Run",
+        "func Service.ValidateJudgeProvenance",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/issueopsbodysync/ports.go",
       "owner": "application",
       "task": "T07",
@@ -11298,12 +11143,10 @@
         "type IssueOpsAutoresearchGateRequest",
         "type IssueOpsAutoresearchGateResult",
         "type IssueOpsBenchmarkCompareResult",
-        "type IssueOpsBenchmarkRunRequest",
         "type IssueOpsBenchmarkRunResult",
         "type IssueOpsBenchmarkScore",
         "type IssueOpsDimensionScore",
         "type IssueOpsJudgeMap",
-        "type IssueOpsLLMJudgeRequest",
         "type JudgeSample",
         "type PassPowKPoint",
         "type RecordedOutcomes",
@@ -11706,12 +11549,10 @@
         "type IssueOpsAutoresearchGateRequest",
         "type IssueOpsAutoresearchGateResult",
         "type IssueOpsBenchmarkCompareResult",
-        "type IssueOpsBenchmarkRunRequest",
         "type IssueOpsBenchmarkRunResult",
         "type IssueOpsBenchmarkScore",
         "type IssueOpsDimensionScore",
         "type IssueOpsJudgeMap",
-        "type IssueOpsLLMJudgeRequest",
         "type JudgeSample",
         "type PassPowKPoint",
         "type RecordedOutcomes",
@@ -14211,6 +14052,16 @@
       ]
     },
     {
+      "path": "internal/domain/issueopsbenchmark/input.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ResolveJudgeScores",
+        "func ValidateFixture",
+        "func ValidateJudgeScore"
+      ]
+    },
+    {
       "path": "internal/domain/issueopsbenchmark/issueops_benchmark_quality.go",
       "owner": "domain",
       "task": "T20",
@@ -14323,6 +14174,15 @@
       "symbols": [
         "func FinalizeRun",
         "func MergeScoreWithJudge"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopsbenchmark/score_run.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ScoreFixture",
+        "func ScoreRun"
       ]
     },
     {
@@ -16714,6 +16574,15 @@
         "type Inspector",
         "type Receipt",
         "type Request"
+      ]
+    },
+    {
+      "path": "internal/port/issueopsbenchmark/benchmark.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type Files",
+        "type Runs"
       ]
     },
     {
@@ -24468,6 +24337,75 @@
       "evidence_tests": [
         "TestInstallNativeDelegatesThroughHostInstaller",
         "TestInstallRootsAndAllHostReadbacksStayIsolated"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "benchmark-fixture-requirements",
+      "source_path": "internal/adapter/issueops/benchmark/issueops_benchmark_fixtures.go",
+      "source_symbol": "func validateIssueOpsBenchmarkFixture",
+      "responsibility": "required benchmark fixture business inputs",
+      "target": "internal/domain/issueopsbenchmark",
+      "target_symbol": "func ValidateFixture",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_benchmark_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestValidateFixtureRequiresBusinessInputsInOrder",
+        "TestLoadIssueOpsBenchmarkFixtures"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "benchmark-score-coverage",
+      "source_path": "cmd/issueops/issueopscli/benchmarkcmd/benchmark.go",
+      "source_symbol": "func readIssueOpsJudgeMap",
+      "responsibility": "exact judge fixture coverage with per-fixture error precedence",
+      "target": "internal/domain/issueopsbenchmark",
+      "target_symbol": "func ResolveJudgeScores",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_benchmark_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestResolveJudgeScoresPreservesDecodeAndCoveragePrecedence",
+        "TestRunIssueOpsBenchmarkJudgeFileFailsClosedOnUnknownKey"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "benchmark-run-orchestration",
+      "source_path": "cmd/issueops/issueopscli/benchmarkcmd/benchmark_subcommands.go",
+      "source_symbol": "func runBenchmarkRun",
+      "responsibility": "load fixtures, score artifacts, validate source, merge and finalize before saving",
+      "target": "internal/application/issueopsbenchmark",
+      "target_symbol": "func Service.Run",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_benchmark_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestRunRejectsJudgeBeforeSave",
+        "TestRunFinalizesMergedScoresBeforePersisting",
+        "TestBenchmarkCLIInstancesKeepCapturedState"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "benchmark-source-provenance",
+      "source_path": "internal/adapter/issueops/benchmark/issueops_judge_provenance.go",
+      "source_symbol": "func validateJudgeProvenance",
+      "responsibility": "judge metadata decision before source-run lookup; fail before persistence",
+      "target": "internal/application/issueopsbenchmark",
+      "target_symbol": "func Service.ValidateJudgeProvenance",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/issueops_benchmark_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestValidateJudgeProvenanceFailsClosed",
+        "TestRunRejectsJudgeBeforeSave"
       ],
       "status": "migrated"
     }
