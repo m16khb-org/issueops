@@ -1,4 +1,4 @@
-package omo
+package hostprotocol
 
 import (
 	"encoding/json"
@@ -88,7 +88,13 @@ func TestGeneratedLifecycleExtensionExecutesActualMockPiModule(t *testing.T) {
 		{name: "empty compact sends nothing", event: "session_start", exec: mockLifecycleExec{Stdout: `{"should_inject":true,"compact":""}`}, wantArgv: []string{"hook", "session-start", "--repo", "/repo", "--json"}},
 	}
 
-	source := LifecycleExtension("/private/bin/issueops")
+	source := OmoLifecycleExtension("/private/bin/issueops")
+	contract := parseGeneratedLifecycleContract(t, source)
+	if contract.Events["session_start"] != (generatedLifecycleRule{Subcommand: "session-start"}) ||
+		contract.Events["session_compact"] != (generatedLifecycleRule{Subcommand: "post-compact", AcceptedOnly: true}) ||
+		contract.Message != (generatedLifecycleMessage{CustomType: "issueops:project-docs"}) {
+		t.Fatalf("unexpected Omo lifecycle contract: %+v", contract)
+	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got, err := executeLifecycleModule(source, test.event, test.accepted, test.exec)
@@ -131,7 +137,7 @@ func TestGeneratedLifecycleExtensionExecutesActualMockPiModule(t *testing.T) {
 }
 
 func TestGeneratedLifecycleExtensionProofRejectsRuntimeMutations(t *testing.T) {
-	source := LifecycleExtension("/private/bin/issueops")
+	source := OmoLifecycleExtension("/private/bin/issueops")
 	if err := verifyLifecycleModule(source); err != nil {
 		t.Fatalf("generated module failed baseline proof: %v", err)
 	}

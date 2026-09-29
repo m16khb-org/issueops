@@ -2,6 +2,7 @@ package hookcatalog
 
 import (
 	"fmt"
+	"issueops/internal/adapter/hostprotocol"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,7 +18,7 @@ func TestRunCatalogHooksWithInjectedPrinter(t *testing.T) {
 		t.Fatal(err)
 	}
 	var printed []any
-	config := Config{
+	config := Config{FormatContext: hostprotocol.FormatHookContext,
 		ResolveTarget: func(string) string { return repo },
 		PrintJSON: func(value any) error {
 			printed = append(printed, value)
@@ -42,7 +43,7 @@ func TestRunCatalogHooksIgnoreLegacyRuntimeDependencies(t *testing.T) {
 	for _, host := range []string{"codex", "claude"} {
 		t.Run(host, func(t *testing.T) {
 			var printed map[string]any
-			config := Config{
+			config := Config{FormatContext: hostprotocol.FormatHookContext,
 				ResolveTarget: func(string) string { return t.TempDir() },
 				PrintJSON: func(value any) error {
 					printed, _ = value.(map[string]any)
@@ -68,7 +69,7 @@ func TestRunCatalogHooksFormatsHostOutputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	var printed []any
-	config := Config{
+	config := Config{FormatContext: hostprotocol.FormatHookContext,
 		ResolveTarget: func(string) string { return repo },
 		PrintJSON: func(value any) error {
 			printed = append(printed, value)
@@ -94,16 +95,10 @@ func TestCatalogHostHelpers(t *testing.T) {
 	if hostOf(&codex) != "codex" {
 		t.Fatalf("hostOf = %q", hostOf(&codex))
 	}
-	for _, host := range []string{"codex", "claude", ""} {
-		host := host
-		if resolveCatalogHost(&host) == nil {
-			t.Fatalf("expected host output for %q", host)
-		}
-	}
 }
 
 func TestCatalogHookFlagErrors(t *testing.T) {
-	config := Config{ResolveTarget: func(string) string { return t.TempDir() }, PrintJSON: func(any) error { return nil }}
+	config := Config{FormatContext: hostprotocol.FormatHookContext, ResolveTarget: func(string) string { return t.TempDir() }, PrintJSON: func(any) error { return nil }}
 	if err := RunPostCompact([]string{"--bad"}, config); err == nil {
 		t.Fatal("expected post-compact flag error")
 	}

@@ -16,11 +16,11 @@ func hookDisabled() bool {
 	return hookenv.Bool("ISSUEOPS_DISABLE_HOOKS")
 }
 
-// runHook dispatches the host lifecycle context hooks. Only SessionStart and
+// RunHook dispatches the host lifecycle context hooks. Only SessionStart and
 // PostCompact exist: both read the static project-doc catalog and emit a
 // host-compatible context payload. They never touch durable issueops state,
 // telemetry, or IssueOps authority (ADR 2026-08-10, 2026-08-27).
-func runHook(args []string) error {
+func RunHook(args []string, formatContext func(string, string, string, string) map[string]any) error {
 	if hookDisabled() {
 		return nil
 	}
@@ -33,17 +33,17 @@ func runHook(args []string) error {
 		hookUsage()
 		return flag.ErrHelp
 	case "session-start":
-		return hookcatalog.RunSessionStart(args[1:], hookCatalogConfig())
+		return hookcatalog.RunSessionStart(args[1:], hookCatalogConfig(formatContext))
 	case "post-compact":
-		return hookcatalog.RunPostCompact(args[1:], hookCatalogConfig())
+		return hookcatalog.RunPostCompact(args[1:], hookCatalogConfig(formatContext))
 	default:
 		hookUsage()
 		return fmt.Errorf("unknown hook subcommand %q", args[0])
 	}
 }
 
-func hookCatalogConfig() hookcatalog.Config {
-	return hookcatalog.Config{ResolveTarget: ResolveTarget, PrintJSON: printJSON}
+func hookCatalogConfig(formatContext func(string, string, string, string) map[string]any) hookcatalog.Config {
+	return hookcatalog.Config{ResolveTarget: ResolveTarget, PrintJSON: printJSON, FormatContext: formatContext}
 }
 
 func hookUsage() {

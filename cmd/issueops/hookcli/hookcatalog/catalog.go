@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"issueops/cmd/issueops/hookcli/hookinput"
-	hookadapter "issueops/internal/domain/hook"
 )
 
 type Config struct {
+	FormatContext func(host, eventName, additionalContext, userView string) map[string]any
 	ResolveTarget func(string) string
 	PrintJSON     func(any) error
 }
@@ -37,11 +37,10 @@ func RunSessionStart(args []string, config Config) error {
 	if *jsonOut {
 		return config.PrintJSON(cat)
 	}
-	ho := resolveCatalogHost(hostFlag)
 	if !cat.ShouldInject {
-		return config.PrintJSON(ho.FormatNoop())
+		return config.PrintJSON(map[string]any{})
 	}
-	return config.PrintJSON(ho.FormatContext("SessionStart", cat.Compact, cat.UserView))
+	return config.PrintJSON(config.FormatContext(hostOf(hostFlag), "SessionStart", cat.Compact, cat.UserView))
 }
 
 // RunPostCompact keeps an explicit post-compaction catalog surface for hosts whose
@@ -54,7 +53,7 @@ func RunSessionStart(args []string, config Config) error {
 func RunPostCompact(args []string, config Config) error {
 	fs := flag.NewFlagSet("hook post-compact", flag.ContinueOnError)
 	repo := fs.String("repo", "", "target repository path; defaults to hook stdin JSON or cwd")
-	hostFlag := fs.String("host", "", "hook host (codex or claude); controls user-visible compatibility fields")
+	fs.String("host", "", "hook host (codex or claude); controls user-visible compatibility fields")
 	jsonOut := fs.Bool("json", false, "print raw analysis JSON instead of host hook JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -65,7 +64,7 @@ func RunPostCompact(args []string, config Config) error {
 		return config.PrintJSON(cat)
 	}
 	if !cat.ShouldInject {
-		return config.PrintJSON(resolveCatalogHost(hostFlag).FormatNoop())
+		return config.PrintJSON(map[string]any{})
 	}
 	return config.PrintJSON(map[string]any{"systemMessage": cat.UserView})
 }
@@ -79,17 +78,6 @@ func resolveRepo(flagValue string, stdin []byte, config Config) string {
 		repo = config.ResolveTarget("")
 	}
 	return repo
-}
-
-// resolveCatalogHost returns the hook output adapter for catalog hooks.
-// Catalog hooks default to Claude, not Codex.
-func resolveCatalogHost(hostFlag *string) hookadapter.HostHookOutput {
-	switch hostOf(hostFlag) {
-	case "codex":
-		return hookadapter.CodexHookOutput{}
-	default:
-		return hookadapter.ClaudeHookOutput{}
-	}
 }
 
 func hostOf(hostFlag *string) string {

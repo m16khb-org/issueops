@@ -9,7 +9,7 @@ import (
 	"issueops/internal/port"
 )
 
-func VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvidence, error) {
+func VerifyActivation(req port.NativeInstallRequest, lifecycleExtension func(string) string) ([]port.NativeActivationEvidence, error) {
 	omoRoot := filepath.Join(req.Home, ".omo")
 	mcpPath := filepath.Join(omoRoot, "mcp.json")
 	raw, err := os.ReadFile(mcpPath)
@@ -49,7 +49,7 @@ func VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvi
 	if err != nil {
 		return nil, err
 	}
-	expectedExtension := omoLifecycleExtension(req.BinPath)
+	expectedExtension := lifecycleExtension(req.BinPath)
 	if string(extension) != expectedExtension {
 		return nil, fmt.Errorf("Omo lifecycle extension does not match the canonical managed content")
 	}

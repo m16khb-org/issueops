@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"issueops/cmd/issueops/hookcli"
 	"issueops/cmd/issueops/updatecli"
+	"issueops/internal/adapter/hostprotocol"
 )
 
 type daemonProcess = updatecli.DaemonProcess
@@ -27,7 +28,7 @@ func configureHookCLI() {
 
 func runHook(args []string) error {
 	configureHookCLI()
-	return hookcli.RunHook(args)
+	return hookcli.RunHook(args, hostprotocol.FormatHookContext)
 }
 
 func resetUpdateFacadeDeps() {

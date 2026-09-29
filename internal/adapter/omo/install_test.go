@@ -2,6 +2,7 @@ package omo
 
 import (
 	"encoding/json"
+	"issueops/internal/adapter/hostprotocol"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,7 +37,7 @@ func TestInstallerWritesNativeOmoSurfaces(t *testing.T) {
 		},
 	})
 
-	result, err := NewInstaller().Install(req)
+	result, err := NewInstaller(hostprotocol.OmoLifecycleExtension).Install(req)
 	if err != nil {
 		t.Fatalf("Install returned error: %v\n%+v", err, result)
 	}
@@ -60,12 +61,10 @@ func TestInstallerWritesNativeOmoSurfaces(t *testing.T) {
 	assertOmoTestMCPServer(t, projectMCP, "issueops_project", "./bin/issueops", ".")
 
 	extension := readOmoTestFile(t, filepath.Join(req.Home, ".omo", "extensions", "issueops.js"))
-	contract := parseGeneratedLifecycleContract(t, extension)
-	if contract.Events["session_start"] != (generatedLifecycleRule{Subcommand: "session-start"}) ||
-		contract.Events["session_compact"] != (generatedLifecycleRule{Subcommand: "post-compact", AcceptedOnly: true}) ||
-		contract.Message != (generatedLifecycleMessage{CustomType: "issueops:project-docs"}) {
-		t.Fatalf("unexpected Omo lifecycle contract: %+v", contract)
+	if extension != hostprotocol.OmoLifecycleExtension(req.BinPath) {
+		t.Fatal("installed lifecycle extension differs from canonical host protocol")
 	}
+
 	for _, token := range []string{
 		`"--json"`,
 		req.BinPath,
@@ -89,7 +88,7 @@ func TestInstallerDryRunPlansWithoutWriting(t *testing.T) {
 	req.ProjectLocal = true
 	req.DryRun = true
 
-	result, err := NewInstaller().Install(req)
+	result, err := NewInstaller(hostprotocol.OmoLifecycleExtension).Install(req)
 	if err != nil {
 		t.Fatalf("dry-run returned error: %v\n%+v", err, result)
 	}
@@ -109,10 +108,10 @@ func TestInstallerDryRunPlansWithoutWriting(t *testing.T) {
 
 func TestVerifyActivationRejectsTamperedExtension(t *testing.T) {
 	req := omoTestRequest(t)
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := NewInstaller(hostprotocol.OmoLifecycleExtension).Install(req); err != nil {
 		t.Fatal(err)
 	}
-	evidence, err := VerifyActivation(req)
+	evidence, err := VerifyActivation(req, hostprotocol.OmoLifecycleExtension)
 	if err != nil {
 		t.Fatalf("VerifyActivation returned error: %v", err)
 	}
@@ -125,7 +124,7 @@ func TestVerifyActivationRejectsTamperedExtension(t *testing.T) {
 	if err := os.WriteFile(extensionPath, []byte("export default function () {}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := VerifyActivation(req); err == nil || !strings.Contains(err.Error(), "lifecycle extension") {
+	if _, err := VerifyActivation(req, hostprotocol.OmoLifecycleExtension); err == nil || !strings.Contains(err.Error(), "lifecycle extension") {
 		t.Fatalf("tampered extension must fail strict readback, got %v", err)
 	}
 }
@@ -133,7 +132,7 @@ func TestVerifyActivationRejectsTamperedExtension(t *testing.T) {
 func TestTrackedTemplatesMatchGeneratedContent(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	extension := readOmoTestFile(t, filepath.Join(root, "configs", "omo", "issueops.js"))
-	if extension != omoLifecycleExtension("./bin/issueops") {
+	if extension != hostprotocol.OmoLifecycleExtension("./bin/issueops") {
 		t.Fatal("tracked Omo lifecycle extension drifted from generated template")
 	}
 	config := readOmoTestJSON(t, filepath.Join(root, "configs", "omo", "mcp.json"))

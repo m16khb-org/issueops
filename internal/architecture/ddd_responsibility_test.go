@@ -661,8 +661,8 @@ func dddTask(path string) string {
 		{"cmd/issueops/selfworkflow/", "T18"},
 		{"internal/adapter/verification/probe/", "T18"},
 		{"internal/domain/mcp/", "T19"}, {"internal/domain/cli/", "T19"},
-		{"internal/domain/nativehost/", "T19"}, {"internal/domain/omolifecycle/", "T19"},
-		{"internal/domain/hook/", "T19"},
+		{"internal/domain/nativehost/", "T19"},
+		{"internal/adapter/hostprotocol/", "T19"},
 	} {
 		if strings.HasPrefix(path, item.prefix) {
 			return item.task

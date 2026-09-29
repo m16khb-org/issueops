@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"issueops/internal/adapter/hostprotocol"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,7 +39,7 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 			if err := os.WriteFile(host, []byte(hostSource), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			prepared, err := PrepareLauncher(ArtifactRequest{
+			prepared, err := prepareTestLauncher(ArtifactRequest{
 				Root: filepath.Join(root, "artifacts"), CWD: worktree,
 				WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 				Host: test.host, HostExecutable: host, Model: test.model, Effort: test.effort,
@@ -116,7 +117,7 @@ func TestPrepareLauncherUsesPortableSingleArgumentBoundary(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			prompt := []byte(strings.Repeat("p", test.size))
-			prepared, err := PrepareLauncher(ArtifactRequest{
+			prepared, err := prepareTestLauncher(ArtifactRequest{
 				Root: filepath.Join(root, "artifacts-"+strings.ReplaceAll(test.name, " ", "-")), CWD: worktree,
 				WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 				Host: "codex", HostExecutable: host, Model: "model", Prompt: prompt,
@@ -161,7 +162,7 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 		t.Fatal(err)
 	}
 	prompt := []byte("prompt")
-	prepared, err := PrepareLauncher(ArtifactRequest{
+	prepared, err := prepareTestLauncher(ArtifactRequest{
 		Root: filepath.Join(root, "artifacts"), CWD: worktree, WindowID: testWindow, WorkspaceID: testWorkspace,
 		SurfaceID: testSurface, SocketPath: socketPath, Host: "codex", HostExecutable: host, Model: "model",
 		Prompt: prompt, PromptSHA256: digestBytes(prompt), MaterialSHA256: strings.Repeat("b", 64),
@@ -207,7 +208,7 @@ func TestPrivateLauncherRejectsWrongAmbientCmuxScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	prompt := []byte("prompt")
-	prepared, err := PrepareLauncher(ArtifactRequest{
+	prepared, err := prepareTestLauncher(ArtifactRequest{
 		Root: filepath.Join(root, "artifacts"), CWD: worktree, WindowID: testWindow, WorkspaceID: testWorkspace,
 		SurfaceID: testSurface, SocketPath: socketPath, Host: "codex", HostExecutable: host, Model: "model",
 		Prompt: prompt, PromptSHA256: digestBytes(prompt), MaterialSHA256: strings.Repeat("b", 64),
@@ -329,4 +330,8 @@ func canonicalTempDir(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return root
+}
+
+func prepareTestLauncher(request ArtifactRequest) (PreparedLauncher, error) {
+	return PrepareLauncher(request, hostprotocol.BuildInteractiveArgv)
 }

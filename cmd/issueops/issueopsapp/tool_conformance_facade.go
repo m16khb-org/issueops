@@ -3,12 +3,12 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
+	"issueops/internal/adapter/hostprotocol"
 	"os"
 	"strings"
 
 	"issueops/cmd/issueops/contractcli"
 	"issueops/internal/adapter/hostprobe"
-	omoHost "issueops/internal/adapter/omo"
 	"issueops/internal/adapter/toolconformance"
 	mcpadapter "issueops/internal/domain/mcp"
 	"issueops/internal/port"
@@ -39,7 +39,7 @@ func toolConformanceRunners(binary string) map[string]port.HostProbeRunner {
 	return map[string]port.HostProbeRunner{
 		"codex":  hostprobe.NewCodexRunner(binary, hostprobe.Dependencies{}),
 		"claude": hostprobe.NewClaudeRunner(binary, hostprobe.Dependencies{}),
-		"omo":    hostprobe.NewOmoRunner(binary, omoHost.LifecycleExtension(binary), hostprobe.Dependencies{}),
+		"omo":    hostprobe.NewOmoRunner(binary, hostprotocol.OmoLifecycleExtension(binary), hostprobe.Dependencies{}, hostprotocol.OmoLifecycleExtension),
 	}
 }
 

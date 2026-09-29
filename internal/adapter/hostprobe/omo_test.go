@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"issueops/internal/adapter/hostprotocol"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	omoadapter "issueops/internal/adapter/omo"
 	"issueops/internal/port"
 )
 
@@ -46,7 +46,7 @@ func TestOmoRunnerPreflightUsesNativeOmoAndRequiresExplicitModel(t *testing.T) {
 		}
 		return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22 (engine: senpi 2026.8.26-2)\n")}, nil
 	}}
-	runner := NewOmoRunner("/opt/bin/issueops", omoadapter.LifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmoRunner("/opt/bin/issueops", hostprotocol.OmoLifecycleExtension("/opt/bin/issueops"), Dependencies{
 		Process: process,
 		LookPath: func(name string) (string, error) {
 			if name != "omo" {
@@ -72,7 +72,7 @@ func TestOmoRunnerPreflightUsesNativeOmoAndRequiresExplicitModel(t *testing.T) {
 func TestOmoRunnerPreflightRejectsUnverifiedLifecycleContract(t *testing.T) {
 	t.Parallel()
 
-	runner := NewOmoRunner("/opt/bin/issueops", "export default function issueops() {}\n", Dependencies{
+	runner := newTestOmoRunner("/opt/bin/issueops", "export default function issueops() {}\n", Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 		}},
@@ -86,7 +86,7 @@ func TestOmoRunnerPreflightRejectsUnverifiedLifecycleContract(t *testing.T) {
 }
 
 func TestOmoRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
-	canonical := omoadapter.LifecycleExtension("/opt/bin/issueops")
+	canonical := hostprotocol.OmoLifecycleExtension("/opt/bin/issueops")
 	mutations := []struct {
 		name string
 		old  string
@@ -102,7 +102,7 @@ func TestOmoRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
 			if source == canonical {
 				t.Fatalf("mutation target %q missing", mutation.old)
 			}
-			runner := NewOmoRunner("/opt/bin/issueops", source, Dependencies{
+			runner := newTestOmoRunner("/opt/bin/issueops", source, Dependencies{
 				Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 					return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 				}},
@@ -120,7 +120,7 @@ func TestOmoRunnerPreflightBindsExactCanonicalLifecycleModule(t *testing.T) {
 func TestOmoRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testing.T) {
 	t.Parallel()
 
-	runner := NewOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{}, errors.New("version unavailable")
 		}},
@@ -135,7 +135,7 @@ func TestOmoRunnerPreflightKeepsInstalledEvidenceWhenVersionProbeFails(t *testin
 
 func TestOmoRunnerPreflightFailsClosedWhenPrivateRootCleanupFails(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "preflight")
-	runner := NewOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
+	runner := newTestOmoRunner("/opt/bin/issueops", omoTestLifecycleExtension("/opt/bin/issueops"), Dependencies{
 		Process: &omoFakeProcess{run: func(_ context.Context, _ CommandRequest) (CommandOutput, error) {
 			return CommandOutput{Stdout: []byte("omo 5.0.0-0.beta.22\n")}, nil
 		}},
@@ -171,7 +171,7 @@ func TestOmoRunnerEpisodeFailsClosedWhenPrivateRootCleanupFails(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "episode")
 	request := omoProbeRequest()
 	target := "mcp_issueops_probe_" + request.ProbeTool
-	runner := NewOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
+	runner := newTestOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
 		LookPath: func(string) (string, error) { return "/test/bin/omo", nil },
 		TempDir: func(_, _ string) (string, error) {
 			if err := os.Mkdir(root, 0o700); err != nil {
@@ -266,7 +266,7 @@ func TestOmoRunnerRunUsesIsolatedNativeProbeAndCapturesEvidence(t *testing.T) {
 		return CommandOutput{Stdout: omoSuccessfulStream(request, targetTool), ExitCode: 0}, nil
 	}}
 	now := time.Unix(100, 0)
-	runner := NewOmoRunner(filepath.Join("testdata", "issueops"), lifecycleSource, Dependencies{
+	runner := newTestOmoRunner(filepath.Join("testdata", "issueops"), lifecycleSource, Dependencies{
 		Process: process,
 		LookPath: func(name string) (string, error) {
 			if name != "omo" {
@@ -354,7 +354,7 @@ func TestOmoRunnerRunFailsClosedOnStreamAndProcessFailures(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			request := omoProbeRequest()
 			root := filepath.Join(t.TempDir(), "episode")
-			runner := NewOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
+			runner := newTestOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
 				LookPath: func(string) (string, error) { return "/test/bin/omo", nil },
 				TempDir: func(_, _ string) (string, error) {
 					if err := os.Mkdir(root, 0o700); err != nil {
@@ -383,7 +383,7 @@ func TestOmoRunnerRunRejectsCaptureCardinalityMismatch(t *testing.T) {
 
 	request := omoProbeRequest()
 	root := filepath.Join(t.TempDir(), "episode")
-	runner := NewOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
+	runner := newTestOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
 		LookPath: func(string) (string, error) { return "/test/bin/omo", nil },
 		TempDir: func(_, _ string) (string, error) {
 			if err := os.Mkdir(root, 0o700); err != nil {
@@ -451,7 +451,7 @@ func TestOmoRunnerDerivesAmbientToolCountFromRejectedStream(t *testing.T) {
 		`{"type":"tool_execution_start","toolCallId":"ambient-1","toolName":"read_file","args":{}}`+"\n"+
 			`{"type":"tool_execution_end","toolCallId":"ambient-1","toolName":"read_file","result":{"content":"ambient"},"isError":false}`+"\n",
 	)...)
-	runner := NewOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
+	runner := newTestOmoRunner("issueops", omoTestLifecycleExtension(), Dependencies{
 		LookPath: func(string) (string, error) { return "/test/bin/omo", nil },
 		TempDir: func(_, _ string) (string, error) {
 			if err := os.Mkdir(root, 0o700); err != nil {
@@ -492,7 +492,7 @@ func omoTestLifecycleExtension(harnessBinary ...string) string {
 		binary = harnessBinary[0]
 	}
 	absolute, _ := filepath.Abs(binary)
-	return omoadapter.LifecycleExtension(absolute)
+	return hostprotocol.OmoLifecycleExtension(absolute)
 }
 
 func writeOmoCapture(t *testing.T, path string, request port.HostProbeRequest) {
@@ -633,3 +633,7 @@ func assertOmoProbeConfig(t *testing.T, path, harnessBinary, episodeRoot string,
 }
 
 var _ port.HostProbeRunner = OmoRunner{}
+
+func newTestOmoRunner(binary, source string, deps Dependencies) OmoRunner {
+	return NewOmoRunner(binary, source, deps, hostprotocol.OmoLifecycleExtension)
+}

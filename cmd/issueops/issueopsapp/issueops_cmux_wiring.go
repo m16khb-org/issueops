@@ -15,9 +15,9 @@ import (
 
 	auditadapter "issueops/internal/adapter/audit"
 	cmuxadapter "issueops/internal/adapter/cmux"
+	"issueops/internal/adapter/hostprotocol"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/domain/nativehost"
 )
 
 type cmuxClient interface {
@@ -56,7 +56,7 @@ func issueOpsCmuxHandoffHandler(ctx context.Context, stateRoot string, request i
 	client := cmuxadapter.Client{Runner: cmuxadapter.ExecRunner{}, ObserveEndpoint: cmuxadapter.ObserveEndpoint, UID: os.Getuid()}
 	return issueOpsCmuxHandoffHandlerWithDeps(ctx, stateRoot, request, cmuxHandoffDependencies{
 		Client: client, Now: time.Now, Getwd: os.Getwd, GitTop: cmuxGitTop, ReadPrompt: cmuxadapter.ReadPrompt,
-		ValidateHostExecutable: validateCmuxHostExecutable, Prepare: cmuxadapter.PrepareLauncher,
+		ValidateHostExecutable: validateCmuxHostExecutable, Prepare: prepareCmuxLauncher,
 		AwaitReceipt: awaitCmuxBootstrapReceipt, Cleanup: func(prepared cmuxadapter.PreparedLauncher) error { return prepared.Cleanup() },
 	})
 }
@@ -110,7 +110,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	if err := deps.ValidateHostExecutable(request.HostExecutable); err != nil {
 		return result, err
 	}
-	if _, err := nativehost.BuildInteractiveArgv(request.Host, request.HostExecutable, request.Model, request.Effort, ""); err != nil {
+	if _, err := hostprotocol.BuildInteractiveArgv(request.Host, request.HostExecutable, request.Model, request.Effort, ""); err != nil {
 		return result, err
 	}
 
@@ -194,7 +194,7 @@ func issueOpsCmuxHandoffHandlerWithDeps(ctx context.Context, stateRoot string, r
 	observation = audited.Observation
 
 	if deps.Prepare == nil {
-		deps.Prepare = cmuxadapter.PrepareLauncher
+		deps.Prepare = prepareCmuxLauncher
 	}
 	artifactRoot := filepath.Join(stateRoot, "cmux-handoff")
 	prepared, err := deps.Prepare(cmuxadapter.ArtifactRequest{
@@ -518,4 +518,8 @@ func cmuxRequestContainsNUL(request issueopscontract.ExecutionCmuxHandoffRequest
 		}
 	}
 	return false
+}
+
+func prepareCmuxLauncher(request cmuxadapter.ArtifactRequest) (cmuxadapter.PreparedLauncher, error) {
+	return cmuxadapter.PrepareLauncher(request, hostprotocol.BuildInteractiveArgv)
 }

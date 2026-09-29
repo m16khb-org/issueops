@@ -679,22 +679,14 @@
       ]
     },
     {
-      "path": "cmd/issueops/hookcli/exports.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func RunHook"
-      ]
-    },
-    {
       "path": "cmd/issueops/hookcli/hook.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func RunHook",
         "func hookCatalogConfig",
         "func hookDisabled",
-        "func hookUsage",
-        "func runHook"
+        "func hookUsage"
       ]
     },
     {
@@ -705,7 +697,6 @@
         "func RunPostCompact",
         "func RunSessionStart",
         "func hostOf",
-        "func resolveCatalogHost",
         "func resolveRepo",
         "type Config"
       ]
@@ -1246,6 +1237,7 @@
         "func issueOpsCmuxHandoffHandler",
         "func issueOpsCmuxHandoffHandlerWithDeps",
         "func newCmuxCanonicalRootFence",
+        "func prepareCmuxLauncher",
         "func sameCmuxDirectory",
         "func sameCmuxPath",
         "func validateCmuxHostExecutable",
@@ -5248,6 +5240,7 @@
         "func OmoRunner.Preflight",
         "func OmoRunner.Run",
         "func OmoRunner.resolveExecutable",
+        "func OmoRunner.validLifecycleExtension",
         "func ellipsizeMiddle",
         "func explicitOmoModel",
         "func isolatedOmoEnv",
@@ -5260,7 +5253,6 @@
         "func prepareOmoPrivateState",
         "func resolveOmoAuth",
         "func sanitizeOmoToolName",
-        "func validOmoLifecycleExtension",
         "type OmoRunner",
         "type omoAuthSnapshot",
         "type omoMCPConfig",
@@ -5375,6 +5367,33 @@
         "type hostStreamObservation",
         "type semanticToolContent",
         "type semanticToolResponse"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprotocol/argv.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func BuildInteractiveArgv"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprotocol/hook.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func FormatHookContext"
+      ]
+    },
+    {
+      "path": "internal/adapter/hostprotocol/omo.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func OmoLifecycleExtension",
+        "type contract",
+        "type message",
+        "type rule"
       ]
     },
     {
@@ -7425,15 +7444,6 @@
       "task": "T20",
       "symbols": [
         "type InstallPlan"
-      ]
-    },
-    {
-      "path": "internal/adapter/omo/extension.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func LifecycleExtension",
-        "func omoLifecycleExtension"
       ]
     },
     {
@@ -14463,20 +14473,6 @@
       "symbols": []
     },
     {
-      "path": "internal/domain/hook/output.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func ClaudeHookOutput.FormatContext",
-        "func ClaudeHookOutput.FormatNoop",
-        "func CodexHookOutput.FormatContext",
-        "func CodexHookOutput.FormatNoop",
-        "type ClaudeHookOutput",
-        "type CodexHookOutput",
-        "type HostHookOutput"
-      ]
-    },
-    {
       "path": "internal/domain/install/cleanup.go",
       "owner": "domain",
       "task": "T11",
@@ -16728,23 +16724,11 @@
       ]
     },
     {
-      "path": "internal/domain/nativehost/argv.go",
+      "path": "internal/domain/nativehost/identity.go",
       "owner": "domain",
       "task": "T19",
       "symbols": [
-        "func BuildInteractiveArgv",
         "func ExecutableMatchesHost"
-      ]
-    },
-    {
-      "path": "internal/domain/omolifecycle/extension.go",
-      "owner": "domain",
-      "task": "T19",
-      "symbols": [
-        "func Extension",
-        "type contract",
-        "type message",
-        "type rule"
       ]
     },
     {

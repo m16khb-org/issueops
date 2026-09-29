@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/domain/nativehost"
 )
 
 // MaximumPromptBytes keeps the prompt argv plus its terminating NUL below
@@ -72,7 +71,7 @@ type BootstrapExpectation struct {
 	MaterialSHA256 string
 }
 
-func PrepareLauncher(request ArtifactRequest) (PreparedLauncher, error) {
+func PrepareLauncher(request ArtifactRequest, buildArgv func(string, string, string, string, string) ([]string, error)) (PreparedLauncher, error) {
 	if err := requireSupportedPlatform(); err != nil {
 		return PreparedLauncher{}, err
 	}
@@ -113,7 +112,7 @@ func PrepareLauncher(request ArtifactRequest) (PreparedLauncher, error) {
 	if err := os.WriteFile(prepared.PromptPath, request.Prompt, 0o600); err != nil {
 		return fail(err)
 	}
-	argv, err := nativehost.BuildInteractiveArgv(request.Host, request.HostExecutable, request.Model, request.Effort, "prompt-placeholder")
+	argv, err := buildArgv(request.Host, request.HostExecutable, request.Model, request.Effort, "prompt-placeholder")
 	if err != nil {
 		return fail(err)
 	}

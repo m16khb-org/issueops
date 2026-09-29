@@ -1,4 +1,4 @@
-package omolifecycle
+package hostprotocol
 
 import (
 	"encoding/json"
@@ -23,8 +23,8 @@ type message struct {
 	TriggerTurn bool   `json:"trigger_turn"`
 }
 
-// Extension returns the one canonical Omo lifecycle module for a harness binary.
-func Extension(binPath string) string {
+// OmoLifecycleExtension returns the one canonical Omo lifecycle module for a harness binary.
+func OmoLifecycleExtension(binPath string) string {
 	encodedBin, _ := json.Marshal(binPath)
 	encodedContract, _ := json.Marshal(contract{
 		SchemaVersion: 1,

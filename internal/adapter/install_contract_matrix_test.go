@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"flag"
+	"issueops/internal/adapter/hostprotocol"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,7 +86,7 @@ func TestNativeInstallAdapterContractMatrix(t *testing.T) {
 
 			req := install.DefaultNativeInstallRequest(root, home, codexHome, binPath)
 			req.ProjectLocal = tc.projectLocal
-			result, err := install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(), agyadapter.NewInstaller())
+			result, err := install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(hostprotocol.OmoLifecycleExtension), agyadapter.NewInstaller())
 			if err != nil {
 				t.Fatalf("InstallNative returned error: %v\n%+v", err, result)
 			}
@@ -107,7 +108,7 @@ func TestNativeInstallDryRunDoesNotWrite(t *testing.T) {
 	req := install.DefaultNativeInstallRequest(root, home, codexHome, binPath)
 	req.ProjectLocal = true
 	req.DryRun = true
-	result, err := install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(), agyadapter.NewInstaller())
+	result, err := install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(hostprotocol.OmoLifecycleExtension), agyadapter.NewInstaller())
 	if err != nil {
 		t.Fatalf("dry-run InstallNative returned error: %v\n%+v", err, result)
 	}
@@ -742,7 +743,7 @@ func assertInstallContractSemantics(t *testing.T, req port.NativeInstallRequest,
 		}
 	}
 	omoExtension := readFile(t, filepath.Join(req.Home, ".omo", "extensions", "issueops.js"))
-	if want := omoadapter.LifecycleExtension(req.BinPath); omoExtension != want {
+	if want := hostprotocol.OmoLifecycleExtension(req.BinPath); omoExtension != want {
 		t.Fatalf("installed Omo lifecycle extension differs from generated contract:\n%s", omoExtension)
 	}
 	agyMCP := readFile(t, filepath.Join(req.Home, ".gemini", "config", "mcp_config.json"))

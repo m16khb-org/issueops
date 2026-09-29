@@ -7,13 +7,13 @@ import (
 )
 
 func TestRunHookExport(t *testing.T) {
-	if err := RunHook([]string{"--help"}); err == nil {
+	if err := runHook([]string{"--help"}); err == nil {
 		t.Fatalf("expected ErrHelp, got nil")
 	}
-	if err := RunHook([]string{}); err == nil {
+	if err := runHook([]string{}); err == nil {
 		t.Fatalf("expected error for empty args, got nil")
 	}
-	if err := RunHook([]string{"unknown-hook"}); err == nil {
+	if err := runHook([]string{"unknown-hook"}); err == nil {
 		t.Fatalf("expected error for unknown hook, got nil")
 	}
 }

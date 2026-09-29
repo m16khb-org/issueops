@@ -6,6 +6,7 @@ import (
 	agyt4deps "issueops/internal/adapter/agy"
 	claudet4deps "issueops/internal/adapter/claude"
 	codext4deps "issueops/internal/adapter/codex"
+	"issueops/internal/adapter/hostprotocol"
 	installadapter "issueops/internal/adapter/install"
 	installutiladapter "issueops/internal/adapter/installutil"
 	fingerprintt4deps "issueops/internal/adapter/lifecycle/fingerprint"
@@ -75,7 +76,7 @@ func configureAdapterTail() {
 	nativeintegrationt4deps.SkillNamesForHost = installutiladapter.SkillNamesForHost
 	nativeintegrationt4deps.ResolveStableNativeRoot = installadapter.ResolveStableNativeRoot
 	nativeintegrationt4deps.CodexHooksConfig = codext4deps.HooksConfig
-	nativeintegrationt4deps.OmoLifecycleExtension = omot4deps.LifecycleExtension
+	nativeintegrationt4deps.OmoLifecycleExtension = hostprotocol.OmoLifecycleExtension
 	nativeintegrationt4deps.VerifyHookConfigActivation = installutiladapter.VerifyHookConfigActivation
 	projectbootstrapt4deps.AnalyzeProjectSignals = projectdocsadapter.AnalyzeProjectSignals
 	projectbootstrapt4deps.RenderAgentsWithBlock = projectdocsadapter.RenderAgentsWithBlock

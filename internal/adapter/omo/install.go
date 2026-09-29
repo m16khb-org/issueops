@@ -6,13 +6,15 @@ import (
 	"issueops/internal/port"
 )
 
-type Installer struct{}
+type Installer struct{ lifecycleExtension func(string) string }
 
-func NewInstaller() Installer { return Installer{} }
+func NewInstaller(lifecycleExtension func(string) string) Installer {
+	return Installer{lifecycleExtension: lifecycleExtension}
+}
 
 func (Installer) Name() string { return "omo" }
 
-func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
+func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
 	plan := NewInstallPlan("omo", req.DryRun)
 	_, links, messages, skillErrs := PlanHostSkillLinks(
 		req.Root,
@@ -30,7 +32,7 @@ func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult,
 	plan.File(WriteTextPlan(
 		filepath.Join(omoRoot, "extensions", "issueops.js"),
 		"omo_user_lifecycle_extension",
-		omoLifecycleExtension(req.BinPath),
+		installer.lifecycleExtension(req.BinPath),
 		0o644,
 		req.DryRun,
 	))
@@ -42,7 +44,7 @@ func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult,
 	plan.File(WriteTextPlan(
 		filepath.Join(req.Root, "configs", "omo", "issueops.js"),
 		"omo_lifecycle_extension_template",
-		omoLifecycleExtension("./bin/issueops"),
+		installer.lifecycleExtension("./bin/issueops"),
 		0o644,
 		req.DryRun,
 	))

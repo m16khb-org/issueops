@@ -1,7 +1,8 @@
-package nativehost
+package hostprotocol
 
 import (
 	"fmt"
+	"issueops/internal/domain/nativehost"
 	"path/filepath"
 	"strings"
 )
@@ -26,7 +27,7 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string) ([]str
 	if !filepath.IsAbs(executable) || filepath.Clean(executable) != executable || strings.ContainsAny(executable, "\x00\r\n") {
 		return nil, fmt.Errorf("native host executable must be an absolute literal path")
 	}
-	if !ExecutableMatchesHost(host, executable) {
+	if !nativehost.ExecutableMatchesHost(host, executable) {
 		return nil, fmt.Errorf("native host executable does not match %s", host)
 	}
 	if model == "" || strings.HasPrefix(model, "-") || strings.ContainsAny(model, "\x00\r\n") {
@@ -54,22 +55,4 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string) ([]str
 		}
 	}
 	return append(argv, "--", prompt), nil
-}
-
-// ExecutableMatchesHost checks only the caller-selected launcher identity. A
-// terminal receiver still has to correlate the observed live process exactly;
-// this name check cannot prove that a wrapper's descendant owns a session.
-func ExecutableMatchesHost(host, executable string) bool {
-	normalized := strings.ToLower(filepath.ToSlash(strings.TrimSpace(executable)))
-	base := strings.TrimSuffix(filepath.Base(normalized), ".exe")
-	switch strings.ToLower(strings.TrimSpace(host)) {
-	case "codex":
-		return base == "codex"
-	case "claude":
-		return base == "claude" || strings.Contains(normalized, "/claude/versions/")
-	case "omo":
-		return base == "omo"
-	default:
-		return false
-	}
 }

@@ -1,4 +1,4 @@
-package nativehost
+package hostprotocol
 
 import (
 	"reflect"

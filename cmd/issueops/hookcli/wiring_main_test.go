@@ -7,6 +7,7 @@ import (
 	"issueops/cmd/issueops/hookcli/hookcatalog"
 	"issueops/cmd/issueops/hookcli/hookenv"
 	hookpromptadapter "issueops/internal/adapter/hookprompt"
+	"issueops/internal/adapter/hostprotocol"
 	projectdocadapter "issueops/internal/adapter/projectdoc"
 )
 
@@ -20,3 +21,5 @@ func TestMain(m *testing.M) {
 	hookpromptadapter.FormatProjectDocCatalog = projectdocadapter.FormatProjectDocCatalog
 	os.Exit(m.Run())
 }
+
+func runHook(args []string) error { return RunHook(args, hostprotocol.FormatHookContext) }

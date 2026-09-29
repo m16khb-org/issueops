@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
+	"issueops/internal/adapter/hostprotocol"
 
 	"issueops/cmd/issueops/installcli"
 	agyadapter "issueops/internal/adapter/agy"
@@ -26,7 +27,7 @@ func installDependencies() installcli.Deps {
 		ActivationBackend:    nativeActivationBackend(),
 		NativeInstallRequest: install.DefaultNativeInstallRequest,
 		InstallNative: func(req port.NativeInstallRequest) (port.NativeInstallResult, error) {
-			return install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(), agyadapter.NewInstaller())
+			return install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller(), omoadapter.NewInstaller(hostprotocol.OmoLifecycleExtension), agyadapter.NewInstaller())
 		},
 		ActivationReadback: func(req port.NativeInstallRequest) activationport.ReadbackVerifier {
 			return hostActivationReadback{request: req}
@@ -49,7 +50,7 @@ func (readback hostActivationReadback) Verify(_ context.Context, issueOpsRoot, t
 	if err != nil {
 		return activationport.Readback{}, err
 	}
-	omoEvidence, err := omoadapter.VerifyActivation(readback.request)
+	omoEvidence, err := omoadapter.VerifyActivation(readback.request, hostprotocol.OmoLifecycleExtension)
 	if err != nil {
 		return activationport.Readback{}, err
 	}

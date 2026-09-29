@@ -2,9 +2,9 @@ package probe
 
 import (
 	codexadapter "issueops/internal/adapter/codex"
+	"issueops/internal/adapter/hostprotocol"
 	installadapter "issueops/internal/adapter/install"
 	installutiladapter "issueops/internal/adapter/installutil"
-	omoadapter "issueops/internal/adapter/omo"
 	nativeintegrationt4d "issueops/internal/adapter/verification/probe/nativeintegration"
 )
 
@@ -13,6 +13,6 @@ func init() {
 	nativeintegrationt4d.SkillNamesForHost = installutiladapter.SkillNamesForHost
 	nativeintegrationt4d.ResolveStableNativeRoot = installadapter.ResolveStableNativeRoot
 	nativeintegrationt4d.CodexHooksConfig = codexadapter.HooksConfig
-	nativeintegrationt4d.OmoLifecycleExtension = omoadapter.LifecycleExtension
+	nativeintegrationt4d.OmoLifecycleExtension = hostprotocol.OmoLifecycleExtension
 	nativeintegrationt4d.VerifyHookConfigActivation = installutiladapter.VerifyHookConfigActivation
 }
