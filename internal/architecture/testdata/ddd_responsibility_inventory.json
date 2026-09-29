@@ -479,20 +479,11 @@
       ]
     },
     {
-      "path": "cmd/issueops/hookcli/dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func printJSON"
-      ]
-    },
-    {
       "path": "cmd/issueops/hookcli/hook.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
         "func RunHook",
-        "func hookCatalogConfig",
         "func hookDisabled",
         "func hookUsage"
       ]
@@ -508,12 +499,6 @@
         "func resolveRepo",
         "type Config"
       ]
-    },
-    {
-      "path": "cmd/issueops/hookcli/hookcatalog/hookprompt_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "cmd/issueops/hookcli/hookcatalog/live_probe_observation.go",
@@ -836,16 +821,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureHookCLI",
+        "func newHookConfig",
         "func runHook"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/hookprompt_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureHookPrompts"
       ]
     },
     {
@@ -1371,14 +1348,6 @@
       "symbols": [
         "func newProjectBootstrapService",
         "func newProjectLifecycleService"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopsapp/projectdoc_wiring.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func configureProjectDocReaders"
       ]
     },
     {
@@ -3729,16 +3698,8 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func BuildProjectDocCatalogContext",
-        "func renderProjectDocCatalogUserView",
-        "type ProjectDocCatalogEntry"
+        "func RenderProjectDocCatalogUserView"
       ]
-    },
-    {
-      "path": "internal/adapter/hookprompt/projectdoc_dependencies.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "internal/adapter/hostprobe/claude.go",
@@ -9130,6 +9091,15 @@
         "func Service.ObserveManualSnapshot",
         "type Audit",
         "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/hookprompt/catalog.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func CatalogService.Build",
+        "type CatalogService"
       ]
     },
     {
@@ -24575,6 +24545,26 @@
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "hook-catalog-assembly",
+      "source_path": "internal/adapter/hookprompt/catalog.go",
+      "source_symbol": "func BuildProjectDocCatalogContext",
+      "responsibility": "read project documents and assemble the two host views through per-invocation dependencies; formatting remains presentation in adapters",
+      "target": "internal/application/hookprompt",
+      "target_symbol": "func CatalogService.Build",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/hook_facade.go",
+        "cmd/issueops/hookcli/hookcatalog/catalog.go"
+      ],
+      "evidence_tests": [
+        "TestCatalogConfigsKeepIndependentReaders",
+        "TestHookConfigsKeepIndependentDefaultRepositories",
+        "TestBuildProjectDocCatalogContext",
+        "TestCatalogWithoutDocsSkipsRendering"
+      ],
+      "status": "migrated"
     }
   ]
 }

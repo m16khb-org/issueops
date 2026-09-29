@@ -7,9 +7,11 @@ import (
 	"strings"
 
 	"issueops/cmd/issueops/hookcli/hookinput"
+	hookcontract "issueops/internal/contract/hookprompt"
 )
 
 type Config struct {
+	BuildCatalog  func(string) hookcontract.ProjectDocCatalogContext
 	FormatContext func(host, eventName, additionalContext, userView string) map[string]any
 	ResolveTarget func(string) string
 	PrintJSON     func(any) error
@@ -33,7 +35,7 @@ func RunSessionStart(args []string, config Config) error {
 	if err := recordLiveProbeSessionStart(stdin); err != nil {
 		return err
 	}
-	cat := BuildProjectDocCatalogContext(resolveRepo(*repo, stdin, config))
+	cat := config.BuildCatalog(resolveRepo(*repo, stdin, config))
 	if *jsonOut {
 		return config.PrintJSON(cat)
 	}
@@ -59,7 +61,7 @@ func RunPostCompact(args []string, config Config) error {
 		return err
 	}
 	stdin, _ := io.ReadAll(os.Stdin)
-	cat := BuildProjectDocCatalogContext(resolveRepo(*repo, stdin, config))
+	cat := config.BuildCatalog(resolveRepo(*repo, stdin, config))
 	if *jsonOut {
 		return config.PrintJSON(cat)
 	}

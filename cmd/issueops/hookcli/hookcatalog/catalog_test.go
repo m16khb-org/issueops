@@ -18,7 +18,7 @@ func TestRunCatalogHooksWithInjectedPrinter(t *testing.T) {
 		t.Fatal(err)
 	}
 	var printed []any
-	config := Config{FormatContext: hostprotocol.FormatHookContext,
+	config := Config{BuildCatalog: testCatalogService().Build, FormatContext: hostprotocol.FormatHookContext,
 		ResolveTarget: func(string) string { return repo },
 		PrintJSON: func(value any) error {
 			printed = append(printed, value)
@@ -43,7 +43,7 @@ func TestRunCatalogHooksIgnoreLegacyRuntimeDependencies(t *testing.T) {
 	for _, host := range []string{"codex", "claude"} {
 		t.Run(host, func(t *testing.T) {
 			var printed map[string]any
-			config := Config{FormatContext: hostprotocol.FormatHookContext,
+			config := Config{BuildCatalog: testCatalogService().Build, FormatContext: hostprotocol.FormatHookContext,
 				ResolveTarget: func(string) string { return t.TempDir() },
 				PrintJSON: func(value any) error {
 					printed, _ = value.(map[string]any)
@@ -69,7 +69,7 @@ func TestRunCatalogHooksFormatsHostOutputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	var printed []any
-	config := Config{FormatContext: hostprotocol.FormatHookContext,
+	config := Config{BuildCatalog: testCatalogService().Build, FormatContext: hostprotocol.FormatHookContext,
 		ResolveTarget: func(string) string { return repo },
 		PrintJSON: func(value any) error {
 			printed = append(printed, value)
@@ -98,7 +98,7 @@ func TestCatalogHostHelpers(t *testing.T) {
 }
 
 func TestCatalogHookFlagErrors(t *testing.T) {
-	config := Config{FormatContext: hostprotocol.FormatHookContext, ResolveTarget: func(string) string { return t.TempDir() }, PrintJSON: func(any) error { return nil }}
+	config := Config{BuildCatalog: testCatalogService().Build, FormatContext: hostprotocol.FormatHookContext, ResolveTarget: func(string) string { return t.TempDir() }, PrintJSON: func(any) error { return nil }}
 	if err := RunPostCompact([]string{"--bad"}, config); err == nil {
 		t.Fatal("expected post-compact flag error")
 	}

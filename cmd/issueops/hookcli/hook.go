@@ -20,7 +20,7 @@ func hookDisabled() bool {
 // PostCompact exist: both read the static project-doc catalog and emit a
 // host-compatible context payload. They never touch durable issueops state,
 // telemetry, or IssueOps authority (ADR 2026-08-10, 2026-08-27).
-func RunHook(args []string, formatContext func(string, string, string, string) map[string]any) error {
+func RunHook(args []string, config hookcatalog.Config) error {
 	if hookDisabled() {
 		return nil
 	}
@@ -33,17 +33,13 @@ func RunHook(args []string, formatContext func(string, string, string, string) m
 		hookUsage()
 		return flag.ErrHelp
 	case "session-start":
-		return hookcatalog.RunSessionStart(args[1:], hookCatalogConfig(formatContext))
+		return hookcatalog.RunSessionStart(args[1:], config)
 	case "post-compact":
-		return hookcatalog.RunPostCompact(args[1:], hookCatalogConfig(formatContext))
+		return hookcatalog.RunPostCompact(args[1:], config)
 	default:
 		hookUsage()
 		return fmt.Errorf("unknown hook subcommand %q", args[0])
 	}
-}
-
-func hookCatalogConfig(formatContext func(string, string, string, string) map[string]any) hookcatalog.Config {
-	return hookcatalog.Config{ResolveTarget: ResolveTarget, PrintJSON: printJSON, FormatContext: formatContext}
 }
 
 func hookUsage() {
