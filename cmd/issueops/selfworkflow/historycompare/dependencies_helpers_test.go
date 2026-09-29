@@ -1,7 +1,6 @@
 package historycompare
 
 import (
-	"issueops/cmd/issueops/selfworkflow/model"
 	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
@@ -11,9 +10,9 @@ type SelfAugmentHistoryResult = augmentcontract.SelfAugmentHistoryResult
 type SelfAugmentHistoryRetention = augmentcontract.SelfAugmentHistoryRetention
 type SelfAugmentHistoryRetentionOptions = augmentcontract.SelfAugmentHistoryRetentionOptions
 type SelfAugmentHistorySkipped = augmentcontract.SelfAugmentHistorySkipped
-type SelfAugmentSlowStep = model.SelfAugmentSlowStep
+type SelfAugmentSlowStep = augmentcontract.SelfAugmentSlowStep
 type SelfAugmentSlowStepRegression = augmentcontract.SelfAugmentSlowStepRegression
 type SelfAugmentStateSnapshot = augmentcontract.SelfAugmentStateSnapshot
 type SelfAugmentStepBudgetRegression = augmentcontract.SelfAugmentStepBudgetRegression
-type SelfAugmentStepDurationStat = model.SelfAugmentStepDurationStat
-type SelfAugmentSummary = model.SelfAugmentSummary
+type SelfAugmentStepDurationStat = augmentcontract.SelfAugmentStepDurationStat
+type SelfAugmentSummary = augmentcontract.SelfAugmentSummary

@@ -10,9 +10,9 @@ import (
 	"sort"
 	"strings"
 
-	"issueops/cmd/issueops/selfworkflow"
 	clicontract "issueops/internal/contract/cli"
 	mcpcontract "issueops/internal/contract/mcp"
+	verifydomain "issueops/internal/domain/selfverify"
 )
 
 type CompatibilityContract struct {
@@ -106,7 +106,7 @@ func BuildCompatibilityContract(commands []clicontract.Command, tools []map[stri
 		CLICommands: commands,
 		MCPTools:    toolNames,
 		ResponseFields: map[string][]string{
-			"self_verification_summary":       selfworkflow.BuildSelfVerificationContract().RequiredFields,
+			"self_verification_summary":       verifydomain.ContractValue().RequiredFields,
 			"harness_doctor":                  {"ok", "healthy", "kind", "repo_root", "state_dir", "lifecycle_state", "pipe_capacity_bytes", "checks", "issues"},
 			"harness_status":                  {"ok", "kind", "version", "repo", "inspect", "doctor", "daemon", "state", "workers", "self_verify", "warnings"},
 			"command_policy":                  {"ok", "allowed", "audit_log_id", "workspace_root", "cwd", "argv", "tier", "deny_reasons", "warnings"},

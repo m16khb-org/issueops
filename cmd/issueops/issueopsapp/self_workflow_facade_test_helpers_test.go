@@ -1,12 +1,17 @@
 package issueopsapp
 
 import (
-	statestore "issueops/internal/adapter/outbound/state"
-	augmentcontract "issueops/internal/contract/selfaugment"
-	domain "issueops/internal/domain/selfaugment"
 	"time"
 
-	"issueops/cmd/issueops/selfworkflow"
+	augmentation "issueops/internal/adapter/augmentation"
+	docs "issueops/internal/adapter/docs"
+	statestore "issueops/internal/adapter/outbound/state"
+	augmentapp "issueops/internal/application/selfaugment"
+	verifyapp "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	verifycontract "issueops/internal/contract/selfverify"
+	domain "issueops/internal/domain/selfaugment"
+	verifydomain "issueops/internal/domain/selfverify"
 )
 
 func applySelfAugmentHistoryRetention(result *SelfAugmentHistoryResult, options selfAugmentHistoryRetentionOptions) error {
@@ -32,51 +37,51 @@ func nonNilSlowStepSlice(items []SelfAugmentSlowStep) []SelfAugmentSlowStep {
 }
 
 func collectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) SelfAugmentRepoSignals {
-	return selfworkflow.CollectSelfAugmentRepoSignals(root, docsIndexed, skills, geniusText)
+	return (augmentation.Repository{ListDocs: docs.ListDocs}).CollectSignals(root, docsIndexed, skills, geniusText)
 }
 
 func selfAugmentCandidates(signals SelfAugmentRepoSignals) []SelfAugmentCandidate {
-	return selfworkflow.SelfAugmentCandidates(signals)
+	return augmentapp.Candidates(signals)
 }
 
 func scoreBool(ok bool) float64 {
-	return selfworkflow.ScoreBool(ok)
+	return domain.ScoreBool(ok)
 }
 
 func allSelfAugmentGoalsPassed(goals []SelfAugmentGoal) bool {
-	return selfworkflow.AllSelfAugmentGoalsPassed(goals)
+	return domain.AllGoalsPassed(goals)
 }
 
 func selectedCandidateID(candidate *SelfAugmentCandidate) string {
-	return selfworkflow.SelectedCandidateID(candidate)
+	return domain.SelectedCandidateID(candidate)
 }
 
 func docsContainTerm(root, term string) bool {
-	return selfworkflow.DocsContainTerm(root, term)
+	return (augmentation.Repository{ListDocs: docs.ListDocs}).DocsContainTerm(root, term)
 }
 
 func fileContainsTerm(root, relPath, term string) bool {
-	return selfworkflow.FileContainsTerm(root, relPath, term)
+	return augmentation.FileContainsTerm(root, relPath, term)
 }
 
 func dirContainsTerm(root, relDir, term string) bool {
-	return selfworkflow.DirContainsTerm(root, relDir, term)
+	return augmentation.DirContainsTerm(root, relDir, term)
 }
 
 func selectGeniusFormulas(text string) []string {
-	return selfworkflow.SelectGeniusFormulas(text)
+	return domain.SelectGeniusFormulas(text)
 }
 
 func selfAugmentResearchInfluences() []SelfAugmentInfluence {
-	return selfworkflow.SelfAugmentResearchInfluences()
+	return domain.ResearchInfluences()
 }
 
 func markSatisfiedSelfAugmentCandidate(candidate *SelfAugmentCandidate, signals SelfAugmentRepoSignals) {
-	selfworkflow.MarkSatisfiedSelfAugmentCandidate(candidate, signals)
+	domain.MarkSatisfiedCandidate(candidate, signals)
 }
 
 func selfAugmentCandidateScore(candidate SelfAugmentCandidate) float64 {
-	return selfworkflow.SelfAugmentCandidateScore(candidate)
+	return domain.CandidateScore(candidate)
 }
 
 func compareSlowestStepRegressions(baseline, candidate []SelfAugmentSlowStep, maxRegressionPct float64) []SelfAugmentSlowStepRegression {
@@ -92,72 +97,72 @@ func missingStrings(want, have []string) []string {
 }
 
 func stepDurationStatByLabel(stats []SelfAugmentStepDurationStat) map[string]SelfAugmentStepDurationStat {
-	return selfworkflow.StepDurationStatByLabel(stats)
+	return domain.StepDurationStatByLabel(stats)
 }
 
 func maxSlowStepDurationByLabel(steps []SelfAugmentSlowStep) map[string]int64 {
-	return selfworkflow.MaxSlowStepDurationByLabel(steps)
+	return domain.MaxSlowStepDurationByLabel(steps)
 }
 
 func buildStepDurationStats(durationsByLabel map[string][]int64) []SelfAugmentStepDurationStat {
-	return selfworkflow.BuildStepDurationStats(durationsByLabel)
+	return domain.BuildStepDurationStats(durationsByLabel)
 }
 
 func stepDurationStatsForCompare(summary SelfAugmentSummary) []SelfAugmentStepDurationStat {
-	return selfworkflow.StepDurationStatsForCompare(summary)
+	return domain.StepDurationStatsForCompare(summary)
 }
 
 func summarizeSelfAugment(result SelfAugmentResult) SelfAugmentSummary {
-	return selfworkflow.SummarizeSelfAugment(result)
+	return verifyapp.SummarizeSelfVerification(result, 95)
 }
 
 func summarizeSelfVerification(result SelfAugmentResult, targetScore float64) SelfAugmentSummary {
-	return selfworkflow.SummarizeSelfVerification(result, targetScore)
+	return verifyapp.SummarizeSelfVerification(result, targetScore)
 }
 
 func classifySelfVerificationFailure(result SelfAugmentResult, summary SelfAugmentSummary) (string, string, []SelfVerificationFailureCluster) {
-	return selfworkflow.ClassifySelfVerificationFailure(result, summary)
+	return verifyapp.ClassifySelfVerificationFailure(result, summary)
 }
 
 func selfVerificationFailureClusters(result SelfAugmentResult) []SelfVerificationFailureCluster {
-	return selfworkflow.SelfVerificationFailureClusters(result)
+	return verifyapp.SelfVerificationFailureClusters(result)
 }
 
 func selfVerifyRerunCommands(failedStep string, baseSeed int64, targetScore float64) []string {
-	return selfworkflow.SelfVerifyRerunCommands(failedStep, baseSeed, targetScore)
+	return verifydomain.SelfVerifyRerunCommands(failedStep, baseSeed, targetScore)
 }
 
 func selfVerifyStepRerunCommand(label string) (string, bool) {
-	return selfworkflow.SelfVerifyStepRerunCommand(label)
+	return verifydomain.SelfVerifyStepRerunCommand(label)
 }
 
 func formatScore(score float64) string {
-	return selfworkflow.FormatScore(score)
+	return verifydomain.FormatScore(score)
 }
 
 func scoreSelfVerificationGoals(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
-	return selfworkflow.ScoreSelfVerificationGoals(result, targetScore)
+	return verifyapp.MapGoalScores(result, targetScore)
 }
 
 func selfVerificationContract() SelfVerificationContract {
-	return selfworkflow.BuildSelfVerificationContract()
+	return verifydomain.ContractValue()
 }
 
 func selfVerificationCoverage(stepLabels []string) ([]SelfVerificationCoverage, []string) {
-	return selfworkflow.BuildSelfVerificationCoverage(stepLabels)
+	return verifydomain.CoverageForLabels(stepLabels)
 }
 
 func selfVerificationCoverageDefinitions() []selfVerificationCoverageDefinition {
-	return selfworkflow.SelfVerificationCoverageDefinitions()
+	return verifydomain.CoverageDefinitions()
 }
 
 type selfAugmentHistoryRetentionOptions = augmentcontract.SelfAugmentHistoryRetentionOptions
 
-type selfVerificationCoverageDefinition = selfworkflow.SelfVerificationCoverageDefinition
+type selfVerificationCoverageDefinition = verifycontract.SelfVerificationCoverageDefinition
 
 type SelfAugmentPromoteResult = augmentcontract.SelfAugmentPromoteResult
 
-type SelfAugmentIteration = selfworkflow.SelfAugmentIteration
+type SelfAugmentIteration = augmentcontract.SelfAugmentIteration
 
 type SelfAugmentCompareResult = augmentcontract.SelfAugmentCompareResult
 
@@ -169,35 +174,35 @@ type SelfAugmentHistoryResult = augmentcontract.SelfAugmentHistoryResult
 
 type SelfAugmentHistoryEntry = augmentcontract.SelfAugmentHistoryEntry
 
-type SelfAugmentInfluence = selfworkflow.SelfAugmentInfluence
+type SelfAugmentInfluence = augmentcontract.SelfAugmentInfluence
 
-type SelfAugmentGoal = selfworkflow.SelfAugmentGoal
+type SelfAugmentGoal = augmentcontract.SelfAugmentGoal
 
-type SelfAugmentCandidate = selfworkflow.SelfAugmentCandidate
+type SelfAugmentCandidate = augmentcontract.SelfAugmentCandidate
 
-type SelfAugmentRepoSignals = selfworkflow.SelfAugmentRepoSignals
+type SelfAugmentRepoSignals = augmentcontract.SelfAugmentRepoSignals
 
 type SelfAugmentStateSnapshot = augmentcontract.SelfAugmentStateSnapshot
 
-type SelfAugmentSummary = selfworkflow.SelfAugmentSummary
+type SelfAugmentSummary = augmentcontract.SelfAugmentSummary
 
-type SelfVerifyLLMEvalResult = selfworkflow.SelfVerifyLLMEvalResult
+type SelfVerifyLLMEvalResult = augmentcontract.SelfVerifyLLMEvalResult
 
-type SelfVerificationContract = selfworkflow.SelfVerificationContract
+type SelfVerificationContract = verifycontract.SelfVerificationContract
 
-type SelfVerificationGoalScore = selfworkflow.SelfVerificationGoalScore
+type SelfVerificationGoalScore = verifycontract.SelfVerificationGoalScore
 
-type SelfVerificationCoverage = selfworkflow.SelfVerificationCoverage
+type SelfVerificationCoverage = verifycontract.SelfVerificationCoverage
 
-type SelfVerificationFailureCluster = selfworkflow.SelfVerificationFailureCluster
+type SelfVerificationFailureCluster = verifycontract.SelfVerificationFailureCluster
 
-type SelfAugmentSlowStep = selfworkflow.SelfAugmentSlowStep
+type SelfAugmentSlowStep = augmentcontract.SelfAugmentSlowStep
 
-type SelfAugmentStepDurationStat = selfworkflow.SelfAugmentStepDurationStat
+type SelfAugmentStepDurationStat = augmentcontract.SelfAugmentStepDurationStat
 
-const selfVerificationSummaryKind = selfworkflow.SelfVerificationSummaryKind
+const selfVerificationSummaryKind = domain.SelfVerificationSummaryKind
 
-type SelfAugmentPlanRequest = selfworkflow.SelfAugmentPlanRequest
-type SelfAugmentPlanResult = selfworkflow.SelfAugmentPlanResult
+type SelfAugmentPlanRequest = augmentcontract.SelfAugmentPlanRequest
+type SelfAugmentPlanResult = augmentcontract.SelfAugmentPlanResult
 
-type SelfAugmentResult = selfworkflow.SelfAugmentResult
+type SelfAugmentResult = augmentcontract.SelfAugmentResult

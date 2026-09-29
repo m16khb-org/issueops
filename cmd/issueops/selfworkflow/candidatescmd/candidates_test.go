@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	augmentcontract "issueops/internal/contract/selfaugment"
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	verifycontract "issueops/internal/contract/selfverify"
 	"issueops/internal/testsupport"
 )
@@ -78,7 +77,7 @@ func selfVerifyCandidatesCLIResultForTest() augmentcontract.SelfVerificationCand
 		OK:                    true,
 		Kind:                  augmentcontract.SelfVerificationCandidateExportKind,
 		LoopKind:              "self_verification",
-		KoreanName:            model.SelfVerificationKoreanName,
+		KoreanName:            augmentcontract.SelfVerificationKoreanName,
 		CandidateCount:        2,
 		OpenCandidateIDs:      []string{selected.ID},
 		SatisfiedCandidateIDs: []string{satisfied.ID},

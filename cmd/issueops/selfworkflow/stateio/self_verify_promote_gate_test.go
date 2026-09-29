@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func writePromoteGateSnapshotForTest(t *testing.T, dir, key string, ok, terminationEligible bool) {
@@ -16,7 +16,7 @@ func writePromoteGateSnapshotForTest(t *testing.T, dir, key string, ok, terminat
 		OK:            ok,
 		Iterations:    1,
 		GeneratedAt:   "2000-01-01T00:00:00Z",
-		Summary:       model.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 2, PassedSteps: 2, TerminationEligible: terminationEligible},
+		Summary:       augmentcontract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 2, PassedSteps: 2, TerminationEligible: terminationEligible},
 	}
 	if err := WriteSelfAugmentSnapshotRecord(dir, key, snapshot); err != nil {
 		t.Fatal(err)

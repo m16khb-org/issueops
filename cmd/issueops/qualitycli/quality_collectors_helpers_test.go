@@ -4,28 +4,29 @@ import (
 	"fmt"
 	"strings"
 
-	"issueops/cmd/issueops/selfworkflow"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	quality "issueops/internal/domain/quality"
 	"issueops/internal/domain/qualitycatalog"
+	augmentdomain "issueops/internal/domain/selfaugment"
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
 func collectSelfAugmentOpenCount(root string) (int, error) {
-	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(selfworkflow.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
-	return len(selfworkflow.SelfAugmentCandidateIDsByStatus(plan.Candidates, selfworkflow.SelfAugmentCandidateStatusOpen)), nil
+	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
+	return len(augmentdomain.CandidateIDsByStatus(plan.Candidates, augmentcontract.CandidateStatusOpen)), nil
 }
 
 func collectSelfVerifyOpenCount(root string) (int, error) {
 	result := planningForTest(root, statestore.StateDir(), hostDeps.Version).ExportCandidates()
-	return len(verifydomain.CandidateIDsByStatus(result.Candidates, selfworkflow.SelfAugmentCandidateStatusOpen)), nil
+	return len(verifydomain.CandidateIDsByStatus(result.Candidates, augmentcontract.CandidateStatusOpen)), nil
 }
 
 func collectQualityCandidates(root string) []QualityCandidate {
 	candidates := qualitycatalog.Candidates()
 
-	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(selfworkflow.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
-	statusByID := map[string]selfworkflow.SelfAugmentCandidate{}
+	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
+	statusByID := map[string]augmentcontract.SelfAugmentCandidate{}
 	for _, candidate := range plan.Candidates {
 		statusByID[candidate.ID] = candidate
 	}

@@ -6,19 +6,20 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/contract/failurecause"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
 func TestWriteSelfAugmentSnapshotRecordIsLockedAndAtomic(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	summary := model.SelfAugmentSummary{TotalRuns: 2, TotalSteps: 5, PassedSteps: 5}
+	summary := augmentcontract.SelfAugmentSummary{TotalRuns: 2, TotalSteps: 5, PassedSteps: 5}
 
 	if err := WriteSelfAugmentSnapshotRecord(dir, "snap", SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		Summary:       summary,
 	}); err != nil {
 		t.Fatalf("write: %v", err)
@@ -56,7 +57,7 @@ func TestWriteSelfAugmentSnapshotRecordIsLockedAndAtomic(t *testing.T) {
 func TestReadSelfAugmentStateSnapshotRejectsBadSchemaAndRetiredKinds(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	summary := model.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1}
+	summary := augmentcontract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1}
 
 	if err := WriteSelfAugmentSnapshotRecord(dir, "bad-kind", SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
@@ -71,7 +72,7 @@ func TestReadSelfAugmentStateSnapshotRejectsBadSchemaAndRetiredKinds(t *testing.
 
 	if err := WriteSelfAugmentSnapshotRecord(dir, "bad-schema", SelfAugmentStateSnapshot{
 		SchemaVersion: 2,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		Summary:       summary,
 	}); err != nil {
 		t.Fatalf("write bad schema: %v", err)
@@ -140,8 +141,8 @@ func TestReadSelfAugmentStateSnapshotRoundTripsFailureCause(t *testing.T) {
 	}}
 	want := SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
-		Summary: model.SelfAugmentSummary{
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
+		Summary: augmentcontract.SelfAugmentSummary{
 			TotalSteps:           1,
 			FailedSteps:          1,
 			FailureCause:         failurecause.Transport,

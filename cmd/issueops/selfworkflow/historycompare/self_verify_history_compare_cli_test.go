@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentdomain "issueops/internal/domain/selfaugment"
 	"issueops/internal/testsupport"
 )
 
@@ -105,7 +105,7 @@ func writeSelfVerifyCLISnapshotForTest(t *testing.T, dir, key string, elapsedMS 
 	t.Helper()
 	if err := writeSnapshotForTest(dir, key, SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            ok,
 		Iterations:    10,
 		BaseSeed:      900,

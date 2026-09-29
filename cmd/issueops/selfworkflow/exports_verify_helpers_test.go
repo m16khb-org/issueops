@@ -1,7 +1,8 @@
 package selfworkflow
 
 import (
-	"issueops/cmd/issueops/selfworkflow/loopresult"
+	verifyapp "issueops/internal/application/selfverify"
+	verifycontract "issueops/internal/contract/selfverify"
 )
 
 func BuildSelfVerificationContract() SelfVerificationContract {
@@ -9,15 +10,15 @@ func BuildSelfVerificationContract() SelfVerificationContract {
 }
 
 func NewSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) SelfAugmentResult {
-	return loopresult.New(iterations, baseSeed, targetScore, IssueOpsRoot())
+	return verifyapp.NewLoopResult(iterations, baseSeed, targetScore, IssueOpsRoot())
 }
 
 func EmitSelfVerifyLoopStart(progress *SelfVerifyProgressReporter, loopKind string, iterations int, seed int64) {
-	loopresult.EmitStart(progress, loopKind, iterations, seed)
+	progress.Emit(verifycontract.ProgressEvent{Event: "loop_start", LoopKind: loopKind, Iterations: iterations, Seed: seed})
 }
 
 func EmitSelfVerifyLoopEnd(progress *SelfVerifyProgressReporter, loopKind string, iterations int, seed int64, ok bool, errorText string) {
-	loopresult.EmitEnd(progress, loopKind, iterations, seed, ok, errorText)
+	progress.Emit(verifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: boolPtr(ok), Error: errorText})
 }
 
 func BuildSelfVerificationCoverage(stepLabels []string) ([]SelfVerificationCoverage, []string) {

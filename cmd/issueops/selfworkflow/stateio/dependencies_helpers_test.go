@@ -1,22 +1,21 @@
 package stateio
 
 import (
-	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
-	"issueops/cmd/issueops/selfworkflow/model"
 	augmentcontract "issueops/internal/contract/selfaugment"
+	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
 const (
-	selfAugmentCandidateStatusOpen      = augmentcatalog.SelfAugmentCandidateStatusOpen
-	selfAugmentCandidateStatusSatisfied = augmentcatalog.SelfAugmentCandidateStatusSatisfied
-	selfAugmentationPlanKind            = model.SelfAugmentationPlanKind
-	selfVerificationSummaryKind         = model.SelfVerificationSummaryKind
+	selfAugmentCandidateStatusOpen      = augmentcontract.CandidateStatusOpen
+	selfAugmentCandidateStatusSatisfied = augmentcontract.CandidateStatusSatisfied
+	selfAugmentationPlanKind            = augmentcontract.SelfAugmentationPlanKind
+	selfVerificationSummaryKind         = augmentdomain.SelfVerificationSummaryKind
 )
 
-type SelfAugmentCandidate = model.SelfAugmentCandidate
-type SelfAugmentPlanResult = model.SelfAugmentPlanResult
+type SelfAugmentCandidate = augmentcontract.SelfAugmentCandidate
+type SelfAugmentPlanResult = augmentcontract.SelfAugmentPlanResult
 type SelfAugmentPlanStateSnapshot = augmentcontract.SelfAugmentPlanStateSnapshot
 type SelfAugmentPromoteResult = augmentcontract.SelfAugmentPromoteResult
-type SelfAugmentResult = model.SelfAugmentResult
+type SelfAugmentResult = augmentcontract.SelfAugmentResult
 type SelfAugmentStateCheckpoint = augmentcontract.SelfAugmentStateCheckpoint
 type SelfAugmentStateSnapshot = augmentcontract.SelfAugmentStateSnapshot

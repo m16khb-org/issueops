@@ -10,7 +10,7 @@ import (
 
 	"issueops/cmd/issueops/commandstep"
 	"issueops/cmd/issueops/selfworkflow/progress"
-	"issueops/cmd/issueops/selfworkflow/steps"
+	verifyapp "issueops/internal/application/selfverify"
 )
 
 func TestSelfVerifyRunsAllStepsSuccessfully(t *testing.T) {
@@ -79,7 +79,7 @@ func decodeProgressEventsForLoopTest(t *testing.T, out string) []progress.SelfVe
 	return events
 }
 
-func fakeVerifyLoopStepDeps(failLabel, failError string) steps.SelfVerifyStepDeps {
+func fakeVerifyLoopStepDeps(failLabel, failError string) verifyapp.SelfVerifyStepDeps {
 	return fakeVerifyLoopStepDepsOK(func(label string) commandstep.StepResult {
 		if label == failLabel {
 			return commandstep.StepResult{Label: label, OK: false, Error: failError}
@@ -90,7 +90,7 @@ func fakeVerifyLoopStepDeps(failLabel, failError string) steps.SelfVerifyStepDep
 
 // fakeVerifyLoopStepDepsFailing fails every label in failLabels (the rest pass),
 // for exercising collect-all-steps across multiple gates in one iteration.
-func fakeVerifyLoopStepDepsFailing(failLabels ...string) steps.SelfVerifyStepDeps {
+func fakeVerifyLoopStepDepsFailing(failLabels ...string) verifyapp.SelfVerifyStepDeps {
 	fail := map[string]bool{}
 	for _, label := range failLabels {
 		fail[label] = true
@@ -103,16 +103,16 @@ func fakeVerifyLoopStepDepsFailing(failLabels ...string) steps.SelfVerifyStepDep
 	})
 }
 
-func fakeVerifyLoopStepDepsOK(ok func(string) commandstep.StepResult) steps.SelfVerifyStepDeps {
-	return steps.SelfVerifyStepDeps{
+func fakeVerifyLoopStepDepsOK(ok func(string) commandstep.StepResult) verifyapp.SelfVerifyStepDeps {
+	return verifyapp.SelfVerifyStepDeps{
 		IssueOpsRoot: func() string { return "." },
 		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) commandstep.StepResult {
 			return ok(label)
 		},
 		ValidateHarnessInvariants: func(string) commandstep.StepResult { return ok("harness invariants") },
 		ValidateGoFormat:          func(string) commandstep.StepResult { return ok("gofmt") },
-		ValidateRiskQATier: func(string) steps.RiskQAEvidence {
-			return steps.RiskQAEvidence{Step: ok("risk QA tier")}
+		ValidateRiskQATier: func(string) verifyapp.RiskQAEvidence {
+			return verifyapp.RiskQAEvidence{Step: ok("risk QA tier")}
 		},
 		ValidateInspect: func(string, string) commandstep.StepResult {
 			return ok("inspect smoke")

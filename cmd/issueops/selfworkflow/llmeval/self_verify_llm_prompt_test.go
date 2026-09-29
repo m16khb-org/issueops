@@ -5,16 +5,16 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestSelfVerifyLLMEvalPromptRemainsJSONWhenEvidenceIsLarge(t *testing.T) {
-	result := model.SelfAugmentResult{
+	result := augmentcontract.SelfAugmentResult{
 		OK:          true,
 		LoopKind:    "self_verification",
 		Iterations:  10,
 		TargetScore: 95,
-		Summary: model.SelfAugmentSummary{
+		Summary: augmentcontract.SelfAugmentSummary{
 			CoverageGaps: []string{strings.Repeat("large-gap-", 6000)},
 		},
 	}
@@ -35,7 +35,7 @@ func TestSelfVerifyLLMEvalPromptRemainsJSONWhenEvidenceIsLarge(t *testing.T) {
 }
 
 func TestSelfVerifyLLMEvalPromptForcesPlainJSONOutput(t *testing.T) {
-	prompt, _, err := BuildSelfVerifyLLMEvalPrompt(model.SelfAugmentResult{
+	prompt, _, err := BuildSelfVerifyLLMEvalPrompt(augmentcontract.SelfAugmentResult{
 		OK:                  true,
 		LoopKind:            "self_verification",
 		Iterations:          10,

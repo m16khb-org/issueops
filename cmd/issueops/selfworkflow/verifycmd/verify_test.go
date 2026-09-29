@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	augmentcontract "issueops/internal/contract/selfaugment"
 	"strings"
 	"testing"
 
 	"issueops/cmd/issueops/selfworkflow/llmeval"
-	"issueops/cmd/issueops/selfworkflow/model"
 	verifyloop "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"issueops/internal/testsupport"
 )
 
@@ -20,7 +19,7 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 	var saveCalled bool
 	deps := Deps{
 		LookupEnv: func(string) (string, bool) { return "", false },
-		Verify: func(request verifyloop.LoopRequest) (model.SelfAugmentResult, error) {
+		Verify: func(request verifyloop.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
 			verifyCalled = true
 			if request.BaseSeed != 42 ||
 				request.TargetScore != 95 ||
@@ -28,26 +27,26 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 				request.Reporter != nil {
 				t.Fatalf("unexpected verify request: %+v", request)
 			}
-			return model.SelfAugmentResult{
+			return augmentcontract.SelfAugmentResult{
 				OK:                  true,
 				LoopKind:            "self_verification",
-				KoreanName:          model.SelfVerificationKoreanName,
+				KoreanName:          augmentcontract.SelfVerificationKoreanName,
 				Iterations:          1,
 				BaseSeed:            request.BaseSeed,
 				TargetScore:         request.TargetScore,
 				TerminationEligible: true,
-				Summary:             model.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true},
+				Summary:             augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true},
 			}, nil
 		},
-		ApplyLLMEval: func(result model.SelfAugmentResult, opts llmeval.SelfVerifyLLMEvalOptions) (model.SelfAugmentResult, error) {
+		ApplyLLMEval: func(result augmentcontract.SelfAugmentResult, opts llmeval.SelfVerifyLLMEvalOptions) (augmentcontract.SelfAugmentResult, error) {
 			evalCalled = true
 			if !opts.Enabled || opts.Mode != "gate" || opts.TargetScore != 95 {
 				t.Fatalf("unexpected LLM eval options: %+v", opts)
 			}
-			result.LLMEval = &model.SelfVerifyLLMEvalResult{OK: true, Mode: opts.Mode, Score: 99, Summary: "pass"}
+			result.LLMEval = &augmentcontract.SelfVerifyLLMEvalResult{OK: true, Mode: opts.Mode, Score: 99, Summary: "pass"}
 			return result, nil
 		},
-		SaveSummary: func(result *model.SelfAugmentResult, key string) error {
+		SaveSummary: func(result *augmentcontract.SelfAugmentResult, key string) error {
 			saveCalled = true
 			if key != "verify-latest" || result.LLMEval == nil {
 				t.Fatalf("unexpected saved result key=%q result=%+v", key, result)
@@ -74,7 +73,7 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 	if !verifyCalled || !evalCalled || !saveCalled {
 		t.Fatalf("expected verify/eval/save calls, got verify=%v eval=%v save=%v", verifyCalled, evalCalled, saveCalled)
 	}
-	var result model.SelfAugmentResult
+	var result augmentcontract.SelfAugmentResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode self-verify JSON: %v\n%s", err, out)
 	}
@@ -88,10 +87,10 @@ func TestRunReturnsSaveErrorAfterSuccessfulVerification(t *testing.T) {
 	out, err := captureStdoutAllowError(t, func() error {
 		return Run([]string{"--save-state", "--state-key", "bad-key", "--json"}, Deps{
 			LookupEnv: func(string) (string, bool) { return "", false },
-			Verify: func(verifyloop.LoopRequest) (model.SelfAugmentResult, error) {
-				return model.SelfAugmentResult{OK: true, LoopKind: "self_verification", Summary: model.SelfAugmentSummary{MinimumGoalScore: 100}}, nil
+			Verify: func(verifyloop.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+				return augmentcontract.SelfAugmentResult{OK: true, LoopKind: "self_verification", Summary: augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100}}, nil
 			},
-			SaveSummary: func(result *model.SelfAugmentResult, key string) error {
+			SaveSummary: func(result *augmentcontract.SelfAugmentResult, key string) error {
 				result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: false, Key: key, Error: saveErr.Error()}
 				return saveErr
 			},

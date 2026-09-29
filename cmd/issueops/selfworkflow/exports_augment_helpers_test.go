@@ -1,12 +1,14 @@
 package selfworkflow
 
 import (
-	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
+	augmentation "issueops/internal/adapter/augmentation"
+	docs "issueops/internal/adapter/docs"
+	augmentapp "issueops/internal/application/selfaugment"
 	domain "issueops/internal/domain/selfaugment"
 )
 
 func allSelfAugmentGoalsPassed(goals []SelfAugmentGoal) bool {
-	return augmentcatalog.AllSelfAugmentGoalsPassed(goals)
+	return domain.AllGoalsPassed(goals)
 }
 
 func AllSelfAugmentGoalsPassed(goals []SelfAugmentGoal) bool {
@@ -26,7 +28,7 @@ func CollectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string
 }
 
 func collectSelfAugmentRepoSignals(root string, docsIndexed int, skills []string, geniusText string) SelfAugmentRepoSignals {
-	return augmentcatalog.CollectSelfAugmentRepoSignals(root, docsIndexed, skills, geniusText)
+	return (augmentation.Repository{ListDocs: docs.ListDocs}).CollectSignals(root, docsIndexed, skills, geniusText)
 }
 
 func DocsContainTerm(root, term string) bool {
@@ -34,7 +36,7 @@ func DocsContainTerm(root, term string) bool {
 }
 
 func docsContainTerm(root, term string) bool {
-	return augmentcatalog.DocsContainTerm(root, term)
+	return (augmentation.Repository{ListDocs: docs.ListDocs}).DocsContainTerm(root, term)
 }
 
 func DirContainsTerm(root, relDir, term string) bool {
@@ -42,7 +44,7 @@ func DirContainsTerm(root, relDir, term string) bool {
 }
 
 func dirContainsTerm(root, relDir, term string) bool {
-	return augmentcatalog.DirContainsTerm(root, relDir, term)
+	return augmentation.DirContainsTerm(root, relDir, term)
 }
 
 func FileContainsTerm(root, relPath, term string) bool {
@@ -50,7 +52,7 @@ func FileContainsTerm(root, relPath, term string) bool {
 }
 
 func fileContainsTerm(root, relPath, term string) bool {
-	return augmentcatalog.FileContainsTerm(root, relPath, term)
+	return augmentation.FileContainsTerm(root, relPath, term)
 }
 
 func FormatScore(score float64) string {
@@ -62,7 +64,7 @@ func MarkSatisfiedSelfAugmentCandidate(candidate *SelfAugmentCandidate, signals 
 }
 
 func markSatisfiedSelfAugmentCandidate(candidate *SelfAugmentCandidate, signals SelfAugmentRepoSignals) {
-	augmentcatalog.MarkSatisfiedSelfAugmentCandidate(candidate, signals)
+	domain.MarkSatisfiedCandidate(candidate, signals)
 }
 
 func MaxSlowStepDurationByLabel(steps []SelfAugmentSlowStep) map[string]int64 {
@@ -74,7 +76,7 @@ func ScoreBool(ok bool) float64 {
 }
 
 func scoreBool(ok bool) float64 {
-	return augmentcatalog.ScoreBool(ok)
+	return domain.ScoreBool(ok)
 }
 
 func ScoreSelfVerificationGoals(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
@@ -86,7 +88,7 @@ func SelectGeniusFormulas(text string) []string {
 }
 
 func selectGeniusFormulas(text string) []string {
-	return augmentcatalog.SelectGeniusFormulas(text)
+	return domain.SelectGeniusFormulas(text)
 }
 
 func SelectedCandidateID(candidate *SelfAugmentCandidate) string {
@@ -94,7 +96,7 @@ func SelectedCandidateID(candidate *SelfAugmentCandidate) string {
 }
 
 func selectedCandidateID(candidate *SelfAugmentCandidate) string {
-	return augmentcatalog.SelectedCandidateID(candidate)
+	return domain.SelectedCandidateID(candidate)
 }
 
 func SelfAugmentCandidates(signals SelfAugmentRepoSignals) []SelfAugmentCandidate {
@@ -102,7 +104,7 @@ func SelfAugmentCandidates(signals SelfAugmentRepoSignals) []SelfAugmentCandidat
 }
 
 func selfAugmentCandidates(signals SelfAugmentRepoSignals) []SelfAugmentCandidate {
-	return augmentcatalog.SelfAugmentCandidates(signals)
+	return augmentapp.Candidates(signals)
 }
 
 func SelfAugmentCandidateScore(candidate SelfAugmentCandidate) float64 {
@@ -110,7 +112,7 @@ func SelfAugmentCandidateScore(candidate SelfAugmentCandidate) float64 {
 }
 
 func selfAugmentCandidateScore(candidate SelfAugmentCandidate) float64 {
-	return augmentcatalog.SelfAugmentCandidateScore(candidate)
+	return domain.CandidateScore(candidate)
 }
 
 func SelfAugmentCandidateIDsByStatus(candidates []SelfAugmentCandidate, status string) []string {
@@ -122,7 +124,7 @@ func SelfAugmentResearchInfluences() []SelfAugmentInfluence {
 }
 
 func selfAugmentResearchInfluences() []SelfAugmentInfluence {
-	return augmentcatalog.SelfAugmentResearchInfluences()
+	return domain.ResearchInfluences()
 }
 
 func StepDurationStatByLabel(stats []SelfAugmentStepDurationStat) map[string]SelfAugmentStepDurationStat {

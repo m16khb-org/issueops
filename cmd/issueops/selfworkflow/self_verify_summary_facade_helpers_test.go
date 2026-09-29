@@ -1,55 +1,59 @@
 package selfworkflow
 
-import "issueops/cmd/issueops/selfworkflow/summary"
+import (
+	verifyapp "issueops/internal/application/selfverify"
+	augmentdomain "issueops/internal/domain/selfaugment"
+	verifydomain "issueops/internal/domain/selfverify"
+)
 
 func summarizeSelfAugment(result SelfAugmentResult) SelfAugmentSummary {
-	return summary.SummarizeSelfAugment(result)
+	return verifyapp.SummarizeSelfVerification(result, 95)
 }
 
 func summarizeSelfVerification(result SelfAugmentResult, targetScore float64) SelfAugmentSummary {
-	return summary.SummarizeSelfVerification(result, targetScore)
+	return verifyapp.SummarizeSelfVerification(result, targetScore)
 }
 
 func selfVerificationContract() SelfVerificationContract {
-	return summary.SelfVerificationContractValue()
+	return verifydomain.ContractValue()
 }
 
 func selfVerificationGoalDefinitions() []selfVerificationGoalDefinition {
-	return summary.SelfVerificationGoalDefinitions()
+	return verifydomain.GoalDefinitions()
 }
 
 func selfVerificationCoverageDefinitions() []selfVerificationCoverageDefinition {
-	return summary.SelfVerificationCoverageDefinitions()
+	return verifydomain.CoverageDefinitions()
 }
 
 func selfVerificationCoverage(stepLabels []string) ([]SelfVerificationCoverage, []string) {
-	return summary.SelfVerificationCoverageForLabels(stepLabels)
+	return verifydomain.CoverageForLabels(stepLabels)
 }
 
 func scoreSelfVerificationGoals(result SelfAugmentResult, targetScore float64) []SelfVerificationGoalScore {
-	return summary.MapGoalScores(result, targetScore)
+	return verifyapp.MapGoalScores(result, targetScore)
 }
 
 func classifySelfVerificationFailure(result SelfAugmentResult, summaryValue SelfAugmentSummary) (string, string, []SelfVerificationFailureCluster) {
-	return summary.ClassifySelfVerificationFailure(result, summaryValue)
+	return verifyapp.ClassifySelfVerificationFailure(result, summaryValue)
 }
 
 func selfVerificationFailureClusters(result SelfAugmentResult) []SelfVerificationFailureCluster {
-	return summary.SelfVerificationFailureClusters(result)
+	return verifyapp.SelfVerificationFailureClusters(result)
 }
 
 func stepDurationStatByLabel(stats []SelfAugmentStepDurationStat) map[string]SelfAugmentStepDurationStat {
-	return summary.StepDurationStatByLabel(stats)
+	return augmentdomain.StepDurationStatByLabel(stats)
 }
 
 func maxSlowStepDurationByLabel(steps []SelfAugmentSlowStep) map[string]int64 {
-	return summary.MaxSlowStepDurationByLabel(steps)
+	return augmentdomain.MaxSlowStepDurationByLabel(steps)
 }
 
 func buildStepDurationStats(durationsByLabel map[string][]int64) []SelfAugmentStepDurationStat {
-	return summary.BuildStepDurationStats(durationsByLabel)
+	return augmentdomain.BuildStepDurationStats(durationsByLabel)
 }
 
 func stepDurationStatsForCompare(summaryValue SelfAugmentSummary) []SelfAugmentStepDurationStat {
-	return summary.StepDurationStatsForCompare(summaryValue)
+	return augmentdomain.StepDurationStatsForCompare(summaryValue)
 }

@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"issueops/internal/testsupport"
 )
 
@@ -24,7 +24,7 @@ func TestRunSelfAugmentLessonSavesStateAndUsesTextDefaults(t *testing.T) {
 	if !strings.Contains(out, "self-augment lesson saved: candidate=candidate-one key=lesson-one") {
 		t.Fatalf("unexpected lesson text output:\n%s", out)
 	}
-	assertStateRecordContains(t, "lesson-one", model.SelfAugmentationLessonKind)
+	assertStateRecordContains(t, "lesson-one", augmentcontract.SelfAugmentationLessonKind)
 	assertStateRecordContains(t, "lesson-one", "Keep coverage slices isolated")
 }
 
@@ -45,7 +45,7 @@ func assertStateRecordContains(t *testing.T, key string, want string) {
 }
 
 func RunSelfAugmentLesson(args []string, deps lessonTestDeps) error {
-	return Run(args, Deps{PrintJSON: deps.PrintJSON, Save: func(req model.SelfAugmentLessonRequest) (model.SelfAugmentLessonResult, error) {
+	return Run(args, Deps{PrintJSON: deps.PrintJSON, Save: func(req augmentcontract.SelfAugmentLessonRequest) (augmentcontract.SelfAugmentLessonResult, error) {
 		return SaveSelfAugmentLesson(req, deps)
 	}})
 }

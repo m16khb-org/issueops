@@ -6,13 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/cmd/issueops/selfworkflow/progress"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestNewBuildsSelfVerificationResultContract(t *testing.T) {
 	got := New(10, 100, 95, "/repo")
-	if got.LoopKind != "self_verification" || got.KoreanName != model.SelfVerificationKoreanName {
+	if got.LoopKind != "self_verification" || got.KoreanName != augmentcontract.SelfVerificationKoreanName {
 		t.Fatalf("unexpected loop identity: %#v", got)
 	}
 	if got.Iterations != 10 || got.BaseSeed != 100 || got.TargetScore != 95 || got.IssueOpsRoot != "/repo" {

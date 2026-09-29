@@ -3,14 +3,14 @@ package augmentlesson
 import (
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestSaveSelfAugmentLessonSameSecondKeysDoNotCollide(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	deps := lessonTestDeps{IssueOpsRoot: func() string { return t.TempDir() }}
 
-	req := model.SelfAugmentLessonRequest{
+	req := augmentcontract.SelfAugmentLessonRequest{
 		CandidateID: "collision-cand",
 		Lesson:      "attempt failed",
 		NextAction:  "retry",

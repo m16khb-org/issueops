@@ -1,12 +1,12 @@
 package loopresult
 
 import (
-	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/cmd/issueops/selfworkflow/progress"
 	application "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
-func New(iterations int, baseSeed int64, targetScore float64, root string) model.SelfAugmentResult {
+func New(iterations int, baseSeed int64, targetScore float64, root string) augmentcontract.SelfAugmentResult {
 	return application.NewLoopResult(iterations, baseSeed, targetScore, root)
 }
 

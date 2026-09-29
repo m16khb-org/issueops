@@ -4,14 +4,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestPromoteSelfAugmentBaseline(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	summary := model.SelfAugmentSummary{TotalRuns: 10, TotalSteps: 20, PassedSteps: 20, TerminationEligible: true, StepLabels: []string{"go test"}}
+	summary := augmentcontract.SelfAugmentSummary{TotalRuns: 10, TotalSteps: 20, PassedSteps: 20, TerminationEligible: true, StepLabels: []string{"go test"}}
 	source := SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",

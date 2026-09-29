@@ -1,9 +1,6 @@
 package qagate
 
 import (
-	augmentcatalogcli "issueops/cmd/issueops/selfworkflow/augmentcatalog"
-
-	"issueops/internal/adapter/augmentation"
 	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/inspect"
 )
@@ -14,10 +11,5 @@ import (
 func init() {
 	ListDocs = docs.ListDocs
 	inspect.ListDocs = docs.ListDocs
-	repo := augmentation.Repository{ListDocs: docs.ListDocs}
-	augmentcatalogcli.CollectSelfAugmentRepoSignals = repo.CollectSignals
-	augmentcatalogcli.DocsContainTerm = repo.DocsContainTerm
-	augmentcatalogcli.FileContainsTerm = augmentation.FileContainsTerm
-	augmentcatalogcli.DirContainsTerm = augmentation.DirContainsTerm
 
 }

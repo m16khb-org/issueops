@@ -5,14 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestSaveSelfAugmentLesson(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{
+	result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{
 		CandidateID: "reflexion-state-memory",
 		Lesson:      "실패 교훈은 다음 cycle에서 재사용 가능해야 한다.",
 		NextAction:  "다음 자가 증강 후보 선택 전에 저장된 lesson을 확인한다.",
@@ -23,18 +23,18 @@ func TestSaveSelfAugmentLesson(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveSelfAugmentLesson: %v", err)
 	}
-	if !result.OK || result.Kind != model.SelfAugmentationLessonKind || result.StateCheckpoint == nil || !result.StateCheckpoint.OK {
+	if !result.OK || result.Kind != augmentcontract.SelfAugmentationLessonKind || result.StateCheckpoint == nil || !result.StateCheckpoint.OK {
 		t.Fatalf("unexpected lesson result: %+v", result)
 	}
 	state, err := statestore.StateRead("self-augment-lesson-test")
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}
-	var snapshot model.SelfAugmentLessonStateSnapshot
+	var snapshot augmentcontract.SelfAugmentLessonStateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("unmarshal saved lesson snapshot: %v", err)
 	}
-	if snapshot.Kind != model.SelfAugmentationLessonKind || snapshot.CandidateID != "reflexion-state-memory" || snapshot.NextAction == "" {
+	if snapshot.Kind != augmentcontract.SelfAugmentationLessonKind || snapshot.CandidateID != "reflexion-state-memory" || snapshot.NextAction == "" {
 		t.Fatalf("unexpected lesson snapshot: %+v", snapshot)
 	}
 }
@@ -53,7 +53,7 @@ func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 		t.Fatalf("rewrite old lesson: %v", err)
 	}
 
-	if _, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{
+	if _, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{
 		CandidateID: "candidate-one",
 		Lesson:      "old lessons should not grow forever",
 		NextAction:  "keep only recent lesson state",
@@ -70,10 +70,10 @@ func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 func TestSaveSelfAugmentLessonRejectsMissingRequiredFields(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 
-	if result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{CandidateID: "candidate-one"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "lesson is required") || result.OK {
+	if result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{CandidateID: "candidate-one"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "lesson is required") || result.OK {
 		t.Fatalf("expected missing lesson error, result=%#v err=%v", result, err)
 	}
-	if result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{CandidateID: "candidate-one", Lesson: "learned"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "next-action is required") || result.OK {
+	if result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{CandidateID: "candidate-one", Lesson: "learned"}, lessonTestDeps{}); err == nil || !strings.Contains(err.Error(), "next-action is required") || result.OK {
 		t.Fatalf("expected missing next-action error, result=%#v err=%v", result, err)
 	}
 }
@@ -103,8 +103,8 @@ func TestStateKeySlugNormalizesUnsafeText(t *testing.T) {
 
 func TestSaveSelfAugmentLessonAcceptsFreeSlugWhenCurriculumIsExhausted(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	deps := lessonTestDeps{SelectCandidate: func() *model.SelfAugmentCandidate { return nil }}
-	result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{
+	deps := lessonTestDeps{SelectCandidate: func() *augmentcontract.SelfAugmentCandidate { return nil }}
+	result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{
 		CandidateID: "issueops-whoami-record-flags",
 		Lesson:      "whoami must advertise both actor flag vectors",
 		NextAction:  "rerun lifecycle dogfood",
@@ -119,9 +119,9 @@ func TestSaveSelfAugmentLessonAcceptsFreeSlugWhenCurriculumIsExhausted(t *testin
 
 func TestSaveSelfAugmentLessonRejectsInvalidFreeSlug(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	deps := lessonTestDeps{SelectCandidate: func() *model.SelfAugmentCandidate { return nil }}
+	deps := lessonTestDeps{SelectCandidate: func() *augmentcontract.SelfAugmentCandidate { return nil }}
 	for _, candidateID := range []string{"IssueOps Whoami", "issueops/whoami", "whoami:record"} {
-		if result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{
+		if result, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{
 			CandidateID: candidateID, Lesson: "l", NextAction: "n",
 		}, deps); err == nil || result.OK {
 			t.Fatalf("candidate id %q must be rejected, result=%#v err=%v", candidateID, result, err)

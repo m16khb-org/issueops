@@ -4,21 +4,21 @@ import (
 	"io"
 
 	"issueops/cmd/issueops/selfworkflow/llmeval"
-	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/cmd/issueops/selfworkflow/progress"
-	"issueops/cmd/issueops/selfworkflow/rerun"
-	"issueops/cmd/issueops/selfworkflow/steps"
+	verifyapp "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	verifydomain "issueops/internal/domain/selfverify"
 )
 
 type SelfVerifyLLMEvalConfig = llmeval.SelfVerifyLLMEvalConfig
 type SelfVerifyLLMEvalInput = llmeval.SelfVerifyLLMEvalInput
 type SelfVerifyLLMEvalOptions = llmeval.SelfVerifyLLMEvalOptions
-type SelfVerifyLLMEvalResult = model.SelfVerifyLLMEvalResult
-type SelfVerifyPlannedStep = steps.SelfVerifyPlannedStep
+type SelfVerifyLLMEvalResult = augmentcontract.SelfVerifyLLMEvalResult
+type SelfVerifyPlannedStep = verifyapp.SelfVerifyPlannedStep
 type SelfVerifyProgressEvent = progress.SelfVerifyProgressEvent
 type SelfVerifyProgressReporter = progress.SelfVerifyProgressReporter
-type SelfVerifyStepDeps = steps.SelfVerifyStepDeps
-type SelfVerifyRiskQAEvidence = steps.RiskQAEvidence
+type SelfVerifyStepDeps = verifyapp.SelfVerifyStepDeps
+type SelfVerifyRiskQAEvidence = verifyapp.RiskQAEvidence
 
 func ValidateSelfVerifyLLMEvalMode(mode string) error {
 	return llmeval.ValidateSelfVerifyLLMEvalMode(mode)
@@ -77,23 +77,23 @@ func NewSelfVerifyProgressReporter(mode string, writer io.Writer) (*SelfVerifyPr
 }
 
 func PlannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *StepResult, deps SelfVerifyStepDeps) []SelfVerifyPlannedStep {
-	return steps.PlannedSelfVerifySteps(root, tempBin, seed, goTestStep, deps)
+	return verifyapp.PlannedSteps(root, tempBin, seed, goTestStep, deps)
 }
 
 func CachedContractGoldenStep(goTestStep StepResult, deps SelfVerifyStepDeps) StepResult {
-	return steps.CachedContractGoldenStep(goTestStep, deps)
+	return verifyapp.CachedContractGoldenStep(goTestStep, deps)
 }
 
 func selfVerifyRerunCommands(failedStep string, baseSeed int64, targetScore float64) []string {
-	return rerun.SelfVerifyRerunCommands(failedStep, baseSeed, targetScore)
+	return verifydomain.SelfVerifyRerunCommands(failedStep, baseSeed, targetScore)
 }
 
 func selfVerifyStepRerunCommand(label string) (string, bool) {
-	return rerun.SelfVerifyStepRerunCommand(label)
+	return verifydomain.SelfVerifyStepRerunCommand(label)
 }
 
 func formatScore(score float64) string {
-	return rerun.FormatScore(score)
+	return verifydomain.FormatScore(score)
 }
 
 func boolPtr(value bool) *bool {

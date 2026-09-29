@@ -1,14 +1,17 @@
 package issueopsapp
 
 import (
+	"os"
+	"time"
+
+	"issueops/cmd/issueops/selfworkflow/candidatescmd"
 	"issueops/cmd/issueops/selfworkflow/promotecmd"
 	statestore "issueops/internal/adapter/outbound/state"
 	app "issueops/internal/application/selfaugment"
+	verifyapp "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	verifycontract "issueops/internal/contract/selfverify"
 	domain "issueops/internal/domain/selfaugment"
-	"time"
-
-	"issueops/cmd/issueops/selfworkflow"
-	"issueops/cmd/issueops/selfworkflow/candidatescmd"
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
@@ -84,21 +87,21 @@ func boolPtr(value bool) *bool {
 }
 
 func newSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) SelfAugmentResult {
-	return selfworkflow.NewSelfVerifyLoopResult(iterations, baseSeed, targetScore)
+	return verifyapp.NewLoopResult(iterations, baseSeed, targetScore, selfWorkflowRootForTest())
 }
 
 func emitSelfVerifyLoopStart(progress *selfVerifyProgressReporter, loopKind string, iterations int, seed int64) {
 	if progress == nil {
 		return
 	}
-	selfworkflow.EmitSelfVerifyLoopStart(progress.inner, loopKind, iterations, seed)
+	progress.inner.Emit(verifycontract.ProgressEvent{Event: "loop_start", LoopKind: loopKind, Iterations: iterations, Seed: seed})
 }
 
 func emitSelfVerifyLoopEnd(progress *selfVerifyProgressReporter, loopKind string, iterations int, seed int64, ok bool, errorText string) {
 	if progress == nil {
 		return
 	}
-	selfworkflow.EmitSelfVerifyLoopEnd(progress.inner, loopKind, iterations, seed, ok, errorText)
+	progress.inner.Emit(verifycontract.ProgressEvent{Event: "loop_end", LoopKind: loopKind, Iterations: iterations, Seed: seed, OK: boolPtr(ok), Error: errorText})
 }
 
 func saveSelfVerificationSummary(result *SelfAugmentResult, key string) error {
@@ -114,14 +117,14 @@ func newSelfVerificationSummarySnapshot(result SelfAugmentResult, generatedAt ti
 }
 
 func plannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *StepResult) []selfVerifyPlannedStep {
-	return selfworkflow.PlannedSelfVerifySteps(root, tempBin, seed, goTestStep, selfVerifyStepDeps(issueOpsRoot()))
+	return verifyapp.PlannedSteps(root, tempBin, seed, goTestStep, selfVerifyStepDeps(issueOpsRoot()))
 }
 
 func cachedContractGoldenStep(goTestStep StepResult) StepResult {
-	return selfworkflow.CachedContractGoldenStep(goTestStep, selfVerifyStepDeps(issueOpsRoot()))
+	return verifyapp.CachedContractGoldenStep(goTestStep, selfVerifyStepDeps(issueOpsRoot()))
 }
 
-type selfVerifyPlannedStep = selfworkflow.SelfVerifyPlannedStep
+type selfVerifyPlannedStep = verifyapp.SelfVerifyPlannedStep
 
 type selfVerifyCandidatesDeps struct {
 	export func() SelfVerificationCandidateExportResult
@@ -132,10 +135,21 @@ type selfVerifyPromoteDeps struct {
 	promote func(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error)
 }
 
-type SelfVerificationCandidateExportResult = selfworkflow.SelfVerificationCandidateExportResult
+type SelfVerificationCandidateExportResult = augmentcontract.SelfVerificationCandidateExportResult
 
-type SelfVerificationCandidate = selfworkflow.SelfVerificationCandidate
+type SelfVerificationCandidate = verifycontract.SelfVerificationCandidate
 
-func saveSelfAugmentPlan(result *selfworkflow.SelfAugmentPlanResult, key string) error {
+func saveSelfAugmentPlan(result *augmentcontract.SelfAugmentPlanResult, key string) error {
 	return newSelfWorkflowState(statestore.StateDir()).SavePlan(result, key)
+}
+
+func selfWorkflowRootForTest() string {
+	if root := os.Getenv("ISSUEOPS_ROOT"); root != "" {
+		return root
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	return cwd
 }

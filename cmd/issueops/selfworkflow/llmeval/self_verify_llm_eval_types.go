@@ -1,10 +1,10 @@
 package llmeval
 
 import (
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	selfverifycontract "issueops/internal/contract/selfverify"
 )
 
 type SelfVerifyLLMEvalOptions = selfverifycontract.LLMEvalOptions
 
-type SelfVerifyLLMEvalResult = model.SelfVerifyLLMEvalResult
+type SelfVerifyLLMEvalResult = augmentcontract.SelfVerifyLLMEvalResult

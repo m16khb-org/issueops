@@ -7,18 +7,16 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/commandstep"
-	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/cmd/issueops/selfworkflow/progress"
-	"issueops/cmd/issueops/selfworkflow/steps"
-	"issueops/cmd/issueops/selfworkflow/summary"
 	application "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 var ErrSelfVerificationGateFailed = application.ErrSelfVerificationGateFailed
 
 type Deps struct {
 	IssueOpsRoot func() string
-	StepDeps     steps.SelfVerifyStepDeps
+	StepDeps     application.SelfVerifyStepDeps
 	FailedStep   func(string, error) commandstep.StepResult
 	PrintStep    func(commandstep.StepResult)
 	Printf       func(string, ...any) (int, error)
@@ -32,7 +30,7 @@ type Request struct {
 	CollectAllSteps bool
 }
 
-func SelfVerify(request Request, deps Deps) (model.SelfAugmentResult, error) {
+func SelfVerify(request Request, deps Deps) (augmentcontract.SelfAugmentResult, error) {
 	deps = deps.withDefaults()
 	var reporter application.ProgressReporter
 	if request.Reporter != nil {
@@ -47,7 +45,7 @@ func SelfVerify(request Request, deps Deps) (model.SelfAugmentResult, error) {
 		FailedStep:     deps.FailedStep,
 		PrintStep:      deps.PrintStep,
 		Printf:         deps.Printf,
-		Summarize:      summary.SummarizeSelfVerification,
+		Summarize:      application.SummarizeSelfVerification,
 		MkdirTemp:      func() (string, error) { return os.MkdirTemp("", "issueops-self-verify-*") },
 		RemoveAll:      os.RemoveAll,
 		TempBinaryPath: func(dir string) string { return filepath.Join(dir, "issueops") },

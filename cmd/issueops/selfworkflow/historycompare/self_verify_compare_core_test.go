@@ -3,14 +3,14 @@ package historycompare
 import (
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/internal/contract/failurecause"
+	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
 func TestCompareSelfAugmentSummariesFromSnapshotsCoversWarningsAndGoalRegressions(t *testing.T) {
 	baseline := SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,
 		GeneratedAt:   "2000-01-01T00:00:00Z",
 		Summary: SelfAugmentSummary{
@@ -49,7 +49,7 @@ func TestCompareSelfAugmentSummariesFromSnapshotsCoversWarningsAndGoalRegression
 func TestCompareSelfAugmentSummariesFromSnapshotsWarnsWhenFailureCauseChanges(t *testing.T) {
 	baseline := SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		Summary: SelfAugmentSummary{
 			TotalSteps:   1,
 			FailedSteps:  1,
@@ -79,7 +79,7 @@ func TestCompareSelfAugmentSummariesFromSnapshotsWarnsWhenFailureCauseChanges(t 
 func TestCompareSelfAugmentSummariesFromSnapshotsSkipsCauseWarningWhenOnlyOneSummaryFailed(t *testing.T) {
 	baseline := SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		Summary: SelfAugmentSummary{
 			TotalSteps:   1,
 			FailedSteps:  1,

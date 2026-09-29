@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestSelfVerifyLLMEvalDefaultOmittedFromJSON(t *testing.T) {
-	result := model.SelfAugmentResult{OK: true, LoopKind: "self_verification"}
+	result := augmentcontract.SelfAugmentResult{OK: true, LoopKind: "self_verification"}
 	b, err := json.Marshal(result)
 	if err != nil {
 		t.Fatal(err)
@@ -79,7 +79,7 @@ func TestParseSelfVerifyLLMEvalEnvParsesDisabledAliasesAndRejectsUnknown(t *test
 }
 
 func TestDecodeSelfVerifyLLMEvalStrictRejectsExtraJSONValue(t *testing.T) {
-	var eval model.SelfVerifyLLMEvalResult
+	var eval augmentcontract.SelfVerifyLLMEvalResult
 	err := DecodeSelfVerifyLLMEvalStrict([]byte(`{"ok":true,"mode":"advisory","execution_class":"foreground_blocking","read_only":true,"score":99,"blockers":[],"risks":[],"recommended_next_actions":[],"evidence_packet_bytes":10} {"ok":false}`), &eval)
 	if err == nil || !strings.Contains(err.Error(), "unexpected extra JSON value") {
 		t.Fatalf("expected extra JSON value error, got %v", err)
@@ -87,7 +87,7 @@ func TestDecodeSelfVerifyLLMEvalStrictRejectsExtraJSONValue(t *testing.T) {
 }
 
 func TestDecodeSelfVerifyLLMEvalReadsHostJudgementJSON(t *testing.T) {
-	var eval model.SelfVerifyLLMEvalResult
+	var eval augmentcontract.SelfVerifyLLMEvalResult
 	err := DecodeSelfVerifyLLMEval([]byte(`{"ok":true,"score":99,"summary":"looks safe","risks":["watch flakes"],"recommended_next_actions":["ship"]}`), &eval)
 	if err != nil {
 		t.Fatalf("decode host judgement result: %v", err)
@@ -101,7 +101,7 @@ func TestDecodeSelfVerifyLLMEvalReadsHostJudgementJSON(t *testing.T) {
 }
 
 func TestDecodeSelfVerifyLLMEvalExtractsNoisyHostJudgementJSON(t *testing.T) {
-	var eval model.SelfVerifyLLMEvalResult
+	var eval augmentcontract.SelfVerifyLLMEvalResult
 	err := DecodeSelfVerifyLLMEval([]byte("review note\n"+`{"ok":true,"score":99,"summary":"looks safe","blockers":[],"risks":[],"recommended_next_actions":[]}`), &eval)
 	if err != nil {
 		t.Fatalf("decode noisy host judgement result: %v", err)
@@ -112,7 +112,7 @@ func TestDecodeSelfVerifyLLMEvalExtractsNoisyHostJudgementJSON(t *testing.T) {
 }
 
 func TestDecodeSelfVerifyLLMEvalRejectsMalformedOutput(t *testing.T) {
-	var eval model.SelfVerifyLLMEvalResult
+	var eval augmentcontract.SelfVerifyLLMEvalResult
 	err := DecodeSelfVerifyLLMEval([]byte(`not-json`), &eval)
 	if err == nil {
 		t.Fatal("expected malformed host judgement output error")
@@ -124,7 +124,7 @@ func TestDecodeSelfVerifyLLMEvalRejectsMalformedOutput(t *testing.T) {
 }
 
 func TestSelfVerifyLLMEvalRendersPromptOnlyResult(t *testing.T) {
-	result := model.SelfAugmentResult{OK: true, TerminationEligible: true}
+	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true}
 	updated, err := ApplySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})
 	if err != nil {
 		t.Fatalf("advisory prompt-only eval should be recorded, not returned as gate error: %v", err)
@@ -135,7 +135,7 @@ func TestSelfVerifyLLMEvalRendersPromptOnlyResult(t *testing.T) {
 }
 
 func TestSelfVerifyLLMEvalResultClassifiesForegroundReadOnlyGate(t *testing.T) {
-	result := model.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: model.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true}}
+	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true}}
 	updated, _ := ApplySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})
 	if updated.LLMEval == nil {
 		t.Fatal("expected llm_eval result")
@@ -146,7 +146,7 @@ func TestSelfVerifyLLMEvalResultClassifiesForegroundReadOnlyGate(t *testing.T) {
 }
 
 func TestSelfVerifyLLMEvalGateFailsOnBlocker(t *testing.T) {
-	result := model.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: model.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true}}
+	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true}}
 	updated, err := ApplySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{Enabled: true, Mode: "gate", TargetScore: 95})
 	if err == nil || !strings.Contains(err.Error(), "LLM evaluation gate failed") {
 		t.Fatalf("expected gate failure, got err=%v result=%+v", err, updated)

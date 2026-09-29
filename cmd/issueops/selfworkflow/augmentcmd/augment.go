@@ -6,19 +6,19 @@ import (
 	"io"
 	"os"
 
-	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
-	"issueops/cmd/issueops/selfworkflow/model"
 	app "issueops/internal/application/selfaugment"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
 type Deps struct {
 	Output              io.Writer
 	RunLesson           func([]string) error
 	RunVerify           func([]string) error
-	Plan                func(model.SelfAugmentPlanRequest) model.SelfAugmentPlanResult
-	SavePlan            func(*model.SelfAugmentPlanResult, string) error
+	Plan                func(augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult
+	SavePlan            func(*augmentcontract.SelfAugmentPlanResult, string) error
 	PrintJSON           func(any) error
-	SelectedCandidateID func(*model.SelfAugmentCandidate) string
+	SelectedCandidateID func(*augmentcontract.SelfAugmentCandidate) string
 	DefaultTargetScore  float64
 }
 
@@ -49,7 +49,7 @@ func Run(args []string, deps Deps) error {
 	if *targetScore < 0 || *targetScore >= 100 {
 		return fmt.Errorf("target-score must be >= 0 and < 100")
 	}
-	result, err := app.PlanAndSave(model.SelfAugmentPlanRequest{Cycles: *cycles, TargetScore: *targetScore}, *saveState, *stateKey, app.PlanAndSaveDeps{Plan: deps.Plan, Save: deps.SavePlan})
+	result, err := app.PlanAndSave(augmentcontract.SelfAugmentPlanRequest{Cycles: *cycles, TargetScore: *targetScore}, *saveState, *stateKey, app.PlanAndSaveDeps{Plan: deps.Plan, Save: deps.SavePlan})
 	if err != nil {
 		return err
 	}
@@ -81,12 +81,12 @@ func (deps Deps) withDefaults() Deps {
 		}
 	}
 	if deps.Plan == nil {
-		deps.Plan = func(model.SelfAugmentPlanRequest) model.SelfAugmentPlanResult {
-			return model.SelfAugmentPlanResult{OK: false}
+		deps.Plan = func(augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult {
+			return augmentcontract.SelfAugmentPlanResult{OK: false}
 		}
 	}
 	if deps.SavePlan == nil {
-		deps.SavePlan = func(*model.SelfAugmentPlanResult, string) error {
+		deps.SavePlan = func(*augmentcontract.SelfAugmentPlanResult, string) error {
 			return fmt.Errorf("self-augment state dependency is required")
 		}
 	}
@@ -96,10 +96,10 @@ func (deps Deps) withDefaults() Deps {
 		}
 	}
 	if deps.SelectedCandidateID == nil {
-		deps.SelectedCandidateID = augmentcatalog.SelectedCandidateID
+		deps.SelectedCandidateID = augmentdomain.SelectedCandidateID
 	}
 	if deps.DefaultTargetScore == 0 {
-		deps.DefaultTargetScore = model.DefaultLoopTargetScoreExclusive
+		deps.DefaultTargetScore = 95.0
 	}
 	return deps
 }
