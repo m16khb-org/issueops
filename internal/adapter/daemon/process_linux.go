@@ -1,6 +1,6 @@
 //go:build linux
 
-package daemonpaths
+package daemon
 
 import (
 	"encoding/binary"

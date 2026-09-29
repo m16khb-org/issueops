@@ -11,7 +11,7 @@ func newStatusService() statusapp.Service {
 	defaultTarget := resolveTarget("")
 	return statusapp.Service{
 		Home: home, IssueOpsRoot: issueOpsRoot(), Version: version, Inspect: newHarnessInspector(),
-		Daemon: checkDaemonStatus, Doctor: newDoctorService().Run,
+		Daemon: newDaemonReader().Run, Doctor: newDoctorService().Run,
 		State: newStateService(statestore.StateDir()).List, Workers: newWorkerService().List,
 		ResolveTarget: func(target string) string {
 			if target != "" {

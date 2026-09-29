@@ -6,27 +6,19 @@ import (
 	daemondomain "issueops/internal/domain/daemon"
 	"os"
 
-	"issueops/cmd/issueops/daemoncli/daemonpaths"
 	contract "issueops/internal/contract/daemon"
 )
 
-type daemonPaths = daemonpaths.Paths
-type daemonInstance = daemonpaths.InstanceRecord
-type daemonProcessIdentity = contract.ProcessIdentity
-
-type daemonStatus = contract.Status
-
-func currentDaemonPaths() (daemonPaths, error) {
-	return daemonpaths.Current()
+type Command struct {
+	Start  func() (contract.Status, error)
+	Status func() contract.Status
+	Stop   func() (contract.Status, error)
+	Serve  func() error
 }
 
-func processAlive(pid int) bool {
-	return daemonpaths.ProcessAlive(pid)
-}
-
-func runDaemon(args []string) error {
+func (command Command) Run(args []string) error {
 	if len(args) > 0 && args[0] == "--internal" {
-		return runDaemonServer()
+		return command.Serve()
 	}
 	if len(args) == 0 {
 		daemonUsage()
@@ -40,7 +32,7 @@ func runDaemon(args []string) error {
 	}
 	switch sub {
 	case "start":
-		status, err := ensureDaemonRunning()
+		status, err := command.Start()
 		if *jsonOut {
 			if printErr := printJSON(status); printErr != nil {
 				return printErr
@@ -53,7 +45,7 @@ func runDaemon(args []string) error {
 		fmt.Printf("issueops daemon running pid=%d socket=%s\n", status.PID, status.Paths.Socket)
 		return nil
 	case "status":
-		status := checkDaemonStatus()
+		status := command.Status()
 		if *jsonOut {
 			return printJSON(status)
 		}
@@ -66,7 +58,7 @@ func runDaemon(args []string) error {
 		}
 		return nil
 	case "stop":
-		status, err := stopDaemon()
+		status, err := command.Stop()
 		if *jsonOut {
 			if printErr := printJSON(status); printErr != nil {
 				return printErr

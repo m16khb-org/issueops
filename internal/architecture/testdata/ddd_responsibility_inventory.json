@@ -414,14 +414,9 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func currentDaemonPaths",
+        "func Command.Run",
         "func daemonUsage",
-        "func processAlive",
-        "func runDaemon",
-        "type daemonInstance",
-        "type daemonPaths",
-        "type daemonProcessIdentity",
-        "type daemonStatus"
+        "type Command"
       ]
     },
     {
@@ -447,12 +442,8 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func daemonExecutableSHA",
         "func daemonReplayConn.Read",
-        "func newDaemonIdentityToken",
-        "func probeDaemonStatus",
         "func rejectDaemonConnection",
-        "func serveDaemonConnection",
         "func serveDaemonConnectionWithAdmission",
         "type daemonReplayConn"
       ]
@@ -462,108 +453,13 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func daemonMaxConnections",
+        "func Server.Run",
         "func idleConn.Read",
         "func runDaemonAcceptLoop",
-        "func runDaemonServer",
-        "func runDaemonServerWithDeps",
-        "type daemonServerDeps",
-        "type daemonServerLogFile",
+        "type LogFile",
+        "type Server",
         "type daemonServerLoopDeps",
         "type idleConn"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemon_start.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func acquireDaemonLock",
-        "func daemonWaiter",
-        "func ensureDaemonRunning",
-        "func ensureDaemonRunningContext",
-        "func startDaemonProcess",
-        "func waitForDaemonContext"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemon_status.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func checkDaemonStatus",
-        "func daemonProcessHandle.Terminate",
-        "func daemonStatusForMCP",
-        "func stopDaemon",
-        "type daemonProcessHandle"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemonlock/lock.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func Acquire",
-        "func stale"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemonpaths/instance.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ReadInstance",
-        "func WriteInstance",
-        "func canonicalExecutable",
-        "type InstanceRecord"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemonpaths/paths.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func Current",
-        "func ProcessAlive",
-        "func ReadPID",
-        "type Paths"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemonpaths/process_darwin.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func InspectProcess"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemonpaths/process_linux.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func InspectProcess",
-        "func linuxBootTime",
-        "func linuxClockTicksPerSecond",
-        "func linuxNativeWord",
-        "func linuxProcessStartTicks",
-        "func linuxProcessStartTime"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemonpaths/process_other.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func InspectProcess"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/daemonpaths/process_ps.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func processFieldWithCLocale"
       ]
     },
     {
@@ -572,18 +468,6 @@
       "task": "T20",
       "symbols": [
         "func printJSON"
-      ]
-    },
-    {
-      "path": "cmd/issueops/daemoncli/exports.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func CheckDaemonStatus",
-        "func DaemonStatusForMCP",
-        "func RunDaemon",
-        "type Paths",
-        "type Status"
       ]
     },
     {
@@ -894,15 +778,14 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/daemon_facade.go",
+      "path": "cmd/issueops/issueopsapp/daemon_wiring.go",
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func checkDaemonStatus",
-        "func configureDaemonCLI",
-        "func daemonStatusForMCP",
-        "func runDaemon",
-        "type daemonStatus"
+        "func newDaemonCommand",
+        "func newDaemonReader",
+        "func newDaemonServer",
+        "func runDaemon"
       ]
     },
     {
@@ -3814,6 +3697,91 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": []
+    },
+    {
+      "path": "internal/adapter/daemon/instance.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ReadInstance",
+        "func WriteInstance",
+        "func canonicalExecutable"
+      ]
+    },
+    {
+      "path": "internal/adapter/daemon/lock.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func acquireFileLock",
+        "func stale"
+      ]
+    },
+    {
+      "path": "internal/adapter/daemon/paths.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Current",
+        "func ProcessAlive",
+        "func ReadPID"
+      ]
+    },
+    {
+      "path": "internal/adapter/daemon/process.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func AcquireLock",
+        "func EnsureDirectory",
+        "func ExecutableSHA",
+        "func FindProcess",
+        "func Launcher.Start",
+        "func NewIdentityToken",
+        "func Probe.Status",
+        "func SleepContext",
+        "func processHandle.Terminate",
+        "type Launcher",
+        "type Probe",
+        "type processHandle"
+      ]
+    },
+    {
+      "path": "internal/adapter/daemon/process_darwin.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func InspectProcess"
+      ]
+    },
+    {
+      "path": "internal/adapter/daemon/process_linux.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func InspectProcess",
+        "func linuxBootTime",
+        "func linuxClockTicksPerSecond",
+        "func linuxNativeWord",
+        "func linuxProcessStartTicks",
+        "func linuxProcessStartTime"
+      ]
+    },
+    {
+      "path": "internal/adapter/daemon/process_other.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func InspectProcess"
+      ]
+    },
+    {
+      "path": "internal/adapter/daemon/process_ps.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func processFieldWithCLocale"
+      ]
     },
     {
       "path": "internal/adapter/docs/authoring_scope.go",
@@ -13301,6 +13269,15 @@
       "symbols": [
         "func CanonicalProcessStartTime",
         "func ProcessStartTimeEqual"
+      ]
+    },
+    {
+      "path": "internal/domain/daemon/settings.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func IdleTimeout",
+        "func MaxConnections"
       ]
     },
     {
@@ -22804,7 +22781,7 @@
         "issueops self-verify"
       ],
       "evidence_tests": [
-        "cmd/issueops/daemoncli/daemonpaths/instance_test.go",
+        "internal/adapter/daemon/instance_test.go",
         "cmd/issueops/daemoncli/daemon_identity_test.go"
       ],
       "status": "migrated"
@@ -23507,7 +23484,7 @@
         "internal/domain/daemon/status_test.go",
         "cmd/issueops/daemoncli/daemon_identity_test.go",
         "cmd/issueops/daemoncli/daemon_ensure_test.go",
-        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+        "internal/adapter/daemon/instance_test.go"
       ],
       "status": "migrated"
     },
@@ -23529,7 +23506,7 @@
         "internal/domain/daemon/status_test.go",
         "cmd/issueops/daemoncli/daemon_identity_test.go",
         "cmd/issueops/daemoncli/daemon_ensure_test.go",
-        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+        "internal/adapter/daemon/instance_test.go"
       ],
       "status": "migrated"
     },
@@ -23551,7 +23528,7 @@
         "internal/domain/daemon/status_test.go",
         "cmd/issueops/daemoncli/daemon_identity_test.go",
         "cmd/issueops/daemoncli/daemon_ensure_test.go",
-        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+        "internal/adapter/daemon/instance_test.go"
       ],
       "status": "migrated"
     },
@@ -23573,7 +23550,7 @@
         "internal/domain/daemon/status_test.go",
         "cmd/issueops/daemoncli/daemon_identity_test.go",
         "cmd/issueops/daemoncli/daemon_ensure_test.go",
-        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+        "internal/adapter/daemon/instance_test.go"
       ],
       "status": "migrated"
     },
@@ -23595,7 +23572,7 @@
         "internal/domain/daemon/status_test.go",
         "cmd/issueops/daemoncli/daemon_identity_test.go",
         "cmd/issueops/daemoncli/daemon_ensure_test.go",
-        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+        "internal/adapter/daemon/instance_test.go"
       ],
       "status": "migrated"
     },
@@ -23617,7 +23594,7 @@
         "internal/domain/daemon/status_test.go",
         "cmd/issueops/daemoncli/daemon_identity_test.go",
         "cmd/issueops/daemoncli/daemon_ensure_test.go",
-        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+        "internal/adapter/daemon/instance_test.go"
       ],
       "status": "migrated"
     },
@@ -23639,7 +23616,43 @@
         "internal/domain/daemon/status_test.go",
         "cmd/issueops/daemoncli/daemon_identity_test.go",
         "cmd/issueops/daemoncli/daemon_ensure_test.go",
-        "cmd/issueops/daemoncli/daemonpaths/instance_test.go"
+        "internal/adapter/daemon/instance_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-capacity-configuration",
+      "source_path": "cmd/issueops/daemoncli/daemon_server.go",
+      "source_symbol": "func daemonMaxConnections",
+      "responsibility": "Validate positive bounded daemon capacity with the existing default",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func MaxConnections",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/daemon_instance_wiring_test.go",
+        "cmd/issueops/daemoncli/daemon_server_loop_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "daemon-idle-configuration",
+      "source_path": "cmd/issueops/daemoncli/daemon_server.go",
+      "source_symbol": "var mcpIdleTimeout",
+      "responsibility": "Select positive MCP idle duration or the existing thirty minute default",
+      "target": "internal/domain/daemon",
+      "target_symbol": "func IdleTimeout",
+      "task": "T20",
+      "entrypoints": [
+        "issueops daemon start|status|stop",
+        "daemon_status MCP"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/daemon_instance_wiring_test.go",
+        "cmd/issueops/daemoncli/daemon_server_loop_test.go"
       ],
       "status": "migrated"
     }

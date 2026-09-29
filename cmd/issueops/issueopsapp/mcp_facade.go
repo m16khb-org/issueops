@@ -32,9 +32,7 @@ func configureMCPCLI() {
 	mcpcli.InspectHarness = func(repo string) any {
 		return inspectHarness(repo)
 	}
-	mcpcli.DaemonStatus = func() any {
-		return daemonStatusForMCP()
-	}
+
 	mcpcli.CompatibilityContract = func() any {
 		return compatibilityContract()
 	}
@@ -59,6 +57,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	docsService := newProjectDocsService(resolveTarget(""))
 	return mcpcli.MCPDependencies{
 		Worker:           newWorkerService(),
+		Daemon:           newDaemonReader(),
 		Catalog:          mcpcatalog.Build(),
 		Loop:             newLoopService(),
 		ProjectDocs:      docsService,

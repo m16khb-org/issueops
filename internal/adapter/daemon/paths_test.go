@@ -1,4 +1,4 @@
-package daemonpaths
+package daemon
 
 import (
 	"os"

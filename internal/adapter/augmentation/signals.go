@@ -121,11 +121,12 @@ func (repo Repository) signalRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "workercli", "worker_test.go"), "TestRunWorkerCleanupStuckMarksDeadPIDJobsFailed")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			hasDaemonConnectionCap := FileContainsTerm(root, filepath.Join("cmd", "issueops", "daemoncli", "daemon_server.go"), "const maxConnections") ||
-				(FileContainsTerm(root, filepath.Join("cmd", "issueops", "daemoncli", "daemon_server.go"), "defaultMaxConnections") &&
-					FileContainsTerm(root, filepath.Join("cmd", "issueops", "daemoncli", "daemon_server.go"), "maxConnections = daemonMaxConnections"))
+			hasDaemonConnectionCap := FileContainsTerm(root, filepath.Join("internal", "domain", "daemon", "settings.go"), "func MaxConnections(value string)") &&
+				FileContainsTerm(root, filepath.Join("internal", "domain", "daemon", "settings.go"), "DefaultMaxConnections") &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "daemon_wiring.go"), `domain.MaxConnections(os.Getenv("ISSUEOPS_DAEMON_MAX_CONNECTIONS"))`) &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "daemon_wiring.go"), "MaxConnections: reader.MaxConnections")
 			signals.HasDaemonConnectionLimit = hasDaemonConnectionCap &&
-				FileContainsTerm(root, filepath.Join("cmd", "issueops", "daemoncli", "daemon_server.go"), "newDaemonAdmission(maxConnections)") &&
+				FileContainsTerm(root, filepath.Join("cmd", "issueops", "daemoncli", "daemon_server.go"), "newDaemonAdmission(deps.MaxConnections)") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "daemoncli", "daemon_admission.go"), "case a.slots <- struct{}{}") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "daemoncli", "daemon_admission.go"), "writeDaemonAdmissionError") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "daemoncli", "daemon_server_loop_test.go"), "TestRunDaemonAcceptLoopRejectsWhenConnectionLimitReached") &&

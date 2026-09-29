@@ -3,7 +3,7 @@ package statuscli
 import (
 	"os"
 
-	"issueops/cmd/issueops/daemoncli"
+	daemoncontract "issueops/internal/contract/daemon"
 	inspect "issueops/internal/contract/inspect"
 )
 
@@ -13,7 +13,7 @@ type Deps struct {
 	ResolveTarget     func(string) string
 	Version           string
 	InspectHarness    func(string) inspect.InspectInfo
-	CheckDaemonStatus func() daemoncli.Status
+	CheckDaemonStatus func() daemoncontract.Status
 }
 
 var deps = defaultDeps()
@@ -27,7 +27,7 @@ func defaultDeps() Deps {
 		ResolveTarget:     defaultResolveTarget,
 		Version:           "dev",
 		InspectHarness:    func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
-		CheckDaemonStatus: daemoncli.CheckDaemonStatus,
+		CheckDaemonStatus: testDaemonReader().Run,
 	}
 }
 

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/daemoncli"
+	daemoncontract "issueops/internal/contract/daemon"
 	doctor "issueops/internal/contract/doctor"
 	inspect "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
@@ -124,7 +124,7 @@ func TestRunDoctorStaticOnlySkipsLiveOperationalChecks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	repo := t.TempDir()
 	command := testDoctorCommand()
-	command.CheckDaemonStatus = func() daemoncli.Status { panic("static doctor must not inspect daemon admission") }
+	command.CheckDaemonStatus = func() daemoncontract.Status { panic("static doctor must not inspect daemon admission") }
 	command.CollectOperationalHealth = func(context.Context, string) operationalhealth.Snapshot {
 		panic("static doctor must not collect live operational health")
 	}
@@ -157,8 +157,8 @@ func TestRunDoctor_printsLiveDaemonAdmissionHealth(t *testing.T) {
 	command := testDoctorCommand()
 	command.IssueOpsRoot = repo
 	command.Version = "test"
-	command.CheckDaemonStatus = func() daemoncli.Status {
-		return daemoncli.Status{ActiveConnections: 64, MaxConnections: 64, Accepting: false, Draining: false}
+	command.CheckDaemonStatus = func() daemoncontract.Status {
+		return daemoncontract.Status{ActiveConnections: 64, MaxConnections: 64, Accepting: false, Draining: false}
 	}
 	command.CollectOperationalHealth = func(_ context.Context, root string) operationalhealth.Snapshot {
 		return healthyCLIOperationalSnapshot(root)

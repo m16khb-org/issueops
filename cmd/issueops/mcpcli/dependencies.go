@@ -68,10 +68,6 @@ var InspectHarness = func(repo string) any {
 	return map[string]any{"ok": false, "error": "inspect dependency is not configured", "repo": repo}
 }
 
-var DaemonStatus = func() any {
-	return map[string]any{"ok": false, "message": "daemon is not running"}
-}
-
 var CompatibilityContract = func() any {
 	return map[string]any{"ok": false, "error": "compatibility contract dependency is not configured"}
 }

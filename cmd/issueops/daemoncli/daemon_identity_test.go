@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"issueops/cmd/issueops/daemoncli/daemonpaths"
+	daemonpaths "issueops/internal/adapter/daemon"
 )
 
 func TestCheckDaemonStatusVerifiesInstanceFileSocketAndProcess(t *testing.T) {

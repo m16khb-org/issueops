@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"issueops/cmd/issueops/hookcli"
 	"issueops/cmd/issueops/updatecli"
+	daemonpaths "issueops/internal/adapter/daemon"
 	"issueops/internal/adapter/hostprotocol"
 )
 
@@ -18,7 +19,7 @@ var mcpProxyProcessLister = updatecli.ListMCPProxyProcesses
 var mcpProxyTerminator = updatecli.TerminateMCPProxyProcess
 
 func wireHostCLIDeps() {
-	updatecli.Configure(updatecli.Deps{IssueOpsRoot: issueOpsRoot})
+	updatecli.Configure(updatecli.Deps{IssueOpsRoot: issueOpsRoot, InspectProcess: daemonpaths.InspectProcess})
 	resetUpdateFacadeDeps()
 }
 

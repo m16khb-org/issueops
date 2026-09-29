@@ -1,4 +1,4 @@
-package daemonlock
+package daemon
 
 import (
 	"os"
@@ -9,9 +9,9 @@ import (
 
 func TestAcquireCreatesLockWithCurrentPID(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "daemon.lock")
-	f, err := Acquire(path, func() int { return 42 }, func(int) bool { return true })
+	f, err := acquireFileLock(path, func() int { return 42 }, func(int) bool { return true })
 	if err != nil {
-		t.Fatalf("Acquire returned error: %v", err)
+		t.Fatalf("acquireFileLock returned error: %v", err)
 	}
 	defer f.Close()
 	b, err := os.ReadFile(path)
@@ -28,9 +28,9 @@ func TestAcquireRemovesStaleLockForDeadProcess(t *testing.T) {
 	if err := os.WriteFile(path, []byte("42\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	f, err := Acquire(path, func() int { return 99 }, func(pid int) bool { return pid != 42 })
+	f, err := acquireFileLock(path, func() int { return 99 }, func(pid int) bool { return pid != 42 })
 	if err != nil {
-		t.Fatalf("Acquire returned error: %v", err)
+		t.Fatalf("acquireFileLock returned error: %v", err)
 	}
 	defer f.Close()
 	b, err := os.ReadFile(path)
@@ -47,7 +47,7 @@ func TestAcquireRejectsFreshLiveLock(t *testing.T) {
 	if err := os.WriteFile(path, []byte("42\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	f, err := Acquire(path, func() int { return 99 }, func(int) bool { return true })
+	f, err := acquireFileLock(path, func() int { return 99 }, func(int) bool { return true })
 	if err == nil {
 		f.Close()
 		t.Fatal("expected lock acquisition error")

@@ -127,7 +127,7 @@ root가 실제 preflight·guard application과 정책 실행기, Git·프로젝�
 
 `internal/contract/status`가 전체 status 응답을, `internal/domain/status`가 관측 성공 여부·경고 순서·self-verify 기록 선택과 daemon admission 관측 조건을 소유한다. 전체 성공은 doctor의 `Healthy`가 아닌 `OK`와 state·worker의 `OK`, 조회 오류 여부로 판정한다. self-verify는 입력 목록에서 처음 일치한 prefix 기록을 선택하며 최신 시각이나 `self-verify-latest` 키를 우선하지 않는다.
 
-`application/status.Service`는 inspect → daemon → doctor → state → worker 순서로 조회하며 오류가 있어도 뒤의 조회를 수행한다. root는 home·harness 경로, state·worker application과 inspect 관측 함수를 조립하고 CLI는 flag·출력만 담당한다. status CLI의 전역 setter·state 콜백·결과 builder·DTO 별칭은 제거했다. `adapter/inspect.Observer`는 문서 조회 함수를 인스턴스로 받아 파일 관측을 수행한다. 기존 daemon 조회의 CLI 내부 정책·경로 관측과 다른 basic/MCP 진입점의 전역 연결은 후속 이전 대상이다.
+`application/status.Service`는 inspect → daemon → doctor → state → worker 순서로 조회하며 오류가 있어도 뒤의 조회를 수행한다. root는 home·harness 경로, state·worker application과 inspect 관측 함수를 조립하고 CLI는 flag·출력만 담당한다. status CLI의 전역 setter·state 콜백·결과 builder·DTO 별칭은 제거했다. `adapter/inspect.Observer`는 문서 조회 함수를 인스턴스로 받아 파일 관측을 수행한다. daemon 조회도 root에서 고정한 reader를 받는다. 다른 basic/MCP 진입점의 전역 연결은 후속 이전 대상이다.
 
 ### Worker runtime boundary
 
@@ -141,7 +141,9 @@ daemon의 준비 완료·시작 차단·종료 허용과 OS 프로세스 신원 
 
 `application/daemon.Reader`는 instance 파일·socket·OS 관측 순서를, `Starter`와 `Waiter`는 시작 잠금·준비 대기·취소를, `StopCoordinator`와 `Stopper`는 잠금 안에서 종료·재확인·파일 정리 순서를 담당한다. 최초 instance 읽기 실패 후 socket이 응답하면 파일을 다시 읽는 기존 시작 경쟁 처리를 유지한다. TERM 전과 강제 종료 직전에 OS 신원을 다시 확인하고, 강제 종료 직전 신원 조회가 실패하면 생존 여부를 재확인해 이미 종료한 프로세스를 오인하지 않는다. 파일·프로세스·잠금·clock 효과는 명시적으로 받는다.
 
-상태 코드·프로세스 관측·socket 응답 DTO는 `contract/daemon`으로 모았다. 기존 CLI의 판정·순서 구현과 중복 DTO는 제거했으며, 테스트용 callback fixture는 실제 application을 호출한다. daemon의 기술 I/O·서버 admission·환경변수 조립과 root/CLI/MCP 전역 연결은 후속 이전 대상이다.
+상태 코드·프로세스 관측·socket 응답 DTO와 private probe 식별자는 `contract/daemon`으로 모았다. `adapter/daemon`은 파일·프로세스·잠금·소켓 관측과 실행을 맡는다. root가 경로·환경변수·연결 한도·유휴 제한을 고정해 application, `daemoncli.Command`, `daemoncli.Server`를 조립한다. 연결 한도와 유휴 제한의 기본값·유효 범위는 domain이 판정한다.
+
+MCP 직접 호출·SDK, doctor, status는 조립 시 고정한 daemon reader를 사용한다. daemon 서버도 MCP 의존성을 한 번 받아 각 연결에 전달하므로 다른 서버의 환경 설정으로 바뀌지 않는다. CLI의 전역 함수 setter·서버 factory·실행 facade·DTO 별칭은 제거했다. 테스트용 callback fixture는 실제 application과 adapter를 호출한다. socket accept, admission 동시성, 첫 바이트 재생, idle deadline은 inbound transport 책임으로 유지한다. 실제 Unix 소켓의 두 서버와 MCP 호출로 경로·연결 한도 분리를 검증한다.
 
 ### Loop runtime boundary
 

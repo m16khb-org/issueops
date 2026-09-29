@@ -56,3 +56,8 @@ type IdentityResponse struct {
 	Accepting         bool           `json:"accepting"`
 	Draining          bool           `json:"draining"`
 }
+
+const ProtocolVersion = "1"
+
+// IdentityRequest starts with NUL, which cannot begin a JSON-RPC request.
+const IdentityRequest = "\x00issueops-daemon-identity/1\n"

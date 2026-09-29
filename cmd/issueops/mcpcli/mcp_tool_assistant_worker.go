@@ -2,6 +2,7 @@ package mcpcli
 
 import (
 	"context"
+	daemonapp "issueops/internal/application/daemon"
 	workerapp "issueops/internal/application/worker"
 	"time"
 
@@ -12,10 +13,10 @@ import (
 	webfetchcontract "issueops/internal/contract/webfetch"
 )
 
-func handleAssistantWorkerMCPToolCall(call MCPToolCall, worker workerapp.Service) MCPToolOutcome {
+func handleAssistantWorkerMCPToolCall(call MCPToolCall, worker workerapp.Service, daemon daemonapp.Reader) MCPToolOutcome {
 	switch call.Name {
 	case "daemon_status":
-		return mcpToolPayload(DaemonStatus())
+		return mcpToolPayload(daemon.Run())
 	case "commit_suggest":
 		result, err := SuggestCommit(commitsuggestcontract.CommitSuggestRequest{
 			RepoRoot: ResolveTarget(argmap.String(call.Arguments, "repo")),

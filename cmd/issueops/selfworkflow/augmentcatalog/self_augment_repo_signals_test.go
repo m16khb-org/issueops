@@ -225,10 +225,8 @@ func TestDaemonConnectionLimitIsSatisfiedByAcceptLoopGuard(t *testing.T) {
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "daemoncli", "daemon_server.go"), `package daemoncli
 
-const maxConnections = 64
-
-func runDaemonServerWithDeps() {
-	admission := newDaemonAdmission(maxConnections)
+func (deps Server) Run() {
+	admission := newDaemonAdmission(deps.MaxConnections)
 	_ = admission
 }
 `)
@@ -255,6 +253,13 @@ func TestRunDaemonAcceptLoopRejectsWhenConnectionLimitReached() {}
 func TestRunDaemonAcceptLoopExpires64IdleSessionsAndAdmitsInitialize() {}
 `)
 
+	domainPath := filepath.Join(root, "internal", "domain", "daemon", "settings.go")
+	domainSource := "package daemon\nconst DefaultMaxConnections = 256\nfunc MaxConnections(value string) int {}\n"
+	writeFileForRepoSignalTest(t, domainPath, domainSource)
+	wiringPath := filepath.Join(root, "cmd", "issueops", "issueopsapp", "daemon_wiring.go")
+	wiringSource := "package issueopsapp\ncapacity := domain.MaxConnections(os.Getenv(\"ISSUEOPS_DAEMON_MAX_CONNECTIONS\"))\nMaxConnections: reader.MaxConnections\n"
+	writeFileForRepoSignalTest(t, wiringPath, wiringSource)
+
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasDaemonConnectionLimit {
 		t.Fatalf("daemon connection limit signal was not detected: %+v", signals)
@@ -265,6 +270,17 @@ func TestRunDaemonAcceptLoopExpires64IdleSessionsAndAdmitsInitialize() {}
 	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("daemon connection limit candidate was not marked satisfied: %+v", candidate)
 	}
+	for _, missing := range []string{domainPath, wiringPath} {
+		if err := os.Remove(missing); err != nil {
+			t.Fatal(err)
+		}
+		if CollectSelfAugmentRepoSignals(root, 0, nil, "").HasDaemonConnectionLimit {
+			t.Fatalf("connection limit accepted without %s", missing)
+		}
+		writeFileForRepoSignalTest(t, domainPath, domainSource)
+		writeFileForRepoSignalTest(t, wiringPath, wiringSource)
+	}
+
 }
 
 func TestMCPResourceCoverageIsSatisfiedByCatalogAndReadEdgeTests(t *testing.T) {

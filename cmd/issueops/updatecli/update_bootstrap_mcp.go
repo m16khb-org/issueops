@@ -10,7 +10,6 @@ import (
 	"strings"
 	"syscall"
 
-	"issueops/cmd/issueops/daemoncli/daemonpaths"
 	updateapp "issueops/internal/application/update"
 	updatecontract "issueops/internal/contract/update"
 )
@@ -62,7 +61,7 @@ func listMCPProxyProcesses() ([]mcpProxyProcess, error) {
 		if !ok {
 			continue
 		}
-		identity, identityErr := daemonpaths.InspectProcess(process.PID)
+		identity, identityErr := deps.InspectProcess(process.PID)
 		if identityErr == nil {
 			process.StartTime = identity.StartTime
 			process.Executable = identity.Executable

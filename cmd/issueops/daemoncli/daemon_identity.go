@@ -3,87 +3,14 @@ package daemoncli
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	daemoncontract "issueops/internal/contract/daemon"
 	"net"
-	"os"
-	"time"
-
-	daemondomain "issueops/internal/domain/daemon"
 )
 
-const (
-	daemonProtocolVersion = "1"
-	// NUL 접두사는 유효한 JSON-RPC 메시지의 첫 바이트가 될 수 없다. 덕분에 daemon은
-	// 일반 MCP 트래픽의 모든 바이트를 보존하면서도 한 바이트만으로 자신의 private
-	// health probe를 구분할 수 있다.
-	daemonIdentityRequest = "\x00issueops-daemon-identity/1\n"
-)
-
-func newDaemonIdentityToken() (string, error) {
-	b := make([]byte, 16)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
-}
-
-func daemonExecutableSHA(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	hash := sha256.New()
-	if _, err := io.Copy(hash, f); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
-}
-
-func probeDaemonStatus(socket string) (daemoncontract.IdentityResponse, error) {
-	conn, err := net.DialTimeout("unix", socket, 150*time.Millisecond)
-	if err != nil {
-		return daemoncontract.IdentityResponse{}, err
-	}
-	defer conn.Close()
-	if err := conn.SetDeadline(time.Now().Add(500 * time.Millisecond)); err != nil {
-		return daemoncontract.IdentityResponse{}, err
-	}
-	if _, err := io.WriteString(conn, daemonIdentityRequest); err != nil {
-		return daemoncontract.IdentityResponse{}, err
-	}
-	var response daemoncontract.IdentityResponse
-	if err := json.NewDecoder(conn).Decode(&response); err != nil {
-		return daemoncontract.IdentityResponse{}, fmt.Errorf("decode daemon identity: %w", err)
-	}
-	if !response.OK {
-		return daemoncontract.IdentityResponse{}, fmt.Errorf("daemon identity probe was rejected")
-	}
-	if err := daemondomain.ValidateInstance(response.Instance); err != nil {
-		return daemoncontract.IdentityResponse{}, fmt.Errorf("invalid daemon identity: %w", err)
-	}
-	// admission health 이전 daemon은 이 additive 필드들을 생략한다. 그런 응답은
-	// 과거의 고정 capacity, accepting 상태로 취급한다.
-	if response.MaxConnections == 0 {
-		response.MaxConnections = maxConnections
-		response.Accepting = true
-	}
-	return response, nil
-}
-
-func serveDaemonConnection(conn net.Conn, logFile daemonServerLogFile, instance daemonInstance, serveMCPStream func(net.Conn, daemonServerLogFile) error) error {
-	return serveDaemonConnectionWithAdmission(conn, logFile, instance, newDaemonAdmission(maxConnections), func(_ context.Context, conn net.Conn, logFile daemonServerLogFile) error {
-		return serveMCPStream(conn, logFile)
-	})
-}
-
-func serveDaemonConnectionWithAdmission(conn net.Conn, logFile daemonServerLogFile, instance daemonInstance, admission *daemonAdmission, serveMCPStream func(context.Context, net.Conn, daemonServerLogFile) error) error {
+func serveDaemonConnectionWithAdmission(conn net.Conn, logFile LogFile, instance daemoncontract.InstanceRecord, admission *daemonAdmission, serveMCPStream func(context.Context, net.Conn, LogFile) error) error {
 	session, admitted := admission.acquire()
 	if admitted {
 		defer func() {
@@ -101,7 +28,7 @@ func serveDaemonConnectionWithAdmission(conn net.Conn, logFile daemonServerLogFi
 	if _, err := io.ReadFull(conn, first[:]); err != nil {
 		return err
 	}
-	if first[0] != daemonIdentityRequest[0] {
+	if first[0] != daemoncontract.IdentityRequest[0] {
 		if !admitted {
 			return rejectDaemonConnection(conn, logFile, admission.snapshot())
 		}
@@ -110,11 +37,11 @@ func serveDaemonConnectionWithAdmission(conn net.Conn, logFile daemonServerLogFi
 			reader: io.MultiReader(bytes.NewReader(first[:]), conn),
 		}, logFile)
 	}
-	rest := make([]byte, len(daemonIdentityRequest)-1)
+	rest := make([]byte, len(daemoncontract.IdentityRequest)-1)
 	if _, err := io.ReadFull(conn, rest); err != nil {
 		return err
 	}
-	if string(append(first[:], rest...)) != daemonIdentityRequest {
+	if string(append(first[:], rest...)) != daemoncontract.IdentityRequest {
 		return fmt.Errorf("invalid daemon identity request")
 	}
 	if session != nil {
@@ -132,7 +59,7 @@ func serveDaemonConnectionWithAdmission(conn net.Conn, logFile daemonServerLogFi
 	})
 }
 
-func rejectDaemonConnection(conn net.Conn, logFile daemonServerLogFile, status daemonAdmissionStatus) error {
+func rejectDaemonConnection(conn net.Conn, logFile LogFile, status daemonAdmissionStatus) error {
 	fmt.Fprintf(logFile, "daemon admission rejected code=%s active_connections=%d max_connections=%d draining=%t\n", daemonStatusConnectionLimit, status.ActiveConnections, status.MaxConnections, status.Draining)
 	return writeDaemonAdmissionError(conn, status)
 }

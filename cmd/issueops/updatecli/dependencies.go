@@ -1,11 +1,15 @@
 package updatecli
 
-import "os"
+import (
+	daemoncontract "issueops/internal/contract/daemon"
+	"os"
+)
 
 // Deps holds host-provided dependencies for the update CLI. The composition root
 // injects implementations via Configure; defaults support standalone use/tests.
 type Deps struct {
-	IssueOpsRoot func() string
+	InspectProcess func(int) (daemoncontract.ProcessIdentity, error)
+	IssueOpsRoot   func() string
 }
 
 var deps = defaultDeps()

@@ -39,5 +39,5 @@ func newDoctorCommand() basiccli.Doctor {
 	collector := operationalhealth.Collector{Git: operationalhealth.ExecGitRunner{}, Orca: orca.New()}
 	return basiccli.Doctor{Service: newDoctorService(), NormalizeRepoRoot: newRepoRootResolver("."),
 		IssueOpsRoot: issueOpsRoot(), Home: home, Version: version, Now: time.Now,
-		CollectOperationalHealth: collector.Collect, CheckDaemonStatus: checkDaemonStatus}
+		CollectOperationalHealth: collector.Collect, CheckDaemonStatus: newDaemonReader().Run}
 }

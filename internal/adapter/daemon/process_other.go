@@ -1,6 +1,6 @@
-//go:build darwin
+//go:build !darwin && !linux
 
-package daemonpaths
+package daemon
 
 import (
 	"fmt"

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/daemoncli"
 	statestore "issueops/internal/adapter/outbound/state"
+	daemoncontract "issueops/internal/contract/daemon"
 	inspect "issueops/internal/contract/inspect"
 	"issueops/internal/testsupport"
 )
@@ -52,7 +52,7 @@ func TestBuildHarnessStatusSharesDaemonAdmissionWithDoctor(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", t.TempDir())
 	oldDeps := deps
 	t.Cleanup(func() { Configure(oldDeps) })
-	want := daemoncli.Status{
+	want := daemoncontract.Status{
 		Running:           true,
 		Reachable:         true,
 		IdentityVerified:  true,
@@ -66,7 +66,7 @@ func TestBuildHarnessStatusSharesDaemonAdmissionWithDoctor(t *testing.T) {
 		ResolveTarget:     func(target string) string { return target },
 		Version:           "test",
 		InspectHarness:    func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
-		CheckDaemonStatus: func() daemoncli.Status { return want },
+		CheckDaemonStatus: func() daemoncontract.Status { return want },
 	})
 
 	status := BuildStatus(testDoctorService(), testWorkerService(), repo)

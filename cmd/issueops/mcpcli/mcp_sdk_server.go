@@ -165,7 +165,9 @@ func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MC
 		}
 	}
 	if group == mcpcontract.DispatchAssistantWorker {
-		return func(call MCPToolCall) MCPToolOutcome { return handleAssistantWorkerMCPToolCall(call, deps.Worker) }
+		return func(call MCPToolCall) MCPToolOutcome {
+			return handleAssistantWorkerMCPToolCall(call, deps.Worker, deps.Daemon)
+		}
 	}
 	if group == mcpcontract.DispatchLoop {
 		return func(call MCPToolCall) MCPToolOutcome { return handleLoopMCPToolCall(call, deps.Loop) }

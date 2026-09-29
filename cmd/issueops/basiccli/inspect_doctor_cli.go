@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"issueops/cmd/issueops/daemoncli"
+	daemoncontract "issueops/internal/contract/daemon"
 	doctorcontract "issueops/internal/contract/doctor"
 	"issueops/internal/domain/operationalhealth"
 	"sort"
@@ -81,7 +81,7 @@ func (command Doctor) Run(args []string) error {
 		return err
 	}
 	var snapshot *operationalhealth.Snapshot
-	var daemon daemoncli.Status
+	var daemon daemoncontract.Status
 	if !*staticOnly {
 		observed := command.CollectOperationalHealth(context.Background(), root)
 		snapshot = &observed

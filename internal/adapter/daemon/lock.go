@@ -1,4 +1,4 @@
-package daemonlock
+package daemon
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func Acquire(path string, currentPID func() int, processAlive func(int) bool) (*os.File, error) {
+func acquireFileLock(path string, currentPID func() int, processAlive func(int) bool) (*os.File, error) {
 	for attempt := 0; attempt < 2; attempt++ {
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 		if err == nil {

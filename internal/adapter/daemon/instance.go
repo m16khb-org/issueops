@@ -1,4 +1,4 @@
-package daemonpaths
+package daemon
 
 import (
 	"encoding/json"
@@ -13,23 +13,22 @@ import (
 
 // InstanceRecord는 daemon 생명주기 동작을 정확히 하나의 OS 프로세스와 정확히
 // 하나의 daemon protocol 인스턴스에 묶는다.
-type InstanceRecord = contract.InstanceRecord
 
-func ReadInstance(path string) (record InstanceRecord, err error) {
+func ReadInstance(path string) (record contract.InstanceRecord, err error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return InstanceRecord{}, err
+		return contract.InstanceRecord{}, err
 	}
 	if err := json.Unmarshal(b, &record); err != nil {
-		return InstanceRecord{}, fmt.Errorf("decode daemon instance record: %w", err)
+		return contract.InstanceRecord{}, fmt.Errorf("decode daemon instance record: %w", err)
 	}
 	if err := domain.ValidateInstance(record); err != nil {
-		return InstanceRecord{}, fmt.Errorf("invalid daemon instance record: %w", err)
+		return contract.InstanceRecord{}, fmt.Errorf("invalid daemon instance record: %w", err)
 	}
 	return record, nil
 }
 
-func WriteInstance(path string, record InstanceRecord) error {
+func WriteInstance(path string, record contract.InstanceRecord) error {
 	if err := domain.ValidateInstance(record); err != nil {
 		return err
 	}

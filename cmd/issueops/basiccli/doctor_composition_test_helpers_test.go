@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"issueops/cmd/issueops/daemoncli"
 	doctoradapter "issueops/internal/adapter/doctor"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/repopath"
@@ -39,6 +38,6 @@ var testOperationalCollector = func(_ context.Context, repo string) operationalh
 
 func testDoctorCommand() Doctor {
 	home, _ := os.UserHomeDir()
-	return Doctor{Service: testDoctorService(), NormalizeRepoRoot: repopath.NormalizeRoot, IssueOpsRoot: deps.IssueOpsRoot(), Home: home, Version: deps.Version, Now: time.Now, CheckDaemonStatus: daemoncli.CheckDaemonStatus, CollectOperationalHealth: testOperationalCollector}
+	return Doctor{Service: testDoctorService(), NormalizeRepoRoot: repopath.NormalizeRoot, IssueOpsRoot: deps.IssueOpsRoot(), Home: home, Version: deps.Version, Now: time.Now, CheckDaemonStatus: testDaemonReader().Run, CollectOperationalHealth: testOperationalCollector}
 }
 func testRunDoctor(args []string) error { return testDoctorCommand().Run(args) }
