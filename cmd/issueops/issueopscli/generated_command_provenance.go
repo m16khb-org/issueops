@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func prepareGeneratedCommandInvocation(args []string, deps Dependencies) ([]string, bool, error) {
+func (cli command) prepareGeneratedCommandInvocation(args []string, deps Dependencies) ([]string, bool, error) {
 	clean, expected, present, err := commandparsecontract.ConsumeGeneratedCommandProvenance(args)
 	if err != nil || !present {
 		return clean, false, err
@@ -19,13 +19,13 @@ func prepareGeneratedCommandInvocation(args []string, deps Dependencies) ([]stri
 			Code: "generated_command_provenance_invalid", Message: "generated command provenance requires an IssueOps id",
 		}
 	}
-	record, err := issueOpsCLIDeps.ReadIssueOps(issueOpsCLIDeps.IssueOpsStateRoot(), id)
+	record, err := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), id)
 	if err != nil {
 		return nil, true, err
 	}
 	authority := record
 	if authority.Execution == nil {
-		authority, err = generatedDelegatedBootstrapAuthority(clean, record)
+		authority, err = cli.generatedDelegatedBootstrapAuthority(clean, record)
 		if err != nil {
 			return nil, true, err
 		}
@@ -48,7 +48,7 @@ func prepareGeneratedCommandInvocation(args []string, deps Dependencies) ([]stri
 	return clean, true, nil
 }
 
-func generatedDelegatedBootstrapAuthority(args []string, child issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error) {
+func (cli command) generatedDelegatedBootstrapAuthority(args []string, child issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error) {
 	invalid := func(message string) (issueopscontract.IssueOpsRecord, error) {
 		return issueopscontract.IssueOpsRecord{}, &commandparsecontract.GeneratedCommandProvenanceError{
 			Code: "generated_command_provenance_invalid", Message: message,
@@ -67,7 +67,7 @@ func generatedDelegatedBootstrapAuthority(args []string, child issueopscontract.
 		return invalid("generated delegated child bootstrap command is malformed")
 	}
 	parentID := strings.TrimSpace(child.Delegation.ParentCycleID)
-	parent, err := issueOpsCLIDeps.ReadIssueOps(issueOpsCLIDeps.IssueOpsStateRoot(), parentID)
+	parent, err := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), parentID)
 	if err != nil || parent.Execution == nil || parent.Execution.Lease.Status != issueopscontract.LeaseStatusActive ||
 		!generatedParentReferencesChild(parent, child.ID) {
 		return invalid("generated delegated child bootstrap requires an active referenced parent execution")

@@ -9,11 +9,11 @@ func TestCLIHelpUsesEachInvocationsCatalog(t *testing.T) {
 	first.ChildUsage += "\nfirst child"
 	second.ChildUsage += "\nsecond child"
 	for _, deps := range []Dependencies{first, second, first} {
-		output, err := captureProjectCLIStderr(t, func() error { return RunIssueOpsWithDependencies([]string{"--help"}, deps) })
+		output, err := captureProjectCLIStderr(t, func() error { return runIssueOpsForTest([]string{"--help"}, deps) })
 		if err != nil || output != deps.Usage {
 			t.Fatalf("lifecycle help ignores invocation catalog: err=%v output=%q", err, output)
 		}
-		child, err := captureStdoutAndErrorForIssueOps(t, func() error { return RunIssueOpsWithDependencies([]string{"child", "--help"}, deps) })
+		child, err := captureStdoutAndErrorForIssueOps(t, func() error { return runIssueOpsForTest([]string{"child", "--help"}, deps) })
 		if err != nil || child != deps.ChildUsage+"\n" {
 			t.Fatalf("child help ignores invocation catalog: err=%v output=%q", err, child)
 		}

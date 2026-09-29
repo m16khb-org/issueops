@@ -4,7 +4,6 @@ import (
 	"context"
 
 	issueopsadapter "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/loopgate"
 	healthadapter "issueops/internal/adapter/operationalhealth"
 	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -23,12 +22,12 @@ func wireOrphanAndLoopGateForTests() {
 			return orphanCleaner(deps).Apply(ctx, req, apply)
 		},
 	})
-	ConfigureLoopGate(LoopGateDeps{
+	testIssueOpsGates = LoopGateDeps{
 		AdvancePhaseWithActor: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return loopgate.AdvancePhaseWithActor(stateRoot, id, to, actor)
+			return advanceLoopPhaseForTest(stateRoot, id, to, actor)
 		},
-		StrictPRReadinessWithState: loopgate.StrictPRReadinessWithState,
-	})
+		StrictPRReadinessWithState: strictLoopReadinessForTest,
+	}
 }
 
 func orphanCleaner(deps OrphanDependencies) cleanupapp.OrphanCleaner {

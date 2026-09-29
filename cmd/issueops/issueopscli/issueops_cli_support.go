@@ -15,23 +15,23 @@ func issueOpsUsage(usage string) {
 
 const issueOpsBranchPrepareUsage = "Usage: issueops branch prepare --id ID --provider github|gitlab --issue-url URL --branch NAME --base-branch REF [--base-sha SHA] [--parent-worktree PATH] [--remote-branch-url URL] [--code-project-key HOST/PROJECT] [--link-verified] [--json]\n       issueops branch await-link --id ID [--timeout DURATION] [--json]\n       issueops branch retarget --id ID --base-branch REF --reason TEXT [--json]"
 
-func runIssueOpsBranch(args []string) error {
+func (cli command) runIssueOpsBranch(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println(issueOpsBranchPrepareUsage)
 		return nil
 	}
 	if args[0] == "await-link" {
-		return runIssueOpsBranchAwaitLink(args[1:])
+		return cli.runIssueOpsBranchAwaitLink(args[1:])
 	}
 	if args[0] == "retarget" {
-		return runIssueOpsBranchRetarget(args[1:])
+		return cli.runIssueOpsBranchRetarget(args[1:])
 	}
 	if args[0] != "prepare" {
 		return fmt.Errorf("unknown issueops branch subcommand")
 	}
 	fs := flag.NewFlagSet("issueops branch prepare", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	provider := fs.String("provider", "", "remote provider: github or gitlab")
 	issueURL := fs.String("issue-url", "", "GitHub/GitLab issue URL")
 	branch := fs.String("branch", "", "provider-linked issue-number branch name")
@@ -45,7 +45,7 @@ func runIssueOpsBranch(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.PrepareIssueOpsBranchWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsBranchPrepareRequest{
+	record, err := cli.Runtime.PrepareIssueOpsBranchWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsBranchPrepareRequest{
 		Provider:        *provider,
 		IssueURL:        *issueURL,
 		Branch:          *branch,
@@ -103,22 +103,22 @@ func printIssueOpsErrorJSON(err error) error {
 // runIssueOpsBranchRetarget은 provider가 실제로 보여주는 PR/MR target으로 준비
 // base를 옮긴다. cleanup finish의 base_branch_drifted는 레코드에 없는 base 변경을
 // 거부하므로, 정당한 재타깃은 finish 전에 이 명령으로 기록한다.
-func runIssueOpsBranchRetarget(args []string) error {
+func (cli command) runIssueOpsBranchRetarget(args []string) error {
 	fs := flag.NewFlagSet("issueops branch retarget", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	baseBranch := fs.String("base-branch", "", "new base branch; must equal the PR/MR target the provider shows")
 	reason := fs.String("reason", "", "why the base changed")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RetargetIssueOpsBranchWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id,
+	record, err := cli.Runtime.RetargetIssueOpsBranchWithActor(cli.Runtime.IssueOpsStateRoot(), *id,
 		issueopscontract.IssueOpsBranchRetargetRequest{BaseBranch: *baseBranch, Reason: *reason}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsBranchAwaitLink(args []string) error {
+func (cli command) runIssueOpsBranchAwaitLink(args []string) error {
 	fs := flag.NewFlagSet("issueops branch await-link", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	timeout := fs.String("timeout", "", "bounded wait, e.g. 10m (default 10m, max 30m)")
@@ -126,10 +126,10 @@ func runIssueOpsBranchAwaitLink(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	if issueOpsCLIDeps.AwaitIssueOpsBranchLink == nil {
+	if cli.Runtime.AwaitIssueOpsBranchLink == nil {
 		return fmt.Errorf("issueops branch await-link is unavailable")
 	}
-	result, err := issueOpsCLIDeps.AwaitIssueOpsBranchLink(context.Background(), issueOpsCLIDeps.IssueOpsStateRoot(),
+	result, err := cli.Runtime.AwaitIssueOpsBranchLink(context.Background(), cli.Runtime.IssueOpsStateRoot(),
 		issueopscontract.AwaitBranchLinkRequest{ID: *id, Timeout: *timeout})
 	if err != nil {
 		if *jsonOut {

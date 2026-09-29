@@ -3,7 +3,6 @@ package gatesgate
 import (
 	adapter "issueops/internal/adapter/gates"
 	"issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/loopgate"
 	policyadapter "issueops/internal/adapter/policy"
 	app "issueops/internal/application/gates"
 	cycleapp "issueops/internal/application/issueopscycle"
@@ -13,9 +12,9 @@ import (
 
 func readinessServiceForTest() cycleapp.GateService {
 	gates := app.Service{Store: adapter.FileStore{}, Clock: adapter.Clock{}, Runner: app.CommandRunner{Evaluate: policyadapter.EvaluateCommandPolicy, Execute: policyadapter.RunCommand}}
-	return cycleapp.GateService{BaseReadiness: loopgate.StrictPRReadinessWithState,
+	return cycleapp.GateService{BaseReadiness: strictLoopReadinessForTest,
 		LoopReadiness: func(repo string) model.IssueOpsReadiness {
-			return loopgate.WithLoopGate(model.IssueOpsReadiness{Ready: true}, repo)
+			return withLoopGateForTest(model.IssueOpsReadiness{Ready: true}, repo)
 		},
 		ReadRecord: issueops.ReadIssueOps, AdvanceRecord: issueops.AdvanceIssueOpsPhaseWithActor,
 		Ledger: cycleport.GateLedgerReadiness{Discover: adapter.DiscoverGateFiles, Check: gates.Check}, DuplicateFiles: Observer{}.DuplicateFiles}

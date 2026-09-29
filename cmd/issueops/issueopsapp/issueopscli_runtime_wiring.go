@@ -14,12 +14,12 @@ import (
 
 // IssueOps CLI는 사이클 저장소 구현을 알지 않는다. 어댑터를 아는 곳은
 // composition root 하나뿐이다.
-func configureIssueOpsCLIRuntime() {
+func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 	observer := issueOpsRecordObserver(os.Stderr)
 	artifacts := issueOpsArtifactHandlers(observer)
 	decisions := issueOpsDecisionHandlers(observer)
 	routing := issueOpsRoutingHandlers(observer)
-	issueopscli.ConfigureIssueOpsRuntime2(issueopscli.IssueOpsCLIDeps{
+	return issueopscli.IssueOpsCLIDeps{
 		AcceptIssueOpsChildWithActor: func(root, parentID, childID string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error) {
 			return newChildValidator(root).Accept(context.Background(), parentID, childID, evidence, &actor)
 		},
@@ -32,7 +32,7 @@ func configureIssueOpsCLIRuntime() {
 		},
 		IssueOpsPRReadiness: issueopscore.IssueOpsPRReadiness,
 		IssueOpsNext:        issueOpsNextHandler(artifacts.Names, observer),
-		IssueOpsStateRoot:   issueopscore.IssueOpsStateRoot,
+		IssueOpsStateRoot:   func() string { return stateRoot },
 		IssueOpsStatus:      issueOpsStatusHandler(observer),
 		LinkIssueOpsChildWithActor: func(root, id, childURL, title string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newIssueLinker(root).Child(context.Background(), id, childURL, title, &actor)
@@ -100,5 +100,5 @@ func configureIssueOpsCLIRuntime() {
 			return newChildStarter(root).Start(context.Background(), req, &actor)
 		},
 		UnstageIssueOpsArtifact: artifacts.Unstage,
-	})
+	}
 }

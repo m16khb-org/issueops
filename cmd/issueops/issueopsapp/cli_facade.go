@@ -31,10 +31,9 @@ func wireBasicCLIDeps() {
 	configureIssueOpsBenchmark()
 	configureIssueOpsCleanup()
 	configureIssueOpsRemote()
-	configureIssueOpsOrphanAndLoopGate()
+	configureIssueOpsOrphanCleanup()
 	configureIssueOpsLeaseNextCommands()
 	configureIssueOpsExecutionRunners()
-	configureIssueOpsCLIRuntime()
 	installcli.Configure(installDependencies())
 
 }

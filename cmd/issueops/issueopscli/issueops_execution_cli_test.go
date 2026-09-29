@@ -29,7 +29,7 @@ func TestIssueOpsExecutionDepsPropagatePublicationReconcileWithoutInvocation(t *
 		return issueopscore.ExecutionReconcileResult{}, nil
 	})
 
-	deps := issueOpsExecutionDeps(Dependencies{Publication: remotecmd.PublicationHandlers{Reconcile: handler}})
+	deps := testIssueOpsCommand().issueOpsExecutionDeps(Dependencies{Publication: remotecmd.PublicationHandlers{Reconcile: handler}})
 	if deps.Publication.Reconcile == nil {
 		t.Fatal("publication reconcile handler was not propagated")
 	}
@@ -47,7 +47,7 @@ func TestIssueOpsExecutionDepsPropagateCompletionWithoutInvocation(t *testing.T)
 		invoked++
 		return issueopscore.ExecutionResult{}, nil
 	})
-	deps := issueOpsExecutionDeps(Dependencies{Complete: handler})
+	deps := testIssueOpsCommand().issueOpsExecutionDeps(Dependencies{Complete: handler})
 	if deps.Complete == nil || reflect.ValueOf(deps.Complete).Pointer() != reflect.ValueOf(handler).Pointer() {
 		t.Fatal("completion handler was not propagated unchanged")
 	}
@@ -67,7 +67,7 @@ func TestIssueOpsExecutionPrepareCLIAndStatusShareSchemaProjection(t *testing.T)
 	}
 
 	preparedJSON := captureStdoutForContract(t, func() error {
-		return runIssueOpsWithDependencies(append([]string{
+		return testIssueOpsCommand().runIssueOpsWithDependencies(append([]string{
 			"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--confirm", "--json",
 		}, actorFlags...), deps)
 	})
@@ -83,7 +83,7 @@ func TestIssueOpsExecutionPrepareCLIAndStatusShareSchemaProjection(t *testing.T)
 	}
 
 	statusJSON := captureStdoutForContract(t, func() error {
-		return RunIssueOpsWithDependencies([]string{"execution", "status", "--id", id, "--json"}, deps)
+		return runIssueOpsForTest([]string{"execution", "status", "--id", id, "--json"}, deps)
 	})
 	var status issueopscore.ExecutionResult
 	if err := json.Unmarshal([]byte(statusJSON), &status); err != nil {
@@ -129,7 +129,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 		ExecutablePath: "/repo/bin/issueops", ExecutableSHA256: strings.Repeat("e", 64),
 	}}}
 	statusJSON := captureStdoutForContract(t, func() error {
-		return RunIssueOpsWithDependencies([]string{"execution", "status", "--id", id, "--json"}, deps)
+		return runIssueOpsForTest([]string{"execution", "status", "--id", id, "--json"}, deps)
 	})
 	var status issueopscore.ExecutionResult
 	if err := json.Unmarshal([]byte(statusJSON), &status); err != nil {
@@ -148,7 +148,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacyJSON := captureStdoutForContract(t, func() error {
-		return RunIssueOpsWithDependencies([]string{"execution", "status", "--id", id, "--json"}, deps)
+		return runIssueOpsForTest([]string{"execution", "status", "--id", id, "--json"}, deps)
 	})
 	if err := json.Unmarshal([]byte(legacyJSON), &status); err != nil {
 		t.Fatalf("legacy execution status should return JSON: %v\n%s", err, legacyJSON)
@@ -189,7 +189,7 @@ func TestIssueOpsExecutionPrepareCLIAndMCPStatusAndErrorsAreIdentical(t *testing
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo, id, actorFlags := executionCLIRecord(t)
 	_ = captureStdoutForContract(t, func() error {
-		return runIssueOpsWithDependencies(
+		return testIssueOpsCommand().runIssueOpsWithDependencies(
 			append([]string{"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--confirm", "--json"}, actorFlags...),
 			Dependencies{Prepare: executionCLIPrepareHandler(t)},
 		)
@@ -247,7 +247,7 @@ func TestIssueOpsExecutionPrepareCLIFailsClosedWithoutHandler(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo, id, actorFlags := executionCLIRecord(t)
 	_, err := captureStdoutAndErrorForIssueOps(t, func() error {
-		return runIssueOpsWithDependencies(
+		return testIssueOpsCommand().runIssueOpsWithDependencies(
 			append([]string{"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--json"}, actorFlags...),
 			Dependencies{},
 		)

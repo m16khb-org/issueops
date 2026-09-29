@@ -7,7 +7,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func runIssueOpsDecision(args []string) error {
+func (cli command) runIssueOpsDecision(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops decision add --id ID --title TEXT --body TEXT --kind product|architecture|implementation|test|review|scope|follow-up [--rationale TEXT] [--alternative TEXT]... [--affected-link URL]... [--affected-artifact issue|plan|test|implementation|review|pr_mr|follow-up]... [--json]")
 		return nil
@@ -17,7 +17,7 @@ func runIssueOpsDecision(args []string) error {
 	}
 	fs := flag.NewFlagSet("issueops decision add", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	title := fs.String("title", "", "decision title")
 	body := fs.String("body", "", "decision body")
 	kind := fs.String("kind", "", "decision kind: product, architecture, implementation, test, review, scope, follow-up")
@@ -32,7 +32,7 @@ func runIssueOpsDecision(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.AddIssueOpsDecisionWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsDecisionRecordRequest{
+	record, err := cli.Runtime.AddIssueOpsDecisionWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsDecisionRecordRequest{
 		Title:              *title,
 		Body:               *body,
 		Kind:               *kind,

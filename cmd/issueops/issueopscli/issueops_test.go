@@ -267,7 +267,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 }
 
 func TestIssueOpsDevilsAdvocateReviewRequiresReviewerContext(t *testing.T) {
-	err := runIssueOpsDevilsAdvocate([]string{"review", "--id", "io-missing", "--verdict", "pass", "--finding", "attacked gate 3"})
+	err := testIssueOpsCommand().runIssueOpsDevilsAdvocate([]string{"review", "--id", "io-missing", "--verdict", "pass", "--finding", "attacked gate 3"})
 	if err == nil || !strings.Contains(err.Error(), "--reviewer-context") {
 		t.Fatalf("devils-advocate review without --reviewer-context must fail before touching state, got %v", err)
 	}

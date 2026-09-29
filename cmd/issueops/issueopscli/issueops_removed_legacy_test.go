@@ -11,7 +11,7 @@ func TestIssueOpsRejectsRemovedResetCommand(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "unknown issueops subcommand") {
 		t.Fatalf("removed command error=%v", err)
 	}
-	if _, ok := issueOpsSubcommands(testCLIUsageDependencies())[command]; ok {
+	if _, ok := testIssueOpsCommand().issueOpsSubcommands(testCLIUsageDependencies())[command]; ok {
 		t.Fatalf("removed command remains registered")
 	}
 }

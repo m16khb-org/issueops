@@ -12,6 +12,7 @@ import (
 func runIssueOps(args []string) error {
 	execution := productionIssueOpsExecutionDependencies()
 	return issueopscli.RunIssueOpsWithDependencies(args, issueopscli.Dependencies{
+		Runtime: newIssueOpsCLIRuntime(issueops.IssueOpsStateRoot()), Gates: newIssueOpsCLIGates(),
 		Usage: clicatalog.LifecycleUsage(), ChildUsage: clicatalog.ChildUsage(),
 		Prepare: execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner,
 		BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit), ReadIssue: execution.ReadIssue,

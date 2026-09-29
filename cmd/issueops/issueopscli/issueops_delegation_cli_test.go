@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	issueopscore "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/loopgate"
 	preflight "issueops/internal/adapter/preflight"
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -109,7 +108,7 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
-	if _, err := loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), parent.ID, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, err := advanceLoopPhaseForTest(issueopscore.IssueOpsStateRoot(), parent.ID, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, parent.ID)
@@ -160,7 +159,7 @@ func TestCLIIssueOpsStrictPRReadinessReportsIncompleteChildren(t *testing.T) {
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
-	if _, err := loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), parent.ID, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, err := advanceLoopPhaseForTest(issueopscore.IssueOpsStateRoot(), parent.ID, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 
@@ -195,7 +194,7 @@ func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (i
 		t.Fatal(err)
 	}
 	record, actor := seedIssueOpsCLIExecution(t, record)
-	record, err = loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), record.ID, string(issueopscore.IssueOpsPhaseImplement), actor)
+	record, err = advanceLoopPhaseForTest(issueopscore.IssueOpsStateRoot(), record.ID, string(issueopscore.IssueOpsPhaseImplement), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +239,7 @@ func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (
 		t.Fatal(err)
 	}
 	parent, actor := seedIssueOpsCLIExecution(t, parent)
-	parent, err = loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), parent.ID, string(issueopscore.IssueOpsPhaseImplement), actor)
+	parent, err = advanceLoopPhaseForTest(issueopscore.IssueOpsStateRoot(), parent.ID, string(issueopscore.IssueOpsPhaseImplement), actor)
 	if err != nil {
 		t.Fatal(err)
 	}

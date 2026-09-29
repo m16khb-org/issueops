@@ -1080,7 +1080,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsOrphanAndLoopGate",
+        "func configureIssueOpsOrphanCleanup",
+        "func newIssueOpsCLIGates",
         "func orphanCleaner"
       ]
     },
@@ -1266,7 +1267,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureIssueOpsCLIRuntime"
+        "func newIssueOpsCLIRuntime"
       ]
     },
     {
@@ -1796,7 +1797,8 @@
         "func SetChildIssueVerifier",
         "func VerifyChildIssueBeforeLink",
         "func VerifyRemoteArtifactLive",
-        "type Dependencies"
+        "type Dependencies",
+        "type command"
       ]
     },
     {
@@ -1844,13 +1846,13 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func command.generatedDelegatedBootstrapAuthority",
+        "func command.prepareGeneratedCommandInvocation",
         "func firstGeneratedValue",
-        "func generatedDelegatedBootstrapAuthority",
         "func generatedParentReferencesChild",
         "func issueOpsCommandID",
         "func issueOpsJSONRequested",
-        "func oneGeneratedFlag",
-        "func prepareGeneratedCommandInvocation"
+        "func oneGeneratedFlag"
       ]
     },
     {
@@ -1858,22 +1860,19 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func dispatchIssueOps",
+        "func command.dispatchIssueOps",
+        "func command.issueOpsSubcommands",
+        "func command.runIssueOpsFeedbackWithDependencies",
+        "func command.runIssueOpsWithDependencies",
+        "func command.suggestIssueOpsSubcommand",
         "func issueOpsFeedbackCleanupDeps",
         "func issueOpsOrphanCleanupDeps",
-        "func issueOpsRemoteDeps",
         "func issueOpsRemoteDepsWithPublication",
-        "func issueOpsSubcommands",
         "func normalizeOrcaRemoveWorktreeErr",
         "func parseIssueOpsFlags",
         "func requireGeneratedOwnerProcessCWD",
-        "func runIssueOpsCleanup",
         "func runIssueOpsCleanupWithDependencies",
-        "func runIssueOpsFeedback",
-        "func runIssueOpsFeedbackWithDependencies",
-        "func runIssueOpsWithDependencies",
-        "func sameExistingIssueOpsPath",
-        "func suggestIssueOpsSubcommand"
+        "func sameExistingIssueOpsPath"
       ]
     },
     {
@@ -1881,7 +1880,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func addIssueOpsActorFlags",
+        "func command.addIssueOpsActorFlags",
         "func issueOpsActorFlags.actor",
         "type issueOpsActorFlags"
       ]
@@ -1901,12 +1900,12 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func command.runIssueOpsBranch",
+        "func command.runIssueOpsBranchAwaitLink",
+        "func command.runIssueOpsBranchRetarget",
         "func issueOpsUsage",
         "func printIssueOpsErrorJSON",
-        "func printIssueOpsResult",
-        "func runIssueOpsBranch",
-        "func runIssueOpsBranchAwaitLink",
-        "func runIssueOpsBranchRetarget"
+        "func printIssueOpsResult"
       ]
     },
     {
@@ -1914,7 +1913,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runIssueOpsCompatibility"
+        "func command.runIssueOpsCompatibility"
       ]
     },
     {
@@ -1922,7 +1921,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runIssueOpsDecision"
+        "func command.runIssueOpsDecision"
       ]
     },
     {
@@ -1930,8 +1929,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ConfigureIssueOpsRuntime2",
-        "func neutralIssueOpsCLIDeps",
         "type IssueOpsCLIDeps"
       ]
     },
@@ -1940,7 +1937,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runIssueOpsDevilsAdvocate"
+        "func command.runIssueOpsDevilsAdvocate"
       ]
     },
     {
@@ -1948,9 +1945,8 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func issueOpsExecutionDeps",
-        "func runIssueOpsExecution",
-        "func runIssueOpsExecutionWithDependencies"
+        "func command.issueOpsExecutionDeps",
+        "func command.runIssueOpsExecutionWithDependencies"
       ]
     },
     {
@@ -1968,9 +1964,9 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func printIssueOpsDesignReviewUsage",
-        "func runIssueOpsDesign",
-        "func runIssueOpsIntent"
+        "func command.runIssueOpsDesign",
+        "func command.runIssueOpsIntent",
+        "func printIssueOpsDesignReviewUsage"
       ]
     },
     {
@@ -1978,10 +1974,10 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runIssueOpsAISlopClean",
-        "func runIssueOpsDomainReview",
-        "func runIssueOpsFeedbackResolve",
-        "func runIssueOpsRegress"
+        "func command.runIssueOpsAISlopClean",
+        "func command.runIssueOpsDomainReview",
+        "func command.runIssueOpsFeedbackResolve",
+        "func command.runIssueOpsRegress"
       ]
     },
     {
@@ -1989,12 +1985,12 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func command.runIssueOpsNext",
         "func issueOpsNextCycleID",
         "func issueOpsNextExit",
         "func issueOpsNextLease",
         "func issueOpsNextPhase",
-        "func printIssueOpsNextText",
-        "func runIssueOpsNext"
+        "func printIssueOpsNextText"
       ]
     },
     {
@@ -2002,7 +1998,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runIssueOpsPlanPrep"
+        "func command.runIssueOpsPlanPrep"
       ]
     },
     {
@@ -2010,7 +2006,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func runIssueOpsPrune"
+        "func command.runIssueOpsPrune"
       ]
     },
     {
@@ -2031,31 +2027,31 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func command.runIssueOpsArtifact",
+        "func command.runIssueOpsChild",
+        "func command.runIssueOpsChildAccept",
+        "func command.runIssueOpsChildDrop",
+        "func command.runIssueOpsChildReject",
+        "func command.runIssueOpsChildStart",
+        "func command.runIssueOpsChildStatus",
+        "func command.runIssueOpsImplementationReview",
+        "func command.runIssueOpsLinkChild",
+        "func command.runIssueOpsLinkIssue",
+        "func command.runIssueOpsLinkPlan",
+        "func command.runIssueOpsLinkRelated",
+        "func command.runIssueOpsLinkWorktree",
+        "func command.runIssueOpsList",
+        "func command.runIssueOpsPRReadiness",
+        "func command.runIssueOpsPhase",
+        "func command.runIssueOpsProjectDocsReview",
+        "func command.runIssueOpsRecordRouting",
+        "func command.runIssueOpsReviewMetrics",
+        "func command.runIssueOpsRoutingScore",
+        "func command.runIssueOpsSchemaEvidence",
+        "func command.runIssueOpsStart",
+        "func command.runIssueOpsStatus",
         "func parseExpectedRouting",
-        "func printIssueOpsChildValue",
-        "func runIssueOpsArtifact",
-        "func runIssueOpsChild",
-        "func runIssueOpsChildAccept",
-        "func runIssueOpsChildDrop",
-        "func runIssueOpsChildReject",
-        "func runIssueOpsChildStart",
-        "func runIssueOpsChildStatus",
-        "func runIssueOpsImplementationReview",
-        "func runIssueOpsLinkChild",
-        "func runIssueOpsLinkIssue",
-        "func runIssueOpsLinkPlan",
-        "func runIssueOpsLinkRelated",
-        "func runIssueOpsLinkWorktree",
-        "func runIssueOpsList",
-        "func runIssueOpsPRReadiness",
-        "func runIssueOpsPhase",
-        "func runIssueOpsProjectDocsReview",
-        "func runIssueOpsRecordRouting",
-        "func runIssueOpsReviewMetrics",
-        "func runIssueOpsRoutingScore",
-        "func runIssueOpsSchemaEvidence",
-        "func runIssueOpsStart",
-        "func runIssueOpsStatus"
+        "func printIssueOpsChildValue"
       ]
     },
     {
@@ -2063,7 +2059,6 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ConfigureLoopGate",
         "type LoopGateDeps"
       ]
     },
@@ -5687,25 +5682,6 @@
         "func LinkedBranchRemoteRef.Observe",
         "type LinkedBranchRemoteRef"
       ]
-    },
-    {
-      "path": "internal/adapter/issueops/loopgate/loop_gate.go",
-      "owner": "adapter",
-      "task": "T04",
-      "symbols": [
-        "func AdvancePhase",
-        "func AdvancePhaseWithActor",
-        "func StrictPRReadiness",
-        "func StrictPRReadinessWithState",
-        "func WithLoopGate",
-        "func guardPRPhase"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/loopgate/tail5_dependencies.go",
-      "owner": "adapter",
-      "task": "T04",
-      "symbols": []
     },
     {
       "path": "internal/adapter/issueops/orca_intent_files.go",
@@ -21077,7 +21053,7 @@
       "source_symbol": "func StartIssueOps",
       "responsibility": "compose cycle start application at the root; test fixtures construct application with record and identity ports directly",
       "target": "cmd/issueops/issueopsapp",
-      "target_symbol": "func configureIssueOpsCLIRuntime",
+      "target_symbol": "func newIssueOpsCLIRuntime",
       "task": "T20",
       "entrypoints": [
         "issueops child start"
@@ -23400,7 +23376,7 @@
       ],
       "evidence_tests": [
         "internal/domain/looprun/gate_test.go",
-        "internal/adapter/issueops/loopgate/loop_gate_test.go",
+        "internal/application/issueopscycle/integration/loop_gate_test.go",
         "cmd/issueops/issueopsapp/loop_instance_wiring_test.go"
       ],
       "status": "migrated"
@@ -23420,7 +23396,7 @@
       ],
       "evidence_tests": [
         "internal/domain/looprun/gate_test.go",
-        "internal/adapter/issueops/loopgate/loop_gate_test.go",
+        "internal/application/issueopscycle/integration/loop_gate_test.go",
         "cmd/issueops/issueopsapp/loop_instance_wiring_test.go"
       ],
       "status": "migrated"

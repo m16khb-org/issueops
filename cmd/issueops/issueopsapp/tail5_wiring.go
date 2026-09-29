@@ -1,13 +1,11 @@
 package issueopsapp
 
 import (
-	loopgateadapter "issueops/internal/adapter/issueops/loopgate"
 	pathutiladapter "issueops/internal/adapter/issueops/pathutil"
 	operationalhealthadapter "issueops/internal/adapter/operationalhealth"
 )
 
-// configureTail5는 경로 정리와 loop gate 조회를 설치한다.
+// configureTail5는 경로 정리 구현을 설치한다.
 func configureTail5() {
 	operationalhealthadapter.CleanAbsPath = pathutiladapter.CleanAbsPath
-	loopgateadapter.RepoGateMissing = func(repo string) ([]string, []string) { return newLoopReader().RepoGateMissing(repo) }
 }

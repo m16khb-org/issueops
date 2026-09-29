@@ -13,7 +13,7 @@ import (
 
 // issueops CLI는 고아 정리와 루프 게이트 구현을 알지 않는다. 어댑터를 아는 곳은
 // composition root 하나뿐이다.
-func configureIssueOpsOrphanAndLoopGate() {
+func configureIssueOpsOrphanCleanup() {
 	issueopscli.ConfigureOrphanCleanup(issueopscli.OrphanCleanupDeps{
 		Preview: func(ctx context.Context, req orphancontract.Request, deps issueopscli.OrphanDependencies) (orphancontract.Result, error) {
 			return orphanCleaner(deps).Preview(ctx, req)
@@ -22,13 +22,16 @@ func configureIssueOpsOrphanAndLoopGate() {
 			return orphanCleaner(deps).Apply(ctx, req, apply)
 		},
 	})
+}
+
+func newIssueOpsCLIGates() issueopscli.LoopGateDeps {
 	gate := newGateReadiness()
-	issueopscli.ConfigureLoopGate(issueopscli.LoopGateDeps{
+	return issueopscli.LoopGateDeps{
 		AdvancePhaseWithActor: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return gate.AdvancePhaseWithActor(stateRoot, id, to, actor)
 		},
 		StrictPRReadinessWithState: gate.StrictPRReadinessWithState,
-	})
+	}
 }
 
 func orphanCleaner(deps issueopscli.OrphanDependencies) cleanupapp.OrphanCleaner {

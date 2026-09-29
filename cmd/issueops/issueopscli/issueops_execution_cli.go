@@ -4,17 +4,13 @@ import (
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 )
 
-func runIssueOpsExecution(args []string) error {
-	return runIssueOpsExecutionWithDependencies(args, Dependencies{})
+func (cli command) runIssueOpsExecutionWithDependencies(args []string, deps Dependencies) error {
+	return executioncmd.Run(args, cli.issueOpsExecutionDeps(deps))
 }
 
-func runIssueOpsExecutionWithDependencies(args []string, deps Dependencies) error {
-	return executioncmd.Run(args, issueOpsExecutionDeps(deps))
-}
-
-func issueOpsExecutionDeps(deps Dependencies) executioncmd.Deps {
+func (cli command) issueOpsExecutionDeps(deps Dependencies) executioncmd.Deps {
 	return executioncmd.Deps{
-		StateRoot:   issueOpsCLIDeps.IssueOpsStateRoot,
+		StateRoot:   cli.Runtime.IssueOpsStateRoot,
 		Prepare:     deps.Prepare,
 		Orca:        deps.Orca,
 		OrcaOwner:   deps.OrcaOwner,

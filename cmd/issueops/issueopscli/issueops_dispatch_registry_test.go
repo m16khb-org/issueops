@@ -51,13 +51,13 @@ func TestIssueOpsUsageRegistryBidirectionalParity(t *testing.T) {
 		}
 		usageKeys[fields[0]] = true
 	}
-	for key := range issueOpsSubcommands(testCLIUsageDependencies()) {
+	for key := range testIssueOpsCommand().issueOpsSubcommands(testCLIUsageDependencies()) {
 		if !usageKeys[key] {
 			t.Errorf("registry subcommand %q is missing from testLifecycleUsage()", key)
 		}
 	}
 	for key := range usageKeys {
-		if _, ok := issueOpsSubcommands(testCLIUsageDependencies())[key]; !ok {
+		if _, ok := testIssueOpsCommand().issueOpsSubcommands(testCLIUsageDependencies())[key]; !ok {
 			t.Errorf("usage subcommand %q is not registered in issueOpsSubcommands", key)
 		}
 	}

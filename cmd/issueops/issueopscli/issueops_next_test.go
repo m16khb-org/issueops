@@ -36,12 +36,10 @@ func TestIssueOpsNextDispatchesThroughRegistry(t *testing.T) {
 
 // 배선이 없으면 조용히 빈 결과를 내지 않고 실패한다.
 func TestIssueOpsNextFailsClosedWithoutRuntime(t *testing.T) {
-	previous := issueOpsCLIDeps
-	issueOpsCLIDeps = neutralIssueOpsCLIDeps()
-	defer func() { issueOpsCLIDeps = previous }()
-	if err := runIssueOps([]string{"next", "--json"}); err == nil {
+	if err := RunIssueOpsWithDependencies([]string{"next", "--json"}, Dependencies{}); err == nil {
 		t.Fatal("an unconfigured runtime must fail closed")
 	}
+
 }
 
 // --cwd는 관측 지점을 바꾼다. 저장소 밖이면 사이클을 고르지 않는다.

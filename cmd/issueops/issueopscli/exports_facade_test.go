@@ -46,7 +46,7 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 		t.Fatalf("zero dependency wrapper err=%v", err)
 	}
 	handlerCalls := 0
-	err = RunIssueOpsWithDependencies(args, Dependencies{Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueops.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+	err = runIssueOpsForTest(args, Dependencies{Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueops.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 		handlerCalls++
 		if request.ID != record.ID || request.Confirm {
 			t.Fatalf("request=%#v", request)
@@ -84,13 +84,13 @@ func TestIssueOpsDecisionAndCleanupCLIBranches(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := runIssueOpsDecision(nil); err != nil {
+	if err := testIssueOpsCommand().runIssueOpsDecision(nil); err != nil {
 		t.Fatalf("decision help: %v", err)
 	}
-	if err := runIssueOpsDecision([]string{"remove"}); err == nil {
+	if err := testIssueOpsCommand().runIssueOpsDecision([]string{"remove"}); err == nil {
 		t.Fatal("unknown decision subcommand should fail")
 	}
-	if err := runIssueOpsDecision([]string{
+	if err := testIssueOpsCommand().runIssueOpsDecision([]string{
 		"add",
 		"--id", record.ID,
 		"--title", "Use focused tests",

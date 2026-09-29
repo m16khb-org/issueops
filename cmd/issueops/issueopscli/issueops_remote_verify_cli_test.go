@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	issueopscore "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/loopgate"
 	preflight "issueops/internal/adapter/preflight"
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -119,7 +118,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 		t.Fatal(err)
 	}
 	_, actor := seedIssueOpsCLIExecution(t, record)
-	if _, err := loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), id, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, err := advanceLoopPhaseForTest(issueopscore.IssueOpsStateRoot(), id, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	if code, _, stderr := preflight.GitCmd(worktree, "commit", "-q", "-m", "feat: implement remote verify cli"); code != 0 {
@@ -130,7 +129,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, id)
 	recordIssueOpsCoreImplementationReviewForCLITest(t, id)
-	record, err = loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), id, string(issueopscore.IssueOpsPhasePR), actor)
+	record, err = advanceLoopPhaseForTest(issueopscore.IssueOpsStateRoot(), id, string(issueopscore.IssueOpsPhasePR), actor)
 	if err != nil {
 		t.Fatal(err)
 	}

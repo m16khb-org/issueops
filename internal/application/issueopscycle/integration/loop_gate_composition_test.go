@@ -1,10 +1,4 @@
-// Package loopgate는 IssueOps의 PR readiness에 loop run gate를 합성한다.
-//
-// issueops는 IssueOps 레코드만 보고 readiness를 판정하고, looprun은 저장소의 loop
-// 상태만 안다. 두 판정을 합치는 규칙은 어느 한쪽의 관심사가 아니므로 별도 패키지가
-// 소유한다. internal/adapter/core facade가 갖고 있던 조립을 옮겨온 것이며, 이름이
-// issueops의 동명 함수와 겹치지 않도록 여기서는 접두사 없는 이름을 쓴다.
-package loopgate
+package cycleintegration
 
 import (
 	"issueops/internal/adapter/issueops"
@@ -54,5 +48,5 @@ func guardPRPhase(stateRoot, id, to string) error {
 
 // WithLoopGate는 readiness에 repo의 loop run gate를 더한다.
 func WithLoopGate(ready issueopscontract.IssueOpsReadiness, repo string) issueopscontract.IssueOpsReadiness {
-	return cycleapp.ApplyLoopGate(ready, repo, RepoGateMissing)
+	return cycleapp.ApplyLoopGate(ready, repo, testLoopRepoGateMissing)
 }

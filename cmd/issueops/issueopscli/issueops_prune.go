@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func runIssueOpsPrune(args []string) error {
+func (cli command) runIssueOpsPrune(args []string) error {
 	fs := flag.NewFlagSet("issueops prune", flag.ContinueOnError)
 	maxAge := fs.String("max-age", "720h", "prune done cycles older than this Go duration (720h = 30 days)")
 	confirm := fs.Bool("confirm", false, "delete the selected cycles; omit to preview only")
@@ -22,7 +22,7 @@ func runIssueOpsPrune(args []string) error {
 	if err != nil {
 		return fmt.Errorf("invalid --max-age: %w", err)
 	}
-	result, err := issueOpsCLIDeps.PruneIssueOps(issueOpsCLIDeps.IssueOpsStateRoot(), age, *confirm)
+	result, err := cli.Runtime.PruneIssueOps(cli.Runtime.IssueOpsStateRoot(), age, *confirm)
 	if err != nil {
 		if *jsonOut {
 			if printErr := printJSON(result); printErr != nil {

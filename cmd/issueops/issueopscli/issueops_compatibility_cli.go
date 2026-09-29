@@ -7,7 +7,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func runIssueOpsCompatibility(args []string) error {
+func (cli command) runIssueOpsCompatibility(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops compatibility review --id ID --backward-compatibility TEXT --side-effect TEXT --rollback-plan TEXT --verification TEXT [--blocker TEXT] [--approved] [--json]")
 		return nil
@@ -17,7 +17,7 @@ func runIssueOpsCompatibility(args []string) error {
 	}
 	fs := flag.NewFlagSet("issueops compatibility review", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	rollbackPlan := fs.String("rollback-plan", "", "rollback plan if compatibility or side effects break")
 	approved := fs.Bool("approved", false, "approve compatibility and side-effect review")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -32,7 +32,7 @@ func runIssueOpsCompatibility(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsCompatibilityReviewWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCompatibilityReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsCompatibilityReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCompatibilityReviewRequest{
 		BackwardCompatibility: backwardCompatibility,
 		SideEffects:           sideEffects,
 		RollbackPlan:          *rollbackPlan,

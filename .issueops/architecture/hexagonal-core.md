@@ -83,7 +83,7 @@ Mermaid는 보조 자료다. 규칙·경계·검증 명령은 아래 텍스트�
 | `internal/adapter/worker` | local IPC, job lifecycle, daemon state | shell policy 우회 금지 |
 | `internal/domain/gates` | unlazy 호환 게이트 ledger의 순수 파서·판정·직렬화(원문 보존) | filesystem/process I/O, policy 실행 금지 |
 | `internal/adapter/gates` | 게이트 파일 I/O와 policy 게이트 실행(argv 토큰화→policy→timeout/audit) | raw shell 실행, 크로스 케퍼빌리티 adapter 직접 import 금지(실행기는 composition root 주입) |
-| `internal/adapter/issueops/gatesgate` | IssueOps PR readiness에 게이트 ledger 합성(`gates_incomplete:<file>`) | gates adapter 직접 import 금지(함수 변수 주입, loopgate와 동일 구조) |
+| `internal/adapter/issueops/gatesgate` | 중복 gate ledger의 파일 관측 | readiness 합성과 판정은 application/domain이 담당 |
 | `internal/contract/channel` | 세션 간 메시지 채널 DTO(schema v1) | 판정 로직과 I/O 금지 |
 | `internal/adapter/channel` | 채널 메시지 append/읽기/대기 원시(issueops state 위) | 크로스 케퍼빌리티 adapter import 금지, 인증 경계 아님 |
 | `configs/codex` | Codex plugin/skill 템플릿 | core 로직 금지 |
@@ -171,7 +171,7 @@ update/bootstrap CLI는 root에서 조립한 `updatecli.Command`로 flag를 해�
 
 loop의 생성·시도 기록·종료·status는 root가 조립한 `application/looprun.Service`를 호출한다. CLI와 MCP 직접 호출·SDK는 각 인스턴스에 고정한 저장소 경로와 작업 디렉터리를 사용한다. adapter의 `Store`는 SQL 읽기·쓰기와 기존 span 잠금만 수행하며 전역 저장소 setter와 lifecycle 실행 facade는 제거했다.
 
-PR readiness와 doctor의 loop 조회는 `application/looprun.Reader`가 기존 record만 읽고, `domain/looprun.EvaluateRepoGate`가 같은 repo의 미완료 여부·집계와 읽기 실패 시 차단을 판정한다. 빈 저장소를 조회해도 생성하거나 권한을 고치지 않는다. doctor는 조립 시 이 reader를 고정하며, IssueOps readiness의 기존 조립 진입점은 호출 시 reader를 만든다. IssueOps readiness 소비자 전체의 인스턴스 전환은 후속 범위다.
+PR readiness와 doctor의 loop 조회는 `application/looprun.Reader`가 기존 record만 읽고, `domain/looprun.EvaluateRepoGate`가 같은 repo의 미완료 여부·집계와 읽기 실패 시 차단을 판정한다. 빈 저장소를 조회해도 생성하거나 권한을 고치지 않는다. doctor와 IssueOps readiness는 조립 시 이 reader를 고정한다. CLI의 phase·PR readiness와 MCP의 readiness도 같은 application 구성을 사용하며, loopgate의 전역 조회 함수와 production 조립 패키지는 제거했다.
 
 ### Self-verification history boundary
 
@@ -216,6 +216,8 @@ self-verify 실행은 root가 저장소 경로와 step adapter를 고정해 `app
 
 - channel의 발신·수신 입력 검증, 메시지 구성, cursor 정렬·선택, 채널·개수 제한, 대기 시간과 poll 상한은 `internal/domain/channel`이 소유한다. `application/channel.Service`는 저장소 조회·쓰기·시계·대기를 조율하고, 한 번의 수신 대기 안에서 성공적으로 읽은 immutable ID만 기억한다. 읽기 실패는 다음 poll에서 재시도하며 이 관측 집합을 다른 호출과 공유하지 않는다. root는 명시적인 state root·SQL 연산·시계를 가진 `adapter/channel.Store`로 CLI와 `MCPDependencies.Channel`을 구성한다. MCP의 직접 호출과 SDK transport 모두 같은 서버별 서비스를 사용하며, channel의 전역 callback과 Send/Recv 조립 facade는 제거했다.
 
-- gates의 초기 입력·파일명·원장 형식, 실행 여부·결과 반영·집계, abandon 가능 여부와 이슈 폴더 정렬은 `internal/domain/gates`가 소유한다. `application/gates.Service`는 파일 조회·쓰기 순서를, `CommandRunner`는 정책 평가 후 허용된 명령만 실행하는 순서를 조율한다. root는 파일·시계 adapter와 정책 서비스를 명시적으로 연결해 CLI와 `MCPDependencies.Gates`에 전달한다. MCP 직접 호출·SDK 모두 서버별 서비스를 사용하며 gates의 전역 callback과 runtime 조립 facade는 제거했다. 파일 모드, 기존 파일 거부 우선순위, 원장 문구와 저장 경로 호환 계약은 유지한다. PR readiness는 `application/issueopscycle.GateService`가 관측을 조율하고, 연결 이슈 번호는 기존 URL 해석을 소유한 `domain/issueopsremote`가 선택하고, 중복 원장 차단·PR 진입 여부·readiness 병합은 `domain/issueops`가 판정한다. gatesgate adapter에는 파일 관측만 남겼으며, loopgate 및 다른 진입점의 전역 의존성 제거는 후속 범위다.
+- gates의 초기 입력·파일명·원장 형식, 실행 여부·결과 반영·집계, abandon 가능 여부와 이슈 폴더 정렬은 `internal/domain/gates`가 소유한다. `application/gates.Service`는 파일 조회·쓰기 순서를, `CommandRunner`는 정책 평가 후 허용된 명령만 실행하는 순서를 조율한다. root는 파일·시계 adapter와 정책 서비스를 명시적으로 연결해 CLI와 `MCPDependencies.Gates`에 전달한다. MCP 직접 호출·SDK 모두 서버별 서비스를 사용하며 gates의 전역 callback과 runtime 조립 facade는 제거했다. 파일 모드, 기존 파일 거부 우선순위, 원장 문구와 저장 경로 호환 계약은 유지한다. PR readiness는 `application/issueopscycle.GateService`가 관측을 조율하고, 연결 이슈 번호는 기존 URL 해석을 소유한 `domain/issueopsremote`가 선택하고, 중복 원장 차단·PR 진입 여부·readiness 병합은 `domain/issueops`가 판정한다. gatesgate adapter에는 파일 관측만 남겼으며, 다른 진입점의 잔여 전역 의존성 제거는 후속 범위다.
 
-- MCP 서버는 `MCPDependencies`로 검사·preflight·스킬 목록·commit 제안·lint 진단·웹 조회·실행 의존성을 받는다. root는 기본 대상과 harness 경로, 버전, inspector, execution state root를 생성 시 고정하며 직접 호출·SDK가 같은 구성을 사용한다. 문서 도구와 resource는 `Resources`의 동일한 reader/index 설정을 공유한다. MCP의 전역 함수 setter와 실행 fallback, 사용하지 않는 switch/base callback은 제거했다. execution의 실제 application 연결과 native 계보 관측을 유지하며 transport의 요청 context를 전달한다. commit/lint adapter는 명시적으로 받은 경로 정규화와 Git/process 실행만 담당하고 CLI·MCP가 application 서비스를 주입한다. 빈 diff 판정과 명령 존재·실패 로그 tail 규칙은 각 domain, prompt 조합은 application이 소유한다. CLI execution setter, loopgate, webfetch 내부 조립 facade와 docs/inspect의 의미적 책임 점검은 후속 범위다.
+- MCP 서버는 `MCPDependencies`로 검사·preflight·스킬 목록·commit 제안·lint 진단·웹 조회·실행 의존성을 받는다. root는 기본 대상과 harness 경로, 버전, inspector, execution state root를 생성 시 고정하며 직접 호출·SDK가 같은 구성을 사용한다. 문서 도구와 resource는 `Resources`의 동일한 reader/index 설정을 공유한다. MCP의 전역 함수 setter와 실행 fallback, 사용하지 않는 switch/base callback은 제거했다. execution의 실제 application 연결과 native 계보 관측을 유지하며 transport의 요청 context를 전달한다. commit/lint adapter는 명시적으로 받은 경로 정규화와 Git/process 실행만 담당하고 CLI·MCP가 application 서비스를 주입한다. 빈 diff 판정과 명령 존재·실패 로그 tail 규칙은 각 domain, prompt 조합은 application이 소유한다. CLI execution setter, webfetch 내부 조립 facade와 docs/inspect의 의미적 책임 점검은 후속 범위다.
+
+- IssueOps lifecycle CLI는 `Dependencies.Runtime`과 `Gates`를 명령 인스턴스에 보관한다. root가 state root를 고정한 runtime과 loop reader를 연결하고, actor flag는 해당 인스턴스의 프로세스 계보 관측 함수를 사용한다. 전역 runtime·PR gate setter와 빈 의존성으로 재진입하던 dispatch wrapper는 제거했다. 생성 명령의 provenance·실제 cwd 검사는 dispatch 전에 유지하며 strict readiness의 record 조회 → 기본 판정 → strict 판정 순서도 보존한다. CLI의 execution runner와 cleanup·remote 등 하위 capability의 전역 의존성은 T20 후속 대상이다.

@@ -85,7 +85,7 @@ func wireIssueOpsRuntimeForTests() {
 		Env:        os.Getenv,
 		Now:        time.Now,
 	})
-	ConfigureIssueOpsRuntime2(IssueOpsCLIDeps{
+	testIssueOpsRuntime = IssueOpsCLIDeps{
 		AcceptIssueOpsChildWithActor:  acceptChildWithActorForTest,
 		AddIssueOpsDecisionWithActor:  decisions.AddWithActor,
 		DropIssueOpsChildWithActor:    dropChildWithActorForTest,
@@ -139,5 +139,5 @@ func wireIssueOpsRuntimeForTests() {
 		StartIssueOps:                               startIssueOpsFixture,
 		StartIssueOpsChildWithActor:                 startChildWithActorForTest,
 		UnstageIssueOpsArtifact:                     artifacts.Unstage,
-	})
+	}
 }

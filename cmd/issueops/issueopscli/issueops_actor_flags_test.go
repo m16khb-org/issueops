@@ -34,8 +34,14 @@ func TestActorFlagRegistrationsAreNeverDiscarded(t *testing.T) {
 			if !ok {
 				return nil, false
 			}
-			name, ok := call.Fun.(*ast.Ident)
-			return call, ok && registrars[name.Name]
+			switch name := call.Fun.(type) {
+			case *ast.Ident:
+				return call, registrars[name.Name]
+			case *ast.SelectorExpr:
+				return call, registrars[name.Sel.Name]
+			default:
+				return call, false
+			}
 		}
 		ast.Inspect(file, func(node ast.Node) bool {
 			switch statement := node.(type) {

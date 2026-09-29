@@ -1,4 +1,4 @@
-package loopgate
+package cycleintegration
 
 import (
 	"encoding/json"

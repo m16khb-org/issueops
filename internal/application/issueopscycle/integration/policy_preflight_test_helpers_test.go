@@ -1,4 +1,4 @@
-package loopgate
+package cycleintegration
 
 import (
 	issueopsppdeps "issueops/internal/adapter/issueops"

@@ -49,7 +49,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 
 	mutations := 0
 	out, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
-		return RunIssueOpsWithDependencies([]string{
+		return runIssueOpsForTest([]string{
 			"execution", "release", "--id", record.ID, "--generation", "7",
 			"--generated-by-executable", "/worktree/bin/issueops",
 			"--generated-by-sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
@@ -117,7 +117,7 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 	}
 	mutations := 0
 	_, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
-		return RunIssueOpsWithDependencies(tokens[1:], Dependencies{
+		return runIssueOpsForTest(tokens[1:], Dependencies{
 			Release: func(context.Context, string, issueopscore.ExecutionReleaseRequest) (issueopscore.ExecutionResult, error) {
 				mutations++
 				return issueopscore.ExecutionResult{OK: true, ID: record.ID, Execution: *record.Execution}, nil
@@ -166,7 +166,7 @@ func TestGeneratedDelegatedChildBootstrapUsesParentExecutionProvenance(t *testin
 		"--generated-by-sha256", evidence.ExecutableSHA256,
 		"--generated-for-generation", "1",
 	}
-	clean, generated, err := prepareGeneratedCommandInvocation(args, Dependencies{
+	clean, generated, err := testIssueOpsCommand().prepareGeneratedCommandInvocation(args, Dependencies{
 		Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
 			ExecutablePath: evidence.ExecutablePath, ExecutableSHA256: evidence.ExecutableSHA256,
 		}},
@@ -198,7 +198,7 @@ func TestGeneratedOwnerMutationRequiresActualProcessCWD(t *testing.T) {
 
 	t.Chdir(repo)
 	_, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
-		return RunIssueOpsWithDependencies(args, deps)
+		return runIssueOpsForTest(args, deps)
 	})
 	if runErr == nil || !strings.Contains(runErr.Error(), "actual process cwd") {
 		t.Fatalf("generated owner mutation from source cwd must fail before mutation: %v", runErr)
@@ -213,7 +213,7 @@ func TestGeneratedOwnerMutationRequiresActualProcessCWD(t *testing.T) {
 
 	t.Chdir(parent.WorktreePath)
 	if _, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
-		return RunIssueOpsWithDependencies(args, deps)
+		return runIssueOpsForTest(args, deps)
 	}); runErr != nil {
 		t.Fatalf("matching actual process cwd must admit generated owner mutation: %v", runErr)
 	}

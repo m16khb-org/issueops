@@ -7,7 +7,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func runIssueOpsPlanPrep(args []string) error {
+func (cli command) runIssueOpsPlanPrep(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops plan-prep record --id ID [--decisions-evidence TEXT | --decisions-waive REASON] [--related-score-ref TEXT | --related-waive REASON] [--web-research-evidence TEXT | --web-research-waive REASON] [--codebase-survey-evidence TEXT | --codebase-survey-waive REASON] [--json]")
 		return nil
@@ -17,7 +17,7 @@ func runIssueOpsPlanPrep(args []string) error {
 	}
 	fs := flag.NewFlagSet("issueops plan-prep record", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	var decisionsEvidence repeatedFlag
 	var relatedScore repeatedFlag
 	var webResearch repeatedFlag
@@ -34,7 +34,7 @@ func runIssueOpsPlanPrep(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsPlanPrepWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsPlanPrepRequest{
+	record, err := cli.Runtime.RecordIssueOpsPlanPrepWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsPlanPrepRequest{
 		PriorDecisions: issueopscontract.IssueOpsPlanPrepItemRequest{Evidence: []string(decisionsEvidence), WaiveReason: *decisionsWaive},
 		RelatedIssues:  issueopscontract.IssueOpsPlanPrepItemRequest{Evidence: []string(relatedScore), WaiveReason: *relatedWaive},
 		WebResearch:    issueopscontract.IssueOpsPlanPrepItemRequest{Evidence: []string(webResearch), WaiveReason: *webWaive},

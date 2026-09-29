@@ -11,6 +11,8 @@ import (
 )
 
 type Dependencies struct {
+	Runtime     IssueOpsCLIDeps
+	Gates       LoopGateDeps
 	Usage       string
 	ChildUsage  string
 	Prepare     issueopscontract.ExecutionPrepareHandler
@@ -30,7 +32,7 @@ type Dependencies struct {
 }
 
 func RunIssueOpsWithDependencies(args []string, deps Dependencies) error {
-	return runIssueOpsWithDependencies(args, deps)
+	return (command{Runtime: deps.Runtime, Gates: deps.Gates}).runIssueOpsWithDependencies(args, deps)
 }
 
 func VerifyChildIssueBeforeLink(childURL string) error {
@@ -43,4 +45,10 @@ func VerifyRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerific
 
 func SetChildIssueVerifier(verifier func(string) error) func(string) error {
 	return remoteverify.SetChildIssueVerifier(verifier)
+}
+
+// command owns the runtime used by one CLI invocation.
+type command struct {
+	Runtime IssueOpsCLIDeps
+	Gates   LoopGateDeps
 }
