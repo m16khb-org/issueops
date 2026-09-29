@@ -17,16 +17,20 @@ func TestExportedIssueOpsFacades(t *testing.T) {
 	if err := runIssueOps([]string{"unknown"}); err == nil {
 		t.Fatal("unknown issueops subcommand should fail")
 	}
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
+	if err := testRemoteVerifier().Verify(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
 		t.Fatal("invalid remote artifact URL should fail before provider inspection")
 	}
 
 	sentinel := errors.New("sentinel")
-	previous := SetChildIssueVerifier(func(string) error { return sentinel })
-	defer SetChildIssueVerifier(previous)
-	if err := VerifyChildIssueBeforeLink("https://github.com/acme/repo/issues/1"); !errors.Is(err, sentinel) {
+	cli := testIssueOpsCommand()
+	cli.VerifyChild = func(string) error { return sentinel }
+	_, err := captureStdoutAndErrorForIssueOps(t, func() error {
+		return cli.runIssueOpsLinkChild([]string{"--child-url", "https://github.com/acme/repo/issues/1", "--json"})
+	})
+	if !errors.Is(err, sentinel) {
 		t.Fatalf("stubbed child verifier err=%v", err)
 	}
+
 }
 
 func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {

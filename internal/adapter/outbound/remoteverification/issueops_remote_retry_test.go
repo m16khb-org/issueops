@@ -1,4 +1,4 @@
-package remoteverify
+package remoteverification
 
 import (
 	"context"
@@ -11,17 +11,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-// withInstantBackoff drops the inter-attempt sleep so retry behaviour is tested
-// without slowing the suite, restoring the production value afterwards.
-func withInstantBackoff(t *testing.T) {
-	t.Helper()
-	previous := remoteVerifyBackoff
-	remoteVerifyBackoff = 0
-	t.Cleanup(func() { remoteVerifyBackoff = previous })
-}
-
 func TestRunRemoteVerifyCommandRetriesTransientFailureThenSucceeds(t *testing.T) {
-	withInstantBackoff(t)
 	bin := t.TempDir()
 	countPath := filepath.Join(t.TempDir(), "count")
 	// Fail transiently (HTTP 503, no auth/not-found signal) for the first
@@ -49,7 +39,6 @@ exit 0
 }
 
 func TestRunRemoteVerifyCommandFailsFastOnAuthError(t *testing.T) {
-	withInstantBackoff(t)
 	bin := t.TempDir()
 	countPath := filepath.Join(t.TempDir(), "count")
 	// An auth-classified failure must NOT be retried so the documented MCP
@@ -74,7 +63,6 @@ exit 1
 }
 
 func TestRunRemoteVerifyCommandRejectsOversizedOutput(t *testing.T) {
-	withInstantBackoff(t)
 	bin := t.TempDir()
 	writeFakeCommand(t, filepath.Join(bin, "gh"), `#!/bin/sh
 dd if=/dev/zero bs=1024 count=300 2>/dev/null

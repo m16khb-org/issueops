@@ -1,4 +1,4 @@
-package remoteverify
+package remoteverification
 
 import (
 	"context"
@@ -15,16 +15,8 @@ const maxRemoteVerifyDiagnosticBytes = 2048
 const maxRemoteVerifyOutputBytes = 256 * 1024
 const remoteVerifyCommandTimeout = 30 * time.Second
 
-// remoteVerifyAttempts is the bounded number of times a load-bearing gh/glab
-// verification exec is attempted before a transient failure is surfaced. It is a
-// package var so tests can tune it; the load-bearing verify must not hang on a
-// single network blip the way the optional LLM judge never did.
-var remoteVerifyAttempts = 3
-
-// remoteVerifyBackoff is the delay between transient retries. Kept tiny and
-// deterministic so the retry never meaningfully slows verification or tests; a
-// momentary 5xx/rate-limit resolves well within this window.
-var remoteVerifyBackoff = 50 * time.Millisecond
+const remoteVerifyAttempts = 3
+const remoteVerifyBackoff = 50 * time.Millisecond
 
 // runRemoteVerifyCommand runs a gh/glab verification command with bounded retry
 // and returns the raw command result so callers keep wrapping failures through
@@ -139,27 +131,6 @@ func (err *remoteVerifyCommandError) Unwrap() error {
 	return err.cause
 }
 
-// nonRetryableCommandSignals are lowercased stderr fragments that mark a gh/glab
-// failure as definitive: auth/permission/credential problems and missing
-// resources where retrying the identical command cannot change the outcome.
-var nonRetryableCommandSignals = []string{
-	"http 401",
-	"http 403",
-	"http 404",
-	"401 unauthorized",
-	"403 forbidden",
-	"unauthorized",
-	"forbidden",
-	"not found",
-	"authentication",
-	"not logged in",
-	"auth login",
-	"auth status",
-	"credential",
-	"permission denied",
-	"not installed",
-}
-
 // isRetryableCommandError reports whether a failed gh/glab verification command
 // should be retried. A missing or non-executable binary, and any failure whose
 // stderr carries an auth/permission/missing-resource signal, is NOT retryable:
@@ -167,6 +138,24 @@ var nonRetryableCommandSignals = []string{
 // else — bare non-zero exits and transient 5xx/rate-limit/network blips — is
 // retried.
 func isRetryableCommandError(err error) bool {
+	nonRetryableCommandSignals := []string{
+		"http 401",
+		"http 403",
+		"http 404",
+		"401 unauthorized",
+		"403 forbidden",
+		"unauthorized",
+		"forbidden",
+		"not found",
+		"authentication",
+		"not logged in",
+		"auth login",
+		"auth status",
+		"credential",
+		"permission denied",
+		"not installed",
+	}
+
 	if err == nil {
 		return false
 	}
@@ -192,27 +181,6 @@ func isRetryableCommandError(err error) bool {
 	}
 	// Unknown error shape without exit metadata: treat as transient.
 	return true
-}
-
-func requireRemoteValues(kind string, required []string, actual []string) error {
-	actualSet := map[string]bool{}
-	for _, value := range actual {
-		value = strings.TrimSpace(strings.ToLower(value))
-		if value != "" {
-			actualSet[value] = true
-		}
-	}
-	missing := []string{}
-	for _, value := range required {
-		cleaned := strings.TrimSpace(strings.ToLower(value))
-		if cleaned != "" && !actualSet[cleaned] {
-			missing = append(missing, value)
-		}
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf("remote artifact missing verified %s(s): %s", kind, strings.Join(missing, ", "))
-	}
-	return nil
 }
 
 func commandOutputError(err error) error {

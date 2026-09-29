@@ -3,7 +3,7 @@ package issueopscli
 var testIssueOpsRuntime IssueOpsCLIDeps
 
 func testIssueOpsCommand() command {
-	return command{Runtime: testIssueOpsRuntime, Gates: testIssueOpsGates}
+	return command{Runtime: testIssueOpsRuntime, Gates: testIssueOpsGates, VerifyChild: testRemoteVerifier().Child}
 }
 
 func runIssueOpsForTest(args []string, deps Dependencies) error {
@@ -15,6 +15,13 @@ func runIssueOpsForTest(args []string, deps Dependencies) error {
 	}
 	if deps.Execution.ExecuteExecution == nil {
 		deps.Execution = testCLIExecutionRuntime()
+	}
+	if deps.Verification.Verify == nil {
+		child := deps.Verification.Child
+		deps.Verification = testRemoteVerificationHandlers()
+		if child != nil {
+			deps.Verification.Child = child
+		}
 	}
 	return RunIssueOpsWithDependencies(args, deps)
 }

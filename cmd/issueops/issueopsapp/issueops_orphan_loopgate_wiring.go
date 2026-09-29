@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"context"
 	"issueops/cmd/issueops/issueopscli"
-	"issueops/cmd/issueops/issueopscli/remoteverify"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	healthadapter "issueops/internal/adapter/operationalhealth"
 	orcaadapter "issueops/internal/adapter/orca"
@@ -30,5 +29,5 @@ func orphanCleaner(root string) cleanupapp.OrphanCleaner {
 	}
 	return cleanupapp.OrphanCleaner{Environment: environment, Collect: func(ctx context.Context, repo string) (health.Snapshot, error) {
 		return (newOperationalHealthCollector(root, healthadapter.ExecGitRunner{}, orcaadapter.New())).Collect(ctx, repo), nil
-	}, VerifyMerged: remoteverify.VerifyRemoteArtifactMergedLive}
+	}, VerifyMerged: newRemoteVerifier().Merged}
 }

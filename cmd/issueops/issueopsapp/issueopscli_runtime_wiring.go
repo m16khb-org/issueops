@@ -2,11 +2,10 @@ package issueopsapp
 
 import (
 	"context"
+	"issueops/cmd/issueops/issueopscli"
 	"os"
 	"time"
 
-	"issueops/cmd/issueops/issueopscli"
-	"issueops/cmd/issueops/issueopscli/remoteverify"
 	issueopscore "issueops/internal/adapter/issueops"
 	branchapp "issueops/internal/application/issueopsbranch"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -60,7 +59,7 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 			return newBranchPreparer(root).Prepare(context.Background(), id, req, &actor)
 		},
 		RetargetIssueOpsBranchWithActor: func(stateRoot, id string, req issueopscontract.IssueOpsBranchRetargetRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return newBranchRetargeter(stateRoot, remoteverify.ObserveRemoteArtifactTargetLive).Retarget(context.Background(), id, req, actor)
+			return newBranchRetargeter(stateRoot, newRemoteVerifier().ObserveTarget).Retarget(context.Background(), id, req, actor)
 		},
 		AwaitIssueOpsBranchLink: func(ctx context.Context, stateRoot string, req issueopscontract.AwaitBranchLinkRequest) (issueopscontract.AwaitBranchLinkResult, error) {
 			return (branchapp.LinkAwaiter{

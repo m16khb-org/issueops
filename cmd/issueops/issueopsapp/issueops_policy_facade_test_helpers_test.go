@@ -1,13 +1,12 @@
 package issueopsapp
 
 import (
-	"issueops/cmd/issueops/issueopscli"
 	issueopscontract "issueops/internal/contract/issueops"
 	policy "issueops/internal/contract/policy"
 )
 
 func verifyIssueOpsRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
-	return issueopscli.VerifyRemoteArtifactLive(req)
+	return newRemoteVerifier().Verify(req)
 }
 
 func parseCommandPolicyFlags(name string, args []string) (policy.CommandPolicyRequest, bool, error) {

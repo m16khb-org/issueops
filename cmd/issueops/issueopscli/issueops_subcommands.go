@@ -88,7 +88,7 @@ func (cli command) runIssueOpsLinkChild(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	if err := verifyIssueOpsChildIssueBeforeLink(*childURL); err != nil {
+	if err := cli.VerifyChild(*childURL); err != nil {
 		return printIssueOpsResult(issueopscontract.IssueOpsRecord{OK: false}, *jsonOut, err)
 	}
 	record, err := cli.Runtime.LinkIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *childURL, *title, actor.actor())

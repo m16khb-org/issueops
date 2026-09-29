@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
-	"issueops/cmd/issueops/issueopscli/remoteverify"
 	orcaadapter "issueops/internal/adapter/orca"
 	provideradapter "issueops/internal/adapter/provider"
 	model "issueops/internal/contract/issueops"
@@ -22,12 +21,12 @@ func testCleanupRuntime() feedbackcleanup.Deps {
 		},
 		OrcaIntent: execution, OrcaOwner: execution,
 		VerifyMerged: func(a model.IssueOpsRemoteArtifactVerification) error {
-			return remoteverify.VerifyRemoteArtifactMergedLive(context.Background(), a)
+			return testRemoteVerifier().Merged(context.Background(), a)
 		},
 		VerifyMergedHead: func(a model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
-			return remoteverify.VerifyRemoteArtifactMergedHeadLive(context.Background(), a)
+			return testRemoteVerifier().MergedHead(context.Background(), a)
 		},
-		ObserveArtifactMerged: remoteverify.ObserveRemoteArtifactMergedLive,
+		ObserveArtifactMerged: testRemoteVerifier().ObserveMerged,
 		Provider:              provideradapter.Resolve,
 		OrphanPreview:         orphans.Preview, OrphanApply: orphans.Apply,
 	}

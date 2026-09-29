@@ -10,7 +10,6 @@ import (
 )
 
 func TestRunIssueOpsLifecycle(t *testing.T) {
-	stubIssueOpsChildIssueVerifier(t, nil)
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	bin := t.TempDir()
 	codegraph := filepath.Join(bin, "codegraph")
@@ -130,7 +129,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	}
 
 	child := captureStdoutForContract(t, func() error {
-		return runIssueOps(withIssueOpsCLIActor([]string{"link-child", "--id", id, "--child-url", "https://github.com/example/repo/issues/2", "--title", "write child graph tests", "--json"}, actor))
+		return runIssueOpsForTest(withIssueOpsCLIActor([]string{"link-child", "--id", id, "--child-url", "https://github.com/example/repo/issues/2", "--title", "write child graph tests", "--json"}, actor), Dependencies{Verification: RemoteVerification{Child: func(string) error { return nil }}})
 	})
 	var childRecord map[string]any
 	if err := json.Unmarshal([]byte(child), &childRecord); err != nil {

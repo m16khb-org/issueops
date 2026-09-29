@@ -5,17 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-
-	"issueops/cmd/issueops/issueopscli"
 )
-
-func stubIssueOpsChildIssueVerifier(t *testing.T, verifier func(string) error) {
-	t.Helper()
-	previous := issueopscli.SetChildIssueVerifier(verifier)
-	t.Cleanup(func() {
-		issueopscli.SetChildIssueVerifier(previous)
-	})
-}
 
 func makeGitRepoForContract(t *testing.T) string {
 	t.Helper()

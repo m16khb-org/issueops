@@ -8,9 +8,9 @@ import (
 )
 
 func TestRunIssueOpsLinkChildRequiresLiveIssue(t *testing.T) {
-	stubIssueOpsChildIssueVerifier(t, func(_ string) error {
+	verifyChild := func(_ string) error {
 		return errors.New("child issue not found")
-	})
+	}
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "child-live")
 	start := captureStdoutForContract(t, func() error {
@@ -27,7 +27,7 @@ func TestRunIssueOpsLinkChildRequiresLiveIssue(t *testing.T) {
 	_ = captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"link-issue", "--id", id, "--issue-url", "https://github.com/example/repo/issues/1", "--json"})
 	})
-	if err := runIssueOps([]string{"link-child", "--id", id, "--child-url", "https://github.com/example/repo/issues/2", "--title", "missing child", "--json"}); err == nil || !strings.Contains(err.Error(), "child issue not found") {
+	if err := runIssueOpsForTest([]string{"link-child", "--id", id, "--child-url", "https://github.com/example/repo/issues/2", "--title", "missing child", "--json"}, Dependencies{Verification: RemoteVerification{Child: verifyChild}}); err == nil || !strings.Contains(err.Error(), "child issue not found") {
 		t.Fatalf("link-child should require live child issue verification, got %v", err)
 	}
 }

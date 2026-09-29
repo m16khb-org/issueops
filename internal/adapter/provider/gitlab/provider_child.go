@@ -573,7 +573,7 @@ func parseGitLabWorkItemURL(raw string) (hostname, projectPath, iid string, err 
 // net/url plus the shared remoteparse path splitter (keyed on the /-/issues/ and
 // /-/work_items/ markers). This accepts self-hosted instances on custom domains
 // that do not contain the literal substring "gitlab", matching the structural
-// detection already used by the verify layer (remoteverify.VerifyGitLabIssueLive).
+// detection already used by the verify layer (remoteverification.Service.Child).
 func splitGitLabIssueURL(raw string) (hostname, projectPath, iid, kind string, err error) {
 	trimmed := strings.TrimSpace(raw)
 	parsed, perr := url.Parse(trimmed)

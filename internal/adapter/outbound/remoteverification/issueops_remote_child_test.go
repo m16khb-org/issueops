@@ -1,4 +1,4 @@
-package remoteverify
+package remoteverification
 
 import (
 	"net/url"

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"issueops/cmd/issueops/issueopscli"
 	publicationinbound "issueops/internal/adapter/inbound/issueopspublication"
 	"issueops/internal/adapter/issueops"
 	authorizationoutbound "issueops/internal/adapter/outbound/issueopsauthorization"
@@ -29,7 +28,7 @@ type issueOpsPublicationCompositionDeps struct {
 
 func productionIssueOpsPublicationDeps() issueOpsPublicationCompositionDeps {
 	return issueOpsPublicationCompositionDeps{
-		Resolve: provider.Resolve, VerifyLive: issueopscli.VerifyRemoteArtifactLive, Now: time.Now,
+		Resolve: provider.Resolve, VerifyLive: newRemoteVerifier().Verify, Now: time.Now,
 	}
 }
 

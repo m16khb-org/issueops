@@ -1,11 +1,11 @@
 package issueopscli
 
 import (
+	"context"
 	"issueops/cmd/issueops/issueopscli/benchmarkcmd"
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	"issueops/cmd/issueops/issueopscli/remoteverify"
 	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
@@ -13,7 +13,15 @@ import (
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
 
+type RemoteVerification struct {
+	Child         func(string) error
+	Verify        func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error
+	VerifyContext func(context.Context, issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error
+	Merged        func(context.Context, issueopscontract.IssueOpsRemoteArtifactVerification) error
+}
+
 type Dependencies struct {
+	Verification   RemoteVerification
 	Remote         remotecmd.Command
 	Cleanup        feedbackcleanup.Command
 	CleanupRuntime feedbackcleanup.Deps
@@ -40,23 +48,12 @@ type Dependencies struct {
 }
 
 func RunIssueOpsWithDependencies(args []string, deps Dependencies) error {
-	return (command{Runtime: deps.Runtime, Gates: deps.Gates}).runIssueOpsWithDependencies(args, deps)
-}
-
-func VerifyChildIssueBeforeLink(childURL string) error {
-	return verifyIssueOpsChildIssueBeforeLink(childURL)
-}
-
-func VerifyRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
-	return verifyIssueOpsRemoteArtifactLive(req)
-}
-
-func SetChildIssueVerifier(verifier func(string) error) func(string) error {
-	return remoteverify.SetChildIssueVerifier(verifier)
+	return (command{Runtime: deps.Runtime, Gates: deps.Gates, VerifyChild: deps.Verification.Child}).runIssueOpsWithDependencies(args, deps)
 }
 
 // command owns the runtime used by one CLI invocation.
 type command struct {
-	Runtime IssueOpsCLIDeps
-	Gates   LoopGateDeps
+	VerifyChild func(string) error
+	Runtime     IssueOpsCLIDeps
+	Gates       LoopGateDeps
 }

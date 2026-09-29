@@ -1,10 +1,12 @@
 package issueopscli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
+	issueopscontract "issueops/internal/contract/issueops"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 	"os"
 	"path/filepath"
@@ -49,10 +51,10 @@ func (cli command) issueOpsSubcommands(deps Dependencies) map[string]func([]stri
 		"cleanup":               func(args []string) error { return runIssueOpsCleanupWithDependencies(args, deps) },
 		"benchmark":             func(args []string) error { return deps.Benchmark.Run(args) },
 		"remote": func(args []string) error {
-			return deps.Remote.Run(args, issueOpsRemoteDepsWithPublication(deps.Publication))
+			return deps.Remote.Run(args, issueOpsRemoteDepsWithPublication(deps.Publication, deps.Verification))
 		},
 		"remote-score": func(args []string) error {
-			return deps.Remote.Run(append([]string{"score"}, args...), issueOpsRemoteDepsWithPublication(deps.Publication))
+			return deps.Remote.Run(append([]string{"score"}, args...), issueOpsRemoteDepsWithPublication(deps.Publication, deps.Verification))
 		},
 		"prune":        cli.runIssueOpsPrune,
 		"pr-readiness": cli.runIssueOpsPRReadiness,
@@ -155,15 +157,17 @@ func (cli command) suggestIssueOpsSubcommand(input string) string {
 	return ""
 }
 
-func issueOpsRemoteDepsWithPublication(publication remotecmd.PublicationHandlers) remotecmd.Deps {
+func issueOpsRemoteDepsWithPublication(publication remotecmd.PublicationHandlers, verification RemoteVerification) remotecmd.Deps {
 	return remotecmd.Deps{
 		PrintJSON:         printJSON,
 		PrintResult:       printIssueOpsResult,
 		PrintError:        printIssueOpsErrorJSON,
-		VerifyLive:        verifyIssueOpsRemoteArtifactLive,
-		VerifyLiveContext: verifyIssueOpsRemoteArtifactLiveContext,
-		VerifyMerged:      verifyIssueOpsRemoteArtifactMergedLive,
-		Publication:       publication,
+		VerifyLive:        verification.Verify,
+		VerifyLiveContext: verification.VerifyContext,
+		VerifyMerged: func(a issueopscontract.IssueOpsRemoteArtifactVerification) error {
+			return verification.Merged(context.Background(), a)
+		},
+		Publication: publication,
 	}
 }
 

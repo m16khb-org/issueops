@@ -1246,6 +1246,15 @@
       ]
     },
     {
+      "path": "cmd/issueops/issueopsapp/remote_verification_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func newRemoteVerificationHandlers",
+        "func newRemoteVerifier"
+      ]
+    },
+    {
       "path": "cmd/issueops/issueopsapp/responsecontract/normalize.go",
       "owner": "composition",
       "task": "T20",
@@ -1623,10 +1632,8 @@
       "task": "T20",
       "symbols": [
         "func RunIssueOpsWithDependencies",
-        "func SetChildIssueVerifier",
-        "func VerifyChildIssueBeforeLink",
-        "func VerifyRemoteArtifactLive",
         "type Dependencies",
+        "type RemoteVerification",
         "type command"
       ]
     },
@@ -1835,19 +1842,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopscli/issueops_remote_verify_facade.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func observeIssueOpsRemoteArtifactMergedLive",
-        "func verifyIssueOpsChildIssueBeforeLink",
-        "func verifyIssueOpsRemoteArtifactLive",
-        "func verifyIssueOpsRemoteArtifactLiveContext",
-        "func verifyIssueOpsRemoteArtifactMergedHeadLive",
-        "func verifyIssueOpsRemoteArtifactMergedLive"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopscli/issueops_subcommands.go",
       "owner": "inbound",
       "task": "T20",
@@ -1995,67 +1989,6 @@
       "task": "T20",
       "symbols": [
         "func Command.runRemotePublication"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_child.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func SetChildIssueVerifier",
-        "func VerifyChildIssueBeforeLink",
-        "func VerifyChildIssueLive",
-        "func VerifyGitHubIssueLive",
-        "func VerifyGitLabIssueLive",
-        "func fetchGitLabIssueEndpoint",
-        "func verifyGitLabIssuePayloadIsTask"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_fetch.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func fetchGitHubIssueArtifactContext",
-        "func fetchGitHubPullRequestArtifact",
-        "func fetchGitHubPullRequestArtifactContext",
-        "func fetchGitLabIssueArtifact",
-        "func fetchGitLabIssueArtifactContext",
-        "func fetchGitLabMergeRequestArtifact",
-        "func fetchGitLabMergeRequestArtifactContext"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_helpers.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func commandOutputError",
-        "func executeBoundedRemoteVerifyCommand",
-        "func isRetryableCommandError",
-        "func remoteVerifyBuffer.String",
-        "func remoteVerifyBuffer.Write",
-        "func remoteVerifyCommandError.Error",
-        "func remoteVerifyCommandError.Unwrap",
-        "func requireRemoteValues",
-        "func runRemoteVerifyCommand",
-        "type remoteVerifyBuffer",
-        "type remoteVerifyCommandError"
-      ]
-    },
-    {
-      "path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_verify.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ObserveRemoteArtifactMergedLive",
-        "func ObserveRemoteArtifactTargetLive",
-        "func VerifyRemoteArtifactLive",
-        "func VerifyRemoteArtifactLiveContext",
-        "func VerifyRemoteArtifactMergedHeadLive",
-        "func VerifyRemoteArtifactMergedLive",
-        "func fetchRemoteArtifactLive",
-        "type liveRemoteArtifact"
       ]
     },
     {
@@ -6622,6 +6555,45 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/remoteverification/fetch.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func fetchGitHubIssueArtifactContext",
+        "func fetchGitHubPullRequestArtifactContext",
+        "func fetchGitLabIssueArtifactContext",
+        "func fetchGitLabMergeRequestArtifactContext"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/remoteverification/process.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func commandOutputError",
+        "func executeBoundedRemoteVerifyCommand",
+        "func isRetryableCommandError",
+        "func remoteVerifyBuffer.String",
+        "func remoteVerifyBuffer.Write",
+        "func remoteVerifyCommandError.Error",
+        "func remoteVerifyCommandError.Unwrap",
+        "func runRemoteVerifyCommand",
+        "type remoteVerifyBuffer",
+        "type remoteVerifyCommandError"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/remoteverification/reader.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Reader.Artifact",
+        "func Reader.GitHubChild",
+        "func Reader.GitLabChild",
+        "type Reader"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/sqlstore/maintain.go",
       "owner": "adapter",
       "task": "T20",
@@ -10464,6 +10436,22 @@
       ]
     },
     {
+      "path": "internal/application/remoteverification/verification.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Child",
+        "func Service.Merged",
+        "func Service.MergedHead",
+        "func Service.ObserveMerged",
+        "func Service.ObserveTarget",
+        "func Service.Verify",
+        "func Service.VerifyContext",
+        "func Service.mergedArtifact",
+        "type Service"
+      ]
+    },
+    {
       "path": "internal/application/riskqa/execute.go",
       "owner": "application",
       "task": "T20",
@@ -12218,6 +12206,17 @@
       "task": "T02",
       "symbols": [
         "type VerificationKind"
+      ]
+    },
+    {
+      "path": "internal/contract/remoteverification/verification.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type Artifact",
+        "type ChildTarget",
+        "type Target",
+        "type TaskMetadata"
       ]
     },
     {
@@ -15746,6 +15745,26 @@
       ]
     },
     {
+      "path": "internal/domain/remoteverification/artifact.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ArtifactTarget",
+        "func RequireMerged",
+        "func ValidateArtifact",
+        "func requireRemoteValues"
+      ]
+    },
+    {
+      "path": "internal/domain/remoteverification/child.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ChildTarget",
+        "func ValidateTask"
+      ]
+    },
+    {
       "path": "internal/domain/repoidentity/source.go",
       "owner": "domain",
       "task": "T20",
@@ -16771,6 +16790,14 @@
         "type IssueProviderReplaceArtifactBodyResult",
         "type IssueProviderUpdateIssueBodySectionRequest",
         "type IssueProviderUpdateIssueBodySectionResult"
+      ]
+    },
+    {
+      "path": "internal/port/remoteverification/reader.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type Reader"
       ]
     },
     {
@@ -24445,6 +24472,122 @@
       "evidence_tests": [
         "TestChildCreatorOrdersValidationAuthorityCreationAndLink",
         "TestRemoteChildCreationUsesRootApplicationAndPersistsLink"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-verification-evidence",
+      "source_path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_verify.go",
+      "source_symbol": "func VerifyRemoteArtifactLiveContext",
+      "responsibility": "artifact URL and required label/assignee acceptance with exact refusal ordering",
+      "target": "internal/domain/remoteverification",
+      "target_symbol": "func ValidateArtifact",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/remote_verification_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestVerificationChecksEvidenceBeforeSuccess",
+        "TestArtifactEvidencePreservesMissingOrderAndRefusalPrecedence"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-verification-route",
+      "source_path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_verify.go",
+      "source_symbol": "func fetchRemoteArtifactLive",
+      "responsibility": "allowed provider/kind combinations and merge-only artifact routing",
+      "target": "internal/domain/remoteverification",
+      "target_symbol": "func ArtifactTarget",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/remote_verification_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestArtifactTargetsRestrictProviderKindPairs"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-verification-merged-head",
+      "source_path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_verify.go",
+      "source_symbol": "func VerifyRemoteArtifactMergedHeadLive",
+      "responsibility": "require merged evidence and project trimmed head/base from one readback",
+      "target": "internal/domain/remoteverification",
+      "target_symbol": "func RequireMerged",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/remote_verification_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestVerificationUsesOneReadbackAndPreservesUnknownMerge"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-verification-child-task",
+      "source_path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_child.go",
+      "source_symbol": "func verifyGitLabIssuePayloadIsTask",
+      "responsibility": "work item fallback requires Task metadata and bounded diagnostics",
+      "target": "internal/domain/remoteverification",
+      "target_symbol": "func ValidateTask",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/remote_verification_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestChildWorkItemFallbackRequiresTaskEvidence"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-verification-child-route",
+      "source_path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_child.go",
+      "source_symbol": "func VerifyChildIssueLive",
+      "responsibility": "child verification provider route and GitLab identity prerequisites",
+      "target": "internal/domain/remoteverification",
+      "target_symbol": "func ChildTarget",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/remote_verification_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestVerifyIssueOpsChildIssueLiveRoutesGithubAndUnknownHosts",
+        "TestVerifyGitLabIssueLiveRejectsInvalidIssuePath"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-verification-child-orchestration",
+      "source_path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_child.go",
+      "source_symbol": "func VerifyGitLabIssueLive",
+      "responsibility": "native work item lookup then issues fallback and semantic acceptance",
+      "target": "internal/application/remoteverification",
+      "target_symbol": "func Service.Child",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/remote_verification_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestChildWorkItemFallbackRequiresTaskEvidence",
+        "TestRemoteVerificationWiringProtectsChildLink"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-verification-readback",
+      "source_path": "cmd/issueops/issueopscli/remoteverify/issueops_remote_verify.go",
+      "source_symbol": "func VerifyRemoteArtifactLiveContext",
+      "responsibility": "bounded artifact lookup then pure evidence validation without global verifier",
+      "target": "internal/application/remoteverification",
+      "target_symbol": "func Service.VerifyContext",
+      "task": "T20",
+      "entrypoints": [
+        "cmd/issueops/issueopsapp/remote_verification_wiring.go"
+      ],
+      "evidence_tests": [
+        "TestVerificationChecksEvidenceBeforeSuccess",
+        "TestChildVerificationRemainsBoundToCommand"
       ],
       "status": "migrated"
     }

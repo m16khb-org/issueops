@@ -64,11 +64,3 @@ func writeIssueOpsCLIFileForTest(t *testing.T, root, rel, content string) {
 		t.Fatal(err)
 	}
 }
-
-func stubIssueOpsChildIssueVerifier(t *testing.T, verifier func(string) error) {
-	t.Helper()
-	previous := SetChildIssueVerifier(verifier)
-	t.Cleanup(func() {
-		SetChildIssueVerifier(previous)
-	})
-}

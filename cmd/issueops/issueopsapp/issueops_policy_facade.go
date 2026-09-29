@@ -16,6 +16,7 @@ func runIssueOps(args []string) error {
 func issueOpsCLIDependencies() issueopscli.Dependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	return issueopscli.Dependencies{
+		Verification:   newRemoteVerificationHandlers(),
 		Remote:         newIssueOpsRemote(issueops.IssueOpsStateRoot()),
 		Benchmark:      newBenchmarkCommand(),
 		Cleanup:        newIssueOpsCleanup(issueops.IssueOpsStateRoot()),
