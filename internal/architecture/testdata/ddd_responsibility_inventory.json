@@ -369,32 +369,32 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func ConfigureConformance",
-        "func buildCandidateRegression",
+        "func Conformance.Run",
+        "func Conformance.buildCandidateRegression",
+        "func Conformance.conformanceDescriptors",
+        "func Conformance.evaluateBaselineReport",
+        "func Conformance.evaluateSyntheticBaseline",
+        "func Conformance.persistLiveReport",
+        "func Conformance.replayFixture",
+        "func Conformance.replayRegressionFixture",
+        "func Conformance.runConformanceBaseline",
+        "func Conformance.runConformanceLive",
+        "func Conformance.runConformanceReplay",
+        "func Conformance.runConformanceServe",
+        "func Conformance.sourceSchema",
+        "func NewConformance",
         "func cloneJSONMap",
-        "func conformanceDescriptors",
-        "func defaultConformanceDependencies",
-        "func evaluateBaselineReport",
-        "func evaluateSyntheticBaseline",
         "func firstN",
-        "func init",
         "func loadBenchmarkReport",
-        "func persistLiveReport",
         "func regressionDirectory",
         "func regressionFixtures",
-        "func replayFixture",
-        "func runConformance",
-        "func runConformanceBaseline",
-        "func runConformanceLive",
-        "func runConformanceReplay",
-        "func runConformanceServe",
         "func safeRunID",
-        "func sourceSchema",
         "func splitNonEmpty",
         "func stringSlice.Set",
         "func stringSlice.String",
         "func validSHA256Text",
         "func writePrivateJSONFile",
+        "type Conformance",
         "type ConformanceDependencies",
         "type LiveRequest",
         "type ReplayOutcome",
@@ -414,21 +414,6 @@
         "func runContractCheck",
         "func runContractSchema",
         "type CompatibilityContract"
-      ]
-    },
-    {
-      "path": "cmd/issueops/contractcli/mcp_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": []
-    },
-    {
-      "path": "cmd/issueops/contractcli/toolconformance_dependencies.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "func ConfigureToolConformance",
-        "type ToolConformanceDeps"
       ]
     },
     {
@@ -1592,7 +1577,6 @@
         "func checkNestControllerStatic",
         "func checkNestDTOStatic",
         "func compatibilityContract",
-        "func configureContractCLI",
         "func containsString",
         "func exists",
         "func findUp",
@@ -1938,7 +1922,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func configureToolConformance"
+        "func newContractConformance"
       ]
     },
     {

@@ -28,7 +28,7 @@ type CompatibilityContract struct {
 	Verification   []string              `json:"verification"`
 }
 
-func Run(args []string, commands []clicontract.Command, tools []map[string]any) error {
+func Run(args []string, commands []clicontract.Command, tools []map[string]any, conformance *Conformance) error {
 	if len(args) == 0 {
 		contractUsage()
 		return fmt.Errorf("missing contract subcommand")
@@ -39,7 +39,7 @@ func Run(args []string, commands []clicontract.Command, tools []map[string]any) 
 	case "check":
 		return runContractCheck(args[1:], commands, tools)
 	case "conformance":
-		return runConformance(args[1:])
+		return conformance.Run(args[1:])
 	default:
 		contractUsage()
 		return fmt.Errorf("unknown contract subcommand %q", args[0])

@@ -11,7 +11,6 @@ import (
 	"issueops/cmd/issueops/pathutil"
 	"issueops/cmd/issueops/selfworkflow"
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	statecontract "issueops/internal/contract/state"
 )
 
@@ -27,17 +26,11 @@ var (
 	errSelfVerificationGateFailed = selfworkflow.ErrSelfVerificationGateFailed
 )
 
-func configureContractCLI() {
-	contractcli.ConfigureConformance(contractcli.ConformanceDependencies{Catalog: mcpcatalog.AdvertisedTools, Root: issueOpsRoot, RunProcess: runToolConformanceLive})
-}
-
 func runContract(args []string) error {
-	configureContractCLI()
-	return contractcli.Run(args, clicatalog.Commands(), mcpTools())
+	return contractcli.Run(args, clicatalog.Commands(), mcpTools(), newContractConformance())
 }
 
 func compatibilityContract() CompatibilityContract {
-	configureContractCLI()
 	return contractcli.BuildCompatibilityContract(clicatalog.Commands(), mcpTools())
 }
 

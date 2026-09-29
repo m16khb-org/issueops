@@ -52,7 +52,6 @@ func wireBasicCLIDeps() {
 	configureRepoPathResolvers()
 	configureProjectBootstrap()
 	configureDoctorLifecycle()
-	configureToolConformance()
 	configureDoctorRunner()
 	configureIssueOpsBenchmark()
 	configureIssueOpsCleanup()
