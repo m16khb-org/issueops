@@ -90,7 +90,7 @@ func TestIssueOpsClaimProducesOwnerClaimEvidenceFromCommittedLease(t *testing.T)
 				callKind = "prompt"
 			}
 			lineageID := "generation:1:prompt:" + record.Execution.Orca.OwnerPromptSHA256 + ":material:" + record.Execution.Orca.ContextPacketSHA256 + ":call:" + callKind
-			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, record.ID, lineageID)
+			folded, _, err := foldHandoffAuditForTest(stateRoot, record.ID, lineageID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -162,7 +162,7 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 			if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err != nil {
 				t.Fatal(err)
 			}
-			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
+			folded, _, err := foldHandoffAuditForTest(stateRoot, observation.LifecycleID, observation.LineageID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -218,7 +218,7 @@ func TestSuccessfulDirectClaimUsesCmuxOnlyAfterRawInputAndExactReceiverCorrelati
 			if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err != nil {
 				t.Fatal(err)
 			}
-			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
+			folded, _, err := foldHandoffAuditForTest(stateRoot, observation.LifecycleID, observation.LineageID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -320,7 +320,7 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	if err != nil || !claimed.OK {
 		t.Fatalf("claim reseeded direct execution: result=%+v err=%v", claimed, err)
 	}
-	folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
+	folded, _, err := foldHandoffAuditForTest(stateRoot, observation.LifecycleID, observation.LineageID)
 	if err != nil {
 		t.Fatal(err)
 	}

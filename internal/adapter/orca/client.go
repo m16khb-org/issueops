@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	deliverycontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -668,7 +669,7 @@ func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, request
 		strings.ContainsAny(prompt, "\x00\x1b") {
 		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "terminal_prompt_invalid"}
 	}
-	if err := port.ValidateOrcaRetryRequestID(requestID); err != nil {
+	if err := deliverycontract.ValidateOrcaRetryRequestID(requestID); err != nil {
 		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "request_identity_invalid", Detail: err.Error()}
 	}
 	prompt = "\x1b[200~" + prompt + "\x1b[201~"

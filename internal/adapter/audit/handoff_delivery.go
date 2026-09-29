@@ -52,10 +52,6 @@ func (handle *handoffDeliveryAuditHandle) VerifyPath() error {
 	return handle.verifyPath()
 }
 
-func AuditHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
-	return AuditHandoffDeliveryObservationAt(StateDir(), observation)
-}
-
 func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 	auditLogID := auditid.Generate(observation.LifecycleID, observation.AttemptID, []string{observation.PromptSHA256, observation.Launcher.Name})
 	observation = redactedHandoffDeliveryObservation(observation)
@@ -80,10 +76,6 @@ func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscon
 		return record, err
 	}
 	return record, nil
-}
-
-func ReadHandoffDeliveryAuditObservations() ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	return ReadHandoffDeliveryAuditObservationsAt(StateDir())
 }
 
 func ReadHandoffDeliveryAuditObservationsAt(stateRoot string) ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
@@ -170,22 +162,6 @@ func handoffDeliveryAuditErrorAffects(record auditcontract.HandoffDeliveryAuditR
 	}
 	return record.Observation.LifecycleID == "" || record.Observation.LineageID == "" ||
 		(record.Observation.LifecycleID == lifecycleID && record.Observation.LineageID == lineageID)
-}
-
-func FoldHandoffDeliveryAuditObservations() (map[string]issueopscontract.IssueOpsHandoffDeliveryObservation, []issueopscontract.IssueOpsHandoffDeliveryDecision, error) {
-	return FoldHandoffDeliveryAuditObservationsAt(StateDir())
-}
-
-func FoldHandoffDeliveryAuditObservationsAt(stateRoot string) (map[string]issueopscontract.IssueOpsHandoffDeliveryObservation, []issueopscontract.IssueOpsHandoffDeliveryDecision, error) {
-	observations, err := ReadHandoffDeliveryAuditObservationsAt(stateRoot)
-	folded, decisions := issueopsdomain.FoldHandoffDeliveryObservations(observations)
-	return folded, decisions, err
-}
-
-func FoldHandoffDeliveryAuditObservationsForAt(stateRoot, lifecycleID, lineageID string) (map[string]issueopscontract.IssueOpsHandoffDeliveryObservation, []issueopscontract.IssueOpsHandoffDeliveryDecision, error) {
-	observations, err := readHandoffDeliveryAuditObservationsAt(stateRoot, lifecycleID, lineageID)
-	folded, decisions := issueopsdomain.FoldHandoffDeliveryObservations(observations)
-	return folded, decisions, err
 }
 
 func appendHandoffDeliveryAudit(stateRoot string, record auditcontract.HandoffDeliveryAuditRecord) error {

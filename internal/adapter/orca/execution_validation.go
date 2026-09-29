@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	deliverycontract "issueops/internal/contract/issueops"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
@@ -58,10 +59,10 @@ func validateExecutionIntentForMode(req port.ExecutionOrcaIntentRequest, mode st
 }
 
 func validateExecutionRetryRequestIDs(req port.ExecutionOrcaIntentRequest) error {
-	if err := port.ValidateOrcaRetryRequestID(req.RetryRequestID); err != nil {
+	if err := deliverycontract.ValidateOrcaRetryRequestID(req.RetryRequestID); err != nil {
 		return err
 	}
-	return port.ValidateOrcaRetryRequestID(req.PromptRetryRequestID)
+	return deliverycontract.ValidateOrcaRetryRequestID(req.PromptRetryRequestID)
 }
 
 func validateExecutionInspectionOwnerEnvelope(req port.ExecutionOrcaIntentRequest) error {

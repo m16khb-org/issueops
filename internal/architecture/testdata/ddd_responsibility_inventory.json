@@ -811,38 +811,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func cloneHandoffDeliveryUint64",
-        "func containsHandoffDeliveryString",
-        "func firstNonEmptyIssueOpsApp",
-        "func foldedHandoffDeliveryObservation",
-        "func handoffDeliveryAcceptedResponseID",
-        "func handoffDeliveryCallKind",
-        "func handoffDeliveryDurableRequestID",
-        "func handoffDeliveryEventClock",
-        "func handoffDeliveryLauncher",
-        "func handoffDeliveryLineageID",
-        "func handoffDeliveryObservation",
-        "func handoffDeliveryObservationProbe",
-        "func handoffDeliveryObserved",
-        "func handoffDeliveryProvisioner.InspectIntent",
-        "func handoffDeliveryProvisioner.InvokeIntent",
-        "func handoffDeliveryProvisioner.Probe",
-        "func handoffDeliveryProvisioner.deliveryIdentity",
-        "func handoffDeliveryResponseIdentityRejected",
-        "func inspectHandoffDeliveryRecovery",
-        "func isHandoffDeliveryRequest",
-        "func newHandoffDeliveryProvisioner",
-        "func observeHandoffDeliveryAfter",
-        "func observeHandoffDeliveryBefore",
-        "func observeHandoffDeliveryCompleted",
-        "func observeHandoffDeliveryFailure",
-        "func observeHandoffDeliveryRequest",
-        "func observeHandoffDeliveryStaged",
-        "func recoverHandoffDeliveryRequest",
-        "func rejectStagedHandoffDeliveryWithoutResponse",
-        "func validateHandoffDeliveryDispatchReceipt",
-        "func validateHandoffDeliveryRetryRequestIDs",
-        "type handoffDeliveryProvisioner"
+        "func newHandoffDeliveryProvisioner"
       ]
     },
     {
@@ -3135,12 +3104,7 @@
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func AuditHandoffDeliveryObservation",
         "func AuditHandoffDeliveryObservationAt",
-        "func FoldHandoffDeliveryAuditObservations",
-        "func FoldHandoffDeliveryAuditObservationsAt",
-        "func FoldHandoffDeliveryAuditObservationsForAt",
-        "func ReadHandoffDeliveryAuditObservations",
         "func ReadHandoffDeliveryAuditObservationsAt",
         "func appendHandoffDeliveryAudit",
         "func handoffDeliveryAuditErrorAffects",
@@ -9221,6 +9185,37 @@
       ]
     },
     {
+      "path": "internal/application/handoffdelivery/provisioner.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Observation",
+        "func ObserveCompleted",
+        "func ObserveFailure",
+        "func ObserveStaged",
+        "func Provisioner.InspectIntent",
+        "func Provisioner.InvokeIntent",
+        "func Provisioner.Probe",
+        "func Provisioner.deliveryIdentity",
+        "func deliveryAttempt",
+        "func deliveryFailure",
+        "func deliveryPrompt",
+        "func deliveryReceiptIdentity",
+        "func foldedHandoffDeliveryObservation",
+        "func handoffDeliveryCallKind",
+        "func handoffDeliveryEventClock",
+        "func handoffDeliveryLauncher",
+        "func handoffDeliveryObserved",
+        "func inspectHandoffDeliveryRecovery",
+        "func observeHandoffDeliveryAfter",
+        "func observeHandoffDeliveryBefore",
+        "func observeHandoffDeliveryRequest",
+        "func recoverHandoffDeliveryRequest",
+        "func rejectStagedHandoffDeliveryWithoutResponse",
+        "type Provisioner"
+      ]
+    },
+    {
       "path": "internal/application/handoffdelivery/service.go",
       "owner": "application",
       "task": "T20",
@@ -11825,6 +11820,15 @@
       ]
     },
     {
+      "path": "internal/contract/issueops/orca_request_id.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "func ValidateOrcaRequestID",
+        "func ValidateOrcaRetryRequestID"
+      ]
+    },
+    {
       "path": "internal/contract/issueops/phase.go",
       "owner": "contract",
       "task": "T02",
@@ -13857,6 +13861,29 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/handoff_delivery_attempt.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func DeliveryAcceptedResponseID",
+        "func DeliveryAttempt.AttemptID",
+        "func DeliveryAttempt.CallKind",
+        "func DeliveryAttempt.IsDelivery",
+        "func DeliveryAttempt.LineageID",
+        "func DeliveryAttempt.Probe",
+        "func DeliveryDurableRequestID",
+        "func DeliveryRequestStatus",
+        "func DeliveryResponseIdentityRejected",
+        "func RecoverDeliveryObservation",
+        "func RejectStagedDeliveryWithoutResponse",
+        "func ValidateDeliveryDispatchReceipt",
+        "func ValidateDeliveryRetryRequestIDs",
+        "type DeliveryAttempt",
+        "type DeliveryFailure",
+        "type DeliveryReceiptIdentity"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/handoff_delivery_claim.go",
       "owner": "domain",
       "task": "T20",
@@ -13866,6 +13893,36 @@
         "func claimedHandoffDeliveryObservation",
         "func manualOwnerClaimObservation",
         "type HandoffDeliveryClaimQuery"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/handoff_delivery_events.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CompleteDeliveryObservation",
+        "func DeliveryCompletionID",
+        "func DeliveryFailurePlan",
+        "func DeliveryObserved",
+        "func NewDeliveryObservation",
+        "func cloneDeliveryUint64",
+        "func firstDeliveryValue",
+        "type DeliveryFailureDisposition",
+        "type DeliveryObservationInput",
+        "type DeliveryPrompt"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/handoff_delivery_recovery.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func FinishDeliveryRecovery",
+        "func InspectDeliveryDispatch",
+        "func PlanDeliveryRecovery",
+        "type DeliveryRecoveryConclusion",
+        "type DeliveryRecoveryMode",
+        "type DeliveryRecoveryPlan"
       ]
     },
     {
@@ -16923,8 +16980,6 @@
         "func ValidateExecutionOrcaDeliveryReceipt",
         "func ValidateOrcaDurableRequestID",
         "func ValidateOrcaPromptReceipt",
-        "func ValidateOrcaRequestID",
-        "func ValidateOrcaRetryRequestID",
         "type CleanupOrcaTerminals",
         "type OrcaAdoptWorktreeRequest",
         "type OrcaBootstrapTerminalAgentRequest",
@@ -23853,6 +23908,226 @@
         "internal/contract/guard/error_test.go",
         "cmd/issueops/basiccli/trace_guard_cli_test.go",
         "cmd/issueops/issueopsapp/basic_instance_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-retry-identity",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func handoffDeliveryDurableRequestID",
+      "responsibility": "Require a valid exact durable UUID and matching persisted observation before replay",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func DeliveryDurableRequestID",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-staged-ambiguity",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func rejectStagedHandoffDeliveryWithoutResponse",
+      "responsibility": "Refuse another external call after a staged call without accepted response evidence",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RejectStagedDeliveryWithoutResponse",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-response-authority",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func handoffDeliveryResponseIdentityRejected",
+      "responsibility": "Reject mismatched dispatch or prompt response identity as recovery authority",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func DeliveryResponseIdentityRejected",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-recovery-plan",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func inspectHandoffDeliveryRecovery",
+      "responsibility": "Select durable dispatch and prompt identities and reject missing or ambiguous lineage",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func PlanDeliveryRecovery",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-recovery-conclusion",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func inspectHandoffDeliveryRecovery",
+      "responsibility": "Require complete Omo prompt evidence and select candidate, exact replay or delegation",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func FinishDeliveryRecovery",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-request-status",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func observeHandoffDeliveryRequest",
+      "responsibility": "Validate provider request runtime and method identity and supported recovery status",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func DeliveryRequestStatus",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-receipt-identity",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func validateHandoffDeliveryDispatchReceipt",
+      "responsibility": "Validate durable dispatch candidate task, terminal, handle and request identity",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateDeliveryDispatchReceipt",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-audit-recovery",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func foldedHandoffDeliveryObservation",
+      "responsibility": "Fold scoped evidence preserving rejection precedence and exact current request identity",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func RecoverDeliveryObservation",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-failure-evidence",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func observeHandoffDeliveryFailure",
+      "responsibility": "Classify failed external attempts and durable dispatch or prompt response loss evidence",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func DeliveryFailurePlan",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-completion-evidence",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func observeHandoffDeliveryCompleted",
+      "responsibility": "Project dispatch and prompt receipt into accepted, native turn or ambiguous evidence",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func CompleteDeliveryObservation",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "orca-delivery-observation-identity",
+      "source_path": "cmd/issueops/issueopsapp/handoff_delivery_wiring.go",
+      "source_symbol": "func handoffDeliveryObservation",
+      "responsibility": "Preserve creation timestamp and derive canonical handoff observation identity and target",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func NewDeliveryObservation",
+      "task": "T20",
+      "entrypoints": [
+        "execution prepare",
+        "execution resume",
+        "execution reconcile"
+      ],
+      "evidence_tests": [
+        "cmd/issueops/issueopsapp/handoff_delivery_wiring_test.go",
+        "internal/domain/issueops/handoff_recovery_test.go",
+        "internal/application/handoffdelivery/provisioner_test.go"
       ],
       "status": "migrated"
     }

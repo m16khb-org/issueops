@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/sync/errgroup"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
+	deliverycontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -553,7 +554,7 @@ func (c *Client) Dispatch(ctx context.Context, req port.OrcaDispatchRequest) (po
 	if err != nil {
 		return port.OrcaDispatch{}, err
 	}
-	if err := port.ValidateOrcaRetryRequestID(req.RetryRequestID); err != nil {
+	if err := deliverycontract.ValidateOrcaRetryRequestID(req.RetryRequestID); err != nil {
 		return port.OrcaDispatch{}, &port.OrcaError{Code: "request_identity_invalid", Detail: err.Error()}
 	}
 	if _, err := currentCoordinatorHandle(); err != nil {
@@ -597,7 +598,7 @@ func (c *Client) ShowDispatchFrom(ctx context.Context, taskID, fromHandle string
 
 func (c *Client) ShowRequest(ctx context.Context, requestID string) (port.OrcaRequestObservation, error) {
 	requestID = strings.TrimSpace(requestID)
-	if err := port.ValidateOrcaRequestID(requestID); err != nil {
+	if err := deliverycontract.ValidateOrcaRequestID(requestID); err != nil {
 		return port.OrcaRequestObservation{}, &port.OrcaError{Code: "request_identity_invalid"}
 	}
 	var payload struct {

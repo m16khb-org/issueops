@@ -105,6 +105,16 @@
     "role": "shape"
   },
   {
+    "path": "internal/contract/issueops/orca_request_id.go",
+    "symbol": "func ValidateOrcaRequestID",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/issueops/orca_request_id.go",
+    "symbol": "func ValidateOrcaRetryRequestID",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/issueops/record_validation.go",
     "symbol": "func KnownFeedbackClassification",
     "role": "shape"

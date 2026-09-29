@@ -9,6 +9,7 @@ import (
 
 	recordcodec "issueops/internal/adapter/outbound/issueopsrecord"
 	preparationapp "issueops/internal/application/issueopspreparation"
+	deliverycontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
@@ -50,8 +51,8 @@ func recordOrcaIntentFailure(ctx context.Context, store port.RecordRawCASStore, 
 			SealedDispatch: updated.OrcaRequestID, SealedPrompt: updated.OrcaPromptRequestID,
 			CallPhase: typed.CallPhase, ObservedDispatch: typed.DispatchRequestID,
 			ObservedOrchestration: typed.OrchestrationRequestID,
-			DispatchValid:         port.ValidateOrcaRequestID(typed.DispatchRequestID) == nil,
-			OrchestrationValid:    port.ValidateOrcaRequestID(typed.OrchestrationRequestID) == nil,
+			DispatchValid:         deliverycontract.ValidateOrcaRequestID(typed.DispatchRequestID) == nil,
+			OrchestrationValid:    deliverycontract.ValidateOrcaRequestID(typed.OrchestrationRequestID) == nil,
 		})
 	}
 	recordData, err := recordcodec.EncodeLease(record)

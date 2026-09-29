@@ -3,7 +3,6 @@ package issueopsapp
 import (
 	"context"
 	"errors"
-	issueopsdomain "issueops/internal/domain/issueops"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	auditadapter "issueops/internal/adapter/audit"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -439,7 +439,7 @@ func TestHandoffDeliveryProductionProvisionerUsesOneTimestampBeforeInvoke(t *tes
 	if provisioner.invokeCalls != 1 {
 		t.Fatalf("external invoke calls=%d, want 1", provisioner.invokeCalls)
 	}
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservations()
+	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,7 +511,7 @@ func TestManualHandoffDeliveryRejectsClaimForgeryAndUsesIsolatedLineage(t *testi
 		t.Fatal(err)
 	}
 	standardLineage := strings.TrimPrefix(observation.LineageID, "manual-direct:")
-	folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, standardLineage)
+	folded, _, err := foldHandoffAuditForTest(stateRoot, observation.LifecycleID, standardLineage)
 	if err != nil || len(folded) != 0 {
 		t.Fatalf("manual observation entered execution recovery lineage: folded=%+v err=%v", folded, err)
 	}

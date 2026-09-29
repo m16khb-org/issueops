@@ -3,11 +3,10 @@ package port
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
-)
 
-var orcaRequestUUIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	deliverycontract "issueops/internal/contract/issueops"
+)
 
 const OrcaMaxBaselineIDs = 512
 
@@ -254,11 +253,11 @@ type OrcaDeliveryReceiptExpectation struct {
 func ValidateOrcaDurableRequestID(actual, retry string) error {
 	actual = strings.TrimSpace(actual)
 	retry = strings.TrimSpace(retry)
-	if err := ValidateOrcaRequestID(actual); err != nil {
+	if err := deliverycontract.ValidateOrcaRequestID(actual); err != nil {
 		return fmt.Errorf("Orca response is missing a durable request UUID")
 	}
 	if retry != "" {
-		if err := ValidateOrcaRequestID(retry); err != nil {
+		if err := deliverycontract.ValidateOrcaRequestID(retry); err != nil {
 			return fmt.Errorf("Orca retry request UUID is invalid")
 		}
 	}
@@ -266,20 +265,6 @@ func ValidateOrcaDurableRequestID(actual, retry string) error {
 		return fmt.Errorf("Orca response request UUID does not match the requested retry UUID")
 	}
 	return nil
-}
-
-func ValidateOrcaRequestID(value string) error {
-	if !orcaRequestUUIDPattern.MatchString(strings.TrimSpace(value)) {
-		return fmt.Errorf("Orca durable request UUID is invalid")
-	}
-	return nil
-}
-
-func ValidateOrcaRetryRequestID(value string) error {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	return ValidateOrcaRequestID(value)
 }
 
 func ValidateOrcaPromptReceipt(receipt OrcaPromptReceipt, retryID, expectedProcess string) error {
