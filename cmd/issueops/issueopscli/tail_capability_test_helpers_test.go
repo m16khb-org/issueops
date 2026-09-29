@@ -3,9 +3,7 @@ package issueopscli
 import (
 	remotecmdtdeps "issueops/cmd/issueops/issueopscli/remotecmd"
 	mcpclitdeps "issueops/cmd/issueops/mcpcli"
-	summarytdeps "issueops/cmd/issueops/selfworkflow/summary"
 	auditadapter "issueops/internal/adapter/audit"
-	failurecauseadapter "issueops/internal/adapter/failurecause"
 	webfetchadapter "issueops/internal/adapter/outbound/webfetch"
 	provideradapter "issueops/internal/adapter/provider"
 )
@@ -16,5 +14,4 @@ func init() {
 	mcpclitdeps.AuditCommandPolicy = auditadapter.AuditCommandPolicy
 	mcpclitdeps.Fetch = webfetchadapter.Fetch
 	remotecmdtdeps.Resolve = provideradapter.Resolve
-	summarytdeps.Classify = failurecauseadapter.Classify
 }

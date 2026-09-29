@@ -8,6 +8,7 @@ import (
 
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/model"
+	app "issueops/internal/application/selfaugment"
 )
 
 type Deps struct {
@@ -48,11 +49,9 @@ func Run(args []string, deps Deps) error {
 	if *targetScore < 0 || *targetScore >= 100 {
 		return fmt.Errorf("target-score must be >= 0 and < 100")
 	}
-	result := deps.Plan(model.SelfAugmentPlanRequest{Cycles: *cycles, TargetScore: *targetScore})
-	if *saveState {
-		if err := deps.SavePlan(&result, *stateKey); err != nil {
-			return err
-		}
+	result, err := app.PlanAndSave(model.SelfAugmentPlanRequest{Cycles: *cycles, TargetScore: *targetScore}, *saveState, *stateKey, app.PlanAndSaveDeps{Plan: deps.Plan, Save: deps.SavePlan})
+	if err != nil {
+		return err
 	}
 	if *jsonOut {
 		return deps.PrintJSON(result)

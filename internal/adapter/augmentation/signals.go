@@ -32,7 +32,7 @@ func (repo Repository) signalRules() []repoSignalRule {
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasSelfVerifyCLI = FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "root_command_facade.go"), `"self-verify":`) &&
-				DirContainsTerm(root, filepath.Join("cmd", "issueops", "selfworkflow"), "selfVerificationKoreanName")
+				FileContainsTerm(root, filepath.Join("internal", "application", "selfverify", "loop.go"), "SelfVerificationKoreanName")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
 			signals.HasSelfAugmentPlanner = DirContainsTerm(root, filepath.Join("cmd", "issueops", "selfworkflow"), "planSelfAugmentation")

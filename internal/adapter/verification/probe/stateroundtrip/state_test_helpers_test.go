@@ -7,6 +7,7 @@ import (
 	historycomparepkg "issueops/cmd/issueops/selfworkflow/historycompare"
 	stateiopkg "issueops/cmd/issueops/selfworkflow/stateio"
 	statestore "issueops/internal/adapter/outbound/state"
+	"issueops/internal/adapter/verification"
 )
 
 // production wiring과 같은 state store를 설치한다. 이 package가 실제로 의존하는
@@ -17,6 +18,7 @@ func init() {
 	augmentlessonpkg.StateWrite = statestore.StateWrite
 	augmentplanpkg.StateList = statestore.StateList
 	augmentplanpkg.StateRead = statestore.StateRead
+	candidateexportpkg.ObserveSource = verification.CandidateSource
 	candidateexportpkg.StateDir = statestore.StateDir
 	candidateexportpkg.StateWrite = statestore.StateWrite
 	historycomparepkg.StateDelete = statestore.StateDelete

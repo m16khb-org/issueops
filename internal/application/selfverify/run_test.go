@@ -9,10 +9,10 @@ import (
 	selfverifycontract "issueops/internal/contract/selfverify"
 )
 
-func TestRunKeepsVerificationFailurePrimaryAndStillSaves(t *testing.T) {
+func TestExecuteKeepsVerificationFailurePrimaryAndStillSaves(t *testing.T) {
 	wantErr := errors.New("verification failed")
 	order := []string{}
-	err := Run(RunRequest{Loop: LoopRequest{BaseSeed: 7, TargetScore: 95}, LLMEnabled: true, SaveState: true, StateKey: "run", JSONOutput: true}, RunDeps{
+	_, err := Execute(ExecuteRequest{Loop: LoopRequest{BaseSeed: 7, TargetScore: 95}, LLMEnabled: true, SaveState: true, StateKey: "run"}, ExecuteDeps{
 		Verify: func(LoopRequest) (selfaugmentcontract.SelfAugmentResult, error) {
 			order = append(order, "verify")
 			return selfaugmentcontract.SelfAugmentResult{BaseSeed: 7}, wantErr
@@ -28,17 +28,16 @@ func TestRunKeepsVerificationFailurePrimaryAndStillSaves(t *testing.T) {
 			order = append(order, "save")
 			return errors.New("save failed")
 		},
-		PrintJSON: func(any) error { order = append(order, "print"); return nil },
 	})
-	if !errors.Is(err, wantErr) || !reflect.DeepEqual(order, []string{"verify", "save", "print"}) {
+	if !errors.Is(err, wantErr) || !reflect.DeepEqual(order, []string{"verify", "save"}) {
 		t.Fatalf("err=%v order=%v", err, order)
 	}
 }
 
-func TestRunAppliesLLMBeforeSavingAndReturnsSaveFailure(t *testing.T) {
+func TestExecuteAppliesLLMBeforeSavingAndReturnsSaveFailure(t *testing.T) {
 	wantErr := errors.New("save failed")
 	order := []string{}
-	err := Run(RunRequest{Loop: LoopRequest{TargetScore: 95}, LLMEnabled: true, LLMMode: "gate", SaveState: true}, RunDeps{
+	_, err := Execute(ExecuteRequest{Loop: LoopRequest{TargetScore: 95}, LLMEnabled: true, LLMMode: "gate", SaveState: true}, ExecuteDeps{
 		Verify: func(LoopRequest) (selfaugmentcontract.SelfAugmentResult, error) {
 			order = append(order, "verify")
 			return selfaugmentcontract.SelfAugmentResult{OK: true}, nil
@@ -61,5 +60,40 @@ func TestRunAppliesLLMBeforeSavingAndReturnsSaveFailure(t *testing.T) {
 	})
 	if !errors.Is(err, wantErr) || !reflect.DeepEqual(order, []string{"verify", "llm", "save"}) {
 		t.Fatalf("err=%v order=%v", err, order)
+	}
+}
+
+func TestExecutePreservesFailureAndCheckpoint(t *testing.T) {
+	verifyErr := errors.New("verification failed")
+	saveErr := errors.New("save failed")
+	for _, tc := range []struct {
+		name      string
+		verifyErr error
+		save      bool
+		wantErr   error
+	}{
+		{"read-only", nil, false, nil}, {"save-failure", nil, true, saveErr}, {"verification-first", verifyErr, true, verifyErr},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Execute(ExecuteRequest{Loop: LoopRequest{BaseSeed: 123}, SaveState: tc.save, StateKey: "checkpoint"}, ExecuteDeps{
+				Verify: func(req LoopRequest) (selfaugmentcontract.SelfAugmentResult, error) {
+					return selfaugmentcontract.SelfAugmentResult{BaseSeed: req.BaseSeed}, tc.verifyErr
+				},
+				SaveSummary: func(result *selfaugmentcontract.SelfAugmentResult, key string) error {
+					result.StateCheckpoint = &selfaugmentcontract.SelfAugmentStateCheckpoint{Key: key, OK: false, Error: saveErr.Error()}
+					return saveErr
+				},
+			})
+			if !errors.Is(err, tc.wantErr) || result.BaseSeed != 123 {
+				t.Fatalf("result=%+v err=%v", result, err)
+			}
+			if tc.save {
+				if result.StateCheckpoint == nil || result.StateCheckpoint.Key != "checkpoint" || result.StateCheckpoint.Error != "save failed" {
+					t.Fatalf("lost checkpoint: %+v", result)
+				}
+			} else if result.StateCheckpoint != nil {
+				t.Fatal("unexpected save")
+			}
+		})
 	}
 }

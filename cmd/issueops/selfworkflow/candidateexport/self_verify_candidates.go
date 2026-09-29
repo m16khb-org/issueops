@@ -1,9 +1,9 @@
 package candidateexport
 
 import (
-	"path/filepath"
 	"time"
 
+	app "issueops/internal/application/selfverify"
 	augmentcontract "issueops/internal/contract/selfaugment"
 	contract "issueops/internal/contract/selfverify"
 	domain "issueops/internal/domain/selfverify"
@@ -17,33 +17,11 @@ type SelfVerificationCandidate = contract.SelfVerificationCandidate
 
 type SelfVerificationCandidateExportStateSnapshot = augmentcontract.SelfVerificationCandidateExportStateSnapshot
 
+// Source observation is installed by the composition root.
+var ObserveSource func(string) (string, bool)
+
 func ExportSelfVerificationCandidates(root string) SelfVerificationCandidateExportResult {
-	sourcePath := filepath.Join(root, "skills", "self-verify", "CANDIDATES.md")
-	sourceExists := fileExists(sourcePath)
-	candidates := SelfVerificationCandidateCatalog()
-	openIDs := SelfVerificationCandidateIDsByStatus(candidates, selfAugmentCandidateStatusOpen)
-	satisfiedIDs := SelfVerificationCandidateIDsByStatus(candidates, selfAugmentCandidateStatusSatisfied)
-	selected := domain.SelectedCandidate(candidates)
-	warnings := []string{}
-	if !sourceExists {
-		warnings = append(warnings, "skills/self-verify/CANDIDATES.md not found; using built-in candidate export catalog")
-	}
-	return SelfVerificationCandidateExportResult{
-		OK:                    true,
-		Kind:                  SelfVerificationCandidateExportKind,
-		LoopKind:              "self_verification",
-		KoreanName:            selfVerificationKoreanName,
-		IssueOpsRoot:          root,
-		GeneratedAt:           time.Now().UTC().Format(time.RFC3339Nano),
-		SourcePath:            sourcePath,
-		SourceExists:          sourceExists,
-		CandidateCount:        len(candidates),
-		OpenCandidateIDs:      openIDs,
-		SatisfiedCandidateIDs: satisfiedIDs,
-		SelectedCandidate:     selected,
-		Candidates:            candidates,
-		Warnings:              warnings,
-	}
+	return app.ExportCandidates(root, app.ExportCandidatesDeps{Source: ObserveSource, Now: time.Now})
 }
 
 func SelfVerificationCandidateIDsByStatus(candidates []SelfVerificationCandidate, status string) []string {

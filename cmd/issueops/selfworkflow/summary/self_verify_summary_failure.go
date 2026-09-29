@@ -1,11 +1,10 @@
 package summary
 
-import domain "issueops/internal/domain/selfverify"
+import app "issueops/internal/application/selfverify"
 
 func ClassifySelfVerificationFailure(result SelfAugmentResult, summary SelfAugmentSummary) (string, string, []SelfVerificationFailureCluster) {
-	return domain.ClassifyFailure(summary.FailedSteps, summary.TotalRuns, projectRuns(result))
+	return app.ClassifySelfVerificationFailure(result, summary)
 }
-
 func SelfVerificationFailureClusters(result SelfAugmentResult) []SelfVerificationFailureCluster {
-	return domain.FailureClusters(projectRuns(result))
+	return app.SelfVerificationFailureClusters(result)
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"issueops/cmd/issueops/selfworkflow/candidateexport"
+	app "issueops/internal/application/selfverify"
 )
 
 type Deps struct {
@@ -21,11 +22,9 @@ func Run(args []string, deps Deps) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result := deps.Export()
-	if *saveState {
-		if err := deps.Save(&result, *stateKey); err != nil {
-			return err
-		}
+	result, err := app.ExportAndSaveCandidates(*saveState, *stateKey, app.ExportAndSaveCandidatesDeps{Export: deps.Export, Save: deps.Save})
+	if err != nil {
+		return err
 	}
 	if *jsonOut {
 		return deps.PrintJSON(result)

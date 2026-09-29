@@ -4,9 +4,11 @@ import (
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
 	"issueops/cmd/issueops/selfworkflow/augmentplan"
+	"issueops/cmd/issueops/selfworkflow/candidateexport"
 	"issueops/internal/adapter/augmentation"
 	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/inspect"
+	"issueops/internal/adapter/verification"
 	"issueops/internal/adapter/verification/probe/qagate"
 )
 
@@ -16,6 +18,7 @@ import (
 // 소비자들은 transport와 조립 순서가 서로 다르므로 package 변수로 설치한다 —
 // Deps를 중간 package로 전달하면 그 package가 대신 문서 구현을 알게 된다.
 func configureDocsReaders() {
+	candidateexport.ObserveSource = verification.CandidateSource
 	mcpcli.DocsIndex = docs.DocsIndex
 	augmentplan.Repository = augmentation.Repository{ListDocs: docs.ListDocs}
 	augmentplan.DocsIndex = docs.DocsIndex

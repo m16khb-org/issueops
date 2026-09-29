@@ -5,7 +5,6 @@ import (
 	remotecmdtaildeps "issueops/cmd/issueops/issueopscli/remotecmd"
 	mcpclitaildeps "issueops/cmd/issueops/mcpcli"
 	policyclitaildeps "issueops/cmd/issueops/policycli"
-	summarytaildeps "issueops/cmd/issueops/selfworkflow/summary"
 	webfetchclitaildeps "issueops/cmd/issueops/webfetchcli"
 	auditadapter "issueops/internal/adapter/audit"
 	failurecauseadapter "issueops/internal/adapter/failurecause"
@@ -24,7 +23,6 @@ func configureTailCapabilities() {
 	mcpclitaildeps.Fetch = webfetchadapter.Fetch
 	policyclitaildeps.AuditCommandPolicy = auditadapter.AuditCommandPolicy
 	remotecmdtaildeps.Resolve = provideradapter.Resolve
-	summarytaildeps.Classify = failurecauseadapter.Classify
 	toolconformancetaildeps.ClassifyFailureCause = failurecauseadapter.Classify
 	tracetaildeps.Classify = failurecauseadapter.Classify
 	webfetchclitaildeps.DeterministicFixtures = webfetchadapter.DeterministicFixtures

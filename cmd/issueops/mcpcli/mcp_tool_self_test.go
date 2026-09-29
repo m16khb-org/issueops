@@ -129,3 +129,28 @@ func mcpSelfPayloadText(t *testing.T, payload any) string {
 	}
 	return string(b)
 }
+
+func TestSelfPlanAndCandidatesReturnFailedCheckpointOnSaveError(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	for _, tool := range []string{"self_augment", "self_verify_candidates"} {
+		t.Run(tool, func(t *testing.T) {
+			outcome := handleSelfLoopMCPToolCall(MCPToolCall{Name: tool, Arguments: map[string]any{"save_state": true, "state_key": "!invalid-key"}})
+			if !outcome.Handled || outcome.Err == nil || outcome.Err.Code != -32000 {
+				t.Fatalf("outcome=%+v", outcome)
+			}
+			var data struct {
+				StateCheckpoint struct {
+					OK    bool   `json:"ok"`
+					Key   string `json:"key"`
+					Error string `json:"error"`
+				} `json:"state_checkpoint"`
+			}
+			if err := json.Unmarshal(outcome.Err.Data, &data); err != nil {
+				t.Fatal(err)
+			}
+			if data.StateCheckpoint.OK || data.StateCheckpoint.Key != "!invalid-key" || data.StateCheckpoint.Error == "" {
+				t.Fatalf("lost failed checkpoint: %s", outcome.Err.Data)
+			}
+		})
+	}
+}

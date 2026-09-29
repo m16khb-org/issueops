@@ -52,14 +52,14 @@ func Run(args []string, deps Deps) error {
 	if err != nil {
 		return err
 	}
-	return application.Run(application.RunRequest{
+	result, err := application.Execute(application.ExecuteRequest{
 		Loop: application.LoopRequest{
 			BaseSeed: *seed, TargetScore: *targetScore, Verbose: !*jsonOut,
 			Reporter: reporter, CollectAllSteps: *collectAll,
 		},
 		LLMEnabled: llmEvalConfig.Enabled, LLMMode: llmEvalConfig.Mode,
-		SaveState: *saveState, StateKey: *stateKey, JSONOutput: *jsonOut,
-	}, application.RunDeps{
+		SaveState: *saveState, StateKey: *stateKey,
+	}, application.ExecuteDeps{
 		Verify: func(request application.LoopRequest) (model.SelfAugmentResult, error) {
 			return deps.Verify(verifyloop.Request{
 				BaseSeed: request.BaseSeed, TargetScore: request.TargetScore,
@@ -69,8 +69,11 @@ func Run(args []string, deps Deps) error {
 		},
 		ApplyLLMEval: deps.ApplyLLMEval,
 		SaveSummary:  deps.SaveSummary,
-		PrintJSON:    deps.PrintJSON,
 	})
+	if *jsonOut {
+		_ = deps.PrintJSON(result)
+	}
+	return err
 }
 
 func (deps Deps) withDefaults() Deps {

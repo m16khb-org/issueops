@@ -78,6 +78,15 @@ Project docs bootstrap:
 `domain/selfaugment`가 소유한다. probe의 snapshot writer는 composition root에서
 주입하고, 누락되면 process를 실행하기 전에 실패 결과를 반환한다.
 
+후보 export는 `application/selfverify`가 source 관측과 시각을 조율하고,
+`domain/selfaugment`가 기본 후보 목록·분류·누락 경고를 구성한다. source 유무는
+`adapter/verification`이 관측하며, 파일이 없어도 기본 후보 목록은 유지한다.
+summary 집계·실패 근거 수집과 LLM 평가 결과 조율은 application, 점수·종료 조건과
+LLM gate 판정은 domain이 소유한다. LLM 통과가 기존 검증 실패를 성공으로 바꾸지는 않는다.
+CLI와 MCP는 계획·후보 생성 후 선택적 저장, 검증 후 선택적 저장을 같은 application으로
+호출한다. 검증 오류가 저장 오류보다 우선하며, 저장 실패의 checkpoint는 결과에 남긴다.
+JSON·MCP 응답 렌더링은 각 inbound adapter가 맡는다.
+
 검증 이력 조회·비교·보존 삭제는 `application/selfaugment.HistoryService`가 조율한다.
 입력 허용 조건, snapshot kind/schema 분류와 보존 대상·삭제 허용 결정은 domain이 맡는다.
 조회는 개별 읽기 실패·잘못된 snapshot을 skipped로 남기며, 전체 이력에서 보존 대상을

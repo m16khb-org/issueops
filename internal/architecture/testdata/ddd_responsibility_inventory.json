@@ -3389,15 +3389,6 @@
       "symbols": []
     },
     {
-      "path": "cmd/issueops/selfworkflow/candidateexport/dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": [
-        "func fileExists",
-        "type SelfAugmentStateCheckpoint"
-      ]
-    },
-    {
       "path": "cmd/issueops/selfworkflow/candidateexport/self_verify_candidates.go",
       "owner": "inbound",
       "task": "T17",
@@ -4071,12 +4062,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/selfworkflow/summary/failurecause_dependencies.go",
-      "owner": "inbound",
-      "task": "T17",
-      "symbols": []
-    },
-    {
       "path": "cmd/issueops/selfworkflow/summary/self_verify_step_stats.go",
       "owner": "inbound",
       "task": "T17",
@@ -4121,8 +4106,7 @@
       "owner": "inbound",
       "task": "T17",
       "symbols": [
-        "func MapGoalScores",
-        "func projectRuns"
+        "func MapGoalScores"
       ]
     },
     {
@@ -9601,6 +9585,14 @@
       "symbols": []
     },
     {
+      "path": "internal/adapter/verification/candidate_source.go",
+      "owner": "adapter",
+      "task": "T18",
+      "symbols": [
+        "func CandidateSource"
+      ]
+    },
+    {
       "path": "internal/adapter/verification/goformat.go",
       "owner": "adapter",
       "task": "T20",
@@ -12402,6 +12394,24 @@
       ]
     },
     {
+      "path": "internal/application/selfaugment/workflow.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func PlanAndSave",
+        "type PlanAndSaveDeps"
+      ]
+    },
+    {
+      "path": "internal/application/selfverify/export_candidates.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func ExportCandidates",
+        "type ExportCandidatesDeps"
+      ]
+    },
+    {
       "path": "internal/application/selfverify/format.go",
       "owner": "application",
       "task": "T18",
@@ -12409,6 +12419,15 @@
         "func ValidateFormat",
         "func failedFormat",
         "type FormatDeps"
+      ]
+    },
+    {
+      "path": "internal/application/selfverify/llm_eval.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func ApplyLLMEval",
+        "type LLMEvalDeps"
       ]
     },
     {
@@ -12431,9 +12450,9 @@
       "owner": "application",
       "task": "T18",
       "symbols": [
-        "func Run",
-        "type RunDeps",
-        "type RunRequest"
+        "func Execute",
+        "type ExecuteDeps",
+        "type ExecuteRequest"
       ]
     },
     {
@@ -12455,6 +12474,32 @@
       ]
     },
     {
+      "path": "internal/application/selfverify/self_verify_summary.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func SummarizeSelfVerification"
+      ]
+    },
+    {
+      "path": "internal/application/selfverify/self_verify_summary_failure.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func ClassifySelfVerificationFailure",
+        "func SelfVerificationFailureClusters"
+      ]
+    },
+    {
+      "path": "internal/application/selfverify/self_verify_summary_score.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func MapGoalScores",
+        "func projectRuns"
+      ]
+    },
+    {
       "path": "internal/application/selfverify/steps.go",
       "owner": "application",
       "task": "T18",
@@ -12465,6 +12510,15 @@
         "type SelfVerifyPlannedStep",
         "type SelfVerifyStepDeps",
         "type StepResult"
+      ]
+    },
+    {
+      "path": "internal/application/selfverify/workflow.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func ExportAndSaveCandidates",
+        "type ExportAndSaveCandidatesDeps"
       ]
     },
     {
@@ -17168,6 +17222,14 @@
       ]
     },
     {
+      "path": "internal/domain/selfaugment/candidate_export.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func NewCandidateExport"
+      ]
+    },
+    {
       "path": "internal/domain/selfaugment/candidate_snapshot.go",
       "owner": "domain",
       "task": "T18",
@@ -17261,6 +17323,14 @@
         "func PrepareLesson",
         "func StateKeySlug",
         "func validateLessonCandidateID"
+      ]
+    },
+    {
+      "path": "internal/domain/selfaugment/llm_gate.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func ApplySelfVerifyLLMGate"
       ]
     },
     {
@@ -17363,7 +17433,7 @@
     {
       "path": "internal/domain/selfverify/assertion.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func AssertionStep",
         "func AssertionStepWithOutput",
@@ -17373,7 +17443,7 @@
     {
       "path": "internal/domain/selfverify/candidate.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T17",
       "symbols": [
         "func CandidateIDsByStatus",
         "func SelectedCandidate",
@@ -17383,7 +17453,7 @@
     {
       "path": "internal/domain/selfverify/candidate_catalog.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T17",
       "symbols": [
         "func CandidateCatalog",
         "func candidate"
@@ -17392,7 +17462,7 @@
     {
       "path": "internal/domain/selfverify/contract.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T17",
       "symbols": [
         "func ContractValue",
         "func CoverageDefinitions",
@@ -17403,7 +17473,7 @@
     {
       "path": "internal/domain/selfverify/env.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func EnvEntryKey",
         "func MergeEnvOverrides"
@@ -17412,7 +17482,7 @@
     {
       "path": "internal/domain/selfverify/failure.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T17",
       "symbols": [
         "func ClassifyFailure",
         "func FailureClusters"
@@ -17433,7 +17503,7 @@
     {
       "path": "internal/domain/selfverify/llm_config.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T17",
       "symbols": [
         "func NormalizeLLMEvalMode",
         "func ParseLLMEvalEnv",
@@ -17443,7 +17513,7 @@
     {
       "path": "internal/domain/selfverify/llm_gate.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T17",
       "symbols": [
         "func LLMEvalGateReasons"
       ]
@@ -17451,16 +17521,26 @@
     {
       "path": "internal/domain/selfverify/output_budget.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func BudgetCommandOutput",
         "func TailWithBudget"
       ]
     },
     {
+      "path": "internal/domain/selfverify/rerun.go",
+      "owner": "domain",
+      "task": "T18",
+      "symbols": [
+        "func FormatScore",
+        "func SelfVerifyRerunCommands",
+        "func SelfVerifyStepRerunCommand"
+      ]
+    },
+    {
       "path": "internal/domain/selfverify/step_plan.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func ContinueAfterFailure",
         "func ReuseFullTestAsGolden",
@@ -17471,7 +17551,7 @@
     {
       "path": "internal/domain/selfverify/step_result.go",
       "owner": "domain",
-      "task": "T20",
+      "task": "T18",
       "symbols": [
         "func CombineFailedStep"
       ]
@@ -23873,6 +23953,48 @@
       "evidence_tests": [
         "internal/application/selfaugment/planner_test.go",
         "cmd/issueops/selfworkflow/augmentplan/plan_lesson_penalty_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "verification-candidate-export",
+      "source_path": "internal/application/selfverify/export_candidates.go",
+      "source_symbol": "func ExportCandidates",
+      "responsibility": "preserve builtin candidates, status partitions and selection regardless of documentation presence",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func NewCandidateExport",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-verify",
+        "self_verify",
+        "issueops self-verify candidates",
+        "self_verify_candidates"
+      ],
+      "evidence_tests": [
+        "internal/application/selfverify/export_candidates_test.go",
+        "internal/domain/selfaugment/candidate_export_test.go"
+      ],
+      "status": "migrated",
+      "source_retained_as": "application-orchestration"
+    },
+    {
+      "id": "verification-llm-outcome",
+      "source_path": "internal/application/selfverify/llm_eval.go",
+      "source_symbol": "func ApplyLLMEval",
+      "responsibility": "apply advisory versus gate decision to overall and summary termination without promoting deterministic failure",
+      "target": "internal/domain/selfaugment",
+      "target_symbol": "func ApplySelfVerifyLLMGate",
+      "task": "T18",
+      "entrypoints": [
+        "issueops self-verify",
+        "self_verify",
+        "issueops self-verify candidates",
+        "self_verify_candidates"
+      ],
+      "evidence_tests": [
+        "internal/application/selfverify/llm_eval_test.go",
+        "internal/domain/selfaugment/llm_gate_test.go"
       ],
       "status": "migrated",
       "source_retained_as": "application-orchestration"
