@@ -294,15 +294,19 @@
 
 ### Task 9: Command policy·preflight·audit 조율 이전 (T09)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T02. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/policy/{policy_evaluate,policy_command_classification,policy_catalog,policy_run}.go`; `internal/domain/policy/`; `internal/adapter/preflight/`; `cmd/issueops/policycli/`; `cmd/issueops/commandstep/`
-- **변경/신규 파일:** 확장 `internal/domain/policy/`; 신규 `internal/application/policy/{evaluate,run,ports}.go`; process/audit/override snapshot adapters.
+- **변경/신규 파일:** 확장 `internal/domain/policy/`와 `internal/domain/preflight/`; `internal/application/policy/{service,runner,pull_request_target}.go`와 `internal/application/preflight/service.go`; 기존 `internal/application/audit/service.go` 및 process/audit/override snapshot adapter와 root wiring.
 - **구현:** Facts+catalog→decision을 domain으로 옮긴다. application이 canonical path 관측·workspace override 로드·evaluation·bounded runner·audit를 조율한다. timeout/env/secret 규칙의 결정과 실제 process 설정을 분리한다. preflight의 기술 검사와 업무 gate를 구분한다.
 - **경계·보존:** override는 평가마다 workspace별로 로드하고 parse 경고를 기존 warnings에 보존한다. root/cwd 실체 검증은 string-only 검사로 대체하지 않는다. 다른 capability의 기존 실행 정책을 강화하지 않고 기존 runner 의미를 그대로 주입한다.
 - **CHECK:** `go test ./internal/domain/policy ./internal/adapter/policy ./internal/adapter/preflight ./internal/adapter/audit ./cmd/issueops/policycli ./cmd/issueops/commandstep -count=1`; 신규 application/policy suite.
 - **EXPECT / QA:** 정상: 두 workspace의 다른 override가 각각 반영. 실패: outside-root/symlink escape/deny command/secret env/override parse 실패에서 종전 verdict와 warnings 동일, denied marker 파일 없음. `TestPolicyOverridesLoadPerEvaluation` 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T09-success.txt`, `T09-failure.txt`, `T09-ownership.json`.
+
+- **최종 검증 — `d06d1ee0`:** PR 대상 조회·판정 조율은 application, timeout 해석·환경변수 선택·경로 인자 분류와 preflight 커밋 형식 판정은 domain으로 옮겼다. override는 평가마다 읽고, 실제 경로·심볼릭 링크·환경변수 관측과 process 실행·감사 파일 append는 adapter가 맡는다. `PolicyOverrides` alias와 adapter의 PR 대상 조율 함수를 삭제했다. `EvaluateCommandPolicy`의 남은 forwarding entrypoint는 판정을 소유하지 않으며, 전역 의존성·조립 facade 제거는 T20에서 마감한다.
+- **완료 근거:** `T09-ownership.json`은 이전 정책 7개·기술 forwarding retain 1개와 소스 해시 36개를 기록한다. task CHECK 10개 패키지·128개 테스트 pass event(하위 사례 포함), 실패 0이며 `TestPolicyOverridesLoadPerEvaluation`과 다른 workspace 간 격리·parse 경고·outside root·환경변수 격리·감사 마스킹을 확인했다. 실제 CLI·Git·SQLite smoke도 모두 통과했다. 다섯 판정 우회 변형을 검출했고, `T09-self-verify.json`은 전체 race·vet를 포함한 26개 검사·최소 점수 100을 기록한다.
+- **보존한 제한과 검증 수정:** 기존 경로 분류는 `./파일`처럼 경로 형태인 인자를 검사하고 단순 파일명은 제외한다. 첫 smoke의 bare symlink 인자가 허용된 원인을 확인했으며, 이동 전후 순수 분류 함수가 식별자 변경 외 동일함을 `T09-path-policy-parity.json`으로 확인했다. 이 제한의 정책 강화는 책임 이동 범위 밖 발견 사항이다. 최종 smoke는 실제 경로 검사 대상인 `./escape`의 외부 symlink 거부를 검증한다. 준비 상태 smoke fixture의 필수 identity 누락도 수정한 후 처음부터 전체 시나리오를 재실행했다.
 
 ### Task 10: Guard·gate ledger 분리 (T10)
 
