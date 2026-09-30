@@ -1,6 +1,8 @@
 package stateroundtrip
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"time"
 
@@ -19,7 +21,7 @@ type validateStateRoundtripStateInput struct {
 }
 
 type validateStateRoundtripStateResult struct {
-	step        StepResult
+	step        selfverify.StepResult
 	stdoutParts []string
 	commands    []string
 }
@@ -38,29 +40,29 @@ func validateStateRoundtripStateCLI(input validateStateRoundtripStateInput) vali
 	if step := session.validatePrune(); !step.OK {
 		return session.result(step)
 	}
-	return session.result(StepResult{OK: true})
+	return session.result(selfverify.StepResult{OK: true})
 }
 
-func (s *stateRoundtripStateSession) run(label string, command ...string) StepResult {
+func (s *stateRoundtripStateSession) run(label string, command ...string) selfverify.StepResult {
 	step := s.input.deps.run(s.input.root, label, 30*time.Second, "", s.input.env, command...)
 	s.stdoutParts = append(s.stdoutParts, step.Stdout)
 	s.commands = append(s.commands, step.Command)
 	return step
 }
 
-func (s *stateRoundtripStateSession) fail(errs ...string) StepResult {
+func (s *stateRoundtripStateSession) fail(errs ...string) selfverify.StepResult {
 	return assertionStepWithOutput("state roundtrip", s.input.started, errs, s.stdoutParts, s.commands)
 }
 
-func (s *stateRoundtripStateSession) combineFailed(step StepResult) StepResult {
+func (s *stateRoundtripStateSession) combineFailed(step selfverify.StepResult) selfverify.StepResult {
 	return combineFailedStep("state roundtrip", s.input.started, step, s.stdoutParts, s.commands)
 }
 
-func (s *stateRoundtripStateSession) result(step StepResult) validateStateRoundtripStateResult {
+func (s *stateRoundtripStateSession) result(step selfverify.StepResult) validateStateRoundtripStateResult {
 	return validateStateRoundtripStateResult{step: step, stdoutParts: s.stdoutParts, commands: s.commands}
 }
 
-func (s *stateRoundtripStateSession) validateWriteReadList() StepResult {
+func (s *stateRoundtripStateSession) validateWriteReadList() selfverify.StepResult {
 	write := s.run("state write", s.input.binary, "state", "write", "--key", s.input.key, "--value", s.input.content, "--json")
 	if !write.OK {
 		return s.combineFailed(write)
@@ -96,5 +98,5 @@ func (s *stateRoundtripStateSession) validateWriteReadList() StepResult {
 	if !listResult.OK || !containsString(listResult.Keys, s.input.key) {
 		return s.fail("state list did not include roundtrip key")
 	}
-	return StepResult{OK: true}
+	return selfverify.StepResult{OK: true}
 }

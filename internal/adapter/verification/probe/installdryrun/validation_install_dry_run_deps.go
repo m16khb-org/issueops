@@ -1,6 +1,8 @@
 package installdryrun
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"os"
 	"time"
@@ -8,7 +10,7 @@ import (
 	verification "issueops/internal/adapter/verification"
 )
 
-type installDryRunCommandRunner func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult
+type installDryRunCommandRunner func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult
 
 type installDryRunValidationDeps struct {
 	makeTempDir func(kind string, seed int64) (string, error)
@@ -42,7 +44,7 @@ func (deps installDryRunValidationDeps) withDefaults() installDryRunValidationDe
 		deps.exists = exists
 	}
 	if deps.run == nil {
-		deps.run = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+		deps.run = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult {
 			return verification.RunEnv(dir, label, timeout, stdin, env, commandOutputBudgetBytes, name, args...)
 		}
 	}

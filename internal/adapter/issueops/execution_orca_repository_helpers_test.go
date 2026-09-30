@@ -29,7 +29,7 @@ func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsReco
 	if err != nil {
 		return record, preparationcontract.Intent{}, err
 	}
-	operationID, err := newExecutionOperationID()
+	operationID, err := NewExecutionOperationID()
 	if err != nil {
 		return record, preparationcontract.Intent{}, err
 	}

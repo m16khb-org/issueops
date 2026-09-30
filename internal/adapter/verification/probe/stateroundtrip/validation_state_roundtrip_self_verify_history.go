@@ -1,19 +1,22 @@
 package stateroundtrip
 
 import (
+	selfaugment "issueops/internal/contract/selfaugment"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 
 	statecontract "issueops/internal/contract/state"
 )
 
-func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCompareKey, candidateCompareKey, promotedBaselineKey string) StepResult {
+func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCompareKey, candidateCompareKey, promotedBaselineKey string) selfverify.StepResult {
 	input := s.input
 	key := input.key
 	history := s.run("self verify history", input.binary, "self-verify", "history", "--prefix", key+"-", "--json")
 	if !history.OK {
 		return s.combineFailed(history)
 	}
-	var historyResult SelfAugmentHistoryResult
+	var historyResult selfaugment.SelfAugmentHistoryResult
 	if err := json.Unmarshal([]byte(history.Stdout), &historyResult); err != nil {
 		return s.fail(err.Error())
 	}
@@ -29,7 +32,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCo
 	if !retentionDry.OK {
 		return s.combineFailed(retentionDry)
 	}
-	var retentionDryResult SelfAugmentHistoryResult
+	var retentionDryResult selfaugment.SelfAugmentHistoryResult
 	if err := json.Unmarshal([]byte(retentionDry.Stdout), &retentionDryResult); err != nil {
 		return s.fail(err.Error())
 	}
@@ -41,7 +44,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCo
 	if !retentionConfirm.OK {
 		return s.combineFailed(retentionConfirm)
 	}
-	var retentionConfirmResult SelfAugmentHistoryResult
+	var retentionConfirmResult selfaugment.SelfAugmentHistoryResult
 	if err := json.Unmarshal([]byte(retentionConfirm.Stdout), &retentionConfirmResult); err != nil {
 		return s.fail(err.Error())
 	}
@@ -53,7 +56,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCo
 	if !historyAfterRetention.OK {
 		return s.combineFailed(historyAfterRetention)
 	}
-	var historyAfterRetentionResult SelfAugmentHistoryResult
+	var historyAfterRetentionResult selfaugment.SelfAugmentHistoryResult
 	if err := json.Unmarshal([]byte(historyAfterRetention.Stdout), &historyAfterRetentionResult); err != nil {
 		return s.fail(err.Error())
 	}
@@ -79,7 +82,7 @@ func (s *stateRoundtripSelfVerifySession) validateHistoryAndRetention(baselineCo
 	if !doctorResult.OK || doctorResult.Healthy || !containsString(doctorResult.ValidKeys, key) || !stateDoctorHasIssueCode(doctorResult.Issues, "invalid_state") {
 		return s.fail("state doctor did not report corrupt fixture and preserve valid key")
 	}
-	return StepResult{OK: true}
+	return selfverify.StepResult{OK: true}
 }
 
 func stateDoctorHasIssueCode(issues []statecontract.StateDoctorIssue, want string) bool {

@@ -1,6 +1,8 @@
 package goformat
 
 import (
+	selfverify "issueops/internal/application/selfverify"
+
 	"context"
 	"errors"
 	"os"
@@ -25,7 +27,7 @@ func TestValidateReportsUnformattedTrackedFiles(t *testing.T) {
 
 	step := ValidateWithDeps("/repo", deps)
 
-	if step.OK || step.Label != Label || step.Command != Command {
+	if step.OK || step.Label != Label || step.Command != selfverify.FormatCommand {
 		t.Fatalf("unexpected step: %+v", step)
 	}
 	if !strings.Contains(step.Error, "internal/b.go") || strings.Contains(step.Error, "cmd/a.go") || !strings.Contains(step.Error, "gofmt -w") {
@@ -70,7 +72,7 @@ func TestValidateFailsClosedWithoutTrackedFilesOrTooling(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			step := ValidateWithDeps("/repo", tc.deps)
-			if step.OK || step.Command != Command || !strings.Contains(step.Error, tc.want) {
+			if step.OK || step.Command != selfverify.FormatCommand || !strings.Contains(step.Error, tc.want) {
 				t.Fatalf("expected fail-closed step containing %q, got %+v", tc.want, step)
 			}
 		})

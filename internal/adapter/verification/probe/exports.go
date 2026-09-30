@@ -1,47 +1,49 @@
 package probe
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"issueops/internal/adapter/verification/probe/goformat"
 	"issueops/internal/adapter/verification/probe/nativeintegration"
 )
 
-func ValidateCommandPolicy(binary, root string) StepResult {
+func ValidateCommandPolicy(binary, root string) selfverify.StepResult {
 	return validateCommandPolicy(binary, root)
 }
 
-func ValidateContractCheckSmoke(binary, root string) StepResult {
+func ValidateContractCheckSmoke(binary, root string) selfverify.StepResult {
 	return ValidateContractCheck(binary, root)
 }
 
-func ValidateWorkerLifecycleSmoke(binary, root string, seed int64) StepResult {
+func ValidateWorkerLifecycleSmoke(binary, root string, seed int64) selfverify.StepResult {
 	return ValidateWorkerLifecycle(binary, root, seed)
 }
 
-func ValidateParallelTempIsolation(binary, root string, seed int64) StepResult {
+func ValidateParallelTempIsolation(binary, root string, seed int64) selfverify.StepResult {
 	return validateParallelTempIsolation(binary, root, seed)
 }
 
-func ValidateInstallDryRunSmoke(binary, root string, seed int64) StepResult {
+func ValidateInstallDryRunSmoke(binary, root string, seed int64) selfverify.StepResult {
 	return validateInstallDryRunSmoke(binary, root, seed)
 }
 
-func ValidateDaemonRestartResilience(binary, root string, seed int64) StepResult {
+func ValidateDaemonRestartResilience(binary, root string, seed int64) selfverify.StepResult {
 	return validateDaemonRestartResilience(binary, root, seed)
 }
 
-func ValidateInspect(binary, root string) StepResult {
+func ValidateInspect(binary, root string) selfverify.StepResult {
 	return validateInspect(binary, root)
 }
 
-func ValidateDocsIndex(binary, root string) StepResult {
+func ValidateDocsIndex(binary, root string) selfverify.StepResult {
 	return validateDocsIndex(binary, root)
 }
 
-func ValidateGoFormat(root string) StepResult {
+func ValidateGoFormat(root string) selfverify.StepResult {
 	return goformat.Validate(root)
 }
 
-func DetectClaudeMCPDuplicateWarnings(output string) []ClaudeMCPDuplicateWarning {
+func DetectClaudeMCPDuplicateWarnings(output string) []nativeintegration.ClaudeMCPDuplicateWarning {
 	return nativeintegration.DetectClaudeMCPDuplicateWarnings(output)
 }
 
@@ -65,6 +67,6 @@ func ForbiddenNameHits(root string) []string {
 	return forbiddenNameHits(root)
 }
 
-func ValidateHarnessInvariants(root string) StepResult {
+func ValidateHarnessInvariants(root string) selfverify.StepResult {
 	return validateHarnessInvariants(root)
 }

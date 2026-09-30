@@ -1,12 +1,16 @@
 package mcpsmoke
 
+import (
+	selfverify "issueops/internal/contract/selfverify"
+)
+
 import "time"
 
-func ValidateMCP(binary, root string) StepResult {
+func ValidateMCP(binary, root string) selfverify.StepResult {
 	return ValidateMCPWithDeps(binary, root, MCPValidationDeps{})
 }
 
-func ValidateMCPWithDeps(binary, root string, deps MCPValidationDeps) StepResult {
+func ValidateMCPWithDeps(binary, root string, deps MCPValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	tempState, err := deps.MkdirTemp("", "issueops-mcp-state-*")
 	if err != nil {

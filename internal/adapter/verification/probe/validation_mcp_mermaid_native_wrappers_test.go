@@ -1,6 +1,9 @@
 package probe
 
 import (
+	mcpsmoke "issueops/internal/adapter/verification/probe/mcpsmoke"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,12 +20,12 @@ func TestValidationMCPMermaidNativeWrappersUseDefaultSurfaces(t *testing.T) {
 	t.Setenv("HOME", home)
 	writeNativeIntegrationFixture(t, root, home)
 
-	mcpDeps := MCPValidationDeps{
-		RunCommandStepEnv: func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-			return StepResult{OK: true}
+	mcpDeps := mcpsmoke.MCPValidationDeps{
+		RunCommandStepEnv: func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+			return selfverify.StepResult{OK: true}
 		},
-		RunSDKSmoke: func(string, string, []string, time.Duration) StepResult {
-			return StepResult{Label: "MCP smoke", OK: true, Stdout: validMCPResponses()}
+		RunSDKSmoke: func(string, string, []string, time.Duration) selfverify.StepResult {
+			return selfverify.StepResult{Label: "MCP smoke", OK: true, Stdout: validMCPResponses()}
 		},
 	}
 	if step := ValidateMCPWithDeps("fake-harness", root, mcpDeps); !step.OK || !strings.Contains(step.Stdout, "atomic_commit_preflight") {

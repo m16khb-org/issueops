@@ -1,5 +1,9 @@
 package stateroundtrip
 
+import (
+	selfverify "issueops/internal/contract/selfverify"
+)
+
 import "time"
 
 type validateStateRoundtripSelfVerifyInput struct {
@@ -29,17 +33,17 @@ func newStateRoundtripSelfVerifySession(input validateStateRoundtripSelfVerifyIn
 	}
 }
 
-func (s *stateRoundtripSelfVerifySession) run(label string, command ...string) StepResult {
+func (s *stateRoundtripSelfVerifySession) run(label string, command ...string) selfverify.StepResult {
 	step := s.input.deps.run(s.input.root, label, 30*time.Second, "", s.input.env, command...)
 	s.stdoutParts = append(s.stdoutParts, step.Stdout)
 	s.commands = append(s.commands, step.Command)
 	return step
 }
 
-func (s *stateRoundtripSelfVerifySession) fail(errs ...string) StepResult {
+func (s *stateRoundtripSelfVerifySession) fail(errs ...string) selfverify.StepResult {
 	return assertionStepWithOutput("state roundtrip", s.input.started, errs, s.stdoutParts, s.commands)
 }
 
-func (s *stateRoundtripSelfVerifySession) combineFailed(step StepResult) StepResult {
+func (s *stateRoundtripSelfVerifySession) combineFailed(step selfverify.StepResult) selfverify.StepResult {
 	return combineFailedStep("state roundtrip", s.input.started, step, s.stdoutParts, s.commands)
 }

@@ -1,6 +1,8 @@
 package daemonresilience
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"os"
 	"time"
@@ -44,7 +46,7 @@ func (deps daemonResilienceValidationDeps) withDefaults() daemonResilienceValida
 	return deps
 }
 
-func runDaemonResilienceCommand(root, label string, timeout time.Duration, input string, env []string, command ...string) StepResult {
+func runDaemonResilienceCommand(root, label string, timeout time.Duration, input string, env []string, command ...string) selfverify.StepResult {
 	if len(command) == 0 {
 		return verifydomain.FailedStep(label, fmt.Errorf("missing command"))
 	}

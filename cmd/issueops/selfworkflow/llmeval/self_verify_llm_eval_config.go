@@ -6,8 +6,6 @@ import (
 	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
-const EnvName = selfverifydomain.LLMEvalEnvName
-
 type SelfVerifyLLMEvalConfig struct {
 	Enabled bool
 	Mode    string
@@ -27,7 +25,7 @@ func ResolveSelfVerifyLLMEvalConfig(llmEvalFlagSet bool, llmEvalFlagValue bool, 
 		lookupEnv = os.LookupEnv
 	}
 	ignoreEnv := llmEvalFlagSet && !llmEvalFlagValue
-	if value, ok := lookupEnv(EnvName); ok && !ignoreEnv {
+	if value, ok := lookupEnv(selfverifydomain.LLMEvalEnvName); ok && !ignoreEnv {
 		enabled, mode, err := ParseSelfVerifyLLMEvalEnv(value)
 		if err != nil {
 			return config, err

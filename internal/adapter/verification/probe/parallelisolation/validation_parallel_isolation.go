@@ -1,15 +1,17 @@
 package parallelisolation
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"sync"
 	"time"
 )
 
-func Validate(binary, root string, seed int64) StepResult {
+func Validate(binary, root string, seed int64) selfverify.StepResult {
 	return validateParallelTempIsolationWithDeps(binary, root, seed, parallelIsolationValidationDeps{})
 }
 
-func validateParallelTempIsolationWithDeps(binary, root string, seed int64, deps parallelIsolationValidationDeps) StepResult {
+func validateParallelTempIsolationWithDeps(binary, root string, seed int64, deps parallelIsolationValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	const workers = 3

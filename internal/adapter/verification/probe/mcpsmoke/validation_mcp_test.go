@@ -1,6 +1,8 @@
 package mcpsmoke
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"errors"
 	"fmt"
 	"strings"
@@ -20,7 +22,7 @@ func TestMCPSmokeExpectedMarkers(t *testing.T) {
 
 func TestValidateMCPSmokeContract(t *testing.T) {
 	stdout := validMCPSmokeStdout()
-	step := StepResult{OK: true, Stdout: stdout}
+	step := selfverify.StepResult{OK: true, Stdout: stdout}
 	ValidateMCPSmokeContract(&step)
 	if !step.OK || step.Error != "" {
 		t.Fatalf("valid contract failed: %#v", step)
@@ -35,7 +37,7 @@ func TestValidateMCPSmokeContract(t *testing.T) {
 		{name: "missing markers", stdout: strings.Repeat(`{}`+"\n", 11), want: "expected tool/resource"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			step := StepResult{OK: true, Stdout: tc.stdout}
+			step := selfverify.StepResult{OK: true, Stdout: tc.stdout}
 			ValidateMCPSmokeContract(&step)
 			if step.OK || !strings.Contains(step.Error, tc.want) {
 				t.Fatalf("got %#v, want error containing %q", step, tc.want)
@@ -55,15 +57,15 @@ func TestValidateMCPWithDepsRunsSmokeAndCleanup(t *testing.T) {
 			removed = append(removed, path)
 			return nil
 		},
-		RunCommandStepEnv: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+		RunCommandStepEnv: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult {
 			stopCalled = label == "MCP daemon stop" && name == "bin" && len(args) == 3
-			return StepResult{OK: true}
+			return selfverify.StepResult{OK: true}
 		},
-		RunSDKSmoke: func(dir, name string, env []string, timeout time.Duration) StepResult {
+		RunSDKSmoke: func(dir, name string, env []string, timeout time.Duration) selfverify.StepResult {
 			if dir != "/repo" || name != "bin" {
-				return StepResult{OK: false, Error: "unexpected command"}
+				return selfverify.StepResult{OK: false, Error: "unexpected command"}
 			}
-			return StepResult{OK: true, Stdout: validMCPSmokeStdout()}
+			return selfverify.StepResult{OK: true, Stdout: validMCPSmokeStdout()}
 		},
 	}
 	step := ValidateMCPWithDeps("bin", "/repo", deps)
@@ -100,11 +102,11 @@ func TestValidateMCPWithDepsFailurePaths(t *testing.T) {
 	step = ValidateMCPWithDeps("bin", "/repo", MCPValidationDeps{
 		MkdirTemp: func(_, pattern string) (string, error) { return "/tmp/" + pattern, nil },
 		RemoveAll: func(string) error { return nil },
-		RunCommandStepEnv: func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-			return StepResult{OK: true}
+		RunCommandStepEnv: func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+			return selfverify.StepResult{OK: true}
 		},
-		RunSDKSmoke: func(string, string, []string, time.Duration) StepResult {
-			return StepResult{OK: false, Error: "mcp failed"}
+		RunSDKSmoke: func(string, string, []string, time.Duration) selfverify.StepResult {
+			return selfverify.StepResult{OK: false, Error: "mcp failed"}
 		},
 	})
 	if step.OK || step.Error != "mcp failed" {

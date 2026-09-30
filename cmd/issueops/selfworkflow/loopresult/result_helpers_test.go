@@ -1,6 +1,8 @@
 package loopresult
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"issueops/cmd/issueops/selfworkflow/progress"
 	application "issueops/internal/application/selfverify"
 	augmentcontract "issueops/internal/contract/selfaugment"
@@ -14,7 +16,7 @@ func EmitStart(reporter *progress.SelfVerifyProgressReporter, loopKind string, i
 	if reporter == nil {
 		return
 	}
-	reporter.Emit(progress.SelfVerifyProgressEvent{
+	reporter.Emit(selfverify.ProgressEvent{
 		Event:      "loop_start",
 		LoopKind:   loopKind,
 		Iterations: iterations,
@@ -26,7 +28,7 @@ func EmitEnd(reporter *progress.SelfVerifyProgressReporter, loopKind string, ite
 	if reporter == nil {
 		return
 	}
-	event := progress.SelfVerifyProgressEvent{
+	event := selfverify.ProgressEvent{
 		Event:      "loop_end",
 		LoopKind:   loopKind,
 		Iterations: iterations,

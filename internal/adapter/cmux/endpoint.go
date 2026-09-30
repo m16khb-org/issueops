@@ -9,54 +9,52 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-type EndpointIncarnation = issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation
-
-func ObserveEndpoint(path string, expectedUID int) (EndpointIncarnation, error) {
+func ObserveEndpoint(path string, expectedUID int) (issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
 	if err := requireSupportedPlatform(); err != nil {
-		return EndpointIncarnation{}, err
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, err
 	}
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
-		return EndpointIncarnation{}, fmt.Errorf("cmux socket path must be absolute and clean")
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, fmt.Errorf("cmux socket path must be absolute and clean")
 	}
 	info, err := os.Lstat(path)
 	if err != nil {
-		return EndpointIncarnation{}, fmt.Errorf("cmux socket is unavailable: %w", err)
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, fmt.Errorf("cmux socket is unavailable: %w", err)
 	}
 	if info.Mode()&os.ModeSymlink != 0 {
-		return EndpointIncarnation{}, fmt.Errorf("cmux socket path must not be a symlink")
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, fmt.Errorf("cmux socket path must not be a symlink")
 	}
 	if info.Mode()&os.ModeSocket == 0 {
-		return EndpointIncarnation{}, fmt.Errorf("cmux endpoint is not a Unix socket")
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, fmt.Errorf("cmux endpoint is not a Unix socket")
 	}
 	parentPath := filepath.Dir(path)
 	parent, err := os.Lstat(parentPath)
 	if err != nil {
-		return EndpointIncarnation{}, fmt.Errorf("cmux socket parent is unavailable: %w", err)
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, fmt.Errorf("cmux socket parent is unavailable: %w", err)
 	}
 	if parent.Mode()&os.ModeSymlink != 0 || !parent.IsDir() {
-		return EndpointIncarnation{}, fmt.Errorf("cmux socket parent must be a non-symlink directory")
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, fmt.Errorf("cmux socket parent must be a non-symlink directory")
 	}
 	device, inode, ctimeNS, uid, gid, err := fileIdentity(info)
 	if err != nil {
-		return EndpointIncarnation{}, err
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, err
 	}
 	parentDevice, parentInode, _, parentUID, parentGID, err := fileIdentity(parent)
 	if err != nil {
-		return EndpointIncarnation{}, err
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, err
 	}
-	endpoint := EndpointIncarnation{
+	endpoint := issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{
 		Path: path, Kind: "unix_socket", Device: device, Inode: inode, CTimeNS: ctimeNS,
 		OwnerUID: uid, OwnerGID: gid, Mode: permissionMode(info.Mode()), ParentPath: parentPath,
 		ParentDevice: parentDevice, ParentInode: parentInode, ParentOwnerUID: parentUID,
 		ParentOwnerGID: parentGID, ParentMode: permissionMode(parent.Mode()),
 	}
 	if err := ValidateEndpoint(endpoint, path, expectedUID); err != nil {
-		return EndpointIncarnation{}, err
+		return issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation{}, err
 	}
 	return endpoint, nil
 }
 
-func ValidateEndpoint(endpoint EndpointIncarnation, expectedPath string, expectedUID int) error {
+func ValidateEndpoint(endpoint issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation, expectedPath string, expectedUID int) error {
 	if endpoint.Path != expectedPath || endpoint.Kind != "unix_socket" || endpoint.Inode == 0 || endpoint.CTimeNS <= 0 || endpoint.ParentInode == 0 {
 		return fmt.Errorf("cmux socket endpoint identity is incomplete")
 	}
@@ -75,7 +73,7 @@ func ValidateEndpoint(endpoint EndpointIncarnation, expectedPath string, expecte
 	return nil
 }
 
-func SameEndpoint(left, right EndpointIncarnation) bool {
+func SameEndpoint(left, right issueopscontract.IssueOpsHandoffDeliveryEndpointIncarnation) bool {
 	return reflect.DeepEqual(left, right)
 }
 

@@ -10,14 +10,12 @@ import (
 
 const commandOutputBudgetBytes = 32 * 1024
 
-type StepResult = verifycontract.StepResult
-
 type ValidationDeps struct {
 	MkdirTemp         func(string, string) (string, error)
 	RemoveAll         func(string) error
 	ReadFile          func(string) ([]byte, error)
-	RunCommandStep    func(string, string, time.Duration, string, string, ...string) StepResult
-	RunCommandStepEnv func(string, string, time.Duration, string, []string, string, ...string) StepResult
+	RunCommandStep    func(string, string, time.Duration, string, string, ...string) verifycontract.StepResult
+	RunCommandStepEnv func(string, string, time.Duration, string, []string, string, ...string) verifycontract.StepResult
 }
 
 func (deps ValidationDeps) withDefaults() ValidationDeps {
@@ -31,12 +29,12 @@ func (deps ValidationDeps) withDefaults() ValidationDeps {
 		deps.ReadFile = os.ReadFile
 	}
 	if deps.RunCommandStep == nil {
-		deps.RunCommandStep = func(dir, label string, timeout time.Duration, stdin string, name string, args ...string) StepResult {
+		deps.RunCommandStep = func(dir, label string, timeout time.Duration, stdin string, name string, args ...string) verifycontract.StepResult {
 			return verification.Run(dir, label, timeout, stdin, commandOutputBudgetBytes, name, args...)
 		}
 	}
 	if deps.RunCommandStepEnv == nil {
-		deps.RunCommandStepEnv = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+		deps.RunCommandStepEnv = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult {
 			return verification.RunEnv(dir, label, timeout, stdin, env, commandOutputBudgetBytes, name, args...)
 		}
 	}

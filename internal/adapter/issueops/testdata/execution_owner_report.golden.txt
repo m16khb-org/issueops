@@ -11,5 +11,5 @@
 - Verification: <every command + PASS/FAIL>
 - AI-slop clean: <removed duplication/legacy/noise or none>
 - Draft PR/MR: <URL or none>
-- Deviations: <issue-vs-code mismatch with file:line evidence or none>
+- Deviations: <issue-vs-code or intent-vs-issue mismatch with file:line evidence or none>
 - Blockers: <exact state/error/next command or none>

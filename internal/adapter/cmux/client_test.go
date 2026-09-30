@@ -1,6 +1,8 @@
 package cmux
 
 import (
+	issueops "issueops/internal/contract/issueops"
+
 	"context"
 	"errors"
 	"reflect"
@@ -31,7 +33,7 @@ func TestPreflightUsesBoundedReadOnlyCmuxCommandsAndExactObservedIdentity(t *tes
 	observations := 0
 	client := Client{
 		Runner: runner,
-		ObserveEndpoint: func(path string, uid int) (EndpointIncarnation, error) {
+		ObserveEndpoint: func(path string, uid int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
 			observations++
 			if path != socketPath || uid != 501 {
 				t.Fatalf("endpoint observation path=%q uid=%d", path, uid)
@@ -194,7 +196,7 @@ func TestCreateWorkspaceResponseLossAndEndpointRestartNeverRetry(t *testing.T) {
 			{args: []string{"--id-format", "uuids", "identify", "--window", testWindow, "--workspace", testWorkspace, "--surface", testSurface}, stdout: identifyFixture(testWindow, testWorkspace, testSurface)},
 		}}
 		calls := 0
-		observer := func(string, int) (EndpointIncarnation, error) {
+		observer := func(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
 			calls++
 			endpoint := endpointFixture()
 			if calls > 1 {
@@ -240,7 +242,9 @@ func (runner *queueRunner) Run(_ context.Context, request CommandRequest) (Comma
 	return CommandOutput{Stdout: []byte(step.stdout), Stderr: []byte(step.stderr), Invoked: step.invoked || step.err == nil}, step.err
 }
 
-func stableEndpointObserver(string, int) (EndpointIncarnation, error) { return endpointFixture(), nil }
+func stableEndpointObserver(string, int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error) {
+	return endpointFixture(), nil
+}
 
 func preflightFixture() cmuxcontract.PreflightResult {
 	return cmuxcontract.PreflightResult{Executable: cmuxPath, Version: SupportedVersion, Build: SupportedBuildIdentity, SocketPath: socketPath, WindowID: testWindow, Endpoint: endpointFixture()}

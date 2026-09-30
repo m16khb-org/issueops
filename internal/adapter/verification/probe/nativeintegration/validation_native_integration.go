@@ -11,9 +11,7 @@ import (
 
 const aggregateOutputBudgetBytes = 8 * 1024
 
-type StepResult = verifycontract.StepResult
-
-func validateNativeIntegrationWithDeps(root string, deps nativeIntegrationValidationDeps) StepResult {
+func validateNativeIntegrationWithDeps(root string, deps nativeIntegrationValidationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	home, err := deps.userHomeDir()
@@ -40,7 +38,7 @@ func validateNativeIntegrationWithDeps(root string, deps nativeIntegrationValida
 		return verifydomain.AssertionStepWithOutput("native integration", time.Since(started).Milliseconds(), errs, stdoutParts, nil, aggregateOutputBudgetBytes)
 	}
 	stdoutText, stdoutTruncated, stdoutBytes := verifydomain.TailWithBudget(strings.Join(stdoutParts, "\n"), aggregateOutputBudgetBytes)
-	return StepResult{
+	return verifycontract.StepResult{
 		Label:           "native integration",
 		OK:              true,
 		DurationMS:      time.Since(started).Milliseconds(),

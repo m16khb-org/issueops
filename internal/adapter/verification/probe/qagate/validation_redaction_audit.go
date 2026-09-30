@@ -1,6 +1,8 @@
 package qagate
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -20,7 +22,7 @@ var secretMaterialPatterns = []struct {
 	{name: "secret_assignment", re: regexp.MustCompile(`(?i)\b(token|secret|password|api[_-]?key|access[_-]?key)\s*[:=]\s*["']?([^\s"',}]+)`)},
 }
 
-func validateRedactionAuditWithDeps(root string, deps docsValidationDeps) StepResult {
+func validateRedactionAuditWithDeps(root string, deps docsValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	errs := []string{}

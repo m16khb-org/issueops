@@ -1,7 +1,6 @@
 package summary
 
 import (
-	"issueops/cmd/issueops/commandstep"
 	augmentcontract "issueops/internal/contract/selfaugment"
 	verifycontract "issueops/internal/contract/selfverify"
 )
@@ -18,4 +17,4 @@ type SelfVerificationCoverageDefinition = verifycontract.SelfVerificationCoverag
 type SelfVerificationFailureCluster = verifycontract.SelfVerificationFailureCluster
 type SelfVerificationGoalDefinition = verifycontract.SelfVerificationGoalDefinition
 type SelfVerificationGoalScore = verifycontract.SelfVerificationGoalScore
-type StepResult = commandstep.StepResult
+type StepResult = verifycontract.StepResult

@@ -1,12 +1,14 @@
 package mcpsmoke
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"fmt"
 	"strings"
 )
 
-func ValidateMCPSmokeContract(step *StepResult) {
+func ValidateMCPSmokeContract(step *selfverify.StepResult) {
 	lines := splitLines(step.Stdout)
 	if len(lines) != 11 {
 		step.OK = false

@@ -13,17 +13,15 @@ const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
 const skillName = "atomic-commit-push"
 
-type StepResult = verifycontract.StepResult
-
-func Validate(binary, root string, seed int64) StepResult {
+func Validate(binary, root string, seed int64) verifycontract.StepResult {
 	return validateInstallDryRunSmokeWithDeps(binary, root, seed, installDryRunValidationDeps{})
 }
 
-func validateInstallDryRunSmoke(binary, root string, seed int64) StepResult {
+func validateInstallDryRunSmoke(binary, root string, seed int64) verifycontract.StepResult {
 	return Validate(binary, root, seed)
 }
 
-func validateInstallDryRunSmokeWithDeps(binary, root string, seed int64, deps installDryRunValidationDeps) StepResult {
+func validateInstallDryRunSmokeWithDeps(binary, root string, seed int64, deps installDryRunValidationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	tempHome, err := deps.makeTempDir("home", seed)

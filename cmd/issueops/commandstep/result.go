@@ -1,6 +1,8 @@
 package commandstep
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"strings"
 	"time"
@@ -12,23 +14,23 @@ func BudgetCommandOutput(s string, budget int) (string, bool, int) {
 	return selfverifydomain.BudgetCommandOutput(s, budget)
 }
 
-func CombineFailedStep(label string, started time.Time, child StepResult, stdoutParts []string, commands []string, outputBudget int) StepResult {
+func CombineFailedStep(label string, started time.Time, child selfverify.StepResult, stdoutParts []string, commands []string, outputBudget int) selfverify.StepResult {
 	return selfverifydomain.CombineFailedStep(label, time.Since(started).Milliseconds(), child, stdoutParts, commands, outputBudget)
 }
 
-func AssertionStep(label string, started time.Time, errs []string) StepResult {
+func AssertionStep(label string, started time.Time, errs []string) selfverify.StepResult {
 	return selfverifydomain.AssertionStep(label, time.Since(started).Milliseconds(), errs)
 }
 
-func AssertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string, outputBudget int) StepResult {
+func AssertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string, outputBudget int) selfverify.StepResult {
 	return selfverifydomain.AssertionStepWithOutput(label, time.Since(started).Milliseconds(), errs, stdoutParts, commands, outputBudget)
 }
 
-func FailedStep(label string, err error) StepResult {
+func FailedStep(label string, err error) selfverify.StepResult {
 	return selfverifydomain.FailedStep(label, err)
 }
 
-func PrintStep(step StepResult) {
+func PrintStep(step selfverify.StepResult) {
 	if step.OK {
 		fmt.Printf("→ %s ok (%dms)\n", step.Label, step.DurationMS)
 		return

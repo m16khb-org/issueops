@@ -1,6 +1,8 @@
 package stateroundtrip
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
 	app "issueops/internal/application/selfaugment"
@@ -31,7 +33,7 @@ func testStateDependencies(deps stateRoundtripValidationDeps) stateRoundtripVali
 	}
 	return deps
 }
-func validateStateRoundtripWithTestDeps(binary, root string, seed int64, deps stateRoundtripValidationDeps) StepResult {
+func validateStateRoundtripWithTestDeps(binary, root string, seed int64, deps stateRoundtripValidationDeps) selfverify.StepResult {
 	return validateStateRoundtripWithDeps(binary, root, seed, testStateDependencies(deps))
 }
 

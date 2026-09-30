@@ -2,14 +2,6 @@ package projectdocs
 
 import projectdocdomain "issueops/internal/domain/projectdoc"
 
-const ProjectDocsDir = projectdocdomain.ProjectDocsDir
-
-const agentsStartMarker = projectdocdomain.AgentsStartMarker
-const agentsEndMarker = projectdocdomain.AgentsEndMarker
-const behavioralGuidelines = projectdocdomain.BehavioralGuidelines
-const solidDesignPatternGuidance = projectdocdomain.SolidDesignPatternGuidance
-const engineeringStandardsChecklist = projectdocdomain.EngineeringStandardsChecklist
-
 func nonEmptyStrings(values []string) []string {
 	return projectdocdomain.NonEmptyStrings(values)
 }

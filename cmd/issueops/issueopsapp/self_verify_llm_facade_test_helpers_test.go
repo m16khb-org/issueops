@@ -1,6 +1,8 @@
 package issueopsapp
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	llmeval "issueops/cmd/issueops/selfworkflow/llmeval"
 )
 
@@ -58,4 +60,4 @@ func selfVerifyLLMResponseFieldTypes() []string {
 
 type SelfVerifyLLMEvalConfig = llmeval.SelfVerifyLLMEvalConfig
 
-type SelfVerifyLLMEvalOptions = llmeval.SelfVerifyLLMEvalOptions
+type SelfVerifyLLMEvalOptions = selfverify.LLMEvalOptions

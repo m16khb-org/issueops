@@ -1,6 +1,10 @@
 package riskqa
 
 import (
+	riskqacontractx "issueops/internal/application/riskqa"
+	riskqacontract "issueops/internal/contract/riskqa"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -100,7 +104,7 @@ func TestRiskQATierHelpersCoverGitWarningsAndJSON(t *testing.T) {
 		t.Fatalf("unexpected clean git risk plan: %+v", plan)
 	}
 
-	jsonText := PlanJSON(RiskQATierPlan{Tier: "static", ChangedPaths: []string{"b.go", "a.go"}, Commands: []string{"go vet ./..."}})
+	jsonText := PlanJSON(riskqacontract.RiskQATierPlan{Tier: "static", ChangedPaths: []string{"b.go", "a.go"}, Commands: []string{"go vet ./..."}})
 	if !strings.Contains(jsonText, `"tier":"static"`) || !strings.Contains(jsonText, `"changed_paths":["b.go","a.go"]`) {
 		t.Fatalf("unexpected risk QA JSON: %s", jsonText)
 	}
@@ -108,26 +112,26 @@ func TestRiskQATierHelpersCoverGitWarningsAndJSON(t *testing.T) {
 
 func TestValidateRiskQATierWithDepsCoversCommandSuccessAndFailure(t *testing.T) {
 	root := t.TempDir()
-	plan := RiskQATierPlan{
+	plan := riskqacontract.RiskQATierPlan{
 		Tier:         "elevated",
 		ChangedPaths: []string{"cmd/issueops/risk_qa.go"},
 		Reasons:      []string{"go changes detected"},
 		Commands:     []string{"go test -race ./... -count=1", "go vet ./..."},
 	}
 	calls := []string{}
-	success := ValidateWithDeps(root, Deps{
-		Plan: func(gotRoot string) RiskQATierPlan {
+	success := ValidateWithDeps(root, riskqacontractx.ExecuteDeps{
+		Plan: func(gotRoot string) riskqacontract.RiskQATierPlan {
 			if gotRoot != root {
 				t.Fatalf("plan root=%q want %q", gotRoot, root)
 			}
 			return plan
 		},
-		Run: func(gotRoot string, command string) StepResult {
+		Run: func(gotRoot string, command string) selfverify.StepResult {
 			if gotRoot != root || (command != "go test -race ./... -count=1" && command != "go vet ./...") {
 				t.Fatalf("unexpected risk QA command in %q: %q", gotRoot, command)
 			}
 			calls = append(calls, command)
-			return StepResult{Label: command, Command: "stub " + command, OK: true, Stdout: "ok " + command}
+			return selfverify.StepResult{Label: command, Command: "stub " + command, OK: true, Stdout: "ok " + command}
 		},
 	})
 	if !success.OK || success.Command != "stub go test -race ./... -count=1 && stub go vet ./..." {
@@ -137,14 +141,14 @@ func TestValidateRiskQATierWithDepsCoversCommandSuccessAndFailure(t *testing.T) 
 		t.Fatalf("risk QA success did not preserve command order/stdout: calls=%v result=%+v", calls, success)
 	}
 
-	failure := ValidateWithDeps(root, Deps{
-		Plan: func(string) RiskQATierPlan { return plan },
-		Run: func(_ string, command string) StepResult {
+	failure := ValidateWithDeps(root, riskqacontractx.ExecuteDeps{
+		Plan: func(string) riskqacontract.RiskQATierPlan { return plan },
+		Run: func(_ string, command string) selfverify.StepResult {
 			if command == "go test -race ./... -count=1" {
-				return StepResult{Label: "risk QA race test", Command: "stub race", OK: false, Error: "race failed", Stdout: "race out"}
+				return selfverify.StepResult{Label: "risk QA race test", Command: "stub race", OK: false, Error: "race failed", Stdout: "race out"}
 			}
 			t.Fatalf("failure path should stop after first failing command, got %q", command)
-			return StepResult{}
+			return selfverify.StepResult{}
 		},
 	})
 	if failure.OK || failure.Label != "risk QA tier" || !strings.Contains(failure.Command, "stub race") || !strings.Contains(failure.Error, "race failed") {

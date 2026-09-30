@@ -27,7 +27,6 @@ const (
 	storeBucket    = "native_activation_v1"
 	pendingID      = "pending"
 	receiptID      = "receipt"
-	schemaVersion  = activationdomain.RecordSchemaVersion
 )
 
 type StoreOpen func(string) (port.TransactionalRecordStore, error)
@@ -106,7 +105,7 @@ func (backend Backend) Begin(ctx context.Context, request activationport.BeginRe
 		return activationport.Result{}, fmt.Errorf("generate native activation transition ID")
 	}
 	record := pendingRecord{
-		SchemaVersion: schemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
+		SchemaVersion: activationdomain.RecordSchemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
 		TargetBinary: request.TargetBinary, Candidate: candidate, TransitionID: transitionID, StartedAt: startedAt,
 	}
 	data, err := json.Marshal(record)
@@ -179,7 +178,7 @@ func (backend Backend) Seal(ctx context.Context, request activationport.SealRequ
 		}
 		sealedAt := backend.now().UTC().Format(time.RFC3339Nano)
 		receipt := receiptRecord{
-			SchemaVersion: schemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
+			SchemaVersion: activationdomain.RecordSchemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
 			TargetBinary: request.TargetBinary, Binary: active, CatalogSHA256: request.CatalogSHA256,
 			Evidence: append([]activationport.Evidence(nil), request.Evidence...), TransitionID: request.TransitionID, SealedAt: sealedAt,
 		}

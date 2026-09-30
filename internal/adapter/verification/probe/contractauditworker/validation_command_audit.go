@@ -1,6 +1,8 @@
 package contractauditworker
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"path/filepath"
 	"strings"
 	"time"
@@ -8,11 +10,11 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
-func ValidateCommandAudit(binary, root string, seed int64) StepResult {
+func ValidateCommandAudit(binary, root string, seed int64) selfverify.StepResult {
 	return ValidateCommandAuditWithDeps(binary, root, seed, ValidationDeps{})
 }
 
-func ValidateCommandAuditWithDeps(binary, root string, seed int64, deps ValidationDeps) StepResult {
+func ValidateCommandAuditWithDeps(binary, root string, seed int64, deps ValidationDeps) selfverify.StepResult {
 	_ = seed
 	deps = deps.withDefaults()
 	auditDir, err := deps.MkdirTemp("", "issueops-audit-*")

@@ -1,11 +1,13 @@
 package stateroundtrip
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"time"
 )
 
-func validateStateRoundtripWithDeps(binary, root string, seed int64, deps stateRoundtripValidationDeps) StepResult {
+func validateStateRoundtripWithDeps(binary, root string, seed int64, deps stateRoundtripValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	if deps.writeSnapshot == nil {
 		return failedStep("state roundtrip", fmt.Errorf("self-verification snapshot writer dependency is required"))

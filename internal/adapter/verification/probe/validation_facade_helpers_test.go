@@ -1,6 +1,11 @@
 package probe
 
 import (
+	candidateexport "issueops/internal/adapter/verification/probe/candidateexport"
+	selfaugment "issueops/internal/contract/selfaugment"
+	selfverify "issueops/internal/contract/selfverify"
+	selfaugmentx "issueops/internal/domain/selfaugment"
+
 	"encoding/json"
 	"errors"
 	"os"
@@ -23,7 +28,7 @@ func TestValidationDependencyHelpers(t *testing.T) {
 		t.Fatalf("runCommandStepEnvWithBudget true failed: %#v", step)
 	}
 	started := time.Now()
-	failed := StepResult{Label: "child", OK: false, Error: "boom"}
+	failed := selfverify.StepResult{Label: "child", OK: false, Error: "boom"}
 	if combined := combineFailedStep("parent", started, failed, []string{"stdout"}, []string{"cmd"}); combined.OK || !strings.Contains(combined.Error, "child") {
 		t.Fatalf("combineFailedStep = %#v", combined)
 	}
@@ -37,7 +42,7 @@ func TestValidationDependencyHelpers(t *testing.T) {
 		t.Fatalf("failedStep = %#v", failed)
 	}
 	dir := t.TempDir()
-	snapshot := SelfAugmentStateSnapshot{Kind: selfVerificationSummaryKind, OK: true}
+	snapshot := selfaugment.SelfAugmentStateSnapshot{Kind: selfaugmentx.SelfVerificationSummaryKind, OK: true}
 	if err := writeSelfAugmentSnapshotRecord(dir, "snapshot", snapshot); err != nil {
 		t.Fatalf("writeSelfAugmentSnapshotRecord: %v", err)
 	}
@@ -63,10 +68,10 @@ func TestValidationDependencyHelpers(t *testing.T) {
 func TestValidationCandidateExportFacadeWithDeps(t *testing.T) {
 	key := "self-verify-candidates-123"
 	exportResult := validCandidateExportResult(key)
-	snapshot := SelfVerificationCandidateExportStateSnapshot{
-		Kind:                  selfVerificationCandidateExportKind,
+	snapshot := selfaugment.SelfVerificationCandidateExportStateSnapshot{
+		Kind:                  selfaugment.SelfVerificationCandidateExportKind,
 		LoopKind:              "self_verification",
-		KoreanName:            selfVerificationKoreanName,
+		KoreanName:            selfaugment.SelfVerificationKoreanName,
 		OK:                    true,
 		CandidateCount:        exportResult.CandidateCount,
 		SatisfiedCandidateIDs: exportResult.SatisfiedCandidateIDs,
@@ -75,7 +80,7 @@ func TestValidationCandidateExportFacadeWithDeps(t *testing.T) {
 	if errs := CandidateExportValidationErrors(key, exportResult, snapshot); len(errs) != 0 {
 		t.Fatalf("valid export errors = %#v", errs)
 	}
-	if errs := CandidateExportValidationErrors(key, SelfVerificationCandidateExportResult{}, SelfVerificationCandidateExportStateSnapshot{}); len(errs) == 0 {
+	if errs := CandidateExportValidationErrors(key, selfaugment.SelfVerificationCandidateExportResult{}, selfaugment.SelfVerificationCandidateExportStateSnapshot{}); len(errs) == 0 {
 		t.Fatal("invalid export should report errors")
 	}
 	exportJSON, err := json.Marshal(exportResult)
@@ -91,19 +96,19 @@ func TestValidationCandidateExportFacadeWithDeps(t *testing.T) {
 		t.Fatal(err)
 	}
 	calls := 0
-	step := ValidateSelfVerifyCandidateExportWithDeps("issueops", ".", 123, CandidateExportValidationDeps{
+	step := ValidateSelfVerifyCandidateExportWithDeps("issueops", ".", 123, candidateexport.CandidateExportValidationDeps{
 		MakeTempState: func(seed int64) (string, error) {
 			return t.TempDir(), nil
 		},
 		RemoveAll: func(path string) error {
 			return nil
 		},
-		Run: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+		Run: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult {
 			calls++
 			if label == "candidate export" {
-				return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(exportJSON)}
+				return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(exportJSON)}
 			}
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(stateJSON)}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(stateJSON)}
 		},
 	})
 	if !step.OK || calls != 2 {
@@ -145,10 +150,10 @@ func TestValidationPureFacadeWrappers(t *testing.T) {
 	}
 }
 
-func validCandidateExportResult(key string) SelfVerificationCandidateExportResult {
-	candidates := make([]SelfVerificationCandidate, 10)
+func validCandidateExportResult(key string) selfaugment.SelfVerificationCandidateExportResult {
+	candidates := make([]selfverify.SelfVerificationCandidate, 10)
 	for i := range candidates {
-		candidates[i] = SelfVerificationCandidate{ID: "candidate-" + string(rune('a'+i)), Status: selfAugmentCandidateStatusSatisfied}
+		candidates[i] = selfverify.SelfVerificationCandidate{ID: "candidate-" + string(rune('a'+i)), Status: selfaugment.CandidateStatusSatisfied}
 	}
 	satisfied := []string{
 		"completion-evidence-audit",
@@ -156,14 +161,14 @@ func validCandidateExportResult(key string) SelfVerificationCandidateExportResul
 		"self-verify-step-budget-baseline",
 		"self-verify-install-dry-run-smoke",
 	}
-	return SelfVerificationCandidateExportResult{
+	return selfaugment.SelfVerificationCandidateExportResult{
 		OK:                    true,
-		Kind:                  selfVerificationCandidateExportKind,
+		Kind:                  selfaugment.SelfVerificationCandidateExportKind,
 		LoopKind:              "self_verification",
-		KoreanName:            selfVerificationKoreanName,
+		KoreanName:            selfaugment.SelfVerificationKoreanName,
 		CandidateCount:        len(candidates),
 		SatisfiedCandidateIDs: satisfied,
 		Candidates:            candidates,
-		StateCheckpoint:       &SelfAugmentStateCheckpoint{OK: true, Key: key},
+		StateCheckpoint:       &selfaugment.SelfAugmentStateCheckpoint{OK: true, Key: key},
 	}
 }

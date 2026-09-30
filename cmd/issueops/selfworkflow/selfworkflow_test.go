@@ -1,6 +1,8 @@
 package selfworkflow
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"errors"
 	"fmt"
@@ -11,8 +13,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"issueops/cmd/issueops/selfworkflow/llmeval"
 )
 
 func TestSelfWorkflowCandidateExportAndStateWrappers(t *testing.T) {
@@ -268,7 +268,7 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 			}
 			return nil
 		},
-		ApplyLLMEval: func(SelfAugmentResult, llmeval.SelfVerifyLLMEvalOptions) (SelfAugmentResult, error) {
+		ApplyLLMEval: func(SelfAugmentResult, selfverify.LLMEvalOptions) (SelfAugmentResult, error) {
 			return SelfAugmentResult{}, fmt.Errorf("LLM eval should not run without an explicit flag or env")
 		},
 		PrintJSON: func(any) error { return nil },

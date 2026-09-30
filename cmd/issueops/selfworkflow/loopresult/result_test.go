@@ -1,6 +1,8 @@
 package loopresult
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"encoding/json"
 	"strings"
@@ -36,7 +38,7 @@ func TestEmitStartAndEndWriteProgressEvents(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("expected 2 progress lines, got %d: %q", len(lines), buf.String())
 	}
-	var start, end progress.SelfVerifyProgressEvent
+	var start, end selfverify.ProgressEvent
 	if err := json.Unmarshal([]byte(lines[0]), &start); err != nil {
 		t.Fatalf("decode start: %v", err)
 	}

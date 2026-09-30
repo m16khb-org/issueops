@@ -1,6 +1,10 @@
 package stepbudget
 
 import (
+	selfaugment "issueops/internal/contract/selfaugment"
+	selfverify "issueops/internal/contract/selfverify"
+	selfaugmentx "issueops/internal/domain/selfaugment"
+
 	"encoding/json"
 	"errors"
 	"strings"
@@ -25,14 +29,14 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 			}
 			return nil
 		},
-		WriteSnapshot: func(dir, key string, snapshot SelfAugmentStateSnapshot) error {
+		WriteSnapshot: func(dir, key string, snapshot selfaugment.SelfAugmentStateSnapshot) error {
 			writes = append(writes, key)
-			if dir != tempState || snapshot.Kind != selfVerificationSummaryKind || snapshot.LoopKind != "self_verification" || snapshot.IssueOpsRoot != root {
+			if dir != tempState || snapshot.Kind != selfaugmentx.SelfVerificationSummaryKind || snapshot.LoopKind != "self_verification" || snapshot.IssueOpsRoot != root {
 				t.Fatalf("unexpected snapshot write: dir=%q key=%q snapshot=%+v", dir, key, snapshot)
 			}
 			return nil
 		},
-		Run: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+		Run: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult {
 			if dir != root || label != "step budget baseline" || timeout != 30*time.Second || stdin != "" || len(env) != 1 || env[0] != "ISSUEOPS_STATE_DIR="+tempState {
 				t.Fatalf("unexpected compare envelope: dir=%q label=%q timeout=%s stdin=%q env=%v", dir, label, timeout, stdin, env)
 			}
@@ -40,7 +44,7 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 			if !strings.Contains(command, "self-verify compare") || !strings.Contains(command, "--baseline-key self-verify-budget-baseline-42") || !strings.Contains(command, "--candidate-key self-verify-budget-candidate-42") {
 				t.Fatalf("unexpected compare command: %s", command)
 			}
-			return StepResult{Label: label, Command: command, OK: true, Stdout: mustMarshalStepBudgetTest(t, validStepBudgetCompareResult())}
+			return selfverify.StepResult{Label: label, Command: command, OK: true, Stdout: mustMarshalStepBudgetTest(t, validStepBudgetCompareResult())}
 		},
 	}
 	step := ValidateStepBudgetBaselineWithDeps("bin/issueops", root, 42, deps)
@@ -48,7 +52,7 @@ func TestValidateStepBudgetBaselineWithDepsCoversSuccessAndWriteFailure(t *testi
 		t.Fatalf("unexpected step budget success: step=%+v writes=%v", step, writes)
 	}
 
-	deps.WriteSnapshot = func(string, string, SelfAugmentStateSnapshot) error { return errors.New("write fail") }
+	deps.WriteSnapshot = func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return errors.New("write fail") }
 	failed := ValidateStepBudgetBaselineWithDeps("bin", root, 42, deps)
 	if failed.OK || failed.Error != "write fail" {
 		t.Fatalf("unexpected write failure: %+v", failed)
@@ -61,7 +65,7 @@ func TestValidateStepBudgetBaselineWithDepsCoversCommandParseAndContractFailures
 	deps := StepBudgetValidationDeps{
 		MakeTempState: func(int64) (string, error) { return tempState, nil },
 		RemoveAll:     func(string) error { return nil },
-		WriteSnapshot: func(string, string, SelfAugmentStateSnapshot) error { return nil },
+		WriteSnapshot: func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return nil },
 	}
 
 	deps.MakeTempState = func(int64) (string, error) { return "", errors.New("temp fail") }
@@ -71,16 +75,16 @@ func TestValidateStepBudgetBaselineWithDepsCoversCommandParseAndContractFailures
 	}
 	deps.MakeTempState = func(int64) (string, error) { return tempState, nil }
 
-	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "step budget baseline", Command: "compare", OK: false, Error: "boom"}
+	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "step budget baseline", Command: "compare", OK: false, Error: "boom"}
 	}
 	commandFailure := ValidateStepBudgetBaselineWithDeps("bin", root, 7, deps)
 	if commandFailure.OK || !strings.Contains(commandFailure.Error, "step budget baseline: boom") {
 		t.Fatalf("unexpected command failure: %+v", commandFailure)
 	}
 
-	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "step budget baseline", Command: "compare", OK: true, Stdout: "{"}
+	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "step budget baseline", Command: "compare", OK: true, Stdout: "{"}
 	}
 	parseFailure := ValidateStepBudgetBaselineWithDeps("bin", root, 7, deps)
 	if parseFailure.OK || parseFailure.Error == "" {
@@ -89,8 +93,8 @@ func TestValidateStepBudgetBaselineWithDepsCoversCommandParseAndContractFailures
 
 	invalidResult := validStepBudgetCompareResult()
 	invalidResult.StepBudgetRegressions = nil
-	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "step budget baseline", Command: "compare", OK: true, Stdout: mustMarshalStepBudgetTest(t, invalidResult)}
+	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "step budget baseline", Command: "compare", OK: true, Stdout: mustMarshalStepBudgetTest(t, invalidResult)}
 	}
 	contractFailure := ValidateStepBudgetBaselineWithDeps("bin", root, 7, deps)
 	if contractFailure.OK || !strings.Contains(contractFailure.Error, "step budget compare did not report exactly one budget regression") {
@@ -98,15 +102,15 @@ func TestValidateStepBudgetBaselineWithDepsCoversCommandParseAndContractFailures
 	}
 }
 
-func validStepBudgetCompareResult() SelfAugmentCompareResult {
-	return SelfAugmentCompareResult{
+func validStepBudgetCompareResult() selfaugment.SelfAugmentCompareResult {
+	return selfaugment.SelfAugmentCompareResult{
 		OK:        true,
 		Regressed: true,
 		Regressions: []string{
 			"step_budget:docs index smoke_p95_increased_by_30.00_pct",
 		},
-		SlowStepRegressions: []SelfAugmentSlowStepRegression{},
-		StepBudgetRegressions: []SelfAugmentStepBudgetRegression{
+		SlowStepRegressions: []selfaugment.SelfAugmentSlowStepRegression{},
+		StepBudgetRegressions: []selfaugment.SelfAugmentStepBudgetRegression{
 			{Label: "docs index smoke", Metric: "p95_duration_ms", DeltaMS: 30, DeltaPct: 30},
 		},
 	}

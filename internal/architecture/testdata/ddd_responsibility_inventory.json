@@ -202,14 +202,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/commandstep/types.go",
-      "owner": "inbound",
-      "task": "T20",
-      "symbols": [
-        "type StepResult"
-      ]
-    },
-    {
       "path": "cmd/issueops/contractcli/conformance.go",
       "owner": "inbound",
       "task": "T20",
@@ -626,8 +618,7 @@
       "symbols": [
         "func failedStep",
         "func printStep",
-        "func runCommandStep",
-        "type StepResult"
+        "func runCommandStep"
       ]
     },
     {
@@ -1170,8 +1161,7 @@
       "symbols": [
         "func issueOpsMCPDependencies",
         "func mcpTools",
-        "func runMCP",
-        "func serveMCPStream"
+        "func runMCP"
       ]
     },
     {
@@ -1181,14 +1171,11 @@
       "symbols": [
         "func compatibilityContract",
         "func exists",
-        "func isSelfVerificationGateError",
         "func issueOpsRoot",
         "func printJSONTo",
-        "func readHarnessFile",
         "func resolveTarget",
         "func runAPIDoc",
-        "func runContract",
-        "type CompatibilityContract"
+        "func runContract"
       ]
     },
     {
@@ -2516,15 +2503,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/selfworkflow/llmeval/self_verify_llm_eval_types.go",
-      "owner": "inbound",
-      "task": "T18",
-      "symbols": [
-        "type SelfVerifyLLMEvalOptions",
-        "type SelfVerifyLLMEvalResult"
-      ]
-    },
-    {
       "path": "cmd/issueops/selfworkflow/progress/self_verify_progress.go",
       "owner": "inbound",
       "task": "T18",
@@ -2533,8 +2511,7 @@
         "func SelfVerifyProgressReporter.Emit",
         "func SelfVerifyProgressReporter.EmitStepEnd",
         "func SelfVerifyProgressReporter.SetStarted",
-        "func boolPtr",
-        "type StepResult"
+        "func boolPtr"
       ]
     },
     {
@@ -2542,7 +2519,6 @@
       "owner": "inbound",
       "task": "T18",
       "symbols": [
-        "type SelfVerifyProgressEvent",
         "type SelfVerifyProgressReporter"
       ]
     },
@@ -3009,8 +2985,7 @@
         "func ObserveEndpoint",
         "func SameEndpoint",
         "func ValidateEndpoint",
-        "func permissionMode",
-        "type EndpointIncarnation"
+        "func permissionMode"
       ]
     },
     {
@@ -3968,14 +3943,6 @@
       ]
     },
     {
-      "path": "internal/adapter/installutil/contract_alias.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "type ManagedCommandPathPlan"
-      ]
-    },
-    {
       "path": "internal/adapter/installutil/hook_generation.go",
       "owner": "adapter",
       "task": "T20",
@@ -4407,17 +4374,8 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func executionNow",
-        "func newExecutionOperationID",
-        "func renderExecutionOwnerReportContract"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_prepare_bridge.go",
-      "owner": "adapter",
-      "task": "T05",
-      "symbols": [
-        "func NewExecutionPreparationOperationID"
+        "func NewExecutionOperationID",
+        "func executionNow"
       ]
     },
     {
@@ -4518,14 +4476,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/execution_resume.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func NewExecutionResumeOperationID"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/execution_state.go",
       "owner": "adapter",
       "task": "T20",
@@ -4536,8 +4486,7 @@
         "func persistExecutionTransition",
         "func persistExecutionTransitionWithMutations",
         "func persistExecutionTransitionWithRawCAS",
-        "func requireLeaseIndexAvailable",
-        "type leaseHolderIndex"
+        "func requireLeaseIndexAvailable"
       ]
     },
     {
@@ -4761,25 +4710,14 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_phase.go",
-      "owner": "adapter",
-      "task": "T04",
-      "symbols": [
-        "func issueOpsPhaseRank"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_readiness.go",
       "owner": "adapter",
       "task": "T04",
       "symbols": [
-        "func IssueOpsCompatibilityReviewReadiness",
-        "func IssueOpsPlanReadiness",
         "func ReadinessPathObservations",
         "func issueOpsPlanInLinkedWorktree",
         "func issueOpsPlanPathExists",
         "func issueOpsPlanPathInsideWorktree",
-        "func issueOpsStrictGitRoot",
         "func issueOpsWorktreePathValid"
       ]
     },
@@ -6166,8 +6104,6 @@
         "func CollectPioneerCoverage",
         "func collectPioneerEvaluationManifest",
         "func regularFileExists",
-        "type PioneerBlockedCase",
-        "type PioneerCoverage",
         "type pioneerEvaluationCounts"
       ]
     },
@@ -6177,8 +6113,7 @@
       "task": "T20",
       "symbols": [
         "func ComputeCodeSNR",
-        "func snrCountFile",
-        "type SNRResult"
+        "func snrCountFile"
       ]
     },
     {
@@ -6190,9 +6125,7 @@
         "func CollectBranchFunctions",
         "func countBranches",
         "func relOrAbs",
-        "func splitMarkdownRow",
-        "type AuditItem",
-        "type BranchFunction"
+        "func splitMarkdownRow"
       ]
     },
     {
@@ -7172,12 +7105,7 @@
         "func ValidateSelfVerifyCandidateExportWithDeps",
         "func containsString",
         "type CandidateExportCommandRunner",
-        "type CandidateExportValidationDeps",
-        "type SelfAugmentStateCheckpoint",
-        "type SelfVerificationCandidate",
-        "type SelfVerificationCandidateExportResult",
-        "type SelfVerificationCandidateExportStateSnapshot",
-        "type StepResult"
+        "type CandidateExportValidationDeps"
       ]
     },
     {
@@ -7190,7 +7118,6 @@
         "func exists",
         "func validateCommandPolicy",
         "func validateCommandPolicyWithDeps",
-        "type StepResult",
         "type commandPolicyCommandRunner",
         "type commandPolicyValidationDeps"
       ]
@@ -7220,7 +7147,6 @@
       "task": "T18",
       "symbols": [
         "func ValidationDeps.withDefaults",
-        "type StepResult",
         "type ValidationDeps"
       ]
     },
@@ -7259,10 +7185,7 @@
         "func Validate",
         "func validateDaemonRestartResilience",
         "func validateDaemonRestartResilienceWithDeps",
-        "type StepResult",
-        "type daemonPaths",
-        "type daemonResilienceCommandRunner",
-        "type daemonStatus"
+        "type daemonResilienceCommandRunner"
       ]
     },
     {
@@ -7291,17 +7214,7 @@
         "func runCommandStepEnv",
         "func runCommandStepEnvWithBudget",
         "func splitLines",
-        "func tailWithBudget",
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentSlowStepRegression",
-        "type SelfAugmentStateCheckpoint",
-        "type SelfAugmentStateSnapshot",
-        "type SelfAugmentStepBudgetRegression",
-        "type SelfAugmentSummary",
-        "type SelfVerificationCandidate",
-        "type SelfVerificationCandidateExportResult",
-        "type SelfVerificationCandidateExportStateSnapshot",
-        "type StepResult"
+        "func tailWithBudget"
       ]
     },
     {
@@ -7335,8 +7248,7 @@
         "func Deps.withDefaults",
         "func Validate",
         "func ValidateWithDeps",
-        "type Deps",
-        "type StepResult"
+        "type Deps"
       ]
     },
     {
@@ -7346,8 +7258,7 @@
       "symbols": [
         "func Validate",
         "func validateInstallDryRunSmoke",
-        "func validateInstallDryRunSmokeWithDeps",
-        "type StepResult"
+        "func validateInstallDryRunSmokeWithDeps"
       ]
     },
     {
@@ -7389,8 +7300,7 @@
         "func ValidateHarnessInvariants",
         "func exists",
         "func validateHarnessInvariants",
-        "func validateSkillShape",
-        "type StepResult"
+        "func validateSkillShape"
       ]
     },
     {
@@ -7438,8 +7348,7 @@
         "func runCommandStepEnv",
         "func splitLines",
         "func tailWithBudget",
-        "type MCPValidationDeps",
-        "type StepResult"
+        "type MCPValidationDeps"
       ]
     },
     {
@@ -7468,8 +7377,7 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func validateNativeIntegrationWithDeps",
-        "type StepResult"
+        "func validateNativeIntegrationWithDeps"
       ]
     },
     {
@@ -7524,8 +7432,7 @@
         "func parallelIsolationCommands",
         "func parallelIsolationErrors",
         "func parallelIsolationOutput",
-        "func parallelIsolationResult",
-        "type StepResult"
+        "func parallelIsolationResult"
       ]
     },
     {
@@ -7557,7 +7464,6 @@
       "symbols": [
         "func Validator.Validate",
         "func validatePreflightFuzzWithDeps",
-        "type StepResult",
         "type Validator"
       ]
     },
@@ -7601,7 +7507,6 @@
         "func containsString",
         "func docsValidationDeps.withDefaults",
         "func exists",
-        "type StepResult",
         "type docsValidationDeps"
       ]
     },
@@ -7655,7 +7560,6 @@
         "func validateDocsIndexWithDeps",
         "func validateInspect",
         "func validateInspectWithDeps",
-        "type StepResult",
         "type validationCommandRunner"
       ]
     },
@@ -7710,15 +7614,6 @@
         "func runCommandStepEnv",
         "func stateRoundtripValidationDeps.withDefaults",
         "func tailWithBudget",
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentHistoryEntry",
-        "type SelfAugmentHistoryResult",
-        "type SelfAugmentHistoryRetention",
-        "type SelfAugmentPromoteResult",
-        "type SelfAugmentSlowStep",
-        "type SelfAugmentStateSnapshot",
-        "type SelfAugmentSummary",
-        "type StepResult",
         "type stateRoundtripCommandRunner",
         "type stateRoundtripValidationDeps"
       ]
@@ -7796,17 +7691,9 @@
         "func StepBudgetValidationErrors",
         "func ValidateStepBudgetBaselineWithDeps",
         "func containsString",
-        "type SelfAugmentCompareResult",
-        "type SelfAugmentSlowStep",
-        "type SelfAugmentSlowStepRegression",
-        "type SelfAugmentStateSnapshot",
-        "type SelfAugmentStepBudgetRegression",
-        "type SelfAugmentStepDurationStat",
-        "type SelfAugmentSummary",
         "type StepBudgetCommandRunner",
         "type StepBudgetSnapshotWriter",
-        "type StepBudgetValidationDeps",
-        "type StepResult"
+        "type StepBudgetValidationDeps"
       ]
     },
     {
@@ -7816,8 +7703,7 @@
       "symbols": [
         "func CandidateExportValidationErrors",
         "func ValidateSelfVerifyCandidateExport",
-        "func ValidateSelfVerifyCandidateExportWithDeps",
-        "type CandidateExportValidationDeps"
+        "func ValidateSelfVerifyCandidateExportWithDeps"
       ]
     },
     {
@@ -7840,8 +7726,7 @@
         "func ValidateToolConformance",
         "func ValidateToolConformanceWithDeps",
         "func ValidateWorkerLifecycle",
-        "func ValidateWorkerLifecycleWithDeps",
-        "type ContractAuditWorkerValidationDeps"
+        "func ValidateWorkerLifecycleWithDeps"
       ]
     },
     {
@@ -7879,16 +7764,7 @@
         "func MCPSmokeHasExpectedMarkers",
         "func ValidateMCP",
         "func ValidateMCPSmokeContract",
-        "func ValidateMCPWithDeps",
-        "type MCPValidationDeps"
-      ]
-    },
-    {
-      "path": "internal/adapter/verification/probe/validation_native_integration_facade.go",
-      "owner": "adapter",
-      "task": "T18",
-      "symbols": [
-        "type ClaudeMCPDuplicateWarning"
+        "func ValidateMCPWithDeps"
       ]
     },
     {
@@ -7922,8 +7798,7 @@
       "owner": "adapter",
       "task": "T18",
       "symbols": [
-        "func Validator.Validate",
-        "type StepResult"
+        "func Validator.Validate"
       ]
     },
     {
@@ -7951,10 +7826,7 @@
         "func Validate",
         "func ValidateForSelfVerify",
         "func ValidateWithDeps",
-        "func defaultDeps",
-        "type Deps",
-        "type RiskQATierPlan",
-        "type StepResult"
+        "func defaultDeps"
       ]
     },
     {

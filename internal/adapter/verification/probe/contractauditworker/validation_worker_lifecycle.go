@@ -1,6 +1,8 @@
 package contractauditworker
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"fmt"
 	"time"
@@ -9,11 +11,11 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
-func ValidateWorkerLifecycle(binary, root string, seed int64) StepResult {
+func ValidateWorkerLifecycle(binary, root string, seed int64) selfverify.StepResult {
 	return ValidateWorkerLifecycleWithDeps(binary, root, seed, ValidationDeps{})
 }
 
-func ValidateWorkerLifecycleWithDeps(binary, root string, seed int64, deps ValidationDeps) StepResult {
+func ValidateWorkerLifecycleWithDeps(binary, root string, seed int64, deps ValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	workerDir, err := deps.MkdirTemp("", "issueops-worker-*")
 	if err != nil {
@@ -33,7 +35,7 @@ func ValidateWorkerLifecycleWithDeps(binary, root string, seed int64, deps Valid
 	cancel := deps.RunCommandStepEnv(root, "worker lifecycle cancel", 30*time.Second, "", env, binary, "worker", "cancel", "--id", job.ID, "--json")
 	list := deps.RunCommandStepEnv(root, "worker lifecycle list", 30*time.Second, "", env, binary, "worker", "list", "--json")
 	errs := []string{}
-	for _, step := range []StepResult{status, cancel, list} {
+	for _, step := range []selfverify.StepResult{status, cancel, list} {
 		if !step.OK {
 			errs = append(errs, step.Label+" failed")
 		}

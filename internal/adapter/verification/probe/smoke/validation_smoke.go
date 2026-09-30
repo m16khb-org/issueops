@@ -20,7 +20,7 @@ const commandOutputBudgetBytes = 4 * 1024 * 1024
 
 // rejectTruncatedCapture fails a step explicitly when its stdout was
 // budget-truncated, before any JSON parse attempt.
-func rejectTruncatedCapture(step StepResult) (StepResult, bool) {
+func rejectTruncatedCapture(step verifycontract.StepResult) (verifycontract.StepResult, bool) {
 	if !step.StdoutTruncated {
 		return step, false
 	}
@@ -29,18 +29,17 @@ func rejectTruncatedCapture(step StepResult) (StepResult, bool) {
 	return step, true
 }
 
-type StepResult = verifycontract.StepResult
-type validationCommandRunner func(dir, label string, timeout time.Duration, stdin, name string, args ...string) StepResult
+type validationCommandRunner func(dir, label string, timeout time.Duration, stdin, name string, args ...string) verifycontract.StepResult
 
-func ValidateInspect(binary, root string) StepResult {
+func ValidateInspect(binary, root string) verifycontract.StepResult {
 	return validateInspectWithDeps(binary, root, runCommandStep)
 }
 
-func validateInspect(binary, root string) StepResult {
+func validateInspect(binary, root string) verifycontract.StepResult {
 	return ValidateInspect(binary, root)
 }
 
-func validateInspectWithDeps(binary, root string, run validationCommandRunner) StepResult {
+func validateInspectWithDeps(binary, root string, run validationCommandRunner) verifycontract.StepResult {
 	step := run(root, "inspect smoke", 30*time.Second, "", binary, "inspect", "--json")
 	if !step.OK {
 		return step
@@ -62,15 +61,15 @@ func validateInspectWithDeps(binary, root string, run validationCommandRunner) S
 	return step
 }
 
-func ValidateDocsIndex(binary, root string) StepResult {
+func ValidateDocsIndex(binary, root string) verifycontract.StepResult {
 	return validateDocsIndexWithDeps(binary, root, runCommandStep)
 }
 
-func validateDocsIndex(binary, root string) StepResult {
+func validateDocsIndex(binary, root string) verifycontract.StepResult {
 	return ValidateDocsIndex(binary, root)
 }
 
-func validateDocsIndexWithDeps(binary, root string, run validationCommandRunner) StepResult {
+func validateDocsIndexWithDeps(binary, root string, run validationCommandRunner) verifycontract.StepResult {
 	step := run(root, "docs index smoke", 30*time.Second, "", binary, "docs", "--json")
 	if !step.OK {
 		return step
@@ -92,6 +91,6 @@ func validateDocsIndexWithDeps(binary, root string, run validationCommandRunner)
 	return step
 }
 
-func runCommandStep(dir, label string, timeout time.Duration, stdin string, name string, args ...string) StepResult {
+func runCommandStep(dir, label string, timeout time.Duration, stdin string, name string, args ...string) verifycontract.StepResult {
 	return verification.Run(dir, label, timeout, stdin, commandOutputBudgetBytes, name, args...)
 }

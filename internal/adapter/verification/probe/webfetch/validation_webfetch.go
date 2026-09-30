@@ -12,9 +12,7 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
-type StepResult = verifycontract.StepResult
-
-func (v Validator) Validate(binary, root string, seed int64) StepResult {
+func (v Validator) Validate(binary, root string, seed int64) verifycontract.StepResult {
 	started := time.Now()
 	result, err := v.RunBenchmark(context.Background(), webfetchcontract.BenchmarkRequest{
 		Fixtures: v.DeterministicFixtures(),
@@ -27,7 +25,7 @@ func (v Validator) Validate(binary, root string, seed int64) StepResult {
 	if !result.OK {
 		return verifydomain.AssertionStepWithOutput("web fetch battery", time.Since(started).Milliseconds(), result.HardFailures, []string{string(out)}, []string{"internal/adapter/outbound/webfetch deterministic benchmark"}, 8*1024)
 	}
-	return StepResult{
+	return verifycontract.StepResult{
 		Label:      "web fetch battery",
 		Command:    fmt.Sprintf("%s web-fetch benchmark --fixtures builtin --json", binary),
 		OK:         true,

@@ -15,9 +15,7 @@ import (
 const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
 
-type StepResult = verifycontract.StepResult
-
-type commandPolicyCommandRunner func(dir, label string, timeout time.Duration, stdin string, name string, args ...string) StepResult
+type commandPolicyCommandRunner func(dir, label string, timeout time.Duration, stdin string, name string, args ...string) verifycontract.StepResult
 
 type commandPolicyValidationDeps struct {
 	makeTempDir func(kind string) (string, error)
@@ -46,18 +44,18 @@ func (deps commandPolicyValidationDeps) withDefaults() commandPolicyValidationDe
 		deps.exists = exists
 	}
 	if deps.run == nil {
-		deps.run = func(dir, label string, timeout time.Duration, stdin string, name string, args ...string) StepResult {
+		deps.run = func(dir, label string, timeout time.Duration, stdin string, name string, args ...string) verifycontract.StepResult {
 			return verification.Run(dir, label, timeout, stdin, commandOutputBudgetBytes, name, args...)
 		}
 	}
 	return deps
 }
 
-func Validate(binary, root string) StepResult {
+func Validate(binary, root string) verifycontract.StepResult {
 	return validateCommandPolicyWithDeps(binary, root, commandPolicyValidationDeps{})
 }
 
-func validateCommandPolicy(binary, root string) StepResult {
+func validateCommandPolicy(binary, root string) verifycontract.StepResult {
 	return Validate(binary, root)
 }
 
@@ -66,7 +64,7 @@ func exists(path string) bool {
 	return err == nil
 }
 
-func validateCommandPolicyWithDeps(binary, root string, deps commandPolicyValidationDeps) StepResult {
+func validateCommandPolicyWithDeps(binary, root string, deps commandPolicyValidationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	tempWorkspace, err := deps.makeTempDir("workspace")
@@ -99,7 +97,7 @@ func validateCommandPolicyWithDeps(binary, root string, deps commandPolicyValida
 	}
 
 	stdoutText, stdoutTruncated, stdoutBytes := verifydomain.TailWithBudget(strings.Join(stdoutParts, "\n"), aggregateOutputBudgetBytes)
-	return StepResult{
+	return verifycontract.StepResult{
 		Label:           "command policy smoke",
 		Command:         strings.Join(commands, " && "),
 		OK:              true,

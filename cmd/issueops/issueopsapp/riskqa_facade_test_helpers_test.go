@@ -1,16 +1,20 @@
 package issueopsapp
 
 import (
+	riskqax "issueops/internal/application/riskqa"
+	riskqaxx "issueops/internal/contract/riskqa"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"issueops/internal/adapter/verification/riskqa"
 	riskqadomain "issueops/internal/domain/riskqa"
 )
 
-func validateRiskQATier(root string) StepResult {
+func validateRiskQATier(root string) selfverify.StepResult {
 	return riskqa.Validate(root)
 }
 
-func validateRiskQATierWithDeps(root string, deps riskQATierDeps) StepResult {
-	return riskqa.ValidateWithDeps(root, riskqa.Deps{Plan: deps.plan, Run: deps.run})
+func validateRiskQATierWithDeps(root string, deps riskQATierDeps) selfverify.StepResult {
+	return riskqa.ValidateWithDeps(root, riskqax.ExecuteDeps{Plan: deps.plan, Run: deps.run})
 }
 
 func planRiskQATier(root string) RiskQATierPlan {
@@ -31,7 +35,7 @@ func riskQATierPlanJSON(plan RiskQATierPlan) string {
 
 type riskQATierDeps struct {
 	plan func(string) RiskQATierPlan
-	run  func(root string, command string) StepResult
+	run  func(root string, command string) selfverify.StepResult
 }
 
-type RiskQATierPlan = riskqa.RiskQATierPlan
+type RiskQATierPlan = riskqaxx.RiskQATierPlan

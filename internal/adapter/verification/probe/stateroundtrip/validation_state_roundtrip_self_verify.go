@@ -1,12 +1,15 @@
 package stateroundtrip
 
 import (
+	selfaugment "issueops/internal/contract/selfaugment"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"strings"
 	"time"
 )
 
-func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerifyInput) StepResult {
+func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerifyInput) selfverify.StepResult {
 	session := newStateRoundtripSelfVerifySession(input)
 	key := input.key
 	baselineCompareKey := key + "-compare-base"
@@ -19,7 +22,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 	if !compareOK.OK {
 		return session.combineFailed(compareOK)
 	}
-	var compareOKResult SelfAugmentCompareResult
+	var compareOKResult selfaugment.SelfAugmentCompareResult
 	if err := json.Unmarshal([]byte(compareOK.Stdout), &compareOKResult); err != nil {
 		return session.fail(err.Error())
 	}
@@ -31,7 +34,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 	if !compareRegression.OK {
 		return session.combineFailed(compareRegression)
 	}
-	var compareRegressionResult SelfAugmentCompareResult
+	var compareRegressionResult selfaugment.SelfAugmentCompareResult
 	if err := json.Unmarshal([]byte(compareRegression.Stdout), &compareRegressionResult); err != nil {
 		return session.fail(err.Error())
 	}
@@ -44,7 +47,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 	if !promoteDry.OK {
 		return session.combineFailed(promoteDry)
 	}
-	var promoteDryResult SelfAugmentPromoteResult
+	var promoteDryResult selfaugment.SelfAugmentPromoteResult
 	if err := json.Unmarshal([]byte(promoteDry.Stdout), &promoteDryResult); err != nil {
 		return session.fail(err.Error())
 	}
@@ -59,7 +62,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 	if !promoteConfirm.OK {
 		return session.combineFailed(promoteConfirm)
 	}
-	var promoteConfirmResult SelfAugmentPromoteResult
+	var promoteConfirmResult selfaugment.SelfAugmentPromoteResult
 	if err := json.Unmarshal([]byte(promoteConfirm.Stdout), &promoteConfirmResult); err != nil {
 		return session.fail(err.Error())
 	}
@@ -71,7 +74,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 	if !comparePromoted.OK {
 		return session.combineFailed(comparePromoted)
 	}
-	var comparePromotedResult SelfAugmentCompareResult
+	var comparePromotedResult selfaugment.SelfAugmentCompareResult
 	if err := json.Unmarshal([]byte(comparePromoted.Stdout), &comparePromotedResult); err != nil {
 		return session.fail(err.Error())
 	}
@@ -84,7 +87,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 	}
 
 	stdoutText, stdoutTruncated, stdoutBytes := tailWithBudget(strings.Join(session.stdoutParts, "\n"), aggregateOutputBudgetBytes)
-	return StepResult{
+	return selfverify.StepResult{
 		Label:           "state roundtrip",
 		Command:         strings.Join(session.commands, " && "),
 		OK:              true,

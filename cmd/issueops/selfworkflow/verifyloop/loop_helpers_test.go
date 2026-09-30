@@ -1,6 +1,8 @@
 package verifyloop
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,8 +19,8 @@ var ErrSelfVerificationGateFailed = application.ErrSelfVerificationGateFailed
 type Deps struct {
 	IssueOpsRoot func() string
 	StepDeps     application.SelfVerifyStepDeps
-	FailedStep   func(string, error) commandstep.StepResult
-	PrintStep    func(commandstep.StepResult)
+	FailedStep   func(string, error) selfverify.StepResult
+	PrintStep    func(selfverify.StepResult)
 	Printf       func(string, ...any) (int, error)
 }
 

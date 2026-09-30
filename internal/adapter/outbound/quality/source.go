@@ -11,11 +11,8 @@ import (
 	"strings"
 )
 
-type BranchFunction = contract.BranchFunction
-type AuditItem = contract.AuditItem
-
-func CollectBranchFunctions(root string) ([]BranchFunction, []string) {
-	functions := []BranchFunction{}
+func CollectBranchFunctions(root string) ([]contract.BranchFunction, []string) {
+	functions := []contract.BranchFunction{}
 	warnings := []string{}
 	fset := token.NewFileSet()
 	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
@@ -45,7 +42,7 @@ func CollectBranchFunctions(root string) ([]BranchFunction, []string) {
 			}
 			branches := countBranches(fn.Body)
 			pos := fset.Position(fn.Pos())
-			functions = append(functions, BranchFunction{
+			functions = append(functions, contract.BranchFunction{
 				File:     relOrAbs(root, path),
 				Line:     pos.Line,
 				Name:     fn.Name.Name,
@@ -81,7 +78,7 @@ func countBranches(node ast.Node) int {
 	return branches
 }
 
-func CollectAuditItems(root string) ([]AuditItem, []string) {
+func CollectAuditItems(root string) ([]contract.AuditItem, []string) {
 	path := filepath.Join(root, ".issueops", "PROJECT_AUDIT.md")
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -90,7 +87,7 @@ func CollectAuditItems(root string) ([]AuditItem, []string) {
 		}
 		return nil, []string{"audit scan: " + err.Error()}
 	}
-	items := []AuditItem{}
+	items := []contract.AuditItem{}
 	for _, line := range strings.Split(string(b), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "|") || strings.Contains(line, "---") {
@@ -104,7 +101,7 @@ func CollectAuditItems(root string) ([]AuditItem, []string) {
 		if priority != "P0" && priority != "P1" && priority != "P2" {
 			continue
 		}
-		items = append(items, AuditItem{
+		items = append(items, contract.AuditItem{
 			ID:       strings.TrimSpace(parts[0]),
 			Area:     strings.TrimSpace(parts[1]),
 			Title:    strings.TrimSpace(parts[2]),

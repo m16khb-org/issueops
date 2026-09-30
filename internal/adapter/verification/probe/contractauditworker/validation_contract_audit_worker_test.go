@@ -1,6 +1,8 @@
 package contractauditworker
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"os"
@@ -26,11 +28,11 @@ func TestValidateCommandAuditWithDepsCoversSuccessCommandReadAndContractFailures
 			}
 			return []byte(`{"kind":"command_policy_audit","audit_log_id":"abc","payload":"<redacted>"}`), nil
 		},
-		RunCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, env []string, _ string, args ...string) StepResult {
+		RunCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, env []string, _ string, args ...string) selfverify.StepResult {
 			if label != "command audit smoke" || !containsString(env, "ISSUEOPS_AUDIT_LOG="+auditLog) || !containsString(args, "audit") {
-				return StepResult{Label: label, OK: false, Error: "bad command envelope"}
+				return selfverify.StepResult{Label: label, OK: false, Error: "bad command envelope"}
 			}
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true}
 		},
 	}
 
@@ -45,15 +47,15 @@ func TestValidateCommandAuditWithDepsCoversSuccessCommandReadAndContractFailures
 	}
 
 	deps.MkdirTemp = func(string, string) (string, error) { return root, nil }
-	deps.RunCommandStepEnv = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "command audit smoke", OK: false, Error: "audit command failed"}
+	deps.RunCommandStepEnv = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "command audit smoke", OK: false, Error: "audit command failed"}
 	}
 	if step := ValidateCommandAuditWithDeps("issueops", root, 11, deps); step.OK || step.Error != "audit command failed" {
 		t.Fatalf("expected command failure passthrough, got %+v", step)
 	}
 
-	deps.RunCommandStepEnv = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "command audit smoke", OK: true}
+	deps.RunCommandStepEnv = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "command audit smoke", OK: true}
 	}
 	deps.ReadFile = func(string) ([]byte, error) { return nil, errors.New("read failed") }
 	if step := ValidateCommandAuditWithDeps("issueops", root, 11, deps); step.OK || !strings.Contains(step.Error, "read failed") {
@@ -75,12 +77,12 @@ func TestValidateContractAuditWorkerWrappersUseExecutableSurface(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		run  func() StepResult
+		run  func() selfverify.StepResult
 	}{
-		{name: "command audit", run: func() StepResult { return ValidateCommandAudit(binary, root, 101) }},
-		{name: "contract check", run: func() StepResult { return ValidateContractCheck(binary, root) }},
-		{name: "tool conformance", run: func() StepResult { return ValidateToolConformance(binary, root) }},
-		{name: "worker lifecycle", run: func() StepResult { return ValidateWorkerLifecycle(binary, root, 101) }},
+		{name: "command audit", run: func() selfverify.StepResult { return ValidateCommandAudit(binary, root, 101) }},
+		{name: "contract check", run: func() selfverify.StepResult { return ValidateContractCheck(binary, root) }},
+		{name: "tool conformance", run: func() selfverify.StepResult { return ValidateToolConformance(binary, root) }},
+		{name: "worker lifecycle", run: func() selfverify.StepResult { return ValidateWorkerLifecycle(binary, root, 101) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if step := tc.run(); !step.OK {
@@ -129,26 +131,26 @@ func TestValidateContractCheckWithDepsCoversSuccessParseAndContractFailures(t *t
 	contract := contractcli.CompatibilityContract{OK: true, Hash: "abc", CLICommands: []cli.Command{{Name: "worker"}, {Name: "contract"}, {Name: "policy"}}}
 	body, _ := json.Marshal(contract)
 	deps := ValidationDeps{
-		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, args ...string) StepResult {
+		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, args ...string) selfverify.StepResult {
 			if label != "contract check" || strings.Join(args, " ") != "contract check --json" {
-				return StepResult{Label: label, OK: false, Error: "bad contract command"}
+				return selfverify.StepResult{Label: label, OK: false, Error: "bad contract command"}
 			}
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
 		},
 	}
 	if step := ValidateContractCheckWithDeps("issueops", root, deps); !step.OK {
 		t.Fatalf("expected contract success, got %+v", step)
 	}
 
-	deps.RunCommandStep = func(string, string, time.Duration, string, string, ...string) StepResult {
-		return StepResult{Label: "contract check", OK: false, Error: "contract command failed"}
+	deps.RunCommandStep = func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "contract check", OK: false, Error: "contract command failed"}
 	}
 	if step := ValidateContractCheckWithDeps("issueops", root, deps); step.OK || step.Error != "contract command failed" {
 		t.Fatalf("expected command failure passthrough, got %+v", step)
 	}
 
-	deps.RunCommandStep = func(string, string, time.Duration, string, string, ...string) StepResult {
-		return StepResult{Label: "contract check", OK: true, Stdout: `{"ok":`}
+	deps.RunCommandStep = func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "contract check", OK: true, Stdout: `{"ok":`}
 	}
 	if step := ValidateContractCheckWithDeps("issueops", root, deps); step.OK || !strings.Contains(step.Error, "unexpected end") {
 		t.Fatalf("expected parse failure, got %+v", step)
@@ -156,8 +158,8 @@ func TestValidateContractCheckWithDepsCoversSuccessParseAndContractFailures(t *t
 
 	bad := contractcli.CompatibilityContract{OK: false, Hash: "", CLICommands: []cli.Command{{Name: "worker"}}}
 	badBody, _ := json.Marshal(bad)
-	deps.RunCommandStep = func(string, string, time.Duration, string, string, ...string) StepResult {
-		return StepResult{Label: "contract check", OK: true, Stdout: string(badBody)}
+	deps.RunCommandStep = func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "contract check", OK: true, Stdout: string(badBody)}
 	}
 	failed := ValidateContractCheckWithDeps("issueops", root, deps)
 	for _, want := range []string{"contract did not pass or hash is empty", "missing CLI command contract", "missing CLI command policy"} {
@@ -170,19 +172,19 @@ func TestValidateContractCheckWithDepsCoversSuccessParseAndContractFailures(t *t
 func TestValidateToolConformanceWithDepsAddsTypedFailureEvidence(t *testing.T) {
 	root := t.TempDir()
 	deps := ValidationDeps{
-		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, args ...string) StepResult {
+		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, args ...string) selfverify.StepResult {
 			if label != "tool contract conformance" || strings.Join(args, " ") != "contract conformance baseline --json" {
-				return StepResult{Label: label, OK: false, Error: "bad conformance command"}
+				return selfverify.StepResult{Label: label, OK: false, Error: "bad conformance command"}
 			}
-			return StepResult{Label: label, OK: true, Stdout: `{"ok":true,"case_count":10,"gate":{"decision":"baseline_passed"}}`}
+			return selfverify.StepResult{Label: label, OK: true, Stdout: `{"ok":true,"case_count":10,"gate":{"decision":"baseline_passed"}}`}
 		},
 	}
 	if step := ValidateToolConformanceWithDeps("issueops", root, deps); !step.OK {
 		t.Fatalf("expected conformance success, got %+v", step)
 	}
 
-	deps.RunCommandStep = func(string, string, time.Duration, string, string, ...string) StepResult {
-		return StepResult{Label: "tool contract conformance", OK: true, Stdout: `{"ok":false,"case_count":9,"gate":{"decision":"inconclusive"}}`}
+	deps.RunCommandStep = func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "tool contract conformance", OK: true, Stdout: `{"ok":false,"case_count":9,"gate":{"decision":"inconclusive"}}`}
 	}
 	failed := ValidateToolConformanceWithDeps("issueops", root, deps)
 	if failed.OK || len(failed.FailureEvidence) != 1 || failed.FailureEvidence[0].Code != "baseline_contract_failed" {
@@ -198,14 +200,14 @@ func TestValidateWorkerLifecycleWithDepsCoversSuccessParseCommandAndContractFail
 	deps := ValidationDeps{
 		MkdirTemp: func(string, string) (string, error) { return workerDir, nil },
 		RemoveAll: func(string) error { return nil },
-		RunCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, env []string, _ string, args ...string) StepResult {
+		RunCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, env []string, _ string, args ...string) selfverify.StepResult {
 			if !containsString(env, "ISSUEOPS_WORKER_DIR="+workerDir) {
-				return StepResult{Label: label, OK: false, Error: "missing worker env"}
+				return selfverify.StepResult{Label: label, OK: false, Error: "missing worker env"}
 			}
 			if strings.Contains(label, "enqueue") {
-				return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(queuedBody)}
+				return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(queuedBody)}
 			}
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{}`}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{}`}
 		},
 	}
 	if step := ValidateWorkerLifecycleWithDeps("issueops", root, 7, deps); !step.OK {
@@ -218,18 +220,18 @@ func TestValidateWorkerLifecycleWithDepsCoversSuccessParseCommandAndContractFail
 	}
 
 	deps.MkdirTemp = func(string, string) (string, error) { return workerDir, nil }
-	deps.RunCommandStepEnv = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "worker lifecycle enqueue", OK: false, Error: "enqueue failed"}
+	deps.RunCommandStepEnv = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "worker lifecycle enqueue", OK: false, Error: "enqueue failed"}
 	}
 	if step := ValidateWorkerLifecycleWithDeps("issueops", root, 7, deps); step.OK || step.Error != "enqueue failed" {
 		t.Fatalf("expected enqueue passthrough, got %+v", step)
 	}
 
-	deps.RunCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) StepResult {
+	deps.RunCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
 		if strings.Contains(label, "enqueue") {
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{"ok":`}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{"ok":`}
 		}
-		return StepResult{Label: label, OK: true}
+		return selfverify.StepResult{Label: label, OK: true}
 	}
 	if step := ValidateWorkerLifecycleWithDeps("issueops", root, 7, deps); step.OK || !strings.Contains(step.Error, "unexpected end") {
 		t.Fatalf("expected enqueue parse failure, got %+v", step)
@@ -237,14 +239,14 @@ func TestValidateWorkerLifecycleWithDepsCoversSuccessParseCommandAndContractFail
 
 	badJob := workercontract.WorkerJob{OK: true, ID: "job-2", Status: workercontract.WorkerStatusRunning, NoShell: false}
 	badBody, _ := json.Marshal(badJob)
-	deps.RunCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) StepResult {
+	deps.RunCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
 		if strings.Contains(label, "enqueue") {
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(badBody)}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(badBody)}
 		}
 		if strings.Contains(label, "status") {
-			return StepResult{Label: label, OK: false, Error: "status failed"}
+			return selfverify.StepResult{Label: label, OK: false, Error: "status failed"}
 		}
-		return StepResult{Label: label, OK: true}
+		return selfverify.StepResult{Label: label, OK: true}
 	}
 	failed := ValidateWorkerLifecycleWithDeps("issueops", root, 7, deps)
 	for _, want := range []string{"worker lifecycle status failed", "worker job is not queued no-shell"} {

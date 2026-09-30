@@ -1,8 +1,6 @@
 package issueopsapp
 
 import (
-	"io"
-
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/mcpcli/resources"
 	"issueops/cmd/issueops/pathutil"
@@ -18,10 +16,6 @@ import (
 
 func runMCP() error {
 	return mcpcli.RunMCPWithDependencies(issueOpsMCPDependencies())
-}
-
-func serveMCPStream(input io.Reader, output io.Writer, diagnostics io.Writer) error {
-	return mcpcli.ServeMCPStreamWithDependencies(input, output, diagnostics, issueOpsMCPDependencies())
 }
 
 func mcpTools() []map[string]any {

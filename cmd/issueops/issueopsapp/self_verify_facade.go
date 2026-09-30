@@ -1,6 +1,8 @@
 package issueopsapp
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	preflightadapter "issueops/internal/adapter/preflight"
 	"issueops/internal/adapter/verification/probe/preflightfuzz"
@@ -90,7 +92,7 @@ func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
 		ValidateInspect:             validateInspect,
 		ValidateDocsIndex:           validateDocsIndex,
 		ValidateSelfVerifyCandidate: validateSelfVerifyCandidateExport,
-		ValidateStepBudgetBaseline: func(binary, root string, seed int64) StepResult {
+		ValidateStepBudgetBaseline: func(binary, root string, seed int64) selfverify.StepResult {
 			return stepbudget.ValidateStepBudgetBaselineWithDeps(binary, root, seed, budgetProbe)
 		},
 		ValidateInstallDryRunSmoke:      validateInstallDryRunSmoke,
@@ -111,6 +113,6 @@ func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
 	}
 }
 
-func runCommandStepAdapter(dir string, label string, timeout time.Duration, stdin string, name string, args ...string) StepResult {
+func runCommandStepAdapter(dir string, label string, timeout time.Duration, stdin string, name string, args ...string) selfverify.StepResult {
 	return runCommandStep(dir, label, timeout, stdin, name, args...)
 }

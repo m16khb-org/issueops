@@ -1,13 +1,15 @@
 package qagate
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
 )
 
-func validateQAGateWithDeps(root string, deps docsValidationDeps) StepResult {
+func validateQAGateWithDeps(root string, deps docsValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	errs := []string{}

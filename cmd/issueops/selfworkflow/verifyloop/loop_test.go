@@ -1,6 +1,8 @@
 package verifyloop
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -8,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"issueops/cmd/issueops/commandstep"
 	"issueops/cmd/issueops/selfworkflow/progress"
 	verifyapp "issueops/internal/application/selfverify"
 )
@@ -18,7 +19,7 @@ func TestSelfVerifyRunsAllStepsSuccessfully(t *testing.T) {
 	result, err := SelfVerify(Request{BaseSeed: 100, TargetScore: 0, Verbose: true}, Deps{
 		IssueOpsRoot: func() string { return t.TempDir() },
 		StepDeps:     fakeVerifyLoopStepDeps("", ""),
-		PrintStep: func(step commandstep.StepResult) {
+		PrintStep: func(step selfverify.StepResult) {
 			printed = append(printed, step.Label)
 		},
 		Printf: func(format string, args ...any) (int, error) {
@@ -62,15 +63,15 @@ func TestSelfVerifyStopsOnFailedStepAndEmitsProgress(t *testing.T) {
 	}
 }
 
-func decodeProgressEventsForLoopTest(t *testing.T, out string) []progress.SelfVerifyProgressEvent {
+func decodeProgressEventsForLoopTest(t *testing.T, out string) []selfverify.ProgressEvent {
 	t.Helper()
 	lines := strings.Split(strings.TrimSpace(out), "\n")
-	events := make([]progress.SelfVerifyProgressEvent, 0, len(lines))
+	events := make([]selfverify.ProgressEvent, 0, len(lines))
 	for _, line := range lines {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-		var event progress.SelfVerifyProgressEvent
+		var event selfverify.ProgressEvent
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
 			t.Fatalf("decode progress event: %v\n%s", err, line)
 		}
@@ -80,11 +81,11 @@ func decodeProgressEventsForLoopTest(t *testing.T, out string) []progress.SelfVe
 }
 
 func fakeVerifyLoopStepDeps(failLabel, failError string) verifyapp.SelfVerifyStepDeps {
-	return fakeVerifyLoopStepDepsOK(func(label string) commandstep.StepResult {
+	return fakeVerifyLoopStepDepsOK(func(label string) selfverify.StepResult {
 		if label == failLabel {
-			return commandstep.StepResult{Label: label, OK: false, Error: failError}
+			return selfverify.StepResult{Label: label, OK: false, Error: failError}
 		}
-		return commandstep.StepResult{Label: label, OK: true}
+		return selfverify.StepResult{Label: label, OK: true}
 	})
 }
 
@@ -95,78 +96,78 @@ func fakeVerifyLoopStepDepsFailing(failLabels ...string) verifyapp.SelfVerifySte
 	for _, label := range failLabels {
 		fail[label] = true
 	}
-	return fakeVerifyLoopStepDepsOK(func(label string) commandstep.StepResult {
+	return fakeVerifyLoopStepDepsOK(func(label string) selfverify.StepResult {
 		if fail[label] {
-			return commandstep.StepResult{Label: label, OK: false, Error: label + " failed"}
+			return selfverify.StepResult{Label: label, OK: false, Error: label + " failed"}
 		}
-		return commandstep.StepResult{Label: label, OK: true}
+		return selfverify.StepResult{Label: label, OK: true}
 	})
 }
 
-func fakeVerifyLoopStepDepsOK(ok func(string) commandstep.StepResult) verifyapp.SelfVerifyStepDeps {
+func fakeVerifyLoopStepDepsOK(ok func(string) selfverify.StepResult) verifyapp.SelfVerifyStepDeps {
 	return verifyapp.SelfVerifyStepDeps{
 		IssueOpsRoot: func() string { return "." },
-		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) commandstep.StepResult {
+		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) selfverify.StepResult {
 			return ok(label)
 		},
-		ValidateHarnessInvariants: func(string) commandstep.StepResult { return ok("harness invariants") },
-		ValidateGoFormat:          func(string) commandstep.StepResult { return ok("gofmt") },
+		ValidateHarnessInvariants: func(string) selfverify.StepResult { return ok("harness invariants") },
+		ValidateGoFormat:          func(string) selfverify.StepResult { return ok("gofmt") },
 		ValidateRiskQATier: func(string) verifyapp.RiskQAEvidence {
 			return verifyapp.RiskQAEvidence{Step: ok("risk QA tier")}
 		},
-		ValidateInspect: func(string, string) commandstep.StepResult {
+		ValidateInspect: func(string, string) selfverify.StepResult {
 			return ok("inspect smoke")
 		},
-		ValidateDocsIndex: func(string, string) commandstep.StepResult {
+		ValidateDocsIndex: func(string, string) selfverify.StepResult {
 			return ok("docs index smoke")
 		},
-		ValidateSelfVerifyCandidate: func(string, string, int64) commandstep.StepResult {
+		ValidateSelfVerifyCandidate: func(string, string, int64) selfverify.StepResult {
 			return ok("candidate export")
 		},
-		ValidateStepBudgetBaseline: func(string, string, int64) commandstep.StepResult {
+		ValidateStepBudgetBaseline: func(string, string, int64) selfverify.StepResult {
 			return ok("step budget baseline")
 		},
-		ValidateInstallDryRunSmoke: func(string, string, int64) commandstep.StepResult {
+		ValidateInstallDryRunSmoke: func(string, string, int64) selfverify.StepResult {
 			return ok("install dry-run smoke")
 		},
-		ValidateCommandPolicy: func(string, string) commandstep.StepResult {
+		ValidateCommandPolicy: func(string, string) selfverify.StepResult {
 			return ok("command policy smoke")
 		},
-		ValidateCommandAudit: func(string, string, int64) commandstep.StepResult {
+		ValidateCommandAudit: func(string, string, int64) selfverify.StepResult {
 			return ok("command audit smoke")
 		},
-		ValidateContractCheck: func(string, string) commandstep.StepResult {
+		ValidateContractCheck: func(string, string) selfverify.StepResult {
 			return ok("contract check")
 		},
-		ValidateToolConformance: func(string, string) commandstep.StepResult {
+		ValidateToolConformance: func(string, string) selfverify.StepResult {
 			return ok("tool contract conformance")
 		},
-		ValidateWorkerLifecycle: func(string, string, int64) commandstep.StepResult {
+		ValidateWorkerLifecycle: func(string, string, int64) selfverify.StepResult {
 			return ok("worker lifecycle smoke")
 		},
-		ValidateMCP: func(string, string) commandstep.StepResult { return ok("MCP smoke") },
-		ValidateStateRoundtrip: func(string, string, int64) commandstep.StepResult {
+		ValidateMCP: func(string, string) selfverify.StepResult { return ok("MCP smoke") },
+		ValidateStateRoundtrip: func(string, string, int64) selfverify.StepResult {
 			return ok("state roundtrip")
 		},
-		ValidateParallelTempIsolation: func(string, string, int64) commandstep.StepResult {
+		ValidateParallelTempIsolation: func(string, string, int64) selfverify.StepResult {
 			return ok("parallel isolation")
 		},
-		ValidateDaemonRestartResilience: func(string, string, int64) commandstep.StepResult {
+		ValidateDaemonRestartResilience: func(string, string, int64) selfverify.StepResult {
 			return ok("daemon resilience")
 		},
-		ValidatePreflightFuzz: func(string, string, int64) commandstep.StepResult {
+		ValidatePreflightFuzz: func(string, string, int64) selfverify.StepResult {
 			return ok("preflight fuzz")
 		},
-		ValidateWebFetchBattery: func(string, string, int64) commandstep.StepResult {
+		ValidateWebFetchBattery: func(string, string, int64) selfverify.StepResult {
 			return ok("web fetch battery")
 		},
-		ValidateNativeIntegration: func(string) commandstep.StepResult {
+		ValidateNativeIntegration: func(string) selfverify.StepResult {
 			return ok("native integration")
 		},
-		ValidateRedactionAudit: func(string) commandstep.StepResult {
+		ValidateRedactionAudit: func(string) selfverify.StepResult {
 			return ok("redaction audit")
 		},
-		ValidateQAGate: func(string) commandstep.StepResult { return ok("QA gate") },
+		ValidateQAGate: func(string) selfverify.StepResult { return ok("QA gate") },
 	}
 }
 

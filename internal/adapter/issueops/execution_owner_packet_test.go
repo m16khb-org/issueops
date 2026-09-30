@@ -108,7 +108,12 @@ func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
 
 func TestExecutionOwnerReportContractGolden(t *testing.T) {
 	record, req := ownerPacketFixture()
-	got := renderExecutionOwnerReportContract(record, req)
+	prompt := executionOwnerPromptFixture(t, record, req)
+	_, report, found := strings.Cut(prompt, "## IssueOps v1 Owner Report\n")
+	if !found {
+		t.Fatal("owner prompt is missing its report contract")
+	}
+	got := "## IssueOps v1 Owner Report\n" + strings.TrimSpace(report)
 	want, err := os.ReadFile(filepath.Join("testdata", "execution_owner_report.golden.txt"))
 	if err != nil {
 		t.Fatal(err)
@@ -546,4 +551,21 @@ func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
 			}
 		})
 	}
+}
+
+var issueOpsOwnerReportLabels = []string{
+	"Status",
+	"Lifecycle",
+	"Mode/host/model",
+	"Worktree/branch/final HEAD",
+	"Lease generation/completion",
+	"Issue/packet digests",
+	"Commits",
+	"Changed files",
+	"Acceptance evidence",
+	"Verification",
+	"AI-slop clean",
+	"Draft PR/MR",
+	"Deviations",
+	"Blockers",
 }

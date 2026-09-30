@@ -1,6 +1,9 @@
 package daemonresilience
 
 import (
+	daemon "issueops/internal/contract/daemon"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,7 +49,7 @@ func TestValidateDaemonRestartResilienceWithDepsCoversSuccessAndSetupFailure(t *
 		exists: func(path string) bool {
 			return false
 		},
-		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 			calls = append(calls, label+":"+strings.Join(command, " "))
 			return daemonResilienceStep(t, label, daemonResiliencePayload(tempDaemon, label))
 		},
@@ -68,9 +71,9 @@ func TestValidateDaemonRestartResilienceWithDepsCoversCommandParseAndContractFai
 	root := t.TempDir()
 	tempDaemon := t.TempDir()
 	deps := daemonResilienceTestDeps(t, tempDaemon)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		if label == "daemon resilience status" {
-			return StepResult{Label: label, Command: strings.Join(command, " "), OK: false, Error: "status failed"}
+			return selfverify.StepResult{Label: label, Command: strings.Join(command, " "), OK: false, Error: "status failed"}
 		}
 		return daemonResilienceStep(t, label, daemonResiliencePayload(tempDaemon, label))
 	}
@@ -80,9 +83,9 @@ func TestValidateDaemonRestartResilienceWithDepsCoversCommandParseAndContractFai
 	}
 
 	deps = daemonResilienceTestDeps(t, tempDaemon)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		if label == "daemon resilience start" {
-			return StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: "{bad json"}
+			return selfverify.StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: "{bad json"}
 		}
 		return daemonResilienceStep(t, label, daemonResiliencePayload(tempDaemon, label))
 	}
@@ -92,10 +95,10 @@ func TestValidateDaemonRestartResilienceWithDepsCoversCommandParseAndContractFai
 	}
 
 	deps = daemonResilienceTestDeps(t, tempDaemon)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		payload := daemonResiliencePayload(tempDaemon, label)
 		if label == "daemon resilience start" {
-			payload = daemonStatus{OK: true, Running: false, Paths: daemonResiliencePaths(tempDaemon)}
+			payload = daemon.Status{OK: true, Running: false, Paths: daemonResiliencePaths(tempDaemon)}
 		}
 		return daemonResilienceStep(t, label, payload)
 	}
@@ -128,35 +131,35 @@ func daemonResilienceTestDeps(t *testing.T, tempDaemon string) daemonResilienceV
 		exists: func(path string) bool {
 			return false
 		},
-		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 			return daemonResilienceStep(t, label, daemonResiliencePayload(tempDaemon, label))
 		},
 	}
 }
 
-func daemonResilienceStep(t *testing.T, label string, payload daemonStatus) StepResult {
+func daemonResilienceStep(t *testing.T, label string, payload daemon.Status) selfverify.StepResult {
 	t.Helper()
 	b, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return StepResult{Label: label, Command: strings.ReplaceAll(label, " resilience ", " ") + " --json", OK: true, Stdout: string(b)}
+	return selfverify.StepResult{Label: label, Command: strings.ReplaceAll(label, " resilience ", " ") + " --json", OK: true, Stdout: string(b)}
 }
 
-func daemonResiliencePayload(dir, label string) daemonStatus {
+func daemonResiliencePayload(dir, label string) daemon.Status {
 	paths := daemonResiliencePaths(dir)
 	switch label {
 	case "daemon resilience start", "daemon resilience status":
-		return daemonStatus{OK: true, Running: true, PID: 1234, Paths: paths}
+		return daemon.Status{OK: true, Running: true, PID: 1234, Paths: paths}
 	case "daemon resilience stop", "daemon resilience after status":
-		return daemonStatus{OK: true, Running: false, Paths: paths}
+		return daemon.Status{OK: true, Running: false, Paths: paths}
 	default:
-		return daemonStatus{OK: true, Paths: paths}
+		return daemon.Status{OK: true, Paths: paths}
 	}
 }
 
-func daemonResiliencePaths(dir string) daemonPaths {
-	return daemonPaths{
+func daemonResiliencePaths(dir string) daemon.Paths {
+	return daemon.Paths{
 		Dir:    dir,
 		Socket: filepath.Join(dir, "issueops.sock"),
 		PID:    filepath.Join(dir, "issueops.pid"),

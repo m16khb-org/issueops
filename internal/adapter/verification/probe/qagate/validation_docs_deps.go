@@ -9,8 +9,6 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
-type StepResult = verifycontract.StepResult
-
 type docsValidationDeps struct {
 	readFile   func(string) ([]byte, error)
 	listDocs   func(string) []string
@@ -36,7 +34,7 @@ func (deps docsValidationDeps) withDefaults() docsValidationDeps {
 	return deps
 }
 
-func assertionStep(label string, started time.Time, errs []string) StepResult {
+func assertionStep(label string, started time.Time, errs []string) verifycontract.StepResult {
 	return verifydomain.AssertionStep(label, time.Since(started).Milliseconds(), errs)
 }
 

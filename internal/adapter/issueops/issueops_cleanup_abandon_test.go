@@ -1,6 +1,8 @@
 package issueops
 
 import (
+	issueopspublication "issueops/internal/contract/issueopspublication"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -436,7 +438,7 @@ func TestCleanupAbandonRejectsLocalResidue(t *testing.T) {
 // AC-02: pending kind별 허용/거부 + InspectIntent 분기 전수.
 func TestCleanupAbandonPendingIntentGate(t *testing.T) {
 	t.Run("remote kind is never abandonable", func(t *testing.T) {
-		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, externalIntentRemotePR, true)
+		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, issueopspublication.RemoteIntentKind, true)
 		orca := authoritativeZeroOrca()
 		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, orca))
 		if err == nil || !containsString(result.Missing, "pending_intent_safe") {

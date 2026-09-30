@@ -19,8 +19,6 @@ import (
 
 var leaseHolderBucket = fmt.Sprintf("lease_holder_v%d", issueops.IssueOpsSchemaVersion)
 
-type leaseHolderIndex = issueopscontract.LeaseHolderIndex
-
 // ListLeaseHolderIndexes는 state를 생성하거나 복구하지 않고 reverse index를
 // 읽는다. 모든 row는 content에서 파생한 key와 대조해 검증한다.
 func ListLeaseHolderIndexes(stateRoot string) ([]issueopscontract.LeaseHolderIndex, error) {
@@ -97,7 +95,7 @@ func persistExecutionTransitionWithMutations(stateRoot string, record issueops.I
 		if err != nil {
 			return issueops.IssueOpsRecord{OK: false, ID: encoded.ID}, err
 		}
-		index := leaseHolderIndex{
+		index := issueopscontract.LeaseHolderIndex{
 			SchemaVersion: issueops.IssueOpsSchemaVersion,
 			LifecycleID:   encoded.ID,
 			Generation:    encoded.Execution.Lease.Generation,
@@ -172,7 +170,7 @@ func requireLeaseIndexAvailable(db *sqlstore.DB, lifecycleID string, generation 
 	if !ok {
 		return false, nil
 	}
-	var existing leaseHolderIndex
+	var existing issueopscontract.LeaseHolderIndex
 	if err := json.Unmarshal(data, &existing); err != nil {
 		return false, fmt.Errorf("decode active lease-holder index: %w", err)
 	}
@@ -191,7 +189,7 @@ func leaseIndexDeleteMutation(db *sqlstore.DB, lifecycleID string, actor issueop
 	if err != nil || !ok {
 		return nil, err
 	}
-	var existing leaseHolderIndex
+	var existing issueopscontract.LeaseHolderIndex
 	if err := json.Unmarshal(data, &existing); err != nil {
 		return nil, fmt.Errorf("decode active lease-holder index: %w", err)
 	}

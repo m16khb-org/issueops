@@ -13,16 +13,14 @@ import (
 
 const aggregateOutputBudgetBytes = 8 * 1024
 
-type StepResult = verifycontract.StepResult
-
-func parallelIsolationResult(started time.Time, workers int, probes []parallelIsolationProbe) StepResult {
+func parallelIsolationResult(started time.Time, workers int, probes []parallelIsolationProbe) verifycontract.StepResult {
 	sort.Slice(probes, func(i, j int) bool { return probes[i].Worker < probes[j].Worker })
 	stdoutText, stdoutTruncated, stdoutOriginalBytes := parallelIsolationOutput(workers, probes)
 	errs := parallelIsolationErrors(probes)
 	if len(errs) > 0 {
-		return StepResult{Label: "parallel isolation", OK: false, DurationMS: time.Since(started).Milliseconds(), Stdout: stdoutText, StdoutBytes: stdoutOriginalBytes, StdoutTruncated: stdoutTruncated, Error: strings.Join(errs, "; ")}
+		return verifycontract.StepResult{Label: "parallel isolation", OK: false, DurationMS: time.Since(started).Milliseconds(), Stdout: stdoutText, StdoutBytes: stdoutOriginalBytes, StdoutTruncated: stdoutTruncated, Error: strings.Join(errs, "; ")}
 	}
-	return StepResult{Label: "parallel isolation", Command: strings.Join(parallelIsolationCommands(probes), " && "), OK: true, DurationMS: time.Since(started).Milliseconds(), Stdout: stdoutText, StdoutBytes: stdoutOriginalBytes, StdoutTruncated: stdoutTruncated}
+	return verifycontract.StepResult{Label: "parallel isolation", Command: strings.Join(parallelIsolationCommands(probes), " && "), OK: true, DurationMS: time.Since(started).Milliseconds(), Stdout: stdoutText, StdoutBytes: stdoutOriginalBytes, StdoutTruncated: stdoutTruncated}
 }
 
 func parallelIsolationOutput(workers int, probes []parallelIsolationProbe) (string, bool, int) {

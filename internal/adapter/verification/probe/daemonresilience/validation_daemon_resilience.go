@@ -15,21 +15,17 @@ import (
 const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
 
-type StepResult = verifycontract.StepResult
-type daemonPaths = daemoncontract.Paths
-type daemonStatus = daemoncontract.Status
+type daemonResilienceCommandRunner func(root, label string, timeout time.Duration, input string, env []string, command ...string) verifycontract.StepResult
 
-type daemonResilienceCommandRunner func(root, label string, timeout time.Duration, input string, env []string, command ...string) StepResult
-
-func Validate(binary, root string, seed int64) StepResult {
+func Validate(binary, root string, seed int64) verifycontract.StepResult {
 	return validateDaemonRestartResilienceWithDeps(binary, root, seed, daemonResilienceValidationDeps{})
 }
 
-func validateDaemonRestartResilience(binary, root string, seed int64) StepResult {
+func validateDaemonRestartResilience(binary, root string, seed int64) verifycontract.StepResult {
 	return Validate(binary, root, seed)
 }
 
-func validateDaemonRestartResilienceWithDeps(binary, root string, seed int64, deps daemonResilienceValidationDeps) StepResult {
+func validateDaemonRestartResilienceWithDeps(binary, root string, seed int64, deps daemonResilienceValidationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	tempDaemon, err := deps.mkdirTemp("", fmt.Sprintf("ahd-%d-*", seed))
@@ -37,7 +33,7 @@ func validateDaemonRestartResilienceWithDeps(binary, root string, seed int64, de
 		return verifydomain.FailedStep("daemon resilience", err)
 	}
 	defer func() { _ = deps.removeAll(tempDaemon) }()
-	paths := daemonPaths{
+	paths := daemoncontract.Paths{
 		Dir:    tempDaemon,
 		Socket: filepath.Join(tempDaemon, "issueops.sock"),
 		PID:    filepath.Join(tempDaemon, "issueops.pid"),
@@ -55,11 +51,11 @@ func validateDaemonRestartResilienceWithDeps(binary, root string, seed int64, de
 	stdoutParts := []string{}
 	commands := []string{}
 	env := []string{"ISSUEOPS_DAEMON_DIR=" + tempDaemon}
-	runDaemonJSON := func(label string, args ...string) (daemonStatus, StepResult, error) {
+	runDaemonJSON := func(label string, args ...string) (daemoncontract.Status, verifycontract.StepResult, error) {
 		step := deps.run(root, label, 30*time.Second, "", env, append([]string{binary}, args...)...)
 		commands = append(commands, step.Command)
 		stdoutParts = append(stdoutParts, step.Stdout)
-		var status daemonStatus
+		var status daemoncontract.Status
 		if step.Stdout != "" {
 			if err := json.Unmarshal([]byte(step.Stdout), &status); err != nil {
 				return status, step, fmt.Errorf("parse %s JSON: %w", label, err)
@@ -116,7 +112,7 @@ func validateDaemonRestartResilienceWithDeps(binary, root string, seed int64, de
 		return verifydomain.AssertionStepWithOutput("daemon resilience", time.Since(started).Milliseconds(), errs, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
 	stdoutText, stdoutTruncated, stdoutBytes := verifydomain.TailWithBudget(strings.Join(stdoutParts, "\n"), aggregateOutputBudgetBytes)
-	return StepResult{
+	return verifycontract.StepResult{
 		Label:           "daemon resilience",
 		Command:         strings.Join(commands, " && "),
 		OK:              true,

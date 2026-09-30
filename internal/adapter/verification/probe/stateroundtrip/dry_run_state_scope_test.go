@@ -1,6 +1,8 @@
 package stateroundtrip
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"strings"
 	"testing"
 	"time"
@@ -14,7 +16,7 @@ func TestStateRoundtripDetectsDryRunWriteInProbeState(t *testing.T) {
 	deps := testStateDependencies(stateRoundtripTestDeps(t, 456))
 	deps.stateRead = testValidator().StateRead
 	run := deps.run
-	deps.run = func(root, label string, timeout time.Duration, input string, env []string, command ...string) StepResult {
+	deps.run = func(root, label string, timeout time.Duration, input string, env []string, command ...string) selfverify.StepResult {
 		if label == "self verify promote dry-run" {
 			var probeRoot string
 			for _, value := range env {

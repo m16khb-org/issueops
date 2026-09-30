@@ -13,10 +13,7 @@ import (
 	"issueops/internal/domain/pioneerskill"
 )
 
-type PioneerCoverage = contract.PioneerCoverage
-type PioneerBlockedCase = contract.PioneerBlockedCase
-
-func CollectPioneerCoverage(root string) (PioneerCoverage, error) {
+func CollectPioneerCoverage(root string) (contract.PioneerCoverage, error) {
 	names := pioneerskill.Names()
 	benchmarkObserved := make([]string, 0, len(names))
 	reproductionObserved := make([]string, 0, len(names))
@@ -24,7 +21,7 @@ func CollectPioneerCoverage(root string) (PioneerCoverage, error) {
 		benchmarkPath := filepath.Join(root, "testdata", "issueops", "fixtures", "pioneer-"+name+".json")
 		exists, err := regularFileExists(benchmarkPath)
 		if err != nil {
-			return PioneerCoverage{}, err
+			return contract.PioneerCoverage{}, err
 		}
 		if exists {
 			benchmarkObserved = append(benchmarkObserved, name)
@@ -32,7 +29,7 @@ func CollectPioneerCoverage(root string) (PioneerCoverage, error) {
 		reproductionPath := filepath.Join(root, "testdata", "pioneer-holdouts", name, "TASK.md")
 		exists, err = regularFileExists(reproductionPath)
 		if err != nil {
-			return PioneerCoverage{}, err
+			return contract.PioneerCoverage{}, err
 		}
 		if exists {
 			reproductionObserved = append(reproductionObserved, name)
@@ -40,9 +37,9 @@ func CollectPioneerCoverage(root string) (PioneerCoverage, error) {
 	}
 	isolated, err := collectPioneerEvaluationManifest(root, names)
 	if err != nil {
-		return PioneerCoverage{}, err
+		return contract.PioneerCoverage{}, err
 	}
-	return PioneerCoverage{
+	return contract.PioneerCoverage{
 		Expected:               len(names),
 		BenchmarkObserved:      len(benchmarkObserved),
 		BenchmarkMissing:       pioneerskill.Missing(benchmarkObserved),
@@ -54,7 +51,7 @@ func CollectPioneerCoverage(root string) (PioneerCoverage, error) {
 		IsolatedBlocked:        isolated.blocked,
 		IsolatedFailed:         isolated.failed,
 		IsolatedExecutionCount: isolated.executions,
-		IsolatedBlockedCases:   append([]PioneerBlockedCase(nil), isolated.blockedCases...),
+		IsolatedBlockedCases:   append([]contract.PioneerBlockedCase(nil), isolated.blockedCases...),
 		HiddenHoldoutObserved:  isolated.hidden,
 	}, nil
 }
@@ -66,7 +63,7 @@ type pioneerEvaluationCounts struct {
 	failed       int
 	hidden       int
 	executions   int
-	blockedCases []PioneerBlockedCase
+	blockedCases []contract.PioneerBlockedCase
 }
 
 func collectPioneerEvaluationManifest(root string, names []string) (pioneerEvaluationCounts, error) {
@@ -245,7 +242,7 @@ func collectPioneerEvaluationManifest(root string, names []string) (pioneerEvalu
 				return pioneerEvaluationCounts{}, fmt.Errorf("blocked pioneer evaluation %s requires blocked_reason", item.Skill)
 			}
 			counts.blocked++
-			counts.blockedCases = append(counts.blockedCases, PioneerBlockedCase{
+			counts.blockedCases = append(counts.blockedCases, contract.PioneerBlockedCase{
 				Skill: item.Skill, Axis: item.Axis, Reason: item.BlockedReason,
 			})
 		case "fail":

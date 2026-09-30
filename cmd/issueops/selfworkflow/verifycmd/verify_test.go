@@ -1,13 +1,14 @@
 package verifycmd
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/llmeval"
 	verifyloop "issueops/internal/application/selfverify"
 	augmentcontract "issueops/internal/contract/selfaugment"
 	"issueops/internal/testsupport"
@@ -38,7 +39,7 @@ func TestRunCoversLLMEvalSaveStateAndJSON(t *testing.T) {
 				Summary:             augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true},
 			}, nil
 		},
-		ApplyLLMEval: func(result augmentcontract.SelfAugmentResult, opts llmeval.SelfVerifyLLMEvalOptions) (augmentcontract.SelfAugmentResult, error) {
+		ApplyLLMEval: func(result augmentcontract.SelfAugmentResult, opts selfverify.LLMEvalOptions) (augmentcontract.SelfAugmentResult, error) {
 			evalCalled = true
 			if !opts.Enabled || opts.Mode != "gate" || opts.TargetScore != 95 {
 				t.Fatalf("unexpected LLM eval options: %+v", opts)

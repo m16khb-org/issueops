@@ -1,6 +1,8 @@
 package selfworkflow
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"io"
 
 	"issueops/cmd/issueops/selfworkflow/llmeval"
@@ -12,10 +14,10 @@ import (
 
 type SelfVerifyLLMEvalConfig = llmeval.SelfVerifyLLMEvalConfig
 type SelfVerifyLLMEvalInput = llmeval.SelfVerifyLLMEvalInput
-type SelfVerifyLLMEvalOptions = llmeval.SelfVerifyLLMEvalOptions
+type SelfVerifyLLMEvalOptions = selfverify.LLMEvalOptions
 type SelfVerifyLLMEvalResult = augmentcontract.SelfVerifyLLMEvalResult
 type SelfVerifyPlannedStep = verifyapp.SelfVerifyPlannedStep
-type SelfVerifyProgressEvent = progress.SelfVerifyProgressEvent
+type SelfVerifyProgressEvent = selfverify.ProgressEvent
 type SelfVerifyProgressReporter = progress.SelfVerifyProgressReporter
 type SelfVerifyStepDeps = verifyapp.SelfVerifyStepDeps
 type SelfVerifyRiskQAEvidence = verifyapp.RiskQAEvidence

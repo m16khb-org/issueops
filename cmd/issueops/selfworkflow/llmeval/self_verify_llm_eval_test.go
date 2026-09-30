@@ -1,6 +1,9 @@
 package llmeval
 
 import (
+	selfverifyx "issueops/internal/contract/selfverify"
+	selfverify "issueops/internal/domain/selfverify"
+
 	"encoding/json"
 	"strings"
 	"testing"
@@ -31,7 +34,7 @@ func TestResolveSelfVerifyLLMEvalConfigDefaultsOff(t *testing.T) {
 
 func TestResolveSelfVerifyLLMEvalConfigUsesEnvGate(t *testing.T) {
 	config, err := ResolveSelfVerifyLLMEvalConfig(false, false, "advisory", false, envLookupForSelfVerifyTest(map[string]string{
-		EnvName: "gate",
+		selfverify.LLMEvalEnvName: "gate",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -43,7 +46,7 @@ func TestResolveSelfVerifyLLMEvalConfigUsesEnvGate(t *testing.T) {
 
 func TestResolveSelfVerifyLLMEvalConfigCLIOverridesEnv(t *testing.T) {
 	config, err := ResolveSelfVerifyLLMEvalConfig(true, false, "advisory", false, envLookupForSelfVerifyTest(map[string]string{
-		EnvName: "strict",
+		selfverify.LLMEvalEnvName: "strict",
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -55,10 +58,10 @@ func TestResolveSelfVerifyLLMEvalConfigCLIOverridesEnv(t *testing.T) {
 
 func TestResolveSelfVerifyLLMEvalConfigRejectsInvalidEnv(t *testing.T) {
 	_, err := ResolveSelfVerifyLLMEvalConfig(false, false, "advisory", false, envLookupForSelfVerifyTest(map[string]string{
-		EnvName: "strict",
+		selfverify.LLMEvalEnvName: "strict",
 	}))
-	if err == nil || !strings.Contains(err.Error(), EnvName) {
-		t.Fatalf("expected env validation error naming %s, got %v", EnvName, err)
+	if err == nil || !strings.Contains(err.Error(), selfverify.LLMEvalEnvName) {
+		t.Fatalf("expected env validation error naming %s, got %v", selfverify.LLMEvalEnvName, err)
 	}
 }
 
@@ -73,7 +76,7 @@ func TestParseSelfVerifyLLMEvalEnvParsesDisabledAliasesAndRejectsUnknown(t *test
 	if err != nil || !enabled || mode != "gate" {
 		t.Fatalf("gate env parse enabled=%v mode=%q err=%v", enabled, mode, err)
 	}
-	if _, _, err := ParseSelfVerifyLLMEvalEnv("maybe"); err == nil || !strings.Contains(err.Error(), EnvName) {
+	if _, _, err := ParseSelfVerifyLLMEvalEnv("maybe"); err == nil || !strings.Contains(err.Error(), selfverify.LLMEvalEnvName) {
 		t.Fatalf("expected named env parse error, got %v", err)
 	}
 }
@@ -125,7 +128,7 @@ func TestDecodeSelfVerifyLLMEvalRejectsMalformedOutput(t *testing.T) {
 
 func TestSelfVerifyLLMEvalRendersPromptOnlyResult(t *testing.T) {
 	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true}
-	updated, err := ApplySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})
+	updated, err := ApplySelfVerifyLLMEval(result, selfverifyx.LLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})
 	if err != nil {
 		t.Fatalf("advisory prompt-only eval should be recorded, not returned as gate error: %v", err)
 	}
@@ -136,7 +139,7 @@ func TestSelfVerifyLLMEvalRendersPromptOnlyResult(t *testing.T) {
 
 func TestSelfVerifyLLMEvalResultClassifiesForegroundReadOnlyGate(t *testing.T) {
 	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true}}
-	updated, _ := ApplySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})
+	updated, _ := ApplySelfVerifyLLMEval(result, selfverifyx.LLMEvalOptions{Enabled: true, Mode: "advisory", TargetScore: 95})
 	if updated.LLMEval == nil {
 		t.Fatal("expected llm_eval result")
 	}
@@ -147,7 +150,7 @@ func TestSelfVerifyLLMEvalResultClassifiesForegroundReadOnlyGate(t *testing.T) {
 
 func TestSelfVerifyLLMEvalGateFailsOnBlocker(t *testing.T) {
 	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true}}
-	updated, err := ApplySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{Enabled: true, Mode: "gate", TargetScore: 95})
+	updated, err := ApplySelfVerifyLLMEval(result, selfverifyx.LLMEvalOptions{Enabled: true, Mode: "gate", TargetScore: 95})
 	if err == nil || !strings.Contains(err.Error(), "LLM evaluation gate failed") {
 		t.Fatalf("expected gate failure, got err=%v result=%+v", err, updated)
 	}

@@ -24,7 +24,7 @@ func (p *publicationCreateProvider) Create(_ context.Context, provider string, r
 	p.t.Helper()
 	p.calls++
 	record, err := ReadIssueOps(p.root, p.id)
-	if err != nil || record.Execution.Pending == nil || record.Execution.Pending.Kind != externalIntentRemotePR {
+	if err != nil || record.Execution.Pending == nil || record.Execution.Pending.Kind != contract.RemoteIntentKind {
 		p.t.Fatalf("provider invoked before durable intent: record=%+v err=%v", record.Execution, err)
 	}
 	if provider != "github" || request.BaseBranch != "main" || request.ProjectKey != "github.com/example/issueops" || !request.Draft || !strings.Contains(request.Body, record.Execution.Pending.Marker) {

@@ -1,6 +1,8 @@
 package commandpolicy
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"os"
@@ -41,7 +43,7 @@ func TestValidateCommandPolicyWithDepsCoversSuccessAndSetupFailure(t *testing.T)
 		},
 		removeAll: func(string) error { return nil },
 		exists:    func(string) bool { return false },
-		run: func(dir, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+		run: func(dir, label string, timeout time.Duration, stdin, name string, args ...string) selfverify.StepResult {
 			if dir != root || timeout != 30*time.Second || stdin != "" {
 				t.Fatalf("unexpected command envelope: dir=%q label=%q timeout=%s stdin=%q", dir, label, timeout, stdin)
 			}
@@ -61,7 +63,7 @@ func TestValidateCommandPolicyWithDepsCoversSuccessAndSetupFailure(t *testing.T)
 			default:
 				t.Fatalf("unexpected label: %s", label)
 			}
-			return StepResult{}
+			return selfverify.StepResult{}
 		},
 	}
 	step := validateCommandPolicyWithDeps("bin/issueops", root, deps)
@@ -91,23 +93,23 @@ func TestValidateCommandPolicyWithDepsCoversCommandParseAndContractFailures(t *t
 		exists:    func(string) bool { return false },
 	}
 
-	deps.run = func(string, string, time.Duration, string, string, ...string) StepResult {
-		return StepResult{Label: "policy allow", Command: "allow", OK: false, Error: "boom"}
+	deps.run = func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "policy allow", Command: "allow", OK: false, Error: "boom"}
 	}
 	commandFailure := validateCommandPolicyWithDeps("bin", root, deps)
 	if commandFailure.OK || !strings.Contains(commandFailure.Error, "policy allow: boom") {
 		t.Fatalf("unexpected command failure: %+v", commandFailure)
 	}
 
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) StepResult {
-		return StepResult{Label: label, Command: label, OK: true, Stdout: "{"}
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: label, Command: label, OK: true, Stdout: "{"}
 	}
 	parseFailure := validateCommandPolicyWithDeps("bin", root, deps)
 	if parseFailure.OK || parseFailure.Error == "" {
 		t.Fatalf("expected JSON parse failure, got %+v", parseFailure)
 	}
 
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) selfverify.StepResult {
 		switch label {
 		case "policy allow":
 			return policyStep(label, label, policy.CommandPolicyEvaluation{OK: true, Allowed: false})
@@ -132,7 +134,7 @@ func TestValidateCommandPolicyWithDepsCoversCommandParseAndContractFailures(t *t
 
 func validCommandPolicyRunner(t *testing.T) commandPolicyCommandRunner {
 	t.Helper()
-	return func(_ string, label string, _ time.Duration, _ string, name string, args ...string) StepResult {
+	return func(_ string, label string, _ time.Duration, _ string, name string, args ...string) selfverify.StepResult {
 		command := strings.Join(append([]string{name}, args...), " ")
 		switch label {
 		case "policy allow":
@@ -148,16 +150,16 @@ func validCommandPolicyRunner(t *testing.T) commandPolicyCommandRunner {
 		default:
 			t.Fatalf("unexpected label: %s", label)
 		}
-		return StepResult{}
+		return selfverify.StepResult{}
 	}
 }
 
-func policyStep(tLabel, command string, value any) StepResult {
+func policyStep(tLabel, command string, value any) selfverify.StepResult {
 	b, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}
-	return StepResult{Label: tLabel, Command: tLabel + ":" + command, OK: true, Stdout: string(b)}
+	return selfverify.StepResult{Label: tLabel, Command: tLabel + ":" + command, OK: true, Stdout: string(b)}
 }
 
 func writeCommandPolicyFakeBinary(t *testing.T, dir string) string {

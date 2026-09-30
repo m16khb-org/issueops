@@ -1,6 +1,8 @@
 package preflightfuzz
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"os"
@@ -28,7 +30,7 @@ func TestValidatePreflightFuzzWithDepsCoversSuccessAndSetupFailure(t *testing.T)
 			gitCalls = append(gitCalls, strings.Join(args, " "))
 			return 0, "", ""
 		},
-		run: func(_ string, label string, _ time.Duration, _ string, command ...string) StepResult {
+		run: func(_ string, label string, _ time.Duration, _ string, command ...string) selfverify.StepResult {
 			return preflightFuzzStep(t, label, command, preflight.PreflightResult{
 				OK: true,
 				CommitStyleHints: map[string]any{
@@ -74,8 +76,8 @@ func TestValidatePreflightFuzzWithDepsCoversGitCommandParseAndContractFailures(t
 	}
 
 	deps = preflightFuzzTestDeps(t, tempRepo)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, command ...string) StepResult {
-		return StepResult{Label: label, Command: strings.Join(command, " "), OK: false, Error: "preflight failed"}
+	deps.run = func(_ string, label string, _ time.Duration, _ string, command ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: label, Command: strings.Join(command, " "), OK: false, Error: "preflight failed"}
 	}
 	commandFailure := validatePreflightFuzzWithDeps("bin", root, 202, deps)
 	if commandFailure.OK || !strings.Contains(commandFailure.Error, "preflight failed") {
@@ -83,8 +85,8 @@ func TestValidatePreflightFuzzWithDepsCoversGitCommandParseAndContractFailures(t
 	}
 
 	deps = preflightFuzzTestDeps(t, tempRepo)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, command ...string) StepResult {
-		return StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: "{bad json"}
+	deps.run = func(_ string, label string, _ time.Duration, _ string, command ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: "{bad json"}
 	}
 	parseFailure := validatePreflightFuzzWithDeps("bin", root, 202, deps)
 	if parseFailure.OK || !strings.Contains(parseFailure.Error, "invalid character") {
@@ -92,7 +94,7 @@ func TestValidatePreflightFuzzWithDepsCoversGitCommandParseAndContractFailures(t
 	}
 
 	deps = preflightFuzzTestDeps(t, tempRepo)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, command ...string) selfverify.StepResult {
 		return preflightFuzzStep(t, label, command, preflight.PreflightResult{
 			OK:               true,
 			CommitStyleHints: map[string]any{"conventional_subjects": 1, "lore_bodies": 0},
@@ -114,7 +116,7 @@ func preflightFuzzTestDeps(t *testing.T, tempRepo string) preflightFuzzValidatio
 		git: func(string, ...string) (int, string, string) {
 			return 0, "", ""
 		},
-		run: func(_ string, label string, _ time.Duration, _ string, command ...string) StepResult {
+		run: func(_ string, label string, _ time.Duration, _ string, command ...string) selfverify.StepResult {
 			return preflightFuzzStep(t, label, command, preflight.PreflightResult{
 				OK: true,
 				CommitStyleHints: map[string]any{
@@ -127,13 +129,13 @@ func preflightFuzzTestDeps(t *testing.T, tempRepo string) preflightFuzzValidatio
 	}
 }
 
-func preflightFuzzStep(t *testing.T, label string, command []string, payload preflight.PreflightResult) StepResult {
+func preflightFuzzStep(t *testing.T, label string, command []string, payload preflight.PreflightResult) selfverify.StepResult {
 	t.Helper()
 	b, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: string(b)}
+	return selfverify.StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: string(b)}
 }
 
 func TestPreflightFuzzSecretNameVariesBySeed(t *testing.T) {

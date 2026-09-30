@@ -116,11 +116,11 @@ func newSelfVerificationSummarySnapshot(result SelfAugmentResult, generatedAt ti
 	return domain.NewSelfVerificationSummarySnapshot(result, generatedAt)
 }
 
-func plannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *StepResult) []selfVerifyPlannedStep {
+func plannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *verifycontract.StepResult) []selfVerifyPlannedStep {
 	return verifyapp.PlannedSteps(root, tempBin, seed, goTestStep, selfVerifyStepDeps(issueOpsRoot()))
 }
 
-func cachedContractGoldenStep(goTestStep StepResult) StepResult {
+func cachedContractGoldenStep(goTestStep verifycontract.StepResult) verifycontract.StepResult {
 	return verifyapp.CachedContractGoldenStep(goTestStep, selfVerifyStepDeps(issueOpsRoot()))
 }
 

@@ -1,6 +1,8 @@
 package mcpsmoke
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -14,7 +16,7 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
-func runSDKSmoke(root, binary string, env []string, timeout time.Duration) StepResult {
+func runSDKSmoke(root, binary string, env []string, timeout time.Duration) selfverify.StepResult {
 	started := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -88,15 +90,15 @@ func runSDKSmoke(root, binary string, env []string, timeout time.Duration) StepR
 	if closeErr != nil {
 		return sdkSmokeFailure(started, binary, stderrSnapshot, fmt.Errorf("close SDK MCP session: %w", closeErr))
 	}
-	return StepResult{
+	return selfverify.StepResult{
 		Label: "MCP smoke", Command: binary + " mcp", OK: true,
 		DurationMS: time.Since(started).Milliseconds(), Stdout: stdout.String(), Stderr: stderrSnapshot,
 		StdoutBytes: stdout.Len(), StderrBytes: len(stderrSnapshot),
 	}
 }
 
-func sdkSmokeFailure(started time.Time, binary, stderr string, err error) StepResult {
-	return StepResult{
+func sdkSmokeFailure(started time.Time, binary, stderr string, err error) selfverify.StepResult {
+	return selfverify.StepResult{
 		Label: "MCP smoke", Command: binary + " mcp", OK: false,
 		DurationMS: time.Since(started).Milliseconds(), Stderr: stderr, StderrBytes: len(stderr), Error: err.Error(),
 	}

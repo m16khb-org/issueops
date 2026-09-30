@@ -1,6 +1,9 @@
 package stateroundtrip
 
 import (
+	selfaugment "issueops/internal/contract/selfaugment"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,8 +33,8 @@ func TestValidateStateRoundtripWithDepsCoversSuccessAndSetupFailure(t *testing.T
 			}
 			return statecontract.StateResult{OK: true}, nil
 		},
-		writeSnapshot: func(string, string, SelfAugmentStateSnapshot) error { return nil },
-		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+		writeSnapshot: func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return nil },
+		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 			calls = append(calls, label+":"+strings.Join(command, " "))
 			return stateRoundtripStep(t, label, command, validStateRoundtripPayload(t, label, 123))
 		},
@@ -58,9 +61,9 @@ func TestValidateStateRoundtripWithDepsCoversSuccessAndSetupFailure(t *testing.T
 func TestValidateStateRoundtripWithDepsCoversCommandParseAndContractFailures(t *testing.T) {
 	root := t.TempDir()
 	deps := stateRoundtripTestDeps(t, 456)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		if label == "state read" {
-			return StepResult{Label: label, Command: strings.Join(command, " "), OK: false, Error: "read failed"}
+			return selfverify.StepResult{Label: label, Command: strings.Join(command, " "), OK: false, Error: "read failed"}
 		}
 		return stateRoundtripStep(t, label, command, validStateRoundtripPayload(t, label, 456))
 	}
@@ -70,9 +73,9 @@ func TestValidateStateRoundtripWithDepsCoversCommandParseAndContractFailures(t *
 	}
 
 	deps = stateRoundtripTestDeps(t, 456)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		if label == "state list" {
-			return StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: "{bad json"}
+			return selfverify.StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: "{bad json"}
 		}
 		return stateRoundtripStep(t, label, command, validStateRoundtripPayload(t, label, 456))
 	}
@@ -82,7 +85,7 @@ func TestValidateStateRoundtripWithDepsCoversCommandParseAndContractFailures(t *
 	}
 
 	deps = stateRoundtripTestDeps(t, 456)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		payload := validStateRoundtripPayload(t, label, 456)
 		if label == "state prune dry-run" {
 			payload = statecontract.StatePruneResult{OK: true, DryRun: true, DeletedKeys: []string{}, KeptKeys: []string{"self-verify-456"}}
@@ -110,7 +113,7 @@ func TestStateRoundtripSelfVerifySessionCombineFailedAggregatesContext(t *testin
 		stdoutParts: []string{"state write stdout", "self-verify compare stdout"},
 		commands:    []string{"state write", "self-verify compare"},
 	})
-	child := StepResult{
+	child := selfverify.StepResult{
 		Label:           "self-verify compare",
 		OK:              false,
 		Stderr:          "compare stderr",
@@ -148,20 +151,20 @@ func stateRoundtripTestDeps(t *testing.T, seed int64) stateRoundtripValidationDe
 		stateRead: func(string, string) (statecontract.StateResult, error) {
 			return statecontract.StateResult{}, errors.New("missing")
 		},
-		writeSnapshot: func(string, string, SelfAugmentStateSnapshot) error { return nil },
-		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+		writeSnapshot: func(string, string, selfaugment.SelfAugmentStateSnapshot) error { return nil },
+		run: func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 			return stateRoundtripStep(t, label, command, validStateRoundtripPayload(t, label, seed))
 		},
 	}
 }
 
-func stateRoundtripStep(t *testing.T, label string, command []string, payload any) StepResult {
+func stateRoundtripStep(t *testing.T, label string, command []string, payload any) selfverify.StepResult {
 	t.Helper()
 	b, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: string(b)}
+	return selfverify.StepResult{Label: label, Command: strings.Join(command, " "), OK: true, Stdout: string(b)}
 }
 
 func validStateRoundtripPayload(t *testing.T, label string, seed int64) any {
@@ -189,23 +192,23 @@ func validStateRoundtripPayload(t *testing.T, label string, seed int64) any {
 	case "state list after prune":
 		return statecontract.StateListResult{OK: true, Keys: []string{key}}
 	case "self verify compare ok":
-		return SelfAugmentCompareResult{OK: true, ElapsedDeltaMS: 100}
+		return selfaugment.SelfAugmentCompareResult{OK: true, ElapsedDeltaMS: 100}
 	case "self verify compare regression":
-		return SelfAugmentCompareResult{OK: true, Regressed: true, Regressions: []string{"elapsed_ms_increased_by_10.00_pct"}}
+		return selfaugment.SelfAugmentCompareResult{OK: true, Regressed: true, Regressions: []string{"elapsed_ms_increased_by_10.00_pct"}}
 	case "self verify promote dry-run":
-		return SelfAugmentPromoteResult{OK: true, DryRun: true}
+		return selfaugment.SelfAugmentPromoteResult{OK: true, DryRun: true}
 	case "self verify promote confirm":
-		return SelfAugmentPromoteResult{OK: true, Promoted: true}
+		return selfaugment.SelfAugmentPromoteResult{OK: true, Promoted: true}
 	case "self verify compare promoted":
-		return SelfAugmentCompareResult{OK: true, ElapsedDeltaMS: 0}
+		return selfaugment.SelfAugmentCompareResult{OK: true, ElapsedDeltaMS: 0}
 	case "self verify history":
-		return SelfAugmentHistoryResult{OK: true, TotalMatches: 3, Entries: []SelfAugmentHistoryEntry{{Key: baseKey}, {Key: candidateKey}, {Key: promotedKey}}}
+		return selfaugment.SelfAugmentHistoryResult{OK: true, TotalMatches: 3, Entries: []selfaugment.SelfAugmentHistoryEntry{{Key: baseKey}, {Key: candidateKey}, {Key: promotedKey}}}
 	case "self verify history retention dry-run":
-		return SelfAugmentHistoryResult{OK: true, Retention: &SelfAugmentHistoryRetention{DryRun: true, Limit: 1, CandidateKeys: []string{baseKey}}}
+		return selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{DryRun: true, Limit: 1, CandidateKeys: []string{baseKey}}}
 	case "self verify history retention confirm":
-		return SelfAugmentHistoryResult{OK: true, Retention: &SelfAugmentHistoryRetention{Confirm: true, DeletedKeys: []string{baseKey}}}
+		return selfaugment.SelfAugmentHistoryResult{OK: true, Retention: &selfaugment.SelfAugmentHistoryRetention{Confirm: true, DeletedKeys: []string{baseKey}}}
 	case "self verify history after retention":
-		return SelfAugmentHistoryResult{OK: true, TotalMatches: 1}
+		return selfaugment.SelfAugmentHistoryResult{OK: true, TotalMatches: 1}
 	case "state doctor":
 		return statecontract.StateDoctorResult{OK: true, Healthy: false, ValidKeys: []string{key}, Issues: []statecontract.StateDoctorIssue{{Code: "invalid_state"}}}
 	default:
@@ -219,7 +222,7 @@ func validStateRoundtripPayload(t *testing.T, label string, seed int64) any {
 func TestValidateStateRoundtripPruneConfirmAndResidueFailures(t *testing.T) {
 	root := t.TempDir()
 	deps := stateRoundtripTestDeps(t, 789)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		payload := validStateRoundtripPayload(t, label, 789)
 		if label == "state prune confirm" {
 			// DryRun이 그대로 true로 오면 confirm 계약 위반이다.
@@ -233,7 +236,7 @@ func TestValidateStateRoundtripPruneConfirmAndResidueFailures(t *testing.T) {
 	}
 
 	deps = stateRoundtripTestDeps(t, 789)
-	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) StepResult {
+	deps.run = func(_ string, label string, _ time.Duration, _ string, _ []string, command ...string) selfverify.StepResult {
 		payload := validStateRoundtripPayload(t, label, 789)
 		if label == "state list after prune" {
 			// 삭제된 키가 여전히 목록에 남는다.

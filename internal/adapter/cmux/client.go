@@ -1,6 +1,8 @@
 package cmux
 
 import (
+	issueops "issueops/internal/contract/issueops"
+
 	"bytes"
 	"context"
 	"crypto/sha256"
@@ -50,7 +52,7 @@ type Runner interface {
 	Run(context.Context, CommandRequest) (CommandOutput, error)
 }
 
-type EndpointObserver func(path string, expectedUID int) (EndpointIncarnation, error)
+type EndpointObserver func(path string, expectedUID int) (issueops.IssueOpsHandoffDeliveryEndpointIncarnation, error)
 
 type Client struct {
 	Runner          Runner

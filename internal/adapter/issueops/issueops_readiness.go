@@ -2,19 +2,9 @@ package issueops
 
 import (
 	"issueops/internal/adapter/issueops/readinesspaths"
-	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
-	issueopsdomain "issueops/internal/domain/issueops"
 	cycleport "issueops/internal/port/issueopscycle"
 )
-
-func IssueOpsPlanReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	return cycleapp.ReadinessFromMissing(record, issueopsdomain.PlanReadinessMissing(record))
-}
-
-func IssueOpsCompatibilityReviewReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
-	return cycleapp.ReadinessFromMissing(record, cycleapp.CompatibilityReadinessMissing(record, ReadinessPathObservations()))
-}
 
 func ReadinessPathObservations() cycleport.ReadinessObservations {
 	return cycleport.ReadinessObservations{
@@ -24,10 +14,6 @@ func ReadinessPathObservations() cycleport.ReadinessObservations {
 		WorkspaceMatches:     samePath,
 		LinkedPlanDigest:     ReviewPlanSource{}.LinkedDigest,
 	}
-}
-
-func issueOpsStrictGitRoot(record issueops.IssueOpsRecord) string {
-	return readinesspaths.StrictGitRoot(record)
 }
 
 func issueOpsWorktreePathValid(path string) bool {

@@ -1,6 +1,9 @@
 package probe
 
 import (
+	mcpsmoke "issueops/internal/adapter/verification/probe/mcpsmoke"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"path/filepath"
@@ -11,17 +14,17 @@ import (
 
 func TestValidateMCPWithDepsCoversSuccessAndResponseFailures(t *testing.T) {
 	root := t.TempDir()
-	deps := MCPValidationDeps{
+	deps := mcpsmoke.MCPValidationDeps{
 		MkdirTemp: func(_ string, pattern string) (string, error) { return filepath.Join(root, pattern+"dir"), nil },
 		RemoveAll: func(string) error { return nil },
-		RunCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) StepResult {
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true}
+		RunCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true}
 		},
-		RunSDKSmoke: func(_ string, _ string, env []string, _ time.Duration) StepResult {
+		RunSDKSmoke: func(_ string, _ string, env []string, _ time.Duration) selfverify.StepResult {
 			if !containsString(env, "ISSUEOPS_STATE_DIR="+filepath.Join(root, "issueops-mcp-state-*dir")) {
-				return StepResult{Label: "MCP smoke", OK: false, Error: "missing env"}
+				return selfverify.StepResult{Label: "MCP smoke", OK: false, Error: "missing env"}
 			}
-			return StepResult{Label: "MCP smoke", Command: "issueops mcp", OK: true, Stdout: validMCPResponses()}
+			return selfverify.StepResult{Label: "MCP smoke", Command: "issueops mcp", OK: true, Stdout: validMCPResponses()}
 		},
 	}
 
@@ -30,24 +33,24 @@ func TestValidateMCPWithDepsCoversSuccessAndResponseFailures(t *testing.T) {
 		t.Fatalf("expected MCP smoke success, got %+v", step)
 	}
 
-	deps.RunSDKSmoke = func(string, string, []string, time.Duration) StepResult {
-		return StepResult{Label: "MCP smoke", OK: true, Stdout: `{}` + "\n"}
+	deps.RunSDKSmoke = func(string, string, []string, time.Duration) selfverify.StepResult {
+		return selfverify.StepResult{Label: "MCP smoke", OK: true, Stdout: `{}` + "\n"}
 	}
 	wrongCount := ValidateMCPWithDeps("issueops", root, deps)
 	if wrongCount.OK || !strings.Contains(wrongCount.Error, "expected 11 MCP SDK results, got 1") {
 		t.Fatalf("expected response count failure, got %+v", wrongCount)
 	}
 
-	deps.RunSDKSmoke = func(string, string, []string, time.Duration) StepResult {
-		return StepResult{Label: "MCP smoke", OK: true, Stdout: strings.Repeat("not-json\n", 11)}
+	deps.RunSDKSmoke = func(string, string, []string, time.Duration) selfverify.StepResult {
+		return selfverify.StepResult{Label: "MCP smoke", OK: true, Stdout: strings.Repeat("not-json\n", 11)}
 	}
 	badJSON := ValidateMCPWithDeps("issueops", root, deps)
 	if badJSON.OK || !strings.Contains(badJSON.Error, "SDK result 1 is invalid JSON") {
 		t.Fatalf("expected invalid JSON failure, got %+v", badJSON)
 	}
 
-	deps.RunSDKSmoke = func(string, string, []string, time.Duration) StepResult {
-		return StepResult{Label: "MCP smoke", OK: true, Stdout: strings.Repeat(`{}`+"\n", 11)}
+	deps.RunSDKSmoke = func(string, string, []string, time.Duration) selfverify.StepResult {
+		return selfverify.StepResult{Label: "MCP smoke", OK: true, Stdout: strings.Repeat(`{}`+"\n", 11)}
 	}
 	missingTool := ValidateMCPWithDeps("issueops", root, deps)
 	if missingTool.OK || missingTool.Error != "MCP smoke did not expose expected tool/resource" {
@@ -56,7 +59,7 @@ func TestValidateMCPWithDepsCoversSuccessAndResponseFailures(t *testing.T) {
 }
 
 func TestValidateMCPWithDepsCoversTempAndCommandFailure(t *testing.T) {
-	deps := MCPValidationDeps{
+	deps := mcpsmoke.MCPValidationDeps{
 		MkdirTemp: func(string, string) (string, error) { return "", errors.New("temp failed") },
 	}
 	if step := ValidateMCPWithDeps("issueops", t.TempDir(), deps); step.OK || !strings.Contains(step.Error, "temp failed") {
@@ -65,7 +68,7 @@ func TestValidateMCPWithDepsCoversTempAndCommandFailure(t *testing.T) {
 
 	root := t.TempDir()
 	call := 0
-	deps = MCPValidationDeps{
+	deps = mcpsmoke.MCPValidationDeps{
 		MkdirTemp: func(_ string, pattern string) (string, error) {
 			call++
 			if call == 2 {
@@ -79,11 +82,11 @@ func TestValidateMCPWithDepsCoversTempAndCommandFailure(t *testing.T) {
 		t.Fatalf("expected daemon temp failure, got %+v", step)
 	}
 
-	deps = MCPValidationDeps{
+	deps = mcpsmoke.MCPValidationDeps{
 		MkdirTemp: func(_ string, pattern string) (string, error) { return filepath.Join(root, pattern), nil },
 		RemoveAll: func(string) error { return nil },
-		RunSDKSmoke: func(string, string, []string, time.Duration) StepResult {
-			return StepResult{Label: "MCP smoke", OK: false, Error: "mcp failed"}
+		RunSDKSmoke: func(string, string, []string, time.Duration) selfverify.StepResult {
+			return selfverify.StepResult{Label: "MCP smoke", OK: false, Error: "mcp failed"}
 		},
 	}
 	if step := ValidateMCPWithDeps("issueops", root, deps); step.OK || step.Error != "mcp failed" {

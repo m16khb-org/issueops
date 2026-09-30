@@ -16,16 +16,8 @@ import (
 
 const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
-const selfAugmentCandidateStatusSatisfied = augmentcontract.CandidateStatusSatisfied
-const selfVerificationCandidateExportKind = augmentcontract.SelfVerificationCandidateExportKind
 
-type StepResult = verifycontract.StepResult
-type SelfAugmentStateCheckpoint = augmentcontract.SelfAugmentStateCheckpoint
-type SelfVerificationCandidate = verifycontract.SelfVerificationCandidate
-type SelfVerificationCandidateExportResult = augmentcontract.SelfVerificationCandidateExportResult
-type SelfVerificationCandidateExportStateSnapshot = augmentcontract.SelfVerificationCandidateExportStateSnapshot
-
-type CandidateExportCommandRunner func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult
+type CandidateExportCommandRunner func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult
 
 type CandidateExportValidationDeps struct {
 	MakeTempState func(seed int64) (string, error)
@@ -43,18 +35,18 @@ func (deps CandidateExportValidationDeps) withDefaults() CandidateExportValidati
 		deps.RemoveAll = os.RemoveAll
 	}
 	if deps.Run == nil {
-		deps.Run = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+		deps.Run = func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult {
 			return verification.RunEnv(dir, label, timeout, stdin, env, commandOutputBudgetBytes, name, args...)
 		}
 	}
 	return deps
 }
 
-func ValidateSelfVerifyCandidateExport(binary, root string, seed int64) StepResult {
+func ValidateSelfVerifyCandidateExport(binary, root string, seed int64) verifycontract.StepResult {
 	return ValidateSelfVerifyCandidateExportWithDeps(binary, root, seed, CandidateExportValidationDeps{})
 }
 
-func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, deps CandidateExportValidationDeps) StepResult {
+func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, deps CandidateExportValidationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	tempState, err := deps.MakeTempState(seed)
@@ -73,7 +65,7 @@ func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, 
 	if !exportStep.OK {
 		return verifydomain.CombineFailedStep("candidate export", time.Since(started).Milliseconds(), exportStep, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
-	var exportResult SelfVerificationCandidateExportResult
+	var exportResult augmentcontract.SelfVerificationCandidateExportResult
 	if err := json.Unmarshal([]byte(exportStep.Stdout), &exportResult); err != nil {
 		return verifydomain.AssertionStepWithOutput("candidate export", time.Since(started).Milliseconds(), []string{err.Error()}, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
@@ -88,7 +80,7 @@ func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, 
 	if err := json.Unmarshal([]byte(readStep.Stdout), &readResult); err != nil {
 		return verifydomain.AssertionStepWithOutput("candidate export", time.Since(started).Milliseconds(), []string{err.Error()}, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
-	var snapshot SelfVerificationCandidateExportStateSnapshot
+	var snapshot augmentcontract.SelfVerificationCandidateExportStateSnapshot
 	if err := json.Unmarshal([]byte(readResult.Record.Content), &snapshot); err != nil {
 		return verifydomain.AssertionStepWithOutput("candidate export", time.Since(started).Milliseconds(), []string{"candidate export state snapshot parse: " + err.Error()}, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
@@ -98,7 +90,7 @@ func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, 
 		return verifydomain.AssertionStepWithOutput("candidate export", time.Since(started).Milliseconds(), errs, stdoutParts, commands, aggregateOutputBudgetBytes)
 	}
 	stdoutText, stdoutTruncated, stdoutBytes := verifydomain.TailWithBudget(strings.Join(stdoutParts, "\n"), aggregateOutputBudgetBytes)
-	return StepResult{
+	return verifycontract.StepResult{
 		Label:           "candidate export",
 		Command:         strings.Join(commands, " && "),
 		OK:              true,
@@ -118,9 +110,9 @@ func containsString(values []string, want string) bool {
 	return false
 }
 
-func CandidateExportValidationErrors(key string, exportResult SelfVerificationCandidateExportResult, snapshot SelfVerificationCandidateExportStateSnapshot) []string {
+func CandidateExportValidationErrors(key string, exportResult augmentcontract.SelfVerificationCandidateExportResult, snapshot augmentcontract.SelfVerificationCandidateExportStateSnapshot) []string {
 	errs := []string{}
-	if !exportResult.OK || exportResult.Kind != selfVerificationCandidateExportKind || exportResult.LoopKind != "self_verification" {
+	if !exportResult.OK || exportResult.Kind != augmentcontract.SelfVerificationCandidateExportKind || exportResult.LoopKind != "self_verification" {
 		errs = append(errs, "candidate export identity mismatch")
 	}
 	if exportResult.CandidateCount < 10 || len(exportResult.Candidates) != exportResult.CandidateCount {
@@ -135,7 +127,7 @@ func CandidateExportValidationErrors(key string, exportResult SelfVerificationCa
 	if exportResult.StateCheckpoint == nil || !exportResult.StateCheckpoint.OK || exportResult.StateCheckpoint.Key != key {
 		errs = append(errs, "candidate export did not save the requested state checkpoint")
 	}
-	if snapshot.Kind != selfVerificationCandidateExportKind || snapshot.CandidateCount != exportResult.CandidateCount {
+	if snapshot.Kind != augmentcontract.SelfVerificationCandidateExportKind || snapshot.CandidateCount != exportResult.CandidateCount {
 		errs = append(errs, "candidate export state snapshot mismatch")
 	}
 	if snapshot.SelectedCandidate != nil || len(snapshot.OpenCandidateIDs) != 0 || !containsString(snapshot.SatisfiedCandidateIDs, "completion-evidence-audit") {

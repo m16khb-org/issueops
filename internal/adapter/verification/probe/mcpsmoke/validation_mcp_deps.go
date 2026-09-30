@@ -13,13 +13,11 @@ import (
 const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
 
-type StepResult = verifycontract.StepResult
-
 type MCPValidationDeps struct {
 	MkdirTemp         func(string, string) (string, error)
 	RemoveAll         func(string) error
-	RunCommandStepEnv func(string, string, time.Duration, string, []string, string, ...string) StepResult
-	RunSDKSmoke       func(string, string, []string, time.Duration) StepResult
+	RunCommandStepEnv func(string, string, time.Duration, string, []string, string, ...string) verifycontract.StepResult
+	RunSDKSmoke       func(string, string, []string, time.Duration) verifycontract.StepResult
 }
 
 func (deps MCPValidationDeps) withDefaults() MCPValidationDeps {
@@ -38,11 +36,11 @@ func (deps MCPValidationDeps) withDefaults() MCPValidationDeps {
 	return deps
 }
 
-func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult {
 	return verification.RunEnv(dir, label, timeout, stdin, env, commandOutputBudgetBytes, name, args...)
 }
 
-func failedStep(label string, err error) StepResult {
+func failedStep(label string, err error) verifycontract.StepResult {
 	return verifydomain.FailedStep(label, err)
 }
 

@@ -1,18 +1,20 @@
 package probe
 
+import (
+	selfverify "issueops/internal/contract/selfverify"
+)
+
 import "issueops/internal/adapter/verification/probe/mcpsmoke"
 
-type MCPValidationDeps = mcpsmoke.MCPValidationDeps
-
-func ValidateMCP(binary, root string) StepResult {
+func ValidateMCP(binary, root string) selfverify.StepResult {
 	return mcpsmoke.ValidateMCP(binary, root)
 }
 
-func ValidateMCPWithDeps(binary, root string, deps MCPValidationDeps) StepResult {
+func ValidateMCPWithDeps(binary, root string, deps mcpsmoke.MCPValidationDeps) selfverify.StepResult {
 	return mcpsmoke.ValidateMCPWithDeps(binary, root, deps)
 }
 
-func ValidateMCPSmokeContract(step *StepResult) {
+func ValidateMCPSmokeContract(step *selfverify.StepResult) {
 	mcpsmoke.ValidateMCPSmokeContract(step)
 }
 

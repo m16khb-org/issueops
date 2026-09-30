@@ -58,7 +58,7 @@ func newIssueOpsResumeService(stateRoot string, provisioner port.ExecutionOrcaPr
 
 type resumeOperationIDs struct{}
 
-func (resumeOperationIDs) New() (string, error) { return issueops.NewExecutionResumeOperationID() }
+func (resumeOperationIDs) New() (string, error) { return issueops.NewExecutionOperationID() }
 
 type resumeHostAdapter struct {
 	stateRoot   string

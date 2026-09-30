@@ -1,6 +1,8 @@
 package parallelisolation
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,7 +18,7 @@ type parallelIsolationProbeDeps struct {
 	removeAll         func(string) error
 	mkdirAll          func(string, os.FileMode) error
 	writeFile         func(string, []byte, os.FileMode) error
-	runCommandStepEnv func(string, string, time.Duration, string, []string, string, ...string) StepResult
+	runCommandStepEnv func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult
 }
 
 func (deps parallelIsolationProbeDeps) withDefaults() parallelIsolationProbeDeps {
@@ -38,7 +40,7 @@ func (deps parallelIsolationProbeDeps) withDefaults() parallelIsolationProbeDeps
 	return deps
 }
 
-func runCommandStepEnv(root, label string, timeout time.Duration, input string, env []string, name string, args ...string) StepResult {
+func runCommandStepEnv(root, label string, timeout time.Duration, input string, env []string, name string, args ...string) selfverify.StepResult {
 	return verification.RunEnv(root, label, timeout, input, env, 32*1024, name, args...)
 }
 

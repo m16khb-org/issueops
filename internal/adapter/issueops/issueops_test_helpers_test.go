@@ -148,7 +148,7 @@ func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue in
 	if err != nil {
 		t.Fatal(err)
 	}
-	operationID, err := newExecutionOperationID()
+	operationID, err := NewExecutionOperationID()
 	if err != nil {
 		t.Fatal(err)
 	}

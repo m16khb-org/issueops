@@ -12,11 +12,8 @@ import (
 // Label is the self-verify step label. Command mirrors the CI "Format check
 // (gofmt)" step verbatim so a failing step names exactly what CI runs.
 const (
-	Label   = "gofmt"
-	Command = application.FormatCommand
+	Label = "gofmt"
 )
-
-type StepResult = verifycontract.StepResult
 
 // Deps is the narrow process boundary so unit tests can replace git and gofmt
 // without a repository or the Go toolchain.
@@ -40,11 +37,11 @@ func (d Deps) withDefaults() Deps {
 // (`git ls-files '*.go'`), same tool, same pass condition (empty `gofmt -l`
 // output). `gofmt -l` exits 0 even when it lists files, so the verdict is
 // output-based rather than exit-code-based.
-func Validate(root string) StepResult {
+func Validate(root string) verifycontract.StepResult {
 	return ValidateWithDeps(root, Deps{})
 }
 
-func ValidateWithDeps(root string, deps Deps) StepResult {
+func ValidateWithDeps(root string, deps Deps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	return application.ValidateFormat(root, application.FormatDeps{
 		ListTrackedGoFiles: deps.ListTrackedGoFiles,

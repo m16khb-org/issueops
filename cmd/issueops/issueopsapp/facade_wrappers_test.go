@@ -1,6 +1,9 @@
 package issueopsapp
 
 import (
+	"issueops/cmd/issueops/pathutil"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -62,7 +65,7 @@ func TestCommandStepFacadeWrappers(t *testing.T) {
 	if assertionStepWithOutput("assert", started, []string{"bad"}, []string{"out"}, []string{"cmd"}).OK {
 		t.Fatal("assertionStepWithOutput should fail")
 	}
-	printStep(StepResult{Label: "covered", OK: true})
+	printStep(selfverify.StepResult{Label: "covered", OK: true})
 	if tail("abcdef", 3) == "" {
 		t.Fatal("tail returned empty")
 	}
@@ -146,7 +149,7 @@ func TestHostAndPathFacadeWrappers(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "skills", skillName, "SKILL.md"), []byte("skill"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if text, err := readHarnessFile("skills", skillName, "SKILL.md"); err != nil || text != "skill" {
+	if text, err := pathutil.ReadHarnessFile(issueOpsRoot(), "skills", skillName, "SKILL.md"); err != nil || text != "skill" {
 		t.Fatalf("readHarnessFile = %q err=%v", text, err)
 	}
 	if issueOpsRoot() != root {
@@ -216,7 +219,7 @@ func TestUpdateAndAPIDocFacadeWrappers(t *testing.T) {
 	if err := printJSONTo(&buf, map[string]any{"ok": true}); err != nil || !strings.Contains(buf.String(), `"ok"`) {
 		t.Fatalf("printJSONTo = %q err=%v", buf.String(), err)
 	}
-	if !isAPIDocReviewGateError(errAPIDocReviewGateFailed) || !isAPIDocStaticGateError(errAPIDocStaticGateFailed) || !isSelfVerificationGateError(errSelfVerificationGateFailed) {
+	if !isAPIDocReviewGateError(errAPIDocReviewGateFailed) || !isAPIDocStaticGateError(errAPIDocStaticGateFailed) {
 		t.Fatal("gate error wrappers failed")
 	}
 	if len(apiDocReviewSchema()) == 0 {
@@ -350,8 +353,8 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 		plan: func(string) RiskQATierPlan {
 			return RiskQATierPlan{Tier: "static", Commands: []string{"go test ./..."}, Reasons: []string{"test"}}
 		},
-		run: func(root string, command string) StepResult {
-			return StepResult{OK: true, Label: "risk", Command: command}
+		run: func(root string, command string) selfverify.StepResult {
+			return selfverify.StepResult{OK: true, Label: "risk", Command: command}
 		},
 	})
 	if !riskStep.OK {
@@ -544,7 +547,7 @@ func TestSelfVerifyFacadeWrappers(t *testing.T) {
 	}
 	_ = newSelfVerificationSummarySnapshot(result, time.Now())
 	_ = plannedSelfVerifySteps(t.TempDir(), "", 100, nil)
-	_ = cachedContractGoldenStep(StepResult{OK: false, Label: "go test"})
+	_ = cachedContractGoldenStep(selfverify.StepResult{OK: false, Label: "go test"})
 	_ = selfVerifyLoopDeps(issueOpsRoot())
 	_ = selfVerifyStepDeps(issueOpsRoot())
 	step := runCommandStepAdapter("", "adapter", time.Second, "", "sh", "-c", "printf ok")

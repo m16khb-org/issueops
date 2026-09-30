@@ -15,17 +15,15 @@ import (
 
 const commandOutputBudgetBytes = 32 * 1024
 
-type StepResult = verifycontract.StepResult
-
 type Validator struct {
 	Git func(string, ...string) (int, string, string)
 }
 
-func (v Validator) Validate(binary, root string, seed int64) StepResult {
+func (v Validator) Validate(binary, root string, seed int64) verifycontract.StepResult {
 	return validatePreflightFuzzWithDeps(binary, root, seed, preflightFuzzValidationDeps{git: v.Git})
 }
 
-func validatePreflightFuzzWithDeps(binary, root string, seed int64, deps preflightFuzzValidationDeps) StepResult {
+func validatePreflightFuzzWithDeps(binary, root string, seed int64, deps preflightFuzzValidationDeps) verifycontract.StepResult {
 	deps = deps.withDefaults()
 	started := time.Now()
 	tempRepo, err := deps.mkdirTemp("", "issueops-preflight-fuzz-*")

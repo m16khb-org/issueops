@@ -75,7 +75,7 @@ func renderFamilyOverview(f projectdoc.DocFamily, signals projectdoc.ProjectSign
 func renderFamilyModuleDocs(signals projectdoc.ProjectSignals) map[string]string {
 	out := map[string]string{}
 	for _, f := range projectdoc.DocFamilies() {
-		rel := filepath.ToSlash(filepath.Join(ProjectDocsDir, f.OverviewRel()))
+		rel := filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, f.OverviewRel()))
 		out[rel] = renderFamilyOverview(f, signals)
 	}
 	return out

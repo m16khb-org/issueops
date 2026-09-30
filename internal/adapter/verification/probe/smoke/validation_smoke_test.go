@@ -1,6 +1,8 @@
 package smoke
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -16,7 +18,7 @@ import (
 func TestValidateInspectWithDepsCoversCommandAndContractBranches(t *testing.T) {
 	root := t.TempDir()
 	calls := []string{}
-	runner := func(dir, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+	runner := func(dir, label string, timeout time.Duration, stdin, name string, args ...string) selfverify.StepResult {
 		calls = append(calls, strings.Join(append([]string{name}, args...), " "))
 		if dir != root || label != "inspect smoke" || timeout != 30*time.Second || stdin != "" {
 			t.Fatalf("unexpected inspect command envelope: dir=%q label=%q timeout=%s stdin=%q", dir, label, timeout, stdin)
@@ -31,33 +33,33 @@ func TestValidateInspectWithDepsCoversCommandAndContractBranches(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: string(out)}
+		return selfverify.StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: string(out)}
 	}
 	step := validateInspectWithDeps("bin/issueops", root, runner)
 	if !step.OK || len(calls) != 1 || calls[0] != "bin/issueops inspect --json" {
 		t.Fatalf("unexpected inspect success: step=%+v calls=%v", step, calls)
 	}
 
-	failed := validateInspectWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) StepResult {
-		return StepResult{Label: "inspect smoke", OK: false, Error: "boom"}
+	failed := validateInspectWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "inspect smoke", OK: false, Error: "boom"}
 	})
 	if failed.OK || failed.Error != "boom" {
 		t.Fatalf("unexpected failed inspect passthrough: %+v", failed)
 	}
 
-	badJSON := validateInspectWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) StepResult {
-		return StepResult{Label: "inspect smoke", OK: true, Stdout: "{"}
+	badJSON := validateInspectWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "inspect smoke", OK: true, Stdout: "{"}
 	})
 	if badJSON.OK || badJSON.Error == "" {
 		t.Fatalf("expected inspect JSON parse failure, got %+v", badJSON)
 	}
 
-	missing := validateInspectWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) StepResult {
+	missing := validateInspectWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
 		out, err := json.Marshal(inspect.InspectInfo{OK: false})
 		if err != nil {
 			t.Fatal(err)
 		}
-		return StepResult{Label: "inspect smoke", OK: true, Stdout: string(out)}
+		return selfverify.StepResult{Label: "inspect smoke", OK: true, Stdout: string(out)}
 	})
 	if missing.OK || !strings.Contains(missing.Error, "inspect ok=false") || !strings.Contains(missing.Error, "no skills listed") || !strings.Contains(missing.Error, "project Claude MCP config missing") {
 		t.Fatalf("unexpected inspect contract failure: %+v", missing)
@@ -70,8 +72,8 @@ func TestValidateInspectWithDepsCoversCommandAndContractBranches(t *testing.T) {
 func TestValidateSmokeStepsRejectTruncatedCapturesExplicitly(t *testing.T) {
 	root := t.TempDir()
 	truncatedRunner := func(label string) validationCommandRunner {
-		return func(string, string, time.Duration, string, string, ...string) StepResult {
-			return StepResult{
+		return func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+			return selfverify.StepResult{
 				Label:           label,
 				OK:              true,
 				Stdout:          "[truncated: original_bytes=38544 omitted_bytes=5829]\nrest-of-tail",
@@ -82,12 +84,12 @@ func TestValidateSmokeStepsRejectTruncatedCapturesExplicitly(t *testing.T) {
 	}
 	for _, tc := range []struct {
 		name string
-		run  func() StepResult
+		run  func() selfverify.StepResult
 	}{
-		{name: "inspect", run: func() StepResult {
+		{name: "inspect", run: func() selfverify.StepResult {
 			return validateInspectWithDeps("bin", root, truncatedRunner("inspect smoke"))
 		}},
-		{name: "docs index", run: func() StepResult {
+		{name: "docs index", run: func() selfverify.StepResult {
 			return validateDocsIndexWithDeps("bin", root, truncatedRunner("docs index smoke"))
 		}},
 	} {
@@ -121,10 +123,10 @@ func TestValidateSmokeWrappersUseExecutableSurface(t *testing.T) {
 
 	for _, tc := range []struct {
 		name string
-		run  func() StepResult
+		run  func() selfverify.StepResult
 	}{
-		{name: "inspect", run: func() StepResult { return validateInspect(binary, root) }},
-		{name: "docs index", run: func() StepResult { return validateDocsIndex(binary, root) }},
+		{name: "inspect", run: func() selfverify.StepResult { return validateInspect(binary, root) }},
+		{name: "docs index", run: func() selfverify.StepResult { return validateDocsIndex(binary, root) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if step := tc.run(); !step.OK {
@@ -182,7 +184,7 @@ func TestValidateDocsIndexWithDepsCoversCommandAndContractBranches(t *testing.T)
 		{RelPath: ".issueops/OPERATIONS.md", Title: "Ops"},
 	}
 	calls := []string{}
-	runner := func(dir, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+	runner := func(dir, label string, timeout time.Duration, stdin, name string, args ...string) selfverify.StepResult {
 		calls = append(calls, strings.Join(append([]string{name}, args...), " "))
 		if dir != root || label != "docs index smoke" || timeout != 30*time.Second || stdin != "" {
 			t.Fatalf("unexpected docs command envelope: dir=%q label=%q timeout=%s stdin=%q", dir, label, timeout, stdin)
@@ -191,7 +193,7 @@ func TestValidateDocsIndexWithDepsCoversCommandAndContractBranches(t *testing.T)
 		if err != nil {
 			t.Fatal(err)
 		}
-		return StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: string(out)}
+		return selfverify.StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: string(out)}
 	}
 	step := validateDocsIndexWithDeps("bin/issueops", root, runner)
 	if !step.OK || len(calls) != 1 || calls[0] != "bin/issueops docs --json" {
@@ -201,14 +203,14 @@ func TestValidateDocsIndexWithDepsCoversCommandAndContractBranches(t *testing.T)
 		t.Fatalf("unexpected docIndexContains behavior")
 	}
 
-	badJSON := validateDocsIndexWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) StepResult {
-		return StepResult{Label: "docs index smoke", OK: true, Stdout: "{"}
+	badJSON := validateDocsIndexWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "docs index smoke", OK: true, Stdout: "{"}
 	})
 	if badJSON.OK || badJSON.Error == "" {
 		t.Fatalf("expected docs JSON parse failure, got %+v", badJSON)
 	}
 
-	missing := validateDocsIndexWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) StepResult {
+	missing := validateDocsIndexWithDeps("bin", root, func(string, string, time.Duration, string, string, ...string) selfverify.StepResult {
 		out, err := json.Marshal(docs.DocsIndexResult{
 			OK:           false,
 			IssueOpsRoot: root + "-other",
@@ -217,7 +219,7 @@ func TestValidateDocsIndexWithDepsCoversCommandAndContractBranches(t *testing.T)
 		if err != nil {
 			t.Fatal(err)
 		}
-		return StepResult{Label: "docs index smoke", OK: true, Stdout: string(out)}
+		return selfverify.StepResult{Label: "docs index smoke", OK: true, Stdout: string(out)}
 	})
 	if missing.OK || !strings.Contains(missing.Error, "docs index ok=false") || !strings.Contains(missing.Error, "docs index harness root mismatch") || !strings.Contains(missing.Error, "missing doc CLAUDE.md") || !strings.Contains(missing.Error, "missing title for AGENTS.md") {
 		t.Fatalf("unexpected docs contract failure: %+v", missing)

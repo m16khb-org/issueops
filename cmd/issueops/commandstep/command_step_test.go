@@ -1,6 +1,8 @@
 package commandstep
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"strings"
 	"testing"
@@ -11,7 +13,7 @@ import (
 
 func TestCommandStepFormattingHelpers(t *testing.T) {
 	started := time.Now()
-	child := StepResult{Label: "child", OK: false, Stdout: "child stdout", Stderr: "child stderr", Error: "", StderrBytes: 12}
+	child := selfverify.StepResult{Label: "child", OK: false, Stdout: "child stdout", Stderr: "child stderr", Error: "", StderrBytes: 12}
 	combined := CombineFailedStep("parent", started, child, []string{"first", "second"}, []string{"cmd one", "cmd two"}, 8*1024)
 	if combined.OK || combined.Error != "child failed" || combined.Command != "cmd one && cmd two" || !strings.Contains(combined.Stdout, "first\nsecond") {
 		t.Fatalf("unexpected combined failure: %+v", combined)
@@ -36,14 +38,14 @@ func TestCommandStepFormattingHelpers(t *testing.T) {
 	}
 
 	okOut := captureStatusVerifyStdout(t, func() error {
-		PrintStep(StepResult{Label: "ok step", OK: true, DurationMS: 3})
+		PrintStep(selfverify.StepResult{Label: "ok step", OK: true, DurationMS: 3})
 		return nil
 	})
 	if !strings.Contains(okOut, "ok step ok") {
 		t.Fatalf("unexpected ok print:\n%s", okOut)
 	}
 	failOut := captureStatusVerifyStdout(t, func() error {
-		PrintStep(StepResult{Label: "bad step", OK: false, DurationMS: 4, Error: "bad", Stdout: "out", Stderr: "err"})
+		PrintStep(selfverify.StepResult{Label: "bad step", OK: false, DurationMS: 4, Error: "bad", Stdout: "out", Stderr: "err"})
 		return nil
 	})
 	if !strings.Contains(failOut, "bad step failed") || !strings.Contains(failOut, "stdout:") || !strings.Contains(failOut, "stderr:") {

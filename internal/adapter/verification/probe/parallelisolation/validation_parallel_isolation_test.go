@@ -1,6 +1,8 @@
 package parallelisolation
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"fmt"
 	"os"
@@ -49,16 +51,16 @@ func TestRunParallelIsolationProbeWithDepsCoversCommandAndContractFailures(t *te
 		removeAll: func(string) error { return nil },
 		mkdirAll:  func(string, os.FileMode) error { return nil },
 		writeFile: func(string, []byte, os.FileMode) error { return nil },
-		runCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) StepResult {
+		runCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
 			switch {
 			case strings.Contains(label, "write"):
-				return StepResult{Label: label, Command: strings.Join(args, " "), OK: true}
+				return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true}
 			case strings.Contains(label, "read"):
 				body, _ := json.Marshal(statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Key: "parallel-9-2", Content: "worker=2 seed=9"}})
-				return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
+				return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
 			default:
 				body, _ := json.Marshal(statecontract.StateListResult{OK: true, Keys: []string{"parallel-9-2"}})
-				return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
+				return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
 			}
 		},
 	}
@@ -67,56 +69,56 @@ func TestRunParallelIsolationProbeWithDepsCoversCommandAndContractFailures(t *te
 		t.Fatalf("expected successful probe, got %+v", probe)
 	}
 
-	deps.runCommandStepEnv = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{OK: false, Error: "write denied"}
+	deps.runCommandStepEnv = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{OK: false, Error: "write denied"}
 	}
 	writeFail := runParallelIsolationProbeWithDeps("issueops", root, 9, 2, deps)
 	if !strings.Contains(writeFail.Error, "state write failed: write denied") {
 		t.Fatalf("expected write failure, got %+v", writeFail)
 	}
 
-	deps.runCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) StepResult {
+	deps.runCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
 		if strings.Contains(label, "read") {
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{"ok":`}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{"ok":`}
 		}
-		return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{}`}
+		return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{}`}
 	}
 	badReadJSON := runParallelIsolationProbeWithDeps("issueops", root, 9, 2, deps)
 	if !strings.Contains(badReadJSON.Error, "state read parse failed") {
 		t.Fatalf("expected read parse failure, got %+v", badReadJSON)
 	}
 
-	deps.runCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) StepResult {
+	deps.runCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
 		if strings.Contains(label, "read") {
 			body, _ := json.Marshal(statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Key: "other", Content: "wrong"}})
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
 		}
-		return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{}`}
+		return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{}`}
 	}
 	wrongContent := runParallelIsolationProbeWithDeps("issueops", root, 9, 2, deps)
 	if wrongContent.Error != "state read returned another worker's content" {
 		t.Fatalf("expected content failure, got %+v", wrongContent)
 	}
 
-	deps.runCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) StepResult {
+	deps.runCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
 		if strings.Contains(label, "read") {
 			body, _ := json.Marshal(statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Key: "parallel-9-2", Content: "worker=2 seed=9"}})
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
 		}
-		return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{"ok":`}
+		return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: `{"ok":`}
 	}
 	badListJSON := runParallelIsolationProbeWithDeps("issueops", root, 9, 2, deps)
 	if !strings.Contains(badListJSON.Error, "state list parse failed") {
 		t.Fatalf("expected list parse failure, got %+v", badListJSON)
 	}
 
-	deps.runCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) StepResult {
+	deps.runCommandStepEnv = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
 		if strings.Contains(label, "read") {
 			body, _ := json.Marshal(statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Key: "parallel-9-2", Content: "worker=2 seed=9"}})
-			return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
+			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
 		}
 		body, _ := json.Marshal(statecontract.StateListResult{OK: true, Keys: []string{"parallel-9-2", "leak"}})
-		return StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
+		return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true, Stdout: string(body)}
 	}
 	leaked := runParallelIsolationProbeWithDeps("issueops", root, 9, 2, deps)
 	if !strings.Contains(leaked.Error, "state list leaked keys across workers") {

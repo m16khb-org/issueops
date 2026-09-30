@@ -1,13 +1,15 @@
 package issueops
 
 import (
+	cycleapp "issueops/internal/application/issueopscycle"
 	delegation "issueops/internal/application/issueopsdelegation"
 	app "issueops/internal/application/issueopsreview"
 	model "issueops/internal/contract/issueops"
+	domain "issueops/internal/domain/issueops"
 )
 
 func planningRecorderForTest(actor *model.IssueOpsActor) app.PlanningRecorder {
-	return app.PlanningRecorder{ActiveChildren: (delegation.ChildGates{Scan: ScanReadableIssueOps}).ActiveIDs, Store: NewReviewMutationStore(actor), PlanReadiness: IssueOpsPlanReadiness, CompatibilityReadiness: IssueOpsCompatibilityReviewReadiness, PhaseRank: issueOpsPhaseRank, PlanDigest: app.NewPlanDigestResolver(ReviewPlanSource{}).Digest}
+	return app.PlanningRecorder{ActiveChildren: (delegation.ChildGates{Scan: ScanReadableIssueOps}).ActiveIDs, Store: NewReviewMutationStore(actor), PlanReadiness: (cycleapp.Readiness{}).Plan, CompatibilityReadiness: (cycleapp.Readiness{Paths: ReadinessPathObservations()}).Compatibility, PhaseRank: domain.IssueOpsPhaseRank, PlanDigest: app.NewPlanDigestResolver(ReviewPlanSource{}).Digest}
 }
 func RecordIssueOpsIntent(root, id string, req model.IssueOpsIntentRecordRequest) (model.IssueOpsRecord, error) {
 	return planningRecorderForTest(nil).Intent(root, id, req)

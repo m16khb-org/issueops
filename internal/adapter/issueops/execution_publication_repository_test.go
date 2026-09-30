@@ -22,7 +22,7 @@ func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
 	fixture := newClaimableExecutionFixture(t, stateRoot, "195-publication-repository")
 	operationID := "0123456789abcdef0123456789abcdef"
 	fixture.record.Execution.Pending = &contract.ExternalIntent{
-		OperationID: operationID, Kind: externalIntentRemotePR,
+		OperationID: operationID, Kind: publicationcontract.RemoteIntentKind,
 		Marker: "publication-marker", StartedAt: "2026-09-28T00:00:00Z",
 	}
 	record, err := writeIssueOps(stateRoot, fixture.record)
@@ -84,7 +84,7 @@ func newPendingPublicationFixture(t *testing.T) (string, *remoteapp.PublicationJ
 	fixture.record.Execution.Lease.ClaimTokenSHA256 = ""
 	operationID := "0123456789abcdef0123456789abcdef"
 	fixture.record.Execution.Pending = &contract.ExternalIntent{
-		OperationID: operationID, Kind: externalIntentRemotePR,
+		OperationID: operationID, Kind: publicationcontract.RemoteIntentKind,
 		Marker: "publication-marker", StartedAt: "2026-09-28T00:00:00Z",
 	}
 	record, err := writeIssueOps(root, fixture.record)

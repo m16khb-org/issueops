@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"issueops/internal/adapter/issueops/readinesspaths"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,7 +29,7 @@ func recordIssueOpsProjectDocsReviewForTest(t *testing.T, stateRoot, id string) 
 	}
 	// no-change는 실제로 읽은 project doc 경로를 요구한다. initIssueOpsRepo가 커밋한
 	// CAUTIONS.md를 쓰고, git이 아닌 fixture 디렉터리에만 파일을 만들어 준다.
-	root := issueOpsStrictGitRoot(record)
+	root := readinesspaths.StrictGitRoot(record)
 	reviewed := filepath.Join(root, ".issueops", "CAUTIONS.md")
 	if _, statErr := os.Stat(reviewed); statErr != nil {
 		if err := os.MkdirAll(filepath.Dir(reviewed), 0o755); err != nil {

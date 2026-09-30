@@ -1,12 +1,14 @@
 package stateroundtrip
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 
 	statecontract "issueops/internal/contract/state"
 )
 
-func (s *stateRoundtripStateSession) validatePrune() StepResult {
+func (s *stateRoundtripStateSession) validatePrune() selfverify.StepResult {
 	oldKey := s.input.key + "-old"
 	oldWrite := s.run("state old write", s.input.binary, "state", "write", "--key", oldKey, "--value", "old state", "--json")
 	if !oldWrite.OK {
@@ -56,5 +58,5 @@ func (s *stateRoundtripStateSession) validatePrune() StepResult {
 	if !containsString(listAfterPruneResult.Keys, s.input.key) || containsString(listAfterPruneResult.Keys, oldKey) {
 		return s.fail("state prune did not preserve fresh key and remove old key")
 	}
-	return StepResult{OK: true}
+	return selfverify.StepResult{OK: true}
 }

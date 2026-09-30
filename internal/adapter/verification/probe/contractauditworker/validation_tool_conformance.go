@@ -1,6 +1,8 @@
 package contractauditworker
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"fmt"
 	"time"
@@ -9,11 +11,11 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
-func ValidateToolConformance(binary, root string) StepResult {
+func ValidateToolConformance(binary, root string) selfverify.StepResult {
 	return ValidateToolConformanceWithDeps(binary, root, ValidationDeps{})
 }
 
-func ValidateToolConformanceWithDeps(binary, root string, deps ValidationDeps) StepResult {
+func ValidateToolConformanceWithDeps(binary, root string, deps ValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	step := deps.RunCommandStep(root, "tool contract conformance", 30*time.Second, "", binary, "contract", "conformance", "baseline", "--json")
 	if !step.OK {

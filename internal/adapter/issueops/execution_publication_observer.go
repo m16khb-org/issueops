@@ -35,7 +35,7 @@ func (o RemotePublicationObserver) NewOperationID() (string, error) {
 	if o.OperationIDFactory != nil {
 		return o.OperationIDFactory()
 	}
-	return newExecutionOperationID()
+	return NewExecutionOperationID()
 }
 
 var _ application.PublicationEnvironment = RemotePublicationObserver{}

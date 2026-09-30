@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 
-	"issueops/cmd/issueops/commandstep"
 	augmentcontract "issueops/internal/contract/selfaugment"
 	verifycontract "issueops/internal/contract/selfverify"
 	augmentdomain "issueops/internal/domain/selfaugment"
@@ -25,7 +24,7 @@ const (
 	defaultLoopTargetScoreExclusive = 95.0
 )
 
-type StepResult = commandstep.StepResult
+type StepResult = verifycontract.StepResult
 
 type SelfAugmentCandidate = augmentcontract.SelfAugmentCandidate
 type SelfAugmentGoal = augmentcontract.SelfAugmentGoal

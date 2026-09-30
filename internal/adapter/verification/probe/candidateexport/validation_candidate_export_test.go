@@ -1,6 +1,9 @@
 package candidateexport
 
 import (
+	selfaugment "issueops/internal/contract/selfaugment"
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"os"
@@ -42,20 +45,20 @@ func TestValidateCandidateExportWithDepsCoversSuccessAndCommandFailure(t *testin
 			}
 			return nil
 		},
-		Run: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+		Run: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult {
 			calls = append(calls, label+":"+strings.Join(append([]string{name}, args...), " "))
 			if dir != root || timeout != 30*time.Second || stdin != "" || len(env) != 1 || env[0] != "ISSUEOPS_STATE_DIR="+tempState {
 				t.Fatalf("unexpected command envelope: dir=%q label=%q timeout=%s stdin=%q env=%v", dir, label, timeout, stdin, env)
 			}
 			switch label {
 			case "candidate export":
-				return StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: mustMarshalCandidateExportTest(t, export)}
+				return selfverify.StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: mustMarshalCandidateExportTest(t, export)}
 			case "candidate export state read":
-				return StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, snapshot)}})}
+				return selfverify.StepResult{Label: label, Command: calls[len(calls)-1], OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, snapshot)}})}
 			default:
 				t.Fatalf("unexpected label: %s", label)
 			}
-			return StepResult{}
+			return selfverify.StepResult{}
 		},
 	}
 	step := ValidateSelfVerifyCandidateExportWithDeps("bin/issueops", root, 77, deps)
@@ -63,8 +66,8 @@ func TestValidateCandidateExportWithDepsCoversSuccessAndCommandFailure(t *testin
 		t.Fatalf("unexpected candidate export success: step=%+v calls=%v", step, calls)
 	}
 
-	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "candidate export", Command: "export", OK: false, Error: "boom"}
+	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "candidate export", Command: "export", OK: false, Error: "boom"}
 	}
 	failed := ValidateSelfVerifyCandidateExportWithDeps("bin", root, 77, deps)
 	if failed.OK || !strings.Contains(failed.Error, "candidate export: boom") {
@@ -82,30 +85,30 @@ func TestValidateCandidateExportWithDepsCoversParseAndContractFailures(t *testin
 		RemoveAll:     func(string) error { return nil },
 	}
 
-	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "candidate export", OK: true, Stdout: "{"}
+	deps.Run = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "candidate export", OK: true, Stdout: "{"}
 	}
 	badExportJSON := ValidateSelfVerifyCandidateExportWithDeps("bin", root, 5, deps)
 	if badExportJSON.OK || badExportJSON.Error == "" {
 		t.Fatalf("expected export JSON failure, got %+v", badExportJSON)
 	}
 
-	deps.Run = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, _ ...string) StepResult {
+	deps.Run = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, _ ...string) selfverify.StepResult {
 		if label == "candidate export" {
-			return StepResult{Label: label, Command: "export", OK: true, Stdout: mustMarshalCandidateExportTest(t, export)}
+			return selfverify.StepResult{Label: label, Command: "export", OK: true, Stdout: mustMarshalCandidateExportTest(t, export)}
 		}
-		return StepResult{Label: label, Command: "read", OK: true, Stdout: "{"}
+		return selfverify.StepResult{Label: label, Command: "read", OK: true, Stdout: "{"}
 	}
 	badReadJSON := ValidateSelfVerifyCandidateExportWithDeps("bin", root, 5, deps)
 	if badReadJSON.OK || badReadJSON.Error == "" {
 		t.Fatalf("expected read JSON failure, got %+v", badReadJSON)
 	}
 
-	deps.Run = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, _ ...string) StepResult {
+	deps.Run = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, _ ...string) selfverify.StepResult {
 		if label == "candidate export" {
-			return StepResult{Label: label, Command: "export", OK: true, Stdout: mustMarshalCandidateExportTest(t, export)}
+			return selfverify.StepResult{Label: label, Command: "export", OK: true, Stdout: mustMarshalCandidateExportTest(t, export)}
 		}
-		return StepResult{Label: label, Command: "read", OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: "{"}})}
+		return selfverify.StepResult{Label: label, Command: "read", OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: "{"}})}
 	}
 	badSnapshot := ValidateSelfVerifyCandidateExportWithDeps("bin", root, 5, deps)
 	if badSnapshot.OK || !strings.Contains(badSnapshot.Error, "candidate export state snapshot parse") {
@@ -114,11 +117,11 @@ func TestValidateCandidateExportWithDepsCoversParseAndContractFailures(t *testin
 
 	invalidExport := export
 	invalidExport.CandidateCount = 1
-	deps.Run = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, _ ...string) StepResult {
+	deps.Run = func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, _ ...string) selfverify.StepResult {
 		if label == "candidate export" {
-			return StepResult{Label: label, Command: "export", OK: true, Stdout: mustMarshalCandidateExportTest(t, invalidExport)}
+			return selfverify.StepResult{Label: label, Command: "export", OK: true, Stdout: mustMarshalCandidateExportTest(t, invalidExport)}
 		}
-		return StepResult{Label: label, Command: "read", OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, validCandidateExportSnapshot(export))}})}
+		return selfverify.StepResult{Label: label, Command: "read", OK: true, Stdout: mustMarshalCandidateExportTest(t, statecontract.StateResult{OK: true, Record: statecontract.RecordEnvelope{Content: mustMarshalCandidateExportTest(t, validCandidateExportSnapshot(export))}})}
 	}
 	contractFailure := ValidateSelfVerifyCandidateExportWithDeps("bin", root, 5, deps)
 	if contractFailure.OK || !strings.Contains(contractFailure.Error, "candidate export did not include the candidate curriculum") {
@@ -132,25 +135,25 @@ func TestValidateCandidateExportWithDepsCoversParseAndContractFailures(t *testin
 	}
 }
 
-func validCandidateExportResult(key string) SelfVerificationCandidateExportResult {
-	candidates := make([]SelfVerificationCandidate, 10)
+func validCandidateExportResult(key string) selfaugment.SelfVerificationCandidateExportResult {
+	candidates := make([]selfverify.SelfVerificationCandidate, 10)
 	for i := range candidates {
-		candidates[i] = SelfVerificationCandidate{ID: string(rune('a' + i)), Status: selfAugmentCandidateStatusSatisfied}
+		candidates[i] = selfverify.SelfVerificationCandidate{ID: string(rune('a' + i)), Status: selfaugment.CandidateStatusSatisfied}
 	}
-	return SelfVerificationCandidateExportResult{
+	return selfaugment.SelfVerificationCandidateExportResult{
 		OK:                    true,
-		Kind:                  selfVerificationCandidateExportKind,
+		Kind:                  selfaugment.SelfVerificationCandidateExportKind,
 		LoopKind:              "self_verification",
 		CandidateCount:        len(candidates),
 		SatisfiedCandidateIDs: []string{"completion-evidence-audit", "self-verify-candidate-export", "self-verify-step-budget-baseline", "self-verify-install-dry-run-smoke"},
 		Candidates:            candidates,
-		StateCheckpoint:       &SelfAugmentStateCheckpoint{OK: true, Key: key},
+		StateCheckpoint:       &selfaugment.SelfAugmentStateCheckpoint{OK: true, Key: key},
 	}
 }
 
-func validCandidateExportSnapshot(result SelfVerificationCandidateExportResult) SelfVerificationCandidateExportStateSnapshot {
-	return SelfVerificationCandidateExportStateSnapshot{
-		Kind:                  selfVerificationCandidateExportKind,
+func validCandidateExportSnapshot(result selfaugment.SelfVerificationCandidateExportResult) selfaugment.SelfVerificationCandidateExportStateSnapshot {
+	return selfaugment.SelfVerificationCandidateExportStateSnapshot{
+		Kind:                  selfaugment.SelfVerificationCandidateExportKind,
 		LoopKind:              result.LoopKind,
 		OK:                    true,
 		CandidateCount:        result.CandidateCount,

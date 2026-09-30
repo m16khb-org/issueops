@@ -13,34 +13,29 @@ import (
 )
 
 const (
-	selfVerifyCommandOutputBudgetBytes   = 32 * 1024
-	selfVerifyAggregateOutputBudgetBytes = riskqaapp.AggregateOutputBudgetBytes
-	riskQARaceTimeout                    = 10 * time.Minute
-	riskQAVetTimeout                     = 120 * time.Second
-	fullRaceCommand                      = riskqadomain.FullRaceCommand
+	selfVerifyCommandOutputBudgetBytes = 32 * 1024
+
+	riskQARaceTimeout = 10 * time.Minute
+	riskQAVetTimeout  = 120 * time.Second
 )
 
-type RiskQATierPlan = riskqacontract.RiskQATierPlan
-
-type StepResult = verifycontract.StepResult
-
-func Validate(root string) StepResult {
+func Validate(root string) verifycontract.StepResult {
 	return ValidateWithDeps(root, defaultDeps())
 }
 
-func ValidateForSelfVerify(root string) (StepResult, bool) {
+func ValidateForSelfVerify(root string) (verifycontract.StepResult, bool) {
 	deps := defaultDeps()
 	plan := deps.Plan(root)
-	deps.Plan = func(string) RiskQATierPlan { return plan }
+	deps.Plan = func(string) riskqacontract.RiskQATierPlan { return plan }
 	return ValidateWithDeps(root, deps), riskqadomain.CoversFullGoTest(plan)
 }
 
-func defaultDeps() Deps {
-	return Deps{
+func defaultDeps() riskqaapp.ExecuteDeps {
+	return riskqaapp.ExecuteDeps{
 		Plan: Plan,
-		Run: func(root string, command string) StepResult {
+		Run: func(root string, command string) verifycontract.StepResult {
 			switch command {
-			case fullRaceCommand:
+			case riskqadomain.FullRaceCommand:
 				return verification.Run(root, "risk QA race test", riskQARaceTimeout, "", selfVerifyCommandOutputBudgetBytes, "go", "test", "-race", "./...", "-count=1")
 			case "go vet ./...":
 				return verification.Run(root, "risk QA static vet", riskQAVetTimeout, "", selfVerifyCommandOutputBudgetBytes, "go", "vet", "./...")
@@ -51,9 +46,7 @@ func defaultDeps() Deps {
 	}
 }
 
-type Deps = riskqaapp.ExecuteDeps
-
-func ValidateWithDeps(root string, deps Deps) StepResult {
+func ValidateWithDeps(root string, deps riskqaapp.ExecuteDeps) verifycontract.StepResult {
 	if deps.RenderPlan == nil {
 		deps.RenderPlan = PlanJSON
 	}

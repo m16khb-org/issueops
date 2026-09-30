@@ -1,6 +1,8 @@
 package issueopsapp
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"time"
 
 	"issueops/cmd/issueops/commandstep"
@@ -8,11 +10,11 @@ import (
 	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
-func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult {
 	return verification.RunEnv(dir, label, timeout, stdin, env, selfVerifyCommandOutputBudgetBytes, name, args...)
 }
 
-func runCommandStepEnvWithBudget(dir, label string, timeout time.Duration, stdin string, env []string, outputBudget int, name string, args ...string) StepResult {
+func runCommandStepEnvWithBudget(dir, label string, timeout time.Duration, stdin string, env []string, outputBudget int, name string, args ...string) selfverify.StepResult {
 	return verification.RunEnv(dir, label, timeout, stdin, env, outputBudget, name, args...)
 }
 
@@ -28,15 +30,15 @@ func budgetCommandOutput(s string, budget int) (string, bool, int) {
 	return commandstep.BudgetCommandOutput(s, budget)
 }
 
-func combineFailedStep(label string, started time.Time, child StepResult, stdoutParts []string, commands []string) StepResult {
+func combineFailedStep(label string, started time.Time, child selfverify.StepResult, stdoutParts []string, commands []string) selfverify.StepResult {
 	return commandstep.CombineFailedStep(label, started, child, stdoutParts, commands, selfVerifyAggregateOutputBudgetBytes)
 }
 
-func assertionStep(label string, started time.Time, errs []string) StepResult {
+func assertionStep(label string, started time.Time, errs []string) selfverify.StepResult {
 	return commandstep.AssertionStep(label, started, errs)
 }
 
-func assertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string) StepResult {
+func assertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string) selfverify.StepResult {
 	return commandstep.AssertionStepWithOutput(label, started, errs, stdoutParts, commands, selfVerifyAggregateOutputBudgetBytes)
 }
 

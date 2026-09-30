@@ -1,17 +1,20 @@
 package probe
 
+import (
+	selfaugment "issueops/internal/contract/selfaugment"
+	selfverify "issueops/internal/contract/selfverify"
+)
+
 import "issueops/internal/adapter/verification/probe/candidateexport"
 
-type CandidateExportValidationDeps = candidateexport.CandidateExportValidationDeps
-
-func ValidateSelfVerifyCandidateExport(binary, root string, seed int64) StepResult {
+func ValidateSelfVerifyCandidateExport(binary, root string, seed int64) selfverify.StepResult {
 	return candidateexport.ValidateSelfVerifyCandidateExport(binary, root, seed)
 }
 
-func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, deps CandidateExportValidationDeps) StepResult {
+func ValidateSelfVerifyCandidateExportWithDeps(binary, root string, seed int64, deps candidateexport.CandidateExportValidationDeps) selfverify.StepResult {
 	return candidateexport.ValidateSelfVerifyCandidateExportWithDeps(binary, root, seed, deps)
 }
 
-func CandidateExportValidationErrors(key string, exportResult SelfVerificationCandidateExportResult, snapshot SelfVerificationCandidateExportStateSnapshot) []string {
+func CandidateExportValidationErrors(key string, exportResult selfaugment.SelfVerificationCandidateExportResult, snapshot selfaugment.SelfVerificationCandidateExportStateSnapshot) []string {
 	return candidateexport.CandidateExportValidationErrors(key, exportResult, snapshot)
 }

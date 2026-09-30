@@ -1,6 +1,8 @@
 package preflightfuzz
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"os"
 	"time"
@@ -9,7 +11,7 @@ import (
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
-type preflightFuzzCommandRunner func(root, label string, timeout time.Duration, input string, command ...string) StepResult
+type preflightFuzzCommandRunner func(root, label string, timeout time.Duration, input string, command ...string) selfverify.StepResult
 type preflightFuzzGitRunner func(dir string, args ...string) (int, string, string)
 
 type preflightFuzzValidationDeps struct {
@@ -36,7 +38,7 @@ func (deps preflightFuzzValidationDeps) withDefaults() preflightFuzzValidationDe
 	return deps
 }
 
-func runPreflightFuzzCommand(root, label string, timeout time.Duration, input string, command ...string) StepResult {
+func runPreflightFuzzCommand(root, label string, timeout time.Duration, input string, command ...string) selfverify.StepResult {
 	if len(command) == 0 {
 		return verifydomain.FailedStep(label, fmt.Errorf("missing command"))
 	}

@@ -115,7 +115,7 @@ func newIssueOpsPreparationService(stateRoot, id string, deps issueOpsPreparatio
 	}
 	operationID := deps.NewOperationID
 	if operationID == nil {
-		operationID = issueops.NewExecutionPreparationOperationID
+		operationID = issueops.NewExecutionOperationID
 	}
 	return preparationapp.NewService(repository, preparationClock{now}, preparationOperationIDs{operationID}, direct, gateway, evidence), nil
 }

@@ -13,9 +13,7 @@ import (
 
 const skillName = "atomic-commit-push"
 
-type StepResult = verifycontract.StepResult
-
-func ValidateHarnessInvariants(root string) StepResult {
+func ValidateHarnessInvariants(root string) verifycontract.StepResult {
 	started := time.Now()
 	errs := []string{}
 	required := []string{
@@ -63,7 +61,7 @@ func ValidateHarnessInvariants(root string) StepResult {
 	return verifydomain.AssertionStep("harness invariants", time.Since(started).Milliseconds(), errs)
 }
 
-func validateHarnessInvariants(root string) StepResult {
+func validateHarnessInvariants(root string) verifycontract.StepResult {
 	return ValidateHarnessInvariants(root)
 }
 

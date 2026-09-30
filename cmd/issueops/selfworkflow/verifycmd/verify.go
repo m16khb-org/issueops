@@ -1,6 +1,8 @@
 package verifycmd
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"flag"
 	"fmt"
 	"io"
@@ -18,7 +20,7 @@ type Deps struct {
 	ProgressWriter      io.Writer
 	NewProgressReporter func(string, io.Writer) (*progress.SelfVerifyProgressReporter, error)
 	Verify              func(application.LoopRequest) (model.SelfAugmentResult, error)
-	ApplyLLMEval        func(model.SelfAugmentResult, llmeval.SelfVerifyLLMEvalOptions) (model.SelfAugmentResult, error)
+	ApplyLLMEval        func(model.SelfAugmentResult, selfverify.LLMEvalOptions) (model.SelfAugmentResult, error)
 	SaveSummary         func(*model.SelfAugmentResult, string) error
 	PrintJSON           func(any) error
 }

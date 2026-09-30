@@ -1,6 +1,8 @@
 package llmeval
 
 import (
+	selfaugment "issueops/internal/contract/selfaugment"
+
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -12,7 +14,7 @@ import (
 
 const selfVerifyLLMEvalErrorBudgetBytes = 512
 
-func DecodeSelfVerifyLLMEval(out []byte, eval *SelfVerifyLLMEvalResult) error {
+func DecodeSelfVerifyLLMEval(out []byte, eval *selfaugment.SelfVerifyLLMEvalResult) error {
 	trimmed := bytes.TrimSpace(out)
 	if err := DecodeSelfVerifyLLMEvalStrict(trimmed, eval); err == nil {
 		return nil
@@ -26,7 +28,7 @@ func DecodeSelfVerifyLLMEval(out []byte, eval *SelfVerifyLLMEvalResult) error {
 	}
 }
 
-func DecodeSelfVerifyLLMEvalStrict(out []byte, eval *SelfVerifyLLMEvalResult) error {
+func DecodeSelfVerifyLLMEvalStrict(out []byte, eval *selfaugment.SelfVerifyLLMEvalResult) error {
 	decoder := json.NewDecoder(bytes.NewReader(out))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(eval); err != nil {

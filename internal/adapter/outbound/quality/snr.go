@@ -11,9 +11,7 @@ import (
 	"strings"
 )
 
-type SNRResult = contract.SNRResult
-
-func ComputeCodeSNR(root string) (SNRResult, error) {
+func ComputeCodeSNR(root string) (contract.SNRResult, error) {
 	var signal, noise int
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -38,14 +36,14 @@ func ComputeCodeSNR(root string) (SNRResult, error) {
 		return nil
 	})
 	if err != nil {
-		return SNRResult{}, err
+		return contract.SNRResult{}, err
 	}
 	total := signal + noise
 	ratio := 0.0
 	if total > 0 {
 		ratio = math.Round(float64(signal)/float64(total)*10000) / 10000
 	}
-	return SNRResult{SignalLines: signal, NoiseLines: noise, TotalLines: total, Ratio: ratio}, nil
+	return contract.SNRResult{SignalLines: signal, NoiseLines: noise, TotalLines: total, Ratio: ratio}, nil
 }
 
 func snrCountFile(path string) (signal, noise int, err error) {

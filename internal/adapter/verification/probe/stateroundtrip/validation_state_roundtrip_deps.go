@@ -9,25 +9,14 @@ import (
 	augmentcontract "issueops/internal/contract/selfaugment"
 	verifycontract "issueops/internal/contract/selfverify"
 	statecontract "issueops/internal/contract/state"
-	augmentdomain "issueops/internal/domain/selfaugment"
+
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
 const aggregateOutputBudgetBytes = 8 * 1024
 const commandOutputBudgetBytes = 32 * 1024
-const selfVerificationSummaryKind = augmentdomain.SelfVerificationSummaryKind
 
-type StepResult = verifycontract.StepResult
-type SelfAugmentCompareResult = augmentcontract.SelfAugmentCompareResult
-type SelfAugmentHistoryEntry = augmentcontract.SelfAugmentHistoryEntry
-type SelfAugmentHistoryResult = augmentcontract.SelfAugmentHistoryResult
-type SelfAugmentHistoryRetention = augmentcontract.SelfAugmentHistoryRetention
-type SelfAugmentPromoteResult = augmentcontract.SelfAugmentPromoteResult
-type SelfAugmentSlowStep = augmentcontract.SelfAugmentSlowStep
-type SelfAugmentStateSnapshot = augmentcontract.SelfAugmentStateSnapshot
-type SelfAugmentSummary = augmentcontract.SelfAugmentSummary
-
-type stateRoundtripCommandRunner func(root, label string, timeout time.Duration, input string, env []string, command ...string) StepResult
+type stateRoundtripCommandRunner func(root, label string, timeout time.Duration, input string, env []string, command ...string) verifycontract.StepResult
 
 type stateRoundtripValidationDeps struct {
 	writeRecord   func(string, string, statecontract.RecordEnvelope) (string, error)
@@ -36,7 +25,7 @@ type stateRoundtripValidationDeps struct {
 	removeAll     func(string) error
 	writeFile     func(string, []byte, os.FileMode) error
 	stateRead     func(string, string) (statecontract.StateResult, error)
-	writeSnapshot func(string, string, SelfAugmentStateSnapshot) error
+	writeSnapshot func(string, string, augmentcontract.SelfAugmentStateSnapshot) error
 	run           stateRoundtripCommandRunner
 }
 
@@ -51,7 +40,7 @@ func (deps stateRoundtripValidationDeps) withDefaults() stateRoundtripValidation
 		deps.writeFile = os.WriteFile
 	}
 	if deps.run == nil {
-		deps.run = func(root, label string, timeout time.Duration, input string, env []string, command ...string) StepResult {
+		deps.run = func(root, label string, timeout time.Duration, input string, env []string, command ...string) verifycontract.StepResult {
 			if len(command) == 0 {
 				return failedStep(label, fmt.Errorf("missing command"))
 			}
@@ -61,19 +50,19 @@ func (deps stateRoundtripValidationDeps) withDefaults() stateRoundtripValidation
 	return deps
 }
 
-func runCommandStepEnv(root, label string, timeout time.Duration, input string, env []string, name string, args ...string) StepResult {
+func runCommandStepEnv(root, label string, timeout time.Duration, input string, env []string, name string, args ...string) verifycontract.StepResult {
 	return verification.RunEnv(root, label, timeout, input, env, commandOutputBudgetBytes, name, args...)
 }
 
-func failedStep(label string, err error) StepResult {
+func failedStep(label string, err error) verifycontract.StepResult {
 	return verifydomain.FailedStep(label, err)
 }
 
-func assertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string) StepResult {
+func assertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string) verifycontract.StepResult {
 	return verifydomain.AssertionStepWithOutput(label, time.Since(started).Milliseconds(), errs, stdoutParts, commands, aggregateOutputBudgetBytes)
 }
 
-func combineFailedStep(label string, started time.Time, child StepResult, stdoutParts []string, commands []string) StepResult {
+func combineFailedStep(label string, started time.Time, child verifycontract.StepResult, stdoutParts []string, commands []string) verifycontract.StepResult {
 	return verifydomain.CombineFailedStep(label, time.Since(started).Milliseconds(), child, stdoutParts, commands, aggregateOutputBudgetBytes)
 }
 

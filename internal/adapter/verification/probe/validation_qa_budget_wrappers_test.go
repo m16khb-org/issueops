@@ -1,6 +1,8 @@
 package probe
 
 import (
+	selfaugment "issueops/internal/contract/selfaugment"
+
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -66,15 +68,15 @@ esac
 	return path
 }
 
-func validStepBudgetWrapperCompareResult() SelfAugmentCompareResult {
-	return SelfAugmentCompareResult{
+func validStepBudgetWrapperCompareResult() selfaugment.SelfAugmentCompareResult {
+	return selfaugment.SelfAugmentCompareResult{
 		OK:        true,
 		Regressed: true,
 		Regressions: []string{
 			"step_budget:docs index smoke_p95_increased_by_30.00_pct",
 		},
-		SlowStepRegressions: []SelfAugmentSlowStepRegression{},
-		StepBudgetRegressions: []SelfAugmentStepBudgetRegression{
+		SlowStepRegressions: []selfaugment.SelfAugmentSlowStepRegression{},
+		StepBudgetRegressions: []selfaugment.SelfAugmentStepBudgetRegression{
 			{Label: "docs index smoke", Metric: "p95_duration_ms", DeltaMS: 30, DeltaPct: 30},
 		},
 	}

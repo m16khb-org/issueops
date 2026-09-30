@@ -1,6 +1,8 @@
 package projectdocs
 
 import (
+	projectdoc "issueops/internal/domain/projectdoc"
+
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,20 +11,20 @@ import (
 
 func RenderAgentsWithBlock(root, existing string) string {
 	bullets := []string{
-		"- Architecture or large design changes: " + ProjectDocsDir + "/ARCHITECTURE.md, " + ProjectDocsDir + "/CONSTITUTION.md",
-		"- Testing or verification changes: " + ProjectDocsDir + "/TESTING.md",
-		"- Endpoint/DTO/OpenAPI changes: " + ProjectDocsDir + "/OPEN_API_SPEC.md",
-		"- Commit or PR work: " + ProjectDocsDir + "/COMMIT_POLICY.md",
-		"- Code style or structure changes: " + ProjectDocsDir + "/CONVENTIONS.md",
-		"- Dependency or tech-stack changes: " + ProjectDocsDir + "/TECH_STACK.md",
-		"- Run, deploy, environment, or local development: " + ProjectDocsDir + "/OPERATIONS.md",
-		"- Agent start, verification, and completion workflow: " + ProjectDocsDir + "/AGENT_WORKFLOW.md",
-		"- Risky or recurring-failure work: " + ProjectDocsDir + "/CAUTIONS.md",
-		"- Structural rationale, alternatives, and decisions: " + ProjectDocsDir + "/ADR.md",
-		"- Session start, instruction conflicts, and principle decisions: " + ProjectDocsDir + "/CONSTITUTION.md",
+		"- Architecture or large design changes: " + projectdoc.ProjectDocsDir + "/ARCHITECTURE.md, " + projectdoc.ProjectDocsDir + "/CONSTITUTION.md",
+		"- Testing or verification changes: " + projectdoc.ProjectDocsDir + "/TESTING.md",
+		"- Endpoint/DTO/OpenAPI changes: " + projectdoc.ProjectDocsDir + "/OPEN_API_SPEC.md",
+		"- Commit or PR work: " + projectdoc.ProjectDocsDir + "/COMMIT_POLICY.md",
+		"- Code style or structure changes: " + projectdoc.ProjectDocsDir + "/CONVENTIONS.md",
+		"- Dependency or tech-stack changes: " + projectdoc.ProjectDocsDir + "/TECH_STACK.md",
+		"- Run, deploy, environment, or local development: " + projectdoc.ProjectDocsDir + "/OPERATIONS.md",
+		"- Agent start, verification, and completion workflow: " + projectdoc.ProjectDocsDir + "/AGENT_WORKFLOW.md",
+		"- Risky or recurring-failure work: " + projectdoc.ProjectDocsDir + "/CAUTIONS.md",
+		"- Structural rationale, alternatives, and decisions: " + projectdoc.ProjectDocsDir + "/ADR.md",
+		"- Session start, instruction conflicts, and principle decisions: " + projectdoc.ProjectDocsDir + "/CONSTITUTION.md",
 	}
 	if designDocExists(root) {
-		bullets = append(bullets, "- UI, styling, or design-system changes: "+ProjectDocsDir+"/DESIGN.md (client repositories only)")
+		bullets = append(bullets, "- UI, styling, or design-system changes: "+projectdoc.ProjectDocsDir+"/DESIGN.md (client repositories only)")
 	}
 	block := strings.TrimSpace(fmt.Sprintf(`%s
 ## issueops project docs
@@ -30,17 +32,17 @@ func RenderAgentsWithBlock(root, existing string) string {
 This repository uses issueops project docs. Read existing AGENTS.md rules first, then read only the additional documents relevant to the task.
 
 %s
-%s`, agentsStartMarker, strings.Join(bullets, "\n"), agentsEndMarker)) + "\n"
+%s`, projectdoc.AgentsStartMarker, strings.Join(bullets, "\n"), projectdoc.AgentsEndMarker)) + "\n"
 	path := filepath.Join(root, "AGENTS.md")
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return strings.TrimRight(behavioralGuidelines, "\n") + "\n\n---\n\n" + block + "\n"
+		return strings.TrimRight(projectdoc.BehavioralGuidelines, "\n") + "\n\n---\n\n" + block + "\n"
 	}
 	text := ensureBehavioralGuidelinesAtTop(string(b))
-	start := strings.Index(text, agentsStartMarker)
-	end := strings.Index(text, agentsEndMarker)
+	start := strings.Index(text, projectdoc.AgentsStartMarker)
+	end := strings.Index(text, projectdoc.AgentsEndMarker)
 	if start >= 0 && end > start {
-		end += len(agentsEndMarker)
+		end += len(projectdoc.AgentsEndMarker)
 		return strings.TrimRight(text[:start], "\n") + "\n\n" + block + strings.TrimLeft(text[end:], "\n")
 	}
 	return strings.TrimRight(text, "\n") + "\n\n" + block
@@ -51,7 +53,7 @@ This repository uses issueops project docs. Read existing AGENTS.md rules first,
 // DESIGN.md that stays authoritative for the design system.
 func designDocExists(root string) bool {
 	for _, rel := range []string{
-		filepath.Join(ProjectDocsDir, "DESIGN.md"),
+		filepath.Join(projectdoc.ProjectDocsDir, "DESIGN.md"),
 		"DESIGN.md",
 	} {
 		if info, err := os.Stat(filepath.Join(root, rel)); err == nil && !info.IsDir() {
@@ -73,5 +75,5 @@ func ensureBehavioralGuidelinesAtTop(text string) string {
 	if strings.HasPrefix(trimmed, "# ") {
 		return text
 	}
-	return strings.TrimRight(behavioralGuidelines, "\n") + "\n\n---\n\n" + strings.TrimLeft(text, "\n")
+	return strings.TrimRight(projectdoc.BehavioralGuidelines, "\n") + "\n\n---\n\n" + strings.TrimLeft(text, "\n")
 }

@@ -6,56 +6,40 @@ import (
 	"time"
 
 	verification "issueops/internal/adapter/verification"
-	augmentcontract "issueops/internal/contract/selfaugment"
+
 	verifycontract "issueops/internal/contract/selfverify"
-	augmentdomain "issueops/internal/domain/selfaugment"
+
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
 const selfVerifyCommandOutputBudgetBytes = 32 * 1024
 const selfVerifyAggregateOutputBudgetBytes = 8 * 1024
 
-type StepResult = verifycontract.StepResult
-type SelfAugmentCompareResult = augmentcontract.SelfAugmentCompareResult
-type SelfAugmentSlowStepRegression = augmentcontract.SelfAugmentSlowStepRegression
-type SelfAugmentStateSnapshot = augmentcontract.SelfAugmentStateSnapshot
-type SelfAugmentStateCheckpoint = augmentcontract.SelfAugmentStateCheckpoint
-type SelfAugmentStepBudgetRegression = augmentcontract.SelfAugmentStepBudgetRegression
-type SelfAugmentSummary = augmentcontract.SelfAugmentSummary
-type SelfVerificationCandidateExportResult = augmentcontract.SelfVerificationCandidateExportResult
-type SelfVerificationCandidate = verifycontract.SelfVerificationCandidate
-type SelfVerificationCandidateExportStateSnapshot = augmentcontract.SelfVerificationCandidateExportStateSnapshot
-
-const selfVerificationCandidateExportKind = augmentcontract.SelfVerificationCandidateExportKind
-const selfVerificationKoreanName = augmentcontract.SelfVerificationKoreanName
-const selfVerificationSummaryKind = augmentdomain.SelfVerificationSummaryKind
-const selfAugmentCandidateStatusSatisfied = augmentcontract.CandidateStatusSatisfied
-
-func runCommandStep(dir, label string, timeout time.Duration, stdin string, name string, args ...string) StepResult {
+func runCommandStep(dir, label string, timeout time.Duration, stdin string, name string, args ...string) verifycontract.StepResult {
 	return verification.Run(dir, label, timeout, stdin, selfVerifyCommandOutputBudgetBytes, name, args...)
 }
 
-func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult {
 	return verification.RunEnv(dir, label, timeout, stdin, env, selfVerifyCommandOutputBudgetBytes, name, args...)
 }
 
-func runCommandStepEnvWithBudget(dir, label string, timeout time.Duration, stdin string, env []string, outputBudget int, name string, args ...string) StepResult {
+func runCommandStepEnvWithBudget(dir, label string, timeout time.Duration, stdin string, env []string, outputBudget int, name string, args ...string) verifycontract.StepResult {
 	return verification.RunEnv(dir, label, timeout, stdin, env, outputBudget, name, args...)
 }
 
-func combineFailedStep(label string, started time.Time, child StepResult, stdoutParts []string, commands []string) StepResult {
+func combineFailedStep(label string, started time.Time, child verifycontract.StepResult, stdoutParts []string, commands []string) verifycontract.StepResult {
 	return verifydomain.CombineFailedStep(label, time.Since(started).Milliseconds(), child, stdoutParts, commands, selfVerifyAggregateOutputBudgetBytes)
 }
 
-func assertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string) StepResult {
+func assertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string) verifycontract.StepResult {
 	return verifydomain.AssertionStepWithOutput(label, time.Since(started).Milliseconds(), errs, stdoutParts, commands, selfVerifyAggregateOutputBudgetBytes)
 }
 
-func assertionStep(label string, started time.Time, errs []string) StepResult {
+func assertionStep(label string, started time.Time, errs []string) verifycontract.StepResult {
 	return verifydomain.AssertionStep(label, time.Since(started).Milliseconds(), errs)
 }
 
-func failedStep(label string, err error) StepResult {
+func failedStep(label string, err error) verifycontract.StepResult {
 	return verifydomain.FailedStep(label, err)
 }
 

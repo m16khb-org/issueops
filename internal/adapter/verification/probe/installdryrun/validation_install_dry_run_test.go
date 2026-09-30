@@ -1,6 +1,8 @@
 package installdryrun
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"errors"
 	"os"
@@ -58,7 +60,7 @@ func TestValidateInstallDryRunSmokeWithDepsCoversSuccessAndSetupFailures(t *test
 			return nil
 		},
 		exists: func(string) bool { return false },
-		run: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) StepResult {
+		run: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult {
 			if dir != root || label != "install dry-run smoke" || timeout != 30*time.Second || stdin != "" {
 				t.Fatalf("unexpected command envelope: dir=%q label=%q timeout=%s stdin=%q", dir, label, timeout, stdin)
 			}
@@ -69,7 +71,7 @@ func TestValidateInstallDryRunSmokeWithDepsCoversSuccessAndSetupFailures(t *test
 			if command != "bin/issueops install --dry-run --project-local --json" {
 				t.Fatalf("unexpected command: %s", command)
 			}
-			return StepResult{Label: label, Command: command, OK: true, Stdout: mustMarshalInstallDryRunTest(t, validInstallDryRunResult())}
+			return selfverify.StepResult{Label: label, Command: command, OK: true, Stdout: mustMarshalInstallDryRunTest(t, validInstallDryRunResult())}
 		},
 	}
 	step := validateInstallDryRunSmokeWithDeps("bin/issueops", root, 23, deps)
@@ -113,16 +115,16 @@ func TestValidateInstallDryRunSmokeWithDepsCoversCommandParseAndContractFailures
 		exists:     func(string) bool { return false },
 	}
 
-	deps.run = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "install dry-run smoke", Command: "install", OK: false, Error: "boom"}
+	deps.run = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "install dry-run smoke", Command: "install", OK: false, Error: "boom"}
 	}
 	commandFailure := validateInstallDryRunSmokeWithDeps("bin", root, 3, deps)
 	if commandFailure.OK || commandFailure.Error != "boom" {
 		t.Fatalf("unexpected command failure: %+v", commandFailure)
 	}
 
-	deps.run = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "install dry-run smoke", Command: "install", OK: true, Stdout: "{"}
+	deps.run = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "install dry-run smoke", Command: "install", OK: true, Stdout: "{"}
 	}
 	parseFailure := validateInstallDryRunSmokeWithDeps("bin", root, 3, deps)
 	if parseFailure.OK || parseFailure.Error == "" {
@@ -137,8 +139,8 @@ func TestValidateInstallDryRunSmokeWithDepsCoversCommandParseAndContractFailures
 	invalidResult.Files[0].WouldWrite = false
 	invalidResult.Links[0].Created = true
 	invalidResult.Links[0].WouldCreate = false
-	deps.run = func(string, string, time.Duration, string, []string, string, ...string) StepResult {
-		return StepResult{Label: "install dry-run smoke", Command: "install", OK: true, Stdout: mustMarshalInstallDryRunTest(t, invalidResult)}
+	deps.run = func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
+		return selfverify.StepResult{Label: "install dry-run smoke", Command: "install", OK: true, Stdout: mustMarshalInstallDryRunTest(t, invalidResult)}
 	}
 	deps.exists = func(path string) bool {
 		return strings.HasSuffix(path, filepath.Join(tempRoot, ".mcp.json"))
