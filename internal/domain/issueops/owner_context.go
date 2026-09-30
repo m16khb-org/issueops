@@ -213,14 +213,9 @@ func OwnerCommandsFor(record issueops.IssueOpsRecord, req issueops.ExecutionPrep
 	complete := "issueops execution complete --id " + quoteReplacementArg(record.ID) +
 		" --generation " + strconv.FormatUint(generation, 10) + " --final-head <FINAL_HEAD> --verification-report " + quoteReplacementArg(paths.Report) +
 		" --remote-artifact-url <DRAFT_PR_OR_MR_URL> --verification <VERIFICATION_EVIDENCE> " + actorFlags + " --confirm --json"
-	plannerModel, plannerEffort := policy.ReviewerModel, policy.ReviewerEffort
 	implementationReview := "issueops implementation-review record --id " + quoteReplacementArg(record.ID) +
 		" --verdict <VERDICT> --finding <FINDING> --evidence <EVIDENCE> --reviewer-host " + strings.ToLower(strings.TrimSpace(req.OwnerHost)) +
-		" --reviewer-model " + quoteReplacementArg(plannerModel)
-	if strings.TrimSpace(plannerEffort) != "" {
-		implementationReview += " --reviewer-effort " + quoteReplacementArg(plannerEffort)
-	}
-	implementationReview += " " + shortActor + " --json"
+		" --reviewer-model <REVIEWER_MODEL> --reviewer-effort <REVIEWER_EFFORT> " + shortActor + " --json"
 	projectDocsReview := "issueops project-docs-review record --id " + quoteReplacementArg(record.ID) +
 		" --verdict <PROJECT_DOCS_VERDICT> --doc <UPDATED_DOC_PATH> --reviewed-doc <REVIEWED_DOC_PATH> --evidence <PROJECT_DOCS_EVIDENCE> " + shortActor + " --json"
 	schemaEvidence := "issueops schema-evidence record --id " + quoteReplacementArg(record.ID) +

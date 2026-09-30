@@ -32,8 +32,8 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
 - owner_host={OWNER_HOST}
 - owner_model={OWNER_MODEL}
 - owner_effort={OWNER_EFFORT}
-- reviewer_model={REVIEWER_MODEL} (구현 diff design-review 리뷰 전용 planner급 모델)
-- reviewer_effort={REVIEWER_EFFORT}
+- reviewer_model={REVIEWER_MODEL} (준비 당시 기본값; 구현 리뷰는 실행 직전 next.review를 따른다)
+- reviewer_effort={REVIEWER_EFFORT} (준비 당시 기본값)
 - research_model={RESEARCH_MODEL}
 - research_effort={RESEARCH_EFFORT}
 - source_root={SOURCE_ROOT}
@@ -45,7 +45,7 @@ canonical isolated worktree만 구현한다. coordinator의 응답이나 생존�
 - lease_generation={LEASE_GENERATION}
 
 모델 역할:
-- 구현은 위 owner_model이 맡고, 계획과 독립 리뷰는 reviewer_model을 사용한다.
+- 구현은 위 owner_model이 맡고, 계획은 위 reviewer_model을 사용하고, 구현의 독립 리뷰는 아래 publication 절차에서 현재 설정을 읽는다.
 - research_model이 지정돼 있고 사용자·저장소 지침이 위임을 허용한 경우에만, 범위가 좁고
   독립적인 읽기 전용 탐색·자료 요약에 해당 모델과 research_effort를 사용한다.
 - 조사 모델에 구현, 계획 확정, 승인·리뷰 게이트 판정을 맡기지 않는다. 조사 결과는 owner가
@@ -164,11 +164,17 @@ publication과 종료:
    스캔 대신 카탈로그 조회와 추정 row 수를 쓴다. 관찰이 불가능하면 근거를 적어 waive한다.
    스키마 변경이 없으면 이 단계는 요구되지 않는다:
    {SCHEMA_EVIDENCE_COMMAND}
-5. 모든 acceptance와 승인된 verification이 PASS한 뒤, planner급 모델 {REVIEWER_MODEL}
-   ({REVIEWER_EFFORT})의 fresh 서브에이전트로 구현 diff에 대한 design-review 적대 리뷰를
-   수행한다. 실제 verdict와 findings/evidence를 다음 command로 기록한다. verdict가 `revise`면
-   지적을 수정하고, verdict가 `stop`이면 publication을 멈춘다. 수정·재리뷰·중단은
-   `issueops-review`의 유한한 루프와 승인 범위를 따른다. `pass`일 때만 commit/push/PR로 진행한다:
+5. 모든 acceptance와 승인된 verification이 PASS한 뒤, 리뷰 실행 직전에
+   `issueops next --id {LIFECYCLE_ID} --json`을 읽는다. 현재 `.review.model`, `.review.effort`,
+   `.review.tier`, `.review.lenses`를 `issueops-review`에 전달해 fresh 컨텍스트에서 구현 diff의
+   design-review 적대 리뷰를 수행한다. 조회 실패나 review 값 누락은 준비 당시 기본값으로
+   대체하지 않고 `issueops-review`의 중단 규칙을 따른다. 명시적 reviewer 지정과 라운드 상승도
+   그 스킬을 따르며 owner_model/owner_effort 지정은 reviewer override가 아니다.
+   실제 verdict와 findings/evidence를 다음 command로 기록한다. `<REVIEWER_MODEL>`과
+   `<REVIEWER_EFFORT>`는 라운드 상승을 적용한 뒤 실제 리뷰 실행에 넘긴 값으로 shell-quote해
+   채운다. 실행값과 기록값이 같아야 한다. verdict가 `revise`면 지적을 수정하고,
+   verdict가 `stop`이면 publication을 멈춘다. 수정·재리뷰·중단은 `issueops-review`의 유한한
+   루프와 승인 범위를 따른다. `pass`일 때만 commit/push/PR로 진행한다:
    {IMPLEMENTATION_REVIEW_COMMAND}
 6. 리뷰가 봉인한 diff를 더 수정하지 않고 atomic-commit-push 계약으로 commit/push한다. 변경이
    필요해지면 cleanup 검증과 구현 리뷰를 새 fingerprint로 다시 수행한다.

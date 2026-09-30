@@ -24,17 +24,21 @@ description: Use when issueops-plan or issueops-verify needs an independent revi
 | `plan` | `status --json`의 `plan_path` 파일 전체(링크 전이면 staged plan artifact) | 이슈 본문, intent contract의 성공 기준, design review 본문 |
 | `diff` | `git -C "$WORKTREE" diff "$BASE_SHA"` 전체 | plan 파일 전체, 봉인 intent 문서(`<artifact_dir>/intent.md`, 없으면 `status --json`의 `.intent`), 검증 명령과 결과, 변경한 프로젝트 문서 |
 
-리뷰어 모델과 effort는 다음 명령이 돌려준다.
+리뷰를 실행하기 직전에 exact lifecycle ID로 다음 명령을 읽는다. 준비 자료의
+reviewer 메타데이터는 준비 당시 기본값이며 현재 리뷰 설정을 대신하지 않는다.
 
 ```bash
 issueops next --id "$ISSUEOPS_ID" --json
-# .review.model, .review.effort
+# .review.model, .review.effort, .review.tier, .review.lenses
 ```
 
-이 값은 코드가 소유하는 host별 planner 기본값이다. 스킬 본문에 모델 이름 표를
-복사하지 않는다 — 복사한 순간 그 표는 코드보다 먼저 낡는다. `review.model`이 비어
-있으면 이 호스트의 기본값이 정의돼 있지 않다는 뜻이므로, 진행하지 말고 어떤 모델로
-리뷰할지 사용자에게 묻는다.
+이 값은 코드가 소유하는 host별 planner 모델과 현재 변경 집합 티어에 맞춘 effort다. 스킬 본문에 모델 이름 표를
+복사하지 않는다. 조회에 실패하거나 review의 model/effort/tier/lenses가 누락되면
+진행하지 않고 조회 실패나 누락 필드를 보고한다. `review.model`이 비어 있으면 이
+호스트의 기본값이 정의돼 있지 않으므로 어떤 모델로 리뷰할지 사용자에게 묻는다.
+사용자가 reviewer 모델이나 effort를 명시했다면 해당 값에만 그 지시를 우선하고,
+지정하지 않은 값은 현재 출력을 따른다. owner-model/owner-effort override는 구현자
+선택이며 reviewer 지정으로 해석하지 않는다.
 
 `--target diff`는 정리와 문서 반영이 끝나 봉인된 diff에 실행한다. 검증과 리뷰의
 동시 실행은 `issueops-verify`를 따르며, 모든 필수 결과를 확인한 뒤 판정을 기록한다.
@@ -127,6 +131,11 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
   --reviewer-host "$HOST" --reviewer-model "$REVIEWER_MODEL" --reviewer-effort "$REVIEWER_EFFORT" \
   $RECORD_ACTOR_FLAGS --json
 ```
+
+`--reviewer-model`과 `--reviewer-effort`에는 실제 리뷰 실행에 넘긴 값을 shell-quote해
+넣는다. 생성 owner command의 `<REVIEWER_MODEL>`·`<REVIEWER_EFFORT>`도 같은 값으로
+채운다. 기본 티어 선택과 아래 3라운드 상승은 구분하고, 상승 이유는 finding에 남긴다.
+준비 자료의 고정값이나 상승 전 값을 감사 필드에 기록하지 않는다.
 
 finding은 이슈의 `## 계획 검토` 구간과 `.issueops/issues/<n>/plan-review.md`로 팀에 보인다.
 독자가 읽는 한국어 완성 문장으로 쓴다: 무엇을 공격했고 결과가 어땠는지. 해시, 커밋 SHA
