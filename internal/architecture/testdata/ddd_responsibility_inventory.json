@@ -6120,6 +6120,18 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/quality/production_source.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func excludedSourcePath",
+        "func hasGitWorkspace",
+        "func productionGoFiles",
+        "func regularSourcePath",
+        "func sourceGitOutput"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/quality/snr.go",
       "owner": "adapter",
       "task": "T20",

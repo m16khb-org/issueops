@@ -15,25 +15,15 @@ func CollectBranchFunctions(root string) ([]contract.BranchFunction, []string) {
 	functions := []contract.BranchFunction{}
 	warnings := []string{}
 	fset := token.NewFileSet()
-	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
-		if err != nil {
-			warnings = append(warnings, "branch scan: "+err.Error())
-			return nil
-		}
-		if entry.IsDir() {
-			switch entry.Name() {
-			case ".git", ".codegraph", ".issueops-runtime", "bin", "vendor":
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
+	paths, scanErrors := productionGoFiles(root)
+	for _, err := range scanErrors {
+		warnings = append(warnings, "branch scan: "+err.Error())
+	}
+	for _, path := range paths {
 		file, err := parser.ParseFile(fset, path, nil, 0)
 		if err != nil {
 			warnings = append(warnings, "branch scan "+path+": "+err.Error())
-			return nil
+			continue
 		}
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
@@ -49,10 +39,6 @@ func CollectBranchFunctions(root string) ([]contract.BranchFunction, []string) {
 				Branches: branches,
 			})
 		}
-		return nil
-	})
-	if err != nil {
-		warnings = append(warnings, "branch scan: "+err.Error())
 	}
 	sort.Slice(functions, func(i, j int) bool {
 		if functions[i].Branches != functions[j].Branches {
@@ -123,7 +109,11 @@ func splitMarkdownRow(line string) []string {
 }
 
 func relOrAbs(root, path string) string {
-	rel, err := filepath.Rel(root, path)
+	absoluteRoot, err := filepath.Abs(root)
+	if err != nil {
+		return path
+	}
+	rel, err := filepath.Rel(absoluteRoot, path)
 	if err != nil {
 		return path
 	}
