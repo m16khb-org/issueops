@@ -16,7 +16,7 @@ func TestSummaryComposesCoverageFailureEvidenceAndRecoveryHints(t *testing.T) {
 	}
 	input := augment.SelfAugmentResult{OK: true, Iterations: 1, BaseSeed: 123, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Seed: 123, Steps: steps}}}
 	success := SummarizeSelfVerification(input, 95)
-	if !success.TerminationEligible || success.MinimumGoalScore != 100 || len(success.CoverageGaps) != 0 || success.TotalSteps != 26 || success.FailedSteps != 0 {
+	if !success.TerminationEligible || success.MinimumGoalScore != 100 || len(success.CoverageGaps) != 0 || success.TotalSteps != 27 || success.FailedSteps != 0 {
 		t.Fatalf("complete evidence was lost: %+v", success)
 	}
 	equal := SummarizeSelfVerification(input, 100)
@@ -33,7 +33,7 @@ func TestSummaryComposesCoverageFailureEvidenceAndRecoveryHints(t *testing.T) {
 		}
 	}
 	failure := SummarizeSelfVerification(input, 95)
-	if failure.TerminationEligible || failure.FailedSteps != 1 || failure.PassedSteps != 25 || failure.FailedStep != "go test" || failure.FailedSeed != 123 || failure.FailureCause != "model" || len(failure.FailureCauseEvidence) != 1 || failure.FailureCauseEvidence[0].Code != "failed-check" {
+	if failure.TerminationEligible || failure.FailedSteps != 1 || failure.PassedSteps != 26 || failure.FailedStep != "go test" || failure.FailedSeed != 123 || failure.FailureCause != "model" || len(failure.FailureCauseEvidence) != 1 || failure.FailureCauseEvidence[0].Code != "failed-check" {
 		t.Fatalf("failure composition drift: %+v", failure)
 	}
 	if len(failure.RerunCommands) != 2 || failure.RerunCommands[0] != "go test ./... -count=1" || !strings.Contains(failure.RerunCommands[1], "--seed=123 --target-score=95") {

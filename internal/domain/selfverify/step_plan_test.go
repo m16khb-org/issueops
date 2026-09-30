@@ -4,7 +4,7 @@ import "testing"
 
 func TestStepPlanReusesOnlySuccessfulFullSuiteEvidence(t *testing.T) {
 	order := StepOrder()
-	if len(order) == 0 || order[2] != "risk QA tier" || order[3] != "go test" || order[4] != "contract golden tests" {
+	if len(order) == 0 || order[3] != "risk QA tier" || order[4] != "go test" || order[5] != "contract golden tests" {
 		t.Fatalf("unexpected verification order: %v", order)
 	}
 	if ReuseRiskRaceAsFullTest(false, true) || ReuseRiskRaceAsFullTest(true, false) || !ReuseRiskRaceAsFullTest(true, true) {

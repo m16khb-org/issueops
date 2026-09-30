@@ -10,7 +10,7 @@ import (
 func ContractValue() contract.SelfVerificationContract {
 	contract := contract.SelfVerificationContract{
 		Name:    "self_verification_summary",
-		Version: 4,
+		Version: 5,
 		RequiredFields: []string{
 			"total_runs",
 			"total_steps",
@@ -47,7 +47,7 @@ func ContractValue() contract.SelfVerificationContract {
 
 func GoalDefinitions() []contract.SelfVerificationGoalDefinition {
 	return []contract.SelfVerificationGoalDefinition{
-		{Name: "test_suite", KoreanName: "테스트 스위트", Labels: []string{"go test", "contract golden tests"}},
+		{Name: "test_suite", KoreanName: "테스트 스위트", Labels: []string{"go test", "contract golden tests", "Python script tests"}},
 		{Name: "risk_qa", KoreanName: "위험도 기반 QA", Labels: []string{"risk QA tier"}},
 		{Name: "build_release", KoreanName: "빌드 산출물", Labels: []string{"go build"}},
 		{Name: "format_parity", KoreanName: "포맷 정합성", Labels: []string{"gofmt"}},
@@ -67,7 +67,7 @@ func GoalDefinitions() []contract.SelfVerificationGoalDefinition {
 func CoverageDefinitions() []contract.SelfVerificationCoverageDefinition {
 	return []contract.SelfVerificationCoverageDefinition{
 		{Claim: "core repository invariants", Labels: []string{"harness invariants"}},
-		{Claim: "test suite contract", Labels: []string{"go test", "contract golden tests"}},
+		{Claim: "test suite contract", Labels: []string{"go test", "contract golden tests", "Python script tests"}},
 		{Claim: "risk-tier static and race QA", Labels: []string{"risk QA tier"}},
 		{Claim: "release build artifact", Labels: []string{"go build"}},
 		{Claim: "gofmt parity with the CI format gate", Labels: []string{"gofmt"}},

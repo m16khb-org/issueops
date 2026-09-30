@@ -7,6 +7,7 @@ import (
 	contract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
 	domain "issueops/internal/domain/selfaugment"
+	verifydomain "issueops/internal/domain/selfverify"
 	port "issueops/internal/port/selfaugment"
 )
 
@@ -48,5 +49,7 @@ func (planner Planner) Plan(req contract.SelfAugmentPlanRequest, root, version s
 
 func (planner Planner) SelfVerificationPassed() bool {
 	snapshot, err := (SnapshotStore{ReadState: planner.StateRead}).Read("self-verify-latest")
-	return err == nil && snapshot.OK
+	current := verifydomain.ContractValue()
+	proof := snapshot.Summary.Contract
+	return err == nil && snapshot.OK && snapshot.Summary.TerminationEligible && proof.Name == current.Name && proof.Version == current.Version && proof.Hash == current.Hash
 }

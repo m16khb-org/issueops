@@ -31,7 +31,13 @@ ISSUEOPS_SELF_VERIFY_LLM_EVAL=gate ./bin/issueops self-verify --seed=100 --targe
 `self-verify` runs one complete deterministic evidence pass. Repeated `--full` and
 `--iterations` modes were removed because they reran the same expensive build and
 runtime gates without adding independent evidence. Seeded validators keep their
-deterministic case batteries inside that pass. The command never launches Codex,
+deterministic case batteries inside that pass. The `Python script tests` step checks Python 3.10+ and runs the CI discovery
+`python3 -m unittest discover -s scripts -p '*_test.py'` before risk QA/Go tests.
+Missing or unsupported Python fails the step; discovery has a five-minute timeout
+and contributes to test-suite scores and coverage. Summary contract v5 separates
+this evidence from historical summaries while keeping snapshot schema v1.
+
+The command never launches Codex,
 Claude, or a live model. The normative live/reproduction and evidence rules are in
 `.issueops/TESTING.md`.
 

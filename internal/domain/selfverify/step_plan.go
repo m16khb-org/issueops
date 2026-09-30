@@ -3,6 +3,7 @@ package selfverify
 var stepOrder = []string{
 	"harness invariants",
 	"gofmt",
+	"Python script tests",
 	"risk QA tier",
 	"go test",
 	"contract golden tests",
