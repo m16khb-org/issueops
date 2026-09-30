@@ -128,6 +128,12 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
   $RECORD_ACTOR_FLAGS --json
 ```
 
+finding은 이슈의 `## 계획 검토` 구간과 `.issueops/issues/<n>/plan-review.md`로 팀에 보인다.
+독자가 읽는 한국어 완성 문장으로 쓴다: 무엇을 공격했고 결과가 어땠는지. 해시, 커밋 SHA
+전문, 로컬 절대 경로는 쓰지 않는다(렌더러가 가리지만 문장이 깨진다). 리뷰가 이슈
+본문의 사실이 틀렸다고 판정하면 호출 단계가 `feedback add --classification
+contract_change`로 기록한다([`issueops-plan`](../issueops-plan/SKILL.md)의 검토 루프).
+
 `reviewer_context`와 `reviewer_*`는 감사 필드이지 게이트 조건이 아니다. 하네스는
 모델의 자기신고를 검증할 수 없으므로 verdict와 finding·evidence의 실질만 게이트한다.
 그래서 이 필드를 사실대로 적는 것은 도구가 아니라 실행자의 책임이다.
@@ -145,6 +151,17 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
   또는 한 단계 높은 effort로 띄우고, 그 사실을 `--reviewer-model`·`--reviewer-effort`
   (diff) 또는 finding 첫 줄(plan)에 적는다. 그 안에 통과하지 못하면 남은 결함과 시도한
   수정을 보고한다.
+  - Claude에서 "다른 모델"은 사용자가 이름으로 지정한 모델만 쓴다. Fable 5는 명시적
+    수동 지정 전용이므로(`internal/contract/issueopspreparation/prepare.go`) 3라운드용으로
+    고르지 않는다. codex와 omo는 이 항목의 적용을 받지 않는다.
+  - Claude는 3라운드에도 `next.review.model`을 쓰고, effort는 `next.review.effort`에서
+    한 단계 올린다. claude CLI의 단계는 `low`→`medium`→`high`→`xhigh`→`max`다.
+    서브에이전트 도구는 effort를 받지 않으므로, 프롬프트를 표준 입력으로 넘겨
+    `claude -p --model "$REVIEW_MODEL" --effort "$ROUND3_EFFORT" --allowedTools
+    "Bash Read Grep Glob Skill"`로 빈 컨텍스트 세션을 띄운다. 출력 파일은 ignored 영역
+    `.issueops/issues/<n>/review/`나 워크트리 밖에 둔다. 워크트리 안 미추적 파일은
+    fingerprint에 들어가 봉인을 깬다.
+    `--reviewer-model`·`--reviewer-effort`와 finding 첫 줄에는 실제로 넘긴 두 값을 적는다.
 - 같은 plan phase의 비-waived `revise`는 세 번까지다. 네 번째는 CLI가
   `revise round cap reached`로 거부한다. 그때의 탈출은 `stop`을 기록하고
   `issueops remote reflect-devils-advocate --confirm`으로 반영한 뒤 `regress`로
@@ -177,8 +194,10 @@ issueops implementation-review record --id "$ISSUEOPS_ID" \
 issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm --json
 ```
 
-`stop` 판정은 반영이 특히 중요하다. 사이클이 뒤로 돌아간 이유가 이슈에 남지 않으면
-팀이 보는 진행 상태와 실제가 어긋난다.
+이슈에는 라운드 흐름 한 줄("1차 수정 요청(지적 3건) → 계획 수정 → 2차 통과")이
+보이고, `stop` 판정일 때만 중단 이유가 목록으로 붙는다. 지적 원문은 record와
+`plan-review.md`에 있다. `stop` 판정은 반영이 특히 중요하다. 사이클이 뒤로 돌아간
+이유가 이슈에 남지 않으면 팀이 보는 진행 상태와 실제가 어긋난다.
 
 ## 나쁜 예
 
@@ -193,6 +212,7 @@ issueops remote reflect-devils-advocate --id "$ISSUEOPS_ID" --confirm --json
   기록이지 증명이 아니다.
 - `--target diff` 리뷰에 plan을 주지 않는다. 무엇을 하기로 했는지 모르는 리뷰어는
   구현이 계획에서 벗어났는지 판정할 수 없다.
+- 3라운드에서 '다른 모델'로 Fable 5를 고른다. Fable 5는 사용자가 이름으로 지정할 때만 쓴다.
 
 ## 검증
 

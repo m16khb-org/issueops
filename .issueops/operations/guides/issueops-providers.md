@@ -61,15 +61,17 @@ record's `body_syncs` baseline for the next staleness check.
 
 ### Durable parent issue creation and recovery
 
-`create-issue --confirm` requires a started IssueOps record and a canonical
-`origin` remote. The command stores a sealed intent before invoking `gh` or
+`create-issue --confirm` requires a started IssueOps record, a canonical
+`origin` remote, and `--template`. The body contract and readability check run
+before anything is sealed; a critical finding refuses the confirm. The command stores a sealed intent before invoking `gh` or
 `glab`, appends an operation marker to the issue body, performs live
 label/assignee verification, then records the canonical issue URL and completed
 intent atomically.
 
 ```bash
 issueops remote create-issue \
-  --id ID --provider github --title "Title" --body "Body" \
+  --id ID --provider github --title "Title" \
+  --template implementation_task --body-file BODY.md \
   --label bug --assignee USER --confirm --json
 ```
 

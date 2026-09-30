@@ -20,7 +20,7 @@ func TestHandlerMapsEveryRequestAndResultField(t *testing.T) {
 	request := model.ExecutionPrepareRequest{
 		ID: "io-199", Mode: "orca",
 		Actor: model.NativeActor{Host: "codex", SessionID: "session-199", AgentID: "agent-199", SessionProcess: &process},
-		CWD:   "/repo", OwnerHost: "claude", OwnerModel: "claude-sonnet-5", OwnerEffort: "high", IssueSnapshotFile: "/private/gitlab-issue.json",
+		CWD:   "/repo", OwnerHost: "claude", OwnerModel: "claude-sonnet-5-5", OwnerEffort: "high", IssueSnapshotFile: "/private/gitlab-issue.json",
 		DirectReason: "manual recovery", ExpectedReadinessFingerprint: "fingerprint", Confirm: true,
 	}
 	execution := fullContractExecution()

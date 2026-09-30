@@ -29,9 +29,9 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 		host, model, effort string
 		wantPrefix          []string
 	}{
-		{host: "codex", model: "gpt-5.6-terra", effort: "high", wantPrefix: []string{"--model", "gpt-5.6-terra", "-c", "model_reasoning_effort=high", "--dangerously-bypass-approvals-and-sandbox", "--"}},
-		{host: "claude", model: "claude-sonnet-5", effort: "high", wantPrefix: []string{"--model", "claude-sonnet-5", "--effort", "high", "--dangerously-skip-permissions", "--"}},
-		{host: "omo", model: "openai/gpt-5.6", effort: "xhigh", wantPrefix: []string{"--model", "openai/gpt-5.6:xhigh", "--"}},
+		{host: "codex", model: "gpt-6-astra", effort: "high", wantPrefix: []string{"--model", "gpt-6-astra", "-c", "model_reasoning_effort=high", "--dangerously-bypass-approvals-and-sandbox", "--"}},
+		{host: "claude", model: "claude-sonnet-5-5", effort: "high", wantPrefix: []string{"--model", "claude-sonnet-5-5", "--effort", "high", "--dangerously-skip-permissions", "--"}},
+		{host: "omo", model: "chatgpt-subscription/gpt-6-sol", effort: "xhigh", wantPrefix: []string{"--model", "chatgpt-subscription/gpt-6-sol:xhigh", "--"}},
 	} {
 		t.Run(test.host, func(t *testing.T) {
 			capture := filepath.Join(root, test.host+"-argv")

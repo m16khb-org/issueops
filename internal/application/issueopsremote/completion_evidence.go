@@ -8,26 +8,6 @@ import (
 	domain "issueops/internal/domain/issueops"
 )
 
-type CompletionArtifactReader interface {
-	Read(model.IssueOpsRecord, string, string) (string, bool)
-}
-type CompletionCollector struct{ artifacts CompletionArtifactReader }
-
-func NewCompletionCollector(artifacts CompletionArtifactReader) CompletionCollector {
-	return CompletionCollector{artifacts: artifacts}
-}
-
-func (c CompletionCollector) Collect(record model.IssueOpsRecord) model.RemoteCompletionSection {
-	var observations []domain.CompletionArtifact
-	if root := domain.CompletionArtifactRoot(record); root != "" {
-		for _, name := range domain.CompletionArtifactNames() {
-			body, present := c.artifacts.Read(record, root, name)
-			observations = append(observations, domain.CompletionArtifact{Name: name, Body: body, Present: present})
-		}
-	}
-	return domain.ProjectRemoteCompletion(record, observations)
-}
-
 type CompletionReceipts struct {
 	store RecordStore
 	now   func() time.Time

@@ -10,12 +10,13 @@ import (
 
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
+	leasedomain "issueops/internal/domain/issueopslease"
 )
 
 func TestClaimContextPreflight(t *testing.T) {
 	record := claimableRecord(t, leasecontract.Actor{}, "token")
 	store := newClaimStore(t, record)
-	validator, err := NewClaimContextPreflight(store, nil).Preflight(context.Background(), leaseapp.ClaimPreflightRequest{ID: record.ID, Generation: record.Execution.Lease.Generation})
+	validator, err := leaseapp.NewSealedClaimContext(NewClaimContextReader(store), nil, FilesystemPathMatcher{}).Preflight(context.Background(), leaseapp.ClaimPreflightRequest{ID: record.ID, Generation: record.Execution.Lease.Generation})
 	if err != nil {
 		t.Fatalf("direct preflight: %v", err)
 	}
@@ -55,9 +56,11 @@ func TestClaimContextPreflightReadsSealedArtifactFromRecordedArtifactDir(t *test
 }
 
 type sealedClaimContext struct {
-	preflight    *ClaimContextPreflight
+	preflight    *leaseapp.SealedClaimContext
 	request      leaseapp.ClaimPreflightRequest
 	artifactPath string
+	record       leasecontract.Record
+	packetPath   string
 }
 
 func newSealedClaimContext(t *testing.T, issueURL, issueBody, artifactDir string, artifact []byte) sealedClaimContext {
@@ -79,14 +82,14 @@ func newSealedClaimContext(t *testing.T, issueURL, issueBody, artifactDir string
 	if err := os.WriteFile(artifactPath, artifact, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	issueDigest := claimDigest([]byte(issueBody))
-	packet := claimContextPacket{
+	issueDigest := leasedomain.ClaimContextDigest([]byte(issueBody))
+	packet := leasecontract.ClaimContextPacket{
 		SchemaVersion: leasecontract.SchemaVersion, LifecycleID: record.ID, Mode: "orca",
 		SourceRoot: record.Execution.Workspace.SourceRoot, WorktreeRoot: record.Execution.Workspace.Root,
 		Branch: record.Execution.Workspace.Branch, BaseHead: record.Execution.Workspace.BaseHead,
 		LeaseGeneration:  record.Execution.Lease.Generation,
-		Issue:            claimPacketIssue{URL: record.IssueURL, Body: issueBody, BodySHA256: issueDigest},
-		ArtifactManifest: map[string]string{"plan": claimDigest(artifact)},
+		Issue:            leasecontract.ClaimPacketIssue{URL: record.IssueURL, Body: issueBody, BodySHA256: issueDigest},
+		ArtifactManifest: map[string]string{"plan": leasedomain.ClaimContextDigest(artifact)},
 	}
 	packetBytes, err := json.Marshal(packet)
 	if err != nil {
@@ -100,14 +103,14 @@ func newSealedClaimContext(t *testing.T, issueURL, issueBody, artifactDir string
 		t.Fatal(err)
 	}
 	store := newClaimStore(t, record)
-	preflight := NewClaimContextPreflight(store, func(_ context.Context, repo, issueURL string) (IssueSnapshot, error) {
+	preflight := leaseapp.NewSealedClaimContext(NewClaimContextReader(store), func(_ context.Context, repo, issueURL string) (leaseapp.IssueSnapshot, error) {
 		if repo != record.Repo || issueURL != record.IssueURL {
 			t.Fatalf("remote issue request repo=%q url=%q", repo, issueURL)
 		}
-		return IssueSnapshot{URL: record.IssueURL, Body: issueBody}, nil
-	})
-	request := leaseapp.ClaimPreflightRequest{ID: record.ID, Generation: record.Execution.Lease.Generation, IssueBodySHA256: issueDigest, ContextPacketSHA256: claimDigest(packetBytes)}
-	return sealedClaimContext{preflight: preflight, request: request, artifactPath: artifactPath}
+		return leaseapp.IssueSnapshot{URL: record.IssueURL, Body: issueBody}, nil
+	}, FilesystemPathMatcher{})
+	request := leaseapp.ClaimPreflightRequest{ID: record.ID, Generation: record.Execution.Lease.Generation, IssueBodySHA256: issueDigest, ContextPacketSHA256: leasedomain.ClaimContextDigest(packetBytes)}
+	return sealedClaimContext{preflight: preflight, request: request, artifactPath: artifactPath, record: record, packetPath: packetPath}
 }
 
 func TestReadClaimOwnerArtifactRejectsUnsafeFiles(t *testing.T) {
@@ -168,5 +171,30 @@ func TestReadClaimOwnerArtifactRejectsUnsafeFiles(t *testing.T) {
 				t.Fatalf("readClaimOwnerArtifact() error = %v, want containing %q", err, test.want)
 			}
 		})
+	}
+}
+
+// Dropping the locked re-read would accept artifact edits after the remote preflight.
+func TestClaimContextPreflightRechecksSealedFilesInsideClaim(t *testing.T) {
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", "sealed body", "", []byte("sealed plan"))
+	validate, err := fixture.preflight.Preflight(context.Background(), fixture.request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(fixture.artifactPath, []byte("changed after preflight"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := validate(leaseapp.Record{Stable: fixture.record}); err == nil || !strings.Contains(err.Error(), "artifact plan digest mismatch") {
+		t.Fatalf("locked validation: %v", err)
+	}
+}
+
+func TestClaimContextPreflightRejectsPacketDigestBeforeParsing(t *testing.T) {
+	fixture := newSealedClaimContext(t, "https://github.com/example/issueops/issues/197", "sealed body", "", []byte("sealed plan"))
+	if err := os.WriteFile(fixture.packetPath, []byte("malformed json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fixture.preflight.Preflight(context.Background(), fixture.request); err == nil || !strings.Contains(err.Error(), "context packet digest mismatch") {
+		t.Fatalf("digest priority: %v", err)
 	}
 }

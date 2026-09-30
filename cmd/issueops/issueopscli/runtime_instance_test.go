@@ -1,10 +1,11 @@
 package issueopscli
 
 import (
-	model "issueops/internal/contract/issueops"
 	"os"
 	"reflect"
 	"testing"
+
+	model "issueops/internal/contract/issueops"
 )
 
 // Cross-command configuration drift must never redirect a phase mutation or
@@ -31,12 +32,12 @@ func TestLifecycleCommandsKeepRuntimeAndActorOwnership(t *testing.T) {
 			},
 		}
 		gates := LoopGateDeps{
-			AdvancePhaseWithActor: func(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+			AdvancePhaseReport: func(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, model.IssueOpsTrackedMaterials, error) {
 				if actor.Host != "codex" || actor.SessionID != "session" || actor.CWD != "/workspace" || len(actor.NativeProcessAncestry) != 1 || actor.NativeProcessAncestry[0].Executable != owner {
 					t.Fatalf("actor lost ownership: %+v", actor)
 				}
 				events = append(events, owner+":advance:"+root+":"+id+":"+to)
-				return model.IssueOpsRecord{ID: id}, nil
+				return model.IssueOpsRecord{ID: id}, model.IssueOpsTrackedMaterials{}, nil
 			},
 			StrictPRReadinessWithState: func(root string, record model.IssueOpsRecord) model.IssueOpsReadiness {
 				events = append(events, owner+":strict:"+root+":"+record.ID)

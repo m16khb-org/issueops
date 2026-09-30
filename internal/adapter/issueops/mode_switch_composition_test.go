@@ -24,5 +24,5 @@ func SwitchExecutionMode(ctx context.Context, root string, req issueopscontract.
 			return code, out
 		}
 	}
-	return (modeswitch.Service{Records: CycleRecordStore{StateRoot: root}, Workspace: ModeSwitchWorkspace{Git: deps.Git}, Now: func() string { return executionNow(nil) }}).Run(ctx, req)
+	return (modeswitch.Service{Records: CycleRecordStore{StateRoot: root}, Workspace: ModeSwitchWorkspace(deps), Now: func() string { return executionNow(nil) }}).Run(ctx, req)
 }

@@ -13,7 +13,7 @@ import (
 
 type executionOwnerIssue = model.OwnerIssue
 type executionOwnerContextPacket = model.OwnerContextPacket
-type executionOwnerCommands = model.OwnerCommands
+
 type executionOwnerSnapshot struct {
 	issue                                                             model.OwnerIssue
 	requiredDocs, requiredSkills, acceptanceIDs, verificationCommands []string

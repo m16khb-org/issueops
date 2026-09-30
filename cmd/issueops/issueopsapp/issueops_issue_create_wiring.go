@@ -15,6 +15,6 @@ func newIssueCreator(root string, resolve func(string) (port.IssueProvider, erro
 	store := issueops.RemoteRecordStore{StateRoot: root}
 	return application.NewIssueCreator(store, issueops.IssueCreationEnvironment{ResolveProvider: resolve}, application.NewTemplateBodyResolver(os.ReadFile), application.NewIssueCreateIntents(store, now), verify, now)
 }
-func createIssue(ctx context.Context, root string, cmd application.IssueCreateCommand, verify application.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error) {
+func createIssue(ctx context.Context, root string, cmd application.IssueCreateCommand, verify application.IssueLiveVerifier) (application.IssueCreateResult, error) {
 	return newIssueCreator(root, provider.Resolve, verify, time.Now).Create(ctx, cmd)
 }

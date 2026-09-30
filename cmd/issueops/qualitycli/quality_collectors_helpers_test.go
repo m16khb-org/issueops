@@ -2,7 +2,6 @@ package qualitycli
 
 import (
 	"fmt"
-	"strings"
 
 	statestore "issueops/internal/adapter/outbound/state"
 	augmentcontract "issueops/internal/contract/selfaugment"
@@ -43,19 +42,6 @@ func parseCoveragePackages(output string, threshold float64) []CoveragePackage {
 	return quality.ParseCoveragePackages(output, threshold)
 }
 
-func renderCoveragePackages(packages []CoveragePackage) string {
-	var output strings.Builder
-	for _, item := range packages {
-		_, _ = fmt.Fprintf(
-			&output,
-			"%s coverage: %.1f%% of statements\n",
-			item.Package,
-			item.Coverage,
-		)
-	}
-	return output.String()
-}
-
 var sourceCollectorEffects struct {
 	PioneerCoverage func(string) (PioneerCoverage, error)
 	BranchFunctions func(string) ([]BranchFunction, []string)
@@ -87,27 +73,3 @@ func collectAuditItems(root string) ([]AuditItem, []string) {
 	}
 	return sourceCollectorEffects.AuditItems(root)
 }
-
-func statusForCount(count int) string { return quality.StatusForCount(count) }
-
-func statusForCollector(err error, fallback string) string {
-	return quality.StatusForCollector(err, fallback)
-}
-
-func pioneerIsolatedStatus(coverage PioneerCoverage) string {
-	return quality.PioneerIsolatedStatus(coverage)
-}
-
-func pioneerIsolatedEvidence(coverage PioneerCoverage) []string {
-	return quality.PioneerIsolatedEvidence(coverage)
-}
-
-func firstQualityWarning(warnings []string) error { return quality.FirstQualityWarning(warnings) }
-
-func coverageEvidence(packages []CoveragePackage) []string { return quality.CoverageEvidence(packages) }
-
-func branchEvidence(functions []BranchFunction, threshold int) []string {
-	return quality.BranchEvidence(functions, threshold)
-}
-
-func auditEvidence(items []AuditItem) []string { return quality.AuditEvidence(items) }

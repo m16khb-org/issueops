@@ -754,7 +754,7 @@ func benchmarkFixtures(t *testing.T) map[string]fixturecontract.Fixture {
 
 func TestLiveReportNormalizesNullDiagnostics(t *testing.T) {
 	runner := &fakeProbeRunner{host: "omo", fixtures: benchmarkFixtures(t), responses: map[string][]map[string]any{}, mutate: func(r *port.HostProbeResult) { r.DiagnosticsJSON = "null" }}
-	report, err := runLiveBenchmark(context.Background(), app.LiveBenchmarkRequest{Hosts: []string{"omo"}, Models: map[string]string{"omo": "openai-codex/gpt-6-sol"}, Profile: "clean", Only: "omo:empty_object", TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "null-diagnostics"}, catalogDescriptors(), app.LiveBenchmarkDependencies{Runners: map[string]port.HostProbeRunner{"omo": runner}, Token: func() string { return "token" }})
+	report, err := runLiveBenchmark(context.Background(), app.LiveBenchmarkRequest{Hosts: []string{"omo"}, Models: map[string]string{"omo": "chatgpt-subscription/gpt-6-sol"}, Profile: "clean", Only: "omo:empty_object", TargetCompleted: 1, MaxAttemptsPerCase: 1, HarnessBinary: "/harness", RunID: "null-diagnostics"}, catalogDescriptors(), app.LiveBenchmarkDependencies{Runners: map[string]port.HostProbeRunner{"omo": runner}, Token: func() string { return "token" }})
 	if err != nil || report.Counts.Completed != 1 {
 		t.Fatalf("report=%+v err=%v", report, err)
 	}

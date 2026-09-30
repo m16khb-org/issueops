@@ -16,20 +16,20 @@ func TestBuildInteractiveArgvPinsInstalledNativeHostContracts(t *testing.T) {
 		want       []string
 	}{
 		{
-			host: "codex", executable: "/opt/native/codex", model: "gpt-5.6-terra", effort: "high",
-			want: []string{"/opt/native/codex", "--model", "gpt-5.6-terra", "-c", "model_reasoning_effort=high", "--dangerously-bypass-approvals-and-sandbox", "--", prompt},
+			host: "codex", executable: "/opt/native/codex", model: "gpt-6-astra", effort: "high",
+			want: []string{"/opt/native/codex", "--model", "gpt-6-astra", "-c", "model_reasoning_effort=high", "--dangerously-bypass-approvals-and-sandbox", "--", prompt},
 		},
 		{
-			host: "claude", executable: "/opt/native/claude", model: "claude-sonnet-5", effort: "high",
-			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5", "--effort", "high", "--dangerously-skip-permissions", "--", prompt},
+			host: "claude", executable: "/opt/native/claude", model: "claude-sonnet-5-5", effort: "high",
+			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5-5", "--effort", "high", "--dangerously-skip-permissions", "--", prompt},
 		},
 		{
-			host: "claude", executable: "/opt/native/claude", model: "claude-sonnet-5", effort: "xhigh",
-			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5", "--effort", "xhigh", "--dangerously-skip-permissions", "--", prompt},
+			host: "claude", executable: "/opt/native/claude", model: "claude-sonnet-5-5", effort: "xhigh",
+			want: []string{"/opt/native/claude", "--model", "claude-sonnet-5-5", "--effort", "xhigh", "--dangerously-skip-permissions", "--", prompt},
 		},
 		{
-			host: "omo", executable: "/opt/native/omo", model: "openai/gpt-5.6", effort: "xhigh",
-			want: []string{"/opt/native/omo", "--model", "openai/gpt-5.6:xhigh", "--", prompt},
+			host: "omo", executable: "/opt/native/omo", model: "chatgpt-subscription/gpt-6-sol", effort: "xhigh",
+			want: []string{"/opt/native/omo", "--model", "chatgpt-subscription/gpt-6-sol:xhigh", "--", prompt},
 		},
 	}
 	for _, test := range tests {

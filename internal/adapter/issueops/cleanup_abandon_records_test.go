@@ -2,9 +2,10 @@ package issueops
 
 import (
 	"context"
-	model "issueops/internal/contract/issueops"
 	"strings"
 	"testing"
+
+	model "issueops/internal/contract/issueops"
 )
 
 func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing.T) {
@@ -48,9 +49,6 @@ func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing
 					t.Fatal("abandon took over foreign operation")
 				}
 			} else {
-				if _, err := store.MarkAuditReflected(ctx, armed, attempt.StartedAt); err == nil {
-					t.Fatal("abandon used post-merge audit finalizer")
-				}
 				if _, err := store.Release(ctx, armed, "now"); err == nil {
 					t.Fatal("abandon used remote-branch release")
 				}

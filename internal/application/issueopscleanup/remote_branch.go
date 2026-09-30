@@ -16,13 +16,11 @@ import (
 )
 
 type RemoteBranchCleaner struct {
-	Records      port.CleanupRemoteBranchRecords
-	Acquire      func(context.Context, string) (CleanupLifetime, error)
-	NewAttempt   func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
-	Preview      RemoteBranchPreviewer
-	Completion   func(model.IssueOpsRecord) model.RemoteCompletionSection
-	ReflectAudit func(context.Context, model.IssueOpsRecord, model.RemoteCompletionSection, string) error
-	Now          func() time.Time
+	Records    port.CleanupRemoteBranchRecords
+	Acquire    func(context.Context, string) (CleanupLifetime, error)
+	NewAttempt func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
+	Preview    RemoteBranchPreviewer
+	Now        func() time.Time
 }
 
 func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBranchRequest) (model.CleanupRemoteBranchResult, error) {
@@ -49,7 +47,6 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 	if len(result.Missing) > 0 {
 		return result, fmt.Errorf("cleanup remote-branch is not ready: %s", strings.Join(result.Missing, ", "))
 	}
-	var completion model.RemoteCompletionSection
 	if !result.RemoteBranchPresent {
 		// Absence still precedes confirmation and fingerprint. Only an explicit
 		// apply may release a crashed same-operation attempt; preview never writes.
@@ -75,7 +72,6 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 			result.OK = false
 			return result, err
 		}
-		completion = s.Completion(record)
 	}
 	attempt, err := s.NewAttempt(model.CleanupOperationRemoteBranch)
 	if err != nil {
@@ -117,22 +113,7 @@ func (s RemoteBranchCleaner) Run(ctx context.Context, req model.CleanupRemoteBra
 		return finalize("remote_branch_delete", err)
 	}
 	result.Deleted, result.DeletedAt = true, s.Now().UTC().Format(time.RFC3339)
-	if s.ReflectAudit != nil {
-		if err := s.Records.Check(ctx, snapshot); err != nil {
-			return finalize("audit_receipt", err)
-		}
-		audit := fmt.Sprintf("원격 브랜치 삭제: branch=%s oid=%s at=%s", inventory.Branch, inventory.RemoteOID, result.DeletedAt)
-		if err := s.ReflectAudit(ctx, record, completion, audit); err != nil {
-			result.AuditError = err.Error()
-		} else {
-			next, err := s.Records.MarkAuditReflected(ctx, snapshot, s.Now().UTC().Format(time.RFC3339Nano))
-			if err != nil {
-				return finalize("audit_receipt", err)
-			}
-			snapshot = next
-			result.AuditReflected = true
-		}
-	}
+	result.Audit = fmt.Sprintf("원격 브랜치 삭제: branch=%s oid=%s at=%s", inventory.Branch, inventory.RemoteOID, result.DeletedAt)
 	return finalize("", nil)
 }
 

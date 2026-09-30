@@ -6,6 +6,7 @@ import (
 	cleanup "issueops/internal/application/issueopscleanup"
 	cycle "issueops/internal/application/issueopscycle"
 	delegation "issueops/internal/application/issueopsdelegation"
+	materialapp "issueops/internal/application/issueopsremote"
 	review "issueops/internal/application/issueopsreview"
 	model "issueops/internal/contract/issueops"
 	reviewcontract "issueops/internal/contract/issueopsreview"
@@ -30,7 +31,7 @@ func testCycleReadinessWithChanges(changes implementation.Reader) cycle.Readines
 }
 func testCyclePhaseService(actor *model.IssueOpsActor) cycle.PhaseService {
 	store := NewReviewMutationStore(actor)
-	return cycle.PhaseService{Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: testCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: testReadinessGit().Head, Fingerprint: testChangeReader().ChangeFingerprint}}
+	return cycle.PhaseService{WriteMaterials: (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write, Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: testCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: testReadinessGit().Head, Fingerprint: testChangeReader().ChangeFingerprint}}
 }
 
 func IssueOpsAISlopCleanReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
@@ -63,7 +64,6 @@ func AdvanceIssueOpsPhase(root, id, to string) (model.IssueOpsRecord, error) {
 func AdvanceIssueOpsPhaseWithActor(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
 	return testCyclePhaseService(&actor).Advance(root, id, to)
 }
-func issueOpsCurrentHead(record model.IssueOpsRecord) string { return testReadinessGit().Head(record) }
 
 func ObserveIssueOpsLocalPRReadiness(record model.IssueOpsRecord) (model.IssueOpsReadiness, reviewcontract.LocalChangeObservation) {
 	return testCycleReadiness().ObserveLocalPR(record)

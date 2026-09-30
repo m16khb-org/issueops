@@ -132,7 +132,7 @@
 
 ### Task 1: 전체 소유권 원장과 동작 기준 고정 (T01)
 
-- [ ] 완료 — 전수 목록과 기준선은 작성했으나 심볼별 의미적 책임 판정이 남음
+- [x] 완료 — production 1,450개 파일·7,078개 심볼, 정책 483개를 분류했고 미배정·이전 대기 항목 0개를 확인함
 - **담당/등급:** 메인 / deep. **선행:** 없음. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/`, `internal/`, `scripts/`, `configs/`, `skills/`; `internal/architecture/package_inventory_test.go`; `.github/workflows/ci.yml`
 - **변경/신규 파일:** 신규 `internal/architecture/testdata/ddd_responsibility_inventory.json`, `internal/architecture/ddd_responsibility_test.go`, `.issueops/evidence/ddd-refactor/baseline/`.
@@ -445,7 +445,7 @@ CLI 72개 실행, MCP 계약, hook 40개 실행, host argv·Omo 출력의 동일
 
 ### Task 20: 전체 production wiring 전환과 잔여 facade 제거 (T20)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T03–T19. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/issueopsapp/*_wiring.go`, `*_facade.go`; `cmd/issueops/{basiccli,statuscli,daemoncli,workercli,loopcli,statecli,webfetchcli,contractcli,projectcli,issueopscli}/`; 모든 `*_dependencies.go`
 - **변경/신규 파일:** 기존 composition root, migrated capability의 instance dependencies. 신규 architecture public-entrypoint conformance tests.
@@ -457,7 +457,7 @@ CLI 72개 실행, MCP 계약, hook 40개 실행, host argv·Omo 출력의 동일
 
 ### Task 21: 문서·소유권 검사·회귀 방지 마감 (T21)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T20. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `.issueops/{ARCHITECTURE,CONVENTIONS,TESTING,ADR,OPERATIONS}.md`와 각 family module; `AGENTS.md`; `internal/architecture/{dependency,ownership_manifest}_test.go`; `.github/workflows/ci.yml`; T01 원장
 - **변경/신규 파일:** 신규 `.issueops/adr/ddd-responsibility-ownership.md`, `.issueops/architecture/domain-responsibilities.md`; 기존 index와 테스트 갱신. 문서 수정 시 project-docs workflow 적용.
@@ -469,7 +469,7 @@ CLI 72개 실행, MCP 계약, hook 40개 실행, host argv·Omo 출력의 동일
 
 ### Task 22: 전체 호환성·동시성·실제 진입점 검증 (T22)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T21. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `.github/workflows/ci.yml`; `.issueops/testing/{unit-and-contract,concurrency-and-race,cli-mcp-and-hosts,issueops-execution,self-verification}.md`; T01 baseline
 - **변경/신규 파일:** `.issueops/evidence/ddd-refactor/final/`에 명령·출력·scenario 결과·원장·리뷰 증거.
@@ -528,13 +528,13 @@ Go test의 child process 환경에서 home/Codex/state 디렉터리도 임시 �
 
 ### 책임 분리 완료 조건
 
-- [ ] T01의 전체 파일/함수 원장에 미배정 0, migrate 상태 0, 모든 retain에 구체적인 기술 책임과 테스트 근거가 있다.
-- [ ] contract에 상태 기반 정책이 없고, adapter/CLI에 이전한 업무 규칙의 중복 구현이나 legacy Effects 우회가 없다.
-- [ ] domain이 I/O·host protocol·transport를 직접 다루지 않으며 정책의 deterministic test가 성공/거부 경로를 증명한다.
-- [ ] application이 실제 호출 경로와 원자적 변경을 조율하고 store/host adapter는 technical effect만 실행한다.
-- [ ] 업무 use case를 수행하는 모든 CLI/MCP 진입점이 실제 application+domain을 거치며 기존 snapshot/readback/오류/저장 계약을 보존한다. help/schema/catalog 같은 technical-only 진입점은 근거 있는 retain으로 구분한다.
-- [ ] lock/CAS/역색인/related rows/receipt의 concurrency·crash·rollback 테스트가 통과한다.
-- [ ] 전체 battery와 격리 QA가 통과하고 critic/verifier 지적을 실제 source·test로 해소했다.
+- [x] T01의 전체 파일/함수 원장에 미배정 0, migrate 상태 0, 모든 retain에 구체적인 기술 책임과 테스트 근거가 있다.
+- [x] contract에 상태 기반 정책이 없고, adapter/CLI에 이전한 업무 규칙의 중복 구현이나 legacy Effects 우회가 없다.
+- [x] domain이 I/O·host protocol·transport를 직접 다루지 않으며 정책의 deterministic test가 성공/거부 경로를 증명한다.
+- [x] application이 실제 호출 경로와 원자적 변경을 조율하고 store/host adapter는 technical effect만 실행한다.
+- [x] 업무 use case를 수행하는 모든 CLI/MCP 진입점이 실제 application+domain을 거치며 기존 snapshot/readback/오류/저장 계약을 보존한다. help/schema/catalog 같은 technical-only 진입점은 근거 있는 retain으로 구분한다.
+- [x] lock/CAS/역색인/related rows/receipt의 concurrency·crash·rollback 테스트가 통과한다.
+- [x] 전체 battery와 격리 QA가 통과하고 critic/verifier 지적을 실제 source·test로 해소했다.
 
 ### 중단·되돌림 기준
 
@@ -557,3 +557,24 @@ Decision-complete plan: 기존 구조를 유지하는 capability별 이전, 원�
 Assumptions/defaults: 전체 프로젝트 범위, 기존 외부 계약과 운영 동작 유지, 순차 구현, 새 framework와 state migration 없음.
 Unresolved questions: 계획 작성을 막는 질문은 없다. 호환성 변경 요청이 추가되면 별도 설계 변경으로 처리한다.
 Acceptance criteria: 정책 소유권 원장 미배정·이전 미완료 0, 기존 계약 보존, 전체 CI 및 시나리오 증거, 두 독립 리뷰의 지적 해소.
+
+
+## 최종 구현 검증 기록 (2026-09-30)
+
+T01–T22의 구현과 책임 분리 검증을 완료했다. 최신 main의 사람이 작성하는 원격 본문·완료 보고,
+추적 계획 사본과 UTF-8 처리 변경을 새 domain/application 소유자에 통합했다.
+마지막 독립 리뷰가 지적한 Orca claim 정책도 domain으로, 사전 검증·잠금 안 재검증은
+application으로 옮겼다. 해당 domain 거부를 제거하면 실제 application+adapter 회귀 테스트
+두 건이 실패하는 mutation 검증 후 정상 코드를 복원했다.
+
+- 소유권: production 1,450개 파일, 7,078개 심볼, 비-Go 산출물 75개, 정책 483개.
+  미배정 0개, `migrate` 0개. 원장은 `internal/architecture/testdata/ddd_responsibility_inventory.json`.
+- 최종 후보: 소스 3,960개 해시 대조 후 독립 Git 저장소·HOME·state에서 설치 및 검증.
+  `self-verify` 26/26, 최저 100점. 실제 전체 race·vet 실행과 schema 1 저장·승격 확인.
+- 전체 Go 테스트, macOS/Linux lint, 문서 395개, 스킬 52개, API 정적·agent 검사 통과.
+  Python 테스트 53개 통과 판정이며, 선택적 로컬 meeting-notes fixture 한 건은 기존 조건대로 skip.
+- 소유권·안전성 독립 리뷰 모두 `READY`. 마지막 수정에서 사전 검증·원격 읽기·잠금 안 재검증
+  순서와 digest-before-JSON 오류 우선순위를 보존했다.
+- 로컬 상세 근거: `.issueops/evidence/ddd-refactor/T22-final3-*` 및 `T22-claim-policy-mutation.log`.
+
+PR 발행·CI·머지·사용자 홈 설치 갱신·작업 브랜치 정리는 구현 검증 이후의 전달 단계로 진행한다.

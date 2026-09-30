@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+
 	adapter "issueops/internal/adapter/issueops"
 	ownerapp "issueops/internal/application/issueopsowner"
 	model "issueops/internal/contract/issueops"
@@ -17,7 +18,7 @@ func runIssueOpsForTest(args []string, deps Dependencies) error {
 	if deps.Runtime.IssueOpsStateRoot == nil {
 		deps.Runtime = testIssueOpsRuntime
 	}
-	if deps.Gates.AdvancePhaseWithActor == nil {
+	if deps.Gates.AdvancePhaseReport == nil {
 		deps.Gates = testIssueOpsGates
 	}
 	if deps.Status == nil {

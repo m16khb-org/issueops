@@ -13,19 +13,18 @@ import (
 )
 
 type FinishExecutor struct {
-	Records      port.CleanupFinishRecords
-	Acquire      func(context.Context, string) (CleanupLifetime, error)
-	Observe      func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishRequest, error)
-	Plan         func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult)
-	Fingerprint  func(model.CleanupFinishInventory) (string, error)
-	NewAttempt   func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
-	Completion   func(model.IssueOpsRecord) model.RemoteCompletionSection
-	Stop         func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error)
-	RemoveOrca   func(context.Context, string) error
-	Directory    func(string) (bool, error)
-	Git          func(context.Context, string, ...string) (int, string)
-	ReflectAudit func(context.Context, model.IssueOpsRecord, model.RemoteCompletionSection, string) error
-	Now          func() time.Time
+	MaterialWarning func(model.IssueOpsRecord) string
+	Records         port.CleanupFinishRecords
+	Acquire         func(context.Context, string) (CleanupLifetime, error)
+	Observe         func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishRequest, error)
+	Plan            func(context.Context, model.IssueOpsRecord, model.CleanupFinishRequest) (model.CleanupFinishInventory, model.CleanupFinishResult)
+	Fingerprint     func(model.CleanupFinishInventory) (string, error)
+	NewAttempt      func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error)
+	Stop            func(context.Context, model.CleanupFinishInventory, []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error)
+	RemoveOrca      func(context.Context, string) error
+	Directory       func(string) (bool, error)
+	Git             func(context.Context, string, ...string) (int, string)
+	Now             func() time.Time
 }
 
 func (s FinishExecutor) Run(ctx context.Context, req model.CleanupFinishRequest) (model.CleanupFinishResult, error) {
@@ -53,6 +52,11 @@ func (s FinishExecutor) Run(ctx context.Context, req model.CleanupFinishRequest)
 		return failed, &port.CleanupFinishObservationError{Err: err}
 	}
 	inventory, result := s.Plan(ctx, record, req)
+	if s.MaterialWarning != nil {
+		if warning := s.MaterialWarning(record); warning != "" {
+			result.Warnings = append(result.Warnings, warning)
+		}
+	}
 	if len(result.Missing) > 0 {
 		result.OK = false
 		result.NextCommand = domain.CleanupFinishRemedyCommand(record.ID, result.Missing)
@@ -71,7 +75,6 @@ func (s FinishExecutor) Run(ctx context.Context, req model.CleanupFinishRequest)
 		result.OK = false
 		return result, err
 	}
-	completion := s.Completion(record)
 	attempt, err := s.NewAttempt(model.CleanupOperationFinish)
 	if err != nil {
 		return failed, err
@@ -160,22 +163,7 @@ func (s FinishExecutor) Run(ctx context.Context, req model.CleanupFinishRequest)
 		}
 		result.BranchDeleted = true
 	}
-	if s.ReflectAudit != nil {
-		if err := s.Records.Check(ctx, snapshot); err != nil {
-			return fail(model.CleanupFailureStepRecordDelete, err)
-		}
-		audit := domain.CleanupFinishAudit(inventory, result, s.Now().UTC().Format(time.RFC3339))
-		if err := s.ReflectAudit(ctx, record, completion, audit); err != nil {
-			result.AuditError = err.Error()
-		} else {
-			next, err := s.Records.MarkAuditReflected(ctx, snapshot, s.Now().UTC().Format(time.RFC3339Nano))
-			if err != nil {
-				return fail(model.CleanupFailureStepRecordDelete, err)
-			}
-			snapshot = next
-			result.AuditReflected = true
-		}
-	}
+	result.Audit = domain.CleanupFinishAudit(inventory, result, s.Now().UTC().Format(time.RFC3339))
 	if err := drain(); err != nil {
 		return fail(model.CleanupFailureStepRecordDelete, err)
 	}

@@ -194,3 +194,9 @@ The modularization is complete when:
 4. all relative links and documented commands validate;
 5. `issueops docs --json` still reports every required root document;
 6. a reusable documentation-optimization skill enforces these checks.
+
+## DDD 통합 후 문서 분리 (2026-09-30)
+
+검사에서 `hexagonal-core.md` 265줄과 `issueops.md` 251줄이 250줄 예산을 넘었다.
+전자는 capability별 구현 책임을 `domain-responsibilities.md`로, 후자는 실행·정리 경계를
+`issueops-cleanup.md`로 옮긴다. 기존 상세 내용은 그대로 보존하며 인덱스와 양방향 링크를 추가한다.

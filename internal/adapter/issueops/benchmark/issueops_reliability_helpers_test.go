@@ -19,5 +19,3 @@ func clopperPearson(c, n int, alpha float64) (float64, float64, error) {
 func ScoreSpread(scores []float64) (float64, float64, float64) {
 	return domain.ScoreSpread(scores)
 }
-
-func round4(value float64) float64 { return domain.Round4(value) }

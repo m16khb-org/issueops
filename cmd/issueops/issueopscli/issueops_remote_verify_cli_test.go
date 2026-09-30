@@ -118,8 +118,12 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 		t.Fatal(err)
 	}
 	_, actor := seedIssueOpsCLIExecution(t, record)
-	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
+	}
+	// The transition wrote tracked material copies; they ship in the same commit.
+	if code, _, stderr := preflight.GitCmd(worktree, "add", ".issueops/issues"); code != 0 {
+		t.Fatalf("git add tracked materials failed: %s", stderr)
 	}
 	if code, _, stderr := preflight.GitCmd(worktree, "commit", "-q", "-m", "feat: implement remote verify cli"); code != 0 {
 		t.Fatalf("git commit implementation failed: %s", stderr)
@@ -129,7 +133,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, id)
 	recordIssueOpsCoreImplementationReviewForCLITest(t, id)
-	record, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhasePR), actor)
+	record, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhasePR), actor)
 	if err != nil {
 		t.Fatal(err)
 	}

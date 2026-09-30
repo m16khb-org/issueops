@@ -46,7 +46,7 @@ func (s *BodySyncCommandService) Sync(ctx context.Context, input BodySyncInput) 
 	}
 	cmd := input.Command
 	cmd.ID = record.ID
-	cmd.ProposedBody, err = s.bodies.Resolve(TemplateBodyRequest{Body: cmd.ProposedBody, BodyFile: input.BodyFile})
+	cmd.ProposedBody, err = s.bodies.ReadBody(cmd.ProposedBody, input.BodyFile)
 	if err != nil {
 		return model.IssueOpsRecord{}, result, err
 	}

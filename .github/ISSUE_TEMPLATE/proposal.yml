@@ -6,115 +6,68 @@ body:
   - type: markdown
     attributes:
       value: |
-        제안은 바로 구현할 작업보다 결정이 필요한 구조 변경에 사용합니다. 구현 단위가 이미 정해졌다면 구현 작업 템플릿을 사용하세요.
-
-        좋은 예시는 현재 문제, 제안, 대안과 기각 사유, 호환성 영향을 보여 줍니다. 나쁜 예시는 근거 없이 "이 기술로 바꾸자"고만 합니다.
+        첫 절은 요약입니다. 필수 절은 순서대로 두고, 선택 절은 쓸 내용이 있을 때만 남기세요. 해시, 커밋 SHA, 로컬 경로, plan 원문은 적지 않습니다. 작성 지침: `skills/issueops-remote-write/references/readable-body.md`
 
   - type: textarea
-    id: context
+    id: section_1
     attributes:
-      label: 배경과 문제
-      description: 현재 구조, 문서, 코드, 운영상의 문제가 무엇인지 설명해 주세요.
+      label: 요약
+      description: "무엇이 문제인지, 왜 지금 고치는지, 끝나면 무엇이 달라지는지 2~3문장으로 적어 주세요."
     validations:
       required: true
 
   - type: textarea
-    id: proposal
+    id: section_2
+    attributes:
+      label: 배경
+      description: "누가 어떤 상황에서 무엇을 겪는지 적어 주세요. 입력과 출력, 수치, 로그 한 줄 같은 구체적인 장면 하나를 넣고, 코드 근거는 그 뒤에 짧게 붙입니다."
+    validations:
+      required: true
+
+  - type: textarea
+    id: section_3
     attributes:
       label: 제안
-      description: 바꾸려는 아키텍처, API, 정책, 운영 방식을 구체적으로 적어 주세요.
+      description: "무엇을 바꾸자는 것인지 적어 주세요."
     validations:
       required: true
 
   - type: textarea
-    id: evidence
+    id: section_4
     attributes:
-      label: 현재 근거
-      description: 관련 파일, 문서, 명령 결과, upstream 자료, 이전 이슈를 적어 주세요.
+      label: 대안과 선택 이유
+      description: "검토한 대안과 기각한 이유를 적어 주세요."
     validations:
       required: true
 
   - type: textarea
-    id: related_labels
+    id: section_5
     attributes:
-      label: 관련 이슈/라벨 판단
-      description: 중복 또는 관련 이슈, 선택/거절 라벨, 수동 override 이유를 적어 주세요.
+      label: 범위
+      description: "하는 것과 하지 않는 것을 함께 적어 주세요."
     validations:
       required: true
 
   - type: textarea
-    id: alternatives
+    id: section_6
     attributes:
-      label: 대안과 기각 사유
-      description: 검토한 대안과 선택하지 않는 이유를 적어 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: compatibility
-    attributes:
-      label: 호환성과 마이그레이션
-      description: CLI/MCP/schema/hook/skill 문서 호환성, migration 필요 여부를 적어 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: non_goals
-    attributes:
-      label: 비목표
-      description: 이번 제안에서 하지 않을 일을 적어 범위를 제한해 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: scope
-    attributes:
-      label: 구현 범위
-      description: 제안이 수락될 경우 포함할 변경과 분리해야 할 관련 없는 변경을 적어 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: diagram
-    attributes:
-      label: 다이어그램
-      description: 복잡한 흐름, 상태 전이, host별 경계 이해를 실제로 줄일 때만 Mermaid 등 텍스트 다이어그램을 적어 주세요. 필요 없으면 "필요 없음"이라고 적어 주세요.
-      placeholder: |
-        ```mermaid
-        flowchart LR
-          A[현재 흐름] --> B[제안 흐름]
-        ```
+      label: 완료 기준
+      description: "확인할 수 있는 동작을 체크리스트로 적어 주세요."
     validations:
       required: false
 
   - type: textarea
-    id: acceptance
+    id: section_7
     attributes:
-      label: 완료 기준
-      description: 제안이 수락되고 구현됐다고 볼 수 있는 기준을 적어 주세요.
+      label: 위험
+      description: "남는 위험과 되돌리는 방법을 적어 주세요."
     validations:
-      required: true
+      required: false
 
   - type: textarea
-    id: risks
+    id: section_8
     attributes:
-      label: 위험과 트레이드오프
-      description: 보안, secret, workspace boundary, host drift, 운영 비용, 다이어그램이 이해를 돕거나 방해할 수 있는 지점을 적어 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: verification
-    attributes:
-      label: 검증
-      description: 제안 구현 시 필요한 테스트, golden, smoke, 문서 검증을 적어 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: feedback
-    attributes:
-      label: 피드백 기록
-      description: 사용자 피드백과 요구사항 변경 이력을 적어 주세요.
+      label: 열린 질문
+      description: "아직 정하지 못한 것을 적어 주세요."
     validations:
       required: false

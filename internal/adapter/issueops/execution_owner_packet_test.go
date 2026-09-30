@@ -77,7 +77,7 @@ func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
 
 	artifacts, err := PrepareExecutionPreparationOwner(
 		context.Background(), stateRoot, preparationcontract.Snapshot{RecordRaw: raw},
-		preparationcontract.Command{ID: record.ID, OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh"},
+		preparationcontract.Command{ID: record.ID, OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh"},
 		preparationcontract.Intent{StartedAt: "2026-08-03T00:00:00Z", Workspace: workspace, IssueBodySHA256: digestExecutionOwnerBytes([]byte(issueBody))},
 		receipt, readIssue,
 	)
@@ -473,7 +473,7 @@ func ownerPacketFixture() (issueops.IssueOpsRecord, issueops.ExecutionPrepareReq
 		},
 	}
 	req := issueops.ExecutionPrepareRequest{
-		ID: "io-69", Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-5.6-sol", OwnerEffort: "high",
+		ID: "io-69", Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high",
 	}
 	return record, req
 }

@@ -156,7 +156,7 @@ func abandonOrcaPendingRecord(t *testing.T, kind string, writeRow bool) (string,
 				Branch: "106-abandon", BaseBranch: "main", BaseHead: "deadbeef",
 			}),
 			Probe: intentContractProbeRequest(port.ExecutionOrcaProbeRequest{
-				Repo: record.Repo, Host: "codex", Model: "gpt-5.4", Marker: marker,
+				Repo: record.Repo, Host: "codex", Model: "gpt-6-sol", Marker: marker,
 				Provider: "github", Issue: 106,
 			}),
 			IssueBodySHA256: abandonIssueBodySHA,
@@ -690,7 +690,7 @@ func TestCleanupAbandonRefusesToDeleteAnotherLifecyclesIntentRow(t *testing.T) {
 			LifecycleID: "io-someoneelse", SourceRoot: record.Repo, Root: root,
 			Branch: "other", BaseBranch: "main", BaseHead: "deadbeef",
 		}),
-		Probe:           intentContractProbeRequest(port.ExecutionOrcaProbeRequest{Repo: record.Repo, Host: "codex", Model: "gpt-5.4", Marker: "m"}),
+		Probe:           intentContractProbeRequest(port.ExecutionOrcaProbeRequest{Repo: record.Repo, Host: "codex", Model: "gpt-6-sol", Marker: "m"}),
 		IssueBodySHA256: abandonIssueBodySHA,
 	})
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {

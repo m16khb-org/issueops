@@ -31,8 +31,8 @@ type ChildCreator struct {
 	Link      func(context.Context, string, string, string, model.IssueOpsActor) error
 }
 
-func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observe AncestryObserver) (port.IssueProviderCreateChildResult, error) {
-	var result port.IssueProviderCreateChildResult
+func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observe AncestryObserver) (ChildCreateResult, error) {
+	var result ChildCreateResult
 	labels, assignees := remote.CleanValues(cmd.Labels), remote.CleanValues(cmd.Assignees)
 	record, err := s.Records.Read(ctx, cmd.ID)
 	if err != nil {
@@ -49,10 +49,12 @@ func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observ
 	if err != nil {
 		return result, err
 	}
-	body, err := s.Bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Template: cmd.Template, Provider: providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile})
+	resolved, err := s.Bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactChild, Template: cmd.Template, Provider: providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
 	if err != nil {
 		return result, err
 	}
+	body := resolved.Body
+	result.Readability = resolved.Readability
 	if err := policy.ValidateRemoteCreateInputs("child create", cmd.Title, body, labels, assignees); err != nil {
 		return result, err
 	}
@@ -71,7 +73,7 @@ func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observ
 	if provider == nil {
 		return result, fmt.Errorf("no issue provider configured")
 	}
-	result, err = provider.CreateChild(port.IssueProviderCreateChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
+	result.IssueProviderCreateChildResult, err = provider.CreateChild(port.IssueProviderCreateChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
 	if err != nil {
 		return result, err
 	}

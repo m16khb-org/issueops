@@ -33,3 +33,12 @@ func MarkReviewReflected(record model.IssueOpsRecord, now string) model.IssueOps
 	record.UpdatedAt = now
 	return record
 }
+
+// PlanReviewRounds lists every recorded round in chronological order.
+func PlanReviewRounds(review *model.IssueOpsDevilsAdvocateReview) []model.PlanReviewRound {
+	rounds := make([]model.PlanReviewRound, 0, len(review.History)+1)
+	for _, round := range review.History {
+		rounds = append(rounds, model.PlanReviewRound{Verdict: round.Verdict, Findings: len(round.Findings)})
+	}
+	return append(rounds, model.PlanReviewRound{Verdict: review.Verdict, Findings: len(review.Findings)})
+}

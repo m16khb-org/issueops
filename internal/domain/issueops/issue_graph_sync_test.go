@@ -46,7 +46,7 @@ func TestIssueGraphSyncRendersRelationships(t *testing.T) {
 		record.IssueLinks = append(record.IssueLinks, model.IssueOpsIssueLink{Type: kind, URL: "https://example.test/2"})
 	}
 	plan, err := PlanIssueGraphSync(record, true)
-	want := "## Related Issue Graph\n\nThis issue graph was recorded by issueops IssueOps:\n\n- **Depends on**: https://example.test/2\n- **Blocks**: https://example.test/2\n- **Supersedes**: https://example.test/2\n- **Follows up**: https://example.test/2\n- **Duplicates**: https://example.test/2\n- **Splits from**: https://example.test/2\n- **Implements**: https://example.test/2\n- **custom**: https://example.test/2\n\nCycle: `io-graph`"
+	want := "## 관련 이슈\n\n- **선행 이슈**: https://example.test/2\n- **이 이슈가 막는 이슈**: https://example.test/2\n- **대체하는 이슈**: https://example.test/2\n- **후속 이슈**: https://example.test/2\n- **중복 이슈**: https://example.test/2\n- **나뉘어 나온 원래 이슈**: https://example.test/2\n- **구현하는 이슈**: https://example.test/2\n- **custom**: https://example.test/2\n"
 	if err != nil || plan.Body != want || plan.LinkCount != 8 || plan.Provider != "github" || plan.URL != "https://github.com/acme/repo/issues/1" {
 		t.Fatalf("plan=%+v err=%v", plan, err)
 	}

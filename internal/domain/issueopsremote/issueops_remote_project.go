@@ -161,6 +161,27 @@ func isGitLabIssueLikePath(part string) bool {
 	return part == "issues" || part == "work_items"
 }
 
+// TrackedMaterialNames are the tracked copies of the implementation materials
+// that phase transitions write next to gates.md in .issueops/issues/<n>/
+// (#513). They are derived from the sealed plan and the record.
+var TrackedMaterialNames = []string{"plan.md", "intent.md", "spec.md", "plan-review.md"}
+
+// IsTrackedMaterialPath reports whether relPath (worktree-relative, slash or
+// OS separators) is one of issueURL's tracked material copies.
+func IsTrackedMaterialPath(issueURL, relPath string) bool {
+	n := IssueNumber(issueURL)
+	if n == "" {
+		return false
+	}
+	relPath = strings.ReplaceAll(relPath, "\\", "/")
+	for _, name := range TrackedMaterialNames {
+		if relPath == ".issueops/issues/"+n+"/"+name {
+			return true
+		}
+	}
+	return false
+}
+
 // IssueArtifactDir은 linked issue URL로 결정하는 봉인 아티팩트 디렉터리
 // (워크트리 상대, slash)다: `.issueops/issues/<n>/artifact`. 번호를 알 수
 // 없으면 빈 문자열이며, 읽는 쪽은 그것을 legacy `.issueops/artifact`로

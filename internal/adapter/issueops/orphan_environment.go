@@ -11,6 +11,7 @@ import (
 	"issueops/internal/adapter/outbound/sqlstore"
 	app "issueops/internal/application/issueopscleanup"
 	health "issueops/internal/contract/operationalhealth"
+	"issueops/internal/domain/policy"
 )
 
 // OrphanEnvironment performs filesystem, local Git and record-lock operations.
@@ -72,13 +73,7 @@ func (s OrphanEnvironment) Run(ctx context.Context, dir string, args ...string) 
 		return nil, err
 	}
 	if code != 0 {
-		detail := strings.TrimSpace(out)
-		if detail == "" {
-			detail = "git returned a non-zero exit"
-		}
-		if len(detail) > 512 {
-			detail = detail[:512]
-		}
+		detail := boundedGitFailure(out)
 		return nil, fmt.Errorf("%s", detail)
 	}
 	return []byte(out), nil
@@ -115,4 +110,15 @@ func (s OrphanEnvironment) DeleteBranch(ctx context.Context, repo, branch, head 
 		return fmt.Errorf("remove confirmed local branch with preview HEAD CAS: %w", err)
 	}
 	return nil
+}
+
+func boundedGitFailure(stderr string) string {
+	stderr = strings.TrimSpace(stderr)
+	if stderr == "" {
+		return "git returned a non-zero exit"
+	}
+	if len(stderr) > 512 {
+		return policy.TruncateBytes(stderr, 512)
+	}
+	return stderr
 }

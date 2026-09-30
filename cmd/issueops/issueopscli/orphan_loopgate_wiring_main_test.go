@@ -2,10 +2,10 @@ package issueopscli
 
 import (
 	"context"
-	orcaadapter "issueops/internal/adapter/orca"
 
 	issueopsadapter "issueops/internal/adapter/issueops"
 	healthadapter "issueops/internal/adapter/operationalhealth"
+	orcaadapter "issueops/internal/adapter/orca"
 	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	health "issueops/internal/contract/operationalhealth"
@@ -15,7 +15,7 @@ import (
 // 고아 정리를 검증하므로 같은 배선을 재현한다.
 func wireOrphanAndLoopGateForTests() {
 	testIssueOpsGates = LoopGateDeps{
-		AdvancePhaseWithActor: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		AdvancePhaseReport: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsTrackedMaterials, error) {
 			return advanceLoopPhaseForTest(stateRoot, id, to, actor)
 		},
 		StrictPRReadinessWithState: strictLoopReadinessForTest,

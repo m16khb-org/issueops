@@ -108,7 +108,7 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
-	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, parent.ID)
@@ -159,7 +159,7 @@ func TestCLIIssueOpsStrictPRReadinessReportsIncompleteChildren(t *testing.T) {
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
-	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 
@@ -194,7 +194,7 @@ func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (i
 		t.Fatal(err)
 	}
 	record, actor := seedIssueOpsCLIExecution(t, record)
-	record, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), record.ID, string(issueopscontract.IssueOpsPhaseImplement), actor)
+	record, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), record.ID, string(issueopscontract.IssueOpsPhaseImplement), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -239,11 +239,30 @@ func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (
 		t.Fatal(err)
 	}
 	parent, actor := seedIssueOpsCLIExecution(t, parent)
-	parent, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseImplement), actor)
+	parent, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseImplement), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
+	commitTrackedMaterialsForCLITest(t, worktree)
 	return parent, actor
+}
+
+// commitTrackedMaterialsForCLITest commits and pushes the tracked material
+// copies the implement transition wrote, as the implement skill requires.
+func commitTrackedMaterialsForCLITest(t *testing.T, worktree string) {
+	t.Helper()
+	if code, _, stderr := preflight.GitCmd(worktree, "add", ".issueops/issues"); code != 0 {
+		t.Fatalf("git add tracked materials failed: %s", stderr)
+	}
+	if code, _, _ := preflight.GitCmd(worktree, "diff", "--cached", "--quiet"); code == 0 {
+		return
+	}
+	if code, _, stderr := preflight.GitCmd(worktree, "commit", "-q", "-m", "docs: add tracked implementation materials"); code != 0 {
+		t.Fatalf("git commit tracked materials failed: %s", stderr)
+	}
+	if code, _, stderr := preflight.GitCmd(worktree, "push", "-q"); code != 0 {
+		t.Fatalf("git push tracked materials failed: %s", stderr)
+	}
 }
 
 func prepareIssueOpsCLIParentImplementationSurface(t *testing.T, id, branch, worktree string) {

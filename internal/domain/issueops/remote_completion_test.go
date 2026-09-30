@@ -1,9 +1,6 @@
 package issueops
 
 import (
-	"crypto/sha256"
-	"fmt"
-	"strings"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
@@ -25,18 +22,16 @@ func TestRemoteCompletionReceiptsPreserveFirstCloseAndInput(t *testing.T) {
 	}
 }
 
-func TestRemoteCompletionProjectsSealedArtifactEvidence(t *testing.T) {
-	body := strings.Repeat("x", 4097)
-	digest := sha256.Sum256([]byte(body))
-	record := model.IssueOpsRecord{Repo: "repo", AISlopCleanVerification: []string{"fallback"}, RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "verified"}, Execution: &model.Execution{Workspace: model.Workspace{Root: "worktree"}, Completion: &model.ExecutionCompletion{RemoteArtifactURL: "old", FinalHead: "head"}}}
-	section := ProjectRemoteCompletion(record, []CompletionArtifact{{Name: "plan"}, {Name: "verified-execution-loop", Body: body, Present: true}})
-	if section.RemoteArtifactURL != "verified" || section.FinalHead != "head" || strings.Join(section.VerificationSummary, ",") != "fallback" || strings.Join(section.MissingArtifacts, ",") != "plan" {
-		t.Fatalf("section=%+v", section)
+func TestRemoteCompletionProjectsOnlyVerifiedArtifactURL(t *testing.T) {
+	record := model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "verified"}, Execution: &model.Execution{Completion: &model.ExecutionCompletion{RemoteArtifactURL: "fallback", FinalHead: "private-head"}}}
+	if got := ProjectRemoteCompletion(record); got.RemoteArtifactURL != "verified" || got.ResultBody != "" {
+		t.Fatalf("section=%+v", got)
 	}
-	if len(section.ArtifactManifest) != 1 || section.ArtifactManifest[0].SHA256 != fmt.Sprintf("%x", digest) || section.TuringSummary != strings.Repeat("x", 4096)+"\n\u2026 (\uc808\ub2e8)" {
-		t.Fatal("full digest and bounded summary not preserved")
+	record.RemoteArtifact = nil
+	if got := ProjectRemoteCompletion(record); got.RemoteArtifactURL != "fallback" {
+		t.Fatalf("section=%+v", got)
 	}
-	if CompletionArtifactRoot(record) != "worktree" {
-		t.Fatal("worktree must own artifacts")
+	if got := ProjectRemoteCompletion(model.IssueOpsRecord{}); got != (model.RemoteCompletionSection{}) {
+		t.Fatalf("section=%+v", got)
 	}
 }

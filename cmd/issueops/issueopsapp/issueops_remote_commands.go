@@ -25,7 +25,7 @@ func newPublicationCommand(root string, publish model.RemotePullRequestCreateHan
 	}, invoke)
 }
 
-func createPublication(ctx context.Context, root string, input application.PublicationInput, publish model.RemotePullRequestCreateHandler, observe application.AncestryObserver) (port.IssueProviderCreatePullRequestResult, error) {
+func createPublication(ctx context.Context, root string, input application.PublicationInput, publish model.RemotePullRequestCreateHandler, observe application.AncestryObserver) (application.PublicationResult, error) {
 	return newPublicationCommand(root, publish, observe).Create(ctx, input)
 }
 

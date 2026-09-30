@@ -68,45 +68,24 @@ PR/MR은 리뷰어가 본문에 체크리스트나 메모를 직접 추가하는
 
 ## Body 형식
 
-`pull_request` template의 canonical section을 유지한다. 최신화는 **본문 전체
-교체**이므로, 지금 사실이 아닌 문장은 남기지 않는다. 특히 `## 검증` 표에
-실행하지 않은 결과를 남겨 두지 않는다.
+골격은 `issueops remote render-template --kind pr --template pull_request`, 절을 채우는
+방법은 [`references/readable-body.md`](../issueops-remote-write/references/readable-body.md)를
+따른다. 최신화는 **본문 전체 교체**이므로, 지금 사실이 아닌 문장은 남기지 않는다.
+특히 `## 확인한 것`에 실행하지 않은 확인을 남겨 두지 않는다. 옛 13절 형식을
+동기화할 때는 요약, 변경 내용, 확인한 것, 리뷰 포인트로 다시 쓴다.
 
 원격에 쓰기 전에 `fluent-korean` 스킬을 Skill 도구로 호출해서 문장을 다듬는다.
 이 호출을 건너뛴 body로는 `--confirm`을 붙이지 않는다.
 
-### 좋은 예: 리뷰 반영 후 최신화
-
-```markdown
-## 의도
-IssueOps가 만든 원격 본문을 사이클 진행에 맞춰 다시 쓸 수 있게 한다.
-
-## 이슈
-Closes https://github.com/acme/repo/issues/412
-
-## 변경 사항
-- 본문 병합·drift 판정을 도메인으로 옮기고 관리 블록을 보존한다.
-- 리뷰 반영으로 `--accept-remote-edits`를 추가해 사람 편집을 명시 확인한다.
-
-## 검증
-| 명령 | 결과 |
-|---|---|
-| `go test ./internal/domain/issueopsbodysync -count=1` | pass |
-| `go test ./internal/adapter/issueops -run TestSync -count=1` | pass |
-
-## 리뷰어 초점
-- compare-and-swap이 preview와 confirm 사이의 변경을 잡는가
-- 완료 블록이 전체 교체 뒤에도 남는가
-
-## 위험/rollback
-confirm 전에는 dry-run이다. sha가 어긋나면 쓰지 않고 멈춘다.
-```
+preview 응답의 `readability`는 제안 본문 판정이고 critical이 있으면 confirm이
+거부된다. `live_readability`는 원격의 현재 본문 판정이며 warning만 담는다. 거기 나온
+문제가 새 본문에서 사라졌는지 확인한다.
 
 ### 나쁜 예
 
 | 나쁜 입력 | 왜 나쁜가 |
 |---|---|
-| 낡은 검증 표를 그대로 둔 채 문단만 추가 | 본문이 통째로 교체되어 거짓 근거가 남는다 |
+| 낡은 확인한 것 절을 그대로 둔 채 문단만 추가 | 본문이 통째로 교체되어 거짓 근거가 남는다 |
 | `--expected-generation` 생략 | lease 밖 write가 된다. 거부된다 |
 | 머지된 PR 본문 재작성 시도 | 완료된 기록을 흔든다. 거부된다 |
 | 리뷰어가 쓴 체크리스트를 지우고 confirm | 리뷰 맥락이 사라진다 |
@@ -131,6 +110,7 @@ readback한다. 본문 최신화는 완료 기록이 아니다. 완료 증거 �
 ## 품질·성능 게이트
 
 - 품질: generation-CAS, native actor, artifact 수명 상태, drift 판정 기록,
+  `readability.critical` 0과 warning 처리,
   원격 write 전 `fluent-korean` 호출, compare-and-swap sha 일치,
   secret redaction, live readback.
 - 성능: 최신화 단계에서만 이 스킬을 로드한다. issue 생성·완료 reference를

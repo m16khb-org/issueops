@@ -172,3 +172,9 @@ Retired dated snapshots moved verbatim from living documents:
 4. Run the documentation-optimization skill validator.
 5. Run `issueops docs --json` and the documented command smoke checks.
 6. Review the diff for accidental duplication or information loss.
+
+## DDD 책임 문서 분리 (2026-09-30)
+
+[domain-responsibilities.md](../architecture/domain-responsibilities.md)는 capability별 책임을,
+[issueops-cleanup.md](../architecture/issueops-cleanup.md)는 실행과 정리의 효과 순서를 소유한다.
+공통 의존 방향과 사이클 권한은 기존 architecture 모듈에 유지한다.

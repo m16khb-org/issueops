@@ -125,7 +125,7 @@ func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue in
 		Orca: &issueops.OrcaBinding{
 			RuntimeID: "runtime-current", RepoID: "repo-current", WorktreeID: "worktree-current",
 			WorktreeInstanceID: "instance-current", LeaseGeneration: 1,
-			OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh",
+			OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh",
 			RunID: "run-current", TaskID: "task-current", DispatchID: "dispatch-current", TerminalPTYID: "pty-current",
 		},
 	}

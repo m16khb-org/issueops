@@ -6,105 +6,68 @@ body:
   - type: markdown
     attributes:
       value: |
-        기능 요청은 사용자가 겪는 문제와 검증 가능한 완료 기준을 중심으로 작성해 주세요.
-
-        좋은 예시는 대상 사용자, 막힌 흐름, 원하는 결과, 대안을 구분합니다. 나쁜 예시는 구현 방법이나 파일명만 요구합니다.
+        첫 절은 요약입니다. 필수 절은 순서대로 두고, 선택 절은 쓸 내용이 있을 때만 남기세요. 해시, 커밋 SHA, 로컬 경로, plan 원문은 적지 않습니다. 작성 지침: `skills/issueops-remote-write/references/readable-body.md`
 
   - type: textarea
-    id: problem
+    id: section_1
     attributes:
-      label: 문제
-      description: 이 기능이 없어서 어떤 사용 흐름이 막히는지 설명해 주세요.
+      label: 요약
+      description: "무엇이 문제인지, 왜 지금 고치는지, 끝나면 무엇이 달라지는지 2~3문장으로 적어 주세요."
     validations:
       required: true
 
   - type: textarea
-    id: users
+    id: section_2
     attributes:
-      label: 대상 사용자와 가치
-      description: 누가 이 기능을 쓰고 어떤 효과를 얻는지 적어 주세요.
+      label: 배경
+      description: "누가 어떤 상황에서 무엇을 겪는지 적어 주세요. 입력과 출력, 수치, 로그 한 줄 같은 구체적인 장면 하나를 넣고, 코드 근거는 그 뒤에 짧게 붙입니다."
     validations:
       required: true
 
   - type: textarea
-    id: behavior
+    id: section_3
     attributes:
-      label: 원하는 동작
-      description: 사용자가 보게 될 CLI, MCP, hook, skill, 문서 동작을 구체적으로 적어 주세요.
+      label: 완료 기준
+      description: "확인할 수 있는 동작을 체크리스트로 적어 주세요."
     validations:
       required: true
 
   - type: textarea
-    id: evidence
+    id: section_4
     attributes:
-      label: 현재 근거
-      description: 관련 이슈, 사용자 피드백, 파일, 명령 결과, 오픈소스 비교 근거를 적어 주세요.
+      label: 범위
+      description: "하는 것과 하지 않는 것을 함께 적어 주세요."
     validations:
       required: true
 
   - type: textarea
-    id: related_labels
+    id: section_5
     attributes:
-      label: 관련 이슈/라벨 판단
-      description: 중복 또는 관련 이슈, 선택/거절 라벨, 수동 override 이유를 적어 주세요.
+      label: 검증
+      description: "실행할 검증 명령을 첫 코드 블록에 적어 주세요."
     validations:
       required: true
 
   - type: textarea
-    id: alternatives
+    id: section_6
     attributes:
-      label: 검토한 대안
-      description: 기존 도구, 수동 절차, upstream companion 사용 등 비교한 대안을 적어 주세요.
+      label: 접근 방법과 대안
+      description: "고른 방법과 검토한 대안, 선택 이유를 적어 주세요."
     validations:
       required: false
 
   - type: textarea
-    id: acceptance
+    id: section_7
     attributes:
-      label: 완료 기준
-      description: 구현 완료를 판단할 수 있는 체크 가능한 기준을 적어 주세요.
-      placeholder: |
-        - [ ] 사용자가 보게 될 CLI/MCP/hook/문서 동작이 명확히 정의된다.
-        - [ ] 필요한 테스트, 스모크 체크, 문서 검증이 통과한다.
+      label: 위험
+      description: "남는 위험과 되돌리는 방법을 적어 주세요."
     validations:
-      required: true
+      required: false
 
   - type: textarea
-    id: non_goals
+    id: section_8
     attributes:
-      label: 비목표
-      description: 이번 기능 요청에서 하지 않을 일을 적어 범위를 제한해 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: scope
-    attributes:
-      label: 구현 범위
-      description: 포함할 변경과 분리해야 할 관련 없는 변경을 적어 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: verification
-    attributes:
-      label: 검증
-      description: 필요한 테스트, 빌드, 스모크 체크, 문서 검증을 적어 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: risks
-    attributes:
-      label: 위험과 트레이드오프
-      description: 호환성, 보안, secret, host별 drift, 운영 위험을 적어 주세요.
-    validations:
-      required: true
-
-  - type: textarea
-    id: feedback
-    attributes:
-      label: 피드백 기록
-      description: 사용자 피드백과 요구사항 변경 이력을 적어 주세요.
+      label: 열린 질문
+      description: "아직 정하지 못한 것을 적어 주세요."
     validations:
       required: false

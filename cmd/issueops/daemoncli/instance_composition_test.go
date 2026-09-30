@@ -21,7 +21,7 @@ type daemonServerLogFile = LogFile
 
 const maxConnections = domain.DefaultMaxConnections
 const defaultMaxConnections = domain.DefaultMaxConnections
-const absoluteMaxConnections = domain.AbsoluteMaxConnections
+
 const daemonProtocolVersion = contract.ProtocolVersion
 const daemonIdentityRequest = contract.IdentityRequest
 
@@ -31,7 +31,7 @@ func processAlive(pid int) bool                { return adapter.ProcessAlive(pid
 func probeDaemonStatus(socket string) (contract.IdentityResponse, error) {
 	return (adapter.Probe{MaxConnections: maxConnections}).Status(socket)
 }
-func newDaemonIdentityToken() (string, error)      { return adapter.NewIdentityToken() }
+
 func daemonExecutableSHA(p string) (string, error) { return adapter.ExecutableSHA(p) }
 func checkDaemonStatus() daemonStatus {
 	return (app.Reader{Paths: currentDaemonPaths, ReadInstance: adapter.ReadInstance, ProbeStatus: probeDaemonStatus, ProcessAlive: processAlive, InspectProcess: testProcessInspector().Inspect, IsNotExist: os.IsNotExist, MaxConnections: maxConnections, Location: time.Local}).Run()

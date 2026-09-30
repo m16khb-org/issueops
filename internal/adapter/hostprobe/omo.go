@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode"
 
+	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
 
@@ -404,7 +405,7 @@ func ellipsizeMiddle(value string, limit int) string {
 	remaining := limit - 3
 	prefix := (remaining + 1) / 2
 	suffix := remaining / 2
-	return value[:prefix] + "..." + value[len(value)-suffix:]
+	return policy.TruncateBytes(value, prefix) + "..." + policy.TailBytes(value, suffix)
 }
 
 func observeOmoStream(data []byte, targetTool string) (omoStreamObservation, error) {

@@ -50,12 +50,16 @@ func TestCleanupRemoteBranchExcludesOtherExecutorsAndWriters(t *testing.T) {
 	}
 }
 
-func TestCleanupRemoteBranchPreservesRecordChangedDuringAudit(t *testing.T) {
+func TestCleanupRemoteBranchPreservesRecordChangedDuringDelete(t *testing.T) {
 	root, record := remoteBranchTestRecord(t)
 	git := remoteBranchGit()
 	deps := remoteBranchDeps(git)
 	var replacement []byte
-	deps.ReflectAudit = func(_ model.IssueOpsRecord, _ model.RemoteCompletionSection, _ string) error {
+	deps.Git = func(ctx context.Context, repo string, args ...string) (int, string) {
+		code, out := git.run(ctx, repo, args...)
+		if args[0] != "push" {
+			return code, out
+		}
 		current, err := ReadIssueOps(root, record.ID)
 		if err != nil {
 			t.Fatal(err)
@@ -69,15 +73,18 @@ func TestCleanupRemoteBranchPreservesRecordChangedDuringAudit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return db.Put(issueOpsBucket, record.ID, replacement)
+		if err := db.Put(issueOpsBucket, record.ID, replacement); err != nil {
+			t.Fatal(err)
+		}
+		return code, out
 	}
 	preview, err := CleanupRemoteBranch(context.Background(), root, remoteBranchRequest(record.ID, false, ""), deps)
 	if err != nil {
 		t.Fatal(err)
 	}
 	got, err := CleanupRemoteBranch(context.Background(), root, remoteBranchRequest(record.ID, true, preview.Fingerprint), deps)
-	if err == nil || got.OK || !got.Deleted || got.AuditReflected {
-		t.Errorf("changed record received stale audit/finalization: result=%+v err=%v", got, err)
+	if err == nil || got.OK || !got.Deleted {
+		t.Errorf("changed record received stale finalization: result=%+v err=%v", got, err)
 	}
 	db, err := sqlstore.Open(root)
 	if err != nil {

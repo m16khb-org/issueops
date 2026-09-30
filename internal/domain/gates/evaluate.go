@@ -3,6 +3,8 @@ package gates
 import (
 	"regexp"
 	"strings"
+
+	"issueops/internal/domain/policy"
 )
 
 // 게이트 상태. unlazy의 미충족 규칙을 그대로 따른다:
@@ -75,7 +77,7 @@ func EvidenceTail(output string, max int) string {
 		joined = "(no output)"
 	}
 	if len(joined) > max {
-		joined = joined[:max]
+		joined = policy.TruncateBytes(joined, max)
 	}
 	return joined
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"issueops/internal/domain/policy"
 	"issueops/internal/domain/prompt"
 )
 
@@ -109,7 +110,7 @@ func extractFencedJSON(out []byte) ([]byte, bool, error) {
 func boundedOutputText(s string) string {
 	s = strings.TrimSpace(s)
 	if len(s) > 1000 {
-		return s[:1000] + "...[truncated]"
+		return policy.TruncateBytes(s, 1000) + "...[truncated]"
 	}
 	return s
 }

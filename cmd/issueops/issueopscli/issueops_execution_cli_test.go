@@ -120,7 +120,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 		},
 		Orca: &issueopscontract.OrcaBinding{
 			RuntimeID: "runtime-1", RepoID: "repo-1", WorktreeID: "worktree-1",
-			LeaseGeneration: 2, OwnerHost: "codex", OwnerModel: "gpt-5.6-terra",
+			LeaseGeneration: 2, OwnerHost: "codex", OwnerModel: "gpt-6-astra",
 			ArtifactIdentityVersion: issueopscontract.OrcaArtifactIdentityVersion,
 			IssueBodySHA256:         strings.Repeat("b", 64), ContextPacketSHA256: strings.Repeat("c", 64), OwnerPromptSHA256: strings.Repeat("d", 64),
 			TaskID: "task-1", DispatchID: "dispatch-1", TerminalPTYID: "pty-1",

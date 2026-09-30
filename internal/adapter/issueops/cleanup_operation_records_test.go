@@ -43,7 +43,6 @@ func TestCleanupRecordsBindOperationAndReplacementAcrossFinalizers(t *testing.T)
 			forged.Record.CleanupAttempt = &fake
 			for name, call := range map[string]func() error{
 				"check":   func() error { return store.Check(ctx, forged) },
-				"audit":   func() error { _, err := store.MarkAuditReflected(ctx, forged, "now"); return err },
 				"release": func() error { _, err := store.Release(ctx, forged, "now"); return err },
 				"fail":    func() error { _, err := store.Fail(ctx, forged, finishRecordsFailure(), true); return err },
 				"delete":  func() error { return store.Delete(ctx, forged) },

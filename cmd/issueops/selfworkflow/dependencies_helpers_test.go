@@ -20,10 +20,6 @@ const (
 	SelfAugmentCandidateStatusSatisfied = selfAugmentCandidateStatusSatisfied
 )
 
-const (
-	defaultLoopTargetScoreExclusive = 95.0
-)
-
 type StepResult = verifycontract.StepResult
 
 type SelfAugmentCandidate = augmentcontract.SelfAugmentCandidate

@@ -27,7 +27,7 @@ func TestOrcaAdapterMapsProbeInspectAndInvoke(t *testing.T) {
 		},
 	})
 	probeRequest := preparationcontract.ProbeRequest{
-		Repo: "/repo", Host: "codex", Model: "gpt-5.6-terra", Effort: "xhigh",
+		Repo: "/repo", Host: "codex", Model: "gpt-6-astra", Effort: "xhigh",
 		Provider: "github", Issue: 199, Marker: "marker",
 		Workspace: preparationcontract.WorkspaceRequest{Branch: "199-orca"},
 	}
@@ -35,7 +35,7 @@ func TestOrcaAdapterMapsProbeInspectAndInvoke(t *testing.T) {
 	if err != nil || !probe.Available || !probe.Ready || !validated {
 		t.Fatalf("probe=%+v validated=%v err=%v", probe, validated, err)
 	}
-	wantProbe := port.ExecutionOrcaProbeRequest{Repo: "/repo", Host: "codex", Model: "gpt-5.6-terra", Effort: "xhigh", Provider: "github", Issue: 199, Marker: "marker"}
+	wantProbe := port.ExecutionOrcaProbeRequest{Repo: "/repo", Host: "codex", Model: "gpt-6-astra", Effort: "xhigh", Provider: "github", Issue: 199, Marker: "marker"}
 	if !reflect.DeepEqual(provider.probe, wantProbe) {
 		t.Fatalf("probe request=%+v want=%+v", provider.probe, wantProbe)
 	}

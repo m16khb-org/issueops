@@ -3,11 +3,12 @@ package issueopsremote
 import (
 	"context"
 	"errors"
-	model "issueops/internal/contract/issueops"
-	"issueops/internal/port"
 	"reflect"
 	"strings"
 	"testing"
+
+	model "issueops/internal/contract/issueops"
+	"issueops/internal/port"
 )
 
 type childRecordReader func(context.Context, string) (model.IssueOpsRecord, error)
@@ -94,7 +95,7 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 					}
 					return childProviderFunc(func(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 						events = append(events, "create")
-						if req.ParentIssueURL != record.IssueURL || req.Body != "Body" || req.Confirm != tc.confirm || !reflect.DeepEqual(req.Labels, []string{"bug"}) || !reflect.DeepEqual(req.Assignees, []string{"owner"}) {
+						if req.ParentIssueURL != record.IssueURL || req.Body != readableChildBody || req.Confirm != tc.confirm || !reflect.DeepEqual(req.Labels, []string{"bug"}) || !reflect.DeepEqual(req.Assignees, []string{"owner"}) {
 							t.Fatalf("request=%+v", req)
 						}
 						result := port.IssueProviderCreateChildResult{HierarchyVerified: true, ChildURL: "https://github.com/acme/repo/issues/2"}
@@ -115,9 +116,9 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 						t.Fatal(path)
 					}
 					if tc.problem == "body" {
-						return []byte("password=private-value"), nil
+						return []byte(readableChildBody + "\npassword=private-value"), nil
 					}
-					return []byte("Body"), nil
+					return []byte(readableChildBody), nil
 				}),
 				Authorize: func(_ context.Context, id string, actor model.IssueOpsActor) error {
 					events = append(events, "authorize")
@@ -159,3 +160,20 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 		})
 	}
 }
+
+const readableChildBody = `## 요약
+
+부모 이슈 #1234에서 템플릿 렌더러 구현을 맡습니다. 끝나면 렌더러가 새 계약의 필수 절을 출력합니다.
+
+## 완료 기준
+
+- 렌더러 테스트가 필수 절 순서를 확인합니다.
+
+## 범위
+
+- 하는 것: 렌더러 구현
+- 하지 않는 것: provider 정책 변경
+
+## 선행 조건과 병합 조건
+
+부모 브랜치에 병합한 뒤 하위 작업을 닫습니다.`

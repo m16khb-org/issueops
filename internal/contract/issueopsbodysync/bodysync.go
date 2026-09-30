@@ -6,6 +6,8 @@
 // sections and cannot touch the authored body at all.
 package issueopsbodysync
 
+import reportcontract "issueops/internal/contract/artifactreadability"
+
 // Artifact kinds whose body can be synced. Issue and child are provider issues;
 // pr and mr are the GitHub and GitLab names for the same publication.
 const (
@@ -67,16 +69,22 @@ type Result struct {
 	AgeDays            int      `json:"age_days,omitempty"`
 	AcceptRemoteEdits  bool     `json:"accept_remote_edits,omitempty"`
 	Preview            string   `json:"preview,omitempty"`
+	// Readability judges the proposal; live findings are warning-only.
+	Readability     *reportcontract.Report `json:"readability,omitempty"`
+	LiveReadability *reportcontract.Report `json:"live_readability,omitempty"`
 }
 
 // Command is one sync request. Kind is what the caller asked for (KindIssue or
 // KindPR); the resolved artifact kind can differ, because a URL under a linked
 // parent resolves to KindChild and a GitLab publication resolves to KindMR.
 type Command struct {
-	ID                 string
-	Kind               string
-	URL                string
-	ProposedBody       string
+	ID           string
+	Kind         string
+	URL          string
+	ProposedBody string
+	// Template names the body contract the proposal follows. Empty means it
+	// is inferred from the proposal's own section titles.
+	Template           string
 	ExpectedBodySHA256 string
 	AcceptRemoteEdits  bool
 	ExpectedGeneration uint64

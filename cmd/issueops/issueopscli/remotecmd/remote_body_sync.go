@@ -30,6 +30,7 @@ func (command Command) runBodySyncCommand(ctx context.Context, name, kind string
 	artifactURL := fs.String("url", "", "artifact URL; for sync-issue a provider-native child of the linked issue")
 	body := fs.String("body", "", "replacement body markdown")
 	bodyFile := fs.String("body-file", "", "replacement body markdown file")
+	template := fs.String("template", "", "body contract of the replacement; inferred from its sections when omitted")
 	expectedBodySHA := fs.String("expected-body-sha256", "", "digest of the live body the replacement was built on; required with --confirm")
 	acceptRemoteEdits := fs.Bool("accept-remote-edits", false, "acknowledge that the body was edited outside the harness and the replacement preserves those edits")
 	host := fs.String("host", "", "native holder host")
@@ -50,6 +51,7 @@ func (command Command) runBodySyncCommand(ctx context.Context, name, kind string
 		Kind:               kind,
 		URL:                *artifactURL,
 		ProposedBody:       *body,
+		Template:           *template,
 		ExpectedBodySHA256: *expectedBodySHA,
 		AcceptRemoteEdits:  *acceptRemoteEdits,
 		Confirm:            *confirm,

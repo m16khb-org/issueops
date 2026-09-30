@@ -49,8 +49,8 @@ func NewIssueCreator(records IssueRecordReader, environment IssueCreationEnviron
 	return &IssueCreator{records: records, environment: environment, bodies: bodies, intents: intents, verify: verify, now: now}
 }
 
-func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (port.IssueProviderCreateIssueResult, error) {
-	var result port.IssueProviderCreateIssueResult
+func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (IssueCreateResult, error) {
+	var result IssueCreateResult
 	labels, assignees := remote.CleanValues(cmd.Labels), remote.CleanValues(cmd.Assignees)
 	record, err := s.records.Read(ctx, cmd.ID)
 	if err != nil {
@@ -70,10 +70,12 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (port
 	if err != nil {
 		return result, err
 	}
-	body, err := s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: cmd.Template, Provider: providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile})
+	resolved, err := s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactIssue, Template: cmd.Template, Provider: providerName, Title: cmd.Title, Body: cmd.Body, BodyFile: cmd.BodyFile, Fields: cmd.Fields, ScoreFile: cmd.ScoreFile, Confirm: cmd.Confirm})
 	if err != nil {
 		return result, err
 	}
+	body := resolved.Body
+	result.Readability = resolved.Readability
 	if err := policy.ValidateRemoteCreateInputs("issue create", cmd.Title, body, labels, assignees); err != nil {
 		return result, err
 	}
@@ -97,7 +99,7 @@ func (s *IssueCreator) Create(ctx context.Context, cmd IssueCreateCommand) (port
 	if !cmd.Confirm {
 		invokeContext = context.Background()
 	}
-	result, err = provider(invokeContext, port.IssueProviderCreateIssueRequest{Repo: record.Repo, ProjectKey: authority, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
+	result.IssueProviderCreateIssueResult, err = provider(invokeContext, port.IssueProviderCreateIssueRequest{Repo: record.Repo, ProjectKey: authority, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
 	if err != nil {
 		if cmd.Confirm {
 			createErr, typed := errors.AsType[*port.IssueProviderCreateError](err)

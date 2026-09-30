@@ -139,10 +139,6 @@ type SelfVerificationCandidateExportResult = augmentcontract.SelfVerificationCan
 
 type SelfVerificationCandidate = verifycontract.SelfVerificationCandidate
 
-func saveSelfAugmentPlan(result *augmentcontract.SelfAugmentPlanResult, key string) error {
-	return newSelfWorkflowState(statestore.StateDir()).SavePlan(result, key)
-}
-
 func selfWorkflowRootForTest() string {
 	if root := os.Getenv("ISSUEOPS_ROOT"); root != "" {
 		return root

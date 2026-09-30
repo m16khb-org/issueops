@@ -1,7 +1,6 @@
 package qualitycli
 
 import (
-	quality "issueops/internal/domain/quality"
 	"path/filepath"
 	"time"
 
@@ -55,18 +54,6 @@ func RunInspectWithDeps(args []string, deps InspectDeps) error {
 	return RunInspect(args, testCLIDeps(deps))
 }
 func runForTest(args []string) error { return Run(args, testCLIDeps(InspectDeps{})) }
-
-func addQualityCollectorFailure(result *InspectResult, warning string) {
-	quality.AddQualityCollectorFailure(result, warning)
-}
-
-func addSNRRegressionFinding(result *InspectResult, baseline, current float64) {
-	quality.AddSNRRegressionFinding(result, baseline, current)
-}
-
-func successfulSignalValue(signals []Signal, id string) (float64, bool) {
-	return quality.SuccessfulSignalValue(signals, id)
-}
 
 func Inspect(root string, deps InspectDeps) InspectResult {
 	root = resolveRoot(root)
@@ -128,16 +115,4 @@ func resolveRoot(root string) string {
 
 func collectPioneerCoverage(root string) (PioneerCoverage, error) {
 	return pioneerCoverageCollector(root)
-}
-
-func collectQualityFindings(warnings []string, lowCoverage []CoveragePackage, branchFunctions []BranchFunction, auditItems []AuditItem, pioneer PioneerCoverage) []Finding {
-	return quality.CollectQualityFindings(warnings, lowCoverage, branchFunctions, auditItems, pioneer)
-}
-
-func boundedEvidence(evidence []string, limit int) []string {
-	return quality.BoundedEvidence(evidence, limit)
-}
-
-func qualityStatuses(warnings []string, findings []Finding) (string, string, string) {
-	return quality.QualityStatuses(warnings, findings)
 }

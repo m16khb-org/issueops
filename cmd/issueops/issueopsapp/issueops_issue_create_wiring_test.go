@@ -57,7 +57,7 @@ func TestIssueCreateCancellationPreservesPreviewAndConfirm(t *testing.T) {
 			}, time.Now)
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			_, err = service.Create(ctx, application.IssueCreateCommand{ID: record.ID, Provider: "github", Title: "Title", Body: "Body", Labels: []string{"bug"}, Assignees: []string{"owner"}, Confirm: confirm})
+			_, err = service.Create(ctx, application.IssueCreateCommand{ID: record.ID, Provider: "github", Title: "Title", Body: readableWiringIssueBody, Template: "implementation_task", Labels: []string{"bug"}, Assignees: []string{"owner"}, Confirm: confirm})
 			if calls != 1 || (err != nil) != confirm {
 				t.Fatalf("calls=%d error=%v", calls, err)
 			}
@@ -96,7 +96,7 @@ func TestIssueCreateCompositionPersistsBeforeInvocationAndBlocksAmbiguousRetry(t
 			t.Fatal(err)
 		}
 		if !req.Confirm {
-			if stored.IssueCreateIntent != nil || req.Body != "Body" {
+			if stored.IssueCreateIntent != nil || req.Body != readableWiringIssueBody {
 				t.Fatal("preview sealed an intent")
 			}
 			return port.IssueProviderCreateIssueResult{OK: true, Preview: "preview"}, nil
@@ -118,7 +118,7 @@ func TestIssueCreateCompositionPersistsBeforeInvocationAndBlocksAmbiguousRetry(t
 		t.Fatal("failed creation verified")
 		return nil
 	}, time.Now)
-	cmd := application.IssueCreateCommand{ID: record.ID, Title: "Title", Body: "Body", Labels: []string{"bug"}, Assignees: []string{"owner"}}
+	cmd := application.IssueCreateCommand{ID: record.ID, Title: "Title", Body: readableWiringIssueBody, Template: "implementation_task", Labels: []string{"bug"}, Assignees: []string{"owner"}}
 	if _, err := service.Create(context.Background(), cmd); err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestIssueCreateCompositionLinksReadyCycleAfterLiveVerification(t *testing.T
 		verified = true
 		return nil
 	}, time.Now)
-	result, err := service.Create(context.Background(), application.IssueCreateCommand{ID: record.ID, Title: "Title", Body: "Body", Labels: []string{" bug ", "bug"}, Assignees: []string{"owner"}, Confirm: true})
+	result, err := service.Create(context.Background(), application.IssueCreateCommand{ID: record.ID, Title: "Title", Body: readableWiringIssueBody, Template: "implementation_task", Labels: []string{" bug ", "bug"}, Assignees: []string{"owner"}, Confirm: true})
 	if err != nil || !verified || result.Provider != "github" || strings.Join(result.Labels, ",") != "bug" {
 		t.Fatalf("create=%+v verified=%t err=%v", result, verified, err)
 	}
@@ -188,3 +188,24 @@ func TestIssueCreateCompositionLinksReadyCycleAfterLiveVerification(t *testing.T
 		t.Fatalf("completion phase=%s intent=%+v err=%v", stored.Phase, stored.IssueCreateIntent, err)
 	}
 }
+
+const readableWiringIssueBody = `## 요약
+
+이슈 본문을 요약이 먼저 오는 짧은 계약으로 바꿉니다. 끝나면 팀원이 요약만 읽고 변경 이유를 압니다.
+
+## 배경
+
+지금 본문은 절이 많아 팀원이 무엇이 바뀌는지 찾기 어렵습니다.
+
+## 완료 기준
+
+- 새로 게시한 이슈의 첫 절이 요약입니다.
+
+## 범위
+
+- 하는 것: 본문 계약 변경
+- 하지 않는 것: 이미 게시된 이슈 수정
+
+## 검증
+
+단위 테스트로 필수 절과 요약 규칙을 확인합니다.`

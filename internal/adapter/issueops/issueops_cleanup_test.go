@@ -2,14 +2,14 @@ package issueops
 
 import (
 	"context"
-	cycleapp "issueops/internal/application/issueopscycle"
-	remoteapp "issueops/internal/application/issueopsremote"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"issueops/internal/adapter/preflight"
+	cycleapp "issueops/internal/application/issueopscycle"
+	remoteapp "issueops/internal/application/issueopsremote"
 	"issueops/internal/contract/issueops"
 )
 
@@ -65,7 +65,7 @@ func TestIssueOpsCleanupStatusRequiresMergedCleanWorktreeAndDeletedRemoteBranch(
 	if err != nil {
 		t.Fatal(err)
 	}
-	if code, _, stderr := preflight.GitCmd(worktree, "add", "internal/demo.go", "plans/demo.md"); code != 0 {
+	if code, _, stderr := preflight.GitCmd(worktree, "add", "internal/demo.go", "plans/demo.md", ".issueops/issues"); code != 0 {
 		t.Fatalf("git add failed: %s", stderr)
 	}
 	if code, _, stderr := preflight.GitCmd(worktree, "commit", "-q", "-m", "feat: implement cleanup"); code != 0 {

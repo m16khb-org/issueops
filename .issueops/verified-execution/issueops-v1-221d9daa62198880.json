@@ -1,0 +1,156 @@
+{
+  "lifecycle_id": "io-7426b49dc042",
+  "issue_url": "https://github.com/m16khb-org/issueops/issues/513",
+  "branch": "513-readable-issue-pr-bodies",
+  "status": "final for ai-slop-clean; publication evidence follows in the PR and execution complete",
+  "owner": {
+    "host": "claude",
+    "model": "claude-opus-5-5",
+    "effort": "high",
+    "mode": "direct",
+    "lease_generation": 3,
+    "handover": "generation 2 (claude-sonnet-5) left T1-T2 and part of T3 uncommitted; this session reviewed them against the plan and design, fixed six defects, and finished T3-T14"
+  },
+  "goal": "이슈·PR 본문을 요약이 먼저 오는 짧은 계약으로 바꾸고, 가독성 검사를 issueops remote 게시·동기화 명령 안에서 항상 실행하며, 구현 자료는 .issueops/issues/<n>/의 추적 사본으로 남긴다.",
+  "draft_review_fixes": [
+    "legacy --field keys goal, parent_merge, child cleanup, PR verification and issue, issue risk/rollback were dropped by the draft alias maps",
+    "## headings inside code fences counted as sections",
+    "\"- 없음\" list placeholders passed",
+    "finding line numbers shifted after code fences and managed regions",
+    "harness term lease matched release/please",
+    "English word counting diverged from the Python gate (Unicode word boundaries); 50KB check took 15ms (214ms under -race), now 4.4ms (48ms)"
+  ],
+  "tdd_loop": [
+    {
+      "step": "RED",
+      "command": "go test ./internal/domain/artifactreadability -count=1",
+      "observed": "line = 21, want 24; release matched lease; scoreLanguage (30,5) vs Python (30,2)"
+    },
+    {
+      "step": "GREEN",
+      "command": "go test ./internal/domain/artifactreadability -count=1",
+      "observed": "ok"
+    },
+    {
+      "step": "RED",
+      "command": "go test ./internal/domain/artifacttemplate -count=1",
+      "observed": "legacy verification key missing, fenced heading satisfied a section, - 없음 passed, fenced 재현 절차 inferred bug"
+    },
+    {
+      "step": "GREEN",
+      "command": "go test ./internal/domain/artifacttemplate -count=1",
+      "observed": "ok"
+    },
+    {
+      "step": "RED",
+      "command": "go vet ./cmd/issueops/issueopscli/remotecmd",
+      "observed": "undefined: createIssueResponse, createPRResponse"
+    },
+    {
+      "step": "GREEN",
+      "command": "go test ./cmd/issueops/issueopscli/remotecmd -run 'TestRemoteCreateIssueRefusesCriticalReadability|TestRemoteCreateChildAndPRRefuseCriticalReadability|TestRemoteSyncRefusesCriticalAndReportsLiveReadability|TestReflectCompletionRequiresReadableResult' -count=1",
+      "observed": "ok"
+    },
+    {
+      "step": "RED",
+      "command": "go vet ./internal/adapter/issueops",
+      "observed": "result.Audit undefined (CleanupRemoteBranchResult)"
+    },
+    {
+      "step": "GREEN",
+      "command": "go test ./internal/adapter/issueops -run TestCleanupPathsKeepAuditOutOfIssueBody -count=1",
+      "observed": "ok"
+    },
+    {
+      "step": "RED",
+      "command": "go vet ./internal/adapter/provider/issuebody",
+      "observed": "unknown field ResultBody; not enough arguments in call to RenderDevilsAdvocateSection"
+    },
+    {
+      "step": "GREEN",
+      "command": "go test ./internal/adapter/provider/issuebody -run 'TestCompletionSectionIsHumanReadable|TestPlanReviewSectionSummarizesRounds|TestPlanReviewMasksHashesAndPaths' -count=1",
+      "observed": "ok"
+    },
+    {
+      "step": "RED",
+      "command": "go vet ./internal/adapter/issueops",
+      "observed": "preview.Warnings undefined; renderIssueGraphComment undefined"
+    },
+    {
+      "step": "GREEN",
+      "command": "go test ./internal/adapter/issueops -run 'TestPhaseTransitionWritesTrackedMaterials|TestTrackedPlanCopySkipsAPlanOutsideTheSealedDirectory|TestTrackedMaterialsMissingWarning|TestIssueGraphCommentIsKorean|TestShortKoreanStopReflectsAndRegresses|TestReflectCompletionRequiresReadableResult' -count=1",
+      "observed": "ok"
+    },
+    {
+      "step": "RED",
+      "command": "go test ./internal/domain/artifactreadability -run TestCompletionDraftRefusesHarnessValuesInsideCode -count=1",
+      "observed": "a completion draft must refuse commit_sha_full even inside code: []",
+      "expected_reason": "implementation review observation 1: intent success criterion 4 has no code exception for the completion region"
+    },
+    {
+      "step": "GREEN",
+      "command": "go test ./internal/domain/artifactreadability -count=1",
+      "observed": "ok"
+    }
+  ],
+  "review_memos": {
+    "A": "trackedPlanSource skips a plan_path outside the sealed directory",
+    "B": "local_path/commit_sha_full critical and result_too_long only for KindCompletion",
+    "C": "IssueOpsTrackedMaterials is returned and printed as tracked_materials; the record gains no field"
+  },
+  "side_effects": [
+    "CLI JSON: readability on create-issue/child/pr and reflect-completion; readability and live_readability on sync-issue/pr; audit replaces audit_reflected/audit_error on cleanup finish and remote-branch; warnings on cleanup finish; tracked_materials on phase",
+    "CLI input: create-issue --confirm requires --template; reflect-completion --confirm requires --body-file; sync-issue/sync-pr accept --template",
+    "files: implement and ai-slop-clean transitions write .issueops/issues/<n>/{plan,intent,spec,plan-review}.md",
+    "remote: cleanup no longer writes the issue body; completion and plan-review regions render new content inside unchanged markers",
+    "deleted: skills/issueops-remote-write/scripts/remote_artifact_gate.py"
+  ],
+  "verification": {
+    "gates": "issueops gates check --file .issueops/issues/513/gates.md --write --timeout-seconds 900: 28/28 met in one run (go test ./..., go test -race ./..., go vet, gofmt, goldens, focused gates, skills, project-docs check, build, self-verify)",
+    "dogfood": "./bin/issueops phase --to ai-slop-clean wrote .issueops/issues/513/{plan,intent,plan-review}.md; intent.md is byte-identical to the sealed original; plan.md was identical until one QA line that named a private GitLab host and repository was reworded before merge (the public-repo fixture scan caught it)",
+    "diff_check": "git diff --check clean"
+  },
+  "remaining": [
+    "DryRunPreview cuts UTF-8 mid-character at 4,096 bytes (plan gap 11)",
+    "measure the first 10 new-contract bodies against the baseline",
+    "decide whether reader review becomes a publication condition",
+    "tracked plan copies publish plan text verbatim; a private-identifier check before writing them is a follow-up"
+  ],
+  "ai_slop_clean": {
+    "removed": {
+      "needless-abstraction": "artifacttemplate.SupportsTemplate wrapped supportedTemplateForKind one-to-one; the function is now exported directly",
+      "dead-code": "test alias portCompletionSection lost its last use when cleanup stopped writing the issue body (golangci-lint unused)",
+      "weak-artifact": "readability.go pointed at the deleted remote_artifact_gate.py path; a variable named template held an artifact kind"
+    },
+    "complexity": "artifactreadability.Check had 35 branch points; split into addStructural, addKoreanRatio, addLineFindings, addSectionWarnings with no behavior change",
+    "preserved": [
+      "bodysync Result.Readability and LiveReadability stay typed any: contract/issueopsbodysync is imported by domain/issueopsbodysync, which artifactreadability imports, so a concrete type would form an import cycle",
+      "tracked material file names appear both in issueops_materials.go and issueopsremote.TrackedMaterialNames; the domain list serves implementation_changes and the adapter writes each file with its own source"
+    ],
+    "out_of_scope": [
+      "most functions over 12 branch points in touched files predate this change (Run, runRemoteCreateIssue, cleanupFinishGates, provider.go)"
+    ]
+  },
+  "metrics": {
+    "scope": "non-test Go lines changed since 5f767151 (python3 metrics script: added-line SNR, per-function branch count)",
+    "snr": {
+      "before": 0.835,
+      "after": 0.834,
+      "note": "after adds method doc comments for the split Check"
+    },
+    "functions_over_6_branches": {
+      "before": 79,
+      "after": 81
+    },
+    "functions_over_12_branches": {
+      "before": 30,
+      "after": 29
+    },
+    "redundancy": "golangci-lint dupl,unused on artifactreadability, artifacttemplate, issuebody, remotecmd, adapter/issueops, implementation, gatesgate, benchmark: no dupl finding; one unused finding fixed",
+    "performance": "BenchmarkCheck50KB: 4.4ms/op (48ms/op under -race); draft code measured 15ms (214ms under -race)",
+    "caveat": "branch counts are a regex heuristic, not an AST measurement"
+  },
+  "implementation_review": {
+    "round1": "independent subagent (opus, high): pass, no blocking defects; observation 1 (completion draft code exception vs intent criterion 4) and observation 3 (misplaced doc comment) fixed and sent back for a delta review; observation 2 (openwiki page) left because openwiki is generated; observation 4 noted, no change"
+  }
+}

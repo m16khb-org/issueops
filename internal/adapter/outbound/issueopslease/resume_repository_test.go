@@ -317,7 +317,7 @@ func resumeRepositoryRecord(t *testing.T, generation uint64) leasecontract.Recor
 	return leasecontract.Record{OK: true, SchemaVersion: leasecontract.SchemaVersion, ID: "io-resume-repository", Repo: "m16khb/issueops", IssueURL: "https://github.com/m16khb/issueops/issues/193", BranchPrepare: []byte(`{"provider":"github","issue_url":"https://github.com/m16khb/issueops/issues/193","link_verified":true}`), Phase: "implement", CreatedAt: "2026-07-31T00:00:00Z", UpdatedAt: "2026-07-31T00:00:00Z", Execution: &leasecontract.Execution{
 		Mode: "orca", Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "193-resume", BaseHead: "c30fb6761a24eae102f9e79e043306e60525207d", Driver: "orca", LinkedAt: "2026-07-31T00:00:00Z"},
 		Lease: leasecontract.Lease{Generation: generation, Status: "claimable", ClaimTokenSHA256: strings.Repeat("b", 64)},
-		Orca:  &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh", TaskID: "task", DispatchID: "dispatch", TerminalPTYID: "pty", LeaseGeneration: generation},
+		Orca:  &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh", TaskID: "task", DispatchID: "dispatch", TerminalPTYID: "pty", LeaseGeneration: generation},
 	}}
 }
 

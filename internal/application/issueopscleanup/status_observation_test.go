@@ -70,7 +70,8 @@ func TestStatusServiceOnlyNormalizesSameCycleReadinessErrors(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			record := model.IssueOpsRecord{ID: "cycle", Repo: "/repo", Phase: model.IssueOpsPhaseDone, IssueURL: "https://github.com/acme/repo/issues/1", RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/2", Labels: []string{"ready"}, Assignees: []string{"owner"}}}
 			var calls []string
-			ctx := context.WithValue(context.Background(), struct{}{}, "request")
+			type requestContextKey struct{}
+			ctx := context.WithValue(context.Background(), requestContextKey{}, "request")
 			service := app.StatusService{
 				Records: newCleanupStatusTestStore(record), Structural: app.StructuralStatus{Environment: &statusEnvironment{}},
 				Provider: func(name string) (port.IssueProvider, error) {

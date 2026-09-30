@@ -30,7 +30,7 @@ func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 	}
 	valid := issueops.IssueOpsImplementationReviewRequest{
 		Verdict: "pass", Findings: []string{"경계 조건 검토 완료"}, Evidence: []string{"go test ./... ok"},
-		ReviewerHost: "codex", ReviewerModel: "gpt-5.6-sol", ReviewerEffort: "xhigh",
+		ReviewerHost: "codex", ReviewerModel: "gpt-6-sol", ReviewerEffort: "xhigh",
 	}
 	// C4b-F2: implement 이전 phase에서는 기록을 거부한다.
 	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, valid); err == nil || !strings.Contains(err.Error(), "implement phase") {
@@ -42,7 +42,7 @@ func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	review := got.ImplementationReview
-	if review == nil || review.Verdict != "pass" || review.ReviewerModel != "gpt-5.6-sol" {
+	if review == nil || review.Verdict != "pass" || review.ReviewerModel != "gpt-6-sol" {
 		t.Fatalf("review must round-trip with audit fields: %+v", review)
 	}
 	// C4b-F1: 리뷰가 변경 집합 fingerprint를 봉인한다.

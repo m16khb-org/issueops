@@ -25,7 +25,7 @@ func validOrcaExecutionForTest() Execution {
 			RepoID:     "repo-1",
 			WorktreeID: "worktree-1",
 			OwnerHost:  "codex",
-			OwnerModel: "gpt-5.6-terra",
+			OwnerModel: "gpt-6-astra",
 			TaskID:     "task-1",
 			DispatchID: "dispatch-1",
 		},
@@ -56,7 +56,7 @@ func TestValidateNativeActorAcceptsOmo(t *testing.T) {
 func TestValidateExecutionAcceptsOmoOrcaOwner(t *testing.T) {
 	execution := validOrcaExecutionForTest()
 	execution.Orca.OwnerHost = "omo"
-	execution.Orca.OwnerModel = "openai-codex/gpt-5.6-sol"
+	execution.Orca.OwnerModel = "chatgpt-subscription/gpt-6-sol"
 	if err := issueopsdomain.ValidateExecution(execution); err != nil {
 		t.Fatalf("Omo Orca owner must be valid: %v", err)
 	}

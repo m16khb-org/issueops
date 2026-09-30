@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	remote "issueops/internal/domain/issueopsremote"
 	"path/filepath"
 	"strings"
 
@@ -16,6 +15,8 @@ import (
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	issueopsdomain "issueops/internal/domain/issueops"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
+	remote "issueops/internal/domain/issueopsremote"
+	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
 
@@ -292,7 +293,7 @@ func (repository *SQLiteRepository) boundedDiagnostic(cause error) string {
 		}
 	}
 	if len(message) > 4096 {
-		message = message[:4096]
+		message = policy.TruncateBytes(message, 4096)
 	}
 	return message
 }

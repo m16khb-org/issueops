@@ -90,6 +90,7 @@ If a Task is already a linked item and must become a child item, remove the link
 - The GitLab issue body is the source of truth for scope, acceptance criteria, child task list, and durable evidence. If the user says not to comment, update the issue body.
 - For long issue-body updates, fetch the current description, patch it additively, submit with file-backed description input when possible, then re-read and verify.
 - Remote issue/MR text should stay Korean-centered except code identifiers, branch names, commands, and URLs. Before any remote write — issue body, MR body, note, or thread reply — invoke the `fluent-korean` skill and apply it to the draft.
+- Inside an IssueOps cycle, never create or edit an issue, child, or MR body through `glab` or a glab MCP tool. Use `issueops remote create-issue|create-child|create-pr|sync-issue|sync-pr`: they run the body contract and readability check and record the write, and a direct write skips both.
 
 ## Branch And MR Rules
 

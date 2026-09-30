@@ -68,17 +68,6 @@ func (s CleanupRecordStore) Fail(ctx context.Context, expected model.CleanupSnap
 	return s.save(ctx, expected, domain.ApplyCleanupFinishFailure(record, failure, drained))
 }
 
-func (s CleanupRecordStore) MarkAuditReflected(ctx context.Context, expected model.CleanupSnapshot, now string) (model.CleanupSnapshot, error) {
-	record, err := cleanupSnapshotRecord(expected, true)
-	if err != nil {
-		return model.CleanupSnapshot{}, err
-	}
-	if record.CleanupAttempt.Operation == model.CleanupOperationAbandon {
-		return model.CleanupSnapshot{}, fmt.Errorf("abandon does not own post-merge audit reflection")
-	}
-	return s.save(ctx, expected, domain.MarkRemoteCompletionReflected(record, now))
-}
-
 func (s CleanupRecordStore) Delete(ctx context.Context, expected model.CleanupSnapshot) error {
 	if _, err := cleanupOperationRecord(expected, model.CleanupOperationFinish); err != nil {
 		return err

@@ -1847,7 +1847,8 @@
         "func command.runIssueOpsStart",
         "func command.runIssueOpsStatus",
         "func parseExpectedRouting",
-        "func printIssueOpsChildValue"
+        "func printIssueOpsChildValue",
+        "type phaseResponse"
       ]
     },
     {
@@ -1966,6 +1967,14 @@
       "task": "T20",
       "symbols": [
         "func Command.runRemotePublication"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_readability.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "type reflectCompletionResponse"
       ]
     },
     {
@@ -4204,7 +4213,6 @@
         "func CleanupRecordStore.Delete",
         "func CleanupRecordStore.Fail",
         "func CleanupRecordStore.Load",
-        "func CleanupRecordStore.MarkAuditReflected",
         "func CleanupRecordStore.Release",
         "func CleanupRecordStore.compare",
         "func CleanupRecordStore.save",
@@ -4261,16 +4269,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/completion_artifacts.go",
-      "owner": "adapter",
-      "task": "T07",
-      "symbols": [
-        "func CompletionArtifacts.Read",
-        "func readCompletionArtifact",
-        "type CompletionArtifacts"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/cycle_record_store.go",
       "owner": "adapter",
       "task": "T08",
@@ -4314,7 +4312,6 @@
         "func claimTokenPath",
         "func cleanupReplacementGeneration",
         "func createClaimToken",
-        "func hashJSON",
         "func readExecutionLeaseToken",
         "func removeReplacementRuntimeFile",
         "func secureMkdirAll",
@@ -4573,6 +4570,7 @@
         "func cleanRelativePath",
         "func fileTreeHasImplementationChange",
         "func fingerprintPaths",
+        "func pathIsPlanningMaterial",
         "type Reader"
       ]
     },
@@ -4773,6 +4771,23 @@
       ]
     },
     {
+      "path": "internal/adapter/issueops/material_files.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func MaterialFiles.ArtifactPath",
+        "func MaterialFiles.Join",
+        "func MaterialFiles.MkdirAll",
+        "func MaterialFiles.Parent",
+        "func MaterialFiles.ReadFile",
+        "func MaterialFiles.Relative",
+        "func MaterialFiles.Resolve",
+        "func MaterialFiles.Stat",
+        "func MaterialFiles.WriteFile",
+        "type MaterialFiles"
+      ]
+    },
+    {
       "path": "internal/adapter/issueops/orca_intent_files.go",
       "owner": "adapter",
       "task": "T08",
@@ -4799,6 +4814,7 @@
         "func OrphanEnvironment.RemoveWorktree",
         "func OrphanEnvironment.Run",
         "func OrphanEnvironment.StateOutsideTarget",
+        "func boundedGitFailure",
         "type OrphanEnvironment"
       ]
     },
@@ -5552,19 +5568,15 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func ClaimContextPreflight.Preflight",
-        "func NewClaimContextPreflight",
+        "func ClaimContextReader.DecodePacket",
+        "func ClaimContextReader.Load",
+        "func ClaimContextReader.ReadArtifact",
+        "func ClaimContextReader.ReadPacket",
+        "func NewClaimContextReader",
         "func claimContextPacketPath",
-        "func claimDigest",
-        "func claimSHA256",
         "func readClaimOwnerArtifact",
         "func sealedClaimArtifactPath",
-        "func validateClaimPacket",
-        "type ClaimContextPreflight",
-        "type IssueSnapshot",
-        "type IssueSnapshotReader",
-        "type claimContextPacket",
-        "type claimPacketIssue"
+        "type ClaimContextReader"
       ]
     },
     {
@@ -8418,17 +8430,6 @@
       ]
     },
     {
-      "path": "internal/application/issueopscleanup/audit.go",
-      "owner": "application",
-      "task": "T08",
-      "symbols": [
-        "func AuditReflector.Reflect",
-        "func WriteCleanupAudit",
-        "type AuditReflector",
-        "type CompletionReflectionReceipts"
-      ]
-    },
-    {
       "path": "internal/application/issueopscleanup/children.go",
       "owner": "application",
       "task": "T08",
@@ -8729,6 +8730,7 @@
       "owner": "application",
       "task": "T20",
       "symbols": [
+        "func GateService.AdvancePhaseReport",
         "func GateService.AdvancePhaseWithActor",
         "func GateService.StrictPRReadinessWithState",
         "func GateService.apply",
@@ -8799,6 +8801,7 @@
       "symbols": [
         "func GrillReadiness",
         "func PhaseService.Advance",
+        "func PhaseService.AdvanceReport",
         "func PhaseService.Refresh",
         "func PhaseService.advanceLocked",
         "func PhaseService.entryReadiness",
@@ -9031,6 +9034,20 @@
         "type ClaimRequest",
         "type ClaimResult",
         "type ClaimService"
+      ]
+    },
+    {
+      "path": "internal/application/issueopslease/claim_context.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func NewSealedClaimContext",
+        "func SealedClaimContext.Preflight",
+        "func SealedClaimContext.validatePacket",
+        "type ClaimContextReader",
+        "type IssueSnapshot",
+        "type IssueSnapshotReader",
+        "type SealedClaimContext"
       ]
     },
     {
@@ -9487,14 +9504,10 @@
       "owner": "application",
       "task": "T07",
       "symbols": [
-        "func CompletionCollector.Collect",
         "func CompletionReceipts.Closed",
         "func CompletionReceipts.Reflected",
         "func CompletionReceipts.update",
-        "func NewCompletionCollector",
         "func NewCompletionReceipts",
-        "type CompletionArtifactReader",
-        "type CompletionCollector",
         "type CompletionReceipts"
       ]
     },
@@ -9506,6 +9519,16 @@
         "func CreatePreparation.Prepare",
         "func NewCreatePreparation",
         "type CreatePreparation"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/create_results.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "type ChildCreateResult",
+        "type IssueCreateResult",
+        "type PublicationResult"
       ]
     },
     {
@@ -9665,11 +9688,29 @@
       "task": "T07",
       "symbols": [
         "func NewTemplateBodyResolver",
+        "func TemplateBodyResolver.ReadBody",
         "func TemplateBodyResolver.Resolve",
         "func TemplateBodyResolver.ScoreSummary",
         "func firstNonEmpty",
+        "type ResolvedTemplateBody",
         "type TemplateBodyRequest",
         "type TemplateBodyResolver"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/tracked_materials.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func TrackedMaterials.Missing",
+        "func TrackedMaterials.Warning",
+        "func TrackedMaterials.Write",
+        "func TrackedMaterials.contents",
+        "func TrackedMaterials.planSource",
+        "func trackedMaterialsDir",
+        "type MaterialFiles",
+        "type TrackedMaterials",
+        "type trackedMaterial"
       ]
     },
     {
@@ -10597,6 +10638,15 @@
       ]
     },
     {
+      "path": "internal/contract/artifactreadability/report.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type Finding",
+        "type Report"
+      ]
+    },
+    {
       "path": "internal/contract/audit/handoff_delivery.go",
       "owner": "contract",
       "task": "T02",
@@ -11172,7 +11222,7 @@
       "owner": "contract",
       "task": "T07",
       "symbols": [
-        "type CompletionArtifactDigest",
+        "type PlanReviewRound",
         "type RemoteCompletionSection"
       ]
     },
@@ -11240,6 +11290,7 @@
         "type IssueOpsRemoteCompletion",
         "type IssueOpsSchemaEvidence",
         "type IssueOpsStartRequest",
+        "type IssueOpsTrackedMaterials",
         "type LeaseHolderIndex",
         "type SkillRoutingEntry"
       ]
@@ -11354,6 +11405,15 @@
       "owner": "contract",
       "task": "T02",
       "symbols": []
+    },
+    {
+      "path": "internal/contract/issueopslease/claim_context.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type ClaimContextPacket",
+        "type ClaimPacketIssue"
+      ]
     },
     {
       "path": "internal/contract/issueopslease/execution_sidecars.go",
@@ -12396,34 +12456,90 @@
       ]
     },
     {
+      "path": "internal/domain/artifactreadability/body_sync.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BodySyncArtifactKind",
+        "func BodySyncTemplate",
+        "func CheckBodySyncReadability",
+        "func WarningOnly"
+      ]
+    },
+    {
+      "path": "internal/domain/artifactreadability/readability.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Check",
+        "func KindFor",
+        "func RefusalError",
+        "func addKoreanRatio",
+        "func addLineFindings",
+        "func addSectionWarnings",
+        "func addStructural",
+        "func blankCode",
+        "func blankManagedRegions",
+        "func countEnglishWords",
+        "func firstDuplicateSentence",
+        "func hedgeOrIntroCount",
+        "func hexWords",
+        "func isASCII",
+        "func isASCIILetter",
+        "func isASCIIWordByte",
+        "func isASCIIWordTail",
+        "func isHexByte",
+        "func isWordRune",
+        "func scoreLanguage",
+        "func sortFindings",
+        "func splitSentences",
+        "func templateKindFor",
+        "type Input",
+        "type Kind"
+      ]
+    },
+    {
       "path": "internal/domain/artifacttemplate/template.go",
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func InferTemplateKind",
+        "func OptionalSectionTitles",
         "func ParseFieldAssignments",
         "func Render",
+        "func RequiredSectionTitles",
+        "func SectionContent",
+        "func SummarySection",
+        "func SupportsTemplate",
         "func Validate",
+        "func allSectionSpecs",
+        "func bodySections",
+        "func combinedField",
         "func containsHangul",
         "func containsString",
         "func field",
         "func fieldSatisfiedByBody",
+        "func hasNonEmptySummarySection",
+        "func isPlaceholderContent",
         "func missingFields",
         "func normalizeFieldKey",
         "func normalizeFields",
         "func normalizeInput",
         "func renderBody",
         "func renderSections",
-        "func requiredFields",
-        "func scoreSummary",
+        "func requiredFieldNames",
+        "func sectionContentFromBody",
+        "func sectionsFor",
         "func supportedArtifactKind",
-        "func supportedTemplateForKind",
         "func uniqueSorted",
         "type IssueOpsArtifactKind",
         "type IssueOpsTemplateInput",
         "type IssueOpsTemplateKind",
         "type IssueOpsTemplateResult",
         "type IssueOpsTemplateValidation",
-        "type section"
+        "type bodySection",
+        "type section",
+        "type sectionSpec"
       ]
     },
     {
@@ -13482,7 +13598,8 @@
       "task": "T07",
       "symbols": [
         "func PlanIssueGraphSync",
-        "func issueGraphLinkLabel",
+        "func RenderIssueGraphComment",
+        "func linkTypeLabel",
         "type IssueGraphSyncPlan"
       ]
     },
@@ -13544,8 +13661,6 @@
         "func RenderSection",
         "func SectionBudget",
         "func SectionMarkers",
-        "func orPlaceholder",
-        "func renderCollapsed",
         "type SectionInput"
       ]
     },
@@ -13701,6 +13816,15 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/plan_review_text.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func maskHarnessValues",
+        "func planReviewVerdictLabel"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/plan_sections.go",
       "owner": "domain",
       "task": "T20",
@@ -13789,15 +13913,12 @@
       "owner": "domain",
       "task": "T07",
       "symbols": [
-        "func CompletionArtifactNames",
-        "func CompletionArtifactRoot",
         "func MarkRemoteCompletionReflected",
         "func MarkRemoteIssueClosed",
         "func ProjectRemoteCompletion",
         "func ValidateCloseIssue",
         "func ValidateCompletionMerge",
-        "func ValidateReflectCompletion",
-        "type CompletionArtifact"
+        "func ValidateReflectCompletion"
       ]
     },
     {
@@ -13860,6 +13981,7 @@
       "task": "T07",
       "symbols": [
         "func MarkReviewReflected",
+        "func PlanReviewRounds",
         "func ValidateReviewReflection",
         "func ValidateReviewReflectionStamp"
       ]
@@ -13885,6 +14007,14 @@
         "func bodyDeclaresSupersede",
         "func sameArtifactURL",
         "type ArtifactObservation"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/tracked_plan_review.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func RenderTrackedPlanReview"
       ]
     },
     {
@@ -14354,6 +14484,22 @@
         "func ValidateClaim",
         "type ClaimOutcome",
         "type ClaimRequest"
+      ]
+    },
+    {
+      "path": "internal/domain/issueopslease/claim_context.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ClaimContextDigest",
+        "func ClaimContextDigests",
+        "func RequiresSealedClaimContext",
+        "func ValidateClaimArtifact",
+        "func ValidateClaimIssueSnapshot",
+        "func ValidateClaimPacketDigest",
+        "func ValidateClaimPacketIdentity",
+        "func ValidateSealedClaimGeneration",
+        "func claimSHA256"
       ]
     },
     {
@@ -14907,6 +15053,7 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func IsTrackedMaterialPath",
         "func IssueArtifactDir",
         "func IssueNumber",
         "func ProjectKey",
@@ -15524,6 +15671,17 @@
       "task": "T07",
       "symbols": [
         "func ValidateRemoteCreateInputs"
+      ]
+    },
+    {
+      "path": "internal/domain/policy/text_bound.go",
+      "owner": "domain",
+      "task": "T09",
+      "symbols": [
+        "func TailBytes",
+        "func TrimIncompleteRune",
+        "func TruncateBytes",
+        "func TruncateRunes"
       ]
     },
     {
@@ -20319,53 +20477,15 @@
       "id": "remote-completion-artifact-projection",
       "source_path": "internal/adapter/issueops/issueops_completion_remote.go",
       "source_symbol": "func gatherCompletionSection",
-      "responsibility": "project completion evidence and sealed artifact bodies with full digests, a bounded summary and missing-plan disclosure",
+      "responsibility": "project the verified remote artifact URL for the human-authored completion report without publishing sealed harness artifacts",
       "target": "internal/domain/issueops",
       "target_symbol": "func ProjectRemoteCompletion",
       "task": "T07",
       "entrypoints": [
-        "issueops remote reflect-completion",
-        "issueops remote close-issue",
-        "issueops cleanup"
+        "issueops remote reflect-completion"
       ],
       "evidence_tests": [
         "internal/domain/issueops/remote_completion_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "remote-completion-artifact-collection",
-      "source_path": "internal/adapter/issueops/issueops_completion_remote.go",
-      "source_symbol": "func gatherCompletionSection",
-      "responsibility": "collect the fixed completion artifacts from the canonical worktree through a sealed-file port",
-      "target": "internal/application/issueopsremote",
-      "target_symbol": "func CompletionCollector.Collect",
-      "task": "T07",
-      "entrypoints": [
-        "issueops remote reflect-completion",
-        "issueops remote close-issue",
-        "issueops cleanup"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/issueops_completion_remote_test.go"
-      ],
-      "status": "migrated"
-    },
-    {
-      "id": "cleanup-completion-audit-orchestration",
-      "source_path": "internal/adapter/issueops/issueops_cleanup_finish.go",
-      "source_symbol": "func ReflectCleanupAudit",
-      "responsibility": "reflect the pre-destruction completion snapshot and audit only after confirmed provider application, then record the local receipt",
-      "target": "internal/application/issueopscleanup",
-      "target_symbol": "func AuditReflector.Reflect",
-      "task": "T08",
-      "entrypoints": [
-        "issueops cleanup"
-      ],
-      "evidence_tests": [
-        "internal/adapter/issueops/issueops_completion_remote_test.go",
-        "internal/application/issueopscleanup/audit_test.go",
-        "internal/adapter/issueops/cleanup_audit_application_test.go"
       ],
       "status": "migrated"
     },
@@ -20789,14 +20909,13 @@
       "id": "managed-completion-rendering",
       "source_path": "internal/adapter/provider/issuebody/issue_body_section.go",
       "source_symbol": "func RenderCompletionSection",
-      "responsibility": "render mandatory completion blocks and truncate lower-priority bodies without dropping headings",
+      "responsibility": "preserve the human completion report, append bounded child references, and refuse oversized managed bodies",
       "target": "internal/domain/issueops",
       "target_symbol": "func RenderCompletionSection",
       "task": "T07",
       "entrypoints": [
         "issueops remote reflect-completion",
-        "issueops remote reflect-review",
-        "issueops cleanup finish"
+        "issueops remote reflect-review"
       ],
       "evidence_tests": [
         "internal/domain/issueops/managed_body_test.go",
@@ -26323,6 +26442,64 @@
         "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"
       ],
       "status": "migrated"
+    },
+    {
+      "id": "tracked-planning-materials",
+      "source_path": "internal/adapter/issueops/issueops_materials.go",
+      "source_symbol": "func writeTrackedMaterials",
+      "responsibility": "refresh reviewable planning copies before phase sealing and report missing copies without blocking cleanup",
+      "target": "internal/application/issueopsremote",
+      "target_symbol": "func TrackedMaterials.Write",
+      "task": "T20",
+      "entrypoints": [
+        "issueops phase",
+        "issueops cleanup",
+        "issueops remote reflect-completion"
+      ],
+      "evidence_tests": [
+        "internal/adapter/issueops/issueops_materials_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "sealed-claim-context-policy",
+      "source_path": "internal/adapter/outbound/issueopslease/claim_context.go",
+      "source_symbol": "func validateClaimPacket",
+      "responsibility": "decide Orca generation applicability, sealed digests, execution identity, and remote body drift; application preserves preflight and locked revalidation order",
+      "target": "internal/domain/issueopslease",
+      "target_symbol": "func ValidateClaimPacketIdentity",
+      "task": "T05",
+      "entrypoints": [
+        "issueops execution claim"
+      ],
+      "evidence_tests": [
+        "internal/domain/issueopslease/claim_context_test.go",
+        "internal/adapter/outbound/issueopslease/claim_context_test.go",
+        "cmd/issueops/issueopsapp/issueops_claim_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "remote-human-body-readability",
+      "source_path": "internal/domain/artifactreadability/readability.go",
+      "source_symbol": "func Check",
+      "responsibility": "assess human issue, PR, and completion body readability before publication; reject critical findings",
+      "target": "internal/domain/artifactreadability",
+      "target_symbol": "func Check",
+      "task": "T07",
+      "entrypoints": [
+        "issueops remote create-issue",
+        "issueops remote create-pr",
+        "issueops remote sync-issue",
+        "issueops remote sync-pr",
+        "issueops remote reflect-completion"
+      ],
+      "evidence_tests": [
+        "internal/domain/artifactreadability/readability_test.go",
+        "internal/adapter/issueops/issueops_remote_body_sync_test.go",
+        "internal/application/issueopspublication/create_test.go"
+      ],
+      "status": "retain"
     }
   ]
 }

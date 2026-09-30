@@ -100,8 +100,14 @@ issueops decision add --id "$ISSUEOPS_ID" --kind scope \
   --title "no split" --body "<한 owner·한 리뷰로 끝나는 근거>" $RECORD_ACTOR_FLAGS --json
 # 분할하는 경우: remote create-child로 child를 만든다(아래 Parent와 child).
 
+# 관련 이슈·라벨 점수는 plan-prep보다 먼저 만든다. 그 요약이 --related-score-ref다.
+issueops remote score --input "$SCORE_INPUT" --judge none --json > "$SCORE_FILE"
+# 선택하거나 거절한 라벨과 threshold는 본문이 아니라 record에 남긴다.
+issueops decision add --id "$ISSUEOPS_ID" --kind review --title "라벨 판단" \
+  --body "<threshold, 선택한 라벨, 거절한 라벨, override 여부>" $RECORD_ACTOR_FLAGS --json
+
 issueops plan-prep record --id "$ISSUEOPS_ID" \
-  --decisions-evidence "<...>" --related-score-ref "<...>" \
+  --decisions-evidence "<...>" --related-score-ref "<score 결과의 선택·거절 후보와 threshold 요약>" \
   --web-research-evidence "<...>" --codebase-survey-evidence "<...>" \
   $RECORD_ACTOR_FLAGS --json
 
@@ -111,12 +117,11 @@ issueops phase --id "$ISSUEOPS_ID" --to grill $RECORD_ACTOR_FLAGS --json
 여기까지가 로컬 기록이다. 다음은 원격 write이므로 본문 초안을 사용자에게 보여 주고
 현재 요청에 이슈 발행이 포함되어 있으면 별도 재승인 없이
 [`issueops-remote-write`](../issueops-remote-write/SKILL.md)의 절차로
-진행한다. 그 스킬이 fluent-korean 호출, 한국어 게이트, preview, 동일 요청 confirm,
-readback, 모호할 때의 reconcile을 소유한다.
+진행한다. 그 스킬이 골격 받기, fluent-korean 호출, preview의 가독성 판정, 동일 요청
+confirm, readback, 모호할 때의 reconcile을 소유한다.
 
 ```bash
-issueops remote score --input "$SCORE_INPUT" --judge none --json > "$SCORE_FILE"
-# → issueops-remote-write 절차로 remote create-issue 실행
+# → issueops-remote-write 절차로 remote create-issue 실행(--template 필수)
 issueops link-issue --id "$ISSUEOPS_ID" --issue-url "$ISSUE_URL" $RECORD_ACTOR_FLAGS --json
 ```
 
@@ -142,8 +147,8 @@ issue: <url>
 | 바로 실행할 작업 | `implementation_task` | 근거·범위·검증을 중심으로 쓴다 |
 | parent의 독립 작업 | `child_task` | scope·의존성·wave를 metadata 표로 쓴다 |
 
-정보를 모두 한 문단에 넣지 않는다. **결론은 위에, 근거는 해당 section에,
-실행 명령은 검증 section에** 둔다. 다이어그램은 흐름·상태·경계가 문장보다
+정보를 모두 한 문단에 넣지 않는다. **결론은 요약에, 근거는 배경에,
+실행 명령은 검증 절에** 둔다. 다이어그램은 흐름·상태·경계가 문장보다
 빠르게 읽힐 때만 쓴다.
 
 ## 템플릿을 정한 근거
@@ -191,72 +196,27 @@ parent body를 안전하게 갱신할 IssueOps 경계가 없으면 raw `gh`/`gla
 
 ## 읽기 좋은 body
 
-본문의 문장 규칙과 원격 쓰기 전 다듬기는
-[`issueops-remote-write`](../issueops-remote-write/SKILL.md)가 소유한다. 여기서는 어떤
-절을 어떤 순서로 두는지만 정한다.
+절 구성은 `issueops remote render-template`이 출력하는 골격을 따른다. 절을 채우는 방법,
+용어 변환표, 공개 모범 사례, 가독성 검사 기준은
+[`references/readable-body.md`](../issueops-remote-write/references/readable-body.md)가
+소유한다. 이 스킬에 절 목록이나 본문 예시를 따로 두지 않는다.
 
-### Implementation Issue 좋은 예
-
-```markdown
-## 문제
-Issue와 PR/MR 생성 절차가 한 스킬에 섞여 있어 필요한 지침을 찾기 어렵다.
-
-## 현재 근거
-`skills/issueops/SKILL.md`가 lifecycle과 publication 규칙을 함께 안내한다.
-
-## 관련 이슈/라벨 판단
-threshold 0.70; 선택 `enhancement`; 거절 `documentation`; override 없음.
-
-## 완료 기준
-- [ ] Issue와 PR/MR 전용 스킬이 각각 독립 검증된다.
-- [ ] 기존 lifecycle 라우팅과 provider contract가 유지된다.
-
-## 비목표
-provider API나 전체 IssueOps lifecycle을 재설계하지 않는다.
-
-## 구현 범위
-두 SKILL.md, router 링크, remote 입력 validation만 수정한다.
-
-## 검증
-`python3 scripts/validate-skill.py skills/issueops-create-issue`
-
-## 위험과 트레이드오프
-라우팅 누락 가능성은 focused skill validation과 router readback으로 줄인다.
-
-## 피드백 기록
-정보량보다 한국어 독자의 첫 읽기 순서를 우선했다.
-```
-
-### Bug Issue 좋은 예
-
-```markdown
-## 문제
-`--label " bug "`가 공백을 제거하지 않고 provider에 전달된다.
-
-## 재현 절차
-1. label을 앞뒤 공백과 함께 두 번 전달한다.
-2. `create-issue --confirm`을 실행한다.
-3. provider request를 확인한다.
-
-## 기대 동작
-`bug` 한 번만 전달된다.
-
-## 실제 동작
-공백 label과 중복 label이 request에 남는다.
-
-## 현재 근거
-`cmd/issueops/issueopscli/remotecmd/remote.go`의 repeated flag 경계.
+```bash
+issueops remote render-template --kind issue --template "$TEMPLATE" \
+  --provider "$PROVIDER" --title "$TITLE" --json
 ```
 
 로그는 secret을 제거한 짧은 code block으로만 붙인다. 긴 로그 전체나
-스크린샷 대신 재현에 필요한 줄과 파일·명령을 적는다.
+스크린샷 대신 재현에 필요한 줄과 파일·명령을 적는다. 해시, 커밋 SHA 전문,
+라벨 점수, plan 원문은 본문에 넣지 않는다.
 
 ### 나쁜 예
 
 | 나쁜 입력 | 왜 나쁜가 | 고치는 방법 |
 |---|---|---|
-| `버그 고쳐주세요` | 재현·완료 기준이 없다 | bug template의 재현/기대/실제 작성 |
-| 파일 20개 목록 | 문제와 연결되지 않는다 | scope와 non-goals를 한 문단씩 작성 |
+| `버그 고쳐주세요` | 재현·완료 기준이 없다 | bug 골격의 재현 절차, 기대 동작과 실제 동작 작성 |
+| 파일 20개 목록 | 문제와 연결되지 않는다 | 범위 절에 하는 것과 하지 않는 것을 함께 작성 |
+| 본문에 라벨 점수나 해시를 붙임 | 사람이 읽지 않는 값이 흐름을 가린다 | 라벨 판단은 `decision add`, 해시는 record에 둔다 |
 | `나중에 테스트` | 검증이 실행 가능하지 않다 | 명령과 기대 결과를 명시 |
 | `task: 작업` | parent·class·wave가 없다 | `[p]`/`[s]`, prerequisite, wave 작성 |
 | closed #18에 새 child 부착 | 종료된 umbrella 재사용 | 활성 parent를 확인하거나 새 parent 준비 |
@@ -267,17 +227,15 @@ provider API나 전체 IssueOps lifecycle을 재설계하지 않는다.
 
 ## Canonical publication
 
-score 결과를 보존하고 body file을 위 형식으로 먼저 읽어 본다. preview와 confirm의
-규율은 [`issueops-remote-write`](../issueops-remote-write/SKILL.md)가 소유한다.
+body file을 먼저 읽어 보고 preview 응답의 `readability`를 확인한다. critical이 있으면
+confirm이 거부되고, warning은 고치거나 남기는 이유를 적는다. preview와 confirm의 규율은
+[`issueops-remote-write`](../issueops-remote-write/SKILL.md)가 소유한다.
 
 ```bash
-issueops remote score \
-  --input "$SCORE_INPUT" --judge none --json > "$SCORE_FILE"
 issueops remote create-issue \
   --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
   --title "[enhancement] IssueOps 생성 경계를 분리한다" \
   --template implementation_task --body-file "$BODY_FILE" \
-  --score-file "$SCORE_FILE" \
   --label enhancement --assignee "$ASSIGNEE" --json
 ```
 
@@ -291,15 +249,15 @@ issueops remote create-child \
   --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
 ```
 
-child body에는 parent URL, scope, `[p]`/`[s]`, prerequisite, wave, acceptance,
-verification, merge condition, cleanup을 넣는다. confirmed child 결과의
+child 본문의 요약에는 parent 링크와 이 child가 맡는 부분을, 선행 조건과 병합 조건
+절에는 `[p]`/`[s]`, prerequisite, wave, 병합 조건을 쓴다. confirmed child 결과의
 `hierarchy_verified`, type, URL, labels, assignee와 parent body readback을
 확인한다.
 
 ## 품질·성능 게이트
 
-- 품질: template critical validation 0, 한국어 body, 원격 write 전
-  `fluent-korean` 호출, score 기록, secret redaction,
+- 품질: preview의 `readability.critical` 0, warning 처리 기록, 원격 write 전
+  `fluent-korean` 호출, 라벨 판단 decision 기록, secret redaction,
   hierarchy/label/assignee readback.
 - 성능: issue 단계에서만 이 스킬을 로드한다. PR/MR reference를 함께
   중복 로드하지 않는다. 변경 전후 byte 수와 focused 검증 시간을 기록하되

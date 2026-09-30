@@ -11,7 +11,7 @@ type GateService struct {
 	BaseReadiness  func(string, model.IssueOpsRecord) model.IssueOpsReadiness
 	LoopReadiness  func(string) model.IssueOpsReadiness
 	ReadRecord     func(string, string) (model.IssueOpsRecord, error)
-	AdvanceRecord  func(string, string, string, model.IssueOpsActor) (model.IssueOpsRecord, error)
+	AdvanceRecord  func(string, string, string, model.IssueOpsActor) (model.IssueOpsRecord, model.IssueOpsTrackedMaterials, error)
 	Ledger         cycleport.GateLedgerReadiness
 	DuplicateFiles func(string, string) (bool, []domain.GateLedgerFile)
 }
@@ -19,12 +19,16 @@ type GateService struct {
 func (service GateService) StrictPRReadinessWithState(stateRoot string, record model.IssueOpsRecord) model.IssueOpsReadiness {
 	return service.apply(service.BaseReadiness(stateRoot, record), record)
 }
-func (service GateService) AdvancePhaseWithActor(stateRoot, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+func (service GateService) AdvancePhaseWithActor(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+	record, _, err := service.AdvancePhaseReport(root, id, to, actor)
+	return record, err
+}
+func (service GateService) AdvancePhaseReport(stateRoot, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, model.IssueOpsTrackedMaterials, error) {
 	err := GuardPRPhase(stateRoot, id, to, cycleport.PRPhaseGuard{Read: service.ReadRecord, Gate: func(record model.IssueOpsRecord) model.IssueOpsReadiness {
 		return service.apply(service.LoopReadiness(record.Repo), record)
 	}})
 	if err != nil {
-		return model.IssueOpsRecord{OK: false}, err
+		return model.IssueOpsRecord{OK: false}, model.IssueOpsTrackedMaterials{}, err
 	}
 	return service.AdvanceRecord(stateRoot, id, to, actor)
 }

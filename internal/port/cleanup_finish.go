@@ -12,7 +12,6 @@ type CleanupOwnershipRecords interface {
 	Load(context.Context, string) (model.CleanupSnapshot, error)
 	Arm(context.Context, model.CleanupSnapshot, model.IssueOpsCleanupAttempt) (model.CleanupSnapshot, error)
 	Check(context.Context, model.CleanupSnapshot) error
-	MarkAuditReflected(context.Context, model.CleanupSnapshot, string) (model.CleanupSnapshot, error)
 }
 
 type CleanupFinishRecords interface {

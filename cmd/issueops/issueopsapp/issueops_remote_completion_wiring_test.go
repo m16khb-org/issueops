@@ -42,7 +42,7 @@ func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatest
 	prov := &completionProvider{}
 	applied := false
 	prov.update = func(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
-		if req.Completion == nil || req.Section != model.IssueBodySectionCompletion || req.Completion.RemoteArtifactURL != record.RemoteArtifact.URL || strings.Join(req.Completion.MissingArtifacts, ",") != "plan" {
+		if req.Completion == nil || req.Section != model.IssueBodySectionCompletion || req.Completion.RemoteArtifactURL != record.RemoteArtifact.URL || req.Completion.ResultBody != completionResultBody {
 			t.Fatalf("completion=%+v", req)
 		}
 		if applied {
@@ -60,19 +60,19 @@ func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatest
 	mergeErr := errors.New("merge readback failed")
 	now := time.Date(2026, 9, 28, 1, 0, 0, 0, time.UTC)
 	service := newRemoteCompletionService(root, func(string) (port.IssueProvider, error) { return prov, nil }, func(model.IssueOpsRemoteArtifactVerification) error { return mergeErr }, func() time.Time { return now })
-	if _, _, err := service.Reflect(context.Background(), record.ID, "", true); !errors.Is(err, mergeErr) || prov.updates != 0 {
+	if _, _, _, err := service.Reflect(context.Background(), record.ID, "", completionResultBody, true); !errors.Is(err, mergeErr) || prov.updates != 0 {
 		t.Fatalf("merge refusal: calls=%d err=%v", prov.updates, err)
 	}
 	if _, _, err := service.Close(context.Background(), record.ID, "", true); !errors.Is(err, mergeErr) || prov.closes != 0 {
 		t.Fatalf("merge refusal: calls=%d err=%v", prov.closes, err)
 	}
 	mergeErr = nil
-	got, _, err := service.Reflect(context.Background(), record.ID, "", true)
+	got, _, _, err := service.Reflect(context.Background(), record.ID, "", completionResultBody, true)
 	if err != nil || got.RemoteCompletion != nil {
 		t.Fatalf("unapplied reflection stamped: %+v %v", got.RemoteCompletion, err)
 	}
 	applied = true
-	got, _, err = service.Reflect(context.Background(), record.ID, "", true)
+	got, _, _, err = service.Reflect(context.Background(), record.ID, "", completionResultBody, true)
 	if err != nil || got.RemoteCompletion == nil || got.RemoteCompletion.ReflectedAt == "" || strings.Join(got.AISlopCleanVerification, ",") != "concurrent update" {
 		t.Fatalf("reflection overwrote latest state: %+v %v", got.RemoteCompletion, err)
 	}
@@ -87,3 +87,5 @@ func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatest
 		t.Fatalf("repeat close changed first timestamp: %+v %v", got.RemoteCompletion, err)
 	}
 }
+
+const completionResultBody = "이슈 본문을 읽기 쉽게 바꾸고 실제 명령 테스트로 검증했습니다. 동시 수정 결과가 보존되는 것도 확인했습니다."

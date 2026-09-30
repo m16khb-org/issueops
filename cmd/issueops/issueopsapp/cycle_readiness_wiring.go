@@ -7,6 +7,7 @@ import (
 	cleanup "issueops/internal/application/issueopscleanup"
 	cycle "issueops/internal/application/issueopscycle"
 	delegation "issueops/internal/application/issueopsdelegation"
+	materialapp "issueops/internal/application/issueopsremote"
 	review "issueops/internal/application/issueopsreview"
 	model "issueops/internal/contract/issueops"
 	cycleport "issueops/internal/port/issueopscycle"
@@ -32,5 +33,5 @@ func newCycleReadiness() cycle.Readiness {
 }
 func newCyclePhaseService(actor *model.IssueOpsActor) cycle.PhaseService {
 	store := core.NewReviewMutationStore(actor)
-	return cycle.PhaseService{Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: newCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: newReadinessGit().Head, Fingerprint: newChangeReader().ChangeFingerprint}}
+	return cycle.PhaseService{WriteMaterials: (materialapp.TrackedMaterials{Files: core.MaterialFiles{}}).Write, Store: cycleport.PhaseStore{Read: store.Read, WithLock: store.WithLock, ValidateMutation: store.ValidateMutation, Write: store.Write, Now: store.Now}, Readiness: newCycleReadiness(), Transitions: cycleport.PhaseTransitionObservations{Head: newReadinessGit().Head, Fingerprint: newChangeReader().ChangeFingerprint}}
 }

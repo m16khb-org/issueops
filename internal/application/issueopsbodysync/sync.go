@@ -7,6 +7,7 @@ import (
 
 	"issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
+	"issueops/internal/domain/artifactreadability"
 	bodysync "issueops/internal/domain/issueopsbodysync"
 	"issueops/internal/port"
 )
@@ -51,6 +52,15 @@ func (s *Service) Sync(ctx context.Context, id string, cmd bodysynccontract.Comm
 			return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 		}
 	}
+	artifactKind := artifactreadability.BodySyncArtifactKind(kind)
+	template, err := artifactreadability.BodySyncTemplate(artifactKind, cmd.Template, cmd.ProposedBody)
+	if err != nil {
+		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
+	}
+	proposedReadability := artifactreadability.CheckBodySyncReadability(artifactKind, template, cmd.ProposedBody)
+	if cmd.Confirm && !proposedReadability.OK {
+		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, artifactreadability.RefusalError(proposedReadability)
+	}
 	if kind == bodysynccontract.KindChild {
 		if err := s.verifyChild(ctx, record, url); err != nil {
 			return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
@@ -94,8 +104,11 @@ func (s *Service) Sync(ctx context.Context, id string, cmd bodysynccontract.Comm
 		RecordedAt:         baselineAt,
 		AgeDays:            bodysync.AgeDays(baselineAt, s.now()),
 		AcceptRemoteEdits:  cmd.AcceptRemoteEdits,
+		Readability:        &proposedReadability,
 	}
 	if !cmd.Confirm {
+		liveReadability := artifactreadability.WarningOnly(artifactreadability.CheckBodySyncReadability(artifactKind, template, live.Body))
+		result.LiveReadability = &liveReadability
 		preview, err := s.provider.ReplaceArtifactBody(ctx, port.IssueProviderReplaceArtifactBodyRequest{
 			Repo: record.Repo, Kind: kind, URL: url, Body: plan.MergedBody,
 		})

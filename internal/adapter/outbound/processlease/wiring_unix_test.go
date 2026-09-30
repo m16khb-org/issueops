@@ -14,18 +14,11 @@ import (
 	"issueops/internal/adapter/outbound/processlease"
 	"issueops/internal/adapter/provider/github"
 	"issueops/internal/adapter/provider/gitlab"
-	cleanup "issueops/internal/application/issueopscleanup"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
-type reflectedReceipt func(context.Context, string) (model.IssueOpsRecord, error)
-
-func (f reflectedReceipt) Reflected(ctx context.Context, id string) (model.IssueOpsRecord, error) {
-	return f(ctx, id)
-}
-
-func TestCleanupRunnersInheritExecutionLifetime(t *testing.T) {
+func TestRunnersInheritExecutionLifetime(t *testing.T) {
 	for _, name := range []string{"git", "orca", "github", "gitlab"} {
 		t.Run(name, func(t *testing.T) {
 			repo, bin := t.TempDir(), t.TempDir()
@@ -69,19 +62,13 @@ func TestCleanupRunnersInheritExecutionLifetime(t *testing.T) {
 					provider = gitlab.NewProvider()
 					url = "https://gitlab.example.com/acme/repo/-/issues/12"
 				}
-				stamped := false
-				reflector := cleanup.AuditReflector{Receipts: reflectedReceipt(func(got context.Context, id string) (model.IssueOpsRecord, error) {
-					if got != ctx || id != "cycle" {
-						t.Fatalf("receipt lost context/identity")
-					}
-					stamped = true
-					return model.IssueOpsRecord{}, nil
-				})}
-				if err := reflector.Reflect(ctx, model.IssueOpsRecord{ID: "cycle", Repo: repo, IssueURL: url}, model.RemoteCompletionSection{FinalHead: "abc123"}, "cleanup audit", provider); err != nil {
-					t.Fatal(err)
+				result, err := provider.UpdateIssueBodySection(ctx, port.IssueProviderUpdateIssueBodySectionRequest{Repo: repo, IssueURL: url, Section: model.IssueBodySectionCompletion, Completion: &model.RemoteCompletionSection{ResultBody: "진행 결과"}, Confirm: true})
+				if err != nil || !result.Updated {
+					t.Fatalf("provider result=%+v err=%v", result, err)
 				}
-				if raw, err := os.ReadFile(filepath.Join(repo, "provider-effect")); err != nil || string(raw) != "updated" || !stamped {
-					t.Fatalf("effect/receipt missing: %q err=%v stamped=%v", raw, err, stamped)
+
+				if raw, err := os.ReadFile(filepath.Join(repo, "provider-effect")); err != nil || string(raw) != "updated" {
+					t.Fatalf("provider effect missing: %q err=%v", raw, err)
 				}
 			}
 			drained, err := lease.Drain(ctx)

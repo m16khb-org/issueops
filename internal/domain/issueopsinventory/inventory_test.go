@@ -20,7 +20,7 @@ func TestProjectEntryProjectsExecutionAndRemoteState(t *testing.T) {
 			Lease: issueopscontract.WriteLease{
 				Status: issueopscontract.LeaseStatusClaimable,
 			},
-			Orca:    &issueopscontract.OrcaBinding{OwnerModel: "gpt-5.6-sol"},
+			Orca:    &issueopscontract.OrcaBinding{OwnerModel: "gpt-6-sol"},
 			Pending: &issueopscontract.ExternalIntent{Kind: "gh_run", StartedAt: "2026-08-21T01:00:00Z"},
 			Failure: &issueopscontract.ExecutionFailure{Code: "E_TEST", At: "2026-08-21T02:00:00Z"},
 		},
@@ -36,7 +36,7 @@ func TestProjectEntryProjectsExecutionAndRemoteState(t *testing.T) {
 	if entry.Mode != "direct" || entry.LeaseStatus != "claimable" || !entry.Claimable {
 		t.Fatalf("lease projection wrong: %+v", entry)
 	}
-	if entry.WorkspaceRoot != "/repo.worktrees/12-proj" || entry.OwnerModel != "gpt-5.6-sol" {
+	if entry.WorkspaceRoot != "/repo.worktrees/12-proj" || entry.OwnerModel != "gpt-6-sol" {
 		t.Fatalf("workspace/orca projection wrong: %+v", entry)
 	}
 	if entry.PendingKind != "gh_run" || entry.PendingSince != "2026-08-21T01:00:00Z" {

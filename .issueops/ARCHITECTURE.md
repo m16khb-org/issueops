@@ -19,10 +19,12 @@ description: System structure, component boundaries, and responsibilities.
 
 | Module | 책임 |
 |--------|------|
-| [`architecture/hexagonal-core.md`](architecture/hexagonal-core.md) | contract/domain/application/port/adapter 구조, package boundary, 의존 방향 ratchet, cross-host tool contract, operational-health boundary, hardening |
+| [`architecture/hexagonal-core.md`](architecture/hexagonal-core.md) | contract/domain/application/port/adapter 구조, package boundary, 의존 방향 ratchet, cross-host tool contract, operational-health boundary |
+| [`architecture/domain-responsibilities.md`](architecture/domain-responsibilities.md) | capability별 domain·application·adapter 책임과 production wiring |
+| [`architecture/issueops-cleanup.md`](architecture/issueops-cleanup.md) | 실행·정리 소유권, 외부 효과 순서, CAS·drain 경계 |
 | [`architecture/runtime.md`](architecture/runtime.md) | 실행 모드(CLI/MCP/daemon/issueops/loop/worker), docs/state/config/log 토폴로지, lock 직렬화, command/policy model, MCP tool 설계, standalone runtime policy |
 | [`architecture/host-integration.md`](architecture/host-integration.md) | Codex/Claude/Omo 통합 map, pioneer skills layer(host-neutral), host-adapter 변경 체크리스트 |
-| [`architecture/issueops.md`](architecture/issueops.md) | IssueOps v1 execution 상태·schema 권위, capability vertical, operational surface, next_command 권위, actor model, Orca 경계, execution threat model, execution boundary |
+| [`architecture/issueops.md`](architecture/issueops.md) | IssueOps v1 execution 상태·schema 권위, capability vertical, operational surface, next_command 권위, actor model, Orca 경계, execution threat model |
 
 ## 의존 방향 불변식 (canonical)
 
@@ -84,7 +86,7 @@ branch name·source cwd·generic session binding·terminal handle·stable diff�
 `issueopspublication`), operational surface, generated `next_command` 권위,
 actor model, Orca 경계, 전체 threat model과 invariants, execution boundary와
 post-merge cleanup 순서 계약은
-[`architecture/issueops.md`](architecture/issueops.md)가 소유한다.
+[issueops-cleanup.md](architecture/issueops-cleanup.md)가 소유한다.
 
 ## Host integration (요약)
 

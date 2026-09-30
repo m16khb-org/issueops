@@ -8,17 +8,6 @@ import (
 	quality "issueops/internal/domain/quality"
 )
 
-// snrEvidence renders the SNR signal's human-readable evidence lines.
-func snrEvidence(snr SNRResult) []string { return quality.SNREvidence(snr) }
-
-const snrBaselineSchemaVersion = 1
-
-type snrBaselineRecord struct {
-	SchemaVersion int     `json:"schema_version"`
-	Repository    string  `json:"repository"`
-	Ratio         float64 `json:"ratio"`
-}
-
 // SNRResult is a deterministic Shannon-style signal-to-noise measure over the
 // repository's production Go source: signal lines (logic) versus noise lines
 // (blank, comment-only, or structural-only such as a lone brace). It is a
@@ -51,4 +40,3 @@ func snrBaselineIdentity(root string) (string, string, error) {
 	}
 	return repo, quality.SNRBaselineKey(repo), nil
 }
-func validSNRRatio(ratio float64) bool { return quality.ValidSNRRatio(ratio) }

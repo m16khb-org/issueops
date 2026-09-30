@@ -165,6 +165,16 @@ issueops regress --id "$ISSUEOPS_ID" --reason "<리뷰 결론>" $RECORD_ACTOR_FL
 판정 뒤 계획을 고치면 `devils_advocate_review_stale`이 되어 인계가 막힌다. 고쳤으면
 다시 검토한다.
 
+검토가 이슈 본문의 사실(완료 기준, 범위, 원인 설명, 작업 구조)을 틀렸다고 판정하면
+계획만 고치고 끝내지 않는다. 그 사실을 계약 변경으로 기록한다. 기록이 남으면 기존
+게이트 `contract_feedback_issue_update`가 PR 준비를 막고, `sync-issue`로 본문을 고친 뒤
+`feedback mark-issue-updated`를 기록해야 풀린다.
+
+```bash
+issueops feedback add --id "$ISSUEOPS_ID" --source plan-review --classification contract_change \
+  --body "<이슈 본문에서 바뀐 사실>" $RECORD_ACTOR_FLAGS --json
+```
+
 ## 인계
 
 사용자 요청이 계획 작성·검토까지라면 여기서 계획과 검토 결과를 보고하고 종료한다.

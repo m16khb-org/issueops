@@ -49,7 +49,7 @@ func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
 				Lease: issueops.WriteLease{Generation: 2, Status: issueops.LeaseStatusClaimable},
 				Orca: &issueops.OrcaBinding{
 					RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1,
-					OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh",
+					OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh",
 					TaskID: "task", DispatchID: "dispatch",
 				},
 			}

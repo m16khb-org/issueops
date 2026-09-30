@@ -73,7 +73,7 @@ func BoundedDiagnostic(value string, limit int) string {
 	}
 	value = strings.TrimSpace(RedactDiagnostic(value))
 	if len(value) > limit {
-		value = value[:limit] + "...[truncated]"
+		value = TruncateBytes(value, limit) + "...[truncated]"
 	}
 	return value
 }

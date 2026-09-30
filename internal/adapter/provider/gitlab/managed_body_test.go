@@ -18,7 +18,7 @@ func TestGitLabCompletionSectionUsesDomainBudgetAndMerge(t *testing.T) {
 		t.Skip("POSIX provider fixture")
 	}
 	for _, exhausted := range []bool{false, true} {
-		name := "preserve authored bytes and truncate plan"
+		name := "preserve authored bytes and report"
 		if exhausted {
 			name = "reject exhausted budget before edit"
 		}
@@ -48,11 +48,11 @@ esac
 /bin/cat current.json
 `)
 			t.Setenv("PATH", bin)
-			completion := model.RemoteCompletionSection{FinalHead: "abc123", PlanBody: strings.Repeat("p", 900000+1000), SpecBody: "preserved-spec", VerificationSummary: []string{strings.Repeat("v", 2000)}}
+			completion := model.RemoteCompletionSection{ResultBody: "preserved-report\n" + strings.Repeat("v", 2000)}
 			result, err := NewProvider().UpdateIssueBodySection(context.Background(), port.IssueProviderUpdateIssueBodySectionRequest{Repo: repo, IssueURL: "https://gitlab.example.com/acme/repo/-/issues/12", Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: true})
 			path := filepath.Join(repo, "edited.body")
 			if exhausted {
-				if err == nil || !strings.Contains(err.Error(), "even after truncation") || result.Updated {
+				if err == nil || !strings.Contains(err.Error(), "exceeds the body budget") || result.Updated {
 					t.Fatalf("budget refusal = %+v, %v", result, err)
 				}
 				if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -74,8 +74,8 @@ esac
 			if strings.Contains(body, "old") || strings.Count(body, "<!-- issueops:completion:start -->") != 1 {
 				t.Fatal("managed block was not replaced exactly once")
 			}
-			if !strings.Contains(body, "preserved-spec") || strings.Contains(body, strings.Repeat("p", 100)) || !strings.Contains(body, "일부 블록이 절단") || len(body) > 900000 {
-				t.Fatal("completion truncation or budget not preserved")
+			if !strings.Contains(body, completion.ResultBody) || len(body) > 900000 {
+				t.Fatal("completion report or budget not preserved")
 			}
 		})
 	}

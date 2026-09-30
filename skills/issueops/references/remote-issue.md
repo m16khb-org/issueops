@@ -43,9 +43,9 @@ issueops remote score --input issueops-remote-score.json --judge file --judge-fi
 If an independent host agent is unavailable or intentionally disabled, use the
 deterministic result as the final scoring evidence and record that choice.
 
-Default threshold is `0.70` unless the repo or user sets a stronger threshold. Attach selected related issues with the provider-native mechanism described in "Provider-Specific Linking And Hierarchy" below (GitHub body references vs GitLab linked items) — do not reuse one provider's style for the other. Include a compact scoring summary when it helps future reviewers understand why those links and labels were chosen, and apply selected labels with provider CLI/API commands. Do not apply rejected labels, create rejected labels, or link rejected issues. If label candidates existed but none met threshold, do not create an unlabeled remote artifact; stop before remote writes and either rerun scoring with corrected candidates or choose an explicit manual label with the reason recorded in IssueOps feedback.
+Default threshold is `0.70` unless the repo or user sets a stronger threshold. Attach selected related issues with the provider-native mechanism described in "Provider-Specific Linking And Hierarchy" below (GitHub body references vs GitLab linked items) — do not reuse one provider's style for the other. Record the scoring summary with `issueops decision add --kind review --title "라벨 판단"`, not in the issue body, and apply selected labels through the `issueops remote` create commands. Do not apply rejected labels, create rejected labels, or link rejected issues. If label candidates existed but none met threshold, do not create an unlabeled remote artifact; stop before remote writes and either rerun scoring with corrected candidates or choose an explicit manual label with the reason recorded in IssueOps feedback.
 
-The scoring summary is the **threshold-based label decision**. It must name selected labels, rejected labels, and manual override reason if the agent chooses or applies a label outside the scorer's selected set. A manual override is allowed only when the reason is evidence-backed, recorded in the issue draft or IssueOps feedback, and still passes the Korean artifact gate that `issueops-remote-write` owns before the remote write.
+The scoring summary is the **threshold-based label decision**. It must name selected labels, rejected labels, and manual override reason if the agent chooses or applies a label outside the scorer's selected set. A manual override is allowed only when the reason is evidence-backed, recorded in that decision or in IssueOps feedback, and the body still passes the readability check the `issueops remote` commands run before the remote write.
 
 The agent must propose the operational choice instead of leaving the user to invent it. Example:
 
@@ -118,9 +118,9 @@ Rules:
 
 ## Language And Writing Protocol
 
-원격 아티팩트의 한국어 게이트, `fluent-korean` 호출, preview→confirm→readback 절차는
-[`issueops-remote-write`](../../issueops-remote-write/SKILL.md)가 소유한다. 이 문서는
-provider별 링크와 계층 규칙만 소유한다. 게이트 스크립트도 그 스킬이 번들한다.
+원격 아티팩트의 골격 받기, `fluent-korean` 호출, preview의 가독성 판정→confirm→readback
+절차는 [`issueops-remote-write`](../../issueops-remote-write/SKILL.md)가 소유한다. 이 문서는
+provider별 링크와 계층 규칙만 소유한다. 가독성 검사는 `issueops remote` 명령 안에서 실행된다.
 
 원격 write 없이 남는 링크 규칙은 다음과 같다.
 

@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+
 	"issueops/cmd/issueops/issueopscli"
 	issueopsadapter "issueops/internal/adapter/issueops"
 	healthadapter "issueops/internal/adapter/operationalhealth"
@@ -14,8 +15,8 @@ import (
 func newIssueOpsCLIGates() issueopscli.LoopGateDeps {
 	gate := newGateReadiness()
 	return issueopscli.LoopGateDeps{
-		AdvancePhaseWithActor: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return gate.AdvancePhaseWithActor(stateRoot, id, to, actor)
+		AdvancePhaseReport: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsTrackedMaterials, error) {
+			return gate.AdvancePhaseReport(stateRoot, id, to, actor)
 		},
 		StrictPRReadinessWithState: gate.StrictPRReadinessWithState,
 	}

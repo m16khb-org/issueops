@@ -202,7 +202,7 @@ func rolloverExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRe
 		RuntimeID: "runtime-sealed", RepoID: "repo", WorktreeID: "worktree",
 		WorktreeInstanceID: "instance", RunID: "run", TaskID: "task",
 		DispatchID: "dispatch", TerminalPTYID: "pty-old", LeaseGeneration: 1,
-		OwnerHost: "codex", OwnerModel: "gpt-5.6-sol", OwnerEffort: "high",
+		OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high",
 	}
 	// Orca 실행은 sealed plan readiness를 요구한다. 실제 수명주기에서 plan은 owner가
 	// 활성화되기 전 released generation에서 link-plan + artifact stage로 봉인되므로,

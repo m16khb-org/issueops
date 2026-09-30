@@ -2,7 +2,6 @@ package issueopsapp
 
 import (
 	"context"
-	"issueops/internal/port"
 	"os"
 
 	"issueops/cmd/issueops/issueopscli/remotecmd"
@@ -14,7 +13,7 @@ import (
 // root 하나뿐이다.
 func newIssueOpsRemote(root string) remotecmd.Command {
 	return remotecmd.Command{Operations: remotecmd.RemoteDeps{
-		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (port.IssueProviderCreateChildResult, error) {
+		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error) {
 			return newChildCreator(root).Create(ctx, cmd, observe)
 		},
 		VerifyRemoteArtifact:    verifyRemoteArtifact,

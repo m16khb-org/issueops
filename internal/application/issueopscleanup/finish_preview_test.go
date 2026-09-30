@@ -84,7 +84,8 @@ func TestFinishPreviewPreservesObservationOrderAndBoundTargets(t *testing.T) {
 		BranchPrepare: &model.IssueOpsBranchPrepare{BaseBranch: "parent"},
 		Execution:     &model.Execution{Workspace: model.Workspace{Root: "/worktree", Branch: "123-cleanup"}, Lease: model.WriteLease{Status: model.LeaseStatusReleased}},
 	}
-	ctx := context.WithValue(context.Background(), struct{}{}, "request")
+	type requestContextKey struct{}
+	ctx := context.WithValue(context.Background(), requestContextKey{}, "request")
 	service := app.FinishPreviewer{Environment: env, Workspace: func(got context.Context, current model.IssueOpsRecord, root string) (app.FinishWorkspaceObservation, []string) {
 		if got != ctx || current.ID != record.ID || root != "/worktree" {
 			t.Fatal("workspace observation lost context or target")

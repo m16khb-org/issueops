@@ -11,9 +11,10 @@ import (
 )
 
 type PhaseService struct {
-	Store       cycleport.PhaseStore
-	Readiness   Readiness
-	Transitions cycleport.PhaseTransitionObservations
+	Store          cycleport.PhaseStore
+	WriteMaterials func(issueops.IssueOpsRecord) issueops.IssueOpsTrackedMaterials
+	Readiness      Readiness
+	Transitions    cycleport.PhaseTransitionObservations
 }
 
 func (s PhaseService) touchWrite(root string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
@@ -31,9 +32,15 @@ func GrillReadiness(record issueops.IssueOpsRecord) issueops.IssueOpsReadiness {
 }
 
 func (s PhaseService) Advance(stateRoot, id, to string) (issueops.IssueOpsRecord, error) {
+	record, _, err := s.AdvanceReport(stateRoot, id, to)
+	return record, err
+}
+
+func (s PhaseService) AdvanceReport(stateRoot, id, to string) (issueops.IssueOpsRecord, issueops.IssueOpsTrackedMaterials, error) {
+	var materials issueops.IssueOpsTrackedMaterials
 	upstream, err := s.prefetchForPhase(stateRoot, id, to)
 	if err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
+		return issueops.IssueOpsRecord{OK: false}, materials, err
 	}
 	var rec issueops.IssueOpsRecord
 	err = s.Store.WithLock(stateRoot, id, func() error {
@@ -45,10 +52,10 @@ func (s PhaseService) Advance(stateRoot, id, to string) (issueops.IssueOpsRecord
 			return actorErr
 		}
 		var e error
-		rec, e = s.advanceLocked(stateRoot, id, to, upstream)
+		rec, materials, e = s.advanceLocked(stateRoot, id, to, upstream)
 		return e
 	})
-	return rec, err
+	return rec, materials, err
 }
 
 // prefetchForPhase는 pr 진입일 때만 strict 판정이 쓸 fetch를
@@ -71,33 +78,40 @@ func (s PhaseService) prefetchForPhase(stateRoot, id, to string) (func(string) r
 	return s.Readiness.PrefetchUpstream(record), nil
 }
 
-func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(string) review.UpstreamFetch) (issueops.IssueOpsRecord, error) {
+func (s PhaseService) advanceLocked(stateRoot, id, to string, upstream func(string) review.UpstreamFetch) (issueops.IssueOpsRecord, issueops.IssueOpsTrackedMaterials, error) {
+	var materials issueops.IssueOpsTrackedMaterials
 	phase := issueops.IssueOpsPhase(strings.TrimSpace(to))
 	if !issueopsdomain.KnownIssueOpsPhase(phase) {
-		return issueops.IssueOpsRecord{OK: false}, fmt.Errorf("unknown issueops phase %q", to)
+		return issueops.IssueOpsRecord{OK: false}, materials, fmt.Errorf("unknown issueops phase %q", to)
 	}
 	record, err := s.Store.Read(stateRoot, id)
 	if err != nil {
-		return record, err
+		return record, materials, err
 	}
 	if record.Phase == phase {
 		if phase == issueops.IssueOpsPhaseAISlopClean {
-			return s.Refresh(stateRoot, record)
+			record, err = s.Refresh(stateRoot, record)
+			return record, materials, err
 		}
-		return record, nil
+		return record, materials, nil
 	}
 	if issueopsdomain.ShouldRefreshAISlopClean(record, phase) {
-		return s.Refresh(stateRoot, record)
+		record, err = s.Refresh(stateRoot, record)
+		return record, materials, err
 	}
 	if err := ValidatePhaseEntry(s.entryReadiness(stateRoot, upstream), record, phase); err != nil {
-		return issueops.IssueOpsRecord{OK: false}, err
+		return issueops.IssueOpsRecord{OK: false}, materials, err
+	}
+	if (phase == issueops.IssueOpsPhaseImplement || phase == issueops.IssueOpsPhaseAISlopClean) && s.WriteMaterials != nil {
+		materials = s.WriteMaterials(record)
 	}
 	record = ApplyPhaseTransition(cycleport.PhaseTransitionObservations{
 		Now:         s.Store.Now,
 		Head:        s.Transitions.Head,
 		Fingerprint: s.Transitions.Fingerprint,
 	}, record, phase)
-	return s.touchWrite(stateRoot, record)
+	record, err = s.touchWrite(stateRoot, record)
+	return record, materials, err
 }
 
 // entryReadiness는 span 안에서 불린다. pr 진입 판정은 upstream

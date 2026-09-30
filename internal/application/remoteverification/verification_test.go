@@ -90,7 +90,7 @@ func TestVerificationChecksEvidenceBeforeSuccess(t *testing.T) {
 				}
 				return tc.live, nil
 			}}}
-			err := service.VerifyContext(nil, req)
+			err := service.VerifyContext(nil, req) //nolint:staticcheck // Verify the public nil-context normalization contract.
 			if calls != 1 || (tc.want == "" && err != nil) || (tc.want != "" && (err == nil || !strings.Contains(err.Error(), tc.want))) {
 				t.Fatalf("calls=%d err=%v want=%q", calls, err, tc.want)
 			}

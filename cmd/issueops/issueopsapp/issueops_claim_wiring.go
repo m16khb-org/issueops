@@ -20,24 +20,24 @@ func issueOpsClaimHandler(ctx context.Context, stateRoot string, request issueop
 	if err != nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, err
 	}
-	preflight := leaseoutbound.NewClaimContextPreflight(db, func(ctx context.Context, repo, issueURL string) (leaseoutbound.IssueSnapshot, error) {
+	preflight := leaseapp.NewSealedClaimContext(leaseoutbound.NewClaimContextReader(db), func(ctx context.Context, repo, issueURL string) (leaseapp.IssueSnapshot, error) {
 		record, err := issueops.ReadIssueOps(stateRoot, request.ID)
 		if err != nil {
-			return leaseoutbound.IssueSnapshot{}, err
+			return leaseapp.IssueSnapshot{}, err
 		}
 		providerName, err := issueOpsClaimProviderName(record)
 		if err != nil {
-			return leaseoutbound.IssueSnapshot{}, err
+			return leaseapp.IssueSnapshot{}, err
 		}
 		if deps.ReadIssue == nil {
-			return leaseoutbound.IssueSnapshot{}, fmt.Errorf("remote issue snapshot reader is unavailable for the Orca claim")
+			return leaseapp.IssueSnapshot{}, fmt.Errorf("remote issue snapshot reader is unavailable for the Orca claim")
 		}
 		snapshot, err := deps.ReadIssue(ctx, providerName, port.ExecutionIssueSnapshotRequest{Repo: repo, URL: issueURL})
 		if err != nil {
-			return leaseoutbound.IssueSnapshot{}, err
+			return leaseapp.IssueSnapshot{}, err
 		}
-		return leaseoutbound.IssueSnapshot{URL: snapshot.URL, Body: snapshot.Body}, nil
-	})
+		return leaseapp.IssueSnapshot{URL: snapshot.URL, Body: snapshot.Body}, nil
+	}, leaseoutbound.FilesystemPathMatcher{})
 	service := leaseapp.NewClaimService(leaseoutbound.NewSQLiteRepository(db), leaseoutbound.UTCClock{}, leaseoutbound.InspectNativeProcess, preflight)
 	result, err := leaseinbound.NewClaimHandler(service)(ctx, stateRoot, request, deps)
 	if err != nil {

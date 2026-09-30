@@ -11,6 +11,7 @@ import (
 	"issueops/internal/adapter/provider"
 	cycleapp "issueops/internal/application/issueopscycle"
 	remoteapp "issueops/internal/application/issueopsremote"
+	reportcontract "issueops/internal/contract/artifactreadability"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -20,7 +21,7 @@ import (
 func testRemoteCommand() remotecmd.Command {
 
 	return remotecmd.Command{Operations: remotecmd.RemoteDeps{
-		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (port.IssueProviderCreateChildResult, error) {
+		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error) {
 			service := remoteapp.ChildCreator{Records: issueopscore.RemoteRecordStore{StateRoot: root}, Resolve: func(name string) (remoteapp.ChildProvider, error) { return provider.Resolve(name) }, Bodies: remoteapp.NewTemplateBodyResolver(os.ReadFile), Authorize: func(_ context.Context, id string, actor issueopscontract.IssueOpsActor) error {
 				return issueopscore.ValidateIssueOpsMutationActor(root, id, actor)
 			}, Link: func(ctx context.Context, id, url, title string, actor issueopscontract.IssueOpsActor) error {
@@ -33,15 +34,15 @@ func testRemoteCommand() remotecmd.Command {
 			service := remoteapp.NewArtifactVerificationService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), verify, observe, time.Now)
 			return service.Verify(ctx, id, req, actor)
 		},
-		ReflectRemoteCompletion: func(ctx context.Context, root, id, providerOverride string, confirm bool, verify remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
-			return newRemoteCompletionForTest(root, verify).Reflect(ctx, id, providerOverride, confirm)
+		ReflectRemoteCompletion: func(ctx context.Context, root, id, providerOverride, resultBody string, confirm bool, verify remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
+			return newRemoteCompletionForTest(root, verify).Reflect(ctx, id, providerOverride, resultBody, confirm)
 		},
 
 		CloseRemoteIssue: func(ctx context.Context, root, id, providerOverride string, confirm bool, verify remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {
 			return newRemoteCompletionForTest(root, verify).Close(ctx, id, providerOverride, confirm)
 		},
 
-		CreateIssue: func(ctx context.Context, root string, cmd remoteapp.IssueCreateCommand, verify remoteapp.IssueLiveVerifier) (port.IssueProviderCreateIssueResult, error) {
+		CreateIssue: func(ctx context.Context, root string, cmd remoteapp.IssueCreateCommand, verify remoteapp.IssueLiveVerifier) (remoteapp.IssueCreateResult, error) {
 			store := issueopscore.RemoteRecordStore{StateRoot: root}
 			return remoteapp.NewIssueCreator(store, issueopscore.IssueCreationEnvironment{ResolveProvider: provider.Resolve}, remoteapp.NewTemplateBodyResolver(os.ReadFile), newIssueIntentsForTest(root), verify, time.Now).Create(ctx, cmd)
 		},
@@ -52,7 +53,7 @@ func testRemoteCommand() remotecmd.Command {
 			return remoteapp.NewIssueReconciler(store, issueopscore.IssueCreateCandidateSource{Resolve: provider.Resolve}, newIssueIntentsForTest(root), verify, time.Now).Reconcile(ctx, id, confirm)
 		},
 
-		CreatePublication: func(ctx context.Context, root string, input remoteapp.PublicationInput, handler issueopscontract.RemotePullRequestCreateHandler, observe remoteapp.AncestryObserver) (port.IssueProviderCreatePullRequestResult, error) {
+		CreatePublication: func(ctx context.Context, root string, input remoteapp.PublicationInput, handler issueopscontract.RemotePullRequestCreateHandler, observe remoteapp.AncestryObserver) (remoteapp.PublicationResult, error) {
 			var invoke remoteapp.PublicationInvoker
 			if handler != nil {
 				invoke = func(ctx context.Context, req issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
@@ -82,5 +83,5 @@ func newIssueIntentsForTest(root string) *remoteapp.IssueCreateIntents {
 
 func newRemoteCompletionForTest(root string, verify remoteapp.MergeVerifier) *remoteapp.RemoteCompletionService {
 	store := issueopscore.RemoteRecordStore{StateRoot: root}
-	return remoteapp.NewRemoteCompletionService(store, remoteapp.NewCompletionCollector(issueopscore.CompletionArtifacts{}), remoteapp.NewCompletionReceipts(store, time.Now), func(name string) (remoteapp.CompletionProvider, error) { return provider.Resolve(name) }, verify)
+	return remoteapp.NewRemoteCompletionService(store, remoteapp.TrackedMaterials{Files: issueopscore.MaterialFiles{}}, remoteapp.NewCompletionReceipts(store, time.Now), func(name string) (remoteapp.CompletionProvider, error) { return provider.Resolve(name) }, verify)
 }

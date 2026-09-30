@@ -594,3 +594,10 @@ type IssueOpsLinkedBranchCleanup struct {
 	FailedStep     string `json:"failed_step,omitempty"`
 	ObservedAt     string `json:"observed_at"`
 }
+
+// IssueOpsTrackedMaterials reports copied implementation materials. This response
+// is not persisted in the strict versioned IssueOps record.
+type IssueOpsTrackedMaterials struct {
+	Written  []string `json:"written,omitempty"`
+	Warnings []string `json:"warnings,omitempty"`
+}

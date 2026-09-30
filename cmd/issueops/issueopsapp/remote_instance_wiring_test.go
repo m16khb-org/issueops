@@ -82,7 +82,7 @@ exit 2
 	deps := issueOpsCLIDependencies()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	raw := captureStdoutForContract(t, func() error {
-		return issueopscli.RunIssueOpsWithDependencies([]string{"remote", "create-child", "--id", record.ID, "--title", "Child", "--body", "Body", "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps)
+		return issueopscli.RunIssueOpsWithDependencies([]string{"remote", "create-child", "--id", record.ID, "--title", "Child", "--body", readableWiringChildBody, "--label", "bug", "--assignee", "octocat", "--confirm", "--json"}, deps)
 	})
 	var result port.IssueProviderCreateChildResult
 	if err := json.Unmarshal([]byte(raw), &result); err != nil {
@@ -96,3 +96,20 @@ exit 2
 		t.Fatalf("persisted links=%+v err=%v", stored.IssueLinks, err)
 	}
 }
+
+const readableWiringChildBody = `## 요약
+
+부모 이슈 #1234에서 템플릿 렌더러 구현을 맡습니다. 끝나면 렌더러가 새 계약의 필수 절을 출력합니다.
+
+## 완료 기준
+
+- 렌더러 테스트가 필수 절 순서를 확인합니다.
+
+## 범위
+
+- 하는 것: 렌더러 구현
+- 하지 않는 것: provider 정책 변경
+
+## 선행 조건과 병합 조건
+
+부모 브랜치에 병합한 뒤 하위 작업을 닫습니다.`

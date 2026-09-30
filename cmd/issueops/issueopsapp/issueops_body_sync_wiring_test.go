@@ -69,7 +69,7 @@ func TestBodySyncCompositionPersistsOnlyVerifiedReadback(t *testing.T) {
 				provider.receipt = strings.Repeat("a", 64)
 			}
 			_, result, err := syncIssueOpsRemoteArtifactBody(context.Background(), root, record.ID, contract.Command{
-				Kind: contract.KindIssue, ProposedBody: "new body", ExpectedBodySHA256: hex.EncodeToString(digest[:]), Confirm: true, AcceptRemoteEdits: true,
+				Kind: contract.KindIssue, ProposedBody: readableWiringIssueBody, ExpectedBodySHA256: hex.EncodeToString(digest[:]), Confirm: true, AcceptRemoteEdits: true,
 			}, provider, model.IssueOpsActor{})
 			stored, readErr := issueops.ReadIssueOps(root, record.ID)
 			if readErr != nil {
@@ -92,10 +92,10 @@ func TestBodySyncCompositionPersistsOnlyVerifiedReadback(t *testing.T) {
 			if !result.Updated || provider.writes != 1 || result.Drift != contract.DriftInSync || len(stored.BodySyncs) != 1 {
 				t.Fatalf("sync=%+v writes=%d baseline=%+v", result, provider.writes, stored.BodySyncs)
 			}
-			if provider.body != "new body\n\n"+block+"\n" {
+			if provider.body != readableWiringIssueBody+"\n\n"+block+"\n" {
 				t.Fatalf("managed body changed: %q", provider.body)
 			}
-			written := sha256.Sum256([]byte("new body\n\n" + block))
+			written := sha256.Sum256([]byte(readableWiringIssueBody + "\n\n" + block))
 			if stored.BodySyncs[0].ToSHA256 != hex.EncodeToString(written[:]) || stored.BodySyncs[0].URL != record.IssueURL || stored.BodySyncs[0].SyncedAt == "" {
 				t.Fatalf("stored baseline=%+v", stored.BodySyncs[0])
 			}

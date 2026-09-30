@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	webfetchcontract "issueops/internal/contract/webfetch"
+	"issueops/internal/domain/policy"
 )
 
 var tagRE = regexp.MustCompile(`(?s)<[^>]+>`)
@@ -168,11 +169,12 @@ func extractMetaContent(text, marker string) string {
 	return fragment[1 : 1+end]
 }
 
+// TruncateContent keeps the first maxChars characters; zero or less means no limit.
 func TruncateContent(content string, maxChars int) string {
-	if maxChars <= 0 || len(content) <= maxChars {
+	if maxChars <= 0 {
 		return content
 	}
-	return content[:maxChars]
+	return policy.TruncateRunes(content, maxChars)
 }
 
 func HeaderValue(header map[string][]string, key string) string {

@@ -89,7 +89,7 @@ func TestGraphSyncCompositionPreservesPreviewAndProviderContracts(t *testing.T) 
 					if e != nil {
 						t.Fatal(e)
 					}
-					want := "## Related Issue Graph\n\nThis issue graph was recorded by issueops IssueOps:\n\n- **Depends on**: https://github.com/acme/repo/issues/73 (Dependency)\n\nCycle: `" + record.ID + "`"
+					want := "## 관련 이슈\n\n- **선행 이슈**: https://github.com/acme/repo/issues/73 (Dependency)\n"
 					if string(body) != want {
 						t.Fatalf("body=%q want=%q", body, want)
 					}

@@ -16,7 +16,7 @@ publish는 완료가 아니다. 이 스킬이 만드는 것은 draft이며, 그 
 GitHub의 PR과 GitLab의 MR은 같은 publication 계약을 쓴다. CLI의 canonical
 동사는 `remote create-pr`이며, 별도의 `create-mr` alias는 만들지 않는다.
 
-원격 쓰기 절차(fluent-korean, 한국어 게이트, preview → 동일 요청 confirm → readback,
+원격 쓰기 절차(골격 받기, fluent-korean, preview의 가독성 판정 → 동일 요청 confirm → readback,
 모호할 때의 reconcile)는 [`issueops-remote-write`](../issueops-remote-write/SKILL.md)가
 소유한다. provider별 링크·계층 규칙은
 [`remote-issue.md`](../issueops/references/remote-issue.md)가 소유한다.
@@ -25,22 +25,18 @@ GitHub의 PR과 GitLab의 MR은 같은 publication 계약을 쓴다. CLI의 cano
 
 ## 읽는 순서
 
-리뷰어가 처음 보는 순서를 고정한다.
+리뷰어가 처음 보는 순서를 고정한다. 필수 절은 네 개다.
 
-1. **의도·이슈**: 왜 바꾸는지와 어느 Issue를 닫는지. `## 의도`는 봉인 intent 문서
+1. **요약**: 무엇을 왜 바꿨는지와 그 결과 무엇이 달라지는지. 봉인 intent 문서
    (`<artifact_dir>/intent.md`, 없으면 `status --json`의 `.intent`)의 해석과 성공 기준에서
-   옮겨 쓴다. 새로 짓지 않는다
-2. **변경 사항**: 무엇이 바뀌었는지, 무엇은 안 바뀌었는지
-3. **검증**: 실행 명령과 결과
-4. **리뷰어 초점·위험**: 무엇을 집중해서 봐야 하는지와 rollback
+   옮겨 쓴다. 새로 짓지 않는다. 마지막 줄에 `Closes #n`을 둔다
+2. **변경 내용**: 무엇이 바뀌었는지, 무엇은 안 바뀌었는지
+3. **확인한 것**: 확인한 동작, 방법, 결과. 확인하지 못한 것은 따로
+4. **리뷰 포인트**: 판단이 필요한 곳과 원하는 피드백
 
-나머지 canonical section은 빠뜨리지 않되, 같은 내용을 여러 section에
-복사하지 않는다. 작은 변경에 큰 다이어그램을 넣지 않는다.
-
-템플릿 설계의 근거는 [`issueops-create-issue`](../issueops-create-issue/SKILL.md)의
-[GitHub](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests)
-및 [GitLab](https://docs.gitlab.com/user/project/description_templates/)
-공식 문서 링크를 따른다. PR과 MR은 provider만 다르고 읽는 순서는 같게 둔다.
+대안과 선택 이유, 위험과 되돌리기, 호환성과 마이그레이션, 남은 일은 쓸 내용이 있을
+때만 둔다. 같은 내용을 여러 절에 복사하지 않는다. 작은 변경에 큰 다이어그램을 넣지
+않는다. PR과 MR은 provider만 다르고 읽는 순서는 같다.
 
 ## 흐름
 
@@ -81,87 +77,30 @@ evidence gates로 돌아간다. stale은 봉인 이후 diff가 바뀌었다는 �
 
 `expected-generation`은 현재 lease와 같아야 한다. branch를 새로 만들거나
 moving default branch를 추측하지 않는다. label score의 선택/거절과 threshold는
-body 또는 durable completion evidence에 남긴다.
+본문이 아니라 `issueops decision add --kind review --title "라벨 판단"`으로 record에 남긴다.
 
 ## Body 형식
 
-`pull_request` template의 13개 canonical section을 유지하되, 각 section은
-한 가지 질문에만 답한다.
-
-| Section 묶음 | 답할 질문 | 권장 포맷 |
-|---|---|---|
-| 의도·이슈 | 왜, 무엇과 연결되는가 | intent 문서의 해석·성공 기준에서 옮긴 2~3문장 + Issue URL |
-| 변경 유형·변경 사항 | 무엇을 바꿨는가 | checklist + 짧은 목록 |
-| 검증 | 어떻게 확인했는가 | 명령 / 결과 표 |
-| 리뷰어 초점 | 어디를 집중해서 볼까 | 2~4개 bullet |
-| 위험·Breaking Changes | 무엇이 깨질 수 있나 | risk / rollback 표 |
-| 사용자 영향·문서 | 누가 영향을 받나 | 영향과 migration 한 문단 |
-| 범위·정리·자동화 | 범위를 지켰나 | 사실만 bullet |
+골격은 `issueops remote render-template --kind pr --template pull_request`가 출력한다.
+절을 채우는 방법, 용어 변환표, 공개 모범 사례, 가독성 검사 기준은
+[`references/readable-body.md`](../issueops-remote-write/references/readable-body.md)가
+소유한다. 이 스킬에 절 목록이나 본문 예시를 따로 두지 않는다.
 
 body 초안을 만든 다음, `remote create-pr`을 실행하기 전에 `fluent-korean`
-스킬을 Skill 도구로 호출해서 문장을 다듬는다. 한국어 게이트는 한글 비율만
-보기 때문에 AI가 쓴 티는 걸러지지 않는다. 이 호출을 건너뛴 body로는
-`--confirm`을 붙이지 않는다.
-
-### 좋은 예: PR/MR body
-
-```markdown
-## 의도
-Issue와 PR/MR publication 책임을 전용 스킬로 분리해 첫 읽기 비용을 낮춘다.
-
-## 이슈
-Closes https://github.com/acme/issueops/issues/123
-
-## 변경 유형
-- [x] refactor
-- [x] docs
-
-## 변경 사항
-- `issueops-create-issue`와 `issueops-create-pr`을 분리했다.
-- remote metadata와 template 조합을 fail-closed로 검증한다.
-
-## 검증
-| 명령 | 결과 |
-|---|---|
-| `go test ./internal/domain/artifacttemplate ./cmd/issueops/issueopscli/remotecmd -count=1` | pass |
-| `python3 scripts/verify-skill-shell.py skills/issueops-create-pr` | pass |
-
-## 리뷰어 초점
-- `create-pr`가 GitHub PR과 GitLab MR 모두에 같은 경계를 쓰는가
-- generation과 native actor가 provider 호출 전에 확인되는가
-
-## 위험/rollback
-confirm 전에는 dry-run이다. 실패한 remote mutation은 retry하지 않고 reconcile한다.
-
-## Breaking Changes
-- [x] 없음
-
-## 사용자 영향/릴리즈 노트
-IssueOps 사용자가 필요한 단계만 읽고 publication할 수 있다.
-
-## 문서/마이그레이션
-두 전용 skill 링크와 provider 가이드를 갱신했다.
-
-## 범위 관리
-provider adapter API는 건드리지 않고 입력 경계만 수정했다.
-
-## 워크트리 정리
-merge 후 별도 cleanup gate에서 worktree와 branch를 확인한다.
-
-## 자동화/AI 개입 근거
-renderer와 deterministic test 결과를 기록한다.
-```
-
-각 section은 한두 문장으로 충분하다. 같은 내용을 여러 section에 복사하지 않는다.
-검증하지 않은 `pass`나 생성한 URL을 적지 않는다.
+스킬을 Skill 도구로 호출해서 문장을 다듬는다. 가독성 검사는 문장이 자연스러운지
+판정하지 않으므로 AI가 쓴 티는 걸러지지 않는다. 이 호출을 건너뛴 body로는
+`--confirm`을 붙이지 않는다. 해시, 커밋 SHA 전문, 로컬 경로, plan 원문은 본문에
+넣지 않는다. 검증 항목 원장과 계획은 `.issueops/issues/<n>/`에 있다.
 
 ### 나쁜 예
 
 | 나쁜 입력 | 문제 |
 |---|---|
-| `테스트 완료` | 재현 가능한 명령과 결과가 없다 |
+| `테스트 완료` | 무엇을 어떻게 확인했는지 없다 |
+| 확인한 것 절에 `pass`만 적은 표 | 결과만 있고 확인한 동작이 없다 |
+| 계획 원문이나 게이트 원장을 본문에 붙임 | 리뷰어가 흐름을 찾지 못한다. 자료는 `.issueops/issues/<n>/`에 있다 |
 | 파일 30개 나열 | 변경 이유·경계·리뷰 포인트가 보이지 않는다 |
-| Issue 링크 없음 | publication이 어느 작업인지 연결되지 않는다 |
+| 요약에 `Closes #n` 없음 | publication이 어느 작업인지 연결되지 않는다 |
 | `gh pr create` / `glab mr create` 직접 실행 | IssueOps lease와 readback을 우회한다 |
 | `head=main`, `base=feature/*` | 방향이 뒤집혔거나 moving ref를 추측한다 |
 | timeout 뒤 create-pr 재실행 | duplicate PR/MR 위험이 있다 |
@@ -170,7 +109,8 @@ renderer와 deterministic test 결과를 기록한다.
 ## Canonical publication
 
 body file을 먼저 작성하고, 다음 명령은 preview로 실행한다. `--confirm` 없는
-경로는 provider mutation을 하지 않는다.
+경로는 provider mutation을 하지 않는다. 응답의 `readability.critical`이 비어 있어야
+confirm이 통과한다. `--template`을 생략하면 `pull_request`가 쓰인다.
 
 ```bash
 issueops remote create-pr \
@@ -203,7 +143,7 @@ provider 결과가 불명확하면 create를 반복하지 않는다. execution�
 
 ## 품질·성능 게이트
 
-- 품질: linked Issue, generation-CAS, head/base, actor, body completeness,
+- 품질: linked Issue, generation-CAS, head/base, actor, `readability.critical` 0과 warning 처리,
   원격 write 전 `fluent-korean` 호출, label/assignee, live artifact readback,
   secret redaction.
 - 성능: publication 단계에서 issue creation과 전체 lifecycle reference를

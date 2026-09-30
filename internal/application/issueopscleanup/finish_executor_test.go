@@ -12,11 +12,11 @@ import (
 )
 
 type finishTestRecords struct {
-	snapshot                                       model.CleanupSnapshot
-	events                                         *[]string
-	armErr, checkErr, auditErr, deleteErr, failErr error
-	failContextErr                                 error
-	retained                                       bool
+	snapshot                             model.CleanupSnapshot
+	events                               *[]string
+	armErr, checkErr, deleteErr, failErr error
+	failContextErr                       error
+	retained                             bool
 }
 
 func (s *finishTestRecords) Load(context.Context, string) (model.CleanupSnapshot, error) {
@@ -37,10 +37,6 @@ func (s *finishTestRecords) Fail(ctx context.Context, _ model.CleanupSnapshot, _
 	s.retained = !drained
 	s.failContextErr = ctx.Err()
 	return s.snapshot, s.failErr
-}
-func (s *finishTestRecords) MarkAuditReflected(context.Context, model.CleanupSnapshot, string) (model.CleanupSnapshot, error) {
-	*s.events = append(*s.events, "receipt")
-	return s.snapshot, s.auditErr
 }
 func (s *finishTestRecords) Delete(context.Context, model.CleanupSnapshot) error {
 	*s.events = append(*s.events, "delete")
@@ -97,10 +93,6 @@ func finishExecutorFixture(t *testing.T) (FinishExecutor, *finishTestRecords, *f
 		NewAttempt: func(model.CleanupOperation) (model.IssueOpsCleanupAttempt, error) {
 			return model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}, nil
 		},
-		Completion: func(model.IssueOpsRecord) model.RemoteCompletionSection {
-			events = append(events, "completion")
-			return model.RemoteCompletionSection{}
-		},
 		Stop: func(ctx context.Context, _ model.CleanupFinishInventory, _ []model.CleanupWorkspaceProcess) ([]model.CleanupWorkspaceProcess, int, error) {
 			checkContext(ctx)
 			events = append(events, "stop")
@@ -117,11 +109,6 @@ func finishExecutorFixture(t *testing.T) (FinishExecutor, *finishTestRecords, *f
 			events = append(events, strings.Join(args, " "))
 			return 0, ""
 		},
-		ReflectAudit: func(ctx context.Context, _ model.IssueOpsRecord, _ model.RemoteCompletionSection, _ string) error {
-			checkContext(ctx)
-			events = append(events, "audit")
-			return nil
-		},
 		Now: func() time.Time { return time.Date(2026, 9, 29, 0, 0, 1, 0, time.UTC) },
 	}
 	return executor, records, lease, &events
@@ -133,10 +120,10 @@ func finishApplyRequest() model.CleanupFinishRequest {
 func TestFinishExecutorOrdersBoundEffectsAndDrainsBeforeDelete(t *testing.T) {
 	executor, _, _, events := finishExecutorFixture(t)
 	result, err := executor.Run(context.Background(), finishApplyRequest())
-	if err != nil || !result.RecordDeleted || !result.AuditReflected {
+	if err != nil || !result.RecordDeleted || result.Audit == "" {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
-	want := []string{"acquire", "load", "observe", "plan", "completion", "arm", "check", "stop", "check", "orca", "directory", "check", "worktree remove /worktree", "check", "update-ref -d refs/heads/feature oid", "check", "audit", "receipt", "drain", "delete", "close"}
+	want := []string{"acquire", "load", "observe", "plan", "arm", "check", "stop", "check", "orca", "directory", "check", "worktree remove /worktree", "check", "update-ref -d refs/heads/feature oid", "drain", "delete", "close"}
 	if !reflect.DeepEqual(*events, want) {
 		t.Fatalf("events=%v want=%v", *events, want)
 	}
@@ -165,19 +152,6 @@ func TestFinishExecutorRetainsUndrainedAttemptAndDoesNotDelete(t *testing.T) {
 		t.Fatalf("effects after drainage failure: %v", *events)
 	}
 }
-func TestFinishExecutorAuditOwnershipFailureBlocksDeletion(t *testing.T) {
-	executor, records, _, events := finishExecutorFixture(t)
-	records.auditErr = errors.New("owner changed")
-	result, err := executor.Run(context.Background(), finishApplyRequest())
-	if err == nil || result.RecordDeleted {
-		t.Fatalf("result=%+v err=%v", result, err)
-	}
-	for _, event := range *events {
-		if event == "delete" {
-			t.Fatalf("deleted after local receipt failure: %v", *events)
-		}
-	}
-}
 func TestFinishExecutorPreviewDoesNotArm(t *testing.T) {
 	executor, _, _, events := finishExecutorFixture(t)
 	result, err := executor.Run(context.Background(), model.CleanupFinishRequest{ID: "io-finish"})
@@ -202,21 +176,5 @@ func TestFinishExecutorCancellationStillDrainsAndRecordsFailure(t *testing.T) {
 	result, err := executor.Run(ctx, finishApplyRequest())
 	if result.RecordDeleted || !errors.Is(err, context.Canceled) || !errors.Is(err, persistenceFailure) || records.retained || records.failContextErr != nil {
 		t.Fatalf("cancellation finalization: result=%+v err=%v retained=%v finalContext=%v", result, err, records.retained, records.failContextErr)
-	}
-}
-
-func TestFinishExecutorProviderAuditFailureRemainsBestEffort(t *testing.T) {
-	executor, _, _, events := finishExecutorFixture(t)
-	executor.ReflectAudit = func(context.Context, model.IssueOpsRecord, model.RemoteCompletionSection, string) error {
-		return errors.New("provider unavailable")
-	}
-	result, err := executor.Run(context.Background(), finishApplyRequest())
-	if err != nil || !result.RecordDeleted || result.AuditReflected || result.AuditError != "provider unavailable" {
-		t.Fatalf("audit failure: result=%+v err=%v", result, err)
-	}
-	for _, event := range *events {
-		if event == "receipt" {
-			t.Fatal("unconfirmed provider write stamped local receipt")
-		}
 	}
 }

@@ -1,10 +1,11 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
 	"sort"
 	"strings"
 	"testing"
+
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 // A4 — scorer 검증 충분성(차원별 mutation suite)이다.
@@ -120,10 +121,10 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 			coupled: []string{"issue_quality"},
 		},
 		"issue_quality": {
-			// issue 전용 label-decision 절만 깨뜨린다. ProblemSummary와 IssueDraft는
+			// issue 전용 label-decision 줄만 깨뜨린다. ProblemSummary와 IssueDraft는
 			// 비어 있지 않아 intent_understanding은 100점을 유지한다.
 			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
-				a.IssueDraft = strings.ReplaceAll(a.IssueDraft, "선택 라벨: enhancement(score 0.90), 거절 라벨: documentation(score 0.20), threshold 0.70, 수동 override 없음.\n", "")
+				a.ProblemSummary = strings.ReplaceAll(a.ProblemSummary, "선택 라벨: enhancement(score 0.90), 거절 라벨: documentation(score 0.20), threshold 0.70, 수동 override 없음.\n", "")
 				return a
 			},
 		},

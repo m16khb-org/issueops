@@ -1,13 +1,13 @@
 package mcpsmoke
 
 import (
-	selfverify "issueops/internal/contract/selfverify"
-
 	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	selfverify "issueops/internal/contract/selfverify"
 )
 
 func TestMCPSmokeExpectedMarkers(t *testing.T) {
@@ -139,13 +139,4 @@ func validMCPSmokeStdout() string {
 		fmt.Fprintf(&b, `{"id":%d,"text":%q}`+"\n", i, markers)
 	}
 	return b.String()
-}
-
-func containsEnv(env []string, want string) bool {
-	for _, item := range env {
-		if item == want {
-			return true
-		}
-	}
-	return false
 }

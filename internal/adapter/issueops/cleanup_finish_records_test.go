@@ -61,7 +61,7 @@ func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
 }
 
 func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
-	for _, operation := range []string{"check", "fail", "audit", "delete"} {
+	for _, operation := range []string{"check", "fail", "delete"} {
 		t.Run(operation, func(t *testing.T) {
 			root := t.TempDir()
 			ctx := context.Background()
@@ -95,8 +95,6 @@ func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
 				err = store.Check(ctx, old)
 			case "fail":
 				_, err = store.Fail(ctx, old, finishRecordsFailure(), true)
-			case "audit":
-				_, err = store.MarkAuditReflected(ctx, old, "2026-09-29T00:00:01Z")
 			case "delete":
 				err = store.Delete(ctx, old)
 			}
@@ -115,7 +113,7 @@ func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
 	}
 }
 
-func TestFinishRecordsDrainFailureAuditAndAtomicDelete(t *testing.T) {
+func TestFinishRecordsDrainFailureRearmAndAtomicDelete(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()
 	record, err := writeIssueOps(root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-drain", Phase: model.IssueOpsPhaseDone, RemoteCompletion: &model.IssueOpsRemoteCompletion{IssueClosedAt: "first"}})
@@ -156,15 +154,15 @@ func TestFinishRecordsDrainFailureAuditAndAtomicDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reflected, err := store.MarkAuditReflected(ctx, armed, "2026-09-29T00:00:02Z")
+	reflected, err := store.Arm(ctx, armed, finishRecordsAttempt("c"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reflected.Record.RemoteCompletion.IssueClosedAt != "first" || reflected.Record.RemoteCompletion.ReflectedAt == "" || armed.Record.RemoteCompletion.ReflectedAt != "" {
-		t.Fatal("audit projection mutated prior receipt")
+	if reflected.Record.RemoteCompletion.IssueClosedAt != "first" || reflected.Record.RemoteCompletion.ReflectedAt != "" || armed.Record.RemoteCompletion.ReflectedAt != "" {
+		t.Fatal("rearm mutated completion receipt")
 	}
 	if err := store.Delete(ctx, armed); err == nil {
-		t.Fatal("deletion accepted pre-audit revision")
+		t.Fatal("deletion accepted pre-rearm revision")
 	}
 	db, err := sqlstore.Open(root)
 	if err != nil {
@@ -214,9 +212,6 @@ func TestFinishRecordsRejectForgedAttemptProjection(t *testing.T) {
 	}
 	if _, err := store.Fail(ctx, forged, finishRecordsFailure(), true); err == nil {
 		t.Fatal("foreign token cleared ownership")
-	}
-	if _, err := store.MarkAuditReflected(ctx, forged, "2026-09-29T00:00:01Z"); err == nil {
-		t.Fatal("foreign token stamped audit")
 	}
 	if err := store.Delete(ctx, forged); err == nil {
 		t.Fatal("foreign token deleted record")

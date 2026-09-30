@@ -26,9 +26,7 @@ func testSnapshotStore() app.SnapshotStore {
 func ValidateStateRoundtrip(binary, root string, seed int64) selfverify.StepResult {
 	return (stateroundtrip.Validator{StateRead: readProbeState, WriteRecord: statestore.WriteStateRecord, WriteSnapshot: testSnapshotStore().Write, OpenDatabase: func(dir string) (stateroundtrip.StateDatabase, error) { return sqlstore.Open(dir) }}).Validate(binary, root, seed)
 }
-func validateStateRoundtrip(binary, root string, seed int64) selfverify.StepResult {
-	return ValidateStateRoundtrip(binary, root, seed)
-}
+
 func ValidateStepBudgetBaseline(binary, root string, seed int64) selfverify.StepResult {
 	return stepbudget.ValidateStepBudgetBaselineWithDeps(binary, root, seed, stepbudget.StepBudgetValidationDeps{WriteSnapshot: testSnapshotStore().Write})
 }
@@ -39,9 +37,8 @@ func testDocsValidator() qagate.Validator {
 	return qagate.Validator{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List, ListSkills: install.ListSkillNames}
 }
 func ValidateQAGate(root string) selfverify.StepResult { return testDocsValidator().Validate(root) }
-func validateQAGate(root string) selfverify.StepResult { return ValidateQAGate(root) }
-func ValidateMermaidDocs(root string) []string         { return testDocsValidator().MermaidDocs(root) }
-func validateMermaidDocs(root string) []string         { return ValidateMermaidDocs(root) }
+
+func ValidateMermaidDocs(root string) []string { return testDocsValidator().MermaidDocs(root) }
 
 func readProbeState(dir, key string) (statecontract.StateResult, error) {
 	service := stateapp.NewService(stateapp.Dependencies{StateDir: func() string { return dir }, StatePath: statepath.Path, OpenStore: func(dir string) (stateport.Store, error) { return sqlstore.Open(dir) }, ExistingRecords: statestore.ExistingRecords{}})
@@ -51,4 +48,3 @@ func readProbeState(dir, key string) (statecontract.StateResult, error) {
 func ValidateRedactionAudit(root string) selfverify.StepResult {
 	return testDocsValidator().RedactionAudit(root)
 }
-func validateRedactionAudit(root string) selfverify.StepResult { return ValidateRedactionAudit(root) }

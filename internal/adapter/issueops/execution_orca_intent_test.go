@@ -24,7 +24,7 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 		BaseBranch: record.BranchPrepare.BaseBranch, BaseHead: record.BranchPrepare.BaseSHA, Confirm: true,
 	}
 	probe := port.ExecutionOrcaProbeRequest{
-		Repo: record.Repo, Host: "codex", Model: "gpt-5.6-terra", Effort: "xhigh",
+		Repo: record.Repo, Host: "codex", Model: "gpt-6-astra", Effort: "xhigh",
 		Provider: "github", Issue: 16, Marker: "readiness-marker",
 	}
 	issueBody := "## Acceptance\n- AC-01 persist plan\n\n## Verification\n```bash\ngo test ./... -count=1\n```\n"
@@ -33,7 +33,7 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 	}}
 	prepared, intent, err := beginOrcaIntentViaRepository(
 		stateRoot, record, workspace, probe,
-		issueops.ExecutionPrepareRequest{ID: record.ID, Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh"},
+		issueops.ExecutionPrepareRequest{ID: record.ID, Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh"},
 		snapshot, func() time.Time { return time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC) },
 	)
 	if err != nil {

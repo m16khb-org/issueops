@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
+
 	"errors"
 	"fmt"
 	"io"
@@ -162,15 +162,6 @@ func writeFingerprintFile(hash fingerprintWriter, path string, entry os.FileInfo
 	}
 	_, _ = hash.Write([]byte{0})
 	return nil
-}
-
-func hashJSON(value any) (string, error) {
-	data, err := json.Marshal(value)
-	if err != nil {
-		return "", err
-	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
 }
 
 func claimTokenPath(record issueops.IssueOpsRecord) string {

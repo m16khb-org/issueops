@@ -89,7 +89,7 @@ func TestPublicationCommandCompositionPreservesDefaultsAndActor(t *testing.T) {
 		t.Fatal(err)
 	}
 	path := filepath.Join(t.TempDir(), "body.md")
-	if err := os.WriteFile(path, []byte("  publication body\n"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("  "+readableWiringPRBody+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	ancestry, err := core.ObserveNativeProcessAncestry(os.Getpid())
@@ -99,7 +99,7 @@ func TestPublicationCommandCompositionPreservesDefaultsAndActor(t *testing.T) {
 	observed, published := 0, 0
 	service := newPublicationCommand(root, func(_ context.Context, _ string, req model.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 		published++
-		if req.Provider != "github" || req.Head != record.Branch || req.Base != "release" || req.Body != "publication body" || strings.Join(req.Labels, ",") != "bug" || strings.Join(req.Assignees, ",") != "owner" {
+		if req.Provider != "github" || req.Head != record.Branch || req.Base != "release" || req.Body != readableWiringPRBody || strings.Join(req.Labels, ",") != "bug" || strings.Join(req.Assignees, ",") != "owner" {
 			t.Fatalf("request=%+v", req)
 		}
 		if req.Confirm && (req.Actor.Host != "codex" || req.Actor.SessionID != "session" || len(req.Actor.ProcessAncestry) == 0) {
@@ -121,3 +121,20 @@ func TestPublicationCommandCompositionPreservesDefaultsAndActor(t *testing.T) {
 		t.Fatalf("unsafe body err=%v observed=%d published=%d", err, observed, published)
 	}
 }
+
+const readableWiringPRBody = `## 요약
+
+게시 명령이 본문 가독성 검사를 항상 실행하도록 바꿨습니다. 이제 요약이 없는 본문은 게시되지 않습니다.
+Closes #1234
+
+## 변경 내용
+
+- 게시 명령이 본문 계약과 가독성 검사를 함께 실행합니다.
+
+## 확인한 것
+
+- 요약이 없는 본문으로 게시를 시도하면 거부되는 것을 명령 테스트로 확인했습니다.
+
+## 리뷰 포인트
+
+- 거부 시점이 원격 호출보다 앞서는지 봐 주세요.`

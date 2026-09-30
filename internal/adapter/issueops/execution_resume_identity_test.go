@@ -188,7 +188,7 @@ func sealedResumeIdentityFixture(t *testing.T) (issueops.IssueOpsRecord, executi
 			Mode:      issueops.ExecutionModeOrca,
 			Workspace: issueops.Workspace{SourceRoot: filepath.Join(t.TempDir(), "source"), Root: worktree, Branch: "254-resume", BaseHead: strings.Repeat("a", 40), Driver: "orca", LinkedAt: "2026-08-03T00:00:00Z"},
 			Lease:     issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
-			Orca:      &issueops.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1, OwnerHost: "codex", OwnerModel: "gpt-5.6-sol", OwnerEffort: "high", TaskID: "task", DispatchID: "dispatch"},
+			Orca:      &issueops.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", LeaseGeneration: 1, OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high", TaskID: "task", DispatchID: "dispatch"},
 		},
 	}
 	const plan = "# Resume plan\n"
@@ -210,7 +210,7 @@ func sealedResumeIdentityFixture(t *testing.T) (issueops.IssueOpsRecord, executi
 		requiredSkills: []string{"issueops"}, acceptanceIDs: []string{"AC-01"}, verificationCommands: []string{"go test ./..."},
 	}
 	manifest := map[string]string{"plan": digestExecutionOwnerBytes([]byte(plan))}
-	artifacts, err := buildExecutionOwnerArtifacts(record, issueops.ExecutionPrepareRequest{OwnerHost: "codex", OwnerModel: "gpt-5.6-sol", OwnerEffort: "high"}, snapshot, manifest)
+	artifacts, err := buildExecutionOwnerArtifacts(record, issueops.ExecutionPrepareRequest{OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high"}, snapshot, manifest)
 	if err != nil {
 		t.Fatal(err)
 	}

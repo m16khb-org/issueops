@@ -31,8 +31,8 @@ func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBody
 	return &PublicationCommandService{records: records, bodies: bodies, observe: observe, normalize: normalize, publish: publish}
 }
 
-func (s *PublicationCommandService) Create(ctx context.Context, input PublicationInput) (port.IssueProviderCreatePullRequestResult, error) {
-	var result port.IssueProviderCreatePullRequestResult
+func (s *PublicationCommandService) Create(ctx context.Context, input PublicationInput) (PublicationResult, error) {
+	var result PublicationResult
 	req := input.Request
 	req.Labels, req.Assignees = remote.CleanValues(req.Labels), remote.CleanValues(req.Assignees)
 	record, err := s.records.Read(ctx, req.ID)
@@ -43,10 +43,12 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 	if err != nil {
 		return result, err
 	}
-	req.Body, err = s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactPR, Template: input.Template, Provider: req.Provider, Title: req.Title, Body: req.Body, BodyFile: input.BodyFile, Fields: input.Fields, ScoreFile: input.ScoreFile})
+	resolved, err := s.bodies.Resolve(TemplateBodyRequest{Kind: artifacttemplate.IssueOpsArtifactPR, Template: input.Template, Provider: req.Provider, Title: req.Title, Body: req.Body, BodyFile: input.BodyFile, Fields: input.Fields, ScoreFile: input.ScoreFile, Confirm: req.Confirm})
 	if err != nil {
 		return result, err
 	}
+	req.Body = resolved.Body
+	result.Readability = resolved.Readability
 	if err := policy.ValidateRemoteCreateInputs("pr create", req.Title, req.Body, req.Labels, req.Assignees); err != nil {
 		return result, err
 	}
@@ -68,5 +70,6 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 			return result, err
 		}
 	}
-	return s.publish(ctx, req)
+	result.IssueProviderCreatePullRequestResult, err = s.publish(ctx, req)
+	return result, err
 }

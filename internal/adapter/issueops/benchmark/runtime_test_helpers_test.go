@@ -29,9 +29,7 @@ func CompareIssueOpsBenchmarkRuns(baseline, candidate IssueOpsBenchmarkRunResult
 func DecodeIssueOpsBenchmarkJudgeJSON(raw []byte) (IssueOpsBenchmarkScore, error) {
 	return DecodeJudgeScore(raw)
 }
-func validateIssueOpsBenchmarkFixture(f contract.IssueOpsBenchmarkFixture) error {
-	return domain.ValidateFixture(f)
-}
+
 func RunIssueOpsBenchmark(req IssueOpsBenchmarkRunRequest) (IssueOpsBenchmarkRunResult, error) {
 	result := domain.ScoreRun("issueops-benchmark-"+time.Now().UTC().Format("20060102T150405.000000000Z"), req.Fixtures, req.Artifacts)
 	if strings.TrimSpace(req.StateRoot) != "" {

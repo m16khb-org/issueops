@@ -28,6 +28,15 @@ later dated record says so explicitly. Current supersessions include:
 - The Phase 3 daemon-backed MCP proxy in `roadmap.md` is superseded by the
   2026-09-23 in-process MCP decision. The daemon remains only for MCP proxies
   started from older binaries.
+- The 2026-09-09 intent-seal decision's rejection of a tracked intent file is
+  superseded by the 2026-09-24 human-document decision: phase transitions write
+  tracked copies of intent, plan, spec, and plan review into
+  `.issueops/issues/<n>/`. The sealed intent artifact and its digest remain.
+- The Claude role-model defaults named in the 2026-07-24 planner/implementer
+  record (claude fable5/opus4.8) are superseded by the 2026-09-24 Claude
+  role-model decision: planner and reviewer `claude-opus-5`/high, implementer
+  `claude-sonnet-5`/high, and Fable 5 only on explicit manual request. The dual
+  planner/implementer structure itself is unchanged.
 
 Historical host, schema, and command names inside dated records preserve the
 rationale at the time of writing. They are not current support contracts. The

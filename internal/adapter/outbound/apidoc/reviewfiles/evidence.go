@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"issueops/internal/domain/policy"
 )
 
 // Evidence extracts a bounded, machine-generated summary of the business-logic
@@ -301,7 +303,7 @@ func throwDetail(arg string) string {
 		return ""
 	}
 	if len(arg) > 72 {
-		arg = arg[:72]
+		arg = policy.TruncateBytes(arg, 72)
 		if cut := strings.LastIndexAny(arg, " ,'\t"); cut > 24 {
 			arg = arg[:cut]
 		}

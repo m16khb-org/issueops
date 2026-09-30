@@ -114,6 +114,9 @@ func (buffer *remoteVerifyBuffer) Write(value []byte) (int, error) {
 }
 
 func (buffer *remoteVerifyBuffer) String() string {
+	if buffer.truncated {
+		return policydomain.TrimIncompleteRune(string(buffer.data))
+	}
 	return string(buffer.data)
 }
 
@@ -191,7 +194,7 @@ func commandOutputError(err error) error {
 		if stderr := strings.TrimSpace(string(exitErr.Stderr)); stderr != "" {
 			diagnostic := policydomain.RedactDiagnostic(stderr)
 			if len(diagnostic) > maxRemoteVerifyDiagnosticBytes {
-				diagnostic = diagnostic[:maxRemoteVerifyDiagnosticBytes]
+				diagnostic = policydomain.TruncateBytes(diagnostic, maxRemoteVerifyDiagnosticBytes)
 			}
 			return fmt.Errorf("%s", diagnostic)
 		}

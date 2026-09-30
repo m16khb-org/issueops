@@ -3,8 +3,11 @@ package issueopsremote
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	reportcontract "issueops/internal/contract/artifactreadability"
 	model "issueops/internal/contract/issueops"
+	"issueops/internal/domain/artifactreadability"
 	domain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
@@ -18,14 +21,14 @@ type MergeVerifier func(model.IssueOpsRemoteArtifactVerification) error
 
 type RemoteCompletionService struct {
 	records   IssueRecordReader
-	collector CompletionCollector
+	materials TrackedMaterials
 	receipts  CompletionReceipts
 	resolve   CompletionProviderResolver
 	verify    MergeVerifier
 }
 
-func NewRemoteCompletionService(records IssueRecordReader, collector CompletionCollector, receipts CompletionReceipts, resolve CompletionProviderResolver, verify MergeVerifier) *RemoteCompletionService {
-	return &RemoteCompletionService{records: records, collector: collector, receipts: receipts, resolve: resolve, verify: verify}
+func NewRemoteCompletionService(records IssueRecordReader, materials TrackedMaterials, receipts CompletionReceipts, resolve CompletionProviderResolver, verify MergeVerifier) *RemoteCompletionService {
+	return &RemoteCompletionService{records: records, materials: materials, receipts: receipts, resolve: resolve, verify: verify}
 }
 
 func (s *RemoteCompletionService) prepare(ctx context.Context, id, providerOverride string) (CompletionProvider, error) {
@@ -56,29 +59,42 @@ func (s *RemoteCompletionService) prepare(ctx context.Context, id, providerOverr
 	return provider, nil
 }
 
-func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverride string, confirm bool) (model.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (s *RemoteCompletionService) Reflect(ctx context.Context, id, providerOverride, resultBody string, confirm bool) (model.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
 	var result port.IssueProviderUpdateIssueBodySectionResult
+	var report reportcontract.Report
+	resultBody = strings.TrimSpace(resultBody)
+	if confirm && resultBody == "" {
+		return model.IssueOpsRecord{}, result, report, fmt.Errorf("--body-file is required with --confirm: write the progress report for human readers first")
+	}
 	provider, err := s.prepare(ctx, id, providerOverride)
 	if err != nil {
-		return model.IssueOpsRecord{}, result, err
+		return model.IssueOpsRecord{}, result, report, err
 	}
 	record, err := s.records.Read(ctx, id)
 	if err != nil {
-		return record, result, err
+		return record, result, report, err
 	}
 	if err := domain.ValidateReflectCompletion(record); err != nil {
-		return model.IssueOpsRecord{}, result, err
+		return model.IssueOpsRecord{}, result, report, err
 	}
-	completion := s.collector.Collect(record)
+	report = artifactreadability.Check(artifactreadability.Input{Kind: artifactreadability.KindCompletion, Body: resultBody})
+	if s.materials.Missing(record) {
+		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "tracked_materials_missing", Message: TrackedMaterialsMissingWarning})
+	}
+	if confirm && !report.OK {
+		return model.IssueOpsRecord{}, result, report, artifactreadability.RefusalError(report)
+	}
+	completion := domain.ProjectRemoteCompletion(record)
+	completion.ResultBody = resultBody
 	result, err = provider.UpdateIssueBodySection(ctx, port.IssueProviderUpdateIssueBodySectionRequest{Repo: record.Repo, IssueURL: record.IssueURL, Section: model.IssueBodySectionCompletion, Completion: &completion, Confirm: confirm})
 	if err != nil {
-		return model.IssueOpsRecord{}, result, err
+		return model.IssueOpsRecord{}, result, report, err
 	}
 	if !confirm || !result.Updated {
-		return record, result, nil
+		return record, result, report, nil
 	}
 	record, err = s.receipts.Reflected(ctx, id)
-	return record, result, err
+	return record, result, report, err
 }
 
 func (s *RemoteCompletionService) Close(ctx context.Context, id, providerOverride string, confirm bool) (model.IssueOpsRecord, port.IssueProviderCloseIssueResult, error) {

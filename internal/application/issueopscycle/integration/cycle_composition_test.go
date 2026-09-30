@@ -41,6 +41,3 @@ func advancePhaseWithActorForTest(root, id, to string, actor model.IssueOpsActor
 func advancePhaseForTest(root, id, to string) (model.IssueOpsRecord, error) {
 	return testCyclePhaseService(nil).Advance(root, id, to)
 }
-func recordAISlopEvidenceForTest(root, id string, categories, verification []string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	return review.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{ReviewMutationStore: core.NewReviewMutationStore(&actor), Refresh: testCyclePhaseService(&actor).Refresh}, root, id, categories, verification)
-}

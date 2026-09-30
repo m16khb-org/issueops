@@ -5,8 +5,6 @@ import (
 	"testing"
 )
 
-func fullOID() string { return strings.Repeat("a", 40) }
-
 func TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand(t *testing.T) {
 	err := NewBaseSyncRequiredError("io-9'x", 7)
 

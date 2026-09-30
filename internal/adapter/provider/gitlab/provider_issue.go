@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os/exec"
 	"strings"
-	"time"
 
 	"issueops/internal/adapter/provider/providerutil"
 	issuebody "issueops/internal/domain/issueops"
@@ -19,11 +18,10 @@ func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProvid
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
-	ts := time.Now().UTC().Format(time.RFC3339)
-	sectionInput := issuebody.SectionInput{Section: req.Section, Findings: req.Findings, Completion: req.Completion}
+	sectionInput := issuebody.SectionInput{Section: req.Section, Findings: req.Findings, Verdict: req.Verdict, Rounds: req.Rounds, Completion: req.Completion}
 	endpoint := "projects/" + url.PathEscape(projectPath) + "/issues/" + iid
 	if !req.Confirm {
-		if _, _, _, err := issuebody.RenderSection(sectionInput, ts, gitLabIssueBodyLimit); err != nil {
+		if _, _, _, err := issuebody.RenderSection(sectionInput, gitLabIssueBodyLimit); err != nil {
 			return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 		}
 		return port.IssueProviderUpdateIssueBodySectionResult{
@@ -47,7 +45,7 @@ func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProvid
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
 	// 병합 결과가 한도를 지키도록 기존 본문을 반영한 예산으로 렌더한다(C3-F1).
-	section, start, end, err := issuebody.RenderSection(sectionInput, ts, issuebody.SectionBudget(payload.Description, gitLabIssueBodyLimit, start, end))
+	section, start, end, err := issuebody.RenderSection(sectionInput, issuebody.SectionBudget(payload.Description, gitLabIssueBodyLimit, start, end))
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}

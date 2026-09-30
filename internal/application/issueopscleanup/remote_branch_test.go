@@ -2,7 +2,6 @@ package issueopscleanup
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -20,9 +19,6 @@ func (s *remoteBranchTestStore) Arm(_ context.Context, snap model.CleanupSnapsho
 	return snap, nil
 }
 func (s *remoteBranchTestStore) Check(context.Context, model.CleanupSnapshot) error { return nil }
-func (s *remoteBranchTestStore) MarkAuditReflected(_ context.Context, snap model.CleanupSnapshot, _ string) (model.CleanupSnapshot, error) {
-	return snap, nil
-}
 func (s *remoteBranchTestStore) Release(_ context.Context, snap model.CleanupSnapshot, _ string) (model.CleanupSnapshot, error) {
 	snap.Record.CleanupAttempt = nil
 	return snap, nil
@@ -71,7 +67,7 @@ func (e *remoteBranchTestEnvironment) Delete(ctx context.Context, repo, branch, 
 	return nil
 }
 
-func TestRemoteBranchCleanerSnapshotsCompletionBeforeDeletionAndReportsAuditFailure(t *testing.T) {
+func TestRemoteBranchCleanerReportsAuditWithoutRemoteBodyWrite(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	calls := []string{}
@@ -90,23 +86,6 @@ func TestRemoteBranchCleanerSnapshotsCompletionBeforeDeletionAndReportsAuditFail
 			}
 			return model.CleanupRemoteBranchArtifactHead{HeadRefName: record.Branch, HeadRefOID: env.oid}, nil
 		}},
-		Completion: func(got model.IssueOpsRecord) model.RemoteCompletionSection {
-			calls = append(calls, "completion")
-			if !reflect.DeepEqual(got, record) {
-				t.Fatal("completion record drifted")
-			}
-			return model.RemoteCompletionSection{CleanupAudit: "snapshot marker"}
-		},
-		ReflectAudit: func(gotCtx context.Context, got model.IssueOpsRecord, completion model.RemoteCompletionSection, audit string) error {
-			calls = append(calls, "audit")
-			if gotCtx != ctx || !reflect.DeepEqual(got, record) || completion.CleanupAudit != "snapshot marker" {
-				t.Fatal("lost completion snapshot or context")
-			}
-			if audit != "원격 브랜치 삭제: branch=123-work oid=abc at=2026-09-29T00:00:00Z" {
-				t.Fatalf("audit=%q", audit)
-			}
-			return errors.New("provider unavailable")
-		},
 		Now: func() time.Time { return time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC) },
 	}
 	preview, err := s.Run(ctx, model.CleanupRemoteBranchRequest{ID: record.ID})
@@ -118,10 +97,10 @@ func TestRemoteBranchCleanerSnapshotsCompletionBeforeDeletionAndReportsAuditFail
 	}
 	calls = nil
 	got, err := s.Run(ctx, model.CleanupRemoteBranchRequest{ID: record.ID, Apply: true, Confirm: true, Fingerprint: preview.Fingerprint})
-	if err != nil || !got.OK || !got.Deleted || got.AuditReflected || got.AuditError != "provider unavailable" {
+	if err != nil || !got.OK || !got.Deleted || got.Audit != "원격 브랜치 삭제: branch=123-work oid=abc at=2026-09-29T00:00:00Z" {
 		t.Fatalf("result=%+v err=%v", got, err)
 	}
-	if !reflect.DeepEqual(calls, []string{"merge", "origin", "ref", "completion", "delete", "audit"}) {
+	if !reflect.DeepEqual(calls, []string{"merge", "origin", "ref", "delete"}) {
 		t.Fatalf("apply effects=%v", calls)
 	}
 }

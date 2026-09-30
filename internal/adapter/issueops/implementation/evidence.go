@@ -11,6 +11,7 @@ import (
 	"issueops/internal/adapter/issueops/pathutil"
 	"issueops/internal/adapter/issueops/readinesspaths"
 	model "issueops/internal/contract/issueops"
+	remote "issueops/internal/domain/issueopsremote"
 	reviewdomain "issueops/internal/domain/issueopsreview"
 )
 
@@ -191,7 +192,7 @@ func (r Reader) gitStatusHasImplementationChange(record model.IssueOpsRecord, wo
 		if path == "" {
 			continue
 		}
-		if reviewdomain.ImplementationChange(path, PathMatchesPlan(record, worktree, path)) {
+		if reviewdomain.ImplementationChange(path, pathIsPlanningMaterial(record, worktree, path)) {
 			return true
 		}
 	}
@@ -214,7 +215,7 @@ func (r Reader) gitHeadDiffersFromBase(record model.IssueOpsRecord, worktree str
 	_, names, _ := r.GitCmd(worktree, "diff", "--name-only", ref+"..HEAD", "--")
 	for _, name := range strings.Split(names, "\n") {
 		name = strings.TrimSpace(name)
-		if reviewdomain.ImplementationChange(name, PathMatchesPlan(record, worktree, name)) {
+		if reviewdomain.ImplementationChange(name, pathIsPlanningMaterial(record, worktree, name)) {
 			return true
 		}
 	}
@@ -233,7 +234,7 @@ func fileTreeHasImplementationChange(record model.IssueOpsRecord, worktree strin
 			}
 			return nil
 		}
-		if reviewdomain.ImplementationChange(path, PathMatchesPlan(record, worktree, path)) {
+		if reviewdomain.ImplementationChange(path, pathIsPlanningMaterial(record, worktree, path)) {
 			found = true
 		}
 		return nil
@@ -279,4 +280,28 @@ func (r Reader) ObservedChangedPaths(record model.IssueOpsRecord) ([]string, boo
 		return nil, false
 	}
 	return r.changedPathsIn(record, gitRoot), true
+}
+
+// pathIsPlanningMaterial reports a path that is not implementation work: the
+// linked plan, or a tracked material copy a phase transition derived from the
+// plan and the record (#513). Such a path alone never satisfies
+// implementation_changes.
+func pathIsPlanningMaterial(record model.IssueOpsRecord, worktree, path string) bool {
+	if PathMatchesPlan(record, worktree, path) {
+		return true
+	}
+	rel := path
+	if filepath.IsAbs(path) {
+		r, err := filepath.Rel(pathutil.CleanAbsPath(worktree), pathutil.CleanAbsPath(path))
+		if err != nil {
+			return false
+		}
+		rel = r
+	}
+	rel = filepath.ToSlash(filepath.Clean(rel))
+	issueURL := record.IssueURL
+	if strings.TrimSpace(issueURL) == "" && record.BranchPrepare != nil {
+		issueURL = record.BranchPrepare.IssueURL
+	}
+	return remote.IsTrackedMaterialPath(issueURL, rel)
 }

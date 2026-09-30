@@ -72,7 +72,7 @@ func executionLaunchSealed(t *testing.T) (port.ExecutionOrcaWorkspaceReceipt, po
 
 func executionLaunchProbe() port.ExecutionOrcaProbeRequest {
 	return port.ExecutionOrcaProbeRequest{
-		Repo: "/repo", Host: "claude", Model: "claude-opus-5", Effort: "high", Marker: executionLaunchMarker,
+		Repo: "/repo", Host: "claude", Model: "claude-opus-5-5", Effort: "high", Marker: executionLaunchMarker,
 	}
 }
 

@@ -84,7 +84,7 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 		emitEnd(request.Reporter, result.LoopKind, iterations, request.BaseSeed, false, err.Error())
 		return result, err
 	}
-	defer deps.RemoveAll(tempDir)
+	defer func() { _ = deps.RemoveAll(tempDir) }()
 	tempBin := deps.TempBinaryPath(tempDir)
 
 	var goTestStep selfverifycontract.StepResult

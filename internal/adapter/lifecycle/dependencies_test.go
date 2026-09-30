@@ -7,9 +7,6 @@ import (
 )
 
 const ProjectLifecycleSchemaVersion = model.ProjectLifecycleSchemaVersion
-const projectLifecycleProfileFile = model.ProjectLifecycleProfileFile
-const docUpkeepQueueFile = model.DocUpkeepQueueFile
-const compactCapsuleFile = model.CompactCapsuleFile
 
 type ProjectProfile = projectdoccontract.ProjectProfile
 type ProjectLifecycleProfile = lifecyclecontract.ProjectLifecycleProfile

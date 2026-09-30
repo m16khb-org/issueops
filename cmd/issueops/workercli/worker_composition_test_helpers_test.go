@@ -32,13 +32,7 @@ func testWorkerCommand() Command {
 		return cwd
 	}}
 }
-func runWorker(args []string) error             { return testWorkerCommand().Run(args) }
-func runWorkerEnqueue(args []string) error      { return testWorkerCommand().RunEnqueue(args) }
-func runWorkerRun(args []string) error          { return testWorkerCommand().RunReadOnly(args) }
-func runWorkerStatus(args []string) error       { return testWorkerCommand().RunStatus(args) }
-func runWorkerList(args []string) error         { return testWorkerCommand().RunList(args) }
-func runWorkerCleanupStuck(args []string) error { return testWorkerCommand().RunCleanupStuck(args) }
-func runWorkerCancel(args []string) error       { return testWorkerCommand().RunCancel(args) }
+func runWorker(args []string) error { return testWorkerCommand().Run(args) }
 
 func Run(args []string) error { return testWorkerCommand().Run(args) }
 

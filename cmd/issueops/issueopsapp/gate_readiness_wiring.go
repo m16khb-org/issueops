@@ -19,8 +19,8 @@ func newGateReadiness() app.GateService {
 		LoopReadiness: func(repo string) model.IssueOpsReadiness {
 			return app.ApplyLoopGate(model.IssueOpsReadiness{Ready: true}, repo, loops.RepoGateMissing)
 		},
-		ReadRecord: issueopsadapter.ReadIssueOps, AdvanceRecord: func(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
-			return newCyclePhaseService(&actor).Advance(root, id, to)
+		ReadRecord: issueopsadapter.ReadIssueOps, AdvanceRecord: func(root, id, to string, actor model.IssueOpsActor) (model.IssueOpsRecord, model.IssueOpsTrackedMaterials, error) {
+			return newCyclePhaseService(&actor).AdvanceReport(root, id, to)
 		},
 		Ledger: cycleport.GateLedgerReadiness{Discover: gatesadapter.DiscoverGateFiles, Check: gates.Check}, DuplicateFiles: gatesgate.Observer{}.DuplicateFiles}
 }
