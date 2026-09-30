@@ -29,6 +29,20 @@ ID, severity, evidence, remediation, verification command를 가지며
 끝내므로 CI는 payload와 exit code를 함께 사용할 수 있다. `report_only`는
 repository debt를 보이되 exit 0을 유지한다.
 
+분기 복잡도와 code-SNR은 같은 제품 Go 파일 목록을 사용한다. Git workspace에서는
+tracked 파일과 ignore되지 않은 untracked 파일을 포함한다. tracked 파일은 ignore
+패턴과 겹쳐도 포함하고, 삭제된 파일은 제외한다. `_test.go`, `testdata`, `vendor`,
+`node_modules`, `.git`, `.codegraph`, `.issueops-runtime`, `bin`, `.issueops` 경로와
+표준 `// Code generated ... DO NOT EDIT.` 주석이 있는 파일은 제외하며 symlink를
+따라가지 않는다. 일반 generated 문구만 있는 주석은 제외 근거가 아니다.
+Git metadata가 없는 일반 디렉터리는 같은 제외 규칙으로 filesystem을 탐색한다.
+Git workspace의 관측 실패·deadline·출력 제한·파일 읽기 오류는 collector warning/error로
+전달하고, ignored 파일을 포함하는 fallback이나 성공한 빈 결과로 바꾸지 않는다.
+하위 디렉터리를 분석 루트로 넘겨도 제외 경로를 유지한다. Git에서는 가장 가까운
+저장소 기준 경로를 사용하므로 제외 경로 안에 별도 Git 저장소가 있으면 그 저장소의
+제품 파일은 분석한다. non-Git에서는 분석 루트의 제외 구성요소도 검사한다.
+이 선정 기준은 coverage 실행 대상이나 cache fingerprint를 변경하지 않는다.
+
 ## Command Policy
 
 ```bash

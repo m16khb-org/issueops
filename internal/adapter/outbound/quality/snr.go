@@ -2,41 +2,27 @@ package quality
 
 import (
 	"bufio"
-	"io/fs"
+	"errors"
 	contract "issueops/internal/contract/quality"
 	policy "issueops/internal/domain/quality"
 	"math"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
 func ComputeCodeSNR(root string) (contract.SNRResult, error) {
 	var signal, noise int
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if d.IsDir() {
-			switch d.Name() {
-			case ".git", "vendor", "node_modules", "testdata":
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return nil
-		}
+	paths, scanErrors := productionGoFiles(root)
+	if err := errors.Join(scanErrors...); err != nil {
+		return contract.SNRResult{}, err
+	}
+	for _, path := range paths {
 		s, n, err := snrCountFile(path)
 		if err != nil {
-			return err
+			return contract.SNRResult{}, err
 		}
 		signal += s
 		noise += n
-		return nil
-	})
-	if err != nil {
-		return contract.SNRResult{}, err
 	}
 	total := signal + noise
 	ratio := 0.0
