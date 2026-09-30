@@ -1,6 +1,8 @@
 package contractcli
 
 import (
+	fixtureapp "issueops/internal/application/toolconformance"
+
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -34,9 +36,9 @@ func TestConformanceInstancesKeepCatalogAndRegressionRoot(t *testing.T) {
 		instances[i] = NewConformance(ConformanceDependencies{
 			Catalog:               func() []mcpcontract.Tool { return catalog },
 			Root:                  func() string { return roots[i] },
-			LoadManifest:          toolconformance.LoadManifest,
-			LoadRegressionFixture: toolconformance.LoadRegressionFixture,
-			ReplayRegression:      toolconformance.ReplayRegression,
+			LoadManifest:          (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).LoadManifest,
+			LoadRegressionFixture: (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).LoadRegressionFixture,
+			ReplayRegression:      (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).ReplayRegression,
 		})
 	}
 	var wg sync.WaitGroup
@@ -58,7 +60,7 @@ func TestConformanceInstancesKeepCatalogAndRegressionRoot(t *testing.T) {
 
 func TestConformanceInstanceReplaysActualInvalidArgumentsBeforeEffects(t *testing.T) {
 	runtime := newTestConformance(ConformanceDependencies{})
-	fixtures, _, err := toolconformance.LoadManifest(runtime.conformanceDescriptors())
+	fixtures, _, err := (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).LoadManifest(runtime.conformanceDescriptors())
 	if err != nil {
 		t.Fatal(err)
 	}

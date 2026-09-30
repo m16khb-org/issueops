@@ -1,6 +1,8 @@
 package issueopsapp
 
 import (
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"context"
 	"fmt"
 	failurecause "issueops/internal/adapter/failurecause"
@@ -17,25 +19,25 @@ import (
 	"issueops/internal/port"
 )
 
-func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest) (toolconformance.BenchmarkReport, error) {
+func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest) (fixturecontract.BenchmarkReport, error) {
 	binary, err := os.Executable()
 	if err != nil {
-		return toolconformance.BenchmarkReport{}, err
+		return fixturecontract.BenchmarkReport{}, err
 	}
 	models, err := conformanceModelOverrides(request.Models)
 	if err != nil {
-		return toolconformance.BenchmarkReport{}, err
+		return fixturecontract.BenchmarkReport{}, err
 	}
-	descriptors := make([]toolconformance.ToolDescriptor, 0, len(mcpcatalog.AdvertisedTools()))
+	descriptors := make([]fixturecontract.ToolDescriptor, 0, len(mcpcatalog.AdvertisedTools()))
 	for _, tool := range mcpcatalog.AdvertisedTools() {
-		descriptors = append(descriptors, toolconformance.ToolDescriptor{Name: tool.Name, InputSchema: tool.InputSchema})
+		descriptors = append(descriptors, fixturecontract.ToolDescriptor{Name: tool.Name, InputSchema: tool.InputSchema})
 	}
 	runners := toolConformanceRunners(binary)
 	return app.RunLiveBenchmark(ctx, app.LiveBenchmarkRequest{
 		Hosts: request.Hosts, Models: models,
 		Profile: request.Profile, Only: request.Only, TargetCompleted: request.TargetCompleted,
 		MaxAttemptsPerCase: request.MaxAttemptsPerCase, HarnessBinary: binary, Previous: request.Previous,
-	}, descriptors, app.LiveBenchmarkDependencies{Runners: runners, Now: time.Now, Token: toolconformance.RandomToken, LoadManifest: toolconformance.LoadManifest, Classify: failurecause.Classify})
+	}, descriptors, app.LiveBenchmarkDependencies{Runners: runners, Now: time.Now, Token: toolconformance.RandomToken, LoadManifest: newConformanceFixtures().LoadManifest, Classify: failurecause.Classify})
 }
 
 func toolConformanceRunners(binary string) map[string]port.HostProbeRunner {

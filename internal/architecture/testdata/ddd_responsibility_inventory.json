@@ -1407,6 +1407,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func newConformanceFixtures",
         "func newContractConformance"
       ]
     },
@@ -7174,43 +7175,12 @@
       "symbols": []
     },
     {
-      "path": "internal/adapter/toolconformance/contract_alias.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "type BaselineCase",
-        "type BenchmarkCounts",
-        "type BenchmarkReport",
-        "type CallObservation",
-        "type CaseResult",
-        "type Classification",
-        "type Diagnostic",
-        "type EpisodeReport",
-        "type Fixture",
-        "type GateReport",
-        "type HostReport",
-        "type RegressionFixture",
-        "type ReplayResult",
-        "type ToolDescriptor"
-      ]
-    },
-    {
-      "path": "internal/adapter/toolconformance/domain_alias.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": []
-    },
-    {
       "path": "internal/adapter/toolconformance/fixtures.go",
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func LoadFixtures",
-        "func LoadManifest",
-        "func cloneArguments",
-        "func loadManifest",
-        "func validateBaselineCases",
-        "type fixtureManifest"
+        "func FixtureFiles.ReadManifest",
+        "type FixtureFiles"
       ]
     },
     {
@@ -7218,10 +7188,10 @@
       "owner": "adapter",
       "task": "T15",
       "symbols": [
-        "func LoadRegressionFixture",
-        "func ReplayRegression",
-        "func jsonDeepEqual",
-        "func validateRegressionFixture"
+        "func FixtureFiles.InitializeState",
+        "func FixtureFiles.ReadRegression",
+        "func FixtureFiles.ReadState",
+        "func FixtureFiles.WriteState"
       ]
     },
     {
@@ -10676,24 +10646,14 @@
       ]
     },
     {
-      "path": "internal/application/toolconformance/contract_alias.go",
+      "path": "internal/application/toolconformance/fixtures.go",
       "owner": "application",
       "task": "T20",
       "symbols": [
-        "type BaselineCase",
-        "type BenchmarkCounts",
-        "type BenchmarkReport",
-        "type CallObservation",
-        "type CaseResult",
-        "type Classification",
-        "type Diagnostic",
-        "type EpisodeReport",
-        "type Fixture",
-        "type GateReport",
-        "type HostReport",
-        "type RegressionFixture",
-        "type ReplayResult",
-        "type ToolDescriptor"
+        "func FixtureService.LoadManifest",
+        "func FixtureService.LoadRegressionFixture",
+        "func FixtureService.ReplayRegression",
+        "type FixtureService"
       ]
     },
     {
@@ -12440,6 +12400,14 @@
       "symbols": [
         "type Result",
         "type SelfVerifyStatus"
+      ]
+    },
+    {
+      "path": "internal/contract/toolconformance/manifest.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type FixtureManifest"
       ]
     },
     {
@@ -16466,6 +16434,16 @@
       ]
     },
     {
+      "path": "internal/domain/toolconformance/fixtures.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func PrepareManifest",
+        "func cloneArguments",
+        "func validateBaselineCases"
+      ]
+    },
+    {
       "path": "internal/domain/toolconformance/gate.go",
       "owner": "domain",
       "task": "T15",
@@ -16482,6 +16460,18 @@
       "task": "T20",
       "symbols": [
         "func InvalidToolArgumentsResult"
+      ]
+    },
+    {
+      "path": "internal/domain/toolconformance/regression.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func RegressionDescriptor",
+        "func RegressionSource",
+        "func ReplayMatches",
+        "func ValidateRegressionFixture",
+        "func jsonDeepEqual"
       ]
     },
     {
@@ -17184,6 +17174,14 @@
         "type HostProbeRequest",
         "type HostProbeResult",
         "type HostProbeRunner"
+      ]
+    },
+    {
+      "path": "internal/port/toolconformance/fixtures.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type FixtureFiles"
       ]
     },
     {
@@ -26263,6 +26261,132 @@
         "cmd/issueops/basiccli/basic_composition_test.go"
       ],
       "status": "retain"
+    },
+    {
+      "id": "tool-conformance-fixtures-manifest",
+      "source_path": "internal/adapter/toolconformance/fixtures.go",
+      "source_symbol": "func loadManifest",
+      "responsibility": "Manifest schema, baseline references, tool schema identity and sorted isolated arguments",
+      "target": "internal/domain/toolconformance",
+      "target_symbol": "func PrepareManifest",
+      "task": "T20",
+      "entrypoints": [
+        "contract conformance replay",
+        "contract conformance baseline",
+        "contract conformance live"
+      ],
+      "evidence_tests": [
+        "internal/application/toolconformance/fixtures_service_test.go",
+        "internal/adapter/toolconformance/replay_test.go",
+        "internal/adapter/toolconformance/fixtures_internal_test.go",
+        "internal/adapter/toolconformance/fixtures_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "tool-conformance-fixtures-baseline",
+      "source_path": "internal/adapter/toolconformance/fixtures.go",
+      "source_symbol": "func validateBaselineCases",
+      "responsibility": "Exactly ten known fixture baseline cases",
+      "target": "internal/domain/toolconformance",
+      "target_symbol": "func validateBaselineCases",
+      "task": "T20",
+      "entrypoints": [
+        "contract conformance replay",
+        "contract conformance baseline",
+        "contract conformance live"
+      ],
+      "evidence_tests": [
+        "internal/application/toolconformance/fixtures_service_test.go",
+        "internal/adapter/toolconformance/replay_test.go",
+        "internal/adapter/toolconformance/fixtures_internal_test.go",
+        "internal/adapter/toolconformance/fixtures_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "tool-conformance-fixtures-regression-admission",
+      "source_path": "internal/adapter/toolconformance/replay.go",
+      "source_symbol": "func validateRegressionFixture",
+      "responsibility": "Regression identity, digest, drift, diagnostic, confirmed evidence and effect expectations",
+      "target": "internal/domain/toolconformance",
+      "target_symbol": "func ValidateRegressionFixture",
+      "task": "T20",
+      "entrypoints": [
+        "contract conformance replay",
+        "contract conformance baseline",
+        "contract conformance live"
+      ],
+      "evidence_tests": [
+        "internal/application/toolconformance/fixtures_service_test.go",
+        "internal/adapter/toolconformance/replay_test.go",
+        "internal/adapter/toolconformance/fixtures_internal_test.go",
+        "internal/adapter/toolconformance/fixtures_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "tool-conformance-fixtures-regression-load",
+      "source_path": "internal/adapter/toolconformance/replay.go",
+      "source_symbol": "func LoadRegressionFixture",
+      "responsibility": "Bounded strict reader observation followed by domain admission",
+      "target": "internal/application/toolconformance",
+      "target_symbol": "func FixtureService.LoadRegressionFixture",
+      "task": "T20",
+      "entrypoints": [
+        "contract conformance replay",
+        "contract conformance baseline",
+        "contract conformance live"
+      ],
+      "evidence_tests": [
+        "internal/application/toolconformance/fixtures_service_test.go",
+        "internal/adapter/toolconformance/replay_test.go",
+        "internal/adapter/toolconformance/fixtures_internal_test.go",
+        "internal/adapter/toolconformance/fixtures_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "tool-conformance-fixtures-replay",
+      "source_path": "internal/adapter/toolconformance/replay.go",
+      "source_symbol": "func ReplayRegression",
+      "responsibility": "Validate before scratch effects, classify and observe actual handler state",
+      "target": "internal/application/toolconformance",
+      "target_symbol": "func FixtureService.ReplayRegression",
+      "task": "T20",
+      "entrypoints": [
+        "contract conformance replay",
+        "contract conformance baseline",
+        "contract conformance live"
+      ],
+      "evidence_tests": [
+        "internal/application/toolconformance/fixtures_service_test.go",
+        "internal/adapter/toolconformance/replay_test.go",
+        "internal/adapter/toolconformance/fixtures_internal_test.go",
+        "internal/adapter/toolconformance/fixtures_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "tool-conformance-fixtures-manifest-load",
+      "source_path": "internal/adapter/toolconformance/fixtures.go",
+      "source_symbol": "func LoadManifest",
+      "responsibility": "Observe embedded manifest before domain policy",
+      "target": "internal/application/toolconformance",
+      "target_symbol": "func FixtureService.LoadManifest",
+      "task": "T20",
+      "entrypoints": [
+        "contract conformance replay",
+        "contract conformance baseline",
+        "contract conformance live"
+      ],
+      "evidence_tests": [
+        "internal/application/toolconformance/fixtures_service_test.go",
+        "internal/adapter/toolconformance/replay_test.go",
+        "internal/adapter/toolconformance/fixtures_internal_test.go",
+        "internal/adapter/toolconformance/fixtures_test.go"
+      ],
+      "status": "migrated"
     }
   ]
 }

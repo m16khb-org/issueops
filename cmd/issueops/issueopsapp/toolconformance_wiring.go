@@ -5,6 +5,7 @@ import (
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	mcpadapter "issueops/internal/adapter/mcp"
 	"issueops/internal/adapter/toolconformance"
+	app "issueops/internal/application/toolconformance"
 )
 
 // contractcli는 fixture 저장소 구현을 알지 않는다. 어댑터를 아는 곳은
@@ -15,8 +16,12 @@ func newContractConformance() *contractcli.Conformance {
 		Root:                  issueOpsRoot,
 		RunProcess:            runToolConformanceLive,
 		ServeProbe:            mcpadapter.ServeConformanceProbe,
-		LoadManifest:          toolconformance.LoadManifest,
-		LoadRegressionFixture: toolconformance.LoadRegressionFixture,
-		ReplayRegression:      toolconformance.ReplayRegression,
+		LoadManifest:          newConformanceFixtures().LoadManifest,
+		LoadRegressionFixture: newConformanceFixtures().LoadRegressionFixture,
+		ReplayRegression:      newConformanceFixtures().ReplayRegression,
 	})
+}
+
+func newConformanceFixtures() app.FixtureService {
+	return app.FixtureService{Files: toolconformance.FixtureFiles{}}
 }

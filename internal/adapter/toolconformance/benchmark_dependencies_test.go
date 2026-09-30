@@ -20,7 +20,7 @@ func runLiveBenchmark(ctx context.Context, request app.LiveBenchmarkRequest, des
 	if deps.Token == nil {
 		deps.Token = adapter.RandomToken
 	}
-	deps.LoadManifest = adapter.LoadManifest
+	deps.LoadManifest = (app.FixtureService{Files: adapter.FixtureFiles{}}).LoadManifest
 	deps.Classify = failurecause.Classify
 	return app.RunLiveBenchmark(ctx, request, descriptors, deps)
 }
@@ -31,7 +31,7 @@ func TestLiveBenchmarksKeepTheirFailureClassifier(t *testing.T) {
 		deps := app.LiveBenchmarkDependencies{
 			Runners: map[string]port.HostProbeRunner{"codex": &fakeProbeRunner{host: "codex", fixtures: fixtures, failCode: "probe_result_missing"}},
 			Now:     func() time.Time { return time.Unix(1, 0) }, Token: func() string { return "token" },
-			LoadManifest: adapter.LoadManifest,
+			LoadManifest: (app.FixtureService{Files: adapter.FixtureFiles{}}).LoadManifest,
 			Classify: func(failed bool, evidence []failurecontract.Evidence) failurecontract.Result {
 				result := failurecause.Classify(failed, evidence)
 				result.Reason = reason

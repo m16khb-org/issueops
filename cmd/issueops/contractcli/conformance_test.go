@@ -1,6 +1,8 @@
 package contractcli
 
 import (
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"context"
 	"crypto/sha256"
 	"fmt"
@@ -9,7 +11,6 @@ import (
 	"reflect"
 	"testing"
 
-	"issueops/internal/adapter/toolconformance"
 	mcpcontract "issueops/internal/contract/mcp"
 )
 
@@ -97,9 +98,9 @@ func TestConformanceLiveRequiresExplicitOptInBeforeInjectedProcess(t *testing.T)
 		}
 	}()
 	processCalls := 0
-	runtime := newTestConformance(ConformanceDependencies{RunProcess: func(context.Context, LiveRequest) (toolconformance.BenchmarkReport, error) {
+	runtime := newTestConformance(ConformanceDependencies{RunProcess: func(context.Context, LiveRequest) (fixturecontract.BenchmarkReport, error) {
 		processCalls++
-		return toolconformance.BenchmarkReport{}, nil
+		return fixturecontract.BenchmarkReport{}, nil
 	}})
 	_ = os.Unsetenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE")
 	if err := runtime.runConformanceLive([]string{"--hosts", "codex", "--model", "codex=default", "--profile", "clean", "--target-completed", "1", "--max-attempts-per-case", "3"}); err == nil || err.Error() != "live_opt_in_required" {
@@ -121,10 +122,10 @@ func TestConformanceLivePassesFullyParsedFlagsToInjectedProcessAfterOptIn(t *tes
 	}()
 	_ = os.Setenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE", "1")
 	root := t.TempDir()
-	prior := toolconformance.BenchmarkReport{
-		OK: true, SchemaVersion: toolconformance.ReportSchemaVersion, RunID: "prior",
-		Profile: "context-pressure", Gate: toolconformance.GateReport{Decision: toolconformance.GateNeedsReproduction},
-		Hosts: []toolconformance.HostReport{}, Warnings: []string{},
+	prior := fixturecontract.BenchmarkReport{
+		OK: true, SchemaVersion: fixturecontract.ReportSchemaVersion, RunID: "prior",
+		Profile: "context-pressure", Gate: fixturecontract.GateReport{Decision: fixturecontract.GateNeedsReproduction},
+		Hosts: []fixturecontract.HostReport{}, Warnings: []string{},
 	}
 	priorPath := filepath.Join(root, "prior.json")
 	if err := writePrivateJSONFile(priorPath, prior); err != nil {
@@ -133,12 +134,12 @@ func TestConformanceLivePassesFullyParsedFlagsToInjectedProcessAfterOptIn(t *tes
 	var got LiveRequest
 	runtime := newTestConformance(ConformanceDependencies{
 		Root: func() string { return root },
-		RunProcess: func(_ context.Context, request LiveRequest) (toolconformance.BenchmarkReport, error) {
+		RunProcess: func(_ context.Context, request LiveRequest) (fixturecontract.BenchmarkReport, error) {
 			got = request
-			return toolconformance.BenchmarkReport{
-				OK: true, SchemaVersion: toolconformance.ReportSchemaVersion, RunID: "test-live",
-				Profile: request.Profile, Gate: toolconformance.GateReport{Decision: toolconformance.GateDeferHardening},
-				Hosts: []toolconformance.HostReport{}, Warnings: []string{},
+			return fixturecontract.BenchmarkReport{
+				OK: true, SchemaVersion: fixturecontract.ReportSchemaVersion, RunID: "test-live",
+				Profile: request.Profile, Gate: fixturecontract.GateReport{Decision: fixturecontract.GateDeferHardening},
+				Hosts: []fixturecontract.HostReport{}, Warnings: []string{},
 			}, nil
 		},
 	})
@@ -167,12 +168,12 @@ func TestConformanceLiveDefaultsExcludeOmoAndExplicitSelectionIncludesIt(t *test
 	runtime := newTestConformance(ConformanceDependencies{
 		Root:             func() string { return root },
 		EvaluateBaseline: func() (int, bool, error) { return 1, true, nil },
-		RunProcess: func(_ context.Context, request LiveRequest) (toolconformance.BenchmarkReport, error) {
+		RunProcess: func(_ context.Context, request LiveRequest) (fixturecontract.BenchmarkReport, error) {
 			requests = append(requests, request)
-			return toolconformance.BenchmarkReport{
-				OK: true, SchemaVersion: toolconformance.ReportSchemaVersion, RunID: fmt.Sprintf("selection-%d", len(requests)),
-				Profile: request.Profile, Gate: toolconformance.GateReport{Decision: toolconformance.GateDeferHardening},
-				Hosts: []toolconformance.HostReport{}, Warnings: []string{},
+			return fixturecontract.BenchmarkReport{
+				OK: true, SchemaVersion: fixturecontract.ReportSchemaVersion, RunID: fmt.Sprintf("selection-%d", len(requests)),
+				Profile: request.Profile, Gate: fixturecontract.GateReport{Decision: fixturecontract.GateDeferHardening},
+				Hosts: []fixturecontract.HostReport{}, Warnings: []string{},
 			}, nil
 		},
 	})
@@ -219,21 +220,21 @@ func TestConformanceSourceSchemaCopiesConfiguredCatalogSource(t *testing.T) {
 func TestBuildCandidateRegressionRequiresRepeatedSignatureWithinOneHostFixture(t *testing.T) {
 	runtime := newTestConformance(ConformanceDependencies{})
 	signature := "0123456789abcdef"
-	episode := func(host string, attempt int) toolconformance.EpisodeReport {
-		return toolconformance.EpisodeReport{
+	episode := func(host string, attempt int) fixturecontract.EpisodeReport {
+		return fixturecontract.EpisodeReport{
 			Status: "completed", Host: host, HostVersion: "test", ObservedModel: "test",
 			FixtureID: "empty_object", Attempt: attempt, RawArgumentsSHA256: fmt.Sprintf("%064d", attempt), EvidenceID: fmt.Sprintf("%064x", attempt),
-			Classification:      toolconformance.Classification(toolconformance.UnknownKey),
-			Diagnostics:         []toolconformance.Diagnostic{{Code: toolconformance.UnknownKey, Path: "/requireUnique"}},
+			Classification:      fixturecontract.Classification(fixturecontract.UnknownKey),
+			Diagnostics:         []fixturecontract.Diagnostic{{Code: fixturecontract.UnknownKey, Path: "/requireUnique"}},
 			DiagnosticSignature: signature,
 			CanonicalArguments:  map[string]any{"requireUnique": true},
 		}
 	}
-	report := toolconformance.BenchmarkReport{
-		Gate: toolconformance.GateReport{Decision: toolconformance.GateAuthorizeHardening, ConfirmedSignature: signature, ConfirmedCount: 2},
-		Hosts: []toolconformance.HostReport{
-			{Host: "claude", Cases: []toolconformance.EpisodeReport{episode("claude", 1)}},
-			{Host: "codex", Cases: []toolconformance.EpisodeReport{episode("codex", 1)}},
+	report := fixturecontract.BenchmarkReport{
+		Gate: fixturecontract.GateReport{Decision: fixturecontract.GateAuthorizeHardening, ConfirmedSignature: signature, ConfirmedCount: 2},
+		Hosts: []fixturecontract.HostReport{
+			{Host: "claude", Cases: []fixturecontract.EpisodeReport{episode("claude", 1)}},
+			{Host: "codex", Cases: []fixturecontract.EpisodeReport{episode("codex", 1)}},
 		},
 	}
 	if _, _, err := runtime.buildCandidateRegression(report); err == nil || err.Error() != "confirmed_signature_evidence_missing" {

@@ -1,6 +1,8 @@
 package toolconformance_test
 
 import (
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -17,7 +19,7 @@ import (
 
 type fakeProbeRunner struct {
 	host      string
-	fixtures  map[string]core.Fixture
+	fixtures  map[string]fixturecontract.Fixture
 	responses map[string][]map[string]any
 	failCode  string
 	calls     map[string]int
@@ -50,13 +52,13 @@ func (f *fakeProbeRunner) Run(_ context.Context, request port.HostProbeRequest) 
 	encoded, _ := json.Marshal(arguments)
 	rawSHA := sha256.Sum256(encoded)
 	evidenceSHA := sha256.Sum256([]byte(fmt.Sprintf("%s:%s:%s:%d", f.host, request.FixtureID, request.RunToken, request.Attempt)))
-	classification := core.Classification(core.ExactValid)
+	classification := fixturecontract.Classification(fixturecontract.ExactValid)
 	advertisedValid, canonicalValid := true, true
-	diagnostics := []core.Diagnostic{}
+	diagnostics := []fixturecontract.Diagnostic{}
 	if _, exists := arguments["requireUnique"]; exists {
-		classification = core.Classification(core.UnknownKey)
+		classification = fixturecontract.Classification(fixturecontract.UnknownKey)
 		canonicalValid = false
-		diagnostics = []core.Diagnostic{{Path: "/requireUnique", Code: core.UnknownKey, Expected: "declared property", Actual: "boolean"}}
+		diagnostics = []fixturecontract.Diagnostic{{Path: "/requireUnique", Code: fixturecontract.UnknownKey, Expected: "declared property", Actual: "boolean"}}
 	}
 	diagnosticsJSON, _ := json.Marshal(diagnostics)
 	result := port.HostProbeResult{
@@ -167,7 +169,7 @@ func TestLiveReportValidatesFreshCompletedEvidenceForEveryHost(t *testing.T) {
 					t.Fatal(err)
 				}
 				got := report.Hosts[0]
-				if got.Status == issueopscontract.StatusSupported || got.Evidence.LiveVerified || got.CompletedEpisodes != 0 || len(got.Cases) != 1 || got.Cases[0].Status != core.EpisodeIncomplete {
+				if got.Status == issueopscontract.StatusSupported || got.Evidence.LiveVerified || got.CompletedEpisodes != 0 || len(got.Cases) != 1 || got.Cases[0].Status != fixturecontract.EpisodeIncomplete {
 					t.Fatalf("invalid fresh evidence was promoted: %+v", got)
 				}
 			})
@@ -175,7 +177,7 @@ func TestLiveReportValidatesFreshCompletedEvidenceForEveryHost(t *testing.T) {
 	}
 }
 
-func runSingleFreshEpisode(t *testing.T, host string, runner port.HostProbeRunner) (core.BenchmarkReport, error) {
+func runSingleFreshEpisode(t *testing.T, host string, runner port.HostProbeRunner) (fixturecontract.BenchmarkReport, error) {
 	t.Helper()
 	models := map[string]string{host: "model-a"}
 	return runLiveBenchmark(context.Background(), app.LiveBenchmarkRequest{
@@ -249,7 +251,7 @@ func TestLiveGateSixExactEpisodesDeferHardening(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !report.OK || report.Gate.Decision != core.GateDeferHardening || report.Counts.Completed != 6 || report.Counts.ModelDenominator != 6 {
+	if !report.OK || report.Gate.Decision != fixturecontract.GateDeferHardening || report.Counts.Completed != 6 || report.Counts.ModelDenominator != 6 {
 		t.Fatalf("report=%+v", report)
 	}
 }
@@ -263,7 +265,7 @@ func TestLiveGateIncompleteEpisodeFailsClosed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.OK || report.Gate.Decision != core.GateInconclusive || report.Counts.TransportFailures != 1 || report.Counts.ModelDenominator != 0 {
+	if report.OK || report.Gate.Decision != fixturecontract.GateInconclusive || report.Counts.TransportFailures != 1 || report.Counts.ModelDenominator != 0 {
 		t.Fatalf("report=%+v", report)
 	}
 }
@@ -279,7 +281,7 @@ func TestLiveGateResumeConfirmsOnlyRepeatedDiagnosticSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if initial.Gate.Decision != core.GateNeedsReproduction {
+	if initial.Gate.Decision != fixturecontract.GateNeedsReproduction {
 		t.Fatalf("initial gate=%s", initial.Gate.Decision)
 	}
 	reproductionRunner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{"empty_object": {invalid}}}
@@ -289,7 +291,7 @@ func TestLiveGateResumeConfirmsOnlyRepeatedDiagnosticSignature(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if confirmed.Gate.Decision != core.GateAuthorizeHardening || confirmed.Gate.ConfirmedCount != 2 || confirmed.Counts.Completed != 10 {
+	if confirmed.Gate.Decision != fixturecontract.GateAuthorizeHardening || confirmed.Gate.ConfirmedCount != 2 || confirmed.Counts.Completed != 10 {
 		t.Fatalf("confirmed=%+v", confirmed)
 	}
 }
@@ -450,13 +452,13 @@ func TestLiveGateRejectsInvalidPreviousHostRows(t *testing.T) {
 	baseline := certifiedPreviousReport(t, fixtures)
 	tests := []struct {
 		name   string
-		mutate func(*core.BenchmarkReport)
+		mutate func(*fixturecontract.BenchmarkReport)
 	}{
-		{name: "duplicate host", mutate: func(report *core.BenchmarkReport) {
+		{name: "duplicate host", mutate: func(report *fixturecontract.BenchmarkReport) {
 			report.Hosts = append(report.Hosts, report.Hosts[0])
 		}},
-		{name: "missing host identity", mutate: func(report *core.BenchmarkReport) {
-			report.Hosts = append(report.Hosts, core.HostReport{})
+		{name: "missing host identity", mutate: func(report *fixturecontract.BenchmarkReport) {
+			report.Hosts = append(report.Hosts, fixturecontract.HostReport{})
 		}},
 	}
 	for _, test := range tests {
@@ -527,9 +529,9 @@ func TestLiveGateRejectsLegacyShapedAndIdentityDriftedSchemaV2Episodes(t *testin
 	baseline := certifiedPreviousReport(t, fixtures)
 	tests := []struct {
 		name   string
-		mutate func(*core.BenchmarkReport)
+		mutate func(*fixturecontract.BenchmarkReport)
 	}{
-		{name: "legacy shaped runtime proof", mutate: func(report *core.BenchmarkReport) {
+		{name: "legacy shaped runtime proof", mutate: func(report *fixturecontract.BenchmarkReport) {
 			episode := &report.Hosts[0].Cases[0]
 			episode.ObservedModel = ""
 			episode.DurationMS = 0
@@ -537,21 +539,23 @@ func TestLiveGateRejectsLegacyShapedAndIdentityDriftedSchemaV2Episodes(t *testin
 			episode.AmbientToolCount = 0
 			episode.ResponseSHA256 = ""
 		}},
-		{name: "host", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].Host = "claude" }},
-		{name: "host version", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].HostVersion = "old" }},
-		{name: "profile", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].Profile = "context-pressure" }},
-		{name: "requested model", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].RequestedModel = "model-b" }},
-		{name: "observed model", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].ObservedModel = "model-b" }},
-		{name: "schema digest", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].SchemaSHA256 = strings.Repeat("b", 64) }},
-		{name: "response digest", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].ResponseSHA256 = "bad" }},
-		{name: "exit", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].ExitCode = 7 }},
-		{name: "duration", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].DurationMS = 0 }},
-		{name: "context", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].SessionStartObserved = false }},
-		{name: "ambient count", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].AmbientToolCount = 2 }},
-		{name: "one call", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].CallCount = 2 }},
-		{name: "evidence id", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].EvidenceID = "bad" }},
-		{name: "raw digest", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].RawArgumentsSHA256 = "bad" }},
-		{name: "diagnostic cause", mutate: func(report *core.BenchmarkReport) { report.Hosts[0].Cases[0].FailureCause = "model" }},
+		{name: "host", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].Host = "claude" }},
+		{name: "host version", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].HostVersion = "old" }},
+		{name: "profile", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].Profile = "context-pressure" }},
+		{name: "requested model", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].RequestedModel = "model-b" }},
+		{name: "observed model", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].ObservedModel = "model-b" }},
+		{name: "schema digest", mutate: func(report *fixturecontract.BenchmarkReport) {
+			report.Hosts[0].Cases[0].SchemaSHA256 = strings.Repeat("b", 64)
+		}},
+		{name: "response digest", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].ResponseSHA256 = "bad" }},
+		{name: "exit", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].ExitCode = 7 }},
+		{name: "duration", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].DurationMS = 0 }},
+		{name: "context", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].SessionStartObserved = false }},
+		{name: "ambient count", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].AmbientToolCount = 2 }},
+		{name: "one call", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].CallCount = 2 }},
+		{name: "evidence id", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].EvidenceID = "bad" }},
+		{name: "raw digest", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].RawArgumentsSHA256 = "bad" }},
+		{name: "diagnostic cause", mutate: func(report *fixturecontract.BenchmarkReport) { report.Hosts[0].Cases[0].FailureCause = "model" }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -596,16 +600,16 @@ func TestLiveGateRejectsInconsistentPreviousHostSummary(t *testing.T) {
 	baseline := certifiedPreviousReport(t, fixtures)
 	tests := []struct {
 		name   string
-		mutate func(*core.HostReport)
+		mutate func(*fixturecontract.HostReport)
 	}{
-		{name: "attempt count", mutate: func(host *core.HostReport) { host.AttemptCount = 0 }},
-		{name: "completed count", mutate: func(host *core.HostReport) { host.CompletedEpisodes = 0 }},
-		{name: "status", mutate: func(host *core.HostReport) { host.Status = issueopscontract.StatusNotRun }},
-		{name: "live attempted", mutate: func(host *core.HostReport) { host.Evidence.LiveAttempted = false }},
-		{name: "live verified", mutate: func(host *core.HostReport) { host.Evidence.LiveVerified = false }},
-		{name: "status reason", mutate: func(host *core.HostReport) { host.Evidence.StatusReason = "stale" }},
-		{name: "observed model", mutate: func(host *core.HostReport) { host.ObservedModel = "other-model" }},
-		{name: "episode observed model", mutate: func(host *core.HostReport) { host.Cases[0].ObservedModel = "other-model" }},
+		{name: "attempt count", mutate: func(host *fixturecontract.HostReport) { host.AttemptCount = 0 }},
+		{name: "completed count", mutate: func(host *fixturecontract.HostReport) { host.CompletedEpisodes = 0 }},
+		{name: "status", mutate: func(host *fixturecontract.HostReport) { host.Status = issueopscontract.StatusNotRun }},
+		{name: "live attempted", mutate: func(host *fixturecontract.HostReport) { host.Evidence.LiveAttempted = false }},
+		{name: "live verified", mutate: func(host *fixturecontract.HostReport) { host.Evidence.LiveVerified = false }},
+		{name: "status reason", mutate: func(host *fixturecontract.HostReport) { host.Evidence.StatusReason = "stale" }},
+		{name: "observed model", mutate: func(host *fixturecontract.HostReport) { host.ObservedModel = "other-model" }},
+		{name: "episode observed model", mutate: func(host *fixturecontract.HostReport) { host.Cases[0].ObservedModel = "other-model" }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -640,15 +644,15 @@ func TestLiveGateRejectsInconsistentIncompletePreviousHostSummary(t *testing.T) 
 	}
 	tests := []struct {
 		name   string
-		mutate func(*core.HostReport)
+		mutate func(*fixturecontract.HostReport)
 	}{
-		{name: "installed", mutate: func(host *core.HostReport) { host.Evidence.Installed = false }},
-		{name: "preflight ready", mutate: func(host *core.HostReport) { host.Evidence.PreflightReady = false }},
-		{name: "live attempted", mutate: func(host *core.HostReport) { host.Evidence.LiveAttempted = false }},
-		{name: "live verified", mutate: func(host *core.HostReport) { host.Evidence.LiveVerified = true }},
-		{name: "status", mutate: func(host *core.HostReport) { host.Status = issueopscontract.StatusSupported }},
-		{name: "status reason", mutate: func(host *core.HostReport) { host.Evidence.StatusReason = "" }},
-		{name: "observed model", mutate: func(host *core.HostReport) { host.ObservedModel = "other-model" }},
+		{name: "installed", mutate: func(host *fixturecontract.HostReport) { host.Evidence.Installed = false }},
+		{name: "preflight ready", mutate: func(host *fixturecontract.HostReport) { host.Evidence.PreflightReady = false }},
+		{name: "live attempted", mutate: func(host *fixturecontract.HostReport) { host.Evidence.LiveAttempted = false }},
+		{name: "live verified", mutate: func(host *fixturecontract.HostReport) { host.Evidence.LiveVerified = true }},
+		{name: "status", mutate: func(host *fixturecontract.HostReport) { host.Status = issueopscontract.StatusSupported }},
+		{name: "status reason", mutate: func(host *fixturecontract.HostReport) { host.Evidence.StatusReason = "" }},
+		{name: "observed model", mutate: func(host *fixturecontract.HostReport) { host.ObservedModel = "other-model" }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -686,7 +690,7 @@ func TestLiveGateRejectsExtraCompletedEpisodesBeyondCurrentTarget(t *testing.T) 
 	}
 }
 
-func resumeCertifiedReport(t *testing.T, previous core.BenchmarkReport, runner port.HostProbeRunner) (core.BenchmarkReport, error) {
+func resumeCertifiedReport(t *testing.T, previous fixturecontract.BenchmarkReport, runner port.HostProbeRunner) (fixturecontract.BenchmarkReport, error) {
 	t.Helper()
 	return runLiveBenchmark(context.Background(), app.LiveBenchmarkRequest{
 		Hosts: []string{"codex"}, Models: map[string]string{"codex": "model-a"}, Profile: "clean", Only: "codex:empty_object",
@@ -696,7 +700,7 @@ func resumeCertifiedReport(t *testing.T, previous core.BenchmarkReport, runner p
 	})
 }
 
-func certifiedPreviousReport(t *testing.T, fixtures map[string]core.Fixture) core.BenchmarkReport {
+func certifiedPreviousReport(t *testing.T, fixtures map[string]fixturecontract.Fixture) fixturecontract.BenchmarkReport {
 	t.Helper()
 	runner := &fakeProbeRunner{host: "codex", fixtures: fixtures, responses: map[string][]map[string]any{}}
 	report, err := runLiveBenchmark(context.Background(), app.LiveBenchmarkRequest{
@@ -709,13 +713,13 @@ func certifiedPreviousReport(t *testing.T, fixtures map[string]core.Fixture) cor
 	return report
 }
 
-func cloneBenchmarkReport(t *testing.T, report core.BenchmarkReport) core.BenchmarkReport {
+func cloneBenchmarkReport(t *testing.T, report fixturecontract.BenchmarkReport) fixturecontract.BenchmarkReport {
 	t.Helper()
 	data, err := json.Marshal(report)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var cloned core.BenchmarkReport
+	var cloned fixturecontract.BenchmarkReport
 	if err := json.Unmarshal(data, &cloned); err != nil {
 		t.Fatal(err)
 	}
@@ -735,13 +739,13 @@ func TestContextPressureProfileIsFixedSizeAndHash(t *testing.T) {
 	}
 }
 
-func benchmarkFixtures(t *testing.T) map[string]core.Fixture {
+func benchmarkFixtures(t *testing.T) map[string]fixturecontract.Fixture {
 	t.Helper()
-	fixtures, _, err := core.LoadManifest(catalogDescriptors())
+	fixtures, _, err := (app.FixtureService{Files: core.FixtureFiles{}}).LoadManifest(catalogDescriptors())
 	if err != nil {
 		t.Fatal(err)
 	}
-	out := map[string]core.Fixture{}
+	out := map[string]fixturecontract.Fixture{}
 	for _, fixture := range fixtures {
 		out[fixture.ID] = fixture
 	}

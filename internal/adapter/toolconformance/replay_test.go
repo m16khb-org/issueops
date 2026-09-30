@@ -1,6 +1,9 @@
 package toolconformance_test
 
 import (
+	fixtureapp "issueops/internal/application/toolconformance"
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -13,7 +16,7 @@ import (
 
 func TestReplayRegressionRejectsInvalidArgumentsBeforeHandlerAndPreservesState(t *testing.T) {
 	descriptors := catalogDescriptors()
-	fixtures, _, err := core.LoadManifest(descriptors)
+	fixtures, _, err := (fixtureapp.FixtureService{Files: core.FixtureFiles{}}).LoadManifest(descriptors)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,7 +29,7 @@ func TestReplayRegressionRejectsInvalidArgumentsBeforeHandlerAndPreservesState(t
 			break
 		}
 	}
-	classified, err := core.Classify(core.CallObservation{RawArguments: []byte(`{"requireUnique":true}`), CallCount: 1}, schema, fixture.ExpectedArguments)
+	classified, err := domain.Classify(fixturecontract.CallObservation{RawArguments: []byte(`{"requireUnique":true}`), CallCount: 1}, schema, fixture.ExpectedArguments)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +37,7 @@ func TestReplayRegressionRejectsInvalidArgumentsBeforeHandlerAndPreservesState(t
 	evidenceOne := sha256.Sum256([]byte("episode-1"))
 	evidenceTwo := sha256.Sum256([]byte("episode-2"))
 	diagnosticSignature := domain.DiagnosticSignature(classified.Classification, classified.Diagnostics)
-	regression := core.RegressionFixture{
+	regression := fixturecontract.RegressionFixture{
 		SchemaVersion:               1,
 		FixtureID:                   fixture.ID,
 		SourceTool:                  fixture.SourceTool,
@@ -50,16 +53,16 @@ func TestReplayRegressionRejectsInvalidArgumentsBeforeHandlerAndPreservesState(t
 		ExpectedDiagnosticSignature: diagnosticSignature,
 		ConfirmedEvidenceIDs:        []string{fmt.Sprintf("%x", evidenceOne), fmt.Sprintf("%x", evidenceTwo)},
 		ExpectedHandlerCallCount:    0,
-		ExpectedFinalResult:         core.InvalidToolArgumentsResult(fixture.SourceTool, classified.Diagnostics),
+		ExpectedFinalResult:         domain.InvalidToolArgumentsResult(fixture.SourceTool, classified.Diagnostics),
 		ExpectedStateUnchanged:      true,
 	}
 	path := t.TempDir() + "/regression.json"
 	writeJSONFile(t, path, regression)
-	loaded, err := core.LoadRegressionFixture(path)
+	loaded, err := (fixtureapp.FixtureService{Files: core.FixtureFiles{}}).LoadRegressionFixture(path)
 	if err != nil {
 		t.Fatalf("valid regression rejected after JSON roundtrip: %v", err)
 	}
-	replayed, err := core.ReplayRegression(loaded, descriptors, t.TempDir())
+	replayed, err := (fixtureapp.FixtureService{Files: core.FixtureFiles{}}).ReplayRegression(loaded, descriptors, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +79,7 @@ func TestRegressionRequiresTwoConfirmedEvidenceIDs(t *testing.T) {
 		"source_schema_sha256":   "sha",
 		"confirmed_evidence_ids": []string{"one"},
 	})
-	if _, err := core.LoadRegressionFixture(path); err == nil {
+	if _, err := (fixtureapp.FixtureService{Files: core.FixtureFiles{}}).LoadRegressionFixture(path); err == nil {
 		t.Fatal("unconfirmed regression fixture accepted")
 	}
 }

@@ -1,6 +1,8 @@
 package toolconformance
 
 import (
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -27,48 +29,48 @@ type LiveBenchmarkRequest struct {
 	MaxAttemptsPerCase int
 	HarnessBinary      string
 	RunID              string
-	Previous           *BenchmarkReport
+	Previous           *fixturecontract.BenchmarkReport
 }
 
 type LiveBenchmarkDependencies struct {
 	Runners      map[string]port.HostProbeRunner
 	Now          func() time.Time
 	Token        func() string
-	LoadManifest func([]ToolDescriptor) ([]Fixture, []BaselineCase, error)
+	LoadManifest func([]fixturecontract.ToolDescriptor) ([]fixturecontract.Fixture, []fixturecontract.BaselineCase, error)
 	Classify     func(bool, []failurecausecontract.Evidence) failurecausecontract.Result
 }
 
-func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descriptors []ToolDescriptor, deps LiveBenchmarkDependencies) (BenchmarkReport, error) {
+func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descriptors []fixturecontract.ToolDescriptor, deps LiveBenchmarkDependencies) (fixturecontract.BenchmarkReport, error) {
 	if err := validateLiveRequest(request); err != nil {
-		return BenchmarkReport{}, err
+		return fixturecontract.BenchmarkReport{}, err
 	}
 	if request.Previous != nil {
-		if request.Previous.SchemaVersion != ReportSchemaVersion {
-			return BenchmarkReport{}, fmt.Errorf("unsupported_previous_report_schema:%d", request.Previous.SchemaVersion)
+		if request.Previous.SchemaVersion != fixturecontract.ReportSchemaVersion {
+			return fixturecontract.BenchmarkReport{}, fmt.Errorf("unsupported_previous_report_schema:%d", request.Previous.SchemaVersion)
 		}
 		if request.Previous.Profile != request.Profile {
-			return BenchmarkReport{}, fmt.Errorf("invalid_previous_report_identity")
+			return fixturecontract.BenchmarkReport{}, fmt.Errorf("invalid_previous_report_identity")
 		}
 	}
 	policy := benchmarkPolicy{classify: deps.Classify}
 	fixtures, _, err := deps.LoadManifest(descriptors)
 	if err != nil {
-		return BenchmarkReport{}, err
+		return fixturecontract.BenchmarkReport{}, err
 	}
 	selected, err := selectFixturePairs(request.Hosts, fixtures, request.Only)
 	if err != nil {
-		return BenchmarkReport{}, err
+		return fixturecontract.BenchmarkReport{}, err
 	}
 	if err := toolconformancedomain.ValidatePreviousSelection(request.Previous, selected); err != nil {
-		return BenchmarkReport{}, err
+		return fixturecontract.BenchmarkReport{}, err
 	}
-	report := BenchmarkReport{
+	report := fixturecontract.BenchmarkReport{
 		OK:            true,
-		SchemaVersion: ReportSchemaVersion,
+		SchemaVersion: fixturecontract.ReportSchemaVersion,
 		RunID:         request.RunID,
 		Profile:       request.Profile,
 		CaseCount:     len(selected),
-		Hosts:         []HostReport{},
+		Hosts:         []fixturecontract.HostReport{},
 		Warnings:      []string{},
 	}
 	_, report.ProfileSHA256 = BuildEpisodePrompt(selected[0].Fixture, request.Profile)
@@ -80,11 +82,11 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 	for _, host := range request.Hosts {
 		runner := deps.Runners[host]
 		if runner == nil {
-			return BenchmarkReport{}, fmt.Errorf("unsupported_host:%s", host)
+			return fixturecontract.BenchmarkReport{}, fmt.Errorf("unsupported_host:%s", host)
 		}
-		hostReport := HostReport{
+		hostReport := fixturecontract.HostReport{
 			Status: issueopscontract.StatusNotRun,
-			Host:   host, RequestedModel: modelForHost(models, host), Cases: []EpisodeReport{},
+			Host:   host, RequestedModel: modelForHost(models, host), Cases: []fixturecontract.EpisodeReport{},
 		}
 		preflightRequest := port.HostProbeRequest{HarnessBinary: request.HarnessBinary, Model: hostReport.RequestedModel}
 		preflight := runner.Preflight(ctx, preflightRequest)
@@ -98,12 +100,12 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 		if preflight.Ready {
 			previousHost, err := toolconformancedomain.ResumeHostReport(request.Previous, host, hostReport.RequestedModel, preflight.Version, request.Profile, fixtures, selected, request.TargetCompleted)
 			if err != nil {
-				return BenchmarkReport{}, err
+				return fixturecontract.BenchmarkReport{}, err
 			}
 			if previousHost != nil {
 				for _, episode := range previousHost.Cases {
 					fixture, selectedPair := toolconformancedomain.SelectedFixtureForPair(selected, host, episode.FixtureID)
-					if !selectedPair || episode.Status != EpisodeCompleted {
+					if !selectedPair || episode.Status != fixturecontract.EpisodeCompleted {
 						continue
 					}
 					expectation := completedEpisodeExpectation{
@@ -111,10 +113,10 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 						Profile: request.Profile, Fixture: fixture, Attempt: episode.Attempt,
 					}
 					if !policy.validCompletedEpisode(episode, expectation) {
-						return BenchmarkReport{}, fmt.Errorf("invalid_previous_episode_evidence")
+						return fixturecontract.BenchmarkReport{}, fmt.Errorf("invalid_previous_episode_evidence")
 					}
 					if seenEvidenceIDs[episode.EvidenceID] {
-						return BenchmarkReport{}, fmt.Errorf("duplicate_previous_episode_evidence")
+						return fixturecontract.BenchmarkReport{}, fmt.Errorf("duplicate_previous_episode_evidence")
 					}
 					seenEvidenceIDs[episode.EvidenceID] = true
 					hostReport.Cases = append(hostReport.Cases, episode)
@@ -166,12 +168,12 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 					Host: host, HostVersion: preflight.Version, RequestedModel: hostReport.RequestedModel,
 					Profile: request.Profile, Fixture: fixture, Attempt: attempt,
 				}
-				if episode.Status == EpisodeCompleted && !policy.validCompletedEpisode(episode, expectation) {
+				if episode.Status == fixturecontract.EpisodeCompleted && !policy.validCompletedEpisode(episode, expectation) {
 					episode = policy.incompleteEpisode(host, preflight.Version, fixture, request.Profile, hostReport.RequestedModel, attempt, "transport", "probe_result_invalid", host+"_runner")
 				}
-				if episode.Status == EpisodeCompleted {
+				if episode.Status == fixturecontract.EpisodeCompleted {
 					if seenEvidenceIDs[episode.EvidenceID] {
-						return BenchmarkReport{}, fmt.Errorf("duplicate_episode_evidence")
+						return fixturecontract.BenchmarkReport{}, fmt.Errorf("duplicate_episode_evidence")
 					}
 					seenEvidenceIDs[episode.EvidenceID] = true
 				}
@@ -208,7 +210,7 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 		gatePairs = append(gatePairs, toolconformancedomain.SelectedPair{Host: pair.Host, FixtureID: pair.Fixture.ID})
 	}
 	report.Gate = toolconformancedomain.DecideGate(report, gatePairs, request.TargetCompleted)
-	if report.Gate.Decision == GateInconclusive {
+	if report.Gate.Decision == fixturecontract.GateInconclusive {
 		report.OK = false
 	}
 	if report.Counts.Attempts > 0 && float64(report.Counts.EnvironmentFailures+report.Counts.TransportFailures)/float64(report.Counts.Attempts) > 0.05 {
@@ -223,7 +225,7 @@ type benchmarkPolicy struct {
 
 type fixturePair = toolconformancedomain.SelectedFixturePair
 
-func selectFixturePairs(hosts []string, fixtures []Fixture, only string) ([]fixturePair, error) {
+func selectFixturePairs(hosts []string, fixtures []fixturecontract.Fixture, only string) ([]fixturePair, error) {
 	pairs := []fixturePair{}
 	onlyHost, onlyFixture := "", ""
 	if only != "" {
@@ -269,7 +271,7 @@ func validateLiveRequest(request LiveBenchmarkRequest) error {
 	return nil
 }
 
-func BuildEpisodePrompt(fixture Fixture, profile string) (string, string) {
+func BuildEpisodePrompt(fixture fixturecontract.Fixture, profile string) (string, string) {
 	instruction := fmt.Sprintf("Call the only allowed MCP tool %s exactly once with these exact JSON arguments. Do not add, remove, rename, or coerce any field. After the tool result, output only captured.\nArguments:\n%s", fixture.ProbeTool, mustJSON(fixture.ExpectedArguments))
 	if profile != "context-pressure" {
 		return instruction, ""
@@ -280,40 +282,40 @@ func BuildEpisodePrompt(fixture Fixture, profile string) (string, string) {
 	return appendix + "\n" + instruction, hex.EncodeToString(sum[:])
 }
 
-func (policy benchmarkPolicy) classifyHostResult(result port.HostProbeResult, fixture Fixture) EpisodeReport {
+func (policy benchmarkPolicy) classifyHostResult(result port.HostProbeResult, fixture fixturecontract.Fixture) fixturecontract.EpisodeReport {
 	if !result.Completed {
 		return policy.incompleteHostResult(result, fixture, result.Cause, result.Code, result.EvidenceSource)
 	}
-	classification, err := ParseClassification(result.Classification)
+	classification, err := fixturecontract.ParseClassification(result.Classification)
 	if err != nil || result.EvidenceID == "" || !toolconformancedomain.ValidEvidenceID(result.EvidenceID) {
 		return policy.incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
-	if result.CallCount == 0 || classification == Classification(NoCall) {
+	if result.CallCount == 0 || classification == fixturecontract.Classification(fixturecontract.NoCall) {
 		return policy.incompleteHostResult(result, fixture, "unknown", "no_call", result.Host+"_runner")
 	}
-	if (result.CallCount > 1) != (classification == Classification(MultipleCalls)) {
+	if (result.CallCount > 1) != (classification == fixturecontract.Classification(fixturecontract.MultipleCalls)) {
 		return policy.incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	var arguments any
 	if err := json.Unmarshal([]byte(result.CanonicalArgumentsJSON), &arguments); err != nil {
 		return policy.incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
-	diagnostics := []Diagnostic{}
+	diagnostics := []fixturecontract.Diagnostic{}
 	if err := json.Unmarshal([]byte(result.DiagnosticsJSON), &diagnostics); err != nil {
 		return policy.incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	if diagnostics == nil {
-		diagnostics = []Diagnostic{}
+		diagnostics = []fixturecontract.Diagnostic{}
 	}
 	toolconformancedomain.SortDiagnostics(diagnostics)
-	if (classification == Classification(ExactValid) || classification == Classification(ValidButSemanticallyDifferent)) && (!result.CanonicalValid || len(diagnostics) != 0) {
+	if (classification == fixturecontract.Classification(fixturecontract.ExactValid) || classification == fixturecontract.Classification(fixturecontract.ValidButSemanticallyDifferent)) && (!result.CanonicalValid || len(diagnostics) != 0) {
 		return policy.incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	if toolconformancedomain.SchemaDriftClassification(classification) && result.CanonicalValid {
 		return policy.incompleteHostResult(result, fixture, "transport", "probe_result_invalid", result.Host+"_runner")
 	}
 	evidence := []failurecausecontract.Evidence{}
-	failed := classification != Classification(ExactValid)
+	failed := classification != fixturecontract.Classification(fixturecontract.ExactValid)
 	if failed {
 		cause := failurecausecontract.Model
 		if result.AdvertisedValid && !result.CanonicalValid {
@@ -322,8 +324,8 @@ func (policy benchmarkPolicy) classifyHostResult(result port.HostProbeResult, fi
 		evidence = append(evidence, failurecausecontract.Evidence{Cause: cause, Code: string(classification), Source: "tool_conformance"})
 	}
 	causeResult := policy.classify(failed, evidence)
-	return EpisodeReport{
-		Status:               EpisodeCompleted,
+	return fixturecontract.EpisodeReport{
+		Status:               fixturecontract.EpisodeCompleted,
 		Host:                 result.Host,
 		HostVersion:          result.HostVersion,
 		RequestedModel:       result.RequestedModel,
@@ -353,7 +355,7 @@ func (policy benchmarkPolicy) classifyHostResult(result port.HostProbeResult, fi
 	}
 }
 
-func (policy benchmarkPolicy) incompleteHostResult(result port.HostProbeResult, fixture Fixture, cause, code, source string) EpisodeReport {
+func (policy benchmarkPolicy) incompleteHostResult(result port.HostProbeResult, fixture fixturecontract.Fixture, cause, code, source string) fixturecontract.EpisodeReport {
 	episode := policy.incompleteEpisode(result.Host, result.HostVersion, fixture, result.Profile, result.RequestedModel, result.Attempt, cause, code, source)
 	episode.ObservedModel = result.ObservedModel
 	episode.DurationMS = result.DurationMS
@@ -368,10 +370,10 @@ func (policy benchmarkPolicy) incompleteHostResult(result port.HostProbeResult, 
 
 type completedEpisodeExpectation = toolconformancedomain.CompletedEpisodeExpectation
 
-func (policy benchmarkPolicy) validCompletedEpisode(episode EpisodeReport, expected completedEpisodeExpectation) bool {
+func (policy benchmarkPolicy) validCompletedEpisode(episode fixturecontract.EpisodeReport, expected completedEpisodeExpectation) bool {
 	return toolconformancedomain.ValidCompletedEpisode(episode, expected)
 }
-func (policy benchmarkPolicy) incompleteEpisode(host, version string, fixture Fixture, profile, model string, attempt int, cause, code, source string) EpisodeReport {
+func (policy benchmarkPolicy) incompleteEpisode(host, version string, fixture fixturecontract.Fixture, profile, model string, attempt int, cause, code, source string) fixturecontract.EpisodeReport {
 	parsedCause := failurecausecontract.Cause(cause)
 	if parsedCause != failurecausecontract.HarnessEnvironment && parsedCause != failurecausecontract.Transport && parsedCause != failurecausecontract.ContractInput && parsedCause != failurecausecontract.Model {
 		parsedCause = failurecausecontract.Unknown
@@ -380,8 +382,8 @@ func (policy benchmarkPolicy) incompleteEpisode(host, version string, fixture Fi
 		source = "tool_conformance"
 	}
 	result := policy.classify(true, []failurecausecontract.Evidence{{Cause: parsedCause, Code: code, Source: source}})
-	return EpisodeReport{
-		Status:               EpisodeIncomplete,
+	return fixturecontract.EpisodeReport{
+		Status:               fixturecontract.EpisodeIncomplete,
 		Host:                 host,
 		HostVersion:          version,
 		RequestedModel:       model,
@@ -390,15 +392,15 @@ func (policy benchmarkPolicy) incompleteEpisode(host, version string, fixture Fi
 		SchemaSHA256:         fixture.SchemaSHA256,
 		Profile:              profile,
 		Attempt:              attempt,
-		Diagnostics:          []Diagnostic{},
+		Diagnostics:          []fixturecontract.Diagnostic{},
 		FailureCause:         result.Cause,
 		FailureCauseReason:   result.Reason,
 		FailureCauseEvidence: result.Evidence,
 	}
 }
 
-func countReport(report BenchmarkReport) BenchmarkCounts {
-	counts := BenchmarkCounts{}
+func countReport(report fixturecontract.BenchmarkReport) fixturecontract.BenchmarkCounts {
+	counts := fixturecontract.BenchmarkCounts{}
 	for _, host := range report.Hosts {
 		for _, episode := range host.Cases {
 			counts.Attempts++
@@ -424,7 +426,7 @@ func countReport(report BenchmarkReport) BenchmarkCounts {
 			}
 			counts.Completed++
 			counts.ModelDenominator++
-			if episode.Classification == Classification(ValidButSemanticallyDifferent) {
+			if episode.Classification == fixturecontract.Classification(fixturecontract.ValidButSemanticallyDifferent) {
 				counts.ValidSemanticDifferences++
 			}
 			if toolconformancedomain.SchemaDriftClassification(episode.Classification) {

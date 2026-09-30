@@ -1,6 +1,8 @@
 package hostprobe
 
 import (
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"issueops/internal/adapter/toolconformance"
 	"issueops/internal/port"
 )
 
@@ -53,7 +54,7 @@ func writeClaudeCapture(t *testing.T, resultPath, token string) {
 		Classification:     "exact_valid",
 		AdvertisedValid:    true,
 		CanonicalValid:     true,
-		Diagnostics:        []toolconformance.Diagnostic{},
+		Diagnostics:        []fixturecontract.Diagnostic{},
 	}
 	data, err := json.Marshal(capture)
 	if err != nil {

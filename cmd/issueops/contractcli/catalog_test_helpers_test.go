@@ -1,6 +1,8 @@
 package contractcli
 
 import (
+	fixtureapp "issueops/internal/application/toolconformance"
+
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/toolconformance"
@@ -13,9 +15,9 @@ func newTestConformance(deps ConformanceDependencies) *Conformance {
 	if deps.Catalog == nil {
 		deps.Catalog = testConformanceCatalog
 	}
-	deps.LoadManifest = toolconformance.LoadManifest
-	deps.LoadRegressionFixture = toolconformance.LoadRegressionFixture
-	deps.ReplayRegression = toolconformance.ReplayRegression
+	deps.LoadManifest = (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).LoadManifest
+	deps.LoadRegressionFixture = (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).LoadRegressionFixture
+	deps.ReplayRegression = (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).ReplayRegression
 	return NewConformance(deps)
 }
 

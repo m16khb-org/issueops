@@ -1,6 +1,9 @@
 package mcp
 
 import (
+	fixturecontract "issueops/internal/contract/toolconformance"
+	fixturedomain "issueops/internal/domain/toolconformance"
+
 	"context"
 	"crypto/sha256"
 	"encoding/json"
@@ -13,15 +16,13 @@ import (
 	"strings"
 	"testing"
 
-	core "issueops/internal/adapter/toolconformance"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestConformanceProbeWritesPrivateAtomicCapture(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "probe")
 	path := filepath.Join(dir, "result.json")
-	capture := ConformanceCapture{FixtureID: "empty_object", CallCount: 1, RawSHA256: "raw", CanonicalArguments: "<redacted>", SchemaSHA256: "schema", RunTokenSHA256: "token", Classification: core.Classification(core.ExactValid), AdvertisedValid: true, CanonicalValid: true, Diagnostics: []core.Diagnostic{}}
+	capture := ConformanceCapture{FixtureID: "empty_object", CallCount: 1, RawSHA256: "raw", CanonicalArguments: "<redacted>", SchemaSHA256: "schema", RunTokenSHA256: "token", Classification: fixturecontract.Classification(fixturecontract.ExactValid), AdvertisedValid: true, CanonicalValid: true, Diagnostics: []fixturecontract.Diagnostic{}}
 	if err := writeCapture(path, capture); err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +227,7 @@ func TestConformanceProbeSDKRejectsWrongToolAndMalformedResultCollision(t *testi
 
 func TestConformanceProbeRejectsStaleRunTokenWithoutOverwritingCapture(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "capture.json")
-	stale := ConformanceCapture{FixtureID: "empty_object", CallCount: 1, RawSHA256: "raw", CanonicalArguments: map[string]any{}, SchemaSHA256: "schema", RunTokenSHA256: fmtHash(sha256.Sum256([]byte("old-run-token"))), Classification: core.Classification(core.ExactValid), AdvertisedValid: true, CanonicalValid: true, Diagnostics: []core.Diagnostic{}}
+	stale := ConformanceCapture{FixtureID: "empty_object", CallCount: 1, RawSHA256: "raw", CanonicalArguments: map[string]any{}, SchemaSHA256: "schema", RunTokenSHA256: fmtHash(sha256.Sum256([]byte("old-run-token"))), Classification: fixturecontract.Classification(fixturecontract.ExactValid), AdvertisedValid: true, CanonicalValid: true, Diagnostics: []fixturecontract.Diagnostic{}}
 	if err := writeCapture(path, stale); err != nil {
 		t.Fatal(err)
 	}
@@ -279,7 +280,7 @@ func testProbeConfig(t *testing.T, path string) mcpcontract.ConformanceProbeConf
 
 func newTestProbeConfig(t *testing.T, fixtureID, probeTool string, schema, expected map[string]any, path, token string) mcpcontract.ConformanceProbeConfig {
 	t.Helper()
-	schemaSHA, err := core.CanonicalSchemaSHA256(schema)
+	schemaSHA, err := fixturedomain.CanonicalSchemaSHA256(schema)
 	if err != nil {
 		t.Fatal(err)
 	}
