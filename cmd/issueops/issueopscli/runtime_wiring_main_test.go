@@ -103,7 +103,7 @@ func wireIssueOpsRuntimeForTests() {
 		LinkIssueOpsWorktreeWithActor: LinkIssueOpsWorktreeWithActorForTest,
 		ListIssueOpsCycles:            listCycles,
 		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
-			return issueopscore.ReviewMetrics(stateRoot, id, repo, issueopscore.ReviewMetricsDeps{
+			return (reviewapp.MetricsReader{ReadRecord: issueopscore.ReadIssueOps, Now: time.Now,
 				ListCycleIDs: func(stateRoot, repo string) ([]string, []string, error) {
 					result, err := listCycles(stateRoot, repo)
 					if err != nil {
@@ -115,7 +115,7 @@ func wireIssueOpsRuntimeForTests() {
 					}
 					return ids, append([]string(nil), result.UnreadableIDs...), nil
 				},
-			})
+			}).Read(stateRoot, id, repo)
 		},
 		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
 		PrepareIssueOpsBranchWithActor:             prepareBranchWithActorForTest,

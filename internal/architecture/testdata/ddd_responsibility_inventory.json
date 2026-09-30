@@ -4879,15 +4879,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/issueops_review_metrics.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ReviewMetrics",
-        "type ReviewMetricsDeps"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/issueops_state.go",
       "owner": "adapter",
       "task": "T20",
@@ -9974,6 +9965,15 @@
       "symbols": [
         "func LocalChangeObserver.Observe",
         "type LocalChangeObserver"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsreview/metrics.go",
+      "owner": "application",
+      "task": "T03",
+      "symbols": [
+        "func MetricsReader.Read",
+        "type MetricsReader"
       ]
     },
     {
@@ -26385,6 +26385,24 @@
         "internal/adapter/toolconformance/replay_test.go",
         "internal/adapter/toolconformance/fixtures_internal_test.go",
         "internal/adapter/toolconformance/fixtures_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "review-metrics-observation-flow",
+      "source_path": "internal/adapter/issueops/issueops_review_metrics.go",
+      "source_symbol": "func ReviewMetrics",
+      "responsibility": "Read-only review metric query scope, population observations, per-record errors and aggregate assembly",
+      "target": "internal/application/issueopsreview",
+      "target_symbol": "func MetricsReader.Read",
+      "task": "T20",
+      "entrypoints": [
+        "issueops review-metrics"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsreview/metrics_test.go",
+        "internal/adapter/issueops/issueops_review_metrics_test.go",
+        "cmd/issueops/issueopscli/issueops_review_metrics_cli_test.go"
       ],
       "status": "migrated"
     }

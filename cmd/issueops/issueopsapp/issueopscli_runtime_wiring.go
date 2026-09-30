@@ -55,9 +55,9 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		},
 		ListIssueOpsCycles: issueOpsInventoryListHandler(observer),
 		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
-			return issueopscore.ReviewMetrics(stateRoot, id, repo, issueopscore.ReviewMetricsDeps{
+			return (reviewapp.MetricsReader{ReadRecord: issueopscore.ReadIssueOps, Now: time.Now,
 				ListCycleIDs: issueOpsCycleIDLister(observer),
-			})
+			}).Read(stateRoot, id, repo)
 		},
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
 		PrepareIssueOpsBranchWithActor: func(root, id string, req issueopscontract.IssueOpsBranchPrepareRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
