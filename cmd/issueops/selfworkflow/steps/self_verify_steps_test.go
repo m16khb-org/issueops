@@ -18,6 +18,7 @@ func TestPlannedSelfVerifyStepsPreservesExecutionOrder(t *testing.T) {
 	want := []string{
 		"harness invariants",
 		"gofmt",
+		"Python script tests",
 		"risk QA tier",
 		"go test",
 		"contract golden tests",
@@ -57,7 +58,7 @@ func TestPlannedSelfVerifyStepsUsesCachedContractGoldenAfterGoTest(t *testing.T)
 	goTestStep := StepResult{Label: "go test", OK: true}
 
 	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, fakeSelfVerifyStepDeps(t))
-	got := steps[4].Run()
+	got := steps[5].Run()
 
 	if !got.OK || got.Label != "contract golden tests" || got.Command != "covered by go test ./... -count=1" {
 		t.Fatalf("expected cached contract golden result, got %#v", got)
@@ -86,8 +87,8 @@ func TestPlannedSelfVerifyStepsUsesSuccessfulRaceAsFullTestEvidence(t *testing.T
 	}
 
 	planned := PlannedSelfVerifySteps("/repo", "/tmp/harness", 100, &goTestStep, deps)
-	riskStep := planned[2].Run()
-	testStep := planned[3].Run()
+	riskStep := planned[3].Run()
+	testStep := planned[4].Run()
 
 	if !riskStep.OK || !testStep.OK {
 		t.Fatalf("risk/test steps failed: risk=%+v test=%+v", riskStep, testStep)
@@ -128,8 +129,8 @@ func TestPlannedSelfVerifyStepsGivesGoTestFullGateTimeout(t *testing.T) {
 	}
 
 	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, deps)
-	_ = steps[2].Run()
-	got := steps[3].Run()
+	_ = steps[3].Run()
+	got := steps[4].Run()
 
 	if !got.OK || got.Label != "go test" {
 		t.Fatalf("go test step returned unexpected result: %#v", got)
@@ -155,7 +156,7 @@ func TestPlannedSelfVerifyStepsUsesStaticDoctorForBinaryDrift(t *testing.T) {
 	}
 
 	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, deps)
-	got := steps[6].Run()
+	got := steps[7].Run()
 	if !got.OK || got.Label != "binary drift" {
 		t.Fatalf("binary drift step returned unexpected result: %#v", got)
 	}

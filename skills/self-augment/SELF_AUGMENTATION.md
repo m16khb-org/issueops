@@ -31,7 +31,7 @@ Legacy `self_augment_history`, `compare`, and `promote` calls remain compatibili
 The single evidence pass includes at least these checks:
 
 1. Core invariant checks.
-2. Go test suite and contract/golden tests.
+2. Python 3.10+ runtime and CI script discovery (`Python script tests`), Go test suite and contract/golden tests. Python discovery runs before risk QA and fails on missing/unsupported runtime.
 3. Build artifact check.
 4. **Risk QA tier**: run `go test -race ./... -count=1` plus `go vet ./...` for sensitive Go changes, `go vet ./...` for ordinary Go changes, and explicitly record skips for docs/config-only changes. A successful full race suite supplies the regular full-test evidence instead of rerunning the same suite.
 5. CLI/MCP response contract checks.
@@ -50,7 +50,7 @@ The single evidence pass includes at least these checks:
 
 | Goal | Evidence label | Exit condition |
 | --- | --- | --- |
-| Test suite | `go test`, `contract golden tests` | score > 95 |
+| Test suite | `Python script tests`, `go test`, `contract golden tests` | score > 95 |
 | Risk-based QA | `risk QA tier` | score > 95 |
 | Build artifact | `go build` | score > 95 |
 | QA smoke | invariants, inspect/docs, candidate export, QA gate | score > 95 |

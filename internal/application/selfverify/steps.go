@@ -19,6 +19,15 @@ type RiskQAEvidence struct {
 	CoversFullGoTest bool
 }
 
+// Check before importing repository helpers, then exec the CI discovery argv with
+// the same interpreter. The existing runner owns the timeout and output budget.
+const pythonRuntimeDiscovery = `import os, sys
+print("Python runtime: " + sys.version.split()[0] + " (requires Python 3.10+)", flush=True)
+if sys.version_info < (3, 10):
+    sys.exit("Python script tests require Python 3.10+; found " + sys.version.split()[0])
+os.execv(sys.executable, [sys.executable] + sys.argv[1:])
+`
+
 const selfVerifyGoTestTimeout = 10 * time.Minute
 
 type SelfVerifyStepDeps struct {
@@ -55,6 +64,9 @@ func PlannedSteps(root string, tempBin string, seed int64, goTestStep *StepResul
 		// CI의 Format check와 같은 게이트를 로컬에서도 무조건 실행한다. gofmt는
 		// 값싸고 결정적이므로 긴 go test보다 앞에 두어 fail-fast 모드에서 먼저 드러낸다.
 		{Label: "gofmt", Run: func() StepResult { return deps.ValidateGoFormat(root) }},
+		{Label: "Python script tests", Run: func() StepResult {
+			return deps.RunCommandStep(root, "Python script tests", 5*time.Minute, "", "python3", "-c", pythonRuntimeDiscovery, "-m", "unittest", "discover", "-s", "scripts", "-p", "*_test.py")
+		}},
 		{Label: "risk QA tier", Run: func() StepResult {
 			riskQAEvidence = deps.ValidateRiskQATier(root)
 			return riskQAEvidence.Step

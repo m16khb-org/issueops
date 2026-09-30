@@ -1,8 +1,10 @@
 package augmentplan
 
 import (
+	"encoding/json"
 	contract "issueops/internal/contract/selfaugment"
 	state "issueops/internal/contract/state"
+	verifydomain "issueops/internal/domain/selfverify"
 	"strings"
 	"testing"
 )
@@ -14,9 +16,9 @@ func TestPlanVerificationScoreAndEvidenceShareOneRead(t *testing.T) {
 	reads := 0
 	StateRead = func(key string) (state.StateResult, error) {
 		reads++
-		content := `{"schema_version":1,"kind":"self_verification_summary","ok":true}`
+		content := currentSummaryFixture(t, true)
 		if reads > 1 {
-			content = `{"schema_version":1,"kind":"self_verification_summary","ok":false}`
+			content = currentSummaryFixture(t, false)
 		}
 		return state.StateResult{Record: state.RecordEnvelope{Content: content}}, nil
 	}
@@ -46,8 +48,9 @@ func TestVerificationGoalRequiresCurrentSummaryKindAndSchema(t *testing.T) {
 		{"zero-schema", `{"schema_version":0,"kind":"self_verification_summary","ok":true}`, false},
 		{"future-schema", `{"schema_version":999,"kind":"self_verification_summary","ok":true}`, false},
 		{"wrong-kind", `{"schema_version":1,"kind":"other","ok":true}`, false},
-		{"current-pass", `{"schema_version":1,"kind":"self_verification_summary","ok":true}`, true},
-		{"current-fail", `{"schema_version":1,"kind":"self_verification_summary","ok":false}`, false},
+		{"old-pass", `{"schema_version":1,"kind":"self_verification_summary","ok":true}`, false},
+		{"current-pass", currentSummaryFixture(t, true), true},
+		{"current-fail", currentSummaryFixture(t, false), false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			StateRead = func(key string) (state.StateResult, error) {
@@ -61,4 +64,13 @@ func TestVerificationGoalRequiresCurrentSummaryKindAndSchema(t *testing.T) {
 			}
 		})
 	}
+}
+
+func currentSummaryFixture(t *testing.T, ok bool) string {
+	t.Helper()
+	data, err := json.Marshal(contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: ok, Summary: contract.SelfAugmentSummary{TerminationEligible: ok, Contract: verifydomain.ContractValue()}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
 }

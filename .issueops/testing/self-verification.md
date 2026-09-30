@@ -58,7 +58,7 @@ grep -R "Conventional Commit\|Lore:" -n AGENTS.md .issueops/COMMIT_POLICY.md ski
 
 기본 완료 battery의 소유 관계는 다음과 같다.
 
-- `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json`이 self-verify가 실제로 수행한 test/build/golden/docs/inspect 증거를 소유한다. 현재 step 목록은 `go test ./... -count=1`, contract golden의 full-test 포함 관계, `go build -o <temp>/issueops ./cmd/issueops`, `doctor --static-only --json`, `inspect smoke`, `docs index smoke`를 포함한다.
+- `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json`이 self-verify가 실제로 수행한 test/build/golden/docs/inspect 증거를 소유한다. 현재 step 목록은 `Python script tests`, `go test ./... -count=1`, contract golden의 full-test 포함 관계, `go build -o <temp>/issueops ./cmd/issueops`, `doctor --static-only --json`, `inspect smoke`, `docs index smoke`를 포함한다.
 - 최종 battery에서 self-verify JSON이 같은 revision과 환경에서 통과했고 그 step 결과가 완전하면 `go test ./... -count=1`, `go build -o bin/issueops ./cmd/issueops`, `./bin/issueops docs --json`, `./bin/issueops inspect --json`을 별도 최종 책임으로 다시 실행하지 않는다. 이때 전체 `go test ./... -count=1`을 별도 책임으로 다시 실행하지 않는다.
 - `go vet ./...`와 `go test -race ./... -count=1`은 Go 변경 기본 검증의 별도 구성원이다. self-verify의 `risk QA tier`가 그 명령을 실제 실행한 step을 같은 bundle에 담았을 때만 포함 관계로 인정한다. risk tier가 current working tree 기준으로 비어 있거나 `go vet`만 실행했으면 누락된 명령은 같은 battery에서 별도 실행한다.
 - 최종 battery 명령은 `gofmt -l $(git ls-files '*.go')`, `go vet ./...`, `go test -race ./... -count=1`, `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json` 중 이번 변경 범위가 요구하는 모든 항목을 포함한다. self-verify가 소유한 test/build/docs/inspect 증거를 재사용할 때도 vet/race 결과는 `unit-and-contract.md`의 Go 변경 기준을 따른다.
@@ -85,6 +85,31 @@ claude mcp list | grep issueops
 ## 자기 검증 QA gate
 
 `issueops self-verify`에는 테스트와 QA gate가 포함된다. QA gate는 루프 문서, `GENIUS_THINK.md`, shared skill metadata, native integration 설치 상태, redaction audit, bounded stdout/stderr metadata, Mermaid 문서 lint를 확인하고, 모든 목표 점수가 95점을 초과해야 종료할 수 있다. Mermaid lint는 `GENIUS_THINK.md`의 따옴표/`<br/>` 규칙을 기준으로 문서 다이어그램의 파싱 오류를 조기에 방지한다.
+
+
+## 저장소 Python 검사
+
+`Python script tests`는 gofmt 다음, risk QA와 전체 Go 검사 전에 실행한다. PATH의
+`python3`로 버전을 확인한 뒤 같은 `sys.executable`에 CI와 동일한 discovery argv를
+전달한다:
+
+```bash
+python3 -m unittest discover -s scripts -p '*_test.py'
+```
+
+최소 runtime은 Python 3.10이다. publish helper의 union annotation은 Python 3.9에서
+import 오류를 낸다. 버전은 stdout에 표시하고, 3.10 미만이면 stderr 진단과 함께 discovery
+전에 실패한다. 실행 파일이 없으면 기존 command runner의 executable-not-found 오류로
+단계가 실패한다. timeout은 버전 확인과 discovery를 합쳐 5분이며 출력 budget을 유지한다.
+검사를 skip하거나 파일 범위를 줄이지 않는다. 인계 baseline의 전체 53개 검사는
+Python 3.14.6에서 73.498초가 걸렸으므로 이 시간 비용이 자기 검증에 추가된다.
+
+단계 실패는 전체 OK와 termination을 거부한다. `test_suite` 점수와 `test suite contract`
+coverage는 Python 증거도 요구한다. summary contract는 v5이며 기존 JSON 필드와
+snapshot schema v1은 유지한다. labels 자체는 hash 입력이 아니므로 version 변경으로
+검사 범위를 구분한다. 역사 요약은 history/compare로 읽을 수 있고 새 단계는 added/missing
+label로 비교한다. 후보 계획의 verification QA는 현재 contract version/hash와
+termination 판정이 일치하는 성공 요약만 완료 근거로 인정한다.
 
 ## 부분 검증 상태 금지 (all-or-nothing verification)
 

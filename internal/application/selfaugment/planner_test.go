@@ -1,10 +1,12 @@
 package selfaugment
 
 import (
+	"encoding/json"
 	"errors"
 	docs "issueops/internal/contract/docs"
 	contract "issueops/internal/contract/selfaugment"
 	state "issueops/internal/contract/state"
+	verifydomain "issueops/internal/domain/selfverify"
 	"reflect"
 	"strings"
 	"testing"
@@ -53,7 +55,7 @@ func TestPlannerObservesEachGoalOnceAndUsesOneSnapshotForScoreAndEvidence(t *tes
 		},
 		StateRead: func(key string) (state.StateResult, error) {
 			calls = append(calls, "read:"+key)
-			return state.StateResult{Record: state.RecordEnvelope{Content: `{"schema_version":1,"kind":"self_verification_summary","ok":true}`}}, nil
+			return state.StateResult{Record: state.RecordEnvelope{Content: currentSummaryFixture(t, true)}}, nil
 		},
 		Now: func() time.Time { return now },
 	}
@@ -125,4 +127,13 @@ func TestLessonScanSkipsUnreadableMalformedAndWrongKindBeforeCounting(t *testing
 	if !reflect.DeepEqual(counts, map[string]int{"candidate": 1}) || warnings != nil || len(reads) != 4 {
 		t.Fatalf("counts=%v warnings=%v reads=%v", counts, warnings, reads)
 	}
+}
+
+func currentSummaryFixture(t *testing.T, ok bool) string {
+	t.Helper()
+	data, err := json.Marshal(contract.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: ok, Summary: contract.SelfAugmentSummary{TerminationEligible: ok, Contract: verifydomain.ContractValue()}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
 }
