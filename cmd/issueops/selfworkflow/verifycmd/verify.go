@@ -1,6 +1,8 @@
 package verifycmd
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"flag"
 	"fmt"
 	"io"
@@ -8,17 +10,17 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/selfworkflow/llmeval"
-	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/cmd/issueops/selfworkflow/progress"
-	"issueops/cmd/issueops/selfworkflow/verifyloop"
+	application "issueops/internal/application/selfverify"
+	model "issueops/internal/contract/selfaugment"
 )
 
 type Deps struct {
 	LookupEnv           func(string) (string, bool)
 	ProgressWriter      io.Writer
 	NewProgressReporter func(string, io.Writer) (*progress.SelfVerifyProgressReporter, error)
-	Verify              func(verifyloop.Request) (model.SelfAugmentResult, error)
-	ApplyLLMEval        func(model.SelfAugmentResult, llmeval.SelfVerifyLLMEvalOptions) (model.SelfAugmentResult, error)
+	Verify              func(application.LoopRequest) (model.SelfAugmentResult, error)
+	ApplyLLMEval        func(model.SelfAugmentResult, selfverify.LLMEvalOptions) (model.SelfAugmentResult, error)
 	SaveSummary         func(*model.SelfAugmentResult, string) error
 	PrintJSON           func(any) error
 }
@@ -51,29 +53,24 @@ func Run(args []string, deps Deps) error {
 	if err != nil {
 		return err
 	}
-	result, err := deps.Verify(verifyloop.Request{
-		BaseSeed:        *seed,
-		TargetScore:     *targetScore,
-		Verbose:         !*jsonOut,
-		Reporter:        reporter,
-		CollectAllSteps: *collectAll,
+	var reporterPort application.ProgressReporter
+	if reporter != nil {
+		reporterPort = reporter
+	}
+	result, err := application.Execute(application.ExecuteRequest{
+		Loop: application.LoopRequest{
+			BaseSeed: *seed, TargetScore: *targetScore, Verbose: !*jsonOut,
+			Reporter: reporterPort, CollectAllSteps: *collectAll,
+		},
+		LLMEnabled: llmEvalConfig.Enabled, LLMMode: llmEvalConfig.Mode,
+		SaveState: *saveState, StateKey: *stateKey,
+	}, application.ExecuteDeps{
+		Verify:       deps.Verify,
+		ApplyLLMEval: deps.ApplyLLMEval,
+		SaveSummary:  deps.SaveSummary,
 	})
-	if err == nil && llmEvalConfig.Enabled {
-		result, err = deps.ApplyLLMEval(result, llmeval.SelfVerifyLLMEvalOptions{
-			Enabled:     true,
-			Mode:        llmEvalConfig.Mode,
-			TargetScore: *targetScore,
-		})
-	}
-	saveErr := error(nil)
-	if *saveState {
-		saveErr = deps.SaveSummary(&result, *stateKey)
-	}
 	if *jsonOut {
 		_ = deps.PrintJSON(result)
-	}
-	if err == nil && saveErr != nil {
-		return saveErr
 	}
 	return err
 }
@@ -89,7 +86,7 @@ func (deps Deps) withDefaults() Deps {
 		deps.NewProgressReporter = progress.NewSelfVerifyProgressReporter
 	}
 	if deps.Verify == nil {
-		deps.Verify = func(verifyloop.Request) (model.SelfAugmentResult, error) {
+		deps.Verify = func(application.LoopRequest) (model.SelfAugmentResult, error) {
 			return model.SelfAugmentResult{}, fmt.Errorf("self-verify runner dependency is required")
 		}
 	}

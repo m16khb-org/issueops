@@ -10,7 +10,6 @@ import (
 )
 
 func TestRunIssueOpsLifecycle(t *testing.T) {
-	stubIssueOpsChildIssueVerifier(t, nil)
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	bin := t.TempDir()
 	codegraph := filepath.Join(bin, "codegraph")
@@ -113,7 +112,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"devils-advocate", "review", "--id", id, "--verdict", "pass", "--reviewer-context", "subagent", "--finding", "attacked gate 3: no second caller exists", "--json"})
 	})
-	current, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), id)
+	current, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +129,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 	}
 
 	child := captureStdoutForContract(t, func() error {
-		return runIssueOps(withIssueOpsCLIActor([]string{"link-child", "--id", id, "--child-url", "https://github.com/example/repo/issues/2", "--title", "write child graph tests", "--json"}, actor))
+		return runIssueOpsForTest(withIssueOpsCLIActor([]string{"link-child", "--id", id, "--child-url", "https://github.com/example/repo/issues/2", "--title", "write child graph tests", "--json"}, actor), Dependencies{Verification: RemoteVerification{Child: func(string) error { return nil }}})
 	})
 	var childRecord map[string]any
 	if err := json.Unmarshal([]byte(child), &childRecord); err != nil {
@@ -267,7 +266,7 @@ func TestRunIssueOpsLifecycle(t *testing.T) {
 }
 
 func TestIssueOpsDevilsAdvocateReviewRequiresReviewerContext(t *testing.T) {
-	err := runIssueOpsDevilsAdvocate([]string{"review", "--id", "io-missing", "--verdict", "pass", "--finding", "attacked gate 3"})
+	err := testIssueOpsCommand().runIssueOpsDevilsAdvocate([]string{"review", "--id", "io-missing", "--verdict", "pass", "--finding", "attacked gate 3"})
 	if err == nil || !strings.Contains(err.Error(), "--reviewer-context") {
 		t.Fatalf("devils-advocate review without --reviewer-context must fail before touching state, got %v", err)
 	}

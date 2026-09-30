@@ -14,34 +14,32 @@ import (
 const shellPathRCMarker = "# issueops: add user-local bin to PATH"
 
 type installPathTransaction struct {
-	req             port.NativeInstallRequest
-	command         ManagedCommandPathTransaction
-	managed         bool
-	applied         bool
-	commandCreated  bool
-	commandExisted  bool
-	commandTarget   string
-	shortCreated    bool
-	binDirExisted   bool
-	localDirExisted bool
-	path            string
-	shortPath       string
+	ensureSymlinkPlan func(string, string, bool) (port.InstallLink, error)
+	req               port.NativeInstallRequest
+	command           ManagedCommandPathTransaction
+	managed           bool
+	applied           bool
+	commandCreated    bool
+	commandExisted    bool
+	commandTarget     string
+	shortCreated      bool
+	binDirExisted     bool
+	localDirExisted   bool
+	path              string
+	shortPath         string
 }
 
-func prepareInstallPathPlan(result *port.NativeInstallResult, req port.NativeInstallRequest, mode string) (*installPathTransaction, error) {
-	return prepareInstallPathPlanForCandidate(result, req, req.BinPath, mode)
-}
-
-func prepareInstallPathPlanForCandidate(result *port.NativeInstallResult, req port.NativeInstallRequest, candidatePath, mode string) (*installPathTransaction, error) {
+func (c Command) prepareInstallPathPlanForCandidate(result *port.NativeInstallResult, req port.NativeInstallRequest, candidatePath, mode string) (*installPathTransaction, error) {
 	userBin := filepath.Join(req.Home, ".local", "bin")
 	commandPath := filepath.Join(userBin, "issueops")
 	shortCommandPath := filepath.Join(userBin, "io")
 	transaction := &installPathTransaction{
-		req:             req,
-		path:            commandPath,
-		shortPath:       shortCommandPath,
-		binDirExisted:   installPathDirectoryExists(userBin),
-		localDirExisted: installPathDirectoryExists(filepath.Dir(userBin)),
+		req:               req,
+		ensureSymlinkPlan: c.EnsureSymlinkPlan,
+		path:              commandPath,
+		shortPath:         shortCommandPath,
+		binDirExisted:     installPathDirectoryExists(userBin),
+		localDirExisted:   installPathDirectoryExists(filepath.Dir(userBin)),
 	}
 	info, statErr := os.Lstat(commandPath)
 	if statErr == nil && info.Mode()&os.ModeSymlink != 0 {
@@ -52,7 +50,7 @@ func prepareInstallPathPlanForCandidate(result *port.NativeInstallResult, req po
 		}
 	}
 	if statErr == nil && info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 {
-		managed, plan, err := PrepareManagedCommandPathCandidate(req.BinPath, candidatePath, commandPath, req.AdoptCommandFile, req.DryRun)
+		managed, plan, err := c.PrepareManagedCommandPathCandidate(req.BinPath, candidatePath, commandPath, req.AdoptCommandFile, req.DryRun)
 		result.CommandPath = managedCommandPathResult(plan)
 		result.Links = append(result.Links, port.InstallLink{Path: commandPath, Target: req.BinPath, WouldCreate: plan.WouldAdopt})
 		if err != nil {
@@ -64,7 +62,7 @@ func prepareInstallPathPlanForCandidate(result *port.NativeInstallResult, req po
 		if statErr != nil && !os.IsNotExist(statErr) {
 			return nil, statErr
 		}
-		link, err := EnsureSymlinkPlan(req.BinPath, commandPath, true)
+		link, err := c.EnsureSymlinkPlan(req.BinPath, commandPath, true)
 		if req.DryRun {
 			result.Links = append(result.Links, link)
 		}
@@ -72,7 +70,7 @@ func prepareInstallPathPlanForCandidate(result *port.NativeInstallResult, req po
 			return nil, err
 		}
 	}
-	shortLink, err := ensureShortCommandShimPlan(commandPath, shortCommandPath, true)
+	shortLink, err := ensureShortCommandShimPlan(commandPath, shortCommandPath, true, c.EnsureSymlinkPlan)
 	if req.DryRun {
 		result.Links = append(result.Links, shortLink)
 	}
@@ -97,17 +95,21 @@ func (transaction *installPathTransaction) apply(result *port.NativeInstallResul
 		}
 		result.Links = append(result.Links, port.InstallLink{Path: transaction.path, Target: transaction.req.BinPath, Created: true})
 	} else {
-		link, err := EnsureSymlinkPlan(transaction.req.BinPath, transaction.path, false)
+		link, err := transaction.ensureSymlinkPlan(transaction.req.BinPath, transaction.path, false)
 		result.Links = append(result.Links, link)
 		if err != nil {
 			return err
 		}
 		transaction.commandCreated = link.Created
 	}
-	shortLink, err := ensureShortCommandShimPlan(transaction.path, transaction.shortPath, false)
+	shortLink, err := ensureShortCommandShimPlan(transaction.path, transaction.shortPath, false, transaction.ensureSymlinkPlan)
 	result.Links = append(result.Links, shortLink)
 	transaction.shortCreated = shortLink.Created
 	return err
+}
+
+func (transaction *installPathTransaction) Apply(result *port.NativeInstallResult) error {
+	return transaction.apply(result)
 }
 
 func (transaction *installPathTransaction) rollback(result *port.NativeInstallResult) error {
@@ -163,6 +165,10 @@ func (transaction *installPathTransaction) rollback(result *port.NativeInstallRe
 	return errors.Join(errs...)
 }
 
+func (transaction *installPathTransaction) Rollback(result *port.NativeInstallResult) error {
+	return transaction.rollback(result)
+}
+
 func installPathDirectoryExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
@@ -175,6 +181,10 @@ func (transaction *installPathTransaction) finalize(result *port.NativeInstallRe
 	plan, err := transaction.command.Finalize()
 	result.CommandPath = managedCommandPathResult(plan)
 	return err
+}
+
+func (transaction *installPathTransaction) Finalize(result *port.NativeInstallResult) error {
+	return transaction.finalize(result)
 }
 
 func managedCommandPathResult(plan installcontract.ManagedCommandPathPlan) *port.ManagedCommandPathResult {
@@ -218,11 +228,11 @@ func planShellPath(result *port.NativeInstallResult, req port.NativeInstallReque
 	return nil
 }
 
-func ensureShortCommandShimPlan(target, path string, dryRun bool) (port.InstallLink, error) {
+func ensureShortCommandShimPlan(target, path string, dryRun bool, ensureSymlinkPlan func(string, string, bool) (port.InstallLink, error)) (port.InstallLink, error) {
 	link := port.InstallLink{Path: path, Target: target}
 	info, err := os.Lstat(path)
 	if os.IsNotExist(err) {
-		return EnsureSymlinkPlan(target, path, dryRun)
+		return ensureSymlinkPlan(target, path, dryRun)
 	}
 	if err != nil {
 		return link, err

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	replacementmodel "issueops/internal/contract/issueops"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,14 +16,13 @@ import (
 	"testing"
 	"time"
 
-	auditadapter "issueops/internal/adapter/audit"
 	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
 func TestIssueOpsAppClaimWiring(t *testing.T) {
-	_, err := issueOpsClaimHandler(context.Background(), t.TempDir(), issueops.ExecutionClaimRequest{ID: "io-claim-wiring"}, issueops.ExecutionClaimDependencies{})
+	_, err := issueOpsClaimHandler(context.Background(), t.TempDir(), issueopscontract.ExecutionClaimRequest{ID: "io-claim-wiring"}, issueopscontract.ExecutionClaimDependencies{})
 	if err == nil || !strings.Contains(err.Error(), "issueops record io-claim-wiring not found") {
 		t.Fatalf("claim wiring error=%v", err)
 	}
@@ -48,10 +48,10 @@ func TestIssueOpsClaimProviderNameRejectsURLInferenceWithoutBranchAuthority(t *t
 func TestIssueOpsClaimHandlerUsesResolvedSnapshotReader(t *testing.T) {
 	stateRoot, record, token, issueDigest, packetDigest := seedOrcaClaimSnapshot(t)
 	reads := 0
-	result, err := issueOpsClaimHandler(context.Background(), stateRoot, issueops.ExecutionClaimRequest{
+	result, err := issueOpsClaimHandler(context.Background(), stateRoot, issueopscontract.ExecutionClaimRequest{
 		ID: record.ID, Generation: 1, Actor: claimWiringActor(t), CWD: record.Execution.Workspace.Root,
 		TokenFile: token, IssueBodySHA256: issueDigest, ContextPacketSHA256: packetDigest,
-	}, issueops.ExecutionClaimDependencies{ReadIssue: func(_ context.Context, providerName string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+	}, issueopscontract.ExecutionClaimDependencies{ReadIssue: func(_ context.Context, providerName string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
 		reads++
 		if providerName != "gitlab" || request.URL != record.IssueURL {
 			t.Fatalf("snapshot request provider=%q url=%q", providerName, request.URL)
@@ -78,7 +78,7 @@ func TestIssueOpsClaimProducesOwnerClaimEvidenceFromCommittedLease(t *testing.T)
 			seedClaimDeliveryObservation(t, stateRoot, record)
 			actor := claimWiringActor(t)
 			actor.Host = host
-			result, err := issueOpsClaimHandler(context.Background(), stateRoot, issueops.ExecutionClaimRequest{
+			result, err := issueOpsClaimHandler(context.Background(), stateRoot, issueopscontract.ExecutionClaimRequest{
 				ID: record.ID, Generation: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
 				TokenFile: token, IssueBodySHA256: issueDigest, ContextPacketSHA256: packetDigest,
 			}, claimWiringDependencies(record))
@@ -90,7 +90,7 @@ func TestIssueOpsClaimProducesOwnerClaimEvidenceFromCommittedLease(t *testing.T)
 				callKind = "prompt"
 			}
 			lineageID := "generation:1:prompt:" + record.Execution.Orca.OwnerPromptSHA256 + ":material:" + record.Execution.Orca.ContextPacketSHA256 + ":call:" + callKind
-			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, record.ID, lineageID)
+			folded, _, err := foldHandoffAuditForTest(stateRoot, record.ID, lineageID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -141,28 +141,28 @@ func TestSuccessfulDirectClaimAttachesOnlyToExactManualReceiverProcess(t *testin
 				t.Fatal(err)
 			}
 			if test.manualLineage {
-				observation.AttemptID = fmt.Sprintf("%s%s:%d:orca:claim", handoffDeliveryManualLineagePrefix, request.Workspace.LifecycleID, test.sourceGeneration)
-				observation.LineageID = handoffDeliveryManualLineagePrefix + observation.LineageID
+				observation.AttemptID = fmt.Sprintf("%s%s:%d:orca:claim", "manual-direct:", request.Workspace.LifecycleID, test.sourceGeneration)
+				observation.LineageID = "manual-direct:" + observation.LineageID
 			}
 			actor := claimWiringActor(t)
 			process := *actor.SessionProcess
 			observation.Target.Process = &process
 			observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
-			if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+			if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 				t.Fatal(err)
 			}
 			if test.mutateActor != nil {
 				test.mutateActor(&actor)
 			}
 			claimedAt := time.Now().UTC().Format(time.RFC3339Nano)
-			result := issueops.ExecutionResult{OK: true, ID: request.Workspace.LifecycleID, Execution: issueopscontract.Execution{
+			result := issueopscontract.ExecutionResult{OK: true, ID: request.Workspace.LifecycleID, Execution: issueopscontract.Execution{
 				Mode:  issueopscontract.ExecutionModeDirect,
 				Lease: issueopscontract.WriteLease{Generation: test.claimGeneration, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
 			}}
-			if err := observeSuccessfulIssueOpsClaim(stateRoot, result); err != nil {
+			if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err != nil {
 				t.Fatal(err)
 			}
-			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
+			folded, _, err := foldHandoffAuditForTest(stateRoot, observation.LifecycleID, observation.LineageID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -207,18 +207,18 @@ func TestSuccessfulDirectClaimUsesCmuxOnlyAfterRawInputAndExactReceiverCorrelati
 				observation.Target.Process = &process
 				observation.Target.ProcessIncarnation = fmt.Sprintf("%d:%s:%s", process.PID, process.StartedAt, process.Executable)
 			}
-			if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+			if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 				t.Fatal(err)
 			}
 			claimedAt := time.Now().UTC().Format(time.RFC3339Nano)
-			result := issueops.ExecutionResult{OK: true, ID: observation.LifecycleID, Execution: issueopscontract.Execution{
+			result := issueopscontract.ExecutionResult{OK: true, ID: observation.LifecycleID, Execution: issueopscontract.Execution{
 				Mode:  issueopscontract.ExecutionModeDirect,
 				Lease: issueopscontract.WriteLease{Generation: 2, Status: issueopscontract.LeaseStatusActive, Holder: &actor, ClaimedAt: claimedAt},
 			}}
-			if err := observeSuccessfulIssueOpsClaim(stateRoot, result); err != nil {
+			if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err != nil {
 				t.Fatal(err)
 			}
-			folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
+			folded, _, err := foldHandoffAuditForTest(stateRoot, observation.LifecycleID, observation.LineageID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -242,23 +242,23 @@ func TestSuccessfulDirectClaimRejectsAmbiguousManualLineages(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		observation.AttemptID = handoffDeliveryManualLineagePrefix + request.Workspace.LifecycleID + ":1:orca:" + suffix
-		observation.LineageID = handoffDeliveryManualLineagePrefix + suffix + ":" + observation.LineageID
+		observation.AttemptID = "manual-direct:" + request.Workspace.LifecycleID + ":1:orca:" + suffix
+		observation.LineageID = "manual-direct:" + suffix + ":" + observation.LineageID
 		process := *actor.SessionProcess
 		observation.Target.Process = &process
 		observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
-		if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+		if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 			t.Fatal(err)
 		}
 	}
-	result := issueops.ExecutionResult{OK: true, ID: request.Workspace.LifecycleID, Execution: issueopscontract.Execution{
+	result := issueopscontract.ExecutionResult{OK: true, ID: request.Workspace.LifecycleID, Execution: issueopscontract.Execution{
 		Mode: issueopscontract.ExecutionModeDirect,
 		Lease: issueopscontract.WriteLease{
 			Generation: 2, Status: issueopscontract.LeaseStatusActive, Holder: &actor,
 			ClaimedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		},
 	}}
-	if err := observeSuccessfulIssueOpsClaim(stateRoot, result); err == nil || !strings.Contains(err.Error(), "ambiguous") {
+	if err := newHandoffDeliveryService(stateRoot).ObserveClaim(result); err == nil || !strings.Contains(err.Error(), "ambiguous") {
 		t.Fatalf("ambiguous manual lineages were accepted: %v", err)
 	}
 }
@@ -286,24 +286,24 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	observation.AttemptID = handoffDeliveryManualLineagePrefix + record.ID + ":1:orca:reseed-claim"
-	observation.LineageID = handoffDeliveryManualLineagePrefix + observation.LineageID
+	observation.AttemptID = "manual-direct:" + record.ID + ":1:orca:reseed-claim"
+	observation.LineageID = "manual-direct:" + observation.LineageID
 	process := *actor.SessionProcess
 	observation.Target.Process = &process
 	observation.CallStaged = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceExternalCallStaged)
 	observation.InputAccepted = handoffDeliveryObserved(eventNow, issueopscontract.IssueOpsHandoffDeliveryEvidenceLauncherReceipt)
-	if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+	if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 		t.Fatal(err)
 	}
 
 	owner := reseedWiringOwner{}
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
-		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner})
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
+		ID: record.ID, Action: issueopscontract.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
+	}, port.ReplacementInvocation{OrcaOwner: owner})
 	if err != nil {
 		t.Fatalf("preview released direct reseed: %v", err)
 	}
-	reseeded, err := issueOpsReseedHandlerWithOwner(context.Background(), stateRoot, issueops.ExecutionReseedRequest{
+	reseeded, err := issueOpsReseedHandlerWithOwner(context.Background(), stateRoot, issueopscontract.ExecutionReseedRequest{
 		ID: record.ID, ExpectedGeneration: 1, InventoryFingerprint: preview.InventoryFingerprint,
 		Reason: "manual direct handoff", Actor: actor, CWD: record.Execution.Workspace.Root, Confirm: true,
 	}, owner)
@@ -314,13 +314,13 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 		t.Fatalf("reseeded lease=%+v", reseeded.Execution.Lease)
 	}
 
-	claimed, err := issueOpsClaimHandler(context.Background(), stateRoot, issueops.ExecutionClaimRequest{
+	claimed, err := issueOpsClaimHandler(context.Background(), stateRoot, issueopscontract.ExecutionClaimRequest{
 		ID: record.ID, Generation: 2, Actor: actor, CWD: record.Execution.Workspace.Root, ClaimCurrentToken: true,
-	}, issueops.ExecutionClaimDependencies{})
+	}, issueopscontract.ExecutionClaimDependencies{})
 	if err != nil || !claimed.OK {
 		t.Fatalf("claim reseeded direct execution: result=%+v err=%v", claimed, err)
 	}
-	folded, _, err := auditadapter.FoldHandoffDeliveryAuditObservationsForAt(stateRoot, observation.LifecycleID, observation.LineageID)
+	folded, _, err := foldHandoffAuditForTest(stateRoot, observation.LifecycleID, observation.LineageID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +338,7 @@ func TestIssueOpsClaimDoesNotReturnFalseFailureWhenObservationAuditIsUnsafe(t *t
 	if err := os.Chmod(path, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	result, err := issueOpsClaimHandler(context.Background(), stateRoot, issueops.ExecutionClaimRequest{
+	result, err := issueOpsClaimHandler(context.Background(), stateRoot, issueopscontract.ExecutionClaimRequest{
 		ID: record.ID, Generation: 1, Actor: claimWiringActor(t), CWD: record.Execution.Workspace.Root,
 		TokenFile: token, IssueBodySHA256: issueDigest, ContextPacketSHA256: packetDigest,
 	}, claimWiringDependencies(record))
@@ -358,7 +358,7 @@ func TestIssueOpsConcurrentReceiversHaveOneAuthorityHolderAndLoserDoesNoWork(t *
 	var successes atomic.Int32
 	var work [2]atomic.Int32
 	errs := make([]error, 2)
-	results := make([]issueops.ExecutionResult, 2)
+	results := make([]issueopscontract.ExecutionResult, 2)
 	var done sync.WaitGroup
 	done.Add(2)
 	for index := range actors {
@@ -366,7 +366,7 @@ func TestIssueOpsConcurrentReceiversHaveOneAuthorityHolderAndLoserDoesNoWork(t *
 			defer done.Done()
 			ready.Done()
 			<-start
-			results[index], errs[index] = issueOpsClaimHandler(context.Background(), stateRoot, issueops.ExecutionClaimRequest{
+			results[index], errs[index] = issueOpsClaimHandler(context.Background(), stateRoot, issueopscontract.ExecutionClaimRequest{
 				ID: record.ID, Generation: 1, Actor: actors[index], CWD: record.Execution.Workspace.Root,
 				TokenFile: token, IssueBodySHA256: issueDigest, ContextPacketSHA256: packetDigest,
 			}, claimWiringDependencies(record))
@@ -399,8 +399,8 @@ func TestIssueOpsConcurrentReceiversHaveOneAuthorityHolderAndLoserDoesNoWork(t *
 	}
 }
 
-func claimWiringDependencies(record issueopscontract.IssueOpsRecord) issueops.ExecutionClaimDependencies {
-	return issueops.ExecutionClaimDependencies{ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+func claimWiringDependencies(record issueopscontract.IssueOpsRecord) issueopscontract.ExecutionClaimDependencies {
+	return issueopscontract.ExecutionClaimDependencies{ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
 		return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
 	}}
 }
@@ -426,7 +426,7 @@ func seedClaimDeliveryObservation(t *testing.T, stateRoot string, record issueop
 		OwnerClaimed:       issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
 		Ambiguous:          issueopscontract.IssueOpsHandoffDeliveryState{Status: issueopscontract.IssueOpsHandoffDeliveryStateNotObserved},
 	}
-	if _, err := auditadapter.AuditHandoffDeliveryObservationAt(stateRoot, observation); err != nil {
+	if _, err := newHandoffDeliveryAudit(stateRoot).Append(observation); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -445,11 +445,11 @@ func seedOrcaClaimSnapshot(t *testing.T) (string, issueopscontract.IssueOpsRecor
 	claimWiringGit(t, source, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "-q", "-m", "test: snapshot fixture")
 	claimWiringGit(t, source, "worktree", "add", "-q", "-b", branch, worktree, "main")
 	baseHead := strings.TrimSpace(claimWiringGit(t, worktree, "rev-parse", "HEAD"))
-	record, err := issueops.StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: source, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: source, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = issueops.IssueOpsPhaseImplement
+	record.Phase = issueopscontract.IssueOpsPhaseImplement
 	record.IssueURL = "https://gitlab.example.com/acme/repo/-/work_items/16"
 	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{Provider: "gitlab", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true}
 	const plan = "# Snapshot owner plan\n"

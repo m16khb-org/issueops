@@ -1,0 +1,54 @@
+package selfverify
+
+import (
+	contract "issueops/internal/contract/selfverify"
+	"sort"
+)
+
+func ClassifyFailure(failedSteps, totalRuns int, runs []Run) (string, string, []contract.SelfVerificationFailureCluster) {
+	clusters := FailureClusters(runs)
+	if failedSteps == 0 {
+		return "", "", nil
+	}
+	if len(clusters) == 0 {
+		return "unknown", "summary reports failed steps but no failed step details were captured", nil
+	}
+	if failedSteps < totalRuns {
+		return "intermittent", "only some completed seeds failed", clusters
+	}
+	if len(clusters) == 1 && clusters[0].Count == 1 {
+		return "single_failure_observation", "self-verify is fail-fast; rerun the same seed before calling the failure flaky or deterministic", clusters
+	}
+	if len(clusters) == 1 {
+		return "deterministic", "all completed failing seeds failed at the same step", clusters
+	}
+	return "mixed", "multiple failure steps were observed across completed seeds", clusters
+}
+
+func FailureClusters(runs []Run) []contract.SelfVerificationFailureCluster {
+	byStep := map[string][]int64{}
+	for _, run := range runs {
+		for _, step := range run.Checks {
+			if step.OK {
+				continue
+			}
+			byStep[step.Label] = append(byStep[step.Label], run.Seed)
+		}
+	}
+	steps := make([]string, 0, len(byStep))
+	for step := range byStep {
+		steps = append(steps, step)
+	}
+	sort.Strings(steps)
+	clusters := []contract.SelfVerificationFailureCluster{}
+	for _, step := range steps {
+		seeds := append([]int64{}, byStep[step]...)
+		sort.Slice(seeds, func(i, j int) bool { return seeds[i] < seeds[j] })
+		clusters = append(clusters, contract.SelfVerificationFailureCluster{
+			Step:  step,
+			Seeds: seeds,
+			Count: len(seeds),
+		})
+	}
+	return clusters
+}

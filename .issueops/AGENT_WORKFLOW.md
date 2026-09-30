@@ -37,6 +37,7 @@ Orca가 없거나 unready면 Herdr의 실행 중인 서버·호환성·현재 na
 대화 근거·ID·경로·범위·종료점을 기존 decision record에 남긴다.
 새 세션 인계는 기존 holder의 release를 확인한 뒤 같은 worktree에서 수행하며,
 새 holder는 기록을 확인하고 재질문이나 재인계 없이 이어간다.
+Claude Code·Codex 새 세션은 각 native CLI의 permission bypass 인자를 사용한다.
 보류는 release 후 자원을 보존하며 구현을 허용하지 않는다. 구체적인 인계와 수동 시작
 경로는 `skills/issueops/references/session-choice.md`를 따른다.
 
@@ -159,7 +160,7 @@ merge and destructive cleanup require separate authority.
 Orca, Herdr 순서로 사용 가능 여부를 확인하며 둘 다 사용 불가면 현재 세션에서 이어간다.
 실행 방식은 묻지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다.
 명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다.
-4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-clean` →
+4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-slop-clean` →
 `issueops-docs` → `issueops-verify` → `atomic-commit-push` → `issueops-create-pr` →
 `issueops-complete`를 지나 완료한다. 휴먼 머지 뒤 정리는 `issueops-cleanup`이며
 reflect-completion(사람이 쓴 진행 결과를 `--body-file`로 넘긴다)→close-issue→cleanup finish

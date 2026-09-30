@@ -16,7 +16,7 @@ func TestRequireStagedExecutionOwnerPlanArtifact(t *testing.T) {
 		name          string
 		stage         map[string]string
 		configure     func(*testing.T, *issueopscontract.IssueOpsRecord)
-		wantIdentity  PlanIdentity
+		wantIdentity  issueopscontract.OwnerPlanIdentity
 		wantError     bool
 		wantNext      bool
 		wantExactNext bool
@@ -26,7 +26,7 @@ func TestRequireStagedExecutionOwnerPlanArtifact(t *testing.T) {
 		{
 			name:         "fresh staged plan needs no durable path",
 			stage:        map[string]string{"plan": "# Plan\n"},
-			wantIdentity: PlanIdentity{Digest: digestExecutionOwnerBytes([]byte("# Plan\n"))},
+			wantIdentity: issueopscontract.OwnerPlanIdentity{Digest: digestExecutionOwnerBytes([]byte("# Plan\n"))},
 		},
 		{
 			name:  "prelinked plan is missing",
@@ -74,7 +74,7 @@ func TestRequireStagedExecutionOwnerPlanArtifact(t *testing.T) {
 				record.PlanPath = filepath.Join(record.WorktreePath, "plan.md")
 				writePlanArtifactTestFile(t, record.PlanPath, "# Plan\n")
 			},
-			wantIdentity: PlanIdentity{Digest: digestExecutionOwnerBytes([]byte("# Plan\n"))},
+			wantIdentity: issueopscontract.OwnerPlanIdentity{Digest: digestExecutionOwnerBytes([]byte("# Plan\n"))},
 		},
 		{
 			name: "delegation parent plan alone does not satisfy readiness",
@@ -446,7 +446,7 @@ func TestRequireStagedExecutionOwnerPlanSkipsPlanBindingAfterImplementEntry(t *t
 	}
 	// Owner replacement/reseed during implementation reseals the edited plan
 	// without a fresh devil's-advocate round.
-	for _, phase := range []issueopscontract.IssueOpsPhase{IssueOpsPhaseImplement, IssueOpsPhaseAISlopClean, IssueOpsPhasePR} {
+	for _, phase := range []issueopscontract.IssueOpsPhase{issueopscontract.IssueOpsPhaseImplement, issueopscontract.IssueOpsPhaseAISlopClean, issueopscontract.IssueOpsPhasePR} {
 		record.Phase = phase
 		if _, err := RequireStagedExecutionOwnerPlan(stateRoot, record); err != nil {
 			t.Fatalf("phase %s: plan binding must not gate owner replacement after implement entry: %v", phase, err)

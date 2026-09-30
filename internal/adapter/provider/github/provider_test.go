@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -8,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	completionmodel "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -681,8 +683,8 @@ exit 2
 
 func TestGitHubUpdateIssueBodySectionDryRun(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
-		Section:  port.IssueBodySectionDevilsAdvocate,
+	res, err := NewProvider().UpdateIssueBodySection(context.Background(), port.IssueProviderUpdateIssueBodySectionRequest{
+		Section:  completionmodel.IssueBodySectionDevilsAdvocate,
 		Verdict:  "stop",
 		IssueURL: "https://github.com/acme/repo/issues/12",
 		Findings: []string{"gold-plating"},
@@ -719,8 +721,8 @@ exit 2
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest{
-		Section:  port.IssueBodySectionDevilsAdvocate,
+	res, err := NewProvider().UpdateIssueBodySection(context.Background(), port.IssueProviderUpdateIssueBodySectionRequest{
+		Section:  completionmodel.IssueBodySectionDevilsAdvocate,
 		Verdict:  "stop",
 		Repo:     repo,
 		IssueURL: "https://github.com/acme/repo/issues/12",

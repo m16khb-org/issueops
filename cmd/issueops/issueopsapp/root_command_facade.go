@@ -9,8 +9,8 @@ import (
 	"issueops/cmd/issueops/channelcli"
 	"issueops/cmd/issueops/gatescli"
 	"issueops/cmd/issueops/rootcmd"
-	guard "issueops/internal/adapter/guard"
-	cliadapter "issueops/internal/domain/cli"
+	clicontract "issueops/internal/contract/cli"
+	guard "issueops/internal/contract/guard"
 )
 
 var dependencyWiring sync.Once
@@ -27,9 +27,6 @@ func RunRootCommand(args []string) int {
 func wireDependencies() {
 	dependencyWiring.Do(func() {
 		wireBasicCLIDeps()
-		wireHostCLIDeps()
-		wirePolicyCLIDeps()
-		configureMCPCLI()
 	})
 }
 
@@ -70,7 +67,7 @@ func rootCommand() rootcmd.Command {
 		},
 		ErrorExitCode: rootSubcommandErrorExitCode,
 	}
-	for _, lifecycle := range cliadapter.LifecycleCommands() {
+	for _, lifecycle := range clicontract.LifecycleCommands() {
 		name := lifecycle.Name
 		command.Runners[name] = func(args []string) error { return runIssueOps(append([]string{name}, args...)) }
 	}

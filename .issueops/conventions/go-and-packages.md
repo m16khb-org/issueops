@@ -31,7 +31,7 @@ internal/adapter/inbound/          # capability inbound adapter
 internal/adapter/outbound/         # state/SQL/webfetch 등 capability outbound adapter
 internal/adapter/codex/
 internal/adapter/claude/
-internal/domain/hook/
+internal/adapter/hostprotocol/
 cmd/issueops/hookcli/
 internal/adapter/installutil/
 internal/adapter/provider/         # github/gitlab issue provider
@@ -53,13 +53,14 @@ skills/
 | `port` | 외부 capability interface와 error contract | contract, 표준 라이브러리 | domain/application/adapter/cmd concrete 구현 |
 | `adapter/inbound` | capability request를 application 호출로 변환 | contract, application | outbound adapter 직접 호출 |
 | `adapter/outbound` | filesystem, process, Git, DB, network 구현 | contract, port, domain의 순수 helper | transport 정책 복제 |
-| `cmd/issueops/<cli>` | flag/stdout/stderr/JSON-RPC와 command dispatch | contract, domain catalog, application, 주입된 dependency | host별 정책 복제, domain 판정 재구현 |
+| `cmd/issueops/<cli>` | flag/stdout/stderr/JSON-RPC와 command dispatch | contract, domain, application, 주입된 dependency | host별 정책 복제, domain 판정 재구현 |
 | `adapter/codex` | Codex user skill/MCP 설치 구현 | contract, port, 표준 라이브러리 | 적용 대상 repo 파일 쓰기 |
 | `adapter/claude` | Claude user skill/hook/MCP 설치 구현 | contract, port, 표준 라이브러리 | 기본 설치에서 `.claude/skills` 같은 repo-local 파일 쓰기 |
-| `domain/hook` + `cmd/issueops/hookcli` | host별 hook 출력 변환과 context command 전달 | contract, domain catalog | host schema와 다른 응답, lifecycle 변경 |
+| `adapter/hostprotocol` | host별 hook JSON, 실행 인자, Omo extension 코드 생성 | contract, domain의 순수 helper, 표준 라이브러리 | 비즈니스 판정, filesystem/process I/O |
 | `adapter/provider` | github/gitlab issue·PR/MR·child 생성/검증(gh·glab CLI) | contract, port, os/exec | 정책 복제, root 밖 접근 |
 
-> `cmd/issueops/issueopsapp`가 concrete adapter를 조립하는 유일한 composition root다. command별 CLI와 daemon/MCP transport 구현은 현재 `cmd/issueops/*cli`에 있고, 공통 catalog/판정은 `internal/domain`, DTO는 `internal/contract`가 소유한다.
+> `cmd/issueops/issueopsapp`가 concrete adapter를 조립하는 유일한 composition root다. command별 CLI와 daemon/MCP transport 구현은 현재 `cmd/issueops/*cli`에 있고, 순수 판정·명령 해석은 `internal/domain`, DTO와 CLI/MCP 정적 descriptor·schema는 `internal/contract`가 소유한다. CLI/MCP 목록 조합과 도움말 렌더링은 `internal/adapter/inbound/catalog/{cli,mcp}`에 두고 root가 완성한 목록과 도움말을 호출·서버별 dependency로 전달한다.
+> host protocol builder는 root에서 hook CLI, Omo installer·activation verifier·host probe, cmux launcher에 주입한다. concrete adapter 사이에서 builder를 직접 import하지 않는다.
 > filesystem/git/process 구현은 하나의 범용 fs adapter에 모으지 않고 capability별 outbound adapter로 둔다. `internal/adapter/install`처럼 아직 application orchestration을 함께 가진 기존 package는 새 의존을 확대하지 않고 capability vertical로 점진 이동한다.
 
 ---
@@ -76,6 +77,7 @@ skills/
 - `internal/architecture/dependency_test.go`는 direct production import만 검사한다. edge 표기는 항상 `importer -> imported`이며 정렬 순서를 바꾸지 않는다.
 - legacy baseline은 없다. 전환이 끝났으므로 `internal/adapter/*`를 composition root 밖에서 import하는 edge는 새로 추가할 수 없다. `TestProductionGraphHasNoLegacyAdapterEdges`가 즉시 실패한다. 어댑터 기능이 필요하면 세 갈래 처방(순수 규칙은 domain, 타입은 contract, I/O는 주입)을 따른다.
 - composition root 예외는 `cmd/issueops/issueopsapp` 하나로 제한한다. 새 concrete-adapter import가 그 밖에 필요하다면 먼저 boundary를 재검토한다.
+- production 진입점에서 호출하지 않는 테스트용 위임 함수·타입·상수는 `*_test.go`에 둔다. 기존 테스트를 유지하려고 production facade를 남기지 않는다. 구성 루트에서 실제로 쓰는 DTO는 정규 contract를 직접 참조한다.
 - IssueOps 수직 마이그레이션은 capability별 contract/domain/application/inbound/outbound 패키지를 사용한다. domain은 JSON·filesystem·process·SQLite·clock을 import하지 않고, application port는 해당 capability가 실제로 쓰는 좁은 연산만 선언한다. persisted bytes가 공개 계약이면 legacy facade와 새 vertical의 differential 및 race evidence를 함께 유지한다.
 
 ### concrete-adapter 의존을 걷어내는 순서

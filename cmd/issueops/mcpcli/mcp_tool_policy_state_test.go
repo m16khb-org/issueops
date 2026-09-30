@@ -36,7 +36,7 @@ func TestHandlePolicyStateMCPToolCallCoversPolicyPayloads(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handlePolicyStateMCPToolCall(tc.call)
+			outcome := testHandlePolicyStateMCPToolCall(tc.call)
 			if !outcome.Handled || outcome.Err != nil || outcome.Direct {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
@@ -56,7 +56,7 @@ func TestHandlePolicyStateMCPToolCallUsesWorkspacePolicyOverride(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(repo, ".issueops", "policy.json"), []byte(`{"additional_read_only_commands":["repo-tool"]}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	outcome := handlePolicyStateMCPToolCall(MCPToolCall{Name: "command_policy_check", Arguments: map[string]any{
+	outcome := testHandlePolicyStateMCPToolCall(MCPToolCall{Name: "command_policy_check", Arguments: map[string]any{
 		"workspace_root": repo,
 		"cwd":            repo,
 		"argv":           []any{"repo-tool"},
@@ -72,7 +72,7 @@ func TestHandlePolicyStateMCPToolCallUsesWorkspacePolicyOverride(t *testing.T) {
 
 func TestHandlePolicyStateMCPToolCallCoversStatePayloads(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	write := handlePolicyStateMCPToolCall(MCPToolCall{Name: "state_write", Arguments: map[string]any{
+	write := testHandlePolicyStateMCPToolCall(MCPToolCall{Name: "state_write", Arguments: map[string]any{
 		"key": "mcp-policy-state-test", "content": "payload",
 	}})
 	if !write.Handled || write.Err != nil || !strings.Contains(mcpPolicyStatePayloadText(t, write.Payload), "mcp-policy-state-test") {
@@ -90,7 +90,7 @@ func TestHandlePolicyStateMCPToolCallCoversStatePayloads(t *testing.T) {
 		{name: "state doctor", call: MCPToolCall{Name: "state_doctor", Arguments: map[string]any{}}, wantText: "healthy"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handlePolicyStateMCPToolCall(tc.call)
+			outcome := testHandlePolicyStateMCPToolCall(tc.call)
 			if !outcome.Handled || outcome.Err != nil {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
@@ -107,7 +107,7 @@ func TestHandleToolCallRejectsMissingAndUnknownStateWriteArguments(t *testing.T)
 		`{"name":"state_write","arguments":{"key":"schema-reject","content":"value","bogus":"x"}}`,
 		`{"name":"state_write","arguments":{"key":"schema-reject","content":7}}`,
 	} {
-		result, protocolErr := HandleToolCall(json.RawMessage(raw))
+		result, protocolErr := testHandleToolCall(json.RawMessage(raw))
 		if protocolErr == nil || protocolErr.Code != -32602 {
 			t.Fatalf("call %s result=%#v error=%v", raw, result, protocolErr)
 		}
@@ -119,7 +119,7 @@ func TestHandleToolCallRejectsMissingAndUnknownStateWriteArguments(t *testing.T)
 
 func TestPolicyStateMCPDoesNotHandleRetiredMigration(t *testing.T) {
 	name := strings.Join([]string{"state", "migrate"}, "_")
-	outcome := handlePolicyStateMCPToolCall(MCPToolCall{Name: name, Arguments: map[string]any{}})
+	outcome := testHandlePolicyStateMCPToolCall(MCPToolCall{Name: name, Arguments: map[string]any{}})
 	if outcome.Handled {
 		t.Fatalf("retired migration tool remains handled: %+v", outcome)
 	}
@@ -127,17 +127,17 @@ func TestPolicyStateMCPDoesNotHandleRetiredMigration(t *testing.T) {
 
 func TestHandlePolicyStateMCPToolCallCoversErrorsAndUnknownTool(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	prune := handlePolicyStateMCPToolCall(MCPToolCall{Name: "state_prune", Arguments: map[string]any{"max_age": "not-a-duration"}})
+	prune := testHandlePolicyStateMCPToolCall(MCPToolCall{Name: "state_prune", Arguments: map[string]any{"max_age": "not-a-duration"}})
 	if !prune.Handled || prune.Err == nil || prune.Err.Code != -32602 || prune.Err.Message != "State prune failed" || !strings.Contains(string(prune.Err.Data), "invalid max_age") {
 		t.Fatalf("unexpected state_prune error outcome: %#v", prune)
 	}
 
-	read := handlePolicyStateMCPToolCall(MCPToolCall{Name: "state_read", Arguments: map[string]any{"key": ""}})
+	read := testHandlePolicyStateMCPToolCall(MCPToolCall{Name: "state_read", Arguments: map[string]any{"key": ""}})
 	if !read.Handled || read.Err == nil || read.Err.Code != -32602 || read.Err.Message != "State read failed" {
 		t.Fatalf("unexpected state_read error outcome: %#v", read)
 	}
 
-	unknown := handlePolicyStateMCPToolCall(MCPToolCall{Name: "not_policy_state", Arguments: map[string]any{}})
+	unknown := testHandlePolicyStateMCPToolCall(MCPToolCall{Name: "not_policy_state", Arguments: map[string]any{}})
 	if unknown.Handled {
 		t.Fatalf("unknown policy/state tool should pass through: %#v", unknown)
 	}

@@ -54,7 +54,7 @@ func TestAbandonClaimableStillRespectsOrcaResidueGate(t *testing.T) {
 	record.Execution.Workspace.Driver = "orca"
 	record.Execution.Orca = &issueops.OrcaBinding{
 		RuntimeID: "runtime-140", RepoID: "repo-140", WorktreeID: "worktree-140",
-		OwnerHost: "claude", OwnerModel: "claude-opus-5", TerminalPTYID: "pty-140",
+		OwnerHost: "claude", OwnerModel: "claude-opus-5-5", TerminalPTYID: "pty-140",
 		TaskID: "task-140", DispatchID: "dispatch-140",
 	}
 	if _, err := writeIssueOps(stateRoot, record); err != nil {

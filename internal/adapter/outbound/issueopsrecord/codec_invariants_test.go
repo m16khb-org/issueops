@@ -1,13 +1,103 @@
 package issueopsrecord
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	statecontract "issueops/internal/contract/state"
 )
+
+func TestCodecRejectsExecutionSelectionPolicyAsInvalidState(t *testing.T) {
+	record := issueopscontract.IssueOpsRecord{
+		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		ID:            "io-selection",
+		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		Execution: &issueopscontract.Execution{
+			Mode: issueopscontract.ExecutionModeDirect,
+			Workspace: issueopscontract.Workspace{
+				SourceRoot: "/repo", Root: "/repo.worktrees/run", Branch: "run",
+				BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-09-25T00:00:00Z",
+			},
+			Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
+			Selection: &issueopscontract.ExecutionSelection{
+				RequestedMode: "direct", ResolvedMode: "direct",
+				ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-09-25T00:00:00Z",
+				ExplicitDirectReason: "manual execution",
+			},
+		},
+	}
+	if _, err := Encode(record); err != nil {
+		t.Fatalf("valid execution rejected: %v", err)
+	}
+	record.Execution.Selection.ProbeReady = true
+	if err := issueopscontract.ValidateRecord(record); err != nil {
+		t.Fatalf("contract shape rejected policy-only invalid selection: %v", err)
+	}
+	if encoded, err := Encode(record); encoded != nil || !errors.Is(err, statecontract.ErrInvalidState) {
+		t.Fatalf("Encode = %q, %v; want no bytes and invalid state", encoded, err)
+	}
+	raw, err := json.Marshal(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if decoded, err := Decode(record.ID, raw); !errors.Is(err, statecontract.ErrInvalidState) || decoded.OK || !decoded.Invalid {
+		t.Fatalf("Decode = %+v, %v; want invalid state", decoded, err)
+	}
+}
+
+func TestCodecRejectsCompletedIssueURLMismatch(t *testing.T) {
+	record := issueopscontract.IssueOpsRecord{
+		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
+		ID:            "io-url-mismatch",
+		Phase:         issueopscontract.IssueOpsPhaseProblem,
+		IssueURL:      "https://example.test/issues/2",
+		IssueCreateIntent: &issueopscontract.IssueOpsIssueCreateIntent{
+			OperationID:      "0123456789abcdef0123456789abcdef",
+			Marker:           "<!-- issueops:issue-create:0123456789abcdef0123456789abcdef -->",
+			Provider:         "github",
+			ProjectAuthority: "example/repo",
+			Title:            "example",
+			BodySHA256:       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			Status:           issueopscontract.IssueCreateIntentCompleted,
+			Attempt:          1,
+			CanonicalURL:     "https://example.test/issues/1",
+			StartedAt:        "2026-09-24T00:00:00Z",
+			UpdatedAt:        "2026-09-24T00:00:00Z",
+		},
+	}
+	if err := issueopscontract.ValidateRecord(record); err != nil {
+		t.Fatalf("record shape is invalid: %v", err)
+	}
+	if _, err := Encode(record); !errors.Is(err, statecontract.ErrInvalidState) {
+		t.Fatalf("Encode error = %v, want invalid state", err)
+	}
+	raw, err := json.Marshal(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Decode(record.ID, raw); !errors.Is(err, statecontract.ErrInvalidState) {
+		t.Fatalf("Decode error = %v, want invalid state", err)
+	}
+	record.IssueURL = ""
+	record.IssueCreateIntent.CanonicalURL = ""
+	if err := issueopscontract.ValidateRecord(record); err != nil {
+		t.Fatalf("record shape is invalid: %v", err)
+	}
+	if _, err := Encode(record); !errors.Is(err, statecontract.ErrInvalidState) {
+		t.Fatalf("Encode missing completed URL error = %v, want invalid state", err)
+	}
+	raw, err = json.Marshal(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Decode(record.ID, raw); !errors.Is(err, statecontract.ErrInvalidState) {
+		t.Fatalf("Decode missing completed URL error = %v, want invalid state", err)
+	}
+}
 
 func TestDecodeRejectsRecordInvariantViolations(t *testing.T) {
 	tests := []struct {

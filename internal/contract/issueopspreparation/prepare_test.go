@@ -3,6 +3,7 @@ package issueopspreparation
 import (
 	"testing"
 
+	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 )
 
@@ -52,20 +53,12 @@ func TestPrepareContractClonesMutableAuthority(t *testing.T) {
 	}
 }
 
-func TestImplementerDefaults(t *testing.T) {
-	tests := []struct {
-		host, model, effort string
-		ok                  bool
-	}{
-		{host: "codex", model: "gpt-6-sol", effort: "high", ok: true},
-		{host: "claude", model: "claude-sonnet-5", effort: "high", ok: true},
-		{host: "omo", model: "openai-codex/gpt-5.6-sol", effort: "max", ok: true},
-		{host: "unknown"},
-	}
-	for _, test := range tests {
-		model, effort, ok := ImplementerDefaults(test.host)
-		if model != test.model || effort != test.effort || ok != test.ok {
-			t.Fatalf("host=%s defaults=(%q,%q,%v)", test.host, model, effort, ok)
-		}
+func TestPreparationClonePreservesIndependentFinishAttempt(t *testing.T) {
+	original := Snapshot{Record: leasecontract.Record{CleanupAttempt: &model.IssueOpsCleanupAttempt{Operation: "finish", Token: "original", StartedAt: "2026-09-29T00:00:00Z"}}}
+	cloned := original.Clone()
+	cloned.Record.CleanupAttempt.Token = "replacement"
+	cloned.Record.CleanupAttempt.StartedAt = "2026-09-29T01:00:00Z"
+	if original.Record.CleanupAttempt.Token != "original" || original.Record.CleanupAttempt.StartedAt != "2026-09-29T00:00:00Z" {
+		t.Fatal("preparation clone changed the observed finish attempt")
 	}
 }

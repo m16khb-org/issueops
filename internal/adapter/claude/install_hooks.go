@@ -9,7 +9,7 @@ import (
 	"issueops/internal/port"
 )
 
-func writeClaudeSettings(path string, req port.NativeInstallRequest) (port.InstallFile, []string, error) {
+func (installer Installer) writeClaudeSettings(path string, req port.NativeInstallRequest) (port.InstallFile, []string, error) {
 	file := port.InstallFile{Path: path, Kind: "claude_user_settings"}
 	config := map[string]any{}
 	if existing, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(existing))) > 0 {
@@ -19,24 +19,24 @@ func writeClaudeSettings(path string, req port.NativeInstallRequest) (port.Insta
 	} else if err != nil && !os.IsNotExist(err) && !req.DryRun {
 		return file, nil, err
 	}
-	if err := ValidateHookConfigForMerge(config, claudeLifecycleHookEvents); err != nil {
+	if err := installer.deps.ValidateHookConfigForMerge(config, claudeLifecycleHookEvents); err != nil {
 		return file, nil, err
 	}
-	messages := HookTargetDriftMessages(config, "claude", req.BinPath)
+	messages := installer.deps.HookTargetDriftMessages(config, "claude", req.BinPath)
 	// 경로가 같아도 빌드 세대가 갈리면 이전 세대 hook이 새 typed command를
 	// 모른 채 차단해 복구가 교착된다(#328). 그 축을 여기서 함께 보고한다.
-	if HookTargetGenerationMessages != nil && RunningBuildGenerationString != nil && FileBuildGenerationString != nil {
-		messages = append(messages, HookTargetGenerationMessages(config, "claude", req.BinPath, RunningBuildGenerationString(), FileBuildGenerationString)...)
+	if installer.deps.HookTargetGenerationMessages != nil && installer.deps.RunningBuildGenerationString != nil && installer.deps.FileBuildGenerationString != nil {
+		messages = append(messages, installer.deps.HookTargetGenerationMessages(config, "claude", req.BinPath, installer.deps.RunningBuildGenerationString(), installer.deps.FileBuildGenerationString)...)
 	}
-	written, err := WriteJSONPlan(path, file.Kind, mergeClaudeHookConfig(config, req.BinPath), 0o644, req.DryRun)
+	written, err := installer.deps.WriteJSONPlan(path, file.Kind, installer.mergeClaudeHookConfig(config, req.BinPath), 0o644, req.DryRun)
 	return written, messages, err
 }
 
-func claudeSettingsConfig(binPath string) map[string]any {
-	return mergeClaudeHookConfig(map[string]any{}, binPath)
+func (installer Installer) claudeSettingsConfig(binPath string) map[string]any {
+	return installer.mergeClaudeHookConfig(map[string]any{}, binPath)
 }
 
-func mergeClaudeHookConfig(config map[string]any, binPath string) map[string]any {
+func (installer Installer) mergeClaudeHookConfig(config map[string]any, binPath string) map[string]any {
 	if config == nil {
 		config = map[string]any{}
 	}
@@ -53,7 +53,7 @@ func mergeClaudeHookConfig(config map[string]any, binPath string) map[string]any
 		groups := []any{}
 		if existing, ok := hooks[event].([]any); ok {
 			for _, group := range existing {
-				if !HookGroupContainsAgentHarness(group) && !HookGroupContainsCommand(group, shellQuote(binPath)+" hook ") {
+				if !installer.deps.HookGroupContainsAgentHarness(group) && !installer.deps.HookGroupContainsCommand(group, shellQuote(binPath)+" hook ") {
 					groups = append(groups, group)
 				}
 			}

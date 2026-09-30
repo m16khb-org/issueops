@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	issueops "issueops/internal/contract/issueops"
+	abandondomain "issueops/internal/domain/issueops"
 )
 
 func childRefs(ids ...string) []issueops.IssueOpsChildCycleRef {
@@ -40,14 +41,14 @@ func TestAbandonChildGateCountsOnlyUnresolvedChildren(t *testing.T) {
 
 	t.Run("모두 해소되면 통과", func(t *testing.T) {
 		record := issueops.IssueOpsRecord{ChildCycles: childRefs("io-a", "io-b")}
-		if cleanupAbandonUnresolvedChildren(record, resolved("io-a", "io-b")) != nil {
+		if abandondomain.CleanupAbandonUnresolvedChildren(record, resolved("io-a", "io-b")) != nil {
 			t.Fatal("해소된 자식만 있으면 차단하지 않는다")
 		}
 	})
 
 	t.Run("하나라도 남으면 차단하고 지목한다", func(t *testing.T) {
 		record := issueops.IssueOpsRecord{ChildCycles: childRefs("io-a", "io-b", "io-c")}
-		unresolved := cleanupAbandonUnresolvedChildren(record, resolved("io-a"))
+		unresolved := abandondomain.CleanupAbandonUnresolvedChildren(record, resolved("io-a"))
 		if len(unresolved) != 2 {
 			t.Fatalf("해소되지 않은 자식만 세야 한다: %v", unresolved)
 		}
@@ -67,7 +68,7 @@ func TestAbandonChildGateCountsOnlyUnresolvedChildren(t *testing.T) {
 				{Type: "child", URL: "https://github.com/o/r/issues/11"},
 			},
 		}
-		unresolved := cleanupAbandonUnresolvedChildren(record, nil)
+		unresolved := abandondomain.CleanupAbandonUnresolvedChildren(record, nil)
 		if len(unresolved) != 1 || !containsString(unresolved, "https://github.com/o/r/issues/11") {
 			t.Fatalf("닫히지 않은 링크만 세야 한다: %v", unresolved)
 		}
@@ -79,7 +80,7 @@ func TestAbandonChildGateCountsOnlyUnresolvedChildren(t *testing.T) {
 			IssueURL:   self,
 			IssueLinks: []issueops.IssueOpsIssueLink{{Type: "child", URL: self}},
 		}
-		if unresolved := cleanupAbandonUnresolvedChildren(record, nil); len(unresolved) != 0 {
+		if unresolved := abandondomain.CleanupAbandonUnresolvedChildren(record, nil); len(unresolved) != 0 {
 			t.Fatalf("self link는 자식이 아니다: %v", unresolved)
 		}
 	})
@@ -99,10 +100,10 @@ func TestAbandonResolvedChildrenRefusesToInferFromAbsence(t *testing.T) {
 	stateRoot := t.TempDir()
 	record := issueops.IssueOpsRecord{ChildCycles: childRefs("io-gone1", "io-gone2")}
 
-	if resolved := cleanupAbandonResolvedChildren(stateRoot, record); len(resolved) != 0 {
+	if resolved := abandonPreviewerForTests(CleanupAbandonRuntime{StateRoot: stateRoot}, CleanupAbandonDeps{}).ResolvedChildren(record); len(resolved) != 0 {
 		t.Fatalf("부재는 해소의 근거가 아니다: %v", resolved)
 	}
-	if unresolved := cleanupAbandonUnresolvedChildren(record, nil); len(unresolved) != 2 {
+	if unresolved := abandondomain.CleanupAbandonUnresolvedChildren(record, nil); len(unresolved) != 2 {
 		t.Fatalf("근거 없는 자식은 계속 차단한다: %v", unresolved)
 	}
 }
@@ -112,8 +113,8 @@ func TestAbandonResolvedChildrenRefusesToInferFromAbsence(t *testing.T) {
 func TestAbandonResolvedChildrenRequiresDoneForLiveRecords(t *testing.T) {
 	stateRoot := t.TempDir()
 	for id, phase := range map[string]issueops.IssueOpsPhase{
-		"io-live1": IssueOpsPhaseImplement,
-		"io-live2": IssueOpsPhaseDone,
+		"io-live1": issueops.IssueOpsPhaseImplement,
+		"io-live2": issueops.IssueOpsPhaseDone,
 	} {
 		child := issueops.IssueOpsRecord{
 			OK: true, SchemaVersion: 1, ID: id, Repo: t.TempDir(), Phase: phase,
@@ -124,14 +125,14 @@ func TestAbandonResolvedChildrenRequiresDoneForLiveRecords(t *testing.T) {
 		}
 	}
 	record := issueops.IssueOpsRecord{ChildCycles: childRefs("io-live1", "io-live2")}
-	resolved := cleanupAbandonResolvedChildren(stateRoot, record)
+	resolved := abandonPreviewerForTests(CleanupAbandonRuntime{StateRoot: stateRoot}, CleanupAbandonDeps{}).ResolvedChildren(record)
 	if resolved["io-live1"] {
 		t.Fatal("implement 단계의 자식은 해소가 아니다")
 	}
 	if !resolved["io-live2"] {
 		t.Fatal("done 자식은 해소다")
 	}
-	unresolved := cleanupAbandonUnresolvedChildren(record, resolved)
+	unresolved := abandondomain.CleanupAbandonUnresolvedChildren(record, resolved)
 	if len(unresolved) != 1 || unresolved[0] != "io-live1" {
 		t.Fatalf("미완 자식만 지목해야 한다: %v", unresolved)
 	}

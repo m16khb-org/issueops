@@ -7,19 +7,14 @@ import (
 	issueopsauthorizationcontract "issueops/internal/contract/issueopsauthorization"
 )
 
-type SamePath func(string, string) bool
-
-func AuthorizeExecutionMutation(
-	record issueopsauthorizationcontract.Record,
-	actor *issueopsauthorizationcontract.Actor,
-	samePath SamePath,
-) error {
+// ValidateHolder returns whether the application must observe canonical path identity.
+func ValidateHolder(record issueopsauthorizationcontract.Record, actor *issueopsauthorizationcontract.Actor) (bool, error) {
 	if record.Execution == nil {
-		return nil
+		return false, nil
 	}
 	lease := record.Execution.Lease
 	if lease.Status != issueopsauthorizationcontract.LeaseStatusActive || lease.Holder == nil {
-		return fmt.Errorf(
+		return false, fmt.Errorf(
 			"IssueOps execution generation %d has no active write lease",
 			lease.Generation,
 		)
@@ -28,7 +23,7 @@ func AuthorizeExecutionMutation(
 		!strings.EqualFold(strings.TrimSpace(actor.Host), lease.Holder.Host) ||
 		strings.TrimSpace(actor.SessionID) != lease.Holder.SessionID ||
 		strings.TrimSpace(actor.AgentID) != lease.Holder.AgentID {
-		return fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
+		return false, fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
 	}
 	processMatches := false
 	for _, observed := range actor.NativeProcessAncestry {
@@ -38,9 +33,13 @@ func AuthorizeExecutionMutation(
 		}
 	}
 	if !processMatches {
-		return fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
+		return false, fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
 	}
-	if samePath == nil || !samePath(actor.CWD, record.Execution.Workspace.Root) {
+	return true, nil
+}
+
+func ValidateCWD(canonical bool) error {
+	if !canonical {
 		return fmt.Errorf("IssueOps execution mutation requires the canonical worktree cwd")
 	}
 	return nil

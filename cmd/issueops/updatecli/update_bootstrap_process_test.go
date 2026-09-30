@@ -9,17 +9,17 @@ import (
 
 func TestParseMCPProxyProcessOnlyMatchesCurrentHarnessMCP(t *testing.T) {
 	binary := filepath.Join(t.TempDir(), "bin", "issueops")
-	match, ok := parseMCPProxyProcess("  123 "+binary+" mcp", binary)
+	match, ok := parseMCPProxyProcessSnapshot("  123 1 "+binary+" mcp", binary)
 	if !ok || match.PID != 123 || match.Command != binary+" mcp" {
 		t.Fatalf("expected MCP proxy match, got match=%+v ok=%v", match, ok)
 	}
 	for _, line := range []string{
-		"124 " + binary + " daemon --internal",
-		"125 " + binary + " update",
-		"126 /other/bin/issueops mcp",
-		"not-a-pid " + binary + " mcp",
+		"124 1 " + binary + " daemon --internal",
+		"125 1 " + binary + " update",
+		"126 1 /other/bin/issueops mcp",
+		"not-a-pid 1 " + binary + " mcp",
 	} {
-		if got, ok := parseMCPProxyProcess(line, binary); ok {
+		if got, ok := parseMCPProxyProcessSnapshot(line, binary); ok {
 			t.Fatalf("unexpected match for %q: %+v", line, got)
 		}
 	}
@@ -100,11 +100,23 @@ func TestRefreshRunningMCPProxiesAfterInstallPreservesAllActiveProcesses(t *test
 	})
 	defer restoreTerminate()
 
-	count, err := refreshRunningMCPProxiesAfterInstall()
+	root := t.TempDir()
+	t.Setenv("ISSUEOPS_ROOT", root)
+	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "scripts", "install-native.sh"), []byte("#!/bin/sh\nexit 0\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	restoreInstall := stubInstallScriptCommandRunner(t, func(string, ...string) error { return nil })
+	defer restoreInstall()
+	restoreDaemon := stubPostInstallDaemonRefresh(t, func() (bool, error) { return true, nil })
+	defer restoreDaemon()
+	err := runInstallScriptCommand("update", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if count != 0 {
-		t.Fatalf("post-install MCP refresh count = %d, want 0; terminated=%v", count, terminated)
+	if len(terminated) != 0 {
+		t.Fatalf("update terminated active MCP processes: %v", terminated)
 	}
 }

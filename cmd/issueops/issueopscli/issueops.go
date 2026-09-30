@@ -2,15 +2,11 @@ package issueopscli
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"issueops/cmd/issueops/issueopscli/benchmarkcmd"
 	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	orphancontract "issueops/internal/contract/issueopsorphancleanup"
-	corehealth "issueops/internal/domain/operationalhealth"
-	"issueops/internal/port"
+	issueopscontract "issueops/internal/contract/issueops"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 	"os"
 	"path/filepath"
@@ -22,65 +18,65 @@ import (
 // issueOpsSubcommands는 `issueops <subcommand>`의 디스패치 레지스트리다.
 // 라우팅은 단일 map 조회이므로 subcommand 추가는 분기가 많은 switch를 키우는
 // 대신 항목 하나와 핸들러 하나를 더하는 것으로 끝난다.
-var issueOpsSubcommands = map[string]func([]string) error{
-	"start":                 runIssueOpsStart,
-	"status":                runIssueOpsStatus,
-	"list":                  runIssueOpsList,
-	"review-metrics":        runIssueOpsReviewMetrics,
-	"next":                  runIssueOpsNext,
-	"intent":                runIssueOpsIntent,
-	"plan-prep":             runIssueOpsPlanPrep,
-	"design":                runIssueOpsDesign,
-	"compatibility":         runIssueOpsCompatibility,
-	"devils-advocate":       runIssueOpsDevilsAdvocate,
-	"domain-review":         runIssueOpsDomainReview,
-	"ai-slop-clean":         runIssueOpsAISlopClean,
-	"regress":               runIssueOpsRegress,
-	"link-issue":            runIssueOpsLinkIssue,
-	"link-plan":             runIssueOpsLinkPlan,
-	"link-worktree":         runIssueOpsLinkWorktree,
-	"link-child":            runIssueOpsLinkChild,
-	"link-related":          runIssueOpsLinkRelated,
-	"child":                 runIssueOpsChild,
-	"artifact":              runIssueOpsArtifact,
-	"implementation-review": runIssueOpsImplementationReview,
-	"project-docs-review":   runIssueOpsProjectDocsReview,
-	"schema-evidence":       runIssueOpsSchemaEvidence,
-	"branch":                runIssueOpsBranch,
-	"phase":                 runIssueOpsPhase,
-	"record-routing":        runIssueOpsRecordRouting,
-	"routing-score":         runIssueOpsRoutingScore,
-	"feedback":              runIssueOpsFeedback,
-	"cleanup":               runIssueOpsCleanup,
-	"benchmark":             func(args []string) error { return benchmarkcmd.Run(args) },
-	"remote":                func(args []string) error { return remotecmd.Run(args, issueOpsRemoteDeps()) },
-	"remote-score": func(args []string) error {
-		return remotecmd.Run(append([]string{"score"}, args...), issueOpsRemoteDeps())
-	},
-	"prune":        runIssueOpsPrune,
-	"pr-readiness": runIssueOpsPRReadiness,
-	"decision":     runIssueOpsDecision,
-	"execution":    runIssueOpsExecution,
+func (cli command) issueOpsSubcommands(deps Dependencies) map[string]func([]string) error {
+	return map[string]func([]string) error{
+		"start":                 cli.runIssueOpsStart,
+		"status":                cli.runIssueOpsStatus,
+		"list":                  cli.runIssueOpsList,
+		"review-metrics":        cli.runIssueOpsReviewMetrics,
+		"next":                  cli.runIssueOpsNext,
+		"intent":                cli.runIssueOpsIntent,
+		"plan-prep":             cli.runIssueOpsPlanPrep,
+		"design":                cli.runIssueOpsDesign,
+		"compatibility":         cli.runIssueOpsCompatibility,
+		"devils-advocate":       cli.runIssueOpsDevilsAdvocate,
+		"domain-review":         cli.runIssueOpsDomainReview,
+		"ai-slop-clean":         cli.runIssueOpsAISlopClean,
+		"regress":               cli.runIssueOpsRegress,
+		"link-issue":            cli.runIssueOpsLinkIssue,
+		"link-plan":             cli.runIssueOpsLinkPlan,
+		"link-worktree":         cli.runIssueOpsLinkWorktree,
+		"link-child":            cli.runIssueOpsLinkChild,
+		"link-related":          cli.runIssueOpsLinkRelated,
+		"child":                 func(args []string) error { return cli.runIssueOpsChild(args, deps.ChildUsage) },
+		"artifact":              cli.runIssueOpsArtifact,
+		"implementation-review": cli.runIssueOpsImplementationReview,
+		"project-docs-review":   cli.runIssueOpsProjectDocsReview,
+		"schema-evidence":       cli.runIssueOpsSchemaEvidence,
+		"branch":                cli.runIssueOpsBranch,
+		"phase":                 cli.runIssueOpsPhase,
+		"record-routing":        cli.runIssueOpsRecordRouting,
+		"routing-score":         cli.runIssueOpsRoutingScore,
+		"feedback":              func(args []string) error { return cli.runIssueOpsFeedbackWithDependencies(args, deps) },
+		"cleanup":               func(args []string) error { return runIssueOpsCleanupWithDependencies(args, deps) },
+		"benchmark":             func(args []string) error { return deps.Benchmark.Run(args) },
+		"remote": func(args []string) error {
+			return deps.Remote.Run(args, issueOpsRemoteDepsWithPublication(deps.Publication, deps.Verification))
+		},
+		"remote-score": func(args []string) error {
+			return deps.Remote.Run(append([]string{"score"}, args...), issueOpsRemoteDepsWithPublication(deps.Publication, deps.Verification))
+		},
+		"prune":        cli.runIssueOpsPrune,
+		"pr-readiness": cli.runIssueOpsPRReadiness,
+		"decision":     cli.runIssueOpsDecision,
+		"execution":    func(args []string) error { return cli.runIssueOpsExecutionWithDependencies(args, deps) },
+	}
 }
 
-func runIssueOps(args []string) error {
-	return runIssueOpsWithDependencies(args, Dependencies{})
-}
-
-func dispatchIssueOps(args []string) error {
+func (cli command) dispatchIssueOps(args []string, deps Dependencies) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		issueOpsUsage()
+		issueOpsUsage(deps.Usage)
 		return nil
 	}
-	handler, ok := issueOpsSubcommands[args[0]]
+	handler, ok := cli.issueOpsSubcommands(deps)[args[0]]
 	if !ok {
-		return fmt.Errorf("unknown issueops subcommand %q%s", args[0], suggestIssueOpsSubcommand(args[0]))
+		return fmt.Errorf("unknown issueops subcommand %q%s", args[0], cli.suggestIssueOpsSubcommand(args[0]))
 	}
 	return handler(args[1:])
 }
 
-func runIssueOpsWithDependencies(args []string, deps Dependencies) error {
-	clean, generated, err := prepareGeneratedCommandInvocation(args, deps)
+func (cli command) runIssueOpsWithDependencies(args []string, deps Dependencies) error {
+	clean, generated, err := cli.prepareGeneratedCommandInvocation(args, deps)
 	if err == nil && generated {
 		err = requireGeneratedOwnerProcessCWD(clean)
 	}
@@ -93,21 +89,7 @@ func runIssueOpsWithDependencies(args []string, deps Dependencies) error {
 		return err
 	}
 	args = clean
-	if len(args) > 0 {
-		switch args[0] {
-		case "execution":
-			return runIssueOpsExecutionWithDependencies(args[1:], deps)
-		case "feedback":
-			return runIssueOpsFeedbackWithDependencies(args[1:], deps)
-		case "cleanup":
-			return runIssueOpsCleanupWithDependencies(args[1:], deps)
-		case "remote":
-			return remotecmd.Run(args[1:], issueOpsRemoteDepsWithPublication(deps.Publication))
-		case "remote-score":
-			return remotecmd.Run(append([]string{"score"}, args[1:]...), issueOpsRemoteDepsWithPublication(deps.Publication))
-		}
-	}
-	return dispatchIssueOps(args)
+	return cli.dispatchIssueOps(args, deps)
 }
 
 func requireGeneratedOwnerProcessCWD(args []string) error {
@@ -159,12 +141,12 @@ var issueOpsConceptHints = map[string]string{
 // suggestIssueOpsSubcommand는 알 수 없는 subcommand에 대한 제안 접미사를 돌려준다.
 // 알려진 phase/decision 단어에는 concept hint를, 그 외에는 실제 subcommand
 // 레지스트리에 대한 prefix 일치를 쓴다. 쓸 만한 제안이 없으면 ""를 돌려준다.
-func suggestIssueOpsSubcommand(input string) string {
+func (cli command) suggestIssueOpsSubcommand(input string) string {
 	if hint, ok := issueOpsConceptHints[input]; ok {
 		return "; " + hint
 	}
 	var matches []string
-	for name := range issueOpsSubcommands {
+	for name := range cli.issueOpsSubcommands(Dependencies{}) {
 		if strings.HasPrefix(name, input) {
 			matches = append(matches, name)
 		}
@@ -175,19 +157,17 @@ func suggestIssueOpsSubcommand(input string) string {
 	return ""
 }
 
-func issueOpsRemoteDeps() remotecmd.Deps {
-	return issueOpsRemoteDepsWithPublication(remotecmd.PublicationHandlers{})
-}
-
-func issueOpsRemoteDepsWithPublication(publication remotecmd.PublicationHandlers) remotecmd.Deps {
+func issueOpsRemoteDepsWithPublication(publication remotecmd.PublicationHandlers, verification RemoteVerification) remotecmd.Deps {
 	return remotecmd.Deps{
 		PrintJSON:         printJSON,
 		PrintResult:       printIssueOpsResult,
 		PrintError:        printIssueOpsErrorJSON,
-		VerifyLive:        verifyIssueOpsRemoteArtifactLive,
-		VerifyLiveContext: verifyIssueOpsRemoteArtifactLiveContext,
-		VerifyMerged:      verifyIssueOpsRemoteArtifactMergedLive,
-		Publication:       publication,
+		VerifyLive:        verification.Verify,
+		VerifyLiveContext: verification.VerifyContext,
+		VerifyMerged: func(a issueopscontract.IssueOpsRemoteArtifactVerification) error {
+			return verification.Merged(context.Background(), a)
+		},
+		Publication: publication,
 	}
 }
 
@@ -201,86 +181,22 @@ func parseIssueOpsFlags(fs *flag.FlagSet, args []string) (bool, error) {
 	return false, nil
 }
 
-func runIssueOpsFeedback(args []string) error {
-	return runIssueOpsFeedbackWithDependencies(args, Dependencies{})
-}
-
-func runIssueOpsFeedbackWithDependencies(args []string, deps Dependencies) error {
+func (cli command) runIssueOpsFeedbackWithDependencies(args []string, deps Dependencies) error {
 	if len(args) > 0 && args[0] == "resolve" {
-		return runIssueOpsFeedbackResolve(args[1:])
+		return cli.runIssueOpsFeedbackResolve(args[1:])
 	}
-	return feedbackcleanup.RunFeedback(args, issueOpsFeedbackCleanupDeps(deps.Provenance))
-}
-
-func runIssueOpsCleanup(args []string) error {
-	return runIssueOpsCleanupWithDependencies(args, Dependencies{})
+	return deps.Cleanup.RunFeedback(args, cleanupTransport(deps.CleanupRuntime, deps.Provenance))
 }
 
 func runIssueOpsCleanupWithDependencies(args []string, deps Dependencies) error {
-	return feedbackcleanup.RunCleanup(args, issueOpsFeedbackCleanupDeps(deps.Provenance))
+	return deps.Cleanup.RunCleanup(args, cleanupTransport(deps.CleanupRuntime, deps.Provenance))
 }
 
-// normalizeOrcaRemoveWorktreeErr는 orca 워크트리 회수 오류를 멱등 계약으로
-// 정규화한다: "이미 없음"(typed not_found 계열)은 제거 목표가 이미 달성된
-// 상태이므로 성공이다(#97 — cleanup finish 재실행 수렴의 전제).
-func normalizeOrcaRemoveWorktreeErr(err error) error {
-	if err == nil {
-		return nil
-	}
-	if orcaErr, ok := errors.AsType[*port.OrcaError](err); ok && strings.Contains(strings.ToLower(orcaErr.Code), "not_found") {
-		return nil
-	}
-	// 폴백: orca CLI 산문 메시지 매칭. 문구/로캘 변경에 취약하므로
-	// 타입드 코드가 항상 우선이다(C2-F5).
-	if strings.Contains(strings.ToLower(err.Error()), "not found") || strings.Contains(strings.ToLower(err.Error()), "unknown worktree") {
-		return nil
-	}
-	return err
-}
-
-func issueOpsFeedbackCleanupDeps(provenance provenanceport.Observer) feedbackcleanup.Deps {
-	orphanDeps := issueOpsOrphanCleanupDeps()
-	return feedbackcleanup.Deps{
-		// cleanup finish ② 단계: orca 회수. "이미 없음"은 멱등 계약상 성공.
-		RemoveOrcaWorktree: func(ctx context.Context, worktreeID string) error {
-			return normalizeOrcaRemoveWorktreeErr(RemoveOrcaWorktree(ctx, worktreeID, false))
-		},
-		// cleanup abandon pending_intent_safe 게이트: sealed marker로 orca
-		// 인벤토리를 실조회한다. 조회 전용이며 mutation은 부르지 않는다.
-		OrcaIntent: NewOrcaExecutionIntent(),
-		// cleanup abandon orca_resources_absent 게이트: orca 자원 잔여를
-		// 실조회한다. 같은 provisioner가 owner 인벤토리도 제공한다(#136).
-		OrcaOwner:    NewOrcaExecutionOwner(),
-		Provenance:   provenance,
-		ParseFlags:   parseIssueOpsFlags,
-		PrintResult:  printIssueOpsResult,
-		PrintJSON:    printJSON,
-		PrintError:   printIssueOpsErrorJSON,
-		VerifyMerged: verifyIssueOpsRemoteArtifactMergedLive,
-		// cleanup remote-branch 게이트 ⑧·⑨·⑩의 단일 readback 표면.
-		VerifyMergedHead: verifyIssueOpsRemoteArtifactMergedHeadLive,
-		// cleanup abandon의 artifact 게이트는 미병합을 요구하므로 조회 실패와
-		// 미병합을 구분하는 별도 관측 표면을 쓴다(#342).
-		ObserveArtifactMerged: observeIssueOpsRemoteArtifactMergedLive,
-		Provider:              Resolve,
-		OrphanPreview: func(ctx context.Context, request orphancontract.Request) (orphancontract.Result, error) {
-			return orphanPreview(ctx, request, orphanDeps)
-		},
-		OrphanApply: func(ctx context.Context, request orphancontract.Request, apply orphancontract.ApplyRequest) (orphancontract.Result, error) {
-			return orphanApply(ctx, request, apply, orphanDeps)
-		},
-	}
-}
-
-func issueOpsOrphanCleanupDeps() OrphanDependencies {
-	return OrphanDependencies{
-		Collect: func(ctx context.Context, repo string) (corehealth.Snapshot, error) {
-			return CollectOperationalHealth(ctx, repo), nil
-		},
-		VerifyMerged: verifyIssueOpsRemoteArtifactMergedLive,
-	}
-}
-
-func issueOpsCleanupMerged(id string, requested bool) bool {
-	return feedbackcleanup.CleanupMerged(id, requested, issueOpsFeedbackCleanupDeps(nil))
+func cleanupTransport(runtime feedbackcleanup.Deps, provenance provenanceport.Observer) feedbackcleanup.Deps {
+	runtime.Provenance = provenance
+	runtime.ParseFlags = parseIssueOpsFlags
+	runtime.PrintResult = printIssueOpsResult
+	runtime.PrintJSON = printJSON
+	runtime.PrintError = printIssueOpsErrorJSON
+	return runtime
 }

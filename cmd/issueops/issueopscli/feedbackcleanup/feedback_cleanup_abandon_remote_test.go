@@ -5,34 +5,38 @@ import (
 	"testing"
 
 	issueopscore "issueops/internal/adapter/issueops"
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
-func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest, *int) {
+func wireAbandonCapture(t *testing.T) (*[]issueopscontract.CleanupAbandonRequest, *int, Command) {
+	command := testCleanupCommand()
 	t.Helper()
 	requests := &[]issueopscontract.CleanupAbandonRequest{}
 	providerCalls := new(int)
-	previous := cleanupDeps
-	t.Cleanup(func() { cleanupDeps = previous })
-	wired := cleanupDeps
-	wired.IssueOpsStateRoot = issueopscore.IssueOpsStateRoot
-	wired.ReadIssueOps = issueopscore.ReadIssueOps
-	wired.ResolveRecordProvider = issueopscore.ResolveRecordProvider
-	wired.CleanupAbandon = func(_ context.Context, _ string, req issueopscontract.CleanupAbandonRequest, _ Deps, _ port.IssueProvider) (issueopscontract.CleanupAbandonResult, error) {
-		*requests = append(*requests, req)
-		return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID, RemoteEffects: []string{"close_issue"}}, nil
-	}
-	ConfigureCleanup(wired)
+	wired := command.Operations
+	wired.IssueOpsStateRoot = issueOpsStateRootForTest
+
+	command.Operations = wired
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.Read = func(id string) (issueopscontract.IssueOpsRecord, error) {
+			return issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
+		}
+		service.RunAbandon = func(_ context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
+			*requests = append(*requests, req)
+			return issueopscontract.CleanupAbandonResult{OK: true, ID: req.ID, RemoteEffects: []string{"close_issue"}}, nil
+		}
+	})
 	_ = providerCalls
-	return requests, providerCalls
+	return requests, providerCalls, command
 }
 
 // 세 플래그가 요청으로 그대로 전달돼야 어댑터의 게이트가 의미를 갖는다.
 func TestRunCleanupAbandonForwardsRemoteEffectFlags(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, false, true)
-	requests, providerCalls := wireAbandonCapture(t)
+	requests, providerCalls, command := wireAbandonCapture(t)
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(any) error { return nil },
@@ -42,7 +46,7 @@ func TestRunCleanupAbandonForwardsRemoteEffectFlags(t *testing.T) {
 			return &fakeCleanupAbandonProvider{}, nil
 		},
 	}
-	err := RunCleanup([]string{
+	err := command.RunCleanup([]string{
 		"abandon", "--id", record.ID, "--reason", "폐기 검증",
 		"--close-pr", "--close-issue", "--delete-remote-branch", "--preview", "--json",
 	}, deps)
@@ -56,8 +60,8 @@ func TestRunCleanupAbandonForwardsRemoteEffectFlags(t *testing.T) {
 	if !got.ClosePR || !got.CloseIssue || !got.DeleteRemoteBranch {
 		t.Fatalf("remote effect flags did not reach the adapter: %#v", got)
 	}
-	if *providerCalls != 1 {
-		t.Fatalf("a remote effect must resolve exactly one provider, got %d", *providerCalls)
+	if *providerCalls != 0 {
+		t.Fatalf("transport must not resolve the provider before executor ownership, got %d", *providerCalls)
 	}
 }
 
@@ -66,7 +70,7 @@ func TestRunCleanupAbandonForwardsRemoteEffectFlags(t *testing.T) {
 func TestRunCleanupAbandonWithoutFlagsNeedsNoProvider(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := feedbackCleanupIssueOpsRecord(t)
-	requests, providerCalls := wireAbandonCapture(t)
+	requests, providerCalls, command := wireAbandonCapture(t)
 	deps := Deps{
 		ParseFlags: parseFeedbackCleanupFlags,
 		PrintJSON:  func(any) error { return nil },
@@ -76,7 +80,7 @@ func TestRunCleanupAbandonWithoutFlagsNeedsNoProvider(t *testing.T) {
 			return nil, context.DeadlineExceeded
 		},
 	}
-	if err := RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "플래그 없는 폐기", "--preview", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "플래그 없는 폐기", "--preview", "--json"}, deps); err != nil {
 		t.Fatalf("abandon preview: %v", err)
 	}
 	got := (*requests)[0]
@@ -103,9 +107,9 @@ func (fakeCleanupAbandonProvider) CreateChild(port.IssueProviderCreateChildReque
 func (fakeCleanupAbandonProvider) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
-func (fakeCleanupAbandonProvider) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (fakeCleanupAbandonProvider) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, nil
 }
-func (fakeCleanupAbandonProvider) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (fakeCleanupAbandonProvider) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }

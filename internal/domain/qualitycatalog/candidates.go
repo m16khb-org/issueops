@@ -2,6 +2,7 @@ package qualitycatalog
 
 import (
 	"fmt"
+	contract "issueops/internal/contract/qualitycatalog"
 	"strings"
 )
 
@@ -25,22 +26,11 @@ var resolvedCandidateIDs = map[string]bool{
 	"coverage-issueops-transport-boundaries": true,
 }
 
-// VerificationKind classifies how a candidate's change is verified externally,
-// making the tool-grounded vs documentary distinction EXPLICIT instead of
-// guessing it from free-text VerifyWith strings (which cannot reliably tell a
-// tool signal from a doc artifact from model self-critique).
-type VerificationKind string
+type VerificationKind = contract.VerificationKind
 
 const (
-	// ToolSignalKind: a code/correctness change whose VerifyWith MUST name an
-	// executable external signal (test/build/lint/contract/smoke/coverage run or
-	// a CLI command) — never model self-critique.
-	ToolSignalKind VerificationKind = "tool_signal"
-	// DocArtifactKind: a documentation/governance change whose verification is a
-	// concrete produced artifact (ADR entry, README section, checklist, matrix,
-	// transcript). Explicitly EXEMPT from the executable-signal rule and labeled
-	// as such, so it is not falsely claimed to be tool-gated.
-	DocArtifactKind VerificationKind = "doc_artifact"
+	ToolSignalKind  = contract.ToolSignalKind
+	DocArtifactKind = contract.DocArtifactKind
 )
 
 // toolSignalMarkers are CONCRETE executable-verification tokens (runnable
@@ -123,18 +113,7 @@ type CandidateSpec struct {
 	Evidence         []string
 }
 
-type Candidate struct {
-	ID          string   `json:"id"`
-	Title       string   `json:"title"`
-	Category    string   `json:"category"`
-	Status      string   `json:"status"`
-	Score       float64  `json:"score"`
-	Impact      float64  `json:"impact"`
-	Feasibility float64  `json:"feasibility"`
-	Risk        float64  `json:"risk"`
-	VerifyWith  []string `json:"verify_with"`
-	Evidence    []string `json:"evidence"`
-}
+type Candidate = contract.Candidate
 
 func CandidateSpecs() []CandidateSpec {
 	specs := []CandidateSpec{
@@ -175,7 +154,7 @@ func CandidateSpecs() []CandidateSpec {
 			Impact: 84, Feasibility: 82, Novelty: 54, Risk: 16,
 			WhyNow:       []string{"IssueOps durable state gates are easy to regress with boundary paths"},
 			ExpectedGain: []string{"invalid URLs, missing files, and path boundaries are pinned"},
-			VerifyWith:   []string{"go test ./internal/application/issueopslease ./internal/application/issueopspreparation -count=1", "go test -cover ./internal/adapter/issueops/linking"},
+			VerifyWith:   []string{"go test ./internal/application/issueopslease ./internal/application/issueopspreparation -count=1", "go test -cover ./internal/application/issueopsbranch"},
 			Evidence:     []string{"go test -cover low package signal"},
 		},
 		{

@@ -1,89 +1,71 @@
 package issueopsapp
 
 import (
-	"issueops/cmd/issueops/validationcli"
+	selfverify "issueops/internal/contract/selfverify"
+
+	"time"
+
+	"issueops/internal/adapter/verification"
+	probe "issueops/internal/adapter/verification/probe"
+	selfverifyapp "issueops/internal/application/selfverify"
 )
 
-func validateInspect(binary, root string) StepResult {
-	return validationcli.ValidateInspect(binary, root)
+func validateInspect(binary, root string) selfverify.StepResult {
+	return probe.ValidateInspect(binary, root)
 }
 
-func validateDocsIndex(binary, root string) StepResult {
-	return validationcli.ValidateDocsIndex(binary, root)
+func validateDocsIndex(binary, root string) selfverify.StepResult {
+	return probe.ValidateDocsIndex(binary, root)
 }
 
-func validateCommandPolicy(binary, root string) StepResult {
-	return validationcli.ValidateCommandPolicy(binary, root)
+func validateCommandPolicy(binary, root string) selfverify.StepResult {
+	return probe.ValidateCommandPolicy(binary, root)
 }
 
-func validateMCP(binary, root string) StepResult {
-	return validationcli.ValidateMCP(binary, root)
+func validateMCP(binary, root string) selfverify.StepResult {
+	return probe.ValidateMCP(binary, root)
 }
 
-func validateStateRoundtrip(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateStateRoundtrip(binary, root, seed)
+func validateInstallDryRunSmoke(binary, root string, seed int64) selfverify.StepResult {
+	return probe.ValidateInstallDryRunSmoke(binary, root, seed)
 }
 
-func validateInstallDryRunSmoke(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateInstallDryRunSmoke(binary, root, seed)
+func validateParallelTempIsolation(binary, root string, seed int64) selfverify.StepResult {
+	return probe.ValidateParallelTempIsolation(binary, root, seed)
 }
 
-func validateParallelTempIsolation(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateParallelTempIsolation(binary, root, seed)
+func validateDaemonRestartResilience(binary, root string, seed int64) selfverify.StepResult {
+	return probe.ValidateDaemonRestartResilience(binary, root, seed)
 }
 
-func validateDaemonRestartResilience(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateDaemonRestartResilience(binary, root, seed)
+func validateCommandAudit(binary, root string, seed int64) selfverify.StepResult {
+	return probe.ValidateCommandAudit(binary, root, seed)
 }
 
-func validatePreflightFuzz(binary, root string, seed int64) StepResult {
-	return validationcli.ValidatePreflightFuzz(binary, root, seed)
+func validateContractCheck(binary, root string) selfverify.StepResult {
+	return probe.ValidateContractCheck(binary, root)
 }
 
-func validateWebFetchBattery(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateWebFetchBattery(binary, root, seed)
+func validateToolConformance(binary, root string) selfverify.StepResult {
+	return probe.ValidateToolConformance(binary, root)
 }
 
-func validateCommandAudit(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateCommandAudit(binary, root, seed)
+func validateWorkerLifecycle(binary, root string, seed int64) selfverify.StepResult {
+	return probe.ValidateWorkerLifecycle(binary, root, seed)
 }
 
-func validateContractCheck(binary, root string) StepResult {
-	return validationcli.ValidateContractCheck(binary, root)
+func validateSelfVerifyCandidateExport(binary, root string, seed int64) selfverify.StepResult {
+	return probe.ValidateSelfVerifyCandidateExport(binary, root, seed)
 }
 
-func validateToolConformance(binary, root string) StepResult {
-	return validationcli.ValidateToolConformance(binary, root)
+func validateGoFormat(root string) selfverify.StepResult {
+	return selfverifyapp.ValidateFormat(root, selfverifyapp.FormatDeps{
+		ListTrackedGoFiles: verification.ListTrackedGoFiles,
+		ListUnformatted:    verification.ListUnformatted,
+		Now:                time.Now,
+	})
 }
 
-func validateWorkerLifecycle(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateWorkerLifecycle(binary, root, seed)
-}
-
-func validateSelfVerifyCandidateExport(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateSelfVerifyCandidateExport(binary, root, seed)
-}
-
-func validateStepBudgetBaseline(binary, root string, seed int64) StepResult {
-	return validationcli.ValidateStepBudgetBaseline(binary, root, seed)
-}
-
-func validateRedactionAudit(root string) StepResult {
-	return validationcli.ValidateRedactionAudit(root)
-}
-
-func validateGoFormat(root string) StepResult {
-	return validationcli.ValidateGoFormat(root)
-}
-
-func validateQAGate(root string) StepResult {
-	return validationcli.ValidateQAGate(root)
-}
-
-func validateHarnessInvariants(root string) StepResult {
-	return validationcli.ValidateHarnessInvariants(root)
-}
-
-func validateNativeIntegration(root string) StepResult {
-	return validationcli.ValidateNativeIntegration(root)
+func validateHarnessInvariants(root string) selfverify.StepResult {
+	return probe.ValidateHarnessInvariants(root)
 }

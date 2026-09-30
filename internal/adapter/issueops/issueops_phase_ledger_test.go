@@ -77,10 +77,10 @@ func TestIssueOpsGrillSplitDecisionAcceptsChildLink(t *testing.T) {
 
 func TestIssueOpsPhaseCompletionDispatches(t *testing.T) {
 	rec := issueops.IssueOpsRecord{Intent: fullIntentForLedger()}
-	if r := IssueOpsPhaseCompletion(rec, IssueOpsPhaseProblem); !r.Ready {
+	if r := IssueOpsPhaseCompletion(rec, issueops.IssueOpsPhaseProblem); !r.Ready {
 		t.Fatalf("problem completion should be ready for intent-only record: %#v", r)
 	}
-	if r := IssueOpsPhaseCompletion(rec, IssueOpsPhaseGrill); r.Ready {
+	if r := IssueOpsPhaseCompletion(rec, issueops.IssueOpsPhaseGrill); r.Ready {
 		t.Fatalf("grill completion should not be ready for intent-only record")
 	}
 }

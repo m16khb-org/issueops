@@ -1,10 +1,11 @@
 package hookcatalog
 
 import (
-	hookpromptadapter "issueops/internal/adapter/hookprompt"
+	renderer "issueops/internal/adapter/hookprompt"
+	reader "issueops/internal/adapter/projectdoc"
+	app "issueops/internal/application/hookprompt"
 )
 
-// production wiring과 같은 구현을 설치한다.
-func init() {
-	BuildProjectDocCatalogContext = hookpromptadapter.BuildProjectDocCatalogContext
+func testCatalogService() app.CatalogService {
+	return app.CatalogService{Discover: reader.DiscoverProjectDocs, FormatCompact: reader.FormatProjectDocCatalog, FormatUserView: renderer.RenderProjectDocCatalogUserView}
 }

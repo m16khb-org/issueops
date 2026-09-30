@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	delegationapp "issueops/internal/application/issueopsdelegation"
 	"issueops/internal/contract/issueops"
 )
 
@@ -48,7 +49,7 @@ func TestIssueOpsChildStatusAggregatesAndRepairs(t *testing.T) {
 		t.Fatalf("expected indexed, scanned, and orphaned child entries, got %#v", status.Children)
 	}
 	scanned, ok := childStatusEntryByID(status.Children, second.Child.ID)
-	if !ok || !scanned.Scanned || scanned.Indexed || scanned.Orphaned || scanned.Phase != IssueOpsPhaseProblem {
+	if !ok || !scanned.Scanned || scanned.Indexed || scanned.Orphaned || scanned.Phase != issueops.IssueOpsPhaseProblem {
 		t.Fatalf("missing-index child should be surfaced from child delegation pointer, got %#v", scanned)
 	}
 	orphan, ok := childStatusEntryByID(status.Children, "io-deadbeefcafe")
@@ -92,7 +93,7 @@ func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
 		t.Fatalf("accept should refuse non-done child, got %v", err)
 	}
 	child := started.Child
-	child.Phase = IssueOpsPhaseDone
+	child.Phase = issueops.IssueOpsPhaseDone
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 	if _, err := acceptIssueOpsChildForTest(stateRoot, parent, child.ID, nil); err == nil || !strings.Contains(err.Error(), "validation_evidence") {
 		t.Fatalf("accept should require evidence, got %v", err)
@@ -124,10 +125,10 @@ func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	archived, ok := childStatusEntryByID(status.Children, child.ID)
-	if !ok || archived.Orphaned || archived.Phase != IssueOpsPhaseDone || len(status.Orphaned) != 0 {
+	if !ok || archived.Orphaned || archived.Phase != issueops.IssueOpsPhaseDone || len(status.Orphaned) != 0 {
 		t.Fatalf("accepted cleanup receipt must stay terminal without becoming orphaned, got %#v / %#v", archived, status.Orphaned)
 	}
-	if missing, notes := issueOpsChildPRGateMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
+	if missing, notes := (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).PRMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
 		t.Fatalf("accepted cleanup receipt must not block the parent PR gate: missing=%v notes=%v", missing, notes)
 	}
 }
@@ -146,7 +147,7 @@ func TestAcceptIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 		t.Fatal(err)
 	}
 	child := started.Child
-	child.Phase = IssueOpsPhaseDone
+	child.Phase = issueops.IssueOpsPhaseDone
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 	if err := deleteIssueOps(stateRoot, child.ID); err != nil {
 		t.Fatal(err)
@@ -164,7 +165,7 @@ func TestAcceptIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 		t.Fatal(err)
 	}
 	accepted, ok := childStatusEntryByID(status.Children, child.ID)
-	if !ok || accepted.Orphaned || accepted.Phase != IssueOpsPhaseDone {
+	if !ok || accepted.Orphaned || accepted.Phase != issueops.IssueOpsPhaseDone {
 		t.Fatalf("accepted cleaned child should stay terminal without orphaning: %#v", accepted)
 	}
 }
@@ -265,7 +266,7 @@ func TestDropIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if missing, notes := issueOpsChildPRGateMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
+	if missing, notes := (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).PRMissing(stateRoot, parentAfter); len(missing) != 0 || len(notes) != 0 {
 		t.Fatalf("dropped cleaned child must not block the parent PR gate: missing=%v notes=%v", missing, notes)
 	}
 
@@ -312,7 +313,7 @@ func TestDroppedCleanupReceiptWithShortReasonRemainsOrphaned(t *testing.T) {
 	if !ok || !entry.Orphaned || len(status.Orphaned) != 1 {
 		t.Fatalf("malformed dropped receipt must remain orphaned: %#v / %#v", entry, status.Orphaned)
 	}
-	if missing, notes := issueOpsChildPRGateMissing(stateRoot, parentAfter); len(missing) == 0 || len(notes) != 0 {
+	if missing, notes := (delegationapp.ChildGates{Scan: ScanReadableIssueOps}).PRMissing(stateRoot, parentAfter); len(missing) == 0 || len(notes) != 0 {
 		t.Fatalf("malformed dropped receipt must block the parent PR gate: missing=%v notes=%v", missing, notes)
 	}
 }

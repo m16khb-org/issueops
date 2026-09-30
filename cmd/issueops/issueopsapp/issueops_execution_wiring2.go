@@ -2,26 +2,22 @@ package issueopsapp
 
 import (
 	"issueops/cmd/issueops/issueopscli/executioncmd"
-	"issueops/cmd/issueops/mcpcli"
 	issueopscore "issueops/internal/adapter/issueops"
+	authorization "issueops/internal/adapter/outbound/issueopsauthorization"
+	executionapp "issueops/internal/application/issueopsexecution"
 )
 
 // 실행 CLI는 액션 구현을 알지 않는다. 어댑터를 아는 곳은 composition root
 // 하나뿐이다.
-func configureIssueOpsExecutionRunners() {
-	executioncmd.ConfigureExecution(executioncmd.ExecutionDeps{
-		ExecuteExecution:             issueopscore.ExecuteExecution,
+func newIssueOpsExecutionRunners() executioncmd.ExecutionDeps {
+	return executioncmd.ExecutionDeps{
+		ExecuteExecution:             newExecutionService().Execute,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
-		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
+		SwitchExecutionMode:          newModeSwitcher(),
 		SyncExecutionBase:            issueopscore.SyncExecutionBase,
-		HandoffCmux:                  issueOpsCmuxHandoffHandler,
-	})
-	mcpcli.ConfigureExecution(mcpcli.ExecutionDeps{
-		ExecuteExecution:             issueopscore.ExecuteExecution,
-		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
-		IssueOpsStateRoot:            issueopscore.IssueOpsStateRoot,
-		SwitchExecutionMode:          issueopscore.SwitchExecutionMode,
-		SyncExecutionBase:            issueopscore.SyncExecutionBase,
-	})
+	}
+}
+
+func newExecutionService() executionapp.Service {
+	return executionapp.Service{ReadRecord: issueopscore.ReadIssueOps, SamePath: (authorization.CanonicalPaths{}).Same, InspectProcess: issueopscore.InspectNativeProcessReceipt}
 }

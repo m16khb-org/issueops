@@ -176,20 +176,6 @@ func parseNativeProcessStart(value string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("invalid process start identity %q", value)
 }
 
-func requireExactLiveNativeProcessReceipt(receipt issueops.NativeProcessReceipt) error {
-	status, observed, err := inspectNativeProcessReceipt(receipt)
-	if err != nil {
-		return err
-	}
-	if status != "live" {
-		return fmt.Errorf("native process identity is not live: pid=%d status=%s", receipt.PID, status)
-	}
-	if observed.StartedAt != receipt.StartedAt || observed.Executable != receipt.Executable {
-		return fmt.Errorf("native process identity does not match live PID %d", receipt.PID)
-	}
-	return nil
-}
-
 // InspectNativeProcessReceipt는 lease replacement이 쓰는 것과 동일한 PID
 // 재사용에 안전한 read-only 관측을 운영 inventory 수집기에 노출한다.
 func InspectNativeProcessReceipt(receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {
@@ -340,29 +326,6 @@ func nativeProcessAncestryPIDsFromSnapshot(
 		pids[receipt.PID] = true
 	}
 	return pids
-}
-
-// dropRequesterOwnedProcesses는 요청자 세션이 직접 띄운 자손 프로세스(MCP 서버,
-// 테스트 러너, 툴 셸 등)를 quiescence 후보에서 제외한다. 이들은 워크트리를 다투는
-// 다른 holder가 아니라 승계를 요청한 세션 자신의 실행 컨텍스트이므로, 이를 근거로
-// finalize를 막으면 direct 모드 승계가 성립하지 않는다. 외부 세션의 잔여
-// 프로세스는 요청자 조상에 걸리지 않으므로 원래의 fail-closed 계약은 유지된다.
-func dropRequesterOwnedProcessesFromSnapshot(
-	processes []workspaceProcess,
-	owners map[int]bool,
-	snapshot map[int]nativeProcessSnapshotEntry,
-) []workspaceProcess {
-	if len(processes) == 0 || len(owners) == 0 {
-		return processes
-	}
-	kept := make([]workspaceProcess, 0, len(processes))
-	for _, process := range processes {
-		if processHasAncestorInSnapshot(snapshot, process.PID, owners) {
-			continue
-		}
-		kept = append(kept, process)
-	}
-	return kept
 }
 
 // processHasAncestorIn은 pid 자신 또는 그 조상이 owners에 속하는지 본다. 관측에

@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"issueops/internal/adapter/provider/issuebody"
 	"issueops/internal/adapter/provider/providerutil"
+	issuebody "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -664,14 +664,15 @@ func githubAssigneeLogins(assignees []githubAssignee) []string {
 // section budget is computed against the merged body, not the section alone.
 const gitHubIssueBodyLimit = 60000
 
-func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (Provider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	issueURL := strings.TrimSpace(req.IssueURL)
 	if issueURL == "" {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, fmt.Errorf("issue url is required")
 	}
+	sectionInput := issuebody.SectionInput{Section: req.Section, Findings: req.Findings, Verdict: req.Verdict, Rounds: req.Rounds, Completion: req.Completion}
 	if !req.Confirm {
 		// preview는 네트워크 없이 payload 유효성만 검증한다.
-		if _, _, _, err := issuebody.RenderSection(req, gitHubIssueBodyLimit); err != nil {
+		if _, _, _, err := issuebody.RenderSection(sectionInput, gitHubIssueBodyLimit); err != nil {
 			return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 		}
 		return port.IssueProviderUpdateIssueBodySectionResult{
@@ -679,7 +680,7 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 			Preview: fmt.Sprintf("[dry-run] would execute: gh issue view %s --json body; gh issue edit %s --body <merged %s section>", issueURL, issueURL, req.Section),
 		}, nil
 	}
-	body, err := readGhIssueBody(req.Repo, issueURL)
+	body, err := readGhIssueBody(ctx, req.Repo, issueURL)
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
@@ -688,11 +689,11 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
 	// 병합 결과가 한도를 지키도록 기존 본문을 반영한 예산으로 렌더한다(C3-F1).
-	section, start, end, err := issuebody.RenderSection(req, issuebody.SectionBudget(body, gitHubIssueBodyLimit, start, end))
+	section, start, end, err := issuebody.RenderSection(sectionInput, issuebody.SectionBudget(body, gitHubIssueBodyLimit, start, end))
 	if err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
-	if err := runGhIssueEdit(req.Repo, issueURL, issuebody.MergeManagedSection(body, section, start, end)); err != nil {
+	if err := runGhIssueEdit(ctx, req.Repo, issueURL, issuebody.MergeManagedSection(body, section, start, end)); err != nil {
 		return port.IssueProviderUpdateIssueBodySectionResult{OK: false}, err
 	}
 	return port.IssueProviderUpdateIssueBodySectionResult{OK: true, URL: issueURL, Updated: true}, nil
@@ -700,7 +701,7 @@ func (Provider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySect
 
 // CloseIssue closes the parent/primary issue as completed and verifies the
 // final state by readback. Merge-evidence gating is owned by the core caller.
-func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (Provider) CloseIssue(ctx context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	issueURL := strings.TrimSpace(req.IssueURL)
 	if issueURL == "" {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, fmt.Errorf("issue url is required")
@@ -715,21 +716,17 @@ func (Provider) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueP
 			Preview: fmt.Sprintf("[dry-run] would execute: gh issue close %s --reason %s; gh issue view %s --json state", issueURL, ghQuoteReason(reason), issueURL),
 		}, nil
 	}
-	state, err := readGhIssueState(req.Repo, issueURL)
+	state, err := readGhIssueState(ctx, req.Repo, issueURL)
 	if err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, err
 	}
 	if strings.EqualFold(state, "CLOSED") {
 		return port.IssueProviderCloseIssueResult{OK: true, Provider: "github", IssueURL: issueURL, Closed: true, AlreadyClosed: true, State: state}, nil
 	}
-	closeCmd := exec.Command("gh", "issue", "close", issueURL, "--reason", reason)
-	if req.Repo != "" {
-		closeCmd.Dir = req.Repo
+	if _, _, err := providerutil.RunBoundedMutationContext(ctx, req.Repo, "gh", "issue", "close", issueURL, "--reason", reason); err != nil {
+		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, fmt.Errorf("gh issue close failed: %w", err)
 	}
-	if err := closeCmd.Run(); err != nil {
-		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, fmt.Errorf("gh issue close failed: %s", ghExecStderr(err))
-	}
-	state, err = readGhIssueState(req.Repo, issueURL)
+	state, err = readGhIssueState(ctx, req.Repo, issueURL)
 	if err != nil {
 		return port.IssueProviderCloseIssueResult{OK: false, Provider: "github"}, err
 	}
@@ -762,14 +759,10 @@ func ghQuoteReason(reason string) string {
 	return reason
 }
 
-func readGhIssueState(repo, issueURL string) (string, error) {
-	cmd := exec.Command("gh", "issue", "view", issueURL, "--json", "state")
-	if repo != "" {
-		cmd.Dir = repo
-	}
-	out, err := cmd.Output()
+func readGhIssueState(ctx context.Context, repo, issueURL string) (string, error) {
+	out, err := providerutil.RunBoundedReadbackContext(ctx, repo, "gh", "issue", "view", issueURL, "--json", "state")
 	if err != nil {
-		return "", fmt.Errorf("gh issue view failed: %s", ghExecStderr(err))
+		return "", fmt.Errorf("gh issue view failed: %w", err)
 	}
 	var payload struct {
 		State string `json:"state"`
@@ -780,17 +773,13 @@ func readGhIssueState(repo, issueURL string) (string, error) {
 	return payload.State, nil
 }
 
-func readGhIssueBody(repo, issueURL string) (string, error) {
+func readGhIssueBody(ctx context.Context, repo, issueURL string) (string, error) {
 	if _, err := exec.LookPath("gh"); err != nil {
 		return "", fmt.Errorf("gh CLI is not installed; install it from https://cli.github.com")
 	}
-	cmd := exec.Command("gh", "issue", "view", issueURL, "--json", "body")
-	if repo != "" {
-		cmd.Dir = repo
-	}
-	out, err := cmd.Output()
+	out, err := providerutil.RunBoundedReadbackContext(ctx, repo, "gh", "issue", "view", issueURL, "--json", "body")
 	if err != nil {
-		return "", fmt.Errorf("gh issue view failed: %s", ghExecStderr(err))
+		return "", fmt.Errorf("gh issue view failed: %w", err)
 	}
 	var payload struct {
 		Body string `json:"body"`
@@ -801,13 +790,10 @@ func readGhIssueBody(repo, issueURL string) (string, error) {
 	return payload.Body, nil
 }
 
-func runGhIssueEdit(repo, issueURL, body string) error {
-	cmd := exec.Command("gh", "issue", "edit", issueURL, "--body", body)
-	if repo != "" {
-		cmd.Dir = repo
-	}
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("gh issue edit failed: %s", ghExecStderr(err))
+func runGhIssueEdit(ctx context.Context, repo, issueURL, body string) error {
+	_, _, err := providerutil.RunBoundedMutationContext(ctx, repo, "gh", "issue", "edit", issueURL, "--body", body)
+	if err != nil {
+		return fmt.Errorf("gh issue edit failed: %w", err)
 	}
 	return nil
 }

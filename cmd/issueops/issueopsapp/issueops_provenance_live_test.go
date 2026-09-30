@@ -32,7 +32,7 @@ func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 	}
 	binaryDigest := sha256.Sum256(binaryBytes)
 
-	live, err := issueops.ReadIssueOps(issueops.IssueOpsStateRoot(), lifecycleID)
+	live, err := issueops.ReadIssueOps(issueOpsStateRoot(), lifecycleID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 		"--session-executable", process.Executable, "--cwd", fixture.Execution.Workspace.Root, "--json",
 	}
 	previewBytes := runCurrentRelayDogfoodBinary(t, binary, stateBase, fixture.Execution.Workspace.Root, previewArgs)
-	var preview issueops.ExecutionReplaceResult
+	var preview issueopscontract.ExecutionReplaceResult
 	if err := json.Unmarshal(previewBytes, &preview); err != nil {
 		t.Fatalf("decode replacement preview: %v\n%s", err, previewBytes)
 	}

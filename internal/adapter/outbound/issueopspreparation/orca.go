@@ -57,7 +57,7 @@ func (adapter *OrcaGatewayAdapter) Inspect(ctx context.Context, request preparat
 	if adapter == nil || adapter.dependencies.Provisioner == nil {
 		return preparationcontract.IntentInventory{}, fmt.Errorf("Orca provisioner is unavailable")
 	}
-	inventory, err := adapter.dependencies.Provisioner.InspectIntent(ctx, toPortIntentRequest(request))
+	inventory, err := adapter.dependencies.Provisioner.InspectIntent(ctx, OrcaIntentRequest(request))
 	if err != nil {
 		return preparationcontract.IntentInventory{}, err
 	}
@@ -82,7 +82,7 @@ func (adapter *OrcaGatewayAdapter) Invoke(ctx context.Context, request preparati
 			return preparationcontract.IntentReceipt{}, err
 		}
 	}
-	receipt, err := adapter.dependencies.Provisioner.InvokeIntent(ctx, toPortIntentRequest(request))
+	receipt, err := adapter.dependencies.Provisioner.InvokeIntent(ctx, OrcaIntentRequest(request))
 	if err != nil {
 		state := preparationcontract.InvocationUnknown
 		if typed, ok := errors.AsType[*port.OrcaError](err); ok && !typed.Invoked {
@@ -93,7 +93,7 @@ func (adapter *OrcaGatewayAdapter) Invoke(ctx context.Context, request preparati
 	return fromPortIntentReceipt(receipt), nil
 }
 
-func toPortIntentRequest(request preparationcontract.IntentRequest) port.ExecutionOrcaIntentRequest {
+func OrcaIntentRequest(request preparationcontract.IntentRequest) port.ExecutionOrcaIntentRequest {
 	result := port.ExecutionOrcaIntentRequest{
 		Stage: port.ExecutionOrcaIntentStage(request.Stage), OperationID: request.OperationID,
 		RetryRequestID: request.OrcaRequestID, PromptRetryRequestID: request.OrcaPromptRequestID,

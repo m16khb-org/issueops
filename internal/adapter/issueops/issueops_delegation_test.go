@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +25,7 @@ func TestStartIssueOpsChildFailClosedPreconditions(t *testing.T) {
 			childBranch: "124-child-plan",
 			mutate: func(t *testing.T, stateRoot string, parent issueops.IssueOpsRecord) issueops.IssueOpsRecord {
 				t.Helper()
-				parent.Phase = IssueOpsPhasePlan
+				parent.Phase = issueops.IssueOpsPhasePlan
 				return writeIssueOpsRecordForDelegationTest(t, stateRoot, parent)
 			},
 			missing: "parent_phase_not_implement",
@@ -148,13 +149,13 @@ func TestStartIssueOpsChildCreatesDelegatedProfile(t *testing.T) {
 		t.Fatalf("guidance should name parent branch as child base, got %q", result.Guidance)
 	}
 
-	if child, err = AdvanceIssueOpsPhase(stateRoot, child.ID, string(IssueOpsPhaseGrill)); err != nil {
+	if child, err = AdvanceIssueOpsPhase(stateRoot, child.ID, string(issueops.IssueOpsPhaseGrill)); err != nil {
 		t.Fatalf("child should enter grill from delegated problem artifacts: %v", err)
 	}
-	if child, err = AdvanceIssueOpsPhase(stateRoot, child.ID, string(IssueOpsPhasePlan)); err != nil {
+	if child, err = AdvanceIssueOpsPhase(stateRoot, child.ID, string(issueops.IssueOpsPhasePlan)); err != nil {
 		t.Fatalf("child should enter plan from delegated grill artifacts: %v", err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, child.ID, string(IssueOpsPhaseCompatibilityReview)); err == nil || !strings.Contains(err.Error(), "branch_prepare") || !strings.Contains(err.Error(), "worktree_path") || !strings.Contains(err.Error(), "plan_path") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, child.ID, string(issueops.IssueOpsPhaseCompatibilityReview)); err == nil || !strings.Contains(err.Error(), "branch_prepare") || !strings.Contains(err.Error(), "worktree_path") || !strings.Contains(err.Error(), "plan_path") {
 		t.Fatalf("child compatibility-review should still require own branch/worktree/plan gates, got %v", err)
 	}
 
@@ -169,10 +170,10 @@ func TestStartIssueOpsChildCreatesDelegatedProfile(t *testing.T) {
 	if _, err := LinkIssueOpsPlan(stateRoot, child.ID, filepath.Join(childWorktree, "plans/child.md")); err != nil {
 		t.Fatal(err)
 	}
-	if child, err = AdvanceIssueOpsPhase(stateRoot, child.ID, string(IssueOpsPhaseCompatibilityReview)); err != nil {
+	if child, err = AdvanceIssueOpsPhase(stateRoot, child.ID, string(issueops.IssueOpsPhaseCompatibilityReview)); err != nil {
 		t.Fatalf("child should enter compatibility-review after earning own setup gates: %v", err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, child.ID, string(IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "execution") || strings.Contains(err.Error(), "devils_advocate") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, child.ID, string(issueops.IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "execution") || strings.Contains(err.Error(), "devils_advocate") {
 		t.Fatalf("child implement should require only its own execution lease (the synthesized parent verdict is exempt from plan binding), got %v", err)
 	}
 }
@@ -191,11 +192,11 @@ func TestStartIssueOpsChildPerConditionRemedy(t *testing.T) {
 			childBranch: "123-child-remedy-phase",
 			missing:     "parent_phase_not_implement",
 			breakParent: func(parent issueops.IssueOpsRecord) issueops.IssueOpsRecord {
-				parent.Phase = IssueOpsPhasePlan
+				parent.Phase = issueops.IssueOpsPhasePlan
 				return parent
 			},
 			remedy: func(parent issueops.IssueOpsRecord, req *issueops.IssueOpsChildStartRequest) issueops.IssueOpsRecord {
-				parent.Phase = IssueOpsPhaseImplement
+				parent.Phase = issueops.IssueOpsPhaseImplement
 				return parent
 			},
 			remedyMessage: "fixing only parent phase",
@@ -352,7 +353,7 @@ func TestStaleResetPreservesDelegationGraph(t *testing.T) {
 	if err := os.RemoveAll(parentWorktree); err != nil {
 		t.Fatal(err)
 	}
-	resetParent, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: parent.Repo, Branch: parent.Branch})
+	resetParent, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: parent.Repo, Branch: parent.Branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -362,13 +363,13 @@ func TestStaleResetPreservesDelegationGraph(t *testing.T) {
 
 	child := result.Child
 	childWorktree := makeIssueOpsWorktreeDirForTest(t, parent.Repo, "123-child-stale")
-	child.Phase = IssueOpsPhaseImplement
+	child.Phase = issueops.IssueOpsPhaseImplement
 	child.WorktreePath = childWorktree
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 	if err := os.RemoveAll(childWorktree); err != nil {
 		t.Fatal(err)
 	}
-	resetChild, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: child.Repo, Branch: child.Branch})
+	resetChild, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: child.Repo, Branch: child.Branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -491,9 +492,12 @@ func TestAppendIssueOpsChildRefResetsTerminalReceiptOnlyForNewerIncarnation(t *t
 			child := started.Child
 			child.CreatedAt = tc.childCreatedAt(existingTime, child.CreatedAt)
 			child = writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
-			now := existingTime.Add(time.Minute).Format(time.RFC3339Nano)
+			now := existingTime.Add(time.Minute)
 			actor := issueOpsActorForTest(parent.WorktreePath)
-			ref, err := appendIssueOpsChildRef(stateRoot, parent.ID, child, req, now, &actor)
+			starter := childStarterForTest(stateRoot)
+			starter.Now = func() time.Time { return now }
+			restarted, err := starter.Start(context.Background(), req, &actor)
+			ref := restarted.ParentRef
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -506,7 +510,7 @@ func TestAppendIssueOpsChildRefResetsTerminalReceiptOnlyForNewerIncarnation(t *t
 				if err != nil {
 					t.Fatal(err)
 				}
-				if len(status.Children) != 1 || status.Children[0].Phase != IssueOpsPhaseProblem || !status.Children[0].Indexed || !status.Children[0].Scanned || status.Children[0].ValidationVerdict != "" {
+				if len(status.Children) != 1 || status.Children[0].Phase != issueops.IssueOpsPhaseProblem || !status.Children[0].Indexed || !status.Children[0].Scanned || status.Children[0].ValidationVerdict != "" {
 					t.Fatalf("new incarnation should be active and incomplete in child status: %#v", status)
 				}
 				return
@@ -521,18 +525,18 @@ func TestAppendIssueOpsChildRefResetsTerminalReceiptOnlyForNewerIncarnation(t *t
 func TestArchivedIssueOpsChildDoesNotOverwriteReappearedIncarnation(t *testing.T) {
 	cases := []struct {
 		name     string
-		archived func(string, string, string, *IssueOpsActor) error
+		archived func(string, string, string, *issueops.IssueOpsActor) error
 	}{
 		{
 			name: "accept",
-			archived: func(stateRoot, parentID, childID string, actor *IssueOpsActor) error {
+			archived: func(stateRoot, parentID, childID string, actor *issueops.IssueOpsActor) error {
 				_, err := acceptArchivedIssueOpsChild(stateRoot, parentID, childID, []string{"archived verification"}, actor)
 				return err
 			},
 		},
 		{
 			name: "drop",
-			archived: func(stateRoot, parentID, childID string, actor *IssueOpsActor) error {
+			archived: func(stateRoot, parentID, childID string, actor *issueops.IssueOpsActor) error {
 				_, err := dropArchivedIssueOpsChild(stateRoot, parentID, childID, "archived child is absent", actor)
 				return err
 			},
@@ -580,7 +584,9 @@ func TestArchivedIssueOpsChildDoesNotOverwriteReappearedIncarnation(t *testing.T
 			child.CreatedAt = existingTime.Add(time.Nanosecond).Format(time.RFC3339Nano)
 			child = writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 			actor := issueOpsActorForTest(parent.WorktreePath)
-			if _, err := appendIssueOpsChildRef(stateRoot, parent.ID, child, req, existingTime.Add(time.Minute).Format(time.RFC3339Nano), &actor); err != nil {
+			starter := childStarterForTest(stateRoot)
+			starter.Now = func() time.Time { return existingTime.Add(time.Minute) }
+			if _, err := starter.Start(context.Background(), req, &actor); err != nil {
 				t.Fatal(err)
 			}
 
@@ -606,19 +612,19 @@ func TestArchivedIssueOpsChildRecordsReceiptWhenChildRemainsAbsent(t *testing.T)
 	cases := []struct {
 		name     string
 		verdict  string
-		archived func(string, string, string, *IssueOpsActor) (issueops.IssueOpsChildValidationResult, error)
+		archived func(string, string, string, *issueops.IssueOpsActor) (issueops.IssueOpsChildValidationResult, error)
 	}{
 		{
 			name:    "accept",
 			verdict: "accepted",
-			archived: func(stateRoot, parentID, childID string, actor *IssueOpsActor) (issueops.IssueOpsChildValidationResult, error) {
+			archived: func(stateRoot, parentID, childID string, actor *issueops.IssueOpsActor) (issueops.IssueOpsChildValidationResult, error) {
 				return acceptArchivedIssueOpsChild(stateRoot, parentID, childID, []string{"archived verification"}, actor)
 			},
 		},
 		{
 			name:    "drop",
 			verdict: "dropped",
-			archived: func(stateRoot, parentID, childID string, actor *IssueOpsActor) (issueops.IssueOpsChildValidationResult, error) {
+			archived: func(stateRoot, parentID, childID string, actor *issueops.IssueOpsActor) (issueops.IssueOpsChildValidationResult, error) {
 				return dropArchivedIssueOpsChild(stateRoot, parentID, childID, "archived child is absent", actor)
 			},
 		},
@@ -776,7 +782,7 @@ func createDelegationReadyParentForTest(t *testing.T, stateRoot string) issueops
 	repo := initIssueOpsRepo(t)
 	branch := "123-parent"
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, branch)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}

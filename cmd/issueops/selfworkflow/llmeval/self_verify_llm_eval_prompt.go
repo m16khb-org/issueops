@@ -4,24 +4,24 @@ import (
 	"encoding/json"
 
 	"issueops/cmd/issueops/commandstep"
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	judgement "issueops/internal/domain/judgement"
 )
 
 const SelfVerifyLLMEvalEvidenceBudgetBytes = 24 * 1024
 
 type SelfVerifyLLMEvalInput struct {
-	OK                  bool                       `json:"ok"`
-	LoopKind            string                     `json:"loop_kind"`
-	Iterations          int                        `json:"iterations"`
-	TargetScore         float64                    `json:"target_score"`
-	TerminationEligible bool                       `json:"termination_eligible"`
-	Summary             model.SelfAugmentSummary   `json:"summary"`
-	LastRun             model.SelfAugmentIteration `json:"last_run,omitempty"`
+	OK                  bool                                 `json:"ok"`
+	LoopKind            string                               `json:"loop_kind"`
+	Iterations          int                                  `json:"iterations"`
+	TargetScore         float64                              `json:"target_score"`
+	TerminationEligible bool                                 `json:"termination_eligible"`
+	Summary             augmentcontract.SelfAugmentSummary   `json:"summary"`
+	LastRun             augmentcontract.SelfAugmentIteration `json:"last_run,omitempty"`
 }
 
-func BuildSelfVerifyLLMEvalPrompt(result model.SelfAugmentResult) (string, int, error) {
-	lastRun := model.SelfAugmentIteration{}
+func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.SelfAugmentResult) (string, int, error) {
+	lastRun := augmentcontract.SelfAugmentIteration{}
 	if len(result.Runs) > 0 {
 		lastRun = result.Runs[len(result.Runs)-1]
 	}

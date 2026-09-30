@@ -15,7 +15,7 @@ import (
 // subcommand, so adding or changing a subcommand is local to its own function
 // instead of growing the router's branch count.
 
-func runIssueOpsStart(args []string) error {
+func (cli command) runIssueOpsStart(args []string) error {
 	fs := flag.NewFlagSet("issueops start", flag.ContinueOnError)
 	repo := fs.String("repo", "", "repository path")
 	branch := fs.String("branch", "", "working branch")
@@ -24,81 +24,81 @@ func runIssueOpsStart(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.StartIssueOps(issueOpsCLIDeps.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: *repo, Branch: *branch, New: *newCycle})
+	record, err := cli.Runtime.StartIssueOps(cli.Runtime.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: *repo, Branch: *branch, New: *newCycle})
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsStatus(args []string) error {
+func (cli command) runIssueOpsStatus(args []string) error {
 	fs := flag.NewFlagSet("issueops status", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.IssueOpsStatus(issueOpsCLIDeps.IssueOpsStateRoot(), *id)
+	record, err := cli.Runtime.IssueOpsStatus(cli.Runtime.IssueOpsStateRoot(), *id)
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsLinkIssue(args []string) error {
+func (cli command) runIssueOpsLinkIssue(args []string) error {
 	fs := flag.NewFlagSet("issueops link-issue", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	issueURL := fs.String("issue-url", "", "GitHub/GitLab issue URL")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.LinkIssueOpsIssueWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *issueURL, actor.actor())
+	record, err := cli.Runtime.LinkIssueOpsIssueWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *issueURL, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsLinkPlan(args []string) error {
+func (cli command) runIssueOpsLinkPlan(args []string) error {
 	fs := flag.NewFlagSet("issueops link-plan", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	planPath := fs.String("plan-path", "", "issue-driven plan path")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.LinkIssueOpsPlanWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *planPath, actor.actor())
+	record, err := cli.Runtime.LinkIssueOpsPlanWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *planPath, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsLinkWorktree(args []string) error {
+func (cli command) runIssueOpsLinkWorktree(args []string) error {
 	fs := flag.NewFlagSet("issueops link-worktree", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	worktreePath := fs.String("worktree-path", "", "issue-driven worktree path")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.LinkIssueOpsWorktreeWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *worktreePath, actor.actor())
+	record, err := cli.Runtime.LinkIssueOpsWorktreeWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *worktreePath, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsLinkChild(args []string) error {
+func (cli command) runIssueOpsLinkChild(args []string) error {
 	fs := flag.NewFlagSet("issueops link-child", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	childURL := fs.String("child-url", "", "GitHub sub-issue or GitLab child item URL")
 	title := fs.String("title", "", "optional child issue title")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	if err := verifyIssueOpsChildIssueBeforeLink(*childURL); err != nil {
+	if err := cli.VerifyChild(*childURL); err != nil {
 		return printIssueOpsResult(issueopscontract.IssueOpsRecord{OK: false}, *jsonOut, err)
 	}
-	record, err := issueOpsCLIDeps.LinkIssueOpsChildWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *childURL, *title, actor.actor())
+	record, err := cli.Runtime.LinkIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *childURL, *title, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsLinkRelated(args []string) error {
+func (cli command) runIssueOpsLinkRelated(args []string) error {
 	fs := flag.NewFlagSet("issueops link-related", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	linkType := fs.String("type", "", "link type: depends-on, blocks, supersedes, follows-up, duplicates, splits-from, implements")
 	relatedURL := fs.String("related-url", "", "related issue URL")
 	title := fs.String("title", "", "optional related issue title")
@@ -106,37 +106,37 @@ func runIssueOpsLinkRelated(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.LinkIssueOpsRelatedWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *linkType, *relatedURL, *title, actor.actor())
+	record, err := cli.Runtime.LinkIssueOpsRelatedWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *linkType, *relatedURL, *title, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsChild(args []string) error {
+func (cli command) runIssueOpsChild(args []string, usage string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
-		fmt.Println(issueOpsChildUsageText())
+		fmt.Println(usage)
 		return nil
 	}
 	switch args[0] {
 	case "start":
-		return runIssueOpsChildStart(args[1:])
+		return cli.runIssueOpsChildStart(args[1:])
 	case "status":
-		return runIssueOpsChildStatus(args[1:], true)
+		return cli.runIssueOpsChildStatus(args[1:], true)
 	case "list":
-		return runIssueOpsChildStatus(args[1:], false)
+		return cli.runIssueOpsChildStatus(args[1:], false)
 	case "accept":
-		return runIssueOpsChildAccept(args[1:])
+		return cli.runIssueOpsChildAccept(args[1:])
 	case "reject":
-		return runIssueOpsChildReject(args[1:])
+		return cli.runIssueOpsChildReject(args[1:])
 	case "drop":
-		return runIssueOpsChildDrop(args[1:])
+		return cli.runIssueOpsChildDrop(args[1:])
 	default:
 		return fmt.Errorf("unknown issueops child subcommand %q", args[0])
 	}
 }
 
-func runIssueOpsChildStart(args []string) error {
+func (cli command) runIssueOpsChildStart(args []string) error {
 	fs := flag.NewFlagSet("issueops child start", flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	branch := fs.String("branch", "", "child branch")
 	title := fs.String("title", "", "child task title")
 	scope := fs.String("scope", "", "delegated task scope")
@@ -147,7 +147,7 @@ func runIssueOpsChildStart(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := issueOpsCLIDeps.StartIssueOpsChildWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), issueopscontract.IssueOpsChildStartRequest{
+	result, err := cli.Runtime.StartIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), issueopscontract.IssueOpsChildStartRequest{
 		ParentID:           *parentID,
 		Branch:             *branch,
 		Title:              *title,
@@ -160,14 +160,14 @@ func runIssueOpsChildStart(args []string) error {
 
 // runIssueOpsChildStatus는 child status와 child list가 공유한다. list는 읽기 전용이라
 // 부모 index를 고치는 --repair를 받지 않는다.
-func runIssueOpsChildStatus(args []string, allowRepair bool) error {
+func (cli command) runIssueOpsChildStatus(args []string, allowRepair bool) error {
 	name := "issueops child list"
 	if allowRepair {
 		name = "issueops child status"
 	}
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	repair := new(bool)
 	if allowRepair {
 		repair = fs.Bool("repair", false, "append scanned children missing from the parent index")
@@ -176,7 +176,7 @@ func runIssueOpsChildStatus(args []string, allowRepair bool) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := issueOpsCLIDeps.IssueOpsChildStatusWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *parentID, *repair, actor.actor())
+	result, err := cli.Runtime.IssueOpsChildStatusWithActor(cli.Runtime.IssueOpsStateRoot(), *parentID, *repair, actor.actor())
 	if *jsonOut {
 		return printIssueOpsChildValue(result, true, err)
 	}
@@ -189,10 +189,10 @@ func runIssueOpsChildStatus(args []string, allowRepair bool) error {
 	return nil
 }
 
-func runIssueOpsChildAccept(args []string) error {
+func (cli command) runIssueOpsChildAccept(args []string) error {
 	fs := flag.NewFlagSet("issueops child accept", flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	childID := fs.String("child", "", "child issueops id")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	var evidence repeatedFlag
@@ -200,35 +200,35 @@ func runIssueOpsChildAccept(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := issueOpsCLIDeps.AcceptIssueOpsChildWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *parentID, *childID, []string(evidence), actor.actor())
+	result, err := cli.Runtime.AcceptIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *parentID, *childID, []string(evidence), actor.actor())
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
-func runIssueOpsChildReject(args []string) error {
+func (cli command) runIssueOpsChildReject(args []string) error {
 	fs := flag.NewFlagSet("issueops child reject", flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	childID := fs.String("child", "", "child issueops id")
 	reason := fs.String("reason", "", "rejection reason")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := issueOpsCLIDeps.RejectIssueOpsChildWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *parentID, *childID, *reason, nil, actor.actor())
+	result, err := cli.Runtime.RejectIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *parentID, *childID, *reason, nil, actor.actor())
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
-func runIssueOpsChildDrop(args []string) error {
+func (cli command) runIssueOpsChildDrop(args []string) error {
 	fs := flag.NewFlagSet("issueops child drop", flag.ContinueOnError)
 	parentID := fs.String("parent", "", "parent issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	childID := fs.String("child", "", "child issueops id")
 	reason := fs.String("reason", "", "drop reason")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := issueOpsCLIDeps.DropIssueOpsChildWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *parentID, *childID, *reason, actor.actor())
+	result, err := cli.Runtime.DropIssueOpsChildWithActor(cli.Runtime.IssueOpsStateRoot(), *parentID, *childID, *reason, actor.actor())
 	return printIssueOpsChildValue(result, *jsonOut, err)
 }
 
@@ -248,7 +248,7 @@ func printIssueOpsChildValue(value any, jsonOut bool, err error) error {
 	return nil
 }
 
-func runIssueOpsRoutingScore(args []string) error {
+func (cli command) runIssueOpsRoutingScore(args []string) error {
 	fs := flag.NewFlagSet("issueops routing-score", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	expect := fs.String("expect", "", "expected routing as comma-separated phase:skill pairings (e.g. plan:database-design,implement:algorithm-optimization)")
@@ -260,8 +260,8 @@ func runIssueOpsRoutingScore(args []string) error {
 	if err != nil {
 		return err
 	}
-	result, observed, err := issueOpsCLIDeps.ScoreLiveRoutingFidelity(
-		issueOpsCLIDeps.IssueOpsStateRoot(),
+	result, observed, err := cli.Runtime.ScoreLiveRoutingFidelity(
+		cli.Runtime.IssueOpsStateRoot(),
 		*id,
 		expected,
 	)
@@ -305,24 +305,24 @@ func parseExpectedRouting(spec string) ([]issueopsroutingcontract.Expected, erro
 	return out, nil
 }
 
-func runIssueOpsRecordRouting(args []string) error {
+func (cli command) runIssueOpsRecordRouting(args []string) error {
 	fs := flag.NewFlagSet("issueops record-routing", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	phase := fs.String("phase", "", "lifecycle phase at which the skill fired")
 	skill := fs.String("skill", "", "skill that fired (database-design, algorithm-optimization, debugging, code-quality-metrics, ...)")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsRoutingWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *phase, *skill, actor.actor())
+	record, err := cli.Runtime.RecordIssueOpsRoutingWithActor(cli.Runtime.IssueOpsStateRoot(), *id, *phase, *skill, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsPhase(args []string) error {
+func (cli command) runIssueOpsPhase(args []string) error {
 	fs := flag.NewFlagSet("issueops phase", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	to := fs.String("to", "", "target phase: problem, grill, plan, compatibility-review, implement, ai-slop-clean, feedback, pr, done")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
@@ -335,11 +335,7 @@ func runIssueOpsPhase(args []string) error {
 		}
 		return err
 	}
-	if advancePhaseReport == nil {
-		record, err := advancePhaseWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *to, actor.actor())
-		return printIssueOpsResult(record, *jsonOut, err)
-	}
-	record, materials, err := advancePhaseReport(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *to, actor.actor())
+	record, materials, err := cli.Gates.AdvancePhaseReport(cli.Runtime.IssueOpsStateRoot(), *id, *to, actor.actor())
 	if err != nil || (len(materials.Written) == 0 && len(materials.Warnings) == 0) {
 		return printIssueOpsResult(record, *jsonOut, err)
 	}
@@ -364,7 +360,7 @@ type phaseResponse struct {
 	TrackedMaterials *issueopscontract.IssueOpsTrackedMaterials `json:"tracked_materials,omitempty"`
 }
 
-func runIssueOpsPRReadiness(args []string) error {
+func (cli command) runIssueOpsPRReadiness(args []string) error {
 	fs := flag.NewFlagSet("issueops pr-readiness", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
 	strict := fs.Bool("strict", false, "verify git cleanliness, upstream sync, plan path, and linked worktree path")
@@ -372,7 +368,7 @@ func runIssueOpsPRReadiness(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.ReadIssueOps(issueOpsCLIDeps.IssueOpsStateRoot(), *id)
+	record, err := cli.Runtime.ReadIssueOps(cli.Runtime.IssueOpsStateRoot(), *id)
 	if err != nil {
 		if *jsonOut {
 			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
@@ -381,9 +377,9 @@ func runIssueOpsPRReadiness(args []string) error {
 		}
 		return err
 	}
-	readiness := issueOpsCLIDeps.IssueOpsPRReadiness(record)
+	readiness := cli.Runtime.IssueOpsPRReadiness(record)
 	if *strict {
-		readiness = strictPRReadinessWithState(issueOpsCLIDeps.IssueOpsStateRoot(), record)
+		readiness = cli.Gates.StrictPRReadinessWithState(cli.Runtime.IssueOpsStateRoot(), record)
 	}
 	if *jsonOut {
 		return printJSON(readiness)
@@ -398,7 +394,7 @@ func runIssueOpsPRReadiness(args []string) error {
 // runIssueOpsArtifact는 코디네이터가 prepare 이전에 plan/spec/verified-execution-loop
 // artifact를 스테이징하는 진입점이다. materialize와 manifest 봉인은
 // execution prepare가 소유한다(설계 v5 WS2).
-func runIssueOpsArtifact(args []string) error {
+func (cli command) runIssueOpsArtifact(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage:\n  issueops artifact stage --id ID --name plan|spec|verified-execution-loop --file PATH [--json]\n  issueops artifact unstage --id ID --name plan|spec|verified-execution-loop [--json]")
 		return nil
@@ -411,7 +407,7 @@ func runIssueOpsArtifact(args []string) error {
 		if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 			return err
 		}
-		record, err := issueOpsCLIDeps.UnstageIssueOpsArtifact(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *name)
+		record, err := cli.Runtime.UnstageIssueOpsArtifact(cli.Runtime.IssueOpsStateRoot(), *id, *name)
 		return printIssueOpsResult(record, *jsonOut, err)
 	}
 	if args[0] != "stage" {
@@ -432,7 +428,7 @@ func runIssueOpsArtifact(args []string) error {
 	if err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.StageIssueOpsArtifact(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *name, content)
+	record, err := cli.Runtime.StageIssueOpsArtifact(cli.Runtime.IssueOpsStateRoot(), *id, *name, content)
 	if err != nil {
 		if *jsonOut {
 			if printErr := printIssueOpsErrorJSON(err); printErr != nil {
@@ -441,7 +437,7 @@ func runIssueOpsArtifact(args []string) error {
 		}
 		return err
 	}
-	staged, err := issueOpsCLIDeps.StagedIssueOpsArtifactNames(issueOpsCLIDeps.IssueOpsStateRoot(), record.ID)
+	staged, err := cli.Runtime.StagedIssueOpsArtifactNames(cli.Runtime.IssueOpsStateRoot(), record.ID)
 	if err != nil {
 		return err
 	}
@@ -455,7 +451,7 @@ func runIssueOpsArtifact(args []string) error {
 // runIssueOpsImplementationReview는 execution owner가 publication 전에
 // planner급 design-review 리뷰 verdict를 기록하는 표면이다. reviewer 필드는 감사
 // 기록이며 게이트는 verdict pass + 실질 내용만 본다(설계 v5 WS5).
-func runIssueOpsImplementationReview(args []string) error {
+func (cli command) runIssueOpsImplementationReview(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops implementation-review record --id ID --verdict pass|revise|stop --finding TEXT... --evidence TEXT... [--reviewer-host codex|claude|omo] [--reviewer-model MODEL] [--reviewer-effort EFFORT] [--json]")
 		return nil
@@ -472,12 +468,12 @@ func runIssueOpsImplementationReview(args []string) error {
 	reviewerHost := fs.String("reviewer-host", "", "reviewer host (audit only)")
 	reviewerModel := fs.String("reviewer-model", "", "reviewer model (audit only)")
 	reviewerEffort := fs.String("reviewer-effort", "", "reviewer effort (audit only)")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsImplementationReviewWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsImplementationReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsImplementationReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsImplementationReviewRequest{
 		Verdict: *verdict, Findings: findings, Evidence: evidence,
 		ReviewerHost: *reviewerHost, ReviewerModel: *reviewerModel, ReviewerEffort: *reviewerEffort,
 	}, actor.actor())
@@ -487,7 +483,7 @@ func runIssueOpsImplementationReview(args []string) error {
 // runIssueOpsProjectDocsReview는 publication 직전 project-doc 반영 판정을
 // 기록하는 표면이다. verdict updated는 --doc 경로가 실제 변경 집합에 있어야
 // 통과하고, no-change는 실제로 읽은 --reviewed-doc 경로를 최소 하나 요구한다.
-func runIssueOpsProjectDocsReview(args []string) error {
+func (cli command) runIssueOpsProjectDocsReview(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops project-docs-review record --id ID --verdict updated|no-change [--doc PATH...] [--reviewed-doc PATH...] --evidence TEXT... [--json]")
 		return nil
@@ -502,12 +498,12 @@ func runIssueOpsProjectDocsReview(args []string) error {
 	fs.Var(&docs, "doc", "updated project doc path, worktree-relative (repeatable)")
 	fs.Var(&reviewedDocs, "reviewed-doc", "project doc path that was read for this verdict; required for no-change (repeatable)")
 	fs.Var(&evidence, "evidence", "what was checked and why (repeatable)")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsProjectDocsReviewWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsProjectDocsReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsProjectDocsReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsProjectDocsReviewRequest{
 		Verdict: *verdict, Docs: docs, ReviewedDocs: reviewedDocs, Evidence: evidence,
 	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
@@ -515,7 +511,7 @@ func runIssueOpsProjectDocsReview(args []string) error {
 
 // runIssueOpsSchemaEvidence는 스키마·마이그레이션·엔티티 변경 사이클에서만
 // 요구되는 실측 근거 기록 표면이다.
-func runIssueOpsSchemaEvidence(args []string) error {
+func (cli command) runIssueOpsSchemaEvidence(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops schema-evidence record --id ID --measurement TEXT... --source TEXT... [--waive --waiver-rationale TEXT] [--json]")
 		return nil
@@ -530,12 +526,12 @@ func runIssueOpsSchemaEvidence(args []string) error {
 	fs.Var(&sources, "source", "where the value was observed (repeatable)")
 	waive := fs.Bool("waive", false, "waive the measurement requirement")
 	rationale := fs.String("waiver-rationale", "", "why measurement was not possible")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsSchemaEvidenceWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsSchemaEvidenceRequest{
+	record, err := cli.Runtime.RecordIssueOpsSchemaEvidenceWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsSchemaEvidenceRequest{
 		Measurements: measurements, Sources: sources, Waive: *waive, WaiverRationale: *rationale,
 	}, actor.actor())
 	return printIssueOpsResult(record, *jsonOut, err)
@@ -543,7 +539,7 @@ func runIssueOpsSchemaEvidence(args []string) error {
 
 // runIssueOpsReviewMetrics는 적대 리뷰의 라운드·판정·단계 소요를 읽는 표면이다.
 // 읽기 전용이며 record를 바꾸지 않는다. `--id`와 `--repo`는 정확히 하나만 쓴다.
-func runIssueOpsReviewMetrics(args []string) error {
+func (cli command) runIssueOpsReviewMetrics(args []string) error {
 	fs := flag.NewFlagSet("issueops review-metrics", flag.ContinueOnError)
 	id := fs.String("id", "", "single issueops id")
 	repo := fs.String("repo", "", "aggregate every cycle in this repository")
@@ -551,7 +547,7 @@ func runIssueOpsReviewMetrics(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := issueOpsCLIDeps.IssueOpsReviewMetrics(issueOpsCLIDeps.IssueOpsStateRoot(), *id, *repo)
+	result, err := cli.Runtime.IssueOpsReviewMetrics(cli.Runtime.IssueOpsStateRoot(), *id, *repo)
 	if err != nil {
 		// 다른 issueops 명령과 같은 오류 형태를 낸다: --json이면 {"ok":false,"error":...}.
 		if *jsonOut {
@@ -580,14 +576,14 @@ func runIssueOpsReviewMetrics(args []string) error {
 
 // runIssueOpsList는 다중 사이클 조망 표면이다. span lock·repair 없이 전량
 // 읽고, scanned_records로 O(N) 비용을 관측 가능하게 한다(설계 v5 WS6).
-func runIssueOpsList(args []string) error {
+func (cli command) runIssueOpsList(args []string) error {
 	fs := flag.NewFlagSet("issueops list", flag.ContinueOnError)
 	repo := fs.String("repo", "", "filter cycles by repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
 	}
-	result, err := issueOpsCLIDeps.ListIssueOpsCycles(issueOpsCLIDeps.IssueOpsStateRoot(), *repo)
+	result, err := cli.Runtime.ListIssueOpsCycles(cli.Runtime.IssueOpsStateRoot(), *repo)
 	if err != nil {
 		return err
 	}

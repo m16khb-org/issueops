@@ -1,8 +1,9 @@
 package benchmarkartifact
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
+
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func FromFixture(fixture issueopscontract.IssueOpsBenchmarkFixture) issueopscontract.IssueOpsBenchmarkArtifact {

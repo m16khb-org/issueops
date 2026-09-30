@@ -16,6 +16,17 @@ type ClaimRepository interface {
 	Claim(context.Context, ClaimRepositoryRequest) (RepositoryResult, error)
 }
 
+// ClaimTransaction is used within the repository's one atomic span.
+// It exposes observations and persistence while the application orders decisions.
+type ClaimTransaction interface {
+	Load(string) (Record, error)
+	CanonicalCWD(cwd, root string) bool
+	CurrentTokenPath(leasecontract.Record) string
+	ReadToken(leasecontract.Record, string) (string, error)
+	Persist(context.Context, leasecontract.Record) (RepositoryResult, error)
+	RemoveToken(string)
+}
+
 type ClaimRepositoryRequest struct {
 	ID                string
 	Generation        uint64

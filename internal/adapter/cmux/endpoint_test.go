@@ -1,6 +1,8 @@
 package cmux
 
 import (
+	issueops "issueops/internal/contract/issueops"
+
 	"net"
 	"os"
 	"path/filepath"
@@ -81,8 +83,8 @@ func TestValidateEndpointRejectsOwnerAndIncarnationMismatch(t *testing.T) {
 	}
 }
 
-func endpointFixture() EndpointIncarnation {
-	return EndpointIncarnation{
+func endpointFixture() issueops.IssueOpsHandoffDeliveryEndpointIncarnation {
+	return issueops.IssueOpsHandoffDeliveryEndpointIncarnation{
 		Path: "/private/tmp/cmux.sock", Kind: "unix_socket", Device: 1, Inode: 2, CTimeNS: 3,
 		OwnerUID: 501, OwnerGID: 20, Mode: 0o600, ParentPath: "/private/tmp", ParentDevice: 1,
 		ParentInode: 4, ParentOwnerUID: 0, ParentOwnerGID: 0, ParentMode: 0o1777,

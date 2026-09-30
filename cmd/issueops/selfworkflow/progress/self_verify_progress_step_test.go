@@ -1,12 +1,12 @@
 package progress
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
-
-	"issueops/cmd/issueops/commandstep"
 )
 
 func TestStepEndFailureKeepsLastSuccess(t *testing.T) {
@@ -15,8 +15,8 @@ func TestStepEndFailureKeepsLastSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSelfVerifyProgressReporter: %v", err)
 	}
-	reporter.EmitStepEnd("self_verification", 1, 1, 100, 1, 2, commandstep.StepResult{Label: "go test", OK: true, DurationMS: 10})
-	reporter.EmitStepEnd("self_verification", 1, 1, 100, 2, 2, commandstep.StepResult{Label: "go build", OK: false, Error: "build failed"})
+	reporter.EmitStepEnd("self_verification", 1, 1, 100, 1, 2, selfverify.StepResult{Label: "go test", OK: true, DurationMS: 10})
+	reporter.EmitStepEnd("self_verification", 1, 1, 100, 2, 2, selfverify.StepResult{Label: "go build", OK: false, Error: "build failed"})
 
 	events := decodeProgressEventsForStepTest(t, buf.String())
 	if len(events) != 2 {
@@ -28,15 +28,15 @@ func TestStepEndFailureKeepsLastSuccess(t *testing.T) {
 	}
 }
 
-func decodeProgressEventsForStepTest(t *testing.T, out string) []SelfVerifyProgressEvent {
+func decodeProgressEventsForStepTest(t *testing.T, out string) []selfverify.ProgressEvent {
 	t.Helper()
 	lines := strings.Split(strings.TrimSpace(out), "\n")
-	events := make([]SelfVerifyProgressEvent, 0, len(lines))
+	events := make([]selfverify.ProgressEvent, 0, len(lines))
 	for _, line := range lines {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-		var event SelfVerifyProgressEvent
+		var event selfverify.ProgressEvent
 		if err := json.Unmarshal([]byte(line), &event); err != nil {
 			t.Fatalf("decode progress event: %v\n%s", err, line)
 		}

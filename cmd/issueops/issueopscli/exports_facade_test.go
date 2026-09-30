@@ -4,40 +4,41 @@ import (
 	"context"
 	"errors"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
 func TestExportedIssueOpsFacades(t *testing.T) {
-	if err := RunIssueOps([]string{"unknown"}); err == nil {
+	if err := runIssueOps([]string{"unknown"}); err == nil {
 		t.Fatal("unknown issueops subcommand should fail")
 	}
-	if CleanupMerged("", false) {
-		t.Fatal("cleanup without id and request should not be treated as merged")
-	}
-	if err := VerifyRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
+	if err := testRemoteVerifier().Verify(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
 		t.Fatal("invalid remote artifact URL should fail before provider inspection")
 	}
 
 	sentinel := errors.New("sentinel")
-	previous := SetChildIssueVerifier(func(string) error { return sentinel })
-	defer SetChildIssueVerifier(previous)
-	if err := VerifyChildIssueBeforeLink("https://github.com/acme/repo/issues/1"); !errors.Is(err, sentinel) {
+	cli := testIssueOpsCommand()
+	cli.VerifyChild = func(string) error { return sentinel }
+	_, err := captureStdoutAndErrorForIssueOps(t, func() error {
+		return cli.runIssueOpsLinkChild([]string{"--child-url", "https://github.com/acme/repo/issues/1", "--json"})
+	})
+	if !errors.Is(err, sentinel) {
 		t.Fatalf("stubbed child verifier err=%v", err)
 	}
+
 }
 
 func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := issueops.StartIssueOps(issueops.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "195-publication-wrapper"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "195-publication-wrapper"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = issueops.LinkIssueOpsIssue(issueops.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/195")
+	record, err = LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), record.ID, "https://github.com/acme/repo/issues/195")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,11 +46,11 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 		"remote", "create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", "Body",
 		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "maintainer",
 	}
-	if err := RunIssueOps(args); !errors.Is(err, issueops.ErrRemotePullRequestCreateHandlerUnavailable) {
+	if err := runIssueOps(args); !errors.Is(err, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable) {
 		t.Fatalf("zero dependency wrapper err=%v", err)
 	}
 	handlerCalls := 0
-	err = RunIssueOpsWithDependencies(args, Dependencies{Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueops.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+	err = runIssueOpsForTest(args, Dependencies{Remote: testRemoteCommand(), Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 		handlerCalls++
 		if request.ID != record.ID || request.Confirm {
 			t.Fatalf("request=%#v", request)
@@ -62,7 +63,7 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 }
 
 func TestIssueOpsBenchmarkArtifactFacades(t *testing.T) {
-	fixture := issueops.IssueOpsBenchmarkFixture{
+	fixture := benchmarkcontract.IssueOpsBenchmarkFixture{
 		Title:         "Fix quality gate",
 		UserPrompt:    "raise coverage",
 		RepoContext:   "issueops",
@@ -83,17 +84,17 @@ func TestIssueOpsBenchmarkArtifactFacades(t *testing.T) {
 
 func TestIssueOpsDecisionAndCleanupCLIBranches(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	record, err := issueops.StartIssueOps(issueops.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "123-decision"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: t.TempDir(), Branch: "123-decision"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := runIssueOpsDecision(nil); err != nil {
+	if err := testIssueOpsCommand().runIssueOpsDecision(nil); err != nil {
 		t.Fatalf("decision help: %v", err)
 	}
-	if err := runIssueOpsDecision([]string{"remove"}); err == nil {
+	if err := testIssueOpsCommand().runIssueOpsDecision([]string{"remove"}); err == nil {
 		t.Fatal("unknown decision subcommand should fail")
 	}
-	if err := runIssueOpsDecision([]string{
+	if err := testIssueOpsCommand().runIssueOpsDecision([]string{
 		"add",
 		"--id", record.ID,
 		"--title", "Use focused tests",
@@ -127,7 +128,7 @@ func TestIssueOpsSubcommandSuggestions(t *testing.T) {
 		{"totally-bogus", "", true},
 	}
 	for _, tc := range cases {
-		err := RunIssueOps([]string{tc.input})
+		err := runIssueOps([]string{tc.input})
 		if err == nil {
 			t.Fatalf("input %q should fail", tc.input)
 		}

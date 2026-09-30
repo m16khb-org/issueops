@@ -26,12 +26,12 @@ func TestExecutionResumeCLIParsesOnlyTheExactFlagSurface(t *testing.T) {
 		"--session-executable", receipt.Executable,
 		"--cwd", "/repo.worktrees/resume", "--confirm", "--json",
 	}
-	if err := Run(args, Deps{}); err == nil || !strings.Contains(err.Error(), "state root is unavailable") {
+	if err := runExecutionForTest(args, Deps{}); err == nil || !strings.Contains(err.Error(), "state root is unavailable") {
 		t.Fatalf("exact resume flags did not reach execution routing: %v", err)
 	}
 
 	withSnapshot := append(append([]string(nil), args...), "--issue-snapshot-file", "/tmp/issue.json")
-	if err := Run(withSnapshot, Deps{}); err == nil || !strings.Contains(err.Error(), "flag provided but not defined") {
+	if err := runExecutionForTest(withSnapshot, Deps{}); err == nil || !strings.Contains(err.Error(), "flag provided but not defined") {
 		t.Fatalf("resume accepted issue snapshot flag: %v", err)
 	}
 }
@@ -46,21 +46,21 @@ func TestExecutionResumeCLIInvokesInjectedHandler(t *testing.T) {
 	}
 	calls := 0
 	var output any
-	err := Run(args, Deps{
+	err := runExecutionForTest(args, Deps{
 		StateRoot: func() string { return stateRoot },
-		Resume: func(_ context.Context, gotRoot string, request issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
+		Resume: func(_ context.Context, gotRoot string, request model.ExecutionResumeRequest) (model.ExecutionResumeResult, error) {
 			calls++
 			if gotRoot != stateRoot || request.ID != "io-aaaaaaaaaaaa" || request.ExpectedGeneration != 3 || request.CWD != "/repo.worktrees/resume" || !request.Confirm {
 				t.Fatalf("resume handler request=%+v state_root=%q", request, gotRoot)
 			}
-			return issueops.ExecutionResumeResult{OK: true, ID: request.ID, ResumeDisposition: "existing_binding"}, nil
+			return model.ExecutionResumeResult{OK: true, ID: request.ID, ResumeDisposition: "existing_binding"}, nil
 		},
 		PrintJSON: func(value any) error { output = value; return nil },
 	})
 	if err != nil || calls != 1 {
 		t.Fatalf("resume CLI err=%v calls=%d", err, calls)
 	}
-	result, ok := output.(issueops.ExecutionResumeResult)
+	result, ok := output.(model.ExecutionResumeResult)
 	if !ok || !result.OK || result.ID != "io-aaaaaaaaaaaa" || result.ResumeDisposition != "existing_binding" {
 		t.Fatalf("resume CLI output=%#v", output)
 	}
@@ -86,16 +86,16 @@ func TestExecutionResumeCLIInvokesHandlerWithObservedActor(t *testing.T) {
 		},
 	}
 	calls := 0
-	err := Run(args, Deps{
+	err := runExecutionForTest(args, Deps{
 		StateRoot: func() string { return stateRoot },
-		Resume: func(_ context.Context, _ string, request issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
+		Resume: func(_ context.Context, _ string, request model.ExecutionResumeRequest) (model.ExecutionResumeResult, error) {
 			calls++
 			if request.Actor.Host != "claude" || request.Actor.SessionID != "claude-session" ||
 				request.Actor.SessionProcess == nil || request.Actor.SessionProcess.PID != 42 ||
 				request.CWD != "/repo.worktrees/resume" {
 				t.Fatalf("observed resume request=%+v", request)
 			}
-			return issueops.ExecutionResumeResult{OK: true, ID: request.ID}, nil
+			return model.ExecutionResumeResult{OK: true, ID: request.ID}, nil
 		},
 		PrintJSON:              func(any) error { return nil },
 		nativeActorObservation: &observation,
@@ -106,11 +106,9 @@ func TestExecutionResumeCLIInvokesHandlerWithObservedActor(t *testing.T) {
 }
 
 func TestExecutionReplaceCLIInvokesExecutionWithObservedActor(t *testing.T) {
-	previousExecute := execDeps.ExecuteExecution
-	t.Cleanup(func() { execDeps.ExecuteExecution = previousExecute })
 
 	var got model.ExecutionActionRequest
-	execDeps.ExecuteExecution = func(_ context.Context, _ string, request model.ExecutionActionRequest, _ port.ExecutionActionDependencies) (any, error) {
+	execute := func(_ context.Context, _ string, request model.ExecutionActionRequest, _ port.ExecutionActionDependencies) (any, error) {
 		got = request
 		return model.ExecutionReplaceResult{
 			OK: true, ID: request.ID, Action: request.ReplaceAction,
@@ -133,9 +131,10 @@ func TestExecutionReplaceCLIInvokesExecutionWithObservedActor(t *testing.T) {
 			}, nil
 		},
 	}
-	err := Run([]string{
+	err := runExecutionForTest([]string{
 		"replace", "--id", "io-aaaaaaaaaaaa", "--expected-generation", "13", "--preview", "--json",
 	}, Deps{
+		Runtime:                ExecutionDeps{ExecuteExecution: execute},
 		StateRoot:              func() string { return t.TempDir() },
 		PrintJSON:              func(any) error { return nil },
 		nativeActorObservation: &observation,
@@ -221,7 +220,7 @@ func TestResolveResumeActorRejectsPartialExplicitFlags(t *testing.T) {
 func resumeActorFlagsForTest(t *testing.T, args []string) (actorFlags, map[string]bool) {
 	t.Helper()
 	fs := flag.NewFlagSet("resume actor test", flag.ContinueOnError)
-	flags := addActorFlags(fs)
+	flags := addActorFlags(fs, Deps{Runtime: testExecutionRuntime()})
 	if err := fs.Parse(args); err != nil {
 		t.Fatal(err)
 	}

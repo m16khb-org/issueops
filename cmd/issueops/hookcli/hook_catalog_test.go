@@ -88,7 +88,7 @@ func TestRunHookSessionStartRecordsBoundedLiveProbeEvidence(t *testing.T) {
 	t.Setenv("ISSUEOPS_CHILD_SMOKE_HOOKS", "1")
 	t.Setenv("ISSUEOPS_CHILD_SMOKE_OBSERVATION_FILE", observationPath)
 	repo := hookTempRepoWithDoc(t)
-	runHookCapture(t, `{"cwd":"`+repo+`","hook_event_name":"SessionStart","model":"gpt-5.4","permission_mode":"never","session_id":"session"}`, func() error {
+	runHookCapture(t, `{"cwd":"`+repo+`","hook_event_name":"SessionStart","model":"gpt-6-sol","permission_mode":"never","session_id":"session"}`, func() error {
 		return runHook([]string{"session-start", "--host", "codex"})
 	})
 
@@ -100,7 +100,7 @@ func TestRunHookSessionStartRecordsBoundedLiveProbeEvidence(t *testing.T) {
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 2 || got["event"] != "SessionStart" || got["model"] != "gpt-5.4" {
+	if len(got) != 2 || got["event"] != "SessionStart" || got["model"] != "gpt-6-sol" {
 		t.Fatalf("probe evidence = %#v", got)
 	}
 	info, err := os.Stat(observationPath + ".hooks")

@@ -57,6 +57,54 @@ Project docs bootstrap:
 - maintenance: `state maintain`은 고정 store root(`state`, `issueops`, `worker`, `loop`)와 `projects/<repo-id>` store의 WAL checkpoint를 truncate하고 sidecar 권한(0600)을 복구한다. 현재 context hook은 static project-doc catalog만 읽으므로 유지보수를 자동 실행하지 않는다.
 - self-verify summary checkpoint는 `self-verify history/compare/promote`와 MCP `self_verify_history/self_verify_compare/self_verify_promote`로 조회·비교·승격한다.
 
+자가 증강 계획·lesson의 저장과 기준선 승격은 `application/selfaugment`가 조율한다.
+`domain/selfaugment`는 후보 ID 검증, 스냅샷 구성, summary kind/schema 검사와 승격 조건을
+소유한다. 승격 dry-run은 쓰지 않으며, confirm은 통과한 원본 또는 명시적 실패 허용이
+필요하다. 저장 후 다시 읽기까지 성공해야 승격 완료를 반환한다. lesson은 저장 성공 뒤에만
+기존 보존 기간·개수로 정리하며, 정리 실패가 저장 성공을 뒤집지는 않는다. 상태 저장과 잠금은
+기존 outbound state adapter를 사용한다. CLI/MCP는 같은 application을 호출한다.
+
+자가 증강 계획은 `application/selfaugment.Planner`가 문서·스킬·상태 조회를 조율하고,
+`domain/selfaugment.NewPlan`이 목표 점수, lesson 감점, 후보 정렬·선택을 결정한다.
+각 목표의 점수와 설명은 같은 관측값을 사용한다. 검증 목표는 현재 kind/schema를 통과한
+`self-verify-latest`만 증거로 인정한다. 파일·Git·소스 검색은 `adapter/augmentation`이
+맡으며, 후보 감지는 검색어 자체가 들어 있는 observer 대신 실제 구현 파일을 확인한다.
+
+자가 검증 단계 순서·성공 증거 재사용·실패 후 계속 여부는 `domain/selfverify`,
+실행과 저장 순서는 `application/selfverify`가 맡는다. 실제 CLI·MCP·daemon·Git
+검증 driver는 `adapter/verification/probe`, risk tier 실행은 같은 adapter의
+`riskqa`에 둔다. process 실행과 Go 파일 관측은 기존 verification 구현을 공유한다.
+후보 목록 저장은 application이 조율하며, snapshot schema·필드 구성은
+`domain/selfaugment`가 소유한다. probe의 snapshot writer는 composition root에서
+주입하고, 누락되면 process를 실행하기 전에 실패 결과를 반환한다.
+
+후보 export는 `application/selfverify`가 source 관측과 시각을 조율하고,
+`domain/selfaugment`가 기본 후보 목록·분류·누락 경고를 구성한다. source 유무는
+`adapter/verification`이 관측하며, 파일이 없어도 기본 후보 목록은 유지한다.
+summary 집계·실패 근거 수집과 LLM 평가 결과 조율은 application, 점수·종료 조건과
+LLM gate 판정은 domain이 소유한다. LLM 통과가 기존 검증 실패를 성공으로 바꾸지는 않는다.
+CLI와 MCP는 계획·후보 생성 후 선택적 저장, 검증 후 선택적 저장을 같은 application으로
+호출한다. 검증 오류가 저장 오류보다 우선하며, 저장 실패의 checkpoint는 결과에 남긴다.
+JSON·MCP 응답 렌더링은 각 inbound adapter가 맡는다.
+
+검증 이력 조회·비교·보존 삭제는 `application/selfaugment.HistoryService`가 조율한다.
+입력 허용 조건, snapshot kind/schema 분류와 보존 대상·삭제 허용 결정은 domain이 맡는다.
+조회는 개별 읽기 실패·잘못된 snapshot을 skipped로 남기며, 전체 이력에서 보존 대상을
+결정한 뒤 표시 개수를 제한한다. 삭제는 요청과 confirm이 모두 있어야 실행하고,
+후보마다 다시 읽은 뒤 삭제한다. 중간 실패 시 다음 후보를 처리하지 않는다.
+비교는 입력을 검사한 뒤 baseline, candidate 순으로 읽으며 저장소 오류 원인을 보존한다.
+
+Unix의 sqlstore record 쓰기는 state root의 공용 파일에 shared lease를 얻은 뒤 실행한다.
+`ExcludeWrites`는 같은 파일의 exclusive lease로 모든 bucket의 쓰기를 거부하며 읽기는
+허용한다. `Put`, `Delete`, `DeleteBucket`, `Apply`, `CompareAndApplyFunc`가 이 경계를
+공유한다. SQLite span·transaction과 별개이며, exclusive lease를 가진 호출자는
+record를 쓰거나 span에 진입하지 않는다. 실행 context를 전달받은 자식은 부모가
+종료돼도 exclusive lease를 유지한다. 일반 writer의 `SharedLease`에는 `Close`만 있고,
+자식 종료를 증명하는 `Drain`과 실행 context는 exclusive `Lease`에만 있다.
+잠금 파일은 private state root 안에 유지하고 삭제하지 않는다. 삭제 작업에 연결할 때는
+대상이 state root와 잠금 파일을 포함하지 않는지 먼저 확인해야 한다. non-Unix에서는
+exclusive lease 획득을 거부하고 기존 SQLite 쓰기 동작은 유지한다.
+
 IssueOps v1 execution state, schema authority, capability verticals, and the
 actor model live in [`issueops.md`](issueops.md).
 
@@ -82,7 +130,9 @@ actor model live in [`issueops.md`](issueops.md).
 - MCP: `command_policy_check`, `command_fake_run`, `command_policy_audit`, `worker_run_read_only`
 - Resource: `issueops://command-policy`
 - fake runner는 policy 결과와 audit id만 반환하며 명령을 실행하지 않는다.
-- allow/deny 목록은 `internal/adapter/policy/policy_catalog.go`의 catalog table이 source of truth이며, `CommandPolicySummary()`의 `catalog` 필드로 노출된다.
+- allow/deny 목록은 `internal/domain/policy/catalog.go`의 catalog이 source of truth이며, `CommandPolicySummary()`의 `catalog` 필드로 노출된다.
+
+`application/policy.Service`가 경로 관측, 매 평가의 workspace override 로드, PR/MR 생성 명령의 준비된 base 조회와 domain 판정을 조율한다. timeout 해석·환경변수 선택·로컬 경로 인자 분류·대상 브랜치 판정은 domain이 맡는다. 실제 경로와 심볼릭 링크 확인, 환경변수 조회와 process 실행은 adapter에 남는다. 실행은 기존 허용 환경변수만 전달하며, 감사 로그는 `application/audit.Service`가 평가→로그 경로 조회→append 순서를 맡는다. preflight의 커밋 형식 판정은 `domain/preflight.CommitStyleHints`가 소유하고 application이 관측 결과를 조합한다.
 
 필수 필드:
 

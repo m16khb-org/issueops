@@ -10,50 +10,13 @@ import (
 	"strconv"
 	"strings"
 
+	deliverycontract "issueops/internal/contract/issueops"
+	preparationdomain "issueops/internal/domain/issueopspreparation"
 	"issueops/internal/port"
 )
 
 func validateExecutionIntentRequest(req port.ExecutionOrcaIntentRequest) error {
-	if req.Marker == "" || req.Marker != req.Probe.Marker {
-		return fmt.Errorf("Orca intent marker does not match the sealed operation")
-	}
-	if err := validateExecutionPrepare(req.Workspace, req.Probe); err != nil {
-		return err
-	}
-	if err := validateExecutionRetryRequestIDs(req); err != nil {
-		return err
-	}
-	switch req.Stage {
-	case port.ExecutionOrcaIntentWorktree:
-		if req.Prepared != nil || req.Launch != nil || req.TerminalPTYID != "" || req.RunID != "" || req.RunBound || req.TaskID != "" {
-			return fmt.Errorf("worktree intent contains a later-stage receipt")
-		}
-	case port.ExecutionOrcaIntentTerminal, port.ExecutionOrcaIntentRun, port.ExecutionOrcaIntentRunBind, port.ExecutionOrcaIntentTask, port.ExecutionOrcaIntentDispatch:
-		if req.Prepared == nil {
-			return fmt.Errorf("owner intent requires a sealed worktree receipt")
-		}
-		if err := validateExecutionOwnerLaunch(*req.Prepared, req.Probe, executionRequiredLaunch(req)); err != nil {
-			return err
-		}
-		if req.Stage == port.ExecutionOrcaIntentTerminal && (req.TerminalPTYID != "" || req.RunID != "" || req.RunBound || req.TaskID != "") {
-			return fmt.Errorf("terminal intent contains a later-stage receipt")
-		}
-		if req.Stage == port.ExecutionOrcaIntentRun && (req.TerminalPTYID == "" || req.RunID != "" || req.RunBound || req.TaskID != "") {
-			return fmt.Errorf("Run intent requires exactly one terminal receipt")
-		}
-		if req.Stage == port.ExecutionOrcaIntentRunBind && (req.TerminalPTYID == "" || req.RunID == "" || req.RunBound || req.TaskID != "") {
-			return fmt.Errorf("Run bind intent requires terminal and Run receipts")
-		}
-		if req.Stage == port.ExecutionOrcaIntentTask && (req.TerminalPTYID == "" || req.RunID == "" || !req.RunBound || req.TaskID != "") {
-			return fmt.Errorf("task intent requires terminal and bound Run receipts")
-		}
-		if req.Stage == port.ExecutionOrcaIntentDispatch && (req.TerminalPTYID == "" || req.RunID == "" || !req.RunBound || req.TaskID == "") {
-			return fmt.Errorf("dispatch intent requires terminal, bound Run, and task receipts")
-		}
-	default:
-		return fmt.Errorf("unsupported Orca execution intent stage %q", req.Stage)
-	}
-	return nil
+	return validateExecutionIntentForMode(req, preparationdomain.OrcaStageInvocation)
 }
 
 // validateExecutionIntentInspectionRequest는 외부 mutation 없이 Orca
@@ -62,6 +25,10 @@ func validateExecutionIntentRequest(req port.ExecutionOrcaIntentRequest) error {
 // 봉인만 확인한다. InvokeIntent는 계속 validateExecutionIntentRequest를 사용해
 // 실제 파일 내용까지 검증한다.
 func validateExecutionIntentInspectionRequest(req port.ExecutionOrcaIntentRequest) error {
+	return validateExecutionIntentForMode(req, preparationdomain.OrcaStageInspection)
+}
+
+func validateExecutionIntentForMode(req port.ExecutionOrcaIntentRequest, mode string) error {
 	if req.Marker == "" || req.Marker != req.Probe.Marker {
 		return fmt.Errorf("Orca intent marker does not match the sealed operation")
 	}
@@ -71,41 +38,31 @@ func validateExecutionIntentInspectionRequest(req port.ExecutionOrcaIntentReques
 	if err := validateExecutionRetryRequestIDs(req); err != nil {
 		return err
 	}
-	switch req.Stage {
-	case port.ExecutionOrcaIntentWorktree:
-		if req.Prepared != nil || req.Launch != nil || req.TerminalPTYID != "" || req.RunID != "" || req.RunBound || req.TaskID != "" {
-			return fmt.Errorf("worktree intent contains a later-stage receipt")
-		}
-	case port.ExecutionOrcaIntentTerminal, port.ExecutionOrcaIntentRun, port.ExecutionOrcaIntentRunBind, port.ExecutionOrcaIntentTask, port.ExecutionOrcaIntentDispatch:
-		if err := validateExecutionInspectionOwnerEnvelope(req); err != nil {
+	facts := preparationdomain.OrcaStageFacts{
+		Mode: mode, Stage: string(req.Stage), Prepared: req.Prepared != nil, Launch: req.Launch != nil,
+		TerminalPTYID: req.TerminalPTYID, RunID: req.RunID, RunBound: req.RunBound, TaskID: req.TaskID,
+	}
+	needsOwner, err := preparationdomain.ValidateOrcaStagePrerequisites(facts)
+	if err != nil {
+		return err
+	}
+	if needsOwner {
+		if mode == preparationdomain.OrcaStageInvocation {
+			if err := validateExecutionOwnerLaunch(*req.Prepared, req.Probe, executionRequiredLaunch(req)); err != nil {
+				return err
+			}
+		} else if err := validateExecutionInspectionOwnerEnvelope(req); err != nil {
 			return err
 		}
-		if req.Stage == port.ExecutionOrcaIntentTerminal && (req.TerminalPTYID != "" || req.RunID != "" || req.RunBound || req.TaskID != "") {
-			return fmt.Errorf("terminal intent contains a later-stage receipt")
-		}
-		if req.Stage == port.ExecutionOrcaIntentRun && (req.TerminalPTYID == "" || req.RunID != "" || req.RunBound || req.TaskID != "") {
-			return fmt.Errorf("Run intent requires exactly one terminal receipt")
-		}
-		if req.Stage == port.ExecutionOrcaIntentRunBind && (req.TerminalPTYID == "" || req.RunID == "" || req.RunBound || req.TaskID != "") {
-			return fmt.Errorf("Run bind intent requires terminal and Run receipts")
-		}
-		if req.Stage == port.ExecutionOrcaIntentTask && (req.TerminalPTYID == "" || req.RunID == "" || !req.RunBound || req.TaskID != "") {
-			return fmt.Errorf("task intent requires terminal and bound Run receipts")
-		}
-		if req.Stage == port.ExecutionOrcaIntentDispatch && (req.TerminalPTYID == "" || req.RunID == "" || !req.RunBound || req.TaskID == "") {
-			return fmt.Errorf("dispatch intent requires terminal, bound Run, and task receipts")
-		}
-	default:
-		return fmt.Errorf("unsupported Orca execution intent stage %q", req.Stage)
 	}
-	return nil
+	return preparationdomain.ValidateOrcaStageReceipts(facts)
 }
 
 func validateExecutionRetryRequestIDs(req port.ExecutionOrcaIntentRequest) error {
-	if err := port.ValidateOrcaRetryRequestID(req.RetryRequestID); err != nil {
+	if err := deliverycontract.ValidateOrcaRetryRequestID(req.RetryRequestID); err != nil {
 		return err
 	}
-	return port.ValidateOrcaRetryRequestID(req.PromptRetryRequestID)
+	return deliverycontract.ValidateOrcaRetryRequestID(req.PromptRetryRequestID)
 }
 
 func validateExecutionInspectionOwnerEnvelope(req port.ExecutionOrcaIntentRequest) error {

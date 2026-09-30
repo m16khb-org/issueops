@@ -10,24 +10,16 @@ import (
 	"issueops/internal/port"
 )
 
-func handleMCPIssueOpsExecution(args map[string]any) MCPToolOutcome {
-	return handleMCPIssueOpsExecutionWithContext(context.Background(), args, MCPDependencies{})
-}
-
-func handleMCPIssueOpsExecutionWithDependencies(args map[string]any, deps MCPDependencies) MCPToolOutcome {
-	return handleMCPIssueOpsExecutionWithContext(context.Background(), args, deps)
-}
-
 func handleMCPIssueOpsExecutionWithContext(
 	ctx context.Context,
 	args map[string]any,
 	deps MCPDependencies,
 ) MCPToolOutcome {
-	req, err := executionActionRequestFromMCP(args)
+	req, err := executionActionRequestFromMCP(args, deps.Execution)
 	if err != nil {
 		return mcpToolErrorPayload(issueOpsMCPErrorPayload(err))
 	}
-	result, err := execDeps.ExecuteExecution(ctx, execDeps.IssueOpsStateRoot(), req, issueOpsExecutionActionDependencies(deps))
+	result, err := deps.Execution.ExecuteExecution(ctx, deps.Execution.IssueOpsStateRoot(), req, issueOpsExecutionActionDependencies(deps))
 	if err != nil {
 		err = bindMCPIssueOpsExecutionErrorNextCommand(err, deps.Provenance)
 		return mcpToolErrorPayload(issueOpsMCPErrorPayload(err))
@@ -42,7 +34,7 @@ func handleMCPIssueOpsExecutionWithContext(
 func issueOpsExecutionActionDependencies(deps MCPDependencies) port.ExecutionActionDependencies {
 	return port.ExecutionActionDependencies{
 		Prepare: deps.Prepare, Orca: deps.Orca, OrcaOwner: deps.OrcaOwner, ReadIssue: deps.ReadIssue,
-		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
+		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Status: deps.Status, Replace: deps.Replace, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
 		RemoteReconcile: deps.Publication.Reconcile,
 	}
 }
@@ -59,8 +51,8 @@ func issueOpsMCPErrorPayload(err error) map[string]any {
 	return payload
 }
 
-func executionActionRequestFromMCP(args map[string]any) (model.ExecutionActionRequest, error) {
-	ancestry, _ := execDeps.ObserveNativeProcessAncestry(os.Getpid())
+func executionActionRequestFromMCP(args map[string]any, execution ExecutionDeps) (model.ExecutionActionRequest, error) {
+	ancestry, _ := execution.ObserveNativeProcessAncestry(os.Getpid())
 	// 관측이 실패하면 ancestry가 비어 core mutation validation이 호출자의
 	// process receipt를 신뢰하는 대신 fail-closed로 동작한다.
 	return executionActionRequestFromMCPWithAncestry(args, ancestry)

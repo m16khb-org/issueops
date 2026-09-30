@@ -6,6 +6,8 @@
 // sections and cannot touch the authored body at all.
 package issueopsbodysync
 
+import reportcontract "issueops/internal/contract/artifactreadability"
+
 // Artifact kinds whose body can be synced. Issue and child are provider issues;
 // pr and mr are the GitHub and GitLab names for the same publication.
 const (
@@ -67,15 +69,9 @@ type Result struct {
 	AgeDays            int      `json:"age_days,omitempty"`
 	AcceptRemoteEdits  bool     `json:"accept_remote_edits,omitempty"`
 	Preview            string   `json:"preview,omitempty"`
-	// Readability judges the proposed body and can reject a confirm.
-	// LiveReadability judges the body already on the remote artifact and is
-	// warning-only, so drift found there never blocks a sync. Both hold an
-	// artifactreadability.Report; the type is `any` here so this contract
-	// package does not import internal/domain/artifactreadability (that
-	// package already imports internal/domain/issueopsbodysync, and this
-	// contract package is imported by issueopsbodysync in turn).
-	Readability     any `json:"readability,omitempty"`
-	LiveReadability any `json:"live_readability,omitempty"`
+	// Readability judges the proposal; live findings are warning-only.
+	Readability     *reportcontract.Report `json:"readability,omitempty"`
+	LiveReadability *reportcontract.Report `json:"live_readability,omitempty"`
 }
 
 // Command is one sync request. Kind is what the caller asked for (KindIssue or

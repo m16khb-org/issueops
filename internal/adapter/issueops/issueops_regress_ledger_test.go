@@ -16,13 +16,13 @@ import (
 func TestRegressIssueOpsForReplanStatusBackfillsAllPhases(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-empty-ledger"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-empty-ledger"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
 	// Advance to plan with NO ledger stamped (mimics the linking /
 	// compatibility-review paths that record artifacts without a ledger).
-	rec.Phase = IssueOpsPhasePlan
+	rec.Phase = issueops.IssueOpsPhasePlan
 	rec.DesignReview = &issueops.IssueOpsDesignReview{ProblemSummary: "s", ProposedDesign: "d", Verification: []string{"v"}, Approved: true, ReviewedAt: "2026-06-29T00:00:00Z"}
 	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, RecordedAt: "2026-06-29T00:00:00Z", IssueReflectedAt: "2026-06-29T00:02:00Z"}
 	rec.PlanPath = "/repo/plans/x.md"
@@ -49,7 +49,7 @@ func TestRegressIssueOpsForReplanStatusBackfillsAllPhases(t *testing.T) {
 	}
 
 	// plan + compatibility-review remain, but marked stale (incomplete + note).
-	for _, phase := range []issueops.IssueOpsPhase{IssueOpsPhasePlan, IssueOpsPhaseCompatibilityReview} {
+	for _, phase := range []issueops.IssueOpsPhase{issueops.IssueOpsPhasePlan, issueops.IssueOpsPhaseCompatibilityReview} {
 		entry, ok := status.PhaseLedger[phase]
 		if !ok {
 			t.Fatalf("missing %s entry after regression", phase)

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
@@ -34,7 +33,7 @@ func (s *countingProvenanceObserver) Observe(context.Context) (provenanceport.Re
 }
 
 func TestBindExecutionNextCommandUsesObservedBinaryAndResultGeneration(t *testing.T) {
-	raw := issueops.ExecutionReplaceResult{
+	raw := issueopscontract.ExecutionReplaceResult{
 		Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 7}},
 		NextCommand: "issueops execution resume --id io-1 --expected-generation 7 --confirm",
 	}
@@ -44,7 +43,7 @@ func TestBindExecutionNextCommandUsesObservedBinaryAndResultGeneration(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, ok := bound.(issueops.ExecutionReplaceResult)
+	result, ok := bound.(issueopscontract.ExecutionReplaceResult)
 	if !ok {
 		t.Fatalf("bound result type = %T", bound)
 	}
@@ -55,7 +54,7 @@ func TestBindExecutionNextCommandUsesObservedBinaryAndResultGeneration(t *testin
 
 func TestBindExecutionSyncBaseBindsConflictAbortWithSameProvenance(t *testing.T) {
 	observer := &countingProvenanceObserver{}
-	bound, err := bindExecutionNextCommand(issueops.ExecutionSyncBaseResult{
+	bound, err := bindExecutionNextCommand(issueopscontract.ExecutionSyncBaseResult{
 		LeaseGeneration: 7,
 		NextCommand:     "issueops execution sync-base --id io-1 --finalize",
 		AbortCommand:    "issueops execution sync-base --id io-1 --abort",
@@ -63,7 +62,7 @@ func TestBindExecutionSyncBaseBindsConflictAbortWithSameProvenance(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := bound.(issueops.ExecutionSyncBaseResult)
+	result := bound.(issueopscontract.ExecutionSyncBaseResult)
 	for name, command := range map[string]string{"next_command": result.NextCommand, "abort_command": result.AbortCommand} {
 		if !strings.HasPrefix(command, "'/repo/bin/issueops-1'") ||
 			!strings.Contains(command, "--generated-for-generation 7") ||
@@ -114,7 +113,7 @@ func TestOutputBaseSyncRequiredObservationFailureHasNoUnboundFallback(t *testing
 }
 
 func TestBindExecutionNextCommandObservationFailureHasNoFallback(t *testing.T) {
-	raw := issueops.ExecutionReplaceResult{
+	raw := issueopscontract.ExecutionReplaceResult{
 		Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 7}},
 		NextCommand: "issueops execution resume --id io-1 --expected-generation 7 --confirm",
 	}
@@ -132,7 +131,7 @@ func TestBindExecutionNextCommandObservationFailureHasNoFallback(t *testing.T) {
 }
 
 func TestBindExecutionNextCommandMissingObserverHasNoFallback(t *testing.T) {
-	raw := issueops.ExecutionReplaceResult{
+	raw := issueopscontract.ExecutionReplaceResult{
 		Execution:   issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 7}},
 		NextCommand: "issueops execution resume --id io-1 --expected-generation 7 --confirm",
 	}
@@ -158,27 +157,27 @@ func TestBindExecutionNextCommandCoversEveryCommandBearingResult(t *testing.T) {
 	}{
 		{
 			name: "prepare", generation: 3,
-			value: issueops.ExecutionPrepareResult{
+			value: issueopscontract.ExecutionPrepareResult{
 				Execution:   &issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 3}},
 				NextCommand: "issueops execution claim --id io-1 --generation 3",
 			},
-			command: func(value any) string { return value.(issueops.ExecutionPrepareResult).NextCommand },
+			command: func(value any) string { return value.(issueopscontract.ExecutionPrepareResult).NextCommand },
 		},
 		{
 			name: "sync-base", generation: 4,
-			value: issueops.ExecutionSyncBaseResult{
+			value: issueopscontract.ExecutionSyncBaseResult{
 				LeaseGeneration: 4,
 				NextCommand:     "issueops execution sync-base --id io-1 --apply",
 			},
-			command: func(value any) string { return value.(issueops.ExecutionSyncBaseResult).NextCommand },
+			command: func(value any) string { return value.(issueopscontract.ExecutionSyncBaseResult).NextCommand },
 		},
 		{
 			name: "switch-mode preview", generation: 5,
-			value: issueops.ExecutionSwitchModeResult{
+			value: issueopscontract.ExecutionSwitchModeResult{
 				LeaseGeneration: 5,
 				NextCommand:     "issueops execution switch-mode --id io-1 --apply",
 			},
-			command: func(value any) string { return value.(issueops.ExecutionSwitchModeResult).NextCommand },
+			command: func(value any) string { return value.(issueopscontract.ExecutionSwitchModeResult).NextCommand },
 		},
 	}
 	for _, test := range tests {
@@ -197,15 +196,15 @@ func TestBindExecutionNextCommandCoversEveryCommandBearingResult(t *testing.T) {
 
 func TestBindExecutionNextCommandCommandBearingResultsFailClosedWithoutObserver(t *testing.T) {
 	values := []any{
-		issueops.ExecutionPrepareResult{
+		issueopscontract.ExecutionPrepareResult{
 			Execution:   &issueopscontract.Execution{Lease: issueopscontract.WriteLease{Generation: 3}},
 			NextCommand: "issueops execution claim --id io-1 --generation 3",
 		},
-		issueops.ExecutionSyncBaseResult{
+		issueopscontract.ExecutionSyncBaseResult{
 			LeaseGeneration: 4,
 			NextCommand:     "issueops execution sync-base --id io-1 --apply",
 		},
-		issueops.ExecutionSwitchModeResult{
+		issueopscontract.ExecutionSwitchModeResult{
 			LeaseGeneration: 5,
 			NextCommand:     "issueops execution switch-mode --id io-1 --apply",
 		},

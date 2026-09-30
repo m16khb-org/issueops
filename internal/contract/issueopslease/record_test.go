@@ -1,11 +1,31 @@
-package issueopslease
+package issueopslease_test
 
 import (
 	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
+
+	leasecodec "issueops/internal/adapter/outbound/issueopsrecord"
+	leasecontract "issueops/internal/contract/issueopslease"
+	leasedomain "issueops/internal/domain/issueopslease"
 )
+
+type (
+	Record                 = leasecontract.Record
+	Execution              = leasecontract.Execution
+	Selection              = leasecontract.Selection
+	Workspace              = leasecontract.Workspace
+	Lease                  = leasecontract.Lease
+	Actor                  = leasecontract.Actor
+	ProcessReceipt         = leasecontract.ProcessReceipt
+	OrcaBinding            = leasecontract.OrcaBinding
+	Completion             = leasecontract.Completion
+	CompletionHistoryEntry = leasecontract.CompletionHistoryEntry
+)
+
+const SchemaVersion = leasecontract.SchemaVersion
+const OrcaArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
 
 func TestValidateActorRetainsLegacyText(t *testing.T) {
 	for _, tc := range []struct {
@@ -18,7 +38,7 @@ func TestValidateActorRetainsLegacyText(t *testing.T) {
 		{name: "missing receipt", actor: Actor{Host: "codex", SessionID: "session"}, want: "native actor requires a PID reuse-safe session_process receipt"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if err := validateActor(tc.actor); err == nil || err.Error() != tc.want {
+			if err := leasedomain.ValidatePersistedActor(tc.actor); err == nil || err.Error() != tc.want {
 				t.Fatalf("validateActor error=%v want=%q", err, tc.want)
 			}
 		})
@@ -26,7 +46,7 @@ func TestValidateActorRetainsLegacyText(t *testing.T) {
 }
 
 func TestValidateActorAcceptsOmo(t *testing.T) {
-	err := validateActor(Actor{
+	err := leasedomain.ValidatePersistedActor(Actor{
 		Host:      "omo",
 		SessionID: "019ff5b8-7d62-707a-a693-5e7a5e8a3187",
 		SessionProcess: &ProcessReceipt{
@@ -44,30 +64,30 @@ func TestValidateSidecarsDistinguishesLegacyAndPostUpgradeArtifactIdentity(t *te
 		OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch",
 	}
 	execution := Execution{Mode: "orca", Orca: &binding}
-	if err := validateSidecars(execution); err != nil {
+	if err := leasedomain.ValidatePersistedSidecars(execution); err != nil {
 		t.Fatalf("unmarked legacy all-empty identity must remain readable: %v", err)
 	}
 
 	execution.Orca.ArtifactIdentityVersion = OrcaArtifactIdentityVersion
-	if err := validateSidecars(execution); err == nil || !strings.Contains(err.Error(), "version requires a complete sealed artifact identity") {
+	if err := leasedomain.ValidatePersistedSidecars(execution); err == nil || !strings.Contains(err.Error(), "version requires a complete sealed artifact identity") {
 		t.Fatalf("post-upgrade all-empty identity must fail as an invariant violation: %v", err)
 	}
 
 	execution.Orca.IssueBodySHA256 = strings.Repeat("a", 64)
 	execution.Orca.ContextPacketSHA256 = strings.Repeat("b", 64)
 	execution.Orca.OwnerPromptSHA256 = strings.Repeat("c", 64)
-	if err := validateSidecars(execution); err != nil {
+	if err := leasedomain.ValidatePersistedSidecars(execution); err != nil {
 		t.Fatalf("versioned complete identity must be valid: %v", err)
 	}
 }
 
 func TestCompletionHistoryStrictRoundTripAndLegacyRead(t *testing.T) {
 	record := completionHistoryRecord()
-	encoded, err := Encode(record)
+	encoded, err := leasecodec.EncodeLease(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := Decode(record.ID, encoded)
+	decoded, err := leasecodec.DecodeLease(record.ID, encoded)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +112,7 @@ func TestCompletionHistoryStrictRoundTripAndLegacyRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Decode(record.ID, legacyBytes); err != nil {
+	if _, err := leasecodec.DecodeLease(record.ID, legacyBytes); err != nil {
 		t.Fatalf("schema v1 record without completion_history must remain readable: %v", err)
 	}
 }
@@ -119,7 +139,7 @@ func TestCompletionHistoryRejectsIncompleteEntries(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			record := completionHistoryRecord()
 			test.mutate(&record.Execution.CompletionHistory[0])
-			if _, err := Encode(record); err == nil {
+			if _, err := leasecodec.EncodeLease(record); err == nil {
 				t.Fatal("invalid completion history accepted")
 			}
 		})
@@ -133,7 +153,7 @@ func TestCurrentCompletionRejectsBlankVerificationEvidence(t *testing.T) {
 		FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/report.json",
 		Verification: []string{" "}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: "2026-08-03T00:00:00Z",
 	}
-	if _, err := Encode(record); err == nil {
+	if _, err := leasecodec.EncodeLease(record); err == nil {
 		t.Fatal("current completion with blank verification evidence accepted")
 	}
 }
@@ -141,7 +161,7 @@ func TestCurrentCompletionRejectsBlankVerificationEvidence(t *testing.T) {
 func TestCompletionGenerationValidation(t *testing.T) {
 	record := completionHistoryRecord()
 	record.Execution.CompletionHistory[0].Completion.Generation = 2
-	if _, err := Encode(record); err == nil || !strings.Contains(err.Error(), "generation conflicts") {
+	if _, err := leasecodec.EncodeLease(record); err == nil || !strings.Contains(err.Error(), "generation conflicts") {
 		t.Fatalf("history generation conflict error=%v", err)
 	}
 
@@ -151,7 +171,7 @@ func TestCompletionGenerationValidation(t *testing.T) {
 		Generation: 3, FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/report.json",
 		Verification: []string{"go test ./..."}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: "2026-08-03T00:00:00Z",
 	}
-	if _, err := Encode(record); err == nil || !strings.Contains(err.Error(), "exceeds the lease generation") {
+	if _, err := leasecodec.EncodeLease(record); err == nil || !strings.Contains(err.Error(), "exceeds the lease generation") {
 		t.Fatalf("current completion generation error=%v", err)
 	}
 }
@@ -181,7 +201,7 @@ func TestSelectionReceiptRejectsExplicitDirectFallbackCode(t *testing.T) {
 	}
 	for _, fallback := range []string{"orca_unready", " "} {
 		selection.FallbackCode = fallback
-		if err := validateSelection(selection, "direct"); err == nil {
+		if err := leasedomain.ValidatePersistedSelection(selection, "direct"); err == nil {
 			t.Fatalf("explicit direct selection with fallback_code %q accepted", fallback)
 		}
 	}
@@ -258,11 +278,11 @@ func TestSelectionReceiptRoundTripsAndRemainsOptionalInCurrentV1(t *testing.T) {
 			Lease: Lease{Generation: 1, Status: "released"},
 		},
 	}
-	encoded, err := Encode(record)
+	encoded, err := leasecodec.EncodeLease(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := Decode(record.ID, encoded)
+	decoded, err := leasecodec.DecodeLease(record.ID, encoded)
 	if err != nil || decoded.Execution.Selection != nil {
 		t.Fatalf("legacy current-v1 record lost nil selection compatibility: record=%+v err=%v", decoded, err)
 	}
@@ -272,11 +292,11 @@ func TestSelectionReceiptRoundTripsAndRemainsOptionalInCurrentV1(t *testing.T) {
 		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",
 		ExplicitDirectReason: "manual recovery",
 	}
-	encoded, err = Encode(record)
+	encoded, err = leasecodec.EncodeLease(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err = Decode(record.ID, encoded)
+	decoded, err = leasecodec.DecodeLease(record.ID, encoded)
 	if err != nil || !reflect.DeepEqual(decoded.Execution.Selection, record.Execution.Selection) {
 		t.Fatalf("selection receipt changed across current-v1 round trip: got=%+v want=%+v err=%v", decoded.Execution.Selection, record.Execution.Selection, err)
 	}
@@ -288,13 +308,13 @@ func TestSelectionReceiptRequiresExactAutoFallbackCode(t *testing.T) {
 		ProbeCode: "orca_unready", FallbackCode: "orca_unready",
 		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",
 	}
-	if err := validateSelection(selection, "direct"); err != nil {
+	if err := leasedomain.ValidatePersistedSelection(selection, "direct"); err != nil {
 		t.Fatalf("valid auto fallback rejected: %v", err)
 	}
 	for _, fallback := range []string{"", "different_code", " orca_unready "} {
 		candidate := selection
 		candidate.FallbackCode = fallback
-		if err := validateSelection(candidate, "direct"); err == nil {
+		if err := leasedomain.ValidatePersistedSelection(candidate, "direct"); err == nil {
 			t.Fatalf("invalid fallback_code %q accepted", fallback)
 		}
 	}
@@ -303,11 +323,11 @@ func TestSelectionReceiptRequiresExactAutoFallbackCode(t *testing.T) {
 func TestDevilsAdvocateReviewBindingFieldsRoundTrip(t *testing.T) {
 	record := completionHistoryRecord()
 	record.DevilsAdvocateReview = json.RawMessage(`{"verdict":"pass","findings":["attacked gate 3"],"reviewer_pattern":"devils-advocate-review","reviewer_context":"subagent","reviewed_plan_digest":"` + strings.Repeat("d", 64) + `","history":[{"verdict":"revise","findings":["gate 1"],"reviewer_context":"subagent","reviewed_plan_digest":"` + strings.Repeat("e", 64) + `","recorded_at":"2026-08-28T00:00:00Z"}],"recorded_at":"2026-08-28T00:01:00Z"}`)
-	encoded, err := Encode(record)
+	encoded, err := leasecodec.EncodeLease(record)
 	if err != nil {
 		t.Fatal(err)
 	}
-	decoded, err := Decode(record.ID, encoded)
+	decoded, err := leasecodec.DecodeLease(record.ID, encoded)
 	if err != nil {
 		t.Fatalf("plan-bound devil's-advocate review must stay readable by the lease decoder: %v", err)
 	}

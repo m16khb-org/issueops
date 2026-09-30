@@ -17,7 +17,7 @@ func TestOrcaIntentMarkerLiteralHasOneProductionOwner(t *testing.T) {
 			return walkErr
 		}
 		if entry.IsDir() || !strings.HasSuffix(path, ".go") ||
-			strings.HasSuffix(path, "_test.go") || path == "execution_orca_marker.go" {
+			strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
 		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)

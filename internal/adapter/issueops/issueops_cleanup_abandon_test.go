@@ -1,6 +1,8 @@
 package issueops
 
 import (
+	issueopspublication "issueops/internal/contract/issueopspublication"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,6 +15,8 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
+	abandondomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -58,15 +62,15 @@ func abandonTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "106-abandon"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "106-abandon"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot, record
 }
 
-func abandonRequest(id string, apply bool, fingerprint string) CleanupAbandonRequest {
-	return CleanupAbandonRequest{
+func abandonRequest(id string, apply bool, fingerprint string) issueops.CleanupAbandonRequest {
+	return issueops.CleanupAbandonRequest{
 		ID: id, Reason: "폐기된 비-done 사이클 정리",
 		Apply: apply, Confirm: apply, Fingerprint: fingerprint,
 	}
@@ -80,7 +84,7 @@ func authoritativeZeroOrca() *fakeAbandonOrca {
 	return &fakeAbandonOrca{inventory: port.ExecutionOrcaIntentInventory{AuthoritativeZero: true}}
 }
 
-func writeAbandonIntentRow(t *testing.T, stateRoot, operationID string, payload externalOrcaIntentPayload) {
+func writeAbandonIntentRow(t *testing.T, stateRoot, operationID string, payload preparationcontract.Intent) {
 	t.Helper()
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -135,24 +139,24 @@ func abandonOrcaPendingRecord(t *testing.T, kind string, writeRow bool) (string,
 		Provider: "github", IssueURL: issueURL, Branch: "106-abandon",
 		BaseBranch: "main", BaseSHA: "deadbeef", LinkVerified: true,
 	}
-	marker, err := renderOrcaIntentMarker(orcaIntentMarkerIdentity{
-		Purpose: orcaIntentPurposePrepare, LifecycleID: record.ID,
+	marker, err := (preparationcontract.IntentCodec{}).RenderMarker(preparationcontract.MarkerIdentity{
+		Purpose: preparationcontract.PurposePrepare, LifecycleID: record.ID,
 		Generation: 1, OperationID: operationID, Provider: "github", Issue: 106,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if writeRow {
-		writeAbandonIntentRow(t, stateRoot, operationID, externalOrcaIntentPayload{
+		writeAbandonIntentRow(t, stateRoot, operationID, preparationcontract.Intent{
 			SchemaVersion: issueops.IssueOpsSchemaVersion, OperationID: operationID, LifecycleID: record.ID,
 			Generation: 1, Stage: intentContractStage(port.ExecutionOrcaIntentWorktree), Marker: marker,
-			StartedAt: "2026-07-24T00:00:00Z", InvocationState: orcaIntentNotInvoked,
+			StartedAt: "2026-07-24T00:00:00Z", InvocationState: preparationcontract.InvocationNotInvoked,
 			Workspace: intentContractWorkspaceRequest(port.ExecutionWorkspaceRequest{
 				LifecycleID: record.ID, SourceRoot: record.Repo, Root: root,
 				Branch: "106-abandon", BaseBranch: "main", BaseHead: "deadbeef",
 			}),
 			Probe: intentContractProbeRequest(port.ExecutionOrcaProbeRequest{
-				Repo: record.Repo, Host: "codex", Model: "gpt-5.4", Marker: marker,
+				Repo: record.Repo, Host: "codex", Model: "gpt-6-sol", Marker: marker,
 				Provider: "github", Issue: 106,
 			}),
 			IssueBodySHA256: abandonIssueBodySHA,
@@ -207,11 +211,11 @@ func TestCleanupAbandonPreviewThenApplyDeletesRecord(t *testing.T) {
 	if _, err := ReadIssueOps(stateRoot, record.ID); !errors.Is(err, fs.ErrNotExist) {
 		t.Fatalf("record must be gone after abandon: %v", err)
 	}
-	fresh, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "106-abandon"})
+	fresh, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "106-abandon"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fresh.Phase != IssueOpsPhaseProblem || fresh.Execution != nil {
+	if fresh.Phase != issueops.IssueOpsPhaseProblem || fresh.Execution != nil {
 		t.Fatalf("abandon must unlock same-branch rework with a fresh cycle: %+v", fresh)
 	}
 }
@@ -264,7 +268,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 	cases := []struct {
 		name    string
 		mutate  func(*issueops.IssueOpsRecord)
-		request func(id string) CleanupAbandonRequest
+		request func(id string) issueops.CleanupAbandonRequest
 		missing string
 	}{
 		{
@@ -272,7 +276,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 			// 없으면 phase가 done이든 아니든 게이트는 닫힌 채로 남는다(#342).
 			name: "done phase with an artifact belongs to finish",
 			mutate: func(rec *issueops.IssueOpsRecord) {
-				rec.Phase = IssueOpsPhaseDone
+				rec.Phase = issueops.IssueOpsPhaseDone
 				rec.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
 					Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 				}
@@ -303,13 +307,17 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 			missing: "no_children",
 		},
 		{
-			name:    "blank reason",
-			request: func(id string) CleanupAbandonRequest { r := abandonRequest(id, false, ""); r.Reason = "   "; return r },
+			name: "blank reason",
+			request: func(id string) issueops.CleanupAbandonRequest {
+				r := abandonRequest(id, false, "")
+				r.Reason = "   "
+				return r
+			},
 			missing: "reason_required",
 		},
 		{
 			name: "control character in reason",
-			request: func(id string) CleanupAbandonRequest {
+			request: func(id string) issueops.CleanupAbandonRequest {
 				r := abandonRequest(id, false, "")
 				r.Reason = "abandon\nnow"
 				return r
@@ -318,7 +326,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 		},
 		{
 			name: "active shell character in reason",
-			request: func(id string) CleanupAbandonRequest {
+			request: func(id string) issueops.CleanupAbandonRequest {
 				r := abandonRequest(id, false, "")
 				r.Reason = "abandon $(rm -rf /)"
 				return r
@@ -327,9 +335,9 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 		},
 		{
 			name: "reason over the byte limit",
-			request: func(id string) CleanupAbandonRequest {
+			request: func(id string) issueops.CleanupAbandonRequest {
 				r := abandonRequest(id, false, "")
-				r.Reason = strings.Repeat("a", cleanupAbandonReasonLimit+1)
+				r.Reason = strings.Repeat("a", abandondomain.CleanupAbandonReasonLimit+1)
 				return r
 			},
 			missing: "reason_required",
@@ -430,7 +438,7 @@ func TestCleanupAbandonRejectsLocalResidue(t *testing.T) {
 // AC-02: pending kind별 허용/거부 + InspectIntent 분기 전수.
 func TestCleanupAbandonPendingIntentGate(t *testing.T) {
 	t.Run("remote kind is never abandonable", func(t *testing.T) {
-		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, externalIntentRemotePR, true)
+		stateRoot, record, _, _ := abandonOrcaPendingRecord(t, issueopspublication.RemoteIntentKind, true)
 		orca := authoritativeZeroOrca()
 		result, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, false, ""), abandonDeps(&fakeAbandonGit{}, orca))
 		if err == nil || !containsString(result.Missing, "pending_intent_safe") {
@@ -674,15 +682,15 @@ func TestCleanupAbandonTreatsAbsentIntentRowAsSuccess(t *testing.T) {
 func TestCleanupAbandonRefusesToDeleteAnotherLifecyclesIntentRow(t *testing.T) {
 	stateRoot, record, operationID, root := abandonOrcaPendingRecord(t, "worktree_create", true)
 	foreign := "op-foreign-row"
-	writeAbandonIntentRow(t, stateRoot, foreign, externalOrcaIntentPayload{
+	writeAbandonIntentRow(t, stateRoot, foreign, preparationcontract.Intent{
 		SchemaVersion: issueops.IssueOpsSchemaVersion, OperationID: foreign, LifecycleID: "io-someoneelse",
 		Generation: 1, Stage: intentContractStage(port.ExecutionOrcaIntentWorktree), Marker: "m",
-		StartedAt: "2026-07-24T00:00:00Z", InvocationState: orcaIntentNotInvoked,
+		StartedAt: "2026-07-24T00:00:00Z", InvocationState: preparationcontract.InvocationNotInvoked,
 		Workspace: intentContractWorkspaceRequest(port.ExecutionWorkspaceRequest{
 			LifecycleID: "io-someoneelse", SourceRoot: record.Repo, Root: root,
 			Branch: "other", BaseBranch: "main", BaseHead: "deadbeef",
 		}),
-		Probe:           intentContractProbeRequest(port.ExecutionOrcaProbeRequest{Repo: record.Repo, Host: "codex", Model: "gpt-5.4", Marker: "m"}),
+		Probe:           intentContractProbeRequest(port.ExecutionOrcaProbeRequest{Repo: record.Repo, Host: "codex", Model: "gpt-6-sol", Marker: "m"}),
 		IssueBodySHA256: abandonIssueBodySHA,
 	})
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
@@ -720,12 +728,59 @@ func TestCleanupAbandonApplyRejectsStaleFingerprintAndMissingConfirm(t *testing.
 		t.Fatalf("apply without confirm must be rejected: %v", err)
 	}
 	// phase 이동은 게이트를 통과하지만 fingerprint 입력을 바꾼다.
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhasePlan })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhasePlan })
 	if _, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, true, preview.Fingerprint), deps); err == nil ||
 		!strings.Contains(err.Error(), "stale cleanup fingerprint") {
 		t.Fatalf("stale fingerprint must be rejected: %v", err)
 	}
 	if _, err := ReadIssueOps(stateRoot, record.ID); err != nil {
 		t.Fatalf("record must survive a stale apply: %v", err)
+	}
+}
+
+func TestCleanupAbandonRejectsUnknownBranchInventory(t *testing.T) {
+	for _, code := range []int{2, 128, -1} {
+		t.Run(fmt.Sprint(code), func(t *testing.T) {
+			root, record := abandonTestRecord(t)
+			deps := abandonDeps(&fakeAbandonGit{}, nil)
+			deps.Git = func(_ string, args ...string) (int, string) {
+				if args[0] == "rev-parse" {
+					return code, "unavailable"
+				}
+				return 0, ""
+			}
+			preview, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, false, ""), deps)
+			if err == nil || preview.OK || preview.Fingerprint != "" {
+				t.Errorf("unknown branch authorized preview: %+v %v", preview, err)
+			}
+			got, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, true, preview.Fingerprint), deps)
+			if err == nil || got.OK || got.RecordDeleted {
+				t.Errorf("unknown branch authorized apply: %+v %v", got, err)
+			}
+			if _, err := ReadIssueOps(root, record.ID); err != nil {
+				t.Fatalf("unknown branch lost record: %v", err)
+			}
+		})
+	}
+}
+
+func TestCleanupAbandonRejectsNonDirectoryWorkspace(t *testing.T) {
+	root, record := abandonTestRecord(t)
+	path := filepath.Join(t.TempDir(), "workspace")
+	if err := os.WriteFile(path, []byte("preserve"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	mutateFinishRecord(t, root, record.ID, func(r *issueops.IssueOpsRecord) { r.WorktreePath = path })
+	deps := abandonDeps(&fakeAbandonGit{}, nil)
+	preview, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, false, ""), deps)
+	if err == nil || preview.OK || preview.Fingerprint != "" {
+		t.Errorf("file accepted as absent workspace: %+v %v", preview, err)
+	}
+	got, err := CleanupAbandon(context.Background(), root, abandonRequest(record.ID, true, preview.Fingerprint), deps)
+	if err == nil || got.OK || got.RecordDeleted {
+		t.Errorf("file allowed record deletion: %+v %v", got, err)
+	}
+	if _, err := ReadIssueOps(root, record.ID); err != nil {
+		t.Fatalf("file workspace lost record: %v", err)
 	}
 }

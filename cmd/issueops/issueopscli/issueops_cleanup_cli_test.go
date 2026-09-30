@@ -113,7 +113,7 @@ func TestRunIssueOpsCleanupCloseChildrenRequiresMergedAndConfirmRecordsState(t *
 		ID:            issueopscore.NewIssueOpsID(repo, "12-child-cleanup"),
 		Repo:          repo,
 		Branch:        "12-child-cleanup",
-		Phase:         issueopscore.IssueOpsPhasePR,
+		Phase:         issueopscontract.IssueOpsPhasePR,
 		IssueURL:      "https://github.com/acme/repo/issues/12",
 		IssueLinks: []issueopscontract.IssueOpsIssueLink{{
 			Type:     "child",
@@ -128,7 +128,7 @@ func TestRunIssueOpsCleanupCloseChildrenRequiresMergedAndConfirmRecordsState(t *
 		Labels:    []string{"issueops"},
 		Assignees: []string{"octocat"},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -146,7 +146,7 @@ func TestRunIssueOpsCleanupCloseChildrenRequiresMergedAndConfirmRecordsState(t *
 	if result["closed_count"] != float64(1) || result["dry_run"] == true {
 		t.Fatalf("unexpected close-children result: %#v", result)
 	}
-	updated, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID)
+	updated, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

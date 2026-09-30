@@ -19,7 +19,6 @@ type Repository interface {
 }
 
 type Environment interface {
-	VerifyArtifact(completioncontract.RecordSnapshot, string) error
 	PathsMatch(string, string) bool
 	CurrentHead(context.Context, string) (string, error)
 	VerifyReport(string, string) (string, error)

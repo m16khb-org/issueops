@@ -1,6 +1,8 @@
 package state
 
 import (
+	stateapp "issueops/internal/application/state"
+	statecontract "issueops/internal/contract/state"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -142,4 +144,9 @@ func TestStateMaintainReportsProjectDiscoveryErrors(t *testing.T) {
 	if err == nil || result.OK {
 		t.Fatalf("expected project discovery error, result=%+v err=%v", result, err)
 	}
+}
+
+func StateMaintain() (statecontract.StateMaintainResult, error) {
+	stores := NewMaintenanceStores(StateDir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
+	return stateapp.NewMaintenanceService(stateapp.MaintenanceDependencies{AllRoots: stores.Roots, StoreExists: stores.Exists, MaintainStore: stores.Maintain}).Maintain()
 }

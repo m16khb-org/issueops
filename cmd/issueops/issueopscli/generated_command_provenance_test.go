@@ -25,7 +25,7 @@ func (s issueOpsProvenanceObserverStub) Observe(context.Context) (provenanceport
 func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-command-provenance")
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-provenance"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-provenance"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,21 +43,21 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 			}},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 
 	mutations := 0
 	out, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
-		return RunIssueOpsWithDependencies([]string{
+		return runIssueOpsForTest([]string{
 			"execution", "release", "--id", record.ID, "--generation", "7",
 			"--generated-by-executable", "/worktree/bin/issueops",
 			"--generated-by-sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			"--generated-for-generation", "7", "--json",
 		}, Dependencies{
-			Release: func(context.Context, string, issueopscore.ExecutionReleaseRequest) (issueopscore.ExecutionResult, error) {
+			Release: func(context.Context, string, issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				mutations++
-				return issueopscore.ExecutionResult{}, nil
+				return issueopscontract.ExecutionResult{}, nil
 			},
 			Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
 				ExecutablePath:   "/installed/bin/issueops",
@@ -80,7 +80,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIRepoForTest(t, "generated-command-exact-binary")
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-exact-binary"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-exact-binary"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 			}},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{
@@ -117,10 +117,10 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 	}
 	mutations := 0
 	_, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
-		return RunIssueOpsWithDependencies(tokens[1:], Dependencies{
-			Release: func(context.Context, string, issueopscore.ExecutionReleaseRequest) (issueopscore.ExecutionResult, error) {
+		return runIssueOpsForTest(tokens[1:], Dependencies{
+			Release: func(context.Context, string, issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				mutations++
-				return issueopscore.ExecutionResult{OK: true, ID: record.ID, Execution: *record.Execution}, nil
+				return issueopscontract.ExecutionResult{OK: true, ID: record.ID, Execution: *record.Execution}, nil
 			},
 			Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
 				ExecutablePath: evidence.ExecutablePath, ExecutableSHA256: evidence.ExecutableSHA256,
@@ -147,10 +147,10 @@ func TestGeneratedDelegatedChildBootstrapUsesParentExecutionProvenance(t *testin
 	parent.ChildCycles = append(parent.ChildCycles, issueopscontract.IssueOpsChildCycleRef{
 		CycleID: child.ID, Branch: child.Branch, CreatedAt: "2026-08-04T00:00:00Z",
 	})
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), parent); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), parent); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), child); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), child); err != nil {
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{
@@ -166,7 +166,7 @@ func TestGeneratedDelegatedChildBootstrapUsesParentExecutionProvenance(t *testin
 		"--generated-by-sha256", evidence.ExecutableSHA256,
 		"--generated-for-generation", "1",
 	}
-	clean, generated, err := prepareGeneratedCommandInvocation(args, Dependencies{
+	clean, generated, err := testIssueOpsCommand().prepareGeneratedCommandInvocation(args, Dependencies{
 		Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
 			ExecutablePath: evidence.ExecutablePath, ExecutableSHA256: evidence.ExecutableSHA256,
 		}},
@@ -198,12 +198,12 @@ func TestGeneratedOwnerMutationRequiresActualProcessCWD(t *testing.T) {
 
 	t.Chdir(repo)
 	_, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
-		return RunIssueOpsWithDependencies(args, deps)
+		return runIssueOpsForTest(args, deps)
 	})
 	if runErr == nil || !strings.Contains(runErr.Error(), "actual process cwd") {
 		t.Fatalf("generated owner mutation from source cwd must fail before mutation: %v", runErr)
 	}
-	status, err := issueopscore.IssueOpsChildStatus(issueopscore.IssueOpsStateRoot(), parent.ID, false)
+	status, err := childStatusWithActorForTest(issueOpsStateRootForTest(), parent.ID, false, actor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +213,7 @@ func TestGeneratedOwnerMutationRequiresActualProcessCWD(t *testing.T) {
 
 	t.Chdir(parent.WorktreePath)
 	if _, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
-		return RunIssueOpsWithDependencies(args, deps)
+		return runIssueOpsForTest(args, deps)
 	}); runErr != nil {
 		t.Fatalf("matching actual process cwd must admit generated owner mutation: %v", runErr)
 	}

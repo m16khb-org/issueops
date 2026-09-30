@@ -15,11 +15,10 @@ import (
 )
 
 type Deps struct {
-	Stdout io.Writer
-}
-
-func Run(args []string) error {
-	return RunWithDeps(args, Deps{Stdout: os.Stdout})
+	Stdout                io.Writer
+	DeterministicFixtures func() []webfetchcontract.BenchmarkFixture
+	Fetch                 func(context.Context, webfetchcontract.Request) (webfetchcontract.Result, error)
+	RunBenchmark          func(context.Context, webfetchcontract.BenchmarkRequest) (webfetchcontract.BenchmarkResult, error)
 }
 
 func RunWithDeps(args []string, deps Deps) error {
@@ -57,7 +56,7 @@ func runFetch(args []string, deps Deps) error {
 	if err != nil {
 		return fmt.Errorf("invalid --timeout: %w", err)
 	}
-	result, err := Fetch(context.Background(), webfetchcontract.Request{
+	result, err := deps.Fetch(context.Background(), webfetchcontract.Request{
 		URL:      *rawURL,
 		Timeout:  timeout,
 		MaxChars: *maxChars,
@@ -89,11 +88,11 @@ func runBenchmark(args []string, deps Deps) error {
 	if *fixturesPath == "" {
 		return fmt.Errorf("--fixtures is required")
 	}
-	fixtures, err := loadFixtures(*fixturesPath)
+	fixtures, err := loadFixtures(*fixturesPath, deps.DeterministicFixtures)
 	if err != nil {
 		return err
 	}
-	result, err := RunBenchmark(context.Background(), webfetchcontract.BenchmarkRequest{
+	result, err := deps.RunBenchmark(context.Background(), webfetchcontract.BenchmarkRequest{
 		Fixtures:       fixtures,
 		Live:           *live,
 		LiveOptIn:      os.Getenv("ISSUEOPS_WEBFETCH_LIVE") == "1",
@@ -115,9 +114,9 @@ func printJSON(stdout io.Writer, value any) error {
 	return encoder.Encode(value)
 }
 
-func loadFixtures(path string) ([]webfetchcontract.BenchmarkFixture, error) {
+func loadFixtures(path string, builtin func() []webfetchcontract.BenchmarkFixture) ([]webfetchcontract.BenchmarkFixture, error) {
 	if path == "builtin" {
-		return DeterministicFixtures(), nil
+		return builtin(), nil
 	}
 	info, err := os.Stat(path)
 	if err != nil {

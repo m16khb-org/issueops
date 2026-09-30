@@ -10,6 +10,7 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 	statecontract "issueops/internal/contract/state"
+	issueopsdomain "issueops/internal/domain/issueops"
 )
 
 func Decode(id string, data []byte) (issueopscontract.IssueOpsRecord, error) {
@@ -38,6 +39,9 @@ func Decode(id string, data []byte) (issueopscontract.IssueOpsRecord, error) {
 	if err := issueopscontract.ValidateRecord(record); err != nil {
 		return invalid, statecontract.ErrInvalidState
 	}
+	if err := issueopsdomain.ValidateRecordInvariants(record); err != nil {
+		return invalid, statecontract.ErrInvalidState
+	}
 	record.OK = true
 	return record, nil
 }
@@ -47,6 +51,9 @@ func Encode(record issueopscontract.IssueOpsRecord) ([]byte, error) {
 		return nil, err
 	}
 	if err := issueopscontract.ValidateRecord(record); err != nil {
+		return nil, statecontract.ErrInvalidState
+	}
+	if err := issueopsdomain.ValidateRecordInvariants(record); err != nil {
 		return nil, statecontract.ErrInvalidState
 	}
 	record.OK = true

@@ -1,12 +1,15 @@
 package issueopspreparation
 
 import (
+	issueopsport "issueops/internal/port"
+)
+
+import (
 	"context"
 	"errors"
 	"reflect"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
@@ -14,10 +17,10 @@ import (
 
 func TestHandlerMapsEveryRequestAndResultField(t *testing.T) {
 	process := model.NativeProcessReceipt{PID: 199, StartedAt: "2026-08-02T01:02:03.123456789Z", Executable: "/usr/local/bin/codex"}
-	request := issueops.ExecutionPrepareRequest{
+	request := model.ExecutionPrepareRequest{
 		ID: "io-199", Mode: "orca",
 		Actor: model.NativeActor{Host: "codex", SessionID: "session-199", AgentID: "agent-199", SessionProcess: &process},
-		CWD:   "/repo", OwnerHost: "claude", OwnerModel: "claude-sonnet-5", OwnerEffort: "high", IssueSnapshotFile: "/private/gitlab-issue.json",
+		CWD:   "/repo", OwnerHost: "claude", OwnerModel: "claude-sonnet-5-5", OwnerEffort: "high", IssueSnapshotFile: "/private/gitlab-issue.json",
 		DirectReason: "manual recovery", ExpectedReadinessFingerprint: "fingerprint", Confirm: true,
 	}
 	execution := fullContractExecution()
@@ -30,7 +33,7 @@ func TestHandlerMapsEveryRequestAndResultField(t *testing.T) {
 		IssueSnapshotSource: "provider", NextCommand: "issueops next",
 	}}
 
-	got, err := NewHandler(service)(context.Background(), "/state", request, issueops.ExecutionPrepareInvocation{})
+	got, err := NewHandler(service)(context.Background(), "/state", request, issueopsport.ExecutionPrepareInvocation{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +49,7 @@ func TestHandlerMapsEveryRequestAndResultField(t *testing.T) {
 	if !reflect.DeepEqual(service.command, wantCommand) {
 		t.Fatalf("command=%#v want=%#v", service.command, wantCommand)
 	}
-	want := issueops.ExecutionPrepareResult{
+	want := model.ExecutionPrepareResult{
 		OK: true, ID: request.ID, Preview: true, RequestedMode: "auto", ResolvedMode: "orca", FallbackCode: "fallback",
 		ProbeAttempted: true, ProbeAvailable: true, ProbeReady: true, ProbeCode: "ready", ReadinessFingerprint: "fingerprint", ExplicitDirectReason: "manual recovery",
 		Workspace: coreWorkspace(execution.Workspace), Execution: coreExecution(&execution),
@@ -71,15 +74,15 @@ func TestHandlerPreservesResultWithServiceError(t *testing.T) {
 	cause := errors.New("pending external intent")
 	service := &serviceFake{result: preparationcontract.Result{ID: "io-199", RequestedMode: "orca", NextCommand: "reconcile"}, err: cause}
 
-	got, err := NewHandler(service)(context.Background(), "/state", issueops.ExecutionPrepareRequest{ID: "io-199"}, issueops.ExecutionPrepareInvocation{})
+	got, err := NewHandler(service)(context.Background(), "/state", model.ExecutionPrepareRequest{ID: "io-199"}, issueopsport.ExecutionPrepareInvocation{})
 	if err != cause || got.ID != "io-199" || got.RequestedMode != "orca" || got.NextCommand != "reconcile" {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}
 }
 
 func TestHandlerFailsClosedWithoutService(t *testing.T) {
-	got, err := NewHandler(nil)(context.Background(), "/state", issueops.ExecutionPrepareRequest{ID: "io-199"}, issueops.ExecutionPrepareInvocation{})
-	if !errors.Is(err, issueops.ErrPrepareHandlerUnavailable) || got != (issueops.ExecutionPrepareResult{ID: "io-199"}) {
+	got, err := NewHandler(nil)(context.Background(), "/state", model.ExecutionPrepareRequest{ID: "io-199"}, issueopsport.ExecutionPrepareInvocation{})
+	if !errors.Is(err, model.ErrPrepareHandlerUnavailable) || got != (model.ExecutionPrepareResult{ID: "io-199"}) {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}
 }

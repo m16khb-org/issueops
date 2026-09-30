@@ -81,12 +81,12 @@ func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOp
 	t.Helper()
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "80-finish"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "80-finish"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	worktree := ""
-	record.Phase = IssueOpsPhaseDone
+	record.Phase = issueops.IssueOpsPhaseDone
 	record.IssueURL = "https://github.com/acme/repo/issues/80"
 	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/90"}
 	// execution complete가 base_branch 없는 done 전이를 거부하므로 done 레코드는
@@ -115,8 +115,8 @@ func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOp
 	return stateRoot, record, worktree
 }
 
-func finishRequest(id string, apply bool, fingerprint string) CleanupFinishRequest {
-	return CleanupFinishRequest{
+func finishRequest(id string, apply bool, fingerprint string) issueops.CleanupFinishRequest {
+	return issueops.CleanupFinishRequest{
 		ID: id, CWD: "/tmp/elsewhere",
 		Merged: true, CompletionReflected: true, IssueClosed: true,
 		MergedBaseBranch: "main",
@@ -137,13 +137,13 @@ func TestCleanupFinishPreviewGatesRejectMissingEvidence(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		mutate  func(*CleanupFinishRequest)
+		mutate  func(*issueops.CleanupFinishRequest)
 		missing string
 	}{
-		{"unmerged", func(r *CleanupFinishRequest) { r.Merged = false }, "remote_artifact_merged"},
-		{"completion", func(r *CleanupFinishRequest) { r.CompletionReflected = false }, "completion_reflected"},
-		{"issue open", func(r *CleanupFinishRequest) { r.IssueClosed = false }, "issue_closed"},
-		{"cwd inside", func(r *CleanupFinishRequest) { r.CWD = filepath.Join(worktree, "sub") }, "cwd_outside_worktree"},
+		{"unmerged", func(r *issueops.CleanupFinishRequest) { r.Merged = false }, "remote_artifact_merged"},
+		{"completion", func(r *issueops.CleanupFinishRequest) { r.CompletionReflected = false }, "completion_reflected"},
+		{"issue open", func(r *issueops.CleanupFinishRequest) { r.IssueClosed = false }, "issue_closed"},
+		{"cwd inside", func(r *issueops.CleanupFinishRequest) { r.CWD = filepath.Join(worktree, "sub") }, "cwd_outside_worktree"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -184,37 +184,6 @@ func TestCleanupFinishPreviewGatesRejectMissingEvidence(t *testing.T) {
 			rec.IssueLinks[len(rec.IssueLinks)-1].CloseVerifiedAt = "t"
 		})
 	})
-}
-
-// done 전이는 draft PR 생성 직후에 일어나고 finish는 머지 이후에 실행되므로, 그
-// 사이 구간에서 draft PR의 base가 바뀔 수 있다. 준비된 base가 아닌 브랜치로
-// 머지된 결과를 파괴 전에 잡지 못하면 재검증 수단이 남지 않는다.
-// #490: 부모 브랜치가 머지·삭제되어 provider가 PR을 기본 브랜치로 재타깃한
-// 흐름은 drift가 아니다. 준비 base의 원격 부재와 기본 브랜치 일치라는 두
-// 관측으로만 통과시키고, 나머지는 그대로 거부한다.
-func TestClassifyMergedBaseRetarget(t *testing.T) {
-	cases := []struct {
-		name                              string
-		prepared, observed, defaultBranch string
-		preparedRemotePresent, observed_  bool
-		want                              []string
-	}{
-		{name: "same base passes", prepared: "main", observed: "main", defaultBranch: "main", observed_: true},
-		{name: "no prepared base is not judged", prepared: "", observed: "release", defaultBranch: "main", observed_: true},
-		{name: "retarget to default after parent merged", prepared: "484-parent", observed: "main", defaultBranch: "main", observed_: true},
-		{name: "parent branch still present is drift", prepared: "484-parent", observed: "main", defaultBranch: "main", preparedRemotePresent: true, observed_: true, want: []string{"base_branch_drifted"}},
-		{name: "merged into a non-default branch is drift", prepared: "484-parent", observed: "release", defaultBranch: "main", observed_: true, want: []string{"base_branch_drifted"}},
-		{name: "unobserved keeps the drift fact and names the missing observation", prepared: "484-parent", observed: "main", defaultBranch: "main", observed_: false, want: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
-		{name: "empty default branch fails closed", prepared: "484-parent", observed: "main", defaultBranch: "", observed_: true, want: []string{"base_branch_drifted", "merged_base_remote_unobserved"}},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got := classifyMergedBase(tc.prepared, tc.observed, tc.defaultBranch, tc.preparedRemotePresent, tc.observed_)
-			if strings.Join(got, ",") != strings.Join(tc.want, ",") {
-				t.Fatalf("classifyMergedBase = %v, want %v", got, tc.want)
-			}
-		})
-	}
 }
 
 func TestCleanupFinishAllowsRetargetedBaseAfterParentMerged(t *testing.T) {
@@ -368,11 +337,11 @@ func TestCleanupFinishResumableConvergesAndRecordDeleted(t *testing.T) {
 	}
 
 	// 레코드 삭제 후 동일 (repo, branch) start → 새 problem-phase 사이클.
-	fresh, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "80-finish"})
+	fresh, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: record.Repo, Branch: "80-finish"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fresh.Phase != IssueOpsPhaseProblem || fresh.Execution != nil || fresh.RemoteArtifact != nil {
+	if fresh.Phase != issueops.IssueOpsPhaseProblem || fresh.Execution != nil || fresh.RemoteArtifact != nil {
 		t.Fatalf("finish must unlock same-branch rework with a fresh cycle: %+v", fresh)
 	}
 }
@@ -476,12 +445,12 @@ func TestCleanupFinishBranchDeleteFailureAndGates(t *testing.T) {
 	}
 
 	// phase/lease 게이트.
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhasePR })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhasePR })
 	if result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps); err == nil || !containsString(result.Missing, "phase_done") {
 		t.Fatalf("non-done phase must block: %v %v", err, result.Missing)
 	}
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-		rec.Phase = IssueOpsPhaseDone
+		rec.Phase = issueops.IssueOpsPhaseDone
 		rec.Execution.Lease.Status = "active"
 		rec.Execution.Lease.ClaimedAt = "2026-07-24T00:00:00Z"
 		rec.Execution.Lease.Holder = &issueops.NativeActor{

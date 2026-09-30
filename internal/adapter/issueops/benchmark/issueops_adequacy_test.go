@@ -1,10 +1,11 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
 	"sort"
 	"strings"
 	"testing"
+
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 // A4 — scorer 검증 충분성(차원별 mutation suite)이다.

@@ -158,3 +158,25 @@ func TestRecordDevilsAdvocateReviewBindsStagedPlanWhenNoFileIsLinked(t *testing.
 		t.Fatalf("a verdict bound to the staged plan must pass the owner preflight: %v", err)
 	}
 }
+
+func TestReviewPlanBindingDoesNotMaskBrokenLinkedPlanWithStagedContent(t *testing.T) {
+	root, record := executionPrepareRecord(t)
+	if _, err := stageIssueOpsArtifactForTest(root, record.ID, "plan", []byte("abc")); err != nil {
+		t.Fatal(err)
+	}
+	record.PlanPath = "missing-reviewed-plan.md"
+	if _, err := WriteIssueOps(root, record); err != nil {
+		t.Fatal(err)
+	}
+	_, err := RecordIssueOpsDevilsAdvocateReview(root, record.ID, issueops.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate"}})
+	if err == nil {
+		t.Fatal("broken linked plan was silently replaced by staged content")
+	}
+	latest, readErr := ReadIssueOps(root, record.ID)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if latest.DevilsAdvocateReview != nil {
+		t.Fatal("failed plan binding wrote a review")
+	}
+}

@@ -31,10 +31,10 @@ func (*publicationProviderFake) CreateChild(port.IssueProviderCreateChildRequest
 func (*publicationProviderFake) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
-func (*publicationProviderFake) CloseIssue(port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (*publicationProviderFake) CloseIssue(context.Context, port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	return port.IssueProviderCloseIssueResult{}, nil
 }
-func (*publicationProviderFake) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (*publicationProviderFake) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
 func (*publicationProviderFake) ReconcilePullRequest(port.IssueProviderReconcilePullRequestRequest) (port.IssueProviderReconcilePullRequestResult, error) {
@@ -49,8 +49,8 @@ func TestIssueOpsPublicationCompositionBuildsBothServicesAndCreatesPreview(t *te
 	repo := t.TempDir()
 	branch := "195-publication-composition"
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
-		ID: issueops.NewIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePR,
+		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
+		ID: issueops.NewIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueopscontract.IssueOpsPhasePR,
 		IssueURL: "https://github.com/acme/repo/issues/195",
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
 			Provider: "github", IssueURL: "https://github.com/acme/repo/issues/195",
@@ -84,7 +84,7 @@ func TestIssueOpsPublicationCompositionBuildsBothServicesAndCreatesPreview(t *te
 		t.Fatalf("services create=%#v reconcile=%#v", create, reconcile)
 	}
 	handlers := newIssueOpsPublicationHandlers(deps)
-	result, err := handlers.Create(context.Background(), stateRoot, issueops.RemotePullRequestRequest{
+	result, err := handlers.Create(context.Background(), stateRoot, issueopscontract.RemotePullRequestRequest{
 		ID: record.ID, Provider: "github", Title: "Publication preview", Body: "Preview body.",
 		Head: branch, Base: record.BranchPrepare.BaseBranch, Labels: []string{"enhancement"},
 		Assignees: []string{"maintainer"}, Confirm: false,

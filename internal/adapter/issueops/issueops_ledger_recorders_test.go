@@ -11,7 +11,7 @@ func newLedgerRecorderRecord(t *testing.T) (string, string) {
 	t.Helper()
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-ledger"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-ledger"})
 	if err != nil {
 		t.Fatalf("start issueops: %v", err)
 	}

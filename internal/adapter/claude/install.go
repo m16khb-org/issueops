@@ -7,33 +7,33 @@ import (
 	"issueops/internal/port"
 )
 
-type Installer struct{}
+type Installer struct{ deps Dependencies }
 
-func NewInstaller() Installer { return Installer{} }
+func NewInstaller(deps Dependencies) Installer { return Installer{deps: deps} }
 
 func (Installer) Name() string { return "claude" }
 
-func (Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
-	plan := NewInstallPlan("claude", req.DryRun)
+func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInstallResult, error) {
+	plan := installer.deps.NewInstallPlan("claude", req.DryRun)
 
-	_, links, messages, skillErrs := PlanHostSkillLinks(req.Root, filepath.Join(req.Home, ".claude", "skills"), req.SkillNames, "claude", req.DryRun)
+	_, links, messages, skillErrs := installer.deps.PlanHostSkillLinks(req.Root, filepath.Join(req.Home, ".claude", "skills"), req.SkillNames, "claude", req.DryRun)
 	plan.Messages(messages)
 	plan.Links(links)
 	plan.Errs(skillErrs)
 
-	settingsFile, hookMessages, settingsErr := writeClaudeSettings(filepath.Join(req.Home, ".claude", "settings.json"), req)
+	settingsFile, hookMessages, settingsErr := installer.writeClaudeSettings(filepath.Join(req.Home, ".claude", "settings.json"), req)
 	plan.File(settingsFile, settingsErr)
 	plan.Messages(hookMessages)
-	plan.File(writeClaudeUserMCP(filepath.Join(req.Home, ".claude.json"), req))
+	plan.File(installer.writeClaudeUserMCP(filepath.Join(req.Home, ".claude.json"), req))
 
 	mcpConfig := claudeProjectMCPConfig()
-	plan.File(WriteJSONPlan(filepath.Join(req.Root, "configs", "claude", "mcp.project.json"), "claude_project_mcp_template", mcpConfig, 0o644, req.DryRun))
+	plan.File(installer.deps.WriteJSONPlan(filepath.Join(req.Root, "configs", "claude", "mcp.project.json"), "claude_project_mcp_template", mcpConfig, 0o644, req.DryRun))
 
 	hooksTemplatePath := filepath.Join(req.Root, "configs", "claude", "hooks.settings.json")
-	plan.File(WriteJSONPlan(hooksTemplatePath, "claude_hooks_template", claudeSettingsConfig("./bin/issueops"), 0o644, req.DryRun))
+	plan.File(installer.deps.WriteJSONPlan(hooksTemplatePath, "claude_hooks_template", installer.claudeSettingsConfig("./bin/issueops"), 0o644, req.DryRun))
 
 	if req.ProjectLocal {
-		plan.File(WriteJSONPlan(filepath.Join(req.Root, ".mcp.json"), "claude_project_mcp_config", mcpConfig, 0o644, req.DryRun))
+		plan.File(installer.deps.WriteJSONPlan(filepath.Join(req.Root, ".mcp.json"), "claude_project_mcp_config", mcpConfig, 0o644, req.DryRun))
 	}
 
 	if req.DryRun {

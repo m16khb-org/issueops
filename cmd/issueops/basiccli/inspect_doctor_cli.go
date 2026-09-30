@@ -4,13 +4,11 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"issueops/cmd/issueops/daemoncli"
+	daemoncontract "issueops/internal/contract/daemon"
 	doctorcontract "issueops/internal/contract/doctor"
 	"issueops/internal/domain/operationalhealth"
-	"os"
 	"sort"
 	"strings"
-	"time"
 )
 
 type doctorRepeatedFlag []string
@@ -24,7 +22,7 @@ func (values *doctorRepeatedFlag) Set(value string) error {
 	return nil
 }
 
-func runInspect(args []string) error {
+func (command Command) RunInspect(args []string) error {
 	fs := flag.NewFlagSet("inspect", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	repo := fs.String("repo", "", "target repo/workspace")
@@ -34,7 +32,7 @@ func runInspect(args []string) error {
 	if *repo == "" && fs.NArg() > 0 {
 		*repo = fs.Arg(0)
 	}
-	info := deps.InspectHarness(*repo)
+	info := command.InspectHarness(*repo)
 	if *jsonOut {
 		return printJSON(info)
 	}
@@ -50,7 +48,7 @@ func runInspect(args []string) error {
 	return nil
 }
 
-func runDoctor(args []string) error {
+func (command Doctor) Run(args []string) error {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -78,27 +76,26 @@ func runDoctor(args []string) error {
 	if err != nil {
 		return err
 	}
-	root, err := NormalizeRepoRoot(*repo)
+	root, err := command.NormalizeRepoRoot(*repo)
 	if err != nil {
 		return err
 	}
 	var snapshot *operationalhealth.Snapshot
-	var daemon daemoncli.Status
+	var daemon daemoncontract.Status
 	if !*staticOnly {
-		observed := deps.CollectOperationalHealth(context.Background(), root)
+		observed := command.CollectOperationalHealth(context.Background(), root)
 		snapshot = &observed
-		daemon = deps.CheckDaemonStatus()
+		daemon = command.CheckDaemonStatus()
 	}
-	home, _ := os.UserHomeDir()
-	result, err := harnessDoctor(doctorcontract.HarnessDoctorRequest{
+	result, err := command.Service.Run(doctorcontract.HarnessDoctorRequest{
 		RepoRoot:            root,
-		IssueOpsRoot:        deps.IssueOpsRoot(),
-		Home:                home,
-		Version:             deps.Version,
+		IssueOpsRoot:        command.IssueOpsRoot,
+		Home:                command.Home,
+		Version:             command.Version,
 		StaticOnly:          *staticOnly,
 		OperationalSnapshot: snapshot,
 		OperationalOptions: operationalhealth.Options{
-			Now:                     time.Now().UTC(),
+			Now:                     command.Now().UTC(),
 			Profile:                 doctorProfile(*sealed),
 			PreserveCycleIDs:        cycleIDs,
 			PreserveTerminalHandles: terminalHandles,

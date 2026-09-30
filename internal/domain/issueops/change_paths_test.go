@@ -184,3 +184,14 @@ func TestHasFrontendChangeIsIndependentOfTier(t *testing.T) {
 		t.Fatal("no frontend path means no signal")
 	}
 }
+
+func TestCatalogAssemblyChangesRemainPublicContractChanges(t *testing.T) {
+	for _, name := range []string{"internal/adapter/inbound/catalog/cli/usage.go", "internal/adapter/inbound/catalog/mcp/catalog.go"} {
+		if got := ClassifyChangeTier([]string{name}); got != ChangeTierContract {
+			t.Errorf("catalog %s classified %s", name, got)
+		}
+	}
+	if got := ClassifyChangeTier([]string{"internal/adapter/inbound/issueopsstatus/handler.go"}); got != ChangeTierDefault {
+		t.Fatalf("unrelated inbound implementation classified %s", got)
+	}
+}

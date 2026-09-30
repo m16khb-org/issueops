@@ -2,13 +2,14 @@ package issueopscli
 
 import (
 	"io"
+	cliparse "issueops/internal/domain/cli"
 	"os"
 	"regexp"
 	"sort"
 	"strings"
 	"testing"
 
-	domaincli "issueops/internal/domain/cli"
+	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	"issueops/internal/domain/commandparse"
 )
 
@@ -24,8 +25,8 @@ func TestIssueOpsCommandGrammarAgreesAcrossCatalogFlagSetAndSpec(t *testing.T) {
 		"remote verify-artifact": {"--labels", "--assignees"},
 	}
 	var mismatches []string
-	for _, line := range domaincli.IssueOpsUsageLines() {
-		key := domaincli.IssueOpsUsageKey(line)
+	for _, line := range clicatalog.IssueOpsUsageLines() {
+		key := cliparse.IssueOpsUsageKey(line)
 		if key == "" {
 			continue
 		}

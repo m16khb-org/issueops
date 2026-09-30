@@ -140,7 +140,7 @@ alone.
 `--owner-host` accepts `codex|claude|omo`, so Orca can own and display any of
 those host sessions. For Omo, IssueOps launches the UI-visible terminal with
 `omo --model '<provider/model>:<thinking>'`; the default is
-`openai-codex/gpt-5.6-sol:max`.
+`chatgpt-subscription/gpt-6-sol:max`.
 If Orca does not recognize that TUI for native `--inject`, IssueOps creates a
 non-inject dispatch with the official preamble, validates the sealed task and
 terminal identities, and sends the whole preamble to that exact terminal as one
@@ -376,14 +376,20 @@ legacy recipient와 capability recipient 중 정확히 하나만 admit하며 둘
 
 | host | implementer(하위 세션) | planner(리뷰 서브에이전트) |
 |---|---|---|
-| codex | `gpt-6-sol` / `high` | `gpt-5.6-sol` / `xhigh` |
-| claude | `claude-sonnet-5` / `high` | `claude-opus-5` / `high` |
+| codex | `gpt-6-sol` / `high` | `gpt-6-astra` / `xhigh` |
+| claude | `claude-sonnet-5-5` / `high` | `claude-opus-5-5` / `high` |
+| omo | `chatgpt-subscription/gpt-6-sol` / `max` | `chatgpt-subscription/gpt-6-astra` / `max` |
 
 planner 값은 owner 프롬프트의 `{REVIEWER_MODEL}`/`{REVIEWER_EFFORT}`로
 렌더되어, 하위 세션이 구현 diff의 design-review 적대 리뷰 서브에이전트를 planner급
 모델로 띄우는 실행 계약이 된다.
 
-Claude Code의 자동 실행 경로는 `Opus 5 → Sonnet 5`다. Fable 5는 자동
+Codex와 Omo의 조사 모델은 `gpt-6-luna` / `medium`이며, Omo는 같은
+`chatgpt-subscription/` prefix를 사용한다. 위임이 이미 허용된 범위에서만 읽기 전용
+탐색·자료 요약에 사용하고, 구현·계획 확정·리뷰 게이트 판정에는 사용하지 않는다.
+모델·effort 기본값의 정규 소유자는 `internal/domain/agentmodel`이다.
+
+Claude Code의 자동 실행 경로는 `Opus 5.5 → Sonnet 5.5`다. Fable 5는 자동
 기본값이나 폴백으로 사용하지 않으며, 필요한 경우에만
 `--owner-model claude-fable-5`로 명시해 수동 실행한다.
 
@@ -485,7 +491,7 @@ issueops schema-evidence record --id "$ISSUEOPS_ID"   --measurement "orders: 8.4
 구현 diff의 design-review 적대 리뷰를 수행하고 결과를 기록해야 한다:
 
 ```bash
-issueops implementation-review record --id "$ISSUEOPS_ID"   --verdict pass --finding "..." --evidence "..."   --reviewer-host codex --reviewer-model gpt-5.6-sol   --host codex --session-id "$SESSION" --cwd "$WORKTREE" --json
+issueops implementation-review record --id "$ISSUEOPS_ID"   --verdict pass --finding "..." --evidence "..."   --reviewer-host codex --reviewer-model gpt-6-astra   --host codex --session-id "$SESSION" --cwd "$WORKTREE" --json
 ```
 
 - 게이트: `verdict==pass` + findings/evidence 실질 내용. 기록은 implement phase

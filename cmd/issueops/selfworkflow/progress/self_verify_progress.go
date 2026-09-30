@@ -1,16 +1,14 @@
 package progress
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 	"time"
-
-	"issueops/cmd/issueops/commandstep"
 )
-
-type StepResult = commandstep.StepResult
 
 func NewSelfVerifyProgressReporter(mode string, writer io.Writer) (*SelfVerifyProgressReporter, error) {
 	mode = strings.TrimSpace(strings.ToLower(mode))
@@ -26,7 +24,7 @@ func NewSelfVerifyProgressReporter(mode string, writer io.Writer) (*SelfVerifyPr
 	return &SelfVerifyProgressReporter{mode: mode, writer: writer, started: time.Now()}, nil
 }
 
-func (r *SelfVerifyProgressReporter) Emit(event SelfVerifyProgressEvent) {
+func (r *SelfVerifyProgressReporter) Emit(event selfverify.ProgressEvent) {
 	if r == nil || r.mode == "" {
 		return
 	}
@@ -44,7 +42,7 @@ func (r *SelfVerifyProgressReporter) Emit(event SelfVerifyProgressEvent) {
 	fmt.Fprintln(r.writer, string(b))
 }
 
-func (r *SelfVerifyProgressReporter) EmitStepEnd(loopKind string, iteration, iterations int, seed int64, stepIndex, stepCount int, step StepResult) {
+func (r *SelfVerifyProgressReporter) EmitStepEnd(loopKind string, iteration, iterations int, seed int64, stepIndex, stepCount int, step selfverify.StepResult) {
 	if r == nil {
 		return
 	}
@@ -52,7 +50,7 @@ func (r *SelfVerifyProgressReporter) EmitStepEnd(loopKind string, iteration, ite
 	if step.OK {
 		lastSuccess = step.Label
 	}
-	event := SelfVerifyProgressEvent{
+	event := selfverify.ProgressEvent{
 		Event:       "step_end",
 		LoopKind:    loopKind,
 		Iteration:   iteration,

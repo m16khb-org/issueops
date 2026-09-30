@@ -1,6 +1,10 @@
 package mcpcli
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,13 +12,11 @@ import (
 	"sync"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func TestSDKToolHandlerDispatchesCatalogTool(t *testing.T) {
-	handler := sdkToolHandler(resolveHandlerGroup("contract_schema"), "contract_schema")
+	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
 	result, err := handler(context.Background(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)},
 	})
@@ -34,7 +36,7 @@ func TestSDKToolHandlerDispatchesCatalogTool(t *testing.T) {
 }
 
 func TestSDKToolHandlerRejectsInvalidRawArguments(t *testing.T) {
-	handler := sdkToolHandler(resolveHandlerGroup("contract_schema"), "contract_schema")
+	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
 	_, err := handler(context.Background(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{not json`)},
 	})
@@ -44,7 +46,7 @@ func TestSDKToolHandlerRejectsInvalidRawArguments(t *testing.T) {
 }
 
 func TestSDKResourceHandlerReadsHarnessResource(t *testing.T) {
-	result, err := sdkResourceHandler()(context.Background(), &mcp.ReadResourceRequest{
+	result, err := sdkResourceHandler(resourceConfigForTest())(context.Background(), &mcp.ReadResourceRequest{
 		Params: &mcp.ReadResourceParams{URI: "issueops://commit-policy"},
 	})
 	if err != nil {
@@ -63,8 +65,8 @@ func TestSDKResourceHandlerReadsHarnessResource(t *testing.T) {
 }
 
 func TestInitSDKServerKeepsDependenciesPerServer(t *testing.T) {
-	first := initSDKServer(MCPDependencies{})
-	second := initSDKServer(MCPDependencies{})
+	first := initSDKServer(testTransportServices())
+	second := initSDKServer(testTransportServices())
 
 	if first == nil || second == nil {
 		t.Fatalf("initSDKServer returned nil: first=%v second=%v", first, second)
@@ -76,12 +78,12 @@ func TestInitSDKServerKeepsDependenciesPerServer(t *testing.T) {
 
 func TestInitSDKServerAcceptsPublicationReconcileWithoutInvokingIt(t *testing.T) {
 	invoked := 0
-	handler := issueops.RemotePullRequestReconcileHandler(func(context.Context, string, issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+	handler := issueopscontract.RemotePullRequestReconcileHandler(func(context.Context, string, issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 		invoked++
-		return issueops.ExecutionReconcileResult{}, nil
+		return issueopscontract.ExecutionReconcileResult{}, nil
 	})
 
-	server := initSDKServer(MCPDependencies{Publication: PublicationHandlers{Reconcile: handler}})
+	server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Publication: PublicationHandlers{Reconcile: handler}})
 	if server == nil {
 		t.Fatal("initSDKServer returned nil")
 	}
@@ -100,10 +102,10 @@ func TestInitSDKServerDispatchesConcurrentReleaseWithIsolatedDependencies(t *tes
 		group.Add(1)
 		go func(id string) {
 			defer group.Done()
-			server := initSDKServer(MCPDependencies{Release: func(_ context.Context, _ string, request issueops.ExecutionReleaseRequest) (issueops.ExecutionResult, error) {
+			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				token := id + "::" + request.ID
 				called <- token
-				return issueops.ExecutionResult{OK: true, ID: token}, nil
+				return issueopscontract.ExecutionResult{OK: true, ID: token}, nil
 			}})
 			clientTransport, serverTransport := mcp.NewInMemoryTransports()
 			serverSession, err := server.Connect(context.Background(), serverTransport, nil)
@@ -168,8 +170,8 @@ func TestSDKServerHandshakeOmitsLoggingAndKeepsCatalogCapabilities(t *testing.T)
 		&mcp.Implementation{Name: "issueops_test", Version: "0"},
 		sdkServerOptions(),
 	)
-	registerAllTools(server, MCPDependencies{})
-	registerAllResources(server)
+	registerAllTools(server, testTransportServices())
+	registerAllResources(server, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest()})
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "0"}, nil)
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 	ctx, cancel := context.WithCancel(context.Background())

@@ -1,31 +1,11 @@
 package hookprompt
 
 import (
+	"issueops/internal/domain/projectdoc"
 	"strings"
-
-	hookpromptcontract "issueops/internal/contract/hookprompt"
-	projectdoc "issueops/internal/domain/projectdoc"
 )
 
-// ProjectDocCatalogEntry is the domain catalog entry the hook renders.
-type ProjectDocCatalogEntry = projectdoc.ProjectDocCatalogEntry
-
-func BuildProjectDocCatalogContext(repo string) hookpromptcontract.ProjectDocCatalogContext {
-	docs := DiscoverProjectDocs(repo)
-	if len(docs) == 0 {
-		return hookpromptcontract.ProjectDocCatalogContext{}
-	}
-	compact := FormatProjectDocCatalog(docs)
-	userView := renderProjectDocCatalogUserView(docs)
-	return hookpromptcontract.ProjectDocCatalogContext{
-		ShouldInject: true,
-		ProjectDocs:  docs,
-		Compact:      compact,
-		UserView:     userView,
-	}
-}
-
-func renderProjectDocCatalogUserView(docs []ProjectDocCatalogEntry) string {
+func RenderProjectDocCatalogUserView(docs []projectdoc.ProjectDocCatalogEntry) string {
 	if len(docs) == 0 {
 		return ""
 	}

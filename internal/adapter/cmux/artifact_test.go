@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"issueops/internal/adapter/hostprotocol"
+	cmuxcontract "issueops/internal/contract/cmux"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -27,9 +29,9 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 		host, model, effort string
 		wantPrefix          []string
 	}{
-		{host: "codex", model: "gpt-5.6-terra", effort: "high", wantPrefix: []string{"--model", "gpt-5.6-terra", "-c", "model_reasoning_effort=high", "--"}},
-		{host: "claude", model: "claude-sonnet-5", effort: "high", wantPrefix: []string{"--model", "claude-sonnet-5", "--effort", "high", "--"}},
-		{host: "omo", model: "openai/gpt-5.6", effort: "xhigh", wantPrefix: []string{"--model", "openai/gpt-5.6:xhigh", "--"}},
+		{host: "codex", model: "gpt-6-astra", effort: "high", wantPrefix: []string{"--model", "gpt-6-astra", "-c", "model_reasoning_effort=high", "--dangerously-bypass-approvals-and-sandbox", "--"}},
+		{host: "claude", model: "claude-sonnet-5-5", effort: "high", wantPrefix: []string{"--model", "claude-sonnet-5-5", "--effort", "high", "--dangerously-skip-permissions", "--"}},
+		{host: "omo", model: "chatgpt-subscription/gpt-6-sol", effort: "xhigh", wantPrefix: []string{"--model", "chatgpt-subscription/gpt-6-sol:xhigh", "--"}},
 	} {
 		t.Run(test.host, func(t *testing.T) {
 			capture := filepath.Join(root, test.host+"-argv")
@@ -38,7 +40,7 @@ func TestPrivateLauncherPreservesPromptAndExactHostArgv(t *testing.T) {
 			if err := os.WriteFile(host, []byte(hostSource), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			prepared, err := PrepareLauncher(ArtifactRequest{
+			prepared, err := prepareTestLauncher(cmuxcontract.ArtifactRequest{
 				Root: filepath.Join(root, "artifacts"), CWD: worktree,
 				WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 				Host: test.host, HostExecutable: host, Model: test.model, Effort: test.effort,
@@ -116,7 +118,7 @@ func TestPrepareLauncherUsesPortableSingleArgumentBoundary(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			prompt := []byte(strings.Repeat("p", test.size))
-			prepared, err := PrepareLauncher(ArtifactRequest{
+			prepared, err := prepareTestLauncher(cmuxcontract.ArtifactRequest{
 				Root: filepath.Join(root, "artifacts-"+strings.ReplaceAll(test.name, " ", "-")), CWD: worktree,
 				WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 				Host: "codex", HostExecutable: host, Model: "model", Prompt: prompt,
@@ -124,7 +126,7 @@ func TestPrepareLauncherUsesPortableSingleArgumentBoundary(t *testing.T) {
 			})
 			if test.wantErr {
 				if err == nil {
-					_ = prepared.Cleanup()
+					_ = CleanupLauncher(prepared)
 					t.Fatalf("launcher accepted prompt size %d", test.size)
 				}
 				return
@@ -138,7 +140,7 @@ func TestPrepareLauncherUsesPortableSingleArgumentBoundary(t *testing.T) {
 			if output, err := command.CombinedOutput(); err != nil {
 				t.Fatalf("launcher rejected prompt argv size %d: %v\n%s", test.size, err, output)
 			}
-			if err := prepared.Cleanup(); err != nil {
+			if err := CleanupLauncher(prepared); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -161,7 +163,7 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 		t.Fatal(err)
 	}
 	prompt := []byte("prompt")
-	prepared, err := PrepareLauncher(ArtifactRequest{
+	prepared, err := prepareTestLauncher(cmuxcontract.ArtifactRequest{
 		Root: filepath.Join(root, "artifacts"), CWD: worktree, WindowID: testWindow, WorkspaceID: testWorkspace,
 		SurfaceID: testSurface, SocketPath: socketPath, Host: "codex", HostExecutable: host, Model: "model",
 		Prompt: prompt, PromptSHA256: digestBytes(prompt), MaterialSHA256: strings.Repeat("b", 64),
@@ -187,7 +189,7 @@ func TestPrivateLauncherWrongScopeFailsBeforeHostAndPreservesRecoveryArtifacts(t
 	if err != nil || receipt.Status != "identity_mismatch" || receipt.CWD != wrong {
 		t.Fatalf("receipt=%+v err=%v", receipt, err)
 	}
-	if err := prepared.Cleanup(); err != nil {
+	if err := CleanupLauncher(prepared); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(prepared.Directory); !os.IsNotExist(err) {
@@ -207,7 +209,7 @@ func TestPrivateLauncherRejectsWrongAmbientCmuxScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	prompt := []byte("prompt")
-	prepared, err := PrepareLauncher(ArtifactRequest{
+	prepared, err := prepareTestLauncher(cmuxcontract.ArtifactRequest{
 		Root: filepath.Join(root, "artifacts"), CWD: worktree, WindowID: testWindow, WorkspaceID: testWorkspace,
 		SurfaceID: testSurface, SocketPath: socketPath, Host: "codex", HostExecutable: host, Model: "model",
 		Prompt: prompt, PromptSHA256: digestBytes(prompt), MaterialSHA256: strings.Repeat("b", 64),
@@ -235,7 +237,7 @@ func TestPrivateLauncherRejectsWrongAmbientCmuxScope(t *testing.T) {
 }
 
 func TestValidateBootstrapReceiptRequiresExactProcessCorrelation(t *testing.T) {
-	expected := BootstrapExpectation{
+	expected := cmuxcontract.BootstrapExpectation{
 		CWD: "/repo/worktree", WindowID: testWindow, WorkspaceID: testWorkspace, SurfaceID: testSurface, SocketPath: socketPath,
 		HostExecutable: "/opt/native/codex", HostArgvSHA256: strings.Repeat("c", 64), PromptSHA256: strings.Repeat("a", 64), MaterialSHA256: strings.Repeat("b", 64),
 	}
@@ -329,4 +331,8 @@ func canonicalTempDir(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return root
+}
+
+func prepareTestLauncher(request cmuxcontract.ArtifactRequest) (cmuxcontract.PreparedLauncher, error) {
+	return PrepareLauncher(request, hostprotocol.BuildInteractiveArgv)
 }

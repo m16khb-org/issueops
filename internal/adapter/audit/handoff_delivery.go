@@ -10,30 +10,32 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
+	auditcontract "issueops/internal/contract/audit"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/domain/auditid"
 	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/domain/policy"
 )
 
-type HandoffDeliveryAuditRecord struct {
-	OK            bool                                                `json:"ok"`
-	Kind          string                                              `json:"kind"`
-	SchemaVersion int                                                 `json:"schema_version"`
-	AuditLogID    string                                              `json:"audit_log_id"`
-	GeneratedAt   string                                              `json:"generated_at"`
-	LogPath       string                                              `json:"log_path,omitempty"`
-	RecordDigest  string                                              `json:"record_digest"`
-	Observation   issueopscontract.IssueOpsHandoffDeliveryObservation `json:"observation"`
+const handoffDeliveryAuditTimeout = 2 * time.Second
+const handoffDeliveryFieldLimit = 1024
+
+type handoffDeliveryOpenHooks struct {
+	beforeStateRootOpen func()
+	beforeLeafOpen      func()
+	afterLeafOpen       func()
 }
 
-var (
-	handoffDeliveryAuditBeforeStateRootOpen = func() {}
-	handoffDeliveryAuditBeforeLeafOpen      = func() {}
-	handoffDeliveryAuditAfterLeafOpen       = func() {}
-)
+func boundedHandoffDeliveryField(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) > handoffDeliveryFieldLimit {
+		return value[:handoffDeliveryFieldLimit] + "..."
+	}
+	return value
+}
 
 type handoffDeliveryAuditHandle struct {
 	file       *os.File
@@ -62,18 +64,14 @@ func (handle *handoffDeliveryAuditHandle) VerifyPath() error {
 	return handle.verifyPath()
 }
 
-func AuditHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (HandoffDeliveryAuditRecord, error) {
-	return AuditHandoffDeliveryObservationAt(StateDir(), observation)
-}
-
-func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscontract.IssueOpsHandoffDeliveryObservation) (HandoffDeliveryAuditRecord, error) {
+func (store HandoffDeliveryStore) Append(observation issueopscontract.IssueOpsHandoffDeliveryObservation) (auditcontract.HandoffDeliveryAuditRecord, error) {
 	auditLogID := auditid.Generate(observation.LifecycleID, observation.AttemptID, []string{observation.PromptSHA256, observation.Launcher.Name})
 	observation = redactedHandoffDeliveryObservation(observation)
 	observation.Receipt = issueopscontract.IssueOpsHandoffDeliveryReceipt{
 		Location: "audit/handoff-delivery.jsonl#audit_log_id=" + auditLogID,
 		Digest:   handoffDeliveryReceiptDigest(auditLogID, observation),
 	}
-	record := HandoffDeliveryAuditRecord{
+	record := auditcontract.HandoffDeliveryAuditRecord{
 		OK:            true,
 		Kind:          "handoff_delivery_observation",
 		SchemaVersion: 1,
@@ -83,29 +81,25 @@ func AuditHandoffDeliveryObservationAt(stateRoot string, observation issueopscon
 		Observation:   observation,
 	}
 	if err := issueopsdomain.ValidateHandoffDeliveryObservation(record.Observation); err != nil {
-		return HandoffDeliveryAuditRecord{}, err
+		return auditcontract.HandoffDeliveryAuditRecord{}, err
 	}
 	record.RecordDigest = handoffDeliveryRecordDigest(record)
-	if err := appendHandoffDeliveryAudit(stateRoot, record); err != nil {
+	if err := store.append(record); err != nil {
 		return record, err
 	}
 	return record, nil
 }
 
-func ReadHandoffDeliveryAuditObservations() ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	return ReadHandoffDeliveryAuditObservationsAt(StateDir())
+func (store HandoffDeliveryStore) Read() ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
+	return store.ReadFor("", "")
 }
 
-func ReadHandoffDeliveryAuditObservationsAt(stateRoot string) ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
-	return readHandoffDeliveryAuditObservationsAt(stateRoot, "", "")
-}
-
-func readHandoffDeliveryAuditObservationsAt(stateRoot, lifecycleID, lineageID string) ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
+func (store HandoffDeliveryStore) ReadFor(lifecycleID, lineageID string) ([]issueopscontract.IssueOpsHandoffDeliveryObservation, error) {
 	observations := []issueopscontract.IssueOpsHandoffDeliveryObservation{}
-	ctx, cancel := context.WithTimeout(context.Background(), processAuditTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), handoffDeliveryAuditTimeout)
 	defer cancel()
-	err := WithKeyLock(ctx, stateRoot, "handoff-delivery-audit", func(context.Context) error {
-		handle, err := openHandoffDeliveryAudit(stateRoot, handoffDeliveryAuditRead)
+	err := store.WithKeyLock(ctx, store.StateRoot, "handoff-delivery-audit", func(context.Context) error {
+		handle, err := openHandoffDeliveryAudit(store.StateRoot, handoffDeliveryAuditRead, store.openHooks)
 		if errors.Is(err, os.ErrNotExist) {
 			return nil
 		}
@@ -138,7 +132,7 @@ func scanHandoffDeliveryAudit(file *os.File, lifecycleID, lineageID string, acce
 			return readErr
 		}
 		line = line[:len(line)-1]
-		var record HandoffDeliveryAuditRecord
+		var record auditcontract.HandoffDeliveryAuditRecord
 		if err := json.Unmarshal(line, &record); err != nil {
 			return err
 		}
@@ -174,7 +168,7 @@ func scanHandoffDeliveryAudit(file *os.File, lifecycleID, lineageID string, acce
 	}
 }
 
-func handoffDeliveryAuditErrorAffects(record HandoffDeliveryAuditRecord, lifecycleID, lineageID string) bool {
+func handoffDeliveryAuditErrorAffects(record auditcontract.HandoffDeliveryAuditRecord, lifecycleID, lineageID string) bool {
 	if lifecycleID == "" {
 		return true
 	}
@@ -182,23 +176,7 @@ func handoffDeliveryAuditErrorAffects(record HandoffDeliveryAuditRecord, lifecyc
 		(record.Observation.LifecycleID == lifecycleID && record.Observation.LineageID == lineageID)
 }
 
-func FoldHandoffDeliveryAuditObservations() (map[string]issueopscontract.IssueOpsHandoffDeliveryObservation, []issueopscontract.IssueOpsHandoffDeliveryDecision, error) {
-	return FoldHandoffDeliveryAuditObservationsAt(StateDir())
-}
-
-func FoldHandoffDeliveryAuditObservationsAt(stateRoot string) (map[string]issueopscontract.IssueOpsHandoffDeliveryObservation, []issueopscontract.IssueOpsHandoffDeliveryDecision, error) {
-	observations, err := ReadHandoffDeliveryAuditObservationsAt(stateRoot)
-	folded, decisions := issueopsdomain.FoldHandoffDeliveryObservations(observations)
-	return folded, decisions, err
-}
-
-func FoldHandoffDeliveryAuditObservationsForAt(stateRoot, lifecycleID, lineageID string) (map[string]issueopscontract.IssueOpsHandoffDeliveryObservation, []issueopscontract.IssueOpsHandoffDeliveryDecision, error) {
-	observations, err := readHandoffDeliveryAuditObservationsAt(stateRoot, lifecycleID, lineageID)
-	folded, decisions := issueopsdomain.FoldHandoffDeliveryObservations(observations)
-	return folded, decisions, err
-}
-
-func appendHandoffDeliveryAudit(stateRoot string, record HandoffDeliveryAuditRecord) error {
+func (store HandoffDeliveryStore) append(record auditcontract.HandoffDeliveryAuditRecord) error {
 	line, err := json.Marshal(record)
 	if err != nil {
 		return err
@@ -206,10 +184,10 @@ func appendHandoffDeliveryAudit(stateRoot string, record HandoffDeliveryAuditRec
 	if len(line)+1 > 256*1024 {
 		return fmt.Errorf("handoff delivery audit record exceeds reader limit")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), processAuditTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), handoffDeliveryAuditTimeout)
 	defer cancel()
-	return WithKeyLock(ctx, stateRoot, "handoff-delivery-audit", func(context.Context) error {
-		handle, err := openHandoffDeliveryAudit(stateRoot, handoffDeliveryAuditAppend)
+	return store.WithKeyLock(ctx, store.StateRoot, "handoff-delivery-audit", func(context.Context) error {
+		handle, err := openHandoffDeliveryAudit(store.StateRoot, handoffDeliveryAuditAppend, store.openHooks)
 		if err != nil {
 			return err
 		}
@@ -243,7 +221,7 @@ func appendHandoffDeliveryAudit(stateRoot string, record HandoffDeliveryAuditRec
 	})
 }
 
-func handoffDeliveryRecordDigest(record HandoffDeliveryAuditRecord) string {
+func handoffDeliveryRecordDigest(record auditcontract.HandoffDeliveryAuditRecord) string {
 	record.RecordDigest = ""
 	data, _ := json.Marshal(record)
 	sum := sha256.Sum256(data)
@@ -261,22 +239,22 @@ func handoffDeliveryReceiptDigest(auditLogID string, observation issueopscontrac
 }
 
 func redactedHandoffDeliveryObservation(observation issueopscontract.IssueOpsHandoffDeliveryObservation) issueopscontract.IssueOpsHandoffDeliveryObservation {
-	observation.Launcher.Path = boundedProcessField(policy.RedactFreeform(observation.Launcher.Path))
+	observation.Launcher.Path = boundedHandoffDeliveryField(policy.RedactFreeform(observation.Launcher.Path))
 	if observation.Target.Process != nil {
 		process := *observation.Target.Process
-		process.Executable = boundedProcessField(policy.RedactFreeform(process.Executable))
+		process.Executable = boundedHandoffDeliveryField(policy.RedactFreeform(process.Executable))
 		observation.Target.Process = &process
 	}
 	if observation.OwnerActor != nil && observation.OwnerActor.SessionProcess != nil {
 		process := *observation.OwnerActor.SessionProcess
-		process.Executable = boundedProcessField(policy.RedactFreeform(process.Executable))
+		process.Executable = boundedHandoffDeliveryField(policy.RedactFreeform(process.Executable))
 		actor := *observation.OwnerActor
 		actor.SessionProcess = &process
 		observation.OwnerActor = &actor
 	}
 	if observation.OwnerClaim.Actor.SessionProcess != nil {
 		process := *observation.OwnerClaim.Actor.SessionProcess
-		process.Executable = boundedProcessField(policy.RedactFreeform(process.Executable))
+		process.Executable = boundedHandoffDeliveryField(policy.RedactFreeform(process.Executable))
 		observation.OwnerClaim.Actor.SessionProcess = &process
 	}
 	return observation

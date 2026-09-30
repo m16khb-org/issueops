@@ -53,7 +53,7 @@ func TestOmoRunnerKeepsVersionAndEpisodeWritesInsidePrivateHomes(t *testing.T) {
 	tempParent := t.TempDir()
 	roots := []string{filepath.Join(tempParent, "preflight"), filepath.Join(tempParent, "episode")}
 	nextRoot := 0
-	runner := NewOmoRunner(harness, omoTestLifecycleExtension(harness), Dependencies{
+	runner := newTestOmoRunner(harness, omoTestLifecycleExtension(harness), Dependencies{
 		Process: ExecRunner{},
 		LookPath: func(name string) (string, error) {
 			if name != "omo" {

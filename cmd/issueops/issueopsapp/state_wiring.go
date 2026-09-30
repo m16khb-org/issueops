@@ -2,20 +2,36 @@ package issueopsapp
 
 import (
 	"issueops/cmd/issueops/statecli"
+	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
+	stateapp "issueops/internal/application/state"
+	statecontract "issueops/internal/contract/state"
+	"issueops/internal/domain/statepath"
+	stateport "issueops/internal/port/state"
+	"os"
 )
 
-// stateDependencies는 state CLI에 concrete state store를 조립해 넘긴다.
-//
-// state 저장소를 아는 곳은 이 composition root 하나여야 한다. CLI가 outbound
-// adapter를 직접 부르면 transport와 저장소 구현이 한 package에 묶인다.
 func stateDependencies() statecli.Dependencies {
+	return newStateDependencies(statestore.StateDir(), os.Getenv("ISSUEOPS_WORKER_DIR"))
+}
+
+func newStateDependencies(dir, workerOverride string) statecli.Dependencies {
+	service := newStateService(dir)
+	stores := statestore.NewMaintenanceStores(dir, workerOverride)
+	maintenance := stateapp.NewMaintenanceService(stateapp.MaintenanceDependencies{
+		AllRoots: stores.Roots, StoreExists: stores.Exists, MaintainStore: stores.Maintain,
+	})
 	return statecli.Dependencies{
-		Write:    statestore.StateWrite,
-		Read:     statestore.StateRead,
-		List:     statestore.StateList,
-		Prune:    statestore.StatePrune,
-		Doctor:   statestore.StateDoctor,
-		Maintain: statestore.StateMaintain,
+		Write: service.Write, Read: service.Read, List: service.List, Prune: service.Prune,
+		Doctor:   func() (statecontract.StateDoctorResult, error) { return statestore.Doctor(dir) },
+		Maintain: maintenance.Maintain,
 	}
+}
+
+func newStateService(dir string) *stateapp.Service {
+	return stateapp.NewService(stateapp.Dependencies{
+		StateDir: func() string { return dir }, StatePath: statepath.Path,
+		OpenStore:       func(dir string) (stateport.Store, error) { return sqlstore.Open(dir) },
+		ExistingRecords: statestore.ExistingRecords{},
+	})
 }

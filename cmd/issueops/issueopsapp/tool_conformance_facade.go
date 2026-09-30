@@ -1,45 +1,50 @@
 package issueopsapp
 
 import (
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"context"
 	"fmt"
+	failurecause "issueops/internal/adapter/failurecause"
+	"issueops/internal/adapter/hostprotocol"
+	app "issueops/internal/application/toolconformance"
 	"os"
 	"strings"
+	"time"
 
 	"issueops/cmd/issueops/contractcli"
 	"issueops/internal/adapter/hostprobe"
-	omoHost "issueops/internal/adapter/omo"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/toolconformance"
-	mcpadapter "issueops/internal/domain/mcp"
 	"issueops/internal/port"
 )
 
-func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest) (toolconformance.BenchmarkReport, error) {
+func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest) (fixturecontract.BenchmarkReport, error) {
 	binary, err := os.Executable()
 	if err != nil {
-		return toolconformance.BenchmarkReport{}, err
+		return fixturecontract.BenchmarkReport{}, err
 	}
 	models, err := conformanceModelOverrides(request.Models)
 	if err != nil {
-		return toolconformance.BenchmarkReport{}, err
+		return fixturecontract.BenchmarkReport{}, err
 	}
-	descriptors := make([]toolconformance.ToolDescriptor, 0, len(mcpadapter.AdvertisedTools()))
-	for _, tool := range mcpadapter.AdvertisedTools() {
-		descriptors = append(descriptors, toolconformance.ToolDescriptor{Name: tool.Name, InputSchema: tool.InputSchema})
+	descriptors := make([]fixturecontract.ToolDescriptor, 0, len(mcpcatalog.AdvertisedTools()))
+	for _, tool := range mcpcatalog.AdvertisedTools() {
+		descriptors = append(descriptors, fixturecontract.ToolDescriptor{Name: tool.Name, InputSchema: tool.InputSchema})
 	}
 	runners := toolConformanceRunners(binary)
-	return toolconformance.RunLiveBenchmark(ctx, toolconformance.LiveBenchmarkRequest{
+	return app.RunLiveBenchmark(ctx, app.LiveBenchmarkRequest{
 		Hosts: request.Hosts, Models: models,
 		Profile: request.Profile, Only: request.Only, TargetCompleted: request.TargetCompleted,
 		MaxAttemptsPerCase: request.MaxAttemptsPerCase, HarnessBinary: binary, Previous: request.Previous,
-	}, descriptors, toolconformance.LiveBenchmarkDependencies{Runners: runners})
+	}, descriptors, app.LiveBenchmarkDependencies{Runners: runners, Now: time.Now, Token: toolconformance.RandomToken, LoadManifest: newConformanceFixtures().LoadManifest, Classify: failurecause.Classify})
 }
 
 func toolConformanceRunners(binary string) map[string]port.HostProbeRunner {
 	return map[string]port.HostProbeRunner{
 		"codex":  hostprobe.NewCodexRunner(binary, hostprobe.Dependencies{}),
 		"claude": hostprobe.NewClaudeRunner(binary, hostprobe.Dependencies{}),
-		"omo":    hostprobe.NewOmoRunner(binary, omoHost.LifecycleExtension(binary), hostprobe.Dependencies{}),
+		"omo":    hostprobe.NewOmoRunner(binary, hostprotocol.OmoLifecycleExtension(binary), hostprobe.Dependencies{}, hostprotocol.OmoLifecycleExtension),
 	}
 }
 

@@ -1,15 +1,21 @@
 package issueops
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
+	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/contract/issueops"
+	leasecontract "issueops/internal/contract/issueopslease"
+	preparationcontract "issueops/internal/contract/issueopspreparation"
 	issueopsdomain "issueops/internal/domain/issueops"
+	leasedomain "issueops/internal/domain/issueopslease"
 )
 
 type claimableExecutionFixture struct {
@@ -37,7 +43,7 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 		t.Fatalf("git worktree add: %s", stderr)
 	}
 	baseHead := strings.TrimSpace(preflight.GitOut(worktree, "rev-parse", "HEAD"))
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +73,7 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 
 func prepareExecutionCompletionFixture(t *testing.T, stateRoot string, fixture *claimableExecutionFixture) {
 	t.Helper()
-	fixture.record.Phase = IssueOpsPhasePR
+	fixture.record.Phase = issueops.IssueOpsPhasePR
 	fixture.record.IssueURL = "https://github.com/example/issueops/issues/69"
 	fixture.record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/issueops/pull/69",
@@ -88,11 +94,11 @@ func orcaPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	return stateRoot, record
 }
 
-func resumeIntentFixture(t *testing.T, provider string, issue int) (string, issueops.IssueOpsRecord, externalOrcaIntentPayload) {
+func resumeIntentFixture(t *testing.T, provider string, issue int) (string, issueops.IssueOpsRecord, preparationcontract.Intent) {
 	return resumeIntentFixtureWithLinkVerified(t, provider, issue, true)
 }
 
-func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue int, linkVerified bool) (string, issueops.IssueOpsRecord, externalOrcaIntentPayload) {
+func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue int, linkVerified bool) (string, issueops.IssueOpsRecord, preparationcontract.Intent) {
 	t.Helper()
 	stateRoot, record := executionPrepareRecord(t)
 	root := issueOpsWorktreePathForTest(record.Repo, record.Branch)
@@ -119,7 +125,7 @@ func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue in
 		Orca: &issueops.OrcaBinding{
 			RuntimeID: "runtime-current", RepoID: "repo-current", WorktreeID: "worktree-current",
 			WorktreeInstanceID: "instance-current", LeaseGeneration: 1,
-			OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh",
+			OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh",
 			RunID: "run-current", TaskID: "task-current", DispatchID: "dispatch-current", TerminalPTYID: "pty-current",
 		},
 	}
@@ -133,7 +139,36 @@ func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue in
 		packetPath: packetPath, packetSHA256: strings.Repeat("b", 64),
 		promptPath: promptPath, promptSHA256: strings.Repeat("c", 64),
 	}
-	persisted, payload, err := beginOrcaExecutionResumeIntent(stateRoot, record, artifacts, record.Execution.Orca.RuntimeID, "", nil)
+	store, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repository := leaseoutbound.NewResumeRepository(store)
+	snapshot, err := repository.LoadSnapshot(context.Background(), record.ID, record.Execution.Lease.Generation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	operationID, err := NewExecutionOperationID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = repository.BeginIntent(context.Background(), snapshot, leasecontract.ResumeArtifacts{
+		IssueBodySHA256:   artifacts.issueBodySHA256,
+		ContextPacketPath: artifacts.packetPath, ContextPacketSHA256: artifacts.packetSHA256,
+		OwnerPromptPath: artifacts.promptPath, OwnerPromptSHA256: artifacts.promptSHA256,
+	}, leasedomain.ResumePlan{RuntimeID: record.Execution.Orca.RuntimeID}, operationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	persisted, err := ReadIssueOps(stateRoot, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	intentRaw, ok, err := store.Get(externalIntentBucket, operationID)
+	if err != nil || !ok {
+		t.Fatalf("resume intent present=%v err=%v", ok, err)
+	}
+	payload, err := (preparationcontract.IntentCodec{}).Decode(operationID, intentRaw)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +320,7 @@ func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktre
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, id, string(IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, id, string(issueops.IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,8 +404,8 @@ func issueOpsExecutionForTest(repo, worktree, branch string) *issueops.Execution
 	}
 }
 
-func issueOpsActorForTest(worktree string) IssueOpsActor {
-	return IssueOpsActor{
+func issueOpsActorForTest(worktree string) issueops.IssueOpsActor {
+	return issueops.IssueOpsActor{
 		Host: "codex", SessionID: "test-session", AgentID: "test-agent", CWD: worktree,
 		NativeProcessAncestry: []issueops.NativeProcessReceipt{{
 			PID: 1, StartedAt: "2026-07-22T00:00:00Z", Executable: "/usr/bin/codex",
@@ -404,8 +439,8 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		t.Fatalf("create remote branch fixture: %s", stderr)
 	}
 	record := issueops.IssueOpsRecord{
-		OK: true, SchemaVersion: IssueOpsCurrentSchemaVersion,
-		ID: NewIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: IssueOpsPhasePlan,
+		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
+		ID: NewIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan,
 		IssueURL:     "https://github.com/acme/repo/issues/16",
 		DesignReview: &issueops.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{

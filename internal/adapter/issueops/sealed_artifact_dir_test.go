@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
 func TestSealedArtifactDirUsesRecordFieldOrLegacy(t *testing.T) {
@@ -33,14 +32,6 @@ func TestIssueArtifactDirForUsesLinkedIssueNumber(t *testing.T) {
 	}
 	if got := issueArtifactDirFor(issueops.IssueOpsRecord{}); got != "" {
 		t.Fatalf("no issue number must leave artifact_dir empty (legacy), got %q", got)
-	}
-}
-
-func TestWorkspaceFromReceiptRecordsArtifactDir(t *testing.T) {
-	record := issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/480"}
-	ws := workspaceFromReceipt(record, port.ExecutionWorkspaceReceipt{Root: "/wt", Branch: "b", Driver: "orca"}, "2026-08-27T00:00:00Z")
-	if ws.ArtifactDir != ".issueops/issues/480/artifact" || ws.Root != "/wt" {
-		t.Fatalf("workspace must carry artifact_dir: %+v", ws)
 	}
 }
 

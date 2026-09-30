@@ -9,8 +9,8 @@ description: Coding conventions, package structure, and layer boundaries.
 핵심 불변식을 보존하고, 상세 규칙은 아래 module로 연결한다. 각 module은 다시
 이 index로 돌아온다.
 
-> 현재 `issueops`는 초기 문서 단계다. Go 코드가 추가되면 이 문서를 우선
-> 적용한다.
+> 현재 Go 구현은 contract/domain/application/port/adapter 계층을 사용한다.
+> capability별 책임은 [domain-responsibilities.md](architecture/domain-responsibilities.md)를 따른다.
 
 ## Module map
 

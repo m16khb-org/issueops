@@ -15,7 +15,7 @@ func TestRunProjectCommitSuggest_printsNoChangesMessage_whenDiffIsEmpty(t *testi
 
 	// When
 	stderr, err := captureProjectCLIStderr(t, func() error {
-		return RunCommitSuggest([]string{"--repo", repo})
+		return RunCommitSuggest(testCommitService(), []string{"--repo", repo})
 	})
 
 	// Then
@@ -33,7 +33,7 @@ func TestRunProjectCommitSuggest_printsNoChangesJSON_whenJSONFlagIsSet(t *testin
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunCommitSuggest([]string{"--repo", repo, "--staged", "--json"})
+		return RunCommitSuggest(testCommitService(), []string{"--repo", repo, "--staged", "--json"})
 	})
 
 	// Then
@@ -52,7 +52,7 @@ func TestRunProjectLintDiagnose_printsSuccessText_whenCommandPasses(t *testing.T
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunLintDiagnose([]string{"--repo", repo, "--", "/bin/sh", "-c", "printf ok"})
+		return RunLintDiagnose(testLintService(), []string{"--repo", repo, "--", "/bin/sh", "-c", "printf ok"})
 	})
 
 	// Then
@@ -67,7 +67,7 @@ func TestRunProjectLintDiagnose_printsSuccessJSON_whenJSONFlagIsSet(t *testing.T
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunLintDiagnose([]string{"--repo", repo, "--json", "--", "/bin/sh", "-c", "printf ok"})
+		return RunLintDiagnose(testLintService(), []string{"--repo", repo, "--json", "--", "/bin/sh", "-c", "printf ok"})
 	})
 
 	// Then
@@ -85,7 +85,7 @@ func TestRunProjectLintDiagnose_rejectsMissingCommand(t *testing.T) {
 	repo := t.TempDir()
 
 	// When
-	err := RunLintDiagnose([]string{"--repo", repo})
+	err := RunLintDiagnose(testLintService(), []string{"--repo", repo})
 
 	// Then
 	if err == nil || !strings.Contains(err.Error(), "missing command to run") {

@@ -209,13 +209,13 @@ func TestReleasedSyncBaseFixtureRepresentsCurrentCompletion(t *testing.T) {
 	}
 }
 
-func (f syncBaseFixture) request(mode string) ExecutionSyncBaseRequest {
-	return ExecutionSyncBaseRequest{ID: f.record.ID, Mode: mode, CompletionGeneration: 1, Actor: f.actor, CWD: f.worktree}
+func (f syncBaseFixture) request(mode string) issueops.ExecutionSyncBaseRequest {
+	return issueops.ExecutionSyncBaseRequest{ID: f.record.ID, Mode: mode, CompletionGeneration: 1, Actor: f.actor, CWD: f.worktree}
 }
 
-func (f syncBaseFixture) run(t *testing.T, req ExecutionSyncBaseRequest) (ExecutionSyncBaseResult, error) {
+func (f syncBaseFixture) run(t *testing.T, req issueops.ExecutionSyncBaseRequest) (issueops.ExecutionSyncBaseResult, error) {
 	t.Helper()
-	return SyncExecutionBase(context.Background(), f.stateRoot, req, ExecutionSyncBaseDeps{Git: f.git.run})
+	return SyncExecutionBase(context.Background(), f.stateRoot, req, issueops.ExecutionSyncBaseDeps{Git: f.git.run})
 }
 
 func (f syncBaseFixture) rewrite(t *testing.T, mutate func(*issueops.IssueOpsRecord)) {
@@ -252,33 +252,33 @@ func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 		mutate  func(*testing.T, *syncBaseFixture)
 		missing string
 	}{
-		{"completion", ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
+		{"completion", issueops.ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
 			f.rewrite(t, func(r *issueops.IssueOpsRecord) { r.Execution.Completion = nil })
 		}, "completion_present"},
-		{"remote artifact", ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
+		{"remote artifact", issueops.ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
 			f.rewrite(t, func(r *issueops.IssueOpsRecord) { r.RemoteArtifact = nil })
 		}, "remote_artifact_present"},
-		{"remote branch", ExecutionSyncBasePreview, func(_ *testing.T, f *syncBaseFixture) {
+		{"remote branch", issueops.ExecutionSyncBasePreview, func(_ *testing.T, f *syncBaseFixture) {
 			f.git.remoteRef = ""
 		}, "remote_branch_present"},
-		{"pending intent", ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
+		{"pending intent", issueops.ExecutionSyncBasePreview, func(t *testing.T, f *syncBaseFixture) {
 			f.rewrite(t, func(r *issueops.IssueOpsRecord) {
 				r.Execution.Pending = &issueops.ExternalIntent{
 					OperationID: "op-1", Kind: "orca", Marker: "m", StartedAt: "2026-07-25T00:00:00Z",
 				}
 			})
 		}, "pending_intent_absent"},
-		{"cwd canonical", ExecutionSyncBasePreview, nil, "cwd_canonical"},
-		{"detached head", ExecutionSyncBasePreview, func(_ *testing.T, f *syncBaseFixture) {
+		{"cwd canonical", issueops.ExecutionSyncBasePreview, nil, "cwd_canonical"},
+		{"detached head", issueops.ExecutionSyncBasePreview, func(_ *testing.T, f *syncBaseFixture) {
 			f.git.currentBranch = ""
 		}, "head_on_recorded_branch"},
-		{"base fetch", ExecutionSyncBasePreview, func(_ *testing.T, f *syncBaseFixture) {
+		{"base fetch", issueops.ExecutionSyncBasePreview, func(_ *testing.T, f *syncBaseFixture) {
 			f.git.fetchCode = 1
 		}, "base_fetch"},
-		{"merge state clean", ExecutionSyncBaseApply, func(_ *testing.T, f *syncBaseFixture) {
+		{"merge state clean", issueops.ExecutionSyncBaseApply, func(_ *testing.T, f *syncBaseFixture) {
 			f.git.mergeHead = true
 		}, "merge_state_clean"},
-		{"worktree clean", ExecutionSyncBaseApply, func(_ *testing.T, f *syncBaseFixture) {
+		{"worktree clean", issueops.ExecutionSyncBaseApply, func(_ *testing.T, f *syncBaseFixture) {
 			f.git.statusOut = " M internal/x.go"
 		}, "worktree_clean"},
 	}
@@ -311,7 +311,7 @@ func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 		if err := os.RemoveAll(fixture.worktree); err != nil {
 			t.Fatal(err)
 		}
-		result, err := fixture.run(t, fixture.request(ExecutionSyncBasePreview))
+		result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 		if err == nil || !containsString(result.Missing, "worktree_present") {
 			t.Fatalf("absent canonical worktree must fail closed: %v %v", err, result.Missing)
 		}
@@ -330,7 +330,7 @@ func TestExecutionSyncBasePreviewReportsConflictsAndIssuesFingerprint(t *testing
 	fixture.git.mergeTreeCode = 1
 	fixture.git.mergeTreeOut = "treeoid\x00internal/a.go\x00internal/b.go\x00\x00CONFLICT (content)\n"
 
-	req := fixture.request(ExecutionSyncBasePreview)
+	req := fixture.request(issueops.ExecutionSyncBasePreview)
 	req.Actor = issueops.NativeActor{}
 	result, err := fixture.run(t, req)
 	if err != nil {
@@ -356,14 +356,14 @@ func TestExecutionSyncBasePreviewReportsConflictsAndIssuesFingerprint(t *testing
 // 무충돌 fast 경로: fetch→merge-tree→merge→push 순서와 인자를 전수 검증한다.
 func TestExecutionSyncBaseApplyRunsFetchMergePushInOrder(t *testing.T) {
 	fixture := newReleasedSyncBaseFixture(t, "114-apply")
-	preview, err := fixture.run(t, fixture.request(ExecutionSyncBasePreview))
+	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
 		t.Fatal(err)
 	}
 	fixture.git.calls = nil
 	fixture.git.postMergeHead = syncBaseMergeOID
 
-	req := fixture.request(ExecutionSyncBaseApply)
+	req := fixture.request(issueops.ExecutionSyncBaseApply)
 	req.Confirm, req.Fingerprint = true, preview.Fingerprint
 	result, err := fixture.run(t, req)
 	if err != nil {
@@ -396,14 +396,14 @@ func TestExecutionSyncBaseApplyRunsFetchMergePushInOrder(t *testing.T) {
 // 충돌은 merge-in-progress를 남기고 정지한다 — push도 이벤트도 없다.
 func TestExecutionSyncBaseApplyStopsAtConflictWithoutPush(t *testing.T) {
 	fixture := newReleasedSyncBaseFixture(t, "114-conflict")
-	preview, err := fixture.run(t, fixture.request(ExecutionSyncBasePreview))
+	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
 		t.Fatal(err)
 	}
 	fixture.git.mergeTreeCode, fixture.git.mergeTreeOut = 1, "treeoid\x00internal/a.go\x00\x00"
 	fixture.git.mergeCode, fixture.git.mergeOut = 1, "CONFLICT (content): Merge conflict in internal/a.go"
 
-	req := fixture.request(ExecutionSyncBaseApply)
+	req := fixture.request(issueops.ExecutionSyncBaseApply)
 	req.Confirm, req.Fingerprint = true, preview.Fingerprint
 	result, err := fixture.run(t, req)
 	if err != nil {
@@ -436,14 +436,14 @@ func TestExecutionSyncBaseApplyStopsAtConflictWithoutPush(t *testing.T) {
 // 멱등 수렴한다(설계 v2 push 계약).
 func TestExecutionSyncBaseApplyPushFailureConvergesIdempotently(t *testing.T) {
 	fixture := newReleasedSyncBaseFixture(t, "114-push-retry")
-	preview, err := fixture.run(t, fixture.request(ExecutionSyncBasePreview))
+	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
 		t.Fatal(err)
 	}
 	fixture.git.postMergeHead = syncBaseMergeOID
 	fixture.git.pushCode, fixture.git.pushOut = 1, "! [rejected] non-fast-forward"
 
-	req := fixture.request(ExecutionSyncBaseApply)
+	req := fixture.request(issueops.ExecutionSyncBaseApply)
 	req.Confirm, req.Fingerprint = true, preview.Fingerprint
 	result, err := fixture.run(t, req)
 	if err == nil || result.FailedStep != "push" || !result.PushRetryRequired {
@@ -455,7 +455,7 @@ func TestExecutionSyncBaseApplyPushFailureConvergesIdempotently(t *testing.T) {
 	fixture.git.ancestor[syncBaseBaseOID] = true
 	fixture.git.pushCode, fixture.git.pushOut = 0, ""
 	fixture.git.calls = nil
-	retryPreview, err := fixture.run(t, fixture.request(ExecutionSyncBasePreview))
+	retryPreview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -463,7 +463,7 @@ func TestExecutionSyncBaseApplyPushFailureConvergesIdempotently(t *testing.T) {
 		t.Fatalf("preview must report push-only convergence: %#v", retryPreview)
 	}
 	fixture.git.calls = nil
-	retry := fixture.request(ExecutionSyncBaseApply)
+	retry := fixture.request(issueops.ExecutionSyncBaseApply)
 	retry.Confirm, retry.Fingerprint = true, retryPreview.Fingerprint
 	final, err := fixture.run(t, retry)
 	if err != nil {
@@ -489,12 +489,12 @@ func TestExecutionSyncBaseApplyPushFailureConvergesIdempotently(t *testing.T) {
 // 성공한 apply는 durable 이벤트를 남기고 Completion.FinalHead는 불변이다.
 func TestExecutionSyncBaseRecordsDurableEventAndKeepsFinalHeadImmutable(t *testing.T) {
 	fixture := newReleasedSyncBaseFixture(t, "114-durable")
-	preview, err := fixture.run(t, fixture.request(ExecutionSyncBasePreview))
+	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
 		t.Fatal(err)
 	}
 	fixture.git.postMergeHead = syncBaseMergeOID
-	req := fixture.request(ExecutionSyncBaseApply)
+	req := fixture.request(issueops.ExecutionSyncBaseApply)
 	req.Confirm, req.Fingerprint = true, preview.Fingerprint
 	if _, err := fixture.run(t, req); err != nil {
 		t.Fatal(err)
@@ -525,7 +525,7 @@ func TestExecutionSyncBaseFinalizeRejectsUnresolvedConflictsAndMarkers(t *testin
 		fixture.git.mergeHead = true
 		fixture.sealResolution(t)
 		fixture.git.unmergedOut = "100644 " + syncBaseBaseOID + " 1\tinternal/a.go\x00"
-		result, err := fixture.run(t, fixture.request(ExecutionSyncBaseFinalize))
+		result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBaseFinalize))
 		if err == nil || !containsString(result.Missing, "conflict_resolution_complete") {
 			t.Fatalf("unresolved paths must block finalize: %v %v", err, result.Missing)
 		}
@@ -538,7 +538,7 @@ func TestExecutionSyncBaseFinalizeRejectsUnresolvedConflictsAndMarkers(t *testin
 		fixture.git.mergeHead = true
 		fixture.sealResolution(t)
 		fixture.git.diffCheckCode = 1
-		result, err := fixture.run(t, fixture.request(ExecutionSyncBaseFinalize))
+		result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBaseFinalize))
 		if err == nil || !containsString(result.Missing, "conflict_markers_absent") {
 			t.Fatalf("leftover conflict markers must block finalize: %v %v", err, result.Missing)
 		}
@@ -548,7 +548,7 @@ func TestExecutionSyncBaseFinalizeRejectsUnresolvedConflictsAndMarkers(t *testin
 		fixture.git.mergeHead = true
 		fixture.sealResolution(t)
 		fixture.git.headOID = syncBaseMergeOID
-		result, err := fixture.run(t, fixture.request(ExecutionSyncBaseFinalize))
+		result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBaseFinalize))
 		if err != nil {
 			t.Fatalf("resolved finalize must complete: %v", err)
 		}
@@ -575,7 +575,7 @@ func TestExecutionSyncBaseFinalizeRejectsUnresolvedConflictsAndMarkers(t *testin
 		fixture := newReleasedSyncBaseFixture(t, "114-finalize-foreign")
 		fixture.git.mergeHead = true
 		fixture.sealResolution(t)
-		request := fixture.request(ExecutionSyncBaseFinalize)
+		request := fixture.request(issueops.ExecutionSyncBaseFinalize)
 		request.Actor.SessionID = "other-session"
 		result, err := fixture.run(t, request)
 		if err == nil || !containsString(result.Missing, "sync_base_resolution_actor") {
@@ -588,7 +588,7 @@ func TestExecutionSyncBaseAbortWithdrawsTheMergeWithoutEvent(t *testing.T) {
 	fixture := newReleasedSyncBaseFixture(t, "114-abort")
 	fixture.git.mergeHead = true
 	fixture.sealResolution(t)
-	result, err := fixture.run(t, fixture.request(ExecutionSyncBaseAbort))
+	result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBaseAbort))
 	if err != nil {
 		t.Fatalf("abort must be available to the holder: %v", err)
 	}
@@ -609,7 +609,7 @@ func TestExecutionSyncBaseAbortWithdrawsTheMergeWithoutEvent(t *testing.T) {
 	// 진행 중 머지가 없으면 abort/finalize 모두 전제 미충족이다.
 	clean := newReleasedSyncBaseFixture(t, "114-abort-noop")
 	clean.sealResolution(t)
-	result, err = clean.run(t, clean.request(ExecutionSyncBaseAbort))
+	result, err = clean.run(t, clean.request(issueops.ExecutionSyncBaseAbort))
 	if err == nil || !containsString(result.Missing, "merge_in_progress") {
 		t.Fatalf("abort without a merge in progress must fail closed: %v %v", err, result.Missing)
 	}
@@ -618,13 +618,13 @@ func TestExecutionSyncBaseAbortWithdrawsTheMergeWithoutEvent(t *testing.T) {
 // fingerprint TOCTOU: preview 발급 이후 상태가 바뀌면 apply가 멈춘다.
 func TestExecutionSyncBaseApplyRejectsStaleFingerprint(t *testing.T) {
 	fixture := newReleasedSyncBaseFixture(t, "114-toctou")
-	preview, err := fixture.run(t, fixture.request(ExecutionSyncBasePreview))
+	preview, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err != nil {
 		t.Fatal(err)
 	}
 	// 외부에서 base가 전진했다 — 같은 fingerprint로는 진행할 수 없다.
 	fixture.git.fetchHeadOID = syncBaseMergeOID
-	req := fixture.request(ExecutionSyncBaseApply)
+	req := fixture.request(issueops.ExecutionSyncBaseApply)
 	req.Confirm, req.Fingerprint = true, preview.Fingerprint
 	result, err := fixture.run(t, req)
 	if err == nil || !strings.Contains(err.Error(), "stale execution sync-base fingerprint") {
@@ -635,7 +635,7 @@ func TestExecutionSyncBaseApplyRejectsStaleFingerprint(t *testing.T) {
 		t.Fatal("stale fingerprint must stop before any merge")
 	}
 
-	missingConfirm := fixture.request(ExecutionSyncBaseApply)
+	missingConfirm := fixture.request(issueops.ExecutionSyncBaseApply)
 	missingConfirm.Fingerprint = preview.Fingerprint
 	if _, err := fixture.run(t, missingConfirm); err == nil {
 		t.Fatal("apply without --confirm must be rejected")
@@ -646,7 +646,7 @@ func TestExecutionSyncBaseApplyRejectsStaleFingerprint(t *testing.T) {
 func TestExecutionSyncBaseFailsClosedWhenMergeTreeIsUnavailable(t *testing.T) {
 	fixture := newReleasedSyncBaseFixture(t, "114-mergetree")
 	fixture.git.mergeTreeCode, fixture.git.mergeTreeOut = 129, "unknown option `write-tree'"
-	result, err := fixture.run(t, fixture.request(ExecutionSyncBasePreview))
+	result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 	if err == nil || !containsString(result.Missing, "merge_tree_supported") {
 		t.Fatalf("unsupported merge-tree must fail closed in preview: %v %v", err, result.Missing)
 	}
@@ -656,11 +656,11 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *test
 	tests := []struct {
 		name    string
 		mutate  func(*issueops.IssueOpsRecord)
-		request func(*ExecutionSyncBaseRequest)
+		request func(*issueops.ExecutionSyncBaseRequest)
 		missing string
 	}{
-		{name: "missing completion generation", request: func(req *ExecutionSyncBaseRequest) { req.CompletionGeneration = 0 }, missing: "completion_generation_present"},
-		{name: "wrong completion generation", request: func(req *ExecutionSyncBaseRequest) { req.CompletionGeneration = 2 }, missing: "completion_generation_current"},
+		{name: "missing completion generation", request: func(req *issueops.ExecutionSyncBaseRequest) { req.CompletionGeneration = 0 }, missing: "completion_generation_present"},
+		{name: "wrong completion generation", request: func(req *issueops.ExecutionSyncBaseRequest) { req.CompletionGeneration = 2 }, missing: "completion_generation_current"},
 		{name: "missing stamped completion generation", mutate: func(record *issueops.IssueOpsRecord) { record.Execution.Completion.Generation = 0 }, missing: "current_completion_generation_present"},
 		{name: "history only", mutate: func(record *issueops.IssueOpsRecord) {
 			record.Execution.Lease.Generation = 2
@@ -684,7 +684,7 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *test
 			if test.mutate != nil {
 				fixture.rewrite(t, test.mutate)
 			}
-			req := fixture.request(ExecutionSyncBaseApply)
+			req := fixture.request(issueops.ExecutionSyncBaseApply)
 			req.Confirm, req.Fingerprint = true, strings.Repeat("a", 64)
 			if test.request != nil {
 				test.request(&req)
@@ -699,14 +699,14 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *test
 
 func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidProcessReceipt(t *testing.T) {
 	fixture := newReleasedSyncBaseFixture(t, "318-dead-process")
-	req := fixture.request(ExecutionSyncBaseApply)
+	req := fixture.request(issueops.ExecutionSyncBaseApply)
 	req.Actor.SessionProcess = &issueops.NativeProcessReceipt{PID: 999999, StartedAt: "2026-01-01T00:00:00Z", Executable: "/missing/codex"}
 	req.Actor.ProcessAncestry = []issueops.NativeProcessReceipt{*req.Actor.SessionProcess}
 	if _, err := fixture.run(t, req); err == nil {
 		t.Fatal("dead native process receipt was accepted")
 	}
 
-	req = fixture.request(ExecutionSyncBaseApply)
+	req = fixture.request(issueops.ExecutionSyncBaseApply)
 	req.Actor.ProcessAncestry = []issueops.NativeProcessReceipt{{PID: 1, StartedAt: "other", Executable: "codex"}}
 	if _, err := fixture.run(t, req); err == nil || !strings.Contains(err.Error(), "not in the local process ancestry") {
 		t.Fatalf("mismatched ancestry error=%v", err)
@@ -722,7 +722,7 @@ func TestExecutionSyncBaseActiveHolderAuthorityRemainsSupported(t *testing.T) {
 		record.Execution.Completion = nil
 		record.RemoteArtifact = nil
 	})
-	previewRequest := fixture.request(ExecutionSyncBasePreview)
+	previewRequest := fixture.request(issueops.ExecutionSyncBasePreview)
 	previewRequest.CompletionGeneration = 0
 	preview, err := fixture.run(t, previewRequest)
 	if err != nil {
@@ -732,7 +732,7 @@ func TestExecutionSyncBaseActiveHolderAuthorityRemainsSupported(t *testing.T) {
 		t.Fatalf("active-holder preview added released authority generation: %q", preview.NextCommand)
 	}
 	fixture.git.postMergeHead = syncBaseMergeOID
-	applyRequest := fixture.request(ExecutionSyncBaseApply)
+	applyRequest := fixture.request(issueops.ExecutionSyncBaseApply)
 	applyRequest.CompletionGeneration = 0
 	applyRequest.Confirm, applyRequest.Fingerprint = true, preview.Fingerprint
 	if _, err := fixture.run(t, applyRequest); err != nil {

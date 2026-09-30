@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"encoding/json"
+	"issueops/cmd/issueops/issueopscli"
 	"os"
 	"path/filepath"
 	"strings"
@@ -120,7 +121,9 @@ func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]stri
 		return runIssueOps([]string{"link-plan", "--id", issueopsID, "--plan-path", filepath.Join(contractWorktree, "docs", "superpowers", "plans", "contract.md"), "--json"})
 	})
 	cliSnapshot["issueops_link_child"] = runCLIJSONContract(t, replacements, func() error {
-		return runIssueOps([]string{"link-child", "--id", issueopsID, "--child-url", "https://gitlab.example/group/project/-/issues/2", "--title", "contract child", "--json"})
+		deps := issueOpsCLIDependencies()
+		deps.Verification.Child = func(string) error { return nil }
+		return issueopscli.RunIssueOpsWithDependencies([]string{"link-child", "--id", issueopsID, "--child-url", "https://gitlab.example/group/project/-/issues/2", "--title", "contract child", "--json"}, deps)
 	})
 	cliSnapshot["issueops_link_related"] = runCLIJSONContract(t, replacements, func() error {
 		return runIssueOps([]string{"link-related", "--id", issueopsID, "--type", "depends-on", "--related-url", "https://github.com/example/repo/issues/42", "--title", "upstream dependency", "--json"})

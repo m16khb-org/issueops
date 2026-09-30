@@ -14,6 +14,40 @@ import (
 
 var fixedCompletionTime = time.Date(2026, 8, 2, 1, 2, 3, 4, time.UTC)
 
+func TestCompleteValidatesArtifactBeforeEnvironmentEffects(t *testing.T) {
+	for _, retry := range []bool{false, true} {
+		name := "first completion"
+		if retry {
+			name = "identical retry"
+		}
+		t.Run(name, func(t *testing.T) {
+			trace := []string{}
+			request := validRequest()
+			record := activeCompletionRecord("direct")
+			record.Artifact = nil
+			if retry {
+				record.Phase = "done"
+				record.Lease.Status = "released"
+				record.Lease.Holder = nil
+				record.Lease.ReleasedAt = "then"
+				record.Completion = &completioncontract.Completion{FinalHead: request.FinalHead, VerificationReportPath: request.VerificationReportPath, Verification: request.Verification, RemoteArtifactURL: request.RemoteArtifactURL, CompletedAt: "then"}
+			}
+			repository := &repositoryFake{record: record, trace: &trace}
+			environment := &environmentFake{trace: &trace, canonical: true, head: request.FinalHead, report: request.VerificationReportPath}
+			_, err := NewService(repository, environment, fixedClock{fixedCompletionTime}, tracedLiveInspector(&trace)).Complete(context.Background(), request)
+			want := "execution completion requires a durable verified remote artifact"
+			wantTrace := []string{"process", "read"}
+			if retry {
+				want = "execution completion already exists with different evidence"
+				wantTrace = append(wantTrace, "cwd")
+			}
+			if err == nil || err.Error() != want || repository.commits != 0 || !reflect.DeepEqual(record, repository.record) || !reflect.DeepEqual(trace, wantTrace) {
+				t.Fatalf("err=%v commits=%d trace=%v want=%v", err, repository.commits, trace, wantTrace)
+			}
+		})
+	}
+}
+
 func TestCompleteCommitsWithoutOrcaSettle(t *testing.T) {
 	trace := []string{}
 	repository := &repositoryFake{record: activeCompletionRecord("orca"), trace: &trace}
@@ -24,7 +58,7 @@ func TestCompleteCommitsWithoutOrcaSettle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	wantTrace := []string{"process", "read", "artifact", "cwd", "head", "report", "commit"}
+	wantTrace := []string{"process", "read", "cwd", "head", "report", "commit"}
 	if !reflect.DeepEqual(trace, wantTrace) {
 		t.Fatalf("trace = %#v, want %#v", trace, wantTrace)
 	}
@@ -72,7 +106,7 @@ func TestCompleteIdenticalRetrySkipsEnvironmentWithoutOrcaSettle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := []string{"process", "read", "cwd", "artifact"}; !reflect.DeepEqual(trace, want) {
+	if want := []string{"process", "read", "cwd"}; !reflect.DeepEqual(trace, want) {
 		t.Fatalf("trace = %#v, want %#v", trace, want)
 	}
 }
@@ -133,6 +167,7 @@ func TestCompleteReopenedGenerationKeepsExactlyOnceContract(t *testing.T) {
 			request.VerificationReportPath = "/worktree/new-report.json"
 			request.Verification = []string{"new verification"}
 			request.RemoteArtifactURL = "https://github.com/acme/repo/pull/304"
+			repository.record.Artifact.URL = request.RemoteArtifactURL
 
 			if _, err := service.Complete(context.Background(), request); err != nil {
 				t.Fatalf("complete reopened generation: %v", err)
@@ -187,13 +222,8 @@ type environmentFake struct {
 	canonical bool
 	head      string
 	report    string
-	artifact  error
 }
 
-func (f *environmentFake) VerifyArtifact(_ completioncontract.RecordSnapshot, _ string) error {
-	*f.trace = append(*f.trace, "artifact")
-	return f.artifact
-}
 func (f *environmentFake) PathsMatch(_, _ string) bool {
 	*f.trace = append(*f.trace, "cwd")
 	return f.canonical
@@ -226,7 +256,7 @@ func validRequest() Request {
 func activeCompletionRecord(mode string) completioncontract.RecordSnapshot {
 	receipt := completioncontract.ProcessReceipt{PID: 198, StartedAt: "2026-08-02T00:00:00Z", Executable: "/bin/codex"}
 	record := completioncontract.RecordSnapshot{
-		ID: "io-198", Prepared: true, Phase: "pr", CanonicalRoot: "/worktree", Mode: mode,
+		ID: "io-198", IssueURL: "https://github.com/acme/repo/issues/198", Prepared: true, Phase: "pr", CanonicalRoot: "/worktree", Mode: mode,
 		Lease:    completioncontract.Lease{Generation: 1, Status: "active", Holder: &completioncontract.Actor{Host: "codex", SessionID: "session-198", Process: &receipt}, ClaimedAt: "2026-08-02T00:00:01Z"},
 		Artifact: &completioncontract.RemoteArtifact{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/198", Labels: []string{"enhancement"}, Assignees: []string{"m16khb"}, VerifiedAt: "2026-08-02T00:00:02Z", TargetBranch: "main"}, BaseBranch: "main",
 		Ledger: map[string]completioncontract.LedgerEntry{"pr": {Phase: "pr", EnteredAt: "2026-08-02T00:00:02Z"}},
@@ -239,4 +269,54 @@ func activeCompletionRecord(mode string) completioncontract.RecordSnapshot {
 
 func stableExecution(record completioncontract.RecordSnapshot) leasecontract.Execution {
 	return leasecontract.Execution{Mode: record.Mode, Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: record.CanonicalRoot, Branch: "198", BaseHead: strings.Repeat("b", 40), Driver: map[bool]string{true: "orca", false: "git"}[record.Mode == "orca"], LinkedAt: "2026-08-02T00:00:00Z"}, Lease: leasecontract.Lease{Generation: record.Lease.Generation, Status: record.Lease.Status}}
+}
+
+func TestCompleteRefusalsPreserveEffectOrder(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*Request, *completioncontract.RecordSnapshot, *environmentFake)
+		want   string
+		trace  []string
+	}{
+		{"confirm before evidence", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			q.Confirm = false
+			q.Verification = nil
+		}, "execution complete requires confirm", []string{"process"}},
+		{"evidence before URL", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			q.Verification = nil
+			q.RemoteArtifactURL = "bad"
+		}, "execution completion requires verification evidence", []string{"process"}},
+		{"prepared before phase", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			r.Prepared = false
+			r.Phase = "done"
+		}, completioncontract.ErrExecutionNotPrepared.Error(), []string{"process", "read"}},
+		{"phase before artifact", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) { r.Phase = "implement" }, "execution completion requires pr phase", []string{"process", "read"}},
+		{"head before report", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) { q.FinalHead = "abc" }, "final_head must match canonical worktree HEAD", []string{"process", "read", "cwd", "head"}},
+		{"retry generation before path", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			r.Completion = &completioncontract.Completion{}
+		}, "execution completion already exists with different evidence", []string{"process", "read"}},
+		{"retry evidence after path", func(q *Request, r *completioncontract.RecordSnapshot, e *environmentFake) {
+			r.Phase = "done"
+			r.Lease.Status = "released"
+			r.Lease.Holder = nil
+			r.Lease.ReleasedAt = "then"
+			r.Completion = &completioncontract.Completion{FinalHead: q.FinalHead, CompletedAt: "then", Verification: []string{"different"}}
+		}, "execution completion already exists with different evidence", []string{"process", "read", "cwd"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			trace := []string{}
+			request := validRequest()
+			record := activeCompletionRecord("direct")
+			env := &environmentFake{trace: &trace, canonical: true, head: strings.Repeat("a", 40), report: "/worktree/report.json"}
+			tc.change(&request, &record, env)
+			repository := &repositoryFake{record: record, trace: &trace}
+			_, err := NewService(repository, env, fixedClock{fixedCompletionTime}, tracedLiveInspector(&trace)).Complete(context.Background(), request)
+			if err == nil || err.Error() != tc.want {
+				t.Fatalf("error=%v want=%s", err, tc.want)
+			}
+			if repository.commits != 0 || !reflect.DeepEqual(trace, tc.trace) {
+				t.Fatalf("commits=%d trace=%v want=%v", repository.commits, trace, tc.trace)
+			}
+		})
+	}
 }

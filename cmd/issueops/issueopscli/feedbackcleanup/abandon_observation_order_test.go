@@ -1,0 +1,32 @@
+package feedbackcleanup
+
+import (
+	"context"
+	"testing"
+
+	cleanupapp "issueops/internal/application/issueopscleanup"
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+func TestAbandonOwnershipRefusalPrecedesArtifactObservation(t *testing.T) {
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	record := cleanupStatusRecord(t, false, true)
+	_, _, command := wireAbandonCapture(t)
+	observed := 0
+	entered := false
+
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.RunAbandon = func(_ context.Context, req issueopscontract.CleanupAbandonRequest) (issueopscontract.CleanupAbandonResult, error) {
+			entered = true
+			return issueopscontract.CleanupAbandonResult{OK: false, ID: req.ID}, context.Canceled
+		}
+	})
+	deps := Deps{ParseFlags: parseFeedbackCleanupFlags, PrintJSON: func(any) error { return nil }, PrintError: func(error) error { return nil }, ObserveArtifactMerged: func(issueopscontract.IssueOpsRemoteArtifactVerification) (bool, error) { observed++; return false, nil }}
+	err := command.RunCleanup([]string{"abandon", "--id", record.ID, "--reason", "ownership-test", "--preview", "--json"}, deps)
+	if err == nil || !entered {
+		t.Fatalf("executor refusal not reached: %v", err)
+	}
+	if observed != 0 {
+		t.Fatalf("CLI observed artifact before executor ownership refusal: %d", observed)
+	}
+}

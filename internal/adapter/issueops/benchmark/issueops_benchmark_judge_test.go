@@ -22,15 +22,6 @@ func TestIssueOpsJudgeFileParsesFencedJSON(t *testing.T) {
 	}
 }
 
-func TestIssueOpsLLMJudgeReturnsRemovedServiceError(t *testing.T) {
-	_, err := RunIssueOpsLLMJudge(IssueOpsLLMJudgeRequest{
-		Fixture: issueopscontract.IssueOpsBenchmarkFixture{ID: "fixture"},
-	})
-	if err == nil || !strings.Contains(err.Error(), "no longer calls external LLM services") {
-		t.Fatalf("expected removed service error, got %v", err)
-	}
-}
-
 func TestIssueOpsJudgeFileRejectsNoisyOutput(t *testing.T) {
 	_, err := DecodeIssueOpsBenchmarkJudgeJSON([]byte(`I will judge now. {"ok":true}`))
 	if err == nil {
@@ -58,7 +49,7 @@ func TestIssueOpsJudgeFileRejectsFencedUnknownField(t *testing.T) {
 }
 
 func TestIssueOpsLLMJudgePromptRequiresDimensionScoresArray(t *testing.T) {
-	prompt, err := buildIssueOpsLLMJudgePrompt(
+	prompt, err := BuildIssueOpsLLMJudgePrompt(
 		issueopscontract.IssueOpsBenchmarkFixture{ID: "fixture", Title: "Fixture", UserPrompt: "prompt", RepoContext: "context", CriticalFailures: []string{"failure"}},
 		issueopscontract.IssueOpsBenchmarkArtifact{ProblemSummary: "summary"},
 	)

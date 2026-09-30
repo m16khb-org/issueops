@@ -1,6 +1,6 @@
 ---
 name: gates-ledger
-description: Create, check, and report task gate ledgers with the issueops gates CLI. Turns acceptance criteria into G-numbered CHECK and EXPECT gates in .issueops/issues/<n>/gates.md or .issueops/gates/<scope>.md, fills EVIDENCE by running the checks through the command policy, and abandons gates honestly. Use when issueops-plan, issueops-implement, issueops-clean, issueops-verify, or verified-execution needs a gate ledger, or when the user says "게이트 원장", "gates 만들어줘", "수용 기준 체크".
+description: Create, check, and report task gate ledgers with the issueops gates CLI. Turns acceptance criteria into G-numbered CHECK and EXPECT gates in .issueops/issues/<n>/gates.md or .issueops/gates/<scope>.md, fills EVIDENCE by running the checks through the command policy, and abandons gates honestly. Use when issueops-plan, issueops-implement, issueops-slop-clean, issueops-verify, or verified-execution needs a gate ledger, or when the user says "게이트 원장", "gates 만들어줘", "수용 기준 체크".
 ---
 
 # Gates Ledger
@@ -11,7 +11,7 @@ description: Create, check, and report task gate ledgers with the issueops gates
 
 - 계획이 게이트를 만든다: [`issueops-plan`](../issueops-plan/SKILL.md)
 - 구현이 EVIDENCE를 채운다: [`issueops-implement`](../issueops-implement/SKILL.md)
-- 정리 뒤 재실행: [`issueops-clean`](../issueops-clean/SKILL.md)
+- 정리 뒤 재실행: [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)
 - 검증이 유효한 증거를 읽고 필요할 때 재실행한다: [`issueops-verify`](../issueops-verify/SKILL.md)
 
 ## 경로 규칙

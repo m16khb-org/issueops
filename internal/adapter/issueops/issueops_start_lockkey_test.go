@@ -3,13 +3,14 @@ package issueops
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"issueops/internal/contract/issueops"
 )
 
 // TestStartIssueOpsLockIDMatchesAbsRecordID guards LK-01: the lock id that
-// StartIssueOps acquires must equal the canonical record id that start.Start
+// StartIssueOps acquires must equal the canonical record id that Starter.Start
 // derives from the ABS-normalized repo (newIssueOpsID(abs(repo), branch)).
 // Before the fix StartIssueOps hashed the RAW repo string, so a relative path
 // (".") and its absolute equivalent took DIFFERENT locks while read-modify-
@@ -29,7 +30,7 @@ func TestStartIssueOpsLockIDMatchesAbsRecordID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// recordID is the id start.Start writes (it abs-normalizes the repo).
+	// recordID is the id Starter.Start writes (it abs-normalizes the repo).
 	recordID := newIssueOpsID(abs, branch)
 
 	// Precondition: the raw (un-normalized) hash the buggy code used must be a
@@ -67,11 +68,11 @@ func TestStartIssueOpsRelativeThenAbsoluteShareOneRecordAndLock(t *testing.T) {
 	t.Chdir(repo)
 
 	branch := "12-demo"
-	first, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: ".", Branch: branch})
+	first, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: ".", Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
-	second, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	second, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,4 +99,16 @@ func TestStartIssueOpsRelativeThenAbsoluteShareOneRecordAndLock(t *testing.T) {
 	if issueOpsRecordExists(t, stateRoot, newIssueOpsID(".", branch)) {
 		t.Fatalf("StartIssueOps must not persist under the raw relative hash")
 	}
+}
+
+// issueOpsStartLockID computes the lock id used by StartIssueOps. It must
+// mirror Starter.Start's record-id derivation exactly: trim repo+branch and
+// abs-normalize the repo (filepath.Abs) before hashing, so that a relative and
+// the equivalent absolute repo path take the SAME lock and serialize on the
+// SAME record. newIssueOpsID does no repository normalization, so hashing the
+// raw repo here would let source-checkout and linked-worktree starts hold
+// different locks while read-modify-writing one record (lost-update TOCTOU).
+func issueOpsStartLockID(repo, branch string) string {
+	repo = (CycleStartIdentity{RunGit: GitCmd}).CanonicalRepo(repo)
+	return newIssueOpsID(repo, strings.TrimSpace(branch))
 }

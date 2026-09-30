@@ -20,7 +20,7 @@ func TestRunDocs_printsJSON_whenJSONFlagIsSet(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode docs json: %v\n%s", err, out)
 	}
-	if !result.OK || result.Version != deps.Version || result.IssueOpsRoot == "" {
+	if !result.OK || result.Version != "0.1.0" || result.IssueOpsRoot == "" {
 		t.Fatalf("unexpected docs result: %+v", result)
 	}
 	if !docsIndexHasRel(result, "AGENTS.md") {

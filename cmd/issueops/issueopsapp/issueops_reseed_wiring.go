@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	ownerdomain "issueops/internal/domain/issueops"
 
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
-	"issueops/internal/adapter/issueops"
+
 	"issueops/internal/adapter/orca"
 	basesyncoutbound "issueops/internal/adapter/outbound/issueopsbasesync"
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
@@ -18,30 +19,31 @@ import (
 	"issueops/internal/port"
 )
 
-func issueOpsReseedHandler(ctx context.Context, stateRoot string, request issueops.ExecutionReseedRequest) (issueops.ExecutionReplaceResult, error) {
+func issueOpsReseedHandler(ctx context.Context, stateRoot string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
 	return issueOpsReseedHandlerWithOwner(ctx, stateRoot, request, orca.NewExecution())
 }
 
-func issueOpsReseedHandlerWithOwner(ctx context.Context, stateRoot string, request issueops.ExecutionReseedRequest, owner port.ExecutionOrcaOwnerInspector) (issueops.ExecutionReplaceResult, error) {
+func issueOpsReseedHandlerWithOwner(ctx context.Context, stateRoot string, request model.ExecutionReseedRequest, owner port.ExecutionOrcaOwnerInspector) (model.ExecutionReplaceResult, error) {
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
-		return issueops.ExecutionReplaceResult{ID: request.ID, Action: issueops.ExecutionReplaceReseed}, err
+		return model.ExecutionReplaceResult{ID: request.ID, Action: model.ExecutionReplaceReseed}, err
 	}
 	fence, err := leaseoutbound.NewSQLiteReseedFence(stateRoot, func(root string) (port.TransactionalRecordStore, error) { return sqlstore.Open(root) })
 	if err != nil {
-		return issueops.ExecutionReplaceResult{ID: request.ID, Action: issueops.ExecutionReplaceReseed}, err
+		return model.ExecutionReplaceResult{ID: request.ID, Action: model.ExecutionReplaceReseed}, err
 	}
 	inventory := leaseoutbound.NewReseedInventory(owner, leaseoutbound.InspectNativeProcess)
 	readIssue := request.ReadIssue
 	if readIssue == nil {
 		readIssue = provider.ReadExecutionIssueSnapshot
 	}
+	ownerContext := newIssueOpsOwnerContext(stateRoot, readIssue)
 	artifacts := leaseoutbound.NewReseedArtifacts(func(ctx context.Context, record leasecontract.Record) (leasecontract.ReseedReceipt, error) {
 		execution, err := issueOpsReseedExecution(record)
 		if err != nil {
 			return leasecontract.ReseedReceipt{}, err
 		}
-		prepared, err := issueops.PrepareExecutionReseedOwnerArtifacts(ctx, stateRoot, record.ID, execution, readIssue)
+		prepared, err := ownerContext.Reseed(ctx, record.ID, execution)
 		if err != nil {
 			return leasecontract.ReseedReceipt{}, err
 		}
@@ -49,7 +51,7 @@ func issueOpsReseedHandlerWithOwner(ctx context.Context, stateRoot string, reque
 	})
 	baseSync := basesyncoutbound.NewInspector(basesyncoutbound.RunGit)
 	service := leaseapp.NewReseedService(fence, leaseoutbound.NewReseedRepository(db), inventory, baseSync, artifacts, leaseoutbound.UTCClock{}, leaseoutbound.InspectNativeProcess, leaseoutbound.FilesystemPathMatcher{})
-	return leaseinbound.NewReseedHandler(service)(ctx, stateRoot, request)
+	return leaseinbound.NewReseedHandler(service, ownerdomain.OwnerReseedNextCommand)(ctx, stateRoot, request)
 }
 
 func issueOpsReseedExecution(record leasecontract.Record) (model.Execution, error) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	daemondomain "issueops/internal/domain/daemon"
 	"net"
 	"os"
 	"os/exec"
@@ -14,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"issueops/cmd/issueops/daemoncli/daemonpaths"
+	daemonpaths "issueops/internal/adapter/daemon"
 )
 
 func TestCheckDaemonStatusVerifiesInstanceFileSocketAndProcess(t *testing.T) {
@@ -481,7 +482,7 @@ func TestStopDaemonLeavesUnrelatedLiveProcessAlive(t *testing.T) {
 			return daemonStatus{OK: true, Running: true, Reachable: true, IdentityVerified: true, PID: instance.PID, Code: daemonStatusReady, Instance: &instance}
 		},
 		findProcess:    func(pid int) (daemonProcess, error) { return os.FindProcess(pid) },
-		inspectProcess: daemonpaths.InspectProcess,
+		inspectProcess: testProcessInspector().Inspect,
 		processAlive:   processAlive,
 	})
 
@@ -503,11 +504,11 @@ func TestDaemonProcessIdentityMatchesLegacyLocalizedStartTime(t *testing.T) {
 		StartTime:  legacyWallTime.Format(time.RFC3339),
 		Executable: "/tmp/issueops",
 	}
-	if !daemonProcessIdentityMatches(instance, process) {
+	if !daemondomain.ProcessIdentityMatches(instance, process, time.Local) {
 		t.Fatalf("equivalent legacy and canonical identities must match: instance=%#v process=%#v", instance, process)
 	}
 	process.StartTime = legacyWallTime.Add(time.Second).Format(time.RFC3339)
-	if daemonProcessIdentityMatches(instance, process) {
+	if daemondomain.ProcessIdentityMatches(instance, process, time.Local) {
 		t.Fatal("different process start identities must not match")
 	}
 }
@@ -659,7 +660,7 @@ func startVerifiedDaemonTestSocket(t *testing.T, paths daemonPaths) daemonInstan
 
 func writeVerifiedDaemonTestInstance(t *testing.T, paths daemonPaths) daemonInstance {
 	t.Helper()
-	process, err := daemonpaths.InspectProcess(os.Getpid())
+	process, err := testProcessInspector().Inspect(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
 	}

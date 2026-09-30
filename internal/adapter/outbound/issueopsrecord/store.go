@@ -8,6 +8,7 @@ import (
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopscontract "issueops/internal/contract/issueops"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -125,6 +126,9 @@ func (store Store) Update(
 		if err != nil || !changed {
 			return err
 		}
+		if err := issueopsdomain.RequireNoCleanupAttempt(result.CleanupAttempt); err != nil {
+			return err
+		}
 		data, err := Encode(result)
 		if err != nil {
 			return err
@@ -227,7 +231,21 @@ func (store Store) Delete(
 	// 게이트 밖에서 커밋하면 열려 있는 span이 그 뒤에 related row를 되살려,
 	// 레코드는 사라졌는데 related state만 남는 고아가 생긴다.
 	return database.WithSpan(store.observe(ctx, "delete"), func(spanContext context.Context) error {
-		return database.Apply(spanContext, mutations)
+		raw, found, err := database.Get(bucket, id)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return nil
+		}
+		record, err := Decode(id, raw)
+		if err != nil {
+			return err
+		}
+		if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
+			return err
+		}
+		return database.CompareAndApply(spanContext, []port.ExpectedRecord{{Bucket: bucket, ID: id, Data: raw}}, mutations)
 	})
 }
 
@@ -243,6 +261,9 @@ func (store Store) DeleteIfUnchanged(
 	}
 	id, err := NormalizeID(id)
 	if err != nil {
+		return err
+	}
+	if err := issueopsdomain.RequireNoCleanupAttempt(expected.CleanupAttempt); err != nil {
 		return err
 	}
 	expectedData, err := Encode(expected)
@@ -303,6 +324,9 @@ func readLocked(
 	record, err := Decode(id, data)
 	if err != nil {
 		return record, err
+	}
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
+		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	if record.CleanupAbandonFailure != nil &&
 		record.CleanupAbandonFailure.Step == "applying" {

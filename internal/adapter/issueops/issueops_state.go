@@ -11,13 +11,13 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"issueops/internal/adapter/outbound/sqlstore"
 	"issueops/internal/contract/issueops"
 	statecontract "issueops/internal/contract/state"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -163,16 +163,19 @@ func deleteIssueOps(stateRoot, id string) error {
 	if err != nil {
 		return err
 	}
+	raw, found, err := mutableIssueOpsRaw(db, id)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return nil
+	}
 	// 스테이징 artifact는 레코드와 수명을 같이한다 — 레코드 삭제(prune,
 	// cleanup finish)가 스테이지 blob을 고아로 남기지 않는다(C4a-F1 ②).
-	return db.Apply(context.Background(), []port.RecordMutation{
+	return db.CompareAndApply(context.Background(), []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: id, Data: raw}}, []port.RecordMutation{
 		{Bucket: artifactStageBucket, ID: id, Delete: true},
 		{Bucket: issueOpsBucket, ID: id, Delete: true},
 	})
-}
-
-func IssueOpsStateRoot() string {
-	return filepath.Join(StateDir(), issueOpsBucket)
 }
 
 func newIssueOpsID(repo, branch string) string {
@@ -209,7 +212,23 @@ func writeIssueOps(stateRoot string, record issueops.IssueOpsRecord) (issueops.I
 		record.OK = false
 		return record, err
 	}
-	if err := db.Put(issueOpsBucket, record.ID, b); err != nil {
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
+		record.OK = false
+		return record, err
+	}
+	raw, found, err := mutableIssueOpsRaw(db, record.ID)
+	if err != nil {
+		record.OK = false
+		return record, err
+	}
+	mutation := port.RecordMutation{Bucket: issueOpsBucket, ID: record.ID, Data: b}
+	if found {
+		err = db.CompareAndApply(context.Background(), []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: record.ID, Data: raw}}, []port.RecordMutation{mutation})
+	} else {
+		mutation.RequireAbsent = true
+		err = db.Apply(context.Background(), []port.RecordMutation{mutation})
+	}
+	if err != nil {
 		record.OK = false
 		return record, err
 	}
@@ -260,5 +279,25 @@ func validateIssueOpsRecord(record issueops.IssueOpsRecord) error {
 	if err := issueops.ValidateRecord(record); err != nil {
 		return statecontract.ErrInvalidState
 	}
+	if err := issueopsdomain.ValidateRecordInvariants(record); err != nil {
+		return statecontract.ErrInvalidState
+	}
 	return nil
+}
+
+// mutableIssueOpsRaw binds an ordinary writer to the current unfenced bytes.
+// The caller must use these bytes in its CAS, or RequireAbsent for creation.
+func mutableIssueOpsRaw(db *sqlstore.DB, id string) ([]byte, bool, error) {
+	raw, found, err := db.Get(issueOpsBucket, id)
+	if err != nil || !found {
+		return raw, found, err
+	}
+	record, err := decodeIssueOpsRecord(id, raw)
+	if err != nil {
+		return nil, false, err
+	}
+	if err := issueopsdomain.RequireNoCleanupAttempt(record.CleanupAttempt); err != nil {
+		return nil, false, err
+	}
+	return raw, true, nil
 }

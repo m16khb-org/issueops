@@ -4,10 +4,14 @@ import (
 	"os"
 	"testing"
 
+	"encoding/json"
 	"issueops/cmd/issueops/hookcli/hookcatalog"
 	"issueops/cmd/issueops/hookcli/hookenv"
+	"issueops/cmd/issueops/pathutil"
 	hookpromptadapter "issueops/internal/adapter/hookprompt"
+	"issueops/internal/adapter/hostprotocol"
 	projectdocadapter "issueops/internal/adapter/projectdoc"
+	app "issueops/internal/application/hookprompt"
 )
 
 // 프로덕션에서는 issueopsapp이 주입한다. 상속된 운영자 스위치(ISSUEOPS_DISABLE_HOOKS)
@@ -15,8 +19,10 @@ import (
 // 내보내지 않아 테스트 결론이 바뀐다(#395).
 func TestMain(m *testing.M) {
 	hookenv.ClearInheritedOperatorSwitches()
-	hookcatalog.BuildProjectDocCatalogContext = hookpromptadapter.BuildProjectDocCatalogContext
-	hookpromptadapter.DiscoverProjectDocs = projectdocadapter.DiscoverProjectDocs
-	hookpromptadapter.FormatProjectDocCatalog = projectdocadapter.FormatProjectDocCatalog
 	os.Exit(m.Run())
+}
+
+func runHook(args []string) error {
+	service := app.CatalogService{Discover: projectdocadapter.DiscoverProjectDocs, FormatCompact: projectdocadapter.FormatProjectDocCatalog, FormatUserView: hookpromptadapter.RenderProjectDocCatalogUserView}
+	return RunHook(args, hookcatalog.Config{BuildCatalog: service.Build, ResolveTarget: pathutil.ResolveTarget, FormatContext: hostprotocol.FormatHookContext, PrintJSON: func(v any) error { enc := json.NewEncoder(os.Stdout); enc.SetIndent("", "  "); return enc.Encode(v) }})
 }

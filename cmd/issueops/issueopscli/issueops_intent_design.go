@@ -7,7 +7,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func runIssueOpsIntent(args []string) error {
+func (cli command) runIssueOpsIntent(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage: issueops intent record --id ID --raw-request TEXT --interpreted-intent TEXT --success-criteria TEXT [--constraint TEXT] [--ambiguity TEXT] [--non-goal TEXT] [--intent-class CLASS] [--json]")
 		return nil
@@ -17,7 +17,7 @@ func runIssueOpsIntent(args []string) error {
 	}
 	fs := flag.NewFlagSet("issueops intent record", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	rawRequest := fs.String("raw-request", "", "raw user request")
 	interpretedIntent := fs.String("interpreted-intent", "", "agent interpretation of user intent")
 	var successCriteria repeatedFlag
@@ -33,7 +33,7 @@ func runIssueOpsIntent(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsIntentWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsIntentRecordRequest{
+	record, err := cli.Runtime.RecordIssueOpsIntentWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsIntentRecordRequest{
 		RawRequest:        *rawRequest,
 		InterpretedIntent: *interpretedIntent,
 		SuccessCriteria:   []string(successCriteria),
@@ -45,7 +45,7 @@ func runIssueOpsIntent(args []string) error {
 	return printIssueOpsResult(record, *jsonOut, err)
 }
 
-func runIssueOpsDesign(args []string) error {
+func (cli command) runIssueOpsDesign(args []string) error {
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		printIssueOpsDesignReviewUsage()
 		return nil
@@ -59,7 +59,7 @@ func runIssueOpsDesign(args []string) error {
 	}
 	fs := flag.NewFlagSet("issueops design review", flag.ContinueOnError)
 	id := fs.String("id", "", "issueops id")
-	actor := addIssueOpsActorFlags(fs)
+	actor := cli.addIssueOpsActorFlags(fs)
 	problemSummary := fs.String("problem-summary", "", "reviewed problem summary")
 	proposedDesign := fs.String("proposed-design", "", "reviewed design")
 	refactorPlan := fs.String("refactor-plan", "", "refactor plan or boundary decision")
@@ -76,7 +76,7 @@ func runIssueOpsDesign(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := issueOpsCLIDeps.RecordIssueOpsDesignReviewWithActor(issueOpsCLIDeps.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsDesignReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsDesignReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsDesignReviewRequest{
 		ProblemSummary: *problemSummary,
 		ProposedDesign: *proposedDesign,
 		RefactorPlan:   *refactorPlan,

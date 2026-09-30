@@ -3,12 +3,14 @@ package projectcli
 import (
 	"flag"
 	"fmt"
+	bootstrapapp "issueops/internal/application/projectbootstrap"
+	docsapp "issueops/internal/application/projectdocs"
 	projectbootstrapcontract "issueops/internal/contract/projectbootstrap"
 	projectdocscontract "issueops/internal/contract/projectdocs"
 	"strings"
 )
 
-func runProjectBootstrap(args []string) error {
+func runProjectBootstrap(bootstrap bootstrapapp.Service, args []string) error {
 	fs := flag.NewFlagSet("project bootstrap", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	sync := fs.Bool("sync", false, "refresh existing project docs as well as creating missing files")
@@ -21,7 +23,7 @@ func runProjectBootstrap(args []string) error {
 	if fs.NArg() > 0 {
 		*repo = fs.Arg(0)
 	}
-	result, err := bootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: *repo, Write: *write && !*dryRun, Sync: *sync})
+	result, err := bootstrap.Run(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: *repo, Write: *write && !*dryRun, Sync: *sync})
 	if err != nil {
 		return err
 	}
@@ -44,7 +46,7 @@ func runProjectBootstrap(args []string) error {
 	return nil
 }
 
-func runProjectDocs(args []string) error {
+func runProjectDocs(docs docsapp.Service, args []string) error {
 	fs := flag.NewFlagSet("project docs", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
@@ -54,7 +56,7 @@ func runProjectDocs(args []string) error {
 	if fs.NArg() > 0 {
 		*repo = fs.Arg(0)
 	}
-	result, err := RouteProjectDocs(*repo, "general")
+	result, err := docs.Route(*repo, "general")
 	if err != nil {
 		return err
 	}
@@ -67,7 +69,7 @@ func runProjectDocs(args []string) error {
 	return nil
 }
 
-func runProjectRouteDocs(args []string) error {
+func runProjectRouteDocs(docs docsapp.Service, args []string) error {
 	fs := flag.NewFlagSet("project route-docs", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	task := fs.String("task", "general", "task description such as commit, test, architecture, dependency, deploy")
@@ -78,7 +80,7 @@ func runProjectRouteDocs(args []string) error {
 	if fs.NArg() > 0 {
 		*task = strings.Join(fs.Args(), " ")
 	}
-	result, err := RouteProjectDocs(*repo, *task)
+	result, err := docs.Route(*repo, *task)
 	if err != nil {
 		return err
 	}
@@ -95,7 +97,7 @@ func runProjectRouteDocs(args []string) error {
 	return nil
 }
 
-func runProjectAppend(args []string) error {
+func runProjectAppend(docs docsapp.Service, args []string) error {
 	fs := flag.NewFlagSet("project append", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	kind := fs.String("kind", "", "append kind: caution or adr")
@@ -110,7 +112,7 @@ func runProjectAppend(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := AppendProjectDocsEntry(projectdocscontract.ProjectDocsAppendRequest{
+	result, err := docs.Append(projectdocscontract.ProjectDocsAppendRequest{
 		RepoRoot:     *repo,
 		Kind:         *kind,
 		Title:        *title,

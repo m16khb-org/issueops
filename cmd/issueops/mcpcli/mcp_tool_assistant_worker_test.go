@@ -24,7 +24,7 @@ func TestHandleAssistantWorkerMCPToolCallCoversLocalAssistantPayloads(t *testing
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handleAssistantWorkerMCPToolCall(tc.call)
+			outcome := testHandleAssistantWorkerMCPToolCall(tc.call)
 			if !outcome.Handled || outcome.Err != nil {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
@@ -37,7 +37,7 @@ func TestHandleAssistantWorkerMCPToolCallCoversLocalAssistantPayloads(t *testing
 
 func TestHandleAssistantWorkerMCPToolCallCoversWorkerLifecyclePayloads(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", t.TempDir())
-	enqueue := handleAssistantWorkerMCPToolCall(MCPToolCall{Name: "worker_enqueue", Arguments: map[string]any{
+	enqueue := testHandleAssistantWorkerMCPToolCall(MCPToolCall{Name: "worker_enqueue", Arguments: map[string]any{
 		"kind": "qa", "payload": "check docs",
 	}})
 	if !enqueue.Handled || enqueue.Err != nil {
@@ -59,7 +59,7 @@ func TestHandleAssistantWorkerMCPToolCallCoversWorkerLifecyclePayloads(t *testin
 		{name: "worker cancel", call: MCPToolCall{Name: "worker_cancel", Arguments: map[string]any{"id": job.ID}}, wantText: workercontract.WorkerStatusCancelled},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handleAssistantWorkerMCPToolCall(tc.call)
+			outcome := testHandleAssistantWorkerMCPToolCall(tc.call)
 			if !outcome.Handled || outcome.Err != nil {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
@@ -72,17 +72,17 @@ func TestHandleAssistantWorkerMCPToolCallCoversWorkerLifecyclePayloads(t *testin
 
 func TestHandleAssistantWorkerMCPToolCallCoversWorkerErrorsAndUnknownTool(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", t.TempDir())
-	enqueue := handleAssistantWorkerMCPToolCall(MCPToolCall{Name: "worker_enqueue", Arguments: map[string]any{"kind": ""}})
+	enqueue := testHandleAssistantWorkerMCPToolCall(MCPToolCall{Name: "worker_enqueue", Arguments: map[string]any{"kind": ""}})
 	if !enqueue.Handled || enqueue.Err == nil || enqueue.Err.Code != -32000 || enqueue.Err.Message != "worker_enqueue failed" {
 		t.Fatalf("unexpected worker_enqueue error outcome: %#v", enqueue)
 	}
 
-	status := handleAssistantWorkerMCPToolCall(MCPToolCall{Name: "worker_status", Arguments: map[string]any{"id": "../bad"}})
+	status := testHandleAssistantWorkerMCPToolCall(MCPToolCall{Name: "worker_status", Arguments: map[string]any{"id": "../bad"}})
 	if !status.Handled || status.Err == nil || status.Err.Code != -32000 || status.Err.Message != "worker_status failed" {
 		t.Fatalf("unexpected worker_status error outcome: %#v", status)
 	}
 
-	unknown := handleAssistantWorkerMCPToolCall(MCPToolCall{Name: "not_assistant_worker", Arguments: map[string]any{}})
+	unknown := testHandleAssistantWorkerMCPToolCall(MCPToolCall{Name: "not_assistant_worker", Arguments: map[string]any{}})
 	if unknown.Handled {
 		t.Fatalf("unknown assistant/worker tool should pass through: %#v", unknown)
 	}

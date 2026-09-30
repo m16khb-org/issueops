@@ -1,11 +1,11 @@
 package commandparse
 
 import (
-	clidomain "issueops/internal/domain/cli"
 	"path/filepath"
 	"strings"
 
 	commandparsecontract "issueops/internal/contract/commandparse"
+	clidomain "issueops/internal/domain/cli"
 	"issueops/internal/domain/shelltoken"
 )
 

@@ -13,7 +13,7 @@ import (
 
 func TestRunFetchJSONReturnsStructuredSafetyRejection(t *testing.T) {
 	var stdout bytes.Buffer
-	err := RunWithDeps([]string{"fetch", "--url", "http://127.0.0.1/private", "--json"}, Deps{Stdout: &stdout})
+	err := RunWithDeps([]string{"fetch", "--url", "http://127.0.0.1/private", "--json"}, testDependencies(&stdout))
 	if err != nil {
 		t.Fatalf("RunWithDeps returned unexpected error: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestRunFetchJSONReturnsStructuredSafetyRejection(t *testing.T) {
 
 func TestRunBenchmarkJSONUsesDeterministicFixtures(t *testing.T) {
 	var stdout bytes.Buffer
-	err := RunWithDeps([]string{"benchmark", "--fixtures", "builtin", "--json"}, Deps{Stdout: &stdout})
+	err := RunWithDeps([]string{"benchmark", "--fixtures", "builtin", "--json"}, testDependencies(&stdout))
 	if err != nil {
 		t.Fatalf("RunWithDeps returned unexpected error: %v", err)
 	}
@@ -67,7 +67,7 @@ func TestRunBenchmarkJSONLoadsFixtureFile(t *testing.T) {
 	}
 
 	var stdout bytes.Buffer
-	err := RunWithDeps([]string{"benchmark", "--fixtures", path, "--json"}, Deps{Stdout: &stdout})
+	err := RunWithDeps([]string{"benchmark", "--fixtures", path, "--json"}, testDependencies(&stdout))
 	if err != nil {
 		t.Fatalf("RunWithDeps returned unexpected error: %v", err)
 	}
@@ -95,7 +95,7 @@ func TestLoadFixturesDirectorySkipsNonJSONAndSortsFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fixtures, err := loadFixtures(dir)
+	fixtures, err := loadFixtures(dir, nil)
 	if err != nil {
 		t.Fatalf("loadFixtures returned error: %v", err)
 	}
@@ -108,7 +108,7 @@ func TestRunBenchmarkLiveRequiresEnvironmentOptIn(t *testing.T) {
 	t.Setenv("ISSUEOPS_WEBFETCH_LIVE", "")
 
 	var stdout bytes.Buffer
-	err := RunWithDeps([]string{"benchmark", "--fixtures", "builtin", "--live", "--json"}, Deps{Stdout: &stdout})
+	err := RunWithDeps([]string{"benchmark", "--fixtures", "builtin", "--live", "--json"}, testDependencies(&stdout))
 	if err == nil {
 		t.Fatalf("RunWithDeps returned nil error, want live opt-in failure")
 	}
@@ -142,7 +142,7 @@ func TestRunBenchmarkLiveUsesGenericBaselineFlag(t *testing.T) {
 	}
 
 	var stdout bytes.Buffer
-	err := RunWithDeps([]string{"benchmark", "--fixtures", path, "--live", "--compare-baseline", filepath.Join(dir, "missing-baseline"), "--json"}, Deps{Stdout: &stdout})
+	err := RunWithDeps([]string{"benchmark", "--fixtures", path, "--live", "--compare-baseline", filepath.Join(dir, "missing-baseline"), "--json"}, testDependencies(&stdout))
 	if err != nil {
 		t.Fatalf("RunWithDeps returned unexpected error: %v", err)
 	}
@@ -166,6 +166,9 @@ func TestRunBenchmarkLiveUsesGenericBaselineFlag(t *testing.T) {
 	}
 	if payload.LiveParityReport.BaselineAvailable {
 		t.Fatalf("missing baseline command reported available: %+v", payload.LiveParityReport)
+	}
+	if len(payload.LiveParityReport.Warnings) != 1 || !strings.Contains(payload.LiveParityReport.Warnings[0], "baseline comparator unavailable:") {
+		t.Fatalf("unavailable comparator was executed: %+v", payload.LiveParityReport)
 	}
 }
 

@@ -2,47 +2,20 @@ package basiccli
 
 import (
 	"context"
-	"issueops/internal/adapter/docs"
-	"issueops/internal/adapter/preflight"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 
-	"issueops/cmd/issueops/daemoncli"
-	inspect "issueops/internal/adapter/inspect"
-	inspectcontract "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
 	"issueops/internal/testsupport"
 )
 
-func init() {
-	root := testIssueOpsRoot()
-	Configure(Deps{
-		GitPreflight:      preflight.GitPreflight,
-		DocsIndex:         docs.DocsIndex,
-		IssueOpsRoot:      func() string { return root },
-		ResolveTarget:     testResolveTarget,
-		Version:           "0.1.0",
-		CheckDaemonStatus: daemoncli.CheckDaemonStatus,
-		CollectOperationalHealth: func(_ context.Context, repo string) operationalhealth.Snapshot {
-			return healthyCLIOperationalSnapshot(repo)
-		},
-		InspectHarness: func(repo string) inspectcontract.InspectInfo {
-			target := testResolveTarget(repo)
-			home, _ := os.UserHomeDir()
-			return inspect.InspectHarness(root, target, home, "0.1.0", "atomic-commit-push")
-		},
-	})
-}
-
 func configureOperationalCollectorTest(t *testing.T, collect func(context.Context, string) operationalhealth.Snapshot) {
 	t.Helper()
-	oldDeps := deps
-	t.Cleanup(func() { Configure(oldDeps) })
-	next := deps
-	next.CollectOperationalHealth = collect
-	Configure(next)
+	old := testOperationalCollector
+	t.Cleanup(func() { testOperationalCollector = old })
+	testOperationalCollector = collect
 }
 
 func healthyCLIOperationalSnapshot(repo string) operationalhealth.Snapshot {

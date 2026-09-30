@@ -1,9 +1,11 @@
 package prompt_test
 
 import (
-	"issueops/internal/adapter/commitsuggest"
-	"issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/lintdiagnose"
+	benchmarkadapter "issueops/internal/adapter/issueops/benchmark"
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
+
+	"issueops/internal/application/commitsuggest"
+	"issueops/internal/application/lintdiagnose"
 	"issueops/internal/domain/prompt"
 	"os"
 	"path/filepath"
@@ -52,9 +54,9 @@ func TestProjectBootstrapPromptUsesStructuredContract(t *testing.T) {
 
 func mustIssueOpsJudgePromptForTest(t *testing.T) string {
 	t.Helper()
-	promptText, err := issueops.BuildIssueOpsLLMJudgePrompt(
-		issueops.IssueOpsBenchmarkFixture{ID: "fixture", Title: "Fixture", UserPrompt: "prompt", RepoContext: "context", CriticalFailures: []string{"critical"}},
-		issueops.IssueOpsBenchmarkArtifact{ProblemSummary: "summary"},
+	promptText, err := benchmarkadapter.BuildIssueOpsLLMJudgePrompt(
+		benchmarkcontract.IssueOpsBenchmarkFixture{ID: "fixture", Title: "Fixture", UserPrompt: "prompt", RepoContext: "context", CriticalFailures: []string{"critical"}},
+		benchmarkcontract.IssueOpsBenchmarkArtifact{ProblemSummary: "summary"},
 	)
 	if err != nil {
 		t.Fatal(err)

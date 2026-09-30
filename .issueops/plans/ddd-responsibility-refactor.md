@@ -14,8 +14,8 @@
 
 ## 1. 요청, 범위, 기본값
 
-- 사용자 요청: “DDD 관점의 책임분리를 전체적인 리팩토링하기 위한 구체적인 계획을 세워줘”. 추가 지시: “범위는 프로젝트 전체야”.
-- 이번 작업은 계획 작성이다. 코드 구현, 원격 이슈/PR/MR 생성, 커밋, 설치, 배포는 수행하지 않는다.
+- 사용자 요청: “DDD 관점의 책임분리를 전체적인 리팩토링하기 위한 구체적인 계획을 세워줘”. 추가 지시: “범위는 프로젝트 전체야”, “구현진행”, “계속진행해”.
+- 현재는 이 계획을 구현 중이다. 후속 사용자 지시로 구현 완료 후 커밋·PR 생성·머지·정리까지 승인되었다. 설치와 배포는 범위에 포함되지 않는다.
 - 구현 대상은 `cmd/`, `internal/`의 전체 production 기능과 `scripts/`, `configs/`, `skills/`의 실행 경계다. `.issueops/` 운영 문서와 architecture test도 함께 정합화한다.
 - 기본값은 **기존 관찰 가능한 동작 보존**이다. CLI 인자·exit code·JSON·오류 코드, MCP tool/schema, schema v1, SQLite bucket/key/record, 판정 순서와 오류 우선순위를 유지한다.
 - 호환성을 깨는 재설계, 기존 버그 수정, 안전 정책 강화는 발견 항목으로 분리한다. 구조 이동 중 조용히 정책을 변경하지 않는다.
@@ -130,9 +130,9 @@
 
 각 task의 담당은 메인 에이전트이며 권장 실행 등급은 별도 표기한다. 아래 신규 경로는 **생성 예정**이고 기존 경로는 근거다. 각 task는 해당 capability의 기존 모든 production 소비자를 `go list`와 `rg`로 찾아 같은 task에서 갱신한다. 내부 type alias는 이행 중에만 허용하고 제거 task를 명시한다. commit은 이번 계획 작업에서는 하지 않으며 실행 시에도 별도 승인 범위를 따른다.
 
-### T01. 전체 소유권 원장과 동작 기준 고정
+### Task 1: 전체 소유권 원장과 동작 기준 고정 (T01)
 
-- [ ] 완료
+- [x] 완료 — production 1,450개 파일·7,078개 심볼, 정책 483개를 분류했고 미배정·이전 대기 항목 0개를 확인함
 - **담당/등급:** 메인 / deep. **선행:** 없음. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/`, `internal/`, `scripts/`, `configs/`, `skills/`; `internal/architecture/package_inventory_test.go`; `.github/workflows/ci.yml`
 - **변경/신규 파일:** 신규 `internal/architecture/testdata/ddd_responsibility_inventory.json`, `internal/architecture/ddd_responsibility_test.go`, `.issueops/evidence/ddd-refactor/baseline/`.
@@ -142,9 +142,9 @@
 - **EXPECT / QA:** 정상: 모든 production 파일과 executable script가 정확히 한 owner/task로 배정됨. 실패: 임시 synthetic AST에 미등록 정책 함수를 추가하면 inventory 검사 실패. 현재 full test/race의 실패는 기준 결함으로 기록하고 숨기지 않음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T01-success.txt`, `T01-failure.txt`, `T01-ownership.json`.
 
-### T02. Contract의 업무 규칙과 shape 검증 분리
+### Task 2: Contract의 업무 규칙과 shape 검증 분리 (T02)
 
-- [ ] 완료
+- [x] 완료 — contract 함수 97개 역할 분류와 정책 이관, persisted codec 실패 계약 검증 완료
 - **담당/등급:** 메인 / deep. **선행:** T01. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/contract/issueops/issue_create.go:ValidateIssueCreateTransition`; `internal/contract/issueopspreparation/{planner_gates,prepare,intent}.go`; `internal/contract/issueopslease/record.go`; 모든 contract package
 - **변경/신규 파일:** 확장 `internal/domain/issueopspreparation/`, `internal/domain/issueopspublication/`; 신규 `internal/domain/issueopsreview/`; 신규 domain tests. contract codec 파일은 기존 위치 유지.
@@ -154,9 +154,9 @@
 - **EXPECT / QA:** 정상: 현재 허용된 intent/issue-create 전이 행렬 전체와 encode→decode 값/정의된 sidecar 동일. 실패: lease JSON에 미정의 필드를 추가한 fixture, schema missing/zero/future, stale generation, 허용되지 않은 전이는 종전 오류로 거부하며 raw record 불변. 다른 decoder의 미정의 필드 동작은 각각 baseline과 비교한다. contract의 migrated 정책 재등장 fixture는 검사 실패.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T02-success.txt`, `T02-failure.txt`, `T02-ownership.json`.
 
-### T03. 리뷰·증거 기록·재계획 규칙 이전
+### Task 3: 리뷰·증거 기록·재계획 규칙 이전 (T03)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T02. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/issueops/devilsadvocate/devils_advocate.go`; `intentdesign/`; `compatibilityreview/`; `issueops_regress.go`; `issueops_{implementation_review,project_docs_review,schema_evidence,ledger_recorders,feedback}.go`
 - **변경/신규 파일:** 신규 `internal/contract/issueopsreview/{types,snapshot}.go`, `internal/domain/issueopsreview/{review,regress,evidence}.go`, `internal/application/issueopsreview/{service,ports}.go`, 대응 outbound record adapter 및 root wiring. application이 기존 record를 이 capability의 snapshot으로 매핑한다.
@@ -166,9 +166,9 @@
 - **EXPECT / QA:** 정상: stop+reflection+자식 없음에서 grill로 전이하고 audit를 보존. 실패: 네 번째 미면제 revise, 네 번째 regress, 근거 없는 pass, stale digest, foreign actor는 저장 0회. `TestEvidenceRecordersObserveTheChangeSetOutsideTheSpan`, regress cap/ledger 테스트 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T03-success.txt`, `T03-failure.txt`, `T03-ownership.json`.
 
-### T04. 사이클 단계·readiness·아티팩트 조율 이전
+### Task 4: 사이클 단계·readiness·아티팩트 조율 이전 (T04)
 
-- [ ] 완료
+- [x] 완료 — 정책 원장 34개(이전 31, 기술 관측·연결 유지 3), 미이전 0; task battery 통과
 - **담당/등급:** 메인 / deep. **선행:** T03. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/issueops/issueops_phase.go`; `issueops_{readiness,pr_readiness,pr_readiness_strict,phase_ledger,phase_refresh}.go`; `gatesgate/`, `loopgate/`; `internal/application/issueopsartifact/`; 기존 issueopsnext/status/inventory/routing/retention vertical
 - **변경/신규 파일:** 확장 `internal/domain/issueops/`; 신규 `internal/application/issueopscycle/{service,ports}.go`; 기존 artifact/next/status 등의 service와 root wiring.
@@ -178,9 +178,9 @@
 - **EXPECT / QA:** 정상: 완전한 gate로 단계 진입 시 entered/completed ledger와 결과 일치. 실패: intent/plan/review 중 하나 누락, stale artifact, broken worktree는 같은 missing/error. `TestPRPhaseEntryFetchesUpstreamOutsideTheSpan`과 readonly status tests 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T04-success.txt`, `T04-failure.txt`, `T04-ownership.json`.
 
-### T05. Lease·실행 준비의 실제 정책 소유권 완성
+### Task 5: Lease·실행 준비의 실제 정책 소유권 완성 (T05)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T04. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/application/issueopslease/{claim,release}.go`; `internal/adapter/outbound/issueopslease/sqlite.go:claimWithinSpan`; `internal/application/issueopspreparation/prepare.go`; `internal/adapter/outbound/issueopspreparation/repository.go`; `internal/port/transactional_record_store.go`
 - **변경/신규 파일:** 기존 lease/preparation domain/application/ports를 확장하고 outbound의 policy orchestration을 제거한다. 별도 중복 lease aggregate는 만들지 않는다.
@@ -190,9 +190,9 @@
 - **EXPECT / QA:** 정상: current token claim과 동일 actor/generation retry의 결과·효과 수 동일. 실패: stale generation, ambiguous token selector, cleanup applying, apply failure에서 record/index/token authority 불변. `TestSQLiteClaimTransaction`, `TestSQLiteClaimRejectsCleanupAbandonFence` 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T05-success.txt`, `T05-failure.txt`, `T05-ownership.json`.
 
-### T06. Resume·reconcile·reseed·base sync·mode switch 이전
+### Task 6: Resume·reconcile·reseed·base sync·mode switch 이전 (T06)
 
-- [ ] 완료
+- [x] 완료 — resume/reconcile의 구형 브리지를 제거하고 Orca 권한·pending kind 판정을 domain으로 일원화; T06 패키지·race·전체 Go 회귀 검증 완료
 - **담당/등급:** 메인 / deep. **선행:** T05. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/issueops/execution_resume*.go`, `execution_reconcile*.go`, `execution_orca_intent.go`, `execution_sync_base.go`, `execution_mode_switch.go`; `internal/adapter/orca/execution_validation.go`; 기존 lease resume/reseed domain
 - **변경/신규 파일:** 확장 lease/preparation application; 신규 `internal/domain/issueopsbasesync/`, `internal/application/issueopsbasesync/`; 대응 Git/intent port와 outbound 구현.
@@ -202,9 +202,9 @@
 - **EXPECT / QA:** 정상: released resume과 holderless reseed에서 generation 증가/현재 receipt 처리 동일. 실패: stale raw snapshot/CAS, merge conflict, push failure, missing receipt는 rollback 또는 기존 pending 상태 보존. conflict에서 push 0회, ambiguous launch에서 create 0회 재시도. 기존 sync-base test matrix 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T06-success.txt`, `T06-failure.txt`, `T06-ownership.json`.
 
-### T07. 원격 발행·본문 동기화·완료 이전
+### Task 7: 원격 발행·본문 동기화·완료 이전 (T07)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T06. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/application/issueopspublication/{create,reconcile}.go`; `internal/adapter/outbound/issueopspublication/repository.go`; `internal/adapter/issueops/{execution_remote,execution_remote_bridge,issue_create_intent,issueops_remote_body_sync,issueops_remote_sync,issueops_completion_remote,issueops_devilsadvocate_reflect}.go`; `artifactverify/`
 - **변경/신규 파일:** 기존 publication/completion vertical 완성; 신규 `internal/application/issueopsbodysync/`와 해당 narrow ports. 기존 domain remote/bodysync policy 재사용.
@@ -213,34 +213,104 @@
 - **CHECK:** `go test ./internal/domain/issueopspublication ./internal/domain/issueopsbodysync ./internal/application/issueopspublication ./internal/application/issueopscompletion ./internal/adapter/outbound/issueopspublication ./internal/adapter/issueops/... -count=1`.
 - **EXPECT / QA:** 정상: create readback 직후에는 RemoteArtifact/receipt가 생기고 기존 lease는 active, completion은 없음. 별도 complete 호출에 필요한 증거가 충족된 경우에만 completion+release가 원자 기록. 실패: provider 생성 후 응답 유실은 reconcile 요구, 두 번째 create 0회; 다른 candidate/actor/body SHA/HEAD는 거부. managed section 밖 본문 byte 보존.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T07-success.txt`, `T07-failure.txt`, `T07-ownership.json`.
+- **부분 진행:** 발행 Effects/EffectState와 `execution_remote_bridge.go`를 제거하고 실제 저장·검증 어댑터를 composition root에 직접 연결했다. 실제 SQLite 테스트로 원본 snapshot 보존, 영수증 저장 뒤 active lease 유지, stale generation/payload 거부 시 무변경을 확인했다. 전체 Go suite, 선택한 발행 경로 race, 관련 package vet 통과. 본문 동기화와 명시적 실행 완료 경로의 책임 검토가 남아 있어 T07은 미완료다.
+- **부분 진행 — 아티팩트 검증:** provider/kind/project/label/assignee와 PR phase 판정을 `issueopsremote.ProjectArtifact`로 이전했다. 어댑터의 `Projection`은 도메인 입력·출력 변환과 timestamp를 처리하며 기존 private 판정 함수는 삭제했다. domain/기존 adapter/실제 SQLite 경로와 CLI 회귀 테스트, 선택한 race, 관련 vet, build 및 전체 Go suite 통과. assignee 규칙을 무력화한 임시 Go overlay에서 저장 경로 테스트가 기대한 오류로 실패하여 실제 domain 연결을 확인했다.
 
-### T08. 분기·부모자식·정리 capability 이전
+- **부분 진행 — 발행 준비:** `prepareRemotePullRequest`와 저장소의 `PreviewCreate`/준비 경로를 삭제했다. `issueopsremote.CreatePreparation`이 actor/record/권한/review/HEAD 관측을 조율하고 `issueopsremote` domain이 provider/phase/generation/review/branch/content/metadata를 판정한다. 발행 서비스가 준비 결과를 저장소에 전달하며 저장소는 잠금 안에서 최신 레코드를 다시 읽는다. 준비 결과에 불필요한 JSON snapshot을 추가하지 않았다. 실제 Git/SQLite 통합 테스트에서 정상 발행과 branch/assignee/review 거부 시 provider 0회·상태 무변경을 확인했고, domain base 검증을 무력화한 Go overlay에서 통합 테스트가 실패했다. 최종 전체 Go suite, 관련 race·vet, architecture, build가 통과했다. 중간 실행은 실행 중 테스트명 변경에 따른 generated testmain 불일치로 실패했으며, 소스를 고정한 `full-suite-create-preparation-final.txt` 재실행은 통과했다.
+- **부분 진행 — 발행 트랜잭션:** `PublicationJournal`이 intent 생성·재시도·실패·영수증 저장을 조율하고, domain이 pending/payload 일치 검사와 상태 전이를 소유한다. `RemotePublicationStore`는 잠금·codec·원자 저장·원본 snapshot 읽기만 맡는다. 기존 `RemotePublicationRepository`와 adapter의 발행 트랜잭션 함수는 삭제했다. 실제 SQLite 테스트에서 operation ID 충돌 시 record·intent·holder index 무변경, stale retry/terminal receipt 거부, 알려진 URL 보존, terminal intent 삭제, 발행 후 lease 유지를 확인했다. payload CAS를 우회한 overlay에서 실제 retry 테스트가 실패했다. architecture 및 관련 domain/application 테스트, 발행 경로 race, 관련 vet, build, 전체 Go suite 통과(`full-suite-publication-journal.txt`, `publication-journal-cas-mutation.txt`). 본문 동기화의 application 이전과 완료 경로의 추가 정책 검토는 남아 있다.
 
-- [ ] 완료
+- **부분 진행 — 본문 동기화:** `issueopsbodysync.Service`가 조회·관리 구간 보존·provider 쓰기·readback 검증·기준값 저장을 조율한다. readback과 부모자식 확인 판정은 domain으로 이전했고, 원본 `SyncRemoteArtifactBody`·`recordBodySync`·`verifyBodySyncChildHierarchy`는 삭제했다. 어댑터는 provider capability 연결과 typed callback을 실행하는 잠금·저장만 맡는다. 실제 저장소 테스트로 관리 구간 보존, 미적용·불일치 readback의 무기록, 호출 중 바뀐 최신 record 보존, 저장 직전 holder 변경 거부를 확인했다. readback·재인가를 각각 우회한 overlay에서 해당 테스트가 실패했다. 전체 Go suite, 관련 race, vet, build, architecture 및 GitHub/GitLab provider tests 통과(`full-suite-body-sync-application.txt`, `body-sync-readback-mutation.txt`, `body-sync-authority-mutation.txt`). 추가 소스 대조에서 확인한 이슈 intent 3개·원격 반영 3개·완료 재시도 1개 규칙은 정책 원장에 `migrate`로 명시했다. 이전 진행 기록에 남은 본문 동기화 이전은 이번 변경으로 끝났으며, 이슈 생성 intent·원격 결과 반영·완료 경로의 책임 이전은 남아 있다.
+
+- **부분 진행 — 이슈 생성 intent:** 시작·결과 기록·완료의 상태 전이와 봉인된 요청 비교를 `domain/issueops`로 이전했다. 기존 생성 전이 정책도 같은 aggregate 패키지로 옮겼으며 URL 검증은 연결과 생성 완료가 공유한다. `application/issueopsremote.IssueCreateIntents`가 typed Update를 통해 최신 record의 전이와 시간을 조율하고, adapter는 잠금·조회·codec·저장만 맡는다. 기존 adapter lifecycle 함수는 삭제했다. 실제 SQLite에서 6개 동시 시작 중 1회만 성공, 변경된 요청 재시도 거부 시 원본 보존, encoding 실패 시 부분 연결 방지를 확인했다. root wiring과 CLI create/reconcile 테스트, 전체 Go suite, 관련 race·vet·build 및 architecture가 통과했다(`full-suite-issue-create-intents.txt`). 봉인 요청 비교를 우회한 overlay에서 실제 저장소 테스트가 실패했다(`issue-create-sealed-retry-mutation.txt`). CLI의 생성·재조정 조율은 아직 남아 있어 정책 원장에 별도 `migrate` 항목으로 기록했으며 T07은 미완료다.
+
+- **부분 진행 — 이슈 생성 재조정:** `IssueReconciler`가 후보 조회·실물 검증·실패 기록·완료 저장을 조율하고, `domain/issueops`가 미완료 intent, 완전한 단일 후보 검색, 봉인된 프로젝트·제목·본문 digest 일치를 판정한다. 기존 CLI 조율 코드는 삭제하고 별도 transport 파일에 옵션 파싱·출력만 남겼다. provider resolver와 후보 조회 capability는 adapter가 맡으며, 생성·재조정 실패 진단의 redaction/길이 제한은 application의 한 함수로 통합했다. 실제 SQLite composition 테스트로 미리보기 무변경, 검증 실패의 민감정보 제거, 후속 복구와 완료 후 재조회 방지를 확인했다. 실제 CLI/provider subprocess 테스트로 변경된 제목·본문을 실물 검증 전에 거부하고 confirm 여부에 따라 실패 기록을 구분하는 것을 확인했다. 내용 비교를 우회한 overlay에서 두 CLI 시나리오가 실패했다(`issue-reconcile-content-mutation.txt`). 초기 architecture 검사가 발견한 다른 domain 계약 의존성을 제거한 뒤 architecture, 전체 Go suite, 관련 race·vet·build가 통과했다(`full-suite-issue-reconcile.txt`). 생성 명령의 봉인·호출·실패 분류·영수증 조율과 원격 완료 반영은 남아 있으므로 T07은 미완료다.
+
+- **부분 진행 — 이슈 생성 조율:** `IssueCreator`가 record 조회, provider 결정·관측, 본문 준비, intent 저장, provider 호출, 실패 기록, 실물 검증과 완료 저장을 조율한다. domain은 marker/digest 봉인·재사용, 호출 결과 분류, provider 우선순위, 제목·metadata·민감정보 입력 검증을 소유한다. 파일·템플릿·score 본문 준비는 공유 `TemplateBodyResolver`로 이전해 다른 원격 명령도 같은 구현을 사용한다. CLI에는 옵션 파싱과 결과 출력만 남겼고 기존 intent 배선, 사용되지 않는 동기 create wrapper, CLI helper 원본을 삭제했다. 실제 Git/SQLite composition 테스트로 provider 호출 전 저장, 미호출 실패만 재시도, 호출 중 취소 뒤에도 불명확한 결과 저장, 중복 생성 차단, 실물 검증 후 연결·plan 진입을 확인했다. Begin 저장을 우회한 overlay는 provider 호출 직전 테스트에서 실패했다(`issue-create-before-invocation-mutation.txt`). 빌드한 CLI를 임시 repo/state와 테스트용 gh로 실행한 미리보기·생성·readback·중복 차단도 통과했다(`issue-create-binary-smoke.json`). 전체 Go suite, 관련 race·vet·build, architecture가 통과했다(`full-suite-issue-create-orchestration.txt`). 원격 완료 반영·이슈 종료·리뷰 결과 반영과 완료 경로의 남은 판정 이전은 계속 진행한다.
+
+- **부분 진행 — 완료 반영·이슈 종료:** `RemoteCompletionService`가 provider 선택·머지 readback·최신 record 조회·본문 반영/종료·영수증 저장을 조율한다. CLI의 `resolveRemoteCompletionInputs`와 adapter의 `ReflectIssueCompletion`·`CloseIssueOpsRemoteIssue`·`stampRemoteCompletion`·`gatherCompletionSection`을 삭제했다. domain이 완료 본문 구성, 전체 artifact digest와 요약 길이, 누락 plan 표시, 연결 전제, 최초 종료 시각 보존을 소유한다. 공유 본문 DTO는 contract로 옮기고 기존 port 타입은 alias 없이 제거했다. 생성·재조정·완료가 같은 `RemoteRecordStore`를 쓰며, 정리 작업도 공통 collector/receipt writer를 호출한다. 정리 작업 자체의 조율은 T08의 명시적 미완료 항목으로 기록했다. 실제 SQLite composition 테스트에서 merge 실패 시 provider 0회, 미적용 결과의 무기록, provider 호출 중 갱신된 record 보존, 최초 종료 시각 유지를 확인했다. 파일 mode/symlink/크기 제한 테스트와 cleanup·GitHub/GitLab provider 테스트가 통과했다. merge readback과 최초 close 보존을 각각 우회한 overlay에서 composition 테스트가 실패했다(`remote-completion-merge-readback-mutation.txt`, `remote-completion-first-close-mutation.txt`). 실제 바이너리의 두 CLI 명령도 merge artifact 부재를 provider 호출·영수증 저장 전에 거부했다(`remote-completion-binary-smoke.json`). 전체 Go suite, 관련 race·vet·build 및 architecture 통과(`full-suite-remote-completion.txt`). 리뷰 결과 반영과 실행 완료의 남은 판정 이전이 있어 T07은 미완료다.
+
+- **부분 진행 — 실행 완료 판정:** `domain/issueopscompletion`으로 실행자 정규화·ancestry 및 live identity 판정, confirm·검증 증거·URL·준비 상태·phase·최종 HEAD 검증, 동일 완료 재시도 조건을 이전했다. application에는 process/path/Git/report 관측과 원자적 저장 조율을 남기고 기존 판정 함수는 삭제했다. 재시도 조건은 경로 관측 전의 세대·완료 기록 판정과 관측 후의 증거 비교로 나눠 기존 short-circuit 순서를 보존했다. phase 오류의 기존 공개 형태와 domain denial code도 유지한다. 기존 application 테스트에 거부 시 외부 호출 순서와 저장 0회 검증을 추가해 이동 전후 통과했고, 새 domain 경계의 RED→GREEN을 기록했다(`completion-input-domain-red.txt`). 세대 비교·PID 재사용 검사·필수 증거 검사를 각각 제거한 overlay에서 테스트 실패를 확인했다(`completion-*-mutation.txt`). 실제 CLI의 잘못된 host·누락 session 거부도 확인했다(`completion-input-binary-smoke.json`). 전체 Go suite(`full-suite-completion-input-rules.txt`), 관련 race·vet·build 및 architecture가 통과했다. 리뷰 결과 반영과 발행 후보 검증의 adapter 조율은 추가 이전 대상으로 남아 있으므로 T07은 미완료다.
+
+- **부분 진행 — 리뷰 결과 반영과 공통 권한 경계:** `ReviewReflectionService`가 record/provider/ancestry 조회, 호출 전 권한 검사, 원격 본문 반영, 잠금 안 최신 record 재조회·권한 재검사·stamp를 조율한다. CLI에는 parse/render만 남기고 adapter의 기존 반영 함수와 `BodySyncAuthority`를 삭제했다. domain이 findings·연결 이슈 전제, stamp 시 review 존재와 시각 갱신을 소유한다. adapter의 holder 판정과 decision/routing의 기존 authorization 판정을 통합했으며, domain에서 호출하던 filesystem callback도 제거했다. `issueopscycle.MutationAuthority`는 전체 execution 검증이 필요한 기존 경로를, `AuthorizeHolder`는 decision/routing의 기존 holder-only 계약을 보존한다. 파일 경로 관측은 기존 `CanonicalPaths` 구현을 재사용한다. 실제 SQLite composition 테스트에서 외부 호출 전 다른 holder/CWD 거부, preview·미적용 결과의 무기록, 호출 중 holder 변경·review 삭제 시 stamp 거부, 동시 변경 내용 보존을 확인했다. holder 재검사와 ancestry 판정을 우회한 overlay에서 테스트가 실패했다(`review-holder-recheck-mutation.txt`, `review-ancestry-mutation.txt`). CLI 통합 테스트의 잘못된 작업트리·state root·빈 ancestry fixture를 실제 계약에 맞춰 수정했고, 중단한 검증 로그와 최종 전체 통과 로그를 분리했다. 전체 Go suite(`full-suite-review-reflection.txt`), 관련 race·vet·build·architecture 및 실제 바이너리의 preview/confirm smoke(`review-reflection-binary-smoke.json`)가 통과했다. 기존 반영 파일에 섞여 있던 plan digest helper는 `review_plan_digest.go`로 분리했으며, linked/staged plan 선택 조율은 명시적인 `migrate` 항목으로 남겼다. T07은 아직 미완료다.
+
+- **부분 진행 — 계획 선택과 발행 검증:** `PlanDigestResolver`가 linked/staged plan 조회를 조율하고 domain이 연결 우선순위와 원문 digest를 판정한다. 읽을 수 없는 linked plan을 staged 내용으로 대체하지 않으며 기존 오류를 보존한다. `PublicationVerifier`는 intent 해석 뒤 최신 record를 조회하고 후보의 봉인된 내용·프로젝트·known URL 및 live 검증 전 phase를 검사한다. 기존 adapter verifier와 불필요한 역변환 helper를 삭제했다. 실제 SQLite 테스트에서 최신 프로젝트·phase 사용과 잘못된 후보 거부를 확인했고, linked plan 우선순위와 최신 record 사용을 우회한 overlay에서 각각 테스트가 실패했다(`review-plan-priority-mutation.txt`, `publication-latest-authority-mutation.txt`). 전체 Go suite(`full-suite-plan-publication-verification.txt`), 관련 race·vet·build·architecture가 통과했다. 실제 바이너리에서도 계획 부재 거부와 staged 원문 SHA256 기록을 확인했다(`plan-binding-binary-smoke.json`). 원격 artifact 검증 결과의 저장 조율은 adapter에 남아 있어 별도 `migrate` 항목으로 기록했으며 T07은 미완료다.
+
+- **부분 진행 — 원격 artifact 검증과 기록:** `ArtifactVerificationService`가 잠금 안 사전 검증, 원격 readback, ancestry 관측, 최신 record의 권한·metadata 재검사와 저장을 조율한다. CLI에는 parse/render만 남겼고 `artifactverify` 패키지와 기존 facade 함수를 삭제했다. 발행 검증도 같은 domain projection 매핑을 재사용한다. SQLite composition 테스트로 원격 오류·ancestry 오류의 무기록, 원격 조회 중 holder·phase·프로젝트 변경의 거부, 동시 증거 보존과 정상 receipt 저장을 확인했다. holder 검사와 ancestry 전달을 각각 제거한 overlay에서 테스트가 실패했다(`artifact-holder-recheck-mutation.txt`, `artifact-ancestry-mutation.txt`). 실제 바이너리는 잘못된 phase에서 provider를 호출하지 않고, 원격 라벨 누락 시 무기록이며 정상 readback 결과를 저장했다(`artifact-verification-binary-smoke.json`). 전체 Go suite(`full-suite-artifact-verification.txt`), 관련 race·vet·build·architecture가 통과했다. 소스 재점검에서 PR 생성 입력 준비, 본문 동기화 CLI 진입부, issue graph 반영의 조율이 남아 있음을 확인해 세 정책을 `migrate`로 추가했다. T07은 미완료다.
+
+- **부분 진행 — PR 생성·본문 동기화 입력 준비:** `PublicationCommandService`와 `BodySyncCommandService`가 record 조회, 본문 파일·template 준비, 입력 검증과 ancestry 관측을 조율한다. provider·head·base 기본값과 필수 본문 판정은 domain으로 옮겼다. CLI에는 옵션 파싱·요청 매핑·출력만 남겼으며, PR 생성 코드를 별도 transport 파일로 분리하고 기존 `remoteNativeActor`를 삭제했다. SQLite composition 테스트로 provider 오류 우선순위, 빈 본문·민감정보 거부, preview의 ancestry 생략, confirm의 정규화된 actor 전달, body-file과 준비된 브랜치 기본값을 확인했다. 민감정보 검사와 ancestry 관측을 제거한 overlay에서 테스트가 실패했다(`body-command-secret-mutation.txt`, `publication-command-ancestry-mutation.txt`). 실제 바이너리에서 PR preview 기본값, 민감정보의 provider 호출 전 거부, 두 preview의 상태 무변경, 본문 confirm의 readback·baseline 저장과 managed section 보존을 확인했다(`remote-commands-binary-smoke.json`). 전체 Go suite(`full-suite-remote-commands.txt`), 관련 race·vet·build·architecture가 통과했다. 실제 발행 handler 호출 전 native actor를 정규화하는 기존 adapter 조율은 별도 `migrate` 항목으로 기록했다. 이 경로와 issue graph 반영이 남아 있으므로 T07은 미완료다.
+
+- **부분 진행 — 그래프 동기화와 공통 actor 검증:** `IssueGraphSyncService`가 record 조회와 provider 반영을 조율하고 domain이 실행 전제와 관계 본문을 구성한다. 기존 `issueops_remote_sync.go`를 삭제하고 Git 관측과 gh/glab 호출만 adapter에 남겼다. 공통 native actor의 host·receipt·ancestry·live identity 판정은 domain으로, process 관측 순서는 application으로 이전했다. contract의 검증 함수와 adapter의 기존 정규화·PR handler dispatch를 제거했다. SQLite composition 테스트에서 미리보기·빈 그래프·누락 URL·GitHub/GitLab·provider 오류와 저장 row 불변을 확인했다. confirm 분기와 live identity 검사를 각각 무력화한 overlay가 실패했다(`graph-confirm-mutation.txt`, `actor-live-mutation.txt`). 전체 Go suite(`full-suite-graph-actor.txt`), 관련 race·vet·build·architecture와 실제 CLI smoke(`graph-actor-binary-smoke.json`)가 통과했다. 소스 재점검에서 발행의 actor·권한 검증이 adapter callback을 경유하고 완료의 순수 artifact 검증도 adapter에 위임하는 경로가 남아 있음을 확인했다. 이 연결을 제거하기 전까지 T07은 미완료다.
+
+- **부분 진행 — 발행·완료 검증의 adapter 경유 제거:** 발행 준비가 공통 actor 정규화를 직접 호출하고, 준비 단계와 잠금 안 intent 기록이 같은 `MutationAuthority`를 직접 사용한다. `RemotePublicationObserver.NormalizeActor`·`Authorize`와 기존 actor 변환 helper를 삭제했다. 완료 application은 transaction 안에서 `ValidateArtifact`를 직접 호출하며 adapter의 `VerifyArtifact`와 port 항목을 제거했다. 기존 테스트에서 순수 검증을 성공으로 대체하던 fake를 없애고 실제 연결 이슈·artifact를 갖춘 fixture로 바꿨다. 새 테스트의 RED→GREEN, 다른 holder·잘못된 CWD의 무기록, 잠금 안 holder 재검사를 확인했다. 세 검사를 각각 우회한 overlay가 실패했고 실제 CLI에서 잘못된 발행 holder·누락 artifact 거부, 완료+release 저장, 동일 완료 재시도의 row 불변을 확인했다(`publication-direct-binary-smoke.json`). 전체 Go suite(`full-suite-publication-direct.txt`), 관련 race·vet·build·architecture가 통과했다. T07 잔여 점검 항목은 issue preview의 cancellation 선택, journal의 pending intent 판정, issue/publication 실패 진단의 길이·기본값 규칙이다. 이 정책들과 task 단위 성공·실패·소유권 증거를 정리한 뒤 T07 완료 여부를 판정한다.
+
+- **부분 진행 — 원격 처리의 잔여 규칙:** issue preview의 uncancelled 호출 선택을 application으로 옮기고 기존 provider wrapper를 삭제했다. pending publication 판정과 issue/publication 실패 진단의 redaction·기본값·바이트 제한을 domain으로 이전했다. `LoadIntent`는 조회 순서를 맡는 application 메서드로 남기되 domain에 판정을 위임하므로 원장에 `application-orchestration` 잔존 책임을 명시했다. 기존 삭제 여부 검사는 다른 migrated 정책에 그대로 적용한다. 취소된 preview/confirm의 차이를 이동 전후 검증했고, pending kind·진단 한도·preview 취소 처리를 무력화한 overlay가 실패했다. 실제 CLI에서 preview 무호출, 불명확한 실패의 intent 보존·진단 마스킹·중복 생성 차단을 확인했다(`remote-residual-binary-smoke.json`). 전체 Go suite(`full-suite-remote-residual.txt`), T07 관련 race·vet·build·architecture, task 성공·실패 시나리오(`T07-success.txt`, `T07-failure.txt`)가 통과했다. 원장에 남은 삭제된 후보 테스트 경로는 실제 `execution_publication_verifier_test.go`로 정정했다. 추가 소스 점검에서 provider 공용 `issuebody` helper가 완료 본문 절단 우선순위·바이트 예산·관리 구역 병합을 소유하고 있음을 확인했다. 이 helper를 domain으로 이전하기 전까지 T07은 미완료다.
+
+- **부분 진행 — 관리 본문 규칙:** provider 공용 `issuebody` 패키지를 삭제하고 완료 본문 구성·절단 우선순위·관리 구역 예산·병합·payload 검증을 `domain/issueops/managed_body.go`로 이전했다. 공유 section 어휘는 contract가 소유하고 port의 기존 상수와 adapter alias는 제거했다. provider는 요청을 순수 `SectionInput`으로 매핑하고 조회·쓰기만 수행한다. 같은 capability contract 의존성 규칙을 유지했다. GitHub/GitLab subprocess 테스트에서 주변 authored bytes 보존, plan 우선 절단, 남은 예산 초과 시 쓰기 0회를 확인했다. 예산 계산과 주변 bytes 보존을 각각 깨뜨린 overlay에서 두 provider 테스트가 모두 실패했다. 전체 Go suite(`full-suite-managed-body.txt`), 관련 race·vet·build·architecture가 통과했다. 원격 점수 요약의 순수 projection과 scoring facade는 후속 소스 점검 대상으로 남아 있다.
+
+- **부분 진행 — 점수 요약과 scoring facade 제거:** JSON 파일 조회와 해석은 application에 두고 선택/거절 집합의 요약, 표시 이름 우선순위와 점수 표시는 `domain/issueopsremote.RenderScoreSummary`로 이전했다. `issueops_remote_scoring_facade.go`의 함수 래퍼 6개와 타입 별칭 8개를 삭제하고 root와 CLI 테스트를 domain 함수에 직접 연결했다. 파일 부재, 일반 텍스트, 빈 JSON과 null의 기존 계약을 유지한다. 선택 라벨을 누락한 overlay에서 domain과 application 테스트가 모두 실패했다. 실제 CLI의 score와 render-template 연계 및 일반 텍스트 요약 smoke가 통과했다(`remote-scoring-binary-smoke.json`). 전체 Go suite(`full-suite-remote-scoring.txt`), 관련 race, vet, build, architecture 및 T07 성공 9개와 실패 12개 시나리오가 통과했다. 최종 task CHECK와 소유권 증거를 마감한다.
+
+- **최종 검증:** `ba4531ef`에서 지정된 task CHECK 전체가 통과했다. `T07-ownership.json`은 68개 이전 정책, 5개 기존 domain 정책, 미이전 0개와 capability별 실제 배선, source hash 및 제거된 legacy 경로를 기록한다. 성공 9개·실패 12개 시나리오와 전체 suite, 관련 race, CLI smoke를 함께 확인했다. 전체 프로젝트의 의미 기반 원장 재검토(T01), 후속 capability 이전과 최종 검증은 별도 미완료 항목으로 유지한다.
+- **자기 검증 보완:** `self-verify`에서 오래된 preflight helper 경로와 기존 테스트 두 파일의 gofmt 누락이 드러났다. 실제 `helpers.go`를 검사하도록 수정하고 해당 파일이 없으면 실패하는 회귀 테스트를 추가했다. 초기 실패 로그를 보존한 뒤 첫 게이트부터 다시 실행해 26개 검사, 최소 목표 점수 100을 확인했다(`T07-self-verify.json`). 이 실행에는 전체 `go test -race ./... -count=1`, `go vet ./...`, build 및 CLI/MCP/state 검증이 포함된다.
+
+### Task 8: 분기·부모자식·정리 capability 이전 (T08)
+
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T07. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/issueops/{start,branchprepare,linking,delegation,cleanupchildren,cleanupstatus,orphancleanup}/`; `issueops_{umbrella_topology,delegation,child_gate,cleanup_*}.go`; `cleanup_workspace_*.go`; `issueops_linked_branch_observation.go`
-- **변경/신규 파일:** 신규 `internal/domain/issueopsbranch/`, `internal/application/issueopsbranch/`, `internal/domain/issueopsdelegation/`, `internal/application/issueopsdelegation/`, `internal/domain/issueopscleanup/`, `internal/application/issueopscleanup/`; 기술 outbound adapters.
+- **변경/신규 파일:** aggregate 규칙은 기존 `internal/domain/issueops/`와 `internal/domain/issueopsremote/`, 봉인 identity는 `internal/domain/issueopspreparation/`, orphan 규칙은 `internal/domain/issueopsorphancleanup/`에 둔다. 조율은 `internal/application/issueopsbranch/`, `internal/application/issueopsdelegation/`, `internal/application/issueopscleanup/`이 맡고 기술 outbound adapter와 CLI composition root를 연결한다.
 - **구현:** 8a: start/branch prepare/retarget/link의 relation/topology 규칙 이전. 8b: parent/child preconditions/profile/acceptance를 이전하고 related rows를 하나의 transaction으로 유지. 8c: cleanup inventory→eligibility→fingerprinted plan을 domain으로, preview/apply/reprobe/effects/failure receipt를 application으로 이전한다. 각 소작업은 독립 검증·통합 지점을 갖는다.
 - **경계·보존:** cleanup applying fence와 expected raw state를 유지하고 실제 삭제 효과는 fixture Git/worktree/process에 한정한다. operationalhealth/linkedbranch 판단은 재사용한다. live process identity·inode·digest 검사는 adapter에 남긴다. 새 destructive recovery/cleanup 명령을 추가하지 않는다.
 - **CHECK:** `go test ./internal/adapter/issueops/... ./internal/adapter/outbound/issueopsrecord ./internal/architecture -count=1`; 신규 branch/delegation/cleanup domain·application suite와 관련 `-race`.
 - **EXPECT / QA:** 정상: remote-only branch 연결, concurrent siblings create/accept, verified cleanup의 stop→remove 순서 동일. 실패: artifact 관측 후 변경, authority CAS drift, 새 terminal 유입 시 삭제 중단. `TestStartIssueOpsChildConcurrentSiblingsAcrossProcesses`, `TestCleanupFinishFinalTerminalObservationBlocksLateTerminal` 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T08-success.txt`, `T08-failure.txt`, `T08-ownership.json`.
 
-### T09. Command policy·preflight·audit 조율 이전
+- **부분 진행 — 사이클 시작:** 기존 `adapter/issueops/start` 패키지를 제거했다. 새 사이클의 branchless 전제, 기존 record 재사용·충돌 거부·초기 상태 구성, 브랜치 이름 검증은 `domain/issueops`가 맡는다. `application/issueopsbranch.Starter`가 정규화된 identity 선택→잠금→조회→판정→저장을 조율하며 CLI composition root가 직접 구성한다. Git 경로 관측·ID 생성·잠금·저장은 기술 adapter에 남겼다. 기존 부모자식 호출과 테스트가 사용하는 `StartIssueOps` 조립 함수는 정책 원장에 T20 제거 대상으로 명시했다. 전체 일반·race suite 각각 295개 패키지, vet·build·architecture가 통과했다(`T08-start-full-suite.txt`, `T08-start-full-race.txt`). 읽을 수 없는 상태의 거부를 무력화한 overlay에서 domain/application 테스트가 실패했고 실제 CLI에서 상대·절대·worktree 경로의 동일 record 재사용, 독립 ID 생성, branchless 전제 거부를 확인했다(`T08-start-binary-smoke.json`). 첫 smoke는 cwd와 PWD가 불일치해 macOS의 `/var`·`/private/var` 표기를 섞었다. 기존 lexical path 보존 계약을 확인하고 셸과 같은 PWD로 전체 시나리오를 다시 실행했다. T08의 다른 경로는 아직 미완료다.
 
-- [ ] 완료
+- **부분 진행 — 브랜치 재타깃:** `Retargeter`가 잠금 밖 권한 확인·provider/origin 관측과 잠금 안 최신 상태 조회·권한 재확인·저장을 조율한다. active lease의 holder 요구, 준비된 branch/artifact 전제, 관측 대상의 동일성, 상태 전이와 이력 구성은 `domain/issueops`로 옮겼다. 전이는 입력 snapshot과 봉인된 fork SHA를 보존한다. 기존 `RetargetIssueOpsBranchWithActor`, `branchRetargetObservation`, `validateRetargetMutation`, `branchprepare.Retarget`과 전용 callback 필드를 삭제했으며 CLI root가 새 application을 직접 구성한다. 시작과 재타깃이 공유하는 기술 저장소는 `CycleRecordStore`로 이름을 맞췄다. 실제 SQLite·Git 테스트에서 잠금 밖 원격 관측과 artifact drift 거부를 유지하고 holder 변경·원본 snapshot 보존을 추가 검증했다. artifact 동일성 및 holder 재검사를 각각 무력화한 overlay가 실패했다. 전체 일반·race suite 각각 295개 패키지, vet·build·architecture가 통과했다(`T08-retarget-full-suite.txt`, `T08-retarget-full-race.txt`). 테스트 helper의 미사용 인자를 제거한 뒤 관련 race를 재실행했다. 실제 CLI와 로컬 Git origin, 정확한 인자를 검사하는 fake provider CLI로 정상 저장·fork SHA 보존·원격 branch 부재 시 row 불변을 확인했다(`T08-retarget-binary-smoke.json`). 브랜치 준비·연결·부모자식·정리 경로는 남아 있어 T08은 미완료다.
+
+- **부분 진행 — 브랜치 준비:** `Preparer`가 잠금·최신 record 조회·권한 확인·순서가 있는 관측·저장을 맡는다. 이슈 확인 뒤 최초 branch 채택, 부모 branch 제약과 준비 상태 구성은 aggregate domain으로, provider·이슈 번호·코드 프로젝트 선택은 기존 remote domain으로 옮겼다. application이 두 규칙을 조합하며 domain 간 직접 의존을 허용하지 않았다. Git/경로/부모 record 관측은 `BranchPreparationEnvironment`에, provider 명령 안내는 `branchinstructions`에 남겼다. 안내 본문은 이동 전과 바이트 단위로 같다. `branchprepare` 패키지와 production의 `PrepareIssueOpsBranch`, `PrepareIssueOpsBranchWithActor`, `prepareIssueOpsBranch`, `issueOpsBranchPrepareStore`를 삭제하고 CLI root가 새 application을 직접 구성한다. 테스트 fixture의 URL 검증 대역을 없애 실제 domain 검증을 사용한다. 전체 일반·race suite 각각 295개 패키지, vet·build·architecture가 통과했다(`T08-prepare-full-suite.txt`, `T08-prepare-full-race.txt`). 부모 branch 제약과 관측된 코드 프로젝트 봉인을 무력화한 overlay가 실패했다. 실제 바이너리에서 branchless ID 유지, HEAD 해석·SHA 고정 안내, 로컬 이슈 branch가 없는 준비, 잘못된 요청의 raw row 불변, 부모 branch 불일치 거부·일치 수용을 확인했다(`T08-prepare-binary-smoke.json`). 외부 provider 호출은 없었다. 초기 import 누락 정리, domain 간 의존, inventory 갱신 flag의 잘못된 package 범위를 수정했고 실패 출력을 보존했다. 연결·부모자식·정리 경로가 남아 있어 T08은 미완료다.
+
+- **부분 진행 — 이슈 관계 연결:** 이슈 URL 연결, 자식 이슈 연결, 관련 이슈 연결의 잠금·최신 record 조회·권한 확인·저장을 `application/issueopsbranch.Linker`로 옮겼다. 실제 intent/plan-prep 준비 조건에 따른 phase 전이, 허용 관계 유형, 중복 거부와 immutable 관계 추가는 aggregate domain이 맡고 provider 일치 규칙은 remote domain이 맡는다. 기존 production `LinkIssueOpsIssue`, `LinkIssueOpsChild`, `LinkIssueOpsRelatedWithActor` 계열 래퍼와 linking 패키지의 해당 구현을 삭제했다. CLI·remote root는 새 application을 직접 구성하며, 아직 이전 중인 child-start도 새 application을 호출한다. 실제 SQLite와 CLI에서 동시 연결 12건 보존, 중복·다른 프로젝트 거부, 실패 시 raw row 불변을 확인했다. 중복·권한 검사를 무력화한 overlay는 모두 실패했다. 전체 일반·race suite 각각 295개 패키지, vet·build·architecture·응답 golden이 통과했다(`T08-relations-*`). 초기 검증에서 발견한 설계 리뷰 callback 누락을 복구하고 자가 증강 검사 경로와 검증 명령 golden 두 곳을 갱신했다. 계획·워크트리 연결, 부모자식 실행, 정리 경로가 남아 있어 T08은 미완료다.
+
+- **부분 진행 — 계획·워크트리 연결:** `WorkspaceLinker`가 잠금·조회·권한·파일/Git 관측·저장을 조율한다. branch/design 준비 조건, 계획 경로 고정·필수 절, 워크트리의 원본 checkout 분리·sibling 경로·symlink·해석된 경로·브랜치 일치 규칙은 domain으로 옮겼다. released Orca 계획 연결은 application이 staging 가능 여부를 판정하고 authorization domain이 native coordinator와 작업 경로 조건을 검증한다. 기술 관측은 `LinkEnvironment`에 남겼다. 기존 `linking` 패키지, production 계획·워크트리 연결 래퍼, adapter의 계획 권한·필수 절 검사 함수를 삭제했다. 테스트의 준비 조건 대역도 실제 record와 domain 규칙으로 교체했다. 전체 일반·race suite 각각 294개 패키지, vet·build·architecture·응답 golden이 통과했다(`T08-workspace-link-*`). 계획 identity·해석된 경로 격리·coordinator 경로 검사를 무력화한 overlay가 각각 실패했다. 실제 CLI와 Git worktree에서 정상 연결, source checkout·symlink·다른 branch 거부, 설계 리뷰·필수 절 요구, 계획 파일 교체 거부, 편집 중 같은 계획 재연결 시 raw row 불변을 확인했다. 자가 증강 검사와 검증 명령은 새 테스트 경로로 갱신했다. 부모자식 실행과 정리 경로가 남아 있어 T08은 미완료다.
+
+- **부분 진행 — 자식 생성:** 생성 조건·상속 프로필·자식 참조의 새 실행 판정은 aggregate domain으로, 상속 리뷰 표식은 review domain으로 옮겼다. `ChildStarter`가 부모 권한 확인과 규칙 적용을 조율하고 `ChildCycleStore`가 부모·자식을 한 SQLite 트랜잭션으로 저장한다. 기존 세 차례 저장에서 발생할 수 있던 부분 생성도 제거했다. 자식의 cleanup applying 잠금과 저장 후 부가 이슈 연결 경고는 유지했다. production의 기존 생성 함수와 `adapter/issueops/delegation` 패키지를 삭제하고 CLI가 새 application을 직접 구성한다. 전체 일반·race suite 각각 293개 패키지, vet·build·architecture가 통과했다(`T08-child-start-*`). 실제 CLI 프로세스 8개의 동시 생성, DB 오류 시 두 기록 롤백, 잘못된 요청의 raw row 보존을 확인했다. 원자적 저장·자식 잠금·권한 검사를 각각 무력화한 overlay도 실패했다. 부모자식 상태 조회·검증과 정리 경로는 남아 있어 T08은 미완료다.
+
+- **부분 진행 — 부모·자식 상태와 검증:** 자식 선택·상태 집계·정리 후 승인 기록 판정·인덱스 복구·승인/거절/제외 조건·부모 참조 갱신·우산 브랜치 조건을 domain으로 옮겼다. `StatusService`와 `Validator`가 조회·현재 권한 재확인·저장을 조율한다. 기존 production `issueops_delegation.go`와 우산 topology adapter를 삭제하고 CLI가 application/domain을 직접 구성한다. 부모 저장 잠금 안에서 자식 상태를 다시 확인해 처음 관측한 뒤 다시 열린 자식, 부모/저장소가 바뀐 자식, 정리 작업 중인 자식의 승인을 거부한다. 승인 증거가 없는 삭제된 자식이 고아 상태인데도 완료 gate를 통과하던 기존 모순을 재현하고, 완료 판정에 고아 상태 제외 조건을 추가했다. 수정 후 전체 일반·race suite 각각 293개 패키지와 vet·build·architecture가 통과했다(`T08-child-verdict-final-*`). 실제 CLI에서 조회의 row 불변, 인덱스 복구의 멱등성, 동시 승인 8건 보존, 정리 후 승인/제외 기록 유지, 부적절한 승인 거부와 증거 없는 승인 기록의 PR 차단을 확인했다. 최신 자식 재조회·복구 권한·승인 기록 보존·입력 불변성을 무력화한 overlay가 각각 실패했다. cleanup과 이를 호출하는 readiness 경계의 이전은 남아 있어 T08은 미완료다.
+
+- **부분 진행 — 정리 상태 조회:** 작업 공간·브랜치·원격 산출물·자식 종료 조건과 상태 응답 구성은 domain으로 옮겼다. `StructuralStatus`는 파일/Git 관측을 조율하고 `StatusService`는 조건을 갖춘 사이클의 머지·이슈 조회와 정리 preview를 호출한다. 파일 존재 확인과 Git 실행은 기술 adapter에 남겼다. 기존 `cleanupstatus` 패키지와 production 상태 조회 래퍼, CLI의 조회 조율을 삭제했다. 전체 일반·race suite 각각 293개 패키지와 vet·build·architecture 검사가 통과했다(`T08-cleanup-status-*`). 실제 CLI와 임시 Git 저장소에서 변경 파일·원격 브랜치·브랜치 불일치·조회 실패·없는 디렉터리의 차단과 DB 기록 불변을 확인했다. 차단 조건의 극성, 머지 조회 자격, 다른 사이클의 오류 전파를 무력화한 세 변형도 테스트에서 검출했다. 실제 정리 실행과 readiness 조율의 나머지 이전은 남아 있어 T08은 미완료다.
+
+- **부분 진행 — 자식 이슈 종료:** 머지 증거·부모 이슈 연결·원격 종료 확인 규칙과 종료 영수증 갱신은 domain으로 옮겼다. `ChildrenCloser`는 잠금 안에서 조회·증거 확인·최대 네 건의 provider 호출·전체 결과 확인·저장을 조율한다. 기존 `cleanupchildren` 패키지와 production 조립 래퍼는 삭제했다. 원격 처리 일부가 실패하면 로컬 영수증을 저장하지 않으며, 최초 종료 시각과 원본 관측값을 보존한다. 전체 일반·race suite 각각 292개 패키지와 vet·build·architecture 검사가 통과했다(`T08-cleanup-children-*`). 실제 CLI와 명령 인자를 엄격히 검사하는 로컬 `gh` 대역으로 preview의 무기록, 종료 영수증 저장, 미머지 부모·열린 자식·조회 실패 거부를 확인했다. 부모 artifact 조건·종료 확인·원본 복사를 무력화한 세 변형도 검출했다. CLI의 선행 머지 조회 보조 함수와 실제 워크트리 삭제 등 나머지 cleanup 이전이 남아 있어 T08은 미완료다.
+
+- **부분 진행 — 자식 종료 진입과 감사 반영:** CLI의 머지 조회와 두 단계의 export 래퍼를 삭제했다. `ChildrenCloser`가 잠금 밖에서 부모 머지를 조회하고 잠금 안에서 현재 저장소·부모·자식 목록·artifact가 조회 대상과 같은지 검증한다. 감사 본문 반영은 `AuditReflector`로 옮겼고 기존 adapter 함수와 사용하지 않는 CLI 의존성 필드를 제거했다. 원격 반영 확인 뒤 최신 record에 영수증을 저장하며, 삭제 전 수집한 완료 본문을 보존한다. 대상·SQLite 통합 테스트, 전체 일반·race 테스트(각 292개 패키지), vet·build·architecture가 통과했다. 실제 CLI에서 조회 중 artifact 변경 거부와 상태 보존을 확인했고, 세 가지 검증 우회 mutation은 각각 실패했다. 기존 자식 provider 작업의 잠금 경계는 유지했으며, 실제 정리 실행과 나머지 cleanup 경계 이전이 남아 있어 T08은 미완료다.
+
+- **정리 회귀 수정:** 브랜치 삭제 실패 뒤 `show-ref` 조회 오류를 부재로 해석해 record까지 삭제하던 결함을 수정했다. 종료 코드 `1`만 부재로 인정한다. finish·abandon의 오류 코드 `2`·`128`·`-1` 회귀 테스트 여섯 건이 수정 전 실패하고 수정 후 통과했다. 실제 CLI와 임시 Git 저장소에서도 오류 시 브랜치·record·재시도 영수증 보존을 확인했다. 전체 일반·race 테스트 각각 292개 패키지, vet·build가 통과했다(`T08-ref-observation-*`). 정리 use case의 계층 이전은 계속 남아 있다.
+
+- **부분 진행 — 정리 preview:** 정리 대상 구성과 phase·lease·머지·자식 종료·base 재타깃·원격 브랜치 유지 판정을 domain으로, 원격 artifact·Git·파일·점유자 조회 조율을 `FinishPreviewer`로 옮겼다. 기존 adapter의 판정 함수와 base 정규화 함수를 제거했고 strict PR readiness도 같은 domain 정규화를 사용한다. 브랜치 최초 조회 오류와 읽을 수 없거나 디렉터리가 아닌 워크트리 경로는 부재로 취급하지 않는다. 관련 회귀·architecture 검사, 전체 일반·race 테스트(각 292개 패키지), vet·build가 통과했다. 실제 CLI의 정상 preview 출력과 fingerprint가 기준 구현과 같았고, 조회 오류·파일·심볼릭 링크 거부와 DB 무변경을 확인했다. 세 가지 domain 판정 우회도 기존 실행 경로 테스트에서 검출했다. 삭제 실행의 application 이전, 조회 중 artifact 변경 차단, 공유 workspace gate·stop 경계 이전은 남아 있다.
+
+- **최종 검증 — `c6c819ec`:** finish·remote-branch·abandon·orphan 정리 실행과 소유권 재확인, 봉인 intent 구성·hydration, 자식 게이트, 활성 cycle 선택 및 branch await-link까지 이전했다. 이전 adapter의 production 흐름과 호환 facade는 삭제했고, 일부 기존 통합 테스트의 조립 helper는 `_test.go`에만 둔다. 명시된 state root를 무시하던 브랜치 준비 경로도 수정했다. Git/provider 실행·응답 해석, SQLite CAS·writer exclusion, private 파일·process 관측은 adapter에 유지한다. 전체 wiring의 잔여 전역 의존성·조립 facade 제거는 T20에서 계속 추적한다.
+- **완료 근거:** `T08-ownership.json`에 이전 정책 91개, 소스 해시 107개와 composition root를 기록했다. `T08-task-check.jsonl`의 지정 CHECK는 20개 패키지와 2,063개 테스트 pass event(하위 사례 포함), 실패 0을 기록한다. `T08-success.txt`·`T08-failure.txt`는 이 실행의 부모자식 동시 처리·stop→remove 순서·artifact drift·authority CAS·새 terminal/owner 차단 근거다. `T08-await-binary-smoke.json`은 실제 CLI·Git·SQLite로 remote-only branch readback과 모든 경로의 원본 row 보존을 확인한다. `T08-await-self-verify.json`은 전체 race·vet를 포함한 26개 검사, 최소 점수 100을 기록한다.
+- **검증 보완:** await-link 상한을 제거한 변형이 기존 테스트를 통과해, 잘못된 timeout은 조회·대기 0회로 즉시 거부해야 한다는 assertion을 추가했다. 보완 후 provider gate·상한·원격 조회 오류 처리를 각각 깨뜨린 세 변형을 모두 검출했다. 전체 목표는 여전히 미완료이며 T01·T09·T18–T22를 유지한다.
+
+### Task 9: Command policy·preflight·audit 조율 이전 (T09)
+
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T02. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/policy/{policy_evaluate,policy_command_classification,policy_catalog,policy_run}.go`; `internal/domain/policy/`; `internal/adapter/preflight/`; `cmd/issueops/policycli/`; `cmd/issueops/commandstep/`
-- **변경/신규 파일:** 확장 `internal/domain/policy/`; 신규 `internal/application/policy/{evaluate,run,ports}.go`; process/audit/override snapshot adapters.
+- **변경/신규 파일:** 확장 `internal/domain/policy/`와 `internal/domain/preflight/`; `internal/application/policy/{service,runner,pull_request_target}.go`와 `internal/application/preflight/service.go`; 기존 `internal/application/audit/service.go` 및 process/audit/override snapshot adapter와 root wiring.
 - **구현:** Facts+catalog→decision을 domain으로 옮긴다. application이 canonical path 관측·workspace override 로드·evaluation·bounded runner·audit를 조율한다. timeout/env/secret 규칙의 결정과 실제 process 설정을 분리한다. preflight의 기술 검사와 업무 gate를 구분한다.
 - **경계·보존:** override는 평가마다 workspace별로 로드하고 parse 경고를 기존 warnings에 보존한다. root/cwd 실체 검증은 string-only 검사로 대체하지 않는다. 다른 capability의 기존 실행 정책을 강화하지 않고 기존 runner 의미를 그대로 주입한다.
 - **CHECK:** `go test ./internal/domain/policy ./internal/adapter/policy ./internal/adapter/preflight ./internal/adapter/audit ./cmd/issueops/policycli ./cmd/issueops/commandstep -count=1`; 신규 application/policy suite.
 - **EXPECT / QA:** 정상: 두 workspace의 다른 override가 각각 반영. 실패: outside-root/symlink escape/deny command/secret env/override parse 실패에서 종전 verdict와 warnings 동일, denied marker 파일 없음. `TestPolicyOverridesLoadPerEvaluation` 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T09-success.txt`, `T09-failure.txt`, `T09-ownership.json`.
 
-### T10. Guard·gate ledger 분리
+- **최종 검증 — `d06d1ee0`:** PR 대상 조회·판정 조율은 application, timeout 해석·환경변수 선택·경로 인자 분류와 preflight 커밋 형식 판정은 domain으로 옮겼다. override는 평가마다 읽고, 실제 경로·심볼릭 링크·환경변수 관측과 process 실행·감사 파일 append는 adapter가 맡는다. `PolicyOverrides` alias와 adapter의 PR 대상 조율 함수를 삭제했다. `EvaluateCommandPolicy`의 남은 forwarding entrypoint는 판정을 소유하지 않으며, 전역 의존성·조립 facade 제거는 T20에서 마감한다.
+- **완료 근거:** `T09-ownership.json`은 이전 정책 7개·기술 forwarding retain 1개와 소스 해시 36개를 기록한다. task CHECK 10개 패키지·128개 테스트 pass event(하위 사례 포함), 실패 0이며 `TestPolicyOverridesLoadPerEvaluation`과 다른 workspace 간 격리·parse 경고·outside root·환경변수 격리·감사 마스킹을 확인했다. 실제 CLI·Git·SQLite smoke도 모두 통과했다. 다섯 판정 우회 변형을 검출했고, `T09-self-verify.json`은 전체 race·vet를 포함한 26개 검사·최소 점수 100을 기록한다.
+- **보존한 제한과 검증 수정:** 기존 경로 분류는 `./파일`처럼 경로 형태인 인자를 검사하고 단순 파일명은 제외한다. 첫 smoke의 bare symlink 인자가 허용된 원인을 확인했으며, 이동 전후 순수 분류 함수가 식별자 변경 외 동일함을 `T09-path-policy-parity.json`으로 확인했다. 이 제한의 정책 강화는 책임 이동 범위 밖 발견 사항이다. 최종 smoke는 실제 경로 검사 대상인 `./escape`의 외부 symlink 거부를 검증한다. 준비 상태 smoke fixture의 필수 identity 누락도 수정한 후 처음부터 전체 시나리오를 재실행했다.
 
-- [ ] 완료
+### Task 10: Guard·gate ledger 분리 (T10)
+
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T09. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/guard/{findings,paths,symbols,summary}.go`; `internal/adapter/gates/check.go`; `internal/domain/gates/`; `cmd/issueops/gatescli/`
 - **변경/신규 파일:** 신규 `internal/domain/guard/`, `internal/application/guard/`, `internal/application/gates/`; 기존 domain/gates 확장.
@@ -250,9 +320,9 @@
 - **EXPECT / QA:** 정상: argv check 성공과 정확한 EXPECT에서 met. 실패: 비영 exit+EXPECT 일치, shell separator, timeout, missing evidence는 met 아님. 원본 ledger 비관리 텍스트·권한 보존, status-only bytes 불변.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T10-success.txt`, `T10-failure.txt`, `T10-ownership.json`.
 
-### T11. 설치와 native activation 분리
+### Task 11: 설치와 native activation 분리 (T11)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T02. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/install/install.go`; `cmd/issueops/installcli/{install,install_native_path,install_host_transaction}.go`; `internal/application/nativeactivation/service.go`; `internal/adapter/outbound/nativeactivation/sqlite.go`
 - **변경/신규 파일:** 신규 `internal/application/install/`, `internal/domain/nativeactivation/`; 설치 계획 규칙은 기존 `internal/domain/upstream/`와 구분해 `internal/domain/install/`; install outbound/host adapters.
@@ -262,9 +332,9 @@
 - **EXPECT / QA:** 정상: user-scope install에서 repo-local skill 생성 0, project-local opt-in의 MCP만 생성. 실패: host write/ seal 실패 시 기존 shell rc·symlink·빈 디렉터리 복원. dry-run은 파일 쓰기·외부 host CLI 실행·activation begin 모두 0. install matrix 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T11-success.txt`, `T11-failure.txt`, `T11-ownership.json`.
 
-### T12. 업데이트·bootstrap·upstream·호스트 경계 정리
+### Task 12: 업데이트·bootstrap·upstream·호스트 경계 정리 (T12)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T11. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/updatecli/update_bootstrap*.go`; `scripts/install-native.sh`; `internal/application/upstream/service.go`; `internal/adapter/{codex,claude,omo,agy,installutil}/`; `configs/`
 - **변경/신규 파일:** 신규 `internal/application/update/` 및 update process adapter; 기존 upstream vertical과 host adapter 유지. scripts는 build/activation bootstrap wrapper 역할로 제한.
@@ -274,9 +344,9 @@
 - **EXPECT / QA:** 정상: 다른 cwd에서 update가 정확한 source root와 인자를 전달. 실패: installed daemon stop 실패 뒤 후속 refresh 중단, PID identity 변경 대상에 signal 0. dry-run은 ps/host spawn과 설정 변경 0. 기존 `TestRefreshRunningMCPProxiesAfterInstallPreservesAllActiveProcesses` 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T12-success.txt`, `T12-failure.txt`, `T12-ownership.json`.
 
-### T13. 프로젝트 문서·bootstrap·수정 use case 이전
+### Task 13: 프로젝트 문서·bootstrap·수정 use case 이전 (T13)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T09. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/projectdocs/project_docs_{route,revise,append}.go` 및 detection/profile 파일; `internal/adapter/projectbootstrap/project_docs_bootstrap.go`; `internal/domain/projectdoc/`; `cmd/issueops/projectcli/`
 - **변경/신규 파일:** 기존 projectdoc domain 확장; 신규 `internal/application/projectdocs/`, `internal/application/projectbootstrap/`; file/template/Git adapters.
@@ -286,9 +356,9 @@
 - **EXPECT / QA:** 정상: compound task routing이 관련 문서를 누락하지 않고 sync 없는 bootstrap이 기존 본문 보존. 실패: stale SHA/빈 summary/없는 경로는 write 0, dry-run도 bytes 불변. `TestReadAndReviseProjectDocRequireSHAConsensus` 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T13-success.txt`, `T13-failure.txt`, `T13-ownership.json`.
 
-### T14. Loop·worker·state·lifecycle·channel 분리
+### Task 14: Loop·worker·state·lifecycle·channel 분리 (T14)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T09. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/looprun/{lifecycle,gate}.go`; `internal/adapter/worker/{worker,read_only,store}.go`; `internal/application/state/{prune,doctor}.go`; `internal/adapter/lifecycle/lifecycle_project_state_store.go`; `internal/adapter/channel/store.go`
 - **변경/신규 파일:** 신규 domain/application `looprun`, `worker`, `lifecycle`; 신규 application/channel; 기존 domain/state와 application/state 확장. channel에는 불필요한 aggregate를 만들지 않는다.
@@ -298,9 +368,9 @@
 - **EXPECT / QA:** 정상: loop 마지막 pass 뒤 succeed, job queued→running→terminal 결과 동일, cross-process channel 가시성 유지. 실패: exhausted retry/terminal restart/running cancel/future schema/namespace mismatch 거부. `TestWorkerConcurrentCancelAndRunDoesNotLoseUpdates`와 readonly no-repair 테스트 유지.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T14-success.txt`, `T14-failure.txt`, `T14-ownership.json`.
 
-### T15. Health·trace·conformance·분석 도구 분리
+### Task 15: Health·trace·conformance·분석 도구 분리 (T15)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T14. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/adapter/operationalhealth/collector.go`; `internal/adapter/doctor/{doctor,checks}.go`; `internal/adapter/trace/`; `internal/adapter/toolconformance/benchmark.go`; `internal/adapter/{commitsuggest,lintdiagnose}/`; `internal/adapter/hostprobe/`
 - **변경/신규 파일:** 확장 domain/operationalhealth, traceclassification, toolconformance; 신규 application/doctor, trace, toolconformance, commitsuggest, lintdiagnose; 기술 collectors/runners 유지.
@@ -310,9 +380,9 @@
 - **EXPECT / QA:** 정상: 같은 snapshot+clock에서 health findings와 trace 정렬 동일. 실패: stale signature/중복 identity/미완료 host probe는 hardening gate 불통과, live support로 표기하지 않음. read-only 진단의 state 생성 0, secret 원문 출력 없음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T15-success.txt`, `T15-failure.txt`, `T15-ownership.json`.
 
-### T16. API 문서 검사·quality·risk QA 이전
+### Task 16: API 문서 검사·quality·risk QA 이전 (T16)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T13,T15. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/apidoc/{api_doc_static,api_doc_review,staticcheck,reviewfiles,reviewprompt}/`; `cmd/issueops/qualitycli/`; `cmd/issueops/riskqa/{risk_qa_plan,risk_qa_git}.go`
 - **변경/신규 파일:** 신규 contract/domain/application `apidoc`, `quality`, `riskqa`; API source readers/review runners/quality collectors는 outbound, CLI render는 기존 cmd에 유지.
@@ -322,9 +392,9 @@
 - **EXPECT / QA:** 정상: 동일 API fixture의 code/file/line 정렬 일치, Go sensitive path→elevated 명령 동일. 실패: candidate 파일 read 실패, collector 실패, 잘못된 review result는 종전 오류; legacy 전체 Swagger 부채를 새 실패로 포함하지 않음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T16-success.txt`, `T16-failure.txt`, `T16-ownership.json`.
 
-### T17. 자기 검증·증강·IssueOps benchmark 정책 이전
+### Task 17: 자기 검증·증강·IssueOps benchmark 정책 이전 (T17)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T16. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/selfworkflow/{summary,augmentplan,augmentcatalog,historycompare,candidateexport,llmeval}/`; `internal/adapter/issueops/benchmark/`; `internal/domain/qualitycatalog/`
 - **변경/신규 파일:** 신규 contract/domain `selfverify`, `selfaugment`, `issueopsbenchmark`; 해당 application service와 state/judge adapters. 공용 순수 수치 helper는 실제 owner에 둔다.
@@ -334,21 +404,30 @@
 - **EXPECT / QA:** 정상: 같은 seed/fixture의 점수·후보 순서·reliability byte/허용오차 동일. 실패: score가 target과 같은 경우 pass 아님, required label 누락은 실패, stale judge provenance는 수락하지 않음. 빈 결과도 100점으로 바뀌지 않음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T17-success.txt`, `T17-failure.txt`, `T17-ownership.json`.
 
-### T18. 검증 실행기·risk step·저장 orchestration 이전
+### Task 18: 검증 실행기·risk step·저장 orchestration 이전 (T18)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T17. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/selfworkflow/{steps,verifycmd,augmentcmd,stateio,progress}/`; `cmd/issueops/validationcli/`; `cmd/issueops/commandstep/`; `cmd/issueops/selfworkflow/self_augment_loop.go`
 - **변경/신규 파일:** 확장 application/selfverify·selfaugment; 신규 `internal/adapter/verification/`에 실제 fixture/build/process/SDK smoke driver; contract에 StepResult/run DTO. progress 렌더는 inbound.
 - **구현:** 단계 선택·retry/종료·evidence reuse 결정은 domain, 단계 실행/저장/취소 조율은 application으로 이동한다. validationcli의 각 자식 package를 기술 probe와 판단으로 분류해 probe 실행은 verification adapter로 옮긴다. probe가 자기 자신을 다시 실행하는 순환을 만들지 않는다.
 - **경계·보존:** risk race 결과가 full go test를 대체하는 조건과 golden reuse, step label/timeout/order, finite attempt cap를 그대로 유지한다. 기존 출력을 baseline으로 고정한 뒤 wiring을 바꾼다.
-- **CHECK:** `go test ./cmd/issueops/selfworkflow/... ./cmd/issueops/validationcli/... ./cmd/issueops/commandstep -count=1`; 신규 application/verification adapter suites.
+- **CHECK:** `go test ./cmd/issueops/selfworkflow/... ./internal/adapter/verification/... ./cmd/issueops/commandstep -count=1`; 신규 application/verification adapter suites.
 - **EXPECT / QA:** 정상: 성공한 full-suite evidence만 해당 run에서 reuse. 실패: 한 step 실패/cancel/timeout 시 후속 동작과 최종 OK가 기존 계약과 동일; 다른 run의 partial 성공 합성 금지. fake runner가 모르는 argv를 성공 처리하지 않음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T18-success.txt`, `T18-failure.txt`, `T18-ownership.json`.
 
-### T19. CLI·MCP catalog·host protocol 위치 정합화
+T18 완료 근거: 상태 저장·probe·이력·계획 구성·결과 집계·후보 export와
+CLI/MCP 공통 저장 순서를 application으로 이전했다. 순수 판정은 domain,
+파일·Git·process 관측은 adapter가 맡는다. 최종 커밋 `1eeec1a3`에서
+CHECK 45개 패키지, 전체 self-verify 26/26(최소 점수 100), 실제 race·vet가
+통과했다. 기존 버전과 CLI·SQLite·summary·LLM 결과가 일치하고 6개 변이를
+테스트가 거부했다. 상세는 T18-success.txt, T18-failure.txt, T18-ownership.json에
+기록했다. transport 렌더링은 유지하며, host protocol 정합화는 T19,
+forwarding facade·package-global 조립 제거는 T20에서 마감한다.
 
-- [ ] 완료
+### Task 19: CLI·MCP catalog·host protocol 위치 정합화 (T19)
+
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T18,T12. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `internal/domain/{cli,mcp,nativehost,omolifecycle,hook}/`; `internal/contract/mcp/`; `cmd/issueops/{mcpcli,hookcli,rootcmd}/`; `configs/`; `skills/`
 - **변경/신규 파일:** 공개 static schema/descriptor는 contract, catalog assembly와 render는 신규 `internal/adapter/inbound/catalog/`, host argv/extension code 생성은 신규 `internal/adapter/hostprotocol/`. host별 소비자는 root에서 주입한다.
@@ -358,9 +437,15 @@
 - **EXPECT / QA:** 정상: MCP SDK/legacy handshake의 advertised catalog와 extension 생성 bytes 동일. 실패: invalid arguments는 application effect 전에 거부, SessionStart에 mutation 추가 없음. project-local opt-in 없는 install의 repo 쓰기 0.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T19-success.txt`, `T19-failure.txt`, `T19-ownership.json`.
 
-### T20. 전체 production wiring 전환과 잔여 facade 제거
+완료 근거: host protocol `ce2bb5b8`, MCP catalog `de937658`, CLI catalog
+`fd3853fa`에서 정적 descriptor·렌더링·순수 규칙의 소유권을 분리했다.
+최종 후보에서 전체 검증 26/26, 최소 점수 100과 실제 race·vet가 통과했다.
+CLI 72개 실행, MCP 계약, hook 40개 실행, host argv·Omo 출력의 동일성을
+확인했다. T19 CHECK와 성공·거부·소유권 근거는 지정 evidence에 기록했다.
 
-- [ ] 완료
+### Task 20: 전체 production wiring 전환과 잔여 facade 제거 (T20)
+
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T03–T19. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `cmd/issueops/issueopsapp/*_wiring.go`, `*_facade.go`; `cmd/issueops/{basiccli,statuscli,daemoncli,workercli,loopcli,statecli,webfetchcli,contractcli,projectcli,issueopscli}/`; 모든 `*_dependencies.go`
 - **변경/신규 파일:** 기존 composition root, migrated capability의 instance dependencies. 신규 architecture public-entrypoint conformance tests.
@@ -370,9 +455,9 @@
 - **EXPECT / QA:** 정상: 실제 application+domain과 외부 port fixture를 production handler에 연결해 CLI/MCP가 같은 결정·저장 결과를 낸다. application recorder spy는 DTO/호출 1회 검사에만 보조 사용. 실패: domain 거부 fixture에서 공개 error와 effect 0회를 확인하고, 대표 domain 호출/결과를 우회한 실행 가능한 임시 mutation에서는 해당 테스트가 실패해야 한다. 서로 다른 두 service instance의 dependency/state가 누출되지 않음.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T20-success.txt`, `T20-failure.txt`, `T20-ownership.json`.
 
-### T21. 문서·소유권 검사·회귀 방지 마감
+### Task 21: 문서·소유권 검사·회귀 방지 마감 (T21)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T20. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `.issueops/{ARCHITECTURE,CONVENTIONS,TESTING,ADR,OPERATIONS}.md`와 각 family module; `AGENTS.md`; `internal/architecture/{dependency,ownership_manifest}_test.go`; `.github/workflows/ci.yml`; T01 원장
 - **변경/신규 파일:** 신규 `.issueops/adr/ddd-responsibility-ownership.md`, `.issueops/architecture/domain-responsibilities.md`; 기존 index와 테스트 갱신. 문서 수정 시 project-docs workflow 적용.
@@ -382,9 +467,9 @@
 - **EXPECT / QA:** 정상: 모든 원장 항목은 migrated 또는 근거 있는 retain, dangling link 0. 실패: contract에 이전한 state transition을 재도입한 synthetic fixture는 검사 실패. DTO shape helper는 허용. docs index projection 외 CLI/MCP golden 변화 0.
 - **Evidence:** `.issueops/evidence/ddd-refactor/T21-success.txt`, `T21-failure.txt`, `T21-ownership.json`.
 
-### T22. 전체 호환성·동시성·실제 진입점 검증
+### Task 22: 전체 호환성·동시성·실제 진입점 검증 (T22)
 
-- [ ] 완료
+- [x] 완료
 - **담당/등급:** 메인 / deep. **선행:** T21. **병렬:** 기본 NO. **Commit:** 별도 실행 승인 범위에서 task 단위 Conventional Commit + Lore body.
 - **기존 근거:** `.github/workflows/ci.yml`; `.issueops/testing/{unit-and-contract,concurrency-and-race,cli-mcp-and-hosts,issueops-execution,self-verification}.md`; T01 baseline
 - **변경/신규 파일:** `.issueops/evidence/ddd-refactor/final/`에 명령·출력·scenario 결과·원장·리뷰 증거.
@@ -443,13 +528,13 @@ Go test의 child process 환경에서 home/Codex/state 디렉터리도 임시 �
 
 ### 책임 분리 완료 조건
 
-- [ ] T01의 전체 파일/함수 원장에 미배정 0, migrate 상태 0, 모든 retain에 구체적인 기술 책임과 테스트 근거가 있다.
-- [ ] contract에 상태 기반 정책이 없고, adapter/CLI에 이전한 업무 규칙의 중복 구현이나 legacy Effects 우회가 없다.
-- [ ] domain이 I/O·host protocol·transport를 직접 다루지 않으며 정책의 deterministic test가 성공/거부 경로를 증명한다.
-- [ ] application이 실제 호출 경로와 원자적 변경을 조율하고 store/host adapter는 technical effect만 실행한다.
-- [ ] 업무 use case를 수행하는 모든 CLI/MCP 진입점이 실제 application+domain을 거치며 기존 snapshot/readback/오류/저장 계약을 보존한다. help/schema/catalog 같은 technical-only 진입점은 근거 있는 retain으로 구분한다.
-- [ ] lock/CAS/역색인/related rows/receipt의 concurrency·crash·rollback 테스트가 통과한다.
-- [ ] 전체 battery와 격리 QA가 통과하고 critic/verifier 지적을 실제 source·test로 해소했다.
+- [x] T01의 전체 파일/함수 원장에 미배정 0, migrate 상태 0, 모든 retain에 구체적인 기술 책임과 테스트 근거가 있다.
+- [x] contract에 상태 기반 정책이 없고, adapter/CLI에 이전한 업무 규칙의 중복 구현이나 legacy Effects 우회가 없다.
+- [x] domain이 I/O·host protocol·transport를 직접 다루지 않으며 정책의 deterministic test가 성공/거부 경로를 증명한다.
+- [x] application이 실제 호출 경로와 원자적 변경을 조율하고 store/host adapter는 technical effect만 실행한다.
+- [x] 업무 use case를 수행하는 모든 CLI/MCP 진입점이 실제 application+domain을 거치며 기존 snapshot/readback/오류/저장 계약을 보존한다. help/schema/catalog 같은 technical-only 진입점은 근거 있는 retain으로 구분한다.
+- [x] lock/CAS/역색인/related rows/receipt의 concurrency·crash·rollback 테스트가 통과한다.
+- [x] 전체 battery와 격리 QA가 통과하고 critic/verifier 지적을 실제 source·test로 해소했다.
 
 ### 중단·되돌림 기준
 
@@ -472,3 +557,24 @@ Decision-complete plan: 기존 구조를 유지하는 capability별 이전, 원�
 Assumptions/defaults: 전체 프로젝트 범위, 기존 외부 계약과 운영 동작 유지, 순차 구현, 새 framework와 state migration 없음.
 Unresolved questions: 계획 작성을 막는 질문은 없다. 호환성 변경 요청이 추가되면 별도 설계 변경으로 처리한다.
 Acceptance criteria: 정책 소유권 원장 미배정·이전 미완료 0, 기존 계약 보존, 전체 CI 및 시나리오 증거, 두 독립 리뷰의 지적 해소.
+
+
+## 최종 구현 검증 기록 (2026-09-30)
+
+T01–T22의 구현과 책임 분리 검증을 완료했다. 최신 main의 사람이 작성하는 원격 본문·완료 보고,
+추적 계획 사본과 UTF-8 처리 변경을 새 domain/application 소유자에 통합했다.
+마지막 독립 리뷰가 지적한 Orca claim 정책도 domain으로, 사전 검증·잠금 안 재검증은
+application으로 옮겼다. 해당 domain 거부를 제거하면 실제 application+adapter 회귀 테스트
+두 건이 실패하는 mutation 검증 후 정상 코드를 복원했다.
+
+- 소유권: production 1,450개 파일, 7,078개 심볼, 비-Go 산출물 75개, 정책 483개.
+  미배정 0개, `migrate` 0개. 원장은 `internal/architecture/testdata/ddd_responsibility_inventory.json`.
+- 최종 후보: 소스 3,960개 해시 대조 후 독립 Git 저장소·HOME·state에서 설치 및 검증.
+  `self-verify` 26/26, 최저 100점. 실제 전체 race·vet 실행과 schema 1 저장·승격 확인.
+- 전체 Go 테스트, macOS/Linux lint, 문서 395개, 스킬 52개, API 정적·agent 검사 통과.
+  Python 테스트 53개 통과 판정이며, 선택적 로컬 meeting-notes fixture 한 건은 기존 조건대로 skip.
+- 소유권·안전성 독립 리뷰 모두 `READY`. 마지막 수정에서 사전 검증·원격 읽기·잠금 안 재검증
+  순서와 digest-before-JSON 오류 우선순위를 보존했다.
+- 로컬 상세 근거: `.issueops/evidence/ddd-refactor/T22-final3-*` 및 `T22-claim-policy-mutation.log`.
+
+PR 발행·CI·머지·사용자 홈 설치 갱신·작업 브랜치 정리는 구현 검증 이후의 전달 단계로 진행한다.

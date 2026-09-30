@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	issueopscore "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/loopgate"
 	preflight "issueops/internal/adapter/preflight"
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -16,7 +15,7 @@ import (
 func TestRunIssueOpsRemoteVerifyArtifactValidationErrors(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := makeIssueOpsCLIGitRepoForRemoteVerifyTest(t)
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{
 		Repo:   repo,
 		Branch: "75-remote-verify-cli",
 	})
@@ -61,13 +60,13 @@ func TestRunIssueOpsRemoteVerifyArtifactValidationErrors(t *testing.T) {
 	}
 }
 
-func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueopscontract.IssueOpsRecord, issueopscore.IssueOpsActor) {
+func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
 	t.Helper()
 	recordIssueOpsCoreIntentForCLITest(t, id)
-	if _, err := issueopscore.LinkIssueOpsIssue(issueopscore.IssueOpsStateRoot(), id, "https://github.com/example/repo/issues/75"); err != nil {
+	if _, err := LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), id, "https://github.com/example/repo/issues/75"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.PrepareIssueOpsBranch(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsBranchPrepareRequest{
+	if _, err := prepareBranchForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsBranchPrepareRequest{
 		Provider:     "github",
 		IssueURL:     "https://github.com/example/repo/issues/75",
 		Branch:       "75-remote-verify-cli",
@@ -89,16 +88,16 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	if code, _, stderr := preflight.GitCmd(repo, "worktree", "add", "-q", worktree, "75-remote-verify-cli"); code != 0 {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
-	if _, err := issueopscore.LinkIssueOpsWorktree(issueopscore.IssueOpsStateRoot(), id, worktree); err != nil {
+	if _, err := LinkIssueOpsWorktreeForTest(issueOpsStateRootForTest(), id, worktree); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreDesignForCLITest(t, id)
 	planPath := filepath.Join(worktree, "plans", "remote-verify.md")
 	writeIssueOpsCLIFileForTest(t, worktree, "plans/remote-verify.md", planBodyForCLITest())
-	if _, err := issueopscore.LinkIssueOpsPlan(issueopscore.IssueOpsStateRoot(), id, planPath); err != nil {
+	if _, err := LinkIssueOpsPlanForTest(issueOpsStateRootForTest(), id, planPath); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsCompatibilityReview(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsCompatibilityReviewRequest{
+	if _, err := planningRecorderForTest(nil).Compatibility(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsCompatibilityReviewRequest{
 		BackwardCompatibility: []string{"existing IssueOps JSON records remain readable"},
 		SideEffects:           []string{"phase ordering changes are limited to IssueOps lifecycle gates"},
 		RollbackPlan:          "Revert compatibility-review phase and readiness gate.",
@@ -107,19 +106,19 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsDevilsAdvocateReview(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
+	if _, err := planningRecorderForTest(nil).DevilsAdvocate(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
 		t.Fatal(err)
 	}
 	writeIssueOpsCLIFileForTest(t, worktree, "internal/demo.go", "package demo\n")
 	if code, _, stderr := preflight.GitCmd(worktree, "add", "plans/remote-verify.md", "internal/demo.go"); code != 0 {
 		t.Fatalf("git add implementation failed: %s", stderr)
 	}
-	record, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), id)
+	record, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, actor := seedIssueOpsCLIExecution(t, record)
-	if _, err := loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), id, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	// The transition wrote tracked material copies; they ship in the same commit.
@@ -134,7 +133,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, id)
 	recordIssueOpsCoreImplementationReviewForCLITest(t, id)
-	record, err = loopgate.AdvancePhaseWithActor(issueopscore.IssueOpsStateRoot(), id, string(issueopscore.IssueOpsPhasePR), actor)
+	record, _, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhasePR), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,7 +194,7 @@ func assertIssueOpsJSONErrorContains(t *testing.T, out string, err error, want s
 // no-change가 정확한 판정이다.
 func recordIssueOpsCoreProjectDocsReviewForCLITest(t *testing.T, id string) {
 	t.Helper()
-	record, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), id)
+	record, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +213,7 @@ func recordIssueOpsCoreProjectDocsReviewForCLITest(t *testing.T, id string) {
 			t.Fatal(err)
 		}
 	}
-	if _, err := issueopscore.RecordIssueOpsProjectDocsReviewWithActor(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsProjectDocsReviewRequest{
+	if _, err := recordProjectDocsReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsProjectDocsReviewRequest{
 		Verdict:      "no-change",
 		ReviewedDocs: []string{".issueops/CAUTIONS.md"},
 		Evidence:     []string{"이 변경은 운영 문서에 남길 결정을 만들지 않는다"},
@@ -227,11 +226,11 @@ func recordIssueOpsCoreProjectDocsReviewForCLITest(t *testing.T, id string) {
 // 올라가는 CLI 픽스처도 이 기록이 필요하다.
 func recordIssueOpsCoreImplementationReviewForCLITest(t *testing.T, id string) {
 	t.Helper()
-	record, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), id)
+	record, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), id)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.RecordIssueOpsImplementationReviewWithActor(issueopscore.IssueOpsStateRoot(), id, issueopscontract.IssueOpsImplementationReviewRequest{
+	if _, err := recordImplementationReviewForTest(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsImplementationReviewRequest{
 		Verdict:      "pass",
 		Findings:     []string{"변경 범위가 이슈 계약을 넘지 않는다"},
 		Evidence:     []string{"go test ./cmd/issueops/issueopscli -count=1"},

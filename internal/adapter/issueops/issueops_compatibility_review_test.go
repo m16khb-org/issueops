@@ -48,7 +48,7 @@ func TestIssueOpsPhaseImplementRequiresCompatibilityReviewPhase(t *testing.T) {
 	branch := "123-compatibility-review"
 	worktree := makeIssueOpsWorktreeDirForTest(t, repo, branch)
 
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestIssueOpsPhaseImplementRequiresCompatibilityReviewPhase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "compatibility_review") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "compatibility_review") {
 		t.Fatalf("implement phase should require compatibility_review, got %v", err)
 	}
 	record, err = RecordIssueOpsCompatibilityReview(stateRoot, record.ID, issueops.IssueOpsCompatibilityReviewRequest{
@@ -84,14 +84,14 @@ func TestIssueOpsPhaseImplementRequiresCompatibilityReviewPhase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if record.Phase != IssueOpsPhaseCompatibilityReview {
+	if record.Phase != issueops.IssueOpsPhaseCompatibilityReview {
 		t.Fatalf("compatibility review should persist the compatibility-review phase, got %+v", record)
 	}
 	if _, err := RecordIssueOpsDevilsAdvocateReview(stateRoot, record.ID, issueops.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
 		t.Fatal(err)
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
-	if record.Phase != IssueOpsPhaseImplement {
+	if record.Phase != issueops.IssueOpsPhaseImplement {
 		t.Fatalf("compatibility and devils-advocate review should allow implement phase, got %+v", record)
 	}
 }

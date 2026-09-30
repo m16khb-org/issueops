@@ -13,7 +13,7 @@ func TestMCPStateMaintain(t *testing.T) {
 		t.Fatalf("seed state: %v", err)
 	}
 
-	outcome := handlePolicyStateMCPToolCall(MCPToolCall{Name: "state_maintain", Arguments: map[string]any{}})
+	outcome := testHandlePolicyStateMCPToolCall(MCPToolCall{Name: "state_maintain", Arguments: map[string]any{}})
 	if outcome.Err != nil {
 		t.Fatalf("state_maintain failed: %+v", outcome.Err)
 	}

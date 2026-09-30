@@ -11,7 +11,7 @@ import (
 
 const omoMCPCatalogSHA256Env = "ISSUEOPS_MCP_CATALOG_SHA256"
 
-func writeOmoUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
+func (installer Installer) writeOmoUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "omo_user_mcp_config"}
 	config := map[string]any{}
 	if existing, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(existing))) > 0 {
@@ -26,29 +26,29 @@ func writeOmoUserMCP(path string, req port.NativeInstallRequest) (port.InstallFi
 		servers = map[string]any{}
 		config["mcpServers"] = servers
 	}
-	server, err := omoUserMCPServer(req)
+	server, err := installer.omoUserMCPServer(req)
 	if err != nil {
 		return file, err
 	}
 	servers["issueops"] = server
-	return WriteJSONPlan(path, file.Kind, config, 0o600, req.DryRun)
+	return installer.deps.WriteJSONPlan(path, file.Kind, config, 0o600, req.DryRun)
 }
 
-func writeOmoProjectMCP(path, kind string, dryRun bool) (port.InstallFile, error) {
+func (installer Installer) writeOmoProjectMCP(path, kind string, dryRun bool) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: kind}
-	config, err := omoProjectMCPConfig()
+	config, err := installer.omoProjectMCPConfig()
 	if err != nil {
 		return file, err
 	}
-	return WriteJSONPlan(path, kind, config, 0o644, dryRun)
+	return installer.deps.WriteJSONPlan(path, kind, config, 0o644, dryRun)
 }
 
-func omoUserMCPServer(req port.NativeInstallRequest) (map[string]any, error) {
-	return omoMCPServer(req.BinPath, req.Root)
+func (installer Installer) omoUserMCPServer(req port.NativeInstallRequest) (map[string]any, error) {
+	return installer.omoMCPServer(req.BinPath, req.Root)
 }
 
-func omoProjectMCPConfig() (map[string]any, error) {
-	server, err := omoMCPServer("./bin/issueops", ".")
+func (installer Installer) omoProjectMCPConfig() (map[string]any, error) {
+	server, err := installer.omoMCPServer("./bin/issueops", ".")
 	if err != nil {
 		return nil, err
 	}
@@ -59,11 +59,11 @@ func omoProjectMCPConfig() (map[string]any, error) {
 	}, nil
 }
 
-func omoMCPServer(command, root string) (map[string]any, error) {
-	if MCPCatalogSHA256 == nil {
+func (installer Installer) omoMCPServer(command, root string) (map[string]any, error) {
+	if installer.deps.MCPCatalogSHA256 == nil {
 		return nil, fmt.Errorf("Omo MCP catalog digest is not configured")
 	}
-	catalogSHA256, err := MCPCatalogSHA256()
+	catalogSHA256, err := installer.deps.MCPCatalogSHA256()
 	if err != nil {
 		return nil, fmt.Errorf("compute Omo MCP catalog digest: %w", err)
 	}

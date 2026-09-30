@@ -1,6 +1,8 @@
 package progress
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"encoding/json"
 	"io"
@@ -17,19 +19,19 @@ func TestSelfVerifyProgressReporterEmitsJSONL(t *testing.T) {
 	if reporter == nil {
 		t.Fatal("expected progress reporter")
 	}
-	reporter.Emit(SelfVerifyProgressEvent{
+	reporter.Emit(selfverify.ProgressEvent{
 		Event:      "loop_start",
 		LoopKind:   "self_verification",
 		Iterations: 10,
 		Seed:       100,
 	})
-	reporter.EmitStepEnd("self_verification", 1, 10, 100, 1, 13, StepResult{Label: "go test", OK: true, DurationMS: 25})
+	reporter.EmitStepEnd("self_verification", 1, 10, 100, 1, 13, selfverify.StepResult{Label: "go test", OK: true, DurationMS: 25})
 
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
 	if len(lines) != 2 {
 		t.Fatalf("unexpected progress lines: %q", buf.String())
 	}
-	var event SelfVerifyProgressEvent
+	var event selfverify.ProgressEvent
 	if err := json.Unmarshal([]byte(lines[1]), &event); err != nil {
 		t.Fatalf("progress line is not JSON: %v\n%s", err, lines[1])
 	}

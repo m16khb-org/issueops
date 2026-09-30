@@ -12,7 +12,7 @@ func TestStrictPRReadinessFlagsTargetBranchMismatch(t *testing.T) {
 		OK:            true,
 		Repo:          repo,
 		Branch:        "main",
-		Phase:         IssueOpsPhasePR,
+		Phase:         issueops.IssueOpsPhasePR,
 		IssueURL:      "https://github.com/example/repo/issues/1",
 		PlanPath:      "plans/demo.md",
 		WorktreePath:  repo,

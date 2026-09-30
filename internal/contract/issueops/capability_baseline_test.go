@@ -1,4 +1,4 @@
-package issueops
+package issueops_test
 
 import (
 	"encoding/json"
@@ -6,13 +6,16 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	. "issueops/internal/contract/issueops"
+	baselinedomain "issueops/internal/domain/issueops"
 )
 
 func TestH0BaselineFixtureCoversEveryLauncherHostCell(t *testing.T) {
 	var baseline Baseline
 	readFixture(t, "h0-baseline.json", &baseline)
 
-	if err := Validate(baseline); err != nil {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err != nil {
 		t.Fatalf("fixture must be valid: %v", err)
 	}
 
@@ -69,13 +72,13 @@ func TestH5CmuxRowsAndCrossHostMaterialTransferStayAtH0EvidenceLevel(t *testing.
 func TestValidateRejectsBlankOrUnknownStatus(t *testing.T) {
 	baseline := minimalBaseline()
 	baseline.Cells[0].Status = ""
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "status") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "status") {
 		t.Fatalf("blank status error=%v", err)
 	}
 
 	baseline = minimalBaseline()
 	baseline.Cells[0].Status = "maybe"
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "status") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "status") {
 		t.Fatalf("unknown status error=%v", err)
 	}
 }
@@ -83,13 +86,13 @@ func TestValidateRejectsBlankOrUnknownStatus(t *testing.T) {
 func TestValidateRejectsBlankOrUnknownBaselineKind(t *testing.T) {
 	baseline := minimalBaseline()
 	baseline.Kind = ""
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "kind") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "kind") {
 		t.Fatalf("blank kind error=%v", err)
 	}
 
 	baseline = minimalBaseline()
 	baseline.Kind = "cached-live-state"
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "kind") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "kind") {
 		t.Fatalf("unknown kind error=%v", err)
 	}
 }
@@ -101,7 +104,7 @@ func TestValidateStatusEvidenceRelationships(t *testing.T) {
 		cell.Status = StatusUnavailable
 		cell.Evidence.Connected = observation(ClaimLive, true)
 		cell.Evidence.Capable = observation(ClaimLive, true)
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "unavailable") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "unavailable") {
 			t.Fatalf("unavailable relationship error=%v", err)
 		}
 	})
@@ -111,7 +114,7 @@ func TestValidateStatusEvidenceRelationships(t *testing.T) {
 		cell := &baseline.Cells[0]
 		cell.Status = StatusUnsupported
 		cell.Evidence.Capable = observation(ClaimLive, true)
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "unsupported") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "unsupported") {
 			t.Fatalf("unsupported relationship error=%v", err)
 		}
 	})
@@ -121,7 +124,7 @@ func TestValidateStatusEvidenceRelationships(t *testing.T) {
 		cell := &baseline.Cells[0]
 		cell.Status = StatusNotRun
 		cell.Evidence.RuntimeVerified = observation(ClaimLive, true)
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "non-supported") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "non-supported") {
 			t.Fatalf("not-run relationship error=%v", err)
 		}
 	})
@@ -131,13 +134,13 @@ func TestValidateRejectsSilentFallback(t *testing.T) {
 	baseline := minimalBaseline()
 	baseline.Cells[0].SelectedLauncher = LauncherOrca
 	baseline.Cells[0].ObservedLauncher = LauncherHerdr
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "silent fallback") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "silent fallback") {
 		t.Fatalf("fallback error=%v", err)
 	}
 
 	baseline = minimalBaseline()
 	baseline.Cells[0].FallbackLauncher = LauncherDirect
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "fallback") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "fallback") {
 		t.Fatalf("fallback launcher error=%v", err)
 	}
 }
@@ -152,7 +155,7 @@ func TestValidateSeparatesInstalledCapableFromRuntimeSupported(t *testing.T) {
 	cell.Evidence.Capable = observation(ClaimInstalled, true)
 	cell.Evidence.RuntimeVerified = observation(ClaimNotRun, false)
 
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "runtime_verified") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "runtime_verified") {
 		t.Fatalf("installed-only supported error=%v", err)
 	}
 }
@@ -164,7 +167,7 @@ func TestValidateSeparatesMockFromLiveRuntimeSupport(t *testing.T) {
 	cell.Status = StatusSupported
 	cell.Evidence.RuntimeVerified = observation(ClaimMock, true)
 
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "runtime_verified") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "runtime_verified") {
 		t.Fatalf("mock runtime support error=%v", err)
 	}
 }
@@ -172,38 +175,38 @@ func TestValidateSeparatesMockFromLiveRuntimeSupport(t *testing.T) {
 func TestValidateRequiresLiveObservationIdentity(t *testing.T) {
 	baseline := minimalBaseline()
 	baseline.Cells[0].Evidence.Connected = Observation{Claim: ClaimLive, Result: ObservationResultPositive, Observed: true, Version: "1.0.0", ExecutablePath: "/bin/tool", ObservedAt: "2026-09-20T00:00:00Z", AttemptID: "attempt"}
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "runtime_identity") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "runtime_identity") {
 		t.Fatalf("missing live identity error=%v", err)
 	}
 }
 
 func TestValidateRequiresExactlySixDirectedCrossHostHandoffs(t *testing.T) {
 	baseline := minimalBaseline()
-	if err := Validate(baseline); err != nil {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err != nil {
 		t.Fatalf("complete handoff fixture rejected: %v", err)
 	}
 
 	baseline = minimalBaseline()
 	baseline.HandOffs = baseline.HandOffs[:5]
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "six directed cross-host") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "six directed cross-host") {
 		t.Fatalf("missing handoff error=%v", err)
 	}
 
 	baseline = minimalBaseline()
 	baseline.HandOffs[5] = baseline.HandOffs[0]
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "duplicate handoff") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "duplicate handoff") {
 		t.Fatalf("duplicate handoff error=%v", err)
 	}
 
 	baseline = minimalBaseline()
 	baseline.HandOffs[0] = HandOff{FromHost: HostCodex, ToHost: HostCodex, Semantics: HandOffMaterialTransfer}
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "self handoff") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "self handoff") {
 		t.Fatalf("self handoff error=%v", err)
 	}
 
 	baseline = minimalBaseline()
 	baseline.HandOffs[0].Semantics = HandOffNativeSessionMigration
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "material transfer") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "material transfer") {
 		t.Fatalf("native migration error=%v", err)
 	}
 }
@@ -211,7 +214,7 @@ func TestValidateRequiresExactlySixDirectedCrossHostHandoffs(t *testing.T) {
 func TestValidateRejectsCrossHostNativeSessionMigration(t *testing.T) {
 	baseline := minimalBaseline()
 	baseline.HandOffs[0].Semantics = HandOffNativeSessionMigration
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "material transfer") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "material transfer") {
 		t.Fatalf("cross-host migration error=%v", err)
 	}
 }
@@ -225,7 +228,7 @@ func TestValidateAcceptsLiveSupportedWhenRuntimeBindsToBaseline(t *testing.T) {
 	cell.Evidence.RuntimeVerified.AttemptID = baseline.AttemptID
 	cell.Evidence.RuntimeVerified.RuntimeIdentity = baseline.RuntimeIdentity
 
-	if err := Validate(baseline); err != nil {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err != nil {
 		t.Fatalf("live supported baseline rejected: %v", err)
 	}
 }
@@ -238,7 +241,7 @@ func TestValidateEvidenceResultsAreExplicit(t *testing.T) {
 		cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
 		cell.Evidence.RuntimeVerified.AttemptID = baseline.AttemptID
 		cell.Evidence.RuntimeVerified.RuntimeIdentity = baseline.RuntimeIdentity
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "live-observation") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "live-observation") {
 			t.Fatalf("deterministic supported error=%v", err)
 		}
 	})
@@ -251,7 +254,7 @@ func TestValidateEvidenceResultsAreExplicit(t *testing.T) {
 		cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
 		cell.Evidence.RuntimeVerified.RuntimeIdentity = baseline.RuntimeIdentity
 		cell.Evidence.RuntimeVerified.AttemptID = "other-attempt"
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "baseline attempt") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "baseline attempt") {
 			t.Fatalf("supported attempt binding error=%v", err)
 		}
 	})
@@ -264,7 +267,7 @@ func TestValidateEvidenceResultsAreExplicit(t *testing.T) {
 		cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
 		cell.Evidence.RuntimeVerified.AttemptID = baseline.AttemptID
 		cell.Evidence.RuntimeVerified.RuntimeIdentity = "other-runtime"
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "baseline runtime") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "baseline runtime") {
 			t.Fatalf("supported runtime binding error=%v", err)
 		}
 	})
@@ -274,7 +277,7 @@ func TestValidateEvidenceResultsAreExplicit(t *testing.T) {
 		cell := &baseline.Cells[0]
 		cell.Status = StatusUnsupported
 		cell.Evidence.Capable = observationResult(ClaimNotRun, ObservationResultNotRun)
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "explicit negative capable") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "explicit negative capable") {
 			t.Fatalf("unsupported explicit negative error=%v", err)
 		}
 	})
@@ -285,7 +288,7 @@ func TestValidateEvidenceResultsAreExplicit(t *testing.T) {
 		cell.Status = StatusUnavailable
 		cell.Evidence.Connected = observationResult(ClaimNotRun, ObservationResultNotRun)
 		cell.Evidence.Capable = observationResult(ClaimNotRun, ObservationResultNotRun)
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "explicit negative connected or capable") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "explicit negative connected or capable") {
 			t.Fatalf("unavailable explicit negative error=%v", err)
 		}
 	})
@@ -295,7 +298,7 @@ func TestValidateEvidenceResultsAreExplicit(t *testing.T) {
 		cell := &baseline.Cells[0]
 		cell.Status = StatusNotRun
 		cell.Evidence.RuntimeVerified = observationResult(ClaimLive, ObservationResultPositive)
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "non-supported") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "non-supported") {
 			t.Fatalf("non-supported live runtime error=%v", err)
 		}
 	})
@@ -305,7 +308,7 @@ func TestValidateEvidenceResultsAreExplicit(t *testing.T) {
 		cell := &baseline.Cells[0]
 		cell.Status = StatusNotRun
 		cell.Evidence.RuntimeVerified = observationResult(ClaimNotRun, ObservationResultNegative)
-		if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "not-run") {
+		if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "not-run") {
 			t.Fatalf("not-run explicit result error=%v", err)
 		}
 	})
@@ -345,18 +348,18 @@ func TestValidateRecoveryModeInvariants(t *testing.T) {
 			},
 		},
 	}
-	if err := Validate(baseline); err != nil {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err != nil {
 		t.Fatalf("valid recovery invariants rejected: %v", err)
 	}
 
 	baseline.Recovery.Direct.Steps = []RecoveryStep{RecoveryDirectReleased, RecoveryClaim}
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "direct recovery") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "direct recovery") {
 		t.Fatalf("bad direct chain error=%v", err)
 	}
 
 	baseline = minimalBaseline()
 	baseline.Recovery.Orca.Steps = []RecoveryStep{RecoveryOrcaReleased, RecoveryReplace, RecoveryReseed, RecoveryResume, RecoveryClaim}
-	if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "sealed owner") {
+	if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "sealed owner") {
 		t.Fatalf("bad orca chain error=%v", err)
 	}
 }
@@ -408,7 +411,7 @@ func TestValidateRecoveryFailureCasesAreExactSets(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			baseline := minimalBaseline()
 			tt.mutate(&baseline)
-			if err := Validate(baseline); err == nil || !strings.Contains(err.Error(), "failure cases") {
+			if err := baselinedomain.ValidateCapabilityBaseline(baseline); err == nil || !strings.Contains(err.Error(), "failure cases") {
 				t.Fatalf("failure cases accepted or wrong error: %v", err)
 			}
 		})

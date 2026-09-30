@@ -1,13 +1,15 @@
 package mcpcli
 
 import (
+	"issueops/cmd/issueops/contractcli"
+	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	"issueops/internal/adapter/inspect"
 	"issueops/internal/adapter/preflight"
+	preflightapp "issueops/internal/application/preflight"
 )
 
-// production wiring과 같은 구현을 설치한다. fitness graph는 test import를
-// 수집하지 않으므로 여기서는 concrete를 써도 된다.
-func init() {
-	GitPreflight = preflight.GitPreflight
-	ListSkills = inspect.ListSkills
+func testTransportServices() MCPDependencies {
+	return MCPDependencies{APIDoc: testAPIDocService(), DefaultTarget: IssueOpsRoot(), Preflight: preflightapp.Service{Observer: preflight.GitObserver{}}, Skills: inspect.ListSkills, Resources: resourceConfigForTest(), Compatibility: func() any {
+		return contractcli.BuildCompatibilityContract(clicatalog.Commands(), testMCPCatalog().Tools)
+	}, Commit: testCommitService(), Lint: testLintService(), Fetch: testWebFetch, Worker: testWorkerService(), Daemon: testDaemonReader(), Execution: testExecutionDeps(), Catalog: testMCPCatalog()}
 }

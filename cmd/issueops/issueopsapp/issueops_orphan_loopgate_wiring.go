@@ -2,29 +2,33 @@ package issueopsapp
 
 import (
 	"context"
+
 	"issueops/cmd/issueops/issueopscli"
-	"issueops/internal/adapter/issueops/gatesgate"
-	"issueops/internal/adapter/issueops/orphancleanup"
+	issueopsadapter "issueops/internal/adapter/issueops"
+	healthadapter "issueops/internal/adapter/operationalhealth"
+	orcaadapter "issueops/internal/adapter/orca"
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
-	orphancontract "issueops/internal/contract/issueopsorphancleanup"
+	health "issueops/internal/contract/operationalhealth"
 )
 
-// issueops CLI는 고아 정리와 루프 게이트 구현을 알지 않는다. 어댑터를 아는 곳은
-// composition root 하나뿐이다.
-func configureIssueOpsOrphanAndLoopGate() {
-	issueopscli.ConfigureOrphanCleanup(issueopscli.OrphanCleanupDeps{
-		Preview: func(ctx context.Context, req orphancontract.Request, deps issueopscli.OrphanDependencies) (orphancontract.Result, error) {
-			return orphancleanup.Preview(ctx, req, orphancleanup.Dependencies{Collect: deps.Collect, VerifyMerged: deps.VerifyMerged})
+func newIssueOpsCLIGates() issueopscli.LoopGateDeps {
+	gate := newGateReadiness()
+	return issueopscli.LoopGateDeps{
+		AdvancePhaseReport: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsTrackedMaterials, error) {
+			return gate.AdvancePhaseReport(stateRoot, id, to, actor)
 		},
-		Apply: func(ctx context.Context, req orphancontract.Request, apply orphancontract.ApplyRequest, deps issueopscli.OrphanDependencies) (orphancontract.Result, error) {
-			return orphancleanup.Apply(ctx, req, apply, orphancleanup.Dependencies{Collect: deps.Collect, VerifyMerged: deps.VerifyMerged})
-		},
-	})
-	issueopscli.ConfigureLoopGate(issueopscli.LoopGateDeps{
-		AdvancePhaseWithActor: func(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
-			return gatesgate.AdvancePhaseWithActor(stateRoot, id, to, actor)
-		},
-		AdvancePhaseReport:         gatesgate.AdvancePhaseWithActorReport,
-		StrictPRReadinessWithState: gatesgate.StrictPRReadinessWithState,
-	})
+		StrictPRReadinessWithState: gate.StrictPRReadinessWithState,
+	}
+}
+
+func orphanCleaner(root string) cleanupapp.OrphanCleaner {
+	environment := issueopsadapter.OrphanEnvironment{StateRoot: root}
+	collector := newOperationalHealthCollector(root, environment, nil)
+	environment.LocalInventory = func(ctx context.Context, repo string) (health.Snapshot, error) {
+		return collector.CollectLocal(ctx, repo), nil
+	}
+	return cleanupapp.OrphanCleaner{Environment: environment, Collect: func(ctx context.Context, repo string) (health.Snapshot, error) {
+		return (newOperationalHealthCollector(root, healthadapter.ExecGitRunner{}, orcaadapter.New())).Collect(ctx, repo), nil
+	}, VerifyMerged: newRemoteVerifier().Merged}
 }

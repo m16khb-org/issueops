@@ -1,6 +1,9 @@
 package fingerprint
 
 import (
+	projectdocs "issueops/internal/adapter/projectdocs"
+	lifecyclecontract "issueops/internal/contract/lifecycle"
+	lifecycledomain "issueops/internal/domain/lifecycle"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +16,7 @@ func TestForRoot(t *testing.T) {
 		if err := os.MkdirAll(gitDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
-		fp := ForRoot(dir)
+		fp := forRootForTest(dir)
 		if fp.GitDir != gitDir {
 			t.Errorf("GitDir = %q, want %q", fp.GitDir, gitDir)
 		}
@@ -28,7 +31,7 @@ func TestForRoot(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(dir, ".git"), []byte("gitdir: "+realGit+"\n"), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		fp := ForRoot(dir)
+		fp := forRootForTest(dir)
 		if fp.GitDir != "gitdir: "+realGit {
 			t.Errorf("GitDir = %q, want %q", fp.GitDir, "gitdir: "+realGit)
 		}
@@ -36,8 +39,8 @@ func TestForRoot(t *testing.T) {
 }
 
 func TestRepoID(t *testing.T) {
-	fp1 := ForRoot("/tmp/a")
-	fp2 := ForRoot("/tmp/b")
+	fp1 := forRootForTest("/tmp/a")
+	fp2 := forRootForTest("/tmp/b")
 	id1 := RepoID(fp1)
 	id2 := RepoID(fp2)
 	if id1 == "" || id2 == "" {
@@ -52,9 +55,9 @@ func TestRepoID(t *testing.T) {
 }
 
 func TestEqual(t *testing.T) {
-	fp1 := ForRoot("/tmp/a")
-	fp2 := ForRoot("/tmp/a")
-	fp3 := ForRoot("/tmp/b")
+	fp1 := forRootForTest("/tmp/a")
+	fp2 := forRootForTest("/tmp/a")
+	fp3 := forRootForTest("/tmp/b")
 
 	if !Equal(fp1, fp2) {
 		t.Error("same roots should be equal")
@@ -62,4 +65,12 @@ func TestEqual(t *testing.T) {
 	if Equal(fp1, fp3) {
 		t.Error("different roots should not be equal")
 	}
+}
+
+func forRootForTest(root string) lifecyclecontract.ProjectFingerprint {
+	return ForRoot(root, projectdocs.ReadGitOriginURL)
+}
+func RepoID(fp lifecyclecontract.ProjectFingerprint) string { return lifecycledomain.RepoID(fp) }
+func Equal(a, b lifecyclecontract.ProjectFingerprint) bool {
+	return lifecycledomain.EqualFingerprint(a, b)
 }

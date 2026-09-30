@@ -3,8 +3,8 @@ package install
 import (
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
+
+	installdomain "issueops/internal/domain/install"
 )
 
 func ListSkillNames(root string) ([]string, error) {
@@ -27,16 +27,5 @@ func exists(path string) bool {
 }
 
 func normalizeSkillNames(names []string) []string {
-	seen := map[string]bool{}
-	out := make([]string, 0, len(names))
-	for _, name := range names {
-		name = strings.TrimSpace(name)
-		if name == "" || seen[name] {
-			continue
-		}
-		seen[name] = true
-		out = append(out, name)
-	}
-	sort.Strings(out)
-	return out
+	return installdomain.NormalizeSkillNames(names)
 }

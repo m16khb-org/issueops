@@ -1,18 +1,20 @@
 package loopresult
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/cmd/issueops/selfworkflow/progress"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestNewBuildsSelfVerificationResultContract(t *testing.T) {
 	got := New(10, 100, 95, "/repo")
-	if got.LoopKind != "self_verification" || got.KoreanName != model.SelfVerificationKoreanName {
+	if got.LoopKind != "self_verification" || got.KoreanName != augmentcontract.SelfVerificationKoreanName {
 		t.Fatalf("unexpected loop identity: %#v", got)
 	}
 	if got.Iterations != 10 || got.BaseSeed != 100 || got.TargetScore != 95 || got.IssueOpsRoot != "/repo" {
@@ -36,7 +38,7 @@ func TestEmitStartAndEndWriteProgressEvents(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("expected 2 progress lines, got %d: %q", len(lines), buf.String())
 	}
-	var start, end progress.SelfVerifyProgressEvent
+	var start, end selfverify.ProgressEvent
 	if err := json.Unmarshal([]byte(lines[0]), &start); err != nil {
 		t.Fatalf("decode start: %v", err)
 	}

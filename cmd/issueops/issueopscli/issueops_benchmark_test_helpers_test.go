@@ -2,13 +2,15 @@ package issueopscli
 
 import (
 	"encoding/json"
-	issueopscore "issueops/internal/adapter/issueops"
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
 	"os"
 	"path/filepath"
 	"testing"
+
+	remotedomain "issueops/internal/domain/issueopsremote"
 )
 
-func writeIssueOpsRemoteScoreRequestForCLITest(t *testing.T, req issueopscore.IssueOpsRemoteScoringRequest) string {
+func writeIssueOpsRemoteScoreRequestForCLITest(t *testing.T, req remotedomain.IssueOpsRemoteScoringRequest) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "remote-score.json")
 	b, err := json.Marshal(req)
@@ -25,7 +27,7 @@ func scoreForCLITest(score float64) *float64 {
 	return &score
 }
 
-func writeIssueOpsCandidateForCLITest(t *testing.T, candidate issueopscore.IssueOpsAutoresearchCandidate) string {
+func writeIssueOpsCandidateForCLITest(t *testing.T, candidate benchmarkcontract.IssueOpsAutoresearchCandidate) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "candidate.json")
 	b, err := json.Marshal(candidate)

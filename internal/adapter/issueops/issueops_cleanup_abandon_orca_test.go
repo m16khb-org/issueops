@@ -135,7 +135,7 @@ func abandonSettledOrcaRecord(t *testing.T, taskStatus string) (string, issueops
 		},
 		Orca: &issueops.OrcaBinding{
 			RuntimeID: "runtime-136", RepoID: "repo-136", WorktreeID: "worktree-136",
-			OwnerHost: "claude", OwnerModel: "claude-opus-5", TerminalPTYID: "pty-136",
+			OwnerHost: "claude", OwnerModel: "claude-opus-5-5", TerminalPTYID: "pty-136",
 			TaskID: "task-136", DispatchID: "dispatch-136",
 		},
 		Lease: issueops.WriteLease{

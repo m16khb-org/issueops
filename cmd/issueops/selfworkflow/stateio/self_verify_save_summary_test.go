@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
 func TestNewSelfVerificationSummarySnapshotCopiesResultFields(t *testing.T) {
@@ -18,7 +19,7 @@ func TestNewSelfVerificationSummarySnapshotCopiesResultFields(t *testing.T) {
 	snapshot := NewSelfVerificationSummarySnapshot(result, generatedAt)
 
 	if snapshot.SchemaVersion != 1 ||
-		snapshot.Kind != model.SelfVerificationSummaryKind ||
+		snapshot.Kind != augmentdomain.SelfVerificationSummaryKind ||
 		snapshot.LoopKind != result.LoopKind ||
 		snapshot.KoreanName != result.KoreanName ||
 		!snapshot.OK ||
@@ -56,7 +57,7 @@ func TestSaveSelfVerificationSummaryWritesDefaultKeyAndRejectsInvalidKey(t *test
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("decode saved summary: %v\n%s", err, state.Record.Content)
 	}
-	if snapshot.Kind != model.SelfVerificationSummaryKind || snapshot.Summary.TotalSteps != result.Summary.TotalSteps {
+	if snapshot.Kind != augmentdomain.SelfVerificationSummaryKind || snapshot.Summary.TotalSteps != result.Summary.TotalSteps {
 		t.Fatalf("unexpected saved snapshot: %+v", snapshot)
 	}
 
@@ -77,13 +78,13 @@ func TestSaveSelfVerificationSummaryWritesDefaultKeyAndRejectsInvalidKey(t *test
 func TestSaveSelfAugmentSummary(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	result := model.SelfAugmentResult{
+	result := augmentcontract.SelfAugmentResult{
 		OK:           true,
 		Iterations:   10,
 		BaseSeed:     300,
 		ElapsedMS:    1234,
 		IssueOpsRoot: "/tmp/harness",
-		Summary: model.SelfAugmentSummary{
+		Summary: augmentcontract.SelfAugmentSummary{
 			TotalRuns:   1,
 			TotalSteps:  1,
 			PassedSteps: 1,
@@ -107,7 +108,7 @@ func TestSaveSelfAugmentSummary(t *testing.T) {
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("unmarshal saved snapshot: %v", err)
 	}
-	if snapshot.Kind != model.SelfVerificationSummaryKind || !snapshot.OK || snapshot.Summary.TotalSteps != 1 || snapshot.Summary.PassedSteps != 1 {
+	if snapshot.Kind != augmentdomain.SelfVerificationSummaryKind || !snapshot.OK || snapshot.Summary.TotalSteps != 1 || snapshot.Summary.PassedSteps != 1 {
 		t.Fatalf("unexpected saved snapshot: %+v", snapshot)
 	}
 }
@@ -116,13 +117,13 @@ func selfVerificationSummaryResultForSaveTest() SelfAugmentResult {
 	return SelfAugmentResult{
 		OK:           true,
 		LoopKind:     "self_verification",
-		KoreanName:   model.SelfVerificationKoreanName,
+		KoreanName:   augmentcontract.SelfVerificationKoreanName,
 		Iterations:   10,
 		BaseSeed:     123,
 		TargetScore:  95,
 		ElapsedMS:    456,
 		IssueOpsRoot: "/tmp/harness",
-		Summary: model.SelfAugmentSummary{
+		Summary: augmentcontract.SelfAugmentSummary{
 			TotalRuns:   10,
 			TotalSteps:  20,
 			PassedSteps: 20,

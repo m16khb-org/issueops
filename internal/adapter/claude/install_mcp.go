@@ -8,7 +8,7 @@ import (
 	"issueops/internal/port"
 )
 
-func writeClaudeUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
+func (installer Installer) writeClaudeUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "claude_user_mcp_config"}
 	config := map[string]any{}
 	if existing, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(existing))) > 0 {
@@ -24,7 +24,7 @@ func writeClaudeUserMCP(path string, req port.NativeInstallRequest) (port.Instal
 		config["mcpServers"] = mcpServers
 	}
 	mcpServers["issueops"] = claudeUserMCPServer(req)
-	return WriteJSONPlan(path, file.Kind, config, 0o600, req.DryRun)
+	return installer.deps.WriteJSONPlan(path, file.Kind, config, 0o600, req.DryRun)
 }
 
 func claudeUserMCPServer(req port.NativeInstallRequest) map[string]any {

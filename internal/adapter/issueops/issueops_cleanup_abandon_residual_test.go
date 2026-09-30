@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/preflight"
+	abandonapp "issueops/internal/application/issueopscleanup"
 	"issueops/internal/contract/issueops"
 )
 
@@ -187,7 +188,7 @@ func TestCleanupAbandonApplyingReceiptForOriginallyAbsentExecutionIsRetryable(t 
 		t.Fatal(err)
 	}
 	head := strings.TrimSpace(preflight.GitOut(fixture.worktree, "rev-parse", "HEAD"))
-	originalRecordSHA := cleanupAbandonRecordSHA(fixture.record)
+	originalRecordSHA := abandonapp.CleanupAbandonRecordSHA(fixture.record)
 	if code, _, stderr := preflight.GitCmd(fixture.record.Repo, "worktree", "remove", fixture.worktree); code != 0 {
 		t.Fatalf("remove absent fixture worktree: %s", stderr)
 	}
@@ -201,7 +202,7 @@ func TestCleanupAbandonApplyingReceiptForOriginallyAbsentExecutionIsRetryable(t 
 			WorktreePath: fixture.worktree, Branch: current.Branch,
 			At: "2026-08-04T00:00:00Z",
 		}
-		current.CleanupAbandonFailure.InventorySHA256 = cleanupAbandonFailureSeal(*current, current.CleanupAbandonFailure)
+		current.CleanupAbandonFailure.InventorySHA256 = abandonapp.CleanupAbandonFailureSeal(*current, current.CleanupAbandonFailure)
 	})
 
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(fixture.record.ID, false, ""), CleanupAbandonDeps{Processes: quietCleanupProcesses()})
@@ -226,13 +227,13 @@ func TestSwitchExecutionModeRejectsCleanupAbandonFence(t *testing.T) {
 		}
 	})
 
-	preview, err := SwitchExecutionMode(context.Background(), stateRoot, ExecutionSwitchModeRequest{
+	preview, err := SwitchExecutionMode(context.Background(), stateRoot, issueops.ExecutionSwitchModeRequest{
 		ID: record.ID, Mode: string(issueops.ExecutionModeOrca),
 	}, ExecutionSwitchModeDependencies{})
 	if err != nil {
 		t.Fatalf("switch-mode preview: %v", err)
 	}
-	result, err := SwitchExecutionMode(context.Background(), stateRoot, ExecutionSwitchModeRequest{
+	result, err := SwitchExecutionMode(context.Background(), stateRoot, issueops.ExecutionSwitchModeRequest{
 		ID: record.ID, Mode: string(issueops.ExecutionModeOrca), Apply: true, Confirm: true, Fingerprint: preview.Fingerprint,
 	}, ExecutionSwitchModeDependencies{})
 	if err == nil || !strings.Contains(err.Error(), "cleanup abandon apply is in progress") {
@@ -251,7 +252,7 @@ func TestCleanupAbandonRecordDeletePartialStateIsRetryable(t *testing.T) {
 		t.Fatal(err)
 	}
 	head := strings.TrimSpace(preflight.GitOut(fixture.worktree, "rev-parse", "HEAD"))
-	originalRecordSHA := cleanupAbandonRecordSHA(fixture.record)
+	originalRecordSHA := abandonapp.CleanupAbandonRecordSHA(fixture.record)
 	if code, _, stderr := preflight.GitCmd(fixture.record.Repo, "worktree", "remove", fixture.worktree); code != 0 {
 		t.Fatalf("remove partial worktree: %s", stderr)
 	}
@@ -276,7 +277,7 @@ func TestCleanupAbandonRecordDeletePartialStateIsRetryable(t *testing.T) {
 		current.CleanupAbandonFailure.WorktreeHead = head
 		current.CleanupAbandonFailure.BranchOID = head
 		current.CleanupAbandonFailure.RecordSHA = originalRecordSHA
-		current.CleanupAbandonFailure.InventorySHA256 = cleanupAbandonFailureSeal(*current, current.CleanupAbandonFailure)
+		current.CleanupAbandonFailure.InventorySHA256 = abandonapp.CleanupAbandonFailureSeal(*current, current.CleanupAbandonFailure)
 	})
 	preview, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(fixture.record.ID, false, ""), CleanupAbandonDeps{Processes: quietCleanupProcesses()})
 	if err != nil {
@@ -354,7 +355,7 @@ func TestCleanupAbandonAuthorityCASRunsBeforeGitMutation(t *testing.T) {
 		if armed && !mutated && len(args) > 1 && args[0] == "rev-parse" && args[1] == "--verify" {
 			mutated = true
 			mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.IssueOpsRecord) {
-				record.Phase = IssueOpsPhasePlan
+				record.Phase = issueops.IssueOpsPhasePlan
 			})
 		}
 		code, stdout, stderr := preflight.GitCmd(dir, args...)

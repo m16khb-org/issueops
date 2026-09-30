@@ -8,20 +8,20 @@ import (
 	"path/filepath"
 	"strings"
 
+	domain "issueops/internal/domain/gitworktree"
 	"issueops/internal/port"
 )
 
-type Provisioner struct{}
-
-func New() Provisioner {
-	return Provisioner{}
+type Provisioner struct {
+	GitCmd func(string, ...string) (int, string, string)
+	GitOut func(string, ...string) string
 }
 
-func (Provisioner) ProbeAccess(ctx context.Context, req port.ExecutionWorkspaceRequest, host string) (port.ExecutionWorkspaceAccessResult, error) {
+func (p Provisioner) ProbeAccess(ctx context.Context, req port.ExecutionWorkspaceRequest, host string) (port.ExecutionWorkspaceAccessResult, error) {
 	if err := ctx.Err(); err != nil {
 		return port.ExecutionWorkspaceAccessResult{}, err
 	}
-	if _, err := validateRequest(req); err != nil {
+	if _, err := p.validateRequest(req); err != nil {
 		return port.ExecutionWorkspaceAccessResult{}, err
 	}
 	base := filepath.Dir(filepath.Clean(req.Root))
@@ -44,15 +44,15 @@ func (Provisioner) ProbeAccess(ctx context.Context, req port.ExecutionWorkspaceR
 	}, nil
 }
 
-func (Provisioner) Prepare(ctx context.Context, req port.ExecutionWorkspaceRequest) (port.ExecutionWorkspaceReceipt, error) {
+func (p Provisioner) Prepare(ctx context.Context, req port.ExecutionWorkspaceRequest) (port.ExecutionWorkspaceReceipt, error) {
 	if err := ctx.Err(); err != nil {
 		return port.ExecutionWorkspaceReceipt{}, err
 	}
-	receipt, err := validateRequest(req)
+	receipt, err := p.validateRequest(req)
 	if err != nil {
 		return receipt, err
 	}
-	if existing, err := inspectExisting(receipt); err != nil || existing {
+	if existing, err := p.inspectExisting(receipt); err != nil || existing {
 		receipt.Exists = existing
 		return receipt, err
 	}
@@ -62,44 +62,40 @@ func (Provisioner) Prepare(ctx context.Context, req port.ExecutionWorkspaceReque
 	if err := createRealDirectories(receipt.SourceRoot, filepath.Dir(receipt.Root)); err != nil {
 		return receipt, err
 	}
-	args := worktreeAddArgs(receipt)
-	if code, _, stderr := GitCmd(receipt.SourceRoot, args...); code != 0 {
+	args := p.worktreeAddArgs(receipt)
+	if code, _, stderr := p.GitCmd(receipt.SourceRoot, args...); code != 0 {
 		return receipt, fmt.Errorf("git %s: %s", strings.Join(args, " "), stderr)
 	}
-	if _, err := inspectExisting(receipt); err != nil {
+	if _, err := p.inspectExisting(receipt); err != nil {
 		return receipt, err
 	}
 	receipt.Exists = true
 	return receipt, nil
 }
 
-func validateRequest(req port.ExecutionWorkspaceRequest) (port.ExecutionWorkspaceReceipt, error) {
+func (p Provisioner) validateRequest(req port.ExecutionWorkspaceRequest) (port.ExecutionWorkspaceReceipt, error) {
 	receipt := port.ExecutionWorkspaceReceipt{
 		SourceRoot: filepath.Clean(req.SourceRoot), Root: filepath.Clean(req.Root),
 		Branch: strings.TrimSpace(req.Branch), BaseHead: strings.TrimSpace(req.BaseHead), Driver: "git",
 	}
-	if req.LifecycleID == "" || receipt.SourceRoot == "" || receipt.Root == "" || receipt.Branch == "" || receipt.BaseHead == "" {
-		return receipt, fmt.Errorf("lifecycle_id, source_root, root, branch, and base_head are required")
+	if err := domain.ValidateRequired(req.LifecycleID, receipt.SourceRoot, receipt.Root, receipt.Branch, receipt.BaseHead); err != nil {
+		return receipt, err
 	}
 	info, err := os.Lstat(receipt.SourceRoot)
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return receipt, fmt.Errorf("source_root must be a real directory")
 	}
-	top := strings.TrimSpace(GitOut(receipt.SourceRoot, "rev-parse", "--show-toplevel"))
+	top := strings.TrimSpace(p.GitOut(receipt.SourceRoot, "rev-parse", "--show-toplevel"))
 	if !sameResolvedPath(top, receipt.SourceRoot) {
 		return receipt, fmt.Errorf("source_root must be the Git top-level")
 	}
-	expectedBase := receipt.SourceRoot + ".worktrees"
-	if filepath.Clean(filepath.Dir(receipt.Root)) != filepath.Clean(expectedBase) {
-		return receipt, fmt.Errorf("canonical worktree must use the sibling .worktrees base")
-	}
-	if receipt.Root == receipt.SourceRoot {
-		return receipt, fmt.Errorf("canonical worktree must be isolated from source_root")
+	if err := domain.ValidateLocation(receipt.SourceRoot, receipt.Root, filepath.Clean(filepath.Dir(receipt.Root))); err != nil {
+		return receipt, err
 	}
 	return receipt, nil
 }
 
-func inspectExisting(receipt port.ExecutionWorkspaceReceipt) (bool, error) {
+func (p Provisioner) inspectExisting(receipt port.ExecutionWorkspaceReceipt) (bool, error) {
 	info, err := os.Lstat(receipt.Root)
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
@@ -107,26 +103,26 @@ func inspectExisting(receipt port.ExecutionWorkspaceReceipt) (bool, error) {
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
 		return false, fmt.Errorf("canonical worktree path is occupied by a non-directory or symlink")
 	}
-	top := GitOut(receipt.Root, "rev-parse", "--show-toplevel")
-	branch := GitOut(receipt.Root, "branch", "--show-current")
-	head := GitOut(receipt.Root, "rev-parse", "HEAD")
-	if !sameResolvedPath(top, receipt.Root) || branch != receipt.Branch || head != receipt.BaseHead {
-		return false, fmt.Errorf("existing canonical worktree identity does not match branch and base_head")
+	top := p.GitOut(receipt.Root, "rev-parse", "--show-toplevel")
+	branch := p.GitOut(receipt.Root, "branch", "--show-current")
+	head := p.GitOut(receipt.Root, "rev-parse", "HEAD")
+	if err := domain.ValidateExistingIdentity(sameResolvedPath(top, receipt.Root), branch, receipt.Branch, head, receipt.BaseHead); err != nil {
+		return false, err
 	}
 	return true, nil
 }
 
-func worktreeAddArgs(receipt port.ExecutionWorkspaceReceipt) []string {
-	if GitOut(receipt.SourceRoot, "show-ref", "--verify", "--hash", "refs/heads/"+receipt.Branch) != "" {
-		return []string{"worktree", "add", "-q", receipt.Root, receipt.Branch}
-	}
-	for _, remote := range []string{"origin", "upstream"} {
-		ref := "refs/remotes/" + remote + "/" + receipt.Branch
-		if GitOut(receipt.SourceRoot, "show-ref", "--verify", "--hash", ref) != "" {
-			return []string{"worktree", "add", "-q", "-b", receipt.Branch, receipt.Root, ref}
+func (p Provisioner) worktreeAddArgs(receipt port.ExecutionWorkspaceReceipt) []string {
+	for _, candidate := range domain.BranchCandidates(receipt.Branch, receipt.BaseHead) {
+		if candidate.Ref != "" && p.GitOut(receipt.SourceRoot, "show-ref", "--verify", "--hash", candidate.Ref) == "" {
+			continue
 		}
+		if candidate.CreateBranch {
+			return []string{"worktree", "add", "-q", "-b", receipt.Branch, receipt.Root, candidate.StartPoint}
+		}
+		return []string{"worktree", "add", "-q", receipt.Root, candidate.StartPoint}
 	}
-	return []string{"worktree", "add", "-q", "-b", receipt.Branch, receipt.Root, receipt.BaseHead}
+	return nil
 }
 
 func createRealDirectories(sourceRoot, target string) error {
@@ -196,9 +192,9 @@ func workspaceRelaunchCommand(host, sourceRoot, root, base string) (string, erro
 	landing, base = shellQuotePath(landing), shellQuotePath(base)
 	switch strings.ToLower(strings.TrimSpace(host)) {
 	case "codex":
-		return "codex --cd " + landing + " --add-dir " + base, nil
+		return "codex --cd " + landing + " --add-dir " + base + " --dangerously-bypass-approvals-and-sandbox", nil
 	case "claude":
-		return "cd " + landing + " && claude --add-dir " + base, nil
+		return "cd " + landing + " && claude --add-dir " + base + " --dangerously-skip-permissions", nil
 	case "omo":
 		return "cd " + landing + " && omo", nil
 	default:

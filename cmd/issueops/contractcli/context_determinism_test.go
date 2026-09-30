@@ -6,7 +6,7 @@ import (
 )
 
 func TestCompatibilityContractContextIsByteDeterministic(t *testing.T) {
-	stable, _, err := contextregion.ContextSerializationStable(func() any { return BuildCompatibilityContract() })
+	stable, _, err := contextregion.ContextSerializationStable(func() any { return testCompatibilityContract() })
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -238,7 +238,7 @@ func resumeApplicationTestRecord(generation uint64) Record {
 		Mode:      "orca",
 		Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "193-resume", BaseHead: "base", Driver: "orca", LinkedAt: "2026-07-31T00:00:00Z"},
 		Lease:     leasecontract.Lease{Generation: generation, Status: "claimable", ClaimTokenSHA256: strings.Repeat("b", 64)},
-		Orca:      &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", TaskID: "task", DispatchID: "dispatch", TerminalPTYID: "pty", LeaseGeneration: generation},
+		Orca:      &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", OwnerHost: "codex", OwnerModel: "gpt-6-astra", TaskID: "task", DispatchID: "dispatch", TerminalPTYID: "pty", LeaseGeneration: generation},
 	}}
 	return Record{ID: stable.ID, SourceRoot: "/source", CanonicalRoot: "/worktree", Lease: stable.Execution.Lease, Stable: stable}
 }

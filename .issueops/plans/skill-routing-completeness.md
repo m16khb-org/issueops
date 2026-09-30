@@ -35,7 +35,7 @@
 - **frontend는 티어가 아니다.** 티어는 위험 순위, frontend는 QA 라우팅 신호. `next.review.frontend` bool로 분리한다. 신호가 둘 이상 생기면 그때 슬라이스로 바꾸는 것이 골든 계약 변경이므로, 그 시점의 결정으로 미룬다.
 - **frontend 휴리스틱의 오탐·누락.** 오탐: `.html` 골든·테스트 픽스처(이 저장소의 `skills/aside-*/testdata/*.html`), Go `embed` 템플릿, `public/` 정적 문서. 누락: `.js` React, `src/ui/**/*.ts`, Angular `.component.ts`. 신호는 힌트라 오탐 비용은 `Not Run` 한 줄이고 누락 비용은 QA 미제안이다. 확장자·세그먼트 목록을 계획에 고정하고 두 예시를 테스트에 넣는다.
 - **`aside-web-qa`는 네 입력이 필요하다**(`aside-web-qa/SKILL.md:39-61`). 매핑이 없으면 에이전트가 지어낸다. TARGET=계획·이슈 본문의 로컬 실행 절차, SCOPE=frontend 변경 경로, REQUIREMENTS=이슈 성공 기준과 `gates.md`, INTENT=4단계 report에 적은 `ui-ux-craft` 판단. 하나라도 없으면 `Not Run`과 사유.
-- **4단계 `code-quality-metrics`는 표의 오류다.** 전후 측정은 5단계 소유(`issueops-clean/SKILL.md:13,103`). 표에서 뺀다.
+- **4단계 `code-quality-metrics`는 표의 오류다.** 전후 측정은 5단계 소유(`issueops-slop-clean/SKILL.md:13,103`). 표에서 뺀다.
 - **3단계 `design-review`는 간접 호출이다.** 본문은 `issueops-review`를 부른다. 표가 실제 호출 이름을 쓴다.
 - **골든 충돌.** T3·T4가 response-contract 골든을 바꾼다. 직렬, 태스크별 재생성.
 - **이 계획의 프롬프트 변경 측정 기준**(T6의 `prompt-engineering` 규칙을 이 계획에 먼저 적용): T5가 검증 스킬의 리뷰어 프롬프트 입력(`검증할 주장 목록`·렌즈)에 frontend 신호를 더한다. 실패 판정 기준은 "frontend 신호가 있는 사이클의 diff 리뷰 finding에 `ui-ux-craft` 렌즈(접근성·반응형·모션 감소) 언급이 0건"이며, 첫 frontend 사이클의 `review-metrics`와 리뷰 finding으로 확인한다.
@@ -356,7 +356,7 @@
 
 ## Final Verification Wave
 - [ ] F1. Plan Compliance Audit — T1–T6 diff 대조, 커밋 6개 제목 일치.
-- [ ] F2. Code Quality Review — `issueops-clean` 절차. `PathIsFrontendChange`·`HasFrontendChange`·`Readiness.Warnings` 각각 프로덕션 호출자 존재.
+- [ ] F2. Code Quality Review — `issueops-slop-clean` 절차. `PathIsFrontendChange`·`HasFrontendChange`·`Readiness.Warnings` 각각 프로덕션 호출자 존재.
 - [ ] F3. Real Manual QA — 12개 시나리오 evidence 파일 존재.
 - [ ] F4. Scope Fidelity Check — `base_advanced`가 `warnings` append에만 있고 `missing`에 없음; `rg "ChangeTierFrontend|Signals" internal/` 0건; `requiredSkills` 목록 불변; 검증 스킬에 `sync-base --apply` 0건; `diffBaseRef` 무변경.
 

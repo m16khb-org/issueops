@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	reportcontract "issueops/internal/contract/artifactreadability"
 	"issueops/internal/domain/artifacttemplate"
 )
 
@@ -369,7 +370,7 @@ func TestCompletionDraftRefusesHarnessValuesInsideCode(t *testing.T) {
 	}
 }
 
-func hasCriticalCode(report Report, code string) bool {
+func hasCriticalCode(report reportcontract.Report, code string) bool {
 	for _, f := range report.Critical {
 		if f.Code == code {
 			return true

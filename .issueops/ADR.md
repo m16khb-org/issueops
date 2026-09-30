@@ -37,6 +37,9 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-09-29 | Cleanup ownership binds the operation and exact record revision; supersedes the draft finish-only field | [record](adr/2026-09-29-cleanup-ownership-binds-the-operation-and-exact-record-revis.md) |
+| 2026-09-29 | Cleanup finish executor owns observation and attempt-bound finalization | [record](adr/2026-09-29-cleanup-finish-executor-owns-observation-and-attempt-bound-f.md) |
+| 2026-09-29 | Cleanup finish ownership is an optional record field with guarded writers | [record](adr/2026-09-29-cleanup-finish-ownership-is-an-optional-record-field-with-gu.md) |
 | 2026-09-24 | Claude role models: Opus 5 plans and reviews, Sonnet 5 implements, Fable 5 is manual-only; supersedes the 2026-07-24 Claude defaults | [record](adr/2026-09-24-claude-role-models-opus-5-plans-and-reviews-sonnet-5-impleme.md) |
 | 2026-09-24 | Issue and PR bodies are human documents; implementation materials stay in .issueops/issues/<n>/; partially supersedes 2026-09-09 | [record](adr/2026-09-24-issue-and-pr-bodies-are-human-documents.md) |
 | 2026-09-23 | issueops mcp serves in-process; the shared daemon leaves the MCP path | [record](adr/2026-09-23-issueops-mcp-serves-in-process-the-shared-daemon-leaves-the.md) |

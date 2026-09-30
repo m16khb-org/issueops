@@ -1,23 +1,24 @@
 package issueopsapp
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
+	"fmt"
+	preflightadapter "issueops/internal/adapter/preflight"
+	"issueops/internal/adapter/verification/probe/preflightfuzz"
+	"issueops/internal/adapter/verification/probe/stepbudget"
+	"os"
+	"path/filepath"
 	"time"
 
-	"issueops/cmd/issueops/selfworkflow"
+	"issueops/cmd/issueops/selfworkflow/candidatescmd"
+	"issueops/cmd/issueops/selfworkflow/historycompare"
+	"issueops/cmd/issueops/selfworkflow/promotecmd"
+	"issueops/cmd/issueops/selfworkflow/verifycmd"
+	statestore "issueops/internal/adapter/outbound/state"
+	app "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
-
-type SelfVerificationCandidateExportResult = selfworkflow.SelfVerificationCandidateExportResult
-type SelfVerificationCandidate = selfworkflow.SelfVerificationCandidate
-type selfVerifyPlannedStep = selfworkflow.SelfVerifyPlannedStep
-
-type selfVerifyCandidatesDeps struct {
-	export func() SelfVerificationCandidateExportResult
-	save   func(result *SelfVerificationCandidateExportResult, key string) error
-}
-
-type selfVerifyPromoteDeps struct {
-	promote func(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error)
-}
 
 func runSelfVerify(args []string) error {
 	if len(args) > 0 && args[0] == "history" {
@@ -32,164 +33,68 @@ func runSelfVerify(args []string) error {
 	if len(args) > 0 && args[0] == "candidates" {
 		return runSelfVerifyCandidates(args[1:])
 	}
-	return selfworkflow.RunSelfVerifyWithDeps(args, selfworkflow.SelfVerifyRunDeps{
-		Verify: func(request selfworkflow.SelfVerifyRequest) (SelfAugmentResult, error) {
-			return selfVerify(request)
-		},
+	return verifycmd.Run(args, verifycmd.Deps{
+		SaveSummary: newSelfWorkflowState(statestore.StateDir()).SaveSummary,
+		PrintJSON:   printJSON,
+		Verify:      newSelfWorkflowExecutor(issueOpsRoot()),
 	})
-}
-
-func exportSelfVerificationCandidates() SelfVerificationCandidateExportResult {
-	selfworkflow.IssueOpsRoot = issueOpsRoot
-	return selfworkflow.ExportSelfVerificationCandidates()
-}
-
-func selfVerificationCandidateCatalog() []SelfVerificationCandidate {
-	return selfworkflow.SelfVerificationCandidateCatalog()
-}
-
-func selfVerificationCandidateIDsByStatus(candidates []SelfVerificationCandidate, status string) []string {
-	return selfworkflow.SelfVerificationCandidateIDsByStatus(candidates, status)
-}
-
-func selectedSelfVerificationCandidateID(candidate *SelfVerificationCandidate) string {
-	return selfworkflow.SelectedSelfVerificationCandidateID(candidate)
 }
 
 func runSelfVerifyCandidates(args []string) error {
-	selfworkflow.IssueOpsRoot = issueOpsRoot
-	return selfworkflow.RunSelfVerifyCandidates(args)
-}
-
-func runSelfVerifyCandidatesWithDeps(args []string, deps selfVerifyCandidatesDeps) error {
-	return selfworkflow.RunSelfVerifyCandidatesWithDeps(args, selfworkflow.SelfVerifyCandidatesDeps{
-		Export: deps.export,
-		Save:   deps.save,
-	})
-}
-
-func saveSelfVerificationCandidateExport(result *SelfVerificationCandidateExportResult, key string) error {
-	return selfworkflow.SaveSelfVerificationCandidateExport(result, key)
-}
-
-func compareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (SelfAugmentCompareResult, error) {
-	return selfworkflow.CompareSelfAugmentSummaries(baselineKey, candidateKey, maxElapsedRegressionPct)
-}
-
-func compareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey string, maxElapsedRegressionPct float64, baseline, candidate SelfAugmentStateSnapshot) SelfAugmentCompareResult {
-	return selfworkflow.CompareSelfAugmentSummariesFromSnapshots(baselineKey, candidateKey, maxElapsedRegressionPct, baseline, candidate)
-}
-
-func newSelfAugmentCompareResult(baselineKey, candidateKey string, maxElapsedRegressionPct float64) SelfAugmentCompareResult {
-	return selfworkflow.NewSelfAugmentCompareResult(baselineKey, candidateKey, maxElapsedRegressionPct)
+	planning := newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version)
+	return candidatescmd.Run(args, candidatescmd.Deps{Export: planning.ExportCandidates, Save: planning.SaveCandidates, PrintJSON: printJSON})
 }
 
 func runSelfVerifyCompare(args []string) error {
-	return selfworkflow.RunSelfVerifyCompare(args)
+	return historycompare.RunSelfVerifyCompare(args, selfWorkflowHistoryCLI())
 }
 
 func runSelfVerifyHistory(args []string) error {
-	return selfworkflow.RunSelfVerifyHistory(args)
-}
-
-func selfAugmentHistory(prefix string, limit int, retentionOptions ...selfAugmentHistoryRetentionOptions) (SelfAugmentHistoryResult, error) {
-	options := []selfworkflow.SelfAugmentHistoryRetentionOptions{}
-	for _, option := range retentionOptions {
-		options = append(options, selfworkflow.SelfAugmentHistoryRetentionOptions(option))
-	}
-	return selfworkflow.SelfAugmentHistory(prefix, limit, options...)
+	return historycompare.RunSelfVerifyHistory(args, selfWorkflowHistoryCLI())
 }
 
 func runSelfVerifyPromote(args []string) error {
-	return selfworkflow.RunSelfVerifyPromote(args)
+	return promotecmd.Run(args, promotecmd.Deps{Promote: newSelfWorkflowState(statestore.StateDir()).Promote, PrintJSON: printJSON})
 }
 
-func runSelfVerifyPromoteWithDeps(args []string, deps selfVerifyPromoteDeps) error {
-	return selfworkflow.RunSelfVerifyPromoteWithDeps(args, selfworkflow.SelfVerifyPromoteDeps{Promote: deps.promote})
-}
-
-func promoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error) {
-	return selfworkflow.PromoteSelfAugmentBaseline(fromKey, baselineKey, confirm, allowFailedSource)
-}
-
-func readSelfAugmentStateSnapshot(key string) (SelfAugmentStateSnapshot, error) {
-	return selfworkflow.ReadSelfAugmentStateSnapshot(key)
-}
-
-func isSelfVerificationSummaryKind(kind string) bool {
-	return selfworkflow.IsSelfVerificationSummaryKind(kind)
-}
-
-func writeSelfAugmentSnapshotRecord(dir, key string, snapshot SelfAugmentStateSnapshot) error {
-	return selfworkflow.WriteSelfAugmentSnapshotRecord(dir, key, snapshot)
-}
-
-func boolPtr(value bool) *bool {
-	return &value
-}
-
-func selfVerify(request selfworkflow.SelfVerifyRequest) (SelfAugmentResult, error) {
-	return selfworkflow.SelfVerify(request, selfVerifyLoopDeps())
-}
-
-func selfVerifyLoopDeps() selfworkflow.SelfVerifyLoopDeps {
-	return selfworkflow.SelfVerifyLoopDeps{
-		StepDeps:   selfVerifyStepDeps(),
-		FailedStep: failedStep,
-		PrintStep:  printStep,
+func newSelfWorkflowExecutor(root string) func(app.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+	deps := selfVerifyLoopDeps(root)
+	return func(request app.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+		return app.ExecuteLoop(request, deps)
 	}
 }
 
-func newSelfVerifyLoopResult(iterations int, baseSeed int64, targetScore float64) SelfAugmentResult {
-	selfworkflow.IssueOpsRoot = issueOpsRoot
-	return selfworkflow.NewSelfVerifyLoopResult(iterations, baseSeed, targetScore)
-}
-
-func emitSelfVerifyLoopStart(progress *selfVerifyProgressReporter, loopKind string, iterations int, seed int64) {
-	if progress == nil {
-		return
+func selfVerifyLoopDeps(root string) app.LoopDeps {
+	return app.LoopDeps{
+		IssueOpsRoot:   func() string { return root },
+		StepDeps:       selfVerifyStepDeps(root),
+		Printf:         fmt.Printf,
+		Summarize:      app.SummarizeSelfVerification,
+		MkdirTemp:      func() (string, error) { return os.MkdirTemp("", "issueops-self-verify-*") },
+		RemoveAll:      os.RemoveAll,
+		TempBinaryPath: func(dir string) string { return filepath.Join(dir, "issueops") },
+		Now:            time.Now,
+		FailedStep:     failedStep,
+		PrintStep:      printStep,
 	}
-	selfworkflow.EmitSelfVerifyLoopStart(progress.inner, loopKind, iterations, seed)
 }
 
-func emitSelfVerifyLoopEnd(progress *selfVerifyProgressReporter, loopKind string, iterations int, seed int64, ok bool, errorText string) {
-	if progress == nil {
-		return
-	}
-	selfworkflow.EmitSelfVerifyLoopEnd(progress.inner, loopKind, iterations, seed, ok, errorText)
-}
-
-func saveSelfVerificationSummary(result *SelfAugmentResult, key string) error {
-	return selfworkflow.SaveSelfVerificationSummary(result, key)
-}
-
-func saveSelfAugmentSummary(result *SelfAugmentResult, key string) error {
-	return selfworkflow.SaveSelfAugmentSummary(result, key)
-}
-
-func newSelfVerificationSummarySnapshot(result SelfAugmentResult, generatedAt time.Time) SelfAugmentStateSnapshot {
-	return selfworkflow.NewSelfVerificationSummarySnapshot(result, generatedAt)
-}
-
-func plannedSelfVerifySteps(root string, tempBin string, seed int64, goTestStep *StepResult) []selfVerifyPlannedStep {
-	return selfworkflow.PlannedSelfVerifySteps(root, tempBin, seed, goTestStep, selfVerifyStepDeps())
-}
-
-func cachedContractGoldenStep(goTestStep StepResult) StepResult {
-	return selfworkflow.CachedContractGoldenStep(goTestStep, selfVerifyStepDeps())
-}
-
-func selfVerifyStepDeps() selfworkflow.SelfVerifyStepDeps {
-	return selfworkflow.SelfVerifyStepDeps{
-		IssueOpsRoot:                    issueOpsRoot,
-		RunCommandStep:                  runCommandStepAdapter,
-		ValidateHarnessInvariants:       validateHarnessInvariants,
-		ValidateGoFormat:                validateGoFormat,
-		ValidateRiskQATier:              validateRiskQATierEvidence,
-		ValidateInspect:                 validateInspect,
-		ValidateDocsIndex:               validateDocsIndex,
-		ValidateSelfVerifyCandidate:     validateSelfVerifyCandidateExport,
-		ValidateStepBudgetBaseline:      validateStepBudgetBaseline,
+func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
+	stateProbe := newStateRoundtripProbe()
+	budgetProbe := newStepBudgetProbe()
+	docsProbe := newDocsQAProbe()
+	return app.SelfVerifyStepDeps{
+		IssueOpsRoot:                func() string { return root },
+		RunCommandStep:              runCommandStepAdapter,
+		ValidateHarnessInvariants:   validateHarnessInvariants,
+		ValidateGoFormat:            validateGoFormat,
+		ValidateRiskQATier:          validateRiskQATierEvidence,
+		ValidateInspect:             validateInspect,
+		ValidateDocsIndex:           validateDocsIndex,
+		ValidateSelfVerifyCandidate: validateSelfVerifyCandidateExport,
+		ValidateStepBudgetBaseline: func(binary, root string, seed int64) selfverify.StepResult {
+			return stepbudget.ValidateStepBudgetBaselineWithDeps(binary, root, seed, budgetProbe)
+		},
 		ValidateInstallDryRunSmoke:      validateInstallDryRunSmoke,
 		ValidateCommandPolicy:           validateCommandPolicy,
 		ValidateCommandAudit:            validateCommandAudit,
@@ -197,17 +102,17 @@ func selfVerifyStepDeps() selfworkflow.SelfVerifyStepDeps {
 		ValidateToolConformance:         validateToolConformance,
 		ValidateWorkerLifecycle:         validateWorkerLifecycle,
 		ValidateMCP:                     validateMCP,
-		ValidateStateRoundtrip:          validateStateRoundtrip,
+		ValidateStateRoundtrip:          stateProbe.Validate,
 		ValidateParallelTempIsolation:   validateParallelTempIsolation,
 		ValidateDaemonRestartResilience: validateDaemonRestartResilience,
-		ValidatePreflightFuzz:           validatePreflightFuzz,
-		ValidateWebFetchBattery:         validateWebFetchBattery,
-		ValidateNativeIntegration:       validateNativeIntegration,
-		ValidateRedactionAudit:          validateRedactionAudit,
-		ValidateQAGate:                  validateQAGate,
+		ValidatePreflightFuzz:           (preflightfuzz.Validator{Git: preflightadapter.GitCmd}).Validate,
+		ValidateWebFetchBattery:         newWebFetchProbe().Validate,
+		ValidateNativeIntegration:       newNativeIntegrationProbe().Validate,
+		ValidateRedactionAudit:          docsProbe.RedactionAudit,
+		ValidateQAGate:                  docsProbe.Validate,
 	}
 }
 
-func runCommandStepAdapter(dir string, label string, timeout time.Duration, stdin string, name string, args ...string) StepResult {
+func runCommandStepAdapter(dir string, label string, timeout time.Duration, stdin string, name string, args ...string) selfverify.StepResult {
 	return runCommandStep(dir, label, timeout, stdin, name, args...)
 }

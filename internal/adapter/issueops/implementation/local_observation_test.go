@@ -2,6 +2,8 @@ package implementation
 
 import (
 	"errors"
+	app "issueops/internal/application/issueopsreview"
+	port "issueops/internal/port/issueopsreview"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -63,7 +65,7 @@ func TestObserveLocalChangesPreservesChangeSetContracts(t *testing.T) {
 			if test.mutate != nil {
 				test.mutate(t, repo)
 			}
-			legacyFingerprint := ChangeFingerprint(record)
+			legacyFingerprint := testReader().ChangeFingerprint(record)
 
 			observation := ObserveLocalChangesAt(record, repo)
 
@@ -101,8 +103,8 @@ func TestObserveLocalChangesUsesFallbackBaseForCommittedDiff(t *testing.T) {
 	if !observation.Verified || !reflect.DeepEqual(observation.Paths, []string{"only-fallback.go"}) {
 		t.Fatalf("fallback observation = %+v", observation)
 	}
-	if observation.Fingerprint == "" || observation.Fingerprint != ChangeFingerprint(record) {
-		t.Fatalf("fallback fingerprint was not preserved: observation=%q legacy=%q", observation.Fingerprint, ChangeFingerprint(record))
+	if observation.Fingerprint == "" || observation.Fingerprint != testReader().ChangeFingerprint(record) {
+		t.Fatalf("fallback fingerprint was not preserved: observation=%q legacy=%q", observation.Fingerprint, testReader().ChangeFingerprint(record))
 	}
 }
 
@@ -122,7 +124,7 @@ func TestObserveLocalChangesPreservesEmptySnapshotWhenAllFallbackRefsFail(t *tes
 	if !observation.Verified || len(observation.Paths) != 0 || observation.Fingerprint != "" {
 		t.Fatalf("failed fallbacks must preserve the legacy empty snapshot: %+v", observation)
 	}
-	if fingerprint := ChangeFingerprint(record); fingerprint != "" {
+	if fingerprint := testReader().ChangeFingerprint(record); fingerprint != "" {
 		t.Fatalf("legacy fingerprint with no usable base = %q, want empty", fingerprint)
 	}
 }
@@ -212,19 +214,19 @@ func TestObserveLocalChangesRejectsAContinuouslyChangingFile(t *testing.T) {
 func TestObserveLocalChangesUsesOneBaseResolutionAndTwoSnapshotReads(t *testing.T) {
 	repo, record := newLocalObservationRepo(t)
 	writeObservationFile(t, repo, "tracked.txt", "dirty\n")
-	previousCmd, previousRaw := GitCmd, GitCmdRaw
+	reader := testReader()
+	previousCmd, previousRaw := reader.GitCmd, reader.GitCmdRaw
 	var commands []string
-	GitCmd = func(dir string, args ...string) (int, string, string) {
+	reader.GitCmd = func(dir string, args ...string) (int, string, string) {
 		commands = append(commands, strings.Join(args, " "))
 		return previousCmd(dir, args...)
 	}
-	GitCmdRaw = func(dir string, args ...string) (int, string, string) {
+	reader.GitCmdRaw = func(dir string, args ...string) (int, string, string) {
 		commands = append(commands, strings.Join(args, " "))
 		return previousRaw(dir, args...)
 	}
-	t.Cleanup(func() { GitCmd, GitCmdRaw = previousCmd, previousRaw })
 
-	observation := ObserveLocalChangesAt(record, repo)
+	observation := (app.LocalChangeObserver{Source: port.LocalChangeSource{BaseRef: reader.DiffBaseRef, Paths: reader.ObservedPathsIn, Fingerprint: FingerprintSnapshot}}).Observe(record, repo)
 
 	if !observation.Verified {
 		t.Fatalf("stable snapshot must verify: %+v", observation)

@@ -4,12 +4,12 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestSummarizeSelfAugmentSuccess(t *testing.T) {
 	result := SelfAugmentResult{
-		Runs: []model.SelfAugmentIteration{
+		Runs: []augmentcontract.SelfAugmentIteration{
 			{
 				Iteration: 1,
 				Seed:      100,
@@ -42,7 +42,7 @@ func TestSummarizeSelfAugmentSuccess(t *testing.T) {
 
 func TestSummarizeSelfAugmentFailure(t *testing.T) {
 	result := SelfAugmentResult{
-		Runs: []model.SelfAugmentIteration{
+		Runs: []augmentcontract.SelfAugmentIteration{
 			{
 				Iteration: 3,
 				Seed:      202,
@@ -72,7 +72,7 @@ func TestSummarizeSelfVerificationClassifiesIntermittentFailure(t *testing.T) {
 	result := SelfAugmentResult{
 		Iterations: 3,
 		BaseSeed:   10,
-		Runs: []model.SelfAugmentIteration{
+		Runs: []augmentcontract.SelfAugmentIteration{
 			{Iteration: 1, Seed: 10, Steps: []StepResult{{Label: "go test", OK: true}}},
 			{Iteration: 2, Seed: 11, Steps: []StepResult{{Label: "go test", OK: false, Error: "boom"}}},
 			{Iteration: 3, Seed: 12, Steps: []StepResult{{Label: "go test", OK: true}}},
@@ -130,7 +130,7 @@ func TestSelfVerificationContractIncludesSummaryExtensions(t *testing.T) {
 
 func TestClassifySelfVerificationFailureCoversDeterministicMixedAndUnknown(t *testing.T) {
 	deterministic := SelfAugmentResult{
-		Runs: []model.SelfAugmentIteration{
+		Runs: []augmentcontract.SelfAugmentIteration{
 			{Iteration: 1, Seed: 10, Steps: []StepResult{{Label: "go test", OK: false}}},
 			{Iteration: 2, Seed: 11, Steps: []StepResult{{Label: "go test", OK: false}}},
 		},
@@ -141,7 +141,7 @@ func TestClassifySelfVerificationFailureCoversDeterministicMixedAndUnknown(t *te
 	}
 
 	mixed := SelfAugmentResult{
-		Runs: []model.SelfAugmentIteration{
+		Runs: []augmentcontract.SelfAugmentIteration{
 			{Iteration: 1, Seed: 20, Steps: []StepResult{{Label: "go test", OK: false}}},
 			{Iteration: 2, Seed: 21, Steps: []StepResult{{Label: "go build", OK: false}}},
 		},
@@ -161,7 +161,7 @@ func TestSummarizeSelfVerificationMarksGoalFailureWhenLabelsMissing(t *testing.T
 	result := SelfAugmentResult{
 		OK:         true,
 		Iterations: 1,
-		Runs: []model.SelfAugmentIteration{
+		Runs: []augmentcontract.SelfAugmentIteration{
 			{Iteration: 1, Seed: 100, Steps: []StepResult{{Label: "go test", OK: true}}},
 		},
 	}

@@ -7,25 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/installutil"
-	mcpdomain "issueops/internal/domain/mcp"
 	"issueops/internal/port"
 )
-
-func init() {
-	NewInstallPlan = func(host string, dryRun bool) InstallPlan {
-		return installutil.NewPlan(host, dryRun)
-	}
-	WriteJSONPlan = installutil.WriteJSONPlan
-	WriteTextPlan = installutil.WriteTextPlan
-	CaptureNativeActivationEvidence = installutil.CaptureNativeActivationEvidence
-	EnsureSymlinkPlan = installutil.EnsureSymlinkPlan
-	PlanHostSkillLinks = installutil.PlanHostSkillLinks
-	SemanticSHA256 = installutil.SemanticSHA256
-	MCPCatalogSHA256 = func() (string, error) {
-		return SemanticSHA256(mcpdomain.AdvertisedTools())
-	}
-}
 
 func TestInstallerWritesNativeAgySurfaces(t *testing.T) {
 	req := agyTestRequest(t)
@@ -36,7 +19,7 @@ func TestInstallerWritesNativeAgySurfaces(t *testing.T) {
 		},
 	})
 
-	result, err := NewInstaller().Install(req)
+	result, err := testInstaller().Install(req)
 	if err != nil {
 		t.Fatalf("Install returned error: %v\n%+v", err, result)
 	}
@@ -70,7 +53,7 @@ func TestInstallerDryRunPlansWithoutWriting(t *testing.T) {
 	req.ProjectLocal = true
 	req.DryRun = true
 
-	result, err := NewInstaller().Install(req)
+	result, err := testInstaller().Install(req)
 	if err != nil {
 		t.Fatalf("dry-run returned error: %v\n%+v", err, result)
 	}
@@ -90,10 +73,10 @@ func TestInstallerDryRunPlansWithoutWriting(t *testing.T) {
 
 func TestVerifyActivationRejectsTamperedMCP(t *testing.T) {
 	req := agyTestRequest(t)
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
-	evidence, err := VerifyActivation(req)
+	evidence, err := testInstaller().VerifyActivation(req)
 	if err != nil {
 		t.Fatalf("VerifyActivation returned error: %v", err)
 	}
@@ -107,7 +90,7 @@ func TestVerifyActivationRejectsTamperedMCP(t *testing.T) {
 			"issueops": map[string]any{"command": "tampered"},
 		},
 	})
-	if _, err := VerifyActivation(req); err == nil || !strings.Contains(err.Error(), "canonical binary") {
+	if _, err := testInstaller().VerifyActivation(req); err == nil || !strings.Contains(err.Error(), "canonical binary") {
 		t.Fatalf("tampered MCP must fail strict readback, got %v", err)
 	}
 }

@@ -1,13 +1,14 @@
 package commandparse
 
 import (
+	cliparse "issueops/internal/domain/cli"
 	"strings"
 	"testing"
 
-	domaincli "issueops/internal/domain/cli"
+	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 )
 
-// usage 카탈로그(internal/domain/cli)가 광고하는 플래그는 exact-parse 스펙이
+// usage 카탈로그(internal/adapter/inbound/catalog/cli)가 광고하는 플래그는 exact-parse 스펙이
 // 받아들여야 한다. 카탈로그에만 있고 스펙에 없는 플래그는 hook의 exact 파싱이
 // 정상 명령을 거부하는, 사용자에게 바로 보이는 파열이다(#188과 같은 계열의
 // 드리프트). 반대 방향(스펙에만 있는 플래그)은 축약 카탈로그가 의도적으로
@@ -15,8 +16,8 @@ import (
 func TestIssueOpsCommandSpecAcceptsEveryCatalogAdvertisedFlag(t *testing.T) {
 	actorRecord := map[string]bool{"--host": true, "--session-id": true, "--agent-id": true, "--cwd": true}
 	actorFull := map[string]bool{"--host": true, "--session-id": true, "--agent-id": true, "--session-pid": true, "--session-started-at": true, "--session-executable": true, "--cwd": true}
-	for _, line := range domaincli.IssueOpsUsageLines() {
-		key := domaincli.IssueOpsUsageKey(line)
+	for _, line := range clicatalog.IssueOpsUsageLines() {
+		key := cliparse.IssueOpsUsageKey(line)
 		if key == "" {
 			continue
 		}

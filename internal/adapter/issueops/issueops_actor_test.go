@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 )
 
@@ -31,12 +32,12 @@ func TestExecutionMutationRequiresCurrentLeaseHolderInCanonicalWorktree(t *testi
 		Lease: issueops.WriteLease{Generation: 3, Status: issueops.LeaseStatusActive, Holder: &holder, ClaimedAt: "2026-07-22T00:00:01Z"},
 	}}
 
-	exact := IssueOpsActor{Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
+	exact := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
 	if err := validateExecutionMutation(record, &exact); err != nil {
 		t.Fatalf("exact current holder rejected: %v", err)
 	}
 
-	for name, actor := range map[string]*IssueOpsActor{
+	for name, actor := range map[string]*issueops.IssueOpsActor{
 		"missing":            nil,
 		"missing process":    {Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root},
 		"reused process":     {Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{{PID: 42, StartedAt: "2026-07-22T00:00:01Z", Executable: "/usr/bin/codex"}}},
@@ -64,7 +65,7 @@ func TestExecutionMutationAllowsPreExecutionPlanningButFencesNonActiveLease(t *t
 		},
 		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-07-22T00:00:01Z"},
 	}}
-	actor := IssueOpsActor{Host: "codex", SessionID: "session-1", CWD: record.Execution.Workspace.Root}
+	actor := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", CWD: record.Execution.Workspace.Root}
 	if err := validateExecutionMutation(record, &actor); err == nil {
 		t.Fatal("released lease unexpectedly authorized a mutation")
 	}
@@ -82,13 +83,13 @@ func TestReleasedOrcaPlanLinkAllowsOmoCoordinatorInCanonicalWorktree(t *testing.
 			Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-08-12T00:00:01Z",
 		},
 	}}
-	actor := IssueOpsActor{
+	actor := issueops.IssueOpsActor{
 		Host: "omo", SessionID: "omo-session", CWD: root,
 		NativeProcessAncestry: []issueops.NativeProcessReceipt{{
 			PID: 42, StartedAt: "2026-08-12T00:00:00Z", Executable: "omo",
 		}},
 	}
-	if err := validatePlanLinkMutation(record, &actor); err != nil {
+	if err := cycleapp.NewMutationAuthority(samePath).ValidatePlanLink(record, &actor); err != nil {
 		t.Fatalf("Omo coordinator must link a released Orca plan: %v", err)
 	}
 }

@@ -2,13 +2,14 @@ package benchmark
 
 import (
 	"encoding/json"
-	issueopscontract "issueops/internal/contract/issueops"
+	issueopscontract "issueops/internal/contract/issueopsbenchmark"
+	domain "issueops/internal/domain/issueopsbenchmark"
 
 	"issueops/internal/domain/judgement"
 	"issueops/internal/domain/prompt"
 )
 
-func buildIssueOpsLLMJudgePrompt(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact) (string, error) {
+func BuildIssueOpsLLMJudgePrompt(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact) (string, error) {
 	payload, err := json.Marshal(struct {
 		Fixture  issueopscontract.IssueOpsBenchmarkFixture  `json:"fixture"`
 		Artifact issueopscontract.IssueOpsBenchmarkArtifact `json:"artifact"`
@@ -16,7 +17,7 @@ func buildIssueOpsLLMJudgePrompt(fixture issueopscontract.IssueOpsBenchmarkFixtu
 	}{
 		Fixture:  fixture,
 		Artifact: artifact,
-		Rubric:   issueOpsBenchmarkDimensions,
+		Rubric:   domain.Dimensions(),
 	})
 	if err != nil {
 		return "", err
@@ -65,17 +66,13 @@ func buildIssueOpsLLMJudgePrompt(fixture issueopscontract.IssueOpsBenchmarkFixtu
 	}), nil
 }
 
-func BuildIssueOpsLLMJudgePrompt(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact) (string, error) {
-	return buildIssueOpsLLMJudgePrompt(fixture, artifact)
-}
-
 func issueOpsBenchmarkScoreResponseSchemaExample() string {
-	example := IssueOpsBenchmarkScore{
+	example := issueopscontract.IssueOpsBenchmarkScore{
 		OK:           true,
 		FixtureID:    "fixture-id",
 		AverageScore: 100,
 		MinimumScore: 100,
-		DimensionScores: []IssueOpsDimensionScore{{
+		DimensionScores: []issueopscontract.IssueOpsDimensionScore{{
 			Dimension: "intent_understanding",
 			Score:     100,
 			Evidence:  "short evidence",

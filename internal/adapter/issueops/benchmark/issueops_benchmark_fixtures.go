@@ -3,14 +3,15 @@ package benchmark
 import (
 	"encoding/json"
 	"fmt"
-	issueopscontract "issueops/internal/contract/issueops"
+	issueopscontract "issueops/internal/contract/issueopsbenchmark"
+	domain "issueops/internal/domain/issueopsbenchmark"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 )
 
-func LoadIssueOpsBenchmarkFixtures(dir string) ([]issueopscontract.IssueOpsBenchmarkFixture, error) {
+func (Files) LoadFixtures(dir string) ([]issueopscontract.IssueOpsBenchmarkFixture, error) {
 	dir = strings.TrimSpace(dir)
 	if dir == "" {
 		return nil, fmt.Errorf("fixtures path is required")
@@ -33,7 +34,7 @@ func LoadIssueOpsBenchmarkFixtures(dir string) ([]issueopscontract.IssueOpsBench
 		if err := json.Unmarshal(b, &fixture); err != nil {
 			return nil, fmt.Errorf("parse fixture %s: %w", path, err)
 		}
-		if err := validateIssueOpsBenchmarkFixture(fixture); err != nil {
+		if err := domain.ValidateFixture(fixture); err != nil {
 			return nil, fmt.Errorf("invalid fixture %s: %w", path, err)
 		}
 		fixtures = append(fixtures, fixture)
@@ -43,23 +44,4 @@ func LoadIssueOpsBenchmarkFixtures(dir string) ([]issueopscontract.IssueOpsBench
 		return nil, fmt.Errorf("no issueops benchmark fixtures in %s", dir)
 	}
 	return fixtures, nil
-}
-
-func validateIssueOpsBenchmarkFixture(f issueopscontract.IssueOpsBenchmarkFixture) error {
-	if strings.TrimSpace(f.ID) == "" {
-		return fmt.Errorf("id is required")
-	}
-	if strings.TrimSpace(f.Title) == "" {
-		return fmt.Errorf("title is required")
-	}
-	if strings.TrimSpace(f.UserPrompt) == "" {
-		return fmt.Errorf("user_prompt is required")
-	}
-	if strings.TrimSpace(f.RepoContext) == "" {
-		return fmt.Errorf("repo_context is required")
-	}
-	if len(f.CriticalFailures) == 0 {
-		return fmt.Errorf("critical_failures is required")
-	}
-	return nil
 }

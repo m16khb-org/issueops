@@ -3,10 +3,8 @@
 package issueopspreparation
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -203,6 +201,20 @@ type IssueIdentity struct {
 	Issue    int
 }
 
+type IssueLinkEvidence struct {
+	Provider     string `json:"provider"`
+	IssueURL     string `json:"issue_url"`
+	LinkVerified bool   `json:"link_verified"`
+}
+
+func DecodeIssueLinkEvidence(raw json.RawMessage) *IssueLinkEvidence {
+	var evidence IssueLinkEvidence
+	if len(raw) == 0 || json.Unmarshal(raw, &evidence) != nil {
+		return nil
+	}
+	return &evidence
+}
+
 type IntentCodec struct{}
 
 type IntentError struct {
@@ -232,6 +244,18 @@ func (IntentCodec) Decode(operationID string, raw []byte) (Intent, error) {
 	return intent, nil
 }
 
+// DecodeSelfIdentified validates the payload against its own sealed operation ID.
+func (IntentCodec) DecodeSelfIdentified(raw []byte) (Intent, error) {
+	intent, err := decodeShape(raw)
+	if err != nil {
+		return Intent{}, err
+	}
+	if err := validateIntent(intent, intent.OperationID); err != nil {
+		return Intent{}, err
+	}
+	return intent, nil
+}
+
 func (IntentCodec) DecodeShape(operationID string, raw []byte) (Intent, error) {
 	intent, err := decodeShape(raw)
 	if err != nil {
@@ -247,13 +271,6 @@ func (IntentCodec) Validate(intent Intent, operationID string) error {
 	return validateIntent(intent, operationID)
 }
 
-func (IntentCodec) ValidateRecord(record leasecontract.Record, intent Intent) error {
-	if err := validateIntent(intent, intent.OperationID); err != nil {
-		return err
-	}
-	return validateRecordAuthority(record, intent)
-}
-
 func (IntentCodec) ValidateShape(intent Intent, operationID string) error {
 	return validateShape(intent, operationID)
 }
@@ -263,43 +280,6 @@ func (IntentCodec) Encode(intent Intent) ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(intent)
-}
-
-func (IntentCodec) Seal(intent Intent, issue IssueIdentity) (Intent, error) {
-	if intent.LifecycleID == "" || !validProvider(issue.Provider) || issue.Issue <= 0 {
-		return Intent{}, contractError("intent_identity_mismatch", "Orca intent issue identity is invalid")
-	}
-	intent.Probe.Provider = strings.ToLower(strings.TrimSpace(issue.Provider))
-	intent.Probe.Issue = issue.Issue
-	marker, err := renderMarker(MarkerIdentity{
-		Purpose: normalizedPurpose(intent), LifecycleID: intent.LifecycleID,
-		Generation: intent.Generation, OperationID: intent.OperationID,
-		Provider: intent.Probe.Provider, Issue: intent.Probe.Issue,
-	})
-	if err != nil {
-		return Intent{}, err
-	}
-	intent.Marker = marker
-	intent.Probe.Marker = marker
-	if err := validateIntent(intent, intent.OperationID); err != nil {
-		return Intent{}, err
-	}
-	return intent, nil
-}
-
-// Canonicalize validates the current intent contract without mutating its bytes.
-func (IntentCodec) Canonicalize(record leasecontract.Record, raw []byte) (Intent, []byte, error) {
-	intent, err := decodeShape(raw)
-	if err != nil {
-		return Intent{}, nil, err
-	}
-	if err := validateIntent(intent, intent.OperationID); err != nil {
-		return Intent{}, nil, err
-	}
-	if err := validateRecordAuthority(record, intent); err != nil {
-		return Intent{}, nil, err
-	}
-	return intent, append([]byte(nil), raw...), nil
 }
 
 func decodeShape(raw []byte) (Intent, error) {
@@ -399,63 +379,6 @@ func validateWorkspaceReceipt(request WorkspaceRequest, receipt OrcaWorkspaceRec
 		return fmt.Errorf("Orca workspace receipt does not match the sealed request")
 	}
 	return nil
-}
-
-func validateRecordAuthority(record leasecontract.Record, intent Intent) error {
-	if record.ID != intent.LifecycleID || record.Execution == nil || record.Execution.Pending == nil ||
-		record.Execution.Pending.OperationID != intent.OperationID || record.Execution.Pending.Marker != intent.Marker ||
-		record.Execution.Pending.Kind != pendingKind(intent.Stage) || record.Execution.Lease.Generation != intent.Generation {
-		return fmt.Errorf("Orca intent authority changed before CAS")
-	}
-	switch normalizedPurpose(intent) {
-	case PurposePrepare:
-		if record.Execution.Lease.Status != "released" || record.Execution.Orca != nil {
-			return fmt.Errorf("Orca prepare intent authority changed before CAS")
-		}
-	case PurposeResume:
-		if intent.ResumeLease == nil || intent.PriorBinding == nil ||
-			!leasesEqual(record.Execution.Lease, *intent.ResumeLease) || !bindingsEqual(record.Execution.Orca, intent.PriorBinding) {
-			return fmt.Errorf("Orca resume intent authority changed before CAS")
-		}
-	default:
-		return fmt.Errorf("unsupported Orca intent purpose")
-	}
-	return nil
-}
-
-func (IntentCodec) PrepareIssueIdentity(record leasecontract.Record) (IssueIdentity, error) {
-	return parseIssueIdentity(record, true)
-}
-
-func parseIssueIdentity(record leasecontract.Record, allowUnverifiedGitHub bool) (IssueIdentity, error) {
-	var prepared struct {
-		Provider     string `json:"provider"`
-		IssueURL     string `json:"issue_url"`
-		LinkVerified bool   `json:"link_verified"`
-	}
-	if len(record.BranchPrepare) == 0 || json.Unmarshal(record.BranchPrepare, &prepared) != nil {
-		return IssueIdentity{}, contractError("intent_identity_mismatch", "Orca intent requires verified branch issue identity")
-	}
-	provider := strings.ToLower(strings.TrimSpace(prepared.Provider))
-	if !prepared.LinkVerified && !(allowUnverifiedGitHub && provider == "github") {
-		return IssueIdentity{}, contractError("intent_identity_mismatch", "Orca intent requires verified branch issue identity")
-	}
-	if !validProvider(provider) || strings.TrimSpace(prepared.IssueURL) == "" || strings.TrimSpace(record.IssueURL) != strings.TrimSpace(prepared.IssueURL) {
-		return IssueIdentity{}, contractError("intent_identity_mismatch", "Orca intent issue URL does not match the verified branch identity")
-	}
-	parsed, err := url.Parse(prepared.IssueURL)
-	if err != nil || parsed.Hostname() == "" || !providerHostMatches(provider, parsed.Hostname()) {
-		return IssueIdentity{}, contractError("intent_identity_mismatch", "Orca intent provider does not match the verified issue URL")
-	}
-	parts := strings.Split(strings.Trim(parsed.Path, "/"), "/")
-	if len(parts) < 2 || (parts[len(parts)-2] != "issues" && parts[len(parts)-2] != "work_items") {
-		return IssueIdentity{}, contractError("intent_identity_mismatch", "Orca intent requires a positive issue number")
-	}
-	issue, err := strconv.Atoi(parts[len(parts)-1])
-	if err != nil || issue <= 0 {
-		return IssueIdentity{}, contractError("intent_identity_mismatch", "Orca intent requires a positive issue number")
-	}
-	return IssueIdentity{Provider: provider, Issue: issue}, nil
 }
 
 type MarkerIdentity struct {
@@ -563,19 +486,6 @@ func normalizedPurpose(intent Intent) string {
 	return strings.TrimSpace(intent.Purpose)
 }
 
-func pendingKind(stage IntentStage) string {
-	switch stage {
-	case IntentStageWorktree:
-		return "worktree_create"
-	case IntentStageTerminal, IntentStageRun, IntentStageRunBind, IntentStageTask:
-		return "owner_launch"
-	case IntentStageDispatch:
-		return "dispatch"
-	default:
-		return ""
-	}
-}
-
 func samePath(left, right string) bool {
 	a, err := filepath.Abs(strings.TrimSpace(left))
 	if err != nil {
@@ -602,31 +512,11 @@ func sameOptionalPath(left, right string) bool {
 	return samePath(left, right)
 }
 
-func leasesEqual(left, right leasecontract.Lease) bool {
-	leftRaw, _ := json.Marshal(left)
-	rightRaw, _ := json.Marshal(right)
-	return bytes.Equal(leftRaw, rightRaw)
-}
-
-func bindingsEqual(left *leasecontract.OrcaBinding, right *ResumeBinding) bool {
-	if left == nil || right == nil {
-		return left == nil && right == nil
-	}
-	return left.RuntimeID == right.RuntimeID && left.RepoID == right.RepoID && left.WorktreeID == right.WorktreeID &&
-		left.WorktreeInstanceID == right.WorktreeInstanceID && left.LeaseGeneration == right.LeaseGeneration &&
-		left.OwnerHost == right.OwnerHost && left.OwnerModel == right.OwnerModel && left.OwnerEffort == right.OwnerEffort &&
-		left.RunID == right.RunID && left.TaskID == right.TaskID && left.DispatchID == right.DispatchID && left.TerminalPTYID == right.TerminalPTYID
-}
-
 func validToken(value string) bool {
 	return value != "" && value == strings.TrimSpace(value) && !strings.ContainsRune(value, '=') &&
 		!strings.ContainsFunc(value, unicode.IsSpace)
 }
-func validProvider(value string) bool { return value == "github" || value == "gitlab" }
-func providerHostMatches(provider, host string) bool {
-	host = strings.ToLower(strings.TrimSpace(host))
-	return (provider == "github" && host == "github.com") || (provider == "gitlab" && (host == "gitlab.com" || strings.Contains(host, "gitlab")))
-}
+func validProvider(value string) bool         { return value == "github" || value == "gitlab" }
 func contractError(code, detail string) error { return &IntentError{Code: code, Detail: detail} }
 func invalidMarker() error {
 	return contractError("intent_marker_invalid", "Orca intent marker is not canonical")

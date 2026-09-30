@@ -1,10 +1,12 @@
 package issueopscli
 
 import (
+	clicontract "issueops/internal/contract/cli"
+	cliparse "issueops/internal/domain/cli"
 	"strings"
 	"testing"
 
-	cliadapter "issueops/internal/domain/cli"
+	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 )
 
 func TestIssueOpsChildUsageMatchesCanonicalCatalog(t *testing.T) {
@@ -18,7 +20,7 @@ func TestIssueOpsChildUsageMatchesCanonicalCatalog(t *testing.T) {
 	}
 	var lines []string
 	for _, line := range cliadapter.IssueOpsUsageLines() {
-		key := cliadapter.IssueOpsUsageKey(line)
+		key := cliparse.IssueOpsUsageKey(line)
 		if _, selected := counts[key]; !selected {
 			continue
 		}
@@ -31,9 +33,9 @@ func TestIssueOpsChildUsageMatchesCanonicalCatalog(t *testing.T) {
 		}
 	}
 	want := "Usage:\n" + strings.Join(lines, "\n") + "\n\n" +
-		cliadapter.IssueOpsActorFlagLegend
+		clicontract.IssueOpsActorFlagLegend
 	got := strings.TrimSuffix(captureStdoutForContract(t, func() error {
-		return runIssueOpsChild([]string{"--help"})
+		return testIssueOpsCommand().runIssueOpsChild([]string{"--help"}, testChildUsage())
 	}), "\n")
 	if got != want {
 		t.Fatalf("child help가 canonical catalog projection과 다르다\nwant:\n%s\n\ngot:\n%s", want, got)

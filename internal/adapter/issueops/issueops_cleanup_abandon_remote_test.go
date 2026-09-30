@@ -34,14 +34,14 @@ func (p *fakeAbandonRemote) CreateChild(port.IssueProviderCreateChildRequest) (p
 func (p *fakeAbandonRemote) CloseChild(port.IssueProviderCloseChildRequest) (port.IssueProviderCloseChildResult, error) {
 	return port.IssueProviderCloseChildResult{}, nil
 }
-func (p *fakeAbandonRemote) UpdateIssueBodySection(port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (p *fakeAbandonRemote) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, nil
 }
-func (p *fakeAbandonRemote) CloseIssue(req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
+func (p *fakeAbandonRemote) CloseIssue(_ context.Context, req port.IssueProviderCloseIssueRequest) (port.IssueProviderCloseIssueResult, error) {
 	p.calls = append(p.calls, "close_issue:"+req.Reason)
 	return p.closeIssue, nil
 }
-func (p *fakeAbandonRemote) ClosePullRequest(port.IssueProviderClosePullRequestRequest) (port.IssueProviderClosePullRequestResult, error) {
+func (p *fakeAbandonRemote) ClosePullRequest(context.Context, port.IssueProviderClosePullRequestRequest) (port.IssueProviderClosePullRequestResult, error) {
 	p.calls = append(p.calls, "close_pr")
 	return p.closePR, p.closePRErr
 }
@@ -106,7 +106,7 @@ func remoteAbandonRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	return stateRoot, record
 }
 
-func remoteAbandonRequest(id string, apply bool, fingerprint string) CleanupAbandonRequest {
+func remoteAbandonRequest(id string, apply bool, fingerprint string) issueops.CleanupAbandonRequest {
 	req := abandonRequest(id, apply, fingerprint)
 	req.ArtifactUnmerged = true
 	req.ClosePR, req.CloseIssue, req.DeleteRemoteBranch = true, true, true
@@ -234,7 +234,7 @@ func TestCleanupAbandonRemoteSkipsAlreadyClosedArtifacts(t *testing.T) {
 		issueBody:    port.IssueProviderArtifactBody{State: "CLOSED"},
 	}
 	result, err := CleanupAbandon(context.Background(), stateRoot,
-		func() CleanupAbandonRequest {
+		func() issueops.CleanupAbandonRequest {
 			req := remoteAbandonRequest(record.ID, false, "")
 			req.DeleteRemoteBranch = false
 			return req

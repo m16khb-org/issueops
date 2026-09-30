@@ -17,7 +17,7 @@ import (
 
 func TestExecutionValidatorsAcceptOmoOwner(t *testing.T) {
 	probe := port.ExecutionOrcaProbeRequest{
-		Repo: "/repo", Host: "omo", Model: "openai-codex/gpt-5.6-sol",
+		Repo: "/repo", Host: "omo", Model: "chatgpt-subscription/gpt-6-sol",
 		Effort: "max", Provider: "github", Issue: 469,
 		Marker: "issueops-v1 lifecycle=io-omo operation=0123456789abcdef0123456789abcdef provider=github issue=469",
 	}
@@ -33,7 +33,7 @@ func TestExecutionValidatorsAcceptOmoOwner(t *testing.T) {
 func TestExecutionDispatchesOmoWithOfficialPreamble(t *testing.T) {
 	workspace, probe := executionFixture(t)
 	probe.Host = "omo"
-	probe.Model = "openai-codex/gpt-5.6-sol"
+	probe.Model = "chatgpt-subscription/gpt-6-sol"
 	probe.Effort = "max"
 	launch := executionLaunchFixture(t, workspace.Root)
 	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
@@ -67,7 +67,7 @@ func TestExecutionDispatchesOmoWithOfficialPreamble(t *testing.T) {
 func TestExecutionDoesNotReconcileUnprovenOmoPromptDelivery(t *testing.T) {
 	workspace, probe := executionFixture(t)
 	probe.Host = "omo"
-	probe.Model = "openai-codex/gpt-5.6-sol"
+	probe.Model = "chatgpt-subscription/gpt-6-sol"
 	probe.Effort = "max"
 	launch := executionLaunchFixture(t, workspace.Root)
 	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
@@ -90,7 +90,7 @@ func TestExecutionDoesNotReconcileUnprovenOmoPromptDelivery(t *testing.T) {
 func TestExecutionObservedOmoStagesDispatchAndPromptAroundEachCall(t *testing.T) {
 	workspace, probe := executionFixture(t)
 	probe.Host = "omo"
-	probe.Model = "openai-codex/gpt-5.6-sol"
+	probe.Model = "chatgpt-subscription/gpt-6-sol"
 	launch := executionLaunchFixture(t, workspace.Root)
 	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
 	client := &executionFake{
@@ -117,7 +117,7 @@ func TestExecutionObservedOmoStagesDispatchAndPromptAroundEachCall(t *testing.T)
 func TestExecutionObservedOmoCrashAfterDispatchDoesNotReachPromptCall(t *testing.T) {
 	workspace, probe := executionFixture(t)
 	probe.Host = "omo"
-	probe.Model = "openai-codex/gpt-5.6-sol"
+	probe.Model = "chatgpt-subscription/gpt-6-sol"
 	launch := executionLaunchFixture(t, workspace.Root)
 	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
 	client := &executionFake{
@@ -144,7 +144,7 @@ func TestExecutionObservedOmoCrashAfterDispatchDoesNotReachPromptCall(t *testing
 func TestExecutionOmoPromptReplayRejectsProcessIncarnationMismatchAndPreservesIDs(t *testing.T) {
 	workspace, probe := executionFixture(t)
 	probe.Host = "omo"
-	probe.Model = "openai-codex/gpt-5.6-sol"
+	probe.Model = "chatgpt-subscription/gpt-6-sol"
 	launch := executionLaunchFixture(t, workspace.Root)
 	prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
 	dispatchRequestID := "11111111-1111-4111-8111-111111111111"
@@ -239,7 +239,7 @@ func TestExecutionOmoPromptRequiresCompleteDurableReceiptIdentity(t *testing.T) 
 		t.Run(test.name, func(t *testing.T) {
 			workspace, probe := executionFixture(t)
 			probe.Host = "omo"
-			probe.Model = "openai-codex/gpt-5.6-sol"
+			probe.Model = "chatgpt-subscription/gpt-6-sol"
 			launch := executionLaunchFixture(t, workspace.Root)
 			prepared := executionWorkspaceReceipt(workspace, executionWorktree(workspace, probe))
 			client := &executionFake{

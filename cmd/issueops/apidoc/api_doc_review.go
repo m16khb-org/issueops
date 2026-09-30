@@ -4,51 +4,22 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
+
+	app "issueops/internal/application/apidoc"
 )
 
-type apiDocReviewFinding struct {
-	File     string `json:"file"`
-	Line     *int   `json:"line"`
-	Severity string `json:"severity"`
-	Message  string `json:"message"`
-}
-
-type apiDocReviewResult struct {
-	OK         bool                  `json:"ok"`
-	Verdict    string                `json:"verdict"`
-	Summary    string                `json:"summary"`
-	Findings   []apiDocReviewFinding `json:"findings"`
-	Files      []string              `json:"files"`
-	Skipped    bool                  `json:"skipped,omitempty"`
-	Reason     string                `json:"reason,omitempty"`
-	Prompt     string                `json:"prompt,omitempty"`
-	Schema     map[string]any        `json:"schema,omitempty"`
-	ResultFile string                `json:"result_file,omitempty"`
-}
-
-type apiDocReviewOptions struct {
-	Repo       string
-	Files      []string
-	All        bool
-	DiffFile   string
-	PromptFile string
-	ResultFile string
-	JSON       bool
-}
-
-func runAPIDoc(args []string) error {
+func (c Command) runAPIDoc(args []string) error {
 	if len(args) == 0 {
 		apiDocUsage()
 		return fmt.Errorf("missing api-doc subcommand")
 	}
 	switch args[0] {
 	case "check":
-		return runAPIDocCheck(args[1:])
+		return c.runAPIDocCheck(args[1:])
 	case "review":
-		return runAPIDocReview(args[1:])
+		return c.runAPIDocReview(args[1:])
 	case "static-check":
-		return runAPIDocStaticCheck(args[1:])
+		return c.runAPIDocStaticCheck(args[1:])
 	default:
 		apiDocUsage()
 		return fmt.Errorf("unknown api-doc subcommand %q", args[0])
@@ -63,7 +34,7 @@ func apiDocUsage() {
 `)
 }
 
-func runAPIDocReview(args []string) error {
+func (c Command) runAPIDocReview(args []string) error {
 	fs := flag.NewFlagSet("api-doc review", flag.ContinueOnError)
 	repo := fs.String("repo", "", "target git repository; defaults to current working directory")
 	all := fs.Bool("all", false, "review all tracked API documentation candidate files instead of staged changes")
@@ -74,56 +45,13 @@ func runAPIDocReview(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	root := ResolveTarget(*repo)
-	options := apiDocReviewOptions{Repo: root, Files: fs.Args(), All: *all, DiffFile: *diffFile, PromptFile: *promptFile, ResultFile: *resultFile, JSON: *jsonOut}
-	result, err := runAPIDocReviewWithOptions(options)
+	root := c.ResolveTarget(*repo)
+	options := app.ReviewOptions{Repo: root, Files: fs.Args(), All: *all, DiffFile: *diffFile, PromptFile: *promptFile, ResultFile: *resultFile, JSON: *jsonOut}
+	result, err := c.Service.Reviewer.Review(options)
 	if *jsonOut {
 		_ = printJSON(result)
 		return err
 	}
 	printAPIDocReview(result)
 	return err
-}
-
-func runAPIDocReviewWithOptions(options apiDocReviewOptions) (apiDocReviewResult, error) {
-	files := normalizeAPIDocFiles(options.Repo, options.Files)
-	if len(files) == 0 && options.All && options.DiffFile == "" {
-		files = trackedAPIDocFiles(options.Repo)
-	}
-	if len(files) == 0 && !options.All && options.DiffFile == "" {
-		files = stagedAPIDocFiles(options.Repo)
-	}
-	if len(files) == 0 && options.DiffFile == "" {
-		summary := "No staged API documentation candidate files."
-		reason := "no_api_doc_candidate_files"
-		if options.All {
-			summary = "No tracked API documentation candidate files."
-			reason = "no_tracked_api_doc_candidate_files"
-		}
-		return apiDocReviewResult{OK: true, Verdict: "pass", Summary: summary, Findings: []apiDocReviewFinding{}, Files: []string{}, Skipped: true, Reason: reason}, nil
-	}
-	diff, err := apiDocInput(options.Repo, files, options.DiffFile, options.All)
-	if err != nil {
-		return apiDocReviewResult{OK: false, Verdict: "fail", Summary: err.Error(), Files: files}, err
-	}
-	if strings.TrimSpace(diff) == "" {
-		summary := "No staged API documentation diff."
-		if options.All {
-			summary = "No API documentation content."
-		}
-		return apiDocReviewResult{OK: true, Verdict: "pass", Summary: summary, Findings: []apiDocReviewFinding{}, Files: files, Skipped: true, Reason: "empty_diff"}, nil
-	}
-	extraPrompt, err := apiDocReviewExtraPrompt(options)
-	if err != nil {
-		return apiDocReviewResult{OK: false, Verdict: "fail", Summary: err.Error(), Files: files}, err
-	}
-	evidence := ""
-	if options.ResultFile == "" {
-		evidence = apiDocReviewEvidence(options.Repo, files)
-	}
-	review, err := runHostAgentAPIDocReview(options, files, diff, extraPrompt, evidence)
-	if err != nil {
-		return review, err
-	}
-	return review, nil
 }

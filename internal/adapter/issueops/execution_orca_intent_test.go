@@ -24,16 +24,16 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 		BaseBranch: record.BranchPrepare.BaseBranch, BaseHead: record.BranchPrepare.BaseSHA, Confirm: true,
 	}
 	probe := port.ExecutionOrcaProbeRequest{
-		Repo: record.Repo, Host: "codex", Model: "gpt-5.6-terra", Effort: "xhigh",
+		Repo: record.Repo, Host: "codex", Model: "gpt-6-astra", Effort: "xhigh",
 		Provider: "github", Issue: 16, Marker: "readiness-marker",
 	}
 	issueBody := "## Acceptance\n- AC-01 persist plan\n\n## Verification\n```bash\ngo test ./... -count=1\n```\n"
 	snapshot := executionOwnerSnapshot{issue: executionOwnerIssue{
 		URL: record.IssueURL, Body: issueBody, BodySHA256: digestExecutionOwnerBytes([]byte(issueBody)),
 	}}
-	prepared, intent, err := beginOrcaExecutionIntent(
+	prepared, intent, err := beginOrcaIntentViaRepository(
 		stateRoot, record, workspace, probe,
-		ExecutionPrepareRequest{ID: record.ID, Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh"},
+		issueops.ExecutionPrepareRequest{ID: record.ID, Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh"},
 		snapshot, func() time.Time { return time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC) },
 	)
 	if err != nil {
@@ -53,7 +53,7 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 		return port.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
 	}
 
-	advanced, next, err := advanceOrcaIntentReceipt(context.Background(), stateRoot, prepared, intent, receipt, readIssue, nil)
+	advanced, next, err := advanceOrcaIntentReceiptViaRepository(context.Background(), stateRoot, prepared, intent, receipt, readIssue, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,12 +96,12 @@ func TestRecordOrcaIntentTerminalSendFailurePreservesDispatchAndPromptRequestIDs
 		default:
 			t.Fatalf("unexpected stage before dispatch: %s", payload.Stage)
 		}
-		record, payload, err = advanceOrcaIntentReceipt(context.Background(), stateRoot, record, payload, receipt, nil, nil)
+		record, payload, err = advanceOrcaIntentReceiptViaRepository(context.Background(), stateRoot, record, payload, receipt, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	state, err := ReadExecutionResumeIntent(stateRoot, record.ID, payload.OperationID)
+	state, err := loadResumeIntentViaRepository(stateRoot, record.ID, payload.OperationID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,10 +110,10 @@ func TestRecordOrcaIntentTerminalSendFailurePreservesDispatchAndPromptRequestIDs
 		DispatchRequestID:      "11111111-1111-4111-8111-111111111111",
 		OrchestrationRequestID: "22222222-2222-4222-8222-222222222222",
 	}
-	if err := RecordExecutionResumeIntentFailure(stateRoot, state, orcaIntentUnknown, cause, nil); err != nil {
+	if err := recordResumeIntentFailureViaRepository(stateRoot, state, preparationcontract.InvocationUnknown, cause, nil); err != nil {
 		t.Fatal(err)
 	}
-	updated, err := ReadExecutionResumeIntent(stateRoot, record.ID, payload.OperationID)
+	updated, err := loadResumeIntentViaRepository(stateRoot, record.ID, payload.OperationID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,19 +166,19 @@ func TestRecordOrcaIntentFailureRejectsMalformedOrMismatchedResponseIDs(t *testi
 		t.Run(test.name, func(t *testing.T) {
 			stateRoot, state := resumeDispatchIntentState(t)
 			if test.seed != nil {
-				if err := RecordExecutionResumeIntentFailure(stateRoot, state, orcaIntentUnknown, test.seed, nil); err != nil {
+				if err := recordResumeIntentFailureViaRepository(stateRoot, state, preparationcontract.InvocationUnknown, test.seed, nil); err != nil {
 					t.Fatal(err)
 				}
 				var err error
-				state, err = ReadExecutionResumeIntent(stateRoot, state.Record.ID, state.OperationID)
+				state, err = loadResumeIntentViaRepository(stateRoot, state.Record.ID, state.OperationID)
 				if err != nil {
 					t.Fatal(err)
 				}
 			}
-			if err := RecordExecutionResumeIntentFailure(stateRoot, state, orcaIntentUnknown, test.cause, nil); err != nil {
+			if err := recordResumeIntentFailureViaRepository(stateRoot, state, preparationcontract.InvocationUnknown, test.cause, nil); err != nil {
 				t.Fatal(err)
 			}
-			updated, err := ReadExecutionResumeIntent(stateRoot, state.Record.ID, state.OperationID)
+			updated, err := loadResumeIntentViaRepository(stateRoot, state.Record.ID, state.OperationID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -211,12 +211,12 @@ func resumeDispatchIntentState(t *testing.T) (string, ExecutionResumeIntentState
 			t.Fatalf("unexpected stage before dispatch: %s", payload.Stage)
 		}
 		var err error
-		record, payload, err = advanceOrcaIntentReceipt(context.Background(), stateRoot, record, payload, receipt, nil, nil)
+		record, payload, err = advanceOrcaIntentReceiptViaRepository(context.Background(), stateRoot, record, payload, receipt, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	state, err := ReadExecutionResumeIntent(stateRoot, record.ID, payload.OperationID)
+	state, err := loadResumeIntentViaRepository(stateRoot, record.ID, payload.OperationID)
 	if err != nil {
 		t.Fatal(err)
 	}

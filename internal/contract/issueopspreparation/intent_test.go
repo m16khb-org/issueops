@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-
-	leasecontract "issueops/internal/contract/issueopslease"
 )
 
 const (
@@ -16,9 +14,9 @@ const (
 	digestA            = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	digestB            = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
-	prepareIntentJSON = `{"schema_version":1,"purpose":"prepare","operation_id":"0123456789abcdef0123456789abcdef","lifecycle_id":"io-codec-prepare","generation":1,"stage":"worktree_create","marker":"issueops-v1 lifecycle=io-codec-prepare operation=0123456789abcdef0123456789abcdef provider=github issue=199","started_at":"2026-08-02T00:00:00Z","invocation_state":"not_invoked_proven","invocation_attempts":0,"workspace":{"lifecycle_id":"io-codec-prepare","source_root":"/repo","root":"/repo.worktrees/199-prepare","branch":"199-prepare","base_branch":"117-parent","base_head":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","confirm":true},"probe":{"repo":"/repo","host":"codex","model":"gpt-5.6","effort":"high","provider":"github","issue":199,"marker":"issueops-v1 lifecycle=io-codec-prepare operation=0123456789abcdef0123456789abcdef provider=github issue=199"},"issue_body_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`
+	prepareIntentJSON = `{"schema_version":1,"purpose":"prepare","operation_id":"0123456789abcdef0123456789abcdef","lifecycle_id":"io-codec-prepare","generation":1,"stage":"worktree_create","marker":"issueops-v1 lifecycle=io-codec-prepare operation=0123456789abcdef0123456789abcdef provider=github issue=199","started_at":"2026-08-02T00:00:00Z","invocation_state":"not_invoked_proven","invocation_attempts":0,"workspace":{"lifecycle_id":"io-codec-prepare","source_root":"/repo","root":"/repo.worktrees/199-prepare","branch":"199-prepare","base_branch":"117-parent","base_head":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","confirm":true},"probe":{"repo":"/repo","host":"codex","model":"gpt-6-sol","effort":"high","provider":"github","issue":199,"marker":"issueops-v1 lifecycle=io-codec-prepare operation=0123456789abcdef0123456789abcdef provider=github issue=199"},"issue_body_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}`
 
-	resumeIntentJSON = `{"schema_version":1,"purpose":"resume","operation_id":"fedcba9876543210fedcba9876543210","lifecycle_id":"io-codec-resume","generation":2,"stage":"terminal_create","marker":"issueops-v1 resume lifecycle=io-codec-resume generation=2 operation=fedcba9876543210fedcba9876543210 provider=github issue=199","started_at":"2026-08-02T00:01:00Z","invocation_state":"not_invoked_proven","invocation_attempts":0,"workspace":{"lifecycle_id":"io-codec-resume","source_root":"/repo","root":"/repo.worktrees/199-resume","branch":"199-resume","base_branch":"117-parent","base_head":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","confirm":true},"probe":{"repo":"/repo","host":"claude","model":"claude-opus-4-1","effort":"high","provider":"github","issue":199,"marker":"issueops-v1 resume lifecycle=io-codec-resume generation=2 operation=fedcba9876543210fedcba9876543210 provider=github issue=199"},"prepared":{"workspace":{"source_root":"/repo","root":"/repo.worktrees/199-resume","branch":"199-resume","base_head":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","driver":"orca"},"runtime_id":"runtime","repo_id":"repo","worktree_id":"worktree","worktree_instance_id":"instance"},"launch":{"prompt_path":"/repo.worktrees/199-resume/.issueops/owner.md","prompt_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","context_packet_path":"/repo.worktrees/199-resume/.issueops/context.json","context_packet_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"issue_body_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","claim_token_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prior_binding":{"runtime_id":"runtime","repo_id":"repo","worktree_id":"worktree","worktree_instance_id":"instance","lease_generation":1,"owner_host":"claude","owner_model":"claude-opus-4-1","owner_effort":"high","run_id":"run-old","task_id":"task-old","dispatch_id":"dispatch-old","terminal_pty_id":"terminal-old"},"resume_lease":{"generation":2,"status":"claimable","claim_token_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}`
+	resumeIntentJSON = `{"schema_version":1,"purpose":"resume","operation_id":"fedcba9876543210fedcba9876543210","lifecycle_id":"io-codec-resume","generation":2,"stage":"terminal_create","marker":"issueops-v1 resume lifecycle=io-codec-resume generation=2 operation=fedcba9876543210fedcba9876543210 provider=github issue=199","started_at":"2026-08-02T00:01:00Z","invocation_state":"not_invoked_proven","invocation_attempts":0,"workspace":{"lifecycle_id":"io-codec-resume","source_root":"/repo","root":"/repo.worktrees/199-resume","branch":"199-resume","base_branch":"117-parent","base_head":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","confirm":true},"probe":{"repo":"/repo","host":"claude","model":"claude-opus-5-5","effort":"high","provider":"github","issue":199,"marker":"issueops-v1 resume lifecycle=io-codec-resume generation=2 operation=fedcba9876543210fedcba9876543210 provider=github issue=199"},"prepared":{"workspace":{"source_root":"/repo","root":"/repo.worktrees/199-resume","branch":"199-resume","base_head":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","driver":"orca"},"runtime_id":"runtime","repo_id":"repo","worktree_id":"worktree","worktree_instance_id":"instance"},"launch":{"prompt_path":"/repo.worktrees/199-resume/.issueops/owner.md","prompt_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","context_packet_path":"/repo.worktrees/199-resume/.issueops/context.json","context_packet_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},"issue_body_sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","claim_token_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","prior_binding":{"runtime_id":"runtime","repo_id":"repo","worktree_id":"worktree","worktree_instance_id":"instance","lease_generation":1,"owner_host":"claude","owner_model":"claude-opus-5-5","owner_effort":"high","run_id":"run-old","task_id":"task-old","dispatch_id":"dispatch-old","terminal_pty_id":"terminal-old"},"resume_lease":{"generation":2,"status":"claimable","claim_token_sha256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}`
 )
 
 func TestIntentCodecRoundTripsPrepareAndResumeBytes(t *testing.T) {
@@ -47,14 +45,25 @@ func TestIntentCodecRoundTripsPrepareAndResumeBytes(t *testing.T) {
 	}
 }
 
+func TestIntentCodecDecodesSelfIdentifiedPayloadForAuthorityCheck(t *testing.T) {
+	codec := IntentCodec{}
+	intent, err := codec.DecodeSelfIdentified([]byte(prepareIntentJSON))
+	if err != nil || intent.OperationID != prepareOperationID {
+		t.Fatalf("self-identified intent = %+v, %v", intent, err)
+	}
+	if _, err := codec.DecodeSelfIdentified(retiredPrepareIntentBytes(t)); err == nil || !strings.Contains(err.Error(), "intent_marker_invalid") {
+		t.Fatalf("retired marker accepted: %v", err)
+	}
+}
+
 func TestIntentCodecAcceptsOmoOwner(t *testing.T) {
 	var intent Intent
 	if err := json.Unmarshal([]byte(prepareIntentJSON), &intent); err != nil {
 		t.Fatal(err)
 	}
 	intent.Probe.Host = "omo"
-	intent.Probe.Model = ImplementerModelOmo
-	intent.Probe.Effort = ImplementerEffortOmo
+	intent.Probe.Model = "chatgpt-subscription/gpt-6-sol"
+	intent.Probe.Effort = "max"
 	if err := (IntentCodec{}).Validate(intent, prepareOperationID); err != nil {
 		t.Fatalf("Omo owner intent must be valid: %v", err)
 	}
@@ -131,57 +140,38 @@ func TestIntentCodecRejectsNonCanonicalMarkerTokensAndPrepareGeneration(t *testi
 	}
 }
 
-func TestIntentCodecCanonicalizeRejectsRetiredMarkerWithoutMutation(t *testing.T) {
+func TestIntentCodecRejectsRetiredMarkerWithoutMutation(t *testing.T) {
 	codec := IntentCodec{}
 	raw := retiredPrepareIntentBytes(t)
-	record := prepareIntentRecord(t, "github", "https://github.com/m16khb/issueops/issues/199", raw)
 	beforeRaw := append([]byte(nil), raw...)
-	beforeRecord, err := json.Marshal(record)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, encoded, err := codec.Canonicalize(record, raw)
-	if err == nil || encoded != nil || !strings.Contains(err.Error(), "intent_marker_invalid") {
-		t.Fatalf("canonicalize = encoded:%s err:%v", encoded, err)
+	_, err := codec.Decode(prepareOperationID, raw)
+	if err == nil || !strings.Contains(err.Error(), "intent_marker_invalid") {
+		t.Fatalf("decode retired marker: %v", err)
 	}
 	if !bytes.Equal(raw, beforeRaw) {
 		t.Fatal("retired marker rejection mutated the input bytes")
 	}
-	afterRecord, err := json.Marshal(record)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Equal(afterRecord, beforeRecord) {
-		t.Fatal("retired marker rejection mutated the record")
-	}
 }
 
-func TestPrepareIssueIdentityAndReadinessMarker(t *testing.T) {
-	record := leasecontract.Record{
-		ID: "io-prepare", IssueURL: "https://github.com/example/repo/issues/199",
-		BranchPrepare: []byte(`{"provider":"github","issue_url":"https://github.com/example/repo/issues/199","link_verified":false}`),
-	}
+func TestRenderReadinessMarker(t *testing.T) {
 	codec := IntentCodec{}
-	issue, err := codec.PrepareIssueIdentity(record)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if issue.Provider != "github" || issue.Issue != 199 {
-		t.Fatalf("issue=%+v", issue)
-	}
-	marker, err := codec.RenderReadinessMarker(record.ID, issue)
+	marker, err := codec.RenderReadinessMarker("io-prepare", IssueIdentity{Provider: "github", Issue: 199})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if marker != "issueops-v1 lifecycle=io-prepare provider=github issue=199" {
 		t.Fatalf("marker=%q", marker)
 	}
+}
 
-	record.IssueURL = "https://gitlab.com/example/repo/-/work_items/199"
-	record.BranchPrepare = []byte(`{"provider":"gitlab","issue_url":"https://gitlab.com/example/repo/-/work_items/199","link_verified":false}`)
-	if _, err := codec.PrepareIssueIdentity(record); err == nil {
-		t.Fatal("GitLab preparation identity accepted without a verified link")
+func TestDecodeIssueLinkEvidencePreservesDefinedSidecarFields(t *testing.T) {
+	raw := []byte(`{"provider":"gitlab","issue_url":"https://gitlab.com/example/repo/-/work_items/199","link_verified":true,"base_head":"abc"}`)
+	link := DecodeIssueLinkEvidence(raw)
+	if link == nil || link.Provider != "gitlab" || !link.LinkVerified || link.IssueURL == "" {
+		t.Fatalf("decoded link = %+v", link)
+	}
+	if DecodeIssueLinkEvidence([]byte(`{"provider":"gitlab"} broken`)) != nil {
+		t.Fatal("malformed branch-prepare sidecar accepted")
 	}
 }
 
@@ -190,27 +180,4 @@ func retiredPrepareIntentBytes(t *testing.T) []byte {
 	canonical := "issueops-v1 lifecycle=io-codec-prepare operation=" + prepareOperationID + " provider=github issue=199"
 	retired := "issueops-v1 lifecycle=io-codec-prepare operation=" + prepareOperationID
 	return []byte(strings.ReplaceAll(prepareIntentJSON, canonical, retired))
-}
-
-func prepareIntentRecord(t *testing.T, provider, issueURL string, raw []byte) leasecontract.Record {
-	t.Helper()
-	var intent Intent
-	if err := json.Unmarshal(raw, &intent); err != nil {
-		t.Fatal(err)
-	}
-	branchPrepare, err := json.Marshal(map[string]any{
-		"provider": provider, "issue_url": issueURL, "link_verified": true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return leasecontract.Record{
-		ID: intent.LifecycleID, IssueURL: issueURL, BranchPrepare: branchPrepare,
-		Execution: &leasecontract.Execution{
-			Lease: leasecontract.Lease{Generation: intent.Generation, Status: "released"},
-			Pending: &leasecontract.ExternalIntent{
-				OperationID: intent.OperationID, Kind: "worktree_create", Marker: intent.Marker,
-			},
-		},
-	}
 }

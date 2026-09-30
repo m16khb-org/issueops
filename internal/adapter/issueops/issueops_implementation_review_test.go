@@ -17,32 +17,32 @@ func preflightGitForReviewTest(dir string, args ...string) (int, string, string)
 func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
 	repo := gitInitedRepoForReviewTest(t)
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "83-review"})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "83-review"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, IssueOpsImplementationReviewRequest{Verdict: "approve"}); err == nil {
+	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, issueops.IssueOpsImplementationReviewRequest{Verdict: "approve"}); err == nil {
 		t.Fatal("unknown verdict must be rejected")
 	}
-	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, IssueOpsImplementationReviewRequest{Verdict: "pass"}); err == nil {
+	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, issueops.IssueOpsImplementationReviewRequest{Verdict: "pass"}); err == nil {
 		t.Fatal("pass without findings/evidence must be rejected")
 	}
-	valid := IssueOpsImplementationReviewRequest{
+	valid := issueops.IssueOpsImplementationReviewRequest{
 		Verdict: "pass", Findings: []string{"경계 조건 검토 완료"}, Evidence: []string{"go test ./... ok"},
-		ReviewerHost: "codex", ReviewerModel: "gpt-5.6-sol", ReviewerEffort: "xhigh",
+		ReviewerHost: "codex", ReviewerModel: "gpt-6-sol", ReviewerEffort: "xhigh",
 	}
 	// C4b-F2: implement 이전 phase에서는 기록을 거부한다.
 	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, valid); err == nil || !strings.Contains(err.Error(), "implement phase") {
 		t.Fatalf("pre-implement recording must be rejected: %v", err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
 	got, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, valid)
 	if err != nil {
 		t.Fatal(err)
 	}
 	review := got.ImplementationReview
-	if review == nil || review.Verdict != "pass" || review.ReviewerModel != "gpt-5.6-sol" {
+	if review == nil || review.Verdict != "pass" || review.ReviewerModel != "gpt-6-sol" {
 		t.Fatalf("review must round-trip with audit fields: %+v", review)
 	}
 	// C4b-F1: 리뷰가 변경 집합 fingerprint를 봉인한다.
@@ -139,11 +139,11 @@ func TestOwnerCommandsIncludeImplementationReviewWithPlannerModel(t *testing.T) 
 		model  string
 		effort string
 	}{
-		{host: "codex", model: "gpt-5.6-sol", effort: "xhigh"},
-		{host: "claude", model: "claude-opus-5", effort: "high"},
+		{host: "codex", model: "gpt-6-astra", effort: "xhigh"},
+		{host: "claude", model: "claude-opus-5-5", effort: "high"},
 	} {
 		t.Run(tc.host, func(t *testing.T) {
-			commands := executionOwnerCommandsFor(record, ExecutionPrepareRequest{OwnerHost: tc.host}, strings.Repeat("a", 64))
+			commands := executionOwnerCommandsFor(record, issueops.ExecutionPrepareRequest{OwnerHost: tc.host}, strings.Repeat("a", 64))
 			if !strings.Contains(commands.ImplementationReview, "implementation-review record") ||
 				!strings.Contains(commands.ImplementationReview, tc.model) ||
 				!strings.Contains(commands.ImplementationReview, "--reviewer-effort '"+tc.effort+"'") {

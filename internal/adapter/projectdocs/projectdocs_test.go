@@ -40,11 +40,11 @@ func TestAnalyzeRenderRouteAndProfile(t *testing.T) {
 			t.Fatalf("rendered doc %s missing expected content/frontmatter:\n%s", rel, content)
 		}
 	}
-	conventionsOverview := docs[filepath.ToSlash(filepath.Join(ProjectDocsDir, "conventions", "overview.md"))]
+	conventionsOverview := docs[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "conventions", "overview.md"))]
 	if !strings.Contains(conventionsOverview, "Engineering standards checklist") || !strings.Contains(conventionsOverview, "DDD") || !strings.Contains(conventionsOverview, "engineering-standards.md") {
 		t.Fatalf("conventions overview missing engineering standards checklist:\n%s", conventionsOverview)
 	}
-	architectureOverview := docs[filepath.ToSlash(filepath.Join(ProjectDocsDir, "architecture", "overview.md"))]
+	architectureOverview := docs[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "architecture", "overview.md"))]
 	if !strings.Contains(architectureOverview, "hexagonal/ports-and-adapters") {
 		t.Fatalf("architecture overview missing style naming guidance:\n%s", architectureOverview)
 	}
@@ -55,17 +55,17 @@ func TestAnalyzeRenderRouteAndProfile(t *testing.T) {
 	if route.Task != "openapi controller dto test" || len(route.Docs) == 0 || len(route.Warnings) != 0 {
 		t.Fatalf("unexpected route result: %#v", route)
 	}
-	if !routeContains(route.Docs, filepath.ToSlash(filepath.Join(ProjectDocsDir, "OPEN_API_SPEC.md"))) {
+	if !routeContains(route.Docs, filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "OPEN_API_SPEC.md"))) {
 		t.Fatalf("route missing OPEN_API_SPEC: %#v", route.Docs)
 	}
-	if len(routeDocsForTask("dependency upgrade")) < 2 || len(routeDocsForTask("")) < 2 {
+	if len(projectdoc.RouteDocsForTask("dependency upgrade")) < 2 || len(projectdoc.RouteDocsForTask("")) < 2 {
 		t.Fatal("expected routed docs for dependency and default tasks")
 	}
 }
 
 func TestReadUpdateRecordAndAgentsBlock(t *testing.T) {
 	root := t.TempDir()
-	missing, err := ReadProjectDoc(root, filepath.ToSlash(filepath.Join(ProjectDocsDir, "TESTING.md")))
+	missing, err := ReadProjectDoc(root, filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "TESTING.md")))
 	if err != nil {
 		t.Fatalf("ReadProjectDoc missing returned error: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestReadUpdateRecordAndAgentsBlock(t *testing.T) {
 	}
 	create, err := ReviseProjectDoc(projectdocscontract.ProjectDocsReviseRequest{
 		RepoRoot: root,
-		RelPath:  filepath.ToSlash(filepath.Join(ProjectDocsDir, "TESTING.md")),
+		RelPath:  filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "TESTING.md")),
 		Content:  "# Testing\n",
 		Summary:  "seed testing",
 		Evidence: []string{" ", "test"},
@@ -116,11 +116,11 @@ func TestReadUpdateRecordAndAgentsBlock(t *testing.T) {
 		t.Fatal("expected unsupported record kind")
 	}
 	rendered := RenderAgentsWithBlock(root, "")
-	if !strings.Contains(rendered, agentsStartMarker) || !strings.Contains(rendered, ProjectDocsDir+"/TESTING.md") {
+	if !strings.Contains(rendered, projectdoc.AgentsStartMarker) || !strings.Contains(rendered, projectdoc.ProjectDocsDir+"/TESTING.md") {
 		t.Fatalf("unexpected AGENTS block:\n%s", rendered)
 	}
 	agentsPath := filepath.Join(root, "AGENTS.md")
-	if err := os.WriteFile(agentsPath, []byte("Custom\n\n"+agentsStartMarker+"\nold\n"+agentsEndMarker+"\nTail\n"), 0o600); err != nil {
+	if err := os.WriteFile(agentsPath, []byte("Custom\n\n"+projectdoc.AgentsStartMarker+"\nold\n"+projectdoc.AgentsEndMarker+"\nTail\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	replaced := RenderAgentsWithBlock(root, "")
@@ -337,7 +337,7 @@ func TestRouteProjectDocsQualityTableHasNoRequiredOmissions(t *testing.T) {
 }
 
 func TestProjectDocsHelpers(t *testing.T) {
-	if rel, err := normalizeProjectDocRelPath(filepath.ToSlash(filepath.Join(ProjectDocsDir, "ADR.md"))); err != nil || rel == "" {
+	if rel, err := normalizeProjectDocRelPath(filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "ADR.md"))); err != nil || rel == "" {
 		t.Fatalf("normalize rel = %q, %v", rel, err)
 	}
 	if got := nonEmptyStrings([]string{"", " a ", "b"}); len(got) != 2 || got[0] != "a" || got[1] != "b" {
@@ -385,7 +385,7 @@ func projectDocsFixture(t *testing.T) string {
 	writeProjectDocFixtureFile(t, root, ".github/workflows/ci.yml", "name: ci\n")
 	writeProjectDocFixtureFile(t, root, "cmd/app/main_test.go", "package app\n")
 	writeProjectDocFixtureFile(t, root, ".git/config", "[remote \"origin\"]\nurl = https://github.com/acme/repo.git\n")
-	if err := os.MkdirAll(filepath.Join(root, ProjectDocsDir), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, projectdoc.ProjectDocsDir), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	return root
@@ -422,7 +422,7 @@ func routeContains(entries []projectdocscontract.ProjectDocRouteEntry, rel strin
 
 func TestRenderAgentsWithBlockRespectsCuratedHeader(t *testing.T) {
 	root := t.TempDir()
-	curated := "# nextcandle-api\n\n## Core behavior\n\n- 프로젝트 자체 규칙이 우선한다.\n\n" + agentsStartMarker + "\nold\n" + agentsEndMarker + "\n"
+	curated := "# nextcandle-api\n\n## Core behavior\n\n- 프로젝트 자체 규칙이 우선한다.\n\n" + projectdoc.AgentsStartMarker + "\nold\n" + projectdoc.AgentsEndMarker + "\n"
 	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte(curated), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -436,7 +436,7 @@ func TestRenderAgentsWithBlockRespectsCuratedHeader(t *testing.T) {
 	if !strings.Contains(got, "프로젝트 자체 규칙이 우선한다.") {
 		t.Fatalf("repo-authored rules must survive marker refresh:\n%s", firstLinesGot(got))
 	}
-	if !strings.Contains(got, agentsStartMarker) || strings.Contains(got, "\nold\n") {
+	if !strings.Contains(got, projectdoc.AgentsStartMarker) || strings.Contains(got, "\nold\n") {
 		t.Fatalf("marker block must be refreshed in place:\n%s", firstLinesGot(got))
 	}
 }
@@ -457,7 +457,7 @@ func TestRenderDesignDocOnlyForClientRepositories(t *testing.T) {
 	}
 	clientSignals := AnalyzeProjectSignals(clientRoot)
 	clientDocs := RenderProjectDocs(clientRoot, clientSignals)
-	designRel := filepath.ToSlash(filepath.Join(ProjectDocsDir, "DESIGN.md"))
+	designRel := filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "DESIGN.md"))
 	content, ok := clientDocs[designRel]
 	if !ok {
 		t.Fatalf("client repo must render DESIGN.md, got keys: %v", docMapKeys(clientDocs))
@@ -516,7 +516,7 @@ func TestRenderAgentsWithBlockAddsDesignLineOnlyWhenDesignDocExists(t *testing.T
 	if err := os.WriteFile(filepath.Join(withCurated, "DESIGN.md"), []byte("# Design\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if block := RenderAgentsWithBlock(withCurated, ""); !strings.Contains(block, ProjectDocsDir+"/DESIGN.md") {
+	if block := RenderAgentsWithBlock(withCurated, ""); !strings.Contains(block, projectdoc.ProjectDocsDir+"/DESIGN.md") {
 		t.Fatalf("repo with root DESIGN.md should advertise the design doc route:\n%s", block)
 	}
 }

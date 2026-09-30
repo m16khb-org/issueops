@@ -1,6 +1,7 @@
 package github
 
 import (
+	"context"
 	"runtime"
 	"strings"
 	"testing"
@@ -10,7 +11,7 @@ import (
 
 func TestGitHubClosePullRequestPreview(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+	res, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 		ArtifactURL: "https://github.com/acme/repo/pull/12", Kind: "pr",
 	})
 	if err != nil {
@@ -25,7 +26,7 @@ func TestGitHubClosePullRequestPreview(t *testing.T) {
 func TestGitHubClosePullRequestRejectsMalformedURL(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	for _, raw := range []string{"", "https://github.com/acme/repo/issues/12", "https://github.com/acme/repo/pull/0"} {
-		if _, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+		if _, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 			ArtifactURL: raw, Kind: "pr",
 		}); err == nil {
 			t.Fatalf("malformed artifact url %q must be rejected", raw)
@@ -48,7 +49,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+	res, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 		ArtifactURL: "https://github.com/acme/repo/pull/12", Kind: "pr", Confirm: true,
 	})
 	if err != nil {
@@ -72,7 +73,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+	res, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 		ArtifactURL: "https://github.com/acme/repo/pull/12", Kind: "pr", Confirm: true,
 	})
 	if err != nil {
@@ -97,7 +98,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	if _, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+	if _, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 		ArtifactURL: "https://github.com/acme/repo/pull/12", Kind: "pr", Confirm: true,
 	}); err == nil {
 		t.Fatal("an unverified close must fail closed")
@@ -108,7 +109,7 @@ esac
 // 기존 동작(completed)을 그대로 유지한다.
 func TestGitHubCloseIssueReasonDefaultsToCompleted(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{
+	res, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{
 		IssueURL: "https://github.com/acme/repo/issues/12",
 	})
 	if err != nil {
@@ -117,7 +118,7 @@ func TestGitHubCloseIssueReasonDefaultsToCompleted(t *testing.T) {
 	if !strings.Contains(res.Preview, "--reason completed") {
 		t.Fatalf("an empty reason must keep the completed default: %+v", res)
 	}
-	notPlanned, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{
+	notPlanned, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{
 		IssueURL: "https://github.com/acme/repo/issues/12", Reason: "not_planned",
 	})
 	if err != nil {
@@ -130,7 +131,7 @@ func TestGitHubCloseIssueReasonDefaultsToCompleted(t *testing.T) {
 
 func TestGitHubCloseIssueRejectsUnknownReason(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	if _, err := NewProvider().CloseIssue(port.IssueProviderCloseIssueRequest{
+	if _, err := NewProvider().CloseIssue(context.Background(), port.IssueProviderCloseIssueRequest{
 		IssueURL: "https://github.com/acme/repo/issues/12", Reason: "abandoned",
 	}); err == nil {
 		t.Fatal("an unknown close reason must be rejected")

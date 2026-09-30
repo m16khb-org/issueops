@@ -1,8 +1,11 @@
 package issueopscli
 
 import (
+	"context"
+	"issueops/cmd/issueops/issueopscli/benchmarkcmd"
+	"issueops/cmd/issueops/issueopscli/executioncmd"
+	"issueops/cmd/issueops/issueopscli/feedbackcleanup"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	"issueops/cmd/issueops/issueopscli/remoteverify"
 	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
@@ -10,61 +13,49 @@ import (
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
 
-func RunIssueOps(args []string) error {
-	return RunIssueOpsWithDependencies(args, Dependencies{})
+type RemoteVerification struct {
+	Child         func(string) error
+	Verify        func(issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error
+	VerifyContext func(context.Context, issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error
+	Merged        func(context.Context, issueopscontract.IssueOpsRemoteArtifactVerification) error
 }
 
 type Dependencies struct {
-	Prepare     issueopscontract.ExecutionPrepareHandler
-	Orca        port.ExecutionOrcaProvisioner
-	OrcaOwner   port.ExecutionOrcaOwnerInspector
-	BaseSync    basesyncport.Inspector
-	ReadIssue   executionissue.ExecutionIssueSnapshotReadFunc
-	Claim       issueopscontract.ExecutionClaimHandler
-	Release     issueopscontract.ExecutionReleaseHandler
-	Reseed      issueopscontract.ExecutionReseedHandler
-	Resume      issueopscontract.ExecutionResumeHandler
-	Reconcile   port.ExecutionReconcileHandler
-	Complete    issueopscontract.ExecutionCompleteHandler
-	Publication remotecmd.PublicationHandlers
-	Provenance  provenanceport.Observer
-	HandoffCmux issueopscontract.ExecutionCmuxHandoffHandler
+	Verification   RemoteVerification
+	Remote         remotecmd.Command
+	Cleanup        feedbackcleanup.Command
+	CleanupRuntime feedbackcleanup.Deps
+	Benchmark      benchmarkcmd.Command
+	Execution      executioncmd.ExecutionDeps
+	Runtime        IssueOpsCLIDeps
+	Gates          LoopGateDeps
+	Usage          string
+	ChildUsage     string
+	Prepare        issueopscontract.ExecutionPrepareHandler
+	Orca           port.ExecutionOrcaProvisioner
+	OrcaOwner      port.ExecutionOrcaOwnerInspector
+	BaseSync       basesyncport.Inspector
+	ReadIssue      executionissue.ExecutionIssueSnapshotReadFunc
+	Claim          issueopscontract.ExecutionClaimHandler
+	Release        issueopscontract.ExecutionReleaseHandler
+	Status         port.ExecutionStatusHandler
+	Replace        port.ExecutionReplaceHandler
+	Reseed         issueopscontract.ExecutionReseedHandler
+	Resume         issueopscontract.ExecutionResumeHandler
+	Reconcile      port.ExecutionReconcileHandler
+	Complete       issueopscontract.ExecutionCompleteHandler
+	Publication    remotecmd.PublicationHandlers
+	Provenance     provenanceport.Observer
+	HandoffCmux    issueopscontract.ExecutionCmuxHandoffHandler
 }
 
 func RunIssueOpsWithDependencies(args []string, deps Dependencies) error {
-	return runIssueOpsWithDependencies(args, deps)
+	return (command{Runtime: deps.Runtime, Gates: deps.Gates, VerifyChild: deps.Verification.Child}).runIssueOpsWithDependencies(args, deps)
 }
 
-func RunIssueOpsWithExecutionHandlers(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler) error {
-	return RunIssueOpsWithExecutionHandlersAndReseed(args, claim, release, nil)
-}
-
-func RunIssueOpsWithExecutionHandlersAndReseed(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler, reseed issueopscontract.ExecutionReseedHandler) error {
-	return RunIssueOpsWithExecutionHandlersAndReseedAndResume(args, claim, release, reseed, nil)
-}
-
-func RunIssueOpsWithExecutionHandlersAndReseedAndResume(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler, reseed issueopscontract.ExecutionReseedHandler, resume issueopscontract.ExecutionResumeHandler) error {
-	return RunIssueOpsWithExecutionHandlersAndReseedResumeAndReconcile(args, claim, release, reseed, resume, nil)
-}
-
-func RunIssueOpsWithExecutionHandlersAndReseedResumeAndReconcile(args []string, claim issueopscontract.ExecutionClaimHandler, release issueopscontract.ExecutionReleaseHandler, reseed issueopscontract.ExecutionReseedHandler, resume issueopscontract.ExecutionResumeHandler, reconcile port.ExecutionReconcileHandler) error {
-	return RunIssueOpsWithDependencies(args, Dependencies{
-		Claim: claim, Release: release, Reseed: reseed, Resume: resume, Reconcile: reconcile,
-	})
-}
-
-func VerifyChildIssueBeforeLink(childURL string) error {
-	return verifyIssueOpsChildIssueBeforeLink(childURL)
-}
-
-func CleanupMerged(id string, requested bool) bool {
-	return issueOpsCleanupMerged(id, requested)
-}
-
-func VerifyRemoteArtifactLive(req issueopscontract.IssueOpsRemoteArtifactVerificationRequest) error {
-	return verifyIssueOpsRemoteArtifactLive(req)
-}
-
-func SetChildIssueVerifier(verifier func(string) error) func(string) error {
-	return remoteverify.SetChildIssueVerifier(verifier)
+// command owns the runtime used by one CLI invocation.
+type command struct {
+	VerifyChild func(string) error
+	Runtime     IssueOpsCLIDeps
+	Gates       LoopGateDeps
 }

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	completionapp "issueops/internal/application/issueopscompletion"
+	model "issueops/internal/contract/issueops"
 	completioncontract "issueops/internal/contract/issueopscompletion"
 	leasecontract "issueops/internal/contract/issueopslease"
 	"issueops/internal/port"
@@ -139,3 +140,24 @@ func recordKey(bucket, id string) string { return bucket + "\x00" + id }
 
 var _ port.TransactionalRecordStore = (*memoryStore)(nil)
 var _ completionapp.Repository = (*Repository)(nil)
+
+func TestCompletionRefusesExistingFinishAttemptBeforeTransition(t *testing.T) {
+	record, _ := completionRepositoryRecord(t)
+	record.CleanupAttempt = &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+	raw, err := leasecontract.Encode(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := newMemoryStore(map[string][]byte{recordKey(recordBucket, record.ID): raw})
+	called := false
+	_, err = NewRepository(store).Update(context.Background(), record.ID, func(r completioncontract.RecordSnapshot) (completioncontract.RecordSnapshot, bool, error) {
+		called = true
+		return r, false, nil
+	})
+	if err == nil || !strings.Contains(err.Error(), "cleanup finish") || called {
+		t.Fatalf("completion reached transition: called=%v err=%v", called, err)
+	}
+	if !reflect.DeepEqual(raw, store.records[recordKey(recordBucket, record.ID)]) {
+		t.Fatal("completion changed armed record")
+	}
+}

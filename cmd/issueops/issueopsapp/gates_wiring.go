@@ -2,22 +2,15 @@ package issueopsapp
 
 import (
 	"issueops/cmd/issueops/gatescli"
-	gatesadapter "issueops/internal/adapter/gates"
-	gatesgatedeps "issueops/internal/adapter/issueops/gatesgate"
+	adapter "issueops/internal/adapter/gates"
+	app "issueops/internal/application/gates"
 )
 
-// gatesDependencies는 gates CLI에 concrete adapter를 조립해 넘긴다.
-func gatesDependencies() gatescli.Dependencies {
-	return gatescli.Dependencies{
-		Check:   gatesadapter.Check,
-		Init:    gatesadapter.Init,
-		Abandon: gatesadapter.Abandon,
-	}
+func newGatesService() app.Service {
+	policy := newPolicyService()
+	return app.Service{Store: adapter.FileStore{}, Clock: adapter.Clock{}, Runner: app.CommandRunner{Evaluate: policy.Evaluate, Execute: policy.Run}}
 }
-
-// configureGatesGate는 IssueOps PR readiness에 합성되는 gates ledger 조회·평가
-// 연산을 설치한다. 크로스 케퍼빌리티 adapter edge는 composition root만 만든다.
-func configureGatesGate() {
-	gatesgatedeps.DiscoverGateFiles = gatesadapter.DiscoverGateFiles
-	gatesgatedeps.CheckGateLedger = gatesadapter.Check
+func gatesDependencies() gatescli.Dependencies {
+	service := newGatesService()
+	return gatescli.Dependencies{Check: service.Check, Init: service.Init, Abandon: service.Abandon}
 }

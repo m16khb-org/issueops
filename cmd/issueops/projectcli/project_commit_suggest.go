@@ -3,11 +3,12 @@ package projectcli
 import (
 	"flag"
 	"fmt"
+	app "issueops/internal/application/commitsuggest"
 	commitsuggestcontract "issueops/internal/contract/commitsuggest"
 	"os"
 )
 
-func runProjectCommitSuggest(args []string) error {
+func runProjectCommitSuggest(service app.Service, args []string) error {
 	fs := flag.NewFlagSet("project commit-suggest", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	staged := fs.Bool("staged", false, "suggest commit based on staged changes (git diff --cached)")
@@ -17,7 +18,7 @@ func runProjectCommitSuggest(args []string) error {
 		return err
 	}
 
-	result, err := SuggestCommit(commitsuggestcontract.CommitSuggestRequest{
+	result, err := service.Suggest(commitsuggestcontract.CommitSuggestRequest{
 		RepoRoot: *repo,
 		Staged:   *staged,
 	})

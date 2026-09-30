@@ -3,45 +3,22 @@ package daemoncli
 import (
 	"flag"
 	"fmt"
+	daemondomain "issueops/internal/domain/daemon"
 	"os"
-	"time"
 
-	"issueops/cmd/issueops/daemoncli/daemonpaths"
+	contract "issueops/internal/contract/daemon"
 )
 
-type daemonPaths = daemonpaths.Paths
-type daemonInstance = daemonpaths.InstanceRecord
-type daemonProcessIdentity = daemonpaths.ProcessIdentity
-
-type daemonStatus struct {
-	OK                bool            `json:"ok"`
-	Running           bool            `json:"running"`
-	Reachable         bool            `json:"reachable"`
-	IdentityVerified  bool            `json:"identity_verified"`
-	ActiveConnections int             `json:"active_connections"`
-	MaxConnections    int             `json:"max_connections"`
-	Accepting         bool            `json:"accepting"`
-	Draining          bool            `json:"draining"`
-	PID               int             `json:"pid,omitempty"`
-	Code              string          `json:"code"`
-	Paths             daemonPaths     `json:"paths"`
-	Instance          *daemonInstance `json:"instance,omitempty"`
-	Message           string          `json:"message,omitempty"`
+type Command struct {
+	Start  func() (contract.Status, error)
+	Status func() contract.Status
+	Stop   func() (contract.Status, error)
+	Serve  func() error
 }
 
-const daemonReadyTimeout = 15 * time.Second
-
-func currentDaemonPaths() (daemonPaths, error) {
-	return daemonpaths.Current()
-}
-
-func processAlive(pid int) bool {
-	return daemonpaths.ProcessAlive(pid)
-}
-
-func runDaemon(args []string) error {
+func (command Command) Run(args []string) error {
 	if len(args) > 0 && args[0] == "--internal" {
-		return runDaemonServer()
+		return command.Serve()
 	}
 	if len(args) == 0 {
 		daemonUsage()
@@ -55,7 +32,7 @@ func runDaemon(args []string) error {
 	}
 	switch sub {
 	case "start":
-		status, err := ensureDaemonRunning()
+		status, err := command.Start()
 		if *jsonOut {
 			if printErr := printJSON(status); printErr != nil {
 				return printErr
@@ -68,11 +45,11 @@ func runDaemon(args []string) error {
 		fmt.Printf("issueops daemon running pid=%d socket=%s\n", status.PID, status.Paths.Socket)
 		return nil
 	case "status":
-		status := checkDaemonStatus()
+		status := command.Status()
 		if *jsonOut {
 			return printJSON(status)
 		}
-		if daemonStatusIsReady(status) {
+		if daemondomain.IsReady(status) {
 			fmt.Printf("running pid=%d socket=%s\n", status.PID, status.Paths.Socket)
 		} else if status.Running || status.Reachable || status.PID > 0 {
 			fmt.Printf("unverified code=%s pid=%d socket=%s\n", status.Code, status.PID, status.Paths.Socket)
@@ -81,7 +58,7 @@ func runDaemon(args []string) error {
 		}
 		return nil
 	case "stop":
-		status, err := stopDaemon()
+		status, err := command.Stop()
 		if *jsonOut {
 			if printErr := printJSON(status); printErr != nil {
 				return printErr

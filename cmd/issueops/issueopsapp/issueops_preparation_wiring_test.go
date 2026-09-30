@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"issueops/cmd/issueops/issueopscli/executioncmd"
-	auditadapter "issueops/internal/adapter/audit"
 	issueopscore "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/preflight"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -27,7 +26,7 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 	claimWiringGit(t, repo, "config", "user.email", "issueops@example.invalid")
 	claimWiringGit(t, repo, "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(preflight.GitOut(repo, "rev-parse", "HEAD"))
-	record, err := issueopscore.StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-wiring"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-wiring"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,10 +45,10 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 	})
 	process := &issueopscontract.NativeProcessReceipt{PID: 199, StartedAt: "2026-08-02T00:00:00Z", Executable: "/usr/local/bin/codex"}
 
-	result, err := handler(context.Background(), stateRoot, issueopscore.ExecutionPrepareRequest{
+	result, err := handler(context.Background(), stateRoot, issueopscontract.ExecutionPrepareRequest{
 		ID: record.ID, Mode: "direct", Actor: issueopscontract.NativeActor{Host: "codex", SessionID: "session", SessionProcess: process},
 		CWD: repo, DirectReason: "wiring preview test", Confirm: false,
-	}, issueopscore.ExecutionPrepareInvocation{})
+	}, port.ExecutionPrepareInvocation{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +71,7 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	claimWiringGit(t, repo, "init", "-q", "-b", "main")
 	claimWiringGit(t, repo, "-c", "user.name=IssueOps Test", "-c", "user.email=issueops@example.invalid", "commit", "--allow-empty", "-q", "-m", "initial")
 	baseHead := strings.TrimSpace(preflight.GitOut(repo, "rev-parse", "HEAD"))
-	record, err := issueopscore.StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-snapshot"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "199-preparation-snapshot"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,16 +111,16 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	seedPlannerGates(t, stateRoot, record.ID)
-	request := issueopscore.ExecutionActionRequest{
-		Action: issueopscore.ExecutionActionPrepare, ID: record.ID, Mode: "orca",
+	request := issueopscontract.ExecutionActionRequest{
+		Action: issueopscontract.ExecutionActionPrepare, ID: record.ID, Mode: "orca",
 		Actor: claimWiringActor(t), CWD: repo, OwnerHost: "codex",
 		IssueSnapshotFile: snapshotPath, IssueSnapshot: issueSnapshot,
 	}
-	previewRaw, err := issueopscore.ExecuteExecution(context.Background(), stateRoot, request, issueopscore.ExecutionActionDependencies{Prepare: handler, ReadIssue: fallback})
+	previewRaw, err := newExecutionService().Execute(context.Background(), stateRoot, request, port.ExecutionActionDependencies{Prepare: handler, ReadIssue: fallback})
 	if err != nil {
 		t.Fatal(err)
 	}
-	preview := previewRaw.(issueopscore.ExecutionPrepareResult)
+	preview := previewRaw.(issueopscontract.ExecutionPrepareResult)
 	if !strings.Contains(preview.NextCommand, "--issue-snapshot-file '") {
 		t.Fatalf("snapshot-backed preview lost exact confirm source: %s", preview.NextCommand)
 	}
@@ -131,20 +130,21 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	}
 	var raw any
 	err = executioncmd.Run(tokens[2:], executioncmd.Deps{
+		Runtime:   newIssueOpsExecutionRunners(),
 		StateRoot: func() string { return stateRoot }, Prepare: handler, ReadIssue: fallback,
 		PrintJSON: func(value any) error { raw = value; return nil },
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, ok := raw.(issueopscore.ExecutionPrepareResult)
+	result, ok := raw.(issueopscontract.ExecutionPrepareResult)
 	if !ok || !result.OK || result.ResolvedMode != "orca" || result.IssueSnapshotSource != "glab_mcp" {
 		t.Fatalf("result=%#v", raw)
 	}
 	if fallbackCalls != 0 {
 		t.Fatalf("validated request snapshot called provider fallback %d times", fallbackCalls)
 	}
-	observations, err := auditadapter.ReadHandoffDeliveryAuditObservationsAt(stateRoot)
+	observations, err := newHandoffDeliveryAudit(stateRoot).Read()
 	if err != nil || len(observations) == 0 {
 		t.Fatalf("fresh preparation bypassed delivery observation: observations=%d err=%v", len(observations), err)
 	}
@@ -164,7 +164,7 @@ func TestIssueOpsPrepareWiringRejectsActorBeforeStateMutation(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		issueopscontract.ExecutionPrepareRequest{ID: "io-forged-actor"},
-		issueopscore.ExecutionPrepareInvocation{},
+		port.ExecutionPrepareInvocation{},
 	)
 
 	if err == nil || !strings.Contains(err.Error(), "not in the local process ancestry") {

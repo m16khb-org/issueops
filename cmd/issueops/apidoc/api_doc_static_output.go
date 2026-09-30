@@ -1,8 +1,11 @@
 package apidoc
 
-import "fmt"
+import (
+	"fmt"
+	contract "issueops/internal/contract/apidoc"
+)
 
-func printAPIDocStaticCheck(result apiDocStaticResult) {
+func printAPIDocStaticCheck(result contract.StaticResult) {
 	if result.OK {
 		fmt.Println(result.Summary)
 		return

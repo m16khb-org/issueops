@@ -146,7 +146,7 @@ which stage a cycle is in, so every host gets the same answer.
 | 2 Prepare the branch | `issueops-prepare` | Seals the base SHA and links the branch to the issue |
 | 3 Read docs, plan, review, hand off | `issueops-plan` | Reads the operating docs, writes the plan, passes review, and picks the execution session automatically |
 | 4 Implement | `issueops-implement` | Implements with TDD in the canonical worktree |
-| 5 Clean AI slop | `issueops-clean` | Removes residue and seals the change set |
+| 5 Clean AI slop | `issueops-slop-clean` | Removes residue and seals the change set |
 | 6 Reflect into project docs | `issueops-docs` | Records decisions and pitfalls in the operating docs and reseals |
 | 7 Verify | `issueops-verify` | Re-runs verification, review, and readiness without touching files |
 | 8 Commit and push | `atomic-commit-push` | Commits and pushes the sealed change |
@@ -272,7 +272,7 @@ host's user-level skill path at this directory.
 - Execution and verification: `verified-execution`, `issueops-debugging`, `algorithm-optimization`, `database-design`, `code-quality-metrics`
 - Research and team work: `web-research`, `meeting-notes`, `slack-delegate`, `sharing-backend-work`
 - Git and operations: `git-operations`, `atomic-commit-push`, `rebase-onto-parent`, `gitlab-usecase`
-- IssueOps stages: `issueops` (router), `issueops-create-issue`, `issueops-prepare`, `issueops-plan`, `issueops-implement`, `issueops-clean`, `issueops-docs`, `issueops-verify`, `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, `issueops-abandon`
+- IssueOps stages: `issueops` (router), `issueops-create-issue`, `issueops-prepare`, `issueops-plan`, `issueops-implement`, `issueops-slop-clean`, `issueops-docs`, `issueops-verify`, `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, `issueops-abandon`
 - IssueOps shared: `issueops-review`, `gates-ledger`, `issueops-remote-write`, `issueops-sync-issue`, `issueops-sync-pr`
 - Project docs: `project-bootstrap`, `project-docs-bootstrap`, `project-docs-update`, `project-docs-optimize`
 - UI/UX and browser QA: `ui-ux-craft`, `aside-functional-qa`, `aside-visual-qa`, `aside-web-qa`, `read-public-artifact`. Of these, `ui-ux-craft` and `aside-web-qa` are reached from stages 4 and 7 when `next.review.frontend` is set; the other two QA skills are driven by that orchestrator, never called by the cycle directly

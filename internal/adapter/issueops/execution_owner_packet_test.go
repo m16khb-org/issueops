@@ -77,7 +77,7 @@ func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
 
 	artifacts, err := PrepareExecutionPreparationOwner(
 		context.Background(), stateRoot, preparationcontract.Snapshot{RecordRaw: raw},
-		preparationcontract.Command{ID: record.ID, OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh"},
+		preparationcontract.Command{ID: record.ID, OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh"},
 		preparationcontract.Intent{StartedAt: "2026-08-03T00:00:00Z", Workspace: workspace, IssueBodySHA256: digestExecutionOwnerBytes([]byte(issueBody))},
 		receipt, readIssue,
 	)
@@ -108,7 +108,12 @@ func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
 
 func TestExecutionOwnerReportContractGolden(t *testing.T) {
 	record, req := ownerPacketFixture()
-	got := renderExecutionOwnerReportContract(record, req)
+	prompt := executionOwnerPromptFixture(t, record, req)
+	_, report, found := strings.Cut(prompt, "## IssueOps v1 Owner Report\n")
+	if !found {
+		t.Fatal("owner prompt is missing its report contract")
+	}
+	got := "## IssueOps v1 Owner Report\n" + strings.TrimSpace(report)
 	want, err := os.ReadFile(filepath.Join("testdata", "execution_owner_report.golden.txt"))
 	if err != nil {
 		t.Fatal(err)
@@ -420,7 +425,7 @@ func TestExecutionOwnerPromptRenderingRejectsPlaceholderAndLineInjectionDetermin
 	}
 }
 
-func executionOwnerPromptFixture(t *testing.T, record issueops.IssueOpsRecord, req ExecutionPrepareRequest) string {
+func executionOwnerPromptFixture(t *testing.T, record issueops.IssueOpsRecord, req issueops.ExecutionPrepareRequest) string {
 	t.Helper()
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
 	packet := executionOwnerContextPacket{
@@ -442,7 +447,7 @@ func executionOwnerPromptFixture(t *testing.T, record issueops.IssueOpsRecord, r
 	return prompt
 }
 
-func ownerPacketFixture() (issueops.IssueOpsRecord, ExecutionPrepareRequest) {
+func ownerPacketFixture() (issueops.IssueOpsRecord, issueops.ExecutionPrepareRequest) {
 	record := issueops.IssueOpsRecord{
 		SchemaVersion: 1,
 		ID:            "io-69",
@@ -467,8 +472,8 @@ func ownerPacketFixture() (issueops.IssueOpsRecord, ExecutionPrepareRequest) {
 			Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
 		},
 	}
-	req := ExecutionPrepareRequest{
-		ID: "io-69", Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-5.6-sol", OwnerEffort: "high",
+	req := issueops.ExecutionPrepareRequest{
+		ID: "io-69", Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-6-sol", OwnerEffort: "high",
 	}
 	return record, req
 }
@@ -485,4 +490,82 @@ func executionOwnerReportLabels(report string) []string {
 		}
 	}
 	return labels
+}
+
+// A default-model change must reach the sealed packet, rendered prompt and review
+// command without rewriting an explicitly selected implementation model.
+func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
+	for _, tc := range []struct{ host, reviewer, effort, research, researchEffort string }{
+		{"codex", "gpt-6-astra", "xhigh", "gpt-6-luna", "medium"},
+		{"claude", "claude-opus-5-5", "high", "", ""},
+		{"omo", "chatgpt-subscription/gpt-6-astra", "max", "chatgpt-subscription/gpt-6-luna", "medium"},
+	} {
+		t.Run(tc.host, func(t *testing.T) {
+			record, req := ownerPacketFixture()
+			record.Execution.Workspace.Root = t.TempDir()
+			req.OwnerHost = tc.host
+			req.OwnerModel, req.OwnerEffort = "explicit-model", "low"
+			snapshot := executionOwnerSnapshot{issue: executionOwnerIssue{URL: record.IssueURL, Body: "AC-01", BodySHA256: strings.Repeat("a", 64)}}
+			artifacts, err := buildExecutionOwnerArtifacts(record, req, snapshot, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw, err := os.ReadFile(artifacts.packetPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var packet map[string]any
+			if err := json.Unmarshal(raw, &packet); err != nil {
+				t.Fatal(err)
+			}
+			for key, want := range map[string]string{"owner_model": "explicit-model", "owner_effort": "low", "reviewer_model": tc.reviewer, "reviewer_effort": tc.effort} {
+				if packet[key] != want {
+					t.Errorf("packet %s=%v want %s", key, packet[key], want)
+				}
+				if !strings.Contains(artifacts.prompt, key+"="+want) {
+					t.Errorf("prompt lost %s=%s", key, want)
+				}
+			}
+			for key, want := range map[string]string{"research_model": tc.research, "research_effort": tc.researchEffort} {
+				got, _ := packet[key].(string)
+				if got != want {
+					t.Errorf("packet %s=%q want %q", key, got, want)
+				}
+				if !strings.Contains(artifacts.prompt, key+"="+want) {
+					t.Errorf("prompt lost %s=%s", key, want)
+				}
+			}
+			commands := packet["commands"].(map[string]any)
+			if !strings.Contains(commands["implementation_review"].(string), "--reviewer-model '"+tc.reviewer+"'") {
+				t.Errorf("review command=%v", commands["implementation_review"])
+			}
+			if digestExecutionOwnerBytes(raw) != artifacts.packetSHA256 {
+				t.Fatal("packet seal mismatch")
+			}
+			prompt, err := os.ReadFile(artifacts.promptPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(prompt) != artifacts.prompt || digestExecutionOwnerBytes(prompt) != artifacts.promptSHA256 {
+				t.Fatal("prompt seal mismatch")
+			}
+		})
+	}
+}
+
+var issueOpsOwnerReportLabels = []string{
+	"Status",
+	"Lifecycle",
+	"Mode/host/model",
+	"Worktree/branch/final HEAD",
+	"Lease generation/completion",
+	"Issue/packet digests",
+	"Commits",
+	"Changed files",
+	"Acceptance evidence",
+	"Verification",
+	"AI-slop clean",
+	"Draft PR/MR",
+	"Deviations",
+	"Blockers",
 }

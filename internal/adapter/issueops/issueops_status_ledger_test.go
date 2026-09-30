@@ -11,7 +11,7 @@ import (
 func TestIssueOpsStatusDerivesLedgerWhenAbsent(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := initIssueOpsRepo(t)
-	rec, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-status"})
+	rec, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: "1-status"})
 	if err != nil {
 		t.Fatalf("start: %v", err)
 	}
@@ -24,7 +24,7 @@ func TestIssueOpsStatusDerivesLedgerWhenAbsent(t *testing.T) {
 	if len(status.PhaseLedger) == 0 {
 		t.Fatalf("status should derive a phase ledger for a record without one")
 	}
-	problem, ok := status.PhaseLedger[IssueOpsPhaseProblem]
+	problem, ok := status.PhaseLedger[issueops.IssueOpsPhaseProblem]
 	if !ok || len(problem.Missing) != 0 {
 		t.Fatalf("status ledger should mark problem complete (intent present): %#v", problem)
 	}

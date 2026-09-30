@@ -1,140 +1,51 @@
 package issueopslease
 
 import (
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
 	"issueops/internal/port"
 )
 
-type IssueSnapshot struct {
-	URL  string
-	Body string
+// ClaimContextReader observes persisted records and private sealed files.
+type ClaimContextReader struct{ store port.TransactionalRecordStore }
+
+func NewClaimContextReader(store port.TransactionalRecordStore) *ClaimContextReader {
+	return &ClaimContextReader{store: store}
 }
-
-type IssueSnapshotReader func(context.Context, string, string) (IssueSnapshot, error)
-
-type ClaimContextPreflight struct {
-	store     port.TransactionalRecordStore
-	readIssue IssueSnapshotReader
-}
-
-func NewClaimContextPreflight(store port.TransactionalRecordStore, readIssue IssueSnapshotReader) *ClaimContextPreflight {
-	return &ClaimContextPreflight{store: store, readIssue: readIssue}
-}
-
-func (p *ClaimContextPreflight) Preflight(ctx context.Context, request leaseapp.ClaimPreflightRequest) (leaseapp.RecordValidator, error) {
+func (p *ClaimContextReader) Load(id string) (leasecontract.Record, error) {
 	if p == nil || p.store == nil {
-		return nil, fmt.Errorf("claim context store is required")
+		return leasecontract.Record{}, fmt.Errorf("claim context store is required")
 	}
-	data, ok, err := p.store.Get(recordBucket, request.ID)
+	data, ok, err := p.store.Get(recordBucket, id)
 	if err != nil {
-		return nil, leasecontract.Fail(leasecontract.FailurePersistence, err)
+		return leasecontract.Record{}, leasecontract.Fail(leasecontract.FailurePersistence, err)
 	}
 	if !ok {
-		return nil, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", request.ID))
+		return leasecontract.Record{}, leasecontract.Fail(leasecontract.FailurePersistence, fmt.Errorf("issueops record %s not found", id))
 	}
-	record, err := decodeLeaseRecord(request.ID, data)
+	record, err := decodeMutableLeaseRecord(id, data)
 	if err != nil {
-		return nil, err
+		return leasecontract.Record{}, err
 	}
-	if record.Execution == nil || record.Execution.Mode != "orca" || request.Generation == 0 || request.Generation != record.Execution.Lease.Generation {
-		return func(leaseapp.Record) error { return nil }, nil
-	}
-	issueDigest := strings.ToLower(strings.TrimSpace(request.IssueBodySHA256))
-	packetDigest := strings.ToLower(strings.TrimSpace(request.ContextPacketSHA256))
-	if !claimSHA256(issueDigest) || !claimSHA256(packetDigest) {
-		return nil, fmt.Errorf("Orca claim requires sealed issue and context packet digests")
-	}
-	if err := validateClaimPacket(record, issueDigest, packetDigest); err != nil {
-		return nil, err
-	}
-	if p.readIssue == nil {
-		return nil, fmt.Errorf("remote issue snapshot reader is unavailable for the Orca claim")
-	}
-	snapshot, err := p.readIssue(ctx, record.Repo, record.IssueURL)
-	if err != nil {
-		return nil, fmt.Errorf("read remote issue before claim: %w", err)
-	}
-	if strings.TrimSpace(snapshot.URL) != strings.TrimSpace(record.IssueURL) {
-		return nil, fmt.Errorf("remote issue snapshot url does not match the linked issue: observed=%s expected=%s", strings.TrimSpace(snapshot.URL), strings.TrimSpace(record.IssueURL))
-	}
-	if observed := claimDigest([]byte(snapshot.Body)); observed != issueDigest {
-		return nil, fmt.Errorf("remote issue body digest drifted from the sealed owner context: expected=%s observed=%s; reseal with `issueops execution replace --reseed` after confirming the revision is intended", issueDigest, observed)
-	}
-	return func(current leaseapp.Record) error {
-		return validateClaimPacket(current.Stable, issueDigest, packetDigest)
-	}, nil
+	return record, nil
 }
-
-type claimContextPacket struct {
-	SchemaVersion    int               `json:"schema_version"`
-	LifecycleID      string            `json:"lifecycle_id"`
-	Mode             string            `json:"mode"`
-	SourceRoot       string            `json:"source_root"`
-	WorktreeRoot     string            `json:"worktree_root"`
-	Branch           string            `json:"branch"`
-	BaseHead         string            `json:"base_head"`
-	LeaseGeneration  uint64            `json:"lease_generation"`
-	Issue            claimPacketIssue  `json:"issue"`
-	ArtifactManifest map[string]string `json:"artifact_manifest"`
+func (*ClaimContextReader) ReadPacket(record leasecontract.Record) ([]byte, string, error) {
+	path := claimContextPacketPath(record)
+	data, err := readClaimOwnerArtifact(record.Execution.Workspace.Root, path)
+	return data, path, err
 }
-
-type claimPacketIssue struct {
-	URL        string `json:"url"`
-	Body       string `json:"body"`
-	BodySHA256 string `json:"body_sha256"`
+func (*ClaimContextReader) DecodePacket(data []byte) (leasecontract.ClaimContextPacket, error) {
+	var packet leasecontract.ClaimContextPacket
+	err := json.Unmarshal(data, &packet)
+	return packet, err
 }
-
-func validateClaimPacket(record leasecontract.Record, issueDigest, packetDigest string) error {
-	if record.Execution == nil || record.Execution.Mode != "orca" || record.Execution.Lease.Generation == 0 {
-		return fmt.Errorf("sealed owner context no longer matches an Orca execution generation")
-	}
-	packetPath := claimContextPacketPath(record)
-	data, err := readClaimOwnerArtifact(record.Execution.Workspace.Root, packetPath)
-	if err != nil {
-		return fmt.Errorf("read sealed context packet: %w", err)
-	}
-	if observed := claimDigest(data); observed != packetDigest {
-		return fmt.Errorf("sealed context packet digest mismatch: expected=%s observed=%s path=%s", packetDigest, observed, packetPath)
-	}
-	var packet claimContextPacket
-	if err := json.Unmarshal(data, &packet); err != nil {
-		return fmt.Errorf("parse sealed context packet: %w", err)
-	}
-	execution := record.Execution
-	if packet.SchemaVersion != leasecontract.SchemaVersion || packet.LifecycleID != record.ID || packet.Mode != execution.Mode ||
-		!(FilesystemPathMatcher{}).Matches(packet.SourceRoot, execution.Workspace.SourceRoot) ||
-		!(FilesystemPathMatcher{}).Matches(packet.WorktreeRoot, execution.Workspace.Root) ||
-		packet.Branch != execution.Workspace.Branch || packet.BaseHead != execution.Workspace.BaseHead ||
-		packet.LeaseGeneration != execution.Lease.Generation || packet.Issue.URL != record.IssueURL {
-		return fmt.Errorf("sealed context packet execution identity mismatch: packet_generation=%d expected_generation=%d", packet.LeaseGeneration, execution.Lease.Generation)
-	}
-	if packet.Issue.BodySHA256 != issueDigest {
-		return fmt.Errorf("sealed context packet issue body digest mismatch: expected=%s observed=%s", issueDigest, packet.Issue.BodySHA256)
-	}
-	if observed := claimDigest([]byte(packet.Issue.Body)); observed != issueDigest {
-		return fmt.Errorf("sealed context packet issue body does not hash to its sealed digest: expected=%s observed=%s", issueDigest, observed)
-	}
-	for name, digest := range packet.ArtifactManifest {
-		path := sealedClaimArtifactPath(execution, execution.Workspace.Root, name)
-		artifact, err := readClaimOwnerArtifact(execution.Workspace.Root, path)
-		if err != nil {
-			return fmt.Errorf("read sealed artifact %s: %w", name, err)
-		}
-		if claimDigest(artifact) != digest {
-			return fmt.Errorf("sealed artifact %s digest mismatch", name)
-		}
-	}
-	return nil
+func (*ClaimContextReader) ReadArtifact(record leasecontract.Record, name string) ([]byte, error) {
+	return readClaimOwnerArtifact(record.Execution.Workspace.Root, sealedClaimArtifactPath(record.Execution, record.Execution.Workspace.Root, name))
 }
 
 // sealedClaimArtifactPath는 record가 기록한 artifact_dir 아래의 봉인 아티팩트 경로다.
@@ -175,17 +86,4 @@ func readClaimOwnerArtifact(root, path string) ([]byte, error) {
 		}
 	}
 	return os.ReadFile(path)
-}
-
-func claimDigest(data []byte) string {
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:])
-}
-
-func claimSHA256(value string) bool {
-	if len(value) != 64 {
-		return false
-	}
-	_, err := hex.DecodeString(value)
-	return err == nil
 }

@@ -4,10 +4,15 @@ import (
 	"flag"
 	"fmt"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	contract "issueops/internal/contract/selfaugment"
 )
 
-func RunSelfAugmentLesson(args []string, deps Deps) error {
+type Deps struct {
+	Save      func(contract.SelfAugmentLessonRequest) (contract.SelfAugmentLessonResult, error)
+	PrintJSON func(any) error
+}
+
+func Run(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("self-augment lesson", flag.ContinueOnError)
 	candidateID := fs.String("candidate", "", "candidate id this lesson belongs to; defaults to the current selected open candidate")
 	lesson := fs.String("lesson", "", "Reflexion-style lesson learned from a failure, QA issue, or design concern")
@@ -19,14 +24,14 @@ func RunSelfAugmentLesson(args []string, deps Deps) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := SaveSelfAugmentLesson(model.SelfAugmentLessonRequest{
+	result, err := deps.Save(contract.SelfAugmentLessonRequest{
 		CandidateID: *candidateID,
 		Lesson:      *lesson,
 		NextAction:  *nextAction,
 		Source:      *source,
 		Severity:    *severity,
 		StateKey:    *stateKey,
-	}, deps)
+	})
 	if err != nil {
 		return err
 	}

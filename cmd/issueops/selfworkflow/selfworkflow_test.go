@@ -1,15 +1,18 @@
 package selfworkflow
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"bytes"
 	"errors"
 	"fmt"
+	"issueops/cmd/issueops/selfworkflow/promotecmd"
+	"issueops/cmd/issueops/selfworkflow/verifycmd"
+	domain "issueops/internal/domain/selfaugment"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"issueops/cmd/issueops/selfworkflow/llmeval"
 )
 
 func TestSelfWorkflowCandidateExportAndStateWrappers(t *testing.T) {
@@ -111,16 +114,16 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if fileExists(filepath.Join(t.TempDir(), "missing")) {
 		t.Fatal("missing file should not exist")
 	}
-	if _, ok := ParseSelfAugmentTimestamp(time.Now().UTC().Format(time.RFC3339Nano)); !ok {
+	if _, ok := domain.ParseHistoryTimestamp(time.Now().UTC().Format(time.RFC3339Nano)); !ok {
 		t.Fatal("timestamp should parse")
 	}
-	if _, ok := ParseSelfAugmentTimestamp("bad"); ok {
+	if _, ok := domain.ParseHistoryTimestamp("bad"); ok {
 		t.Fatal("bad timestamp should not parse")
 	}
-	if got := MissingStrings([]string{"a", "b"}, []string{"b"}); len(got) != 1 || got[0] != "a" {
+	if got := domain.MissingStrings([]string{"a", "b"}, []string{"b"}); len(got) != 1 || got[0] != "a" {
 		t.Fatalf("MissingStrings = %#v", got)
 	}
-	if NonNilStringSlice(nil) == nil || NonNilSlowStepSlice(nil) == nil {
+	if nonNilStringSliceForTest(nil) == nil || nonNilSlowStepSliceForTest(nil) == nil {
 		t.Fatal("non-nil wrappers should return empty slices")
 	}
 	slow := []SelfAugmentSlowStep{{Label: "test", DurationMS: 10}, {Label: "test", DurationMS: 20}}
@@ -134,7 +137,7 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if StepDurationStatByLabel(stats)["test"].MaxDurationMS != 30 {
 		t.Fatal("step duration lookup mismatch")
 	}
-	regressions := CompareStepBudgetRegressions(
+	regressions := domain.CompareStepBudgetRegressions(
 		[]SelfAugmentStepDurationStat{{Label: "test", Count: 1, P95DurationMS: 100}},
 		[]SelfAugmentStepDurationStat{{Label: "test", Count: 1, P95DurationMS: 140}},
 		10,
@@ -142,7 +145,7 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if len(regressions) != 1 {
 		t.Fatalf("expected budget regression, got %#v", regressions)
 	}
-	slowRegressions := CompareSlowestStepRegressions(
+	slowRegressions := domain.CompareSlowestStepRegressions(
 		[]SelfAugmentSlowStep{{Label: "test", DurationMS: 10}},
 		[]SelfAugmentSlowStep{{Label: "test", DurationMS: 20}},
 		10,
@@ -250,7 +253,7 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 		IssueOpsRoot:        t.TempDir(),
 		Summary:             SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true},
 	}
-	if err := RunSelfVerifyWithDeps([]string{"--json", "--save-state", "--state-key", "verify-latest", "--seed", "100"}, SelfVerifyRunDeps{
+	if err := verifycmd.Run([]string{"--json", "--save-state", "--state-key", "verify-latest", "--seed", "100"}, verifycmd.Deps{
 		LookupEnv:      func(string) (string, bool) { return "", false },
 		ProgressWriter: &bytes.Buffer{},
 		Verify: func(request SelfVerifyRequest) (SelfAugmentResult, error) {
@@ -265,7 +268,7 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 			}
 			return nil
 		},
-		ApplyLLMEval: func(SelfAugmentResult, llmeval.SelfVerifyLLMEvalOptions) (SelfAugmentResult, error) {
+		ApplyLLMEval: func(SelfAugmentResult, selfverify.LLMEvalOptions) (SelfAugmentResult, error) {
 			return SelfAugmentResult{}, fmt.Errorf("LLM eval should not run without an explicit flag or env")
 		},
 		PrintJSON: func(any) error { return nil },
@@ -286,7 +289,7 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 	if !savedCandidate {
 		t.Fatal("candidate export was not saved through deps")
 	}
-	if err := RunSelfVerifyPromoteWithDeps([]string{"--from-key", "verify-latest", "--baseline-key", "baseline", "--json"}, SelfVerifyPromoteDeps{
+	if err := promotecmd.Run([]string{"--from-key", "verify-latest", "--baseline-key", "baseline", "--json"}, promotecmd.Deps{PrintJSON: printJSON,
 		Promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error) {
 			return SelfAugmentPromoteResult{OK: true, FromKey: fromKey, BaselineKey: baselineKey, Confirm: confirm, DryRun: !confirm, SourcePassed: true}, nil
 		},
@@ -330,4 +333,17 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 	if err != nil || !promote.DryRun {
 		t.Fatalf("PromoteSelfAugmentBaseline dry-run: %#v err=%v", promote, err)
 	}
+}
+
+func nonNilStringSliceForTest(items []string) []string {
+	if items == nil {
+		return []string{}
+	}
+	return items
+}
+func nonNilSlowStepSliceForTest(items []SelfAugmentSlowStep) []SelfAugmentSlowStep {
+	if items == nil {
+		return []SelfAugmentSlowStep{}
+	}
+	return items
 }

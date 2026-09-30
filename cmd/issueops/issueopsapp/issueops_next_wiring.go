@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	ownerapp "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"issueops/cmd/issueops/issueopscli/executioncmd"
 	issueopsnextinbound "issueops/internal/adapter/inbound/issueopsnext"
 	issueopscore "issueops/internal/adapter/issueops"
-	"issueops/internal/adapter/issueops/implementation"
 	issueopsinventoryoutbound "issueops/internal/adapter/outbound/issueopsinventory"
 	"issueops/internal/adapter/outbound/issueopsrecord"
 	preflightadapter "issueops/internal/adapter/preflight"
@@ -18,7 +18,8 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	issueopsinventorycontract "issueops/internal/contract/issueopsinventory"
 	issueopsnextcontract "issueops/internal/contract/issueopsnext"
-	"issueops/internal/port"
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	"issueops/internal/domain/agentmodel"
 )
 
 // issueOpsNextHandler는 단계 분류에 필요한 관측을 꽂는다. 전부 읽기 전용이며,
@@ -32,22 +33,24 @@ func issueOpsNextHandler(
 	string,
 ) (issueopsnextcontract.Result, error) {
 	listCycles := issueOpsInventoryListHandler(observers...)
+	readiness := newCycleReadiness()
+	changes := newChangeReader()
 	return func(stateRoot, cwd, id string) (issueopsnextcontract.Result, error) {
 		localObservation := nextLocalReadinessObservation{
-			observe:  issueopscore.ObserveIssueOpsLocalPRReadiness,
-			fallback: implementation.ObservedChangedPaths,
+			observe:  readiness.ObserveLocalPR,
+			fallback: changes.ObservedChangedPaths,
 		}
 		service := issueopsnextapplication.NewService(issueopsnextapplication.Ports{
 			ListCycles: func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
 				return listCycles(stateRoot, repo)
 			},
 			ReadRecord:          issueopscore.ReadIssueOps,
-			Completion:          issueopscore.IssueOpsPhaseCompletion,
+			Completion:          readiness.Completion,
 			LocalReadiness:      localObservation.localReadiness,
-			WriterlessCommand:   issueopscore.ExecutionWriterAbsentRecoveryCommand,
-			PlannerDefaults:     port.IssueOpsPlannerDefaults,
+			WriterlessCommand:   ownerapp.WriterlessCommand,
+			PlannerDefaults:     agentmodel.PlannerDefaults,
 			ChangedPaths:        localObservation.changedPaths,
-			ReviewEffortForTier: port.IssueOpsReviewEffortForTier,
+			ReviewEffortForTier: agentmodel.ReviewEffortForTier,
 			StagedArtifacts:     stagedArtifactNames,
 			Actor: func() (string, string, error) {
 				host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
@@ -68,10 +71,10 @@ func issueOpsNextHandler(
 }
 
 type nextLocalReadinessObservation struct {
-	observe  func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, implementation.LocalChangeObservation)
+	observe  func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsReadiness, reviewcontract.LocalChangeObservation)
 	fallback func(issueopscontract.IssueOpsRecord) ([]string, bool)
 	record   nextObservationRecord
-	changes  implementation.LocalChangeObservation
+	changes  reviewcontract.LocalChangeObservation
 	set      bool
 }
 

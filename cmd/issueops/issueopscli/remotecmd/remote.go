@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	artifacttemplate "issueops/internal/domain/artifacttemplate"
-	issueopsremote "issueops/internal/domain/issueopsremote"
-	policydomain "issueops/internal/domain/policy"
-	port "issueops/internal/port"
 	"os"
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
+	artifacttemplate "issueops/internal/domain/artifacttemplate"
+	issueopsremote "issueops/internal/domain/issueopsremote"
 )
 
 type Deps struct {
@@ -26,7 +24,10 @@ type Deps struct {
 	Publication            PublicationHandlers
 }
 
-func Run(args []string, deps Deps) error {
+func (command Command) Run(args []string, deps Deps) error {
+	if deps.ObserveProcessAncestry == nil {
+		deps.ObserveProcessAncestry = command.Operations.ObserveNativeProcessAncestry
+	}
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
 		fmt.Println("Usage:")
 		fmt.Println("  issueops remote score --input PATH [--judge none|prompt|file] [--judge-file PATH] [--json]")
@@ -37,10 +38,10 @@ func Run(args []string, deps Deps) error {
 		fmt.Println("  issueops remote create-child --id ID --title TEXT [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
 		fmt.Println("  issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--body TEXT] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo --session-id SESSION [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd WORKER_PATH [--confirm] [--json]")
 		fmt.Println("  issueops remote sync-graph --id ID [--confirm] [--json]")
-		fmt.Println("  issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] [--host codex|claude|omo] [--session-id SESSION] [--agent-id ID] [--cwd WORKER_PATH] [--confirm] [--json]")
-		fmt.Println("  issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND] [--expected-body-sha256 SHA] [--accept-remote-edits] --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
+		fmt.Println("  issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] [--host codex|claude|omo] [--session-id SESSION] [--agent-id ID] [--cwd WORKER_PATH] [--confirm] [--json]")
+		fmt.Println("  issueops remote sync-pr --id ID --expected-generation N [--provider github|gitlab] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
 		fmt.Println("  issueops remote reflect-devils-advocate --id ID [--provider github|gitlab] --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
-		fmt.Println("  issueops remote reflect-completion --id ID [--provider github|gitlab] [--body-file PATH] [--confirm] [--json]")
+		fmt.Println("  issueops remote reflect-completion --id ID [--provider github|gitlab] [--confirm] [--json]")
 		fmt.Println("  issueops remote close-issue --id ID [--provider github|gitlab] [--confirm] [--json]")
 		return nil
 	}
@@ -70,7 +71,7 @@ func Run(args []string, deps Deps) error {
 			return err
 		}
 		if *judge == "prompt" {
-			result, promptErr := remoteDeps.RenderIssueOpsRemoteJudgePrompt(issueopsremote.IssueOpsRemoteLLMJudgeRequest{Request: req})
+			result, promptErr := issueopsremote.RenderIssueOpsRemoteJudgePrompt(issueopsremote.IssueOpsRemoteLLMJudgeRequest{Request: req})
 			if promptErr != nil {
 				if *jsonOut {
 					if printErr := deps.printError(promptErr); printErr != nil {
@@ -90,7 +91,7 @@ func Run(args []string, deps Deps) error {
 		case "file":
 			result, err = readIssueOpsRemoteJudgeFile(*judgeFile)
 		case "none":
-			result, err = remoteDeps.ScoreIssueOpsRemoteCandidates(req)
+			result, err = issueopsremote.ScoreIssueOpsRemoteCandidates(req)
 		default:
 			err = fmt.Errorf("unsupported issueops remote score judge %q", *judge)
 		}
@@ -142,49 +143,38 @@ func Run(args []string, deps Deps) error {
 			Labels:       labels,
 			Assignees:    assignees,
 		}
-		_, err := remoteDeps.ValidateIssueOpsRemoteArtifactVerification(remoteDeps.IssueOpsStateRoot(), *id, req)
-		var record issueopscontract.IssueOpsRecord
-		if err == nil {
-			err = deps.verifyLive(context.Background(), req)
-		}
-		if err == nil {
-			var ancestry []issueopscontract.NativeProcessReceipt
-			ancestry, err = deps.observeNativeProcessAncestry()
-			if err == nil {
-				record, err = remoteDeps.VerifyIssueOpsRemoteArtifactWithActor(remoteDeps.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
-					Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd, NativeProcessAncestry: ancestry,
-				})
-			}
-		}
+		record, err := command.Operations.VerifyRemoteArtifact(context.Background(), command.Operations.IssueOpsStateRoot(), *id, req, issueopscontract.IssueOpsActor{
+			Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
+		}, deps.verifyLive, deps.observeNativeProcessAncestry)
 		return deps.printResult(record, *jsonOut, err)
 	case "render-template":
-		return runRemoteRenderTemplate(args[1:], deps)
+		return command.runRemoteRenderTemplate(args[1:], deps)
 	case "create-issue":
-		return runRemoteCreateIssue(context.Background(), args[1:], deps)
+		return command.runRemoteCreateIssue(context.Background(), args[1:], deps)
 	case "reconcile-issue":
-		return runRemoteReconcileIssue(context.Background(), args[1:], deps)
+		return command.runRemoteReconcileIssue(context.Background(), args[1:], deps)
 	case "create-child":
-		return runRemoteCreateChild(args[1:], deps)
+		return command.runRemoteCreateChild(args[1:], deps)
 	case "create-pr":
-		return runRemoteCreatePR(args[1:], deps)
+		return command.runRemotePublication(args[1:], deps)
 	case "sync-graph":
-		return runRemoteSyncGraph(args[1:], deps)
+		return command.runIssueGraphSync(args[1:], deps)
 	case "sync-issue":
-		return runRemoteSyncIssue(context.Background(), args[1:], deps)
+		return command.runRemoteSyncIssue(context.Background(), args[1:], deps)
 	case "sync-pr":
-		return runRemoteSyncPR(context.Background(), args[1:], deps)
+		return command.runRemoteSyncPR(context.Background(), args[1:], deps)
 	case "reflect-devils-advocate":
-		return runRemoteReflectDevilsAdvocate(args[1:], deps)
+		return command.runRemoteReflectDevilsAdvocate(args[1:], deps)
 	case "reflect-completion":
-		return runRemoteReflectCompletion(args[1:], deps)
+		return command.runRemoteReflectCompletion(args[1:], deps)
 	case "close-issue":
-		return runRemoteCloseIssue(args[1:], deps)
+		return command.runRemoteCloseIssue(args[1:], deps)
 	default:
 		return fmt.Errorf("unknown issueops remote subcommand %q", args[0])
 	}
 }
 
-func runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
+func (command Command) runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote reflect-devils-advocate", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
@@ -197,26 +187,9 @@ func runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := remoteDeps.ReadIssueOps(remoteDeps.IssueOpsStateRoot(), *id)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	providerName := firstNonEmptyMain(*providerOverride, remoteDeps.ResolveRecordProvider(record))
-	if providerName == "" {
-		err := fmt.Errorf("cannot determine provider from IssueOps record; ensure issue_url is set")
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	prov, err := Resolve(providerName)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	ancestry, err := deps.observeNativeProcessAncestry()
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	_, result, err := remoteDeps.ReflectDevilsAdvocateFindingsWithActor(remoteDeps.IssueOpsStateRoot(), *id, *confirm, prov, issueopscontract.IssueOpsActor{
-		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd, NativeProcessAncestry: ancestry,
-	})
+	_, result, err := command.Operations.ReflectReviewFindings(context.Background(), command.Operations.IssueOpsStateRoot(), *id, *providerOverride, *confirm, issueopscontract.IssueOpsActor{
+		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd,
+	}, deps.observeNativeProcessAncestry)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
@@ -225,99 +198,6 @@ func runRemoteReflectDevilsAdvocate(args []string, deps Deps) error {
 	}
 	if result.Updated {
 		fmt.Printf("reflected devil's-advocate findings: %s\n", result.URL)
-	} else {
-		fmt.Println(result.Preview)
-	}
-	return nil
-}
-
-// resolveRemoteCompletionInputs는 completion 계열 명령의 공통 전제(레코드,
-// provider, provider readback 머지 검증)를 fail-closed로 해석한다. readback
-// 실패는 "판정 불가"이며 강등 없이 에러다(설계 v5 WS3).
-func resolveRemoteCompletionInputs(deps Deps, id, providerOverride string) (issueopscontract.IssueOpsRecord, port.IssueProvider, error) {
-	record, err := remoteDeps.ReadIssueOps(remoteDeps.IssueOpsStateRoot(), id)
-	if err != nil {
-		return issueopscontract.IssueOpsRecord{}, nil, err
-	}
-	providerName := firstNonEmptyMain(providerOverride, remoteDeps.ResolveRecordProvider(record))
-	if providerName == "" {
-		return issueopscontract.IssueOpsRecord{}, nil, fmt.Errorf("cannot determine provider from IssueOps record; ensure issue_url is set")
-	}
-	prov, err := Resolve(providerName)
-	if err != nil {
-		return issueopscontract.IssueOpsRecord{}, nil, err
-	}
-	if record.RemoteArtifact == nil {
-		return issueopscontract.IssueOpsRecord{}, nil, fmt.Errorf("cannot verify merge evidence before a verified remote artifact")
-	}
-	if deps.VerifyMerged == nil {
-		return issueopscontract.IssueOpsRecord{}, nil, fmt.Errorf("merge verification is not configured")
-	}
-	if err := deps.VerifyMerged(*record.RemoteArtifact); err != nil {
-		return issueopscontract.IssueOpsRecord{}, nil, fmt.Errorf("merge evidence readback failed (refusing to continue): %w", err)
-	}
-	return record, prov, nil
-}
-
-func runRemoteReflectCompletion(args []string, deps Deps) error {
-	fs := flag.NewFlagSet("issueops remote reflect-completion", flag.ContinueOnError)
-	id := fs.String("id", "", "IssueOps id")
-	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
-	bodyFile := fs.String("body-file", "", "progress report markdown file written for human readers; required with --confirm")
-	confirm := fs.Bool("confirm", false, "write to the remote issue; without this, dry-run preview only")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseFlags(fs, args); help || err != nil {
-		return err
-	}
-	resultBody, err := readBodyInput("", *bodyFile)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	// 원고 없는 confirm은 머지 readback 전에 거부한다. provider를 부를 이유가 없다.
-	if *confirm && resultBody == "" {
-		return deps.printErrorResult(*jsonOut, fmt.Errorf("--body-file is required with --confirm: write the progress report for human readers first"))
-	}
-	_, prov, err := resolveRemoteCompletionInputs(deps, *id, *providerOverride)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	_, result, report, err := remoteDeps.ReflectIssueCompletion(remoteDeps.IssueOpsStateRoot(), *id, resultBody, true, *confirm, prov)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	if *jsonOut {
-		return deps.printJSON(reflectCompletionResponse{IssueProviderUpdateIssueBodySectionResult: result, Readability: report})
-	}
-	if result.Updated {
-		fmt.Printf("reflected completion section: %s\n", result.URL)
-	} else {
-		fmt.Println(result.Preview)
-	}
-	return nil
-}
-
-func runRemoteCloseIssue(args []string, deps Deps) error {
-	fs := flag.NewFlagSet("issueops remote close-issue", flag.ContinueOnError)
-	id := fs.String("id", "", "IssueOps id")
-	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
-	confirm := fs.Bool("confirm", false, "close the remote issue; without this, dry-run preview only")
-	jsonOut := fs.Bool("json", false, "print JSON")
-	if help, err := parseFlags(fs, args); help || err != nil {
-		return err
-	}
-	_, prov, err := resolveRemoteCompletionInputs(deps, *id, *providerOverride)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	_, result, err := remoteDeps.CloseIssueOpsRemoteIssue(remoteDeps.IssueOpsStateRoot(), *id, true, *confirm, prov)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	if *jsonOut {
-		return deps.printJSON(result)
-	}
-	if result.Closed {
-		fmt.Printf("closed issue: %s\n", result.IssueURL)
 	} else {
 		fmt.Println(result.Preview)
 	}
@@ -369,18 +249,6 @@ func (deps Deps) verifyLive(ctx context.Context, req issueopscontract.IssueOpsRe
 	return fmt.Errorf("live remote artifact verifier is not configured")
 }
 
-func durableIssueCreateFailure(err error) string {
-	if err == nil {
-		return ""
-	}
-	const maxBytes = 2048
-	diagnostic := policydomain.RedactDiagnostic(strings.TrimSpace(err.Error()))
-	if len(diagnostic) > maxBytes {
-		diagnostic = policydomain.TruncateBytes(diagnostic, maxBytes)
-	}
-	return diagnostic
-}
-
 func parseFlags(fs *flag.FlagSet, args []string) (bool, error) {
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
@@ -400,10 +268,6 @@ func (f *repeatedFlag) String() string {
 func (f *repeatedFlag) Set(value string) error {
 	*f = append(*f, value)
 	return nil
-}
-
-func normalizeRemoteCreateMetadata(labels, assignees repeatedFlag) (repeatedFlag, repeatedFlag) {
-	return repeatedFlag(issueopsremote.CleanValues(labels)), repeatedFlag(issueopsremote.CleanValues(assignees))
 }
 
 func formatIssueOpsRemoteIssueRef(issue issueopsremote.IssueOpsRemoteScoredItem) string {
@@ -428,7 +292,7 @@ func readIssueOpsRemoteScoringRequestFile(path string) (issueopsremote.IssueOpsR
 		return issueopsremote.IssueOpsRemoteScoringRequest{}, err
 	}
 	var req issueopsremote.IssueOpsRemoteScoringRequest
-	req, err = remoteDeps.DecodeIssueOpsRemoteScoringRequest(b)
+	req, err = issueopsremote.DecodeIssueOpsRemoteScoringRequest(b)
 	if err != nil {
 		return issueopsremote.IssueOpsRemoteScoringRequest{}, fmt.Errorf("parse input file %s: %w", path, err)
 	}
@@ -444,14 +308,14 @@ func readIssueOpsRemoteJudgeFile(path string) (issueopsremote.IssueOpsRemoteScor
 	if err != nil {
 		return issueopsremote.IssueOpsRemoteScoringResult{}, err
 	}
-	result, err := remoteDeps.DecodeIssueOpsRemoteJudgeJSON(b)
+	result, err := issueopsremote.DecodeIssueOpsRemoteJudgeJSON(b)
 	if err != nil {
 		return issueopsremote.IssueOpsRemoteScoringResult{}, fmt.Errorf("parse judge file %s: %w", path, err)
 	}
 	return result, nil
 }
 
-func runRemoteRenderTemplate(args []string, deps Deps) error {
+func (command Command) runRemoteRenderTemplate(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote render-template", flag.ContinueOnError)
 	kind := fs.String("kind", "", "artifact kind: issue, child, or pr")
 	template := fs.String("template", "", "template kind")
@@ -468,7 +332,7 @@ func runRemoteRenderTemplate(args []string, deps Deps) error {
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}
-	scoreSummary, err := readScoreSummaryFile(*scoreFile)
+	scoreSummary, err := command.Operations.ReadScoreSummaryFile(*scoreFile)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

@@ -1,6 +1,8 @@
 package hostprobe
 
 import (
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -13,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"issueops/internal/adapter/toolconformance"
 	"issueops/internal/port"
 )
 
@@ -32,7 +33,7 @@ func claudeProbeRequest() port.HostProbeRequest {
 		ProbeTool:     "issueops_web_fetch_resilient",
 		SchemaSHA256:  "schema-sha",
 		Prompt:        "Call only the probe tool.",
-		Model:         "claude-opus-4-6",
+		Model:         "claude-opus-5-5",
 		Profile:       "clean",
 		Attempt:       1,
 		RunToken:      "episode-token",
@@ -53,7 +54,7 @@ func writeClaudeCapture(t *testing.T, resultPath, token string) {
 		Classification:     "exact_valid",
 		AdvertisedValid:    true,
 		CanonicalValid:     true,
-		Diagnostics:        []toolconformance.Diagnostic{},
+		Diagnostics:        []fixturecontract.Diagnostic{},
 	}
 	data, err := json.Marshal(capture)
 	if err != nil {
@@ -226,7 +227,7 @@ func TestClaudeRunnerNormalLiveCollectsCanonicalRuntimeEvidenceWithoutActivatedH
 			writeClaudeCapture(t, filepath.Join(command.Cwd, "result.json"), request.RunToken)
 			writeChildSmokeHookMarkers(t, observationPath, request.Model)
 			stream := strings.Join([]string{
-				`{"type":"system","subtype":"init","model":"claude-opus-4-6"}`,
+				`{"type":"system","subtype":"init","model":"claude-opus-5-5"}`,
 				`{"type":"assistant","message":{"content":[{"type":"tool_use","id":"target","name":"mcp__issueops_probe__issueops_web_fetch_resilient","input":{}}]}}`,
 				`{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"target","content":"captured"}]},"tool_use_result":{"content":"captured"}}`,
 			}, "\n") + "\n"

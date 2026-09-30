@@ -12,7 +12,7 @@ import (
 func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemoval(t *testing.T) {
 	stateRoot := t.TempDir()
 	repo := t.TempDir()
-	record, err := StartIssueOps(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-switch-provenance"})
+	record, err := startIssueOpsFixture(stateRoot, issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "303-switch-provenance"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemova
 		t.Fatal(err)
 	}
 	git := func(string, ...string) (int, string) { return 1, "" }
-	preview, err := SwitchExecutionMode(context.Background(), stateRoot, ExecutionSwitchModeRequest{
+	preview, err := SwitchExecutionMode(context.Background(), stateRoot, issueopscontract.ExecutionSwitchModeRequest{
 		ID: record.ID, Mode: "orca",
 	}, ExecutionSwitchModeDependencies{Git: git})
 	if err != nil {
@@ -39,7 +39,7 @@ func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemova
 	if preview.NextCommand == "" || preview.LeaseGeneration != 6 {
 		t.Fatalf("switch preview = %#v", preview)
 	}
-	result, err := SwitchExecutionMode(context.Background(), stateRoot, ExecutionSwitchModeRequest{
+	result, err := SwitchExecutionMode(context.Background(), stateRoot, issueopscontract.ExecutionSwitchModeRequest{
 		ID: record.ID, Mode: "orca", Apply: true, Confirm: true, Fingerprint: preview.Fingerprint,
 	}, ExecutionSwitchModeDependencies{Git: git})
 	if err != nil {

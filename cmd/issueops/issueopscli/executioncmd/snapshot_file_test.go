@@ -1,6 +1,10 @@
 package executioncmd
 
 import (
+	issueopsport "issueops/internal/port"
+)
+
+import (
 	"context"
 	"fmt"
 	"os"
@@ -35,7 +39,7 @@ func TestExecutionSnapshotFileFlagMapsToPrepareRequest(t *testing.T) {
 	}
 	path := writeExecutionSnapshotTestFile(t, validExecutionSnapshotJSON(), 0o600)
 	var output any
-	err = Run([]string{
+	err = runExecutionForTest([]string{
 		"prepare", "--id", id, "--mode", "direct", "--owner-host", "claude",
 		"--issue-snapshot-file", path,
 		"--host", "codex", "--session-id", "snapshot-cli",
@@ -45,11 +49,11 @@ func TestExecutionSnapshotFileFlagMapsToPrepareRequest(t *testing.T) {
 		"--cwd", repo, "--json",
 	}, Deps{
 		StateRoot: func() string { return stateRoot },
-		Prepare: func(_ context.Context, _ string, request issueops.ExecutionPrepareRequest, _ issueops.ExecutionPrepareInvocation) (issueops.ExecutionPrepareResult, error) {
+		Prepare: func(_ context.Context, _ string, request issueopscontract.ExecutionPrepareRequest, _ issueopsport.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 			if request.IssueSnapshotFile != path {
 				t.Fatalf("snapshot file path=%q want=%q", request.IssueSnapshotFile, path)
 			}
-			return issueops.ExecutionPrepareResult{
+			return issueopscontract.ExecutionPrepareResult{
 				OK: true, ID: request.ID, RequestedMode: request.Mode, ResolvedMode: "direct",
 			}, nil
 		},
@@ -61,7 +65,7 @@ func TestExecutionSnapshotFileFlagMapsToPrepareRequest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, ok := output.(issueops.ExecutionPrepareResult)
+	got, ok := output.(issueopscontract.ExecutionPrepareResult)
 	if !ok || got.IssueSnapshotSource != "glab_mcp" {
 		t.Fatalf("snapshot flag did not reach core: result=%#v", output)
 	}
@@ -129,11 +133,11 @@ func executionSnapshotCLIRecord(t *testing.T) (string, string, string) {
 	issueURL := "https://gitlab.example.com/acme/repo/-/work_items/69"
 	record := issueopscontract.IssueOpsRecord{
 		OK:            true,
-		SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
+		SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
 		ID:            issueops.NewIssueOpsID(repo, branch),
 		Repo:          repo,
 		Branch:        branch,
-		Phase:         issueops.IssueOpsPhasePlan,
+		Phase:         issueopscontract.IssueOpsPhasePlan,
 		IssueURL:      issueURL,
 		DesignReview:  &issueopscontract.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-07-28T00:00:00Z"},
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{

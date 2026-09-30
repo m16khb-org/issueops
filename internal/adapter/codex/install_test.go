@@ -11,7 +11,7 @@ import (
 )
 
 func TestInstallerName(t *testing.T) {
-	if got := NewInstaller().Name(); got != "codex" {
+	if got := testInstaller().Name(); got != "codex" {
 		t.Fatalf("Name() = %q, want %q", got, "codex")
 	}
 }
@@ -22,7 +22,7 @@ func TestCodexInstallerWritesOnlyUserAndHarnessTemplatePaths(t *testing.T) {
 	writeAdapterTestSkill(t, root, "alpha")
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
-	result, err := NewInstaller().Install(req)
+	result, err := testInstaller().Install(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,10 +71,10 @@ func TestCodexInstallerMergesLifecycleHooksIdempotently(t *testing.T) {
 	writeAdapterTestSkill(t, root, "alpha")
 	req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 	req.SkillNames = []string{"alpha"}
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
 	hooks, err := os.ReadFile(filepath.Join(home, ".codex", "hooks.json"))
@@ -102,7 +102,7 @@ func TestMergeHookConfigPreservesCoResidentHookPositions(t *testing.T) {
 	}}}
 	config := map[string]any{"hooks": map[string]any{"PreToolUse": []any{agentHarness, orca}}}
 
-	merged := mergeHookConfig(config, "/new/bin/issueops")
+	merged := testInstaller().mergeHookConfig(config, "/new/bin/issueops")
 	groups := merged["hooks"].(map[string]any)["PreToolUse"].([]any)
 	if len(groups) != 1 {
 		t.Fatalf("PreToolUse groups = %d, want only the third-party group: %#v", len(groups), groups)
@@ -140,7 +140,7 @@ func TestMergeHookConfigReplacesManagedContextGroupsInPlace(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			merged := mergeHookConfig(map[string]any{"hooks": map[string]any{"SessionStart": groups}}, "/new/bin/issueops")
+			merged := testInstaller().mergeHookConfig(map[string]any{"hooks": map[string]any{"SessionStart": groups}}, "/new/bin/issueops")
 			got := merged["hooks"].(map[string]any)["SessionStart"].([]any)
 			if len(got) != 2 {
 				t.Fatalf("SessionStart groups = %d, want 2: %#v", len(got), got)
@@ -170,7 +170,7 @@ func TestCodexInstallerDropsEmptyHookGroups(t *testing.T) {
 	hooksPath := filepath.Join(home, ".codex", "hooks.json")
 	writeFile(t, hooksPath, `{"hooks":{"PostToolUse":[{"matcher":"Write|Edit|Bash","hooks":[]}],"PreToolUse":[{"matcher":"Read","hooks":[{"type":"command","command":"echo preserved","timeout":1}]}]}}`)
 
-	if _, err := NewInstaller().Install(req); err != nil {
+	if _, err := testInstaller().Install(req); err != nil {
 		t.Fatal(err)
 	}
 	b, err := os.ReadFile(hooksPath)
@@ -210,7 +210,7 @@ func TestCodexInstallerRejectsMalformedHookConfigWithoutWriting(t *testing.T) {
 			req := install.DefaultNativeInstallRequest(root, home, filepath.Join(home, ".codex"), filepath.Join(root, "bin", "issueops"))
 			req.SkillNames = []string{"alpha"}
 
-			result, err := NewInstaller().Install(req)
+			result, err := testInstaller().Install(req)
 			if err == nil || result.OK {
 				t.Fatalf("malformed hook config must fail without replacement: result=%+v err=%v", result, err)
 			}
@@ -238,7 +238,7 @@ func TestCodexInstallerReportsStaleHookTarget(t *testing.T) {
 			req.SkillNames = []string{"alpha"}
 			req.DryRun = dryRun
 
-			result, err := NewInstaller().Install(req)
+			result, err := testInstaller().Install(req)
 			if err != nil {
 				t.Fatal(err)
 			}

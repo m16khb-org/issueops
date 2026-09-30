@@ -20,9 +20,9 @@ func TestHandoffDeliveryAuditRejectsSymlinkedStateRootAncestor(t *testing.T) {
 		t.Fatal(err)
 	}
 	redirectedStateRoot := filepath.Join(symlinkParent, "state")
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(redirectedStateRoot)
 
-	if _, err := AuditHandoffDeliveryObservationAt(redirectedStateRoot, auditDeliveryObservationFixture()); err == nil {
+	if _, err := store.Append(auditDeliveryObservationFixture()); err == nil {
 		t.Fatal("symlinked state-root ancestor was accepted")
 	}
 	if _, err := os.Stat(filepath.Join(stateRoot, "audit", "handoff-delivery.jsonl")); !os.IsNotExist(err) {
@@ -40,10 +40,10 @@ func TestHandoffDeliveryAuditStateRootReplacementCannotRedirectOpen(t *testing.T
 			t.Fatal(err)
 		}
 	}
-	installAuditStateDepsForTest(t)
-	originalHook := handoffDeliveryAuditBeforeStateRootOpen
-	handoffDeliveryAuditBeforeStateRootOpen = func() {
-		handoffDeliveryAuditBeforeStateRootOpen = func() {}
+	store := auditStoreForTest(stateRoot)
+
+	store.openHooks.beforeStateRootOpen = func() {
+		store.openHooks.beforeStateRootOpen = func() {}
 		if err := os.Rename(stateRoot, pinnedStateRoot); err != nil {
 			panic(err)
 		}
@@ -51,9 +51,8 @@ func TestHandoffDeliveryAuditStateRootReplacementCannotRedirectOpen(t *testing.T
 			panic(err)
 		}
 	}
-	t.Cleanup(func() { handoffDeliveryAuditBeforeStateRootOpen = originalHook })
 
-	if _, err := AuditHandoffDeliveryObservationAt(stateRoot, auditDeliveryObservationFixture()); err == nil {
+	if _, err := store.Append(auditDeliveryObservationFixture()); err == nil {
 		t.Fatal("replaced state root was accepted")
 	}
 	for _, path := range []string{pinnedStateRoot, stateRoot} {
@@ -75,10 +74,10 @@ func TestHandoffDeliveryAuditAncestorReplacementAfterOpenFailsClosed(t *testing.
 			t.Fatal(err)
 		}
 	}
-	installAuditStateDepsForTest(t)
-	originalHook := handoffDeliveryAuditAfterLeafOpen
-	handoffDeliveryAuditAfterLeafOpen = func() {
-		handoffDeliveryAuditAfterLeafOpen = func() {}
+	store := auditStoreForTest(stateRoot)
+
+	store.openHooks.afterLeafOpen = func() {
+		store.openHooks.afterLeafOpen = func() {}
 		if err := os.Rename(ancestor, pinnedAncestor); err != nil {
 			panic(err)
 		}
@@ -86,9 +85,8 @@ func TestHandoffDeliveryAuditAncestorReplacementAfterOpenFailsClosed(t *testing.
 			panic(err)
 		}
 	}
-	t.Cleanup(func() { handoffDeliveryAuditAfterLeafOpen = originalHook })
 
-	if _, err := AuditHandoffDeliveryObservationAt(stateRoot, auditDeliveryObservationFixture()); err == nil {
+	if _, err := store.Append(auditDeliveryObservationFixture()); err == nil {
 		t.Fatal("replacement above the immediate state parent was accepted")
 	}
 	if data, err := os.ReadFile(filepath.Join(pinnedAncestor, "parent", "state", "audit", "handoff-delivery.jsonl")); err != nil || len(data) == 0 {
@@ -101,7 +99,7 @@ func TestHandoffDeliveryAuditAncestorReplacementAfterOpenFailsClosed(t *testing.
 
 func TestHandoffDeliveryAuditLeafReplacementKeepsWriteAndReadOnPinnedFile(t *testing.T) {
 	stateRoot := t.TempDir()
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateRoot)
 	auditPath := filepath.Join(stateRoot, "audit")
 	if err := os.Mkdir(auditPath, 0o700); err != nil {
 		t.Fatal(err)
@@ -115,9 +113,9 @@ func TestHandoffDeliveryAuditLeafReplacementKeepsWriteAndReadOnPinnedFile(t *tes
 	if err := os.WriteFile(targetLeaf, []byte("target-must-stay-unchanged\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	originalHook := handoffDeliveryAuditAfterLeafOpen
-	handoffDeliveryAuditAfterLeafOpen = func() {
-		handoffDeliveryAuditAfterLeafOpen = func() {}
+
+	store.openHooks.afterLeafOpen = func() {
+		store.openHooks.afterLeafOpen = func() {}
 		if err := os.Rename(leafPath, pinnedLeaf); err != nil {
 			panic(err)
 		}
@@ -125,9 +123,8 @@ func TestHandoffDeliveryAuditLeafReplacementKeepsWriteAndReadOnPinnedFile(t *tes
 			panic(err)
 		}
 	}
-	t.Cleanup(func() { handoffDeliveryAuditAfterLeafOpen = originalHook })
 
-	if _, err := AuditHandoffDeliveryObservationAt(stateRoot, auditDeliveryObservationFixture()); err == nil {
+	if _, err := store.Append(auditDeliveryObservationFixture()); err == nil {
 		t.Fatal("replaced audit leaf remained reportable")
 	}
 	pinnedData, err := os.ReadFile(pinnedLeaf)
@@ -142,7 +139,7 @@ func TestHandoffDeliveryAuditLeafReplacementKeepsWriteAndReadOnPinnedFile(t *tes
 
 func TestHandoffDeliveryAuditDirectoryReplacementCannotRedirectLeafOpen(t *testing.T) {
 	stateRoot := t.TempDir()
-	installAuditStateDepsForTest(t)
+	store := auditStoreForTest(stateRoot)
 	auditPath := filepath.Join(stateRoot, "audit")
 	if err := os.Mkdir(auditPath, 0o700); err != nil {
 		t.Fatal(err)
@@ -152,9 +149,9 @@ func TestHandoffDeliveryAuditDirectoryReplacementCannotRedirectLeafOpen(t *testi
 	if err := os.Mkdir(targetPath, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	originalHook := handoffDeliveryAuditBeforeLeafOpen
-	handoffDeliveryAuditBeforeLeafOpen = func() {
-		handoffDeliveryAuditBeforeLeafOpen = func() {}
+
+	store.openHooks.beforeLeafOpen = func() {
+		store.openHooks.beforeLeafOpen = func() {}
 		if err := os.Rename(auditPath, pinnedPath); err != nil {
 			panic(err)
 		}
@@ -162,9 +159,8 @@ func TestHandoffDeliveryAuditDirectoryReplacementCannotRedirectLeafOpen(t *testi
 			panic(err)
 		}
 	}
-	t.Cleanup(func() { handoffDeliveryAuditBeforeLeafOpen = originalHook })
 
-	if _, err := AuditHandoffDeliveryObservationAt(stateRoot, auditDeliveryObservationFixture()); err == nil {
+	if _, err := store.Append(auditDeliveryObservationFixture()); err == nil {
 		t.Fatal("replaced audit path remained reportable without receipt readback")
 	}
 	if _, err := os.Stat(filepath.Join(pinnedPath, "handoff-delivery.jsonl")); err != nil {

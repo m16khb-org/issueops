@@ -1,16 +1,35 @@
 package mcpcli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"issueops/cmd/issueops/mcpcli/resources"
+	apidocapp "issueops/internal/application/apidoc"
+	auditapp "issueops/internal/application/audit"
+	channelapp "issueops/internal/application/channel"
+	commitapp "issueops/internal/application/commitsuggest"
+	daemonapp "issueops/internal/application/daemon"
+	gatesapp "issueops/internal/application/gates"
+	lintapp "issueops/internal/application/lintdiagnose"
+	loopapp "issueops/internal/application/looprun"
+	policyapp "issueops/internal/application/policy"
+	preflightapp "issueops/internal/application/preflight"
+	bootstrapapp "issueops/internal/application/projectbootstrap"
+	docsapp "issueops/internal/application/projectdocs"
+	augmentapp "issueops/internal/application/selfaugment"
+	verifyapp "issueops/internal/application/selfverify"
+	workerapp "issueops/internal/application/worker"
 	executionissue "issueops/internal/contract/executionissue"
+	inspectmodel "issueops/internal/contract/inspect"
 	issueopscontract "issueops/internal/contract/issueops"
+	mcpcontract "issueops/internal/contract/mcp"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	webfetchmodel "issueops/internal/contract/webfetch"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
-
-	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
 type MCPToolCall struct {
@@ -30,18 +49,47 @@ type MCPToolOutcome struct {
 // MCPDependencies는 server 생성 시 고정된다. 요청 간 package-global dependency
 // cache를 두지 않아 서로 다른 MCP server의 handler가 섞이지 않는다.
 type MCPDependencies struct {
-	Prepare     issueopscontract.ExecutionPrepareHandler
-	Orca        port.ExecutionOrcaProvisioner
-	OrcaOwner   port.ExecutionOrcaOwnerInspector
-	ReadIssue   executionissue.ExecutionIssueSnapshotReadFunc
-	Claim       issueopscontract.ExecutionClaimHandler
-	Release     issueopscontract.ExecutionReleaseHandler
-	Reseed      issueopscontract.ExecutionReseedHandler
-	Resume      issueopscontract.ExecutionResumeHandler
-	Reconcile   port.ExecutionReconcileHandler
-	Complete    issueopscontract.ExecutionCompleteHandler
-	Publication PublicationHandlers
-	Provenance  provenanceport.Observer
+	APIDoc        apidocapp.Service
+	DefaultTarget string
+	Inspect       func(string) any
+	Preflight     preflightapp.Service
+	Skills        func(string, string) []inspectmodel.SkillInfo
+	Compatibility func() any
+	Commit        commitapp.Service
+	Lint          lintapp.Service
+	Fetch         func(context.Context, webfetchmodel.Request) (webfetchmodel.Result, error)
+	Execution     ExecutionDeps
+
+	Gates            gatesapp.Service
+	Channel          channelapp.Service
+	Policy           policyapp.Service
+	Audit            auditapp.Service
+	Daemon           daemonapp.Reader
+	Worker           workerapp.Service
+	Loop             loopapp.Service
+	ProjectBootstrap bootstrapapp.Service
+	ProjectDocs      docsapp.Service
+	State            StateDependencies
+	Resources        resources.Config
+	SelfVerify       func(verifyapp.LoopRequest) (augmentcontract.SelfAugmentResult, error)
+	Catalog          mcpcontract.Catalog
+	SelfHistory      augmentapp.HistoryService
+	SelfState        SelfStateDependencies
+	SelfPlanning     SelfPlanningDependencies
+	Prepare          issueopscontract.ExecutionPrepareHandler
+	Orca             port.ExecutionOrcaProvisioner
+	OrcaOwner        port.ExecutionOrcaOwnerInspector
+	ReadIssue        executionissue.ExecutionIssueSnapshotReadFunc
+	Claim            issueopscontract.ExecutionClaimHandler
+	Release          issueopscontract.ExecutionReleaseHandler
+	Status           port.ExecutionStatusHandler
+	Replace          port.ExecutionReplaceHandler
+	Reseed           issueopscontract.ExecutionReseedHandler
+	Resume           issueopscontract.ExecutionResumeHandler
+	Reconcile        port.ExecutionReconcileHandler
+	Complete         issueopscontract.ExecutionCompleteHandler
+	Publication      PublicationHandlers
+	Provenance       provenanceport.Observer
 }
 
 func mcpToolPayload(payload any) MCPToolOutcome {
@@ -73,10 +121,6 @@ func newProtocolError(code int64, message string, data any) *jsonrpc.Error {
 	return &jsonrpc.Error{Code: code, Message: message, Data: raw}
 }
 
-func HandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
-	return HandleToolCallWithDependencies(params, MCPDependencies{})
-}
-
 func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies) (any, *jsonrpc.Error) {
 	var call MCPToolCall
 	if err := json.Unmarshal(params, &call); err != nil {
@@ -85,20 +129,22 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 	if call.Arguments == nil {
 		call.Arguments = map[string]any{}
 	}
-	if validationErr := validateMCPToolArguments(call.Name, call.Arguments); validationErr != nil {
+	if validationErr := validateMCPToolArguments(deps.Catalog, call.Name, call.Arguments); validationErr != nil {
 		return nil, validationErr
 	}
 	for _, handler := range []func(MCPToolCall) MCPToolOutcome{
-		handleProjectMCPToolCall,
-		handlePolicyStateMCPToolCall,
+		func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) },
+		func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps) },
 		func(call MCPToolCall) MCPToolOutcome {
 			return handleIssueOpsMCPToolCallWithDependencies(call, deps)
 		},
-		handleLoopMCPToolCall,
-		handleGatesMCPToolCall,
-		handleChannelMCPToolCall,
-		handleAssistantWorkerMCPToolCall,
-		handleSelfLoopMCPToolCall,
+		func(call MCPToolCall) MCPToolOutcome { return handleLoopMCPToolCall(call, deps.Loop) },
+		func(call MCPToolCall) MCPToolOutcome { return handleGatesMCPToolCall(call, deps.Gates) },
+		func(call MCPToolCall) MCPToolOutcome { return handleChannelMCPToolCall(call, deps.Channel) },
+		func(call MCPToolCall) MCPToolOutcome {
+			return handleAssistantWorkerMCPToolCall(call, deps)
+		},
+		func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) },
 	} {
 		outcome := handler(call)
 		if !outcome.Handled {
@@ -119,8 +165,8 @@ func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies
 	return nil, newProtocolError(-32602, "Unknown tool", call.Name)
 }
 
-func validateMCPToolArguments(name string, arguments map[string]any) *jsonrpc.Error {
-	for _, tool := range MCPTools() {
+func validateMCPToolArguments(catalog mcpcontract.Catalog, name string, arguments map[string]any) *jsonrpc.Error {
+	for _, tool := range catalog.Tools {
 		toolName, _ := tool["name"].(string)
 		if toolName != name {
 			continue
@@ -158,4 +204,11 @@ func ErrorTextResult(text string) map[string]any {
 	result := TextResult(text)
 	result["isError"] = true
 	return result
+}
+
+func (deps MCPDependencies) resolveTarget(target string) string {
+	if target != "" {
+		return target
+	}
+	return deps.DefaultTarget
 }

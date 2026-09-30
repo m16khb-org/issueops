@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/processlease"
 	"issueops/internal/domain/policy"
 )
 
@@ -54,6 +55,7 @@ func runBoundedCommandContext(parent context.Context, repo, name string, args []
 	ctx, cancel := context.WithTimeout(parent, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, name, args...)
+	processlease.Attach(ctx, cmd)
 	cmd.Dir = repo
 	stdout := &boundedBuffer{limit: outputLimit}
 	stderr := &boundedBuffer{limit: providerDiagnosticLimit}

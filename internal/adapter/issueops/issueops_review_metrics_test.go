@@ -1,20 +1,22 @@
 package issueops
 
 import (
+	reviewapp "issueops/internal/application/issueopsreview"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // 집계 모집단이 조용히 줄면 revise 비율이 어떤 사이클들에서 나온 값인지 알 수 없다.
 // 읽히지 않는 사이클은 버리지 말고 경고로 드러낸다.
 func TestReviewMetricsWarnsAboutUnreadableCyclesDuringRepoAggregation(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
-	result, err := ReviewMetrics(stateRoot, "", "/repo", ReviewMetricsDeps{
+	result, err := (reviewapp.MetricsReader{ReadRecord: ReadIssueOps, Now: time.Now,
 		ListCycleIDs: func(string, string) ([]string, []string, error) {
 			return nil, []string{"io-corrupt"}, nil
 		},
-	})
+	}).Read(stateRoot, "", "/repo")
 	if err != nil {
 		t.Fatalf("an unreadable cycle must not fail the aggregation: %v", err)
 	}

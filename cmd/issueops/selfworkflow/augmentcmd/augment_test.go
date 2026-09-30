@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"issueops/internal/testsupport"
 )
 
@@ -80,17 +80,17 @@ func TestRunPrintsTextPlanAndSelectedCandidate(t *testing.T) {
 	var out bytes.Buffer
 	err := Run([]string{"--cycles", "2", "--target-score", "95"}, Deps{
 		Output: &out,
-		Plan: func(req model.SelfAugmentPlanRequest) model.SelfAugmentPlanResult {
-			candidate := &model.SelfAugmentCandidate{ID: "quality-next", Title: "Improve the next quality signal"}
-			return model.SelfAugmentPlanResult{
+		Plan: func(req augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult {
+			candidate := &augmentcontract.SelfAugmentCandidate{ID: "quality-next", Title: "Improve the next quality signal"}
+			return augmentcontract.SelfAugmentPlanResult{
 				OK:                  true,
-				KoreanName:          model.SelfAugmentationKoreanName,
+				KoreanName:          augmentcontract.SelfAugmentationKoreanName,
 				Cycles:              req.Cycles,
 				TargetScore:         req.TargetScore,
 				SelectedCandidate:   candidate,
-				Candidates:          []model.SelfAugmentCandidate{*candidate},
+				Candidates:          []augmentcontract.SelfAugmentCandidate{*candidate},
 				TerminationEligible: true,
-				Goals: []model.SelfAugmentGoal{{
+				Goals: []augmentcontract.SelfAugmentGoal{{
 					Name:        "quality",
 					KoreanName:  "품질",
 					Score:       100,
@@ -99,7 +99,7 @@ func TestRunPrintsTextPlanAndSelectedCandidate(t *testing.T) {
 				}},
 			}
 		},
-		SelectedCandidateID: func(candidate *model.SelfAugmentCandidate) string {
+		SelectedCandidateID: func(candidate *augmentcontract.SelfAugmentCandidate) string {
 			if candidate == nil {
 				return ""
 			}
@@ -111,7 +111,7 @@ func TestRunPrintsTextPlanAndSelectedCandidate(t *testing.T) {
 	}
 	got := out.String()
 	for _, want := range []string{
-		model.SelfAugmentationKoreanName + " plan: 1 candidate(s), selected=selected:quality-next, termination_eligible=true",
+		augmentcontract.SelfAugmentationKoreanName + " plan: 1 candidate(s), selected=selected:quality-next, termination_eligible=true",
 		"- 품질 score=100.0 target>95.0 passed=true",
 		"selected: quality-next",
 		"Improve the next quality signal",
@@ -146,18 +146,18 @@ func TestRunSavesPlanStateAsJSON(t *testing.T) {
 	var savedKey string
 	out := captureStdout(t, func() error {
 		return Run([]string{"--cycles", "1", "--target-score", "99", "--save-state", "--state-key", "augment-plan", "--json"}, Deps{
-			Plan: func(req model.SelfAugmentPlanRequest) model.SelfAugmentPlanResult {
-				return model.SelfAugmentPlanResult{
+			Plan: func(req augmentcontract.SelfAugmentPlanRequest) augmentcontract.SelfAugmentPlanResult {
+				return augmentcontract.SelfAugmentPlanResult{
 					OK:          true,
 					LoopKind:    "self_augmentation",
-					KoreanName:  model.SelfAugmentationKoreanName,
+					KoreanName:  augmentcontract.SelfAugmentationKoreanName,
 					Cycles:      req.Cycles,
 					TargetScore: req.TargetScore,
 				}
 			},
-			SavePlan: func(result *model.SelfAugmentPlanResult, key string) error {
+			SavePlan: func(result *augmentcontract.SelfAugmentPlanResult, key string) error {
 				savedKey = key
-				result.StateCheckpoint = &model.SelfAugmentStateCheckpoint{OK: true, Key: key}
+				result.StateCheckpoint = &augmentcontract.SelfAugmentStateCheckpoint{OK: true, Key: key}
 				return nil
 			},
 			PrintJSON: printJSONForTest,
@@ -166,7 +166,7 @@ func TestRunSavesPlanStateAsJSON(t *testing.T) {
 	if savedKey != "augment-plan" {
 		t.Fatalf("expected save key augment-plan, got %q", savedKey)
 	}
-	var result model.SelfAugmentPlanResult
+	var result augmentcontract.SelfAugmentPlanResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode self-augment JSON: %v\n%s", err, out)
 	}

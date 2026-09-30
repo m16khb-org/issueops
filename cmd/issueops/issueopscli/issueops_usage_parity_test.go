@@ -1,18 +1,19 @@
 package issueopscli
 
 import (
+	cliparse "issueops/internal/domain/cli"
 	"sort"
 	"strings"
 	"testing"
 
-	cliadapter "issueops/internal/domain/cli"
+	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 )
 
 // usageCommandKey는 usage 라인에서 플래그 직전까지의 명령 경로를 `issueops
 // issueops X` 형태로 돌려준다. 파싱 규칙은 카탈로그가 소유하며(#188) 여기서는
 // 접두를 붙여 기존 비교 형태를 유지한다 — 규칙을 두 번 적으면 그 둘이 어긋난다.
 func usageCommandKey(line string) string {
-	key := cliadapter.IssueOpsUsageKey(line)
+	key := cliparse.IssueOpsUsageKey(line)
 	if key == "" {
 		return ""
 	}
@@ -35,7 +36,7 @@ func TestIssueOpsUsageMatchesAdapterUsage(t *testing.T) {
 		t.Fatal("adapter usage exposes no issueops lines; parity test inputs are broken")
 	}
 	shared := 0
-	for _, line := range strings.Split(issueOpsUsageText(), "\n") {
+	for _, line := range strings.Split(testLifecycleUsage(), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, "issueops ") {
 			continue
@@ -63,7 +64,7 @@ func TestIssueOpsUsageMatchesAdapterUsage(t *testing.T) {
 func TestAdapterIssueOpsUsageCommandsExistInIssueOpsUsage(t *testing.T) {
 	const prefix = "issueops "
 	issueOpsKeys := map[string]bool{}
-	for _, line := range strings.Split(issueOpsUsageText(), "\n") {
+	for _, line := range strings.Split(testLifecycleUsage(), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, prefix) {
 			continue
@@ -80,7 +81,7 @@ func TestAdapterIssueOpsUsageCommandsExistInIssueOpsUsage(t *testing.T) {
 		if !strings.HasPrefix(trimmed, prefix) {
 			continue
 		}
-		if cliadapter.IssueOpsUsageKey(trimmed) == "" {
+		if cliparse.IssueOpsUsageKey(trimmed) == "" {
 			continue
 		}
 		key := usageCommandKey(trimmed)
@@ -92,6 +93,6 @@ func TestAdapterIssueOpsUsageCommandsExistInIssueOpsUsage(t *testing.T) {
 	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
-		t.Errorf("adapter usage exposes issueops commands missing from issueOpsUsageText(): %s", strings.Join(missing, ", "))
+		t.Errorf("adapter usage exposes issueops commands missing from testLifecycleUsage(): %s", strings.Join(missing, ", "))
 	}
 }

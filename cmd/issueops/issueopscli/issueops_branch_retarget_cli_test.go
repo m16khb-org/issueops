@@ -9,11 +9,11 @@ import (
 )
 
 func TestBranchRetargetCLIForwardsRequestAndPrintsRecord(t *testing.T) {
-	prev := issueOpsCLIDeps.RetargetIssueOpsBranchWithActor
-	t.Cleanup(func() { issueOpsCLIDeps.RetargetIssueOpsBranchWithActor = prev })
+	prev := testIssueOpsRuntime.RetargetIssueOpsBranchWithActor
+	t.Cleanup(func() { testIssueOpsRuntime.RetargetIssueOpsBranchWithActor = prev })
 	var got issueopscontract.IssueOpsBranchRetargetRequest
 	var gotID string
-	issueOpsCLIDeps.RetargetIssueOpsBranchWithActor = func(_ string, id string, req issueopscontract.IssueOpsBranchRetargetRequest, _ issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+	testIssueOpsRuntime.RetargetIssueOpsBranchWithActor = func(_ string, id string, req issueopscontract.IssueOpsBranchRetargetRequest, _ issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 		gotID, got = id, req
 		return issueopscontract.IssueOpsRecord{OK: true, ID: id, BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
 			BaseBranch: req.BaseBranch,

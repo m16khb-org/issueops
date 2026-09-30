@@ -1,12 +1,15 @@
 package issueopspreparation
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 
 	preparationapp "issueops/internal/application/issueopspreparation"
+	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	preparationdomain "issueops/internal/domain/issueopspreparation"
@@ -280,7 +283,7 @@ func newOrcaRepositoryFixture(t *testing.T) (*preparationStore, *SQLiteRepositor
 		t.Fatal(err)
 	}
 	workspace := preparationcontract.WorkspaceRequest{LifecycleID: record.ID, SourceRoot: record.Repo, Root: "/repo.worktrees/199-orca", Branch: record.Branch, BaseBranch: "main", BaseHead: "base", Confirm: true, CWD: "/repo"}
-	command := preparationcontract.Command{ID: record.ID, Mode: preparationcontract.ModeOrca, OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh", Confirm: true}
+	command := preparationcontract.Command{ID: record.ID, Mode: preparationcontract.ModeOrca, OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh", Confirm: true}
 	decision, err := preparationdomain.Decide(preparationdomain.DecisionInput{Command: command, Orca: preparationdomain.OrcaReadiness{Available: true, Ready: true, Provider: "github", Issue: 199}})
 	if err != nil {
 		t.Fatal(err)
@@ -288,7 +291,7 @@ func newOrcaRepositoryFixture(t *testing.T) (*preparationStore, *SQLiteRepositor
 	return store, repository, preparationapp.OrcaBegin{
 		Snapshot: snapshot, Command: command,
 		Workspace:   workspace,
-		Probe:       preparationcontract.ProbeRequest{Repo: record.Repo, Host: "codex", Model: "gpt-5.6-terra", Effort: "xhigh", Provider: "github", Issue: 199, Marker: "issueops-v1 lifecycle=io-orca provider=github issue=199", Workspace: workspace},
+		Probe:       preparationcontract.ProbeRequest{Repo: record.Repo, Host: "codex", Model: "gpt-6-astra", Effort: "xhigh", Provider: "github", Issue: 199, Marker: "issueops-v1 lifecycle=io-orca provider=github issue=199", Workspace: workspace},
 		Owner:       preparationcontract.OwnerEvidence{IssueURL: record.IssueURL, IssueBody: "body", BodySHA256: strings.Repeat("a", 64), Source: "github", Provider: "github", Issue: 199},
 		OperationID: "0123456789abcdef0123456789abcdef", StartedAt: "2026-08-02T00:00:00Z",
 		Selection: leasecontract.Selection{RequestedMode: "orca", ResolvedMode: "orca", ProbeAttempted: true, ProbeAvailable: true, ProbeReady: true, ProbeCode: "ready", ReadinessFingerprint: decision.ReadinessFingerprint, SelectedAt: "2026-08-02T00:00:00Z"},
@@ -321,3 +324,49 @@ func repositoryOrcaReceipt(stage preparationcontract.IntentStage) preparationcon
 type longDiagnosticError struct{}
 
 func (*longDiagnosticError) Error() string { return strings.Repeat("x", 5000) }
+
+func TestPreparationIntentWritersRejectFinishSnapshots(t *testing.T) {
+	for _, source := range []string{"raw", "typed", "both"} {
+		for _, operation := range []string{"invoking", "failure", "receipt"} {
+			t.Run(source+"/"+operation, func(t *testing.T) {
+				store, repository, begin := newOrcaRepositoryFixture(t)
+				state, err := repository.BeginIntent(context.Background(), begin)
+				if err != nil {
+					t.Fatal(err)
+				}
+				state.FailureAt = "2026-09-29T00:00:00Z"
+				state.OwnerArtifacts = preparationcontract.OwnerArtifacts{
+					PlanPath:       "/repo.worktrees/199-orca/.issueops/artifact/plan.md",
+					ClaimTokenPath: "/repo.worktrees/199-orca/.issueops/state/claim", ClaimTokenSHA256: strings.Repeat("d", 64),
+					ContextPacketPath: "/repo.worktrees/199-orca/.issueops/context.json", ContextPacketSHA256: strings.Repeat("c", 64),
+					OwnerPromptPath: "/repo.worktrees/199-orca/.issueops/owner.md", OwnerPromptSHA256: strings.Repeat("b", 64),
+				}
+				attempt := &model.IssueOpsCleanupAttempt{Operation: "finish", Token: strings.Repeat("a", 64), StartedAt: "2026-09-29T00:00:00Z"}
+				persisted := state.Snapshot.Record
+				if source != "typed" {
+					persisted.CleanupAttempt = attempt
+				}
+				store.seedRecord(t, persisted)
+				raw := store.mustGet(recordBucket, persisted.ID)
+				state.Snapshot.RecordRaw = raw
+				if source != "raw" {
+					state.Snapshot.Record.CleanupAttempt = attempt
+				}
+				switch operation {
+				case "invoking":
+					_, err = repository.MarkInvoking(context.Background(), state)
+				case "failure":
+					err = repository.RecordFailure(context.Background(), state, "unknown", errors.New("external failure"))
+				case "receipt":
+					_, err = repository.ApplyReceipt(context.Background(), state, repositoryOrcaReceipt(state.Intent.Stage))
+				}
+				if err == nil || !strings.Contains(err.Error(), "cleanup finish") {
+					t.Fatalf("finish authority ignored: %v", err)
+				}
+				if !bytes.Equal(raw, store.mustGet(recordBucket, persisted.ID)) || !bytes.Equal(state.IntentRaw, store.mustGet(intentBucket, state.Intent.OperationID)) {
+					t.Fatal("record or intent changed")
+				}
+			})
+		}
+	}
+}

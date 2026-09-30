@@ -12,11 +12,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"syscall"
 	"time"
 
+	activationcontract "issueops/internal/contract/nativeactivation"
+	activationdomain "issueops/internal/domain/nativeactivation"
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
 )
@@ -26,7 +27,6 @@ const (
 	storeBucket    = "native_activation_v1"
 	pendingID      = "pending"
 	receiptID      = "receipt"
-	schemaVersion  = 1
 )
 
 type StoreOpen func(string) (port.TransactionalRecordStore, error)
@@ -105,7 +105,7 @@ func (backend Backend) Begin(ctx context.Context, request activationport.BeginRe
 		return activationport.Result{}, fmt.Errorf("generate native activation transition ID")
 	}
 	record := pendingRecord{
-		SchemaVersion: schemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
+		SchemaVersion: activationdomain.RecordSchemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
 		TargetBinary: request.TargetBinary, Candidate: candidate, TransitionID: transitionID, StartedAt: startedAt,
 	}
 	data, err := json.Marshal(record)
@@ -178,7 +178,7 @@ func (backend Backend) Seal(ctx context.Context, request activationport.SealRequ
 		}
 		sealedAt := backend.now().UTC().Format(time.RFC3339Nano)
 		receipt := receiptRecord{
-			SchemaVersion: schemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
+			SchemaVersion: activationdomain.RecordSchemaVersion, StateRoot: request.StateRoot, IssueOpsRoot: request.IssueOpsRoot,
 			TargetBinary: request.TargetBinary, Binary: active, CatalogSHA256: request.CatalogSHA256,
 			Evidence: append([]activationport.Evidence(nil), request.Evidence...), TransitionID: request.TransitionID, SealedAt: sealedAt,
 		}
@@ -375,27 +375,56 @@ func decodeExact[T any](data []byte) (T, error) {
 }
 
 func samePending(record pendingRecord, request activationport.SealRequest, active binaryIdentity) bool {
-	return record.SchemaVersion == schemaVersion && record.StateRoot == request.StateRoot &&
-		record.IssueOpsRoot == request.IssueOpsRoot && record.TargetBinary == request.TargetBinary &&
-		record.TransitionID == request.TransitionID && sameBinaryContent(record.Candidate, active) && record.StartedAt != ""
+	return activationdomain.PendingMatches(pendingSnapshot(record), transitionFacts(request.StateRoot, request.IssueOpsRoot, request.TargetBinary, request.TransitionID, active, request.CatalogSHA256, request.Evidence))
 }
 
 func sameAbortPending(record pendingRecord, request activationport.AbortRequest, active binaryIdentity) bool {
-	return record.SchemaVersion == schemaVersion && record.StateRoot == request.StateRoot &&
-		record.IssueOpsRoot == request.IssueOpsRoot && record.TargetBinary == request.TargetBinary &&
-		record.TransitionID == request.TransitionID && sameBinaryContent(record.Candidate, active) && record.StartedAt != ""
+	return activationdomain.PendingMatches(pendingSnapshot(record), transitionFacts(request.StateRoot, request.IssueOpsRoot, request.TargetBinary, request.TransitionID, active, "", nil))
 }
 
 func sameReceipt(record receiptRecord, request activationport.SealRequest, active binaryIdentity) bool {
-	return record.SchemaVersion == schemaVersion && record.StateRoot == request.StateRoot &&
-		record.IssueOpsRoot == request.IssueOpsRoot && record.TargetBinary == request.TargetBinary &&
-		record.Binary == active && record.CatalogSHA256 == request.CatalogSHA256 &&
-		record.TransitionID == request.TransitionID && slices.Equal(record.Evidence, request.Evidence) && record.SealedAt != ""
+	return activationdomain.ReceiptMatches(receiptSnapshot(record), transitionFacts(request.StateRoot, request.IssueOpsRoot, request.TargetBinary, request.TransitionID, active, request.CatalogSHA256, request.Evidence))
 }
 
-func sameBinaryContent(left, right binaryIdentity) bool {
-	return left.SHA256 == right.SHA256 && left.Mode == right.Mode && left.Size == right.Size &&
-		left.Device == right.Device && left.Inode == right.Inode
+func pendingSnapshot(record pendingRecord) activationdomain.PendingSnapshot {
+	return activationdomain.PendingSnapshot{
+		SchemaVersion: record.SchemaVersion, StateRoot: record.StateRoot, IssueOpsRoot: record.IssueOpsRoot,
+		TargetBinary: record.TargetBinary, Candidate: domainBinary(record.Candidate),
+		TransitionID: record.TransitionID, StartedAt: record.StartedAt,
+	}
+}
+
+func receiptSnapshot(record receiptRecord) activationdomain.ReceiptSnapshot {
+	return activationdomain.ReceiptSnapshot{
+		SchemaVersion: record.SchemaVersion, StateRoot: record.StateRoot, IssueOpsRoot: record.IssueOpsRoot,
+		TargetBinary: record.TargetBinary, Binary: domainBinary(record.Binary), CatalogSHA256: record.CatalogSHA256,
+		Evidence: domainEvidence(record.Evidence), TransitionID: record.TransitionID, SealedAt: record.SealedAt,
+	}
+}
+
+func transitionFacts(stateRoot, issueOpsRoot, targetBinary, transitionID string, active binaryIdentity, catalog string, evidence []activationport.Evidence) activationdomain.TransitionFacts {
+	return activationdomain.TransitionFacts{
+		StateRoot: stateRoot, IssueOpsRoot: issueOpsRoot, TargetBinary: targetBinary, TransitionID: transitionID,
+		Active: domainBinary(active), CatalogSHA256: catalog, Evidence: domainEvidence(evidence),
+	}
+}
+
+func domainBinary(binary binaryIdentity) activationdomain.BinaryIdentity {
+	return activationdomain.BinaryIdentity{
+		Executable: binary.Executable, SHA256: binary.SHA256, Mode: binary.Mode,
+		Size: binary.Size, Device: binary.Device, Inode: binary.Inode,
+	}
+}
+
+func domainEvidence(evidence []activationport.Evidence) []activationcontract.Evidence {
+	converted := make([]activationcontract.Evidence, len(evidence))
+	for index, item := range evidence {
+		converted[index] = activationcontract.Evidence{
+			Host: item.Host, Surface: item.Surface, Path: item.Path, SemanticSHA256: item.SemanticSHA256,
+			SHA256: item.SHA256, Mode: item.Mode, Size: item.Size, Device: item.Device, Inode: item.Inode,
+		}
+	}
+	return converted
 }
 
 func sealedResult(record receiptRecord) activationport.Result {

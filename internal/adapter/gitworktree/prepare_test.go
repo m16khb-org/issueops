@@ -28,7 +28,7 @@ func TestPrepareCreatesCanonicalWorktreeOnConfirm(t *testing.T) {
 		BaseHead: preflight.GitOut(repo, "rev-parse", "HEAD"),
 		Confirm:  true,
 	}
-	if _, err := New().Prepare(context.Background(), req); err != nil {
+	if _, err := testProvisioner().Prepare(context.Background(), req); err != nil {
 		t.Fatalf("prepare confirm: %v", err)
 	}
 	if info, err := os.Lstat(req.Root); err != nil || !info.IsDir() {
@@ -38,7 +38,7 @@ func TestPrepareCreatesCanonicalWorktreeOnConfirm(t *testing.T) {
 		t.Fatalf("prepared branch = %q want %q", got, req.Branch)
 	}
 	// 동일 요청 재실행은 기존 worktree identity로 통과해야 한다(멱등).
-	receipt, err := New().Prepare(context.Background(), req)
+	receipt, err := testProvisioner().Prepare(context.Background(), req)
 	if err != nil || !receipt.Exists {
 		t.Fatalf("re-prepare must be idempotent: receipt=%#v err=%v", receipt, err)
 	}
@@ -52,7 +52,7 @@ func TestPrepareDryRunDoesNotCreateWorktree(t *testing.T) {
 		Branch: "70-dry", BaseBranch: "main",
 		BaseHead: preflight.GitOut(repo, "rev-parse", "HEAD"),
 	}
-	receipt, err := New().Prepare(context.Background(), req)
+	receipt, err := testProvisioner().Prepare(context.Background(), req)
 	if err != nil {
 		t.Fatalf("dry-run prepare: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestPrepareRejectsInvalidRequests(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := New().Prepare(context.Background(), tc.req)
+			_, err := testProvisioner().Prepare(context.Background(), tc.req)
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("want error containing %q, got %v", tc.want, err)
 			}
@@ -119,7 +119,7 @@ func TestPrepareRejectsOccupiedNonWorktreePath(t *testing.T) {
 		BaseHead: preflight.GitOut(repo, "rev-parse", "HEAD"),
 		Confirm:  true,
 	}
-	if _, err := New().Prepare(context.Background(), req); err == nil {
+	if _, err := testProvisioner().Prepare(context.Background(), req); err == nil {
 		t.Fatal("occupied non-worktree path must fail closed")
 	}
 }
@@ -144,7 +144,7 @@ func TestPrepareAdoptsPreCreatedWorktreeAtBaseSHA(t *testing.T) {
 		LifecycleID: "io-74", SourceRoot: repo, Root: root,
 		Branch: "74-adopt", BaseBranch: "main", BaseHead: head, Confirm: true,
 	}
-	receipt, err := New().Prepare(context.Background(), req)
+	receipt, err := testProvisioner().Prepare(context.Background(), req)
 	if err != nil {
 		t.Fatalf("adopting a pre-created worktree must succeed: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestPrepareRejectsAdoptedWorktreeThatMovedPastBaseSHA(t *testing.T) {
 		LifecycleID: "io-75", SourceRoot: repo, Root: root,
 		Branch: "75-moved", BaseBranch: "main", BaseHead: head, Confirm: true,
 	}
-	_, err := New().Prepare(context.Background(), req)
+	_, err := testProvisioner().Prepare(context.Background(), req)
 	if err == nil || !strings.Contains(err.Error(), "does not match branch and base_head") {
 		t.Fatalf("a worktree past the base SHA must fail closed, got %v", err)
 	}
@@ -208,7 +208,7 @@ func TestPrepareRejectsAdoptedWorktreeOnAnotherBranch(t *testing.T) {
 		LifecycleID: "io-76", SourceRoot: repo, Root: root,
 		Branch: "76-branch", BaseBranch: "main", BaseHead: head, Confirm: true,
 	}
-	if _, err := New().Prepare(context.Background(), req); err == nil ||
+	if _, err := testProvisioner().Prepare(context.Background(), req); err == nil ||
 		!strings.Contains(err.Error(), "does not match branch and base_head") {
 		t.Fatalf("a worktree on another branch must fail closed, got %v", err)
 	}

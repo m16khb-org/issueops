@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	publicationcontract "issueops/internal/contract/issueopspublication"
 )
@@ -51,9 +50,9 @@ func (f *fakeReconcileService) Reconcile(_ context.Context, id string) (publicat
 var _ createService = (*fakeCreateService)(nil)
 var _ reconcileService = (*fakeReconcileService)(nil)
 
-func fullCoreCreateRequest() issueops.RemotePullRequestRequest {
+func fullCoreCreateRequest() issueopscontract.RemotePullRequestRequest {
 	process := issueopscontract.NativeProcessReceipt{PID: 123, StartedAt: "2026-08-01T00:00:00.123456789Z", Executable: "/usr/local/bin/codex"}
-	return issueops.RemotePullRequestRequest{
+	return issueopscontract.RemotePullRequestRequest{
 		ID: "io-195", Provider: "github", Title: "Publication vertical", Body: "Compatibility body.",
 		Head: "195-publication", Base: "117-hexagonal-architecture-migration",
 		Labels: []string{"enhancement", "issueops"}, Assignees: []string{"maintainer"},
@@ -69,9 +68,9 @@ func fullCoreCreateRequest() issueops.RemotePullRequestRequest {
 	}
 }
 
-func fullCoreReconcileRequest() issueops.ExecutionReconcileRequest {
+func fullCoreReconcileRequest() issueopscontract.ExecutionReconcileRequest {
 	process := issueopscontract.NativeProcessReceipt{PID: 223, StartedAt: "2026-08-01T01:00:00.123456789Z", Executable: "/usr/local/bin/codex"}
-	return issueops.ExecutionReconcileRequest{
+	return issueopscontract.ExecutionReconcileRequest{
 		ID: "io-195", Preview: false, Confirm: true,
 		Actor: issueopscontract.NativeActor{
 			Host: "codex", SessionID: "reconcile-session", AgentID: "reconcile-agent", SessionProcess: &process,
@@ -81,15 +80,15 @@ func fullCoreReconcileRequest() issueops.ExecutionReconcileRequest {
 			},
 		},
 		CWD:      "/repo.worktrees/195-publication",
-		Snapshot: &issueopscontract.IssueOpsRecord{ID: "io-195", Phase: issueops.IssueOpsPhasePR},
+		Snapshot: &issueopscontract.IssueOpsRecord{ID: "io-195", Phase: issueopscontract.IssueOpsPhasePR},
 	}
 }
 
 func publicationRecordRaw(t *testing.T) []byte {
 	t.Helper()
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion, ID: "io-195", Repo: "/repo",
-		Branch: "195-publication", Phase: issueops.IssueOpsPhasePR,
+		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion, ID: "io-195", Repo: "/repo",
+		Branch: "195-publication", Phase: issueopscontract.IssueOpsPhasePR,
 		Execution: &issueopscontract.Execution{
 			Mode: issueopscontract.ExecutionModeDirect,
 			Workspace: issueopscontract.Workspace{

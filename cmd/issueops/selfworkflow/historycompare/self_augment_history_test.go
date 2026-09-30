@@ -3,7 +3,6 @@ package historycompare
 import (
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/stateio"
 	statestore "issueops/internal/adapter/outbound/state"
 )
 
@@ -19,7 +18,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 			{Iteration: 1, Seed: 800, Label: "go test", DurationMS: 1000},
 		},
 	}
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, "self-verify-old", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-old", SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -31,7 +30,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write old snapshot: %v", err)
 	}
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, "self-verify-new", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-new", SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,
@@ -43,7 +42,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write new snapshot: %v", err)
 	}
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, "other-summary", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "other-summary", SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            true,

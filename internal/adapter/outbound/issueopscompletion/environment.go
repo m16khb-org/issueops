@@ -7,18 +7,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	completioncontract "issueops/internal/contract/issueopscompletion"
-	completiondomain "issueops/internal/domain/issueopscompletion"
 )
 
 type Environment struct{}
 
 func NewEnvironment() Environment { return Environment{} }
-
-func (Environment) VerifyArtifact(record completioncontract.RecordSnapshot, requestedURL string) error {
-	return completiondomain.ValidateArtifact(record.Clone(), requestedURL)
-}
 
 func (Environment) PathsMatch(left, right string) bool {
 	leftPath, err := filepath.Abs(strings.TrimSpace(left))

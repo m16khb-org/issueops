@@ -8,7 +8,10 @@ import (
 // SourceRoot maps a Git common directory back to the primary checkout while
 // preserving the caller's lexical path prefix (for example /var on macOS).
 func SourceRoot(path, commonDir string) string {
-	path = cleanAbsolute(path)
+	path = strings.TrimSpace(path)
+	if path != "" {
+		path = filepath.Clean(path)
+	}
 	if path == "" {
 		return ""
 	}
@@ -24,17 +27,4 @@ func SourceRoot(path, commonDir string) string {
 		return path
 	}
 	return filepath.Dir(commonDir)
-}
-
-func cleanAbsolute(path string) string {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return ""
-	}
-	if !filepath.IsAbs(path) {
-		if absolute, err := filepath.Abs(path); err == nil {
-			path = absolute
-		}
-	}
-	return filepath.Clean(path)
 }

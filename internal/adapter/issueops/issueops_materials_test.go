@@ -9,8 +9,9 @@ import (
 	"testing"
 
 	"issueops/internal/adapter/preflight"
+	materialapp "issueops/internal/application/issueopsremote"
+	reportcontract "issueops/internal/contract/artifactreadability"
 	"issueops/internal/contract/issueops"
-	"issueops/internal/domain/artifactreadability"
 )
 
 // tracked copies live next to gates.md; the sealed originals stay under the
@@ -38,7 +39,7 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 	if code, _, stderr := preflight.GitCmd(repo, "worktree", "add", "-q", worktree, branch); code != 0 {
 		t.Fatalf("git worktree add: %s", stderr)
 	}
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +78,7 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 
 func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 	stateRoot, record, worktree := materialsCycleForTest(t)
-	_, materials, err := AdvanceIssueOpsPhaseWithActorReport(stateRoot, record.ID, string(IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
+	_, materials, err := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree)).AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement))
 	if err != nil {
 		t.Fatalf("implement: %v", err)
 	}
@@ -99,7 +100,7 @@ func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 	review := trackedCopy(t, worktree, "13", "plan-review.md")
 
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 1\n")
-	_, again, err := AdvanceIssueOpsPhaseWithActorReport(stateRoot, record.ID, string(IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
+	_, again, err := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree)).AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean))
 	if err != nil {
 		t.Fatalf("ai-slop-clean: %v", err)
 	}
@@ -118,7 +119,7 @@ func TestPhaseTransitionWritesTrackedMaterials(t *testing.T) {
 	orca.Execution.Workspace.Root = orcaRoot
 	orca.PlanPath = filepath.Join(orcaRoot, ".issueops", "issues", "13", "artifact", "plan.md")
 	writeIssueOpsFile(t, orcaRoot, ".issueops/issues/13/artifact/plan.md", planBodyForTest())
-	orcaMaterials := writeTrackedMaterials(orca)
+	orcaMaterials := (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write(orca)
 	for _, name := range []string{"plan.md", "intent.md", "plan-review.md"} {
 		if trackedCopy(t, orcaRoot, "13", name) == "" {
 			t.Fatalf("an Orca cycle gets the same tracked %s: %+v", name, orcaMaterials)
@@ -137,12 +138,12 @@ func TestTrackedPlanCopySkipsAPlanOutsideTheSealedDirectory(t *testing.T) {
 	}
 	writeIssueOpsFile(t, root, ".issueops/issues/13/plan.md", "사람이 추적하는 계획\n")
 	writeIssueOpsFile(t, root, ".issueops/issues/13/artifact/plan.md", "봉인 계획\n")
-	materials := writeTrackedMaterials(record)
+	materials := (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write(record)
 	if got := trackedCopy(t, root, "13", "plan.md"); got != "사람이 추적하는 계획\n" || slices.Contains(materials.Written, ".issueops/issues/13/plan.md") {
 		t.Fatalf("a tracked plan must not be overwritten: %q %+v", got, materials)
 	}
 
-	noIssue := writeTrackedMaterials(issueops.IssueOpsRecord{Execution: &issueops.Execution{Workspace: issueops.Workspace{Root: root}}})
+	noIssue := (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write(issueops.IssueOpsRecord{Execution: &issueops.Execution{Workspace: issueops.Workspace{Root: root}}})
 	if len(noIssue.Written) != 0 || len(noIssue.Warnings) != 1 || !strings.Contains(noIssue.Warnings[0], "tracked_materials_skipped") {
 		t.Fatalf("without an issue number nothing is written and the skip is reported: %+v", noIssue)
 	}
@@ -173,11 +174,16 @@ func TestTrackedMaterialsMissingWarning(t *testing.T) {
 		}
 	})
 	writeIssueOpsFile(t, root, ".issueops/issues/81/artifact/plan.md", "봉인 계획\n")
-	_, _, report, err := ReflectIssueCompletion(stateRoot2, record2.ID, readableResult, true, false, &fakeCompletionProvider{updateRes: portUpdateResult(false)})
+	_, _, report, err := completionServiceForTest(stateRoot2, &fakeCompletionProvider{updateRes: portUpdateResult(false)}, true).Reflect(context.Background(), record2.ID, "", readableResult, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.ContainsFunc(report.Warnings, func(f artifactreadability.Finding) bool { return f.Code == "tracked_materials_missing" }) {
+	if !slices.ContainsFunc(report.Warnings, func(f reportcontract.Finding) bool { return f.Code == "tracked_materials_missing" }) {
 		t.Fatalf("reflect-completion must warn about the missing tracked plan: %+v", report.Warnings)
 	}
+}
+
+func issueOpsActorPointerForMaterialsTest(root string) *issueops.IssueOpsActor {
+	actor := issueOpsActorForTest(root)
+	return &actor
 }

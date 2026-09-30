@@ -23,6 +23,7 @@ type cleanupProvenanceObserverStub struct {
 }
 
 func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 	var printed any
@@ -36,16 +37,16 @@ func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
 	}
 	deps.Provider = func(string) (port.IssueProvider, error) {
 		return &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
-			URL: record.IssueURL, Body: port.IssueBodyCompletionStartMarker, State: "closed",
+			URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 		}}, nil
 	}
 	deps.VerifyMergedHead = func(issueopscontract.IssueOpsRemoteArtifactVerification) (issueopscontract.CleanupRemoteBranchArtifactHead, error) {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{HeadRefName: record.Branch, HeadRefOID: "abc123", BaseRefName: "main"}, nil
 	}
-	if err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
-	result, ok := printed.(issueopscore.CleanupFinishResult)
+	result, ok := printed.(issueopscontract.CleanupFinishResult)
 	if !ok || !strings.Contains(result.NextCommand, "cleanup finish") || !strings.Contains(result.NextCommand, "--generated-for-generation 1") {
 		t.Fatalf("cleanup finish preview result = %#v", printed)
 	}
@@ -90,6 +91,7 @@ func TestBindCleanupNextCommandMissingObserverHasNoFallback(t *testing.T) {
 }
 
 func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
+	command := testCleanupCommand()
 	binary := os.Getenv("ISSUEOPS_CURRENT_RELAY_DOGFOOD_BINARY")
 	lifecycleID := os.Getenv("ISSUEOPS_CURRENT_RELAY_DOGFOOD_ID")
 	if binary == "" || lifecycleID == "" {
@@ -104,7 +106,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		t.Fatal(err)
 	}
 	binaryHash := sha256.Sum256(binaryBytes)
-	live, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), lifecycleID)
+	live, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), lifecycleID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +125,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	record.Execution.Mode = issueopscontract.ExecutionModeOrca
 	record.Execution.Workspace.Driver = "orca"
 	record.Execution.Orca = &binding
-	if _, err := issueopscore.WriteIssueOps(issueopscore.IssueOpsStateRoot(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -131,7 +133,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		ExecutablePath: binary, ExecutableSHA256: hex.EncodeToString(binaryHash[:]),
 	}}
 	provider := &liveCleanupProvider{cleanupStatusProvider: cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
-		URL: record.IssueURL, Body: port.IssueBodyCompletionStartMarker, State: "closed",
+		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}}
 	var printed any
 	removeCalls := 0
@@ -168,10 +170,10 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 		}
 		return err
 	}
-	if err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
-	preview, ok := printed.(issueopscore.CleanupFinishResult)
+	preview, ok := printed.(issueopscontract.CleanupFinishResult)
 	if !ok || preview.NextCommand == "" {
 		t.Fatalf("cleanup current-relay preview = %#v", printed)
 	}
@@ -186,16 +188,16 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	observed := commandparsecontract.GeneratedCommandProvenance{
 		ExecutablePath: observer.evidence.ExecutablePath, ExecutableSHA256: observer.evidence.ExecutableSHA256, LeaseGeneration: 1,
 	}
-	if err := commandparsecontract.ValidateGeneratedCommandInvocation(provenance, observed, 1); err != nil {
+	if err := commandparse.ValidateGeneratedCommandInvocation(provenance, observed, 1); err != nil {
 		t.Fatal(err)
 	}
-	if err := RunCleanup(clean[1:], deps); err != nil {
+	if err := command.RunCleanup(clean[1:], deps); err != nil {
 		t.Fatal(err)
 	}
 	if removeCalls != 1 {
 		t.Fatalf("current relay remove calls = %d, want 1", removeCalls)
 	}
-	if _, err := issueopscore.ReadIssueOps(issueopscore.IssueOpsStateRoot(), record.ID); !errors.Is(err, os.ErrNotExist) {
+	if _, err := issueopscore.ReadIssueOps(issueOpsStateRootForTest(), record.ID); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("cleanup dogfood record was not deleted: %v", err)
 	}
 }
@@ -204,6 +206,6 @@ type liveCleanupProvider struct {
 	cleanupStatusProvider
 }
 
-func (p *liveCleanupProvider) UpdateIssueBodySection(req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
+func (p *liveCleanupProvider) UpdateIssueBodySection(ctx context.Context, req port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{OK: true, URL: req.IssueURL, Updated: true}, nil
 }

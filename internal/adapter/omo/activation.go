@@ -9,7 +9,7 @@ import (
 	"issueops/internal/port"
 )
 
-func VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvidence, error) {
+func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvidence, error) {
 	omoRoot := filepath.Join(req.Home, ".omo")
 	mcpPath := filepath.Join(omoRoot, "mcp.json")
 	raw, err := os.ReadFile(mcpPath)
@@ -28,15 +28,15 @@ func VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvi
 	if !ok {
 		return nil, fmt.Errorf("Omo MCP readback has no issueops server")
 	}
-	actualDigest, err := SemanticSHA256(actual)
+	actualDigest, err := installer.deps.SemanticSHA256(actual)
 	if err != nil {
 		return nil, err
 	}
-	expectedServer, err := omoUserMCPServer(req)
+	expectedServer, err := installer.omoUserMCPServer(req)
 	if err != nil {
 		return nil, err
 	}
-	expectedDigest, err := SemanticSHA256(expectedServer)
+	expectedDigest, err := installer.deps.SemanticSHA256(expectedServer)
 	if err != nil {
 		return nil, err
 	}
@@ -49,22 +49,22 @@ func VerifyActivation(req port.NativeInstallRequest) ([]port.NativeActivationEvi
 	if err != nil {
 		return nil, err
 	}
-	expectedExtension := omoLifecycleExtension(req.BinPath)
+	expectedExtension := installer.lifecycleExtension(req.BinPath)
 	if string(extension) != expectedExtension {
 		return nil, fmt.Errorf("Omo lifecycle extension does not match the canonical managed content")
 	}
-	extensionDigest, err := SemanticSHA256(map[string]any{
+	extensionDigest, err := installer.deps.SemanticSHA256(map[string]any{
 		"host": "omo", "surface": "hooks", "content": expectedExtension,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	mcpEvidence, err := CaptureNativeActivationEvidence("omo", "mcp", mcpPath, expectedDigest)
+	mcpEvidence, err := installer.deps.CaptureNativeActivationEvidence("omo", "mcp", mcpPath, expectedDigest)
 	if err != nil {
 		return nil, err
 	}
-	hookEvidence, err := CaptureNativeActivationEvidence("omo", "hooks", extensionPath, extensionDigest)
+	hookEvidence, err := installer.deps.CaptureNativeActivationEvidence("omo", "hooks", extensionPath, extensionDigest)
 	if err != nil {
 		return nil, err
 	}

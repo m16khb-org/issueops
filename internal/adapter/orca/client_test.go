@@ -171,13 +171,40 @@ func TestProbeRequiresInstalledCodexHookTrustBypassFlag(t *testing.T) {
 	}
 }
 
+func TestProbeRequiresInstalledHandoffPermissionBypassFlag(t *testing.T) {
+	for _, tt := range []struct{ agent, help string }{
+		{agent: "codex", help: "--model --config --dangerously-bypass-hook-trust"},
+		{agent: "claude", help: "--model"},
+	} {
+		t.Run(tt.agent, func(t *testing.T) {
+			runner := newFakeRunner(t)
+			runner.lookPaths["orca"] = "/usr/local/bin/orca"
+			runner.lookPaths[tt.agent] = "/usr/local/bin/" + tt.agent
+			runner.responses["orca status --json"] = fixtureOutput(t, "status_ready.json")
+			runner.responses["orca repo show --repo path:/repo --json"] = fixtureOutput(t, "repo_show.json")
+			addCompleteProbeLeafHelp(runner)
+			runner.responses[tt.agent+" --help"] = CommandOutput{Stdout: []byte(tt.help)}
+			result, err := NewClient(runner).Probe(context.Background(), port.OrcaProbeRequest{Repo: "/repo", Agent: tt.agent})
+			if err != nil || result.Ready || result.Code != "host_permission_bypass_unsupported" {
+				t.Fatalf("%s permission bypass probe = %#v err=%v", tt.agent, result, err)
+			}
+			for _, call := range runner.calls {
+				joined := strings.Join(call, " ")
+				if strings.Contains(joined, " create ") && !strings.HasSuffix(joined, " --help") {
+					t.Fatalf("%s capability probe mutated state: %s", tt.agent, joined)
+				}
+			}
+		})
+	}
+}
+
 func TestProbeRequiresHostModelSelectionCapability(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
 		agent string
 		help  string
 	}{
-		{name: "codex", agent: "codex", help: "--dangerously-bypass-hook-trust"},
+		{name: "codex", agent: "codex", help: "--dangerously-bypass-hook-trust --dangerously-bypass-approvals-and-sandbox"},
 		{name: "claude", agent: "claude", help: "Usage: claude"},
 		{name: "omo", agent: "omo", help: "Usage: omo"},
 	} {
@@ -772,16 +799,16 @@ func TestClientCreateTerminalUsesCallerSelectedHostLaunchProfile(t *testing.T) {
 		name, agent, model, effort, command string
 	}{
 		{
-			name: "Codex Terra high", agent: "codex", model: "gpt-5.6-terra", effort: "high",
-			command: "codex --model 'gpt-5.6-terra' -c model_reasoning_effort='high' --dangerously-bypass-hook-trust",
+			name: "Codex Astra high", agent: "codex", model: "gpt-6-astra", effort: "high",
+			command: "codex --model 'gpt-6-astra' -c model_reasoning_effort='high' --dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust",
 		},
 		{
 			name: "Claude Opus 4.8", agent: "claude", model: "opus",
-			command: "claude --model 'opus'",
+			command: "claude --model 'opus' --dangerously-skip-permissions",
 		},
 		{
-			name: "Omo Sol max", agent: "omo", model: "openai-codex/gpt-5.6-sol", effort: "max",
-			command: "omo --model 'openai-codex/gpt-5.6-sol:max'",
+			name: "Omo Sol max", agent: "omo", model: "chatgpt-subscription/gpt-6-sol", effort: "max",
+			command: "omo --model 'chatgpt-subscription/gpt-6-sol:max'",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -806,10 +833,10 @@ func TestClientCreateTerminalUsesCallerSelectedHostLaunchProfile(t *testing.T) {
 
 func TestClientBootstrapsExactOwnedTerminalWithSealedCodexProfile(t *testing.T) {
 	runner := newFakeRunner(t)
-	command := `codex --model 'gpt-5.6-terra' -c model_reasoning_effort='high' --dangerously-bypass-hook-trust`
+	command := `codex --model 'gpt-6-astra' -c model_reasoning_effort='high' --dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust`
 	runner.responses["orca terminal send --terminal term-owned --text "+command+" --enter --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"send":{"accepted":true}}}`)}
 	runner.responses["orca terminal wait --terminal term-owned --for tui-idle --timeout-ms 10000 --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"wait":{"satisfied":true}}}`)}
-	if err := NewClient(runner).BootstrapTerminalAgent(context.Background(), port.OrcaBootstrapTerminalAgentRequest{TerminalHandle: "term-owned", Agent: "codex", Model: "gpt-5.6-terra", ReasoningEffort: "high", AllowCodexHookTrustBypass: true}); err != nil {
+	if err := NewClient(runner).BootstrapTerminalAgent(context.Background(), port.OrcaBootstrapTerminalAgentRequest{TerminalHandle: "term-owned", Agent: "codex", Model: "gpt-6-astra", ReasoningEffort: "high", AllowCodexHookTrustBypass: true}); err != nil {
 		t.Fatal(err)
 	}
 	want := [][]string{
@@ -1076,7 +1103,7 @@ func TestClientRejectsBracketedPasteControlInTerminalPrompt(t *testing.T) {
 func TestClientCreateTerminalCapabilityLossIsPreInvocation(t *testing.T) {
 	runner := newFakeRunner(t)
 	runner.responses["orca terminal create --help"] = CommandOutput{Stdout: []byte("--worktree --title --json")}
-	_, err := NewClient(runner).CreateTerminal(context.Background(), port.OrcaCreateTerminalRequest{WorktreeID: "worktree-1", Agent: "codex", Model: "gpt-5.6-terra", ReasoningEffort: "high"})
+	_, err := NewClient(runner).CreateTerminal(context.Background(), port.OrcaCreateTerminalRequest{WorktreeID: "worktree-1", Agent: "codex", Model: "gpt-6-astra", ReasoningEffort: "high"})
 	var orcaErr *port.OrcaError
 	if !errors.As(err, &orcaErr) || orcaErr.Code != "terminal_create_capability_missing" || orcaErr.Invoked {
 		t.Fatalf("terminal capability loss error = %#v", err)
@@ -1103,7 +1130,7 @@ func TestProbeRejectsAgentOnlyTerminalCreateCapability(t *testing.T) {
 func TestClientCreateTerminalAcceptsRuntimeIdentityWithoutPTY(t *testing.T) {
 	runner := newFakeRunner(t)
 	runner.responses["orca terminal create --help"] = CommandOutput{Stdout: []byte("--worktree --command --title --json")}
-	command := `codex --model 'gpt-5.6-terra' -c model_reasoning_effort='high'`
+	command := `codex --model 'gpt-6-astra' -c model_reasoning_effort='high' --dangerously-bypass-approvals-and-sandbox`
 	runner.responses["orca terminal create --worktree id:worktree-1 --command "+command+" --title marker --json"] = CommandOutput{Stdout: []byte(`{
 		"ok": true,
 		"result": {
@@ -1118,7 +1145,7 @@ func TestClientCreateTerminalAcceptsRuntimeIdentityWithoutPTY(t *testing.T) {
 	runner.responses["orca terminal list --worktree id:worktree-1 --limit 512 --json"] = fixtureOutput(t, "terminal_list.json")
 
 	terminal, err := NewClient(runner).CreateTerminal(context.Background(), port.OrcaCreateTerminalRequest{
-		WorktreeID: "worktree-1", Agent: "codex", Model: "gpt-5.6-terra", ReasoningEffort: "high", Title: "marker",
+		WorktreeID: "worktree-1", Agent: "codex", Model: "gpt-6-astra", ReasoningEffort: "high", Title: "marker",
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1140,9 +1167,9 @@ func TestClientCreateTerminalUsesCodexBypassOnlyWhenAttested(t *testing.T) {
 		name, agent, model, effort, command string
 		attested                            bool
 	}{
-		{name: "attested Codex", agent: "codex", model: "caller-model", effort: "high", command: `codex --model 'caller-model' -c model_reasoning_effort='high' --dangerously-bypass-hook-trust`, attested: true},
-		{name: "ordinary Codex", agent: "codex", model: "caller-model", effort: "xhigh", command: `codex --model 'caller-model' -c model_reasoning_effort='xhigh'`},
-		{name: "Claude caller profile", agent: "claude", model: "caller-model", effort: "max", command: "claude --model 'caller-model' --effort 'max'", attested: true},
+		{name: "attested Codex", agent: "codex", model: "caller-model", effort: "high", command: `codex --model 'caller-model' -c model_reasoning_effort='high' --dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust`, attested: true},
+		{name: "ordinary Codex", agent: "codex", model: "caller-model", effort: "xhigh", command: `codex --model 'caller-model' -c model_reasoning_effort='xhigh' --dangerously-bypass-approvals-and-sandbox`},
+		{name: "Claude caller profile", agent: "claude", model: "caller-model", effort: "max", command: "claude --model 'caller-model' --effort 'max' --dangerously-skip-permissions", attested: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1167,13 +1194,13 @@ func TestClientCreateTerminalUsesCodexBypassOnlyWhenAttested(t *testing.T) {
 func TestClientCreateTerminalRejectsIncompleteRuntimeIdentity(t *testing.T) {
 	runner := newFakeRunner(t)
 	runner.responses["orca terminal create --help"] = CommandOutput{Stdout: []byte("--worktree --command --title --json")}
-	command := `codex --model 'gpt-5.6-terra' -c model_reasoning_effort='high'`
+	command := `codex --model 'gpt-6-astra' -c model_reasoning_effort='high' --dangerously-bypass-approvals-and-sandbox`
 	runner.responses["orca terminal create --worktree id:worktree-1 --command "+command+" --json"] = CommandOutput{Stdout: []byte(`{
 		"ok": true,
 		"result": {"terminal": {"ptyId": "pty-2", "worktreeId": "worktree-1"}}
 	}`)}
 
-	_, err := NewClient(runner).CreateTerminal(context.Background(), port.OrcaCreateTerminalRequest{WorktreeID: "worktree-1", Agent: "codex", Model: "gpt-5.6-terra", ReasoningEffort: "high"})
+	_, err := NewClient(runner).CreateTerminal(context.Background(), port.OrcaCreateTerminalRequest{WorktreeID: "worktree-1", Agent: "codex", Model: "gpt-6-astra", ReasoningEffort: "high"})
 	if err == nil || !strings.Contains(err.Error(), "terminal identity") {
 		t.Fatalf("CreateTerminal() error = %v, want terminal identity error", err)
 	}
@@ -1607,7 +1634,7 @@ func addCompleteProbeLeafHelp(runner *fakeRunner) {
 	}
 	runner.responses["orca orchestration run-current --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"run":null},"_meta":{"runtimeId":"runtime-1"}}`)}
 	runner.responses["orca orchestration run-list --json"] = fixtureOutput(runner.t, "run_list.json")
-	runner.responses["codex --help"] = CommandOutput{Stdout: []byte("--model --config --dangerously-bypass-hook-trust")}
-	runner.responses["claude --help"] = CommandOutput{Stdout: []byte("--model")}
+	runner.responses["codex --help"] = CommandOutput{Stdout: []byte("--model --config --dangerously-bypass-hook-trust --dangerously-bypass-approvals-and-sandbox")}
+	runner.responses["claude --help"] = CommandOutput{Stdout: []byte("--model --dangerously-skip-permissions")}
 	runner.responses["omo --help"] = CommandOutput{Stdout: []byte("--model")}
 }

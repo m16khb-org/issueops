@@ -5,7 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	apidoc "issueops/cmd/issueops/apidoc"
+	apidoc "issueops/internal/application/apidoc"
+	contract "issueops/internal/contract/apidoc"
 )
 
 // fixtureAPIFiles are the API candidate files (controller/DTO) the gates see.
@@ -30,7 +31,7 @@ func TestDogfoodStaticRecall(t *testing.T) {
 	if err := Materialize(dir, DirtyFiles()); err != nil {
 		t.Fatalf("materialize: %v", err)
 	}
-	result, _ := apidoc.RunStaticCheckWithOptions(apidoc.StaticOptions{Repo: dir, Files: fixtureAPIFiles(), All: true, JSON: true})
+	result, _ := testAPIDocService().Static.Check(apidoc.StaticOptions{Repo: dir, Files: fixtureAPIFiles(), All: true, JSON: true})
 
 	found := map[string]bool{}
 	for _, violation := range result.Violations {
@@ -57,7 +58,7 @@ func TestDogfoodCleanFixtureNoFalsePositives(t *testing.T) {
 	if err := Materialize(dir, CleanFiles()); err != nil {
 		t.Fatalf("materialize: %v", err)
 	}
-	result, _ := apidoc.RunStaticCheckWithOptions(apidoc.StaticOptions{Repo: dir, Files: fixtureAPIFiles(), All: true, JSON: true})
+	result, _ := testAPIDocService().Static.Check(apidoc.StaticOptions{Repo: dir, Files: fixtureAPIFiles(), All: true, JSON: true})
 	if !result.OK || len(result.Violations) != 0 {
 		t.Fatalf("clean fixture produced violations: %s", codes(result))
 	}
@@ -73,7 +74,7 @@ func TestDogfoodReviewEvidenceContract(t *testing.T) {
 	if err := Materialize(dir, DirtyFiles()); err != nil {
 		t.Fatalf("materialize: %v", err)
 	}
-	result, err := apidoc.RunReviewWithOptions(apidoc.ReviewOptions{Repo: dir, Files: fixtureAPIFiles(), All: true, JSON: true})
+	result, err := testAPIDocService().Reviewer.Review(apidoc.ReviewOptions{Repo: dir, Files: fixtureAPIFiles(), All: true, JSON: true})
 	if err == nil {
 		t.Fatalf("expected pending host-agent review result, got err=nil")
 	}
@@ -105,7 +106,7 @@ func TestDogfoodReviewEvidenceContract(t *testing.T) {
 	}
 }
 
-func codes(result apidoc.StaticResult) string {
+func codes(result contract.StaticResult) string {
 	var parts []string
 	for _, violation := range result.Violations {
 		parts = append(parts, violation.Code+"@"+filepath.Base(violation.File)+":"+itoa(violation.Line))

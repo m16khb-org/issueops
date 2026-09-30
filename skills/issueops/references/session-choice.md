@@ -53,7 +53,9 @@ native host에 단일 argv 문자열로 전달되므로 64 KiB를 넘길 수 없
 no-follow handle traversal과 namespace identity 검사가 보호하므로 이 leaf owner 규칙의
 대상이 아니다. material digest는 봉인된 인계 자료의 SHA-256이다. cmux와 native host
 실행 파일, socket, window UUID, model을 실측한 exact 값으로 채우고, 해당 host가 지원하는
-effort만 전달한다.
+effort만 전달한다. cmux의 private launcher는 Claude Code에
+`--dangerously-skip-permissions`, Codex에
+`--dangerously-bypass-approvals-and-sandbox`를 붙인다.
 
 ```bash
 issueops execution handoff-cmux \
@@ -177,6 +179,9 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
    worktree 삭제로 우회하지 않는다. release 후 기존 세션은 구현하거나 다시 claim하지 않는다.
 6. 자동 `new-session`이면 추가 질문 없이 **기존 worktree에** 새 세션 하나만 연다.
    현재 native host를 유지하고 현재 모델·effort는 해당 launch가 지원하는 값만 전달한다.
+   Claude Code를 여는 명령에는 `--dangerously-skip-permissions`, Codex를 여는
+   명령에는 `--dangerously-bypass-approvals-and-sandbox`를 붙인다. 설치된 host의
+   `--help`에서 플래그 지원을 확인한 뒤 호출한다.
    사용자가 직접 세션을 열겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
    Orca에서는 설치된 `orca-cli` 안내로 exact worktree 경로를 확인한 뒤 `terminal create`와
    일회성 prompt 전달을 사용한다. Herdr는 아래 **Herdr 실행** 절을 따른다. raw launcher를
@@ -355,9 +360,12 @@ IssueOps lease나 `direct|orca` mode를 소유하지 않는다. 실제 Herdr 호
    canonical cwd와 foreground가 빈 interactive shell임을 확인한다.
    현재 native host별로 **한 경로만** 실행한다.
 
-   - Claude·Codex: `herdr agent start "$AGENT_NAME" --kind "$HOST" --pane "$PANE_ID"
-     --timeout 60000`을 사용한다. 이름은 `agent list`와 대조한 고유한 이름이고,
-     모델·effort 인자는 해당 호스트의 설치된 help에서 확인한 경우에만 `--` 뒤에 붙인다.
+   - Claude Code: `herdr agent start "$AGENT_NAME" --kind claude --pane "$PANE_ID"
+     --timeout 60000 -- --dangerously-skip-permissions`를 사용한다.
+   - Codex: `herdr agent start "$AGENT_NAME" --kind codex --pane "$PANE_ID"
+     --timeout 60000 -- --dangerously-bypass-approvals-and-sandbox`를 사용한다.
+     이름은 `agent list`와 대조한 고유한 이름이고, 모델·effort 인자는 해당
+     호스트의 설치된 help에서 확인한 경우에만 같은 `--` 뒤에 추가한다.
      성공 후에도 `herdr agent read "$AGENT_NAME" --source visible`로 입력창을 확인한 뒤
      `herdr agent prompt "$AGENT_NAME" "$HANDOFF"`로 한 번 전달한다.
    - Omo: Herdr 0.9.0의 kind 목록에는 `omo`가 없다. `pi`나 `omp`, Claude로 대체하지
@@ -372,7 +380,7 @@ IssueOps lease나 `direct|orca` mode를 소유하지 않는다. 실제 Herdr 호
 3. Herdr의 `idle`/`interactive_ready`만으로 준비 완료라고 판단하지 않는다.
    0.9.0에서 Claude의 첫 MCP 선택 화면도 `idle`로 관측됐다. 실제 화면의 질문을 읽고
    기존 승인 범위 안에서 처리한다. 필요 없는 선택 기능은 화면이 제공하는 건너뛰기를
-   사용할 수 있지만 인증·신뢰·권한을 일괄 승인하지 않는다.
+   사용한다.
 4. 입력 제출 직전에 host의 이벤트/상태 구독을 등록하고 유한한 timeout을 둔다.
    전달 완료는 native 세션 기록에 exact 인계가 수신됐거나 새 세션의 수신 응답으로
    확인한다. 프롬프트가 입력창에만 남아 있거나 Herdr가 `done`이라고 한 것만으로는

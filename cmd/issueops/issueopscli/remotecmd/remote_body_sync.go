@@ -6,23 +6,24 @@ import (
 	"fmt"
 	"strings"
 
+	remoteapp "issueops/internal/application/issueopsremote"
 	issueopscontract "issueops/internal/contract/issueops"
 	bodysynccontract "issueops/internal/contract/issueopsbodysync"
 )
 
 // runRemoteSyncIssue refreshes a linked issue's body, or the body of one of its
 // provider-native children when --url names one.
-func runRemoteSyncIssue(ctx context.Context, args []string, deps Deps) error {
-	return runRemoteBodySync(ctx, "issueops remote sync-issue", bodysynccontract.KindIssue, args, deps)
+func (command Command) runRemoteSyncIssue(ctx context.Context, args []string, deps Deps) error {
+	return command.runBodySyncCommand(ctx, "issueops remote sync-issue", bodysynccontract.KindIssue, args, deps)
 }
 
 // runRemoteSyncPR refreshes the body of the PR/MR this cycle published. It is
 // fenced by the execution lease generation, like create-pr.
-func runRemoteSyncPR(ctx context.Context, args []string, deps Deps) error {
-	return runRemoteBodySync(ctx, "issueops remote sync-pr", bodysynccontract.KindPR, args, deps)
+func (command Command) runRemoteSyncPR(ctx context.Context, args []string, deps Deps) error {
+	return command.runBodySyncCommand(ctx, "issueops remote sync-pr", bodysynccontract.KindPR, args, deps)
 }
 
-func runRemoteBodySync(ctx context.Context, name, kind string, args []string, deps Deps) error {
+func (command Command) runBodySyncCommand(ctx context.Context, name, kind string, args []string, deps Deps) error {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
 	providerOverride := fs.String("provider", "", "remote provider override: github or gitlab")
@@ -45,38 +46,11 @@ func runRemoteBodySync(ctx context.Context, name, kind string, args []string, de
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err
 	}
-	record, err := remoteDeps.ReadIssueOps(remoteDeps.IssueOpsStateRoot(), *id)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	providerName := firstNonEmptyMain(*providerOverride, remoteDeps.ResolveRecordProvider(record))
-	if providerName == "" {
-		return deps.printErrorResult(*jsonOut, fmt.Errorf("cannot determine provider from IssueOps record; ensure issue_url is set or pass --provider github|gitlab"))
-	}
-	prov, err := Resolve(providerName)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	replacement, err := readBodyInput(*body, *bodyFile)
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	if strings.TrimSpace(replacement) == "" {
-		return deps.printErrorResult(*jsonOut, fmt.Errorf("a replacement body is required: pass --body or --body-file"))
-	}
-	// 원격 본문은 durable하다. 생성 경로와 같은 secret 게이트를 통과해야 한다.
-	if err := rejectSecretLikeRemoteCreateInputs(name, "", replacement, nil, nil); err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
-	ancestry, err := deps.observeNativeProcessAncestry()
-	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
-	}
 	cmd := bodysynccontract.Command{
-		ID:                 record.ID,
+		ID:                 *id,
 		Kind:               kind,
 		URL:                *artifactURL,
-		ProposedBody:       replacement,
+		ProposedBody:       *body,
 		Template:           *template,
 		ExpectedBodySHA256: *expectedBodySHA,
 		AcceptRemoteEdits:  *acceptRemoteEdits,
@@ -85,9 +59,10 @@ func runRemoteBodySync(ctx context.Context, name, kind string, args []string, de
 	if expectedGeneration != nil {
 		cmd.ExpectedGeneration = *expectedGeneration
 	}
-	_, result, err := remoteDeps.SyncRemoteArtifactBody(ctx, remoteDeps.IssueOpsStateRoot(), record.ID, cmd, prov, issueopscontract.IssueOpsActor{
-		Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd, NativeProcessAncestry: ancestry,
-	})
+	_, result, err := command.Operations.SyncRemoteBody(ctx, command.Operations.IssueOpsStateRoot(), remoteapp.BodySyncInput{
+		Provider: *providerOverride, BodyFile: *bodyFile, Command: cmd,
+		Actor: issueopscontract.IssueOpsActor{Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd},
+	}, deps.observeNativeProcessAncestry)
 	if err != nil {
 		return deps.printErrorResult(*jsonOut, err)
 	}

@@ -194,7 +194,7 @@ func TestPreviewAndApplyRemoveOnlyConfirmedRecordlessLocalArtifacts(t *testing.T
 	if got := gitOutput(t, fixture.repo, "ls-remote", "--heads", "origin", fixture.branch); strings.TrimSpace(got) == "" {
 		t.Fatal("remote branch was removed or unavailable; orphan cleanup must not delete it")
 	}
-	ids, err := coreissueops.ListIssueOpsIDs(coreissueops.IssueOpsStateRoot())
+	ids, err := coreissueops.ListIssueOpsIDs(issueOpsStateRootForTest())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,6 +237,7 @@ type orphanCleanupGitFixture struct {
 
 func newOrphanCleanupGitFixture(t *testing.T) orphanCleanupGitFixture {
 	t.Helper()
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := filepath.Join(t.TempDir(), "repo")
 	remote := filepath.Join(t.TempDir(), "remote.git")
 	worktree := filepath.Join(t.TempDir(), "feature-worktree")

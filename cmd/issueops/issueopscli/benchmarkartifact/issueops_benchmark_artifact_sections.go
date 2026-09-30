@@ -1,8 +1,9 @@
 package benchmarkartifact
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
+
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func prDraft(fixture issueopscontract.IssueOpsBenchmarkFixture, issueNumber, branchName, worktreePath, guideline, expectedIssue, expectedPR string) string {

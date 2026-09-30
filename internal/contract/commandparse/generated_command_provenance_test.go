@@ -76,27 +76,6 @@ func TestConsumeGeneratedCommandProvenanceRemovesOnlyCompleteEnvelope(t *testing
 	}
 }
 
-func TestValidateGeneratedCommandInvocationRejectsStaleInstalledBinary(t *testing.T) {
-	expected := GeneratedCommandProvenance{
-		ExecutablePath:   "/worktree/bin/issueops",
-		ExecutableSHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		LeaseGeneration:  7,
-	}
-	observed := GeneratedCommandProvenance{
-		ExecutablePath:   "/installed/bin/issueops",
-		ExecutableSHA256: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-		LeaseGeneration:  7,
-	}
-	err := ValidateGeneratedCommandInvocation(expected, observed, 7)
-	if err == nil {
-		t.Fatal("stale installed binary must be rejected")
-	}
-	fields, ok := err.(interface{ IssueOpsErrorFields() map[string]any })
-	if !ok || fields.IssueOpsErrorFields()["code"] != "generated_command_binary_provenance_mismatch" {
-		t.Fatalf("mismatch is not structured: %T %v", err, err)
-	}
-}
-
 func TestObservationErrorDoesNotExposeAdapterDiagnostic(t *testing.T) {
 	err := NewGeneratedCommandProvenanceObservationError(errors.New("credential=must-not-leak"))
 	if strings.Contains(err.Error(), "credential") || strings.Contains(err.Error(), "must-not-leak") {

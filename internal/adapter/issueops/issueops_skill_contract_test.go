@@ -209,10 +209,10 @@ func TestIssueOpsOrchestrationBindsOmoAgentsToCanonicalWorktrees(t *testing.T) {
 
 func TestIssueOpsCurrentSurfacesDoNotNameRemovedCommands(t *testing.T) {
 	for _, parts := range [][]string{
-		{"internal", "domain", "cli", "usage.go"},
+		{"internal", "adapter", "inbound", "catalog", "cli", "usage.go"},
 		{"cmd", "issueops", "issueopscli", "issueops_cli_support.go"},
 		{"internal", "domain", "commandparse", "issueops.go"},
-		{"internal", "domain", "mcp", "issueops_catalog.go"},
+		{"internal", "contract", "mcp", "issueops_catalog.go"},
 	} {
 		content := readIssueOpsContractFile(t, parts...)
 		for _, removed := range removedIssueOpsCurrentCommandTerms() {

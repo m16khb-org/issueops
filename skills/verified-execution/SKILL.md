@@ -398,7 +398,7 @@ Do not run the standalone sequence below as an additional gate. The router's pre
 confirmation governs the authorized endpoint; finishing this skill is not another user-approval stop.
 
 1. **Targeted verification**: Re-run the changed behavior tests.
-2. **AI slop clean**: Run targeted verification plus the IssueOps cleanup stage skill (`skills/issueops-clean/SKILL.md`) when cleanup is in scope; use `issueops self-verify` for harness-level health, not as a generic cleanup substitute.
+2. **AI slop clean**: Run targeted verification plus the IssueOps cleanup stage skill (`skills/issueops-slop-clean/SKILL.md`) when cleanup is in scope; use `issueops self-verify` for harness-level health, not as a generic cleanup substitute.
 3. **Re-verify** after cleanup.
 4. **Reviewer (when required by the recorded risk decision)**: For full mode and any user-facing or hard-to-reverse work, spawn an adversarial reviewer sub-agent (pattern #2: Devil's advocate). Give it: goal, all criteria, all evidence, full diff. A fresh model with no implementation bias must refute your work. For a trivially reversible low-risk change in proportionate mode, record the skip rationale instead.
    - The reviewer's verdict is BINDING as a gate: do not pass while a concern remains unresolved.

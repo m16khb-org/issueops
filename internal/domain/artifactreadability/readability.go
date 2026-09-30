@@ -15,6 +15,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	reportcontract "issueops/internal/contract/artifactreadability"
 	"issueops/internal/domain/artifacttemplate"
 	"issueops/internal/domain/issueopsbodysync"
 )
@@ -61,18 +62,6 @@ type Input struct {
 	Fields map[string]string `json:"fields,omitempty"`
 }
 
-type Finding struct {
-	Code    string `json:"code"`
-	Line    int    `json:"line,omitempty"`
-	Message string `json:"message"`
-}
-
-type Report struct {
-	OK       bool      `json:"ok"`
-	Critical []Finding `json:"critical"`
-	Warnings []Finding `json:"warnings"`
-}
-
 var harnessTerms = []string{
 	"generation", "lease", "fingerprint", "봉인", "sealed", "canonical worktree",
 	"grill", "plan-prep", "readback", "reconcile", "brooks", "turing", "shannon", "boehm",
@@ -107,33 +96,33 @@ var (
 // Check judges body against Kind's rules and, for Issue/Child/PR, the
 // matching artifacttemplate contract. It never mutates input and performs no
 // I/O. Line numbers in findings refer to lines of input.Body.
-func Check(input Input) Report {
-	report := Report{Critical: []Finding{}, Warnings: []Finding{}}
+func Check(input Input) reportcontract.Report {
+	report := reportcontract.Report{Critical: []reportcontract.Finding{}, Warnings: []reportcontract.Finding{}}
 	// prose is the authored body with harness-managed regions blanked out;
 	// code additionally blanks fenced and inline code. Both keep every line
 	// break so a finding's line is the line in the original body.
 	prose := blankManagedRegions(input.Body)
 	code := blankCode(prose)
 	if input.Kind != KindCompletion {
-		report.addStructural(input, prose)
+		addStructural(&report, input, prose)
 	}
-	report.addKoreanRatio(input.Title + "\n" + prose)
+	addKoreanRatio(&report, input.Title+"\n"+prose)
 	// A progress-report draft is rendered verbatim, code spans included, so
 	// its line findings get no code exception (intent success criterion 4).
 	lines := code
 	if input.Kind == KindCompletion {
 		lines = prose
 	}
-	report.addLineFindings(lines, input.Kind == KindCompletion)
-	report.addSectionWarnings(input, prose)
+	addLineFindings(&report, lines, input.Kind == KindCompletion)
+	addSectionWarnings(&report, input, prose)
 	if hedgeOrIntroCount(code) > 0 || strings.Count(code, "—") >= 3 || strings.Count(code, "→") >= 3 {
-		report.Warnings = append(report.Warnings, Finding{Code: "slop_pattern", Message: "fluent-korean이 잡는 AI 작문 패턴이 있습니다."})
+		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "slop_pattern", Message: "fluent-korean이 잡는 AI 작문 패턴이 있습니다."})
 	}
 	if firstDuplicateSentence(code) != "" {
-		report.Warnings = append(report.Warnings, Finding{Code: "duplicate_sentence", Message: "같은 문장이 두 절 이상에 반복됩니다."})
+		report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "duplicate_sentence", Message: "같은 문장이 두 절 이상에 반복됩니다."})
 	}
 	if input.Kind == KindCompletion && utf8.RuneCountInString(strings.TrimSpace(prose)) > completionMaxRunes {
-		report.Critical = append(report.Critical, Finding{Code: "result_too_long", Message: "진행 결과 원고가 2,000자를 넘습니다."})
+		report.Critical = append(report.Critical, reportcontract.Finding{Code: "result_too_long", Message: "진행 결과 원고가 2,000자를 넘습니다."})
 	}
 	report.Critical = sortFindings(report.Critical)
 	report.Warnings = sortFindings(report.Warnings)
@@ -143,7 +132,7 @@ func Check(input Input) Report {
 
 // addStructural restates artifacttemplate's structural judgment; this
 // package does not re-implement it.
-func (report *Report) addStructural(input Input, prose string) {
+func addStructural(report *reportcontract.Report, input Input, prose string) {
 	structural := artifacttemplate.Validate(artifacttemplate.IssueOpsTemplateInput{
 		Kind:     templateKindFor(input.Kind),
 		Template: input.Template,
@@ -152,35 +141,35 @@ func (report *Report) addStructural(input Input, prose string) {
 		Fields:   input.Fields,
 	})
 	if slices.Contains(structural.Critical, "summary_section_missing") {
-		report.Critical = append(report.Critical, Finding{Code: "summary_section_missing", Message: "첫 절이 ## 요약이고 비어 있지 않아야 합니다."})
+		report.Critical = append(report.Critical, reportcontract.Finding{Code: "summary_section_missing", Message: "첫 절이 ## 요약이고 비어 있지 않아야 합니다."})
 	}
 	if slices.Contains(structural.Critical, "required_section_missing") {
-		report.Critical = append(report.Critical, Finding{Code: "required_section_missing", Message: "필수 절이 빠졌습니다: " + strings.Join(structural.MissingRequiredSections, ", ")})
+		report.Critical = append(report.Critical, reportcontract.Finding{Code: "required_section_missing", Message: "필수 절이 빠졌습니다: " + strings.Join(structural.MissingRequiredSections, ", ")})
 	}
 	if slices.Contains(structural.Critical, "placeholder_section") {
-		report.Critical = append(report.Critical, Finding{Code: "placeholder_section", Message: "필수 절에 자리 표시만 있습니다."})
+		report.Critical = append(report.Critical, reportcontract.Finding{Code: "placeholder_section", Message: "필수 절에 자리 표시만 있습니다."})
 	}
 	for _, w := range structural.Warnings {
 		if key, ok := strings.CutPrefix(w, "unrendered_field:"); ok {
-			report.Warnings = append(report.Warnings, Finding{Code: w, Message: "본문에 렌더하지 않는 필드입니다: " + key})
+			report.Warnings = append(report.Warnings, reportcontract.Finding{Code: w, Message: "본문에 렌더하지 않는 필드입니다: " + key})
 		}
 	}
 }
 
-func (report *Report) addKoreanRatio(text string) {
+func addKoreanRatio(report *reportcontract.Report, text string) {
 	hangul, englishWords := scoreLanguage(text)
 	if hangul < minHangulChars {
-		report.Critical = append(report.Critical, Finding{Code: "korean_ratio", Message: "한글이 최소 20자 이상이어야 합니다."})
+		report.Critical = append(report.Critical, reportcontract.Finding{Code: "korean_ratio", Message: "한글이 최소 20자 이상이어야 합니다."})
 	} else if float64(englishWords)/float64(hangul) > maxEnglishRatio {
-		report.Critical = append(report.Critical, Finding{Code: "korean_ratio", Message: "영어 단어 비율이 한글 대비 1.2를 넘습니다."})
+		report.Critical = append(report.Critical, reportcontract.Finding{Code: "korean_ratio", Message: "영어 단어 비율이 한글 대비 1.2를 넘습니다."})
 	}
 }
 
 // addLineFindings scans code-blanked text line by line for hashes, local
 // paths, commit SHAs, and harness terms. local_path and commit_sha_full block
 // a progress-report draft (memo B) but only warn on issue and PR bodies.
-func (report *Report) addLineFindings(code string, completion bool) {
-	pathOrSHA := func(f Finding) {
+func addLineFindings(report *reportcontract.Report, code string, completion bool) {
+	pathOrSHA := func(f reportcontract.Finding) {
 		if completion {
 			report.Critical = append(report.Critical, f)
 		} else {
@@ -191,62 +180,39 @@ func (report *Report) addLineFindings(code string, completion bool) {
 		lineNo := i + 1
 		hasSHA256, hasCommitSHA := hexWords(line)
 		if hasSHA256 {
-			report.Critical = append(report.Critical, Finding{Code: "sha256_hex", Line: lineNo, Message: "코드 밖에 64자리 hex가 있습니다."})
+			report.Critical = append(report.Critical, reportcontract.Finding{Code: "sha256_hex", Line: lineNo, Message: "코드 밖에 64자리 hex가 있습니다."})
 		}
 		if (strings.Contains(line, "/Users/") || strings.Contains(line, "/home/")) && localPathRe.MatchString(line) {
-			pathOrSHA(Finding{Code: "local_path", Line: lineNo, Message: "로컬 절대 경로가 있습니다."})
+			pathOrSHA(reportcontract.Finding{Code: "local_path", Line: lineNo, Message: "로컬 절대 경로가 있습니다."})
 		}
 		if hasCommitSHA {
-			pathOrSHA(Finding{Code: "commit_sha_full", Line: lineNo, Message: "코드 밖에 40자리 커밋 SHA 전문이 있습니다."})
+			pathOrSHA(reportcontract.Finding{Code: "commit_sha_full", Line: lineNo, Message: "코드 밖에 40자리 커밋 SHA 전문이 있습니다."})
 		}
 		lower := strings.ToLower(line)
 		for j, term := range harnessTerms {
 			if strings.Contains(lower, term) && harnessTermRes[j].MatchString(line) {
-				report.Warnings = append(report.Warnings, Finding{Code: "harness_term", Line: lineNo, Message: "하네스 용어가 나옵니다: " + term})
+				report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "harness_term", Line: lineNo, Message: "하네스 용어가 나옵니다: " + term})
 			}
 		}
 	}
 }
 
-func (report *Report) addSectionWarnings(input Input, prose string) {
+func addSectionWarnings(report *reportcontract.Report, input Input, prose string) {
 	if input.Kind != KindCompletion {
 		if content, ok := artifacttemplate.SummarySection(prose); ok && utf8.RuneCountInString(content) > summaryMaxRunes {
-			report.Warnings = append(report.Warnings, Finding{Code: "summary_too_long", Message: "요약이 400자를 넘습니다."})
+			report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "summary_too_long", Message: "요약이 400자를 넘습니다."})
 		}
 		for _, title := range artifacttemplate.OptionalSectionTitles(templateKindFor(input.Kind), input.Template) {
 			if content, ok := artifacttemplate.SectionContent(prose, title); ok && content == "" {
-				report.Warnings = append(report.Warnings, Finding{Code: "empty_optional_section", Message: "선택 절이 비어 있습니다: " + title})
+				report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "empty_optional_section", Message: "선택 절이 비어 있습니다: " + title})
 			}
 		}
 	}
 	for _, verifyTitle := range []string{"확인한 것", "검증"} {
 		if content, ok := artifacttemplate.SectionContent(prose, verifyTitle); ok && slices.ContainsFunc(strings.Split(content, "\n"), resultOnlyRe.MatchString) {
-			report.Warnings = append(report.Warnings, Finding{Code: "result_only_pass", Message: verifyTitle + " 절에 결과만 있는 줄이 있습니다."})
+			report.Warnings = append(report.Warnings, reportcontract.Finding{Code: "result_only_pass", Message: verifyTitle + " 절에 결과만 있는 줄이 있습니다."})
 		}
 	}
-}
-
-var (
-	maskHashRe      = regexp.MustCompile(`\b(?:[0-9a-fA-F]{64}|[0-9a-fA-F]{40})\b`)
-	maskLocalPathRe = regexp.MustCompile(`(?:/Users/|/home/)[^\s\x60)]*`)
-)
-
-// MaskHarnessValues hides full hashes (64 and 40 hex digits) and local
-// absolute paths in text the harness renders for human readers, such as plan
-// review findings, and says what was left out.
-func MaskHarnessValues(text string) string {
-	text = maskHashRe.ReplaceAllString(text, "[해시 생략]")
-	return maskLocalPathRe.ReplaceAllString(text, "[로컬 경로 생략]")
-}
-
-var planReviewVerdictLabels = map[string]string{"pass": "통과", "revise": "수정 요청", "stop": "중단"}
-
-// PlanReviewVerdictLabel is the word a reader sees for a plan-review verdict.
-func PlanReviewVerdictLabel(verdict string) string {
-	if label := planReviewVerdictLabels[verdict]; label != "" {
-		return label
-	}
-	return verdict
 }
 
 // KindFor maps a template artifact kind to the readability kind that
@@ -264,7 +230,7 @@ func KindFor(kind artifacttemplate.IssueOpsArtifactKind) Kind {
 
 // RefusalError explains a refused publication finding by finding, so the
 // author can fix the body without running the preview again.
-func RefusalError(report Report) error {
+func RefusalError(report reportcontract.Report) error {
 	items := make([]string, 0, len(report.Critical))
 	for _, f := range report.Critical {
 		item := f.Code
@@ -470,7 +436,7 @@ func isHexByte(b byte) bool {
 	return (b >= '0' && b <= '9') || (b >= 'a' && b <= 'f') || (b >= 'A' && b <= 'F')
 }
 
-func sortFindings(findings []Finding) []Finding {
+func sortFindings(findings []reportcontract.Finding) []reportcontract.Finding {
 	sort.SliceStable(findings, func(i, j int) bool {
 		if findings[i].Code != findings[j].Code {
 			return findings[i].Code < findings[j].Code

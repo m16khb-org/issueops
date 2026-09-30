@@ -1,10 +1,10 @@
 package verifyloop
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"testing"
 	"time"
-
-	"issueops/cmd/issueops/commandstep"
 )
 
 func TestSelfVerifyRunsExactlyOneEvidencePass(t *testing.T) {
@@ -18,7 +18,7 @@ func TestSelfVerifyRunsExactlyOneEvidencePass(t *testing.T) {
 		stdin string,
 		name string,
 		args ...string,
-	) commandstep.StepResult {
+	) selfverify.StepResult {
 		if label == "go test" {
 			goTestCalls++
 		}

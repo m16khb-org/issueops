@@ -12,18 +12,18 @@ func RenderProjectDocs(root string, signals projectdoc.ProjectSignals) map[strin
 	// Family roots become short indexes; their previous detail bodies move
 	// into module starter documents created alongside them (folder-first).
 	for _, f := range projectdoc.DocFamilies() {
-		out[filepath.ToSlash(filepath.Join(ProjectDocsDir, f.Root))] = renderFamilyIndex(f)
+		out[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, f.Root))] = renderFamilyIndex(f)
 	}
-	out[filepath.ToSlash(filepath.Join(ProjectDocsDir, "COMMIT_POLICY.md"))] = renderCommitPolicy()
-	out[filepath.ToSlash(filepath.Join(ProjectDocsDir, "CONSTITUTION.md"))] = renderConstitution()
-	out[filepath.ToSlash(filepath.Join(ProjectDocsDir, "TECH_STACK.md"))] = renderTechStack(signals)
-	out[filepath.ToSlash(filepath.Join(ProjectDocsDir, "OPEN_API_SPEC.md"))] = renderOpenAPISpec()
-	out[filepath.ToSlash(filepath.Join(ProjectDocsDir, "AGENT_WORKFLOW.md"))] = renderAgentWorkflow()
+	out[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "COMMIT_POLICY.md"))] = renderCommitPolicy()
+	out[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "CONSTITUTION.md"))] = renderConstitution()
+	out[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "TECH_STACK.md"))] = renderTechStack(signals)
+	out[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "OPEN_API_SPEC.md"))] = renderOpenAPISpec()
+	out[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "AGENT_WORKFLOW.md"))] = renderAgentWorkflow()
 	// DESIGN.md exists only in repositories with a client surface (web
 	// frontend or desktop client): a design system contract is meaningless
 	// for backend/CLI-only projects.
 	if hasClientSurface(signals) {
-		out[filepath.ToSlash(filepath.Join(ProjectDocsDir, "DESIGN.md"))] = renderDesignDoc(root, signals)
+		out[filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "DESIGN.md"))] = renderDesignDoc(root, signals)
 	}
 	// Prepend canonical meta frontmatter so created/synced docs declare what
 	// category of information they hold. Same doc name => same metadata.
@@ -100,8 +100,8 @@ func renderConventions(signals projectdoc.ProjectSignals) string {
 		lines = append(lines, bulletListWithFallback(signals.DetectedConventions, "No detected conventions."))
 	}
 	lines = append(lines, "\n## Editing rules\n\n- Follow existing style first.\n- Do not run repo-wide formatting unless explicitly requested.\n- Add new dependencies only after documenting the need and alternatives.\n")
-	lines = append(lines, "\n", solidDesignPatternGuidance)
-	lines = append(lines, "\n", engineeringStandardsChecklist)
+	lines = append(lines, "\n", projectdoc.SolidDesignPatternGuidance)
+	lines = append(lines, "\n", projectdoc.EngineeringStandardsChecklist)
 	return strings.Join(lines, "")
 }
 

@@ -6,23 +6,26 @@ import (
 	"path/filepath"
 
 	"issueops/internal/adapter/outbound/sqlstore"
-	stateapplication "issueops/internal/application/state"
 	statecontract "issueops/internal/contract/state"
 )
 
-func knownStoreRoots() []string {
-	base := StateDir()
+type MaintenanceStores struct {
+	base       string
+	workerRoot string
+}
+
+func NewMaintenanceStores(base, workerOverride string) MaintenanceStores {
 	workerRoot := filepath.Join(base, "worker")
-	if dir := os.Getenv("ISSUEOPS_WORKER_DIR"); dir != "" {
+	if dir := workerOverride; dir != "" {
 		if abs, err := filepath.Abs(dir); err == nil {
 			workerRoot = abs
 		}
 	}
-	return []string{base, filepath.Join(base, "issueops_v1"), workerRoot, filepath.Join(base, "loop")}
+	return MaintenanceStores{base: base, workerRoot: workerRoot}
 }
 
-func projectStoreRoots() ([]string, error) {
-	projectsDir := filepath.Join(StateDir(), "projects")
+func (stores MaintenanceStores) projectRoots() ([]string, error) {
+	projectsDir := filepath.Join(stores.base, "projects")
 	entries, err := os.ReadDir(projectsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -50,36 +53,24 @@ func projectStoreRoots() ([]string, error) {
 	return roots, nil
 }
 
-func allStoreRoots() ([]string, error) {
-	roots := knownStoreRoots()
-	projectRoots, err := projectStoreRoots()
+func (stores MaintenanceStores) Roots() ([]string, error) {
+	roots := []string{stores.base, filepath.Join(stores.base, "issueops_v1"), stores.workerRoot, filepath.Join(stores.base, "loop")}
+	projectRoots, err := stores.projectRoots()
 	if err != nil {
 		return nil, err
 	}
 	return append(roots, projectRoots...), nil
 }
 
-func storeExists(root string) bool {
+func (MaintenanceStores) Exists(root string) bool {
 	_, err := os.Stat(filepath.Join(root, "issueops.db"))
 	return err == nil
 }
 
-func maintainStore(root string) (statecontract.StoreMaintainResult, error) {
+func (MaintenanceStores) Maintain(root string) (statecontract.StoreMaintainResult, error) {
 	database, err := sqlstore.Open(root)
 	if err != nil {
 		return statecontract.StoreMaintainResult{}, err
 	}
 	return database.Maintain()
-}
-
-func maintenanceService() *stateapplication.MaintenanceService {
-	return stateapplication.NewMaintenanceService(stateapplication.MaintenanceDependencies{
-		AllRoots:      allStoreRoots,
-		StoreExists:   storeExists,
-		MaintainStore: maintainStore,
-	})
-}
-
-func StateMaintain() (statecontract.StateMaintainResult, error) {
-	return maintenanceService().Maintain()
 }

@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
+	replacementmodel "issueops/internal/contract/issueops"
 	"os"
 	"strings"
 	"testing"
@@ -29,7 +30,7 @@ func TestIssueOpsAppReseedWiringUsesVerticalRepository(t *testing.T) {
 	if err != nil {
 		t.Fatalf("observe native process: %v", err)
 	}
-	_, err = issueOpsReseedHandler(context.Background(), t.TempDir(), issueops.ExecutionReseedRequest{ID: "io-reseed-wiring", Confirm: true, Actor: model.NativeActor{Host: "codex", SessionID: "reseed-wiring", SessionProcess: &receipt, ProcessAncestry: []model.NativeProcessReceipt{receipt}}})
+	_, err = issueOpsReseedHandler(context.Background(), t.TempDir(), model.ExecutionReseedRequest{ID: "io-reseed-wiring", Confirm: true, Actor: model.NativeActor{Host: "codex", SessionID: "reseed-wiring", SessionProcess: &receipt, ProcessAncestry: []model.NativeProcessReceipt{receipt}}})
 	if err == nil || !strings.Contains(err.Error(), "issueops record io-reseed-wiring not found") {
 		t.Fatalf("reseed wiring error=%v", err)
 	}
@@ -39,9 +40,9 @@ func TestIssueOpsReseedHandlerUsesResolvedSnapshotReader(t *testing.T) {
 	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
 	actor := claimWiringActor(t)
 	owner := reseedWiringOwner{}
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
-		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner})
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
+		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
+	}, port.ReplacementInvocation{OrcaOwner: owner})
 	if err != nil {
 		t.Fatalf("preview reseed inventory: %v", err)
 	}
@@ -50,23 +51,23 @@ func TestIssueOpsReseedHandlerUsesResolvedSnapshotReader(t *testing.T) {
 		Body: claimWiringIssueBody(), State: "opened",
 	}
 	fallbackCalls := 0
-	raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, issueops.ExecutionActionRequest{
-		Action: issueops.ExecutionActionReplace, ReplaceAction: issueops.ExecutionReplaceReseed, ID: record.ID,
+	raw, err := newExecutionService().Execute(context.Background(), stateRoot, model.ExecutionActionRequest{
+		Action: model.ExecutionActionReplace, ReplaceAction: model.ExecutionReplaceReseed, ID: record.ID,
 		ExpectedGeneration: 1, InventoryFingerprint: preview.InventoryFingerprint, Reason: "resolved snapshot reseed",
 		Actor: actor, CWD: record.Execution.Workspace.Root, Confirm: true, IssueSnapshot: evidence,
-	}, issueops.ExecutionActionDependencies{
+	}, port.ExecutionActionDependencies{
 		ReadIssue: func(context.Context, string, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
 			fallbackCalls++
 			return port.ExecutionIssueSnapshot{}, context.DeadlineExceeded
 		},
-		Reseed: func(ctx context.Context, root string, request issueops.ExecutionReseedRequest) (issueops.ExecutionReplaceResult, error) {
+		Reseed: func(ctx context.Context, root string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
 			return issueOpsReseedHandlerWithOwner(ctx, root, request, owner)
 		},
 	})
 	if err != nil {
 		t.Fatalf("reseed with resolved snapshot reader: %v", err)
 	}
-	result, ok := raw.(issueops.ExecutionReplaceResult)
+	result, ok := raw.(model.ExecutionReplaceResult)
 	if !ok || !result.OK || result.Execution.Lease.Generation != 2 || result.IssueSnapshotSource != "glab_mcp" || fallbackCalls != 0 {
 		t.Fatalf("reseed result=%#v fallback_calls=%d", raw, fallbackCalls)
 	}
@@ -86,21 +87,22 @@ func TestExecutionReseedCLIDogfoodDirectAndOrca(t *testing.T) {
 			}
 			actor := claimWiringActor(t)
 			owner := reseedWiringOwner{}
-			preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
-				ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
-			}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner})
+			preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
+				ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root,
+			}, port.ReplacementInvocation{OrcaOwner: owner})
 			if err != nil {
 				t.Fatalf("preview: %v", err)
 			}
-			var result issueops.ExecutionReplaceResult
+			var result model.ExecutionReplaceResult
 			deps := executioncmd.Deps{
+				Runtime:    newIssueOpsExecutionRunners(),
 				StateRoot:  func() string { return stateRoot },
 				Provenance: reseedProvenanceObserver{},
-				Reseed: func(ctx context.Context, root string, request issueops.ExecutionReseedRequest) (issueops.ExecutionReplaceResult, error) {
+				Reseed: func(ctx context.Context, root string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
 					return issueOpsReseedHandlerWithOwner(ctx, root, request, owner)
 				},
 				PrintJSON: func(value any) error {
-					mapped, ok := value.(issueops.ExecutionReplaceResult)
+					mapped, ok := value.(model.ExecutionReplaceResult)
 					if !ok {
 						return fmt.Errorf("unexpected CLI result %T", value)
 					}
@@ -123,7 +125,7 @@ func TestExecutionReseedCLIDogfoodDirectAndOrca(t *testing.T) {
 			if err := executioncmd.Run(args, deps); err != nil {
 				t.Fatalf("CLI reseed: %v", err)
 			}
-			if !result.OK || result.Action != issueops.ExecutionReplaceReseed || result.Execution.Lease.Generation != 2 || result.Execution.Lease.Status != model.LeaseStatusClaimable || result.ClaimTokenPath == "" {
+			if !result.OK || result.Action != model.ExecutionReplaceReseed || result.Execution.Lease.Generation != 2 || result.Execution.Lease.Status != model.LeaseStatusClaimable || result.ClaimTokenPath == "" {
 				t.Fatalf("CLI reseed result=%+v", result)
 			}
 			if info, err := os.Stat(result.ClaimTokenPath); err != nil || info.Mode().Perm() != 0o600 {
@@ -171,14 +173,14 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	}
 	actor := claimWiringActor(t)
 	owner := reseedWiringOwner{}
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(preview.NextCommand, "--completion-generation 1") {
 		t.Fatalf("preview lost typed completion provenance: %q", preview.NextCommand)
 	}
-	result, err := issueOpsReseedHandlerWithOwner(context.Background(), stateRoot, issueops.ExecutionReseedRequest{ID: record.ID, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root, InventoryFingerprint: preview.InventoryFingerprint, Reason: "functional HEAD changed", Confirm: true, ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+	result, err := issueOpsReseedHandlerWithOwner(context.Background(), stateRoot, model.ExecutionReseedRequest{ID: record.ID, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root, InventoryFingerprint: preview.InventoryFingerprint, Reason: "functional HEAD changed", Confirm: true, ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
 		return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
 	}}, owner)
 	if err != nil {
@@ -187,7 +189,7 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	if result.Execution.Completion != nil || len(result.Execution.CompletionHistory) != 1 || result.Execution.CompletionHistory[0].Completion.FinalHead != oldHead || result.Execution.CompletionHistory[0].Completion.Verification[0] != "old verification" {
 		t.Fatalf("reseed projection=%+v", result.Execution)
 	}
-	status, err := issueops.StatusExecution(stateRoot, record.ID)
+	status, err := issueOpsExecutionStatusHandler(context.Background(), stateRoot, record.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -217,10 +219,10 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 
 func TestCompletedReplacementPreviewRequiresSyncBaseBeforeReseedWhenParentDrifted(t *testing.T) {
 	stateRoot, record, actor, owner := completedReplacementPreviewFixture(t, true)
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
-		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
+		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err == nil {
 		t.Fatalf("drifted completed preview emitted reseed instead of sync-base: %+v", preview)
 	}
@@ -240,10 +242,10 @@ func TestCompletedReplacementPreviewRequiresSyncBaseBeforeReseedWhenParentDrifte
 
 func TestCompletedReplacementPreviewKeepsNoDriftReseed(t *testing.T) {
 	stateRoot, record, actor, owner := completedReplacementPreviewFixture(t, false)
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
-		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
+		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err != nil {
 		t.Fatalf("no-drift completed preview: %v", err)
 	}
@@ -258,10 +260,10 @@ func TestCompletedReplacementPreviewRejectsMissingStampedCompletionGeneration(t 
 	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
-	_, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
-		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
+	_, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
+		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
+	}, port.ReplacementInvocation{OrcaOwner: owner, BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit)})
 	if err == nil || err.Error() != "invalid or missing stamped completion generation" {
 		t.Fatalf("zero-generation preview error=%v", err)
 	}
@@ -301,9 +303,9 @@ func TestExecutionReseedPreviewNextCommandRunsWithoutCallerRepair(t *testing.T) 
 	actor := claimWiringActor(t)
 	actor.SessionID = "claim wiring's session"
 	owner := reseedWiringOwner{}
-	preview, err := issueops.ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
-		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.SourceRoot,
-	}, issueops.ExecutionReplaceDependencies{OrcaOwner: owner})
+	preview, err := newIssueOpsReplacementHandler()(context.Background(), stateRoot, replacementmodel.ExecutionReplaceRequest{
+		ID: record.ID, Action: model.ExecutionReplacePreview, ExpectedGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.SourceRoot,
+	}, port.ReplacementInvocation{OrcaOwner: owner})
 	if err != nil {
 		t.Fatalf("preview: %v", err)
 	}
@@ -323,12 +325,13 @@ func TestExecutionReseedPreviewNextCommandRunsWithoutCallerRepair(t *testing.T) 
 		t.Fatalf("preview did not emit canonical worktree cwd: %q", preview.NextCommand)
 	}
 	if err := executioncmd.Run(tokens[2:], executioncmd.Deps{
+		Runtime:    newIssueOpsExecutionRunners(),
 		StateRoot:  func() string { return stateRoot },
 		Provenance: reseedProvenanceObserver{},
 		ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
 			return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
 		},
-		Reseed: func(ctx context.Context, root string, request issueops.ExecutionReseedRequest) (issueops.ExecutionReplaceResult, error) {
+		Reseed: func(ctx context.Context, root string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
 			return issueOpsReseedHandlerWithOwner(ctx, root, request, owner)
 		},
 	}); err != nil {

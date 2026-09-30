@@ -7,17 +7,16 @@ import (
 	"testing"
 	"time"
 
-	"issueops/cmd/issueops/selfworkflow/augmentcatalog"
-	"issueops/cmd/issueops/selfworkflow/model"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
 func TestApplyLessonPenaltiesDemotesRepeatedSevereLessons(t *testing.T) {
-	candidates := []model.SelfAugmentCandidate{
-		{ID: "repeat-fail", Status: augmentcatalog.SelfAugmentCandidateStatusOpen, Score: 80},
-		{ID: "single-fail", Status: augmentcatalog.SelfAugmentCandidateStatusOpen, Score: 70},
-		{ID: "already-done", Status: augmentcatalog.SelfAugmentCandidateStatusSatisfied, Score: 0},
-		{ID: "floor-case", Status: augmentcatalog.SelfAugmentCandidateStatusOpen, Score: 20},
+	candidates := []augmentcontract.SelfAugmentCandidate{
+		{ID: "repeat-fail", Status: augmentcontract.CandidateStatusOpen, Score: 80},
+		{ID: "single-fail", Status: augmentcontract.CandidateStatusOpen, Score: 70},
+		{ID: "already-done", Status: augmentcontract.CandidateStatusSatisfied, Score: 0},
+		{ID: "floor-case", Status: augmentcontract.CandidateStatusOpen, Score: 20},
 	}
 	counts := map[string]int{
 		"repeat-fail":  2,
@@ -56,9 +55,9 @@ func TestSevereLessonCountsCountsOnlySevereLessonSnapshots(t *testing.T) {
 
 	writeLesson := func(t *testing.T, key, candidateID, severity string) {
 		t.Helper()
-		snapshot := model.SelfAugmentLessonStateSnapshot{
+		snapshot := augmentcontract.SelfAugmentLessonStateSnapshot{
 			SchemaVersion: 1,
-			Kind:          model.SelfAugmentationLessonKind,
+			Kind:          augmentcontract.SelfAugmentationLessonKind,
 			LoopKind:      "self_augmentation",
 			OK:            true,
 			CandidateID:   candidateID,
@@ -109,9 +108,9 @@ func TestSevereLessonCountsIgnoresOldLessonsOutsideRecentWindow(t *testing.T) {
 
 	writeLesson := func(t *testing.T, key, candidateID, generatedAt string) {
 		t.Helper()
-		snapshot := model.SelfAugmentLessonStateSnapshot{
+		snapshot := augmentcontract.SelfAugmentLessonStateSnapshot{
 			SchemaVersion: 1,
-			Kind:          model.SelfAugmentationLessonKind,
+			Kind:          augmentcontract.SelfAugmentationLessonKind,
 			LoopKind:      "self_augmentation",
 			OK:            true,
 			CandidateID:   candidateID,
@@ -150,7 +149,7 @@ func TestSevereLessonCountsIgnoresOldLessonsOutsideRecentWindow(t *testing.T) {
 func TestPlanAppliesLessonPenaltyAndRotatesSelection(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
-	req := model.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}
+	req := augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}
 
 	baseline := Plan(req, root, "test")
 	if baseline.SelectedCandidate == nil {
@@ -159,9 +158,9 @@ func TestPlanAppliesLessonPenaltyAndRotatesSelection(t *testing.T) {
 	topID := baseline.SelectedCandidate.ID
 
 	for i := range 4 {
-		snapshot := model.SelfAugmentLessonStateSnapshot{
+		snapshot := augmentcontract.SelfAugmentLessonStateSnapshot{
 			SchemaVersion: 1,
-			Kind:          model.SelfAugmentationLessonKind,
+			Kind:          augmentcontract.SelfAugmentationLessonKind,
 			LoopKind:      "self_augmentation",
 			OK:            true,
 			CandidateID:   topID,

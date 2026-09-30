@@ -1,39 +1,31 @@
 package worker
 
 import (
-	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	workercontract "issueops/internal/contract/worker"
+	workerdomain "issueops/internal/domain/worker"
 	"os"
 	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
-	"time"
 )
-
-var workerIDRe = regexp.MustCompile(`^[A-Za-z0-9._-]{1,128}$`)
 
 // workerBucket is the sqlstore bucket holding one row per worker job.
 const workerBucket = "worker"
 
-func openWorkerDB(dir string) (StateDatabase, error) {
-	return OpenStateDatabase(dir)
+func (store Store) open() (StateDatabase, error) {
+	return store.OpenDatabase(store.FilesystemDirectory)
 }
 
-func ReadWorkerJob(id string) (workercontract.WorkerJob, error) {
-	if !workerIDRe.MatchString(id) || strings.Contains(id, "..") {
+func (store Store) Read(id string) (workercontract.WorkerJob, error) {
+	if !workerdomain.ValidID(id) {
 		return workercontract.WorkerJob{OK: false, ID: id}, fmt.Errorf("invalid worker job id")
 	}
-	dir, err := workerDir()
+	dir, err := store.Dir()
 	if err != nil {
 		return workercontract.WorkerJob{OK: false, ID: id}, err
 	}
-	db, err := openWorkerDB(dir)
+	db, err := store.open()
 	if err != nil {
 		return workercontract.WorkerJob{OK: false, ID: id, WorkerDir: dir}, err
 	}
@@ -52,61 +44,15 @@ func ReadWorkerJob(id string) (workercontract.WorkerJob, error) {
 	return job, nil
 }
 
-func ListWorkerJobs() (workercontract.WorkerListResult, error) {
-	dir, err := workerDir()
-	if err != nil {
-		return workercontract.WorkerListResult{OK: false}, err
-	}
-	result := workercontract.WorkerListResult{OK: true, WorkerDir: dir, Jobs: []workercontract.WorkerJob{}}
-	db, err := openWorkerDB(dir)
-	if err != nil {
-		return result, err
-	}
-	ids, err := db.List(workerBucket)
-	if err != nil {
-		return result, err
-	}
-	for _, id := range ids {
-		job, err := ReadWorkerJob(id)
-		if err == nil {
-			result.Jobs = append(result.Jobs, job)
-		}
-	}
-	sort.Slice(result.Jobs, func(i, j int) bool { return result.Jobs[i].CreatedAt > result.Jobs[j].CreatedAt })
-	result.Queue = summarizeWorkerQueue(result.Jobs)
-	return result, nil
-}
-
-// summarizeWorkerQueue builds the status histogram + saturation depth (A2/G6).
-func summarizeWorkerQueue(jobs []workercontract.WorkerJob) *workercontract.WorkerQueueStats {
-	q := &workercontract.WorkerQueueStats{Total: len(jobs)}
-	for _, job := range jobs {
-		switch job.Status {
-		case workercontract.WorkerStatusQueued:
-			q.Queued++
-		case workercontract.WorkerStatusRunning:
-			q.Running++
-		case workercontract.WorkerStatusSucceeded:
-			q.Succeeded++
-		case workercontract.WorkerStatusFailed:
-			q.Failed++
-		case workercontract.WorkerStatusCancelled:
-			q.Cancelled++
-		}
-	}
-	q.Depth = q.Queued + q.Running
-	return q
-}
-
-func writeWorkerJob(job workercontract.WorkerJob) error {
-	if !workerIDRe.MatchString(job.ID) || strings.Contains(job.ID, "..") {
+func (store Store) Write(job workercontract.WorkerJob) error {
+	if !workerdomain.ValidID(job.ID) {
 		return fmt.Errorf("invalid worker job id")
 	}
-	dir, err := workerDir()
+	dir, err := store.Dir()
 	if err != nil {
 		return err
 	}
-	db, err := openWorkerDB(dir)
+	db, err := store.open()
 	if err != nil {
 		return err
 	}
@@ -115,13 +61,13 @@ func writeWorkerJob(job workercontract.WorkerJob) error {
 	if err != nil {
 		return err
 	}
-	// The span lock is the CALLER's responsibility (withWorkerJobLock); the row
+	// The span lock is the CALLER's responsibility (Store.WithLock); the row
 	// upsert itself is atomic, so a crash mid-write can never leave a truncated
-	// job record that ListWorkerJobs silently drops.
+	// job record that the application list operation silently drops.
 	return db.Put(workerBucket, job.ID, append(b, '\n'))
 }
 
-func workerDir() (string, error) {
+func ResolveDirectory() (string, error) {
 	if dir := os.Getenv("ISSUEOPS_WORKER_DIR"); dir != "" {
 		return filepath.Abs(dir)
 	}
@@ -134,69 +80,4 @@ func workerDir() (string, error) {
 		dir = filepath.Join(home, ".local", "state", "issueops")
 	}
 	return filepath.Join(dir, "worker"), nil
-}
-
-// DetectStuckWorkerJobs scans all worker jobs. For any job stuck in
-// "running" status whose PID is no longer alive, it marks the job as
-// "failed" with an error message. Returns the list of jobs that were
-// detected and fixed.
-func DetectStuckWorkerJobs() (workercontract.WorkerListResult, error) {
-	dir, err := workerDir()
-	if err != nil {
-		return workercontract.WorkerListResult{OK: false}, err
-	}
-	result := workercontract.WorkerListResult{OK: true, WorkerDir: dir, Jobs: []workercontract.WorkerJob{}}
-	db, err := openWorkerDB(dir)
-	if err != nil {
-		return result, err
-	}
-	ids, err := db.List(workerBucket)
-	if err != nil {
-		return result, err
-	}
-	for _, id := range ids {
-		job, err := ReadWorkerJob(id)
-		if err != nil {
-			continue
-		}
-		if job.Status == workercontract.WorkerStatusRunning && !isPIDAlive(job.PID) {
-			// Lock per job so we don't race with another modifier.
-			fixed := false
-			lockErr := withWorkerJobLock(context.Background(), dir, id, func(context.Context) error {
-				current, reReadErr := ReadWorkerJob(id)
-				if reReadErr != nil {
-					return reReadErr
-				}
-				if current.Status != workercontract.WorkerStatusRunning || isPIDAlive(current.PID) {
-					// Status changed or PID became alive since we first
-					// checked; nothing to fix.
-					return nil
-				}
-				current.Status = workercontract.WorkerStatusFailed
-				current.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-				current.OK = false
-				current.Result = nil // clear any stale result
-				current.SafetyNotice = "worker job was stuck in running status with dead PID; auto-marked as failed"
-				if err := writeWorkerJob(current); err != nil {
-					return err
-				}
-				job = current
-				fixed = true
-				return nil
-			})
-			if lockErr != nil {
-				continue
-			}
-			if fixed {
-				result.Jobs = append(result.Jobs, job)
-			}
-		}
-	}
-	sort.Slice(result.Jobs, func(i, j int) bool { return result.Jobs[i].CreatedAt > result.Jobs[j].CreatedAt })
-	return result, nil
-}
-
-func makeWorkerJobID(kind, payload string, t time.Time) string {
-	sum := sha256.Sum256([]byte(kind + "\x00" + payload + "\x00" + t.Format(time.RFC3339Nano)))
-	return "job-" + t.Format("20060102T150405Z") + "-" + hex.EncodeToString(sum[:])[:12]
 }

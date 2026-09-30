@@ -119,13 +119,13 @@ func TestCollectOrcaSharesOneRunSnapshotAndPreservesCrossChecks(t *testing.T) {
 }
 
 func TestCollectOverlapsGitAndOrcaInventory(t *testing.T) {
-	withEmptyIssueOps(t)
 	release := make(chan struct{})
 	gitStarted := make(chan struct{})
 	orcaStarted := make(chan struct{})
 	collector := Collector{
-		Git:  &overlapGit{gitStarted: gitStarted, orcaStarted: orcaStarted, release: release},
-		Orca: &runInventoryOrca{inventory: port.OrcaRunInventory{RuntimeID: "runtime"}, gitStarted: gitStarted, orcaStarted: orcaStarted, release: release},
+		IssueOps: emptyIssueOpsReader(t),
+		Git:      &overlapGit{gitStarted: gitStarted, orcaStarted: orcaStarted, release: release},
+		Orca:     &runInventoryOrca{inventory: port.OrcaRunInventory{RuntimeID: "runtime"}, gitStarted: gitStarted, orcaStarted: orcaStarted, release: release},
 	}
 	done := make(chan corehealth.Snapshot, 1)
 	go func() {
@@ -309,19 +309,9 @@ func (git *overlapGit) Run(_ context.Context, _ string, _ ...string) ([]byte, er
 	return nil, nil
 }
 
-func withEmptyIssueOps(t *testing.T) {
+func emptyIssueOpsReader(t *testing.T) IssueOpsReader {
 	t.Helper()
-	previousRoot := IssueOpsStateRoot
-	previousIDs := ListIssueOpsIDs
-	previousIndexes := ListLeaseHolderIndexes
-	IssueOpsStateRoot = func() string { return t.TempDir() }
-	ListIssueOpsIDs = func(string) ([]string, error) { return nil, nil }
-	ListLeaseHolderIndexes = func(string) ([]issueopscontract.LeaseHolderIndex, error) { return nil, nil }
-	t.Cleanup(func() {
-		IssueOpsStateRoot = previousRoot
-		ListIssueOpsIDs = previousIDs
-		ListLeaseHolderIndexes = previousIndexes
-	})
+	return IssueOpsReader{StateRoot: t.TempDir(), ListIDs: func(string) ([]string, error) { return nil, nil }, ListLeaseHolders: func(string) ([]issueopscontract.LeaseHolderIndex, error) { return nil, nil }}
 }
 
 // collectOrca의 자원 identity 필터와 resolve 경계를 잠근다. 자원 rows는

@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	cycleapp "issueops/internal/application/issueopscycle"
 	"path/filepath"
 	"testing"
 
@@ -29,7 +30,7 @@ func planPrepHasMissing(missing []string, key string) bool {
 }
 
 func TestPlanReadinessRequiresPlanPrepForNonTrivial(t *testing.T) {
-	ready := IssueOpsPlanReadiness(baseIntentRecord("standard"))
+	ready := (cycleapp.Readiness{}).Plan(baseIntentRecord("standard"))
 	for _, key := range []string{"plan_prep_decisions", "plan_prep_related_issues", "plan_prep_web_research", "plan_prep_codebase_survey"} {
 		if !planPrepHasMissing(ready.Missing, key) {
 			t.Fatalf("standard cycle without plan_prep should miss %s: %#v", key, ready.Missing)
@@ -41,7 +42,7 @@ func TestPlanReadinessRequiresPlanPrepForNonTrivial(t *testing.T) {
 }
 
 func TestPlanReadinessSkipsPlanPrepForTrivial(t *testing.T) {
-	ready := IssueOpsPlanReadiness(baseIntentRecord("trivial"))
+	ready := (cycleapp.Readiness{}).Plan(baseIntentRecord("trivial"))
 	if !ready.Ready {
 		t.Fatalf("trivial cycle should be ready without plan_prep: %#v", ready.Missing)
 	}
@@ -55,7 +56,7 @@ func TestPlanReadinessAcceptsEvidenceAndWaive(t *testing.T) {
 		WebResearch:    issueops.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "순수 내부 리팩토링이라 외부 근거 불필요"},
 		CodebaseSurvey: issueops.IssueOpsPlanPrepItem{Status: "evidence", Evidence: []string{"rg PlanPrep: internal/core/issueops/issueops_readiness.go, model/types.go, intentdesign/plan_prep.go"}},
 	}
-	ready := IssueOpsPlanReadiness(rec)
+	ready := (cycleapp.Readiness{}).Plan(rec)
 	if !ready.Ready {
 		t.Fatalf("evidence+waive should satisfy plan-prep gate: %#v", ready.Missing)
 	}
@@ -68,7 +69,7 @@ func TestPlanReadinessRequiresCodebaseSurvey(t *testing.T) {
 		RelatedIssues:  issueops.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "n/a"},
 		WebResearch:    issueops.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "n/a"},
 	}
-	ready := IssueOpsPlanReadiness(rec)
+	ready := (cycleapp.Readiness{}).Plan(rec)
 	if !planPrepHasMissing(ready.Missing, "plan_prep_codebase_survey") {
 		t.Fatalf("plan_prep without codebase survey must be missing plan_prep_codebase_survey: %#v", ready.Missing)
 	}
@@ -81,7 +82,7 @@ func TestPlanReadinessRejectsEmptyStatusItem(t *testing.T) {
 		RelatedIssues:  issueops.IssueOpsPlanPrepItem{Status: "waived", WaiveReason: "n/a"},
 		WebResearch:    issueops.IssueOpsPlanPrepItem{Status: "evidence"}, // evidence missing
 	}
-	ready := IssueOpsPlanReadiness(rec)
+	ready := (cycleapp.Readiness{}).Plan(rec)
 	if !planPrepHasMissing(ready.Missing, "plan_prep_web_research") {
 		t.Fatalf("web research with empty evidence must be missing: %#v", ready.Missing)
 	}

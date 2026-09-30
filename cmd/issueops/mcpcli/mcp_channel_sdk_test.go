@@ -2,6 +2,8 @@ package mcpcli
 
 import (
 	"context"
+	"encoding/json"
+	model "issueops/internal/contract/channel"
 	"strings"
 	"testing"
 
@@ -12,7 +14,7 @@ import (
 // 수발신이 실제로 동작하는지 검증한다.
 func TestServeMCPStreamAdvertisesAndRunsChannelTools(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Channel: testChannelService()})
 
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -59,5 +61,30 @@ func TestServeMCPStreamAdvertisesAndRunsChannelTools(t *testing.T) {
 	}
 	if strings.Contains(content, `"timed_out": true`) {
 		t.Fatalf("existing message must not time out:\n%s", content)
+	}
+}
+
+func TestChannelSDKServersKeepSeparateStores(t *testing.T) {
+	first := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Channel: testChannelServiceAt(t.TempDir())})
+	second := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Channel: testChannelServiceAt(t.TempDir())})
+	for i, session := range []*mcp.ClientSession{first, second} {
+		body := []string{"first", "second"}[i]
+		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "channel_send", Arguments: map[string]any{"channel": "same", "from": "sender", "body": body}})
+		if err != nil || result.IsError {
+			t.Fatalf("send=%+v err=%v", result, err)
+		}
+	}
+	for i, session := range []*mcp.ClientSession{first, second} {
+		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "channel_recv", Arguments: map[string]any{"channel": "same"}})
+		if err != nil || result.IsError {
+			t.Fatalf("recv=%+v err=%v", result, err)
+		}
+		var recv model.RecvResult
+		if err := json.Unmarshal([]byte(toolResultText(result)), &recv); err != nil {
+			t.Fatal(err)
+		}
+		if len(recv.Messages) != 1 || recv.Messages[0].Body != []string{"first", "second"}[i] {
+			t.Fatalf("server state leaked: %+v", recv)
+		}
 	}
 }

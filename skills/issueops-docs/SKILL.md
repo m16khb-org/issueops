@@ -10,7 +10,7 @@ description: Reflect a finished IssueOps implementation into the project's opera
 
 - 전체 흐름과 단계 판별: [`issueops`](../issueops/SKILL.md)
 - 문서 갱신 절차: [`project-docs-update`](../project-docs-update/SKILL.md)
-- 이전 단계: [`issueops-clean`](../issueops-clean/SKILL.md)
+- 이전 단계: [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)
 - 다음 단계: [`issueops-verify`](../issueops-verify/SKILL.md)
 
 ## 이 스킬이 맞는지 확인
@@ -20,7 +20,7 @@ issueops next --id "$ISSUEOPS_ID" --json
 ```
 
 `stage.key`가 `docs`면 이 스킬이다. `clean`이면 정리와 봉인이 아직이므로
-[`issueops-clean`](../issueops-clean/SKILL.md)으로 돌아간다.
+[`issueops-slop-clean`](../issueops-slop-clean/SKILL.md)으로 돌아간다.
 
 ## 왜 이 단계가 정리 뒤에 오는가
 

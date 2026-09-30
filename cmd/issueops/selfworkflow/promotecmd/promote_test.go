@@ -4,22 +4,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
 	"issueops/internal/testsupport"
 )
 
 func TestRunPrintsDryRunAndConfirmedText(t *testing.T) {
 	calls := 0
 	deps := Deps{
-		Promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (model.SelfAugmentPromoteResult, error) {
+		Promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.SelfAugmentPromoteResult, error) {
 			calls++
 			if fromKey != "candidate" || baselineKey != "baseline" {
 				t.Fatalf("unexpected promote keys: from=%q baseline=%q", fromKey, baselineKey)
 			}
-			return model.SelfAugmentPromoteResult{
+			return augmentcontract.SelfAugmentPromoteResult{
 				OK:          true,
 				FromKey:     fromKey,
 				BaselineKey: baselineKey,
@@ -52,8 +52,8 @@ func TestRunPrintsJSONAndPropagatesErrors(t *testing.T) {
 	promoteErr := errors.New("promote failed")
 	jsonOut := captureStdout(t, func() error {
 		return Run([]string{"--from-key", "candidate", "--baseline-key", "baseline", "--json"}, Deps{
-			Promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (model.SelfAugmentPromoteResult, error) {
-				return model.SelfAugmentPromoteResult{
+			Promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.SelfAugmentPromoteResult, error) {
+				return augmentcontract.SelfAugmentPromoteResult{
 					OK:          true,
 					FromKey:     fromKey,
 					BaselineKey: baselineKey,
@@ -65,7 +65,7 @@ func TestRunPrintsJSONAndPropagatesErrors(t *testing.T) {
 			PrintJSON: printJSONForTest,
 		})
 	})
-	var result model.SelfAugmentPromoteResult
+	var result augmentcontract.SelfAugmentPromoteResult
 	if err := json.Unmarshal([]byte(jsonOut), &result); err != nil {
 		t.Fatalf("decode promote JSON: %v\n%s", err, jsonOut)
 	}
@@ -74,8 +74,8 @@ func TestRunPrintsJSONAndPropagatesErrors(t *testing.T) {
 	}
 
 	err := Run([]string{"--from-key", "candidate", "--baseline-key", "baseline"}, Deps{
-		Promote: func(string, string, bool, bool) (model.SelfAugmentPromoteResult, error) {
-			return model.SelfAugmentPromoteResult{}, promoteErr
+		Promote: func(string, string, bool, bool) (augmentcontract.SelfAugmentPromoteResult, error) {
+			return augmentcontract.SelfAugmentPromoteResult{}, promoteErr
 		},
 	})
 	if !errors.Is(err, promoteErr) {

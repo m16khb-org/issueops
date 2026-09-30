@@ -11,30 +11,41 @@ func TestDirContainsTermIgnoresTestOnlySignals(t *testing.T) {
 	relDir := filepath.Join("cmd", "issueops")
 	writeFileForRepoSignalTest(t, filepath.Join(root, relDir, "signal_test.go"), "package main\nconst marker = \"production-only-signal\"\n")
 
-	if dirContainsTerm(root, relDir, "production-only-signal") {
+	if DirContainsTerm(root, relDir, "production-only-signal") {
 		t.Fatalf("test-only source was accepted as production repo signal")
 	}
 
 	writeFileForRepoSignalTest(t, filepath.Join(root, relDir, "signal.go"), "package main\nconst marker = \"production-only-signal\"\n")
-	if !dirContainsTerm(root, relDir, "production-only-signal") {
+	if !DirContainsTerm(root, relDir, "production-only-signal") {
 		t.Fatalf("production source was not accepted as repo signal")
 	}
 }
 
-func TestCollectSelfAugmentRepoSignalsFindsMCPAdapterCatalogInContractCLI(t *testing.T) {
+func TestTransportCoverageSignalFollowsExecutionDomainTests(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "mcp", "catalog.go"), "package mcp\nfunc AdapterOwnedTools() {}\n")
-	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "contractcli", "contract.go"), "package contractcli\nconst marker = \"mcpadapter.AdapterOwnedTools\"\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "contract", "toolconformance", "types_test.go"), "func TestClassificationsCoverAllContractCases() {}\nfunc TestBenchmarkReportJSONRoundTripPreservesTypedEnums() {}\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "issueops", "execution_sync_base_validation_test.go"), "func TestValidateWriteLeaseStatusMatrix() {}\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "contract", "issueops", "execution_sync_base_test.go"), "func TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand() {}\n")
 
+	if signals := CollectSelfAugmentRepoSignals(root, 0, nil, ""); !signals.HasToolConformanceTransportCoverage {
+		t.Fatal("transport coverage must follow the execution invariant tests into domain")
+	}
+}
+
+func TestCollectSelfAugmentRepoSignalsFindsMCPAdapterCatalogInCompositionRoot(t *testing.T) {
+	root := t.TempDir()
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "contract", "mcp", "catalog.go"), "package mcp\nfunc AdapterOwnedTools() {}\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "inbound", "catalog", "mcp", "catalog.go"), "package mcp\nfunc Build(){contract.AdapterOwnedTools()}\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "issueopsapp", "mcp_facade.go"), "package issueopsapp\nfunc dependencies() mcpcli.MCPDependencies { return mcpcli.MCPDependencies{Catalog: mcpcatalog.Build()} }\n")
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasMCPAdapterCatalog {
-		t.Fatalf("contractcli MCP adapter catalog signal was not detected: %+v", signals)
+		t.Fatalf("root MCP catalog signal was not detected: %+v", signals)
 	}
 }
 
 func TestSelfAugmentSignalTableIsSatisfiedByRepoSignalRules(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "selfworkflow", "augmentcatalog", "self_augment_repo_signals.go"), "package augmentcatalog\ntype repoSignalRule struct{}\nfunc repoSignalRules() []repoSignalRule { return nil }\nfunc CollectSelfAugmentRepoSignals() { for _, rule := range repoSignalRules() { _ = rule } }\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "augmentation", "signals.go"), "package augmentcatalog\ntype repoSignalRule struct{}\nfunc (repo Repository) signalRules() []repoSignalRule { return nil }\nfunc CollectSelfAugmentRepoSignals() { for _, rule := range repo.signalRules() { _ = rule } }\n")
 
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasSelfAugmentSignalTable {
@@ -52,7 +63,7 @@ func TestQualitySignalHarvesterIsSatisfiedByQualityInspectCLIAndSignals(t *testi
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "qualitycli", "quality_inspect.go"), "package qualitycli\nfunc Inspect() {}\nconst marker = \"quality inspect\"\n")
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "issueopsapp", "root_command_facade.go"), "package issueopsapp\nvar commands = map[string]any{\"quality\": nil}\n")
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "core", "qualityinspect", "inspect.go"), "package qualityinspect\nconst marker = \"branch_candidate_functions audit_p1_p2_items low_coverage_packages\"\n")
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "contract", "quality", "types.go"), "package quality\nconst marker = \"branch_candidate_functions audit_p1_p2_items low_coverage_packages\"\n")
 
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasQualityInspectCLI || !signals.HasQualityInspectSignals {
@@ -68,11 +79,12 @@ func TestQualitySignalHarvesterIsSatisfiedByQualityInspectCLIAndSignals(t *testi
 
 func TestIssueOpsLinkingCoverageIsSatisfiedByBoundaryTests(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "issueops", "linking", "link_test.go"), `package linking
-
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "application", "issueopsbranch", "link_test.go"), `package issueopsbranch
 func TestLinkIssueRejectsInvalidURL() {
 	_ = "http(s) URL"
 }
+`)
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "application", "issueopsbranch", "workspace_link_test.go"), `package issueopsbranch_test
 
 func TestLinkPlanRejectsBoundaryViolations() {
 	_ = "plan_path does not exist"
@@ -131,14 +143,14 @@ func TestStateWriteWaitsForKeyLock() {}
 
 func TestWorkerStuckRunningDetectionIsSatisfiedByCoreAndCLI(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "worker", "store.go"), `package worker
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "application", "worker", "service.go"), `package worker
 
-func DetectStuckWorkerJobs() (WorkerListResult, error) {
-	current.Status = WorkerStatusFailed
+func (service Service) DetectStuck() (WorkerListResult, error) {
 	current.SafetyNotice = "worker job was stuck in running status with dead PID; auto-marked as failed"
 	return result, nil
 }
 `)
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "worker", "lifecycle.go"), "package worker\nconst WorkerStatusFailed = \"failed\"\n")
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "worker", "worker_test.go"), `package worker
 
 func TestWorkerDetectStuckJobsMarksDeadPIDAsFailed() {}
@@ -146,18 +158,18 @@ func TestWorkerDetectStuckJobsSkipsAlivePID() {}
 `)
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "workercli", "worker.go"), `package workercli
 
-func runWorker(args []string) error {
+func (command Command) Run(args []string) error {
 	switch args[0] {
 	case "cleanup-stuck":
-		return runWorkerCleanupStuck(args[1:])
+		return command.RunCleanupStuck(args[1:])
 	}
 	return nil
 }
 `)
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "workercli", "worker_queue_cli.go"), `package workercli
 
-func runWorkerCleanupStuck(args []string) error {
-	result, err := core.DetectStuckWorkerJobs()
+func (command Command) RunCleanupStuck(args []string) error {
+	result, err := command.Service.DetectStuck()
 	_ = result
 	return err
 }
@@ -177,16 +189,44 @@ func TestRunWorkerCleanupStuckMarksDeadPIDJobsFailed() {}
 	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("worker stuck-running candidate was not marked satisfied: %+v", candidate)
 	}
+
+	if err := os.Remove(filepath.Join(root, "internal", "application", "worker", "service.go")); err != nil {
+		t.Fatal(err)
+	}
+	if CollectSelfAugmentRepoSignals(root, 0, nil, "").HasWorkerStuckRunningDetection {
+		t.Fatal("stuck-job detection accepted without its application owner")
+	}
+}
+
+func TestWorkerMVPSignalRequiresApplicationAndCLI(t *testing.T) {
+	root := t.TempDir()
+	appPath := filepath.Join(root, "internal", "application", "worker", "service.go")
+	cliPath := filepath.Join(root, "cmd", "issueops", "workercli", "worker_queue_cli.go")
+	app := "package worker\nfunc (service Service) Enqueue(kind, payload string) {}\n"
+	cli := "package workercli\nfunc (command Command) RunEnqueue(args []string) error {}\n"
+	writeFileForRepoSignalTest(t, appPath, app)
+	writeFileForRepoSignalTest(t, cliPath, cli)
+	if !CollectSelfAugmentRepoSignals(root, 0, nil, "").HasWorkerMVP {
+		t.Fatal("worker application and CLI were not detected")
+	}
+	for _, missing := range []string{appPath, cliPath} {
+		if err := os.Remove(missing); err != nil {
+			t.Fatal(err)
+		}
+		if CollectSelfAugmentRepoSignals(root, 0, nil, "").HasWorkerMVP {
+			t.Fatalf("worker signal accepted without %s", missing)
+		}
+		writeFileForRepoSignalTest(t, appPath, app)
+		writeFileForRepoSignalTest(t, cliPath, cli)
+	}
 }
 
 func TestDaemonConnectionLimitIsSatisfiedByAcceptLoopGuard(t *testing.T) {
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "daemoncli", "daemon_server.go"), `package daemoncli
 
-const maxConnections = 64
-
-func runDaemonServerWithDeps() {
-	admission := newDaemonAdmission(maxConnections)
+func (deps Server) Run() {
+	admission := newDaemonAdmission(deps.MaxConnections)
 	_ = admission
 }
 `)
@@ -213,6 +253,13 @@ func TestRunDaemonAcceptLoopRejectsWhenConnectionLimitReached() {}
 func TestRunDaemonAcceptLoopExpires64IdleSessionsAndAdmitsInitialize() {}
 `)
 
+	domainPath := filepath.Join(root, "internal", "domain", "daemon", "settings.go")
+	domainSource := "package daemon\nconst DefaultMaxConnections = 256\nfunc MaxConnections(value string) int {}\n"
+	writeFileForRepoSignalTest(t, domainPath, domainSource)
+	wiringPath := filepath.Join(root, "cmd", "issueops", "issueopsapp", "daemon_wiring.go")
+	wiringSource := "package issueopsapp\ncapacity := domain.MaxConnections(os.Getenv(\"ISSUEOPS_DAEMON_MAX_CONNECTIONS\"))\nMaxConnections: reader.MaxConnections\n"
+	writeFileForRepoSignalTest(t, wiringPath, wiringSource)
+
 	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
 	if !signals.HasDaemonConnectionLimit {
 		t.Fatalf("daemon connection limit signal was not detected: %+v", signals)
@@ -223,15 +270,26 @@ func TestRunDaemonAcceptLoopExpires64IdleSessionsAndAdmitsInitialize() {}
 	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("daemon connection limit candidate was not marked satisfied: %+v", candidate)
 	}
+	for _, missing := range []string{domainPath, wiringPath} {
+		if err := os.Remove(missing); err != nil {
+			t.Fatal(err)
+		}
+		if CollectSelfAugmentRepoSignals(root, 0, nil, "").HasDaemonConnectionLimit {
+			t.Fatalf("connection limit accepted without %s", missing)
+		}
+		writeFileForRepoSignalTest(t, domainPath, domainSource)
+		writeFileForRepoSignalTest(t, wiringPath, wiringSource)
+	}
+
 }
 
 func TestMCPResourceCoverageIsSatisfiedByCatalogAndReadEdgeTests(t *testing.T) {
 	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "mcp", "resource_catalog_test.go"), `package mcp
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "inbound", "catalog", "mcp", "resource_catalog_test.go"), `package mcp
 
 func TestResourcesExposeStableDescriptors() {}
 `)
-	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "domain", "mcp", "catalog_test.go"), `package mcp
+	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "inbound", "catalog", "mcp", "catalog_assembly_test.go"), `package mcp
 
 func TestResourceMapsPreserveDescriptorShape() {}
 `)

@@ -1,6 +1,7 @@
 package gitlab
 
 import (
+	"context"
 	"os"
 	"runtime"
 	"strings"
@@ -11,7 +12,7 @@ import (
 
 func TestGitLabCloseMergeRequestPreviewKeepsHostname(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
-	res, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+	res, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 		ArtifactURL: "https://gitlab.corp.example.com/acme/repo/-/merge_requests/7", Kind: "mr",
 	})
 	if err != nil {
@@ -27,7 +28,7 @@ func TestGitLabCloseMergeRequestPreviewKeepsHostname(t *testing.T) {
 func TestGitLabCloseMergeRequestRejectsMalformedURL(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())
 	for _, raw := range []string{"", "https://gitlab.example.com/acme/repo/-/issues/7"} {
-		if _, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+		if _, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 			ArtifactURL: raw, Kind: "mr",
 		}); err == nil {
 			t.Fatalf("malformed artifact url %q must be rejected", raw)
@@ -48,7 +49,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+	res, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 		ArtifactURL: "https://gitlab.example.com/acme/repo/-/merge_requests/7", Kind: "mr", Confirm: true,
 	})
 	if err != nil {
@@ -73,7 +74,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+	res, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 		ArtifactURL: "https://gitlab.example.com/acme/repo/-/merge_requests/7", Kind: "mr", Confirm: true,
 	})
 	if err != nil {
@@ -100,7 +101,7 @@ esac
 `)
 	t.Setenv("PATH", binDir)
 
-	res, err := NewProvider().ClosePullRequest(port.IssueProviderClosePullRequestRequest{
+	res, err := NewProvider().ClosePullRequest(context.Background(), port.IssueProviderClosePullRequestRequest{
 		ArtifactURL: "https://gitlab.example.com/acme/repo/-/merge_requests/7", Kind: "mr", Confirm: true,
 	})
 	if err != nil {

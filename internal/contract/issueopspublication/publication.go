@@ -1,5 +1,15 @@
 package issueopspublication
 
+const (
+	IssueCreateIntentPending            = "pending"
+	IssueCreateIntentNotInvoked         = "not_invoked"
+	IssueCreateIntentInvokedUnknown     = "invoked_unknown"
+	IssueCreateIntentURLObserved        = "url_observed"
+	IssueCreateIntentVerificationFailed = "verification_failed"
+	IssueCreateIntentReceiptFailed      = "receipt_failed"
+	IssueCreateIntentCompleted          = "completed"
+)
+
 type InvocationState string
 
 const (
@@ -101,12 +111,14 @@ type CreateEligibility struct {
 }
 
 type PreparedCreate struct {
+	Command     CreateCommand
 	Request     ProviderCreateRequest
 	Eligibility CreateEligibility
 }
 
 func (p PreparedCreate) Clone() PreparedCreate {
 	cloned := p
+	cloned.Command = p.Command.Clone()
 	cloned.Request = p.Request.Clone()
 	return cloned
 }

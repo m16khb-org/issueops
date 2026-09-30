@@ -1,61 +1,36 @@
 package commandstep
 
 import (
+	selfverify "issueops/internal/contract/selfverify"
+
 	"fmt"
 	"strings"
 	"time"
 
-	"issueops/internal/domain/policy"
+	selfverifydomain "issueops/internal/domain/selfverify"
 )
 
 func BudgetCommandOutput(s string, budget int) (string, bool, int) {
-	if budget <= 0 {
-		return s, false, len(s)
-	}
-	return TailWithBudget(s, budget)
+	return selfverifydomain.BudgetCommandOutput(s, budget)
 }
 
-func CombineFailedStep(label string, started time.Time, child StepResult, stdoutParts []string, commands []string, outputBudget int) StepResult {
-	stdoutText, stdoutTruncated, stdoutBytes := TailWithBudget(strings.Join(stdoutParts, "\n"), outputBudget)
-	step := StepResult{
-		Label:           label,
-		Command:         strings.Join(commands, " && "),
-		OK:              false,
-		DurationMS:      time.Since(started).Milliseconds(),
-		Stdout:          stdoutText,
-		Stderr:          child.Stderr,
-		StdoutBytes:     stdoutBytes,
-		StderrBytes:     child.StderrBytes,
-		StdoutTruncated: stdoutTruncated,
-		StderrTruncated: child.StderrTruncated,
-		Error:           child.Label + ": " + child.Error,
-	}
-	if step.Error == child.Label+": " {
-		step.Error = child.Label + " failed"
-	}
-	return step
+func CombineFailedStep(label string, started time.Time, child selfverify.StepResult, stdoutParts []string, commands []string, outputBudget int) selfverify.StepResult {
+	return selfverifydomain.CombineFailedStep(label, time.Since(started).Milliseconds(), child, stdoutParts, commands, outputBudget)
 }
 
-func AssertionStep(label string, started time.Time, errs []string) StepResult {
-	step := StepResult{Label: label, OK: len(errs) == 0, DurationMS: time.Since(started).Milliseconds()}
-	if len(errs) > 0 {
-		step.Error = strings.Join(errs, "; ")
-	}
-	return step
+func AssertionStep(label string, started time.Time, errs []string) selfverify.StepResult {
+	return selfverifydomain.AssertionStep(label, time.Since(started).Milliseconds(), errs)
 }
 
-func AssertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string, outputBudget int) StepResult {
-	step := AssertionStep(label, started, errs)
-	step.Command = strings.Join(commands, " && ")
-	step.Stdout, step.StdoutTruncated, step.StdoutBytes = TailWithBudget(strings.Join(stdoutParts, "\n"), outputBudget)
-	return step
+func AssertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string, outputBudget int) selfverify.StepResult {
+	return selfverifydomain.AssertionStepWithOutput(label, time.Since(started).Milliseconds(), errs, stdoutParts, commands, outputBudget)
 }
 
-func FailedStep(label string, err error) StepResult {
-	return StepResult{Label: label, OK: false, Error: err.Error()}
+func FailedStep(label string, err error) selfverify.StepResult {
+	return selfverifydomain.FailedStep(label, err)
 }
 
-func PrintStep(step StepResult) {
+func PrintStep(step selfverify.StepResult) {
 	if step.OK {
 		fmt.Printf("→ %s ok (%dms)\n", step.Label, step.DurationMS)
 		return
@@ -75,26 +50,7 @@ func Tail(s string, max int) string {
 }
 
 func TailWithBudget(s string, max int) (string, bool, int) {
-	originalBytes := len(s)
-	if max <= 0 {
-		return "", originalBytes > 0, originalBytes
-	}
-	if originalBytes <= max {
-		return s, false, originalBytes
-	}
-	tailBudget := max
-	for {
-		tail := policy.TailBytes(s, tailBudget)
-		marker := fmt.Sprintf("[truncated: original_bytes=%d omitted_bytes=%d]\n", originalBytes, originalBytes-len(tail))
-		tailBudgetNext := max - len(marker)
-		if tailBudgetNext < 0 {
-			return marker[:max], true, originalBytes
-		}
-		if tailBudgetNext == tailBudget {
-			return marker + tail, true, originalBytes
-		}
-		tailBudget = tailBudgetNext
-	}
+	return selfverifydomain.TailWithBudget(s, max)
 }
 
 func IndentLines(s string) string {

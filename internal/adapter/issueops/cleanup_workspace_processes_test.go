@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"issueops/internal/contract/issueops"
+	domain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
 )
 
@@ -168,7 +169,7 @@ func TestStopWorkspaceProcessesRefusesReceiptMismatchAndRequester(t *testing.T) 
 		stranger := issueops.CleanupWorkspaceProcess{PID: 900, Command: "vim", StartedAt: "s3", Executable: "vim"}
 		world := &fakeCleanupProcessWorld{t: t, occupants: map[int]issueops.CleanupWorkspaceProcess{501: a, 900: stranger}, ancestry: map[int][]int{501: {1}, 900: {1}, 777: {1}}}
 		_, err := stopCleanupWorkspaceProcesses("/tmp/wt", []issueops.CleanupWorkspaceProcess{a}, nil, CleanupProcessDeps{Observe: world.observe, Signal: world.signal, Sleep: func(time.Duration) {}, SelfPID: 777})
-		if err == nil || len(world.signals) != 0 || !errors.Is(err, errCleanupOccupancyChanged) {
+		if err == nil || len(world.signals) != 0 || !errors.Is(err, domain.ErrCleanupOccupancyChanged) {
 			t.Fatalf("an occupant absent from the preview must be stale, before any signal: err=%v signals=%v", err, world.signals)
 		}
 	})

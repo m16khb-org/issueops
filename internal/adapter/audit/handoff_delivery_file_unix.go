@@ -24,12 +24,12 @@ const (
 // root through the state root, audit directory, and leaf. The caller reads back
 // an append through the returned leaf descriptor; VerifyPath rejects any
 // namespace-link replacement before success is reported.
-func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (*handoffDeliveryAuditHandle, error) {
+func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode, hooks handoffDeliveryOpenHooks) (*handoffDeliveryAuditHandle, error) {
 	stateRoot, err := handoffDeliveryStateRootPath(stateRoot)
 	if err != nil {
 		return nil, err
 	}
-	statePathFDs, statePathNames, err := openHandoffDeliveryStateRootUnix(stateRoot)
+	statePathFDs, statePathNames, err := openHandoffDeliveryStateRootUnix(stateRoot, hooks.beforeStateRootOpen)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,9 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 	if beforeFileErr == nil && (beforeFile.Mode&unix.S_IFMT != unix.S_IFREG || beforeFile.Mode&0o777 != 0o600) {
 		return nil, errors.New("handoff delivery audit log has unsafe type or permissions")
 	}
-	handoffDeliveryAuditBeforeLeafOpen()
+	if hooks.beforeLeafOpen != nil {
+		hooks.beforeLeafOpen()
+	}
 
 	flags := unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NOFOLLOW
 	if mode == handoffDeliveryAuditAppend {
@@ -96,7 +98,9 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 			return nil, errors.New("handoff delivery audit log changed while opening")
 		}
 	}
-	handoffDeliveryAuditAfterLeafOpen()
+	if hooks.afterLeafOpen != nil {
+		hooks.afterLeafOpen()
+	}
 
 	handle := &handoffDeliveryAuditHandle{file: file}
 	handle.verifyPath = func() error {
@@ -121,7 +125,7 @@ func openHandoffDeliveryAudit(stateRoot string, mode handoffDeliveryAuditMode) (
 	return handle, nil
 }
 
-func openHandoffDeliveryStateRootUnix(stateRoot string) ([]int, []string, error) {
+func openHandoffDeliveryStateRootUnix(stateRoot string, beforeStateRootOpen func()) ([]int, []string, error) {
 	if !filepath.IsAbs(stateRoot) {
 		return nil, nil, errors.New("handoff delivery state root must be absolute")
 	}
@@ -137,7 +141,7 @@ func openHandoffDeliveryStateRootUnix(stateRoot string) ([]int, []string, error)
 	for index, part := range parts {
 		var beforeOpen func()
 		if index == len(parts)-1 {
-			beforeOpen = handoffDeliveryAuditBeforeStateRootOpen
+			beforeOpen = beforeStateRootOpen
 		}
 		nextFD, openErr := openPinnedHandoffDeliveryUnixDirectory(currentFD, part, beforeOpen)
 		if openErr != nil {

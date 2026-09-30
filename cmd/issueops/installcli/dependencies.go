@@ -5,15 +5,20 @@ import (
 	"encoding/json"
 	"os"
 
+	installcontract "issueops/internal/contract/install"
 	upstreamcontract "issueops/internal/contract/upstream"
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
 )
 
-// Deps holds host-provided dependencies for the install CLI. The composition
-// root injects implementations via Configure; defaults support standalone
-// use/tests.
+// Command keeps one installation configuration through all transaction phases.
+type Command struct{ Deps }
+
 type Deps struct {
+	StateRoot                          string
+	EnsureSymlinkPlan                  func(target, path string, dryRun bool) (port.InstallLink, error)
+	PrepareManagedCommandPathCandidate func(target, candidate, path string, adopt, dryRun bool) (ManagedCommandPathTransaction, installcontract.ManagedCommandPathPlan, error)
+
 	IssueOpsRoot      func() string
 	ActivationBackend activationport.Backend
 
@@ -33,35 +38,6 @@ type Deps struct {
 	// SyncUpstream은 선언된 upstream plugin/skill 중 host에 없는 것만 설치한다.
 	// 미주입이면 install은 upstream을 건드리지 않고 그대로 진행한다.
 	SyncUpstream func(ctx context.Context, root string, dryRun bool) (upstreamcontract.Report, error)
-}
-
-var deps = defaultDeps()
-
-// Configure installs host-provided dependencies (called once by the composition
-// root); Reset restores defaults for tests via t.Cleanup.
-func Configure(d Deps) {
-	if d.ExecutablePath == nil {
-		d.ExecutablePath = os.Executable
-	}
-	deps = d
-}
-
-// Reset restores standalone defaults.
-func Reset() { deps = defaultDeps() }
-
-func defaultDeps() Deps {
-	return Deps{IssueOpsRoot: defaultIssueOpsRoot, ExecutablePath: os.Executable}
-}
-
-func defaultIssueOpsRoot() string {
-	if root := os.Getenv("ISSUEOPS_ROOT"); root != "" {
-		return root
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "."
-	}
-	return cwd
 }
 
 func printJSON(value any) error {

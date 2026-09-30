@@ -1,13 +1,6 @@
 package trace
 
-import (
-	tracecontract "issueops/internal/contract/trace"
-	"sort"
-	"strings"
-
-	"issueops/internal/contract/failurecause"
-	"issueops/internal/domain/policy"
-)
+import "strings"
 
 func nestedMap(doc map[string]any, key string) map[string]any {
 	raw, ok := doc[key]
@@ -31,55 +24,6 @@ func stringField(doc map[string]any, key string) string {
 	}
 	return ""
 }
-func failureCauseField(doc map[string]any, key string) failurecause.Cause {
-	return normalizedFailureCause(failurecause.Cause(stringField(doc, key)))
-}
-
-func failureCauseEvidenceField(doc map[string]any, key string) []failurecause.Evidence {
-	raw, ok := doc[key]
-	if !ok {
-		return []failurecause.Evidence{}
-	}
-	items, ok := raw.([]any)
-	if !ok {
-		return []failurecause.Evidence{}
-	}
-	evidence := make([]failurecause.Evidence, 0, len(items))
-	for _, item := range items {
-		entry, ok := item.(map[string]any)
-		if !ok {
-			continue
-		}
-		evidence = append(evidence, failurecause.Evidence{
-			Cause:  failureCauseField(entry, "cause"),
-			Code:   stringField(entry, "code"),
-			Source: stringField(entry, "source"),
-		})
-	}
-	return redactedFailureCauseEvidence(evidence)
-}
-
-func normalizedFailureCause(cause failurecause.Cause) failurecause.Cause {
-	switch cause {
-	case failurecause.None, failurecause.Model, failurecause.HarnessEnvironment, failurecause.Transport, failurecause.ContractInput, failurecause.Unknown:
-		return cause
-	default:
-		return failurecause.Unknown
-	}
-}
-
-func redactedFailureCauseEvidence(items []failurecause.Evidence) []failurecause.Evidence {
-	out := make([]failurecause.Evidence, 0, len(items))
-	for _, item := range items {
-		out = append(out, failurecause.Evidence{
-			Cause:  normalizedFailureCause(item.Cause),
-			Code:   policy.RedactFreeform(item.Code),
-			Source: policy.RedactFreeform(item.Source),
-		})
-	}
-	return out
-}
-
 func intField(doc map[string]any, key string) int {
 	raw, ok := doc[key]
 	if !ok {
@@ -119,80 +63,5 @@ func stringSliceField(doc map[string]any, key string) []string {
 			out = append(out, strings.TrimSpace(s))
 		}
 	}
-	return out
-}
-
-func firstString(doc map[string]any, key, fallback string) string {
-	items := stringSliceField(doc, key)
-	if len(items) == 0 {
-		return fallback
-	}
-	return policy.RedactFreeform(items[0])
-}
-
-func redactStringSlice(items []string) []string {
-	out := make([]string, len(items))
-	for i, item := range items {
-		out[i] = policy.RedactFreeform(item)
-	}
-	return out
-}
-
-func traceSortedIntKeys(values map[string]int) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-func uniqSortedTraceStrings(values []string) []string {
-	set := map[string]bool{}
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value != "" {
-			set[value] = true
-		}
-	}
-	out := make([]string, 0, len(set))
-	for value := range set {
-		out = append(out, value)
-	}
-	sort.Strings(out)
-	return out
-}
-
-func dedupeTraceFindings(findings []tracecontract.TraceAnalysisFinding) []tracecontract.TraceAnalysisFinding {
-	seen := map[string]bool{}
-	out := []tracecontract.TraceAnalysisFinding{}
-	for _, finding := range findings {
-		finding.FailureCause = normalizedFailureCause(finding.FailureCause)
-		finding.FailureCauseEvidence = redactedFailureCauseEvidence(finding.FailureCauseEvidence)
-		key := finding.FailureClass + "\x00" + string(finding.FailureCause) + "\x00" + finding.RecurringPattern + "\x00" + finding.ProposedKnob
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		out = append(out, finding)
-	}
-	sort.Slice(out, func(i, j int) bool {
-		if out[i].FailureClass != out[j].FailureClass {
-			return out[i].FailureClass < out[j].FailureClass
-		}
-		if out[i].FailureCause != out[j].FailureCause {
-			return out[i].FailureCause < out[j].FailureCause
-		}
-		if out[i].RecurringPattern != out[j].RecurringPattern {
-			return out[i].RecurringPattern < out[j].RecurringPattern
-		}
-		if out[i].ProposedKnob != out[j].ProposedKnob {
-			return out[i].ProposedKnob < out[j].ProposedKnob
-		}
-		if out[i].OverfitRisk != out[j].OverfitRisk {
-			return out[i].OverfitRisk < out[j].OverfitRisk
-		}
-		return out[i].VerificationCommand < out[j].VerificationCommand
-	})
 	return out
 }

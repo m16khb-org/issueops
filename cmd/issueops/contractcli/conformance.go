@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	toolconformancecontract "issueops/internal/contract/toolconformance"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"os"
@@ -15,7 +16,6 @@ import (
 	"strings"
 
 	mcpcontract "issueops/internal/contract/mcp"
-	mcpdomain "issueops/internal/domain/mcp"
 )
 
 type LiveRequest struct {
@@ -40,109 +40,117 @@ type ReplayOutcome struct {
 }
 
 type ConformanceDependencies struct {
-	Catalog          func() []mcpdomain.Tool
-	Root             func() string
-	RunProcess       func(context.Context, LiveRequest) (toolconformancecontract.BenchmarkReport, error)
-	EvaluateBaseline func() (caseCount int, ok bool, err error)
-	Replay           func(context.Context, string, string) (ReplayOutcome, error)
+	LoadManifest          func([]toolconformancecontract.ToolDescriptor) ([]toolconformancecontract.Fixture, []toolconformancecontract.BaselineCase, error)
+	LoadRegressionFixture func(string) (toolconformancecontract.RegressionFixture, error)
+	ReplayRegression      func(toolconformancecontract.RegressionFixture, []toolconformancecontract.ToolDescriptor, string) (toolconformancecontract.ReplayResult, error)
+	ServeProbe            func(context.Context, io.Reader, io.Writer, mcpcontract.ConformanceProbeConfig) error
+	Catalog               func() []mcpcontract.Tool
+	Root                  func() string
+	RunProcess            func(context.Context, LiveRequest) (toolconformancecontract.BenchmarkReport, error)
+	EvaluateBaseline      func() (caseCount int, ok bool, err error)
+	Replay                func(context.Context, string, string) (ReplayOutcome, error)
 }
 
-var conformanceDependencies ConformanceDependencies
+type Conformance struct{ deps ConformanceDependencies }
 
-func init() { conformanceDependencies = defaultConformanceDependencies() }
-
-func defaultConformanceDependencies() ConformanceDependencies {
-	return ConformanceDependencies{
-		Catalog: mcpdomain.AdvertisedTools,
-		Root: func() string {
+func NewConformance(deps ConformanceDependencies) *Conformance {
+	c := &Conformance{deps: deps}
+	if c.deps.Catalog == nil {
+		c.deps.Catalog = func() []mcpcontract.Tool { return nil }
+	}
+	if c.deps.Root == nil {
+		c.deps.Root = func() string {
 			root, err := os.Getwd()
 			if err != nil {
 				return "."
 			}
 			return root
-		},
-		RunProcess: func(context.Context, LiveRequest) (toolconformancecontract.BenchmarkReport, error) {
+		}
+	}
+	if c.deps.RunProcess == nil {
+		c.deps.RunProcess = func(context.Context, LiveRequest) (toolconformancecontract.BenchmarkReport, error) {
 			return toolconformancecontract.BenchmarkReport{}, fmt.Errorf("live_runner_unavailable")
-		},
-		EvaluateBaseline: evaluateSyntheticBaseline,
-		Replay: func(_ context.Context, fixturePath, stateDir string) (ReplayOutcome, error) {
-			fixture, err := loadRegressionFixture(fixturePath)
-			if err != nil {
-				return ReplayOutcome{}, err
-			}
-			replayed, err := replayRegression(fixture, conformanceDescriptors(), stateDir)
-			if err != nil {
-				return ReplayOutcome{}, err
-			}
-			if !replayed.OK {
-				return ReplayOutcome{}, fmt.Errorf("replay_expectation_failed")
-			}
-			return ReplayOutcome{
-				HandlerCalls: replayed.HandlerCalls, StateBeforeSHA256: replayed.StateBeforeSHA256, StateAfterSHA256: replayed.StateAfterSHA256,
-				Classification: replayed.Classification, Diagnostics: replayed.Diagnostics, FinalResult: replayed.FinalResult,
-			}, nil
-		},
+		}
 	}
+	if c.deps.LoadManifest == nil {
+		c.deps.LoadManifest = func([]toolconformancecontract.ToolDescriptor) ([]toolconformancecontract.Fixture, []toolconformancecontract.BaselineCase, error) {
+			return nil, nil, fmt.Errorf("conformance manifest loader is not configured")
+		}
+	}
+	if c.deps.LoadRegressionFixture == nil {
+		c.deps.LoadRegressionFixture = func(string) (toolconformancecontract.RegressionFixture, error) {
+			return toolconformancecontract.RegressionFixture{}, fmt.Errorf("conformance fixture loader is not configured")
+		}
+	}
+	if c.deps.ReplayRegression == nil {
+		c.deps.ReplayRegression = func(toolconformancecontract.RegressionFixture, []toolconformancecontract.ToolDescriptor, string) (toolconformancecontract.ReplayResult, error) {
+			return toolconformancecontract.ReplayResult{}, fmt.Errorf("conformance replay is not configured")
+		}
+	}
+	if c.deps.ServeProbe == nil {
+		c.deps.ServeProbe = func(context.Context, io.Reader, io.Writer, mcpcontract.ConformanceProbeConfig) error {
+			return fmt.Errorf("conformance probe is not configured")
+		}
+	}
+	if c.deps.EvaluateBaseline == nil {
+		c.deps.EvaluateBaseline = c.evaluateSyntheticBaseline
+	}
+	if c.deps.Replay == nil {
+		c.deps.Replay = c.replayRegressionFixture
+	}
+	return c
 }
 
-// ConfigureConformance는 capture 서버를 production MCP catalog에 노출하지 않으면서
-// 하네스 소유 의존성을 주입한다. restore 함수는 특정 테스트에서 쓰이며, 애플리케이션
-// 와이어링은 의도적으로 구성된 값을 유지한다.
-func ConfigureConformance(overrides ConformanceDependencies) func() {
-	previous := conformanceDependencies
-	if overrides.Catalog != nil {
-		conformanceDependencies.Catalog = overrides.Catalog
+func (c *Conformance) replayRegressionFixture(_ context.Context, fixturePath, stateDir string) (ReplayOutcome, error) {
+	fixture, err := c.deps.LoadRegressionFixture(fixturePath)
+	if err != nil {
+		return ReplayOutcome{}, err
 	}
-	if overrides.Root != nil {
-		conformanceDependencies.Root = overrides.Root
+	replayed, err := c.deps.ReplayRegression(fixture, c.conformanceDescriptors(), stateDir)
+	if err != nil {
+		return ReplayOutcome{}, err
 	}
-	if overrides.RunProcess != nil {
-		conformanceDependencies.RunProcess = overrides.RunProcess
+	if !replayed.OK {
+		return ReplayOutcome{}, fmt.Errorf("replay_expectation_failed")
 	}
-	if overrides.EvaluateBaseline != nil {
-		conformanceDependencies.EvaluateBaseline = overrides.EvaluateBaseline
-	}
-	if overrides.Replay != nil {
-		conformanceDependencies.Replay = overrides.Replay
-	}
-	return func() { conformanceDependencies = previous }
+	return ReplayOutcome{HandlerCalls: replayed.HandlerCalls, StateBeforeSHA256: replayed.StateBeforeSHA256, StateAfterSHA256: replayed.StateAfterSHA256, Classification: replayed.Classification, Diagnostics: replayed.Diagnostics, FinalResult: replayed.FinalResult}, nil
 }
 
-func runConformance(args []string) error {
+func (c *Conformance) Run(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("missing conformance subcommand")
 	}
 	switch args[0] {
 	case "baseline":
-		return runConformanceBaseline(args[1:])
+		return c.runConformanceBaseline(args[1:])
 	case "live":
-		return runConformanceLive(args[1:])
+		return c.runConformanceLive(args[1:])
 	case "replay":
-		return runConformanceReplay(args[1:])
+		return c.runConformanceReplay(args[1:])
 	case "serve":
-		return runConformanceServe(args[1:])
+		return c.runConformanceServe(args[1:])
 	default:
 		return fmt.Errorf("unknown conformance subcommand %q", args[0])
 	}
 }
 
-func conformanceDescriptors() []toolconformancecontract.ToolDescriptor {
+func (c *Conformance) conformanceDescriptors() []toolconformancecontract.ToolDescriptor {
 	out := []toolconformancecontract.ToolDescriptor{}
-	for _, t := range conformanceDependencies.Catalog() {
+	for _, t := range c.deps.Catalog() {
 		out = append(out, toolconformancecontract.ToolDescriptor{Name: t.Name, InputSchema: t.InputSchema})
 	}
 	return out
 }
 
-func evaluateSyntheticBaseline() (int, bool, error) {
-	fixtures, cases, err := loadManifest(conformanceDescriptors())
+func (c *Conformance) evaluateSyntheticBaseline() (int, bool, error) {
+	fixtures, cases, err := c.deps.LoadManifest(c.conformanceDescriptors())
 	if err != nil {
 		return 0, false, err
 	}
 	byID := map[string]toolconformancecontract.Fixture{}
 	schema := map[string]map[string]any{}
 	byTool := map[string]map[string]any{}
-	for _, d := range conformanceDescriptors() {
+	for _, d := range c.conformanceDescriptors() {
 		byTool[d.Name] = d.InputSchema
 	}
 	for _, f := range fixtures {
@@ -158,13 +166,13 @@ func evaluateSyntheticBaseline() (int, bool, error) {
 	return len(cases), ok, nil
 }
 
-func runConformanceBaseline(args []string) error {
+func (c *Conformance) runConformanceBaseline(args []string) error {
 	fs := flag.NewFlagSet("contract conformance baseline", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	report, err := evaluateBaselineReport()
+	report, err := c.evaluateBaselineReport()
 	if err != nil {
 		return err
 	}
@@ -181,17 +189,17 @@ func runConformanceBaseline(args []string) error {
 	return nil
 }
 
-func evaluateBaselineReport() (toolconformancecontract.BenchmarkReport, error) {
-	caseCount, ok, err := conformanceDependencies.EvaluateBaseline()
+func (c *Conformance) evaluateBaselineReport() (toolconformancecontract.BenchmarkReport, error) {
+	caseCount, ok, err := c.deps.EvaluateBaseline()
 	if err != nil {
 		return toolconformancecontract.BenchmarkReport{}, err
 	}
-	regressions, err := regressionFixtures(regressionDirectory(conformanceDependencies.Root()))
+	regressions, err := regressionFixtures(regressionDirectory(c.deps.Root()))
 	if err != nil {
 		return toolconformancecontract.BenchmarkReport{}, err
 	}
 	for _, fixture := range regressions {
-		outcome, replayErr := replayFixture(fixture)
+		outcome, replayErr := c.replayFixture(fixture)
 		caseCount++
 		ok = ok && replayErr == nil && outcome.HandlerCalls == 0 && outcome.StateBeforeSHA256 != "" && outcome.StateBeforeSHA256 == outcome.StateAfterSHA256
 	}
@@ -230,7 +238,7 @@ func regressionFixtures(dir string) ([]string, error) {
 	return fixtures, nil
 }
 
-func runConformanceLive(args []string) error {
+func (c *Conformance) runConformanceLive(args []string) error {
 	fs := flag.NewFlagSet("contract conformance live", flag.ContinueOnError)
 	hosts := fs.String("hosts", "codex,claude", "comma-separated hosts")
 	profile := fs.String("profile", "clean", "clean or context-pressure")
@@ -265,7 +273,7 @@ func runConformanceLive(args []string) error {
 	if os.Getenv("ISSUEOPS_TOOL_CONFORMANCE_LIVE") != "1" {
 		return fmt.Errorf("live_opt_in_required")
 	}
-	baseline, err := evaluateBaselineReport()
+	baseline, err := c.evaluateBaselineReport()
 	if err != nil || !baseline.OK {
 		return fmt.Errorf("baseline_failed_before_live")
 	}
@@ -276,11 +284,11 @@ func runConformanceLive(args []string) error {
 		}
 		request.Previous = &previous
 	}
-	report, err := conformanceDependencies.RunProcess(context.Background(), request)
+	report, err := c.deps.RunProcess(context.Background(), request)
 	if err != nil {
 		return err
 	}
-	if err := persistLiveReport(&report, request); err != nil {
+	if err := c.persistLiveReport(&report, request); err != nil {
 		return err
 	}
 	if *jsonOut {
@@ -311,8 +319,8 @@ func loadBenchmarkReport(path string) (toolconformancecontract.BenchmarkReport, 
 	return report, nil
 }
 
-func persistLiveReport(report *toolconformancecontract.BenchmarkReport, request LiveRequest) error {
-	root := conformanceDependencies.Root()
+func (c *Conformance) persistLiveReport(report *toolconformancecontract.BenchmarkReport, request LiveRequest) error {
+	root := c.deps.Root()
 	evidenceRoot := request.EvidenceDir
 	if !filepath.IsAbs(evidenceRoot) {
 		evidenceRoot = filepath.Join(root, evidenceRoot)
@@ -331,7 +339,7 @@ func persistLiveReport(report *toolconformancecontract.BenchmarkReport, request 
 	relativeRunDir := filepath.Join(relative, safeRunID(report.RunID))
 	report.Evidence.ReportPath = filepath.Join(relativeRunDir, "report.json")
 	if report.Gate.Decision == toolconformancecontract.GateAuthorizeHardening {
-		candidate, tracked, buildErr := buildCandidateRegression(*report)
+		candidate, tracked, buildErr := c.buildCandidateRegression(*report)
 		if buildErr != nil {
 			return buildErr
 		}
@@ -391,7 +399,7 @@ func writePrivateJSONFile(path string, value any) error {
 	return os.Rename(name, path)
 }
 
-func buildCandidateRegression(report toolconformancecontract.BenchmarkReport) (toolconformancecontract.RegressionFixture, string, error) {
+func (c *Conformance) buildCandidateRegression(report toolconformancecontract.BenchmarkReport) (toolconformancecontract.RegressionFixture, string, error) {
 	signature := report.Gate.ConfirmedSignature
 	groups := map[string][]toolconformancecontract.EpisodeReport{}
 	keys := []string{}
@@ -418,7 +426,7 @@ func buildCandidateRegression(report toolconformancecontract.BenchmarkReport) (t
 	if len(matches) < 2 {
 		return toolconformancecontract.RegressionFixture{}, "", fmt.Errorf("confirmed_signature_evidence_missing")
 	}
-	fixtures, _, err := loadManifest(conformanceDescriptors())
+	fixtures, _, err := c.deps.LoadManifest(c.conformanceDescriptors())
 	if err != nil {
 		return toolconformancecontract.RegressionFixture{}, "", err
 	}
@@ -474,7 +482,7 @@ func firstN(value string, count int) string {
 	return value[:count]
 }
 
-func runConformanceReplay(args []string) error {
+func (c *Conformance) runConformanceReplay(args []string) error {
 	fs := flag.NewFlagSet("contract conformance replay", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	fixture := fs.String("fixture", "", "fixture")
@@ -484,7 +492,7 @@ func runConformanceReplay(args []string) error {
 	if *fixture == "" {
 		return fmt.Errorf("fixture_required")
 	}
-	outcome, err := replayFixture(*fixture)
+	outcome, err := c.replayFixture(*fixture)
 	if err != nil {
 		return err
 	}
@@ -505,7 +513,7 @@ func runConformanceReplay(args []string) error {
 	return nil
 }
 
-func replayFixture(fixture string) (ReplayOutcome, error) {
+func (c *Conformance) replayFixture(fixture string) (ReplayOutcome, error) {
 	stateDir, err := os.MkdirTemp("", "issueops-conformance-replay-")
 	if err != nil {
 		return ReplayOutcome{}, err
@@ -514,10 +522,10 @@ func replayFixture(fixture string) (ReplayOutcome, error) {
 	if err := os.Chmod(stateDir, 0o700); err != nil {
 		return ReplayOutcome{}, err
 	}
-	return conformanceDependencies.Replay(context.Background(), fixture, stateDir)
+	return c.deps.Replay(context.Background(), fixture, stateDir)
 }
 
-func runConformanceServe(args []string) error {
+func (c *Conformance) runConformanceServe(args []string) error {
 	fs := flag.NewFlagSet("contract conformance serve", flag.ContinueOnError)
 	id := fs.String("fixture-id", "", "fixture id")
 	path := fs.String("result-file", "", "result file")
@@ -528,20 +536,20 @@ func runConformanceServe(args []string) error {
 	if *id == "" || *path == "" || *token == "" {
 		return fmt.Errorf("fixture-id, result-file, and run-token are required")
 	}
-	fixtures, _, err := loadManifest(conformanceDescriptors())
+	fixtures, _, err := c.deps.LoadManifest(c.conformanceDescriptors())
 	if err != nil {
 		return err
 	}
 	for _, f := range fixtures {
 		if f.ID == *id {
-			return ServeConformanceProbe(context.Background(), os.Stdin, os.Stdout, mcpcontract.ConformanceProbeConfig{FixtureID: f.ID, ProbeTool: f.ProbeTool, Schema: sourceSchema(f.SourceTool), SchemaSHA: f.SchemaSHA256, ExpectedArguments: f.ExpectedArguments, ResultPath: *path, RunToken: *token})
+			return c.deps.ServeProbe(context.Background(), os.Stdin, os.Stdout, mcpcontract.ConformanceProbeConfig{FixtureID: f.ID, ProbeTool: f.ProbeTool, Schema: c.sourceSchema(f.SourceTool), SchemaSHA: f.SchemaSHA256, ExpectedArguments: f.ExpectedArguments, ResultPath: *path, RunToken: *token})
 		}
 	}
 	return fmt.Errorf("unknown fixture %s", *id)
 }
 
-func sourceSchema(name string) map[string]any {
-	for _, t := range conformanceDependencies.Catalog() {
+func (c *Conformance) sourceSchema(name string) map[string]any {
+	for _, t := range c.deps.Catalog() {
 		if t.Name == name {
 			copy, err := cloneJSONMap(t.InputSchema)
 			if err != nil {

@@ -30,7 +30,7 @@ func TestProbeAccessReturnsHostSpecificRelaunchWithoutWorktreeMutation(t *testin
 		{"codex", "codex --cd '" + repo + "'"},
 		{"claude", "cd '" + repo + "' && claude "},
 	} {
-		got, err := New().ProbeAccess(context.Background(), req, tt.host)
+		got, err := testProvisioner().ProbeAccess(context.Background(), req, tt.host)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -68,8 +68,8 @@ func TestWorkspaceRelaunchCommandLandsInExistingCanonicalWorktree(t *testing.T) 
 	}
 	quotedRoot, quotedBase := "'"+root+"'", "'"+base+"'"
 	for _, tt := range []struct{ host, want string }{
-		{"codex", "codex --cd " + quotedRoot + " --add-dir " + quotedBase},
-		{"claude", "cd " + quotedRoot + " && claude --add-dir " + quotedBase},
+		{"codex", "codex --cd " + quotedRoot + " --add-dir " + quotedBase + " --dangerously-bypass-approvals-and-sandbox"},
+		{"claude", "cd " + quotedRoot + " && claude --add-dir " + quotedBase + " --dangerously-skip-permissions"},
 		{"omo", "cd " + quotedRoot + " && omo"},
 	} {
 		got, err := workspaceRelaunchCommand(tt.host, "/unused/source", root, base)
@@ -89,8 +89,8 @@ func TestWorkspaceRelaunchCommandFallsBackToSourceRootWhenWorktreeMissing(t *tes
 	root := filepath.Join(base, "69-absent")
 	quotedSource, quotedBase := "'/repo/source'", "'"+base+"'"
 	for _, tt := range []struct{ host, want string }{
-		{"codex", "codex --cd " + quotedSource + " --add-dir " + quotedBase},
-		{"claude", "cd " + quotedSource + " && claude --add-dir " + quotedBase},
+		{"codex", "codex --cd " + quotedSource + " --add-dir " + quotedBase + " --dangerously-bypass-approvals-and-sandbox"},
+		{"claude", "cd " + quotedSource + " && claude --add-dir " + quotedBase + " --dangerously-skip-permissions"},
 		{"omo", "cd " + quotedSource + " && omo"},
 	} {
 		got, err := workspaceRelaunchCommand(tt.host, "/repo/source", root, base)

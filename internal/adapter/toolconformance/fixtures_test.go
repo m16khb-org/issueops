@@ -1,18 +1,21 @@
 package toolconformance_test
 
 import (
+	fixtureapp "issueops/internal/application/toolconformance"
+	fixturecontract "issueops/internal/contract/toolconformance"
+
 	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
 
+	mcp "issueops/internal/adapter/inbound/catalog/mcp"
 	core "issueops/internal/adapter/toolconformance"
-	mcp "issueops/internal/domain/mcp"
 )
 
 func TestFixtureManifestPinsRepresentativeCatalogSchemas(t *testing.T) {
 	items := catalogDescriptors()
-	fixtures, cases, err := core.LoadManifest(items)
+	fixtures, cases, err := (fixtureapp.FixtureService{Files: core.FixtureFiles{}}).LoadManifest(items)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +61,7 @@ func TestFixtureManifestPinsRepresentativeCatalogSchemas(t *testing.T) {
 	cases[0].Arguments["mutated"] = true
 	fixtures[2].ExpectedArguments["verification"].([]any)[0] = "mutated"
 	cases[2].Arguments["verification"].([]any)[0] = "mutated"
-	again, againCases, err := core.LoadManifest(items)
+	again, againCases, err := (fixtureapp.FixtureService{Files: core.FixtureFiles{}}).LoadManifest(items)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,11 +84,11 @@ func TestFixtureManifestPinsRepresentativeCatalogSchemas(t *testing.T) {
 }
 
 func TestJSONEnumsRejectUnknownValues(t *testing.T) {
-	var result core.CaseResult
+	var result fixturecontract.CaseResult
 	if err := json.Unmarshal([]byte(`{"classification":"invented"}`), &result); err == nil {
 		t.Fatal("classification json accepted")
 	}
-	var report core.BenchmarkReport
+	var report fixturecontract.BenchmarkReport
 	if err := json.Unmarshal([]byte(`{"gate":{"decision":"invented"}}`), &report); err == nil {
 		t.Fatal("gate json accepted")
 	}
@@ -95,15 +98,15 @@ func TestJSONEnumsRejectUnknownValues(t *testing.T) {
 }
 
 func TestFixtureManifestHashMismatchNamesFixtureSourceAndHashes(t *testing.T) {
-	items := []core.ToolDescriptor{}
+	items := []fixturecontract.ToolDescriptor{}
 	for _, tool := range mcp.AdvertisedTools() {
 		schema := tool.InputSchema
 		if tool.Name == "contract_schema" {
 			schema = map[string]any{"type": "object", "properties": map[string]any{"changed": map[string]any{"type": "string"}}}
 		}
-		items = append(items, core.ToolDescriptor{Name: tool.Name, InputSchema: schema})
+		items = append(items, fixturecontract.ToolDescriptor{Name: tool.Name, InputSchema: schema})
 	}
-	_, err := core.LoadFixtures(items)
+	_, _, err := (fixtureapp.FixtureService{Files: core.FixtureFiles{}}).LoadManifest(items)
 	if err == nil {
 		t.Fatal("want mismatch")
 	}

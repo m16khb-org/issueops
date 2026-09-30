@@ -2,8 +2,6 @@ package issueopscli
 
 import (
 	"issueops/cmd/issueops/hookcli/hookenv"
-	"issueops/cmd/issueops/issueopscli/benchmarkcmd"
-	issueopscore "issueops/internal/adapter/issueops"
 	"os"
 	"testing"
 )
@@ -15,24 +13,8 @@ func TestMain(m *testing.M) {
 	// dogfood 셸의 ISSUEOPS_DISABLE_HOOKS=1이 새어 들어오면 hook이 no-op이 되어
 	// 빈 stdout을 JSON으로 파싱하려다 실패한다(#395).
 	hookenv.ClearInheritedOperatorSwitches()
-	benchmarkcmd.ConfigureBenchmark(benchmarkcmd.BenchmarkDeps{
-		CompareIssueOpsBenchmarkRuns:         issueopscore.CompareIssueOpsBenchmarkRuns,
-		ComputeReliability:                   issueopscore.ComputeReliability,
-		ConsensusJudgeVerdict:                issueopscore.ConsensusJudgeVerdict,
-		DecodeIssueOpsBenchmarkJudgeJSON:     issueopscore.DecodeIssueOpsBenchmarkJudgeJSON,
-		EvaluateIssueOpsAutoresearchGate:     issueopscore.EvaluateIssueOpsAutoresearchGate,
-		FinalizeIssueOpsBenchmarkRunResult:   issueopscore.FinalizeIssueOpsBenchmarkRunResult,
-		LoadIssueOpsBenchmarkFixtures:        issueopscore.LoadIssueOpsBenchmarkFixtures,
-		MergeIssueOpsBenchmarkScoreWithJudge: issueopscore.MergeIssueOpsBenchmarkScoreWithJudge,
-		ReadIssueOpsBenchmarkRun:             issueopscore.ReadIssueOpsBenchmarkRun,
-		RunIssueOpsBenchmark:                 issueopscore.RunIssueOpsBenchmark,
-		SaveIssueOpsBenchmarkRun:             issueopscore.SaveIssueOpsBenchmarkRun,
-		ValidateJudgeProvenance:              issueopscore.ValidateJudgeProvenance,
-	})
-	wireCleanupForTests()
-	wireRemoteForTests()
+
 	wireOrphanAndLoopGateForTests()
-	wireExecutionRunnersForTests()
 	wireIssueOpsRuntimeForTests()
 	os.Exit(m.Run())
 }

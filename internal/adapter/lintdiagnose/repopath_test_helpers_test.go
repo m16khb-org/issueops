@@ -2,10 +2,10 @@ package lintdiagnose
 
 import (
 	"issueops/internal/adapter/repopath"
+	app "issueops/internal/application/lintdiagnose"
+	model "issueops/internal/contract/lintdiagnose"
 )
 
-// production wiring과 같은 repo path resolver를 설치한다. 다른 adapter까지 채우면
-// import 순환이 되므로 자기 것만 설치한다.
-func init() {
-	NormalizeRepoRoot = repopath.NormalizeRoot
+func DiagnoseCommand(req model.LintDiagnoseRequest) (model.LintDiagnoseResult, error) {
+	return (app.Service{Effects: Effects{Normalize: repopath.NormalizeRoot}}).Diagnose(req)
 }

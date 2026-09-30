@@ -38,7 +38,6 @@ type GitRunner interface {
 type NativeProcessInspector func(issueopscontract.NativeProcessReceipt) (string, issueopscontract.NativeProcessReceipt, error)
 
 const gitInventoryCommandTimeout = 15 * time.Second
-const staleIssueCreatePendingAfter = 5 * time.Minute
 
 type ExecGitRunner struct {
 	timeout time.Duration
@@ -65,7 +64,15 @@ func (runner ExecGitRunner) Run(ctx context.Context, repo string, args ...string
 }
 
 func canonicalInventoryPath(path string) string {
-	abs := CleanAbsPath(path)
+	abs := strings.TrimSpace(path)
+	if abs != "" && !filepath.IsAbs(abs) {
+		if resolved, err := filepath.Abs(abs); err == nil {
+			abs = resolved
+		}
+	}
+	if abs != "" {
+		abs = filepath.Clean(abs)
+	}
 	if abs == "" {
 		return ""
 	}
@@ -89,6 +96,7 @@ func canonicalInventoryPath(path string) string {
 }
 
 type Collector struct {
+	IssueOps             IssueOpsReader
 	Git                  GitRunner
 	Orca                 OrcaInventory
 	InspectNativeProcess NativeProcessInspector
@@ -109,7 +117,7 @@ func (collector Collector) Collect(ctx context.Context, repo string) corehealth.
 	orcaSnapshot := corehealth.Snapshot{RepoRoot: repo, Messages: corehealth.MessagePresence{Empty: true}}
 	reads, readCtx := errgroup.WithContext(ctx)
 	reads.Go(func() error {
-		collector.collectGit(readCtx, &gitSnapshot)
+		collector.collectGit(readCtx, &gitSnapshot, true)
 		return nil
 	})
 	reads.Go(func() error {
@@ -139,7 +147,17 @@ func (collector Collector) Collect(ctx context.Context, repo string) corehealth.
 	return snapshot
 }
 
-func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.Snapshot) {
+// CollectLocal refreshes strict persisted ownership and local Git facts only.
+// It performs no provider, remote-ref or Orca requests and takes no SQLite span.
+func (collector Collector) CollectLocal(ctx context.Context, repo string) corehealth.Snapshot {
+	snapshot := corehealth.Snapshot{RepoRoot: canonicalInventoryPath(repo)}
+	collector.collectIssueOps(&snapshot)
+	collector.collectGit(ctx, &snapshot, false)
+	sortSnapshot(&snapshot)
+	return snapshot
+}
+
+func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.Snapshot, includeRemote bool) {
 	if collector.Git == nil {
 		addProblem(snapshot, "git", "git_runner_missing", "Git inventory reader is unavailable")
 		return
@@ -209,6 +227,9 @@ func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.
 		},
 	}
 	for _, command := range commands {
+		if !includeRemote && command.source == "git_remote_refs" {
+			continue
+		}
 		output, err := collector.Git.Run(ctx, snapshot.RepoRoot, command.args...)
 		if err != nil {
 			addProblem(snapshot, command.source, command.code, command.source+" inventory failed")
@@ -229,8 +250,8 @@ func (collector Collector) collectGit(ctx context.Context, snapshot *corehealth.
 }
 
 func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]issueopscontract.IssueOpsRecord, bool) {
-	stateRoot := IssueOpsStateRoot()
-	ids, err := ListIssueOpsIDs(stateRoot)
+	stateRoot := collector.IssueOps.StateRoot
+	ids, err := collector.IssueOps.ListIDs(stateRoot)
 	if err != nil {
 		addProblem(snapshot, "issueops", "issueops_list_failed", "IssueOps ID inventory failed")
 		return nil, false
@@ -238,18 +259,18 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]iss
 	records := make([]issueopscontract.IssueOpsRecord, 0, len(ids))
 	orcaOwned := false
 	for _, id := range ids {
-		record, err := ReadIssueOpsExisting(stateRoot, id)
+		record, err := collector.IssueOps.Read(stateRoot, id)
 		if err != nil {
 			addProblem(snapshot, "issueops_record", "issueops_read_failed", "could not read IssueOps record "+strings.TrimSpace(id))
 			continue
 		}
 		records = append(records, record)
-		cycle, problems := cycleFromRecord(record, collector.nativeProcessInspector())
+		cycle, problems := cycleFromRecord(record, collector.InspectNativeProcess)
 		snapshot.Cycles = append(snapshot.Cycles, cycle)
 		snapshot.InventoryProblems = append(snapshot.InventoryProblems, problems...)
 		orcaOwned = orcaOwned || recordOwnsOrca(record)
 	}
-	indexes, err := ListLeaseHolderIndexes(stateRoot)
+	indexes, err := collector.IssueOps.ListLeaseHolders(stateRoot)
 	if err != nil {
 		addProblem(snapshot, "issueops_lease_holder", "issueops_lease_holder_list_failed", "IssueOps active lease-holder index inventory failed")
 	} else {
@@ -261,13 +282,6 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]iss
 		}
 	}
 	return records, orcaOwned
-}
-
-func (collector Collector) nativeProcessInspector() NativeProcessInspector {
-	if collector.InspectNativeProcess != nil {
-		return collector.InspectNativeProcess
-	}
-	return InspectNativeProcessReceipt
 }
 
 func (collector Collector) collectOrca(ctx context.Context, snapshot *corehealth.Snapshot, owned bool) {
@@ -542,25 +556,7 @@ func issueCreateIntentNeedsReconciliationAt(intent *issueopscontract.IssueOpsIss
 	if intent == nil {
 		return false
 	}
-	switch intent.Status {
-	case issueopscontract.IssueCreateIntentPending:
-		updatedAt := strings.TrimSpace(intent.UpdatedAt)
-		if updatedAt == "" {
-			updatedAt = strings.TrimSpace(intent.StartedAt)
-		}
-		observedAt, err := time.Parse(time.RFC3339Nano, updatedAt)
-		if err != nil {
-			return true
-		}
-		return now.UTC().Sub(observedAt.UTC()) > staleIssueCreatePendingAfter
-	case issueopscontract.IssueCreateIntentInvokedUnknown,
-		issueopscontract.IssueCreateIntentURLObserved,
-		issueopscontract.IssueCreateIntentVerificationFailed,
-		issueopscontract.IssueCreateIntentReceiptFailed:
-		return true
-	default:
-		return false
-	}
+	return corehealth.IssueCreateIntentNeedsReconciliationAt(intent.Status, intent.UpdatedAt, intent.StartedAt, now)
 }
 
 func recordOwnsOrca(record issueopscontract.IssueOpsRecord) bool {

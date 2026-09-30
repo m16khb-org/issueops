@@ -2,6 +2,8 @@ package issueopscli
 
 import (
 	"context"
+	ownerapp "issueops/internal/application/issueopsowner"
+	reviewapp "issueops/internal/application/issueopsreview"
 	"os"
 	"path/filepath"
 	"time"
@@ -27,8 +29,8 @@ import (
 	issueopsretentionapplication "issueops/internal/application/issueopsretention"
 	issueopsroutingapplication "issueops/internal/application/issueopsrouting"
 	issueopsstatusapplication "issueops/internal/application/issueopsstatus"
+	"issueops/internal/domain/agentmodel"
 	issueopsstatusdomain "issueops/internal/domain/issueopsstatus"
-	"issueops/internal/port"
 
 	issueopsnextinbound "issueops/internal/adapter/inbound/issueopsnext"
 	issueopsnextapplication "issueops/internal/application/issueopsnext"
@@ -58,7 +60,7 @@ func wireIssueOpsRuntimeForTests() {
 	)
 	status := issueopsstatusapplication.NewService(
 		issueopsstatusoutbound.Repository{},
-		issueopsstatusdomain.NewProjector(issueopscore.IssueOpsPhaseCompletion),
+		issueopsstatusdomain.NewProjector(testCycleReadiness().Completion),
 	)
 	routing := issueopsroutinginbound.NewHandlers(issueopsroutingapplication.NewService(
 		issueopsroutingoutbound.Repository{},
@@ -71,10 +73,10 @@ func wireIssueOpsRuntimeForTests() {
 			return listCycles(stateRoot, repo)
 		},
 		ReadRecord:        issueopscore.ReadIssueOps,
-		Completion:        issueopscore.IssueOpsPhaseCompletion,
-		LocalReadiness:    issueopscore.IssueOpsLocalPRReadiness,
-		WriterlessCommand: issueopscore.ExecutionWriterAbsentRecoveryCommand,
-		PlannerDefaults:   port.IssueOpsPlannerDefaults,
+		Completion:        testCycleReadiness().Completion,
+		LocalReadiness:    testCycleReadiness().LocalPR,
+		WriterlessCommand: ownerapp.WriterlessCommand,
+		PlannerDefaults:   agentmodel.PlannerDefaults,
 		StagedArtifacts:   artifacts.Names,
 		Actor: func() (string, string, error) {
 			host, sessionID, _, err := executioncmd.ResolveNativeSessionIdentity(os.Getenv)
@@ -85,23 +87,23 @@ func wireIssueOpsRuntimeForTests() {
 		Env:        os.Getenv,
 		Now:        time.Now,
 	})
-	ConfigureIssueOpsRuntime2(IssueOpsCLIDeps{
-		AcceptIssueOpsChildWithActor:  issueopscore.AcceptIssueOpsChildWithActor,
+	testIssueOpsRuntime = IssueOpsCLIDeps{
+		AcceptIssueOpsChildWithActor:  acceptChildWithActorForTest,
 		AddIssueOpsDecisionWithActor:  decisions.AddWithActor,
-		DropIssueOpsChildWithActor:    issueopscore.DropIssueOpsChildWithActor,
-		IssueOpsChildStatusWithActor:  issueopscore.IssueOpsChildStatusWithActor,
-		IssueOpsPRReadiness:           issueopscore.IssueOpsPRReadiness,
+		DropIssueOpsChildWithActor:    dropChildWithActorForTest,
+		IssueOpsChildStatusWithActor:  childStatusWithActorForTest,
+		IssueOpsPRReadiness:           testCycleReadiness().PR,
 		IssueOpsNext:                  issueopsnextinbound.NewNextHandler(next),
-		IssueOpsStateRoot:             issueopscore.IssueOpsStateRoot,
+		IssueOpsStateRoot:             issueOpsStateRootForTest,
 		IssueOpsStatus:                issueopsstatusinbound.NewStatusHandler(status),
-		LinkIssueOpsChildWithActor:    issueopscore.LinkIssueOpsChildWithActor,
-		LinkIssueOpsIssueWithActor:    issueopscore.LinkIssueOpsIssueWithActor,
-		LinkIssueOpsPlanWithActor:     issueopscore.LinkIssueOpsPlanWithActor,
-		LinkIssueOpsRelatedWithActor:  issueopscore.LinkIssueOpsRelatedWithActor,
-		LinkIssueOpsWorktreeWithActor: issueopscore.LinkIssueOpsWorktreeWithActor,
+		LinkIssueOpsChildWithActor:    LinkIssueOpsChildWithActorForTest,
+		LinkIssueOpsIssueWithActor:    LinkIssueOpsIssueWithActorForTest,
+		LinkIssueOpsPlanWithActor:     LinkIssueOpsPlanWithActorForTest,
+		LinkIssueOpsRelatedWithActor:  LinkIssueOpsRelatedWithActorForTest,
+		LinkIssueOpsWorktreeWithActor: LinkIssueOpsWorktreeWithActorForTest,
 		ListIssueOpsCycles:            listCycles,
 		IssueOpsReviewMetrics: func(stateRoot, id, repo string) (issueopscontract.IssueOpsReviewMetricsResult, error) {
-			return issueopscore.ReviewMetrics(stateRoot, id, repo, issueopscore.ReviewMetricsDeps{
+			return (reviewapp.MetricsReader{ReadRecord: issueopscore.ReadIssueOps, Now: time.Now,
 				ListCycleIDs: func(stateRoot, repo string) ([]string, []string, error) {
 					result, err := listCycles(stateRoot, repo)
 					if err != nil {
@@ -113,31 +115,47 @@ func wireIssueOpsRuntimeForTests() {
 					}
 					return ids, append([]string(nil), result.UnreadableIDs...), nil
 				},
-			})
+			}).Read(stateRoot, id, repo)
 		},
-		ObserveNativeProcessAncestry:                issueopscore.ObserveNativeProcessAncestry,
-		PrepareIssueOpsBranchWithActor:              issueopscore.PrepareIssueOpsBranchWithActor,
-		PruneIssueOps:                               issueopsretentioninbound.NewPruneHandler(retention),
-		ReadIssueOps:                                issueopscore.ReadIssueOps,
-		RecordIssueOpsAISlopCleanEvidenceWithActor:  issueopscore.RecordIssueOpsAISlopCleanEvidenceWithActor,
-		RecordIssueOpsCompatibilityReviewWithActor:  issueopscore.RecordIssueOpsCompatibilityReviewWithActor,
-		RecordIssueOpsDesignReviewWithActor:         issueopscore.RecordIssueOpsDesignReviewWithActor,
-		RecordIssueOpsDevilsAdvocateReviewWithActor: issueopscore.RecordIssueOpsDevilsAdvocateReviewWithActor,
-		RecordIssueOpsDomainReviewWithActor:         issueopscore.RecordIssueOpsDomainReviewWithActor,
-		RecordIssueOpsImplementationReviewWithActor: issueopscore.RecordIssueOpsImplementationReviewWithActor,
-		RecordIssueOpsProjectDocsReviewWithActor:    issueopscore.RecordIssueOpsProjectDocsReviewWithActor,
-		RecordIssueOpsSchemaEvidenceWithActor:       issueopscore.RecordIssueOpsSchemaEvidenceWithActor,
-		RecordIssueOpsIntentWithActor:               issueopscore.RecordIssueOpsIntentWithActor,
-		RecordIssueOpsPlanPrepWithActor:             issueopscore.RecordIssueOpsPlanPrepWithActor,
-		RecordIssueOpsRoutingWithActor:              routing.Record,
-		RegressIssueOpsForReplanWithActor:           issueopscore.RegressIssueOpsForReplanWithActor,
-		RejectIssueOpsChildWithActor:                issueopscore.RejectIssueOpsChildWithActor,
-		ResolveIssueOpsFeedbackWithActor:            issueopscore.ResolveIssueOpsFeedbackWithActor,
-		ScoreLiveRoutingFidelity:                    routing.Score,
-		StageIssueOpsArtifact:                       artifacts.Stage,
-		StagedIssueOpsArtifactNames:                 artifacts.Names,
-		StartIssueOps:                               issueopscore.StartIssueOps,
-		StartIssueOpsChildWithActor:                 issueopscore.StartIssueOpsChildWithActor,
-		UnstageIssueOpsArtifact:                     artifacts.Unstage,
-	})
+		ObserveNativeProcessAncestry:               issueopscore.ObserveNativeProcessAncestry,
+		PrepareIssueOpsBranchWithActor:             prepareBranchWithActorForTest,
+		PruneIssueOps:                              issueopsretentioninbound.NewPruneHandler(retention),
+		ReadIssueOps:                               issueopscore.ReadIssueOps,
+		RecordIssueOpsAISlopCleanEvidenceWithActor: recordAISlopEvidenceForTest,
+		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req issueopscontract.IssueOpsCompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return planningRecorderForTest(&actor).Compatibility(root, id, req)
+		},
+		RecordIssueOpsDesignReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return planningRecorderForTest(&actor).Design(root, id, req)
+		},
+		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return planningRecorderForTest(&actor).DevilsAdvocate(root, id, req)
+		},
+		RecordIssueOpsDomainReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDomainReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.RecordDomainReview(issueopscore.NewReviewMutationStore(&actor), root, id, req)
+		},
+		RecordIssueOpsImplementationReviewWithActor: recordImplementationReviewForTest,
+		RecordIssueOpsProjectDocsReviewWithActor:    recordProjectDocsReviewForTest,
+		RecordIssueOpsSchemaEvidenceWithActor:       recordSchemaEvidenceForTest,
+		RecordIssueOpsIntentWithActor: func(root, id string, req issueopscontract.IssueOpsIntentRecordRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return planningRecorderForTest(&actor).Intent(root, id, req)
+		},
+		RecordIssueOpsPlanPrepWithActor: func(root, id string, req issueopscontract.IssueOpsPlanPrepRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return planningRecorderForTest(&actor).PlanPrep(root, id, req)
+		},
+		RecordIssueOpsRoutingWithActor: routing.Record,
+		RegressIssueOpsForReplanWithActor: func(root, id, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return planningRecorderForTest(&actor).Regress(root, id, reason)
+		},
+		RejectIssueOpsChildWithActor: rejectChildWithActorForTest,
+		ResolveIssueOpsFeedbackWithActor: func(root, id string, index int, resolution string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+			return reviewapp.ResolveFeedback(issueopscore.NewReviewMutationStore(&actor), root, id, index, resolution)
+		},
+		ScoreLiveRoutingFidelity:    routing.Score,
+		StageIssueOpsArtifact:       artifacts.Stage,
+		StagedIssueOpsArtifactNames: artifacts.Names,
+		StartIssueOps:               startIssueOpsFixture,
+		StartIssueOpsChildWithActor: startChildWithActorForTest,
+		UnstageIssueOpsArtifact:     artifacts.Unstage,
+	}
 }

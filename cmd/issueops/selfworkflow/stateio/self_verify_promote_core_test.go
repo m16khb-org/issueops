@@ -4,7 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
+	augmentcontract "issueops/internal/contract/selfaugment"
+	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
 func TestPromoteSelfAugmentBaselineRejectsMissingKeysAndBadSource(t *testing.T) {
@@ -40,10 +41,10 @@ func TestPromoteSelfAugmentBaselinePropagatesDestinationWriteError(t *testing.T)
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
 	source := SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,
 		GeneratedAt:   "2000-01-01T00:00:00Z",
-		Summary:       model.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1, TerminationEligible: true},
+		Summary:       augmentcontract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1, PassedSteps: 1, TerminationEligible: true},
 	}
 	if err := WriteSelfAugmentSnapshotRecord(dir, "candidate", source); err != nil {
 		t.Fatalf("write candidate: %v", err)

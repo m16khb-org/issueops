@@ -1,7 +1,6 @@
 package repoidentity
 
 import (
-	"path/filepath"
 	"testing"
 )
 
@@ -63,12 +62,8 @@ func TestSourceRootMapsGitCommonDirToPrimaryCheckout(t *testing.T) {
 	}
 }
 
-func TestSourceRootCleansRelativeCallerPath(t *testing.T) {
-	abs, err := filepath.Abs("repo/../repo")
-	if err != nil {
-		t.Fatalf("filepath.Abs failed: %v", err)
-	}
-	if got := SourceRoot("repo/../repo", ""); got != abs {
-		t.Fatalf("SourceRoot relative path = %q, want cleaned absolute %q", got, abs)
+func TestSourceRootCleansRelativePathsLexically(t *testing.T) {
+	if got := SourceRoot("repo/../repo", ""); got != "repo" {
+		t.Fatalf("got %q", got)
 	}
 }

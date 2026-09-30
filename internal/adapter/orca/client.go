@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	deliverycontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -228,11 +229,19 @@ func (c *Client) Probe(ctx context.Context, req port.OrcaProbeRequest) (port.Orc
 			result.Code = "host_model_selection_unsupported"
 			return result, nil
 		}
+		if !containsAllHelpFlags(help, []string{"--dangerously-bypass-approvals-and-sandbox"}) {
+			result.Code = "host_permission_bypass_unsupported"
+			return result, nil
+		}
 	}
 	if agent == "claude" || agent == "omo" {
 		help, err := c.runText(ctx, "", readTimeout, []string{agent, "--help"})
 		if err != nil || !containsAllHelpFlags(help, []string{"--model"}) {
 			result.Code = "host_model_selection_unsupported"
+			return result, nil
+		}
+		if agent == "claude" && !containsAllHelpFlags(help, []string{"--dangerously-skip-permissions"}) {
+			result.Code = "host_permission_bypass_unsupported"
 			return result, nil
 		}
 	}
@@ -660,7 +669,7 @@ func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, request
 		strings.ContainsAny(prompt, "\x00\x1b") {
 		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "terminal_prompt_invalid"}
 	}
-	if err := port.ValidateOrcaRetryRequestID(requestID); err != nil {
+	if err := deliverycontract.ValidateOrcaRetryRequestID(requestID); err != nil {
 		return port.OrcaPromptReceipt{}, &port.OrcaError{Code: "request_identity_invalid", Detail: err.Error()}
 	}
 	prompt = "\x1b[200~" + prompt + "\x1b[201~"

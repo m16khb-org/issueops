@@ -11,17 +11,16 @@ import (
 )
 
 func TestAppendUpstreamMessagesRendersEveryDeclaredEntry(t *testing.T) {
-	t.Cleanup(Reset)
-	Configure(Deps{SyncUpstream: func(context.Context, string, bool) (upstreamcontract.Report, error) {
+	cli := Command{Deps: Deps{SyncUpstream: func(context.Context, string, bool) (upstreamcontract.Report, error) {
 		return upstreamcontract.Report{Items: []upstreamcontract.ItemResult{
 			{Kind: upstreamcontract.KindPlugin, Name: "eli5@claude-community", Status: upstreamcontract.StatusInstalled},
 			{Kind: upstreamcontract.KindPlugin, Name: "old@mkt", Status: upstreamcontract.StatusSkipped, Reason: "already installed on the host"},
 			{Kind: upstreamcontract.KindSkill, Name: "cua-driver", Status: upstreamcontract.StatusFailed, Error: "clone failed"},
 		}}, nil
-	}})
+	}}}
 
 	result := port.NativeInstallResult{OK: true}
-	appendUpstreamMessages(&result, "/root", false)
+	cli.appendUpstreamMessages(&result, "/root", false)
 
 	if len(result.Messages) != 3 {
 		t.Fatalf("messages = %#v, want one per entry", result.Messages)
@@ -42,13 +41,12 @@ func TestAppendUpstreamMessagesRendersEveryDeclaredEntry(t *testing.T) {
 }
 
 func TestAppendUpstreamMessagesReportsSyncFailureWithoutFailingInstall(t *testing.T) {
-	t.Cleanup(Reset)
-	Configure(Deps{SyncUpstream: func(context.Context, string, bool) (upstreamcontract.Report, error) {
+	cli := Command{Deps: Deps{SyncUpstream: func(context.Context, string, bool) (upstreamcontract.Report, error) {
 		return upstreamcontract.Report{}, errors.New("declaration is malformed")
-	}})
+	}}}
 
 	result := port.NativeInstallResult{OK: true}
-	appendUpstreamMessages(&result, "/root", true)
+	cli.appendUpstreamMessages(&result, "/root", true)
 
 	if len(result.Messages) != 1 || !strings.Contains(result.Messages[0], "declaration is malformed") {
 		t.Fatalf("messages = %#v, want the sync failure reported", result.Messages)
@@ -59,11 +57,10 @@ func TestAppendUpstreamMessagesReportsSyncFailureWithoutFailingInstall(t *testin
 }
 
 func TestAppendUpstreamMessagesIsSilentWithoutAnInjectedSync(t *testing.T) {
-	t.Cleanup(Reset)
-	Reset()
+	cli := Command{}
 
 	result := port.NativeInstallResult{OK: true}
-	appendUpstreamMessages(&result, "/root", false)
+	cli.appendUpstreamMessages(&result, "/root", false)
 
 	if len(result.Messages) != 0 {
 		t.Fatalf("messages = %#v, want none", result.Messages)
@@ -71,13 +68,12 @@ func TestAppendUpstreamMessagesIsSilentWithoutAnInjectedSync(t *testing.T) {
 }
 
 func TestAppendUpstreamMessagesSaysNothingWhenNothingIsDeclared(t *testing.T) {
-	t.Cleanup(Reset)
-	Configure(Deps{SyncUpstream: func(context.Context, string, bool) (upstreamcontract.Report, error) {
+	cli := Command{Deps: Deps{SyncUpstream: func(context.Context, string, bool) (upstreamcontract.Report, error) {
 		return upstreamcontract.Report{Items: []upstreamcontract.ItemResult{}}, nil
-	}})
+	}}}
 
 	result := port.NativeInstallResult{OK: true}
-	appendUpstreamMessages(&result, "/root", false)
+	cli.appendUpstreamMessages(&result, "/root", false)
 
 	if len(result.Messages) != 0 {
 		t.Fatalf("messages = %#v, want none", result.Messages)

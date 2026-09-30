@@ -9,7 +9,7 @@ import (
 	"issueops/internal/port"
 )
 
-func writeGlobalConfig(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
+func (installer Installer) writeGlobalConfig(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "codex_user_mcp_config"}
 	text := ""
 	if b, err := os.ReadFile(path); err == nil {
@@ -34,7 +34,7 @@ func writeGlobalConfig(path string, req port.NativeInstallRequest) (port.Install
 	if strings.TrimSpace(text) != "" && !strings.HasSuffix(text, "\n\n") {
 		text += "\n"
 	}
-	text += codexGlobalBlock(req)
+	text += installer.codexGlobalBlock(req)
 	existing, _ := os.ReadFile(path)
 	if string(existing) == text {
 		return file, nil
@@ -53,7 +53,7 @@ func writeGlobalConfig(path string, req port.NativeInstallRequest) (port.Install
 	return file, nil
 }
 
-func codexGlobalBlock(req port.NativeInstallRequest) string {
+func (installer Installer) codexGlobalBlock(req port.NativeInstallRequest) string {
 	return fmt.Sprintf(`[mcp_servers.issueops]
 command = %s
 args = ["mcp"]
@@ -61,7 +61,7 @@ startup_timeout_sec = 30
 
 [mcp_servers.issueops.env]
 ISSUEOPS_ROOT = %s
-`, TOMLString(req.BinPath), TOMLString(req.Root))
+`, installer.deps.TOMLString(req.BinPath), installer.deps.TOMLString(req.Root))
 }
 
 func codexTemplate(req port.NativeInstallRequest) string {

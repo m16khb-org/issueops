@@ -1,12 +1,15 @@
 package issueopspublication
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"errors"
 	"reflect"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
 	publicationcontract "issueops/internal/contract/issueopspublication"
 	"issueops/internal/port"
 )
@@ -96,7 +99,7 @@ func TestCreateHandlerPreservesNilAndEmptySliceShape(t *testing.T) {
 
 func TestCreateHandlerFailsClosedWithoutService(t *testing.T) {
 	got, err := NewCreateHandler(nil)(context.Background(), "/state", fullCoreCreateRequest())
-	if !errors.Is(err, issueops.ErrRemotePullRequestCreateHandlerUnavailable) || got != (port.IssueProviderCreatePullRequestResult{}) {
+	if !errors.Is(err, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable) || got != (port.IssueProviderCreatePullRequestResult{}) {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}
 }

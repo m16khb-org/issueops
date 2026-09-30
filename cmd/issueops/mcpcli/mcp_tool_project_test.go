@@ -36,7 +36,7 @@ func TestHandleProjectMCPToolCallCoversLocalProjectPayloads(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handleProjectMCPToolCall(tc.call)
+			outcome := handleProjectMCPToolCall(tc.call, testProjectDependencies())
 			if !outcome.Handled || outcome.Err != nil || outcome.Direct {
 				t.Fatalf("unexpected MCP outcome: %#v", outcome)
 			}
@@ -75,7 +75,7 @@ func TestHandleProjectMCPToolCallCoversProjectErrorBranches(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outcome := handleProjectMCPToolCall(tc.call)
+			outcome := handleProjectMCPToolCall(tc.call, testProjectDependencies())
 			if !outcome.Handled || outcome.Err == nil {
 				t.Fatalf("expected handled MCP failure, got %#v", outcome)
 			}
@@ -87,7 +87,7 @@ func TestHandleProjectMCPToolCallCoversProjectErrorBranches(t *testing.T) {
 }
 
 func TestHandleProjectMCPToolCallIgnoresUnknownProjectTool(t *testing.T) {
-	outcome := handleProjectMCPToolCall(MCPToolCall{Name: "not_project_tool", Arguments: map[string]any{}})
+	outcome := handleProjectMCPToolCall(MCPToolCall{Name: "not_project_tool", Arguments: map[string]any{}}, testProjectDependencies())
 	if outcome.Handled {
 		t.Fatalf("unknown project tool should be ignored: %#v", outcome)
 	}
@@ -109,7 +109,7 @@ func TestMCPResourceReadCoversGuidanceStateAndErrors(t *testing.T) {
 		{uri: "issueops://unknown", wantError: true},
 	} {
 		t.Run(tc.uri, func(t *testing.T) {
-			result, rpcErr := HandleResourceRead(mustMarshalMCPTest(t, map[string]any{"uri": tc.uri}))
+			result, rpcErr := testHandleResourceRead(mustMarshalMCPTest(t, map[string]any{"uri": tc.uri}))
 			if tc.wantError {
 				if rpcErr == nil || !strings.Contains(rpcErr.Message, "Unknown resource") {
 					t.Fatalf("expected unknown resource error, got result=%#v err=%+v", result, rpcErr)
@@ -117,7 +117,7 @@ func TestMCPResourceReadCoversGuidanceStateAndErrors(t *testing.T) {
 				return
 			}
 			if rpcErr != nil {
-				t.Fatalf("HandleResourceRead(%s): %+v", tc.uri, rpcErr)
+				t.Fatalf("testHandleResourceRead(%s): %+v", tc.uri, rpcErr)
 			}
 			content := singleMCPResourceContent(t, result)
 			if content["mimeType"] != tc.wantType || !strings.Contains(content["text"].(string), tc.wantText) {
@@ -126,14 +126,14 @@ func TestMCPResourceReadCoversGuidanceStateAndErrors(t *testing.T) {
 		})
 	}
 
-	_, rpcErr := HandleResourceRead(json.RawMessage(`{bad json}`))
+	_, rpcErr := testHandleResourceRead(json.RawMessage(`{bad json}`))
 	if rpcErr == nil || rpcErr.Code != -32602 {
 		t.Fatalf("expected invalid params error, got %+v", rpcErr)
 	}
 }
 
 func TestMCPProjectToolCallCoversDirectPayloadAndUnknownTool(t *testing.T) {
-	direct, rpcErr := HandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "commit_policy", "arguments": map[string]any{}}))
+	direct, rpcErr := testHandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "commit_policy", "arguments": map[string]any{}}))
 	if rpcErr != nil {
 		t.Fatalf("commit_policy: %+v", rpcErr)
 	}
@@ -141,7 +141,7 @@ func TestMCPProjectToolCallCoversDirectPayloadAndUnknownTool(t *testing.T) {
 		t.Fatalf("commit_policy did not return markdown policy text: %s", text)
 	}
 
-	payload, rpcErr := HandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "project_docs_bootstrap_plan", "arguments": map[string]any{"repo": t.TempDir()}}))
+	payload, rpcErr := testHandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "project_docs_bootstrap_plan", "arguments": map[string]any{"repo": t.TempDir()}}))
 	if rpcErr != nil {
 		t.Fatalf("project_docs_bootstrap_plan: %+v", rpcErr)
 	}
@@ -149,11 +149,11 @@ func TestMCPProjectToolCallCoversDirectPayloadAndUnknownTool(t *testing.T) {
 		t.Fatalf("bootstrap plan payload did not look like JSON result: %s", text)
 	}
 
-	_, rpcErr = HandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "missing_tool", "arguments": map[string]any{}}))
+	_, rpcErr = testHandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "missing_tool", "arguments": map[string]any{}}))
 	if rpcErr == nil || rpcErr.Code != -32602 || !strings.Contains(rpcErr.Message, "Unknown tool") {
 		t.Fatalf("expected unknown tool error, got %+v", rpcErr)
 	}
-	_, rpcErr = HandleToolCall(json.RawMessage(`{bad json}`))
+	_, rpcErr = testHandleToolCall(json.RawMessage(`{bad json}`))
 	if rpcErr == nil || rpcErr.Code != -32602 {
 		t.Fatalf("expected invalid params error, got %+v", rpcErr)
 	}

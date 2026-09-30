@@ -1,10 +1,11 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func TestLoadIssueOpsBenchmarkFixtures(t *testing.T) {

@@ -2,11 +2,11 @@ package doctor_test
 
 import (
 	"encoding/json"
-	"issueops/internal/adapter/doctor"
-	lifecycle "issueops/internal/adapter/lifecycle"
-	"issueops/internal/adapter/looprun"
-	projectbootstrap "issueops/internal/adapter/projectbootstrap"
+	"issueops/internal/contract/doctor"
+
+	lifecyclecontract "issueops/internal/contract/lifecycle"
 	loopruncontract "issueops/internal/contract/looprun"
+	bootstrapcontract "issueops/internal/contract/projectbootstrap"
 	"issueops/internal/domain/operationalhealth"
 	"os"
 	"path/filepath"
@@ -18,7 +18,7 @@ import (
 
 func TestHarnessDoctorJSONIncludesDaemonAdmissionHealth(t *testing.T) {
 	repo := t.TempDir()
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{
 		RepoRoot:     repo,
 		IssueOpsRoot: repo,
 		Home:         t.TempDir(),
@@ -62,7 +62,7 @@ func TestHarnessDoctorJSONIncludesDaemonAdmissionHealth(t *testing.T) {
 }
 
 func TestHarnessDoctorMarksSaturatedDaemonUnhealthy(t *testing.T) {
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{
 		RepoRoot:     t.TempDir(),
 		IssueOpsRoot: t.TempDir(),
 		Home:         t.TempDir(),
@@ -100,10 +100,10 @@ func TestHarnessDoctorHealthyBaseline(t *testing.T) {
 	stateRoot := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateRoot)
 	repo := t.TempDir()
-	if _, err := projectbootstrap.BootstrapProjectDocs(projectbootstrap.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
+	if _, err := testBootstrapService().Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
 		t.Fatal(err)
 	}
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestHarnessDoctorProjectsOperationalFinding(t *testing.T) {
 	snapshot := healthyDoctorOperationalSnapshot(repo)
 	snapshot.Gates = []operationalhealth.OrcaGate{{ID: "gate-1", Status: "pending"}}
 
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{
 		RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test",
 		OperationalSnapshot: &snapshot,
 		OperationalOptions:  operationalhealth.Options{Now: doctorOperationalNow()},
@@ -154,7 +154,7 @@ func TestHarnessDoctorOperationalInventoryProblemIsError(t *testing.T) {
 		Source: "orca_tasks", Code: "orca_tasks_failed", Detail: "task inventory failed",
 	}}
 
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{
 		RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test",
 		OperationalSnapshot: &snapshot,
 		OperationalOptions:  operationalhealth.Options{Now: doctorOperationalNow()},
@@ -184,7 +184,7 @@ func TestHarnessDoctorProjectsStateArtifactsWithoutLegacyDuplicates(t *testing.T
 	snapshot.StateArtifacts[0] = operationalhealth.StateArtifact{Path: unexpectedFile, Code: "unexpected_file"}
 	before := append(make([]operationalhealth.StateArtifact, 0, len(snapshot.StateArtifacts)), snapshot.StateArtifacts...)
 
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{
 		RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test",
 		OperationalSnapshot: &snapshot,
 		OperationalOptions:  operationalhealth.Options{Now: doctorOperationalNow()},
@@ -210,7 +210,7 @@ func TestHarnessDoctorNilOperationalSnapshotPreservesLegacyStateIssues(t *testin
 	mustWrite(t, filepath.Join(stateRoot, "recovery.patch"), "recovery evidence")
 	repo := t.TempDir()
 
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func TestHarnessDoctorReportsRepoLocalRuntimeState(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
 	mustWrite(t, filepath.Join(repo, ".issueops", "state", "live.json"), `{"x":1}`)
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,11 +236,11 @@ func TestHarnessDoctorReportsRepoLocalRuntimeState(t *testing.T) {
 func TestHarnessDoctorReportsLifecycleNamespaceMismatch(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	plan, err := lifecycle.InitProjectLifecycleState(repo, true)
+	plan, err := testLifecycleService().Init(repo, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var profile lifecycle.ProjectLifecycleProfile
+	var profile lifecyclecontract.ProjectLifecycleProfile
 	b, err := os.ReadFile(plan.ProjectJSONPath)
 	if err != nil {
 		t.Fatal(err)
@@ -256,7 +256,7 @@ func TestHarnessDoctorReportsLifecycleNamespaceMismatch(t *testing.T) {
 	if err := os.WriteFile(plan.ProjectJSONPath, append(b, '\n'), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,10 +268,10 @@ func TestHarnessDoctorReportsLifecycleNamespaceMismatch(t *testing.T) {
 func TestHarnessDoctorReportsLoopContracts(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	if _, err := projectbootstrap.BootstrapProjectDocs(projectbootstrap.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
+	if _, err := testBootstrapService().Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
 		t.Fatal(err)
 	}
-	loop, err := looprun.Start(loopruncontract.StartLoopRequest{
+	loop, err := testLoopService().Start(loopruncontract.StartLoopRequest{
 		Repo:        repo,
 		Name:        "doctor-loop",
 		Goal:        "verify doctor loop contract reporting",
@@ -280,7 +280,7 @@ func TestHarnessDoctorReportsLoopContracts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,10 +296,10 @@ func TestHarnessDoctorReportsLoopContracts(t *testing.T) {
 func TestHarnessDoctorLoopContractsHealthyWhenNoIncompleteLoops(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	if _, err := projectbootstrap.BootstrapProjectDocs(projectbootstrap.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
+	if _, err := testBootstrapService().Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
 		t.Fatal(err)
 	}
-	result, err := doctor.HarnessDoctor(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
+	result, err := testDoctorService().Run(doctor.HarnessDoctorRequest{RepoRoot: repo, IssueOpsRoot: repo, Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}

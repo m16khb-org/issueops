@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	cliadapter "issueops/internal/domain/cli"
+	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
 	"issueops/internal/testsupport"
 )
 
@@ -143,7 +143,7 @@ func registeredFlags(t *testing.T, args []string) map[string]bool {
 // 목록을 로그로 남겨 무음 축소가 되지 않게 한다.
 func TestUsageDeclaredFlagsAreRegistered(t *testing.T) {
 	var skipped []string
-	for _, line := range parseUsageFlagLines(t, issueOpsUsageText()) {
+	for _, line := range parseUsageFlagLines(t, testLifecycleUsage()) {
 		registered := registeredFlags(t, line.args)
 		if len(registered) == 0 {
 			skipped = append(skipped, line.command)
@@ -171,7 +171,7 @@ func TestUsageDeclaredFlagsAreRegistered(t *testing.T) {
 // 쓰면서 4종만 받아 그랬다(#184).
 func TestActorFlagShorthandMatchesRegisteredFlags(t *testing.T) {
 	checkedByShorthand := map[string]int{}
-	for _, line := range parseUsageFlagLines(t, issueOpsUsageText()) {
+	for _, line := range parseUsageFlagLines(t, testLifecycleUsage()) {
 		if line.shorthand == "" {
 			continue
 		}
@@ -203,7 +203,7 @@ func TestActorFlagShorthandMatchesRegisteredFlags(t *testing.T) {
 // 소유자 mutation인데 usage가 --id와 --plan-path만 보여줬다.
 func TestCommandsRequiringActorDiscloseItInUsage(t *testing.T) {
 	checked := 0
-	for _, line := range parseUsageFlagLines(t, issueOpsUsageText()) {
+	for _, line := range parseUsageFlagLines(t, testLifecycleUsage()) {
 		registered := registeredFlags(t, line.args)
 		if len(registered) == 0 {
 			continue
@@ -248,7 +248,7 @@ func TestCommandsRequiringActorDiscloseItInUsage(t *testing.T) {
 // 토큰의 확장을 볼 수 없다.
 func TestUsageTextsDefineActorFlagShorthand(t *testing.T) {
 	for name, usage := range map[string]string{
-		"issueOpsUsageText": issueOpsUsageText(),
+		"issueOpsUsageText": testLifecycleUsage(),
 		"adapter usage":     cliadapter.Usage("test"),
 	} {
 		for shorthand, flagNames := range actorFlagShorthands {
@@ -290,7 +290,7 @@ func TestExecutionSubcommandsAppearInUsageTexts(t *testing.T) {
 		"replace", "reconcile", "complete", "sync-base", "switch-mode",
 	}
 	for name, usage := range map[string]string{
-		"issueOpsUsageText": issueOpsUsageText(),
+		"issueOpsUsageText": testLifecycleUsage(),
 		"adapter usage":     cliadapter.Usage("test"),
 	} {
 		var missing []string

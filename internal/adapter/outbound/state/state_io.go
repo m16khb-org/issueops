@@ -30,20 +30,21 @@ func openStateStore(dir string) (stateport.Store, error) {
 	return sqlstore.Open(dir)
 }
 
-type existingRecords struct{}
+// ExistingRecords reads records without creating an absent store.
+type ExistingRecords struct{}
 
-func (existingRecords) GetExisting(dir, bucket, id string) ([]byte, bool, error) {
+func (ExistingRecords) GetExisting(dir, bucket, id string) ([]byte, bool, error) {
 	return sqlstore.GetExisting(dir, bucket, id)
 }
 
-var _ stateport.ExistingReader = existingRecords{}
+var _ stateport.ExistingReader = ExistingRecords{}
 
 func service() *stateapplication.Service {
 	return stateapplication.NewService(stateapplication.Dependencies{
 		StateDir:        stateDir,
 		StatePath:       statepath.Path,
 		OpenStore:       openStateStore,
-		ExistingRecords: existingRecords{},
+		ExistingRecords: ExistingRecords{},
 	})
 }
 

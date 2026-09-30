@@ -28,6 +28,7 @@
 
 - `execution release`는 첫 production vertical이다. CLI/MCP transport facade는 injected release handler만 호출하고, `internal/contract/issueopslease` decode → pure `internal/domain/issueopslease` → capability-local `internal/application/issueopslease` → inbound/outbound adapter 순서로 흐른다. decode는 persisted record를 production record contract(`internal/contract/issueops`)로 엄격하게 읽어 모르는 field를 거부하고, execution만 typed로 다루며 나머지 sidecar는 원문 그대로 보존한다(ADR 2026-09-23). `cmd/issueops/issueopsapp`만 SQLite store, process observation, clock, filesystem path matcher를 조립한다. two-argument `ReleaseExecution` facade는 제거됐고 `TestCurrentIssueOpsVerticalOnly`가 재도입을 막는다.
 - `execution reconcile`의 Orca `worktree_create`·`owner_launch`·`dispatch` confirm도 같은 vertical 경계를 사용한다. kind-local router가 injected handler로 보내고, application은 호출당 현재 durable stage 하나만 inventory/adopt 또는 bounded retry/CAS한다. preview와 no-pending은 side effect가 없는 compatibility router에 남는다.
+- `issueopsdelegation.ChildGates`가 현재 자식 레코드 조회와 PR·재검토 게이트 조합을 맡는다. 자식 선택·종료 판정은 domain에 두며, 조회 실패는 차단하고 기존 span 안에서도 추가 잠금이나 쓰기를 하지 않는다. `issueopsbranch.ActiveCycleReader`는 주입된 저장소의 단일 bulk 조회와 경로 정규화를 조율한다. 부모 이슈 선택·완료 cycle 제외·워크트리 우선순위·준비된 base 판정은 domain이 맡고, 브랜치 준비는 명시된 상태 저장소를, 정책 평가는 호출 시점의 상태 저장소를 사용한다. `issueopsbranch.LinkAwaiter`는 봉인된 branch의 조회·재시도를 조율하며 provider·식별자 전제와 대기 상한은 domain이 결정한다. Git readback과 취소 가능한 timer는 adapter가 맡고 이 경로는 상태를 쓰지 않는다.
 - 원격 PR/MR 생성과 `remote_pr_create` 복구는 `issueopspublication` capability vertical이다. `internal/contract/issueopspublication`의 stable mapping → pure domain decision → shared `CreateService`/`ReconcileService` → inbound/outbound adapter 순서로 흐르며, `cmd/issueops/issueopsapp`만 provider, raw schema v1 CAS bridge, live verifier를 조립한다. CLI create와 CLI/MCP reconcile은 같은 request-scoped handler pair를 사용하고, handler가 없으면 legacy full-flow로 우회하지 않고 fail closed한다.
 - 최초 parent issue 생성은 record의 `IssueCreateIntent`가 권위다. Provider 호출
   전에 operation marker, provider, canonical project authority, title/body
@@ -39,7 +40,7 @@
 
 ## IssueOps operational surface
 
-- IssueOps 제공 표면: 기존 lifecycle/domain CLI와 함께 `issueops execution prepare/status/claim/release/replace/reconcile/switch-mode/complete`, generation-fenced `issueops remote create-pr`를 제공한다. 단계 운영 표면으로 `issueops artifact stage/unstage`(prepare 전 스테이징·materialize·orca packet manifest 봉인), `issueops implementation-review record`(publication fail-closed 게이트, execution이 있는 모든 모드에 적용, 변경 집합 fingerprint 바인딩), `issueops next`(read-only 단계 투영 — `issueopsnext` vertical이 소유하며 record와 로컬 관측만 쓰고 fetch·provider·Orca 호출을 하지 않는다. stage key·index·missing·next_command·exits를 돌려주고, 키를 스킬 이름으로 바꾸는 표는 라우터 스킬이 소유한다), `issueops list`(read-only 다중 사이클 집계, 단일 SQLite snapshot의 물리 `scanned_records`, bounded invalid-row diagnostics와 pending/failure/cleanup-failure/issue-create projection), `issueops cleanup abandon`(미머지 사이클 폐기 — `--close-pr`·`--close-issue`·`--delete-remote-branch`로 원격 효과를 opt-in하며, 원격 효과는 record 삭제보다 먼저 실행되고 플래그와 원격 브랜치 OID만 fingerprint에 들어간다), `issueops cleanup finish`(record-backed 머지 후 정리 — orca 회수→git worktree 제거→브랜치 CAS 삭제→응답에 감사 라인 보고→레코드 삭제, resumable, 이슈 본문 쓰기 없음), `issueops remote create-issue/reconcile-issue`(intent-first parent issue 생성과 zero/one/many marker reconciliation), `issueops remote reflect-completion/close-issue`(사람이 쓴 진행 결과 반영(`--body-file`)·부모 이슈 close, 원격 readback fail-closed). 게시·동기화 명령(`create-issue/create-child/create-pr/sync-issue/sync-pr`)은 본문 계약과 가독성 검사를 항상 실행하고 confirm에서 critical을 거부한다를 제공한다. execution prepare는 `--owner-model` 미지정 시 host별 implementer 기본값(codex gpt-6-sol/high, claude claude-sonnet-5/high)을 적용하고, owner 프롬프트에 planner급 reviewer 모델(codex gpt-5.6-sol/xhigh, claude claude-opus-5/high)을 렌더한다. Claude의 Fable 5는 자동 기본값이나 폴백으로 쓰지 않고 명시적 수동 지정으로만 사용한다. IssueOps MCP 표면은 정확히 하나인 `issueops_execution`이며 action으로 같은 execution state machine을 호출한다. `execution prepare`가 provider branch의 exact base SHA에서 fixed sibling worktree를 만들거나 top-level·branch·HEAD가 모두 일치하는 기존 워크트리를 채택하고, direct는 caller에게 generation 1을 부여하며 Orca는 sealed packet/prompt/token file과 claimable lease를 만든다. External mutation은 intent-first이고 ambiguity는 reconcile 전까지 fail closed다. `execution complete`는 phase `pr`, active generation, final HEAD, committed verification report, verification, exact verified remote URL을 요구하며 `done` 전이와 lease release를 원자적으로 기록한다.
+- IssueOps 제공 표면: 기존 lifecycle/domain CLI와 함께 `issueops execution prepare/status/claim/release/replace/reconcile/switch-mode/complete`, generation-fenced `issueops remote create-pr`를 제공한다. 단계 운영 표면으로 `issueops artifact stage/unstage`(prepare 전 스테이징·materialize·orca packet manifest 봉인), `issueops implementation-review record`(publication fail-closed 게이트, execution이 있는 모든 모드에 적용, 변경 집합 fingerprint 바인딩), `issueops next`(read-only 단계 투영 — `issueopsnext` vertical이 소유하며 record와 로컬 관측만 쓰고 fetch·provider·Orca 호출을 하지 않는다. stage key·index·missing·next_command·exits를 돌려주고, 키를 스킬 이름으로 바꾸는 표는 라우터 스킬이 소유한다), `issueops list`(read-only 다중 사이클 집계, 단일 SQLite snapshot의 물리 `scanned_records`, bounded invalid-row diagnostics와 pending/failure/cleanup-failure/issue-create projection), `issueops cleanup abandon`(미머지 사이클 폐기 — `--close-pr`·`--close-issue`·`--delete-remote-branch`로 원격 효과를 opt-in하며, 원격 효과는 record 삭제보다 먼저 실행되고 플래그와 원격 브랜치 OID만 fingerprint에 들어간다), `issueops cleanup finish`(record-backed 머지 후 정리 — orca 회수→git worktree 제거→브랜치 CAS 삭제→응답에 감사 라인 보고→레코드 삭제, resumable, 이슈 본문 쓰기 없음), `issueops remote create-issue/reconcile-issue`(intent-first parent issue 생성과 zero/one/many marker reconciliation), `issueops remote reflect-completion/close-issue`(사람이 쓴 진행 결과 반영(`--body-file`)·부모 이슈 close, 원격 readback fail-closed). 게시·동기화 명령(`create-issue/create-child/create-pr/sync-issue/sync-pr`)은 본문 계약과 가독성 검사를 항상 실행하고 confirm에서 critical을 거부한다. execution prepare는 `--owner-model` 미지정 시 host별 implementer 기본값(codex gpt-6-sol/high, claude claude-sonnet-5-5/high, omo chatgpt-subscription/gpt-6-sol/max)을 적용하고, owner 프롬프트에 planner급 reviewer 모델(codex gpt-6-astra/xhigh, claude claude-opus-5-5/high, omo chatgpt-subscription/gpt-6-astra/max)을 렌더한다. 기본값은 `internal/domain/agentmodel`이 소유한다. Codex와 Omo의 읽기 전용 조사에는 gpt-6-luna/medium(Omo는 chatgpt-subscription prefix)을 렌더하며, 구현·계획 확정·게이트 판정에는 사용하지 않는다. 조사 모델 지정은 별도 위임 권한을 부여하지 않는다. Claude의 Fable 5는 자동 기본값이나 폴백으로 쓰지 않고 명시적 수동 지정으로만 사용한다. IssueOps MCP 표면은 정확히 하나인 `issueops_execution`이며 action으로 같은 execution state machine을 호출한다. `execution prepare`가 provider branch의 exact base SHA에서 fixed sibling worktree를 만들거나 top-level·branch·HEAD가 모두 일치하는 기존 워크트리를 채택하고, direct는 caller에게 generation 1을 부여하며 Orca는 sealed packet/prompt/token file과 claimable lease를 만든다. External mutation은 intent-first이고 ambiguity는 reconcile 전까지 fail closed다. `execution complete`는 phase `pr`, active generation, final HEAD, committed verification report, verification, exact verified remote URL을 요구하며 `done` 전이와 lease release를 원자적으로 기록한다.
 
 ## Generated command authority
 
@@ -101,6 +102,8 @@ cycle은 명시값이 없을 때 같은 경로를 계산해 하위 호환한다.
   sealed SHA-256 values. Token contents never enter state, prompts, logs, or
   responses.
 
+`issueopspreparation` domain은 준비·재개·폐기 조회에 공통인 이슈와 workspace 신원을 검증하며, 검증된 자체 호스팅 GitLab URL도 허용한다. `IntentRequestBuilder`의 조회는 봉인된 메타데이터만 사용하고, 실행은 현재 pending·generation과 토큰·프롬프트·컨텍스트 파일의 digest까지 검증한다. `LaunchHydrator`는 현재 레코드와 intent를 다시 읽으며, adapter는 SQL·파일 읽기와 DTO 변환만 맡는다.
+
 ### External intent and lock discipline
 
 - Workspace and remote PR/MR creation persist intent before calling the adapter.
@@ -161,36 +164,7 @@ cycle은 명시값이 없을 때 같은 경로를 계산해 하위 호환한다.
   AC-06 host parity is the exact CLI command plus Codex/Claude hook classifier,
   while MCP binds only reachable resume/replace `BaseSyncRequiredError` output.
 
-## Execution boundary
+## 실행과 정리 경계
 
-Workspace provisioning and lease grant are one execution transaction. The
-source main worktree remains available before, during, and after direct or Orca
-execution for unrelated work. A generic session binding is routing metadata
-only. The fence selects the exact lifecycle ID, generation, native process
-receipt, canonical worktree, and persisted Orca identity.
-
-One active execution exists per record, not per source repository. Exact-ID
-routing therefore keeps parallel cycles independent. The active holder performs
-the remaining gates, implementation, publication, and completion in its
-canonical worktree. Completion records `done` and releases the generation;
-later merge and cleanup require separate current evidence and authority.
-
-Post-merge cleanup ordering is a contract: `reflect-completion`(사람이 쓴
-진행 결과를 completion 구간에 반영. 해시·plan 원문은 record와 `.issueops/issues/<n>/`에
-남는다) → `close-issue` →
-`cleanup finish`. finish는 preview 게이트(원격 readback fail-closed·요청자
-보호·head OID CAS·fingerprint) 뒤에만 파괴 단계를 수행하고 마지막에
-레코드를 삭제한다. 워크트리를 점유한 프로세스와 그 워크트리에 매인 Orca 터미널은
-차단 사유가 아니라 apply ①′의 종료 대상이다: preview가 receipt(pid·시작 시각·실행
-파일)와 터미널 handle을 fingerprint에 결속하고, apply가 fingerprint된 handle마다
-`orca terminal close --terminal`(same-handle·`ptyKilled=true` receipt 필수)를
-호출한 뒤 HUP+TERM → KILL → 최종 점유·터미널 재관측(둘 다 0 증명) 순서로 닫은
-뒤 orca 회수로 넘어간다. bulk `terminal stop --worktree`는 fingerprint 밖 동시
-생성 터미널까지 닫을 수 있어 쓰지 않는다. 터미널 close 실패는 fail-closed다
-(`workspace_processes_stop`, 시그널 없음). 요청자 자신(pid 조상, `ORCA_PANE_KEY`/`ORCA_TERMINAL_HANDLE`로 확정한
-요청자 터미널)과 소스 체크아웃은 종료·삭제 대상이 될 수 없어 preview가 거부한다
-(#477) — 결정적 ID(`sha256(repo+branch)`) 재사용과 충돌하지 않는
-유일한 수명 종료다. 각 파괴 단계는 멱등이며, 실패 시 레코드가 보존되고 재실행
-전 preview 재발급이 요구된다. prune은 completion 미반영 + RemoteArtifact 보유
-레코드를 나이와 무관하게 보존한다(보존 불변식). staged artifact의 수명은
-레코드와 같다(deleteIssueOps가 스테이지 버킷을 동반 삭제).
+실행 권한, 정리 소유권과 외부 효과 순서는
+[issueops-cleanup.md](issueops-cleanup.md)를 따른다.

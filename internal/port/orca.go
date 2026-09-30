@@ -3,51 +3,12 @@ package port
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
+
+	deliverycontract "issueops/internal/contract/issueops"
 )
 
-var orcaRequestUUIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
-
-const (
-	OrcaMaxBaselineIDs = 512
-
-	// IssueOps planner(계획/리뷰 세션)의 host별 기본 모델. 하위 세션이 구현
-	// diff의 design-review 적대 리뷰 서브에이전트를 띄울 때 사용한다(설계 v5 WS5).
-	IssueOpsPlannerModelCodex   = "gpt-5.6-sol"
-	IssueOpsPlannerEffortCodex  = "xhigh"
-	IssueOpsPlannerModelClaude  = "claude-opus-5"
-	IssueOpsPlannerEffortClaude = "high"
-)
-
-// IssueOpsPlannerDefaults는 host별 planner(reviewer급) 기본 모델/effort를
-// 반환한다.
-// IssueOpsReviewEffortDocsOnly는 문서만 바뀐 변경 집합의 리뷰 effort다. 적대
-// 리뷰의 비용을 변경 집합에 비례시키는 유일한 하향 분기다.
-const IssueOpsReviewEffortDocsOnly = "medium"
-
-// IssueOpsReviewEffortForTier는 티어별 리뷰 effort를 돌려준다. docs-only만
-// 낮추고 나머지는 host planner 기본값을 그대로 쓴다.
-func IssueOpsReviewEffortForTier(host string, tier string) string {
-	_, effort, ok := IssueOpsPlannerDefaults(host)
-	if !ok {
-		return ""
-	}
-	if strings.TrimSpace(tier) == "docs-only" {
-		return IssueOpsReviewEffortDocsOnly
-	}
-	return effort
-}
-
-func IssueOpsPlannerDefaults(host string) (model string, effort string, ok bool) {
-	switch host {
-	case "codex":
-		return IssueOpsPlannerModelCodex, IssueOpsPlannerEffortCodex, true
-	case "claude":
-		return IssueOpsPlannerModelClaude, IssueOpsPlannerEffortClaude, true
-	}
-	return "", "", false
-}
+const OrcaMaxBaselineIDs = 512
 
 type OrcaError struct {
 	Code    string `json:"code"`
@@ -292,11 +253,11 @@ type OrcaDeliveryReceiptExpectation struct {
 func ValidateOrcaDurableRequestID(actual, retry string) error {
 	actual = strings.TrimSpace(actual)
 	retry = strings.TrimSpace(retry)
-	if err := ValidateOrcaRequestID(actual); err != nil {
+	if err := deliverycontract.ValidateOrcaRequestID(actual); err != nil {
 		return fmt.Errorf("Orca response is missing a durable request UUID")
 	}
 	if retry != "" {
-		if err := ValidateOrcaRequestID(retry); err != nil {
+		if err := deliverycontract.ValidateOrcaRequestID(retry); err != nil {
 			return fmt.Errorf("Orca retry request UUID is invalid")
 		}
 	}
@@ -304,20 +265,6 @@ func ValidateOrcaDurableRequestID(actual, retry string) error {
 		return fmt.Errorf("Orca response request UUID does not match the requested retry UUID")
 	}
 	return nil
-}
-
-func ValidateOrcaRequestID(value string) error {
-	if !orcaRequestUUIDPattern.MatchString(strings.TrimSpace(value)) {
-		return fmt.Errorf("Orca durable request UUID is invalid")
-	}
-	return nil
-}
-
-func ValidateOrcaRetryRequestID(value string) error {
-	if strings.TrimSpace(value) == "" {
-		return nil
-	}
-	return ValidateOrcaRequestID(value)
 }
 
 func ValidateOrcaPromptReceipt(receipt OrcaPromptReceipt, retryID, expectedProcess string) error {

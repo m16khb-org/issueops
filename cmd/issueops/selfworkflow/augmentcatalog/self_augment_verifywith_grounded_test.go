@@ -1,6 +1,7 @@
 package augmentcatalog
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -54,7 +55,7 @@ func TestAdapterContractMatrixCandidateCoversEveryFirstPartyHost(t *testing.T) {
 			}
 		}
 		want := "go test ./internal/adapter -run TestNativeInstallAdapterContractMatrix -count=1"
-		if !containsString(candidate.VerifyWith, want) {
+		if !slices.Contains(candidate.VerifyWith, want) {
 			t.Errorf("adapter contract matrix VerifyWith=%q want %q", candidate.VerifyWith, want)
 		}
 		return

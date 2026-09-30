@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
@@ -13,11 +12,11 @@ import (
 func TestCreateChildRequiresPreparedUmbrellaBranch(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	repo := t.TempDir()
-	record, err := issueopscore.StartIssueOps(issueopscore.IssueOpsStateRoot(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "78-umbrella"})
+	record, err := startIssueOpsFixture(issueOpsStateRootForTest(), issueopscontract.IssueOpsStartRequest{Repo: repo, Branch: "78-umbrella"})
 	if err != nil {
 		t.Fatalf("StartIssueOps: %v", err)
 	}
-	record, err = issueopscore.LinkIssueOpsIssue(issueopscore.IssueOpsStateRoot(), record.ID, "https://github.com/acme/repo/issues/78")
+	record, err = LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), record.ID, "https://github.com/acme/repo/issues/78")
 	if err != nil {
 		t.Fatalf("LinkIssueOpsIssue: %v", err)
 	}
@@ -31,7 +30,7 @@ func TestCreateChildRequiresPreparedUmbrellaBranch(t *testing.T) {
 		},
 	}
 
-	err = Run([]string{"create-child", "--id", record.ID, "--title", "자식 작업", "--body", "본문",
+	err = testRemoteCommand().Run([]string{"create-child", "--id", record.ID, "--title", "자식 작업", "--body", "본문",
 		"--label", "bug", "--assignee", "octocat", "--json"}, deps)
 	if err == nil {
 		t.Fatal("create-child must be blocked until the umbrella cycle prepares its own branch")
@@ -55,7 +54,7 @@ func TestCreateChildProceedsWithPreparedUmbrellaBranch(t *testing.T) {
 		PrintError: func(error) error { return nil },
 	}
 
-	if err := Run([]string{"create-child", "--id", record.ID, "--title", "자식 작업", "--body", "본문",
+	if err := testRemoteCommand().Run([]string{"create-child", "--id", record.ID, "--title", "자식 작업", "--body", "본문",
 		"--label", "bug", "--assignee", "octocat", "--json"}, deps); err != nil {
 		t.Fatalf("a prepared umbrella branch must not block child creation: %v", err)
 	}

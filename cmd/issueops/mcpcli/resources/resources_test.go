@@ -5,12 +5,14 @@ import (
 	"errors"
 	"issueops/internal/adapter/docs"
 	statestore "issueops/internal/adapter/outbound/state"
-	"issueops/internal/adapter/projectdocs"
+	"issueops/internal/adapter/policy"
+	docsapp "issueops/internal/application/docs"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHandleResourceReadReturnsJSONResources(t *testing.T) {
@@ -27,11 +29,12 @@ func TestHandleResourceReadReturnsJSONResources(t *testing.T) {
 	}
 
 	config := Config{
-		RouteProjectDocs: projectdocs.RouteProjectDocs,
-		IssueOpsRoot:     issueOpsRoot,
-		Version:          "test-version",
-		StateList:        statestore.StateList,
-		DocsIndex:        docs.DocsIndex,
+		RouteProjectDocs:     testProjectDocsService().Route,
+		CommandPolicySummary: policy.CommandPolicySummary,
+		IssueOpsRoot:         issueOpsRoot,
+		Version:              "test-version",
+		StateList:            statestore.StateList,
+		DocsIndex:            (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).Index,
 	}
 	for _, uri := range []string{
 		"issueops://docs",

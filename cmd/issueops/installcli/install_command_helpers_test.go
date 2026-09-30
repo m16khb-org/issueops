@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	claudeadapter "issueops/internal/adapter/claude"
-	codexadapter "issueops/internal/adapter/codex"
+
 	"issueops/internal/adapter/install"
-	installutiladapter "issueops/internal/adapter/installutil"
+
 	activationport "issueops/internal/port/nativeactivation"
 	"os"
 	"os/exec"
@@ -19,7 +18,7 @@ import (
 	"issueops/internal/port"
 )
 
-func configureInstallCommandTest(t *testing.T, home string) string {
+func installCommandFixture(t *testing.T, home string) (Command, string) {
 	t.Helper()
 	root, err := filepath.Abs("../../..")
 	if err != nil {
@@ -30,19 +29,16 @@ func configureInstallCommandTest(t *testing.T, home string) string {
 	t.Setenv("ISSUEOPS_ROOT", root)
 	t.Setenv("SHELL", "/bin/zsh")
 	t.Setenv("PATH", "/usr/bin:/bin")
-	claudeadapter.ValidateHookConfigForMerge = installutiladapter.ValidateHookConfigForMerge
-	codexadapter.ValidateHookConfigForMerge = installutiladapter.ValidateHookConfigForMerge
-	Configure(Deps{
+	cli := testInstallCommand(t, Deps{
 		IssueOpsRoot:         func() string { return root },
 		ExecutablePath:       func() (string, error) { return filepath.Join(root, "bin", "issueops"), nil },
 		NativeInstallRequest: install.DefaultNativeInstallRequest,
 		InstallNative: func(req port.NativeInstallRequest) (port.NativeInstallResult, error) {
-			return install.InstallNative(req, codexadapter.NewInstaller(), claudeadapter.NewInstaller())
+			return installNativeForTest(req, testCodexInstaller(), testClaudeInstaller())
 		},
 		ActivationReadback: func(port.NativeInstallRequest) activationport.ReadbackVerifier { return nil },
 	})
-	t.Cleanup(Reset)
-	return installCommandTestStableRoot(t, root)
+	return cli, installCommandTestStableRoot(t, root)
 }
 
 func installCommandTestStableRoot(t *testing.T, invokingRoot string) string {
@@ -61,9 +57,9 @@ func installCommandTestStableRoot(t *testing.T, invokingRoot string) string {
 
 func runInstallDryRunJSON(t *testing.T, home, pathMode string) port.NativeInstallResult {
 	t.Helper()
-	configureInstallCommandTest(t, home)
+	cli, _ := installCommandFixture(t, home)
 	out, _, err := captureInstallCommandOutput(t, nil, func() error {
-		return RunInstall([]string{"--dry-run", "--json", "--path-mode=" + pathMode})
+		return cli.RunInstall([]string{"--dry-run", "--json", "--path-mode=" + pathMode})
 	})
 	if err != nil {
 		t.Fatalf("install --dry-run --json --path-mode=%s failed: %v\n%s", pathMode, err, out)

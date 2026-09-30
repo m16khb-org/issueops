@@ -11,13 +11,16 @@ import (
 
 // runIssueOpsNext는 현재 단계와 다음 명령을 출력한다. 읽기 전용이므로 어느
 // 단계에서 실행해도 사이클을 바꾸지 않는다.
-func runIssueOpsNext(args []string) error {
+func (cli command) runIssueOpsNext(args []string) error {
 	fs := flag.NewFlagSet("issueops next", flag.ContinueOnError)
 	id := fs.String("id", "", "select a cycle by id")
 	cwd := fs.String("cwd", "", "classify as if run from this directory")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseIssueOpsFlags(fs, args); help || err != nil {
 		return err
+	}
+	if cli.Runtime.IssueOpsNext == nil || cli.Runtime.IssueOpsStateRoot == nil {
+		return fmt.Errorf("issueops runtime is not configured")
 	}
 	directory := strings.TrimSpace(*cwd)
 	if directory == "" {
@@ -27,7 +30,7 @@ func runIssueOpsNext(args []string) error {
 		}
 		directory = current
 	}
-	result, err := issueOpsCLIDeps.IssueOpsNext(issueOpsCLIDeps.IssueOpsStateRoot(), directory, *id)
+	result, err := cli.Runtime.IssueOpsNext(cli.Runtime.IssueOpsStateRoot(), directory, *id)
 	if err != nil {
 		return err
 	}

@@ -1,9 +1,10 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"testing"
+
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func TestScoreIssueOpsBenchmarkArtifactAcceptsKoreanSectionLabels(t *testing.T) {

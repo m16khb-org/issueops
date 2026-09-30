@@ -7,14 +7,14 @@ import (
 	"os"
 )
 
-func runGuard(args []string) error {
+func (command Command) RunGuard(args []string) error {
 	if len(args) == 0 {
 		guardUsage()
 		return fmt.Errorf("missing guard subcommand")
 	}
 	switch args[0] {
 	case "check":
-		return runGuardCheck(args[1:])
+		return command.runGuardCheck(args[1:])
 	default:
 		guardUsage()
 		return fmt.Errorf("unknown guard subcommand %q", args[0])
@@ -27,7 +27,7 @@ func guardUsage() {
 `)
 }
 
-func runGuardCheck(args []string) error {
+func (command Command) runGuardCheck(args []string) error {
 	fs := flag.NewFlagSet("guard check", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	staged := fs.Bool("staged", true, "check staged files")
@@ -43,7 +43,7 @@ func runGuardCheck(args []string) error {
 	if *all {
 		*staged = false
 	}
-	result := GuardCheck(guardcontract.GuardCheckRequest{RepoRoot: *repo, Staged: *staged, All: *all, Files: files})
+	result, checkErr := command.Guard.CheckForCommand(guardcontract.GuardCheckRequest{RepoRoot: *repo, Staged: *staged, All: *all, Files: files})
 	if *jsonOut {
 		if err := printJSON(result); err != nil {
 			return err
@@ -61,14 +61,5 @@ func runGuardCheck(args []string) error {
 			fmt.Printf("%s %s %s: %s\n", finding.Severity, finding.Rule, location, finding.Message)
 		}
 	}
-	if !result.OK {
-		blockers := []guardcontract.GuardFinding{}
-		for _, finding := range result.Findings {
-			if finding.Severity == "block" {
-				blockers = append(blockers, finding)
-			}
-		}
-		return NewGuardBlockedError(blockers)
-	}
-	return nil
+	return checkErr
 }

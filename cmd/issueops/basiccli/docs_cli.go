@@ -5,11 +5,7 @@ import (
 	"fmt"
 )
 
-func runDocs(args []string) error {
-	return runDocsWithRoot(args, deps.IssueOpsRoot())
-}
-
-func runDocsWithRoot(args []string, root string) error {
+func (command Command) RunDocs(args []string) error {
 	if len(args) > 0 && args[0] == "index" {
 		args = args[1:]
 	}
@@ -18,10 +14,10 @@ func runDocsWithRoot(args []string, root string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if deps.DocsIndex == nil {
+	if command.DocsIndex == nil {
 		return fmt.Errorf("docs index reader is not configured")
 	}
-	result := deps.DocsIndex(root, deps.Version)
+	result := command.DocsIndex(command.IssueOpsRoot, command.Version)
 	if *jsonOut {
 		return printJSON(result)
 	}

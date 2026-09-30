@@ -10,14 +10,17 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-type ReseedHandler struct{ service *leaseapp.ReseedService }
+type ReseedHandler struct {
+	service     *leaseapp.ReseedService
+	nextCommand func(id string, generation uint64, mode, claimTokenPath string) string
+}
 
-func NewReseedHandler(service *leaseapp.ReseedService) issueopscontract.ExecutionReseedHandler {
-	return ReseedHandler{service: service}.Handle
+func NewReseedHandler(service *leaseapp.ReseedService, nextCommand func(id string, generation uint64, mode, claimTokenPath string) string) issueopscontract.ExecutionReseedHandler {
+	return ReseedHandler{service: service, nextCommand: nextCommand}.Handle
 }
 
 func (h ReseedHandler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionReseedRequest) (issueopscontract.ExecutionReplaceResult, error) {
-	if h.service == nil {
+	if h.service == nil || h.nextCommand == nil {
 		return issueopscontract.ExecutionReplaceResult{ID: request.ID, Action: issueopscontract.ExecutionReplaceReseed}, issueopscontract.ErrReseedHandlerUnavailable
 	}
 	result, err := h.service.Reseed(ctx, leaseapp.ReseedRequest{
@@ -33,7 +36,7 @@ func (h ReseedHandler) Handle(ctx context.Context, _ string, request issueopscon
 		ContextPacketPath: result.Receipt.ContextPacketPath, ContextPacketSHA256: result.Receipt.ContextPacketSHA256,
 		OwnerPromptPath: result.Receipt.OwnerPromptPath, OwnerPromptSHA256: result.Receipt.OwnerPromptSHA256,
 	}
-	response.NextCommand = executionReseedNextCommand(
+	response.NextCommand = h.nextCommand(
 		result.ID, result.Execution.Lease.Generation, result.Execution.Mode, result.Receipt.ClaimTokenPath,
 	)
 	return response, nil

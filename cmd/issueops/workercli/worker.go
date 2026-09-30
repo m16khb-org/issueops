@@ -8,24 +8,24 @@ import (
 	"time"
 )
 
-func runWorker(args []string) error {
+func (command Command) Run(args []string) error {
 	if len(args) == 0 {
 		workerUsage()
 		return fmt.Errorf("missing worker subcommand")
 	}
 	switch args[0] {
 	case "enqueue":
-		return runWorkerEnqueue(args[1:])
+		return command.RunEnqueue(args[1:])
 	case "run":
-		return runWorkerRun(args[1:])
+		return command.RunReadOnly(args[1:])
 	case "status":
-		return runWorkerStatus(args[1:])
+		return command.RunStatus(args[1:])
 	case "list":
-		return runWorkerList(args[1:])
+		return command.RunList(args[1:])
 	case "cleanup-stuck":
-		return runWorkerCleanupStuck(args[1:])
+		return command.RunCleanupStuck(args[1:])
 	case "cancel":
-		return runWorkerCancel(args[1:])
+		return command.RunCancel(args[1:])
 	default:
 		workerUsage()
 		return fmt.Errorf("unknown worker subcommand %q", args[0])
@@ -43,7 +43,7 @@ func workerUsage() {
 `)
 }
 
-func runWorkerRun(args []string) error {
+func (command Command) RunReadOnly(args []string) error {
 	fs := flag.NewFlagSet("worker run", flag.ContinueOnError)
 	kind := fs.String("kind", "read-only-command", "job kind")
 	payload := fs.String("payload", "", "redacted job payload")
@@ -61,7 +61,7 @@ func runWorkerRun(args []string) error {
 	}
 	root := *workspaceRoot
 	if root == "" {
-		root = deps.ResolveTarget("")
+		root = command.ResolveTarget("")
 	}
 	workDir := *cwd
 	if workDir == "" {
@@ -74,7 +74,7 @@ func runWorkerRun(args []string) error {
 		Timeout:       timeout.String(),
 		EnvAllowlist:  splitCSV(*envAllowlist),
 	}
-	job, err := RunReadOnlyWorkerJob(*kind, *payload, req)
+	job, err := command.Service.RunReadOnly(*kind, *payload, req)
 	if *jsonOut {
 		_ = printJSON(job)
 	}

@@ -1,9 +1,10 @@
 package benchmarkartifact
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"testing"
+
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func TestDefaultsForNoExtraRequirementsFixture(t *testing.T) {

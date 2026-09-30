@@ -5,24 +5,24 @@ import (
 	"os"
 )
 
-func runProject(args []string) error {
+func runProject(deps Dependencies, args []string) error {
 	if len(args) == 0 {
 		projectUsage()
 		return fmt.Errorf("missing project subcommand")
 	}
 	switch args[0] {
 	case "bootstrap":
-		return runProjectBootstrap(args[1:])
+		return runProjectBootstrap(deps.Bootstrap, args[1:])
 	case "docs":
-		return runProjectDocs(args[1:])
+		return runProjectDocs(deps.Docs, args[1:])
 	case "route-docs":
-		return runProjectRouteDocs(args[1:])
+		return runProjectRouteDocs(deps.Docs, args[1:])
 	case "append":
-		return runProjectAppend(args[1:])
+		return runProjectAppend(deps.Docs, args[1:])
 	case "commit-suggest":
-		return runProjectCommitSuggest(args[1:])
+		return runProjectCommitSuggest(deps.Commit, args[1:])
 	case "lint-diagnose":
-		return runProjectLintDiagnose(args[1:])
+		return runProjectLintDiagnose(deps.Lint, args[1:])
 	default:
 		projectUsage()
 		return fmt.Errorf("unknown project subcommand %q", args[0])

@@ -26,10 +26,10 @@ func TestRepeatedFlagRoundTripsRepeatedValues(t *testing.T) {
 
 // TestIssueOpsUsageListsNewlyAddedSubcommands는 usage 텍스트를 docs-drift
 // 회귀로부터 지킨다. 감사에서 누락으로 드러난, issueOpsSubcommands에 등록된 모든
-// subcommand는 issueOpsUsage()에 나타나야 한다.
+// subcommand는 issueOpsUsage(testLifecycleUsage())에 나타나야 한다.
 func TestIssueOpsUsageListsNewlyAddedSubcommands(t *testing.T) {
 	usage, err := captureProjectCLIStderr(t, func() error {
-		issueOpsUsage()
+		issueOpsUsage(testLifecycleUsage())
 		return nil
 	})
 	if err != nil {

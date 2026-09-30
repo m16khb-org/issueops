@@ -29,8 +29,8 @@ func TestNewEpisodeRootSurfacesCleanupFailureAfterPermissionFailure(t *testing.T
 }
 
 func TestObservedModelFromOutputReadsOnlyStructuredModelFields(t *testing.T) {
-	output := []byte("{\"type\":\"system\",\"subtype\":\"init\",\"model\":\"claude-opus-5\"}\n{\"model\":\"later\"}\n")
-	if got := observedModelFromOutput(output); got != "claude-opus-5" {
+	output := []byte("{\"type\":\"system\",\"subtype\":\"init\",\"model\":\"claude-opus-5-5\"}\n{\"model\":\"later\"}\n")
+	if got := observedModelFromOutput(output); got != "claude-opus-5-5" {
 		t.Fatalf("observed model=%q", got)
 	}
 	if got := observedModelFromOutput([]byte(`{"text":"model=secret"}`)); got != "" {
@@ -88,7 +88,7 @@ func TestObserveHostStreamCountsEveryToolCallAndObservedModel(t *testing.T) {
 		{
 			name: "codex",
 			stream: strings.Join([]string{
-				`{"type":"thread.started","thread_id":"thread-probe","model":"gpt-5.4"}`,
+				`{"type":"thread.started","thread_id":"thread-probe","model":"gpt-6-sol"}`,
 				`{"type":"item.completed","item":{"type":"command_execution","id":"ambient","status":"completed","aggregated_output":"ignored","exit_code":0}}`,
 				`{"type":"item.completed","item":{"type":"mcp_tool_call","id":"target","server":"issueops_probe","status":"completed","result":{"content":"captured"}}}`,
 			}, "\n") + "\n",
@@ -96,7 +96,7 @@ func TestObserveHostStreamCountsEveryToolCallAndObservedModel(t *testing.T) {
 		{
 			name: "claude",
 			stream: strings.Join([]string{
-				`{"type":"system","subtype":"init","model":"claude-opus-4-6"}`,
+				`{"type":"system","subtype":"init","model":"claude-opus-5-5"}`,
 				`{"type":"assistant","message":{"content":[{"type":"tool_use","id":"ambient","name":"Read","input":{}},{"type":"tool_use","id":"target","name":"mcp__issueops_probe__harness_probe_empty_object","input":{}}]}}`,
 				`{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"ambient","content":"ignored"},{"type":"tool_result","tool_use_id":"target","content":"captured"}]},"tool_use_result":{"content":"captured"}}`,
 			}, "\n") + "\n",
@@ -117,7 +117,7 @@ func TestObserveHostStreamCountsEveryToolCallAndObservedModel(t *testing.T) {
 
 func TestObserveCodexHookTrustWarningIsNotATool(t *testing.T) {
 	warning := `{"type":"item.completed","item":{"type":"error","message":"` + "`--dangerously-bypass-hook-trust` is enabled. Enabled hooks may run without review for this invocation." + `"}}` + "\n"
-	got, err := observeHostStream([]byte(warning + warning + string(codexSuccessfulStream("gpt-5.6-sol"))))
+	got, err := observeHostStream([]byte(warning + warning + string(codexSuccessfulStream("gpt-6-sol"))))
 	if err != nil || got.AmbientToolCount != 1 || got.MCPCallCount != 1 {
 		t.Fatalf("observation=%+v err=%v", got, err)
 	}
@@ -127,7 +127,7 @@ func TestObserveCodexHookTrustWarningIsNotATool(t *testing.T) {
 }
 
 func TestObserveClaudeArrayResult(t *testing.T) {
-	stream := `{"type":"system","subtype":"init","model":"claude-opus-5"}
+	stream := `{"type":"system","subtype":"init","model":"claude-opus-5-5"}
 {"type":"assistant","message":{"content":[{"type":"tool_use","id":"target","name":"mcp__issueops_probe__harness_probe_empty_object","input":{}}]}}
 {"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"target","content":[{"type":"text","text":"captured"}]}]},"tool_use_result":[{"type":"text","text":"captured"}]}`
 	got, err := observeHostStream([]byte(stream))
@@ -160,8 +160,8 @@ func TestRecordedSessionStartCanUseStreamModel(t *testing.T) {
 	if err != nil || !recorded.SessionStartObserved || recorded.Model != "" {
 		t.Fatalf("recorded=%+v err=%v", recorded, err)
 	}
-	observation := hostStreamObservation{Model: "claude-opus-5"}
-	if err := mergeHookObservation(&observation, recorded); err != nil || !observation.SessionStartObserved || observation.Model != "claude-opus-5" {
+	observation := hostStreamObservation{Model: "claude-opus-5-5"}
+	if err := mergeHookObservation(&observation, recorded); err != nil || !observation.SessionStartObserved || observation.Model != "claude-opus-5-5" {
 		t.Fatalf("merge=%+v err=%v", observation, err)
 	}
 }
@@ -169,7 +169,7 @@ func TestRecordedSessionStartCanUseStreamModel(t *testing.T) {
 func TestRunnersRequirePrivateSessionStartReceipt(t *testing.T) {
 	for _, host := range []string{"codex", "claude"} {
 		t.Run(host, func(t *testing.T) {
-			request := codexRequest("gpt-5.6-sol")
+			request := codexRequest("gpt-6-sol")
 			if host == "claude" {
 				request = claudeProbeRequest()
 			}

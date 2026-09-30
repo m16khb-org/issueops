@@ -162,6 +162,10 @@ func (transaction *installHostTransaction) rollback() error {
 	return errors.Join(errs...)
 }
 
+func (transaction *installHostTransaction) RollbackHosts() error {
+	return transaction.rollback()
+}
+
 func restoreInstallHostPath(snapshot installHostPathSnapshot) error {
 	if !snapshot.existed {
 		if err := os.Remove(snapshot.path); err != nil && !os.IsNotExist(err) {

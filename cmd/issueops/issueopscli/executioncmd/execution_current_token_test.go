@@ -28,11 +28,9 @@ func TestClaimRejectsPartialActorFlags(t *testing.T) {
 }
 
 func TestClaimWithoutActorFlagsUsesNativeReceipt(t *testing.T) {
-	previousExecute := execDeps.ExecuteExecution
-	t.Cleanup(func() { execDeps.ExecuteExecution = previousExecute })
 
 	var got model.ExecutionActionRequest
-	execDeps.ExecuteExecution = func(_ context.Context, _ string, request model.ExecutionActionRequest, _ port.ExecutionActionDependencies) (any, error) {
+	execute := func(_ context.Context, _ string, request model.ExecutionActionRequest, _ port.ExecutionActionDependencies) (any, error) {
 		got = request
 		return struct{}{}, nil
 	}
@@ -55,6 +53,7 @@ func TestClaimWithoutActorFlagsUsesNativeReceipt(t *testing.T) {
 	err := runClaim([]string{
 		"--id", "io-direct", "--generation", "2", "--claim-current-token", "--json",
 	}, Deps{
+		Runtime:                ExecutionDeps{ExecuteExecution: execute},
 		StateRoot:              func() string { return t.TempDir() },
 		PrintJSON:              func(any) error { return nil },
 		nativeActorObservation: &observation,
@@ -70,11 +69,9 @@ func TestClaimWithoutActorFlagsUsesNativeReceipt(t *testing.T) {
 }
 
 func TestClaimWithoutActorFlagsUsesOmoNativeReceipt(t *testing.T) {
-	previousExecute := execDeps.ExecuteExecution
-	t.Cleanup(func() { execDeps.ExecuteExecution = previousExecute })
 
 	var got model.ExecutionActionRequest
-	execDeps.ExecuteExecution = func(_ context.Context, _ string, request model.ExecutionActionRequest, _ port.ExecutionActionDependencies) (any, error) {
+	execute := func(_ context.Context, _ string, request model.ExecutionActionRequest, _ port.ExecutionActionDependencies) (any, error) {
 		got = request
 		return struct{}{}, nil
 	}
@@ -97,6 +94,7 @@ func TestClaimWithoutActorFlagsUsesOmoNativeReceipt(t *testing.T) {
 	err := runClaim([]string{
 		"--id", "io-direct", "--generation", "2", "--claim-current-token", "--json",
 	}, Deps{
+		Runtime:                ExecutionDeps{ExecuteExecution: execute},
 		StateRoot:              func() string { return t.TempDir() },
 		PrintJSON:              func(any) error { return nil },
 		nativeActorObservation: &observation,

@@ -26,7 +26,7 @@ var authPathSegments = map[string]bool{
 // contractPathPrefixes는 공개 계약 표면이다. 여기가 바뀌면 하위 호환 렌즈가
 // 먼저 걸려야 한다.
 var contractPathPrefixes = []string{
-	"internal/contract/", "internal/domain/cli/", "internal/domain/commandparse/", "configs/",
+	"internal/contract/", "internal/adapter/inbound/catalog/", "internal/domain/cli/", "internal/domain/commandparse/", "configs/",
 }
 
 // frontendExtensions는 사람이 보는 화면을 만드는 확장자다. `.js`와 `.ts`는

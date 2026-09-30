@@ -25,7 +25,7 @@ func TestInstallNativeDelegatesThroughHostInstaller(t *testing.T) {
 	writeInstallTestSkill(t, root, "alpha")
 	writeInstallTestSkill(t, root, "beta")
 	req := DefaultNativeInstallRequest(root, t.TempDir(), "", "")
-	result, err := InstallNative(req, fakeHostInstaller{name: "host-a"}, fakeHostInstaller{name: "host-b"})
+	result, err := installNativeForTest(req, fakeHostInstaller{name: "host-a"}, fakeHostInstaller{name: "host-b"})
 	if err != nil {
 		t.Fatal(err)
 	}

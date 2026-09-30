@@ -9,7 +9,6 @@ import (
 
 	issueopscontract "issueops/internal/contract/issueops"
 
-	"issueops/internal/adapter/issueops"
 	leaseadapter "issueops/internal/adapter/outbound/issueopslease"
 	leaseapp "issueops/internal/application/issueopslease"
 	leasecontract "issueops/internal/contract/issueopslease"
@@ -28,7 +27,7 @@ func TestReleaseHandlerReturnsCommittedProjectionWithoutStatusReadback(t *testin
 			Mode:           "orca",
 			Workspace:      leasecontract.Workspace{SourceRoot: "/source", Root: "/canonical", Branch: "196-release", BaseHead: strings.Repeat("a", 40), Driver: "orca", LinkedAt: "2026-07-29T00:00:00Z"},
 			Lease:          leasecontract.Lease{Generation: 1, Status: "active", Holder: &actor, ClaimedAt: "2026-07-29T00:00:01Z"},
-			Orca:           &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", RunID: "run", OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", TaskID: "task", DispatchID: "dispatch"},
+			Orca:           &leasecontract.OrcaBinding{RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", RunID: "run", OwnerHost: "codex", OwnerModel: "gpt-6-astra", TaskID: "task", DispatchID: "dispatch"},
 			Pending:        &leasecontract.ExternalIntent{OperationID: "pending", Kind: "pr_create", Marker: "marker", StartedAt: "2026-07-29T00:00:02Z"},
 			Completion:     &leasecontract.Completion{FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/196.json", Verification: []string{"focused"}, RemoteArtifactURL: "https://example.test/pull/196", CompletedAt: "2026-07-29T00:00:03Z"},
 			Failure:        &leasecontract.FailureDetail{OperationID: "failed-operation", Code: "transient", Message: "retry", At: "2026-07-29T00:00:04Z"},
@@ -52,7 +51,7 @@ func TestReleaseHandlerReturnsCommittedProjectionWithoutStatusReadback(t *testin
 		leaseadapter.FilesystemPathMatcher{},
 	)
 	handler := NewReleaseHandler(service)
-	result, err := handler(context.Background(), "/state-root-that-must-not-be-read", issueops.ExecutionReleaseRequest{
+	result, err := handler(context.Background(), "/state-root-that-must-not-be-read", issueopscontract.ExecutionReleaseRequest{
 		ID: record.ID, Generation: 1, CWD: "/canonical",
 		Actor: issueopscontract.NativeActor{Host: actor.Host, SessionID: actor.SessionID, SessionProcess: &issueopscontract.NativeProcessReceipt{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}, ProcessAncestry: []issueopscontract.NativeProcessReceipt{{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}}},
 	})
@@ -109,7 +108,7 @@ func TestReleaseHandlerPreservesNotPreparedCompatibilityText(t *testing.T) {
 		},
 		leaseadapter.FilesystemPathMatcher{},
 	)
-	_, err = NewReleaseHandler(service)(context.Background(), "/unused", issueops.ExecutionReleaseRequest{
+	_, err = NewReleaseHandler(service)(context.Background(), "/unused", issueopscontract.ExecutionReleaseRequest{
 		ID: record.ID, Generation: 1, CWD: "/canonical",
 		Actor: issueopscontract.NativeActor{Host: actor.Host, SessionID: actor.SessionID, SessionProcess: &issueopscontract.NativeProcessReceipt{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}, ProcessAncestry: []issueopscontract.NativeProcessReceipt{{PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable}}},
 	})
@@ -130,7 +129,7 @@ func TestReleaseHandlerPreservesLegacyNativeActorValidationText(t *testing.T) {
 		{name: "missing receipt", actor: issueopscontract.NativeActor{Host: "codex", SessionID: "missing-receipt"}, want: "native actor requires a PID reuse-safe session_process receipt"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := handler(context.Background(), "/unused", issueops.ExecutionReleaseRequest{ID: "io-native-actor", Generation: 1, Actor: tc.actor})
+			_, err := handler(context.Background(), "/unused", issueopscontract.ExecutionReleaseRequest{ID: "io-native-actor", Generation: 1, Actor: tc.actor})
 			if err == nil || err.Error() != tc.want {
 				t.Fatalf("handler error=%v want=%q", err, tc.want)
 			}
@@ -174,7 +173,7 @@ func TestReleaseHandlerPreservesLegacyContractAndPersistenceText(t *testing.T) {
 				},
 				leaseadapter.FilesystemPathMatcher{},
 			)
-			_, err := NewReleaseHandler(service)(context.Background(), "/unused", issueops.ExecutionReleaseRequest{
+			_, err := NewReleaseHandler(service)(context.Background(), "/unused", issueopscontract.ExecutionReleaseRequest{
 				ID: "io-public-error", Generation: 1, CWD: "/canonical", Actor: actor,
 			})
 			if err == nil || err.Error() != tc.want {

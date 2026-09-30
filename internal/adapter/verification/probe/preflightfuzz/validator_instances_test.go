@@ -1,0 +1,25 @@
+package preflightfuzz
+
+import (
+	selfverify "issueops/internal/contract/selfverify"
+
+	"strings"
+	"testing"
+)
+
+func TestPreparedValidatorsKeepTheirGitRunner(t *testing.T) {
+	prepare := func(name string) func(string, string, int64) selfverify.StepResult {
+		return (Validator{Git: func(string, ...string) (int, string, string) { return 1, "", name }}).Validate
+	}
+	first := prepare("first-runner")
+	second := prepare("second-runner")
+	for _, tc := range []struct {
+		run  func(string, string, int64) selfverify.StepResult
+		want string
+	}{{first, "first-runner"}, {second, "second-runner"}, {first, "first-runner"}} {
+		step := tc.run("unused", t.TempDir(), 1)
+		if step.OK || !strings.Contains(step.Error, "git init: "+tc.want) {
+			t.Fatalf("expected captured %s git failure, got %#v", tc.want, step)
+		}
+	}
+}

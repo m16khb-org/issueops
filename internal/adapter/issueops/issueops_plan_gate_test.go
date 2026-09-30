@@ -32,12 +32,12 @@ func TestAdvanceToImplementGatesOnDesignApproval(t *testing.T) {
 		t.Fatalf("git worktree add failed: %s", stderr)
 	}
 
-	record, err := StartIssueOps(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
+	record, err := startIssueOpsFixture(stateRoot, issueops.IssueOpsStartRequest{Repo: repo, Branch: branch})
 	if err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsIntentForTest(t, stateRoot, record.ID)
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhaseGrill)); err != nil {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseGrill)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := LinkIssueOpsIssue(stateRoot, record.ID, "https://github.com/example/repo/issues/1"); err != nil {
@@ -56,7 +56,7 @@ func TestAdvanceToImplementGatesOnDesignApproval(t *testing.T) {
 
 	// No design review recorded: implement entry is blocked because the review
 	// is missing entirely.
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "design_review") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "design_review") {
 		t.Fatalf("implement entry with no design review must be blocked on design_review, got %v", err)
 	}
 
@@ -71,14 +71,14 @@ func TestAdvanceToImplementGatesOnDesignApproval(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "design_approval") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "design_approval") {
 		t.Fatalf("implement entry with an unapproved design review must be blocked on design_approval, got %v", err)
 	}
 
 	// Recording an approved design review clears the design_approval block (other
 	// readiness items such as the plan may remain, but the approval gate is gone).
 	recordIssueOpsApprovedDesignForTest(t, stateRoot, record.ID)
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhaseImplement)); err != nil && strings.Contains(err.Error(), "design_approval") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement)); err != nil && strings.Contains(err.Error(), "design_approval") {
 		t.Fatalf("approved design review must clear the design_approval block, still got %v", err)
 	}
 }

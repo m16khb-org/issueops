@@ -3,25 +3,24 @@ package historycompare
 import (
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
-	"issueops/cmd/issueops/selfworkflow/stateio"
+	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
 func TestSelfAugmentHistoryCoversInvalidTimestampSchemaSkipAndNilSlices(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, "self-verify-invalid-time", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-invalid-time", SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,
 		GeneratedAt:   "not-a-time",
 		Summary:       SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1},
 	}); err != nil {
 		t.Fatalf("write invalid time: %v", err)
 	}
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, "self-verify-bad-schema", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-bad-schema", SelfAugmentStateSnapshot{
 		SchemaVersion: 2,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		Summary:       SelfAugmentSummary{TotalRuns: 1},
 	}); err != nil {
 		t.Fatalf("write bad schema: %v", err)

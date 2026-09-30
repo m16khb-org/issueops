@@ -4,16 +4,18 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+
+	publicationcontract "issueops/internal/contract/issueopspublication"
 )
 
 const (
-	IssueCreateIntentPending            = "pending"
-	IssueCreateIntentNotInvoked         = "not_invoked"
-	IssueCreateIntentInvokedUnknown     = "invoked_unknown"
-	IssueCreateIntentURLObserved        = "url_observed"
-	IssueCreateIntentVerificationFailed = "verification_failed"
-	IssueCreateIntentReceiptFailed      = "receipt_failed"
-	IssueCreateIntentCompleted          = "completed"
+	IssueCreateIntentPending            = publicationcontract.IssueCreateIntentPending
+	IssueCreateIntentNotInvoked         = publicationcontract.IssueCreateIntentNotInvoked
+	IssueCreateIntentInvokedUnknown     = publicationcontract.IssueCreateIntentInvokedUnknown
+	IssueCreateIntentURLObserved        = publicationcontract.IssueCreateIntentURLObserved
+	IssueCreateIntentVerificationFailed = publicationcontract.IssueCreateIntentVerificationFailed
+	IssueCreateIntentReceiptFailed      = publicationcontract.IssueCreateIntentReceiptFailed
+	IssueCreateIntentCompleted          = publicationcontract.IssueCreateIntentCompleted
 
 	MaxIssueCreateTitleBytes     = 512
 	MaxIssueCreateAuthorityBytes = 512
@@ -138,47 +140,6 @@ func ValidateIssueCreateIntent(intent IssueOpsIssueCreateIntent) error {
 		IssueCreateIntentCompleted:
 	default:
 		return fmt.Errorf("unsupported issue create intent status %q", intent.Status)
-	}
-	if intent.Status == IssueCreateIntentCompleted && strings.TrimSpace(intent.CanonicalURL) == "" {
-		return fmt.Errorf("completed issue create intent requires canonical_url")
-	}
-	if (intent.Status == IssueCreateIntentPending ||
-		intent.Status == IssueCreateIntentNotInvoked ||
-		intent.Status == IssueCreateIntentInvokedUnknown) &&
-		strings.TrimSpace(intent.CanonicalURL) != "" {
-		return fmt.Errorf("issue create intent status %s must not have canonical_url", intent.Status)
-	}
-	if intent.Status != IssueCreateIntentPending &&
-		intent.Status != IssueCreateIntentCompleted &&
-		strings.TrimSpace(intent.Failure) == "" {
-		return fmt.Errorf("issue create intent status %s requires failure", intent.Status)
-	}
-	return nil
-}
-
-func ValidateIssueCreateTransition(from, to string) error {
-	allowed := false
-	switch from {
-	case IssueCreateIntentPending:
-		allowed = to == IssueCreateIntentNotInvoked ||
-			to == IssueCreateIntentInvokedUnknown ||
-			to == IssueCreateIntentURLObserved ||
-			to == IssueCreateIntentVerificationFailed ||
-			to == IssueCreateIntentReceiptFailed ||
-			to == IssueCreateIntentCompleted
-	case IssueCreateIntentInvokedUnknown, IssueCreateIntentURLObserved:
-		allowed = to == from ||
-			to == IssueCreateIntentVerificationFailed ||
-			to == IssueCreateIntentReceiptFailed ||
-			to == IssueCreateIntentCompleted
-	case IssueCreateIntentVerificationFailed, IssueCreateIntentReceiptFailed:
-		allowed = to == from ||
-			to == IssueCreateIntentVerificationFailed ||
-			to == IssueCreateIntentReceiptFailed ||
-			to == IssueCreateIntentCompleted
-	}
-	if !allowed {
-		return fmt.Errorf("illegal issue create intent transition %s -> %s", from, to)
 	}
 	return nil
 }

@@ -6,130 +6,60 @@ import (
 	"path/filepath"
 	"time"
 
-	"issueops/internal/adapter/lifecycle/fingerprint"
+	"issueops/internal/adapter/lifecycle/model"
+	lifecyclecontract "issueops/internal/contract/lifecycle"
+	lifecycledomain "issueops/internal/domain/lifecycle"
 )
 
-func ResolveProjectLifecycleState(repoRoot string) (ProjectLifecycleStatePlan, error) {
-	root, err := NormalizeRepoRoot(repoRoot)
-	if err != nil {
-		return ProjectLifecycleStatePlan{OK: false, StateRoot: StateDir(), SchemaVersion: ProjectLifecycleSchemaVersion}, err
-	}
-	projectFingerprint := fingerprint.ForRoot(root)
-	repoID := fingerprint.RepoID(projectFingerprint)
-	stateRoot := StateDir()
+type ProfileFiles struct {
+	Normalize          func(string) (string, error)
+	StateDir           string
+	ObserveFingerprint func(string) lifecyclecontract.ProjectFingerprint
+}
+
+func (files ProfileFiles) NormalizeRoot(root string) (string, error) { return files.Normalize(root) }
+func (files ProfileFiles) StateRoot() string                         { return files.StateDir }
+func (files ProfileFiles) Fingerprint(root string) lifecyclecontract.ProjectFingerprint {
+	return files.ObserveFingerprint(root)
+}
+func (files ProfileFiles) Paths(root string, projectFingerprint lifecyclecontract.ProjectFingerprint) lifecyclecontract.ProjectLifecycleStatePlan {
+	repoID := lifecycledomain.RepoID(projectFingerprint)
+	stateRoot := files.StateDir
 	projectDir := filepath.Join(stateRoot, "projects", repoID)
-	plan := ProjectLifecycleStatePlan{
+	return lifecyclecontract.ProjectLifecycleStatePlan{
 		OK:              true,
-		SchemaVersion:   ProjectLifecycleSchemaVersion,
+		SchemaVersion:   model.ProjectLifecycleSchemaVersion,
 		RepoRoot:        root,
 		RepoID:          repoID,
 		StateRoot:       stateRoot,
 		ProjectStateDir: projectDir,
-		ProjectJSONPath: filepath.Join(projectDir, projectLifecycleProfileFile),
-		QueuePath:       filepath.Join(projectDir, docUpkeepQueueFile),
-		CompactPath:     filepath.Join(projectDir, compactCapsuleFile),
+		ProjectJSONPath: filepath.Join(projectDir, model.ProjectLifecycleProfileFile),
+		QueuePath:       filepath.Join(projectDir, model.DocUpkeepQueueFile),
+		CompactPath:     filepath.Join(projectDir, model.CompactCapsuleFile),
 		Fingerprint:     projectFingerprint,
 		Warnings:        []string{},
 	}
-	profile, err := readProjectLifecycleProfile(plan.ProjectJSONPath)
-	if os.IsNotExist(err) {
-		return plan, nil
-	}
-	if err != nil {
-		plan.Warnings = append(plan.Warnings, "project_json_read_error")
-		return plan, nil
-	}
-	plan.Exists = true
-	plan.Profile = &profile
-	plan.NamespaceValid = fingerprint.Equal(profile.Fingerprint, projectFingerprint) && profile.RepoID == repoID && profile.SchemaVersion == ProjectLifecycleSchemaVersion
-	if !plan.NamespaceValid {
-		plan.Warnings = append(plan.Warnings, "namespace_mismatch")
-	}
-	return plan, nil
 }
-
-func InitProjectLifecycleState(repoRoot string, confirm bool, metadata ...ProjectProfile) (ProjectLifecycleStatePlan, error) {
-	plan, err := ResolveProjectLifecycleState(repoRoot)
-	if err != nil || !confirm {
-		return plan, err
-	}
-	if plan.Exists && !plan.NamespaceValid {
-		return plan, nil
-	}
-	if err := os.MkdirAll(plan.ProjectStateDir, 0o700); err != nil {
-		plan.OK = false
-		return plan, err
-	}
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	createdAt := now
-	if plan.Profile != nil && plan.Profile.CreatedAt != "" {
-		createdAt = plan.Profile.CreatedAt
-	}
-	var meta *ProjectProfile
-	if len(metadata) > 0 {
-		m := metadata[0]
-		meta = &m
-	} else if plan.Profile != nil {
-		meta = plan.Profile.Metadata
-	}
-	profile := ProjectLifecycleProfile{
-		SchemaVersion: ProjectLifecycleSchemaVersion,
-		RepoID:        plan.RepoID,
-		Fingerprint:   plan.Fingerprint,
-		Metadata:      meta,
-		CreatedAt:     createdAt,
-		UpdatedAt:     now,
-	}
-	if !plan.Exists {
-		// Use O_EXCL to avoid a race where two concurrent sessions
-		// both pass the existence check and both write the profile.
-		if err := createJSONAtomic(plan.ProjectJSONPath, profile, 0o600); err == nil {
-			plan.Exists = true
-			plan.NamespaceValid = true
-			plan.Profile = &profile
-			return plan, nil
-		} else if !os.IsExist(err) {
-			plan.OK = false
-			return plan, err
-		}
-		// Another session won the race — read its profile.
-		existing, err := readProjectLifecycleProfile(plan.ProjectJSONPath)
-		if err != nil {
-			plan.OK = false
-			return plan, err
-		}
-		plan.Exists = true
-		plan.Profile = &existing
-		plan.NamespaceValid = fingerprint.Equal(existing.Fingerprint, plan.Fingerprint) &&
-			existing.RepoID == plan.RepoID &&
-			existing.SchemaVersion == ProjectLifecycleSchemaVersion
-		if !plan.NamespaceValid {
-			plan.Warnings = append(plan.Warnings, "namespace_mismatch")
-		}
-		return plan, nil
-	}
-	if err := writeJSONAtomic(plan.ProjectJSONPath, profile, 0o600); err != nil {
-		plan.OK = false
-		return plan, err
-	}
-	plan.Exists = true
-	plan.NamespaceValid = true
-	plan.Profile = &profile
-	return plan, nil
+func (files ProfileFiles) ReadProfile(path string) (lifecyclecontract.ProjectLifecycleProfile, error) {
+	return readProjectLifecycleProfile(path)
 }
-
-func ValidateProjectLifecycleState(repoRoot string) (ProjectLifecycleStatePlan, error) {
-	return ResolveProjectLifecycleState(repoRoot)
+func (files ProfileFiles) Mkdir(path string) error { return os.MkdirAll(path, 0o700) }
+func (files ProfileFiles) Create(path string, profile lifecyclecontract.ProjectLifecycleProfile) error {
+	return createJSONAtomic(path, profile, 0o600)
 }
+func (files ProfileFiles) Write(path string, profile lifecyclecontract.ProjectLifecycleProfile) error {
+	return writeJSONAtomic(path, profile, 0o600)
+}
+func (files ProfileFiles) Now() time.Time { return time.Now() }
 
-func readProjectLifecycleProfile(path string) (ProjectLifecycleProfile, error) {
+func readProjectLifecycleProfile(path string) (lifecyclecontract.ProjectLifecycleProfile, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return ProjectLifecycleProfile{}, err
+		return lifecyclecontract.ProjectLifecycleProfile{}, err
 	}
-	var profile ProjectLifecycleProfile
+	var profile lifecyclecontract.ProjectLifecycleProfile
 	if err := json.Unmarshal(b, &profile); err != nil {
-		return ProjectLifecycleProfile{}, err
+		return lifecyclecontract.ProjectLifecycleProfile{}, err
 	}
 	return profile, nil
 }

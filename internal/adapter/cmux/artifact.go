@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	cmuxcontract "issueops/internal/contract/cmux"
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/domain/nativehost"
 )
 
 // MaximumPromptBytes keeps the prompt argv plus its terminating NUL below
@@ -20,31 +20,6 @@ import (
 // margin and remains portable to Darwin. ReadPrompt and PrepareLauncher must
 // enforce this one shared bound.
 const MaximumPromptBytes = 64 << 10
-
-type ArtifactRequest struct {
-	Root           string
-	CWD            string
-	WindowID       string
-	WorkspaceID    string
-	SurfaceID      string
-	SocketPath     string
-	Host           string
-	HostExecutable string
-	Model          string
-	Effort         string
-	Prompt         []byte
-	PromptSHA256   string
-	MaterialSHA256 string
-}
-
-type PreparedLauncher struct {
-	Directory      string
-	PromptPath     string
-	LauncherPath   string
-	ReceiptPath    string
-	Command        string
-	HostArgvSHA256 string
-}
 
 type BootstrapReceipt struct {
 	Status         string
@@ -60,60 +35,48 @@ type BootstrapReceipt struct {
 	HostArgvSHA256 string
 }
 
-type BootstrapExpectation struct {
-	CWD            string
-	WindowID       string
-	WorkspaceID    string
-	SurfaceID      string
-	SocketPath     string
-	HostExecutable string
-	HostArgvSHA256 string
-	PromptSHA256   string
-	MaterialSHA256 string
-}
-
-func PrepareLauncher(request ArtifactRequest) (PreparedLauncher, error) {
+func PrepareLauncher(request cmuxcontract.ArtifactRequest, buildArgv func(string, string, string, string, string) ([]string, error)) (cmuxcontract.PreparedLauncher, error) {
 	if err := requireSupportedPlatform(); err != nil {
-		return PreparedLauncher{}, err
+		return cmuxcontract.PreparedLauncher{}, err
 	}
 	if !filepath.IsAbs(request.Root) || !filepath.IsAbs(request.CWD) || !filepath.IsAbs(request.SocketPath) ||
 		!validUUID(request.WindowID) || !validUUID(request.WorkspaceID) || !validUUID(request.SurfaceID) {
-		return PreparedLauncher{}, fmt.Errorf("cmux launcher artifact scope is invalid")
+		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher artifact scope is invalid")
 	}
 	if len(request.Prompt) > MaximumPromptBytes || bytes.IndexByte(request.Prompt, 0) >= 0 || digest(request.Prompt) != request.PromptSHA256 || !validDigest(request.MaterialSHA256) {
-		return PreparedLauncher{}, fmt.Errorf("cmux launcher prompt or material digest is invalid")
+		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher prompt or material digest is invalid")
 	}
 	hostInfo, err := os.Stat(request.HostExecutable)
 	if err != nil || !hostInfo.Mode().IsRegular() || hostInfo.Mode().Perm()&0o111 == 0 {
-		return PreparedLauncher{}, fmt.Errorf("native host executable is unavailable")
+		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("native host executable is unavailable")
 	}
 	if strings.ContainsAny(request.Root, "\\\r\n\x00") {
-		return PreparedLauncher{}, fmt.Errorf("cmux launcher artifact root is not safe for raw input")
+		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher artifact root is not safe for raw input")
 	}
 	if strings.ContainsAny(request.CWD+request.SocketPath, "\r\n\x00") {
-		return PreparedLauncher{}, fmt.Errorf("cmux launcher identity is not safe for raw input")
+		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher identity is not safe for raw input")
 	}
 	if err := ensurePrivateDirectory(request.Root); err != nil {
-		return PreparedLauncher{}, err
+		return cmuxcontract.PreparedLauncher{}, err
 	}
 	directory, err := os.MkdirTemp(request.Root, "issueops-cmux-")
 	if err != nil {
-		return PreparedLauncher{}, err
+		return cmuxcontract.PreparedLauncher{}, err
 	}
-	prepared := PreparedLauncher{
+	prepared := cmuxcontract.PreparedLauncher{
 		Directory: directory, PromptPath: filepath.Join(directory, "prompt"),
 		LauncherPath: filepath.Join(directory, "launch.sh"), ReceiptPath: filepath.Join(directory, "bootstrap.receipt"),
 	}
-	fail := func(cause error) (PreparedLauncher, error) {
+	fail := func(cause error) (cmuxcontract.PreparedLauncher, error) {
 		if cleanupErr := os.RemoveAll(directory); cleanupErr != nil {
 			cause = errors.Join(cause, fmt.Errorf("cleanup cmux launcher artifact: %w", cleanupErr))
 		}
-		return PreparedLauncher{}, cause
+		return cmuxcontract.PreparedLauncher{}, cause
 	}
 	if err := os.WriteFile(prepared.PromptPath, request.Prompt, 0o600); err != nil {
 		return fail(err)
 	}
-	argv, err := nativehost.BuildInteractiveArgv(request.Host, request.HostExecutable, request.Model, request.Effort, "prompt-placeholder")
+	argv, err := buildArgv(request.Host, request.HostExecutable, request.Model, request.Effort, "prompt-placeholder")
 	if err != nil {
 		return fail(err)
 	}
@@ -131,14 +94,14 @@ func PrepareLauncher(request ArtifactRequest) (PreparedLauncher, error) {
 	return prepared, nil
 }
 
-func (prepared PreparedLauncher) Cleanup() error {
+func CleanupLauncher(prepared cmuxcontract.PreparedLauncher) error {
 	if strings.TrimSpace(prepared.Directory) == "" {
 		return nil
 	}
 	return os.RemoveAll(prepared.Directory)
 }
 
-func launcherScript(request ArtifactRequest, prepared PreparedLauncher, argv []string, argvDigest string) string {
+func launcherScript(request cmuxcontract.ArtifactRequest, prepared cmuxcontract.PreparedLauncher, argv []string, argvDigest string) string {
 	var command strings.Builder
 	command.WriteString("exec")
 	for _, argument := range argv[:len(argv)-1] {
@@ -189,7 +152,7 @@ func ReadBootstrapReceipt(path string) (BootstrapReceipt, error) {
 	}, nil
 }
 
-func ValidateBootstrapReceipt(receipt BootstrapReceipt, expected BootstrapExpectation, observe func(int) (issueopscontract.NativeProcessReceipt, error)) (issueopscontract.NativeProcessReceipt, error) {
+func ValidateBootstrapReceipt(receipt BootstrapReceipt, expected cmuxcontract.BootstrapExpectation, observe func(int) (issueopscontract.NativeProcessReceipt, error)) (issueopscontract.NativeProcessReceipt, error) {
 	if receipt.Status != "ok" || receipt.CWD != expected.CWD || receipt.WorkspaceID != expected.WorkspaceID ||
 		receipt.SurfaceID != expected.SurfaceID || receipt.SocketPath != expected.SocketPath ||
 		(receipt.WindowID != "" && receipt.WindowID != expected.WindowID) ||

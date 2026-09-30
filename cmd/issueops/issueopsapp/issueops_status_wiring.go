@@ -2,7 +2,6 @@ package issueopsapp
 
 import (
 	issueopsstatusinbound "issueops/internal/adapter/inbound/issueopsstatus"
-	issueopscore "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/outbound/issueopsrecord"
 	issueopsstatusoutbound "issueops/internal/adapter/outbound/issueopsstatus"
 	issueopsstatusapplication "issueops/internal/application/issueopsstatus"
@@ -20,7 +19,7 @@ func issueOpsStatusHandler(
 		issueopsstatusoutbound.Repository{
 			Store: issueOpsRecordStore("status", observers...),
 		},
-		issueopsstatusdomain.NewProjector(issueopscore.IssueOpsPhaseCompletion),
+		issueopsstatusdomain.NewProjector(newCycleReadiness().Completion),
 	)
 	return issueopsstatusinbound.NewStatusHandler(service)
 }

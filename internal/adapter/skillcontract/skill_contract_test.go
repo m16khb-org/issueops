@@ -2,7 +2,8 @@ package skillcontract
 
 import (
 	"fmt"
-	issueopscore "issueops/internal/adapter/issueops"
+	benchmarkadapter "issueops/internal/adapter/issueops/benchmark"
+
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -91,7 +92,7 @@ func TestP1PioneerCorrectnessContracts(t *testing.T) {
 		t.Fatal("algorithm-optimization SKILL.md must keep scaling-test interpretation inside its fenced block")
 	}
 
-	fixtures, err := issueopscore.LoadIssueOpsBenchmarkFixtures(filepath.Join("..", "..", "..", "testdata", "issueops", "fixtures"))
+	fixtures, err := (benchmarkadapter.Files{}).LoadFixtures(filepath.Join("..", "..", "..", "testdata", "issueops", "fixtures"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,7 +122,7 @@ func TestIssueOpsRouterPinsStageContract(t *testing.T) {
 		"issueops-create-issue", "issueops-prepare", "issueops-plan",
 		"issueops-implement", "issueops-create-pr", "issueops-complete",
 		"issueops-cleanup", "issueops-abandon",
-		"issueops-clean", "issueops-docs", "issueops-verify",
+		"issueops-slop-clean", "issueops-docs", "issueops-verify",
 		"issueops-review", "gates-ledger", "issueops-remote-write",
 		"## 공통 불변식", "## 단계 표",
 	})

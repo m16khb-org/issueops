@@ -8,11 +8,11 @@ import (
 	"io"
 	"log/slog"
 
-	"issueops/cmd/issueops/mcpcli/resources"
-	mcpadapter "issueops/internal/domain/mcp"
-
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"issueops/cmd/issueops/mcpcli/resources"
+	mcpcontract "issueops/internal/contract/mcp"
 )
 
 func initSDKServer(deps MCPDependencies) *mcp.Server {
@@ -24,11 +24,11 @@ func initSDKServerWithDiagnostics(deps MCPDependencies, diagnostics io.Writer) *
 		diagnostics = io.Discard
 	}
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "issueops", Version: Version},
+		&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version},
 		sdkServerOptionsWithDiagnostics(diagnostics),
 	)
 	registerAllTools(server, deps)
-	registerAllResources(server)
+	registerAllResources(server, deps)
 	return server
 }
 
@@ -39,11 +39,11 @@ func initSDKServerWithLogger(deps MCPDependencies, logger *slog.Logger) *mcp.Ser
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 	server := mcp.NewServer(
-		&mcp.Implementation{Name: "issueops", Version: Version},
+		&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version},
 		sdkServerOptionsWithLogger(logger),
 	)
 	registerAllTools(server, deps)
-	registerAllResources(server)
+	registerAllResources(server, deps)
 	return server
 }
 
@@ -63,8 +63,9 @@ func sdkServerOptionsWithLogger(logger *slog.Logger) *mcp.ServerOptions {
 	}
 }
 
-func sdkToolHandler(groupHandler func(MCPToolCall) MCPToolOutcome, toolName string) mcp.ToolHandler {
+func sdkToolHandler(catalog mcpcontract.Catalog, groupHandler func(MCPToolCall) MCPToolOutcome, toolName string) mcp.ToolHandler {
 	return sdkToolHandlerWithContext(
+		catalog,
 		func(_ context.Context, call MCPToolCall) MCPToolOutcome {
 			return groupHandler(call)
 		},
@@ -73,6 +74,7 @@ func sdkToolHandler(groupHandler func(MCPToolCall) MCPToolOutcome, toolName stri
 }
 
 func sdkToolHandlerWithContext(
+	catalog mcpcontract.Catalog,
 	groupHandler func(context.Context, MCPToolCall) MCPToolOutcome,
 	toolName string,
 ) mcp.ToolHandler {
@@ -86,7 +88,7 @@ func sdkToolHandlerWithContext(
 		if args == nil {
 			args = map[string]any{}
 		}
-		if validationErr := validateMCPToolArguments(toolName, args); validationErr != nil {
+		if validationErr := validateMCPToolArguments(catalog, toolName, args); validationErr != nil {
 			return nil, validationErr
 		}
 		outcome := groupHandler(ctx, MCPToolCall{Name: toolName, Arguments: args})
@@ -121,7 +123,7 @@ func sdkToolHandlerWithContext(
 }
 
 func registerAllTools(server *mcp.Server, deps MCPDependencies) {
-	for _, toolMap := range MCPTools() {
+	for _, toolMap := range deps.Catalog.Tools {
 		name, _ := toolMap["name"].(string)
 		desc, _ := toolMap["description"].(string)
 		inputSchema := toolMap["inputSchema"]
@@ -132,90 +134,86 @@ func registerAllTools(server *mcp.Server, deps MCPDependencies) {
 			)
 			continue
 		}
-		handler := resolveHandlerGroup(name)
+		handler := resolveHandlerGroup(deps, name)
 		server.AddTool(
 			&mcp.Tool{Name: name, Description: desc, InputSchema: inputSchema},
-			sdkToolHandler(handler, name),
+			sdkToolHandler(deps.Catalog, handler, name),
 		)
 	}
 }
 
 func issueOpsExecutionSDKToolHandler(deps MCPDependencies) mcp.ToolHandler {
-	return sdkToolHandlerWithContext(func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+	return sdkToolHandlerWithContext(deps.Catalog, func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
 		return handleIssueOpsMCPToolCallWithContext(ctx, call, deps)
 	}, "issueops_execution")
 }
 
-// handlerGroupLookup maps each dispatch group to its handler function.
-// New tools only need to be added to the adapter catalog DispatchMap; this
-// lookup stays stable as long as no new handler group is introduced.
-var handlerGroupLookup = map[mcpadapter.DispatchGroup]func(MCPToolCall) MCPToolOutcome{
-	mcpadapter.DispatchProject:         handleProjectMCPToolCall,
-	mcpadapter.DispatchPolicyState:     handlePolicyStateMCPToolCall,
-	mcpadapter.DispatchIssueOps:        handleIssueOpsMCPToolCall,
-	mcpadapter.DispatchLoop:            handleLoopMCPToolCall,
-	mcpadapter.DispatchGates:           handleGatesMCPToolCall,
-	mcpadapter.DispatchChannel:         handleChannelMCPToolCall,
-	mcpadapter.DispatchAssistantWorker: handleAssistantWorkerMCPToolCall,
-	mcpadapter.DispatchSelfLoop:        handleSelfLoopMCPToolCall,
-}
-
-func resolveHandlerGroup(name string) func(MCPToolCall) MCPToolOutcome {
-	dm := mcpadapter.DispatchMap()
-	group, ok := dm[name]
+func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MCPToolOutcome {
+	group, ok := deps.Catalog.Dispatch[name]
 	if !ok {
 		return func(call MCPToolCall) MCPToolOutcome {
 			return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
 		}
 	}
-	if fn, ok := handlerGroupLookup[group]; ok {
-		return fn
+	if group == mcpcontract.DispatchAssistantWorker {
+		return func(call MCPToolCall) MCPToolOutcome {
+			return handleAssistantWorkerMCPToolCall(call, deps)
+		}
+	}
+	if group == mcpcontract.DispatchGates {
+		return func(call MCPToolCall) MCPToolOutcome { return handleGatesMCPToolCall(call, deps.Gates) }
+	}
+	if group == mcpcontract.DispatchChannel {
+		return func(call MCPToolCall) MCPToolOutcome { return handleChannelMCPToolCall(call, deps.Channel) }
+	}
+	if group == mcpcontract.DispatchLoop {
+		return func(call MCPToolCall) MCPToolOutcome { return handleLoopMCPToolCall(call, deps.Loop) }
+	}
+	if group == mcpcontract.DispatchProject {
+		return func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) }
+	}
+	if group == mcpcontract.DispatchPolicyState {
+		return func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps) }
+	}
+	if group == mcpcontract.DispatchSelfLoop {
+		return func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) }
+	}
+	if group == mcpcontract.DispatchIssueOps {
+		return func(call MCPToolCall) MCPToolOutcome { return handleIssueOpsMCPToolCallWithDependencies(call, deps) }
 	}
 	return func(call MCPToolCall) MCPToolOutcome {
 		return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
 	}
 }
 
-func MCPResources() []map[string]any {
-	return resources.MCPResources()
-}
-
-func HandleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
-	result, readErr := resources.HandleResourceRead(params, resources.Config{
-		IssueOpsRoot:     IssueOpsRoot(),
-		Version:          Version,
-		SkillName:        skillName,
-		ReadHarnessFile:  ReadHarnessFile,
-		StateList:        StateList,
-		RouteProjectDocs: RouteProjectDocs,
-		DocsIndex:        DocsIndex,
-	})
+func HandleResourceRead(params json.RawMessage, config resources.Config) (any, *jsonrpc.Error) {
+	result, readErr := resources.HandleResourceRead(params, config)
 	if readErr != nil {
 		return nil, newProtocolError(int64(readErr.Code), readErr.Message, readErr.Data)
 	}
 	return result, nil
 }
 
-func registerAllResources(server *mcp.Server) {
-	for _, r := range MCPResources() {
+func registerAllResources(server *mcp.Server, deps MCPDependencies) {
+	for _, r := range deps.Catalog.Resources {
 		uri, _ := r["uri"].(string)
 		name, _ := r["name"].(string)
 		desc, _ := r["description"].(string)
 		mime, _ := r["mimeType"].(string)
 		server.AddResource(
 			&mcp.Resource{URI: uri, Name: name, Description: desc, MIMEType: mime},
-			sdkResourceHandler(),
+			sdkResourceHandler(deps.Resources),
 		)
 	}
 }
 
-func sdkResourceHandler() mcp.ResourceHandler {
+func sdkResourceHandler(config resources.Config) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		params, err := json.Marshal(map[string]string{"uri": req.Params.URI})
 		if err != nil {
 			return nil, fmt.Errorf("marshal resource params: %w", err)
 		}
-		result, readErr := HandleResourceRead(params)
+		result, readErr := HandleResourceRead(params, config)
 		if readErr != nil {
 			return nil, readErr
 		}

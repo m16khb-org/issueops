@@ -7,9 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/selfworkflow/model"
-	"issueops/cmd/issueops/selfworkflow/stateio"
 	statestore "issueops/internal/adapter/outbound/state"
+	augmentdomain "issueops/internal/domain/selfaugment"
 	"issueops/internal/testsupport"
 )
 
@@ -24,7 +23,7 @@ func TestRunSelfVerifyCompareTextAndFailOnRegression(t *testing.T) {
 			"--baseline-key", "baseline-cli",
 			"--candidate-key", "candidate-cli",
 			"--max-elapsed-regression-pct", "5",
-		}, CLIDeps{})
+		}, historyCLIDepsForTest(nil))
 	})
 	if !strings.Contains(out, "self-verify compare regressed") ||
 		!strings.Contains(out, "candidate_not_ok") ||
@@ -39,7 +38,7 @@ func TestRunSelfVerifyCompareTextAndFailOnRegression(t *testing.T) {
 		"--max-elapsed-regression-pct", "5",
 		"--fail-on-regression",
 		"--json",
-	}, CLIDeps{PrintJSON: printJSONForTest})
+	}, historyCLIDepsForTest(printJSONForTest))
 	if err == nil || !strings.Contains(err.Error(), "summary regression detected") {
 		t.Fatalf("expected fail-on-regression error, got %v", err)
 	}
@@ -55,7 +54,7 @@ func TestRunSelfVerifyHistoryTextOutputCoversSkippedAndRetentionActions(t *testi
 	}
 
 	planned := captureStdout(t, func() error {
-		return RunSelfVerifyHistory([]string{"--prefix", "self-verify", "--retention-limit", "1"}, CLIDeps{})
+		return RunSelfVerifyHistory([]string{"--prefix", "self-verify", "--retention-limit", "1"}, historyCLIDepsForTest(nil))
 	})
 	if !strings.Contains(planned, "self-verify history: 2/2 entries") ||
 		!strings.Contains(planned, "- self-verify-new-cli ok iterations=10 elapsed=900ms") ||
@@ -66,7 +65,7 @@ func TestRunSelfVerifyHistoryTextOutputCoversSkippedAndRetentionActions(t *testi
 	}
 
 	dryRun := captureStdout(t, func() error {
-		return RunSelfVerifyHistory([]string{"--prefix", "self-verify", "--retention-limit", "1", "--prune-retention"}, CLIDeps{})
+		return RunSelfVerifyHistory([]string{"--prefix", "self-verify", "--retention-limit", "1", "--prune-retention"}, historyCLIDepsForTest(nil))
 	})
 	if !strings.Contains(dryRun, "retention: retain=1 candidates=1 would delete=0") {
 		t.Fatalf("unexpected dry-run history text:\n%s", dryRun)
@@ -78,7 +77,7 @@ func TestRunSelfVerifyHistoryTextOutputCoversSkippedAndRetentionActions(t *testi
 
 func TestRunSelfVerifyHistoryJSONRejectsUnsafeRetentionOptions(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	err := RunSelfVerifyHistory([]string{"--confirm", "--json"}, CLIDeps{PrintJSON: printJSONForTest})
+	err := RunSelfVerifyHistory([]string{"--confirm", "--json"}, historyCLIDepsForTest(printJSONForTest))
 	if err == nil || !strings.Contains(err.Error(), "requires --prune-retention") {
 		t.Fatalf("expected unsafe retention option error, got %v", err)
 	}
@@ -91,7 +90,7 @@ func TestRunSelfVerifyCompareJSONOutput(t *testing.T) {
 	writeSelfVerifyCLISnapshotForTest(t, dir, "candidate-json", 1010, true, 20, 20, "2000-01-01T00:01:00Z")
 
 	out := captureStdout(t, func() error {
-		return RunSelfVerifyCompare([]string{"--baseline-key", "baseline-json", "--candidate-key", "candidate-json", "--json"}, CLIDeps{PrintJSON: printJSONForTest})
+		return RunSelfVerifyCompare([]string{"--baseline-key", "baseline-json", "--candidate-key", "candidate-json", "--json"}, historyCLIDepsForTest(printJSONForTest))
 	})
 	var result SelfAugmentCompareResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
@@ -104,9 +103,9 @@ func TestRunSelfVerifyCompareJSONOutput(t *testing.T) {
 
 func writeSelfVerifyCLISnapshotForTest(t *testing.T, dir, key string, elapsedMS int64, ok bool, totalSteps, passedSteps int, generatedAt string) {
 	t.Helper()
-	if err := stateio.WriteSelfAugmentSnapshotRecord(dir, key, SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, key, SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
-		Kind:          model.SelfVerificationSummaryKind,
+		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            ok,
 		Iterations:    10,
 		BaseSeed:      900,
@@ -137,4 +136,9 @@ func printJSONForTest(value any) error {
 	}
 	fmt.Println(string(data))
 	return nil
+}
+
+func historyCLIDepsForTest(print func(any) error) CLIDeps {
+	service := historyService()
+	return CLIDeps{History: service.History, Compare: service.Compare, PrintJSON: print}
 }

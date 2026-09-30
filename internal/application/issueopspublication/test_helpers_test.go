@@ -9,8 +9,7 @@ import (
 
 type fakeRepository struct {
 	t                  *testing.T
-	preview            func(context.Context, contract.CreateCommand) (contract.PreparedCreate, error)
-	begin              func(context.Context, contract.CreateCommand) (contract.Intent, error)
+	begin              func(context.Context, contract.PreparedCreate) (contract.Intent, error)
 	load               func(context.Context, string) (contract.Intent, error)
 	markRetry          func(context.Context, contract.Intent) (contract.Intent, error)
 	recordFailure      func(context.Context, contract.Intent, contract.InvocationState, string, error) error
@@ -19,20 +18,12 @@ type fakeRepository struct {
 	latest             func(context.Context, string) (contract.RecordSnapshot, error)
 }
 
-func (f *fakeRepository) PreviewCreate(ctx context.Context, command contract.CreateCommand) (contract.PreparedCreate, error) {
-	f.t.Helper()
-	if f.preview == nil {
-		f.t.Fatalf("unexpected Repository.PreviewCreate call")
-	}
-	return f.preview(ctx, command)
-}
-
-func (f *fakeRepository) BeginCreate(ctx context.Context, command contract.CreateCommand) (contract.Intent, error) {
+func (f *fakeRepository) BeginCreate(ctx context.Context, prepared contract.PreparedCreate) (contract.Intent, error) {
 	f.t.Helper()
 	if f.begin == nil {
 		f.t.Fatalf("unexpected Repository.BeginCreate call")
 	}
-	return f.begin(ctx, command)
+	return f.begin(ctx, prepared)
 }
 
 func (f *fakeRepository) LoadIntent(ctx context.Context, id string) (contract.Intent, error) {
@@ -217,4 +208,18 @@ func successfulResult() contract.ProviderCreateResult {
 
 func authoritativeZero(context.Context, contract.Intent) (contract.Inventory, bool, error) {
 	return contract.Inventory{AuthoritativeZero: true}, true, nil
+}
+
+type preparationFunc func(context.Context, contract.CreateCommand) (contract.PreparedCreate, error)
+
+func (f preparationFunc) Prepare(ctx context.Context, command contract.CreateCommand) (contract.PreparedCreate, error) {
+	return f(ctx, command)
+}
+func acceptingPreparation() preparationFunc {
+	return func(_ context.Context, command contract.CreateCommand) (contract.PreparedCreate, error) {
+		intent := validIntent()
+		intent.Request.Confirm = command.Confirm
+		intent.Eligibility.Confirm = command.Confirm
+		return contract.PreparedCreate{Command: command, Request: intent.Request, Eligibility: intent.Eligibility}, nil
+	}
 }

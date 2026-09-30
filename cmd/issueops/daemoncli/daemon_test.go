@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"issueops/cmd/issueops/daemoncli/daemonpaths"
+	daemonpaths "issueops/internal/adapter/daemon"
 )
 
 func TestDaemonPathsUseOverride(t *testing.T) {
@@ -68,7 +68,7 @@ func TestCheckDaemonStatusReportsLivePIDWithoutSocket(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	process, err := daemonpaths.InspectProcess(os.Getpid())
+	process, err := testProcessInspector().Inspect(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
 	}

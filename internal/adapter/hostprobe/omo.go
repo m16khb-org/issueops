@@ -12,7 +12,6 @@ import (
 	"strings"
 	"unicode"
 
-	"issueops/internal/domain/omolifecycle"
 	"issueops/internal/domain/policy"
 	"issueops/internal/port"
 )
@@ -24,6 +23,7 @@ const (
 
 // OmoRunner runs one capture-only MCP episode in an isolated Omo native session.
 type OmoRunner struct {
+	canonicalExtension func(string) string
 	harnessBinary      string
 	lifecycleExtension string
 	deps               Dependencies
@@ -67,8 +67,8 @@ type omoAuthSnapshot struct {
 	data    []byte
 }
 
-func NewOmoRunner(harnessBinary, lifecycleExtension string, deps Dependencies) OmoRunner {
-	return OmoRunner{
+func NewOmoRunner(harnessBinary, lifecycleExtension string, deps Dependencies, canonicalExtension func(string) string) OmoRunner {
+	return OmoRunner{canonicalExtension: canonicalExtension,
 		harnessBinary:      harnessBinary,
 		lifecycleExtension: lifecycleExtension,
 		deps:               normalizeDependencies(deps),
@@ -128,7 +128,7 @@ func (r OmoRunner) Preflight(ctx context.Context, request port.HostProbeRequest)
 	}
 	result.Ready = true
 	result.Version = boundedVersion(string(output.Stdout))
-	result.MockExtensionVerified = validOmoLifecycleExtension(r.harnessBinary, r.lifecycleExtension)
+	result.MockExtensionVerified = r.validLifecycleExtension()
 	if result.Ready && !result.MockExtensionVerified {
 		result.Ready = false
 		result.Cause = "harness_environment"
@@ -164,7 +164,7 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) (resu
 	if strings.TrimSpace(r.lifecycleExtension) == "" {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "lifecycle_extension_missing")
 	}
-	if !validOmoLifecycleExtension(r.harnessBinary, r.lifecycleExtension) {
+	if !r.validLifecycleExtension() {
 		return failedResult(r.Name(), "", request, started, r.deps, "harness_environment", "mock_extension_invalid")
 	}
 	if !explicitOmoModel(request.Model) {
@@ -251,9 +251,9 @@ func (r OmoRunner) Run(ctx context.Context, request port.HostProbeRequest) (resu
 	return result
 }
 
-func validOmoLifecycleExtension(harnessBinary, source string) bool {
-	absolute, err := filepath.Abs(harnessBinary)
-	return err == nil && source == omolifecycle.Extension(absolute)
+func (r OmoRunner) validLifecycleExtension() bool {
+	absolute, err := filepath.Abs(r.harnessBinary)
+	return err == nil && r.canonicalExtension != nil && r.lifecycleExtension == r.canonicalExtension(absolute)
 }
 
 func explicitOmoModel(model string) bool {

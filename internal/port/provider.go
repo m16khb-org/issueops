@@ -3,6 +3,8 @@ package port
 import (
 	"context"
 	"fmt"
+
+	completionmodel "issueops/internal/contract/issueops"
 )
 
 type IssueProviderCreateError struct {
@@ -169,46 +171,18 @@ type IssueProviderCloseChildResult struct {
 	Preview           string `json:"preview,omitempty"`
 }
 
-// Managed issue-body section kinds shared by core callers and provider
-// adapters. The set is intentionally closed (no open extension point).
-const (
-	IssueBodySectionDevilsAdvocate = "devils-advocate"
-	IssueBodySectionCompletion     = "completion"
-
-	// IssueBodyCompletionStartMarker is the durable delimiter cleanup finish
-	// readback-checks before destructive local cleanup (설계 v5 WS3).
-	IssueBodyCompletionStartMarker = "<!-- issueops:completion:start -->"
-)
-
-// IssueProviderCompletionSection carries the progress report reflected into
-// the managed completion region after merge. ResultBody is written by a
-// person or agent for human readers and has already passed the readability
-// check; harness values (final head, digests, plan and spec texts) stay in the
-// record and in .issueops/issues/<n>/ instead of the issue body.
-type IssueProviderCompletionSection struct {
-	RemoteArtifactURL string `json:"remote_artifact_url"`
-	ResultBody        string `json:"result_body"`
-}
-
 // IssueProviderUpdateIssueBodySectionRequest describes reflecting one managed,
 // delimited section (devils-advocate | completion) of an existing remote issue
 // body. Exactly the payload matching Section is consumed.
 type IssueProviderUpdateIssueBodySectionRequest struct {
-	Repo       string                          `json:"repo"`                 // local repo path for provider auth context
-	IssueURL   string                          `json:"issue_url"`            // issue whose body is updated
-	Section    string                          `json:"section"`              // devils-advocate | completion
-	Findings   []string                        `json:"findings,omitempty"`   // devils-advocate payload: current round's findings
-	Verdict    string                          `json:"verdict,omitempty"`    // devils-advocate payload: current verdict (pass | revise | stop)
-	Rounds     []IssueProviderPlanReviewRound  `json:"rounds,omitempty"`     // devils-advocate payload: every round, oldest first
-	Completion *IssueProviderCompletionSection `json:"completion,omitempty"` // completion payload
-	Confirm    bool                            `json:"confirm"`              // must be true to write; false = dry-run preview
-}
-
-// IssueProviderPlanReviewRound is one plan-review round as the issue shows it:
-// its verdict and how many findings it raised, never the finding text.
-type IssueProviderPlanReviewRound struct {
-	Verdict  string `json:"verdict"`
-	Findings int    `json:"findings"`
+	Repo       string                                   `json:"repo"`               // local repo path for provider auth context
+	IssueURL   string                                   `json:"issue_url"`          // issue whose body is updated
+	Section    string                                   `json:"section"`            // devils-advocate | completion
+	Findings   []string                                 `json:"findings,omitempty"` // devils-advocate payload
+	Verdict    string                                   `json:"verdict,omitempty"`
+	Rounds     []completionmodel.PlanReviewRound        `json:"rounds,omitempty"`
+	Completion *completionmodel.RemoteCompletionSection `json:"completion,omitempty"` // completion payload
+	Confirm    bool                                     `json:"confirm"`              // must be true to write; false = dry-run preview
 }
 
 // IssueProviderUpdateIssueBodySectionResult reports the outcome of a body update.
@@ -274,7 +248,7 @@ type IssueProviderClosePullRequestResult struct {
 // break them all. Callers type-assert and fail closed when an adapter does not
 // implement it.
 type IssueProviderPullRequestCloser interface {
-	ClosePullRequest(IssueProviderClosePullRequestRequest) (IssueProviderClosePullRequestResult, error)
+	ClosePullRequest(context.Context, IssueProviderClosePullRequestRequest) (IssueProviderClosePullRequestResult, error)
 }
 
 // IssueProvider is implemented by provider-specific adapters such as GitHub and GitLab.
@@ -286,8 +260,8 @@ type IssueProvider interface {
 	CreatePullRequest(req IssueProviderCreatePullRequestRequest) (IssueProviderCreatePullRequestResult, error)
 	CreateChild(req IssueProviderCreateChildRequest) (IssueProviderCreateChildResult, error)
 	CloseChild(req IssueProviderCloseChildRequest) (IssueProviderCloseChildResult, error)
-	CloseIssue(req IssueProviderCloseIssueRequest) (IssueProviderCloseIssueResult, error)
-	UpdateIssueBodySection(req IssueProviderUpdateIssueBodySectionRequest) (IssueProviderUpdateIssueBodySectionResult, error)
+	CloseIssue(ctx context.Context, req IssueProviderCloseIssueRequest) (IssueProviderCloseIssueResult, error)
+	UpdateIssueBodySection(ctx context.Context, req IssueProviderUpdateIssueBodySectionRequest) (IssueProviderUpdateIssueBodySectionResult, error)
 }
 
 // Artifact-body sync capabilities.

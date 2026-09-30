@@ -41,6 +41,8 @@
     "technology selection": ".issueops/TECH_STACK.md",
     "agent execution sequence": ".issueops/AGENT_WORKFLOW.md",
     "issueops historical audit": ".issueops/archive/issueops-audit.md",
-    "whole-project audit snapshot": ".issueops/PROJECT_AUDIT.md"
+    "whole-project audit snapshot": ".issueops/PROJECT_AUDIT.md",
+    "capability domain responsibilities": ".issueops/architecture/domain-responsibilities.md",
+    "issueops execution cleanup boundary": ".issueops/architecture/issueops-cleanup.md"
   }
 }

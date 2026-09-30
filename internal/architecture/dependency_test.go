@@ -172,8 +172,8 @@ func TestLegacyEdgesClassifyConcreteAdapterOutsideCompositionRoot(t *testing.T) 
 
 func TestLegacyEdgesExcludeSameCapabilityAdapterPackages(t *testing.T) {
 	inside := []dependencyEdge{
-		{"internal/adapter/issueops", "internal/adapter/issueops/linking"},
-		{"internal/adapter/issueops/linking", "internal/adapter/issueops/pathutil"},
+		{"internal/adapter/issueops", "internal/adapter/issueops/readinesspaths"},
+		{"internal/adapter/issueops/readinesspaths", "internal/adapter/issueops/pathutil"},
 		{"internal/adapter/lifecycle/compact", "internal/adapter/lifecycle/model"},
 	}
 	for _, edge := range inside {
@@ -473,7 +473,7 @@ func route(req request, deps dependencies) {
 }
 
 func TestReseedOwnerArtifactPreparationDoesNotReapplyLeaseTransition(t *testing.T) {
-	path := filepath.Join(findRepoRoot(t), "internal", "adapter", "issueops", "execution_reseed_adapter.go")
+	path := filepath.Join(findRepoRoot(t), "internal", "application", "issueopsowner", "reseal.go")
 	contents, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -541,6 +541,11 @@ func productionReseedRoutingViolations(repoRoot string) ([]string, error) {
 		}
 		violations = append(violations, reseedRoutingViolations(file, name == "execution_api.go")...)
 	}
+	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_api.go"))
+	if err != nil {
+		return nil, err
+	}
+	violations = append(violations, reseedRoutingViolations(applicationFile, true)...)
 	sort.Strings(violations)
 	return violations, nil
 }
@@ -590,6 +595,11 @@ func productionResumeRoutingViolations(repoRoot string) ([]string, error) {
 			}
 		}
 	}
+	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_api.go"))
+	if err != nil {
+		return nil, err
+	}
+	violations = append(violations, resumeRoutingViolations(applicationFile, true)...)
 	sort.Strings(violations)
 	return violations, nil
 }
@@ -627,6 +637,11 @@ func productionReconcileRoutingViolations(repoRoot string) ([]string, error) {
 		return nil, err
 	}
 	violations = append(violations, wiringViolations...)
+	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_reconcile.go"))
+	if err != nil {
+		return nil, err
+	}
+	violations = append(violations, reconcileRoutingViolations(applicationFile, true)...)
 	sort.Strings(violations)
 	return violations, nil
 }
@@ -716,20 +731,27 @@ func productionPreparationRoutingViolations(repoRoot string) ([]string, error) {
 	}
 
 	for _, wiring := range []struct {
-		path     string
-		function string
+		path        string
+		function    string
+		constructor string
 	}{
-		{path: filepath.Join("cmd", "issueops", "issueopsapp", "issueops_policy_facade.go"), function: "runIssueOps"},
-		{path: filepath.Join("cmd", "issueops", "issueopsapp", "mcp_facade.go"), function: "issueOpsMCPDependencies"},
+		{path: filepath.Join("cmd", "issueops", "issueopsapp", "issueops_policy_facade.go"), function: "runIssueOps", constructor: "issueOpsCLIDependencies"},
+		{path: filepath.Join("cmd", "issueops", "issueopsapp", "issueops_policy_facade.go"), function: "issueOpsCLIDependencies", constructor: "productionIssueOpsExecutionDependencies"},
+		{path: filepath.Join("cmd", "issueops", "issueopsapp", "mcp_facade.go"), function: "issueOpsMCPDependencies", constructor: "productionIssueOpsExecutionDependencies"},
 	} {
 		file, err := parseProductionFile(filepath.Join(repoRoot, wiring.path))
 		if err != nil {
 			return nil, err
 		}
-		if count := functionCallCount(file, wiring.function, "productionIssueOpsExecutionDependencies"); count != 1 {
-			violations = append(violations, fmt.Sprintf("%s:%s must call the shared execution composition constructor exactly once, found %d", filepath.ToSlash(wiring.path), wiring.function, count))
+		if count := functionCallCount(file, wiring.function, wiring.constructor); count != 1 {
+			violations = append(violations, fmt.Sprintf("%s:%s must call %s exactly once, found %d", filepath.ToSlash(wiring.path), wiring.function, wiring.constructor, count))
 		}
 	}
+	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_api.go"))
+	if err != nil {
+		return nil, err
+	}
+	violations = append(violations, preparationRoutingViolations(applicationFile, true)...)
 	sort.Strings(violations)
 	return violations, nil
 }
@@ -1101,7 +1123,7 @@ func evaluateEdges(edges []dependencyEdge) []violation {
 		if isPreparationDomain(edge.importer) && strings.HasPrefix(edge.imported, "internal/") && !isPreparationContract(edge.imported) && !isLeaseContract(edge.imported) {
 			violations = append(violations, violation{"preparation_domain_must_only_import_contract", edge})
 		}
-		if isPreparationApplication(edge.importer) && strings.HasPrefix(edge.imported, "internal/") && !isPreparationDomain(edge.imported) && !isPreparationContract(edge.imported) && !isLeaseContract(edge.imported) {
+		if isPreparationApplication(edge.importer) && strings.HasPrefix(edge.imported, "internal/") && !isPreparationDomain(edge.imported) && !isPreparationContract(edge.imported) && !isLeaseContract(edge.imported) && edge.imported != "internal/domain/agentmodel" {
 			violations = append(violations, violation{"preparation_application_must_only_import_domain_or_contract", edge})
 		}
 		if isPreparationOutboundAdapter(edge.importer) && isCore(edge.imported) {
@@ -1295,7 +1317,7 @@ func legacyEdges(edges []dependencyEdge) []dependencyEdge {
 		if (isCore(edge.importer) && isLegacyInfrastructure(edge.imported)) ||
 			(isAdapter(edge.importer) && isCore(edge.imported) && !isMigratedInboundAdapter(edge.importer)) ||
 			(isConcreteAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
-				!isSharedStorageEngineEdge(edge.importer, edge.imported)) {
+				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported)) {
 			legacy = append(legacy, edge)
 		}
 	}
@@ -1400,6 +1422,22 @@ func isSharedStorageEngineEdge(importer, imported string) bool {
 			importer == "internal/adapter/issueops"
 	}
 	return false
+}
+
+// The OS lifetime descriptor is shared by concrete command runners and the
+// record storage engine that excludes writes during inherited cleanup effects.
+// It carries no capability policy or durable state; application code reaches it
+// through an injected lifetime port, never by importing the implementation.
+func isProcessLifetimeEdge(importer, imported string) bool {
+	if imported != "internal/adapter/outbound/processlease" {
+		return false
+	}
+	switch importer {
+	case "internal/adapter/issueops", "internal/adapter/orca", "internal/adapter/provider/providerutil", "internal/adapter/outbound/sqlstore":
+		return true
+	default:
+		return false
+	}
 }
 
 func isInboundAdapter(path string) bool {

@@ -8,7 +8,7 @@ import (
 	"issueops/internal/contract/issueops"
 )
 
-func keepRemoteRequest(id string, apply bool, fingerprint string) CleanupFinishRequest {
+func keepRemoteRequest(id string, apply bool, fingerprint string) issueops.CleanupFinishRequest {
 	req := finishRequest(id, apply, fingerprint)
 	req.KeepRemoteBranch = true
 	return req

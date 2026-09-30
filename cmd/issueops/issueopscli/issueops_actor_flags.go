@@ -11,17 +11,19 @@ type issueOpsActorFlags struct {
 	sessionID *string
 	agentID   *string
 	cwd       *string
+	observe   func(int) ([]issueopscontract.NativeProcessReceipt, error)
 }
 
-func addIssueOpsActorFlags(fs *flag.FlagSet) issueOpsActorFlags {
+func (cli command) addIssueOpsActorFlags(fs *flag.FlagSet) issueOpsActorFlags {
 	return issueOpsActorFlags{
-		host: fs.String("host", "", "native actor host"), sessionID: fs.String("session-id", "", "native actor session id"),
+		observe: cli.Runtime.ObserveNativeProcessAncestry,
+		host:    fs.String("host", "", "native actor host"), sessionID: fs.String("session-id", "", "native actor session id"),
 		agentID: fs.String("agent-id", "", "native actor agent id"), cwd: fs.String("cwd", "", "canonical actor cwd"),
 	}
 }
 
 func (flags issueOpsActorFlags) actor() issueopscontract.IssueOpsActor {
-	ancestry, _ := issueOpsCLIDeps.ObserveNativeProcessAncestry(os.Getpid())
+	ancestry, _ := flags.observe(os.Getpid())
 	return issueopscontract.IssueOpsActor{
 		Host: *flags.host, SessionID: *flags.sessionID, AgentID: *flags.agentID, CWD: *flags.cwd,
 		NativeProcessAncestry: ancestry,

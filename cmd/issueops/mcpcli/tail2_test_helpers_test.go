@@ -1,17 +1,16 @@
 package mcpcli
 
 import (
-	basicclit2d "issueops/cmd/issueops/basiccli"
-	commitsuggestadapter "issueops/internal/adapter/commitsuggest"
-	guardadapter "issueops/internal/adapter/guard"
-	lintdiagnoseadapter "issueops/internal/adapter/lintdiagnose"
-	traceadapter "issueops/internal/adapter/trace"
+	commitadapter "issueops/internal/adapter/commitsuggest"
+	lintadapter "issueops/internal/adapter/lintdiagnose"
+	"issueops/internal/adapter/repopath"
+	commitapp "issueops/internal/application/commitsuggest"
+	lintapp "issueops/internal/application/lintdiagnose"
 )
 
-// production wiring과 같은 구현을 설치한다.
-func init() {
-	DiagnoseCommand = lintdiagnoseadapter.DiagnoseCommand
-	SuggestCommit = commitsuggestadapter.SuggestCommit
-	basicclit2d.GuardCheck = guardadapter.GuardCheck
-	basicclit2d.TraceAnalyze = traceadapter.TraceAnalyze
+func testCommitService() commitapp.Service {
+	return commitapp.Service{Effects: commitadapter.Effects{Normalize: repopath.NormalizeRoot}}
+}
+func testLintService() lintapp.Service {
+	return lintapp.Service{Effects: lintadapter.Effects{Normalize: repopath.NormalizeRoot}}
 }

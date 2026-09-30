@@ -1,6 +1,8 @@
 package installutil
 
 import (
+	install "issueops/internal/contract/install"
+
 	"crypto/rand"
 	"crypto/sha256"
 	"debug/buildinfo"
@@ -21,7 +23,7 @@ const (
 )
 
 type ManagedCommandPathTransaction struct {
-	plan      ManagedCommandPathPlan
+	plan      install.ManagedCommandPathPlan
 	existing  managedCommandIdentity
 	candidate managedCommandIdentity
 	deps      managedCommandPathDeps
@@ -74,20 +76,20 @@ func defaultManagedCommandPathDeps() managedCommandPathDeps {
 	}
 }
 
-func PrepareManagedCommandPath(target, path string, adopt, dryRun bool) (*ManagedCommandPathTransaction, ManagedCommandPathPlan, error) {
+func PrepareManagedCommandPath(target, path string, adopt, dryRun bool) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {
 	return PrepareManagedCommandPathCandidate(target, target, path, adopt, dryRun)
 }
 
-func PrepareManagedCommandPathCandidate(target, candidate, path string, adopt, dryRun bool) (*ManagedCommandPathTransaction, ManagedCommandPathPlan, error) {
+func PrepareManagedCommandPathCandidate(target, candidate, path string, adopt, dryRun bool) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {
 	return prepareManagedCommandPathCandidateWithDeps(target, candidate, path, adopt, dryRun, defaultManagedCommandPathDeps())
 }
 
-func prepareManagedCommandPathWithDeps(target, path string, adopt, dryRun bool, deps managedCommandPathDeps) (*ManagedCommandPathTransaction, ManagedCommandPathPlan, error) {
+func prepareManagedCommandPathWithDeps(target, path string, adopt, dryRun bool, deps managedCommandPathDeps) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {
 	return prepareManagedCommandPathCandidateWithDeps(target, target, path, adopt, dryRun, deps)
 }
 
-func prepareManagedCommandPathCandidateWithDeps(target, candidatePath, path string, adopt, dryRun bool, deps managedCommandPathDeps) (*ManagedCommandPathTransaction, ManagedCommandPathPlan, error) {
-	plan := ManagedCommandPathPlan{Path: path, Target: target, AdoptionApproved: adopt}
+func prepareManagedCommandPathCandidateWithDeps(target, candidatePath, path string, adopt, dryRun bool, deps managedCommandPathDeps) (*ManagedCommandPathTransaction, install.ManagedCommandPathPlan, error) {
+	plan := install.ManagedCommandPathPlan{Path: path, Target: target, AdoptionApproved: adopt}
 	if !adopt {
 		return nil, plan, fmt.Errorf("refusing to adopt regular command file without --adopt-command-file: %s", path)
 	}
@@ -115,9 +117,9 @@ func prepareManagedCommandPathCandidateWithDeps(target, candidatePath, path stri
 	return &ManagedCommandPathTransaction{plan: plan, existing: existing, candidate: candidate, deps: deps}, plan, nil
 }
 
-func (transaction *ManagedCommandPathTransaction) Apply() (ManagedCommandPathPlan, error) {
+func (transaction *ManagedCommandPathTransaction) Apply() (install.ManagedCommandPathPlan, error) {
 	if transaction == nil || transaction.closed || transaction.applied {
-		return ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction is not applicable")
+		return install.ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction is not applicable")
 	}
 	if err := transaction.revalidate(); err != nil {
 		return transaction.plan, err
@@ -171,9 +173,9 @@ func (transaction *ManagedCommandPathTransaction) Apply() (ManagedCommandPathPla
 	return transaction.plan, nil
 }
 
-func (transaction *ManagedCommandPathTransaction) Rollback() (ManagedCommandPathPlan, error) {
+func (transaction *ManagedCommandPathTransaction) Rollback() (install.ManagedCommandPathPlan, error) {
 	if transaction == nil || transaction.closed || !transaction.applied {
-		return ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction cannot roll back")
+		return install.ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction cannot roll back")
 	}
 	if err := verifyManagedCommandSymlink(transaction.plan.Path, transaction.plan.Target); err != nil {
 		return transaction.plan, fmt.Errorf("managed command path changed before rollback")
@@ -259,9 +261,9 @@ func (transaction *ManagedCommandPathTransaction) restoreRollbackDisplacement(di
 	return nil
 }
 
-func (transaction *ManagedCommandPathTransaction) Finalize() (ManagedCommandPathPlan, error) {
+func (transaction *ManagedCommandPathTransaction) Finalize() (install.ManagedCommandPathPlan, error) {
 	if transaction == nil || transaction.closed || !transaction.applied {
-		return ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction cannot finalize")
+		return install.ManagedCommandPathPlan{}, fmt.Errorf("managed command path transaction cannot finalize")
 	}
 	current, err := os.Lstat(transaction.plan.Path)
 	if err != nil || current.Mode()&os.ModeSymlink == 0 {

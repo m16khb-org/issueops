@@ -247,13 +247,12 @@ func TestResolveProjectLifecycleStateCorruptedJSON(t *testing.T) {
 }
 
 func TestResolveProjectLifecycleStateNormalizeError(t *testing.T) {
-	oldNormalize := NormalizeRepoRoot
-	defer func() { NormalizeRepoRoot = oldNormalize }()
-	NormalizeRepoRoot = func(root string) (string, error) {
-		return "", os.ErrNotExist
-	}
+	service := testLifecycleService()
+	effects := service.Effects.(ProfileFiles)
+	effects.Normalize = func(string) (string, error) { return "", os.ErrNotExist }
+	service.Effects = effects
+	plan, err := service.Resolve("non-existent")
 
-	plan, err := ResolveProjectLifecycleState("non-existent")
 	if err == nil || plan.OK {
 		t.Fatalf("expected error and OK=false, got plan=%+v, err=%v", plan, err)
 	}

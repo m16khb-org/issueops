@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	cleanupapp "issueops/internal/application/issueopscleanup"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -12,10 +13,11 @@ import (
 // 하고, 붙이지 않은 실행에서는 절대 켜지면 안 된다. 이 플래그가 조용히 켜지면
 // 파괴는 없지만 원격 브랜치가 추적 없이 남는다.
 func TestRunCleanupFinishPropagatesKeepRemoteBranchExactly(t *testing.T) {
+	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 	provider := &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
-		URL: record.IssueURL, Body: port.IssueBodyCompletionStartMarker, State: "closed",
+		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}
 	deps := cleanupStatusDeps(nil)
 	deps.Provider = func(string) (port.IssueProvider, error) { return provider, nil }
@@ -23,17 +25,16 @@ func TestRunCleanupFinishPropagatesKeepRemoteBranchExactly(t *testing.T) {
 		return issueopscontract.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 	}
 
-	previous := cleanupDeps
-	t.Cleanup(func() { cleanupDeps = previous })
-	wired := cleanupDeps
 	var captured issueopscontract.CleanupFinishRequest
-	wired.CleanupFinish = func(_ context.Context, _ string, req issueopscontract.CleanupFinishRequest, _ Deps, _ port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
-		captured = req
-		return issueopscontract.CleanupFinishResult{OK: true, ID: req.ID, Preview: true}, nil
-	}
-	ConfigureCleanup(wired)
 
-	if err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--keep-remote-branch", "--json"}, deps); err != nil {
+	configureCleanupInvocation(&command, func(service *cleanupapp.Invocation) {
+		service.RunFinish = func(_ context.Context, req issueopscontract.CleanupFinishRequest, _ port.IssueProvider) (issueopscontract.CleanupFinishResult, error) {
+			captured = req
+			return issueopscontract.CleanupFinishResult{OK: true, ID: req.ID, Preview: true}, nil
+		}
+	})
+
+	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--keep-remote-branch", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
 	if !captured.KeepRemoteBranch {
@@ -41,7 +42,7 @@ func TestRunCleanupFinishPropagatesKeepRemoteBranchExactly(t *testing.T) {
 	}
 
 	captured = issueopscontract.CleanupFinishRequest{}
-	if err := RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
+	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
 	if captured.KeepRemoteBranch {

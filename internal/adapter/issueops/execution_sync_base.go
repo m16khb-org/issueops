@@ -14,7 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"issueops/internal/adapter/outbound/processlease"
+	basesyncapp "issueops/internal/application/issueopsbasesync"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
+	basesyncdomain "issueops/internal/domain/issueopsbasesync"
 )
 
 // execution sync-base는 completion 이후에도 남는 typed 충돌 해소 표면이다
@@ -53,23 +57,23 @@ type executionSyncBaseInventory struct {
 // 실행한다. preview는 워크트리를 오염시키지 않는 관측 전용이며(merge-tree는
 // ODB에만 객체를 쓴다), 변형 3모드는 활성 holder 또는 generation이 일치하는
 // released current completion의 권위를 요구한다.
-func SyncExecutionBase(ctx context.Context, stateRoot string, req ExecutionSyncBaseRequest, deps ExecutionSyncBaseDeps) (ExecutionSyncBaseResult, error) {
+func SyncExecutionBase(ctx context.Context, stateRoot string, req issueops.ExecutionSyncBaseRequest, deps issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
 	if deps.Git == nil {
 		deps.Git = defaultExecutionSyncBaseGit
 	}
 	mode := strings.TrimSpace(req.Mode)
 	switch mode {
-	case ExecutionSyncBasePreview, ExecutionSyncBaseApply, ExecutionSyncBaseFinalize, ExecutionSyncBaseAbort:
+	case issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply, issueops.ExecutionSyncBaseFinalize, issueops.ExecutionSyncBaseAbort:
 	default:
-		return ExecutionSyncBaseResult{OK: false, ID: req.ID, Mode: mode},
+		return issueops.ExecutionSyncBaseResult{OK: false, ID: req.ID, Mode: mode},
 			fmt.Errorf("execution sync-base requires exactly one mode: --preview, --apply, --finalize, or --abort")
 	}
-	mutating := mode != ExecutionSyncBasePreview
+	mutating := mode != issueops.ExecutionSyncBasePreview
 	record, err := ReadIssueOps(stateRoot, req.ID)
 	if err != nil {
-		return ExecutionSyncBaseResult{OK: false, ID: req.ID, Mode: mode}, err
+		return issueops.ExecutionSyncBaseResult{OK: false, ID: req.ID, Mode: mode}, err
 	}
-	result := ExecutionSyncBaseResult{OK: true, ID: record.ID, Mode: mode}
+	result := issueops.ExecutionSyncBaseResult{OK: true, ID: record.ID, Mode: mode}
 	if record.Execution != nil {
 		result.LeaseGeneration = record.Execution.Lease.Generation
 	}
@@ -77,7 +81,7 @@ func SyncExecutionBase(ctx context.Context, stateRoot string, req ExecutionSyncB
 	// 요구하지 않는다. 변형 3모드만 live process receipt까지 정규화한다.
 	var actor issueops.NativeActor
 	if mutating {
-		actor, err = normalizeNativeActor(req.Actor)
+		actor, err = cycleapp.NormalizeNativeActor(req.Actor, inspectNativeProcessReceipt)
 		if err != nil {
 			result.OK = false
 			return result, err
@@ -96,7 +100,7 @@ func SyncExecutionBase(ctx context.Context, stateRoot string, req ExecutionSyncB
 		return result, err
 	}
 	result.Fingerprint = fingerprint
-	if mode == ExecutionSyncBasePreview {
+	if mode == issueops.ExecutionSyncBasePreview {
 		result.NextCommand = fmt.Sprintf(
 			"%s --apply --confirm --fingerprint %s ACTOR_FLAGS --json",
 			executionSyncBaseCommandPrefix(record), fingerprint)
@@ -104,14 +108,14 @@ func SyncExecutionBase(ctx context.Context, stateRoot string, req ExecutionSyncB
 	}
 	// --confirm은 파괴적 머지 커밋과 push를 만드는 apply에만 요구한다
 	// (설계 v2 4모드 표기 그대로 — finalize/abort는 플래그 자체가 명시 의사다).
-	if mode == ExecutionSyncBaseApply && !req.Confirm {
+	if mode == issueops.ExecutionSyncBaseApply && !req.Confirm {
 		result.OK = false
 		return result, fmt.Errorf("execution sync-base --apply requires --confirm")
 	}
 	switch mode {
-	case ExecutionSyncBaseApply:
+	case issueops.ExecutionSyncBaseApply:
 		return applyExecutionSyncBase(ctx, stateRoot, record, req, actor, inventory, fingerprint, deps, &result)
-	case ExecutionSyncBaseFinalize:
+	case issueops.ExecutionSyncBaseFinalize:
 		return finalizeExecutionSyncBase(ctx, stateRoot, record, actor, inventory, deps, &result)
 	default:
 		return abortExecutionSyncBase(ctx, stateRoot, record, inventory, deps, &result)
@@ -121,30 +125,12 @@ func SyncExecutionBase(ctx context.Context, stateRoot string, req ExecutionSyncB
 // executionSyncBaseGates는 설계 v2의 게이트 10종을 순서대로 평가하고 missing을
 // 나열한다(fail-closed). 워크트리를 관측할 수 없으면 그 지점에서 끊는다 —
 // 이후 git 호출은 전부 의미가 없기 때문이다.
-func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord, req ExecutionSyncBaseRequest, mode string,
-	actor issueops.NativeActor, deps ExecutionSyncBaseDeps, result *ExecutionSyncBaseResult) (executionSyncBaseInventory, []string) {
-	missing := []string{}
+func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest, mode string,
+	actor issueops.NativeActor, deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (executionSyncBaseInventory, []string) {
 	inventory := executionSyncBaseInventory{ID: record.ID, Repo: record.Repo}
 	execution := record.Execution
 	if execution == nil {
-		return inventory, append(missing, "execution_prepared")
-	}
-	// released maintenance는 current completion과 remote artifact가 권위다.
-	// Active holder는 PR 전 parent sync에도 같은 typed path를 사용한다.
-	if execution.Lease.Status != issueops.LeaseStatusActive {
-		if execution.Completion == nil {
-			missing = append(missing, "completion_present")
-		} else if execution.Completion.Generation == 0 {
-			missing = append(missing, "current_completion_generation_present")
-		}
-		if record.RemoteArtifact == nil {
-			missing = append(missing, "remote_artifact_present")
-		}
-	}
-	// ④ pending_intent_absent: 열린 외부 intent 위에서는 어떤 변형도 금지한다
-	//    (design-review F13 — replace 선례 준용, reconcile로 안내).
-	if execution.Pending != nil {
-		missing = append(missing, "pending_intent_absent")
+		return inventory, basesyncdomain.MissingRecordGates(basesyncdomain.RecordGateFacts{})
 	}
 	inventory.PendingIntentAbsent = execution.Pending == nil
 	inventory.LeaseGeneration = execution.Lease.Generation
@@ -158,9 +144,15 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 	if record.BranchPrepare != nil {
 		inventory.BaseBranch = strings.TrimSpace(record.BranchPrepare.BaseBranch)
 	}
-	if inventory.BaseBranch == "" {
-		missing = append(missing, "base_branch_present")
+	facts := basesyncdomain.RecordGateFacts{
+		ExecutionPresent: true, LeaseActive: execution.Lease.Status == issueops.LeaseStatusActive,
+		CompletionPresent: execution.Completion != nil, RemoteArtifactPresent: record.RemoteArtifact != nil,
+		PendingIntentAbsent: inventory.PendingIntentAbsent, BaseBranchPresent: inventory.BaseBranch != "",
 	}
+	if execution.Completion != nil {
+		facts.CompletionGeneration = execution.Completion.Generation
+	}
+	missing := basesyncdomain.MissingRecordGates(facts)
 	result.Branch, result.BaseBranch = inventory.Branch, inventory.BaseBranch
 	// ⑤ worktree_present + cwd_canonical: 소스 루트 호출의 훅 사각지대를
 	//    봉쇄한다(design-review F2 — complete/claim 선례 준용).
@@ -193,27 +185,19 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 	//    (design-review F11 — apply는 거부, finalize/abort는 필수 전제).
 	inventory.MergeInProgress = executionSyncBaseMergeInProgress(ctx, inventory.Root, deps)
 	result.MergeInProgress = inventory.MergeInProgress
-	switch mode {
-	case ExecutionSyncBaseApply:
-		if inventory.MergeInProgress {
-			missing = append(missing, "merge_state_clean")
-		}
+	mergeFacts := basesyncdomain.MergeStateFacts{Mode: mode, MergeInProgress: inventory.MergeInProgress}
+	if mode == issueops.ExecutionSyncBaseApply {
 		// ⑧ worktree_clean: tracked 변경만 차단하고 untracked는 경고로
 		//    나열한다(design-review F10 — 상시 거부 방지).
 		trackedDirty, untracked := executionSyncBaseWorktreeStatus(ctx, inventory.Root, deps)
 		result.UntrackedWarnings = untracked
-		if trackedDirty {
-			missing = append(missing, "worktree_clean")
-		}
-	case ExecutionSyncBaseFinalize, ExecutionSyncBaseAbort:
-		if !inventory.MergeInProgress {
-			missing = append(missing, "merge_in_progress")
-		}
+		mergeFacts.TrackedDirty = trackedDirty
 	}
+	missing = append(missing, basesyncdomain.MissingMergeStateGates(mergeFacts)...)
 	// fetch 선행(preview·apply): stale base 머지 방지(design-review F6 —
 	// pr-readiness strict 선례). base tip은 반드시 fetch 이후 값이어야 한다.
 	switch mode {
-	case ExecutionSyncBasePreview, ExecutionSyncBaseApply:
+	case issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply:
 		if inventory.BaseBranch != "" {
 			if code, _ := deps.Git(ctx, inventory.Root, "fetch", "--quiet", "origin", inventory.BaseBranch); code != 0 {
 				missing = append(missing, "base_fetch")
@@ -223,7 +207,7 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 				missing = append(missing, "base_tip_resolved")
 			}
 		}
-	case ExecutionSyncBaseFinalize:
+	case issueops.ExecutionSyncBaseFinalize:
 		// finalize는 진행 중인 머지를 마무리한다 — 대상 base tip은 MERGE_HEAD가
 		// 그대로 들고 있다. 재fetch하면 진행 중 머지의 base가 바뀐 값으로 기록될
 		// 수 있으므로 네트워크를 건드리지 않고 MERGE_HEAD로 확정한다.
@@ -252,7 +236,7 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 	}
 	// preview는 예상 충돌 파일을 노출한다. merge-tree 미지원(git 2.38 미만)은
 	// fail-closed로 거부한다 — 예측 없는 apply 안내는 만들지 않는다.
-	if mode == ExecutionSyncBasePreview && result.MergeNeeded && inventory.BaseOID != "" && inventory.WorkOID != "" {
+	if mode == issueops.ExecutionSyncBasePreview && result.MergeNeeded && inventory.BaseOID != "" && inventory.WorkOID != "" {
 		conflicts, err := executionSyncBasePredictConflicts(ctx, inventory.Root, inventory.WorkOID, inventory.BaseOID, deps)
 		if err != nil {
 			missing = append(missing, "merge_tree_supported")
@@ -263,56 +247,34 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 	return inventory, missing
 }
 
-func executionSyncBaseAuthorityMissing(execution *issueops.Execution, req ExecutionSyncBaseRequest, mode string, actor issueops.NativeActor) []string {
+func executionSyncBaseAuthorityMissing(execution *issueops.Execution, req issueops.ExecutionSyncBaseRequest, mode string, actor issueops.NativeActor) []string {
 	if execution == nil {
 		return nil
 	}
-	lease := execution.Lease
-	if lease.Status == issueops.LeaseStatusActive {
-		if mode != ExecutionSyncBasePreview && !sameNativeActor(lease.Holder, &actor) {
-			return []string{"lease_holder"}
-		}
-		return nil
+	facts := basesyncdomain.AuthorityFacts{
+		Mode: mode, LeaseStatus: string(execution.Lease.Status), LeaseGeneration: execution.Lease.Generation,
+		HolderMatches:     sameNativeActor(execution.Lease.Holder, &actor),
+		CompletionPresent: execution.Completion != nil, RequestedGeneration: req.CompletionGeneration,
 	}
-	if lease.Status != issueops.LeaseStatusReleased || execution.Completion == nil {
-		return []string{"released_completion_authority"}
+	if execution.Completion != nil {
+		facts.CompletionGeneration = execution.Completion.Generation
 	}
-	if execution.Completion.Generation == 0 {
-		return nil
-	}
-	if req.CompletionGeneration == 0 {
-		return []string{"completion_generation_present"}
-	}
-	if req.CompletionGeneration != execution.Completion.Generation {
-		return []string{"completion_generation_current"}
-	}
-	resolution := execution.SyncBaseResolution
-	switch mode {
-	case ExecutionSyncBaseApply:
-		if resolution != nil {
-			return []string{"sync_base_resolution_absent"}
-		}
-	case ExecutionSyncBaseFinalize, ExecutionSyncBaseAbort:
-		if resolution == nil {
-			return []string{"sync_base_resolution_present"}
-		}
-		if resolution.Generation != lease.Generation || resolution.CompletionGeneration != execution.Completion.Generation {
-			return []string{"sync_base_resolution_current"}
-		}
-		if !sameNativeActor(&resolution.Actor, &actor) {
-			return []string{"sync_base_resolution_actor"}
+	if resolution := execution.SyncBaseResolution; resolution != nil {
+		facts.Resolution = basesyncdomain.AuthorityResolution{
+			Present: true, LeaseGeneration: resolution.Generation, CompletionGeneration: resolution.CompletionGeneration,
+			ActorMatches: sameNativeActor(&resolution.Actor, &actor),
 		}
 	}
-	return nil
+	return basesyncdomain.MissingAuthority(facts)
 }
 
 // applyExecutionSyncBase는 무충돌이면 merge commit + push로 완결하고, 충돌이면
 // 파일을 나열한 채 merge-in-progress로 정지한다(해소 편집은 같은 holder).
 // 병합이 이미 반영된 상태에서의 재실행은 merge를 건너뛰고 push만 수행해
 // non-fast-forward 거부 이후로 멱등 수렴한다(설계 v2 push 계약).
-func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, req ExecutionSyncBaseRequest,
+func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest,
 	actor issueops.NativeActor, inventory executionSyncBaseInventory, fingerprint string,
-	deps ExecutionSyncBaseDeps, result *ExecutionSyncBaseResult) (ExecutionSyncBaseResult, error) {
+	deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (issueops.ExecutionSyncBaseResult, error) {
 	// ⑩ TOCTOU: apply 직전 재계산 일치. 외부 변경이 있었다면 preview 재발급을
 	//    요구하고 멈춘다(cleanup finish 선례).
 	if req.Fingerprint != fingerprint {
@@ -321,111 +283,161 @@ func applyExecutionSyncBase(ctx context.Context, stateRoot string, record issueo
 		return *result, fmt.Errorf("stale execution sync-base fingerprint; run --preview again and retry with the new value")
 	}
 	fail := executionSyncBaseFail(record, result)
-	if result.MergeNeeded {
-		conflicts, err := executionSyncBasePredictConflicts(ctx, inventory.Root, inventory.WorkOID, inventory.BaseOID, deps)
-		if err != nil {
-			return fail("merge_tree", err)
-		}
-		if code, out := deps.Git(ctx, inventory.Root, "merge", "--no-ff", "--no-edit", inventory.BaseOID); code != 0 {
-			// 충돌 정지: merge-in-progress를 남기고 같은 holder의 해소를 기다린다.
-			result.MergeInProgress, result.Merged = true, false
-			result.ConflictFiles = conflicts
-			if len(result.ConflictFiles) == 0 {
-				result.ConflictFiles = executionSyncBaseUnmergedPaths(ctx, inventory.Root, deps)
-			}
-			if len(result.ConflictFiles) == 0 {
-				// 충돌이 아닌 다른 실패다 — 게이트 밖 실패로 fail-closed 보고.
-				return fail("merge", fmt.Errorf("git merge: %s", strings.TrimSpace(out)))
-			}
-			if record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased {
-				if err := startExecutionSyncBaseResolution(ctx, stateRoot, record.ID, actor, inventory, result.ConflictFiles); err != nil {
-					_, _ = deps.Git(ctx, inventory.Root, "merge", "--abort")
-					result.MergeInProgress = false
-					return fail("record_resolution", err)
-				}
-			}
-			prefix := executionSyncBaseCommandPrefix(record)
-			result.NextCommand = prefix + " --finalize ACTOR_FLAGS --json"
-			result.AbortCommand = prefix + " --abort ACTOR_FLAGS --json"
-			return *result, nil
-		}
-		result.Merged, result.MergeInProgress = true, false
+	outcome, err := basesyncapp.Apply(ctx, basesyncapp.ApplyRequest{
+		Push: basesyncapp.PushRequest{
+			ID: record.ID, Root: inventory.Root, Branch: inventory.Branch,
+			Mode: issueops.ExecutionSyncBaseEventApply, BaseBranch: inventory.BaseBranch,
+			BaseOID: inventory.BaseOID, Actor: executionSyncBaseActorLabel(actor),
+		},
+		WorkOID: inventory.WorkOID, MergeNeeded: result.MergeNeeded,
+		Released: record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased,
+	}, &executionSyncBaseApplyEffects{
+		executionSyncBasePushEffects: executionSyncBasePushEffects{stateRoot: stateRoot, deps: deps},
+		actor:                        actor, inventory: inventory,
+	})
+	result.ConflictFiles = outcome.ConflictFiles
+	result.MergeInProgress, result.Merged = outcome.MergeInProgress, outcome.Merged
+	result.MergeCommit = outcome.MergeCommit
+	result.Pushed, result.PushRetryRequired = outcome.Pushed, outcome.PushRetryRequired
+	if err != nil {
+		return fail(outcome.FailedStep, err)
 	}
-	code, head := deps.Git(ctx, inventory.Root, "rev-parse", "HEAD")
-	if code != 0 || strings.TrimSpace(head) == "" {
-		return fail("head", fmt.Errorf("git rev-parse HEAD: %s", strings.TrimSpace(head)))
+	if outcome.ConflictPaused {
+		prefix := executionSyncBaseCommandPrefix(record)
+		result.NextCommand = prefix + " --finalize ACTOR_FLAGS --json"
+		result.AbortCommand = prefix + " --abort ACTOR_FLAGS --json"
 	}
-	result.MergeCommit = strings.TrimSpace(head)
-	return pushExecutionSyncBase(ctx, stateRoot, record, actor, inventory, issueops.ExecutionSyncBaseEventApply, 0, deps, result, fail)
+	return *result, nil
+}
+
+type executionSyncBaseApplyEffects struct {
+	executionSyncBasePushEffects
+	actor     issueops.NativeActor
+	inventory executionSyncBaseInventory
+}
+
+func (e *executionSyncBaseApplyEffects) PredictConflicts(ctx context.Context, root, workOID, baseOID string) ([]string, error) {
+	return executionSyncBasePredictConflicts(ctx, root, workOID, baseOID, e.deps)
+}
+
+func (e *executionSyncBaseApplyEffects) Merge(ctx context.Context, root, baseOID string) (int, string) {
+	return e.deps.Git(ctx, root, "merge", "--no-ff", "--no-edit", baseOID)
+}
+
+func (e *executionSyncBaseApplyEffects) UnmergedPaths(ctx context.Context, root string) []string {
+	return executionSyncBaseUnmergedPaths(ctx, root, e.deps)
+}
+
+func (e *executionSyncBaseApplyEffects) StartResolution(ctx context.Context, id string, conflicts []string) error {
+	return startExecutionSyncBaseResolution(ctx, e.stateRoot, id, e.actor, e.inventory, conflicts)
+}
+
+func (e *executionSyncBaseApplyEffects) AbortMerge(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "merge", "--abort")
+}
+
+func (e *executionSyncBaseApplyEffects) Head(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "rev-parse", "HEAD")
+}
+
+func (e *executionSyncBaseApplyEffects) Now() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
 // finalizeExecutionSyncBase는 해소가 끝난 merge-in-progress를 커밋하고 push한다.
 // unmerged 인덱스 항목이나 충돌 마커가 남아 있으면 커밋하지 않는다.
 func finalizeExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, actor issueops.NativeActor,
-	inventory executionSyncBaseInventory, deps ExecutionSyncBaseDeps, result *ExecutionSyncBaseResult) (ExecutionSyncBaseResult, error) {
+	inventory executionSyncBaseInventory, deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (issueops.ExecutionSyncBaseResult, error) {
 	fail := executionSyncBaseFail(record, result)
-	conflictCount := executionSyncBaseMergeMsgConflictCount(ctx, inventory.Root, deps)
-	if unmerged := executionSyncBaseUnmergedPaths(ctx, inventory.Root, deps); len(unmerged) > 0 {
-		result.OK, result.ConflictFiles = false, unmerged
-		result.Missing = append(result.Missing, "conflict_resolution_complete")
-		return *result, fmt.Errorf("execution sync-base finalize is blocked by unresolved paths: %s", strings.Join(unmerged, ", "))
+	outcome, err := basesyncapp.Finalize(ctx, basesyncapp.FinalizeRequest{Push: basesyncapp.PushRequest{
+		ID: record.ID, Root: inventory.Root, Branch: inventory.Branch,
+		Mode: issueops.ExecutionSyncBaseEventFinalize, BaseBranch: inventory.BaseBranch, BaseOID: inventory.BaseOID,
+		Actor: executionSyncBaseActorLabel(actor),
+	}}, &executionSyncBaseFinalizeEffects{executionSyncBasePushEffects{stateRoot: stateRoot, deps: deps}})
+	result.ConflictFiles = outcome.ConflictFiles
+	result.MergeCommit = outcome.MergeCommit
+	result.Merged = outcome.Merged
+	if outcome.Merged {
+		result.MergeInProgress = false
 	}
-	// 해소했다고 스테이징만 하고 마커를 지우지 않은 상태를 거부한다.
-	if code, out := deps.Git(ctx, inventory.Root, "diff", "--cached", "--check"); code != 0 {
-		result.OK = false
-		result.Missing = append(result.Missing, "conflict_markers_absent")
-		return *result, fmt.Errorf("conflict markers remain in the staged merge result: %s", strings.TrimSpace(out))
+	result.Pushed, result.PushRetryRequired = outcome.Pushed, outcome.PushRetryRequired
+	if err != nil {
+		if outcome.DirectError {
+			result.OK = false
+			result.Missing = append(result.Missing, outcome.Missing)
+			return *result, err
+		}
+		return fail(outcome.FailedStep, err)
 	}
-	if code, out := deps.Git(ctx, inventory.Root, "commit", "--no-edit"); code != 0 {
-		return fail("merge_commit", fmt.Errorf("git commit --no-edit: %s", strings.TrimSpace(out)))
-	}
-	code, head := deps.Git(ctx, inventory.Root, "rev-parse", "HEAD")
-	if code != 0 || strings.TrimSpace(head) == "" {
-		return fail("head", fmt.Errorf("git rev-parse HEAD: %s", strings.TrimSpace(head)))
-	}
-	result.MergeCommit = strings.TrimSpace(head)
-	result.Merged, result.MergeInProgress = true, false
-	return pushExecutionSyncBase(ctx, stateRoot, record, actor, inventory, issueops.ExecutionSyncBaseEventFinalize, conflictCount, deps, result, fail)
+	return *result, nil
+}
+
+type executionSyncBaseFinalizeEffects struct{ executionSyncBasePushEffects }
+
+func (e *executionSyncBaseFinalizeEffects) ConflictCount(ctx context.Context, root string) int {
+	return executionSyncBaseMergeMsgConflictCount(ctx, root, e.deps)
+}
+
+func (e *executionSyncBaseFinalizeEffects) UnmergedPaths(ctx context.Context, root string) []string {
+	return executionSyncBaseUnmergedPaths(ctx, root, e.deps)
+}
+
+func (e *executionSyncBaseFinalizeEffects) CheckStaged(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "diff", "--cached", "--check")
+}
+
+func (e *executionSyncBaseFinalizeEffects) Commit(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "commit", "--no-edit")
+}
+
+func (e *executionSyncBaseFinalizeEffects) Head(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "rev-parse", "HEAD")
+}
+
+func (e *executionSyncBaseFinalizeEffects) Now() string {
+	return time.Now().UTC().Format(time.RFC3339Nano)
 }
 
 // abortExecutionSyncBase는 진행 중 머지를 명시적으로 철회한다. 되돌림이므로
 // durable 이벤트를 남기지 않는다(이벤트는 apply/finalize 성공 전용).
 func abortExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, inventory executionSyncBaseInventory,
-	deps ExecutionSyncBaseDeps, result *ExecutionSyncBaseResult) (ExecutionSyncBaseResult, error) {
+	deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (issueops.ExecutionSyncBaseResult, error) {
 	fail := executionSyncBaseFail(record, result)
-	if code, out := deps.Git(ctx, inventory.Root, "merge", "--abort"); code != 0 {
-		return fail("merge_abort", fmt.Errorf("git merge --abort: %s", strings.TrimSpace(out)))
+	outcome, err := basesyncapp.Abort(ctx, basesyncapp.AbortRequest{
+		ID: record.ID, Root: inventory.Root,
+		Released: record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased,
+	}, &executionSyncBaseAbortEffects{stateRoot: stateRoot, deps: deps})
+	if err != nil {
+		return fail(outcome.FailedStep, err)
 	}
-	if record.Execution != nil && record.Execution.Lease.Status == issueops.LeaseStatusReleased {
-		if err := clearExecutionSyncBaseResolution(ctx, stateRoot, record.ID); err != nil {
-			return fail("clear_resolution", err)
-		}
-	}
-	result.Aborted, result.MergeInProgress = true, false
+	result.Aborted, result.MergeInProgress = outcome.Aborted, false
 	return *result, nil
 }
 
-// pushExecutionSyncBase는 비강제 push를 수행하고 성공 시에만 durable 이벤트를
-// append한다. push 실패는 로컬 merge commit을 남긴 채 typed 오류로 끝나며,
-// 다음 preview가 "ahead"로 보고하고 apply 재실행이 merge 없이 push만 한다.
-func pushExecutionSyncBase(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, actor issueops.NativeActor,
-	inventory executionSyncBaseInventory, eventMode string, conflictCount int, deps ExecutionSyncBaseDeps,
-	result *ExecutionSyncBaseResult, fail func(string, error) (ExecutionSyncBaseResult, error)) (ExecutionSyncBaseResult, error) {
-	refspec := "refs/heads/" + inventory.Branch + ":refs/heads/" + inventory.Branch
-	if code, out := deps.Git(ctx, inventory.Root, "push", "origin", refspec); code != 0 {
-		result.PushRetryRequired = true
-		return fail("push", fmt.Errorf("git push origin %s: %s", refspec, strings.TrimSpace(out)))
-	}
-	result.Pushed, result.PushRetryRequired = true, false
-	event := issueops.ExecutionSyncBaseEvent{
-		Mode: eventMode, BaseBranch: inventory.BaseBranch, BaseOID: inventory.BaseOID,
-		MergeCommit: result.MergeCommit, ConflictFiles: conflictCount,
-		Actor: executionSyncBaseActorLabel(actor), At: time.Now().UTC().Format(time.RFC3339Nano),
-	}
-	if err := appendExecutionSyncBaseEvent(ctx, stateRoot, record.ID, event); err != nil {
-		return fail("record_event", err)
-	}
-	return *result, nil
+type executionSyncBaseAbortEffects struct {
+	stateRoot string
+	deps      issueops.ExecutionSyncBaseDeps
+}
+
+func (e *executionSyncBaseAbortEffects) AbortMerge(ctx context.Context, root string) (int, string) {
+	return e.deps.Git(ctx, root, "merge", "--abort")
+}
+
+func (e *executionSyncBaseAbortEffects) ClearResolution(ctx context.Context, id string) error {
+	return clearExecutionSyncBaseResolution(ctx, e.stateRoot, id)
+}
+
+type executionSyncBasePushEffects struct {
+	stateRoot string
+	deps      issueops.ExecutionSyncBaseDeps
+}
+
+func (e *executionSyncBasePushEffects) Push(ctx context.Context, root, refspec string) (int, string) {
+	return e.deps.Git(ctx, root, "push", "origin", refspec)
+}
+
+func (e *executionSyncBasePushEffects) AppendEvent(ctx context.Context, id string, event issueops.ExecutionSyncBaseEvent) error {
+	return appendExecutionSyncBaseEvent(ctx, e.stateRoot, id, event)
 }
 
 // appendExecutionSyncBaseEvent는 레코드 쓰기 락 안에서 이벤트만 append한다.
@@ -437,8 +449,8 @@ func appendExecutionSyncBaseEvent(ctx context.Context, stateRoot, id string, eve
 		if err != nil {
 			return err
 		}
-		if rec.Execution == nil {
-			return fmt.Errorf("IssueOps execution v1 is not prepared")
+		if err := basesyncdomain.ValidateEventAppend(rec.Execution != nil); err != nil {
+			return err
 		}
 		rec.Execution.SyncBaseEvents = append(rec.Execution.SyncBaseEvents, event)
 		rec.Execution.SyncBaseResolution = nil
@@ -455,11 +467,13 @@ func startExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string,
 		if err != nil {
 			return err
 		}
-		if record.Execution == nil || record.Execution.Completion == nil || record.Execution.SyncBaseResolution != nil {
-			return fmt.Errorf("execution sync-base resolution state changed before sealing")
+		state := executionSyncBaseResolutionState(record.Execution)
+		generations, err := basesyncdomain.BeginResolution(state)
+		if err != nil {
+			return err
 		}
 		record.Execution.SyncBaseResolution = &issueops.ExecutionSyncBaseResolution{
-			Generation: record.Execution.Lease.Generation, CompletionGeneration: record.Execution.Completion.Generation,
+			Generation: generations.Lease, CompletionGeneration: generations.Completion,
 			BaseOID: inventory.BaseOID, Actor: actor,
 			ConflictFiles: append([]string(nil), conflictFiles...), StartedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}
@@ -475,8 +489,8 @@ func clearExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string)
 		if err != nil {
 			return err
 		}
-		if record.Execution == nil || record.Execution.SyncBaseResolution == nil {
-			return fmt.Errorf("execution sync-base resolution authority is absent")
+		if err := basesyncdomain.ValidateResolutionClear(executionSyncBaseResolutionState(record.Execution)); err != nil {
+			return err
 		}
 		record.Execution.SyncBaseResolution = nil
 		record.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
@@ -485,8 +499,23 @@ func clearExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string)
 	})
 }
 
-func executionSyncBaseFail(record issueops.IssueOpsRecord, result *ExecutionSyncBaseResult) func(string, error) (ExecutionSyncBaseResult, error) {
-	return func(step string, stepErr error) (ExecutionSyncBaseResult, error) {
+func executionSyncBaseResolutionState(execution *issueops.Execution) basesyncdomain.ResolutionState {
+	if execution == nil {
+		return basesyncdomain.ResolutionState{}
+	}
+	state := basesyncdomain.ResolutionState{
+		ExecutionPresent: true, ResolutionPresent: execution.SyncBaseResolution != nil,
+		LeaseGeneration: execution.Lease.Generation,
+	}
+	if execution.Completion != nil {
+		state.CompletionPresent = true
+		state.CompletionGeneration = execution.Completion.Generation
+	}
+	return state
+}
+
+func executionSyncBaseFail(record issueops.IssueOpsRecord, result *issueops.ExecutionSyncBaseResult) func(string, error) (issueops.ExecutionSyncBaseResult, error) {
+	return func(step string, stepErr error) (issueops.ExecutionSyncBaseResult, error) {
 		result.OK = false
 		result.FailedStep = step
 		result.NextCommand = executionSyncBasePreviewCommand(record)
@@ -497,7 +526,7 @@ func executionSyncBaseFail(record issueops.IssueOpsRecord, result *ExecutionSync
 // executionSyncBasePredictConflicts는 워크트리를 오염시키지 않고 병합 결과를
 // 시험한다(ODB에만 객체를 쓴다 — design-review F12). exit 0=무충돌, 1=충돌,
 // 그 외=미지원/오류로 갈라 fail-closed 처리한다(git 2.38 미만 포함).
-func executionSyncBasePredictConflicts(ctx context.Context, root, workOID, baseOID string, deps ExecutionSyncBaseDeps) ([]string, error) {
+func executionSyncBasePredictConflicts(ctx context.Context, root, workOID, baseOID string, deps issueops.ExecutionSyncBaseDeps) ([]string, error) {
 	code, out := deps.Git(ctx, root, "merge-tree", "--write-tree", "--name-only", "-z", workOID, baseOID)
 	switch code {
 	case 0:
@@ -526,7 +555,7 @@ func parseExecutionSyncBaseMergeTreeNames(out string) []string {
 	return names
 }
 
-func executionSyncBaseUnmergedPaths(ctx context.Context, root string, deps ExecutionSyncBaseDeps) []string {
+func executionSyncBaseUnmergedPaths(ctx context.Context, root string, deps issueops.ExecutionSyncBaseDeps) []string {
 	code, out := deps.Git(ctx, root, "ls-files", "--unmerged", "-z")
 	if code != 0 {
 		return nil
@@ -553,7 +582,7 @@ func executionSyncBaseUnmergedPaths(ctx context.Context, root string, deps Execu
 
 // executionSyncBaseMergeInProgress는 MERGE_HEAD/CHERRY_PICK_HEAD/REBASE_HEAD와
 // rebase 디렉토리를 모두 본다(design-review F11). 경로 해석 실패는 진행 중으로 본다.
-func executionSyncBaseMergeInProgress(ctx context.Context, root string, deps ExecutionSyncBaseDeps) bool {
+func executionSyncBaseMergeInProgress(ctx context.Context, root string, deps issueops.ExecutionSyncBaseDeps) bool {
 	for _, ref := range []string{"MERGE_HEAD", "CHERRY_PICK_HEAD", "REBASE_HEAD"} {
 		if code, _ := deps.Git(ctx, root, "rev-parse", "--verify", "--quiet", ref); code == 0 {
 			return true
@@ -577,7 +606,7 @@ func executionSyncBaseMergeInProgress(ctx context.Context, root string, deps Exe
 
 // executionSyncBaseWorktreeStatus는 tracked 오염 여부와 untracked 목록을
 // 나눠 돌려준다. status를 읽지 못하면 오염으로 간주한다(fail-closed).
-func executionSyncBaseWorktreeStatus(ctx context.Context, root string, deps ExecutionSyncBaseDeps) (bool, []string) {
+func executionSyncBaseWorktreeStatus(ctx context.Context, root string, deps issueops.ExecutionSyncBaseDeps) (bool, []string) {
 	code, out := deps.Git(ctx, root, "status", "--porcelain=v1", "--untracked-files=all")
 	if code != 0 {
 		return true, nil
@@ -600,7 +629,7 @@ func executionSyncBaseWorktreeStatus(ctx context.Context, root string, deps Exec
 // executionSyncBaseMergeMsgConflictCount는 finalize 시점에 남은 유일한 충돌
 // 흔적인 MERGE_MSG의 "Conflicts:" 블록을 센다. 해소 후 인덱스에는 흔적이
 // 없으므로 다른 관측 경로가 없다 — 실패는 0으로 강등하고 게이트하지 않는다.
-func executionSyncBaseMergeMsgConflictCount(ctx context.Context, root string, deps ExecutionSyncBaseDeps) int {
+func executionSyncBaseMergeMsgConflictCount(ctx context.Context, root string, deps issueops.ExecutionSyncBaseDeps) int {
 	code, out := deps.Git(ctx, root, "rev-parse", "--git-path", "MERGE_MSG")
 	if code != 0 {
 		return 0
@@ -687,6 +716,7 @@ func defaultExecutionSyncBaseGit(ctx context.Context, dir string, args ...string
 	ctx, cancel := context.WithTimeout(ctx, executionSyncBaseGitTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "git", args...)
+	processlease.Attach(ctx, cmd)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
 		"GIT_TERMINAL_PROMPT=0",
