@@ -1,0 +1,5 @@
+{
+  "adr": ".issueops/adr/2026-09-30-reader-review-remains-recommended-after-ten-public-bodies.md",
+  "decision": "권장 절차로 유지",
+  "scope": "no implementation gate, no sampled body changes"
+}

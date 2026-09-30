@@ -1,0 +1,162 @@
+{
+  "method": "reconstructed, not verified equivalent to the 2026-09-23 method",
+  "denominator": 10,
+  "rows": [
+    {
+      "number": 518,
+      "h2_sections": 4,
+      "unicode_characters": 2097,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 0,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 0
+    },
+    {
+      "number": 519,
+      "h2_sections": 5,
+      "unicode_characters": 2318,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 0,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 0
+    },
+    {
+      "number": 520,
+      "h2_sections": 4,
+      "unicode_characters": 1504,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 0,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 0
+    },
+    {
+      "number": 521,
+      "h2_sections": 6,
+      "unicode_characters": 1708,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 0,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 472
+    },
+    {
+      "number": 522,
+      "h2_sections": 6,
+      "unicode_characters": 1547,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 0,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 484
+    },
+    {
+      "number": 523,
+      "h2_sections": 7,
+      "unicode_characters": 1853,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 0,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 458
+    },
+    {
+      "number": 524,
+      "h2_sections": 4,
+      "unicode_characters": 1004,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 0,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 0
+    },
+    {
+      "number": 525,
+      "h2_sections": 4,
+      "unicode_characters": 1019,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 0,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 0
+    },
+    {
+      "number": 526,
+      "h2_sections": 4,
+      "unicode_characters": 891,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 1,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 0
+    },
+    {
+      "number": 527,
+      "h2_sections": 5,
+      "unicode_characters": 1159,
+      "terms_raw": {
+        "execution": 0,
+        "lease": 0,
+        "봉인": 1,
+        "generation": 0
+      },
+      "first_h2_summary": true,
+      "hex64_outside_code": 0,
+      "completion_characters": 0
+    }
+  ],
+  "totals": {
+    "h2_sections": 49,
+    "unicode_characters": 15100,
+    "hex64_outside_code": 0,
+    "completion_characters": 1414
+  },
+  "medians": {
+    "h2_sections": 4.5,
+    "unicode_characters": 1525.5
+  },
+  "terms_totals": {
+    "execution": 0,
+    "lease": 0,
+    "봉인": 2,
+    "generation": 0
+  }
+}

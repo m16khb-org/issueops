@@ -1,0 +1,448 @@
+{
+  "judged_at": "2026-09-30T08:21:13.574046+00:00",
+  "judge": "main agent, against preserved pre-reader rubric; wording differences are not mismatches",
+  "intent_available_bodies": 7,
+  "intent_unknown_bodies": 3,
+  "intent_match_bodies": 7,
+  "intent_mismatch_bodies": 0,
+  "intent_q1_q3_match": 21,
+  "intent_q1_q3_denominator": 21,
+  "total_bodies": 10,
+  "q4_flagged_bodies": 10,
+  "missing_specific_now_trigger_bodies": 8,
+  "samples": [
+    {
+      "number": 518,
+      "original_intent": "available",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": false,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   리뷰 3라운드 규칙이 모호해서, 사용자가 지정해야만 쓸 수 있는 Fable 5를 에이전트가 자동으로 골랐습니다. Claude는 3라운드에서도 같은 모델을 쓰고 effort만 한 단계 올리도록 스킬을 고칩니다. 코드의 기본값은 그대로이고, 결정 기록도 이 원칙에 맞춥니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "자동 Fable 선택 금지와 같은 Claude 모델 effort 상승, 코드 기본값 보존을 이해했다.",
+          "intent_reference": ".issueops/issues/517/intent.md"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   #513과 #514에서 같은 문제가 실제로 발생했기 때문입니다. 기존 코드·운영 문서와 리뷰 스킬의 지시가 달라서 재발할 수 있습니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "실제 #513/#514 발생과 스킬·운영 규칙 불일치를 설명했다.",
+          "intent_reference": ".issueops/issues/517/intent.md"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   문구·스킬 검증, 13개 검증 항목, 독립 리뷰 2라운드가 통과했다는 근거가 있습니다. 다만 실제 3라운드가 같은 모델과 높아진 effort로 실행되는지는 아직 확인하지 못했습니다. **문서 수정은 검증됐고, 실제 실행 확인은 머지 뒤에 남아 있다**고 읽힙니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "문서 검증과 머지 뒤 실제 실행 확인을 구분하며 의도의 테스트 완료 기준과 충돌하지 않는다.",
+          "intent_reference": ".issueops/issues/517/intent.md"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   핵심 문제는 이해됩니다. 다음 부분에서는 멈추게 됩니다.\n\n   - `effort`, `next.review.model`, `next.review.effort`: effort가 모델의 추론 수준이라는 짧은 설명이 있으면 좋겠습니다.\n   - `ADR`, `caution`, `base`, `golden`, `원장`: 저장소 운영 ",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": ".issueops/issues/517/intent.md"
+        }
+      ],
+      "information_missing_questions": []
+    },
+    {
+      "number": 519,
+      "original_intent": "unknown",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": true,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   한글이나 이모지를 바이트 상한에 맞춰 자르다가 글자 중간이 끊겨, 진단·미리보기 등에 깨진 문자가 나타나는 문제입니다. 20개 절단 지점에서 글자 경계를 지키도록 바꿉니다. 대부분 상한과 잘림 표시는 유지하지만, `max_chars`는 바이트 수에서 글자 수로 바뀌어 별도의 동작 변경이 있습니다.\n",
+          "verdict": "unknown",
+          "public_scope_comparison": "match",
+          "evidence": "UTF-8 경계 보존과 max_chars의 동작 변경을 구분했다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   깨진 출력 때문에 진단 내용을 읽기 어려워진다는 필요성은 이해됩니다. 다만 **이번에 고쳐야 하는 계기**는 본문에 없습니다. #514에서 어떤 출력이 깨졌고 사용자에게 어떤 불편을 줬는지 사례 한 문장이 있으면 충분합니다.\n",
+          "verdict": "unknown",
+          "public_scope_comparison": "match",
+          "evidence": "출력 손상 수정 필요성을 이해했고 현재 착수 계기는 본문에 없다고 구분했다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   수정 전 실패·수정 후 성공한 회귀 테스트, 실제 명령 실행, JSON 인코딩 확인, 전체 테스트와 CI, 독립 리뷰로 확인합니다. 검증 결과를 모아 둔 파일도 있어 확인 경로가 분명합니다.  \n   다만 “모두 통과했다”는 설명 뒤에 “push할 때 도는 CI는 실패한다”가 나와 완료 상태를 다시 판단하게 됩니다. **브랜치 CI와 main",
+          "verdict": "unknown",
+          "public_scope_comparison": "match",
+          "evidence": "회귀·실제 stderr/JSON·CI와 브랜치/PR CI의 서로 다른 기준을 구분했다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   개발자에게도 다음 부분은 설명을 보충하면 읽기 쉽습니다.\n\n   - `TruncateRunes`의 “글자 수”: 여기서 글자가 어떤 단위인지 정의가 없습니다. 특히 이모지도 언급했으므로 기준을 밝혀 주면 좋겠습니다.\n   - `stderr`·`stdout`: 처음에 “오류 출력(stderr)”, “표준 출력(stdout)”으로 ",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": "frozen public body only"
+        }
+      ],
+      "information_missing_questions": []
+    },
+    {
+      "number": 520,
+      "original_intent": "unknown",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": true,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**\n\n   바뀌는 구조는 이해됩니다. 업무 규칙과 상태 전이는 `domain`, 실행 순서와 트랜잭션 조율은 `application`, 외부 시스템 접근은 어댑터가 담당합니다.\n\n   다만 **기존 구조가 어떤 문제를 일으켰는지**는 직접 설명하지 않습니다. 책임이 섞여 있었다는 점은 추측할 수 있지만, 중복 판단·수정 누락·테스트 어려움 중 무엇을",
+          "verdict": "unknown",
+          "public_scope_comparison": "match",
+          "evidence": "변경 구조는 이해했지만 기존 구조가 일으키는 구체적 문제는 본문에 없다고 지적했다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**\n\n   본문만으로는 알 수 없습니다. main에 들어온 변경을 통합했다는 설명은 있지만, 그것이 프로젝트 전체를 재구성해야 하는 이유로 이어지지는 않습니다.\n\n   최근 어떤 변경에서 기존 구조의 한계가 드러났는지, 그대로 두면 어떤 작업이 어려워지는지 한두 문장이 필요합니다.\n",
+          "verdict": "unknown",
+          "public_scope_comparison": "unanswerable",
+          "evidence": "왜 지금 필요한지는 본문만으로 알 수 없다고 명시했다. 원래 의도 unknown과 별도로 정보 부재를 집계한다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**\n\n   테스트·정적 검사·독립 환경 설치·책임 원장·독립 리뷰라는 확인 방법은 충분히 제시되어 있습니다. 특히 미배정과 이전 대기 항목이 0개라는 수치는 이전 범위의 완료 기준으로 읽힙니다.\n\n   다만 검사 결과가 많아서 핵심 완료 조건이 묻힙니다. 다음 세 가지로 묶으면 판단하기 쉽습니다.\n\n   - 모든 생산 코드의 책임이 배정되고 경계 검사를 ",
+          "verdict": "unknown",
+          "public_scope_comparison": "match",
+          "evidence": "공개 본문의 전체 테스트·격리 설치·책임 원장 검증과 완료 경계를 비교한다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**\n\n   있습니다.\n\n   - `CAS`, `schema 1 checkpoint 저장·승격`, `Orca claim`, `READY`는 의미나 판정 기준을 설명하지 않습니다.\n   - “후보 소스 3,960개의 해시를 대조한 독립 저장소·HOME·state에서…”는 해시 대조와 검증 환경의 관계를 두 번 읽게 됩니다. “독립된 저장소·HO",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": "frozen public body only"
+        }
+      ],
+      "information_missing_questions": [
+        2
+      ]
+    },
+    {
+      "number": 521,
+      "original_intent": "available",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": true,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   임시 재현 코드까지 제품 코드로 계산해 품질 지표가 왜곡되는 문제입니다. 복잡도와 코드 비율 분석에 같은 파일 선정 규칙을 적용하고, 추적 중인 제품 코드와 무시되지 않은 신규 코드를 포함하도록 바뀝니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "임시 코드 제외와 공통 제품 파일 목록을 이해했다.",
+          "intent_reference": ".issueops/issues/521/intent.md"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   잘못된 지표로 개선 우선순위를 정할 수 있기 때문입니다. 다만 본문에는 최근 발생한 피해나 일정 같은 **지금 처리해야 하는 계기**는 없습니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "품질 지표로 우선순위를 판단해야 한다는 필요성을 이해했다.",
+          "intent_reference": ".issueops/issues/521/intent.md"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   명시된 테스트를 실행하고, Git 저장소·신규 파일이 있는 작업 공간·Git이 없는 디렉터리에서 포함·제외 결과를 확인하면 됩니다. 실제 저장소에서도 임시 파일은 빠지고 제품 함수는 남아야 합니다. 진행 결과에는 main 반영과 검증 통과가 적혀 있어 **구현은 끝났고 정리만 남은 상태**로 읽힙니다. 다만 완료 기준 체크박스가 비어 있고, ",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "포함·제외·비Git·실제 결과 확인과 구현 완료/정리 잔여를 구분했다.",
+          "intent_reference": ".issueops/issues/521/intent.md"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   `CollectBranchFunctions`, fixture, 표준 생성 주석, 전체 자기 검증은 배경지식이 필요합니다. 특히 “표준 생성 주석”은 어떤 표시를 뜻하는지 예시가 있으면 좋겠습니다.  \n   “기존 응답 필드와 수집 오류 표시를 유지하고, 파일 선정 실패를 정상적인 빈 결과로 숨기지 않습니다”는 두 번 읽었습니다.",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": ".issueops/issues/521/intent.md"
+        }
+      ],
+      "information_missing_questions": []
+    },
+    {
+      "number": 522,
+      "original_intent": "available",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": true,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   실제 검증 단계에서는 변경 종류에 맞춰 리뷰 설정을 계산하지만, 담당 세션의 프롬프트는 작업 준비 당시의 effort를 그대로 지시합니다. 그래서 문서만 바꿔도 불필요하게 높은 effort로 리뷰할 수 있습니다. 리뷰 직전에 현재 작업의 `next.review`를 읽도록 프롬프트와 리뷰 스킬을 바꿉니다. 기본값, 사용자 지정값, 기존 인",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "준비 기본값 대신 리뷰 직전 설정을 읽으며 기본값·override·기존 자료 보존을 이해했다.",
+          "intent_reference": ".issueops/issues/522/intent.md"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   변경 종류에 따른 설정과 실제 리뷰 지침이 어긋나고 있고, 운영 문서에도 미구현 항목으로 남아 있기 때문입니다. 다만 **지금 처리해야 하는 계기나 시급성**은 본문에 없습니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "변경 티어와 준비 프롬프트 충돌을 설명했다.",
+          "intent_reference": ".issueops/issues/522/intent.md"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   실제 생성 프롬프트가 리뷰 직전에 설정을 읽도록 지시하는지 확인하고, 변경 종류별 설정과 세 번째 리뷰 상승 규칙을 회귀 테스트로 검증합니다. 전체 검증과 독립 리뷰 결과도 PR에 남겨야 합니다.  \n   진행 결과에는 검증·CI 통과와 main 반영이 적혀 있어 **구현은 완료됐고 정리만 남은 상태**로 읽힙니다. 다만 완료 기준의 체크박스",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "렌더링·티어·상승 회귀와 main 반영/정리 잔여를 구분했다.",
+          "intent_reference": ".issueops/issues/522/intent.md"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   저장소에 익숙하지 않은 독자는 `effort`, `next.review`, ‘계약 변경’, ‘인계 자료’, ‘프롬프트 평가’, ‘전체 자기 검증’의 뜻을 바로 알기 어렵습니다.\n\n   특히 다음 표현은 한 번 더 읽게 됩니다.\n\n   - **“준비 시점 설정과 실제 리뷰 실행 설정의 책임을 구분한다.”**  \n     → “준비",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": ".issueops/issues/522/intent.md"
+        }
+      ],
+      "information_missing_questions": []
+    },
+    {
+      "number": 523,
+      "original_intent": "available",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": true,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   상태 요약이 처음 발견한 기록을 최신 결과로 잘못 표시합니다. 오래된 결과나 검증 후보 목록이 선택될 수 있습니다. 이제 기록의 내용으로 실제 실행 결과인지 판별하고, 생성 시각을 비교해 가장 최근 결과를 선택합니다. 최근 결과가 실패여도 그대로 표시합니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "최신 적격 생성시각 선택과 최근 실패 유지, 후보 제외를 이해했다.",
+          "intent_reference": ".issueops/issues/523/intent.md"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   최신 실패가 오래된 성공에 가려지면 현재 상태를 잘못 판단할 수 있기 때문입니다. 수정 필요성은 분명하지만, **최근 어떤 사건이나 영향 때문에 지금 고치는지는 본문에 없습니다.**\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "최근 실패가 오래된 성공에 가려질 수 있음을 설명했다.",
+          "intent_reference": ".issueops/issues/523/intent.md"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   입력 순서와 키 이름을 바꿔도 같은 최신 실행을 선택하는지, 후보 목록 등은 제외하는지 테스트합니다. 실제 저장소를 사용한 CLI 확인과 조회 전후 데이터가 바뀌지 않는지도 확인 대상입니다.  \n   본문은 테스트와 CI를 통과하고 main에 반영됐다고 보고합니다. 다만 **완료 기준 체크박스는 모두 비어 있어 완료 보고와 어긋납니다.** 남",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "순서·키·후보·조회 무변이와 테스트, 완료 보고/미체크 상태 충돌을 구분했다.",
+          "intent_reference": ".issueops/issues/523/intent.md"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   다음 부분은 설명을 보태면 더 쉽게 읽힙니다.\n\n   - **“적격”, “기준 결과”, “승격”, “지원하지 않는 스키마”**: 무엇을 뜻하는지 본문만으로 정확히 알기 어렵습니다.\n   - **“기준 결과를 나중에 복사해도…”**: 복사한 시각과 원래 실행 시각 중 무엇을 기준으로 삼는다는 뜻인지 다시 읽게 됩니다.\n   - *",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": ".issueops/issues/523/intent.md"
+        }
+      ],
+      "information_missing_questions": []
+    },
+    {
+      "number": 524,
+      "original_intent": "available",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": true,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   `system-status`가 키 prefix에 처음 맞는 항목을 골라 최신 자기 검증 결과를 놓칠 수 있었습니다. 이제 summary의 종류·schema·생성 시각을 확인해 적격한 최신 결과를 선택합니다. 최신 실행이 실패했다면 그 실패 결과도 그대로 표시합니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "종류·schema·생성 시각을 통한 최신 적격 실패 결과 유지를 이해했다.",
+          "intent_reference": ".issueops/issues/523/intent.md"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   상태 요약에 과거 결과가 표시되면 최근 실패를 놓칠 수 있으므로 필요합니다. 다만 실제로 어떤 오표시가 발생했는지, 이번에 수정하게 된 계기는 본문에 없습니다. `Closes #523`만으로는 알 수 없습니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "과거 결과가 최신 실패를 가리는 위험을 설명했다.",
+          "intent_reference": ".issueops/issues/523/intent.md"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   본문에는 회귀 테스트, 실제 저장 함수와 SQLite를 이용한 CLI 검증, 조회 전후 데이터 불변 확인, 전체 self-verify 26단계 통과, 독립 리뷰 결과가 제시돼 있습니다. 완료 판단 근거는 충분히 구체적입니다. 다만 테스트 명령이나 결과 위치가 없어 본문만으로 재확인하기는 어렵습니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "실제 SQLite CLI, 회귀·조회 무변이·전체 검증과 재확인 링크 부재를 구분했다.",
+          "intent_reference": ".issueops/issues/523/intent.md"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   - `적격`의 구체적인 조건이 설명되지 않았습니다. `summary`, `schema`, `record`, `응답 golden`, `offset`, `fallback`도 배경지식이 필요합니다.\n   - “후보 목록과 적격하지 않은 자료를 제외합니다”는 후보 목록까지 제외한다는 뜻으로 읽힙니다. “후보 목록을 조회하고, 적격하지 ",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": ".issueops/issues/523/intent.md"
+        }
+      ],
+      "information_missing_questions": []
+    },
+    {
+      "number": 525,
+      "original_intent": "available",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": true,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   임시 재현 코드가 제품 코드에 섞여 품질 수치를 왜곡하던 문제입니다. 분기 복잡도와 code-SNR이 동일한 파일 선정 기준을 쓰도록 바뀝니다. 정상 제품 코드는 포함하고, 임시 증거·fixture·생성 코드 등은 제외합니다. 핵심은 잘 전달됩니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "공통 품질 선정과 정상 코드 포함/임시·fixture·생성 코드 제외를 이해했다.",
+          "intent_reference": ".issueops/issues/521/intent.md"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   품질 분석 결과를 믿을 수 있게 하려는 이유는 이해됩니다. 다만 **지금 고쳐야 하는 계기는 본문에 없습니다.** `Closes #521`만으로는 실제로 어떤 수치나 판단에 영향을 줬는지 알 수 없습니다. 문제를 발견한 사례나 영향을 한 문장 보태면 좋겠습니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "품질 분석을 신뢰하기 위한 필요성을 이해했다.",
+          "intent_reference": ".issueops/issues/521/intent.md"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   본문에서 가장 분명한 기준은 **ignored 증거 파일을 추가해도 분기 목록과 SNR이 달라지지 않는 것**입니다. 제품 파일의 포함, 제외 대상의 배제, Git 오류 전달도 회귀 테스트와 별도 CLI로 확인했다고 적혀 있습니다. 검증 범위는 충분히 드러나지만, 독자가 재실행할 명령이나 결과 위치는 없습니다. 본문만으로 실제 통과 여부를 검",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "임시 증거 주입 불변과 Git 오류 전달, 실제 CLI·회귀 확인을 설명했다.",
+          "intent_reference": ".issueops/issues/521/intent.md"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   일반 개발자 독자에게도 `code-SNR`, `collector`, `응답 golden`, `self-verify 26단계`는 설명이 필요할 수 있습니다. 특히 `루트 경계 결함`은 어떤 문제가 있었는지 알기 어렵습니다.\n\n   “최종 self-verify 26단계가…” 문장은 검사 종류와 결함 수정·재검토를 한꺼번에 담아 두 ",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": ".issueops/issues/521/intent.md"
+        }
+      ],
+      "information_missing_questions": []
+    },
+    {
+      "number": 526,
+      "original_intent": "available",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": true,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   리뷰를 준비할 때 정한 effort가 실제 실행과 감사 기록에도 고정되어, 리뷰 직전의 설정을 반영하지 못하던 문제로 읽힙니다. 이제 리뷰 직전에 현재 설정을 읽고, reviewer 지정과 라운드 상승까지 적용한 모델·effort를 실행과 기록에 동일하게 사용합니다. 다만 문서만 바꾼 경우와 세 번째 리뷰에서 **어떤 값이 서로 달랐는지",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "runtime 설정과 실제 기록값 일치, 지정·라운드 상승 반영을 이해했다.",
+          "intent_reference": ".issueops/issues/522/intent.md"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   실제 리뷰 설정과 감사 기록을 일치시켜야 한다는 필요성은 이해됩니다. 하지만 최근 어떤 사례로 문제가 드러났는지, 왜 이번에 고쳐야 하는지는 본문에 없습니다. `Closes #522`만으로는 본문 독자가 그 배경을 알 수 없습니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "실행 설정과 감사 기록의 충돌 해소 필요성을 이해했다.",
+          "intent_reference": ".issueops/issues/522/intent.md"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   실패 재현, 수정 후 회귀 테스트, 시나리오 평가, 전체 검증, 독립 리뷰까지 확인했다고 적혀 있어 완료 근거는 충분히 제시됩니다. 핵심 완료 기준은 **실행에 전달한 모델·effort와 감사 기록이 같은지**입니다. 다만 G1~G4의 검증 항목과 점수 100의 의미가 없어, 본문만으로 검증 범위를 판단하기는 어렵습니다.\n",
+          "verdict": "match",
+          "public_scope_comparison": "match",
+          "evidence": "회귀·평가·전체 검증과 실제 모델·effort 기록 일치를 핵심 기준으로 설명했다.",
+          "intent_reference": ".issueops/issues/522/intent.md"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   `owner`, `effort`, `티어`, `렌즈`, `봉인 파일`, `self-verify`, `Astra/xhigh`는 프로젝트 배경지식이 필요합니다.\n\n   특히 “생성된 리뷰 기록 명령은 명시적 reviewer 지정과 라운드 상승을 적용한 실제 실행값을 받습니다”는 두 번 읽었습니다. **“reviewer를 직접 지정하",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": ".issueops/issues/522/intent.md"
+        }
+      ],
+      "information_missing_questions": []
+    },
+    {
+      "number": 527,
+      "original_intent": "unknown",
+      "mismatch": false,
+      "public_scope_mismatch": false,
+      "missing_now_trigger": false,
+      "terminology_or_reread": true,
+      "answers": [
+        {
+          "question": 1,
+          "reader_quote": "1. **무엇이 문제이고 무엇이 바뀌는가?**  \n   공개 문서에서 로컬 경로를 지워도 단계가 바뀌면 원본을 다시 복사하면서 경로가 되살아납니다. 공개 사본을 만들거나 갱신할 때 경로를 자동으로 바꾸도록 수정합니다. 실행에 쓰는 원본과 재개에 필요한 경로는 유지합니다.\n",
+          "verdict": "unknown",
+          "public_scope_comparison": "match",
+          "evidence": "공개 사본 경로 정규화와 실행 원본 보존의 범위를 이해했다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 2,
+          "reader_quote": "2. **왜 지금 필요한가?**  \n   최근 PR #524, #525, #526에서 사용자 경로 때문에 CI 검사가 실패했고, 수동 수정도 다음 단계에서 무효가 되기 때문입니다. 반복해서 문서를 고치는 원인을 해결하려는 작업으로 이해됩니다.\n",
+          "verdict": "unknown",
+          "public_scope_comparison": "match",
+          "evidence": "최근 CI 실패와 단계 전환 뒤 수동 수정 무효를 설명했다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 3,
+          "reader_quote": "3. **끝났는지 어떻게 확인하는가?**  \n   네 종류의 공개 문서에서 단계 전환 후에도 로컬 경로가 다시 나타나지 않아야 합니다. 동시에 원본 바이트·해시와 실행 재개 동작, 일반 본문·URL·상대경로는 유지돼야 합니다. 제시된 테스트와 전체 자기 검증, 원격 CI 통과로 확인합니다.  \n   다만 **경로를 정확히 어떤 표현으로 바꾸는지**가 없어, 결과 파일을 보고 정답인지 판단할 ",
+          "verdict": "unknown",
+          "public_scope_comparison": "match",
+          "evidence": "네 문서의 반복 변환, 원본·해시·일반 텍스트 보존과 테스트·CI를 설명했다.",
+          "intent_reference": "frozen public body only"
+        },
+        {
+          "question": 4,
+          "reader_quote": "4. **모르는 용어나 두 번 읽은 문장이 있는가?**  \n   핵심 문제는 이해됩니다. 다만 다음 표현은 배경지식이나 재독이 필요합니다.\n\n   - **“봉인 원본”, “실행 재개 계약”, “선택 사양”**: 각각 무엇을 가리키는지 본문만으로는 분명하지 않습니다.\n   - **“계정 정보 없는 표현”**: 경로 삭제인지, 상대경로 변환인지, 자리표시자로 치환하는 것인지 알 수 없습니다.\n ",
+          "verdict": "terminology",
+          "public_scope_comparison": "not_scored",
+          "evidence": "용어·문장 재독 지적 원문은 reader 답변 Q4에 보존했다.",
+          "intent_reference": "frozen public body only"
+        }
+      ],
+      "information_missing_questions": []
+    }
+  ],
+  "q1_q3_unanswerable_bodies": 1
+}
