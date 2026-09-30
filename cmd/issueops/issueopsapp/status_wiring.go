@@ -9,10 +9,11 @@ import (
 func newStatusService() statusapp.Service {
 	home, _ := os.UserHomeDir()
 	defaultTarget := resolveTarget("")
+	state := newStateService(statestore.StateDir())
 	return statusapp.Service{
 		Home: home, IssueOpsRoot: issueOpsRoot(), Version: version, Inspect: newHarnessInspector(),
 		Daemon: newDaemonReader().Run, Doctor: newDoctorService().Run,
-		State: newStateService(statestore.StateDir()).List, Workers: newWorkerService().List,
+		State: state.List, StateRead: state.Read, Workers: newWorkerService().List,
 		ResolveTarget: func(target string) string {
 			if target != "" {
 				return target
