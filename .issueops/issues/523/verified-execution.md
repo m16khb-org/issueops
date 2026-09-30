@@ -43,3 +43,10 @@
 메인 에이전트가 구현·테스트·CLI QA를 직접 수행한다. 최종 독립 리뷰는 `devils-advocate-review` 패턴의 빈 context reviewer가 담당한다. 전체 battery와 read-only 리뷰를 같은 입력에서 병렬 실행하는 경우 `parallel_speed`이며, 최종 결과를 모두 관측한 뒤만 durable verdict를 기록한다.
 
 UI/DB 실측/외부 LLM 평가는 해당 없음: 이번 범위에는 frontend, 스키마, 모델 호출 변경이 없다. deterministic selfverify는 명시적으로 `--llm-eval=false`를 사용한다.
+
+## CI 문서 보정 (generation 3)
+
+- 기존 generation 2 구현·검증 기록은 그대로 보존한다. 이번 실행은 추적 계획의 개인 홈 경로를 `$SOURCE_ROOT` 표기로 바꾸는 문서 보정만 수행한다.
+- CI와 같은 meeting-notes 계약 unittest를 실행해 `plan.md`의 식별정보 탐지 실패를 재현했다. 실패 전체 출력과 실제 로컬 인계 자료는 ignored `artifact/`에 보존한다.
+- 검사 코드는 수정하지 않는다. 이전 HEAD `c1abd4c2c6c84cb4abc5ec0a13f3854418cc344d`의 Go 구현·테스트 파일과 현재 파일의 내용 해시를 대조해 같음을 확인한다. 기존 구현 검증은 그 동일 파일에 대한 증거로 유지하며 새 실행 결과로 바꿔 적지 않는다.
+- 보정 후 전체 Python unittest와 원격 CI 결과, 독립 문서 변경 리뷰, 새 HEAD는 최신 durable review·completion 기록에서 확인한다.

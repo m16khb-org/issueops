@@ -2,7 +2,7 @@
 
 - Lifecycle: `io-14e119b8fce9`
 - Issue: https://github.com/m16khb-org/issueops/issues/523
-- Source: `/Users/habin/workspace/issueops`
+- Source: `$SOURCE_ROOT`
 - Branch: `523-latest-selfverify-status`, base `main` at `768546a219b082f5f7ad7f78f85664747eca9b74`
 - 사용자 원문: “3 항목을 각각 $issueops 를 통해 병렬로 인계하여 진행해줘”
 - 승인된 종료점: 독립 구현·검증·해당 브랜치 commit/push·Draft PR 발행·execution complete. merge/cleanup은 제외한다.
