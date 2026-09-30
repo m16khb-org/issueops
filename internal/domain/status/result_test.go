@@ -36,18 +36,19 @@ func TestEvaluatePreservesFailureAndWarningOrder(t *testing.T) {
 	}
 }
 
-func TestEvaluateSelectsFirstSelfVerifyPrefixInSourceOrder(t *testing.T) {
-	facts := Observation{Records: []Record{
-		{Key: "unrelated", UpdatedAt: "2030", Bytes: 99},
-		{Key: "self-verify-older", UpdatedAt: "2020", Bytes: 11},
-		{Key: "self-verify-latest", UpdatedAt: "2026", Bytes: 22},
-	}}
-	got := Evaluate(facts).SelfVerify
-	if !got.Found || got.LatestKey != "self-verify-older" || got.UpdatedAt != "2020" || got.Bytes != 11 {
-		t.Fatalf("selection reordered: %+v", got)
+func TestEvaluateProjectsValidatedSummaryAndSeparatesDiagnosticsFromReadFailure(t *testing.T) {
+	record := Record{Key: "custom-run", UpdatedAt: "2026", Bytes: 22}
+	facts := Observation{Doctor: Outcome{OK: true}, State: Outcome{OK: true}, Workers: Outcome{OK: true}, LatestSelfVerify: &record, SelfVerifyWarnings: []string{"invalid_generated_at:older"}}
+	before := facts
+	got := Evaluate(facts)
+	if !got.OK || !got.SelfVerify.Found || got.SelfVerify.LatestKey != record.Key || got.SelfVerify.UpdatedAt != record.UpdatedAt || got.SelfVerify.Bytes != record.Bytes || !reflect.DeepEqual(got.Warnings, []string{"selfverify: invalid_generated_at:older"}) {
+		t.Fatalf("%+v", got)
 	}
-	facts.Records = []Record{{Key: "self-verifyanything", Bytes: 7}}
-	if got := Evaluate(facts).SelfVerify; !got.Found || got.LatestKey != "self-verifyanything" {
-		t.Fatalf("prefix semantics changed: %+v", got)
+	if !reflect.DeepEqual(facts, before) || record != (Record{Key: "custom-run", UpdatedAt: "2026", Bytes: 22}) {
+		t.Fatal("input mutated")
+	}
+	facts.SelfVerifyReadFailed = true
+	if got := Evaluate(facts); got.OK || !got.SelfVerify.Found {
+		t.Fatalf("%+v", got)
 	}
 }

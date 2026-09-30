@@ -2,11 +2,16 @@ package statuscli
 
 import (
 	"encoding/json"
+	selfverifyapp "issueops/internal/application/selfverify"
+	selfcontract "issueops/internal/contract/selfaugment"
+	statecontract "issueops/internal/contract/state"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	statestore "issueops/internal/adapter/outbound/state"
 	daemoncontract "issueops/internal/contract/daemon"
@@ -20,7 +25,7 @@ func TestBuildHarnessStatusReportsStateWorkerAndSelfVerify(t *testing.T) {
 	workerDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
 	t.Setenv("ISSUEOPS_WORKER_DIR", workerDir)
-	if _, err := statestore.StateWrite("self-verify-latest", `{"ok":true}`); err != nil {
+	if _, err := statestore.StateWrite("self-verify-latest", `{"schema_version":1,"kind":"self_verification_summary","generated_at":"2026-09-30T00:00:00Z","ok":true}`); err != nil {
 		t.Fatalf("write self verify state: %v", err)
 	}
 	if _, err := testWorkerService().Enqueue("smoke", "payload"); err != nil {
@@ -224,4 +229,78 @@ func equalStringSlices(a []string, b []string) bool {
 func captureStatusVerifyStdout(t *testing.T, fn func() error) string {
 	t.Helper()
 	return testsupport.CaptureStdout(t, fn)
+}
+
+func TestRunStatusSelectsProductionSummaryWithoutChangingState(t *testing.T) {
+	repo := t.TempDir()
+	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
+	t.Setenv("ISSUEOPS_WORKER_DIR", t.TempDir())
+	for _, fixture := range []struct {
+		key string
+		at  time.Time
+		ok  bool
+	}{
+		{"self-verify-baseline", time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC), true},
+		{"custom-failed-run", time.Date(2026, 9, 30, 0, 0, 0, 123456789, time.UTC), false},
+	} {
+		result := selfcontract.SelfAugmentResult{OK: fixture.ok}
+		err := selfverifyapp.SaveSummary(&result, fixture.key, selfverifyapp.SaveSummaryDeps{
+			Now:    func() time.Time { return fixture.at },
+			Encode: func(snapshot selfcontract.SelfAugmentStateSnapshot) ([]byte, error) { return json.Marshal(snapshot) },
+			Write:  statestore.StateWrite, StateDir: statestore.StateDir,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := statestore.StateWrite("self-verify-candidates", `{"schema_version":1,"kind":"self_verification_candidate_export","generated_at":"2030-01-01T00:00:00Z"}`); err != nil {
+		t.Fatal(err)
+	}
+	// Re-saving an old baseline must not make it newer than the failed execution.
+	baseline, err := statestore.StateRead("self-verify-baseline")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := statestore.StateWrite("self-verify-baseline", baseline.Record.Content); err != nil {
+		t.Fatal(err)
+	}
+	before, err := statestore.StateList()
+	if err != nil {
+		t.Fatal(err)
+	}
+	contents := map[string]statecontract.RecordEnvelope{}
+	for _, record := range before.Records {
+		r, err := statestore.StateRead(record.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		contents[record.Key] = r.Record
+	}
+	out := captureStatusVerifyStdout(t, func() error {
+		return RunStatus(testDoctorService(), testWorkerService(), []string{"--repo", repo, "--json"})
+	})
+	var got Status
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatal(err)
+	}
+	expected := contents["custom-failed-run"]
+	if !got.SelfVerify.Found || got.SelfVerify.LatestKey != expected.Key || got.SelfVerify.UpdatedAt != expected.UpdatedAt || got.SelfVerify.Bytes != expected.Bytes {
+		t.Fatalf("selfverify: %+v", got.SelfVerify)
+	}
+	after, err := statestore.StateList()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("status changed state metadata")
+	}
+	for _, record := range after.Records {
+		r, err := statestore.StateRead(record.Key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(contents[record.Key], r.Record) {
+			t.Fatalf("status changed %s", record.Key)
+		}
+	}
 }

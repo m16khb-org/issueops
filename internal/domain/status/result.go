@@ -2,7 +2,6 @@ package status
 
 import (
 	statuscontract "issueops/internal/contract/status"
-	"strings"
 )
 
 type Outcome struct {
@@ -15,7 +14,9 @@ type Record struct {
 }
 type Observation struct {
 	Doctor, State, Workers Outcome
-	Records                []Record
+	LatestSelfVerify       *Record
+	SelfVerifyWarnings     []string
+	SelfVerifyReadFailed   bool
 }
 type Decision struct {
 	OK         bool
@@ -35,13 +36,14 @@ func Evaluate(facts Observation) Decision {
 		warnings = append(warnings, "workers: "+facts.Workers.Err.Error())
 	}
 	selfVerify := statuscontract.SelfVerifyStatus{}
-	for _, record := range facts.Records {
-		if record.Key == "self-verify-latest" || strings.HasPrefix(record.Key, "self-verify") {
-			selfVerify = statuscontract.SelfVerifyStatus{LatestKey: record.Key, Found: true, UpdatedAt: record.UpdatedAt, Bytes: record.Bytes}
-			break
-		}
+	lookupOK := len(warnings) == 0 && !facts.SelfVerifyReadFailed
+	for _, warning := range facts.SelfVerifyWarnings {
+		warnings = append(warnings, "selfverify: "+warning)
 	}
-	return Decision{OK: len(warnings) == 0 && facts.Doctor.OK && facts.State.OK && facts.Workers.OK, Warnings: warnings, SelfVerify: selfVerify}
+	if record := facts.LatestSelfVerify; record != nil {
+		selfVerify = statuscontract.SelfVerifyStatus{LatestKey: record.Key, Found: true, UpdatedAt: record.UpdatedAt, Bytes: record.Bytes}
+	}
+	return Decision{OK: lookupOK && facts.Doctor.OK && facts.State.OK && facts.Workers.OK, Warnings: warnings, SelfVerify: selfVerify}
 }
 
 func DaemonAdmissionObserved(running, reachable, identityVerified bool) bool {

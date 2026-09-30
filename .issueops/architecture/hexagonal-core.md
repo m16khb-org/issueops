@@ -139,9 +139,9 @@ root가 실제 preflight·guard application과 정책 실행기, Git·프로젝�
 
 ### Status aggregation and inspect boundary
 
-`internal/contract/status`가 전체 status 응답을, `internal/domain/status`가 관측 성공 여부·경고 순서·self-verify 기록 선택과 daemon admission 관측 조건을 소유한다. 전체 성공은 doctor의 `Healthy`가 아닌 `OK`와 state·worker의 `OK`, 조회 오류 여부로 판정한다. self-verify는 입력 목록에서 처음 일치한 prefix 기록을 선택하며 최신 시각이나 `self-verify-latest` 키를 우선하지 않는다.
+`internal/contract/status`가 전체 status 응답을, `internal/domain/status`가 관측 성공 여부·경고 순서·검증된 self-verify metadata 투영과 daemon admission 관측 조건을 소유한다. 전체 성공은 doctor의 `Healthy`가 아닌 `OK`와 state·worker의 `OK`, 조회 오류 여부로 판정한다. self-verify는 기존 `selfaugment.HistoryService`의 summary kind/schema 적격성과 generated_at 정렬을 재사용해 최신 실행을 선택한다. 키 prefix나 실행 성공 여부로 제한하지 않으며 후보 자료는 제외한다. 유효한 generated_at 우선, 생성 시각 내림차순, 유효한 updated_at 우선 및 내림차순, key 사전순의 기존 fallback을 유지한다. 선택된 항목의 key·updated_at·bytes는 그대로 투영한다. 시각 진단 경고만으로 전체 성공을 바꾸지 않지만 추가 state read 오류는 warning과 실패로 노출한다.
 
-`application/status.Service`는 inspect → daemon → doctor → state → worker 순서로 조회하며 오류가 있어도 뒤의 조회를 수행한다. root는 home·harness 경로, state·worker application과 inspect 관측 함수를 조립하고 CLI는 flag·출력만 담당한다. status CLI의 전역 setter·state 콜백·결과 builder·DTO 별칭은 제거했다. `adapter/inspect.Observer`는 문서 조회 함수를 인스턴스로 받아 파일 관측을 수행한다. daemon 조회도 root에서 고정한 reader를 받는다. 다른 basic/MCP 진입점의 전역 연결은 후속 이전 대상이다.
+`application/status.Service`는 inspect → daemon → doctor → state → worker 순서로 조회하며 오류가 있어도 뒤의 조회를 수행한다. state 조회가 성공하면 그 목록을 history의 List callback에서 재사용하고 각 record를 추가로 한 번 읽는다. 빈 목록과 state 조회 실패에는 추가 읽기가 없으며 retention·삭제·쓰기·승격은 호출하지 않는다. 기존 State.List 내부 record 읽기 외에 O(n) 읽기와 O(k log k) 이력 정렬 비용이 생긴다. JSON decode는 application, 적격성과 순서는 selfaugment domain, 집계와 metadata 투영은 status domain에 둔다. root는 home·harness 경로, 같은 state application 인스턴스의 List·Read, worker application과 inspect 관측 함수를 조립하고 CLI는 flag·출력만 담당한다. status CLI의 전역 setter·state 콜백·결과 builder·DTO 별칭은 제거했다. `adapter/inspect.Observer`는 문서 조회 함수를 인스턴스로 받아 파일 관측을 수행한다. daemon 조회도 root에서 고정한 reader를 받는다. 다른 basic/MCP 진입점의 전역 연결은 후속 이전 대상이다.
 
 ### Worker runtime boundary
 

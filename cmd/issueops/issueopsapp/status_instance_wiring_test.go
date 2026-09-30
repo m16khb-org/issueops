@@ -10,7 +10,7 @@ import (
 func TestStatusInstancesKeepCapturedStoresAndInspectionContext(t *testing.T) {
 	var services [2]statusapp.Service
 	var roots [2]string
-	payloads := []string{"first", "second payload"}
+	payloads := []string{`{"schema_version":1,"kind":"self_verification_summary","generated_at":"2026-09-30T00:00:00Z","ok":true}`, `{"schema_version":1,"kind":"self_verification_summary","generated_at":"2026-09-30T01:00:00Z","ok":false}`}
 	for i, payload := range payloads {
 		roots[i] = t.TempDir()
 		home := filepath.Join(roots[i], "home")
