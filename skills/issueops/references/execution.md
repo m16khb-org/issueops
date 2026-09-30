@@ -376,7 +376,7 @@ legacy recipient와 capability recipient 중 정확히 하나만 admit하며 둘
 
 | host | implementer(하위 세션) | planner(리뷰 서브에이전트) |
 |---|---|---|
-| codex | `gpt-6-sol` / `high` | `gpt-6-astra` / `xhigh` |
+| codex | `gpt-6.1-sol` / `high` | `gpt-6-astra` / `xhigh` |
 | claude | `claude-sonnet-5-5` / `high` | `claude-opus-5-5` / `high` |
 | omo | `chatgpt-subscription/gpt-6-sol` / `max` | `chatgpt-subscription/gpt-6-astra` / `max` |
 

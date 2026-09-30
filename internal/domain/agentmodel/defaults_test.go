@@ -7,7 +7,7 @@ func TestImplementerDefaults(t *testing.T) {
 		host, model, effort string
 		ok                  bool
 	}{
-		{host: "codex", model: "gpt-6-sol", effort: "high", ok: true},
+		{host: "codex", model: "gpt-6.1-sol", effort: "high", ok: true},
 		{host: "claude", model: "claude-sonnet-5-5", effort: "high", ok: true},
 		{host: "omo", model: "chatgpt-subscription/gpt-6-sol", effort: "max", ok: true},
 		{host: "unknown"},

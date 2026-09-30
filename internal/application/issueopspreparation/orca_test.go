@@ -472,12 +472,12 @@ func countTracePrefix(trace []string, prefix string) int {
 
 func TestPreparationPreviewPinsModelDefaultsAndPreservesOverrides(t *testing.T) {
 	for _, tc := range []struct{ host, model, effort, inputModel, inputEffort string }{
-		{" Codex ", "gpt-6-sol", "high", "", ""},
+		{" Codex ", "gpt-6.1-sol", "high", "", ""},
 		{"claude", "claude-sonnet-5-5", "high", "", ""},
 		{"omo", "chatgpt-subscription/gpt-6-sol", "max", "", ""},
 		{"codex", "explicit-model", "low", " explicit-model ", " low "},
 		{"codex", "explicit-model", "high", "explicit-model", ""},
-		{"codex", "gpt-6-sol", "low", "", "low"},
+		{"codex", "gpt-6.1-sol", "low", "", "low"},
 	} {
 		t.Run(tc.host+tc.inputModel+tc.inputEffort, func(t *testing.T) {
 			fixture := newOrcaApplicationFixture()

@@ -5,7 +5,7 @@ import "strings"
 const (
 	// IssueOps implementer(하위 세션 execution owner)의 host별 기본 모델.
 	// execution prepare가 --owner-model/--owner-effort 미지정 호출에 적용한다.
-	ImplementerModelCodex  = "gpt-6-sol"
+	ImplementerModelCodex  = "gpt-6.1-sol"
 	ImplementerEffortCodex = "high"
 	// Claude Code 자동 체인은 Opus 5.5 planner가 계획·리뷰하고 Sonnet 5.5
 	// implementer가 실행한다.
