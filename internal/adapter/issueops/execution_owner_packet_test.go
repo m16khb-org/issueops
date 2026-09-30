@@ -492,8 +492,7 @@ func executionOwnerReportLabels(report string) []string {
 	return labels
 }
 
-// A default-model change must reach the sealed packet, rendered prompt and review
-// command without rewriting an explicitly selected implementation model.
+// Prepare metadata preserves model roles; the review command receives runtime values.
 func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
 	for _, tc := range []struct{ host, reviewer, effort, research, researchEffort string }{
 		{"codex", "gpt-6-astra", "xhigh", "gpt-6-luna", "medium"},
@@ -536,7 +535,7 @@ func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
 				}
 			}
 			commands := packet["commands"].(map[string]any)
-			if !strings.Contains(commands["implementation_review"].(string), "--reviewer-model '"+tc.reviewer+"'") {
+			if !strings.Contains(commands["implementation_review"].(string), "--reviewer-model <REVIEWER_MODEL> --reviewer-effort <REVIEWER_EFFORT>") {
 				t.Errorf("review command=%v", commands["implementation_review"])
 			}
 			if digestExecutionOwnerBytes(raw) != artifacts.packetSHA256 {
@@ -548,6 +547,21 @@ func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
 			}
 			if string(prompt) != artifacts.prompt || digestExecutionOwnerBytes(prompt) != artifacts.promptSHA256 {
 				t.Fatal("prompt seal mismatch")
+			}
+
+			req.OwnerEffort = "medium"
+			if _, err := buildExecutionOwnerArtifacts(record, req, snapshot, nil); err == nil {
+				t.Fatal("changed prepare must not rewrite sealed artifacts")
+			}
+			record.Execution.Lease.Generation++
+			if _, err := buildExecutionOwnerArtifacts(record, req, snapshot, nil); err != nil {
+				t.Fatal(err)
+			}
+			for path, want := range map[string]string{artifacts.packetPath: artifacts.packetSHA256, artifacts.promptPath: artifacts.promptSHA256} {
+				old, err := os.ReadFile(path)
+				if err != nil || digestExecutionOwnerBytes(old) != want {
+					t.Fatalf("new generation altered sealed artifact %s: %v", path, err)
+				}
 			}
 		})
 	}
@@ -568,4 +582,22 @@ var issueOpsOwnerReportLabels = []string{
 	"Draft PR/MR",
 	"Deviations",
 	"Blockers",
+}
+
+func TestExecutionOwnerPromptConsumesRuntimeReview(t *testing.T) {
+	record, req := ownerPacketFixture()
+	prompt := executionOwnerPromptFixture(t, record, req)
+	for _, required := range []string{
+		"issueops next --id io-69 --json",
+		".review.model", ".review.effort", ".review.tier", ".review.lenses",
+		"issueops-review", "준비 당시 기본값", "shell-quote", "라운드 상승",
+		"<REVIEWER_MODEL>", "<REVIEWER_EFFORT>",
+	} {
+		if !strings.Contains(prompt, required) {
+			t.Errorf("rendered owner prompt missing %q", required)
+		}
+	}
+	if strings.Contains(prompt, "PASS한 뒤, planner급 모델") {
+		t.Error("publication must not execute prepare-time reviewer directly")
+	}
 }

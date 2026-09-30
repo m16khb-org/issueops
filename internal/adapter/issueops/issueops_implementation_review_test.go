@@ -122,7 +122,7 @@ func TestDirectModeRequiresImplementationReviewForPR(t *testing.T) {
 	}
 }
 
-func TestOwnerCommandsIncludeImplementationReviewWithPlannerModel(t *testing.T) {
+func TestOwnerCommandsIncludeImplementationReviewWithRuntimeInputs(t *testing.T) {
 	repo := t.TempDir()
 	worktree := filepath.Join(t.TempDir(), "83-review")
 	record := issueops.IssueOpsRecord{
@@ -134,20 +134,12 @@ func TestOwnerCommandsIncludeImplementationReviewWithPlannerModel(t *testing.T) 
 			Lease:     issueops.WriteLease{Generation: 1},
 		},
 	}
-	for _, tc := range []struct {
-		host   string
-		model  string
-		effort string
-	}{
-		{host: "codex", model: "gpt-6-astra", effort: "xhigh"},
-		{host: "claude", model: "claude-opus-5-5", effort: "high"},
-	} {
-		t.Run(tc.host, func(t *testing.T) {
-			commands := executionOwnerCommandsFor(record, issueops.ExecutionPrepareRequest{OwnerHost: tc.host}, strings.Repeat("a", 64))
+	for _, host := range []string{"codex", "claude", "omo"} {
+		t.Run(host, func(t *testing.T) {
+			commands := executionOwnerCommandsFor(record, issueops.ExecutionPrepareRequest{OwnerHost: host}, strings.Repeat("a", 64))
 			if !strings.Contains(commands.ImplementationReview, "implementation-review record") ||
-				!strings.Contains(commands.ImplementationReview, tc.model) ||
-				!strings.Contains(commands.ImplementationReview, "--reviewer-effort '"+tc.effort+"'") {
-				t.Fatalf("owner command must pin the planner reviewer model: %s", commands.ImplementationReview)
+				!strings.Contains(commands.ImplementationReview, "--reviewer-model <REVIEWER_MODEL> --reviewer-effort <REVIEWER_EFFORT>") {
+				t.Fatalf("owner command must accept actual runtime reviewer values: %s", commands.ImplementationReview)
 			}
 			if err := validateExecutionOwnerCatalog(commands); err != nil {
 				t.Fatalf("implementation review command must match the catalog: %v", err)
