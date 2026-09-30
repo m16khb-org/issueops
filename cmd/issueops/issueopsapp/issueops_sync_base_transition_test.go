@@ -1,6 +1,10 @@
 package issueopsapp
 
 import (
+	issueopsport "issueops/internal/port"
+)
+
+import (
 	"context"
 	"os"
 	"path/filepath"
@@ -16,14 +20,14 @@ func TestReleasedSyncBaseReachableThroughProductionClaimCompleteTransitions(t *t
 	stateRoot, record, tokenPath := seedSyncBaseTransition(t)
 	actor := claimWiringActor(t)
 
-	claimed, err := issueops.ExecuteExecution(context.Background(), stateRoot, issueops.ExecutionActionRequest{
-		Action: issueops.ExecutionActionClaim, ID: record.ID, Generation: 1,
+	claimed, err := newExecutionService().Execute(context.Background(), stateRoot, issueopscontract.ExecutionActionRequest{
+		Action: issueopscontract.ExecutionActionClaim, ID: record.ID, Generation: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root, TokenFile: tokenPath,
-	}, issueops.ExecutionActionDependencies{Claim: issueOpsClaimHandler})
+	}, issueopsport.ExecutionActionDependencies{Claim: issueOpsClaimHandler})
 	if err != nil {
 		t.Fatalf("production claim: %v", err)
 	}
-	if result := claimed.(issueops.ExecutionResult); result.Execution.Lease.Status != issueopscontract.LeaseStatusActive {
+	if result := claimed.(issueopscontract.ExecutionResult); result.Execution.Lease.Status != issueopscontract.LeaseStatusActive {
 		t.Fatalf("claim result=%+v", result)
 	}
 
@@ -35,16 +39,16 @@ func TestReleasedSyncBaseReachableThroughProductionClaimCompleteTransitions(t *t
 		t.Fatal(err)
 	}
 	finalHead := strings.TrimSpace(claimWiringGit(t, record.Execution.Workspace.Root, "rev-parse", "HEAD"))
-	completed, err := issueops.ExecuteExecution(context.Background(), stateRoot, issueops.ExecutionActionRequest{
-		Action: issueops.ExecutionActionComplete, ID: record.ID, Generation: 1,
+	completed, err := newExecutionService().Execute(context.Background(), stateRoot, issueopscontract.ExecutionActionRequest{
+		Action: issueopscontract.ExecutionActionComplete, ID: record.ID, Generation: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root, FinalHead: finalHead,
 		VerificationReportPath: reportPath, Verification: []string{"go test ./... -count=1"},
 		RemoteArtifactURL: record.RemoteArtifact.URL, Confirm: true,
-	}, issueops.ExecutionActionDependencies{Complete: issueOpsCompleteHandler})
+	}, issueopsport.ExecutionActionDependencies{Complete: issueOpsCompleteHandler})
 	if err != nil {
 		t.Fatalf("production complete: %v", err)
 	}
-	completedResult := completed.(issueops.ExecutionResult)
+	completedResult := completed.(issueopscontract.ExecutionResult)
 	if completedResult.Execution.Lease.Status != issueopscontract.LeaseStatusReleased ||
 		completedResult.Execution.Lease.Holder != nil || completedResult.Execution.Completion == nil ||
 		completedResult.Execution.Completion.Generation != 1 {
@@ -60,26 +64,26 @@ func TestReleasedSyncBaseReachableThroughProductionClaimCompleteTransitions(t *t
 	phaseBefore := before.Phase
 	git := newTransitionSyncBaseGit(t, record.Branch, finalHead)
 
-	preview, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueops.ExecutionSyncBaseRequest{
-		ID: record.ID, Mode: issueops.ExecutionSyncBasePreview, CompletionGeneration: 1,
+	preview, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
+		ID: record.ID, Mode: issueopscontract.ExecutionSyncBasePreview, CompletionGeneration: 1,
 		CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionSyncBaseDeps{Git: git.run})
+	}, issueopscontract.ExecutionSyncBaseDeps{Git: git.run})
 	if err != nil || len(preview.Fingerprint) != 64 || !preview.MergeNeeded {
 		t.Fatalf("released preview result=%+v err=%v", preview, err)
 	}
 
-	apply, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueops.ExecutionSyncBaseRequest{
-		ID: record.ID, Mode: issueops.ExecutionSyncBaseApply, CompletionGeneration: 1,
+	apply, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
+		ID: record.ID, Mode: issueopscontract.ExecutionSyncBaseApply, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root, Confirm: true, Fingerprint: preview.Fingerprint,
-	}, issueops.ExecutionSyncBaseDeps{Git: git.run})
+	}, issueopscontract.ExecutionSyncBaseDeps{Git: git.run})
 	if err != nil || !apply.MergeInProgress || apply.Pushed || apply.NextCommand == "" || apply.AbortCommand == "" {
 		t.Fatalf("released conflict apply result=%+v err=%v", apply, err)
 	}
 
-	finalized, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueops.ExecutionSyncBaseRequest{
-		ID: record.ID, Mode: issueops.ExecutionSyncBaseFinalize, CompletionGeneration: 1,
+	finalized, err := issueops.SyncExecutionBase(context.Background(), stateRoot, issueopscontract.ExecutionSyncBaseRequest{
+		ID: record.ID, Mode: issueopscontract.ExecutionSyncBaseFinalize, CompletionGeneration: 1,
 		Actor: actor, CWD: record.Execution.Workspace.Root,
-	}, issueops.ExecutionSyncBaseDeps{Git: git.run})
+	}, issueopscontract.ExecutionSyncBaseDeps{Git: git.run})
 	if err != nil || !finalized.Merged || !finalized.Pushed || finalized.MergeCommit != git.mergeOID {
 		t.Fatalf("released finalize result=%+v err=%v", finalized, err)
 	}
@@ -114,7 +118,7 @@ func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.IssueOpsReco
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = issueops.IssueOpsPhasePR
+	record.Phase = issueopscontract.IssueOpsPhasePR
 	record.IssueURL = "https://github.com/example/issueops/issues/318"
 	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: branch,

@@ -10,7 +10,7 @@ import (
 // 비교하므로 같은 배선을 재현한다.
 func testCLIExecutionRuntime() executioncmd.ExecutionDeps {
 	return executioncmd.ExecutionDeps{
-		ExecuteExecution:             issueopscore.ExecuteExecution,
+		ExecuteExecution:             testExecutionService().Execute,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
 		SwitchExecutionMode:          testModeSwitcher(),
 		SyncExecutionBase:            issueopscore.SyncExecutionBase,
@@ -18,5 +18,5 @@ func testCLIExecutionRuntime() executioncmd.ExecutionDeps {
 }
 func testMCPExecutionDeps() mcpcli.ExecutionDeps {
 	root := issueOpsStateRootForTest()
-	return mcpcli.ExecutionDeps{ExecuteExecution: issueopscore.ExecuteExecution, ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return root }}
+	return mcpcli.ExecutionDeps{ExecuteExecution: testExecutionService().Execute, ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return root }}
 }

@@ -30,7 +30,7 @@ func TestCleanupRemoteBranchAcceptsAVerifiedSupersedingArtifact(t *testing.T) {
 			Body: "Supersedes " + record.RemoteArtifact.URL,
 		}, nil
 	}
-	req := CleanupRemoteBranchRequest{ID: record.ID, SupersededBy: "https://github.com/acme/repo/pull/307"}
+	req := issueops.CleanupRemoteBranchRequest{ID: record.ID, SupersededBy: "https://github.com/acme/repo/pull/307"}
 
 	result, err := CleanupRemoteBranch(context.Background(), stateRoot, req, deps)
 	if err != nil {
@@ -60,7 +60,7 @@ func TestCleanupRemoteBranchAcceptsSupersedingArtifactForUnmergedOriginal(t *tes
 	}
 	replacement := "https://github.com/acme/repo/pull/307"
 
-	result, err := CleanupRemoteBranch(context.Background(), stateRoot, CleanupRemoteBranchRequest{
+	result, err := CleanupRemoteBranch(context.Background(), stateRoot, issueops.CleanupRemoteBranchRequest{
 		ID: record.ID, SupersededBy: replacement,
 	}, deps)
 	if err != nil {
@@ -78,7 +78,7 @@ func TestCleanupRemoteBranchAcceptsSupersedingArtifactForUnmergedOriginal(t *tes
 	}
 
 	other := "https://github.com/acme/repo/pull/308"
-	otherResult, err := CleanupRemoteBranch(context.Background(), stateRoot, CleanupRemoteBranchRequest{
+	otherResult, err := CleanupRemoteBranch(context.Background(), stateRoot, issueops.CleanupRemoteBranchRequest{
 		ID: record.ID, SupersededBy: other,
 	}, deps)
 	if err != nil {
@@ -88,7 +88,7 @@ func TestCleanupRemoteBranchAcceptsSupersedingArtifactForUnmergedOriginal(t *tes
 		t.Fatal("different replacement URLs must produce different fingerprints")
 	}
 
-	applied, err := CleanupRemoteBranch(context.Background(), stateRoot, CleanupRemoteBranchRequest{
+	applied, err := CleanupRemoteBranch(context.Background(), stateRoot, issueops.CleanupRemoteBranchRequest{
 		ID: record.ID, SupersededBy: replacement, Apply: true, Confirm: true, Fingerprint: result.Fingerprint,
 	}, deps)
 	if err != nil || !applied.Deleted || git.pushes != 1 {
@@ -131,7 +131,7 @@ func TestCleanupRemoteBranchRejectsUnverifiableSupersedingArtifacts(t *testing.T
 			stateRoot, record := remoteBranchTestRecord(t)
 			deps := remoteBranchDeps(remoteBranchAdvancedTipGit())
 			deps.ObserveArtifact = tc.observe
-			req := CleanupRemoteBranchRequest{ID: record.ID}
+			req := issueops.CleanupRemoteBranchRequest{ID: record.ID}
 			if tc.name != "증거 없음" {
 				req.SupersededBy = "https://github.com/acme/repo/pull/307"
 			}

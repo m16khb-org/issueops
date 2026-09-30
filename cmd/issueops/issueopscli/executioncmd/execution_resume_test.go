@@ -48,19 +48,19 @@ func TestExecutionResumeCLIInvokesInjectedHandler(t *testing.T) {
 	var output any
 	err := runExecutionForTest(args, Deps{
 		StateRoot: func() string { return stateRoot },
-		Resume: func(_ context.Context, gotRoot string, request issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
+		Resume: func(_ context.Context, gotRoot string, request model.ExecutionResumeRequest) (model.ExecutionResumeResult, error) {
 			calls++
 			if gotRoot != stateRoot || request.ID != "io-aaaaaaaaaaaa" || request.ExpectedGeneration != 3 || request.CWD != "/repo.worktrees/resume" || !request.Confirm {
 				t.Fatalf("resume handler request=%+v state_root=%q", request, gotRoot)
 			}
-			return issueops.ExecutionResumeResult{OK: true, ID: request.ID, ResumeDisposition: "existing_binding"}, nil
+			return model.ExecutionResumeResult{OK: true, ID: request.ID, ResumeDisposition: "existing_binding"}, nil
 		},
 		PrintJSON: func(value any) error { output = value; return nil },
 	})
 	if err != nil || calls != 1 {
 		t.Fatalf("resume CLI err=%v calls=%d", err, calls)
 	}
-	result, ok := output.(issueops.ExecutionResumeResult)
+	result, ok := output.(model.ExecutionResumeResult)
 	if !ok || !result.OK || result.ID != "io-aaaaaaaaaaaa" || result.ResumeDisposition != "existing_binding" {
 		t.Fatalf("resume CLI output=%#v", output)
 	}
@@ -88,14 +88,14 @@ func TestExecutionResumeCLIInvokesHandlerWithObservedActor(t *testing.T) {
 	calls := 0
 	err := runExecutionForTest(args, Deps{
 		StateRoot: func() string { return stateRoot },
-		Resume: func(_ context.Context, _ string, request issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
+		Resume: func(_ context.Context, _ string, request model.ExecutionResumeRequest) (model.ExecutionResumeResult, error) {
 			calls++
 			if request.Actor.Host != "claude" || request.Actor.SessionID != "claude-session" ||
 				request.Actor.SessionProcess == nil || request.Actor.SessionProcess.PID != 42 ||
 				request.CWD != "/repo.worktrees/resume" {
 				t.Fatalf("observed resume request=%+v", request)
 			}
-			return issueops.ExecutionResumeResult{OK: true, ID: request.ID}, nil
+			return model.ExecutionResumeResult{OK: true, ID: request.ID}, nil
 		},
 		PrintJSON:              func(any) error { return nil },
 		nativeActorObservation: &observation,

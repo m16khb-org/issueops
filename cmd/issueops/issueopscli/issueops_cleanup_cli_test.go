@@ -113,7 +113,7 @@ func TestRunIssueOpsCleanupCloseChildrenRequiresMergedAndConfirmRecordsState(t *
 		ID:            issueopscore.NewIssueOpsID(repo, "12-child-cleanup"),
 		Repo:          repo,
 		Branch:        "12-child-cleanup",
-		Phase:         issueopscore.IssueOpsPhasePR,
+		Phase:         issueopscontract.IssueOpsPhasePR,
 		IssueURL:      "https://github.com/acme/repo/issues/12",
 		IssueLinks: []issueopscontract.IssueOpsIssueLink{{
 			Type:     "child",

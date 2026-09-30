@@ -657,7 +657,7 @@ func seedReleasedDirectHandoffRecord(t *testing.T, stateRoot string) issueopscon
 	if err := os.MkdirAll(worktree, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = issueopsadapter.IssueOpsPhaseImplement
+	record.Phase = issueopscontract.IssueOpsPhaseImplement
 	record.WorktreePath = worktree
 	record.IssueURL = "https://github.com/example/issueops/issues/11"
 	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{

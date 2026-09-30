@@ -1,16 +1,18 @@
 package issueopslease
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"errors"
 	"testing"
-
-	"issueops/internal/adapter/issueops"
 )
 
 func TestReseedHandlerRequiresService(t *testing.T) {
-	_, err := NewReseedHandler(nil, nil)(context.Background(), "/state", issueops.ExecutionReseedRequest{ID: "io-reseed"})
-	if !errors.Is(err, issueops.ErrReseedHandlerUnavailable) {
+	_, err := NewReseedHandler(nil, nil)(context.Background(), "/state", issueopscontract.ExecutionReseedRequest{ID: "io-reseed"})
+	if !errors.Is(err, issueopscontract.ErrReseedHandlerUnavailable) {
 		t.Fatalf("error=%v", err)
 	}
 }

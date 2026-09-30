@@ -1,32 +1,34 @@
 package executioncmd
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"strings"
 	"testing"
-
-	"issueops/internal/adapter/issueops"
 )
 
 func TestExecutionSyncBaseCLIMapsCompletionGeneration(t *testing.T) {
-	var captured issueops.ExecutionSyncBaseRequest
+	var captured issueopscontract.ExecutionSyncBaseRequest
 	err := runExecutionForTest([]string{
 		"sync-base", "--id", "io-sync-base-cli", "--completion-generation", "7", "--preview", "--cwd", "/worktree", "--json",
 	}, Deps{
 		StateRoot: func() string { return "/state" },
-		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, stateRoot string, request issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionSyncBaseRequest, _ issueopscontract.ExecutionSyncBaseDeps) (issueopscontract.ExecutionSyncBaseResult, error) {
 			if stateRoot != "/state" {
 				t.Fatalf("state root=%q", stateRoot)
 			}
 			captured = request
-			return issueops.ExecutionSyncBaseResult{OK: true, ID: request.ID, Mode: request.Mode}, nil
+			return issueopscontract.ExecutionSyncBaseResult{OK: true, ID: request.ID, Mode: request.Mode}, nil
 		}},
 		PrintJSON: func(any) error { return nil },
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if captured.ID != "io-sync-base-cli" || captured.Mode != issueops.ExecutionSyncBasePreview || captured.CompletionGeneration != 7 || captured.CWD != "/worktree" {
+	if captured.ID != "io-sync-base-cli" || captured.Mode != issueopscontract.ExecutionSyncBasePreview || captured.CompletionGeneration != 7 || captured.CWD != "/worktree" {
 		t.Fatalf("captured request=%+v", captured)
 	}
 }
@@ -44,9 +46,9 @@ func TestExecutionSyncBaseCLIMutationRequiresProcessCWD(t *testing.T) {
 		"--cwd", requested, "--json",
 	}, Deps{
 		StateRoot: func() string { return "/state" },
-		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, _ string, _ issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, _ string, _ issueopscontract.ExecutionSyncBaseRequest, _ issueopscontract.ExecutionSyncBaseDeps) (issueopscontract.ExecutionSyncBaseResult, error) {
 			calls++
-			return issueops.ExecutionSyncBaseResult{OK: true}, nil
+			return issueopscontract.ExecutionSyncBaseResult{OK: true}, nil
 		}},
 		PrintJSON:  func(any) error { return nil },
 		PrintError: func(err error) error { return err },
@@ -71,12 +73,12 @@ func TestExecutionSyncBaseCLIMutationAcceptsMatchingProcessCWD(t *testing.T) {
 		"--cwd", requested, "--json",
 	}, Deps{
 		StateRoot: func() string { return "/state" },
-		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, _ string, request issueops.ExecutionSyncBaseRequest, _ issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+		Runtime: ExecutionDeps{SyncExecutionBase: func(_ context.Context, _ string, request issueopscontract.ExecutionSyncBaseRequest, _ issueopscontract.ExecutionSyncBaseDeps) (issueopscontract.ExecutionSyncBaseResult, error) {
 			calls++
 			if request.CWD != requested {
 				t.Fatalf("sync-base request cwd=%q", request.CWD)
 			}
-			return issueops.ExecutionSyncBaseResult{OK: true}, nil
+			return issueopscontract.ExecutionSyncBaseResult{OK: true}, nil
 		}},
 		PrintJSON: func(any) error { return nil },
 	})

@@ -24,11 +24,11 @@ import (
 	"issueops/internal/port"
 )
 
-func issueOpsResumeHandler(ctx context.Context, stateRoot string, request issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
+func issueOpsResumeHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
 	orcaExecution := orca.NewExecution()
 	service, err := newIssueOpsResumeService(stateRoot, orcaExecution, orcaExecution)
 	if err != nil {
-		return issueops.ExecutionResumeResult{ID: request.ID}, err
+		return issueopscontract.ExecutionResumeResult{ID: request.ID}, err
 	}
 	return leaseinbound.NewResumeHandler(service, ownerdomain.OwnerResumeNextCommand)(ctx, stateRoot, request)
 }

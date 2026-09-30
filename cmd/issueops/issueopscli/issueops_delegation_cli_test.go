@@ -61,7 +61,7 @@ func TestRunIssueOpsChildLifecycle(t *testing.T) {
 	}
 
 	child := started.Child
-	child.Phase = issueopscore.IssueOpsPhaseDone
+	child.Phase = issueopscontract.IssueOpsPhaseDone
 	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), child); err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +108,7 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
-	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, parent.ID)
@@ -120,7 +120,7 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 	assertIssueOpsJSONErrorContains(t, blockedOut, err, "child_incomplete:"+started.Child.ID)
 
 	child := started.Child
-	child.Phase = issueopscore.IssueOpsPhaseDone
+	child.Phase = issueopscontract.IssueOpsPhaseDone
 	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), child); err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestCLIIssueOpsPhaseAdvanceToPRBlockedByChildren(t *testing.T) {
 	if err := json.Unmarshal([]byte(prOut), &prRecord); err != nil {
 		t.Fatalf("phase pr should return JSON after child acceptance: %v\n%s", err, prOut)
 	}
-	if prRecord.Phase != issueopscore.IssueOpsPhasePR {
+	if prRecord.Phase != issueopscontract.IssueOpsPhasePR {
 		t.Fatalf("accepted child should allow parent pr phase, got %s", prRecord.Phase)
 	}
 }
@@ -159,7 +159,7 @@ func TestCLIIssueOpsStrictPRReadinessReportsIncompleteChildren(t *testing.T) {
 	if err := json.Unmarshal([]byte(startOut), &started); err != nil {
 		t.Fatalf("child start should return JSON: %v\n%s", err, startOut)
 	}
-	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 
@@ -175,7 +175,7 @@ func TestCLIIssueOpsStrictPRReadinessReportsIncompleteChildren(t *testing.T) {
 	}
 }
 
-func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (issueopscontract.IssueOpsRecord, issueopscore.IssueOpsActor) {
+func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
 	t.Helper()
 	out := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"start", "--repo", repo, "--branch", branch, "--json"})
@@ -194,14 +194,14 @@ func startIssueOpsCLIReadyDelegationParent(t *testing.T, repo, branch string) (i
 		t.Fatal(err)
 	}
 	record, actor := seedIssueOpsCLIExecution(t, record)
-	record, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), record.ID, string(issueopscore.IssueOpsPhaseImplement), actor)
+	record, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), record.ID, string(issueopscontract.IssueOpsPhaseImplement), actor)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return record, actor
 }
 
-func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (issueopscontract.IssueOpsRecord, issueopscore.IssueOpsActor) {
+func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
 	t.Helper()
 	if code, _, stderr := preflight.GitCmd(repo, "checkout", "-q", "-b", branch); code != 0 {
 		t.Fatalf("git checkout parent branch failed: %s", stderr)
@@ -239,7 +239,7 @@ func startIssueOpsCLIReadyPRParentWithChild(t *testing.T, repo, branch string) (
 		t.Fatal(err)
 	}
 	parent, actor := seedIssueOpsCLIExecution(t, parent)
-	parent, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscore.IssueOpsPhaseImplement), actor)
+	parent, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), parent.ID, string(issueopscontract.IssueOpsPhaseImplement), actor)
 	if err != nil {
 		t.Fatal(err)
 	}

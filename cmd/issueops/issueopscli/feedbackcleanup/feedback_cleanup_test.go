@@ -461,7 +461,7 @@ func cleanupStatusRecord(t *testing.T, done, withArtifact bool) issueopscontract
 	record := feedbackCleanupIssueOpsRecord(t)
 	record.IssueURL = "https://github.com/acme/repo/issues/285"
 	if done {
-		record.Phase = issueopscore.IssueOpsPhaseDone
+		record.Phase = issueopscontract.IssueOpsPhaseDone
 	}
 	if withArtifact {
 		record.RemoteArtifact = &issueopscontract.IssueOpsRemoteArtifactVerification{

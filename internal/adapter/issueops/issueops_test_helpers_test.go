@@ -73,7 +73,7 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 
 func prepareExecutionCompletionFixture(t *testing.T, stateRoot string, fixture *claimableExecutionFixture) {
 	t.Helper()
-	fixture.record.Phase = IssueOpsPhasePR
+	fixture.record.Phase = issueops.IssueOpsPhasePR
 	fixture.record.IssueURL = "https://github.com/example/issueops/issues/69"
 	fixture.record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
 		Provider: "github", Kind: "pr", URL: "https://github.com/example/issueops/pull/69",
@@ -320,7 +320,7 @@ func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktre
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, id, string(IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, id, string(issueops.IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -404,8 +404,8 @@ func issueOpsExecutionForTest(repo, worktree, branch string) *issueops.Execution
 	}
 }
 
-func issueOpsActorForTest(worktree string) IssueOpsActor {
-	return IssueOpsActor{
+func issueOpsActorForTest(worktree string) issueops.IssueOpsActor {
+	return issueops.IssueOpsActor{
 		Host: "codex", SessionID: "test-session", AgentID: "test-agent", CWD: worktree,
 		NativeProcessAncestry: []issueops.NativeProcessReceipt{{
 			PID: 1, StartedAt: "2026-07-22T00:00:00Z", Executable: "/usr/bin/codex",
@@ -439,8 +439,8 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		t.Fatalf("create remote branch fixture: %s", stderr)
 	}
 	record := issueops.IssueOpsRecord{
-		OK: true, SchemaVersion: IssueOpsCurrentSchemaVersion,
-		ID: NewIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: IssueOpsPhasePlan,
+		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
+		ID: NewIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan,
 		IssueURL:     "https://github.com/acme/repo/issues/16",
 		DesignReview: &issueops.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{

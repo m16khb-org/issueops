@@ -15,9 +15,9 @@ import (
 
 func TestMCPExecutionDependenciesPropagatePublicationReconcileWithoutInvocation(t *testing.T) {
 	invoked := 0
-	handler := issueops.RemotePullRequestReconcileHandler(func(context.Context, string, issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+	handler := issueopscontract.RemotePullRequestReconcileHandler(func(context.Context, string, issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 		invoked++
-		return issueops.ExecutionReconcileResult{}, nil
+		return issueopscontract.ExecutionReconcileResult{}, nil
 	})
 
 	deps := issueOpsExecutionActionDependencies(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Publication: PublicationHandlers{Reconcile: handler}})
@@ -34,9 +34,9 @@ func TestMCPExecutionDependenciesPropagatePublicationReconcileWithoutInvocation(
 
 func TestMCPExecutionDependenciesPropagateCompletionWithoutInvocation(t *testing.T) {
 	invoked := 0
-	handler := issueops.ExecutionCompleteHandler(func(context.Context, string, issueops.ExecutionCompleteRequest) (issueops.ExecutionResult, error) {
+	handler := issueopscontract.ExecutionCompleteHandler(func(context.Context, string, issueopscontract.ExecutionCompleteRequest) (issueopscontract.ExecutionResult, error) {
 		invoked++
-		return issueops.ExecutionResult{}, nil
+		return issueopscontract.ExecutionResult{}, nil
 	})
 	deps := issueOpsExecutionActionDependencies(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Complete: handler})
 	if deps.Complete == nil || reflect.ValueOf(deps.Complete).Pointer() != reflect.ValueOf(handler).Pointer() {
@@ -69,12 +69,12 @@ func TestMCPPublicationReconcilePreservesToolErrorClassification(t *testing.T) {
 				"host": "codex", "session_id": "publication-mcp-session",
 				"session_pid": float64(receipt.PID), "session_started_at": receipt.StartedAt,
 				"session_executable": receipt.Executable, "cwd": record.Execution.Workspace.Root,
-			}, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Publication: PublicationHandlers{Reconcile: func(_ context.Context, _ string, request issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+			}, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Publication: PublicationHandlers{Reconcile: func(_ context.Context, _ string, request issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 				calls++
 				if request.Snapshot == nil || request.Snapshot.ID != record.ID {
 					t.Fatalf("publication reconcile snapshot=%#v", request.Snapshot)
 				}
-				return issueops.ExecutionReconcileResult{OK: test.handlerErr == nil, ID: record.ID, Code: code}, test.handlerErr
+				return issueopscontract.ExecutionReconcileResult{OK: test.handlerErr == nil, ID: record.ID, Code: code}, test.handlerErr
 			}}})
 			if calls != 1 || !outcome.Handled || outcome.IsError != test.wantIsError || outcome.Err != nil {
 				t.Fatalf("calls=%d outcome=%#v", calls, outcome)
@@ -84,7 +84,7 @@ func TestMCPPublicationReconcilePreservesToolErrorClassification(t *testing.T) {
 				if !ok || payload["ok"] != false || payload["error"] != test.handlerErr.Error() {
 					t.Fatalf("error payload=%#v", outcome.Payload)
 				}
-			} else if result, ok := outcome.Payload.(issueops.ExecutionReconcileResult); !ok || !result.OK || result.ID != record.ID {
+			} else if result, ok := outcome.Payload.(issueopscontract.ExecutionReconcileResult); !ok || !result.OK || result.ID != record.ID {
 				t.Fatalf("success payload=%#v", outcome.Payload)
 			}
 		})
@@ -110,9 +110,9 @@ func publicationReconcileMCPRecord(t *testing.T, stateRoot string) (issueopscont
 	repo, worktree := t.TempDir(), t.TempDir()
 	actor := issueopscontract.NativeActor{Host: "codex", SessionID: "publication-mcp-session", SessionProcess: &receipt}
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
+		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
 		ID: issueops.NewIssueOpsID(repo, "195-publication-mcp"), Repo: repo, Branch: "195-publication-mcp",
-		Phase: issueops.IssueOpsPhasePR, WorktreePath: worktree,
+		Phase: issueopscontract.IssueOpsPhasePR, WorktreePath: worktree,
 		Execution: &issueopscontract.Execution{
 			Mode:      issueopscontract.ExecutionModeDirect,
 			Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: "195-publication-mcp", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-01T00:00:00Z"},
@@ -207,12 +207,12 @@ func TestHandleToolCallWithDependenciesRoutesResumeToInjectedHandler(t *testing.
 		t.Fatal(err)
 	}
 	calls := 0
-	response, rpcErr := HandleToolCallWithDependencies(params, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resume: func(_ context.Context, stateRoot string, request issueops.ExecutionResumeRequest) (issueops.ExecutionResumeResult, error) {
+	response, rpcErr := HandleToolCallWithDependencies(params, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resume: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
 		calls++
 		if stateRoot == "" || request.ID != "io-aaaaaaaaaaaa" || request.ExpectedGeneration != 3 || request.CWD != "/repo.worktrees/resume" || !request.Confirm {
 			t.Fatalf("resume handler request=%+v state_root=%q", request, stateRoot)
 		}
-		return issueops.ExecutionResumeResult{OK: true, ID: request.ID, ResumeDisposition: "existing_binding"}, nil
+		return issueopscontract.ExecutionResumeResult{OK: true, ID: request.ID, ResumeDisposition: "existing_binding"}, nil
 	}})
 	if rpcErr != nil || calls != 1 {
 		t.Fatalf("resume MCP rpc_err=%v calls=%d", rpcErr, calls)

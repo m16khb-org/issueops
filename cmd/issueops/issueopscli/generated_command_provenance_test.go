@@ -55,9 +55,9 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 			"--generated-by-sha256", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 			"--generated-for-generation", "7", "--json",
 		}, Dependencies{
-			Release: func(context.Context, string, issueopscore.ExecutionReleaseRequest) (issueopscore.ExecutionResult, error) {
+			Release: func(context.Context, string, issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				mutations++
-				return issueopscore.ExecutionResult{}, nil
+				return issueopscontract.ExecutionResult{}, nil
 			},
 			Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
 				ExecutablePath:   "/installed/bin/issueops",
@@ -118,9 +118,9 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 	mutations := 0
 	_, runErr := captureStdoutAndErrorForIssueOps(t, func() error {
 		return runIssueOpsForTest(tokens[1:], Dependencies{
-			Release: func(context.Context, string, issueopscore.ExecutionReleaseRequest) (issueopscore.ExecutionResult, error) {
+			Release: func(context.Context, string, issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				mutations++
-				return issueopscore.ExecutionResult{OK: true, ID: record.ID, Execution: *record.Execution}, nil
+				return issueopscontract.ExecutionResult{OK: true, ID: record.ID, Execution: *record.Execution}, nil
 			},
 			Provenance: issueOpsProvenanceObserverStub{evidence: provenanceport.Receipt{
 				ExecutablePath: evidence.ExecutablePath, ExecutableSHA256: evidence.ExecutableSHA256,

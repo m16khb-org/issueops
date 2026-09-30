@@ -210,7 +210,7 @@ func sealedResumeIdentityFixture(t *testing.T) (issueops.IssueOpsRecord, executi
 		requiredSkills: []string{"issueops"}, acceptanceIDs: []string{"AC-01"}, verificationCommands: []string{"go test ./..."},
 	}
 	manifest := map[string]string{"plan": digestExecutionOwnerBytes([]byte(plan))}
-	artifacts, err := buildExecutionOwnerArtifacts(record, ExecutionPrepareRequest{OwnerHost: "codex", OwnerModel: "gpt-5.6-sol", OwnerEffort: "high"}, snapshot, manifest)
+	artifacts, err := buildExecutionOwnerArtifacts(record, issueops.ExecutionPrepareRequest{OwnerHost: "codex", OwnerModel: "gpt-5.6-sol", OwnerEffort: "high"}, snapshot, manifest)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,10 @@
 package issueops
 
 import (
+	issueopsport "issueops/internal/port"
+)
+
+import (
 	"context"
 	model "issueops/internal/contract/issueops"
 	"testing"
@@ -8,7 +12,7 @@ import (
 
 func TestExecutionStatusUsesConfiguredHandler(t *testing.T) {
 	calls := 0
-	out, err := ExecuteExecution(t.Context(), "isolated-state", ExecutionActionRequest{Action: ExecutionActionStatus, ID: "io-status"}, ExecutionActionDependencies{Status: func(_ context.Context, root, id string) (model.ExecutionResult, error) {
+	out, err := testExecutionService().Execute(t.Context(), "isolated-state", model.ExecutionActionRequest{Action: model.ExecutionActionStatus, ID: "io-status"}, issueopsport.ExecutionActionDependencies{Status: func(_ context.Context, root, id string) (model.ExecutionResult, error) {
 		calls++
 		if root != "isolated-state" || id != "io-status" {
 			t.Fatalf("wrong identity: %q %q", root, id)

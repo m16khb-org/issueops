@@ -97,7 +97,7 @@ func TestPreparationRepositoryRejectsRecordIdentityDriftBeforePersistence(t *tes
 	}
 	snapshot := executionOwnerSnapshot{issue: executionOwnerIssue{BodySHA256: strings.Repeat("a", 64)}}
 
-	_, _, err = beginOrcaIntentViaRepository(stateRoot, passed, workspace, probe, ExecutionPrepareRequest{
+	_, _, err = beginOrcaIntentViaRepository(stateRoot, passed, workspace, probe, issueops.ExecutionPrepareRequest{
 		OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh",
 	}, snapshot, nil)
 	if err == nil || !strings.Contains(err.Error(), "identity") {

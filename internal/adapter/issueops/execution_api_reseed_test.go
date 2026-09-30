@@ -1,6 +1,11 @@
 package issueops
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+	issueopsport "issueops/internal/port"
+)
+
+import (
 	"context"
 	"errors"
 	ownerdomain "issueops/internal/domain/issueops"
@@ -9,21 +14,21 @@ import (
 )
 
 func TestExecuteExecutionReseedRequiresInjectedHandler(t *testing.T) {
-	_, err := ExecuteExecution(context.Background(), t.TempDir(), ExecutionActionRequest{
-		Action:        ExecutionActionReplace,
-		ReplaceAction: ExecutionReplaceReseed,
+	_, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueopscontract.ExecutionActionRequest{
+		Action:        issueopscontract.ExecutionActionReplace,
+		ReplaceAction: issueopscontract.ExecutionReplaceReseed,
 		ID:            "io-reseed-handler",
-	}, ExecutionActionDependencies{})
-	if !errors.Is(err, ErrReseedHandlerUnavailable) {
+	}, issueopsport.ExecutionActionDependencies{})
+	if !errors.Is(err, issueopscontract.ErrReseedHandlerUnavailable) {
 		t.Fatalf("reseed error=%v, want unavailable handler", err)
 	}
 }
 
 func TestExecuteExecutionReseedUsesInjectedHandlerOnce(t *testing.T) {
 	called := 0
-	result, err := ExecuteExecution(context.Background(), t.TempDir(), ExecutionActionRequest{
-		Action:               ExecutionActionReplace,
-		ReplaceAction:        ExecutionReplaceReseed,
+	result, err := testExecutionService().Execute(context.Background(), t.TempDir(), issueopscontract.ExecutionActionRequest{
+		Action:               issueopscontract.ExecutionActionReplace,
+		ReplaceAction:        issueopscontract.ExecutionReplaceReseed,
 		ID:                   "io-reseed-handler",
 		ExpectedGeneration:   3,
 		CompletionGeneration: 2,
@@ -31,17 +36,17 @@ func TestExecuteExecutionReseedUsesInjectedHandlerOnce(t *testing.T) {
 		Reason:               "holderless recovery",
 		CWD:                  "/canonical/worktree",
 		Confirm:              true,
-	}, ExecutionActionDependencies{Reseed: func(_ context.Context, stateRoot string, request ExecutionReseedRequest) (ExecutionReplaceResult, error) {
+	}, issueopsport.ExecutionActionDependencies{Reseed: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionReseedRequest) (issueopscontract.ExecutionReplaceResult, error) {
 		called++
 		if stateRoot == "" || request.ID != "io-reseed-handler" || request.ExpectedGeneration != 3 || request.CompletionGeneration != 2 || request.InventoryFingerprint != "inventory" || request.Reason != "holderless recovery" || request.CWD != "/canonical/worktree" || !request.Confirm {
 			t.Fatalf("unexpected injected reseed request: root=%q request=%+v", stateRoot, request)
 		}
-		return ExecutionReplaceResult{OK: true, ID: request.ID, Action: ExecutionReplaceReseed}, nil
+		return issueopscontract.ExecutionReplaceResult{OK: true, ID: request.ID, Action: issueopscontract.ExecutionReplaceReseed}, nil
 	}})
 	if err != nil {
 		t.Fatalf("execute reseed: %v", err)
 	}
-	got, ok := result.(ExecutionReplaceResult)
+	got, ok := result.(issueopscontract.ExecutionReplaceResult)
 	if !ok || !got.OK || got.ID != "io-reseed-handler" || called != 1 {
 		t.Fatalf("result=%#v called=%d", result, called)
 	}

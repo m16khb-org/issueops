@@ -12,10 +12,10 @@ import (
 	completioncontract "issueops/internal/contract/issueopscompletion"
 )
 
-func issueOpsCompleteHandler(ctx context.Context, stateRoot string, request issueops.ExecutionCompleteRequest) (issueops.ExecutionResult, error) {
+func issueOpsCompleteHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionCompleteRequest) (issueopscontract.ExecutionResult, error) {
 	database, err := sqlstore.Open(stateRoot)
 	if err != nil {
-		return issueops.ExecutionResult{ID: request.ID}, err
+		return issueopscontract.ExecutionResult{ID: request.ID}, err
 	}
 	service := completionapp.NewService(
 		completionoutbound.NewRepository(database), completionoutbound.NewEnvironment(), completionoutbound.UTCClock{},

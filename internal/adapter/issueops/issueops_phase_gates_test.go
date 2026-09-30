@@ -20,7 +20,7 @@ func issueOpsGrillGateBaseRecord(t *testing.T, stateRoot, repo, branch string) s
 		t.Fatal(err)
 	}
 	setIssueOpsPlanPrepForTest(t, stateRoot, rec.ID)
-	if _, err := AdvanceIssueOpsPhase(stateRoot, rec.ID, string(IssueOpsPhaseGrill)); err != nil {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, rec.ID, string(issueops.IssueOpsPhaseGrill)); err != nil {
 		t.Fatalf("grill entry should pass once intent is present: %v", err)
 	}
 	return rec.ID
@@ -34,14 +34,14 @@ func TestEnterPlanRequiresDomainReview(t *testing.T) {
 	if _, err := addIssueOpsDecisionForTest(stateRoot, id, issueops.IssueOpsDecisionRecordRequest{Title: "no split", Body: "single work item", Kind: "scope"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, id, string(IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "domain_review") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "domain_review") {
 		t.Fatalf("plan entry must require domain_review, got %v", err)
 	}
 	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.IssueOpsDomainReviewRequest{ModelFit: "fits the model"}); err != nil {
 		t.Fatal(err)
 	}
-	rec, err := AdvanceIssueOpsPhase(stateRoot, id, string(IssueOpsPhasePlan))
-	if err != nil || rec.Phase != IssueOpsPhasePlan {
+	rec, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhasePlan))
+	if err != nil || rec.Phase != issueops.IssueOpsPhasePlan {
 		t.Fatalf("plan entry should pass once grill is complete: %+v err=%v", rec, err)
 	}
 }
@@ -54,14 +54,14 @@ func TestEnterPlanRequiresSplitDecision(t *testing.T) {
 	if _, err := RecordIssueOpsDomainReview(stateRoot, id, issueops.IssueOpsDomainReviewRequest{ModelFit: "fits the model"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, id, string(IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "split_decision") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "split_decision") {
 		t.Fatalf("plan entry must require split_decision, got %v", err)
 	}
 	if _, err := addIssueOpsDecisionForTest(stateRoot, id, issueops.IssueOpsDecisionRecordRequest{Title: "no split", Body: "single work item", Kind: "scope"}); err != nil {
 		t.Fatal(err)
 	}
-	rec, err := AdvanceIssueOpsPhase(stateRoot, id, string(IssueOpsPhasePlan))
-	if err != nil || rec.Phase != IssueOpsPhasePlan {
+	rec, err := AdvanceIssueOpsPhase(stateRoot, id, string(issueops.IssueOpsPhasePlan))
+	if err != nil || rec.Phase != issueops.IssueOpsPhasePlan {
 		t.Fatalf("plan entry should pass once split_decision is recorded: %+v err=%v", rec, err)
 	}
 }

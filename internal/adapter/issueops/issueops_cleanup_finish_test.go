@@ -88,7 +88,7 @@ func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOp
 		t.Fatal(err)
 	}
 	worktree := ""
-	record.Phase = IssueOpsPhaseDone
+	record.Phase = issueops.IssueOpsPhaseDone
 	record.IssueURL = "https://github.com/acme/repo/issues/80"
 	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/90"}
 	// execution complete가 base_branch 없는 done 전이를 거부하므로 done 레코드는
@@ -117,8 +117,8 @@ func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOp
 	return stateRoot, record, worktree
 }
 
-func finishRequest(id string, apply bool, fingerprint string) CleanupFinishRequest {
-	return CleanupFinishRequest{
+func finishRequest(id string, apply bool, fingerprint string) issueops.CleanupFinishRequest {
+	return issueops.CleanupFinishRequest{
 		ID: id, CWD: "/tmp/elsewhere",
 		Merged: true, CompletionReflected: true, IssueClosed: true,
 		MergedBaseBranch: "main",
@@ -139,13 +139,13 @@ func TestCleanupFinishPreviewGatesRejectMissingEvidence(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		mutate  func(*CleanupFinishRequest)
+		mutate  func(*issueops.CleanupFinishRequest)
 		missing string
 	}{
-		{"unmerged", func(r *CleanupFinishRequest) { r.Merged = false }, "remote_artifact_merged"},
-		{"completion", func(r *CleanupFinishRequest) { r.CompletionReflected = false }, "completion_reflected"},
-		{"issue open", func(r *CleanupFinishRequest) { r.IssueClosed = false }, "issue_closed"},
-		{"cwd inside", func(r *CleanupFinishRequest) { r.CWD = filepath.Join(worktree, "sub") }, "cwd_outside_worktree"},
+		{"unmerged", func(r *issueops.CleanupFinishRequest) { r.Merged = false }, "remote_artifact_merged"},
+		{"completion", func(r *issueops.CleanupFinishRequest) { r.CompletionReflected = false }, "completion_reflected"},
+		{"issue open", func(r *issueops.CleanupFinishRequest) { r.IssueClosed = false }, "issue_closed"},
+		{"cwd inside", func(r *issueops.CleanupFinishRequest) { r.CWD = filepath.Join(worktree, "sub") }, "cwd_outside_worktree"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -343,7 +343,7 @@ func TestCleanupFinishResumableConvergesAndRecordDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fresh.Phase != IssueOpsPhaseProblem || fresh.Execution != nil || fresh.RemoteArtifact != nil {
+	if fresh.Phase != issueops.IssueOpsPhaseProblem || fresh.Execution != nil || fresh.RemoteArtifact != nil {
 		t.Fatalf("finish must unlock same-branch rework with a fresh cycle: %+v", fresh)
 	}
 }
@@ -447,12 +447,12 @@ func TestCleanupFinishBranchDeleteFailureAndGates(t *testing.T) {
 	}
 
 	// phase/lease 게이트.
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhasePR })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhasePR })
 	if result, err := CleanupFinish(context.Background(), stateRoot, finishRequest(record.ID, false, ""), deps); err == nil || !containsString(result.Missing, "phase_done") {
 		t.Fatalf("non-done phase must block: %v %v", err, result.Missing)
 	}
 	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) {
-		rec.Phase = IssueOpsPhaseDone
+		rec.Phase = issueops.IssueOpsPhaseDone
 		rec.Execution.Lease.Status = "active"
 		rec.Execution.Lease.ClaimedAt = "2026-07-24T00:00:00Z"
 		rec.Execution.Lease.Holder = &issueops.NativeActor{

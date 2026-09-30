@@ -1,6 +1,10 @@
 package issueopscli
 
 import (
+	issueopsport "issueops/internal/port"
+)
+
+import (
 	"context"
 	"encoding/json"
 	"errors"
@@ -25,9 +29,9 @@ import (
 
 func TestIssueOpsExecutionDepsPropagatePublicationReconcileWithoutInvocation(t *testing.T) {
 	invoked := 0
-	handler := issueopscore.RemotePullRequestReconcileHandler(func(context.Context, string, issueopscore.ExecutionReconcileRequest) (issueopscore.ExecutionReconcileResult, error) {
+	handler := issueopscontract.RemotePullRequestReconcileHandler(func(context.Context, string, issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 		invoked++
-		return issueopscore.ExecutionReconcileResult{}, nil
+		return issueopscontract.ExecutionReconcileResult{}, nil
 	})
 
 	deps := testIssueOpsCommand().issueOpsExecutionDeps(Dependencies{Publication: remotecmd.PublicationHandlers{Reconcile: handler}})
@@ -44,9 +48,9 @@ func TestIssueOpsExecutionDepsPropagatePublicationReconcileWithoutInvocation(t *
 
 func TestIssueOpsExecutionDepsPropagateCompletionWithoutInvocation(t *testing.T) {
 	invoked := 0
-	handler := issueopscore.ExecutionCompleteHandler(func(context.Context, string, issueopscore.ExecutionCompleteRequest) (issueopscore.ExecutionResult, error) {
+	handler := issueopscontract.ExecutionCompleteHandler(func(context.Context, string, issueopscontract.ExecutionCompleteRequest) (issueopscontract.ExecutionResult, error) {
 		invoked++
-		return issueopscore.ExecutionResult{}, nil
+		return issueopscontract.ExecutionResult{}, nil
 	})
 	deps := testIssueOpsCommand().issueOpsExecutionDeps(Dependencies{Complete: handler})
 	if deps.Complete == nil || reflect.ValueOf(deps.Complete).Pointer() != reflect.ValueOf(handler).Pointer() {
@@ -72,7 +76,7 @@ func TestIssueOpsExecutionPrepareCLIAndStatusShareSchemaProjection(t *testing.T)
 			"execution", "prepare", "--id", id, "--mode", "direct", "--cwd", repo, "--confirm", "--json",
 		}, actorFlags...), deps)
 	})
-	var prepared issueopscore.ExecutionPrepareResult
+	var prepared issueopscontract.ExecutionPrepareResult
 	if err := json.Unmarshal([]byte(preparedJSON), &prepared); err != nil {
 		t.Fatalf("execution prepare should return JSON: %v\n%s", err, preparedJSON)
 	}
@@ -86,7 +90,7 @@ func TestIssueOpsExecutionPrepareCLIAndStatusShareSchemaProjection(t *testing.T)
 	statusJSON := captureStdoutForContract(t, func() error {
 		return runIssueOpsForTest([]string{"execution", "status", "--id", id, "--json"}, deps)
 	})
-	var status issueopscore.ExecutionResult
+	var status issueopscontract.ExecutionResult
 	if err := json.Unmarshal([]byte(statusJSON), &status); err != nil {
 		t.Fatalf("execution status should return JSON: %v\n%s", err, statusJSON)
 	}
@@ -132,7 +136,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 	statusJSON := captureStdoutForContract(t, func() error {
 		return runIssueOpsForTest([]string{"execution", "status", "--id", id, "--json"}, deps)
 	})
-	var status issueopscore.ExecutionResult
+	var status issueopscontract.ExecutionResult
 	if err := json.Unmarshal([]byte(statusJSON), &status); err != nil {
 		t.Fatalf("execution status should return JSON: %v\n%s", err, statusJSON)
 	}
@@ -214,7 +218,7 @@ func TestIssueOpsExecutionPrepareCLIAndMCPStatusAndErrorsAreIdentical(t *testing
 		return runIssueOps([]string{"execution", "status", "--id", id, "--json"})
 	})
 	mcpJSON := executionMCPText(t, map[string]any{"action": "status", "id": id})
-	var cliResult, mcpResult issueopscore.ExecutionResult
+	var cliResult, mcpResult issueopscontract.ExecutionResult
 	if err := json.Unmarshal([]byte(cliJSON), &cliResult); err != nil {
 		t.Fatal(err)
 	}
@@ -253,17 +257,17 @@ func TestIssueOpsExecutionPrepareCLIFailsClosedWithoutHandler(t *testing.T) {
 			Dependencies{},
 		)
 	})
-	if !errors.Is(err, issueopscore.ErrPrepareHandlerUnavailable) {
+	if !errors.Is(err, issueopscontract.ErrPrepareHandlerUnavailable) {
 		t.Fatalf("prepare without handler error = %v", err)
 	}
 }
 
-func executionCLIPrepareHandler(t *testing.T) issueopscore.ExecutionPrepareHandler {
+func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareHandler {
 	t.Helper()
-	return func(_ context.Context, stateRoot string, request issueopscore.ExecutionPrepareRequest, _ issueopscore.ExecutionPrepareInvocation) (issueopscore.ExecutionPrepareResult, error) {
+	return func(_ context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, _ issueopsport.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 		record, err := issueopscore.ReadIssueOps(stateRoot, request.ID)
 		if err != nil {
-			return issueopscore.ExecutionPrepareResult{ID: request.ID}, err
+			return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 		}
 		actor := request.Actor
 		actor.ProcessAncestry = nil
@@ -289,9 +293,9 @@ func executionCLIPrepareHandler(t *testing.T) issueopscore.ExecutionPrepareHandl
 		record.Execution = execution
 		written, err := issueopscore.WriteIssueOps(stateRoot, record)
 		if err != nil {
-			return issueopscore.ExecutionPrepareResult{ID: request.ID}, err
+			return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 		}
-		return issueopscore.ExecutionPrepareResult{
+		return issueopscontract.ExecutionPrepareResult{
 			OK: true, ID: request.ID, RequestedMode: request.Mode, ResolvedMode: "direct",
 			Workspace: workspace, Execution: written.Execution,
 		}, nil

@@ -33,7 +33,7 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 	}}
 	prepared, intent, err := beginOrcaIntentViaRepository(
 		stateRoot, record, workspace, probe,
-		ExecutionPrepareRequest{ID: record.ID, Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh"},
+		issueops.ExecutionPrepareRequest{ID: record.ID, Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-5.6-terra", OwnerEffort: "xhigh"},
 		snapshot, func() time.Time { return time.Date(2026, 8, 3, 0, 0, 0, 0, time.UTC) },
 	)
 	if err != nil {

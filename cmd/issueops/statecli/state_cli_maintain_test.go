@@ -24,7 +24,7 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            issueopscore.NewIssueOpsID("/repo/maintain", "1-maintain"),
 		Repo:          "/repo/maintain",
-		Phase:         issueopscore.IssueOpsPhaseProblem,
+		Phase:         issueopscontract.IssueOpsPhaseProblem,
 	}); err != nil {
 		t.Fatalf("seed issueops: %v", err)
 	}

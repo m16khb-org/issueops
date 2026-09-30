@@ -78,7 +78,7 @@ func remoteBranchTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	record.Phase = IssueOpsPhaseDone
+	record.Phase = issueops.IssueOpsPhaseDone
 	record.IssueURL = "https://github.com/acme/repo/issues/116"
 	record.BranchPrepare = &issueops.IssueOpsBranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL,
@@ -114,8 +114,8 @@ func remoteBranchDeps(git *fakeRemoteBranchGit) CleanupRemoteBranchDeps {
 	}
 }
 
-func remoteBranchRequest(id string, apply bool, fingerprint string) CleanupRemoteBranchRequest {
-	return CleanupRemoteBranchRequest{ID: id, Apply: apply, Confirm: apply, Fingerprint: fingerprint}
+func remoteBranchRequest(id string, apply bool, fingerprint string) issueops.CleanupRemoteBranchRequest {
+	return issueops.CleanupRemoteBranchRequest{ID: id, Apply: apply, Confirm: apply, Fingerprint: fingerprint}
 }
 
 // AC-01: preview → apply로 원격 브랜치가 삭제되고, 부재 상태 재실행은 이전
@@ -248,7 +248,7 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 		},
 		{
 			name:    "phase not done",
-			mutate:  func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhasePR },
+			mutate:  func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhasePR },
 			missing: "phase_done",
 		},
 		{
@@ -310,10 +310,10 @@ func TestCleanupRemoteBranchFailsClosed(t *testing.T) {
 // 않으면 이 방어를 삭제해도 어떤 테스트도 깨지지 않는다.
 func TestCleanupRemoteBranchGatesRejectUnrecordedBranch(t *testing.T) {
 	git := remoteBranchGit()
-	result := CleanupRemoteBranchResult{}
+	result := issueops.CleanupRemoteBranchResult{}
 	_, result = remoteBranchPreviewer(remoteBranchDeps(git)).Plan(context.Background(), issueops.IssueOpsRecord{
-		ID: "io-test", Repo: t.TempDir(), Phase: IssueOpsPhaseDone,
-	}, CleanupRemoteBranchRequest{ID: "io-test"})
+		ID: "io-test", Repo: t.TempDir(), Phase: issueops.IssueOpsPhaseDone,
+	}, issueops.CleanupRemoteBranchRequest{ID: "io-test"})
 	missing := result.Missing
 	if !containsString(missing, "branch_recorded") {
 		t.Fatalf("an unrecorded branch must block: %v", missing)

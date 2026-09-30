@@ -45,7 +45,7 @@ func TestAcceptIssueOpsChildrenConcurrentlyAcrossProcesses(t *testing.T) {
 			t.Fatalf("start child %d: %v", i, err)
 		}
 		child := started.Child
-		child.Phase = IssueOpsPhaseDone
+		child.Phase = issueops.IssueOpsPhaseDone
 		writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 		childIDs[i] = child.ID
 		evidenceByChild[child.ID] = fmt.Sprintf("worker-%d accepted verified diff", i)

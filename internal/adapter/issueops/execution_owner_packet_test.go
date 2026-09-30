@@ -420,7 +420,7 @@ func TestExecutionOwnerPromptRenderingRejectsPlaceholderAndLineInjectionDetermin
 	}
 }
 
-func executionOwnerPromptFixture(t *testing.T, record issueops.IssueOpsRecord, req ExecutionPrepareRequest) string {
+func executionOwnerPromptFixture(t *testing.T, record issueops.IssueOpsRecord, req issueops.ExecutionPrepareRequest) string {
 	t.Helper()
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
 	packet := executionOwnerContextPacket{
@@ -442,7 +442,7 @@ func executionOwnerPromptFixture(t *testing.T, record issueops.IssueOpsRecord, r
 	return prompt
 }
 
-func ownerPacketFixture() (issueops.IssueOpsRecord, ExecutionPrepareRequest) {
+func ownerPacketFixture() (issueops.IssueOpsRecord, issueops.ExecutionPrepareRequest) {
 	record := issueops.IssueOpsRecord{
 		SchemaVersion: 1,
 		ID:            "io-69",
@@ -467,7 +467,7 @@ func ownerPacketFixture() (issueops.IssueOpsRecord, ExecutionPrepareRequest) {
 			Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusClaimable},
 		},
 	}
-	req := ExecutionPrepareRequest{
+	req := issueops.ExecutionPrepareRequest{
 		ID: "io-69", Mode: "orca", OwnerHost: "codex", OwnerModel: "gpt-5.6-sol", OwnerEffort: "high",
 	}
 	return record, req

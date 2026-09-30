@@ -19,14 +19,14 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "intent_contract") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "intent_contract") {
 		t.Fatalf("plan phase should require intent contract, got %v", err)
 	}
 	record, err = LinkIssueOpsIssue(stateRoot, record.ID, "https://github.com/example/repo/issues/1")
 	if err != nil {
 		t.Fatalf("issue link should record remote issue before intent contract: %v", err)
 	}
-	if record.Phase != IssueOpsPhaseProblem {
+	if record.Phase != issueops.IssueOpsPhaseProblem {
 		t.Fatalf("issue link before intent should not enter plan phase: %+v", record)
 	}
 	if _, err := RecordIssueOpsIntent(stateRoot, record.ID, issueops.IssueOpsIntentRecordRequest{
@@ -77,13 +77,13 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, recordWithoutIssue.ID, string(IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "issue_url") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, recordWithoutIssue.ID, string(issueops.IssueOpsPhasePlan)); err == nil || !strings.Contains(err.Error(), "issue_url") {
 		t.Fatalf("plan phase should require issue_url after intent, got %v", err)
 	}
 	recordIssueOpsGrillArtifactsForTest(t, stateRoot, record.ID)
 	setIssueOpsPlanPrepForTest(t, stateRoot, record.ID)
-	record, err = AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhasePlan))
-	if err != nil || record.Phase != IssueOpsPhasePlan {
+	record, err = AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhasePlan))
+	if err != nil || record.Phase != issueops.IssueOpsPhasePlan {
 		t.Fatalf("plan should be allowed after intent contract, got %+v err=%v", record, err)
 	}
 	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
@@ -192,11 +192,11 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 		t.Fatal(err)
 	}
 	record, err = LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md"))
-	if err != nil || record.Phase != IssueOpsPhasePlan {
+	if err != nil || record.Phase != issueops.IssueOpsPhasePlan {
 		t.Fatalf("approved design should allow plan attachment before tool prep, got %+v err=%v", record, err)
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
-	if record.Phase != IssueOpsPhaseImplement {
+	if record.Phase != issueops.IssueOpsPhaseImplement {
 		t.Fatalf("worktree tool prep should allow implementation entry, got %+v", record)
 	}
 }

@@ -58,22 +58,22 @@ func TestIssueOpsRefreshesAISlopCleanEvidenceFromFeedback(t *testing.T) {
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
 
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 1\n")
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhaseFeedback), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseFeedback), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
 	originalFingerprint := record.AISlopCleanFingerprint
 
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 2\n")
-	refreshed, err := AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
+	refreshed, err := AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if refreshed.Phase != IssueOpsPhaseFeedback {
+	if refreshed.Phase != issueops.IssueOpsPhaseFeedback {
 		t.Fatalf("refresh should preserve feedback phase, got %+v", refreshed)
 	}
 	if refreshed.AISlopCleanFingerprint == "" || refreshed.AISlopCleanFingerprint == originalFingerprint {

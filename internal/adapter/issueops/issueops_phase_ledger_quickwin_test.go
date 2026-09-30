@@ -22,10 +22,10 @@ func TestIssueOpsStatusBackfillsPartialLedger(t *testing.T) {
 	}
 
 	// Persist a partial ledger: problem + plan stamped, grill absent.
-	rec.Phase = IssueOpsPhasePlan
+	rec.Phase = issueops.IssueOpsPhasePlan
 	rec.PhaseLedger = issueops.IssueOpsPhaseLedger{
-		IssueOpsPhaseProblem: {Phase: IssueOpsPhaseProblem, EnteredAt: "2026-06-29T00:00:00Z", CompletedAt: "2026-06-29T00:01:00Z"},
-		IssueOpsPhasePlan:    {Phase: IssueOpsPhasePlan, EnteredAt: "2026-06-29T00:02:00Z"},
+		issueops.IssueOpsPhaseProblem: {Phase: issueops.IssueOpsPhaseProblem, EnteredAt: "2026-06-29T00:00:00Z", CompletedAt: "2026-06-29T00:01:00Z"},
+		issueops.IssueOpsPhasePlan:    {Phase: issueops.IssueOpsPhasePlan, EnteredAt: "2026-06-29T00:02:00Z"},
 	}
 	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
 		t.Fatalf("write: %v", err)
@@ -41,7 +41,7 @@ func TestIssueOpsStatusBackfillsPartialLedger(t *testing.T) {
 		}
 	}
 	// The real persisted entry must win over the derived one.
-	if got := status.PhaseLedger[IssueOpsPhaseProblem].CompletedAt; got != "2026-06-29T00:01:00Z" {
+	if got := status.PhaseLedger[issueops.IssueOpsPhaseProblem].CompletedAt; got != "2026-06-29T00:01:00Z" {
 		t.Fatalf("persisted problem entry must be preserved, got CompletedAt=%q", got)
 	}
 }
@@ -49,13 +49,13 @@ func TestIssueOpsStatusBackfillsPartialLedger(t *testing.T) {
 // A forward transition that re-completes a previously-regressed phase must clear
 // the stale-regression note so status no longer shows the phase as stale forever.
 func TestStampForwardTransitionClearsStaleNote(t *testing.T) {
-	ledger := issueopsdomain.MarkLedgerStale(issueops.IssueOpsPhaseLedger{}, "stale: design-review regression (second-system effect)", IssueOpsPhasePlan)
-	if len(ledger[IssueOpsPhasePlan].Notes) == 0 {
+	ledger := issueopsdomain.MarkLedgerStale(issueops.IssueOpsPhaseLedger{}, "stale: design-review regression (second-system effect)", issueops.IssueOpsPhasePlan)
+	if len(ledger[issueops.IssueOpsPhasePlan].Notes) == 0 {
 		t.Fatal("precondition: plan must carry a stale note before re-completion")
 	}
 
-	ledger = issueopsdomain.StampForwardTransition(ledger, IssueOpsPhasePlan, IssueOpsPhaseCompatibilityReview, "2026-06-30T00:00:00Z", issueopsstatusdomain.ArtifactKeys(IssueOpsPhasePlan))
-	plan := ledger[IssueOpsPhasePlan]
+	ledger = issueopsdomain.StampForwardTransition(ledger, issueops.IssueOpsPhasePlan, issueops.IssueOpsPhaseCompatibilityReview, "2026-06-30T00:00:00Z", issueopsstatusdomain.ArtifactKeys(issueops.IssueOpsPhasePlan))
+	plan := ledger[issueops.IssueOpsPhasePlan]
 	if plan.CompletedAt == "" {
 		t.Fatalf("plan must be marked complete after the forward transition, got %#v", plan)
 	}

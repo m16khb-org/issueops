@@ -74,7 +74,7 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	}
 }
 
-func reflectReviewForTest(root, id string, confirm bool, provider port.IssueProvider, actor IssueOpsActor) (issueops.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
+func reflectReviewForTest(root, id string, confirm bool, provider port.IssueProvider, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
 	service := remoteapp.NewReviewReflectionService(RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(string) (remoteapp.ReviewReflectionProvider, error) { return provider, nil }, func() ([]issueops.NativeProcessReceipt, error) { return actor.NativeProcessAncestry, nil }, time.Now)
 	return service.Reflect(context.Background(), id, "", confirm, actor)
 }

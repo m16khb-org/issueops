@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
@@ -47,11 +46,11 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 		"remote", "create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", "Body",
 		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "maintainer",
 	}
-	if err := runIssueOps(args); !errors.Is(err, issueops.ErrRemotePullRequestCreateHandlerUnavailable) {
+	if err := runIssueOps(args); !errors.Is(err, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable) {
 		t.Fatalf("zero dependency wrapper err=%v", err)
 	}
 	handlerCalls := 0
-	err = runIssueOpsForTest(args, Dependencies{Remote: testRemoteCommand(), Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueops.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+	err = runIssueOpsForTest(args, Dependencies{Remote: testRemoteCommand(), Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 		handlerCalls++
 		if request.ID != record.ID || request.Confirm {
 			t.Fatalf("request=%#v", request)

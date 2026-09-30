@@ -47,7 +47,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		Commit:        newCommitService(resolveTarget("")),
 		Lint:          newLintService(resolveTarget("")),
 		Fetch:         newWebFetch(),
-		Execution:     mcpcli.ExecutionDeps{ExecuteExecution: issueopsadapter.ExecuteExecution, ObserveNativeProcessAncestry: issueopsadapter.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return stateRoot }},
+		Execution:     mcpcli.ExecutionDeps{ExecuteExecution: newExecutionService().Execute, ObserveNativeProcessAncestry: issueopsadapter.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return stateRoot }},
 
 		Gates:   newGatesService(),
 		Channel: newChannelService(statestore.StateDir()),

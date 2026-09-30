@@ -218,7 +218,7 @@ func TestPRPhaseEntryFetchesUpstreamOutsideTheSpan(t *testing.T) {
 	log := installSpanProbingGit(t, stateRoot, false)
 	// 이 레코드는 PR readiness를 채우지 않았으므로 전이는 거부된다. 확인할 것은
 	// 거부 여부가 아니라 fetch가 어디서 실행됐는가다.
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhasePR)); err == nil {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhasePR)); err == nil {
 		t.Fatal("an unprepared record must not enter the pr phase")
 	}
 	requireGitCallsOutsideSpan(t, log, "fetch")
@@ -239,7 +239,7 @@ func TestBranchRetargetObservesRemoteOutsideTheSpan(t *testing.T) {
 	readbackState := ""
 	updated, err := retargetForTest(stateRoot, record.ID, issueops.IssueOpsBranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "child MR retargeted to the umbrella",
-	}, IssueOpsActor{}, branchapp.Retargeter{
+	}, issueops.IssueOpsActor{}, branchapp.Retargeter{
 		TargetBranch: func(issueops.IssueOpsRemoteArtifactVerification) (string, error) {
 			readbackState = spanLockState(lockDB)
 			return "2803-umbrella", nil
@@ -268,7 +268,7 @@ func TestBranchRetargetRejectsAnArtifactThatChangedAfterObservation(t *testing.T
 	record := retargetReadyRecord(t, stateRoot, repo)
 	_, err := retargetForTest(stateRoot, record.ID, issueops.IssueOpsBranchRetargetRequest{
 		BaseBranch: "2803-umbrella", Reason: "child MR retargeted to the umbrella",
-	}, IssueOpsActor{}, branchapp.Retargeter{
+	}, issueops.IssueOpsActor{}, branchapp.Retargeter{
 		TargetBranch: func(issueops.IssueOpsRemoteArtifactVerification) (string, error) {
 			// 관측 도중 다른 쓰기가 artifact를 바꾼다.
 			changed, readErr := ReadIssueOps(stateRoot, record.ID)
@@ -305,17 +305,17 @@ func TestEvidenceRecordersObserveTheChangeSetOutsideTheSpan(t *testing.T) {
 	}
 	log := installSpanProbingGit(t, stateRoot, true)
 
-	if _, err := RecordIssueOpsImplementationReviewWithActor(stateRoot, fixture.record.ID, IssueOpsImplementationReviewRequest{
+	if _, err := RecordIssueOpsImplementationReviewWithActor(stateRoot, fixture.record.ID, issueops.IssueOpsImplementationReviewRequest{
 		Verdict: "pass", Findings: []string{"none"}, Evidence: []string{"go test ./..."},
 	}, holder); err != nil {
 		t.Fatalf("implementation review: %v", err)
 	}
-	if _, err := RecordIssueOpsSchemaEvidenceWithActor(stateRoot, fixture.record.ID, IssueOpsSchemaEvidenceRequest{
+	if _, err := RecordIssueOpsSchemaEvidenceWithActor(stateRoot, fixture.record.ID, issueops.IssueOpsSchemaEvidenceRequest{
 		Measurements: []string{"orders rows=1"}, Sources: []string{"psql"},
 	}, holder); err != nil {
 		t.Fatalf("schema evidence: %v", err)
 	}
-	if _, err := RecordIssueOpsProjectDocsReviewWithActor(stateRoot, fixture.record.ID, IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReviewWithActor(stateRoot, fixture.record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict: "no-change", ReviewedDocs: []string{"AGENTS.md"}, Evidence: []string{"read AGENTS.md"},
 	}, holder); err != nil {
 		t.Fatalf("project docs review: %v", err)
@@ -347,7 +347,7 @@ func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.IssueOps
 	return written
 }
 
-func retargetForTest(root, id string, req issueops.IssueOpsBranchRetargetRequest, actor IssueOpsActor, service branchapp.Retargeter) (issueops.IssueOpsRecord, error) {
+func retargetForTest(root, id string, req issueops.IssueOpsBranchRetargetRequest, actor issueops.IssueOpsActor, service branchapp.Retargeter) (issueops.IssueOpsRecord, error) {
 	service.Records = CycleRecordStore{StateRoot: root}
 	service.Authority = cycleapp.NewMutationAuthority(samePath)
 	service.OriginPresent = (BranchGit{Run: GitCmd}).OriginPresent

@@ -60,7 +60,7 @@ func TestRunIssueOpsRemoteVerifyArtifactValidationErrors(t *testing.T) {
 	}
 }
 
-func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueopscontract.IssueOpsRecord, issueopscore.IssueOpsActor) {
+func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
 	t.Helper()
 	recordIssueOpsCoreIntentForCLITest(t, id)
 	if _, err := LinkIssueOpsIssueForTest(issueOpsStateRootForTest(), id, "https://github.com/example/repo/issues/75"); err != nil {
@@ -118,7 +118,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 		t.Fatal(err)
 	}
 	_, actor := seedIssueOpsCLIExecution(t, record)
-	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscore.IssueOpsPhaseAISlopClean), actor); err != nil {
+	if _, err := advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhaseAISlopClean), actor); err != nil {
 		t.Fatal(err)
 	}
 	if code, _, stderr := preflight.GitCmd(worktree, "commit", "-q", "-m", "feat: implement remote verify cli"); code != 0 {
@@ -129,7 +129,7 @@ func makeIssueOpsPRPhaseRecordForCLITest(t *testing.T, id, repo string) (issueop
 	}
 	recordIssueOpsCoreProjectDocsReviewForCLITest(t, id)
 	recordIssueOpsCoreImplementationReviewForCLITest(t, id)
-	record, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscore.IssueOpsPhasePR), actor)
+	record, err = advanceLoopPhaseForTest(issueOpsStateRootForTest(), id, string(issueopscontract.IssueOpsPhasePR), actor)
 	if err != nil {
 		t.Fatal(err)
 	}

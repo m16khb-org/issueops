@@ -67,8 +67,8 @@ func abandonTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	return stateRoot, record
 }
 
-func abandonRequest(id string, apply bool, fingerprint string) CleanupAbandonRequest {
-	return CleanupAbandonRequest{
+func abandonRequest(id string, apply bool, fingerprint string) issueops.CleanupAbandonRequest {
+	return issueops.CleanupAbandonRequest{
 		ID: id, Reason: "폐기된 비-done 사이클 정리",
 		Apply: apply, Confirm: apply, Fingerprint: fingerprint,
 	}
@@ -213,7 +213,7 @@ func TestCleanupAbandonPreviewThenApplyDeletesRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if fresh.Phase != IssueOpsPhaseProblem || fresh.Execution != nil {
+	if fresh.Phase != issueops.IssueOpsPhaseProblem || fresh.Execution != nil {
 		t.Fatalf("abandon must unlock same-branch rework with a fresh cycle: %+v", fresh)
 	}
 }
@@ -266,7 +266,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 	cases := []struct {
 		name    string
 		mutate  func(*issueops.IssueOpsRecord)
-		request func(id string) CleanupAbandonRequest
+		request func(id string) issueops.CleanupAbandonRequest
 		missing string
 	}{
 		{
@@ -274,7 +274,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 			// 없으면 phase가 done이든 아니든 게이트는 닫힌 채로 남는다(#342).
 			name: "done phase with an artifact belongs to finish",
 			mutate: func(rec *issueops.IssueOpsRecord) {
-				rec.Phase = IssueOpsPhaseDone
+				rec.Phase = issueops.IssueOpsPhaseDone
 				rec.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
 					Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/9",
 				}
@@ -305,13 +305,17 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 			missing: "no_children",
 		},
 		{
-			name:    "blank reason",
-			request: func(id string) CleanupAbandonRequest { r := abandonRequest(id, false, ""); r.Reason = "   "; return r },
+			name: "blank reason",
+			request: func(id string) issueops.CleanupAbandonRequest {
+				r := abandonRequest(id, false, "")
+				r.Reason = "   "
+				return r
+			},
 			missing: "reason_required",
 		},
 		{
 			name: "control character in reason",
-			request: func(id string) CleanupAbandonRequest {
+			request: func(id string) issueops.CleanupAbandonRequest {
 				r := abandonRequest(id, false, "")
 				r.Reason = "abandon\nnow"
 				return r
@@ -320,7 +324,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 		},
 		{
 			name: "active shell character in reason",
-			request: func(id string) CleanupAbandonRequest {
+			request: func(id string) issueops.CleanupAbandonRequest {
 				r := abandonRequest(id, false, "")
 				r.Reason = "abandon $(rm -rf /)"
 				return r
@@ -329,7 +333,7 @@ func TestCleanupAbandonRecordGatesRejectUnsafeRecords(t *testing.T) {
 		},
 		{
 			name: "reason over the byte limit",
-			request: func(id string) CleanupAbandonRequest {
+			request: func(id string) issueops.CleanupAbandonRequest {
 				r := abandonRequest(id, false, "")
 				r.Reason = strings.Repeat("a", abandondomain.CleanupAbandonReasonLimit+1)
 				return r
@@ -722,7 +726,7 @@ func TestCleanupAbandonApplyRejectsStaleFingerprintAndMissingConfirm(t *testing.
 		t.Fatalf("apply without confirm must be rejected: %v", err)
 	}
 	// phase 이동은 게이트를 통과하지만 fingerprint 입력을 바꾼다.
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhasePlan })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhasePlan })
 	if _, err := CleanupAbandon(context.Background(), stateRoot, abandonRequest(record.ID, true, preview.Fingerprint), deps); err == nil ||
 		!strings.Contains(err.Error(), "stale cleanup fingerprint") {
 		t.Fatalf("stale fingerprint must be rejected: %v", err)

@@ -15,10 +15,10 @@ import (
 	"issueops/internal/port"
 )
 
-func issueOpsClaimHandler(ctx context.Context, stateRoot string, request issueops.ExecutionClaimRequest, deps issueops.ExecutionClaimDependencies) (issueops.ExecutionResult, error) {
+func issueOpsClaimHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionClaimRequest, deps issueopscontract.ExecutionClaimDependencies) (issueopscontract.ExecutionResult, error) {
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
-		return issueops.ExecutionResult{ID: request.ID}, err
+		return issueopscontract.ExecutionResult{ID: request.ID}, err
 	}
 	preflight := leaseoutbound.NewClaimContextPreflight(db, func(ctx context.Context, repo, issueURL string) (leaseoutbound.IssueSnapshot, error) {
 		record, err := issueops.ReadIssueOps(stateRoot, request.ID)

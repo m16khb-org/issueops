@@ -6,7 +6,7 @@ import (
 )
 
 // NewEvidenceReviewStore supplies actor-fenced persistence and the caller's change observation.
-func NewEvidenceReviewStore(actor *IssueOpsActor, fingerprint func(model.IssueOpsRecord) string) reviewport.EvidenceReviewStore {
+func NewEvidenceReviewStore(actor *model.IssueOpsActor, fingerprint func(model.IssueOpsRecord) string) reviewport.EvidenceReviewStore {
 	store := NewReviewMutationStore(actor)
 	return reviewport.EvidenceReviewStore{
 		Read: store.Read, Fingerprint: fingerprint, WithLock: store.WithLock,

@@ -113,8 +113,8 @@ func TestAbandonResolvedChildrenRefusesToInferFromAbsence(t *testing.T) {
 func TestAbandonResolvedChildrenRequiresDoneForLiveRecords(t *testing.T) {
 	stateRoot := t.TempDir()
 	for id, phase := range map[string]issueops.IssueOpsPhase{
-		"io-live1": IssueOpsPhaseImplement,
-		"io-live2": IssueOpsPhaseDone,
+		"io-live1": issueops.IssueOpsPhaseImplement,
+		"io-live2": issueops.IssueOpsPhaseDone,
 	} {
 		child := issueops.IssueOpsRecord{
 			OK: true, SchemaVersion: 1, ID: id, Repo: t.TempDir(), Phase: phase,

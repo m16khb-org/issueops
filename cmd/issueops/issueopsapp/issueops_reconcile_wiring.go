@@ -10,7 +10,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
-	"issueops/internal/adapter/issueops"
+
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
@@ -22,15 +22,15 @@ import (
 	"issueops/internal/port"
 )
 
-func issueOpsReconcileHandler(ctx context.Context, stateRoot string, request issueops.ExecutionReconcileRequest, deps issueops.ExecutionReconcileDependencies) (issueops.ExecutionReconcileResult, error) {
+func issueOpsReconcileHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionReconcileRequest, deps port.ExecutionReconcileDependencies) (issueopscontract.ExecutionReconcileResult, error) {
 	service, err := newIssueOpsReconcileService(stateRoot, deps.Orca, deps.ReadIssue, request.Snapshot, deps.Now)
 	if err != nil {
-		return issueops.ExecutionReconcileResult{ID: request.ID}, err
+		return issueopscontract.ExecutionReconcileResult{ID: request.ID}, err
 	}
 	return leaseinbound.NewReconcileHandler(service)(ctx, stateRoot, request, deps)
 }
 
-func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrcaProvisioner, readIssue issueops.ExecutionIssueSnapshotReadFunc, snapshot *issueopscontract.IssueOpsRecord, now func() time.Time) (*leaseapp.ReconcileService, error) {
+func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrcaProvisioner, readIssue port.ExecutionIssueSnapshotReadFunc, snapshot *issueopscontract.IssueOpsRecord, now func() time.Time) (*leaseapp.ReconcileService, error) {
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrc
 type coreReconcileEffects struct {
 	stateRoot   string
 	provisioner port.ExecutionOrcaProvisioner
-	readIssue   issueops.ExecutionIssueSnapshotReadFunc
+	readIssue   port.ExecutionIssueSnapshotReadFunc
 }
 
 func (e *coreReconcileEffects) PrepareWorktree(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt) (preparationcontract.OwnerArtifacts, error) {

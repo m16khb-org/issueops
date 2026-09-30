@@ -31,7 +31,7 @@ type CleanupFinishDeps struct {
 
 // CleanupFinish is only a fixture for existing integration scenarios. Production
 // composition calls the application executor directly.
-func CleanupFinish(ctx context.Context, stateRoot string, req CleanupFinishRequest, deps CleanupFinishDeps) (CleanupFinishResult, error) {
+func CleanupFinish(ctx context.Context, stateRoot string, req issueops.CleanupFinishRequest, deps CleanupFinishDeps) (issueops.CleanupFinishResult, error) {
 	return finishExecutorForTests(stateRoot, deps).Run(ctx, req)
 }
 

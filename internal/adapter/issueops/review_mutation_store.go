@@ -8,7 +8,7 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func NewReviewMutationStore(actor *IssueOpsActor) reviewport.ReviewMutationStore {
+func NewReviewMutationStore(actor *issueops.IssueOpsActor) reviewport.ReviewMutationStore {
 	return reviewport.ReviewMutationStore{
 		WithLock: func(root, cycleID string, fn func() error) error {
 			return withIssueOpsLock(context.Background(), root, cycleID, func(context.Context) error { return fn() })

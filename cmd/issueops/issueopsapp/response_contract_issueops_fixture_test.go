@@ -20,7 +20,7 @@ func seedIssueOpsExecutionContract(t *testing.T, repo, branch string) string {
 		t.Fatal(err)
 	}
 	record.WorktreePath = worktree
-	record.Phase = issueops.IssueOpsPhasePR
+	record.Phase = issueopscontract.IssueOpsPhasePR
 	record.IssueURL = "https://github.com/example/repo/issues/69"
 	record.BranchPrepare = &issueopscontract.IssueOpsBranchPrepare{
 		Provider: "github", IssueURL: record.IssueURL, Branch: branch, BaseBranch: "main",

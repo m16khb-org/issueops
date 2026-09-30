@@ -1,13 +1,15 @@
 package mcpcli
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"io"
 	"net"
 	"testing"
 	"time"
-
-	"issueops/internal/adapter/issueops"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -44,9 +46,9 @@ func TestServeMCPStreamListsHarnessTools(t *testing.T) {
 func TestServeMCPStreamCarriesPublicationReconcileWithoutInvokingOnHandshake(t *testing.T) {
 	invoked := 0
 	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(),
-		Publication: PublicationHandlers{Reconcile: func(context.Context, string, issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+		Publication: PublicationHandlers{Reconcile: func(context.Context, string, issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 			invoked++
-			return issueops.ExecutionReconcileResult{}, nil
+			return issueopscontract.ExecutionReconcileResult{}, nil
 		}},
 	})
 	tools, err := session.ListTools(context.Background(), nil)

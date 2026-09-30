@@ -17,7 +17,7 @@ func TestIssueOpsDoneRequiresPRPhase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(IssueOpsPhaseDone)); err == nil || !strings.Contains(err.Error(), "before pr phase") {
+	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseDone)); err == nil || !strings.Contains(err.Error(), "before pr phase") {
 		t.Fatalf("done before pr should fail, got %v", err)
 	}
 }
@@ -91,11 +91,11 @@ func TestImplementGateDoesNotRequireCodeGraph(t *testing.T) {
 	if !ready.Ready {
 		t.Fatalf("implementation should be ready without CodeGraph when other gates pass: %+v", ready)
 	}
-	advanced, err := AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
+	advanced, err := AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatalf("AdvanceIssueOpsPhase to implement should not require CodeGraph: %v", err)
 	}
-	if advanced.Phase != IssueOpsPhaseImplement {
+	if advanced.Phase != issueops.IssueOpsPhaseImplement {
 		t.Fatalf("expected implement phase, got %s", advanced.Phase)
 	}
 }
@@ -219,7 +219,7 @@ func TestIssueOpsStrictPRReadinessDetectsStaleAISlopCleanAfterImplementationChan
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 1\n")
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}

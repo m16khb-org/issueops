@@ -46,7 +46,7 @@ func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
 	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
-	result, ok := printed.(issueopscore.CleanupFinishResult)
+	result, ok := printed.(issueopscontract.CleanupFinishResult)
 	if !ok || !strings.Contains(result.NextCommand, "cleanup finish") || !strings.Contains(result.NextCommand, "--generated-for-generation 1") {
 		t.Fatalf("cleanup finish preview result = %#v", printed)
 	}
@@ -173,7 +173,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	if err := command.RunCleanup([]string{"finish", "--id", record.ID, "--preview", "--json"}, deps); err != nil {
 		t.Fatal(err)
 	}
-	preview, ok := printed.(issueopscore.CleanupFinishResult)
+	preview, ok := printed.(issueopscontract.CleanupFinishResult)
 	if !ok || preview.NextCommand == "" {
 		t.Fatalf("cleanup current-relay preview = %#v", printed)
 	}

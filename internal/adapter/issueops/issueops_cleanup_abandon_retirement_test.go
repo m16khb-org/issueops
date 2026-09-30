@@ -71,7 +71,7 @@ func TestAbandonAllowsDoneCycleWithoutArtifact(t *testing.T) {
 func abandonRetirementRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	t.Helper()
 	stateRoot, record := abandonTestRecord(t)
-	record.Phase = IssueOpsPhaseDone
+	record.Phase = issueops.IssueOpsPhaseDone
 	record.RemoteArtifact = &issueops.IssueOpsRemoteArtifactVerification{
 		Provider: "github", Kind: "pr",
 		URL:        "https://github.com/example/issueops/pull/241",

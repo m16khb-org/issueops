@@ -1,13 +1,16 @@
 package issueopspublication
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
 
-	"issueops/internal/adapter/issueops"
 	publicationcontract "issueops/internal/contract/issueopspublication"
 )
 
@@ -62,7 +65,7 @@ func TestReconcileHandlerRejectsMalformedRecordProjection(t *testing.T) {
 
 func TestReconcileHandlerFailsClosedWithoutService(t *testing.T) {
 	got, err := NewReconcileHandler(nil)(context.Background(), "/state", fullCoreReconcileRequest())
-	if !errors.Is(err, issueops.ErrRemotePullRequestReconcileHandlerUnavailable) || got.ID != "io-195" || got.OK {
+	if !errors.Is(err, issueopscontract.ErrRemotePullRequestReconcileHandlerUnavailable) || got.ID != "io-195" || got.OK {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}
 }

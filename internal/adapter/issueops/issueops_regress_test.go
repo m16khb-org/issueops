@@ -23,7 +23,7 @@ func recordAtPhaseForRegressTest(t *testing.T, phase issueops.IssueOpsPhase) (st
 	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, RecordedAt: "2026-06-29T00:00:00Z", IssueReflectedAt: "2026-06-29T00:02:00Z"}
 	rec.PlanPath = "/repo/plans/x.md"
 	rec.PhaseLedger = issueops.IssueOpsPhaseLedger{
-		IssueOpsPhasePlan: issueops.IssueOpsPhaseLedgerEntry{Phase: IssueOpsPhasePlan, CompletedAt: "2026-06-29T00:01:00Z", Artifacts: []string{"plan_path"}},
+		issueops.IssueOpsPhasePlan: issueops.IssueOpsPhaseLedgerEntry{Phase: issueops.IssueOpsPhasePlan, CompletedAt: "2026-06-29T00:01:00Z", Artifacts: []string{"plan_path"}},
 	}
 	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
 		t.Fatalf("seed write: %v", err)
@@ -32,7 +32,7 @@ func recordAtPhaseForRegressTest(t *testing.T, phase issueops.IssueOpsPhase) (st
 }
 
 func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
-	stateRoot, id := recordAtPhaseForRegressTest(t, IssueOpsPhasePlan)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 
 	if _, err := RegressIssueOpsForReplan(stateRoot, id, "  "); err == nil {
 		t.Fatal("empty regression reason must be rejected")
@@ -42,7 +42,7 @@ func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("regress: %v", err)
 	}
-	if out.Phase != IssueOpsPhaseGrill {
+	if out.Phase != issueops.IssueOpsPhaseGrill {
 		t.Fatalf("design-review stop must regress to grill, got %s", out.Phase)
 	}
 	if out.DesignReview == nil || out.DesignReview.Approved {
@@ -62,7 +62,7 @@ func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 		t.Fatalf("regression must record a scope decision with the stop reason: %#v", out.Decisions)
 	}
 	// rule 12: downstream plan ledger entry retained but marked stale
-	planEntry, ok := out.PhaseLedger[IssueOpsPhasePlan]
+	planEntry, ok := out.PhaseLedger[issueops.IssueOpsPhasePlan]
 	if !ok || planEntry.CompletedAt != "" {
 		t.Fatalf("plan ledger entry should be marked incomplete (stale) after regression: %#v", planEntry)
 	}
@@ -78,7 +78,7 @@ func TestRegressIssueOpsForReplanFromPlan(t *testing.T) {
 }
 
 func TestRegressIssueOpsForReplanRejectedOutsidePlanCompat(t *testing.T) {
-	stateRoot, id := recordAtPhaseForRegressTest(t, IssueOpsPhaseProblem)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhaseProblem)
 	if _, err := RegressIssueOpsForReplan(stateRoot, id, "too early"); err == nil {
 		t.Fatal("regression from problem phase must be rejected")
 	}
@@ -118,7 +118,7 @@ func TestRegressIssueOpsForReplanBlockedByActiveChildren(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rec.Phase = IssueOpsPhasePlan
+	rec.Phase = issueops.IssueOpsPhasePlan
 	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"scope drift"}, RecordedAt: "2026-07-07T00:00:00Z", IssueReflectedAt: "2026-07-07T00:01:00Z"}
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, rec)
 
@@ -132,14 +132,14 @@ func TestRegressIssueOpsForReplanBlockedByActiveChildren(t *testing.T) {
 	if err != nil {
 		t.Fatalf("regress should pass after child is dropped: %v", err)
 	}
-	if out.Phase != IssueOpsPhaseGrill {
+	if out.Phase != issueops.IssueOpsPhaseGrill {
 		t.Fatalf("regress should still rewind to grill after child resolution, got %s", out.Phase)
 	}
 }
 
 func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 	// No devil's-advocate stop verdict → rejected.
-	stateRoot, id := recordAtPhaseForRegressTest(t, IssueOpsPhasePlan)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 	rec, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +153,7 @@ func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 	}
 
 	// Stop verdict recorded but findings not yet reflected to the issue → rejected.
-	stateRoot2, id2 := recordAtPhaseForRegressTest(t, IssueOpsPhasePlan)
+	stateRoot2, id2 := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 	rec2, err := ReadIssueOps(stateRoot2, id2)
 	if err != nil {
 		t.Fatal(err)
@@ -168,7 +168,7 @@ func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 }
 
 func TestRegressIssueOpsForReplanExplainsReviseRecovery(t *testing.T) {
-	stateRoot, id := recordAtPhaseForRegressTest(t, IssueOpsPhaseCompatibilityReview)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhaseCompatibilityReview)
 	rec, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
 		t.Fatal(err)

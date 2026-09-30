@@ -26,7 +26,7 @@ func AdvancePhase(stateRoot, id, to string) (issueopscontract.IssueOpsRecord, er
 }
 
 // AdvancePhaseWithActor는 AdvancePhase와 같은 gate를 actor 경로에 적용한다.
-func AdvancePhaseWithActor(stateRoot, id, to string, actor issueops.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+func AdvancePhaseWithActor(stateRoot, id, to string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 	if err := guardPRPhase(stateRoot, id, to); err != nil {
 		return issueopscontract.IssueOpsRecord{OK: false}, err
 	}

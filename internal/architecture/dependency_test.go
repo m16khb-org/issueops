@@ -541,6 +541,11 @@ func productionReseedRoutingViolations(repoRoot string) ([]string, error) {
 		}
 		violations = append(violations, reseedRoutingViolations(file, name == "execution_api.go")...)
 	}
+	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_api.go"))
+	if err != nil {
+		return nil, err
+	}
+	violations = append(violations, reseedRoutingViolations(applicationFile, true)...)
 	sort.Strings(violations)
 	return violations, nil
 }
@@ -590,6 +595,11 @@ func productionResumeRoutingViolations(repoRoot string) ([]string, error) {
 			}
 		}
 	}
+	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_api.go"))
+	if err != nil {
+		return nil, err
+	}
+	violations = append(violations, resumeRoutingViolations(applicationFile, true)...)
 	sort.Strings(violations)
 	return violations, nil
 }
@@ -627,6 +637,11 @@ func productionReconcileRoutingViolations(repoRoot string) ([]string, error) {
 		return nil, err
 	}
 	violations = append(violations, wiringViolations...)
+	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_reconcile.go"))
+	if err != nil {
+		return nil, err
+	}
+	violations = append(violations, reconcileRoutingViolations(applicationFile, true)...)
 	sort.Strings(violations)
 	return violations, nil
 }
@@ -732,6 +747,11 @@ func productionPreparationRoutingViolations(repoRoot string) ([]string, error) {
 			violations = append(violations, fmt.Sprintf("%s:%s must call %s exactly once, found %d", filepath.ToSlash(wiring.path), wiring.function, wiring.constructor, count))
 		}
 	}
+	applicationFile, err := parseProductionFile(filepath.Join(repoRoot, "internal", "application", "issueopsexecution", "execution_api.go"))
+	if err != nil {
+		return nil, err
+	}
+	violations = append(violations, preparationRoutingViolations(applicationFile, true)...)
 	sort.Strings(violations)
 	return violations, nil
 }

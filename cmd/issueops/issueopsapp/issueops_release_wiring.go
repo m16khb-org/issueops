@@ -1,19 +1,23 @@
 package issueopsapp
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 
 	leaseinbound "issueops/internal/adapter/inbound/issueopslease"
-	"issueops/internal/adapter/issueops"
+
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
 )
 
-func issueOpsReleaseHandler(ctx context.Context, stateRoot string, request issueops.ExecutionReleaseRequest) (issueops.ExecutionResult, error) {
+func issueOpsReleaseHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
-		return issueops.ExecutionResult{ID: request.ID}, err
+		return issueopscontract.ExecutionResult{ID: request.ID}, err
 	}
 	service := leaseapp.NewReleaseService(leaseoutbound.NewSQLiteRepository(db), leaseoutbound.UTCClock{}, leaseoutbound.InspectNativeProcess, leaseoutbound.FilesystemPathMatcher{})
 	return leaseinbound.NewReleaseHandler(service)(ctx, stateRoot, request)

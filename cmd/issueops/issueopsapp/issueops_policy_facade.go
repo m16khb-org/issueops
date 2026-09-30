@@ -1,10 +1,15 @@
 package issueopsapp
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+	issueopsport "issueops/internal/port"
+)
+
+import (
 	"issueops/cmd/issueops/issueopscli"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
-	"issueops/internal/adapter/issueops"
+
 	basesyncoutbound "issueops/internal/adapter/outbound/issueopsbasesync"
 	provenanceadapter "issueops/internal/adapter/outbound/issueopsprovenance"
 )
@@ -27,13 +32,13 @@ func issueOpsCLIDependencies() issueopscli.Dependencies {
 		Prepare: execution.Prepare, Orca: execution.Orca, OrcaOwner: execution.OrcaOwner,
 		BaseSync: basesyncoutbound.NewInspector(basesyncoutbound.RunGit), ReadIssue: execution.ReadIssue,
 		Status: issueOpsExecutionStatusHandler, Replace: newIssueOpsReplacementHandler(),
-		Claim: issueops.ExecutionClaimHandler(issueOpsClaimHandler), Release: issueops.ExecutionReleaseHandler(issueOpsReleaseHandler),
-		Reseed: issueops.ExecutionReseedHandler(issueOpsReseedHandler), Resume: issueops.ExecutionResumeHandler(issueOpsResumeHandler),
-		Reconcile: issueops.ExecutionReconcileHandler(issueOpsReconcileHandler), Complete: issueops.ExecutionCompleteHandler(issueOpsCompleteHandler),
+		Claim: issueopscontract.ExecutionClaimHandler(issueOpsClaimHandler), Release: issueopscontract.ExecutionReleaseHandler(issueOpsReleaseHandler),
+		Reseed: issueopscontract.ExecutionReseedHandler(issueOpsReseedHandler), Resume: issueopscontract.ExecutionResumeHandler(issueOpsResumeHandler),
+		Reconcile: issueopsport.ExecutionReconcileHandler(issueOpsReconcileHandler), Complete: issueopscontract.ExecutionCompleteHandler(issueOpsCompleteHandler),
 		Provenance: provenanceadapter.NewExecutableObserver(),
 		Publication: remotecmd.PublicationHandlers{
-			Create:    issueops.RemotePullRequestCreateHandler(issueOpsPublicationCreateHandler),
-			Reconcile: issueops.RemotePullRequestReconcileHandler(issueOpsPublicationReconcileHandler),
+			Create:    issueopscontract.RemotePullRequestCreateHandler(issueOpsPublicationCreateHandler),
+			Reconcile: issueopscontract.RemotePullRequestReconcileHandler(issueOpsPublicationReconcileHandler),
 		},
 	}
 }

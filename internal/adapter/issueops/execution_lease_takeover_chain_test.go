@@ -1,6 +1,10 @@
 package issueops
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"strings"
 	"testing"
@@ -21,7 +25,7 @@ func TestReplacePreviewRendersTheRevokeStepForAnActiveLease(t *testing.T) {
 	}
 
 	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
-		ID: record.ID, Action: ExecutionReplacePreview, ExpectedGeneration: 1,
+		ID: record.ID, Action: issueopscontract.ExecutionReplacePreview, ExpectedGeneration: 1,
 		Actor: requester, CWD: record.Execution.Workspace.SourceRoot,
 	}, deps)
 	if err != nil {

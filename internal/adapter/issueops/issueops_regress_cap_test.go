@@ -8,7 +8,7 @@ import (
 )
 
 func TestRegressIssueOpsForReplanRecordsRegressEvent(t *testing.T) {
-	stateRoot, id := recordAtPhaseForRegressTest(t, IssueOpsPhasePlan)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 
 	out, err := RegressIssueOpsForReplan(stateRoot, id, "first stop: scope too broad")
 	if err != nil {
@@ -21,8 +21,8 @@ func TestRegressIssueOpsForReplanRecordsRegressEvent(t *testing.T) {
 	if event.Reason != "first stop: scope too broad" {
 		t.Errorf("event reason = %q, want the stop reason", event.Reason)
 	}
-	if event.FromPhase != IssueOpsPhasePlan {
-		t.Errorf("event from_phase = %q, want %q", event.FromPhase, IssueOpsPhasePlan)
+	if event.FromPhase != issueops.IssueOpsPhasePlan {
+		t.Errorf("event from_phase = %q, want %q", event.FromPhase, issueops.IssueOpsPhasePlan)
 	}
 	if event.At == "" {
 		t.Error("event must carry a timestamp")
@@ -50,7 +50,7 @@ func TestRegressIssueOpsForReplanCapsRepeatedRegressions(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rec2.Phase != IssueOpsPhasePlan {
+	if rec2.Phase != issueops.IssueOpsPhasePlan {
 		t.Fatalf("refused regress must not rewind the phase, got %s", rec2.Phase)
 	}
 	if len(rec2.RegressEvents) != 3 {
@@ -72,7 +72,7 @@ func TestRegressCapErrorReportsActualEventCount(t *testing.T) {
 
 func seedRegressEvents(t *testing.T, count int) (string, string) {
 	t.Helper()
-	stateRoot, id := recordAtPhaseForRegressTest(t, IssueOpsPhasePlan)
+	stateRoot, id := recordAtPhaseForRegressTest(t, issueops.IssueOpsPhasePlan)
 	rec, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +80,7 @@ func seedRegressEvents(t *testing.T, count int) (string, string) {
 	for range count {
 		rec.RegressEvents = append(rec.RegressEvents, issueops.IssueOpsRegressEvent{
 			Reason:    "earlier stop",
-			FromPhase: IssueOpsPhasePlan,
+			FromPhase: issueops.IssueOpsPhasePlan,
 			At:        "2026-07-02T00:00:00Z",
 		})
 	}

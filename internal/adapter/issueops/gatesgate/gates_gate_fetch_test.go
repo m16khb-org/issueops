@@ -24,7 +24,7 @@ func TestAdvancePhaseToPRFetchesUpstreamOnce(t *testing.T) {
 	writeGatesLedger(t, record.Repo, "- [x] G1: done\n  EVIDENCE: measured\n")
 	log := installFetchCountingGit(t)
 
-	if _, err := AdvancePhaseWithActor(issueOpsStateRootForTest(), record.ID, "pr", issueops.IssueOpsActor{Host: "codex"}); err != nil {
+	if _, err := AdvancePhaseWithActor(issueOpsStateRootForTest(), record.ID, "pr", issueopscontract.IssueOpsActor{Host: "codex"}); err != nil {
 		t.Fatalf("pr entry with met gates must pass: %v", err)
 	}
 	data, err := os.ReadFile(log)

@@ -21,7 +21,7 @@ type CleanupAbandonDeps struct {
 	Remote        port.IssueProvider
 }
 
-func CleanupAbandon(ctx context.Context, root string, req CleanupAbandonRequest, deps CleanupAbandonDeps) (CleanupAbandonResult, error) {
+func CleanupAbandon(ctx context.Context, root string, req model.CleanupAbandonRequest, deps CleanupAbandonDeps) (model.CleanupAbandonResult, error) {
 	return abandonExecutorForTests(root, deps).Run(ctx, req)
 }
 func abandonExecutorForTests(root string, deps CleanupAbandonDeps) cleanupapp.AbandonExecutor {

@@ -45,10 +45,10 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 	})
 	process := &issueopscontract.NativeProcessReceipt{PID: 199, StartedAt: "2026-08-02T00:00:00Z", Executable: "/usr/local/bin/codex"}
 
-	result, err := handler(context.Background(), stateRoot, issueopscore.ExecutionPrepareRequest{
+	result, err := handler(context.Background(), stateRoot, issueopscontract.ExecutionPrepareRequest{
 		ID: record.ID, Mode: "direct", Actor: issueopscontract.NativeActor{Host: "codex", SessionID: "session", SessionProcess: process},
 		CWD: repo, DirectReason: "wiring preview test", Confirm: false,
-	}, issueopscore.ExecutionPrepareInvocation{})
+	}, port.ExecutionPrepareInvocation{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,16 +111,16 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	seedPlannerGates(t, stateRoot, record.ID)
-	request := issueopscore.ExecutionActionRequest{
-		Action: issueopscore.ExecutionActionPrepare, ID: record.ID, Mode: "orca",
+	request := issueopscontract.ExecutionActionRequest{
+		Action: issueopscontract.ExecutionActionPrepare, ID: record.ID, Mode: "orca",
 		Actor: claimWiringActor(t), CWD: repo, OwnerHost: "codex",
 		IssueSnapshotFile: snapshotPath, IssueSnapshot: issueSnapshot,
 	}
-	previewRaw, err := issueopscore.ExecuteExecution(context.Background(), stateRoot, request, issueopscore.ExecutionActionDependencies{Prepare: handler, ReadIssue: fallback})
+	previewRaw, err := newExecutionService().Execute(context.Background(), stateRoot, request, port.ExecutionActionDependencies{Prepare: handler, ReadIssue: fallback})
 	if err != nil {
 		t.Fatal(err)
 	}
-	preview := previewRaw.(issueopscore.ExecutionPrepareResult)
+	preview := previewRaw.(issueopscontract.ExecutionPrepareResult)
 	if !strings.Contains(preview.NextCommand, "--issue-snapshot-file '") {
 		t.Fatalf("snapshot-backed preview lost exact confirm source: %s", preview.NextCommand)
 	}
@@ -137,7 +137,7 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, ok := raw.(issueopscore.ExecutionPrepareResult)
+	result, ok := raw.(issueopscontract.ExecutionPrepareResult)
 	if !ok || !result.OK || result.ResolvedMode != "orca" || result.IssueSnapshotSource != "glab_mcp" {
 		t.Fatalf("result=%#v", raw)
 	}
@@ -164,7 +164,7 @@ func TestIssueOpsPrepareWiringRejectsActorBeforeStateMutation(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		issueopscontract.ExecutionPrepareRequest{ID: "io-forged-actor"},
-		issueopscore.ExecutionPrepareInvocation{},
+		port.ExecutionPrepareInvocation{},
 	)
 
 	if err == nil || !strings.Contains(err.Error(), "not in the local process ancestry") {

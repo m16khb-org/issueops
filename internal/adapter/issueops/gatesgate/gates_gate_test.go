@@ -50,7 +50,7 @@ func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	repo := initGatesGateRepo(t)
 	record := issueopscontract.IssueOpsRecord{
 		OK:            true,
-		SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
+		SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
 		ID:            issueops.NewIssueOpsID(repo, "main"),
 		Repo:          repo,
 		Branch:        "main",
@@ -165,7 +165,7 @@ func TestAdvancePhaseGuardsPRWithGates(t *testing.T) {
 
 	// 게이트 없으면 loopgate와 동일하게 pr 진입 가능(다른 readiness는 이미 충족).
 	writeGatesLedger(t, record.Repo, "- [x] G1: done\n  EVIDENCE: measured\n")
-	if _, err := AdvancePhaseWithActor(stateRoot, record.ID, "pr", issueops.IssueOpsActor{Host: "codex"}); err != nil {
+	if _, err := AdvancePhaseWithActor(stateRoot, record.ID, "pr", issueopscontract.IssueOpsActor{Host: "codex"}); err != nil {
 		t.Fatalf("pr entry with met gates must pass: %v", err)
 	}
 
@@ -179,13 +179,13 @@ func TestAdvancePhaseGuardsPRWithGates(t *testing.T) {
 		t.Fatal(err)
 	}
 	writeGatesLedger(t, record.Repo, "- [ ] G1: blocked\n  EVIDENCE: pending\n")
-	_, err := AdvancePhaseWithActor(stateRoot, record.ID, "pr", issueops.IssueOpsActor{Host: "codex"})
+	_, err := AdvancePhaseWithActor(stateRoot, record.ID, "pr", issueopscontract.IssueOpsActor{Host: "codex"})
 	if err == nil || !strings.Contains(err.Error(), "gates_incomplete") {
 		t.Fatalf("pr entry with unmet gates must fail with gates_incomplete: %v", err)
 	}
 
 	// pr 외 전환은 게이트와 무관하게 통과.
-	if _, err := AdvancePhaseWithActor(stateRoot, record.ID, "feedback", issueops.IssueOpsActor{Host: "codex"}); err != nil {
+	if _, err := AdvancePhaseWithActor(stateRoot, record.ID, "feedback", issueopscontract.IssueOpsActor{Host: "codex"}); err != nil {
 		t.Fatalf("non-pr transition must pass: %v", err)
 	}
 }

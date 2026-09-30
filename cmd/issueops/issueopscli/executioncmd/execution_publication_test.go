@@ -16,9 +16,9 @@ import (
 
 func TestActionDepsPropagatePublicationReconcileWithoutInvocation(t *testing.T) {
 	invoked := 0
-	handler := issueops.RemotePullRequestReconcileHandler(func(context.Context, string, issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+	handler := issueopscontract.RemotePullRequestReconcileHandler(func(context.Context, string, issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 		invoked++
-		return issueops.ExecutionReconcileResult{}, nil
+		return issueopscontract.ExecutionReconcileResult{}, nil
 	})
 
 	deps := (Deps{Publication: remotecmd.PublicationHandlers{Reconcile: handler}}).actionDeps()
@@ -44,12 +44,12 @@ func TestRunPublicationReconcilePreservesCLITextProjection(t *testing.T) {
 			"--session-executable", receipt.Executable, "--cwd", record.Execution.Workspace.Root,
 		}, Deps{
 			StateRoot: func() string { return stateRoot },
-			Publication: remotecmd.PublicationHandlers{Reconcile: func(_ context.Context, _ string, request issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+			Publication: remotecmd.PublicationHandlers{Reconcile: func(_ context.Context, _ string, request issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 				calls++
 				if request.Snapshot == nil || request.Snapshot.ID != record.ID {
 					t.Fatalf("publication reconcile snapshot=%#v", request.Snapshot)
 				}
-				return issueops.ExecutionReconcileResult{OK: true, ID: record.ID, Reconciled: true, Code: "remote_reconcile_adopted"}, nil
+				return issueopscontract.ExecutionReconcileResult{OK: true, ID: record.ID, Reconciled: true, Code: "remote_reconcile_adopted"}, nil
 			}},
 		})
 		if err != nil {
@@ -80,9 +80,9 @@ func publicationReconcileCLIRecord(t *testing.T) (string, issueopscontract.Issue
 	stateRoot, repo, worktree := t.TempDir(), t.TempDir(), t.TempDir()
 	actor := issueopscontract.NativeActor{Host: "codex", SessionID: "publication-cli-session", SessionProcess: &receipt}
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
+		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
 		ID: issueops.NewIssueOpsID(repo, "195-publication-cli"), Repo: repo, Branch: "195-publication-cli",
-		Phase: issueops.IssueOpsPhasePR, WorktreePath: worktree,
+		Phase: issueopscontract.IssueOpsPhasePR, WorktreePath: worktree,
 		Execution: &issueopscontract.Execution{
 			Mode:      issueopscontract.ExecutionModeDirect,
 			Workspace: issueopscontract.Workspace{SourceRoot: repo, Root: worktree, Branch: "195-publication-cli", BaseHead: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Driver: "git", LinkedAt: "2026-08-01T00:00:00Z"},

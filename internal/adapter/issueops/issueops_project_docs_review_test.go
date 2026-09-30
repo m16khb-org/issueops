@@ -48,31 +48,31 @@ func TestRecordIssueOpsProjectDocsReviewValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
 
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{Verdict: "done"}); err == nil {
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{Verdict: "done"}); err == nil {
 		t.Fatal("unknown verdict must be rejected")
 	}
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{Verdict: "no-change"}); err == nil {
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{Verdict: "no-change"}); err == nil {
 		t.Fatal("verdict without evidence must be rejected")
 	}
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict: "updated", Evidence: []string{"CAUTIONS 확인"},
 	}); err == nil {
 		t.Fatal("updated verdict without a doc path must be rejected")
 	}
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict: "no-change", Docs: []string{".issueops/CAUTIONS.md"}, Evidence: []string{"확인함"},
 	}); err == nil {
 		t.Fatal("no-change verdict must not carry updated docs")
 	}
 	// 연극 방지: 변경 집합에 없는 문서를 갱신했다고 주장하면 거부한다.
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict: "updated", Docs: []string{".issueops/ADR.md"}, Evidence: []string{"ADR 갱신"},
 	}); err == nil || !strings.Contains(err.Error(), "change set") {
 		t.Fatalf("doc outside the change set must be rejected: %v", err)
 	}
-	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict: "updated", Docs: []string{".issueops/CAUTIONS.md"}, Evidence: []string{"재발 함정 기록"},
 	})
 	if err != nil {
@@ -94,7 +94,7 @@ func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+	_, err = RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict: "no-change", ReviewedDocs: []string{".issueops/ADR.md"}, Evidence: []string{"문서 영향 없음"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "implement phase") {
@@ -143,9 +143,9 @@ func TestRecordIssueOpsProjectDocsReviewNoChangeRequiresReviewedDocs(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
 
-	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+	if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict: "no-change", Evidence: []string{"대조했으나 없음"},
 	}); err == nil || !strings.Contains(err.Error(), "--reviewed-doc") {
 		t.Fatalf("no-change without reviewed docs must be rejected: %v", err)
@@ -155,13 +155,13 @@ func TestRecordIssueOpsProjectDocsReviewNoChangeRequiresReviewedDocs(t *testing.
 		{doc: ".issueops/MISSING.md", want: "does not exist"},
 		{doc: "../outside.md", want: "inside the worktree"},
 	} {
-		if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+		if _, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 			Verdict: "no-change", ReviewedDocs: []string{tc.doc}, Evidence: []string{"대조"},
 		}); err == nil || !strings.Contains(err.Error(), tc.want) {
 			t.Fatalf("reviewed doc %q must be rejected with %q: %v", tc.doc, tc.want, err)
 		}
 	}
-	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict:      "no-change",
 		ReviewedDocs: []string{filepath.Join(repo, ".issueops", "ADR.md"), "AGENTS.md"},
 		Evidence:     []string{"ADR과 AGENTS를 대조했으나 남길 결정 없음"},
@@ -183,8 +183,8 @@ func TestRecordIssueOpsProjectDocsReviewUpdatedAcceptsReviewedDocs(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhaseImplement })
-	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, IssueOpsProjectDocsReviewRequest{
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
+	got, err := RecordIssueOpsProjectDocsReview(stateRoot, record.ID, issueops.IssueOpsProjectDocsReviewRequest{
 		Verdict: "updated", Docs: []string{".issueops/CAUTIONS.md"}, ReviewedDocs: []string{".issueops/ADR.md"},
 		Evidence: []string{"재발 함정 기록"},
 	})

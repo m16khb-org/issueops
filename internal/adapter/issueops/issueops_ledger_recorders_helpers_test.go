@@ -12,11 +12,11 @@ func RecordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomai
 	return recordIssueOpsDomainReview(stateRoot, id, req, nil)
 }
 
-func RecordIssueOpsDomainReviewWithActor(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
+func RecordIssueOpsDomainReviewWithActor(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return recordIssueOpsDomainReview(stateRoot, id, req, &actor)
 }
 
-func recordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
+func recordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest, actor *issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	store := NewReviewMutationStore(actor)
 	store.ValidateMutation = func(record issueops.IssueOpsRecord) error {
 		return validateWorkspacePreparationMutation(record, actor)
@@ -30,10 +30,10 @@ func ResolveIssueOpsFeedback(stateRoot, id string, index int, resolution string)
 	return resolveIssueOpsFeedback(stateRoot, id, index, resolution, nil)
 }
 
-func ResolveIssueOpsFeedbackWithActor(stateRoot, id string, index int, resolution string, actor IssueOpsActor) (issueops.IssueOpsRecord, error) {
+func ResolveIssueOpsFeedbackWithActor(stateRoot, id string, index int, resolution string, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return resolveIssueOpsFeedback(stateRoot, id, index, resolution, &actor)
 }
 
-func resolveIssueOpsFeedback(stateRoot, id string, index int, resolution string, actor *IssueOpsActor) (issueops.IssueOpsRecord, error) {
+func resolveIssueOpsFeedback(stateRoot, id string, index int, resolution string, actor *issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	return reviewapp.ResolveFeedback(NewReviewMutationStore(actor), stateRoot, id, index, resolution)
 }

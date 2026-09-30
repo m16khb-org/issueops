@@ -20,20 +20,20 @@ type executionOwnerSnapshot struct {
 }
 type executionOwnerArtifacts struct{ packetPath, packetSHA256, promptPath, promptSHA256, prompt string }
 
-func ownerContextForTest(root string, read ExecutionIssueSnapshotReadFunc) app.Service {
+func ownerContextForTest(root string, read port.ExecutionIssueSnapshotReadFunc) app.Service {
 	return app.Service{Files: OwnerContextFiles{StateRoot: root}, ReadIssue: read, Template: executionOwnerPromptTemplate, ReadRecord: (CycleRecordStore{StateRoot: root}).Load}
 }
-func ReadExecutionPreparationOwnerEvidence(ctx context.Context, root string, snapshot preparationcontract.Snapshot, read ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerEvidence, error) {
+func ReadExecutionPreparationOwnerEvidence(ctx context.Context, root string, snapshot preparationcontract.Snapshot, read port.ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerEvidence, error) {
 	return ownerContextForTest(root, read).ReadPreparationEvidence(ctx, snapshot)
 }
-func PrepareExecutionPreparationOwner(ctx context.Context, root string, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt, read ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerArtifacts, error) {
+func PrepareExecutionPreparationOwner(ctx context.Context, root string, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt, read port.ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerArtifacts, error) {
 	return ownerContextForTest(root, read).Prepare(ctx, snapshot, command, intent, receipt)
 }
-func buildExecutionOwnerArtifacts(record model.IssueOpsRecord, req ExecutionPrepareRequest, snapshot executionOwnerSnapshot, manifest map[string]string) (executionOwnerArtifacts, error) {
+func buildExecutionOwnerArtifacts(record model.IssueOpsRecord, req model.ExecutionPrepareRequest, snapshot executionOwnerSnapshot, manifest map[string]string) (executionOwnerArtifacts, error) {
 	out, err := ownerContextForTest("", nil).Build(record, req, model.OwnerSnapshot{Issue: snapshot.issue, RequiredDocs: snapshot.requiredDocs, RequiredSkills: snapshot.requiredSkills, AcceptanceIDs: snapshot.acceptanceIDs, VerificationCommands: snapshot.verificationCommands}, manifest)
 	return executionOwnerArtifacts{packetPath: out.PacketPath, packetSHA256: out.PacketSHA256, promptPath: out.PromptPath, promptSHA256: out.PromptSHA256, prompt: out.Prompt}, err
 }
-func executionOwnerCommandsFor(record model.IssueOpsRecord, req ExecutionPrepareRequest, digest string) model.OwnerCommands {
+func executionOwnerCommandsFor(record model.IssueOpsRecord, req model.ExecutionPrepareRequest, digest string) model.OwnerCommands {
 	return domain.OwnerCommandsFor(record, req, digest, (OwnerContextFiles{}).Paths(record), app.PolicyContext(record, req))
 }
 func renderExecutionOwnerPrompt(packet model.OwnerContextPacket, path, digest string) (string, error) {

@@ -1,6 +1,10 @@
 package issueopsapp
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -32,21 +36,21 @@ func productionIssueOpsPublicationDeps() issueOpsPublicationCompositionDeps {
 	}
 }
 
-func issueOpsPublicationCreateHandler(ctx context.Context, stateRoot string, request issueops.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func issueOpsPublicationCreateHandler(ctx context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 	return newIssueOpsPublicationHandlers(productionIssueOpsPublicationDeps()).Create(ctx, stateRoot, request)
 }
 
-func issueOpsPublicationReconcileHandler(ctx context.Context, stateRoot string, request issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+func issueOpsPublicationReconcileHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 	return newIssueOpsPublicationHandlers(productionIssueOpsPublicationDeps()).Reconcile(ctx, stateRoot, request)
 }
 
-func newIssueOpsPublicationHandlers(deps issueOpsPublicationCompositionDeps) issueops.RemotePublicationHandlers {
-	return issueops.RemotePublicationHandlers{
-		Create: func(ctx context.Context, stateRoot string, request issueops.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func newIssueOpsPublicationHandlers(deps issueOpsPublicationCompositionDeps) issueopscontract.RemotePublicationHandlers {
+	return issueopscontract.RemotePublicationHandlers{
+		Create: func(ctx context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 			create, _ := newIssueOpsPublicationServices(stateRoot, deps)
 			return publicationinbound.NewCreateHandler(create)(ctx, stateRoot, request)
 		},
-		Reconcile: func(ctx context.Context, stateRoot string, request issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+		Reconcile: func(ctx context.Context, stateRoot string, request issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 			_, reconcile := newIssueOpsPublicationServices(stateRoot, deps)
 			return publicationinbound.NewReconcileHandler(reconcile)(ctx, stateRoot, request)
 		},

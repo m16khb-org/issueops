@@ -227,13 +227,13 @@ func TestSwitchExecutionModeRejectsCleanupAbandonFence(t *testing.T) {
 		}
 	})
 
-	preview, err := SwitchExecutionMode(context.Background(), stateRoot, ExecutionSwitchModeRequest{
+	preview, err := SwitchExecutionMode(context.Background(), stateRoot, issueops.ExecutionSwitchModeRequest{
 		ID: record.ID, Mode: string(issueops.ExecutionModeOrca),
 	}, ExecutionSwitchModeDependencies{})
 	if err != nil {
 		t.Fatalf("switch-mode preview: %v", err)
 	}
-	result, err := SwitchExecutionMode(context.Background(), stateRoot, ExecutionSwitchModeRequest{
+	result, err := SwitchExecutionMode(context.Background(), stateRoot, issueops.ExecutionSwitchModeRequest{
 		ID: record.ID, Mode: string(issueops.ExecutionModeOrca), Apply: true, Confirm: true, Fingerprint: preview.Fingerprint,
 	}, ExecutionSwitchModeDependencies{})
 	if err == nil || !strings.Contains(err.Error(), "cleanup abandon apply is in progress") {
@@ -355,7 +355,7 @@ func TestCleanupAbandonAuthorityCASRunsBeforeGitMutation(t *testing.T) {
 		if armed && !mutated && len(args) > 1 && args[0] == "rev-parse" && args[1] == "--verify" {
 			mutated = true
 			mutateFinishRecord(t, stateRoot, fixture.record.ID, func(record *issueops.IssueOpsRecord) {
-				record.Phase = IssueOpsPhasePlan
+				record.Phase = issueops.IssueOpsPhasePlan
 			})
 		}
 		code, stdout, stderr := preflight.GitCmd(dir, args...)

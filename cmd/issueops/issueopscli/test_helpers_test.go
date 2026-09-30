@@ -101,14 +101,14 @@ func recordIssueOpsCoreDesignForCLITest(t *testing.T, id string) {
 	}
 }
 
-func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, issueopscore.IssueOpsActor) {
+func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, issueopscontract.IssueOpsActor) {
 	t.Helper()
 	baseHead := strings.TrimSpace(record.BranchPrepare.BaseSHA)
 	if len(baseHead) != 40 {
 		baseHead = strings.Repeat("a", 40)
 	}
 	const now = "2026-07-22T00:00:00Z"
-	actor := issueopscore.IssueOpsActor{Host: "codex", SessionID: "issueops-cli-test", AgentID: "test-agent", CWD: record.WorktreePath}
+	actor := issueopscontract.IssueOpsActor{Host: "codex", SessionID: "issueops-cli-test", AgentID: "test-agent", CWD: record.WorktreePath}
 	receipt, err := issueopscore.ObserveNativeProcessReceipt(os.Getpid())
 	if err != nil {
 		t.Fatal(err)
@@ -135,7 +135,7 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 	return written, actor
 }
 
-func withIssueOpsCLIActor(args []string, actor issueopscore.IssueOpsActor) []string {
+func withIssueOpsCLIActor(args []string, actor issueopscontract.IssueOpsActor) []string {
 	return append(args,
 		"--host", actor.Host,
 		"--session-id", actor.SessionID,

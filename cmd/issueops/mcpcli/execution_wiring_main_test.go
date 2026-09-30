@@ -9,7 +9,7 @@ import (
 // 검증하므로 같은 배선을 재현한다.
 func testExecutionDeps() ExecutionDeps {
 	root := issueOpsStateRootForTest()
-	return ExecutionDeps{ExecuteExecution: issueopscore.ExecuteExecution, ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return root }}
+	return ExecutionDeps{ExecuteExecution: testExecutionService().Execute, ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return root }}
 }
 
 func handleMCPIssueOpsExecutionWithDependencies(args map[string]any, deps MCPDependencies) MCPToolOutcome {

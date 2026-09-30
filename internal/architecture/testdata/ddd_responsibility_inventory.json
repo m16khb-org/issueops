@@ -858,6 +858,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func newExecutionService",
         "func newIssueOpsExecutionRunners"
       ]
     },
@@ -4303,54 +4304,6 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/contract_alias.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "type CleanupAbandonRequest",
-        "type CleanupAbandonResult",
-        "type CleanupFinishRequest",
-        "type CleanupFinishResult",
-        "type CleanupRemoteBranchRequest",
-        "type CleanupRemoteBranchResult",
-        "type ExecutionActionRequest",
-        "type ExecutionClaimDependencies",
-        "type ExecutionClaimHandler",
-        "type ExecutionClaimRequest",
-        "type ExecutionCompleteHandler",
-        "type ExecutionCompleteRequest",
-        "type ExecutionIssueSnapshotReadFunc",
-        "type ExecutionPrepareHandler",
-        "type ExecutionPrepareInvocation",
-        "type ExecutionPrepareRequest",
-        "type ExecutionPrepareResult",
-        "type ExecutionReconcileRequest",
-        "type ExecutionReconcileResult",
-        "type ExecutionReleaseHandler",
-        "type ExecutionReleaseRequest",
-        "type ExecutionReplaceResult",
-        "type ExecutionReseedHandler",
-        "type ExecutionReseedRequest",
-        "type ExecutionResult",
-        "type ExecutionResumeHandler",
-        "type ExecutionResumeRequest",
-        "type ExecutionResumeResult",
-        "type ExecutionSwitchModeRequest",
-        "type ExecutionSwitchModeResult",
-        "type ExecutionSyncBaseDeps",
-        "type ExecutionSyncBaseRequest",
-        "type ExecutionSyncBaseResult",
-        "type IssueOpsActor",
-        "type IssueOpsImplementationReviewRequest",
-        "type IssueOpsProjectDocsReviewRequest",
-        "type IssueOpsSchemaEvidenceRequest",
-        "type RemotePublicationHandlers",
-        "type RemotePullRequestCreateHandler",
-        "type RemotePullRequestReconcileHandler",
-        "type RemotePullRequestRequest"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/cycle_record_store.go",
       "owner": "adapter",
       "task": "T08",
@@ -4366,36 +4319,10 @@
       ]
     },
     {
-      "path": "internal/adapter/issueops/execution_api.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func ExecuteExecution",
-        "func executeExecutionAction",
-        "func invokeExecutionPrepareHandler"
-      ]
-    },
-    {
       "path": "internal/adapter/issueops/execution_complete.go",
       "owner": "adapter",
       "task": "T20",
       "symbols": []
-    },
-    {
-      "path": "internal/adapter/issueops/execution_issue_snapshot.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func executionGitLabFallbackSnapshotReader",
-        "func executionIssueSnapshotReaderForAction",
-        "func parseGitLabExecutionIssueIdentity",
-        "func sameGitLabExecutionIssueIdentity",
-        "func validateExecutionIssueSnapshotAction",
-        "func validateExecutionIssueSnapshotRecord",
-        "func validateGitLabExecutionIssueSnapshot",
-        "func withExecutionIssueSnapshotSource",
-        "type gitLabExecutionIssueIdentity"
-      ]
     },
     {
       "path": "internal/adapter/issueops/execution_lease_identity.go",
@@ -4473,18 +4400,6 @@
         "func quoteExecutionOwnerArg",
         "func readExecutionOwnerArtifact",
         "func writeExecutionOwnerArtifact"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_port_types.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "type ExecutionActionDependencies",
-        "type ExecutionOrcaOwnerInspector",
-        "type ExecutionOrcaProvisioner",
-        "type ExecutionReconcileDependencies",
-        "type ExecutionReconcileHandler"
       ]
     },
     {
@@ -4567,16 +4482,6 @@
         "func RemotePublicationStore.WithinTransaction",
         "func readRemotePublicationRaw",
         "type RemotePublicationStore"
-      ]
-    },
-    {
-      "path": "internal/adapter/issueops/execution_reconcile.go",
-      "owner": "adapter",
-      "task": "T06",
-      "symbols": [
-        "func ReconcileExecutionWithDependencies",
-        "func executionReconcileResult",
-        "func failedExecutionReconcileResult"
       ]
     },
     {
@@ -4977,12 +4882,6 @@
         "func OwnerContextFiles.Write",
         "type OwnerContextFiles"
       ]
-    },
-    {
-      "path": "internal/adapter/issueops/package.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": []
     },
     {
       "path": "internal/adapter/issueops/pathutil/path_helpers.go",
@@ -9172,6 +9071,44 @@
         "func Validator.Reject",
         "func Validator.validate",
         "type Validator"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsexecution/execution_api.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Execute",
+        "func Service.executeAction",
+        "func invokeExecutionPrepareHandler"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsexecution/execution_reconcile.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.Reconcile",
+        "func executionReconcileResult",
+        "func failedExecutionReconcileResult"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsexecution/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "type Service"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsexecution/snapshot.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.snapshotReader",
+        "func executionGitLabFallbackSnapshotReader",
+        "func withExecutionIssueSnapshotSource"
       ]
     },
     {
@@ -13413,6 +13350,20 @@
       "task": "T03",
       "symbols": [
         "func ValidateEvidenceRecordingPhase"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/execution_issue_snapshot.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func SameGitLabExecutionIssueIdentity",
+        "func ValidateExecutionSnapshotAction",
+        "func ValidateExecutionSnapshotEvidence",
+        "func ValidateExecutionSnapshotRecord",
+        "func ValidateGitLabExecutionSnapshot",
+        "func parseGitLabExecutionIssueIdentity",
+        "type gitLabExecutionIssueIdentity"
       ]
     },
     {
@@ -26403,6 +26354,101 @@
         "internal/application/issueopsreview/metrics_test.go",
         "internal/adapter/issueops/issueops_review_metrics_test.go",
         "cmd/issueops/issueopscli/issueops_review_metrics_cli_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "execution-action-orchestration",
+      "source_path": "internal/adapter/issueops/execution_api.go",
+      "source_symbol": "func ExecuteExecution",
+      "responsibility": "execution action orchestration",
+      "target": "internal/application/issueopsexecution",
+      "target_symbol": "func Service.Execute",
+      "task": "T20",
+      "entrypoints": [
+        "issueops execution",
+        "MCP issueops_execution"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsexecution/service_test.go",
+        "internal/domain/issueops/execution_issue_snapshot_test.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "execution-snapshot-admission",
+      "source_path": "internal/adapter/issueops/execution_issue_snapshot.go",
+      "source_symbol": "func validateExecutionIssueSnapshotAction",
+      "responsibility": "execution snapshot admission",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateExecutionSnapshotAction",
+      "task": "T20",
+      "entrypoints": [
+        "issueops execution",
+        "MCP issueops_execution"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsexecution/service_test.go",
+        "internal/domain/issueops/execution_issue_snapshot_test.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "execution-snapshot-identity",
+      "source_path": "internal/adapter/issueops/execution_issue_snapshot.go",
+      "source_symbol": "func validateGitLabExecutionIssueSnapshot",
+      "responsibility": "execution snapshot identity",
+      "target": "internal/domain/issueops",
+      "target_symbol": "func ValidateGitLabExecutionSnapshot",
+      "task": "T20",
+      "entrypoints": [
+        "issueops execution",
+        "MCP issueops_execution"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsexecution/service_test.go",
+        "internal/domain/issueops/execution_issue_snapshot_test.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "execution-snapshot-observation-flow",
+      "source_path": "internal/adapter/issueops/execution_issue_snapshot.go",
+      "source_symbol": "func executionIssueSnapshotReaderForAction",
+      "responsibility": "execution snapshot observation flow",
+      "target": "internal/application/issueopsexecution",
+      "target_symbol": "func Service.snapshotReader",
+      "task": "T20",
+      "entrypoints": [
+        "issueops execution",
+        "MCP issueops_execution"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsexecution/service_test.go",
+        "internal/domain/issueops/execution_issue_snapshot_test.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"
+      ],
+      "status": "migrated"
+    },
+    {
+      "id": "execution-reconcile-observation-flow",
+      "source_path": "internal/adapter/issueops/execution_reconcile.go",
+      "source_symbol": "func ReconcileExecutionWithDependencies",
+      "responsibility": "execution reconcile observation flow",
+      "target": "internal/application/issueopsexecution",
+      "target_symbol": "func Service.Reconcile",
+      "task": "T20",
+      "entrypoints": [
+        "issueops execution",
+        "MCP issueops_execution"
+      ],
+      "evidence_tests": [
+        "internal/application/issueopsexecution/service_test.go",
+        "internal/domain/issueops/execution_issue_snapshot_test.go",
+        "cmd/issueops/issueopsapp/issueops_reconcile_wiring_test.go"
       ],
       "status": "migrated"
     }

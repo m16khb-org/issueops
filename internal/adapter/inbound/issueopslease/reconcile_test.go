@@ -1,16 +1,19 @@
 package issueopslease
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+	issueopsport "issueops/internal/port"
+)
+
+import (
 	"context"
 	"errors"
 	"testing"
-
-	"issueops/internal/adapter/issueops"
 )
 
 func TestReconcileHandlerFailsClosedWithoutService(t *testing.T) {
-	result, err := NewReconcileHandler(nil)(context.Background(), "state", issueops.ExecutionReconcileRequest{ID: "io-reconcile"}, issueops.ExecutionReconcileDependencies{})
-	if !errors.Is(err, issueops.ErrReconcileHandlerUnavailable) || result.ID != "io-reconcile" {
+	result, err := NewReconcileHandler(nil)(context.Background(), "state", issueopscontract.ExecutionReconcileRequest{ID: "io-reconcile"}, issueopsport.ExecutionReconcileDependencies{})
+	if !errors.Is(err, issueopscontract.ErrReconcileHandlerUnavailable) || result.ID != "io-reconcile" {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}
 }

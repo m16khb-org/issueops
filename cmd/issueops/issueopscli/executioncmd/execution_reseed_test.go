@@ -1,10 +1,12 @@
 package executioncmd
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"testing"
-
-	"issueops/internal/adapter/issueops"
 )
 
 func TestExecutionReseedCLIMapsCompletionGeneration(t *testing.T) {
@@ -19,12 +21,12 @@ func TestExecutionReseedCLIMapsCompletionGeneration(t *testing.T) {
 		"--cwd", stateRoot,
 	}, Deps{
 		StateRoot: func() string { return stateRoot },
-		Reseed: func(_ context.Context, gotRoot string, request issueops.ExecutionReseedRequest) (issueops.ExecutionReplaceResult, error) {
+		Reseed: func(_ context.Context, gotRoot string, request issueopscontract.ExecutionReseedRequest) (issueopscontract.ExecutionReplaceResult, error) {
 			calls++
 			if gotRoot != stateRoot || request.ExpectedGeneration != 5 || request.CompletionGeneration != 4 {
 				t.Fatalf("reseed handler request=%+v state_root=%q", request, gotRoot)
 			}
-			return issueops.ExecutionReplaceResult{OK: true, ID: request.ID, Action: issueops.ExecutionReplaceReseed}, nil
+			return issueopscontract.ExecutionReplaceResult{OK: true, ID: request.ID, Action: issueopscontract.ExecutionReplaceReseed}, nil
 		},
 		PrintJSON: func(any) error { return nil },
 	})

@@ -61,7 +61,7 @@ func TestIssueOpsCleanupStatusRequiresMergedCleanWorktreeAndDeletedRemoteBranch(
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\n")
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestIssueOpsCleanupStatusRequiresMergedCleanWorktreeAndDeletedRemoteBranch(
 	}
 	recordIssueOpsProjectDocsReviewForTest(t, stateRoot, record.ID)
 	recordIssueOpsImplementationReviewForTest(t, stateRoot, record.ID)
-	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhasePR), issueOpsActorForTest(worktree))
+	record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhasePR), issueOpsActorForTest(worktree))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestIssueOpsCleanupStatusBlocksWhenRemoteBranchCheckUnavailable(t *testing.
 	record := issueops.IssueOpsRecord{
 		ID:           "io-cleanup",
 		Branch:       branch,
-		Phase:        IssueOpsPhasePR,
+		Phase:        issueops.IssueOpsPhasePR,
 		WorktreePath: worktree,
 		RemoteArtifact: &issueops.IssueOpsRemoteArtifactVerification{
 			Provider:  "github",

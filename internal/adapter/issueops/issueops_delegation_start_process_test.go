@@ -136,7 +136,7 @@ func TestIssueOpsDelegationStartProcessHelper(t *testing.T) {
 		Title:              title,
 		TaskScope:          "process sibling concurrency",
 		AcceptanceCriteria: []string{"every process sibling persists"},
-	}, &IssueOpsActor{
+	}, &issueops.IssueOpsActor{
 		Host: "codex", SessionID: "test-session", AgentID: "test-agent", CWD: parentWorktree,
 		NativeProcessAncestry: []issueops.NativeProcessReceipt{{
 			PID: 1, StartedAt: "2026-07-22T00:00:00Z", Executable: "/usr/bin/codex",

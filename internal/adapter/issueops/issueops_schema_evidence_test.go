@@ -75,20 +75,20 @@ func TestRecordIssueOpsSchemaEvidenceValidation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
 
-	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, IssueOpsSchemaEvidenceRequest{}); err == nil {
+	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{}); err == nil {
 		t.Fatal("empty request must be rejected")
 	}
-	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, IssueOpsSchemaEvidenceRequest{
+	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{
 		Measurements: []string{"row count 12"},
 	}); err == nil || !strings.Contains(err.Error(), "source") {
 		t.Fatalf("measurement without a source must be rejected: %v", err)
 	}
-	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, IssueOpsSchemaEvidenceRequest{Waive: true}); err == nil {
+	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{Waive: true}); err == nil {
 		t.Fatal("waiver without rationale must be rejected")
 	}
-	got, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, IssueOpsSchemaEvidenceRequest{
+	got, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{
 		Measurements: []string{"idx_orders_user_id 미존재, orders 8.4M rows"},
 		Sources:      []string{"mcp db-bc-prod execute_sql_bc_prod_market"},
 	})

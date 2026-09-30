@@ -81,7 +81,7 @@ func TestRunVerifyArtifactAndRemoteCreateDryRuns(t *testing.T) {
 			}
 			return nil
 		},
-		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscore.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 			return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 		}},
 	}
@@ -236,7 +236,7 @@ func TestRunRemoteCreatePRDryRunRejectsSecretLikeContentBeforeProviderCall(t *te
 	secret := "api_key=opaque-token password=opaque-password Authorization: Bearer opaque-bearer /tmp/secret.pem"
 	providerCalls := 0
 	deps := Deps{
-		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscore.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 			providerCalls++
 			return port.IssueProviderCreatePullRequestResult{OK: true}, nil
 		}},
@@ -264,7 +264,7 @@ func TestRunRemoteCreatePRRejectsSecretLikeMetadataBeforeProviderCall(t *testing
 		t.Run(test.name, func(t *testing.T) {
 			providerCalls := 0
 			deps := Deps{Publication: PublicationHandlers{
-				Create: func(context.Context, string, issueopscore.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+				Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 					providerCalls++
 					return port.IssueProviderCreatePullRequestResult{OK: true}, nil
 				},
@@ -304,7 +304,7 @@ func TestRunRemoteCreatePRUsesPublicationHandlerForPreviewAndConfirm(t *testing.
 	handlerCalls := 0
 	var printed []any
 	deps := Deps{
-		Publication: PublicationHandlers{Create: func(_ context.Context, stateRoot string, request issueopscore.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Publication: PublicationHandlers{Create: func(_ context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 			handlerCalls++
 			if stateRoot != issueOpsStateRootForTest() || request.ID != record.ID || request.Provider != "github" || request.Title != "PR" {
 				t.Fatalf("stateRoot=%q request=%#v", stateRoot, request)
@@ -354,7 +354,7 @@ func TestRunRemoteCreatePRFailsClosedWithoutPublicationHandler(t *testing.T) {
 		"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", "Body",
 		"--head", record.Branch, "--base", "main", "--label", "bug", "--assignee", "octocat",
 	}, Deps{})
-	if !errors.Is(err, issueopscore.ErrRemotePullRequestCreateHandlerUnavailable) {
+	if !errors.Is(err, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable) {
 		t.Fatalf("err=%v", err)
 	}
 }
@@ -369,7 +369,7 @@ func TestRunRemoteCreatePRObservesAncestryOnlyForConfirmedMutation(t *testing.T)
 			observeCalls++
 			return nil, errors.New("ps unavailable")
 		},
-		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscore.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
 			providerCalls++
 			return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 		}},
@@ -602,7 +602,7 @@ func remoteIssueOpsRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	if err != nil {
 		t.Fatalf("LinkIssueOpsChild: %v", err)
 	}
-	record.Phase = issueopscore.IssueOpsPhasePR
+	record.Phase = issueopscontract.IssueOpsPhasePR
 	record, err = issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
 	if err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)

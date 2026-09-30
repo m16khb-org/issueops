@@ -22,17 +22,17 @@ import (
 type issueOpsPreparationCompositionDeps struct {
 	Direct         port.ExecutionWorkspaceProvisioner
 	Orca           port.ExecutionOrcaProvisioner
-	ReadIssue      issueops.ExecutionIssueSnapshotReadFunc
+	ReadIssue      port.ExecutionIssueSnapshotReadFunc
 	Now            func() time.Time
 	NewOperationID func() (string, error)
 	ValidateActor  func(issueopscontract.NativeActor) error
 }
 
 type issueOpsExecutionCompositionDeps struct {
-	Prepare   issueops.ExecutionPrepareHandler
+	Prepare   issueopscontract.ExecutionPrepareHandler
 	Orca      port.ExecutionOrcaProvisioner
 	OrcaOwner port.ExecutionOrcaOwnerInspector
-	ReadIssue issueops.ExecutionIssueSnapshotReadFunc
+	ReadIssue port.ExecutionIssueSnapshotReadFunc
 }
 
 func productionIssueOpsExecutionDependencies() issueOpsExecutionCompositionDeps {
@@ -47,11 +47,11 @@ func productionIssueOpsExecutionDependencies() issueOpsExecutionCompositionDeps 
 	}
 }
 
-func newIssueOpsPreparationHandler(deps issueOpsPreparationCompositionDeps) issueops.ExecutionPrepareHandler {
-	return func(ctx context.Context, stateRoot string, request issueops.ExecutionPrepareRequest, invocation issueops.ExecutionPrepareInvocation) (issueops.ExecutionPrepareResult, error) {
+func newIssueOpsPreparationHandler(deps issueOpsPreparationCompositionDeps) issueopscontract.ExecutionPrepareHandler {
+	return func(ctx context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, invocation port.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 		if deps.ValidateActor != nil {
 			if err := deps.ValidateActor(request.Actor); err != nil {
-				return issueops.ExecutionPrepareResult{ID: request.ID}, err
+				return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 			}
 		}
 		requestDeps := deps
@@ -60,7 +60,7 @@ func newIssueOpsPreparationHandler(deps issueOpsPreparationCompositionDeps) issu
 		}
 		service, err := newIssueOpsPreparationService(stateRoot, request.ID, requestDeps)
 		if err != nil {
-			return issueops.ExecutionPrepareResult{ID: request.ID}, err
+			return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 		}
 		return preparationinbound.NewHandler(service)(ctx, stateRoot, request, invocation)
 	}

@@ -34,7 +34,7 @@ var issueOpsOwnerReportLabels = []string{
 	"Blockers",
 }
 
-func renderExecutionOwnerReportContract(record issueops.IssueOpsRecord, req ExecutionPrepareRequest) string {
+func renderExecutionOwnerReportContract(record issueops.IssueOpsRecord, req issueops.ExecutionPrepareRequest) string {
 	mode := strings.ToLower(strings.TrimSpace(req.Mode))
 	if record.Execution != nil {
 		mode = string(record.Execution.Mode)

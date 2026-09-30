@@ -26,7 +26,7 @@ func TestIssueOpsStrictPRReadinessBlocksIncompleteChildren(t *testing.T) {
 	}
 
 	child := started.Child
-	child.Phase = IssueOpsPhaseDone
+	child.Phase = issueops.IssueOpsPhaseDone
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 	ready = IssueOpsStrictPRReadinessWithState(stateRoot, parent)
 	if containsString(ready.Missing, "child_incomplete:"+child.ID) || !containsString(ready.Missing, "child_unvalidated:"+child.ID) {
@@ -60,7 +60,7 @@ func TestIssueOpsStrictPRReadinessRejectedAndDroppedVerdicts(t *testing.T) {
 		t.Fatal(err)
 	}
 	child := started.Child
-	child.Phase = IssueOpsPhaseDone
+	child.Phase = issueops.IssueOpsPhaseDone
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
 	if _, err := rejectIssueOpsChildForTest(stateRoot, parent, child.ID, "needs another integration pass", []string{"missing validation"}); err != nil {
 		t.Fatal(err)

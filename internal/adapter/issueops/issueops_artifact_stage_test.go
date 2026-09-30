@@ -446,7 +446,7 @@ func TestRequireStagedExecutionOwnerPlanSkipsPlanBindingAfterImplementEntry(t *t
 	}
 	// Owner replacement/reseed during implementation reseals the edited plan
 	// without a fresh devil's-advocate round.
-	for _, phase := range []issueopscontract.IssueOpsPhase{IssueOpsPhaseImplement, IssueOpsPhaseAISlopClean, IssueOpsPhasePR} {
+	for _, phase := range []issueopscontract.IssueOpsPhase{issueopscontract.IssueOpsPhaseImplement, issueopscontract.IssueOpsPhaseAISlopClean, issueopscontract.IssueOpsPhasePR} {
 		record.Phase = phase
 		if _, err := RequireStagedExecutionOwnerPlan(stateRoot, record); err != nil {
 			t.Fatalf("phase %s: plan binding must not gate owner replacement after implement entry: %v", phase, err)

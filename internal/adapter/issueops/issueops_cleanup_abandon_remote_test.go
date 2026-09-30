@@ -106,7 +106,7 @@ func remoteAbandonRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	return stateRoot, record
 }
 
-func remoteAbandonRequest(id string, apply bool, fingerprint string) CleanupAbandonRequest {
+func remoteAbandonRequest(id string, apply bool, fingerprint string) issueops.CleanupAbandonRequest {
 	req := abandonRequest(id, apply, fingerprint)
 	req.ArtifactUnmerged = true
 	req.ClosePR, req.CloseIssue, req.DeleteRemoteBranch = true, true, true
@@ -234,7 +234,7 @@ func TestCleanupAbandonRemoteSkipsAlreadyClosedArtifacts(t *testing.T) {
 		issueBody:    port.IssueProviderArtifactBody{State: "CLOSED"},
 	}
 	result, err := CleanupAbandon(context.Background(), stateRoot,
-		func() CleanupAbandonRequest {
+		func() issueops.CleanupAbandonRequest {
 			req := remoteAbandonRequest(record.ID, false, "")
 			req.DeleteRemoteBranch = false
 			return req

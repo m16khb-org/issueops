@@ -1,14 +1,16 @@
 package mcpcli
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
 	"testing"
-
-	"issueops/internal/adapter/issueops"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -76,9 +78,9 @@ func TestInitSDKServerKeepsDependenciesPerServer(t *testing.T) {
 
 func TestInitSDKServerAcceptsPublicationReconcileWithoutInvokingIt(t *testing.T) {
 	invoked := 0
-	handler := issueops.RemotePullRequestReconcileHandler(func(context.Context, string, issueops.ExecutionReconcileRequest) (issueops.ExecutionReconcileResult, error) {
+	handler := issueopscontract.RemotePullRequestReconcileHandler(func(context.Context, string, issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 		invoked++
-		return issueops.ExecutionReconcileResult{}, nil
+		return issueopscontract.ExecutionReconcileResult{}, nil
 	})
 
 	server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Publication: PublicationHandlers{Reconcile: handler}})
@@ -100,10 +102,10 @@ func TestInitSDKServerDispatchesConcurrentReleaseWithIsolatedDependencies(t *tes
 		group.Add(1)
 		go func(id string) {
 			defer group.Done()
-			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueops.ExecutionReleaseRequest) (issueops.ExecutionResult, error) {
+			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				token := id + "::" + request.ID
 				called <- token
-				return issueops.ExecutionResult{OK: true, ID: token}, nil
+				return issueopscontract.ExecutionResult{OK: true, ID: token}, nil
 			}})
 			clientTransport, serverTransport := mcp.NewInMemoryTransports()
 			serverSession, err := server.Connect(context.Background(), serverTransport, nil)

@@ -1,6 +1,10 @@
 package issueopsapp
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"bytes"
 	"context"
 	"encoding/json"
@@ -49,7 +53,7 @@ func TestResumePlanIdentityFailureStopsBeforeOperationAndOrcaMutation(t *testing
 		t.Fatal(err)
 	}
 	handler := leaseinbound.NewResumeHandler(service, ownerdomain.OwnerResumeNextCommand)
-	result, err := handler(context.Background(), stateRoot, issueops.ExecutionResumeRequest{
+	result, err := handler(context.Background(), stateRoot, issueopscontract.ExecutionResumeRequest{
 		ID: record.ID, ExpectedGeneration: 1, Actor: claimWiringActor(t),
 		CWD: record.Execution.Workspace.Root, Confirm: true,
 	})
@@ -129,7 +133,7 @@ func TestIssueOpsResumeProductionWiringObservesDispatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, err := leaseinbound.NewResumeHandler(service, ownerdomain.OwnerResumeNextCommand)(context.Background(), stateRoot, issueops.ExecutionResumeRequest{
+	result, err := leaseinbound.NewResumeHandler(service, ownerdomain.OwnerResumeNextCommand)(context.Background(), stateRoot, issueopscontract.ExecutionResumeRequest{
 		ID: record.ID, ExpectedGeneration: 1, Actor: claimWiringActor(t), CWD: record.Execution.Workspace.Root, Confirm: true,
 	})
 	if err != nil || !result.OK {

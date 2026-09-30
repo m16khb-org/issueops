@@ -117,7 +117,7 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)
 	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\n")
-	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree)); err != nil {
+	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean), issueOpsActorForTest(worktree)); err != nil {
 		t.Fatal(err)
 	}
 	if code, _, stderr := preflight.GitCmd(worktree, "add", "internal/demo.go", "plans/demo.md"); code != 0 {
@@ -131,7 +131,7 @@ func cleanupStatusMissingWithSurvivingRemoteBranch(t *testing.T) []string {
 	}
 	recordIssueOpsProjectDocsReviewForTest(t, stateRoot, record.ID)
 	recordIssueOpsImplementationReviewForTest(t, stateRoot, record.ID)
-	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(IssueOpsPhasePR), issueOpsActorForTest(worktree)); err != nil {
+	if record, err = AdvanceIssueOpsPhaseWithActor(stateRoot, record.ID, string(issueops.IssueOpsPhasePR), issueOpsActorForTest(worktree)); err != nil {
 		t.Fatal(err)
 	}
 	if record, err = recordVerifiedArtifactForTest(stateRoot, record.ID, issueops.IssueOpsRemoteArtifactVerificationRequest{

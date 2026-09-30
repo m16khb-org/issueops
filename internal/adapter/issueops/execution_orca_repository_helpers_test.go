@@ -19,7 +19,7 @@ import (
 	"issueops/internal/port"
 )
 
-func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsRecord, workspace port.ExecutionWorkspaceRequest, probe port.ExecutionOrcaProbeRequest, request ExecutionPrepareRequest, owner executionOwnerSnapshot, now func() time.Time) (issueops.IssueOpsRecord, preparationcontract.Intent, error) {
+func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsRecord, workspace port.ExecutionWorkspaceRequest, probe port.ExecutionOrcaProbeRequest, request issueops.ExecutionPrepareRequest, owner executionOwnerSnapshot, now func() time.Time) (issueops.IssueOpsRecord, preparationcontract.Intent, error) {
 	store, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return record, preparationcontract.Intent{}, err
@@ -61,7 +61,7 @@ func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsReco
 
 type reconcileWorktreeTestEffects struct {
 	stateRoot string
-	readIssue ExecutionIssueSnapshotReadFunc
+	readIssue port.ExecutionIssueSnapshotReadFunc
 }
 
 type ExecutionResumeIntentState struct {
@@ -102,7 +102,7 @@ func (e reconcileWorktreeTestEffects) PrepareWorktree(ctx context.Context, snaps
 	return PrepareExecutionPreparationOwner(ctx, e.stateRoot, snapshot, command, intent, receipt, e.readIssue)
 }
 
-func advanceOrcaIntentReceiptViaRepository(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected preparationcontract.Intent, receipt port.ExecutionOrcaIntentReceipt, readIssue ExecutionIssueSnapshotReadFunc, _ func() time.Time) (issueops.IssueOpsRecord, preparationcontract.Intent, error) {
+func advanceOrcaIntentReceiptViaRepository(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected preparationcontract.Intent, receipt port.ExecutionOrcaIntentReceipt, readIssue port.ExecutionIssueSnapshotReadFunc, _ func() time.Time) (issueops.IssueOpsRecord, preparationcontract.Intent, error) {
 	store, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return record, expected, err

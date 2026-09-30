@@ -14,7 +14,7 @@ type ExecutionReplaceRequest = model.ExecutionReplaceRequest
 type ExecutionReplaceDependencies struct {
 	OrcaOwner        port.ExecutionOrcaOwnerInspector
 	BaseSync         basesync.Inspector
-	ReadIssue        ExecutionIssueSnapshotReadFunc
+	ReadIssue        port.ExecutionIssueSnapshotReadFunc
 	inspectWorkspace executionWorkspaceProcessInspector
 }
 

@@ -103,7 +103,7 @@ func bodySyncCreateIntent(url, sha string) *issueops.IssueOpsIssueCreateIntent {
 	}
 }
 
-func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.IssueOpsRecord, actor IssueOpsActor) {
+func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.IssueOpsRecord, actor issueops.IssueOpsActor) {
 	t.Helper()
 	stateRoot = filepath.Join(t.TempDir(), "issueops")
 	repo := t.TempDir()
@@ -376,7 +376,7 @@ func TestSyncBodyRejectsManagedMarkersBeforeAnyProviderCall(t *testing.T) {
 	}
 }
 
-func syncBodyForTest(ctx context.Context, stateRoot, id string, command bodysynccontract.Command, provider port.IssueProvider, actor IssueOpsActor) (issueops.IssueOpsRecord, bodysynccontract.Result, error) {
+func syncBodyForTest(ctx context.Context, stateRoot, id string, command bodysynccontract.Command, provider port.IssueProvider, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, bodysynccontract.Result, error) {
 	gateway, err := NewBodySyncProvider(provider)
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err

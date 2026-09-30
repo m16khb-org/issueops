@@ -22,13 +22,13 @@ func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, IssueOpsImplementationReviewRequest{Verdict: "approve"}); err == nil {
+	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, issueops.IssueOpsImplementationReviewRequest{Verdict: "approve"}); err == nil {
 		t.Fatal("unknown verdict must be rejected")
 	}
-	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, IssueOpsImplementationReviewRequest{Verdict: "pass"}); err == nil {
+	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, issueops.IssueOpsImplementationReviewRequest{Verdict: "pass"}); err == nil {
 		t.Fatal("pass without findings/evidence must be rejected")
 	}
-	valid := IssueOpsImplementationReviewRequest{
+	valid := issueops.IssueOpsImplementationReviewRequest{
 		Verdict: "pass", Findings: []string{"경계 조건 검토 완료"}, Evidence: []string{"go test ./... ok"},
 		ReviewerHost: "codex", ReviewerModel: "gpt-5.6-sol", ReviewerEffort: "xhigh",
 	}
@@ -36,7 +36,7 @@ func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 	if _, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, valid); err == nil || !strings.Contains(err.Error(), "implement phase") {
 		t.Fatalf("pre-implement recording must be rejected: %v", err)
 	}
-	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = IssueOpsPhaseImplement })
+	mutateFinishRecord(t, stateRoot, record.ID, func(rec *issueops.IssueOpsRecord) { rec.Phase = issueops.IssueOpsPhaseImplement })
 	got, err := RecordIssueOpsImplementationReview(stateRoot, record.ID, valid)
 	if err != nil {
 		t.Fatal(err)
@@ -143,7 +143,7 @@ func TestOwnerCommandsIncludeImplementationReviewWithPlannerModel(t *testing.T) 
 		{host: "claude", model: "claude-opus-5-5", effort: "high"},
 	} {
 		t.Run(tc.host, func(t *testing.T) {
-			commands := executionOwnerCommandsFor(record, ExecutionPrepareRequest{OwnerHost: tc.host}, strings.Repeat("a", 64))
+			commands := executionOwnerCommandsFor(record, issueops.ExecutionPrepareRequest{OwnerHost: tc.host}, strings.Repeat("a", 64))
 			if !strings.Contains(commands.ImplementationReview, "implementation-review record") ||
 				!strings.Contains(commands.ImplementationReview, tc.model) ||
 				!strings.Contains(commands.ImplementationReview, "--reviewer-effort '"+tc.effort+"'") {

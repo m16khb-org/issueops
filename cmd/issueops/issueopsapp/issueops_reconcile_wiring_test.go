@@ -87,16 +87,16 @@ func TestIssueOpsReconcileVerticalAdoptsExactlyOneStage(t *testing.T) {
 	fake.adopt = true
 	fake.inspectCalls = 0
 	fake.invokeCalls = 0
-	raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, issueops.ExecutionActionRequest{
-		Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
+	raw, err := newExecutionService().Execute(context.Background(), stateRoot, issueopscontract.ExecutionActionRequest{
+		Action: issueopscontract.ExecutionActionReconcile, ID: record.ID, Confirm: true,
 		Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
-	}, issueops.ExecutionActionDependencies{
+	}, port.ExecutionActionDependencies{
 		Orca: fake, Reconcile: issueOpsReconcileHandler, RemoteReconcile: issueOpsPublicationReconcileHandler,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, ok := raw.(issueops.ExecutionReconcileResult)
+	result, ok := raw.(issueopscontract.ExecutionReconcileResult)
 	if !ok {
 		t.Fatalf("result type=%T", raw)
 	}
@@ -121,10 +121,10 @@ func TestIssueOpsReconcileVerticalUsesRequestScopedReaderForWorktreeReceipt(t *t
 	fake.inspectCalls = 0
 	fake.invokeCalls = 0
 	reads := 0
-	raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, issueops.ExecutionActionRequest{
-		Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
+	raw, err := newExecutionService().Execute(context.Background(), stateRoot, issueopscontract.ExecutionActionRequest{
+		Action: issueopscontract.ExecutionActionReconcile, ID: record.ID, Confirm: true,
 		Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
-	}, issueops.ExecutionActionDependencies{
+	}, port.ExecutionActionDependencies{
 		Orca: fake, Reconcile: issueOpsReconcileHandler,
 		ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
 			reads++
@@ -134,7 +134,7 @@ func TestIssueOpsReconcileVerticalUsesRequestScopedReaderForWorktreeReceipt(t *t
 	if err != nil {
 		t.Fatal(err)
 	}
-	result := raw.(issueops.ExecutionReconcileResult)
+	result := raw.(issueopscontract.ExecutionReconcileResult)
 	if result.Code != "orca_reconcile_advanced_terminal_create" || reads != 1 || fake.inspectCalls != 1 || fake.invokeCalls != 0 {
 		t.Fatalf("result=%#v reads=%d inspect=%d invoke=%d", result, reads, fake.inspectCalls, fake.invokeCalls)
 	}
@@ -155,14 +155,14 @@ func TestIssueOpsReconcileVerticalAdvancesRemainingStagesOneCallAtATime(t *testi
 			fake.adopt = false
 		}
 		beforeInspects := fake.inspectCalls
-		raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, issueops.ExecutionActionRequest{
-			Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
+		raw, err := newExecutionService().Execute(context.Background(), stateRoot, issueopscontract.ExecutionActionRequest{
+			Action: issueopscontract.ExecutionActionReconcile, ID: record.ID, Confirm: true,
 			Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
-		}, issueops.ExecutionActionDependencies{Orca: fake, Reconcile: issueOpsReconcileHandler})
+		}, port.ExecutionActionDependencies{Orca: fake, Reconcile: issueOpsReconcileHandler})
 		if err != nil {
 			t.Fatalf("stage %d: %v", index, err)
 		}
-		result := raw.(issueops.ExecutionReconcileResult)
+		result := raw.(issueopscontract.ExecutionReconcileResult)
 		if result.Code != wantCode || fake.inspectCalls != beforeInspects+1 {
 			t.Fatalf("stage %d result=%#v inspect=%d", index, result, fake.inspectCalls-beforeInspects)
 		}
@@ -175,14 +175,14 @@ func TestIssueOpsReconcileVerticalAdvancesRemainingStagesOneCallAtATime(t *testi
 
 func TestIssueOpsReconcileVerticalDoesNotClaimInspectionWithoutProvisioner(t *testing.T) {
 	stateRoot, record, _ := reconcilePendingFixture(t, port.ExecutionOrcaIntentTerminal)
-	raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, issueops.ExecutionActionRequest{
-		Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
+	raw, err := newExecutionService().Execute(context.Background(), stateRoot, issueopscontract.ExecutionActionRequest{
+		Action: issueopscontract.ExecutionActionReconcile, ID: record.ID, Confirm: true,
 		Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
-	}, issueops.ExecutionActionDependencies{Reconcile: issueOpsReconcileHandler})
+	}, port.ExecutionActionDependencies{Reconcile: issueOpsReconcileHandler})
 	if err == nil {
 		t.Fatal("missing provisioner must fail")
 	}
-	result := raw.(issueops.ExecutionReconcileResult)
+	result := raw.(issueopscontract.ExecutionReconcileResult)
 	if result.Code != "orca_reconcile_ambiguous" || result.ExternalStateInspected {
 		t.Fatalf("result=%#v err=%v", result, err)
 	}
@@ -193,27 +193,27 @@ func TestIssueOpsReconcileVerticalKeepsStagedOnlyDispatchUnclaimable(t *testing.
 	fake.adopt = true
 	fake.inspectCalls = 0
 	fake.invokeCalls = 0
-	request := issueops.ExecutionActionRequest{
-		Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
+	request := issueopscontract.ExecutionActionRequest{
+		Action: issueopscontract.ExecutionActionReconcile, ID: record.ID, Confirm: true,
 		Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
 	}
-	deps := issueops.ExecutionActionDependencies{Orca: fake, Reconcile: issueOpsReconcileHandler}
+	deps := port.ExecutionActionDependencies{Orca: fake, Reconcile: issueOpsReconcileHandler}
 
 	for range 4 {
-		if _, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps); err != nil {
+		if _, err := newExecutionService().Execute(context.Background(), stateRoot, request, deps); err != nil {
 			t.Fatalf("advance to dispatch: %v", err)
 		}
 	}
 	fake.adopt = false
 	fake.failStage = port.ExecutionOrcaIntentDispatch
-	if _, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps); err == nil {
+	if _, err := newExecutionService().Execute(context.Background(), stateRoot, request, deps); err == nil {
 		t.Fatal("fixture dispatch must stop after staging the ambiguous external call")
 	}
 	fake.adopt = true
 	fake.inspectCalls = 0
 	fake.invokeCalls = 0
 
-	raw, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps)
+	raw, err := newExecutionService().Execute(context.Background(), stateRoot, request, deps)
 	if err == nil {
 		t.Fatalf("staged-only dispatch became recoverable: %#v", raw)
 	}
@@ -274,18 +274,18 @@ func TestIssueOpsReconcileVerticalRejectsIncompleteDeliveryReceiptBeforeClaimabl
 		t.Run(test.name, func(t *testing.T) {
 			stateRoot, record, fake := reconcilePendingFixtureForHost(t, port.ExecutionOrcaIntentTerminal, test.host)
 			fake.adopt = true
-			request := issueops.ExecutionActionRequest{
-				Action: issueops.ExecutionActionReconcile, ID: record.ID, Confirm: true,
+			request := issueopscontract.ExecutionActionRequest{
+				Action: issueopscontract.ExecutionActionReconcile, ID: record.ID, Confirm: true,
 				Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
 			}
-			deps := issueops.ExecutionActionDependencies{Orca: fake, Reconcile: issueOpsReconcileHandler}
+			deps := port.ExecutionActionDependencies{Orca: fake, Reconcile: issueOpsReconcileHandler}
 			for range 4 {
-				if _, err := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps); err != nil {
+				if _, err := newExecutionService().Execute(context.Background(), stateRoot, request, deps); err != nil {
 					t.Fatalf("advance to dispatch: %v", err)
 				}
 			}
 			fake.receipt = &test.receipt
-			raw, finalErr := issueops.ExecuteExecution(context.Background(), stateRoot, request, deps)
+			raw, finalErr := newExecutionService().Execute(context.Background(), stateRoot, request, deps)
 			if test.wantClaimable && finalErr != nil {
 				t.Fatalf("complete receipt did not become claimable: %#v err=%v", raw, finalErr)
 			}
@@ -319,9 +319,9 @@ func reconcilePromptReceiptFromJSON(t *testing.T, raw string) *port.OrcaPromptRe
 func TestIssueOpsReconcileVerticalUsesInjectedClockForFailureReceipt(t *testing.T) {
 	stateRoot, record, fake := reconcilePendingFixture(t, port.ExecutionOrcaIntentTerminal)
 	want := time.Date(2026, 8, 1, 11, 12, 13, 14, time.UTC)
-	_, err := issueops.ReconcileExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReconcileRequest{
+	_, err := newExecutionService().Reconcile(context.Background(), stateRoot, issueopscontract.ExecutionReconcileRequest{
 		ID: record.ID, Confirm: true, Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
-	}, issueops.ExecutionReconcileDependencies{
+	}, port.ExecutionReconcileDependencies{
 		Orca: fake, Handler: issueOpsReconcileHandler, Now: func() time.Time { return want },
 	})
 	// #280: 외부 인벤토리가 authoritative zero를 돌려주면 intent를 보존하지
@@ -362,8 +362,8 @@ func reconcilePendingFixtureForHost(t *testing.T, failStage port.ExecutionOrcaIn
 	baseHead := strings.TrimSpace(claimWiringGit(t, repo, "rev-parse", "HEAD"))
 	const branch = "194-reconcile"
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion, ID: issueops.NewIssueOpsID(repo, branch),
-		Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan, IssueURL: "https://github.com/acme/repo/issues/194",
+		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion, ID: issueops.NewIssueOpsID(repo, branch),
+		Repo: repo, Branch: branch, Phase: issueopscontract.IssueOpsPhasePlan, IssueURL: "https://github.com/acme/repo/issues/194",
 		DesignReview:  &issueopscontract.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-08-01T00:00:00Z"},
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/acme/repo/issues/194", Branch: branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true, CreatedAt: "2026-08-01T00:00:00Z"},
 		CreatedAt:     "2026-08-01T00:00:00Z", UpdatedAt: "2026-08-01T00:00:00Z",
@@ -381,16 +381,16 @@ func reconcilePendingFixtureForHost(t *testing.T, failStage port.ExecutionOrcaIn
 			return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
 		},
 	})
-	request := issueops.ExecutionPrepareRequest{
+	request := issueopscontract.ExecutionPrepareRequest{
 		ID: record.ID, Mode: "orca", Actor: claimWiringActor(t), CWD: repo, OwnerHost: host, OwnerModel: "model", Confirm: true,
 	}
 	request.Confirm = false
-	preview, err := prepare(context.Background(), stateRoot, request, issueops.ExecutionPrepareInvocation{})
+	preview, err := prepare(context.Background(), stateRoot, request, port.ExecutionPrepareInvocation{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	request.ExpectedReadinessFingerprint, request.Confirm = preview.ReadinessFingerprint, true
-	_, err = prepare(context.Background(), stateRoot, request, issueops.ExecutionPrepareInvocation{})
+	_, err = prepare(context.Background(), stateRoot, request, port.ExecutionPrepareInvocation{})
 	if err == nil {
 		t.Fatal("fixture must stop on an ambiguous terminal mutation")
 	}

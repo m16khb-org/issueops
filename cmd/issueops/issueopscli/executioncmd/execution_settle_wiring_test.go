@@ -1,10 +1,12 @@
 package executioncmd
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"testing"
-
-	"issueops/internal/adapter/issueops"
 )
 
 // 판정은 core가 하지만, CLI가 종결 표면을 실제로 넘기는지는 이 층에서만
@@ -13,9 +15,9 @@ import (
 func TestActionDepsCarriesTheCompletionHandler(t *testing.T) {
 	called := false
 	deps := Deps{
-		Complete: func(_ context.Context, _ string, request issueops.ExecutionCompleteRequest) (issueops.ExecutionResult, error) {
+		Complete: func(_ context.Context, _ string, request issueopscontract.ExecutionCompleteRequest) (issueopscontract.ExecutionResult, error) {
 			called = true
-			return issueops.ExecutionResult{OK: true, ID: request.ID}, nil
+			return issueopscontract.ExecutionResult{OK: true, ID: request.ID}, nil
 		},
 	}
 
@@ -23,7 +25,7 @@ func TestActionDepsCarriesTheCompletionHandler(t *testing.T) {
 	if action.Complete == nil {
 		t.Fatal("execution action dependencies must carry the completion handler")
 	}
-	if _, err := action.Complete(context.Background(), t.TempDir(), issueops.ExecutionCompleteRequest{ID: "io-198"}); err != nil {
+	if _, err := action.Complete(context.Background(), t.TempDir(), issueopscontract.ExecutionCompleteRequest{ID: "io-198"}); err != nil {
 		t.Fatal(err)
 	}
 	if !called {

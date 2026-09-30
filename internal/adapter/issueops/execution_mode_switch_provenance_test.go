@@ -30,7 +30,7 @@ func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemova
 		t.Fatal(err)
 	}
 	git := func(string, ...string) (int, string) { return 1, "" }
-	preview, err := SwitchExecutionMode(context.Background(), stateRoot, ExecutionSwitchModeRequest{
+	preview, err := SwitchExecutionMode(context.Background(), stateRoot, issueopscontract.ExecutionSwitchModeRequest{
 		ID: record.ID, Mode: "orca",
 	}, ExecutionSwitchModeDependencies{Git: git})
 	if err != nil {
@@ -39,7 +39,7 @@ func TestSwitchExecutionModeApplyReturnsNonCommandNextActionAfterExecutionRemova
 	if preview.NextCommand == "" || preview.LeaseGeneration != 6 {
 		t.Fatalf("switch preview = %#v", preview)
 	}
-	result, err := SwitchExecutionMode(context.Background(), stateRoot, ExecutionSwitchModeRequest{
+	result, err := SwitchExecutionMode(context.Background(), stateRoot, issueopscontract.ExecutionSwitchModeRequest{
 		ID: record.ID, Mode: "orca", Apply: true, Confirm: true, Fingerprint: preview.Fingerprint,
 	}, ExecutionSwitchModeDependencies{Git: git})
 	if err != nil {

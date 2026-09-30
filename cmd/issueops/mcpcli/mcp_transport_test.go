@@ -1,6 +1,10 @@
 package mcpcli
 
 import (
+	issueopscontract "issueops/internal/contract/issueops"
+)
+
+import (
 	"context"
 	"errors"
 	"fmt"
@@ -10,8 +14,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-
-	"issueops/internal/adapter/issueops"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -41,9 +43,9 @@ func TestRunMCPServesInProcessWithoutADaemon(t *testing.T) {
 
 func TestRunMCPWithDependenciesUsesItsReleaseHandlerOnDirectTransport(t *testing.T) {
 	called := false
-	session := startRunMCPTestSession(t, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueops.ExecutionReleaseRequest) (issueops.ExecutionResult, error) {
+	session := startRunMCPTestSession(t, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 		called = true
-		return issueops.ExecutionResult{OK: true, ID: request.ID}, nil
+		return issueopscontract.ExecutionResult{OK: true, ID: request.ID}, nil
 	}})
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "issueops_execution", Arguments: map[string]any{"action": "release", "id": "io-mcp-direct", "generation": 1}})
 	if err != nil {
@@ -69,9 +71,9 @@ func TestServeMCPStreamWithDependenciesKeepsConcurrentReleaseHandlersIsolated(t 
 		group.Add(1)
 		go func(tc testCase) {
 			defer group.Done()
-			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueops.ExecutionReleaseRequest) (issueops.ExecutionResult, error) {
+			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				called <- tc.id
-				return issueops.ExecutionResult{OK: true, ID: request.ID}, nil
+				return issueopscontract.ExecutionResult{OK: true, ID: request.ID}, nil
 			}})
 			serverTransport, clientTransport := mcp.NewInMemoryTransports()
 			serverSession, err := server.Connect(context.Background(), serverTransport, nil)
