@@ -35,3 +35,13 @@ CONSTITUTION·ARCHITECTURE·CONVENTIONS·CAUTIONS·ADR·TESTING을 계획과 dif
 ## 최종 battery 결과
 
 G1~G4 모두 충족했다. candidate self-verify의 단일 run은 26단계 전부 성공했고 최저 goal score는 100이다. risk QA tier의 실제 명령에 `go test -race ./... -count=1`과 `go vet ./...`가 포함됐으며, 해당 step도 성공했다. 별도 중복 전체 테스트는 실행하지 않았다. 일반 Go test와 golden은 full race suite에 포함되는 계약을 self-verify step에서 확인했다. gofmt 출력은 비어 있었다. 검증 중 implementation source 변경은 없었다. 준비 중 gate spec의 pipe/newline 형식 오류와 timeout 상한 오류는 실행 전에 해소했으며 성공 evidence에 합치지 않았다.
+
+## CI 문서 수정: generation 3
+
+PR #526의 두 CI에서 기존 식별정보 검사 `test_synthetic_fixture_family_has_no_identified_meeting_data`가 공개 계획 사본의 절대 홈 경로를 검출했다. 같은 unittest를 로컬에서 실행해 실패를 재현했고, 이번 브랜치에서 새로 추적한 문서 6개를 검사해 해당 경로 한 곳만 확인했다. 공개 `plan.md`의 Source를 `$SOURCE_ROOT`로 바꿨다. 검사 코드와 기존 구현·테스트·프롬프트·스킬은 수정하지 않았다.
+
+수정 후 `python3 -m unittest discover -s scripts -p '*_test.py'`를 현대 Python으로 실행했다. 53개 테스트가 완료됐고, 로컬 선택 입력을 요구하는 1개만 기존 조건에 따라 skip됐다. 나머지는 모두 통과했다. 원래 실패 검사도 이 run에 포함됐다. 실행 로그는 ignored `artifact/ci-fix/`에 보존한다.
+
+원래 generation 2의 구현 검증은 위 결과와 구분한다. 당시 HEAD는 `c572b727cb94a6943b4d522c7d0194c864f34bbc`이며, 원본 계획과 렌더링·평가·self-verify를 포함한 ignored 자료 13개의 SHA-256은 수정 전후 동일하다. 원본 계획 digest `3b6453642e79a2bc4b77396b170e7bb9ac3c6d2aa6dc6dbbe367072c3103dd8e`도 그대로다. 이 절의 공개 경로 수정은 기존 봉인 계획의 재생성이나 내용 변경이 아니다. 원본 G1~G4 결과를 새 실행 결과로 덮어쓰지 않는다.
+
+후속 문서 battery와 새 독립 리뷰는 이번 변경 집합에 대해 수행한다. 결과는 ignored `artifact/ci-fix/`와 durable review·completion 기록이 소유한다. phase 전이가 원본 계획을 공개 사본으로 다시 복사하는 동작을 확인했으며, 각 전이 후 공개 Source 표기를 다시 정규화하고 최종 추적 문서를 검사한다. 최종 원격 HEAD의 CI 두 run을 조회해 모두 성공한 뒤 해당 HEAD로 `verify-artifact`와 `execution complete`를 기록한다. 이 문서 수정에는 실행 성능 영향이 없으며 측정하지 않은 속도 향상을 주장하지 않는다. side effect는 공개 문서·검증 기록·해당 브랜치 push에 한정된다. merge·cleanup과 source checkout 수정은 coordinator가 맡는다.

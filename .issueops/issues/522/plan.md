@@ -4,7 +4,7 @@ Lifecycle: io-814b092d660e
 Issue: https://github.com/m16khb-org/issueops/issues/522
 Branch: 522-runtime-review-profile
 Base: main / 768546a219b082f5f7ad7f78f85664747eca9b74
-Source: /Users/habin/workspace/issueops
+Source: $SOURCE_ROOT
 사용자 원문: “3 항목을 각각 $issueops 를 통해 병렬로 인계하여 진행해줘”
 
 ## 목적과 범위
