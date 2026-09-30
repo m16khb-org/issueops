@@ -12,6 +12,7 @@ import (
 	materialapp "issueops/internal/application/issueopsremote"
 	reportcontract "issueops/internal/contract/artifactreadability"
 	"issueops/internal/contract/issueops"
+	domain "issueops/internal/domain/issueops"
 )
 
 // tracked copies live next to gates.md; the sealed originals stay under the
@@ -186,4 +187,105 @@ func TestTrackedMaterialsMissingWarning(t *testing.T) {
 func issueOpsActorPointerForMaterialsTest(root string) *issueops.IssueOpsActor {
 	actor := issueOpsActorForTest(root)
 	return &actor
+}
+
+func TestPhaseTransitionNormalizesPublicMaterials(t *testing.T) {
+	stateRoot, record, worktree := materialsCycleForTest(t)
+	body := "source `" + record.Repo + "/src.go:12` work `" + worktree + "/test.go` URL https://example.test" + record.Repo + "/src.go\n"
+	originals := map[string][]byte{}
+	modes := map[string]os.FileMode{}
+	for _, name := range []string{"plan.md", "intent.md", "spec.md"} {
+		path := filepath.Join(worktree, ".issueops/issues/13/artifact", name)
+		data := body
+		if name == "plan.md" {
+			data = planBodyForTest() + "\n" + body
+		}
+		writeIssueOpsFile(t, worktree, ".issueops/issues/13/artifact/"+name, data)
+		originals[path] = []byte(data)
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		modes[path] = info.Mode()
+	}
+	record.DevilsAdvocateReview.ReviewedPlanDigest = digestExecutionOwnerBytes(originals[record.PlanPath])
+	if _, err := writeIssueOps(stateRoot, record); err != nil {
+		t.Fatal(err)
+	}
+	service := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree))
+	_, materials, err := service.AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement))
+	if err != nil {
+		t.Fatal(err)
+	}
+	check := func() {
+		t.Helper()
+		for _, name := range []string{"plan.md", "intent.md", "spec.md"} {
+			got := trackedCopy(t, worktree, "13", name)
+			if !strings.Contains(got, "source `$SOURCE_ROOT/src.go:12` work `$WORKTREE/test.go`") || !strings.Contains(got, "https://example.test"+record.Repo+"/src.go") {
+				t.Errorf("%s must normalize local paths and preserve URL: %q", name, got)
+			}
+		}
+		for path, before := range originals {
+			after, err := os.ReadFile(path)
+			info, statErr := os.Stat(path)
+			if err != nil || statErr != nil || string(before) != string(after) || info.Mode() != modes[path] {
+				t.Errorf("sealed original changed: %s", path)
+			}
+		}
+	}
+	if len(materials.Written) != 4 {
+		t.Fatalf("all material kinds: %+v", materials)
+	}
+	check()
+	writeIssueOpsFile(t, worktree, ".issueops/issues/13/plan.md", "manual edit\n")
+	if err := os.Remove(filepath.Join(worktree, ".issueops/issues/13/spec.md")); err != nil {
+		t.Fatal(err)
+	}
+	writeIssueOpsFile(t, worktree, "internal/demo.go", "package demo\nconst Value = 1\n")
+	_, regenerated, err := service.AdvanceReport(stateRoot, record.ID, string(issueops.IssueOpsPhaseAISlopClean))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(regenerated.Written) != 2 {
+		t.Fatalf("edited/deleted copies must regenerate: %+v", regenerated)
+	}
+	check()
+	current, err := ReadIssueOps(stateRoot, record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again := (materialapp.TrackedMaterials{Files: MaterialFiles{}}).Write(current); len(again.Written) != 0 {
+		t.Fatalf("identical Write is a no-op: %+v", again)
+	}
+}
+
+func TestTrackedMaterialsFallbackAndReviewPaths(t *testing.T) {
+	root := t.TempDir()
+	const source = "/workspace/source"
+	for _, mode := range []issueops.ExecutionMode{issueops.ExecutionModeDirect, issueops.ExecutionModeOrca} {
+		t.Run(string(mode), func(t *testing.T) {
+			record := issueops.IssueOpsRecord{
+				Repo: source, IssueURL: "https://github.com/example/repo/issues/13",
+				Intent:               &issueops.IssueOpsIntentContract{RawRequest: "source `" + source + "/a` home `/home/synthetic/.config` work `" + root + "/b`"},
+				Execution:            &issueops.Execution{Mode: mode, Workspace: issueops.Workspace{Root: root, ArtifactDir: ".issueops/issues/13/artifact"}},
+				DevilsAdvocateReview: &issueops.IssueOpsDevilsAdvocateReview{Verdict: "pass", Findings: []string{"source `" + source + "/a` work `" + root + "/b` URL https://host.test/home/synthetic/a"}},
+			}
+			files := materialapp.TrackedMaterials{Files: MaterialFiles{}}
+			if got := files.Write(record); len(got.Warnings) > 0 {
+				t.Fatal(got)
+			}
+			intent := trackedCopy(t, root, "13", "intent.md")
+			if !strings.Contains(intent, "source `$SOURCE_ROOT/a`") || !strings.Contains(intent, "work `$WORKTREE/b`") {
+				t.Fatalf("record fallback: %q", intent)
+			}
+			// The legacy renderer masks URL home paths before normalization.
+			want := strings.ReplaceAll(strings.ReplaceAll(domain.RenderTrackedPlanReview(record.DevilsAdvocateReview), source, "$SOURCE_ROOT"), root, "$WORKTREE")
+			if got := trackedCopy(t, root, "13", "plan-review.md"); got != want || !strings.Contains(got, "https://host.test[로컬 경로 생략]") {
+				t.Fatalf("review policy changed: %q want %q", got, want)
+			}
+			if got := files.Write(record); len(got.Written) != 0 {
+				t.Fatalf("fallback no-op: %+v", got)
+			}
+		})
+	}
 }

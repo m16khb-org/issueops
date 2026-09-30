@@ -122,6 +122,11 @@ agent가 즉시 알아야 할 canonical 요약이다.
 - 사본(plan.md, intent.md, spec.md, plan-review.md)은 파생물이다. 내용이 같으면 쓰지 않고,
   다르면 현재 봉인 원본과 record로 덮어쓴다. 구현 진입 뒤 생긴 사본은 첫 커밋에 포함한다.
   사본만 바뀐 상태는 `implementation_changes`를 충족하지 않는다(#513).
+- 공개 사본은 생성·재생성 때 record의 source/worktree root를 각각 `$SOURCE_ROOT`·
+  `$WORKTREE`로 표현한다. 두 root에서 확인되는 POSIX 사용자 홈만 `$HOME`으로 바꾸고,
+  더 구체적인 root와 경로 token 경계를 우선한다. URL·상대경로·다른 계정 경로는 새
+  정규화에서 보존한다. plan-review의 기존 해시·경로 가림(일부 URL 내부 경로 포함)은
+  먼저 적용한다. 봉인 원본 bytes·mode·digest와 owner resume 입력은 바꾸지 않는다(#527).
 - 이슈가 없는 작업의 플랜은 `.issueops/plans/<slug>.md`, 리뷰 작업 파일은
   `.issueops/tmp/`에 둔다. 둘 다 이슈 번호를 알 수 없을 때만 쓰는 fallback이다.
 - PR readiness는 현재 사이클의 이슈 원장(`issues/<번호>/gates.md`, 같은 번호의 옛 파일)과

@@ -92,6 +92,9 @@ func (s TrackedMaterials) contents(record issueops.IssueOpsRecord, root string) 
 	if review := record.DevilsAdvocateReview; review != nil {
 		materials = append(materials, trackedMaterial{trackedPlanReview, []byte(domain.RenderTrackedPlanReview(review))})
 	}
+	for i := range materials {
+		materials[i].content = domain.NormalizePublicMaterialPaths(materials[i].content, record.Repo, root)
+	}
 	return materials
 }
 

@@ -13875,6 +13875,14 @@
       ]
     },
     {
+      "path": "internal/domain/issueops/public_material_paths.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func NormalizePublicMaterialPaths"
+      ]
+    },
+    {
       "path": "internal/domain/issueops/publication_transition.go",
       "owner": "domain",
       "task": "T07",
