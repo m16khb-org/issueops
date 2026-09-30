@@ -1,7 +1,7 @@
 # #521 품질 분석 제품 코드 선정 검증
 
 - Lifecycle: io-dd786760d2a9, direct / Codex, generation 2
-- Worktree: `/Users/habin/workspace/issueops.worktrees/521-quality-production-source-scope`
+- Worktree: `$WORKTREE`
 - Branch: `521-quality-production-source-scope`
 - Base: `768546a219b082f5f7ad7f78f85664747eca9b74`
 - 최종 HEAD, Draft PR URL, 완료 receipt는 이 보고서를 커밋한 뒤 durable execution completion에 기록한다. 보고서에 자신의 commit SHA를 넣지 않는다.
@@ -54,3 +54,9 @@ Verification mode: 제품 파일 선정과 오류 계약을 바꾸므로 full ve
 Skipped checks: API/DB/UI는 변경 대상이 없어 해당하지 않는다. 설치·업데이트는 사용자 지시에 따라 실행하지 않는다.
 
 최종 결과: self-verify(seed 100, target 95, llm-eval=false)는 26/26 단계 통과, 최소 goal score 100, termination_eligible=true였다. 실제 risk QA 명령 `go test -race ./... -count=1 && go vet ./...`가 통과해 전체 Go 테스트와 vet를 함께 확인했다. gofmt 출력은 비었고 build·golden·docs·inspect 단계도 통과했다. 독립 diff review에서 발견한 root 경계 결함을 수정한 뒤 fresh-context delta review는 pass였으며 필수 잔여 finding은 없다. 최종 publication과 completion은 이 보고서를 커밋한 뒤 읽은 HEAD로 봉인한다.
+
+## CI 문서 식별정보 수정 (generation 3)
+
+PR #525의 두 CI가 tracked 문서의 개인 홈 경로를 식별정보로 판정했다. 동일 `test_synthetic_fixture_family_has_no_identified_meeting_data`를 실행해 exit 1을 재현한 뒤, 이 브랜치가 새로 추적한 모든 문서를 검사하고 유일한 홈 경로를 `$WORKTREE`로 바꿨다. 검사 코드와 제품 구현은 수정하지 않았다. `python3 -m unittest scripts.meeting_notes_skill_contract_test -v`는 총 15개 테스트 중 14개가 통과했고 선택적 로컬 자료 테스트 1개는 skip이었다.
+
+기존 제품 코드와 RED/GREEN·실제 scanner/CLI·최종 배터리 파일, ignored 인계 계획 파일의 SHA가 수정 전과 같음을 확인했다. 기존 26/26 구현 배터리는 generation 2의 증거이며 이번 문서 수정 후 재실행한 것으로 표시하지 않는다. 이번 재검증 결과와 최신 HEAD의 CI URL은 generation 3 completion에 봉인한다. 로컬 원본 인계 자료는 ignored 상태로 보존했다.
