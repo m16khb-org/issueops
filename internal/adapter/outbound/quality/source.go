@@ -1,6 +1,7 @@
 package quality
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -68,38 +69,154 @@ func CollectAuditItems(root string) ([]contract.AuditItem, []string) {
 	path := filepath.Join(root, ".issueops", "PROJECT_AUDIT.md")
 	b, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
 		return nil, []string{"audit scan: " + err.Error()}
 	}
 	items := []contract.AuditItem{}
-	for _, line := range strings.Split(string(b), "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "|") || strings.Contains(line, "---") {
+	warnings := []string{}
+	warn := func(line int, reason string) {
+		warnings = append(warnings, fmt.Sprintf("audit scan %s:%d: %s", path, line, reason))
+	}
+	lines := strings.Split(string(b), "\n")
+	hasHeadings := false
+	for _, line := range lines {
+		if level, _ := auditHeading(strings.TrimSpace(line)); level > 0 {
+			hasHeadings = true
+			break
+		}
+	}
+	openLevel := 0
+	var header map[string]int
+	width := 0
+	inTable, validTable, explicitNone := false, false, false
+	for i := 0; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+		if level, title := auditHeading(line); level > 0 {
+			if openLevel > 0 && level <= openLevel {
+				openLevel = 0
+			}
+			if title == "open" || strings.HasPrefix(title, "open ") {
+				openLevel = level
+			}
+			inTable = false
+			continue
+		}
+		if hasHeadings && openLevel == 0 {
+			continue
+		}
+		if openLevel > 0 && line == "_None. All triaged P1/P2 items are resolved or accepted-with-rationale below._" {
+			explicitNone = true
+		}
+		if !strings.HasPrefix(line, "|") {
+			if inTable && header != nil && strings.Contains(line, "|") {
+				warn(i+1, "audit row is missing its leading pipe")
+			}
+			inTable = false
 			continue
 		}
 		parts := splitMarkdownRow(line)
-		if len(parts) < 5 || parts[0] == "ID" {
+		if !inTable {
+			inTable = true
+			width = len(parts)
+			header = auditColumns(parts)
+			if header == nil {
+				warn(i+1, "invalid audit header: require unique ID, Area, Title, Priority, Size columns")
+				continue
+			}
+			if i+1 >= len(lines) || !auditSeparator(strings.TrimSpace(lines[i+1]), width) {
+				warn(i+1, "missing or invalid audit table separator")
+				header = nil
+				continue
+			}
+			i++
+			validTable = true
 			continue
 		}
-		priority := strings.TrimSpace(parts[3])
-		if priority != "P0" && priority != "P1" && priority != "P2" {
+		if header == nil {
+			continue
+		}
+		if len(parts) != width {
+			warn(i+1, "audit row width does not match header")
+			continue
+		}
+		missing := false
+		for _, name := range []string{"id", "area", "title", "priority", "size"} {
+			if parts[header[name]] == "" {
+				warn(i+1, "empty required audit cell: "+name)
+				missing = true
+			}
+		}
+		if missing {
+			continue
+		}
+		priority := parts[header["priority"]]
+		if priority != "P0" && priority != "P1" && priority != "P2" && priority != "P3" {
+			warn(i+1, "invalid audit priority: require P0, P1, P2 or P3")
+			continue
+		}
+		if priority == "P3" {
 			continue
 		}
 		items = append(items, contract.AuditItem{
-			ID:       strings.TrimSpace(parts[0]),
-			Area:     strings.TrimSpace(parts[1]),
-			Title:    strings.TrimSpace(parts[2]),
+			ID:       parts[header["id"]],
+			Area:     parts[header["area"]],
+			Title:    parts[header["title"]],
 			Priority: priority,
-			Size:     strings.TrimSpace(parts[4]),
+			Size:     parts[header["size"]],
 		})
 	}
-	return items, nil
+	if !validTable && !explicitNone {
+		warn(1, "no valid open audit table or explicit zero declaration")
+	}
+	if explicitNone && len(items) > 0 {
+		warn(1, "explicit zero declaration contradicts open audit items")
+	}
+	return items, warnings
+}
+
+func auditHeading(line string) (int, string) {
+	level := len(line) - len(strings.TrimLeft(line, "#"))
+	if level == 0 || level > 6 || len(line) <= level || line[level] != ' ' {
+		return 0, ""
+	}
+	return level, strings.ToLower(strings.TrimSpace(strings.TrimRight(line[level:], "#")))
+}
+
+func auditColumns(parts []string) map[string]int {
+	columns := make(map[string]int, len(parts))
+	for i, part := range parts {
+		name := strings.ToLower(strings.TrimSpace(part))
+		if _, exists := columns[name]; name == "" || exists {
+			return nil
+		}
+		columns[name] = i
+	}
+	for _, name := range []string{"id", "area", "title", "priority", "size"} {
+		if _, exists := columns[name]; !exists {
+			return nil
+		}
+	}
+	return columns
+}
+
+func auditSeparator(line string, width int) bool {
+	if !strings.HasPrefix(line, "|") {
+		return false
+	}
+	parts := splitMarkdownRow(line)
+	if len(parts) != width {
+		return false
+	}
+	for _, part := range parts {
+		part = strings.TrimSuffix(strings.TrimPrefix(part, ":"), ":")
+		if len(part) < 3 || strings.Trim(part, "-") != "" {
+			return false
+		}
+	}
+	return true
 }
 
 func splitMarkdownRow(line string) []string {
-	line = strings.Trim(line, "|")
+	line = strings.TrimSuffix(strings.TrimPrefix(line, "|"), "|")
 	raw := strings.Split(line, "|")
 	out := make([]string, 0, len(raw))
 	for _, part := range raw {

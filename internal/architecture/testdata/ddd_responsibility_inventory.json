@@ -6157,6 +6157,9 @@
       "symbols": [
         "func CollectAuditItems",
         "func CollectBranchFunctions",
+        "func auditColumns",
+        "func auditHeading",
+        "func auditSeparator",
         "func countBranches",
         "func relOrAbs",
         "func splitMarkdownRow"

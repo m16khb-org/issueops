@@ -13,6 +13,7 @@ import (
 
 func TestQualityProductionSourceWiringAndCLI(t *testing.T) {
 	root := t.TempDir()
+	writeValidZeroAudit(t, root)
 	command := exec.Command("git", "init", "-q", root)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git init: %s %v", output, err)
