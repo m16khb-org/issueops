@@ -17406,6 +17406,11 @@
       "task": "T12"
     },
     {
+      "path": "scripts/ci_workflow_test.py",
+      "owner": "execution-script",
+      "task": "T20"
+    },
+    {
       "path": "scripts/install-native.sh",
       "owner": "execution-script",
       "task": "T11"
