@@ -6481,8 +6481,11 @@
         "func FakeRunCommand",
         "func RunCommand",
         "func RunReadOnlyCommand",
+        "func boundedOutput.String",
+        "func boundedOutput.Write",
         "type Clock",
-        "type CommandExecutor"
+        "type CommandExecutor",
+        "type boundedOutput"
       ]
     },
     {
@@ -6492,6 +6495,24 @@
       "symbols": [
         "func CommandPolicySummary",
         "func commandPolicyTiers"
+      ]
+    },
+    {
+      "path": "internal/adapter/policy/process_group_other.go",
+      "owner": "adapter",
+      "task": "T09",
+      "symbols": [
+        "func configureProcessGroup",
+        "func terminateProcessGroup"
+      ]
+    },
+    {
+      "path": "internal/adapter/policy/process_group_unix.go",
+      "owner": "adapter",
+      "task": "T09",
+      "symbols": [
+        "func configureProcessGroup",
+        "func terminateProcessGroup"
       ]
     },
     {
@@ -10041,6 +10062,7 @@
         "func Service.RunReadOnly",
         "func Service.run",
         "func budgetOutput",
+        "func capturedOutput",
         "type Clock",
         "type Execution",
         "type Executor"

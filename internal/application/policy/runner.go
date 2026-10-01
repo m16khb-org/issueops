@@ -12,11 +12,13 @@ import (
 type Clock interface{ Now() time.Time }
 
 type Execution struct {
-	Stdout   string
-	Stderr   string
-	ExitCode int
-	TimedOut bool
-	Err      error
+	StdoutTruncated bool
+	StderrTruncated bool
+	Stdout          string
+	Stderr          string
+	ExitCode        int
+	TimedOut        bool
+	Err             error
 }
 
 type Executor interface {
@@ -80,8 +82,8 @@ func (service Service) run(request policycontract.CommandPolicyRequest, tier str
 	result.FinishedAt = finished.UTC().Format(time.RFC3339Nano)
 	result.DurationMS = finished.Sub(started).Milliseconds()
 	result.TimedOut = execution.TimedOut
-	result.Stdout = budgetOutput(policydomain.RedactFreeform(execution.Stdout))
-	result.Stderr = budgetOutput(policydomain.RedactFreeform(execution.Stderr))
+	result.Stdout = capturedOutput(execution.Stdout, execution.StdoutTruncated)
+	result.Stderr = capturedOutput(execution.Stderr, execution.StderrTruncated)
 	if execution.Err != nil {
 		result.OK = false
 		result.ExitCode = execution.ExitCode
@@ -107,4 +109,15 @@ func budgetOutput(text string) string {
 		return text
 	}
 	return policydomain.TruncateBytes(text, limit) + "\n<truncated>\n"
+}
+
+func capturedOutput(text string, truncated bool) string {
+	text = policydomain.RedactFreeform(text)
+	if len(text) > 32*1024 {
+		return budgetOutput(text)
+	}
+	if truncated {
+		return text + "\n<truncated>\n"
+	}
+	return text
 }

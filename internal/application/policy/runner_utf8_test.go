@@ -18,3 +18,12 @@ func TestBudgetOutputUTF8Safe(t *testing.T) {
 		t.Fatalf("budgeted output length = %d", len(got))
 	}
 }
+
+func TestCapturedOutputPreservesTruncationAfterRedaction(t *testing.T) {
+	for _, value := range []string{"", "safe\n", "token=fake-value\n", strings.Repeat("가", 30000)} {
+		got := capturedOutput(value, true)
+		if !utf8.ValidString(got) || !strings.HasSuffix(got, "\n<truncated>\n") || len(got) > 32*1024+len("\n<truncated>\n") || strings.Contains(got, "fake-value") {
+			t.Errorf("capture redaction/budget contract failed for %d bytes", len(value))
+		}
+	}
+}
