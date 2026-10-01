@@ -12,7 +12,7 @@ import (
 const FullRaceCommand = "go test -race ./... -count=1"
 
 func CoversFullGoTest(plan riskqacontract.RiskQATierPlan) bool {
-	return slices.Contains(plan.Commands, FullRaceCommand)
+	return (plan.Scope == nil || plan.Scope.Error == "") && slices.Contains(plan.Commands, FullRaceCommand)
 }
 
 func PlanFromPaths(paths []string) riskqacontract.RiskQATierPlan {

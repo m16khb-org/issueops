@@ -36,6 +36,7 @@ type SelfVerifyStepDeps struct {
 	ValidateHarnessInvariants       func(string) StepResult
 	ValidateGoFormat                func(string) StepResult
 	ValidateRiskQATier              func(string) RiskQAEvidence
+	ValidateRiskQATierWithScope     func(string, string) RiskQAEvidence
 	ValidateInspect                 func(string, string) StepResult
 	ValidateDocsIndex               func(string, string) StepResult
 	ValidateSelfVerifyCandidate     func(string, string, int64) StepResult

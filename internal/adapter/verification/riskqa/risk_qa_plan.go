@@ -10,7 +10,11 @@ import (
 )
 
 func Plan(root string) riskqacontract.RiskQATierPlan {
-	return (riskqaapp.Service{ChangedPaths: gitChangedPaths}).Plan(root)
+	return PlanWithScope(root, "")
+}
+
+func PlanWithScope(root, baseRef string) riskqacontract.RiskQATierPlan {
+	return (riskqaapp.Service{ScopedPaths: gitScopedPaths}).PlanWithScope(root, baseRef)
 }
 
 func PlanJSON(plan riskqacontract.RiskQATierPlan) string {

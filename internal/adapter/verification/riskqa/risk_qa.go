@@ -24,8 +24,12 @@ func Validate(root string) verifycontract.StepResult {
 }
 
 func ValidateForSelfVerify(root string) (verifycontract.StepResult, bool) {
+	return ValidateForSelfVerifyWithScope(root, "")
+}
+
+func ValidateForSelfVerifyWithScope(root, baseRef string) (verifycontract.StepResult, bool) {
 	deps := defaultDeps()
-	plan := deps.Plan(root)
+	plan := PlanWithScope(root, baseRef)
 	deps.Plan = func(string) riskqacontract.RiskQATierPlan { return plan }
 	return ValidateWithDeps(root, deps), riskqadomain.CoversFullGoTest(plan)
 }

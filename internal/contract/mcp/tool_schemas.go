@@ -146,6 +146,7 @@ func SelfLoopAdvertisedTools() []Tool {
 			Name:        "self_verify",
 			Description: "Run one complete deterministic self-verification evidence pass. Termination requires every concrete goal score to be greater than target_score.",
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{
+				"base_ref":     map[string]any{"type": "string", "pattern": ".+", "description": "Include committed changes from this commit to HEAD in risk QA; omitted uses working-tree changes only."},
 				"seed":         map[string]any{"type": "integer", "description": "Seed for deterministic fuzz fixtures."},
 				"target_score": map[string]any{"type": "number", "description": "Exclusive per-goal score threshold; defaults to 95."},
 				"save_state":   map[string]any{"type": "boolean", "description": "When true, save compact summary to issueops state after the run."},

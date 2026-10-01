@@ -6,7 +6,11 @@ import (
 )
 
 func validateRiskQATierEvidence(root string) app.RiskQAEvidence {
-	step, coversFullGoTest := riskqa.ValidateForSelfVerify(root)
+	return validateRiskQATierEvidenceWithScope(root, "")
+}
+
+func validateRiskQATierEvidenceWithScope(root, baseRef string) app.RiskQAEvidence {
+	step, coversFullGoTest := riskqa.ValidateForSelfVerifyWithScope(root, baseRef)
 	return app.RiskQAEvidence{
 		Step:             step,
 		CoversFullGoTest: coversFullGoTest,

@@ -1298,7 +1298,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func validateRiskQATierEvidence"
+        "func validateRiskQATierEvidence",
+        "func validateRiskQATierEvidenceWithScope"
       ]
     },
     {
@@ -7908,6 +7909,7 @@
       "symbols": [
         "func Validate",
         "func ValidateForSelfVerify",
+        "func ValidateForSelfVerifyWithScope",
         "func ValidateWithDeps",
         "func defaultDeps"
       ]
@@ -7918,7 +7920,8 @@
       "task": "T16",
       "symbols": [
         "func ParseGitStatusPath",
-        "func gitChangedPaths"
+        "func gitScopedPaths",
+        "func riskGit"
       ]
     },
     {
@@ -7927,7 +7930,8 @@
       "task": "T16",
       "symbols": [
         "func Plan",
-        "func PlanJSON"
+        "func PlanJSON",
+        "func PlanWithScope"
       ]
     },
     {
@@ -10301,6 +10305,7 @@
       "task": "T20",
       "symbols": [
         "func Service.Plan",
+        "func Service.PlanWithScope",
         "type Service"
       ]
     },
@@ -12189,7 +12194,8 @@
       "owner": "contract",
       "task": "T16",
       "symbols": [
-        "type RiskQATierPlan"
+        "type RiskQATierPlan",
+        "type Scope"
       ]
     },
     {
