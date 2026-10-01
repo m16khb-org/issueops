@@ -5,6 +5,6 @@
   EXPECT: DIFF_CHECK_PASS
   EVIDENCE: DIFF_CHECK_PASS
 - [x] G2: project-doc 링크와 구조가 유효하다
-  CHECK: uv run --directory skills/project-docs-optimize python -m scripts.check --root /Users/habin/workspace/issueops.worktrees/544-doc-verification-ownership --mode check --json
+  CHECK: uv run --directory skills/project-docs-optimize python -m scripts.check --root ../.. --mode check --json
   EXPECT: /"ok": true/
   EVIDENCE: "violations": [] | }
