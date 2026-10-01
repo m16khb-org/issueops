@@ -2,12 +2,28 @@ package selfverify
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	selfaugmentcontract "issueops/internal/contract/selfaugment"
 	selfverifycontract "issueops/internal/contract/selfverify"
 )
+
+func TestLoopContractDescribesSinglePassAndOptionalLLMEvaluation(t *testing.T) {
+	result := NewLoopResult(1, 100, 95, "/repo")
+	body := strings.Join(result.LoopContract, "\n")
+	for _, want := range []string{"one deterministic evidence pass", "opt-in", "read-only evaluator prompt", "collect-all-steps"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing current loop contract %q", want)
+		}
+	}
+	for _, retired := range []string{"quick mode", "full mode", "10 seeded iterations", "final LLM gate"} {
+		if strings.Contains(body, retired) {
+			t.Errorf("retired loop contract %q", retired)
+		}
+	}
+}
 
 type recordingProgress struct {
 	events []selfverifycontract.ProgressEvent
