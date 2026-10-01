@@ -151,7 +151,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 9. Essential Commands
 
-현재 기본 검증:
+필수 완료 기준은 `.issueops/TESTING.md`와 `.issueops/testing/self-verification.md`의 최종 battery를 따른다.
+아래는 관련 기능 변경 시 선택하는 운영 명령 예시이며, 같은 self-verify의 성공 step을 중복 실행하거나 문서-only 검증을 위해 사용자 홈에 설치하지 않는다.
 
 ```bash
 find . -maxdepth 3 -type f | sort
@@ -179,7 +180,7 @@ test -f ~/.omo/mcp.json
 test -f ~/.omo/extensions/issueops.js
 ```
 
-Go 코드가 추가된 뒤 표준 검증:
+Go 코드 변경의 표준 검증 예시(실제 self-verify step 증거가 없는 필수 vet/race는 별도 실행):
 
 ```bash
 go mod tidy

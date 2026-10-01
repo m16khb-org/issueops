@@ -7,7 +7,19 @@ policy, and web-fetch live parity.
 
 ## 문서 단계 검증
 
-문서만 변경해도 최소한 다음을 확인한다.
+문서만 변경해도 문서 링크·구조와 관련 지침의 일치 여부를 확인하고 아래
+[최종 검증 battery](#최종-검증-battery)의 단일 self-verify 결과를 남긴다.
+설치·bootstrap apply·daemon/state 쓰기는 문서-only 최소 완료 기준에 추가하지
+않는다. self-verify가 수행하는 기존 내부 smoke와 native integration은 유지한다.
+실행용 binary가 없거나 stale이면 먼저 빌드하며, 이 준비 build는 self-verify의
+검증용 임시 build와 구분한다.
+
+## 선택적 운영 명령 예시
+
+아래 목록은 전체를 순서대로 실행하는 필수 battery가 아니다. 관련 기능을 변경할
+때 필요한 명령만 선택한다. 설치·bootstrap apply·daemon/state 저장·promote·
+self-augment는 해당 작업의 승인 범위와 격리된 HOME/state에 따라 실행한다.
+문서 변경만을 이유로 사용자 홈 설치 상태를 바꾸지 않는다.
 
 ```bash
 find . -maxdepth 3 -type f | sort
@@ -54,18 +66,21 @@ grep -R "Conventional Commit\|Lore:" -n AGENTS.md .issueops/COMMIT_POLICY.md ski
 
 ## 최종 검증 battery
 
-완료 보고의 최종 검증 battery는 같은 revision, 같은 환경, 같은 입력 상태에서 나온 하나의 evidence bundle로 기록한다. 범위는 현재 미커밋 파일만이 아니라 검증 대상 base-to-head diff와 보존된 작업 범위다. clean working tree에 이미 커밋된 Go 변경도 이 범위에 들어가며, 이때 필요한 Go 정적·race 검증을 working-tree 기준 self-verify 위험 tier가 대신했다고 추정하지 않는다.
+완료 보고의 최종 검증 battery는 같은 revision, 같은 환경, 같은 입력 상태에서 나온 하나의 evidence bundle로 기록한다. 범위는 검증 대상 base-to-head diff와 보존된 작업 범위이며, clean working tree에 이미 커밋된 Go 변경도 포함한다. 위험 tier 이름이나 working-tree 상태만으로 필요한 Go 정적·race 검증의 성공을 추정하지 않는다.
 
 기본 완료 battery의 소유 관계는 다음과 같다.
 
-- `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json`이 self-verify가 실제로 수행한 test/build/golden/docs/inspect 증거를 소유한다. 현재 step 목록은 `Python script tests`, `go test ./... -count=1`, contract golden의 full-test 포함 관계, `go build -o <temp>/issueops ./cmd/issueops`, `doctor --static-only --json`, `inspect smoke`, `docs index smoke`를 포함한다.
-- 최종 battery에서 self-verify JSON이 같은 revision과 환경에서 통과했고 그 step 결과가 완전하면 `go test ./... -count=1`, `go build -o bin/issueops ./cmd/issueops`, `./bin/issueops docs --json`, `./bin/issueops inspect --json`을 별도 최종 책임으로 다시 실행하지 않는다. 이때 전체 `go test ./... -count=1`을 별도 책임으로 다시 실행하지 않는다.
-- `go vet ./...`와 `go test -race ./... -count=1`은 Go 변경 기본 검증의 별도 구성원이다. self-verify의 `risk QA tier`가 그 명령을 실제 실행한 step을 같은 bundle에 담았을 때만 포함 관계로 인정한다. risk tier가 current working tree 기준으로 비어 있거나 `go vet`만 실행했으면 누락된 명령은 같은 battery에서 별도 실행한다.
+- `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json`이 self-verify가 실제로 수행한 test/build/golden/docs/inspect 증거를 소유한다. 현재 step 목록은 `gofmt`, `Python script tests`, `go test ./... -count=1`, contract golden의 full-test 포함 관계, `go build -o <temp>/issueops ./cmd/issueops`, `doctor --static-only --json`, `inspect smoke`, `docs index smoke`를 포함한다.
+- 최종 battery에서 self-verify JSON이 같은 revision·환경·입력에서 통과했고 그 step 결과가 완전하면 전체 `go test ./... -count=1`을 별도 책임으로 다시 실행하지 않는다. `go build -o bin/issueops ./cmd/issueops`, `./bin/issueops docs --json`, `./bin/issueops inspect --json`과 전체 Go 테스트에 포함된 contract golden도 별도로 반복하지 않는다.
+- `go vet ./...`와 `go test -race ./... -count=1`은 Go 변경 기본 검증의 별도 구성원이다. self-verify의 `risk QA tier`가 그 명령을 실제 실행한 step을 같은 bundle에 담았을 때만 포함 관계로 인정한다. 실제 step 증거에 필요한 명령이 없으면 누락된 명령을 같은 battery에서 별도 실행한다.
 - 최종 battery 명령은 `gofmt -l $(git ls-files '*.go')`, `go vet ./...`, `go test -race ./... -count=1`, `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json` 중 이번 변경 범위가 요구하는 모든 항목을 포함한다. self-verify가 소유한 test/build/docs/inspect 증거를 재사용할 때도 vet/race 결과는 `unit-and-contract.md`의 Go 변경 기준을 따른다.
 
 IssueOps benchmark fixtures must stay repo-agnostic. They score portable workflow evidence rather than one target repository's domain facts: domain invariants vs exact/equivalent mechanisms, API-doc gate evidence, live runtime evidence matrices, review-feedback accountability, and completion hygiene. A deterministic benchmark passes only when `average_score == 100`, `minimum_score == 100`, and `critical_failure_count == 0`.
 
-추가 확인:
+관련 변경의 추가 확인:
+
+아래 native integration 명령은 host 연결을 변경했을 때 확인하는 운영 예시다.
+문서-only 완료를 위해 별도 설치나 중복 smoke를 요구하지 않는다.
 
 Native integration smoke:
 
