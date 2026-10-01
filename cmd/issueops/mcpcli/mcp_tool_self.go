@@ -34,10 +34,15 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOu
 		}
 		return mcpToolPayload(result)
 	case "self_verify":
+		if value, present := call.Arguments["base_ref"]; present {
+			if ref, ok := value.(string); !ok || ref == "" {
+				return mcpToolFailure(newProtocolError(-32602, "base_ref must name a commit", nil))
+			}
+		}
 		seed := argmap.Int64(call.Arguments, "seed", time.Now().Unix())
 		targetScore := argmap.Float(call.Arguments, "target_score", 95)
 		result, err := verifyapp.Execute(verifyapp.ExecuteRequest{
-			Loop:      verifyapp.LoopRequest{BaseSeed: seed, TargetScore: targetScore},
+			Loop:      verifyapp.LoopRequest{BaseSeed: seed, TargetScore: targetScore, BaseRef: argmap.String(call.Arguments, "base_ref")},
 			SaveState: argmap.Bool(call.Arguments, "save_state"),
 			StateKey:  argmap.StringDefault(call.Arguments, "state_key", "self-verify-latest"),
 		}, verifyapp.ExecuteDeps{

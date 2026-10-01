@@ -345,13 +345,27 @@ func TestFinalVerificationBatteryPinsSingleOwnerContract(t *testing.T) {
 	}
 	for _, want := range []string{
 		"최종 검증 battery에서 self-verify가 실제로 실행했거나 명시적으로 재사용한 항목은 중복 실행하지 않는다.",
-		"`risk QA tier`는 현재 working tree 기준",
-		"clean committed Go diff",
-		"base-to-head plus preserved work",
+		"`risk QA tier`는 선택한 `base_ref`의 tree부터 관측 HEAD tree까지의 tracked diff",
+		"staged·unstaged·untracked 경로",
+		"기준을 생략한 standalone 호출은 working-tree 범위를 유지한다.",
+		"exact record의 `branch_prepare.base_sha`를 전달한다.",
+		"잘못된 기준이나 Git 관측 실패는 성공 또는 full-suite coverage로 처리하지 않는다.",
 		"별도 실행한다",
 	} {
 		if !strings.Contains(unitContract, want) {
 			t.Fatalf("unit-and-contract final battery guidance missing %q", want)
+		}
+	}
+	for _, skill := range []string{"self-verify", "issueops-verify"} {
+		body := readRepoFileForTest(t, filepath.Join("skills", skill, "SKILL.md"))
+		for _, want := range []string{
+			`issueops status --id "$ISSUEOPS_ID" --json`,
+			"branch_prepare.base_sha",
+			`self-verify --base-ref "$BASE_SHA" --seed=100 --target-score=95 --llm-eval=false --json`,
+		} {
+			if !strings.Contains(body, want) {
+				t.Fatalf("%s scope contract missing %q", skill, want)
+			}
 		}
 	}
 }

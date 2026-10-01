@@ -29,6 +29,7 @@ func Run(args []string, deps Deps) error {
 	deps = deps.withDefaults()
 	fs := flag.NewFlagSet("self-verify", flag.ContinueOnError)
 	seed := fs.Int64("seed", time.Now().Unix(), "seed for randomized checks")
+	baseRef := fs.String("base-ref", "", "include committed changes from this commit to HEAD in risk QA")
 	targetScore := fs.Float64("target-score", 95, "exclusive per-goal score threshold; every concrete goal must score above this value to terminate")
 	saveState := fs.Bool("save-state", false, "save compact self-verification summary to issueops state")
 	stateKey := fs.String("state-key", "self-verify-latest", "state key for --save-state")
@@ -42,6 +43,9 @@ func Run(args []string, deps Deps) error {
 	}
 	if *targetScore < 0 || *targetScore >= 100 {
 		return fmt.Errorf("target-score must be >= 0 and < 100")
+	}
+	if flagSetVisited(fs, "base-ref") && *baseRef == "" {
+		return fmt.Errorf("base-ref must name a commit")
 	}
 	llmEvalFlagSet := flagSetVisited(fs, "llm-eval")
 	llmEvalModeFlagSet := flagSetVisited(fs, "llm-eval-mode")
@@ -59,6 +63,7 @@ func Run(args []string, deps Deps) error {
 	}
 	result, err := application.Execute(application.ExecuteRequest{
 		Loop: application.LoopRequest{
+			BaseRef:  *baseRef,
 			BaseSeed: *seed, TargetScore: *targetScore, Verbose: !*jsonOut,
 			Reporter: reporterPort, CollectAllSteps: *collectAll,
 		},

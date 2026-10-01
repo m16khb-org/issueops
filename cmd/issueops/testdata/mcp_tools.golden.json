@@ -1040,6 +1040,11 @@
     "description": "Run one complete deterministic self-verification evidence pass. Termination requires every concrete goal score to be greater than target_score.",
     "inputSchema": {
       "properties": {
+        "base_ref": {
+          "description": "Include committed changes from this commit to HEAD in risk QA; omitted uses working-tree changes only.",
+          "pattern": ".+",
+          "type": "string"
+        },
         "save_state": {
           "description": "When true, save compact summary to issueops state after the run.",
           "type": "boolean"

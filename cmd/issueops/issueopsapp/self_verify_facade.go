@@ -89,6 +89,7 @@ func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
 		ValidateHarnessInvariants:   validateHarnessInvariants,
 		ValidateGoFormat:            validateGoFormat,
 		ValidateRiskQATier:          validateRiskQATierEvidence,
+		ValidateRiskQATierWithScope: validateRiskQATierEvidenceWithScope,
 		ValidateInspect:             validateInspect,
 		ValidateDocsIndex:           validateDocsIndex,
 		ValidateSelfVerifyCandidate: validateSelfVerifyCandidateExport,

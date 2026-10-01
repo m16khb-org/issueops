@@ -128,3 +128,20 @@ func printJSONForTest(value any) error {
 	fmt.Println(string(data))
 	return nil
 }
+
+func TestRunForwardsBaseRefAndRejectsExplicitEmptyScope(t *testing.T) {
+	var got string
+	err := Run([]string{"--base-ref", "HEAD~1", "--llm-eval=false", "--json"}, Deps{
+		Verify: func(request verifyloop.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+			got = request.BaseRef
+			return augmentcontract.SelfAugmentResult{OK: true}, nil
+		},
+		PrintJSON: func(any) error { return nil },
+	})
+	if err != nil || got != "HEAD~1" {
+		t.Fatalf("base_ref=%q err=%v", got, err)
+	}
+	if err := Run([]string{"--base-ref="}, Deps{}); err == nil || !strings.Contains(err.Error(), "base-ref must name a commit") {
+		t.Fatalf("empty base accepted: %v", err)
+	}
+}

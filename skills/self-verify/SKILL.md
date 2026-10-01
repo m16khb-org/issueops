@@ -12,6 +12,26 @@ the harness behaves consistently across all three hosts and that CLI, MCP,
 native integration, state, policy, docs, and skills work as intended.
 This skill is a QA gate; it does not choose improvements by itself.
 
+## Scope for an IssueOps cycle
+
+When verifying a selected IssueOps cycle, first run
+`issueops status --id "$ISSUEOPS_ID" --json` for that exact lifecycle ID. Read
+`branch_prepare.base_sha` from the current result into `BASE_SHA` and pass it to
+self-verify, including when the worktree is clean after committing:
+
+```bash
+./bin/issueops self-verify --base-ref "$BASE_SHA" --seed=100 --target-score=95 --llm-eval=false --json
+```
+
+A missing prepared base blocks cycle verification; do not fall back to an
+unscoped run, infer origin/main, or select another cycle. MCP callers supply the
+same commit as `self_verify.base_ref`. The scope combines that commit's tree to
+the observed HEAD tree with staged, unstaged, and untracked paths. An invalid
+ref or failed Git observation fails risk QA. The result's `risk QA tier` stdout
+preserves `scope.base_sha`, `scope.head_sha`, and scope errors even when command
+logs are truncated. A valid empty scope is a successful no-op. Standalone calls
+that omit the optional ref retain working-tree-only scope.
+
 ## Commands
 
 ```bash

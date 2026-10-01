@@ -2,6 +2,8 @@ package mcpcli
 
 import (
 	"encoding/json"
+	verifyapp "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"strings"
 	"testing"
 )
@@ -152,5 +154,23 @@ func TestSelfPlanAndCandidatesReturnFailedCheckpointOnSaveError(t *testing.T) {
 				t.Fatalf("lost failed checkpoint: %s", outcome.Err.Data)
 			}
 		})
+	}
+}
+
+func TestSelfVerifyMCPForwardsBaseRefAndRejectsInvalidScope(t *testing.T) {
+	var got string
+	deps := MCPDependencies{SelfVerify: func(request verifyapp.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
+		got = request.BaseRef
+		return augmentcontract.SelfAugmentResult{OK: true}, nil
+	}}
+	outcome := handleSelfLoopMCPToolCall(MCPToolCall{Name: "self_verify", Arguments: map[string]any{"base_ref": "HEAD~1"}}, deps)
+	if outcome.Err != nil || got != "HEAD~1" {
+		t.Fatalf("base_ref=%q outcome=%+v", got, outcome)
+	}
+	for _, value := range []any{"", 7, nil} {
+		outcome := handleSelfLoopMCPToolCall(MCPToolCall{Name: "self_verify", Arguments: map[string]any{"base_ref": value}}, MCPDependencies{})
+		if outcome.Err == nil || outcome.Err.Code != -32602 {
+			t.Fatalf("invalid scope accepted: %+v", outcome)
+		}
 	}
 }

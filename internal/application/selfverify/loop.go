@@ -19,6 +19,7 @@ type ProgressReporter interface {
 }
 
 type LoopRequest struct {
+	BaseRef         string
 	BaseSeed        int64
 	TargetScore     float64
 	Verbose         bool
@@ -88,7 +89,13 @@ func ExecuteLoop(request LoopRequest, deps LoopDeps) (selfaugmentcontract.SelfAu
 	tempBin := deps.TempBinaryPath(tempDir)
 
 	var goTestStep selfverifycontract.StepResult
-	plannedSteps := PlannedSteps(result.IssueOpsRoot, tempBin, seed, &goTestStep, deps.StepDeps)
+	stepDeps := deps.StepDeps
+	if stepDeps.ValidateRiskQATierWithScope != nil {
+		stepDeps.ValidateRiskQATier = func(root string) RiskQAEvidence {
+			return deps.StepDeps.ValidateRiskQATierWithScope(root, request.BaseRef)
+		}
+	}
+	plannedSteps := PlannedSteps(result.IssueOpsRoot, tempBin, seed, &goTestStep, stepDeps)
 	emit(request.Reporter, selfverifycontract.ProgressEvent{Event: "iteration_start", LoopKind: result.LoopKind, Iteration: iteration, Iterations: iterations, Seed: seed, StepCount: len(plannedSteps)})
 	failed := false
 	var firstFailure selfverifycontract.StepResult
