@@ -101,21 +101,14 @@ jobs:
             python3 scripts/validate-skill.py "$dir"
           done
 
-      - name: Script unit tests (repo-owned validators)
-        # scripts/*_test.py cover validate-skill.py, verify-skill-shell.py, and
-        # the meeting-notes skill contract; the Go suite only shells out to the
-        # validators themselves, so their own unit tests need this step.
-        run: python3 -m unittest discover -s scripts -p '*_test.py'
-
       - name: Build
         run: go build -o bin/issueops ./cmd/issueops
-
-      - name: Test (catches golden drift + all unit/contract regressions)
-        run: go test ./... -count=1
 
       - name: Race test all packages
         run: go test -race ./... -count=1
 
+      # Owns Python discovery and the normal Go suite (including golden tests)
+      # once, in the same temporary HOME as native integration. Race stays above.
       - name: Deterministic self-verify gate (seed-pinned, --judge none)
         run: |
           tmp_home="$(mktemp -d)"
@@ -125,4 +118,4 @@ jobs:
           }
           trap cleanup EXIT
           HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./scripts/install-native.sh --skip-build --path-mode=skip
-          HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./bin/issueops self-verify --seed=100 --target-score=95 --json
+          HOME="$tmp_home" CODEX_HOME="$tmp_home/.codex" ./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json

@@ -82,6 +82,29 @@ claude mcp list | grep issueops
 - shared skill 원본(`skills/*`)과 user-level host 연결(`~/.codex/skills/*`, `~/.claude/skills/*`)이 drift 없이 같은 대상을 가리키는가
 - 커밋 정책이 `AGENTS.md`, `.issueops/COMMIT_POLICY.md`, `atomic-commit-push` skill에서 충돌하지 않는가
 
+## CI 검사 소유권
+
+CI의 clean checkout에서는 다음 소유 관계로 각 검사를 한 번 실행한다.
+
+| 검사 | 실행 소유자 | 환경·횟수 |
+| --- | --- | --- |
+| Python discovery | self-verify의 `Python script tests` | 임시 HOME, 1회 |
+| 일반 Go 전체 테스트 | self-verify의 `go test` | 임시 HOME, 1회 |
+| Contract golden | 성공한 전체 Go 테스트에 포함 | 별도 중복 실행 없음 |
+| Go race | CI의 독립 `Race test all packages` 단계 | runner 기본 HOME, 1회 |
+| Native integration | 설치 후 self-verify의 `native integration` | 같은 임시 HOME/CODEX_HOME, 1회 |
+| Build | CI의 `Build`와 self-verify의 `go build` | 설치용 binary와 검증용 temp binary를 각각 생성 |
+
+임시 HOME 설치와 self-verify는 한 CI 블록에서 실행하며, 설치 실패와 Python·Go
+검사 실패는 블록의 비영 종료 코드로 CI에 전파한다. EXIT trap은 성공·실패 모두에서
+임시 HOME을 정리한다. race 실패도 독립 단계의 비영 종료 코드로 전파한다.
+
+runner 기본 HOME과 임시 HOME의 결과를 서로 재사용하지 않는다. CI 밖에서 실행하는
+standalone self-verify도 Python·Go·golden·native integration 검사를 그대로 수행하며,
+별도 skip 옵션이나 이전 SHA·dirty 상태·환경의 결과를 가져오는 경로는 없다. dirty
+Go 변경에 따른 risk QA의 성공 race 재사용은 기존 계약대로 같은 self-verify run
+안에서만 적용한다. CI 명령은 `--llm-eval=false`를 명시한다.
+
 ## 자기 검증 QA gate
 
 `issueops self-verify`에는 테스트와 QA gate가 포함된다. QA gate는 루프 문서, `GENIUS_THINK.md`, shared skill metadata, native integration 설치 상태, redaction audit, bounded stdout/stderr metadata, Mermaid 문서 lint를 확인하고, 모든 목표 점수가 95점을 초과해야 종료할 수 있다. Mermaid lint는 `GENIUS_THINK.md`의 따옴표/`<br/>` 규칙을 기준으로 문서 다이어그램의 파싱 오류를 조기에 방지한다.
