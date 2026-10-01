@@ -5,7 +5,21 @@ import (
 	app "issueops/internal/application/quality"
 	contract "issueops/internal/contract/quality"
 	catalog "issueops/internal/domain/qualitycatalog"
+	"os"
+	"path/filepath"
+	"testing"
 )
+
+func writeValidZeroAudit(t *testing.T, root string) {
+	t.Helper()
+	path := filepath.Join(root, ".issueops", "PROJECT_AUDIT.md")
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("## Summary Matrix\n### Open\n_None. All triaged P1/P2 items are resolved or accepted-with-rationale below._\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func inspectQualityForTest(root string, deps app.InspectDeps) contract.InspectResult {
 	if deps.BranchFunctions == nil {

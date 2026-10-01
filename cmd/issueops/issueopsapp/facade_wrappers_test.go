@@ -419,6 +419,7 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 
 func TestCLIFacadeWrappers(t *testing.T) {
 	root := t.TempDir()
+	writeValidZeroAudit(t, root)
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_ROOT", root)
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)

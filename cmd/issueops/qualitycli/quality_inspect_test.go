@@ -119,7 +119,7 @@ func TestRunRoutesQualityCommands(t *testing.T) {
 	}
 }
 func TestRunInspectWithDepsPrintsTextAndJSON(t *testing.T) {
-	root := t.TempDir()
+	root := qualityRootForTest(t)
 	deps := qualityDepsForTest("2026-06-13T00:00:00Z")
 	textOut := captureQualityStdout(t, func() error {
 		return RunInspectWithDeps([]string{"--repo", root}, deps)
@@ -197,7 +197,7 @@ func TestInspectRunsIndependentSignalsConcurrently(t *testing.T) {
 	}
 	result := make(chan InspectResult, 1)
 	go func() {
-		result <- Inspect(t.TempDir(), deps)
+		result <- Inspect(qualityRootForTest(t), deps)
 	}()
 
 	<-started
@@ -225,7 +225,7 @@ func TestInspectSeparatesCollectionHealthAndGateStatus(t *testing.T) {
 		}, nil
 	}
 
-	result := Inspect(t.TempDir(), deps)
+	result := Inspect(qualityRootForTest(t), deps)
 
 	if !result.OK || result.CollectionStatus != CollectionStatusOK {
 		t.Fatalf("collection status = ok=%v status=%q", result.OK, result.CollectionStatus)
@@ -399,6 +399,13 @@ func writeQualityTestFile(t *testing.T, path, body string) {
 	}
 }
 
+func qualityRootForTest(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	writeQualityTestFile(t, filepath.Join(root, ".issueops", "PROJECT_AUDIT.md"), "## Open\n_None. All triaged P1/P2 items are resolved or accepted-with-rationale below._\n")
+	return root
+}
+
 func qualityDepsForTest(now string) InspectDeps {
 	return InspectDeps{
 		Now: func() string { return now },
@@ -448,6 +455,8 @@ func branchy(v int) int {
 }
 `)
 	writeQualityTestFile(t, filepath.Join(root, ".issueops", "PROJECT_AUDIT.md"), `
+| ID | Area | Title | Priority | Size |
+| --- | --- | --- | --- | --- |
 | D1 | Daemon | No connection limit | P1 | Small |
 | X1 | Docs | Low priority docs polish | P3 | Small |
 `)
