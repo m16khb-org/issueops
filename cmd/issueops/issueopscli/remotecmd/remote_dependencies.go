@@ -12,6 +12,7 @@ import (
 
 type Command struct{ Operations RemoteDeps }
 type RemoteDeps struct {
+	ReconcileChild               func(context.Context, string, remoteapp.ChildReconcileCommand, remoteapp.AncestryObserver) (issueopscontract.ChildReconcileResult, error)
 	CreateChild                  func(context.Context, string, remoteapp.ChildCreateCommand, remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error)
 	VerifyRemoteArtifact         func(context.Context, string, string, issueopscontract.IssueOpsRemoteArtifactVerificationRequest, issueopscontract.IssueOpsActor, remoteapp.ArtifactLiveVerifier, remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error)
 	CloseRemoteIssue             func(context.Context, string, string, string, bool, remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderCloseIssueResult, error)

@@ -91,6 +91,44 @@ labels/assignees verify. `issueops list` shows
 `[issue-create:<status>]`; `doctor` reports ambiguous, verification-failed, and
 receipt-failed states. Normal short-lived `pending` intent is not unhealthy.
 
+### Durable child creation and recovery
+
+`create-child` seals a separate `child_create_operations` entry before the
+provider create. It retains the parent `IssueURL`, request digest, child marker,
+known URL, labels/assignees and execution authority. A replay without an ID
+always selects the first implicit operation for the same normalized payload,
+even after completion or a later explicit child with that payload.
+
+For an intentional additional child, generate an ID once, save it and reuse it
+on every retry:
+
+```bash
+CHILD_OPERATION_ID="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
+issueops remote create-child --id ID --operation-id "$CHILD_OPERATION_ID" \
+  --title "Title" --template child_task --body-file BODY.md \
+  --label enhancement --assignee USER --host codex --session-id SESSION \
+  --cwd WORKER_PATH --json
+```
+
+Preview does not write state or call the provider. Only a proven
+`not_invoked` result permits the exact create request to be retried.
+An unresolved operation blocks additional creates, including fresh IDs.
+GitHub reads valid `gh issue create --help` before choosing one create path;
+an error after create never selects a second create.
+
+```bash
+issueops remote reconcile-child --id ID --operation-id OPERATION \
+  --host codex --session-id SESSION --cwd WORKER_PATH --json
+# Repeat the verified preview with --confirm to adopt the existing child.
+```
+
+Recovery checks the exact known URL, or requires one untruncated marker
+candidate. Title/body digest, project, child type, labels/assignees and hierarchy
+must verify. Confirm can attach the existing child, then records the child link
+and completed receipt atomically; it never creates a replacement. A stale
+operation requires explicit reconciliation by the current active holder.
+CLI errors retain the operation ID, known URL and recovery command.
+
 Orca is user-installed and optional. Preview
 `issueops execution prepare --id ID --mode auto ... --json` preview 후 반환된 `next_command`의 동일 입력과 `--expected-readiness-fingerprint`로 confirm한다. `--mode direct`는 예외 경로이며 정규화된 `--direct-reason` 없이는 거부된다. 완료 전 status의 `execution.selection`에서 requested/resolved mode, probe booleans/code, fallback, fingerprint, selected_at, explicit-direct reason을 다시 읽는다.
 review the mode, branch, base SHA, canonical worktree, and owner model, then

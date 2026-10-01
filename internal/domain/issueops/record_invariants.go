@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"fmt"
+
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -9,6 +10,26 @@ import (
 
 // ValidateRecordInvariants checks relationships between fields of a persisted cycle.
 func ValidateRecordInvariants(record issueopscontract.IssueOpsRecord) error {
+	for _, op := range record.ChildCreateOperations {
+		if err := ValidateIssueCreateIntentInvariants(op.IssueOpsIssueCreateIntent); err != nil {
+			return err
+		}
+		project, err := childProjectAuthority(op.ParentURL, op.Provider)
+		if err != nil || project != op.ProjectAuthority {
+			return fmt.Errorf("child operation project mismatch")
+		}
+		if op.CanonicalURL != "" {
+			childProject, err := childProjectAuthority(op.CanonicalURL, op.Provider)
+			if err != nil || childProject != project || op.CanonicalURL == op.ParentURL {
+				return fmt.Errorf("child operation canonical project mismatch")
+			}
+		}
+		if op.Holder != nil {
+			if err := ValidateNativeActor(*op.Holder); err != nil {
+				return err
+			}
+		}
+	}
 	if record.Execution != nil {
 		if err := ValidateExecution(*record.Execution); err != nil {
 			return err

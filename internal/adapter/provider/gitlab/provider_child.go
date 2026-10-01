@@ -40,29 +40,29 @@ func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.Issu
 	}
 	taskTypeID, err := resolveGitLabTaskTypeID(req.Repo, hostname, projectPath)
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, err
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
 	labelIDs, err := resolveGitLabLabelIDs(req.Repo, hostname, projectPath, req.Labels)
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, err
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
 	assigneeIDs, err := resolveGitLabAssigneeIDs(req.Repo, hostname, req.Assignees)
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, err
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
 	createQuery := buildGitLabWorkItemCreateQuery(projectPath, title, strings.TrimSpace(req.Body), taskTypeID, labelIDs, assigneeIDs)
 	create, err := runGlabGraphQL[gitlabWorkItemCreateResponse](req.Repo, hostname, createQuery, map[string]string{
 		"operation": "workItemCreate",
 	})
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, err
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: strings.TrimSpace(create.Data.WorkItemCreate.WorkItem.WebURL)}, err
 	}
 	if len(create.Data.WorkItemCreate.Errors) > 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, fmt.Errorf("gitlab workItemCreate failed: %s", strings.Join(create.Data.WorkItemCreate.Errors, ", "))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: strings.TrimSpace(create.Data.WorkItemCreate.WorkItem.WebURL)}, fmt.Errorf("gitlab workItemCreate failed: %s", strings.Join(create.Data.WorkItemCreate.Errors, ", "))
 	}
 	child := create.Data.WorkItemCreate.WorkItem
 	if strings.TrimSpace(child.ID) == "" {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, fmt.Errorf("gitlab workItemCreate did not return child work item id")
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: strings.TrimSpace(create.Data.WorkItemCreate.WorkItem.WebURL)}, fmt.Errorf("gitlab workItemCreate did not return child work item id")
 	}
 	childURL := strings.TrimSpace(child.WebURL)
 	parent, err := runGlabGraphQL[gitlabParentIssueResponse](req.Repo, hostname, gitlabParentIssueQuery, map[string]string{
@@ -70,47 +70,47 @@ func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.Issu
 		"parentIid":   parentIID,
 	})
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, err)
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, err)
 	}
 	parentID := strings.TrimSpace(parent.Data.Project.Issue.ID)
 	if parentID == "" {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab parent issue lookup did not return work item id"))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab parent issue lookup did not return work item id"))
 	}
 	attach, err := runGlabGraphQL[gitlabHierarchyAddResponse](req.Repo, hostname, gitlabHierarchyAddQuery, map[string]string{
 		"parentId": parentID,
 		"childId":  child.ID,
 	})
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, err)
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, err)
 	}
 	if len(attach.Data.WorkItemHierarchyAddChildrenItems.Errors) > 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab hierarchy attach failed: %s", strings.Join(attach.Data.WorkItemHierarchyAddChildrenItems.Errors, ", ")))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab hierarchy attach failed: %s", strings.Join(attach.Data.WorkItemHierarchyAddChildrenItems.Errors, ", ")))
 	}
 	children, err := runGlabGraphQL[gitlabHierarchyChildrenResponse](req.Repo, hostname, gitlabHierarchyChildrenQuery, map[string]string{
 		"parentId": parentID,
 	})
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, err)
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, err)
 	}
 	if !gitlabChildrenContain(children.Data.WorkItem.Widgets, child.ID, child.IID) {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab child hierarchy verification failed"))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab child hierarchy verification failed"))
 	}
 	verify, err := runGlabGraphQL[gitlabChildVerifyResponse](req.Repo, hostname, gitlabChildVerifyQuery, map[string]string{
 		"childId":     child.ID,
 		"childVerify": "true",
 	})
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, err)
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, err)
 	}
 	verifiedChild := verify.Data.WorkItem
 	childURL = providerutil.FirstNonEmpty(verifiedChild.WebURL, childURL)
 	labels := gitlabWorkItemLabelTitles(verifiedChild.Widgets)
 	assignees := gitlabWorkItemAssigneeUsernames(verifiedChild.Widgets)
 	if missing := providerutil.MissingStrings(req.Labels, labels); len(missing) > 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab child work item missing labels: %s", strings.Join(missing, ", ")))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab child work item missing labels: %s", strings.Join(missing, ", ")))
 	}
 	if missing := providerutil.MissingStrings(req.Assignees, assignees); len(missing) > 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab"}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab child work item missing assignees: %s", strings.Join(missing, ", ")))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "gitlab", ChildURL: childURL}, gitlabCreatedChildError(childURL, fmt.Errorf("gitlab child work item missing assignees: %s", strings.Join(missing, ", ")))
 	}
 	return port.IssueProviderCreateChildResult{
 		OK:                true,
@@ -517,9 +517,10 @@ func runGlabGraphQLContext[T any](ctx context.Context, repo, hostname, query str
 	for key, value := range fields {
 		args = append(args, "-f", key+"="+value)
 	}
-	out, _, err := providerutil.RunBoundedMutationWithOutputLimitContext(ctx, repo, "glab", gitLabCommandOutputLimit, args...)
+	out, invoked, err := providerutil.RunBoundedMutationWithOutputLimitContext(ctx, repo, "glab", gitLabCommandOutputLimit, args...)
 	if err != nil {
-		return zero, fmt.Errorf("glab graphql failed: %w", err)
+		_ = json.Unmarshal(out, &zero)
+		return zero, &port.IssueProviderCreateError{Invoked: invoked, Err: fmt.Errorf("glab graphql failed: %w", err)}
 	}
 	var envelope struct {
 		Errors []struct {
@@ -541,10 +542,10 @@ func runGlabGraphQLContext[T any](ctx context.Context, repo, hostname, query str
 
 func gitlabCreatedChildError(childURL string, err error) error {
 	childURL = strings.TrimSpace(childURL)
-	if childURL == "" {
-		return err
+	if childURL != "" {
+		err = fmt.Errorf("created child %s but follow-up failed: %w", childURL, err)
 	}
-	return fmt.Errorf("created child %s but follow-up failed: %w", childURL, err)
+	return &port.IssueProviderCreateError{Invoked: true, Err: err}
 }
 
 // parseGitLabIssueURL decodes the parent/primary issue URL. GitLab 18.10+ (work

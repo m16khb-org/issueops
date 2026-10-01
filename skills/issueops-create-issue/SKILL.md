@@ -249,6 +249,22 @@ issueops remote create-child \
   --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
 ```
 
+같은 본문으로 의도적인 새 child를 만들려면 ID를 한 번 생성해 저장하고 최초 요청과
+재시도에 같은 값을 `--operation-id`로 넘긴다.
+
+```bash
+CHILD_OPERATION_ID="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
+# 저장한 CHILD_OPERATION_ID를 위 create-child 요청에 --operation-id로 넘긴다.
+```
+
+무ID 재시도는 완료 뒤에도 최초 implicit child를 반환한다. 같은 본문의 explicit 새
+child가 생겨도 이 결합은 유지된다. 미해결 operation은 새 ID로도 생성하지 않으며,
+오류 응답의 known URL·operation ID·recovery command를 보존한다.
+`remote reconcile-child --id ID --operation-id OPERATION`의 preview에서 제목·본문
+digest·type·계층·metadata를 확인한 뒤 같은 요청에 `--confirm`을 붙인다. 현재
+execution holder만 confirm할 수 있고, generation이 바뀐 작업은 자동 replay 대신
+명시적 reconcile로 복구한다. 복구는 기존 child를 조회·연결하며 생성하지 않는다.
+
 child 본문의 요약에는 parent 링크와 이 child가 맡는 부분을, 선행 조건과 병합 조건
 절에는 `[p]`/`[s]`, prerequisite, wave, 병합 조건을 쓴다. confirmed child 결과의
 `hierarchy_verified`, type, URL, labels, assignee와 parent body readback을

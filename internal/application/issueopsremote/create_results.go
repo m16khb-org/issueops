@@ -11,7 +11,9 @@ type IssueCreateResult struct {
 }
 type ChildCreateResult struct {
 	port.IssueProviderCreateChildResult
-	Readability reportcontract.Report `json:"readability"`
+	Readability     reportcontract.Report `json:"readability"`
+	OperationID     string                `json:"operation_id,omitempty"`
+	RecoveryCommand string                `json:"recovery_command,omitempty"`
 }
 type PublicationResult struct {
 	port.IssueProviderCreatePullRequestResult

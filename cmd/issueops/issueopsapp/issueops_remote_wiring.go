@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	model "issueops/internal/contract/issueops"
 	"os"
 
 	"issueops/cmd/issueops/issueopscli/remotecmd"
@@ -13,6 +14,9 @@ import (
 // root 하나뿐이다.
 func newIssueOpsRemote(root string) remotecmd.Command {
 	return remotecmd.Command{Operations: remotecmd.RemoteDeps{
+		ReconcileChild: func(ctx context.Context, root string, cmd remoteapp.ChildReconcileCommand, observe remoteapp.AncestryObserver) (model.ChildReconcileResult, error) {
+			return newChildReconciler(root).Reconcile(ctx, cmd, observe)
+		},
 		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error) {
 			return newChildCreator(root).Create(ctx, cmd, observe)
 		},

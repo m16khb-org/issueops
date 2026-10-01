@@ -13,6 +13,7 @@ import (
 func (command Command) runRemoteCreateChild(args []string, deps Deps) error {
 	fs := flag.NewFlagSet("issueops remote create-child", flag.ContinueOnError)
 	id := fs.String("id", "", "IssueOps id")
+	operationID := fs.String("operation-id", "", "32 lowercase hex ID; generate once with Python secrets.token_hex(16), save it, and reuse it for retries; a fresh ID explicitly creates another child")
 	title := fs.String("title", "", "child title")
 	body := fs.String("body", "", "child body (markdown)")
 	bodyFile := fs.String("body-file", "", "child body markdown file")
@@ -35,11 +36,11 @@ func (command Command) runRemoteCreateChild(args []string, deps Deps) error {
 		return err
 	}
 	result, err := command.Operations.CreateChild(context.Background(), command.Operations.IssueOpsStateRoot(), remoteapp.ChildCreateCommand{
-		ID: *id, Provider: *providerOverride, Title: *title, Body: *body, BodyFile: *bodyFile, Template: *template, ScoreFile: *scoreFile, Fields: fields, Labels: labels, Assignees: assignees, Confirm: *confirm,
+		ID: *id, OperationID: *operationID, Provider: *providerOverride, Title: *title, Body: *body, BodyFile: *bodyFile, Template: *template, ScoreFile: *scoreFile, Fields: fields, Labels: labels, Assignees: assignees, Confirm: *confirm,
 		Actor: issueopscontract.IssueOpsActor{Host: *host, SessionID: *sessionID, AgentID: *agentID, CWD: *cwd},
 	}, deps.observeNativeProcessAncestry)
 	if err != nil {
-		return deps.printErrorResult(*jsonOut, err)
+		return deps.printChildErrorResult(*jsonOut, result, err)
 	}
 
 	if *jsonOut {
@@ -63,4 +64,20 @@ func (deps Deps) observeNativeProcessAncestry() ([]issueopscontract.NativeProces
 		return nil, fmt.Errorf("observe native process ancestry: no process receipts returned")
 	}
 	return ancestry, nil
+}
+
+func (deps Deps) printChildErrorResult(jsonOut bool, result remoteapp.ChildCreateResult, err error) error {
+	if result.OperationID == "" && result.ChildURL == "" {
+		return deps.printErrorResult(jsonOut, err)
+	}
+	result.OK = false
+	if jsonOut {
+		if printErr := deps.printJSON(struct {
+			remoteapp.ChildCreateResult
+			Error string `json:"error"`
+		}{result, err.Error()}); printErr != nil {
+			return printErr
+		}
+	}
+	return err
 }

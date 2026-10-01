@@ -787,7 +787,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func newChildCreator"
+        "func newChildCreator",
+        "func newChildReconciler"
       ]
     },
     {
@@ -1916,7 +1917,16 @@
       "task": "T20",
       "symbols": [
         "func Command.runRemoteCreateChild",
-        "func Deps.observeNativeProcessAncestry"
+        "func Deps.observeNativeProcessAncestry",
+        "func Deps.printChildErrorResult"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopscli/remotecmd/remote_child_reconcile.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func Command.runRemoteReconcileChild"
       ]
     },
     {
@@ -6782,6 +6792,18 @@
       "symbols": []
     },
     {
+      "path": "internal/adapter/provider/github/child_recovery.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.AttachChild",
+        "func Provider.FindChildCreateCandidates",
+        "func Provider.ReadChild",
+        "func childReadAPI",
+        "type githubChildSnapshot"
+      ]
+    },
+    {
       "path": "internal/adapter/provider/github/close_pull_request.go",
       "owner": "adapter",
       "task": "T20",
@@ -6868,6 +6890,19 @@
         "func ghArtifactCommand",
         "func readGhArtifactBody",
         "func runGhArtifactBodyEdit"
+      ]
+    },
+    {
+      "path": "internal/adapter/provider/gitlab/child_recovery.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Provider.AttachChild",
+        "func Provider.FindChildCreateCandidates",
+        "func Provider.ReadChild",
+        "func readGitlabRecoveryItem",
+        "type gitlabRecoveryItem",
+        "type gitlabRecoveryItems"
       ]
     },
     {
@@ -9527,9 +9562,37 @@
       "task": "T07",
       "symbols": [
         "func ChildCreator.Create",
+        "func ChildRecoveryCommand",
         "type ChildCreateCommand",
         "type ChildCreator",
         "type ChildProvider"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/child_create_intents.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func ChildCreateIntents.Begin",
+        "func ChildCreateIntents.Complete",
+        "func ChildCreateIntents.Outcome",
+        "func ChildCreateIntents.RecoveryFailure",
+        "func ChildCreateIntents.timestamp",
+        "func ChildCreateIntents.update",
+        "type ChildCreateIntents"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsremote/child_reconcile.go",
+      "owner": "application",
+      "task": "T07",
+      "symbols": [
+        "func ChildReconciler.Reconcile",
+        "func containsChildValues",
+        "func sameChildRecoveryAuthority",
+        "func validateChildSnapshot",
+        "type ChildReconcileCommand",
+        "type ChildReconciler"
       ]
     },
     {
@@ -10973,6 +11036,16 @@
         "type RecoveryMode",
         "type RecoveryStep",
         "type Status"
+      ]
+    },
+    {
+      "path": "internal/contract/issueops/child_create.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "func ValidateChildCreateOperations",
+        "type ChildCreateOperation",
+        "type ChildReconcileResult"
       ]
     },
     {
@@ -13098,6 +13171,23 @@
         "func pathIsDocument",
         "func pathTouchesAuth",
         "type ChangeTier"
+      ]
+    },
+    {
+      "path": "internal/domain/issueops/child_create_operation.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func BeginChildOperation",
+        "func ChildRequestDigest",
+        "func CompleteChildOperation",
+        "func FindChildOperation",
+        "func RebindChildOperation",
+        "func RecordChildOutcome",
+        "func SealChildOperation",
+        "func ValidateChildOperationAuthority",
+        "func childProjectAuthority",
+        "func putChildOperation"
       ]
     },
     {
@@ -16734,6 +16824,15 @@
         "func QueueStats",
         "func Start",
         "func ValidID"
+      ]
+    },
+    {
+      "path": "internal/port/child_create_recovery.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type ChildSnapshot",
+        "type IssueProviderChildCreateRecovery"
       ]
     },
     {

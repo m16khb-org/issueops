@@ -61,6 +61,7 @@ func TestRemoteChildCreationUsesRootApplicationAndPersistsLink(t *testing.T) {
 
 	bin := t.TempDir()
 	script := `#!/bin/sh
+if [ "$1 $2 $3" = "issue create --help" ]; then printf "  --title string\n";exit 0;fi
 if [ "$1 $2" = "issue create" ]; then
  printf 'https://github.com/acme/repo/issues/34\n';exit 0
 fi

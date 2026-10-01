@@ -88,7 +88,7 @@ func ExactIssueOpsOwnerMutation(command ExactIssueOpsCommand) (map[string][]stri
 		"plan-prep record",
 		"link-child", "link-related", "feedback add",
 		"child start", "child status", "child accept", "child reject", "child drop",
-		"remote create-child", "remote create-pr", "remote verify-artifact", "remote reflect-devils-advocate",
+		"remote create-child", "remote reconcile-child", "remote create-pr", "remote verify-artifact", "remote reflect-devils-advocate",
 		"remote sync-issue", "remote sync-pr":
 	default:
 		return nil, false
@@ -372,8 +372,12 @@ var issueOpsCommandSpecs = map[string]issueOpsSpec{
 		repeatable: []string{"--label", "--assignee", "--field"},
 		booleans:   []string{"--confirm", "--json"},
 	},
+	"remote reconcile-child": {
+		values:   []string{"--id", "--operation-id", "--host", "--session-id", "--agent-id", "--cwd"},
+		booleans: []string{"--confirm", "--json"},
+	},
 	"remote create-child": {
-		values:     []string{"--id", "--title", "--body", "--body-file", "--template", "--provider", "--score-file", "--host", "--session-id", "--agent-id", "--cwd", "--label", "--assignee", "--field"},
+		values:     []string{"--id", "--operation-id", "--title", "--body", "--body-file", "--template", "--provider", "--score-file", "--host", "--session-id", "--agent-id", "--cwd", "--label", "--assignee", "--field"},
 		repeatable: []string{"--label", "--assignee", "--field"},
 		booleans:   []string{"--confirm", "--json"},
 	},

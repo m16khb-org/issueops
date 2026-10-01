@@ -395,54 +395,74 @@ func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.Issu
 	if !req.Confirm {
 		preferred := append(append([]string{}, createArgs...), "--parent", parentNumber)
 		preview := strings.Join([]string{
-			providerutil.DryRunPreview("gh", preferred...),
+			providerutil.DryRunPreview("gh", "issue", "create", "--help"),
+			"if parent flag is supported: " + providerutil.DryRunPreview("gh", preferred...),
 			providerutil.DryRunPreview("gh", "api", "repos/"+owner+"/"+repoName+"/issues/"+parentNumber+"/sub_issues"),
-			providerutil.DryRunPreview("gh", createArgs...),
+			"if parent flag is absent from valid help: " + providerutil.DryRunPreview("gh", createArgs...),
 			providerutil.DryRunPreview("gh", "api", "-X", "POST", "repos/"+owner+"/"+repoName+"/issues/"+parentNumber+"/sub_issues", "-f", "sub_issue_id={child_database_id}"),
-		}, "; ") + "; fallback if --parent is unsupported"
+		}, "; ") + "; choose one create path before mutation; never retry a failed create"
 		return port.IssueProviderCreateChildResult{OK: true, Provider: "github", Preview: preview}, nil
 	}
-	preferredCreateArgs := append(append([]string{}, createArgs...), "--parent", parentNumber)
-	child, err := runGhJSON(preferredCreateArgs, req.Repo, "issue")
-	usedParentFlag := err == nil
+	help, err := providerutil.RunBoundedReadbackContext(context.Background(), req.Repo, "gh", "issue", "create", "--help")
 	if err != nil {
-		child, err = runGhJSON(createArgs, req.Repo, "issue")
+		return port.IssueProviderCreateChildResult{Provider: "github"}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
+	usedParentFlag, knownCreateHelp := false, false
+	for _, line := range strings.Split(string(help), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) > 0 && strings.HasPrefix(fields[0], "-") {
+			for _, field := range fields {
+				if field == "--parent" {
+					usedParentFlag = true
+				}
+				if field == "--title" {
+					knownCreateHelp = true
+				}
+			}
+		}
+	}
+	if !usedParentFlag && !knownCreateHelp {
+		return port.IssueProviderCreateChildResult{Provider: "github"}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("cannot determine gh issue create parent capability")}
+	}
+	if usedParentFlag {
+		createArgs = append(createArgs, "--parent", parentNumber)
+	}
+	child, err := runGhJSON(createArgs, req.Repo, "issue")
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, err
+		return port.IssueProviderCreateChildResult{Provider: "github", ChildURL: strings.TrimSpace(child.URL)}, err
 	}
 	childURL := strings.TrimSpace(child.URL)
 	_, _, childNumber, err := parseGitHubIssueURL(childURL)
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, githubCreatedChildError(childURL, fmt.Errorf("parse created child issue URL: %w", err))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("parse created child issue URL: %w", err))
 	}
 	childIssue, err := runGhAPIJSON[githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + childNumber}, "issue lookup")
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, githubCreatedChildError(childURL, err)
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, err)
 	}
 	if childIssue.ID == 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, githubCreatedChildError(childURL, fmt.Errorf("created child issue is missing database id"))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("created child issue is missing database id"))
 	}
 	if !usedParentFlag {
 		_, err = runGhAPIJSON[map[string]any](req.Repo, []string{"-X", "POST", "repos/" + owner + "/" + repoName + "/issues/" + parentNumber + "/sub_issues", "-f", "sub_issue_id=" + strconv.FormatInt(childIssue.ID, 10)}, "sub-issue attach")
 		if err != nil {
-			return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, githubCreatedChildError(childURL, err)
+			return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, err)
 		}
 	}
 	children, err := runGhAPIJSON[[]githubIssue](req.Repo, []string{"repos/" + owner + "/" + repoName + "/issues/" + parentNumber + "/sub_issues"}, "sub-issue verification")
 	if err != nil {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, githubCreatedChildError(childURL, err)
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, err)
 	}
 	if !githubIssueListContains(children, childIssue.ID, childNumber) {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, githubCreatedChildError(childURL, fmt.Errorf("github sub-issue hierarchy verification failed"))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("github sub-issue hierarchy verification failed"))
 	}
 	labels := githubLabelNames(childIssue.Labels)
 	assignees := githubAssigneeLogins(childIssue.Assignees)
 	if missing := providerutil.MissingStrings(req.Labels, labels); len(missing) > 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, githubCreatedChildError(childURL, fmt.Errorf("github child issue missing labels: %s", strings.Join(missing, ", ")))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("github child issue missing labels: %s", strings.Join(missing, ", ")))
 	}
 	if missing := providerutil.MissingStrings(req.Assignees, assignees); len(missing) > 0 {
-		return port.IssueProviderCreateChildResult{OK: false, Provider: "github"}, githubCreatedChildError(childURL, fmt.Errorf("github child issue missing assignees: %s", strings.Join(missing, ", ")))
+		return port.IssueProviderCreateChildResult{OK: false, Provider: "github", ChildURL: childURL}, githubCreatedChildError(childURL, fmt.Errorf("github child issue missing assignees: %s", strings.Join(missing, ", ")))
 	}
 	return port.IssueProviderCreateChildResult{
 		OK:                true,
@@ -599,10 +619,10 @@ func runGhAPIJSON[T any](repo string, args []string, kind string) (T, error) {
 
 func githubCreatedChildError(childURL string, err error) error {
 	childURL = strings.TrimSpace(childURL)
-	if childURL == "" {
-		return err
+	if childURL != "" {
+		err = fmt.Errorf("created child %s but follow-up failed: %w", childURL, err)
 	}
-	return fmt.Errorf("created child %s but follow-up failed: %w", childURL, err)
+	return &port.IssueProviderCreateError{Invoked: true, Err: err}
 }
 
 func parseGitHubIssueURL(raw string) (owner, repo, number string, err error) {
