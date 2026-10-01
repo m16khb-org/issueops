@@ -10325,6 +10325,15 @@
       ]
     },
     {
+      "path": "internal/application/selfverify/evidence.go",
+      "owner": "application",
+      "task": "T18",
+      "symbols": [
+        "func binaryDriftEvidence",
+        "func requireGoldenEvidence"
+      ]
+    },
+    {
       "path": "internal/application/selfverify/export_candidates.go",
       "owner": "application",
       "task": "T18",

@@ -108,7 +108,11 @@ func fakeVerifyLoopStepDepsOK(ok func(string) selfverify.StepResult) verifyapp.S
 	return verifyapp.SelfVerifyStepDeps{
 		IssueOpsRoot: func() string { return "." },
 		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) selfverify.StepResult {
-			return ok(label)
+			step := ok(label)
+			if label == "binary drift" && step.OK {
+				step.Stdout = `{"checks":[{"name":"binary_drift","healthy":true}]}`
+			}
+			return step
 		},
 		ValidateHarnessInvariants: func(string) selfverify.StepResult { return ok("harness invariants") },
 		ValidateGoFormat:          func(string) selfverify.StepResult { return ok("gofmt") },
