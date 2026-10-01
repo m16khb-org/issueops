@@ -66,6 +66,9 @@ func ValidateRecord(record IssueOpsRecord) error {
 		!knownCleanupAbandonFailureStep(record.CleanupAbandonFailure.Step) {
 		return fmt.Errorf("issueops cleanup abandon failure step is invalid")
 	}
+	if err := ValidateChildCreateOperations(record.ChildCreateOperations); err != nil {
+		return err
+	}
 	if record.IssueCreateIntent != nil {
 		if err := ValidateIssueCreateIntent(*record.IssueCreateIntent); err != nil {
 			return err

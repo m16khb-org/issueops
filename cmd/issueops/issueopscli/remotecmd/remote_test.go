@@ -693,6 +693,7 @@ func writeFakeGhForCreateChild(t *testing.T, binDir string) {
 	t.Helper()
 	path := filepath.Join(binDir, "gh")
 	script := `#!/bin/sh
+if [ "$3" = "--help" ]; then echo "  --parent string"; exit 0; fi
 if [ "$1 $2" = "issue create" ]; then
   printf 'https://github.com/acme/repo/issues/34\n'
   exit 0

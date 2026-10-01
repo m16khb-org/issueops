@@ -70,6 +70,11 @@
     "role": "error"
   },
   {
+    "path": "internal/contract/issueops/child_create.go",
+    "symbol": "func ValidateChildCreateOperations",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/issueops/cleanup_attempt.go",
     "symbol": "func ValidateCleanupAttempt",
     "role": "shape"

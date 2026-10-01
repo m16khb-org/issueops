@@ -77,6 +77,7 @@ func TestDecodeEncodePreservesEverySidecar(t *testing.T) {
 		CreatedAt:             "2026-09-23T00:00:00Z",
 		UpdatedAt:             "2026-09-23T00:00:00Z",
 	}
+	record.ChildCreateOperations = []model.ChildCreateOperation{{IssueOpsIssueCreateIntent: model.IssueOpsIssueCreateIntent{OperationID: strings.Repeat("c", 32), Marker: "<!-- issueops:child-create:" + strings.Repeat("c", 32) + " -->", Provider: "github", ProjectAuthority: "github.com/example/issueops", Title: "child", BodySHA256: strings.Repeat("d", 64), Status: model.IssueCreateIntentPending, Attempt: 1, StartedAt: record.CreatedAt, UpdatedAt: record.UpdatedAt}, Origin: "implicit", RequestSHA256: strings.Repeat("e", 64), ParentURL: record.IssueURL}}
 	data, err := json.Marshal(record)
 	if err != nil {
 		t.Fatal(err)

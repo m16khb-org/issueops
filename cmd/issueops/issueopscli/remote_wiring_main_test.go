@@ -24,10 +24,8 @@ func testRemoteCommand() remotecmd.Command {
 		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error) {
 			service := remoteapp.ChildCreator{Records: issueopscore.RemoteRecordStore{StateRoot: root}, Resolve: func(name string) (remoteapp.ChildProvider, error) { return provider.Resolve(name) }, Bodies: remoteapp.NewTemplateBodyResolver(os.ReadFile), Authorize: func(_ context.Context, id string, actor issueopscontract.IssueOpsActor) error {
 				return issueopscore.ValidateIssueOpsMutationActor(root, id, actor)
-			}, Link: func(ctx context.Context, id, url, title string, actor issueopscontract.IssueOpsActor) error {
-				_, err := issueLinkerForTest(root).Child(ctx, id, url, title, &actor)
-				return err
-			}}
+			}, Intents: &remoteapp.ChildCreateIntents{Store: issueopscore.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}, NewOperationID: issueopscore.RemotePublicationObserver{}.NewOperationID}
+
 			return service.Create(ctx, cmd, observe)
 		},
 		VerifyRemoteArtifact: func(ctx context.Context, root, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest, actor issueopscontract.IssueOpsActor, verify remoteapp.ArtifactLiveVerifier, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error) {

@@ -71,7 +71,7 @@ func TestGitHubCreateChildDryRunDoesNotExecute(t *testing.T) {
 	if res.ChildURL != "" || res.ChildNumber != "" || res.HierarchyVerified {
 		t.Fatalf("dry-run must not populate remote result fields: %+v", res)
 	}
-	for _, want := range []string{"[dry-run]", "gh issue create", "--parent 12", "--repo acme/repo", "fallback", "sub_issues", "sub_issue_id", "--label bug", "--assignee octocat"} {
+	for _, want := range []string{"[dry-run]", "gh issue create", "--parent 12", "--repo acme/repo", "choose one create path", "sub_issues", "sub_issue_id", "--label bug", "--assignee octocat"} {
 		if !strings.Contains(res.Preview, want) {
 			t.Fatalf("preview %q missing %q", res.Preview, want)
 		}
@@ -341,6 +341,7 @@ func TestGitHubCreateChildConfirmCreatesAttachesAndVerifies(t *testing.T) {
 	logPath := filepath.Join(repo, "gh.calls")
 	writeFakeGh(t, binDir, `#!/bin/sh
 printf '%s\n' "$*" >> gh.calls
+if [ "$3" = "--help" ]; then echo "  --parent string"; exit 0; fi
 if [ "$1 $2" = "issue create" ]; then
   case "$*" in
     *"--parent 12"*)
@@ -401,7 +402,7 @@ exit 2
 	}
 }
 
-func TestGitHubCreateChildFallsBackToRESTAttachWhenParentFlagFails(t *testing.T) {
+func TestGitHubCreateChildUsesRESTWhenParentCapabilityUnsupported(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("fake gh shell script is POSIX-only")
 	}
@@ -410,6 +411,7 @@ func TestGitHubCreateChildFallsBackToRESTAttachWhenParentFlagFails(t *testing.T)
 	logPath := filepath.Join(repo, "gh.calls")
 	writeFakeGh(t, binDir, `#!/bin/sh
 printf '%s\n' "$*" >> gh.calls
+if [ "$3" = "--help" ]; then echo "  --title string"; exit 0; fi
 if [ "$1 $2" = "issue create" ]; then
   case "$*" in
     *"--parent 12"*)
@@ -461,7 +463,6 @@ exit 2
 	}
 	calls := strings.TrimSpace(string(log))
 	for _, want := range []string{
-		"issue create --title 하위 작업 --body details --label bug --assignee octocat --repo acme/repo --parent 12",
 		"issue create --title 하위 작업 --body details --label bug --assignee octocat --repo acme/repo",
 		"api repos/acme/repo/issues/34",
 		"api -X POST repos/acme/repo/issues/12/sub_issues -f sub_issue_id=987",
@@ -480,6 +481,7 @@ func TestGitHubCreateChildFailureAfterCreateIncludesChildURL(t *testing.T) {
 	binDir := t.TempDir()
 	repo := t.TempDir()
 	writeFakeGh(t, binDir, `#!/bin/sh
+if [ "$3" = "--help" ]; then echo "  --parent string"; exit 0; fi
 if [ "$1 $2" = "issue create" ]; then
   printf 'https://github.com/acme/repo/issues/34\n'
   exit 0

@@ -21,13 +21,22 @@ import (
 // 검증하므로 같은 배선을 재현한다.
 func testRemoteCommand() Command {
 	return Command{Operations: RemoteDeps{
+		ReconcileChild: func(ctx context.Context, root string, cmd remoteapp.ChildReconcileCommand, observe remoteapp.AncestryObserver) (issueopscontract.ChildReconcileResult, error) {
+			creatorIntents := &remoteapp.ChildCreateIntents{Store: issueopscore.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}
+			service := remoteapp.ChildReconciler{Records: issueopscore.RemoteRecordStore{StateRoot: root}, Intents: creatorIntents, Resolve: func(name string) (port.IssueProviderChildCreateRecovery, error) {
+				p, err := provider.Resolve(name)
+				if err != nil {
+					return nil, err
+				}
+				return p.(port.IssueProviderChildCreateRecovery), nil
+			}}
+			return service.Reconcile(ctx, cmd, observe)
+		},
 		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error) {
 			service := remoteapp.ChildCreator{Records: issueopscore.RemoteRecordStore{StateRoot: root}, Resolve: func(name string) (remoteapp.ChildProvider, error) { return provider.Resolve(name) }, Bodies: remoteapp.NewTemplateBodyResolver(os.ReadFile), Authorize: func(_ context.Context, id string, actor issueopscontract.IssueOpsActor) error {
 				return issueopscore.ValidateIssueOpsMutationActor(root, id, actor)
-			}, Link: func(ctx context.Context, id, url, title string, actor issueopscontract.IssueOpsActor) error {
-				_, err := issueLinkerForTest(root).Child(ctx, id, url, title, &actor)
-				return err
-			}}
+			}, Intents: &remoteapp.ChildCreateIntents{Store: issueopscore.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}, NewOperationID: issueopscore.RemotePublicationObserver{}.NewOperationID}
+
 			return service.Create(ctx, cmd, observe)
 		},
 		VerifyRemoteArtifact: func(ctx context.Context, root, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest, actor issueopscontract.IssueOpsActor, verify remoteapp.ArtifactLiveVerifier, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error) {

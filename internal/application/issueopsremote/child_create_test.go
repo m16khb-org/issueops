@@ -2,10 +2,13 @@ package issueopsremote
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
@@ -95,7 +98,7 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 					}
 					return childProviderFunc(func(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 						events = append(events, "create")
-						if req.ParentIssueURL != record.IssueURL || req.Body != readableChildBody || req.Confirm != tc.confirm || !reflect.DeepEqual(req.Labels, []string{"bug"}) || !reflect.DeepEqual(req.Assignees, []string{"owner"}) {
+						if req.ParentIssueURL != record.IssueURL || strings.TrimSpace(strings.Split(req.Body, "<!-- issueops:child-create:")[0]) != readableChildBody || req.Confirm != tc.confirm || !reflect.DeepEqual(req.Labels, []string{"bug"}) || !reflect.DeepEqual(req.Assignees, []string{"owner"}) {
 							t.Fatalf("request=%+v", req)
 						}
 						result := port.IssueProviderCreateChildResult{HierarchyVerified: true, ChildURL: "https://github.com/acme/repo/issues/2"}
@@ -128,17 +131,19 @@ func TestChildCreatorOrdersValidationAuthorityCreationAndLink(t *testing.T) {
 					}
 					return nil
 				},
-				Link: func(_ context.Context, id, url, title string, actor model.IssueOpsActor) error {
-					events = append(events, "link")
-					assertActor(actor)
-					if id != record.ID || url != "https://github.com/acme/repo/issues/2" || title != "Child" {
-						t.Fatalf("link %s %s %s", id, url, title)
-					}
-					if tc.problem == "link" {
-						return errors.New("link refused")
+				Intents: &ChildCreateIntents{Store: &testChildStore{record: record, before: func(updated model.IssueOpsRecord) error {
+					if len(updated.ChildCreateOperations) > 0 && updated.ChildCreateOperations[0].Status == model.IssueCreateIntentCompleted {
+						events = append(events, "link")
+						if len(updated.IssueLinks) != 1 || updated.IssueLinks[0].URL != "https://github.com/acme/repo/issues/2" {
+							t.Fatalf("links=%+v", updated.IssueLinks)
+						}
+						if tc.problem == "link" {
+							return errors.New("link refused")
+						}
 					}
 					return nil
-				},
+				}}, Authority: testChildAuthority{}, Now: time.Now},
+				NewOperationID: func() (string, error) { return strings.Repeat("a", 32), nil },
 			}
 			_, err := service.Create(context.Background(), cmd, func() ([]model.NativeProcessReceipt, error) {
 				events = append(events, "observe")
@@ -177,3 +182,77 @@ const readableChildBody = `## 요약
 ## 선행 조건과 병합 조건
 
 부모 브랜치에 병합한 뒤 하위 작업을 닫습니다.`
+
+func TestChildCreatorRestartAfterReceiptFailureDoesNotCreateAgain(t *testing.T) {
+	record := model.IssueOpsRecord{ID: "io-child", Repo: "/repo", IssueURL: "https://github.com/acme/repo/issues/1", Branch: "1-parent", BranchPrepare: &model.IssueOpsBranchPrepare{Branch: "1-parent"}}
+	calls := 0
+	store := &testChildStore{record: record, before: func(updated model.IssueOpsRecord) error {
+		if updated.ChildCreateOperations[0].Status == model.IssueCreateIntentCompleted {
+			return errors.New("disk full")
+		}
+		return nil
+	}}
+	service := ChildCreator{
+		Records: childRecordReader(func(context.Context, string) (model.IssueOpsRecord, error) { return store.read(), nil }),
+		Resolve: func(string) (ChildProvider, error) {
+			return childProviderFunc(func(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
+				calls++
+				return port.IssueProviderCreateChildResult{ChildURL: "https://github.com/acme/repo/issues/2", HierarchyVerified: true}, nil
+			}), nil
+		},
+		Bodies:         NewTemplateBodyResolver(nil),
+		Intents:        &ChildCreateIntents{Store: store, Authority: testChildAuthority{}, Now: time.Now},
+		NewOperationID: func() (string, error) { return strings.Repeat("a", 32), nil },
+	}
+	cmd := ChildCreateCommand{ID: record.ID, Title: "Child", Body: readableChildBody, Labels: []string{"bug"}, Assignees: []string{"owner"}, Confirm: true}
+	for range 2 {
+		if _, err := service.Create(context.Background(), cmd, nil); err == nil {
+			t.Fatal("expected receipt/recovery error")
+		}
+	}
+	if calls != 1 {
+		t.Fatalf("create count after retry=%d; want 1", calls)
+	}
+}
+
+type testChildAuthority struct{}
+
+func (testChildAuthority) Authorize(context.Context, model.IssueOpsRecord, model.IssueOpsActor) error {
+	return nil
+}
+
+type testChildStore struct {
+	mu     sync.Mutex
+	record model.IssueOpsRecord
+	before func(model.IssueOpsRecord) error
+}
+
+func (s *testChildStore) read() model.IssueOpsRecord {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return cloneChildRecord(s.record)
+}
+func (s *testChildStore) Read(context.Context, string) (model.IssueOpsRecord, error) {
+	return s.read(), nil
+}
+func (s *testChildStore) Update(ctx context.Context, id string, transition RecordTransition) (model.IssueOpsRecord, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	updated, err := transition(cloneChildRecord(s.record))
+	if err != nil {
+		return s.record, err
+	}
+	if s.before != nil {
+		if err := s.before(updated); err != nil {
+			return s.record, err
+		}
+	}
+	s.record = cloneChildRecord(updated)
+	return cloneChildRecord(updated), nil
+}
+func cloneChildRecord(r model.IssueOpsRecord) model.IssueOpsRecord {
+	b, _ := json.Marshal(r)
+	var out model.IssueOpsRecord
+	_ = json.Unmarshal(b, &out)
+	return out
+}

@@ -35,7 +35,8 @@ func (command Command) Run(args []string, deps Deps) error {
 		fmt.Println("  issueops remote verify-artifact --id ID --provider github|gitlab --kind pr|mr --url URL --target-branch BRANCH --label LABEL --assignee USER [--json]")
 		fmt.Println("  issueops remote create-issue --id ID --title TEXT [--provider github|gitlab] [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... [--confirm] [--json]")
 		fmt.Println("  issueops remote reconcile-issue --id ID [--confirm] [--json]")
-		fmt.Println("  issueops remote create-child --id ID --title TEXT [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
+		fmt.Println("  issueops remote reconcile-child --id ID --operation-id HEX [--host HOST --session-id SESSION --cwd WORKTREE] [--confirm] [--json]")
+		fmt.Println("  issueops remote create-child --id ID [--operation-id HEX] --title TEXT [--body TEXT|--body-file PATH] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo --session-id SESSION [--agent-id ID] --cwd WORKER_PATH [--confirm] [--json]")
 		fmt.Println("  issueops remote create-pr --id ID --expected-generation N --title TEXT --head BRANCH --base BRANCH [--body TEXT] [--template KIND --field key=value...] [--label LABEL]... [--assignee USER]... --host codex|claude|omo --session-id SESSION [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH --cwd WORKER_PATH [--confirm] [--json]")
 		fmt.Println("  issueops remote sync-graph --id ID [--confirm] [--json]")
 		fmt.Println("  issueops remote sync-issue --id ID [--provider github|gitlab] [--url CHILD_URL] [--body TEXT|--body-file PATH] [--expected-body-sha256 SHA] [--accept-remote-edits] [--host codex|claude|omo] [--session-id SESSION] [--agent-id ID] [--cwd WORKER_PATH] [--confirm] [--json]")
@@ -153,6 +154,8 @@ func (command Command) Run(args []string, deps Deps) error {
 		return command.runRemoteCreateIssue(context.Background(), args[1:], deps)
 	case "reconcile-issue":
 		return command.runRemoteReconcileIssue(context.Background(), args[1:], deps)
+	case "reconcile-child":
+		return command.runRemoteReconcileChild(args[1:], deps)
 	case "create-child":
 		return command.runRemoteCreateChild(args[1:], deps)
 	case "create-pr":
