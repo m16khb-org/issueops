@@ -25,17 +25,15 @@ description: Verification standards, test practices, and required checks.
 
 ## 최소 완료 기준
 
-문서만 변경한 경우에도 최소한 빌드·docs·inspect·self-verify 기본 게이트를
-확인한다. 전체 battery와 단계별 명령은
+문서만 변경한 경우에도 문서 링크·구조를 대조하고, 단일 self-verify의 완전한
+성공 결과로 test/build/golden/docs/inspect 기본 게이트를 확인한다. 같은 revision·
+환경·입력의 성공 step은 별도로 재실행하지 않는다. 전체 battery와 명령은
 [self-verification.md](testing/self-verification.md)가 소유한다.
 
-```bash
-go test ./... -count=1
-go build -o bin/issueops ./cmd/issueops
-./bin/issueops docs --json
-./bin/issueops inspect --json
-./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json
-```
+검증 명령을 실행할 최신 binary가 없으면 먼저 빌드한다. 이 실행용 binary 준비와
+self-verify 내부의 검증용 임시 build는 목적이 다르다. 문서-only 최소 검증은 별도
+설치·bootstrap apply·daemon/state 쓰기를 요구하지 않으며, self-verify 내부 smoke는
+그대로 수행한다.
 
 Go 코드 변경의 기본 검증(`gofmt -l`, `go test -race ./...`, `go vet ./...`, architecture
 ratchet, operational-health 위임, golden 갱신 조건)은
