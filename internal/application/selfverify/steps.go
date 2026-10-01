@@ -91,12 +91,9 @@ func PlannedSteps(root string, tempBin string, seed int64, goTestStep *StepResul
 			return deps.RunCommandStep(root, "go build", 120*time.Second, "", "go", "build", "-o", tempBin, "./cmd/issueops")
 		}},
 		{Label: "binary drift", Run: func() StepResult {
-			// 빌드가 성공한 뒤, 커밋된 bin/issueops가 소스 트리 대비 stale하지
-			// 않은지 확인한다. 방금 빌드한 tempBin으로 doctor --json을 실행해
-			// binary_drift 체크를 살핀다. 갓 빌드한 tempBin은 구조상 항상 최신이므로
-			// 이 단계가 false positive를 낼 수는 없지만, self-verify QA 표면의 일부로
-			// drift 탐지 경로를 여전히 검증한다.
-			return deps.RunCommandStep(root, "binary drift", 10*time.Second, "", tempBin, "doctor", "--static-only", "--json", "--repo", root)
+			// tempBin runs doctor; the observation concerns root/bin/issueops.
+			step := deps.RunCommandStep(root, "binary drift", 10*time.Second, "", tempBin, "doctor", "--static-only", "--json", "--repo", root)
+			return binaryDriftEvidence(step)
 		}},
 		{Label: "inspect smoke", Run: func() StepResult { return deps.ValidateInspect(tempBin, root) }},
 		{Label: "docs index smoke", Run: func() StepResult { return deps.ValidateDocsIndex(tempBin, root) }},
@@ -146,5 +143,13 @@ func CachedContractGoldenStep(goTestStep StepResult, deps SelfVerifyStepDeps) St
 			Stdout:     "contract golden tests already executed by full go test suite",
 		}
 	}
-	return deps.RunCommandStep(deps.IssueOpsRoot(), "contract golden tests", 120*time.Second, "", "go", "test", "./cmd/issueops", "-run", "Golden", "-count=1")
+	step := deps.RunCommandStep(deps.IssueOpsRoot(), "contract golden tests", 120*time.Second, "", "go", "test", "-json", "./cmd/issueops/contractgolden", "./cmd/issueops/issueopsapp", "-run", "^(TestCLIUsageGolden|TestMCPToolsGolden|TestMCPResourcesGolden|TestResponseContractsGolden)$", "-count=1")
+	if !step.OK {
+		return step
+	}
+	if err := requireGoldenEvidence(step); err != nil {
+		step.OK = false
+		step.Error = "contract golden evidence: " + err.Error()
+	}
+	return step
 }

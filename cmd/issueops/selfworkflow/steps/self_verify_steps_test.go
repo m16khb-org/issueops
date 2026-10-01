@@ -152,7 +152,7 @@ func TestPlannedSelfVerifyStepsUsesStaticDoctorForBinaryDrift(t *testing.T) {
 			gotExecutable = executable
 			gotArgs = append([]string(nil), args...)
 		}
-		return StepResult{Label: label, OK: true}
+		return StepResult{Label: label, OK: true, Stdout: `{"checks":[{"name":"binary_drift","healthy":true}]}`}
 	}
 
 	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, deps)
@@ -202,7 +202,23 @@ func fakeSelfVerifyStepDeps(t *testing.T) SelfVerifyStepDeps {
 			return "/repo"
 		},
 		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) StepResult {
-			return ok(label)
+			step := ok(label)
+			if label == "binary drift" {
+				step.Stdout = `{"checks":[{"name":"binary_drift","healthy":true}]}`
+			}
+			if label == "contract golden tests" {
+				step.Stdout = `{"Action":"run","Package":"issueops/cmd/issueops/contractgolden","Test":"TestCLIUsageGolden"}
+{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden","Test":"TestCLIUsageGolden"}
+{"Action":"run","Package":"issueops/cmd/issueops/contractgolden","Test":"TestMCPToolsGolden"}
+{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden","Test":"TestMCPToolsGolden"}
+{"Action":"run","Package":"issueops/cmd/issueops/contractgolden","Test":"TestMCPResourcesGolden"}
+{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden","Test":"TestMCPResourcesGolden"}
+{"Action":"pass","Package":"issueops/cmd/issueops/contractgolden"}
+{"Action":"run","Package":"issueops/cmd/issueops/issueopsapp","Test":"TestResponseContractsGolden"}
+{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp","Test":"TestResponseContractsGolden"}
+{"Action":"pass","Package":"issueops/cmd/issueops/issueopsapp"}`
+			}
+			return step
 		},
 		ValidateHarnessInvariants: func(string) StepResult {
 			return ok("harness invariants")

@@ -111,6 +111,21 @@ snapshot schema v1은 유지한다. labels 자체는 hash 입력이 아니므로
 label로 비교한다. 후보 계획의 verification QA는 현재 contract version/hash와
 termination 판정이 일치하는 성공 요약만 완료 근거로 인정한다.
 
+## Golden 및 binary drift 결과 판정
+
+성공한 full-suite는 golden 증거로 재사용한다. fallback은
+`cmd/issueops/contractgolden`과 `cmd/issueops/issueopsapp`에서
+TestCLIUsageGolden, TestMCPToolsGolden, TestMCPResourcesGolden,
+TestResponseContractsGolden만 `go test -json`으로 실행한다. 네 테스트 각각의
+run/pass와 두 package의 pass가 모두 있어야 통과한다. zero-match, skip, fail,
+잘못되거나 잘린 JSON은 성공 증거가 아니다.
+
+Binary drift 단계는 temp binary로 doctor를 실행하되 관측 대상은
+`root/bin/issueops`다. 정확히 한 `binary_drift` check의 명시적인 healthy bool을
+확인한다. stale은 실패하고, fresh와 미빌드 skip은 통과한다. 다른 doctor 경고는
+이 단계의 실패로 바꾸지 않는다. 누락·중복 check, bool 누락, 잘못되거나 잘린 JSON은
+실패한다. doctor의 JSON exit code와 generic command runner의 계약은 유지한다.
+
 ## 부분 검증 상태 금지 (all-or-nothing verification)
 
 다단계 검증 시나리오에서 한 단계라도 실패하면 이전 통과를 재사용하지 말고 1단계부터 전체를 다시 실행한다.
