@@ -134,6 +134,10 @@ actor model live in [`issueops.md`](issueops.md).
 
 `application/policy.Service`가 경로 관측, 매 평가의 workspace override 로드, PR/MR 생성 명령의 준비된 base 조회와 domain 판정을 조율한다. timeout 해석·환경변수 선택·로컬 경로 인자 분류·대상 브랜치 판정은 domain이 맡는다. 실제 경로와 심볼릭 링크 확인, 환경변수 조회와 process 실행은 adapter에 남는다. 실행은 기존 허용 환경변수만 전달하며, 감사 로그는 `application/audit.Service`가 평가→로그 경로 조회→append 순서를 맡는다. preflight의 커밋 형식 판정은 `domain/preflight.CommitStyleHints`가 소유하고 application이 관측 결과를 조합한다.
 
+정책 실행은 직접 부모를 `Wait`로 회수하고 stdout·stderr의 EOF까지 완료를 관측한다. Unix에서는 별도 process group을 만들고 deadline에 SIGKILL로 같은 그룹의 자식을 종료한다. 부모가 먼저 끝나도 상속 pipe 수집은 deadline을 따른다. 종료 후 drain 유예는 250ms이며, 유예가 끝나면 reader를 닫고 수집 goroutine을 회수한다. 그룹을 벗어난 프로세스를 추적하는 sandbox는 아니다. non-Unix에서는 직접 프로세스 종료와 pipe 대기 상한만 제공한다.
+
+출력은 stdout·stderr 각각 64KiB만 보관하고 초과 bytes는 계속 drain해 버린다. 상한을 넘겼을 때 비밀값 패턴을 끝까지 검사하지 못한 마지막 줄은 버린다. application은 보관한 prefix를 기존 규칙으로 redaction한 뒤 UTF-8 경계를 보존해 32KiB까지 반환하고 기존 `<truncated>` 표시를 붙인다. truncation 여부는 내부 Execution에만 전달하며 공개 JSON 필드와 timeout exit 124는 유지한다.
+
 필수 필드:
 
 - `workspace_root`
