@@ -2,12 +2,15 @@ package selfverify
 
 import (
 	"fmt"
-
-	"issueops/internal/domain/policy"
+	"unicode/utf8"
 )
 
 func TailWithBudget(s string, max int) (string, bool, int) {
-	originalBytes := len(s)
+	return tailWithBudget(s, len(s), max)
+}
+
+// s contains at least the last max raw bytes when originalBytes exceeds max.
+func tailWithBudget(s string, originalBytes, max int) (string, bool, int) {
 	if max <= 0 {
 		return "", originalBytes > 0, originalBytes
 	}
@@ -16,7 +19,16 @@ func TailWithBudget(s string, max int) (string, bool, int) {
 	}
 	tailBudget := max
 	for {
-		tail := policy.TailBytes(s, tailBudget)
+		tail := ""
+		if tailBudget > 0 {
+			start := len(s) - min(len(s), tailBudget)
+			if originalBytes > tailBudget {
+				for i := 0; i < utf8.UTFMax-1 && start < len(s) && !utf8.RuneStart(s[start]); i++ {
+					start++
+				}
+			}
+			tail = s[start:]
+		}
 		marker := fmt.Sprintf("[truncated: original_bytes=%d omitted_bytes=%d]\n", originalBytes, originalBytes-len(tail))
 		tailBudgetNext := max - len(marker)
 		if tailBudgetNext < 0 {

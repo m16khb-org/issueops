@@ -1,7 +1,6 @@
 package verification
 
 import (
-	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -28,12 +27,13 @@ func RunEnv(dir, label string, timeout time.Duration, stdin string, env []string
 	if stdin != "" {
 		cmd.Stdin = strings.NewReader(stdin)
 	}
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	stdout := domain.NewCommandOutput(outputBudget)
+	stderr := domain.NewCommandOutput(outputBudget)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	err := cmd.Run()
-	stdoutText, stdoutTruncated, stdoutBytes := domain.BudgetCommandOutput(stdout.String(), outputBudget)
-	stderrText, stderrTruncated, stderrBytes := domain.BudgetCommandOutput(stderr.String(), outputBudget)
+	stdoutText, stdoutTruncated, stdoutBytes := stdout.Result()
+	stderrText, stderrTruncated, stderrBytes := stderr.Result()
 	step := contract.StepResult{
 		Label:           label,
 		Command:         strings.Join(append([]string{name}, args...), " "),

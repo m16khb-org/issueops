@@ -16432,7 +16432,19 @@
       "task": "T18",
       "symbols": [
         "func BudgetCommandOutput",
-        "func TailWithBudget"
+        "func TailWithBudget",
+        "func tailWithBudget"
+      ]
+    },
+    {
+      "path": "internal/domain/selfverify/output_capture.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func CommandOutput.Result",
+        "func CommandOutput.Write",
+        "func NewCommandOutput",
+        "type CommandOutput"
       ]
     },
     {
