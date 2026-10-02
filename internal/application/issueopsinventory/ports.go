@@ -8,10 +8,11 @@ import (
 )
 
 type Repository interface {
-	Scan(
+	ScanEach(
 		context.Context,
 		string,
-	) ([]issueopsinventorycontract.Record, []issueopsinventorycontract.RecordDiagnostic, error)
+		func(issueopsinventorycontract.Record) error,
+	) ([]issueopsinventorycontract.RecordDiagnostic, error)
 }
 
 type Clock interface {

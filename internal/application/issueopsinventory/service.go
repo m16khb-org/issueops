@@ -27,25 +27,16 @@ func (service *Service) ListCycles(
 	if service == nil || service.repository == nil || service.clock == nil || service.paths == nil {
 		return issueopsinventorycontract.ListResult{OK: false}, fmt.Errorf("issueops inventory dependencies are required")
 	}
-	records, diagnostics, err := service.repository.Scan(ctx, stateRoot)
-	if err != nil {
+	if err := ctx.Err(); err != nil {
 		return issueopsinventorycontract.ListResult{OK: false}, err
 	}
+	rawRepo := repo
 	repo = service.paths.Normalize(repo)
-	result := issueopsinventorycontract.ListResult{
-		OK:             true,
-		GeneratedAt:    service.clock.Now().UTC().Format(time.RFC3339),
-		ScannedRecords: len(records) + len(diagnostics),
-		ReadErrors:     len(diagnostics),
-		UnreadableIDs:  []string{},
-		Diagnostics:    diagnostics,
-		Entries:        []issueopsinventorycontract.ListEntry{},
-	}
-	for _, diagnostic := range diagnostics {
-		result.UnreadableIDs = append(result.UnreadableIDs, diagnostic.ID)
-	}
-	normalizedRecordPaths := make(map[string]string)
-	for _, record := range records {
+	normalizedRecordPaths := map[string]string{rawRepo: repo}
+	entries := []issueopsinventorycontract.ListEntry{}
+	scannedRecords := 0
+	diagnostics, err := service.repository.ScanEach(ctx, stateRoot, func(record issueopsinventorycontract.Record) error {
+		scannedRecords++
 		if repo != "" {
 			normalizedRepo, ok := normalizedRecordPaths[record.Repo]
 			if !ok {
@@ -53,10 +44,26 @@ func (service *Service) ListCycles(
 				normalizedRecordPaths[record.Repo] = normalizedRepo
 			}
 			if normalizedRepo != repo {
-				continue
+				return nil
 			}
 		}
-		result.Entries = append(result.Entries, issueopsinventorydomain.ProjectEntry(record))
+		entries = append(entries, issueopsinventorydomain.ProjectEntry(record))
+		return nil
+	})
+	if err != nil {
+		return issueopsinventorycontract.ListResult{OK: false}, err
+	}
+	result := issueopsinventorycontract.ListResult{
+		OK:             true,
+		GeneratedAt:    service.clock.Now().UTC().Format(time.RFC3339),
+		ScannedRecords: scannedRecords + len(diagnostics),
+		ReadErrors:     len(diagnostics),
+		UnreadableIDs:  []string{},
+		Diagnostics:    diagnostics,
+		Entries:        entries,
+	}
+	for _, diagnostic := range diagnostics {
+		result.UnreadableIDs = append(result.UnreadableIDs, diagnostic.ID)
 	}
 	return result, nil
 }

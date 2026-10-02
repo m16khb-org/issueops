@@ -27,9 +27,25 @@ func (repository Repository) Scan(
 	ctx context.Context,
 	stateRoot string,
 ) ([]issueopsinventorycontract.Record, []issueopsinventorycontract.RecordDiagnostic, error) {
-	records, diagnostics, err := repository.Store.Scan(ctx, stateRoot)
+	records := []issueopsinventorycontract.Record{}
+	diagnostics, err := repository.ScanEach(ctx, stateRoot, func(record issueopsinventorycontract.Record) error {
+		records = append(records, record)
+		return nil
+	})
 	if err != nil {
 		return nil, nil, err
+	}
+	return records, diagnostics, nil
+}
+
+func (repository Repository) ScanEach(
+	ctx context.Context,
+	stateRoot string,
+	visit func(issueopsinventorycontract.Record) error,
+) ([]issueopsinventorycontract.RecordDiagnostic, error) {
+	diagnostics, err := repository.Store.ScanEach(ctx, stateRoot, visit)
+	if err != nil {
+		return nil, err
 	}
 	result := make([]issueopsinventorycontract.RecordDiagnostic, 0, len(diagnostics))
 	for _, diagnostic := range diagnostics {
@@ -38,5 +54,5 @@ func (repository Repository) Scan(
 			Code: diagnostic.Code,
 		})
 	}
-	return records, result, nil
+	return result, nil
 }

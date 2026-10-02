@@ -537,25 +537,46 @@ func ListExisting(dir, bucket string) ([]string, error) {
 // GetAllExisting은 state 파일을 생성하거나 복구하지 않고 기존 data store에서
 // bucket의 row를 반환한다. store가 없으면 fs.ErrNotExist를 반환한다.
 func GetAllExisting(dir, bucket string) ([]port.RecordRow, error) {
+	result := []port.RecordRow{}
+	err := WalkExisting(context.Background(), dir, bucket, func(row port.RecordRow) error {
+		result = append(result, row)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// WalkExisting visits ordered rows without creating state or retaining the bucket.
+// Each callback completes before the next row is read.
+func WalkExisting(ctx context.Context, dir, bucket string, visit func(port.RecordRow) error) (err error) {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	data, err := openExistingData(dir)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer data.Close()
-	rows, err := data.Query(`SELECT id, data FROM records WHERE bucket = ? ORDER BY id`, bucket)
+	defer func() { err = errors.Join(err, data.Close()) }()
+	rows, err := data.QueryContext(ctx, `SELECT id, data FROM records WHERE bucket = ? ORDER BY id`, bucket)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer rows.Close()
-	result := []port.RecordRow{}
+	defer func() { err = errors.Join(err, rows.Close()) }()
 	for rows.Next() {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		var row port.RecordRow
 		if err := rows.Scan(&row.ID, &row.Data); err != nil {
-			return nil, err
+			return err
 		}
-		result = append(result, row)
+		if err := visit(row); err != nil {
+			return err
+		}
 	}
-	return result, rows.Err()
+	return errors.Join(rows.Err(), ctx.Err())
 }
 
 // InspectExisting은 state를 생성하거나 복구하지 않고 기존 store의 bucket과

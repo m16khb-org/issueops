@@ -18,13 +18,22 @@ type fakeScanner struct {
 	err         error
 }
 
-func (scanner *fakeScanner) Scan(
+func (scanner *fakeScanner) ScanEach(
 	_ context.Context,
 	stateRoot string,
-) ([]issueopsinventorycontract.Record, []issueopsinventorycontract.RecordDiagnostic, error) {
+	visit func(issueopsinventorycontract.Record) error,
+) ([]issueopsinventorycontract.RecordDiagnostic, error) {
 	scanner.scanCalls++
 	scanner.stateRoot = stateRoot
-	return scanner.records, scanner.diagnostics, scanner.err
+	if scanner.err != nil {
+		return nil, scanner.err
+	}
+	for _, record := range scanner.records {
+		if err := visit(record); err != nil {
+			return nil, err
+		}
+	}
+	return scanner.diagnostics, nil
 }
 
 type fixedClock struct{ now time.Time }

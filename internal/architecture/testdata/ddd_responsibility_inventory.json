@@ -5571,6 +5571,7 @@
         "func Repository.ListIDs",
         "func Repository.ReadUnchecked",
         "func Repository.Scan",
+        "func Repository.ScanEach",
         "type Repository"
       ]
     },
@@ -5959,6 +5960,7 @@
         "func Store.Read",
         "func Store.ReadRelated",
         "func Store.Scan",
+        "func Store.ScanEach",
         "func Store.Update",
         "func Store.UpdateRelated",
         "func open",
@@ -6252,6 +6254,7 @@
         "func Open",
         "func RawCASError.Error",
         "func RawCASError.FailedBucket",
+        "func WalkExisting",
         "func applyMutationsTx",
         "func ensurePrivateRoot",
         "func existingBuckets",

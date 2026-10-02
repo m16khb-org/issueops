@@ -79,30 +79,46 @@ func (Store) Scan(
 	ctx context.Context,
 	stateRoot string,
 ) ([]issueopscontract.IssueOpsRecord, []ScanDiagnostic, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, nil, err
-	}
-	rows, err := sqlstore.GetAllExisting(stateRoot, bucket)
-	if errors.Is(err, fs.ErrNotExist) {
-		return []issueopscontract.IssueOpsRecord{}, []ScanDiagnostic{}, nil
-	}
+	records := []issueopscontract.IssueOpsRecord{}
+	diagnostics, err := (Store{}).ScanEach(ctx, stateRoot, func(record issueopscontract.IssueOpsRecord) error {
+		records = append(records, record)
+		return nil
+	})
 	if err != nil {
 		return nil, nil, err
 	}
-	records := make([]issueopscontract.IssueOpsRecord, 0, len(rows))
+	return records, diagnostics, nil
+}
+
+func (Store) ScanEach(
+	ctx context.Context,
+	stateRoot string,
+	visit func(issueopscontract.IssueOpsRecord) error,
+) ([]ScanDiagnostic, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	diagnostics := make([]ScanDiagnostic, 0)
-	for _, row := range rows {
+	visited := false
+	err := sqlstore.WalkExisting(ctx, stateRoot, bucket, func(row port.RecordRow) error {
+		visited = true
 		if err := ctx.Err(); err != nil {
-			return nil, nil, err
+			return err
 		}
 		record, decodeErr := Decode(row.ID, row.Data)
 		if decodeErr != nil {
 			diagnostics = append(diagnostics, ScanDiagnostic{ID: row.ID, Code: "invalid_state"})
-			continue
+			return nil
 		}
-		records = append(records, record)
+		return visit(record)
+	})
+	if !visited && errors.Is(err, fs.ErrNotExist) {
+		return []ScanDiagnostic{}, nil
 	}
-	return records, diagnostics, nil
+	if err != nil {
+		return nil, err
+	}
+	return diagnostics, nil
 }
 
 func (store Store) Update(

@@ -174,7 +174,7 @@ func TestServiceListCyclesCachesFallbacksButKeepsDistinctInputs(t *testing.T) {
 			recordPaths: []string{"/deleted/repo", "/deleted/repo"},
 			normalize:   func(path string, _ int) string { return path },
 			wantIDs:     []string{"io-0000", "io-0001"},
-			wantCalls:   map[string]int{"/deleted/repo": 2},
+			wantCalls:   map[string]int{"/deleted/repo": 1},
 		},
 		{
 			name:        "git_failure_fallback_is_reused",
@@ -416,14 +416,14 @@ type fakeRepository struct {
 	listError  error
 }
 
-func (f fakeRepository) Scan(
-	context.Context,
-	string,
-) ([]issueopsinventorycontract.Record, []issueopsinventorycontract.RecordDiagnostic, error) {
+func (f fakeRepository) ScanEach(
+	_ context.Context,
+	_ string,
+	visit func(issueopsinventorycontract.Record) error,
+) ([]issueopsinventorycontract.RecordDiagnostic, error) {
 	if f.listError != nil {
-		return nil, nil, f.listError
+		return nil, f.listError
 	}
-	records := make([]issueopsinventorycontract.Record, 0, len(f.ids))
 	diagnostics := make([]issueopsinventorycontract.RecordDiagnostic, 0)
 	for _, id := range f.ids {
 		if f.readErrors[id] != nil {
@@ -433,14 +433,54 @@ func (f fakeRepository) Scan(
 			)
 			continue
 		}
-		records = append(records, f.records[id])
+		if err := visit(f.records[id]); err != nil {
+			return nil, err
+		}
 	}
-	return records, diagnostics, nil
+	return diagnostics, nil
 }
 
 type fixedClock struct{ now time.Time }
 
 func (f fixedClock) Now() time.Time { return f.now }
+
+type scanCompletionClock struct {
+	scanned bool
+	calls   int
+}
+
+func (clock *scanCompletionClock) Now() time.Time {
+	clock.calls++
+	if clock.scanned {
+		return time.Unix(2, 0).UTC()
+	}
+	return time.Unix(1, 0).UTC()
+}
+
+type completingRepository struct {
+	fakeRepository
+	clock *scanCompletionClock
+}
+
+func (repository completingRepository) ScanEach(ctx context.Context, root string, visit func(issueopsinventorycontract.Record) error) ([]issueopsinventorycontract.RecordDiagnostic, error) {
+	diagnostics, err := repository.fakeRepository.ScanEach(ctx, root, visit)
+	repository.clock.scanned = true
+	return diagnostics, err
+}
+
+func TestServiceListCyclesObservesClockOnceAfterScan(t *testing.T) {
+	clock := &scanCompletionClock{}
+	repository := completingRepository{fakeRepository: inventoryRecords([]string{"/repo", "/foreign"}), clock: clock}
+	service := NewService(repository, clock, cleanPath{})
+	result, err := service.ListCycles(context.Background(), "/state", "/repo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clock.calls != 1 || result.GeneratedAt != time.Unix(2, 0).UTC().Format(time.RFC3339) ||
+		len(result.Entries) != 1 || result.ScannedRecords != 2 {
+		t.Fatalf("clock calls=%d inventory=%+v", clock.calls, result)
+	}
+}
 
 type cleanPath struct{}
 
