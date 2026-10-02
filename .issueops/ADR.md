@@ -37,6 +37,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-02 | `rebase-onto-parent` 스킬을 `sync-base`로 바꾸고 merge와 rebase를 증거로 고른다 | [record](adr/2026-10-02-sync-base-skill-chooses-merge-or-rebase-by-evidence.md) |
 | 2026-09-30 | 독자 검토를 공개 본문 10건 분석 뒤에도 권장 절차로 유지한다 | [record](adr/2026-09-30-reader-review-remains-recommended-after-ten-public-bodies.md) |
 | 2026-09-29 | Cleanup ownership binds the operation and exact record revision; supersedes the draft finish-only field | [record](adr/2026-09-29-cleanup-ownership-binds-the-operation-and-exact-record-revis.md) |
 | 2026-09-29 | Cleanup finish executor owns observation and attempt-bound finalization | [record](adr/2026-09-29-cleanup-finish-executor-owns-observation-and-attempt-bound-f.md) |
