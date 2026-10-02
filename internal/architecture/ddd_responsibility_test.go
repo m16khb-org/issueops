@@ -6,8 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -271,69 +269,39 @@ func TestDDDExecutableArtifactsRequireExplicitOwnership(t *testing.T) {
 
 func collectDDDInventory(t *testing.T, root string) dddInventory {
 	t.Helper()
-	result := dddInventory{Sources: []dddSource{}, Artifacts: []dddArtifactEntry{}}
-	for _, top := range []string{"cmd", "internal"} {
-		err := filepath.WalkDir(filepath.Join(root, top), func(path string, entry os.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				return walkErr
-			}
-			if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-				return nil
-			}
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			rel, err := filepath.Rel(root, path)
-			if err != nil {
-				return err
-			}
-			rel = filepath.ToSlash(rel)
-			owner, task := dddOwner(rel)
-			result.Sources = append(result.Sources, dddSource{
-				Path: rel, Owner: owner, Task: task, Symbols: declarationsInGo(t, path, data),
-			})
-			return nil
-		})
+	var snapshot dddSourceSnapshot
+	if *updateDDDInventory {
+		var err error
+		snapshot, err = readDDDSourceSnapshot(root, parseDDDSource)
 		if err != nil {
 			t.Fatal(err)
 		}
+	} else {
+		snapshot = cachedDDDSourceSnapshot(t, root)
 	}
-	for _, top := range []string{"scripts", "configs", "skills"} {
-		err := filepath.WalkDir(filepath.Join(root, top), func(path string, entry os.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				return walkErr
-			}
-			if entry.IsDir() || !dddArtifact(top, path) {
-				return nil
-			}
-			rel, err := filepath.Rel(root, path)
-			if err != nil {
-				return err
-			}
-			artifact, ok := dddArtifactOwner(filepath.ToSlash(rel))
-			if !ok {
-				t.Errorf("non-Go artifact has no owner or task: %s", rel)
-				return nil
-			}
-			result.Artifacts = append(result.Artifacts, artifact)
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
+	result := snapshot.inventory
+	result.Sources = append([]dddSource{}, result.Sources...)
+	for index := range result.Sources {
+		result.Sources[index].Symbols = append([]string{}, result.Sources[index].Symbols...)
 	}
-	sort.Slice(result.Sources, func(i, j int) bool { return result.Sources[i].Path < result.Sources[j].Path })
-	sort.Slice(result.Artifacts, func(i, j int) bool { return result.Artifacts[i].Path < result.Artifacts[j].Path })
+	result.Artifacts = append([]dddArtifactEntry{}, result.Artifacts...)
 	return result
 }
 
 func declarationsInGo(t *testing.T, path string, data []byte) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), path, data, 0)
+	file, err := parseDDDSource(path, data)
 	if err != nil {
 		t.Fatal(err)
 	}
+	declarations, err := declarationsFromAST(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return declarations
+}
+
+func declarationsFromAST(file *ast.File) ([]string, error) {
 	declarations := []string{}
 	for _, declaration := range file.Decls {
 		switch decl := declaration.(type) {
@@ -342,7 +310,7 @@ func declarationsInGo(t *testing.T, path string, data []byte) []string {
 			if decl.Recv != nil && len(decl.Recv.List) > 0 {
 				var out bytes.Buffer
 				if err := formatReceiver(&out, decl.Recv.List[0].Type); err != nil {
-					t.Fatal(err)
+					return nil, err
 				}
 				name = out.String() + "." + name
 			}
@@ -356,7 +324,7 @@ func declarationsInGo(t *testing.T, path string, data []byte) []string {
 		}
 	}
 	sort.Strings(declarations)
-	return declarations
+	return declarations, nil
 }
 
 func formatReceiver(out *bytes.Buffer, expr ast.Expr) error {

@@ -2,9 +2,6 @@ package architecture
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"testing"
@@ -19,12 +16,9 @@ func TestPersistedLeaseCodecHasNoUnreviewedBypass(t *testing.T) {
 		"cmd/issueops/issueopsapp/issueops_reconcile_wiring.go":   {"Decode"},
 	}
 	actual := map[string][]string{}
-	for _, source := range collectDDDInventory(t, root).Sources {
-		path := filepath.Join(root, source.Path)
-		file, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.ImportsOnly)
-		if err != nil {
-			t.Fatalf("parse imports in %s: %v", source.Path, err)
-		}
+	snapshot := cachedDDDSourceSnapshot(t, root)
+	for _, source := range snapshot.inventory.Sources {
+		file := snapshot.files[source.Path]
 		aliases := map[string]bool{}
 		for _, imported := range file.Imports {
 			name, err := strconv.Unquote(imported.Path.Value)
@@ -39,10 +33,6 @@ func TestPersistedLeaseCodecHasNoUnreviewedBypass(t *testing.T) {
 		}
 		if len(aliases) == 0 {
 			continue
-		}
-		file, err = parser.ParseFile(token.NewFileSet(), path, nil, 0)
-		if err != nil {
-			t.Fatalf("parse %s: %v", source.Path, err)
 		}
 		ast.Inspect(file, func(node ast.Node) bool {
 			call, ok := node.(*ast.CallExpr)
