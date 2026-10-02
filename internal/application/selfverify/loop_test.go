@@ -86,7 +86,7 @@ func TestExecuteLoopForwardsScopeAndKeepsScopeFailureNonPassing(t *testing.T) {
 		},
 	}
 	result, err := ExecuteLoop(LoopRequest{BaseRef: "sealed-base", TargetScore: 95}, deps)
-	if !errors.Is(err, ErrSelfVerificationGateFailed) || calls != 1 || result.OK || result.TerminationEligible || len(result.Runs[0].Steps) != 4 {
+	if !errors.Is(err, ErrSelfVerificationGateFailed) || calls != 1 || result.OK || result.TerminationEligible || len(result.Runs[0].Steps) != 5 {
 		t.Fatalf("scope failure result=%+v calls=%d err=%v", result, calls, err)
 	}
 }

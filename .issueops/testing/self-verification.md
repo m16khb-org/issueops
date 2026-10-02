@@ -103,7 +103,8 @@ CI의 clean checkout에서는 다음 소유 관계로 각 검사를 한 번 실�
 
 | 검사 | 실행 소유자 | 환경·횟수 |
 | --- | --- | --- |
-| Python discovery | self-verify의 `Python script tests` | 임시 HOME, 1회 |
+| Python discovery | self-verify의 `Python script tests` | 준비한 Python 환경·임시 HOME, root 1회와 스킬별 1회 |
+| Go test match self-test | self-verify의 `Go test match guard` | Python 다음, 1회 |
 | 일반 Go 전체 테스트 | self-verify의 `go test` | 임시 HOME, 1회 |
 | Contract golden | 성공한 전체 Go 테스트에 포함 | 별도 중복 실행 없음 |
 | Go race | CI의 독립 `Race test all packages` 단계 | runner 기본 HOME, 1회 |
@@ -128,22 +129,31 @@ Go 변경에 따른 risk QA의 성공 race 재사용은 기존 계약대로 같�
 ## 저장소 Python 검사
 
 `Python script tests`는 gofmt 다음, risk QA와 전체 Go 검사 전에 실행한다. PATH의
-`python3`로 버전을 확인한 뒤 같은 `sys.executable`에 CI와 동일한 discovery argv를
-전달한다:
+`python3`로 버전을 확인한 뒤 같은 `sys.executable`로 CI와 동일한 suite runner를
+실행한다:
 
 ```bash
-python3 -m unittest discover -s scripts -p '*_test.py'
+python3 scripts/python_suite_runner.py
 ```
 
 최소 runtime은 Python 3.10이다. publish helper의 union annotation은 Python 3.9에서
 import 오류를 낸다. 버전은 stdout에 표시하고, 3.10 미만이면 stderr 진단과 함께 discovery
 전에 실패한다. 실행 파일이 없으면 기존 command runner의 executable-not-found 오류로
 단계가 실패한다. timeout은 버전 확인과 discovery를 합쳐 5분이며 출력 budget을 유지한다.
-검사를 skip하거나 파일 범위를 줄이지 않는다. 인계 baseline의 전체 53개 검사는
-Python 3.14.6에서 73.498초가 걸렸으므로 이 시간 비용이 자기 검증에 추가된다.
+runner는 root suite를 한 번 실행하고 스킬마다 CWD/import가 격리된 process를 사용한다.
+파일별 수집 수와 전체 suite 수를 출력한다. 기존 optional root skip 의미는 보존하지만
+스킬의 import 실패·빈 테스트 파일·실패·skip으로 통과시키지 않는다.
+기존 Slack 의존성을 포함한 환경 준비는
+[Python 검사 환경](unit-and-contract.md#python-검사-환경)을 따른다.
+
+그다음 `Go test match guard`가 `bash scripts/verify-go-test-match-test.sh`를
+30초 한도로 실행한다. 이 guard는 실제 Go/race 검사의 대체 증거가 아니며,
+누락·실패하면 기본 fail-fast 모드에서는 risk QA 이전에 중단한다.
+재실행 명령도 같은 script를 가리킨다.
 
 단계 실패는 전체 OK와 termination을 거부한다. `test_suite` 점수와 `test suite contract`
-coverage는 Python 증거도 요구한다. summary contract는 v5이며 기존 JSON 필드와
+coverage는 Python과 Go test-match guard 증거를 모두 요구한다.
+기본 계획은 28단계이고 summary contract는 v6이며 기존 JSON 필드와
 snapshot schema v1은 유지한다. labels 자체는 hash 입력이 아니므로 version 변경으로
 검사 범위를 구분한다. 역사 요약은 history/compare로 읽을 수 있고 새 단계는 added/missing
 label로 비교한다. 후보 계획의 verification QA는 현재 contract version/hash와

@@ -1,0 +1,3 @@
+# Existing slack-delegate PEP 723 runtime dependencies, needed by its tests.
+pydantic==2.11.7
+typer==0.27.1

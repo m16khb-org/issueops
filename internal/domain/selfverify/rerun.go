@@ -17,7 +17,9 @@ func SelfVerifyRerunCommands(failedStep string, baseSeed int64, targetScore floa
 func SelfVerifyStepRerunCommand(label string) (string, bool) {
 	switch label {
 	case "Python script tests":
-		return "python3 -m unittest discover -s scripts -p '*_test.py'", true
+		return "python3 scripts/python_suite_runner.py", true
+	case "Go test match guard":
+		return "bash scripts/verify-go-test-match-test.sh", true
 	case "go test":
 		return "go test ./... -count=1", true
 	case "contract golden tests":

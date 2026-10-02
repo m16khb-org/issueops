@@ -32,6 +32,7 @@ func TestPythonDiscoveryRuntimeAndEarlyFailure(t *testing.T) {
 			if err := os.Mkdir(filepath.Join(root, "scripts"), 0700); err != nil {
 				t.Fatal(err)
 			}
+			copyPythonSuiteRunner(t, root)
 			body := "import unittest\nfrom pathlib import Path\nPath('discovery-ran').write_text('yes')\nclass DiscoveryTest(unittest.TestCase):\n    def test_result(self):\n        self.assertTrue(" + map[bool]string{true: "True", false: "False"}[mode == "pass"] + ")\n"
 			if err := os.WriteFile(filepath.Join(root, "scripts", "fixture_test.py"), []byte(body), 0600); err != nil {
 				t.Fatal(err)

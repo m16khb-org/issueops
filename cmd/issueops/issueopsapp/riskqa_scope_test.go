@@ -50,10 +50,10 @@ func TestSelfVerifyProductionWiringPreservesCommittedScopeFailure(t *testing.T) 
 		return verify.StepResult{OK: true}
 	}
 	result, err := app.ExecuteLoop(app.LoopRequest{BaseRef: "HEAD~1", BaseSeed: 100, TargetScore: 95}, deps)
-	if err == nil || result.OK || len(result.Runs) != 1 || len(result.Runs[0].Steps) != 4 {
+	if err == nil || result.OK || len(result.Runs) != 1 || len(result.Runs[0].Steps) != 5 {
 		t.Fatalf("scope pipeline result=%+v err=%v", result, err)
 	}
-	step := result.Runs[0].Steps[3]
+	step := result.Runs[0].Steps[4]
 	if step.OK || !step.StdoutTruncated || !strings.Contains(step.Command, "go test -race ./... -count=1") || !strings.Contains(step.Stdout, "scope-command-tail") || !strings.Contains(step.Stdout, `"base_sha"`) || !strings.Contains(step.Stdout, `"head_sha"`) {
 		t.Fatalf("scope evidence lost: %+v", step)
 	}

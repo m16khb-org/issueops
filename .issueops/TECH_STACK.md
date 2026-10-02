@@ -33,6 +33,13 @@ description: Chosen languages, runtimes, tools, and rationale.
 
 ## 2.1 Core independence and optional upstream provisioning
 
+Python 검증은 stdlib suite runner와 스킬에 이미 선언된 Pydantic/Typer를 사용한다.
+테스트 버전은 `scripts/python_test_requirements.txt`에 고정하고 CI는 Python 3.13의
+별도 환경을 준비한다. 로컬 준비 명령은
+[Python 검사 환경](testing/unit-and-contract.md#python-검사-환경)에 둔다.
+이 라이브러리는 테스트·해당 스킬의 의존성이며 Go CLI/MCP나 native 설치·업데이트의
+추가 readiness gate로 검사하거나 자동 설치하지 않는다.
+
 `issueops` core는 외부 companion 도구에 의존하지 않는다. Native install, readiness, self-verify, CLI/MCP 계약은 외부 계정·키·도구 없이 재현되어야 하며, 전문 기능은 core에 복제하지 않는다.
 
 다만 `configs/upstream.json`은 native activation 후 실행하는 **선택적** provisioning catalog다. 현재 v0는 Claude Code용 plugin 4개와 Git skill 1개를 선언하며, 없는 항목만 Claude CLI 또는 shallow sparse clone으로 준비한다. dry-run에는 이 계획을 표시한다. network·host CLI 실패는 `upstream ...` 메시지로 보고하지만 native install은 실패시키지 않는다. 이 제한된 adapter는 외부 도구를 core/readiness dependency로 만들지 않는다.

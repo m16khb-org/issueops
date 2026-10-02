@@ -17487,6 +17487,16 @@
       "task": "T21"
     },
     {
+      "path": "scripts/python_suite_runner.py",
+      "owner": "execution-script",
+      "task": "T18"
+    },
+    {
+      "path": "scripts/python_suite_runner_test.py",
+      "owner": "execution-script",
+      "task": "T18"
+    },
+    {
       "path": "scripts/release-build-matrix.sh",
       "owner": "execution-script",
       "task": "T12"

@@ -4,6 +4,7 @@ var stepOrder = []string{
 	"harness invariants",
 	"gofmt",
 	"Python script tests",
+	"Go test match guard",
 	"risk QA tier",
 	"go test",
 	"contract golden tests",

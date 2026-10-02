@@ -24,7 +24,7 @@ from typing import Any
 
 ROOT = Path.cwd()
 BIN = ROOT / "bin" / "issueops"
-LEGACY_BIN_RE = re.compile(r"/bin/harness (daemon --internal|mcp)\b")
+LEGACY_BIN_RE = re.compile(r"/bin/(?:harness|issueops) (daemon --internal|mcp)\b")
 ISSUEOPS_DAEMON_RE = re.compile(r"issueops daemon --internal")
 TEMP_WATCHER_RE = re.compile(r"scripts/codegraph-watcher\.mjs .*/T/tmp\.")
 REGRESSION_TIMEOUT_SECONDS = 300
@@ -299,8 +299,14 @@ def terminate(pid: int) -> str:
 
 
 def classify_processes(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    current_daemons = [r for r in rows if ISSUEOPS_DAEMON_RE.search(r["command"])]
-    legacy = [r for r in rows if LEGACY_BIN_RE.search(r["command"])]
+    current_daemons = []
+    legacy = []
+    current_paths = (str(BIN) + " ", "/usr/local/bin/issueops ", (shutil.which("issueops") or "issueops") + " ")
+    for row in rows:
+        if LEGACY_BIN_RE.search(row["command"]) and not row["command"].startswith(current_paths):
+            legacy.append(row)
+        elif ISSUEOPS_DAEMON_RE.search(row["command"]):
+            current_daemons.append(row)
     temp_watchers = [r for r in rows if TEMP_WATCHER_RE.search(r["command"])]
     zombies = [r for r in rows if "Z" in r["state"] and re.search(r"issueops|bin/harness|codegraph", r["command"])]
     return {"current_daemons": current_daemons, "legacy_harness": legacy, "temp_watchers": temp_watchers, "zombies": zombies}

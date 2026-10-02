@@ -10,13 +10,20 @@ import (
 	domain "issueops/internal/domain/selfverify"
 )
 
+func TestPythonRerunUsesTheExpandedSuiteRunner(t *testing.T) {
+	command, ok := domain.SelfVerifyStepRerunCommand("Python script tests")
+	if !ok || command != "python3 scripts/python_suite_runner.py" {
+		t.Fatalf("Python rerun lost skill suites: %q, %v", command, ok)
+	}
+}
+
 func TestPythonScriptTestsUseRepositoryDiscoveryAndPropagateFailure(t *testing.T) {
 	for _, ok := range []bool{false, true} {
 		t.Run(map[bool]string{false: "fail", true: "pass"}[ok], func(t *testing.T) {
 			calls := 0
 			deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
 				calls++
-				if root != "/repo" || label != "Python script tests" || timeout != 5*time.Minute || stdin != "" || name != "python3" || len(args) < 3 || args[0] != "-c" || !reflect.DeepEqual(args[2:], []string{"-m", "unittest", "discover", "-s", "scripts", "-p", "*_test.py"}) {
+				if root != "/repo" || label != "Python script tests" || timeout != 5*time.Minute || stdin != "" || name != "python3" || len(args) < 3 || args[0] != "-c" || !reflect.DeepEqual(args[2:], []string{"scripts/python_suite_runner.py"}) {
 					t.Fatalf("unexpected Python command: %s %s %s %s %v", root, label, timeout, name, args)
 				}
 				if !strings.Contains(args[1], "sys.version_info") || !strings.Contains(args[1], "os.execv(sys.executable") {
@@ -43,7 +50,7 @@ func TestPythonScriptTestsUseRepositoryDiscoveryAndPropagateFailure(t *testing.T
 				t.Fatal(summary)
 			}
 			for _, goal := range summary.GoalScores {
-				if goal.Name == "test_suite" && (goal.TotalChecks != 3 || goal.Passed != ok) {
+				if goal.Name == "test_suite" && (goal.TotalChecks != 4 || goal.Passed != ok) {
 					t.Fatal(goal)
 				}
 			}

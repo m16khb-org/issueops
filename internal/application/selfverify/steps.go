@@ -19,7 +19,7 @@ type RiskQAEvidence struct {
 	CoversFullGoTest bool
 }
 
-// Check before importing repository helpers, then exec the CI discovery argv with
+// Check before importing repository helpers, then exec the suite runner with
 // the same interpreter. The existing runner owns the timeout and output budget.
 const pythonRuntimeDiscovery = `import os, sys
 print("Python runtime: " + sys.version.split()[0] + " (requires Python 3.10+)", flush=True)
@@ -66,7 +66,10 @@ func PlannedSteps(root string, tempBin string, seed int64, goTestStep *StepResul
 		// 값싸고 결정적이므로 긴 go test보다 앞에 두어 fail-fast 모드에서 먼저 드러낸다.
 		{Label: "gofmt", Run: func() StepResult { return deps.ValidateGoFormat(root) }},
 		{Label: "Python script tests", Run: func() StepResult {
-			return deps.RunCommandStep(root, "Python script tests", 5*time.Minute, "", "python3", "-c", pythonRuntimeDiscovery, "-m", "unittest", "discover", "-s", "scripts", "-p", "*_test.py")
+			return deps.RunCommandStep(root, "Python script tests", 5*time.Minute, "", "python3", "-c", pythonRuntimeDiscovery, "scripts/python_suite_runner.py")
+		}},
+		{Label: "Go test match guard", Run: func() StepResult {
+			return deps.RunCommandStep(root, "Go test match guard", 30*time.Second, "", "bash", "scripts/verify-go-test-match-test.sh")
 		}},
 		{Label: "risk QA tier", Run: func() StepResult {
 			riskQAEvidence = deps.ValidateRiskQATier(root)

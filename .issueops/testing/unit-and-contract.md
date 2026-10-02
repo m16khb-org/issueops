@@ -90,7 +90,7 @@ go test ./internal/adapter -run TestNativeInstallAdapterContractMatrix -update-a
 - **shape 불변식 테스트는 우연한 수치를 고정하지 않는다.** #176에서 `TestStepsKeepTheirExistingShape`가 "3단계"를 불변식으로 검사했지만, 실제 계약은 첫 단계가 MCP이고 마지막이 `fail`이며 사이에 provider CLI `fallback_api`가 오고 `Order`가 연속이라는 것이었다. 단계를 하나 늘리는 정당한 변경이 그 테스트를 깨뜨렸다. 이름이 "shape"인 테스트는 구조를 검사하고, 개수·인덱스는 그 구조가 요구할 때만 고정한다.
 - filesystem test는 temporary directory를 사용하고, workspace root 밖 접근 거부를 검증한다.
 - secret redaction test는 token-like fixture가 로그/응답에 남지 않는지 확인한다.
-- `repo-owned validator` 단위 테스트(`scripts/*_test.py`: validate-skill, verify-skill-shell, meeting-notes contract)는 `python3 -m unittest discover -s scripts -p '*_test.py'`로 실행하며 CI도 같은 명령을 실행한다. `verify-skill-shell.py`는 스캔 루트 바로 아래에서 `SKILL.md`가 있는 디렉터리를 가리키는 심링크만 로컬 외부 스킬 링크로 분류해 건너뛴다(설치기와 `inspect`의 `ListSkillNames`도 같은 규칙을 사용한다). 중첩 심링크와 `SKILL.md`가 없는 링크는 계속 `symlink-not-allowed` 위반이다.
+- Python 검사는 `python3 scripts/python_suite_runner.py`가 소유한다. root `scripts/*_test.py`를 한 번 실행하고, 각 스킬의 `scripts/`·`tests/`에서 `test_*.py`·`*_test.py`를 중복 없이 찾아 별도 interpreter process로 실행한다. CI는 self-verify의 같은 단계를 사용하며 별도 root suite를 중복 실행하지 않는다. `verify-skill-shell.py`는 스캔 루트 바로 아래에서 `SKILL.md`가 있는 디렉터리를 가리키는 심링크만 로컬 외부 스킬 링크로 분류해 건너뛴다(설치기와 `inspect`의 `ListSkillNames`도 같은 규칙을 사용한다). 중첩 심링크와 `SKILL.md`가 없는 링크는 계속 `symlink-not-allowed` 위반이다.
 - shipped skill의 executable shell fence는
   `python3 scripts/verify-skill-shell.py`로 syntax, swallowed failure,
   fabricated zero, unsafe command expansion/word splitting, destructive
@@ -103,6 +103,26 @@ go test ./internal/adapter -run TestNativeInstallAdapterContractMatrix -update-a
   live verification failure, URL+receipt atomic write, dry-run no-mutation을
   검증한다. Provider command test는 start failure와 post-start ambiguity를
   `IssueProviderCreateError.Invoked`로 구분한다.
+
+### Python 검사 환경
+
+Slack 스킬 테스트에 필요한 기존 PEP 723 의존성은
+`scripts/python_test_requirements.txt`에 고정한다. 개인 uv cache 경로를
+`PYTHONPATH`에 넣거나 import 실패를 skip으로 바꾸지 않는다.
+root suite의 기존 optional local-file skip은 unittest 의미대로 유지하지만,
+스킬의 import 오류·빈 테스트 파일·실패·skip은 검사 실패다.
+
+```bash
+python_env="$(mktemp -d)"
+uv venv --python 3.13 "$python_env"
+uv pip install --python "$python_env/bin/python" -r scripts/python_test_requirements.txt
+PATH="$python_env/bin:$PATH" python3 scripts/python_suite_runner.py
+PATH="$python_env/bin:$PATH" ./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json
+```
+
+CI도 `RUNNER_TEMP`의 환경을 사용하여 checkout이나 사용자 홈을 오염시키지 않는다.
+이는 저장소 테스트 환경 준비이며 CLI/MCP의 운영 의존성이나 native 설치기의
+자동 설치 항목이 아니다.
 
 ## Contract / Golden tests
 

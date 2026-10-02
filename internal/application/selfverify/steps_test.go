@@ -23,7 +23,7 @@ func TestFailedRiskRaceCannotReplaceFullSuite(t *testing.T) {
 	}
 	var fullTest StepResult
 	planned := PlannedSteps("/repo", "/tmp/issueops", 100, &fullTest, deps)
-	if planned[3].Run().OK || !planned[4].Run().OK || fullSuiteCalls != 1 {
+	if planned[4].Run().OK || !planned[5].Run().OK || fullSuiteCalls != 1 {
 		t.Fatalf("failed race reused as full suite: result=%+v calls=%d", fullTest, fullSuiteCalls)
 	}
 }
@@ -46,13 +46,13 @@ func TestRiskEvidenceIsLocalToEachPlannedRun(t *testing.T) {
 	var firstResult, secondResult StepResult
 	first := PlannedSteps("/repo", "/tmp/first", 1, &firstResult, deps)
 	second := PlannedSteps("/repo", "/tmp/second", 2, &secondResult, deps)
-	if !first[3].Run().OK || !first[4].Run().OK || fullCalls != 0 {
+	if !first[4].Run().OK || !first[5].Run().OK || fullCalls != 0 {
 		t.Fatal("successful risk evidence was not reused in its own run")
 	}
-	if second[4].Run().OK || fullCalls != 1 {
+	if second[5].Run().OK || fullCalls != 1 {
 		t.Fatalf("second run reused foreign evidence: %+v, calls=%d", secondResult, fullCalls)
 	}
-	if !first[5].Run().OK {
+	if !first[6].Run().OK {
 		t.Fatal("first run lost successful golden evidence")
 	}
 }

@@ -104,7 +104,7 @@ func TestBinaryDriftUsesRealDoctorObservation(t *testing.T) {
 				return raw
 			}}
 			var full StepResult
-			result := PlannedSteps(fixture, bin, 100, &full, deps)[7].Run()
+			result := PlannedSteps(fixture, bin, 100, &full, deps)[8].Run()
 			if !raw.OK {
 				t.Fatalf("doctor exit contract changed: %+v", raw)
 			}
@@ -154,7 +154,7 @@ func TestBinaryDriftRejectsInvalidEvidenceAndPreservesCommandFailure(t *testing.
 				return StepResult{Label: "binary drift", OK: true, Stdout: tc.body}
 			}}
 			var full StepResult
-			result := PlannedSteps("/repo", "/bin", 100, &full, deps)[7].Run()
+			result := PlannedSteps("/repo", "/bin", 100, &full, deps)[8].Run()
 			if result.OK != tc.ok || (!tc.ok && result.Error == "") {
 				t.Fatalf("%s: %+v", tc.name, result)
 			}
@@ -163,7 +163,7 @@ func TestBinaryDriftRejectsInvalidEvidenceAndPreservesCommandFailure(t *testing.
 	original := StepResult{Label: "binary drift", OK: false, Error: "timeout after 10s", Stdout: "partial", DurationMS: 10000}
 	deps := SelfVerifyStepDeps{RunCommandStep: func(string, string, time.Duration, string, string, ...string) StepResult { return original }}
 	var full StepResult
-	if got := PlannedSteps("/repo", "/bin", 100, &full, deps)[7].Run(); !reflect.DeepEqual(got, original) {
+	if got := PlannedSteps("/repo", "/bin", 100, &full, deps)[8].Run(); !reflect.DeepEqual(got, original) {
 		t.Fatalf("command failure changed: %+v", got)
 	}
 }

@@ -676,6 +676,8 @@ func dddArtifactOwner(path string) (dddArtifactEntry, bool) {
 			entry.Task = "T12"
 		case "scripts/measure_efficiency.py", "scripts/measure_efficiency_test.py":
 			entry.Task = "T17"
+		case "scripts/python_suite_runner.py", "scripts/python_suite_runner_test.py":
+			entry.Task = "T18"
 		case "scripts/ci_workflow_test.py", "scripts/verify-child-host-smoke.sh", "scripts/verify-go-test-match.sh", "scripts/verify-go-test-match-test.sh":
 			entry.Task = "T20"
 		case "scripts/meeting_notes_quality_rubric.py", "scripts/meeting_notes_skill_contract_test.py",
