@@ -35,7 +35,7 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 		Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
-	if _, err := issueopscore.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	direct := &preparationWiringDirectFake{}
@@ -80,7 +80,7 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 		Provider: "gitlab", IssueURL: record.IssueURL, Branch: record.Branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
-	if _, err := issueopscore.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	fallbackCalls := 0
@@ -154,7 +154,7 @@ func TestIssueOpsPrepareWiringRejectsActorBeforeStateMutation(t *testing.T) {
 	stateRoot := t.TempDir()
 	called := false
 	handler := newIssueOpsPreparationHandler(issueOpsPreparationCompositionDeps{
-		ValidateActor: func(issueopscontract.NativeActor) error {
+		ValidateActor: func(context.Context, issueopscontract.NativeActor) error {
 			called = true
 			return errors.New("native session process receipt is not in the local process ancestry")
 		},

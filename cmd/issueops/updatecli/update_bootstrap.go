@@ -20,6 +20,7 @@ func (command Command) Run(commandName string, args []string) error {
 	interactive := fs.Bool("interactive", false, "ask for install choices before applying the plan")
 	jsonOut := fs.Bool("json", false, "print JSON from install")
 	skipBuild := fs.Bool("skip-build", false, "do not rebuild bin/issueops")
+	mcpTransport := fs.String("mcp-transport", "", "Codex/Claude/Omo MCP transport: http (shared service) or stdio; default http on darwin/linux")
 	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
 			return nil
@@ -32,6 +33,6 @@ func (command Command) Run(commandName string, args []string) error {
 
 	return command.Service.Run(updateapp.Options{
 		Root: command.Root, ProjectLocal: *projectLocal, DryRun: *dryRun,
-		PathMode: *pathMode, Interactive: *interactive, JSON: *jsonOut, SkipBuild: *skipBuild,
+		PathMode: *pathMode, Interactive: *interactive, JSON: *jsonOut, SkipBuild: *skipBuild, MCPTransport: *mcpTransport,
 	})
 }

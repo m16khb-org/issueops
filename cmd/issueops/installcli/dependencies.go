@@ -38,6 +38,11 @@ type Deps struct {
 	// SyncUpstream은 선언된 upstream plugin/skill 중 host에 없는 것만 설치한다.
 	// 미주입이면 install은 upstream을 건드리지 않고 그대로 진행한다.
 	SyncUpstream func(ctx context.Context, root string, dryRun bool) (upstreamcontract.Report, error)
+
+	// DefaultMCPTransport applies when --mcp-transport is omitted; empty means stdio.
+	DefaultMCPTransport string
+	MCPURL              string
+	MCPService          MCPServiceSetup
 }
 
 func printJSON(value any) error {

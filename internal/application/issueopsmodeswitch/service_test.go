@@ -38,7 +38,7 @@ func (f *switchFixture) Load(string) (model.IssueOpsRecord, error) {
 	}
 	return record, nil
 }
-func (f *switchFixture) Save(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (f *switchFixture) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	f.events = append(f.events, "save")
 	if !f.locked {
 		return record, errors.New("save outside lock")
@@ -49,11 +49,11 @@ func (f *switchFixture) Save(record model.IssueOpsRecord) (model.IssueOpsRecord,
 	f.record = record
 	return record, nil
 }
-func (f *switchFixture) WithinLock(_ context.Context, _ string, fn func() error) error {
+func (f *switchFixture) WithinLock(ctx context.Context, _ string, fn func(context.Context) error) error {
 	f.events = append(f.events, "lock")
 	f.locked = true
 	defer func() { f.locked = false; f.events = append(f.events, "unlock") }()
-	return fn()
+	return fn(ctx)
 }
 func (f *switchFixture) Present(string) bool { return true }
 func (f *switchFixture) Clean(string) bool   { return f.clean }

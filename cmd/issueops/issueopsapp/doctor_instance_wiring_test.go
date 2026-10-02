@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -38,7 +39,7 @@ func TestDoctorInstancesKeepLifecycleLoopAndStateTogether(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(states[i], "unexpected.txt"), []byte("fixture"), 0600); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := newLoopService().Start(loopcontract.StartLoopRequest{Repo: root, Name: "first-only", Goal: "verify independent doctor state"}); err != nil {
+			if _, err := newLoopService().Start(context.Background(), loopcontract.StartLoopRequest{Repo: root, Name: "first-only", Goal: "verify independent doctor state"}); err != nil {
 				t.Fatal(err)
 			}
 		}

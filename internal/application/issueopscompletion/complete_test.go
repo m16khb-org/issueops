@@ -10,6 +10,7 @@ import (
 
 	completioncontract "issueops/internal/contract/issueopscompletion"
 	leasecontract "issueops/internal/contract/issueopslease"
+	completiondomain "issueops/internal/domain/issueopscompletion"
 )
 
 var fixedCompletionTime = time.Date(2026, 8, 2, 1, 2, 3, 4, time.UTC)
@@ -64,26 +65,6 @@ func TestCompleteCommitsWithoutOrcaSettle(t *testing.T) {
 	}
 	if repository.record.Phase != "done" || repository.record.Lease.Status != "released" || repository.record.Completion == nil {
 		t.Fatalf("completion was not committed: %+v", repository.record)
-	}
-}
-
-func TestResolveActorAcceptsOmoNativeProcess(t *testing.T) {
-	process := completioncontract.ProcessReceipt{
-		PID: 42, StartedAt: "2026-08-12T00:00:00Z", Executable: "omo",
-	}
-	actor, err := resolveActor(
-		context.Background(),
-		completioncontract.Actor{Host: "omo", SessionID: "omo-session", Process: &process},
-		[]completioncontract.ProcessReceipt{process},
-		func(context.Context, completioncontract.ProcessReceipt) (string, completioncontract.ProcessReceipt, error) {
-			return "live", process, nil
-		},
-	)
-	if err != nil {
-		t.Fatalf("Omo completion actor must resolve: %v", err)
-	}
-	if actor.Host != "omo" || actor.SessionID != "omo-session" || actor.Process == nil || *actor.Process != process {
-		t.Fatalf("resolved Omo completion actor=%+v", actor)
 	}
 }
 
@@ -241,10 +222,10 @@ type fixedClock struct{ at time.Time }
 
 func (c fixedClock) Now() time.Time { return c.at }
 
-func tracedLiveInspector(trace *[]string) ProcessInspector {
-	return func(_ context.Context, receipt completioncontract.ProcessReceipt) (string, completioncontract.ProcessReceipt, error) {
+func tracedLiveInspector(trace *[]string) ActorVerifier {
+	return func(_ context.Context, actor completioncontract.Actor, ancestry []completioncontract.ProcessReceipt) (completioncontract.Actor, error) {
 		*trace = append(*trace, "process")
-		return "live", receipt, nil
+		return completiondomain.NormalizeActor(actor, ancestry)
 	}
 }
 

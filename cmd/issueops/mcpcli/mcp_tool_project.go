@@ -11,7 +11,7 @@ import (
 func handleProjectMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
 	case "harness_inspect":
-		return mcpToolPayload(deps.Inspect(argmap.String(call.Arguments, "repo")))
+		return mcpToolPayload(deps.Inspect(argmap.String(call.Arguments, "repo"), argmap.String(call.Arguments, "host_receipts")))
 	case "atomic_commit_preflight":
 		return mcpToolPayload(deps.Preflight.Check(deps.resolveTarget(argmap.String(call.Arguments, "path")), deps.Resources.IssueOpsRoot))
 	case "commit_policy":

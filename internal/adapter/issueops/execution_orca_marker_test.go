@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -88,7 +89,7 @@ func TestPreparationRepositoryRejectsRecordIdentityDriftBeforePersistence(t *tes
 	passed := record
 	record.IssueURL = "https://github.com/acme/repo/issues/17"
 	record.BranchPrepare.IssueURL = record.IssueURL
-	if _, err := writeIssueOps(stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	probe := port.ExecutionOrcaProbeRequest{

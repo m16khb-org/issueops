@@ -63,11 +63,11 @@ func TestWriteStateRecordRejectsKeyMismatch(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
 	// A caller-built record whose Key diverges from the write key would persist a
 	// record StateRead later rejects; WriteStateRecord must reject it up front.
-	if _, err := WriteStateRecord(dir, "foo", statecontract.RecordEnvelope{Key: "bar", SchemaVersion: statecontract.SchemaVersion, Content: "x", Bytes: 1}); err == nil || !strings.Contains(err.Error(), "does not match") {
+	if _, err := WriteStateRecord(context.Background(), dir, "foo", statecontract.RecordEnvelope{Key: "bar", SchemaVersion: statecontract.SchemaVersion, Content: "x", Bytes: 1}); err == nil || !strings.Contains(err.Error(), "does not match") {
 		t.Fatalf("expected key-mismatch error, got %v", err)
 	}
 	// Matching key (or empty Key) is accepted and round-trips.
-	if _, err := WriteStateRecord(dir, "foo", statecontract.RecordEnvelope{Key: "foo", SchemaVersion: statecontract.SchemaVersion, Content: "x", Bytes: 1}); err != nil {
+	if _, err := WriteStateRecord(context.Background(), dir, "foo", statecontract.RecordEnvelope{Key: "foo", SchemaVersion: statecontract.SchemaVersion, Content: "x", Bytes: 1}); err != nil {
 		t.Fatalf("matching key should write: %v", err)
 	}
 	if read, err := StateRead("foo"); err != nil || read.Record.Content != "x" {
@@ -86,7 +86,7 @@ func TestStateUpdateLockedReadModifyWrite(t *testing.T) {
 	}
 
 	// Create-from-absent: transform receives an empty record.
-	res, err := StateUpdate("counter", func(cur statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
+	res, err := StateUpdate(context.Background(), "counter", func(cur statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
 		if cur.Content != "" {
 			t.Fatalf("expected absent record, got %q", cur.Content)
 		}
@@ -100,7 +100,7 @@ func TestStateUpdateLockedReadModifyWrite(t *testing.T) {
 	}
 
 	// Real transform mutates + persists.
-	if _, err := StateUpdate("counter", func(cur statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
+	if _, err := StateUpdate(context.Background(), "counter", func(cur statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
 		return rec(cur.Content + "2"), nil
 	}); err != nil {
 		t.Fatalf("update mutate: %v", err)
@@ -110,7 +110,7 @@ func TestStateUpdateLockedReadModifyWrite(t *testing.T) {
 	}
 
 	// Skip-write sentinel: an empty record returned by transform must NOT write.
-	if res, err := StateUpdate("counter", func(cur statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
+	if res, err := StateUpdate(context.Background(), "counter", func(cur statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
 		return statecontract.RecordEnvelope{}, nil
 	}); err != nil || !res.OK {
 		t.Fatalf("update skip: ok=%v err=%v", res.OK, err)
@@ -126,7 +126,7 @@ func TestStateUpdateLockedReadModifyWrite(t *testing.T) {
 	for range n {
 		go func() {
 			defer wg.Done()
-			_, _ = StateUpdate("ctr2", func(cur statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
+			_, _ = StateUpdate(context.Background(), "ctr2", func(cur statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
 				v := 0
 				if cur.Content != "" {
 					if _, err := fmt.Sscanf(cur.Content, "%d", &v); err != nil {
@@ -154,7 +154,7 @@ func TestStateRoundtrip(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
 
 	content := "seed=42\nLore: state roundtrip\n"
-	written, err := StateWrite("checkpoint-1", content)
+	written, err := StateWrite(context.Background(), "checkpoint-1", content)
 	if err != nil {
 		t.Fatalf("StateWrite: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestStateWriteWaitsForKeyLock(t *testing.T) {
 	writeDone := make(chan error, 1)
 	go func() {
 		close(started)
-		_, err := StateWrite("locked-key", "locked content")
+		_, err := StateWrite(context.Background(), "locked-key", "locked content")
 		writeDone <- err
 	}()
 	<-started
@@ -264,8 +264,8 @@ func TestStateWriteWaitsForKeyLock(t *testing.T) {
 func TestStateRejectsPathTraversalKeys(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	for _, key := range []string{"", "../x", "x/y", "x\\y", "x..y"} {
-		if _, err := StateWrite(key, "content"); err == nil {
-			t.Fatalf("StateWrite(%q) succeeded; want error", key)
+		if _, err := StateWrite(context.Background(), key, "content"); err == nil {
+			t.Fatalf("StateWrite(context.Background(), %q) succeeded; want error", key)
 		}
 	}
 }
@@ -273,10 +273,10 @@ func TestStateRejectsPathTraversalKeys(t *testing.T) {
 func TestStatePruneDryRunAndConfirm(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if _, err := StateWrite("old", "old content"); err != nil {
+	if _, err := StateWrite(context.Background(), "old", "old content"); err != nil {
 		t.Fatalf("StateWrite old: %v", err)
 	}
-	if _, err := StateWrite("fresh", "fresh content"); err != nil {
+	if _, err := StateWrite(context.Background(), "fresh", "fresh content"); err != nil {
 		t.Fatalf("StateWrite fresh: %v", err)
 	}
 	old, err := StateRead("old")
@@ -290,7 +290,7 @@ func TestStatePruneDryRunAndConfirm(t *testing.T) {
 	}
 	writeRawStateRow(t, dir, "old", string(b)+"\n")
 
-	dry, err := StatePrune(time.Hour, false)
+	dry, err := StatePrune(context.Background(), time.Hour, false)
 	if err != nil {
 		t.Fatalf("StatePrune dry-run: %v", err)
 	}
@@ -301,7 +301,7 @@ func TestStatePruneDryRunAndConfirm(t *testing.T) {
 		t.Fatalf("dry-run removed old key: %v", err)
 	}
 
-	confirmed, err := StatePrune(time.Hour, true)
+	confirmed, err := StatePrune(context.Background(), time.Hour, true)
 	if err != nil {
 		t.Fatalf("StatePrune confirmed: %v", err)
 	}
@@ -322,7 +322,7 @@ func TestStatePrunePrefixAppliesAgeAndCountOnlyToMatchingKeys(t *testing.T) {
 
 	write := func(key, updatedAt string) {
 		t.Helper()
-		if _, err := StateWrite(key, "content "+key); err != nil {
+		if _, err := StateWrite(context.Background(), key, "content "+key); err != nil {
 			t.Fatalf("StateWrite %s: %v", key, err)
 		}
 		read, err := StateRead(key)
@@ -343,7 +343,7 @@ func TestStatePrunePrefixAppliesAgeAndCountOnlyToMatchingKeys(t *testing.T) {
 	write("external-llm-usage-recent-3", "2026-07-03T00:00:03Z")
 	write("self-augment-lesson-old", "2000-01-01T00:00:00Z")
 
-	result, err := StatePrunePrefix("external-llm-usage-", 365*24*time.Hour, 2, true)
+	result, err := StatePrunePrefix(context.Background(), "external-llm-usage-", 365*24*time.Hour, 2, true)
 	if err != nil {
 		t.Fatalf("StatePrunePrefix: %v", err)
 	}
@@ -364,7 +364,7 @@ func TestStatePrunePrefixAppliesAgeAndCountOnlyToMatchingKeys(t *testing.T) {
 
 func TestStatePruneRejectsInvalidMaxAge(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := StatePrune(0, false); err == nil {
+	if _, err := StatePrune(context.Background(), 0, false); err == nil {
 		t.Fatalf("StatePrune accepted zero max age")
 	}
 }

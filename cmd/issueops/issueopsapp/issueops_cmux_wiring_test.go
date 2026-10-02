@@ -618,7 +618,7 @@ func advanceCmuxRecordGeneration(t *testing.T, stateRoot, id string) {
 		t.Fatal(err)
 	}
 	record.Execution.Lease.Generation++
-	if _, err := issueopsadapter.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueopsadapter.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -631,7 +631,7 @@ func rewriteCmuxRecordWorktree(t *testing.T, stateRoot, id, root string) {
 	}
 	record.WorktreePath = root
 	record.Execution.Workspace.Root = root
-	if _, err := issueopsadapter.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueopsadapter.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 }

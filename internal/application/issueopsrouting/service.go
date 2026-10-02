@@ -7,16 +7,18 @@ import (
 	cycleapp "issueops/internal/application/issueopscycle"
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
 	issueopsroutingdomain "issueops/internal/domain/issueopsrouting"
+	authorityport "issueops/internal/port/authority"
 )
 
 type Service struct {
 	repository Repository
 	clock      Clock
 	paths      PathMatcher
+	verifier   authorityport.ActorVerifier
 }
 
-func NewService(repository Repository, clock Clock, paths PathMatcher) *Service {
-	return &Service{repository: repository, clock: clock, paths: paths}
+func NewService(repository Repository, clock Clock, paths PathMatcher, verifier authorityport.ActorVerifier) *Service {
+	return &Service{repository: repository, clock: clock, paths: paths, verifier: verifier}
 }
 
 func (service *Service) Record(
@@ -40,9 +42,11 @@ func (service *Service) Record(
 		record issueopsroutingcontract.Record,
 	) (issueopsroutingcontract.Record, bool, error) {
 		if err := cycleapp.AuthorizeHolder(
+			ctx,
 			record,
 			&actor,
 			service.paths.Same,
+			service.verifier,
 		); err != nil {
 			record.OK = false
 			return record, false, err

@@ -13,7 +13,7 @@ Usage:
   issueops guard check [--repo PATH] [--staged] [--all] [--json] [--] [FILES...]
   issueops quality inspect [--repo PATH] [--json]
   issueops verify-work [--repo PATH] [--all] [--json] [--] [READ_ONLY_ARGV...]
-  issueops trace analyze --input <jsonl|state-key> [--json]
+  issueops trace analyze --input <jsonl|state-key|-> [--input-format issueops|claude-stream|codex-exec|omo-json] [--json]
   issueops trace handoff-delivery --input <observation.json|-> [--json]
   issueops contract schema [--json]
   issueops contract check [--json]
@@ -125,9 +125,9 @@ Usage:
   issueops channel recv --channel NAME [--since MSG_ID] [--wait] [--timeout-seconds N] [--limit N] [--json]
   issueops web-fetch fetch --url URL [--timeout 30s] [--max-chars N] [--json]
   issueops web-fetch benchmark --fixtures PATH [--live] [--compare-baseline PATH] [--json]
-  issueops install [--interactive] [--project-local] [--path-mode=auto|manual|skip] [--dry-run] [--json]
-  issueops update [--path-mode=auto|manual|skip] [--dry-run] [--json]
-  issueops bootstrap [--interactive] [--sync] [--path-mode=auto|manual|skip] [--dry-run] [--json]
+  issueops install [--interactive] [--project-local] [--path-mode=auto|manual|skip] [--mcp-transport=http|stdio] [--dry-run] [--json]
+  issueops update [--path-mode=auto|manual|skip] [--mcp-transport=http|stdio] [--dry-run] [--json]
+  issueops bootstrap [--interactive] [--sync] [--path-mode=auto|manual|skip] [--mcp-transport=http|stdio] [--dry-run] [--json]
   issueops self-verify [--seed=N] [--target-score=95] [--progress=none|jsonl] [--llm-eval] [--llm-eval-mode=advisory|gate] [--save-state] [--state-key KEY] [--json]
   issueops self-verify history [--prefix PREFIX] [--limit N] [--retention-limit N] [--prune-retention] [--confirm] [--json]
   issueops self-verify compare --baseline-key KEY --candidate-key KEY [--max-elapsed-regression-pct N] [--fail-on-regression] [--json]
@@ -136,6 +136,9 @@ Usage:
   issueops self-augment [--cycles=1] [--target-score=95] [--save-state] [--state-key KEY] [--json]
   issueops self-augment lesson [--candidate ID] --lesson TEXT --next-action TEXT [--source TEXT] [--severity info|warning|error] [--state-key KEY] [--json]
   issueops mcp [cleanup [--dry-run|--apply] [--json]]
+  issueops mcp --http [--addr 127.0.0.1:47831]
+  issueops mcp service start|stop|status [--json]
+  issueops mcp authorize --workspace-root PATH --host codex|claude|omo --session-id ID [--agent-id ID] --session-pid PID --session-started-at RFC3339 --session-executable PATH [--cwd PATH] [--json]
   issueops version
 
 

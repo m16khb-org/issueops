@@ -1,6 +1,7 @@
 package statecli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -51,7 +52,7 @@ func runStateWrite(deps Dependencies, args []string) error {
 		}
 		content = string(b)
 	}
-	result, err := deps.Write(*key, content)
+	result, err := deps.Write(context.Background(), *key, content)
 	if err != nil {
 		return err
 	}

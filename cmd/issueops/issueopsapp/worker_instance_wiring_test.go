@@ -168,7 +168,7 @@ func TestWorkerCapturedDirectoryPreservesRelativeMkdirError(t *testing.T) {
 	}
 	service := newWorkerService()
 	t.Chdir(t.TempDir())
-	_, err := service.Enqueue("fixture", "")
+	_, err := service.Enqueue(context.Background(), "fixture", "")
 	if err == nil || err.Error() != expected.Error() {
 		t.Fatalf("mkdir error changed: %v want %v", err, expected)
 	}

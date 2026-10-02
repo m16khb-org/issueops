@@ -16,7 +16,7 @@ func startChildWithActorForTest(root string, req model.IssueOpsChildStartRequest
 	starter := delegationapp.ChildStarter{
 		Records:   core.ChildCycleStore{CycleRecordStore: core.CycleRecordStore{StateRoot: root}},
 		Identity:  core.CycleStartIdentity{RunGit: branchpreflight.GitCmd},
-		Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same),
+		Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()),
 		Links:     issueLinkerForTest(root),
 		Now:       time.Now,
 	}
@@ -26,14 +26,14 @@ func startChildWithActorForTest(root string, req model.IssueOpsChildStartRequest
 func childStatusWithActorForTest(root, id string, repair bool, actor model.IssueOpsActor) (model.IssueOpsChildStatusResult, error) {
 	service := delegationapp.StatusService{
 		Records:   core.ChildCycleStore{CycleRecordStore: core.CycleRecordStore{StateRoot: root}},
-		Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same),
+		Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()),
 		Now:       time.Now,
 	}
 	return service.Status(context.Background(), id, repair, &actor)
 }
 
 func childValidatorForTest(root string) delegationapp.Validator {
-	return delegationapp.Validator{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}
+	return delegationapp.Validator{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Now: time.Now}
 }
 func acceptChildWithActorForTest(root, parentID, childID string, evidence []string, actor model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
 	return childValidatorForTest(root).Accept(context.Background(), parentID, childID, evidence, &actor)

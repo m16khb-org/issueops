@@ -1,6 +1,7 @@
 package mcpcli
 
 import (
+	"context"
 	statecontract "issueops/internal/contract/state"
 	"time"
 )
@@ -10,7 +11,7 @@ type StateDependencies struct {
 	Doctor   func() (statecontract.StateDoctorResult, error)
 	List     func() (statecontract.StateListResult, error)
 	Maintain func() (statecontract.StateMaintainResult, error)
-	Prune    func(maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error)
+	Prune    func(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error)
 	Read     func(key string) (statecontract.StateResult, error)
-	Write    func(key, content string) (statecontract.StateResult, error)
+	Write    func(ctx context.Context, key, content string) (statecontract.StateResult, error)
 }

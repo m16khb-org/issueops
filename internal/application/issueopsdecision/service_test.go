@@ -16,6 +16,7 @@ func TestServiceRecordsNormalizedDecision(t *testing.T) {
 		repository,
 		fixedClock{now: time.Date(2026, 8, 11, 6, 0, 0, 0, time.UTC)},
 		matchingPaths{},
+		liveVerifier(),
 	)
 
 	record, err := service.Add(

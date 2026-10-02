@@ -1,6 +1,7 @@
 package doctor_test
 
 import (
+	"context"
 	"encoding/json"
 	"issueops/internal/contract/doctor"
 
@@ -271,7 +272,7 @@ func TestHarnessDoctorReportsLoopContracts(t *testing.T) {
 	if _, err := testBootstrapService().Run(bootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: repo, Write: true}); err != nil {
 		t.Fatal(err)
 	}
-	loop, err := testLoopService().Start(loopruncontract.StartLoopRequest{
+	loop, err := testLoopService().Start(context.Background(), loopruncontract.StartLoopRequest{
 		Repo:        repo,
 		Name:        "doctor-loop",
 		Goal:        "verify doctor loop contract reporting",

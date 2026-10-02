@@ -1,6 +1,7 @@
 package augmentlesson
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -41,7 +42,7 @@ func TestSaveSelfAugmentLesson(t *testing.T) {
 
 func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := statestore.StateWrite("self-augment-lesson-old", `{"kind":"self_augmentation_lesson"}`); err != nil {
+	if _, err := statestore.StateWrite(context.Background(), "self-augment-lesson-old", `{"kind":"self_augmentation_lesson"}`); err != nil {
 		t.Fatalf("write old lesson: %v", err)
 	}
 	old, err := statestore.StateRead("self-augment-lesson-old")
@@ -49,7 +50,7 @@ func TestSaveSelfAugmentLessonPrunesOldLessonRecords(t *testing.T) {
 		t.Fatalf("read old lesson: %v", err)
 	}
 	old.Record.UpdatedAt = "2000-01-01T00:00:00Z"
-	if _, err := statestore.WriteStateRecord(statestore.StateDir(), "self-augment-lesson-old", old.Record); err != nil {
+	if _, err := statestore.WriteStateRecord(context.Background(), statestore.StateDir(), "self-augment-lesson-old", old.Record); err != nil {
 		t.Fatalf("rewrite old lesson: %v", err)
 	}
 

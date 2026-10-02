@@ -1,6 +1,7 @@
 package workercli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 )
@@ -13,7 +14,7 @@ func (command Command) RunEnqueue(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	job, err := command.Service.Enqueue(*kind, *payload)
+	job, err := command.Service.Enqueue(context.Background(), *kind, *payload)
 	if *jsonOut {
 		_ = printJSON(job)
 	}
@@ -64,7 +65,7 @@ func (command Command) RunCleanupStuck(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := command.Service.DetectStuck()
+	result, err := command.Service.DetectStuck(context.Background())
 	if *jsonOut {
 		_ = printJSON(result)
 	}
@@ -83,7 +84,7 @@ func (command Command) RunCancel(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	job, err := command.Service.Cancel(*id)
+	job, err := command.Service.Cancel(context.Background(), *id)
 	if *jsonOut {
 		_ = printJSON(job)
 	}

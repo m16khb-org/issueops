@@ -51,7 +51,7 @@ func newIssueOpsResumeService(stateRoot string, provisioner port.ExecutionOrcaPr
 		leaseoutbound.NewResumeOwnerInventory(effects.observeOwner),
 		leaseoutbound.NewResumeStageExecutor(effects.inspectStage, effects.invokeStage),
 		resumeOperationIDs{},
-		leaseoutbound.InspectNativeProcess,
+		issueOpsActorVerifier(),
 		leaseoutbound.FilesystemPathMatcher{},
 	), nil
 }

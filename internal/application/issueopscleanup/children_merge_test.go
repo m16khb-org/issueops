@@ -18,7 +18,7 @@ type childMergeRecords struct {
 	readErr    error
 }
 
-func (r childMergeRecords) WithinLock(ctx context.Context, id string, fn func() error) error {
+func (r childMergeRecords) WithinLock(ctx context.Context, id string, fn func(context.Context) error) error {
 	if r.beforeLock != nil {
 		r.beforeLock()
 	}

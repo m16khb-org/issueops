@@ -1,6 +1,7 @@
 package mcpcli
 
 import (
+	"context"
 	"encoding/json"
 	verifyapp "issueops/internal/application/selfverify"
 	augmentcontract "issueops/internal/contract/selfaugment"
@@ -163,12 +164,12 @@ func TestSelfVerifyMCPForwardsBaseRefAndRejectsInvalidScope(t *testing.T) {
 		got = request.BaseRef
 		return augmentcontract.SelfAugmentResult{OK: true}, nil
 	}}
-	outcome := handleSelfLoopMCPToolCall(MCPToolCall{Name: "self_verify", Arguments: map[string]any{"base_ref": "HEAD~1"}}, deps)
+	outcome := handleSelfLoopMCPToolCall(context.Background(), MCPToolCall{Name: "self_verify", Arguments: map[string]any{"base_ref": "HEAD~1"}}, deps)
 	if outcome.Err != nil || got != "HEAD~1" {
 		t.Fatalf("base_ref=%q outcome=%+v", got, outcome)
 	}
 	for _, value := range []any{"", 7, nil} {
-		outcome := handleSelfLoopMCPToolCall(MCPToolCall{Name: "self_verify", Arguments: map[string]any{"base_ref": value}}, MCPDependencies{})
+		outcome := handleSelfLoopMCPToolCall(context.Background(), MCPToolCall{Name: "self_verify", Arguments: map[string]any{"base_ref": value}}, MCPDependencies{})
 		if outcome.Err == nil || outcome.Err.Code != -32602 {
 			t.Fatalf("invalid scope accepted: %+v", outcome)
 		}

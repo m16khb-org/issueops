@@ -1,0 +1,8 @@
+{"type":"session","version":3,"id":"sess-omo-1","timestamp":"2026-10-02T00:00:00Z","cwd":"/work"}
+{"type":"agent_start"}
+{"type":"turn_start"}
+{"type":"message_start","message":{"role":"assistant","content":[]}}
+{"type":"message_update","usage":{"input":10,"output":0,"cacheRead":0,"cacheWrite":0},"assistantMessageEvent":{"type":"text_delta","contentIndex":0,"delta":"SECRET-DELTA"}}
+{"type":"message_end","message":{"role":"assistant","provider":"prov-a","model":"model-a","responseId":"resp-omo-1","stopReason":"stop","content":[{"type":"text","text":"SECRET-ANSWER"}],"usage":{"input":120,"output":30,"cacheRead":0,"cacheWrite":7,"totalTokens":157,"cost":{"input":0.1,"output":0.2,"cacheRead":0,"cacheWrite":0,"total":0.3}}}}
+{"type":"turn_end","message":{"role":"assistant","provider":"prov-a","model":"model-a","responseId":"resp-omo-1","stopReason":"stop","content":[{"type":"text","text":"SECRET-ANSWER"}],"usage":{"input":120,"output":30,"cacheRead":0,"cacheWrite":7,"totalTokens":157,"cost":{"input":0.1,"output":0.2,"cacheRead":0,"cacheWrite":0,"total":0.3}}},"toolResults":[]}
+{"type":"agent_end","messages":[{"role":"assistant","provider":"prov-a","model":"model-a","responseId":"resp-omo-1","stopReason":"stop","usage":{"input":120,"output":30,"cacheRead":0,"cacheWrite":7,"totalTokens":157,"cost":{"total":0.3}}}]}

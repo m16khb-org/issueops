@@ -76,7 +76,7 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 				record.ImplementationReview.ReviewedFingerprint = "stale"
 				wantError = "implementation_review_stale"
 			}
-			if _, err := writeIssueOps(root, record); err != nil {
+			if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 				t.Fatal(err)
 			}
 			var operationID func() (string, error)
@@ -108,7 +108,7 @@ func TestPublicationCreateUsesPreparedDomainRulesBeforePersistence(t *testing.T)
 				}
 				return nil
 			})
-			service := publicationapp.NewCreateService(remoteapp.NewCreatePreparation(RemotePublicationObserver{CurrentFingerprint: testChangeReader().ChangeFingerprint, CurrentHead: testReadinessGit().Head, StateRoot: root}, cycleapp.NewMutationAuthority(samePath), inspectNativeProcessReceipt), repository, provider, verifier)
+			service := publicationapp.NewCreateService(remoteapp.NewCreatePreparation(RemotePublicationObserver{CurrentFingerprint: testChangeReader().ChangeFingerprint, CurrentHead: testReadinessGit().Head, StateRoot: root}, cycleapp.NewMutationAuthority(samePath, NativeActorVerifier()), NativeActorVerifier()), repository, provider, verifier)
 			result, err := service.Create(context.Background(), command)
 			after, readErr := ReadIssueOps(root, record.ID)
 			if readErr != nil {

@@ -466,6 +466,17 @@
       ]
     },
     {
+      "path": "cmd/issueops/installcli/install_mcp_transport.go",
+      "owner": "inbound",
+      "task": "T11",
+      "symbols": [
+        "func Command.applyMCPTransport",
+        "func Command.preflightHostPlan",
+        "func Command.resolveMCPTransport",
+        "type MCPServiceSetup"
+      ]
+    },
+    {
       "path": "cmd/issueops/installcli/install_native_interactive.go",
       "owner": "inbound",
       "task": "T11",
@@ -547,8 +558,11 @@
       "symbols": [
         "func fprintString",
         "func fprintUsage",
+        "func harnessInspectorWithDefault",
+        "func newHarnessHostInspector",
         "func newHarnessInspector",
         "func printJSON",
+        "func scopedHarnessInspector",
         "func usage"
       ]
     },
@@ -558,7 +572,19 @@
       "task": "T20",
       "symbols": [
         "func newCommitService",
-        "func newLintService"
+        "func newLintService",
+        "func newScopedCommitService",
+        "func newScopedLintService"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/authority_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func bindIssueOpsAuthority",
+        "func issueOpsActorVerifier",
+        "func newAuthorityService"
       ]
     },
     {
@@ -675,7 +701,9 @@
       "task": "T20",
       "symbols": [
         "func gatesDependencies",
-        "func newGatesService"
+        "func gatesServiceWith",
+        "func newGatesService",
+        "func newScopedGatesService"
       ]
     },
     {
@@ -720,9 +748,14 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func defaultMCPTransport",
         "func hostActivationReadback.Verify",
         "func installDependencies",
-        "type hostActivationReadback"
+        "func installMCPService.EnsureRunning",
+        "func installMCPService.Prepare",
+        "func installMCPService.ReadBearer",
+        "type hostActivationReadback",
+        "type installMCPService"
       ]
     },
     {
@@ -834,7 +867,7 @@
       "task": "T20",
       "symbols": [
         "func issueOpsCompleteHandler",
-        "func issueOpsCompletionProcessInspector"
+        "func verifyIssueOpsCompletionActor"
       ]
     },
     {
@@ -905,11 +938,15 @@
       "task": "T20",
       "symbols": [
         "func issueOpsNextHandler",
+        "func newNextGitObservation",
+        "func nextGitObservation.currentBranch",
+        "func nextGitObservation.out",
+        "func nextGitObservation.worktreeState",
         "func nextLocalReadinessObservation.changedPaths",
         "func nextLocalReadinessObservation.localReadiness",
         "func nextObservationRecordOf",
         "func observeIssueOpsHolderLiveness",
-        "func observeIssueOpsWorktreeState",
+        "type nextGitObservation",
         "type nextLocalReadinessObservation",
         "type nextObservationRecord"
       ]
@@ -951,6 +988,7 @@
         "func preparationClock.Now",
         "func preparationOperationIDs.New",
         "func productionIssueOpsExecutionDependencies",
+        "func verifyIssueOpsPreparationActor",
         "type issueOpsExecutionCompositionDeps",
         "type issueOpsPreparationCompositionDeps",
         "type preparationClock",
@@ -1007,6 +1045,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func issueOpsCLIRecordObserver",
         "func issueOpsRecordObserver",
         "func issueOpsRecordStore"
       ]
@@ -1140,10 +1179,23 @@
       "task": "T20",
       "symbols": [
         "func loopDependencies",
+        "func loopServiceWith",
         "func newLoopIdentity",
         "func newLoopReader",
         "func newLoopService",
-        "func newLoopStore"
+        "func newLoopStore",
+        "func newScopedLoopService"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/mcp_authorize_command.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func mcpAuthorizeCommand.Run",
+        "func runMCPAuthorize",
+        "type authorityIssuer",
+        "type mcpAuthorizeCommand"
       ]
     },
     {
@@ -1161,8 +1213,49 @@
       "task": "T20",
       "symbols": [
         "func issueOpsMCPDependencies",
+        "func issueOpsMCPHTTPDependencies",
+        "func issueOpsMCPRecordRoots",
+        "func issueOpsMCPRequestDependencies",
         "func mcpTools",
         "func runMCP"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/mcp_http_command.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func runMCPHTTP",
+        "func serveMCPHTTP"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/mcp_service_command.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func mcpServiceCommand.Run",
+        "func newMCPService",
+        "func runMCPService",
+        "type mcpServiceCommand"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/mcp_service_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func mcpServiceProcessInspector",
+        "func mcpServiceStateDir",
+        "func newSupervisorMCPService"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/mcp_trace_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func issueOpsMCPTraceBinding"
       ]
     },
     {
@@ -1238,7 +1331,8 @@
         "func newDocsQAProbe",
         "func newProbeSnapshotStore",
         "func newStateRoundtripProbe",
-        "func newStepBudgetProbe"
+        "func newStepBudgetProbe",
+        "func probeStateWriteRecord"
       ]
     },
     {
@@ -1247,7 +1341,10 @@
       "task": "T20",
       "symbols": [
         "func newProjectDocsService",
-        "func newRepoRootResolver"
+        "func newRepoRootResolver",
+        "func newRepoRootResolverAt",
+        "func newScopedProjectDocsService",
+        "func projectDocsServiceWith"
       ]
     },
     {
@@ -1256,7 +1353,9 @@
       "task": "T20",
       "symbols": [
         "func newProjectBootstrapService",
-        "func newProjectLifecycleService"
+        "func newProjectLifecycleService",
+        "func newScopedProjectBootstrapService",
+        "func projectBootstrapServiceWith"
       ]
     },
     {
@@ -1274,6 +1373,17 @@
       "symbols": [
         "func newRemoteVerificationHandlers",
         "func newRemoteVerifier"
+      ]
+    },
+    {
+      "path": "cmd/issueops/issueopsapp/request_store_fence_wiring.go",
+      "owner": "composition",
+      "task": "T20",
+      "symbols": [
+        "func grantFencedLoopStore.WithLock",
+        "func grantFencedWorkerStore.WithLock",
+        "type grantFencedLoopStore",
+        "type grantFencedWorkerStore"
       ]
     },
     {
@@ -1361,7 +1471,8 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
-        "func newSelfWorkflowState"
+        "func newSelfWorkflowState",
+        "func requestStateWrite"
       ]
     },
     {
@@ -1474,6 +1585,7 @@
       "owner": "composition",
       "task": "T20",
       "symbols": [
+        "func newScopedWorkerService",
         "func newWorkerCommand",
         "func newWorkerService",
         "func newWorkerStore"
@@ -2076,15 +2188,83 @@
       ]
     },
     {
+      "path": "cmd/issueops/mcpcli/mcp_http.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func NewHTTPHandler",
+        "func ServeHTTP",
+        "func ValidateHTTPAddress",
+        "func httpGuard.ServeHTTP",
+        "func httpGuard.authorized",
+        "func httpToolHandler",
+        "func statusRecorder.Flush",
+        "func statusRecorder.Unwrap",
+        "func statusRecorder.WriteHeader",
+        "type HTTPOptions",
+        "type httpGuard",
+        "type statusRecorder"
+      ]
+    },
+    {
+      "path": "cmd/issueops/mcpcli/mcp_http_bearer.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func EnsureHTTPBearer",
+        "func createHTTPBearer",
+        "func httpStateDir",
+        "func readHTTPBearer",
+        "func validateHTTPBearer"
+      ]
+    },
+    {
+      "path": "cmd/issueops/mcpcli/mcp_request_dispatch.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func authorityErrorPayload",
+        "func authorizeMCPRequest",
+        "func dispatchMCPToolCall",
+        "func requiresCapability",
+        "type serverTransport"
+      ]
+    },
+    {
+      "path": "cmd/issueops/mcpcli/mcp_request_scope.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func NewRequestScope",
+        "func authorityInvalid",
+        "func authorityRequired",
+        "func canonicalRequestPath",
+        "func confineFile",
+        "func confineRequestFiles",
+        "func explicitRequestRoot",
+        "func pathWithin",
+        "func recordRequestRoot",
+        "func requestAuthorityError.Error",
+        "func requestFileValues",
+        "func requestRelativePath",
+        "func resolveExistingAncestor",
+        "func scopedArguments",
+        "type RecordRoots",
+        "type confinedFiles",
+        "type requestAuthorityError"
+      ]
+    },
+    {
       "path": "cmd/issueops/mcpcli/mcp_sdk_server.go",
       "owner": "inbound",
       "task": "T20",
       "symbols": [
         "func HandleResourceRead",
+        "func compileToolOutputSchema",
         "func initSDKServer",
         "func initSDKServerWithDiagnostics",
         "func initSDKServerWithLogger",
-        "func issueOpsExecutionSDKToolHandler",
+        "func newSDKServer",
         "func registerAllResources",
         "func registerAllTools",
         "func resolveHandlerGroup",
@@ -2093,9 +2273,10 @@
         "func sdkServerOptions",
         "func sdkServerOptionsWithDiagnostics",
         "func sdkServerOptionsWithLogger",
-        "func sdkToolHandler",
+        "func sdkToolAnnotations",
         "func sdkToolHandlerWithContext",
         "func serveMCPStreamSDK",
+        "func validatedStructuredContent",
         "func writeCloser.Close",
         "type writeCloser"
       ]
@@ -2129,6 +2310,17 @@
       "task": "T20",
       "symbols": [
         "func handleAssistantWorkerMCPToolCall"
+      ]
+    },
+    {
+      "path": "cmd/issueops/mcpcli/mcp_tool_authority.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func validateHTTPToolClassification",
+        "type RecordKind",
+        "type toolAuthority",
+        "type toolScope"
       ]
     },
     {
@@ -2171,6 +2363,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
+        "func executionActionRequestFromCapability",
         "func executionActionRequestFromMCP",
         "func executionActionRequestFromMCPWithAncestry",
         "func executionIssueSnapshotFromMCP",
@@ -2940,6 +3133,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func Installer.removeClaudeProjectMCP",
         "func Installer.writeClaudeUserMCP",
         "func claudeUserMCPServer"
       ]
@@ -3127,7 +3321,8 @@
         "func Installer.codexGlobalBlock",
         "func Installer.writeGlobalConfig",
         "func codexTemplate",
-        "func removeTOMLSection"
+        "func removeTOMLSection",
+        "func restrictToOwner"
       ]
     },
     {
@@ -3325,10 +3520,29 @@
         "func FileStore.ExistsFile",
         "func FileStore.Read",
         "func FileStore.WritePreservingMode",
-        "func appendIssueFolderGateFiles",
-        "func appendMarkdownGateFiles",
+        "func discoverGateFiles",
+        "func gateFileScan.appendIssueFolderGateFiles",
+        "func gateFileScan.appendMarkdownGateFiles",
+        "func gateFileScan.output",
         "type Clock",
-        "type FileStore"
+        "type FileStore",
+        "type gateFileScan"
+      ]
+    },
+    {
+      "path": "internal/adapter/gates/workspace_store.go",
+      "owner": "adapter",
+      "task": "T10",
+      "symbols": [
+        "func WorkspaceFileStore.Create",
+        "func WorkspaceFileStore.Discover",
+        "func WorkspaceFileStore.ExistsFile",
+        "func WorkspaceFileStore.Read",
+        "func WorkspaceFileStore.WritePreservingMode",
+        "func WorkspaceFileStore.name",
+        "func WorkspaceFileStore.within",
+        "func resolveExistingAncestor",
+        "type WorkspaceFileStore"
       ]
     },
     {
@@ -3398,6 +3612,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func RenderProjectDocCatalogOmissions",
         "func RenderProjectDocCatalogUserView"
       ]
     },
@@ -3631,6 +3846,15 @@
       ]
     },
     {
+      "path": "internal/adapter/inbound/catalog/mcp/authority_fields.go",
+      "owner": "adapter",
+      "task": "T19",
+      "symbols": [
+        "func WorkspaceScopedTools",
+        "func withAuthorityFields"
+      ]
+    },
+    {
       "path": "internal/adapter/inbound/catalog/mcp/catalog.go",
       "owner": "adapter",
       "task": "T19",
@@ -3822,6 +4046,52 @@
       ]
     },
     {
+      "path": "internal/adapter/inspect/hostconfig.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func bracketDepth",
+        "func configReadError.Error",
+        "func entryTransport",
+        "func finishEntry",
+        "func jsonObjectFields",
+        "func jsonServerEntries",
+        "func parseCodexIssueOpsTable",
+        "func parseTOMLValue",
+        "func readCodexEntry",
+        "func readJSONEntry",
+        "func redactValues",
+        "func stripSecrets",
+        "func stripTOMLComment",
+        "func tomlReader.array",
+        "func tomlReader.basicString",
+        "func tomlReader.inlineTable",
+        "func tomlReader.scalar",
+        "func tomlReader.skipSpace",
+        "func tomlReader.value",
+        "type configReadError",
+        "type hostEntry",
+        "type jsonField",
+        "type tomlReader"
+      ]
+    },
+    {
+      "path": "internal/adapter/inspect/hosts.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Observer.now",
+        "func Observer.observeHosts",
+        "func notChecked",
+        "func observation",
+        "func observeHostFiles",
+        "func observeSkill",
+        "func reasonCode",
+        "func sameResolvedPath",
+        "type hostSpec"
+      ]
+    },
+    {
       "path": "internal/adapter/inspect/inspect.go",
       "owner": "adapter",
       "task": "T20",
@@ -3832,6 +4102,38 @@
         "func Observer.Inspect",
         "func readSkillDescription",
         "type Observer"
+      ]
+    },
+    {
+      "path": "internal/adapter/inspect/receipts.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CommandHostVersion",
+        "func Observer.applyReceipts",
+        "func Observer.resolveReceiptPath",
+        "func artifactEvidence",
+        "func artifactScan.consume",
+        "func artifactScan.consumeClaudeStream",
+        "func artifactScan.consumeCodexStep",
+        "func artifactScan.consumeCodexToolResult",
+        "func artifactScan.consumeCodexWire",
+        "func artifactScan.consumeJSONRPCResponse",
+        "func artifactScan.consumeOmoTransport",
+        "func contains",
+        "func demote",
+        "func isDocsIndexTool",
+        "func listsDocsIndex",
+        "func loadReceipts",
+        "func normalizeVersion",
+        "func readArtifactFacts",
+        "func receiptVetter.artifact",
+        "func receiptVetter.hostVersion",
+        "func receiptVetter.staleReason",
+        "func receiptVetter.vet",
+        "type artifactFacts",
+        "type artifactScan",
+        "type receiptVetter"
       ]
     },
     {
@@ -4036,6 +4338,7 @@
       "task": "T20",
       "symbols": [
         "func MergeJSONMapFile",
+        "func RemoveJSONMapEntry",
         "func VerifyJSONMapEntry"
       ]
     },
@@ -4315,12 +4618,14 @@
       "owner": "adapter",
       "task": "T05",
       "symbols": [
-        "func ValidateNativeActorProcess",
+        "func NativeActorVerifier",
+        "func NativeProcessInspector.Inspect",
         "func inspectNativeProcessReceiptForRollover",
         "func sameNativeActor",
         "func sameNativeActorIdentity",
         "func sameNativeProcessReceipt",
-        "func samePath"
+        "func samePath",
+        "type NativeProcessInspector"
       ]
     },
     {
@@ -4514,6 +4819,7 @@
       "task": "T06",
       "symbols": [
         "func SyncExecutionBase",
+        "func VerifiedSyncExecutionBase",
         "func abortExecutionSyncBase",
         "func appendExecutionSyncBaseEvent",
         "func applyExecutionSyncBase",
@@ -4554,6 +4860,7 @@
         "func finalizeExecutionSyncBase",
         "func parseExecutionSyncBaseMergeTreeNames",
         "func startExecutionSyncBaseResolution",
+        "func syncExecutionBase",
         "type executionSyncBaseAbortEffects",
         "type executionSyncBaseApplyEffects",
         "type executionSyncBaseFinalizeEffects",
@@ -5078,6 +5385,107 @@
       ]
     },
     {
+      "path": "internal/adapter/mcpservice/instance.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func AcquireInstance",
+        "func BuildID",
+        "func IdentityHandler",
+        "func Instance.Publish",
+        "func Instance.Release",
+        "func ReadBearer",
+        "func httpDir",
+        "func identityWriter.Flush",
+        "func identityWriter.Unwrap",
+        "func identityWriter.Write",
+        "func identityWriter.WriteHeader",
+        "func readRecord",
+        "func trimSpace",
+        "func writeRecord",
+        "type Instance",
+        "type Record",
+        "type identityWriter"
+      ]
+    },
+    {
+      "path": "internal/adapter/mcpservice/lock_other.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func LockHolder",
+        "func tryLock"
+      ]
+    },
+    {
+      "path": "internal/adapter/mcpservice/lock_unix.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func LockHolder",
+        "func tryLock"
+      ]
+    },
+    {
+      "path": "internal/adapter/mcpservice/service.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func New",
+        "func Service.EnsureRunning",
+        "func Service.Prepare",
+        "func Service.Start",
+        "func Service.Status",
+        "func Service.Stop",
+        "func Service.awaitRunning",
+        "func Service.dir",
+        "func Service.fail",
+        "func Service.lockPath",
+        "func Service.observe",
+        "func Service.portInUse",
+        "func Service.probe",
+        "func Service.recordPath",
+        "func Service.requireSupervisor",
+        "func Service.result",
+        "func Service.unloadIdle",
+        "func Service.url",
+        "func checkInitializeResult",
+        "func waitContext",
+        "type Config",
+        "type Service",
+        "type observation"
+      ]
+    },
+    {
+      "path": "internal/adapter/mcpservice/supervisor.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func launchd.command",
+        "func launchd.domain",
+        "func launchd.load",
+        "func launchd.renderUnit",
+        "func launchd.supervised",
+        "func launchd.target",
+        "func launchd.unitPath",
+        "func launchd.unload",
+        "func systemd.command",
+        "func systemd.load",
+        "func systemd.renderUnit",
+        "func systemd.supervised",
+        "func systemd.unitPath",
+        "func systemd.unload",
+        "func systemdQuote",
+        "func unitSpec.environment",
+        "func xmlText",
+        "type Runner",
+        "type launchd",
+        "type supervisor",
+        "type systemd",
+        "type unitSpec"
+      ]
+    },
+    {
       "path": "internal/adapter/omo/activation.go",
       "owner": "adapter",
       "task": "T20",
@@ -5109,9 +5517,11 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func Installer.catalogSHA256",
         "func Installer.omoMCPServer",
         "func Installer.omoProjectMCPConfig",
         "func Installer.omoUserMCPServer",
+        "func Installer.removeOmoProjectMCP",
         "func Installer.writeOmoProjectMCP",
         "func Installer.writeOmoUserMCP"
       ]
@@ -5470,6 +5880,62 @@
         "func Mode",
         "func ReadFile",
         "func ReadResult"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/authority/credential_files.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CredentialFiles.grantsDir",
+        "func CredentialFiles.managedComponents",
+        "func validateCredential",
+        "type CredentialFiles"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/authority/credential_files_other.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CredentialFiles.Read",
+        "func CredentialFiles.Write"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/authority/credential_files_unix.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func CredentialFiles.Read",
+        "func CredentialFiles.Write",
+        "func CredentialFiles.openGrantDirs",
+        "func closeFDs",
+        "func privateEntry",
+        "func writeCredential"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/authority/repository.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Repository.Get",
+        "func Repository.Within",
+        "type Repository"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/authority/scope.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func ScopeResolver.Resolve",
+        "func ScopeResolver.gitIdentity",
+        "func canonicalDir",
+        "func inside",
+        "func withoutGitEnvironment",
+        "type ScopeResolver"
       ]
     },
     {
@@ -5952,12 +6418,22 @@
       "symbols": [
         "func NewJSONLineObserver",
         "func ObserverFunc.Observe",
-        "func Store.observe",
+        "func Store.ObserveSpans",
         "func jsonLineObserver.Observe",
+        "func optionalMilliseconds",
         "type Observer",
         "type ObserverFunc",
         "type SpanObservation",
         "type jsonLineObserver"
+      ]
+    },
+    {
+      "path": "internal/adapter/outbound/issueopsrecord/observer_trace.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func WithTraceparent",
+        "type recordTraceContextKey"
       ]
     },
     {
@@ -6236,15 +6712,36 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/sqlstore/record_guard.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func DB.bindRecordGuard",
+        "func DB.recheckRecordGuard",
+        "func DB.recordGuard",
+        "func WithRecordGuard",
+        "func txRecordReader.Get",
+        "type recordGuard",
+        "type recordGuardFunc",
+        "type recordGuardKey",
+        "type txRecordReader"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/sqlstore/span_observer.go",
       "owner": "adapter",
       "task": "T20",
       "symbols": [
         "func WithSpanObserver",
+        "func activeSpanRun",
         "func spanObserver",
+        "func spanRun.invoke",
+        "func spanRun.observation",
         "type SpanObservation",
         "type SpanObserver",
-        "type spanObserverKey"
+        "type spanObserverKey",
+        "type spanRun",
+        "type spanRunKey"
       ]
     },
     {
@@ -6266,6 +6763,10 @@
         "func DB.WithSpan",
         "func DB.beginSpanTx",
         "func DB.beginSpanTxAfterContention",
+        "func DB.commitData",
+        "func DB.runSpan",
+        "func DB.unattributedWrite",
+        "func DB.withSpan",
         "func GetAllExisting",
         "func GetExisting",
         "func InspectExisting",
@@ -6289,6 +6790,7 @@
         "func openSQLite",
         "func pruneRemovedHandlesLocked",
         "func repairPrivateSQLiteFiles",
+        "func spanOutcome",
         "func touchPrivate",
         "func validateMutations",
         "type DB",
@@ -6296,6 +6798,7 @@
         "type NestedSpanError",
         "type RawCASError",
         "type SchemaObject",
+        "type dbTestHooks",
         "type spanChainKey"
       ]
     },
@@ -6568,10 +7071,15 @@
       "task": "T09",
       "symbols": [
         "func atoi",
+        "func commitHistory.bodies",
+        "func commitHistory.commits",
+        "func commitHistory.last",
         "func listRemotes",
-        "func recentCommits",
+        "func parseHistory",
         "func redactRemote",
-        "func splitLines"
+        "func splitLines",
+        "type commitHistory",
+        "type historyRecord"
       ]
     },
     {
@@ -6615,10 +7123,20 @@
       "task": "T20",
       "symbols": [
         "func DiscoverProjectDocs",
+        "func DiscoverProjectDocsReport",
         "func FormatProjectDocCatalog",
-        "func firstMarkdownTitle",
-        "func readProjectDocCatalogEntries",
-        "func readProjectDocCatalogFile"
+        "func FormatProjectDocCatalogOmissions",
+        "func buildProjectDocCatalogEntry",
+        "func firstMarkdownHeading",
+        "func newProjectDocNameSelector",
+        "func projectDocNameSelector.add",
+        "func projectDocNameSelector.before",
+        "func projectDocNameSelector.names",
+        "func projectDocNameSelector.rank",
+        "func readProjectDocCatalogHeader",
+        "func scanProjectDocNames",
+        "type projectDocDirReader",
+        "type projectDocNameSelector"
       ]
     },
     {
@@ -7138,6 +7656,7 @@
       "task": "T15",
       "symbols": [
         "func Source.Decode",
+        "func decodeIssueOps",
         "func observeDocument"
       ]
     },
@@ -7154,11 +7673,43 @@
       ]
     },
     {
+      "path": "internal/adapter/trace/host_usage.go",
+      "owner": "adapter",
+      "task": "T15",
+      "symbols": [
+        "func carriesUsage",
+        "func clearZeros",
+        "func decodeHostEvent",
+        "func decodeHostUsage",
+        "func finalityOf",
+        "func hasUsageKey",
+        "func hostCollector.add",
+        "func hostCollector.claude",
+        "func hostCollector.claudeResult",
+        "func hostCollector.codex",
+        "func hostCollector.cost",
+        "func hostCollector.identity",
+        "func hostCollector.metric",
+        "func hostCollector.omo",
+        "func hostCollector.omoCost",
+        "func hostCollector.omoMessageEnd",
+        "func hostCollector.warn",
+        "func isHostFormat",
+        "func label",
+        "func object",
+        "func parseHostEvents",
+        "func text",
+        "type hostCollector",
+        "type hostEvent"
+      ]
+    },
+    {
       "path": "internal/adapter/trace/input.go",
       "owner": "adapter",
       "task": "T15",
       "symbols": [
         "func Source.Load",
+        "func Source.loadHost",
         "type Source"
       ]
     },
@@ -8060,6 +8611,31 @@
       ]
     },
     {
+      "path": "internal/application/authority/service.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func New",
+        "func Service.Bind",
+        "func Service.BindSpan",
+        "func Service.Check",
+        "func Service.Issue",
+        "func Service.Verify",
+        "func Service.check",
+        "func Service.observeLive",
+        "func Service.recordReader",
+        "func Service.resolveBinding",
+        "func Service.verifyNative",
+        "func bindingFrom",
+        "func capabilityActor",
+        "type Service",
+        "type binding",
+        "type bindingKey",
+        "type spanKey",
+        "type spanState"
+      ]
+    },
+    {
       "path": "internal/application/channel/service.go",
       "owner": "application",
       "task": "T20",
@@ -8735,7 +9311,6 @@
         "func Service.Complete",
         "func fromDomainOutcome",
         "func publicDomainError",
-        "func resolveActor",
         "func toDomainSnapshot",
         "type Request",
         "type Result",
@@ -8747,9 +9322,9 @@
       "owner": "application",
       "task": "T07",
       "symbols": [
+        "type ActorVerifier",
         "type Clock",
         "type Environment",
-        "type ProcessInspector",
         "type RecordTransition",
         "type Repository",
         "type RepositoryResult"
@@ -8854,6 +9429,7 @@
         "func MutationAuthority.Authorize",
         "func MutationAuthority.Validate",
         "func NewMutationAuthority",
+        "func verifyHolderCaller",
         "type MutationAuthority"
       ]
     },
@@ -10658,6 +11234,7 @@
       "task": "T20",
       "symbols": [
         "func Service.Analyze",
+        "func supportedInputFormat",
         "type Effects",
         "type Service"
       ]
@@ -10806,6 +11383,21 @@
       "task": "T02",
       "symbols": [
         "type CommandAuditRecord"
+      ]
+    },
+    {
+      "path": "internal/contract/authority/types.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type IssueRequest",
+        "type NativeActor",
+        "type ProcessReceipt",
+        "type Receipt",
+        "type Record",
+        "type Scope",
+        "type Use",
+        "type VerifiedActor"
       ]
     },
     {
@@ -11002,8 +11594,12 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
+        "type HostIntegration",
+        "type HostReceipts",
         "type InspectInfo",
         "type IntegrationStatus",
+        "type Observation",
+        "type Options",
         "type SkillInfo"
       ]
     },
@@ -11452,6 +12048,14 @@
       ]
     },
     {
+      "path": "internal/contract/issueops/verified_actor.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type VerifiedActor"
+      ]
+    },
+    {
       "path": "internal/contract/issueopsartifact/types.go",
       "owner": "contract",
       "task": "T02",
@@ -11469,7 +12073,8 @@
       "task": "T02",
       "symbols": [
         "type Actor",
-        "type Record"
+        "type Record",
+        "type VerifiedActor"
       ]
     },
     {
@@ -11952,7 +12557,8 @@
         "type Catalog",
         "type DispatchGroup",
         "type Resource",
-        "type Tool"
+        "type Tool",
+        "type ToolAnnotations"
       ]
     },
     {
@@ -12007,6 +12613,22 @@
       ]
     },
     {
+      "path": "internal/contract/mcp/output_schemas.go",
+      "owner": "contract",
+      "task": "T19",
+      "symbols": [
+        "func DocsIndexOutputSchema",
+        "func InspectOutputSchema",
+        "func ReadOnlyClosedWorldAnnotations",
+        "func schemaArray",
+        "func schemaBool",
+        "func schemaInteger",
+        "func schemaObject",
+        "func schemaRef",
+        "func schemaString"
+      ]
+    },
+    {
       "path": "internal/contract/mcp/resource_catalog.go",
       "owner": "contract",
       "task": "T19",
@@ -12039,6 +12661,14 @@
       "task": "T19",
       "symbols": [
         "type ConformanceProbeConfig"
+      ]
+    },
+    {
+      "path": "internal/contract/mcpservice/status.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type Status"
       ]
     },
     {
@@ -12477,6 +13107,23 @@
       ]
     },
     {
+      "path": "internal/contract/trace/host_usage.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type UsageReport",
+        "type UsageSample"
+      ]
+    },
+    {
+      "path": "internal/contract/trace/trace_context.go",
+      "owner": "contract",
+      "task": "T02",
+      "symbols": [
+        "type TraceContext"
+      ]
+    },
+    {
       "path": "internal/contract/trace/types.go",
       "owner": "contract",
       "task": "T02",
@@ -12705,6 +13352,32 @@
       "task": "T20",
       "symbols": [
         "func Generate"
+      ]
+    },
+    {
+      "path": "internal/domain/authority/authority.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func Check",
+        "func ComposeToken",
+        "func DecodeRecord",
+        "func EncodeRecord",
+        "func Error.Error",
+        "func Invalid",
+        "func Key",
+        "func MatchIdentity",
+        "func NewRecord",
+        "func NormalizeIdentity",
+        "func Required",
+        "func ScopeAllows",
+        "func TokenDigest",
+        "func TokenKey",
+        "func ValidKey",
+        "func isLowerHex",
+        "func validateRecord",
+        "func within",
+        "type Error"
       ]
     },
     {
@@ -14260,7 +14933,8 @@
       "owner": "domain",
       "task": "T05",
       "symbols": [
-        "func ValidatePlanCoordinator"
+        "func ValidatePlanCoordinator",
+        "func verifiedCoordinator"
       ]
     },
     {
@@ -15920,7 +16594,11 @@
       "owner": "domain",
       "task": "T20",
       "symbols": [
+        "func CatalogOmissions.Any",
+        "func CatalogOmissions.Summary",
         "func SHA256Hex",
+        "type CatalogOmissions",
+        "type CatalogStats",
         "type ProjectDocCatalogEntry"
       ]
     },
@@ -16734,6 +17412,28 @@
       ]
     },
     {
+      "path": "internal/domain/trace/host_usage.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func NoteUsageLoss",
+        "func ReduceUsage",
+        "func UsageDigest",
+        "func int64Decreased",
+        "func sameInt64",
+        "func sameUsage",
+        "func sortedCodes",
+        "func usageCoverage",
+        "func usageDecreased",
+        "func usageSample",
+        "func valueOrUnknown",
+        "type UsageObservation",
+        "type cumulativeKey",
+        "type deltaKey",
+        "type usageEntry"
+      ]
+    },
+    {
       "path": "internal/domain/trace/observation.go",
       "owner": "domain",
       "task": "T20",
@@ -16755,6 +17455,14 @@
       "symbols": [
         "func selfVerifySummaryFindings",
         "func traceTypesForJSON"
+      ]
+    },
+    {
+      "path": "internal/domain/trace/trace_context.go",
+      "owner": "domain",
+      "task": "T20",
+      "symbols": [
+        "func ParseTraceparent"
       ]
     },
     {
@@ -16884,6 +17592,21 @@
         "func QueueStats",
         "func Start",
         "func ValidID"
+      ]
+    },
+    {
+      "path": "internal/port/authority/authority.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "func ProcessInspectorFunc.Inspect",
+        "type ActorVerifier",
+        "type CredentialFiles",
+        "type ProcessInspector",
+        "type ProcessInspectorFunc",
+        "type RecordReader",
+        "type Repository",
+        "type ScopeResolver"
       ]
     },
     {
@@ -17214,6 +17937,14 @@
         "type ProjectDocsReviewStore",
         "type RegressStore",
         "type ReviewMutationStore"
+      ]
+    },
+    {
+      "path": "internal/port/mcpservice.go",
+      "owner": "port",
+      "task": "T20",
+      "symbols": [
+        "type MCPService"
       ]
     },
     {

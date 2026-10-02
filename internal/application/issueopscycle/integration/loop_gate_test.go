@@ -1,6 +1,7 @@
 package cycleintegration
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -68,7 +69,7 @@ func TestIssueOpsStrictPRReadinessBlocksExhaustedLoop(t *testing.T) {
 	record := readyIssueOpsRecordForLoopGateTest(t)
 
 	loop := startCoreLoopGateLoop(t, record.Repo, "exhausted-loop", 1)
-	if _, err := testLoopService().RecordAttempt(loop.ID, loopruncontract.RecordAttemptRequest{
+	if _, err := testLoopService().RecordAttempt(context.Background(), loop.ID, loopruncontract.RecordAttemptRequest{
 		Verdict:  "fail",
 		Evidence: []string{"focused verification failed"},
 	}); err != nil {
@@ -85,7 +86,7 @@ func TestIssueOpsStrictPRReadinessClearsAfterLoopStop(t *testing.T) {
 	record := readyIssueOpsRecordForLoopGateTest(t)
 
 	loop := startCoreLoopGateLoop(t, record.Repo, "stopped-loop", 3)
-	if _, err := testLoopService().Stop(loop.ID, false, "operator stopped loop after explicit handoff"); err != nil {
+	if _, err := testLoopService().Stop(context.Background(), loop.ID, false, "operator stopped loop after explicit handoff"); err != nil {
 		t.Fatalf("Stop: %v", err)
 	}
 	ready := StrictPRReadiness(record)
@@ -94,13 +95,13 @@ func TestIssueOpsStrictPRReadinessClearsAfterLoopStop(t *testing.T) {
 	}
 
 	successLoop := startCoreLoopGateLoop(t, record.Repo, "succeeded-loop", 3)
-	if _, err := testLoopService().RecordAttempt(successLoop.ID, loopruncontract.RecordAttemptRequest{
+	if _, err := testLoopService().RecordAttempt(context.Background(), successLoop.ID, loopruncontract.RecordAttemptRequest{
 		Verdict:  "pass",
 		Evidence: []string{"focused verification passed"},
 	}); err != nil {
 		t.Fatalf("RecordAttempt: %v", err)
 	}
-	if _, err := testLoopService().Stop(successLoop.ID, true, ""); err != nil {
+	if _, err := testLoopService().Stop(context.Background(), successLoop.ID, true, ""); err != nil {
 		t.Fatalf("Stop success: %v", err)
 	}
 	ready = StrictPRReadiness(record)
@@ -111,7 +112,7 @@ func TestIssueOpsStrictPRReadinessClearsAfterLoopStop(t *testing.T) {
 
 func startCoreLoopGateLoop(t *testing.T, repo, name string, maxAttempts int) loopruncontract.LoopRun {
 	t.Helper()
-	loop, err := testLoopService().Start(loopruncontract.StartLoopRequest{
+	loop, err := testLoopService().Start(context.Background(), loopruncontract.StartLoopRequest{
 		Repo:        repo,
 		Name:        name,
 		Goal:        "verify strict loop gate behavior",
@@ -164,7 +165,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 		// publication 게이트는 execution lease가 없는 record에도 걸린다.
 		ProjectDocsReview: &issueopscontract.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
-	if _, err := issueops.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}
 	return record
@@ -218,12 +219,12 @@ func TestAdvancePhaseGuardsPRTransition(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := readyIssueOpsRecordForLoopGateTest(t)
 	stateRoot := issueOpsStateRootForTest()
-	written, err := issueops.WriteIssueOps(stateRoot, record)
+	written, err := issueops.WriteIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}
 	written.Phase = issueopscontract.IssueOpsPhaseFeedback
-	written, err = issueops.WriteIssueOps(stateRoot, written)
+	written, err = issueops.WriteIssueOps(context.Background(), stateRoot, written)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,10 +239,10 @@ func TestAdvancePhaseGuardsPRTransition(t *testing.T) {
 	}
 
 	// loop를 성공으로 끝내면 pr 재진입이 통과한다(복구 경로 보존).
-	if _, err := testLoopService().RecordAttempt(loop.ID, loopruncontract.RecordAttemptRequest{Verdict: "pass", Evidence: []string{"gate cleared"}}); err != nil {
+	if _, err := testLoopService().RecordAttempt(context.Background(), loop.ID, loopruncontract.RecordAttemptRequest{Verdict: "pass", Evidence: []string{"gate cleared"}}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := testLoopService().Stop(loop.ID, true, "goal met"); err != nil {
+	if _, err := testLoopService().Stop(context.Background(), loop.ID, true, "goal met"); err != nil {
 		t.Fatal(err)
 	}
 	inPR, err := AdvancePhase(stateRoot, written.ID, "pr")

@@ -1,6 +1,8 @@
 package trace
 
 import (
+	"bufio"
+	"context"
 	"encoding/json"
 	tracecontract "issueops/internal/contract/trace"
 	"os"
@@ -176,6 +178,85 @@ func TestTraceAnalyzeInvalidJSONAndJSONLFallback(t *testing.T) {
 	}
 }
 
+func TestTraceAnalyzeJSONLCompleteness(t *testing.T) {
+	first := `{"event":"step_end","step":"first sentinel","ok":false}`
+	last := `{"event":"step_end","step":"last sentinel","ok":false}`
+	large := `{"padding":"` + strings.Repeat("x", bufio.MaxScanTokenSize) + `"}`
+	for _, tc := range []struct {
+		name     string
+		body     string
+		complete bool
+		warnings []string
+		patterns []string
+	}{
+		{"valid json", `{"failed_steps":1,"failed_step":"summary sentinel"}`, true, nil, []string{"summary sentinel"}},
+		{"valid jsonl", first + "\n" + last, true, nil, []string{"first sentinel failed 1 time(s)", "last sentinel failed 1 time(s)"}},
+		{"blank lines", "\n" + first + "\n \t\n" + last + "\n", true, nil, []string{"first sentinel failed 1 time(s)", "last sentinel failed 1 time(s)"}},
+		{"damaged middle", first + "\nprivate-input-marker\n" + last, false, []string{"invalid_jsonl_line"}, []string{"first sentinel failed 1 time(s)", "last sentinel failed 1 time(s)"}},
+		{"damaged first", "private-input-marker\n" + last, false, []string{"invalid_jsonl_line"}, []string{"last sentinel failed 1 time(s)"}},
+		{"damaged last", first + "\nprivate-input-marker", false, []string{"invalid_jsonl_line"}, []string{"first sentinel failed 1 time(s)"}},
+		{"damaged without findings", "private-input-marker\n{\"other\":true}", false, []string{"invalid_jsonl_line", "no_supported_trace_findings"}, nil},
+		{"damaged single json", `{"private-input-marker":`, false, []string{"invalid_json:invalid_jsonl_line", "no_supported_trace_findings"}, nil},
+		{"oversized middle", first + "\n" + large + "\n" + last, false, []string{"jsonl_scan_error"}, []string{"first sentinel failed 1 time(s)"}},
+		{"oversized first", large + "\n" + last, false, []string{"jsonl_scan_error", "no_supported_trace_findings"}, nil},
+		{"damage and scan error", first + "\nprivate-input-marker\n" + large + "\n" + last, false, []string{"invalid_jsonl_line", "jsonl_scan_error"}, []string{"first sentinel failed 1 time(s)"}},
+		{"repeated damage", first + "\nprivate-input-marker\nprivate-input-marker\n" + last, false, []string{"invalid_jsonl_line"}, []string{"first sentinel failed 1 time(s)", "last sentinel failed 1 time(s)"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Given
+			input := filepath.Join(t.TempDir(), "trace.jsonl")
+			if err := os.WriteFile(input, []byte(tc.body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			// When
+			result, err := TraceAnalyze(tracecontract.TraceAnalyzeRequest{Input: input})
+			// Then
+			if err != nil || !result.OK {
+				t.Fatalf("result=%+v err=%v", result, err)
+			}
+			if result.Complete != tc.complete {
+				t.Errorf("complete=%v want %v", result.Complete, tc.complete)
+			}
+			if len(result.Warnings) != len(tc.warnings) {
+				t.Errorf("warnings=%q want %q", result.Warnings, tc.warnings)
+			}
+			for _, warning := range tc.warnings {
+				if !containsString(result.Warnings, warning) {
+					t.Errorf("missing warning %q in %q", warning, result.Warnings)
+				}
+			}
+			patterns := []string{}
+			for _, finding := range result.Findings {
+				patterns = append(patterns, finding.RecurringPattern)
+			}
+			if result.FindingCount != len(tc.patterns) {
+				t.Errorf("finding_count=%d want %d", result.FindingCount, len(tc.patterns))
+			}
+			for _, pattern := range tc.patterns {
+				if !containsString(patterns, pattern) {
+					t.Errorf("missing sentinel %q in %q", pattern, patterns)
+				}
+			}
+			encoded, err := json.Marshal(result)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var response struct {
+				Complete *bool `json:"complete"`
+			}
+			if err := json.Unmarshal(encoded, &response); err != nil {
+				t.Fatal(err)
+			}
+			if response.Complete == nil || *response.Complete != tc.complete {
+				t.Errorf("serialized completeness=%v want %v", response.Complete, tc.complete)
+			}
+			if strings.Contains(string(encoded), "private-input-marker") {
+				t.Errorf("response leaked malformed input: %s", encoded)
+			}
+		})
+	}
+}
+
 func TestTraceAnalyzeRedactsFailureCauseEvidence(t *testing.T) {
 	input := filepath.Join(t.TempDir(), "summary.json")
 	body := `{
@@ -210,7 +291,7 @@ func TestTraceAnalyzeRedactsFailureCauseEvidence(t *testing.T) {
 }
 func TestTraceAnalyzeReadsStateKey(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	if _, err := corestate.StateWrite("trace-fixture", `{"failed_steps":1,"failure_class":"intermittent","failed_step":"go test"}`); err != nil {
+	if _, err := corestate.StateWrite(context.Background(), "trace-fixture", `{"failed_steps":1,"failure_class":"intermittent","failed_step":"go test"}`); err != nil {
 		t.Fatal(err)
 	}
 	result, err := TraceAnalyze(tracecontract.TraceAnalyzeRequest{Input: "trace-fixture"})

@@ -15,7 +15,7 @@ func newBranchPreparer(root string) branchapp.Preparer {
 	environment := core.BranchPreparationEnvironment{RunGit: preflightadapter.GitCmd}
 	return branchapp.Preparer{
 		Records:               core.CycleRecordStore{StateRoot: root},
-		Authority:             cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same),
+		Authority:             cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()),
 		CleanParentPath:       environment.CleanParentPath,
 		ResolveBaseCommit:     environment.ResolveBaseCommit,
 		UmbrellaForChildIssue: newActiveCycleReader(root).UmbrellaForChildIssue,

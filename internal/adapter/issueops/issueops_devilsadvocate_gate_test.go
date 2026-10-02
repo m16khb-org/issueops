@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,7 +166,7 @@ func TestReviewPlanBindingDoesNotMaskBrokenLinkedPlanWithStagedContent(t *testin
 		t.Fatal(err)
 	}
 	record.PlanPath = "missing-reviewed-plan.md"
-	if _, err := WriteIssueOps(root, record); err != nil {
+	if _, err := WriteIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	_, err := RecordIssueOpsDevilsAdvocateReview(root, record.ID, issueops.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate"}})

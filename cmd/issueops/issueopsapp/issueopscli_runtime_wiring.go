@@ -17,7 +17,7 @@ import (
 // IssueOps CLI는 사이클 저장소 구현을 알지 않는다. 어댑터를 아는 곳은
 // composition root 하나뿐이다.
 func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
-	observer := issueOpsRecordObserver(os.Stderr)
+	observer := issueOpsCLIRecordObserver(os.Getenv("TRACEPARENT"), os.Stderr)
 	readiness := newCycleReadiness()
 	changes := newChangeReader()
 	artifacts := issueOpsArtifactHandlers(observer)

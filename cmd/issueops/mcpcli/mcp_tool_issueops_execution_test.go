@@ -11,6 +11,8 @@ import (
 
 	"issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/port"
+	basesyncport "issueops/internal/port/issueopsbasesync"
 )
 
 func TestMCPExecutionDependenciesPropagatePublicationReconcileWithoutInvocation(t *testing.T) {
@@ -29,6 +31,27 @@ func TestMCPExecutionDependenciesPropagatePublicationReconcileWithoutInvocation(
 	}
 	if invoked != 0 {
 		t.Fatalf("publication reconcile handler invoked during propagation: %d", invoked)
+	}
+}
+
+type recordingBaseSync struct{ basesyncport.Inspector }
+
+func TestMCPExecutionDependenciesMatchEveryCoreActionDependency(t *testing.T) {
+	core := reflect.TypeFor[port.ExecutionActionDependencies]()
+	mcp := reflect.TypeFor[MCPDependencies]()
+	for field := range core.Fields() {
+		if field.Name == "RemoteReconcile" {
+			continue
+		}
+		matching, ok := mcp.FieldByName(field.Name)
+		if !ok || matching.Type != field.Type {
+			t.Errorf("MCPDependencies lacks core action dependency %s %s", field.Name, field.Type)
+		}
+	}
+	inspector := &recordingBaseSync{}
+	deps := issueOpsExecutionActionDependencies(MCPDependencies{BaseSync: inspector})
+	if deps.BaseSync != inspector {
+		t.Fatalf("base sync inspector was not propagated: %#v", deps.BaseSync)
 	}
 }
 
@@ -122,7 +145,7 @@ func publicationReconcileMCPRecord(t *testing.T, stateRoot string) (issueopscont
 		CreatedAt: "2026-08-01T00:00:00Z",
 		UpdatedAt: "2026-08-01T00:00:00Z",
 	}
-	written, err := issueops.WriteIssueOps(stateRoot, record)
+	written, err := issueops.WriteIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

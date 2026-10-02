@@ -385,9 +385,9 @@ func TestReseedServiceOrdersPrepareCommitAndBestEffortCleanup(t *testing.T) {
 			return context.DeadlineExceeded
 		}},
 		fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)},
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", leasedomain.ProcessReceipt{PID: 1, StartedAt: "start", Executable: "codex"}, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 	result, err := service.Reseed(context.Background(), ReseedRequest{ID: record.ID, ExpectedGeneration: 3, Actor: reseedTestActor(), Ancestry: []leasedomain.ProcessReceipt{{PID: 1, StartedAt: "start", Executable: "codex"}}, CWD: "/worktree", InventoryFingerprint: "current", Confirm: true})
@@ -473,9 +473,9 @@ func TestReseedServicePersistsSettledHolderlessRuntimeRollover(t *testing.T) {
 			return ReseedArtifactReceipt{TokenSHA256: strings.Repeat("d", 64)}, nil
 		}, cleanup: func(context.Context, leasecontract.Record) error { return nil }},
 		fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)},
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", leasedomain.ProcessReceipt{PID: 1, StartedAt: "start", Executable: "codex"}, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 	if _, err := service.Reseed(context.Background(), reseedServiceRequest(record.ID)); err != nil {
@@ -513,9 +513,9 @@ func TestReseedServiceRejectsChangedOwnerEvidenceFingerprintBeforePrepare(t *tes
 			return ReseedArtifactReceipt{}, nil
 		}, cleanup: func(context.Context, leasecontract.Record) error { return nil }},
 		fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)},
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", leasedomain.ProcessReceipt{PID: 1, StartedAt: "start", Executable: "codex"}, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 	request := reseedServiceRequest(record.ID)
@@ -555,9 +555,9 @@ func TestReseedServiceRejectsUnsettledRolloverAfterFingerprintMatch(t *testing.T
 			return ReseedArtifactReceipt{}, nil
 		}, cleanup: func(context.Context, leasecontract.Record) error { return nil }},
 		fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)},
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", leasedomain.ProcessReceipt{PID: 1, StartedAt: "start", Executable: "codex"}, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 	if _, err := service.Reseed(context.Background(), reseedServiceRequest(record.ID)); err == nil || !strings.Contains(err.Error(), "resume_runtime_identity") {
@@ -819,17 +819,17 @@ func newReseedServiceForTest(fence ReseedFence, repository ReseedRepository, art
 		return ReseedInventoryReceipt{Fingerprint: "current", Inventory: inventory}, nil
 	}), baseSyncInspectorFunc(func(context.Context, basesyncport.Request) (basesyncport.Receipt, error) {
 		return basesyncport.Receipt{}, nil
-	}), artifacts, fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)}, func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+	}), artifacts, fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)}, leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		return "live", leasedomain.ProcessReceipt{PID: 1, StartedAt: "start", Executable: "codex"}, nil
-	}, reseedPathMatcher{})
+	}), reseedPathMatcher{})
 }
 
 func newReseedServiceForTestWithBaseSync(fence ReseedFence, repository ReseedRepository, artifacts ReseedArtifacts, baseSync basesyncport.Inspector) *ReseedService {
 	return NewReseedService(fence, repository, reseedInventoryFunc(func(context.Context, leasecontract.Record, leasedomain.Actor) (ReseedInventoryReceipt, error) {
 		return ReseedInventoryReceipt{Fingerprint: "current"}, nil
-	}), baseSync, artifacts, fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)}, func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+	}), baseSync, artifacts, fixedClock{now: time.Date(2026, 7, 30, 9, 0, 0, 0, time.UTC)}, leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		return "live", leasedomain.ProcessReceipt{PID: 1, StartedAt: "start", Executable: "codex"}, nil
-	}, reseedPathMatcher{})
+	}), reseedPathMatcher{})
 }
 
 func reseedServiceRequest(id string) ReseedRequest {

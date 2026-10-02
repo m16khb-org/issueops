@@ -132,7 +132,7 @@ func (store Store) Update(
 		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	result := issueopscontract.IssueOpsRecord{OK: false, ID: id}
-	err = database.WithSpan(store.observe(ctx, "update"), func(spanContext context.Context) error {
+	err = database.WithSpan(store.ObserveSpans(ctx, "update"), func(spanContext context.Context) error {
 		record, err := readLocked(spanContext, database, id)
 		if err != nil {
 			return err
@@ -149,7 +149,7 @@ func (store Store) Update(
 		if err != nil {
 			return err
 		}
-		return database.Put(bucket, id, data)
+		return database.Apply(spanContext, []port.RecordMutation{{Bucket: bucket, ID: id, Data: data}})
 	})
 	if err != nil {
 		result.OK = false
@@ -171,7 +171,7 @@ func (store Store) UpdateRelated(
 		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	result := issueopscontract.IssueOpsRecord{OK: false, ID: id}
-	err = database.WithSpan(store.observe(ctx, "related_update"), func(spanContext context.Context) error {
+	err = database.WithSpan(store.ObserveSpans(ctx, "related_update"), func(spanContext context.Context) error {
 		record, err := readLocked(spanContext, database, id)
 		if err != nil {
 			return err
@@ -184,11 +184,11 @@ func (store Store) UpdateRelated(
 		if err != nil {
 			return err
 		}
+		mutation := port.RecordMutation{Bucket: relatedBucket, ID: id, Data: data}
 		if remove {
-			err = database.Delete(relatedBucket, id)
-		} else {
-			err = database.Put(relatedBucket, id, data)
+			mutation = port.RecordMutation{Bucket: relatedBucket, ID: id, Delete: true}
 		}
+		err = database.Apply(spanContext, []port.RecordMutation{mutation})
 		if err == nil {
 			result = record
 		}
@@ -246,7 +246,7 @@ func (store Store) Delete(
 	// 삭제는 update/related-update span과 같은 직렬화 게이트를 지나야 한다.
 	// 게이트 밖에서 커밋하면 열려 있는 span이 그 뒤에 related row를 되살려,
 	// 레코드는 사라졌는데 related state만 남는 고아가 생긴다.
-	return database.WithSpan(store.observe(ctx, "delete"), func(spanContext context.Context) error {
+	return database.WithSpan(store.ObserveSpans(ctx, "delete"), func(spanContext context.Context) error {
 		raw, found, err := database.Get(bucket, id)
 		if err != nil {
 			return err
@@ -297,7 +297,7 @@ func (store Store) DeleteIfUnchanged(
 	mutations = append(mutations, port.RecordMutation{Bucket: bucket, ID: id, Delete: true})
 	// DeleteIfUnchanged도 같은 게이트를 지난다. CAS는 레코드 drift만 막고
 	// 열려 있는 span의 related Put과는 순서를 맺지 못한다.
-	return database.WithSpan(store.observe(ctx, "retention_delete"), func(spanContext context.Context) error {
+	return database.WithSpan(store.ObserveSpans(ctx, "retention_delete"), func(spanContext context.Context) error {
 		return database.CompareAndApply(
 			spanContext,
 			[]port.ExpectedRecord{{Bucket: bucket, ID: id, Data: expectedData}},

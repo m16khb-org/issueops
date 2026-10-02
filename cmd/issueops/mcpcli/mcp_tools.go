@@ -21,6 +21,7 @@ import (
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
 	workerapp "issueops/internal/application/worker"
+	authoritycontract "issueops/internal/contract/authority"
 	executionissue "issueops/internal/contract/executionissue"
 	inspectmodel "issueops/internal/contract/inspect"
 	issueopscontract "issueops/internal/contract/issueops"
@@ -29,6 +30,8 @@ import (
 	webfetchmodel "issueops/internal/contract/webfetch"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"issueops/internal/port"
+	authorityport "issueops/internal/port/authority"
+	basesyncport "issueops/internal/port/issueopsbasesync"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
 
@@ -51,7 +54,7 @@ type MCPToolOutcome struct {
 type MCPDependencies struct {
 	APIDoc        apidocapp.Service
 	DefaultTarget string
-	Inspect       func(string) any
+	Inspect       func(repo, hostReceipts string) any
 	Preflight     preflightapp.Service
 	Skills        func(string, string) []inspectmodel.SkillInfo
 	Compatibility func() any
@@ -79,6 +82,7 @@ type MCPDependencies struct {
 	Prepare          issueopscontract.ExecutionPrepareHandler
 	Orca             port.ExecutionOrcaProvisioner
 	OrcaOwner        port.ExecutionOrcaOwnerInspector
+	BaseSync         basesyncport.Inspector
 	ReadIssue        executionissue.ExecutionIssueSnapshotReadFunc
 	Claim            issueopscontract.ExecutionClaimHandler
 	Release          issueopscontract.ExecutionReleaseHandler
@@ -90,6 +94,16 @@ type MCPDependencies struct {
 	Complete         issueopscontract.ExecutionCompleteHandler
 	Publication      PublicationHandlers
 	Provenance       provenanceport.Observer
+
+	// Request authority: RequestScope -> Credentials.Read -> BindAuthority ->
+	// ForRequest -> dispatch. ForRequest returns a per-request copy whose Caller
+	// is the verified identity; server-scoped dependencies leave Caller nil.
+	RequestScope  func(context.Context, string, map[string]any) (authoritycontract.Scope, error)
+	Credentials   authorityport.CredentialFiles
+	BindAuthority func(context.Context, authoritycontract.Use) (context.Context, issueopscontract.VerifiedActor, error)
+	ForRequest    func(context.Context, authoritycontract.Scope, issueopscontract.VerifiedActor) (context.Context, MCPDependencies, error)
+	BindTrace     func(context.Context, string) (context.Context, bool)
+	Caller        *issueopscontract.VerifiedActor
 }
 
 func mcpToolPayload(payload any) MCPToolOutcome {

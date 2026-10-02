@@ -12,9 +12,11 @@ import (
 func newHookConfig() hookcatalog.Config {
 	target := resolveTarget("")
 	service := app.CatalogService{
-		Discover:       projectdoc.DiscoverProjectDocs,
-		FormatCompact:  projectdoc.FormatProjectDocCatalog,
-		FormatUserView: renderer.RenderProjectDocCatalogUserView,
+		DiscoverReport:        projectdoc.DiscoverProjectDocsReport,
+		FormatCompact:         projectdoc.FormatProjectDocCatalog,
+		FormatUserView:        renderer.RenderProjectDocCatalogUserView,
+		FormatCompactOmission: projectdoc.FormatProjectDocCatalogOmissions,
+		FormatUserOmission:    renderer.RenderProjectDocCatalogOmissions,
 	}
 	return hookcatalog.Config{
 		ResolveTarget: func(string) string { return target },

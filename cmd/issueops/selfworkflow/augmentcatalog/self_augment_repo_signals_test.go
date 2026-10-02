@@ -110,9 +110,9 @@ func TestStateWriteLockingIsSatisfiedByLockedStateWrite(t *testing.T) {
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "application", "state", "service.go"), `package state
 
-func (service *Service) Write(key, content string) (StateResult, error) {
-	err := store.WithSpan(context.Background(), func(context.Context) error {
-		_, err := service.writeRecord(store, dir, key, record)
+func (service *Service) Write(ctx context.Context, key, content string) (StateResult, error) {
+	err := store.WithSpan(ctx, func(spanCtx context.Context) error {
+		_, err := service.writeRecord(spanCtx, store, dir, key, record)
 		return err
 	})
 	return result, err
@@ -120,8 +120,8 @@ func (service *Service) Write(key, content string) (StateResult, error) {
 `)
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "outbound", "state", "state_io.go"), `package state
 
-func StateWrite(key, content string) (StateResult, error) {
-	return service().Write(key, content)
+func StateWrite(ctx context.Context, key, content string) (StateResult, error) {
+	return service().Write(ctx, key, content)
 }
 `)
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "outbound", "state", "state_test.go"), `package state
@@ -145,7 +145,7 @@ func TestWorkerStuckRunningDetectionIsSatisfiedByCoreAndCLI(t *testing.T) {
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "application", "worker", "service.go"), `package worker
 
-func (service Service) DetectStuck() (WorkerListResult, error) {
+func (service Service) DetectStuck(ctx context.Context) (WorkerListResult, error) {
 	current.SafetyNotice = "worker job was stuck in running status with dead PID; auto-marked as failed"
 	return result, nil
 }

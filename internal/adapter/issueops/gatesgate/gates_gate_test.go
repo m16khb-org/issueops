@@ -1,6 +1,7 @@
 package gatesgate
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -87,7 +88,7 @@ func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 		ProjectDocsReview: &issueopscontract.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedDocs: []string{".issueops/CAUTIONS.md"}},
 	}
 	record.AISlopCleanFingerprint = testChangeReader().ChangeFingerprint(record)
-	if _, err := issueops.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}
 	return record
@@ -154,7 +155,7 @@ func TestStrictPRReadinessBlocksOnEvidencePendingOnly(t *testing.T) {
 func TestAdvancePhaseGuardsPRWithGates(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := readyGatesGateRecord(t)
-	if _, err := issueops.WriteIssueOps(issueOpsStateRootForTest(), func() issueopscontract.IssueOpsRecord {
+	if _, err := issueops.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), func() issueopscontract.IssueOpsRecord {
 		regressed := record
 		regressed.Phase = issueopscontract.IssueOpsPhaseImplement
 		return regressed
@@ -175,7 +176,7 @@ func TestAdvancePhaseGuardsPRWithGates(t *testing.T) {
 		regressed.Phase = issueopscontract.IssueOpsPhaseImplement
 		return regressed
 	}()
-	if _, err := issueops.WriteIssueOps(stateRoot, blockRecord); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, blockRecord); err != nil {
 		t.Fatal(err)
 	}
 	writeGatesLedger(t, record.Repo, "- [ ] G1: blocked\n  EVIDENCE: pending\n")

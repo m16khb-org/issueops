@@ -1,7 +1,9 @@
 package qualitycli
 
 import (
+	"context"
 	statestore "issueops/internal/adapter/outbound/state"
+	statecontract "issueops/internal/contract/state"
 
 	"testing"
 )
@@ -17,7 +19,9 @@ func configureTestStateStore(t *testing.T) {
 	t.Helper()
 	deps := hostDeps
 	deps.StateRead = statestore.StateRead
-	deps.StateWrite = statestore.StateWrite
+	deps.StateWrite = func(key, content string) (statecontract.StateResult, error) {
+		return statestore.StateWrite(context.Background(), key, content)
+	}
 	Configure(deps)
 	t.Cleanup(Reset)
 }

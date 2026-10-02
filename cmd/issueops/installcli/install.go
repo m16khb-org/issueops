@@ -22,6 +22,7 @@ func (c Command) runInstall(args []string) error {
 	pathMode := fs.String("path-mode", "auto", "manage ~/.local/bin PATH setup: auto, manual, or skip")
 	interactive := fs.Bool("interactive", false, "ask for install choices before applying the plan")
 	adoptCommandFile := fs.Bool("adopt-command-file", false, "replace an existing managed issueops command file with rollback protection")
+	mcpTransportFlag := fs.String("mcp-transport", "", "Codex/Claude/Omo MCP transport: http (shared service) or stdio; default http on darwin/linux")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -49,6 +50,10 @@ func (c Command) runInstall(args []string) error {
 	if !validInstallPathMode(*pathMode) {
 		return fmt.Errorf("invalid --path-mode %q: expected auto, manual, or skip", *pathMode)
 	}
+	mcpTransport, err := c.resolveMCPTransport(*mcpTransportFlag)
+	if err != nil {
+		return err
+	}
 	root := c.IssueOpsRoot()
 	if c.NativeInstallRequest == nil || c.InstallNative == nil {
 		return fmt.Errorf("native installer is not configured")
@@ -72,6 +77,9 @@ func (c Command) runInstall(args []string) error {
 	}
 	if c.ActivationReadback == nil {
 		return fmt.Errorf("native activation readback is not configured")
+	}
+	if err := c.applyMCPTransport(context.Background(), &req, mcpTransport, activationStep); err != nil {
+		return err
 	}
 	readback := c.ActivationReadback(req)
 	activationService := activationapp.NewService(c.ActivationBackend, readback)

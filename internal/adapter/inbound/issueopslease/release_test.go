@@ -45,9 +45,9 @@ func TestReleaseHandlerReturnsCommittedProjectionWithoutStatusReadback(t *testin
 	service := leaseapp.NewReleaseService(
 		repository,
 		fixedClock{at: time.Date(2026, 7, 29, 0, 3, 0, 0, time.UTC)},
-		func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", receipt, nil
-		},
+		}),
 		leaseadapter.FilesystemPathMatcher{},
 	)
 	handler := NewReleaseHandler(service)
@@ -103,9 +103,9 @@ func TestReleaseHandlerPreservesNotPreparedCompatibilityText(t *testing.T) {
 	service := leaseapp.NewReleaseService(
 		repository,
 		fixedClock{at: time.Date(2026, 7, 29, 0, 3, 0, 0, time.UTC)},
-		func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", receipt, nil
-		},
+		}),
 		leaseadapter.FilesystemPathMatcher{},
 	)
 	_, err = NewReleaseHandler(service)(context.Background(), "/unused", issueopscontract.ExecutionReleaseRequest{
@@ -118,7 +118,9 @@ func TestReleaseHandlerPreservesNotPreparedCompatibilityText(t *testing.T) {
 }
 
 func TestReleaseHandlerPreservesLegacyNativeActorValidationText(t *testing.T) {
-	handler := NewReleaseHandler(leaseapp.NewReleaseService(nil, nil, nil, nil))
+	handler := NewReleaseHandler(leaseapp.NewReleaseService(nil, nil, leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		return "live", receipt, nil
+	}), nil))
 	for _, tc := range []struct {
 		name  string
 		actor issueopscontract.NativeActor
@@ -168,9 +170,9 @@ func TestReleaseHandlerPreservesLegacyContractAndPersistenceText(t *testing.T) {
 			service := leaseapp.NewReleaseService(
 				releaseErrorRepository{err: tc.err},
 				fixedClock{at: time.Date(2026, 7, 29, 0, 3, 0, 0, time.UTC)},
-				func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+				leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 					return "live", receipt, nil
-				},
+				}),
 				leaseadapter.FilesystemPathMatcher{},
 			)
 			_, err := NewReleaseHandler(service)(context.Background(), "/unused", issueopscontract.ExecutionReleaseRequest{

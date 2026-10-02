@@ -16,9 +16,9 @@ import (
 
 	"issueops/internal/adapter/outbound/processlease"
 	basesyncapp "issueops/internal/application/issueopsbasesync"
-	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	basesyncdomain "issueops/internal/domain/issueopsbasesync"
+	authorityport "issueops/internal/port/authority"
 )
 
 // execution sync-base는 completion 이후에도 남는 typed 충돌 해소 표면이다
@@ -58,6 +58,18 @@ type executionSyncBaseInventory struct {
 // ODB에만 객체를 쓴다), 변형 3모드는 활성 holder 또는 generation이 일치하는
 // released current completion의 권위를 요구한다.
 func SyncExecutionBase(ctx context.Context, stateRoot string, req issueops.ExecutionSyncBaseRequest, deps issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+	return syncExecutionBase(ctx, stateRoot, req, deps, NativeActorVerifier())
+}
+
+// VerifiedSyncExecutionBase binds sync-base to the composed actor verifier so a
+// request-bound capability proves the caller instead of server ancestry.
+func VerifiedSyncExecutionBase(verifier authorityport.ActorVerifier) func(context.Context, string, issueops.ExecutionSyncBaseRequest, issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+	return func(ctx context.Context, stateRoot string, req issueops.ExecutionSyncBaseRequest, deps issueops.ExecutionSyncBaseDeps) (issueops.ExecutionSyncBaseResult, error) {
+		return syncExecutionBase(ctx, stateRoot, req, deps, verifier)
+	}
+}
+
+func syncExecutionBase(ctx context.Context, stateRoot string, req issueops.ExecutionSyncBaseRequest, deps issueops.ExecutionSyncBaseDeps, verifier authorityport.ActorVerifier) (issueops.ExecutionSyncBaseResult, error) {
 	if deps.Git == nil {
 		deps.Git = defaultExecutionSyncBaseGit
 	}
@@ -81,11 +93,12 @@ func SyncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 	// 요구하지 않는다. 변형 3모드만 live process receipt까지 정규화한다.
 	var actor issueops.NativeActor
 	if mutating {
-		actor, err = cycleapp.NormalizeNativeActor(req.Actor, inspectNativeProcessReceipt)
-		if err != nil {
+		verified, verifyErr := verifier.Verify(ctx, req.Actor)
+		if verifyErr != nil {
 			result.OK = false
-			return result, err
+			return result, verifyErr
 		}
+		actor = verified.Identity
 	}
 	inventory, missing := executionSyncBaseGates(ctx, record, req, mode, actor, deps, &result)
 	result.Missing = missing
@@ -457,7 +470,7 @@ func (e *executionSyncBasePushEffects) AppendEvent(ctx context.Context, id strin
 // Completion.FinalHead는 여기서도 다른 어디서도 건드리지 않는다 — 완결 시점
 // 증거를 보존하고 merge OID는 이벤트가 담당한다는 정책이다(design-review F9).
 func appendExecutionSyncBaseEvent(ctx context.Context, stateRoot, id string, event issueops.ExecutionSyncBaseEvent) error {
-	return withIssueOpsLock(ctx, stateRoot, id, func(context.Context) error {
+	return withIssueOpsLock(ctx, stateRoot, id, func(spanCtx context.Context) error {
 		rec, err := ReadIssueOps(stateRoot, id)
 		if err != nil {
 			return err
@@ -468,14 +481,14 @@ func appendExecutionSyncBaseEvent(ctx context.Context, stateRoot, id string, eve
 		rec.Execution.SyncBaseEvents = append(rec.Execution.SyncBaseEvents, event)
 		rec.Execution.SyncBaseResolution = nil
 		rec.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-		_, err = writeIssueOps(stateRoot, rec)
+		_, err = writeIssueOps(spanCtx, stateRoot, rec)
 		return err
 	})
 }
 
 func startExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string, actor issueops.NativeActor,
 	inventory executionSyncBaseInventory, conflictFiles []string) error {
-	return withIssueOpsLock(ctx, stateRoot, id, func(context.Context) error {
+	return withIssueOpsLock(ctx, stateRoot, id, func(spanCtx context.Context) error {
 		record, err := ReadIssueOps(stateRoot, id)
 		if err != nil {
 			return err
@@ -491,13 +504,13 @@ func startExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string,
 			ConflictFiles: append([]string(nil), conflictFiles...), StartedAt: time.Now().UTC().Format(time.RFC3339Nano),
 		}
 		record.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-		_, err = writeIssueOps(stateRoot, record)
+		_, err = writeIssueOps(spanCtx, stateRoot, record)
 		return err
 	})
 }
 
 func clearExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string) error {
-	return withIssueOpsLock(ctx, stateRoot, id, func(context.Context) error {
+	return withIssueOpsLock(ctx, stateRoot, id, func(spanCtx context.Context) error {
 		record, err := ReadIssueOps(stateRoot, id)
 		if err != nil {
 			return err
@@ -507,7 +520,7 @@ func clearExecutionSyncBaseResolution(ctx context.Context, stateRoot, id string)
 		}
 		record.Execution.SyncBaseResolution = nil
 		record.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-		_, err = writeIssueOps(stateRoot, record)
+		_, err = writeIssueOps(spanCtx, stateRoot, record)
 		return err
 	})
 }

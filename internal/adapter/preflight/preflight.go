@@ -12,25 +12,39 @@ func GitPreflight(target, issueOpsRoot string) preflightcontract.PreflightResult
 	return (preflightapp.Service{Observer: GitObserver{}}).Check(target, issueOpsRoot)
 }
 
-type GitObserver struct{}
+// GitObserver reads one preflight observation. Run defaults to GitCmd.
+type GitObserver struct {
+	Run func(dir string, args ...string) (int, string, string)
+}
 
-func (GitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation {
-	code, root, stderr := GitCmd(target, "rev-parse", "--show-toplevel")
+func (observer GitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation {
+	run := observer.Run
+	if run == nil {
+		run = GitCmd
+	}
+	out := func(dir string, args ...string) string {
+		code, stdout, _ := run(dir, args...)
+		if code != 0 {
+			return ""
+		}
+		return strings.TrimSpace(stdout)
+	}
+	code, root, stderr := run(target, "rev-parse", "--show-toplevel")
 	if code != 0 {
 		return preflightapp.Observation{ErrorDetail: stderr}
 	}
 	root = strings.TrimSpace(root)
-	branch := GitOut(root, "branch", "--show-current")
-	head := GitOut(root, "rev-parse", "--short", "HEAD")
-	up := GitOut(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
+	branch := out(root, "branch", "--show-current")
+	head := out(root, "rev-parse", "--short", "HEAD")
+	up := out(root, "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}")
 	var upstream *string
 	if up != "" {
 		upstream = &up
 	}
-	status := splitLines(GitOut(root, "status", "--porcelain=v1", "--branch"))
+	status := splitLines(out(root, "status", "--porcelain=v1", "--branch"))
 	var ahead, behind *int
 	if up != "" {
-		counts := strings.Fields(GitOut(root, "rev-list", "--left-right", "--count", up+"...HEAD"))
+		counts := strings.Fields(out(root, "rev-list", "--left-right", "--count", up+"...HEAD"))
 		if len(counts) >= 2 {
 			b := atoi(counts[0])
 			a := atoi(counts[1])
@@ -38,6 +52,7 @@ func (GitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation
 			ahead = &a
 		}
 	}
+	history := parseHistory(out(root, historyArgs...))
 	return preflightapp.Observation{
 		GitOK:            true,
 		RepoRoot:         root,
@@ -47,11 +62,11 @@ func (GitObserver) Observe(target, issueOpsRoot string) preflightapp.Observation
 		Ahead:            ahead,
 		Behind:           behind,
 		StatusLines:      status,
-		Remotes:          listRemotes(root),
-		LastCommit:       GitOut(root, "log", "-1", "--pretty=format:%h %s"),
-		RecentCommits:    recentCommits(root, 5),
-		StyleCommits:     recentCommits(root, 10),
-		CommitBodies:     strings.Split(GitOut(root, "log", "-10", "--pretty=format:%B%x1e"), "\x1e"),
+		Remotes:          listRemotes(out, root),
+		LastCommit:       history.last(),
+		RecentCommits:    history.commits(5),
+		StyleCommits:     history.commits(10),
+		CommitBodies:     history.bodies(),
 		CommitPolicyPath: filepath.Join(issueOpsRoot, ".issueops", "COMMIT_POLICY.md"),
 	}
 }

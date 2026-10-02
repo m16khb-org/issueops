@@ -1,6 +1,8 @@
 package status
 
 import (
+	"context"
+
 	selfaugmentapp "issueops/internal/application/selfaugment"
 	daemoncontract "issueops/internal/contract/daemon"
 	doctorcontract "issueops/internal/contract/doctor"
@@ -45,7 +47,7 @@ func (service Service) Run(repo string) statuscontract.Result {
 			StateDir: func() string { return state.StateDir },
 			List:     func() (statecontract.StateListResult, error) { return state, nil },
 			Read:     service.StateRead,
-		}).History("", 1, selfaugmentcontract.SelfAugmentHistoryRetentionOptions{})
+		}).History(context.Background(), "", 1, selfaugmentcontract.SelfAugmentHistoryRetentionOptions{})
 		if err != nil {
 			facts.SelfVerifyReadFailed = true
 			facts.SelfVerifyWarnings = append(facts.SelfVerifyWarnings, err.Error())

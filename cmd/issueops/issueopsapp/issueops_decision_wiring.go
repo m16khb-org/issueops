@@ -17,6 +17,7 @@ func issueOpsDecisionHandlers(
 		},
 		issueopsdecisionoutbound.SystemClock{},
 		issueopsauthorizationoutbound.CanonicalPaths{},
+		issueOpsActorVerifier(),
 	)
 	return issueopsdecisioninbound.NewHandlers(service)
 }

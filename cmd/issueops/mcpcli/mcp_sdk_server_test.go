@@ -16,7 +16,7 @@ import (
 )
 
 func TestSDKToolHandlerDispatchesCatalogTool(t *testing.T) {
-	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
+	handler := sdkToolHandlerWithContext(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
 	result, err := handler(context.Background(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)},
 	})
@@ -46,7 +46,7 @@ func TestSDKDirectContentPreservesTextAndError(t *testing.T) {
 				}
 				server := initSDKServer(MCPDependencies{})
 				server.AddTool(&mcp.Tool{Name: "commit_policy", InputSchema: map[string]any{"type": "object"}},
-					sdkToolHandler(testMCPCatalog(), func(MCPToolCall) MCPToolOutcome {
+					sdkToolHandlerWithContext(testMCPCatalog(), func(context.Context, MCPToolCall) MCPToolOutcome {
 						return mcpToolDirect(map[string]any{"content": content, "isError": isError})
 					}, "commit_policy"))
 				serverTransport, clientTransport := mcp.NewInMemoryTransports()
@@ -84,7 +84,7 @@ func TestSDKCommitPolicyReturnsExactResourceText(t *testing.T) {
 }
 
 func TestSDKToolHandlerRejectsInvalidRawArguments(t *testing.T) {
-	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
+	handler := sdkToolHandlerWithContext(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
 	_, err := handler(context.Background(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{not json`)},
 	})
@@ -218,7 +218,7 @@ func TestSDKServerHandshakeOmitsLoggingAndKeepsCatalogCapabilities(t *testing.T)
 		&mcp.Implementation{Name: "issueops_test", Version: "0"},
 		sdkServerOptions(),
 	)
-	registerAllTools(server, testTransportServices())
+	registerAllTools(server, testTransportServices(), transportStdio, nil)
 	registerAllResources(server, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest()})
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "0"}, nil)
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()

@@ -1,6 +1,7 @@
 package selfverify
 
 import (
+	"encoding/json"
 	cause "issueops/internal/contract/failurecause"
 	augment "issueops/internal/contract/selfaugment"
 	verify "issueops/internal/contract/selfverify"
@@ -8,6 +9,43 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestSummaryCarriesReusedMarkersWithoutLosingCoverage(t *testing.T) {
+	// Given
+	var input augment.SelfAugmentResult
+	if err := json.Unmarshal([]byte(`{"ok":true,"runs":[{"iteration":1,"seed":123,"steps":[
+		{"label":"go test","ok":true,"duration_ms":137},
+		{"label":"go test","ok":true,"duration_ms":0,"reused":true},
+		{"label":"contract golden tests","ok":true,"duration_ms":0,"reused":true}
+	]}]}`), &input); err != nil {
+		t.Fatal(err)
+	}
+
+	// When
+	summary := SummarizeSelfVerification(input, 95)
+
+	// Then
+	if summary.TotalSteps != 3 || summary.PassedSteps != 3 || len(summary.SlowestSteps) != 1 || summary.SlowestSteps[0].DurationMS != 137 {
+		t.Errorf("reuse evidence was lost or timed: %+v", summary)
+	}
+	data, err := json.Marshal(summary.StepDurationStats)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stats []struct {
+		Label         string `json:"label"`
+		Count         int    `json:"count"`
+		ReusedCount   int    `json:"reused_count"`
+		P95DurationMS int64  `json:"p95_duration_ms"`
+	}
+	if err := json.Unmarshal(data, &stats); err != nil {
+		t.Fatal(err)
+	}
+	if len(stats) != 2 || stats[0].Label != "contract golden tests" || stats[0].Count != 0 || stats[0].ReusedCount != 1 ||
+		stats[1].Label != "go test" || stats[1].Count != 1 || stats[1].ReusedCount != 1 || stats[1].P95DurationMS != 137 {
+		t.Fatalf("summary stats = %s", data)
+	}
+}
 
 func TestSummaryComposesCoverageFailureEvidenceAndRecoveryHints(t *testing.T) {
 	steps := []verify.StepResult{}

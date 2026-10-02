@@ -52,7 +52,10 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 		req.DryRun,
 	))
 
-	if req.ProjectLocal {
+	if req.ProjectLocal && req.MCPTransport == mcpTransportHTTP {
+		plan.File(installer.removeOmoProjectMCP(filepath.Join(req.Root, ".omo", "mcp.json"), req.DryRun))
+		plan.Message("project-local Omo MCP uses the user-scope issueops HTTP entry; no project entry or secret is written")
+	} else if req.ProjectLocal {
 		plan.File(installer.writeOmoProjectMCP(
 			filepath.Join(req.Root, ".omo", "mcp.json"),
 			"omo_project_mcp_config",

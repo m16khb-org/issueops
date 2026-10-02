@@ -1,6 +1,7 @@
 package historycompare
 
 import (
+	"context"
 	"testing"
 
 	statestore "issueops/internal/adapter/outbound/state"
@@ -54,7 +55,7 @@ func TestSelfAugmentHistory(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("write other snapshot: %v", err)
 	}
-	if _, err := statestore.StateWrite("self-verify-note", "not a summary"); err != nil {
+	if _, err := statestore.StateWrite(context.Background(), "self-verify-note", "not a summary"); err != nil {
 		t.Fatalf("write non-summary state: %v", err)
 	}
 

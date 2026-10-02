@@ -3,10 +3,10 @@ package issueopsreplacement
 import (
 	"context"
 	"fmt"
-	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
 	domain "issueops/internal/domain/issueops"
 	"issueops/internal/port"
+	authorityport "issueops/internal/port/authority"
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
 
@@ -20,15 +20,19 @@ type Service struct {
 	Artifacts        port.ReplacementArtifacts
 	BaseSync         basesyncport.Inspector
 	InspectProcess   func(issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error)
+	Verifier         authorityport.ActorVerifier
 	Now              func() string
 }
 
 func (s Service) Run(ctx context.Context, req issueops.ExecutionReplaceRequest) (issueops.ExecutionReplaceResult, error) {
-	actor, err := cycleapp.NormalizeNativeActor(req.Actor, s.InspectProcess)
+	if s.Verifier == nil {
+		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, fmt.Errorf("execution replace actor verifier is required")
+	}
+	verified, err := s.Verifier.Verify(ctx, req.Actor)
 	if err != nil {
 		return issueops.ExecutionReplaceResult{OK: false, ID: req.ID, Action: req.Action}, err
 	}
-	req.Actor = actor
+	req.Actor = verified.Identity
 	switch req.Action {
 	case issueops.ExecutionReplacePreview:
 		return s.previewExecutionReplacement(ctx, req)
@@ -137,7 +141,7 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 	var persisted issueops.IssueOpsRecord
 	var tokenPath string
 	var resealed issueops.ReplacementArtifacts
-	err := s.Records.WithinLock(ctx, req.ID, func() error {
+	err := s.Records.WithinLock(ctx, req.ID, func(spanCtx context.Context) error {
 		record, err := s.recordAtGeneration(req.ID, req.ExpectedGeneration)
 		if err != nil {
 			return err
@@ -167,7 +171,7 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 			}
 			previous := *lease.Holder
 			*lease = domain.RevokeReplacement(*lease, req.Reason, now)
-			persisted, err = s.Records.Persist(record, &previous)
+			persisted, err = s.Records.Persist(spanCtx, record, &previous)
 			return err
 		case issueops.ExecutionReplaceFinalize:
 			if lease.Status != issueops.LeaseStatusRevoking {
@@ -193,7 +197,7 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 			// 처음부터 다시 prepare해야 하며, 두 경로 모두 released에서 열린다.
 			if s.Artifacts.WorkspaceAbsent(record.Execution.Workspace.Root) {
 				*lease = domain.FinalizeReplacement(*lease, true, "")
-				persisted, err = s.Records.Persist(record, nil)
+				persisted, err = s.Records.Persist(spanCtx, record, nil)
 				return err
 			}
 			token, path, err := s.Artifacts.CreateToken(record)
@@ -210,7 +214,7 @@ func (s Service) mutateExecutionReplacement(ctx context.Context, req issueops.Ex
 			}
 			domain.SealReplacementOwner(record.Execution.Orca, lease.Generation, reseal)
 			resealed = reseal
-			persisted, err = s.Records.Persist(record, nil)
+			persisted, err = s.Records.Persist(spanCtx, record, nil)
 			if err != nil {
 				return s.cleanupFailure(record, err)
 			}

@@ -19,10 +19,10 @@ func newChildCreator(root string) app.ChildCreator {
 		Records: adapter.RemoteRecordStore{StateRoot: root},
 		Resolve: func(name string) (app.ChildProvider, error) { return provider.Resolve(name) },
 		Bodies:  app.NewTemplateBodyResolver(os.ReadFile),
-		Authorize: func(_ context.Context, id string, actor model.IssueOpsActor) error {
-			return adapter.ValidateIssueOpsMutationActor(root, id, actor)
+		Authorize: func(ctx context.Context, id string, actor model.IssueOpsActor) error {
+			return adapter.ValidateIssueOpsMutationActor(ctx, root, id, actor, issueOpsActorVerifier())
 		},
-		Intents:        &app.ChildCreateIntents{Store: adapter.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorization.CanonicalPaths{}.Same), Now: time.Now},
+		Intents:        &app.ChildCreateIntents{Store: adapter.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorization.CanonicalPaths{}.Same, issueOpsActorVerifier()), Now: time.Now},
 		NewOperationID: adapter.RemotePublicationObserver{}.NewOperationID,
 	}
 }

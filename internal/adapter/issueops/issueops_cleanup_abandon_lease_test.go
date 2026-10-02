@@ -57,7 +57,7 @@ func TestAbandonClaimableStillRespectsOrcaResidueGate(t *testing.T) {
 		OwnerHost: "claude", OwnerModel: "claude-opus-5-5", TerminalPTYID: "pty-140",
 		TaskID: "task-140", DispatchID: "dispatch-140",
 	}
-	if _, err := writeIssueOps(stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	inspector := &fakeOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{TaskLive: true, TaskStatus: "dispatched"}}
@@ -113,7 +113,7 @@ func abandonLeaseRecord(t *testing.T, status issueops.LeaseStatus) (string, issu
 		},
 		Lease: lease,
 	}
-	written, err := writeIssueOps(stateRoot, record)
+	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -33,7 +33,7 @@ func TestMCPAssistantServicesKeepCapturedRepositoryAndState(t *testing.T) {
 		if d.Resources.IssueOpsRoot != roots[i] || !strings.HasPrefix(d.Execution.IssueOpsStateRoot(), states[i]) {
 			t.Fatalf("instance %d root=%s state=%s", i, d.Resources.IssueOpsRoot, d.Execution.IssueOpsStateRoot())
 		}
-		info := d.Inspect("").(inspectmodel.InspectInfo)
+		info := d.Inspect("", "").(inspectmodel.InspectInfo)
 		if info.IssueOpsRoot != roots[i] || info.TargetRepo != roots[i] {
 			t.Fatalf("instance %d inspect=%+v", i, info)
 		}

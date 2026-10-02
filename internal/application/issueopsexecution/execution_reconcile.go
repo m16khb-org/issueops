@@ -17,10 +17,14 @@ func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.E
 	if req.Preview == req.Confirm {
 		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile requires exactly one of preview or confirm")
 	}
-	actor, err := cycleapp.NormalizeNativeActor(req.Actor, s.InspectProcess)
+	if s.Verifier == nil {
+		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, fmt.Errorf("execution reconcile actor verifier is required")
+	}
+	verified, err := s.Verifier.Verify(ctx, req.Actor)
 	if err != nil {
 		return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, err
 	}
+	actor := verified.Identity
 	req.Actor = actor
 	record, err := s.ReadRecord(stateRoot, req.ID)
 	if err != nil {
@@ -42,7 +46,7 @@ func (s Service) Reconcile(ctx context.Context, stateRoot string, req issueops.E
 			Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID, CWD: req.CWD,
 			NativeProcessAncestry: actor.ProcessAncestry,
 		}
-		if err := cycleapp.NewMutationAuthority(s.SamePath).Validate(record, &mutationActor); err != nil {
+		if err := cycleapp.NewMutationAuthority(s.SamePath, s.Verifier).Validate(ctx, record, &mutationActor); err != nil {
 			return issueops.ExecutionReconcileResult{OK: false, ID: req.ID}, err
 		}
 	}

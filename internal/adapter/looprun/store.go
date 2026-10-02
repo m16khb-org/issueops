@@ -1,6 +1,7 @@
 package looprun
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -8,6 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	loopruncontract "issueops/internal/contract/looprun"
+	"issueops/internal/port"
 	"strings"
 )
 
@@ -73,7 +75,7 @@ func decodeLoop(loopID string, data []byte) (loopruncontract.LoopRun, error) {
 	return loop, nil
 }
 
-func (store Store) Write(loop loopruncontract.LoopRun) (loopruncontract.LoopRun, error) {
+func (store Store) Write(ctx context.Context, loop loopruncontract.LoopRun) (loopruncontract.LoopRun, error) {
 	if _, err := normalizeLoopID(loop.ID); err != nil {
 		loop.OK = false
 		return loop, err
@@ -93,7 +95,7 @@ func (store Store) Write(loop loopruncontract.LoopRun) (loopruncontract.LoopRun,
 		loop.OK = false
 		return loop, err
 	}
-	if err := db.Put(loopBucket, loop.ID, data); err != nil {
+	if err := db.Apply(ctx, []port.RecordMutation{{Bucket: loopBucket, ID: loop.ID, Data: data}}); err != nil {
 		loop.OK = false
 		return loop, err
 	}

@@ -368,7 +368,7 @@ func reconcilePendingFixtureForHost(t *testing.T, failStage port.ExecutionOrcaIn
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/acme/repo/issues/194", Branch: branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true, CreatedAt: "2026-08-01T00:00:00Z"},
 		CreatedAt:     "2026-08-01T00:00:00Z", UpdatedAt: "2026-08-01T00:00:00Z",
 	}
-	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := stageIssueOpsArtifact(stateRoot, record.ID, "plan", []byte("# Reconcile plan\n")); err != nil {

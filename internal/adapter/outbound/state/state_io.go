@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"issueops/internal/adapter/outbound/sqlstore"
 	stateapplication "issueops/internal/application/state"
 	statecontract "issueops/internal/contract/state"
@@ -48,8 +49,8 @@ func service() *stateapplication.Service {
 	})
 }
 
-func StateWrite(key, content string) (statecontract.StateResult, error) {
-	return service().Write(key, content)
+func StateWrite(ctx context.Context, key, content string) (statecontract.StateResult, error) {
+	return service().Write(ctx, key, content)
 }
 
 func StateRead(key string) (statecontract.StateResult, error) {
@@ -60,10 +61,10 @@ func StateList() (statecontract.StateListResult, error) {
 	return service().List()
 }
 
-func WriteStateRecord(dir, key string, record statecontract.RecordEnvelope) (string, error) {
-	return service().WriteRecord(dir, key, record)
+func WriteStateRecord(ctx context.Context, dir, key string, record statecontract.RecordEnvelope) (string, error) {
+	return service().WriteRecord(ctx, dir, key, record)
 }
 
-func StateDelete(key string) error {
-	return service().Delete(key)
+func StateDelete(ctx context.Context, key string) error {
+	return service().Delete(ctx, key)
 }

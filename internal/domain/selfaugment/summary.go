@@ -9,6 +9,7 @@ import (
 type SummaryStep struct {
 	Label      string
 	OK         bool
+	Reused     bool
 	DurationMS int64
 }
 
@@ -28,6 +29,7 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugment
 	}
 	seenLabels := map[string]bool{}
 	durationsByLabel := map[string][]int64{}
+	reusedByLabel := map[string]int{}
 	for _, run := range runs {
 		for _, step := range run.Steps {
 			summary.TotalSteps++
@@ -44,6 +46,11 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugment
 			if !seenLabels[step.Label] {
 				seenLabels[step.Label] = true
 				summary.StepLabels = append(summary.StepLabels, step.Label)
+				durationsByLabel[step.Label] = nil
+			}
+			if step.Reused {
+				reusedByLabel[step.Label]++
+				continue
 			}
 			summary.SlowestSteps = append(summary.SlowestSteps, contract.SelfAugmentSlowStep{
 				Iteration: run.Iteration, Seed: run.Seed, Label: step.Label, DurationMS: step.DurationMS,
@@ -64,6 +71,9 @@ func SummarizeSteps(runs []SummaryRun, targetScore float64) contract.SelfAugment
 		summary.SlowestSteps = summary.SlowestSteps[:5]
 	}
 	summary.StepDurationStats = BuildStepDurationStats(durationsByLabel)
+	for i := range summary.StepDurationStats {
+		summary.StepDurationStats[i].ReusedCount = reusedByLabel[summary.StepDurationStats[i].Label]
+	}
 	return summary
 }
 

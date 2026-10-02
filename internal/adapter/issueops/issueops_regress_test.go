@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -25,7 +26,7 @@ func recordAtPhaseForRegressTest(t *testing.T, phase issueops.IssueOpsPhase) (st
 	rec.PhaseLedger = issueops.IssueOpsPhaseLedger{
 		issueops.IssueOpsPhasePlan: issueops.IssueOpsPhaseLedgerEntry{Phase: issueops.IssueOpsPhasePlan, CompletedAt: "2026-06-29T00:01:00Z", Artifacts: []string{"plan_path"}},
 	}
-	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
+	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatalf("seed write: %v", err)
 	}
 	return stateRoot, rec.ID
@@ -145,7 +146,7 @@ func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 		t.Fatal(err)
 	}
 	rec.DevilsAdvocateReview = nil
-	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
+	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := RegressIssueOpsForReplan(stateRoot, id, "reason"); err == nil || !strings.Contains(err.Error(), "stop verdict") {
@@ -159,7 +160,7 @@ func TestRegressIssueOpsForReplanRequiresReflectedStop(t *testing.T) {
 		t.Fatal(err)
 	}
 	rec2.DevilsAdvocateReview.IssueReflectedAt = ""
-	if _, err := touchAndWriteIssueOps(stateRoot2, rec2); err != nil {
+	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot2, rec2); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := RegressIssueOpsForReplan(stateRoot2, id2, "reason"); err == nil || !strings.Contains(err.Error(), "reflect the devil's-advocate findings") {
@@ -178,7 +179,7 @@ func TestRegressIssueOpsForReplanExplainsReviseRecovery(t *testing.T) {
 		Findings:   []string{"probe 경합의 openUntil은 선택값이어야 한다"},
 		RecordedAt: "2026-07-29T00:00:00Z",
 	}
-	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
+	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatal(err)
 	}
 
@@ -202,7 +203,7 @@ func TestShortKoreanStopReflectsAndRegresses(t *testing.T) {
 	rec.IssueURL = "https://github.com/acme/repo/issues/1"
 	rec.DevilsAdvocateReview.Findings = []string{"범위가 이슈와 다르다"}
 	rec.DevilsAdvocateReview.IssueReflectedAt = ""
-	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
+	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatal(err)
 	}
 	prov := &fakeCompletionProvider{updateRes: portUpdateResult(true)}

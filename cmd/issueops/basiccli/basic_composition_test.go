@@ -23,11 +23,11 @@ func testBasicCommand() Command {
 	home, _ := os.UserHomeDir()
 	cwd, _ := os.Getwd()
 	return Command{IssueOpsRoot: root, DefaultTarget: target, Version: "0.1.0", DocsIndex: (docsapp.Service{Observer: docsadapter.Observer{}, Now: time.Now}).Index,
-		InspectHarness: func(repo string) inspectcontract.InspectInfo {
+		InspectHarness: func(repo string, options inspectcontract.Options) inspectcontract.InspectInfo {
 			if repo == "" {
 				repo = target
 			}
-			return (inspectadapter.Observer{ListDocs: (docsapp.Service{Observer: docsadapter.Observer{}, Now: time.Now}).List}).Inspect(root, repo, home, "0.1.0", "atomic-commit-push")
+			return (inspectadapter.Observer{ListDocs: (docsapp.Service{Observer: docsadapter.Observer{}, Now: time.Now}).List}).Inspect(root, repo, home, "0.1.0", "atomic-commit-push", options)
 		},
 		Preflight: preflightapp.Service{Observer: preflightadapter.GitObserver{}}, Guard: guardapp.Service{Source: guardadapter.Source{BaseDir: cwd}}, Trace: traceapp.Service{Effects: traceadapter.Source{ReadState: statestore.StateRead}}}
 }

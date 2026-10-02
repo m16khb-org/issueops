@@ -1,8 +1,10 @@
 package stateio
 
 import (
+	"context"
 	"encoding/json"
 	statestore "issueops/internal/adapter/outbound/state"
+	statecontract "issueops/internal/contract/state"
 	"time"
 
 	application "issueops/internal/application/selfverify"
@@ -11,9 +13,11 @@ import (
 
 func SaveSelfVerificationSummary(result *SelfAugmentResult, key string) error {
 	return application.SaveSummary(result, key, application.SaveSummaryDeps{
-		Now:      time.Now,
-		Encode:   func(snapshot SelfAugmentStateSnapshot) ([]byte, error) { return json.MarshalIndent(snapshot, "", "  ") },
-		Write:    statestore.StateWrite,
+		Now:    time.Now,
+		Encode: func(snapshot SelfAugmentStateSnapshot) ([]byte, error) { return json.MarshalIndent(snapshot, "", "  ") },
+		Write: func(key, content string) (statecontract.StateResult, error) {
+			return statestore.StateWrite(context.Background(), key, content)
+		},
 		StateDir: statestore.StateDir,
 	})
 }

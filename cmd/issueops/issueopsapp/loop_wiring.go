@@ -22,7 +22,15 @@ func newLoopIdentity() adapter.Identity {
 	return adapter.Identity{BaseDir: cwd, BaseError: err}
 }
 func newLoopService() app.Service {
-	return app.Service{Store: newLoopStore(), Identity: newLoopIdentity(), Clock: adapter.Clock{Time: time.Now}, SchemaVersion: adapter.LoopRunCurrentSchemaVersion}
+	return loopServiceWith(newLoopIdentity())
+}
+func newScopedLoopService(cwd string) app.Service {
+	service := loopServiceWith(adapter.Identity{BaseDir: cwd})
+	service.Store = grantFencedLoopStore{Store: newLoopStore(), grantRoot: issueOpsStateRoot()}
+	return service
+}
+func loopServiceWith(identity adapter.Identity) app.Service {
+	return app.Service{Store: newLoopStore(), Identity: identity, Clock: adapter.Clock{Time: time.Now}, SchemaVersion: adapter.LoopRunCurrentSchemaVersion}
 }
 func newLoopReader() app.Reader {
 	return app.Reader{Store: newLoopStore(), Identity: newLoopIdentity()}

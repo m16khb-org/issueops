@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	core "issueops/internal/adapter/issueops"
 	model "issueops/internal/contract/issueops"
 	"os"
@@ -23,7 +24,7 @@ func TestEvidenceReviewRuntimePersistsObservedChangeSet(t *testing.T) {
 		t.Fatal(err)
 	}
 	record.Phase = model.IssueOpsPhaseImplement
-	if _, err = core.WriteIssueOps(root, record); err != nil {
+	if _, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	actor := model.IssueOpsActor{}

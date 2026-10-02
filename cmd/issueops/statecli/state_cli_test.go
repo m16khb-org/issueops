@@ -1,6 +1,7 @@
 package statecli
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -81,7 +82,7 @@ func TestRunStateWriteReadAndPruneErrorsStaySurfaced(t *testing.T) {
 func TestRunStatePruneAndDoctorTextBranches(t *testing.T) {
 	stateDir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", stateDir)
-	if _, err := statestore.StateWrite("old", "old content"); err != nil {
+	if _, err := statestore.StateWrite(context.Background(), "old", "old content"); err != nil {
 		t.Fatalf("write old state: %v", err)
 	}
 	old, err := statestore.StateRead("old")

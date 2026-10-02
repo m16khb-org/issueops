@@ -39,7 +39,7 @@ func (s Validator) validate(ctx context.Context, parentID, childID, verdict, rea
 		return result, err
 	}
 	var child model.IssueOpsRecord
-	err = s.Records.WithinLock(ctx, childID, func() error {
+	err = s.Records.WithinLock(ctx, childID, func(spanCtx context.Context) error {
 		var err error
 		child, err = s.Records.Load(childID)
 		return err
@@ -53,12 +53,12 @@ func (s Validator) validate(ctx context.Context, parentID, childID, verdict, rea
 			return result, err
 		}
 	}
-	err = s.Records.WithinLock(ctx, parentID, func() error {
+	err = s.Records.WithinLock(ctx, parentID, func(spanCtx context.Context) error {
 		parent, err := s.Records.Load(parentID)
 		if err != nil {
 			return err
 		}
-		if err := s.Authority.Validate(parent, actor); err != nil {
+		if err := s.Authority.Validate(ctx, parent, actor); err != nil {
 			return err
 		}
 		current, readErr := s.Records.Load(childID)
@@ -88,7 +88,7 @@ func (s Validator) validate(ctx context.Context, parentID, childID, verdict, rea
 			return err
 		}
 		parent.UpdatedAt = now
-		if _, err := s.Records.Save(parent); err != nil {
+		if _, err := s.Records.Save(spanCtx, parent); err != nil {
 			return err
 		}
 		result.ParentRef = ref

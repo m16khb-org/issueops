@@ -486,7 +486,7 @@ func cleanupStatusRecord(t *testing.T, done, withArtifact bool) issueopscontract
 		},
 		Lease: issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 	}
-	written, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
+	written, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
 	if err != nil {
 		t.Fatalf("WriteIssueOps: %v", err)
 	}

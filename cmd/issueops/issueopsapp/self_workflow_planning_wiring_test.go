@@ -94,7 +94,7 @@ func TestSelfPlanningInstancesKeepRootsAndLessonStateSeparate(t *testing.T) {
 		}
 	}
 	absent := filepath.Join(t.TempDir(), "absent")
-	if _, err := newSelfWorkflowPlanning(roots[0], absent, "test").SaveLesson(contract.SelfAugmentLessonRequest{CandidateID: "candidate", Lesson: "", NextAction: "next"}); err == nil {
+	if _, err := newSelfWorkflowPlanning(roots[0], absent, "test").SaveLesson(context.Background(), contract.SelfAugmentLessonRequest{CandidateID: "candidate", Lesson: "", NextAction: "next"}); err == nil {
 		t.Fatal("invalid lesson accepted")
 	}
 	if _, err := os.Stat(absent); !os.IsNotExist(err) {
@@ -212,7 +212,7 @@ func TestQualityBaselineRefusesUnknownSchemaWithoutMutation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := newStateService(dir).Write(key, string(content)); err != nil {
+	if _, err := newStateService(dir).Write(context.Background(), key, string(content)); err != nil {
 		t.Fatal(err)
 	}
 	before, _, err := sqlstore.GetExisting(dir, "state", key)

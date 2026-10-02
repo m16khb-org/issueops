@@ -1,6 +1,8 @@
 package issueopsapp
 
 import (
+	"context"
+	statecontract "issueops/internal/contract/state"
 	"os"
 	"time"
 
@@ -39,7 +41,7 @@ func runSelfVerifyCandidatesWithDeps(args []string, deps selfVerifyCandidatesDep
 }
 
 func saveSelfVerificationCandidateExport(result *SelfVerificationCandidateExportResult, key string) error {
-	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).SaveCandidates(result, key)
+	return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).SaveCandidates(context.Background(), result, key)
 }
 
 func compareSelfAugmentSummaries(baselineKey, candidateKey string, maxElapsedRegressionPct float64) (SelfAugmentCompareResult, error) {
@@ -59,7 +61,7 @@ func selfAugmentHistory(prefix string, limit int, retentionOptions ...selfAugmen
 	if len(retentionOptions) > 0 {
 		options = retentionOptions[0]
 	}
-	return newSelfWorkflowHistory(statestore.StateDir()).History(prefix, limit, options)
+	return newSelfWorkflowHistory(statestore.StateDir()).History(context.Background(), prefix, limit, options)
 }
 
 func runSelfVerifyPromoteWithDeps(args []string, deps selfVerifyPromoteDeps) error {
@@ -67,7 +69,7 @@ func runSelfVerifyPromoteWithDeps(args []string, deps selfVerifyPromoteDeps) err
 }
 
 func promoteSelfAugmentBaseline(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error) {
-	return newSelfWorkflowState(statestore.StateDir()).Promote(fromKey, baselineKey, confirm, allowFailedSource)
+	return newSelfWorkflowState(statestore.StateDir()).Promote(context.Background(), fromKey, baselineKey, confirm, allowFailedSource)
 }
 
 func readSelfAugmentStateSnapshot(key string) (SelfAugmentStateSnapshot, error) {
@@ -79,7 +81,9 @@ func isSelfVerificationSummaryKind(kind string) bool {
 }
 
 func writeSelfAugmentSnapshotRecord(dir, key string, snapshot SelfAugmentStateSnapshot) error {
-	return (app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: newStateService(dir).WriteRecord, Now: time.Now}).Write(dir, key, snapshot)
+	return (app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+		return newStateService(dir).WriteRecord(context.Background(), dir, key, record)
+	}, Now: time.Now}).Write(dir, key, snapshot)
 }
 
 func boolPtr(value bool) *bool {
@@ -105,11 +109,11 @@ func emitSelfVerifyLoopEnd(progress *selfVerifyProgressReporter, loopKind string
 }
 
 func saveSelfVerificationSummary(result *SelfAugmentResult, key string) error {
-	return newSelfWorkflowState(statestore.StateDir()).SaveSummary(result, key)
+	return newSelfWorkflowState(statestore.StateDir()).SaveSummary(context.Background(), result, key)
 }
 
 func saveSelfAugmentSummary(result *SelfAugmentResult, key string) error {
-	return newSelfWorkflowState(statestore.StateDir()).SaveSummary(result, key)
+	return newSelfWorkflowState(statestore.StateDir()).SaveSummary(context.Background(), result, key)
 }
 
 func newSelfVerificationSummarySnapshot(result SelfAugmentResult, generatedAt time.Time) SelfAugmentStateSnapshot {

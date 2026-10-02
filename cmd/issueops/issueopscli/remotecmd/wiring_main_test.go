@@ -22,7 +22,7 @@ import (
 func testRemoteCommand() Command {
 	return Command{Operations: RemoteDeps{
 		ReconcileChild: func(ctx context.Context, root string, cmd remoteapp.ChildReconcileCommand, observe remoteapp.AncestryObserver) (issueopscontract.ChildReconcileResult, error) {
-			creatorIntents := &remoteapp.ChildCreateIntents{Store: issueopscore.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}
+			creatorIntents := &remoteapp.ChildCreateIntents{Store: issueopscore.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueopscore.NativeActorVerifier()), Now: time.Now}
 			service := remoteapp.ChildReconciler{Records: issueopscore.RemoteRecordStore{StateRoot: root}, Intents: creatorIntents, Resolve: func(name string) (port.IssueProviderChildCreateRecovery, error) {
 				p, err := provider.Resolve(name)
 				if err != nil {
@@ -33,14 +33,14 @@ func testRemoteCommand() Command {
 			return service.Reconcile(ctx, cmd, observe)
 		},
 		CreateChild: func(ctx context.Context, root string, cmd remoteapp.ChildCreateCommand, observe remoteapp.AncestryObserver) (remoteapp.ChildCreateResult, error) {
-			service := remoteapp.ChildCreator{Records: issueopscore.RemoteRecordStore{StateRoot: root}, Resolve: func(name string) (remoteapp.ChildProvider, error) { return provider.Resolve(name) }, Bodies: remoteapp.NewTemplateBodyResolver(os.ReadFile), Authorize: func(_ context.Context, id string, actor issueopscontract.IssueOpsActor) error {
-				return issueopscore.ValidateIssueOpsMutationActor(root, id, actor)
-			}, Intents: &remoteapp.ChildCreateIntents{Store: issueopscore.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}, NewOperationID: issueopscore.RemotePublicationObserver{}.NewOperationID}
+			service := remoteapp.ChildCreator{Records: issueopscore.RemoteRecordStore{StateRoot: root}, Resolve: func(name string) (remoteapp.ChildProvider, error) { return provider.Resolve(name) }, Bodies: remoteapp.NewTemplateBodyResolver(os.ReadFile), Authorize: func(ctx context.Context, id string, actor issueopscontract.IssueOpsActor) error {
+				return issueopscore.ValidateIssueOpsMutationActor(ctx, root, id, actor, issueopscore.NativeActorVerifier())
+			}, Intents: &remoteapp.ChildCreateIntents{Store: issueopscore.RemoteRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueopscore.NativeActorVerifier()), Now: time.Now}, NewOperationID: issueopscore.RemotePublicationObserver{}.NewOperationID}
 
 			return service.Create(ctx, cmd, observe)
 		},
 		VerifyRemoteArtifact: func(ctx context.Context, root, id string, req issueopscontract.IssueOpsRemoteArtifactVerificationRequest, actor issueopscontract.IssueOpsActor, verify remoteapp.ArtifactLiveVerifier, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, error) {
-			service := remoteapp.NewArtifactVerificationService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), verify, observe, time.Now)
+			service := remoteapp.NewArtifactVerificationService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueopscore.NativeActorVerifier()), verify, observe, time.Now)
 			return service.Verify(ctx, id, req, actor)
 		},
 		ReflectRemoteCompletion: func(ctx context.Context, root, id, providerOverride, resultBody string, confirm bool, verify remoteapp.MergeVerifier) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, reportcontract.Report, error) {
@@ -69,15 +69,16 @@ func testRemoteCommand() Command {
 					return handler(ctx, root, req)
 				}
 			}
-			service := remoteapp.NewPublicationCommandService(issueopscore.RemoteRecordStore{StateRoot: root}, remoteapp.NewTemplateBodyResolver(os.ReadFile), observe, func(actor issueopscontract.NativeActor) (issueopscontract.NativeActor, error) {
-				return cycleapp.NormalizeNativeActor(actor, issueopscore.InspectNativeProcessReceipt)
+			service := remoteapp.NewPublicationCommandService(issueopscore.RemoteRecordStore{StateRoot: root}, remoteapp.NewTemplateBodyResolver(os.ReadFile), observe, func(ctx context.Context, actor issueopscontract.NativeActor) (issueopscontract.NativeActor, error) {
+				verified, err := issueopscore.NativeActorVerifier().Verify(ctx, actor)
+				return verified.Identity, err
 			}, invoke)
 			return service.Create(ctx, input)
 		},
 		IssueOpsStateRoot:            issueOpsStateRootForTest,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
 		ReflectReviewFindings: func(ctx context.Context, root, id, providerOverride string, confirm bool, actor issueopscontract.IssueOpsActor, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
-			service := remoteapp.NewReviewReflectionService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(name string) (remoteapp.ReviewReflectionProvider, error) { return provider.Resolve(name) }, observe, time.Now)
+			service := remoteapp.NewReviewReflectionService(issueopscore.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueopscore.NativeActorVerifier()), func(name string) (remoteapp.ReviewReflectionProvider, error) { return provider.Resolve(name) }, observe, time.Now)
 			return service.Reflect(ctx, id, providerOverride, confirm, actor)
 		},
 		SyncRemoteBody: func(ctx context.Context, root string, input remoteapp.BodySyncInput, observe remoteapp.AncestryObserver) (issueopscontract.IssueOpsRecord, bodycontract.Result, error) {
@@ -90,7 +91,7 @@ func testRemoteCommand() Command {
 				if err != nil {
 					return nil, err
 				}
-				sync := bodysyncapp.NewService(issueopscore.BodySyncRepository{StateRoot: root}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), time.Now)
+				sync := bodysyncapp.NewService(issueopscore.BodySyncRepository{StateRoot: root}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueopscore.NativeActorVerifier()), time.Now)
 				return sync.Sync, nil
 			}, observe)
 			return service.Sync(ctx, input)

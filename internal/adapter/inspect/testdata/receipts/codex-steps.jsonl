@@ -1,0 +1,3 @@
+{"step":"inventory","servers":[{"name":"issueops","tools":["project_docs_read","gates_check","docs_index"]}]}
+{"step":"thread","created":true}
+{"step":"tool","tool":"docs_index","isError":false,"ok":true,"fields":["ok","version","issueops_root","docs","generated_at"],"arrays":{"docs":587}}

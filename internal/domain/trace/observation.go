@@ -1,5 +1,7 @@
 package trace
 
+import tracecontract "issueops/internal/contract/trace"
+
 type Evidence struct{ Cause, Code, Source string }
 type Cluster struct {
 	Step  string
@@ -28,9 +30,11 @@ type Document struct {
 	OK                   bool
 }
 type Input struct {
-	Document  *Document
-	Lines     []Document
-	JSONError string
+	Document   *Document
+	Lines      []Document
+	Incomplete bool
+	Warnings   []string
+	Usage      *tracecontract.UsageReport
 }
 type Finding struct {
 	FailureClass, FailureCause                                       string
@@ -40,4 +44,5 @@ type Finding struct {
 type Analysis struct {
 	Findings        []Finding
 	Types, Warnings []string
+	Incomplete      bool
 }

@@ -1,6 +1,7 @@
 package stateroundtrip
 
 import (
+	"context"
 	selfverify "issueops/internal/contract/selfverify"
 
 	"issueops/internal/adapter/outbound/sqlstore"
@@ -14,8 +15,12 @@ import (
 )
 
 func testValidator() Validator {
-	store := app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: statestore.WriteStateRecord, Now: time.Now}
-	return Validator{StateRead: readProbeState, WriteRecord: statestore.WriteStateRecord, WriteSnapshot: store.Write, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
+	store := app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+		return statestore.WriteStateRecord(context.Background(), dir, key, record)
+	}, Now: time.Now}
+	return Validator{StateRead: readProbeState, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+		return statestore.WriteStateRecord(context.Background(), dir, key, record)
+	}, WriteSnapshot: store.Write, OpenDatabase: func(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }}
 }
 func testStateDependencies(deps stateRoundtripValidationDeps) stateRoundtripValidationDeps {
 	v := testValidator()

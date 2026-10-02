@@ -38,12 +38,12 @@ func TestSelfWorkflowStateInstancesSaveAndPromoteIndependently(t *testing.T) {
 			defer wg.Done()
 			service := services[i]
 			summary := contract.SelfAugmentResult{OK: true, IssueOpsRoot: fmt.Sprintf("repo-%d", i), Summary: contract.SelfAugmentSummary{TerminationEligible: true}}
-			if err := service.SaveSummary(&summary, "source"); err != nil {
+			if err := service.SaveSummary(context.Background(), &summary, "source"); err != nil {
 				t.Error(err)
 				return
 			}
 			plan := contract.SelfAugmentPlanResult{OK: true, IssueOpsRoot: fmt.Sprintf("repo-%d", i)}
-			if err := service.SavePlan(&plan, "plan"); err != nil {
+			if err := service.SavePlan(context.Background(), &plan, "plan"); err != nil {
 				t.Error(err)
 				return
 			}
@@ -52,7 +52,9 @@ func TestSelfWorkflowStateInstancesSaveAndPromoteIndependently(t *testing.T) {
 				return
 			}
 			var promoted contract.SelfAugmentPromoteResult
-			if err := promotecmd.Run([]string{"--from-key", "source", "--baseline-key", "cli-baseline", "--confirm", "--json"}, promotecmd.Deps{Promote: service.Promote, PrintJSON: func(value any) error { promoted = value.(contract.SelfAugmentPromoteResult); return nil }}); err != nil || !promoted.Promoted || promoted.StateDir != dirs[i] {
+			if err := promotecmd.Run([]string{"--from-key", "source", "--baseline-key", "cli-baseline", "--confirm", "--json"}, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
+				return service.Promote(context.Background(), from, to, confirm, allowFailed)
+			}, PrintJSON: func(value any) error { promoted = value.(contract.SelfAugmentPromoteResult); return nil }}); err != nil || !promoted.Promoted || promoted.StateDir != dirs[i] {
 				t.Errorf("CLI promotion instance %d: %+v %v", i, promoted, err)
 				return
 			}
@@ -106,7 +108,7 @@ func TestSelfWorkflowPromotionRefusesFailedAndUnknownSummaryWithoutWriting(t *te
 	dir := t.TempDir()
 	service := newSelfWorkflowState(dir)
 	failed := contract.SelfAugmentResult{OK: false, Summary: contract.SelfAugmentSummary{TerminationEligible: false}}
-	if err := service.SaveSummary(&failed, "failed"); err != nil {
+	if err := service.SaveSummary(context.Background(), &failed, "failed"); err != nil {
 		t.Fatal(err)
 	}
 	before, _, err := sqlstore.GetExisting(dir, "state", "failed")
@@ -125,7 +127,9 @@ func TestSelfWorkflowPromotionRefusesFailedAndUnknownSummaryWithoutWriting(t *te
 	if !errors.As(err, &sdkErr) || sdkErr.Code != -32602 || !strings.Contains(string(sdkErr.Data), "refusing to promote") {
 		t.Fatalf("SDK gate refused incorrectly: %v", err)
 	}
-	if err := promotecmd.Run([]string{"--from-key", "failed", "--baseline-key", "forbidden", "--confirm", "--json"}, promotecmd.Deps{Promote: service.Promote, PrintJSON: func(any) error { return nil }}); err == nil || !strings.Contains(err.Error(), "refusing to promote") {
+	if err := promotecmd.Run([]string{"--from-key", "failed", "--baseline-key", "forbidden", "--confirm", "--json"}, promotecmd.Deps{Promote: func(from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
+		return service.Promote(context.Background(), from, to, confirm, allowFailed)
+	}, PrintJSON: func(any) error { return nil }}); err == nil || !strings.Contains(err.Error(), "refusing to promote") {
 		t.Fatalf("CLI gate refused incorrectly: %v", err)
 	}
 	if _, exists, err := sqlstore.GetExisting(dir, "state", "forbidden"); err != nil || exists {
@@ -135,17 +139,17 @@ func TestSelfWorkflowPromotionRefusesFailedAndUnknownSummaryWithoutWriting(t *te
 	if err != nil || string(before) != string(after) {
 		t.Fatalf("refusal changed source: %v", err)
 	}
-	if _, err := statestore.WriteStateRecord(dir, "future", stateRecordForHistoryTest("future", `{"schema_version":2,"kind":"self_verification_summary","ok":true}`)); err != nil {
+	if _, err := statestore.WriteStateRecord(context.Background(), dir, "future", stateRecordForHistoryTest("future", `{"schema_version":2,"kind":"self_verification_summary","ok":true}`)); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Promote("future", "forbidden", true, true); err == nil || !strings.Contains(err.Error(), "unsupported") {
+	if _, err := service.Promote(context.Background(), "future", "forbidden", true, true); err == nil || !strings.Contains(err.Error(), "unsupported") {
 		t.Fatalf("future schema accepted: %v", err)
 	}
 	if _, exists, err := sqlstore.GetExisting(dir, "state", "forbidden"); err != nil || exists {
 		t.Fatalf("future schema wrote destination: exists=%v %v", exists, err)
 	}
 	absent := filepath.Join(t.TempDir(), "absent")
-	if _, err := newSelfWorkflowState(absent).Promote("", "baseline", true, false); err == nil {
+	if _, err := newSelfWorkflowState(absent).Promote(context.Background(), "", "baseline", true, false); err == nil {
 		t.Fatal("missing source accepted")
 	}
 	if _, err := os.Stat(absent); !os.IsNotExist(err) {

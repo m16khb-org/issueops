@@ -12,7 +12,7 @@ import (
 )
 
 func issueLinkerForTest(root string) branchapp.Linker {
-	return branchapp.Linker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}
+	return branchapp.Linker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Now: time.Now}
 }
 func LinkIssueOpsChildForTest(root, id, childURL, title string) (model.IssueOpsRecord, error) {
 	return issueLinkerForTest(root).Child(context.Background(), id, childURL, title, nil)

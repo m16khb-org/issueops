@@ -11,7 +11,7 @@ import (
 )
 
 func issueLinkerForTest(root string) branchapp.Linker {
-	return branchapp.Linker{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}
+	return branchapp.Linker{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, liveTestVerifier()), Now: time.Now}
 }
 func LinkIssueOpsChild(root, id, childURL, title string) (model.IssueOpsRecord, error) {
 	return issueLinkerForTest(root).Child(context.Background(), id, childURL, title, nil)

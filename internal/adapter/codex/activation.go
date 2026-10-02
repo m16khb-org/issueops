@@ -17,7 +17,11 @@ func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]po
 	}
 	text := string(config)
 	expectedBlock := installer.codexGlobalBlock(req)
-	if strings.Count(text, "[mcp_servers.issueops]") != 1 || strings.Count(text, "[mcp_servers.issueops.env]") != 1 ||
+	wantEnvSections := 1
+	if req.MCPTransport == mcpTransportHTTP {
+		wantEnvSections = 0
+	}
+	if strings.Count(text, "[mcp_servers.issueops]") != 1 || strings.Count(text, "[mcp_servers.issueops.env]") != wantEnvSections ||
 		!strings.HasSuffix(text, expectedBlock) {
 		return nil, fmt.Errorf("Codex MCP readback does not contain exactly one canonical issueops server")
 	}

@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
 
 	"issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/selfworkflow/historycompare"
@@ -38,7 +37,7 @@ func TestSelfWorkflowHistoryInstancesKeepCLIAndMCPStateSeparate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := statestore.WriteStateRecord(dir, key, stateRecordForHistoryTest(key, string(b))); err != nil {
+			if _, err := statestore.WriteStateRecord(context.Background(), dir, key, stateRecordForHistoryTest(key, string(b))); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -52,7 +51,9 @@ func TestSelfWorkflowHistoryInstancesKeepCLIAndMCPStateSeparate(t *testing.T) {
 			defer wg.Done()
 			for n := 0; n < 10; n++ {
 				var cli contract.SelfAugmentHistoryResult
-				err := historycompare.RunSelfVerifyHistory([]string{"--json"}, historycompare.CLIDeps{History: service.History, Compare: service.Compare, PrintJSON: func(v any) error { cli = v.(contract.SelfAugmentHistoryResult); return nil }})
+				err := historycompare.RunSelfVerifyHistory([]string{"--json"}, historycompare.CLIDeps{History: func(prefix string, limit int, retention contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error) {
+					return service.History(context.Background(), prefix, limit, retention)
+				}, Compare: service.Compare, PrintJSON: func(v any) error { cli = v.(contract.SelfAugmentHistoryResult); return nil }})
 				if err != nil || cli.StateDir != dirs[i] || len(cli.Entries) != 2 || cli.Entries[0].ElapsedMS != int64(100*(i+1)+1) {
 					t.Errorf("CLI instance %d: result=%+v err=%v", i, cli, err)
 					return
@@ -84,21 +85,23 @@ func TestSelfWorkflowHistoryInstancesKeepCLIAndMCPStateSeparate(t *testing.T) {
 	wg.Wait()
 	// The domain refuses confirmation without a prune request, before any writes.
 	for i, service := range services {
-		err := historycompare.RunSelfVerifyHistory([]string{"--confirm", "--json"}, historycompare.CLIDeps{History: service.History, Compare: service.Compare, PrintJSON: func(any) error { return nil }})
+		err := historycompare.RunSelfVerifyHistory([]string{"--confirm", "--json"}, historycompare.CLIDeps{History: func(prefix string, limit int, retention contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error) {
+			return service.History(context.Background(), prefix, limit, retention)
+		}, Compare: service.Compare, PrintJSON: func(any) error { return nil }})
 		if err == nil || !strings.Contains(err.Error(), "requires --prune-retention") {
 			t.Fatalf("domain refusal: %v", err)
 		}
-		result, err := service.History("self-verify", 0, contract.SelfAugmentHistoryRetentionOptions{})
+		result, err := service.History(context.Background(), "self-verify", 0, contract.SelfAugmentHistoryRetentionOptions{})
 		if err != nil || result.TotalMatches != 2 {
 			t.Fatalf("refusal changed store %d: %+v %v", i, result, err)
 		}
 	}
 	// Confirmed pruning only changes the selected instance.
-	if _, err := services[0].History("self-verify", 0, contract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true, Confirm: true}); err != nil {
+	if _, err := services[0].History(context.Background(), "self-verify", 0, contract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true, Confirm: true}); err != nil {
 		t.Fatal(err)
 	}
 	for i, want := range []int{1, 2} {
-		result, err := services[i].History("self-verify", 0, contract.SelfAugmentHistoryRetentionOptions{})
+		result, err := services[i].History(context.Background(), "self-verify", 0, contract.SelfAugmentHistoryRetentionOptions{})
 		if err != nil || result.TotalMatches != want {
 			t.Fatalf("retention isolation instance %d: %+v %v", i, result, err)
 		}
@@ -133,7 +136,9 @@ func historyComparePayload(result any) (contract.SelfAugmentCompareResult, error
 func startHistoryMCPTestSession(t *testing.T, deps mcpcli.MCPDependencies) *mcp.ClientSession {
 	t.Helper()
 	server, client := net.Pipe()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// The session lives for the test, not a fixed wall clock: a slow call under
+	// full -race load must not be cut off by an unrelated deadline.
+	ctx, cancel := context.WithCancel(t.Context())
 	done := make(chan error, 1)
 	go func() { done <- mcpcli.ServeMCPStreamContextWithDependencies(ctx, server, server, io.Discard, deps) }()
 	session, err := mcp.NewClient(&mcp.Implementation{Name: "history-instance-test", Version: "1"}, nil).Connect(ctx, &mcp.IOTransport{Reader: client, Writer: client}, nil)
@@ -149,7 +154,9 @@ func startHistoryMCPTestSession(t *testing.T, deps mcpcli.MCPDependencies) *mcp.
 func TestSelfWorkflowHistoryRefusalDoesNotMaterializeState(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "absent")
 	service := newSelfWorkflowHistory(dir)
-	deps := historycompare.CLIDeps{History: service.History, Compare: service.Compare, PrintJSON: func(any) error { return nil }}
+	deps := historycompare.CLIDeps{History: func(prefix string, limit int, retention contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error) {
+		return service.History(context.Background(), prefix, limit, retention)
+	}, Compare: service.Compare, PrintJSON: func(any) error { return nil }}
 	if err := historycompare.RunSelfVerifyHistory([]string{"--confirm", "--json"}, deps); err == nil || !strings.Contains(err.Error(), "requires --prune-retention") {
 		t.Fatalf("history refusal: %v", err)
 	}

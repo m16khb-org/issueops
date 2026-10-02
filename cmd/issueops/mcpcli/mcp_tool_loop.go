@@ -1,6 +1,7 @@
 package mcpcli
 
 import (
+	"context"
 	"fmt"
 	loopapp "issueops/internal/application/looprun"
 
@@ -8,19 +9,19 @@ import (
 	loopruncontract "issueops/internal/contract/looprun"
 )
 
-var loopMCPHandlers = map[string]func(map[string]any, loopapp.Service) MCPToolOutcome{
+var loopMCPHandlers = map[string]func(context.Context, map[string]any, loopapp.Service) MCPToolOutcome{
 	"loop_start":          handleMCPLoopStart,
 	"loop_record_attempt": handleMCPLoopRecordAttempt,
 	"loop_status":         handleMCPLoopStatus,
 	"loop_stop":           handleMCPLoopStop,
 }
 
-func handleLoopMCPToolCall(call MCPToolCall, service loopapp.Service) MCPToolOutcome {
+func handleLoopMCPToolCall(ctx context.Context, call MCPToolCall, service loopapp.Service) MCPToolOutcome {
 	handler, ok := loopMCPHandlers[call.Name]
 	if !ok {
 		return MCPToolOutcome{}
 	}
-	return handler(call.Arguments, service)
+	return handler(ctx, call.Arguments, service)
 }
 
 func loopMCPOutcome(payload any, err error, message string) MCPToolOutcome {
@@ -33,8 +34,8 @@ func loopMCPOutcome(payload any, err error, message string) MCPToolOutcome {
 	return mcpToolPayload(payload)
 }
 
-func handleMCPLoopStart(args map[string]any, service loopapp.Service) MCPToolOutcome {
-	result, err := service.Start(loopruncontract.StartLoopRequest{
+func handleMCPLoopStart(ctx context.Context, args map[string]any, service loopapp.Service) MCPToolOutcome {
+	result, err := service.Start(ctx, loopruncontract.StartLoopRequest{
 		Repo:        argmap.String(args, "repo"),
 		Name:        argmap.String(args, "name"),
 		Goal:        argmap.String(args, "goal"),
@@ -44,20 +45,20 @@ func handleMCPLoopStart(args map[string]any, service loopapp.Service) MCPToolOut
 	return loopMCPOutcome(result, err, "Loop start failed")
 }
 
-func handleMCPLoopRecordAttempt(args map[string]any, service loopapp.Service) MCPToolOutcome {
-	result, err := service.RecordAttempt(argmap.String(args, "id"), loopruncontract.RecordAttemptRequest{
+func handleMCPLoopRecordAttempt(ctx context.Context, args map[string]any, service loopapp.Service) MCPToolOutcome {
+	result, err := service.RecordAttempt(ctx, argmap.String(args, "id"), loopruncontract.RecordAttemptRequest{
 		Verdict:  argmap.String(args, "verdict"),
 		Evidence: argmap.StringSlice(args, "evidence"),
 	})
 	return loopMCPOutcome(result, err, "Loop record-attempt failed")
 }
 
-func handleMCPLoopStatus(args map[string]any, service loopapp.Service) MCPToolOutcome {
+func handleMCPLoopStatus(_ context.Context, args map[string]any, service loopapp.Service) MCPToolOutcome {
 	result, err := service.Status(argmap.String(args, "id"))
 	return loopMCPOutcome(result, err, "Loop status failed")
 }
 
-func handleMCPLoopStop(args map[string]any, service loopapp.Service) MCPToolOutcome {
-	result, err := service.Stop(argmap.String(args, "id"), argmap.Bool(args, "success"), argmap.String(args, "reason"))
+func handleMCPLoopStop(ctx context.Context, args map[string]any, service loopapp.Service) MCPToolOutcome {
+	result, err := service.Stop(ctx, argmap.String(args, "id"), argmap.Bool(args, "success"), argmap.String(args, "reason"))
 	return loopMCPOutcome(result, err, "Loop stop failed")
 }

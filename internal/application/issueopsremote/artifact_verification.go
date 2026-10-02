@@ -63,10 +63,12 @@ func (s *ArtifactVerificationService) Validate(_ context.Context, id string, req
 	return record, err
 }
 
-func (s *ArtifactVerificationService) Record(_ context.Context, id string, req model.IssueOpsRemoteArtifactVerificationRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
-	// Keep receipt persistence independent of cancellation after live verification.
-	return s.store.Update(context.Background(), id, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
-		if err := s.authority.Authorize(context.Background(), record, actor); err != nil {
+func (s *ArtifactVerificationService) Record(ctx context.Context, id string, req model.IssueOpsRemoteArtifactVerificationRequest, actor model.IssueOpsActor) (model.IssueOpsRecord, error) {
+	// Keep receipt persistence independent of cancellation after live verification,
+	// while keeping the request's caller authority values.
+	persist := context.WithoutCancel(ctx)
+	return s.store.Update(persist, id, func(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+		if err := s.authority.Authorize(persist, record, actor); err != nil {
 			return record, err
 		}
 		artifact, err := projectRemoteArtifact(record, req)

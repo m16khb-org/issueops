@@ -121,23 +121,23 @@ func (s ChildCreator) Create(ctx context.Context, cmd ChildCreateCommand, observ
 		body = strings.TrimSpace(resolved.Body) + "\n\n" + operation.Marker
 		if fmt.Sprintf("%x", sha256.Sum256([]byte(body))) != operation.BodySHA256 {
 			err = fmt.Errorf("selected child operation body digest mismatch")
-			return result, errors.Join(err, s.Intents.Outcome(context.Background(), record.ID, operation.OperationID, model.IssueCreateIntentNotInvoked, "", remote.IssueCreateFailure(err), actor))
+			return result, errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentNotInvoked, "", remote.IssueCreateFailure(err), actor))
 		}
 	}
 	result.IssueProviderCreateChildResult, err = provider.CreateChild(port.IssueProviderCreateChildRequest{Repo: record.Repo, ParentIssueURL: record.IssueURL, Title: cmd.Title, Body: body, Labels: labels, Assignees: assignees, Confirm: cmd.Confirm})
 	if err != nil {
 		if cmd.Confirm {
 			createErr, typed := errors.AsType[*port.IssueProviderCreateError](err)
-			err = errors.Join(err, s.Intents.Outcome(context.Background(), record.ID, operation.OperationID, domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked && result.ChildURL == "", result.ChildURL), result.ChildURL, remote.IssueCreateFailure(err), actor))
+			err = errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, domain.ClassifyIssueCreateFailure(typed && !createErr.Invoked && result.ChildURL == "", result.ChildURL), result.ChildURL, remote.IssueCreateFailure(err), actor))
 		}
 		return result, err
 	}
 	if cmd.Confirm {
 		if err := domain.ValidateCreatedChild(result.HierarchyVerified, result.ChildURL); err != nil {
-			return result, errors.Join(err, s.Intents.Outcome(context.Background(), record.ID, operation.OperationID, model.IssueCreateIntentVerificationFailed, result.ChildURL, remote.IssueCreateFailure(err), actor))
+			return result, errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentVerificationFailed, result.ChildURL, remote.IssueCreateFailure(err), actor))
 		}
-		if err := s.Intents.Complete(context.Background(), record, operation, result.ChildURL, actor, false); err != nil {
-			return result, errors.Join(err, s.Intents.Outcome(context.Background(), record.ID, operation.OperationID, model.IssueCreateIntentReceiptFailed, result.ChildURL, remote.IssueCreateFailure(err), actor))
+		if err := s.Intents.Complete(context.WithoutCancel(ctx), record, operation, result.ChildURL, actor, false); err != nil {
+			return result, errors.Join(err, s.Intents.Outcome(context.WithoutCancel(ctx), record.ID, operation.OperationID, model.IssueCreateIntentReceiptFailed, result.ChildURL, remote.IssueCreateFailure(err), actor))
 		}
 		result.RecoveryCommand = ""
 	}

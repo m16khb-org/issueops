@@ -44,5 +44,5 @@ func ValidateContractCheckWithDeps(binary, root string, deps ValidationDeps) sel
 			errs = append(errs, "missing CLI command "+want)
 		}
 	}
-	return verifydomain.AssertionStep("contract check", time.Since(time.Now()).Milliseconds(), errs)
+	return verifydomain.AssertionStep("contract check", step.DurationMS, errs)
 }

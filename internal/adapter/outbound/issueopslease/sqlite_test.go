@@ -40,9 +40,9 @@ func TestSQLiteRepositoryLeavesRecordUnchangedWhenApplyFailsAfterClock(t *testin
 	service := leaseapp.NewReleaseService(
 		NewSQLiteRepository(store),
 		clock,
-		func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", receipt, nil
-		},
+		}),
 		applyFailurePaths{},
 	)
 	_, err = service.Release(context.Background(), leaseapp.ReleaseRequest{

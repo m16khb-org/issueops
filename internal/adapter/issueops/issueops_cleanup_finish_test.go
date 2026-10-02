@@ -107,7 +107,7 @@ func finishTestRecord(t *testing.T, withWorktree bool) (string, issueops.IssueOp
 		}
 	}
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		_, e := writeIssueOps(stateRoot, record)
+		_, e := writeIssueOps(context.Background(), stateRoot, record)
 		return e
 	}); err != nil {
 		t.Fatal(err)
@@ -508,7 +508,7 @@ func mutateFinishRecord(t *testing.T, stateRoot, id string, mutate func(*issueop
 			return err
 		}
 		mutate(&rec)
-		_, err = writeIssueOps(stateRoot, rec)
+		_, err = writeIssueOps(context.Background(), stateRoot, rec)
 		return err
 	}); err != nil {
 		t.Fatal(err)

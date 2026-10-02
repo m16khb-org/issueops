@@ -13,7 +13,7 @@ func SummarizeSelfVerification(result augment.SelfAugmentResult, targetScore flo
 	for _, run := range result.Runs {
 		steps := make([]augmentdomain.SummaryStep, 0, len(run.Steps))
 		for _, step := range run.Steps {
-			steps = append(steps, augmentdomain.SummaryStep{Label: step.Label, OK: step.OK, DurationMS: step.DurationMS})
+			steps = append(steps, augmentdomain.SummaryStep{Label: step.Label, OK: step.OK, Reused: step.Reused, DurationMS: step.DurationMS})
 		}
 		runs = append(runs, augmentdomain.SummaryRun{Iteration: run.Iteration, Seed: run.Seed, Steps: steps})
 	}

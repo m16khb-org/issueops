@@ -19,6 +19,6 @@ func issueOpsReleaseHandler(ctx context.Context, stateRoot string, request issue
 	if err != nil {
 		return issueopscontract.ExecutionResult{ID: request.ID}, err
 	}
-	service := leaseapp.NewReleaseService(leaseoutbound.NewSQLiteRepository(db), leaseoutbound.UTCClock{}, leaseoutbound.InspectNativeProcess, leaseoutbound.FilesystemPathMatcher{})
+	service := leaseapp.NewReleaseService(leaseoutbound.NewSQLiteRepository(db), leaseoutbound.UTCClock{}, issueOpsActorVerifier(), leaseoutbound.FilesystemPathMatcher{})
 	return leaseinbound.NewReleaseHandler(service)(ctx, stateRoot, request)
 }

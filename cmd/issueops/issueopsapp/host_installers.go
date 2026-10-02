@@ -26,6 +26,7 @@ func newAgyInstaller() agyadapter.Installer {
 func newClaudeInstaller() claudeadapter.Installer {
 	return claudeadapter.NewInstaller(claudeadapter.Dependencies{
 		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
 		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
 		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
 		FileBuildGenerationString:       installadapter.FileBuildGenerationString,
@@ -67,6 +68,7 @@ func newCodexInstaller() codexadapter.Installer {
 func newOmoInstaller() omoadapter.Installer {
 	return omoadapter.NewInstaller(omoadapter.Dependencies{
 		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
 		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
 		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
 		MCPCatalogSHA256:                func() (string, error) { return installutil.SemanticSHA256(mcpcatalog.AdvertisedTools()) },

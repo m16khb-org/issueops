@@ -18,6 +18,6 @@ func syncIssueOpsRemoteArtifactBody(ctx context.Context, stateRoot, id string, c
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, contract.Result{}, err
 	}
-	service := application.NewService(issueops.BodySyncRepository{StateRoot: stateRoot}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), time.Now)
+	service := application.NewService(issueops.BodySyncRepository{StateRoot: stateRoot}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()), time.Now)
 	return service.Sync(ctx, id, command, actor)
 }

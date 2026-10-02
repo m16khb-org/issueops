@@ -125,7 +125,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	record.Execution.Mode = issueopscontract.ExecutionModeOrca
 	record.Execution.Workspace.Driver = "orca"
 	record.Execution.Orca = &binding
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 

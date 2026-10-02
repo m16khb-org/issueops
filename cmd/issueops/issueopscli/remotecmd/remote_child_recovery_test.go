@@ -1,6 +1,7 @@
 package remotecmd
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	core "issueops/internal/adapter/issueops"
@@ -22,7 +23,7 @@ func childCLIRecoveryFixture(t *testing.T, provider string) (model.IssueOpsRecor
 		record.BranchPrepare.Provider = "gitlab"
 		record.BranchPrepare.IssueURL = record.IssueURL
 		var err error
-		record, err = core.WriteIssueOps(issueOpsStateRootForTest(), record)
+		record, err = core.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -130,7 +131,7 @@ func TestChildCLIStaleOperationRequiresCurrentHolderReconcile(t *testing.T) {
 	}
 	operation := record.ChildCreateOperations[0]
 	record.Execution.Lease.Generation++
-	record, err = core.WriteIssueOps(issueOpsStateRootForTest(), record)
+	record, err = core.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

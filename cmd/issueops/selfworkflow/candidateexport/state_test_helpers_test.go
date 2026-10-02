@@ -1,8 +1,10 @@
 package candidateexport
 
 import (
+	"context"
 	statestore "issueops/internal/adapter/outbound/state"
 	"issueops/internal/adapter/verification"
+	statecontract "issueops/internal/contract/state"
 )
 
 // production wiring과 같은 state store를 설치한다. fitness graph는 test import를
@@ -10,5 +12,7 @@ import (
 func init() {
 	ObserveSource = verification.CandidateSource
 	StateDir = statestore.StateDir
-	StateWrite = statestore.StateWrite
+	StateWrite = func(key, content string) (statecontract.StateResult, error) {
+		return statestore.StateWrite(context.Background(), key, content)
+	}
 }

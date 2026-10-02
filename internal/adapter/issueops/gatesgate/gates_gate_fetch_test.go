@@ -1,6 +1,7 @@
 package gatesgate
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,7 +19,7 @@ func TestAdvancePhaseToPRFetchesUpstreamOnce(t *testing.T) {
 	record := readyGatesGateRecord(t)
 	regressed := record
 	regressed.Phase = issueopscontract.IssueOpsPhaseImplement
-	if _, err := issueops.WriteIssueOps(issueOpsStateRootForTest(), regressed); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), regressed); err != nil {
 		t.Fatal(err)
 	}
 	writeGatesLedger(t, record.Repo, "- [x] G1: done\n  EVIDENCE: measured\n")

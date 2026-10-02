@@ -43,7 +43,7 @@ func TestGeneratedCommandRejectsStaleInstalledBinaryBeforeMutation(t *testing.T)
 			}},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -98,7 +98,7 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 			}},
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{
@@ -147,10 +147,10 @@ func TestGeneratedDelegatedChildBootstrapUsesParentExecutionProvenance(t *testin
 	parent.ChildCycles = append(parent.ChildCycles, issueopscontract.IssueOpsChildCycleRef{
 		CycleID: child.ID, Branch: child.Branch, CreatedAt: "2026-08-04T00:00:00Z",
 	})
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), parent); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), parent); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), child); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), child); err != nil {
 		t.Fatal(err)
 	}
 	evidence := commandparsecontract.GeneratedCommandProvenance{

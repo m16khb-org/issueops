@@ -4,28 +4,28 @@ import (
 	"context"
 	"strings"
 
-	cycleapp "issueops/internal/application/issueopscycle"
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopspublication"
 	reviewcontract "issueops/internal/contract/issueopsreview"
 	remote "issueops/internal/domain/issueopsremote"
 	reviewdomain "issueops/internal/domain/issueopsreview"
 	"issueops/internal/domain/policy"
+	authorityport "issueops/internal/port/authority"
 )
 
 type CreatePreparation struct {
 	observer  PreparationObserver
 	authority PublicationAuthority
-	inspect   cycleapp.NativeProcessInspector
+	verifier  authorityport.ActorVerifier
 }
 
-func NewCreatePreparation(observer PreparationObserver, authority PublicationAuthority, inspect cycleapp.NativeProcessInspector) *CreatePreparation {
-	return &CreatePreparation{observer: observer, authority: authority, inspect: inspect}
+func NewCreatePreparation(observer PreparationObserver, authority PublicationAuthority, verifier authorityport.ActorVerifier) *CreatePreparation {
+	return &CreatePreparation{observer: observer, authority: authority, verifier: verifier}
 }
 
 func (s *CreatePreparation) Prepare(ctx context.Context, command contract.CreateCommand) (contract.PreparedCreate, error) {
 	if command.Confirm {
-		actor, err := normalizePublicationActor(command.Actor, s.inspect)
+		actor, err := normalizePublicationActor(ctx, command.Actor, s.verifier)
 		if err != nil {
 			return contract.PreparedCreate{}, err
 		}

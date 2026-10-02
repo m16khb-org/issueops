@@ -92,7 +92,7 @@ func publicationReconcileCLIRecord(t *testing.T) (string, issueopscontract.Issue
 		CreatedAt: "2026-08-01T00:00:00Z",
 		UpdatedAt: "2026-08-01T00:00:00Z",
 	}
-	written, err := issueops.WriteIssueOps(stateRoot, record)
+	written, err := issueops.WriteIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

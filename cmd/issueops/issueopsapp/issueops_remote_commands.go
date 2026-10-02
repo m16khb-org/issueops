@@ -6,7 +6,6 @@ import (
 
 	core "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/provider"
-	cycleapp "issueops/internal/application/issueopscycle"
 	application "issueops/internal/application/issueopsremote"
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopsbodysync"
@@ -20,8 +19,9 @@ func newPublicationCommand(root string, publish model.RemotePullRequestCreateHan
 			return publish(ctx, root, req)
 		}
 	}
-	return application.NewPublicationCommandService(core.RemoteRecordStore{StateRoot: root}, application.NewTemplateBodyResolver(os.ReadFile), observe, func(actor model.NativeActor) (model.NativeActor, error) {
-		return cycleapp.NormalizeNativeActor(actor, core.InspectNativeProcessReceipt)
+	return application.NewPublicationCommandService(core.RemoteRecordStore{StateRoot: root}, application.NewTemplateBodyResolver(os.ReadFile), observe, func(ctx context.Context, actor model.NativeActor) (model.NativeActor, error) {
+		verified, err := issueOpsActorVerifier().Verify(ctx, actor)
+		return verified.Identity, err
 	}, invoke)
 }
 

@@ -24,7 +24,7 @@ func ReplaceExecutionWithDependencies(ctx context.Context, stateRoot string, req
 		Records:   ReplacementRecords{StateRoot: stateRoot},
 		Workspace: ReplacementWorkspace{Snapshot: LeaseWorkspaceSnapshot{GitCmd: GitCmd, GitCmdRaw: GitCmdRaw}, inspectWorkspace: deps.inspectWorkspace},
 		Artifacts: ReplacementArtifacts{}, ResealOwner: ownerContextForTest(stateRoot, deps.ReadIssue).Reseal,
-		BaseSync: deps.BaseSync, InspectProcess: inspectNativeProcessReceipt,
+		BaseSync: deps.BaseSync, InspectProcess: inspectNativeProcessReceipt, Verifier: NativeActorVerifier(),
 		Now: func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
 	}
 	return service.Run(ctx, req)

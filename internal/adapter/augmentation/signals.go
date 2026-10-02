@@ -105,14 +105,14 @@ func (repo Repository) signalRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join("internal", "application", "issueopsbranch", "workspace_link_test.go"), "TestValidateIssueURL")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasStateWriteLocking = FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "func (service *Service) Write(key, content string)") &&
-				FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "store.WithSpan(context.Background()") &&
-				FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "service.writeRecord(store, dir, key, record)") &&
-				FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_io.go"), "return service().Write(key, content)") &&
+			signals.HasStateWriteLocking = FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "func (service *Service) Write(ctx context.Context, key, content string)") &&
+				FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "store.WithSpan(ctx, func(spanCtx context.Context) error {") &&
+				FileContainsTerm(root, filepath.Join("internal", "application", "state", "service.go"), "service.writeRecord(spanCtx, store, dir, key, record)") &&
+				FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_io.go"), "return service().Write(ctx, key, content)") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "outbound", "state", "state_test.go"), "TestStateWriteWaitsForKeyLock")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasWorkerStuckRunningDetection = FileContainsTerm(root, filepath.Join("internal", "application", "worker", "service.go"), "func (service Service) DetectStuck()") &&
+			signals.HasWorkerStuckRunningDetection = FileContainsTerm(root, filepath.Join("internal", "application", "worker", "service.go"), "func (service Service) DetectStuck(ctx context.Context)") &&
 				FileContainsTerm(root, filepath.Join("internal", "domain", "worker", "lifecycle.go"), "WorkerStatusFailed") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "worker_test.go"), "TestWorkerDetectStuckJobsMarksDeadPIDAsFailed") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "worker", "worker_test.go"), "TestWorkerDetectStuckJobsSkipsAlivePID") &&

@@ -36,6 +36,7 @@ func issueOpsNextHandler(
 	readiness := newCycleReadiness()
 	changes := newChangeReader()
 	return func(stateRoot, cwd, id string) (issueopsnextcontract.Result, error) {
+		git := newNextGitObservation(preflightadapter.GitCmd)
 		localObservation := nextLocalReadinessObservation{
 			observe:  readiness.ObserveLocalPR,
 			fallback: changes.ObservedChangedPaths,
@@ -64,12 +65,10 @@ func issueOpsNextHandler(
 			ProcessLive:   observeIssueOpsHolderLiveness,
 			SourceRoot:    issueopsinventoryoutbound.CleanPath{}.Normalize,
 			CleanPath:     filepath.Clean,
-			WorktreeState: observeIssueOpsWorktreeState,
-			CurrentBranch: func(cwd string) string {
-				return strings.TrimSpace(preflightadapter.GitOut(cwd, "branch", "--show-current"))
-			},
-			Env: os.Getenv,
-			Now: time.Now,
+			WorktreeState: git.worktreeState,
+			CurrentBranch: git.currentBranch,
+			Env:           os.Getenv,
+			Now:           time.Now,
 		})
 		return issueopsnextinbound.NewNextHandler(service)(stateRoot, cwd, id)
 	}
@@ -140,15 +139,42 @@ func observeIssueOpsHolderLiveness(receipt issueopscontract.NativeProcessReceipt
 	}
 }
 
-func observeIssueOpsWorktreeState(root string) (bool, string, string) {
+// nextGitObservation is created per Next call. It reuses only the exact
+// root-and-argv branch read shared by cycle selection and the worktree probe;
+// toplevel and HEAD reads stay fresh, and nothing outlives the call.
+type nextGitObservation struct {
+	run      func(string, ...string) (int, string, string)
+	branches map[string]string
+}
+
+func newNextGitObservation(run func(string, ...string) (int, string, string)) *nextGitObservation {
+	return &nextGitObservation{run: run, branches: map[string]string{}}
+}
+
+func (observation *nextGitObservation) out(root string, args ...string) string {
+	code, out, _ := observation.run(root, args...)
+	if code != 0 {
+		return ""
+	}
+	return strings.TrimSpace(out)
+}
+
+func (observation *nextGitObservation) currentBranch(root string) string {
+	if branch, ok := observation.branches[root]; ok {
+		return branch
+	}
+	branch := observation.out(root, "branch", "--show-current")
+	observation.branches[root] = branch
+	return branch
+}
+
+func (observation *nextGitObservation) worktreeState(root string) (bool, string, string) {
 	if strings.TrimSpace(root) == "" {
 		return false, "", ""
 	}
-	code, out, _ := preflightadapter.GitCmd(root, "rev-parse", "--show-toplevel")
+	code, out, _ := observation.run(root, "rev-parse", "--show-toplevel")
 	if code != 0 || strings.TrimSpace(out) == "" {
 		return false, "", ""
 	}
-	return true,
-		strings.TrimSpace(preflightadapter.GitOut(root, "branch", "--show-current")),
-		strings.TrimSpace(preflightadapter.GitOut(root, "rev-parse", "HEAD"))
+	return true, observation.currentBranch(root), observation.out(root, "rev-parse", "HEAD")
 }

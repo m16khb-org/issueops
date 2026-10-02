@@ -8,6 +8,7 @@ import (
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
 	"issueops/internal/port"
+	authorityport "issueops/internal/port/authority"
 )
 
 type ResumeRequest struct {
@@ -33,12 +34,12 @@ type ResumeService struct {
 	owners       ResumeOwnerInventory
 	stages       ResumeStageExecutor
 	operationIDs ResumeOperationIDs
-	inspect      ProcessInspector
+	verifier     authorityport.ActorVerifier
 	paths        CanonicalPathMatcher
 }
 
-func NewResumeService(fence ResumeFence, repository ResumeRepository, artifacts ResumeArtifacts, owners ResumeOwnerInventory, stages ResumeStageExecutor, operationIDs ResumeOperationIDs, inspect ProcessInspector, paths CanonicalPathMatcher) *ResumeService {
-	return &ResumeService{fence: fence, repository: repository, artifacts: artifacts, owners: owners, stages: stages, operationIDs: operationIDs, inspect: inspect, paths: paths}
+func NewResumeService(fence ResumeFence, repository ResumeRepository, artifacts ResumeArtifacts, owners ResumeOwnerInventory, stages ResumeStageExecutor, operationIDs ResumeOperationIDs, verifier authorityport.ActorVerifier, paths CanonicalPathMatcher) *ResumeService {
+	return &ResumeService{fence: fence, repository: repository, artifacts: artifacts, owners: owners, stages: stages, operationIDs: operationIDs, verifier: verifier, paths: paths}
 }
 
 func (s *ResumeService) Resume(ctx context.Context, request ResumeRequest) (ResumeResult, error) {
@@ -50,7 +51,7 @@ func (s *ResumeService) Resume(ctx context.Context, request ResumeRequest) (Resu
 	}
 	var result ResumeResult
 	err := s.fence.Within(ctx, request.ID, func(fenceCtx context.Context) error {
-		if _, err := resolveActor(fenceCtx, request.Actor, request.Ancestry, s.inspect); err != nil {
+		if _, err := resolveActor(fenceCtx, request.Actor, request.Ancestry, s.verifier); err != nil {
 			return err
 		}
 		snapshot, err := s.repository.LoadSnapshot(fenceCtx, request.ID, request.ExpectedGeneration)

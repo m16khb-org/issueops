@@ -7,15 +7,19 @@ import (
 	installapp "issueops/internal/application/install"
 	installcontract "issueops/internal/contract/install"
 	"os"
+	"runtime"
 
 	"issueops/cmd/issueops/installcli"
+	"issueops/cmd/issueops/mcpcli"
 	agyadapter "issueops/internal/adapter/agy"
 	claudeadapter "issueops/internal/adapter/claude"
 	codexadapter "issueops/internal/adapter/codex"
 	"issueops/internal/adapter/install"
 	"issueops/internal/adapter/installutil"
+	mcpserviceadapter "issueops/internal/adapter/mcpservice"
 	omoadapter "issueops/internal/adapter/omo"
 	mcpcontract "issueops/internal/contract/mcp"
+	"issueops/internal/contract/mcpservice"
 	"issueops/internal/port"
 	activationport "issueops/internal/port/nativeactivation"
 )
@@ -45,8 +49,35 @@ func installDependencies() installcli.Deps {
 		ActivationReadback: func(req port.NativeInstallRequest) activationport.ReadbackVerifier {
 			return hostActivationReadback{request: req, codex: codex, claude: claude, omo: omo, agy: agy}
 		},
-		SyncUpstream: syncUpstream,
+		SyncUpstream:        syncUpstream,
+		DefaultMCPTransport: defaultMCPTransport(runtime.GOOS),
+		MCPURL:              "http://" + mcpcli.DefaultHTTPAddress + mcpcli.HTTPEndpointPath,
+		MCPService:          installMCPService{service: newSupervisorMCPService(), stateDir: mcpServiceStateDir()},
 	}
+}
+
+func defaultMCPTransport(goos string) string {
+	if goos == "darwin" || goos == "linux" {
+		return "http"
+	}
+	return "stdio"
+}
+
+type installMCPService struct {
+	service  *mcpserviceadapter.Service
+	stateDir string
+}
+
+func (s installMCPService) ReadBearer() (string, error) {
+	return mcpserviceadapter.ReadBearer(s.stateDir)
+}
+
+func (s installMCPService) Prepare(ctx context.Context) (string, error) {
+	return s.service.Prepare(ctx)
+}
+
+func (s installMCPService) EnsureRunning(ctx context.Context, binary string) (mcpservice.Status, error) {
+	return s.service.EnsureRunning(ctx, binary)
 }
 
 type hostActivationReadback struct {

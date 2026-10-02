@@ -1,11 +1,13 @@
 package issueopsapp
 
 import (
+	"context"
 	"issueops/cmd/issueops/qualitycli"
 	outbound "issueops/internal/adapter/outbound/quality"
 	app "issueops/internal/application/quality"
 	contract "issueops/internal/contract/quality"
 	augmentcontract "issueops/internal/contract/selfaugment"
+	statecontract "issueops/internal/contract/state"
 	catalog "issueops/internal/domain/qualitycatalog"
 	augmentdomain "issueops/internal/domain/selfaugment"
 	verifydomain "issueops/internal/domain/selfverify"
@@ -15,7 +17,9 @@ import (
 
 func newQualityDependencies(root, dir string) qualitycli.Deps {
 	state := newStateService(dir)
-	baseline := app.SNRBaselineStore{CanonicalRepository: outbound.CanonicalRepository, ReadState: state.Read, WriteState: state.Write}
+	baseline := app.SNRBaselineStore{CanonicalRepository: outbound.CanonicalRepository, ReadState: state.Read, WriteState: func(key, content string) (statecontract.StateResult, error) {
+		return state.Write(context.Background(), key, content)
+	}}
 	return qualitycli.Deps{Root: root, PrintJSON: printJSON, ReadSNRBaseline: baseline.Read, SaveSNRBaseline: baseline.Save, Inspect: func(target string) contract.InspectResult {
 		if target == "" {
 			target = root

@@ -134,14 +134,14 @@ type startFake struct {
 	Locked        bool
 }
 
-func (f *startFake) WithinLock(_ context.Context, id string, fn func() error) error {
+func (f *startFake) WithinLock(ctx context.Context, id string, fn func(context.Context) error) error {
 	f.Events = append(f.Events, "lock:"+id)
 	if f.LockError != nil {
 		return f.LockError
 	}
 	f.Locked = true
 	defer func() { f.Locked = false; f.Events = append(f.Events, "unlock") }()
-	return fn()
+	return fn(ctx)
 }
 func (f *startFake) Load(id string) (model.IssueOpsRecord, error) {
 	if !f.Locked {
@@ -150,7 +150,7 @@ func (f *startFake) Load(id string) (model.IssueOpsRecord, error) {
 	f.Events = append(f.Events, "read:"+id)
 	return f.Read("state", id)
 }
-func (f *startFake) Save(r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (f *startFake) Save(_ context.Context, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	if !f.Locked {
 		panic("write outside lock")
 	}

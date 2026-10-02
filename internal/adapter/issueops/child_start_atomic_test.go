@@ -86,7 +86,7 @@ func TestChildStartRefusalPreservesBothRows(t *testing.T) {
 					t.Fatal(err)
 				}
 				record.CleanupAbandonFailure = &model.IssueOpsCleanupAbandonFailure{Step: "applying", Fingerprint: strings.Repeat("a", 64), At: "2026-08-04T00:00:00Z"}
-				if _, err := writeIssueOps(root, record); err != nil {
+				if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 					t.Fatal(err)
 				}
 				want = "cleanup abandon apply is in progress"

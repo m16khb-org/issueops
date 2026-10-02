@@ -505,6 +505,51 @@
     "role": "shape"
   },
   {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func DocsIndexOutputSchema",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func InspectOutputSchema",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func ReadOnlyClosedWorldAnnotations",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func schemaArray",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func schemaBool",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func schemaInteger",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func schemaObject",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func schemaRef",
+    "role": "shape"
+  },
+  {
+    "path": "internal/contract/mcp/output_schemas.go",
+    "symbol": "func schemaString",
+    "role": "shape"
+  },
+  {
     "path": "internal/contract/mcp/resource_catalog.go",
     "symbol": "func Resources",
     "role": "shape"

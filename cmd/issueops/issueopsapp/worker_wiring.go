@@ -26,6 +26,11 @@ func newWorkerStore() workeradapter.Store {
 }
 
 func newWorkerService() workerapp.Service { return workerapp.Service{Effects: newWorkerStore()} }
+
+// newScopedWorkerService serves capability-bound MCP requests.
+func newScopedWorkerService() workerapp.Service {
+	return workerapp.Service{Effects: grantFencedWorkerStore{Store: newWorkerStore(), grantRoot: issueOpsStateRoot()}}
+}
 func newWorkerCommand() workercli.Command {
 	root := resolveTarget("")
 	return workercli.Command{Service: newWorkerService(), ResolveTarget: func(target string) string {

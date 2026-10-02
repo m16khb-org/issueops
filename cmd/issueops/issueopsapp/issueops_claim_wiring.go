@@ -38,7 +38,7 @@ func issueOpsClaimHandler(ctx context.Context, stateRoot string, request issueop
 		}
 		return leaseapp.IssueSnapshot{URL: snapshot.URL, Body: snapshot.Body}, nil
 	}, leaseoutbound.FilesystemPathMatcher{})
-	service := leaseapp.NewClaimService(leaseoutbound.NewSQLiteRepository(db), leaseoutbound.UTCClock{}, leaseoutbound.InspectNativeProcess, preflight)
+	service := leaseapp.NewClaimService(leaseoutbound.NewSQLiteRepository(db), leaseoutbound.UTCClock{}, issueOpsActorVerifier(), preflight)
 	result, err := leaseinbound.NewClaimHandler(service)(ctx, stateRoot, request, deps)
 	if err != nil {
 		return result, err

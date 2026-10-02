@@ -1,18 +1,31 @@
 package issueops
 
 import (
+	"context"
 	"path/filepath"
 	"strings"
 
-	cycleapp "issueops/internal/application/issueopscycle"
+	authorityapp "issueops/internal/application/authority"
 	"issueops/internal/contract/issueops"
+	authorityport "issueops/internal/port/authority"
 )
 
-// ValidateNativeActorProcess applies the same ancestry and live-process receipt
-// checks used by lease transitions before preparation can persist a new holder.
-func ValidateNativeActorProcess(actor issueops.NativeActor) error {
-	_, err := cycleapp.NormalizeNativeActor(actor, inspectNativeProcessReceipt)
-	return err
+// NativeProcessInspector is the PID reuse-safe live process observation used by
+// actor verification.
+type NativeProcessInspector struct{}
+
+func (NativeProcessInspector) Inspect(ctx context.Context, receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {
+	if err := ctx.Err(); err != nil {
+		return NativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, err
+	}
+	return inspectNativeProcessReceipt(receipt)
+}
+
+// NativeActorVerifier proves callers only by observed native ancestry and the
+// live session receipt. It has no grant store, so a capability-bound request
+// fails closed instead of falling back to native identity.
+func NativeActorVerifier() authorityport.ActorVerifier {
+	return authorityapp.New(nil, NativeProcessInspector{}, nil, nil, nil, nil)
 }
 
 func sameNativeActor(a, b *issueops.NativeActor) bool {

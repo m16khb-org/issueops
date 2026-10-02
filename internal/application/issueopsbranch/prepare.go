@@ -25,12 +25,12 @@ type Preparer struct {
 
 func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBranchPrepareRequest, actor *model.IssueOpsActor) (model.IssueOpsRecord, error) {
 	var result model.IssueOpsRecord
-	err := s.Records.WithinLock(ctx, id, func() error {
+	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
 			return err
 		}
-		if err := s.Authority.Validate(record, actor); err != nil {
+		if err := s.Authority.Validate(ctx, record, actor); err != nil {
 			return err
 		}
 		req.Provider = strings.ToLower(strings.TrimSpace(req.Provider))
@@ -96,7 +96,7 @@ func (s Preparer) Prepare(ctx context.Context, id string, req model.IssueOpsBran
 		}
 		req.RemoteBranchURL = strings.TrimSpace(req.RemoteBranchURL)
 		steps := s.Steps(req.Provider, req.IssueURL, req.Branch, req.BaseBranch, req.BaseSHA)
-		result, err = s.Records.Save(domain.ApplyBranchPreparation(record, req, codeProject, steps, s.Now().UTC().Format(time.RFC3339Nano), s.Now().UTC().Format(time.RFC3339Nano)))
+		result, err = s.Records.Save(spanCtx, domain.ApplyBranchPreparation(record, req, codeProject, steps, s.Now().UTC().Format(time.RFC3339Nano), s.Now().UTC().Format(time.RFC3339Nano)))
 		return err
 	})
 	return result, err

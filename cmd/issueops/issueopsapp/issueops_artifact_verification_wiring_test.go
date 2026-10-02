@@ -20,14 +20,14 @@ func TestArtifactVerificationCompositionRechecksLatestAuthority(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			process := model.NativeProcessReceipt{PID: 1, StartedAt: "start", Executable: "/bin/codex"}
+			process := liveFixtureReceipt(t)
 			record.Phase = model.IssueOpsPhasePR
 			record.IssueURL = "https://github.com/acme/repo/issues/68"
 			record.Execution = &model.Execution{Mode: model.ExecutionModeDirect, Workspace: model.Workspace{SourceRoot: repo, Root: worktree, Branch: record.Branch, BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "then"}, Lease: model.WriteLease{Generation: 1, Status: model.LeaseStatusActive, Holder: &model.NativeActor{Host: "codex", SessionID: "holder", SessionProcess: &process}, ClaimedAt: "then"}}
 			if mode == "invalid-phase" {
 				record.Phase = model.IssueOpsPhasePlan
 			}
-			if _, err = core.WriteIssueOps(root, record); err != nil {
+			if _, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
 				t.Fatal(err)
 			}
 			req := model.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pull_request", URL: "https://github.com/acme/repo/pull/68", TargetBranch: " main ", Labels: []string{" bug ", "bug"}, Assignees: []string{" owner "}}
@@ -53,7 +53,7 @@ func TestArtifactVerificationCompositionRechecksLatestAuthority(t *testing.T) {
 				case "project-change":
 					latest.IssueURL = "https://github.com/other/repo/issues/68"
 				}
-				if _, e = core.WriteIssueOps(root, latest); e != nil {
+				if _, e = core.WriteIssueOps(context.Background(), root, latest); e != nil {
 					t.Fatal(e)
 				}
 				return nil

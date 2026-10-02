@@ -16,6 +16,7 @@ type Dependencies struct {
 	NewInstallPlan                  func(host string, dryRun bool) port.InstallPlan
 	MergeJSONMapFile                func(path, parent, entry string, dryRun bool, value func() (map[string]any, error)) (map[string]any, error)
 	PlanHostSkillLinks              func(root, destRoot string, skillNames []string, host string, dryRun bool) ([]string, []port.InstallLink, []string, []error)
+	RemoveJSONMapEntry              func(path, parent, entry string) (map[string]any, bool, error)
 	RunningBuildGenerationString    func() string
 	SemanticSHA256                  func(value any) (string, error)
 	ValidateHookConfigForMerge      func(config map[string]any, knownEvents []string) error

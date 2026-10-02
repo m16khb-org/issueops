@@ -16,7 +16,7 @@ func newBasicCommand() basiccli.Command {
 	cwd, _ := os.Getwd()
 	return basiccli.Command{
 		IssueOpsRoot: issueOpsRoot(), DefaultTarget: resolveTarget(""), Version: version,
-		DocsIndex: newDocsService().Index, InspectHarness: newHarnessInspector(),
+		DocsIndex: newDocsService().Index, InspectHarness: newHarnessHostInspector(),
 		Preflight: preflightapp.Service{Observer: preflightadapter.GitObserver{}},
 		Guard:     guardapp.Service{Source: guardadapter.Source{BaseDir: cwd}},
 		Trace:     newTraceService(), Handoff: newHandoffDeliveryService(issueOpsStateRoot()),

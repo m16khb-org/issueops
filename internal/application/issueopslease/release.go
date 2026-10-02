@@ -3,10 +3,11 @@ package issueopslease
 import (
 	"context"
 	"fmt"
-	"strings"
 
+	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	"issueops/internal/domain/issueopslease"
+	authorityport "issueops/internal/port/authority"
 )
 
 type ReleaseRequest struct {
@@ -25,16 +26,16 @@ type ReleaseResult struct {
 type ReleaseService struct {
 	repository Repository
 	clock      Clock
-	inspect    ProcessInspector
+	verifier   authorityport.ActorVerifier
 	paths      CanonicalPathMatcher
 }
 
-func NewReleaseService(repository Repository, clock Clock, inspect ProcessInspector, paths CanonicalPathMatcher) *ReleaseService {
-	return &ReleaseService{repository: repository, clock: clock, inspect: inspect, paths: paths}
+func NewReleaseService(repository Repository, clock Clock, verifier authorityport.ActorVerifier, paths CanonicalPathMatcher) *ReleaseService {
+	return &ReleaseService{repository: repository, clock: clock, verifier: verifier, paths: paths}
 }
 
 func (s *ReleaseService) Release(ctx context.Context, request ReleaseRequest) (ReleaseResult, error) {
-	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.inspect)
+	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.verifier)
 	if err != nil {
 		return ReleaseResult{ID: request.ID}, err
 	}
@@ -68,47 +69,28 @@ func toDomainLease(lease leasecontract.Lease) issueopslease.Lease {
 	return result
 }
 
-func resolveActor(ctx context.Context, actor issueopslease.Actor, ancestry []issueopslease.ProcessReceipt, inspect ProcessInspector) (issueopslease.Actor, error) {
-	actor.Host = strings.ToLower(strings.TrimSpace(actor.Host))
-	actor.SessionID = strings.TrimSpace(actor.SessionID)
-	actor.AgentID = strings.TrimSpace(actor.AgentID)
+// resolveActor proves the caller through the shared verifier (native ancestry
+// or a bound capability). Proof of identity is not lease ownership: the lease
+// transition still checks holder, generation, token, and canonical cwd.
+func resolveActor(ctx context.Context, actor issueopslease.Actor, ancestry []issueopslease.ProcessReceipt, verifier authorityport.ActorVerifier) (issueopslease.Actor, error) {
+	if verifier == nil {
+		return issueopslease.Actor{}, fmt.Errorf("native actor verifier is required")
+	}
+	native := model.NativeActor{Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID}
 	if actor.Process != nil {
-		process := *actor.Process
-		process.StartedAt = strings.TrimSpace(process.StartedAt)
-		process.Executable = strings.TrimSpace(process.Executable)
-		actor.Process = &process
+		native.SessionProcess = &model.NativeProcessReceipt{PID: actor.Process.PID, StartedAt: actor.Process.StartedAt, Executable: actor.Process.Executable}
 	}
-	if actor.Host != "codex" && actor.Host != "claude" && actor.Host != "omo" {
-		return issueopslease.Actor{}, fmt.Errorf("native actor host must be codex, claude, or omo")
+	for _, receipt := range ancestry {
+		native.ProcessAncestry = append(native.ProcessAncestry, model.NativeProcessReceipt{PID: receipt.PID, StartedAt: receipt.StartedAt, Executable: receipt.Executable})
 	}
-	if actor.SessionID == "" {
-		return issueopslease.Actor{}, fmt.Errorf("native actor session_id is required")
-	}
-	if actor.Process == nil || actor.Process.PID <= 0 || actor.Process.StartedAt == "" || actor.Process.Executable == "" {
-		return issueopslease.Actor{}, fmt.Errorf("native actor requires a PID reuse-safe session_process receipt")
-	}
-	found := false
-	for _, observed := range ancestry {
-		if observed == *actor.Process {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return issueopslease.Actor{}, fmt.Errorf("native session process receipt is not in the local process ancestry")
-	}
-	if inspect == nil {
-		return issueopslease.Actor{}, fmt.Errorf("native process inspector is required")
-	}
-	status, observed, err := inspect(ctx, *actor.Process)
+	verified, err := verifier.Verify(ctx, native)
 	if err != nil {
 		return issueopslease.Actor{}, err
 	}
-	if status != "live" {
-		return issueopslease.Actor{}, fmt.Errorf("native process identity is not live: pid=%d status=%s", actor.Process.PID, status)
+	identity := verified.Identity
+	result := issueopslease.Actor{Host: identity.Host, SessionID: identity.SessionID, AgentID: identity.AgentID}
+	if identity.SessionProcess != nil {
+		result.Process = &issueopslease.ProcessReceipt{PID: identity.SessionProcess.PID, StartedAt: identity.SessionProcess.StartedAt, Executable: identity.SessionProcess.Executable}
 	}
-	if observed != *actor.Process {
-		return issueopslease.Actor{}, fmt.Errorf("native process identity does not match live PID %d", actor.Process.PID)
-	}
-	return actor, nil
+	return result, nil
 }

@@ -1,23 +1,290 @@
 [
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Inspect the issueops installation, shared skills, docs, and native Codex/Claude integration status.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
+        "host_receipts": {
+          "description": "Optional path of a host receipts file (schema_version 1) from real host runs; only such receipts can verify discovered/connected/protocol.",
+          "type": "string"
+        },
         "repo": {
           "description": "Optional target repository path.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
       "type": "object"
     },
-    "name": "harness_inspect"
+    "name": "harness_inspect",
+    "outputSchema": {
+      "$defs": {
+        "host": {
+          "additionalProperties": false,
+          "properties": {
+            "config_path": {
+              "type": "string"
+            },
+            "configured": {
+              "$ref": "#/$defs/observation"
+            },
+            "connected": {
+              "$ref": "#/$defs/observation"
+            },
+            "discovered": {
+              "$ref": "#/$defs/observation"
+            },
+            "host": {
+              "type": "string"
+            },
+            "installed": {
+              "$ref": "#/$defs/observation"
+            },
+            "linked": {
+              "$ref": "#/$defs/observation"
+            },
+            "protocol": {
+              "$ref": "#/$defs/observation"
+            },
+            "skill_path": {
+              "type": "string"
+            },
+            "transport": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "host",
+            "config_path",
+            "transport",
+            "skill_path",
+            "installed",
+            "linked",
+            "configured",
+            "discovered",
+            "connected",
+            "protocol"
+          ],
+          "type": "object"
+        },
+        "integration": {
+          "additionalProperties": false,
+          "properties": {
+            "claude_skill_installed": {
+              "type": "boolean"
+            },
+            "claude_skill_path": {
+              "type": "string"
+            },
+            "codex_mcp_configured": {
+              "type": "boolean"
+            },
+            "codex_skill_installed": {
+              "type": "boolean"
+            },
+            "codex_skill_path": {
+              "type": "string"
+            },
+            "hosts": {
+              "items": {
+                "$ref": "#/$defs/host"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "mcp_binary_path": {
+              "type": "string"
+            },
+            "project_claude_mcp_config": {
+              "type": "boolean"
+            },
+            "project_claude_skill": {
+              "type": "boolean"
+            },
+            "project_claude_skill_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "codex_skill_path",
+            "codex_skill_installed",
+            "codex_mcp_configured",
+            "claude_skill_path",
+            "claude_skill_installed",
+            "project_claude_skill_path",
+            "project_claude_skill",
+            "project_claude_mcp_config",
+            "mcp_binary_path",
+            "hosts"
+          ],
+          "type": "object"
+        },
+        "observation": {
+          "additionalProperties": false,
+          "properties": {
+            "config_sha256": {
+              "type": "string"
+            },
+            "features": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "host_version": {
+              "type": "string"
+            },
+            "negotiated_revision": {
+              "type": "string"
+            },
+            "observed_at": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "requested_revision": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "status": {
+              "description": "verified, failed, unknown, or not_checked.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "status",
+            "source",
+            "observed_at",
+            "reason",
+            "host_version",
+            "requested_revision",
+            "negotiated_revision",
+            "config_sha256",
+            "features"
+          ],
+          "type": "object"
+        },
+        "skill": {
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "type": "string"
+            },
+            "has_openai_yaml": {
+              "type": "boolean"
+            },
+            "has_skill_md": {
+              "type": "boolean"
+            },
+            "name": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "path",
+            "has_skill_md",
+            "has_openai_yaml"
+          ],
+          "type": "object"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "docs": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "integration": {
+          "$ref": "#/$defs/integration"
+        },
+        "issueops_root": {
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "skills": {
+          "items": {
+            "$ref": "#/$defs/skill"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "target_repo": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "version",
+        "issueops_root",
+        "target_repo",
+        "skills",
+        "docs",
+        "integration",
+        "generated_at"
+      ],
+      "type": "object"
+    }
   },
   {
     "description": "Run a read-only git preflight for the atomic-commit-push workflow: branch/upstream, staged/unstaged/untracked files, secret-like paths, and commit style hints.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "path": {
           "description": "Git repository path. Defaults to the agent project directory.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -42,23 +309,110 @@
     "name": "skill_manifest"
   },
   {
+    "annotations": {
+      "readOnlyHint": true,
+      "openWorldHint": false
+    },
     "description": "Return a lightweight index of AGENTS.md, CLAUDE.md, GENIUS_THINK.md, .issueops markdown files, and self-* skill docs: relative path, title, headings, and byte size.",
     "inputSchema": {
       "properties": {},
       "type": "object"
     },
-    "name": "docs_index"
+    "name": "docs_index",
+    "outputSchema": {
+      "$defs": {
+        "doc": {
+          "additionalProperties": false,
+          "properties": {
+            "bytes": {
+              "type": "integer"
+            },
+            "headings": {
+              "items": {
+                "type": "string"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "path": {
+              "type": "string"
+            },
+            "rel_path": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "rel_path",
+            "path",
+            "title",
+            "headings",
+            "bytes"
+          ],
+          "type": "object"
+        }
+      },
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "docs": {
+          "items": {
+            "$ref": "#/$defs/doc"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "issueops_root": {
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ok",
+        "version",
+        "issueops_root",
+        "docs",
+        "generated_at"
+      ],
+      "type": "object"
+    }
   },
   {
     "description": "Given a task, return the project AGENTS.md and .issueops documents an agent should read before working.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "repo": {
           "description": "Target repository path. Defaults to current directory.",
           "type": "string"
         },
         "task": {
           "description": "Task description such as commit, test, architecture, dependency, deploy, or general.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -70,8 +424,20 @@
     "description": "Dry-run the project docs bootstrap that creates or updates AGENTS.md and .issueops/*.md from repository evidence. This tool never writes files.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "repo": {
           "description": "Target repository path. Defaults to current directory.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -83,12 +449,24 @@
     "description": "Read one allowed .issueops project document and return its content plus SHA-256. Use before project_docs_revise so autonomous doc refreshes preserve user consensus and avoid stale overwrites.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "rel_path": {
           "description": "Allowed project doc path, for example .issueops/TESTING.md or TESTING.md.",
           "type": "string"
         },
         "repo": {
           "description": "Target repository path. Defaults to current directory.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -103,12 +481,20 @@
     "description": "Revise (fully replace) one allowed .issueops project document after reading repo evidence and preserving user consensus. Dry-run unless confirm=true. Existing files require expected_sha256 from project_docs_read. Do not use for solved false cases or ADR entries; use project_docs_append there.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
         "confirm": {
           "description": "Set true to write. Omit or false for dry-run preview.",
           "type": "boolean"
         },
         "content": {
           "description": "Full replacement content for the one document. Preserve stronger existing local guidance and user decisions.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
           "type": "string"
         },
         "evidence": {
@@ -133,6 +519,10 @@
         "summary": {
           "description": "Short reason for the update and how it maintains current consensus.",
           "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "type": "string"
         }
       },
       "required": [
@@ -155,12 +545,20 @@
           },
           "type": "array"
         },
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
         "consequences": {
           "description": "Expected follow-up consequences for ADR records.",
           "type": "string"
         },
         "context": {
           "description": "Relevant context or trigger.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
           "type": "string"
         },
         "decision": {
@@ -197,6 +595,10 @@
         "title": {
           "description": "Short record title.",
           "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "type": "string"
         }
       },
       "required": [
@@ -215,6 +617,14 @@
         "all": {
           "description": "When true, review all tracked API candidate files. Default false keeps scope to staged changes.",
           "type": "boolean"
+        },
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
         },
         "diff_file": {
           "description": "Optional file containing a diff to review instead of git diff --cached.",
@@ -238,6 +648,10 @@
         "result_file": {
           "description": "Optional host-agent JSON review result to record as evidence. Omit to render prompt/schema for the host agent.",
           "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -252,6 +666,14 @@
           "description": "When true, check all tracked API candidate files. Default false keeps scope to staged changes.",
           "type": "boolean"
         },
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "files": {
           "description": "Explicit API candidate files. Omit to use staged controller/DTO/handler/OpenAPI files.",
           "items": {
@@ -261,6 +683,10 @@
         },
         "repo": {
           "description": "Target git repository path. Defaults to current directory.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -281,6 +707,10 @@
         },
         "audit_log_id": {
           "description": "Optional caller-provided audit log correlation id.",
+          "type": "string"
+        },
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -341,6 +771,10 @@
         },
         "audit_log_id": {
           "description": "Optional caller-provided audit log correlation id.",
+          "type": "string"
+        },
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
           "type": "string"
         },
         "cwd": {
@@ -487,6 +921,10 @@
           "type": "string"
         },
         "agent_id": {
+          "type": "string"
+        },
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
           "type": "string"
         },
         "claim_current_token": {
@@ -648,6 +1086,10 @@
         },
         "verification_report_path": {
           "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "type": "string"
         }
       },
       "required": [
@@ -662,6 +1104,14 @@
     "description": "Create or resume a durable verify-until-done loop contract. This writes state only; it records verify_argv but never executes shell commands.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "goal": {
           "description": "Loop goal text.",
           "type": "string"
@@ -684,6 +1134,10 @@
             "type": "string"
           },
           "type": "array"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "type": "string"
         }
       },
       "required": [
@@ -699,6 +1153,14 @@
     "description": "Append a pass/fail attempt with evidence to an active loop contract. This writes state and auto-exhausts after max failed attempts.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "evidence": {
           "description": "Observable evidence for this attempt.",
           "items": {
@@ -712,6 +1174,10 @@
         },
         "verdict": {
           "description": "Attempt verdict: pass or fail.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -728,8 +1194,20 @@
     "description": "Read a durable loop contract status and summary. This does not write state.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "id": {
           "description": "Loop id.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -744,6 +1222,14 @@
     "description": "Stop a loop contract. success=true requires the latest attempt verdict to be pass; non-success stops require a reason.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "id": {
           "description": "Loop id.",
           "type": "string"
@@ -755,6 +1241,10 @@
         "success": {
           "description": "Mark the loop succeeded. Requires latest attempt verdict pass.",
           "type": "boolean"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "type": "string"
         }
       },
       "required": [
@@ -768,6 +1258,10 @@
     "description": "Evaluate task gate ledgers (.issueops/gates/*.md; compatible GATES.md and gates/*.md). Runs CHECK commands for unmet gates through the command policy engine (workspace boundary, env allowlist, timeout, audit), matches EXPECT, flips checkboxes, and records evidence. Complete means zero unmet gates; ABANDON gates count as resolved.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
         "cwd": {
           "description": "Directory holding .issueops/gates/*.md or compatible gate ledgers, and the CHECK working directory. Defaults to the agent project directory.",
           "type": "string"
@@ -811,6 +1305,10 @@
     "description": "Report gate ledger state without executing anything or modifying files. Flags unchecked gates and checked-but-EVIDENCE-pending gates (a checkbox is a claim; evidence is the proof).",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
         "cwd": {
           "description": "Directory holding .issueops/gates/*.md or compatible gate ledgers. Defaults to the agent project directory.",
           "type": "string"
@@ -835,6 +1333,10 @@
     "description": "Render the final-report ledger paste: per-file N-of-N gate counts, per-gate state, evidence, and abandon reasons. Re-measures counts at report time instead of trusting memory.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
         "cwd": {
           "description": "Directory holding .issueops/gates/*.md or compatible gate ledgers. Defaults to the agent project directory.",
           "type": "string"
@@ -859,6 +1361,14 @@
     "description": "Record an honest ABANDON line for one gate in a ledger file. Abandoned gates count as resolved but stay visible in reports; use instead of silently dropping a gate.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "file": {
           "description": "Gate ledger file. Legacy default is GATES.md; pass namespaced .issueops/gates/\u003cname\u003e.md explicitly.",
           "type": "string"
@@ -869,6 +1379,10 @@
         },
         "reason": {
           "description": "Honest reason the gate cannot be met.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -884,6 +1398,14 @@
     "description": "Scaffold a new gate ledger file. Refuses to overwrite an existing file. Each gate spec looks like \"G1: outcome | CHECK: command | EXPECT: expectation\".",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "file": {
           "description": "Gate ledger file to create. Defaults to .issueops/gates/\u003cscope-slug\u003e.md.",
           "type": "string"
@@ -897,6 +1419,10 @@
         },
         "scope": {
           "description": "Gate scope name for the heading.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },
@@ -1210,6 +1736,10 @@
           },
           "type": "array"
         },
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
         "cwd": {
           "type": "string"
         },
@@ -1295,6 +1825,10 @@
           "description": "Optional caller-provided audit log correlation id.",
           "type": "string"
         },
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
         "cwd": {
           "description": "Command working directory; must be inside workspace_root.",
           "type": "string"
@@ -1344,6 +1878,14 @@
     "description": "Render a host-agent prompt for a Conventional + Lore Hybrid commit message based on git diff.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "repo": {
           "description": "Target repository path. Defaults to current directory.",
           "type": "string"
@@ -1351,6 +1893,10 @@
         "staged": {
           "description": "When true, suggest commit based on staged changes (git diff --cached); otherwise unstaged. Defaults to false.",
           "type": "boolean"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
+          "type": "string"
         }
       },
       "type": "object"
@@ -1361,6 +1907,10 @@
     "description": "Run a command, capture failure outputs, and render a host-agent diagnosis prompt.",
     "inputSchema": {
       "properties": {
+        "authority_file": {
+          "description": "Managed credential file printed by `issueops mcp authorize`. Required for this tool on the shared HTTP server.",
+          "type": "string"
+        },
         "command_argv": {
           "description": "The command argv array to run and diagnose.",
           "items": {
@@ -1368,8 +1918,16 @@
           },
           "type": "array"
         },
+        "cwd": {
+          "description": "Request working directory inside the workspace. Relative file arguments resolve against it; defaults to the workspace root.",
+          "type": "string"
+        },
         "repo": {
           "description": "Target repository path. Defaults to current directory.",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "Absolute workspace root for this request. Must agree with repo/path and the stored record.",
           "type": "string"
         }
       },

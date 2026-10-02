@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -18,7 +19,7 @@ func TestBasicCommandsKeepCapturedRootsAndStores(t *testing.T) {
 	t.Setenv("CLAUDE_PROJECT_DIR", root)
 	state := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", state)
-	if _, err := newStateService(state).Write("basic-trace", `{"failed_steps":1,"failed_step":"policy"}`); err != nil {
+	if _, err := newStateService(state).Write(context.Background(), "basic-trace", `{"failed_steps":1,"failed_step":"policy"}`); err != nil {
 		t.Fatal(err)
 	}
 	stateRoot := issueOpsStateRoot()

@@ -1,6 +1,7 @@
 package historycompare
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -49,7 +50,7 @@ func TestRunSelfVerifyHistoryTextOutputCoversSkippedAndRetentionActions(t *testi
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
 	writeSelfVerifyCLISnapshotForTest(t, dir, "self-verify-old-cli", 1200, false, 20, 19, "2000-01-01T00:00:00Z")
 	writeSelfVerifyCLISnapshotForTest(t, dir, "self-verify-new-cli", 900, true, 20, 20, "2000-01-02T00:00:00Z")
-	if _, err := statestore.StateWrite("self-verify-note-cli", "not a summary"); err != nil {
+	if _, err := statestore.StateWrite(context.Background(), "self-verify-note-cli", "not a summary"); err != nil {
 		t.Fatalf("write non-summary state: %v", err)
 	}
 
@@ -140,5 +141,7 @@ func printJSONForTest(value any) error {
 
 func historyCLIDepsForTest(print func(any) error) CLIDeps {
 	service := historyService()
-	return CLIDeps{History: service.History, Compare: service.Compare, PrintJSON: print}
+	return CLIDeps{History: func(prefix string, limit int, retention SelfAugmentHistoryRetentionOptions) (SelfAugmentHistoryResult, error) {
+		return service.History(context.Background(), prefix, limit, retention)
+	}, Compare: service.Compare, PrintJSON: print}
 }

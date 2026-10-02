@@ -14,10 +14,10 @@ func newIssueOpsExecutionRunners() executioncmd.ExecutionDeps {
 		ExecuteExecution:             newExecutionService().Execute,
 		ObserveNativeProcessAncestry: issueopscore.ObserveNativeProcessAncestry,
 		SwitchExecutionMode:          newModeSwitcher(),
-		SyncExecutionBase:            issueopscore.SyncExecutionBase,
+		SyncExecutionBase:            issueopscore.VerifiedSyncExecutionBase(issueOpsActorVerifier()),
 	}
 }
 
 func newExecutionService() executionapp.Service {
-	return executionapp.Service{ReadRecord: issueopscore.ReadIssueOps, SamePath: (authorization.CanonicalPaths{}).Same, InspectProcess: issueopscore.InspectNativeProcessReceipt}
+	return executionapp.Service{ReadRecord: issueopscore.ReadIssueOps, SamePath: (authorization.CanonicalPaths{}).Same, Verifier: issueOpsActorVerifier()}
 }

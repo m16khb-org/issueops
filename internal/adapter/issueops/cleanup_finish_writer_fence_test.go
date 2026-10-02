@@ -46,17 +46,17 @@ func TestFinishAttemptBlocksLegacyWriterEntrypoints(t *testing.T) {
 					case "publication":
 						_, err = (RemotePublicationStore{StateRoot: root}).Persist(context.Background(), stale, publicationcontract.IntentMutation{OperationID: "pending-finish", Delete: true})
 					case "stale write":
-						_, err = writeIssueOps(root, stale)
+						_, err = writeIssueOps(context.Background(), root, stale)
 					case "execution write":
-						_, err = persistExecutionTransition(root, stale, nil)
+						_, err = persistExecutionTransition(context.Background(), root, stale, nil)
 					case "raw execution write":
-						_, err = persistExecutionTransitionWithRawCAS(root, stale, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: armed.ID, Data: raw}}, nil)
+						_, err = persistExecutionTransitionWithRawCAS(context.Background(), root, stale, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: armed.ID, Data: raw}}, nil)
 					case "parent pair write":
 						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), stale, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-new-child", Phase: model.IssueOpsPhaseProblem})
 					case "child pair write":
 						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), model.IssueOpsRecord{SchemaVersion: 1, ID: "io-new-parent", Phase: model.IssueOpsPhaseProblem}, stale)
 					case "delete":
-						err = deleteIssueOps(root, armed.ID)
+						err = deleteIssueOps(context.Background(), root, armed.ID)
 					case "span":
 						err = withIssueOpsLock(context.Background(), root, armed.ID, callback)
 					}
@@ -113,11 +113,11 @@ func TestOrdinaryWritersCannotRestoreDrainedFinishAttempt(t *testing.T) {
 					case "publication":
 						_, err = (RemotePublicationStore{StateRoot: root}).Persist(context.Background(), stale, publicationcontract.IntentMutation{OperationID: "pending-finish", Delete: true})
 					case "write":
-						_, err = writeIssueOps(root, stale)
+						_, err = writeIssueOps(context.Background(), root, stale)
 					case "execution":
-						_, err = persistExecutionTransition(root, stale, nil)
+						_, err = persistExecutionTransition(context.Background(), root, stale, nil)
 					case "raw execution":
-						_, err = persistExecutionTransitionWithRawCAS(root, stale, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: current.ID, Data: raw}}, nil)
+						_, err = persistExecutionTransitionWithRawCAS(context.Background(), root, stale, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: current.ID, Data: raw}}, nil)
 					case "parent pair":
 						_, _, err = (ChildCycleStore{CycleRecordStore{StateRoot: root}}).SavePair(context.Background(), stale, other)
 					case "child pair":

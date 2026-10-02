@@ -81,6 +81,7 @@ func PlannedSteps(root string, tempBin string, seed int64, goTestStep *StepResul
 					Label:   "go test",
 					Command: riskQAEvidence.Step.Command,
 					OK:      true,
+					Reused:  true,
 					Stdout:  "reused successful full-suite coverage from risk QA race test",
 				}
 				return *goTestStep
@@ -143,6 +144,7 @@ func CachedContractGoldenStep(goTestStep StepResult, deps SelfVerifyStepDeps) St
 			Label:      "contract golden tests",
 			Command:    "covered by go test ./... -count=1",
 			OK:         true,
+			Reused:     true,
 			DurationMS: 0,
 			Stdout:     "contract golden tests already executed by full go test suite",
 		}

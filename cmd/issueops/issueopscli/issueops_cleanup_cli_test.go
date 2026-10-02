@@ -1,6 +1,7 @@
 package issueopscli
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -128,7 +129,7 @@ func TestRunIssueOpsCleanupCloseChildrenRequiresMergedAndConfirmRecordsState(t *
 		Labels:    []string{"issueops"},
 		Assignees: []string{"octocat"},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 

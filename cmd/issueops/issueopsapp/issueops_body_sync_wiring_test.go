@@ -49,7 +49,7 @@ func TestBodySyncCompositionPersistsOnlyVerifiedReadback(t *testing.T) {
 				t.Fatal(err)
 			}
 			record.IssueURL = "https://github.com/acme/repo/issues/412"
-			record, err = issueops.WriteIssueOps(root, record)
+			record, err = issueops.WriteIssueOps(context.Background(), root, record)
 			if err != nil {
 				t.Fatal(err)
 			}

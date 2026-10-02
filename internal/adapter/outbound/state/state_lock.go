@@ -6,8 +6,8 @@ import (
 	statecontract "issueops/internal/contract/state"
 )
 
-func StateUpdate(key string, transform func(statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error)) (statecontract.StateResult, error) {
-	return service().Update(key, transform)
+func StateUpdate(ctx context.Context, key string, transform func(statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error)) (statecontract.StateResult, error) {
+	return service().Update(ctx, key, transform)
 }
 
 func WithKeyLock(ctx context.Context, dir, key string, fn func(context.Context) error) error {

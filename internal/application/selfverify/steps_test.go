@@ -26,6 +26,30 @@ func TestFailedRiskRaceCannotReplaceFullSuite(t *testing.T) {
 	if planned[4].Run().OK || !planned[5].Run().OK || fullSuiteCalls != 1 {
 		t.Fatalf("failed race reused as full suite: result=%+v calls=%d", fullTest, fullSuiteCalls)
 	}
+	if fullTest.Reused {
+		t.Fatalf("fresh full suite marked reused: %+v", fullTest)
+	}
+}
+
+func TestFailedGoldenCommandKeepsMeasuredEvidence(t *testing.T) {
+	// Given
+	want := StepResult{Label: "contract golden tests", Command: "go test", DurationMS: 149, Error: "fixture failure", Stderr: "failed"}
+	calls := 0
+	deps := SelfVerifyStepDeps{
+		IssueOpsRoot: func() string { return "/repo" },
+		RunCommandStep: func(_ string, _ string, _ time.Duration, _ string, _ string, _ ...string) StepResult {
+			calls++
+			return want
+		},
+	}
+
+	// When
+	got := CachedContractGoldenStep(StepResult{OK: false}, deps)
+
+	// Then
+	if calls != 1 || !reflect.DeepEqual(got, want) {
+		t.Fatalf("failed measured child changed: got=%+v want=%+v calls=%d", got, want, calls)
+	}
 }
 
 func TestRiskEvidenceIsLocalToEachPlannedRun(t *testing.T) {

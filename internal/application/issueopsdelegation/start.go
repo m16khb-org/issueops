@@ -16,7 +16,7 @@ import (
 )
 
 type ChildRecords interface {
-	WithinLock(context.Context, string, func() error) error
+	WithinLock(context.Context, string, func(context.Context) error) error
 	Load(string) (model.IssueOpsRecord, error)
 	SavePair(context.Context, model.IssueOpsRecord, model.IssueOpsRecord) (model.IssueOpsRecord, model.IssueOpsRecord, error)
 }
@@ -38,12 +38,12 @@ func (s ChildStarter) Start(ctx context.Context, req model.IssueOpsChildStartReq
 		return model.IssueOpsChildStartResult{OK: false}, err
 	}
 	var result model.IssueOpsChildStartResult
-	err = s.Records.WithinLock(ctx, req.ParentID, func() error {
+	err = s.Records.WithinLock(ctx, req.ParentID, func(spanCtx context.Context) error {
 		parent, err := s.Records.Load(req.ParentID)
 		if err != nil {
 			return err
 		}
-		if err = s.Authority.Validate(parent, actor); err != nil {
+		if err = s.Authority.Validate(ctx, parent, actor); err != nil {
 			return err
 		}
 		if missing := domain.ChildStartMissingPreconditions(parent, req); len(missing) > 0 {

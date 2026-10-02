@@ -70,11 +70,18 @@ func DispatchMap() map[string]contract.DispatchGroup {
 func ToolMaps(tools []contract.Tool) []map[string]any {
 	out := make([]map[string]any, 0, len(tools))
 	for _, tool := range tools {
-		out = append(out, map[string]any{
+		toolMap := map[string]any{
 			"name":        tool.Name,
 			"description": tool.Description,
 			"inputSchema": tool.InputSchema,
-		})
+		}
+		if tool.OutputSchema != nil {
+			toolMap["outputSchema"] = tool.OutputSchema
+		}
+		if tool.Annotations != nil {
+			toolMap["annotations"] = tool.Annotations
+		}
+		out = append(out, toolMap)
 	}
 	return out
 }
@@ -93,5 +100,5 @@ func ResourceMaps(resources []contract.Resource) []map[string]any {
 }
 
 func Build() contract.Catalog {
-	return contract.Catalog{Tools: ToolMaps(AdvertisedTools()), Resources: ResourceMaps(contract.Resources()), Dispatch: DispatchMap()}
+	return contract.Catalog{Tools: withAuthorityFields(ToolMaps(AdvertisedTools())), Resources: ResourceMaps(contract.Resources()), Dispatch: DispatchMap()}
 }

@@ -12,5 +12,5 @@ import (
 )
 
 func newBranchRetargeter(root string, observe func(model.IssueOpsRemoteArtifactVerification) (string, error)) branchapp.Retargeter {
-	return branchapp.Retargeter{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), TargetBranch: observe, OriginPresent: (core.BranchGit{Run: preflight.GitCmd}).OriginPresent, Now: time.Now}
+	return branchapp.Retargeter{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()), TargetBranch: observe, OriginPresent: (core.BranchGit{Run: preflight.GitCmd}).OriginPresent, Now: time.Now}
 }

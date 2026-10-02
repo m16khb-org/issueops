@@ -42,6 +42,7 @@ type SelfAugmentSlowStep struct {
 type SelfAugmentStepDurationStat struct {
 	Label             string  `json:"label"`
 	Count             int     `json:"count"`
+	ReusedCount       int     `json:"reused_count"`
 	MinDurationMS     int64   `json:"min_duration_ms"`
 	MaxDurationMS     int64   `json:"max_duration_ms"`
 	AverageDurationMS float64 `json:"average_duration_ms"`

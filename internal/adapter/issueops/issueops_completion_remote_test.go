@@ -57,7 +57,7 @@ func completionTestRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/85",
 	}
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		_, e := writeIssueOps(stateRoot, record)
+		_, e := writeIssueOps(context.Background(), stateRoot, record)
 		return e
 	}); err != nil {
 		t.Fatal(err)

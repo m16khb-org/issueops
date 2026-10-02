@@ -119,3 +119,28 @@ func TestGitObservationExactRootsArgumentsAndFetchBoundaries(t *testing.T) {
 		t.Fatalf("external boundary did not refresh: %v", calls)
 	}
 }
+
+func TestGitObservationKeepsRefAndHeadProbesFresh(t *testing.T) {
+	calls := map[string]int{}
+	run := func(root string, args ...string) (int, string, string) {
+		calls[root+" "+strings.Join(args, " ")]++
+		return 0, "", ""
+	}
+	git, _, _ := NewReadinessGitObservations(run)
+	for range 2 {
+		git.BaseAdvanced("/repo", "origin/main")
+		git.BaseAdvanced("/repo", "origin/other")
+		git.IsWorktree("/repo")
+	}
+	for command, want := range map[string]int{
+		"/repo rev-parse --verify --end-of-options origin/main^{commit}":  2,
+		"/repo rev-parse --verify --end-of-options origin/other^{commit}": 2,
+		"/repo merge-base --is-ancestor origin/main HEAD":                 2,
+		"/repo merge-base --is-ancestor origin/other HEAD":                2,
+		"/repo rev-parse --is-inside-work-tree":                           2,
+	} {
+		if calls[command] != want {
+			t.Fatalf("%q calls=%d want=%d: %v", command, calls[command], want, calls)
+		}
+	}
+}

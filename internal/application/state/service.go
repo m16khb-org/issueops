@@ -35,7 +35,7 @@ func NewService(dependencies Dependencies) *Service {
 	return &Service{dependencies: dependencies}
 }
 
-func (service *Service) Write(key, content string) (statecontract.StateResult, error) {
+func (service *Service) Write(ctx context.Context, key, content string) (statecontract.StateResult, error) {
 	key, err := statepath.NormalizeKey(key)
 	if err != nil {
 		return statecontract.StateResult{OK: false, StateDir: service.stateDir()}, err
@@ -46,7 +46,7 @@ func (service *Service) Write(key, content string) (statecontract.StateResult, e
 		return statecontract.StateResult{OK: false, StateDir: dir}, err
 	}
 	var result statecontract.StateResult
-	err = store.WithSpan(context.Background(), func(context.Context) error {
+	err = store.WithSpan(ctx, func(spanCtx context.Context) error {
 		record := statecontract.RecordEnvelope{
 			SchemaVersion: statecontract.SchemaVersion,
 			Key:           key,
@@ -54,7 +54,7 @@ func (service *Service) Write(key, content string) (statecontract.StateResult, e
 			UpdatedAt:     service.now().UTC().Format(time.RFC3339Nano),
 			Bytes:         len([]byte(content)),
 		}
-		path, writeErr := service.writeRecord(store, dir, key, record)
+		path, writeErr := service.writeRecord(spanCtx, store, dir, key, record)
 		result = statecontract.StateResult{OK: writeErr == nil, StateDir: dir, Path: path, Record: record}
 		return writeErr
 	})
@@ -139,7 +139,7 @@ func (service *Service) List() (statecontract.StateListResult, error) {
 	return statecontract.StateListResult{OK: true, StateDir: dir, Keys: listKeys, Records: records}, nil
 }
 
-func (service *Service) WriteRecord(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+func (service *Service) WriteRecord(ctx context.Context, dir, key string, record statecontract.RecordEnvelope) (string, error) {
 	key, err := statepath.NormalizeKey(key)
 	if err != nil {
 		return "", err
@@ -152,15 +152,15 @@ func (service *Service) WriteRecord(dir, key string, record statecontract.Record
 		return "", err
 	}
 	var path string
-	err = store.WithSpan(context.Background(), func(context.Context) error {
+	err = store.WithSpan(ctx, func(spanCtx context.Context) error {
 		var writeErr error
-		path, writeErr = service.writeRecord(store, dir, key, record)
+		path, writeErr = service.writeRecord(spanCtx, store, dir, key, record)
 		return writeErr
 	})
 	return path, err
 }
 
-func (service *Service) writeRecord(store stateport.Store, dir, key string, record statecontract.RecordEnvelope) (string, error) {
+func (service *Service) writeRecord(ctx context.Context, store stateport.Store, dir, key string, record statecontract.RecordEnvelope) (string, error) {
 	path := service.dependencies.StatePath(dir, key)
 	if err := statedomain.ValidateRecord(key, record); err != nil {
 		return path, err
@@ -169,13 +169,13 @@ func (service *Service) writeRecord(store stateport.Store, dir, key string, reco
 	if err != nil {
 		return path, err
 	}
-	if err := store.Mutate([]stateport.Mutation{{Bucket: stateBucket, ID: key, Data: append(raw, '\n')}}); err != nil {
+	if err := store.Mutate(ctx, []stateport.Mutation{{Bucket: stateBucket, ID: key, Data: append(raw, '\n')}}); err != nil {
 		return path, err
 	}
 	return path, nil
 }
 
-func (service *Service) Delete(key string) error {
+func (service *Service) Delete(ctx context.Context, key string) error {
 	key, err := statepath.NormalizeKey(key)
 	if err != nil {
 		return err
@@ -184,10 +184,10 @@ func (service *Service) Delete(key string) error {
 	if err != nil {
 		return err
 	}
-	return store.Mutate([]stateport.Mutation{{Bucket: stateBucket, ID: key, Delete: true}})
+	return store.Mutate(ctx, []stateport.Mutation{{Bucket: stateBucket, ID: key, Delete: true}})
 }
 
-func (service *Service) Update(key string, transform func(statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error)) (statecontract.StateResult, error) {
+func (service *Service) Update(ctx context.Context, key string, transform func(statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error)) (statecontract.StateResult, error) {
 	key, err := statepath.NormalizeKey(key)
 	if err != nil {
 		return statecontract.StateResult{OK: false, StateDir: service.stateDir()}, err
@@ -198,7 +198,7 @@ func (service *Service) Update(key string, transform func(statecontract.RecordEn
 		return statecontract.StateResult{OK: false, StateDir: dir}, err
 	}
 	var result statecontract.StateResult
-	err = store.WithSpan(context.Background(), func(context.Context) error {
+	err = store.WithSpan(ctx, func(spanCtx context.Context) error {
 		current, readErr := service.read(dir, key)
 		if readErr != nil && !errors.Is(readErr, fs.ErrNotExist) {
 			return readErr
@@ -211,7 +211,7 @@ func (service *Service) Update(key string, transform func(statecontract.RecordEn
 			result = statecontract.StateResult{OK: true, StateDir: dir}
 			return nil
 		}
-		path, writeErr := service.writeRecord(store, dir, key, next)
+		path, writeErr := service.writeRecord(spanCtx, store, dir, key, next)
 		result = statecontract.StateResult{OK: writeErr == nil, StateDir: dir, Path: path, Record: next}
 		return writeErr
 	})

@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"issueops/internal/port"
@@ -55,6 +56,25 @@ type DB struct {
 	data     *sql.DB
 	span     *sql.DB
 	spanGate chan struct{}
+	// unattributedEpoch는 활성 span context에 귀속할 수 없는 write의 시작과 끝마다
+	// 증가하고, unattributedInFlight는 그런 write가 진행 중인 동안 0이 아니다.
+	// span은 lock 획득 전에 epoch→in-flight 순서로 표본을 떠고 lock 해제 뒤 epoch를
+	// 다시 비교한다. baseline 전에 시작해 hold 중에 commit하는 write는 in-flight로,
+	// 그 뒤에 시작한 write는 epoch 변화로 잡혀 coverage가 unknown이 된다.
+	unattributedEpoch    atomic.Uint64
+	unattributedInFlight atomic.Int64
+	// hooks는 sleep 없이 경계 사이에 사건을 끼워 넣는 테스트 전용 seam이다.
+	// production 핸들에서는 모두 nil이다.
+	hooks dbTestHooks
+}
+
+type dbTestHooks struct {
+	// unattributedWriteStarted는 귀속 불가 write가 시작을 기록한 뒤, 실행 전에 불린다.
+	unattributedWriteStarted func()
+	// unattributedWriteFinished는 귀속 불가 write가 끝난 뒤, 끝 기록 전에 불린다.
+	unattributedWriteFinished func()
+	// beforeDataCommit은 data commit의 취소 확인 직전에 불린다.
+	beforeDataCommit func()
 }
 
 type spanChainKey struct{}
@@ -337,41 +357,54 @@ func openSQLite(path, params string) (*sql.DB, error) {
 // WithSpan은 root 하나의 read-modify-write span을 직렬화하고, 순서 있는
 // active-root chain을 전파하며, 로컬 대기와 SQLite lock 대기 모두 ctx를
 // 따르게 한다.
-func (d *DB) WithSpan(ctx context.Context, fn func(context.Context) error) (err error) {
+func (d *DB) WithSpan(ctx context.Context, fn func(context.Context) error) error {
+	return d.withSpan(ctx, time.Now, fn)
+}
+
+func (d *DB) withSpan(ctx context.Context, now func() time.Time, fn func(context.Context) error) (err error) {
 	if ctx == nil {
 		return fmt.Errorf("sqlstore span context is required")
 	}
 	if fn == nil {
 		return fmt.Errorf("sqlstore span callback is required")
 	}
-	started := time.Now()
-	observation := SpanObservation{}
 	observer := spanObserver(ctx)
-	gateHeld := false
-	lockAcquiredAt := time.Time{}
+	parent, _ := ctx.Value(spanRunKey{}).(*spanRun)
+	run := &spanRun{db: d, parent: parent, now: now}
+	started := now()
+	returned := false
 	defer func() {
-		if !lockAcquiredAt.IsZero() {
-			observation.Hold = time.Since(lockAcquiredAt)
-		} else {
-			observation.Wait = time.Since(started)
+		ended := run.gateReleased
+		if ended.IsZero() {
+			ended = now()
 		}
-		if gateHeld {
-			d.spanGate <- struct{}{}
-		}
-		switch {
-		case err == nil:
-			observation.Outcome = SpanOutcomeSuccess
-		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
-			observation.Outcome = SpanOutcomeCanceled
-		case isNestedSpanError(err):
-			observation.Outcome = SpanOutcomeNested
-		default:
-			observation.Outcome = SpanOutcomeError
+		outcome := spanOutcome(err)
+		if !returned {
+			outcome = SpanOutcomeError
 		}
 		if observer != nil {
-			observer(observation)
+			observer(run.observation(started, ended, outcome))
 		}
 	}()
+	err = d.runSpan(ctx, run, fn)
+	returned = true
+	return err
+}
+
+func spanOutcome(err error) string {
+	switch {
+	case err == nil:
+		return SpanOutcomeSuccess
+	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		return SpanOutcomeCanceled
+	case isNestedSpanError(err):
+		return SpanOutcomeNested
+	default:
+		return SpanOutcomeError
+	}
+}
+
+func (d *DB) runSpan(ctx context.Context, run *spanRun, fn func(context.Context) error) error {
 	chain, _ := ctx.Value(spanChainKey{}).([]string)
 	chain = append([]string(nil), chain...)
 	for _, active := range chain {
@@ -386,29 +419,83 @@ func (d *DB) WithSpan(ctx context.Context, fn func(context.Context) error) (err 
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-d.spanGate:
-		gateHeld = true
 	default:
-		observation.Contended = true
+		run.contended = true
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-d.spanGate:
-			gateHeld = true
 		}
 	}
+	defer func() {
+		d.spanGate <- struct{}{}
+		run.gateReleased = run.now()
+	}()
+	run.unattributedBase = d.unattributedEpoch.Load()
+	inFlightAtBaseline := d.unattributedInFlight.Load() != 0
 	tx, sqliteContended, err := d.beginSpanTx(ctx)
-	observation.Contended = observation.Contended || sqliteContended
+	run.contended = run.contended || sqliteContended
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return fmt.Errorf("sqlstore span lock %s: %w", d.dir, ctxErr)
 		}
 		return fmt.Errorf("sqlstore span lock %s: %w", d.dir, err)
 	}
-	lockAcquiredAt = time.Now()
-	observation.Wait = lockAcquiredAt.Sub(started)
-	defer func() { _ = tx.Rollback() }()
+	run.lockAcquired = run.now()
+	run.acquired = true
+	run.active.Store(true)
+	defer func() {
+		run.active.Store(false)
+		_ = tx.Rollback()
+		run.lockReleased = run.now()
+		run.unattributedWrites = inFlightAtBaseline || d.unattributedEpoch.Load() != run.unattributedBase
+	}()
 	spanCtx := context.WithValue(ctx, spanChainKey{}, append(chain, d.dir))
-	return fn(spanCtx)
+	spanCtx = context.WithValue(spanCtx, spanRunKey{}, run)
+	spanCtx, err = d.bindRecordGuard(spanCtx, run)
+	if err != nil {
+		return err
+	}
+	return run.invoke(spanCtx, fn)
+}
+
+// commitData는 commit 직전에 취소를 확인하고, 취소됐으면 Commit을 부르지 않는다.
+// ctx가 이 핸들의 활성 span에서 왔으면 Commit 호출 시간을 그 span에 누적하고,
+// 아니면 귀속 불가 write로 센다. 실패한 Commit 호출도 실제 호출이므로 센다.
+func (d *DB) commitData(ctx context.Context, tx *sql.Tx) error {
+	if d.hooks.beforeDataCommit != nil {
+		d.hooks.beforeDataCommit()
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	run := activeSpanRun(ctx, d)
+	if run == nil {
+		return d.unattributedWrite(tx.Commit)
+	}
+	started := run.now()
+	err := tx.Commit()
+	run.commitNanos.Add(int64(run.now().Sub(started)))
+	run.commitCount.Add(1)
+	return err
+}
+
+// unattributedWrite는 write 전체를 in-flight로 표시하고 시작과 끝에 epoch를 올린다.
+func (d *DB) unattributedWrite(write func() error) error {
+	d.unattributedInFlight.Add(1)
+	d.unattributedEpoch.Add(1)
+	defer func() {
+		d.unattributedEpoch.Add(1)
+		d.unattributedInFlight.Add(-1)
+	}()
+	if d.hooks.unattributedWriteStarted != nil {
+		d.hooks.unattributedWriteStarted()
+	}
+	err := write()
+	if d.hooks.unattributedWriteFinished != nil {
+		d.hooks.unattributedWriteFinished()
+	}
+	return err
 }
 
 func isNestedSpanError(err error) bool {
@@ -678,12 +765,14 @@ func (d *DB) Put(bucket, id string, data []byte) error {
 		return err
 	}
 	defer release()
-	_, err = d.data.Exec(`INSERT INTO records (bucket, id, data) VALUES (?, ?, ?)
+	return d.unattributedWrite(func() error {
+		_, err := d.data.Exec(`INSERT INTO records (bucket, id, data) VALUES (?, ?, ?)
 		ON CONFLICT (bucket, id) DO UPDATE SET data = excluded.data`, bucket, id, data)
-	return err
+		return err
+	})
 }
 
-func (d *DB) Mutate(mutations []stateport.Mutation) error {
+func (d *DB) Mutate(ctx context.Context, mutations []stateport.Mutation) error {
 	converted := make([]port.RecordMutation, 0, len(mutations))
 	for _, mutation := range mutations {
 		converted = append(converted, port.RecordMutation{
@@ -694,7 +783,7 @@ func (d *DB) Mutate(mutations []stateport.Mutation) error {
 			RequireAbsent: mutation.RequireAbsent,
 		})
 	}
-	return d.Apply(context.Background(), converted)
+	return d.Apply(ctx, converted)
 }
 
 // Apply는 모든 mutation을 issueops.db 트랜잭션 하나로 commit한다.
@@ -718,7 +807,10 @@ func (d *DB) Apply(ctx context.Context, mutations []port.RecordMutation) error {
 	if err := applyMutationsTx(ctx, tx, mutations); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := d.recheckRecordGuard(ctx, tx); err != nil {
+		return err
+	}
+	return d.commitData(ctx, tx)
 }
 
 // CompareAndApply는 raw-byte 비교와 write를 하나의 data.sqlite transaction으로
@@ -777,7 +869,10 @@ func (d *DB) CompareAndApplyFunc(ctx context.Context, expected []port.ExpectedRe
 	if err := applyMutationsTx(ctx, tx, mutations); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err := d.recheckRecordGuard(ctx, tx); err != nil {
+		return err
+	}
+	return d.commitData(ctx, tx)
 }
 
 func validateMutations(mutations []port.RecordMutation) error {
@@ -826,8 +921,10 @@ func (d *DB) Delete(bucket, id string) error {
 		return err
 	}
 	defer release()
-	_, err = d.data.Exec(`DELETE FROM records WHERE bucket = ? AND id = ?`, bucket, id)
-	return err
+	return d.unattributedWrite(func() error {
+		_, err := d.data.Exec(`DELETE FROM records WHERE bucket = ? AND id = ?`, bucket, id)
+		return err
+	})
 }
 
 // List는 bucket의 id를 오름차순으로 반환한다.
@@ -873,6 +970,8 @@ func (d *DB) DeleteBucket(bucket string) error {
 		return err
 	}
 	defer release()
-	_, err = d.data.Exec(`DELETE FROM records WHERE bucket = ?`, bucket)
-	return err
+	return d.unattributedWrite(func() error {
+		_, err := d.data.Exec(`DELETE FROM records WHERE bucket = ?`, bucket)
+		return err
+	})
 }

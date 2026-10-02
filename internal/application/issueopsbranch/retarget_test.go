@@ -35,16 +35,16 @@ type retargetRepository struct {
 	beforeLock func()
 }
 
-func (s *retargetRepository) WithinLock(_ context.Context, _ string, fn func() error) error {
+func (s *retargetRepository) WithinLock(ctx context.Context, _ string, fn func(context.Context) error) error {
 	if s.beforeLock != nil {
 		s.beforeLock()
 	}
 	s.locked = true
 	defer func() { s.locked = false }()
-	return fn()
+	return fn(ctx)
 }
 func (s *retargetRepository) Load(string) (model.IssueOpsRecord, error) { return s.record, nil }
-func (s *retargetRepository) Save(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *retargetRepository) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	if !s.locked {
 		panic("save outside lock")
 	}
@@ -198,7 +198,7 @@ func TestRetargetRechecksHolderAfterObservation(t *testing.T) {
 	record := retargetTestRecord()
 	record.Execution = active.Execution
 	repo, service := retargetTestStore(record, "2803-umbrella", true)
-	service.Authority = cycleapp.NewMutationAuthority(func(a, b string) bool { return a == b })
+	service.Authority = cycleapp.NewMutationAuthority(func(a, b string) bool { return a == b }, liveVerifier())
 	repo.beforeLock = func() { next := holder; next.SessionID = "new-owner"; repo.record.Execution.Lease.Holder = &next }
 	_, err := service.Retarget(context.Background(), record.ID, model.IssueOpsBranchRetargetRequest{BaseBranch: "2803-umbrella", Reason: "observed"}, model.IssueOpsActor{Host: "codex", SessionID: "owner", CWD: root, NativeProcessAncestry: []model.NativeProcessReceipt{*holder.SessionProcess}})
 	if err == nil || repo.saves != 0 {

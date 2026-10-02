@@ -123,7 +123,7 @@ func TestExecutionReplacementRuntimeRolloverSafetyBoundaries(t *testing.T) {
 		stateRoot, record := rolloverExecutionFixture(t)
 		liveOwner := executionActor("codex", "live-owner")
 		record.Execution.Lease.Holder = &liveOwner
-		if _, err := writeIssueOps(stateRoot, record); err != nil {
+		if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 			t.Fatal(err)
 		}
 		inspector := &rolloverOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "runtime-current"}}
@@ -213,7 +213,7 @@ func rolloverExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRe
 	record.Execution.Lease = contractissueops.WriteLease{
 		Generation: 1, Status: contractissueops.LeaseStatusReleased,
 	}
-	if _, err := writeIssueOps(stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte(planBody)); err != nil {
@@ -229,7 +229,7 @@ func rolloverExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRe
 		},
 		ClaimedAt: "2026-08-03T00:00:00Z",
 	}
-	written, err := writeIssueOps(stateRoot, record)
+	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

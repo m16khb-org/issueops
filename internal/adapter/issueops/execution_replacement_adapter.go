@@ -11,11 +11,11 @@ type ReplacementRecords struct{ StateRoot string }
 func (s ReplacementRecords) Load(id string) (issueops.IssueOpsRecord, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
-func (s ReplacementRecords) WithinLock(ctx context.Context, id string, fn func() error) error {
-	return withIssueOpsLock(ctx, s.StateRoot, id, func(context.Context) error { return fn() })
+func (s ReplacementRecords) WithinLock(ctx context.Context, id string, fn func(context.Context) error) error {
+	return withIssueOpsLock(ctx, s.StateRoot, id, fn)
 }
-func (s ReplacementRecords) Persist(record issueops.IssueOpsRecord, previous *issueops.NativeActor) (issueops.IssueOpsRecord, error) {
-	return persistExecutionTransition(s.StateRoot, record, previous)
+func (s ReplacementRecords) Persist(ctx context.Context, record issueops.IssueOpsRecord, previous *issueops.NativeActor) (issueops.IssueOpsRecord, error) {
+	return persistExecutionTransition(ctx, s.StateRoot, record, previous)
 }
 
 type ReplacementWorkspace struct {

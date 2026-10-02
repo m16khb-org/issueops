@@ -9,6 +9,7 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
+	authorityport "issueops/internal/port/authority"
 	basesyncport "issueops/internal/port/issueopsbasesync"
 )
 
@@ -38,12 +39,12 @@ type ReseedService struct {
 	baseSync   basesyncport.Inspector
 	artifacts  ReseedArtifacts
 	clock      Clock
-	inspect    ProcessInspector
+	verifier   authorityport.ActorVerifier
 	paths      CanonicalPathMatcher
 }
 
-func NewReseedService(fence ReseedFence, repository ReseedRepository, inventory ReseedInventory, baseSync basesyncport.Inspector, artifacts ReseedArtifacts, clock Clock, inspect ProcessInspector, paths CanonicalPathMatcher) *ReseedService {
-	return &ReseedService{fence: fence, repository: repository, inventory: inventory, baseSync: baseSync, artifacts: artifacts, clock: clock, inspect: inspect, paths: paths}
+func NewReseedService(fence ReseedFence, repository ReseedRepository, inventory ReseedInventory, baseSync basesyncport.Inspector, artifacts ReseedArtifacts, clock Clock, verifier authorityport.ActorVerifier, paths CanonicalPathMatcher) *ReseedService {
+	return &ReseedService{fence: fence, repository: repository, inventory: inventory, baseSync: baseSync, artifacts: artifacts, clock: clock, verifier: verifier, paths: paths}
 }
 
 func (s *ReseedService) Reseed(ctx context.Context, request ReseedRequest) (ReseedResult, error) {
@@ -52,7 +53,7 @@ func (s *ReseedService) Reseed(ctx context.Context, request ReseedRequest) (Rese
 	}
 	var result ReseedResult
 	err := s.fence.Within(ctx, request.ID, func(fenceCtx context.Context) error {
-		actor, err := resolveActor(fenceCtx, request.Actor, request.Ancestry, s.inspect)
+		actor, err := resolveActor(fenceCtx, request.Actor, request.Ancestry, s.verifier)
 		if err != nil {
 			return err
 		}

@@ -50,7 +50,7 @@ func issueOpsReseedHandlerWithOwner(ctx context.Context, stateRoot string, reque
 		return leasecontract.ReseedReceipt{IssueBodySHA256: prepared.IssueBodySHA256, ContextPacketPath: prepared.ContextPacketPath, ContextPacketSHA256: prepared.ContextPacketSHA256, OwnerPromptPath: prepared.OwnerPromptPath, OwnerPromptSHA256: prepared.OwnerPromptSHA256}, nil
 	})
 	baseSync := basesyncoutbound.NewInspector(basesyncoutbound.RunGit)
-	service := leaseapp.NewReseedService(fence, leaseoutbound.NewReseedRepository(db), inventory, baseSync, artifacts, leaseoutbound.UTCClock{}, leaseoutbound.InspectNativeProcess, leaseoutbound.FilesystemPathMatcher{})
+	service := leaseapp.NewReseedService(fence, leaseoutbound.NewReseedRepository(db), inventory, baseSync, artifacts, leaseoutbound.UTCClock{}, issueOpsActorVerifier(), leaseoutbound.FilesystemPathMatcher{})
 	return leaseinbound.NewReseedHandler(service, ownerdomain.OwnerReseedNextCommand)(ctx, stateRoot, request)
 }
 

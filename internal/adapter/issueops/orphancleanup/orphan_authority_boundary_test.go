@@ -41,7 +41,7 @@ func TestOrphanApplyPreservesOwnerCreatedDuringMergeObservation(t *testing.T) {
 	owner := domain.NewCycleRecord("io-late-owner", fixture.repo, fixture.branch, "2026-09-29T00:00:00Z")
 	owner.WorktreePath = fixture.worktree
 	deps.VerifyMerged = func(model.IssueOpsRemoteArtifactVerification) error {
-		_, err := coreissueops.WriteIssueOps(stateRoot, owner)
+		_, err := coreissueops.WriteIssueOps(context.Background(), stateRoot, owner)
 		return err
 	}
 	result, applyErr := Apply(context.Background(), request, ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
@@ -100,7 +100,7 @@ func TestOrphanCleanupPreservesContainedStateStore(t *testing.T) {
 			}
 			stateRoot := issueOpsStateRootForTest()
 			unrelated := domain.NewCycleRecord("io-unrelated", fixture.repo, "77-another-cycle", "2026-09-29T00:00:00Z")
-			if _, err := coreissueops.WriteIssueOps(stateRoot, unrelated); err != nil {
+			if _, err := coreissueops.WriteIssueOps(context.Background(), stateRoot, unrelated); err != nil {
 				t.Fatal(err)
 			}
 			request := fixture.request()

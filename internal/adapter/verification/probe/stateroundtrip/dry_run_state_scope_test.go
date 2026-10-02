@@ -1,6 +1,7 @@
 package stateroundtrip
 
 import (
+	"context"
 	selfverify "issueops/internal/contract/selfverify"
 
 	"strings"
@@ -27,7 +28,7 @@ func TestStateRoundtripDetectsDryRunWriteInProbeState(t *testing.T) {
 			if probeRoot == "" {
 				t.Fatal("missing isolated probe state")
 			}
-			_, err := statestore.WriteStateRecord(probeRoot, "self-verify-456-promoted-baseline", statecontract.RecordEnvelope{SchemaVersion: 1, Key: "self-verify-456-promoted-baseline", Content: "unexpected write", UpdatedAt: "2026-09-30T00:00:00Z", Bytes: 16})
+			_, err := statestore.WriteStateRecord(context.Background(), probeRoot, "self-verify-456-promoted-baseline", statecontract.RecordEnvelope{SchemaVersion: 1, Key: "self-verify-456-promoted-baseline", Content: "unexpected write", UpdatedAt: "2026-09-30T00:00:00Z", Bytes: 16})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -46,7 +47,7 @@ func TestStateRoundtripDetectsDryRunWriteInProbeState(t *testing.T) {
 func TestStateRoundtripIgnoresUnrelatedParentState(t *testing.T) {
 	parent := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", parent)
-	_, err := statestore.WriteStateRecord(parent, "self-verify-456-promoted-baseline", statecontract.RecordEnvelope{SchemaVersion: 1, Key: "self-verify-456-promoted-baseline", Content: "parent baseline", UpdatedAt: "2026-09-30T00:00:00Z", Bytes: 15})
+	_, err := statestore.WriteStateRecord(context.Background(), parent, "self-verify-456-promoted-baseline", statecontract.RecordEnvelope{SchemaVersion: 1, Key: "self-verify-456-promoted-baseline", Content: "parent baseline", UpdatedAt: "2026-09-30T00:00:00Z", Bytes: 15})
 	if err != nil {
 		t.Fatal(err)
 	}

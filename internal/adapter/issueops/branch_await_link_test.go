@@ -25,7 +25,7 @@ func awaitFixture(t *testing.T, linkVerified bool) string {
 			CreatedAt: "2026-08-09T00:00:00Z",
 		},
 	}
-	if _, err := WriteIssueOps(root, record); err != nil {
+	if _, err := WriteIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	return root
@@ -193,7 +193,7 @@ func TestAwaitBranchLinkIsGitHubOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	record.BranchPrepare.Provider = "gitlab"
-	if _, err := WriteIssueOps(root, record); err != nil {
+	if _, err := WriteIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	deps := &awaitDeps{rounds: [][]linkedbranch.Node{nil}}

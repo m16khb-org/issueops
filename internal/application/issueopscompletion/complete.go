@@ -31,18 +31,18 @@ type Service struct {
 	repository  Repository
 	environment Environment
 	clock       Clock
-	inspect     ProcessInspector
+	verify      ActorVerifier
 }
 
-func NewService(repository Repository, environment Environment, clock Clock, inspect ProcessInspector) *Service {
-	return &Service{repository: repository, environment: environment, clock: clock, inspect: inspect}
+func NewService(repository Repository, environment Environment, clock Clock, verify ActorVerifier) *Service {
+	return &Service{repository: repository, environment: environment, clock: clock, verify: verify}
 }
 
 func (s *Service) Complete(ctx context.Context, request Request) (Result, error) {
-	if s == nil || s.repository == nil || s.environment == nil || s.clock == nil || s.inspect == nil {
+	if s == nil || s.repository == nil || s.environment == nil || s.clock == nil || s.verify == nil {
 		return Result{ID: request.ID}, fmt.Errorf("completion dependencies are required")
 	}
-	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.inspect)
+	actor, err := s.verify(ctx, request.Actor, request.Ancestry)
 	if err != nil {
 		return Result{ID: request.ID}, err
 	}
@@ -98,21 +98,6 @@ func (s *Service) Complete(ctx context.Context, request Request) (Result, error)
 		return Result{ID: request.ID}, err
 	}
 	return Result{OK: true, ID: request.ID, Execution: persisted.Execution}, nil
-}
-
-func resolveActor(ctx context.Context, actor completioncontract.Actor, ancestry []completioncontract.ProcessReceipt, inspect ProcessInspector) (completioncontract.Actor, error) {
-	actor, err := completiondomain.NormalizeActor(actor, ancestry)
-	if err != nil {
-		return completioncontract.Actor{}, err
-	}
-	status, observed, err := inspect(ctx, *actor.Process)
-	if err != nil {
-		return completioncontract.Actor{}, err
-	}
-	if err := completiondomain.ValidateLiveActor(actor, status, observed); err != nil {
-		return completioncontract.Actor{}, err
-	}
-	return actor, nil
 }
 
 func toDomainSnapshot(record completioncontract.RecordSnapshot) completiondomain.Snapshot {

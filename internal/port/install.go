@@ -7,6 +7,9 @@ type NativeInstallRequest struct {
 	Home             string   `json:"home"`
 	CodexHome        string   `json:"codex_home"`
 	BinPath          string   `json:"bin_path"`
+	MCPTransport     string   `json:"mcp_transport,omitempty"`
+	MCPURL           string   `json:"mcp_url,omitempty"`
+	MCPBearer        string   `json:"-"`
 	SkillNames       []string `json:"skill_names"`
 	ProjectLocal     bool     `json:"project_local"`
 	DryRun           bool     `json:"dry_run,omitempty"`

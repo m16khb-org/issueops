@@ -17,6 +17,7 @@ func addIssueOpsDecisionForTest(
 		issueopsdecisionoutbound.Repository{},
 		issueopsdecisionoutbound.SystemClock{},
 		issueopsauthorizationoutbound.CanonicalPaths{},
+		liveTestVerifier(),
 	)
 	return issueopsdecisioninbound.NewHandlers(service).Add(stateRoot, id, request)
 }

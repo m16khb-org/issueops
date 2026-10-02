@@ -7,11 +7,13 @@ package trace
 import failurecause "issueops/internal/contract/failurecause"
 
 type TraceAnalyzeRequest struct {
-	Input string `json:"input"`
+	Input       string `json:"input"`
+	InputFormat string `json:"input_format,omitempty"`
 }
 
 type TraceAnalyzeResult struct {
 	OK           bool                   `json:"ok"`
+	Complete     bool                   `json:"complete"`
 	Kind         string                 `json:"kind"`
 	Input        string                 `json:"input"`
 	InputSource  string                 `json:"input_source"`
@@ -19,6 +21,7 @@ type TraceAnalyzeResult struct {
 	FindingCount int                    `json:"finding_count"`
 	Findings     []TraceAnalysisFinding `json:"findings"`
 	Warnings     []string               `json:"warnings,omitempty"`
+	Usage        *UsageReport           `json:"usage,omitempty"`
 }
 
 type TraceAnalysisFinding struct {

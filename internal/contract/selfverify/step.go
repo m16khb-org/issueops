@@ -6,6 +6,7 @@ type StepResult struct {
 	Label           string                  `json:"label"`
 	Command         string                  `json:"command,omitempty"`
 	OK              bool                    `json:"ok"`
+	Reused          bool                    `json:"reused"`
 	DurationMS      int64                   `json:"duration_ms"`
 	Stdout          string                  `json:"stdout,omitempty"`
 	Stderr          string                  `json:"stderr,omitempty"`

@@ -1,6 +1,7 @@
 package state_test
 
 import (
+	"context"
 	"testing"
 
 	stateport "issueops/internal/port/state"
@@ -8,8 +9,8 @@ import (
 
 type memoryStore struct{}
 
-func (memoryStore) Get(string, string) ([]byte, bool, error) { return nil, false, nil }
-func (memoryStore) Mutate([]stateport.Mutation) error        { return nil }
+func (memoryStore) Get(string, string) ([]byte, bool, error)           { return nil, false, nil }
+func (memoryStore) Mutate(context.Context, []stateport.Mutation) error { return nil }
 
 type memoryExistingReader struct{}
 

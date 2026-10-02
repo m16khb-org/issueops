@@ -72,7 +72,7 @@ func TestIssueOpsClaimProducesOwnerClaimEvidenceFromCommittedLease(t *testing.T)
 		t.Run(host, func(t *testing.T) {
 			stateRoot, record, token, issueDigest, packetDigest := seedOrcaClaimSnapshot(t)
 			record.Execution.Orca.OwnerHost = host
-			if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+			if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 				t.Fatal(err)
 			}
 			seedClaimDeliveryObservation(t, stateRoot, record)
@@ -274,7 +274,7 @@ func TestSuccessfulDirectClaimObservesReleasedReseededGeneration(t *testing.T) {
 	if err := os.Remove(oldToken); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -511,7 +511,7 @@ func seedOrcaClaimSnapshot(t *testing.T) (string, issueopscontract.IssueOpsRecor
 	record.Execution.Orca.IssueBodySHA256 = issueDigest
 	record.Execution.Orca.ContextPacketSHA256 = packetDigest
 	record.Execution.Orca.OwnerPromptSHA256 = strings.Repeat("d", 64)
-	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot, record, tokenPath, issueDigest, packetDigest

@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -272,7 +273,7 @@ func TestReleasedArtifactStagingChangesOnlyNextResealInput(t *testing.T) {
 	record.Execution.Workspace.Branch = record.Branch
 	record.Execution.Workspace.BaseHead = record.BranchPrepare.BaseSHA
 	record.Execution.Workspace.LinkedAt = "2026-08-03T00:00:00Z"
-	if _, err := WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	packetPath, _ := executionOwnerArtifactPaths(record)
@@ -308,7 +309,7 @@ func TestReleasedArtifactRecoveryLinksPlanBeforeStaging(t *testing.T) {
 	record.Execution.Workspace.Branch = record.Branch
 	record.Execution.Workspace.BaseHead = record.BranchPrepare.BaseSHA
 	record.Execution.Workspace.LinkedAt = "2026-08-03T00:00:00Z"
-	if _, err := WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	planPath := filepath.Join(worktree, "plans", "recovery.md")
@@ -340,7 +341,7 @@ func TestArtifactReleasedNearMissRequiresReseedBeforeResume(t *testing.T) {
 	record.Execution.Workspace.Branch = record.Branch
 	record.Execution.Workspace.BaseHead = record.BranchPrepare.BaseSHA
 	record.Execution.Workspace.LinkedAt = "2026-08-03T00:00:00Z"
-	if _, err := WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	_, err := stageIssueOpsArtifactForTest(stateRoot, record.ID, "plan", []byte("# Blocked\n"))

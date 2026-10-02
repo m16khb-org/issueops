@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,7 +34,7 @@ func TestExecutionMutationRequiresCurrentLeaseHolderInCanonicalWorktree(t *testi
 	}}
 
 	exact := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: root, NativeProcessAncestry: []issueops.NativeProcessReceipt{*holder.SessionProcess}}
-	if err := validateExecutionMutation(record, &exact); err != nil {
+	if err := validateExecutionMutation(context.Background(), record, &exact, liveTestVerifier()); err != nil {
 		t.Fatalf("exact current holder rejected: %v", err)
 	}
 
@@ -47,14 +48,14 @@ func TestExecutionMutationRequiresCurrentLeaseHolderInCanonicalWorktree(t *testi
 		"source checkout":    {Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: source, NativeProcessAncestry: exact.NativeProcessAncestry},
 		"other worktree cwd": {Host: "codex", SessionID: "session-1", AgentID: "agent-1", CWD: filepath.Join(source+".worktrees", "other"), NativeProcessAncestry: exact.NativeProcessAncestry},
 	} {
-		if err := validateExecutionMutation(record, actor); err == nil {
+		if err := validateExecutionMutation(context.Background(), record, actor, liveTestVerifier()); err == nil {
 			t.Fatalf("%s actor unexpectedly authorized: %#v", name, actor)
 		}
 	}
 }
 
 func TestExecutionMutationAllowsPreExecutionPlanningButFencesNonActiveLease(t *testing.T) {
-	if err := validateExecutionMutation(issueops.IssueOpsRecord{}, nil); err != nil {
+	if err := validateExecutionMutation(context.Background(), issueops.IssueOpsRecord{}, nil, liveTestVerifier()); err != nil {
 		t.Fatalf("pre-execution planning rejected: %v", err)
 	}
 
@@ -66,7 +67,7 @@ func TestExecutionMutationAllowsPreExecutionPlanningButFencesNonActiveLease(t *t
 		Lease: issueops.WriteLease{Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-07-22T00:00:01Z"},
 	}}
 	actor := issueops.IssueOpsActor{Host: "codex", SessionID: "session-1", CWD: record.Execution.Workspace.Root}
-	if err := validateExecutionMutation(record, &actor); err == nil {
+	if err := validateExecutionMutation(context.Background(), record, &actor, liveTestVerifier()); err == nil {
 		t.Fatal("released lease unexpectedly authorized a mutation")
 	}
 }
@@ -89,7 +90,7 @@ func TestReleasedOrcaPlanLinkAllowsOmoCoordinatorInCanonicalWorktree(t *testing.
 			PID: 42, StartedAt: "2026-08-12T00:00:00Z", Executable: "omo",
 		}},
 	}
-	if err := cycleapp.NewMutationAuthority(samePath).ValidatePlanLink(record, &actor); err != nil {
+	if err := cycleapp.NewMutationAuthority(samePath, liveTestVerifier()).ValidatePlanLink(context.Background(), record, &actor); err != nil {
 		t.Fatalf("Omo coordinator must link a released Orca plan: %v", err)
 	}
 }

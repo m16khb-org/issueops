@@ -32,7 +32,10 @@ func (installer Installer) Install(req port.NativeInstallRequest) (port.HostInst
 	hooksTemplatePath := filepath.Join(req.Root, "configs", "claude", "hooks.settings.json")
 	plan.File(installer.deps.WriteJSONPlan(hooksTemplatePath, "claude_hooks_template", installer.claudeSettingsConfig("./bin/issueops"), 0o644, req.DryRun))
 
-	if req.ProjectLocal {
+	if req.ProjectLocal && req.MCPTransport == mcpTransportHTTP {
+		plan.File(installer.removeClaudeProjectMCP(filepath.Join(req.Root, ".mcp.json"), req.DryRun))
+		plan.Message("project-local Claude MCP uses the user-scope issueops HTTP entry; no project entry or secret is written")
+	} else if req.ProjectLocal {
 		plan.File(installer.deps.WriteJSONPlan(filepath.Join(req.Root, ".mcp.json"), "claude_project_mcp_config", mcpConfig, 0o644, req.DryRun))
 	}
 

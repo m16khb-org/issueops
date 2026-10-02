@@ -6,6 +6,7 @@ import (
 	"fmt"
 	daemoncontract "issueops/internal/contract/daemon"
 	doctorcontract "issueops/internal/contract/doctor"
+	inspectcontract "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
 	"sort"
 	"strings"
@@ -26,13 +27,14 @@ func (command Command) RunInspect(args []string) error {
 	fs := flag.NewFlagSet("inspect", flag.ContinueOnError)
 	jsonOut := fs.Bool("json", false, "print JSON")
 	repo := fs.String("repo", "", "target repo/workspace")
+	hostReceipts := fs.String("host-receipts", "", "host receipt JSON file (schema_version 1) for discovered/connected/protocol observations")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if *repo == "" && fs.NArg() > 0 {
 		*repo = fs.Arg(0)
 	}
-	info := command.InspectHarness(*repo)
+	info := command.InspectHarness(*repo, inspectcontract.Options{HostReceipts: *hostReceipts})
 	if *jsonOut {
 		return printJSON(info)
 	}
@@ -45,6 +47,10 @@ func (command Command) RunInspect(args []string) error {
 	fmt.Printf("codex skill installed: %v\n", info.Integration.CodexSkillInstalled)
 	fmt.Printf("claude skill installed: %v\n", info.Integration.ClaudeSkillInstalled)
 	fmt.Printf("project Claude MCP config: %v\n", info.Integration.ProjectClaudeMCPConfig)
+	for _, host := range info.Integration.Hosts {
+		fmt.Printf("host %s (%s): installed=%s linked=%s configured=%s discovered=%s connected=%s protocol=%s\n", host.Host, host.Transport,
+			host.Installed.Status, host.Linked.Status, host.Configured.Status, host.Discovered.Status, host.Connected.Status, host.Protocol.Status)
+	}
 	return nil
 }
 

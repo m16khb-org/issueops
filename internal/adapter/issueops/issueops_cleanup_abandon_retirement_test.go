@@ -55,7 +55,7 @@ func TestAbandonKeepsArtifactGateClosedWithoutObservation(t *testing.T) {
 func TestAbandonAllowsDoneCycleWithoutArtifact(t *testing.T) {
 	stateRoot, record := abandonRetirementRecord(t)
 	record.RemoteArtifact = nil
-	if _, err := writeIssueOps(stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -77,7 +77,7 @@ func abandonRetirementRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		URL:        "https://github.com/example/issueops/pull/241",
 		VerifiedAt: "2026-08-02T15:54:07Z",
 	}
-	written, err := writeIssueOps(stateRoot, record)
+	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

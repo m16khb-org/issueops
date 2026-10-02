@@ -43,7 +43,7 @@ func TestGraphSyncCompositionPreservesPreviewAndProviderContracts(t *testing.T) 
 			if mode != "preview" && mode != "missing-issue" && mode != "no-links" {
 				record.IssueLinks = []model.IssueOpsIssueLink{{Type: "depends-on", URL: "https://github.com/acme/repo/issues/73", Title: "Dependency", CreatedAt: "then"}}
 			}
-			if record, err = core.WriteIssueOps(root, record); err != nil {
+			if record, err = core.WriteIssueOps(context.Background(), root, record); err != nil {
 				t.Fatal(err)
 			}
 			db, err := sqlstore.Open(root)

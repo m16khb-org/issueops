@@ -276,7 +276,7 @@ func TestBranchRetargetRejectsAnArtifactThatChangedAfterObservation(t *testing.T
 				return "", readErr
 			}
 			changed.RemoteArtifact.URL = "https://github.com/example/issueops/pull/9999"
-			if _, writeErr := writeIssueOps(stateRoot, changed); writeErr != nil {
+			if _, writeErr := writeIssueOps(context.Background(), stateRoot, changed); writeErr != nil {
 				return "", writeErr
 			}
 			return "2803-umbrella", nil
@@ -340,7 +340,7 @@ func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.IssueOps
 		Labels: []string{"enhancement"}, Assignees: []string{"maintainer"},
 		VerifiedAt: "2026-09-23T00:00:00Z", TargetBranch: "main",
 	}
-	written, err := writeIssueOps(stateRoot, record)
+	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -349,7 +349,7 @@ func retargetReadyRecord(t *testing.T, stateRoot, repo string) issueops.IssueOps
 
 func retargetForTest(root, id string, req issueops.IssueOpsBranchRetargetRequest, actor issueops.IssueOpsActor, service branchapp.Retargeter) (issueops.IssueOpsRecord, error) {
 	service.Records = CycleRecordStore{StateRoot: root}
-	service.Authority = cycleapp.NewMutationAuthority(samePath)
+	service.Authority = cycleapp.NewMutationAuthority(samePath, liveTestVerifier())
 	service.OriginPresent = (BranchGit{Run: GitCmd}).OriginPresent
 	service.Now = time.Now
 	return service.Retarget(context.Background(), id, req, actor)

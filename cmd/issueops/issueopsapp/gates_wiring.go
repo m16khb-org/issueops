@@ -7,8 +7,16 @@ import (
 )
 
 func newGatesService() app.Service {
+	return gatesServiceWith(adapter.FileStore{})
+}
+
+func newScopedGatesService(root, cwd string) app.Service {
+	return gatesServiceWith(adapter.WorkspaceFileStore{Root: root, CWD: cwd})
+}
+
+func gatesServiceWith(store app.LedgerStore) app.Service {
 	policy := newPolicyService()
-	return app.Service{Store: adapter.FileStore{}, Clock: adapter.Clock{}, Runner: app.CommandRunner{Evaluate: policy.Evaluate, Execute: policy.Run}}
+	return app.Service{Store: store, Clock: adapter.Clock{}, Runner: app.CommandRunner{Evaluate: policy.Evaluate, Execute: policy.Run}}
 }
 func gatesDependencies() gatescli.Dependencies {
 	service := newGatesService()

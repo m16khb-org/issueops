@@ -1,6 +1,7 @@
 package selfworkflow
 
 import (
+	"context"
 	"encoding/json"
 	"issueops/cmd/issueops/selfworkflow/augmentlesson"
 	"issueops/internal/adapter/augmentation"
@@ -12,6 +13,7 @@ import (
 	app "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
 	contract "issueops/internal/contract/selfaugment"
+	statecontract "issueops/internal/contract/state"
 	domain "issueops/internal/domain/selfaugment"
 	verifydomain "issueops/internal/domain/selfverify"
 	"time"
@@ -28,7 +30,11 @@ func SaveSelfAugmentLesson(req SelfAugmentLessonRequest) (SelfAugmentLessonResul
 		return planSelfAugmentation(SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95}).SelectedCandidate
 	}, Now: time.Now, Encode: func(snapshot contract.SelfAugmentLessonStateSnapshot) ([]byte, error) {
 		return json.MarshalIndent(snapshot, "", "  ")
-	}, Write: state.StateWrite, StateDir: state.StateDir, Prune: state.StatePrunePrefix})
+	}, Write: func(key, content string) (statecontract.StateResult, error) {
+		return state.StateWrite(context.Background(), key, content)
+	}, StateDir: state.StateDir, Prune: func(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
+		return state.StatePrunePrefix(context.Background(), prefix, maxAge, maxRecords, confirm)
+	}})
 }
 func RunSelfAugmentLesson(args []string) error {
 	return augmentlesson.Run(args, augmentlesson.Deps{Save: SaveSelfAugmentLesson, PrintJSON: printJSON})
@@ -40,7 +46,9 @@ func ExportSelfVerificationCandidates() SelfVerificationCandidateExportResult {
 func SaveSelfVerificationCandidateExport(result *SelfVerificationCandidateExportResult, key string) error {
 	return verifyapp.SaveCandidateExport(result, key, verifyapp.SaveCandidateExportDeps{Now: time.Now, Encode: func(snapshot contract.SelfVerificationCandidateExportStateSnapshot) ([]byte, error) {
 		return json.MarshalIndent(snapshot, "", "  ")
-	}, Write: state.StateWrite, StateDir: state.StateDir})
+	}, Write: func(key, content string) (statecontract.StateResult, error) {
+		return state.StateWrite(context.Background(), key, content)
+	}, StateDir: state.StateDir})
 }
 func SelectedSelfVerificationCandidateID(candidate *SelfVerificationCandidate) string {
 	return verifydomain.SelectedCandidateID(candidate)

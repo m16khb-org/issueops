@@ -15,7 +15,7 @@ func (r BodySyncRepository) Read(_ context.Context, id string) (model.IssueOpsRe
 
 func (r BodySyncRepository) Update(ctx context.Context, id string, transition application.RecordTransition) (model.IssueOpsRecord, error) {
 	var persisted model.IssueOpsRecord
-	err := withIssueOpsLock(ctx, r.StateRoot, id, func(context.Context) error {
+	err := withIssueOpsLock(ctx, r.StateRoot, id, func(spanCtx context.Context) error {
 		current, err := ReadIssueOps(r.StateRoot, id)
 		if err != nil {
 			return err
@@ -24,7 +24,7 @@ func (r BodySyncRepository) Update(ctx context.Context, id string, transition ap
 		if err != nil {
 			return err
 		}
-		persisted, err = writeIssueOps(r.StateRoot, updated)
+		persisted, err = writeIssueOps(spanCtx, r.StateRoot, updated)
 		return err
 	})
 	if err != nil {

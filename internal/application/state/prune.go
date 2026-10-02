@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,18 +9,18 @@ import (
 	statedomain "issueops/internal/domain/state"
 )
 
-func (service *Service) Prune(maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error) {
-	return service.prune("", maxAge, 0, confirm)
+func (service *Service) Prune(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error) {
+	return service.prune(ctx, "", maxAge, 0, confirm)
 }
 
-func (service *Service) PrunePrefix(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
+func (service *Service) PrunePrefix(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
 	if prefix == "" {
 		return service.newPruneResult(maxAge, confirm), fmt.Errorf("prefix is required")
 	}
-	return service.prune(prefix, maxAge, maxRecords, confirm)
+	return service.prune(ctx, prefix, maxAge, maxRecords, confirm)
 }
 
-func (service *Service) prune(prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
+func (service *Service) prune(ctx context.Context, prefix string, maxAge time.Duration, maxRecords int, confirm bool) (statecontract.StatePruneResult, error) {
 	result := service.newPruneResult(maxAge, confirm)
 	if maxAge <= 0 {
 		return result, fmt.Errorf("max age must be positive")
@@ -37,7 +38,7 @@ func (service *Service) prune(prefix string, maxAge time.Duration, maxRecords in
 	for _, record := range result.Pruned {
 		result.DeletedKeys = append(result.DeletedKeys, record.Key)
 		if confirm {
-			if err := service.Delete(record.Key); err != nil {
+			if err := service.Delete(ctx, record.Key); err != nil {
 				return result, err
 			}
 		}

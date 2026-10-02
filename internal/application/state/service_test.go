@@ -19,11 +19,11 @@ func TestServiceOwnsStateReadWriteAndUpdateOrchestration(t *testing.T) {
 		Now:             func() time.Time { return time.Date(2026, 8, 4, 1, 2, 3, 0, time.UTC) },
 	})
 
-	written, err := service.Write("counter", "1")
+	written, err := service.Write(context.Background(), "counter", "1")
 	if err != nil || !written.OK || written.Record.UpdatedAt != "2026-08-04T01:02:03Z" {
 		t.Fatalf("Write() = %+v, %v", written, err)
 	}
-	updated, err := service.Update("counter", func(current statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
+	updated, err := service.Update(context.Background(), "counter", func(current statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error) {
 		current.Content = "12"
 		current.Bytes = 2
 		return current, nil
@@ -57,7 +57,7 @@ func (s *memoryStore) Get(bucket, id string) ([]byte, bool, error) {
 	return append([]byte(nil), value...), ok, nil
 }
 
-func (s *memoryStore) Mutate(mutations []stateport.Mutation) error {
+func (s *memoryStore) Mutate(_ context.Context, mutations []stateport.Mutation) error {
 	for _, mutation := range mutations {
 		key := mutation.Bucket + "/" + mutation.ID
 		if mutation.Delete {
@@ -104,17 +104,17 @@ func TestServiceListWriteRecordAndPrune(t *testing.T) {
 		UpdatedAt: now.Add(-800 * time.Hour).UTC().Format(time.RFC3339Nano),
 	}
 	envelope.Bytes = len("old")
-	if _, err := service.WriteRecord("/state", "rec-old", envelope); err != nil {
+	if _, err := service.WriteRecord(context.Background(), "/state", "rec-old", envelope); err != nil {
 		t.Fatalf("WriteRecord: %v", err)
 	}
 	// envelope key가 쓰기 key와 불일치하면 거부한다.
 	mismatch := statecontract.RecordEnvelope{SchemaVersion: statecontract.SchemaVersion, Key: "different", Content: "x"}
 	mismatch.Bytes = 1
-	if _, err := service.WriteRecord("/state", "rec-x", mismatch); err == nil {
+	if _, err := service.WriteRecord(context.Background(), "/state", "rec-x", mismatch); err == nil {
 		t.Fatal("key mismatch must fail")
 	}
 	// envelope 불변식 위반(schema/bytes)도 거부한다.
-	if _, err := service.WriteRecord("/state", "rec-bad", statecontract.RecordEnvelope{Key: "rec-bad", Content: "abc"}); err == nil {
+	if _, err := service.WriteRecord(context.Background(), "/state", "rec-bad", statecontract.RecordEnvelope{Key: "rec-bad", Content: "abc"}); err == nil {
 		t.Fatal("invalid envelope invariant must fail")
 	}
 	listed, err := service.List()
@@ -123,7 +123,7 @@ func TestServiceListWriteRecordAndPrune(t *testing.T) {
 	}
 
 	// dry-run: 오래된 기록을 골라도 삭제하지 않는다.
-	dry, err := service.Prune(720*time.Hour, false)
+	dry, err := service.Prune(context.Background(), 720*time.Hour, false)
 	if err != nil || !dry.OK || !dry.DryRun || dry.Confirm {
 		t.Fatalf("dry-run prune = %+v err=%v", dry, err)
 	}
@@ -136,7 +136,7 @@ func TestServiceListWriteRecordAndPrune(t *testing.T) {
 		t.Fatalf("dry-run must not delete: %+v", afterDry)
 	}
 	// confirm: 실제로 삭제한다.
-	confirmed, err := service.Prune(720*time.Hour, true)
+	confirmed, err := service.Prune(context.Background(), 720*time.Hour, true)
 	if err != nil || !confirmed.OK || confirmed.DryRun || !confirmed.Confirm {
 		t.Fatalf("confirm prune = %+v err=%v", confirmed, err)
 	}
@@ -145,10 +145,10 @@ func TestServiceListWriteRecordAndPrune(t *testing.T) {
 		t.Fatalf("confirm must delete: %+v", afterConfirm)
 	}
 	// 검증: 잘못된 max-age/prefix는 즉시 거부.
-	if _, err := service.Prune(0, true); err == nil {
+	if _, err := service.Prune(context.Background(), 0, true); err == nil {
 		t.Fatal("zero max-age must fail")
 	}
-	if _, err := service.PrunePrefix("", time.Hour, 1, true); err == nil {
+	if _, err := service.PrunePrefix(context.Background(), "", time.Hour, 1, true); err == nil {
 		t.Fatal("empty prefix must fail")
 	}
 }

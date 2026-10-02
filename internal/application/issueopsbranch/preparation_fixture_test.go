@@ -23,10 +23,10 @@ type preparationRepository struct {
 	locked bool
 }
 
-func (r *preparationRepository) WithinLock(_ context.Context, _ string, fn func() error) error {
+func (r *preparationRepository) WithinLock(ctx context.Context, _ string, fn func(context.Context) error) error {
 	r.locked = true
 	defer func() { r.locked = false }()
-	return fn()
+	return fn(ctx)
 }
 func (r *preparationRepository) Load(id string) (model.IssueOpsRecord, error) {
 	if !r.locked {
@@ -34,7 +34,7 @@ func (r *preparationRepository) Load(id string) (model.IssueOpsRecord, error) {
 	}
 	return r.store.Read(r.root, id)
 }
-func (r *preparationRepository) Save(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (r *preparationRepository) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	if !r.locked {
 		panic("write outside lock")
 	}

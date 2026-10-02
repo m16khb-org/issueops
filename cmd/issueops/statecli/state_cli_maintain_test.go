@@ -1,6 +1,7 @@
 package statecli
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -17,10 +18,10 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", "")
 	// Materialize the root store and the IssueOps v1 store; worker and loop stay
 	// absent and must be reported as skipped, not created.
-	if _, err := statestore.StateWrite("maintain-smoke", "content"); err != nil {
+	if _, err := statestore.StateWrite(context.Background(), "maintain-smoke", "content"); err != nil {
 		t.Fatalf("seed state: %v", err)
 	}
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), issueopscontract.IssueOpsRecord{
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), issueopscontract.IssueOpsRecord{
 		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            issueopscore.NewIssueOpsID("/repo/maintain", "1-maintain"),
 		Repo:          "/repo/maintain",

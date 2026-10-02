@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	"encoding/json"
 	"issueops/cmd/issueops/issueopscli"
 	core "issueops/internal/adapter/issueops"
@@ -60,7 +61,7 @@ func TestLifecycleCLIInstancesKeepCapturedState(t *testing.T) {
 func TestLifecyclePRGateKeepsCapturedLoopState(t *testing.T) {
 	repo := makeGitRepoForContract(t)
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	loop, err := newLoopService().Start(loopmodel.StartLoopRequest{Repo: repo, Name: "ownership", Goal: "verify state ownership", MaxAttempts: 3})
+	loop, err := newLoopService().Start(context.Background(), loopmodel.StartLoopRequest{Repo: repo, Name: "ownership", Goal: "verify state ownership", MaxAttempts: 3})
 	if err != nil {
 		t.Fatal(err)
 	}

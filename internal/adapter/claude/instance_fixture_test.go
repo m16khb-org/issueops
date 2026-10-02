@@ -9,6 +9,7 @@ import (
 func testDependencies() Dependencies {
 	return Dependencies{
 		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		RemoveJSONMapEntry:              installutil.RemoveJSONMapEntry,
 		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
 		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
 		FileBuildGenerationString:       installadapter.FileBuildGenerationString,

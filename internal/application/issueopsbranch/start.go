@@ -13,9 +13,9 @@ import (
 )
 
 type CycleRecords interface {
-	WithinLock(context.Context, string, func() error) error
+	WithinLock(context.Context, string, func(context.Context) error) error
 	Load(string) (model.IssueOpsRecord, error)
-	Save(model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 }
 
 type StartIdentity interface {
@@ -47,7 +47,7 @@ func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (mod
 		id = s.Identity.StableID(repo, branch)
 	}
 	var record model.IssueOpsRecord
-	err := s.Records.WithinLock(ctx, id, func() error {
+	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		repo := strings.TrimSpace(req.Repo)
 		if repo == "" {
 			return fmt.Errorf("repo is required")
@@ -72,7 +72,7 @@ func (s Starter) Start(ctx context.Context, req model.IssueOpsStartRequest) (mod
 			record = existing
 			return nil
 		}
-		record, err = s.Records.Save(domain.NewCycleRecord(recordID, repo, branch, s.Now().UTC().Format(time.RFC3339Nano)))
+		record, err = s.Records.Save(spanCtx, domain.NewCycleRecord(recordID, repo, branch, s.Now().UTC().Format(time.RFC3339Nano)))
 		return err
 	})
 	return record, err

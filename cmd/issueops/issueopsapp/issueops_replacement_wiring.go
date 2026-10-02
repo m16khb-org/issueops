@@ -19,7 +19,7 @@ func newIssueOpsReplacementHandler() port.ExecutionReplaceHandler {
 			Records:   adapter.ReplacementRecords{StateRoot: stateRoot},
 			Workspace: adapter.ReplacementWorkspace{Snapshot: snapshot},
 			Artifacts: adapter.ReplacementArtifacts{}, ResealOwner: newIssueOpsOwnerContext(stateRoot, req.ReadIssue).Reseal,
-			BaseSync: invocation.BaseSync, InspectProcess: adapter.InspectNativeProcessReceipt,
+			BaseSync: invocation.BaseSync, InspectProcess: adapter.InspectNativeProcessReceipt, Verifier: issueOpsActorVerifier(),
 			Now: func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
 		}
 		return service.Run(ctx, req)

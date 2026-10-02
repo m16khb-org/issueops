@@ -45,7 +45,7 @@ func TestMCPDirectAndSDKKeepProjectAndExecutionServicesIsolated(t *testing.T) {
 	for i, owner := range owners {
 		pid := 100 + i
 		deps[i] = MCPDependencies{Catalog: testMCPCatalog(), DefaultTarget: owner,
-			Inspect:   func(repo string) any { return map[string]any{"owner": owner} },
+			Inspect:   func(repo, _ string) any { return inspectmodel.InspectInfo{OK: true, TargetRepo: owner} },
 			Preflight: preflightapp.Service{Observer: instancePreflight{owner}},
 			Skills: func(root, name string) []inspectmodel.SkillInfo {
 				if name != owner {

@@ -29,7 +29,9 @@ func TestSelfVerificationInstancesKeepActualFailuresAndSavedRootsSeparate(t *tes
 		go func(i int) {
 			defer wg.Done()
 			var cli contract.SelfAugmentResult
-			err := verifycmd.Run([]string{"--seed", "42", "--llm-eval=false", "--save-state", "--state-key", "cli", "--json"}, verifycmd.Deps{Verify: execute, SaveSummary: state.SaveSummary, PrintJSON: func(value any) error { cli = value.(contract.SelfAugmentResult); return nil }})
+			err := verifycmd.Run([]string{"--seed", "42", "--llm-eval=false", "--save-state", "--state-key", "cli", "--json"}, verifycmd.Deps{Verify: execute, SaveSummary: func(result *contract.SelfAugmentResult, key string) error {
+				return state.SaveSummary(context.Background(), result, key)
+			}, PrintJSON: func(value any) error { cli = value.(contract.SelfAugmentResult); return nil }})
 			if !errors.Is(err, app.ErrSelfVerificationGateFailed) {
 				t.Errorf("instance %d CLI lost real gate error: %v", i, err)
 				return

@@ -22,10 +22,10 @@ func TestBranchPrepareCompositionAdoptsOnceAndSealsResolvedCommit(t *testing.T) 
 		t.Fatal(err)
 	}
 	store := core.CycleRecordStore{StateRoot: root}
-	err = store.WithinLock(context.Background(), record.ID, func() error {
+	err = store.WithinLock(context.Background(), record.ID, func(spanCtx context.Context) error {
 		record.IssueURL = "https://github.com/acme/planning/issues/63"
 		var saveErr error
-		record, saveErr = store.Save(record)
+		record, saveErr = store.Save(spanCtx, record)
 		return saveErr
 	})
 	if err != nil {
@@ -72,10 +72,10 @@ func TestBranchPrepareUsesItsExplicitStateRootForUmbrella(t *testing.T) {
 	}
 	child.IssueURL = "https://github.com/acme/repo/issues/79"
 	parent.IssueLinks = []model.IssueOpsIssueLink{{Type: "child", URL: child.IssueURL, CreatedAt: parent.CreatedAt}}
-	if _, err = core.WriteIssueOps(root, parent); err != nil {
+	if _, err = core.WriteIssueOps(context.Background(), root, parent); err != nil {
 		t.Fatal(err)
 	}
-	child, err = core.WriteIssueOps(root, child)
+	child, err = core.WriteIssueOps(context.Background(), root, child)
 	if err != nil {
 		t.Fatal(err)
 	}

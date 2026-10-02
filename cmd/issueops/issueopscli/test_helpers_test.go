@@ -1,6 +1,7 @@
 package issueopscli
 
 import (
+	"context"
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/testsupport"
@@ -128,7 +129,7 @@ func seedIssueOpsCLIExecution(t *testing.T, record issueopscontract.IssueOpsReco
 			},
 		},
 	}
-	written, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record)
+	written, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record)
 	if err != nil {
 		t.Fatal(err)
 	}

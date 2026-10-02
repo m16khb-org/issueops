@@ -1,6 +1,7 @@
 package historycompare
 
 import (
+	"context"
 	statestore "issueops/internal/adapter/outbound/state"
 	app "issueops/internal/application/selfaugment"
 )
@@ -14,5 +15,5 @@ func SelfAugmentHistory(prefix string, limit int, retentionOptions ...SelfAugmen
 	if len(retentionOptions) > 0 {
 		retention = retentionOptions[0]
 	}
-	return historyService().History(prefix, limit, retention)
+	return historyService().History(context.Background(), prefix, limit, retention)
 }

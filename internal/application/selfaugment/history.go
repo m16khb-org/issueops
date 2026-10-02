@@ -1,6 +1,7 @@
 package selfaugment
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -15,10 +16,10 @@ type HistoryService struct {
 	StateDir func() string
 	List     func() (state.StateListResult, error)
 	Read     func(string) (state.StateResult, error)
-	Delete   func(string) error
+	Delete   func(context.Context, string) error
 }
 
-func (service HistoryService) History(prefix string, limit int, retention contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error) {
+func (service HistoryService) History(ctx context.Context, prefix string, limit int, retention contract.SelfAugmentHistoryRetentionOptions) (contract.SelfAugmentHistoryResult, error) {
 	result := contract.SelfAugmentHistoryResult{
 		OK:       false,
 		StateDir: service.StateDir(),
@@ -67,7 +68,7 @@ func (service HistoryService) History(prefix string, limit int, retention contra
 	sort.Strings(result.Warnings)
 	result.TotalMatches = len(result.Entries)
 	if retention.Limit > 0 {
-		if err := service.ApplyRetention(&result, retention); err != nil {
+		if err := service.ApplyRetention(ctx, &result, retention); err != nil {
 			return result, err
 		}
 		sort.Strings(result.Warnings)
@@ -80,7 +81,7 @@ func (service HistoryService) History(prefix string, limit int, retention contra
 	return result, nil
 }
 
-func (service HistoryService) ApplyRetention(result *contract.SelfAugmentHistoryResult, options contract.SelfAugmentHistoryRetentionOptions) error {
+func (service HistoryService) ApplyRetention(ctx context.Context, result *contract.SelfAugmentHistoryResult, options contract.SelfAugmentHistoryRetentionOptions) error {
 	keys := make([]string, 0, len(result.Entries))
 	for _, entry := range result.Entries {
 		keys = append(keys, entry.Key)
@@ -106,7 +107,7 @@ func (service HistoryService) ApplyRetention(result *contract.SelfAugmentHistory
 			if _, err := service.Read(key); err != nil {
 				return fmt.Errorf("read retention candidate %q: %w", key, err)
 			}
-			if err := service.Delete(key); err != nil {
+			if err := service.Delete(ctx, key); err != nil {
 				return fmt.Errorf("delete retention candidate %q: %w", key, err)
 			}
 			retention.DeletedKeys = append(retention.DeletedKeys, key)

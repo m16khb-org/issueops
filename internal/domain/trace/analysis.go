@@ -9,7 +9,7 @@ import (
 func Analyze(input Input) Analysis {
 	findings := []Finding{}
 	types := []string{}
-	warnings := []string{}
+	warnings := append([]string{}, input.Warnings...)
 	if input.Document != nil {
 		doc := *input.Document
 		findings = append(findings, selfVerifySummaryFindings(doc.Summary)...)
@@ -22,14 +22,11 @@ func Analyze(input Input) Analysis {
 		}
 	} else {
 		findings, types = analyzeLines(input.Lines)
-		if input.JSONError != "" && len(findings) == 0 {
-			return Analysis{Findings: findings, Types: types, Warnings: []string{"invalid_json:" + input.JSONError}}
-		}
 	}
-	if len(findings) == 0 {
+	if len(findings) == 0 && input.Usage == nil {
 		warnings = append(warnings, "no_supported_trace_findings")
 	}
-	return Analysis{Findings: dedupeTraceFindings(findings), Types: uniqSortedTraceStrings(types), Warnings: warnings}
+	return Analysis{Findings: dedupeTraceFindings(findings), Types: uniqSortedTraceStrings(types), Warnings: warnings, Incomplete: input.Incomplete}
 }
 func analyzeLines(lines []Document) ([]Finding, []string) {
 	events := []Upkeep{}

@@ -1,6 +1,7 @@
 package mcpcli
 
 import (
+	"context"
 	"time"
 
 	"issueops/cmd/issueops/mcpcli/argmap"
@@ -22,7 +23,7 @@ func commandPolicyRequestFromArgs(args map[string]any) policydomain.CommandPolic
 	}
 }
 
-func handlePolicyStateMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handlePolicyStateMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	state := deps.State
 	switch call.Name {
 	case "command_policy_check":
@@ -36,7 +37,7 @@ func handlePolicyStateMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToo
 		}
 		return mcpToolPayload(result)
 	case "state_write":
-		result, err := state.Write(argmap.String(call.Arguments, "key"), argmap.String(call.Arguments, "content"))
+		result, err := state.Write(ctx, argmap.String(call.Arguments, "key"), argmap.String(call.Arguments, "content"))
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32602, "State write failed", err.Error()))
 		}
@@ -58,7 +59,7 @@ func handlePolicyStateMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToo
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32602, "State prune failed", "invalid max_age: "+err.Error()))
 		}
-		result, err := state.Prune(maxAge, argmap.Bool(call.Arguments, "confirm"))
+		result, err := state.Prune(ctx, maxAge, argmap.Bool(call.Arguments, "confirm"))
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32602, "State prune failed", err.Error()))
 		}

@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,7 @@ import (
 func TestStateDoctorDetectsCorruptRecords(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if _, err := StateWrite("good", "good content"); err != nil {
+	if _, err := StateWrite(context.Background(), "good", "good content"); err != nil {
 		t.Fatalf("StateWrite good: %v", err)
 	}
 	writeRawStateRow(t, dir, "corrupt", "{not json\n")
@@ -96,7 +97,7 @@ func TestStateDoctorAcceptsCurrentIssueOpsDirectory(t *testing.T) {
 func TestStateDoctorAllowsHarnessOwnedAuxiliaryState(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if _, err := StateWrite("good", "good content"); err != nil {
+	if _, err := StateWrite(context.Background(), "good", "good content"); err != nil {
 		t.Fatalf("StateWrite good: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "hook-failures.jsonl"), []byte(`{"hook":"pre-tool-use","error":"failed"}`+"\n"), 0o600); err != nil {

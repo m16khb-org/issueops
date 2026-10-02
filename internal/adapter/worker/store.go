@@ -1,11 +1,13 @@
 package worker
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	workercontract "issueops/internal/contract/worker"
 	workerdomain "issueops/internal/domain/worker"
+	"issueops/internal/port"
 	"os"
 	"path/filepath"
 )
@@ -44,7 +46,7 @@ func (store Store) Read(id string) (workercontract.WorkerJob, error) {
 	return job, nil
 }
 
-func (store Store) Write(job workercontract.WorkerJob) error {
+func (store Store) Write(ctx context.Context, job workercontract.WorkerJob) error {
 	if !workerdomain.ValidID(job.ID) {
 		return fmt.Errorf("invalid worker job id")
 	}
@@ -64,7 +66,7 @@ func (store Store) Write(job workercontract.WorkerJob) error {
 	// The span lock is the CALLER's responsibility (Store.WithLock); the row
 	// upsert itself is atomic, so a crash mid-write can never leave a truncated
 	// job record that the application list operation silently drops.
-	return db.Put(workerBucket, job.ID, append(b, '\n'))
+	return db.Apply(ctx, []port.RecordMutation{{Bucket: workerBucket, ID: job.ID, Data: append(b, '\n')}})
 }
 
 func ResolveDirectory() (string, error) {

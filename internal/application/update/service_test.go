@@ -32,6 +32,7 @@ func TestServiceRunsInstallerBeforeDaemonRefresh(t *testing.T) {
 	}{
 		{name: "update", options: Options{Root: "/repo", ProjectLocal: true, PathMode: "skip", SkipBuild: true}, want: []string{"/repo", "--project-local", "--path-mode=skip", "--skip-build", "refresh"}},
 		{name: "dry run", options: Options{Root: "/repo", DryRun: true, JSON: true}, want: []string{"/repo", "--dry-run", "--json"}},
+		{name: "stdio transport", options: Options{Root: "/repo", MCPTransport: "stdio"}, want: []string{"/repo", "--mcp-transport=stdio", "refresh"}},
 		{name: "install failure", options: Options{Root: "/repo"}, installErr: errors.New("write failed"), want: []string{"/repo"}, wantErr: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

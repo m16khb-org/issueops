@@ -1,6 +1,7 @@
 package statecli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 )
@@ -13,7 +14,7 @@ func runStatePrune(deps Dependencies, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := deps.Prune(*maxAge, *confirm)
+	result, err := deps.Prune(context.Background(), *maxAge, *confirm)
 	if err != nil {
 		return err
 	}

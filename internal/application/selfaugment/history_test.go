@@ -1,6 +1,7 @@
 package selfaugment
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strings"
@@ -25,7 +26,7 @@ func TestHistoryRejectsInvalidRequestBeforeStateRead(t *testing.T) {
 			t.Fatal("invalid request reached state list")
 			return state.StateListResult{}, nil
 		}}
-		result, err := service.History("prefix", tc.limit, tc.retention)
+		result, err := service.History(context.Background(), "prefix", tc.limit, tc.retention)
 		if err == nil || err.Error() != tc.want || result.OK || result.StateDir != "/state" || result.Entries == nil || result.Skipped == nil || result.Warnings == nil {
 			t.Fatalf("result=%+v err=%v want=%s", result, err, tc.want)
 		}
@@ -45,7 +46,7 @@ func TestHistoryRetentionPreservesEffectOrderAndStopsAtFailure(t *testing.T) {
 					}
 					return state.StateResult{}, nil
 				},
-				Delete: func(key string) error {
+				Delete: func(_ context.Context, key string) error {
 					calls = append(calls, "delete:"+key)
 					if "delete:"+key == failureAt {
 						return failure
@@ -54,7 +55,7 @@ func TestHistoryRetentionPreservesEffectOrderAndStopsAtFailure(t *testing.T) {
 				},
 			}
 			result := contract.SelfAugmentHistoryResult{Entries: []contract.SelfAugmentHistoryEntry{{Key: "a"}, {Key: "b"}, {Key: "c"}}, TotalMatches: 3, Warnings: []string{}}
-			err := service.ApplyRetention(&result, contract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true, Confirm: true})
+			err := service.ApplyRetention(context.Background(), &result, contract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true, Confirm: true})
 			sequence := []string{"read:b", "delete:b", "read:c", "delete:c"}
 			want := sequence
 			if failureAt != "" {
@@ -83,9 +84,9 @@ func TestHistoryRetentionPreviewDoesNotTouchStorage(t *testing.T) {
 	service := HistoryService{Read: func(string) (state.StateResult, error) {
 		t.Fatal("preview read deletion candidate")
 		return state.StateResult{}, nil
-	}, Delete: func(string) error { t.Fatal("preview deleted candidate"); return nil }}
+	}, Delete: func(context.Context, string) error { t.Fatal("preview deleted candidate"); return nil }}
 	result := contract.SelfAugmentHistoryResult{Entries: []contract.SelfAugmentHistoryEntry{{Key: "a"}, {Key: "b"}}, TotalMatches: 2, Warnings: []string{}}
-	if err := service.ApplyRetention(&result, contract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true}); err != nil {
+	if err := service.ApplyRetention(context.Background(), &result, contract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true}); err != nil {
 		t.Fatal(err)
 	}
 	if result.Retention == nil || !result.Retention.DryRun || len(result.Retention.DeletedKeys) != 0 || !reflect.DeepEqual(result.Retention.CandidateKeys, []string{"b"}) {
@@ -152,9 +153,9 @@ func TestHistoryCollectsDiagnosticsBeforeLimitingResults(t *testing.T) {
 			}
 			return state.StateResult{Record: state.RecordEnvelope{Content: content}}, nil
 		},
-		Delete: func(string) error { t.Fatal("retention preview deleted state"); return nil },
+		Delete: func(context.Context, string) error { t.Fatal("retention preview deleted state"); return nil },
 	}
-	result, err := service.History("keep-", 1, contract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true})
+	result, err := service.History(context.Background(), "keep-", 1, contract.SelfAugmentHistoryRetentionOptions{Limit: 1, PruneRequested: true})
 	if err != nil || !result.OK || result.TotalMatches != 3 || result.Returned != 1 || len(reads) != 7 || len(result.Entries) != 1 || result.Entries[0].Key != "keep-new" {
 		t.Fatalf("result=%+v reads=%v err=%v", result, reads, err)
 	}

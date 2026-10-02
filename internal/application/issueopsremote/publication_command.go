@@ -23,11 +23,11 @@ type PublicationCommandService struct {
 	records   IssueRecordReader
 	bodies    TemplateBodyResolver
 	observe   AncestryObserver
-	normalize func(model.NativeActor) (model.NativeActor, error)
+	normalize func(context.Context, model.NativeActor) (model.NativeActor, error)
 	publish   PublicationInvoker
 }
 
-func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, normalize func(model.NativeActor) (model.NativeActor, error), publish PublicationInvoker) *PublicationCommandService {
+func NewPublicationCommandService(records IssueRecordReader, bodies TemplateBodyResolver, observe AncestryObserver, normalize func(context.Context, model.NativeActor) (model.NativeActor, error), publish PublicationInvoker) *PublicationCommandService {
 	return &PublicationCommandService{records: records, bodies: bodies, observe: observe, normalize: normalize, publish: publish}
 }
 
@@ -65,7 +65,7 @@ func (s *PublicationCommandService) Create(ctx context.Context, input Publicatio
 		return result, model.ErrRemotePullRequestCreateHandlerUnavailable
 	}
 	if req.Confirm {
-		req.Actor, err = s.normalize(req.Actor)
+		req.Actor, err = s.normalize(ctx, req.Actor)
 		if err != nil {
 			return result, err
 		}

@@ -19,7 +19,7 @@ func (s RemoteRecordStore) Read(_ context.Context, id string) (model.IssueOpsRec
 
 func (s RemoteRecordStore) Update(ctx context.Context, id string, transition application.RecordTransition) (model.IssueOpsRecord, error) {
 	var persisted model.IssueOpsRecord
-	err := withIssueOpsLock(ctx, s.StateRoot, id, func(context.Context) error {
+	err := withIssueOpsLock(ctx, s.StateRoot, id, func(spanCtx context.Context) error {
 		current, err := ReadIssueOps(s.StateRoot, id)
 		if err != nil {
 			return err
@@ -28,7 +28,7 @@ func (s RemoteRecordStore) Update(ctx context.Context, id string, transition app
 		if err != nil {
 			return err
 		}
-		persisted, err = writeIssueOps(s.StateRoot, updated)
+		persisted, err = writeIssueOps(spanCtx, s.StateRoot, updated)
 		return err
 	})
 	return persisted, err

@@ -2,7 +2,9 @@
 package gates
 
 import (
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -50,19 +52,35 @@ func DiscoverGateFiles(root string) ([]string, error) {
 	if strings.TrimSpace(root) == "" {
 		return nil, nil
 	}
-	files := appendIssueFolderGateFiles([]string{}, filepath.Join(root, filepath.FromSlash(IssueFolderDir)))
-	if info, err := os.Stat(filepath.Join(root, "GATES.md")); err == nil && !info.IsDir() {
-		files = append(files, filepath.Join(root, "GATES.md"))
+	return discoverGateFiles(os.DirFS(root), ".", root), nil
+}
+
+// discoverGateFiles walks dir inside fsys and reports each ledger as prefix
+// joined with its dir-relative path.
+func discoverGateFiles(fsys fs.FS, dir, prefix string) []string {
+	scan := gateFileScan{fsys: fsys, dir: dir, prefix: prefix}
+	files := scan.appendIssueFolderGateFiles([]string{}, IssueFolderDir)
+	if info, err := fs.Stat(fsys, path.Join(dir, "GATES.md")); err == nil && !info.IsDir() {
+		files = append(files, scan.output("GATES.md"))
 	}
-	files = appendMarkdownGateFiles(files, filepath.Join(root, ".issueops", "gates"))
-	files = appendMarkdownGateFiles(files, filepath.Join(root, "gates"))
-	return files, nil
+	files = scan.appendMarkdownGateFiles(files, ".issueops/gates")
+	files = scan.appendMarkdownGateFiles(files, "gates")
+	return files
+}
+
+type gateFileScan struct {
+	fsys        fs.FS
+	dir, prefix string
+}
+
+func (s gateFileScan) output(name string) string {
+	return filepath.Join(s.prefix, filepath.FromSlash(name))
 }
 
 // appendIssueFolderGateFiles는 issues/<name>/gates.md만 후보로 넣는다. 같은
 // 폴더의 plan.md/spec.md는 원장이 아니다.
-func appendIssueFolderGateFiles(files []string, dir string) []string {
-	entries, err := os.ReadDir(dir)
+func (s gateFileScan) appendIssueFolderGateFiles(files []string, dir string) []string {
+	entries, err := fs.ReadDir(s.fsys, path.Join(s.dir, dir))
 	if err != nil {
 		return files
 	}
@@ -71,19 +89,19 @@ func appendIssueFolderGateFiles(files []string, dir string) []string {
 		if !entry.IsDir() {
 			continue
 		}
-		if info, err := os.Stat(filepath.Join(dir, entry.Name(), "gates.md")); err == nil && !info.IsDir() {
+		if info, err := fs.Stat(s.fsys, path.Join(s.dir, dir, entry.Name(), "gates.md")); err == nil && !info.IsDir() {
 			names = append(names, entry.Name())
 		}
 	}
 	gatesdomain.SortIssueFolders(names)
 	for _, name := range names {
-		files = append(files, filepath.Join(dir, name, "gates.md"))
+		files = append(files, s.output(path.Join(dir, name, "gates.md")))
 	}
 	return files
 }
 
-func appendMarkdownGateFiles(files []string, dir string) []string {
-	entries, err := os.ReadDir(dir)
+func (s gateFileScan) appendMarkdownGateFiles(files []string, dir string) []string {
+	entries, err := fs.ReadDir(s.fsys, path.Join(s.dir, dir))
 	if err == nil {
 		names := []string{}
 		for _, entry := range entries {
@@ -93,7 +111,7 @@ func appendMarkdownGateFiles(files []string, dir string) []string {
 		}
 		sort.Strings(names)
 		for _, name := range names {
-			files = append(files, filepath.Join(dir, name))
+			files = append(files, s.output(path.Join(dir, name)))
 		}
 	}
 	return files

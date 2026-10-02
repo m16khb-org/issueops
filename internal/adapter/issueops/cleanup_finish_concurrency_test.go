@@ -57,7 +57,7 @@ func TestCleanupFinishExcludesConcurrentApplyAndOrdinaryWriters(t *testing.T) {
 			t.Fatal("second finish entered active executor")
 		}
 	}
-	if _, err := writeIssueOps(root, record); err == nil || !strings.Contains(err.Error(), "cleanup finish") {
+	if _, err := writeIssueOps(context.Background(), root, record); err == nil || !strings.Contains(err.Error(), "cleanup finish") {
 		t.Fatalf("ordinary writer bypassed attempt: %v", err)
 	}
 	close(release)

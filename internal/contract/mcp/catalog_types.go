@@ -2,9 +2,20 @@ package mcp
 
 // Tool describes a stable MCP tool schema fragment owned by the MCP adapter.
 type Tool struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description"`
-	InputSchema map[string]any `json:"inputSchema"`
+	Name         string           `json:"name"`
+	Description  string           `json:"description"`
+	InputSchema  map[string]any   `json:"inputSchema"`
+	OutputSchema map[string]any   `json:"outputSchema,omitempty"`
+	Annotations  *ToolAnnotations `json:"annotations,omitempty"`
+}
+
+// ToolAnnotations are the MCP behavior hints a tool advertises. A nil hint is
+// omitted from tools/list so an unset hint never reads as a claim.
+type ToolAnnotations struct {
+	ReadOnlyHint    *bool `json:"readOnlyHint,omitempty"`
+	DestructiveHint *bool `json:"destructiveHint,omitempty"`
+	IdempotentHint  *bool `json:"idempotentHint,omitempty"`
+	OpenWorldHint   *bool `json:"openWorldHint,omitempty"`
 }
 
 type Resource struct {

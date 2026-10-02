@@ -29,7 +29,7 @@ func (s StatusService) Status(ctx context.Context, parentID string, repair bool,
 		return model.IssueOpsChildStatusResult{OK: false}, fmt.Errorf("parent_id is required")
 	}
 	var parent model.IssueOpsRecord
-	err := s.Records.WithinLock(ctx, parentID, func() error {
+	err := s.Records.WithinLock(ctx, parentID, func(spanCtx context.Context) error {
 		var err error
 		parent, err = s.Records.Load(parentID)
 		return err
@@ -47,12 +47,12 @@ func (s StatusService) Status(ctx context.Context, parentID string, repair bool,
 		return result, nil
 	}
 	var appended []string
-	err = s.Records.WithinLock(ctx, parent.ID, func() error {
+	err = s.Records.WithinLock(ctx, parent.ID, func(spanCtx context.Context) error {
 		current, err := s.Records.Load(parent.ID)
 		if err != nil {
 			return err
 		}
-		if err := s.Authority.Validate(current, actor); err != nil {
+		if err := s.Authority.Validate(ctx, current, actor); err != nil {
 			return err
 		}
 		updated, added := domain.RepairChildIndex(current, scanned)
@@ -61,7 +61,7 @@ func (s StatusService) Status(ctx context.Context, parentID string, repair bool,
 			return nil
 		}
 		updated.UpdatedAt = s.Now().UTC().Format(time.RFC3339Nano)
-		_, err = s.Records.Save(updated)
+		_, err = s.Records.Save(spanCtx, updated)
 		return err
 	})
 	if err != nil {

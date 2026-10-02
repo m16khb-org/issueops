@@ -38,7 +38,7 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 	}
 	record.Execution = issueOpsExecutionForTest(repo, worktree, record.Branch)
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		_, writeErr := writeIssueOps(stateRoot, record)
+		_, writeErr := writeIssueOps(context.Background(), stateRoot, record)
 		return writeErr
 	}); err != nil {
 		t.Fatal(err)
@@ -75,6 +75,6 @@ func TestReflectDevilsAdvocateFindingsRequiresCurrentHolderBeforeProviderCall(t 
 }
 
 func reflectReviewForTest(root, id string, confirm bool, provider port.IssueProvider, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, port.IssueProviderUpdateIssueBodySectionResult, error) {
-	service := remoteapp.NewReviewReflectionService(RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), func(string) (remoteapp.ReviewReflectionProvider, error) { return provider, nil }, func() ([]issueops.NativeProcessReceipt, error) { return actor.NativeProcessAncestry, nil }, time.Now)
+	service := remoteapp.NewReviewReflectionService(RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, liveTestVerifier()), func(string) (remoteapp.ReviewReflectionProvider, error) { return provider, nil }, func() ([]issueops.NativeProcessReceipt, error) { return actor.NativeProcessAncestry, nil }, time.Now)
 	return service.Reflect(context.Background(), id, "", confirm, actor)
 }

@@ -14,8 +14,10 @@ import (
 
 type RemotePublicationStore struct{ StateRoot string }
 
-func (s RemotePublicationStore) WithinTransaction(_ context.Context, id string, transition func(context.Context) error) error {
-	return withIssueOpsLock(context.Background(), s.StateRoot, id, transition)
+// WithinTransaction keeps the caller's request values (authority guard, trace)
+// while still ignoring cancellation once a publication transition starts.
+func (s RemotePublicationStore) WithinTransaction(ctx context.Context, id string, transition func(context.Context) error) error {
+	return withIssueOpsLock(context.WithoutCancel(ctx), s.StateRoot, id, transition)
 }
 func (s RemotePublicationStore) Read(_ context.Context, id string) (issueops.IssueOpsRecord, error) {
 	return ReadIssueOps(s.StateRoot, id)
@@ -30,7 +32,7 @@ func (s RemotePublicationStore) PayloadRaw(_ context.Context, operationID string
 func (s RemotePublicationStore) DecodeSnapshot(intent contract.Intent) (issueops.IssueOpsRecord, contract.IntentPayload, error) {
 	return publicationIntentSnapshot(intent)
 }
-func (s RemotePublicationStore) Persist(_ context.Context, record issueops.IssueOpsRecord, intent contract.IntentMutation) (issueops.IssueOpsRecord, error) {
+func (s RemotePublicationStore) Persist(ctx context.Context, record issueops.IssueOpsRecord, intent contract.IntentMutation) (issueops.IssueOpsRecord, error) {
 	mutation := port.RecordMutation{Bucket: externalIntentBucket, ID: intent.OperationID, Delete: intent.Delete, RequireAbsent: intent.RequireAbsent}
 	if !intent.Delete {
 		data, err := json.Marshal(intent.Payload)
@@ -39,7 +41,7 @@ func (s RemotePublicationStore) Persist(_ context.Context, record issueops.Issue
 		}
 		mutation.Data = data
 	}
-	return persistExecutionTransitionWithMutations(s.StateRoot, record, nil, []port.RecordMutation{mutation})
+	return persistExecutionTransitionWithMutations(ctx, s.StateRoot, record, nil, []port.RecordMutation{mutation})
 }
 
 func (s RemotePublicationStore) ReadPayload(_ context.Context, operationID string) (contract.IntentPayload, error) {

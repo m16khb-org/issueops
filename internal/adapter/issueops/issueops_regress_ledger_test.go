@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestRegressIssueOpsForReplanStatusBackfillsAllPhases(t *testing.T) {
 	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, RecordedAt: "2026-06-29T00:00:00Z", IssueReflectedAt: "2026-06-29T00:02:00Z"}
 	rec.PlanPath = "/repo/plans/x.md"
 	rec.PhaseLedger = nil
-	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
+	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatalf("seed write: %v", err)
 	}
 

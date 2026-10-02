@@ -139,7 +139,7 @@ func TestLoopCLIAndReadGateKeepCapturedPaths(t *testing.T) {
 	if err != nil || id != started.ID {
 		t.Fatalf("resolve=%s %v", id, err)
 	}
-	if _, err := dependencies.Stop(id, true, ""); err == nil {
+	if _, err := dependencies.Stop(context.Background(), id, true, ""); err == nil {
 		t.Fatal("stop bypassed pass requirement")
 	}
 	status, err := dependencies.Status(id)
@@ -154,7 +154,7 @@ func TestLoopCLIAndReadGateKeepCapturedPaths(t *testing.T) {
 func TestLoopInstancesSerializeAttemptsInSharedStore(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	first, second := newLoopService(), newLoopService()
-	run, err := first.Start(loopcontract.StartLoopRequest{Repo: t.TempDir(), Name: "parallel", Goal: "preserve all attempts", MaxAttempts: 32})
+	run, err := first.Start(context.Background(), loopcontract.StartLoopRequest{Repo: t.TempDir(), Name: "parallel", Goal: "preserve all attempts", MaxAttempts: 32})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -165,7 +165,7 @@ func TestLoopInstancesSerializeAttemptsInSharedStore(t *testing.T) {
 			if i%2 == 1 {
 				service = second
 			}
-			_, err := service.RecordAttempt(run.ID, loopcontract.RecordAttemptRequest{Verdict: "pass", Evidence: []string{"parallel verification"}})
+			_, err := service.RecordAttempt(context.Background(), run.ID, loopcontract.RecordAttemptRequest{Verdict: "pass", Evidence: []string{"parallel verification"}})
 			errors <- err
 		}(i)
 	}

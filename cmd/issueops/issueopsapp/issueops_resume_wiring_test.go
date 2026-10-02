@@ -44,7 +44,7 @@ type resumeCoreState struct {
 func TestResumePlanIdentityFailureStopsBeforeOperationAndOrcaMutation(t *testing.T) {
 	stateRoot, record, _, _, _ := seedOrcaClaimSnapshot(t)
 	record.PlanPath = filepath.Join(record.Execution.Workspace.Root, "plans", "missing.md")
-	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	fake := &resumePlanMutationFake{}
@@ -125,7 +125,7 @@ func TestIssueOpsResumeProductionWiringObservesDispatch(t *testing.T) {
 	}
 	record.Execution.Orca.ContextPacketSHA256 = claimWiringSHA256(string(packetData))
 	record.Execution.Orca.OwnerPromptSHA256 = claimWiringSHA256(string(prompt))
-	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	fake := &resumePlanMutationFake{}
@@ -273,7 +273,7 @@ func TestResumePersistenceRejectsRawSnapshotDriftWithoutAdditionalMutation(t *te
 			canonicalRoot := coreRecord.Repo + ".worktrees/" + coreRecord.Branch
 			coreRecord.WorktreePath = canonicalRoot
 			coreRecord.Execution.Workspace.Root = canonicalRoot
-			if _, err := issueops.WriteIssueOps(stateRoot, coreRecord); err != nil {
+			if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, coreRecord); err != nil {
 				t.Fatal(err)
 			}
 			db, err := sqlstore.Open(stateRoot)
@@ -404,7 +404,7 @@ func resumeWiringDriftRecord(t *testing.T, stateRoot, id string) {
 		t.Fatal(err)
 	}
 	record.UpdatedAt += "-drift"
-	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -1,6 +1,7 @@
 package steps
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -64,6 +65,7 @@ func TestPlannedSelfVerifyStepsUsesCachedContractGoldenAfterGoTest(t *testing.T)
 	if !got.OK || got.Label != "contract golden tests" || got.Command != "covered by go test ./... -count=1" {
 		t.Fatalf("expected cached contract golden result, got %#v", got)
 	}
+	assertStepReuseMarker(t, got, true)
 }
 
 func TestPlannedSelfVerifyStepsUsesSuccessfulRaceAsFullTestEvidence(t *testing.T) {
@@ -94,8 +96,13 @@ func TestPlannedSelfVerifyStepsUsesSuccessfulRaceAsFullTestEvidence(t *testing.T
 	if !riskStep.OK || !testStep.OK {
 		t.Fatalf("risk/test steps failed: risk=%+v test=%+v", riskStep, testStep)
 	}
+	assertStepReuseMarker(t, riskStep, false)
+	assertStepReuseMarker(t, testStep, true)
 	if goTestCalls != 0 {
 		t.Fatalf("regular full test calls=%d want=0", goTestCalls)
+	}
+	if testStep.DurationMS != 0 {
+		t.Fatalf("reused evidence has a duration sample: %+v", testStep)
 	}
 	if !strings.Contains(testStep.Stdout, "race") {
 		t.Fatalf("cached test evidence did not identify race coverage: %+v", testStep)
@@ -178,6 +185,7 @@ func TestCachedContractGoldenStepFallsBackWhenGoTestDidNotPass(t *testing.T) {
 	if !step.OK || step.Label != "contract golden tests" {
 		t.Fatalf("expected fallback contract golden step, got %#v", step)
 	}
+	assertStepReuseMarker(t, step, false)
 }
 
 func TestCachedContractGoldenStepUsesFullGoTestEvidence(t *testing.T) {
@@ -188,8 +196,25 @@ func TestCachedContractGoldenStepUsesFullGoTestEvidence(t *testing.T) {
 	if step.DurationMS != 0 {
 		t.Fatalf("cached step should not report subprocess duration: %+v", step)
 	}
+	assertStepReuseMarker(t, step, true)
 	if !strings.Contains(step.Command, "covered by go test") || !strings.Contains(step.Stdout, "full go test suite") {
 		t.Fatalf("cached step did not explain evidence source: %+v", step)
+	}
+}
+
+func assertStepReuseMarker(t *testing.T, step StepResult, want bool) {
+	t.Helper()
+	data, err := json.Marshal(step)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		t.Fatal(err)
+	}
+	marker, exists := fields["reused"]
+	if !exists || string(marker) != map[bool]string{false: "false", true: "true"}[want] {
+		t.Errorf("reused marker = %s, exists=%v want=%v; step=%s", marker, exists, want, data)
 	}
 }
 

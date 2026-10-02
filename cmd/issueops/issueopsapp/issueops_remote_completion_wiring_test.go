@@ -36,7 +36,7 @@ func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatest
 	}
 	record.IssueURL = "https://github.com/acme/repo/issues/61"
 	record.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/62"}
-	if _, err := issueops.WriteIssueOps(root, record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	prov := &completionProvider{}
@@ -51,7 +51,7 @@ func TestRemoteCompletionCompositionVerifiesMergeBeforeEffectsAndPreservesLatest
 				t.Fatal(err)
 			}
 			latest.AISlopCleanVerification = []string{"concurrent update"}
-			if _, err := issueops.WriteIssueOps(root, latest); err != nil {
+			if _, err := issueops.WriteIssueOps(context.Background(), root, latest); err != nil {
 				t.Fatal(err)
 			}
 		}

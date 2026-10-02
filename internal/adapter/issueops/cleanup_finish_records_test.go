@@ -12,7 +12,7 @@ import (
 
 func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
 	root := t.TempDir()
-	record, err := writeIssueOps(root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-records", Phase: model.IssueOpsPhaseDone})
+	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-records", Phase: model.IssueOpsPhaseDone})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +22,7 @@ func TestFinishRecordsBindArmToObservedRevision(t *testing.T) {
 		t.Fatal(err)
 	}
 	record.Branch = "replacement"
-	if _, err := writeIssueOps(root, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := store.Arm(context.Background(), snapshot, finishRecordsAttempt("a")); err == nil {
@@ -65,7 +65,7 @@ func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
 		t.Run(operation, func(t *testing.T) {
 			root := t.TempDir()
 			ctx := context.Background()
-			record, err := writeIssueOps(root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-replaced", Phase: model.IssueOpsPhaseDone})
+			record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-replaced", Phase: model.IssueOpsPhaseDone})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -116,7 +116,7 @@ func TestFinishRecordsPreserveReplacementAcrossAllFinalizers(t *testing.T) {
 func TestFinishRecordsDrainFailureRearmAndAtomicDelete(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()
-	record, err := writeIssueOps(root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-drain", Phase: model.IssueOpsPhaseDone, RemoteCompletion: &model.IssueOpsRemoteCompletion{IssueClosedAt: "first"}})
+	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-drain", Phase: model.IssueOpsPhaseDone, RemoteCompletion: &model.IssueOpsRemoteCompletion{IssueClosedAt: "first"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +143,7 @@ func TestFinishRecordsDrainFailureRearmAndAtomicDelete(t *testing.T) {
 	if drained.Record.CleanupAttempt != nil {
 		t.Fatal("drained failure retained ownership")
 	}
-	if _, err := writeIssueOps(root, drained.Record); err != nil {
+	if _, err := writeIssueOps(context.Background(), root, drained.Record); err != nil {
 		t.Fatalf("ordinary write after drain: %v", err)
 	}
 	snapshot, err = store.Load(ctx, record.ID)
@@ -191,7 +191,7 @@ func finishRecordsFailure() model.IssueOpsCleanupFinishFailure {
 func TestFinishRecordsRejectForgedAttemptProjection(t *testing.T) {
 	ctx := context.Background()
 	root := t.TempDir()
-	record, err := writeIssueOps(root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-forged", Phase: model.IssueOpsPhaseDone})
+	record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-finish-forged", Phase: model.IssueOpsPhaseDone})
 	if err != nil {
 		t.Fatal(err)
 	}

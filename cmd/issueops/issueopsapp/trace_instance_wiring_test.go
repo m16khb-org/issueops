@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	traceapp "issueops/internal/application/trace"
 	tracecontract "issueops/internal/contract/trace"
 	"os"
@@ -13,7 +14,7 @@ func TestTraceServicesKeepCapturedStateAndFilePriority(t *testing.T) {
 	for i, step := range []string{"policy check", "daemon probe"} {
 		state := t.TempDir()
 		t.Setenv("ISSUEOPS_STATE_DIR", state)
-		if _, err := newStateService(state).Write("trace-fixture", `{"failed_steps":1,"failed_step":"`+step+`"}`); err != nil {
+		if _, err := newStateService(state).Write(context.Background(), "trace-fixture", `{"failed_steps":1,"failed_step":"`+step+`"}`); err != nil {
 			t.Fatal(err)
 		}
 		services[i] = newTraceService()

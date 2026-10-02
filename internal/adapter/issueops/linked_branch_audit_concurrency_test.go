@@ -19,7 +19,7 @@ func TestLinkedBranchAuditPreservesConcurrentCycleChanges(t *testing.T) {
 			deps := (&lbDeps{}).build()
 			deps.ObserveLinkedBranches = func(context.Context, string) (linkedbranch.Observation, error) {
 				if name == "deleted cycle" {
-					if err := deleteIssueOps(root, record.ID); err != nil {
+					if err := deleteIssueOps(context.Background(), root, record.ID); err != nil {
 						t.Fatal(err)
 					}
 				} else {

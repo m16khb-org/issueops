@@ -49,6 +49,7 @@ func TestRoutingHandlersDelegateRecordAndScore(t *testing.T) {
 		store,
 		fixedClock{now: time.Date(2026, 8, 25, 10, 0, 0, 0, time.UTC)},
 		identityPaths{},
+		liveVerifier(),
 	))
 
 	actor := issueopsroutingcontract.Actor{Host: "codex"}
@@ -82,6 +83,7 @@ func TestScorePropagatesReadState(t *testing.T) {
 		store,
 		fixedClock{},
 		identityPaths{},
+		liveVerifier(),
 	))
 
 	_, depth, err := handlers.Score("/state", "io-empty", nil)

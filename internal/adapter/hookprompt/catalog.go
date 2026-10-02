@@ -5,6 +5,15 @@ import (
 	"strings"
 )
 
+// RenderProjectDocCatalogOmissions returns a trailing user-view line naming the
+// omitted-document counts, or "" when nothing was omitted.
+func RenderProjectDocCatalogOmissions(omissions projectdoc.CatalogOmissions) string {
+	if !omissions.Any() {
+		return ""
+	}
+	return "\n⚠ 일부 문서가 목록에서 생략됨: " + omissions.Summary()
+}
+
 func RenderProjectDocCatalogUserView(docs []projectdoc.ProjectDocCatalogEntry) string {
 	if len(docs) == 0 {
 		return ""

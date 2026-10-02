@@ -39,5 +39,5 @@ func ValidateCommandAuditWithDeps(binary, root string, seed int64, deps Validati
 	if strings.Contains(strings.ToLower(text), "secret-value") || strings.Contains(text, "sk-123") {
 		errs = append(errs, "audit log contains unredacted secret fixture")
 	}
-	return verifydomain.AssertionStep("command audit smoke", time.Since(time.Now()).Milliseconds(), errs)
+	return verifydomain.AssertionStep("command audit smoke", step.DurationMS, errs)
 }

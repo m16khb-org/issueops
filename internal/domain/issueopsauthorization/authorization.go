@@ -8,7 +8,9 @@ import (
 )
 
 // ValidateHolder returns whether the application must observe canonical path identity.
-func ValidateHolder(record issueopsauthorizationcontract.Record, actor *issueopsauthorizationcontract.Actor) (bool, error) {
+// verified is the caller identity proven by the application verifier (native
+// ancestry or a bound capability); its ancestry is never required here.
+func ValidateHolder(record issueopsauthorizationcontract.Record, actor *issueopsauthorizationcontract.Actor, verified *issueopsauthorizationcontract.VerifiedActor) (bool, error) {
 	if record.Execution == nil {
 		return false, nil
 	}
@@ -19,21 +21,19 @@ func ValidateHolder(record issueopsauthorizationcontract.Record, actor *issueops
 			lease.Generation,
 		)
 	}
+	holderRequired := fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
 	if actor == nil ||
 		!strings.EqualFold(strings.TrimSpace(actor.Host), lease.Holder.Host) ||
 		strings.TrimSpace(actor.SessionID) != lease.Holder.SessionID ||
 		strings.TrimSpace(actor.AgentID) != lease.Holder.AgentID {
-		return false, fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
+		return false, holderRequired
 	}
-	processMatches := false
-	for _, observed := range actor.NativeProcessAncestry {
-		if lease.Holder.SessionProcess != nil && observed == *lease.Holder.SessionProcess {
-			processMatches = true
-			break
-		}
-	}
-	if !processMatches {
-		return false, fmt.Errorf("IssueOps execution mutation requires the current write lease holder")
+	if verified == nil || lease.Holder.SessionProcess == nil || verified.Identity.SessionProcess == nil ||
+		!strings.EqualFold(verified.Identity.Host, lease.Holder.Host) ||
+		verified.Identity.SessionID != lease.Holder.SessionID ||
+		verified.Identity.AgentID != lease.Holder.AgentID ||
+		*verified.Identity.SessionProcess != *lease.Holder.SessionProcess {
+		return false, holderRequired
 	}
 	return true, nil
 }

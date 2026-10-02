@@ -31,12 +31,12 @@ type WorkspaceLinker struct {
 
 func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model.IssueOpsActor) (model.IssueOpsRecord, error) {
 	var result model.IssueOpsRecord
-	err := s.Records.WithinLock(ctx, id, func() error {
+	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
 			return err
 		}
-		if err = s.Authority.ValidatePlanLink(record, actor); err != nil {
+		if err = s.Authority.ValidatePlanLink(ctx, record, actor); err != nil {
 			return err
 		}
 		path = strings.TrimSpace(path)
@@ -69,7 +69,7 @@ func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model
 		if err = domain.ValidateLinkedPlanSections(missing); err != nil {
 			return err
 		}
-		result, err = s.Records.Save(domain.ApplyPlanLink(record, path, s.Now().UTC().Format(time.RFC3339Nano)))
+		result, err = s.Records.Save(spanCtx, domain.ApplyPlanLink(record, path, s.Now().UTC().Format(time.RFC3339Nano)))
 		return err
 	})
 	return result, err
@@ -77,12 +77,12 @@ func (s WorkspaceLinker) Plan(ctx context.Context, id, path string, actor *model
 
 func (s WorkspaceLinker) Worktree(ctx context.Context, id, path string, actor *model.IssueOpsActor) (model.IssueOpsRecord, error) {
 	var result model.IssueOpsRecord
-	err := s.Records.WithinLock(ctx, id, func() error {
+	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
 			return err
 		}
-		if err = s.Authority.Validate(record, actor); err != nil {
+		if err = s.Authority.Validate(ctx, record, actor); err != nil {
 			return err
 		}
 		path = strings.TrimSpace(path)
@@ -108,7 +108,7 @@ func (s WorkspaceLinker) Worktree(ctx context.Context, id, path string, actor *m
 				return err
 			}
 		}
-		result, err = s.Records.Save(domain.ApplyWorktreeLink(record, path, s.Now().UTC().Format(time.RFC3339Nano)))
+		result, err = s.Records.Save(spanCtx, domain.ApplyWorktreeLink(record, path, s.Now().UTC().Format(time.RFC3339Nano)))
 		return err
 	})
 	return result, err

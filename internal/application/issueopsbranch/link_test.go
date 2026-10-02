@@ -18,10 +18,10 @@ type relationStore struct {
 	saves   int
 }
 
-func (s *relationStore) WithinLock(_ context.Context, _ string, fn func() error) error {
+func (s *relationStore) WithinLock(ctx context.Context, _ string, fn func(context.Context) error) error {
 	s.locked = true
 	defer func() { s.locked = false }()
-	return fn()
+	return fn(ctx)
 }
 func (s *relationStore) Load(id string) (model.IssueOpsRecord, error) {
 	if !s.locked {
@@ -33,7 +33,7 @@ func (s *relationStore) Load(id string) (model.IssueOpsRecord, error) {
 	}
 	return r, nil
 }
-func (s *relationStore) Save(r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *relationStore) Save(_ context.Context, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	if !s.locked {
 		panic("save outside lock")
 	}
@@ -46,7 +46,7 @@ func newRelationStoreForTest(records ...model.IssueOpsRecord) (*relationStore, L
 	for _, r := range records {
 		s.records[r.ID] = r
 	}
-	return s, Linker{Records: s, Authority: cycleapp.NewMutationAuthority(func(a, b string) bool { return a == b }), Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}
+	return s, Linker{Records: s, Authority: cycleapp.NewMutationAuthority(func(a, b string) bool { return a == b }, liveVerifier()), Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}
 }
 func TestLinkIssuePersistsURLAndAdvancesReadyRecord(t *testing.T) {
 	record := model.IssueOpsRecord{

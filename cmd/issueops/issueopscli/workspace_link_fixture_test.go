@@ -12,7 +12,7 @@ import (
 )
 
 func workspaceLinkerForTest(root string) branchapp.WorkspaceLinker {
-	return branchapp.WorkspaceLinker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Files: core.LinkEnvironment{}, Now: time.Now}
+	return branchapp.WorkspaceLinker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Files: core.LinkEnvironment{}, Now: time.Now}
 }
 func LinkIssueOpsPlanForTest(root, id, planPath string) (model.IssueOpsRecord, error) {
 	return workspaceLinkerForTest(root).Plan(context.Background(), id, planPath, nil)

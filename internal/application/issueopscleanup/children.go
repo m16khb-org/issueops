@@ -14,9 +14,9 @@ import (
 )
 
 type ChildCleanupRecords interface {
-	WithinLock(context.Context, string, func() error) error
+	WithinLock(context.Context, string, func(context.Context) error) error
 	Load(string) (model.IssueOpsRecord, error)
-	Save(model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
 }
 
 type ChildrenCloser struct {
@@ -43,7 +43,7 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 			req.Merged = s.VerifyMerged(artifact) == nil
 		}
 	}
-	err := s.Records.WithinLock(ctx, id, func() error {
+	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
 			return err
@@ -89,7 +89,7 @@ func (s ChildrenCloser) Close(ctx context.Context, id string, requested, confirm
 		}
 		if req.Confirm && len(changed) > 0 {
 			record = domain.ApplyChildCleanupReceipts(record, changed, s.Now().UTC().Format(time.RFC3339Nano))
-			_, err = s.Records.Save(record)
+			_, err = s.Records.Save(spanCtx, record)
 			return err
 		}
 		return nil

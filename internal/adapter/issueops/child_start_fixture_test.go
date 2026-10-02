@@ -13,7 +13,7 @@ import (
 
 func childStarterForTest(root string) delegationapp.ChildStarter {
 	records := CycleRecordStore{StateRoot: root}
-	authority := cycleapp.NewMutationAuthority(samePath)
+	authority := cycleapp.NewMutationAuthority(samePath, liveTestVerifier())
 	return delegationapp.ChildStarter{Records: ChildCycleStore{CycleRecordStore: records}, Identity: CycleStartIdentity{RunGit: GitCmd}, Authority: authority, Links: branchapp.Linker{Records: records, Authority: authority, Now: time.Now}, Now: time.Now}
 }
 func StartIssueOpsChildWithActor(root string, req model.IssueOpsChildStartRequest, actor model.IssueOpsActor) (model.IssueOpsChildStartResult, error) {
@@ -21,7 +21,7 @@ func StartIssueOpsChildWithActor(root string, req model.IssueOpsChildStartReques
 }
 
 func childStatusServiceForTest(root string) delegationapp.StatusService {
-	return delegationapp.StatusService{Records: ChildCycleStore{CycleRecordStore: CycleRecordStore{StateRoot: root}}, Authority: cycleapp.NewMutationAuthority(samePath), Now: time.Now}
+	return delegationapp.StatusService{Records: ChildCycleStore{CycleRecordStore: CycleRecordStore{StateRoot: root}}, Authority: cycleapp.NewMutationAuthority(samePath, liveTestVerifier()), Now: time.Now}
 }
 func IssueOpsChildStatus(root, id string, repair bool) (model.IssueOpsChildStatusResult, error) {
 	return childStatusServiceForTest(root).Status(context.Background(), id, repair, nil)
@@ -31,7 +31,7 @@ func IssueOpsChildStatusWithActor(root, id string, repair bool, actor model.Issu
 }
 
 func childValidatorForTest(root string) delegationapp.Validator {
-	return delegationapp.Validator{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(samePath), Now: time.Now}
+	return delegationapp.Validator{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(samePath, liveTestVerifier()), Now: time.Now}
 }
 func AcceptIssueOpsChildWithActor(root, parentID, childID string, evidence []string, actor model.IssueOpsActor) (model.IssueOpsChildValidationResult, error) {
 	return childValidatorForTest(root).Accept(context.Background(), parentID, childID, evidence, &actor)

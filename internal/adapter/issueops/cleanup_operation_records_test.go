@@ -13,7 +13,7 @@ func TestCleanupRecordsBindOperationAndReplacementAcrossFinalizers(t *testing.T)
 	for _, operation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch} {
 		t.Run(string(operation), func(t *testing.T) {
 			root := t.TempDir()
-			record, err := writeIssueOps(root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-operation", Phase: model.IssueOpsPhaseDone})
+			record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-operation", Phase: model.IssueOpsPhaseDone})
 			if err != nil {
 				t.Fatal(err)
 			}

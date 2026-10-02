@@ -28,15 +28,33 @@ func fprintString(w io.Writer, text string) {
 }
 
 func newHarnessInspector() func(string) inspectcontract.InspectInfo {
+	inspector := newHarnessHostInspector()
+	return func(target string) inspectcontract.InspectInfo { return inspector(target, inspectcontract.Options{}) }
+}
+
+func newHarnessHostInspector() func(string, inspectcontract.Options) inspectcontract.InspectInfo {
+	return harnessInspectorWithDefault(resolveTarget(""), "")
+}
+
+func scopedHarnessInspector(defaultTarget string) func(string, string) any {
+	inspector := harnessInspectorWithDefault(defaultTarget, defaultTarget)
+	return func(repo, hostReceipts string) any {
+		return inspector(repo, inspectcontract.Options{HostReceipts: hostReceipts})
+	}
+}
+
+func harnessInspectorWithDefault(defaultTarget, receiptRoot string) func(string, inspectcontract.Options) inspectcontract.InspectInfo {
 	root := issueOpsRoot()
 	home, _ := os.UserHomeDir()
-	defaultTarget := resolveTarget("")
-	observer := inspect.Observer{ListDocs: newDocsService().List}
-	return func(target string) inspectcontract.InspectInfo {
+	observer := inspect.Observer{ListDocs: newDocsService().List, HostVersion: inspect.CommandHostVersion, ReceiptRoot: receiptRoot}
+	return func(target string, options inspectcontract.Options) inspectcontract.InspectInfo {
 		if target == "" {
 			target = defaultTarget
 		}
-		return observer.Inspect(root, target, home, version, skillName)
+		if options.CodexHome == "" {
+			options.CodexHome = os.Getenv("CODEX_HOME")
+		}
+		return observer.Inspect(root, target, home, version, skillName, options)
 	}
 }
 

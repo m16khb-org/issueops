@@ -229,6 +229,12 @@ func TestResumeRepositoryRecordFailureUsesRawCASAndAdoptsRequestIDs(t *testing.T
 
 func seededResumeIntent(t *testing.T) (*ResumeRepository, leaseapp.ResumeIntentState, *sqlstore.DB) {
 	t.Helper()
+	repository, state, store, _ := seededResumeIntentAt(t)
+	return repository, state, store
+}
+
+func seededResumeIntentAt(t *testing.T) (*ResumeRepository, leaseapp.ResumeIntentState, *sqlstore.DB, string) {
+	t.Helper()
 	const operationID = "0123456789abcdef0123456789abcdef"
 	record := resumeRepositoryRecord(t, 4)
 	lease := record.Execution.Lease
@@ -269,7 +275,7 @@ func seededResumeIntent(t *testing.T) (*ResumeRepository, leaseapp.ResumeIntentS
 		t.Fatal(err)
 	}
 	record.Execution.Pending = &leasecontract.ExternalIntent{OperationID: operationID, Kind: "owner_launch", Marker: intent.Marker, StartedAt: intent.StartedAt}
-	_, store := newResumeRepositoryStore(t, record)
+	stateRoot, store := newResumeRepositoryStore(t, record)
 	intentRaw, err := (preparationcontract.IntentCodec{}).Encode(intent)
 	if err != nil {
 		t.Fatal(err)
@@ -287,7 +293,7 @@ func seededResumeIntent(t *testing.T) (*ResumeRepository, leaseapp.ResumeIntentS
 		OperationID: operationID, Stage: string(intent.Stage), InvocationState: intent.InvocationState,
 		RecordRaw: recordRaw, IntentRaw: intentRaw,
 	}
-	return repository, state, store
+	return repository, state, store, stateRoot
 }
 
 func newResumeRepositoryStore(t *testing.T, record leasecontract.Record) (string, *sqlstore.DB) {

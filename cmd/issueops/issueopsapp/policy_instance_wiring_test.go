@@ -83,7 +83,7 @@ func TestPolicyMCPInstancesKeepStateAndReloadOverrides(t *testing.T) {
 		}
 		record.IssueURL = "https://github.com/acme/repo/issues/79"
 		record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: base, LinkVerified: true, CreatedAt: record.CreatedAt}
-		if _, err = core.WriteIssueOps(issueOpsStateRoot(), record); err != nil {
+		if _, err = core.WriteIssueOps(context.Background(), issueOpsStateRoot(), record); err != nil {
 			t.Fatal(err)
 		}
 		deps[i] = issueOpsMCPDependencies()

@@ -48,6 +48,7 @@ func wireIssueOpsRuntimeForTests() {
 		issueopsdecisionoutbound.Repository{},
 		issueopsdecisionoutbound.SystemClock{},
 		issueopsauthorizationoutbound.CanonicalPaths{},
+		issueopscore.NativeActorVerifier(),
 	))
 	inventory := issueopsinventoryapplication.NewService(
 		issueopsinventoryoutbound.Repository{},
@@ -66,6 +67,7 @@ func wireIssueOpsRuntimeForTests() {
 		issueopsroutingoutbound.Repository{},
 		issueopsroutingoutbound.SystemClock{},
 		issueopsauthorizationoutbound.CanonicalPaths{},
+		issueopscore.NativeActorVerifier(),
 	))
 	listCycles := issueopsinventoryinbound.NewListHandler(inventory)
 	next := issueopsnextapplication.NewService(issueopsnextapplication.Ports{

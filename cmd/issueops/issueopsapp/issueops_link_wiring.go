@@ -9,9 +9,9 @@ import (
 )
 
 func newIssueLinker(root string) branchapp.Linker {
-	return branchapp.Linker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Now: time.Now}
+	return branchapp.Linker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()), Now: time.Now}
 }
 
 func newWorkspaceLinker(root string) branchapp.WorkspaceLinker {
-	return branchapp.WorkspaceLinker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Files: core.LinkEnvironment{}, Now: time.Now}
+	return branchapp.WorkspaceLinker{Records: core.CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()), Files: core.LinkEnvironment{}, Now: time.Now}
 }

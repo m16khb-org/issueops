@@ -19,7 +19,7 @@ type Command struct {
 	DefaultTarget  string
 	Version        string
 	DocsIndex      func(string, string) docscontract.DocsIndexResult
-	InspectHarness func(string) inspectcontract.InspectInfo
+	InspectHarness func(string, inspectcontract.Options) inspectcontract.InspectInfo
 	Preflight      preflightapp.Service
 	Guard          guardapp.Service
 	Trace          traceapp.Service

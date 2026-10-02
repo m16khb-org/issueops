@@ -157,6 +157,6 @@ func TestIssueOpsCleanupStatusBlocksWhenRemoteBranchCheckUnavailable(t *testing.
 }
 
 func recordVerifiedArtifactForTest(root, id string, req issueops.IssueOpsRemoteArtifactVerificationRequest, actor issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
-	service := remoteapp.NewArtifactVerificationService(RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(samePath), nil, nil, time.Now)
+	service := remoteapp.NewArtifactVerificationService(RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(samePath, liveTestVerifier()), nil, nil, time.Now)
 	return service.Record(context.Background(), id, req, actor)
 }

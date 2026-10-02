@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 )
@@ -19,7 +20,7 @@ func RecordIssueOpsDomainReviewWithActor(stateRoot, id string, req issueops.Issu
 func recordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest, actor *issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	store := NewReviewMutationStore(actor)
 	store.ValidateMutation = func(record issueops.IssueOpsRecord) error {
-		return validateWorkspacePreparationMutation(record, actor)
+		return validateWorkspacePreparationMutation(context.Background(), record, actor, liveTestVerifier())
 	}
 	return reviewapp.RecordDomainReview(store, stateRoot, id, req)
 }

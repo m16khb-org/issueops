@@ -33,7 +33,11 @@ func MaxSlowStepDurationByLabel(steps []contract.SelfAugmentSlowStep) map[string
 func BuildStepDurationStats(durationsByLabel map[string][]int64) []contract.SelfAugmentStepDurationStat {
 	stats := []contract.SelfAugmentStepDurationStat{}
 	for label, durations := range durationsByLabel {
-		if label == "" || len(durations) == 0 {
+		if label == "" {
+			continue
+		}
+		if len(durations) == 0 {
+			stats = append(stats, contract.SelfAugmentStepDurationStat{Label: label})
 			continue
 		}
 		sortedDurations := append([]int64{}, durations...)

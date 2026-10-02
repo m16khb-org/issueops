@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	core "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/preflight"
 	model "issueops/internal/contract/issueops"
@@ -15,7 +16,7 @@ func TestOrcaBranchPrecheckKeepsCapturedGitCapabilities(t *testing.T) {
 		t.Fatal(stderr)
 	}
 	record := model.IssueOpsRecord{OK: true, SchemaVersion: model.IssueOpsSchemaVersion, ID: "io-0123456789ab", Repo: repo, Branch: "occupied", Phase: model.IssueOpsPhaseImplement, CreatedAt: "2026-01-01T00:00:00Z", UpdatedAt: "2026-01-01T00:00:00Z"}
-	if _, err := core.WriteIssueOps(root, record); err != nil {
+	if _, err := core.WriteIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	check := newOrcaBranchPrecheck(root)

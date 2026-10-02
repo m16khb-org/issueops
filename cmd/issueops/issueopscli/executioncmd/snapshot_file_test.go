@@ -148,7 +148,7 @@ func executionSnapshotCLIRecord(t *testing.T) (string, string, string) {
 		CreatedAt: "2026-07-28T00:00:00Z",
 		UpdatedAt: "2026-07-28T00:00:00Z",
 	}
-	written, err := issueops.WriteIssueOps(stateRoot, record)
+	written, err := issueops.WriteIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

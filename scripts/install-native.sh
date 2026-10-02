@@ -19,6 +19,7 @@ ACTIVATION_BINARY_SHA256=""
 ACTIVATION_ABORTED=0
 ACTIVATION_COMMITTED=0
 ACTIVATION_ARGS=()
+MCP_TRANSPORT=""
 
 usage() {
   cat <<'EOF'
@@ -31,6 +32,11 @@ Harness flags are passed to `issueops install`, for example:
   --dry-run
   --json
   --adopt-command-file   Explicitly adopt a managed regular command file.
+  --mcp-transport=http|stdio
+                         Codex/Claude/Omo MCP transport (default http on darwin/linux).
+                         http stops the shared service before the binary swap,
+                         starts it after, and merges host configs only once the
+                         new build answers an authenticated MCP request.
 
 Harness binary:
   --skip-build            Do not rebuild bin/issueops before installing integrations.
@@ -152,11 +158,36 @@ for arg in "$@"; do
       ISSUEOPS_ARGS+=("$arg")
       ACTIVATION_ARGS+=("$arg")
       ;;
+    --mcp-transport=*)
+      MCP_TRANSPORT="${arg#--mcp-transport=}"
+      ISSUEOPS_ARGS+=("$arg")
+      ACTIVATION_ARGS+=("$arg")
+      ;;
+    --mcp-transport)
+      log "use --mcp-transport=http or --mcp-transport=stdio"
+      exit 2
+      ;;
     *)
       ISSUEOPS_ARGS+=("$arg")
       ;;
   esac
 done
+
+if [[ -z "$MCP_TRANSPORT" ]]; then
+  case "$(uname -s)" in
+    Darwin|Linux) MCP_TRANSPORT=http ;;
+    *) MCP_TRANSPORT=stdio ;;
+  esac
+fi
+
+mcp_service() {
+  local executable="$1" action="$2" output
+  if ! output="$("$executable" mcp service "$action" --json 2>&1)"; then
+    printf '%s\n' "$output" >&2
+    log "shared MCP service $action failed"
+    return 1
+  fi
+}
 
 if [[ "$DRY_RUN" == "1" ]]; then
   if is_truthy "$SKIP_BUILD"; then
@@ -181,6 +212,10 @@ else
   "$STAGED_BIN" version >/dev/null
   preflight_install "$STAGED_BIN"
   begin_activation "$STAGED_BIN"
+  if [[ "$MCP_TRANSPORT" == "http" ]]; then
+    log "stopping shared MCP service before binary replacement"
+    mcp_service "$STAGED_BIN" stop
+  fi
   python3 - "$STAGED_BIN" "$BIN" <<'PY'
 import os
 import sys
@@ -200,6 +235,10 @@ finally:
 PY
   STAGED_BIN=""
   "$BIN" version >/dev/null
+  if [[ "$MCP_TRANSPORT" == "http" ]]; then
+    log "starting shared MCP service from the new binary"
+    mcp_service "$BIN" start
+  fi
 fi
 
 if [[ -x "$BIN" ]]; then

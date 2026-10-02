@@ -25,7 +25,7 @@ type issueOpsPreparationCompositionDeps struct {
 	ReadIssue      port.ExecutionIssueSnapshotReadFunc
 	Now            func() time.Time
 	NewOperationID func() (string, error)
-	ValidateActor  func(issueopscontract.NativeActor) error
+	ValidateActor  func(context.Context, issueopscontract.NativeActor) error
 }
 
 type issueOpsExecutionCompositionDeps struct {
@@ -41,7 +41,7 @@ func productionIssueOpsExecutionDependencies() issueOpsExecutionCompositionDeps 
 	return issueOpsExecutionCompositionDeps{
 		Prepare: newIssueOpsPreparationHandler(issueOpsPreparationCompositionDeps{
 			Direct: gitworktree.Provisioner{GitCmd: preflightadapter.GitCmd, GitOut: preflightadapter.GitOut}, Orca: orcaExecution, ReadIssue: readIssue,
-			ValidateActor: issueops.ValidateNativeActorProcess,
+			ValidateActor: verifyIssueOpsPreparationActor,
 		}),
 		Orca: orcaExecution, OrcaOwner: orcaExecution, ReadIssue: readIssue,
 	}
@@ -50,7 +50,7 @@ func productionIssueOpsExecutionDependencies() issueOpsExecutionCompositionDeps 
 func newIssueOpsPreparationHandler(deps issueOpsPreparationCompositionDeps) issueopscontract.ExecutionPrepareHandler {
 	return func(ctx context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, invocation port.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 		if deps.ValidateActor != nil {
-			if err := deps.ValidateActor(request.Actor); err != nil {
+			if err := deps.ValidateActor(ctx, request.Actor); err != nil {
 				return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 			}
 		}
@@ -127,3 +127,8 @@ func (clock preparationClock) Now() time.Time { return clock.now() }
 type preparationOperationIDs struct{ next func() (string, error) }
 
 func (ids preparationOperationIDs) New() (string, error) { return ids.next() }
+
+func verifyIssueOpsPreparationActor(ctx context.Context, actor issueopscontract.NativeActor) error {
+	_, err := issueOpsActorVerifier().Verify(ctx, actor)
+	return err
+}

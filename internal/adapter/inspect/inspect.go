@@ -9,9 +9,17 @@ import (
 	"time"
 )
 
-type Observer struct{ ListDocs func(string) []string }
+type Observer struct {
+	ListDocs func(string) []string
+	// Now와 HostVersion은 결정적 테스트를 위한 seam이다. 비어 있으면 time.Now이고
+	// 현재 host 버전은 관측 불가로 취급한다.
+	Now         func() time.Time
+	HostVersion func(host string) string
+	// ReceiptRoot가 있으면 receipt 파일은 이 root 안에 있어야 한다.
+	ReceiptRoot string
+}
 
-func (observer Observer) Inspect(root, target, home, version, skillName string) inspectcontract.InspectInfo {
+func (observer Observer) Inspect(root, target, home, version, skillName string, options inspectcontract.Options) inspectcontract.InspectInfo {
 	codexSkill := filepath.Join(home, ".codex", "skills", skillName)
 	claudeSkill := filepath.Join(home, ".claude", "skills", skillName)
 	projectClaudeSkill := filepath.Join(root, ".claude", "skills", skillName)
@@ -33,8 +41,9 @@ func (observer Observer) Inspect(root, target, home, version, skillName string) 
 			ProjectClaudeSkill:     Exists(filepath.Join(projectClaudeSkill, "SKILL.md")),
 			ProjectClaudeMCPConfig: Exists(filepath.Join(root, ".mcp.json")),
 			MCPBinaryPath:          mcpBinary,
+			Hosts:                  observer.observeHosts(root, home, skillName, options),
 		},
-		GeneratedAt: time.Now().Format(time.RFC3339),
+		GeneratedAt: observer.now().Format(time.RFC3339),
 	}
 }
 

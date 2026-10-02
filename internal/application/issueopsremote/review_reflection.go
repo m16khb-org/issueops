@@ -74,11 +74,12 @@ func (s *ReviewReflectionService) Reflect(ctx context.Context, id, providerOverr
 		return record, result, nil
 	}
 	// A confirmed remote update must retain the existing uncancelled receipt write.
-	record, err = s.store.Update(context.Background(), id, func(current model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+	persist := context.WithoutCancel(ctx)
+	record, err = s.store.Update(persist, id, func(current model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 		if err := domain.ValidateReviewReflectionStamp(current); err != nil {
 			return current, err
 		}
-		if err := s.authority.Authorize(ctx, current, actor); err != nil {
+		if err := s.authority.Authorize(persist, current, actor); err != nil {
 			return current, err
 		}
 		return domain.MarkReviewReflected(current, s.now().UTC().Format(time.RFC3339Nano)), nil

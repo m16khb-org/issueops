@@ -1,6 +1,8 @@
 package mcpcli
 
 import (
+	"context"
+
 	"issueops/internal/adapter/outbound/sqlstore"
 	policyadapter "issueops/internal/adapter/policy"
 	workeradapter "issueops/internal/adapter/worker"
@@ -20,5 +22,5 @@ func testWorkerStore() workeradapter.Store {
 func testWorkerService() workerapp.Service { return workerapp.Service{Effects: testWorkerStore()} }
 
 func testHandleAssistantWorkerMCPToolCall(call MCPToolCall) MCPToolOutcome {
-	return handleAssistantWorkerMCPToolCall(call, testTransportServices())
+	return handleAssistantWorkerMCPToolCall(context.Background(), call, testTransportServices())
 }

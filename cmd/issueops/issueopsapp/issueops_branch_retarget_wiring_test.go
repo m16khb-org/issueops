@@ -30,7 +30,11 @@ func TestBranchRetargetCompositionPersistsObservedTargetAndForkPoint(t *testing.
 	record.BranchPrepare = &model.IssueOpsBranchPrepare{Provider: "github", IssueURL: record.IssueURL, Branch: record.Branch, BaseBranch: "main", BaseSHA: strings.Repeat("a", 40), LinkVerified: true}
 	record.RemoteArtifact = &model.IssueOpsRemoteArtifactVerification{Provider: "github", Kind: "pr", URL: "https://github.com/acme/repo/pull/52", TargetBranch: "main", VerifiedAt: "2026-09-28T00:00:00Z"}
 	store := core.CycleRecordStore{StateRoot: root}
-	if err := store.WithinLock(context.Background(), record.ID, func() error { var saveErr error; record, saveErr = store.Save(record); return saveErr }); err != nil {
+	if err := store.WithinLock(context.Background(), record.ID, func(spanCtx context.Context) error {
+		var saveErr error
+		record, saveErr = store.Save(spanCtx, record)
+		return saveErr
+	}); err != nil {
 		t.Fatal(err)
 	}
 	providerCalls := 0

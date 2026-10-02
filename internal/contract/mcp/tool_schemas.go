@@ -17,9 +17,11 @@ func DaemonStatusTool() Tool {
 func CoreProjectTools() []Tool {
 	return []Tool{
 		{
-			Name:        "harness_inspect",
-			Description: "Inspect the issueops installation, shared skills, docs, and native Codex/Claude integration status.",
-			InputSchema: map[string]any{"type": "object", "properties": map[string]any{"repo": map[string]any{"type": "string", "description": "Optional target repository path."}}},
+			Name:         "harness_inspect",
+			Description:  "Inspect the issueops installation, shared skills, docs, and native Codex/Claude integration status.",
+			InputSchema:  map[string]any{"type": "object", "properties": map[string]any{"repo": map[string]any{"type": "string", "description": "Optional target repository path."}, "host_receipts": map[string]any{"type": "string", "description": "Optional path of a host receipts file (schema_version 1) from real host runs; only such receipts can verify discovered/connected/protocol."}}},
+			OutputSchema: InspectOutputSchema(),
+			Annotations:  ReadOnlyClosedWorldAnnotations(),
 		},
 		{
 			Name:        "atomic_commit_preflight",
@@ -37,9 +39,11 @@ func CoreProjectTools() []Tool {
 			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
 		},
 		{
-			Name:        "docs_index",
-			Description: "Return a lightweight index of AGENTS.md, CLAUDE.md, GENIUS_THINK.md, .issueops markdown files, and self-* skill docs: relative path, title, headings, and byte size.",
-			InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
+			Name:         "docs_index",
+			Description:  "Return a lightweight index of AGENTS.md, CLAUDE.md, GENIUS_THINK.md, .issueops markdown files, and self-* skill docs: relative path, title, headings, and byte size.",
+			InputSchema:  map[string]any{"type": "object", "properties": map[string]any{}},
+			OutputSchema: DocsIndexOutputSchema(),
+			Annotations:  ReadOnlyClosedWorldAnnotations(),
 		},
 		{
 			Name:        "project_docs_route",

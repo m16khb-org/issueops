@@ -115,7 +115,7 @@ func TestSelfVerificationCoverageCompleteWhenAllLabelsPresent(t *testing.T) {
 
 func TestSelfVerificationContractIncludesSummaryExtensions(t *testing.T) {
 	contract := SelfVerificationContractValue()
-	if contract.Name != "self_verification_summary" || contract.Version != 6 || len(contract.Hash) != 64 {
+	if contract.Name != "self_verification_summary" || contract.Version != 7 || len(contract.Hash) != 64 {
 		t.Fatalf("unexpected contract identity: %+v", contract)
 	}
 	for _, want := range []string{"goal_scores", "coverage_gaps", "slowest_steps", "failure_cause", "failure_cause_reason", "failure_cause_evidence"} {

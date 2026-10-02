@@ -7,5 +7,5 @@ import (
 )
 
 func testExecutionService() executionapp.Service {
-	return executionapp.Service{ReadRecord: adapter.ReadIssueOps, SamePath: (authorization.CanonicalPaths{}).Same, InspectProcess: adapter.InspectNativeProcessReceipt}
+	return executionapp.Service{ReadRecord: adapter.ReadIssueOps, SamePath: (authorization.CanonicalPaths{}).Same, Verifier: adapter.NativeActorVerifier()}
 }

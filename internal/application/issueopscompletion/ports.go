@@ -26,4 +26,6 @@ type Environment interface {
 
 type Clock interface{ Now() time.Time }
 
-type ProcessInspector func(context.Context, completioncontract.ProcessReceipt) (string, completioncontract.ProcessReceipt, error)
+// ActorVerifier proves the caller (native ancestry or a bound capability) and
+// returns its verified identity. It never decides holder or generation.
+type ActorVerifier func(context.Context, completioncontract.Actor, []completioncontract.ProcessReceipt) (completioncontract.Actor, error)

@@ -12,7 +12,7 @@ type ExistingReader interface {
 
 type TransactionalStore interface {
 	Reader
-	Mutate([]Mutation) error
+	Mutate(context.Context, []Mutation) error
 }
 
 type Store interface {

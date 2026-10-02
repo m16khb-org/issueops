@@ -59,12 +59,12 @@ func newIssueOpsPublicationHandlers(deps issueOpsPublicationCompositionDeps) iss
 
 func newIssueOpsPublicationServices(stateRoot string, deps issueOpsPublicationCompositionDeps) (*publicationapp.CreateService, *publicationapp.ReconcileService) {
 	observer := issueops.RemotePublicationObserver{CurrentFingerprint: newChangeReader().ChangeFingerprint, CurrentHead: newReadinessGit().Head, StateRoot: stateRoot, Clock: deps.Now, OperationIDFactory: deps.NewOperationID}
-	authority := cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same)
+	authority := cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier())
 	repository := remoteapp.NewPublicationJournal(issueops.RemotePublicationStore{StateRoot: stateRoot}, observer, authority)
 	providerAdapter := &publicationProviderAdapter{deps: deps}
 	gateway := publicationoutbound.NewProviderGateway(providerAdapter.create, providerAdapter.inspect)
 	verifier := remoteapp.NewPublicationVerifier(issueops.RemotePublicationStore{StateRoot: stateRoot}, deps.VerifyLive)
-	preparer := remoteapp.NewCreatePreparation(observer, authority, issueops.InspectNativeProcessReceipt)
+	preparer := remoteapp.NewCreatePreparation(observer, authority, issueOpsActorVerifier())
 	return publicationapp.NewCreateService(preparer, repository, gateway, verifier), publicationapp.NewReconcileService(repository, gateway, verifier)
 }
 

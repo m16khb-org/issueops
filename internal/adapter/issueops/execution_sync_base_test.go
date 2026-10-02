@@ -181,7 +181,7 @@ func newReleasedSyncBaseFixture(t *testing.T, branch string) syncBaseFixture {
 		RemoteArtifactURL:      "https://github.com/example/issueops/pull/69",
 		CompletedAt:            "2026-07-25T00:00:00Z",
 	}
-	record, err = writeIssueOps(stateRoot, record)
+	record, err = writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +225,7 @@ func (f syncBaseFixture) rewrite(t *testing.T, mutate func(*issueops.IssueOpsRec
 		t.Fatal(err)
 	}
 	mutate(&record)
-	if _, err := writeIssueOps(f.stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), f.stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -288,7 +288,7 @@ func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 			fixture := baseline
 			gitState := *baseline.git
 			fixture.git = &gitState
-			if _, err := writeIssueOps(fixture.stateRoot, baseline.record); err != nil {
+			if _, err := writeIssueOps(context.Background(), fixture.stateRoot, baseline.record); err != nil {
 				t.Fatal(err)
 			}
 			if tc.mutate != nil {

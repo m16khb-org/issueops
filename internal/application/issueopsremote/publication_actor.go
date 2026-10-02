@@ -1,9 +1,11 @@
 package issueopsremote
 
 import (
-	cycleapp "issueops/internal/application/issueopscycle"
+	"context"
+
 	model "issueops/internal/contract/issueops"
 	contract "issueops/internal/contract/issueopspublication"
+	authorityport "issueops/internal/port/authority"
 )
 
 func publicationNativeActor(actor contract.Actor) model.NativeActor {
@@ -24,11 +26,12 @@ func publicationNativeActor(actor contract.Actor) model.NativeActor {
 	return result
 }
 
-func normalizePublicationActor(actor contract.Actor, inspect cycleapp.NativeProcessInspector) (contract.Actor, error) {
-	normalized, err := cycleapp.NormalizeNativeActor(publicationNativeActor(actor), inspect)
+func normalizePublicationActor(ctx context.Context, actor contract.Actor, verifier authorityport.ActorVerifier) (contract.Actor, error) {
+	verified, err := verifier.Verify(ctx, publicationNativeActor(actor))
 	if err != nil {
 		return contract.Actor{}, err
 	}
+	normalized := verified.Identity
 	result := actor.Clone()
 	result.Host, result.SessionID, result.AgentID = normalized.Host, normalized.SessionID, normalized.AgentID
 	if normalized.SessionProcess != nil {

@@ -23,8 +23,16 @@ func newProjectLifecycleService() lifecycleapp.Service {
 }
 
 func newProjectBootstrapService(defaultRoot string) bootstrapapp.Service {
+	return projectBootstrapServiceWith(newRepoRootResolver(defaultRoot))
+}
+
+func newScopedProjectBootstrapService(root, cwd string) bootstrapapp.Service {
+	return projectBootstrapServiceWith(newRepoRootResolverAt(root, cwd, nil))
+}
+
+func projectBootstrapServiceWith(normalizeRoot func(string) (string, error)) bootstrapapp.Service {
 	lifecycle := newProjectLifecycleService()
-	return bootstrapapp.Service{NormalizeRoot: newRepoRootResolver(defaultRoot), Effects: bootstrapfiles.Files{
+	return bootstrapapp.Service{NormalizeRoot: normalizeRoot, Effects: bootstrapfiles.Files{
 		AnalyzeRepo: projectdocs.AnalyzeProjectSignals, InitializeLifecycle: lifecycle.Init,
 		RenderDocs: projectdocs.RenderProjectDocs, RenderAgentsBlock: projectdocs.RenderAgentsWithBlock,
 		FileAction: projectdoc.PlannedFileAction,

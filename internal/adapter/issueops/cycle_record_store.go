@@ -10,16 +10,16 @@ import (
 
 type CycleRecordStore struct{ StateRoot string }
 
-func (s CycleRecordStore) WithinLock(ctx context.Context, id string, fn func() error) error {
-	return withIssueOpsLock(ctx, s.StateRoot, id, func(context.Context) error { return fn() })
+func (s CycleRecordStore) WithinLock(ctx context.Context, id string, fn func(context.Context) error) error {
+	return withIssueOpsLock(ctx, s.StateRoot, id, fn)
 }
 
 func (s CycleRecordStore) Load(id string) (model.IssueOpsRecord, error) {
 	return ReadIssueOps(s.StateRoot, id)
 }
 
-func (s CycleRecordStore) Save(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
-	return writeIssueOps(s.StateRoot, record)
+func (s CycleRecordStore) Save(ctx context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+	return writeIssueOps(ctx, s.StateRoot, record)
 }
 
 type CycleStartIdentity struct {

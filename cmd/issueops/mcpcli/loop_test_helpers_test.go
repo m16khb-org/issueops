@@ -1,5 +1,7 @@
 package mcpcli
 
+import "context"
+
 func testHandleLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
-	return handleLoopMCPToolCall(call, testLoopService())
+	return handleLoopMCPToolCall(context.Background(), call, testLoopService())
 }

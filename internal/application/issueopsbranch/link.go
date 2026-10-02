@@ -57,19 +57,19 @@ func (s Linker) Related(ctx context.Context, id, linkType, relatedURL, title str
 
 func (s Linker) mutate(ctx context.Context, id string, actor *model.IssueOpsActor, change func(model.IssueOpsRecord) (model.IssueOpsRecord, error)) (model.IssueOpsRecord, error) {
 	var result model.IssueOpsRecord
-	err := s.Records.WithinLock(ctx, id, func() error {
+	err := s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
 			return err
 		}
-		if err = s.Authority.Validate(record, actor); err != nil {
+		if err = s.Authority.Validate(ctx, record, actor); err != nil {
 			return err
 		}
 		result, err = change(record)
 		if err != nil {
 			return err
 		}
-		result, err = s.Records.Save(result)
+		result, err = s.Records.Save(spanCtx, result)
 		return err
 	})
 	return result, err

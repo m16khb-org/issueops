@@ -15,4 +15,6 @@ type ProjectDocCatalogContext struct {
 	ProjectDocs  []projectdoc.ProjectDocCatalogEntry `json:"project_docs,omitempty"`
 	Compact      string                              `json:"compact,omitempty"`
 	UserView     string                              `json:"user_view,omitempty"`
+	// Omitted is set only when discovery left documents out; it carries the exact counts.
+	Omitted *projectdoc.CatalogOmissions `json:"omitted,omitempty"`
 }

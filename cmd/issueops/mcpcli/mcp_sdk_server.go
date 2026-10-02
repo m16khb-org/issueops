@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -23,11 +25,17 @@ func initSDKServerWithDiagnostics(deps MCPDependencies, diagnostics io.Writer) *
 	if diagnostics == nil {
 		diagnostics = io.Discard
 	}
-	server := mcp.NewServer(
-		&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version},
-		sdkServerOptionsWithDiagnostics(diagnostics),
-	)
-	registerAllTools(server, deps)
+	return newSDKServer(deps, sdkServerOptionsWithDiagnostics(diagnostics), transportStdio, nil)
+}
+
+const httpServerInstructions = "This MCP endpoint is the shared local service used by every host session, not a per-host process. Workspace tools need an authority_file issued by 'issueops mcp authorize'. Use harness tools for shared Codex/Claude inspection, atomic commit preflight, state checkpoints, self-verification, self-augmentation, and commit policy context. External wiki or knowledge-base workflows belong to their own separately installed servers, not issueops."
+
+func newSDKServer(deps MCPDependencies, options *mcp.ServerOptions, transport serverTransport, access *slog.Logger) *mcp.Server {
+	if transport == transportHTTP {
+		options.Instructions = httpServerInstructions
+	}
+	server := mcp.NewServer(&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version}, options)
+	registerAllTools(server, deps, transport, access)
 	registerAllResources(server, deps)
 	return server
 }
@@ -38,13 +46,7 @@ func initSDKServerWithLogger(deps MCPDependencies, logger *slog.Logger) *mcp.Ser
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
-	server := mcp.NewServer(
-		&mcp.Implementation{Name: "issueops", Version: deps.Resources.Version},
-		sdkServerOptionsWithLogger(logger),
-	)
-	registerAllTools(server, deps)
-	registerAllResources(server, deps)
-	return server
+	return newSDKServer(deps, sdkServerOptionsWithLogger(logger), transportStdio, nil)
 }
 
 func sdkServerOptions() *mcp.ServerOptions {
@@ -63,21 +65,12 @@ func sdkServerOptionsWithLogger(logger *slog.Logger) *mcp.ServerOptions {
 	}
 }
 
-func sdkToolHandler(catalog mcpcontract.Catalog, groupHandler func(MCPToolCall) MCPToolOutcome, toolName string) mcp.ToolHandler {
-	return sdkToolHandlerWithContext(
-		catalog,
-		func(_ context.Context, call MCPToolCall) MCPToolOutcome {
-			return groupHandler(call)
-		},
-		toolName,
-	)
-}
-
 func sdkToolHandlerWithContext(
 	catalog mcpcontract.Catalog,
 	groupHandler func(context.Context, MCPToolCall) MCPToolOutcome,
 	toolName string,
 ) mcp.ToolHandler {
+	output, outputErr := compileToolOutputSchema(catalog, toolName)
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var args map[string]any
 		if req.Params.Arguments != nil {
@@ -124,74 +117,141 @@ func sdkToolHandlerWithContext(
 			return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(b)}}}, nil
 		}
 		b, _ := json.MarshalIndent(outcome.Payload, "", "  ")
-		return &mcp.CallToolResult{
+		result := &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: string(b)}},
 			IsError: outcome.IsError,
-		}, nil
+		}
+		if output != nil || outputErr != nil {
+			if outcome.IsError {
+				return result, nil
+			}
+			structured, err := validatedStructuredContent(output, outputErr, outcome.Payload)
+			if err != nil {
+				return nil, newProtocolError(-32603, "Invalid tool output", toolName)
+			}
+			result.StructuredContent = structured
+		}
+		return result, nil
 	}
 }
 
-func registerAllTools(server *mcp.Server, deps MCPDependencies) {
+// compileToolOutputSchema resolves the catalog outputSchema of a tool once, so
+// every call validates against the same compiled schema. A tool without an
+// outputSchema returns nil.
+func compileToolOutputSchema(catalog mcpcontract.Catalog, name string) (*jsonschema.Resolved, error) {
+	for _, tool := range catalog.Tools {
+		if toolName, _ := tool["name"].(string); toolName != name {
+			continue
+		}
+		raw, ok := tool["outputSchema"].(map[string]any)
+		if !ok {
+			return nil, nil
+		}
+		encoded, err := json.Marshal(raw)
+		if err != nil {
+			return nil, err
+		}
+		var schema jsonschema.Schema
+		if err := json.Unmarshal(encoded, &schema); err != nil {
+			return nil, err
+		}
+		return schema.Resolve(nil)
+	}
+	return nil, nil
+}
+
+// validatedStructuredContent returns the payload as the JSON object that
+// structuredContent carries, after checking it against the tool's outputSchema.
+// Errors never include the payload.
+func validatedStructuredContent(schema *jsonschema.Resolved, schemaErr error, payload any) (any, error) {
+	if schemaErr != nil {
+		return nil, schemaErr
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	var structured any
+	if err := json.Unmarshal(encoded, &structured); err != nil {
+		return nil, err
+	}
+	if err := schema.Validate(structured); err != nil {
+		return nil, errors.New("output does not match outputSchema")
+	}
+	return structured, nil
+}
+
+func registerAllTools(server *mcp.Server, deps MCPDependencies, transport serverTransport, access *slog.Logger) {
 	for _, toolMap := range deps.Catalog.Tools {
 		name, _ := toolMap["name"].(string)
 		desc, _ := toolMap["description"].(string)
 		inputSchema := toolMap["inputSchema"]
-		if name == "issueops_execution" {
-			server.AddTool(
-				&mcp.Tool{Name: name, Description: desc, InputSchema: inputSchema},
-				issueOpsExecutionSDKToolHandler(deps),
-			)
-			continue
+		sdkTool := &mcp.Tool{Name: name, Description: desc, InputSchema: inputSchema}
+		if outputSchema, ok := toolMap["outputSchema"].(map[string]any); ok {
+			sdkTool.OutputSchema = outputSchema
 		}
-		handler := resolveHandlerGroup(deps, name)
-		server.AddTool(
-			&mcp.Tool{Name: name, Description: desc, InputSchema: inputSchema},
-			sdkToolHandler(deps.Catalog, handler, name),
-		)
+		if annotations, ok := toolMap["annotations"].(*mcpcontract.ToolAnnotations); ok {
+			sdkTool.Annotations = sdkToolAnnotations(annotations)
+		}
+		handler := sdkToolHandlerWithContext(deps.Catalog, func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+			return dispatchMCPToolCall(ctx, call, deps, transport)
+		}, name)
+		if transport == transportHTTP {
+			handler = httpToolHandler(handler, name, deps.BindTrace, access)
+		}
+		server.AddTool(sdkTool, handler)
 	}
 }
 
-func issueOpsExecutionSDKToolHandler(deps MCPDependencies) mcp.ToolHandler {
-	return sdkToolHandlerWithContext(deps.Catalog, func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
-		return handleIssueOpsMCPToolCallWithContext(ctx, call, deps)
-	}, "issueops_execution")
+// sdkToolAnnotations converts the catalog hints. The SDK serializes its
+// non-pointer hints even when false, so a tool without annotations keeps nil.
+func sdkToolAnnotations(annotations *mcpcontract.ToolAnnotations) *mcp.ToolAnnotations {
+	out := &mcp.ToolAnnotations{DestructiveHint: annotations.DestructiveHint, OpenWorldHint: annotations.OpenWorldHint}
+	if annotations.ReadOnlyHint != nil {
+		out.ReadOnlyHint = *annotations.ReadOnlyHint
+	}
+	if annotations.IdempotentHint != nil {
+		out.IdempotentHint = *annotations.IdempotentHint
+	}
+	return out
 }
 
-func resolveHandlerGroup(deps MCPDependencies, name string) func(MCPToolCall) MCPToolOutcome {
-	group, ok := deps.Catalog.Dispatch[name]
-	if !ok {
-		return func(call MCPToolCall) MCPToolOutcome {
+func resolveHandlerGroup(deps MCPDependencies, name string) func(context.Context, MCPToolCall) MCPToolOutcome {
+	switch deps.Catalog.Dispatch[name] {
+	case mcpcontract.DispatchAssistantWorker:
+		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+			return handleAssistantWorkerMCPToolCall(ctx, call, deps)
+		}
+	case mcpcontract.DispatchGates:
+		return func(_ context.Context, call MCPToolCall) MCPToolOutcome {
+			return handleGatesMCPToolCall(call, deps.Gates)
+		}
+	case mcpcontract.DispatchChannel:
+		return func(_ context.Context, call MCPToolCall) MCPToolOutcome {
+			return handleChannelMCPToolCall(call, deps.Channel)
+		}
+	case mcpcontract.DispatchLoop:
+		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+			return handleLoopMCPToolCall(ctx, call, deps.Loop)
+		}
+	case mcpcontract.DispatchProject:
+		return func(_ context.Context, call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) }
+	case mcpcontract.DispatchPolicyState:
+		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+			return handlePolicyStateMCPToolCall(ctx, call, deps)
+		}
+	case mcpcontract.DispatchSelfLoop:
+		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+			return handleSelfLoopMCPToolCall(ctx, call, deps)
+		}
+	case mcpcontract.DispatchIssueOps:
+		return func(ctx context.Context, call MCPToolCall) MCPToolOutcome {
+			return handleIssueOpsMCPToolCallWithContext(ctx, call, deps)
+		}
+	default:
+		return func(_ context.Context, call MCPToolCall) MCPToolOutcome {
 			return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
 		}
-	}
-	if group == mcpcontract.DispatchAssistantWorker {
-		return func(call MCPToolCall) MCPToolOutcome {
-			return handleAssistantWorkerMCPToolCall(call, deps)
-		}
-	}
-	if group == mcpcontract.DispatchGates {
-		return func(call MCPToolCall) MCPToolOutcome { return handleGatesMCPToolCall(call, deps.Gates) }
-	}
-	if group == mcpcontract.DispatchChannel {
-		return func(call MCPToolCall) MCPToolOutcome { return handleChannelMCPToolCall(call, deps.Channel) }
-	}
-	if group == mcpcontract.DispatchLoop {
-		return func(call MCPToolCall) MCPToolOutcome { return handleLoopMCPToolCall(call, deps.Loop) }
-	}
-	if group == mcpcontract.DispatchProject {
-		return func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) }
-	}
-	if group == mcpcontract.DispatchPolicyState {
-		return func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps) }
-	}
-	if group == mcpcontract.DispatchSelfLoop {
-		return func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) }
-	}
-	if group == mcpcontract.DispatchIssueOps {
-		return func(call MCPToolCall) MCPToolOutcome { return handleIssueOpsMCPToolCallWithDependencies(call, deps) }
-	}
-	return func(call MCPToolCall) MCPToolOutcome {
-		return MCPToolOutcome{Handled: true, Err: newProtocolError(-32602, "Unknown tool", call.Name)}
 	}
 }
 

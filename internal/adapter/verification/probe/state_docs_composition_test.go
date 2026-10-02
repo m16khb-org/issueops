@@ -1,6 +1,7 @@
 package probe
 
 import (
+	"context"
 	selfaugment "issueops/internal/contract/selfaugment"
 	selfverify "issueops/internal/contract/selfverify"
 
@@ -21,10 +22,14 @@ import (
 )
 
 func testSnapshotStore() app.SnapshotStore {
-	return app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: statestore.WriteStateRecord, Now: time.Now}
+	return app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+		return statestore.WriteStateRecord(context.Background(), dir, key, record)
+	}, Now: time.Now}
 }
 func ValidateStateRoundtrip(binary, root string, seed int64) selfverify.StepResult {
-	return (stateroundtrip.Validator{StateRead: readProbeState, WriteRecord: statestore.WriteStateRecord, WriteSnapshot: testSnapshotStore().Write, OpenDatabase: func(dir string) (stateroundtrip.StateDatabase, error) { return sqlstore.Open(dir) }}).Validate(binary, root, seed)
+	return (stateroundtrip.Validator{StateRead: readProbeState, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+		return statestore.WriteStateRecord(context.Background(), dir, key, record)
+	}, WriteSnapshot: testSnapshotStore().Write, OpenDatabase: func(dir string) (stateroundtrip.StateDatabase, error) { return sqlstore.Open(dir) }}).Validate(binary, root, seed)
 }
 
 func ValidateStepBudgetBaseline(binary, root string, seed int64) selfverify.StepResult {

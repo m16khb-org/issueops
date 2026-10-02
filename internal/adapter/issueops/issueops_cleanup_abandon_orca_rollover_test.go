@@ -63,7 +63,7 @@ func TestAbandonWithheldRolloverAuthorityForActiveHolder(t *testing.T) {
 		},
 		ClaimedAt: "2026-07-25T00:00:00Z",
 	}
-	if _, err := writeIssueOps(stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	inspector := &rolloverAwareInspector{

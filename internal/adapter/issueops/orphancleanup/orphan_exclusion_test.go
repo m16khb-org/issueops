@@ -50,7 +50,7 @@ func TestOrphanEffectsExcludeNewOwnersAndCompetingCleanup(t *testing.T) {
 	environment := service.Environment
 	service.Environment = interceptOrphanEnvironment{OrphanEnvironment: environment, beforeRemove: func(ctx context.Context) {
 		observed = true
-		if _, err := adapter.WriteIssueOps(root, owner); !errors.Is(err, processlease.ErrBusy) {
+		if _, err := adapter.WriteIssueOps(context.Background(), root, owner); !errors.Is(err, processlease.ErrBusy) {
 			t.Errorf("new owner admitted during effect: %v", err)
 		}
 		lease, err := environment.ExcludeWrites(ctx)
@@ -69,7 +69,7 @@ func TestOrphanEffectsExcludeNewOwnersAndCompetingCleanup(t *testing.T) {
 	if err != nil || len(ids) != 0 {
 		t.Fatalf("cleanup manufactured or admitted owner: %v %v", ids, err)
 	}
-	if _, err := adapter.WriteIssueOps(root, owner); err != nil {
+	if _, err := adapter.WriteIssueOps(context.Background(), root, owner); err != nil {
 		t.Fatalf("exclusion leaked after effects: %v", err)
 	}
 }

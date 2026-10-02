@@ -121,7 +121,7 @@ func (s Service) RemoveBranch(ctx context.Context, repo, branch string) error {
 	return s.Workspace.RemoveBranch(ctx, repo, branch)
 }
 func (s Service) ResetExecution(ctx context.Context, id, expectedSHA string) error {
-	return s.Records.WithinLock(ctx, id, func() error {
+	return s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		current, err := s.Records.Load(id)
 		if err != nil {
 			return err
@@ -133,7 +133,7 @@ func (s Service) ResetExecution(ctx context.Context, id, expectedSHA string) err
 		if currentSHA != expectedSHA {
 			return fmt.Errorf("execution switch-mode authority changed before record mutation")
 		}
-		_, err = s.Records.Save(cycledomain.ResetExecutionForModeSwitch(current))
+		_, err = s.Records.Save(spanCtx, cycledomain.ResetExecutionForModeSwitch(current))
 		return err
 	})
 }

@@ -13,8 +13,8 @@ import (
 const AnalysisKind = "trace_analysis"
 
 type Effects interface {
-	Load(string) (source string, body []byte, err error)
-	Decode([]byte) tracedomain.Input
+	Load(input, format string) (source string, body []byte, truncated bool, err error)
+	Decode(body []byte, format string) tracedomain.Input
 }
 
 type Service struct{ Effects Effects }
@@ -28,15 +28,31 @@ func (service Service) Analyze(req tracecontract.TraceAnalyzeRequest) (tracecont
 	if input == "" {
 		return result, fmt.Errorf("trace analyze input is required")
 	}
-	source, body, err := service.Effects.Load(input)
-	if err != nil {
-		return result, err
+	format := strings.TrimSpace(req.InputFormat)
+	if format == "" {
+		format = tracecontract.InputFormatIssueOps
 	}
+	if !supportedInputFormat(format) {
+		result.Warnings = append(result.Warnings, "unsupported_input_format")
+		return result, fmt.Errorf("unsupported trace input format %q (want issueops, claude-stream, codex-exec or omo-json)", format)
+	}
+	source, body, truncated, err := service.Effects.Load(input, format)
 	result.InputSource = source
-	if len(strings.TrimSpace(string(body))) == 0 {
+	if err != nil {
+		result.Warnings = append(result.Warnings, "trace_read_error")
+		return result, fmt.Errorf("read trace input: %w", err)
+	}
+	if len(strings.TrimSpace(string(body))) == 0 && !truncated {
 		return result, fmt.Errorf("trace analyze input is empty")
 	}
-	inputFacts := service.Effects.Decode(body)
+	inputFacts := service.Effects.Decode(body, format)
+	if truncated {
+		inputFacts.Incomplete = true
+		inputFacts.Warnings = append(inputFacts.Warnings, "input_truncated")
+		if inputFacts.Usage != nil {
+			tracedomain.NoteUsageLoss(inputFacts.Usage, "input_truncated")
+		}
+	}
 	if inputFacts.Document != nil {
 		summary := &inputFacts.Document.Summary
 		evidence := make([]failurecontract.Evidence, 0, len(summary.Evidence))
@@ -62,6 +78,16 @@ func (service Service) Analyze(req tracecontract.TraceAnalyzeRequest) (tracecont
 	}
 	result.FindingCount = len(result.Findings)
 	result.Warnings = analysis.Warnings
+	result.Complete = !analysis.Incomplete
+	result.Usage = inputFacts.Usage
 	result.OK = true
 	return result, nil
+}
+
+func supportedInputFormat(format string) bool {
+	switch format {
+	case tracecontract.InputFormatIssueOps, tracecontract.InputFormatClaudeJSON, tracecontract.InputFormatCodexExec, tracecontract.InputFormatOmoJSON:
+		return true
+	}
+	return false
 }

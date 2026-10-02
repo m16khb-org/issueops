@@ -131,7 +131,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 			TaskID: "task-1", DispatchID: "dispatch-1", TerminalPTYID: "pty-1",
 		},
 	}
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -154,7 +154,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 	record.Execution.Orca.ContextPacketSHA256 = ""
 	record.Execution.Orca.OwnerPromptSHA256 = ""
 	record.Execution.Orca.ArtifactIdentityVersion = 0
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 	legacyJSON := captureStdoutForContract(t, func() error {
@@ -215,7 +215,7 @@ func TestIssueOpsExecutionPrepareCLIAndMCPStatusAndErrorsAreIdentical(t *testing
 		Reason:     "functional HEAD changed",
 		ReopenedAt: "2026-08-04T00:00:00Z",
 	}}
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -296,7 +296,7 @@ func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareH
 		}
 		record.WorktreePath = workspace.Root
 		record.Execution = execution
-		written, err := issueopscore.WriteIssueOps(stateRoot, record)
+		written, err := issueopscore.WriteIssueOps(context.Background(), stateRoot, record)
 		if err != nil {
 			return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err
 		}
@@ -375,7 +375,7 @@ func executionCLIRecord(t *testing.T) (string, string, []string) {
 		Provider: "github", IssueURL: record.IssueURL, Branch: branch,
 		BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true,
 	}
-	if _, err := issueopscore.WriteIssueOps(issueOpsStateRootForTest(), record); err != nil {
+	if _, err := issueopscore.WriteIssueOps(context.Background(), issueOpsStateRootForTest(), record); err != nil {
 		t.Fatal(err)
 	}
 	receipt, err := issueopscore.ObserveNativeProcessReceipt(os.Getpid())

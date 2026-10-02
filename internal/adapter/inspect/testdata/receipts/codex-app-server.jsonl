@@ -1,0 +1,8 @@
+{"direction":"client->host","method":"initialize"}
+{"direction":"host->client","raw":"{\"id\":1,\"result\":{\"userAgent\":\"issueops-inspect-qa/0.128.0\",\"codexHome\":\"/tmp/home/.codex\",\"platformFamily\":\"unix\",\"platformOs\":\"macos\"}}"}
+{"direction":"client->host","method":"mcpServerStatus/list"}
+{"direction":"host->client","raw":"{\"id\":2,\"result\":{\"data\":[{\"name\":\"issueops\",\"tools\":{\"gates_abandon\":{\"name\":\"gates_abandon\"},\"docs_index\":{\"name\":\"docs_index\"}}}],\"nextCursor\":null}}"}
+{"direction":"client->host","method":"thread/start"}
+{"direction":"host->client","raw":"{\"id\":3,\"result\":{\"thread\":{\"id\":\"01a0fd02-b33b-77d1-b138-88ca2e1af7e8\",\"ephemeral\":true}}}"}
+{"direction":"client->host","method":"mcpServer/tool/call"}
+{"direction":"host->client","raw":"{\"id\":4,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"{\\n  \\\"ok\\\": true,\\n  \\\"version\\\": \\\"0.1.0\\\",\\n  \\\"issueops_root\\\": \\\"/tmp/root\\\",\\n  \\\"docs\\\": []\\n}\"}]}}"}

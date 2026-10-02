@@ -1,32 +1,35 @@
 package issueops
 
 import (
+	"context"
+
 	cycleapp "issueops/internal/application/issueopscycle"
 	"issueops/internal/contract/issueops"
+	authorityport "issueops/internal/port/authority"
 )
 
 // validateExecutionMutation binds every durable IssueOps mutation to the
 // current write lease once execution has been prepared. Planning mutations are
 // intentionally actor-optional until the execution record exists.
-func validateExecutionMutation(record issueops.IssueOpsRecord, actor *issueops.IssueOpsActor) error {
-	return cycleapp.NewMutationAuthority(samePath).Validate(record, actor)
+func validateExecutionMutation(ctx context.Context, record issueops.IssueOpsRecord, actor *issueops.IssueOpsActor, verifier authorityport.ActorVerifier) error {
+	return cycleapp.NewMutationAuthority(samePath, verifier).Validate(ctx, record, actor)
 }
 
-func validateWorkspacePreparationMutation(record issueops.IssueOpsRecord, actor *issueops.IssueOpsActor) error {
-	return validateExecutionMutation(record, actor)
+func validateWorkspacePreparationMutation(ctx context.Context, record issueops.IssueOpsRecord, actor *issueops.IssueOpsActor, verifier authorityport.ActorVerifier) error {
+	return validateExecutionMutation(ctx, record, actor, verifier)
 }
 
-func ValidateIssueOpsMutationActor(stateRoot, id string, actor issueops.IssueOpsActor) error {
+func ValidateIssueOpsMutationActor(ctx context.Context, stateRoot, id string, actor issueops.IssueOpsActor, verifier authorityport.ActorVerifier) error {
 	record, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
 		return err
 	}
-	return validateWorkspacePreparationMutation(record, &actor)
+	return validateWorkspacePreparationMutation(ctx, record, &actor, verifier)
 }
 
 // validatePostTransferMutation keeps current-contract durable writes bound to the
 // owner even when callers bypass lifecycle hooks through a direct CLI or MCP
 // request. Legacy cycles retain their existing actor-optional behavior.
-func validatePostTransferMutation(record issueops.IssueOpsRecord, actor *issueops.IssueOpsActor) error {
-	return validateExecutionMutation(record, actor)
+func validatePostTransferMutation(ctx context.Context, record issueops.IssueOpsRecord, actor *issueops.IssueOpsActor, verifier authorityport.ActorVerifier) error {
+	return validateExecutionMutation(ctx, record, actor, verifier)
 }

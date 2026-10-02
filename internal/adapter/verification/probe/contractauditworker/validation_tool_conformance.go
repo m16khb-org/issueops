@@ -44,7 +44,7 @@ func ValidateToolConformanceWithDeps(binary, root string, deps ValidationDeps) s
 	if result.Gate.Decision != "baseline_passed" {
 		errs = append(errs, "tool conformance baseline gate is not baseline_passed")
 	}
-	validated := verifydomain.AssertionStep("tool contract conformance", time.Since(time.Now()).Milliseconds(), errs)
+	validated := verifydomain.AssertionStep("tool contract conformance", step.DurationMS, errs)
 	if !validated.OK {
 		validated.FailureEvidence = []failurecause.Evidence{{Cause: failurecause.ContractInput, Code: "baseline_contract_failed", Source: "tool_conformance"}}
 	}

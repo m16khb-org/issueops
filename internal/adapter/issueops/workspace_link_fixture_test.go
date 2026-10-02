@@ -11,7 +11,7 @@ import (
 )
 
 func workspaceLinkerForTest(root string) branchapp.WorkspaceLinker {
-	return branchapp.WorkspaceLinker{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Files: LinkEnvironment{}, Now: time.Now}
+	return branchapp.WorkspaceLinker{Records: CycleRecordStore{StateRoot: root}, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, liveTestVerifier()), Files: LinkEnvironment{}, Now: time.Now}
 }
 func LinkIssueOpsPlan(root, id, planPath string) (model.IssueOpsRecord, error) {
 	return workspaceLinkerForTest(root).Plan(context.Background(), id, planPath, nil)

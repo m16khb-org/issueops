@@ -1,6 +1,7 @@
 package mcpcli
 
 import (
+	"context"
 	"time"
 
 	"issueops/cmd/issueops/mcpcli/argmap"
@@ -9,19 +10,21 @@ import (
 	augmentcontract "issueops/internal/contract/selfaugment"
 )
 
-func handleSelfLoopMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleSelfLoopMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
 	case "self_augment":
 		result, err := augmentapp.PlanAndSave(augmentcontract.SelfAugmentPlanRequest{
 			Cycles:      argmap.Int(call.Arguments, "cycles", 1),
 			TargetScore: argmap.Float(call.Arguments, "target_score", 95),
-		}, argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-augment-latest"), augmentapp.PlanAndSaveDeps{Plan: deps.SelfPlanning.Plan, Save: deps.SelfState.SavePlan})
+		}, argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-augment-latest"), augmentapp.PlanAndSaveDeps{Plan: deps.SelfPlanning.Plan, Save: func(result *augmentcontract.SelfAugmentPlanResult, key string) error {
+			return deps.SelfState.SavePlan(ctx, result, key)
+		}})
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32000, "Self-augmentation plan save failed", result))
 		}
 		return mcpToolPayload(result)
 	case "self_augment_lesson":
-		result, err := deps.SelfPlanning.SaveLesson(augmentcontract.SelfAugmentLessonRequest{
+		result, err := deps.SelfPlanning.SaveLesson(ctx, augmentcontract.SelfAugmentLessonRequest{
 			CandidateID: argmap.String(call.Arguments, "candidate_id"),
 			Lesson:      argmap.String(call.Arguments, "lesson"),
 			NextAction:  argmap.String(call.Arguments, "next_action"),
@@ -46,21 +49,26 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOu
 			SaveState: argmap.Bool(call.Arguments, "save_state"),
 			StateKey:  argmap.StringDefault(call.Arguments, "state_key", "self-verify-latest"),
 		}, verifyapp.ExecuteDeps{
-			Verify:      deps.SelfVerify,
-			SaveSummary: deps.SelfState.SaveSummary,
+			Verify: deps.SelfVerify,
+			SaveSummary: func(result *augmentcontract.SelfAugmentResult, key string) error {
+				return deps.SelfState.SaveSummary(ctx, result, key)
+			},
 		})
 		if err != nil && !isSelfVerificationGateError(err) {
 			return mcpToolFailure(newProtocolError(-32000, "Self-verification failed", result))
 		}
 		return mcpToolPayload(result)
 	case "self_verify_candidates":
-		result, err := verifyapp.ExportAndSaveCandidates(argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-verify-candidates-latest"), verifyapp.ExportAndSaveCandidatesDeps{Export: deps.SelfPlanning.ExportCandidates, Save: deps.SelfPlanning.SaveCandidates})
+		result, err := verifyapp.ExportAndSaveCandidates(argmap.Bool(call.Arguments, "save_state"), argmap.StringDefault(call.Arguments, "state_key", "self-verify-candidates-latest"), verifyapp.ExportAndSaveCandidatesDeps{Export: deps.SelfPlanning.ExportCandidates, Save: func(result *augmentcontract.SelfVerificationCandidateExportResult, key string) error {
+			return deps.SelfPlanning.SaveCandidates(ctx, result, key)
+		}})
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32000, "Self-verify candidate export save failed", result))
 		}
 		return mcpToolPayload(result)
 	case "self_verify_history", "self_augment_history":
 		result, err := deps.SelfHistory.History(
+			ctx,
 			argmap.StringDefault(call.Arguments, "prefix", "self-verify"),
 			argmap.Int(call.Arguments, "limit", 20),
 			augmentcontract.SelfAugmentHistoryRetentionOptions{
@@ -85,6 +93,7 @@ func handleSelfLoopMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOu
 		return mcpToolPayload(result)
 	case "self_verify_promote", "self_augment_promote":
 		result, err := deps.SelfState.Promote(
+			ctx,
 			argmap.String(call.Arguments, "from_key"),
 			argmap.String(call.Arguments, "baseline_key"),
 			argmap.Bool(call.Arguments, "confirm"),

@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -84,7 +85,7 @@ func seedRegressEvents(t *testing.T, count int) (string, string) {
 			At:        "2026-07-02T00:00:00Z",
 		})
 	}
-	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
+	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot, id

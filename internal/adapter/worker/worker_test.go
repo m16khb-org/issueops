@@ -1,7 +1,9 @@
 package worker
 
 import (
+	"context"
 	workercontract "issueops/internal/contract/worker"
+	"issueops/internal/port"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +43,7 @@ func TestWriteWorkerJobAtomicAndNoTempLeak(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open worker db: %v", err)
 	}
-	if err := db.Put(workerBucket, job.ID, []byte("{ truncated")); err != nil {
+	if err := db.Apply(context.Background(), []port.RecordMutation{{Bucket: workerBucket, ID: job.ID, Data: []byte("{ truncated")}}); err != nil {
 		t.Fatalf("truncate: %v", err)
 	}
 	if _, err := ReadWorkerJob(job.ID); err == nil {

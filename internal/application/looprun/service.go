@@ -12,7 +12,7 @@ import (
 type Store interface {
 	WithLock(context.Context, string, func(context.Context) error) error
 	Read(string) (loopcontract.LoopRun, error)
-	Write(loopcontract.LoopRun) (loopcontract.LoopRun, error)
+	Write(context.Context, loopcontract.LoopRun) (loopcontract.LoopRun, error)
 }
 
 type Identity interface {
@@ -30,7 +30,7 @@ type Service struct {
 	SchemaVersion int
 }
 
-func (service Service) Start(request loopcontract.StartLoopRequest) (loopcontract.LoopRun, error) {
+func (service Service) Start(ctx context.Context, request loopcontract.StartLoopRequest) (loopcontract.LoopRun, error) {
 	repo, err := service.Identity.NormalizeRepo(request.Repo)
 	if err != nil {
 		return loopcontract.LoopRun{OK: false}, err
@@ -41,7 +41,7 @@ func (service Service) Start(request loopcontract.StartLoopRequest) (loopcontrac
 	}
 	loopID := service.Identity.NewID(repo, prepared.Name)
 	var loop loopcontract.LoopRun
-	err = service.Store.WithLock(context.Background(), loopID, func(context.Context) error {
+	err = service.Store.WithLock(ctx, loopID, func(spanCtx context.Context) error {
 		existing, readErr := service.Store.Read(loopID)
 		if readErr == nil {
 			if err := loopdomain.Resume(existing); err != nil {
@@ -54,13 +54,13 @@ func (service Service) Start(request loopcontract.StartLoopRequest) (loopcontrac
 			return readErr
 		}
 		loop = loopdomain.New(loopID, repo, prepared, service.Clock.Now(), service.SchemaVersion)
-		loop, readErr = service.Store.Write(loop)
+		loop, readErr = service.Store.Write(spanCtx, loop)
 		return readErr
 	})
 	return loop, err
 }
 
-func (service Service) RecordAttempt(loopID string, request loopcontract.RecordAttemptRequest) (loopcontract.LoopRun, error) {
+func (service Service) RecordAttempt(ctx context.Context, loopID string, request loopcontract.RecordAttemptRequest) (loopcontract.LoopRun, error) {
 	loopID, err := service.Identity.NormalizeID(loopID)
 	if err != nil {
 		return loopcontract.LoopRun{OK: false}, err
@@ -70,7 +70,7 @@ func (service Service) RecordAttempt(loopID string, request loopcontract.RecordA
 		return loopcontract.LoopRun{OK: false, ID: loopID}, err
 	}
 	var loop loopcontract.LoopRun
-	err = service.Store.WithLock(context.Background(), loopID, func(context.Context) error {
+	err = service.Store.WithLock(ctx, loopID, func(spanCtx context.Context) error {
 		var readErr error
 		loop, readErr = service.Store.Read(loopID)
 		if readErr != nil {
@@ -80,19 +80,19 @@ func (service Service) RecordAttempt(loopID string, request loopcontract.RecordA
 		if transitionErr != nil {
 			return transitionErr
 		}
-		loop, readErr = service.Store.Write(next)
+		loop, readErr = service.Store.Write(spanCtx, next)
 		return readErr
 	})
 	return loop, err
 }
 
-func (service Service) Stop(loopID string, success bool, reason string) (loopcontract.LoopRun, error) {
+func (service Service) Stop(ctx context.Context, loopID string, success bool, reason string) (loopcontract.LoopRun, error) {
 	loopID, err := service.Identity.NormalizeID(loopID)
 	if err != nil {
 		return loopcontract.LoopRun{OK: false}, err
 	}
 	var loop loopcontract.LoopRun
-	err = service.Store.WithLock(context.Background(), loopID, func(context.Context) error {
+	err = service.Store.WithLock(ctx, loopID, func(spanCtx context.Context) error {
 		var readErr error
 		loop, readErr = service.Store.Read(loopID)
 		if readErr != nil {
@@ -102,7 +102,7 @@ func (service Service) Stop(loopID string, success bool, reason string) (loopcon
 		if transitionErr != nil {
 			return transitionErr
 		}
-		loop, readErr = service.Store.Write(next)
+		loop, readErr = service.Store.Write(spanCtx, next)
 		return readErr
 	})
 	return loop, err

@@ -13,3 +13,9 @@ func newCommitService(defaultRoot string) commitapp.Service {
 func newLintService(defaultRoot string) lintapp.Service {
 	return lintapp.Service{Effects: lintadapter.Effects{Normalize: newRepoRootResolver(defaultRoot)}}
 }
+func newScopedCommitService(root, cwd string) commitapp.Service {
+	return commitapp.Service{Effects: commitadapter.Effects{Normalize: newRepoRootResolverAt(root, cwd, nil)}}
+}
+func newScopedLintService(root, cwd string) lintapp.Service {
+	return lintapp.Service{Effects: lintadapter.Effects{Normalize: newRepoRootResolverAt(root, cwd, nil)}}
+}

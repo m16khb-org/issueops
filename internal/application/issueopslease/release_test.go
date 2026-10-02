@@ -8,7 +8,9 @@ import (
 )
 
 func TestReleaseKeepsLegacyNativeActorValidationErrorsPublic(t *testing.T) {
-	service := NewReleaseService(nil, nil, nil, nil)
+	service := NewReleaseService(nil, nil, leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		return "live", receipt, nil
+	}), nil)
 	for _, tc := range []struct {
 		name  string
 		actor leasedomain.Actor
@@ -34,9 +36,9 @@ func TestResolveActorAcceptsOmoNativeProcess(t *testing.T) {
 		context.Background(),
 		leasedomain.Actor{Host: "omo", SessionID: "019ff5b8-7d62-707a-a693-5e7a5e8a3187", Process: &process},
 		[]leasedomain.ProcessReceipt{process},
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", process, nil
-		},
+		}),
 	)
 	if err != nil {
 		t.Fatalf("Omo native actor must resolve: %v", err)

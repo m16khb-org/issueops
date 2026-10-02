@@ -1,6 +1,7 @@
 package mcpcli
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
@@ -11,6 +12,7 @@ import (
 	verifyapp "issueops/internal/application/selfverify"
 	mcpcontract "issueops/internal/contract/mcp"
 	contract "issueops/internal/contract/selfaugment"
+	statecontract "issueops/internal/contract/state"
 	"testing"
 	"time"
 )
@@ -68,23 +70,29 @@ func historyServiceForTest() augmentapp.HistoryService {
 	return augmentapp.HistoryService{StateDir: statestore.StateDir, List: statestore.StateList, Read: statestore.StateRead, Delete: statestore.StateDelete}
 }
 func testHandleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
-	return handleSelfLoopMCPToolCall(call, MCPDependencies{SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
+	return handleSelfLoopMCPToolCall(context.Background(), call, MCPDependencies{SelfHistory: historyServiceForTest(), SelfState: selfStateForTest(), SelfPlanning: planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)})
 }
 
 func selfStateForTest() SelfStateDependencies {
-	snapshots := augmentapp.SnapshotStore{ReadState: statestore.StateRead, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: statestore.WriteStateRecord, Now: time.Now}
+	snapshots := augmentapp.SnapshotStore{ReadState: statestore.StateRead, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+		return statestore.WriteStateRecord(context.Background(), dir, key, record)
+	}, Now: time.Now}
 	return SelfStateDependencies{
-		SavePlan: func(result *contract.SelfAugmentPlanResult, key string) error {
+		SavePlan: func(_ context.Context, result *contract.SelfAugmentPlanResult, key string) error {
 			return augmentapp.SavePlan(result, key, augmentapp.SavePlanDeps{Now: time.Now, Encode: func(snapshot contract.SelfAugmentPlanStateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
-			}, Write: statestore.StateWrite, StateDir: statestore.StateDir})
+			}, Write: func(key, content string) (statecontract.StateResult, error) {
+				return statestore.StateWrite(context.Background(), key, content)
+			}, StateDir: statestore.StateDir})
 		},
-		SaveSummary: func(result *contract.SelfAugmentResult, key string) error {
+		SaveSummary: func(_ context.Context, result *contract.SelfAugmentResult, key string) error {
 			return verifyapp.SaveSummary(result, key, verifyapp.SaveSummaryDeps{Now: time.Now, Encode: func(snapshot contract.SelfAugmentStateSnapshot) ([]byte, error) {
 				return json.MarshalIndent(snapshot, "", "  ")
-			}, Write: statestore.StateWrite, StateDir: statestore.StateDir})
+			}, Write: func(key, content string) (statecontract.StateResult, error) {
+				return statestore.StateWrite(context.Background(), key, content)
+			}, StateDir: statestore.StateDir})
 		},
-		Promote: func(from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
+		Promote: func(_ context.Context, from, to string, confirm, allowFailed bool) (contract.SelfAugmentPromoteResult, error) {
 			return augmentapp.PromoteBaseline(from, to, confirm, allowFailed, augmentapp.PromoteDeps{StateDir: statestore.StateDir, ReadSnapshot: snapshots.Read, WriteSnapshot: snapshots.Write, ReadState: statestore.StateRead})
 		},
 	}

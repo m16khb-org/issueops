@@ -34,6 +34,34 @@ func MergeJSONMapFile(path, parent, entry string, dryRun bool, value func() (map
 	return config, nil
 }
 
+// RemoveJSONMapEntry returns the config without the named entry. removed is
+// false when the file or entry is absent, so callers leave the file untouched.
+func RemoveJSONMapEntry(path, parent, entry string) (map[string]any, bool, error) {
+	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if strings.TrimSpace(string(raw)) == "" {
+		return nil, false, nil
+	}
+	var config map[string]any
+	if err := json.Unmarshal(raw, &config); err != nil {
+		return nil, false, err
+	}
+	if config == nil {
+		return nil, false, fmt.Errorf("JSON config must be an object")
+	}
+	entries, _ := config[parent].(map[string]any)
+	if _, ok := entries[entry]; !ok {
+		return nil, false, nil
+	}
+	delete(entries, entry)
+	return config, true, nil
+}
+
 // VerifyJSONMapEntry hashes only the named entry, not unrelated host settings.
 func VerifyJSONMapEntry(path, parent, entry, context string, expected func() (map[string]any, error), digest func(any) (string, error)) (string, error) {
 	raw, err := os.ReadFile(path)

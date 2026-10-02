@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -27,7 +28,7 @@ func TestIssueOpsStatusBackfillsPartialLedger(t *testing.T) {
 		issueops.IssueOpsPhaseProblem: {Phase: issueops.IssueOpsPhaseProblem, EnteredAt: "2026-06-29T00:00:00Z", CompletedAt: "2026-06-29T00:01:00Z"},
 		issueops.IssueOpsPhasePlan:    {Phase: issueops.IssueOpsPhasePlan, EnteredAt: "2026-06-29T00:02:00Z"},
 	}
-	if _, err := touchAndWriteIssueOps(stateRoot, rec); err != nil {
+	if _, err := touchAndWriteIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 

@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	"issueops/cmd/issueops/selfworkflow/augmentcmd"
 	"issueops/cmd/issueops/selfworkflow/augmentlesson"
 	statestore "issueops/internal/adapter/outbound/state"
@@ -12,7 +13,9 @@ func runSelfAugment(args []string) error {
 		RunLesson: runSelfAugmentLesson,
 		RunVerify: runSelfVerify,
 		Plan:      planSelfAugmentation,
-		SavePlan:  newSelfWorkflowState(statestore.StateDir()).SavePlan,
+		SavePlan: func(result *augmentcontract.SelfAugmentPlanResult, key string) error {
+			return newSelfWorkflowState(statestore.StateDir()).SavePlan(context.Background(), result, key)
+		},
 		PrintJSON: printJSON,
 	})
 }
@@ -22,5 +25,7 @@ func planSelfAugmentation(req augmentcontract.SelfAugmentPlanRequest) augmentcon
 }
 
 func runSelfAugmentLesson(args []string) error {
-	return augmentlesson.Run(args, augmentlesson.Deps{Save: newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).SaveLesson, PrintJSON: printJSON})
+	return augmentlesson.Run(args, augmentlesson.Deps{Save: func(req augmentcontract.SelfAugmentLessonRequest) (augmentcontract.SelfAugmentLessonResult, error) {
+		return newSelfWorkflowPlanning(issueOpsRoot(), statestore.StateDir(), version).SaveLesson(context.Background(), req)
+	}, PrintJSON: printJSON})
 }

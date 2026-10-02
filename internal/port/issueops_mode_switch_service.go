@@ -7,8 +7,8 @@ import (
 
 type ModeSwitchRecords interface {
 	Load(string) (model.IssueOpsRecord, error)
-	Save(model.IssueOpsRecord) (model.IssueOpsRecord, error)
-	WithinLock(context.Context, string, func() error) error
+	Save(context.Context, model.IssueOpsRecord) (model.IssueOpsRecord, error)
+	WithinLock(context.Context, string, func(context.Context) error) error
 }
 type ModeSwitchWorkspace interface {
 	Present(string) bool

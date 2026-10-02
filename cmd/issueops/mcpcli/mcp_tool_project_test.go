@@ -193,3 +193,30 @@ func singleMCPResourceContent(t *testing.T, result any) map[string]any {
 	}
 	return contents[0]
 }
+
+func TestHandleProjectMCPToolCallPassesHostReceiptsToHarnessInspect(t *testing.T) {
+	for name, args := range map[string]map[string]any{
+		"provided": {"repo": "/work/repo", "host_receipts": "receipts.json"},
+		"absent":   {},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var gotRepo, gotReceipts string
+			deps := testProjectDependencies()
+			deps.Inspect = func(repo, hostReceipts string) any {
+				gotRepo, gotReceipts = repo, hostReceipts
+				return map[string]any{"ok": true}
+			}
+
+			outcome := handleProjectMCPToolCall(MCPToolCall{Name: "harness_inspect", Arguments: args}, deps)
+
+			if !outcome.Handled || outcome.Err != nil {
+				t.Fatalf("unexpected outcome: %#v", outcome)
+			}
+			wantRepo, _ := args["repo"].(string)
+			wantReceipts, _ := args["host_receipts"].(string)
+			if gotRepo != wantRepo || gotReceipts != wantReceipts {
+				t.Fatalf("repo=%q receipts=%q, want %q %q", gotRepo, gotReceipts, wantRepo, wantReceipts)
+			}
+		})
+	}
+}

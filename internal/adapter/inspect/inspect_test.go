@@ -14,7 +14,7 @@ func TestInspectHarnessIndexesSkillsAndDocs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	info := (Observer{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}).Inspect(root, root, t.TempDir(), "test-version", "atomic-commit-push")
+	info := (Observer{ListDocs: (docsapp.Service{Observer: docs.Observer{}, Now: time.Now}).List}).Inspect(root, root, t.TempDir(), "test-version", "atomic-commit-push", inspectcontract.Options{})
 	if !info.OK {
 		t.Fatalf("InspectHarness ok=false: %+v", info)
 	}

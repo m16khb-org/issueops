@@ -17,12 +17,12 @@ type childChangedBeforeParentSpan struct {
 	change   func()
 }
 
-func (s childChangedBeforeParentSpan) WithinLock(ctx context.Context, id string, fn func() error) error {
-	return s.CycleRecordStore.WithinLock(ctx, id, func() error {
+func (s childChangedBeforeParentSpan) WithinLock(ctx context.Context, id string, fn func(context.Context) error) error {
+	return s.CycleRecordStore.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		if id == s.parentID {
 			s.change()
 		}
-		return fn()
+		return fn(spanCtx)
 	})
 }
 

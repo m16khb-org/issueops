@@ -15,9 +15,11 @@ func NewReviewMutationStore(actor *issueops.IssueOpsActor) reviewport.ReviewMuta
 		},
 		Read: ReadIssueOps,
 		ValidateMutation: func(record issueops.IssueOpsRecord) error {
-			return validatePostTransferMutation(record, actor)
+			return validatePostTransferMutation(context.Background(), record, actor, NativeActorVerifier())
 		},
-		Write: writeIssueOps,
-		Now:   func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
+		Write: func(root string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+			return writeIssueOps(context.Background(), root, record)
+		},
+		Now: func() string { return time.Now().UTC().Format(time.RFC3339Nano) },
 	}
 }

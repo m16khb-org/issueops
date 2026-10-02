@@ -16,7 +16,7 @@ type Effects interface {
 	EnsureDir(string) error
 	WithLock(context.Context, string, string, func(context.Context) error) error
 	Read(string) (workercontract.WorkerJob, error)
-	Write(workercontract.WorkerJob) error
+	Write(context.Context, workercontract.WorkerJob) error
 	Now() time.Time
 	PID() int
 	Run(policycontract.CommandPolicyRequest) policycontract.CommandRunResult
@@ -26,7 +26,7 @@ type Effects interface {
 
 type Service struct{ Effects Effects }
 
-func (service Service) Enqueue(kind, payload string) (workercontract.WorkerJob, error) {
+func (service Service) Enqueue(ctx context.Context, kind, payload string) (workercontract.WorkerJob, error) {
 	kind, err := workerdomain.NormalizeKind(kind)
 	if err != nil {
 		return workercontract.WorkerJob{OK: false}, err
@@ -44,16 +44,16 @@ func (service Service) Enqueue(kind, payload string) (workercontract.WorkerJob, 
 	if err != nil {
 		return job, err
 	}
-	return job, service.Effects.WithLock(context.Background(), dir, id, func(context.Context) error { return service.Effects.Write(job) })
+	return job, service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error { return service.Effects.Write(spanCtx, job) })
 }
 
-func (service Service) Cancel(id string) (workercontract.WorkerJob, error) {
+func (service Service) Cancel(ctx context.Context, id string) (workercontract.WorkerJob, error) {
 	dir, err := service.Effects.Dir()
 	if err != nil {
 		return workercontract.WorkerJob{OK: false, ID: id}, err
 	}
 	var job workercontract.WorkerJob
-	err = service.Effects.WithLock(context.Background(), dir, id, func(context.Context) error {
+	err = service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error {
 		current, readErr := service.Effects.Read(id)
 		job = current
 		if readErr != nil {
@@ -67,13 +67,13 @@ func (service Service) Cancel(id string) (workercontract.WorkerJob, error) {
 			return transitionErr
 		}
 		job = next
-		return service.Effects.Write(next)
+		return service.Effects.Write(spanCtx, next)
 	})
 	return job, err
 }
 
-func (service Service) RunReadOnly(kind, payload string, request policycontract.CommandPolicyRequest) (workercontract.WorkerJob, error) {
-	job, err := service.Enqueue(kind, payload)
+func (service Service) RunReadOnly(ctx context.Context, kind, payload string, request policycontract.CommandPolicyRequest) (workercontract.WorkerJob, error) {
+	job, err := service.Enqueue(ctx, kind, payload)
 	if err != nil {
 		return job, err
 	}
@@ -81,7 +81,7 @@ func (service Service) RunReadOnly(kind, payload string, request policycontract.
 	if err != nil {
 		return job, err
 	}
-	if err := service.Effects.WithLock(context.Background(), dir, job.ID, func(context.Context) error {
+	if err := service.Effects.WithLock(ctx, dir, job.ID, func(spanCtx context.Context) error {
 		current, readErr := service.Effects.Read(job.ID)
 		if readErr != nil {
 			return readErr
@@ -95,12 +95,14 @@ func (service Service) RunReadOnly(kind, payload string, request policycontract.
 			return transitionErr
 		}
 		job = next
-		return service.Effects.Write(next)
+		return service.Effects.Write(spanCtx, next)
 	}); err != nil {
 		return job, err
 	}
 	result := service.Effects.Run(request)
-	if err := service.Effects.WithLock(context.Background(), dir, job.ID, func(context.Context) error {
+	// The command already ran; its result is recorded even if the request was
+	// cancelled meanwhile, or the job would stay running under a live server PID.
+	if err := service.Effects.WithLock(context.WithoutCancel(ctx), dir, job.ID, func(spanCtx context.Context) error {
 		current, readErr := service.Effects.Read(job.ID)
 		if readErr != nil {
 			return readErr
@@ -109,14 +111,14 @@ func (service Service) RunReadOnly(kind, payload string, request policycontract.
 		current.Result = &result
 		current = workerdomain.Finish(current, result.OK, service.Effects.Now().UTC().Format(time.RFC3339Nano))
 		job = current
-		return service.Effects.Write(current)
+		return service.Effects.Write(spanCtx, current)
 	}); err != nil {
 		return job, err
 	}
 	return job, nil
 }
 
-func (service Service) DetectStuck() (workercontract.WorkerListResult, error) {
+func (service Service) DetectStuck(ctx context.Context) (workercontract.WorkerListResult, error) {
 	dir, err := service.Effects.Dir()
 	if err != nil {
 		return workercontract.WorkerListResult{OK: false}, err
@@ -132,7 +134,7 @@ func (service Service) DetectStuck() (workercontract.WorkerListResult, error) {
 			continue
 		}
 		fixed := false
-		lockErr := service.Effects.WithLock(context.Background(), dir, id, func(context.Context) error {
+		lockErr := service.Effects.WithLock(ctx, dir, id, func(spanCtx context.Context) error {
 			current, reReadErr := service.Effects.Read(id)
 			if reReadErr != nil {
 				return reReadErr
@@ -144,7 +146,7 @@ func (service Service) DetectStuck() (workercontract.WorkerListResult, error) {
 			if !changed {
 				return nil
 			}
-			if err := service.Effects.Write(next); err != nil {
+			if err := service.Effects.Write(spanCtx, next); err != nil {
 				return err
 			}
 			job = next

@@ -6,20 +6,20 @@ import (
 )
 
 func TestAnalyzeKeepsUpkeepPriorityAndCountsFailedProgress(t *testing.T) {
-	result := Analyze(Input{JSONError: "multiple documents", Lines: []Document{
+	result := Analyze(Input{Lines: []Document{
 		{Event: "step_end", OK: false, Step: "ignored", Upkeep: Upkeep{Kind: "changed", TargetDocs: []string{"ADR.md"}}},
 		{Event: "step_end", OK: false, Step: "policy check"},
 		{Event: "step_end", OK: false, Step: "policy check"},
 		{Event: "step_end", OK: true, Step: "successful"},
 	}})
-	if len(result.Findings) != 2 || len(result.Types) != 2 || len(result.Warnings) != 0 {
+	if result.Incomplete || len(result.Findings) != 2 || len(result.Types) != 2 || len(result.Warnings) != 0 {
 		t.Fatalf("unexpected fallback=%+v", result)
 	}
 	if result.Findings[0].FailureClass != "lifecycle_doc_upkeep" || result.Findings[1].RecurringPattern != "policy check failed 2 time(s)" {
 		t.Fatalf("priority/count changed: %+v", result.Findings)
 	}
-	empty := Analyze(Input{JSONError: "broken"})
-	if len(empty.Findings) != 0 || len(empty.Warnings) != 1 || empty.Warnings[0] != "invalid_json:broken" {
+	empty := Analyze(Input{Incomplete: true, Warnings: []string{"invalid_json:invalid_jsonl_line"}})
+	if !empty.Incomplete || len(empty.Findings) != 0 || len(empty.Warnings) != 2 || empty.Warnings[0] != "invalid_json:invalid_jsonl_line" || empty.Warnings[1] != "no_supported_trace_findings" {
 		t.Fatalf("invalid input lost: %+v", empty)
 	}
 }
@@ -43,5 +43,28 @@ func TestAnalyzeKeepsExplicitRerunAndRedactsSummary(t *testing.T) {
 	text := finding.RecurringPattern + finding.VerificationCommand + finding.FailureCauseEvidence[0].Code + finding.FailureCauseEvidence[0].Source
 	if strings.Contains(text, "hidden-value") {
 		t.Fatalf("secret leaked: %+v", finding)
+	}
+}
+
+func TestAnalyzePreservesIncompleteWarningsWithOrWithoutFindings(t *testing.T) {
+	for _, lines := range [][]Document{
+		nil,
+		{{Event: "step_end", Step: "sentinel", OK: false}},
+	} {
+		// Given
+		input := Input{Lines: lines, Incomplete: true, Warnings: []string{"invalid_jsonl_line", "jsonl_scan_error"}}
+		// When
+		result := Analyze(input)
+		// Then
+		if !result.Incomplete || len(result.Findings) != len(lines) {
+			t.Errorf("incomplete=%v findings=%d want %d", result.Incomplete, len(result.Findings), len(lines))
+		}
+		wantWarnings := 2
+		if len(lines) == 0 {
+			wantWarnings++
+		}
+		if len(result.Warnings) != wantWarnings || result.Warnings[0] != "invalid_jsonl_line" || result.Warnings[1] != "jsonl_scan_error" {
+			t.Errorf("warnings=%q", result.Warnings)
+		}
 	}
 }

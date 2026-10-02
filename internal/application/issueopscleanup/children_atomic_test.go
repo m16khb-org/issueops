@@ -30,13 +30,13 @@ type lockedChildCleanupRecords struct {
 	saveErr error
 }
 
-func (r *lockedChildCleanupRecords) WithinLock(_ context.Context, id string, fn func() error) error {
+func (r *lockedChildCleanupRecords) WithinLock(ctx context.Context, id string, fn func(context.Context) error) error {
 	if r.locked || id != r.record.ID {
 		r.t.Fatal("incorrect lock")
 	}
 	r.locked = true
 	defer func() { r.locked = false }()
-	return fn()
+	return fn(ctx)
 }
 func (r *lockedChildCleanupRecords) Load(id string) (model.IssueOpsRecord, error) {
 	if id != r.record.ID {
@@ -44,7 +44,7 @@ func (r *lockedChildCleanupRecords) Load(id string) (model.IssueOpsRecord, error
 	}
 	return r.record, nil
 }
-func (r *lockedChildCleanupRecords) Save(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (r *lockedChildCleanupRecords) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	if !r.locked {
 		r.t.Fatal("save outside the cycle lock")
 	}

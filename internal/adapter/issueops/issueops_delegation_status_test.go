@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -117,7 +118,7 @@ func TestAcceptIssueOpsChildRequiresDonePhaseAndEvidence(t *testing.T) {
 	// cleanup finish가 child 레코드를 삭제해도 accepted parent receipt는 완료
 	// 증거로 남아야 한다. 이를 orphan/incomplete로 되돌리면 parent PR gate가
 	// 이미 승인·정리한 child 때문에 영구적으로 막힌다.
-	if err := deleteIssueOps(stateRoot, child.ID); err != nil {
+	if err := deleteIssueOps(context.Background(), stateRoot, child.ID); err != nil {
 		t.Fatal(err)
 	}
 	status, err := IssueOpsChildStatus(stateRoot, parent.ID, false)
@@ -149,7 +150,7 @@ func TestAcceptIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 	child := started.Child
 	child.Phase = issueops.IssueOpsPhaseDone
 	writeIssueOpsRecordForDelegationTest(t, stateRoot, child)
-	if err := deleteIssueOps(stateRoot, child.ID); err != nil {
+	if err := deleteIssueOps(context.Background(), stateRoot, child.ID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -243,7 +244,7 @@ func TestDropIssueOpsChildAfterCleanupUsesIndexedParentRef(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := deleteIssueOps(stateRoot, started.Child.ID); err != nil {
+	if err := deleteIssueOps(context.Background(), stateRoot, started.Child.ID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -289,7 +290,7 @@ func TestDroppedCleanupReceiptWithShortReasonRemainsOrphaned(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := deleteIssueOps(stateRoot, started.Child.ID); err != nil {
+	if err := deleteIssueOps(context.Background(), stateRoot, started.Child.ID); err != nil {
 		t.Fatal(err)
 	}
 	parentAfter, err := ReadIssueOps(stateRoot, parent.ID)

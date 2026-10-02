@@ -45,6 +45,7 @@ func newTestHandlers(repo *fakeRepository) Handlers {
 		repo,
 		fixedClock{now: time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)},
 		identityPaths{},
+		liveVerifier(),
 	))
 }
 

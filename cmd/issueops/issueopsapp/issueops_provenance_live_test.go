@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -48,7 +49,7 @@ func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 	fixture.Execution.Lease.Status = issueopscontract.LeaseStatusReleased
 	fixture.Execution.Lease.Holder = nil
 	fixture.Execution.Lease.ClaimTokenSHA256 = ""
-	if _, err := issueops.WriteIssueOps(stateRoot, fixture); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, fixture); err != nil {
 		t.Fatal(err)
 	}
 

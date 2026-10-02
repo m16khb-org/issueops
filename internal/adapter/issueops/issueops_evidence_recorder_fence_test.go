@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -92,7 +93,7 @@ func TestEvidenceRecordersStayOpenBeforeExecutionPreparation(t *testing.T) {
 		t.Fatal(err)
 	}
 	record.Phase = issueops.IssueOpsPhaseImplement
-	if _, err := writeIssueOps(stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := RecordIssueOpsSchemaEvidence(stateRoot, record.ID, issueops.IssueOpsSchemaEvidenceRequest{
@@ -107,14 +108,14 @@ func TestEvidenceRecordersStayOpenBeforeExecutionPreparation(t *testing.T) {
 func activeLeaseEvidenceFixture(t *testing.T, stateRoot string) (claimableExecutionFixture, issueops.IssueOpsActor) {
 	t.Helper()
 	fixture := newClaimableExecutionFixture(t, stateRoot, "996-evidence-fence")
-	receipt := issueops.NativeProcessReceipt{PID: 4242, StartedAt: "2026-09-23T00:00:00Z", Executable: "/usr/bin/codex"}
+	receipt := liveFixtureReceipt()
 	fixture.record.Phase = issueops.IssueOpsPhaseImplement
 	fixture.record.Execution.Lease = issueops.WriteLease{
 		Generation: 1, Status: issueops.LeaseStatusActive,
 		Holder:    &issueops.NativeActor{Host: "codex", SessionID: "owner-session", SessionProcess: &receipt},
 		ClaimedAt: "2026-09-23T00:00:00Z",
 	}
-	written, err := writeIssueOps(stateRoot, fixture.record)
+	written, err := writeIssueOps(context.Background(), stateRoot, fixture.record)
 	if err != nil {
 		t.Fatal(err)
 	}

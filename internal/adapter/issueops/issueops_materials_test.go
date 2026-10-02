@@ -71,7 +71,7 @@ func materialsCycleForTest(t *testing.T) (string, issueops.IssueOpsRecord, strin
 	}
 	record.Execution = issueOpsExecutionForTest(record.Repo, worktree, record.Branch)
 	record.Execution.Workspace.ArtifactDir = ".issueops/issues/13/artifact"
-	if record, err = writeIssueOps(stateRoot, record); err != nil {
+	if record, err = writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot, record, worktree
@@ -209,7 +209,7 @@ func TestPhaseTransitionNormalizesPublicMaterials(t *testing.T) {
 		modes[path] = info.Mode()
 	}
 	record.DevilsAdvocateReview.ReviewedPlanDigest = digestExecutionOwnerBytes(originals[record.PlanPath])
-	if _, err := writeIssueOps(stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	service := testCyclePhaseService(issueOpsActorPointerForMaterialsTest(worktree))

@@ -76,7 +76,7 @@ func (s ChildReconciler) Reconcile(ctx context.Context, cmd ChildReconcileComman
 		if !cmd.Confirm {
 			return cause
 		}
-		return errors.Join(cause, s.Intents.RecoveryFailure(context.Background(), record, op, childURL, status, remote.IssueCreateFailure(cause), actor))
+		return errors.Join(cause, s.Intents.RecoveryFailure(context.WithoutCancel(ctx), record, op, childURL, status, remote.IssueCreateFailure(cause), actor))
 	}
 	snapshot, err := provider.ReadChild(ctx, record.Repo, op.ParentURL, childURL)
 	if err != nil {

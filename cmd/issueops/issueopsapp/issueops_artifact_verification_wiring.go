@@ -12,7 +12,7 @@ import (
 )
 
 func newArtifactVerificationService(root string, verify application.ArtifactLiveVerifier, observe application.AncestryObserver, now func() time.Time) *application.ArtifactVerificationService {
-	return application.NewArtifactVerificationService(issueops.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), verify, observe, now)
+	return application.NewArtifactVerificationService(issueops.RemoteRecordStore{StateRoot: root}, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, issueOpsActorVerifier()), verify, observe, now)
 }
 
 func verifyRemoteArtifact(ctx context.Context, root, id string, req model.IssueOpsRemoteArtifactVerificationRequest, actor model.IssueOpsActor, verify application.ArtifactLiveVerifier, observe application.AncestryObserver) (model.IssueOpsRecord, error) {

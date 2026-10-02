@@ -138,9 +138,7 @@ func TestIssueOpsDelegationStartProcessHelper(t *testing.T) {
 		AcceptanceCriteria: []string{"every process sibling persists"},
 	}, &issueops.IssueOpsActor{
 		Host: "codex", SessionID: "test-session", AgentID: "test-agent", CWD: parentWorktree,
-		NativeProcessAncestry: []issueops.NativeProcessReceipt{{
-			PID: 1, StartedAt: "2026-07-22T00:00:00Z", Executable: "/usr/bin/codex",
-		}},
+		NativeProcessAncestry: []issueops.NativeProcessReceipt{liveFixtureReceipt()},
 	})
 	if err != nil {
 		t.Fatal(err)

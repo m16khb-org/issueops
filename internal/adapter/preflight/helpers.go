@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-func listRemotes(root string) []preflightcontract.RemoteInfo {
-	lines := splitLines(GitOut(root, "remote", "-v"))
+func listRemotes(read func(string, ...string) string, root string) []preflightcontract.RemoteInfo {
+	lines := splitLines(read(root, "remote", "-v"))
 	var out []preflightcontract.RemoteInfo
 	for _, line := range lines {
 		fields := strings.Fields(line)
@@ -19,14 +19,49 @@ func listRemotes(root string) []preflightcontract.RemoteInfo {
 	return out
 }
 
-func recentCommits(root string, limit int) []preflightcontract.CommitInfo {
-	lines := splitLines(GitOut(root, "log", fmt.Sprintf("-%d", limit), "--pretty=format:%h%x09%s"))
+var historyArgs = []string{"log", "-10", "--format=%h%x00%s%x00%B%x00"}
+
+type historyRecord struct{ sha, subject, body string }
+
+type commitHistory []historyRecord
+
+// parseHistory reads NUL-terminated sha/subject/body triples; Git separates
+// records with one newline. An incomplete trailing triple is dropped.
+func parseHistory(raw string) commitHistory {
+	fields := strings.Split(raw, "\x00")
+	var history commitHistory
+	for i := 0; i+2 < len(fields); i += 3 {
+		history = append(history, historyRecord{
+			sha:     strings.TrimPrefix(fields[i], "\n"),
+			subject: fields[i+1],
+			body:    fields[i+2],
+		})
+	}
+	return history
+}
+
+func (history commitHistory) last() string {
+	if len(history) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(history[0].sha + " " + history[0].subject)
+}
+
+func (history commitHistory) commits(limit int) []preflightcontract.CommitInfo {
 	var out []preflightcontract.CommitInfo
-	for _, line := range lines {
-		parts := strings.SplitN(line, "\t", 2)
-		if len(parts) == 2 {
-			out = append(out, preflightcontract.CommitInfo{SHA: parts[0], Subject: parts[1]})
-		}
+	for _, record := range history[:min(limit, len(history))] {
+		out = append(out, preflightcontract.CommitInfo{SHA: record.sha, Subject: record.subject})
+	}
+	return out
+}
+
+func (history commitHistory) bodies() []string {
+	if len(history) == 0 {
+		return []string{""}
+	}
+	out := make([]string, 0, len(history))
+	for _, record := range history {
+		out = append(out, record.body)
 	}
 	return out
 }

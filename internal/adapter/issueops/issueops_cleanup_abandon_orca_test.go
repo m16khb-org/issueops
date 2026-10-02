@@ -142,7 +142,7 @@ func abandonSettledOrcaRecord(t *testing.T, taskStatus string) (string, issueops
 			Generation: 1, Status: issueops.LeaseStatusReleased, ReleasedAt: "2026-07-25T00:00:01Z",
 		},
 	}
-	written, err := writeIssueOps(stateRoot, record)
+	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

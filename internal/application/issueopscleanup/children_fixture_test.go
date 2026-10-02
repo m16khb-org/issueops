@@ -22,13 +22,13 @@ type childCleanupFixtureRecords struct {
 	root  string
 }
 
-func (r childCleanupFixtureRecords) WithinLock(_ context.Context, _ string, fn func() error) error {
-	return fn()
+func (r childCleanupFixtureRecords) WithinLock(ctx context.Context, _ string, fn func(context.Context) error) error {
+	return fn(ctx)
 }
 func (r childCleanupFixtureRecords) Load(id string) (model.IssueOpsRecord, error) {
 	return r.store.Read(r.root, id)
 }
-func (r childCleanupFixtureRecords) Save(record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (r childCleanupFixtureRecords) Save(_ context.Context, record model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	return r.store.TouchWrite(r.root, record)
 }
 func ByID(store Store, root, id string, req model.IssueOpsCloseChildrenRequest) (model.IssueOpsCloseChildrenResult, error) {

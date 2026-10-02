@@ -21,7 +21,7 @@ func TestCleanupRemoteBranchExcludesOtherExecutorsAndWriters(t *testing.T) {
 	}
 	deps.Git = func(ctx context.Context, repo string, args ...string) (int, string) {
 		if args[0] == "push" {
-			if _, err := writeIssueOps(root, record); err == nil {
+			if _, err := writeIssueOps(context.Background(), root, record); err == nil {
 				t.Error("ordinary writer entered during remote deletion")
 			}
 			observed := false

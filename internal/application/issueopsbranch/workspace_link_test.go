@@ -22,10 +22,10 @@ type linkStoreForTest struct {
 	writes  int
 }
 
-func (s *linkStoreForTest) WithinLock(_ context.Context, _ string, fn func() error) error {
+func (s *linkStoreForTest) WithinLock(ctx context.Context, _ string, fn func(context.Context) error) error {
 	s.locked = true
 	defer func() { s.locked = false }()
-	return fn()
+	return fn(ctx)
 }
 func (s *linkStoreForTest) Load(id string) (model.IssueOpsRecord, error) {
 	if !s.locked {
@@ -37,7 +37,7 @@ func (s *linkStoreForTest) Load(id string) (model.IssueOpsRecord, error) {
 	}
 	return r, nil
 }
-func (s *linkStoreForTest) Save(r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
+func (s *linkStoreForTest) Save(_ context.Context, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 	if !s.locked {
 		panic("write outside lock")
 	}
@@ -55,7 +55,7 @@ func newLinkStoreForTest(records ...model.IssueOpsRecord) (*linkStoreForTest, br
 		r.DesignReview = &model.IssueOpsDesignReview{ProblemSummary: "problem", ProposedDesign: "design", Verification: []string{"design review checked alternatives and risks"}, Approved: true, RefactorPlan: "plan", Alternatives: []string{"alternative"}, Risks: []string{"risk"}}
 		s.records[r.ID] = r
 	}
-	return s, branchapp.WorkspaceLinker{Records: s, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), Files: core.LinkEnvironment{}, Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}
+	return s, branchapp.WorkspaceLinker{Records: s, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Files: core.LinkEnvironment{}, Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}
 }
 func LinkPlan(s branchapp.WorkspaceLinker, _ string, id, path string) (model.IssueOpsRecord, error) {
 	return s.Plan(context.Background(), id, path, nil)

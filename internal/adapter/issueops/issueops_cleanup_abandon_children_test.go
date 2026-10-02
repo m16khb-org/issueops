@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	"context"
 	"testing"
 
 	issueops "issueops/internal/contract/issueops"
@@ -120,7 +121,7 @@ func TestAbandonResolvedChildrenRequiresDoneForLiveRecords(t *testing.T) {
 			OK: true, SchemaVersion: 1, ID: id, Repo: t.TempDir(), Phase: phase,
 			CreatedAt: "2026-08-01T00:00:00Z", UpdatedAt: "2026-08-01T00:00:00Z",
 		}
-		if _, err := WriteIssueOps(stateRoot, child); err != nil {
+		if _, err := WriteIssueOps(context.Background(), stateRoot, child); err != nil {
 			t.Fatal(err)
 		}
 	}

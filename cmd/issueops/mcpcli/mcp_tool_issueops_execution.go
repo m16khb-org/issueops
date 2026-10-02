@@ -15,7 +15,7 @@ func handleMCPIssueOpsExecutionWithContext(
 	args map[string]any,
 	deps MCPDependencies,
 ) MCPToolOutcome {
-	req, err := executionActionRequestFromMCP(args, deps.Execution)
+	req, err := executionActionRequestFromMCP(args, deps)
 	if err != nil {
 		return mcpToolErrorPayload(issueOpsMCPErrorPayload(err))
 	}
@@ -33,7 +33,7 @@ func handleMCPIssueOpsExecutionWithContext(
 
 func issueOpsExecutionActionDependencies(deps MCPDependencies) port.ExecutionActionDependencies {
 	return port.ExecutionActionDependencies{
-		Prepare: deps.Prepare, Orca: deps.Orca, OrcaOwner: deps.OrcaOwner, ReadIssue: deps.ReadIssue,
+		Prepare: deps.Prepare, Orca: deps.Orca, OrcaOwner: deps.OrcaOwner, BaseSync: deps.BaseSync, ReadIssue: deps.ReadIssue,
 		Claim: deps.Claim, Release: deps.Release, Reseed: deps.Reseed, Status: deps.Status, Replace: deps.Replace, Resume: deps.Resume, Reconcile: deps.Reconcile, Complete: deps.Complete,
 		RemoteReconcile: deps.Publication.Reconcile,
 	}
@@ -51,11 +51,40 @@ func issueOpsMCPErrorPayload(err error) map[string]any {
 	return payload
 }
 
-func executionActionRequestFromMCP(args map[string]any, execution ExecutionDeps) (model.ExecutionActionRequest, error) {
-	ancestry, _ := execution.ObserveNativeProcessAncestry(os.Getpid())
+func executionActionRequestFromMCP(args map[string]any, deps MCPDependencies) (model.ExecutionActionRequest, error) {
+	if deps.Caller != nil {
+		return executionActionRequestFromCapability(args, *deps.Caller)
+	}
+	ancestry, _ := deps.Execution.ObserveNativeProcessAncestry(os.Getpid())
 	// 관측이 실패하면 ancestry가 비어 core mutation validation이 호출자의
 	// process receipt를 신뢰하는 대신 fail-closed로 동작한다.
 	return executionActionRequestFromMCPWithAncestry(args, ancestry)
+}
+
+// executionActionRequestFromCapability never attaches this server's ancestry:
+// a bound capability is the caller proof. Omitted actor fields take the
+// verified identity; supplied ones (stdio only) must match it in core Verify.
+func executionActionRequestFromCapability(args map[string]any, caller model.VerifiedActor) (model.ExecutionActionRequest, error) {
+	req, err := executionActionRequestFromMCPWithAncestry(args, nil)
+	if err != nil {
+		return req, err
+	}
+	supplied := false
+	for _, field := range actorArguments {
+		if _, present := args[field]; present {
+			supplied = true
+		}
+	}
+	if !supplied {
+		req.Actor = caller.Identity
+		req.Actor.ProcessAncestry = nil
+		return req, nil
+	}
+	req.Actor.ProcessAncestry = nil
+	if _, pid := args["session_pid"]; !pid && argmap.String(args, "session_started_at") == "" && argmap.String(args, "session_executable") == "" {
+		req.Actor.SessionProcess = nil
+	}
+	return req, nil
 }
 
 func executionActionRequestFromMCPWithAncestry(args map[string]any, ancestry []model.NativeProcessReceipt) (model.ExecutionActionRequest, error) {

@@ -6,6 +6,7 @@ import (
 
 	leasecontract "issueops/internal/contract/issueopslease"
 	leasedomain "issueops/internal/domain/issueopslease"
+	authorityport "issueops/internal/port/authority"
 )
 
 type ClaimRequest struct {
@@ -29,12 +30,12 @@ type ClaimResult struct {
 type ClaimService struct {
 	repository ClaimRepository
 	clock      Clock
-	inspect    ProcessInspector
+	verifier   authorityport.ActorVerifier
 	preflight  ClaimContextPreflight
 }
 
-func NewClaimService(repository ClaimRepository, clock Clock, inspect ProcessInspector, preflight ClaimContextPreflight) *ClaimService {
-	return &ClaimService{repository: repository, clock: clock, inspect: inspect, preflight: preflight}
+func NewClaimService(repository ClaimRepository, clock Clock, verifier authorityport.ActorVerifier, preflight ClaimContextPreflight) *ClaimService {
+	return &ClaimService{repository: repository, clock: clock, verifier: verifier, preflight: preflight}
 }
 
 func (s *ClaimService) Claim(ctx context.Context, request ClaimRequest) (ClaimResult, error) {
@@ -47,7 +48,7 @@ func (s *ClaimService) Claim(ctx context.Context, request ClaimRequest) (ClaimRe
 	if err != nil {
 		return ClaimResult{ID: request.ID}, err
 	}
-	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.inspect)
+	actor, err := resolveActor(ctx, request.Actor, request.Ancestry, s.verifier)
 	if err != nil {
 		return ClaimResult{ID: request.ID}, err
 	}

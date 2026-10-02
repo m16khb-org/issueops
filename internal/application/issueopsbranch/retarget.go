@@ -19,12 +19,12 @@ type Retargeter struct {
 	Now           func() time.Time
 }
 
-func (s Retargeter) authorize(record model.IssueOpsRecord, actor *model.IssueOpsActor) error {
+func (s Retargeter) authorize(ctx context.Context, record model.IssueOpsRecord, actor *model.IssueOpsActor) error {
 	required, err := domain.RetargetRequiresHolder(record)
 	if err != nil || !required {
 		return err
 	}
-	return s.Authority.Validate(record, actor)
+	return s.Authority.Validate(ctx, record, actor)
 }
 
 // Retarget observes the remote before entering the transaction. Inside the
@@ -34,18 +34,18 @@ func (s Retargeter) Retarget(ctx context.Context, id string, req model.IssueOpsB
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
-	if err := s.authorize(observed, &actor); err != nil {
+	if err := s.authorize(ctx, observed, &actor); err != nil {
 		return model.IssueOpsRecord{OK: false}, err
 	}
 	base, reason := strings.TrimSpace(req.BaseBranch), strings.TrimSpace(req.Reason)
 	observation := s.observe(observed, base)
 	var result model.IssueOpsRecord
-	err = s.Records.WithinLock(ctx, id, func() error {
+	err = s.Records.WithinLock(ctx, id, func(spanCtx context.Context) error {
 		record, err := s.Records.Load(id)
 		if err != nil {
 			return err
 		}
-		if err := s.authorize(record, &actor); err != nil {
+		if err := s.authorize(ctx, record, &actor); err != nil {
 			return err
 		}
 		if err := domain.ValidateRetargetRequest(base, reason); err != nil {
@@ -69,7 +69,7 @@ func (s Retargeter) Retarget(ctx context.Context, id string, req model.IssueOpsB
 		if err := domain.ValidateRetargetOrigin(record.Repo, base, observation.repo, observation.branch, observation.presentStated, observation.present, observation.presentErr); err != nil {
 			return err
 		}
-		result, err = s.Records.Save(domain.ApplyBranchRetarget(record, base, reason, s.Now().UTC().Format(time.RFC3339Nano), s.Now().UTC().Format(time.RFC3339Nano)))
+		result, err = s.Records.Save(spanCtx, domain.ApplyBranchRetarget(record, base, reason, s.Now().UTC().Format(time.RFC3339Nano), s.Now().UTC().Format(time.RFC3339Nano)))
 		return err
 	})
 	return result, err

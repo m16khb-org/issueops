@@ -1,6 +1,7 @@
 package workercli
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	policy "issueops/internal/contract/policy"
@@ -74,7 +75,7 @@ func (command Command) RunReadOnly(args []string) error {
 		Timeout:       timeout.String(),
 		EnvAllowlist:  splitCSV(*envAllowlist),
 	}
-	job, err := command.Service.RunReadOnly(*kind, *payload, req)
+	job, err := command.Service.RunReadOnly(context.Background(), *kind, *payload, req)
 	if *jsonOut {
 		_ = printJSON(job)
 	}

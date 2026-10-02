@@ -13,7 +13,7 @@ func TestAbandonRecordFinalizersRejectReplacementAndForeignOperations(t *testing
 	for _, operation := range []model.CleanupOperation{model.CleanupOperationFinish, model.CleanupOperationRemoteBranch, model.CleanupOperationAbandon} {
 		t.Run(string(operation), func(t *testing.T) {
 			root := t.TempDir()
-			record, err := writeIssueOps(root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-abandon-store", Phase: model.IssueOpsPhaseDone})
+			record, err := writeIssueOps(context.Background(), root, model.IssueOpsRecord{SchemaVersion: 1, ID: "io-abandon-store", Phase: model.IssueOpsPhaseDone})
 			if err != nil {
 				t.Fatal(err)
 			}

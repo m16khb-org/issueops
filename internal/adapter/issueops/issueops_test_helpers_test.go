@@ -65,7 +65,7 @@ func newClaimableExecutionFixture(t *testing.T, stateRoot, branch string) claima
 		t.Fatal(err)
 	}
 	record.Execution.Lease.ClaimTokenSHA256 = tokenSHA256(token)
-	if _, err := writeIssueOps(stateRoot, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	return claimableExecutionFixture{record: record, worktree: worktree, tokenPath: tokenPath}
@@ -80,7 +80,7 @@ func prepareExecutionCompletionFixture(t *testing.T, stateRoot string, fixture *
 		Labels: []string{"enhancement"}, Assignees: []string{"maintainer"},
 		VerifiedAt: "2026-07-22T00:00:00Z", TargetBranch: "main",
 	}
-	if _, err := writeIssueOps(stateRoot, fixture.record); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, fixture.record); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -129,7 +129,7 @@ func resumeIntentFixtureWithLinkVerified(t *testing.T, provider string, issue in
 			RunID: "run-current", TaskID: "task-current", DispatchID: "dispatch-current", TerminalPTYID: "pty-current",
 		},
 	}
-	record, err := writeIssueOps(stateRoot, record)
+	record, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func setIssueOpsPlanPrepForTest(t *testing.T, stateRoot, id string) {
 		WebResearch:    waived,
 		CodebaseSurvey: waived,
 	}
-	if _, err := writeIssueOps(stateRoot, rec); err != nil {
+	if _, err := writeIssueOps(context.Background(), stateRoot, rec); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -316,7 +316,7 @@ func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktre
 		t.Fatal(err)
 	}
 	record.Execution = issueOpsExecutionForTest(record.Repo, worktree, record.Branch)
-	record, err = writeIssueOps(stateRoot, record)
+	record, err = writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -390,14 +390,10 @@ func issueOpsExecutionForTest(repo, worktree, branch string) *issueops.Execution
 			Generation: 1,
 			Status:     issueops.LeaseStatusActive,
 			Holder: &issueops.NativeActor{
-				Host:      "codex",
-				SessionID: "test-session",
-				AgentID:   "test-agent",
-				SessionProcess: &issueops.NativeProcessReceipt{
-					PID:        1,
-					StartedAt:  "2026-07-22T00:00:00Z",
-					Executable: "/usr/bin/codex",
-				},
+				Host:           "codex",
+				SessionID:      "test-session",
+				AgentID:        "test-agent",
+				SessionProcess: func() *issueops.NativeProcessReceipt { receipt := liveFixtureReceipt(); return &receipt }(),
 			},
 			ClaimedAt: "2026-07-22T00:00:00Z",
 		},
@@ -407,9 +403,7 @@ func issueOpsExecutionForTest(repo, worktree, branch string) *issueops.Execution
 func issueOpsActorForTest(worktree string) issueops.IssueOpsActor {
 	return issueops.IssueOpsActor{
 		Host: "codex", SessionID: "test-session", AgentID: "test-agent", CWD: worktree,
-		NativeProcessAncestry: []issueops.NativeProcessReceipt{{
-			PID: 1, StartedAt: "2026-07-22T00:00:00Z", Executable: "/usr/bin/codex",
-		}},
+		NativeProcessAncestry: []issueops.NativeProcessReceipt{liveFixtureReceipt()},
 	}
 }
 
@@ -449,7 +443,7 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		},
 		CreatedAt: "2026-07-11T00:00:00Z", UpdatedAt: "2026-07-11T00:00:00Z",
 	}
-	written, err := WriteIssueOps(stateRoot, record)
+	written, err := WriteIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -51,7 +51,7 @@ func preparationFixture() (*preparationObserver, contract.CreateCommand) {
 
 func TestPreparationOrdersObservationsAndPreservesNormalizedActor(t *testing.T) {
 	observer, command := preparationFixture()
-	got, err := NewCreatePreparation(observer, observer, observer.inspect).Prepare(context.Background(), command)
+	got, err := NewCreatePreparation(observer, observer, inspectorVerifier(observer.inspect)).Prepare(context.Background(), command)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestPreparationOrdersObservationsAndPreservesNormalizedActor(t *testing.T) 
 func TestPreparationRejectsInvalidIdentityBeforeRecordRead(t *testing.T) {
 	observer, command := preparationFixture()
 	command.Actor.Host = "unsupported"
-	_, err := NewCreatePreparation(observer, observer, observer.inspect).Prepare(context.Background(), command)
+	_, err := NewCreatePreparation(observer, observer, inspectorVerifier(observer.inspect)).Prepare(context.Background(), command)
 	if err == nil || !strings.Contains(err.Error(), "native actor host must") || len(observer.events) != 0 {
 		t.Fatalf("events=%v err=%v", observer.events, err)
 	}
@@ -76,7 +76,7 @@ func TestPreparationPreviewSkipsExecutionObservations(t *testing.T) {
 	observer, command := preparationFixture()
 	command.Confirm = false
 	observer.record.Execution = nil
-	got, err := NewCreatePreparation(observer, observer, observer.inspect).Prepare(context.Background(), command)
+	got, err := NewCreatePreparation(observer, observer, inspectorVerifier(observer.inspect)).Prepare(context.Background(), command)
 	if err != nil || strings.Join(observer.events, ",") != "read" || got.Request.Repo != "/repo" || got.Request.ExpectedHeadSHA != "" {
 		t.Fatalf("prepared=%+v events=%v err=%v", got, observer.events, err)
 	}
@@ -101,7 +101,7 @@ func TestPreparationStopsBeforeUnnecessaryEffects(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			o, c := preparationFixture()
 			tc.change(o, &c)
-			_, err := NewCreatePreparation(o, o, o.inspect).Prepare(context.Background(), c)
+			_, err := NewCreatePreparation(o, o, inspectorVerifier(o.inspect)).Prepare(context.Background(), c)
 			if err == nil || !strings.Contains(err.Error(), tc.want) || strings.Join(o.events, ",") != tc.events {
 				t.Fatalf("events=%v err=%v", o.events, err)
 			}

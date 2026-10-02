@@ -19,6 +19,7 @@ func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 		repository,
 		fixedClock{now: time.Date(2026, 8, 11, 5, 0, 0, 0, time.UTC)},
 		matchingPaths{},
+		liveVerifier(),
 	)
 
 	record, err := service.Record(

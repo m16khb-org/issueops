@@ -25,7 +25,7 @@ func TestPublicationRepositoryPreservesStoredSnapshots(t *testing.T) {
 		OperationID: operationID, Kind: publicationcontract.RemoteIntentKind,
 		Marker: "publication-marker", StartedAt: "2026-09-28T00:00:00Z",
 	}
-	record, err := writeIssueOps(stateRoot, fixture.record)
+	record, err := writeIssueOps(context.Background(), stateRoot, fixture.record)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func newPendingPublicationFixture(t *testing.T) (string, *remoteapp.PublicationJ
 		OperationID: operationID, Kind: publicationcontract.RemoteIntentKind,
 		Marker: "publication-marker", StartedAt: "2026-09-28T00:00:00Z",
 	}
-	record, err := writeIssueOps(root, fixture.record)
+	record, err := writeIssueOps(context.Background(), root, fixture.record)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestPublicationRepositoryRejectsStaleReceiptWithoutWrites(t *testing.T) {
 			wantError := "stale execution generation"
 			if mutation == "generation" {
 				record.Execution.Lease.Generation++
-				if _, err := writeIssueOps(root, record); err != nil {
+				if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 					t.Fatal(err)
 				}
 			} else {
@@ -250,13 +250,13 @@ func TestPublicationRepositoryRejectsInvalidArtifactWithoutWrites(t *testing.T) 
 }
 
 func newPublicationJournalForTest(root string, now func() time.Time, operationID func() (string, error)) *remoteapp.PublicationJournal {
-	return remoteapp.NewPublicationJournal(RemotePublicationStore{StateRoot: root}, RemotePublicationObserver{CurrentFingerprint: testChangeReader().ChangeFingerprint, CurrentHead: testReadinessGit().Head, StateRoot: root, Clock: now, OperationIDFactory: operationID}, cycleapp.NewMutationAuthority(samePath))
+	return remoteapp.NewPublicationJournal(RemotePublicationStore{StateRoot: root}, RemotePublicationObserver{CurrentFingerprint: testChangeReader().ChangeFingerprint, CurrentHead: testReadinessGit().Head, StateRoot: root, Clock: now, OperationIDFactory: operationID}, cycleapp.NewMutationAuthority(samePath, liveTestVerifier()))
 }
 
 func TestPublicationJournalRechecksHolderBeforeIntentWrite(t *testing.T) {
 	root, journal, record, _ := newPendingPublicationFixture(t)
 	record.Execution.Pending = nil
-	if _, err := writeIssueOps(root, record); err != nil {
+	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
 	before, err := journal.Latest(context.Background(), record.ID)
@@ -294,7 +294,7 @@ func TestPublicationJournalRejectsAbsentOrOtherPendingIntent(t *testing.T) {
 			case "other-kind":
 				record.Execution.Pending.Kind = "orca"
 			}
-			if _, err := writeIssueOps(root, record); err != nil {
+			if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 				t.Fatal(err)
 			}
 			before, err := journal.Latest(context.Background(), record.ID)

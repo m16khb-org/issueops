@@ -138,7 +138,7 @@ func scanIssueOpsRows(stateRoot string) ([]issueops.IssueOpsRecord, bool, error)
 
 // deleteIssueOps removes the cycle record for id; deleting an absent record is
 // not an error.
-func deleteIssueOps(stateRoot, id string) error {
+func deleteIssueOps(ctx context.Context, stateRoot, id string) error {
 	id, err := normalizeIssueOpsID(id)
 	if err != nil {
 		return err
@@ -156,7 +156,7 @@ func deleteIssueOps(stateRoot, id string) error {
 	}
 	// 스테이징 artifact는 레코드와 수명을 같이한다 — 레코드 삭제(prune,
 	// cleanup finish)가 스테이지 blob을 고아로 남기지 않는다(C4a-F1 ②).
-	return db.CompareAndApply(context.Background(), []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: id, Data: raw}}, []port.RecordMutation{
+	return db.CompareAndApply(ctx, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: id, Data: raw}}, []port.RecordMutation{
 		{Bucket: artifactStageBucket, ID: id, Delete: true},
 		{Bucket: issueOpsBucket, ID: id, Delete: true},
 	})
@@ -181,12 +181,12 @@ func NewIssueOpsID(repo, branch string) string {
 	return newIssueOpsID(repo, branch)
 }
 
-func touchAndWriteIssueOps(stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+func touchAndWriteIssueOps(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
 	record.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
-	return writeIssueOps(stateRoot, record)
+	return writeIssueOps(ctx, stateRoot, record)
 }
 
-func writeIssueOps(stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+func writeIssueOps(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
 	record, b, err := encodeIssueOpsRecord(record)
 	if err != nil {
 		return record, err
@@ -207,10 +207,10 @@ func writeIssueOps(stateRoot string, record issueops.IssueOpsRecord) (issueops.I
 	}
 	mutation := port.RecordMutation{Bucket: issueOpsBucket, ID: record.ID, Data: b}
 	if found {
-		err = db.CompareAndApply(context.Background(), []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: record.ID, Data: raw}}, []port.RecordMutation{mutation})
+		err = db.CompareAndApply(ctx, []port.ExpectedRecord{{Bucket: issueOpsBucket, ID: record.ID, Data: raw}}, []port.RecordMutation{mutation})
 	} else {
 		mutation.RequireAbsent = true
-		err = db.Apply(context.Background(), []port.RecordMutation{mutation})
+		err = db.Apply(ctx, []port.RecordMutation{mutation})
 	}
 	if err != nil {
 		record.OK = false
@@ -241,8 +241,8 @@ func encodeIssueOpsRecord(record issueops.IssueOpsRecord) (issueops.IssueOpsReco
 	return record, b, nil
 }
 
-func WriteIssueOps(stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
-	return writeIssueOps(stateRoot, record)
+func WriteIssueOps(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord) (issueops.IssueOpsRecord, error) {
+	return writeIssueOps(ctx, stateRoot, record)
 }
 
 func normalizeIssueOpsID(id string) (string, error) {

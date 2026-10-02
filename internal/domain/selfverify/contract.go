@@ -10,7 +10,7 @@ import (
 func ContractValue() contract.SelfVerificationContract {
 	contract := contract.SelfVerificationContract{
 		Name:    "self_verification_summary",
-		Version: 6,
+		Version: 7,
 		RequiredFields: []string{
 			"total_runs",
 			"total_steps",

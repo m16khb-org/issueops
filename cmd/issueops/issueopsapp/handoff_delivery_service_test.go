@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,7 +27,7 @@ func TestManualHandoffServiceKeepsCapturedStateAndSnapshot(t *testing.T) {
 	copied := *record.Execution
 	advanced.Execution = &copied
 	advanced.Execution.Lease.Generation++
-	if _, err := issueopsadapter.WriteIssueOps(stateRoot, advanced); err != nil {
+	if _, err := issueopsadapter.WriteIssueOps(context.Background(), stateRoot, advanced); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := service.ObserveManual(observation); err == nil {

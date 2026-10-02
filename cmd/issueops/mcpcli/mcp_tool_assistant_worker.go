@@ -11,7 +11,7 @@ import (
 	webfetchcontract "issueops/internal/contract/webfetch"
 )
 
-func handleAssistantWorkerMCPToolCall(call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
+func handleAssistantWorkerMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
 	case "daemon_status":
 		return mcpToolPayload(deps.Daemon.Run())
@@ -38,7 +38,7 @@ func handleAssistantWorkerMCPToolCall(call MCPToolCall, deps MCPDependencies) MC
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32602, "invalid timeout", err.Error()))
 		}
-		result, err := deps.Fetch(context.Background(), webfetchcontract.Request{
+		result, err := deps.Fetch(ctx, webfetchcontract.Request{
 			URL:      argmap.String(call.Arguments, "url"),
 			Timeout:  timeout,
 			MaxChars: argmap.Int(call.Arguments, "max_chars", 0),
@@ -50,13 +50,14 @@ func handleAssistantWorkerMCPToolCall(call MCPToolCall, deps MCPDependencies) MC
 	case "contract_schema", "contract_check":
 		return mcpToolPayload(deps.Compatibility())
 	case "worker_enqueue":
-		result, err := deps.Worker.Enqueue(argmap.String(call.Arguments, "kind"), argmap.String(call.Arguments, "payload"))
+		result, err := deps.Worker.Enqueue(ctx, argmap.String(call.Arguments, "kind"), argmap.String(call.Arguments, "payload"))
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32000, "worker_enqueue failed", err.Error()))
 		}
 		return mcpToolPayload(result)
 	case "worker_run_read_only":
 		result, err := deps.Worker.RunReadOnly(
+			ctx,
 			argmap.String(call.Arguments, "kind"),
 			argmap.String(call.Arguments, "payload"),
 			policy.CommandPolicyRequest{
@@ -84,7 +85,7 @@ func handleAssistantWorkerMCPToolCall(call MCPToolCall, deps MCPDependencies) MC
 		}
 		return mcpToolPayload(result)
 	case "worker_cancel":
-		result, err := deps.Worker.Cancel(argmap.String(call.Arguments, "id"))
+		result, err := deps.Worker.Cancel(ctx, argmap.String(call.Arguments, "id"))
 		if err != nil {
 			return mcpToolFailure(newProtocolError(-32000, "worker_cancel failed", err.Error()))
 		}

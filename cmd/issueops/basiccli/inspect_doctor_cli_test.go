@@ -386,3 +386,42 @@ func TestRunDoctor_doesNotRequireRealHome(t *testing.T) {
 		t.Fatalf("doctor should inspect configured HOME integration paths:\n%s", out)
 	}
 }
+
+func TestRunInspect_passesHostReceiptsFlagToInspector_whenProvided(t *testing.T) {
+	var gotRepo string
+	var gotOptions inspect.Options
+	command := Command{InspectHarness: func(repo string, options inspect.Options) inspect.InspectInfo {
+		gotRepo, gotOptions = repo, options
+		return inspect.InspectInfo{OK: true, Integration: inspect.IntegrationStatus{Hosts: []inspect.HostIntegration{{
+			Host: "codex", Transport: "http",
+			Installed:  inspect.Observation{Status: "verified"},
+			Connected:  inspect.Observation{Status: "unknown"},
+			Discovered: inspect.Observation{Status: "not_checked"},
+		}}}}
+	}}
+
+	out := captureStatusVerifyStdout(t, func() error {
+		return command.RunInspect([]string{"--repo", "/work/repo", "--host-receipts", "/tmp/receipts.json"})
+	})
+
+	if gotRepo != "/work/repo" || gotOptions.HostReceipts != "/tmp/receipts.json" {
+		t.Fatalf("repo=%q options=%+v", gotRepo, gotOptions)
+	}
+	if !strings.Contains(out, "host codex (http): installed=verified linked= configured= discovered=not_checked connected=unknown protocol=") {
+		t.Fatalf("host summary missing:\n%s", out)
+	}
+}
+
+func TestRunInspect_leavesHostReceiptsEmpty_whenFlagIsAbsent(t *testing.T) {
+	var gotOptions inspect.Options
+	command := Command{InspectHarness: func(_ string, options inspect.Options) inspect.InspectInfo {
+		gotOptions = options
+		return inspect.InspectInfo{OK: true}
+	}}
+
+	_ = captureStatusVerifyStdout(t, func() error { return command.RunInspect([]string{"--json"}) })
+
+	if gotOptions != (inspect.Options{}) {
+		t.Fatalf("options = %+v, want zero", gotOptions)
+	}
+}

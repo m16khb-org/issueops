@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	docsapp "issueops/internal/application/docs"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 )
 
 func applySelfAugmentHistoryRetention(result *SelfAugmentHistoryResult, options selfAugmentHistoryRetentionOptions) error {
-	return newSelfWorkflowHistory(statestore.StateDir()).ApplyRetention(result, options)
+	return newSelfWorkflowHistory(statestore.StateDir()).ApplyRetention(context.Background(), result, options)
 }
 
 func parseSelfAugmentTimestamp(value string) (time.Time, bool) {

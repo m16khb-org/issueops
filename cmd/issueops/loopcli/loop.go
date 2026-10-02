@@ -1,6 +1,7 @@
 package loopcli
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -61,7 +62,7 @@ func runStart(deps Dependencies, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := deps.Start(loopruncontract.StartLoopRequest{
+	result, err := deps.Start(context.Background(), loopruncontract.StartLoopRequest{
 		Repo:        *repo,
 		Name:        *name,
 		Goal:        *goal,
@@ -81,7 +82,7 @@ func runRecordAttempt(deps Dependencies, args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	result, err := deps.RecordAttempt(*id, loopruncontract.RecordAttemptRequest{
+	result, err := deps.RecordAttempt(context.Background(), *id, loopruncontract.RecordAttemptRequest{
 		Verdict:  *verdict,
 		Evidence: []string(evidence),
 	})
@@ -121,7 +122,7 @@ func runStop(deps Dependencies, args []string) error {
 	if *success && *reason != "" {
 		return printLoopResult(loopruncontract.LoopRun{OK: false}, fmt.Errorf("success_and_reason_conflict"), *jsonOut)
 	}
-	result, err := deps.Stop(*id, *success, *reason)
+	result, err := deps.Stop(context.Background(), *id, *success, *reason)
 	return printLoopResult(result, err, *jsonOut)
 }
 

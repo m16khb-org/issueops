@@ -3,11 +3,23 @@ package trace
 import (
 	"bufio"
 	"encoding/json"
+	tracecontract "issueops/internal/contract/trace"
 	tracedomain "issueops/internal/domain/trace"
 	"strings"
 )
 
-func (Source) Decode(body []byte) tracedomain.Input {
+func (Source) Decode(body []byte, format string) tracedomain.Input {
+	switch {
+	case format == "" || format == tracecontract.InputFormatIssueOps:
+		return decodeIssueOps(body)
+	case isHostFormat(format):
+		return decodeHostUsage(body, format)
+	default:
+		return tracedomain.Input{Incomplete: true, Warnings: []string{"unsupported_input_format"}}
+	}
+}
+
+func decodeIssueOps(body []byte) tracedomain.Input {
 	text := strings.TrimSpace(string(body))
 	result := tracedomain.Input{}
 	if strings.HasPrefix(text, "{") {
@@ -16,14 +28,15 @@ func (Source) Decode(body []byte) tracedomain.Input {
 			observed := observeDocument(doc)
 			result.Document = &observed
 			return result
-		} else {
-			result.JSONError = err.Error()
 		}
 		if !strings.Contains(text, "\n") {
+			result.Incomplete = true
+			result.Warnings = []string{"invalid_json:invalid_jsonl_line"}
 			return result
 		}
 	}
 	scanner := bufio.NewScanner(strings.NewReader(text))
+	invalidLine := false
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
@@ -31,9 +44,18 @@ func (Source) Decode(body []byte) tracedomain.Input {
 		}
 		var doc map[string]any
 		if err := json.Unmarshal([]byte(line), &doc); err != nil {
+			invalidLine = true
 			continue
 		}
 		result.Lines = append(result.Lines, observeDocument(doc))
+	}
+	if invalidLine {
+		result.Incomplete = true
+		result.Warnings = append(result.Warnings, "invalid_jsonl_line")
+	}
+	if scanner.Err() != nil {
+		result.Incomplete = true
+		result.Warnings = append(result.Warnings, "jsonl_scan_error")
 	}
 	return result
 }

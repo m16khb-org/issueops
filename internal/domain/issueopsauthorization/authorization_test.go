@@ -35,11 +35,16 @@ func TestAuthorizeRequiresExactLeaseHolderProcessAndWorkspace(t *testing.T) {
 		CWD:                   "/repo.worktrees/decision",
 		NativeProcessAncestry: []issueopscontract.NativeProcessReceipt{process},
 	}
-	if needsPath, err := ValidateHolder(record, actor); err != nil || !needsPath {
+	verified := &issueopscontract.VerifiedActor{Identity: *record.Execution.Lease.Holder, Method: issueopscontract.VerifiedByNativeAncestry}
+	if needsPath, err := ValidateHolder(record, actor, verified); err != nil || !needsPath {
 		t.Fatal(err)
 	}
+	if _, err := ValidateHolder(record, actor, nil); err == nil || !strings.Contains(err.Error(), "write lease holder") {
+		t.Fatalf("unverified caller must fail closed: %v", err)
+	}
 	actor.NativeProcessAncestry = nil
-	if _, err := ValidateHolder(record, actor); err == nil || !strings.Contains(err.Error(), "write lease holder") {
-		t.Fatalf("missing process receipt must fail closed: %v", err)
+	capability := &issueopscontract.VerifiedActor{Identity: *record.Execution.Lease.Holder, Method: issueopscontract.VerifiedByCapability}
+	if needsPath, err := ValidateHolder(record, actor, capability); err != nil || !needsPath {
+		t.Fatalf("capability-verified holder must not need observed ancestry: %v", err)
 	}
 }

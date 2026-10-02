@@ -146,7 +146,7 @@ func seedSyncBaseTransition(t *testing.T) (string, issueopscontract.IssueOpsReco
 	if err := os.WriteFile(tokenPath, []byte(token+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := issueops.WriteIssueOps(stateRoot, record); err != nil {
+	if _, err := issueops.WriteIssueOps(context.Background(), stateRoot, record); err != nil {
 		t.Fatal(err)
 	}
 	return stateRoot, record, tokenPath

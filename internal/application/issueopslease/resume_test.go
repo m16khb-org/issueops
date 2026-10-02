@@ -29,9 +29,9 @@ func TestResumeRejectsBeforeArtifactsAndInventory(t *testing.T) {
 		}),
 		resumeStagesFake{},
 		resumeOperationIDsFunc(func() (string, error) { return strings.Repeat("a", 32), nil }),
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", *resumeApplicationActor().Process, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 	_, err := service.Resume(context.Background(), ResumeRequest{
@@ -65,9 +65,9 @@ func TestResumeReturnsExistingBindingWithoutAllocatingAnotherLaunch(t *testing.T
 			operationIDs++
 			return strings.Repeat("d", 32), nil
 		}),
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", *resumeApplicationActor().Process, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 
@@ -109,10 +109,10 @@ func TestResumeReplacesSettledGhostTerminalInApplicationOrder(t *testing.T) {
 		}),
 		resumeTraceStages{trace: &trace},
 		resumeOperationIDsFunc(func() (string, error) { trace = append(trace, "operation_id"); return strings.Repeat("d", 32), nil }),
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			trace = append(trace, "actor")
 			return "live", *resumeApplicationActor().Process, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 	result, err := service.Resume(context.Background(), ResumeRequest{ID: record.ID, ExpectedGeneration: 4, Actor: resumeApplicationActor(), Ancestry: []leasedomain.ProcessReceipt{*resumeApplicationActor().Process}, CWD: "/worktree", Confirm: true})
@@ -158,9 +158,9 @@ func TestResumeCreatesOneOwnerForSettledHolderlessRuntimeRollover(t *testing.T) 
 		}),
 		resumeStagesFake{},
 		resumeOperationIDsFunc(func() (string, error) { operationIDs++; return strings.Repeat("d", 32), nil }),
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", *resumeApplicationActor().Process, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 
@@ -226,9 +226,9 @@ func resumeApplicationStageService(record Record, repository ResumeRepository, s
 		}),
 		stages,
 		resumeOperationIDsFunc(func() (string, error) { return strings.Repeat("d", 32), nil }),
-		func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+		leaseVerifier(func(context.Context, leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 			return "live", *resumeApplicationActor().Process, nil
-		},
+		}),
 		reseedPathMatcher{},
 	)
 }

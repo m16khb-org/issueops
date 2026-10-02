@@ -1,6 +1,7 @@
 package looprun
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"time"
@@ -27,13 +28,13 @@ func testLoopReader() loopapp.Reader {
 }
 
 func Start(req loopcontract.StartLoopRequest) (loopcontract.LoopRun, error) {
-	return testLoopService().Start(req)
+	return testLoopService().Start(context.Background(), req)
 }
 func Stop(id string, success bool, reason string) (loopcontract.LoopRun, error) {
-	return testLoopService().Stop(id, success, reason)
+	return testLoopService().Stop(context.Background(), id, success, reason)
 }
 func RecordAttempt(id string, req loopcontract.RecordAttemptRequest) (loopcontract.LoopRun, error) {
-	return testLoopService().RecordAttempt(id, req)
+	return testLoopService().RecordAttempt(context.Background(), id, req)
 }
 func ReadLoop(id string) (loopcontract.LoopRun, error) { return testLoopStore().Read(id) }
 func StateRoot() string                                { return testLoopStateRoot() }

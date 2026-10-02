@@ -67,7 +67,7 @@ exit 0
 	if err != nil || current.CleanupAttempt == nil {
 		t.Fatalf("lost undrained attempt: %v", err)
 	}
-	if _, err := writeIssueOps(root, record); err == nil {
+	if _, err := writeIssueOps(context.Background(), root, record); err == nil {
 		t.Fatal("ordinary writer entered undrained attempt")
 	}
 	if _, err := CleanupRemoteBranch(context.Background(), root, remoteBranchRequest(record.ID, false, ""), deps); err == nil {

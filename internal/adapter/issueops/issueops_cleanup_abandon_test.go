@@ -540,7 +540,7 @@ func TestCleanupAbandonAllowsStaleOwnerIntentAfterEveryOrcaStageIsAbsent(t *test
 				t.Fatal(err)
 			}
 			record.Execution.Pending.Kind = tc.kind
-			record, err = persistExecutionTransitionWithMutations(stateRoot, record, nil, []port.RecordMutation{{
+			record, err = persistExecutionTransitionWithMutations(context.Background(), stateRoot, record, nil, []port.RecordMutation{{
 				Bucket: externalIntentBucket, ID: payload.OperationID, Data: data,
 			}})
 			if err != nil {

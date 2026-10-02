@@ -119,7 +119,7 @@ func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.IssueOpsRe
 	record.IssueURL = "https://github.com/acme/repo/issues/412"
 	record.Execution = issueOpsExecutionForTest(repo, worktree, record.Branch)
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		_, writeErr := writeIssueOps(stateRoot, record)
+		_, writeErr := writeIssueOps(context.Background(), stateRoot, record)
 		return writeErr
 	}); err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func bodySyncFixture(t *testing.T) (stateRoot string, record issueops.IssueOpsRe
 func saveBodySyncRecord(t *testing.T, stateRoot string, record issueops.IssueOpsRecord) {
 	t.Helper()
 	if err := withIssueOpsLock(context.Background(), stateRoot, record.ID, func(context.Context) error {
-		_, err := writeIssueOps(stateRoot, record)
+		_, err := writeIssueOps(context.Background(), stateRoot, record)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -456,7 +456,7 @@ func syncBodyForTest(ctx context.Context, stateRoot, id string, command bodysync
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, bodysynccontract.Result{}, err
 	}
-	return application.NewService(BodySyncRepository{StateRoot: stateRoot}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same), time.Now).Sync(ctx, id, command, actor)
+	return application.NewService(BodySyncRepository{StateRoot: stateRoot}, gateway, cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, liveTestVerifier()), time.Now).Sync(ctx, id, command, actor)
 }
 
 type bodySyncConcurrentProvider struct {

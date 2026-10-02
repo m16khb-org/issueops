@@ -23,7 +23,7 @@ func (fake *workerEffects) WithLock(_ context.Context, _, _ string, fn func(cont
 func (fake *workerEffects) Read(id string) (workercontract.WorkerJob, error) {
 	return fake.jobs[id], nil
 }
-func (fake *workerEffects) Write(job workercontract.WorkerJob) error {
+func (fake *workerEffects) Write(_ context.Context, job workercontract.WorkerJob) error {
 	fake.jobs[job.ID] = job
 	fake.events = append(fake.events, job.Status)
 	return nil
@@ -39,7 +39,7 @@ func (*workerEffects) PIDAlive(int) bool                { return true }
 
 func TestRunReadOnlyReleasesLockBeforeCommand(t *testing.T) {
 	fake := &workerEffects{jobs: map[string]workercontract.WorkerJob{}}
-	result, err := (Service{Effects: fake}).RunReadOnly("safe", "payload", policycontract.CommandPolicyRequest{Argv: []string{"go", "version"}})
+	result, err := (Service{Effects: fake}).RunReadOnly(context.Background(), "safe", "payload", policycontract.CommandPolicyRequest{Argv: []string{"go", "version"}})
 	if err != nil || result.Status != workercontract.WorkerStatusSucceeded {
 		t.Fatalf("result=%+v err=%v", result, err)
 	}

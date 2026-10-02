@@ -645,7 +645,7 @@ func TestArchivedIssueOpsChildRecordsReceiptWhenChildRemainsAbsent(t *testing.T)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := deleteIssueOps(stateRoot, started.Child.ID); err != nil {
+			if err := deleteIssueOps(context.Background(), stateRoot, started.Child.ID); err != nil {
 				t.Fatal(err)
 			}
 
@@ -811,7 +811,7 @@ func createDelegationReadyParentForTest(t *testing.T, stateRoot string) issueops
 
 func writeIssueOpsRecordForDelegationTest(t *testing.T, stateRoot string, record issueops.IssueOpsRecord) issueops.IssueOpsRecord {
 	t.Helper()
-	written, err := writeIssueOps(stateRoot, record)
+	written, err := writeIssueOps(context.Background(), stateRoot, record)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	"context"
 	"issueops/internal/adapter/install"
 	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
@@ -13,11 +14,18 @@ import (
 )
 
 func newProbeSnapshotStore() app.SnapshotStore {
-	return app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: statestore.WriteStateRecord, Now: time.Now}
+	return app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: probeStateWriteRecord, Now: time.Now}
 }
 func newStateRoundtripProbe() stateroundtrip.Validator {
-	return stateroundtrip.Validator{StateRead: func(dir, key string) (statecontract.StateResult, error) { return newStateService(dir).Read(key) }, WriteRecord: statestore.WriteStateRecord, WriteSnapshot: newProbeSnapshotStore().Write, OpenDatabase: func(dir string) (stateroundtrip.StateDatabase, error) { return sqlstore.Open(dir) }}
+	return stateroundtrip.Validator{StateRead: func(dir, key string) (statecontract.StateResult, error) { return newStateService(dir).Read(key) }, WriteRecord: probeStateWriteRecord, WriteSnapshot: newProbeSnapshotStore().Write, OpenDatabase: func(dir string) (stateroundtrip.StateDatabase, error) { return sqlstore.Open(dir) }}
 }
+
+// probeStateWriteRecord serves the self-verification probes, whose executor
+// API carries no request context; their scratch records are not request-bound.
+func probeStateWriteRecord(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+	return statestore.WriteStateRecord(context.Background(), dir, key, record)
+}
+
 func newStepBudgetProbe() stepbudget.StepBudgetValidationDeps {
 	return stepbudget.StepBudgetValidationDeps{WriteSnapshot: newProbeSnapshotStore().Write}
 }

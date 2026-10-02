@@ -26,10 +26,10 @@ func TestClaimServiceOrder(t *testing.T) {
 		}
 		return RepositoryResult{Record: Record{ID: request.ID}, Execution: leasecontract.Execution{}}, nil
 	})
-	service := NewClaimService(repository, fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 0, 0, time.UTC)}, func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
+	service := NewClaimService(repository, fixedClaimClock{at: time.Date(2026, 7, 30, 0, 0, 0, 0, time.UTC)}, leaseVerifier(func(_ context.Context, receipt leasedomain.ProcessReceipt) (string, leasedomain.ProcessReceipt, error) {
 		trace = append(trace, "actor")
 		return "live", receipt, nil
-	}, preflight)
+	}), preflight)
 	if _, err := service.Claim(context.Background(), ClaimRequest{ID: "io-claim-order", Generation: 3, Actor: actor, Ancestry: []leasedomain.ProcessReceipt{*actor.Process}, CWD: "/canonical"}); err != nil {
 		t.Fatalf("claim: %v", err)
 	}

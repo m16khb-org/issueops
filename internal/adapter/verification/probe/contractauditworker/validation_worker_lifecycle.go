@@ -43,5 +43,6 @@ func ValidateWorkerLifecycleWithDeps(binary, root string, seed int64, deps Valid
 	if !job.NoShell || job.Status != workercontract.WorkerStatusQueued {
 		errs = append(errs, "worker job is not queued no-shell")
 	}
-	return verifydomain.AssertionStep("worker lifecycle smoke", time.Since(time.Now()).Milliseconds(), errs)
+	durationMS := enqueue.DurationMS + status.DurationMS + cancel.DurationMS + list.DurationMS
+	return verifydomain.AssertionStep("worker lifecycle smoke", durationMS, errs)
 }

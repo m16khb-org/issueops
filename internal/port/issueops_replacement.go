@@ -8,8 +8,8 @@ import (
 
 type ReplacementRecords interface {
 	Load(string) (model.IssueOpsRecord, error)
-	WithinLock(context.Context, string, func() error) error
-	Persist(model.IssueOpsRecord, *model.NativeActor) (model.IssueOpsRecord, error)
+	WithinLock(context.Context, string, func(context.Context) error) error
+	Persist(context.Context, model.IssueOpsRecord, *model.NativeActor) (model.IssueOpsRecord, error)
 }
 type ReplacementWorkspace interface {
 	WorkspaceSnapshot(model.Workspace) (string, error)

@@ -896,6 +896,224 @@
         "codex_mcp_configured": false,
         "codex_skill_installed": false,
         "codex_skill_path": "$HOME/.codex/skills/atomic-commit-push",
+        "hosts": [
+          {
+            "config_path": "$HOME/.codex/config.toml",
+            "configured": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "config_missing",
+              "requested_revision": "",
+              "source": "$HOME/.codex/config.toml",
+              "status": "failed"
+            },
+            "connected": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "discovered": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "host": "codex",
+            "installed": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "skill_missing",
+              "requested_revision": "",
+              "source": "$HOME/.codex/skills/atomic-commit-push",
+              "status": "failed"
+            },
+            "linked": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "skill_missing",
+              "requested_revision": "",
+              "source": "$HOME/.codex/skills/atomic-commit-push",
+              "status": "failed"
+            },
+            "protocol": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "skill_path": "$HOME/.codex/skills/atomic-commit-push",
+            "transport": ""
+          },
+          {
+            "config_path": "$HOME/.claude.json",
+            "configured": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "config_missing",
+              "requested_revision": "",
+              "source": "$HOME/.claude.json",
+              "status": "failed"
+            },
+            "connected": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "discovered": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "host": "claude",
+            "installed": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "skill_missing",
+              "requested_revision": "",
+              "source": "$HOME/.claude/skills/atomic-commit-push",
+              "status": "failed"
+            },
+            "linked": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "skill_missing",
+              "requested_revision": "",
+              "source": "$HOME/.claude/skills/atomic-commit-push",
+              "status": "failed"
+            },
+            "protocol": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "skill_path": "$HOME/.claude/skills/atomic-commit-push",
+            "transport": ""
+          },
+          {
+            "config_path": "$HOME/.omo/mcp.json",
+            "configured": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "config_missing",
+              "requested_revision": "",
+              "source": "$HOME/.omo/mcp.json",
+              "status": "failed"
+            },
+            "connected": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "discovered": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "host": "omo",
+            "installed": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "skill_missing",
+              "requested_revision": "",
+              "source": "$HOME/.omo/agent/skills/atomic-commit-push",
+              "status": "failed"
+            },
+            "linked": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "$TIMESTAMP",
+              "reason": "skill_missing",
+              "requested_revision": "",
+              "source": "$HOME/.omo/agent/skills/atomic-commit-push",
+              "status": "failed"
+            },
+            "protocol": {
+              "config_sha256": "",
+              "features": [],
+              "host_version": "",
+              "negotiated_revision": "",
+              "observed_at": "",
+              "reason": "host_receipt_required",
+              "requested_revision": "",
+              "source": "",
+              "status": "not_checked"
+            },
+            "skill_path": "$HOME/.omo/agent/skills/atomic-commit-push",
+            "transport": ""
+          }
+        ],
         "mcp_binary_path": "$ISSUEOPS_ROOT/bin/issueops",
         "project_claude_mcp_config": true,
         "project_claude_skill": "$PROJECT_SKILL_PRESENCE",
@@ -5939,7 +6157,8 @@
           "label": "go test",
           "max_duration_ms": 1000,
           "min_duration_ms": 1000,
-          "p95_duration_ms": 1000
+          "p95_duration_ms": 1000,
+          "reused_count": 0
         }
       ],
       "baseline_summary": {
@@ -5996,7 +6215,8 @@
           "label": "go test",
           "max_duration_ms": 1000,
           "min_duration_ms": 1000,
-          "p95_duration_ms": 1000
+          "p95_duration_ms": 1000,
+          "reused_count": 0
         }
       ],
       "candidate_summary": {
@@ -6307,6 +6527,7 @@
       "state_dir": "$STATE_DIR"
     },
     "trace_analyze": {
+      "complete": true,
       "finding_count": 1,
       "findings": [
         {
@@ -7509,6 +7730,224 @@
               "codex_mcp_configured": false,
               "codex_skill_installed": false,
               "codex_skill_path": "$HOME/.codex/skills/atomic-commit-push",
+              "hosts": [
+                {
+                  "config_path": "$HOME/.codex/config.toml",
+                  "configured": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "config_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.codex/config.toml",
+                    "status": "failed"
+                  },
+                  "connected": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "discovered": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "host": "codex",
+                  "installed": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "skill_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.codex/skills/atomic-commit-push",
+                    "status": "failed"
+                  },
+                  "linked": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "skill_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.codex/skills/atomic-commit-push",
+                    "status": "failed"
+                  },
+                  "protocol": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "skill_path": "$HOME/.codex/skills/atomic-commit-push",
+                  "transport": ""
+                },
+                {
+                  "config_path": "$HOME/.claude.json",
+                  "configured": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "config_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.claude.json",
+                    "status": "failed"
+                  },
+                  "connected": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "discovered": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "host": "claude",
+                  "installed": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "skill_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.claude/skills/atomic-commit-push",
+                    "status": "failed"
+                  },
+                  "linked": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "skill_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.claude/skills/atomic-commit-push",
+                    "status": "failed"
+                  },
+                  "protocol": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "skill_path": "$HOME/.claude/skills/atomic-commit-push",
+                  "transport": ""
+                },
+                {
+                  "config_path": "$HOME/.omo/mcp.json",
+                  "configured": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "config_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.omo/mcp.json",
+                    "status": "failed"
+                  },
+                  "connected": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "discovered": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "host": "omo",
+                  "installed": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "skill_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.omo/agent/skills/atomic-commit-push",
+                    "status": "failed"
+                  },
+                  "linked": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "$TIMESTAMP",
+                    "reason": "skill_missing",
+                    "requested_revision": "",
+                    "source": "$HOME/.omo/agent/skills/atomic-commit-push",
+                    "status": "failed"
+                  },
+                  "protocol": {
+                    "config_sha256": "",
+                    "features": [],
+                    "host_version": "",
+                    "negotiated_revision": "",
+                    "observed_at": "",
+                    "reason": "host_receipt_required",
+                    "requested_revision": "",
+                    "source": "",
+                    "status": "not_checked"
+                  },
+                  "skill_path": "$HOME/.omo/agent/skills/atomic-commit-push",
+                  "transport": ""
+                }
+              ],
               "mcp_binary_path": "$ISSUEOPS_ROOT/bin/issueops",
               "project_claude_mcp_config": true,
               "project_claude_skill": "$PROJECT_SKILL_PRESENCE",
@@ -9354,7 +9793,8 @@
                 "label": "go test",
                 "max_duration_ms": 1000,
                 "min_duration_ms": 1000,
-                "p95_duration_ms": 1000
+                "p95_duration_ms": 1000,
+                "reused_count": 0
               }
             ],
             "baseline_summary": {
@@ -9411,7 +9851,8 @@
                 "label": "go test",
                 "max_duration_ms": 1000,
                 "min_duration_ms": 1000,
-                "p95_duration_ms": 1000
+                "p95_duration_ms": 1000,
+                "reused_count": 0
               }
             ],
             "candidate_summary": {
