@@ -1,10 +1,7 @@
 package omo
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
 
 	"issueops/internal/port"
 )
@@ -13,24 +10,12 @@ const omoMCPCatalogSHA256Env = "ISSUEOPS_MCP_CATALOG_SHA256"
 
 func (installer Installer) writeOmoUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "omo_user_mcp_config"}
-	config := map[string]any{}
-	if existing, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(existing))) > 0 {
-		if err := json.Unmarshal(existing, &config); err != nil {
-			return file, err
-		}
-	} else if err != nil && !os.IsNotExist(err) && !req.DryRun {
-		return file, err
-	}
-	servers, _ := config["mcpServers"].(map[string]any)
-	if servers == nil {
-		servers = map[string]any{}
-		config["mcpServers"] = servers
-	}
-	server, err := installer.omoUserMCPServer(req)
+	config, err := installer.deps.MergeJSONMapFile(path, "mcpServers", "issueops", req.DryRun, func() (map[string]any, error) {
+		return installer.omoUserMCPServer(req)
+	})
 	if err != nil {
 		return file, err
 	}
-	servers["issueops"] = server
 	return installer.deps.WriteJSONPlan(path, file.Kind, config, 0o600, req.DryRun)
 }
 

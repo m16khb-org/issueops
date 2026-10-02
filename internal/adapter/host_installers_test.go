@@ -14,6 +14,8 @@ import (
 
 func testAgyInstaller() agyadapter.Installer {
 	return agyadapter.NewInstaller(agyadapter.Dependencies{
+		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
 		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
 		MCPCatalogSHA256:                func() (string, error) { return installutil.SemanticSHA256(mcpcatalog.AdvertisedTools()) },
 		NewInstallPlan:                  func(host string, dry bool) port.InstallPlan { return installutil.NewPlan(host, dry) },
@@ -23,6 +25,8 @@ func testAgyInstaller() agyadapter.Installer {
 }
 func testClaudeInstaller() claudeadapter.Installer {
 	return claudeadapter.NewInstaller(claudeadapter.Dependencies{
+		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
 		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
 		FileBuildGenerationString:       installadapter.FileBuildGenerationString,
 		HookGroupContainsAgentHarness:   installutil.HookGroupContainsAgentHarness,
@@ -62,6 +66,8 @@ func testCodexInstaller() codexadapter.Installer {
 }
 func testOmoInstaller() omoadapter.Installer {
 	return omoadapter.NewInstaller(omoadapter.Dependencies{
+		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
 		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
 		MCPCatalogSHA256:                func() (string, error) { return installutil.SemanticSHA256(mcpcatalog.AdvertisedTools()) },
 		NewInstallPlan:                  func(host string, dry bool) port.InstallPlan { return installutil.NewPlan(host, dry) },

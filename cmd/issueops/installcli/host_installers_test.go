@@ -12,6 +12,8 @@ import (
 
 func testClaudeInstaller() claudeadapter.Installer {
 	return claudeadapter.NewInstaller(claudeadapter.Dependencies{
+		MergeJSONMapFile:                installutil.MergeJSONMapFile,
+		VerifyJSONMapEntry:              installutil.VerifyJSONMapEntry,
 		CaptureNativeActivationEvidence: installutil.CaptureNativeActivationEvidence,
 		FileBuildGenerationString:       installadapter.FileBuildGenerationString,
 		HookGroupContainsAgentHarness:   installutil.HookGroupContainsAgentHarness,

@@ -1,29 +1,15 @@
 package claude
 
-import (
-	"encoding/json"
-	"os"
-	"strings"
-
-	"issueops/internal/port"
-)
+import "issueops/internal/port"
 
 func (installer Installer) writeClaudeUserMCP(path string, req port.NativeInstallRequest) (port.InstallFile, error) {
 	file := port.InstallFile{Path: path, Kind: "claude_user_mcp_config"}
-	config := map[string]any{}
-	if existing, err := os.ReadFile(path); err == nil && len(strings.TrimSpace(string(existing))) > 0 {
-		if err := json.Unmarshal(existing, &config); err != nil {
-			return file, err
-		}
-	} else if err != nil && !os.IsNotExist(err) && !req.DryRun {
+	config, err := installer.deps.MergeJSONMapFile(path, "mcpServers", "issueops", req.DryRun, func() (map[string]any, error) {
+		return claudeUserMCPServer(req), nil
+	})
+	if err != nil {
 		return file, err
 	}
-	mcpServers, _ := config["mcpServers"].(map[string]any)
-	if mcpServers == nil {
-		mcpServers = map[string]any{}
-		config["mcpServers"] = mcpServers
-	}
-	mcpServers["issueops"] = claudeUserMCPServer(req)
 	return installer.deps.WriteJSONPlan(path, file.Kind, config, 0o600, req.DryRun)
 }
 

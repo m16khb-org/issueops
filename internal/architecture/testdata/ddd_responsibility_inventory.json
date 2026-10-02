@@ -4031,6 +4031,15 @@
       ]
     },
     {
+      "path": "internal/adapter/installutil/json_config.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func MergeJSONMapFile",
+        "func VerifyJSONMapEntry"
+      ]
+    },
+    {
       "path": "internal/adapter/installutil/skill_hosts.go",
       "owner": "adapter",
       "task": "T20",
