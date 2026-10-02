@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sync Base"
+  short_description: "Catch a branch up with its base by merge or rebase"
+  default_prompt: "Use $sync-base to resolve the base branch of the current branch from recorded evidence, confirm that base with me before acting, prove it has advanced past the divergence point, choose merge or rebase with the decision table and show me the deciding row, create and verify a backup ref, apply the merge or rebase, prove that every commit survived, and ask before any push: a plain push after a merge, --force-with-lease after a rebase. Route the branch to issueops execution sync-base instead when an IssueOps cycle owns it, and never resolve a conflict without my decision."

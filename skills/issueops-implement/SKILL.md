@@ -88,7 +88,7 @@ issueops execution sync-base --id "$ISSUEOPS_ID" --preview $ACTOR_FLAGS --json
   `## 하위 호환성과 side effect` 절에 적는다. 이미 추적 중인 미커밋 변경이 있으면
   `worktree_clean`으로 거부되므로 변경이 없는 이 시점에 한다.
 - `conflict_files`가 있으면 계획의 영향 범위를 다시 보고 사용자에게 알린다.
-- rebase하지 않는다. 이유는 [`rebase-onto-parent`](../rebase-onto-parent/SKILL.md)가 소유한다.
+- rebase하지 않는다. 이유는 [`sync-base`](../sync-base/SKILL.md) 스킬이 소유한다.
 
 ## 진입 절차
 

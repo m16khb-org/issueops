@@ -271,7 +271,7 @@ host's user-level skill path at this directory.
 - Planning and critique: `implementation-planning`, `requirements-analysis`, `design-review`, `prompt-engineering`
 - Execution and verification: `verified-execution`, `issueops-debugging`, `algorithm-optimization`, `database-design`, `code-quality-metrics`
 - Research and team work: `web-research`, `meeting-notes`, `slack-delegate`, `sharing-backend-work`
-- Git and operations: `git-operations`, `atomic-commit-push`, `rebase-onto-parent`, `gitlab-usecase`
+- Git and operations: `git-operations`, `atomic-commit-push`, `sync-base`, `gitlab-usecase`. `sync-base` catches a branch up with a base that keeps advancing, such as a release branch: it checks whether the commits already reached another branch and whether other authors or reviewers depend on them, then picks merge or rebase, falling back to merge when the evidence is unclear. A branch an IssueOps cycle owns uses `issueops execution sync-base` instead
 - IssueOps stages: `issueops` (router), `issueops-create-issue`, `issueops-prepare`, `issueops-plan`, `issueops-implement`, `issueops-slop-clean`, `issueops-docs`, `issueops-verify`, `issueops-create-pr`, `issueops-complete`, `issueops-cleanup`, `issueops-abandon`
 - IssueOps shared: `issueops-review`, `gates-ledger`, `issueops-remote-write`, `issueops-sync-issue`, `issueops-sync-pr`
 - Project docs: `project-bootstrap`, `project-docs-bootstrap`, `project-docs-update`, `project-docs-optimize`

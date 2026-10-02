@@ -153,6 +153,12 @@ io next --id "반환된-ID" --json
 [실행 가이드](.issueops/operations/guides/issueops-execution.md)가 설명합니다.
 중간에 보류하거나 폐기하려면 `issueops-abandon`을 사용합니다.
 
+release처럼 계속 앞서 나가는 base 브랜치에서 딴 작업 브랜치는 `sync-base` 스킬로
+최신 상태에 맞춥니다. 이 스킬은 커밋이 이미 다른 브랜치에 들어갔는지, 다른 사람의 커밋이나
+리뷰가 있는지를 확인해 merge와 rebase 중 하나를 고르고, 판단할 근거가 부족하면 merge를
+선택합니다. IssueOps 사이클이 소유한 브랜치는 이 스킬 대신 `issueops execution sync-base`로
+base 변경을 반영합니다.
+
 ## 모델과 세션 인계
 
 Orca가 준비되어 있으면 같은 worktree의 새 세션으로 인계하고, 사용할 수 없으면

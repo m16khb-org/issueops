@@ -17761,11 +17761,6 @@
       "task": "T21"
     },
     {
-      "path": "skills/rebase-onto-parent/SKILL.md",
-      "owner": "skill-contract",
-      "task": "T21"
-    },
-    {
       "path": "skills/requirements-analysis/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"
@@ -17797,6 +17792,11 @@
     },
     {
       "path": "skills/stability-audit/SKILL.md",
+      "owner": "skill-contract",
+      "task": "T21"
+    },
+    {
+      "path": "skills/sync-base/SKILL.md",
       "owner": "skill-contract",
       "task": "T21"
     },

@@ -65,7 +65,7 @@ issueops next --json
 | 1 이슈 확정·생성 | [`issueops-create-issue`](../issueops-create-issue/SKILL.md) | `implementation-planning`(인터뷰), `web-research`(외부 조사) |
 | 2 브랜치 준비 | [`issueops-prepare`](../issueops-prepare/SKILL.md) | — |
 | 3 문서 확인·계획·검토·인계 | [`issueops-plan`](../issueops-plan/SKILL.md) | `implementation-planning`, `issueops-review`, `database-design`, `algorithm-optimization`, `prompt-engineering` |
-| 4 구현 | [`issueops-implement`](../issueops-implement/SKILL.md) | `issueops-debugging`, `verified-execution`, `ui-ux-craft`(frontend 신호), `rebase-onto-parent`(base drift 사유) |
+| 4 구현 | [`issueops-implement`](../issueops-implement/SKILL.md) | `issueops-debugging`, `verified-execution`, `ui-ux-craft`(frontend 신호), `sync-base`(base drift 사유) |
 | 5 AI slop 정리 | [`issueops-slop-clean`](../issueops-slop-clean/SKILL.md) | `code-quality-metrics`, `verified-execution` |
 | 6 프로젝트 문서 반영 | [`issueops-docs`](../issueops-docs/SKILL.md) | `project-docs-update` |
 | 7 검증 | [`issueops-verify`](../issueops-verify/SKILL.md) | `database-design`, `verified-execution`, `aside-web-qa`(frontend 신호) |
