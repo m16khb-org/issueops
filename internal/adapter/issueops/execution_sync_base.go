@@ -123,8 +123,9 @@ func SyncExecutionBase(ctx context.Context, stateRoot string, req issueops.Execu
 }
 
 // executionSyncBaseGates는 설계 v2의 게이트 10종을 순서대로 평가하고 missing을
-// 나열한다(fail-closed). 워크트리를 관측할 수 없으면 그 지점에서 끊는다 —
-// 이후 git 호출은 전부 의미가 없기 때문이다.
+// 나열한다(fail-closed). execution/worktree 부재는 부분 진단으로 반환한다.
+// record/authority 등 원격 조회 전 확정된 blocker도 도달 가능한 로컬 진단만
+// 수집하고 반환한다. 거부 결과는 관측하지 않은 원격 게이트를 보장하지 않는다.
 func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord, req issueops.ExecutionSyncBaseRequest, mode string,
 	actor issueops.NativeActor, deps issueops.ExecutionSyncBaseDeps, result *issueops.ExecutionSyncBaseResult) (executionSyncBaseInventory, []string) {
 	inventory := executionSyncBaseInventory{ID: record.ID, Repo: record.Repo}
@@ -170,6 +171,34 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 		inventory.Branch == "" || strings.TrimSpace(head) != inventory.Branch {
 		missing = append(missing, "head_on_recorded_branch")
 	}
+	observeMergeState := func() {
+		// ⑦ merge_state_clean / merge_in_progress: 중간 상태를 모드별로 갈라 본다
+		//    (design-review F11 — apply는 거부, finalize/abort는 필수 전제).
+		inventory.MergeInProgress = executionSyncBaseMergeInProgress(ctx, inventory.Root, deps)
+		result.MergeInProgress = inventory.MergeInProgress
+		mergeFacts := basesyncdomain.MergeStateFacts{Mode: mode, MergeInProgress: inventory.MergeInProgress}
+		if mode == issueops.ExecutionSyncBaseApply {
+			// ⑧ worktree_clean: tracked 변경만 차단하고 untracked는 경고로
+			//    나열한다(design-review F10 — 상시 거부 방지).
+			trackedDirty, untracked := executionSyncBaseWorktreeStatus(ctx, inventory.Root, deps)
+			result.UntrackedWarnings = untracked
+			mergeFacts.TrackedDirty = trackedDirty
+		}
+		missing = append(missing, basesyncdomain.MissingMergeStateGates(mergeFacts)...)
+	}
+	observeWorkTip := func() {
+		if code, oid := deps.Git(ctx, inventory.Root, "rev-parse", "HEAD"); code == 0 && strings.TrimSpace(oid) != "" {
+			inventory.WorkOID = strings.TrimSpace(oid)
+		} else {
+			missing = append(missing, "work_tip_resolved")
+		}
+		result.WorkOID = inventory.WorkOID
+	}
+	if len(missing) > 0 {
+		observeMergeState()
+		observeWorkTip()
+		return inventory, missing
+	}
 	// ③ remote_branch_present: 머지·삭제된 원격 브랜치 부활 방지(design-review F7).
 	if code, out := deps.Git(ctx, inventory.Root, "ls-remote", "--heads", "origin", "refs/heads/"+inventory.Branch); code != 0 {
 		missing = append(missing, "remote_branch_readable")
@@ -181,19 +210,7 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 		missing = append(missing, "remote_branch_present")
 	}
 	result.RemoteBranchPresent = inventory.RemoteBranchPresent
-	// ⑦ merge_state_clean / merge_in_progress: 중간 상태를 모드별로 갈라 본다
-	//    (design-review F11 — apply는 거부, finalize/abort는 필수 전제).
-	inventory.MergeInProgress = executionSyncBaseMergeInProgress(ctx, inventory.Root, deps)
-	result.MergeInProgress = inventory.MergeInProgress
-	mergeFacts := basesyncdomain.MergeStateFacts{Mode: mode, MergeInProgress: inventory.MergeInProgress}
-	if mode == issueops.ExecutionSyncBaseApply {
-		// ⑧ worktree_clean: tracked 변경만 차단하고 untracked는 경고로
-		//    나열한다(design-review F10 — 상시 거부 방지).
-		trackedDirty, untracked := executionSyncBaseWorktreeStatus(ctx, inventory.Root, deps)
-		result.UntrackedWarnings = untracked
-		mergeFacts.TrackedDirty = trackedDirty
-	}
-	missing = append(missing, basesyncdomain.MissingMergeStateGates(mergeFacts)...)
+	observeMergeState()
 	// fetch 선행(preview·apply): stale base 머지 방지(design-review F6 —
 	// pr-readiness strict 선례). base tip은 반드시 fetch 이후 값이어야 한다.
 	switch mode {
@@ -217,12 +234,8 @@ func executionSyncBaseGates(ctx context.Context, record issueops.IssueOpsRecord,
 			missing = append(missing, "merge_head_resolved")
 		}
 	}
-	if code, oid := deps.Git(ctx, inventory.Root, "rev-parse", "HEAD"); code == 0 && strings.TrimSpace(oid) != "" {
-		inventory.WorkOID = strings.TrimSpace(oid)
-	} else {
-		missing = append(missing, "work_tip_resolved")
-	}
-	result.BaseOID, result.WorkOID = inventory.BaseOID, inventory.WorkOID
+	observeWorkTip()
+	result.BaseOID = inventory.BaseOID
 	// 병합 필요성과 push 재시도 필요성(ahead)을 관측해 preview가 보고한다.
 	if inventory.BaseOID != "" && inventory.WorkOID != "" {
 		if code, _ := deps.Git(ctx, inventory.Root, "merge-base", "--is-ancestor", inventory.BaseOID, inventory.WorkOID); code != 0 {

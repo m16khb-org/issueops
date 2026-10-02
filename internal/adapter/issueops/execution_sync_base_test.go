@@ -243,7 +243,8 @@ func (f syncBaseFixture) sealResolution(t *testing.T, conflicts ...string) {
 	})
 }
 
-// 게이트 10종 전수 거부. 설계 v2의 번호와 missing 토큰이 1:1로 대응한다.
+// 각 전제의 거부 코드를 검증한다. execution/worktree 부재나 확정 blocker의
+// missing은 부분 진단이며, 관측하지 않은 원격 게이트까지 나열하지 않는다.
 func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 	baseline := newReleasedSyncBaseFixture(t, "114-gates")
 	cases := []struct {
@@ -308,12 +309,16 @@ func TestExecutionSyncBaseGatesRejectEveryMissingPrecondition(t *testing.T) {
 
 	t.Run("worktree present", func(t *testing.T) {
 		fixture := baseline
+		fixture.git.calls = nil
 		if err := os.RemoveAll(fixture.worktree); err != nil {
 			t.Fatal(err)
 		}
 		result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBasePreview))
 		if err == nil || !containsString(result.Missing, "worktree_present") {
 			t.Fatalf("absent canonical worktree must fail closed: %v %v", err, result.Missing)
+		}
+		if len(fixture.git.calls) != 0 {
+			t.Fatalf("absent worktree must return partial diagnostics without Git: %v", fixture.git.calls)
 		}
 	})
 }
@@ -581,6 +586,9 @@ func TestExecutionSyncBaseFinalizeRejectsUnresolvedConflictsAndMarkers(t *testin
 		if err == nil || !containsString(result.Missing, "sync_base_resolution_actor") {
 			t.Fatalf("foreign resolution actor must fail closed: %v %v", err, result.Missing)
 		}
+		if fixture.git.callWith("ls-remote") != nil || fixture.git.callWith("fetch") != nil {
+			t.Fatal("foreign resolution actor must not query the remote")
+		}
 	})
 }
 
@@ -693,7 +701,87 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidState(t *test
 			if err == nil || !containsString(result.Missing, test.missing) {
 				t.Fatalf("error=%v missing=%v want=%q", err, result.Missing, test.missing)
 			}
+			for _, verb := range []string{"ls-remote", "fetch", "merge-base", "merge-tree", "merge", "push"} {
+				if args := fixture.git.callWith(verb); args != nil {
+					t.Fatalf("blocked authority must not run %s: %v", verb, args)
+				}
+			}
 		})
+	}
+}
+
+func TestExecutionSyncBaseBlockersKeepLocalDiagnosticsWithoutNetwork(t *testing.T) {
+	for _, mode := range []string{issueops.ExecutionSyncBasePreview, issueops.ExecutionSyncBaseApply} {
+		t.Run(mode, func(t *testing.T) {
+			fixture := newReleasedSyncBaseFixture(t, "318-efficiency-blocked-"+mode)
+			fixture.rewrite(t, func(record *issueops.IssueOpsRecord) {
+				record.Execution.Pending = &issueops.ExternalIntent{
+					OperationID: "op-1", Kind: "orca", Marker: "m", StartedAt: "2026-07-25T00:00:00Z",
+				}
+			})
+			fixture.git.currentBranch = ""
+			fixture.git.mergeHead = true
+			fixture.git.statusOut = " M internal/x.go\n?? notes.txt"
+			fixture.git.headOID = ""
+			fixture.git.remoteRef, fixture.git.fetchCode = "", 1
+			req := fixture.request(mode)
+			req.CWD = t.TempDir()
+			if mode == issueops.ExecutionSyncBasePreview {
+				req.Actor = issueops.NativeActor{}
+			}
+
+			result, err := fixture.run(t, req)
+			want := []string{"pending_intent_absent", "cwd_canonical", "head_on_recorded_branch"}
+			if mode == issueops.ExecutionSyncBaseApply {
+				want = append(want, "merge_state_clean", "worktree_clean")
+			}
+			want = append(want, "work_tip_resolved")
+			if err == nil || result.OK || strings.Join(result.Missing, ",") != strings.Join(want, ",") {
+				t.Fatalf("error=%v missing=%v want=%v", err, result.Missing, want)
+			}
+			if !result.MergeInProgress || result.Fingerprint != "" || result.BaseOID != "" {
+				t.Fatalf("blocked local diagnostics=%+v", result)
+			}
+			if mode == issueops.ExecutionSyncBaseApply &&
+				strings.Join(result.UntrackedWarnings, ",") != "notes.txt" {
+				t.Fatalf("untracked warnings=%v", result.UntrackedWarnings)
+			}
+			counts := map[string]int{}
+			for _, call := range fixture.git.calls {
+				counts[strings.Join(call.args, " ")]++
+			}
+			for _, command := range []string{"branch --show-current", "rev-parse --verify --quiet MERGE_HEAD", "rev-parse HEAD"} {
+				if counts[command] != 1 {
+					t.Fatalf("local command %q count=%d", command, counts[command])
+				}
+			}
+			for _, verb := range []string{"ls-remote", "fetch", "merge-base", "merge-tree", "merge", "push"} {
+				if args := fixture.git.callWith(verb); args != nil {
+					t.Fatalf("blocked invocation ran %s: %v", verb, args)
+				}
+			}
+		})
+	}
+}
+
+func TestExecutionSyncBaseActiveHolderMismatchSkipsNetwork(t *testing.T) {
+	fixture := newReleasedSyncBaseFixture(t, "318-efficiency-foreign-holder")
+	fixture.rewrite(t, func(record *issueops.IssueOpsRecord) {
+		record.Execution.Lease.Status = issueops.LeaseStatusActive
+		holder := fixture.actor
+		holder.SessionID = "other-session"
+		record.Execution.Lease.Holder = &holder
+		record.Execution.Lease.ClaimedAt = "2026-07-25T00:00:00Z"
+		record.Execution.Completion = nil
+	})
+	result, err := fixture.run(t, fixture.request(issueops.ExecutionSyncBaseApply))
+	if err == nil || !containsString(result.Missing, "lease_holder") || result.WorkOID != syncBaseWorkOID {
+		t.Fatalf("error=%v result=%+v", err, result)
+	}
+	for _, verb := range []string{"ls-remote", "fetch", "merge-tree", "merge", "push"} {
+		if args := fixture.git.callWith(verb); args != nil {
+			t.Fatalf("foreign holder ran %s: %v", verb, args)
+		}
 	}
 }
 
@@ -710,6 +798,9 @@ func TestExecutionSyncBaseReleasedCompletionAuthorityRejectsInvalidProcessReceip
 	req.Actor.ProcessAncestry = []issueops.NativeProcessReceipt{{PID: 1, StartedAt: "other", Executable: "codex"}}
 	if _, err := fixture.run(t, req); err == nil || !strings.Contains(err.Error(), "not in the local process ancestry") {
 		t.Fatalf("mismatched ancestry error=%v", err)
+	}
+	if len(fixture.git.calls) != 0 {
+		t.Fatalf("invalid actor must stop before Git diagnostics: %v", fixture.git.calls)
 	}
 }
 
