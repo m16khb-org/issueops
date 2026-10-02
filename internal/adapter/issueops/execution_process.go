@@ -348,6 +348,10 @@ func processHasAncestorInSnapshot(
 }
 
 func parseWorkspaceProcesses(output, root string, excluded map[int]bool) ([]workspaceProcess, error) {
+	return parseWorkspaceProcessesWithPathPredicate(output, root, excluded, pathWithinResolved)
+}
+
+func parseWorkspaceProcessesWithPathPredicate(output, root string, excluded map[int]bool, pathWithin func(string, string) bool) ([]workspaceProcess, error) {
 	root, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
@@ -357,6 +361,7 @@ func parseWorkspaceProcesses(output, root string, excluded map[int]bool) ([]work
 	}
 	var pid int
 	var command, fd, access string
+	containment := make(map[string]bool)
 	result := []workspaceProcess{}
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	for scanner.Scan() {
@@ -387,12 +392,18 @@ func parseWorkspaceProcesses(output, root string, excluded map[int]bool) ([]work
 			if !filepath.IsAbs(path) {
 				continue
 			}
-			if pid <= 0 || excluded[pid] || !pathWithinResolved(path, root) {
+			if pid <= 0 || excluded[pid] || (fd != "cwd" && access != "w" && access != "u") {
 				continue
 			}
-			if fd == "cwd" || access == "w" || access == "u" {
-				result = append(result, workspaceProcess{PID: pid, Command: command, FD: fd, Access: access, Path: path})
+			within, ok := containment[path]
+			if !ok {
+				within = pathWithin(path, root)
+				containment[path] = within
 			}
+			if !within {
+				continue
+			}
+			result = append(result, workspaceProcess{PID: pid, Command: command, FD: fd, Access: access, Path: path})
 		}
 	}
 	if err := scanner.Err(); err != nil {

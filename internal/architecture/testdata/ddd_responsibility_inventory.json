@@ -4405,6 +4405,7 @@
         "func parseNativeProcessSnapshot",
         "func parseNativeProcessStart",
         "func parseWorkspaceProcesses",
+        "func parseWorkspaceProcessesWithPathPredicate",
         "func pathWithinResolved",
         "func processField",
         "func processHasAncestorInSnapshot",
