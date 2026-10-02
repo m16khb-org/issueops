@@ -50,7 +50,7 @@ func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {
 		if err := json.Unmarshal([]byte(raw), &write); err != nil || write.StateDir != dirs[i] {
 			t.Fatalf("CLI write: %+v %v", write, err)
 		}
-		result, rpcErr := mcpcli.HandleToolCallWithDependencies(json.RawMessage(`{"name":"state_read","arguments":{"key":"shared"}}`), deps[i])
+		result, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"state_read","arguments":{"key":"shared"}}`), deps[i])
 		if rpcErr != nil {
 			t.Fatal(rpcErr)
 		}
@@ -72,7 +72,7 @@ func TestPublicStateInstancesKeepToolsAndResourcesSeparate(t *testing.T) {
 					t.Error(err)
 					return
 				}
-				result, rpcErr := mcpcli.HandleToolCallWithDependencies(json.RawMessage(`{"name":"state_read","arguments":{"key":"shared"}}`), deps[i])
+				result, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"state_read","arguments":{"key":"shared"}}`), deps[i])
 				if rpcErr != nil {
 					t.Error(rpcErr)
 					return
@@ -134,7 +134,7 @@ func TestPublicStateRefusalAndMissingReadsDoNotCreateStores(t *testing.T) {
 		`{"name":"state_read","arguments":{"key":"missing"}}`,
 		`{"name":"state_prune","arguments":{"max_age":"0s","confirm":true}}`,
 	} {
-		if _, err := mcpcli.HandleToolCallWithDependencies(json.RawMessage(args), deps); err == nil {
+		if _, err := callSDKTool(t, json.RawMessage(args), deps); err == nil {
 			t.Fatalf("request accepted: %s", args)
 		}
 	}
@@ -169,7 +169,7 @@ func TestPublicStateUnknownSchemaIsRefusedWithoutRewriting(t *testing.T) {
 			if err := statecli.Run(cli, []string{"read", "--key", "future"}); err == nil || err.Error() != "invalid state" {
 				t.Fatalf("CLI schema refusal: %v", err)
 			}
-			_, rpcErr := mcpcli.HandleToolCallWithDependencies(json.RawMessage(`{"name":"state_read","arguments":{"key":"future"}}`), deps)
+			_, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"state_read","arguments":{"key":"future"}}`), deps)
 			if rpcErr == nil || rpcErr.Code != -32602 || string(rpcErr.Data) != `"invalid state"` {
 				t.Fatalf("MCP schema refusal: %+v", rpcErr)
 			}

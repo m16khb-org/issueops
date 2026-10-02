@@ -82,7 +82,7 @@ func sdkToolHandlerWithContext(
 		var args map[string]any
 		if req.Params.Arguments != nil {
 			if err := json.Unmarshal(req.Params.Arguments, &args); err != nil {
-				return nil, fmt.Errorf("invalid arguments: %w", err)
+				return nil, newProtocolError(-32602, "invalid arguments", err.Error())
 			}
 		}
 		if args == nil {
@@ -97,15 +97,24 @@ func sdkToolHandlerWithContext(
 		}
 		if outcome.Direct {
 			if dm, ok := outcome.Result.(map[string]any); ok {
-				if contentArr, ok := dm["content"].([]any); ok {
-					result := &mcp.CallToolResult{}
-					for _, c := range contentArr {
-						if cm, ok := c.(map[string]any); ok {
-							if cm["type"] == "text" {
-								if text, ok := cm["text"].(string); ok {
-									result.Content = append(result.Content, &mcp.TextContent{Text: text})
-								}
-							}
+				var content []map[string]any
+				switch items := dm["content"].(type) {
+				case []map[string]any:
+					content = items
+				case []any:
+					content = make([]map[string]any, 0, len(items))
+					for _, item := range items {
+						if cm, ok := item.(map[string]any); ok {
+							content = append(content, cm)
+						}
+					}
+				}
+				if content != nil {
+					isError, _ := dm["isError"].(bool)
+					result := &mcp.CallToolResult{IsError: isError}
+					for _, cm := range content {
+						if text, ok := cm["text"].(string); ok && cm["type"] == "text" {
+							result.Content = append(result.Content, &mcp.TextContent{Text: text})
 						}
 					}
 					return result, nil

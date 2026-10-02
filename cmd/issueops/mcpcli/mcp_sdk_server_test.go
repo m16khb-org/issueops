@@ -35,6 +35,54 @@ func TestSDKToolHandlerDispatchesCatalogTool(t *testing.T) {
 	}
 }
 
+func TestSDKDirectContentPreservesTextAndError(t *testing.T) {
+	for _, shape := range []string{"maps", "any"} {
+		for _, isError := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/error=%t", shape, isError), func(t *testing.T) {
+				const text = "# Policy\n\nexact bytes\t\n"
+				var content any = []map[string]any{{"type": "text", "text": text}}
+				if shape == "any" {
+					content = []any{map[string]any{"type": "text", "text": text}}
+				}
+				server := initSDKServer(MCPDependencies{})
+				server.AddTool(&mcp.Tool{Name: "commit_policy", InputSchema: map[string]any{"type": "object"}},
+					sdkToolHandler(testMCPCatalog(), func(MCPToolCall) MCPToolOutcome {
+						return mcpToolDirect(map[string]any{"content": content, "isError": isError})
+					}, "commit_policy"))
+				serverTransport, clientTransport := mcp.NewInMemoryTransports()
+				serverSession, err := server.Connect(t.Context(), serverTransport, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer serverSession.Close()
+				client := mcp.NewClient(&mcp.Implementation{Name: "direct-content-test", Version: "1"}, nil)
+				session, err := client.Connect(t.Context(), clientTransport, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer session.Close()
+				result, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "commit_policy", Arguments: map[string]any{}})
+				if err != nil || result.IsError != isError || len(result.Content) != 1 || toolResultText(result) != text {
+					t.Fatalf("direct result lost text/error: result=%+v err=%v", result, err)
+				}
+			})
+		}
+	}
+}
+
+func TestSDKCommitPolicyReturnsExactResourceText(t *testing.T) {
+	deps := testTransportServices()
+	want, err := deps.Resources.ReadHarnessFile(".issueops", "COMMIT_POLICY.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := startMCPTransportTestSession(t, "stdio", deps)
+	result, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "commit_policy", Arguments: map[string]any{}})
+	if err != nil || result.IsError || len(result.Content) != 1 || toolResultText(result) != want {
+		t.Fatalf("commit_policy must return exact Markdown: result=%+v err=%v", result, err)
+	}
+}
+
 func TestSDKToolHandlerRejectsInvalidRawArguments(t *testing.T) {
 	handler := sdkToolHandler(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
 	_, err := handler(context.Background(), &mcp.CallToolRequest{

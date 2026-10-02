@@ -56,7 +56,7 @@ func TestWebFetchCLIAndMCPKeepCapturedHTTPClients(t *testing.T) {
 		}
 		call := mcpcli.MCPToolCall{Name: "web_fetch_resilient", Arguments: map[string]any{"url": "http://8.8.8.8"}}
 		raw, _ := json.Marshal(call)
-		result, err := mcpcli.HandleToolCallWithDependencies(raw, command.mcp)
+		result, err := callSDKTool(t, raw, command.mcp)
 		encoded, _ := json.Marshal(result)
 		if err != nil || !bytes.Contains(encoded, []byte(command.name)) {
 			t.Fatalf("direct MCP lost %s: %s %v", command.name, encoded, err)

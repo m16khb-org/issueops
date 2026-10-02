@@ -65,7 +65,7 @@ func TestAPIDocDirectAndSDKKeepServicesAndGateErrors(t *testing.T) {
 			}
 			raw, _ := json.Marshal(map[string]any{"name": tool, "arguments": args})
 			for _, i := range []int{0, 1, 0} {
-				direct, rpcErr := HandleToolCallWithDependencies(raw, deps[i])
+				direct, rpcErr := callSDKTool(t, raw, deps[i])
 				sdk, err := sessions[i].CallTool(context.Background(), &mcp.CallToolParams{Name: tool, Arguments: args})
 				failedIO := strings.HasSuffix(mode, "-io")
 				var sdkText string

@@ -392,7 +392,7 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 	if result := textResult("hello"); result["content"] == nil {
 		t.Fatalf("textResult = %#v", result)
 	}
-	if _, rpcErr := handleToolCall(json.RawMessage(`{"name":"unknown","arguments":{}}`)); rpcErr == nil {
+	if _, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"unknown","arguments":{}}`), issueOpsMCPDependencies()); rpcErr == nil {
 		t.Fatal("unknown MCP tool should fail")
 	}
 	if _, rpcErr := handleResourceRead(json.RawMessage(`{"uri":"unknown://resource"}`)); rpcErr == nil {

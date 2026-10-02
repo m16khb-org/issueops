@@ -133,7 +133,7 @@ func TestMCPResourceReadCoversGuidanceStateAndErrors(t *testing.T) {
 }
 
 func TestMCPProjectToolCallCoversDirectPayloadAndUnknownTool(t *testing.T) {
-	direct, rpcErr := testHandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "commit_policy", "arguments": map[string]any{}}))
+	direct, rpcErr := testCallSDKTool(t, mustMarshalMCPTest(t, map[string]any{"name": "commit_policy", "arguments": map[string]any{}}))
 	if rpcErr != nil {
 		t.Fatalf("commit_policy: %+v", rpcErr)
 	}
@@ -141,7 +141,7 @@ func TestMCPProjectToolCallCoversDirectPayloadAndUnknownTool(t *testing.T) {
 		t.Fatalf("commit_policy did not return markdown policy text: %s", text)
 	}
 
-	payload, rpcErr := testHandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "project_docs_bootstrap_plan", "arguments": map[string]any{"repo": t.TempDir()}}))
+	payload, rpcErr := testCallSDKTool(t, mustMarshalMCPTest(t, map[string]any{"name": "project_docs_bootstrap_plan", "arguments": map[string]any{"repo": t.TempDir()}}))
 	if rpcErr != nil {
 		t.Fatalf("project_docs_bootstrap_plan: %+v", rpcErr)
 	}
@@ -149,11 +149,11 @@ func TestMCPProjectToolCallCoversDirectPayloadAndUnknownTool(t *testing.T) {
 		t.Fatalf("bootstrap plan payload did not look like JSON result: %s", text)
 	}
 
-	_, rpcErr = testHandleToolCall(mustMarshalMCPTest(t, map[string]any{"name": "missing_tool", "arguments": map[string]any{}}))
-	if rpcErr == nil || rpcErr.Code != -32602 || !strings.Contains(rpcErr.Message, "Unknown tool") {
+	_, rpcErr = testCallSDKTool(t, mustMarshalMCPTest(t, map[string]any{"name": "missing_tool", "arguments": map[string]any{}}))
+	if rpcErr == nil || rpcErr.Code != -32602 || !strings.Contains(rpcErr.Message, "missing_tool") {
 		t.Fatalf("expected unknown tool error, got %+v", rpcErr)
 	}
-	_, rpcErr = testHandleToolCall(json.RawMessage(`{bad json}`))
+	_, rpcErr = testCallSDKTool(t, json.RawMessage(`{"name":"commit_policy","arguments":[]}`))
 	if rpcErr == nil || rpcErr.Code != -32602 {
 		t.Fatalf("expected invalid params error, got %+v", rpcErr)
 	}

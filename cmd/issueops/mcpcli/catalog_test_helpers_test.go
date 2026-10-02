@@ -2,19 +2,23 @@ package mcpcli
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	statestore "issueops/internal/adapter/outbound/state"
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
 	mcpcontract "issueops/internal/contract/mcp"
 	contract "issueops/internal/contract/selfaugment"
+	"testing"
 	"time"
 )
 
 func testMCPCatalog() mcpcontract.Catalog { return mcpcatalog.Build() }
 
-func testHandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
+func testCallSDKTool(t *testing.T, params json.RawMessage) (any, *jsonrpc.Error) {
+	t.Helper()
 	deps := testTransportServices()
 	deps.Gates = testGatesService()
 	deps.Channel = testChannelService()
@@ -27,7 +31,37 @@ func testHandleToolCall(params json.RawMessage) (any, *jsonrpc.Error) {
 	deps.SelfHistory = historyServiceForTest()
 	deps.SelfState = selfStateForTest()
 	deps.SelfPlanning = planningForTest(IssueOpsRoot(), statestore.StateDir(), Version)
-	return HandleToolCallWithDependencies(params, deps)
+	return callSDKTool(t, params, deps)
+}
+
+func callSDKTool(t *testing.T, params json.RawMessage, deps MCPDependencies) (any, *jsonrpc.Error) {
+	t.Helper()
+	var call mcp.CallToolParams
+	if err := json.Unmarshal(params, &call); err != nil {
+		t.Fatal(err)
+	}
+	session := startMCPTransportTestSession(t, "stdio", deps)
+	result, err := session.CallTool(t.Context(), &call)
+	if err != nil {
+		var protocolErr *jsonrpc.Error
+		if !errors.As(err, &protocolErr) {
+			t.Fatalf("SDK call returned non-protocol error: %v", err)
+		}
+		return nil, protocolErr
+	}
+	content := make([]map[string]any, 0, len(result.Content))
+	for _, item := range result.Content {
+		text, ok := item.(*mcp.TextContent)
+		if !ok {
+			t.Fatalf("unexpected SDK content: %T", item)
+		}
+		content = append(content, map[string]any{"type": "text", "text": text.Text})
+	}
+	envelope := map[string]any{"content": content}
+	if result.IsError {
+		envelope["isError"] = true
+	}
+	return envelope, nil
 }
 
 func historyServiceForTest() augmentapp.HistoryService {

@@ -195,7 +195,7 @@ func TestExecutionActionRequestFromMCPMapsCompletionGeneration(t *testing.T) {
 	}
 }
 
-func TestHandleToolCallWithDependenciesRoutesResumeToInjectedHandler(t *testing.T) {
+func TestSDKCallToolRoutesResumeToInjectedHandler(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	params, err := json.Marshal(MCPToolCall{Name: "issueops_execution", Arguments: map[string]any{
 		"action": "resume", "id": "io-aaaaaaaaaaaa", "expected_generation": float64(3),
@@ -207,7 +207,7 @@ func TestHandleToolCallWithDependenciesRoutesResumeToInjectedHandler(t *testing.
 		t.Fatal(err)
 	}
 	calls := 0
-	response, rpcErr := HandleToolCallWithDependencies(params, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resume: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
+	response, rpcErr := callSDKTool(t, params, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resume: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
 		calls++
 		if stateRoot == "" || request.ID != "io-aaaaaaaaaaaa" || request.ExpectedGeneration != 3 || request.CWD != "/repo.worktrees/resume" || !request.Confirm {
 			t.Fatalf("resume handler request=%+v state_root=%q", request, stateRoot)

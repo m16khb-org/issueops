@@ -9,13 +9,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
 	ownerdomain "issueops/internal/domain/issueops"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"issueops/cmd/issueops/mcpcli"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
@@ -304,13 +309,21 @@ func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareH
 
 func executionMCPText(t *testing.T, arguments map[string]any) string {
 	t.Helper()
-	raw, err := json.Marshal(map[string]any{"name": "issueops_execution", "arguments": arguments})
+	server, client := net.Pipe()
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	done := make(chan error, 1)
+	deps := mcpcli.MCPDependencies{Execution: testMCPExecutionDeps(), Status: executionStatusForTest, Catalog: mcpcatalog.Build()}
+	go func() { done <- mcpcli.ServeMCPStreamContextWithDependencies(ctx, server, server, io.Discard, deps) }()
+	session, err := mcp.NewClient(&mcp.Implementation{Name: "execution-cli-test", Version: "1"}, nil).Connect(ctx, &mcp.IOTransport{Reader: client, Writer: client}, nil)
 	if err != nil {
+		_ = client.Close()
 		t.Fatal(err)
 	}
-	result, rpcErr := mcpcli.HandleToolCallWithDependencies(raw, mcpcli.MCPDependencies{Execution: testMCPExecutionDeps(), Status: executionStatusForTest, Catalog: mcpcatalog.Build()})
-	if rpcErr != nil {
-		t.Fatalf("MCP execution call failed at protocol layer: %#v", rpcErr)
+	defer func() { _ = session.Close(); cancel(); _ = client.Close(); <-done }()
+	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "issueops_execution", Arguments: arguments})
+	if err != nil {
+		t.Fatalf("MCP execution call failed at protocol layer: %v", err)
 	}
 	encoded, err := json.Marshal(result)
 	if err != nil {

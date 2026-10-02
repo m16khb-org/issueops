@@ -35,7 +35,7 @@ func runMCPToolContractRaw(t *testing.T, name string, arguments map[string]any) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	result, rpcErr := handleToolCall(params)
+	result, rpcErr := callSDKTool(t, params, issueOpsMCPDependencies())
 	if rpcErr != nil {
 		t.Fatalf("handleToolCall(%s): %+v", name, rpcErr)
 	}

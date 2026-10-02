@@ -121,50 +121,6 @@ func newProtocolError(code int64, message string, data any) *jsonrpc.Error {
 	return &jsonrpc.Error{Code: code, Message: message, Data: raw}
 }
 
-func HandleToolCallWithDependencies(params json.RawMessage, deps MCPDependencies) (any, *jsonrpc.Error) {
-	var call MCPToolCall
-	if err := json.Unmarshal(params, &call); err != nil {
-		return nil, newProtocolError(-32602, "Invalid params", err.Error())
-	}
-	if call.Arguments == nil {
-		call.Arguments = map[string]any{}
-	}
-	if validationErr := validateMCPToolArguments(deps.Catalog, call.Name, call.Arguments); validationErr != nil {
-		return nil, validationErr
-	}
-	for _, handler := range []func(MCPToolCall) MCPToolOutcome{
-		func(call MCPToolCall) MCPToolOutcome { return handleProjectMCPToolCall(call, deps) },
-		func(call MCPToolCall) MCPToolOutcome { return handlePolicyStateMCPToolCall(call, deps) },
-		func(call MCPToolCall) MCPToolOutcome {
-			return handleIssueOpsMCPToolCallWithDependencies(call, deps)
-		},
-		func(call MCPToolCall) MCPToolOutcome { return handleLoopMCPToolCall(call, deps.Loop) },
-		func(call MCPToolCall) MCPToolOutcome { return handleGatesMCPToolCall(call, deps.Gates) },
-		func(call MCPToolCall) MCPToolOutcome { return handleChannelMCPToolCall(call, deps.Channel) },
-		func(call MCPToolCall) MCPToolOutcome {
-			return handleAssistantWorkerMCPToolCall(call, deps)
-		},
-		func(call MCPToolCall) MCPToolOutcome { return handleSelfLoopMCPToolCall(call, deps) },
-	} {
-		outcome := handler(call)
-		if !outcome.Handled {
-			continue
-		}
-		if outcome.Err != nil {
-			return nil, outcome.Err
-		}
-		if outcome.Direct {
-			return outcome.Result, nil
-		}
-		b, _ := json.MarshalIndent(outcome.Payload, "", "  ")
-		if outcome.IsError {
-			return ErrorTextResult(string(b)), nil
-		}
-		return TextResult(string(b)), nil
-	}
-	return nil, newProtocolError(-32602, "Unknown tool", call.Name)
-}
-
 func validateMCPToolArguments(catalog mcpcontract.Catalog, name string, arguments map[string]any) *jsonrpc.Error {
 	for _, tool := range catalog.Tools {
 		toolName, _ := tool["name"].(string)

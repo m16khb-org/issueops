@@ -115,7 +115,7 @@ func TestSelfWorkflowPromotionRefusesFailedAndUnknownSummaryWithoutWriting(t *te
 	}
 	deps := mcpcli.MCPDependencies{Catalog: mcpcatalog.Build(), SelfState: service}
 	params, _ := json.Marshal(mcpcli.MCPToolCall{Name: "self_verify_promote", Arguments: map[string]any{"from_key": "failed", "baseline_key": "forbidden", "confirm": true}})
-	_, rpcErr := mcpcli.HandleToolCallWithDependencies(params, deps)
+	_, rpcErr := callSDKTool(t, params, deps)
 	if rpcErr == nil || rpcErr.Code != -32602 || !strings.Contains(string(rpcErr.Data), "refusing to promote") {
 		t.Fatalf("MCP gate refused incorrectly: %+v", rpcErr)
 	}

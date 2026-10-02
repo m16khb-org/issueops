@@ -39,7 +39,7 @@ func TestDaemonMCPInstancesKeepCapturedPathsAndCapacity(t *testing.T) {
 				}
 				raw = result.Content[0].(*mcp.TextContent).Text
 			} else {
-				result, err := mcpcli.HandleToolCallWithDependencies(json.RawMessage(`{"name":"daemon_status","arguments":{}}`), deps[i])
+				result, err := callSDKTool(t, json.RawMessage(`{"name":"daemon_status","arguments":{}}`), deps[i])
 				if err != nil {
 					t.Fatal(err)
 				}

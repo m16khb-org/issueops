@@ -43,7 +43,7 @@ func TestProjectDocMCPInstancesKeepDefaultRootsSeparate(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			for n := 0; n < 3; n++ {
-				read, err := projectDocsDirectRead(deps[i])
+				read, err := projectDocsSDKRead(t, deps[i])
 				if err != nil {
 					t.Error(err)
 					return
@@ -58,7 +58,7 @@ func TestProjectDocMCPInstancesKeepDefaultRootsSeparate(t *testing.T) {
 					t.Errorf("revise %d: %v %+v", i, err, result)
 					return
 				}
-				after, err := projectDocsDirectRead(deps[i])
+				after, err := projectDocsSDKRead(t, deps[i])
 				if err != nil || after.Content != want || after.RepoRoot != roots[i] {
 					t.Errorf("after %d: %+v %v", i, after, err)
 					return
@@ -94,7 +94,7 @@ func TestProjectDocMCPRefusalsPreserveFileBytes(t *testing.T) {
 		{"repo": root, "rel_path": ".issueops/TESTING.md", "content": "changed", "summary": "missing digest", "confirm": true},
 	} {
 		params, _ := json.Marshal(map[string]any{"name": "project_docs_revise", "arguments": args})
-		if _, err := mcpcli.HandleToolCallWithDependencies(params, deps); err == nil {
+		if _, err := callSDKTool(t, params, deps); err == nil {
 			t.Errorf("direct accepted %+v", args)
 		}
 		if _, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "project_docs_revise", Arguments: args}); err == nil {
@@ -107,8 +107,8 @@ func TestProjectDocMCPRefusalsPreserveFileBytes(t *testing.T) {
 	}
 }
 
-func projectDocsDirectRead(deps mcpcli.MCPDependencies) (docscontract.ProjectDocsReadResult, error) {
-	result, rpcErr := mcpcli.HandleToolCallWithDependencies(json.RawMessage(`{"name":"project_docs_read","arguments":{"rel_path":".issueops/TESTING.md"}}`), deps)
+func projectDocsSDKRead(t *testing.T, deps mcpcli.MCPDependencies) (docscontract.ProjectDocsReadResult, error) {
+	result, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"project_docs_read","arguments":{"rel_path":".issueops/TESTING.md"}}`), deps)
 	if rpcErr != nil {
 		return docscontract.ProjectDocsReadResult{}, rpcErr
 	}
@@ -158,7 +158,7 @@ func TestProjectDocMCPDryRunAndExplicitRepositoryPreserveTargets(t *testing.T) {
 	t.Setenv("CLAUDE_PROJECT_DIR", first)
 	deps := issueOpsMCPDependencies()
 	session := startHistoryMCPTestSession(t, deps)
-	read, err := projectDocsDirectRead(deps)
+	read, err := projectDocsSDKRead(t, deps)
 	if err != nil || read.Exists {
 		t.Fatalf("missing read=%+v %v", read, err)
 	}

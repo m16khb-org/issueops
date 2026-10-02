@@ -2223,7 +2223,6 @@
       "task": "T20",
       "symbols": [
         "func ErrorTextResult",
-        "func HandleToolCallWithDependencies",
         "func MCPDependencies.resolveTarget",
         "func TextResult",
         "func mcpToolDirect",

@@ -109,7 +109,7 @@ func TestPolicyMCPInstancesKeepStateAndReloadOverrides(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		result, protocolErr := mcpcli.HandleToolCallWithDependencies(raw, deps[i])
+		result, protocolErr := callSDKTool(t, raw, deps[i])
 		if protocolErr != nil {
 			t.Fatal(protocolErr)
 		}

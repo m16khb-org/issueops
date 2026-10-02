@@ -95,7 +95,7 @@ func TestMCPDirectAndSDKKeepProjectAndExecutionServicesIsolated(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				direct, rpcErr := HandleToolCallWithDependencies(raw, deps[i])
+				direct, rpcErr := callSDKTool(t, raw, deps[i])
 				if rpcErr != nil {
 					t.Fatalf("%s direct: %v", call.Name, rpcErr)
 				}

@@ -41,9 +41,12 @@ export class UsersController {
 	if err != nil {
 		t.Fatal(err)
 	}
-	payload, rpcErr := testHandleToolCall(params)
+	payload, rpcErr := testCallSDKTool(t, params)
 	if rpcErr != nil {
 		t.Fatalf("quality gate failure should be a normal MCP payload, got rpc error: %+v", rpcErr)
+	}
+	if payload.(map[string]any)["isError"] == true {
+		t.Fatal("quality gate failure must not be a tool error")
 	}
 	text := extractSingleTextResult(t, payload)
 	if !strings.Contains(text, `"ok": false`) || !strings.Contains(text, `"violations"`) || !strings.Contains(text, `"missing_api_param"`) {
@@ -63,9 +66,12 @@ func TestQualityGateSentinelsAreRecognizedAsNormalMCPOutcomes(t *testing.T) {
 			args["result_file"] = "result"
 		}
 		raw, _ := json.Marshal(map[string]any{"name": tool, "arguments": args})
-		payload, rpcErr := HandleToolCallWithDependencies(raw, deps)
+		payload, rpcErr := callSDKTool(t, raw, deps)
 		if rpcErr != nil {
 			t.Fatalf("%s gate became protocol error: %v", mode, rpcErr)
+		}
+		if payload.(map[string]any)["isError"] == true {
+			t.Fatalf("%s gate became tool error", mode)
 		}
 		if text := extractSingleTextResult(t, payload); !strings.Contains(text, `"ok": false`) {
 			t.Fatalf("%s gate outcome=%s", mode, text)

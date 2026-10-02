@@ -58,7 +58,7 @@ func TestSelfWorkflowHistoryInstancesKeepCLIAndMCPStateSeparate(t *testing.T) {
 					return
 				}
 				raw := json.RawMessage(`{"name":"self_verify_compare","arguments":{"baseline_key":"self-verify-old","candidate_key":"self-verify-new"}}`)
-				result, rpcErr := mcpcli.HandleToolCallWithDependencies(raw, mcpcli.MCPDependencies{Catalog: mcpcatalog.Build(), SelfHistory: service})
+				result, rpcErr := callSDKTool(t, raw, mcpcli.MCPDependencies{Catalog: mcpcatalog.Build(), SelfHistory: service})
 				if rpcErr != nil {
 					t.Errorf("MCP direct instance %d: %v", i, rpcErr)
 					return
@@ -157,7 +157,7 @@ func TestSelfWorkflowHistoryRefusalDoesNotMaterializeState(t *testing.T) {
 		t.Fatalf("compare refusal: %v", err)
 	}
 	mcpDeps := mcpcli.MCPDependencies{Catalog: mcpcatalog.Build(), SelfHistory: service}
-	_, rpcErr := mcpcli.HandleToolCallWithDependencies(json.RawMessage(`{"name":"self_verify_history","arguments":{"confirm":true}}`), mcpDeps)
+	_, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"self_verify_history","arguments":{"confirm":true}}`), mcpDeps)
 	if rpcErr == nil || rpcErr.Code != -32602 || !strings.Contains(string(rpcErr.Data), "requires --prune-retention") {
 		t.Fatalf("MCP domain refusal: %+v", rpcErr)
 	}

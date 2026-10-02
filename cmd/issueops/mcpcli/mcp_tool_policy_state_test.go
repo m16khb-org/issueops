@@ -107,7 +107,7 @@ func TestHandleToolCallRejectsMissingAndUnknownStateWriteArguments(t *testing.T)
 		`{"name":"state_write","arguments":{"key":"schema-reject","content":"value","bogus":"x"}}`,
 		`{"name":"state_write","arguments":{"key":"schema-reject","content":7}}`,
 	} {
-		result, protocolErr := testHandleToolCall(json.RawMessage(raw))
+		result, protocolErr := testCallSDKTool(t, json.RawMessage(raw))
 		if protocolErr == nil || protocolErr.Code != -32602 {
 			t.Fatalf("call %s result=%#v error=%v", raw, result, protocolErr)
 		}

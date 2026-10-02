@@ -26,7 +26,7 @@ func TestChannelCLIAndMCPKeepCapturedStores(t *testing.T) {
 		wg.Go(func() {
 			for j := range 4 {
 				raw, _ := json.Marshal(mcpcli.MCPToolCall{Name: "channel_send", Arguments: map[string]any{"channel": "same", "from": "test", "body": fmt.Sprintf("store-%d", i)}})
-				_, err := mcpcli.HandleToolCallWithDependencies(raw, deps)
+				_, err := callSDKTool(t, raw, deps)
 				if err != nil {
 					t.Errorf("send %d: %v", j, err)
 				}

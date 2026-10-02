@@ -43,7 +43,7 @@ func TestLoopMCPInstancesKeepSameIDInSeparateStores(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, callErr := mcpcli.HandleToolCallWithDependencies(params, dependencies[i])
+			result, callErr := callSDKTool(t, params, dependencies[i])
 			if callErr != nil {
 				t.Fatal(callErr)
 			}

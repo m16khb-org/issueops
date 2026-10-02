@@ -8,6 +8,14 @@ single-pass verification battery that exercises these commands lives in
 adapter parity is owned by
 [issueops-execution.md](issueops-execution.md).
 
+## SDK 단일 호출 경로
+
+MCP handler 검증은 production이 사용하는 SDK server에 `ClientSession.CallTool`로
+호출한다. 테스트 전용 dispatcher나 별도 facade를 복제하지 않는다.
+direct content의 text·`IsError`, protocol error와 tool error의 구분,
+인자 검증 선행, server별 catalog/dependency 격리를 함께 확인한다.
+commit-policy 결과는 고정한 문구가 아니라 함께 배포한 resource의 실제 bytes와 비교한다.
+
 ## GitLab Issue Snapshot
 
 GitLab MCP/CLI snapshot 계약을 바꿀 때는 다음 bounded set을 먼저 실행한다.

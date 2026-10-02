@@ -15,7 +15,7 @@ import (
 // If either transport ignores its catalog or validates after dispatch, invalid
 // input reaches Release. Different schemas also detect a shared catalog cache.
 func TestMCPCatalogValidationIsInstanceScopedAndPrecedesEffects(t *testing.T) {
-	for _, entry := range []string{"direct", "sdk-handler"} {
+	for _, entry := range []string{"stdio", "daemon_conn"} {
 		t.Run(entry, func(t *testing.T) {
 			var calls [2]atomic.Int32
 			deps := [2]MCPDependencies{}
@@ -28,17 +28,12 @@ func TestMCPCatalogValidationIsInstanceScopedAndPrecedesEffects(t *testing.T) {
 					},
 				}
 			}
-			invoke := func(d MCPDependencies, raw json.RawMessage) (bool, string) {
-				if entry == "direct" {
-					params, err := json.Marshal(MCPToolCall{Name: "issueops_execution", Arguments: mustCatalogArgs(t, raw)})
-					if err != nil {
-						t.Fatal(err)
-					}
-					result, rpcErr := HandleToolCallWithDependencies(params, d)
-					bytes, _ := json.Marshal(result)
-					return rpcErr != nil, string(bytes)
-				}
-				result, err := issueOpsExecutionSDKToolHandler(d)(context.Background(), &mcp.CallToolRequest{Params: &mcp.CallToolParamsRaw{Name: "issueops_execution", Arguments: raw}})
+			sessions := [2]*mcp.ClientSession{
+				startMCPTransportTestSession(t, entry, deps[0]),
+				startMCPTransportTestSession(t, entry, deps[1]),
+			}
+			invoke := func(i int, raw json.RawMessage) (bool, string) {
+				result, err := sessions[i].CallTool(t.Context(), &mcp.CallToolParams{Name: "issueops_execution", Arguments: mustCatalogArgs(t, raw)})
 				bytes, _ := json.Marshal(result)
 				return err != nil, string(bytes)
 			}
@@ -47,11 +42,11 @@ func TestMCPCatalogValidationIsInstanceScopedAndPrecedesEffects(t *testing.T) {
 				json.RawMessage(`{"action":"release","id":"io-integer","generation":1,"proof":3}`),
 			}
 			for i := range deps {
-				rejected, _ := invoke(deps[i], input[1-i])
+				rejected, _ := invoke(i, input[1-i])
 				if !rejected || calls[i].Load() != 0 {
 					t.Fatalf("instance %d accepted invalid schema or invoked effect: rejected=%v calls=%d", i, rejected, calls[i].Load())
 				}
-				rejected, result := invoke(deps[i], input[i])
+				rejected, result := invoke(i, input[i])
 				want := []string{"io-string", "io-integer"}[i]
 				if rejected || calls[i].Load() != 1 || !strings.Contains(result, want) {
 					t.Fatalf("instance %d did not use its catalog/handler: rejected=%v calls=%d result=%s", i, rejected, calls[i].Load(), result)
