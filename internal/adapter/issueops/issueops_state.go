@@ -26,15 +26,7 @@ import (
 var issueOpsBucket = fmt.Sprintf("issueops_v%d", issueops.IssueOpsSchemaVersion)
 
 func ReadIssueOps(stateRoot, id string) (issueops.IssueOpsRecord, error) {
-	record, err := readIssueOpsUnchecked(stateRoot, id)
-	if err != nil {
-		return record, err
-	}
-	if err := validateIssueOpsRecord(record); err != nil {
-		record.OK = false
-		return record, err
-	}
-	return record, nil
+	return readIssueOpsUnchecked(stateRoot, id)
 }
 
 // ReadIssueOpsExisting reads exactly one existing record without creating,
@@ -51,15 +43,7 @@ func ReadIssueOpsExisting(stateRoot, id string) (issueops.IssueOpsRecord, error)
 	if !ok {
 		return issueops.IssueOpsRecord{OK: false, ID: id}, fmt.Errorf("issueops record %s: %w", id, fs.ErrNotExist)
 	}
-	record, err := decodeIssueOpsRecord(id, b)
-	if err != nil {
-		return record, err
-	}
-	if err := validateIssueOpsRecord(record); err != nil {
-		record.OK = false
-		return record, err
-	}
-	return record, nil
+	return decodeIssueOpsRecord(id, b)
 }
 
 func readIssueOpsUnchecked(stateRoot, id string) (issueops.IssueOpsRecord, error) {

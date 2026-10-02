@@ -1,13 +1,71 @@
 package issueops
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
+	"reflect"
 	"testing"
 
 	"issueops/internal/adapter/outbound/sqlstore"
+	"issueops/internal/contract/issueops"
 	statecontract "issueops/internal/contract/state"
 )
+
+func TestReadIssueOpsAcceptsValidRecord(t *testing.T) {
+	stateRoot := t.TempDir()
+	database, err := sqlstore.Open(stateRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := issueops.IssueOpsRecord{
+		SchemaVersion: issueops.IssueOpsSchemaVersion,
+		ID:            "io-valid",
+		Repo:          "/repo",
+		Branch:        "state-read",
+		Phase:         issueops.IssueOpsPhaseProblem,
+		CreatedAt:     "2026-10-01T00:00:00Z",
+		UpdatedAt:     "2026-10-01T01:00:00Z",
+	}
+	raw, err := json.Marshal(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Put(issueOpsBucket, want.ID, raw); err != nil {
+		t.Fatal(err)
+	}
+	want.OK = true
+	for _, reader := range []struct {
+		name string
+		read func(string, string) (issueops.IssueOpsRecord, error)
+	}{
+		{name: "read", read: ReadIssueOps},
+		{name: "existing", read: ReadIssueOpsExisting},
+	} {
+		t.Run(reader.name, func(t *testing.T) {
+			got, err := reader.read(stateRoot, " "+want.ID+" ")
+			if err != nil || !reflect.DeepEqual(got, want) {
+				t.Fatalf("record = %+v, error = %v, want %+v", got, err, want)
+			}
+		})
+	}
+}
+
+func TestReadIssueOpsMissingRecordPreservesErrorIdentity(t *testing.T) {
+	stateRoot := t.TempDir()
+	if _, err := sqlstore.Open(stateRoot); err != nil {
+		t.Fatal(err)
+	}
+	for _, read := range []func(string, string) (issueops.IssueOpsRecord, error){ReadIssueOps, ReadIssueOpsExisting} {
+		got, err := read(stateRoot, "io-missing")
+		want := issueops.IssueOpsRecord{ID: "io-missing"}
+		if !errors.Is(err, fs.ErrNotExist) || err.Error() != "issueops record io-missing: file does not exist" ||
+			!reflect.DeepEqual(got, want) {
+			t.Fatalf("record = %+v, error = %v, want %+v and not-exist error", got, err, want)
+		}
+	}
+}
 
 func TestReadIssueOpsRejectsRecordInvariantViolations(t *testing.T) {
 	stateRoot := t.TempDir()
@@ -51,10 +109,13 @@ func TestReadIssueOpsRejectsRecordInvariantViolations(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err := ReadIssueOps(stateRoot, id)
-
-			if !errors.Is(err, statecontract.ErrInvalidState) {
-				t.Fatalf("ReadIssueOps error = %v, want invalid state", err)
+			for _, read := range []func(string, string) (issueops.IssueOpsRecord, error){ReadIssueOps, ReadIssueOpsExisting} {
+				got, err := read(stateRoot, id)
+				want := issueops.IssueOpsRecord{ID: id, Invalid: true, InvalidReason: statecontract.ErrInvalidState.Error()}
+				if !errors.Is(err, statecontract.ErrInvalidState) ||
+					!reflect.DeepEqual(got, want) {
+					t.Fatalf("record = %+v, error = %v, want %+v and invalid state", got, err, want)
+				}
 			}
 		})
 	}
@@ -74,7 +135,10 @@ func TestReadIssueOpsRejectsInvalidStateMatrix(t *testing.T) {
 		{name: "missing_schema", id: "io-missing", raw: `{"id":"io-missing","phase":"problem"}`},
 		{name: "zero_schema", id: "io-zero", raw: `{"schema_version":0,"id":"io-zero","phase":"problem"}`},
 		{name: "future_schema", id: "io-future", raw: `{"schema_version":2,"id":"io-future","phase":"problem"}`},
+		{name: "unsupported_schema", id: "io-unsupported", raw: `{"schema_version":-1,"id":"io-unsupported","phase":"problem"}`},
 		{name: "malformed_json", id: "io-malformed", raw: `{`},
+		{name: "trailing_json", id: "io-trailing", raw: `{"schema_version":1,"id":"io-trailing","phase":"problem"} {}`},
+		{name: "trailing_garbage", id: "io-garbage", raw: `{"schema_version":1,"id":"io-garbage","phase":"problem"} x`},
 		{name: "unknown_field", id: "io-unknown", raw: `{"schema_version":1,"id":"io-unknown","phase":"problem","unknown":true}`},
 		{name: "id_mismatch", id: "io-requested", raw: `{"schema_version":1,"id":"io-other","phase":"problem"}`},
 	}
@@ -85,11 +149,13 @@ func TestReadIssueOpsRejectsInvalidStateMatrix(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err := ReadIssueOps(stateRoot, test.id)
-
-			if !errors.Is(err, statecontract.ErrInvalidState) ||
-				err.Error() != statecontract.ErrInvalidState.Error() {
-				t.Fatalf("ReadIssueOps error = %v, want invalid state", err)
+			for _, read := range []func(string, string) (issueops.IssueOpsRecord, error){ReadIssueOps, ReadIssueOpsExisting} {
+				got, err := read(stateRoot, test.id)
+				want := issueops.IssueOpsRecord{ID: test.id, Invalid: true, InvalidReason: statecontract.ErrInvalidState.Error()}
+				if !errors.Is(err, statecontract.ErrInvalidState) ||
+					err.Error() != statecontract.ErrInvalidState.Error() || !reflect.DeepEqual(got, want) {
+					t.Fatalf("record = %+v, error = %v, want %+v and invalid state", got, err, want)
+				}
 			}
 		})
 	}
