@@ -1,13 +1,37 @@
 package sqlstore
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
+	"syscall"
 	"testing"
 )
+
+func TestEnsurePrivateRootCreatesMissingParents(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "parent", "state")
+	if err := ensurePrivateRoot(root); err != nil {
+		t.Fatal(err)
+	}
+	assertMode(t, root, 0o700)
+	assertMode(t, filepath.Dir(root), 0o700)
+}
+
+func TestEnsurePrivateRootPreservesNonDirectoryError(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "state")
+	if err := os.WriteFile(root, []byte("unchanged"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	err := ensurePrivateRoot(root)
+	var pathErr *os.PathError
+	if !errors.As(err, &pathErr) || pathErr.Op != "mkdir" || pathErr.Path != root || !errors.Is(err, syscall.ENOTDIR) {
+		t.Fatalf("non-directory error changed: %v", err)
+	}
+	assertMode(t, root, 0o644)
+}
 
 func TestOpenRepairsPermissiveRootAndKnownFiles(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "state")

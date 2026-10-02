@@ -270,10 +270,13 @@ func touchPrivate(path string) error {
 }
 
 func ensurePrivateRoot(dir string) error {
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
-	}
 	info, err := os.Lstat(dir)
+	if err != nil || !info.IsDir() {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			return err
+		}
+		info, err = os.Lstat(dir)
+	}
 	if err != nil {
 		return err
 	}
