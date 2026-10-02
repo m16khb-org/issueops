@@ -37,6 +37,8 @@ and supersession rules live in [adr/README.md](adr/README.md).
 
 | Date | Decision | Record |
 |---|---|---|
+| 2026-10-03 | 요청 grant 재검사는 grant root의 span과 모든 data write 트랜잭션에서 한다(다른 root는 통과) | [record](adr/2026-10-03-grant-grant-root-data-write.md) |
+| 2026-10-02 | 세 host가 공용 Streamable HTTP MCP 서비스에 직접 연결하고 native 발급 caller capability로 요청 권한을 정한다; 2026-09-23 in-process 결정을 stdio 경로로 좁힌다 | [record](adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md) |
 | 2026-10-02 | `rebase-onto-parent` 스킬을 `sync-base`로 바꾸고 merge와 rebase를 증거로 고른다 | [record](adr/2026-10-02-sync-base-skill-chooses-merge-or-rebase-by-evidence.md) |
 | 2026-09-30 | 독자 검토를 공개 본문 10건 분석 뒤에도 권장 절차로 유지한다 | [record](adr/2026-09-30-reader-review-remains-recommended-after-ten-public-bodies.md) |
 | 2026-09-29 | Cleanup ownership binds the operation and exact record revision; supersedes the draft finish-only field | [record](adr/2026-09-29-cleanup-ownership-binds-the-operation-and-exact-record-revis.md) |
@@ -44,7 +46,7 @@ and supersession rules live in [adr/README.md](adr/README.md).
 | 2026-09-29 | Cleanup finish ownership is an optional record field with guarded writers | [record](adr/2026-09-29-cleanup-finish-ownership-is-an-optional-record-field-with-gu.md) |
 | 2026-09-24 | Claude role models: Opus 5 plans and reviews, Sonnet 5 implements, Fable 5 is manual-only; supersedes the 2026-07-24 Claude defaults | [record](adr/2026-09-24-claude-role-models-opus-5-plans-and-reviews-sonnet-5-impleme.md) |
 | 2026-09-24 | Issue and PR bodies are human documents; implementation materials stay in .issueops/issues/<n>/; partially supersedes 2026-09-09 | [record](adr/2026-09-24-issue-and-pr-bodies-are-human-documents.md) |
-| 2026-09-23 | issueops mcp serves in-process; the shared daemon leaves the MCP path | [record](adr/2026-09-23-issueops-mcp-serves-in-process-the-shared-daemon-leaves-the.md) |
+| 2026-09-23 | issueops mcp serves in-process; the shared daemon leaves the MCP path (stdio 경로로 축소: 2026-10-02 공용 HTTP 결정) | [record](adr/2026-09-23-issueops-mcp-serves-in-process-the-shared-daemon-leaves-the.md) |
 | 2026-09-23 | The lease contract decodes persisted records through the production record contract; supersedes 2026-07-28 | [record](adr/2026-09-23-the-lease-contract-decodes-persisted-records-through-the-pro.md) |
 | 2026-09-09 | IssueOps seals the requester intent as a derived artifact next to the plan | [record](adr/2026-09-09-issueops-seals-the-requester-intent-as-a-derived-artifact.md) |
 | 2026-09-08 | Pipeline skill routing: companion skills called by name, base drift as a three-surface model, frontend as a next flag | [record](adr/2026-09-08-pipeline-skill-routing-companion-skills-called-by-name-base.md) |

@@ -64,12 +64,22 @@ cd issueops
 | Codex | `~/.codex/skills/`, MCP 설정, `SessionStart` hook |
 | Claude Code | `~/.claude/skills/`, user-scope MCP, `SessionStart` hook |
 | Omo native | `~/.omo/agent/skills/`, `~/.omo/mcp.json`, lifecycle extension |
+| MCP 서비스 | macOS LaunchAgent `io.issueops.mcp` 또는 Linux systemd user `issueops-mcp.service`. `http://127.0.0.1:47831/mcp` 하나를 세 호스트가 함께 씁니다 |
 | 실행 상태 | `~/.local/state/issueops/` 아래 SQLite 저장소. `ISSUEOPS_STATE_DIR`로 격리 가능 |
 | 프로젝트 지식 | 대상 저장소의 `AGENTS.md`·`.issueops/`. 명시적인 project bootstrap으로 생성 |
 
 스킬은 복사하지 않고 이 체크아웃의 `skills/`를 참조합니다. 설치 후에도 체크아웃을 유지하세요.
 기본 설치는 대상 프로젝트에 파일을 만들지 않습니다. `--project-local`을 명시하면 project
 MCP 설정을 추가하지만 스킬 링크는 사용자 홈에만 둡니다. agy용 통합도 설치기에 포함되어 있습니다.
+
+macOS와 Linux의 기본 MCP 연결은 공용 HTTP 서비스입니다(`--mcp-transport=http`). 설치기는
+`~/.local/state/issueops/mcp-http/bearer`에 인증 토큰을 만들고, 세 호스트 설정의 issueops 항목만
+URL과 `Authorization` 헤더로 바꾼 뒤 파일 권한을 0600으로 둡니다. 예전처럼 호스트 세션마다
+`issueops mcp`를 띄우려면 `./install.sh --mcp-transport=stdio`로 설치합니다. 서비스 상태는
+`io mcp service status --json`으로 확인합니다. HTTP로 workspace 도구를 부르는 세션은 먼저
+`io mcp authorize --workspace-root <repo> ...`로 권한 파일을 발급받고, 호출할 때 그 경로를
+`authority_file`로 넘깁니다. 같은 OS 사용자의 프로세스는 이 파일들을 읽을 수 있으므로 신뢰 경계는
+OS 사용자입니다.
 
 설치 옵션과 선택적 upstream plugin·skill 준비는 [설치 가이드](.issueops/operations/install.md)를 참고하세요.
 
@@ -85,8 +95,9 @@ io inspect --json
 ```
 
 `io update`는 설치된 명령이 가리키는 IssueOps 체크아웃을 빌드합니다. 실행한 현재 디렉터리를
-설치 원본으로 바꾸거나 `git pull`을 대신 실행하지 않습니다. MCP 변경은 호스트가 서버를
-다시 연결할 때 적용되므로, 업데이트 후에도 옛 도구가 보이면 MCP를 재연결하세요.
+설치 원본으로 바꾸거나 `git pull`을 대신 실행하지 않습니다. HTTP 설치에서는 `io update`가
+MCP 서비스를 멈추고 새 바이너리로 다시 띄운 뒤 `build_id`를 확인합니다. MCP 변경은 호스트가
+서버를 다시 연결할 때 적용되므로, 업데이트 후에도 옛 도구가 보이면 MCP를 재연결하세요.
 
 현재 배포 결정은 첫 릴리스에 tarball/manual archive를 우선하고, Homebrew는
 재현성 검증과 롤백 기준을 충족한 뒤 도입하는 것입니다. 설치 복구가 필요하면
@@ -188,7 +199,7 @@ flowchart LR
     Codex["Codex"] --> Host["얇은 host adapter<br/>skills · hooks · MCP wiring"]
     Claude["Claude Code"] --> Host
     Omo["Omo native"] --> Host
-    Shell["Human shell"] --> Surface["issueops<br/>CLI · in-process MCP"]
+    Shell["Human shell"] --> Surface["issueops<br/>CLI · 공용 HTTP MCP · stdio MCP"]
     Host --> Surface
     Surface --> Core["Host-neutral Go core"]
     Core --> Policy["policy · guard · contracts"]
@@ -212,7 +223,8 @@ DDD 관점에서 **업무 규칙과 상태 전이는 domain**, **실행 순서�
 | `skills/`, `configs/` | 공용 스킬 원본과 호스트 설정 템플릿 |
 | `.issueops/` | 아키텍처·운영·검증·ADR 문서 |
 
-MCP는 호스트 세션 안에서 실행됩니다. hook은 프로젝트 문서 문맥을 제공하고,
+MCP는 기본적으로 사용자당 하나만 뜨는 로컬 HTTP 서비스에서 실행되고, stdio로 설치하면
+호스트 세션 안에서 실행됩니다. hook은 프로젝트 문서 문맥을 제공하고,
 작업 실행이나 단계 판정을 대신하지 않습니다. 작업 단계는 `next`, 변경 허용 여부는
 CLI 게이트가 담당합니다. 상세 경계는 [아키텍처 문서](.issueops/ARCHITECTURE.md)를 참고하세요.
 

@@ -87,7 +87,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 |------|------|------|
 | 하네스 방식 | **외부 Go 하네스 코어 + 얇은 호스트 어댑터** | 특정 host 전용 구현은 다른 host와 공유하기 어렵다. 외부 CLI/MCP/worker 코어를 두면 Codex, Claude Code, Omo에서 같은 동작을 재사용할 수 있다. |
 | Plugin의 역할 | 핵심 로직이 아니라 **설치·문서·명령 호출 래퍼** | Codex/Claude/Omo별 확장점 차이를 어댑터에 격리한다. |
-| 통합 표면 | 1차 CLI, 2차 in-process MCP stdio server, 3차 local job worker | 모든 에이전트는 shell/CLI를 다룰 수 있고, Claude Code는 MCP 연동이 자연스럽다. MCP는 host 세션이 띄운 프로세스 안에서 처리해 native actor 계보를 보존하고, 공통 state는 SQLite가 맡는다. 장기 job worker는 필요성이 확인된 뒤 도입한다. |
+| 통합 표면 | 1차 CLI, 2차 공용 로컬 Streamable HTTP MCP 서비스(stdio는 호환 표면), 3차 local job worker | 모든 에이전트는 shell/CLI를 다룰 수 있고, Claude Code는 MCP 연동이 자연스럽다. 세 host는 사용자당 하나인 `127.0.0.1:47831/mcp` 서비스에 직접 연결하고, 요청 권한은 native CLI(`issueops mcp authorize`)가 발급한 caller capability로 정한다. stdio `issueops mcp`는 host 세션 프로세스 안에서 native actor 계보를 보존한다. 공통 state는 SQLite가 맡는다. 장기 job worker는 필요성이 확인된 뒤 도입한다(2026-10-02 ADR). |
 | 구현 언어 | **Go** | 현재 로컬 toolchain이 Go 1.26.3이고, 단일 바이너리·동시성·CLI/MCP/daemon 구현 생산성이 Rust보다 유리하다. |
 
 상세 근거와 단계별 계획은 `.issueops/ADR.md`를 따른다.
@@ -131,7 +131,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 | 경로 | 목적 |
 |------|------|
-| `cmd/issueops/` | composition root와 inbound CLI/MCP/daemon/hook adapter. top-level 명령(정규 목록은 `issueops --help`): `api-doc`, `bootstrap`, `channel`, `contract`, `daemon`, `docs`, `doctor`, `gates`, `guard`, `hook`, `inspect`, `install`, `issueops`, `loop`, `mcp`, `policy`, `preflight`, `project`, `quality`, `self-augment`, `self-verify`, `state`, `status`, `trace`, `update`, `verify-work`, `version`, `web-fetch`, `worker` |
+| `cmd/issueops/` | composition root와 inbound CLI/MCP(stdio·Streamable HTTP)/daemon/hook adapter. `mcp`는 `--http`, `service start\|stop\|status`, `authorize`, `cleanup` 하위 명령을 갖는다. top-level 명령(정규 목록은 `issueops --help`): `api-doc`, `bootstrap`, `channel`, `contract`, `daemon`, `docs`, `doctor`, `gates`, `guard`, `hook`, `inspect`, `install`, `issueops`, `loop`, `mcp`, `policy`, `preflight`, `project`, `quality`, `self-augment`, `self-verify`, `state`, `status`, `trace`, `update`, `verify-work`, `version`, `web-fetch`, `worker` |
 | `internal/contract/` | CLI, MCP, state가 공유하는 versioned DTO와 response contract |
 | `internal/domain/` | filesystem, process, DB를 모르는 순수 규칙, reducer, classifier |
 | `internal/application/` | domain과 좁은 port를 조합하는 capability use case |
@@ -174,6 +174,8 @@ tmp_state="$(mktemp -d)" && ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops state
 tmp_state="$(mktemp -d)" && ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops loop start --repo "$PWD" --name smoke --goal "smoke loop contract" --json && rm -rf "$tmp_state"
 gates_demo="$(mktemp -d)" && (cd "$gates_demo" && "$OLDPWD/bin/issueops" gates init --scope smoke --gate "G1: smoke | CHECK: printf %s ok | EXPECT: ok" --json && "$OLDPWD/bin/issueops" gates check --cwd "$gates_demo" --workspace-root "$gates_demo" --json && "$OLDPWD/bin/issueops" gates report --cwd "$gates_demo" --workspace-root "$gates_demo") && rm -rf "$gates_demo"
 ./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json
+./bin/issueops mcp service status --json
+tmp_state="$(mktemp -d)" && ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops install --dry-run --json --mcp-transport=stdio && rm -rf "$tmp_state"
 codex mcp get issueops
 claude mcp list
 test -f ~/.omo/mcp.json

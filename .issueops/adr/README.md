@@ -28,6 +28,11 @@ later dated record says so explicitly. Current supersessions include:
 - The Phase 3 daemon-backed MCP proxy in `roadmap.md` is superseded by the
   2026-09-23 in-process MCP decision. The daemon remains only for MCP proxies
   started from older binaries.
+- The 2026-09-23 in-process MCP decision is narrowed by the 2026-10-02 shared
+  Streamable HTTP decision. Codex, Claude Code, and Omo connect directly to one
+  local HTTP service and carry a native-issued caller capability. The in-process
+  rules (actor ancestry, answering every request read before stdin EOF) now
+  describe only the `issueops mcp` stdio compatibility path.
 - The 2026-09-09 intent-seal decision's rejection of a tracked intent file is
   superseded by the 2026-09-24 human-document decision: phase transitions write
   tracked copies of intent, plan, spec, and plan review into

@@ -1,6 +1,6 @@
 ---
 name: cli-and-mcp.md
-description: Direct CLI, in-process MCP, policy, guard, worker, and command smoke operations.
+description: Direct CLI, shared HTTP and stdio MCP, policy, guard, worker, and command smoke operations.
 ---
 
 # CLI And MCP Operations
@@ -18,6 +18,19 @@ issueops guard check --staged --json
 issueops verify-work --json -- git status --short
 issueops quality inspect --json
 ```
+
+`inspect --json`의 `integration.hosts`는 Codex·Claude·Omo마다 installed/linked/configured와
+discovered/connected/protocol 여섯 관측을 verified/failed/unknown/not_checked로 보고한다.
+기본 inspect는 파일과 설정만 읽으므로 뒤 세 관측은 `not_checked/host_receipt_required`다.
+`inspect --host-receipts FILE`(MCP `harness_inspect`의 `host_receipts`)은 실제 host 실행 artifact를
+가리키는 schema 1 receipt를 읽는다. receipt가 verified를 유지하려면 transport·config_path·
+config_sha256·host version이 현재 값과 같고, artifact 내용에 `docs_index` 또는 주장한 revision이
+있어야 한다. 하나라도 어긋나면 `receipt_stale_*`·`receipt_artifact_missing_*` 같은 reason과 함께
+unknown이 된다. `config_sha256`은 config 파일 전체가 아니라 secret을 지운 issueops entry만
+해싱한다. `~/.claude.json`처럼 host가 매번 바꾸는 다른 필드가 receipt를 stale로 만들지 않게
+하려는 것이다. 공용 HTTP 서비스의 `harness_inspect`는 supervisor의 `HOME`/`PATH`로 실행되고
+`CODEX_HOME`이 없으므로, 사용자 셸에서 실행한 CLI `inspect`와 Codex 설정 경로나 host version
+관측(`host_version_unobservable`)이 다를 수 있다.
 
 `quality inspect`는 수집 성공(`collection_status`), repository health
 (`health_status`), automation gate(`gate_status`)를 분리한다. Collector 오류는
@@ -154,7 +167,10 @@ issueops mcp cleanup --json
 issueops mcp cleanup --apply --json
 ```
 
-`issueops mcp`는 host 세션 안에서 in-process로 동작하며 daemon을 시작하지 않는다. 아래 daemon 명령과
+기본 HTTP 설치에서 세 host는 `issueops mcp --http`(서비스 제어는 `issueops mcp service start|stop|status --json`)에
+연결하고, HTTP로 workspace 도구를 부르기 전에 native 세션에서 `issueops mcp authorize`를 실행해
+`authority_file`을 받는다. stdio `issueops mcp`는 host 세션 안에서 in-process로 동작하며 daemon을
+시작하지 않는다. 두 경로 모두 daemon을 쓰지 않는다. 아래 daemon 명령과
 admission 설정은 이전 binary로 떠 있는 MCP proxy가 붙는 legacy daemon에만 적용된다.
 
 daemon admission은 기본 256개 동시 MCP 연결을 허용한다. 장기 실행 multi-session

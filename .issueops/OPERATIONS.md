@@ -50,9 +50,31 @@ instead of duplicating their content here or in a guide.
    `issueops-abandon`; the shared ones are `issueops-review`, `gates-ledger`,
    and `issueops-remote-write`. `issueops next` decides which stage
    a cycle is in and which command advances it.
-2. MCP stdio server: `issueops mcp` serves MCP inside the host session's own
-   process. The legacy `issueops daemon` remains only for MCP proxies started
-   from older binaries.
+2. MCP: on darwin/linux, `install`/`update`/`bootstrap` default to
+   `--mcp-transport=http`. Codex, Claude Code, and Omo then connect directly to
+   one shared Streamable HTTP service at `http://127.0.0.1:47831/mcp`, sending the
+   bearer from `<state>/mcp-http/bearer` (0600). Each host config holds only the
+   issueops entry (`url` + `Authorization` header), written 0600. `issueops mcp
+   --http` runs the service in the foreground, and `issueops mcp service
+   start|stop|status --json` controls the LaunchAgent `io.issueops.mcp` or the
+   systemd user unit `issueops-mcp.service`. The status DTO is
+   `{ok,status,pid,build_id,url,error_code}`. `status` is
+   running/stopped/stale/conflict. It is empty (with `ok:false`) when the
+   supervisor, the service state, or the service binary could not be observed:
+   `error_code` is then `supervisor_unsupported`, `supervisor_unavailable`,
+   `state_unreadable`, or `build_mismatch` from an unreadable binary on start. Workspace
+   tools over HTTP need a capability: the native session runs `issueops mcp
+   authorize --workspace-root PATH ...` once, and the tool call passes the printed
+   path as `authority_file` plus `workspace_root`/`cwd`. The token itself is
+   never printed. `--mcp-transport=stdio` keeps the previous `issueops mcp`
+   stdio entry, which serves inside the host session's own process. agy always
+   uses stdio. The legacy `issueops daemon` remains only for MCP proxies started
+   from older binaries. Service limits: the unit passes only `ISSUEOPS_ROOT` and
+   `ISSUEOPS_STATE_DIR`. HTTP `harness_inspect` therefore sees the supervisor's
+   default `HOME`/`PATH` and no `CODEX_HOME`, and may report
+   `host_version_unobservable`. The SDK also advertises `idempotentHint:false`
+   on the two read-only tools (`harness_inspect`, `docs_index`), next to the
+   catalog's `readOnlyHint:true`/`openWorldHint:false`.
 3. CLI: 29 top-level commands (`install/update/bootstrap/version`,
    `inspect/preflight/status/doctor/docs`,
    `policy/guard/quality/verify-work/trace/contract/api-doc`, `project/hook`,

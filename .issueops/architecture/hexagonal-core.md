@@ -21,13 +21,15 @@
 
 ```mermaid
 flowchart LR
-    Codex["Codex<br/>AGENTS.md · native skills · MCP config"] --> MCP["issueops mcp<br/>in-process stdio server"]
+    Codex["Codex<br/>AGENTS.md · native skills · MCP config"] --> MCP["issueops mcp --http<br/>shared Streamable HTTP service"]
     Claude["Claude Code<br/>CLAUDE.md · skills · hooks · MCP config"] --> MCP
     Omo["Omo native<br/>AGENTS.md · skills · MCP · extension"] --> MCP
+    Codex -. stdio option .-> Stdio["issueops mcp<br/>in-process stdio server"]
     Human["Human shell"] --> CLI["CLI: issueops"]
     Hook["SessionStart context hook"] --> CLI
 
-    MCP --> Core["contract · domain · application<br/>policy · workspace · docs · state"]
+    MCP --> Core
+    Stdio --> Core["contract · domain · application<br/>policy · workspace · docs · state"]
     CLI --> Core
     Core --> Ports["ports/interfaces"]
     Ports --> FS["fs/git/wiki adapter"]
@@ -59,7 +61,7 @@ Mermaid는 보조 자료다. 규칙·경계·검증 명령은 아래 텍스트�
 
 | 경로 | 책임 | 금지/주의 |
 |------|------|----------|
-| `cmd/issueops` | composition root, CLI flag/출력, MCP stdio·JSON-RPC, daemon lifecycle, self-verify/self-augment orchestration | host별 정책과 domain 판정 복제 금지 |
+| `cmd/issueops` | composition root, CLI flag/출력, MCP Streamable HTTP·stdio·JSON-RPC, 요청별 caller scope, daemon lifecycle, self-verify/self-augment orchestration | host별 정책과 domain 판정 복제 금지 |
 | `internal/contract` | transport/state가 공유하는 versioned DTO와 error vocabulary | 판정 로직과 I/O 금지 |
 | `internal/domain` | 순수 규칙, reducer, classifier | adapter/cmd, filesystem/process/DB I/O 금지. clock은 기본 주입하며 `auditid` timestamp ID 생성은 현재 명시적 예외 |
 | `internal/application` | contract/domain/port를 조합하는 capability use case | concrete adapter와 transport 의존 금지 |

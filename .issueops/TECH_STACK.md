@@ -28,7 +28,7 @@ description: Chosen languages, runtimes, tools, and rationale.
 | 로컬 확인 toolchain | `go version go1.26.3 darwin/arm64` |
 | 패키지 관리 | Go modules |
 | 기본 바이너리 | `bin/issueops` (`cmd/issueops` source) |
-| 실행 모드 | CLI one-shot, in-process MCP stdio server, state-first one-shot worker jobs. legacy daemon은 이전 binary의 MCP proxy만 쓴다 |
+| 실행 모드 | CLI one-shot, 사용자당 하나인 로컬 Streamable HTTP MCP 서비스(`issueops mcp --http`, launchd/systemd user 감독), 호환용 in-process MCP stdio server, state-first one-shot worker jobs. legacy daemon은 이전 binary의 MCP proxy만 쓴다 |
 | 설정 prefix | `ISSUEOPS_` |
 
 ## 2.1 Core independence and optional upstream provisioning
@@ -96,12 +96,12 @@ Orca는 `exec.CommandContext`로 설치된 CLI를 호출하는 선택적 IssueOp
 | CLI | 표준 `flag` | `cmd/issueops` CLI와 command package에서 stdlib `flag` 사용; Cobra는 도입하지 않음 |
 | Config/State 직렬화 | 표준 `encoding/json` | 설정·상태는 JSON으로 직렬화; 외부 config 라이브러리(yaml.v3/toml)는 의존성에 없음 |
 | Logging | 표준 `log/slog` | secret redaction은 host 어댑터 계층에서 처리 |
-| MCP | `github.com/modelcontextprotocol/go-sdk` v1.6.1 | stdio server와 legacy daemon socket transport가 함께 쓰는 SDK. hand-rolled JSON-RPC 경로는 2026-08-03에 제거됐다(ADR "MCP go-sdk 채택" 참조) |
-| IPC | stdio, Unix socket | MCP는 host와 stdio로 통신한다. legacy daemon만 Unix socket을 쓴다. localhost HTTP는 future worker 필요 시 검토 |
+| MCP | `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3 | stateless Streamable HTTP(2025 initialize와 2026-07-28 request metadata 동시 지원), stdio server, legacy daemon socket transport가 함께 쓰는 SDK. jsonschema-go는 `harness_inspect`·`docs_index`의 outputSchema를 컴파일해 structuredContent를 검사하는 데 쓴다. hand-rolled JSON-RPC 경로는 2026-08-03에 제거됐다(ADR "MCP go-sdk 채택" 참조) |
+| IPC | loopback HTTP, stdio, Unix socket | 세 host는 기본으로 `http://127.0.0.1:47831/mcp`에 bearer 헤더로 연결한다(2026-10-02 ADR). `--mcp-transport=stdio` 설치와 agy는 stdio를 쓴다. legacy daemon만 Unix socket을 쓴다 |
 | State 저장 | SQLite (`modernc.org/sqlite`, pure Go) | `ISSUEOPS_STATE_DIR` 또는 `~/.local/state/issueops/`; state root마다 `issueops.db`(WAL, records(bucket,id,data) JSON blob) + `issueops.lock.db`(BEGIN IMMEDIATE span lock). 동시성은 per-root sqlstore span으로 직렬화 |
 | Testing | 표준 `testing`, golden file, `net/http/httptest` | 외부 agent host 없이 core contract를 검증하며 HTTP boundary 격리에만 `httptest` 사용 |
 
-직접 의존성(`go.mod`): `golang.org/x/term` v0.43.0, `golang.org/x/sys` v0.44.0, `modernc.org/sqlite` v1.53.0, `github.com/modelcontextprotocol/go-sdk` v1.6.1.
+직접 의존성(`go.mod`): `golang.org/x/term` v0.43.0, `golang.org/x/sys` v0.44.0, `modernc.org/sqlite` v1.53.0, `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3.
 
 ---
 

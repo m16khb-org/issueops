@@ -49,12 +49,19 @@ description: System structure, component boundaries, and responsibilities.
 
 ## 실행 모드와 표면 (요약)
 
-CLI one-shot, host 세션 안에서 도는 `mcp` stdio server, 이전 binary의 proxy만
-쓰는 legacy `daemon`, `issueops`, `loop`, `worker` 부분 구현, 그리고 Phase 5/6의
+CLI one-shot, 세 host가 직접 연결하는 사용자당 하나의 로컬 Streamable HTTP MCP
+서비스(`mcp --http`, `mcp service`), 호환 표면으로 남은 host 세션 안의 `mcp` stdio
+server, 이전 binary의 proxy만 쓰는 legacy `daemon`, `issueops`, `loop`, `worker` 부분 구현, 그리고 Phase 5/6의
 Codex/Claude/Omo UX adapter. 각 모드의 도입 단계·용도·원칙 표와 legacy daemon
 socket/lock, MCP schema/descriptor
 설계, command-policy catalog와 기본 거부/허용 범주, standalone runtime policy는
 [`architecture/runtime.md`](architecture/runtime.md)가 소유한다.
+
+HTTP 서비스는 서버 프로세스 계보나 cwd로 호출자를 판단하지 않는다. native 세션이
+`issueops mcp authorize`로 발급받은 capability 파일(`authority_file`)과
+`workspace_root`/`cwd`가 요청마다 scope와 actor를 정하고, lease의 generation·claim
+token·holder 검사는 그대로 core가 맡는다. 신뢰 경계는 같은 OS 사용자다. 근거는
+[2026-10-02 ADR](adr/2026-10-02-shared-streamable-http-mcp-and-caller-capability.md)에 있다.
 
 ## State / process / lock 토폴로지 (요약)
 

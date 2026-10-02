@@ -38,7 +38,7 @@ hygiene. Dated incident lessons live under [lessons/](lessons/).
 
 ## 13. Daemon lifecycle drift
 
-`issueops mcp`는 host 세션 안에서 in-process로 동작하므로 새 세션의 MCP는 daemon build와 갈라지지 않는다. 다만 이전 binary로 떠 있는 MCP proxy는 여전히 daemon에 붙는다. `issueops update`와 `issueops bootstrap`은 post-install 단계에서 daemon을 내리기만 하고, 옛 proxy가 재연결하면서 새 binary로 daemon을 다시 띄운다. 수동 `go build`나 `install-native`만 실행한 경우에는 daemon이 옛 binary로 남을 수 있다.
+stdio `issueops mcp`는 host 세션 안에서 in-process로 동작하므로 새 세션의 MCP는 daemon build와 갈라지지 않는다. 기본 HTTP 설치의 공용 서비스는 다르다. `update`/`bootstrap`/`install-native.sh`는 서비스를 stop하고 binary를 교체한 뒤 다시 start하며, 새 `bin/issueops`의 SHA-256과 서비스가 보고한 `build_id`가 같아야 성공으로 본다. 수동 `go build -o bin/issueops`만 하면 실행 중인 서비스는 옛 build로 남는다. `issueops mcp service status --json`의 `build_id`를 확인하고 필요하면 `mcp service stop`/`start`로 교체한다. 서비스는 서버 cwd를 어떤 도구에서도 쓰지 않으므로 workspace 도구는 항상 `authority_file`과 `workspace_root`를 넘겨야 한다. unit은 `ISSUEOPS_ROOT`·`ISSUEOPS_STATE_DIR`만 넘기므로 서비스의 `HOME`·`PATH`는 supervisor 기본값이고 `CODEX_HOME`은 없다. 테스트용 서비스는 격리 state와 테스트 전용 launchd label로 띄우고, 끝난 뒤 label과 47831 listener가 남지 않았는지 확인한다. 다만 이전 binary로 떠 있는 MCP proxy는 여전히 daemon에 붙는다. `issueops update`와 `issueops bootstrap`은 post-install 단계에서 daemon을 내리기만 하고, 옛 proxy가 재연결하면서 새 binary로 daemon을 다시 띄운다. 수동 `go build`나 `install-native`만 실행한 경우에는 daemon이 옛 binary로 남을 수 있다.
 
 주의:
 - 수동 설치/빌드 후 MCP smoke 전에는 필요하면 `issueops daemon stop --json`으로 기존 daemon을 내린다.

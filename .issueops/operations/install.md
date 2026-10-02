@@ -49,12 +49,22 @@ those snapshots together with the command shims before aborting the transition.
 
 `bootstrap` and `update` use the current `issueops` checkout. They build `bin/issueops`, refresh both command shims through the same installer path, run native host installation, refresh issueops MCP registration, and stop and clean up the legacy daemon without restarting it. They do not run `git pull`. Executable symlinks are resolved back to the checkout, so `io update` works outside the repository directory.
 
-현재 `issueops mcp`는 host 세션 안에서 in-process로 실행된다. `io update`는 host가 소유한 stdio MCP 프로세스를 열거하거나 종료하지 않으므로, 새 binary의 MCP 동작은 host에서 서버를 재연결(reconnect)할 때 적용된다. 이전 binary로 이미 떠 있는 legacy proxy만 daemon을 사용하며, update가 daemon을 내린 뒤 재연결하면서 새 binary로 daemon을 다시 띄울 수 있다. 실행 모드와 legacy backend의 정규 설명은 [runtime 문서](../architecture/runtime.md)를 따른다.
+darwin/linux의 기본 `--mcp-transport=http` 설치는 세 host의 issueops entry를 공용 서비스
+`http://127.0.0.1:47831/mcp`와 bearer 헤더로 바꾼다. 설치기는 host plan을 dry-run으로 먼저 검증하고,
+서비스를 새 build로 띄운 뒤 `build_id`와 인증된 MCP 응답을 확인해야 host 설정을 merge한다.
+`update`/`bootstrap`도 같은 순서로 서비스를 교체한다. 실패하면 host 설정을 바꾸지 않는다.
+`--mcp-transport=stdio`는 이전 stdio entry를 설치한다. 아래 Omo catalog cache token은 stdio entry에서는
+`env.ISSUEOPS_MCP_CATALOG_SHA256`으로, HTTP entry에서는 `headers.X-Issueops-Mcp-Catalog-Sha256`으로
+들어간다. Omo는 server config 전체(헤더 포함)를 `hashConfig`로 해싱해 catalog cache 키로 쓰므로,
+catalog가 바뀌면 두 transport 모두 다음 세션이 새 `tools/list`를 조회한다. 서버는 이 헤더를 읽지 않는다
+(`internal/adapter/omo/mcp.go`의 `omoMCPCatalogHeader`, `TestOmoHTTPEntryChangesWithTheAdvertisedCatalog`).
+
+stdio `issueops mcp`는 host 세션 안에서 in-process로 실행된다. `io update`는 host가 소유한 stdio MCP 프로세스를 열거하거나 종료하지 않으므로, 새 binary의 MCP 동작은 host에서 서버를 재연결(reconnect)할 때 적용된다. 이전 binary로 이미 떠 있는 legacy proxy만 daemon을 사용하며, update가 daemon을 내린 뒤 재연결하면서 새 binary로 daemon을 다시 띄울 수 있다. 실행 모드와 legacy backend의 정규 설명은 [runtime 문서](../architecture/runtime.md)를 따른다.
 
 Omo는 MCP tool catalog를 server config hash 기준으로 최대 7일 재사용하므로, 같은
 경로의 binary만 교체하면 새 세션도 이전 input schema를 유지할 수 있다. Omo
-installer는 현재 advertised tool catalog의 SHA-256을
-`ISSUEOPS_MCP_CATALOG_SHA256` env에 기록한다. 따라서 `install`/`bootstrap`/`update`
+installer는 현재 advertised tool catalog의 SHA-256을 stdio entry의
+`ISSUEOPS_MCP_CATALOG_SHA256` env(HTTP entry에서는 `X-Issueops-Mcp-Catalog-Sha256` 헤더)에 기록한다. 따라서 `install`/`bootstrap`/`update`
 후 catalog가 바뀌면 Omo server config hash도 바뀌고, 다음 세션은 새
 `tools/list`를 조회한다. 이 값은 cache revision token이며 MCP handler 동작을
 제어하지 않는다.
