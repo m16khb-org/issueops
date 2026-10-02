@@ -65,8 +65,15 @@ func observeCleanupWorkspaceOccupancy(root string, selfPID int) (port.CleanupWor
 // 요청자 계보를 관측하지 못하면 실패다 — 제외 집합을 {self}로 축약하면 cwd가
 // 워크트리인 부모 셸에 신호가 가서 하네스 자신이 HUP을 받는다(design-review 1차 finding 7).
 func buildCleanupOccupancy(procs []workspaceProcess, snapshot map[int]nativeProcessSnapshotEntry, selfPID int) (port.CleanupWorkspaceOccupancy, error) {
+	return buildCleanupOccupancyWithAncestry(procs, snapshot, selfPID, func(pid int) ([]int, error) {
+		return cleanupAncestorPIDs(snapshot, pid)
+	})
+}
+
+func buildCleanupOccupancyWithAncestry(procs []workspaceProcess, snapshot map[int]nativeProcessSnapshotEntry, selfPID int, resolve func(int) ([]int, error)) (port.CleanupWorkspaceOccupancy, error) {
+	ancestorPIDs := memoCleanupAncestry(resolve)
 	occupancy := port.CleanupWorkspaceOccupancy{Ancestry: map[int][]int{}}
-	selfAncestry, err := cleanupAncestorPIDs(snapshot, selfPID)
+	selfAncestry, err := ancestorPIDs(selfPID)
 	if err != nil {
 		return port.CleanupWorkspaceOccupancy{}, fmt.Errorf("requester process ancestry: %w", err)
 	}
@@ -83,7 +90,7 @@ func buildCleanupOccupancy(procs []workspaceProcess, snapshot map[int]nativeProc
 			}
 			continue
 		}
-		ancestors, err := cleanupAncestorPIDs(snapshot, pid)
+		ancestors, err := ancestorPIDs(pid)
 		if err != nil {
 			return port.CleanupWorkspaceOccupancy{}, fmt.Errorf("workspace process %d ancestry: %w", pid, err)
 		}
@@ -93,13 +100,31 @@ func buildCleanupOccupancy(procs []workspaceProcess, snapshot map[int]nativeProc
 			PID: pid, Command: cleanupOccupantCommand(procs, pid), StartedAt: entry.Receipt.StartedAt, Executable: entry.Receipt.Executable,
 		})
 	}
-	descendants, collateral := cleanupDescendantCounts(snapshot, occupantSet)
+	descendants, collateral := cleanupDescendantCounts(snapshot, occupantSet, ancestorPIDs)
 	for i := range occupancy.Occupants {
 		occupant := &occupancy.Occupants[i]
 		occupant.Descendants = descendants[occupant.PID]
 		occupant.Collateral = collateral[occupant.PID]
 	}
 	return occupancy, nil
+}
+
+// memoCleanupAncestry는 한 불변 스냅샷의 결과와 오류를 PID별로 재사용한다.
+// 반환된 계보 slice는 점유·자손 집계에서 읽기 전용으로 사용한다.
+func memoCleanupAncestry(resolve func(int) ([]int, error)) func(int) ([]int, error) {
+	type result struct {
+		ancestors []int
+		err       error
+	}
+	cache := map[int]result{}
+	return func(pid int) ([]int, error) {
+		if cached, ok := cache[pid]; ok {
+			return cached.ancestors, cached.err
+		}
+		ancestors, err := resolve(pid)
+		cache[pid] = result{ancestors: ancestors, err: err}
+		return ancestors, err
+	}
 }
 
 // cleanupOccupantPIDs는 lsof 행(pid마다 fd 여러 개)을 pid 오름차순 집합으로 줄인다.
@@ -128,11 +153,11 @@ func cleanupOccupantCommand(procs []workspaceProcess, pid int) string {
 // cleanupDescendantCounts는 점유자별 자손 수와 워크트리를 점유하지 않는 자손
 // (부수 피해 후보) 수를 센다. 계보가 끊긴 프로세스는 세지 않는다 — 관측 실패로
 // 확대하지 않는다.
-func cleanupDescendantCounts(snapshot map[int]nativeProcessSnapshotEntry, occupantSet map[int]bool) (map[int]int, map[int]int) {
+func cleanupDescendantCounts(snapshot map[int]nativeProcessSnapshotEntry, occupantSet map[int]bool, ancestorPIDs func(int) ([]int, error)) (map[int]int, map[int]int) {
 	descendants := map[int]int{}
 	collateral := map[int]int{}
 	for pid := range snapshot {
-		ancestors, err := cleanupAncestorPIDs(snapshot, pid)
+		ancestors, err := ancestorPIDs(pid)
 		if err != nil {
 			continue
 		}

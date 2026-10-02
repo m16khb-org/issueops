@@ -4263,10 +4263,12 @@
       "symbols": [
         "func CleanupProcessDeps.withDefaults",
         "func buildCleanupOccupancy",
+        "func buildCleanupOccupancyWithAncestry",
         "func cleanupAncestorPIDs",
         "func cleanupDescendantCounts",
         "func cleanupOccupantCommand",
         "func cleanupOccupantPIDs",
+        "func memoCleanupAncestry",
         "func observeCleanupWorkspaceOccupancy",
         "type CleanupProcessDeps"
       ]
