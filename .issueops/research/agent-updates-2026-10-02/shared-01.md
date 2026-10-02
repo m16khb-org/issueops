@@ -1,0 +1,32 @@
+# MCP Tasks and Long-Running Operations: Evidence Brief
+
+**Retrieved:** 2026-10-02
+**Question:** What recent MCP task/long-running-operation changes are actionable for IssueOps performance, optimization, and visibility?
+
+## Findings
+
+1. **MCP `2026-07-28`, published July 28, 2026, makes Tasks an official extension rather than a core task API.** The final announcement and SEP-2663 (Final, Extensions Track, created 2026-04-27) establish the release and extension status. This supersedes the experimental Tasks API from `2025-11-25`. **Certainty: high** (MCP official sources agree; they are not independent corroborations). **Applicability: high for roadmap, not an automatic dependency.** Counterevidence: GitHub releases showed the `2026-07-28` RC and older entries; the dated final announcement and versioned spec confirm final publication. Sources: [final announcement](https://blog.modelcontextprotocol.io/posts/2026-07-28/), [SEP-2663](https://modelcontextprotocol.io/seps/2663-tasks-extension), [versioned spec](https://modelcontextprotocol.io/specification/2026-07-28).
+
+2. **The lifecycle replaces blocking `tasks/result` and removes `tasks/list`.** A supported `tools/call` can return `resultType: "task"` with a durable ID; `tasks/get` reads state/result, `tasks/update` submits input, and `tasks/cancel` requests cancellation. Clients declare extension capability per request, but no task-specific preference; the server decides whether to create a task. Although the changelog says “unsolicited without per-request opt-in,” SEP-2663 requires the capability on each request and forbids returning a task without it. **Certainty: high** on the SEP's normative rule; the summary wording is ambiguous. **Applicability: medium** if IssueOps later exposes asynchronous worker jobs to MCP; both client and server must support the extension. Sources: [SEP-2663](https://modelcontextprotocol.io/seps/2663-tasks-extension), [changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog).
+
+3. **Tasks expose lifecycle status, not guaranteed progress telemetry.** State includes `working`, `input_required`, `completed`, `failed`, or `cancelled`, timestamps, optional `statusMessage`, TTL, and suggested poll interval. Clients should honor the interval and persist IDs; servers must durably create a task before returning its handle. Cancellation is cooperative; notifications are optional and polling is supported. The spec defines no percentage complete or performance gain. **Certainty: high** (SEP normative text; Microsoft’s separate C# SDK v2 guide corroborates implementation behavior, not the standard itself). **Applicability: medium** for future worker visibility; no IssueOps effect is measured. Sources: [SEP-2663](https://modelcontextprotocol.io/seps/2663-tasks-extension), [Microsoft C# SDK guide](https://csharp.sdk.modelcontextprotocol.io/v2/concepts/tasks/tasks.html), [Tasks overview](https://modelcontextprotocol.io/extensions/tasks/overview).
+
+4. **Local caching work is more immediately applicable than remote stateless scaling.** IssueOps runs MCP over host-launched stdio and has one-shot worker jobs, not a long-running job daemon (`.issueops/architecture/runtime.md:15,19`). Tool ordering is already deterministic for cache stability and goldens (`runtime.md:175-181`); `catalog.go:11-38` derives advertisement and dispatch from one ordered source. MCP `2026-07-28` recommends deterministic order and adds `ttlMs`/`cacheScope`; this search found no local references to those fields. **Certainty: high** for cited implementation/docs; the negative search is bounded and does not exclude indirect support. **Applicability: high** to benchmark repeated `tools/list`; low for HTTP load-balancing changes until IssueOps has a remote transport. Sources: [MCP tools spec](https://modelcontextprotocol.io/specification/2026-07-28/server/tools), [MCP changelog](https://modelcontextprotocol.io/specification/2026-07-28/changelog).
+
+## Evidence classification
+
+- **Official evidence:** Protocol and release claims cite MCP publications; multiple project URLs are not independent sources.
+- **Independent corroboration:** Microsoft’s C# SDK v2 documentation is a separately maintained implementation guide. It supports implementation feasibility and caveats, not the normative status of the specification.
+- **Search boundary:** Repository search found no literal task-method or extension-ID references; this does not rule out indirect support.
+
+## EXPAND
+
+- Check installed Go SDK and host-client support for `2026-07-28` and SEP-2663 before proposing implementation.
+- If resumable MCP jobs are needed, map `worker enqueue/status/cancel` to task durability, TTL, authorization, and cooperative cancellation.
+- Benchmark catalog construction and repeated `tools/list`; test cache hints against actual stdio clients. No performance percentage is evidenced.
+
+## Retrieval and access notes
+
+Fetched the official final release, versioned specification/changelog, Tasks extension overview, SEP-2663, and Microsoft C# SDK guide on 2026-10-02. Inaccessible URLs returned 404: the guessed historical pages `https://modelcontextprotocol.io/specification/2025-11-25/server/tasks` and `https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/docs/specification/2025-11-25/server/tasks.mdx`, plus the guessed release alias `https://blog.modelcontextprotocol.io/posts/2026-07-28-spec-ga/`. The canonical extension SEP, versioned specification, and actual release announcement supplied the needed evidence. No access-control challenge or authentication boundary was encountered.
+
+**Verification:** `./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --json` exited 1 at `Python script tests`: `ModuleNotFoundError: No module named 'pydantic'` while importing `skills/slack-delegate/scripts/test_capability_routing.py`. The root Python suite passed 61 tests (one skipped); the missing dependency made the full suite fail. No dependency was installed. The prescribed collect-all retry, `./bin/issueops self-verify --collect-all-steps --seed=100 --target-score=95 --llm-eval=false --progress=jsonl --json`, timed out after entering `go test`; no result for that step or later build/docs gates was captured. The first bundled diff-check attempt returned exit 1 without captured output; the exact requested `git diff --check -- .issueops/research/agent-updates-2026-10-02/shared-01.md` was rerun after the final report edit and returned exit 0.
