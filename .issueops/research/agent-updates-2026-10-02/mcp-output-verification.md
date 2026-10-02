@@ -14,7 +14,7 @@
 
 ## 현재 SDK에서 이미 가능한 부분
 
-메인은 `go env GOMODCACHE`가 반환한 `/Users/habin/go/pkg/mod` 아래의
+메인은 `go env GOMODCACHE`가 반환한 `$HOME/go/pkg/mod` 아래의
 `github.com/modelcontextprotocol/go-sdk@v1.6.1/mcp/protocol.go`를 읽었다.
 
 - `:71-90`: CallToolResult에 `StructuredContent any`가 이미 있다.

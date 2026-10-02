@@ -6,7 +6,7 @@ Retrieval date: **2026-10-02**. Question: which implementation facts support Iss
 
 Source fan-out: package provenance, installed implementation, tagged official documentation, and official release notes. Local source and public documentation corroborate mechanisms but are not independent authorities. No independent benchmark was established; no performance percentage is claimed.
 
-Exact local anchor prefix `K` means `/Users/habin/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d/node_modules/@code-yeongyu/senpi-codemode`. Installed provenance: `/Users/habin/node_modules/omo-ai/package.json:1-26` identifies `omo-ai` **5.1.8**, canonical repository `code-yeongyu/oh-my-openagent`, and Senpi dependency **2026.10.1-2**. `K/package.json:50-54` identifies the eval implementation's canonical repository as `code-yeongyu/senpi`, directory `packages/senpi-codemode`.
+Exact local anchor prefix `K` means `$HOME/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d/node_modules/@code-yeongyu/senpi-codemode`. Installed provenance: `$HOME/node_modules/omo-ai/package.json:1-26` identifies `omo-ai` **5.1.8**, canonical repository `code-yeongyu/oh-my-openagent`, and Senpi dependency **2026.10.1-2**. `K/package.json:50-54` identifies the eval implementation's canonical repository as `code-yeongyu/senpi`, directory `packages/senpi-codemode`.
 
 Public sources, all official and fetched on the retrieval date:
 

@@ -11,7 +11,7 @@ Source index: 다음 공식 원문을 모두 2026-10-02에 직접 조회했다.
 - [정식 릴리스 발표, 2026-07-28](https://blog.modelcontextprotocol.io/posts/2026-07-28/).
 - [최신 Streamable HTTP binding, 2026-07-28](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http).
 - [이전 transport 규격, 2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
-- SDK 근거는 설치 경로 `/Users/habin/go/pkg/mod/github.com/modelcontextprotocol/go-sdk@v1.6.1/`에서 읽었다. 이하 `SDK/`는 이 경로다. 대응 소스 URL은 [v1.6.1](https://github.com/modelcontextprotocol/go-sdk/tree/v1.6.1/mcp)이다. URL 원격 내용 대신 설치 소스를 검증했다.
+- SDK 근거는 설치 경로 `$HOME/go/pkg/mod/github.com/modelcontextprotocol/go-sdk@v1.6.1/`에서 읽었다. 이하 `SDK/`는 이 경로다. 대응 소스 URL은 [v1.6.1](https://github.com/modelcontextprotocol/go-sdk/tree/v1.6.1/mcp)이다. URL 원격 내용 대신 설치 소스를 검증했다.
 
 Claim verification: 규격 의미는 공식 규격 단일 권위, 로컬 동작은 코드·기존 테스트·ADR 교차 확인이다. 발표와 규격은 독립된 두 출처로 세지 않는다. HTTP 배포 결과와 성능 향상은 측정하지 않았으며 주장하지 않는다.
 

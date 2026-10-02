@@ -42,7 +42,7 @@
 
 [go.mod:33](../../../go.mod#L33)는 SDK v1.6.1을 고정한다. 설치 `SDK/mcp/shared.go:32-64`의 지원 목록은 2025-11-25까지다. `RequestExtra`의 TokenInfo/Header(`:476-498`)와 issueops [handler:76-94](../../../cmd/issueops/mcpcli/mcp_sdk_server.go#L76-L94)를 대조하면 이 handler는 Extra를 actor 권위에 연결하지 않는다. SDK의 HTTP 기능이나 Stateless 옵션을 최신판 호환성과 동일시하지 않는다.
 
-`SDK/`는 직접 읽은 `/Users/habin/go/pkg/mod/github.com/modelcontextprotocol/go-sdk@v1.6.1/`이다.
+`SDK/`는 직접 읽은 `$HOME/go/pkg/mod/github.com/modelcontextprotocol/go-sdk@v1.6.1/`이다.
 
 ## 4. Claude.dev에서 유지하는 적용 후보
 

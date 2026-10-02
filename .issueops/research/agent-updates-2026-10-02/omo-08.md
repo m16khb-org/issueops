@@ -2,9 +2,9 @@
 
 Retrieval date: **2026-10-02**. Scope: official public sources, installed implementation, and IssueOps source; no credentials or session transcripts inspected. Actual session model: `gpt-6.1-sol` (`PI_MODEL`).
 
-Canonical project: installed `/Users/habin/node_modules/omo-ai/package.json:2-25` identifies `omo-ai` **5.1.8**, repository `code-yeongyu/oh-my-openagent`, and engine `@code-yeongyu/senpi` **2026.10.1-2**. The [official release](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.8) confirms that engine; [GitHub release metadata](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.8) gives publication **2026-10-01T15:00:33Z**. These are publisher-controlled sources, not independent corroboration. Installed code independently checks implementation consistency, not performance or billing accuracy. Findings below describe this installed version, not the introduction date of each feature.
+Canonical project: installed `$HOME/node_modules/omo-ai/package.json:2-25` identifies `omo-ai` **5.1.8**, repository `code-yeongyu/oh-my-openagent`, and engine `@code-yeongyu/senpi` **2026.10.1-2**. The [official release](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.8) confirms that engine; [GitHub release metadata](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.8) gives publication **2026-10-01T15:00:33Z**. These are publisher-controlled sources, not independent corroboration. Installed code independently checks implementation consistency, not performance or billing accuracy. Findings below describe this installed version, not the introduction date of each feature.
 
-For exact local anchors, `R` means `/Users/habin/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d`; IssueOps-relative paths resolve under `/Users/habin/workspace/issueops`.
+For exact local anchors, `R` means `$HOME/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d`; IssueOps-relative paths resolve under `$REPO_ROOT`.
 
 ## Findings
 

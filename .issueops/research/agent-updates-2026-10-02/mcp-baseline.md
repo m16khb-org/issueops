@@ -4,7 +4,7 @@
 
 - 관측일: 2026-10-02.
 - 저장소 HEAD: `02be6d78cb0209c59cd0099614d9a03e453a59b6`.
-- 실행 파일: `/Users/habin/workspace/issueops/bin/issueops`.
+- 실행 파일: `$REPO_ROOT/bin/issueops`.
 - 파일 mtime: `2026-10-02T01:18:52.145Z`.
 - `./bin/issueops version --json`: exit 0, stdout `issueops 0.1.0`.
 - Bun eval에서 `bin/issueops mcp`를 별도 프로세스로 시작하고 stdio로

@@ -4,7 +4,7 @@ Retrieval date: **2026-10-02**. Model: `gpt-6.1-sol` (`PI_MODEL`).
 
 ## Provenance and method
 
-The canonical project is **code-yeongyu/oh-my-openagent**, established by `/Users/habin/node_modules/omo-ai/package.json:2-24`: installed `omo-ai` is **5.1.8**, depending on senpi **2026.10.1-2**, with that repository URL. Official metadata dates [5.1.8](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.8) to **2026-10-01 15:00:33 UTC** and [5.1.9](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.9) to **2026-10-02 01:13:10 UTC**. These are actual releases, not forecasts.
+The canonical project is **code-yeongyu/oh-my-openagent**, established by `$HOME/node_modules/omo-ai/package.json:2-24`: installed `omo-ai` is **5.1.8**, depending on senpi **2026.10.1-2**, with that repository URL. Official metadata dates [5.1.8](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.8) to **2026-10-01 15:00:33 UTC** and [5.1.9](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.9) to **2026-10-02 01:13:10 UTC**. These are actual releases, not forecasts.
 
 Source fan-out: official release metadata/notes, release-tagged implementation, installed SDK, and IssueOps architecture. Claim verification: implementation facts below have high source-reading certainty; all public evidence is **official single-source**, not independently corroborated or runtime-benchmarked. Local package/SDK agreement is another artifact from the same producer, not source independence. Release-tagged links avoid conflating development-branch documentation with installed behavior.
 
@@ -20,7 +20,7 @@ Applicability: investigate dependency-ready admission and capacity-wait visibili
 
 [Node retry](https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/v5.1.8/packages/senpi-task/src/dag/node-retry.ts), lines 16-119 and 153-188, permits failed, cancelled, or skipped nodes, refuses completed nodes, increments `execAttempt`, and restores cascaded skipped dependents. Re-entry creates a **new scheduler**, dropping previous `preAttachedTasks`; spent cancellation/admission latches are not reused. Prompt overrides require exactly one explicit node.
 
-Applicability: recovery controls should expose the retained run ID, new execution attempt, and descendant restoration. Counterevidence: retry refuses active pending/running runs; a skipped node cannot be retried alone while its blocking ancestors remain failed. Installed `/Users/habin/node_modules/omo-ai/plugin/runtime/dag/sdk.js:121-150` confirms the wrapper forwards these controls, but does not independently prove engine correctness.
+Applicability: recovery controls should expose the retained run ID, new execution attempt, and descendant restoration. Counterevidence: retry refuses active pending/running runs; a skipped node cannot be retried alone while its blocking ancestors remain failed. Installed `$HOME/node_modules/omo-ai/plugin/runtime/dag/sdk.js:121-150` confirms the wrapper forwards these controls, but does not independently prove engine correctness.
 
 ### 3. Amendment is selective invalidation, not unrestricted live editing
 

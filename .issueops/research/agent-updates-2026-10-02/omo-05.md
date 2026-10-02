@@ -4,9 +4,9 @@ Retrieval date: **2026-10-02**. Scope: public official material and installed im
 
 ## Provenance and evidence boundaries
 
-Canonical Omo project: [code-yeongyu/oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), established by `/Users/habin/node_modules/omo-ai/package.json:2-26`: installed `omo-ai` **5.1.8** depends on `@code-yeongyu/senpi` **2026.10.1-2**. Its [official release notes](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.8) identify that engine; [release metadata](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.8) dates publication to **2026-10-01T15:00:33Z**.
+Canonical Omo project: [code-yeongyu/oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent), established by `$HOME/node_modules/omo-ai/package.json:2-26`: installed `omo-ai` **5.1.8** depends on `@code-yeongyu/senpi` **2026.10.1-2**. Its [official release notes](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.8) identify that engine; [release metadata](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.8) dates publication to **2026-10-01T15:00:33Z**.
 
-Below, `R` means `/Users/habin/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d`; `T` means `R/dist/core/extensions/builtin/terminal`. `R/package.json:122-126` identifies the engine's canonical repository as **code-yeongyu/senpi**, directory `packages/coding-agent`. These are local implementation observations, not assertions about every Omo edition. Official docs, changelog, and shipped code share maintainer provenance: their agreement is implementation corroboration, **not independent-source corroboration**. No independent corroboration or performance benchmark was established.
+Below, `R` means `$HOME/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d`; `T` means `R/dist/core/extensions/builtin/terminal`. `R/package.json:122-126` identifies the engine's canonical repository as **code-yeongyu/senpi**, directory `packages/coding-agent`. These are local implementation observations, not assertions about every Omo edition. Official docs, changelog, and shipped code share maintainer provenance: their agreement is implementation corroboration, **not independent-source corroboration**. No independent corroboration or performance benchmark was established.
 
 ## Findings
 

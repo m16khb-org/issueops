@@ -4,9 +4,9 @@ Retrieval date: **2026-10-02**. Scope: read-only investigation; no installation,
 
 ## Provenance and method
 
-Canonical Omo project: [code-yeongyu/oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.8), established by `/Users/habin/node_modules/omo-ai/package.json:2-26`: installed `omo-ai` **5.1.8**, depending on `@code-yeongyu/senpi` **2026.10.1-2**. The engine manifest identifies its separate canonical repository, `code-yeongyu/senpi`.
+Canonical Omo project: [code-yeongyu/oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.8), established by `$HOME/node_modules/omo-ai/package.json:2-26`: installed `omo-ai` **5.1.8**, depending on `@code-yeongyu/senpi` **2026.10.1-2**. The engine manifest identifies its separate canonical repository, `code-yeongyu/senpi`.
 
-For local anchors below, **R** means `/Users/habin/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d/dist`. These describe this installed engine, not every Omo edition.
+For local anchors below, **R** means `$HOME/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d/dist`. These describe this installed engine, not every Omo edition.
 
 Source fan-out: official release notes/metadata, installed package provenance, and targeted engine implementation reads. Source index: [v5.1.8 notes](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.8), [v5.1.9 notes](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.9), and [release metadata](https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases?per_page=5); all retrieved 2026-10-02. Metadata gives publication times **2026-10-01 15:00:33 UTC** and **2026-10-02 01:13:10 UTC**, respectively. v5.1.9 names engine **2026.10.1-3**; it is published, but not the inspected installation.
 

@@ -23,21 +23,21 @@ monitor: `mon_J6ZJSZ5WBSDXC59D`.
 그 뒤의 Go test, build, golden, docs/inspect 검증이 통과했다고 주장하지 않는다.
 앞 단계의 성공을 전체 성공으로 합치지도 않는다.
 
-## 정확한 실패
+## 실패 출력 (개인 경로 익명화)
 
 ```text
 Traceback (most recent call last):
-  File "/Users/habin/workspace/issueops/scripts/python_suite_runner.py", line 83, in <module>
+  File "$REPO_ROOT/scripts/python_suite_runner.py", line 83, in <module>
     sys.exit(main())
              ~~~~^^
-  File "/Users/habin/workspace/issueops/scripts/python_suite_runner.py", line 46, in main
+  File "$REPO_ROOT/scripts/python_suite_runner.py", line 46, in main
     return run_suite(files)
-  File "/Users/habin/workspace/issueops/scripts/python_suite_runner.py", line 22, in run_suite
+  File "$REPO_ROOT/scripts/python_suite_runner.py", line 22, in run_suite
     spec.loader.exec_module(module)
     ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
   File "<frozen importlib._bootstrap_external>", line 759, in exec_module
   File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
-  File "/Users/habin/workspace/issueops/skills/slack-delegate/scripts/test_capability_routing.py", line 18, in <module>
+  File "$REPO_ROOT/skills/slack-delegate/scripts/test_capability_routing.py", line 18, in <module>
     from pydantic import BaseModel, Field
 ModuleNotFoundError: No module named 'pydantic'
 ```

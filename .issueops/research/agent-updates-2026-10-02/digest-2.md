@@ -12,7 +12,7 @@
 
 ## 정정 사항
 
-1. **설치 버전과 실행 엔진을 분리해야 한다.** 모든 Omo 보고서는 당시 `omo-ai 5.1.8 / senpi 2026.10.1-2`를 관측했다. 이번 조회의 `/Users/habin/node_modules/omo-ai/package.json:2-3,19-20`은 **5.1.9 / 2026.10.1-3**이다. 반면 아래 R의 `package.json:2-3`은 여전히 **2026.10.1-2**다. 패키지 업데이트 여부만으로 현재 세션에 새 수정이 적용됐다고 단정할 수 없다. 이 작업에서는 설치하지 않았다.
+1. **설치 버전과 실행 엔진을 분리해야 한다.** 모든 Omo 보고서는 당시 `omo-ai 5.1.8 / senpi 2026.10.1-2`를 관측했다. 이번 조회의 `$HOME/node_modules/omo-ai/package.json:2-3,19-20`은 **5.1.9 / 2026.10.1-3**이다. 반면 아래 R의 `package.json:2-3`은 여전히 **2026.10.1-2**다. 패키지 업데이트 여부만으로 현재 세션에 새 수정이 적용됐다고 단정할 수 없다. 이 작업에서는 설치하지 않았다.
 2. **Gemini 미확정은 해소됐다.** `other-01`과 달리 tag 및 latest API를 이번에 직접 조회했다. latest는 `v0.62.0`, `prerelease: false`, **2026-09-29T21:17:07Z**를 반환했다([S14,S21]; 리드의 `release-corrections.md`와 일치). 조회 시점 최신 정식 릴리스는 v0.62.0이다. v0.63.0 preview의 memory lifecycle 주장을 정식 릴리스로 옮기지 않는다.
 3. **LLM 관측 ADR은 현재 구현 증거가 아니다.** `other-06/07`의 근거인 2026-07-02 ADR은 과거 결정이다. 인용한 두 production 경로는 현재 없다. `internal`·`cmd` 검색에서도 `RunExternalLLMPrint` 및 관측 recorder의 production 일치를 찾지 못했다. 따라서 “현재 외부 LLM 사용량을 이미 기록한다”는 주장은 미해결로 낮춘다. 모든 가능한 대체 구현의 부재까지 증명한 것은 아니다.
 4. **Cline 문서와 SDK의 차이는 범위 차이일 수 있다.** 현재 SDK는 root agent의 `beforeModel`, `iteration === 1`에서 새 사용자 턴과 저장된 이력을 판정한다([S3], `beforeModel` 구간). 이를 extension의 “매 tool 후” 설명 전체가 틀렸다는 증거로 확대하지 않는다. Cline의 “about one git process”도 전체 snapshot의 프로세스 수 실측이 아니라 릴리스 표현이다([S15]).
@@ -59,9 +59,9 @@
 이번 조회의 원문 fetch는 성공했다. 큰 응답의 잘린 부분은 선택 구간을 다시 표시했다. 직접 확인한 실패는 다음과 같다.
 
 ```text
-Path not found: /Users/habin/workspace/issueops/internal/adapter/webfetch
-ENOENT: no such file or directory, access '/Users/habin/workspace/issueops/internal/core/externalllm/usage.go'
-ENOENT: no such file or directory, access '/Users/habin/workspace/issueops/internal/core/external_llm_usage.go'
+Path not found: $REPO_ROOT/internal/adapter/webfetch
+ENOENT: no such file or directory, access '$REPO_ROOT/internal/core/externalllm/usage.go'
+ENOENT: no such file or directory, access '$REPO_ROOT/internal/core/external_llm_usage.go'
 ```
 
 보고서의 과거 실패는 원본 20개 파일에 그대로 남아 있다. 핵심 미해결 근거도 그대로 유지한다: `other-08`의 `runtime_build.py`, `docker_runtime.py`는 **HTTP 404**, `https://docs.swebench.com/`은 **ENOTFOUND**였다. `omo-09`의 release API는 **API-rate-limit error**, `other-09`의 최초 whitespace 명령은 **exit 2** 및 `[: $?: bad number`였다. 이들은 이번 검증의 실패로 바꿔 쓰지 않는다. 런타임 benchmark·restart·process teardown 실험, 테스트·빌드·self-verify는 파일 외 쓰기 금지 범위 때문에 실행하지 않았다.
@@ -104,7 +104,7 @@ ENOENT: no such file or directory, access '/Users/habin/workspace/issueops/inter
 
 S7의 형제 경로 `dag/manager.ts`, `manager/concurrency.ts`, `tools/task/validation.ts`, `lifecycle/destroy.ts`도 같은 v5.1.8 tag에서 직접 조회했다.
 
-로컬 anchor prefix **R**: `/Users/habin/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d`.
+로컬 anchor prefix **R**: `$HOME/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d`.
 
 - **L1:** R 아래 `dist/core/extensions/builtin/terminal/monitor-notify.js:60-76,160-169,220-234`, `monitor-file-watch.js:1-33`, `tools/monitor-manifest-binding.js:58-76`, `restore.js:78-85`.
 - **L2:** R 아래 `dist/core/extensions/builtin/mcp/catalog-cache.js:6-28`, `config.js:240-258`, `service.js:342-354`, `tool-search/service.js:83-89`.

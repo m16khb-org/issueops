@@ -4,7 +4,7 @@ Retrieval date: 2026-10-02. Scope: installed implementation and public official 
 
 ## Provenance and released versions
 
-Canonical Omo project: https://github.com/code-yeongyu/oh-my-openagent, established by `/Users/habin/node_modules/omo-ai/package.json:2-24`. Installed `omo-ai` is 5.1.8, pinning `@code-yeongyu/senpi` 2026.10.1-2; the inspected runtime's `package.json:2-3` confirms that engine version.
+Canonical Omo project: https://github.com/code-yeongyu/oh-my-openagent, established by `$HOME/node_modules/omo-ai/package.json:2-24`. Installed `omo-ai` is 5.1.8, pinning `@code-yeongyu/senpi` 2026.10.1-2; the inspected runtime's `package.json:2-3` confirms that engine version.
 
 Official notes fetched:
 
@@ -13,7 +13,7 @@ Official notes fetched:
 
 Official GitHub metadata gives publication times: v5.1.8, 2026-10-01T15:00:33Z; v5.1.9, 2026-10-02T01:13:10Z. Exact metadata URLs are `https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.8` and `https://api.github.com/repos/code-yeongyu/oh-my-openagent/releases/tags/v5.1.9`. v5.1.9 names engine 2026.10.1-3; it is released, not anticipated, but is not the inspected installation.
 
-For anchors below, **R** means `/Users/habin/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d/dist/core/extensions/builtin/`.
+For anchors below, **R** means `$HOME/.omo/agent/runtime/a1700c8985bbd0c8-ef3ba637dc3d/dist/core/extensions/builtin/`.
 
 ## Findings
 

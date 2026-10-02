@@ -85,12 +85,12 @@
 잘못 추정한 로컬 경로 조회 실패를 그대로 남긴다:
 
 ```text
-ENOENT: no such file or directory, access '/Users/habin/workspace/issueops/internal/adapter/trace/trace.go'
-ENOENT: no such file or directory, access '/Users/habin/workspace/issueops/internal/adapter/hostprobe/process.go'
-ENOENT: no such file or directory, access '/Users/habin/workspace/issueops/internal/adapter/trace/store.go'
-ENOENT: no such file or directory, access '/Users/habin/workspace/issueops/internal/adapter/inbound/hook/context.go'
-Skipped missing path(s): /Users/habin/workspace/issueops/internal/adapter/state
-Path not found: /Users/habin/workspace/issueops/internal/application/hook
+ENOENT: no such file or directory, access '$REPO_ROOT/internal/adapter/trace/trace.go'
+ENOENT: no such file or directory, access '$REPO_ROOT/internal/adapter/hostprobe/process.go'
+ENOENT: no such file or directory, access '$REPO_ROOT/internal/adapter/trace/store.go'
+ENOENT: no such file or directory, access '$REPO_ROOT/internal/adapter/inbound/hook/context.go'
+Skipped missing path(s): $REPO_ROOT/internal/adapter/state
+Path not found: $REPO_ROOT/internal/application/hook
 ```
 
 입력 보고서의 실패 중 `"EISDIR"`, `"ENOENT"`, `"Page not found"`, `"test: $?: bad number"`, `"format: \"json\""` 거부는 이번에 재현한 결과가 아니다. 원문에 기록된 상태로 유지하며, 대체 URL 성공을 과거 실패 삭제로 해석하지 않는다.
