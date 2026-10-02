@@ -63,11 +63,18 @@ func (service *Service) Next(ctx context.Context, stateRoot, cwd, id string) (is
 		return applyDecision(result, issueopsnextdomain.Classify(issueopsnextdomain.Input{})), nil
 	}
 
+	selectedID := strings.TrimSpace(id)
+	if selectedID == "" && ports.Env != nil {
+		selectedID = strings.TrimSpace(ports.Env("ISSUEOPS_ID"))
+	}
+	if selectedID != "" {
+		return service.nextSelected(ctx, stateRoot, sourceRoot, selectedID, result, actorHost, actorSession)
+	}
 	listing, err := ports.ListCycles(ctx, stateRoot, sourceRoot)
 	if err != nil {
 		return issueopsnextcontract.Result{OK: false}, err
 	}
-	selected, candidates := selectCycle(ports, listing.Entries, cwd, id)
+	selected, candidates := selectCycle(ports, listing.Entries, cwd)
 	if len(candidates) > 0 {
 		result.Stage = issueopsnextcontract.Stage{Key: issueopsnextcontract.StageAmbiguous}
 		result.Candidates = candidates
@@ -184,26 +191,8 @@ func (service *Service) buildInput(
 func selectCycle(
 	ports Ports,
 	entries []issueopsinventorycontract.ListEntry,
-	cwd, id string,
+	cwd string,
 ) (*issueopsinventorycontract.ListEntry, []issueopsnextcontract.Entry) {
-	if trimmed := strings.TrimSpace(id); trimmed != "" {
-		for index := range entries {
-			if entries[index].ID == trimmed {
-				return &entries[index], nil
-			}
-		}
-		return &issueopsinventorycontract.ListEntry{ID: trimmed, Invalid: true}, nil
-	}
-	if ports.Env != nil {
-		if trimmed := strings.TrimSpace(ports.Env("ISSUEOPS_ID")); trimmed != "" {
-			for index := range entries {
-				if entries[index].ID == trimmed {
-					return &entries[index], nil
-				}
-			}
-			return &issueopsinventorycontract.ListEntry{ID: trimmed, Invalid: true}, nil
-		}
-	}
 	if matched := matchOne(entries, func(entry issueopsinventorycontract.ListEntry) bool {
 		return entry.WorkspaceRoot != "" && sameDir(ports, entry.WorkspaceRoot, cwd)
 	}); matched != nil {

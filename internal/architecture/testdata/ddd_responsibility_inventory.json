@@ -5949,6 +5949,14 @@
       ]
     },
     {
+      "path": "internal/adapter/outbound/issueopsrecord/selected.go",
+      "owner": "adapter",
+      "task": "T20",
+      "symbols": [
+        "func Store.ReadSelected"
+      ]
+    },
+    {
       "path": "internal/adapter/outbound/issueopsrecord/store.go",
       "owner": "adapter",
       "task": "T20",
@@ -9273,6 +9281,14 @@
       "task": "T20",
       "symbols": [
         "type Ports"
+      ]
+    },
+    {
+      "path": "internal/application/issueopsnext/selected.go",
+      "owner": "application",
+      "task": "T20",
+      "symbols": [
+        "func Service.nextSelected"
       ]
     },
     {

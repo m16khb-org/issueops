@@ -44,7 +44,12 @@ func issueOpsNextHandler(
 			ListCycles: func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error) {
 				return listCycles(stateRoot, repo)
 			},
-			ReadRecord:          issueopscore.ReadIssueOps,
+			ReadRecord:   issueopscore.ReadIssueOps,
+			ReadSelected: issueopsrecord.Store{}.ReadSelected,
+			ScanRecords: func(ctx context.Context, stateRoot string, visit func(issueopscontract.IssueOpsRecord) error) error {
+				_, err := (issueopsrecord.Store{}).ScanEach(ctx, stateRoot, visit)
+				return err
+			},
 			Completion:          readiness.Completion,
 			LocalReadiness:      localObservation.localReadiness,
 			WriterlessCommand:   ownerapp.WriterlessCommand,

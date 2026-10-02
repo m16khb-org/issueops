@@ -14,7 +14,10 @@ import (
 type Ports struct {
 	ListCycles func(ctx context.Context, stateRoot, repo string) (issueopsinventorycontract.ListResult, error)
 	ReadRecord func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
-	Completion func(record issueopscontract.IssueOpsRecord, phase issueopscontract.IssueOpsPhase) issueopscontract.IssueOpsReadiness
+	// ReadSelected maps absent or invalid IDs to an invalid record, but preserves I/O errors.
+	ReadSelected func(ctx context.Context, stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
+	ScanRecords  func(ctx context.Context, stateRoot string, visit func(issueopscontract.IssueOpsRecord) error) error
+	Completion   func(record issueopscontract.IssueOpsRecord, phase issueopscontract.IssueOpsPhase) issueopscontract.IssueOpsReadiness
 	// LocalReadiness는 fetch 없는 PR readiness다. 네트워크를 건드리지 않는다.
 	LocalReadiness func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness
 	// WriterlessCommand는 writer 없는 lease의 회복 명령이다.
