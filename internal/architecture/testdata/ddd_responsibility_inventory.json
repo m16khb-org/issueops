@@ -4863,6 +4863,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
+        "func NewReadinessGitObservations",
         "func ReadinessGit.BaseAdvanced",
         "func ReadinessGit.Branch",
         "func ReadinessGit.Clean",
@@ -8950,6 +8951,7 @@
         "func Readiness.StrictPRWithFetch",
         "func Readiness.StrictPRWithState",
         "func Readiness.observePR",
+        "func Readiness.scoped",
         "type Readiness"
       ]
     },

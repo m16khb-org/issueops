@@ -23,11 +23,15 @@ func newReadinessGit() core.ReadinessGit {
 func newCycleReadiness() cycle.Readiness {
 	changes := newChangeReader()
 	observer := review.LocalChangeObserver{Source: reviewport.LocalChangeSource{BaseRef: changes.DiffBaseRef, Paths: changes.ObservedPathsIn, Fingerprint: implementation.FingerprintSnapshot}}
-	cleanupStatus := cleanup.StructuralStatus{Environment: core.CleanupStatusEnvironment{RunGit: preflight.GitCmd, ReadGit: preflight.GitOut}}
 	return cycle.Readiness{Paths: core.ReadinessPathObservations(), Git: newReadinessGit(), HasEvidence: changes.HasEvidence,
 		ObserveChanges: observer.Observe, ChangedPaths: changes.ChangedPaths,
-		Cleanup: func(record model.IssueOpsRecord) model.IssueOpsCleanupStatus {
-			return cleanupStatus.ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: false})
+		NewObservationScope: func(s cycle.Readiness) cycle.Readiness {
+			git, environment, reset := core.NewReadinessGitObservations(preflight.GitCmd)
+			s.Git, s.ClearGitObservations = git, reset
+			s.Cleanup = func(record model.IssueOpsRecord) model.IssueOpsCleanupStatus {
+				return (cleanup.StructuralStatus{Environment: environment}).ForRecord(record, model.IssueOpsCleanupStatusRequest{Merged: false})
+			}
+			return s
 		},
 		ChildMissing: (delegation.ChildGates{Scan: core.ScanReadableIssueOps}).PRMissing}
 }

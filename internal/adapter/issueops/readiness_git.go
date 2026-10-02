@@ -13,6 +13,46 @@ type ReadinessGit struct {
 	Output func(string, ...string) string
 }
 
+// NewReadinessGitObservations pairs readiness and cleanup for one operation.
+// Only their overlapping branch/status facts are reused; all other probes stay fresh.
+func NewReadinessGitObservations(run func(string, ...string) (int, string, string)) (ReadinessGit, CleanupStatusEnvironment, func()) {
+	type result struct {
+		code        int
+		out, stderr string
+	}
+	type key struct {
+		root string
+		argv [2]string
+	}
+	results := map[key]result{}
+	reset := func() { clear(results) }
+	observe := func(root string, args ...string) (int, string, string) {
+		reuse := len(args) == 2 && ((args[0] == "branch" && args[1] == "--show-current") || (args[0] == "status" && args[1] == "--porcelain=v1"))
+		if !reuse {
+			// Fetch is the only mutation in readiness and starts a new phase.
+			if len(args) > 0 && args[0] == "fetch" {
+				reset()
+			}
+			return run(root, args...)
+		}
+		k := key{root: root, argv: [2]string{args[0], args[1]}}
+		if observed, ok := results[k]; ok {
+			return observed.code, observed.out, observed.stderr
+		}
+		code, out, stderr := run(root, args...)
+		results[k] = result{code: code, out: out, stderr: stderr}
+		return code, out, stderr
+	}
+	output := func(root string, args ...string) string {
+		code, out, _ := observe(root, args...)
+		if code != 0 {
+			return ""
+		}
+		return strings.TrimSpace(out)
+	}
+	return ReadinessGit{Run: observe, Output: output}, CleanupStatusEnvironment{RunGit: observe, ReadGit: output}, reset
+}
+
 func (ReadinessGit) Root(record model.IssueOpsRecord) string {
 	return readinesspaths.StrictGitRoot(record)
 }
