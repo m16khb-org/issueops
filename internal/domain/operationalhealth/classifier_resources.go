@@ -6,18 +6,18 @@ import (
 	"strings"
 )
 
-func validateCycleResources(builder *findingBuilder, snapshot Snapshot, cycle Cycle, authority CycleAuthority, repoScoped bool, gitPathCounts, worktreeCounts, terminalCounts, ptyCounts, taskCounts, dispatchCounts map[string]int) {
+func validateCycleResources(builder *findingBuilder, resources resourceIndex, cycle Cycle, authority CycleAuthority, repoScoped bool, gitPathCounts, worktreeCounts, terminalCounts, ptyCounts, taskCounts, dispatchCounts map[string]int) {
 	var gitWorktree GitWorktree
 	gitWorktreeOK := false
 	if repoScoped && (authority == AuthorityLive || strings.TrimSpace(cycle.WorktreePath) != "") {
-		gitWorktree, gitWorktreeOK = uniqueBy(snapshot.GitWorktrees, cycle.WorktreePath, func(value GitWorktree) string { return clean(value.Path) })
+		gitWorktree, gitWorktreeOK = resources.gitPaths.unique(cycle.WorktreePath)
 		if !gitWorktreeOK || gitPathCounts[clean(cycle.WorktreePath)] != 1 || strings.TrimSpace(gitWorktree.Branch) != strings.TrimSpace(cycle.Branch) {
 			builder.add(FindingInventoryUnknown, "git_worktree", clean(cycle.WorktreePath), "cycle identity does not match exactly one Git worktree", clean(cycle.WorktreePath))
 		}
 	}
 	isOrca := strings.TrimSpace(cycle.ExecutionMode) == "orca"
 	if repoScoped && (isOrca || strings.TrimSpace(cycle.OrcaWorktreeID) != "") {
-		worktree, ok := uniqueBy(snapshot.OrcaWorktrees, cycle.OrcaWorktreeID, func(value OrcaWorktree) string { return value.ID })
+		worktree, ok := resources.worktrees.unique(cycle.OrcaWorktreeID)
 		headMismatch := gitWorktreeOK && strings.TrimSpace(worktree.Head) != strings.TrimSpace(gitWorktree.Head)
 		instanceMismatch := strings.TrimSpace(cycle.OrcaWorktreeInstanceID) != "" && strings.TrimSpace(worktree.InstanceID) != strings.TrimSpace(cycle.OrcaWorktreeInstanceID)
 		if !ok || worktreeCounts[strings.TrimSpace(cycle.OrcaWorktreeID)] != 1 || strings.TrimSpace(worktree.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) || strings.TrimSpace(worktree.RepoID) != strings.TrimSpace(cycle.OrcaRepoID) || instanceMismatch || clean(worktree.Repo) != clean(cycle.Repo) || clean(worktree.Path) != clean(cycle.WorktreePath) || strings.TrimSpace(worktree.Branch) != strings.TrimSpace(cycle.Branch) || headMismatch {
@@ -27,7 +27,7 @@ func validateCycleResources(builder *findingBuilder, snapshot Snapshot, cycle Cy
 	var dispatch OrcaDispatch
 	dispatchOK := false
 	if isOrca || strings.TrimSpace(cycle.DispatchID) != "" {
-		dispatch, dispatchOK = uniqueBy(snapshot.Dispatches, cycle.DispatchID, func(value OrcaDispatch) string { return value.ID })
+		dispatch, dispatchOK = resources.dispatches.unique(cycle.DispatchID)
 		statusMismatch := authority == AuthorityLive && strings.TrimSpace(dispatch.Status) != "dispatched"
 		if !dispatchOK || dispatchCounts[cycle.DispatchID] != 1 || strings.TrimSpace(dispatch.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) ||
 			orcaTaskKey(dispatch.RunID, dispatch.TaskID) != orcaTaskKey(cycle.RunID, cycle.TaskID) || statusMismatch {
@@ -39,9 +39,9 @@ func validateCycleResources(builder *findingBuilder, snapshot Snapshot, cycle Cy
 		var terminal OrcaTerminal
 		terminalOK := false
 		if strings.TrimSpace(cycle.TerminalPTYID) != "" {
-			terminal, terminalOK = uniqueBy(snapshot.Terminals, cycle.TerminalPTYID, func(value OrcaTerminal) string { return value.PTYID })
+			terminal, terminalOK = resources.ptys.unique(cycle.TerminalPTYID)
 		} else if handle != "" {
-			terminal, terminalOK = uniqueBy(snapshot.Terminals, handle, func(value OrcaTerminal) string { return value.Handle })
+			terminal, terminalOK = resources.terminals.unique(handle)
 		}
 		liveMismatch := authority == AuthorityLive && (!terminal.Connected || !terminal.Writable)
 		countMismatch := terminalCounts[strings.TrimSpace(terminal.Handle)] != 1 || (strings.TrimSpace(cycle.TerminalPTYID) != "" && ptyCounts[cycle.TerminalPTYID] != 1)
@@ -53,7 +53,7 @@ func validateCycleResources(builder *findingBuilder, snapshot Snapshot, cycle Cy
 	}
 	if isOrca || strings.TrimSpace(cycle.TaskID) != "" {
 		taskKey := orcaTaskKey(cycle.RunID, cycle.TaskID)
-		task, ok := uniqueBy(snapshot.Tasks, taskKey, func(value OrcaTask) string { return orcaTaskKey(value.RunID, value.ID) })
+		task, ok := resources.tasks.unique(taskKey)
 		if !ok || taskCounts[taskKey] != 1 || strings.TrimSpace(task.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) || (authority == AuthorityLive && strings.TrimSpace(task.Status) != "dispatched") || (strings.TrimSpace(task.DispatchID) != "" && strings.TrimSpace(task.DispatchID) != strings.TrimSpace(cycle.DispatchID)) {
 			builder.add(FindingInventoryUnknown, "task", cycle.TaskID, "cycle task identity or status does not match exactly one task", "")
 		}
@@ -68,21 +68,11 @@ func orcaTaskKey(runID, taskID string) string {
 	return runID + "\x00" + taskID
 }
 
-func resolveLegacyCycleRun(cycle Cycle, tasks []OrcaTask) Cycle {
+func resolveLegacyCycleRun(cycle Cycle, resources resourceIndex) Cycle {
 	if strings.TrimSpace(cycle.RunID) != "" || strings.TrimSpace(cycle.TaskID) == "" {
 		return cycle
 	}
-	var candidate *OrcaTask
-	for index := range tasks {
-		if strings.TrimSpace(tasks[index].ID) != strings.TrimSpace(cycle.TaskID) {
-			continue
-		}
-		if candidate != nil {
-			return cycle
-		}
-		candidate = &tasks[index]
-	}
-	if candidate != nil {
+	if candidate, ok := resources.legacyTasks.unique(cycle.TaskID); ok {
 		cycle.RunID = strings.TrimSpace(candidate.RunID)
 	}
 	return cycle
@@ -91,11 +81,17 @@ func resolveLegacyCycleRun(cycle Cycle, tasks []OrcaTask) Cycle {
 func validateLeaseHolderIndexes(builder *findingBuilder, cycles []Cycle, indexes []LeaseHolderIndex) {
 	active := make([]Cycle, 0, len(cycles))
 	holderOwners := make(map[string][]string)
+	activeCounts := make(map[leaseHolderKey]int)
+	indexCounts := make(map[leaseHolderKey]int)
+	for _, index := range indexes {
+		indexCounts[holderKey(index.LifecycleID, index.Generation, index.Host, index.SessionID, index.AgentID)]++
+	}
 	for _, cycle := range cycles {
 		if strings.TrimSpace(cycle.LeaseStatus) != "active" {
 			continue
 		}
 		active = append(active, cycle)
+		activeCounts[holderKey(cycle.ID, cycle.Generation, cycle.HolderHost, cycle.HolderSessionID, cycle.HolderAgentID)]++
 		addOwner(holderOwners, nativeHolderIdentity(cycle.HolderHost, cycle.HolderSessionID, cycle.HolderAgentID), cycle.ID)
 	}
 	for identity, owners := range holderOwners {
@@ -107,12 +103,7 @@ func validateLeaseHolderIndexes(builder *findingBuilder, cycles []Cycle, indexes
 	keyCounts := countBy(indexes, func(index LeaseHolderIndex) string { return strings.TrimSpace(index.Key) })
 	addDuplicateFindings(builder, "lease_holder", keyCounts)
 	for _, cycle := range active {
-		matches := 0
-		for _, index := range indexes {
-			if leaseHolderIndexMatchesCycle(index, cycle) {
-				matches++
-			}
-		}
+		matches := indexCounts[holderKey(cycle.ID, cycle.Generation, cycle.HolderHost, cycle.HolderSessionID, cycle.HolderAgentID)]
 		if matches != 1 {
 			builder.add(FindingInventoryUnknown, "lease_holder", strings.TrimSpace(cycle.ID), "active cycle must match exactly one lease-holder reverse index", "")
 		}
@@ -120,23 +111,23 @@ func validateLeaseHolderIndexes(builder *findingBuilder, cycles []Cycle, indexes
 	for _, index := range indexes {
 		valid := strings.TrimSpace(index.Key) != "" && strings.TrimSpace(index.LifecycleID) != "" && index.Generation > 0 &&
 			validNativeHost(index.Host) && strings.TrimSpace(index.SessionID) != ""
-		matches := 0
-		for _, cycle := range active {
-			if leaseHolderIndexMatchesCycle(index, cycle) {
-				matches++
-			}
-		}
+		matches := activeCounts[holderKey(index.LifecycleID, index.Generation, index.Host, index.SessionID, index.AgentID)]
 		if !valid || matches != 1 {
 			builder.add(FindingInventoryUnknown, "lease_holder", firstNonEmpty(strings.TrimSpace(index.Key), strings.TrimSpace(index.LifecycleID), "index"), "lease-holder reverse index must match exactly one active cycle", "")
 		}
 	}
 }
 
-func leaseHolderIndexMatchesCycle(index LeaseHolderIndex, cycle Cycle) bool {
-	return strings.TrimSpace(index.LifecycleID) == strings.TrimSpace(cycle.ID) && index.Generation == cycle.Generation &&
-		strings.TrimSpace(index.Host) == strings.TrimSpace(cycle.HolderHost) &&
-		strings.TrimSpace(index.SessionID) == strings.TrimSpace(cycle.HolderSessionID) &&
-		strings.TrimSpace(index.AgentID) == strings.TrimSpace(cycle.HolderAgentID)
+type leaseHolderKey struct {
+	lifecycleID string
+	generation  uint64
+	host        string
+	sessionID   string
+	agentID     string
+}
+
+func holderKey(lifecycleID string, generation uint64, host, sessionID, agentID string) leaseHolderKey {
+	return leaseHolderKey{strings.TrimSpace(lifecycleID), generation, strings.TrimSpace(host), strings.TrimSpace(sessionID), strings.TrimSpace(agentID)}
 }
 
 func nativeHolderIdentity(host, sessionID, agentID string) string {
@@ -214,14 +205,14 @@ func addOwner(owners map[string][]string, resourceID, cycleID string) {
 	owners[resourceID] = append(owners[resourceID], strings.TrimSpace(cycleID))
 }
 
-func cycleTerminalHandle(cycle Cycle, snapshot Snapshot) string {
+func cycleTerminalHandle(cycle Cycle, resources resourceIndex) string {
 	if ptyID := strings.TrimSpace(cycle.TerminalPTYID); ptyID != "" {
-		if terminal, ok := uniqueBy(snapshot.Terminals, ptyID, func(value OrcaTerminal) string { return value.PTYID }); ok {
+		if terminal, ok := resources.ptys.unique(ptyID); ok {
 			return strings.TrimSpace(terminal.Handle)
 		}
 	}
 	if dispatchID := strings.TrimSpace(cycle.DispatchID); dispatchID != "" {
-		if dispatch, ok := uniqueBy(snapshot.Dispatches, dispatchID, func(value OrcaDispatch) string { return value.ID }); ok {
+		if dispatch, ok := resources.dispatches.unique(dispatchID); ok {
 			return strings.TrimSpace(dispatch.AssigneeHandle)
 		}
 	}
@@ -246,20 +237,72 @@ func addDuplicateFindings(builder *findingBuilder, kind string, counts map[strin
 	}
 }
 
-func uniqueBy[T any](values []T, want string, identity func(T) string) (T, bool) {
-	var zero T
-	var found T
-	count := 0
+type resourceBucket[T any] struct {
+	count int
+	value T
+}
+
+type resourceLookup[T any] map[string]resourceBucket[T]
+
+func indexBy[T any](values []T, identity func(T) string) resourceLookup[T] {
+	index := make(resourceLookup[T], len(values))
 	for _, value := range values {
-		if strings.TrimSpace(identity(value)) == strings.TrimSpace(want) {
-			found = value
-			count++
+		key := strings.TrimSpace(identity(value))
+		bucket := index[key]
+		bucket.count++
+		if bucket.count == 1 {
+			bucket.value = value
+		} else {
+			var zero T
+			bucket.value = zero
+		}
+		index[key] = bucket
+	}
+	return index
+}
+
+func (index resourceLookup[T]) unique(want string) (T, bool) {
+	bucket := index[strings.TrimSpace(want)]
+	return bucket.value, bucket.count == 1
+}
+
+func (index resourceLookup[T]) counts() map[string]int {
+	counts := make(map[string]int, len(index))
+	for key, bucket := range index {
+		// countBy ignored empty identities; uniqueBy still matched them.
+		if key != "" {
+			counts[key] = bucket.count
 		}
 	}
-	if count != 1 {
-		return zero, false
+	return counts
+}
+
+type resourceIndex struct {
+	cycles      resourceLookup[Cycle]
+	worktrees   resourceLookup[OrcaWorktree]
+	instances   resourceLookup[OrcaWorktree]
+	terminals   resourceLookup[OrcaTerminal]
+	ptys        resourceLookup[OrcaTerminal]
+	tasks       resourceLookup[OrcaTask]
+	legacyTasks resourceLookup[OrcaTask]
+	dispatches  resourceLookup[OrcaDispatch]
+	gates       resourceLookup[OrcaGate]
+	gitPaths    resourceLookup[GitWorktree]
+}
+
+func newResourceIndex(snapshot Snapshot) resourceIndex {
+	return resourceIndex{
+		cycles:      indexBy(snapshot.Cycles, func(cycle Cycle) string { return cycle.ID }),
+		worktrees:   indexBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return worktree.ID }),
+		instances:   indexBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return worktree.InstanceID }),
+		terminals:   indexBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return terminal.Handle }),
+		ptys:        indexBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return terminal.PTYID }),
+		tasks:       indexBy(snapshot.Tasks, func(task OrcaTask) string { return orcaTaskKey(task.RunID, task.ID) }),
+		legacyTasks: indexBy(snapshot.Tasks, func(task OrcaTask) string { return task.ID }),
+		dispatches:  indexBy(snapshot.Dispatches, func(dispatch OrcaDispatch) string { return dispatch.ID }),
+		gates:       indexBy(snapshot.Gates, func(gate OrcaGate) string { return gate.ID }),
+		gitPaths:    indexBy(snapshot.GitWorktrees, func(worktree GitWorktree) string { return clean(worktree.Path) }),
 	}
-	return found, true
 }
 
 func clean(path string) string {

@@ -15704,18 +15704,25 @@
         "func findingBuilder.add",
         "func findingBuilder.sorted",
         "func firstNonEmpty",
-        "func leaseHolderIndexMatchesCycle",
+        "func holderKey",
+        "func indexBy",
         "func nativeHolderIdentity",
+        "func newResourceIndex",
         "func normalizedSet",
         "func orcaTaskKey",
         "func ownerIndex",
         "func preserveContains",
         "func preserveSet",
         "func resolveLegacyCycleRun",
-        "func uniqueBy",
+        "func resourceLookup.counts",
+        "func resourceLookup.unique",
         "func validateCycleResources",
         "func validateLeaseHolderIndexes",
-        "type findingBuilder"
+        "type findingBuilder",
+        "type leaseHolderKey",
+        "type resourceBucket",
+        "type resourceIndex",
+        "type resourceLookup"
       ]
     },
     {

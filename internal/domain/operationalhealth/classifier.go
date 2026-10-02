@@ -286,15 +286,16 @@ func Classify(snapshot Snapshot, opts Options) Result {
 		validateOrcaInventoryIdentity(&builder, snapshot)
 	}
 
-	cycleCounts := countBy(snapshot.Cycles, func(cycle Cycle) string { return strings.TrimSpace(cycle.ID) })
-	worktreeCounts := countBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return strings.TrimSpace(worktree.ID) })
-	instanceCounts := countBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return strings.TrimSpace(worktree.InstanceID) })
-	terminalCounts := countBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return strings.TrimSpace(terminal.Handle) })
-	ptyCounts := countBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return strings.TrimSpace(terminal.PTYID) })
-	taskCounts := countBy(snapshot.Tasks, func(task OrcaTask) string { return orcaTaskKey(task.RunID, task.ID) })
-	dispatchCounts := countBy(snapshot.Dispatches, func(dispatch OrcaDispatch) string { return strings.TrimSpace(dispatch.ID) })
-	gateCounts := countBy(snapshot.Gates, func(gate OrcaGate) string { return strings.TrimSpace(gate.ID) })
-	gitPathCounts := countBy(snapshot.GitWorktrees, func(worktree GitWorktree) string { return clean(worktree.Path) })
+	resources := newResourceIndex(snapshot)
+	cycleCounts := resources.cycles.counts()
+	worktreeCounts := resources.worktrees.counts()
+	instanceCounts := resources.instances.counts()
+	terminalCounts := resources.terminals.counts()
+	ptyCounts := resources.ptys.counts()
+	taskCounts := resources.tasks.counts()
+	dispatchCounts := resources.dispatches.counts()
+	gateCounts := resources.gates.counts()
+	gitPathCounts := resources.gitPaths.counts()
 
 	addDuplicateFindings(&builder, "cycle", cycleCounts)
 	addDuplicateFindings(&builder, "worktree", worktreeCounts)
@@ -314,7 +315,7 @@ func Classify(snapshot Snapshot, opts Options) Result {
 	for _, cycle := range snapshot.Cycles {
 		authority := authorities[strings.TrimSpace(cycle.ID)]
 		if authority == AuthorityLive || authority == AuthorityPreserved {
-			cycle = resolveLegacyCycleRun(cycle, snapshot.Tasks)
+			cycle = resolveLegacyCycleRun(cycle, resources)
 			activeCycles = append(activeCycles, cycle)
 			if clean(cycle.Repo) == clean(snapshot.RepoRoot) {
 				activeRepoCycles = append(activeRepoCycles, cycle)
@@ -325,7 +326,7 @@ func Classify(snapshot Snapshot, opts Options) Result {
 	worktreeOwners := ownerIndex(activeRepoCycles, func(cycle Cycle) string { return strings.TrimSpace(cycle.OrcaWorktreeID) })
 	terminalOwners := make(map[string][]string)
 	for _, cycle := range activeCycles {
-		addOwner(terminalOwners, cycleTerminalHandle(cycle, snapshot), cycle.ID)
+		addOwner(terminalOwners, cycleTerminalHandle(cycle, resources), cycle.ID)
 	}
 	for handle := range terminalOwners {
 		sort.Strings(terminalOwners[handle])
@@ -345,7 +346,7 @@ func Classify(snapshot Snapshot, opts Options) Result {
 	}
 
 	for _, cycle := range activeCycles {
-		validateCycleResources(&builder, snapshot, cycle, authorities[strings.TrimSpace(cycle.ID)], clean(cycle.Repo) == clean(snapshot.RepoRoot), gitPathCounts, worktreeCounts, terminalCounts, ptyCounts, taskCounts, dispatchCounts)
+		validateCycleResources(&builder, resources, cycle, authorities[strings.TrimSpace(cycle.ID)], clean(cycle.Repo) == clean(snapshot.RepoRoot), gitPathCounts, worktreeCounts, terminalCounts, ptyCounts, taskCounts, dispatchCounts)
 	}
 
 	preservedTerminalCounts, _ := normalizedSet(opts.PreserveTerminalHandles)
