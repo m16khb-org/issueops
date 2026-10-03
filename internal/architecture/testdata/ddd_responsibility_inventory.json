@@ -16689,8 +16689,6 @@
       "symbols": [
         "func NormalizeRouteTask",
         "func RouteDocsForTask",
-        "func appendRouteDocsUnique",
-        "func hasTaskToken",
         "type RouteDoc"
       ]
     },
