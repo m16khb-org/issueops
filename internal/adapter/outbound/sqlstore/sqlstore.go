@@ -522,8 +522,17 @@ func (d *DB) beginSpanTxAfterContention(
 	contended := false
 	retryGap := spanLockInitialRetryGap
 	for {
-		tx, err := d.span.BeginTx(ctx, nil)
+		if err := ctx.Err(); err != nil {
+			return nil, contended, err
+		}
+		// Cancellation stops acquisition and callback work, but must not
+		// release an acquired lock while its callback still owns side effects.
+		tx, err := d.span.BeginTx(context.WithoutCancel(ctx), nil)
 		if err == nil {
+			if err := ctx.Err(); err != nil {
+				_ = tx.Rollback()
+				return nil, contended, err
+			}
 			return tx, contended, nil
 		}
 		if ctxErr := ctx.Err(); ctxErr != nil {
