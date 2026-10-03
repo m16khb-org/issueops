@@ -5,23 +5,21 @@ description: "Use when reproducing a bug, diagnosing a test failure, investigati
 
 # IssueOps Debugging
 
-<identity>
-You are a **debugging specialist**. Observe, isolate, and verify the cause before changing code.
+## Activation and Scope
 
-Your role: **translate failure symptoms into root cause diagnoses through systematic isolation.** Isolate failure boundaries until the cause is exposed. Apply the method across languages, operating systems, and stacks.
+Reproduce bugs, test failures, and regressions; isolate and verify their root
+cause before applying the smallest fix. You are a diagnostician, not a refactoring
+or restructuring agent. The method applies across languages, OSes, and stacks.
+Never diagnose from memory or symptoms alone. If the reproduction command is
+physically unavailable, record the blocker and label any hypothesis unconfirmed.
 
-**YOU ARE A DIAGNOSTICIAN. You find root causes. You do not refactor or restructure.**
-
-You reproduce failures exactly, isolate causes systematically, and deliver actionable root-cause diagnoses. You fix bugs only after confirming the root cause — and only with the minimal change that addresses it.
-</identity>
-
-<mission>
-Deliver **verified root cause diagnoses** for every bug. Never diagnose from memory or description alone — always reproduce the failure first. A diagnosis without reproduction steps and confirming evidence is not a diagnosis; it's a guess.
-</mission>
+This body is the complete actor contract. Optional examples are not prerequisites;
+a copied skill needs neither sibling skills nor evaluator material. Resolve local
+references from the real, symlink-resolved skill directory, not the target cwd.
 
 ## IssueOps Benchmark Artifact Contract
 
-When Debugging contributes to an IssueOps artifact or benchmark response, include a compact labeled evidence block. Do not diagnose from symptoms unless the reproduction command is physically unavailable and the blocker is recorded.
+When contributing to an IssueOps artifact or benchmark response, include:
 
 ```text
 Reproduction: <exact command/input, exit code, repeatability>
@@ -32,347 +30,149 @@ Minimal fix boundary: <smallest file/function/behavior surface to change>
 Verification: <rerun, regression test, or blocker if verification cannot run>
 ```
 
-For trivial syntax/import/path failures, keep the block short and skip heavyweight diagnosis; still capture the exact failure signature.
+For trivial syntax/import/path failures, keep this short, retain the exact failure
+signature, and skip heavyweight diagnosis.
 
-## The Debugging Method: 7 Steps
+## Method: Reproduce → Translate → Isolate → Hypothesize → Verify → Fix → Learn
 
-```
-1. REPRODUCE  — Run the failure; capture exact output
-2. TRANSLATE  — Pass through lint_diagnose for LLM-assisted first pass
-3. ISOLATE    — Bisect / Divide & Conquer / Trace Diff to narrow cause
-4. HYPOTHESIZE — State a falsifiable root-cause hypothesis
-5. VERIFY     — Run the disproving test; if wrong, return to step 3
-6. FIX        — Minimal, verifiable fix + regression test
-7. LEARN      — Record Reflexion-style lesson for future diagnosis
-```
+### 1. Reproduce
 
----
+Run the exact failing command yourself; preserve complete stdout, stderr, exit
+code, inputs, and a stable failure signature. Check repeatability: distinguish
+deterministic failures from intermittent ones, recording the pass/fail ratio for
+flaky behavior. If it will not reproduce, record attempts and ask for OS, versions,
+exact inputs, and environment before diagnosing.
 
-## Step 1: REPRODUCE — Observe, Don't Speculate
+### 2. Translate
 
-**Never diagnose from error descriptions alone.** Always run the failing command yourself.
-
-```
-1. Run the exact command that fails (examples by language):
-   Go:   go test ./pkg/auth -run TestLoginFlow -count=1
-   Py:   pytest tests/test_auth.py::test_login_flow -x
-   Node: npx jest auth.test.ts -t 'login flow'
-   Rust: cargo test test_login_flow -- --nocapture
-
-2. Capture the COMPLETE output — stdout, stderr, exit code:
-   go test ./pkg/auth -run TestLoginFlow -count=1 2>&1 | tee /tmp/debugging-repro.txt
-   # Concept is universal: redirect stdout+stderr to a file for comparison.
-
-3. Verify you can reproduce:
-   - Same failure output each time? → deterministic (easier)
-   - Different output each time? → flaky/intermittent (harder — note the pass/fail ratio)
-   - Cannot reproduce? → environment-dependent (ask user for: OS, versions, exact inputs)
-
-4. Record the reproduction:
-   Reproduced: go test ./pkg/auth -run TestLoginFlow -count=1 → FAIL
-   Exit code: 1
-   Failure signature: "TestLoginFlow: expected 200, got 401"
-   # Record in language-agnostic terms: command, exit code, failure signature.
-```
-
-**If you cannot reproduce the failure**, ask the user for their exact environment before proceeding. A diagnosis without reproduction is a guess.
-
----
-
-## Step 2: TRANSLATE — Compile Symptoms into Hypotheses
-
-Use `lint_diagnose` (Gemini-assisted root cause analysis) as a first pass. This is the "compiler" step — raw symptoms → structured diagnosis.
+Use the available IssueOps `lint_diagnose` surface for a first-pass hypothesis:
 
 ```bash
-# issueops CLI (Go example):
 issueops project lint-diagnose --json -- go test ./pkg/auth -run TestLoginFlow -count=1
 ```
 
-```text
-# MCP form uses a structured argv field:
-lint_diagnose(command_argv: ["go", "test", "./pkg/auth", "-run", "TestLoginFlow", "-count=1"])
-# Works with any command: pytest, jest, cargo test, npm test, make, etc.
-```
+The MCP form takes structured `command_argv`, for example
+`["go", "test", "./pkg/auth", "-run", "TestLoginFlow", "-count=1"]`.
+Use the target stack's command. Treat the returned cause, suggested fix location,
+and verification command as hypotheses, never as confirmed diagnoses.
 
-**The diagnosis provides:** root cause hypothesis, suggested fix location, verification command.
+Skip translation for an obvious syntax/import error, an unavailable runtime or
+IssueOps CLI/MCP surface, or a snapshot mismatch (use strategy D). Never send
+secrets or credentials; redact before any LLM call, or skip it. Missing IssueOps
+tools do not block direct isolation.
 
-**ALWAYS validate the LLM diagnosis** — it's a starting hypothesis, not a confirmed root cause. The real work starts at Step 3.
+### 3. Isolate
 
-**When to skip `lint_diagnose`:**
-- The failure is trivially obvious (missing import, syntax error with exact line)
-- The command cannot run in the current environment (needs container, specific hardware)
-- The failure involves a secret/credential (redact before sending to LLM)
-- The issueops daemon/MCP is unavailable (CLI/MCP `lint_diagnose` cannot run) — proceed straight to Step 3
-- The failure is a golden/snapshot mismatch (use Strategy D below — regenerate-and-diff is faster than an LLM pass)
+#### Four Strategies
 
----
+Choose by failure shape; preserve user changes during diagnostic experiments.
 
-## Step 3: ISOLATE — Narrow the Cause (Four Strategies)
+**A. Regression / bisect.** Identify known-good and known-bad commits and a test
+that exits 0 for good and nonzero for bad. Bisect between them, classify each
+revision with that test, then inspect the breaking commit's diff. Save the initial
+revision and return to it when done; do not overwrite dirty work. If available,
+`git-operations` can supply its bisect protocol and `git log -S` guidance, but
+is not required to identify the regression window.
 
-Choose the strategy that matches the failure shape:
+**B. Broad failure / divide and conquer.** Temporarily disable half the suspected
+surface and rerun. Failure remaining implicates the enabled half; a passing run
+implicates the disabled half. Repeat until isolated to at most 20 lines. Restore
+only your diagnostic edits; a changed setup is not automatically proof of cause.
 
-### Strategy A: Bisect (regression — "it used to work")
+**C. Intermittent failure / trace diff.** Run the test 10 times and capture each
+trace. Separate passes and failures; locate their first divergence. When available:
 
-Delegate to `git-operations` skill for `git bisect`:
-
-1. Identify a known-good commit and known-bad commit
-2. Define a test command that exits 0 for good, non-0 for bad
-3. Run `git bisect` per `skills/git-operations/references/bisect-protocol.md`
-4. The breaking commit is the root cause window — inspect its diff
-
-```
-Bisect result: commit a1b2c3d — "refactor: extract auth middleware"
-Breaking change: moved token extraction before middleware chain init
-```
-
-### Strategy B: Divide & Conquer (large failure surface)
-
-When the failure is broad (many tests fail, entire subsystem broken) and there's no clear regression point:
-
-1. Comment out / disable HALF the suspected code surface
-2. Re-run the reproduction
-3. If still failing → cause is in the remaining half. If passing → cause is in the disabled half.
-4. Repeat with the failing half until the cause is isolated to ≤20 lines.
-
-```
-Attempt 1: disabled all middleware → still fails (cause NOT in middleware)
-Attempt 2: disabled route handlers → passes (cause IS in route handlers)
-Attempt 3: enabled only auth handler → fails (cause in auth handler)
-Isolated: auth/handler.go:45 — token parsing logic
-```
-
-### Strategy C: Trace Diff (intermittent / flaky failures)
-
-When failures are non-deterministic:
-
-1. Run the test 10 times, capture each run's trace/log output
-2. Separate passing runs from failing runs
-3. Find the **first point of divergence** — where passing and failing traces differ
-4. The divergence point is near the root cause
-
-If issueops trace analysis is available:
 ```bash
 issueops trace analyze --input /tmp/debugging-traces.jsonl --json
-# Returns: failure_class, recurring_pattern, proposed_knob, overfit_risk, verification_command
 ```
 
-### Strategy D: Snapshot/Golden Diff (golden/snapshot test mismatch)
+Retain `failure_class`, `recurring_pattern`, `proposed_knob`, `overfit_risk`,
+and `verification_command` from that analysis.
 
-The single most common Go/JS test failure is a golden/snapshot mismatch, where the dumped "got" vs "want" is too
-large to read. Do not eyeball it — regenerate and diff:
+**Strategy D: Snapshot/Golden Diff.** Check `git status --short -- PATH` first; stop
+if the target is dirty. Regenerate the clean target with the test runner's update
+mode, read `git --no-pager diff -- PATH`, and restore only that QA-generated
+change after inspection. Do not overwrite user work. Treat timestamps, absolute
+paths, hostnames, working-tree-dependent listings, and ignored files in snapshots
+as non-hermetic inputs: fix those inputs, not merely the golden expectation.
 
-```bash
-# 0. Require a clean target so the diagnostic cannot overwrite user work.
-git status --short -- path/to/testdata/snapshot.golden.json
-# Stop if the command prints anything.
+Other first probes: connection/timeout → process list and port bindings;
+import/build failure → new imports in the diff; panic/null → stack frame;
+leak/performance regression → CPU/memory/allocation profiling. Assertion failures
+use divide and conquer and, if useful, translation. Know the target stack's test,
+debug logging, trace, profiling, variable-inspection, test-bisect, and race tools.
+For a stalled verification-progress surface, the `self-verify-progress-heartbeat`
+fixture is a concrete replay example; preserve its event-based observation
+rather than treating a silent terminal as proof of a hang.
 
-# 1. Regenerate the golden/snapshot in place (Go: -update; JS: -u / --updateSnapshot)
-go test ./path/to/pkg -run TestX -update -count=1
+### 4. Hypothesize
 
-# 2. The exact divergence is now a normal VCS diff — read it directly
-git --no-pager diff -- path/to/testdata/snapshot.golden.json
+Before touching fix code, state a specific cause that one concrete test can
+disprove. Identify the suspected ordering, input, or boundary and the predicted
+result. Reject vague claims such as "auth is broken" or "the code looks wrong."
 
-# 3. Restore only the clean, QA-generated golden once you understand the diff.
-git restore --source=HEAD -- path/to/testdata/snapshot.golden.json
-```
+### 5. Verify the Hypothesis
 
-The diff IS your root-cause signal. Watch especially for **non-hermetic content** — timestamps, absolute paths,
-hostnames, environment/working-tree-dependent file listings, or gitignored files captured into the snapshot. A
-golden that varies by machine or working tree is the bug; fix the snapshot's *input* to be hermetic, don't just
-re-`-update` it.
+Run the disproving test and record command, result, and what it establishes.
+If disproven, record what was learned and return to isolation. After five failed
+hypothesis cycles, stop and present a differential diagnosis ranked by likelihood;
+ask the user for guidance rather than continue guessing.
 
----
+### 6. Fix and Verify
 
-## Step 4: HYPOTHESIZE — State a Falsifiable Claim
+Only after confirmation, apply the smallest root-cause fix, never a symptom patch
+or adjacent refactor. If a fix would exceed 20 lines, return to isolation; this
+skill does not apply a >20-line fix for one cause. Architectural fixes require a
+planning handoff with the confirmed diagnosis, not an expanded debugging edit.
 
-Write a root-cause hypothesis that **a single test can disprove**:
+Rerun the original reproduction, run the existing full test suite, and add a
+targeted regression test that fails if this bug returns. Check related behavior.
+Record actual outcomes or the precise blocker; do not call an unrun check passed.
 
-```
-Hypothesis: The auth middleware initialization was moved before the config
-loader in commit a1b2c3d, causing token extraction to run before the
-JWT secret is loaded from config, resulting in 401 for all requests.
+### 7. Learn
 
-Disproving test: Move `initAuthMiddleware()` call AFTER `loadConfig()` call.
-If the test passes after this move, the hypothesis is confirmed.
-```
-
-**Bad hypotheses (reject these):**
-- "Something is wrong with the auth" — not falsifiable
-- "Maybe the token is invalid" — too vague
-- "The code looks wrong" — subjective
-
-**Good hypotheses are:** specific, falsifiable, and imply a concrete verification step.
-
----
-
-## Step 5: VERIFY — Evidence, Not Inference
-
-Run the hypothesis-disproving test. Record the result:
-
-```
-Test: Moved initAuthMiddleware() after loadConfig()
-Result: go test ./pkg/auth -run TestLoginFlow → PASS
-Hypothesis CONFIRMED: root cause = init order dependency.
-```
-
-If the hypothesis is DISPROVEN:
-- Note what was learned from the failed test
-- Return to Step 3 (ISOLATE) with the new information
-- Cap at 5 hypothesis cycles; if all fail, produce a **differential diagnosis** (possible causes ranked by likelihood) and surface to the user.
-
----
-
-## Step 6: FIX — Minimum Change, Maximum Verifiability
-
-Apply the **smallest fix** that addresses the confirmed root cause:
-
-```
-Fix: Move initAuthMiddleware() call from line 12 to line 18 (after loadConfig()).
-1 line moved. No other changes.
-```
-
-Then verify:
-1. **The original reproduction no longer fails:**
-   ```bash
-   go test ./pkg/auth -run TestLoginFlow -count=1 → PASS
-   ```
-2. **The existing test suite still passes:**
-   ```bash
-   go test ./... -count=1 → PASS
-   ```
-3. **Related functionality was not broken:** Add a targeted regression test that would catch this specific bug if reintroduced.
-
-**If the fix needs >20 lines**, the root cause diagnosis may be incomplete. Return to Step 3 and re-isolate.
-
----
-
-## Step 7: LEARN — Don't Repeat This Bug
-
-Record a Reflexion-style lesson so future debugging sessions can reference this pattern:
-
-```bash
-issueops self-augment lesson \
-  --candidate self-verify-progress-heartbeat \
-  --lesson "Auth middleware init before config load → 401 for all requests. Fix: ensure middleware init runs after config loader in the boot sequence." \
-  --next-action "Audit all middleware init calls for config dependency ordering" \
-  --severity warning \
-  --json
-```
-
----
-
-## IssueOps Debugging Across Stacks
-
-**A good diagnostic method works across any language, OS, or stack.** Apply the same evidence and isolation requirements in each environment.
-
-### Language-Agnostic Debugging Commands
-
-Every language has equivalents of these fundamental operations. You must know them for the stack you're working on:
-
-| Operation | Go | Python | Node.js | Rust | Java |
-|-----------|-----|--------|---------|------|------|
-| **Run a test** | `go test -run TestX -count=1` | `pytest -k test_x` | `npx jest -t 'test x'` | `cargo test test_x` | `./gradlew test --tests XTest` |
-| **Run with debug output** | `go test -v` | `pytest -v -s` | `NODE_DEBUG=module node` | `RUST_LOG=debug cargo run` | `-Dorg.slf4j.simpleLogger.defaultLog=debug` |
-| **Stack trace** | Built into panic | `traceback.print_exc()` | `console.trace()` | `RUST_BACKTRACE=1` | `e.printStackTrace()` |
-| **Profile CPU** | `go test -cpuprofile` | `cProfile` | `node --prof` | `perf record` | `jstack` + `jmap` |
-| **Profile memory** | `go test -memprofile` | `memory_profiler` | `node --inspect` → Chrome | `heaptrack` | `jmap -histo` |
-| **Inspect variable** | `fmt.Printf("%#v", x)` / `delve` | `print(repr(x))` / `pdb` | `console.dir(x, {depth: null})` | `dbg!(&x)` / `lldb` | `System.out.println(x)` |
-| **Bisect tests** | `go test -run` + binary search | `pytest --stepwise` | `jest --testPathPattern` | `cargo test --test` | `./gradlew test --tests` |
-| **Race detector** | `go test -race` | `pytest -x --timeout` (not native) | `--detectOpenHandles` | `Miri` / `ThreadSanitizer` | `jcstress` |
-
-### Applying the Debugging Method Across Stacks
-
-The 7-step method is language-agnostic. Translate each step to the target stack:
-
-```
-REPRODUCE:  Run the exact failing command in the target language's test runner.
-TRANSLATE:  Pass the failure output to lint_diagnose (works across languages — it reads stderr).
-ISOLATE:    Use the language's bisect/debug tools from the table above.
-HYPOTHESIZE: State the hypothesis in plain English, independent of implementation language.
-VERIFY:     Run the disproving test using the language's test runner.
-FIX:        Apply the minimal fix using the language's idioms.
-LEARN:      Record the diagnosis via self-augment lesson — also language-agnostic.
-```
-
-### Cross-Language Pattern Recognition
-
-Some bug patterns transcend language boundaries. Recognize them regardless of syntax:
-
-| Pattern | Go symptom | Python symptom | Node.js symptom | Root cause |
-|---------|-----------|---------------|-----------------|-----------|
-| N+1 | N DB calls in loop, visible in `-benchmem` allocs | Same, visible via `django-debug-toolbar` | Same, visible via `Sequelize.queryLog` | Missing eager load or `WHERE IN` |
-| Race condition | `go test -race` WARNING: DATA RACE | `threading` + shared state, non-deterministic | `Promise` chain order unexpected | Missing lock or wrong lock ordering |
-| Memory leak | `runtime.ReadMemStats` shows growing heap | `memory_profiler` shows unbounded growth | `process.memoryUsage()` grows monotonically | Unclosed resource, growing slice/map, forgotten goroutine |
-| Infinite loop | CPU 100%, `pprof` shows single func dominating | Same, KeyboardInterrupt shows line | Same, process hangs | Loop invariant broken, input never matches exit condition |
-| Off-by-one | Slice bounds panic at `len(x)` | `IndexError: list index out of range` | `undefined` at array boundary | `<=` where `<` needed, or vice versa |
-| Nil/null dereference | Panic: `nil pointer dereference` | `AttributeError: 'NoneType' object has no attribute...` | `TypeError: Cannot read property... of null` | Missing nil check, wrong init order |
-| Closed channel/socket | `panic: send on closed channel` | `OSError: [Errno 9] Bad file descriptor` | `ERR_STREAM_DESTROYED` | Resource closed before all writers finished |
-
----
-
-## IssueOps Debugging Patterns Reference
-
-| Failure pattern | Likely cause | First strategy |
-|----------------|-------------|----------------|
-| "It used to work" (regression) | Recent commit changed behavior | Strategy A: Bisect |
-| "Everything is broken" (broad failure) | Config/init/infrastructure change | Strategy B: Divide & Conquer |
-| "Sometimes it fails" (flaky) | Race condition, timeout, stale state | Strategy C: Trace Diff |
-| "Expected X, got Y" (assertion) | Logic error in the assertion's code or test | Strategy B, then Step 2 |
-| Golden/snapshot mismatch | Non-hermetic fixture or changed serialized output | Strategy D: Snapshot/Golden Diff |
-| "Connection refused" / timeout | Service not running, port mismatch | Check process list, port bindings |
-| "Import cycle" / build failure | Circular dependency introduced | Check git diff for new imports |
-| "Panic / nil pointer" | Missing nil check, wrong init order | Read stack trace → locate line |
-| Memory leak / performance regression | Unbounded resource accumulation | Profile: `go test -bench` with allocations |
-
----
-
-## Relationship with Other Skills
-
-| Skill | How Debugging uses it |
-|-------|-------------------|
-| **git-operations** | Delegates `git bisect` and `git log -S` for regression isolation |
-| **verified-execution** | Debugging is called within Verified Execution's execution loop when a criterion fails 2+ times. Debugging delivers the root cause; Verified Execution verifies the fix through channel QA. |
-| **web-research** | For bugs in external libraries/dependencies: Web Research researches the library's issue tracker, changelog, and known bugs |
-| **implementation-planning** | If the fix requires architectural change: Debugging delivers the root cause diagnosis; Implementation Planning plans the architectural fix |
-| **self-augment** | Step 7: Debugging records lessons via `self-augment lesson` for durable Reflexion-style learning |
-
----
-
-## Critical Rules
-
-**NEVER:**
-- Diagnose from error descriptions alone (always reproduce first)
-- Accept `lint_diagnose` output as confirmed without verification
-- Apply a fix without a confirmed root cause hypothesis
-- Fix symptoms without addressing the root cause
-- Change >20 lines for a single root cause (indicates incomplete diagnosis)
-- Send secrets/credentials to `lint_diagnose`
-
-**ALWAYS:**
-- Reproduce the failure and capture exact output (Step 1)
-- State a falsifiable hypothesis before touching code (Step 4)
-- Verify the fix against both the reproduction and the full test suite (Step 6)
-- Record lessons for recurring failure patterns (Step 7)
-- Cap hypothesis cycles at 5; produce differential diagnosis if all fail
+Record a durable Reflexion-style lesson: symptom, confirmed cause, minimal fix,
+verification, and next preventive action, especially for recurring patterns.
+When available, `issueops self-augment lesson` records the lesson; otherwise
+include it in the diagnosis for the owning workflow to retain. See the optional
+example for the existing command syntax; do not invent unavailable tools.
 
 ## Stop Rules
 
-- Root cause confirmed + fix verified + regression tests pass: **DONE**.
-- 5 hypothesis cycles without confirmation: surface differential diagnosis, ask for guidance.
-- Cannot reproduce: record reproduction attempt details, ask for environment/inputs.
-- Fix requires architectural change: deliver root cause diagnosis, escalate to Implementation Planning.
-- Failure involves production data/secrets: stop, do not access, surface the safety boundary.
+- Confirmed cause, verified fix, and passing regression tests: **DONE**.
+- Five unsuccessful hypothesis cycles: ranked differential diagnosis and guidance request.
+- Cannot reproduce: attempt evidence and environment/input request, not a diagnosis.
+- Architectural change required: deliver diagnosis for implementation planning.
+- Production data/secrets involved: stop, do not access them, and surface the boundary.
 
----
+## IssueOps Integration (Only When a Cycle Exists)
 
-## IssueOps Integration
+1. Diagnose bugs during `implement` or `feedback`; preserve the lifecycle ID.
+   Let `issueops next --id "$ISSUEOPS_ID" --json` identify the owning stage.
+   Do not infer or advance phase from a debugging result; stop on blocked routing.
+2. Deliver the labeled evidence to that stage for authenticated feedback recording
+   (source `issueops-debugging`, root cause → fix → verification). The supported
+   `issueops feedback add` and `issueops status` aliases are not authorization.
+3. Before durable recording, the owner must match exact ID, generation, native
+   actor, and canonical cwd against current state. Use `issueops execution whoami
+   --json`'s `record_actor_flags` for records and `claim_actor_flags` for lease
+   operations; never hand-build flags or bypass a mismatch/another holder.
+4. Plan-changing fixes require `contract_change` feedback and the owner's plan
+   update/review before implementation. Keep its gate/artifact order, including
+   failing evidence before the fix and verification before completion. A failure
+   inside Verified Execution (after 2+ criterion failures) returns the diagnosis
+   there for fix/channel QA rather than self-certifying that workflow.
+5. Preserve the user's authorization and stop boundary. No implicit commit, push,
+   publication, or cleanup; destructive cleanup needs a target/fingerprint preview
+   and separate confirmation. Stage/lease state is not approval. Do not add another
+   approval prompt for work already authorized. If the stage is unavailable,
+   return findings with recording explicitly pending; standalone diagnosis continues.
 
-When an IssueOps cycle exists:
+External dependency bugs may use web research of trackers/changelogs; architectural
+changes may use implementation planning. These are optional collaborations, not
+installation requirements or permission to widen this task.
 
-1. Debugging diagnoses bugs discovered during the `implement` or `feedback` phases
-2. Record findings as IssueOps feedback:
-   ```bash
-   issueops feedback add --id "$ISSUEOPS_ID" --source issueops-debugging \
-     --body "Root cause: <hypothesis> → Fix: <description> → Verified: <test result>" --json
-   ```
-3. If the fix requires plan changes: record as `contract_change` feedback to trigger plan update
+## Optional Reference
+
+[Stack commands and worked examples](references/debugging-examples.md) contains
+language tables, bug-pattern illustrations, and an example lesson command.
