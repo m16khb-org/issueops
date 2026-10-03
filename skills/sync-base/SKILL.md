@@ -5,26 +5,23 @@ description: Bring the current branch up to date with the base branch it was cre
 
 # Sync Base
 
-> **Git Operations sub-skill.** Git has no notion of a base branch, so this skill
-> resolves one from recorded evidence, proves the base actually advanced, picks
-> merge or rebase from evidence, and applies it with a verified recovery path.
-> Interactive rebase, bisect, and reflog archaeology belong to the parent
-> **`git-operations`** skill. Ordinary commit and push belong to
-> **`atomic-commit-push`**.
+## Activation and Scope
 
 **User's request:** $ARGUMENTS
 
-This skill owns exactly five effects:
-
-1. resolve the base branch of the current branch and record the decision;
-2. determine whether that base has advanced past the divergence point;
-3. choose merge or rebase with the decision table and report the deciding row;
-4. merge the base in, or rebase onto it, with a verified backup ref;
-5. optionally push after explicit confirmation: a plain push after a merge,
-   `--force-with-lease` after a rebase.
+Git records no base-branch identity. Resolve and confirm it from evidence, prove
+it advanced, report the merge/rebase decision row, sync with a verified backup,
+then optionally push after explicit confirmation. Interactive history editing,
+bisect, and archaeology belong to `git-operations`; ordinary commits belong to
+`atomic-commit-push`, when available. Neither sibling is needed for this protocol.
 
 It never resolves conflicts on its own, never uses bare `--force`, and never
 syncs a branch owned by an active issueops cycle.
+
+This body is sufficient for isolated/body-only execution. Optional references
+resolve from the real, symlink-resolved skill directory, never cwd. Missing
+examples or evaluator material do not block execution; missing required input
+or ambiguous ownership/base evidence does. Report it and ask rather than guess.
 
 ## Routing gate (run first)
 
@@ -33,6 +30,11 @@ syncs a branch owned by an active issueops cycle.
    branch, stop and route to `issueops execution sync-base`. That
    surface is merge-based and bound to the execution lease generation; syncing
    here bypasses the lease and the recorded PR head.
+   If IssueOps is unavailable and no cycle context is present, standalone Git
+   work needs no installation; any evidence of cycle ownership blocks this lane
+   until the owning stage verifies lifecycle ID, generation, native actor, and
+   canonical cwd. Preserve its gate order and confirmation boundary, not raw Git
+   fallbacks. `issueops status` is supported but grants no mutation authority.
 2. **Protected branch?** Refuse to sync `main`, `master`, `develop`, or
    `release/*` itself unless the user names the branch and confirms in the same
    message. Syncing a feature branch from one of them is the normal case.
@@ -72,14 +74,6 @@ answered so the user can judge the confidence.
 The record key stays `branch.<branch>.parent` so records written under this
 skill's former name, `rebase-onto-parent`, keep answering rank 1.
 `branch.<branch>.base` belongs to IssueOps and holds a SHA; never write it here.
-
-```bash
-BRANCH=$(git branch --show-current)
-git config --get "branch.$BRANCH.parent"
-git config --get "branch.$BRANCH.gh-merge-base"
-git config --get "branch.$BRANCH.base"
-git config --get "branch.$BRANCH.vscode-merge-base"
-```
 
 Each `git config --get` exits 1 when the key is absent. Treat exit 1 as "no
 evidence from this source" and continue down the cascade; do not treat it as a
@@ -170,22 +164,6 @@ git for-each-ref --format='%(refname:short)' --contains "$OLDEST" refs/heads ref
   | grep -v -x -e "$BRANCH" -e "origin/$BRANCH"
 ```
 
-Why each row picks merge:
-
-- **Row 2.** Rebasing rewrites the hashes, so the branch that already took the
-  old commits (a QA or staging branch, or a branch stacked on this one) ends up
-  with a second copy of every change. Merging the two later records each change
-  twice, and any later edit to one copy conflicts with the other.
-- **Row 3.** A collaborator's local branch still points at the old commits; a
-  rebase forces them to recover by hand.
-- **Row 4.** Review comments anchor to commits. A rewritten history detaches
-  them and hides what changed since the last review.
-- **Row 5.** A plain rebase linearizes the branch and drops its merge commits,
-  so every earlier conflict resolution must be redone. Once a branch has been
-  synced by merge, this row keeps it on merge.
-- **Unclear.** A wrong merge costs a less linear history. A wrong rebase breaks
-  someone else's branch or review.
-
 For row 4, `gh pr view` exiting with `no pull requests found` or an empty
 `glab mr list --source-branch "$BRANCH"` means there is no PR or MR, so the row
 does not match; it is not an unclear answer.
@@ -229,18 +207,14 @@ SHA.
 git merge --no-edit "<base>"
 ```
 
-The merge leaves this branch's commits untouched and adds one merge commit, so
-no hash that anyone else holds changes. Continue with step 6 on a conflict,
-otherwise with step 7M.
+Continue with step 6 on a conflict, otherwise with step 7M.
 
 ## Step 5R — Rebase
 
 ### Choose the rebase form
 
-The plain form is correct only while the recorded divergence point is still an
-ancestor of the base. When the base was itself rebased or amended, replaying
-the old range makes Git re-apply a commit the base already carries in a
-modified form, which produces a conflict in a file this branch never touched.
+Use the plain form only when the recorded divergence point is still an ancestor
+of the base; a rewritten base otherwise risks replaying its own old commits.
 
 ```bash
 git merge-base --is-ancestor "<old-merge-base>" "<base>"
@@ -407,39 +381,23 @@ git reset --hard "<backup-ref>"
 Backup refs under `refs/backup/` are not pruned by ordinary garbage collection
 while they exist. Delete one only after the user confirms the sync result.
 
-## Never
+Never delete a backup in the run that created it, even if the sync succeeded.
 
-- Sync a branch an active issueops cycle owns; route to
-  `issueops execution sync-base`.
-- Rebase when a row from 2 to 5 of the decision table matched, unless the user
-  confirmed after seeing that evidence.
-- Sync without a verified backup ref.
-- Resolve a conflict by picking a side without the user's decision.
-- Push with bare `--force`, with a lease that carries no expected SHA, or with
-  any force flag after a merge.
-- Report success without every invariant of step 7M or 7R shown.
-- Delete a backup ref in the same run that created it.
+## Completion and Stop Rules
 
-## Verified facts
+- Already current (step 2 left count 0): report no sync needed; no merge/rebase/push.
+- Dirty tree, active merge/rebase, ambiguous base or ownership: stop at that gate.
+- First conflict: stop for the user's choice; more than three conflicted replayed
+  commits: abort and offer merge. Do not guess or silently skip a commit.
+- Verification failure: retain the backup, report the failed invariant, and
+  offer confirmed recovery; never report success.
+- Done only after every step 7 invariant is evidenced and the optional push is
+  confirmed and verified, or explicitly declined/pending. Final report names
+  base/source/confidence, divergence counts, mode/row, backup, pre-sync remote
+  SHA, preservation/content evidence, conflict resolutions, and push outcome.
 
-Each row was reproduced in a scratch repository before being written here.
+## Optional Background
 
-| Claim | Evidence |
-|---|---|
-| `git switch -c` records `branch: Created from HEAD`, never a branch name | reflog of a branch created with `switch -c` |
-| The divergence-point lookup separates the immediate base from an older ancestor | the base showed `merge-base` equal to the fork point with `base-ahead=2`; `origin/main` showed an earlier merge base with `base-ahead=0` |
-| Plain `git rebase <base>` conflicts in an untouched file after the base is amended | exit 1 with the base's own file listed by `--diff-filter=U` |
-| `git rebase --onto <base> <old-merge-base>` handles the same case cleanly | exit 0, the branch commit preserved, the base's content intact |
-| `git merge-base --fork-point` and the reflog divergence SHA both recover the old merge base | both returned the same SHA that `git merge-base` alone did not |
-| `--force-with-lease` with a wrong expected SHA is rejected | `! [rejected] ... (stale info)` in one run and `! [rejected] ... (non-fast-forward)` in another, depending on whether Git could resolve the expected value |
-| `range-diff` over the old and new ranges proves commit preservation | every row read `=` after a successful rebase |
-| `origin/HEAD` may be absent and is restored by `git remote set-head origin --auto` | `symbolic-ref` exit 1 before, exit 0 after |
-| Row 2's `for-each-ref --contains` finds a branch that took this branch's commits | printed nothing before the feature was merged into `qa`, then `qa` and `origin/qa` |
-| Rebasing after another branch took the commits leaves two copies there | the rebased commit had a new hash and the same patch-id; merging it into `qa` exited 0 and `qa` then logged the change twice |
-| Row 3's author check sees a collaborator's commit | `sort -u` printed both addresses after a commit made with another `user.email` |
-| A plain rebase drops the branch's merge commits | `git rev-list --merges --count` was 1 before the rebase and 0 after |
-| A merge keeps the pre-sync tip as an ancestor and brings only the base's files | both `--is-ancestor` checks exited 0; `diff --name-only <backup>..HEAD` equalled the base's own file list |
-| The push after a merge needs no force flag | plain `git push origin feature` fast-forwarded and exited 0 |
-| A plain push after someone else pushed is rejected, not overwritten | `(fetch first)` before fetching and `(non-fast-forward)` after |
-| During a merge `:2:` is this branch and `:3:` is the base | `git show :2:c` printed the feature line and `:3:c` the release line; `git merge --abort` restored the branch tip with a clean tree |
-| `glab mr view -F json` exposes `user_notes_count` and `target_branch`, and the approvals API exposes `approved_by` | read from an open MR on a GitLab project |
+[Decision rationale and recorded examples](references/sync-rationale.md) preserve
+the original explanations and historical observations; they are not a new test
+run or a required reference bundle.

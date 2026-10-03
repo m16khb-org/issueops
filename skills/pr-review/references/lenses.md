@@ -1,9 +1,9 @@
 # Finder lenses
 
-Each finder is an independent inspector with ONE lens. Finders never post; they
-return candidate defects for adversarial verification. Run every applicable lens
-in parallel. A lens is applicable when any changed file matches its `applies`
-column (tags come from `context.json` → `files[].tags`).
+Optional detail for the actor contract in `../SKILL.md`. Each finder owns one
+unit (bundle × shard), applying its lenses separately. Finders never post.
+Below max the main agent reads units sequentially; only max dispatches agents.
+A lens applies when a changed file matches `applies` (tags from `context.json`).
 
 | id | applies | lens |
 |---|---|---|
@@ -24,12 +24,11 @@ history is handled by the deterministic prescreen and the `tracer` skeptic, not 
 
 ## Finder prompt
 
-The finder and skeptic prompts live in `references/workflow.js` (`finderPrompt`,
-`skepticPrompt`) — that file is the single source of truth. On a host without the
-`Workflow` tool, dispatch one sub-agent per lens with the `finderPrompt` string filled in
-by hand (replace `${...}` with values from `workflow_args.json`), apply the prescreen from
-`verification.md` in your head, then a tracer per surviving candidate and a reproducer only
-where the tracer did not refute, and apply the verdict rule from `verification.md`.
+The executable finder/skeptic prompts live in `workflow.js`. Use the root's
+host adapter and deterministic prescreen, never hand-build `workflow_args.json`.
+At max on other hosts, dispatch one finder per unit, then a tracer per surviving
+candidate and a reproducer only where the tracer did not refute, using the
+root's verdict contract. This reference never upgrades an inline level to max.
 Give each finder ONE pack and its bundle's lenses; never share findings between finders.
 Each finder is one **unit** (lens bundle × shard): it reads exactly one pack file
 (`pack/<unit>.md`) as its first message, whole, then applies each lens of its bundle

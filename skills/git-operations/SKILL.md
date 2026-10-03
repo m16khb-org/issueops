@@ -5,19 +5,18 @@ description: "Use when performing interactive rebase, bisect, conflict resolutio
 
 # Git Operations
 
-<identity>
-You are a **Git operations specialist**. Git identifies stored objects by the repository’s configured hash (SHA-1 by default, with SHA-256 also supported); use object IDs to verify content and recovery references.
+## Activation and Scope
 
-Your role: **perform advanced git operations with surgical precision and zero data loss**. You know that Git often retains otherwise-lost tips in local reflogs, but retention is configurable and unreachable entries expire sooner by default. You verify before every destructive action, use `--force-with-lease` instead of `--force`, and always leave a recovery path.
+Handle rebase, bisect, conflicts, history analysis, reflog recovery, cherry-pick,
+and worktrees with verified recovery paths and no lost work. Basic staging,
+commit/push requests route to `atomic-commit-push`; base-branch catch-up routes
+to `sync-base` when available. Neither sibling is required for the operations
+defined here. Missing task, target, or necessary evidence means ask, not guess.
 
-**YOU ARE A GIT SURGEON. NOT A BULLDOZER.**
-
-Basic commit/push workflows are handled by the `atomic-commit-push` skill. You handle advanced operations: rebase, bisect, conflict resolution, history analysis, reflog recovery, cherry-pick, and worktree management.
-</identity>
-
-<mission>
-Execute git operations with **verifiable safety and zero data loss**. Every destructive action is preceded by a status check and followed by a verification. Every rewritten history has a backup reference. Every conflict is resolved with explicit rationale, not blind acceptance of one side. Git's content-addressable architecture means you can always verify — never assume.
-</mission>
+This body is the actor contract, including isolated/body-only use. Optional
+references resolve from the real, symlink-resolved skill directory, not cwd;
+missing references or evaluator material never block ordinary execution.
+Use object IDs for the repository's hash format (SHA-1 or SHA-256), not assumptions.
 
 ## IssueOps Benchmark Artifact Contract
 
@@ -33,51 +32,26 @@ Force-with-lease rule: <push policy and raw-force refusal when applicable>
 
 For read-only archaeology, the recovery path can be "not needed"; destructive recovery still requires backup verification and explicit confirmation.
 
-## Core Principles
+## Safety and Atomicity
 
-1. **Data integrity over convenience.** Git's SHA-1 checksums mean you can verify any object hasn't been corrupted. Before every operation: `git status --short`, `git diff --stat`. After every operation: re-verify.
-
-2. **Never lose data.** Prefer `git stash` over `git clean -fd`. Prefer `git reset --soft` over `--hard`. Always create and verify a backup branch before history rewrite. Hard reset, forced cleanup, and rebase skip are last-resort actions that require explicit user confirmation after the recovery path is recorded. The reflog is your safety net — use it.
-
-3. **Small, atomic changes.** One commit = one intent. Already enforced by `atomic-commit-push`. If you're rewriting history, preserve this property — don't squash unrelated changes.
-
-4. **Distributed means local-first.** Your local repo is as authoritative as the remote. Verify local state before interacting with remotes. Fetch before push. Diff before merge.
-
-5. **Trust the SHA, not assumptions.** `git diff --cached` proves what will be committed. `git log --oneline --graph` proves the history structure. Don't guess what state the repo is in — read it.
-
----
-
-## Principles for Every Commit
-
-Torvalds built Git and shaped the Linux kernel process. Two principles from that process apply to **every** project using git, regardless of size:
-
-### Small, Self-Contained Commits
-
-Every commit must be understood in one reading and reverted independently. This is the foundation of atomic commits:
-
-```
-WRONG: "Refactor auth, add rate limiting, fix typo in docs, and update deps"
-RIGHT: "auth/login: extract token validation from handler"  (one concern)
-       "auth/login: add rate limiting middleware"            (one feature)
-       "docs: fix JWT expiry description"                    (one fix)
-```
-
-The commit message must answer **why**, not **what**. The diff already shows what changed. If the first line of the commit message restates the diff, rewrite it.
-
-### Every Commit Must Stand Alone
-
-Torvalds's iron rule: `git bisect` must work. Every commit between `good` and `bad` must compile and pass tests. If a commit introduces a regression, the commit is wrong — **revert it, don't patch around it.**
-
-Before pushing, verify the entire series:
-<!-- skill-shell: destructive recovery="create and verify a backup branch before rewriting the series" -->
-```bash
-git rebase -i --exec "go test ./..." <base>
-```
-A single failing commit in the series means that commit must be fixed (or squashed with its fix), not that a later commit should add a workaround.
-
-**These principles are enforced automatically by the `atomic-commit-push` skill.** Git Operations ensures advanced operations (rebase, bisect, conflict resolution) preserve them.
-
----
+- Before every operation inspect `git status --short` and `git diff --stat`;
+  afterward verify diff, log, and status. Inspect local state before remotes,
+  fetch before push, diff before merge, and read `git diff --cached` before commit.
+- Prefer stash to `clean -fd`, and soft reset to hard reset. History rewrite
+  requires a created and verified backup branch and a recorded recovery path.
+  Last-resort `reset --hard`, `clean -fd`, and `rebase --skip` require explicit
+  confirmation of the exact command after showing the backup and discard scope.
+- Explain force-push risk and use `--force-with-lease`, never raw `--force`.
+  Never rebase or force-push shared `main`, `master`, `develop`, or `release/*`
+  unless explicitly requested; destructive shared-branch work needs confirmation.
+- One commit is one intent, independently understandable and revertible.
+  Preserve atomicity while rewriting; never squash unrelated changes.
+  Commit messages explain why; use Conventional Commit + Lore when committing.
+  Each commit in a series must compile and pass tests before push: fix/squash a
+  broken commit with its fix or revert it, never hide it with a later workaround.
+- Document why for every conflict resolution and non-trivial rebase decision.
+  Reflogs are local and configurable, not guaranteed backups. Never expire
+  reflogs or run garbage collection/pruning during recovery.
 
 ## Operations
 
@@ -87,13 +61,14 @@ A single failing commit in the series means that commit must be fixed (or squash
 Trigger: "rebase", "squash commits", "rewrite history", "clean up branch"
 ```
 
-Detailed protocol: [references/rebase-protocol.md](references/rebase-protocol.md)
+Optional walkthrough: [rebase protocol](references/rebase-protocol.md).
 
 **Pre-flight:**
 - `git status --short` — clean working tree required
 - `git branch --show-current` — confirm branch
 - `git log --oneline -n 20` — understand current history
 - `git branch backup/<branch>-pre-rebase-<timestamp>` — create safety backup
+- Verify it with `git show-ref --verify refs/heads/backup/<branch>-pre-rebase-<timestamp>`.
 
 **Execution:**
 - Determine the base: `git merge-base HEAD <target-branch>`
@@ -125,12 +100,14 @@ Detailed protocol: [references/rebase-protocol.md](references/rebase-protocol.md
 Trigger: "bisect", "find which commit broke X", "regression search"
 ```
 
-Detailed protocol: [references/bisect-protocol.md](references/bisect-protocol.md)
+Optional walkthrough: [bisect protocol](references/bisect-protocol.md).
 
 **Pre-flight:**
 - Identify a known-good commit (SHA or tag) and a known-bad commit (usually HEAD)
 - Define the test command: a single shell command that exits 0 for good, non-0 for bad
 - The test must be automated — no manual inspection per step
+- Record original HEAD. Use a reviewed executable wrapper with fixed argv;
+  choose a linear range or `git bisect start --first-parent` for merge history.
 
 **Execution:**
 <!-- skill-shell: destructive recovery="record the original HEAD and always run git bisect reset after diagnosis" -->
@@ -174,6 +151,9 @@ Trigger: "merge conflict", "resolve conflicts", "conflict in <file>"
   4. Document the choice in the merge commit message (WHY this resolution)
 - For structural conflicts: report the options and ask for user decision
 
+Label sides by meaning: merge stage 2 is this branch and stage 3 the incoming
+branch; during rebase stage 2 is the base and stage 3 the replayed commit.
+
 **Post-flight:**
 - `git diff --cached` — verify the resolved state
 - `git diff --cached --stat` — verify no unintended files are staged
@@ -191,10 +171,8 @@ Trigger: "what happened to <file>?", "find deleted code", "recover lost commit",
          "when/which commit introduced X?", "who changed this and why?" (read-only archaeology)
 ```
 
-> **Read-only archaeology, not only recovery.** These commands serve pure *investigation* — understanding when/why
-> history changed (`git log -S '<string>' -- <file>` to date when a line entered a file, `git log --follow -p`,
-> `git blame`, `git log --diff-filter`) — as much as recovering lost data. Investigation is read-only and needs no
-> backup ceremony; reach for it whenever you need to understand history, not just when something is lost.
+Read-only investigation needs no backup ceremony. Recovery that changes state
+still follows the safety and confirmation rules.
 
 **Techniques (ordered by recovery probability):**
 
@@ -298,61 +276,17 @@ git worktree prune
 - Always verify with `git worktree list` before removing
 - The main worktree cannot be removed — it's always the first in `git worktree list`
 - Worktrees share the same `.git` directory — operations in one worktree affect refs visible in others
-- IssueOps worktree management is in `skills/issueops/references/execution.md` — don't duplicate those rules
+- For an IssueOps-owned worktree, route to its execution lifecycle; do not create,
+  replace, or remove it outside the actor/generation/canonical-cwd gates below.
 
 ---
 
-## Relationship with Other Skills
+## Collaboration
 
-| Skill | How Git Operations integrates |
-|-------|------------------------|
-| **atomic-commit-push** | Basic commit/push workflows belong to atomic-commit-push. Git Operations handles advanced operations (rebase, bisect, conflict, recovery, cherry-pick, worktree). When atomic-commit-push's preflight detects complex state, it delegates to Git Operations. |
-| **sync-base** | Bringing one branch up to date with the branch it was created from belongs to sync-base: it resolves the base from recorded evidence, proves the base advanced, chooses merge or rebase from evidence, and applies it with a verified backup ref and a confirmed push. Git Operations handles the interactive rebase, the conflict protocol it delegates to, and any recovery beyond that skill's backup ref. |
-| **issueops-debugging** | Debugging calls Git Operations for `git bisect` during debugging. Git Operations handles the git mechanics; Debugging handles the debugging methodology and root cause determination. |
-| **algorithm-optimization** | Algorithm Optimization optimizes algorithms; Git Operations commits each transformation atomically with before/after metrics in the commit message. |
-| **database-design** | Schema migration files (DDL) are committed atomically per Git Operations' protocols. |
-| **web-research** | Research reports (`.issueops/research/`) are committed as atomic commits following Git Operations' commit format. |
-| **verified-execution** | Every code change from Verified Execution's execution loop is committed atomically per Git Operations' protocols. |
-| **implementation-planning** | Plan files (`.issueops/issues/<n>/plan.md`, `.issueops/plans/`) are committed as atomic commits. |
-
-## Relationship with atomic-commit-push
-
-| Capability | `atomic-commit-push` | `git-operations` |
-|-----------|---------------------|-----------|
-| Stage/push safely | ✅ Core | — |
-| Commit message format | ✅ Conventional + Lore | ✅ Inherits from atomic-commit-push |
-| Pre-flight git checks | ✅ git_preflight.py | ✅ Extended for each operation |
-| Interactive rebase | — | ✅ |
-| Bisect debugging | — | ✅ |
-| Conflict resolution | — | ✅ |
-| History analysis/recovery | — | ✅ (reflog, blame, bisect) |
-| Cherry-pick | — | ✅ |
-| Worktree management | — | ✅ |
-| Push force-with-lease | ✅ (explained risk) | ✅ (extended safety rules) |
-
-**When to use which:** If the user says "commit", "push", "stage changes" → `atomic-commit-push`. If the user says "rebase", "bisect", "resolve conflict", "recover lost commit", "cherry-pick", "worktree" → `git-operations`.
-
----
-
-## Critical Rules
-
-**NEVER:**
-- Run destructive commands (`reset --hard`, `clean -fd`, `rebase --skip`) without a verified backup reference, a recorded recovery path, and explicit user confirmation
-- Force-push without `--force-with-lease` and without explaining the risk
-- Rebase or force-push shared branches (`main`, `master`, `develop`, `release/*`) unless explicitly requested
-- Squash commits with different intents
-- Resolve conflicts by blindly accepting one side
-- Run `git reflog expire` or `git gc --prune` during recovery operations
-
-**ALWAYS:**
-- `git status --short` before every operation
-- Create a backup branch before any history rewrite
-- Verify the backup branch with `git show-ref --verify` before destructive recovery
-- Verify with `git diff --stat` after every operation
-- Record the recovery path in the operation description
-- Document WHY for every conflict resolution and non-trivial rebase decision
-
-**RECOVERY RULE:** Reflog retention is local and configurable; unreachable entries expire after 30 days by default and may disappear sooner under explicit expiry or pruning. Don't panic, but inspect the reflog immediately.
+Debugging may request bisect mechanics; sync-base may request conflict resolution
+or recovery. Authorized commits of algorithm changes retain before/after metrics;
+schema migrations, research reports, plans, and Verified Execution changes remain
+atomic. These collaborations do not authorize implicit commits or require siblings.
 
 ## Stop Rules
 
@@ -368,9 +302,20 @@ git worktree prune
 
 When an IssueOps cycle exists:
 
-1. **Before rebase on an issue branch**: verify the branch matches the IssueOps worktree contract.
-2. **After history rewrite**: update the IssueOps state if the branch tip changed.
-3. **Bisect findings**: record as IssueOps feedback:
-   ```bash
-   issueops feedback add --id "$ISSUEOPS_ID" --source git-operations --body "Bisect: breaking commit <sha> — <subject>" --json
-   ```
+1. Resolve the owner with `issueops next --id "$ISSUEOPS_ID" --json`.
+   Before rebase, verify the selected branch and canonical worktree; only the
+   active generation holder mutates there. Never bypass actor/generation/cwd
+   denials or another holder. Base sync routes to `issueops execution sync-base`.
+2. Give the owning stage any changed branch tip for its state update and bisect
+   findings for feedback recording with source `git-operations`.
+   `issueops feedback add` and `issueops status` are supported aliases, not
+   authority. The owner uses `issueops execution whoami --json`'s
+   `record_actor_flags` for records and `claim_actor_flags` for lease operations,
+   with exact lifecycle ID, generation, native actor, and cwd; never invent flags.
+3. Preserve lifecycle gate/artifact order and the user's authorized endpoint.
+   Reconcile ambiguous writes rather than retry. Cleanup is separately authorized,
+   not implied by recovery or completion. If the stage is unavailable, return
+   evidence with recording pending; do not bypass it or block standalone reads.
+
+`quality inspect` is not semantic skill evaluation; `issueops skill-bench` is
+unsupported. Optional walkthroughs are examples, not additional actor contracts.

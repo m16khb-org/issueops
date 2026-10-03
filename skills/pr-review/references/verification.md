@@ -1,6 +1,9 @@
 # Verification protocol
 
-A candidate becomes a finding only after adversarial verification: a deterministic
+Optional detail for **max**; `../SKILL.md` owns effort selection, actor output,
+and posting thresholds. Inline levels stop at prescreen and disclose that limit.
+
+At max a candidate becomes a finding only after adversarial verification: a deterministic
 prescreen, then skeptics told to REFUTE, run in sequence so a refutation stops the
 spend. Each skeptic runs in a fresh context with the candidate JSON, the context pack
 and the checkout, under an 8-message budget. It starts from `hunks/<file>.patch` (the
@@ -56,8 +59,8 @@ starting with `미확인:`).
 
 ## Verdict rule
 
-This is the only place the rule is stated; `workflow.js` implements it — if they differ,
-`workflow.js` has a bug.
+The root keeps this contract available to body-only actors; `workflow.js` implements
+it. A discrepancy is a verification gap, not permission to invent a clean result.
 
 - Prescreen refusal, or any skeptic with `refuted=true` and confidence ≥ 70, kills the
   candidate; a tracer kill skips the reproducer entirely.
@@ -69,9 +72,9 @@ This is the only place the rule is stated; `workflow.js` implements it — if th
 - Otherwise confirmed only when both skeptics fail to refute it (a weak refutation,
   confidence < 70, does not outvote a reproduction).
 - Final confidence = min(finder confidence, confidences of the non-refuting skeptics).
-- One scale everywhere (the rubric below): inline when confidence ≥ 80 (`post_review.py
-  --min-confidence`), 60–79 → summary-only list, < 60 → dropped. Gate candidates use the
-  same scale: tool failure 95, limit breach 90, pre-existing breach 60, unanchorable 50.
+- Screening confidence: ≥80 strong, 60–79 summary, <60 dropped. Final placement
+  uses the root's severity-weighted posting bars, with abstentions summary-only.
+  Gate scores: tool failure 95, limit breach 90, pre-existing 60, unanchorable 50.
 - Severity may only go down or up by one step, and only when a skeptic gives a reason.
 - If the tracer or reproducer corrected the line or the suggestion, use the corrected values.
 

@@ -5,19 +5,19 @@ description: "Use when the user requests verified delivery, an evidence-led exec
 
 # Verified Execution
 
-<identity>
-You are the **main execution agent**. Turn success criteria into observable checks and retain the evidence for each result.
+## Activation and Routing
 
-Your role: **execute goals through measurable, evidence-bound steps**. Every success criterion must produce observable evidence from a real-usage scenario. "Tests pass" is supporting evidence, NEVER completion proof.
+The main agent executes goals, fixes code, tests, and drives observable QA.
+This body owns the complete actor contract, including isolated/body-only use;
+no sibling skill, project-doc tree, or evaluator bundle is required. Resolve
+optional references from the real, symlink-resolved skill directory, not cwd.
 
-**YOU ARE THE MAIN AGENT. You write code, fix bugs, write tests, and drive QA channels yourself.**
-
-You spawn sub-agents ONLY for context-isolated work where the main agent's context, perspective, or tools would be a liability. Every sub-agent dispatch must match one of the 12 validated net-positive patterns (see `.issueops/SUB_AGENT_PATTERNS.md`). You NEVER delegate work that requires your full conversation context, cross-cutting judgement, or safety/reversibility decisions.
-</identity>
-
-<mission>
-Deliver every goal with **captured, verifiable evidence** for every success criterion. Measure everything: cycle time, rework count, parallelization ratio, evidence coverage. Prove completion — never claim it from inference alone.
-</mission>
+Decide risk first: low-risk reversible work uses the proportionate one-line
+ledger/CLI evidence exception below; user-facing, hard-to-reverse or multi-criterion
+work uses the full loop. Keep real evidence, cleanup receipts and honest outcomes
+in either mode. Measure cycle time/rework/coverage, not confidence in your own work.
+For a cycle, follow the lifecycle lane and authenticated owner; otherwise skip
+the cycle-only fences and use State and criteria → Per-Criterion Loop → Standalone Gate.
 
 For repository-local symbol discovery, use CodeGraph first when `.codegraph/` exists; otherwise use local `rg` and direct reads only. Never use web search for local repository symbols. Run verification and inspection commands as separate calls; never chain them with `echo` or `printf` banner markers.
 
@@ -35,7 +35,11 @@ Verification mode: <full loop or proportionate lightweight mode, with rationale>
 Skipped checks: <checks skipped with explicit reason; "none" if all ran>
 ```
 
-For an IssueOps v1 execution, render every acceptance criterion as a binary observation. The owner's exact 14-field report includes evidence paths, final HEAD, changed files, remote artifact URL, verification results, and the completion receipt required by `issueops execution complete`.
+## Cycle Lane: Authority and Startup (Only When a Cycle Exists)
+
+Render every acceptance criterion as a binary observation. Use the exact
+14-field owner report below, including evidence paths, HEAD, changed files,
+artifact URL, verification and the `issueops execution complete` receipt.
 
 Before execution, verify that the plan states the current issue, exact lifecycle ID, branch, base SHA, canonical worktree, bounded scope, acceptance criteria, verification, completion, and cleanup boundary. Never link an unrelated plan as readiness evidence.
 
@@ -102,137 +106,49 @@ Before this fence, each worker commit must use a Conventional Commit subject and
 
 A completed execution is never a new mutation lease. Review feedback that requires edits starts a new bounded execution or an explicitly authorized continuation before completion.
 
-Pending external intent survives interruption. Follow `skills/issueops/references/execution.md`: reconcile ambiguous workspace/publication state, or replace a failed holder with exact generation and quiescence evidence. Verified Execution records before/after process, worktree, branch, HEAD, dirty-path, and Orca-resource observations. Cleanup remains a separate human-authorized operation after verified merge evidence.
+Pending external intent survives interruption: reconcile ambiguous workspace/publication state, or replace a failed holder with exact generation and quiescence evidence. Record before/after process, worktree, branch, HEAD, dirty-path, and Orca-resource observations. Cleanup remains a separate human-authorized operation after verified merge evidence.
 
-## Quantitative Quality Metrics (vs ulw-loop baseline)
+## Execution Mode and Evidence
 
-Verified Execution tracks these metrics automatically. Target: **20%+ improvement over ulw-loop** on every dimension.
+Choose risk before execution. Full mode is for user-facing, hard-to-reverse, or
+multi-criterion work: goals, append-only ledger, per-criterion artifacts, metrics,
+and a binding adversarial reviewer. For trivially reversible docs, wording,
+single-file validation, or config work, a one-line pass/fail ledger and command
+stdout/diff are enough; goals/metrics are optional. Record the risk rationale and
+review skip explicitly. Both modes require observable evidence, honest results,
+and verified cleanup (or "none spawned"). Tests alone never prove completion.
 
-| Metric | ulw-loop baseline | Verified Execution target | Measurement |
-|--------|------------------|---------------|-------------|
-| **Evidence Coverage** | ~70% (some criteria lack observable evidence) | ≥95% (every criterion has a channel artifact) | `criteria_with_evidence / total_criteria` |
-| **Rework Rate** | ~30% (worker outputs rejected on integration) | ≤15% (better task specs reduce rework) | `respawned_tasks / total_tasks` |
-| **Cycle Efficiency** | ~60% (blocked criteria waste cycles) | ≥80% (dependency ordering prevents blocks) | `completed_criteria / total_attempts` |
-| **Parallelization Ratio** | ~2x (manual wave grouping) | ≥4x (dependency-matrix-driven waves) | `total_tasks / wave_count` |
-| **Cleanup Compliance** | ~50% (cleanup receipts often missing) | 100% (no pass without receipt) | `cleanup_receipts / qa_scenarios` |
-| **Cross-Session Survival** | None (filesystem-only, no state checkpoints) | 100% (issueops state survives compaction) | `resumed_sessions / total_sessions` |
-| **Host Portability** | Codex-only host assumptions | 2 hosts (Codex and Claude unified skill) | Host-specific section translates available tools |
+For each full-mode criterion, actually run one channel: HTTP (status + headers +
+body), terminal/tmux (transcript), browser (actions + screenshot), or computer use
+(actions + screenshot; AppleScript on macOS, `xdotool` on Linux only). Use available
+host tools. CLI stdout, DB diffs and parsed config are valid auxiliary evidence
+for CLI/data criteria and the low-risk exception, never substitutes for a
+user-facing channel. Dry-run, printed commands, speculation and "looks correct"
+are not usage evidence. Artifacts must be nonempty, untruncated, reproducible,
+make pass/fail binary, and name goal + criterion + channel. If output exceeds
+32 KB, record the truncation point and retain/read the complete artifact before PASS.
 
----
+### State and criteria (before implementation)
 
-## Proportionate Mode (size the ceremony to the risk — decide FIRST)
+Prefer IssueOps state; otherwise use local files, never invented state elsewhere:
+- IssueOps: `.issueops/verified-execution/`; fallback: `.verified-execution/`.
+- Each root contains `goals.json`, append-only `ledger.jsonl`, and `evidence/<goal>-<criterion>-<channel>.<ext>`.
+- Read availability with `issueops state read --key verified-execution-goals-<repo-hash>`;
+  checkpoint with `issueops state write --key verified-execution-goals-<repo-hash> --input goals.json --json`.
 
-The full loop below (goals.json + ledger.jsonl + per-criterion evidence files + 5 metrics + a binding
-adversarial-reviewer Final Quality Gate) is calibrated for user-facing, hard-to-reverse, or multi-criterion work.
-For a low-risk task — a docs/wording fix, a single-file validate, a config tweak, a trivially-reversible change —
-scale it down:
+Read the user brief, plan, or cycle intent; no usable goal means clarify before
+execution, not fabricated criteria. Plan TODOs map 1:1 to criteria. Goal fields:
+`id`, `title`, `objective`, `status`, `successCriteria`. Each criterion has unique
+`id`, exact `scenario` (tool, steps, inputs, binary outcome), `channel`,
+`expectedEvidence` path, `status`, `capturedEvidence`, `cleanupReceipt`, and
+applicable `ultraqaClasses`. Initial status is pending and captured evidence/receipt
+are null. Pick relevant adversarial classes: `malformed_input`, `prompt_injection`,
+`cancel_resume`, `stale_state`, `dirty_worktree`, `hung_command`, `flaky_test`,
+`misleading_success`, `repeated_interruption`. Do not proceed to a criterion without
+a concrete expected artifact path.
 
-- Evidence: an **auxiliary CLI surface** (command stdout, validate output, diff) is sufficient; no HTTP/tmux/browser channel required.
-- Ledger: a **one-line** pass/fail record is enough; goals.json/metrics tracking is optional.
-- Final Quality Gate: the **adversarial-reviewer step is conditional on risk** — skip it for trivially-reversible low-risk changes; keep it for user-facing or hard-to-reverse work.
-
-The non-negotiables still hold at every size: a real observable artifact (never "looks correct"), a cleanup
-receipt for any runtime state spawned, and an honest pass/fail. Proportionate ≠ unverified — it means matching the
-evidence weight to what failure would cost.
-
-## Artifacts
-
-Verified Execution uses issueops state for durability. When issueops is unavailable, fall back to local files.
-
-```
-.issueops/verified-execution/
-├── goals.json           ← goals with embedded success criteria
-├── ledger.jsonl         ← append-only audit trail (every pass/fail/block)
-└── evidence/            ← captured artifacts per criterion
-    └── <goal>-<criterion>.<ext>
-
-Fallback (no issueops):
-./.verified-execution/
-├── goals.json
-├── ledger.jsonl
-└── evidence/
-```
-
-**Never invent state outside these files.** Use `issueops state write --key verified-execution-goals-<repo-hash> --input goals.json --json` for cross-session durability when available.
-
----
-
-## Manual-QA Channels (FULL MODE: PICK ONE PER CRITERION — ACTUALLY RUN IT)
-
-In full mode, build a real-usage scenario for every criterion through ONE of these four channels and run it yourself before recording PASS. In proportionate mode, follow its explicit auxiliary-surface exception for low-risk CLI-, data-, or docs-shaped criteria. The full test suite being green is NEVER verification on its own.
-
-| # | Channel | Tool | Evidence Artifact |
-|---|---------|------|-------------------|
-| 1 | **HTTP call** | `curl -i` or Playwright APIRequestContext | status line + headers + body |
-| 2 | **tmux** | `tmux new-session -d -s verified-execution-qa-<criterion>`, `send-keys`, `capture-pane -pS -E -` | transcript file |
-| 3 | **Browser use** | current host's available browser tool | action log + screenshot path |
-| 4 | **Computer use** | AppleScript on macOS; `xdotool` on Linux only; current host computer-use tool when available | action log + screenshot |
-
-**Auxiliary surfaces** (pure CLI stdout, DB state diff, parsed config dump) are valid for CLI- or data-shaped criteria but NEVER replace a channel scenario for user-facing behavior. `--dry-run`, printing the command, "should respond", and "looks correct" never count.
-
----
-
-## Sub-Agent Usage (12 Net-Positive Patterns)
-
-**Default: main agent performs work directly.** Spawn sub-agents ONLY when the work matches one of these 12 validated patterns. Full rationale and sources: `.issueops/SUB_AGENT_PATTERNS.md`.
-
-### When to spawn a sub-agent (net-positive)
-
-| # | Pattern | Trigger | Example |
-|---|---------|---------|---------|
-| 1 | **High-volume exploration** | Reading dozens of files would flood main context | Codebase-wide pattern search, multi-file audit |
-| 2 | **Devil's advocate review** | Need fresh perspective to refute your own work | Final Quality Gate reviewer, adversarial code review |
-| 3 | **Parallel independent research** | Multiple read-only probes with zero mutual dependencies | Researching 3 competing libraries simultaneously |
-| 4 | **Cross-verification** | Same problem, independent angles → compare results | Two reviewers on critical security change |
-| 5 | **Isolated worktree edits** | Bounded code changes in separate git worktree | IssueOps worktree-based implementation |
-| 6 | **Model specialization** | Cheap model for search, expensive model for reasoning | Explorer on Haiku, reviewer on Opus |
-| 7 | **Tool-gated exploration** | Read-only tools only — prevents accidental writes | Explorer with Grep/Glob/Read only, no Write/Bash |
-| 8 | **Background long-running** | Non-blocking async work with progress checks | long test suite run |
-| 9 | **Plan-execute separation** | Planner (read-only) vs executor (write) — already structural | Implementation Planning plans, Verified Execution executes |
-| 10 | **Forked context exploration** | Branch exploration with full context copy, no pollution | Claude Code forked subagents |
-| 11 | **Task fan-out** | Naturally decomposable independent subtasks | Batch migration touching isolated modules |
-| 12 | **Triage → specialist** | Domain-specific routing | Customer-support style routing (future) |
-
-### When NOT to spawn (net-negative — main agent does it directly)
-
-- Single-file, small-scope edits — spawning overhead > direct cost
-- Tasks requiring full conversation context — sub-agents start with empty context
-- Cross-cutting architectural decisions — need whole-codebase understanding
-- Safety/reversibility/alignment judgement — main agent's responsibility
-- Tasks smaller than sub-agent system prompt + tool schema overhead
-- Sub-agent nesting — sub-agents must not spawn further sub-agents
-
-### Host Translation (sub-agent dispatch only)
-
-| Task shape | Codex | Claude Code |
-|------------|-------|-------------|
-| Read-only exploration | Use the current Codex sub-agent tool only when the session policy allows it | Use the current Task tool when available |
-| Adversarial review | Use a fresh reviewer only when sub-agent dispatch is allowed | Use a reviewer task when available |
-| External docs research | Use current web/docs tools or `web-research`; label unavailable tools as blocked | Use current web/docs tools or `web-research` |
-| Background work | Use current async agent/job tools only when allowed | Use current background task support when available |
-| Isolated worktree edits | IssueOps worktree + worker | Same |
-
-Every sub-agent message MUST carry: goal + exact files in scope; the baseline characterization test pinning current behavior (when touching existing code); constraints + project rules; the verification commands to run; the ONE Manual-QA channel and the exact evidence artifact path to capture. Sub-agents have NO interview context — be exhaustive.
-If the current host does not expose or allow a listed sub-agent pattern, record that limitation and keep the work in the main agent.
-
----
-
-## Bootstrap (DO ALL BEFORE EXECUTION)
-
-### 1. Resolve State Backend
-
-```bash
-# Prefer issueops state (survives compaction, cross-session)
-if issueops state read --key verified-execution-goals-<repo-hash> >/dev/null 2>&1; then
-  STATE_BACKEND="issueops"
-else
-  STATE_BACKEND="local"
-fi
-```
-
-### 2. Create Goals from the Brief
-
-Read the brief (from Implementation Planning plan, user instruction, or IssueOps intent contract). Create `goals.json`:
+The checkpoint is a JSON object with a top-level `goals` array and sibling
+`metrics` object, not a bare goal or array. Initialize all five metrics to 0.0:
 
 ```json
 {
@@ -266,252 +182,230 @@ Read the brief (from Implementation Planning plan, user instruction, or IssueOps
 }
 ```
 
-### 3. Refine Success Criteria
+For web usage evidence, use the current host's available browser tool.
+In this repository, `skills/issueops/references/execution.md` provides supplemental
+cycle details; it is not a prerequisite for this body-only standalone contract.
 
-For each criterion, define pass/fail BEFORE execution:
-- **`id`**: unique within goal
-- **`scenario`**: exact tool + exact steps with specific inputs + single binary pass/fail
-- **`channel`**: which Manual-QA channel (1-4 above)
-- **`expectedEvidence`**: exact artifact path
-- **`ultraqaClasses`**: adversarial classes relevant to this criterion
+### Delegation boundary
 
-**UltraQA Adversarial Classes** (pick applicable ones per criterion):
-1. `malformed_input` — malformed, empty, or boundary input
-2. `prompt_injection` — user input that looks like a system instruction
-3. `cancel_resume` — cancel mid-operation, resume, expect consistent state
-4. `stale_state` — stale cache, dirty worktree, outdated dependency
-5. `dirty_worktree` — uncommitted changes before operation
-6. `hung_command` — command that hangs or takes very long
-7. `flaky_test` — test that passes/fails non-deterministically
-8. `misleading_success` — operation reports success but produces wrong output
-9. `repeated_interruption` — operation interrupted multiple times
+The main agent implements, fixes, tests and drives QA. Delegate only these
+net-positive patterns: high-volume exploration, devil's advocate, parallel
+independent research, cross-verification, isolated-worktree edits, model
+specialization, tool-gated read-only exploration, background long-running work,
+plan/execute separation, forked-context exploration, independent task fan-out,
+and triage to a specialist. No nested sub-agents. Small/single-file tasks, work
+requiring full conversation context, cross-cutting architecture, and safety/
+reversibility/alignment decisions stay with the main agent; overhead must pay off.
 
----
+Every dispatch includes goal, exact files, baseline characterization test when
+changing existing behavior, constraints/project rules, verification commands,
+one QA channel and exact artifact path. Workers lack interview context. Use only
+current host tools; if dispatch is unavailable/disallowed, record the limitation
+and work directly. A required independent review remains unfulfilled, not an
+invented approval. Verify every worker diff, tests, diagnostics and evidence yourself.
 
-## Execution Loop
+## Per-Criterion Loop
 
-Loop per goal. Cap at 5 cycles per goal (after 5, checkpoint and surface diagnosis). Cap identical same-criterion failures at 3.
+Cap one goal at 5 cycles and identical criterion failures at 3; checkpoint the
+diagnosis at either limit. After 2+ failures use systematic root-cause diagnosis
+(with the debugging skill if available), not another unchanged attempt.
 
-### Per-Criterion Cycle
+1. **Plan:** read scenario, expected evidence and ledger; identify independent
+   wave tasks. Register atomic todos: path, action, criterion, verification.
+   Serialize only on a named dependency.
+2. **Execute:** for existing code behavior, first pin current behavior with a
+   passing characterization test. RED must fail for the intended requirement,
+   not syntax/import errors. Capture it, then make the smallest GREEN change
+   (roughly under 20 lines); a larger step calls for a finer test. Pure prose
+   changes use validation/diff evidence, not prose-pinning tests.
+3. **Integrate:** inspect your diff, run relevant tests and changed-file LSP
+   diagnostics. Fix scope drift, hollow tests, or missing evidence. Re-verify
+   isolated worker output; fix it directly or return specific failure context.
+4. **Run scenario:** personally execute the named QA surface; a heavy browser/
+   computer channel may use a dedicated QA-only specialist. On failure, fix the
+   cause and rerun the same criterion. Capture transcript/stdout/screenshot/
+   assertion/status+body/diff/dump at the expected path; missing artifact is BLOCKED.
+5. **Clean before recording:** remove every spawned runtime resource and verify
+   removal: PIDs (kill, failed kill -0), terminal sessions (kill and inventory),
+   browser contexts (close), containers (remove), ports (empty lsof), temporary
+   mktemp paths (remove), QA-only environment variables (unset). Retain evidence.
+   Record resource → action → verification, or "none spawned"; leftovers are BLOCKED.
+6. **Record once:** PASS needs artifact + receipt; FAIL needs captured output +
+   diagnosis; BLOCKED needs evidence + blocker. Ledger fields are `ts` (ISO8601),
+   `goal`, `criterion`, `status`, `evidence` (path and cleanup receipt), `rework`.
+   Full evidence also records exact channel command, summary, attempts, rework,
+   cycle (of 5), and timestamp. Update criterion state and checkpoint.
+7. **Measure in full mode:** recompute `evidenceCoverage = passed_with_evidence / total_criteria`,
+   `reworkRate = self_corrections / total_criteria`,
+   `cycleEfficiency = completed_criteria / total_attempts`,
+   `parallelizationRatio = total_tasks / waves_used`,
+   `cleanupCompliance = cleanup_receipts / completed_scenarios`.
+   Start metrics at zero. Targets: ≥95% coverage, ≤15% rework, ≥80% efficiency,
+   ≥4x parallelization where independent work permits, 100% cleanup and durable
+   cross-session survival. Comparative target is ≥20% improvement over the
+   inherited ulw-loop baseline, not a claim of measured improvement. These
+   targets never justify unnecessary delegation.
+8. **Complete goal:** every criterion must pass with evidence; append `ts`,
+   `goal`, `event: goal_complete` and current `metrics`. Only after all goals pass,
+   enter the appropriate final gate below.
 
-```
-1. PLAN
-   Read criterion.scenario, criterion.expectedEvidence, prior ledger entries.
-   Identify which tasks in the current wave are independent.
-   Register atomic todos: "path: <action> for <criterion> — verify by <check>"
+## Final Gate: Standalone Lane
 
-2. EXECUTE-DIRECTLY
-   You — the main agent — perform the implementation work directly.
-   Follow strict TDD:
-     - When touching EXISTING behavior: PIN IT FIRST — write a characterization
-       test asserting current behavior on unchanged code (baseline must PASS).
-     - RED: write the failing assertion FIRST. Run it. Capture the exact failure.
-       Must fail for the RIGHT reason (no syntax error, no missing import).
-     - GREEN: write the SMALLEST production change (<~20 lines). Run it. Capture.
-     - A GREEN needing >~20 lines means the test was too coarse — split it.
-   For tasks that match the 12 sub-agent patterns (e.g., parallel independent
-   research, adversarial review, isolated worktree edits), spawn sub-agents as
-   needed. Otherwise, do it yourself. Serialize only on a NAMED dependency.
+Inside a cycle use its clean → docs → verify stages once, not this extra sequence.
+The prepared-worktree confirmation sets the authorized endpoint; finishing this
+skill creates no additional approval stop. Standalone order:
 
-3. INTEGRATE + SELF-QA
-   After implementation, read your own diff. Re-run tests. Run LSP diagnostics
-   on changed files. Treat "done" as a claim to disprove.
-   If the diff drifts, the test is hollow, or evidence is missing:
-   fix it yourself — do not hand-patch around failures.
-   If a sub-agent was used for isolated work: read its diff, re-run its tests,
-   verify its evidence. If the sub-agent's output fails, fix the issue directly
-   or respawn with the specific failure context.
+1. Targeted verification of changed behavior.
+2. If cleanup is in scope, remove lazy/duplicated/unused diff residue without
+   changing behavior (use the cleanup skill when available). Harness health
+   `issueops self-verify` is not a generic cleanup substitute.
+3. Re-verify after cleanup.
+4. Full mode/user-facing/hard-to-reverse work requires a fresh adversarial reviewer
+   given goal, criteria, artifacts and full diff. Its gate is binding: verify
+   every concern, fix valid ones, return disconfirming evidence for invalid ones,
+   rerun full scenario QA after fixes, and resubmit to the same reviewer until
+   unconditional approval. "Looks good but" or LGTM without evidence review fails.
+   Proportionate low-risk work may skip with its specific recorded rationale.
+5. Record `aiSlopCleaner` (status/evidence), `verification` (status/commands/evidence),
+   `codeReview` (status/recommendation/evidence), `criteriaCoverage` (totalCriteria/passCount),
+   and `metrics` (all five fields above). Reviewer pass is `APPROVE`; a risk-based
+   skip is `status: skipped, recommendation: null` with rationale, never fake approval.
+   Record other inapplicable steps honestly rather than claiming they ran.
 
-4. EXECUTE-AS-SCENARIO
-   ACTUALLY run the Manual-QA channel scenario the criterion named.
-   Run it yourself. For browser/computer-use channels that need heavy tooling,
-   dispatch a dedicated QA sub-agent whose ONLY job is to drive the channel
-   and write the artifact to the named evidence path (pattern #6: model specialization).
-   If the scenario FAILS, fix the issue directly — do not hand-patch around it.
+A failed step in an ordered verification sequence restarts from step 1; do not
+reuse partial passes as a completed sequence. Cycle stages own valid evidence
+reuse/resealing and their bounded review loop, not this standalone review loop.
 
-5. CAPTURE
-   Collect the observable artifact: transcript, stdout, screenshot, assertion,
-   status+body, diff, or parsed dump.
-   No artifact written at the evidence path → not done; record BLOCKED.
+## Cycle Recording and Ordered Completion
 
-6. CLEAN (PAIRED, NEVER SKIP)
-   Tear down EVERY runtime artifact step 5 spawned BEFORE recording:
-   - Server PIDs: `kill <pid>`; verify `kill -0 <pid>` fails
-   - tmux sessions: `tmux kill-session -t verified-execution-qa-<criterion>`; verify `tmux ls`
-   - Browser/Playwright contexts: `.close()`
-   - Containers: `docker rm -f <id>`
-   - Bound ports: `lsof -i :<port>` empty
-   - Temp files/dirs: `rm -rf` the `mktemp` paths
-   - QA-only env vars: unset them
-   Embed a one-line cleanup receipt:
-   `cleanup: killed 12345; tmux kill-session verified-execution-qa-foo; rm -rf /tmp/verified-execution.aB12cD`
+Use `issueops next --id "$ISSUEOPS_ID" --json` for lifecycle routing; implement
+owns this execution loop, then clean → docs → verify → pr → completion. Never
+jump directly from criterion PASS to pr. The owning stage records START/scenario,
+PASS/evidence/cleanup and progress feedback with source `verified-execution`.
+`issueops feedback add` and `issueops status` are supported aliases, not authority.
+For authenticated recording, obtain `record_actor_flags` and `claim_actor_flags`
+from `issueops execution whoami --json`, for records and lease operations
+respectively; retain exact lifecycle ID, generation, native actor, canonical cwd.
+Use the owning stage's rendered commands, not invented flags or direct phase jumps.
+If it is absent, leave recording pending; standalone execution still works.
 
-7. RECORD
-   Record exactly one result with quantitative metrics:
-   - PASS: evidence artifact exists + cleanup receipt present
-   - FAIL: captured failure output + diagnosis notes
-   - BLOCKED: evidence + blocker description
+Preserve this order and the existing user-confirmed endpoint:
+1. Record cleanup category and rerun verification; finish the report/implementation
+   diff before entering ai-slop-clean with the sealed command.
+2. Review project docs. If updates are needed, edit first, verify/reseal, then
+   record `updated` with changed paths; otherwise record evidenced `no-change`.
+   Never relabel old evidence as execution against a new fingerprint.
+3. For migration/entity/SQL schema changes only, observe real DB indexes and target
+   row counts (catalog/estimates, not large scans); record sources or justified waiver.
+4. After acceptance and authorized verification pass, read current `next.review`
+   model/effort/tier/lenses immediately before fresh independent review. Missing
+   routing is blocked, not a fallback to prepare-time defaults. Record actual
+   reviewer model/effort/verdict/findings; follow the stage's bounded escalation
+   and override rules. Revise means fix/reverify/review; stop blocks publication;
+   only pass proceeds. An owner-model choice is not a reviewer override.
+5. Commit/push the sealed diff only within existing authorization. Changed diff
+   requires renewed cleanup/verification/review. Verify clean/synced branch, enter
+   pr, observe final HEAD separately, and preview the governed draft request with
+   explicit branches, labels, assignee, actor/cwd/generation. Confirmation repeats
+   the identical request with only `--confirm`; never infer remote-write approval.
+6. Read back URL, target, labels, assignee and Korean body. Only then complete from
+   pr with committed relative report, final HEAD, exact artifact URL and repeatable
+   verification results. Verify completion receipt and lease release with status,
+   then stop: no automatic merge, close, or worktree/branch cleanup.
 
-   Append to ledger.jsonl:
-   ```json
-   {"ts":"<ISO8601>","goal":"G1","criterion":"G1-C1","status":"pass","evidence":"<artifact path> | cleanup: <receipt>","rework":0}
-   ```
+On lease/session/generation denial: one status read, at most one exact rendered
+next command, then release a claimed lease and return blocked if still denied.
+Digest drift is mutation-free. Preserve safe WIP; reconcile ambiguous external
+intent rather than retrying creation. A completed execution grants no new lease.
 
-8. UPDATE METRICS
-   After each criterion completion, recompute:
-   - evidenceCoverage = passed_with_evidence / total_criteria
-   - reworkRate = self_corrections / total_criteria
-   - cycleEfficiency = completed_criteria / total_attempts
-   - parallelizationRatio = total_tasks / waves_used
-   - cleanupCompliance = cleanup_receipts / completed_scenarios
+### Fixed IssueOps v1 Owner Report
 
-9. LOOP
-   If actual != expected: diagnose, fix directly, rerun SAME criterion.
-   After 3 same-criterion failures: exit the goal with diagnosis.
-   After 5 cycles on one goal: checkpoint failed.
+Return these 14 fields exactly once, in this order (bounded evidence, no secrets,
+claim-token text, private reasoning, or raw transcript):
 
-10. CONTINUE only when next pending criterion has a concrete expectedEvidence target.
-```
+~~~text
+Status: <completed | blocked>
+Lifecycle: <exact lifecycle ID>
+Mode/host/model: <mode / host / model (effort)>
+Worktree/branch/final HEAD: <exact values>
+Lease generation/completion: <generation + receipt or blocker>
+Issue/packet digests: <verified | drift>
+Commits: <ordered SHA + subject>
+Changed files: <exact paths>
+Acceptance evidence: <AC-ID → test/command/result and artifact paths>
+Verification: <every command + PASS/FAIL, explicit skips>
+AI-slop clean: <removed duplication/legacy/noise or none>
+Draft PR/MR: <URL or none>
+Deviations: <issue/code or intent/issue mismatch + file:line or none>
+Blockers: <exact state/error/next command or none>
+~~~
 
-### Goal Completion
+Completed requires draft readback, all required verification PASS and completion
+receipt; blocked preserves safe state without further unauthorized mutation.
 
-1. Confirm every criterion is `pass` with evidence.
-2. Record goal completion in ledger:
-   ```json
-   {"ts":"<ISO8601>","goal":"G1","event":"goal_complete","metrics":{"evidenceCoverage":1.0,"reworkRate":0.12,"cycleEfficiency":0.88,"parallelizationRatio":4.5,"cleanupCompliance":1.0}}
-   ```
-3. If all goals complete, run the Final Quality Gate.
+## Portable Cycle Evidence
 
----
+- Before domain changes record invariant, exact mechanism, equivalent behavior,
+  and current source/command evidence. Report missing documented mechanism
+  separately from whether another path enforces the invariant.
+- API changes require plan/draft evidence of changed endpoints (or none), public
+  errors reachable through business logic, available static checks, agent review
+  for visible errors, and targeted commands. Prefer repo commands; if absent,
+  record that and use the nearest check, without blaming unrelated legacy debt.
+- Runtime/environment differences need a matrix: Environment | Repo/config
+  evidence | Runtime evidence | Failure path | Remediation order. Separate source
+  from live DB/config/env/pod/log observations and similar-looking failure paths;
+  distinguish local-only probes from same-network/workload proof.
+- For feedback record classification (contract_change, defect, question, noise,
+  valid_review, stale_review, rollout_evidence_missing, environment_debt), validity
+  evidence, original-thread reply status, and resolution (unresolved, fixed,
+  resolved, obsolete, follow-up). Apply only verified feedback. Scope/criteria/
+  non-goals/verification/labels/link changes require owning-stage issue-body update
+  before continuing, within remote-write authorization.
+- Before ready/done record actual-worktree diff, source/target branches, issue/PR
+  body freshness, copied or explicitly replaced labels, single-commit policy or
+  reason for multiple commits, divergence/cleanliness, cleanup status or numbered
+  choices. Prepare an inspectable draft completion record before remote writing
+  and final reporting: diff, verification, labels, linked children, PR/MR URL,
+  review-thread status, cleanup and unresolved follow-ups. Tests alone do not
+  satisfy requested remote updates, replies, merge readiness, or cleanup.
 
-## Final Quality Gate
+## Structured Steering and Collaboration
 
-Trigger when every goal's criteria are passing.
+Reject free-form steering in place of structured, evidence-backed state changes.
+Record every steering event in the ledger:
 
-Inside an IssueOps cycle, continue through its clean → docs → verify stages once. Those stages
-own evidence reuse and resealing (`issueops-verify`) and the bounded review loop (`issueops-review`).
-Do not run the standalone sequence below as an additional gate. The router's prepared-worktree
-confirmation governs the authorized endpoint; finishing this skill is not another user-approval stop.
+| Kind | Required fields |
+|---|---|
+| add_subgoal (real blocker) | --title, --objective, --evidence, --rationale |
+| split_subgoal (too large) | --goal-id, --children, --evidence, --rationale |
+| reorder_pending (dependency) | --order (IDs), --evidence |
+| revise_criterion (no observable PASS) | --goal-id, --criterion-id, --scenario, --evidence |
+| mark_blocked_superseded (replacement) | --goal-id, --replacements, --evidence |
 
-1. **Targeted verification**: Re-run the changed behavior tests.
-2. **AI slop clean**: Run targeted verification plus the IssueOps cleanup stage skill (`skills/issueops-slop-clean/SKILL.md`) when cleanup is in scope; use `issueops self-verify` for harness-level health, not as a generic cleanup substitute.
-3. **Re-verify** after cleanup.
-4. **Reviewer (when required by the recorded risk decision)**: For full mode and any user-facing or hard-to-reverse work, spawn an adversarial reviewer sub-agent (pattern #2: Devil's advocate). Give it: goal, all criteria, all evidence, full diff. A fresh model with no implementation bias must refute your work. For a trivially reversible low-risk change in proportionate mode, record the skip rationale instead.
-   - The reviewer's verdict is BINDING as a gate: do not pass while a concern remains unresolved.
-   - Verify every concern against the diff, criteria, and evidence. Fix confirmed findings; return disconfirming evidence for invalid findings to the same reviewer. Never dismiss a concern without evidence.
-   - Fix every confirmed issue yourself. Re-run the FULL scenario QA. Capture fresh evidence.
-   - Re-submit to the SAME reviewer. Loop until UNCONDITIONAL approval.
-   - "looks good but..." = REJECTION. "LGTM" without evidence review = REJECTION.
-5. **Quality gate record**:
-   ```json
-   {
-     "aiSlopCleaner": {"status": "passed", "evidence": "cleaner report"},
-     "verification": {"status": "passed", "commands": ["go test ./..."], "evidence": "all green"},
-     "codeReview": {"status": "passed", "recommendation": "APPROVE", "evidence": "all concerns resolved"},
-     "criteriaCoverage": {"totalCriteria": N, "passCount": N},
-     "metrics": {"evidenceCoverage": 1.0, "reworkRate": 0.08, "cycleEfficiency": 0.92, "parallelizationRatio": 5.0, "cleanupCompliance": 1.0}
-   }
-   ```
-
-   When the recorded proportionate-mode risk decision skips review, record `codeReview` as `{"status":"skipped","recommendation":null,"evidence":"<specific low-risk skip rationale>"}` instead. Never claim `APPROVE` without a reviewer.
-
-다단계 검증에서 한 단계라도 실패하면 1단계부터 재실행하며 부분 통과 evidence를 재사용하지 않는다 (규범 출처: `.issueops/TESTING.md` 부분 검증 상태 금지 절).
-
----
-
-## Dynamic Steering
-
-Use steering for structured, evidence-backed mutation. Reject natural-language steering.
-
-| Kind | When | Fields |
-|------|------|--------|
-| `add_subgoal` | Real blocker found; new story required | `--title`, `--objective`, `--evidence`, `--rationale` |
-| `split_subgoal` | Story too large | `--goal-id`, `--children`, `--evidence`, `--rationale` |
-| `reorder_pending` | Dependency order discovered | `--order` (array of ids), `--evidence` |
-| `revise_criterion` | Criterion lacks observable PASS | `--goal-id`, `--criterion-id`, `--scenario`, `--evidence` |
-| `mark_blocked_superseded` | Old story replaced by new evidence | `--goal-id`, `--replacements`, `--evidence` |
-
-Record all steering in the ledger.
-
----
-
-## IssueOps Integration
-
-When an IssueOps cycle exists:
-
-1. **Goal ↔ IssueOps phase**: `implement` phase → Verified Execution execution loop. `pr` phase → Verified Execution final quality gate.
-2. **Evidence ↔ IssueOps state**: After each criterion PASS, record evidence in IssueOps:
-   ```bash
-   issueops feedback add --id "$ISSUEOPS_ID" --source verified-execution --body "G1-C1 PASS: <evidence_path> | cleanup: <receipt>" --json
-   ```
-3. **Progress record**: Inspect the durable generation and native process receipt with execution status. Criterion detail belongs in a concise feedback entry:
-   ```bash
-   issueops execution status --id "$ISSUEOPS_ID" --json
-   issueops feedback add --id "$ISSUEOPS_ID" --source verified-execution --body "G1-C1 START: <scenario>" --json
-   ```
-4. **Owner completion**: The active generation holder writes the evidence report, creates and verifies the draft PR/MR, then records `issueops execution complete` with exact actor, cwd, generation, final HEAD, report, artifact URL, and verification evidence. Completion releases the generation but never merges or cleans up resources.
-5. **Phase advancement**: After all criteria pass + quality gate clean:
-   ```bash
-   issueops phase --id "$ISSUEOPS_ID" --to pr --json
-   ```
-
----
-
-## Cross-Host Translation Table
-
-| Action | Codex | Claude Code |
-|--------|-------|-------------|
-| Run shell command | Use the current shell/terminal tool with explicit cwd | Same principle |
-| Read file | Use the current file-read or shell read tool | Same principle |
-| Search codebase | Prefer indexed search when configured; otherwise `rg` | Same principle |
-| Write/edit files | Use the current patch/edit tool | Same principle |
-| Write evidence file | Use the current patch/edit tool or CLI that owns the state | Same principle |
-| State checkpoint | `issueops state write --key KEY (--value TEXT|--input FILE|--stdin) --json` | Same |
-| Spawn explorer (pattern #1) | Only when the current Codex session exposes and permits sub-agents | Only when Task is available |
-| Spawn reviewer (pattern #2) | Only when the current Codex session exposes and permits sub-agents | Only when Task is available |
-| External docs research (pattern #3) | Use current web/docs tools or `web-research`; do not name unavailable tools as executable | Same principle |
-| Background + poll (pattern #8) | Use current async/job tools only when available | Same principle |
-
----
-
-## Critical Rules
-
-1. **NEVER** mark `criterion.status == "pass"` without captured observable evidence AND cleanup receipt.
-2. **PERFORM** all code edits, test writes, fixes, and QA directly as the main agent. Sub-agents only per the 12 net-positive patterns (see Sub-Agent Usage section).
-3. **BASELINE-PIN** existing behavior before changing it: characterization test FIRST.
-4. **CLEANUP IS PAIRED**: no PASS without cleanup receipt. Leftover runtime state = BLOCKED.
-5. **METRICS ARE TRACKED**: recompute evidence coverage, rework rate, cycle efficiency, parallelization ratio, cleanup compliance after every criterion.
-6. **REVIEWER IS BINDING**: when the risk-calibrated gate requires one, spawn an adversarial reviewer (pattern #2), verify every concern, fix confirmed findings yourself, and re-submit until unconditional approval.
-7. **SUB-AGENT OUTPUT IS A CLAIM**: re-verify diff, tests, LSP yourself before accepting.
-8. **3x same-criterion failure** → exit the goal with diagnosis.
-9. **5 cycles on one goal without all-pass** → checkpoint failed, surface diagnosis.
-10. **NO SUB-AGENT NESTING**: sub-agents must not spawn further sub-agents.
+These are record fields, not invented executable CLI flags. Optional collaborators:
+planning supplies criteria; debugging diagnoses; algorithm work supplies redesign
+and benchmarks; DB work supplies before/after EXPLAIN ANALYZE; research supplies
+reviewed reports; code-quality metrics add SNR/entropy/redundancy; self-verify
+health scores feed evidence coverage; repeated failures yield recorded lessons
+(with self-augment if available). Authorized code/evidence commits stay atomic.
+Use current file/patch/search/shell/async tools with explicit cwd on Codex, Claude
+Code and Omo; never name unavailable host tools as executable.
 
 ## Stop Rules
 
-- All goals complete + all criteria `pass` + final quality gate clean: **DONE**.
-- 3x same criterion failure: checkpoint failed, surface diagnosis.
-- 5 cycles on one goal without all-pass: checkpoint failed, surface.
-- Safety boundary (destructive command, secret exfiltration, production write): block and surface a safe substitute.
-- Leftover state from QA (live process, tmux session, browser context, bound port, temp dir): NOT pass. Clean up, append receipt, then continue.
-- User issues `/cancel`: release in-progress state cleanly and do not auto-resume.
+- All goals and criteria pass with artifacts/receipts and the applicable final gate
+  is clean: DONE at the authorized endpoint.
+- Three identical criterion failures or five goal cycles: checkpoint failed and
+  surface diagnosis, not endless retries.
+- Destructive commands, secret exfiltration or production writes: block at the
+  safety boundary and offer a safe substitute; no hidden expansion of authority.
+- Leftover QA state: clean, verify and append receipt before proceeding; never PASS.
+- User /cancel: release in-progress state cleanly; do not auto-resume.
 
----
+## Optional Reference
 
-## Relationship with Other Skills
-
-| Skill | How Verified Execution integrates |
-|-------|----------------------|
-| **implementation-planning** | Implementation Planning produces the decision-complete plan; Verified Execution executes it as evidence-bound goals. Plan TODOs map 1:1 to Verified Execution criteria. Dispatch independent read-only exploration or isolated worktree edits only when a documented net-positive pattern applies; all interdependent implementation stays in the main agent. |
-| **issueops-debugging** | Debugging is called within Verified Execution's execution loop when a criterion fails 2+ times. Debugging delivers the root cause diagnosis; Verified Execution verifies the fix through channel QA. |
-| **algorithm-optimization** | Verified Execution invokes Algorithm Optimization for "optimize," "reduce complexity," or "improve performance" criteria. Algorithm Optimization delivers the algorithmic redesign with benchmark evidence. |
-| **database-design** | Database Design's EXPLAIN ANALYZE before/after evidence becomes Verified Execution's evidence artifact. Database Design recommends; Verified Execution verifies the recommendation through channel QA. |
-| **web-research** | When a criterion requires external research, Verified Execution delegates to Web Research. Research reports are Verified Execution evidence artifacts; adversarial review of findings follows Verified Execution's reviewer gate. |
-| **git-operations** | Every code change from Verified Execution's execution is committed atomically per Git Operations' protocols. Verified Execution's evidence files are committed alongside code changes. |
-| **code-quality-metrics** | Code Quality Metrics's SNR/Entropy/Redundancy metrics feed into Verified Execution's Final Quality Gate as quantitative quality dimensions alongside the existing reviewer gate. |
-| **self-verify** | Verified Execution's execution health is validated by self-verify loops; self-verify goal scores feed into Verified Execution's evidence coverage metric. |
-| **self-augment** | Verified Execution records Reflexion-style lessons via self-augment when a criterion fails repeatedly; the lesson informs future execution strategies. |
-
-## Reference: evidence-contract
-
-For portable domain, API-documentation, live-evidence, review-accountability, and completion-hygiene rules, use `skills/issueops/references/evidence-contract.md`.
+[Evidence examples](references/evidence-contract.md) and
+[historical comparisons](references/comparison-context.md) add no runtime requirement.
+No evaluator reference is needed to execute this skill. `quality inspect` is not
+semantic skill evaluation; `issueops skill-bench` is unsupported.
