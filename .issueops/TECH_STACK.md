@@ -13,8 +13,8 @@ description: Chosen languages, runtimes, tools, and rationale.
 
 | 후보 | 장점 | 단점 | 판단 |
 |------|------|------|------|
-| Go | 단일 바이너리 배포, 빠른 컴파일, goroutine 기반 동시성, CLI/daemon/MCP 구현 생산성, 현재 로컬 `go1.26.3` 확인 | Rust보다 메모리 안전성의 정적 보장이 약함 | **채택** |
-| Rust | 강한 메모리 안전성, 고성능, 단일 바이너리 | 러닝커브와 구현 속도 비용, 현재 로컬 toolchain 확인 안 됨 | 추후 sandbox/security critical component에만 재검토 |
+| Go | 단일 바이너리 배포, 빠른 컴파일, goroutine 기반 동시성, CLI/daemon/MCP 구현 생산성 | Rust보다 메모리 안전성의 정적 보장이 약함 | **채택** |
+| Rust | 강한 메모리 안전성, 고성능, 단일 바이너리 | 러닝커브와 구현 속도 비용 | 추후 sandbox/security critical component에만 재검토 |
 
 빠른 반복과 host integration 생산성을 위해 **Go**를 채택한다. untrusted code sandbox나 고위험 parser가 필요해지면 해당 component만 Rust를 재검토한다.
 
@@ -25,7 +25,7 @@ description: Chosen languages, runtimes, tools, and rationale.
 | 항목 | 기준 |
 |------|------|
 | 언어 | Go |
-| 로컬 확인 toolchain | `go version go1.26.3 darwin/arm64` |
+| toolchain 기준 | 요구 버전은 `go.mod`, 실제 실행 버전은 `go version`으로 확인한다. 린터의 Go 버전 일치는 [테스트 규칙](testing/unit-and-contract.md)을 따른다. |
 | 패키지 관리 | Go modules |
 | 기본 바이너리 | `bin/issueops` (`cmd/issueops` source) |
 | 실행 모드 | CLI one-shot, 사용자당 하나인 로컬 Streamable HTTP MCP 서비스(`issueops mcp --http`, launchd/systemd user 감독), 호환용 in-process MCP stdio server, state-first one-shot worker jobs. legacy daemon은 이전 binary의 MCP proxy만 쓴다 |
@@ -52,40 +52,17 @@ Orca는 `exec.CommandContext`로 설치된 CLI를 호출하는 선택적 IssueOp
 
 ## 2.2 Project skills
 
-`skills/`에는 현재 **34개** shared skill이 있다. 현재 inventory는 `issueops inspect --json`의 `skills` 배열과 각 `skills/<name>/SKILL.md`로 확인할 수 있으며, 분해 합계는 **pioneer-namesake 12 + operational 22 = 34**이다.
+`skills/<name>/SKILL.md`의 frontmatter와 본문이 스킬 이름, 활성 조건, 실행 계약의
+source of truth다. 목록·개수는 `issueops inspect --json`의 `skills` 배열로 확인한다.
+새 스킬이 추가될 때 이 문서에 별도 합계나 복제 목록을 유지하지 않는다.
 
-**Pioneer-namesake (12)** — 컴퓨터 과학 선구자의 이름을 딴 language/tech agnostic 스킬:
-
-| 스킬 | 역할 |
-|------|------|
-| `web-research` | Web Research — 다중 소스 출처 인용 조사 |
-| `requirements-analysis` | Risk-driven planning-document analysis — Kordoc·OCR·시각 증거 조정 |
-| `design-review` | Devil's-advocate design/plan critic — 구현 전 계획 적대 검증 |
-| `database-design` | Database Design & Optimization |
-| `algorithm-optimization` | Algorithm Design & Complexity Optimization |
-| `meeting-notes` | Meeting-record augmentation / team-memory |
-| `issueops-debugging` | Systematic Debugging — 과학적 디버깅 |
-| `prompt-engineering` | Prompt Engineering & Optimization |
-| `code-quality-metrics` | Signal-to-Noise Quality Measurement |
-| `git-operations` | Git Operations — rebase, bisect, conflict, reflog |
-| `verified-execution` | Evidence-Bound Execution — 증거 기반 목표 실행 |
-| `implementation-planning` | Strategic Planning — decision-complete 계획 수립 |
-
-**Operational (22)** — host·workflow·문서·QA 운영 스킬:
-
-| 범주 | 스킬 |
-|------|------|
-| 협업 | `slack-delegate`, `sharing-backend-work` |
-| Git / IssueOps | `atomic-commit-push`, `gitlab-usecase`, `issueops`, `issueops-prepare`, `issueops-cleanup` |
-| Project docs | `project-bootstrap`, `project-docs-bootstrap`, `project-docs-update`, `project-docs-optimize` |
-| Browser QA | `aside-functional-qa`, `aside-visual-qa`, `aside-web-qa`, `read-public-artifact` |
-| Code review | `pr-review`, `review-agent-feedback` |
-| 운영 개선 | `self-verify`, `self-augment`, `stability-audit` |
-| 작성·시각화 | `fluent-korean`, `diagram-design` |
-
-기본 설치는 같은 `skills/` 원본을 `~/.codex/skills/`, `~/.claude/skills/`, `~/.omo/agent/skills/`에 연결한다. repo-local skill link는 `--project-local`에서도 생성하지 않고(user-scope와 대상이 같아 중복), upstream catalog에서 받은 외부 skill cache는 이 34개 원본과 분리한다. trigger와 사용 계약은 각 `SKILL.md`가 정의한다.
-
----
+- source는 `skills/` 하나이며 host별로 본문을 복사하지 않는다.
+- 각 host의 실제 노출·제외와 링크 규칙은
+  [Skills and hosts](operations/guides/skills-and-hosts.md)가 소유한다.
+- IssueOps lifecycle는 `issueops` router와 stage skill이, 분석·검토·협업 같은
+  전문 작업은 해당 skill의 activation contract가 소유한다.
+- 스킬 문서의 구조·중복·보존 검증은
+  [Documentation audit](documentation/README.md)를 따른다.
 
 ## 3. 확정 라이브러리
 

@@ -43,6 +43,9 @@
     "issueops historical audit": ".issueops/archive/issueops-audit.md",
     "whole-project audit snapshot": ".issueops/PROJECT_AUDIT.md",
     "capability domain responsibilities": ".issueops/architecture/domain-responsibilities.md",
-    "issueops execution cleanup boundary": ".issueops/architecture/issueops-cleanup.md"
+    "issueops execution cleanup boundary": ".issueops/architecture/issueops-cleanup.md",
+    "skill discovery and source inventory": ".issueops/TECH_STACK.md",
+    "documentation structure and quality": ".issueops/documentation/README.md",
+    "pioneer evaluator policy": ".issueops/operations/pioneer-skill-quality-rubric.md"
   }
 }

@@ -75,9 +75,12 @@ ALWAYS:
 
 ## IssueOps Integration
 
-During `grill` or `plan`, audit schema and query design. During `implement`, verify new or changed queries. Record evidence with:
+During issue investigation or planning, audit schema and query design. During
+implementation, verify new or changed queries. When a linked cycle exists,
+the invoking stage records the evidence with its authenticated `issueops feedback add`
+invocation and canonical actor context; do not invent host/session identities or
+run a bare example outside that stage.
 
-```bash
-issueops feedback add --id "$ISSUEOPS_ID" --source database-design \
-  --body "Optimization: <query>. Evidence: <cost/time/buffer delta>. Index tradeoff: <write penalty>." --json
-```
+Use source `database-design` and include the query, cost/time/buffer delta, and
+index write penalty in the feedback body. Without a cycle, include the same
+evidence in the task handoff; do not create a cycle merely to store this result.

@@ -1,7 +1,8 @@
 # Operating Documentation Architecture
 
 This directory defines how `.issueops/` operating knowledge is divided,
-navigated, and validated.
+navigated, and validated, and how repository-owned skill documentation is
+audited when it is included in the requested scope.
 
 ## Design goals
 
@@ -15,6 +16,8 @@ navigated, and validated.
 The measured starting point and responsibility analysis are in
 [`AUDIT.md`](AUDIT.md). The machine-readable ownership contract is
 [`manifest.json`](manifest.json).
+The current cross-skill/project-doc review is
+[`quality-audit-2026-10-03.md`](quality-audit-2026-10-03.md).
 
 ## Navigation model
 
@@ -39,7 +42,7 @@ project-doc contract discovers those exact filenames:
 └── documentation/
 ```
 
-Each required root document is a canonical index. It owns:
+Each family root listed in the manifest is a canonical index. It owns:
 
 1. the short normative summary needed by every agent;
 2. links to responsibility-specific modules;
@@ -48,6 +51,8 @@ Each required root document is a canonical index. It owns:
 Detailed modules own procedures, rationale, examples, and historical records.
 They link back to their family index and do not duplicate another family's
 normative rules.
+Other required entrypoints, such as the constitution, keep their standalone
+contract; do not replace them with thin redirects merely to match this layout.
 
 ## Ownership map
 
@@ -79,8 +84,8 @@ verbatim under `archive/`.
 
 ## Size and structure budgets
 
-- Required root index: at most 250 lines.
-- Detailed module: at most 250 lines.
+- Manifest-listed root index: at most 250 lines.
+- Detailed module in a manifest-listed family: at most 250 lines.
 - One module owns one responsibility.
 - One ADR file owns one accepted decision.
 - One dated caution lesson file owns one incident lesson or tightly coupled
@@ -89,6 +94,28 @@ verbatim under `archive/`.
   arbitrary part numbers.
 
 The line budget is a retrieval boundary, not a reason to delete detail.
+Standalone machine-input contracts outside those families require an explicit
+consumer/preservation assessment before splitting; a passing family checker
+does not certify every Markdown file in the repository.
+
+## Skill-document quality
+
+- Inventory all owned `skills/<name>/SKILL.md` files and their references;
+  distinguish external links, fixtures, generated pages, and historical evidence.
+- Preserve frontmatter routing, body-only actor instructions, output fields,
+  authorization, refusal/no-input/no-change branches, and stop rules.
+- Prefer concise roots and optional examples within the same skill. A 250-line
+  entrypoint is a design target, not permission to move mandatory contracts
+  beyond an isolated actor's input.
+- Resolve repository-level evaluator links from the real source location.
+  Missing optional evaluator material must not block ordinary skill execution;
+  missing required evaluation evidence prevents a formal quality verdict.
+- Record before/after lines, words, reference/link results, scope changes and
+  semantic duplication decisions. Do not call smaller prose a measured task
+  success-rate or latency improvement.
+- Validate all owned skills and local reference paths separately from the
+  project-doc checker. Use an evidence-bound preservation review for changed
+  contracts; metadata signatures alone do not prove semantic quality.
 
 ## Folder contracts
 

@@ -1,0 +1,559 @@
+{
+  "schema_version": 1,
+  "baseline": ".issueops/documentation/quality-baseline-2026-10-03.json",
+  "revision": "345ae6187cd75b786985e65a6074e77f237544b1",
+  "status": "complete",
+  "measurement": {
+    "lines": "newline-delimited lines; final newline is not an extra blank line",
+    "words": "nonempty whitespace-delimited units, not model tokens",
+    "bytes": "UTF-8 bytes",
+    "duplicates": "whitespace-normalized paragraphs >=160 characters; blocks starting with code fences or table delimiters excluded",
+    "links": "local Markdown file targets outside fenced code; URL and same-file fragments excluded"
+  },
+  "skill": {
+    "roots": [
+      {
+        "path": "skills/algorithm-optimization/SKILL.md",
+        "before_lines": 569,
+        "after_lines": 163,
+        "before_words": 4073,
+        "after_words": 1257,
+        "before_bytes": 26794,
+        "after_bytes": 9306
+      },
+      {
+        "path": "skills/aside-functional-qa/SKILL.md",
+        "before_lines": 228,
+        "after_lines": 228,
+        "before_words": 1313,
+        "after_words": 1313,
+        "before_bytes": 9555,
+        "after_bytes": 9555
+      },
+      {
+        "path": "skills/aside-visual-qa/SKILL.md",
+        "before_lines": 202,
+        "after_lines": 202,
+        "before_words": 1247,
+        "after_words": 1247,
+        "before_bytes": 8759,
+        "after_bytes": 8759
+      },
+      {
+        "path": "skills/aside-web-qa/SKILL.md",
+        "before_lines": 177,
+        "after_lines": 177,
+        "before_words": 1151,
+        "after_words": 1151,
+        "before_bytes": 8106,
+        "after_bytes": 8106
+      },
+      {
+        "path": "skills/atomic-commit-push/SKILL.md",
+        "before_lines": 132,
+        "after_lines": 132,
+        "before_words": 983,
+        "after_words": 983,
+        "before_bytes": 6798,
+        "after_bytes": 6798
+      },
+      {
+        "path": "skills/code-quality-metrics/SKILL.md",
+        "before_lines": 483,
+        "after_lines": 233,
+        "before_words": 2776,
+        "after_words": 1553,
+        "before_bytes": 19263,
+        "after_bytes": 11470
+      },
+      {
+        "path": "skills/database-design/SKILL.md",
+        "before_lines": 83,
+        "after_lines": 86,
+        "before_words": 719,
+        "after_words": 769,
+        "before_bytes": 5227,
+        "after_bytes": 5503
+      },
+      {
+        "path": "skills/design-review/SKILL.md",
+        "before_lines": 142,
+        "after_lines": 142,
+        "before_words": 2127,
+        "after_words": 2127,
+        "before_bytes": 13943,
+        "after_bytes": 13943
+      },
+      {
+        "path": "skills/diagram-design/SKILL.md",
+        "before_lines": 83,
+        "after_lines": 83,
+        "before_words": 721,
+        "after_words": 721,
+        "before_bytes": 6733,
+        "after_bytes": 6733
+      },
+      {
+        "path": "skills/explain/SKILL.md",
+        "before_lines": 103,
+        "after_lines": 103,
+        "before_words": 730,
+        "after_words": 730,
+        "before_bytes": 6955,
+        "after_bytes": 6955
+      },
+      {
+        "path": "skills/fluent-korean/SKILL.md",
+        "before_lines": 83,
+        "after_lines": 83,
+        "before_words": 810,
+        "after_words": 810,
+        "before_bytes": 7852,
+        "after_bytes": 7852
+      },
+      {
+        "path": "skills/gates-ledger/SKILL.md",
+        "before_lines": 119,
+        "after_lines": 119,
+        "before_words": 780,
+        "after_words": 780,
+        "before_bytes": 7479,
+        "after_bytes": 7479
+      },
+      {
+        "path": "skills/git-operations/SKILL.md",
+        "before_lines": 376,
+        "after_lines": 321,
+        "before_words": 2647,
+        "after_words": 1999,
+        "before_bytes": 18506,
+        "after_bytes": 14162
+      },
+      {
+        "path": "skills/gitlab-usecase/SKILL.md",
+        "before_lines": 117,
+        "after_lines": 117,
+        "before_words": 1462,
+        "after_words": 1462,
+        "before_bytes": 10819,
+        "after_bytes": 10819
+      },
+      {
+        "path": "skills/implementation-planning/SKILL.md",
+        "before_lines": 495,
+        "after_lines": 302,
+        "before_words": 3429,
+        "after_words": 2328,
+        "before_bytes": 24048,
+        "after_bytes": 17223
+      },
+      {
+        "path": "skills/io-update/SKILL.md",
+        "before_lines": 126,
+        "after_lines": 126,
+        "before_words": 584,
+        "after_words": 584,
+        "before_bytes": 4882,
+        "after_bytes": 4882
+      },
+      {
+        "path": "skills/issueops-abandon/SKILL.md",
+        "before_lines": 163,
+        "after_lines": 163,
+        "before_words": 1109,
+        "after_words": 1109,
+        "before_bytes": 10359,
+        "after_bytes": 10359
+      },
+      {
+        "path": "skills/issueops-cleanup/SKILL.md",
+        "before_lines": 310,
+        "after_lines": 258,
+        "before_words": 2131,
+        "after_words": 1687,
+        "before_bytes": 15116,
+        "after_bytes": 12731
+      },
+      {
+        "path": "skills/issueops-complete/SKILL.md",
+        "before_lines": 208,
+        "after_lines": 208,
+        "before_words": 1238,
+        "after_words": 1238,
+        "before_bytes": 10997,
+        "after_bytes": 10997
+      },
+      {
+        "path": "skills/issueops-create-issue/SKILL.md",
+        "before_lines": 290,
+        "after_lines": 256,
+        "before_words": 1755,
+        "after_words": 1609,
+        "before_bytes": 16593,
+        "after_bytes": 15339
+      },
+      {
+        "path": "skills/issueops-create-pr/SKILL.md",
+        "before_lines": 161,
+        "after_lines": 161,
+        "before_words": 848,
+        "after_words": 848,
+        "before_bytes": 8216,
+        "after_bytes": 8216
+      },
+      {
+        "path": "skills/issueops-debugging/SKILL.md",
+        "before_lines": 378,
+        "after_lines": 178,
+        "before_words": 2669,
+        "after_words": 1275,
+        "before_bytes": 18269,
+        "after_bytes": 9263
+      },
+      {
+        "path": "skills/issueops-docs/SKILL.md",
+        "before_lines": 160,
+        "after_lines": 160,
+        "before_words": 902,
+        "after_words": 902,
+        "before_bytes": 8677,
+        "after_bytes": 8677
+      },
+      {
+        "path": "skills/issueops-implement/SKILL.md",
+        "before_lines": 274,
+        "after_lines": 288,
+        "before_words": 1724,
+        "after_words": 1943,
+        "before_bytes": 17420,
+        "after_bytes": 20498
+      },
+      {
+        "path": "skills/issueops-plan/SKILL.md",
+        "before_lines": 247,
+        "after_lines": 247,
+        "before_words": 1677,
+        "after_words": 1677,
+        "before_bytes": 16218,
+        "after_bytes": 16218
+      },
+      {
+        "path": "skills/issueops-prepare/SKILL.md",
+        "before_lines": 150,
+        "after_lines": 150,
+        "before_words": 909,
+        "after_words": 909,
+        "before_bytes": 8934,
+        "after_bytes": 8934
+      },
+      {
+        "path": "skills/issueops-remote-write/SKILL.md",
+        "before_lines": 126,
+        "after_lines": 126,
+        "before_words": 889,
+        "after_words": 889,
+        "before_bytes": 8561,
+        "after_bytes": 8561
+      },
+      {
+        "path": "skills/issueops-review/SKILL.md",
+        "before_lines": 233,
+        "after_lines": 233,
+        "before_words": 1602,
+        "after_words": 1602,
+        "before_bytes": 16383,
+        "after_bytes": 16383
+      },
+      {
+        "path": "skills/issueops-slop-clean/SKILL.md",
+        "before_lines": 175,
+        "after_lines": 175,
+        "before_words": 1125,
+        "after_words": 1125,
+        "before_bytes": 9313,
+        "after_bytes": 9313
+      },
+      {
+        "path": "skills/issueops-sync-issue/SKILL.md",
+        "before_lines": 183,
+        "after_lines": 183,
+        "before_words": 949,
+        "after_words": 949,
+        "before_bytes": 8713,
+        "after_bytes": 8713
+      },
+      {
+        "path": "skills/issueops-sync-pr/SKILL.md",
+        "before_lines": 127,
+        "after_lines": 127,
+        "before_words": 671,
+        "after_words": 671,
+        "before_bytes": 6228,
+        "after_bytes": 6228
+      },
+      {
+        "path": "skills/issueops-verify/SKILL.md",
+        "before_lines": 234,
+        "after_lines": 234,
+        "before_words": 1521,
+        "after_words": 1521,
+        "before_bytes": 15306,
+        "after_bytes": 15306
+      },
+      {
+        "path": "skills/issueops/SKILL.md",
+        "before_lines": 281,
+        "after_lines": 331,
+        "before_words": 1898,
+        "after_words": 2426,
+        "before_bytes": 18292,
+        "after_bytes": 24768
+      },
+      {
+        "path": "skills/meeting-notes/SKILL.md",
+        "before_lines": 380,
+        "after_lines": 380,
+        "before_words": 5573,
+        "after_words": 5573,
+        "before_bytes": 37644,
+        "after_bytes": 37644
+      },
+      {
+        "path": "skills/pr-review/SKILL.md",
+        "before_lines": 344,
+        "after_lines": 333,
+        "before_words": 3353,
+        "after_words": 2608,
+        "before_bytes": 22746,
+        "after_bytes": 19899
+      },
+      {
+        "path": "skills/project-bootstrap/SKILL.md",
+        "before_lines": 114,
+        "after_lines": 114,
+        "before_words": 577,
+        "after_words": 577,
+        "before_bytes": 4667,
+        "after_bytes": 4667
+      },
+      {
+        "path": "skills/project-docs-bootstrap/SKILL.md",
+        "before_lines": 149,
+        "after_lines": 149,
+        "before_words": 897,
+        "after_words": 897,
+        "before_bytes": 7033,
+        "after_bytes": 7033
+      },
+      {
+        "path": "skills/project-docs-optimize/SKILL.md",
+        "before_lines": 135,
+        "after_lines": 135,
+        "before_words": 622,
+        "after_words": 622,
+        "before_bytes": 4771,
+        "after_bytes": 4771
+      },
+      {
+        "path": "skills/project-docs-update/SKILL.md",
+        "before_lines": 114,
+        "after_lines": 114,
+        "before_words": 790,
+        "after_words": 790,
+        "before_bytes": 5689,
+        "after_bytes": 5689
+      },
+      {
+        "path": "skills/prompt-engineering/SKILL.md",
+        "before_lines": 465,
+        "after_lines": 203,
+        "before_words": 4000,
+        "after_words": 1541,
+        "before_bytes": 26870,
+        "after_bytes": 11573
+      },
+      {
+        "path": "skills/read-public-artifact/SKILL.md",
+        "before_lines": 107,
+        "after_lines": 107,
+        "before_words": 885,
+        "after_words": 885,
+        "before_bytes": 5646,
+        "after_bytes": 5646
+      },
+      {
+        "path": "skills/requirements-analysis/SKILL.md",
+        "before_lines": 265,
+        "after_lines": 265,
+        "before_words": 1453,
+        "after_words": 1453,
+        "before_bytes": 11347,
+        "after_bytes": 11347
+      },
+      {
+        "path": "skills/review-agent-feedback/SKILL.md",
+        "before_lines": 141,
+        "after_lines": 141,
+        "before_words": 1259,
+        "after_words": 1259,
+        "before_bytes": 8290,
+        "after_bytes": 8290
+      },
+      {
+        "path": "skills/self-augment/SKILL.md",
+        "before_lines": 63,
+        "after_lines": 63,
+        "before_words": 637,
+        "after_words": 637,
+        "before_bytes": 4914,
+        "after_bytes": 4914
+      },
+      {
+        "path": "skills/self-verify/SKILL.md",
+        "before_lines": 84,
+        "after_lines": 85,
+        "before_words": 748,
+        "after_words": 746,
+        "before_bytes": 5713,
+        "after_bytes": 5733
+      },
+      {
+        "path": "skills/sharing-backend-work/SKILL.md",
+        "before_lines": 111,
+        "after_lines": 118,
+        "before_words": 982,
+        "after_words": 1003,
+        "before_bytes": 8614,
+        "after_bytes": 8941
+      },
+      {
+        "path": "skills/slack-delegate/SKILL.md",
+        "before_lines": 98,
+        "after_lines": 98,
+        "before_words": 500,
+        "after_words": 500,
+        "before_bytes": 3811,
+        "after_bytes": 3811
+      },
+      {
+        "path": "skills/stability-audit/SKILL.md",
+        "before_lines": 103,
+        "after_lines": 103,
+        "before_words": 881,
+        "after_words": 881,
+        "before_bytes": 6851,
+        "after_bytes": 6851
+      },
+      {
+        "path": "skills/sync-base/SKILL.md",
+        "before_lines": 445,
+        "after_lines": 403,
+        "before_words": 3475,
+        "after_words": 2837,
+        "before_bytes": 21650,
+        "after_bytes": 18250
+      },
+      {
+        "path": "skills/ui-ux-craft/SKILL.md",
+        "before_lines": 193,
+        "after_lines": 193,
+        "before_words": 1244,
+        "after_words": 1244,
+        "before_bytes": 8782,
+        "after_bytes": 8782
+      },
+      {
+        "path": "skills/verified-execution/SKILL.md",
+        "before_lines": 517,
+        "after_lines": 411,
+        "before_words": 5214,
+        "after_words": 4042,
+        "before_bytes": 38392,
+        "after_bytes": 30918
+      },
+      {
+        "path": "skills/web-research/SKILL.md",
+        "before_lines": 374,
+        "after_lines": 236,
+        "before_words": 3069,
+        "after_words": 1726,
+        "before_bytes": 21918,
+        "after_bytes": 13200
+      }
+    ],
+    "files": 106,
+    "links": 179,
+    "broken_links": [],
+    "frontmatter_changes": [],
+    "summary": {
+      "skill_roots": 52,
+      "before_lines": 11420,
+      "after_lines": 9746,
+      "before_words": 85328,
+      "after_words": 72015,
+      "before_bytes": 654662,
+      "after_bytes": 578008,
+      "over_250_before": 16,
+      "over_250_after": 11
+    }
+  },
+  "source_cohort": {
+    "before_files": 174,
+    "after_files": 187,
+    "before_lines": 28889,
+    "after_lines": 27840,
+    "before_duplicate_paragraphs": 1,
+    "after_duplicate_paragraphs": 1,
+    "duplicate_details": [
+      {
+        "sha256": "1bc47d16fecfd3fa8f159e644876f46f5b6fcbc0aabd437174a797a75f9b5f57",
+        "preview": "- build, golden, generator, formatter, fixture와 분류 불명 작업은 명령·cwd·출력 위치로 공유 상태를 바꾸지 않는다는 점을 입증하기 전까지 writer다. 공유 상태 밖의 immutable 입력만 읽는 독립 re",
+        "paths": [
+          "skills/issueops-implement/SKILL.md",
+          "skills/issueops/SKILL.md"
+        ],
+        "reason": "Required independent handoff safety contract; intentional repetition."
+      }
+    ]
+  },
+  "preservation": {
+    "historical_and_fixture_files": 542,
+    "changed": [],
+    "template_bodies": [
+      {
+        "path": "skills/sharing-backend-work/references/team-channel-examples.md",
+        "preserved": true
+      },
+      {
+        "path": "skills/sharing-backend-work/references/backend-channel-examples.md",
+        "preserved": true
+      },
+      {
+        "path": "skills/sharing-backend-work/references/lead-report-examples.md",
+        "preserved": true
+      },
+      {
+        "path": "skills/sharing-backend-work/references/audience-comparison.md",
+        "preserved": true
+      }
+    ],
+    "requirements_analysis_restored": true
+  },
+  "qualitative": {
+    "skill_preservation": "PASS after C1-C4/E1-E2 closure and R1 withdrawal",
+    "project_docs": "PASS for scoped changed claims",
+    "task_success_benchmark": "not performed; no performance/actor success claim"
+  },
+  "verification": {
+    "ok": true,
+    "steps_passed": 28,
+    "steps_total": 28,
+    "minimum_goal_score": 100,
+    "termination_eligible": true,
+    "source_changed_during_run": [],
+    "go_toolchain": "go1.26.3",
+    "GOFLAGS": "-p=2",
+    "raw_result": "/tmp/issueops-docs-final-pass.json",
+    "elapsed_ms": 350556
+  }
+}

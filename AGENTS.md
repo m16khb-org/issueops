@@ -88,7 +88,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | 하네스 방식 | **외부 Go 하네스 코어 + 얇은 호스트 어댑터** | 특정 host 전용 구현은 다른 host와 공유하기 어렵다. 외부 CLI/MCP/worker 코어를 두면 Codex, Claude Code, Omo에서 같은 동작을 재사용할 수 있다. |
 | Plugin의 역할 | 핵심 로직이 아니라 **설치·문서·명령 호출 래퍼** | Codex/Claude/Omo별 확장점 차이를 어댑터에 격리한다. |
 | 통합 표면 | 1차 CLI, 2차 공용 로컬 Streamable HTTP MCP 서비스(stdio는 호환 표면), 3차 local job worker | 모든 에이전트는 shell/CLI를 다룰 수 있고, Claude Code는 MCP 연동이 자연스럽다. 세 host는 사용자당 하나인 `127.0.0.1:47831/mcp` 서비스에 직접 연결하고, 요청 권한은 native CLI(`issueops mcp authorize`)가 발급한 caller capability로 정한다. stdio `issueops mcp`는 host 세션 프로세스 안에서 native actor 계보를 보존한다. 공통 state는 SQLite가 맡는다. 장기 job worker는 필요성이 확인된 뒤 도입한다(2026-10-02 ADR). |
-| 구현 언어 | **Go** | 현재 로컬 toolchain이 Go 1.26.3이고, 단일 바이너리·동시성·CLI/MCP/daemon 구현 생산성이 Rust보다 유리하다. |
+| 구현 언어 | **Go** | 단일 바이너리·동시성·CLI/MCP/daemon 구현 생산성이 Rust보다 유리하다. 요구 toolchain은 `go.mod`를 기준으로 확인한다. |
 
 상세 근거와 단계별 계획은 `.issueops/ADR.md`를 따른다.
 

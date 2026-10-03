@@ -20,14 +20,19 @@ For each skill:
 5. Main evaluator scores the artifact. The executor does not self-score.
 6. Append `after_score` only after evidence strength is A, B, or C and calibration drift is checked.
 
-If fresh-context sub-agents are unavailable in the current host, run the fixture in the main session and mark `context_mode: main-agent-fallback`. Do not pretend the holdout had fresh-context isolation.
+The [rubric's fresh-context policy](pioneer-skill-quality-rubric.md#fresh-context-sub-agent-execution)
+is authoritative. If a fresh sub-agent is unavailable, use a fresh session with
+the same isolated packet or report formal evaluation incomplete. An existing
+main-session trial is diagnostic only; it cannot supply a new formal score or
+satisfy holdout isolation.
 
 ## Result Record Template
 
 ```yaml
 skill:
 cycle:
-context_mode: fresh-subagent | main-agent-fallback
+rubric_version: 2
+context_mode: fresh-subagent | fresh-session
 skill_path:
 visible_cases:
 holdout_case:
@@ -41,11 +46,28 @@ scores:
   method_fidelity:
   evidence_and_verification:
   safety_and_portability:
+  proportionality:
+sub_criteria:
+  request_fit: [met | partial | unmet, met | partial | unmet, met | partial | unmet]
+  completion: [met | partial | unmet, met | partial | unmet, met | partial | unmet]
+  method_fidelity: [met | partial | unmet, met | partial | unmet, met | partial | unmet]
+  evidence_and_verification: [met | partial | unmet, met | partial | unmet, met | partial | unmet]
+  safety_and_portability: [met | partial | unmet, met | partial | unmet, met | partial | unmet]
+  proportionality: [met | partial | unmet, met | partial | unmet, met | partial | unmet]
+case_type: primary | boundary | operational | holdout
+holdout_matches_visible_type:
+case_type_weights_applied:
+discovery: {count: 0, findings: []}
 gate_flags_remaining:
 calibration_cases_rerun:
 keep_discard_decision:
 notes:
 ```
+
+Use v2's 0.1 score units, sub-criterion caps, case-type weights, and gate caps.
+`evidence_and_verification` and `safety_and_portability` retain the existing
+record keys; the rubric's `evidence` and `safety_portability` labels refer to
+those same dimensions. Historical v1 records remain v1 until actually rescored.
 
 ## Fixture Matrix
 

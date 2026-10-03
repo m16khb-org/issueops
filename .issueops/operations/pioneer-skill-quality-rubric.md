@@ -221,9 +221,12 @@ Discovery: <발굴 항목 수와 한 줄 요약, 없으면 none>
 Case type weights applied: <P|B|O|H>
 ```
 
-## Five Scored Dimensions
+## Shared Dimension Anchors
 
-Each dimension is scored from 0 to 5.
+The five definitions below are shared by v1 and v2. Current evaluations use
+v2's six dimensions, adding proportionality, the 0.1 score units, sub-criteria,
+case-type weights, and discovery record defined above. Keep historical v1
+records labeled v1 until they are actually rescored.
 
 | Score | Meaning |
 |-------|---------|
@@ -382,14 +385,20 @@ A score of 5 requires the generic dimensions plus the skill-specific standard be
 
 ## Scoring Formula
 
-Per case:
+Per new case (v2):
 
 ```
-case_score = average(request_fit, completion, method_fidelity, evidence, safety_portability)
+dimensions = [request_fit, completion, method_fidelity, evidence,
+              safety_portability, proportionality]
+case_score = sum(score[d] * weight[d] for d in dimensions) / sum(weight.values())
 case_score = min(case_score, gate_cap_if_any)
 ```
 
-Per skill:
+Use the visible case type's weights from v2.3; a holdout inherits its matching
+visible type. Apply the sub-criterion score limits before the weighted mean.
+The old five-dimension arithmetic mean describes historical v1 records only.
+
+Per skill (aggregation unchanged; holdouts remain an additional gate):
 
 ```
 skill_score =
@@ -440,6 +449,7 @@ Each case result must use this shape:
 
 ```markdown
 ### CASE-ID: Title
+Rubric version: v2
 Request:
 Observed response/artifact:
 Evidence:
@@ -450,6 +460,10 @@ Scores:
 - Method fidelity: N/5
 - Evidence and verification: N/5
 - Safety and portability: N/5
+- Proportionality: N.N/5
+Sub-criteria: <each dimension's three met/partial/unmet results>
+Case type weights applied: <P|B|O|H and the actual weights>
+Discovery: <count and severity/summary, or none>
 Pre-score critical checks:
 Gate flags:
 Case score:
@@ -462,7 +476,8 @@ Improvement required:
 
 A pioneer skill quality evaluation is complete only when:
 
-- All 27 cases have result records.
+- All current visible cases in `pioneer-skill-quality-cases.md` have result records;
+  enumerate their IDs rather than copying a fixed case count into another document.
 - No result uses evidence strength D.
 - Every gate flag has a concrete improvement task.
 - The skill score is calculated from the three weighted case scores.

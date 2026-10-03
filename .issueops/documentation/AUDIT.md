@@ -1,5 +1,11 @@
 # Operating Documentation Responsibility Audit
 
+Current cross-skill/project-doc audit:
+[2026-10-03 structure, duplication, and quality](quality-audit-2026-10-03.md).
+The inventory and decisions below are the historical family-modularization
+snapshot; current budgets and ownership come from [README.md](README.md) and
+[manifest.json](manifest.json).
+
 Measured on 2026-08-11 from the current worktree.
 
 ## Scope and threshold

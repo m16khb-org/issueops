@@ -153,7 +153,8 @@ runner는 root suite를 한 번 실행하고 스킬마다 CWD/import가 격리�
 
 단계 실패는 전체 OK와 termination을 거부한다. `test_suite` 점수와 `test suite contract`
 coverage는 Python과 Go test-match guard 증거를 모두 요구한다.
-기본 계획은 28단계이고 summary contract는 v6이며 기존 JSON 필드와
+기본 step 목록과 summary contract의 version/hash는 native CLI 출력이 기준이다.
+현재 계약 정의는 `internal/domain/selfverify/contract.go`의 `ContractValue`가 소유하며, 기존 JSON 필드와
 snapshot schema v1은 유지한다. labels 자체는 hash 입력이 아니므로 version 변경으로
 검사 범위를 구분한다. 역사 요약은 history/compare로 읽을 수 있고 새 단계는 added/missing
 label로 비교한다. 후보 계획의 verification QA는 현재 contract version/hash와
