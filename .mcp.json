@@ -1,14 +1,3 @@
 {
-  "mcpServers": {
-    "issueops_project": {
-      "args": [
-        "mcp"
-      ],
-      "command": "./bin/issueops",
-      "env": {
-        "ISSUEOPS_ROOT": "."
-      },
-      "type": "stdio"
-    }
-  }
+  "mcpServers": {}
 }
