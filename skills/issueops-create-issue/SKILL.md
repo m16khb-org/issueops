@@ -5,13 +5,20 @@ description: Confirm and create the IssueOps issue that a cycle contracts on. In
 
 # IssueOps Create Issue
 
-이 스킬의 일은 **1단계 하나**다. 무엇을 할 일인지 확정하고, 그 확정을 원장에
-기록하고, 팀이 보는 이슈로 만든다. 브랜치·계획·구현은 다음 단계 스킬이 소유한다.
+**1단계 하나**를 맡는다. 할 일을 확정해 기록하고 팀이 보는 이슈로 만든다.
+브랜치·계획·구현은 다음 단계다.
 
-- 전체 흐름과 단계 판별: [`issueops`](../issueops/SKILL.md)
-- 다음 단계: [`issueops-prepare`](../issueops-prepare/SKILL.md)
-- 원격 쓰기 절차: [`issueops-remote-write`](../issueops-remote-write/SKILL.md)
-- provider 링크·계층 규칙: [`remote-issue.md`](../issueops/references/remote-issue.md)
+본문은 단독 주입·복사에도 적용된다. sibling 스킬은 설치되어 있을 때 활용하며 없으면
+아래 계약과 CLI의 exact `next_command`로 진행한다. evaluator나 sibling 설치는 요구하지 않는다.
+선택적 [작성 예시와 배경](references/issue-writing.md)은 symlink를 해소한 이 파일 기준이다.
+초안/상태만 요청했으면 그 결과에서 끝낸다. 원격 생성 권한을 추정하지 않는다.
+
+`execution whoami --json`의 `record_actor_flags`를 `$RECORD_ACTOR_FLAGS`,
+`claim_actor_flags`를 `$ACTOR_FLAGS`로 그대로 쓴다. durable 기록 직전 exact ID·native actor·
+source cwd를 대조하고, execution이 있으면 generation·holder·canonical cwd도 확인한다.
+다른 holder나 불일치는 stop이다. lease 전 준비에 가짜 generation을 만들지 않는다.
+`feedback add`와 `status`는 유효 root alias다. 이 단계가 인증된 feedback 기록을 맡는다.
+`skill-bench`는 미구현이고 `quality inspect`는 semantic skill runner가 아니다.
 
 ## 이 스킬이 맞는지 확인
 
@@ -20,12 +27,10 @@ description: Confirm and create the IssueOps issue that a cycle contracts on. In
 issueops next --json
 ```
 
-`stage.key`가 `none`이거나 `issue`면 이 스킬이다. 사용자가 라우터의 "새 사이클
-시작"을 골랐으면 `stage.key`와 무관하게 진행하며, 이 저장소에 다른 사이클이 있어도
-새 `start`는 허용된다. 그 밖의 값이면 라우터 `## 단계 표`가 지목하는 스킬로 이어간다.
+`none|issue`면 진행한다. 명시적인 새 사이클 요청은 다른 기존 stage/사이클과 무관하게
+허용한다. 그 밖에는 `next`가 지목한 단계로 간다. `blocked.*`를 우회하지 않는다.
 
-`start`는 **source checkout**에서 실행한다. 워크트리 안에서 실행하면 record의 repo가
-워크트리를 가리키고 이후 모든 경로 판정이 어긋난다.
+`start`는 **source checkout**에서만 실행한다. worktree를 record의 repo로 만들지 않는다.
 
 `next`가 기존 사이클을 선택했지만 사용자가 별도의 새 사이클을 명시적으로 요청했다면
 첫 명령에 `--new`를 붙인다. `--new`는 `--branch`와 함께 쓸 수 없고, 실행할 때마다
@@ -35,21 +40,20 @@ issueops next --json
 
 ## 입력 세 가지
 
-이슈는 세 곳에서 온 것을 합쳐 만든다. 각 조사 결과가 그대로 plan-prep의 evidence가
-되므로, 조사하면서 무엇을 봤는지 문자열로 남긴다.
+세 입력의 조사 출처를 plan-prep evidence 문자열로 남긴다.
 
 1. **사용자가 준 정보.** 원문을 그대로 intent contract의 `--raw-request`에 넣는다.
    요약해서 넣으면 나중에 해석이 맞았는지 대조할 원본이 사라진다.
    사용자가 HWP·PDF·DOCX 기획서나 화면 캡처를 줬으면
-   [`requirements-analysis`](../requirements-analysis/SKILL.md)로 요구사항·모순·누락을
-   먼저 추출한다. 원문 요청은 그대로 `--raw-request`에 넣고, 추출한 제약은
+   요구사항·모순·누락을 원문·표·화면·작은 글씨까지 확인해 먼저 추출한다. 설치된
+   `requirements-analysis`를 활용한다. 원문 요청은 그대로 `--raw-request`에 넣고, 추출한 제약은
    `intent record --constraint`에, 모순과 누락은 `--ambiguity`에 넣는다. 문서를 요약해
    `--raw-request`를 대체하지 않는다.
 2. **코드베이스 조사.** `.codegraph/`가 있으면 `codegraph explore "<질문>"`으로 관련
    심볼과 호출 경로를 찾고, 없으면 `rg`로 찾는다. 만진 심볼·파일·호출 경로를 evidence
    문자열로 만든다(`--codebase-survey-evidence`).
 3. **배경지식과 웹 조사.** 외부 API의 의미나 계약이 걸릴 때만
-   [`web-research`](../web-research/SKILL.md)로 조사하고 그 결과를
+   출처를 직접 조사하고(설치된 `web-research` 활용) 그 결과를
    `--web-research-evidence`에 넣는다. 조사하지 않았으면 waive하지 말고 왜 필요 없는지를
    evidence로 쓴다. 관련 이슈는 `--related-score-ref`로, 이미 내려진 결정은
    `--decisions-evidence`로 남긴다.
@@ -64,24 +68,22 @@ issueops next --json
 | `deferred` | 지금 몰라도 구현 방향이 바뀌지 않는다 | 이슈 본문 "열린 결정" 절에 남긴다 |
 | `blocking` | 답에 따라 다른 것을 만들게 된다 | 사용자에게 묻는다 |
 
-- **blocking만 묻는다.** 조사로 답할 수 있는 것을 묻는 것은 조사를 사용자에게 떠넘기는
-  것이다.
+- **blocking만 묻는다.** 조사로 답할 수 있는 것은 먼저 조사한다.
 - 한 번에 한 질문만 한다. 선택지가 있으면 번호로 제시하고 추천안을 먼저 둔다.
 - 답을 받으면 그 답이 무엇을 바꾸는지 한 문장으로 되돌려 확인한다.
 - 다음을 확인할 때까지 이슈를 만들지 않는다: 사용자에게 보이는 문제와 지금 중요한
   이유, 테스트와 실제 표면으로 검증 가능한 성공 기준, 비목표와 범위 경계, 근거가 필요한
   도메인 용어, 필요한 파일·API·명령·런타임 표면, 구현을 실질적으로 바꿀 열린 결정.
 
-blocking 질문이 둘 이상이거나 답에 따라 만들 것이 갈리면
-[`implementation-planning`](../implementation-planning/SKILL.md)의 인터뷰 절차를 쓴다.
-드래프트 파일을 먼저 만들고, 한 번에 한 질문만 하고, 매 답변 뒤 clearance check로 남은
-모호함을 센다. 그 드래프트의 `Requirements (confirmed)` 절이 intent contract
+blocking 질문이 둘 이상이거나 답에 따라 만들 것이 갈리면 드래프트를 먼저 만들고,
+한 번에 한 질문만 하며 매 답변 뒤 남은 모호함을 확인한다. 설치된 `implementation-planning`의
+인터뷰를 활용한다. 드래프트의 `Requirements (confirmed)` 절이 intent contract
 `--interpreted-intent`의 원문이 된다. 확정 뒤 드래프트는 지운다 — 이슈 본문이 유일한
 계약이다.
 
 ## 기록 순서
 
-이 순서가 곧 grill 완료 조건이다. 항목이 비면 grill 진입이 거부된다.
+아래 기록 순서를 지킨다. 항목이 비면 grill 진입이 거부된다.
 
 ```bash
 issueops start --repo "$SOURCE_ROOT" --json      # ISSUEOPS_ID를 받는다
@@ -114,19 +116,11 @@ issueops plan-prep record --id "$ISSUEOPS_ID" \
 issueops phase --id "$ISSUEOPS_ID" --to grill $RECORD_ACTOR_FLAGS --json
 ```
 
-여기까지가 로컬 기록이다. 다음은 원격 write이므로 본문 초안을 사용자에게 보여 주고
-현재 요청에 이슈 발행이 포함되어 있으면 별도 재승인 없이
-[`issueops-remote-write`](../issueops-remote-write/SKILL.md)의 절차로
-진행한다. 그 스킬이 골격 받기, fluent-korean 호출, preview의 가독성 판정, 동일 요청
-confirm, readback, 모호할 때의 reconcile을 소유한다.
+다음은 원격 write다. 초안을 보여 주고 요청에 발행이 포함되어 있으면 아래 publication
+절차로 재승인 없이 진행한다. 승인받은 특정 원문이나 범위를 바꿨으면 먼저 확인받는다.
 
-```bash
-# → issueops-remote-write 절차로 remote create-issue 실행(--template 필수)
-issueops link-issue --id "$ISSUEOPS_ID" --issue-url "$ISSUE_URL" $RECORD_ACTOR_FLAGS --json
-```
-
-`remote create-issue`가 `issue_url`을 record에 이미 넣었으면 `link-issue`는 생략한다.
-`status --json`으로 확인하고 없을 때만 실행한다.
+`remote create-issue` 뒤 `status --json`에 `issue_url`이 없을 때만
+`issueops link-issue --id "$ISSUEOPS_ID" --issue-url "$ISSUE_URL" $RECORD_ACTOR_FLAGS --json`을 실행한다.
 
 이슈만 요청했으면 다음 세 줄로 완료 보고한다. 전체 작업 요청이면 진행 상황으로 알린 뒤
 같은 ID로 `issueops-prepare`를 실행한다. worktree 준비 후 환경별 자동 세션 인계를 적용한다.
@@ -147,29 +141,12 @@ issue: <url>
 | 바로 실행할 작업 | `implementation_task` | 근거·범위·검증을 중심으로 쓴다 |
 | parent의 독립 작업 | `child_task` | scope·의존성·wave를 metadata 표로 쓴다 |
 
-정보를 모두 한 문단에 넣지 않는다. **결론은 요약에, 근거는 배경에,
-실행 명령은 검증 절에** 둔다. 다이어그램은 흐름·상태·경계가 문장보다
-빠르게 읽힐 때만 쓴다.
-
-## 템플릿을 정한 근거
-
-공식 문서의 기능 범위와 이 저장소의 운영 계약을 맞췄다.
-
-- [GitHub issue form 문법](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms):
-  field type과 required validation을 사용한다.
-- [GitHub PR template](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/creating-a-pull-request-template-for-your-repository):
-  본문에 반복되는 리뷰 정보를 미리 제공한다.
-- [GitLab description templates](https://docs.gitlab.com/user/project/description_templates/):
-  Issue와 MR 모두 Markdown template을 사용한다.
-
-그래서 GitHub Issue는 입력 오류를 앞에서 막는 form으로, GitLab Issue와
-PR/MR은 같은 읽기 순서를 유지하는 Markdown으로 관리한다. 필수 항목은
-많이 넣기보다 완료·검증에 실제로 필요한 항목만 남긴다.
+**결론은 요약, 근거는 배경, 명령은 검증 절**에 둔다. 다이어그램은 흐름·상태·경계를
+문장보다 빨리 이해할 때만 쓴다.
 
 ## Parent와 child
 
-기본값은 `no split`이다. 한 owner가 한 번의 검토 가능한 변경으로 끝낼 수
-있다면 다음 근거를 parent에 남기고 child를 만들지 않는다.
+기본은 `no split`이다. 한 owner의 검토 가능한 변경이면 아래 근거를 parent에 남긴다.
 
 ```text
 Large Issue Breakdown Gate: no split
@@ -191,15 +168,16 @@ Large Issue Breakdown Gate: no split
 | 생성 | ordinary sibling이 아닌 `remote create-child` |
 | parent 기록 | `## 하위 Task` 아래 URL·scope·wave·prerequisite를 본문에 기록 |
 
-parent body를 안전하게 갱신할 IssueOps 경계가 없으면 raw `gh`/`glab`로
-우회하지 말고 중지한다. 댓글만 남기는 것은 완료가 아니다.
+닫힌 parent를 재사용하지 않는다. parent body를 안전하게 갱신할 IssueOps 경계가 없으면
+raw `gh`/`glab`로 우회하지 말고 중지한다. 댓글만 남기는 것은 완료가 아니다.
+GitHub 관련 이슈는 body cross-reference, GitLab은 native linked item이다.
+child는 양쪽 모두 native hierarchy를 확인하며 sibling/body 목록으로 대체하지 않는다.
+`[p]`/`[s]`, prerequisite, wave는 child 제목·본문·parent 하위 Task 절에 모두 남긴다.
 
 ## 읽기 좋은 body
 
-절 구성은 `issueops remote render-template`이 출력하는 골격을 따른다. 절을 채우는 방법,
-용어 변환표, 공개 모범 사례, 가독성 검사 기준은
-[`references/readable-body.md`](../issueops-remote-write/references/readable-body.md)가
-소유한다. 이 스킬에 절 목록이나 본문 예시를 따로 두지 않는다.
+절 구성은 `issueops remote render-template`이 출력하는 골격을 따른다. 사람이 읽을
+문제·범위/비목표·완료 기준·실행 가능한 검증 명령과 기대 결과를 채운다.
 
 ```bash
 issueops remote render-template --kind issue --template "$TEMPLATE" \
@@ -208,54 +186,43 @@ issueops remote render-template --kind issue --template "$TEMPLATE" \
 
 로그는 secret을 제거한 짧은 code block으로만 붙인다. 긴 로그 전체나
 스크린샷 대신 재현에 필요한 줄과 파일·명령을 적는다. 해시, 커밋 SHA 전문,
-라벨 점수, plan 원문은 본문에 넣지 않는다.
-
-### 나쁜 예
-
-| 나쁜 입력 | 왜 나쁜가 | 고치는 방법 |
-|---|---|---|
-| `버그 고쳐주세요` | 재현·완료 기준이 없다 | bug 골격의 재현 절차, 기대 동작과 실제 동작 작성 |
-| 파일 20개 목록 | 문제와 연결되지 않는다 | 범위 절에 하는 것과 하지 않는 것을 함께 작성 |
-| 본문에 라벨 점수나 해시를 붙임 | 사람이 읽지 않는 값이 흐름을 가린다 | 라벨 판단은 `decision add`, 해시는 record에 둔다 |
-| `나중에 테스트` | 검증이 실행 가능하지 않다 | 명령과 기대 결과를 명시 |
-| `task: 작업` | parent·class·wave가 없다 | `[p]`/`[s]`, prerequisite, wave 작성 |
-| closed #18에 새 child 부착 | 종료된 umbrella 재사용 | 활성 parent를 확인하거나 새 parent 준비 |
-| token이 든 로그 첨부 | secret이 durable artifact에 남는다 | redaction 후 최소 재현 출력만 첨부 |
-| 워크트리 안에서 `start` 실행 | record의 repo가 워크트리를 가리켜 이후 경로 판정이 어긋난다 | source checkout에서 실행한다 |
-| blocking이 아닌 질문을 연달아 던짐 | 조사로 답할 것을 사용자에게 떠넘긴다 | 조사로 답하고 blocking만 묻는다 |
-| plan-prep 네 항목을 waive로 채움 | 계획의 근거가 비어 있는 채로 다음 단계가 진행된다 | 조사 결과를 evidence로 넣고, 필요 없으면 그 이유를 evidence로 쓴다 |
+라벨 점수, plan 원문·repo-local plan 경로·`Plan Link`·`TBD`는 본문에 넣지 않는다.
+plan-prep 네 항목은 waive로 채우지 않는다. 조사 결과나 불필요한 이유를 evidence로 쓴다.
 
 ## Canonical publication
 
-body file을 먼저 읽어 보고 preview 응답의 `readability`를 확인한다. critical이 있으면
-confirm이 거부되고, warning은 고치거나 남기는 이유를 적는다. preview와 confirm의 규율은
-[`issueops-remote-write`](../issueops-remote-write/SKILL.md)가 소유한다.
+1. 현재 provider 이슈·label 후보를 조사한다. 일치하는 이슈가 있으면 중복 생성 대신
+   연결/갱신한다. score의 기본 threshold는 0.70(더 강한 repo/user 값 우선)이며 선택된
+   label·관련 이슈만 적용한다. 없는 label도 선택된 것만 먼저 만든다. 미선택 label을
+   적용하려면 근거 있는 override를 decision/feedback에 기록한다. 무라벨 발행은 하지 않는다.
+2. deterministic score 뒤 semantic 판단이 필요하면 `remote score --judge prompt`를
+   fresh 독립 read-only agent에게 주고 결과 JSON을 `--judge file --judge-file`로 검증한다.
+   독립 agent가 없거나 비활성화했으면 deterministic 결과를 쓰고 그 선택을 기록한다.
+3. 한국어 본문을 다듬는다. `fluent-korean`이 있으면 호출하고, 없으면 명확한 주어·완성된
+   문장·검증 가능한 결과·불필요한 수식 제거를 직접 검토한다. secret을 제거하고 실제
+   assignee를 확인한다(`@me` 금지). 설치된 `issueops-remote-write`를 활용할 수 있다.
+4. body file을 읽고 preview의 `readability`를 확인한다. critical은 수정 후 재preview,
+   warning은 수정하거나 이유를 기록한다. preview와 동일한 요청에만 `--confirm`을 붙인다.
+5. URL·상태·본문 hash·label·assignee·hierarchy와 `status.body_syncs` baseline을 readback한다.
+   모호한 issue 생성은 `remote reconcile-issue --id ID --json`으로 확인하며 재생성하지 않는다.
+   raw provider CLI/MCP 쓰기로 우회하지 않는다. 둘 이상의 artifact면 중단한다.
 
 ```bash
-issueops remote create-issue \
-  --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
-  --title "[enhancement] IssueOps 생성 경계를 분리한다" \
-  --template implementation_task --body-file "$BODY_FILE" \
-  --label enhancement --assignee "$ASSIGNEE" --json
+issueops remote create-issue --id "$ISSUEOPS_ID" --provider "$PROVIDER" \
+  --title "$TITLE" --template "$TEMPLATE" --body-file "$BODY_FILE" \
+  --label "$LABEL" --assignee "$ASSIGNEE" $ACTOR_FLAGS --json
 ```
 
 child는 parent URL이 record에 연결되고 umbrella branch gate가 통과한 뒤 만든다.
 
 ```bash
-issueops remote create-child \
-  --id "$ISSUEOPS_ID" --title "[p] Issue body 계약을 검증한다" \
+issueops remote create-child --id "$ISSUEOPS_ID" --title "$CHILD_TITLE" \
   --template child_task --body-file "$CHILD_BODY" \
-  --label enhancement --assignee "$ASSIGNEE" \
-  --host "$HOST" --session-id "$SESSION_ID" --cwd "$WORKER_PATH" --json
+  --label "$LABEL" --assignee "$ASSIGNEE" $ACTOR_FLAGS --json
 ```
 
 같은 본문으로 의도적인 새 child를 만들려면 ID를 한 번 생성해 저장하고 최초 요청과
 재시도에 같은 값을 `--operation-id`로 넘긴다.
-
-```bash
-CHILD_OPERATION_ID="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
-# 저장한 CHILD_OPERATION_ID를 위 create-child 요청에 --operation-id로 넘긴다.
-```
 
 무ID 재시도는 완료 뒤에도 최초 implicit child를 반환한다. 같은 본문의 explicit 새
 child가 생겨도 이 결합은 유지된다. 미해결 operation은 새 ID로도 생성하지 않으며,
@@ -273,13 +240,12 @@ child 본문의 요약에는 parent 링크와 이 child가 맡는 부분을, 선
 ## 품질·성능 게이트
 
 - 품질: preview의 `readability.critical` 0, warning 처리 기록, 원격 write 전
-  `fluent-korean` 호출, 라벨 판단 decision 기록, secret redaction,
+  한국어 검토(설치된 `fluent-korean` 호출), 라벨 판단 decision 기록, secret redaction,
   hierarchy/label/assignee readback.
 - 성능: issue 단계에서만 이 스킬을 로드한다. PR/MR reference를 함께
   중복 로드하지 않는다. 변경 전후 byte 수와 focused 검증 시간을 기록하되
   측정 없는 성능 개선을 주장하지 않는다.
 - 검증:
-
 ```bash
 python3 scripts/validate-skill.py skills/issueops-create-issue
 python3 scripts/verify-skill-shell.py skills/issueops-create-issue
