@@ -27,10 +27,15 @@ test/race/self-verify 결과를 표시하지 않으므로, 로컬 검증 게이�
 (2026-08-26 lesson).
 
 `go vet`은 harness의 기본 정적 분석 게이트이며, CI는 `.golangci.yml` 설정에 따라 그 위에
-golangci-lint 기본 linter 집합(errcheck, gosimple, govet, ineffassign, staticcheck, unused)도
-실행한다. 로컬에 golangci-lint가 설치되어 있으면 `golangci-lint run ./...`로 같은 목록을
-확인하고, CI runner가 Linux이므로 `GOOS=linux golangci-lint run ./...`도 실행한다(플랫폼
-build tag 분기에서만 unused가 되는 심볼을 찾는다). 이 도구는 install/update/self-verify
+golangci-lint v2.12.2의 명시된 linter 집합(errcheck, govet, ineffassign, staticcheck,
+unused)도 실행한다. v1의 staticcheck(SA)·gosimple(S1)을 v2의 staticcheck에 명시하고,
+기존에 사용하지 않던 stylecheck(ST)·quickfix(QF)는 추가하지 않는다. 기존 제외 preset과
+전체 issue 출력 설정은 유지한다. 로컬 린터도 `go.mod`의 toolchain을 사용한다:
+`GOTOOLCHAIN="go$(go list -m -f '{{.GoVersion}}')" golangci-lint run ./...`.
+CI runner가 Linux이므로 같은 명령에 `GOOS=linux`를 추가해 실행한다(플랫폼
+build tag 분기에서만 unused가 되는 심볼을 찾는다). 린터는 해당 Go 버전 이상으로
+빌드해야 하며, 더 최신인 로컬 Go의 표준 라이브러리를 구버전 analyzer에 넘기지 않는다.
+이 도구는 install/update/self-verify
 readiness 경로에는 필요하지 않고, CI와 개발자 게이트에서만 사용한다.
 
 작은 변경이면 targeted test를 먼저 실행한 뒤, 완료 전에 영향 범위에 맞춰 전체 테스트를 실행한다.

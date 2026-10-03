@@ -24,8 +24,7 @@ func digest(kind, id string) string {
 
 func scopeDigest(host, session string) string { return digest("scope", host+"\x00"+session) }
 
-func i64(v int64) *int64     { return &v }
-func f64(v float64) *float64 { return &v }
+func i64(v int64) *int64 { return &v }
 
 func samePtr(a, b *int64) bool {
 	if a == nil || b == nil {

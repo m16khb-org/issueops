@@ -2354,8 +2354,7 @@
       "owner": "inbound",
       "task": "T20",
       "symbols": [
-        "func handleIssueOpsMCPToolCallWithContext",
-        "func handleIssueOpsMCPToolCallWithDependencies"
+        "func handleIssueOpsMCPToolCallWithContext"
       ]
     },
     {

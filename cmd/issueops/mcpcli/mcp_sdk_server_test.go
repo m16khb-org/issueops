@@ -208,7 +208,7 @@ func TestSDKServerOptionsDoNotAdvertiseUnusedLoggingState(t *testing.T) {
 	if options.Capabilities == nil {
 		t.Fatal("SDK server must use explicit capabilities instead of logging defaults")
 	}
-	if options.Capabilities.Logging != nil {
+	if _, present := sdkCapabilityFields(t, options.Capabilities)["logging"]; present {
 		t.Fatalf("unused logging capability must remain disabled: %#v", options.Capabilities)
 	}
 }
@@ -236,7 +236,21 @@ func TestSDKServerHandshakeOmitsLoggingAndKeepsCatalogCapabilities(t *testing.T)
 	defer clientSession.Close()
 
 	capabilities := clientSession.InitializeResult().Capabilities
-	if capabilities.Logging != nil || capabilities.Tools == nil || capabilities.Resources == nil {
+	fields := sdkCapabilityFields(t, capabilities)
+	if _, present := fields["logging"]; present || capabilities.Tools == nil || capabilities.Resources == nil {
 		t.Fatalf("SDK handshake capabilities = %#v", capabilities)
 	}
+}
+
+func sdkCapabilityFields(t *testing.T, capabilities *mcp.ServerCapabilities) map[string]json.RawMessage {
+	t.Helper()
+	body, err := json.Marshal(capabilities)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(body, &fields); err != nil {
+		t.Fatal(err)
+	}
+	return fields
 }

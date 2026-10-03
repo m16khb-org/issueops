@@ -56,15 +56,12 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-      - name: Lint (golangci-lint default linter set)
-        # Pinned to the same v1 release used locally; .golangci.yml only removes
-        # the per-linter/same-issue caps so CI and a local run report the same
-        # complete list. golangci-lint-action v7+ supports golangci-lint v2 only.
-        # goinstall builds the linter with the go.mod toolchain: the prebuilt
-        # v1.64.8 binary is compiled with Go 1.24 and refuses a go 1.26 module.
-        uses: golangci/golangci-lint-action@v6
+      - name: Lint (golangci-lint v2)
+        # Build with the toolchain selected from go.mod. Local lint uses the
+        # same toolchain so a newer ambient GOROOT cannot break its analyzers.
+        uses: golangci/golangci-lint-action@v8
         with:
-          version: v1.64.8
+          version: v2.12.2
           install-mode: goinstall
           # The action runs `config verify` before linting, and that fetches the
           # JSON schema from golangci-lint.run. When the host is slow the fetch
@@ -77,8 +74,7 @@ jobs:
         # `golangci-lint run` silently ignores unknown config keys (checked on
         # v1.64.8: a bogus key exits 0 with no output), so a typo here would
         # disable the caps this repo depends on without any signal. `config
-        # verify` is the only check that catches it, and v1.64.8 has no --schema
-        # flag, so the schema can only come over the network. Retry, then let an
+        # verify` catches it. Retry schema retrieval, then let an
         # unreachable host pass with a warning: an external service is not a
         # readiness gate for this repo (AGENTS.md philosophy).
         run: |

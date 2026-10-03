@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -37,7 +38,7 @@ func runMCPHTTP(args []string) error {
 	return serveMCPHTTP(ctx, *address, statestore.StateDir(), issueOpsMCPHTTPDependencies(), os.Stderr)
 }
 
-func serveMCPHTTP(ctx context.Context, address, stateDir string, deps mcpcli.MCPDependencies, diagnostics io.Writer) error {
+func serveMCPHTTP(ctx context.Context, address, stateDir string, deps mcpcli.MCPDependencies, diagnostics io.Writer) (resultErr error) {
 	if err := mcpcli.ValidateHTTPAddress(address); err != nil {
 		return err
 	}
@@ -49,7 +50,7 @@ func serveMCPHTTP(ctx context.Context, address, stateDir string, deps mcpcli.MCP
 	if err != nil {
 		return fmt.Errorf("mcp http: %w", err)
 	}
-	defer instance.Release()
+	defer func() { resultErr = errors.Join(resultErr, instance.Release()) }()
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
 		return fmt.Errorf("mcp http: %s is unavailable (conflict): %w", address, err)

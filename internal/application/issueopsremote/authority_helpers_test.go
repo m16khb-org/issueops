@@ -13,9 +13,3 @@ func inspectorVerifier(inspect func(model.NativeProcessReceipt) (string, model.N
 		return inspect(receipt)
 	}), nil, nil, nil, nil)
 }
-
-func liveVerifier() authorityport.ActorVerifier {
-	return inspectorVerifier(func(receipt model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) {
-		return "live", receipt, nil
-	})
-}
