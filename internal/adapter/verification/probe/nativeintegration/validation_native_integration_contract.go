@@ -1,9 +1,13 @@
 package nativeintegration
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
+	"net/url"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -95,7 +99,37 @@ func hasCanonicalOmoMCP(body []byte, expectedBinary, root string) bool {
 		return false
 	}
 	server, ok := servers["issueops"].(map[string]any)
-	if !ok || server["command"] != expectedBinary {
+	if !ok {
+		return false
+	}
+	if server["type"] == "http" {
+		if _, present := server["command"]; present {
+			return false
+		}
+		if _, present := server["args"]; present {
+			return false
+		}
+		address, _ := server["url"].(string)
+		endpoint, err := url.Parse(address)
+		if err != nil || endpoint.Scheme != "http" || !net.ParseIP(endpoint.Hostname()).IsLoopback() ||
+			endpoint.Path != "/mcp" || endpoint.User != nil || endpoint.RawQuery != "" ||
+			endpoint.ForceQuery || endpoint.Fragment != "" {
+			return false
+		}
+		port, err := strconv.Atoi(endpoint.Port())
+		if err != nil || port < 1 || port > 65535 {
+			return false
+		}
+		headers, _ := server["headers"].(map[string]any)
+		authorization, _ := headers["Authorization"].(string)
+		bearer, ok := strings.CutPrefix(authorization, "Bearer ")
+		if !ok || strings.ContainsAny(bearer, " \t\r\n") {
+			return false
+		}
+		decoded, err := base64.RawURLEncoding.DecodeString(bearer)
+		return err == nil && len(decoded) >= 32
+	}
+	if server["command"] != expectedBinary {
 		return false
 	}
 	args, ok := server["args"].([]any)
