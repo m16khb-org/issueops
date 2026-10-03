@@ -22,7 +22,7 @@ unknown과 measured zero 구분, 손상·초과 입력, 원본 ID와 payload 비
 
 ## 재실행한 명령
 
-모두 `/Users/habin/workspace/issueops`에서 실행했다. 임시 바이너리와 fixture는
+모두 `$WORKSPACE`에서 실행했다. 임시 바이너리와 fixture는
 `/tmp/i9verify`에 두고 검증 뒤 삭제했다(`rm -rf` 후 `ls`가 "No such file or directory").
 
 ```text
@@ -66,7 +66,7 @@ CLI는 `ISSUEOPS_STATE_DIR=/tmp/i9verify/state /tmp/i9verify/issueops trace anal
 | 16 | 모르는 event/field는 계량하지 않고 unknown coverage | pass | `{"type":"mystery","usage":{...}}` → `usage_unknown_event`, sample에 반영 안 됨, `coverage=partial`(다른 sample이 있을 때). Claude 파일을 `omo-json`으로 읽으면 `samples=[]`, `coverage=unknown`, `usage_unknown_event` — 형식 오지정이 잘못된 숫자를 만들지 않는다 |
 | 17 | 원본 ID는 256 bytes까지, 초과는 unknown | pass | 257바이트 `id` → `session_id=""`, `message_id=""`, `scope_id=""`, `coverage=unknown`, `usage_identity_too_long`. 256바이트 → 정상 digest, `coverage=complete`. `host_usage.go:15,122-128` |
 | 18 | cost는 host pricing basis 있을 때만, 없으면 null | pass | Claude `costUSD` → `host_reported_estimate`; Codex → 항상 `cost_usd:null, cost_basis:"unknown"`; Omo `cost.total:0` → null + `unknown`(`host_usage.go:347-353`) |
-| 19 | prompt/text/thinking/tool payload 비노출 | pass | fixture와 추가 입력의 `SECRET-PROMPT-TEXT`, `SECRET-OUTPUT`, `SECRET-DELTA`, `SECRET-ANSWER`, `TOKEN=sk-SECRET-VALUE`, `PROMPT_SECRET`, `TEXT_SECRET`은 stdout·stderr 어디에도 없음. 단, 아래 "틈 1" 참조 |
+| 19 | prompt/text/thinking/tool payload 비노출 | pass | 민감한 합성 입력이 결과에 남지 않음을 검증했다. 입력 원문은 문서에서 제거했다. |
 | 20 | 기본 `issueops` 모드와 I1 동작 유지 | pass | 기본 모드 응답에 `usage` 키 없음(`types.go:24` `omitempty`). 70,000자 줄이 낀 issueops JSONL → `complete=false`, `warnings=["jsonl_scan_error","no_supported_trace_findings"]`, `--input-format issueops`를 명시해도 동일. `analysis.go:26` `no_supported_trace_findings`는 `input.Usage == nil`일 때만 붙으므로 host 모드에서는 나오지 않는다 |
 | 21 | text 출력 | pass | `usage: 2 sample(s), coverage=unknown` / `usage warning: usage_turn_failed`. text 출력에는 sample 라벨이 찍히지 않는다 |
 

@@ -45,7 +45,7 @@
 ## 도구 분류와 root 결정 (소스·실측)
 
 - `mcpToolAuthorities`(`mcp_tool_authority.go:63-126`)는 51개 전부를 명시한다. 실제 2026 `tools/list` 51개를 `authority_file` 노출 여부로 나누면 workspace 25개(`api_doc_*`, `atomic_commit_preflight`, `command_*` 3, `commit_suggest`, `gates_*` 5, `harness_inspect`, `issueops_execution`, `lint_diagnose`, `loop_*` 4, `project_docs_*` 5, `worker_run_read_only`), server 26개(`channel_*`, `commit_policy`, `contract_*`, `daemon_status`, `docs_index`, `self_*` 10, `skill_manifest`, `state_*` 6, `web_fetch_resilient`, `worker_enqueue/status/list/cancel`)로 contract §2 표와 일치한다. `validateHTTPToolClassification`(`:128-148`)은 catalog Tools와 Dispatch 양쪽 이름을 모으므로 annotation에 의존하지 않는다.
-- `harness_inspect` 실측: 인자 없음 → `issueops_root=/Users/habin/workspace/issueops`(server), `repo`만 → `authority_required`, `repo`+grant → `target_repo=/private/tmp/h-verify2/run/repoA`.
+- `harness_inspect` 실측: 인자 없음 → `issueops_root=$WORKSPACE`(server), `repo`만 → `authority_required`, `repo`+grant → `target_repo=/private/tmp/h-verify2/run/repoA`.
 - root 결정(`mcp_request_scope.go:32-61,63-86,91-136`)과 실측: `path=repoA`+`workspace_root=repoB` → "conflicts with another workspace root input"; 상대 `path` cwd 없음 → "must be absolute unless cwd is absolute"; `path=.`+`cwd=repoA` → 통과; `cwd=repoB`로 repoA → "cwd is outside workspace_root"; `/tmp`와 `/private/tmp` 혼용 → 통과(canonical 동일); record 도구에 `workspace_root=repoB` → "workspace root conflicts with record io-…"; grant B로 repoA record → "outside the authorized repository scope".
 - `scopedArguments`(`:149-177`)는 `authority_file`을 지우고 root 인자·`workspace_root`·`cwd`를 scope 값으로 덮어쓴다. gates handler는 그 `workspace_root`/`cwd`/`files`만 읽으므로(`mcp_tool_gates.go:45-52`) 요청 인자가 서비스에 그대로 새지 않는다.
 - `issueopsapp`·`mcpcli` production에 `os.Chdir` 0건, 전역 current actor/workspace 변수 없음. `os.Getwd`는 `apidoc_wiring.go:24`, `basic_wiring.go:16`, `project_docs_wiring.go:30`, `loop_wiring.go:21` 네 곳이며 HTTP 요청 경로에서는 `issueOpsMCPRecordRoots`의 loop 분기가 `newLoopService()`(→`newLoopIdentity()`→`os.Getwd`)를 만드는 것 하나다. `Status`는 `Store.Read`만 쓰므로 결과에 영향이 없지만, 요청 경로에서 Getwd를 호출하는 코드가 남아 있다(아래 후속).
@@ -63,7 +63,7 @@
 
 ## 실제 바이너리 HTTP 실측
 
-환경: `ISSUEOPS_STATE_DIR=/tmp/h-verify2/run/state`, `ISSUEOPS_ROOT=/Users/habin/workspace/issueops`, 서버 env `TRACEPARENT=00-9999…-01`, 서버 cwd `/tmp/h-verify2/run/C`(빈 디렉터리), `--addr 127.0.0.1:47961`. ready line `issueops mcp http ready url=http://127.0.0.1:47961/mcp pid=95492`. bearer `0600` 43바이트, `mcp-http` `0700`.
+환경: `ISSUEOPS_STATE_DIR=/tmp/h-verify2/run/state`, `ISSUEOPS_ROOT=$WORKSPACE`, 서버 env `TRACEPARENT=00-9999…-01`, 서버 cwd `/tmp/h-verify2/run/C`(빈 디렉터리), `--addr 127.0.0.1:47961`. ready line `issueops mcp http ready url=http://127.0.0.1:47961/mcp pid=95492`. bearer `0600` 43바이트, `mcp-http` `0700`.
 grant는 대화형 bash(pid 98327, `started_at 2026-10-02T13:48:41Z`, executable `bash`)에서 `issueops mcp authorize --json`으로 발급했다: A(codex/session-a→repoA), B(claude/session-b→repoB), BA(claude/session-b→repoA). 철회 실험 뒤 A는 같은 세션에서 재발급했다(A2).
 
 ### Guard
