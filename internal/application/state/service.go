@@ -41,6 +41,9 @@ func (service *Service) Write(ctx context.Context, key, content string) (stateco
 		return statecontract.StateResult{OK: false, StateDir: service.stateDir()}, err
 	}
 	dir := service.stateDir()
+	if err := ctx.Err(); err != nil {
+		return statecontract.StateResult{OK: false, StateDir: dir}, err
+	}
 	store, err := service.dependencies.OpenStore(dir)
 	if err != nil {
 		return statecontract.StateResult{OK: false, StateDir: dir}, err
@@ -147,6 +150,9 @@ func (service *Service) WriteRecord(ctx context.Context, dir, key string, record
 	if record.Key != "" && record.Key != key {
 		return "", fmt.Errorf("state record key %q does not match write key %q", record.Key, key)
 	}
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	store, err := service.dependencies.OpenStore(dir)
 	if err != nil {
 		return "", err
@@ -180,11 +186,16 @@ func (service *Service) Delete(ctx context.Context, key string) error {
 	if err != nil {
 		return err
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	store, err := service.dependencies.OpenStore(service.stateDir())
 	if err != nil {
 		return err
 	}
-	return store.Mutate(ctx, []stateport.Mutation{{Bucket: stateBucket, ID: key, Delete: true}})
+	return store.WithSpan(ctx, func(spanCtx context.Context) error {
+		return store.Mutate(spanCtx, []stateport.Mutation{{Bucket: stateBucket, ID: key, Delete: true}})
+	})
 }
 
 func (service *Service) Update(ctx context.Context, key string, transform func(statecontract.RecordEnvelope) (statecontract.RecordEnvelope, error)) (statecontract.StateResult, error) {
@@ -193,6 +204,9 @@ func (service *Service) Update(ctx context.Context, key string, transform func(s
 		return statecontract.StateResult{OK: false, StateDir: service.stateDir()}, err
 	}
 	dir := service.stateDir()
+	if err := ctx.Err(); err != nil {
+		return statecontract.StateResult{OK: false, StateDir: dir}, err
+	}
 	store, err := service.dependencies.OpenStore(dir)
 	if err != nil {
 		return statecontract.StateResult{OK: false, StateDir: dir}, err
@@ -223,6 +237,9 @@ func (service *Service) Update(ctx context.Context, key string, transform func(s
 
 func (service *Service) WithKeyLock(ctx context.Context, dir, key string, fn func(context.Context) error) error {
 	if _, err := statepath.NormalizeKey(key); err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
 		return err
 	}
 	store, err := service.dependencies.OpenStore(dir)

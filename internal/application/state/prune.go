@@ -7,6 +7,7 @@ import (
 
 	statecontract "issueops/internal/contract/state"
 	statedomain "issueops/internal/domain/state"
+	stateport "issueops/internal/port/state"
 )
 
 func (service *Service) Prune(ctx context.Context, maxAge time.Duration, confirm bool) (statecontract.StatePruneResult, error) {
@@ -28,26 +29,41 @@ func (service *Service) prune(ctx context.Context, prefix string, maxAge time.Du
 	if maxRecords < 0 {
 		return result, fmt.Errorf("max records must be non-negative")
 	}
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
 	cutoff := service.now().UTC().Add(-maxAge)
 	result.Cutoff = cutoff.Format(time.RFC3339Nano)
-	list, err := service.List()
+	prune := func(spanCtx context.Context, store stateport.Store) error {
+		list, err := service.List()
+		if err != nil {
+			return err
+		}
+		result.Pruned, result.Kept = statedomain.SelectPrune(list.Records, prefix, cutoff, maxRecords)
+		for _, record := range result.Pruned {
+			result.DeletedKeys = append(result.DeletedKeys, record.Key)
+			if confirm {
+				if err := store.Mutate(spanCtx, []stateport.Mutation{{Bucket: stateBucket, ID: record.Key, Delete: true}}); err != nil {
+					return err
+				}
+			}
+		}
+		for _, record := range result.Kept {
+			result.KeptKeys = append(result.KeptKeys, record.Key)
+		}
+		result.OK = true
+		return nil
+	}
+	if !confirm {
+		err := prune(ctx, nil)
+		return result, err
+	}
+	store, err := service.dependencies.OpenStore(result.StateDir)
 	if err != nil {
 		return result, err
 	}
-	result.Pruned, result.Kept = statedomain.SelectPrune(list.Records, prefix, cutoff, maxRecords)
-	for _, record := range result.Pruned {
-		result.DeletedKeys = append(result.DeletedKeys, record.Key)
-		if confirm {
-			if err := service.Delete(ctx, record.Key); err != nil {
-				return result, err
-			}
-		}
-	}
-	for _, record := range result.Kept {
-		result.KeptKeys = append(result.KeptKeys, record.Key)
-	}
-	result.OK = true
-	return result, nil
+	err = store.WithSpan(ctx, func(spanCtx context.Context) error { return prune(spanCtx, store) })
+	return result, err
 }
 
 func (service *Service) newPruneResult(maxAge time.Duration, confirm bool) statecontract.StatePruneResult {
