@@ -1,6 +1,9 @@
 # Implementation Planning Clearance Checklist
 
-The 6-item clearance check runs after EVERY interview turn. ALL must be YES before transitioning to plan generation.
+Optional elaboration of [Implementation Planning](../SKILL.md), which owns the actor contract.
+The 6-item clearance check runs after EVERY interview turn. ALL must be YES for automatic
+plan generation; an explicit generation request may proceed with unresolved decisions
+marked, but they must be resolved before decision-complete delivery.
 
 ## Checklist
 
