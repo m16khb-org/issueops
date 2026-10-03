@@ -135,7 +135,7 @@ func newProtocolError(code int64, message string, data any) *jsonrpc.Error {
 	return &jsonrpc.Error{Code: code, Message: message, Data: raw}
 }
 
-func validateMCPToolArguments(catalog mcpcontract.Catalog, name string, arguments map[string]any) *jsonrpc.Error {
+func prepareMCPToolInputSchema(catalog mcpcontract.Catalog, name string) (map[string]any, *jsonrpc.Error) {
 	for _, tool := range catalog.Tools {
 		toolName, _ := tool["name"].(string)
 		if toolName != name {
@@ -143,25 +143,26 @@ func validateMCPToolArguments(catalog mcpcontract.Catalog, name string, argument
 		}
 		schema, ok := tool["inputSchema"].(map[string]any)
 		if !ok {
-			return newProtocolError(-32603, "Invalid tool schema", name)
+			return nil, newProtocolError(-32603, "Invalid tool schema", name)
 		}
-		diagnostics, err := toolconformancedomain.Validate(
-			toolconformancedomain.ClosedProjection(schema),
-			arguments,
-		)
-		if err != nil {
-			return newProtocolError(-32603, "Invalid tool schema", fmt.Sprintf("%s: %v", name, err))
-		}
-		if len(diagnostics) == 0 {
-			return nil
-		}
-		return newProtocolError(
-			-32602,
-			"Invalid params",
-			toolconformancedomain.InvalidToolArgumentsResult(name, diagnostics),
-		)
+		return toolconformancedomain.ClosedProjection(schema), nil
 	}
-	return newProtocolError(-32602, "Unknown tool", name)
+	return nil, newProtocolError(-32602, "Unknown tool", name)
+}
+
+func validateMCPToolArguments(schema map[string]any, name string, arguments map[string]any) *jsonrpc.Error {
+	diagnostics, err := toolconformancedomain.Validate(schema, arguments)
+	if err != nil {
+		return newProtocolError(-32603, "Invalid tool schema", fmt.Sprintf("%s: %v", name, err))
+	}
+	if len(diagnostics) == 0 {
+		return nil
+	}
+	return newProtocolError(
+		-32602,
+		"Invalid params",
+		toolconformancedomain.InvalidToolArgumentsResult(name, diagnostics),
+	)
 }
 
 func TextResult(text string) map[string]any {

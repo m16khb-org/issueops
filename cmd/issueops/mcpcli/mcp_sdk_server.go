@@ -71,6 +71,7 @@ func sdkToolHandlerWithContext(
 	toolName string,
 ) mcp.ToolHandler {
 	output, outputErr := compileToolOutputSchema(catalog, toolName)
+	input, inputErr := prepareMCPToolInputSchema(catalog, toolName)
 	return func(ctx context.Context, req *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var args map[string]any
 		if req.Params.Arguments != nil {
@@ -81,7 +82,10 @@ func sdkToolHandlerWithContext(
 		if args == nil {
 			args = map[string]any{}
 		}
-		if validationErr := validateMCPToolArguments(catalog, toolName, args); validationErr != nil {
+		if inputErr != nil {
+			return nil, inputErr
+		}
+		if validationErr := validateMCPToolArguments(input, toolName, args); validationErr != nil {
 			return nil, validationErr
 		}
 		outcome := groupHandler(ctx, MCPToolCall{Name: toolName, Arguments: args})

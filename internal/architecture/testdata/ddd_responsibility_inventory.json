@@ -2423,6 +2423,7 @@
         "func mcpToolFailure",
         "func mcpToolPayload",
         "func newProtocolError",
+        "func prepareMCPToolInputSchema",
         "func validateMCPToolArguments",
         "type MCPDependencies",
         "type MCPToolCall",
