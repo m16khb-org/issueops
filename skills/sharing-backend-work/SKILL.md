@@ -108,4 +108,11 @@ A에는 내부 구현 경로, 클러스터 이름, MR 번호를 쓰지 않습니
 | 원인을 단정하되 확인 방법이 없다 | 증거 체인에 조회한 대상과 수치를 적는다 |
 | `**볼드**`를 쓴다 | Slack에서는 `*볼드*`다 |
 
-케이스별 채움 템플릿과 실제 사례는 `references/case-templates.md`를 참조합니다.
+필요한 청중의 채움 템플릿과 사례만 읽습니다:
+
+- [전사 채널](references/team-channel-examples.md)
+- [동료 백엔드](references/backend-channel-examples.md)
+- [리드 보고](references/lead-report-examples.md)
+- [같은 사건을 세 청중에게 전달하는 비교](references/audience-comparison.md)
+
+[전체 예시 인덱스](references/case-templates.md)는 기존 진입점으로 유지합니다.
