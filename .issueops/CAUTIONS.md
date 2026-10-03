@@ -76,6 +76,7 @@ footer; older notes also live in `archive/cautions-incidents.md`.
 | Date | Lesson |
 |---|---|
 | 2026-10-03 | [공용 HTTP 경계와 검증 증거: capability 파일 인자 이탈, 문자열만 보는 receipt, 고정 deadline 테스트 세션](cautions/2026-10-03-http.md) |
+| 2026-10-03 | [HTTP 설치 검증과 린터 toolchain 일치](cautions/lessons/2026-10-03-native-http-validation-and-lint-toolchain.md) |
 | 2026-10-02 | [실제 host QA의 함정: Claude tool-results 파일, Codex service_tier, AMFI, 정확 치환 편집](cautions/lessons/2026-10-02-real-host-qa-tool-results-service-tier-amfi-exact-edits.md) |
 | 2026-09-02 | [fingerprint를 봉인하는 게이트는 수정 뒤에 기록한다](cautions/lessons/2026-09-02-fingerprint-sealing-gates-recorded-after-edit.md) |
 | 2026-09-01 | [전진한 원격 브랜치가 cleanup을 교착시켰다; finish가 --keep-remote-branch를 받는다](cautions/lessons/2026-09-01-cleanup-deadlock-advanced-remote-branch.md) |
