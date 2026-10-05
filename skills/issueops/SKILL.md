@@ -42,7 +42,8 @@ issueops next --json
 실행 방식 메뉴는 묻지 않는다. 전체 사이클은 draft PR/MR 발행·execution complete에서,
 이슈 작성·계획만 요청했거나 더 좁은 종료점을 정했으면 그 범위에서 끝낸다.
 
-- `issueops-plan`이 direct mode로 워크트리를 먼저 준비한다. 설치된 `orca-cli` 안내를
+- `issueops-plan`이 direct mode로 워크트리를 먼저 준비한다. 준비 세션이 Herdr 세션이면
+  Herdr를 먼저 확인해 사용 가능하면 Orca가 ready여도 Herdr로 인계한다. 그 밖에는 설치된 `orca-cli` 안내를
   읽고 `orca status --json`의 `runtime.state == "ready"`인지 확인한다.
   ready면 같은 worktree의 새 세션으로 자동 인계한다. Orca가 없거나 unready면
   Herdr의 실행 중인 서버·호환성·현재 native host 실행 가능 여부를 확인해 같은

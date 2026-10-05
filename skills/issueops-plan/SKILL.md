@@ -193,7 +193,9 @@ issueops execution prepare --id "$ISSUEOPS_ID" --mode direct \
 materialize한다. 반환된 `resolved_mode`, canonical path, branch, 계획을 확인한 뒤
 [`issueops`](../issueops/SKILL.md)의 **환경별 자동 세션 인계**를 적용한다.
 
-[session-choice.md](../issueops/references/session-choice.md)에 따라 Orca가 ready면
+[session-choice.md](../issueops/references/session-choice.md)에 따라 준비 세션이 Herdr 세션이면
+Herdr를 먼저 확인하고, 사용 가능하면 Orca가 ready여도 Herdr로 아래와 같은 release·새 세션
+인계 절차를 적용한다. 그 밖에는 Orca가 ready면
 현재 holder가 결정 기록, 인계 자료 봉인, writer 정리를 마친 뒤 release하고
 같은 worktree에 새 세션 하나를 띄운다. 이때 새 쓰기 작업과 하위 작업 dispatch를 중지하고,
 소유자, 실행 핸들, 입력 리비전, 쓰기 범위, 결과 위치, 읽기 작업인지 쓰기 작업인지의 분류,

@@ -17,7 +17,8 @@ Orca·Herdr의 worktree 생성 명령으로 canonical worktree를 다시 만든�
 원인: workspace/lease 운영 방식과 native 세션 배치를 같은 결정으로 취급했다.
 
 규칙: 일반 경로는 사유를 포함한 `execution prepare --mode direct`로 준비하고,
-`session-choice.md`에 따라 Orca, Herdr, 현재 세션 순서로 결정한다. 같은 worktree와
+`session-choice.md`에 따라 Orca, Herdr, 현재 세션 순서로 결정한다. 준비 세션이 Herdr
+세션이면 Orca가 ready여도 Herdr를 먼저 확인한다. 같은 worktree와
 mode를 유지하며 release 뒤 새 세션 하나에 인계한다. 명시적으로 요청했거나 기존에
 선택된 Orca execution의 core 경로와 `auto|orca` API 의미는 유지한다.
 

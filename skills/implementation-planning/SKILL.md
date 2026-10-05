@@ -273,7 +273,8 @@ Preserve the cycle's order and artifacts even when only this body is supplied:
    in the canonical worktree. Final plan location uses the issue number, with slug
    `{issue-number}-{short-title}`; never use a lifecycle ID as the issue folder number.
 6. Return to the stage's authorized routing: after preparation, use automatic
-   Orca handoff when ready, otherwise Herdr when usable, otherwise current-session
+   handoff: usable Herdr first when the preparing session runs inside Herdr, otherwise
+   Orca when ready, otherwise Herdr when usable, otherwise current-session
    continuation. Preserve explicitly selected execution modes. Handoff requires
    settled writers, release of the old holder, and verified new ownership in the same
    worktree; do not keep implementing after delivery to the new session.

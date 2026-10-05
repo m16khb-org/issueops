@@ -20,7 +20,7 @@
 
 `internal/adapter/cmux`는 기존 released direct execution의 canonical worktree에 native host를
 여는 outbound terminal adapter다. 사용자 지시로 `issueops execution handoff-cmux`를 실행할
-때만 연결되며, 자동 Orca → Herdr → current 선택, install, update, self-verify는 이 adapter를
+때만 연결되며, 자동 Orca → Herdr → current 선택(Herdr 세션에서는 Herdr 우선), install, update, self-verify는 이 adapter를
 probe하거나 readiness 조건으로 삼지 않는다. `execution` command가 generation/worktree fence와
 host argv를 소유하고, 기존 handoff-delivery audit가 call stage와 receipt를 소유한다. cmux는
 exact window에 workspace/surface를 배치하고 raw input을 전달할 뿐 lease, claim, native turn을

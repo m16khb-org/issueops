@@ -10,7 +10,15 @@ mode를 바꾸지 않는다. 일반 흐름은 direct로 만든 **같은 worktree
 이미 인계받은 세션은 기존 기록과 승인 범위를 대조한 뒤 이어간다. 환경 판별부터 다시
 시작해 새 세션을 연쇄 생성하지 않는다.
 
-준비 세션은 설치된 `orca-cli` 안내로 실행 파일을 정하고 `orca status --json`을 확인한다.
+준비 세션이 Herdr 안에서 실행 중이면 Orca가 ready여도 Herdr를 먼저 확인한다. `HERDR_ENV=1`이고
+`HERDR_SOCKET_PATH`가 있으면 Herdr 세션이다. env는 먼저 확인할 런처만 정한다. 사용 가능
+여부는 아래 Herdr 확인 명령과 조건으로 실측해 판단하고, 대상은 그 세션의
+`HERDR_SOCKET_PATH`가 가리키는 서버로 고정한다. 다른 서버를 찾거나 시작하지 않는다. 사용
+가능하면 Herdr의 `new-session`을 선택하고 Orca는 확인하지 않는다. Herdr 세션에서 Herdr가
+사용 불가임이 확인됐으면 아래 Orca 확인으로 넘어가며 Herdr를 다시 확인하지 않는다.
+인계받은 새 세션도 같은 env를 갖지만 환경 판별을 다시 시작하지 않는다.
+
+그 밖의 준비 세션은 설치된 `orca-cli` 안내로 실행 파일을 정하고 `orca status --json`을 확인한다.
 `runtime.state == "ready"`면 Orca의 `new-session`을 선택한다. 기존 Orca execution은
 prepare·resume·reconcile에 연결된 production observer를 사용한다. direct execution의 raw
 Orca 전송은 아래 `trace handoff-delivery` producer로 실제 호출 전후를 기록한다. Orca가 없거나

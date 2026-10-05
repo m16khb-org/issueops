@@ -48,7 +48,8 @@ holder/generation 불일치는 아래 회복 표를 따른다. branch·HEAD 불�
 새 세션은 이전 holder의 release 확인 후 자기 lease로 인수하며, 이미 인계받았으면
 재인계하지 않는다. 보류·phase·claim·`--approved`는 구현이나 publication 승인이 아니다.
 준비 세션은 같은 direct worktree에서 Orca runtime ready → 호환되는 실행 중 Herdr와
-현재 native host → 둘 다 사용 불가면 current 순서로 결정한다. 설치만으로 ready라
+현재 native host → 둘 다 사용 불가면 current 순서로 결정한다. 준비 세션이 Herdr 세션이면
+Herdr를 먼저 확인하고 사용 가능하면 Orca가 ready여도 Herdr로 인계한다. 설치만으로 ready라
 판단하거나 실행 방식 메뉴를 묻지 않는다. 최신 명시적 current/new-session/hold가 우선한다.
 인계 시 아래 writer 종료 규칙을 지키고 ID·generation·경로·요청/대화 근거·승인 범위·종료점,
 목적/비목표·base/full HEAD·diff·계획 digest·검증 입력/명령/시각/환경/실패·미완료 결과 위치·

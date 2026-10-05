@@ -28,7 +28,8 @@ description: Agent start, execution, verification, and completion flow.
 
 전체 사이클은 `skills/issueops/SKILL.md`의 환경별 자동 세션 인계를 따른다. 일반 흐름은
 이슈 확정·계획·리뷰 뒤 `execution prepare --mode direct`와 사유를 사용해 canonical
-worktree를 준비한다. Orca runtime이 ready면 같은 worktree의 새 세션으로 자동 인계한다.
+worktree를 준비한다. 준비 세션이 Herdr 세션이면 Herdr를 먼저 확인해 사용 가능하면 Orca가
+ready여도 Herdr로 인계한다. 그 밖에는 Orca runtime이 ready면 같은 worktree의 새 세션으로 자동 인계한다.
 Orca가 없거나 unready면 Herdr의 실행 중인 서버·호환성·현재 native host 실행 가능 여부를
 확인해 새 세션으로 인계하고, 둘 다 사용 불가면 현재 세션에서 이어간다.
 실행 방식 메뉴나 진행 여부를 묻지 않는다. Herdr는 준비된 worktree를 열며 재생성하지 않는다.
@@ -158,7 +159,7 @@ merge and destructive cleanup require separate authority.
 1·2단계는 source checkout의 준비 세션이 `issueops-create-issue`와 `issueops-prepare`로
 수행하며 lease를 갖지 않는다. 3단계 `issueops-plan`도 같은 세션이 수행하고,
 `execution prepare --mode direct`로 워크트리를 준비한 뒤 위 자동 세션 인계를 따른다.
-Orca, Herdr 순서로 사용 가능 여부를 확인하며 둘 다 사용 불가면 현재 세션에서 이어간다.
+Herdr 세션이면 Herdr를 먼저, 그 밖에는 Orca, Herdr 순서로 사용 가능 여부를 확인하며 둘 다 사용 불가면 현재 세션에서 이어간다.
 실행 방식은 묻지 않으며 새 세션은 같은 worktree의 release·인수 절차를 사용한다.
 명시적으로 요청한 Orca execution과 기존 사이클은 해당 core 경로를 유지한다.
 4단계부터는 구현 세션이 canonical worktree에서 `issueops-implement` → `issueops-slop-clean` →

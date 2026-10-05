@@ -159,6 +159,39 @@ func TestIssueOpsHandoffRoutesEveryNewSessionThroughProductionObservation(t *tes
 	}
 }
 
+func TestIssueOpsHandoffPrefersHerdrInsideHerdrSession(t *testing.T) {
+	normalize := func(text string) string {
+		return strings.Join(strings.Fields(strings.ToLower(text)), " ")
+	}
+	sessionChoice := normalize(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))
+	for _, want := range []string{
+		"`herdr_env=1`",
+		"`herdr_socket_path`",
+		"orca가 ready여도 herdr를 먼저 확인",
+		"env는 먼저 확인할 런처만 정한다",
+		"herdr 세션에서 herdr가 사용 불가임이 확인됐으면",
+	} {
+		if !strings.Contains(sessionChoice, want) {
+			t.Fatalf("Herdr session preference contract missing %q", want)
+		}
+	}
+	preference := strings.Index(sessionChoice, "orca가 ready여도 herdr를 먼저 확인")
+	orcaProbe := strings.Index(sessionChoice, "`orca status --json`")
+	if orcaProbe < 0 || preference > orcaProbe {
+		t.Fatalf("Herdr session preference must precede the Orca probe: preference=%d orca=%d", preference, orcaProbe)
+	}
+	for name, path := range map[string][]string{
+		"issueops":           {"skills", "issueops", "SKILL.md"},
+		"issueops-plan":      {"skills", "issueops-plan", "SKILL.md"},
+		"issueops-implement": {"skills", "issueops-implement", "SKILL.md"},
+		"workflow":           {".issueops", "AGENT_WORKFLOW.md"},
+	} {
+		if !strings.Contains(normalize(readIssueOpsContractFile(t, path...)), "herdr 세션이면 herdr를 먼저 확인") {
+			t.Fatalf("%s must summarize the Herdr session preference", name)
+		}
+	}
+}
+
 func TestIssueOpsCmuxHandoffIsExplicitAndFollowsTheDefaultFallback(t *testing.T) {
 	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
 	fallback := strings.Index(sessionChoice, "둘 다 없거나 사용 불가")

@@ -173,6 +173,7 @@ Enter 한 번으로 전달한다. Raw multiline send는 줄마다 별도 turn으
 source checkout의 준비 세션이, 4단계 이후는 canonical worktree의 구현 세션이 수행하며,
 그 경계를 만드는 것이 3단계 끝의 worktree 준비와 세션 인계다. 일반 경로는 사유를 포함한
 `execution prepare --mode direct` 뒤 `skills/issueops/references/session-choice.md`를 따른다.
+준비 세션이 Herdr 세션이면 사용 가능한 Herdr를 먼저 쓴다. 그 밖에는
 Orca가 ready면 Orca, 없거나 unready면 사용 가능한 Herdr로 같은 worktree에 새 세션을
 열고, 둘 다 사용 불가면 현재 세션에서 이어간다. Claude Code·Codex·Omo host를 유지하며
 Herdr에서는 `worktree create` 대신 `worktree open`으로 준비된 checkout을 등록한다.
