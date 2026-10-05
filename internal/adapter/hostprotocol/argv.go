@@ -53,6 +53,7 @@ func BuildInteractiveArgv(host, executable, model, effort, prompt string) ([]str
 		if effort != "" {
 			argv[2] += ":" + effort
 		}
+		argv = append(argv, "--permission-preset", "full-access")
 	}
 	return append(argv, "--", prompt), nil
 }

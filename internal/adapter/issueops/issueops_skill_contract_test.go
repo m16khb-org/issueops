@@ -192,6 +192,19 @@ func TestIssueOpsHandoffPrefersHerdrInsideHerdrSession(t *testing.T) {
 	}
 }
 
+func TestIssueOpsHandoffLaunchesEveryNativeHostWithPermissionBypass(t *testing.T) {
+	sessionChoice := readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md")
+	for _, flag := range []string{
+		"--dangerously-skip-permissions",
+		"--dangerously-bypass-approvals-and-sandbox",
+		"--permission-preset full-access",
+	} {
+		if count := strings.Count(sessionChoice, flag); count < 3 {
+			t.Fatalf("explicit launcher, new-session, and Herdr procedures must each require %q: count=%d", flag, count)
+		}
+	}
+}
+
 func TestIssueOpsCmuxHandoffIsExplicitAndFollowsTheDefaultFallback(t *testing.T) {
 	sessionChoice := strings.Join(strings.Fields(strings.ToLower(readIssueOpsContractFile(t, "skills", "issueops", "references", "session-choice.md"))), " ")
 	fallback := strings.Index(sessionChoice, "둘 다 없거나 사용 불가")

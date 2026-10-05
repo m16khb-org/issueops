@@ -29,7 +29,7 @@ func TestBuildInteractiveArgvPinsInstalledNativeHostContracts(t *testing.T) {
 		},
 		{
 			host: "omo", executable: "/opt/native/omo", model: "chatgpt-subscription/gpt-6-sol", effort: "xhigh",
-			want: []string{"/opt/native/omo", "--model", "chatgpt-subscription/gpt-6-sol:xhigh", "--", prompt},
+			want: []string{"/opt/native/omo", "--model", "chatgpt-subscription/gpt-6-sol:xhigh", "--permission-preset", "full-access", "--", prompt},
 		},
 	}
 	for _, test := range tests {

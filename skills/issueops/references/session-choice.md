@@ -63,7 +63,7 @@ no-follow handle traversal과 namespace identity 검사가 보호하므로 이 l
 실행 파일, socket, window UUID, model을 실측한 exact 값으로 채우고, 해당 host가 지원하는
 effort만 전달한다. cmux의 private launcher는 Claude Code에
 `--dangerously-skip-permissions`, Codex에
-`--dangerously-bypass-approvals-and-sandbox`를 붙인다.
+`--dangerously-bypass-approvals-and-sandbox`, Omo에 `--permission-preset full-access`를 붙인다.
 
 ```bash
 issueops execution handoff-cmux \
@@ -188,7 +188,8 @@ release한 준비 세션이 `status`의 replace/reseed/resume 체인을 따른�
 6. 자동 `new-session`이면 추가 질문 없이 **기존 worktree에** 새 세션 하나만 연다.
    현재 native host를 유지하고 현재 모델·effort는 해당 launch가 지원하는 값만 전달한다.
    Claude Code를 여는 명령에는 `--dangerously-skip-permissions`, Codex를 여는
-   명령에는 `--dangerously-bypass-approvals-and-sandbox`를 붙인다. 설치된 host의
+   명령에는 `--dangerously-bypass-approvals-and-sandbox`, Omo를 여는 명령에는
+   `--permission-preset full-access`를 붙인다. 설치된 host의
    `--help`에서 플래그 지원을 확인한 뒤 호출한다.
    사용자가 직접 세션을 열겠다고 명시한 경우에만 경로와 인계문을 제공하고 종료한다.
    Orca에서는 설치된 `orca-cli` 안내로 exact worktree 경로를 확인한 뒤 `terminal create`와
@@ -377,7 +378,7 @@ IssueOps lease나 `direct|orca` mode를 소유하지 않는다. 실제 Herdr 호
      성공 후에도 `herdr agent read "$AGENT_NAME" --source visible`로 입력창을 확인한 뒤
      `herdr agent prompt "$AGENT_NAME" "$HANDOFF"`로 한 번 전달한다.
    - Omo: Herdr 0.9.0의 kind 목록에는 `omo`가 없다. `pi`나 `omp`, Claude로 대체하지
-     않는다. `omo --model … --thinking … -- "$HANDOFF"`처럼 설치된 CLI가 지원하는
+     않는다. `omo --model … --thinking … --permission-preset full-access -- "$HANDOFF"`처럼 설치된 CLI가 지원하는
      **새 interactive 세션과 초기 프롬프트**를 하나의 shell 명령으로 구성하여
      `herdr pane run "$PANE_ID" "$LAUNCH_COMMAND"`으로 한 번 실행한다.
      실행 파일·모델·프롬프트를 각각 shell-quote하며 프롬프트의 따옴표·개행·`$`·backtick을
