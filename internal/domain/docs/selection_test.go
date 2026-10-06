@@ -7,7 +7,7 @@ import (
 )
 
 func TestSelectPreservesAuthoringExclusionsAndFallback(t *testing.T) {
-	paths := []string{"AGENTS.md", ".issueops/NEW.md", ".issueops/testing/unit.md", ".issueops/documentation/guide.md", ".issueops/research/메모.md", ".issueops/research/scratch.md", ".issueops/evidence/report.md", ".issueops/draft-wiki/draft.md", ".issueops/testing-other/scratch.md"}
+	paths := []string{"AGENTS.md", ".issueops/NEW.md", ".issueops/testing/unit.md", ".issueops/documentation/guide.md", ".issueops/research/메모.md", ".issueops/research/scratch.md", ".issueops/evidence/report.md", ".issueops/testing-other/scratch.md"}
 	var candidates []docscontract.Candidate
 	for _, p := range paths {
 		candidates = append(candidates, docscontract.Candidate{Path: "/literal/symlink/" + p, RelPath: p})
@@ -20,7 +20,7 @@ func TestSelectPreservesAuthoringExclusionsAndFallback(t *testing.T) {
 		want      []int
 	}{
 		{"tracked and canonical", map[string]bool{"AGENTS.md": true, ".issueops/research/메모.md": true, ".issueops/evidence/report.md": true}, true, []string{".issueops/testing", "../escape", ".issueops/../../escape"}, []int{1, 3, 4, 2, 0}},
-		{"git unavailable", nil, false, nil, []int{1, 3, 5, 4, 8, 2, 0}},
+		{"git unavailable", nil, false, nil, []int{1, 3, 5, 4, 7, 2, 0}},
 		{"invalid module", map[string]bool{"AGENTS.md": true}, true, []string{".issueops/testing/../../else"}, []int{1, 3, 0}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

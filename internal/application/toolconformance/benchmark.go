@@ -13,7 +13,6 @@ import (
 	"time"
 
 	failurecausecontract "issueops/internal/contract/failurecause"
-	issueopscontract "issueops/internal/contract/issueops"
 	toolconformancedomain "issueops/internal/domain/toolconformance"
 	"issueops/internal/port"
 )
@@ -85,7 +84,7 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 			return fixturecontract.BenchmarkReport{}, fmt.Errorf("unsupported_host:%s", host)
 		}
 		hostReport := fixturecontract.HostReport{
-			Status: issueopscontract.StatusNotRun,
+			Status: fixturecontract.HostStatusNotRun,
 			Host:   host, RequestedModel: modelForHost(models, host), Cases: []fixturecontract.EpisodeReport{},
 		}
 		preflightRequest := port.HostProbeRequest{HarnessBinary: request.HarnessBinary, Model: hostReport.RequestedModel}
@@ -128,9 +127,9 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 		if !preflight.Ready {
 			hostReport.Evidence.StatusReason = preflight.Code
 			if !preflight.Installed || preflight.Code == "version_probe_failed" {
-				hostReport.Status = issueopscontract.StatusUnavailable
+				hostReport.Status = fixturecontract.HostStatusUnavailable
 			} else if preflight.Code == "mock_extension_invalid" {
-				hostReport.Status = issueopscontract.StatusUnsupported
+				hostReport.Status = fixturecontract.HostStatusUnsupported
 			}
 		}
 		for _, pair := range selected {
@@ -195,11 +194,11 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 		hostReport.AttemptCount = len(hostReport.Cases)
 		hostReport.CompletedEpisodes = toolconformancedomain.CountCompleted(hostReport.Cases)
 		if hostReport.Evidence.PreflightReady && hostReport.CompletedEpisodes > 0 {
-			hostReport.Status = issueopscontract.StatusSupported
+			hostReport.Status = fixturecontract.HostStatusSupported
 			hostReport.Evidence.LiveVerified = true
 			hostReport.Evidence.StatusReason = ""
 		} else if hostReport.Evidence.LiveAttempted {
-			hostReport.Status = issueopscontract.StatusUnavailable
+			hostReport.Status = fixturecontract.HostStatusUnavailable
 			hostReport.Evidence.StatusReason = "live_probe_incomplete"
 		}
 		report.Hosts = append(report.Hosts, hostReport)

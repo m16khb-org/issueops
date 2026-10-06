@@ -76,18 +76,11 @@ func (result Result) Clone() Result {
 	return cloned
 }
 
-type RootClaim struct {
-	LifecycleID string
-	Branch      string
-	Root        string
-}
-
 type Snapshot struct {
 	Record         leasecontract.Record
 	RecordRaw      []byte
 	CanonicalRoot  string
 	ClaimTokenPath string
-	RootConflict   *RootClaim
 	// ArtifactDir is the sealed-artifact directory derived from the linked
 	// issue URL; empty when the URL carries no issue number.
 	ArtifactDir string
@@ -128,10 +121,6 @@ func (snapshot Snapshot) Clone() Snapshot {
 	cloned := snapshot
 	cloned.Record = cloneRecord(snapshot.Record)
 	cloned.RecordRaw = cloneBytes(snapshot.RecordRaw)
-	if snapshot.RootConflict != nil {
-		claim := *snapshot.RootConflict
-		cloned.RootConflict = &claim
-	}
 	return cloned
 }
 

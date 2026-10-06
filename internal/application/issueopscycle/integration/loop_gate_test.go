@@ -129,7 +129,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 	repo := initCoreLoopGateRepo(t)
 	record := issueopscontract.IssueOpsRecord{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
+		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            (issueops.CycleStartIdentity{}).StableID(repo, "main"),
 		Repo:          repo,
 		Branch:        "main",

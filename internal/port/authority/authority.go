@@ -23,12 +23,6 @@ type ProcessInspector interface {
 	Inspect(context.Context, model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error)
 }
 
-type ProcessInspectorFunc func(context.Context, model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error)
-
-func (f ProcessInspectorFunc) Inspect(ctx context.Context, receipt model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) {
-	return f(ctx, receipt)
-}
-
 type CredentialFiles interface {
 	Write(ctx context.Context, key, token string) (path string, err error)
 	Read(ctx context.Context, path string) (key, token string, err error)

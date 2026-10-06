@@ -187,7 +187,6 @@ Retired dated snapshots moved verbatim from living documents:
 - Cross-family links target the canonical owner, not a duplicate summary.
 - Links to source code use repository-relative paths and line-independent symbol
   names when possible.
-- OpenWiki output is not edited as part of this documentation system.
 
 ## Update workflow
 

@@ -1272,23 +1272,6 @@
       ]
     },
     {
-      "path": "cmd/issueops/issueopsapp/responsecontract/normalize.go",
-      "owner": "composition",
-      "task": "T20",
-      "symbols": [
-        "func NormalizeContractValue",
-        "func NormalizeMCPTextJSON",
-        "func isDynamicStateRecordKey",
-        "func isDynamicTimeKey",
-        "func isRFC3339Like",
-        "func looksLikeCommandRunResult",
-        "func looksLikeDynamicStateHistoryEntry",
-        "func looksLikeDynamicStateRecord",
-        "func looksLikeStateCheckpoint",
-        "func normalizeContractString"
-      ]
-    },
-    {
       "path": "cmd/issueops/issueopsapp/riskqa_facade.go",
       "owner": "composition",
       "task": "T20",
@@ -2815,26 +2798,11 @@
       ]
     },
     {
-      "path": "internal/adapter/audit/handoff_delivery_file_windows.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": [
-        "func closeHandoffDeliveryWindowsRoots",
-        "func openHandoffDeliveryAudit",
-        "func openHandoffDeliveryStateRootWindows",
-        "func openHandoffDeliveryWindowsDirectory",
-        "func validHandoffDeliveryWindowsInfo",
-        "func verifyHandoffDeliveryWindowsRootEntry",
-        "type handoffDeliveryAuditMode"
-      ]
-    },
-    {
       "path": "internal/adapter/audit/handoff_delivery_path.go",
       "owner": "adapter",
       "task": "T09",
       "symbols": [
-        "func handoffDeliveryStateRootPath",
-        "func validHandoffDeliveryWindowsMode"
+        "func handoffDeliveryStateRootPath"
       ]
     },
     {
@@ -3428,15 +3396,6 @@
       ]
     },
     {
-      "path": "internal/adapter/hostprobe/omo_auth_other.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func readOmoAuthFile",
-        "func stableOmoAuthInfo"
-      ]
-    },
-    {
       "path": "internal/adapter/hostprobe/omo_auth_unix.go",
       "owner": "adapter",
       "task": "T15",
@@ -3456,25 +3415,7 @@
       ]
     },
     {
-      "path": "internal/adapter/hostprobe/process_group_other.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func configureProcessGroup",
-        "func terminateProcessTree"
-      ]
-    },
-    {
       "path": "internal/adapter/hostprobe/process_group_unix.go",
-      "owner": "adapter",
-      "task": "T15",
-      "symbols": [
-        "func configureProcessGroup",
-        "func terminateProcessTree"
-      ]
-    },
-    {
-      "path": "internal/adapter/hostprobe/process_group_windows.go",
       "owner": "adapter",
       "task": "T15",
       "symbols": [
@@ -5271,10 +5212,7 @@
       "owner": "adapter",
       "task": "T20",
       "symbols": [
-        "func Client.AdoptWorktree",
         "func Client.Available",
-        "func Client.BootstrapTerminalAgent",
-        "func Client.CanonicalizeWorktreeBranch",
         "func Client.CloseTerminal",
         "func Client.CreateTerminal",
         "func Client.CreateWorktree",
@@ -5284,11 +5222,9 @@
         "func Client.ListWorktreeTerminalsByPath",
         "func Client.ListWorktrees",
         "func Client.Probe",
-        "func Client.RefreshTerminal",
         "func Client.RemoveWorktree",
         "func Client.ResolveRepo",
         "func Client.SendTerminalPrompt",
-        "func Client.ShowWorktree",
         "func Client.Status",
         "func Client.canonicalizeWorktreeBranch",
         "func Client.gitRefMatches",
@@ -5347,22 +5283,14 @@
         "func Client.CurrentRun",
         "func Client.Dispatch",
         "func Client.InboxPresence",
-        "func Client.ListAllTasks",
         "func Client.ListAllTasksFromRuns",
-        "func Client.ListDispatchedTasks",
         "func Client.ListDispatchedTasksFromRuns",
-        "func Client.ListFailedTasks",
-        "func Client.ListGates",
         "func Client.ListGatesFromRuns",
         "func Client.ListRunInventory",
         "func Client.ListRuns",
-        "func Client.ListTasks",
         "func Client.SendWorkerDone",
-        "func Client.SettleTask",
         "func Client.ShowDispatch",
-        "func Client.ShowDispatchFrom",
         "func Client.ShowRequest",
-        "func Client.UpdateTask",
         "func Client.UseRun",
         "func Client.currentRunInventory",
         "func Client.dispatchInventoryResult",
@@ -5371,13 +5299,11 @@
         "func Client.listRunGatesInventory",
         "func Client.listRunTasksInventory",
         "func Client.listRunsInventory",
-        "func Client.listTasksAcrossRuns",
         "func Client.listTasksAcrossRunsInventory",
         "func Client.listTasksFromRuns",
         "func Client.runMutation",
         "func Client.showDispatchInventory",
         "func currentCoordinatorHandle",
-        "func isConsumerFenced",
         "func readRunsBounded",
         "func validateRunID",
         "func validateRunInventory",
@@ -5404,9 +5330,7 @@
         "func ExecutionProvisioner.InspectOwner",
         "func ExecutionProvisioner.InvokeIntent",
         "func ExecutionProvisioner.InvokeIntentObserved",
-        "func ExecutionProvisioner.LaunchOwner",
         "func ExecutionProvisioner.ObserveRequest",
-        "func ExecutionProvisioner.PrepareWorkspace",
         "func ExecutionProvisioner.Probe",
         "func ExecutionProvisioner.inspectIntentDispatch",
         "func ExecutionProvisioner.inspectIntentRun",
@@ -5416,7 +5340,6 @@
         "func ExecutionProvisioner.inspectIntentWorktree",
         "func ExecutionProvisioner.intentInventoryClient",
         "func ExecutionProvisioner.invokeIntent",
-        "func ExecutionProvisioner.prepareWorktree",
         "func ExecutionProvisioner.reconcileCreatedTerminal",
         "func ExecutionProvisioner.resolveIntentTerminal",
         "func ExecutionProvisioner.runInventoryClient",
@@ -5466,7 +5389,6 @@
         "func validateExecutionIntentTerminal",
         "func validateExecutionInventoryRuntime",
         "func validateExecutionInvokedDispatch",
-        "func validateExecutionLaunch",
         "func validateExecutionObservedDispatch",
         "func validateExecutionOwnerLaunch",
         "func validateExecutionPrepare",
@@ -5580,15 +5502,6 @@
         "func CredentialFiles.managedComponents",
         "func validateCredential",
         "type CredentialFiles"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/authority/credential_files_other.go",
-      "owner": "adapter",
-      "task": "T20",
-      "symbols": [
-        "func CredentialFiles.Read",
-        "func CredentialFiles.Write"
       ]
     },
     {
@@ -6235,15 +6148,6 @@
       ]
     },
     {
-      "path": "internal/adapter/outbound/processlease/acquire_other.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func Acquire",
-        "func AcquireShared"
-      ]
-    },
-    {
       "path": "internal/adapter/outbound/processlease/acquire_unix.go",
       "owner": "adapter",
       "task": "T08",
@@ -6435,7 +6339,6 @@
         "func DB.CompareAndApply",
         "func DB.CompareAndApplyFunc",
         "func DB.Delete",
-        "func DB.DeleteBucket",
         "func DB.Get",
         "func DB.GetAll",
         "func DB.List",
@@ -6484,14 +6387,6 @@
       "task": "T08",
       "symbols": [
         "func DB.ExcludeWrites"
-      ]
-    },
-    {
-      "path": "internal/adapter/outbound/sqlstore/write_guard_other.go",
-      "owner": "adapter",
-      "task": "T08",
-      "symbols": [
-        "func DB.acquireRecordWriter"
       ]
     },
     {
@@ -6687,15 +6582,6 @@
       "symbols": [
         "func CommandPolicySummary",
         "func commandPolicyTiers"
-      ]
-    },
-    {
-      "path": "internal/adapter/policy/process_group_other.go",
-      "owner": "adapter",
-      "task": "T09",
-      "symbols": [
-        "func configureProcessGroup",
-        "func terminateProcessGroup"
       ]
     },
     {
@@ -8115,14 +8001,6 @@
         "func Store.Read",
         "func Store.Write",
         "func Store.open"
-      ]
-    },
-    {
-      "path": "internal/adapter/worker/worker_pid_other.go",
-      "owner": "adapter",
-      "task": "T14",
-      "symbols": [
-        "func isPIDAlive"
       ]
     },
     {
@@ -10904,12 +10782,10 @@
       "symbols": [
         "type IssueRequest",
         "type NativeActor",
-        "type ProcessReceipt",
         "type Receipt",
         "type Record",
         "type Scope",
-        "type Use",
-        "type VerifiedActor"
+        "type Use"
       ]
     },
     {
@@ -11121,20 +10997,7 @@
       "owner": "contract",
       "task": "T02",
       "symbols": [
-        "type ConsensusVerdict",
-        "type FixtureReliability",
-        "type IssueOpsAutoresearchCandidate",
-        "type IssueOpsAutoresearchGateRequest",
-        "type IssueOpsAutoresearchGateResult",
-        "type IssueOpsBenchmarkCompareResult",
-        "type IssueOpsBenchmarkRunResult",
-        "type IssueOpsBenchmarkScore",
-        "type IssueOpsDimensionScore",
-        "type IssueOpsJudgeMap",
-        "type JudgeSample",
         "type PassPowKPoint",
-        "type RecordedOutcomes",
-        "type RecordedRun",
         "type ReliabilityReport",
         "type RoutingFidelityResult"
       ]
@@ -11147,30 +11010,6 @@
         "type IssueOpsBenchmarkArtifact",
         "type IssueOpsBenchmarkFixture",
         "type SkillRouting"
-      ]
-    },
-    {
-      "path": "internal/contract/issueops/capability_baseline.go",
-      "owner": "contract",
-      "task": "T02",
-      "symbols": [
-        "type Baseline",
-        "type BaselineKind",
-        "type Cell",
-        "type Claim",
-        "type Evidence",
-        "type HandOff",
-        "type HandOffSemantics",
-        "type Host",
-        "type Launcher",
-        "type Observation",
-        "type ObservationResult",
-        "type RecoveryChain",
-        "type RecoveryFailure",
-        "type RecoveryInvariants",
-        "type RecoveryMode",
-        "type RecoveryStep",
-        "type Status"
       ]
     },
     {
@@ -11861,7 +11700,6 @@
         "type Record",
         "type Result",
         "type ResumeArtifacts",
-        "type RootClaim",
         "type Selection",
         "type Snapshot",
         "type Workspace"
@@ -12133,8 +11971,7 @@
       "task": "T19",
       "symbols": [
         "func CoreProjectTools",
-        "func SelfLoopAdvertisedTools",
-        "func SelfLoopAliasTools"
+        "func SelfLoopAdvertisedTools"
       ]
     },
     {
@@ -12583,6 +12420,7 @@
         "type GateReport",
         "type HostEvidence",
         "type HostReport",
+        "type HostStatus",
         "type RegressionFixture",
         "type ReplayResult",
         "type ToolDescriptor"
@@ -14588,7 +14426,6 @@
         "type Lease",
         "type LedgerEntry",
         "type Outcome",
-        "type ProcessReceipt",
         "type Snapshot"
       ]
     },
@@ -15720,7 +15557,6 @@
         "func ownerIndex",
         "func preserveContains",
         "func preserveSet",
-        "func resolveLegacyCycleRun",
         "func resourceLookup.counts",
         "func resourceLookup.unique",
         "func validateCycleResources",
@@ -16922,11 +16758,9 @@
       "owner": "port",
       "task": "T20",
       "symbols": [
-        "func ProcessInspectorFunc.Inspect",
         "type ActorVerifier",
         "type CredentialFiles",
         "type ProcessInspector",
-        "type ProcessInspectorFunc",
         "type RecordReader",
         "type Repository",
         "type ScopeResolver"
@@ -17048,7 +16882,6 @@
         "type ExecutionOrcaProbeRequest",
         "type ExecutionOrcaProbeResult",
         "type ExecutionOrcaProvisioner",
-        "type ExecutionOrcaReceipt",
         "type ExecutionOrcaWorkspaceReceipt",
         "type ExecutionWorkspaceAccessProber",
         "type ExecutionWorkspaceAccessResult",
@@ -17295,39 +17128,29 @@
         "func ValidateOrcaDurableRequestID",
         "func ValidateOrcaPromptReceipt",
         "type CleanupOrcaTerminals",
-        "type OrcaAdoptWorktreeRequest",
-        "type OrcaBootstrapTerminalAgentRequest",
-        "type OrcaClient",
         "type OrcaCreateRunRequest",
         "type OrcaCreateTaskRequest",
         "type OrcaCreateTerminalRequest",
         "type OrcaCreateWorktreeRequest",
         "type OrcaDeliveryReceiptExpectation",
         "type OrcaDispatch",
-        "type OrcaDispatchClient",
         "type OrcaDispatchRequest",
         "type OrcaError",
         "type OrcaGate",
         "type OrcaInboxPresence",
-        "type OrcaMessage",
-        "type OrcaProbeClient",
         "type OrcaProbeRequest",
         "type OrcaProbeResult",
         "type OrcaPromptReceipt",
         "type OrcaRepo",
         "type OrcaRequestObservation",
         "type OrcaRun",
-        "type OrcaRunClient",
         "type OrcaStatus",
         "type OrcaTask",
-        "type OrcaTaskClient",
         "type OrcaTerminal",
-        "type OrcaTerminalClient",
         "type OrcaWorkerDoneClient",
         "type OrcaWorkerDoneRequest",
         "type OrcaWorkerDoneResult",
-        "type OrcaWorktree",
-        "type OrcaWorktreeClient"
+        "type OrcaWorktree"
       ]
     },
     {
@@ -17466,6 +17289,15 @@
       ]
     },
     {
+      "path": "internal/testsupport/authoritytest/process_inspector.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func ProcessInspectorFunc.Inspect",
+        "type ProcessInspectorFunc"
+      ]
+    },
+    {
       "path": "internal/testsupport/capture.go",
       "owner": "inbound",
       "task": "T20",
@@ -17493,6 +17325,23 @@
       "task": "T20",
       "symbols": [
         "func ClearInheritedOperatorSwitches"
+      ]
+    },
+    {
+      "path": "internal/testsupport/responsecontract/normalize.go",
+      "owner": "inbound",
+      "task": "T20",
+      "symbols": [
+        "func NormalizeContractValue",
+        "func NormalizeMCPTextJSON",
+        "func isDynamicStateRecordKey",
+        "func isDynamicTimeKey",
+        "func isRFC3339Like",
+        "func looksLikeCommandRunResult",
+        "func looksLikeDynamicStateHistoryEntry",
+        "func looksLikeDynamicStateRecord",
+        "func looksLikeStateCheckpoint",
+        "func normalizeContractString"
       ]
     },
     {

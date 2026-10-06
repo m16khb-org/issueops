@@ -70,7 +70,7 @@ branch and base_head`로 실패한다.
 또한 implementation review 게이트는 2026-09-05부터 모든 execution mode에 적용된다.
 진행 중이던 direct 사이클도 pr 진입과 create-pr 전에 리뷰 기록이 필요하다.
 
-근거: `internal/adapter/issueops/issueops_cleanup_abandon_remote.go`, `skills/issueops-abandon/SKILL.md`.
+근거: `internal/application/issueopscleanup/abandon_remote.go`, `skills/issueops-abandon/SKILL.md`.
 
 ## 5. strict readiness는 `git fetch`를 실행한다
 
@@ -84,7 +84,7 @@ branch and base_head`로 실패한다.
 표면만 쓰며 네트워크를 호출하지 않는다. 커밋·푸시 직전의 strict 판정은 8단계가
 명시적으로 실행한다.
 
-근거: `internal/adapter/issueops/issueops_pr_readiness_strict.go`.
+근거: `internal/application/issueopscycle/readiness_service.go`.
 
 ## 6. change fingerprint는 변경·untracked 파일 전체를 덮는다
 

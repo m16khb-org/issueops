@@ -185,7 +185,7 @@ func seedHTTPLeaseRecord(t *testing.T, repo, worktree string, holder model.Nativ
 	t.Helper()
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	record := model.IssueOpsRecord{
-		OK: true, SchemaVersion: model.IssueOpsCurrentSchemaVersion,
+		OK: true, SchemaVersion: model.IssueOpsSchemaVersion,
 		ID: (issueopscore.CycleStartIdentity{}).StableID(repo, "300-http-lease"), Repo: repo, Branch: "300-http-lease",
 		Phase: model.IssueOpsPhaseImplement, WorktreePath: worktree,
 		Execution: &model.Execution{

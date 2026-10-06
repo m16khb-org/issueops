@@ -100,7 +100,7 @@ Target ownership:
 ### Operations
 
 `OPERATIONS.md` combines installation, upgrades, CLI usage, MCP registration,
-daemon lifecycle, skills, project-local behavior, and troubleshooting.
+the shared HTTP MCP service lifecycle, skills, project-local behavior, and troubleshooting.
 
 Target ownership:
 

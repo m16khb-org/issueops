@@ -315,7 +315,6 @@ func Classify(snapshot Snapshot, opts Options) Result {
 	for _, cycle := range snapshot.Cycles {
 		authority := authorities[strings.TrimSpace(cycle.ID)]
 		if authority == AuthorityLive || authority == AuthorityPreserved {
-			cycle = resolveLegacyCycleRun(cycle, resources)
 			activeCycles = append(activeCycles, cycle)
 			if clean(cycle.Repo) == clean(snapshot.RepoRoot) {
 				activeRepoCycles = append(activeRepoCycles, cycle)

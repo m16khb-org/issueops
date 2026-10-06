@@ -68,16 +68,6 @@ func orcaTaskKey(runID, taskID string) string {
 	return runID + "\x00" + taskID
 }
 
-func resolveLegacyCycleRun(cycle Cycle, resources resourceIndex) Cycle {
-	if strings.TrimSpace(cycle.RunID) != "" || strings.TrimSpace(cycle.TaskID) == "" {
-		return cycle
-	}
-	if candidate, ok := resources.legacyTasks.unique(cycle.TaskID); ok {
-		cycle.RunID = strings.TrimSpace(candidate.RunID)
-	}
-	return cycle
-}
-
 func validateLeaseHolderIndexes(builder *findingBuilder, cycles []Cycle, indexes []LeaseHolderIndex) {
 	active := make([]Cycle, 0, len(cycles))
 	holderOwners := make(map[string][]string)
@@ -278,30 +268,28 @@ func (index resourceLookup[T]) counts() map[string]int {
 }
 
 type resourceIndex struct {
-	cycles      resourceLookup[Cycle]
-	worktrees   resourceLookup[OrcaWorktree]
-	instances   resourceLookup[OrcaWorktree]
-	terminals   resourceLookup[OrcaTerminal]
-	ptys        resourceLookup[OrcaTerminal]
-	tasks       resourceLookup[OrcaTask]
-	legacyTasks resourceLookup[OrcaTask]
-	dispatches  resourceLookup[OrcaDispatch]
-	gates       resourceLookup[OrcaGate]
-	gitPaths    resourceLookup[GitWorktree]
+	cycles     resourceLookup[Cycle]
+	worktrees  resourceLookup[OrcaWorktree]
+	instances  resourceLookup[OrcaWorktree]
+	terminals  resourceLookup[OrcaTerminal]
+	ptys       resourceLookup[OrcaTerminal]
+	tasks      resourceLookup[OrcaTask]
+	dispatches resourceLookup[OrcaDispatch]
+	gates      resourceLookup[OrcaGate]
+	gitPaths   resourceLookup[GitWorktree]
 }
 
 func newResourceIndex(snapshot Snapshot) resourceIndex {
 	return resourceIndex{
-		cycles:      indexBy(snapshot.Cycles, func(cycle Cycle) string { return cycle.ID }),
-		worktrees:   indexBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return worktree.ID }),
-		instances:   indexBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return worktree.InstanceID }),
-		terminals:   indexBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return terminal.Handle }),
-		ptys:        indexBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return terminal.PTYID }),
-		tasks:       indexBy(snapshot.Tasks, func(task OrcaTask) string { return orcaTaskKey(task.RunID, task.ID) }),
-		legacyTasks: indexBy(snapshot.Tasks, func(task OrcaTask) string { return task.ID }),
-		dispatches:  indexBy(snapshot.Dispatches, func(dispatch OrcaDispatch) string { return dispatch.ID }),
-		gates:       indexBy(snapshot.Gates, func(gate OrcaGate) string { return gate.ID }),
-		gitPaths:    indexBy(snapshot.GitWorktrees, func(worktree GitWorktree) string { return clean(worktree.Path) }),
+		cycles:     indexBy(snapshot.Cycles, func(cycle Cycle) string { return cycle.ID }),
+		worktrees:  indexBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return worktree.ID }),
+		instances:  indexBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return worktree.InstanceID }),
+		terminals:  indexBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return terminal.Handle }),
+		ptys:       indexBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return terminal.PTYID }),
+		tasks:      indexBy(snapshot.Tasks, func(task OrcaTask) string { return orcaTaskKey(task.RunID, task.ID) }),
+		dispatches: indexBy(snapshot.Dispatches, func(dispatch OrcaDispatch) string { return dispatch.ID }),
+		gates:      indexBy(snapshot.Gates, func(gate OrcaGate) string { return gate.ID }),
+		gitPaths:   indexBy(snapshot.GitWorktrees, func(worktree GitWorktree) string { return clean(worktree.Path) }),
 	}
 }
 

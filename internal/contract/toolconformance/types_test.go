@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
-
-	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func TestParseEpisodeStatusAcceptsKnownValuesOnly(t *testing.T) {
@@ -102,7 +100,7 @@ func TestBenchmarkReportJSONRoundTripPreservesTypedEnums(t *testing.T) {
 		},
 		Counts: BenchmarkCounts{Attempts: 1, Completed: 1},
 		Hosts: []HostReport{{
-			Status:            issueopscontract.StatusSupported,
+			Status:            HostStatusSupported,
 			Evidence:          HostEvidence{Installed: true, PreflightReady: true, MockExtensionVerified: true, LiveAttempted: true, LiveVerified: true},
 			Host:              "codex",
 			AttemptCount:      1,
@@ -134,7 +132,7 @@ func TestBenchmarkReportJSONRoundTripPreservesTypedEnums(t *testing.T) {
 		t.Fatalf("gate round trip drifted: %+v", decoded.Gate)
 	}
 	host := decoded.Hosts[0]
-	if host.Status != issueopscontract.StatusSupported || !host.Evidence.LiveVerified || !host.Evidence.MockExtensionVerified ||
+	if host.Status != HostStatusSupported || !host.Evidence.LiveVerified || !host.Evidence.MockExtensionVerified ||
 		host.Cases[0].Status != EpisodeCompleted || host.Cases[0].Classification != ExactValid ||
 		!host.Cases[0].SessionStartObserved || host.Cases[0].ResponseSHA256 == "" {
 		t.Fatalf("typed enums drifted: %+v", host.Cases[0])

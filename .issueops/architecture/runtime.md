@@ -95,7 +95,7 @@ JSON·MCP 응답 렌더링은 각 inbound adapter가 맡는다.
 
 Unix의 sqlstore record 쓰기는 state root의 공용 파일에 shared lease를 얻은 뒤 실행한다.
 `ExcludeWrites`는 같은 파일의 exclusive lease로 모든 bucket의 쓰기를 거부하며 읽기는
-허용한다. `Put`, `Delete`, `DeleteBucket`, `Apply`, `CompareAndApplyFunc`가 이 경계를
+허용한다. `Put`, `Delete`, `Apply`, `CompareAndApplyFunc`가 이 경계를
 공유한다. SQLite span·transaction과 별개이며, exclusive lease를 가진 호출자는
 record를 쓰거나 span에 진입하지 않는다. 실행 context를 전달받은 자식은 부모가
 종료돼도 exclusive lease를 유지한다. 일반 writer의 `SharedLease`에는 `Close`만 있고,

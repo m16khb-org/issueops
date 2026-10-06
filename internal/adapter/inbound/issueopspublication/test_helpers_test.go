@@ -87,7 +87,7 @@ func fullCoreReconcileRequest() issueopscontract.ExecutionReconcileRequest {
 func publicationRecordRaw(t *testing.T) []byte {
 	t.Helper()
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion, ID: "io-195", Repo: "/repo",
+		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion, ID: "io-195", Repo: "/repo",
 		Branch: "195-publication", Phase: issueopscontract.IssueOpsPhasePR,
 		Execution: &issueopscontract.Execution{
 			Mode: issueopscontract.ExecutionModeDirect,

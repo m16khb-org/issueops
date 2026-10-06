@@ -249,7 +249,6 @@ func TestGitLabSnapshotSkillsPinPortableVCSContract(t *testing.T) {
 		"glab api",
 		"successful exact-identity MCP evidence를 얻지 못했을 때만",
 		"이미 공급한 invalid evidence는 CLI fallback하지 않고 fail-closed한다.",
-		"OpenWiki 자동 update",
 	})
 	execution := readRepoFileForTest(t, filepath.Join("skills", "issueops", "references", "execution.md"))
 	for _, want := range []string{
@@ -265,7 +264,6 @@ func TestGitLabSnapshotSkillsPinPortableVCSContract(t *testing.T) {
 		"glab api",
 		"successful exact-identity MCP evidence를 얻지 못했을 때만",
 		"이미 공급한 invalid evidence는 CLI fallback하지 않고 fail-closed한다.",
-		"OpenWiki 자동 update",
 	} {
 		if !strings.Contains(execution, want) {
 			t.Fatalf("IssueOps execution reference missing portable snapshot contract %q", want)

@@ -57,18 +57,6 @@ type ExecutionOrcaProbeResult struct {
 	Code      string `json:"code,omitempty"`
 }
 
-type ExecutionOrcaReceipt struct {
-	Workspace          ExecutionWorkspaceReceipt `json:"workspace"`
-	RuntimeID          string                    `json:"runtime_id"`
-	RepoID             string                    `json:"repo_id"`
-	WorktreeID         string                    `json:"worktree_id"`
-	WorktreeInstanceID string                    `json:"worktree_instance_id,omitempty"`
-	RunID              string                    `json:"run_id,omitempty"`
-	TaskID             string                    `json:"task_id"`
-	DispatchID         string                    `json:"dispatch_id"`
-	TerminalPTYID      string                    `json:"terminal_pty_id,omitempty"`
-}
-
 type ExecutionOrcaWorkspaceReceipt struct {
 	Workspace          ExecutionWorkspaceReceipt `json:"workspace"`
 	RuntimeID          string                    `json:"runtime_id"`

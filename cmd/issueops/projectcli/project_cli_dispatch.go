@@ -35,7 +35,6 @@ func projectUsage() {
   issueops project docs [--repo PATH] [--json]
   issueops project route-docs [--repo PATH] [--task TEXT] [--json]
   issueops project append --kind caution|adr --title TEXT --summary TEXT [--repo PATH] [--json]
-  issueops project draft-wiki init|list|suggest|approve|reject|promote|prune ...
   issueops project commit-suggest [--repo PATH] [--staged] [--json]
   issueops project lint-diagnose [--repo PATH] [--json] -- <command_to_run...>
 `)

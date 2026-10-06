@@ -38,12 +38,8 @@ func Select(candidates []docscontract.Candidate, tracked map[string]bool, gitAva
 }
 
 func excluded(relativePath string) bool {
-	for _, dir := range []string{".issueops/draft-wiki", ".issueops/evidence"} {
-		if relativePath == dir || strings.HasPrefix(relativePath, dir+"/") {
-			return true
-		}
-	}
-	return false
+	const evidenceDir = ".issueops/evidence"
+	return relativePath == evidenceDir || strings.HasPrefix(relativePath, evidenceDir+"/")
 }
 
 type authoringScope struct{ moduleDirs []string }

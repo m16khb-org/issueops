@@ -13,7 +13,6 @@ import (
 
 	core "issueops/internal/adapter/toolconformance"
 	app "issueops/internal/application/toolconformance"
-	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
@@ -111,7 +110,7 @@ func TestLiveReportSeparatesInstalledMockAndLiveEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	host := report.Hosts[0]
-	if host.Status != issueopscontract.StatusSupported || !host.Evidence.Installed || !host.Evidence.PreflightReady ||
+	if host.Status != fixturecontract.HostStatusSupported || !host.Evidence.Installed || !host.Evidence.PreflightReady ||
 		!host.Evidence.MockExtensionVerified || !host.Evidence.LiveAttempted || !host.Evidence.LiveVerified || host.Evidence.StatusReason != "" {
 		t.Fatalf("host evidence = %+v status=%q", host.Evidence, host.Status)
 	}
@@ -131,7 +130,7 @@ func TestLiveReportValidatesFreshCompletedEvidenceForEveryHost(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := report.Hosts[0]
-			if got.Status != issueopscontract.StatusSupported || !got.Evidence.LiveVerified || got.CompletedEpisodes != 1 {
+			if got.Status != fixturecontract.HostStatusSupported || !got.Evidence.LiveVerified || got.CompletedEpisodes != 1 {
 				t.Fatalf("host report = %+v", got)
 			}
 		})
@@ -169,7 +168,7 @@ func TestLiveReportValidatesFreshCompletedEvidenceForEveryHost(t *testing.T) {
 					t.Fatal(err)
 				}
 				got := report.Hosts[0]
-				if got.Status == issueopscontract.StatusSupported || got.Evidence.LiveVerified || got.CompletedEpisodes != 0 || len(got.Cases) != 1 || got.Cases[0].Status != fixturecontract.EpisodeIncomplete {
+				if got.Status == fixturecontract.HostStatusSupported || got.Evidence.LiveVerified || got.CompletedEpisodes != 0 || len(got.Cases) != 1 || got.Cases[0].Status != fixturecontract.EpisodeIncomplete {
 					t.Fatalf("invalid fresh evidence was promoted: %+v", got)
 				}
 			})
@@ -207,7 +206,7 @@ func TestLiveReportKeepsInstalledOmoWithoutEpisodeNotRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	host := report.Hosts[0]
-	if host.Status != issueopscontract.StatusNotRun || !host.Evidence.Installed || host.Evidence.PreflightReady ||
+	if host.Status != fixturecontract.HostStatusNotRun || !host.Evidence.Installed || host.Evidence.PreflightReady ||
 		!host.Evidence.MockExtensionVerified || host.Evidence.LiveAttempted || host.Evidence.LiveVerified || host.Evidence.StatusReason != "explicit_model_required" {
 		t.Fatalf("host evidence = %+v status=%q", host.Evidence, host.Status)
 	}
@@ -234,7 +233,7 @@ func TestLiveReportMarksUnavailableExecutableWithoutClaimingSupport(t *testing.T
 		t.Fatal(err)
 	}
 	host := report.Hosts[0]
-	if host.Status != issueopscontract.StatusUnavailable || host.Evidence.Installed || host.Evidence.LiveAttempted || host.Evidence.LiveVerified || host.Evidence.StatusReason != "executable_not_found" {
+	if host.Status != fixturecontract.HostStatusUnavailable || host.Evidence.Installed || host.Evidence.LiveAttempted || host.Evidence.LiveVerified || host.Evidence.StatusReason != "executable_not_found" {
 		t.Fatalf("host evidence = %+v status=%q", host.Evidence, host.Status)
 	}
 }
@@ -344,7 +343,7 @@ func TestLiveGateReusesOnlyCertifiedSchemaV2Episode(t *testing.T) {
 		t.Fatalf("fresh calls = %d, want reused evidence", resumeRunner.calls["empty_object"])
 	}
 	host := resumed.Hosts[0]
-	if host.Status != issueopscontract.StatusSupported || !host.Evidence.LiveAttempted || !host.Evidence.LiveVerified || host.CompletedEpisodes != 1 {
+	if host.Status != fixturecontract.HostStatusSupported || !host.Evidence.LiveAttempted || !host.Evidence.LiveVerified || host.CompletedEpisodes != 1 {
 		t.Fatalf("resumed host = %+v", host)
 	}
 }
@@ -502,7 +501,7 @@ func TestLiveGateResumesSelectedZeroCompletedReport(t *testing.T) {
 		t.Fatalf("fresh calls = %d, want 1", resumeRunner.calls["empty_object"])
 	}
 	host := resumed.Hosts[0]
-	if host.Status != issueopscontract.StatusSupported || !host.Evidence.LiveAttempted || !host.Evidence.LiveVerified || host.CompletedEpisodes != 1 {
+	if host.Status != fixturecontract.HostStatusSupported || !host.Evidence.LiveAttempted || !host.Evidence.LiveVerified || host.CompletedEpisodes != 1 {
 		t.Fatalf("resumed host = %+v", host)
 	}
 }
@@ -604,7 +603,7 @@ func TestLiveGateRejectsInconsistentPreviousHostSummary(t *testing.T) {
 	}{
 		{name: "attempt count", mutate: func(host *fixturecontract.HostReport) { host.AttemptCount = 0 }},
 		{name: "completed count", mutate: func(host *fixturecontract.HostReport) { host.CompletedEpisodes = 0 }},
-		{name: "status", mutate: func(host *fixturecontract.HostReport) { host.Status = issueopscontract.StatusNotRun }},
+		{name: "status", mutate: func(host *fixturecontract.HostReport) { host.Status = fixturecontract.HostStatusNotRun }},
 		{name: "live attempted", mutate: func(host *fixturecontract.HostReport) { host.Evidence.LiveAttempted = false }},
 		{name: "live verified", mutate: func(host *fixturecontract.HostReport) { host.Evidence.LiveVerified = false }},
 		{name: "status reason", mutate: func(host *fixturecontract.HostReport) { host.Evidence.StatusReason = "stale" }},
@@ -639,7 +638,7 @@ func TestLiveGateRejectsInconsistentIncompletePreviousHostSummary(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	if baseline.Hosts[0].CompletedEpisodes != 0 || baseline.Hosts[0].Status != issueopscontract.StatusUnavailable {
+	if baseline.Hosts[0].CompletedEpisodes != 0 || baseline.Hosts[0].Status != fixturecontract.HostStatusUnavailable {
 		t.Fatalf("failed baseline = %+v", baseline.Hosts[0])
 	}
 	tests := []struct {
@@ -650,7 +649,7 @@ func TestLiveGateRejectsInconsistentIncompletePreviousHostSummary(t *testing.T) 
 		{name: "preflight ready", mutate: func(host *fixturecontract.HostReport) { host.Evidence.PreflightReady = false }},
 		{name: "live attempted", mutate: func(host *fixturecontract.HostReport) { host.Evidence.LiveAttempted = false }},
 		{name: "live verified", mutate: func(host *fixturecontract.HostReport) { host.Evidence.LiveVerified = true }},
-		{name: "status", mutate: func(host *fixturecontract.HostReport) { host.Status = issueopscontract.StatusSupported }},
+		{name: "status", mutate: func(host *fixturecontract.HostReport) { host.Status = fixturecontract.HostStatusSupported }},
 		{name: "status reason", mutate: func(host *fixturecontract.HostReport) { host.Evidence.StatusReason = "" }},
 		{name: "observed model", mutate: func(host *fixturecontract.HostReport) { host.ObservedModel = "other-model" }},
 	}

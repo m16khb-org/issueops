@@ -73,7 +73,8 @@ io inspect --json
 
 `install` accepts `--interactive`, `--project-local`, and
 `--path-mode=auto|manual|skip`; `bootstrap` adds `--sync`. `--project-local`
-explicitly creates `.mcp.json`, `.omo/mcp.json`, and `.agents/mcp_config.json`,
+explicitly creates project MCP files (`.mcp.json` only with `--mcp-transport=stdio`; with the default HTTP transport it
+uses the user-scope entry), `.omo/mcp.json`, and `.agents/mcp_config.json`,
 but skill links always stay in the user's home. After native activation,
 `install` and `update` optionally provision the Claude plugins and Git skills
 declared in [`configs/upstream.json`](configs/upstream.json). A network failure
@@ -309,7 +310,6 @@ skills/                 skill source shared by every host
 .issueops/              architecture, operations, testing, ADR, and other project docs
 scripts/                install, release, smoke, and validation scripts
 docs/                   supporting documents and assets
-openwiki/               OpenWiki quickstart and documentation pages
 ```
 
 ## Verification
@@ -373,7 +373,6 @@ first. The README carries no destructive rollback commands.
 | [`.issueops/OPERATIONS.md`](.issueops/OPERATIONS.md) | Install, host, CLI/MCP, and runtime operations map |
 | [`.issueops/TESTING.md`](.issueops/TESTING.md) | Tests and verification gates |
 | [`.issueops/ADR.md`](.issueops/ADR.md) | Structural decisions, rationale, and rejected alternatives |
-| [`openwiki/quickstart.md`](openwiki/quickstart.md) | OpenWiki entry point for code structure and workflows |
 
 Install and operations procedures are split into [install](.issueops/operations/install.md),
 [hosts](.issueops/operations/hosts.md), [CLI/MCP](.issueops/operations/cli-and-mcp.md), and

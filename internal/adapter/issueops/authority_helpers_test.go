@@ -8,10 +8,11 @@ import (
 	authorityapp "issueops/internal/application/authority"
 	"issueops/internal/contract/issueops"
 	authorityport "issueops/internal/port/authority"
+	"issueops/internal/testsupport/authoritytest"
 )
 
 func liveTestVerifier() authorityport.ActorVerifier {
-	return authorityapp.New(nil, authorityport.ProcessInspectorFunc(func(_ context.Context, receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {
+	return authorityapp.New(nil, authoritytest.ProcessInspectorFunc(func(_ context.Context, receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {
 		return NativeProcessStatusLive, receipt, nil
 	}), nil, nil, nil, nil)
 }

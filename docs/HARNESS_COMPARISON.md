@@ -220,7 +220,7 @@ OMC/OMX/Hermes가 실행력을 강조한다면 issueops는 다음 세 가지에�
 
 | 순서 | 산출물 | 왜 지금 필요한가 | 검증 |
 |---|---|---|---|
-| 1 | `docs/ISSUEOPS_COMPARISON.md` 유지 | 경쟁 대비 방향성을 문서화 | 문서 존재, sources/evidence 포함 |
+| 1 | `docs/HARNESS_COMPARISON.md` 유지 | 경쟁 대비 방향성을 문서화 | 문서 존재, sources/evidence 포함 |
 | 2 | `issueops system-status --json` | doctor/inspect/state/self-verify를 한 화면으로 | 구현됨: golden test + CLI smoke |
 | 3 | `policy run --read-only` | fake-run에서 실행 가능한 안전 MVP로 이동 | 구현됨: timeout/redaction/boundary tests |
 | 4 | `worker run --read-only` | long-running job queue의 첫 실용 단계 | 구현됨: command evidence가 있는 read-only job |

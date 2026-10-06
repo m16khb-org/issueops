@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"issueops/cmd/issueops/issueopsapp/responsecontract"
 	"issueops/internal/adapter/outbound/sqlstore"
 	issueopsdomain "issueops/internal/domain/issueops"
+	"issueops/internal/testsupport/responsecontract"
 )
 
 func buildCLIResponseContractSnapshot(t *testing.T, replacements map[string]string, stateDir, workspaceDir, gitRepoDir string) map[string]any {

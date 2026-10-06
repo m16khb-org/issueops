@@ -9,7 +9,7 @@ import (
 
 func TestRecordUsesStablePhaseAndCurrentTypedSidecars(t *testing.T) {
 	record := issueops.IssueOpsRecord{
-		SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
+		SchemaVersion: issueops.IssueOpsSchemaVersion,
 		ID:            "io-1",
 		Repo:          "/repo",
 		Phase:         issueops.IssueOpsPhaseImplement,

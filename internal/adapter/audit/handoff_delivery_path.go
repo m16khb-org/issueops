@@ -29,13 +29,3 @@ func handoffDeliveryStateRootPath(stateRoot string) (string, error) {
 	}
 	return stateRoot, nil
 }
-
-func validHandoffDeliveryWindowsMode(mode os.FileMode, directory bool) bool {
-	if mode&(os.ModeSymlink|os.ModeIrregular) != 0 {
-		return false
-	}
-	if directory {
-		return mode.IsDir()
-	}
-	return mode.IsRegular()
-}

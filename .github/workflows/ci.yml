@@ -4,8 +4,7 @@ name: CI
 # on every branch push and pull request.
 # The self-verify gate runs with --judge none (LLM eval off by default) and a
 # pinned --seed, so this is pure wiring of existing commands: no live-skill
-# invocation and no model is required in CI. See
-# .issueops/plans/harness-quality-program-v2-externally-benchmarked.md (A1).
+# invocation and no model is required in CI.
 on:
   workflow_dispatch:
   push:

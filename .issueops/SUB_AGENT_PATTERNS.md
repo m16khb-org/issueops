@@ -98,7 +98,7 @@ Sub-agent 계획은 아래 slug 중 하나, 기대 이득, 알려진 tradeoff, �
 #### 8. 장시간 백그라운드 작업 (Background Long-Running Work)
 - **설명:** 메인 대화를 차단하지 않고 비동기 실행. 진행상황 체크·취소 가능.
 - **근거:** OpenAI Sandbox Agents, DeepAgents async subagents.
-- **issueops 적용:** issueops worker system (no-shell lifecycle MVP). draft-wiki worker.
+- **issueops 적용:** issueops worker system (no-shell lifecycle MVP).
 
 ### Category D: 다른 권한·모델 필요
 

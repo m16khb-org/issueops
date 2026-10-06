@@ -9,7 +9,7 @@ import (
 func TestIssueOpsRecordDelegationRoundTrip(t *testing.T) {
 	rec := IssueOpsRecord{
 		OK:            true,
-		SchemaVersion: IssueOpsCurrentSchemaVersion,
+		SchemaVersion: IssueOpsSchemaVersion,
 		ID:            "io-parent",
 		Repo:          "/repo/example",
 		Branch:        "123-parent",

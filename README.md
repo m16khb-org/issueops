@@ -282,7 +282,6 @@ io quality inspect --json
 | [테스트 기준](.issueops/TESTING.md) | 변경 종류별 검증과 완료 조건 |
 | [설계 결정](.issueops/ADR.md) | 채택한 결정과 근거 |
 | [릴리스·롤백](.issueops/operations/release-reproducibility.md) | 빌드 산출물 검증과 설치 복구 |
-| [OpenWiki](openwiki/quickstart.md) | 생성된 코드 설명과 탐색 안내 |
 
 ## 라이선스
 

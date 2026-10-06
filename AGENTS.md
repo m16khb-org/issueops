@@ -142,7 +142,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `internal/architecture/` | production import graph와 layer dependency fitness test |
 | `configs/` | Codex/Claude/Omo/MCP 설정 템플릿 |
 | `.omo/mcp.json`, `.agents/mcp_config.json` | 명시적 `--project-local` 때만 생성되는 Omo/agy project MCP 설정. 스킬 링크는 어떤 경우에도 repo-local로 만들지 않으며 git 추적 금지 |
-| `.mcp.json` | 이 하네스 repo의 dogfood/project-local Claude MCP 설정. 기본 설치는 user-scope MCP를 사용하며 대상 repo에는 쓰지 않음 |
+| `.mcp.json` | 이 하네스 repo의 project Claude MCP 설정. 기본값은 빈 `{"mcpServers": {}}`(user-scope MCP 사용). `issueops_project` stdio 템플릿은 `configs/claude/mcp.project.json`이며 `--project-local --mcp-transport=stdio`일 때만 `.mcp.json`에 쓰임 |
 | `bin/issueops` | 빌드된 로컬 하네스 CLI/MCP 바이너리 |
 | `skills/` | Codex/Claude/Omo가 공유하는 스킬 source of truth |
 | `.issueops/` | 에이전트용 프로젝트 지식 베이스 |
@@ -220,16 +220,3 @@ go build -o bin/issueops ./cmd/issueops
 - 기본 검사는 git 변경분의 API candidate files로 제한하고, 기존 레거시 전체 Swagger 부채를 이번 변경의 실패 원인으로 삼지 않는다.
 
 - API 문서 검사는 decorator/comment 존재 여부만 보지 말고 변경 endpoint가 호출하는 business logic의 public error contract(404/403/409 등)도 OpenAPI 응답에 반영됐는지 확인한다.
-
-<!-- OPENWIKI:START -->
-
-## OpenWiki
-
-This repository has a generated `openwiki/` evidence index. It is optional just-in-time context, not required startup reading.
-
-- Treat source code and tests as authoritative. A brief's unknowns and review items are verification gaps, not automatic requirements.
-- Prefer the narrowest quiet validation that proves the changed behavior. Preserve complete failure output.
-
-The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
-
-<!-- OPENWIKI:END -->

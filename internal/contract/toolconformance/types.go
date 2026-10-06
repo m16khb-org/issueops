@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"issueops/internal/contract/failurecause"
-	issueopscontract "issueops/internal/contract/issueops"
 )
 
 const (
@@ -98,6 +97,16 @@ type EpisodeReport struct {
 	FailureCauseEvidence []failurecause.Evidence `json:"failure_cause_evidence"`
 }
 
+// HostStatus is the benchmark verdict for one host.
+type HostStatus string
+
+const (
+	HostStatusSupported   HostStatus = "supported"
+	HostStatusUnsupported HostStatus = "unsupported"
+	HostStatusUnavailable HostStatus = "unavailable"
+	HostStatusNotRun      HostStatus = "not-run"
+)
+
 type HostEvidence struct {
 	Installed             bool   `json:"installed"`
 	PreflightReady        bool   `json:"preflight_ready"`
@@ -108,15 +117,15 @@ type HostEvidence struct {
 }
 
 type HostReport struct {
-	Status            issueopscontract.Status `json:"status"`
-	Evidence          HostEvidence            `json:"evidence"`
-	Host              string                  `json:"host"`
-	Version           string                  `json:"version"`
-	RequestedModel    string                  `json:"requested_model"`
-	ObservedModel     string                  `json:"observed_model"`
-	AttemptCount      int                     `json:"attempt_count"`
-	CompletedEpisodes int                     `json:"completed_episodes"`
-	Cases             []EpisodeReport         `json:"cases"`
+	Status            HostStatus      `json:"status"`
+	Evidence          HostEvidence    `json:"evidence"`
+	Host              string          `json:"host"`
+	Version           string          `json:"version"`
+	RequestedModel    string          `json:"requested_model"`
+	ObservedModel     string          `json:"observed_model"`
+	AttemptCount      int             `json:"attempt_count"`
+	CompletedEpisodes int             `json:"completed_episodes"`
+	Cases             []EpisodeReport `json:"cases"`
 }
 
 type BenchmarkCounts struct {

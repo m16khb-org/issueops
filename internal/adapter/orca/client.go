@@ -320,16 +320,6 @@ func (c *Client) ListWorktrees(ctx context.Context, repo string) ([]port.OrcaWor
 	return result, nil
 }
 
-func (c *Client) ShowWorktree(ctx context.Context, path string) (port.OrcaWorktree, error) {
-	var payload struct {
-		Worktree worktreePayload `json:"worktree"`
-	}
-	runtimeID, err := c.runJSON(ctx, "", readTimeout, []string{"orca", "worktree", "show", "--worktree", pathSelector(path), "--json"}, &payload)
-	shown := payload.Worktree.portValue()
-	shown.RuntimeID = runtimeID
-	return shown, err
-}
-
 func (c *Client) CreateWorktree(ctx context.Context, req port.OrcaCreateWorktreeRequest) (port.OrcaWorktree, error) {
 	provider, ok := orcaIssueProvider(req.Provider)
 	if !ok {
@@ -382,14 +372,6 @@ func (c *Client) CreateWorktree(ctx context.Context, req port.OrcaCreateWorktree
 	return c.canonicalizeWorktreeBranch(ctx, created, requestedBranch, upstream, allowNumericSuffix)
 }
 
-// CanonicalizeWorktreeBranch는 Orca가 만든 브랜치가 정확히
-// <namespace>/<provider-branch>일 때만 namespace를 제거한다. GitLab 예약
-// 브랜치의 숫자 접미사 허용과 upstream 복원은 내부 호출에서 원격 SHA까지
-// 증명한 경우에만 수행한다.
-func (c *Client) CanonicalizeWorktreeBranch(ctx context.Context, created port.OrcaWorktree, requestedBranch, upstream string) (port.OrcaWorktree, error) {
-	return c.canonicalizeWorktreeBranch(ctx, created, requestedBranch, upstream, false)
-}
-
 func (c *Client) canonicalizeWorktreeBranch(ctx context.Context, created port.OrcaWorktree, requestedBranch, upstream string, allowNumericSuffix bool) (port.OrcaWorktree, error) {
 	requestedBranch = strings.TrimSpace(requestedBranch)
 	upstream = strings.TrimSpace(upstream)
@@ -425,31 +407,6 @@ func exactNumericBranchSuffix(observed, requested string) bool {
 	}
 	number, err := strconv.Atoi(suffix)
 	return err == nil && number >= 2 && strconv.Itoa(number) == suffix
-}
-
-func (c *Client) AdoptWorktree(ctx context.Context, req port.OrcaAdoptWorktreeRequest) (port.OrcaWorktree, error) {
-	provider, ok := orcaIssueProvider(req.Provider)
-	if !ok {
-		return port.OrcaWorktree{}, &port.OrcaError{Code: "unsupported_provider", Detail: strings.ToLower(strings.TrimSpace(req.Provider))}
-	}
-	if strings.TrimSpace(req.WorktreeID) == "" || strings.TrimSpace(req.Comment) == "" {
-		return port.OrcaWorktree{}, &port.OrcaError{Code: "worktree_adopt_invalid", Detail: "worktree id and comment are required"}
-	}
-	argv := []string{"orca", "worktree", "set", "--worktree", idSelector(req.WorktreeID), "--comment", strings.TrimSpace(req.Comment)}
-	if provider == "github" {
-		if req.Issue <= 0 {
-			return port.OrcaWorktree{}, &port.OrcaError{Code: "github_issue_required", Detail: "a positive linked GitHub issue number is required"}
-		}
-		argv = append(argv, "--issue", strconv.Itoa(req.Issue))
-	}
-	argv = append(argv, "--json")
-	var payload struct {
-		Worktree worktreePayload `json:"worktree"`
-	}
-	runtimeID, err := c.runJSON(ctx, "", createTimeout, argv, &payload)
-	adopted := payload.Worktree.portValue()
-	adopted.RuntimeID = runtimeID
-	return adopted, err
 }
 
 func (c *Client) RemoveWorktree(ctx context.Context, id string, force bool) error {
@@ -626,43 +583,6 @@ func (c *Client) CreateTerminal(ctx context.Context, req port.OrcaCreateTerminal
 	return created, nil
 }
 
-// BootstrapTerminalAgent turns an exact, already-owned terminal into
-// an Orca-recognized agent target before inject dispatch. The worker terminal
-// is selected and sole-writer-attested by IssueOps; this adapter only emits a
-// fixed host command and waits for Orca to settle its TUI state.
-func (c *Client) BootstrapTerminalAgent(ctx context.Context, req port.OrcaBootstrapTerminalAgentRequest) error {
-	if strings.TrimSpace(req.TerminalHandle) == "" {
-		return &port.OrcaError{Code: "terminal_agent_bootstrap_invalid", Detail: "terminal handle is required"}
-	}
-	command, ok := ownerAgentCommand(req.Agent, req.Model, req.ReasoningEffort, req.AllowCodexHookTrustBypass)
-	if !ok {
-		return &port.OrcaError{Code: "unsupported_agent_profile", Detail: strings.TrimSpace(req.Agent)}
-	}
-	var send struct {
-		Send struct {
-			Accepted bool `json:"accepted"`
-		} `json:"send"`
-	}
-	if _, err := c.runJSON(ctx, "", createTimeout, []string{"orca", "terminal", "send", "--terminal", strings.TrimSpace(req.TerminalHandle), "--text", command, "--enter", "--json"}, &send); err != nil {
-		return err
-	}
-	if !send.Send.Accepted {
-		return &port.OrcaError{Code: "terminal_agent_bootstrap_rejected", Detail: "Orca did not accept the exact terminal bootstrap", Invoked: true}
-	}
-	var wait struct {
-		Wait struct {
-			Satisfied bool `json:"satisfied"`
-		} `json:"wait"`
-	}
-	if _, err := c.runJSON(ctx, "", createTimeout, []string{"orca", "terminal", "wait", "--terminal", strings.TrimSpace(req.TerminalHandle), "--for", "tui-idle", "--timeout-ms", "10000", "--json"}, &wait); err != nil {
-		return err
-	}
-	if !wait.Wait.Satisfied {
-		return &port.OrcaError{Code: "terminal_agent_bootstrap_timeout", Detail: "agent terminal did not reach Orca TUI idle state", Invoked: true}
-	}
-	return nil
-}
-
 func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, requestID string) (port.OrcaPromptReceipt, error) {
 	handle = strings.TrimSpace(handle)
 	if !concreteTerminalHandlePattern.MatchString(handle) || strings.TrimSpace(prompt) == "" ||
@@ -722,17 +642,4 @@ func (c *Client) SendTerminalPrompt(ctx context.Context, handle, prompt, request
 		}
 	}
 	return receipt, nil
-}
-
-func (c *Client) RefreshTerminal(ctx context.Context, worktreeID, ptyID string) (port.OrcaTerminal, error) {
-	terminals, err := c.ListTerminals(ctx, worktreeID)
-	if err != nil {
-		return port.OrcaTerminal{}, err
-	}
-	for _, terminal := range terminals {
-		if terminal.WorktreeID == strings.TrimSpace(worktreeID) && terminal.PTYID == strings.TrimSpace(ptyID) {
-			return terminal, nil
-		}
-	}
-	return port.OrcaTerminal{}, &port.OrcaError{Code: "terminal_not_found"}
 }

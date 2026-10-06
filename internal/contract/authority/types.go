@@ -14,11 +14,7 @@ const (
 )
 
 // Capability-local aliases keep domain/authority on its own contract package.
-type (
-	NativeActor    = model.NativeActor
-	ProcessReceipt = model.NativeProcessReceipt
-	VerifiedActor  = model.VerifiedActor
-)
+type NativeActor = model.NativeActor
 
 // ErrInvalidState is the shared fail-closed schema error.
 var ErrInvalidState = statecontract.ErrInvalidState

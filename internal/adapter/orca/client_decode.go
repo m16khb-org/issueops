@@ -302,5 +302,4 @@ type executionGateInventory struct {
 	Rows      []port.OrcaGate
 }
 
-var _ port.OrcaClient = (*Client)(nil)
 var _ port.OrcaRunInventoryReader = (*Client)(nil)

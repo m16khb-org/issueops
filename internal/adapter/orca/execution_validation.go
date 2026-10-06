@@ -303,17 +303,6 @@ func executionMarkerField(marker, name string) (string, bool) {
 	return value, seen
 }
 
-func validateExecutionLaunch(worktreeID, runID string, terminal port.OrcaTerminal, task port.OrcaTask, dispatch port.OrcaDispatch) error {
-	if strings.TrimSpace(terminal.Handle) == "" || terminal.WorktreeID != worktreeID || !terminal.Connected || !terminal.Writable {
-		return fmt.Errorf("Orca owner terminal receipt is incomplete")
-	}
-	if strings.TrimSpace(runID) == "" || task.RunID != runID || strings.TrimSpace(task.ID) == "" ||
-		strings.TrimSpace(dispatch.ID) == "" || dispatch.TaskID != task.ID || dispatch.AssigneeHandle != terminal.Handle || !dispatch.Injected {
-		return fmt.Errorf("Orca task or dispatch receipt is incomplete")
-	}
-	return nil
-}
-
 var executionPromptPlaceholder = regexp.MustCompile(`\{[A-Z][A-Z0-9_]*\}`)
 
 func validateExecutionOwnerLaunch(prepared port.ExecutionOrcaWorkspaceReceipt, req port.ExecutionOrcaProbeRequest, launch port.ExecutionOrcaLaunchRequest) error {

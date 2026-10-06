@@ -83,7 +83,7 @@ func parseCheckFlags(name string, args []string) (checkFlags, bool, error) {
 	var flags checkFlags
 	fs.StringVar(&flags.WorkspaceRoot, "workspace-root", "", "workspace root boundary (defaults to --cwd)")
 	fs.StringVar(&flags.CWD, "cwd", "", "gate file directory and CHECK working directory (defaults to cwd)")
-	fs.Var(&repeatedFlag{target: &flags.Files}, "file", "gate ledger file (repeatable; defaults to .issueops/gates/*.md plus compatible paths under --cwd)")
+	fs.Var(&repeatedFlag{target: &flags.Files}, "file", "gate ledger file (repeatable; defaults to .issueops/issues/<n>/gates.md and .issueops/gates/*.md under --cwd)")
 	fs.IntVar(&flags.TimeoutSeconds, "timeout-seconds", gatescontract.TimeoutDefaultSeconds, "per-CHECK timeout")
 	fs.StringVar(&flags.EnvAllowlist, "env", "HOME,PATH", "comma-separated environment variable allowlist for CHECK commands")
 	fs.BoolVar(&flags.WriteAllowed, "write", true, "allow workspace-write commands for CHECK execution")

@@ -25,10 +25,7 @@ var resolvedCandidateIDs = map[string]bool{
 
 type VerificationKind = contract.VerificationKind
 
-const (
-	ToolSignalKind  = contract.ToolSignalKind
-	DocArtifactKind = contract.DocArtifactKind
-)
+const ToolSignalKind = contract.ToolSignalKind
 
 type CandidateSpec struct {
 	ID               string

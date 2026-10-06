@@ -433,7 +433,7 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		t.Fatalf("create remote branch fixture: %s", stderr)
 	}
 	record := issueops.IssueOpsRecord{
-		OK: true, SchemaVersion: issueops.IssueOpsCurrentSchemaVersion,
+		OK: true, SchemaVersion: issueops.IssueOpsSchemaVersion,
 		ID: newIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan,
 		IssueURL:     "https://github.com/acme/repo/issues/16",
 		DesignReview: &issueops.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},

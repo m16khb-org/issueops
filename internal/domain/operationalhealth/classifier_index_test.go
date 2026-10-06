@@ -66,14 +66,6 @@ func TestClassifyIndexedFindingsBaseline(t *testing.T) {
 			s.Dispatches[0].RunID = "other"
 			s.LeaseHolderIndexes[0].AgentID = "other"
 		}, "51838c9d1355e73e3b686642fac795bb7682c32653e5a343731bb7723d91874d"},
-		{"legacy-one", func(s *Snapshot) { s.Cycles[0].RunID = "" }, "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"},
-		{"legacy-zero", func(s *Snapshot) { s.Cycles[0].RunID = ""; s.Tasks = nil }, "5a278d19cff7a916a1fab9a75219fbbe082d6a5b5435953e15cf4fb729f2b6a9"},
-		{"legacy-multiple", func(s *Snapshot) {
-			s.Cycles[0].RunID = ""
-			task := s.Tasks[0]
-			task.RunID = "other"
-			s.Tasks = append(s.Tasks, task)
-		}, "8806496abea6c3a656bdadecbd46f5a0345ccc127c50e38055e6c93519a6b945"},
 		{"same-task-different-run", func(s *Snapshot) {
 			s.Cycles[1].TaskID = s.Cycles[0].TaskID
 			s.Cycles[1].RunID = "other"

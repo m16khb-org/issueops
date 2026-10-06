@@ -62,5 +62,5 @@ python3 skills/stability-audit/scripts/e2e_stability_audit.py --full-install --c
 
 ## 잔여 작업 (Q4 종결 조건)
 
-1. ✅ **실측 2회분** (2026-06-13): evidence-first audit 2회 모두 green. `host_mcp_checks`, `daemon_mcp_stress`, `process_hygiene`, `rss_stability`, `go test ./...`, `go test -race ./...`, `go build`, `self-verify --full --iterations=10 --seed=100 --target-score=95` 통과.
-2. ✅ **분류 로직 contract test** (2026-06-13): `classify_processes`의 daemon/legacy/temp-watcher/zombie 4버킷 라우팅을 `e2e_stability_audit_test.py::ClassifyProcessesTest` 6케이스로 핀(zombie는 Z-state ∧ harness-command 동시 조건, 무관 프로세스 미분류, 빈 입력 포함). 계층-C 한계(시그니처 매칭 핀이지 라이브 ps 열거/cleanup 정확성 증명 아님)를 테스트 docstring에 명시. `python3 skills/stability-audit/scripts/e2e_stability_audit_test.py` 11/11 그린.
+1. ✅ **실측 2회분** (2026-06-13): evidence-first audit 2회 모두 green. `host_mcp_checks`, `daemon_mcp_stress`(현재 스크립트의 stage명은 `mcp_stress`), `process_hygiene`, `rss_stability`, `go test ./...`, `go test -race ./...`, `go build`, `self-verify --full --iterations=10 --seed=100 --target-score=95` 통과.
+2. ✅ **분류 로직 contract test** (2026-06-13): `classify_processes`의 당시 daemon/legacy/temp-watcher/zombie 4버킷(현재 스크립트는 `legacy_harness`/`temp_watchers`/`zombies`) 라우팅을 `e2e_stability_audit_test.py::ClassifyProcessesTest` 6케이스로 핀(zombie는 Z-state ∧ harness-command 동시 조건, 무관 프로세스 미분류, 빈 입력 포함). 계층-C 한계(시그니처 매칭 핀이지 라이브 ps 열거/cleanup 정확성 증명 아님)를 테스트 docstring에 명시. `python3 skills/stability-audit/scripts/e2e_stability_audit_test.py` 11/11 그린.

@@ -54,9 +54,8 @@ sections) to `project-docs-update`, and missing-document setup to
    dropping or genericizing them.
 4. Keep root indexes and detailed modules within the manifest line budgets.
 5. Preserve relative-link integrity in both directions.
-6. Do not edit generated OpenWiki pages.
-7. Use `apply_patch` for every repository file change.
-8. Validate machine contracts and real discovery surfaces after the move.
+6. Use `apply_patch` for every repository file change.
+7. Validate machine contracts and real discovery surfaces after the move.
 
 ## Workflow
 

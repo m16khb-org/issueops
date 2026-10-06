@@ -2,12 +2,10 @@ package mcp
 
 import contract "issueops/internal/contract/mcp"
 
-// catalogSection binds one catalog function to its dispatch handler group and
-// records whether its tools are advertised in the tools/list response.
+// catalogSection binds one catalog function to its dispatch handler group.
 type catalogSection struct {
-	group      contract.DispatchGroup
-	advertised bool
-	tools      func() []contract.Tool
+	group contract.DispatchGroup
+	tools func() []contract.Tool
 }
 
 // catalogSections is the single ordered source of truth for the MCP tool
@@ -17,18 +15,17 @@ type catalogSection struct {
 // advertised order matches the stable mcp_tools.golden.json snapshot.
 func catalogSections() []catalogSection {
 	return []catalogSection{
-		{contract.DispatchProject, true, contract.CoreProjectTools},
-		{contract.DispatchPolicyState, true, contract.CommandPolicyTools},
-		{contract.DispatchPolicyState, true, contract.StateTools},
-		{contract.DispatchIssueOps, true, contract.IssueOpsBasicTools},
-		{contract.DispatchLoop, true, contract.LoopTools},
-		{contract.DispatchGates, true, contract.GatesTools},
-		{contract.DispatchChannel, true, contract.ChannelTools},
-		{contract.DispatchSelfLoop, true, contract.SelfLoopAdvertisedTools},
-		{contract.DispatchAssistantWorker, true, contract.AdapterOwnedTools},
-		{contract.DispatchPolicyState, true, contract.CommandPolicyAuditTools},
-		{contract.DispatchAssistantWorker, true, contract.LocalAssistantTools},
-		{contract.DispatchSelfLoop, false, contract.SelfLoopAliasTools},
+		{contract.DispatchProject, contract.CoreProjectTools},
+		{contract.DispatchPolicyState, contract.CommandPolicyTools},
+		{contract.DispatchPolicyState, contract.StateTools},
+		{contract.DispatchIssueOps, contract.IssueOpsBasicTools},
+		{contract.DispatchLoop, contract.LoopTools},
+		{contract.DispatchGates, contract.GatesTools},
+		{contract.DispatchChannel, contract.ChannelTools},
+		{contract.DispatchSelfLoop, contract.SelfLoopAdvertisedTools},
+		{contract.DispatchAssistantWorker, contract.AdapterOwnedTools},
+		{contract.DispatchPolicyState, contract.CommandPolicyAuditTools},
+		{contract.DispatchAssistantWorker, contract.LocalAssistantTools},
 	}
 }
 
@@ -37,16 +34,14 @@ func catalogSections() []catalogSection {
 func AdvertisedTools() []contract.Tool {
 	var out []contract.Tool
 	for _, s := range catalogSections() {
-		if s.advertised {
-			out = append(out, s.tools()...)
-		}
+		out = append(out, s.tools()...)
 	}
 	return out
 }
 
 // DispatchMap returns a map from every MCP tool name to its handler group.
 // It derives from catalogSections so routing can never drift from the catalog:
-// adding a tool to a section makes it both routable and (if advertised) listed.
+// adding a tool to a section makes it both routable and listed.
 func DispatchMap() map[string]contract.DispatchGroup {
 	out := make(map[string]contract.DispatchGroup)
 	for _, s := range catalogSections() {

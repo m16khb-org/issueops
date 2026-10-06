@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	executionLaunchMarker     = "issueops-v1 lifecycle=io-timing operation=op-timing"
+	executionLaunchMarker     = "issueops-v1 lifecycle=io-timing operation=op-timing provider=github issue=169"
 	executionLaunchWorktreeID = "wt-timing"
 	executionLaunchRuntimeID  = "runtime-timing"
 )
@@ -73,7 +73,23 @@ func executionLaunchSealed(t *testing.T) (port.ExecutionOrcaWorkspaceReceipt, po
 func executionLaunchProbe() port.ExecutionOrcaProbeRequest {
 	return port.ExecutionOrcaProbeRequest{
 		Repo: "/repo", Host: "claude", Model: "claude-opus-5-5", Effort: "high", Marker: executionLaunchMarker,
+		Provider: "github", Issue: 169,
 	}
+}
+
+// invokeExecutionLaunchTerminal은 봉인된 worktree 위에서 owner terminal intent를
+// 실행한다. 생성된 terminal의 identity 정착(reconcileCreatedTerminal)은 이
+// production 경로에서만 일어난다.
+func invokeExecutionLaunchTerminal(provisioner *ExecutionProvisioner, prepared port.ExecutionOrcaWorkspaceReceipt, launch port.ExecutionOrcaLaunchRequest) (port.ExecutionOrcaIntentReceipt, error) {
+	probe := executionLaunchProbe()
+	workspace := port.ExecutionWorkspaceRequest{
+		LifecycleID: "io-timing", SourceRoot: prepared.Workspace.SourceRoot, Root: prepared.Workspace.Root,
+		Branch: prepared.Workspace.Branch, BaseHead: prepared.Workspace.BaseHead,
+	}
+	return provisioner.InvokeIntent(context.Background(), port.ExecutionOrcaIntentRequest{
+		Stage: port.ExecutionOrcaIntentTerminal, Marker: probe.Marker, Workspace: workspace, Probe: probe,
+		Prepared: &prepared, Launch: &launch,
+	})
 }
 
 func (f *executionLaunchTimingFake) terminalWithTitle(stableTabTitle string) port.OrcaTerminal {
@@ -193,14 +209,6 @@ func (f *executionLaunchTimingFake) listTerminalsInventory(context.Context, stri
 		RuntimeID: executionLaunchRuntimeID,
 		Rows:      rows,
 	}, nil
-}
-
-func (f *executionLaunchTimingFake) ListTasks(context.Context) ([]port.OrcaTask, error) {
-	return nil, nil
-}
-
-func (f *executionLaunchTimingFake) ListAllTasks(context.Context) ([]port.OrcaTask, error) {
-	return nil, nil
 }
 
 func (f *executionLaunchTimingFake) listAllTasksInventory(context.Context) (executionTaskInventory, error) {

@@ -16,13 +16,6 @@ func TestExecutionWorktreeCreationUsesTheSealedBaseWithoutAnAbsentUpstream(t *te
 		run  func(*ExecutionProvisioner, port.ExecutionWorkspaceRequest, port.ExecutionOrcaProbeRequest) error
 	}{
 		{
-			name: "prepare workspace",
-			run: func(provisioner *ExecutionProvisioner, workspace port.ExecutionWorkspaceRequest, probe port.ExecutionOrcaProbeRequest) error {
-				_, err := provisioner.PrepareWorkspace(context.Background(), workspace, probe)
-				return err
-			},
-		},
-		{
 			name: "worktree intent",
 			run: func(provisioner *ExecutionProvisioner, workspace port.ExecutionWorkspaceRequest, probe port.ExecutionOrcaProbeRequest) error {
 				_, err := provisioner.InvokeIntent(context.Background(), port.ExecutionOrcaIntentRequest{

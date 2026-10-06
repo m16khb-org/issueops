@@ -329,8 +329,6 @@ type IssueOpsChildValidationResult struct {
 	ParentRef IssueOpsChildCycleRef `json:"parent_ref"`
 }
 
-const IssueOpsCurrentSchemaVersion = IssueOpsSchemaVersion
-
 type IssueOpsRecord struct {
 	OK                      bool                                `json:"ok"`
 	Invalid                 bool                                `json:"-"`

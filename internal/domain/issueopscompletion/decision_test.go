@@ -3,11 +3,13 @@ package issueopscompletion
 import (
 	"testing"
 	"time"
+
+	completioncontract "issueops/internal/contract/issueopscompletion"
 )
 
 func TestApplyCompletionReleasesLeaseAndStampsDoneLedger(t *testing.T) {
 	now := time.Date(2026, 8, 2, 0, 0, 0, 123456789, time.UTC)
-	holder := Actor{Host: "codex", SessionID: "session", Process: &ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
+	holder := Actor{Host: "codex", SessionID: "session", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
 	snapshot := Snapshot{
 		Phase:  "pr",
 		Lease:  Lease{Generation: 3, Status: "active", Holder: &holder},
@@ -35,7 +37,7 @@ func TestApplyCompletionReleasesLeaseAndStampsDoneLedger(t *testing.T) {
 }
 
 func TestValidateActiveRejectsForeignHolder(t *testing.T) {
-	holder := Actor{Host: "codex", SessionID: "holder", Process: &ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
+	holder := Actor{Host: "codex", SessionID: "holder", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
 	err := ValidateActive(Snapshot{Phase: "pr", Lease: Lease{Generation: 3, Status: "active", Holder: &holder}}, Command{
 		Generation: 3, Actor: Actor{Host: "claude", SessionID: "foreign", Process: holder.Process},
 	}, true)
@@ -46,7 +48,7 @@ func TestValidateActiveRejectsForeignHolder(t *testing.T) {
 
 func TestApplyCompletionClearsCompletedReseedStaleNotesFromPRAndDone(t *testing.T) {
 	now := time.Date(2026, 8, 4, 0, 0, 0, 0, time.UTC)
-	holder := Actor{Host: "codex", SessionID: "session", Process: &ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
+	holder := Actor{Host: "codex", SessionID: "session", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
 	stale := "stale: completed execution reseed (4 -> 5)"
 	snapshot := Snapshot{
 		Phase: "pr",

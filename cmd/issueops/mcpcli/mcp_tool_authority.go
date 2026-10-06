@@ -118,9 +118,6 @@ var mcpToolAuthorities = map[string]toolAuthority{
 	"self_verify_history":    serverTool,
 	"self_verify_compare":    serverTool,
 	"self_verify_promote":    serverTool,
-	"self_augment_history":   serverTool,
-	"self_augment_compare":   serverTool,
-	"self_augment_promote":   serverTool,
 }
 
 func validateHTTPToolClassification(catalog mcpcontract.Catalog) error {

@@ -50,7 +50,7 @@ func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 	repo := initGatesGateRepo(t)
 	record := issueopscontract.IssueOpsRecord{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
+		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            (issueops.CycleStartIdentity{}).StableID(repo, "main"),
 		Repo:          repo,
 		Branch:        "main",

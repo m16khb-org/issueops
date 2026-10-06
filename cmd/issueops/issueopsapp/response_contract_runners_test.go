@@ -8,9 +8,9 @@ import (
 
 	statecontract "issueops/internal/contract/state"
 
-	"issueops/cmd/issueops/issueopsapp/responsecontract"
 	"issueops/internal/adapter/outbound/sqlstore"
 	statestore "issueops/internal/adapter/outbound/state"
+	"issueops/internal/testsupport/responsecontract"
 )
 
 func runCLIJSONContract(t *testing.T, replacements map[string]string, fn func() error) any {

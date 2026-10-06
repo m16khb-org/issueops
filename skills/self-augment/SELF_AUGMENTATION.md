@@ -24,7 +24,7 @@ Verify that the harness produces consistent results across Codex, Claude Code, a
 ./bin/issueops self-verify promote --from-key self-verify-latest --baseline-key self-verify-baseline --confirm --json
 ```
 
-Legacy `self_augment_history`, `compare`, and `promote` calls remain compatibility aliases only. New docs and automation should use `self_verify_*` names.
+History, compare, and promote are exposed only as `self_verify_*` MCP tools; the `self_augment_*` aliases were removed.
 
 ### Required steps
 

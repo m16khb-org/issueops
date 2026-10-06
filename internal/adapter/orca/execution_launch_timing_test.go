@@ -1,7 +1,6 @@
 package orca
 
 import (
-	"context"
 	"strings"
 	"testing"
 	"time"
@@ -16,19 +15,19 @@ import (
 // 실측(#169): 생성 08:32:59.706 → 실패 08:33:02.607. 3초 창에 걸렸고 그 뒤
 // reconcile을 세 번 밟아야 준비가 끝났다. 즉 prepare --mode orca --confirm이
 // 실환경에서 한 번도 완주하지 못했다.
-func TestLaunchOwnerWaitsForTheDelayedTabTitle(t *testing.T) {
+func TestTerminalIntentWaitsForTheDelayedTabTitle(t *testing.T) {
 	prepared, launch := executionLaunchSealed(t)
 	fake := executionLaunchFake(t)
 	// 첫 조회에는 마커가 없다 — orca가 아직 visualLayouts를 갱신하지 않았다.
 	fake.terminalInventoryTitles = []string{"", executionLaunchMarker}
 
 	provisioner := &ExecutionProvisioner{client: fake}
-	receipt, err := provisioner.LaunchOwner(context.Background(), prepared, executionLaunchProbe(), launch)
+	receipt, err := invokeExecutionLaunchTerminal(provisioner, prepared, launch)
 	if err != nil {
 		t.Fatalf("탭 제목 갱신 지연 때문에 정상 준비가 실패하면 orca 모드를 쓸 수 없다: %v", err)
 	}
-	if strings.TrimSpace(receipt.TaskID) == "" || strings.TrimSpace(receipt.DispatchID) == "" {
-		t.Fatalf("터미널 검증을 통과했으면 task와 dispatch까지 진행해야 한다: %+v", receipt)
+	if strings.TrimSpace(receipt.TerminalPTYID) == "" {
+		t.Fatalf("터미널 검증을 통과했으면 PTY를 durable receipt에 남겨야 한다: %+v", receipt)
 	}
 	if fake.terminalCreateCalls != 1 {
 		t.Fatalf("재조회는 관측이다. mutation을 반복하면 #90의 오류다: createCalls=%d", fake.terminalCreateCalls)
@@ -38,7 +37,7 @@ func TestLaunchOwnerWaitsForTheDelayedTabTitle(t *testing.T) {
 // Orca terminal create는 terminal list에 새 PTY가 나타나기 전에 반환할 수 있다.
 // live #190 실행은 12초 제목 대기 상한이 있는데도 약 1초 만에 실패했다. 첫
 // inventory에 PTY가 없을 때 settle loop를 건너뛰던 경로를 재현한다.
-func TestLaunchOwnerWaitsForTheCreatedPTYToAppearInInventory(t *testing.T) {
+func TestTerminalIntentWaitsForTheCreatedPTYToAppearInInventory(t *testing.T) {
 	prepared, launch := executionLaunchSealed(t)
 	fake := executionLaunchFake(t)
 	fake.terminalInventoryPresent = []bool{false, true}
@@ -47,7 +46,7 @@ func TestLaunchOwnerWaitsForTheCreatedPTYToAppearInInventory(t *testing.T) {
 	provisioner := &ExecutionProvisioner{
 		client: fake, terminalSettleBudget: 30 * time.Millisecond, terminalSettleInterval: 5 * time.Millisecond,
 	}
-	if _, err := provisioner.LaunchOwner(context.Background(), prepared, executionLaunchProbe(), launch); err != nil {
+	if _, err := invokeExecutionLaunchTerminal(provisioner, prepared, launch); err != nil {
 		t.Fatalf("a newly created PTY may appear after the first inventory read: %v", err)
 	}
 	if fake.inventoryCalls != 2 {
@@ -61,7 +60,7 @@ func TestLaunchOwnerWaitsForTheCreatedPTYToAppearInInventory(t *testing.T) {
 // live #190에서 terminal create 응답은 handle과 worktree만 주고 ptyId는 비어
 // 있었다. 같은 handle의 단일 terminal이 inventory에 나타나면 그 행에서 PTY를
 // 회수해야 한다. 생성 mutation은 이미 끝났으므로 재실행하지 않는다.
-func TestLaunchOwnerRecoversPTYOmittedFromCreateReceiptByHandle(t *testing.T) {
+func TestTerminalIntentRecoversPTYOmittedFromCreateReceiptByHandle(t *testing.T) {
 	prepared, launch := executionLaunchSealed(t)
 	fake := executionLaunchFake(t)
 	fake.createdTerminal = &port.OrcaTerminal{
@@ -73,7 +72,7 @@ func TestLaunchOwnerRecoversPTYOmittedFromCreateReceiptByHandle(t *testing.T) {
 	provisioner := &ExecutionProvisioner{
 		client: fake, terminalSettleBudget: 30 * time.Millisecond, terminalSettleInterval: 5 * time.Millisecond,
 	}
-	receipt, err := provisioner.LaunchOwner(context.Background(), prepared, executionLaunchProbe(), launch)
+	receipt, err := invokeExecutionLaunchTerminal(provisioner, prepared, launch)
 	if err != nil {
 		t.Fatalf("create 응답에서 빠진 PTY를 단일 handle 행으로 회수해야 한다: %v", err)
 	}
@@ -85,7 +84,7 @@ func TestLaunchOwnerRecoversPTYOmittedFromCreateReceiptByHandle(t *testing.T) {
 	}
 }
 
-func TestLaunchOwnerBoundsAPersistentlyAbsentPTY(t *testing.T) {
+func TestTerminalIntentBoundsAPersistentlyAbsentPTY(t *testing.T) {
 	prepared, launch := executionLaunchSealed(t)
 	fake := executionLaunchFake(t)
 	fake.terminalInventoryPresent = []bool{false}
@@ -93,7 +92,7 @@ func TestLaunchOwnerBoundsAPersistentlyAbsentPTY(t *testing.T) {
 	provisioner := &ExecutionProvisioner{
 		client: fake, terminalSettleBudget: 30 * time.Millisecond, terminalSettleInterval: 5 * time.Millisecond,
 	}
-	_, err := provisioner.LaunchOwner(context.Background(), prepared, executionLaunchProbe(), launch)
+	_, err := invokeExecutionLaunchTerminal(provisioner, prepared, launch)
 	if err == nil {
 		t.Fatal("a PTY that never appears must remain a bounded identity failure")
 	}
@@ -106,7 +105,7 @@ func TestLaunchOwnerBoundsAPersistentlyAbsentPTY(t *testing.T) {
 	}
 }
 
-func TestLaunchOwnerDoesNotWaitOnAmbiguousPTYInventory(t *testing.T) {
+func TestTerminalIntentDoesNotWaitOnAmbiguousPTYInventory(t *testing.T) {
 	prepared, launch := executionLaunchSealed(t)
 	fake := executionLaunchFake(t)
 	fake.terminalInventoryCopies = []int{2}
@@ -114,7 +113,7 @@ func TestLaunchOwnerDoesNotWaitOnAmbiguousPTYInventory(t *testing.T) {
 	provisioner := &ExecutionProvisioner{
 		client: fake, terminalSettleBudget: 30 * time.Millisecond, terminalSettleInterval: 5 * time.Millisecond,
 	}
-	if _, err := provisioner.LaunchOwner(context.Background(), prepared, executionLaunchProbe(), launch); err == nil {
+	if _, err := invokeExecutionLaunchTerminal(provisioner, prepared, launch); err == nil {
 		t.Fatal("duplicate PTY rows are ambiguity, not a settling delay")
 	}
 	if fake.inventoryCalls != 1 {
@@ -124,14 +123,14 @@ func TestLaunchOwnerDoesNotWaitOnAmbiguousPTYInventory(t *testing.T) {
 
 // 마커가 끝내 나타나지 않으면 여전히 거부한다. 대기는 봉인 검증을 늦추는 것이지
 // 없애는 것이 아니다.
-// TestLaunchOwnerRefusesAForeignStableTitle는 봉인 계약을 고정한다.
+// TestTerminalIntentRefusesAForeignStableTitle는 봉인 계약을 고정한다.
 //
 // 예전에는 "마커가 없으면 거부"였다. 그 계약은 relay 0.1.0+66c426c5173c에서
 // 성립하지 않는다 — 그 runtime은 모든 terminal의 stableTabTitle을 null로 두고
 // live title은 에이전트가 덮어쓴다. 그래서 marker 부재 자체는 더 이상 거부
 // 근거가 아니고(created identity가 결속을 담당한다), **다른 값이 들어 있는
 // 경우**가 거부 근거다(#414).
-func TestLaunchOwnerRefusesAForeignStableTitle(t *testing.T) {
+func TestTerminalIntentRefusesAForeignStableTitle(t *testing.T) {
 	prepared, launch := executionLaunchSealed(t)
 	fake := executionLaunchFake(t)
 	fake.terminalInventoryTitles = []string{"issueops-v1 lifecycle=io-other"}
@@ -141,7 +140,7 @@ func TestLaunchOwnerRefusesAForeignStableTitle(t *testing.T) {
 	provisioner := &ExecutionProvisioner{
 		client: fake, terminalSettleBudget: 30 * time.Millisecond, terminalSettleInterval: 5 * time.Millisecond,
 	}
-	_, err := provisioner.LaunchOwner(context.Background(), prepared, executionLaunchProbe(), launch)
+	_, err := invokeExecutionLaunchTerminal(provisioner, prepared, launch)
 	if err == nil {
 		t.Fatal("다른 lifecycle의 stable title을 가진 터미널을 받아들이면 봉인이 무의미하다")
 	}
@@ -162,7 +161,7 @@ func TestLaunchOwnerRefusesAForeignStableTitle(t *testing.T) {
 }
 
 // 첫 조회에 마커가 있으면 추가 대기가 없다. 정상 환경을 느리게 만들지 않는다.
-func TestLaunchOwnerDoesNotWaitWhenTheMarkerIsAlreadyThere(t *testing.T) {
+func TestTerminalIntentDoesNotWaitWhenTheMarkerIsAlreadyThere(t *testing.T) {
 	prepared, launch := executionLaunchSealed(t)
 	fake := executionLaunchFake(t)
 	fake.createdTerminal = &port.OrcaTerminal{
@@ -171,7 +170,7 @@ func TestLaunchOwnerDoesNotWaitWhenTheMarkerIsAlreadyThere(t *testing.T) {
 	}
 
 	provisioner := &ExecutionProvisioner{client: fake}
-	if _, err := provisioner.LaunchOwner(context.Background(), prepared, executionLaunchProbe(), launch); err != nil {
+	if _, err := invokeExecutionLaunchTerminal(provisioner, prepared, launch); err != nil {
 		t.Fatal(err)
 	}
 	if fake.inventoryCalls != 0 {
@@ -179,10 +178,10 @@ func TestLaunchOwnerDoesNotWaitWhenTheMarkerIsAlreadyThere(t *testing.T) {
 	}
 }
 
-// TestLaunchOwnerAcceptsWhenTheRuntimeOmitsStableTitles는 #414의 실측을 고정한다.
+// TestTerminalIntentAcceptsWhenTheRuntimeOmitsStableTitles는 #414의 실측을 고정한다.
 // stableTabTitle을 제공하지 않는 runtime에서도 created identity로 결속된
 // terminal은 owner로 인정돼야 한다 — 그렇지 않으면 Orca 모드가 영구히 막힌다.
-func TestLaunchOwnerAcceptsWhenTheRuntimeOmitsStableTitles(t *testing.T) {
+func TestTerminalIntentAcceptsWhenTheRuntimeOmitsStableTitles(t *testing.T) {
 	prepared, launch := executionLaunchSealed(t)
 	fake := executionLaunchFake(t)
 	fake.terminalInventoryTitles = []string{""}
@@ -190,7 +189,7 @@ func TestLaunchOwnerAcceptsWhenTheRuntimeOmitsStableTitles(t *testing.T) {
 	provisioner := &ExecutionProvisioner{
 		client: fake, terminalSettleBudget: 30 * time.Millisecond, terminalSettleInterval: 5 * time.Millisecond,
 	}
-	if _, err := provisioner.LaunchOwner(context.Background(), prepared, executionLaunchProbe(), launch); err != nil {
+	if _, err := invokeExecutionLaunchTerminal(provisioner, prepared, launch); err != nil {
 		t.Fatalf("stable title을 제공하지 않는 runtime에서도 결속돼야 한다: %v", err)
 	}
 }
