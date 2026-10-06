@@ -2,10 +2,10 @@ package issueopsapp
 
 import (
 	fixturecontract "issueops/internal/contract/toolconformance"
+	failurecausedomain "issueops/internal/domain/failurecause"
 
 	"context"
 	"fmt"
-	failurecause "issueops/internal/adapter/failurecause"
 	"issueops/internal/adapter/hostprotocol"
 	app "issueops/internal/application/toolconformance"
 	"os"
@@ -37,7 +37,7 @@ func runToolConformanceLive(ctx context.Context, request contractcli.LiveRequest
 		Hosts: request.Hosts, Models: models,
 		Profile: request.Profile, Only: request.Only, TargetCompleted: request.TargetCompleted,
 		MaxAttemptsPerCase: request.MaxAttemptsPerCase, HarnessBinary: binary, Previous: request.Previous,
-	}, descriptors, app.LiveBenchmarkDependencies{Runners: runners, Now: time.Now, Token: toolconformance.RandomToken, LoadManifest: newConformanceFixtures().LoadManifest, Classify: failurecause.Classify})
+	}, descriptors, app.LiveBenchmarkDependencies{Runners: runners, Now: time.Now, Token: toolconformance.RandomToken, LoadManifest: newConformanceFixtures().LoadManifest, Classify: failurecausedomain.Classify})
 }
 
 func toolConformanceRunners(binary string) map[string]port.HostProbeRunner {

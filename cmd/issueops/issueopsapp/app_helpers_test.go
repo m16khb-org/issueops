@@ -1,8 +1,25 @@
 package issueopsapp
 
 import (
+	reviewprompt "issueops/cmd/issueops/apidoc/reviewprompt"
+	commandstep "issueops/cmd/issueops/commandstep"
+	mcpcli "issueops/cmd/issueops/mcpcli"
 	"issueops/cmd/issueops/pathutil"
+	llmeval "issueops/cmd/issueops/selfworkflow/llmeval"
+	augmentation "issueops/internal/adapter/augmentation"
+	reviewfiles "issueops/internal/adapter/outbound/apidoc/reviewfiles"
+	verification "issueops/internal/adapter/verification"
+	riskqa "issueops/internal/adapter/verification/riskqa"
+	app "issueops/internal/application/apidoc"
+	augmentapp "issueops/internal/application/selfaugment"
+	verifyapp "issueops/internal/application/selfverify"
+	riskqaxx "issueops/internal/contract/riskqa"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	selfverify "issueops/internal/contract/selfverify"
+	apidoccontract "issueops/internal/domain/apidoc"
+	riskqadomain "issueops/internal/domain/riskqa"
+	domain "issueops/internal/domain/selfaugment"
+	verifydomain "issueops/internal/domain/selfverify"
 
 	"bytes"
 	"context"
@@ -28,7 +45,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func TestCommandStepFacadeWrappers(t *testing.T) {
+func TestCommandStepHelpers(t *testing.T) {
 	step := runCommandStep("", "echo", time.Second, "", "sh", "-c", "printf ok")
 	if !step.OK || step.Stdout != "ok" {
 		t.Fatalf("runCommandStep = %#v", step)
@@ -37,20 +54,20 @@ func TestCommandStepFacadeWrappers(t *testing.T) {
 	if !envStep.OK || envStep.Stdout != "ok" {
 		t.Fatalf("runCommandStepEnv = %#v", envStep)
 	}
-	budgetStep := runCommandStepEnvWithBudget("", "budget", time.Second, "", nil, 2, "sh", "-c", "printf abc")
+	budgetStep := verification.RunEnv("", "budget", time.Second, "", nil, 2, "sh", "-c", "printf abc")
 	if !budgetStep.OK || !budgetStep.StdoutTruncated {
 		t.Fatalf("runCommandStepEnvWithBudget = %#v", budgetStep)
 	}
-	printStep(selfverify.StepResult{Label: "covered", OK: true})
-	if out, truncated, n := tailWithBudget("abcdef", 3); out == "" || !truncated || n != 6 {
+	commandstep.PrintStep(selfverify.StepResult{Label: "covered", OK: true})
+	if out, truncated, n := verifydomain.TailWithBudget("abcdef", 3); out == "" || !truncated || n != 6 {
 		t.Fatalf("tailWithBudget = %q %v %d", out, truncated, n)
 	}
-	if !strings.Contains(indentLines("a\nb"), "  a") {
+	if !strings.Contains(commandstep.IndentLines("a\nb"), "  a") {
 		t.Fatal("indentLines did not indent")
 	}
 }
 
-func TestAppAndRootCommandFacadeWrappers(t *testing.T) {
+func TestAppAndRootCommandHelpers(t *testing.T) {
 	var buf bytes.Buffer
 	fprintString(&buf, "hello")
 	fprintUsage(&buf)
@@ -111,7 +128,7 @@ func TestRunMCPCommandCleanupJSONUsesDryRunByDefaultAndApplyWhenRequested(t *tes
 	}
 }
 
-func TestHostAndPathFacadeWrappers(t *testing.T) {
+func TestHostAndPathHelpers(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("ISSUEOPS_ROOT", root)
 	t.Setenv("HARNESSAPP_BOOL", "true")
@@ -128,16 +145,16 @@ func TestHostAndPathFacadeWrappers(t *testing.T) {
 	if issueOpsRoot() != root {
 		t.Fatalf("issueOpsRoot = %q", issueOpsRoot())
 	}
-	if found, ok := findUp(filepath.Join(root, "skills", skillName), "SKILL.md"); !ok || found != filepath.Join(root, "skills", skillName) {
+	if found, ok := pathutil.FindUp(filepath.Join(root, "skills", skillName), "SKILL.md"); !ok || found != filepath.Join(root, "skills", skillName) {
 		t.Fatalf("findUp = %q %v", found, ok)
 	}
-	if resolveTarget(root) != root {
+	if pathutil.ResolveTarget(root) != root {
 		t.Fatal("path facade wrappers failed")
 	}
 
 }
 
-func TestUpdateAndAPIDocFacadeWrappers(t *testing.T) {
+func TestUpdateAndAPIDocHelpers(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("ISSUEOPS_ROOT", root)
 	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0o755); err != nil {
@@ -166,25 +183,25 @@ func TestUpdateAndAPIDocFacadeWrappers(t *testing.T) {
 	if err := printJSONTo(&buf, map[string]any{"ok": true}); err != nil || !strings.Contains(buf.String(), `"ok"`) {
 		t.Fatalf("printJSONTo = %q err=%v", buf.String(), err)
 	}
-	if !isAPIDocReviewGateError(errAPIDocReviewGateFailed) || !isAPIDocStaticGateError(errAPIDocStaticGateFailed) {
+	if !isAPIDocReviewGateError(app.ErrReviewGateFailed) || !isAPIDocStaticGateError(app.ErrStaticGateFailed) {
 		t.Fatal("gate error wrappers failed")
 	}
-	if len(apiDocReviewSchema()) == 0 {
+	if len(reviewprompt.Schema()) == 0 {
 		t.Fatal("apiDocReviewSchema empty")
 	}
-	if !isAPIDocCandidate("src/user.controller.ts") {
+	if !apidoccontract.IsCandidate("src/user.controller.ts") {
 		t.Fatal("isAPIDocCandidate failed")
 	}
-	if got := normalizeAPIDocFiles(root, []string{filepath.Join(root, "src", "user.controller.ts")}); len(got) != 1 {
+	if got := reviewfiles.Normalize(root, []string{filepath.Join(root, "src", "user.controller.ts")}); len(got) != 1 {
 		t.Fatalf("normalizeAPIDocFiles = %#v", got)
 	}
-	_ = checkNestControllerStatic("user.controller.ts", "@Controller('users')\nexport class UserController {}")
-	_ = checkNestDTOStatic("dto.ts", "export class UserDto {}")
-	_ = buildAPIDocReviewPrompt([]string{"a.ts"}, "diff", "extra", "")
-	_ = apiDocReviewEvidence("/tmp", []string{"a.ts"})
+	_ = apidoccontract.CheckNestController("user.controller.ts", "@Controller('users')\nexport class UserController {}")
+	_ = apidoccontract.CheckNestDTO("dto.ts", "export class UserDto {}")
+	_ = reviewprompt.Build([]string{"a.ts"}, "diff", "extra", "")
+	_ = reviewfiles.Evidence("/tmp", []string{"a.ts"})
 }
 
-func TestSelfWorkflowAndLLMFacadeWrappers(t *testing.T) {
+func TestSelfWorkflowAndLLMHelpers(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "README.md"), []byte("GENIUS_THINK quality inspect"), 0o644); err != nil {
 		t.Fatal(err)
@@ -195,11 +212,11 @@ func TestSelfWorkflowAndLLMFacadeWrappers(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "docs", "note.md"), []byte("coverage signal"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	history := SelfAugmentHistoryResult{Entries: []SelfAugmentHistoryEntry{}}
-	if err := applySelfAugmentHistoryRetention(&history, selfAugmentHistoryRetentionOptions{}); err != nil {
+	history := augmentcontract.SelfAugmentHistoryResult{Entries: []augmentcontract.SelfAugmentHistoryEntry{}}
+	if err := applySelfAugmentHistoryRetention(&history, augmentcontract.SelfAugmentHistoryRetentionOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := parseSelfAugmentTimestamp(time.Now().UTC().Format(time.RFC3339Nano)); !ok {
+	if _, ok := domain.ParseHistoryTimestamp(time.Now().UTC().Format(time.RFC3339Nano)); !ok {
 		t.Fatal("parseSelfAugmentTimestamp failed")
 	}
 	if got := nonNilStringSlice(nil); got == nil {
@@ -209,83 +226,83 @@ func TestSelfWorkflowAndLLMFacadeWrappers(t *testing.T) {
 		t.Fatal("nonNilSlowStepSlice returned nil")
 	}
 	signals := collectSelfAugmentRepoSignals(root, 1, []string{"self-verify"}, "GENIUS_THINK")
-	candidates := selfAugmentCandidates(signals)
+	candidates := augmentapp.Candidates(signals)
 	if len(candidates) == 0 {
 		t.Fatal("selfAugmentCandidates empty")
 	}
-	if scoreBool(true) <= scoreBool(false) {
+	if domain.ScoreBool(true) <= domain.ScoreBool(false) {
 		t.Fatal("scoreBool failed")
 	}
-	if !allSelfAugmentGoalsPassed([]SelfAugmentGoal{{Passed: true}}) {
+	if !domain.AllGoalsPassed([]augmentcontract.SelfAugmentGoal{{Passed: true}}) {
 		t.Fatal("allSelfAugmentGoalsPassed failed")
 	}
-	if selectedCandidateID(nil) != "" {
+	if domain.SelectedCandidateID(nil) != "" {
 		t.Fatal("selectedCandidateID nil should be empty")
 	}
 	_ = docsContainTerm(root, "coverage")
-	_ = fileContainsTerm(root, "README.md", "quality")
-	_ = dirContainsTerm(root, "docs", "signal")
-	_ = selectGeniusFormulas("invert the problem and use first principles")
-	_ = selfAugmentResearchInfluences()
-	markSatisfiedSelfAugmentCandidate(&candidates[0], signals)
-	_ = selfAugmentCandidateScore(candidates[0])
-	_ = compareSlowestStepRegressions(nil, nil, 10)
-	_ = compareStepBudgetRegressions(nil, nil, 10)
-	if missing := missingStrings([]string{"a", "b"}, []string{"a"}); len(missing) != 1 || missing[0] != "b" {
+	_ = augmentation.FileContainsTerm(root, "README.md", "quality")
+	_ = augmentation.DirContainsTerm(root, "docs", "signal")
+	_ = domain.SelectGeniusFormulas("invert the problem and use first principles")
+	_ = domain.ResearchInfluences()
+	domain.MarkSatisfiedCandidate(&candidates[0], signals)
+	_ = domain.CandidateScore(candidates[0])
+	_ = domain.CompareSlowestStepRegressions(nil, nil, 10)
+	_ = domain.CompareStepBudgetRegressions(nil, nil, 10)
+	if missing := domain.MissingStrings([]string{"a", "b"}, []string{"a"}); len(missing) != 1 || missing[0] != "b" {
 		t.Fatalf("missingStrings = %#v", missing)
 	}
-	_ = stepDurationStatByLabel(nil)
-	_ = maxSlowStepDurationByLabel(nil)
-	_ = buildStepDurationStats(map[string][]int64{"a": {1, 2}})
-	result := SelfAugmentResult{OK: true, Iterations: 0, Runs: []SelfAugmentIteration{}}
+	_ = domain.StepDurationStatByLabel(nil)
+	_ = domain.MaxSlowStepDurationByLabel(nil)
+	_ = domain.BuildStepDurationStats(map[string][]int64{"a": {1, 2}})
+	result := augmentcontract.SelfAugmentResult{OK: true, Iterations: 0, Runs: []augmentcontract.SelfAugmentIteration{}}
 	summary := summarizeSelfAugment(result)
-	_ = stepDurationStatsForCompare(summary)
-	verifySummary := summarizeSelfVerification(result, 95)
-	_, _, _ = classifySelfVerificationFailure(result, verifySummary)
-	_ = selfVerifyRerunCommands("go test", 100, 95)
-	_, _ = selfVerifyStepRerunCommand("go test ./...")
-	if formatScore(95.5) == "" {
+	_ = domain.StepDurationStatsForCompare(summary)
+	verifySummary := verifyapp.SummarizeSelfVerification(result, 95)
+	_, _, _ = verifyapp.ClassifySelfVerificationFailure(result, verifySummary)
+	_ = verifydomain.SelfVerifyRerunCommands("go test", 100, 95)
+	_, _ = verifydomain.SelfVerifyStepRerunCommand("go test ./...")
+	if verifydomain.FormatScore(95.5) == "" {
 		t.Fatal("formatScore empty")
 	}
-	_ = scoreSelfVerificationGoals(result, 95)
-	if len(selfVerificationContract().RequiredFields) == 0 {
+	_ = verifyapp.MapGoalScores(result, 95)
+	if len(verifydomain.ContractValue().RequiredFields) == 0 {
 		t.Fatal("selfVerificationContract empty")
 	}
-	if coverage, _ := selfVerificationCoverage([]string{"go test ./..."}); coverage == nil {
+	if coverage, _ := verifydomain.CoverageForLabels([]string{"go test ./..."}); coverage == nil {
 		t.Fatal("selfVerificationCoverage nil")
 	}
-	if len(selfVerificationCoverageDefinitions()) == 0 {
+	if len(verifydomain.CoverageDefinitions()) == 0 {
 		t.Fatal("selfVerificationCoverageDefinitions empty")
 	}
 
-	if err := validateSelfVerifyLLMEvalMode("advisory"); err != nil {
+	if err := verifydomain.ValidateLLMEvalMode("advisory"); err != nil {
 		t.Fatal(err)
 	}
-	if normalizeSelfVerifyLLMEvalMode("") == "" {
+	if verifydomain.NormalizeLLMEvalMode("") == "" {
 		t.Fatal("normalizeSelfVerifyLLMEvalMode empty")
 	}
-	if _, _, err := parseSelfVerifyLLMEvalEnv("off"); err != nil {
+	if _, _, err := verifydomain.ParseLLMEvalEnv("off"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := resolveSelfVerifyLLMEvalConfig(false, false, "", false, func(string) (string, bool) { return "", false }); err != nil {
+	if _, err := llmeval.ResolveSelfVerifyLLMEvalConfig(false, false, "", false, func(string) (string, bool) { return "", false }); err != nil {
 		t.Fatal(err)
 	}
-	if boundedLLMEvalError("prefix", errors.New("bad"), strings.Repeat("x", 100)) == "" {
+	if llmeval.BoundedLLMEvalError("prefix", errors.New("bad"), strings.Repeat("x", 100)) == "" {
 		t.Fatal("boundedLLMEvalError empty")
 	}
-	_, _ = applySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{})
-	_, _, _ = buildSelfVerifyLLMEvalPrompt(result)
-	if selfVerifyLLMResponseSchemaExample() == "" || len(selfVerifyLLMResponseFieldTypes()) == 0 {
+	_, _ = llmeval.ApplySelfVerifyLLMEval(result, selfverify.LLMEvalOptions{})
+	_, _, _ = llmeval.BuildSelfVerifyLLMEvalPrompt(result)
+	if llmeval.SelfVerifyLLMResponseSchemaExample() == "" || len(llmeval.SelfVerifyLLMResponseFieldTypes()) == 0 {
 		t.Fatal("LLM response schema wrappers empty")
 	}
 }
 
-func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
+func TestRiskMCPAndIssueOpsPolicyHelpers(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("ISSUEOPS_ROOT", root)
 	riskStep := validateRiskQATierWithDeps(root, riskQATierDeps{
-		plan: func(string) RiskQATierPlan {
-			return RiskQATierPlan{Tier: "static", Commands: []string{"go test ./..."}, Reasons: []string{"test"}}
+		plan: func(string) riskqaxx.RiskQATierPlan {
+			return riskqaxx.RiskQATierPlan{Tier: "static", Commands: []string{"go test ./..."}, Reasons: []string{"test"}}
 		},
 		run: func(root string, command string) selfverify.StepResult {
 			return selfverify.StepResult{OK: true, Label: "risk", Command: command}
@@ -294,11 +311,11 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 	if !riskStep.OK {
 		t.Fatalf("validateRiskQATierWithDeps = %#v", riskStep)
 	}
-	plan := planRiskQATierFromPaths([]string{"cmd/issueops/issueopsapp/mcp_facade.go"})
-	if plan.Tier == "" || riskQATierPlanJSON(plan) == "" {
+	plan := riskqadomain.PlanFromPaths([]string{"cmd/issueops/issueopsapp/mcp_facade.go"})
+	if plan.Tier == "" || riskqa.PlanJSON(plan) == "" {
 		t.Fatalf("risk plan = %#v", plan)
 	}
-	_ = planRiskQATier(root)
+	_ = riskqa.Plan(root)
 
 	if err := verifyIssueOpsRemoteArtifactLive(issueopscontract.IssueOpsRemoteArtifactVerificationRequest{Provider: "github", Kind: "pr", URL: "not-a-url"}); err == nil {
 		t.Fatal("invalid remote artifact URL should fail")
@@ -319,7 +336,7 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 	if len(mcpTools()) == 0 || len(mcpResources()) == 0 {
 		t.Fatal("MCP catalog wrappers empty")
 	}
-	if result := textResult("hello"); result["content"] == nil {
+	if result := mcpcli.TextResult("hello"); result["content"] == nil {
 		t.Fatalf("textResult = %#v", result)
 	}
 	if _, rpcErr := callSDKTool(t, json.RawMessage(`{"name":"unknown","arguments":{}}`), issueOpsMCPDependencies()); rpcErr == nil {
@@ -347,7 +364,7 @@ func TestRiskMCPAndIssueOpsPolicyFacadeWrappers(t *testing.T) {
 	<-done
 }
 
-func TestCLIFacadeWrappers(t *testing.T) {
+func TestCLIHelpers(t *testing.T) {
 	root := t.TempDir()
 	writeValidZeroAudit(t, root)
 	stateDir := t.TempDir()
@@ -395,31 +412,31 @@ func TestCLIFacadeWrappers(t *testing.T) {
 	_ = runWorkerCancel([]string{"--id", "missing", "--json"})
 }
 
-func TestSelfVerifyFacadeWrappers(t *testing.T) {
+func TestSelfVerifyHelpers(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	t.Setenv("ISSUEOPS_ROOT", t.TempDir())
 	export := exportSelfVerificationCandidates()
 	if export.Kind == "" {
 		t.Fatalf("export = %#v", export)
 	}
-	catalog := selfVerificationCandidateCatalog()
+	catalog := verifydomain.CandidateCatalog()
 	if len(catalog) == 0 {
 		t.Fatal("self verification catalog empty")
 	}
-	_ = selfVerificationCandidateIDsByStatus(catalog, "open")
-	_ = selectedSelfVerificationCandidateID(&catalog[0])
-	_ = selectedSelfVerificationCandidateID(nil)
+	_ = verifydomain.CandidateIDsByStatus(catalog, "open")
+	_ = verifydomain.SelectedCandidateID(&catalog[0])
+	_ = verifydomain.SelectedCandidateID(nil)
 	if err := runSelfVerifyCandidatesWithDeps([]string{"--json"}, selfVerifyCandidatesDeps{
-		export: func() SelfVerificationCandidateExportResult { return export },
-		save:   func(*SelfVerificationCandidateExportResult, string) error { return nil },
+		export: func() augmentcontract.SelfVerificationCandidateExportResult { return export },
+		save:   func(*augmentcontract.SelfVerificationCandidateExportResult, string) error { return nil },
 	}); err != nil {
 		t.Fatalf("runSelfVerifyCandidatesWithDeps: %v", err)
 	}
 	if err := saveSelfVerificationCandidateExport(&export, "candidate-export-test"); err != nil {
 		t.Fatalf("saveSelfVerificationCandidateExport: %v", err)
 	}
-	baseline := SelfAugmentStateSnapshot{Kind: selfVerificationSummaryKind}
-	candidate := SelfAugmentStateSnapshot{Kind: selfVerificationSummaryKind}
+	baseline := augmentcontract.SelfAugmentStateSnapshot{Kind: domain.SelfVerificationSummaryKind}
+	candidate := augmentcontract.SelfAugmentStateSnapshot{Kind: domain.SelfVerificationSummaryKind}
 	_ = compareSelfAugmentSummariesFromSnapshots("base", "candidate", 10, baseline, candidate)
 	_ = newSelfAugmentCompareResult("base", "candidate", 10)
 	if _, err := compareSelfAugmentSummaries("missing-base", "missing-candidate", 10); err == nil {
@@ -429,8 +446,8 @@ func TestSelfVerifyFacadeWrappers(t *testing.T) {
 		t.Fatalf("selfAugmentHistory: %v", err)
 	}
 	if err := runSelfVerifyPromoteWithDeps([]string{"--from-key", "a", "--baseline-key", "b", "--confirm"}, selfVerifyPromoteDeps{
-		promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error) {
-			return SelfAugmentPromoteResult{OK: true, FromKey: fromKey, BaselineKey: baselineKey}, nil
+		promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.SelfAugmentPromoteResult, error) {
+			return augmentcontract.SelfAugmentPromoteResult{OK: true, FromKey: fromKey, BaselineKey: baselineKey}, nil
 		},
 	}); err != nil {
 		t.Fatalf("runSelfVerifyPromoteWithDeps: %v", err)
@@ -441,7 +458,7 @@ func TestSelfVerifyFacadeWrappers(t *testing.T) {
 	if _, err := readSelfAugmentStateSnapshot("missing"); err == nil {
 		t.Fatal("missing snapshot read should fail")
 	}
-	if !isSelfVerificationSummaryKind(selfVerificationSummaryKind) || boolPtr(true) == nil {
+	if !domain.IsSelfVerificationSummaryKind(domain.SelfVerificationSummaryKind) || boolPtr(true) == nil {
 		t.Fatal("summary kind/boolPtr wrappers failed")
 	}
 	result := newSelfVerifyLoopResult(1, 100, 95)
@@ -456,12 +473,12 @@ func TestSelfVerifyFacadeWrappers(t *testing.T) {
 	if err := saveSelfAugmentSummary(&result, "augment-summary-test"); err != nil {
 		t.Fatalf("saveSelfAugmentSummary: %v", err)
 	}
-	_ = newSelfVerificationSummarySnapshot(result, time.Now())
+	_ = domain.NewSelfVerificationSummarySnapshot(result, time.Now())
 	_ = plannedSelfVerifySteps(t.TempDir(), "", 100, nil)
 	_ = cachedContractGoldenStep(selfverify.StepResult{OK: false, Label: "go test"})
 	_ = selfVerifyLoopDeps(issueOpsRoot())
 	_ = selfVerifyStepDeps(issueOpsRoot())
-	step := runCommandStepAdapter("", "adapter", time.Second, "", "sh", "-c", "printf ok")
+	step := runCommandStep("", "adapter", time.Second, "", "sh", "-c", "printf ok")
 	if !step.OK {
 		t.Fatalf("runCommandStepAdapter = %#v", step)
 	}

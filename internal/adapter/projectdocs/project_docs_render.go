@@ -28,7 +28,7 @@ func RenderProjectDocs(root string, signals projectdoc.ProjectSignals) map[strin
 	// Prepend canonical meta frontmatter so created/synced docs declare what
 	// category of information they hold. Same doc name => same metadata.
 	for rel, content := range out {
-		out[rel] = ensureDocMetaFrontmatter(filepath.Base(rel), content)
+		out[rel] = projectdoc.EnsureMetaFrontmatter(filepath.Base(rel), content)
 	}
 	// Module starters carry their own explicit frontmatter and back-links.
 	for rel, content := range renderFamilyModuleDocs(signals) {

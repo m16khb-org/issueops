@@ -78,9 +78,6 @@ for target in $TARGETS; do
     exit 2
   fi
   out="$OUT_DIR/issueops-${os}-${arch}"
-  if [[ "$os" == "windows" ]]; then
-    out="${out}.exe"
-  fi
   log "building ${target}"
   (cd "$ROOT" && GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 go build -trimpath -o "$out" ./cmd/issueops)
   if [[ ! -s "$out" ]]; then

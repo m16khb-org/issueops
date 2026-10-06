@@ -48,11 +48,3 @@ For help configuring MCP servers, see: https://code.claude.com/docs/en/mcp
    Suggestion: Keep the correct endpoint and remove the others: ` + "`claude mcp remove issueops -s user`" + ` or ` + "`claude mcp remove issueops -s project`" + `
 `
 }
-
-func detectClaudeMCPDuplicateWarnings(output string) []ClaudeMCPDuplicateWarning {
-	return DetectClaudeMCPDuplicateWarnings(output)
-}
-
-func claudeMCPDuplicateWarningFixture() string {
-	return ClaudeMCPDuplicateWarningFixture()
-}

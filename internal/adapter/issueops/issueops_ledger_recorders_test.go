@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	cycle "issueops/internal/application/issueopscycle"
 	"strings"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestRecordIssueOpsDomainReview(t *testing.T) {
 	if strings.TrimSpace(rec.DomainReview.ReviewedAt) == "" {
 		t.Fatal("domain review must stamp reviewed_at")
 	}
-	if r := IssueOpsGrillReadiness(rec); issueOpsDomainReviewMissingForTest(r) {
+	if r := cycle.GrillReadiness(rec); issueOpsDomainReviewMissingForTest(r) {
 		t.Fatalf("recorded domain review should satisfy grill domain_review, missing=%#v", r.Missing)
 	}
 }

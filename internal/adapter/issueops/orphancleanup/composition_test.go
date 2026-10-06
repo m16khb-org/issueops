@@ -10,10 +10,6 @@ import (
 	health "issueops/internal/contract/operationalhealth"
 )
 
-type Request = contract.Request
-type Result = contract.Result
-type ApplyRequest = contract.ApplyRequest
-
 type Dependencies struct {
 	Collect      func(context.Context, string) (health.Snapshot, error)
 	VerifyMerged func(model.IssueOpsRemoteArtifactVerification) error
@@ -32,9 +28,9 @@ func cleaner(deps Dependencies) app.OrphanCleaner {
 		return deps.VerifyMerged(artifact)
 	}}
 }
-func Preview(ctx context.Context, request Request, deps Dependencies) (Result, error) {
+func Preview(ctx context.Context, request contract.Request, deps Dependencies) (contract.Result, error) {
 	return cleaner(deps).Preview(ctx, request)
 }
-func Apply(ctx context.Context, request Request, apply ApplyRequest, deps Dependencies) (Result, error) {
+func Apply(ctx context.Context, request contract.Request, apply contract.ApplyRequest, deps Dependencies) (contract.Result, error) {
 	return cleaner(deps).Apply(ctx, request, apply)
 }

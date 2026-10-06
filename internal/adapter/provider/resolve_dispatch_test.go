@@ -2,10 +2,9 @@ package provider
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"strings"
 	"testing"
-
-	"issueops/internal/port"
 )
 
 // Resolve는 provider 이름 디스패치다. 지원 목록 에러가 정확한 이름을
@@ -25,7 +24,7 @@ func TestResolveDispatch(t *testing.T) {
 // ReadExecutionIssueSnapshot은 resolve 실패와 reader 미구현을 구분해서
 // 거부해야 한다.
 func TestReadExecutionIssueSnapshotFailsClosed(t *testing.T) {
-	if _, err := ReadExecutionIssueSnapshot(context.Background(), "unknown", port.ExecutionIssueSnapshotRequest{URL: "u"}); err == nil || !strings.Contains(err.Error(), "unknown provider") {
+	if _, err := ReadExecutionIssueSnapshot(context.Background(), "unknown", executionissue.ExecutionIssueSnapshotRequest{URL: "u"}); err == nil || !strings.Contains(err.Error(), "unknown provider") {
 		t.Fatalf("unknown provider must fail: %v", err)
 	}
 	// 실 provider는 스냅샷 리더를 구현한다. 실제 원격 호출 없이 타입
@@ -34,7 +33,7 @@ func TestReadExecutionIssueSnapshotFailsClosed(t *testing.T) {
 	// 원격 호출 전 fail-closed를 확인한다.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := ReadExecutionIssueSnapshot(ctx, "github", port.ExecutionIssueSnapshotRequest{URL: "https://github.com/x/y/issues/1"}); err == nil {
+	if _, err := ReadExecutionIssueSnapshot(ctx, "github", executionissue.ExecutionIssueSnapshotRequest{URL: "https://github.com/x/y/issues/1"}); err == nil {
 		t.Fatal("cancelled context must fail before any remote call")
 	}
 }

@@ -9,9 +9,5 @@ import (
 var osExit = os.Exit
 
 func main() {
-	osExit(run(os.Args[1:]))
-}
-
-func run(args []string) int {
-	return issueopsapp.RunRootCommand(args)
+	osExit(issueopsapp.RunRootCommand(os.Args[1:]))
 }

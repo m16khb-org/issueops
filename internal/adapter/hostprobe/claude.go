@@ -111,7 +111,7 @@ func (r ClaudeRunner) Run(ctx context.Context, request port.HostProbeRequest) (r
 	}
 	capture, err := decodeEpisodeCapture(resultPath, request)
 	if err != nil {
-		cause, code := claudeCaptureFailure(err)
+		cause, code := normalizedCaptureFailure(err)
 		return failedResult(r.Name(), "", request, started, r.deps, cause, code)
 	}
 	result = completedResult(r.Name(), "", request, started, r.deps, capture)
@@ -182,8 +182,4 @@ func claudeArgvMode(executable, configPath, settingsPath string, request port.Ho
 
 func claudeProcessFailure(err error) (string, string) {
 	return normalizedProcessFailure(err, "host_process_failed")
-}
-
-func claudeCaptureFailure(err error) (string, string) {
-	return normalizedCaptureFailure(err)
 }

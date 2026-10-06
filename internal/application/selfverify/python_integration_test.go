@@ -2,6 +2,7 @@ package selfverify
 
 import (
 	"errors"
+	contract "issueops/internal/contract/selfverify"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,10 +49,10 @@ func TestPythonDiscoveryRuntimeAndEarlyFailure(t *testing.T) {
 				}
 				t.Setenv("PATH", tools)
 			}
-			deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+			deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 				return verification.Run(root, label, timeout, stdin, 4096, name, args...)
 			}}
-			var goTest StepResult
+			var goTest contract.StepResult
 			step := PlannedSteps(root, "unused", 100, &goTest, deps)[2].Run()
 			wantOK := mode == "pass"
 			if step.OK != wantOK || step.Label != "Python script tests" {
@@ -80,9 +81,9 @@ func TestPythonDiscoveryRuntimeAndEarlyFailure(t *testing.T) {
 					t.Fatal(step)
 				}
 			}
-			steps := []StepResult{}
+			steps := []contract.StepResult{}
 			for _, label := range domain.StepOrder() {
-				steps = append(steps, StepResult{Label: label, OK: true})
+				steps = append(steps, contract.StepResult{Label: label, OK: true})
 			}
 			steps[2] = step
 			summary := SummarizeSelfVerification(augment.SelfAugmentResult{OK: wantOK, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}, 95)
@@ -91,8 +92,8 @@ func TestPythonDiscoveryRuntimeAndEarlyFailure(t *testing.T) {
 			}
 			if !wantOK {
 				longCalls := 0
-				deps.ValidateHarnessInvariants = func(string) StepResult { return StepResult{Label: "harness invariants", OK: true} }
-				deps.ValidateGoFormat = func(string) StepResult { return StepResult{Label: "gofmt", OK: true} }
+				deps.ValidateHarnessInvariants = func(string) contract.StepResult { return contract.StepResult{Label: "harness invariants", OK: true} }
+				deps.ValidateGoFormat = func(string) contract.StepResult { return contract.StepResult{Label: "gofmt", OK: true} }
 				deps.ValidateRiskQATier = func(string) RiskQAEvidence {
 					longCalls++
 					t.Fatal("early failure ran risk QA")

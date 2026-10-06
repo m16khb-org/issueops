@@ -7,34 +7,30 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-type NativeActor = issueopscontract.NativeActor
-type NativeProcessReceipt = issueopscontract.NativeProcessReceipt
-type LeaseStatus = issueopscontract.LeaseStatus
-
-func validSyncBaseNativeActor() NativeActor {
-	return NativeActor{Host: "codex", SessionID: "session-1", SessionProcess: &NativeProcessReceipt{PID: 42, StartedAt: "2026-08-25T00:00:00Z", Executable: "/usr/local/bin/codex"}}
+func validSyncBaseNativeActor() issueopscontract.NativeActor {
+	return issueopscontract.NativeActor{Host: "codex", SessionID: "session-1", SessionProcess: &issueopscontract.NativeProcessReceipt{PID: 42, StartedAt: "2026-08-25T00:00:00Z", Executable: "/usr/local/bin/codex"}}
 }
 
 func fullOID() string { return strings.Repeat("a", 40) }
 
 func TestValidateWriteLeaseStatusMatrix(t *testing.T) {
-	holder := func() *NativeActor {
+	holder := func() *issueopscontract.NativeActor {
 		actor := validSyncBaseNativeActor()
 		return &actor
 	}
 	tests := []struct {
 		name    string
-		lease   WriteLease
+		lease   issueopscontract.WriteLease
 		wantErr string
 	}{
-		{"zero generation", WriteLease{Generation: 0, Status: LeaseStatusClaimable}, "generation must start at 1"},
-		{"unsupported status", WriteLease{Generation: 1, Status: LeaseStatus("frozen")}, "unsupported lease status"},
-		{"claimable with holder", WriteLease{Generation: 1, Status: LeaseStatusClaimable, Holder: holder()}, "claimable lease requires no holder"},
-		{"claimable without token", WriteLease{Generation: 1, Status: LeaseStatusClaimable}, "claimable lease requires no holder and one token hash"},
-		{"active without holder", WriteLease{Generation: 1, Status: LeaseStatusActive}, "active lease requires one holder"},
-		{"active keeps token", WriteLease{Generation: 1, Status: LeaseStatusActive, Holder: holder(), ClaimTokenSHA256: strings.Repeat("b", 64), ClaimedAt: "t"}, "no token hash"},
-		{"revoking without holder", WriteLease{Generation: 1, Status: LeaseStatusRevoking}, "revoking lease requires the fenced holder"},
-		{"released retains token", WriteLease{Generation: 1, Status: LeaseStatusReleased, ClaimTokenSHA256: strings.Repeat("c", 64)}, "released lease must not retain"},
+		{"zero generation", issueopscontract.WriteLease{Generation: 0, Status: issueopscontract.LeaseStatusClaimable}, "generation must start at 1"},
+		{"unsupported status", issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatus("frozen")}, "unsupported lease status"},
+		{"claimable with holder", issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusClaimable, Holder: holder()}, "claimable lease requires no holder"},
+		{"claimable without token", issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusClaimable}, "claimable lease requires no holder and one token hash"},
+		{"active without holder", issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive}, "active lease requires one holder"},
+		{"active keeps token", issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive, Holder: holder(), ClaimTokenSHA256: strings.Repeat("b", 64), ClaimedAt: "t"}, "no token hash"},
+		{"revoking without holder", issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusRevoking}, "revoking lease requires the fenced holder"},
+		{"released retains token", issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased, ClaimTokenSHA256: strings.Repeat("c", 64)}, "released lease must not retain"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -45,11 +41,11 @@ func TestValidateWriteLeaseStatusMatrix(t *testing.T) {
 		})
 	}
 
-	happy := []WriteLease{
-		{Generation: 1, Status: LeaseStatusClaimable, ClaimTokenSHA256: strings.Repeat("b", 64)},
-		{Generation: 1, Status: LeaseStatusActive, Holder: holder(), ClaimedAt: "t"},
-		{Generation: 1, Status: LeaseStatusRevoking, Holder: holder()},
-		{Generation: 1, Status: LeaseStatusReleased},
+	happy := []issueopscontract.WriteLease{
+		{Generation: 1, Status: issueopscontract.LeaseStatusClaimable, ClaimTokenSHA256: strings.Repeat("b", 64)},
+		{Generation: 1, Status: issueopscontract.LeaseStatusActive, Holder: holder(), ClaimedAt: "t"},
+		{Generation: 1, Status: issueopscontract.LeaseStatusRevoking, Holder: holder()},
+		{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 	}
 	for _, lease := range happy {
 		if err := validateWriteLease(lease); err != nil {
@@ -59,11 +55,11 @@ func TestValidateWriteLeaseStatusMatrix(t *testing.T) {
 }
 
 func TestValidateExecutionSyncBaseResolutionBindsReleasedCompletion(t *testing.T) {
-	execution := Execution{
-		Lease:      WriteLease{Generation: 3, Status: LeaseStatusReleased},
-		Completion: &ExecutionCompletion{Generation: 3},
+	execution := issueopscontract.Execution{
+		Lease:      issueopscontract.WriteLease{Generation: 3, Status: issueopscontract.LeaseStatusReleased},
+		Completion: &issueopscontract.ExecutionCompletion{Generation: 3},
 	}
-	valid := ExecutionSyncBaseResolution{
+	valid := issueopscontract.ExecutionSyncBaseResolution{
 		Generation:           3,
 		CompletionGeneration: 3,
 		BaseOID:              fullOID(),
@@ -77,17 +73,17 @@ func TestValidateExecutionSyncBaseResolutionBindsReleasedCompletion(t *testing.T
 
 	invalid := []struct {
 		name    string
-		mutate  func(*ExecutionSyncBaseResolution)
+		mutate  func(*issueopscontract.ExecutionSyncBaseResolution)
 		wantErr string
 	}{
-		{"wrong generation", func(r *ExecutionSyncBaseResolution) { r.Generation = 4 }, "must bind the released current completion"},
-		{"wrong completion generation", func(r *ExecutionSyncBaseResolution) { r.CompletionGeneration = 9 }, "must bind the released current completion"},
-		{"short base oid", func(r *ExecutionSyncBaseResolution) { r.BaseOID = "abc" }, "is incomplete"},
-		{"no conflict files", func(r *ExecutionSyncBaseResolution) { r.ConflictFiles = nil }, "is incomplete"},
-		{"duplicate conflict file", func(r *ExecutionSyncBaseResolution) { r.ConflictFiles = []string{"a.go", "a.go"} }, "conflict path is invalid"},
-		{"absolute conflict file", func(r *ExecutionSyncBaseResolution) { r.ConflictFiles = []string{"/etc/passwd"} }, "conflict path is invalid"},
-		{"escaping conflict file", func(r *ExecutionSyncBaseResolution) { r.ConflictFiles = []string{"../secret"} }, "conflict path is invalid"},
-		{"unclean conflict path", func(r *ExecutionSyncBaseResolution) { r.ConflictFiles = []string{"./a.go"} }, "conflict path is invalid"},
+		{"wrong generation", func(r *issueopscontract.ExecutionSyncBaseResolution) { r.Generation = 4 }, "must bind the released current completion"},
+		{"wrong completion generation", func(r *issueopscontract.ExecutionSyncBaseResolution) { r.CompletionGeneration = 9 }, "must bind the released current completion"},
+		{"short base oid", func(r *issueopscontract.ExecutionSyncBaseResolution) { r.BaseOID = "abc" }, "is incomplete"},
+		{"no conflict files", func(r *issueopscontract.ExecutionSyncBaseResolution) { r.ConflictFiles = nil }, "is incomplete"},
+		{"duplicate conflict file", func(r *issueopscontract.ExecutionSyncBaseResolution) { r.ConflictFiles = []string{"a.go", "a.go"} }, "conflict path is invalid"},
+		{"absolute conflict file", func(r *issueopscontract.ExecutionSyncBaseResolution) { r.ConflictFiles = []string{"/etc/passwd"} }, "conflict path is invalid"},
+		{"escaping conflict file", func(r *issueopscontract.ExecutionSyncBaseResolution) { r.ConflictFiles = []string{"../secret"} }, "conflict path is invalid"},
+		{"unclean conflict path", func(r *issueopscontract.ExecutionSyncBaseResolution) { r.ConflictFiles = []string{"./a.go"} }, "conflict path is invalid"},
 	}
 	for _, tt := range invalid {
 		t.Run(tt.name, func(t *testing.T) {
@@ -101,7 +97,7 @@ func TestValidateExecutionSyncBaseResolutionBindsReleasedCompletion(t *testing.T
 	}
 
 	unbound := execution
-	unbound.Lease.Status = LeaseStatusActive
+	unbound.Lease.Status = issueopscontract.LeaseStatusActive
 	if err := validateExecutionSyncBaseResolution(unbound, valid); err == nil ||
 		!strings.Contains(err.Error(), "must bind the released current completion") {
 		t.Fatal("resolution on non-released lease must be rejected")
@@ -109,8 +105,8 @@ func TestValidateExecutionSyncBaseResolutionBindsReleasedCompletion(t *testing.T
 }
 
 func TestValidateExecutionSyncBaseEventContract(t *testing.T) {
-	valid := ExecutionSyncBaseEvent{
-		Mode:          ExecutionSyncBaseEventApply,
+	valid := issueopscontract.ExecutionSyncBaseEvent{
+		Mode:          issueopscontract.ExecutionSyncBaseEventApply,
 		BaseOID:       fullOID(),
 		MergeCommit:   strings.Repeat("b", 40),
 		BaseBranch:    "main",
@@ -124,13 +120,13 @@ func TestValidateExecutionSyncBaseEventContract(t *testing.T) {
 
 	invalid := []struct {
 		name    string
-		mutate  func(*ExecutionSyncBaseEvent)
+		mutate  func(*issueopscontract.ExecutionSyncBaseEvent)
 		wantErr string
 	}{
-		{"unknown mode", func(e *ExecutionSyncBaseEvent) { e.Mode = "revert" }, "mode must be apply or finalize"},
-		{"short merge commit", func(e *ExecutionSyncBaseEvent) { e.MergeCommit = "zz" }, "full base and merge commit"},
-		{"empty branch", func(e *ExecutionSyncBaseEvent) { e.BaseBranch = " " }, "event is incomplete"},
-		{"negative conflicts", func(e *ExecutionSyncBaseEvent) { e.ConflictFiles = -1 }, "must not be negative"},
+		{"unknown mode", func(e *issueopscontract.ExecutionSyncBaseEvent) { e.Mode = "revert" }, "mode must be apply or finalize"},
+		{"short merge commit", func(e *issueopscontract.ExecutionSyncBaseEvent) { e.MergeCommit = "zz" }, "full base and merge commit"},
+		{"empty branch", func(e *issueopscontract.ExecutionSyncBaseEvent) { e.BaseBranch = " " }, "event is incomplete"},
+		{"negative conflicts", func(e *issueopscontract.ExecutionSyncBaseEvent) { e.ConflictFiles = -1 }, "must not be negative"},
 	}
 	for _, tt := range invalid {
 		t.Run(tt.name, func(t *testing.T) {
@@ -143,7 +139,7 @@ func TestValidateExecutionSyncBaseEventContract(t *testing.T) {
 		})
 	}
 	finalize := valid
-	finalize.Mode = ExecutionSyncBaseEventFinalize
+	finalize.Mode = issueopscontract.ExecutionSyncBaseEventFinalize
 	if err := validateExecutionSyncBaseEvent(finalize); err != nil {
 		t.Fatalf("finalize mode rejected: %v", err)
 	}

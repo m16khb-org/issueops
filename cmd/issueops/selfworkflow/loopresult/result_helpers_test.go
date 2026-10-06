@@ -4,13 +4,7 @@ import (
 	selfverify "issueops/internal/contract/selfverify"
 
 	"issueops/cmd/issueops/selfworkflow/progress"
-	application "issueops/internal/application/selfverify"
-	augmentcontract "issueops/internal/contract/selfaugment"
 )
-
-func New(iterations int, baseSeed int64, targetScore float64, root string) augmentcontract.SelfAugmentResult {
-	return application.NewLoopResult(iterations, baseSeed, targetScore, root)
-}
 
 func EmitStart(reporter *progress.SelfVerifyProgressReporter, loopKind string, iterations int, seed int64) {
 	if reporter == nil {

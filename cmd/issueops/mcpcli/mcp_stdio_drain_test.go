@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +20,7 @@ func TestServeMCPStreamAnswersEveryRequestReadBeforeInputEOF(t *testing.T) {
 		`{"jsonrpc":"2.0","id":"three","method":"resources/read","params":{"uri":"issueops://commit-policy"}}`,
 	}, "\n") + "\n"
 	var output bytes.Buffer
-	_ = ServeMCPStreamWithDependencies(strings.NewReader(input), &output, io.Discard, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest()})
+	_ = ServeMCPStreamWithDependencies(strings.NewReader(input), &output, io.Discard, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resources: resourceConfigForTest()})
 	answered := map[string]bool{}
 	for _, line := range strings.Split(strings.TrimSpace(output.String()), "\n") {
 		if line == "" {

@@ -30,18 +30,6 @@ const (
 	headingVerificationChecklist = "## Verification Checklist"
 )
 
-// StructuredPromptSectionHeadings lists the fixed sections BuildStructuredPrompt
-// emits, in order.
-var StructuredPromptSectionHeadings = []string{
-	headingIdentity,
-	headingObjective,
-	headingOperatingPhases,
-	headingInputs,
-	headingRules,
-	headingOutputContract,
-	headingVerificationChecklist,
-}
-
 func BuildStructuredPrompt(spec StructuredPromptSpec) string {
 	var b strings.Builder
 	writePromptSection(&b, headingIdentity, spec.Identity)

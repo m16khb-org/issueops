@@ -1,6 +1,9 @@
 package port
 
-import "context"
+import (
+	"context"
+	executionissue "issueops/internal/contract/executionissue"
+)
 
 type ExecutionWorkspaceRequest struct {
 	LifecycleID    string `json:"lifecycle_id"`
@@ -38,7 +41,7 @@ type ExecutionWorkspaceAccessProber interface {
 }
 
 type ExecutionIssueSnapshotReader interface {
-	ReadIssueSnapshot(context.Context, ExecutionIssueSnapshotRequest) (ExecutionIssueSnapshot, error)
+	ReadIssueSnapshot(context.Context, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error)
 }
 
 type ExecutionOrcaProbeRequest struct {

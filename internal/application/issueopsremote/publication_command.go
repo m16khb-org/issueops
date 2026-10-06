@@ -2,13 +2,13 @@ package issueopsremote
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/domain/artifacttemplate"
 	domain "issueops/internal/domain/issueops"
 	remote "issueops/internal/domain/issueopsremote"
 	"issueops/internal/domain/policy"
-	"issueops/internal/port"
 )
 
 type PublicationInput struct {
@@ -17,7 +17,7 @@ type PublicationInput struct {
 	Fields                        []string
 }
 
-type PublicationInvoker func(context.Context, model.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error)
+type PublicationInvoker func(context.Context, model.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
 
 type PublicationCommandService struct {
 	records   IssueRecordReader

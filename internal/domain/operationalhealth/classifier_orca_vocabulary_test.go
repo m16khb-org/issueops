@@ -1,6 +1,7 @@
 package operationalhealth
 
 import (
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"testing"
 	"time"
 )
@@ -22,7 +23,7 @@ func TestClassifyKnowsEveryOrcaDispatchStatus(t *testing.T) {
 		t.Run(status, func(t *testing.T) {
 			snapshot := orcaSnapshotWithUnownedDispatch(t, status)
 			result := Classify(snapshot, Options{Now: time.Now()})
-			if hasFindingID(result, FindingInventoryUnknown, "dispatch", "unowned-dispatch") {
+			if hasFindingID(result, operationalhealthcontract.FindingInventoryUnknown, "dispatch", "unowned-dispatch") {
 				t.Fatalf("유효 어휘 %q를 unsupported로 분류하면 진짜 미지 값이 묻힌다: %#v", status, result.Findings)
 			}
 		})
@@ -34,7 +35,7 @@ func TestClassifyKnowsEveryOrcaDispatchStatus(t *testing.T) {
 func TestClassifyStillFlagsUnknownDispatchStatus(t *testing.T) {
 	snapshot := orcaSnapshotWithUnownedDispatch(t, "quantum_superposition")
 	result := Classify(snapshot, Options{Now: time.Now()})
-	if !hasFindingID(result, FindingInventoryUnknown, "dispatch", "unowned-dispatch") {
+	if !hasFindingID(result, operationalhealthcontract.FindingInventoryUnknown, "dispatch", "unowned-dispatch") {
 		t.Fatalf("어휘 밖 값은 여전히 unknown이어야 한다: %#v", result.Findings)
 	}
 }
@@ -48,7 +49,7 @@ func TestClassifySkipsResidueForSettledDispatch(t *testing.T) {
 		t.Run(status, func(t *testing.T) {
 			snapshot := orcaSnapshotWithUnownedDispatch(t, status)
 			result := Classify(snapshot, Options{Now: time.Now()})
-			if hasFindingID(result, FindingTaskResidue, "dispatch", "unowned-dispatch") {
+			if hasFindingID(result, operationalhealthcontract.FindingTaskResidue, "dispatch", "unowned-dispatch") {
 				t.Fatalf("종결된 dispatch를 residue로 보면 정리가 수렴하지 않는다: %#v", result.Findings)
 			}
 		})
@@ -62,7 +63,7 @@ func TestClassifyStillFlagsLiveDispatchWithoutOwner(t *testing.T) {
 		t.Run(status, func(t *testing.T) {
 			snapshot := orcaSnapshotWithUnownedDispatch(t, status)
 			result := Classify(snapshot, Options{Now: time.Now()})
-			if !hasFindingID(result, FindingTaskResidue, "dispatch", "unowned-dispatch") {
+			if !hasFindingID(result, operationalhealthcontract.FindingTaskResidue, "dispatch", "unowned-dispatch") {
 				t.Fatalf("살아 있는 dispatch에 소유자가 없으면 residue다: %#v", result.Findings)
 			}
 		})
@@ -76,9 +77,9 @@ func TestClassifyKnowsEveryOrcaGateStatus(t *testing.T) {
 	for _, status := range []string{"pending", "resolved", "timeout"} {
 		t.Run(status, func(t *testing.T) {
 			snapshot := orcaSnapshotWithUnownedDispatch(t, "dispatched")
-			snapshot.Gates = []OrcaGate{{RuntimeID: "runtime", ID: "gate-id", Status: status}}
+			snapshot.Gates = []operationalhealthcontract.OrcaGate{{RuntimeID: "runtime", ID: "gate-id", Status: status}}
 			result := Classify(snapshot, Options{Now: time.Now()})
-			if hasFinding(result, FindingInventoryUnknown, "gate") {
+			if hasFinding(result, operationalhealthcontract.FindingInventoryUnknown, "gate") {
 				t.Fatalf("유효 gate 어휘 %q를 unsupported로 분류하면 안 된다: %#v", status, result.Findings)
 			}
 		})
@@ -92,9 +93,9 @@ func TestClassifySkipsResidueForSettledGate(t *testing.T) {
 	for _, status := range []string{"resolved", "timeout"} {
 		t.Run(status, func(t *testing.T) {
 			snapshot := orcaSnapshotWithUnownedDispatch(t, "dispatched")
-			snapshot.Gates = []OrcaGate{{RuntimeID: "runtime", ID: "gate-id", Status: status}}
+			snapshot.Gates = []operationalhealthcontract.OrcaGate{{RuntimeID: "runtime", ID: "gate-id", Status: status}}
 			result := Classify(snapshot, Options{Now: time.Now()})
-			if hasFindingID(result, FindingGateResidue, "gate", "gate-id") {
+			if hasFindingID(result, operationalhealthcontract.FindingGateResidue, "gate", "gate-id") {
 				t.Fatalf("종결된 gate를 residue로 보면 정리가 수렴하지 않는다: %#v", result.Findings)
 			}
 		})
@@ -103,18 +104,18 @@ func TestClassifySkipsResidueForSettledGate(t *testing.T) {
 
 func TestClassifyStillFlagsPendingGateResidue(t *testing.T) {
 	snapshot := orcaSnapshotWithUnownedDispatch(t, "dispatched")
-	snapshot.Gates = []OrcaGate{{RuntimeID: "runtime", ID: "gate-id", Status: "pending"}}
+	snapshot.Gates = []operationalhealthcontract.OrcaGate{{RuntimeID: "runtime", ID: "gate-id", Status: "pending"}}
 	result := Classify(snapshot, Options{Now: time.Now()})
-	if !hasFindingID(result, FindingGateResidue, "gate", "gate-id") {
+	if !hasFindingID(result, operationalhealthcontract.FindingGateResidue, "gate", "gate-id") {
 		t.Fatalf("미결 gate는 residue여야 한다: %#v", result.Findings)
 	}
 }
 
 func TestClassifyStillFlagsUnknownGateStatus(t *testing.T) {
 	snapshot := orcaSnapshotWithUnownedDispatch(t, "dispatched")
-	snapshot.Gates = []OrcaGate{{RuntimeID: "runtime", ID: "gate-id", Status: "escalated"}}
+	snapshot.Gates = []operationalhealthcontract.OrcaGate{{RuntimeID: "runtime", ID: "gate-id", Status: "escalated"}}
 	result := Classify(snapshot, Options{Now: time.Now()})
-	if !hasFinding(result, FindingInventoryUnknown, "gate") {
+	if !hasFinding(result, operationalhealthcontract.FindingInventoryUnknown, "gate") {
 		t.Fatalf("어휘 밖 gate 값은 여전히 unknown이어야 한다: %#v", result.Findings)
 	}
 }
@@ -136,21 +137,21 @@ func orcaSnapshotWithUnownedDispatch(t *testing.T, dispatchStatus string) Snapsh
 	snapshot.OrcaObserved = true
 	snapshot.OrcaRuntimeID = "runtime"
 	snapshot.OrcaRepoID = "repo-id"
-	snapshot.OrcaWorktrees = []OrcaWorktree{
+	snapshot.OrcaWorktrees = []operationalhealthcontract.OrcaWorktree{
 		{RuntimeID: "runtime", RepoID: "repo-id", ID: "main-id", InstanceID: "main-instance", Repo: "/repo", Path: "/repo", Branch: "main", Head: snapshot.SourceHead},
 		{RuntimeID: "runtime", RepoID: "repo-id", ID: "worktree-id", InstanceID: "observed-instance", Repo: "/repo", Path: cycle.WorktreePath, Branch: cycle.Branch, Head: snapshot.SourceHead},
 	}
-	snapshot.Terminals = []OrcaTerminal{{RuntimeID: "runtime", Handle: "terminal", PTYID: "observed-pty", WorktreeID: "worktree-id", WorktreePath: cycle.WorktreePath, Connected: true, Writable: true}}
-	snapshot.Tasks = []OrcaTask{{RuntimeID: "runtime", ID: "task-id", Status: "dispatched", DispatchID: "dispatch-id"}}
-	snapshot.Dispatches = []OrcaDispatch{
+	snapshot.Terminals = []operationalhealthcontract.OrcaTerminal{{RuntimeID: "runtime", Handle: "terminal", PTYID: "observed-pty", WorktreeID: "worktree-id", WorktreePath: cycle.WorktreePath, Connected: true, Writable: true}}
+	snapshot.Tasks = []operationalhealthcontract.OrcaTask{{RuntimeID: "runtime", ID: "task-id", Status: "dispatched", DispatchID: "dispatch-id"}}
+	snapshot.Dispatches = []operationalhealthcontract.OrcaDispatch{
 		{RuntimeID: "runtime", ID: "dispatch-id", TaskID: "task-id", AssigneeHandle: "terminal", Status: "dispatched"},
 		{RuntimeID: "runtime", ID: "unowned-dispatch", TaskID: "task-id", AssigneeHandle: "terminal", Status: dispatchStatus},
 	}
-	snapshot.Messages = MessagePresence{RuntimeID: "runtime", Empty: true, CompleteAbsence: true}
+	snapshot.Messages = operationalhealthcontract.MessagePresence{RuntimeID: "runtime", Empty: true, CompleteAbsence: true}
 	return snapshot
 }
 
-func hasFindingID(result Result, code, kind, id string) bool {
+func hasFindingID(result operationalhealthcontract.Result, code, kind, id string) bool {
 	for _, finding := range result.Findings {
 		if finding.Code == code && finding.ResourceKind == kind && finding.ResourceID == id {
 			return true

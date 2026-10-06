@@ -2,6 +2,7 @@ package issueopsrouting
 
 import (
 	"context"
+	benchmark "issueops/internal/contract/issueopsbenchmark"
 	"testing"
 	"time"
 
@@ -58,7 +59,7 @@ func TestServiceRecordsIdempotentlyAndScoresObservedRouting(t *testing.T) {
 		context.Background(),
 		"/state",
 		"io-routing01",
-		[]issueopscontract.SkillRouting{
+		[]benchmark.SkillRouting{
 			{Phase: "plan", Skill: "database-design"},
 			{Phase: "implement", Skill: "algorithm-optimization"},
 		},

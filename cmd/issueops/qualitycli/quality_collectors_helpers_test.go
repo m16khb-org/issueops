@@ -2,10 +2,11 @@ package qualitycli
 
 import (
 	"fmt"
+	contract "issueops/internal/contract/quality"
+	qualitycatalogcontract "issueops/internal/contract/qualitycatalog"
 
 	statestore "issueops/internal/adapter/outbound/state"
 	augmentcontract "issueops/internal/contract/selfaugment"
-	quality "issueops/internal/domain/quality"
 	"issueops/internal/domain/qualitycatalog"
 	augmentdomain "issueops/internal/domain/selfaugment"
 	verifydomain "issueops/internal/domain/selfverify"
@@ -21,7 +22,7 @@ func collectSelfVerifyOpenCount(root string) (int, error) {
 	return len(verifydomain.CandidateIDsByStatus(result.Candidates, augmentcontract.CandidateStatusOpen)), nil
 }
 
-func collectQualityCandidates(root string) []QualityCandidate {
+func collectQualityCandidates(root string) []qualitycatalogcontract.Candidate {
 	candidates := qualitycatalog.Candidates()
 
 	plan := planningForTest(root, statestore.StateDir(), hostDeps.Version).Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
@@ -38,36 +39,32 @@ func collectQualityCandidates(root string) []QualityCandidate {
 	return candidates
 }
 
-func parseCoveragePackages(output string, threshold float64) []CoveragePackage {
-	return quality.ParseCoveragePackages(output, threshold)
-}
-
 var sourceCollectorEffects struct {
-	PioneerCoverage func(string) (PioneerCoverage, error)
-	BranchFunctions func(string) ([]BranchFunction, []string)
-	AuditItems      func(string) ([]AuditItem, []string)
+	PioneerCoverage func(string) (contract.PioneerCoverage, error)
+	BranchFunctions func(string) ([]contract.BranchFunction, []string)
+	AuditItems      func(string) ([]contract.AuditItem, []string)
 }
 
-func ConfigureSourceCollectors(branches func(string) ([]BranchFunction, []string), audits func(string) ([]AuditItem, []string), pioneer func(string) (PioneerCoverage, error)) {
+func ConfigureSourceCollectors(branches func(string) ([]contract.BranchFunction, []string), audits func(string) ([]contract.AuditItem, []string), pioneer func(string) (contract.PioneerCoverage, error)) {
 	sourceCollectorEffects.PioneerCoverage = pioneer
 	sourceCollectorEffects.BranchFunctions = branches
 	sourceCollectorEffects.AuditItems = audits
 }
 
-var pioneerCoverageCollector = func(root string) (PioneerCoverage, error) {
+var pioneerCoverageCollector = func(root string) (contract.PioneerCoverage, error) {
 	if sourceCollectorEffects.PioneerCoverage == nil {
-		return PioneerCoverage{}, fmt.Errorf("quality pioneer collector is not configured")
+		return contract.PioneerCoverage{}, fmt.Errorf("quality pioneer collector is not configured")
 	}
 	return sourceCollectorEffects.PioneerCoverage(root)
 }
 
-func collectBranchFunctions(root string) ([]BranchFunction, []string) {
+func collectBranchFunctions(root string) ([]contract.BranchFunction, []string) {
 	if sourceCollectorEffects.BranchFunctions == nil {
 		return nil, []string{"branch scan: quality source collector is not configured"}
 	}
 	return sourceCollectorEffects.BranchFunctions(root)
 }
-func collectAuditItems(root string) ([]AuditItem, []string) {
+func collectAuditItems(root string) ([]contract.AuditItem, []string) {
 	if sourceCollectorEffects.AuditItems == nil {
 		return nil, []string{"audit scan: quality source collector is not configured"}
 	}

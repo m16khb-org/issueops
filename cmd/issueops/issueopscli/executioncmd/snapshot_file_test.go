@@ -3,7 +3,8 @@ package executioncmd
 import (
 	"context"
 	"fmt"
-	issueopsport "issueops/internal/port"
+	executionissue "issueops/internal/contract/executionissue"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,7 +46,7 @@ func TestExecutionSnapshotFileFlagMapsToPrepareRequest(t *testing.T) {
 		"--cwd", repo, "--json",
 	}, Deps{
 		StateRoot: func() string { return stateRoot },
-		Prepare: func(_ context.Context, _ string, request issueopscontract.ExecutionPrepareRequest, _ issueopsport.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+		Prepare: func(_ context.Context, _ string, request issueopscontract.ExecutionPrepareRequest, _ executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 			if request.IssueSnapshotFile != path {
 				t.Fatalf("snapshot file path=%q want=%q", request.IssueSnapshotFile, path)
 			}
@@ -135,7 +136,7 @@ func executionSnapshotCLIRecord(t *testing.T) (string, string, string) {
 		Branch:        branch,
 		Phase:         issueopscontract.IssueOpsPhasePlan,
 		IssueURL:      issueURL,
-		DesignReview:  &issueopscontract.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-07-28T00:00:00Z"},
+		DesignReview:  &reviewcontract.DesignReview{Approved: true, ReviewedAt: "2026-07-28T00:00:00Z"},
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{
 			Provider: "gitlab", IssueURL: issueURL, Branch: branch,
 			BaseBranch: "main", BaseSHA: strings.Repeat("a", 40), LinkVerified: true,

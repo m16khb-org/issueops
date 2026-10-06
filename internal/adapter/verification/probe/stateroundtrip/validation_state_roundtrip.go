@@ -2,6 +2,7 @@ package stateroundtrip
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	verifydomain "issueops/internal/domain/selfverify"
 
 	"fmt"
 	"time"
@@ -10,12 +11,12 @@ import (
 func validateStateRoundtripWithDeps(binary, root string, seed int64, deps stateRoundtripValidationDeps) selfverify.StepResult {
 	deps = deps.withDefaults()
 	if deps.writeSnapshot == nil {
-		return failedStep("state roundtrip", fmt.Errorf("self-verification snapshot writer dependency is required"))
+		return verifydomain.FailedStep("state roundtrip", fmt.Errorf("self-verification snapshot writer dependency is required"))
 	}
 	started := time.Now()
 	tempState, err := deps.mkdirTemp("", "issueops-state-roundtrip-*")
 	if err != nil {
-		return failedStep("state roundtrip", err)
+		return verifydomain.FailedStep("state roundtrip", err)
 	}
 	defer func() { _ = deps.removeAll(tempState) }()
 

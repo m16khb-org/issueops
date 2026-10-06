@@ -2,6 +2,7 @@ package issueopsreview
 
 import (
 	"errors"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
@@ -18,7 +19,7 @@ func TestRecordDevilsAdvocateDoesNotWriteWithoutPlanDigest(t *testing.T) {
 		},
 		PlanDigest: func(string, model.IssueOpsRecord) (string, error) { return "", errors.New("no plan") },
 	}
-	_, err := RecordDevilsAdvocate(store, "state", "io-review", model.IssueOpsDevilsAdvocateReviewRequest{
+	_, err := RecordDevilsAdvocate(store, "state", "io-review", reviewcontract.DevilsAdvocateReviewRequest{
 		Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"tested rollback"},
 	}, "now")
 	if err == nil || err.Error() != "no plan" || writes != 0 {
@@ -50,7 +51,7 @@ func TestRecordCompatibilityReviewAdvancesOnlyAfterReadiness(t *testing.T) {
 			return 1
 		},
 	}
-	req := model.IssueOpsCompatibilityReviewRequest{
+	req := reviewcontract.CompatibilityReviewRequest{
 		BackwardCompatibility: []string{"compatible"}, SideEffects: []string{"none"},
 		Verification: []string{"tested"}, RollbackPlan: "revert",
 	}

@@ -3,6 +3,7 @@ package issueopscleanup
 import (
 	"context"
 	"errors"
+	executionissue "issueops/internal/contract/executionissue"
 	"reflect"
 	"testing"
 
@@ -25,11 +26,11 @@ func TestFinishEvidenceUsesSupersedingArtifactBaseBranch(t *testing.T) {
 			}
 			return model.CleanupRemoteBranchArtifactHead{BaseRefName: "main"}, nil
 		},
-		ReadIssueSnapshot: func(ctx context.Context, _ port.IssueProvider, req port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+		ReadIssueSnapshot: func(ctx context.Context, _ port.IssueProvider, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 			if ctx.Value(finishTestContextKey{}) != true || req.Repo != record.Repo || req.URL != record.IssueURL {
 				t.Fatal("readback lost snapshot identity or context")
 			}
-			return port.ExecutionIssueSnapshot{URL: req.URL, Body: model.IssueBodyCompletionStartMarker, State: "closed"}, nil
+			return executionissue.ExecutionIssueSnapshot{URL: req.URL, Body: model.IssueBodyCompletionStartMarker, State: "closed"}, nil
 		},
 	}
 	req, err := reader.Observe(context.WithValue(context.Background(), finishTestContextKey{}, true), record, model.CleanupFinishRequest{ID: record.ID, SupersededBy: replacement})
@@ -46,9 +47,9 @@ func TestFinishEvidenceRefusesUnknownMergeBeforeIssueReadback(t *testing.T) {
 		VerifyMergedHead: func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error) {
 			return model.CleanupRemoteBranchArtifactHead{}, errors.New("provider unavailable")
 		},
-		ReadIssueSnapshot: func(context.Context, port.IssueProvider, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+		ReadIssueSnapshot: func(context.Context, port.IssueProvider, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 			t.Fatal("read issue after failed merge evidence")
-			return port.ExecutionIssueSnapshot{}, nil
+			return executionissue.ExecutionIssueSnapshot{}, nil
 		},
 	}
 	_, err := reader.Observe(context.Background(), model.IssueOpsRecord{RemoteArtifact: &model.IssueOpsRemoteArtifactVerification{URL: "original"}}, model.CleanupFinishRequest{})

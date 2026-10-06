@@ -3,6 +3,7 @@ package issueops
 import (
 	"context"
 	"encoding/json"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -11,7 +12,6 @@ import (
 
 	"issueops/internal/contract/issueops"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
-	"issueops/internal/port"
 )
 
 func TestExecutionPreparationPlanArtifactGatePrecedesRemoteOwnerRead(t *testing.T) {
@@ -22,9 +22,9 @@ func TestExecutionPreparationPlanArtifactGatePrecedesRemoteOwnerRead(t *testing.
 		t.Fatal(err)
 	}
 	readerCalls := 0
-	reader := func(context.Context, string, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+	reader := func(context.Context, string, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 		readerCalls++
-		return port.ExecutionIssueSnapshot{}, nil
+		return executionissue.ExecutionIssueSnapshot{}, nil
 	}
 
 	_, err = ReadExecutionPreparationOwnerEvidence(context.Background(), stateRoot, preparationcontract.Snapshot{RecordRaw: raw}, reader)
@@ -71,8 +71,8 @@ func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
 		RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", WorktreeInstanceID: "instance",
 	}}
 	issueBody := "## Acceptance\n- AC-01 seal plan\n\n## Verification\n```bash\ngo test ./... -count=1\n```\n"
-	readIssue := func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-		return port.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
+	readIssue := func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+		return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
 	}
 
 	artifacts, err := PrepareExecutionPreparationOwner(
@@ -97,7 +97,7 @@ func TestPrepareExecutionOwnerMaterializesPlanAndSealsManifest(t *testing.T) {
 	if strings.Contains(string(packetRaw), "claim_token_file") || strings.Contains(string(packetRaw), claimTokenPath(record)) {
 		t.Fatalf("owner context packet must not expose a claim token path: %s", packetRaw)
 	}
-	var packet executionOwnerContextPacket
+	var packet issueops.OwnerContextPacket
 	if err := json.Unmarshal(packetRaw, &packet); err != nil {
 		t.Fatal(err)
 	}
@@ -402,13 +402,13 @@ func TestExecutionOwnerResumePastImplementSkipsBackwardPhaseTransition(t *testin
 func TestExecutionOwnerPromptRenderingRejectsPlaceholderAndLineInjectionDeterministically(t *testing.T) {
 	record, req := ownerPacketFixture()
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
-	packet := executionOwnerContextPacket{
+	packet := issueops.OwnerContextPacket{
 		SchemaVersion: 1, LifecycleID: record.ID, Mode: record.Execution.Mode,
 		SourceRoot: record.Execution.Workspace.SourceRoot, WorktreeRoot: record.Execution.Workspace.Root,
 		WorktreeBase: filepath.Dir(record.Execution.Workspace.Root), Branch: record.Execution.Workspace.Branch,
 		BaseHead: record.Execution.Workspace.BaseHead, CurrentHead: record.Execution.Workspace.BaseHead,
 		LeaseGeneration: record.Execution.Lease.Generation,
-		Issue:           executionOwnerIssue{URL: record.IssueURL, Body: "AC-01", BodySHA256: strings.Repeat("a", 64)},
+		Issue:           issueops.OwnerIssue{URL: record.IssueURL, Body: "AC-01", BodySHA256: strings.Repeat("a", 64)},
 		OwnerHost:       req.OwnerHost, OwnerModel: "{OWNER_EFFORT}", OwnerEffort: "injected",
 		RequiredDocs: []string{"AGENTS.md"}, RequiredSkills: []string{"issueops", "verified-execution"},
 		AcceptanceIDs: []string{"AC-01"}, Verification: []string{"go test ./... -count=1"},
@@ -428,13 +428,13 @@ func TestExecutionOwnerPromptRenderingRejectsPlaceholderAndLineInjectionDetermin
 func executionOwnerPromptFixture(t *testing.T, record issueops.IssueOpsRecord, req issueops.ExecutionPrepareRequest) string {
 	t.Helper()
 	commands := executionOwnerCommandsFor(record, req, strings.Repeat("a", 64))
-	packet := executionOwnerContextPacket{
+	packet := issueops.OwnerContextPacket{
 		SchemaVersion: 1, LifecycleID: record.ID, Mode: record.Execution.Mode,
 		SourceRoot: record.Execution.Workspace.SourceRoot, WorktreeRoot: record.Execution.Workspace.Root,
 		WorktreeBase: filepath.Dir(record.Execution.Workspace.Root), Branch: record.Execution.Workspace.Branch,
 		BaseHead: record.Execution.Workspace.BaseHead, CurrentHead: record.Execution.Workspace.BaseHead,
 		LeaseGeneration: record.Execution.Lease.Generation,
-		Issue:           executionOwnerIssue{URL: record.IssueURL, Body: "AC-01", BodySHA256: strings.Repeat("a", 64)},
+		Issue:           issueops.OwnerIssue{URL: record.IssueURL, Body: "AC-01", BodySHA256: strings.Repeat("a", 64)},
 		OwnerHost:       req.OwnerHost, OwnerModel: req.OwnerModel, OwnerEffort: req.OwnerEffort,
 		RequiredDocs: []string{"AGENTS.md"}, RequiredSkills: []string{"issueops", "verified-execution"},
 		AcceptanceIDs: []string{"AC-01"}, Verification: []string{"go test ./... -count=1"},
@@ -504,7 +504,7 @@ func TestOwnerArtifactsRouteModelRoles(t *testing.T) {
 			record.Execution.Workspace.Root = t.TempDir()
 			req.OwnerHost = tc.host
 			req.OwnerModel, req.OwnerEffort = "explicit-model", "low"
-			snapshot := executionOwnerSnapshot{issue: executionOwnerIssue{URL: record.IssueURL, Body: "AC-01", BodySHA256: strings.Repeat("a", 64)}}
+			snapshot := executionOwnerSnapshot{issue: issueops.OwnerIssue{URL: record.IssueURL, Body: "AC-01", BodySHA256: strings.Repeat("a", 64)}}
 			artifacts, err := buildExecutionOwnerArtifacts(record, req, snapshot, nil)
 			if err != nil {
 				t.Fatal(err)

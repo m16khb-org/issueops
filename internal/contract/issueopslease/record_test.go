@@ -11,31 +11,15 @@ import (
 	leasedomain "issueops/internal/domain/issueopslease"
 )
 
-type (
-	Record                 = leasecontract.Record
-	Execution              = leasecontract.Execution
-	Selection              = leasecontract.Selection
-	Workspace              = leasecontract.Workspace
-	Lease                  = leasecontract.Lease
-	Actor                  = leasecontract.Actor
-	ProcessReceipt         = leasecontract.ProcessReceipt
-	OrcaBinding            = leasecontract.OrcaBinding
-	Completion             = leasecontract.Completion
-	CompletionHistoryEntry = leasecontract.CompletionHistoryEntry
-)
-
-const SchemaVersion = leasecontract.SchemaVersion
-const OrcaArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
-
 func TestValidateActorRetainsLegacyText(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
-		actor Actor
+		actor leasecontract.Actor
 		want  string
 	}{
-		{name: "invalid host", actor: Actor{Host: "other"}, want: "native actor host must be codex, claude, or omo"},
-		{name: "missing session", actor: Actor{Host: "codex"}, want: "native actor session_id is required"},
-		{name: "missing receipt", actor: Actor{Host: "codex", SessionID: "session"}, want: "native actor requires a PID reuse-safe session_process receipt"},
+		{name: "invalid host", actor: leasecontract.Actor{Host: "other"}, want: "native actor host must be codex, claude, or omo"},
+		{name: "missing session", actor: leasecontract.Actor{Host: "codex"}, want: "native actor session_id is required"},
+		{name: "missing receipt", actor: leasecontract.Actor{Host: "codex", SessionID: "session"}, want: "native actor requires a PID reuse-safe session_process receipt"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if err := leasedomain.ValidatePersistedActor(tc.actor); err == nil || err.Error() != tc.want {
@@ -46,10 +30,10 @@ func TestValidateActorRetainsLegacyText(t *testing.T) {
 }
 
 func TestValidateActorAcceptsOmo(t *testing.T) {
-	err := leasedomain.ValidatePersistedActor(Actor{
+	err := leasedomain.ValidatePersistedActor(leasecontract.Actor{
 		Host:      "omo",
 		SessionID: "019ff5b8-7d62-707a-a693-5e7a5e8a3187",
-		SessionProcess: &ProcessReceipt{
+		SessionProcess: &leasecontract.ProcessReceipt{
 			PID: 42, StartedAt: "2026-08-12T00:00:00Z", Executable: "/Users/test/Library/pnpm/bin/omo",
 		},
 	})
@@ -59,16 +43,16 @@ func TestValidateActorAcceptsOmo(t *testing.T) {
 }
 
 func TestValidateSidecarsDistinguishesLegacyAndPostUpgradeArtifactIdentity(t *testing.T) {
-	binding := OrcaBinding{
+	binding := leasecontract.OrcaBinding{
 		RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree",
 		OwnerHost: "codex", OwnerModel: "model", TaskID: "task", DispatchID: "dispatch",
 	}
-	execution := Execution{Mode: "orca", Orca: &binding}
+	execution := leasecontract.Execution{Mode: "orca", Orca: &binding}
 	if err := leasedomain.ValidatePersistedSidecars(execution); err != nil {
 		t.Fatalf("unmarked legacy all-empty identity must remain readable: %v", err)
 	}
 
-	execution.Orca.ArtifactIdentityVersion = OrcaArtifactIdentityVersion
+	execution.Orca.ArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
 	if err := leasedomain.ValidatePersistedSidecars(execution); err == nil || !strings.Contains(err.Error(), "version requires a complete sealed artifact identity") {
 		t.Fatalf("post-upgrade all-empty identity must fail as an invariant violation: %v", err)
 	}
@@ -120,21 +104,21 @@ func TestCompletionHistoryStrictRoundTripAndLegacyRead(t *testing.T) {
 func TestCompletionHistoryRejectsIncompleteEntries(t *testing.T) {
 	for _, test := range []struct {
 		name   string
-		mutate func(*CompletionHistoryEntry)
+		mutate func(*leasecontract.CompletionHistoryEntry)
 	}{
-		{name: "generation", mutate: func(entry *CompletionHistoryEntry) { entry.Generation = 0 }},
-		{name: "completion", mutate: func(entry *CompletionHistoryEntry) { entry.Completion.Verification = nil }},
-		{name: "blank verification", mutate: func(entry *CompletionHistoryEntry) { entry.Completion.Verification = []string{" "} }},
-		{name: "current generation", mutate: func(entry *CompletionHistoryEntry) {
+		{name: "generation", mutate: func(entry *leasecontract.CompletionHistoryEntry) { entry.Generation = 0 }},
+		{name: "completion", mutate: func(entry *leasecontract.CompletionHistoryEntry) { entry.Completion.Verification = nil }},
+		{name: "blank verification", mutate: func(entry *leasecontract.CompletionHistoryEntry) { entry.Completion.Verification = []string{" "} }},
+		{name: "current generation", mutate: func(entry *leasecontract.CompletionHistoryEntry) {
 			entry.Generation = 2
 			entry.Completion.Generation = 2
 		}},
-		{name: "future generation", mutate: func(entry *CompletionHistoryEntry) {
+		{name: "future generation", mutate: func(entry *leasecontract.CompletionHistoryEntry) {
 			entry.Generation = 3
 			entry.Completion.Generation = 3
 		}},
-		{name: "reason", mutate: func(entry *CompletionHistoryEntry) { entry.Reason = " " }},
-		{name: "reopened at", mutate: func(entry *CompletionHistoryEntry) { entry.ReopenedAt = " " }},
+		{name: "reason", mutate: func(entry *leasecontract.CompletionHistoryEntry) { entry.Reason = " " }},
+		{name: "reopened at", mutate: func(entry *leasecontract.CompletionHistoryEntry) { entry.ReopenedAt = " " }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			record := completionHistoryRecord()
@@ -149,7 +133,7 @@ func TestCompletionHistoryRejectsIncompleteEntries(t *testing.T) {
 func TestCurrentCompletionRejectsBlankVerificationEvidence(t *testing.T) {
 	record := completionHistoryRecord()
 	record.Execution.CompletionHistory = nil
-	record.Execution.Completion = &Completion{
+	record.Execution.Completion = &leasecontract.Completion{
 		FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/report.json",
 		Verification: []string{" "}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: "2026-08-03T00:00:00Z",
 	}
@@ -167,7 +151,7 @@ func TestCompletionGenerationValidation(t *testing.T) {
 
 	record = completionHistoryRecord()
 	record.Execution.CompletionHistory = nil
-	record.Execution.Completion = &Completion{
+	record.Execution.Completion = &leasecontract.Completion{
 		Generation: 3, FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/report.json",
 		Verification: []string{"go test ./..."}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: "2026-08-03T00:00:00Z",
 	}
@@ -176,17 +160,17 @@ func TestCompletionGenerationValidation(t *testing.T) {
 	}
 }
 
-func completionHistoryRecord() Record {
-	return Record{
-		SchemaVersion: SchemaVersion,
+func completionHistoryRecord() leasecontract.Record {
+	return leasecontract.Record{
+		SchemaVersion: leasecontract.SchemaVersion,
 		ID:            "io-completion-history",
-		Execution: &Execution{
+		Execution: &leasecontract.Execution{
 			Mode:      "direct",
-			Workspace: Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-03T00:00:00Z"},
-			Lease:     Lease{Generation: 2, Status: "released"},
-			CompletionHistory: []CompletionHistoryEntry{{
+			Workspace: leasecontract.Workspace{SourceRoot: "/source", Root: "/worktree", Branch: "branch", BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-03T00:00:00Z"},
+			Lease:     leasecontract.Lease{Generation: 2, Status: "released"},
+			CompletionHistory: []leasecontract.CompletionHistoryEntry{{
 				Generation: 1,
-				Completion: Completion{Generation: 1, FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/report.json", Verification: []string{"go test ./... -count=1"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: "2026-08-03T00:00:00Z"},
+				Completion: leasecontract.Completion{Generation: 1, FinalHead: strings.Repeat("b", 40), VerificationReportPath: ".issueops/verified-execution/report.json", Verification: []string{"go test ./... -count=1"}, RemoteArtifactURL: "https://github.com/acme/repo/pull/1", CompletedAt: "2026-08-03T00:00:00Z"},
 				Reason:     "new verified HEAD", ReopenedAt: "2026-08-04T00:00:00Z",
 			}},
 		},
@@ -194,7 +178,7 @@ func completionHistoryRecord() Record {
 }
 
 func TestSelectionReceiptRejectsExplicitDirectFallbackCode(t *testing.T) {
-	selection := Selection{
+	selection := leasecontract.Selection{
 		RequestedMode: "direct", ResolvedMode: "direct",
 		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",
 		ExplicitDirectReason: "manual recovery",
@@ -266,16 +250,16 @@ func dereferenceJSONType(typ reflect.Type) reflect.Type {
 	return typ
 }
 func TestSelectionReceiptRoundTripsAndRemainsOptionalInCurrentV1(t *testing.T) {
-	record := Record{
-		SchemaVersion: SchemaVersion,
+	record := leasecontract.Record{
+		SchemaVersion: leasecontract.SchemaVersion,
 		ID:            "io-selection",
-		Execution: &Execution{
+		Execution: &leasecontract.Execution{
 			Mode: "direct",
-			Workspace: Workspace{
+			Workspace: leasecontract.Workspace{
 				SourceRoot: "/repo", Root: "/repo.worktrees/selection", Branch: "selection",
 				BaseHead: strings.Repeat("a", 40), Driver: "git", LinkedAt: "2026-08-03T00:00:00Z",
 			},
-			Lease: Lease{Generation: 1, Status: "released"},
+			Lease: leasecontract.Lease{Generation: 1, Status: "released"},
 		},
 	}
 	encoded, err := leasecodec.EncodeLease(record)
@@ -287,7 +271,7 @@ func TestSelectionReceiptRoundTripsAndRemainsOptionalInCurrentV1(t *testing.T) {
 		t.Fatalf("legacy current-v1 record lost nil selection compatibility: record=%+v err=%v", decoded, err)
 	}
 
-	record.Execution.Selection = &Selection{
+	record.Execution.Selection = &leasecontract.Selection{
 		RequestedMode: "direct", ResolvedMode: "direct",
 		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",
 		ExplicitDirectReason: "manual recovery",
@@ -303,7 +287,7 @@ func TestSelectionReceiptRoundTripsAndRemainsOptionalInCurrentV1(t *testing.T) {
 }
 
 func TestSelectionReceiptRequiresExactAutoFallbackCode(t *testing.T) {
-	selection := Selection{
+	selection := leasecontract.Selection{
 		RequestedMode: "auto", ResolvedMode: "direct", ProbeAttempted: true,
 		ProbeCode: "orca_unready", FallbackCode: "orca_unready",
 		ReadinessFingerprint: strings.Repeat("b", 64), SelectedAt: "2026-08-03T00:00:01Z",

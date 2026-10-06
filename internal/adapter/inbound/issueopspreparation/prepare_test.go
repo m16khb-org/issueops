@@ -1,17 +1,16 @@
 package issueopspreparation
 
 import (
-	issueopsport "issueops/internal/port"
-)
-
-import (
 	"context"
 	"errors"
+	executionissue "issueops/internal/contract/executionissue"
 	"reflect"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
+
 	leasecontract "issueops/internal/contract/issueopslease"
+
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 )
 
@@ -33,13 +32,13 @@ func TestHandlerMapsEveryRequestAndResultField(t *testing.T) {
 		IssueSnapshotSource: "provider", NextCommand: "issueops next",
 	}}
 
-	got, err := NewHandler(service)(context.Background(), "/state", request, issueopsport.ExecutionPrepareInvocation{})
+	got, err := NewHandler(service)(context.Background(), "/state", request, executionissue.ExecutionPrepareInvocation{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	wantCommand := preparationcontract.Command{
 		ID: request.ID, Mode: request.Mode,
-		Actor: preparationcontract.Actor{
+		Actor: leasecontract.Actor{
 			Host: request.Actor.Host, SessionID: request.Actor.SessionID, AgentID: request.Actor.AgentID,
 			SessionProcess: &leasecontract.ProcessReceipt{PID: process.PID, StartedAt: process.StartedAt, Executable: process.Executable},
 		},
@@ -74,14 +73,14 @@ func TestHandlerPreservesResultWithServiceError(t *testing.T) {
 	cause := errors.New("pending external intent")
 	service := &serviceFake{result: preparationcontract.Result{ID: "io-199", RequestedMode: "orca", NextCommand: "reconcile"}, err: cause}
 
-	got, err := NewHandler(service)(context.Background(), "/state", model.ExecutionPrepareRequest{ID: "io-199"}, issueopsport.ExecutionPrepareInvocation{})
+	got, err := NewHandler(service)(context.Background(), "/state", model.ExecutionPrepareRequest{ID: "io-199"}, executionissue.ExecutionPrepareInvocation{})
 	if err != cause || got.ID != "io-199" || got.RequestedMode != "orca" || got.NextCommand != "reconcile" {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}
 }
 
 func TestHandlerFailsClosedWithoutService(t *testing.T) {
-	got, err := NewHandler(nil)(context.Background(), "/state", model.ExecutionPrepareRequest{ID: "io-199"}, issueopsport.ExecutionPrepareInvocation{})
+	got, err := NewHandler(nil)(context.Background(), "/state", model.ExecutionPrepareRequest{ID: "io-199"}, executionissue.ExecutionPrepareInvocation{})
 	if !errors.Is(err, model.ErrPrepareHandlerUnavailable) || got != (model.ExecutionPrepareResult{ID: "io-199"}) {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}

@@ -2,6 +2,7 @@ package commandstep
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	selfverifydomain "issueops/internal/domain/selfverify"
 
 	"fmt"
 	"strings"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestCommandStepFormattingHelpers(t *testing.T) {
-	if failed := FailedStep("label", fmt.Errorf("boom")); failed.OK || failed.Error != "boom" {
+	if failed := selfverifydomain.FailedStep("label", fmt.Errorf("boom")); failed.OK || failed.Error != "boom" {
 		t.Fatalf("unexpected failed step: %+v", failed)
 	}
 
@@ -38,7 +39,7 @@ func TestCommandStepFormattingHelpers(t *testing.T) {
 func TestTailWithBudgetKeepsTruncatedOutputWithinBudget_whenMarkerDigitsGrow(t *testing.T) {
 	input := strings.Repeat("x", 48)
 
-	out, truncated, original := TailWithBudget(input, 47)
+	out, truncated, original := selfverifydomain.TailWithBudget(input, 47)
 
 	if !truncated || original != len(input) {
 		t.Fatalf("unexpected truncation metadata: truncated=%v original=%d", truncated, original)

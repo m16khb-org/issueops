@@ -17,7 +17,7 @@ func ForbiddenNameHits(root string) []string {
 	var reads errgroup.Group
 	reads.SetLimit(8)
 	owner := []byte(currentOwnerHandle())
-	needleNames := forbiddenLegacyNeedles()
+	needleNames := retiredNameNeedles()
 	needles := make([][]byte, len(needleNames))
 	for index, needle := range needleNames {
 		needles[index] = []byte(needle)
@@ -52,7 +52,7 @@ func ForbiddenNameHits(root string) []string {
 			if readErr != nil || bytes.Contains(b, []byte{0}) {
 				return nil
 			}
-			if needle := firstForbiddenLegacyNeedle(b, owner, needles, needleNames); needle != "" {
+			if needle := firstRetiredNameNeedle(b, owner, needles, needleNames); needle != "" {
 				rel, _ := filepath.Rel(root, path)
 				hitsMu.Lock()
 				hits = append(hits, rel+" contains "+needle)
@@ -70,7 +70,7 @@ func ForbiddenNameHits(root string) []string {
 	return hits
 }
 
-func firstForbiddenLegacyNeedle(content, owner []byte, needles [][]byte, needleNames []string) string {
+func firstRetiredNameNeedle(content, owner []byte, needles [][]byte, needleNames []string) string {
 	for index, needle := range needles {
 		remaining := content
 		for {
@@ -87,10 +87,6 @@ func firstForbiddenLegacyNeedle(content, owner []byte, needles [][]byte, needleN
 	return ""
 }
 
-func forbiddenNameHits(root string) []string {
-	return ForbiddenNameHits(root)
-}
-
 func shouldSkipForbiddenNameScanDir(name, rel string) bool {
 	switch name {
 	case ".git", "bin", "cache", ".cache", ".codex", ".codegraph", ".omc", ".omx", ".antigravitycli":
@@ -104,7 +100,7 @@ func shouldSkipForbiddenNameScanDir(name, rel string) bool {
 	}
 }
 
-func forbiddenLegacyNeedles() []string {
+func retiredNameNeedles() []string {
 	return []string{"m" + "16kh", "m" + "16h", "M" + "16H", "m" + "16"}
 }
 

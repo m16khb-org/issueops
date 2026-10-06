@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	contract "issueops/internal/contract/selfverify"
 	"strings"
 )
 
-func requireGoldenEvidence(step StepResult) error {
+func requireGoldenEvidence(step contract.StepResult) error {
 	if step.StdoutTruncated {
 		return fmt.Errorf("truncated go test JSON")
 	}
@@ -61,7 +62,7 @@ func requireGoldenEvidence(step StepResult) error {
 	return nil
 }
 
-func binaryDriftEvidence(step StepResult) StepResult {
+func binaryDriftEvidence(step contract.StepResult) contract.StepResult {
 	if !step.OK {
 		return step
 	}

@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"context"
 	"errors"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
 	"strings"
@@ -97,7 +98,7 @@ func TestPublicationCommandCompositionPreservesDefaultsAndActor(t *testing.T) {
 		t.Fatalf("ancestry=%v err=%v", ancestry, err)
 	}
 	observed, published := 0, 0
-	service := newPublicationCommand(root, func(_ context.Context, _ string, req model.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+	service := newPublicationCommand(root, func(_ context.Context, _ string, req model.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 		published++
 		if req.Provider != "github" || req.Head != record.Branch || req.Base != "release" || req.Body != readableWiringPRBody || strings.Join(req.Labels, ",") != "bug" || strings.Join(req.Assignees, ",") != "owner" {
 			t.Fatalf("request=%+v", req)
@@ -105,7 +106,7 @@ func TestPublicationCommandCompositionPreservesDefaultsAndActor(t *testing.T) {
 		if req.Confirm && (req.Actor.Host != "codex" || req.Actor.SessionID != "session" || len(req.Actor.ProcessAncestry) == 0) {
 			t.Fatalf("actor=%+v", req.Actor)
 		}
-		return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "preview"}, nil
+		return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "preview"}, nil
 	}, func() ([]model.NativeProcessReceipt, error) { observed++; return ancestry, nil })
 	input := application.PublicationInput{Request: model.RemotePullRequestRequest{ID: record.ID, Title: "PR", Labels: []string{" bug ", "bug"}, Assignees: []string{" owner "}, Actor: model.NativeActor{Host: " CODEX ", SessionID: " session ", SessionProcess: &ancestry[0]}}, BodyFile: path}
 	if _, err := service.Create(context.Background(), input); err != nil || observed != 0 || published != 1 {

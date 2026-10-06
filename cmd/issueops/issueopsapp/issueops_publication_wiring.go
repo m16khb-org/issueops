@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
 	"time"
 
@@ -39,7 +40,7 @@ func productionIssueOpsPublicationDeps() issueOpsPublicationCompositionDeps {
 	}
 }
 
-func issueOpsPublicationCreateHandler(ctx context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func issueOpsPublicationCreateHandler(ctx context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return newIssueOpsPublicationHandlers(productionIssueOpsPublicationDeps()).Create(ctx, stateRoot, request)
 }
 
@@ -49,7 +50,7 @@ func issueOpsPublicationReconcileHandler(ctx context.Context, stateRoot string, 
 
 func newIssueOpsPublicationHandlers(deps issueOpsPublicationCompositionDeps) issueopscontract.RemotePublicationHandlers {
 	return issueopscontract.RemotePublicationHandlers{
-		Create: func(ctx context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Create: func(ctx context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 			create, _ := newIssueOpsPublicationServices(stateRoot, deps)
 			return publicationinbound.NewCreateHandler(create)(ctx, stateRoot, request)
 		},

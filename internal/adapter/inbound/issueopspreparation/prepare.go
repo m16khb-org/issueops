@@ -5,12 +5,12 @@ package issueopspreparation
 import (
 	"context"
 	"errors"
+	executionissue "issueops/internal/contract/executionissue"
 
 	issueopscontract "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
 	statecontract "issueops/internal/contract/state"
-	"issueops/internal/port"
 )
 
 type service interface {
@@ -22,11 +22,11 @@ type Handler struct{ service service }
 // 반환 타입은 어댑터의 이름 붙은 핸들러 타입 대신 같은 시그니처를 직접 쓴다.
 // Go에서 두 형태는 할당 호환이므로 소비자는 그대로 동작하고, inbound 어댑터는
 // issueops 어댑터를 알 필요가 없어진다.
-func NewHandler(service service) func(context.Context, string, issueopscontract.ExecutionPrepareRequest, port.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+func NewHandler(service service) func(context.Context, string, issueopscontract.ExecutionPrepareRequest, executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 	return Handler{service: service}.Handle
 }
 
-func (handler Handler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionPrepareRequest, _ port.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+func (handler Handler) Handle(ctx context.Context, _ string, request issueopscontract.ExecutionPrepareRequest, _ executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 	if handler.service == nil {
 		return issueopscontract.ExecutionPrepareResult{ID: request.ID}, issueopscontract.ErrPrepareHandlerUnavailable
 	}
@@ -39,8 +39,8 @@ func (handler Handler) Handle(ctx context.Context, _ string, request issueopscon
 	return coreResult(result), publicError(err)
 }
 
-func preparationActor(actor issueopscontract.NativeActor) preparationcontract.Actor {
-	result := preparationcontract.Actor{Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID}
+func preparationActor(actor issueopscontract.NativeActor) leasecontract.Actor {
+	result := leasecontract.Actor{Host: actor.Host, SessionID: actor.SessionID, AgentID: actor.AgentID}
 	if actor.SessionProcess != nil {
 		result.SessionProcess = &leasecontract.ProcessReceipt{
 			PID: actor.SessionProcess.PID, StartedAt: actor.SessionProcess.StartedAt, Executable: actor.SessionProcess.Executable,
@@ -63,7 +63,7 @@ func coreResult(result preparationcontract.Result) issueopscontract.ExecutionPre
 	}
 }
 
-func coreWorkspace(workspace preparationcontract.Workspace) issueopscontract.Workspace {
+func coreWorkspace(workspace leasecontract.Workspace) issueopscontract.Workspace {
 	return issueopscontract.Workspace{
 		SourceRoot: workspace.SourceRoot, Root: workspace.Root, Branch: workspace.Branch,
 		BaseHead: workspace.BaseHead, ParentWorktree: workspace.ParentWorktree, Driver: workspace.Driver, LinkedAt: workspace.LinkedAt,

@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"flag"
 	"fmt"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 
 	issueopscontract "issueops/internal/contract/issueops"
 )
@@ -76,7 +77,7 @@ func (cli command) runIssueOpsDesign(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.RecordIssueOpsDesignReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsDesignReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsDesignReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, reviewcontract.DesignReviewRequest{
 		ProblemSummary: *problemSummary,
 		ProposedDesign: *proposedDesign,
 		RefactorPlan:   *refactorPlan,

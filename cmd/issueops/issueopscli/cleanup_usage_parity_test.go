@@ -1,6 +1,7 @@
 package issueopscli
 
 import (
+	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	"slices"
 	"sort"
 	"strings"
@@ -36,9 +37,9 @@ func cleanupSubcommandsInUsageText(usage string) []string {
 }
 
 func TestIssueOpsCleanupHelpListsEveryCanonicalCleanupSubcommand(t *testing.T) {
-	canonical := cleanupSubcommandsInUsageText(testLifecycleUsage())
+	canonical := cleanupSubcommandsInUsageText(clicatalog.LifecycleUsage())
 	if len(canonical) == 0 {
-		t.Fatalf("canonical usage must document issueops cleanup subcommands:\n%s", testLifecycleUsage())
+		t.Fatalf("canonical usage must document issueops cleanup subcommands:\n%s", clicatalog.LifecycleUsage())
 	}
 	help := captureStdoutForContract(t, func() error {
 		return runIssueOps([]string{"cleanup", "--help"})
@@ -53,9 +54,9 @@ func TestIssueOpsCleanupHelpListsEveryCanonicalCleanupSubcommand(t *testing.T) {
 // commandparse spec에 등록되어 있어야 한다. spec 등록 누락은 어떤 기존 테스트도
 // 실패시키지 않고 CI green으로 통과하던 사각지대였다.
 func TestIssueOpsCleanupDocumentedSubcommandsHaveCommandParseSpec(t *testing.T) {
-	subs := cleanupSubcommandsInUsageText(testLifecycleUsage())
+	subs := cleanupSubcommandsInUsageText(clicatalog.LifecycleUsage())
 	if len(subs) == 0 {
-		t.Fatalf("canonical usage must document issueops cleanup subcommands:\n%s", testLifecycleUsage())
+		t.Fatalf("canonical usage must document issueops cleanup subcommands:\n%s", clicatalog.LifecycleUsage())
 	}
 	for _, sub := range subs {
 		path := "cleanup " + sub
@@ -66,14 +67,14 @@ func TestIssueOpsCleanupDocumentedSubcommandsHaveCommandParseSpec(t *testing.T) 
 }
 
 func TestIssueOpsCleanupUsageDocumentsRemoteBranchDeletion(t *testing.T) {
-	if !slices.Contains(cleanupSubcommandsInUsageText(testLifecycleUsage()), "remote-branch") {
-		t.Fatalf("canonical usage must document cleanup remote-branch:\n%s", testLifecycleUsage())
+	if !slices.Contains(cleanupSubcommandsInUsageText(clicatalog.LifecycleUsage()), "remote-branch") {
+		t.Fatalf("canonical usage must document cleanup remote-branch:\n%s", clicatalog.LifecycleUsage())
 	}
 }
 
 func TestIssueOpsCleanupDocumentedSubcommandsDispatch(t *testing.T) {
 	const unknownSubcommand = "unknown issueops cleanup subcommand"
-	for _, sub := range cleanupSubcommandsInUsageText(testLifecycleUsage()) {
+	for _, sub := range cleanupSubcommandsInUsageText(clicatalog.LifecycleUsage()) {
 		t.Run(sub, func(t *testing.T) {
 			t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 			var runErr error

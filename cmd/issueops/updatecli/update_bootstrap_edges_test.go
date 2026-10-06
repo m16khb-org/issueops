@@ -2,6 +2,7 @@ package updatecli
 
 import (
 	"errors"
+	contract "issueops/internal/contract/update"
 	"os"
 	"path/filepath"
 	"testing"
@@ -20,7 +21,7 @@ func TestRunInstallScriptCommandRejectsUnexpectedArgsAndMissingScript(t *testing
 }
 
 func TestRefreshRunningMCPProxiesAfterInstallDoesNotInspectProcesses(t *testing.T) {
-	restoreList := stubMCPProxyProcessLister(t, func() ([]mcpProxyProcess, error) {
+	restoreList := stubMCPProxyProcessLister(t, func() ([]contract.MCPProxyProcess, error) {
 		t.Fatal("post-install refresh must not inspect MCP processes")
 		return nil, errors.New("unreachable")
 	})

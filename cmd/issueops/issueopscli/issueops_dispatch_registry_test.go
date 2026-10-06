@@ -1,6 +1,7 @@
 package issueopscli
 
 import (
+	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	"strings"
 	"testing"
 )
@@ -40,7 +41,7 @@ func TestIssueOpsListDispatchesThroughRegistry(t *testing.T) {
 func TestIssueOpsUsageRegistryBidirectionalParity(t *testing.T) {
 	const prefix = "issueops "
 	usageKeys := map[string]bool{}
-	for _, line := range strings.Split(testLifecycleUsage(), "\n") {
+	for _, line := range strings.Split(clicatalog.LifecycleUsage(), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, prefix) {
 			continue

@@ -66,7 +66,6 @@ Gate policy는 evidence 상태와 함께 fail-closed로 동작한다.
 | self-verify | 5.0 | 4.9 ±0 (n=3) | none | A + H:C |
 | self-augment | 5.0 | 4.9 ±0 (n=3) | none | A + H:C |
 | project-bootstrap | 4.86 | 5.0 ±0 (n=3) | none | A + H:A |
-| draft-wiki-promoter | 4.94 | 4.8 ±0 (n=3) | none | A/C/A + H:C |
 | stability-audit | 4.86 | 5.0 ±0 (n=3) | none | A + H:A |
 
 - **STA-P 종료**: 2026-06-13 fast-path audit fresh run으로 A-grade evidence 확보(`ok=true`, `failures=[]`, MCP ids 1-8, zombie/legacy/temp 0, self-verify 10/10·230/230·min score 100). 상세: `.issueops/evidence/harness-skills-quality/sta-p-2026-06-13.md`.
@@ -144,7 +143,7 @@ Gate policy는 evidence 상태와 함께 fail-closed로 동작한다.
 | post-compact | 2 | 1ms | 2ms | 2ms | 0 |
 
 - **수용 기준 충족**: Stop hook p95 38ms ≪ 1s 목표(LLM 게이트 제거 후 heuristic이라 달성). 전 hook 5s 예산 대비 여유 大.
-- 출처: `internal/adapter/hookmetrics/metrics.go`, 로그 `~/.local/state/issueops/hook-metrics.jsonl`.
+- 출처(당시 경로, hook metrics 기능은 이후 제거됨): `internal/adapter/hookmetrics/metrics.go`, 로그 `~/.local/state/issueops/hook-metrics.jsonl`.
 
 ## 측정면 5 — Hook 실패율 (Q2)
 
@@ -153,7 +152,7 @@ Gate policy는 evidence 상태와 함께 fail-closed로 동작한다.
 - by_hook: pre-tool-use 26, user-prompt 5, --help 4, stop 2, post-tool-use 1.
 - **ErrHelp 노이즈 제거**: 초기 38건 중 16건이 help 요청이었음 → `Record`가 `flag.ErrHelp` 스킵하도록 수정(실 결함만 집계).
 - **rotation**: SessionStart hook이 720h 초과 항목 자동 prune(무한 성장 P1 해소). 로그 13KB.
-- 출처: `cmd/issueops/hookcli/hookfailure/`, `internal/adapter/hookfailure/stats.go`.
+- 출처(당시 경로, hook failure 통계 기능은 이후 제거됨): `cmd/issueops/hookcli/hookfailure/`, `internal/adapter/hookfailure/stats.go`.
 
 ## 측정면 6 — 운영 안정성 baseline (Q4, 2회분 실측 완료)
 

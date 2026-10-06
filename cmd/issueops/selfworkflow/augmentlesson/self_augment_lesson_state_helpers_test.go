@@ -6,7 +6,6 @@ import (
 
 	application "issueops/internal/application/selfaugment"
 	augmentcontract "issueops/internal/contract/selfaugment"
-	domain "issueops/internal/domain/selfaugment"
 )
 
 type lessonTestDeps struct {
@@ -25,5 +24,3 @@ func SaveSelfAugmentLesson(req augmentcontract.SelfAugmentLessonRequest, deps le
 		Write: StateWrite, StateDir: StateDir, Prune: StatePrunePrefix,
 	})
 }
-
-func StateKeySlug(s string) string { return domain.StateKeySlug(s) }

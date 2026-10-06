@@ -2,6 +2,7 @@ package projectdocs
 
 import (
 	"encoding/json"
+	projectdoccontract "issueops/internal/adapter/projectdoc"
 	projectdocscontract "issueops/internal/contract/projectdocs"
 	projectdoc "issueops/internal/domain/projectdoc"
 	"os"
@@ -337,30 +338,30 @@ func TestRouteProjectDocsQualityTableHasNoRequiredOmissions(t *testing.T) {
 }
 
 func TestProjectDocsHelpers(t *testing.T) {
-	if rel, err := normalizeProjectDocRelPath(filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "ADR.md"))); err != nil || rel == "" {
+	if rel, err := projectdoc.NormalizeRelPath(filepath.ToSlash(filepath.Join(projectdoc.ProjectDocsDir, "ADR.md"))); err != nil || rel == "" {
 		t.Fatalf("normalize rel = %q, %v", rel, err)
 	}
 	if got := projectdoc.NonEmptyStrings([]string{"", " a ", "b"}); len(got) != 2 || got[0] != "a" || got[1] != "b" {
 		t.Fatalf("NonEmptyStrings = %#v", got)
 	}
-	if got := appendUnique([]string{"a"}, "a"); len(got) != 1 {
+	if got := projectdoc.AppendUnique([]string{"a"}, "a"); len(got) != 1 {
 		t.Fatalf("appendUnique duplicate = %#v", got)
 	}
-	if got := appendUnique([]string{"a"}, "b"); len(got) != 2 {
+	if got := projectdoc.AppendUnique([]string{"a"}, "b"); len(got) != 2 {
 		t.Fatalf("appendUnique new = %#v", got)
 	}
 	tmp := t.TempDir()
 	path := filepath.Join(tmp, "doc.md")
-	if plannedFileAction(path, "x") != "create" {
+	if projectdoccontract.PlannedFileAction(path, "x") != "create" {
 		t.Fatal("missing file should be create")
 	}
 	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if plannedFileAction(path, "x") != "unchanged" || plannedFileAction(path, "y") != "update" {
+	if projectdoccontract.PlannedFileAction(path, "x") != "unchanged" || projectdoccontract.PlannedFileAction(path, "y") != "update" {
 		t.Fatal("unexpected planned file action")
 	}
-	if projectdoc.SHA256Hex("x") == "" || !strings.Contains(ensureDocMetaFrontmatter("ADR.md", "# ADR"), "# ADR") {
+	if projectdoc.SHA256Hex("x") == "" || !strings.Contains(projectdoc.EnsureMetaFrontmatter("ADR.md", "# ADR"), "# ADR") {
 		t.Fatal("unexpected primitive helpers")
 	}
 	if !isProjectSignalFile("go.mod") || isProjectSignalFile("random.txt") {

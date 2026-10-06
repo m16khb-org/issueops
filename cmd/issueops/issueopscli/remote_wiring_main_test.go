@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"time"
 
@@ -54,7 +55,7 @@ func testRemoteCommand() remotecmd.Command {
 		CreatePublication: func(ctx context.Context, root string, input remoteapp.PublicationInput, handler issueopscontract.RemotePullRequestCreateHandler, observe remoteapp.AncestryObserver) (remoteapp.PublicationResult, error) {
 			var invoke remoteapp.PublicationInvoker
 			if handler != nil {
-				invoke = func(ctx context.Context, req issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+				invoke = func(ctx context.Context, req issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 					return handler(ctx, root, req)
 				}
 			}

@@ -11,14 +11,6 @@ type SelfVerifyLLMEvalConfig struct {
 	Mode    string
 }
 
-func ValidateSelfVerifyLLMEvalMode(mode string) error {
-	return selfverifydomain.ValidateLLMEvalMode(mode)
-}
-
-func NormalizeSelfVerifyLLMEvalMode(mode string) string {
-	return selfverifydomain.NormalizeLLMEvalMode(mode)
-}
-
 func ResolveSelfVerifyLLMEvalConfig(llmEvalFlagSet bool, llmEvalFlagValue bool, llmEvalMode string, llmEvalModeFlagSet bool, lookupEnv func(string) (string, bool)) (SelfVerifyLLMEvalConfig, error) {
 	config := SelfVerifyLLMEvalConfig{Mode: "advisory"}
 	if lookupEnv == nil {
@@ -26,7 +18,7 @@ func ResolveSelfVerifyLLMEvalConfig(llmEvalFlagSet bool, llmEvalFlagValue bool, 
 	}
 	ignoreEnv := llmEvalFlagSet && !llmEvalFlagValue
 	if value, ok := lookupEnv(selfverifydomain.LLMEvalEnvName); ok && !ignoreEnv {
-		enabled, mode, err := ParseSelfVerifyLLMEvalEnv(value)
+		enabled, mode, err := selfverifydomain.ParseLLMEvalEnv(value)
 		if err != nil {
 			return config, err
 		}
@@ -34,8 +26,8 @@ func ResolveSelfVerifyLLMEvalConfig(llmEvalFlagSet bool, llmEvalFlagValue bool, 
 		config.Mode = mode
 	}
 	if llmEvalModeFlagSet {
-		mode := NormalizeSelfVerifyLLMEvalMode(llmEvalMode)
-		if err := ValidateSelfVerifyLLMEvalMode(mode); err != nil {
+		mode := selfverifydomain.NormalizeLLMEvalMode(llmEvalMode)
+		if err := selfverifydomain.ValidateLLMEvalMode(mode); err != nil {
 			return config, err
 		}
 		config.Mode = mode
@@ -44,8 +36,4 @@ func ResolveSelfVerifyLLMEvalConfig(llmEvalFlagSet bool, llmEvalFlagValue bool, 
 		config.Enabled = llmEvalFlagValue
 	}
 	return config, nil
-}
-
-func ParseSelfVerifyLLMEvalEnv(value string) (bool, string, error) {
-	return selfverifydomain.ParseLLMEvalEnv(value)
 }

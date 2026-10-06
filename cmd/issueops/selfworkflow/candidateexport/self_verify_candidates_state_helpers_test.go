@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func SaveSelfVerificationCandidateExport(result *SelfVerificationCandidateExportResult, key string) error {
+func SaveSelfVerificationCandidateExport(result *contract.SelfVerificationCandidateExportResult, key string) error {
 	return app.SaveCandidateExport(result, key, app.SaveCandidateExportDeps{
 		Now: time.Now,
 		Encode: func(snapshot contract.SelfVerificationCandidateExportStateSnapshot) ([]byte, error) {

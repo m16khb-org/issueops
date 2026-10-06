@@ -48,11 +48,11 @@ func ResultForRequest(request contract.Request) contract.Result {
 
 func InspectInventory(result *contract.Result, request contract.Request, snapshot corehealth.Snapshot) {
 	if !samePath(snapshot.RepoRoot, request.RepoRoot) {
-		missing(result, "repo_root_match")
+		Missing(result, "repo_root_match")
 		return
 	}
 	if len(snapshot.InventoryProblems) > 0 {
-		missing(result, "inventory_complete")
+		Missing(result, "inventory_complete")
 	}
 	canonicalCount := 0
 	for _, worktree := range snapshot.GitWorktrees {
@@ -70,20 +70,20 @@ func InspectInventory(result *contract.Result, request contract.Request, snapsho
 		if strings.TrimSpace(worktree.Branch) != request.Branch {
 			// branch_match: `missing`은 충족되지 않은 요구의 목록이므로 요구형으로
 			// 적는다. cleanup status가 같은 조건에 쓰는 이름과 같아진다(#185).
-			missing(result, "branch_match")
+			Missing(result, "branch_match")
 		}
 	}
 	if canonicalCount != 1 {
-		missing(result, "canonical_repo_root")
+		Missing(result, "canonical_repo_root")
 	}
 	if result.TargetWorktreeCount != 1 {
-		missing(result, "target_worktree_count")
+		Missing(result, "target_worktree_count")
 	}
 	if result.TargetCanonical {
-		missing(result, "canonical_worktree")
+		Missing(result, "canonical_worktree")
 	}
 	if !validGitOID(result.HeadSHA) {
-		missing(result, "worktree_head")
+		Missing(result, "worktree_head")
 	} else {
 		result.RecoveryHead = result.HeadSHA
 		result.RecoveryPath = filepath.Join(filepath.Dir(request.WorktreePath), filepath.Base(request.WorktreePath)+"-recovery-"+result.HeadSHA[:12])
@@ -97,34 +97,34 @@ func InspectInventory(result *contract.Result, request contract.Request, snapsho
 		result.LocalBranchOID = strings.TrimSpace(ref.OID)
 	}
 	if matchingLocalRefs != 1 || result.LocalBranchOID == "" || result.LocalBranchOID != result.HeadSHA {
-		missing(result, "local_branch_head")
+		Missing(result, "local_branch_head")
 	}
 	for _, cycle := range snapshot.Cycles {
 		if strings.TrimSpace(cycle.ID) == request.ID {
 			result.RecordAbsent = false
-			missing(result, "record_present")
+			Missing(result, "record_present")
 		}
 		ownsTargetBranch := samePath(cycle.Repo, request.RepoRoot) && strings.TrimSpace(cycle.Branch) == request.Branch
 		if !samePath(cycle.WorktreePath, request.WorktreePath) && !ownsTargetBranch {
 			continue
 		}
 		result.RecordAbsent = false
-		missing(result, "target_record_present")
+		Missing(result, "target_record_present")
 		authority := corehealth.EvaluateCycleAuthority(cycle, corehealth.Options{})
 		if authority == corehealth.AuthorityLive || authority == corehealth.AuthorityPreserved {
-			missing(result, "target_lifecycle_owner")
+			Missing(result, "target_lifecycle_owner")
 		} else if authority == corehealth.AuthorityUnknown {
-			missing(result, "target_lifecycle_authority_unknown")
+			Missing(result, "target_lifecycle_authority_unknown")
 		}
 	}
 	for _, index := range snapshot.LeaseHolderIndexes {
 		if strings.TrimSpace(index.LifecycleID) == request.ID {
-			missing(result, "target_lease_authority")
+			Missing(result, "target_lease_authority")
 		}
 	}
 	for _, worktree := range snapshot.OrcaWorktrees {
 		if samePath(worktree.Path, request.WorktreePath) {
-			missing(result, "orca_worktree_authority")
+			Missing(result, "orca_worktree_authority")
 		}
 	}
 }
@@ -161,9 +161,9 @@ func uniqueSorted(values []string) []string {
 }
 
 // Inventory paths have already been canonicalized at the filesystem boundary.
-func samePath(left, right string) bool             { return left != "" && right != "" && left == right }
-func Missing(result *contract.Result, code string) { missing(result, code) }
-func missing(result *contract.Result, code string) {
+func samePath(left, right string) bool { return left != "" && right != "" && left == right }
+
+func Missing(result *contract.Result, code string) {
 	if code = strings.TrimSpace(code); code != "" {
 		result.Missing = append(result.Missing, code)
 	}
@@ -186,26 +186,26 @@ func LocalPreview(request contract.Request, snapshot corehealth.Snapshot, observ
 	result := ResultForRequest(request)
 	result.InventoryRefreshed = true
 	if !observed.PathsObservable {
-		missing(&result, "inventory_complete")
+		Missing(&result, "inventory_complete")
 	}
 	InspectInventory(&result, request, snapshot)
 	if !observed.CleanObservable {
-		missing(&result, "worktree_git_status")
+		Missing(&result, "worktree_git_status")
 	} else {
 		result.TargetClean = observed.Clean
 		if !observed.Clean {
-			missing(&result, "worktree_clean")
+			Missing(&result, "worktree_clean")
 		}
 	}
 	if !observed.StateOutsideTarget {
-		missing(&result, "state_store_outside_target")
+		Missing(&result, "state_store_outside_target")
 	}
 	return result
 }
 func MergeEvidence(result *contract.Result, verified bool) {
 	result.RemoteMerged = verified
 	if !verified {
-		missing(result, "remote_artifact_merged")
+		Missing(result, "remote_artifact_merged")
 		result.Warnings = append(result.Warnings, "remote merge evidence could not be verified through the configured provider")
 	}
 }

@@ -1,6 +1,7 @@
 package loopresult
 
 import (
+	application "issueops/internal/application/selfverify"
 	selfverify "issueops/internal/contract/selfverify"
 
 	"bytes"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestNewBuildsSelfVerificationResultContract(t *testing.T) {
-	got := New(10, 100, 95, "/repo")
+	got := application.NewLoopResult(10, 100, 95, "/repo")
 	if got.LoopKind != "self_verification" || got.KoreanName != augmentcontract.SelfVerificationKoreanName {
 		t.Fatalf("unexpected loop identity: %#v", got)
 	}

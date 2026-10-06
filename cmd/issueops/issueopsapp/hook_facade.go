@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"issueops/cmd/issueops/hookcli"
 	"issueops/cmd/issueops/hookcli/hookcatalog"
+	pathutil "issueops/cmd/issueops/pathutil"
 	renderer "issueops/internal/adapter/hookprompt"
 	"issueops/internal/adapter/hostprotocol"
 	"issueops/internal/adapter/projectdoc"
@@ -10,7 +11,7 @@ import (
 )
 
 func newHookConfig() hookcatalog.Config {
-	target := resolveTarget("")
+	target := pathutil.ResolveTarget("")
 	service := app.CatalogService{
 		DiscoverReport:        projectdoc.DiscoverProjectDocsReport,
 		FormatCompact:         projectdoc.FormatProjectDocCatalog,

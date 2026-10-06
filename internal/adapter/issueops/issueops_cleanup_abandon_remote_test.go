@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"strings"
 	"testing"
 
@@ -25,8 +26,8 @@ func (p *fakeAbandonRemote) Name() string { return "github" }
 func (p *fakeAbandonRemote) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (p *fakeAbandonRemote) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-	return port.IssueProviderCreatePullRequestResult{}, nil
+func (p *fakeAbandonRemote) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
 func (p *fakeAbandonRemote) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil

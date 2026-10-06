@@ -1,12 +1,13 @@
 package commandstep
 
 import (
+	selfverifydomain "issueops/internal/domain/selfverify"
 	"strings"
 	"testing"
 )
 
 func TestTailWithBudgetMarksTruncation(t *testing.T) {
-	out, truncated, original := TailWithBudget(strings.Repeat("x", 100), 40)
+	out, truncated, original := selfverifydomain.TailWithBudget(strings.Repeat("x", 100), 40)
 	if !truncated || original != 100 {
 		t.Fatalf("expected truncation metadata, got truncated=%v original=%d", truncated, original)
 	}

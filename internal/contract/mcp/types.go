@@ -5,12 +5,11 @@
 package mcp
 
 type ConformanceProbeConfig struct {
-	FixtureID          string
-	ProbeTool          string
-	Schema             map[string]any
-	SchemaSHA          string
-	ExpectedArguments  map[string]any
-	ResultPath         string
-	RunToken           string
-	ProductionDispatch func()
+	FixtureID         string
+	ProbeTool         string
+	Schema            map[string]any
+	SchemaSHA         string
+	ExpectedArguments map[string]any
+	ResultPath        string
+	RunToken          string
 }

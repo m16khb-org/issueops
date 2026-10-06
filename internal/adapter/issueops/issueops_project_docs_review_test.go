@@ -1,6 +1,8 @@
 package issueops
 
 import (
+	preflight "issueops/internal/adapter/preflight"
+	cycleapp "issueops/internal/application/issueopscycle"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,13 +17,13 @@ func gitRepoWithProjectDocsForTest(t *testing.T) string {
 	t.Helper()
 	repo := t.TempDir()
 	for _, args := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}} {
-		if code, _, stderr := preflightGitForReviewTest(repo, args...); code != 0 {
+		if code, _, stderr := preflight.GitCmd(repo, args...); code != 0 {
 			t.Fatalf("git %v failed: %s", args, stderr)
 		}
 	}
 	writeRepoFileForTest(t, repo, ".issueops/ADR.md", "# adr\n")
 	for _, args := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "base"}} {
-		if code, _, stderr := preflightGitForReviewTest(repo, args...); code != 0 {
+		if code, _, stderr := preflight.GitCmd(repo, args...); code != 0 {
 			t.Fatalf("git %v failed: %s", args, stderr)
 		}
 	}
@@ -105,23 +107,23 @@ func TestRecordIssueOpsProjectDocsReviewRejectsPreImplementPhase(t *testing.T) {
 // project-docs 게이트는 implementation review와 달리 direct/orca 양쪽에 걸린다.
 func TestProjectDocsReviewMissingAppliesToBothModes(t *testing.T) {
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect}}
-	if got := projectDocsReviewMissing(record, ""); got != "project_docs_review" {
+	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("direct mode must also be gated: %q", got)
 	}
 	record.Execution.Mode = issueops.ExecutionModeOrca
-	if got := projectDocsReviewMissing(record, ""); got != "project_docs_review" {
+	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("orca mode must be gated: %q", got)
 	}
 	record.ProjectDocsReview = &issueops.IssueOpsProjectDocsReview{Verdict: "no-change"}
-	if got := projectDocsReviewMissing(record, ""); got != "" {
+	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "" {
 		t.Fatalf("recorded review must clear the gate: %q", got)
 	}
 	record.ProjectDocsReview.ReviewedFingerprint = "old"
-	if got := projectDocsReviewMissing(record, "new"); got != "project_docs_review_stale" {
+	if got := cycleapp.ProjectDocsReviewMissing(record, "new"); got != "project_docs_review_stale" {
 		t.Fatalf("drifted fingerprint must be stale: %q", got)
 	}
 	record.ProjectDocsReview.ReviewedFingerprint = "new"
-	if got := projectDocsReviewMissing(record, "new"); got != "" {
+	if got := cycleapp.ProjectDocsReviewMissing(record, "new"); got != "" {
 		t.Fatalf("matching fingerprint must clear the gate: %q", got)
 	}
 }
@@ -200,11 +202,11 @@ func TestRecordIssueOpsProjectDocsReviewUpdatedAcceptsReviewedDocs(t *testing.T)
 // phase에 도달한 record도 publication 전에 판정을 남겨야 한다.
 func TestProjectDocsReviewMissingGatesRecordsWithoutExecution(t *testing.T) {
 	record := issueops.IssueOpsRecord{}
-	if got := projectDocsReviewMissing(record, ""); got != "project_docs_review" {
+	if got := cycleapp.ProjectDocsReviewMissing(record, ""); got != "project_docs_review" {
 		t.Fatalf("record without execution must still be gated: %q", got)
 	}
 	record.ProjectDocsReview = &issueops.IssueOpsProjectDocsReview{Verdict: "no-change", ReviewedFingerprint: "old"}
-	if got := projectDocsReviewMissing(record, "new"); got != "project_docs_review_stale" {
+	if got := cycleapp.ProjectDocsReviewMissing(record, "new"); got != "project_docs_review_stale" {
 		t.Fatalf("stale review without execution must be reported: %q", got)
 	}
 }

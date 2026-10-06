@@ -1,6 +1,7 @@
 package selfverify
 
 import (
+	contract "issueops/internal/contract/selfverify"
 	"reflect"
 	"testing"
 	"time"
@@ -11,17 +12,17 @@ func TestFailedRiskRaceCannotReplaceFullSuite(t *testing.T) {
 	deps := SelfVerifyStepDeps{
 		IssueOpsRoot: func() string { return "/repo" },
 		ValidateRiskQATier: func(string) RiskQAEvidence {
-			return RiskQAEvidence{Step: StepResult{Label: "risk QA tier", OK: false}, CoversFullGoTest: true}
+			return RiskQAEvidence{Step: contract.StepResult{Label: "risk QA tier", OK: false}, CoversFullGoTest: true}
 		},
-		RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+		RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 			if root != "/repo" || label != "go test" || timeout != 10*time.Minute || stdin != "" || name != "go" || !reflect.DeepEqual(args, []string{"test", "./...", "-count=1"}) {
-				return StepResult{Label: label, OK: false, Error: "unexpected verification command"}
+				return contract.StepResult{Label: label, OK: false, Error: "unexpected verification command"}
 			}
 			fullSuiteCalls++
-			return StepResult{Label: label, OK: true}
+			return contract.StepResult{Label: label, OK: true}
 		},
 	}
-	var fullTest StepResult
+	var fullTest contract.StepResult
 	planned := PlannedSteps("/repo", "/tmp/issueops", 100, &fullTest, deps)
 	if planned[4].Run().OK || !planned[5].Run().OK || fullSuiteCalls != 1 {
 		t.Fatalf("failed race reused as full suite: result=%+v calls=%d", fullTest, fullSuiteCalls)
@@ -33,18 +34,18 @@ func TestFailedRiskRaceCannotReplaceFullSuite(t *testing.T) {
 
 func TestFailedGoldenCommandKeepsMeasuredEvidence(t *testing.T) {
 	// Given
-	want := StepResult{Label: "contract golden tests", Command: "go test", DurationMS: 149, Error: "fixture failure", Stderr: "failed"}
+	want := contract.StepResult{Label: "contract golden tests", Command: "go test", DurationMS: 149, Error: "fixture failure", Stderr: "failed"}
 	calls := 0
 	deps := SelfVerifyStepDeps{
 		IssueOpsRoot: func() string { return "/repo" },
-		RunCommandStep: func(_ string, _ string, _ time.Duration, _ string, _ string, _ ...string) StepResult {
+		RunCommandStep: func(_ string, _ string, _ time.Duration, _ string, _ string, _ ...string) contract.StepResult {
 			calls++
 			return want
 		},
 	}
 
 	// When
-	got := CachedContractGoldenStep(StepResult{OK: false}, deps)
+	got := CachedContractGoldenStep(contract.StepResult{OK: false}, deps)
 
 	// Then
 	if calls != 1 || !reflect.DeepEqual(got, want) {
@@ -57,17 +58,17 @@ func TestRiskEvidenceIsLocalToEachPlannedRun(t *testing.T) {
 	deps := SelfVerifyStepDeps{
 		IssueOpsRoot: func() string { return "/repo" },
 		ValidateRiskQATier: func(string) RiskQAEvidence {
-			return RiskQAEvidence{Step: StepResult{OK: true, Command: "go test -race ./... -count=1"}, CoversFullGoTest: true}
+			return RiskQAEvidence{Step: contract.StepResult{OK: true, Command: "go test -race ./... -count=1"}, CoversFullGoTest: true}
 		},
-		RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+		RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 			if root != "/repo" || label != "go test" || name != "go" || !reflect.DeepEqual(args, []string{"test", "./...", "-count=1"}) {
 				t.Fatalf("unexpected command %s %s %s %v", root, label, name, args)
 			}
 			fullCalls++
-			return StepResult{Label: label, OK: false, Error: "second run failed"}
+			return contract.StepResult{Label: label, OK: false, Error: "second run failed"}
 		},
 	}
-	var firstResult, secondResult StepResult
+	var firstResult, secondResult contract.StepResult
 	first := PlannedSteps("/repo", "/tmp/first", 1, &firstResult, deps)
 	second := PlannedSteps("/repo", "/tmp/second", 2, &secondResult, deps)
 	if !first[4].Run().OK || !first[5].Run().OK || fullCalls != 0 {

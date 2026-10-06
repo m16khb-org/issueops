@@ -13,9 +13,6 @@ import (
 	verifyworkcontract "issueops/internal/contract/verifywork"
 )
 
-type WorkEvidenceItem = verifyworkcontract.EvidenceItem
-type WorkSuggestedCommand = verifyworkcontract.SuggestedCommand
-
 func BuildVerifyWork(repo string, all bool, argv []string) verifyworkcontract.Result {
 	preflight := preflightapp.Service{Observer: preflightadapter.GitObserver{}}
 	guard := guardapp.Service{Source: guardadapter.Source{}}

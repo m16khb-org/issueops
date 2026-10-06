@@ -3,6 +3,7 @@ package probe
 import (
 	"context"
 	selfverify "issueops/internal/contract/selfverify"
+	statepath "issueops/internal/domain/statepath"
 
 	"issueops/internal/adapter/docs"
 	"issueops/internal/adapter/install"
@@ -16,7 +17,7 @@ import (
 )
 
 func testSnapshotStore() app.SnapshotStore {
-	return app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+	return app.SnapshotStore{NormalizeKey: statepath.NormalizeKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
 		return statestore.WriteStateRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}
 }

@@ -30,11 +30,11 @@ func runQualityInspectWithDeps(args []string, deps qualityapp.InspectDeps) error
 	return qualitycli.RunInspect(args, cli)
 }
 
-func buildHarnessStatus(repo string) HarnessStatus {
+func buildHarnessStatus(repo string) statuscontract.Result {
 	return newStatusService().Run(repo)
 }
 
-func buildVerifyWork(repo string, all bool, argv []string) VerifyWorkResult {
+func buildVerifyWork(repo string, all bool, argv []string) verifyworkcontract.Result {
 	return newVerifyWorkService().Run(repo, all, argv)
 }
 
@@ -57,7 +57,3 @@ func runWorkerList(args []string) error {
 func runWorkerCancel(args []string) error {
 	return newWorkerCommand().RunCancel(args)
 }
-
-type HarnessStatus = statuscontract.Result
-
-type VerifyWorkResult = verifyworkcontract.Result

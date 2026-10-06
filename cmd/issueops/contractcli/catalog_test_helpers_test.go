@@ -6,14 +6,11 @@ import (
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/toolconformance"
-	mcpcontract "issueops/internal/contract/mcp"
 )
-
-func testConformanceCatalog() []mcpcontract.Tool { return mcpcatalog.AdvertisedTools() }
 
 func newTestConformance(deps ConformanceDependencies) *Conformance {
 	if deps.Catalog == nil {
-		deps.Catalog = testConformanceCatalog
+		deps.Catalog = mcpcatalog.AdvertisedTools
 	}
 	deps.LoadManifest = (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).LoadManifest
 	deps.LoadRegressionFixture = (fixtureapp.FixtureService{Files: toolconformance.FixtureFiles{}}).LoadRegressionFixture

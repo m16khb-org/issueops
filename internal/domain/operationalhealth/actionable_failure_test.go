@@ -1,6 +1,7 @@
 package operationalhealth
 
 import (
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"testing"
 	"time"
 )
@@ -13,13 +14,13 @@ func TestClassifySurfacesDurableIssueOpsFailures(t *testing.T) {
 
 	result := Classify(snapshot, Options{Now: time.Now()})
 
-	if !hasFinding(result, FindingExecutionFailure, "cycle") {
+	if !hasFinding(result, operationalhealthcontract.FindingExecutionFailure, "cycle") {
 		t.Fatalf("execution failure was not surfaced: %+v", result.Findings)
 	}
-	if !hasFinding(result, FindingCleanupFailure, "cycle") {
+	if !hasFinding(result, operationalhealthcontract.FindingCleanupFailure, "cycle") {
 		t.Fatalf("cleanup failure was not surfaced: %+v", result.Findings)
 	}
-	if !hasFinding(result, FindingIssueCreateFailure, "cycle") {
+	if !hasFinding(result, operationalhealthcontract.FindingIssueCreateFailure, "cycle") {
 		t.Fatalf("issue create failure was not surfaced: %+v", result.Findings)
 	}
 }

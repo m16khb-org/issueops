@@ -1,6 +1,9 @@
 package issueops
 
 import (
+	preflight "issueops/internal/adapter/preflight"
+	cycleapp "issueops/internal/application/issueopscycle"
+	issueopsdomain "issueops/internal/domain/issueops"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,7 +20,7 @@ func TestSchemaChangeDetection(t *testing.T) {
 		"prisma/schema.prisma",
 		"scripts/backfill.sql",
 	} {
-		if !pathIsSchemaChange(path) {
+		if !issueopsdomain.PathIsSchemaChange(path) {
 			t.Fatalf("schema-shaped path must be detected: %s", path)
 		}
 	}
@@ -27,7 +30,7 @@ func TestSchemaChangeDetection(t *testing.T) {
 		"skills/issueops/SKILL.md",
 		"web/src/components/entityCard.tsx",
 	} {
-		if pathIsSchemaChange(path) {
+		if issueopsdomain.PathIsSchemaChange(path) {
 			t.Fatalf("non-schema path must not be detected: %s", path)
 		}
 	}
@@ -36,7 +39,7 @@ func TestSchemaChangeDetection(t *testing.T) {
 // 스키마 변경이 없는 사이클에서는 게이트 자체가 활성화되지 않는다.
 func TestSchemaEvidenceGateInactiveWithoutSchemaChange(t *testing.T) {
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect}}
-	if got := schemaEvidenceMissingForPaths(record, []string{"main.go", "README.md"}, ""); got != "" {
+	if got := cycleapp.SchemaEvidenceMissingForPaths(record, []string{"main.go", "README.md"}, ""); got != "" {
 		t.Fatalf("non-schema change set must not activate the gate: %q", got)
 	}
 }
@@ -44,26 +47,26 @@ func TestSchemaEvidenceGateInactiveWithoutSchemaChange(t *testing.T) {
 func TestSchemaEvidenceGateActivatesOnSchemaChange(t *testing.T) {
 	paths := []string{"main.go", "src/migrations/1730000000-add-index.ts"}
 	record := issueops.IssueOpsRecord{Execution: &issueops.Execution{Mode: issueops.ExecutionModeDirect}}
-	if got := schemaEvidenceMissingForPaths(record, paths, ""); got != "schema_evidence" {
+	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "schema_evidence" {
 		t.Fatalf("schema change must activate the gate: %q", got)
 	}
 	record.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{
 		Measurements: []string{"orders row count = 8,412,003"},
 		Sources:      []string{"db-bc-prod execute_sql_bc_prod_market"},
 	}
-	if got := schemaEvidenceMissingForPaths(record, paths, ""); got != "" {
+	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "" {
 		t.Fatalf("recorded measurements must clear the gate: %q", got)
 	}
 	record.SchemaEvidence.ReviewedFingerprint = "old"
-	if got := schemaEvidenceMissingForPaths(record, paths, "new"); got != "schema_evidence_stale" {
+	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, "new"); got != "schema_evidence_stale" {
 		t.Fatalf("drifted fingerprint must be stale: %q", got)
 	}
 	record.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{Waived: true, WaiverRationale: "read-only view, no index impact"}
-	if got := schemaEvidenceMissingForPaths(record, paths, ""); got != "" {
+	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "" {
 		t.Fatalf("waived evidence must clear the gate: %q", got)
 	}
 	record.SchemaEvidence = &issueops.IssueOpsSchemaEvidence{Waived: true}
-	if got := schemaEvidenceMissingForPaths(record, paths, ""); got != "schema_evidence" {
+	if got := cycleapp.SchemaEvidenceMissingForPaths(record, paths, ""); got != "schema_evidence" {
 		t.Fatalf("waiver without rationale must not clear the gate: %q", got)
 	}
 }
@@ -124,7 +127,7 @@ func gitRepoWithSchemaChangeForTest(t *testing.T) string {
 	t.Helper()
 	repo := t.TempDir()
 	for _, args := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}} {
-		if code, _, stderr := preflightGitForReviewTest(repo, args...); code != 0 {
+		if code, _, stderr := preflight.GitCmd(repo, args...); code != 0 {
 			t.Fatalf("git %v failed: %s", args, stderr)
 		}
 	}

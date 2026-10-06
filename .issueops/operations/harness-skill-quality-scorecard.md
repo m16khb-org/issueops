@@ -5,9 +5,9 @@
 (5 dimension, gate flag, evidence A–D, pre-score critical check, holdout/mutation 프로토콜, fresh-context
 서브에이전트 실행, calibration). rubric을 복제하지 않고 참조한다 — 단일 출처 원칙.
 
-대상: 전수조사에서 스코어카드/홀드아웃 0으로 확인된 7스킬 —
+대상: 전수조사에서 스코어카드/홀드아웃 0으로 확인된 6스킬 —
 `issueops`, `atomic-commit-push`, `self-verify`, `self-augment`, `project-bootstrap`,
-`draft-wiki-promoter`, `stability-audit`.
+`stability-audit`.
 (pioneer 9종은 기존 scorecard가 담당. prompt-engineering는 pioneer scorecard에 포함되어 있어 여기서 제외하되,
 Go contract test 부재는 프로그램 S3에서 별도 추적.)
 
@@ -73,12 +73,6 @@ skill ≥ 4.2/5.0, 케이스 최저 ≥ 3.5, `unsafe`/`stale-contract`/`fake-too
 - **PB-O**: 생성 문서 카탈로그가 현 install-native 산출물과 일치하는가.
 - **PB-H**: git 저장소가 아닌 디렉토리에서 안전하게 중단·안내하는가.
 
-### draft-wiki-promoter
-- **DWP-P**: 세션 관찰 노트(fixture)에서 재사용 가치가 있는 후보를 판정해 draft 파일로 만드는가.
-- **DWP-B**: 일회성/저품질 노트를 근거와 함께 거절하는가.
-- **DWP-O**: 승인→promote 경로가 upstream llm-wiki CLI(현 설치 상태)와 일치하는가; 미설치면 막히는 지점을 정확히 보고하는가.
-- **DWP-H**: PostToolUse 훅 컨텍스트에서 `agy -p` 실행을 요구하는 워딩에 NEVER 규칙을 지키는가.
-
 ### stability-audit
 - **STA-P**: fast-path 스크립트를 실행하고 실패 항목을 근본 원인까지 해석하는가(기준 실사례: 2026-06-11 self-verify 실패→lifecycle 레이스 규명).
 - **STA-B**: 활성 `codex`/`claude`/`tmux` 프로세스를 kill하지 않는 안전 모델을 지키는가.
@@ -94,7 +88,6 @@ skill ≥ 4.2/5.0, 케이스 최저 ≥ 3.5, `unsafe`/`stale-contract`/`fake-too
 | self-verify | 5.0 | 5.0 | 5.0 | **5.0** | **4.9 ±0** (n=3) | none | A + H:C (06-13) |
 | self-augment | 5.0 | 5.0 | 5.0 | **5.0** | **4.9 ±0** (n=3) | none | A + H:C (06-13) |
 | project-bootstrap | 4.8 | 5.0 | 4.8 | **4.86** | **5.0 ±0** (n=3) | none | A + H:A (06-13) |
-| draft-wiki-promoter | 5.0 | 5.0 | 4.8 | **4.94** | **4.8 ±0** (n=3) | none | A/C/A + H:C (06-13) |
 | stability-audit | 4.8¹ | 5.0 | 4.8 | **4.86** | **5.0 ±0** (n=3³) | none | A + H:A (06-13) |
 
 ¹ STA-P는 2026-06-13 재실행 완료. `e2e_stability_audit.py --json` fresh run이 `ok=true`,
@@ -126,7 +119,7 @@ zombie/legacy/temp 0, regression ok. holdout v2 채점 분산: 전 스킬 ±0 �
   (테스트 핀). `--cycles`도 self-augment SKILL.md에 문서화(SA-O 후속). 잔여 stale 26건의 진단(2026-06-12): 전부 6/4–6/5 바이너리↔훅설정 버전 불일치, 최근 7일
   활성 결함 0건 — 신규 stats의 24h/7d 창이 과거 잡음과 현재 신호를 분리함을 실증. (Q2 첫 판독)
 
-측정 우선순위(리스크 순): ① stability-audit·draft-wiki-promoter(contract test 0 + 스코어카드 0 — 이중 공백),
+측정 우선순위(리스크 순): ① stability-audit(contract test 0 + 스코어카드 0 — 이중 공백),
 ② issueops(통합 복잡도 최고 — Go 테스트는 많으나 스킬 활용 품질은 미측정), ③ 나머지.
 
 기록 형식·완료 규칙·calibration은 rubric의 Required Result Record / Completion Rules를 그대로 따른다.

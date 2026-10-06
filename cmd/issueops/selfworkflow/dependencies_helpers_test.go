@@ -3,48 +3,11 @@ package selfworkflow
 import (
 	"encoding/json"
 	"os"
-
-	augmentcontract "issueops/internal/contract/selfaugment"
-	verifycontract "issueops/internal/contract/selfverify"
-	augmentdomain "issueops/internal/domain/selfaugment"
 )
 
 const (
-	DefaultLoopTargetScoreExclusive     = 95.0
-	SelfAugmentationLessonKind          = augmentcontract.SelfAugmentationLessonKind
-	SelfAugmentationKoreanName          = augmentcontract.SelfAugmentationKoreanName
-	SelfAugmentationPlanKind            = augmentcontract.SelfAugmentationPlanKind
-	SelfVerificationKoreanName          = augmentcontract.SelfVerificationKoreanName
-	SelfVerificationSummaryKind         = augmentdomain.SelfVerificationSummaryKind
-	SelfAugmentCandidateStatusOpen      = selfAugmentCandidateStatusOpen
-	SelfAugmentCandidateStatusSatisfied = selfAugmentCandidateStatusSatisfied
+	DefaultLoopTargetScoreExclusive = 95.0
 )
-
-type StepResult = verifycontract.StepResult
-
-type SelfAugmentCandidate = augmentcontract.SelfAugmentCandidate
-type SelfAugmentGoal = augmentcontract.SelfAugmentGoal
-type SelfAugmentInfluence = augmentcontract.SelfAugmentInfluence
-type SelfAugmentIteration = augmentcontract.SelfAugmentIteration
-type SelfAugmentLessonRequest = augmentcontract.SelfAugmentLessonRequest
-type SelfAugmentLessonResult = augmentcontract.SelfAugmentLessonResult
-type SelfAugmentLessonStateSnapshot = augmentcontract.SelfAugmentLessonStateSnapshot
-type SelfAugmentPlanRequest = augmentcontract.SelfAugmentPlanRequest
-type SelfAugmentPlanResult = augmentcontract.SelfAugmentPlanResult
-type SelfAugmentRepoSignals = augmentcontract.SelfAugmentRepoSignals
-type SelfAugmentResult = augmentcontract.SelfAugmentResult
-type SelfAugmentSlowStep = augmentcontract.SelfAugmentSlowStep
-type SelfAugmentStepDurationStat = augmentcontract.SelfAugmentStepDurationStat
-type SelfAugmentSummary = augmentcontract.SelfAugmentSummary
-type SelfVerificationContract = verifycontract.SelfVerificationContract
-type SelfVerificationCoverage = verifycontract.SelfVerificationCoverage
-type SelfVerificationCoverageDefinition = verifycontract.SelfVerificationCoverageDefinition
-type SelfVerificationFailureCluster = verifycontract.SelfVerificationFailureCluster
-type SelfVerificationGoalDefinition = verifycontract.SelfVerificationGoalDefinition
-type SelfVerificationGoalScore = verifycontract.SelfVerificationGoalScore
-
-type selfVerificationCoverageDefinition = verifycontract.SelfVerificationCoverageDefinition
-type selfVerificationGoalDefinition = verifycontract.SelfVerificationGoalDefinition
 
 var IssueOpsRoot = func() string {
 	if root := os.Getenv("ISSUEOPS_ROOT"); root != "" {

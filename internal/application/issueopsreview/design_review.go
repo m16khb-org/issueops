@@ -2,6 +2,7 @@ package issueopsreview
 
 import (
 	"fmt"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -9,7 +10,7 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func RecordDesignReview(store reviewport.DesignReviewStore, stateRoot, id string, req model.IssueOpsDesignReviewRequest) (model.IssueOpsRecord, error) {
+func RecordDesignReview(store reviewport.DesignReviewStore, stateRoot, id string, req reviewcontract.DesignReviewRequest) (model.IssueOpsRecord, error) {
 	review, err := reviewdomain.PrepareDesignReview(req)
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err

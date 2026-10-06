@@ -55,12 +55,7 @@ func IssueOpsStrictPRReadinessWithState(root string, record model.IssueOpsRecord
 func IssueOpsPhaseCompletion(record model.IssueOpsRecord, phase model.IssueOpsPhase) model.IssueOpsReadiness {
 	return testCycleReadiness().Completion(record, phase)
 }
-func IssueOpsProblemReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
-	return cycle.ProblemReadiness(record)
-}
-func IssueOpsGrillReadiness(record model.IssueOpsRecord) model.IssueOpsReadiness {
-	return cycle.GrillReadiness(record)
-}
+
 func AdvanceIssueOpsPhase(root, id, to string) (model.IssueOpsRecord, error) {
 	record, _, err := testCyclePhaseService(nil).AdvanceReport(root, id, to)
 	return record, err

@@ -3,6 +3,8 @@ package state
 import (
 	"errors"
 	"io/fs"
+	statedomain "issueops/internal/domain/state"
+	statepath "issueops/internal/domain/statepath"
 	"os"
 	"path/filepath"
 
@@ -16,9 +18,9 @@ func Doctor(dir string) (statecontract.StateDoctorResult, error) {
 	if err != nil && !os.IsNotExist(err) {
 		return failedDoctorResult(dir), err
 	}
-	entrySnapshots := make([]stateapplication.DoctorEntry, 0, len(entries))
+	entrySnapshots := make([]statedomain.DoctorEntry, 0, len(entries))
 	for _, entry := range entries {
-		entrySnapshots = append(entrySnapshots, stateapplication.DoctorEntry{
+		entrySnapshots = append(entrySnapshots, statedomain.DoctorEntry{
 			Name:  entry.Name(),
 			Path:  filepath.Join(dir, entry.Name()),
 			IsDir: entry.IsDir(),
@@ -34,7 +36,7 @@ func Doctor(dir string) (statecontract.StateDoctorResult, error) {
 	for _, row := range rows {
 		rowSnapshots = append(rowSnapshots, stateapplication.DoctorRow{
 			Key:  row.ID,
-			Path: statePath(dir, row.ID),
+			Path: statepath.Path(dir, row.ID),
 			Data: row.Data,
 		})
 	}

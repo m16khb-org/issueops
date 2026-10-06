@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,8 +37,8 @@ func (f *fakeBodySyncProvider) Name() string { return "github" }
 func (f *fakeBodySyncProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (f *fakeBodySyncProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-	return port.IssueProviderCreatePullRequestResult{}, nil
+func (f *fakeBodySyncProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
 func (f *fakeBodySyncProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil

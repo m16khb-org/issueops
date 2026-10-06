@@ -135,7 +135,7 @@ func (repo Repository) signalRules() []repoSignalRule {
 				FileContainsTerm(root, filepath.Join("internal", "contract", "issueops", "execution_sync_base_test.go"), "TestBaseSyncRequiredErrorCarriesReseedFreeNextCommand")
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasGeniusMermaidLint = DirContainsTerm(root, filepath.Join("internal", "adapter", "verification", "probe"), "lintMermaidBlocks") &&
+			signals.HasGeniusMermaidLint = DirContainsTerm(root, filepath.Join("internal", "adapter", "verification", "probe"), "LintMermaidBlocks") &&
 				FileContainsTerm(root, filepath.Join("internal", "adapter", "verification", "probe", "validation_mcp_mermaid_native_wrappers_test.go"), "TestLintMermaidBlocksEnforcesGeniusThinkRules") &&
 				!FileContainsTerm(root, filepath.Join(".issueops", "ARCHITECTURE.md"), `\n`)
 		}},
@@ -152,8 +152,7 @@ func (repo Repository) signalRules() []repoSignalRule {
 			signals.HasMCPAdapterCatalog = hasMCPAdapterCatalog(root)
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {
-			signals.HasCompatibilityContract = (FileContainsTerm(root, filepath.Join("cmd", "issueops", "contract.go"), "CompatibilityContract") ||
-				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "misc_facade.go"), "CompatibilityContract")) &&
+			signals.HasCompatibilityContract = FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "misc_facade.go"), "CompatibilityContract") &&
 				FileContainsTerm(root, filepath.Join("cmd", "issueops", "issueopsapp", "root_command_facade.go"), `"contract":`)
 		}},
 		{func(root string, signals *contract.SelfAugmentRepoSignals) {

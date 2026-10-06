@@ -3,6 +3,7 @@ package issueops
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -26,8 +27,8 @@ func (p *fakeCompletionProvider) Name() string { return "github" }
 func (p *fakeCompletionProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (p *fakeCompletionProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-	return port.IssueProviderCreatePullRequestResult{}, nil
+func (p *fakeCompletionProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
 func (p *fakeCompletionProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil

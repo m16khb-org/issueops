@@ -2,6 +2,7 @@ package apidoc
 
 import (
 	"encoding/json"
+	contract "issueops/internal/contract/apidoc"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +22,7 @@ func TestRunAPIDocRoutesStaticCheckAndUsageErrors(t *testing.T) {
 		return runAPIDoc([]string{"static-check", "--repo", root, "--json"})
 	})
 
-	var result apiDocStaticResult
+	var result contract.StaticResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode api-doc static JSON: %v\n%s", err, out)
 	}
@@ -82,7 +83,7 @@ func TestRunAPIDocCheckJSONSkipsReviewWhenStaticFails(t *testing.T) {
 		return nil
 	})
 
-	var result apiDocCheckResult
+	var result contract.CheckResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatalf("decode api-doc check JSON: %v\n%s", err, out)
 	}

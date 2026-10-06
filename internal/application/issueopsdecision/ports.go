@@ -2,9 +2,8 @@ package issueopsdecision
 
 import (
 	"context"
+	issueopscontract "issueops/internal/contract/issueops"
 	"time"
-
-	issueopsdecisioncontract "issueops/internal/contract/issueopsdecision"
 )
 
 type Repository interface {
@@ -12,8 +11,8 @@ type Repository interface {
 		context.Context,
 		string,
 		string,
-		func(issueopsdecisioncontract.Record) (issueopsdecisioncontract.Record, error),
-	) (issueopsdecisioncontract.Record, error)
+		func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error),
+	) (issueopscontract.IssueOpsRecord, error)
 }
 
 type Clock interface {

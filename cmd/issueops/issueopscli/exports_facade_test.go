@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
+	executionissue "issueops/internal/contract/executionissue"
 	"strings"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
 func TestExportedIssueOpsFacades(t *testing.T) {
@@ -49,12 +49,12 @@ func TestIssueOpsPublicationCreateRequiresComposedDependencies(t *testing.T) {
 		t.Fatalf("zero dependency wrapper err=%v", err)
 	}
 	handlerCalls := 0
-	err = runIssueOpsForTest(args, Dependencies{Remote: testRemoteCommand(), Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+	err = runIssueOpsForTest(args, Dependencies{Remote: testRemoteCommand(), Publication: remotecmd.PublicationHandlers{Create: func(_ context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 		handlerCalls++
 		if request.ID != record.ID || request.Confirm {
 			t.Fatalf("request=%#v", request)
 		}
-		return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
+		return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 	}}})
 	if err != nil || handlerCalls != 1 {
 		t.Fatalf("handlerCalls=%d err=%v", handlerCalls, err)

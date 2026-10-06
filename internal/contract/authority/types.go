@@ -16,7 +16,8 @@ const (
 // Capability-local aliases keep domain/authority on its own contract package.
 type NativeActor = model.NativeActor
 
-// ErrInvalidState is the shared fail-closed schema error.
+// ErrInvalidState is the shared fail-closed schema error, named here because
+// domain/authority may import only this contract package.
 var ErrInvalidState = statecontract.ErrInvalidState
 
 type Record struct {

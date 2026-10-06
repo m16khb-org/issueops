@@ -1,6 +1,7 @@
 package projectbootstrap
 
 import (
+	projectbootstrapcontract "issueops/internal/contract/projectbootstrap"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,7 +71,7 @@ func TestAppendProjectDocsEntryWritesCautionsAndADR(t *testing.T) {
 func TestReadAndReviseProjectDocRequireSHAConsensus(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
-	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
+	if _, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	read, err := testProjectDocsService().Read(root, ".issueops/TESTING.md")
@@ -131,7 +132,7 @@ func TestAppendWritesRecordFileAndPreservesRootIndex(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, "go.mod"), "module example.com/modular\n")
-	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
+	if _, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	adrRoot := filepath.Join(root, projectdoc.ProjectDocsDir, "ADR.md")
@@ -181,7 +182,7 @@ func TestRouteAttachesFamilyOverviewInModularRepo(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, "go.mod"), "module example.com/routed\n")
-	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
+	if _, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	route, err := testProjectDocsService().Route(root, "test")

@@ -32,7 +32,7 @@ func (installer Installer) VerifyActivation(req port.NativeInstallRequest) ([]po
 		return nil, err
 	}
 	hooksPath := filepath.Join(req.CodexHome, "hooks.json")
-	hooksDigest, err := installer.deps.VerifyHookActivation(hooksPath, codexHooksConfig(req.BinPath))
+	hooksDigest, err := installer.deps.VerifyHookActivation(hooksPath, HooksConfig(req.BinPath))
 	if err != nil {
 		return nil, fmt.Errorf("Codex hook readback failed: %w", err)
 	}

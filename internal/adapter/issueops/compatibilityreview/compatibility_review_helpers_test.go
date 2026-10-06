@@ -1,6 +1,7 @@
 package compatibilityreview
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"time"
 
 	reviewapp "issueops/internal/application/issueopsreview"
@@ -9,12 +10,10 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-type Store = reviewport.CompatibilityStore
-
-func Record(store Store, stateRoot, id string, req model.IssueOpsCompatibilityReviewRequest) (model.IssueOpsRecord, error) {
+func Record(store reviewport.CompatibilityStore, stateRoot, id string, req reviewcontract.CompatibilityReviewRequest) (model.IssueOpsRecord, error) {
 	return reviewapp.RecordCompatibilityReview(store, stateRoot, id, req, time.Now().UTC().Format(time.RFC3339Nano))
 }
 
-func Validate(req model.IssueOpsCompatibilityReviewRequest) (model.IssueOpsCompatibilityReview, error) {
+func Validate(req reviewcontract.CompatibilityReviewRequest) (reviewcontract.CompatibilityReview, error) {
 	return reviewdomain.ValidateCompatibilityReview(req, time.Now().UTC().Format(time.RFC3339Nano))
 }

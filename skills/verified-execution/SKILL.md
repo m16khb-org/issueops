@@ -351,7 +351,7 @@ receipt; blocked preserves safe state without further unauthorized mutation.
 - API changes require plan/draft evidence of changed endpoints (or none), public
   errors reachable through business logic, available static checks, agent review
   for visible errors, and targeted commands. Prefer repo commands; if absent,
-  record that and use the nearest check, without blaming unrelated legacy debt.
+  record that and use the nearest check, without blaming unrelated pre-existing debt.
 - Runtime/environment differences need a matrix: Environment | Repo/config
   evidence | Runtime evidence | Failure path | Remediation order. Separate source
   from live DB/config/env/pod/log observations and similar-looking failure paths;

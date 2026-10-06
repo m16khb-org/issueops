@@ -2,6 +2,8 @@ package orphancleanup
 
 import (
 	"context"
+	contract "issueops/internal/contract/issueopsorphancleanup"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,7 +31,7 @@ func TestOrphanApplyPreservesOwnerCreatedDuringMergeObservation(t *testing.T) {
 			if err != nil {
 				return snapshot, err
 			}
-			snapshot.Cycles = append(snapshot.Cycles, corehealth.Cycle{ID: record.ID, Repo: record.Repo, Branch: record.Branch, WorktreePath: record.WorktreePath, Phase: string(record.Phase)})
+			snapshot.Cycles = append(snapshot.Cycles, operationalhealthcontract.Cycle{ID: record.ID, Repo: record.Repo, Branch: record.Branch, WorktreePath: record.WorktreePath, Phase: string(record.Phase)})
 		}
 		return snapshot, nil
 	}
@@ -44,7 +46,7 @@ func TestOrphanApplyPreservesOwnerCreatedDuringMergeObservation(t *testing.T) {
 		_, err := (coreissueops.CycleRecordStore{StateRoot: stateRoot}).Save(context.Background(), owner)
 		return err
 	}
-	result, applyErr := Apply(context.Background(), request, ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
+	result, applyErr := Apply(context.Background(), request, contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
 	persisted, err := coreissueops.ReadIssueOpsExisting(stateRoot, owner.ID)
 	if err != nil || persisted.WorktreePath != fixture.worktree {
 		t.Fatalf("owner did not persist: %+v %v", persisted, err)
@@ -67,7 +69,7 @@ func TestOrphanApplyCancellationDuringMergeObservationPreservesResources(t *test
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	deps.VerifyMerged = func(model.IssueOpsRemoteArtifactVerification) error { cancel(); return nil }
-	result, applyErr := Apply(ctx, request, ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
+	result, applyErr := Apply(ctx, request, contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
 	_, statErr := os.Stat(fixture.worktree)
 	branch := strings.TrimSpace(gitOutputNoFail(fixture.repo, "rev-parse", "--verify", "refs/heads/"+fixture.branch))
 	if applyErr == nil || result.Applied || statErr != nil || branch != preview.HeadSHA {
@@ -106,7 +108,7 @@ func TestOrphanCleanupPreservesContainedStateStore(t *testing.T) {
 			request := fixture.request()
 			deps := fixture.deps(func(context.Context, string) (corehealth.Snapshot, error) {
 				snapshot := fixture.snapshot()
-				snapshot.Cycles = append(snapshot.Cycles, corehealth.Cycle{ID: unrelated.ID, Repo: unrelated.Repo, Branch: unrelated.Branch})
+				snapshot.Cycles = append(snapshot.Cycles, operationalhealthcontract.Cycle{ID: unrelated.ID, Repo: unrelated.Repo, Branch: unrelated.Branch})
 				return snapshot, nil
 			}, nil)
 			preview, err := Preview(context.Background(), request, deps)
@@ -120,7 +122,7 @@ func TestOrphanCleanupPreservesContainedStateStore(t *testing.T) {
 			if fingerprint == "" {
 				fingerprint = "contained-state-must-refuse"
 			}
-			result, applyErr := Apply(context.Background(), request, ApplyRequest{Confirm: true, Fingerprint: fingerprint}, deps)
+			result, applyErr := Apply(context.Background(), request, contract.ApplyRequest{Confirm: true, Fingerprint: fingerprint}, deps)
 			_, stateErr := coreissueops.ReadIssueOpsExisting(stateRoot, unrelated.ID)
 			_, worktreeErr := os.Stat(fixture.worktree)
 			if result.Applied || applyErr == nil || stateErr != nil || worktreeErr != nil {

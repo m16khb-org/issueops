@@ -1,15 +1,11 @@
 package issueops
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-)
-
-import (
 	"context"
+	issueopscontract "issueops/internal/contract/issueops"
+	"issueops/internal/port"
 	"strings"
 	"testing"
-
-	"issueops/internal/port"
 )
 
 // 인수 경로의 첫 명령은 `replace --preview`이고, 그 뒤 단계는 preview가 돌려주는
@@ -24,7 +20,7 @@ func TestReplacePreviewRendersTheRevokeStepForAnActiveLease(t *testing.T) {
 		inspectWorkspace: quiescentWorkspaceInspector(),
 	}
 
-	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueopscontract.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueopscontract.ExecutionReplacePreview, ExpectedGeneration: 1,
 		Actor: requester, CWD: record.Execution.Workspace.SourceRoot,
 	}, deps)

@@ -6,6 +6,8 @@ import (
 	selfverifyapp "issueops/internal/application/selfverify"
 	selfcontract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
+	statuscontract "issueops/internal/contract/status"
+	verifyworkcontract "issueops/internal/contract/verifywork"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,7 +64,7 @@ func TestRunStatusWritesTextAndJSON(t *testing.T) {
 	jsonText := captureStatusVerifyStdout(t, func() error {
 		return RunStatus(testDoctorService(), testWorkerService(), []string{"--repo", repo, "--json"})
 	})
-	var decoded Status
+	var decoded statuscontract.Result
 	if err := json.Unmarshal([]byte(jsonText), &decoded); err != nil {
 		t.Fatalf("decode status JSON: %v\n%s", err, jsonText)
 	}
@@ -143,7 +145,7 @@ func runStatusVerifyTestCommand(t *testing.T, dir string, name string, args ...s
 	}
 }
 
-func assertEvidenceItem(t *testing.T, items []WorkEvidenceItem, name string, status string) {
+func assertEvidenceItem(t *testing.T, items []verifyworkcontract.EvidenceItem, name string, status string) {
 	t.Helper()
 	for _, item := range items {
 		if item.Name == name {
@@ -159,7 +161,7 @@ func assertEvidenceItem(t *testing.T, items []WorkEvidenceItem, name string, sta
 	t.Fatalf("missing evidence item %s in %#v", name, items)
 }
 
-func assertSuggestedCommand(t *testing.T, commands []WorkSuggestedCommand, want []string) {
+func assertSuggestedCommand(t *testing.T, commands []verifyworkcontract.SuggestedCommand, want []string) {
 	t.Helper()
 	for _, command := range commands {
 		if equalStringSlices(command.Command, want) {
@@ -239,7 +241,7 @@ func TestRunStatusSelectsProductionSummaryWithoutChangingState(t *testing.T) {
 	out := captureStatusVerifyStdout(t, func() error {
 		return RunStatus(testDoctorService(), testWorkerService(), []string{"--repo", repo, "--json"})
 	})
-	var got Status
+	var got statuscontract.Result
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatal(err)
 	}

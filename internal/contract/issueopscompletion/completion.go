@@ -4,6 +4,8 @@ package issueopscompletion
 
 import leasecontract "issueops/internal/contract/issueopslease"
 
+// application/issueopscompletion은 completion domain·contract만 import할 수 있어서
+// lease 계약의 Execution과 ErrExecutionNotPrepared를 여기서 이 이름으로 둔다.
 type Execution = leasecontract.Execution
 
 var ErrExecutionNotPrepared = leasecontract.ErrExecutionNotPrepared

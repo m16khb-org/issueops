@@ -2,17 +2,19 @@ package compatibilityreview
 
 import (
 	"errors"
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	reviewport "issueops/internal/port/issueopsreview"
 	"strings"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
 )
 
-func reviewStore(readinessMissing []string) (Store, *model.IssueOpsRecord) {
+func reviewStore(readinessMissing []string) (reviewport.CompatibilityStore, *model.IssueOpsRecord) {
 	record := &model.IssueOpsRecord{
 		OK: true, ID: "io-c", Repo: "/repo", Branch: "12-c", Phase: model.IssueOpsPhasePlan,
 	}
-	return Store{
+	return reviewport.CompatibilityStore{
 		Read: func(string, string) (model.IssueOpsRecord, error) { return *record, nil },
 		TouchWrite: func(_ string, rec model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 			*record = rec
@@ -33,7 +35,7 @@ func reviewStore(readinessMissing []string) (Store, *model.IssueOpsRecord) {
 
 // Validate의 필수 목록/rollback/blocker 규칙과 RedactFreeform 적용을 잠근다.
 func TestValidateRules(t *testing.T) {
-	base := model.IssueOpsCompatibilityReviewRequest{
+	base := reviewcontract.CompatibilityReviewRequest{
 		BackwardCompatibility: []string{" additive field ", "additive field", ""},
 		SideEffects:           []string{"none"},
 		Verification:          []string{"go test ./..."},
@@ -68,17 +70,17 @@ func TestValidateRules(t *testing.T) {
 	}
 	for _, missing := range []struct {
 		field string
-		req   model.IssueOpsCompatibilityReviewRequest
+		req   reviewcontract.CompatibilityReviewRequest
 	}{
-		{"backward_compatibility", model.IssueOpsCompatibilityReviewRequest{SideEffects: []string{"n"}, Verification: []string{"v"}, RollbackPlan: "r"}},
-		{"side_effects", model.IssueOpsCompatibilityReviewRequest{BackwardCompatibility: []string{"b"}, Verification: []string{"v"}, RollbackPlan: "r"}},
-		{"verification", model.IssueOpsCompatibilityReviewRequest{BackwardCompatibility: []string{"b"}, SideEffects: []string{"s"}, RollbackPlan: "r"}},
+		{"backward_compatibility", reviewcontract.CompatibilityReviewRequest{SideEffects: []string{"n"}, Verification: []string{"v"}, RollbackPlan: "r"}},
+		{"side_effects", reviewcontract.CompatibilityReviewRequest{BackwardCompatibility: []string{"b"}, Verification: []string{"v"}, RollbackPlan: "r"}},
+		{"verification", reviewcontract.CompatibilityReviewRequest{BackwardCompatibility: []string{"b"}, SideEffects: []string{"s"}, RollbackPlan: "r"}},
 	} {
 		if _, err := Validate(missing.req); err == nil || !strings.Contains(err.Error(), missing.field) {
 			t.Fatalf("missing %s must fail: %v", missing.field, err)
 		}
 	}
-	if _, err := Validate(model.IssueOpsCompatibilityReviewRequest{BackwardCompatibility: []string{"b"}, SideEffects: []string{"s"}, Verification: []string{"v"}}); err == nil || !strings.Contains(err.Error(), "rollback_plan is required") {
+	if _, err := Validate(reviewcontract.CompatibilityReviewRequest{BackwardCompatibility: []string{"b"}, SideEffects: []string{"s"}, Verification: []string{"v"}}); err == nil || !strings.Contains(err.Error(), "rollback_plan is required") {
 		t.Fatalf("missing rollback must fail: %v", err)
 	}
 }
@@ -86,7 +88,7 @@ func TestValidateRules(t *testing.T) {
 // Record는 readiness 게이트를 통과할 때만 기록하고 phase를 compatibility-review로
 // 진행시킨다. 준비 부족은 구체적 missing 목록과 함께 거부한다.
 func TestRecordGatesAndPhaseAdvance(t *testing.T) {
-	req := model.IssueOpsCompatibilityReviewRequest{
+	req := reviewcontract.CompatibilityReviewRequest{
 		BackwardCompatibility: []string{"ok"},
 		SideEffects:           []string{"none"},
 		Verification:          []string{"tests"},
@@ -110,7 +112,7 @@ func TestRecordGatesAndPhaseAdvance(t *testing.T) {
 		t.Fatalf("unready record must list missing gates: %v", err)
 	}
 	// read 실패는 원본 에러로 전파된다.
-	failing := Store{Read: func(string, string) (model.IssueOpsRecord, error) {
+	failing := reviewport.CompatibilityStore{Read: func(string, string) (model.IssueOpsRecord, error) {
 		return model.IssueOpsRecord{}, errors.New("state unreadable")
 	}}
 	if _, err := Record(failing, "state", "io-x", req); err == nil || !strings.Contains(err.Error(), "state unreadable") {

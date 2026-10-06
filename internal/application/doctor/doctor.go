@@ -2,6 +2,8 @@ package doctor
 
 import (
 	"fmt"
+	doctorcontract "issueops/internal/contract/doctor"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"sort"
 	"strings"
 	"time"
@@ -10,12 +12,12 @@ import (
 	"issueops/internal/domain/operationalhealth"
 )
 
-func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error) {
+func (service Service) Run(req doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 	root, err := service.Effects.NormalizeRoot(req.RepoRoot)
 	if err != nil {
-		return HarnessDoctorResult{OK: false, Kind: "harness_doctor", StateDir: service.Effects.StateDir()}, err
+		return doctorcontract.HarnessDoctorResult{OK: false, Kind: "harness_doctor", StateDir: service.Effects.StateDir()}, err
 	}
-	result := HarnessDoctorResult{
+	result := doctorcontract.HarnessDoctorResult{
 		OK:           true,
 		Healthy:      true,
 		Kind:         "harness_doctor",
@@ -23,22 +25,22 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 		IssueOpsRoot: req.IssueOpsRoot,
 		RepoRoot:     root,
 		StateDir:     service.Effects.StateDir(),
-		Checks:       []HarnessDoctorCheck{},
-		Issues:       []HarnessDoctorIssue{},
+		Checks:       []doctorcontract.HarnessDoctorCheck{},
+		Issues:       []doctorcontract.HarnessDoctorIssue{},
 		GeneratedAt:  service.Effects.Now().UTC().Format(time.RFC3339Nano),
 	}
 	AddCheck(&result, "binary", true, "issueops command is running")
 
 	stateDoctor, stateDoctorErr := service.Effects.StateDoctor()
 	if stateDoctorErr != nil {
-		AddIssue(&result, "state_doctor_error", "error", "state doctor could not inspect the user-state store", service.Effects.StateDir(), &HarnessDoctorFix{Description: "Check user-state directory permissions or set ISSUEOPS_STATE_DIR to a writable location."})
+		AddIssue(&result, "state_doctor_error", "error", "state doctor could not inspect the user-state store", service.Effects.StateDir(), &doctorcontract.HarnessDoctorFix{Description: "Check user-state directory permissions or set ISSUEOPS_STATE_DIR to a writable location."})
 	} else {
 		AddCheck(&result, "state_store", stateDoctor.Healthy, stateDoctor.StateDir)
 		for _, issue := range stateDoctor.Issues {
 			if req.OperationalSnapshot != nil && doctordomain.IsUnexpectedStateArtifact(issue.Code) {
 				continue
 			}
-			AddIssue(&result, "state_"+issue.Code, issue.Severity, issue.Message, issue.Path, &HarnessDoctorFix{Command: "issueops state doctor --json", Description: "Inspect state-store integrity details with the narrow state doctor."})
+			AddIssue(&result, "state_"+issue.Code, issue.Severity, issue.Message, issue.Path, &doctorcontract.HarnessDoctorFix{Command: "issueops state doctor --json", Description: "Inspect state-store integrity details with the narrow state doctor."})
 		}
 	}
 	if req.OperationalSnapshot != nil {
@@ -46,7 +48,7 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 		if stateDoctorErr == nil {
 			for _, issue := range stateDoctor.Issues {
 				if doctordomain.IsUnexpectedStateArtifact(issue.Code) {
-					snapshot.StateArtifacts = append(snapshot.StateArtifacts, operationalhealth.StateArtifact{Path: issue.Path, Code: issue.Code})
+					snapshot.StateArtifacts = append(snapshot.StateArtifacts, operationalhealthcontract.StateArtifact{Path: issue.Path, Code: issue.Code})
 				}
 			}
 		}
@@ -62,7 +64,7 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 				}
 				summary = fmt.Sprintf("%s %s: %s", resourceKind, resourceID, summary)
 			}
-			AddIssue(&result, finding.Code, severity, summary, finding.Path, &HarnessDoctorFix{Description: "Inspect exact operational identities and reconcile this finding before continuing."})
+			AddIssue(&result, finding.Code, severity, summary, finding.Path, &doctorcontract.HarnessDoctorFix{Description: "Inspect exact operational identities and reconcile this finding before continuing."})
 		}
 	}
 
@@ -103,25 +105,25 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 	return result, nil
 }
 
-func AddCheck(r *HarnessDoctorResult, name string, healthy bool, summary string) {
-	r.Checks = append(r.Checks, HarnessDoctorCheck{Name: name, Healthy: healthy, Summary: summary})
+func AddCheck(r *doctorcontract.HarnessDoctorResult, name string, healthy bool, summary string) {
+	r.Checks = append(r.Checks, doctorcontract.HarnessDoctorCheck{Name: name, Healthy: healthy, Summary: summary})
 }
 
-func AddIssue(r *HarnessDoctorResult, code, severity, summary, path string, fix *HarnessDoctorFix) {
-	r.Issues = append(r.Issues, HarnessDoctorIssue{Code: code, Severity: severity, Summary: summary, Path: path, Fix: fix})
+func AddIssue(r *doctorcontract.HarnessDoctorResult, code, severity, summary, path string, fix *doctorcontract.HarnessDoctorFix) {
+	r.Issues = append(r.Issues, doctorcontract.HarnessDoctorIssue{Code: code, Severity: severity, Summary: summary, Path: path, Fix: fix})
 }
 
 func cloneOperationalSnapshot(snapshot operationalhealth.Snapshot) operationalhealth.Snapshot {
-	snapshot.Cycles = append([]operationalhealth.Cycle(nil), snapshot.Cycles...)
-	snapshot.GitWorktrees = append([]operationalhealth.GitWorktree(nil), snapshot.GitWorktrees...)
-	snapshot.LocalRefs = append([]operationalhealth.GitRef(nil), snapshot.LocalRefs...)
-	snapshot.RemoteRefs = append([]operationalhealth.GitRef(nil), snapshot.RemoteRefs...)
-	snapshot.OrcaWorktrees = append([]operationalhealth.OrcaWorktree(nil), snapshot.OrcaWorktrees...)
-	snapshot.Terminals = append([]operationalhealth.OrcaTerminal(nil), snapshot.Terminals...)
-	snapshot.Tasks = append([]operationalhealth.OrcaTask(nil), snapshot.Tasks...)
-	snapshot.Dispatches = append([]operationalhealth.OrcaDispatch(nil), snapshot.Dispatches...)
-	snapshot.Gates = append([]operationalhealth.OrcaGate(nil), snapshot.Gates...)
-	snapshot.StateArtifacts = append([]operationalhealth.StateArtifact(nil), snapshot.StateArtifacts...)
-	snapshot.InventoryProblems = append([]operationalhealth.InventoryProblem(nil), snapshot.InventoryProblems...)
+	snapshot.Cycles = append([]operationalhealthcontract.Cycle(nil), snapshot.Cycles...)
+	snapshot.GitWorktrees = append([]operationalhealthcontract.GitWorktree(nil), snapshot.GitWorktrees...)
+	snapshot.LocalRefs = append([]operationalhealthcontract.GitRef(nil), snapshot.LocalRefs...)
+	snapshot.RemoteRefs = append([]operationalhealthcontract.GitRef(nil), snapshot.RemoteRefs...)
+	snapshot.OrcaWorktrees = append([]operationalhealthcontract.OrcaWorktree(nil), snapshot.OrcaWorktrees...)
+	snapshot.Terminals = append([]operationalhealthcontract.OrcaTerminal(nil), snapshot.Terminals...)
+	snapshot.Tasks = append([]operationalhealthcontract.OrcaTask(nil), snapshot.Tasks...)
+	snapshot.Dispatches = append([]operationalhealthcontract.OrcaDispatch(nil), snapshot.Dispatches...)
+	snapshot.Gates = append([]operationalhealthcontract.OrcaGate(nil), snapshot.Gates...)
+	snapshot.StateArtifacts = append([]operationalhealthcontract.StateArtifact(nil), snapshot.StateArtifacts...)
+	snapshot.InventoryProblems = append([]operationalhealthcontract.InventoryProblem(nil), snapshot.InventoryProblems...)
 	return snapshot
 }

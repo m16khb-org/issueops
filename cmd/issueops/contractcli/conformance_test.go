@@ -1,6 +1,7 @@
 package contractcli
 
 import (
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	fixturecontract "issueops/internal/contract/toolconformance"
 
 	"context"
@@ -200,7 +201,7 @@ func TestConformanceServeParsesRequiredFlags(t *testing.T) {
 }
 
 func TestProductionCatalogDoesNotAdvertiseConformanceProbe(t *testing.T) {
-	for _, tool := range testConformanceCatalog() {
+	for _, tool := range mcpcatalog.AdvertisedTools() {
 		if len(tool.Name) >= len("harness_probe_") && tool.Name[:len("harness_probe_")] == "harness_probe_" {
 			t.Fatalf("production catalog advertises probe %q", tool.Name)
 		}

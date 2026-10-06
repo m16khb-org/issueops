@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	contract "issueops/internal/contract/selfverify"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,10 +15,10 @@ import (
 )
 
 func TestPythonContractDistinguishesHistoricalEvidenceWithoutChangingSnapshotSchema(t *testing.T) {
-	steps := []StepResult{}
+	steps := []contract.StepResult{}
 	for _, label := range domain.StepOrder() {
 		if label != "Python script tests" {
-			steps = append(steps, StepResult{Label: label, OK: true})
+			steps = append(steps, contract.StepResult{Label: label, OK: true})
 		}
 	}
 	oldInput := augment.SelfAugmentResult{OK: true, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}
@@ -44,7 +45,7 @@ func TestPythonContractDistinguishesHistoricalEvidenceWithoutChangingSnapshotSch
 	if err := history.ValidateSummarySnapshot("old", old); err != nil {
 		t.Fatalf("historical snapshots must remain readable: %v", err)
 	}
-	steps = append(steps, StepResult{Label: "Python script tests", OK: true})
+	steps = append(steps, contract.StepResult{Label: "Python script tests", OK: true})
 	newInput := augment.SelfAugmentResult{OK: true, Iterations: 1, Runs: []augment.SelfAugmentIteration{{Iteration: 1, Steps: steps}}}
 	fresh := augment.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, Summary: SummarizeSelfVerification(newInput, 95)}
 	comparison := history.CompareSnapshots("v4", "v5", 100, old, fresh, "fixture")

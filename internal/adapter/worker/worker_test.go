@@ -144,7 +144,7 @@ func TestWorkerDirUsesStateDirFallback(t *testing.T) {
 	state := t.TempDir()
 	t.Setenv("ISSUEOPS_WORKER_DIR", "")
 	t.Setenv("ISSUEOPS_STATE_DIR", state)
-	dir, err := workerDir()
+	dir, err := ResolveDirectory()
 	if err != nil {
 		t.Fatal(err)
 	}

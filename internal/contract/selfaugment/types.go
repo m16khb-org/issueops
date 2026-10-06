@@ -77,6 +77,8 @@ const (
 	CandidateStatusSatisfied = "already_satisfied"
 )
 
+// domain/selfaugment는 contract/selfaugment만 import할 수 있어서 qualitycatalog의
+// 검증 종류를 여기서 이 이름으로 둔다.
 const (
 	VerificationToolSignal  = qualitycatalog.ToolSignalKind
 	VerificationDocArtifact = qualitycatalog.DocArtifactKind

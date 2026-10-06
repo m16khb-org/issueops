@@ -1,6 +1,7 @@
 package updatecli
 
 import (
+	contract "issueops/internal/contract/update"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -14,7 +15,7 @@ func stubInstallScriptCommandRunner(t *testing.T, fn func(string, ...string) err
 	return func() { installScriptCommandRunner = previous }
 }
 
-func stubMCPProxyProcessLister(t *testing.T, fn func() ([]mcpProxyProcess, error)) func() {
+func stubMCPProxyProcessLister(t *testing.T, fn func() ([]contract.MCPProxyProcess, error)) func() {
 	t.Helper()
 	previous := mcpProxyProcessLister
 	mcpProxyProcessLister = fn
@@ -130,7 +131,7 @@ func TestCleanupMCPProxiesDryRunAndApply(t *testing.T) {
 		mcpProxyOrphanTerminationSupported = previousSupport
 	})
 	binary := "/repo/bin/issueops"
-	processes := []mcpProxyProcess{
+	processes := []contract.MCPProxyProcess{
 		{
 			PID: os.Getpid(), ParentPID: 1, Command: binary + " mcp",
 			StartTime: "current-start", Executable: binary, IdentityVerified: true,
@@ -152,8 +153,8 @@ func TestCleanupMCPProxiesDryRunAndApply(t *testing.T) {
 			StartTime: "external-start", Executable: "/usr/local/bin/node", IdentityVerified: true,
 		},
 	}
-	restoreList := stubMCPProxyProcessLister(t, func() ([]mcpProxyProcess, error) {
-		return append([]mcpProxyProcess(nil), processes...), nil
+	restoreList := stubMCPProxyProcessLister(t, func() ([]contract.MCPProxyProcess, error) {
+		return append([]contract.MCPProxyProcess(nil), processes...), nil
 	})
 	defer restoreList()
 
@@ -199,19 +200,19 @@ func TestCleanupMCPProxiesSkipsIdentityChangedBeforeSignal(t *testing.T) {
 		mcpProxyOrphanTerminationSupported = previousSupport
 	})
 	binary := "/repo/bin/issueops"
-	first := mcpProxyProcess{
+	first := contract.MCPProxyProcess{
 		PID: 33, ParentPID: 1, Command: binary + " mcp",
 		StartTime: "orphan-start", Executable: binary, IdentityVerified: true,
 	}
 	second := first
 	second.StartTime = "reused-pid-start"
 	listCalls := 0
-	restoreList := stubMCPProxyProcessLister(t, func() ([]mcpProxyProcess, error) {
+	restoreList := stubMCPProxyProcessLister(t, func() ([]contract.MCPProxyProcess, error) {
 		listCalls++
 		if listCalls == 1 {
-			return []mcpProxyProcess{first}, nil
+			return []contract.MCPProxyProcess{first}, nil
 		}
-		return []mcpProxyProcess{second}, nil
+		return []contract.MCPProxyProcess{second}, nil
 	})
 	defer restoreList()
 	restoreTerm := stubMCPProxyTerminator(t, func(pid int) error {
@@ -237,8 +238,8 @@ func TestCleanupMCPProxiesSkipsOrphansOnUnsupportedPlatforms(t *testing.T) {
 		mcpProxyOrphanTerminationSupported = previousSupport
 	})
 	binary := "/repo/bin/issueops"
-	restoreList := stubMCPProxyProcessLister(t, func() ([]mcpProxyProcess, error) {
-		return []mcpProxyProcess{{
+	restoreList := stubMCPProxyProcessLister(t, func() ([]contract.MCPProxyProcess, error) {
+		return []contract.MCPProxyProcess{{
 			PID:              33,
 			ParentPID:        1,
 			Command:          binary + " mcp",
@@ -265,7 +266,7 @@ func TestCleanupMCPProxiesSkipsOrphansOnUnsupportedPlatforms(t *testing.T) {
 }
 
 func TestCleanupMCPProxiesReturnsEmptyProcessListWhenNoMatches(t *testing.T) {
-	restoreList := stubMCPProxyProcessLister(t, func() ([]mcpProxyProcess, error) {
+	restoreList := stubMCPProxyProcessLister(t, func() ([]contract.MCPProxyProcess, error) {
 		return nil, nil
 	})
 	defer restoreList()
@@ -279,7 +280,7 @@ func TestCleanupMCPProxiesReturnsEmptyProcessListWhenNoMatches(t *testing.T) {
 	}
 }
 
-func mcpCleanupActions(processes []MCPCleanupProcess) []string {
+func mcpCleanupActions(processes []contract.MCPCleanupProcess) []string {
 	actions := make([]string, 0, len(processes))
 	for _, process := range processes {
 		actions = append(actions, process.Action)

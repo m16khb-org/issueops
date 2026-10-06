@@ -11,8 +11,6 @@ import (
 	"runtime"
 )
 
-type mcpProxyProcess = contract.MCPProxyProcess
-type MCPCleanupProcess = contract.MCPCleanupProcess
 type Deps struct{ IssueOpsRoot func() string }
 
 var deps = Deps{IssueOpsRoot: func() string {
@@ -43,7 +41,7 @@ func testRuntime() adapter.Runtime {
 var installScriptCommandRunner = func(script string, args ...string) error {
 	return testRuntime().Install(filepath.Dir(filepath.Dir(script)), args)
 }
-var mcpProxyProcessLister = func() ([]mcpProxyProcess, error) { return testRuntime().List() }
+var mcpProxyProcessLister = func() ([]contract.MCPProxyProcess, error) { return testRuntime().List() }
 var mcpProxyTerminator = func(pid int) error { return testRuntime().Terminate(pid) }
 var mcpProxyOrphanTerminationSupported = func() bool { return runtime.GOOS == "darwin" }
 
@@ -73,7 +71,4 @@ func (testMCPProxyEffects) SupportsOrphanTermination() bool {
 }
 func CleanupMCPProxies(dry bool) (contract.MCPCleanupResult, error) {
 	return app.CleanupMCPProxies(testMCPProxyEffects{}, dry)
-}
-func parseMCPProxyProcessSnapshot(line, binary string) (mcpProxyProcess, bool) {
-	return adapter.ParseMCPProxyProcessSnapshot(line, binary)
 }

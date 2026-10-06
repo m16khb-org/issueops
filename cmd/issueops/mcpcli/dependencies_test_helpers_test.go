@@ -3,6 +3,7 @@ package mcpcli
 import (
 	"issueops/cmd/issueops/contractcli"
 	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"issueops/internal/adapter/inspect"
 	"issueops/internal/adapter/preflight"
 	preflightapp "issueops/internal/application/preflight"
@@ -10,6 +11,6 @@ import (
 
 func testTransportServices() MCPDependencies {
 	return MCPDependencies{APIDoc: testAPIDocService(), DefaultTarget: IssueOpsRoot(), Preflight: preflightapp.Service{Observer: preflight.GitObserver{}}, Skills: inspect.ListSkills, Resources: resourceConfigForTest(), Compatibility: func() any {
-		return contractcli.BuildCompatibilityContract(clicatalog.Commands(), testMCPCatalog().Tools)
-	}, Commit: testCommitService(), Lint: testLintService(), Fetch: testWebFetch, Worker: testWorkerService(), Execution: testExecutionDeps(), Catalog: testMCPCatalog()}
+		return contractcli.BuildCompatibilityContract(clicatalog.Commands(), mcpcatalog.Build().Tools)
+	}, Commit: testCommitService(), Lint: testLintService(), Fetch: testWebFetch, Worker: testWorkerService(), Execution: testExecutionDeps(), Catalog: mcpcatalog.Build()}
 }

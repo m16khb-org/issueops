@@ -1,7 +1,7 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
+	benchmark "issueops/internal/contract/issueopsbenchmark"
 	"strings"
 	"testing"
 )
@@ -10,7 +10,7 @@ import (
 // did before the pioneer dimension existed (true N/A: excluded from
 // average/minimum/Passed), while the dimension is still visibly recorded.
 func TestPioneerDimensionNAExcludedForNonTargetFixture(t *testing.T) {
-	fixture := issueopscontract.IssueOpsBenchmarkFixture{ID: "fixture"}
+	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "fixture"}
 	artifact := completeBenchmarkArtifactForTest()
 
 	score := ScoreIssueOpsBenchmarkArtifact(fixture, artifact)
@@ -40,7 +40,7 @@ func TestPioneerDimensionNAExcludedForNonTargetFixture(t *testing.T) {
 // pioneer deterministic failure is recorded. Without this, the N/A exclusion
 // could silently apply to every fixture and the feature would be a no-op.
 func TestPioneerDimensionParticipatesForTargetFixture(t *testing.T) {
-	fixture := issueopscontract.IssueOpsBenchmarkFixture{ID: "pioneer-algorithm-optimization", PioneerSkillTarget: "algorithm-optimization"}
+	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "pioneer-algorithm-optimization", PioneerSkillTarget: "algorithm-optimization"}
 	artifact := completeBenchmarkArtifactForTest()
 	artifact.PioneerSkillEvidence = ""
 

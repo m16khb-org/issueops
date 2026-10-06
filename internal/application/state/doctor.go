@@ -6,15 +6,13 @@ import (
 	"issueops/internal/domain/statepath"
 )
 
-type DoctorEntry = statedomain.DoctorEntry
-
 type DoctorRow struct {
 	Key  string
 	Path string
 	Data []byte
 }
 
-func Doctor(dir string, entries []DoctorEntry, rows []DoctorRow) statecontract.StateDoctorResult {
+func Doctor(dir string, entries []statedomain.DoctorEntry, rows []DoctorRow) statecontract.StateDoctorResult {
 	observations := make([]statedomain.DoctorRecord, 0, len(rows))
 	for _, row := range rows {
 		observation := statedomain.DoctorRecord{Key: row.Key, Path: row.Path}

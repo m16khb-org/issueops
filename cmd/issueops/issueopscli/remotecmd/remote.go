@@ -295,8 +295,7 @@ func readIssueOpsRemoteScoringRequestFile(path string) (issueopsremote.IssueOpsR
 		return issueopsremote.IssueOpsRemoteScoringRequest{}, err
 	}
 	var req issueopsremote.IssueOpsRemoteScoringRequest
-	req, err = issueopsremote.DecodeIssueOpsRemoteScoringRequest(b)
-	if err != nil {
+	if err := json.Unmarshal(b, &req); err != nil {
 		return issueopsremote.IssueOpsRemoteScoringRequest{}, fmt.Errorf("parse input file %s: %w", path, err)
 	}
 	return req, nil

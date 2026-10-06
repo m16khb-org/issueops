@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"path/filepath"
 	"strings"
@@ -141,7 +142,7 @@ func TestAISlopCleanReadinessDoesNotCheckPlanBinding(t *testing.T) {
 
 func TestRecordDevilsAdvocateReviewBindsStagedPlanWhenNoFileIsLinked(t *testing.T) {
 	stateRoot, record := executionPrepareRecord(t)
-	request := issueops.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}
+	request := reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}
 	if _, err := RecordIssueOpsDevilsAdvocateReview(stateRoot, record.ID, request); err == nil || !strings.Contains(err.Error(), "link-plan") {
 		t.Fatalf("a cycle with neither a linked nor a staged plan has nothing to review, got %v", err)
 	}
@@ -169,7 +170,7 @@ func TestReviewPlanBindingDoesNotMaskBrokenLinkedPlanWithStagedContent(t *testin
 	if _, err := writeIssueOps(context.Background(), root, record); err != nil {
 		t.Fatal(err)
 	}
-	_, err := RecordIssueOpsDevilsAdvocateReview(root, record.ID, issueops.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate"}})
+	_, err := RecordIssueOpsDevilsAdvocateReview(root, record.ID, reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate"}})
 	if err == nil {
 		t.Fatal("broken linked plan was silently replaced by staged content")
 	}

@@ -24,9 +24,9 @@ refresh of existing generated docs. Route instead:
 
 - incremental refresh while work is happening → `project-docs-update`;
 - oversized or badly structured docs → `project-docs-optimize`;
-- a repo with legacy flat `.issueops` family roots and no modular
-  manifest → `project-docs-optimize` (bootstrap preserves the flat layout and
-  reports `legacy_flat_layout_preserved` instead of half-migrating it).
+- a repo whose `.issueops` family roots are not modular yet (no
+  `documentation/manifest.json`) → `project-docs-bootstrap` creates the modular
+  layout; there is no flat-layout path.
 
 If `.issueops` documents already exist and the user did not ask for a
 refresh, do not run the write pass; route to `project-docs-update`.
@@ -87,7 +87,7 @@ See `PROMPT.md` for the full fill targets per document.
    `signals.test_commands`, `signals.profile`, each planned
    `files[].action`, and `files[].preserved` (true means the existing file
    will be kept as-is; only `AGENTS.md`'s managed marker block refreshes in
-   place). Heed `warnings` such as `legacy_flat_layout_preserved`,
+   place). Heed `warnings` such as
    `family_docs_preserved`, and `sync_available` — they reroute work to
    `project-docs-optimize` or `--sync` instead of forcing writes.
 

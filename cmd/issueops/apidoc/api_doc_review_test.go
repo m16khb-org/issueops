@@ -2,6 +2,9 @@ package apidoc
 
 import (
 	"errors"
+	reviewprompt "issueops/cmd/issueops/apidoc/reviewprompt"
+	app "issueops/internal/application/apidoc"
+	staticcheck "issueops/internal/domain/apidoc"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,7 +12,7 @@ import (
 )
 
 func TestBuildAPIDocReviewPromptIsFrameworkAgnostic(t *testing.T) {
-	prompt := buildAPIDocReviewPrompt([]string{"internal/api/user_handler.go", "openapi.yaml"}, "diff --git ...", "Require tenant headers.", "")
+	prompt := reviewprompt.Build([]string{"internal/api/user_handler.go", "openapi.yaml"}, "diff --git ...", "Require tenant headers.", "")
 	for _, want := range []string{"## Identity", "## Objective", "## Operating Phases", "## Output Contract", "framework-agnostic", "swaggo", "OpenAPI/Swagger specs", "Do not force NestJS decorators onto Go", "@ApiOperation", "business logic", "404", "409", "Require tenant headers."} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("prompt missing %q:\n%s", want, prompt)
@@ -28,7 +31,7 @@ func TestAPIDocCandidateDetectionCoversGoAndOpenAPIWithoutMarkdown(t *testing.T)
 		"internal/service/payment_service.go": false,
 	}
 	for file, want := range cases {
-		if got := isAPIDocCandidate(file); got != want {
+		if got := staticcheck.IsCandidate(file); got != want {
 			t.Fatalf("isAPIDocCandidate(%q)=%v want %v", file, got, want)
 		}
 	}
@@ -43,7 +46,7 @@ func TestRunAPIDocReviewSkipsWhenNoCandidateFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	runGitForContract(t, root, "add", "README.md")
-	result, err := runAPIDocReviewWithOptions(apiDocReviewOptions{Repo: root})
+	result, err := runAPIDocReviewWithOptions(app.ReviewOptions{Repo: root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,8 +69,8 @@ func TestAPIDocReviewRendersPromptWithoutSpawning(t *testing.T) {
 	}
 	t.Setenv("PATH", "")
 
-	result, err := runAPIDocReviewWithOptions(apiDocReviewOptions{Repo: root, Files: []string{"api/openapi.yaml"}, DiffFile: diffFile})
-	if !errors.Is(err, ErrReviewResultRequired) {
+	result, err := runAPIDocReviewWithOptions(app.ReviewOptions{Repo: root, Files: []string{"api/openapi.yaml"}, DiffFile: diffFile})
+	if !errors.Is(err, app.ErrReviewResultRequired) {
 		t.Fatalf("expected host-agent result requirement, result=%+v err=%v", result, err)
 	}
 	if result.OK || result.Verdict != "pending" || result.Reason != "host_agent_result_required" {
@@ -93,7 +96,7 @@ func TestAPIDocReviewRecordsSuppliedResult(t *testing.T) {
 	}
 	t.Setenv("PATH", "")
 
-	result, err := runAPIDocReviewWithOptions(apiDocReviewOptions{Repo: root, Files: []string{"api/openapi.yaml"}, DiffFile: diffFile, ResultFile: resultFile})
+	result, err := runAPIDocReviewWithOptions(app.ReviewOptions{Repo: root, Files: []string{"api/openapi.yaml"}, DiffFile: diffFile, ResultFile: resultFile})
 	if err != nil {
 		t.Fatalf("expected supplied result to pass, result=%+v err=%v", result, err)
 	}
@@ -120,11 +123,11 @@ func TestAPIDocAllModeUsesTrackedCandidateContent(t *testing.T) {
 	runGitForContract(t, root, "add", ".")
 	runGitForContract(t, root, "commit", "-m", "test")
 
-	files := trackedAPIDocFiles(root)
+	files := TrackedFiles(root)
 	if len(files) != 1 || files[0] != "src/users/users.controller.ts" {
 		t.Fatalf("unexpected tracked API files: %+v", files)
 	}
-	content, err := apiDocInput(root, files, "", true)
+	content, err := Input(root, files, "", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +167,7 @@ export class UsersController {
 	if err := os.WriteFile(filepath.Join(root, "src", "users", "dto", "create-user.dto.ts"), []byte(dto), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	result, err := runAPIDocStaticCheckWithOptions(apiDocStaticOptions{Repo: root, Files: []string{"src/users/users.controller.ts", "src/users/dto/create-user.dto.ts"}})
+	result, err := runAPIDocStaticCheckWithOptions(app.StaticOptions{Repo: root, Files: []string{"src/users/users.controller.ts", "src/users/dto/create-user.dto.ts"}})
 	if err == nil {
 		t.Fatal("expected static check to fail")
 	}
@@ -209,7 +212,7 @@ export class UsersController {
 		t.Fatal(err)
 	}
 
-	result, err := runAPIDocStaticCheckWithOptions(apiDocStaticOptions{
+	result, err := runAPIDocStaticCheckWithOptions(app.StaticOptions{
 		Repo:  root,
 		Files: []string{"src/users/users.controller.ts"},
 	})
@@ -222,7 +225,7 @@ export class UsersController {
 }
 
 func TestAPIDocReviewSchemaRequiresNullableLine(t *testing.T) {
-	schema := apiDocReviewSchema()
+	schema := reviewprompt.Schema()
 	properties := schema["properties"].(map[string]any)
 	findings := properties["findings"].(map[string]any)
 	items := findings["items"].(map[string]any)
@@ -245,7 +248,7 @@ func TestAPIDocReviewExtraPromptUsesExplicitPromptFileFirst(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := apiDocReviewExtraPrompt(apiDocReviewOptions{Repo: root, PromptFile: promptFile})
+	got, err := apiDocReviewExtraPrompt(app.ReviewOptions{Repo: root, PromptFile: promptFile})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +267,7 @@ func TestAPIDocReviewExtraPromptFallsBackToRepoSpec(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got, err := apiDocReviewExtraPrompt(apiDocReviewOptions{Repo: root})
+	got, err := apiDocReviewExtraPrompt(app.ReviewOptions{Repo: root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,7 +278,7 @@ func TestAPIDocReviewExtraPromptFallsBackToRepoSpec(t *testing.T) {
 }
 
 func TestAPIDocReviewExtraPromptReturnsEmptyWhenNoPromptExists(t *testing.T) {
-	got, err := apiDocReviewExtraPrompt(apiDocReviewOptions{Repo: t.TempDir()})
+	got, err := apiDocReviewExtraPrompt(app.ReviewOptions{Repo: t.TempDir()})
 	if err != nil {
 		t.Fatal(err)
 	}

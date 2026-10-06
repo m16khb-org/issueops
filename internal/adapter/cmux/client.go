@@ -61,9 +61,6 @@ type Client struct {
 }
 
 func (client Client) Preflight(ctx context.Context, request cmuxcontract.PreflightRequest) (cmuxcontract.PreflightResult, error) {
-	if err := requireSupportedPlatform(); err != nil {
-		return cmuxcontract.PreflightResult{}, err
-	}
 	if client.Runner == nil || client.ObserveEndpoint == nil {
 		return cmuxcontract.PreflightResult{}, fmt.Errorf("cmux preflight dependencies are unavailable")
 	}
@@ -116,9 +113,6 @@ func (client Client) Preflight(ctx context.Context, request cmuxcontract.Preflig
 }
 
 func (client Client) CreateWorkspace(ctx context.Context, request cmuxcontract.CreateRequest) (cmuxcontract.CreatedWorkspace, error) {
-	if err := requireSupportedPlatform(); err != nil {
-		return cmuxcontract.CreatedWorkspace{}, err
-	}
 	if !validUUID(request.Preflight.WindowID) || !filepath.IsAbs(request.CWD) || filepath.Clean(request.CWD) != request.CWD || strings.TrimSpace(request.AttemptID) == "" {
 		return cmuxcontract.CreatedWorkspace{}, fmt.Errorf("cmux create request identity is invalid")
 	}
@@ -150,9 +144,6 @@ func (client Client) CreateWorkspace(ctx context.Context, request cmuxcontract.C
 }
 
 func (client Client) Send(ctx context.Context, request cmuxcontract.SendRequest) (cmuxcontract.SendReceipt, error) {
-	if err := requireSupportedPlatform(); err != nil {
-		return cmuxcontract.SendReceipt{}, err
-	}
 	created := request.Created
 	if !validUUID(created.WindowID) || !validUUID(created.WorkspaceID) || !validUUID(created.SurfaceID) || strings.TrimSpace(request.Command) == "" {
 		return cmuxcontract.SendReceipt{}, fmt.Errorf("cmux send target is incomplete")

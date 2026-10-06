@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	app "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -186,7 +187,7 @@ func TestExecutionOwnerPlanMaterializationRequiresDurableIdentity(t *testing.T) 
 			record.WorktreePath = worktree
 			record.Execution = &issueopscontract.Execution{
 				Mode:      issueopscontract.ExecutionModeOrca,
-				Workspace: issueopscontract.Workspace{Root: worktree, ArtifactDir: issueArtifactDirFor(record)},
+				Workspace: issueopscontract.Workspace{Root: worktree, ArtifactDir: app.OwnerArtifactDir(record)},
 				Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusReleased},
 			}
 			if test.prelinked != "" {

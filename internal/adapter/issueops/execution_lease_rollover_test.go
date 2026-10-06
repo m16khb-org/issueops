@@ -3,6 +3,8 @@ package issueops
 import (
 	"context"
 	"fmt"
+	app "issueops/internal/application/issueopsowner"
+	executionissue "issueops/internal/contract/executionissue"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,8 +35,8 @@ func TestExecutionReplacementRecoversDeadOwnerAfterOrcaRuntimeRollover(t *testin
 	}}
 	dependencies := ExecutionReplaceDependencies{
 		OrcaOwner: inspector,
-		ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-			return port.ExecutionIssueSnapshot{
+		ReadIssue: func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+			return executionissue.ExecutionIssueSnapshot{
 				URL:   request.URL,
 				Body:  "## 완료 기준\n\n- AC-01\n- AC-02\n- AC-03\n\n## 검증\n\n```bash\ngo test ./internal/core/issueops -count=1\n```",
 				State: "open", Source: "test",
@@ -43,7 +45,7 @@ func TestExecutionReplacementRecoversDeadOwnerAfterOrcaRuntimeRollover(t *testin
 		inspectWorkspace: quiescentWorkspaceInspector(),
 	}
 
-	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: contractissueops.ExecutionReplacePreview, ExpectedGeneration: 1,
 		Actor: requester, CWD: record.Execution.Workspace.Root,
 	}, dependencies)
@@ -57,7 +59,7 @@ func TestExecutionReplacementRecoversDeadOwnerAfterOrcaRuntimeRollover(t *testin
 		t.Fatalf("dead owner did not enable bounded runtime rollover inventory: %#v", inspector.requests)
 	}
 
-	revoked, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	revoked, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: contractissueops.ExecutionReplaceRevoke, ExpectedGeneration: 1,
 		InventoryFingerprint: preview.InventoryFingerprint, Reason: "old Orca runtime rolled over",
 		Actor: requester, CWD: record.Execution.Workspace.Root, Confirm: true,
@@ -68,7 +70,7 @@ func TestExecutionReplacementRecoversDeadOwnerAfterOrcaRuntimeRollover(t *testin
 	if revoked.Execution.Lease.Generation != 2 || revoked.Execution.Lease.Status != contractissueops.LeaseStatusRevoking {
 		t.Fatalf("revoke rotated the lease incorrectly: %#v", revoked.Execution.Lease)
 	}
-	if _, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	if _, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: contractissueops.ExecutionReplaceRevoke, ExpectedGeneration: 1,
 		InventoryFingerprint: preview.InventoryFingerprint, Reason: "duplicate revoke",
 		Actor: requester, CWD: record.Execution.Workspace.Root, Confirm: true,
@@ -76,7 +78,7 @@ func TestExecutionReplacementRecoversDeadOwnerAfterOrcaRuntimeRollover(t *testin
 		t.Fatalf("duplicate revoke did not fail generation CAS: %v", err)
 	}
 
-	finalizePreview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	finalizePreview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: contractissueops.ExecutionReplaceFinalizePreview, ExpectedGeneration: 2,
 		Actor: requester, CWD: record.Execution.Workspace.Root,
 	}, dependencies)
@@ -87,7 +89,7 @@ func TestExecutionReplacementRecoversDeadOwnerAfterOrcaRuntimeRollover(t *testin
 		t.Fatal("dead owner rollover finalization did not return a quiescence fingerprint")
 	}
 
-	finalized, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	finalized, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: contractissueops.ExecutionReplaceFinalize, ExpectedGeneration: 2,
 		QuiescenceFingerprint: finalizePreview.QuiescenceFingerprint,
 		Actor:                 requester, CWD: record.Execution.Workspace.Root, Confirm: true,
@@ -128,7 +130,7 @@ func TestExecutionReplacementRuntimeRolloverSafetyBoundaries(t *testing.T) {
 		}
 		inspector := &rolloverOwnerInspector{inventory: port.ExecutionOrcaOwnerInventory{RuntimeID: "runtime-current"}}
 
-		_, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+		_, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 			ID: record.ID, Action: contractissueops.ExecutionReplacePreview, ExpectedGeneration: 1,
 			Actor: executionActor("codex", "replacement-owner"), CWD: record.Execution.Workspace.Root,
 		}, ExecutionReplaceDependencies{OrcaOwner: inspector})
@@ -147,7 +149,7 @@ func TestExecutionReplacementRuntimeRolloverSafetyBoundaries(t *testing.T) {
 			TaskStatus: "completed", DispatchStatus: "completed",
 		}}
 
-		_, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+		_, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 			ID: record.ID, Action: contractissueops.ExecutionReplacePreview, ExpectedGeneration: 1,
 			Actor: executionActor("codex", "replacement-owner"), CWD: record.Execution.Workspace.Root,
 		}, ExecutionReplaceDependencies{OrcaOwner: inspector})
@@ -164,14 +166,14 @@ func TestExecutionReplacementRuntimeRolloverSafetyBoundaries(t *testing.T) {
 		}}
 		dependencies := ExecutionReplaceDependencies{OrcaOwner: inspector}
 		requester := executionActor("codex", "replacement-owner")
-		preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+		preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 			ID: record.ID, Action: contractissueops.ExecutionReplacePreview, ExpectedGeneration: 1,
 			Actor: requester, CWD: record.Execution.Workspace.Root,
 		}, dependencies)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+		if _, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 			ID: record.ID, Action: contractissueops.ExecutionReplaceRevoke, ExpectedGeneration: 1,
 			InventoryFingerprint: preview.InventoryFingerprint, Reason: "same runtime task check",
 			Actor: requester, CWD: record.Execution.Workspace.Root, Confirm: true,
@@ -179,7 +181,7 @@ func TestExecutionReplacementRuntimeRolloverSafetyBoundaries(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		_, err = ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+		_, err = ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 			ID: record.ID, Action: contractissueops.ExecutionReplaceFinalizePreview, ExpectedGeneration: 2,
 			Actor: requester, CWD: record.Execution.Workspace.Root,
 		}, dependencies)
@@ -198,7 +200,7 @@ func rolloverExecutionFixture(t *testing.T) (string, contractissueops.IssueOpsRe
 	record.BranchPrepare.IssueURL = record.IssueURL
 	record.Execution.Mode = contractissueops.ExecutionModeOrca
 	record.Execution.Workspace.Driver = "orca"
-	record.Execution.Workspace.ArtifactDir = issueArtifactDirFor(record)
+	record.Execution.Workspace.ArtifactDir = app.OwnerArtifactDir(record)
 	record.Execution.Orca = &contractissueops.OrcaBinding{
 		RuntimeID: "runtime-sealed", RepoID: "repo", WorktreeID: "worktree",
 		WorktreeInstanceID: "instance", RunID: "run", TaskID: "task",
@@ -259,14 +261,14 @@ func TestExecutionFinalizePreviewUsesInjectedWorkspaceInspector(t *testing.T) {
 		},
 	}
 
-	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: contractissueops.ExecutionReplacePreview, ExpectedGeneration: 1,
 		Actor: requester, CWD: record.Execution.Workspace.Root,
 	}, dependencies)
 	if err != nil {
 		t.Fatalf("preview: %v", err)
 	}
-	if _, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	if _, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: contractissueops.ExecutionReplaceRevoke, ExpectedGeneration: 1,
 		InventoryFingerprint: preview.InventoryFingerprint, Reason: "injected inspector",
 		Actor: requester, CWD: record.Execution.Workspace.Root, Confirm: true,
@@ -274,7 +276,7 @@ func TestExecutionFinalizePreviewUsesInjectedWorkspaceInspector(t *testing.T) {
 		t.Fatalf("revoke: %v", err)
 	}
 
-	_, err = ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	_, err = ReplaceExecutionWithDependencies(context.Background(), stateRoot, contractissueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: contractissueops.ExecutionReplaceFinalizePreview, ExpectedGeneration: 2,
 		Actor: requester, CWD: record.Execution.Workspace.Root,
 	}, dependencies)

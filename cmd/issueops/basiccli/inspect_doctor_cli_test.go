@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	bootstrapcontract "issueops/internal/contract/projectbootstrap"
 	"os"
 	"path/filepath"
@@ -154,11 +155,11 @@ func TestRunDoctorOperationalPreserveFlagsAreRepeatableAndInvocationScoped(t *te
 	repo := t.TempDir()
 	configureOperationalCollectorTest(t, func(_ context.Context, root string) operationalhealth.Snapshot {
 		snapshot := healthyCLIOperationalSnapshot(root)
-		snapshot.Cycles = []operationalhealth.Cycle{
+		snapshot.Cycles = []operationalhealthcontract.Cycle{
 			{ID: "io-a", Repo: root, Branch: "main", Phase: "plan"},
 			{ID: "io-z", Repo: root, Branch: "main", Phase: "plan"},
 		}
-		snapshot.Terminals = []operationalhealth.OrcaTerminal{{Handle: "term-a"}, {Handle: "term-z"}}
+		snapshot.Terminals = []operationalhealthcontract.OrcaTerminal{{Handle: "term-a"}, {Handle: "term-z"}}
 		return snapshot
 	})
 
@@ -196,8 +197,8 @@ func TestRunDoctorDefaultsToInteractiveProfileForUserTerminals(t *testing.T) {
 	repo := t.TempDir()
 	configureOperationalCollectorTest(t, func(_ context.Context, root string) operationalhealth.Snapshot {
 		snapshot := healthyCLIOperationalSnapshot(root)
-		snapshot.Terminals = []operationalhealth.OrcaTerminal{{Handle: "term_user_tab"}}
-		snapshot.Messages = operationalhealth.MessagePresence{Count: 5}
+		snapshot.Terminals = []operationalhealthcontract.OrcaTerminal{{Handle: "term_user_tab"}}
+		snapshot.Messages = operationalhealthcontract.MessagePresence{Count: 5}
 		return snapshot
 	})
 	out := captureStatusVerifyStdout(t, func() error {
@@ -247,7 +248,7 @@ func TestRunDoctorOperationalInventoryFailureHasJSONTextParity(t *testing.T) {
 	repo := t.TempDir()
 	configureOperationalCollectorTest(t, func(_ context.Context, root string) operationalhealth.Snapshot {
 		snapshot := healthyCLIOperationalSnapshot(root)
-		snapshot.InventoryProblems = []operationalhealth.InventoryProblem{{Source: "orca_tasks", Code: "orca_tasks_failed", Detail: "task inventory failed"}}
+		snapshot.InventoryProblems = []operationalhealthcontract.InventoryProblem{{Source: "orca_tasks", Code: "orca_tasks_failed", Detail: "task inventory failed"}}
 		return snapshot
 	})
 
@@ -258,13 +259,13 @@ func TestRunDoctorOperationalInventoryFailureHasJSONTextParity(t *testing.T) {
 	if err := json.Unmarshal([]byte(jsonOut), &result); err != nil {
 		t.Fatalf("decode doctor json: %v\n%s", err, jsonOut)
 	}
-	if result.Healthy || !doctorResultHasIssue(result, operationalhealth.FindingInventoryUnknown) {
+	if result.Healthy || !doctorResultHasIssue(result, operationalhealthcontract.FindingInventoryUnknown) {
 		t.Fatalf("inventory failure JSON projection = %#v", result)
 	}
 	textOut := captureStatusVerifyStdout(t, func() error {
 		return testRunDoctor([]string{"--repo", repo})
 	})
-	if !strings.Contains(textOut, operationalhealth.FindingInventoryUnknown) {
+	if !strings.Contains(textOut, operationalhealthcontract.FindingInventoryUnknown) {
 		t.Fatalf("text output lost operational code:\n%s", textOut)
 	}
 }

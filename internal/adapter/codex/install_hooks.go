@@ -52,16 +52,12 @@ func (installer Installer) writeCodexHooks(path string, req port.NativeInstallRe
 	return file, messages, nil
 }
 
-func codexHooksConfig(binPath string) map[string]any {
+func HooksConfig(binPath string) map[string]any {
 	hooks := map[string]any{}
 	for _, spec := range codexLifecycleHookSpecs(binPath) {
 		hooks[spec.Event] = []any{codexHookGroup(spec)}
 	}
 	return map[string]any{"hooks": hooks}
-}
-
-func HooksConfig(binPath string) map[string]any {
-	return codexHooksConfig(binPath)
 }
 
 type codexLifecycleHookSpec struct {

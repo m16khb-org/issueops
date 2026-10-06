@@ -1,6 +1,7 @@
 package installcli
 
 import (
+	installdomain "issueops/internal/domain/install"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +27,7 @@ func TestPrintInstallNativeResultCoversDryRunAndProjectLocalModes(t *testing.T) 
 	}
 
 	dryRunOut := captureStatusVerifyStdout(t, func() error {
-		PrintNativeResult(result)
+		printInstallNativeResult(result)
 		return nil
 	})
 	for _, want := range []string{
@@ -45,7 +46,7 @@ func TestPrintInstallNativeResultCoversDryRunAndProjectLocalModes(t *testing.T) 
 	result.ProjectLocal = true
 	result.DryRun = false
 	installedOut := captureStatusVerifyStdout(t, func() error {
-		PrintNativeResult(result)
+		printInstallNativeResult(result)
 		return nil
 	})
 	for _, want := range []string{
@@ -65,7 +66,7 @@ func TestPrintInstallNativeResultCoversDryRunAndProjectLocalModes(t *testing.T) 
 func TestPreferredShellRCAndAppendShellPathLinePlan(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("SHELL", "/bin/bash")
-	if got := PreferredShellRC(home); got != filepath.Join(home, ".bashrc") {
+	if got := preferredShellRC(home); got != filepath.Join(home, ".bashrc") {
 		t.Fatalf("bash shell rc = %q", got)
 	}
 
@@ -74,11 +75,11 @@ func TestPreferredShellRCAndAppendShellPathLinePlan(t *testing.T) {
 	if err := os.WriteFile(zshrc, []byte("# existing\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got := PreferredShellRC(home); got != zshrc {
+	if got := preferredShellRC(home); got != zshrc {
 		t.Fatalf("existing zsh rc = %q", got)
 	}
 
-	dryRunFile, err := AppendShellPathLinePlan(filepath.Join(home, ".profile"), true)
+	dryRunFile, err := appendShellPathLinePlan(filepath.Join(home, ".profile"), true)
 	if err != nil {
 		t.Fatalf("dry-run append path failed: %v", err)
 	}
@@ -87,7 +88,7 @@ func TestPreferredShellRCAndAppendShellPathLinePlan(t *testing.T) {
 	}
 
 	rcPath := filepath.Join(home, "nested", ".profile")
-	writtenFile, err := AppendShellPathLinePlan(rcPath, false)
+	writtenFile, err := appendShellPathLinePlan(rcPath, false)
 	if err != nil {
 		t.Fatalf("append path failed: %v", err)
 	}
@@ -98,7 +99,7 @@ func TestPreferredShellRCAndAppendShellPathLinePlan(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(body), ShellPathRCMarker) || !ShellRCAlreadyAddsLocalBin(rcPath, home) {
+	if !strings.Contains(string(body), ShellPathRCMarker) || !shellRCAlreadyAddsLocalBin(rcPath, home) {
 		t.Fatalf("shell rc did not contain local bin marker:\n%s", string(body))
 	}
 }
@@ -119,7 +120,7 @@ func TestNativeActivationStepAcceptsOnlyInternalTransitionModes(t *testing.T) {
 		{name: "dry_run_transition", dryRun: true, raw: "begin"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := nativeActivationStep(tc.dryRun, tc.raw)
+			got, err := installdomain.ActivationStep(tc.dryRun, tc.raw)
 			if tc.valid && (err != nil || got != tc.want) {
 				t.Fatalf("step=%q err=%v", got, err)
 			}

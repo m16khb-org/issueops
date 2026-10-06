@@ -54,8 +54,7 @@ func TestConformanceProbeRejectsMissingResultPath(t *testing.T) {
 	}
 }
 
-func TestConformanceProbeFailsClosedWithoutProductionDispatch(t *testing.T) {
-	called := 0
+func TestConformanceProbeCaptureRejectsMalformedAndOversizedArguments(t *testing.T) {
 	config := testProbeConfig(t, filepath.Join(t.TempDir(), "capture.json"))
 	if _, err := captureArguments(config, []byte(`{not json`)); err == nil {
 		t.Fatal("malformed json accepted")
@@ -66,14 +65,10 @@ func TestConformanceProbeFailsClosedWithoutProductionDispatch(t *testing.T) {
 	if _, err := captureArguments(config, []byte(`{"token":"secret"}`)); err != nil {
 		t.Fatal(err)
 	}
-	if called != 0 {
-		t.Fatalf("production dispatch calls=%d", called)
-	}
 }
 
 func TestConformanceProbeSDKRoundTripCapturesOnlyRenamedProbe(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "evidence", "capture.json")
-	dispatchCalls := 0
 	arguments := map[string]any{
 		"network_allowed": false,
 		"api_key":         "not-safe-to-store",
@@ -91,7 +86,6 @@ func TestConformanceProbeSDKRoundTripCapturesOnlyRenamedProbe(t *testing.T) {
 		},
 	}
 	config := newTestProbeConfig(t, "mixed_scalars", "harness_probe_mixed_scalars", schema, arguments, path, "run-token")
-	config.ProductionDispatch = func() { dispatchCalls++ }
 	session := serveConformanceProbeStdio(t, config)
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -103,9 +97,6 @@ func TestConformanceProbeSDKRoundTripCapturesOnlyRenamedProbe(t *testing.T) {
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: config.ProbeTool, Arguments: arguments})
 	if err != nil || result.IsError {
 		t.Fatalf("result=%+v err=%v", result, err)
-	}
-	if dispatchCalls != 0 {
-		t.Fatalf("production dispatch calls=%d", dispatchCalls)
 	}
 	var capture ConformanceCapture
 	data, err := os.ReadFile(path)

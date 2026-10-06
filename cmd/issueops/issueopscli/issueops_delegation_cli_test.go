@@ -3,6 +3,7 @@ package issueopscli
 import (
 	"context"
 	"encoding/json"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -299,7 +300,7 @@ func recordIssueOpsCLIParentDelegationPrereqs(t *testing.T, id, planPath string)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := planningRecorderForTest(nil).Compatibility(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsCompatibilityReviewRequest{
+	if _, err := planningRecorderForTest(nil).Compatibility(issueOpsStateRootForTest(), id, reviewcontract.CompatibilityReviewRequest{
 		BackwardCompatibility: []string{"existing IssueOps records remain readable"},
 		SideEffects:           []string{"child CLI writes only IssueOps state"},
 		RollbackPlan:          "Revert child CLI dispatch.",
@@ -308,7 +309,7 @@ func recordIssueOpsCLIParentDelegationPrereqs(t *testing.T, id, planPath string)
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := planningRecorderForTest(nil).DevilsAdvocate(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
+	if _, err := planningRecorderForTest(nil).DevilsAdvocate(issueOpsStateRootForTest(), id, reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
 		t.Fatal(err)
 	}
 }

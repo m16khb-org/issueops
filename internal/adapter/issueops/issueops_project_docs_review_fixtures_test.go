@@ -1,7 +1,6 @@
 package issueops
 
 import (
-	cycleapp "issueops/internal/application/issueopscycle"
 	reviewapp "issueops/internal/application/issueopsreview"
 	"issueops/internal/contract/issueops"
 	reviewport "issueops/internal/port/issueopsreview"
@@ -28,11 +27,4 @@ func recordIssueOpsProjectDocsReview(stateRoot, id string, req issueops.IssueOps
 		RelativePath:        ReviewDocumentPaths{}.RelativePath,
 		FileExists:          ReviewDocumentPaths{}.FileExists,
 	}, stateRoot, id, req)
-}
-
-// projectDocsReviewMissing은 publication 게이트 판정이다. implementation review와
-// 달리 execution mode도, execution lease 유무도 가리지 않는다 — 어떤 경로로
-// implement 이후 phase에 왔든 운영 문서에 남길 결정을 만들 수 있기 때문이다.
-func projectDocsReviewMissing(record issueops.IssueOpsRecord, currentFingerprint string) string {
-	return cycleapp.ProjectDocsReviewMissing(record, currentFingerprint)
 }

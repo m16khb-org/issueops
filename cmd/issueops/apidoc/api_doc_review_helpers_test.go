@@ -2,6 +2,7 @@ package apidoc
 
 import (
 	"encoding/json"
+	contract "issueops/internal/contract/apidoc"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +13,7 @@ func TestAPIDocDiffReadsExplicitDiffFile(t *testing.T) {
 	root := t.TempDir()
 	diffPath := writeAPIDocHelperTestFile(t, root, "api.diff", "diff --git a/api/openapi.yaml b/api/openapi.yaml\n")
 
-	diff, err := apiDocDiff(root, []string{"api/openapi.yaml"}, diffPath)
+	diff, err := Diff(root, []string{"api/openapi.yaml"}, diffPath)
 
 	if err != nil {
 		t.Fatalf("apiDocDiff explicit file failed: %v", err)
@@ -30,7 +31,7 @@ func TestAPIDocDiffReadsStagedCandidateDiff(t *testing.T) {
 	writeAPIDocHelperTestFile(t, root, "api/openapi.yaml", "openapi: 3.0.0\n")
 	runGitForContract(t, root, "add", "api/openapi.yaml")
 
-	diff, err := apiDocDiff(root, []string{"api/openapi.yaml"}, "")
+	diff, err := Diff(root, []string{"api/openapi.yaml"}, "")
 
 	if err != nil {
 		t.Fatalf("apiDocDiff staged diff failed: %v", err)
@@ -63,10 +64,10 @@ func TestMustJSONReturnsIndentedJSON(t *testing.T) {
 func TestPrintAPIDocReviewPrintsSummaryAndFindings(t *testing.T) {
 	line := 42
 	out := captureStatusVerifyStdout(t, func() error {
-		printAPIDocReview(apiDocReviewResult{
+		printAPIDocReview(contract.ReviewResult{
 			Verdict: "fail",
 			Summary: "missing response docs",
-			Findings: []apiDocReviewFinding{
+			Findings: []contract.ReviewFinding{
 				{File: "src/users.controller.ts", Line: &line, Severity: "blocking", Message: "missing 404 response"},
 				{File: "openapi.yaml", Severity: "warning", Message: "description is terse"},
 			},

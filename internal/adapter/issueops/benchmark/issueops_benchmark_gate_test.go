@@ -1,21 +1,22 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
+	benchmark "issueops/internal/contract/issueopsbenchmark"
+	domain "issueops/internal/domain/issueopsbenchmark"
 	"strings"
 	"testing"
 )
 
 func TestRunAndCompareIssueOpsBenchmark(t *testing.T) {
 	dir := t.TempDir()
-	fixtures := []issueopscontract.IssueOpsBenchmarkFixture{
+	fixtures := []benchmark.IssueOpsBenchmarkFixture{
 		{ID: "fixture", Title: "Fixture", UserPrompt: "prompt", RepoContext: "ctx", CriticalFailures: []string{"works in source repo"}},
 	}
 
 	baseline, err := RunIssueOpsBenchmark(IssueOpsBenchmarkRunRequest{
 		StateRoot: dir,
 		Fixtures:  fixtures,
-		Artifacts: map[string]issueopscontract.IssueOpsBenchmarkArtifact{
+		Artifacts: map[string]benchmark.IssueOpsBenchmarkArtifact{
 			"fixture": {},
 		},
 	})
@@ -25,21 +26,21 @@ func TestRunAndCompareIssueOpsBenchmark(t *testing.T) {
 	candidate, err := RunIssueOpsBenchmark(IssueOpsBenchmarkRunRequest{
 		StateRoot: dir,
 		Fixtures:  fixtures,
-		Artifacts: map[string]issueopscontract.IssueOpsBenchmarkArtifact{
+		Artifacts: map[string]benchmark.IssueOpsBenchmarkArtifact{
 			"fixture": completeBenchmarkArtifactForTest(),
 		},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	compare := CompareIssueOpsBenchmarkRuns(baseline, candidate)
+	compare := domain.CompareRuns(baseline, candidate)
 	if !compare.Improved || compare.AverageScoreDelta <= 0 {
 		t.Fatalf("expected candidate improvement: %+v", compare)
 	}
 }
 
 func TestEvaluateIssueOpsAutoresearchGateKeepsPassingCandidate(t *testing.T) {
-	candidate := IssueOpsAutoresearchCandidate{
+	candidate := benchmark.IssueOpsAutoresearchCandidate{
 		ID:               "issueops-autoresearch-loop",
 		Hypothesis:       "A candidate with bounded files and no benchmark regression should be kept.",
 		TargetDimensions: []string{"issue_quality", "plan_quality"},
@@ -50,7 +51,7 @@ func TestEvaluateIssueOpsAutoresearchGateKeepsPassingCandidate(t *testing.T) {
 	baseline := issueOpsBenchmarkRunForGateTest("baseline", 100, 100, 0)
 	next := issueOpsBenchmarkRunForGateTest("candidate", 100, 100, 0)
 
-	result := EvaluateIssueOpsAutoresearchGate(IssueOpsAutoresearchGateRequest{
+	result := domain.EvaluateAutoresearchGate(benchmark.IssueOpsAutoresearchGateRequest{
 		Candidate:    candidate,
 		BaselineRun:  baseline,
 		CandidateRun: next,
@@ -63,27 +64,27 @@ func TestEvaluateIssueOpsAutoresearchGateKeepsPassingCandidate(t *testing.T) {
 }
 
 func TestEvaluateIssueOpsAutoresearchGateRejectsEditSurfaceViolation(t *testing.T) {
-	candidate := IssueOpsAutoresearchCandidate{
+	candidate := benchmark.IssueOpsAutoresearchCandidate{
 		ID:               "issueops-autoresearch-loop",
 		Hypothesis:       "A candidate cannot touch files outside the declared surface.",
 		TargetDimensions: []string{"issue_quality"},
 		EditSurface:      []string{"skills/issueops/**"},
 	}
 
-	result := EvaluateIssueOpsAutoresearchGate(IssueOpsAutoresearchGateRequest{
+	result := domain.EvaluateAutoresearchGate(benchmark.IssueOpsAutoresearchGateRequest{
 		Candidate:    candidate,
 		BaselineRun:  issueOpsBenchmarkRunForGateTest("baseline", 100, 100, 0),
 		CandidateRun: issueOpsBenchmarkRunForGateTest("candidate", 100, 100, 0),
 		ChangedPaths: []string{"cmd/issueops/issueops.go"},
 	})
 
-	if result.KeepCandidate || len(result.EditSurfaceViolations) != 1 || !containsFold(strings.Join(result.DiscardReasons, "\n"), "edit surface") {
+	if result.KeepCandidate || len(result.EditSurfaceViolations) != 1 || !domain.ContainsFold(strings.Join(result.DiscardReasons, "\n"), "edit surface") {
 		t.Fatalf("expected edit surface discard: %+v", result)
 	}
 }
 
 func TestEvaluateIssueOpsAutoresearchGateRejectsTargetRegression(t *testing.T) {
-	candidate := IssueOpsAutoresearchCandidate{
+	candidate := benchmark.IssueOpsAutoresearchCandidate{
 		ID:               "issueops-autoresearch-loop",
 		Hypothesis:       "Target dimensions cannot regress.",
 		TargetDimensions: []string{"issue_quality"},
@@ -92,7 +93,7 @@ func TestEvaluateIssueOpsAutoresearchGateRejectsTargetRegression(t *testing.T) {
 	baseline := issueOpsBenchmarkRunWithDimensionForGateTest("baseline", "issue_quality", 100)
 	next := issueOpsBenchmarkRunWithDimensionForGateTest("candidate", "issue_quality", 90)
 
-	result := EvaluateIssueOpsAutoresearchGate(IssueOpsAutoresearchGateRequest{
+	result := domain.EvaluateAutoresearchGate(benchmark.IssueOpsAutoresearchGateRequest{
 		Candidate:    candidate,
 		BaselineRun:  baseline,
 		CandidateRun: next,
@@ -105,52 +106,52 @@ func TestEvaluateIssueOpsAutoresearchGateRejectsTargetRegression(t *testing.T) {
 }
 
 func TestEvaluateIssueOpsAutoresearchGateRejectsUnknownTargetDimension(t *testing.T) {
-	candidate := IssueOpsAutoresearchCandidate{
+	candidate := benchmark.IssueOpsAutoresearchCandidate{
 		ID:               "issueops-autoresearch-loop",
 		Hypothesis:       "Target dimensions must be known benchmark dimensions.",
 		TargetDimensions: []string{"issue_qualit"},
 		EditSurface:      []string{"skills/issueops/**"},
 	}
 
-	result := EvaluateIssueOpsAutoresearchGate(IssueOpsAutoresearchGateRequest{
+	result := domain.EvaluateAutoresearchGate(benchmark.IssueOpsAutoresearchGateRequest{
 		Candidate:    candidate,
 		BaselineRun:  issueOpsBenchmarkRunForGateTest("baseline", 100, 100, 0),
 		CandidateRun: issueOpsBenchmarkRunForGateTest("candidate", 100, 100, 0),
 		ChangedPaths: []string{"skills/issueops/SKILL.md"},
 	})
 
-	if result.KeepCandidate || !containsFold(strings.Join(result.DiscardReasons, "\n"), "invalid target dimension") {
+	if result.KeepCandidate || !domain.ContainsFold(strings.Join(result.DiscardReasons, "\n"), "invalid target dimension") {
 		t.Fatalf("expected unknown target dimension discard: %+v", result)
 	}
 }
 
 func TestEvaluateIssueOpsAutoresearchGateRejectsNonPassingCandidateRun(t *testing.T) {
-	candidate := IssueOpsAutoresearchCandidate{
+	candidate := benchmark.IssueOpsAutoresearchCandidate{
 		ID:               "issueops-autoresearch-loop",
 		Hypothesis:       "Candidate benchmark must pass.",
 		TargetDimensions: []string{"issue_quality"},
 		EditSurface:      []string{"skills/issueops/**"},
 	}
 
-	result := EvaluateIssueOpsAutoresearchGate(IssueOpsAutoresearchGateRequest{
+	result := domain.EvaluateAutoresearchGate(benchmark.IssueOpsAutoresearchGateRequest{
 		Candidate:    candidate,
 		BaselineRun:  issueOpsBenchmarkRunForGateTest("baseline", 100, 100, 0),
 		CandidateRun: issueOpsBenchmarkRunForGateTest("candidate", 90, 90, 1),
 		ChangedPaths: []string{"skills/issueops/SKILL.md"},
 	})
 
-	if result.KeepCandidate || !containsFold(strings.Join(result.DiscardReasons, "\n"), "candidate benchmark did not pass") {
+	if result.KeepCandidate || !domain.ContainsFold(strings.Join(result.DiscardReasons, "\n"), "candidate benchmark did not pass") {
 		t.Fatalf("expected non-passing benchmark discard: %+v", result)
 	}
 }
 
-func issueOpsBenchmarkRunForGateTest(id string, average, minimum float64, criticalFailures int) IssueOpsBenchmarkRunResult {
-	score := IssueOpsBenchmarkScore{
+func issueOpsBenchmarkRunForGateTest(id string, average, minimum float64, criticalFailures int) benchmark.IssueOpsBenchmarkRunResult {
+	score := benchmark.IssueOpsBenchmarkScore{
 		OK:           criticalFailures == 0 && minimum >= 100,
 		FixtureID:    "fixture",
 		AverageScore: average,
 		MinimumScore: minimum,
-		DimensionScores: []IssueOpsDimensionScore{
+		DimensionScores: []benchmark.IssueOpsDimensionScore{
 			{Dimension: "issue_quality", Score: minimum, Evidence: "gate test"},
 			{Dimension: "plan_quality", Score: minimum, Evidence: "gate test"},
 		},
@@ -159,19 +160,19 @@ func issueOpsBenchmarkRunForGateTest(id string, average, minimum float64, critic
 	for i := 0; i < criticalFailures; i++ {
 		score.CriticalFailures = append(score.CriticalFailures, "critical failure")
 	}
-	return FinalizeIssueOpsBenchmarkRunResult(IssueOpsBenchmarkRunResult{ID: id, Scores: []IssueOpsBenchmarkScore{score}})
+	return domain.FinalizeRun(benchmark.IssueOpsBenchmarkRunResult{ID: id, Scores: []benchmark.IssueOpsBenchmarkScore{score}})
 }
 
-func issueOpsBenchmarkRunWithDimensionForGateTest(id, dimension string, scoreValue float64) IssueOpsBenchmarkRunResult {
-	score := IssueOpsBenchmarkScore{
+func issueOpsBenchmarkRunWithDimensionForGateTest(id, dimension string, scoreValue float64) benchmark.IssueOpsBenchmarkRunResult {
+	score := benchmark.IssueOpsBenchmarkScore{
 		OK:           scoreValue >= 100,
 		FixtureID:    "fixture",
 		AverageScore: scoreValue,
 		MinimumScore: scoreValue,
-		DimensionScores: []IssueOpsDimensionScore{
+		DimensionScores: []benchmark.IssueOpsDimensionScore{
 			{Dimension: dimension, Score: scoreValue, Evidence: "gate test"},
 		},
 		Passed: scoreValue >= 100,
 	}
-	return FinalizeIssueOpsBenchmarkRunResult(IssueOpsBenchmarkRunResult{ID: id, Scores: []IssueOpsBenchmarkScore{score}})
+	return domain.FinalizeRun(benchmark.IssueOpsBenchmarkRunResult{ID: id, Scores: []benchmark.IssueOpsBenchmarkScore{score}})
 }

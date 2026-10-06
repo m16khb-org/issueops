@@ -1,6 +1,7 @@
 package selfverify
 
 import (
+	contract "issueops/internal/contract/selfverify"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,10 +36,10 @@ func TestPythonSkillSuitesExecuteWithLocalContext(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "scripts", "fixture_test.py"), []byte("import unittest\nclass RootTest(unittest.TestCase):\n    def test_root(self):\n        pass\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+	deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 		return verification.Run(root, label, timeout, stdin, 16384, name, args...)
 	}}
-	var goTest StepResult
+	var goTest contract.StepResult
 	step := PlannedSteps(root, "unused", 100, &goTest, deps)[2].Run()
 	if !step.OK {
 		t.Fatalf("%+v", step)

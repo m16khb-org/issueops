@@ -2,15 +2,17 @@ package steps
 
 import (
 	"encoding/json"
+	application "issueops/internal/application/selfverify"
+	contract "issueops/internal/contract/selfverify"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestPlannedSelfVerifyStepsPreservesExecutionOrder(t *testing.T) {
-	var goTestStep StepResult
+	var goTestStep contract.StepResult
 
-	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, fakeSelfVerifyStepDeps(t))
+	steps := application.PlannedSteps("/repo", "/tmp/issueops", 100, &goTestStep, fakeSelfVerifyStepDeps(t))
 
 	got := make([]string, 0, len(steps))
 	for _, step := range steps {
@@ -56,9 +58,9 @@ func TestPlannedSelfVerifyStepsPreservesExecutionOrder(t *testing.T) {
 }
 
 func TestPlannedSelfVerifyStepsUsesCachedContractGoldenAfterGoTest(t *testing.T) {
-	goTestStep := StepResult{Label: "go test", OK: true}
+	goTestStep := contract.StepResult{Label: "go test", OK: true}
 
-	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, fakeSelfVerifyStepDeps(t))
+	steps := application.PlannedSteps("/repo", "/tmp/issueops", 100, &goTestStep, fakeSelfVerifyStepDeps(t))
 	got := steps[6].Run()
 
 	if !got.OK || got.Label != "contract golden tests" || got.Command != "covered by go test ./... -count=1" {
@@ -68,12 +70,12 @@ func TestPlannedSelfVerifyStepsUsesCachedContractGoldenAfterGoTest(t *testing.T)
 }
 
 func TestPlannedSelfVerifyStepsUsesSuccessfulRaceAsFullTestEvidence(t *testing.T) {
-	var goTestStep StepResult
+	var goTestStep contract.StepResult
 	goTestCalls := 0
 	deps := fakeSelfVerifyStepDeps(t)
-	deps.ValidateRiskQATier = func(string) RiskQAEvidence {
-		return RiskQAEvidence{
-			Step: StepResult{
+	deps.ValidateRiskQATier = func(string) application.RiskQAEvidence {
+		return application.RiskQAEvidence{
+			Step: contract.StepResult{
 				Label:   "risk QA tier",
 				Command: "go test -race ./... -count=1",
 				OK:      true,
@@ -81,14 +83,14 @@ func TestPlannedSelfVerifyStepsUsesSuccessfulRaceAsFullTestEvidence(t *testing.T
 			CoversFullGoTest: true,
 		}
 	}
-	deps.RunCommandStep = func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) StepResult {
+	deps.RunCommandStep = func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) contract.StepResult {
 		if label == "go test" {
 			goTestCalls++
 		}
-		return StepResult{Label: label, OK: true}
+		return contract.StepResult{Label: label, OK: true}
 	}
 
-	planned := PlannedSelfVerifySteps("/repo", "/tmp/harness", 100, &goTestStep, deps)
+	planned := application.PlannedSteps("/repo", "/tmp/harness", 100, &goTestStep, deps)
 	riskStep := planned[4].Run()
 	testStep := planned[5].Run()
 
@@ -109,8 +111,8 @@ func TestPlannedSelfVerifyStepsUsesSuccessfulRaceAsFullTestEvidence(t *testing.T
 }
 
 func TestPlannedSelfVerifyStepsRunsEveryPlannedClosure(t *testing.T) {
-	var goTestStep StepResult
-	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, fakeSelfVerifyStepDeps(t))
+	var goTestStep contract.StepResult
+	steps := application.PlannedSteps("/repo", "/tmp/issueops", 100, &goTestStep, fakeSelfVerifyStepDeps(t))
 
 	for _, step := range steps {
 		got := step.Run()
@@ -125,17 +127,17 @@ func TestPlannedSelfVerifyStepsRunsEveryPlannedClosure(t *testing.T) {
 }
 
 func TestPlannedSelfVerifyStepsGivesGoTestFullGateTimeout(t *testing.T) {
-	var goTestStep StepResult
+	var goTestStep contract.StepResult
 	var gotTimeout time.Duration
 	deps := fakeSelfVerifyStepDeps(t)
-	deps.RunCommandStep = func(_ string, label string, timeout time.Duration, _ string, _ string, _ ...string) StepResult {
+	deps.RunCommandStep = func(_ string, label string, timeout time.Duration, _ string, _ string, _ ...string) contract.StepResult {
 		if label == "go test" {
 			gotTimeout = timeout
 		}
-		return StepResult{Label: label, OK: true}
+		return contract.StepResult{Label: label, OK: true}
 	}
 
-	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, deps)
+	steps := application.PlannedSteps("/repo", "/tmp/issueops", 100, &goTestStep, deps)
 	_ = steps[4].Run()
 	got := steps[5].Run()
 
@@ -148,21 +150,21 @@ func TestPlannedSelfVerifyStepsGivesGoTestFullGateTimeout(t *testing.T) {
 }
 
 func TestPlannedSelfVerifyStepsUsesStaticDoctorForBinaryDrift(t *testing.T) {
-	var goTestStep StepResult
+	var goTestStep contract.StepResult
 	var gotTimeout time.Duration
 	var gotExecutable string
 	var gotArgs []string
 	deps := fakeSelfVerifyStepDeps(t)
-	deps.RunCommandStep = func(_ string, label string, timeout time.Duration, _ string, executable string, args ...string) StepResult {
+	deps.RunCommandStep = func(_ string, label string, timeout time.Duration, _ string, executable string, args ...string) contract.StepResult {
 		if label == "binary drift" {
 			gotTimeout = timeout
 			gotExecutable = executable
 			gotArgs = append([]string(nil), args...)
 		}
-		return StepResult{Label: label, OK: true, Stdout: `{"checks":[{"name":"binary_drift","healthy":true}]}`}
+		return contract.StepResult{Label: label, OK: true, Stdout: `{"checks":[{"name":"binary_drift","healthy":true}]}`}
 	}
 
-	steps := PlannedSelfVerifySteps("/repo", "/tmp/issueops", 100, &goTestStep, deps)
+	steps := application.PlannedSteps("/repo", "/tmp/issueops", 100, &goTestStep, deps)
 	got := steps[8].Run()
 	if !got.OK || got.Label != "binary drift" {
 		t.Fatalf("binary drift step returned unexpected result: %#v", got)
@@ -180,7 +182,7 @@ func TestPlannedSelfVerifyStepsUsesStaticDoctorForBinaryDrift(t *testing.T) {
 }
 
 func TestCachedContractGoldenStepFallsBackWhenGoTestDidNotPass(t *testing.T) {
-	step := CachedContractGoldenStep(StepResult{Label: "go test", OK: false}, fakeSelfVerifyStepDeps(t))
+	step := application.CachedContractGoldenStep(contract.StepResult{Label: "go test", OK: false}, fakeSelfVerifyStepDeps(t))
 	if !step.OK || step.Label != "contract golden tests" {
 		t.Fatalf("expected fallback contract golden step, got %#v", step)
 	}
@@ -188,7 +190,7 @@ func TestCachedContractGoldenStepFallsBackWhenGoTestDidNotPass(t *testing.T) {
 }
 
 func TestCachedContractGoldenStepUsesFullGoTestEvidence(t *testing.T) {
-	step := CachedContractGoldenStep(StepResult{Label: "go test", Command: "go test ./... -count=1", OK: true}, fakeSelfVerifyStepDeps(t))
+	step := application.CachedContractGoldenStep(contract.StepResult{Label: "go test", Command: "go test ./... -count=1", OK: true}, fakeSelfVerifyStepDeps(t))
 	if !step.OK || step.Label != "contract golden tests" {
 		t.Fatalf("unexpected cached step: %+v", step)
 	}
@@ -201,7 +203,7 @@ func TestCachedContractGoldenStepUsesFullGoTestEvidence(t *testing.T) {
 	}
 }
 
-func assertStepReuseMarker(t *testing.T, step StepResult, want bool) {
+func assertStepReuseMarker(t *testing.T, step contract.StepResult, want bool) {
 	t.Helper()
 	data, err := json.Marshal(step)
 	if err != nil {
@@ -217,16 +219,16 @@ func assertStepReuseMarker(t *testing.T, step StepResult, want bool) {
 	}
 }
 
-func fakeSelfVerifyStepDeps(t *testing.T) SelfVerifyStepDeps {
+func fakeSelfVerifyStepDeps(t *testing.T) application.SelfVerifyStepDeps {
 	t.Helper()
-	ok := func(label string) StepResult {
-		return StepResult{Label: label, OK: true}
+	ok := func(label string) contract.StepResult {
+		return contract.StepResult{Label: label, OK: true}
 	}
-	return SelfVerifyStepDeps{
+	return application.SelfVerifyStepDeps{
 		IssueOpsRoot: func() string {
 			return "/repo"
 		},
-		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) StepResult {
+		RunCommandStep: func(_ string, label string, _ time.Duration, _ string, _ string, _ ...string) contract.StepResult {
 			step := ok(label)
 			if label == "binary drift" {
 				step.Stdout = `{"checks":[{"name":"binary_drift","healthy":true}]}`
@@ -245,67 +247,67 @@ func fakeSelfVerifyStepDeps(t *testing.T) SelfVerifyStepDeps {
 			}
 			return step
 		},
-		ValidateHarnessInvariants: func(string) StepResult {
+		ValidateHarnessInvariants: func(string) contract.StepResult {
 			return ok("harness invariants")
 		},
-		ValidateGoFormat: func(string) StepResult {
+		ValidateGoFormat: func(string) contract.StepResult {
 			return ok("gofmt")
 		},
-		ValidateRiskQATier: func(string) RiskQAEvidence {
-			return RiskQAEvidence{Step: ok("risk QA tier")}
+		ValidateRiskQATier: func(string) application.RiskQAEvidence {
+			return application.RiskQAEvidence{Step: ok("risk QA tier")}
 		},
-		ValidateInspect: func(string, string) StepResult {
+		ValidateInspect: func(string, string) contract.StepResult {
 			return ok("inspect smoke")
 		},
-		ValidateDocsIndex: func(string, string) StepResult {
+		ValidateDocsIndex: func(string, string) contract.StepResult {
 			return ok("docs index smoke")
 		},
-		ValidateSelfVerifyCandidate: func(string, string, int64) StepResult {
+		ValidateSelfVerifyCandidate: func(string, string, int64) contract.StepResult {
 			return ok("candidate export")
 		},
-		ValidateStepBudgetBaseline: func(string, string, int64) StepResult {
+		ValidateStepBudgetBaseline: func(string, string, int64) contract.StepResult {
 			return ok("step budget baseline")
 		},
-		ValidateInstallDryRunSmoke: func(string, string, int64) StepResult {
+		ValidateInstallDryRunSmoke: func(string, string, int64) contract.StepResult {
 			return ok("install dry-run smoke")
 		},
-		ValidateCommandPolicy: func(string, string) StepResult {
+		ValidateCommandPolicy: func(string, string) contract.StepResult {
 			return ok("command policy smoke")
 		},
-		ValidateCommandAudit: func(string, string, int64) StepResult {
+		ValidateCommandAudit: func(string, string, int64) contract.StepResult {
 			return ok("command audit smoke")
 		},
-		ValidateContractCheck: func(string, string) StepResult {
+		ValidateContractCheck: func(string, string) contract.StepResult {
 			return ok("contract check")
 		},
-		ValidateToolConformance: func(string, string) StepResult {
+		ValidateToolConformance: func(string, string) contract.StepResult {
 			return ok("tool contract conformance")
 		},
-		ValidateWorkerLifecycle: func(string, string, int64) StepResult {
+		ValidateWorkerLifecycle: func(string, string, int64) contract.StepResult {
 			return ok("worker lifecycle smoke")
 		},
-		ValidateMCP: func(string, string) StepResult {
+		ValidateMCP: func(string, string) contract.StepResult {
 			return ok("MCP smoke")
 		},
-		ValidateStateRoundtrip: func(string, string, int64) StepResult {
+		ValidateStateRoundtrip: func(string, string, int64) contract.StepResult {
 			return ok("state roundtrip")
 		},
-		ValidateParallelTempIsolation: func(string, string, int64) StepResult {
+		ValidateParallelTempIsolation: func(string, string, int64) contract.StepResult {
 			return ok("parallel isolation")
 		},
-		ValidatePreflightFuzz: func(string, string, int64) StepResult {
+		ValidatePreflightFuzz: func(string, string, int64) contract.StepResult {
 			return ok("preflight fuzz")
 		},
-		ValidateWebFetchBattery: func(string, string, int64) StepResult {
+		ValidateWebFetchBattery: func(string, string, int64) contract.StepResult {
 			return ok("web fetch battery")
 		},
-		ValidateNativeIntegration: func(string) StepResult {
+		ValidateNativeIntegration: func(string) contract.StepResult {
 			return ok("native integration")
 		},
-		ValidateRedactionAudit: func(string) StepResult {
+		ValidateRedactionAudit: func(string) contract.StepResult {
 			return ok("redaction audit")
 		},
-		ValidateQAGate: func(string) StepResult {
+		ValidateQAGate: func(string) contract.StepResult {
 			return ok("QA gate")
 		},
 	}

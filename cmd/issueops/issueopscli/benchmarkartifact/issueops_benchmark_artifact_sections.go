@@ -1,12 +1,11 @@
 package benchmarkartifact
 
 import (
+	benchmark "issueops/internal/contract/issueopsbenchmark"
 	"strings"
-
-	issueopscontract "issueops/internal/contract/issueops"
 )
 
-func prDraft(fixture issueopscontract.IssueOpsBenchmarkFixture, issueNumber, branchName, worktreePath, guideline, expectedIssue, expectedPR string) string {
+func prDraft(fixture benchmark.IssueOpsBenchmarkFixture, issueNumber, branchName, worktreePath, guideline, expectedIssue, expectedPR string) string {
 	return strings.Join([]string{
 		"## 요약",
 		"",

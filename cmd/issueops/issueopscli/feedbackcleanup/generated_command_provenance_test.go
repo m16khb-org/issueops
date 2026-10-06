@@ -8,8 +8,10 @@ import (
 	issueopscore "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/orca"
 	commandparsecontract "issueops/internal/contract/commandparse"
+	executionissue "issueops/internal/contract/executionissue"
 	issueopscontract "issueops/internal/contract/issueops"
 	"issueops/internal/domain/commandparse"
+	shelltoken "issueops/internal/domain/shelltoken"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 	"os"
@@ -36,7 +38,7 @@ func TestCleanupFinishPreviewEmitsBoundFinishCommand(t *testing.T) {
 		return nil
 	}
 	deps.Provider = func(string) (port.IssueProvider, error) {
-		return &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
+		return &cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
 			URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 		}}, nil
 	}
@@ -132,7 +134,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	observer := cleanupProvenanceObserverStub{evidence: provenanceport.Receipt{
 		ExecutablePath: binary, ExecutableSHA256: hex.EncodeToString(binaryHash[:]),
 	}}
-	provider := &liveCleanupProvider{cleanupStatusProvider: cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
+	provider := &liveCleanupProvider{cleanupStatusProvider: cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
 		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}}
 	var printed any
@@ -177,7 +179,7 @@ func TestCurrentRelayCleanupGeneratedCommandDogfood(t *testing.T) {
 	if !ok || preview.NextCommand == "" {
 		t.Fatalf("cleanup current-relay preview = %#v", printed)
 	}
-	tokens := commandparse.SplitCommandTokens(preview.NextCommand)
+	tokens := shelltoken.SplitCommandTokens(preview.NextCommand)
 	if len(tokens) < 4 || tokens[0] != binary || tokens[1] != "issueops" || tokens[2] != "cleanup" {
 		t.Fatalf("cleanup generated command = %q", preview.NextCommand)
 	}

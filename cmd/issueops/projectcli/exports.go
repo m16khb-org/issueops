@@ -13,7 +13,3 @@ type Dependencies struct {
 	Docs      docsapp.Service
 	Bootstrap bootstrapapp.Service
 }
-
-func Run(deps Dependencies, args []string) error {
-	return runProject(deps, args)
-}

@@ -1,7 +1,8 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
+	benchmark "issueops/internal/contract/issueopsbenchmark"
+	domain "issueops/internal/domain/issueopsbenchmark"
 	"issueops/internal/domain/pioneerskill"
 	"path/filepath"
 	"strings"
@@ -14,13 +15,13 @@ import (
 // regression gate for the scoring path, not proof that issueops invoked the
 // skills (the plan's honesty rule: unmeasured != failing).
 
-func pioneerABFixturesForTest(t *testing.T) []issueopscontract.IssueOpsBenchmarkFixture {
+func pioneerABFixturesForTest(t *testing.T) []benchmark.IssueOpsBenchmarkFixture {
 	t.Helper()
 	fixtures, err := LoadIssueOpsBenchmarkFixtures(filepath.Join("..", "..", "..", "..", "testdata", "issueops", "fixtures"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var pioneers []issueopscontract.IssueOpsBenchmarkFixture
+	var pioneers []benchmark.IssueOpsBenchmarkFixture
 	for _, fixture := range fixtures {
 		if strings.HasPrefix(fixture.ID, "pioneer-") {
 			pioneers = append(pioneers, fixture)
@@ -66,9 +67,9 @@ func pioneerABEvidenceForTest(target string) string {
 	}
 }
 
-func pioneerABRunForTest(t *testing.T, fixtures []issueopscontract.IssueOpsBenchmarkFixture, withEvidence bool) IssueOpsBenchmarkRunResult {
+func pioneerABRunForTest(t *testing.T, fixtures []benchmark.IssueOpsBenchmarkFixture, withEvidence bool) benchmark.IssueOpsBenchmarkRunResult {
 	t.Helper()
-	artifacts := make(map[string]issueopscontract.IssueOpsBenchmarkArtifact, len(fixtures))
+	artifacts := make(map[string]benchmark.IssueOpsBenchmarkArtifact, len(fixtures))
 	for _, fixture := range fixtures {
 		artifact := completeBenchmarkArtifactForTest()
 		if withEvidence {
@@ -93,7 +94,7 @@ func TestPioneerSignaturePresentVsAbsentAB(t *testing.T) {
 	absent := pioneerABRunForTest(t, fixtures, false)
 	present := pioneerABRunForTest(t, fixtures, true)
 
-	compare := CompareIssueOpsBenchmarkRuns(absent, present)
+	compare := domain.CompareRuns(absent, present)
 	if !compare.Improved || compare.AverageScoreDelta <= 0 {
 		t.Fatalf("signature-present run must improve over absent: %+v", compare)
 	}
@@ -116,16 +117,16 @@ func TestPioneerDimensionAbsenceIsNotARegression(t *testing.T) {
 	pioneers := pioneerABFixturesForTest(t)
 	baseline := pioneerABRunForTest(t, pioneers, true)
 
-	workflowOnly := issueopscontract.IssueOpsBenchmarkFixture{ID: "workflow-only"}
+	workflowOnly := benchmark.IssueOpsBenchmarkFixture{ID: "workflow-only"}
 	candidate, err := RunIssueOpsBenchmark(IssueOpsBenchmarkRunRequest{
-		Fixtures:  []issueopscontract.IssueOpsBenchmarkFixture{workflowOnly},
-		Artifacts: map[string]issueopscontract.IssueOpsBenchmarkArtifact{"workflow-only": completeBenchmarkArtifactForTest()},
+		Fixtures:  []benchmark.IssueOpsBenchmarkFixture{workflowOnly},
+		Artifacts: map[string]benchmark.IssueOpsBenchmarkArtifact{"workflow-only": completeBenchmarkArtifactForTest()},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	compare := CompareIssueOpsBenchmarkRuns(baseline, candidate)
+	compare := domain.CompareRuns(baseline, candidate)
 	for _, dimension := range compare.Regressions {
 		if dimension == "pioneer_skill_contribution" {
 			t.Fatalf("absent pioneer dimension must not be a phantom regression: %+v", compare)
@@ -139,7 +140,7 @@ func TestPioneerGateRejectsSignatureRegression(t *testing.T) {
 
 	// Candidate drops one fixture's signature: the gate must catch the
 	// pioneer dimension regression and discard the candidate.
-	artifacts := make(map[string]issueopscontract.IssueOpsBenchmarkArtifact, len(fixtures))
+	artifacts := make(map[string]benchmark.IssueOpsBenchmarkArtifact, len(fixtures))
 	for i, fixture := range fixtures {
 		artifact := completeBenchmarkArtifactForTest()
 		artifact.PioneerSkillEvidence = pioneerABEvidenceForTest(fixture.PioneerSkillTarget)
@@ -154,8 +155,8 @@ func TestPioneerGateRejectsSignatureRegression(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := EvaluateIssueOpsAutoresearchGate(IssueOpsAutoresearchGateRequest{
-		Candidate: IssueOpsAutoresearchCandidate{
+	result := domain.EvaluateAutoresearchGate(benchmark.IssueOpsAutoresearchGateRequest{
+		Candidate: benchmark.IssueOpsAutoresearchCandidate{
 			ID:               "pioneer-ab-gate",
 			Hypothesis:       "dropping a pioneer signature must be discarded",
 			TargetDimensions: []string{"pioneer_skill_contribution"},

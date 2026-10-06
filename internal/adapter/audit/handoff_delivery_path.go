@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -28,4 +29,14 @@ func handoffDeliveryStateRootPath(stateRoot string) (string, error) {
 		return filepath.Join(canonicalBase, rel), nil
 	}
 	return stateRoot, nil
+}
+
+// handoffDeliveryTrustedBases lists the fixed root-owned aliases that may be
+// resolved. macOS exposes /var and /tmp as aliases into /private; Linux has
+// none.
+func handoffDeliveryTrustedBases() []string {
+	if runtime.GOOS == "darwin" {
+		return []string{"/var", "/tmp"}
+	}
+	return nil
 }

@@ -5,15 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"strings"
-
-	"issueops/internal/port"
 )
 
 const executionIssueSnapshotFileLimit = 1 << 20
 
-func readExecutionIssueSnapshotFile(path string) (*port.ExecutionIssueSnapshotEvidence, error) {
+func readExecutionIssueSnapshotFile(path string) (*executionissue.ExecutionIssueSnapshotEvidence, error) {
 	path = strings.TrimSpace(path)
 	if path == "" {
 		return nil, nil
@@ -49,7 +48,7 @@ func readExecutionIssueSnapshotFile(path string) (*port.ExecutionIssueSnapshotEv
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
-	var evidence *port.ExecutionIssueSnapshotEvidence
+	var evidence *executionissue.ExecutionIssueSnapshotEvidence
 	if err := decoder.Decode(&evidence); err != nil {
 		return nil, fmt.Errorf("decode issue snapshot file: %w", err)
 	}

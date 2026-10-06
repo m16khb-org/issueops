@@ -5,6 +5,7 @@ import (
 	"fmt"
 	intentapp "issueops/internal/application/issueopsintent"
 	model "issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	domain "issueops/internal/domain/issueopsreview"
 	intentport "issueops/internal/port/issueopsintent"
 	port "issueops/internal/port/issueopsreview"
@@ -49,7 +50,7 @@ func (s PlanningRecorder) PlanPrep(root, id string, req model.IssueOpsPlanPrepRe
 		return intentapp.RecordPlanPrep(intentport.Store{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now}, root, id, req)
 	})
 }
-func (s PlanningRecorder) Design(root, id string, req model.IssueOpsDesignReviewRequest) (model.IssueOpsRecord, error) {
+func (s PlanningRecorder) Design(root, id string, req reviewcontract.DesignReviewRequest) (model.IssueOpsRecord, error) {
 	return s.record(root, id, func() (model.IssueOpsRecord, error) {
 		record, err := RecordDesignReview(port.DesignReviewStore{Read: s.Store.Read, TouchWrite: s.touchWrite, Now: s.Store.Now, PlanReadiness: s.PlanReadiness}, root, id, req)
 		if errors.Is(err, domain.ErrMissingDesignReviewEvidence) {
@@ -58,12 +59,12 @@ func (s PlanningRecorder) Design(root, id string, req model.IssueOpsDesignReview
 		return record, err
 	})
 }
-func (s PlanningRecorder) Compatibility(root, id string, req model.IssueOpsCompatibilityReviewRequest) (model.IssueOpsRecord, error) {
+func (s PlanningRecorder) Compatibility(root, id string, req reviewcontract.CompatibilityReviewRequest) (model.IssueOpsRecord, error) {
 	return s.record(root, id, func() (model.IssueOpsRecord, error) {
 		return RecordCompatibilityReview(port.CompatibilityStore{Read: s.Store.Read, TouchWrite: s.touchWrite, Ready: s.CompatibilityReadiness, PhaseRank: s.PhaseRank}, root, id, req, s.Store.Now())
 	})
 }
-func (s PlanningRecorder) DevilsAdvocate(root, id string, req model.IssueOpsDevilsAdvocateReviewRequest) (model.IssueOpsRecord, error) {
+func (s PlanningRecorder) DevilsAdvocate(root, id string, req reviewcontract.DevilsAdvocateReviewRequest) (model.IssueOpsRecord, error) {
 	return s.record(root, id, func() (model.IssueOpsRecord, error) {
 		record, err := RecordDevilsAdvocate(port.DevilsAdvocateStore{Read: s.Store.Read, TouchWrite: s.touchWrite, PlanDigest: s.PlanDigest}, root, id, req, s.Store.Now())
 		if capErr, ok := errors.AsType[*domain.ReviseRoundCapError](err); ok {

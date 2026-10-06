@@ -3,6 +3,7 @@ package mcpcli
 import (
 	"context"
 	"io"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -66,7 +67,7 @@ func TestHTTPRegistrationRejectsUnclassifiedTool(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "mystery_tool") {
 		t.Fatalf("unclassified tool registration err = %v", err)
 	}
-	for _, tool := range testMCPCatalog().Tools {
+	for _, tool := range mcpcatalog.Build().Tools {
 		name, _ := tool["name"].(string)
 		if mcpToolAuthorities[name].scope == toolScopeUnclassified {
 			t.Fatalf("catalog tool %s is unclassified", name)

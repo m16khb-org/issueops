@@ -3,6 +3,7 @@ package mcpcli
 import (
 	"context"
 	"encoding/json"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	app "issueops/internal/application/gates"
 	model "issueops/internal/contract/gates"
 	policy "issueops/internal/contract/policy"
@@ -19,7 +20,7 @@ import (
 // 달리 이 테스트는 tools/list 스키마 검증과 실세션 round-trip을 잠근다.
 func TestServeMCPStreamAdvertisesAndRunsGatesTools(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Gates: testGatesService()})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: mcpcatalog.Build(), Gates: testGatesService()})
 
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -119,7 +120,7 @@ func TestGatesSDKServersKeepTheirOwnPolicyRunner(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		sessions[i] = startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Gates: service})
+		sessions[i] = startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: mcpcatalog.Build(), Gates: service})
 	}
 	for i, session := range sessions {
 		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "gates_check", Arguments: map[string]any{"workspace_root": roots[i], "cwd": roots[i]}})

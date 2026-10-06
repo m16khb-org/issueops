@@ -9,7 +9,7 @@ import (
 	"issueops/internal/adapter/issueops"
 	commandparsecontract "issueops/internal/contract/commandparse"
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/domain/commandparse"
+	shelltoken "issueops/internal/domain/shelltoken"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -73,7 +73,7 @@ func TestCurrentRelayReleasedReseedGeneratedCommandDogfood(t *testing.T) {
 	}
 	assertCurrentRelayDogfoodCommand(t, preview.NextCommand, binary, hex.EncodeToString(binaryDigest[:]), 1)
 
-	commandTokens := commandparse.SplitCommandTokens(preview.NextCommand)
+	commandTokens := shelltoken.SplitCommandTokens(preview.NextCommand)
 	reseedBytes := runCurrentRelayDogfoodBinary(t, commandTokens[0], stateBase, fixture.Execution.Workspace.Root, commandTokens[1:])
 	persisted, err := issueops.ReadIssueOps(configuredStateRoot, fixture.ID)
 	if err != nil {
@@ -105,7 +105,7 @@ func runCurrentRelayDogfoodBinary(t *testing.T, binary, stateBase, cwd string, a
 
 func assertCurrentRelayDogfoodCommand(t *testing.T, command, binary, digest string, generation uint64) {
 	t.Helper()
-	tokens := commandparse.SplitCommandTokens(command)
+	tokens := shelltoken.SplitCommandTokens(command)
 	if len(tokens) < 3 || tokens[0] != binary || tokens[1] != "issueops" {
 		t.Fatalf("generated command does not select exact dogfood binary: %q", command)
 	}

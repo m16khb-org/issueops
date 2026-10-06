@@ -10,24 +10,18 @@ import (
 	completioncontract "issueops/internal/contract/issueopscompletion"
 )
 
-type Actor = completioncontract.Actor
-type Lease = completioncontract.Lease
-type Completion = completioncontract.Completion
-type LedgerEntry = completioncontract.LedgerEntry
-type Command = completioncontract.Command
-
 type Snapshot struct {
 	Phase      string
-	Lease      Lease
-	Completion *Completion
-	Ledger     map[string]LedgerEntry
+	Lease      completioncontract.Lease
+	Completion *completioncontract.Completion
+	Ledger     map[string]completioncontract.LedgerEntry
 }
 
 type Outcome struct {
 	Phase      string
-	Lease      Lease
-	Completion *Completion
-	Ledger     map[string]LedgerEntry
+	Lease      completioncontract.Lease
+	Completion *completioncontract.Completion
+	Ledger     map[string]completioncontract.LedgerEntry
 }
 
 type DenyCode string
@@ -57,7 +51,7 @@ func CodeOf(err error) DenyCode {
 	return ""
 }
 
-func ValidateActive(snapshot Snapshot, command Command, canonicalCWD bool) error {
+func ValidateActive(snapshot Snapshot, command completioncontract.Command, canonicalCWD bool) error {
 	if err := ValidatePhase(snapshot.Phase); err != nil {
 		return deny(DenyPhase, err.Error())
 	}
@@ -73,7 +67,7 @@ func ValidateActive(snapshot Snapshot, command Command, canonicalCWD bool) error
 // ApplyAt preserves the established completion contract: the durable completion
 // receipt/released lease and the phase-ledger transition observe consecutive
 // clock reads rather than sharing a synthesized timestamp.
-func ApplyAt(snapshot Snapshot, command Command, resolvedReport string, completedAt, transitionedAt time.Time) Outcome {
+func ApplyAt(snapshot Snapshot, command completioncontract.Command, resolvedReport string, completedAt, transitionedAt time.Time) Outcome {
 	completionTimestamp := completedAt.UTC().Format(time.RFC3339Nano)
 	transitionTimestamp := transitionedAt.UTC().Format(time.RFC3339Nano)
 	lease := snapshot.Lease
@@ -81,7 +75,7 @@ func ApplyAt(snapshot Snapshot, command Command, resolvedReport string, complete
 	lease.Holder = nil
 	lease.ClaimTokenSHA256 = ""
 	lease.ReleasedAt = completionTimestamp
-	completion := &Completion{
+	completion := &completioncontract.Completion{
 		Generation: command.Generation, FinalHead: strings.ToLower(strings.TrimSpace(command.FinalHead)), VerificationReportPath: resolvedReport,
 		Verification: append([]string(nil), command.Verification...), RemoteArtifactURL: strings.TrimSpace(command.RemoteArtifactURL), CompletedAt: completionTimestamp,
 	}
@@ -106,7 +100,7 @@ func ApplyAt(snapshot Snapshot, command Command, resolvedReport string, complete
 	return Outcome{Phase: "done", Lease: lease, Completion: completion, Ledger: ledger}
 }
 
-func sameActor(left, right *Actor) bool {
+func sameActor(left, right *completioncontract.Actor) bool {
 	if left == nil || right == nil {
 		return left == nil && right == nil
 	}
@@ -119,8 +113,8 @@ func sameActor(left, right *Actor) bool {
 	return *left.Process == *right.Process
 }
 
-func cloneLedger(source map[string]LedgerEntry) map[string]LedgerEntry {
-	result := make(map[string]LedgerEntry, len(source)+2)
+func cloneLedger(source map[string]completioncontract.LedgerEntry) map[string]completioncontract.LedgerEntry {
+	result := make(map[string]completioncontract.LedgerEntry, len(source)+2)
 	for phase, entry := range source {
 		entry.Artifacts = append([]string(nil), entry.Artifacts...)
 		entry.Missing = append([]string(nil), entry.Missing...)

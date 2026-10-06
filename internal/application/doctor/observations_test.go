@@ -2,6 +2,7 @@ package doctor
 
 import (
 	"errors"
+	doctorcontract "issueops/internal/contract/doctor"
 	"reflect"
 	"testing"
 	"time"
@@ -44,7 +45,7 @@ func TestDoctorObservesInOrderAndSkipsLiveProbesForStaticRequests(t *testing.T) 
 			BinaryDrift:        func(string) doctordomain.BinaryObservation { record("binary"); return doctordomain.BinaryObservation{} },
 			Now:                func() time.Time { return time.Date(2026, 9, 29, 0, 0, 0, 0, time.UTC) },
 		}}
-		result, err := service.Run(HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: static})
+		result, err := service.Run(doctorcontract.HarnessDoctorRequest{RepoRoot: "/repo", StaticOnly: static})
 		if err != nil || !result.OK || result.Healthy != static {
 			t.Fatalf("static=%t result=%+v err=%v", static, result, err)
 		}

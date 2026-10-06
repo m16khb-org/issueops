@@ -3,6 +3,7 @@ package cycleintegration
 import (
 	"context"
 	"encoding/json"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -143,7 +144,7 @@ func readyIssueOpsRecordForLoopGateTest(t *testing.T) issueopscontract.IssueOpsR
 			SuccessCriteria:   []string{"loop gate works"},
 			RecordedAt:        "2026-07-07T00:00:00Z",
 		},
-		DesignReview: &issueopscontract.IssueOpsDesignReview{
+		DesignReview: &reviewcontract.DesignReview{
 			ProblemSummary: "durable loop readiness",
 			ProposedDesign: "check loops for the target repository",
 			RefactorPlan:   "apply the loop gate",

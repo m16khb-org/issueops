@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	pathutil "issueops/cmd/issueops/pathutil"
 	"issueops/cmd/issueops/workercli"
 
 	"issueops/internal/adapter/outbound/sqlstore"
@@ -32,7 +33,7 @@ func newScopedWorkerService() workerapp.Service {
 	return workerapp.Service{Effects: grantFencedWorkerStore{Store: newWorkerStore(), grantRoot: issueOpsStateRoot()}}
 }
 func newWorkerCommand() workercli.Command {
-	root := resolveTarget("")
+	root := pathutil.ResolveTarget("")
 	return workercli.Command{Service: newWorkerService(), ResolveTarget: func(target string) string {
 		if target != "" {
 			return target

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
 	"strings"
@@ -249,7 +250,7 @@ func TestRunCleanupStatusProjectsFinishReadinessParity(t *testing.T) {
 			t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 			record := cleanupStatusRecord(t, true, true)
 			var printed []any
-			provider := &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
+			provider := &cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
 				URL: record.IssueURL, Body: tc.issueBody, State: tc.issueState,
 			}}
 			deps := cleanupStatusDeps(&printed)
@@ -364,7 +365,7 @@ func TestRunCleanupFinishForwardsSupersedingArtifactToApplication(t *testing.T) 
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
 	replacement := "https://github.com/acme/repo/pull/454"
-	provider := &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
+	provider := &cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
 		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}
 	deps := cleanupStatusDeps(nil)
@@ -541,7 +542,7 @@ func containsCleanupStatusValue(values []string, want string) bool {
 }
 
 type cleanupStatusProvider struct {
-	snapshot  port.ExecutionIssueSnapshot
+	snapshot  executionissue.ExecutionIssueSnapshot
 	readErr   error
 	readCalls int
 }
@@ -550,8 +551,8 @@ func (p *cleanupStatusProvider) Name() string { return "github" }
 func (p *cleanupStatusProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, errors.New("unexpected create issue")
 }
-func (p *cleanupStatusProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-	return port.IssueProviderCreatePullRequestResult{}, errors.New("unexpected create pull request")
+func (p *cleanupStatusProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+	return executionissue.IssueProviderCreatePullRequestResult{}, errors.New("unexpected create pull request")
 }
 func (p *cleanupStatusProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, errors.New("unexpected create child")
@@ -565,7 +566,7 @@ func (p *cleanupStatusProvider) CloseIssue(context.Context, port.IssueProviderCl
 func (p *cleanupStatusProvider) UpdateIssueBodySection(context.Context, port.IssueProviderUpdateIssueBodySectionRequest) (port.IssueProviderUpdateIssueBodySectionResult, error) {
 	return port.IssueProviderUpdateIssueBodySectionResult{}, errors.New("unexpected update issue body")
 }
-func (p *cleanupStatusProvider) ReadIssueSnapshot(context.Context, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+func (p *cleanupStatusProvider) ReadIssueSnapshot(context.Context, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 	p.readCalls++
 	return p.snapshot, p.readErr
 }

@@ -1,6 +1,7 @@
 package issueopsreview
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,19 +11,19 @@ import (
 )
 
 func TestRecordDesignReviewPreservesValidationReadinessAndWriteOrder(t *testing.T) {
-	request := model.IssueOpsDesignReviewRequest{
+	request := reviewcontract.DesignReviewRequest{
 		ProblemSummary: "quality signal is low", ProposedDesign: "add focused tests",
 		RefactorPlan: "keep production unchanged", Alternatives: []string{"raise threshold"},
 		Risks: []string{"brittle tests"}, Verification: []string{"design review checked risks"}, Approved: true,
 	}
 	for _, tc := range []struct {
 		name    string
-		request model.IssueOpsDesignReviewRequest
+		request reviewcontract.DesignReviewRequest
 		ready   model.IssueOpsReadiness
 		want    string
 		events  []string
 	}{
-		{name: "invalid request before read", request: model.IssueOpsDesignReviewRequest{}, want: "problem_summary is required"},
+		{name: "invalid request before read", request: reviewcontract.DesignReviewRequest{}, want: "problem_summary is required"},
 		{name: "intent missing", request: request, ready: model.IssueOpsReadiness{Missing: []string{"intent"}}, want: "cannot record design review before intent contract", events: []string{"read", "readiness"}},
 		{name: "plan preparation alone is allowed", request: request, ready: model.IssueOpsReadiness{Missing: []string{"plan_prep_evidence"}}, events: []string{"read", "readiness", "clock", "write"}},
 	} {

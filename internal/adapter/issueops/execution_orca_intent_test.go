@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
 	"testing"
@@ -28,7 +29,7 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 		Provider: "github", Issue: 16, Marker: "readiness-marker",
 	}
 	issueBody := "## Acceptance\n- AC-01 persist plan\n\n## Verification\n```bash\ngo test ./... -count=1\n```\n"
-	snapshot := executionOwnerSnapshot{issue: executionOwnerIssue{
+	snapshot := executionOwnerSnapshot{issue: issueops.OwnerIssue{
 		URL: record.IssueURL, Body: issueBody, BodySHA256: digestExecutionOwnerBytes([]byte(issueBody)),
 	}}
 	prepared, intent, err := beginOrcaIntentViaRepository(
@@ -49,8 +50,8 @@ func TestOrcaIntentWorktreeReceiptPersistsPlanBeforeNextIntent(t *testing.T) {
 		},
 		RuntimeID: "runtime", RepoID: "repo", WorktreeID: "worktree", WorktreeInstanceID: "instance",
 	}}
-	readIssue := func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-		return port.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
+	readIssue := func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+		return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
 	}
 
 	advanced, next, err := advanceOrcaIntentReceiptViaRepository(context.Background(), stateRoot, prepared, intent, receipt, readIssue, nil)

@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"testing"
 	"time"
 
@@ -20,10 +21,10 @@ func (*publicationProviderFake) Name() string { return "github" }
 func (*publicationProviderFake) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (f *publicationProviderFake) CreatePullRequest(request port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func (f *publicationProviderFake) CreatePullRequest(request port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	f.createCalls++
 	f.request = request
-	return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
+	return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 }
 func (*publicationProviderFake) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil

@@ -8,22 +8,15 @@ import (
 	quality "issueops/internal/domain/quality"
 )
 
-// SNRResult is a deterministic Shannon-style signal-to-noise measure over the
-// repository's production Go source: signal lines (logic) versus noise lines
-// (blank, comment-only, or structural-only such as a lone brace). It is a
-// quantitative code-quality proxy — higher Ratio means less channel overhead.
-// It does not judge whether the logic is correct, only its density.
-type SNRResult = contract.SNRResult
-
 // computeCodeSNR walks root for production (non-test) Go files and computes the
 // signal-to-noise ratio. It is deterministic for a given file tree.
-var snrScanner func(string) (SNRResult, error)
+var snrScanner func(string) (contract.SNRResult, error)
 
-func ConfigureSNRScanner(scanner func(string) (SNRResult, error)) { snrScanner = scanner }
+func ConfigureSNRScanner(scanner func(string) (contract.SNRResult, error)) { snrScanner = scanner }
 
-func computeCodeSNR(root string) (SNRResult, error) {
+func computeCodeSNR(root string) (contract.SNRResult, error) {
 	if snrScanner == nil {
-		return SNRResult{}, fmt.Errorf("quality SNR scanner is not configured")
+		return contract.SNRResult{}, fmt.Errorf("quality SNR scanner is not configured")
 	}
 	return snrScanner(root)
 }

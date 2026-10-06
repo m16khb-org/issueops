@@ -58,7 +58,7 @@ func TestRunProjectRouteDocs_joinsTaskArgs_whenTaskFlagIsOmitted(t *testing.T) {
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunRouteDocs(testProjectDocsService(), []string{"--repo", repo, "--json", "architecture", "test"})
+		return runProjectRouteDocs(testProjectDocsService(), []string{"--repo", repo, "--json", "architecture", "test"})
 	})
 
 	// Then
@@ -77,7 +77,7 @@ func TestRunProjectRouteDocs_joinsTaskArgs_whenTaskFlagIsOmitted(t *testing.T) {
 func TestRunProjectRouteDocs_routesProfilingWithoutCommitReasons(t *testing.T) {
 	repo := t.TempDir()
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunRouteDocs(testProjectDocsService(), []string{"--repo", repo, "--task", "performance profiling", "--json"})
+		return runProjectRouteDocs(testProjectDocsService(), []string{"--repo", repo, "--task", "performance profiling", "--json"})
 	})
 	var result projectdocs.ProjectDocsRouteResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
@@ -101,7 +101,7 @@ func TestRunProjectRecord_recordsADR_whenRequiredFieldsAreProvided(t *testing.T)
 
 	// When
 	out := captureStatusVerifyStdout(t, func() error {
-		return RunRecord(testProjectDocsService(), []string{
+		return runProjectAppend(testProjectDocsService(), []string{
 			"--repo", repo,
 			"--kind", "adr",
 			"--title", "Keep project CLI thin",
@@ -160,7 +160,7 @@ func TestRunProjectRecord_returnsValidationError_whenTitleIsMissing(t *testing.T
 	repo := t.TempDir()
 
 	// When
-	err := RunRecord(testProjectDocsService(), []string{"--repo", repo, "--kind", "caution", "--summary", "summary"})
+	err := runProjectAppend(testProjectDocsService(), []string{"--repo", repo, "--kind", "caution", "--summary", "summary"})
 
 	// Then
 	if err == nil || !strings.Contains(err.Error(), "title is required") {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
 
@@ -45,7 +46,7 @@ func TestMCPDirectAndSDKKeepProjectAndExecutionServicesIsolated(t *testing.T) {
 	sessions := make([]*mcp.ClientSession, 2)
 	for i, owner := range owners {
 		pid := 100 + i
-		deps[i] = MCPDependencies{Catalog: testMCPCatalog(), DefaultTarget: owner,
+		deps[i] = MCPDependencies{Catalog: mcpcatalog.Build(), DefaultTarget: owner,
 			Inspect:   func(repo, _ string) any { return inspectmodel.InspectInfo{OK: true, TargetRepo: owner} },
 			Preflight: preflightapp.Service{Observer: instancePreflight{owner}},
 			Skills: func(root, name string) []inspectmodel.SkillInfo {

@@ -3,6 +3,8 @@ package orphancleanup
 import (
 	"context"
 	"errors"
+	contract "issueops/internal/contract/issueopsorphancleanup"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -42,11 +44,11 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 					CanonicalBranch: "main",
 					SourceHead:      fixture.sourceHead,
 					SourceClean:     true,
-					GitWorktrees: []corehealth.GitWorktree{{
+					GitWorktrees: []operationalhealthcontract.GitWorktree{{
 						Path: fixture.repo, Branch: "main", Head: fixture.sourceHead, Clean: true, Canonical: true,
 					}},
-					LocalRefs: []corehealth.GitRef{{Name: "refs/heads/main", Branch: "main", OID: fixture.sourceHead, Location: "local"}},
-					Messages:  corehealth.MessagePresence{CompleteAbsence: true},
+					LocalRefs: []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: fixture.sourceHead, Location: "local"}},
+					Messages:  operationalhealthcontract.MessagePresence{CompleteAbsence: true},
 				}
 			},
 			want: "canonical_worktree",
@@ -69,7 +71,7 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 		{
 			name: "preserved lifecycle owns target",
 			prepare: func(snapshot corehealth.Snapshot) corehealth.Snapshot {
-				snapshot.Cycles = append(snapshot.Cycles, corehealth.Cycle{
+				snapshot.Cycles = append(snapshot.Cycles, operationalhealthcontract.Cycle{
 					ID:                  "io-live-owner",
 					Repo:                fixture.repo,
 					Branch:              fixture.branch,
@@ -83,7 +85,7 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 					HolderPID:           1,
 					HolderStartedAt:     "2026-07-24T00:00:00Z",
 					HolderExecutable:    "codex",
-					HolderProcessStatus: corehealth.ProcessStatusLive,
+					HolderProcessStatus: operationalhealthcontract.ProcessStatusLive,
 				})
 				return snapshot
 			},
@@ -92,7 +94,7 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 		{
 			name: "lifecycle missing target path remains authority unknown",
 			prepare: func(snapshot corehealth.Snapshot) corehealth.Snapshot {
-				snapshot.Cycles = append(snapshot.Cycles, corehealth.Cycle{
+				snapshot.Cycles = append(snapshot.Cycles, operationalhealthcontract.Cycle{
 					ID: "io-owner-without-worktree", Repo: fixture.repo, Branch: fixture.branch,
 					Phase: "implement", ExecutionMode: "direct", LeaseStatus: "active", Generation: 1,
 				})
@@ -103,7 +105,7 @@ func TestPreviewFailsClosedForUnsafeRecordlessTargets(t *testing.T) {
 		{
 			name: "lease holder index claims target lifecycle id",
 			prepare: func(snapshot corehealth.Snapshot) corehealth.Snapshot {
-				snapshot.LeaseHolderIndexes = append(snapshot.LeaseHolderIndexes, corehealth.LeaseHolderIndex{
+				snapshot.LeaseHolderIndexes = append(snapshot.LeaseHolderIndexes, operationalhealthcontract.LeaseHolderIndex{
 					Key: "active-holder", LifecycleID: request.ID, Generation: 1, Host: "codex", SessionID: "session",
 				})
 				return snapshot
@@ -175,7 +177,7 @@ func TestPreviewAndApplyRemoveOnlyConfirmedRecordlessLocalArtifacts(t *testing.T
 		t.Fatalf("preview must prove the recordless remote-merged boundary: %+v", preview)
 	}
 
-	applied, err := Apply(context.Background(), request, ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
+	applied, err := Apply(context.Background(), request, contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,7 +218,7 @@ func TestApplyRejectsStalePreviewFingerprint(t *testing.T) {
 	}
 	gitRun(t, fixture.worktree, "commit", "--allow-empty", "-m", "advance feature after preview")
 
-	result, err := Apply(context.Background(), request, ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
+	result, err := Apply(context.Background(), request, contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
 	if err == nil || !strings.Contains(err.Error(), "stale preview fingerprint") {
 		t.Fatalf("Apply() error = %v, want stale fingerprint", err)
 	}
@@ -264,8 +266,8 @@ func newOrphanCleanupGitFixture(t *testing.T) orphanCleanupGitFixture {
 	}
 }
 
-func (fixture orphanCleanupGitFixture) request() Request {
-	return Request{
+func (fixture orphanCleanupGitFixture) request() contract.Request {
+	return contract.Request{
 		ID:           "io-f4e347fe9827",
 		RepoRoot:     fixture.repo,
 		WorktreePath: fixture.worktree,
@@ -292,19 +294,19 @@ func (fixture orphanCleanupGitFixture) snapshot() corehealth.Snapshot {
 		CanonicalBranch: "main",
 		SourceHead:      strings.TrimSpace(gitOutputNoFail(fixture.repo, "rev-parse", "main")),
 		SourceClean:     true,
-		GitWorktrees: []corehealth.GitWorktree{
+		GitWorktrees: []operationalhealthcontract.GitWorktree{
 			{Path: fixture.repo, Branch: "main", Head: strings.TrimSpace(gitOutputNoFail(fixture.repo, "rev-parse", "main")), Clean: true, Canonical: true},
 			{Path: fixture.worktree, Branch: fixture.branch, Head: featureHead, Clean: true},
 		},
-		LocalRefs: []corehealth.GitRef{
+		LocalRefs: []operationalhealthcontract.GitRef{
 			{Name: "refs/heads/main", Branch: "main", OID: strings.TrimSpace(gitOutputNoFail(fixture.repo, "rev-parse", "main")), Location: "local"},
 			{Name: "refs/heads/" + fixture.branch, Branch: fixture.branch, OID: featureHead, Location: "local"},
 		},
-		RemoteRefs: []corehealth.GitRef{
+		RemoteRefs: []operationalhealthcontract.GitRef{
 			{Name: "refs/heads/main", Branch: "main", OID: strings.TrimSpace(gitOutputNoFail(fixture.repo, "rev-parse", "main")), Location: "remote"},
 			{Name: "refs/heads/" + fixture.branch, Branch: fixture.branch, OID: featureHead, Location: "remote"},
 		},
-		Messages: corehealth.MessagePresence{CompleteAbsence: true},
+		Messages: operationalhealthcontract.MessagePresence{CompleteAbsence: true},
 	}
 }
 

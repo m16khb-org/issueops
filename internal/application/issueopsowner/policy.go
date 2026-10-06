@@ -36,7 +36,7 @@ func ValidateOwnerCatalog(commands issueops.OwnerCommands) error {
 	}
 	for _, path := range []string{"worktree prepare", "handoff start", "handoff claim", "handoff acknowledge"} {
 		if _, _, _, ok := commandparse.IssueOpsCommandSpec(path); ok {
-			return fmt.Errorf("IssueOps v1 command catalog still exposes legacy %s", path)
+			return fmt.Errorf("IssueOps v1 command catalog still exposes retired %s", path)
 		}
 	}
 	checks := []struct{ command, path string }{

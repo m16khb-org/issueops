@@ -5,11 +5,6 @@ import (
 	projectdoccontract "issueops/internal/contract/projectdoc"
 )
 
-type (
-	ProjectSignals         = projectdoccontract.ProjectSignals
-	ProjectDocsPlannedFile = projectdoccontract.ProjectDocsPlannedFile
-)
-
 type ProjectDocsBootstrapRequest struct {
 	RepoRoot string `json:"repo_root"`
 	Write    bool   `json:"write"`
@@ -25,8 +20,8 @@ type ProjectDocsBootstrapResult struct {
 	Sync           bool                                        `json:"sync"`
 	DryRun         bool                                        `json:"dry_run"`
 	GeneratedAt    string                                      `json:"generated_at"`
-	Signals        ProjectSignals                              `json:"signals"`
-	Files          []ProjectDocsPlannedFile                    `json:"files"`
+	Signals        projectdoccontract.ProjectSignals           `json:"signals"`
+	Files          []projectdoccontract.ProjectDocsPlannedFile `json:"files"`
 	LifecycleState lifecyclecontract.ProjectLifecycleStatePlan `json:"lifecycle_state"`
 	Warnings       []string                                    `json:"warnings,omitempty"`
 }

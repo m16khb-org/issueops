@@ -1,6 +1,7 @@
 package contractcli
 
 import (
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	fixtureapp "issueops/internal/application/toolconformance"
 
 	"context"
@@ -32,7 +33,7 @@ func TestConformanceInstancesKeepCatalogAndRegressionRoot(t *testing.T) {
 	}
 	instances := make([]*Conformance, 2)
 	for i := range instances {
-		catalog := append(testConformanceCatalog(), mcpcontract.Tool{Name: roots[i], InputSchema: map[string]any{"type": "object"}})
+		catalog := append(mcpcatalog.AdvertisedTools(), mcpcontract.Tool{Name: roots[i], InputSchema: map[string]any{"type": "object"}})
 		instances[i] = NewConformance(ConformanceDependencies{
 			Catalog:               func() []mcpcontract.Tool { return catalog },
 			Root:                  func() string { return roots[i] },

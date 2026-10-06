@@ -2,8 +2,6 @@ package selfverify
 
 import contract "issueops/internal/contract/selfverify"
 
-type GoalDefinition = contract.SelfVerificationGoalDefinition
-
 type Check struct {
 	Label string
 	OK    bool
@@ -15,10 +13,8 @@ type Run struct {
 	Checks    []Check
 }
 
-type GoalScore = contract.SelfVerificationGoalScore
-
-func ScoreGoals(goals []GoalDefinition, runs []Run, iterations int, targetScore float64) []GoalScore {
-	scores := make([]GoalScore, 0, len(goals))
+func ScoreGoals(goals []contract.SelfVerificationGoalDefinition, runs []Run, iterations int, targetScore float64) []contract.SelfVerificationGoalScore {
+	scores := make([]contract.SelfVerificationGoalScore, 0, len(goals))
 	runCount := iterations
 	if runCount < 1 {
 		runCount = len(runs)
@@ -48,7 +44,7 @@ func ScoreGoals(goals []GoalDefinition, runs []Run, iterations int, targetScore 
 		if total > 0 {
 			score = float64(passed) * 100 / float64(total)
 		}
-		scores = append(scores, GoalScore{
+		scores = append(scores, contract.SelfVerificationGoalScore{
 			Name: goal.Name, KoreanName: goal.KoreanName, Score: score, TargetScore: targetScore,
 			Passed: score > targetScore, EvidenceLabels: append([]string{}, goal.Labels...),
 			PassedChecks: passed, TotalChecks: total,

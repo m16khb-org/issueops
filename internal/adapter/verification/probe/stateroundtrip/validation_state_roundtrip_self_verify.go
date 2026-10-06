@@ -3,6 +3,7 @@ package stateroundtrip
 import (
 	selfaugment "issueops/internal/contract/selfaugment"
 	selfverify "issueops/internal/contract/selfverify"
+	verifydomain "issueops/internal/domain/selfverify"
 
 	"encoding/json"
 	"strings"
@@ -86,7 +87,7 @@ func validateStateRoundtripSelfVerifyDeps(input validateStateRoundtripSelfVerify
 		return step
 	}
 
-	stdoutText, stdoutTruncated, stdoutBytes := tailWithBudget(strings.Join(session.stdoutParts, "\n"), aggregateOutputBudgetBytes)
+	stdoutText, stdoutTruncated, stdoutBytes := verifydomain.TailWithBudget(strings.Join(session.stdoutParts, "\n"), aggregateOutputBudgetBytes)
 	return selfverify.StepResult{
 		Label:           "state roundtrip",
 		Command:         strings.Join(session.commands, " && "),

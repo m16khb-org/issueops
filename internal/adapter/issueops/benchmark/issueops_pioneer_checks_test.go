@@ -1,13 +1,15 @@
 package benchmark
 
-import issueopscontract "issueops/internal/contract/issueops"
-
-import "testing"
+import (
+	benchmark "issueops/internal/contract/issueopsbenchmark"
+	domain "issueops/internal/domain/issueopsbenchmark"
+	"testing"
+)
 
 func pioneerCheckForTest(target, evidence string) bool {
-	return issueOpsPioneerSkillEvidenceComplete(
-		issueopscontract.IssueOpsBenchmarkFixture{ID: "pioneer-" + target, PioneerSkillTarget: target},
-		issueopscontract.IssueOpsBenchmarkArtifact{PioneerSkillEvidence: evidence},
+	return domain.PioneerSkillEvidenceComplete(
+		benchmark.IssueOpsBenchmarkFixture{ID: "pioneer-" + target, PioneerSkillTarget: target},
+		benchmark.IssueOpsBenchmarkArtifact{PioneerSkillEvidence: evidence},
 	)
 }
 

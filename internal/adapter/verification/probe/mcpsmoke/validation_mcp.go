@@ -2,9 +2,9 @@ package mcpsmoke
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	verifydomain "issueops/internal/domain/selfverify"
+	"time"
 )
-
-import "time"
 
 func ValidateMCP(binary, root string) selfverify.StepResult {
 	return ValidateMCPWithDeps(binary, root, MCPValidationDeps{})
@@ -14,7 +14,7 @@ func ValidateMCPWithDeps(binary, root string, deps MCPValidationDeps) selfverify
 	deps = deps.withDefaults()
 	tempState, err := deps.MkdirTemp("", "issueops-mcp-state-*")
 	if err != nil {
-		return failedStep("MCP smoke", err)
+		return verifydomain.FailedStep("MCP smoke", err)
 	}
 	defer func() { _ = deps.RemoveAll(tempState) }()
 	env := []string{"ISSUEOPS_STATE_DIR=" + tempState}
@@ -24,6 +24,6 @@ func ValidateMCPWithDeps(binary, root string, deps MCPValidationDeps) selfverify
 		return step
 	}
 	ValidateMCPSmokeContract(&step)
-	step.Stdout, step.StdoutTruncated, step.StdoutBytes = tailWithBudget(step.Stdout, aggregateOutputBudgetBytes)
+	step.Stdout, step.StdoutTruncated, step.StdoutBytes = verifydomain.TailWithBudget(step.Stdout, aggregateOutputBudgetBytes)
 	return step
 }

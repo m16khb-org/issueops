@@ -1,32 +1,34 @@
 package devilsadvocate
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	reviewport "issueops/internal/port/issueopsreview"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
 )
 
 func TestValidateVerdicts(t *testing.T) {
-	if _, err := Validate(model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3: no second caller"}}); err != nil {
+	if _, err := Validate(reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3: no second caller"}}); err != nil {
 		t.Fatalf("pass should validate: %v", err)
 	}
-	if _, err := Validate(model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "bogus", ReviewerContext: "subagent"}); err == nil {
+	if _, err := Validate(reviewcontract.DevilsAdvocateReviewRequest{Verdict: "bogus", ReviewerContext: "subagent"}); err == nil {
 		t.Fatal("unknown verdict must fail")
 	}
-	if _, err := Validate(model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "stop", ReviewerContext: "subagent"}); err == nil {
+	if _, err := Validate(reviewcontract.DevilsAdvocateReviewRequest{Verdict: "stop", ReviewerContext: "subagent"}); err == nil {
 		t.Fatal("stop without findings/waiver must fail")
 	}
-	got, err := Validate(model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "stop", ReviewerContext: "subagent", Findings: []string{"gold-plating", "gold-plating", "  "}})
+	got, err := Validate(reviewcontract.DevilsAdvocateReviewRequest{Verdict: "stop", ReviewerContext: "subagent", Findings: []string{"gold-plating", "gold-plating", "  "}})
 	if err != nil {
 		t.Fatalf("stop with findings should validate: %v", err)
 	}
 	if len(got.Findings) != 1 || got.ReviewerPattern != "devils-advocate-review" || got.RecordedAt == "" {
 		t.Fatalf("findings should be cleaned/deduped and stamped: %+v", got)
 	}
-	if _, err := Validate(model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "revise", ReviewerContext: "subagent", Waived: true}); err == nil {
+	if _, err := Validate(reviewcontract.DevilsAdvocateReviewRequest{Verdict: "revise", ReviewerContext: "subagent", Waived: true}); err == nil {
 		t.Fatal("waive without rationale must fail")
 	}
-	waived, err := Validate(model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "revise", ReviewerContext: "subagent", Waived: true, WaiverRationale: "scoped follow-up issue filed"})
+	waived, err := Validate(reviewcontract.DevilsAdvocateReviewRequest{Verdict: "revise", ReviewerContext: "subagent", Waived: true, WaiverRationale: "scoped follow-up issue filed"})
 	if err != nil || !waived.Waived {
 		t.Fatalf("waived revise should validate: %+v %v", waived, err)
 	}
@@ -34,7 +36,7 @@ func TestValidateVerdicts(t *testing.T) {
 
 func TestRecordPersistsReview(t *testing.T) {
 	var written model.IssueOpsRecord
-	store := Store{
+	store := reviewport.DevilsAdvocateStore{
 		Read: func(_, id string) (model.IssueOpsRecord, error) {
 			return model.IssueOpsRecord{OK: true, ID: id, PlanPath: "plans/demo.md"}, nil
 		},
@@ -44,7 +46,7 @@ func TestRecordPersistsReview(t *testing.T) {
 		},
 		PlanDigest: func(string, model.IssueOpsRecord) (string, error) { return "digest", nil },
 	}
-	rec, err := Record(store, "root", "io-1", model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}})
+	rec, err := Record(store, "root", "io-1", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}})
 	if err != nil {
 		t.Fatalf("record: %v", err)
 	}

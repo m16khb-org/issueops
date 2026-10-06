@@ -2,6 +2,7 @@ package issueopsbranch_test
 
 import (
 	"context"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,7 +53,7 @@ func newLinkStoreForTest(records ...model.IssueOpsRecord) (*linkStoreForTest, br
 			r.IssueURL = "https://github.com/example/repo/issues/10"
 		}
 		r.BranchPrepare = &model.IssueOpsBranchPrepare{LinkVerified: true}
-		r.DesignReview = &model.IssueOpsDesignReview{ProblemSummary: "problem", ProposedDesign: "design", Verification: []string{"design review checked alternatives and risks"}, Approved: true, RefactorPlan: "plan", Alternatives: []string{"alternative"}, Risks: []string{"risk"}}
+		r.DesignReview = &reviewcontract.DesignReview{ProblemSummary: "problem", ProposedDesign: "design", Verification: []string{"design review checked alternatives and risks"}, Approved: true, RefactorPlan: "plan", Alternatives: []string{"alternative"}, Risks: []string{"risk"}}
 		s.records[r.ID] = r
 	}
 	return s, branchapp.WorkspaceLinker{Records: s, Authority: cycleapp.NewMutationAuthority(authorizationoutbound.CanonicalPaths{}.Same, core.NativeActorVerifier()), Files: core.LinkEnvironment{}, Now: func() time.Time { return time.Date(2026, 9, 28, 0, 0, 0, 0, time.UTC) }}

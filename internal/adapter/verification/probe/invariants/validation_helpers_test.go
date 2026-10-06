@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestValidateHarnessInvariantsCoversHealthyMissingAndLegacyHits(t *testing.T) {
+func TestValidateHarnessInvariantsCoversHealthyMissingAndRetiredHits(t *testing.T) {
 	root := makeValidationIssueOpsRoot(t)
 	healthy := ValidateHarnessInvariants(root)
 	if !healthy.OK || healthy.Label != "harness invariants" || healthy.Error != "" {
@@ -34,13 +34,13 @@ func TestValidateHarnessInvariantsCoversHealthyMissingAndLegacyHits(t *testing.T
 		t.Fatalf("missing application owner accepted: %+v", bootstrapMissing)
 	}
 
-	legacyRoot := makeValidationIssueOpsRoot(t)
-	if err := os.WriteFile(filepath.Join(legacyRoot, "AGENTS.md"), []byte("legacy m"+"16kh owner\n"), 0o644); err != nil {
+	retiredRoot := makeValidationIssueOpsRoot(t)
+	if err := os.WriteFile(filepath.Join(retiredRoot, "AGENTS.md"), []byte("retired m"+"16kh owner\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	legacy := ValidateHarnessInvariants(legacyRoot)
-	if legacy.OK || !strings.Contains(legacy.Error, "forbidden legacy name hits") {
-		t.Fatalf("expected forbidden legacy invariant, got %+v", legacy)
+	retired := ValidateHarnessInvariants(retiredRoot)
+	if retired.OK || !strings.Contains(retired.Error, "retired name hits") {
+		t.Fatalf("expected retired name invariant, got %+v", retired)
 	}
 }
 
@@ -102,21 +102,21 @@ func TestValidateSkillShapeCoversFrontmatterAndAgentFile(t *testing.T) {
 	}
 }
 
-func TestContainsForbiddenLegacyOutsideRuntimePathsMasksRuntimeAndOwner(t *testing.T) {
+func TestContainsRetiredNameOutsideRuntimePathsMasksRuntimeAndOwner(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "m"+"16kh-runtime-root")
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	runtimeText := filepath.Join(root, "worktrees", "example") + "\n"
-	if containsForbiddenLegacyOutsideRuntimePaths(runtimeText, root) {
-		t.Fatal("runtime root path should be masked before legacy-name scan")
+	if containsRetiredNameOutsideRuntimePaths(runtimeText, root) {
+		t.Fatal("runtime root path should be masked before retired-name scan")
 	}
 	ownerText := "git@github.com:m" + "16khb/issueops.git"
-	if containsForbiddenLegacyOutsideRuntimePaths(ownerText, root) {
-		t.Fatal("current owner handle should be masked before legacy-name scan")
+	if containsRetiredNameOutsideRuntimePaths(ownerText, root) {
+		t.Fatal("current owner handle should be masked before retired-name scan")
 	}
-	if !containsForbiddenLegacyOutsideRuntimePaths("bad legacy m"+"16kh value", root) {
-		t.Fatal("non-runtime legacy needle should still be detected")
+	if !containsRetiredNameOutsideRuntimePaths("bad retired m"+"16kh value", root) {
+		t.Fatal("non-runtime retired needle should still be detected")
 	}
 }
 
@@ -129,25 +129,25 @@ func TestForbiddenNameHitsAllowsCurrentOwnerAndLicense(t *testing.T) {
 	if err := os.WriteFile(planPath, []byte("git clone git@github.com:m"+"16khb/issueops.git\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("legacy m"+"16kh leak\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, "AGENTS.md"), []byte("retired m"+"16kh leak\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	hits := forbiddenNameHits(root)
+	hits := ForbiddenNameHits(root)
 	if len(hits) != 1 || hits[0] != "AGENTS.md contains m"+"16kh" {
-		t.Fatalf("expected only the genuine legacy hit, got %+v", hits)
+		t.Fatalf("expected only the genuine retired hit, got %+v", hits)
 	}
 }
 
 func TestForbiddenNameHitsSkipsWorktreeGitPointer(t *testing.T) {
 	root := t.TempDir()
-	legacyPath := "gitdir: /Users/" + "m" + "16" + "kh" + "b/Workspace/issueops/.git/worktrees/example\n"
-	if err := os.WriteFile(filepath.Join(root, ".git"), []byte(legacyPath), 0o644); err != nil {
+	retiredPath := "gitdir: /Users/" + "m" + "16" + "kh" + "b/Workspace/issueops/.git/worktrees/example\n"
+	if err := os.WriteFile(filepath.Join(root, ".git"), []byte(retiredPath), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "note.txt"), []byte("safe\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if hits := forbiddenNameHits(root); len(hits) != 0 {
+	if hits := ForbiddenNameHits(root); len(hits) != 0 {
 		t.Fatalf("worktree .git pointer should be skipped, got %+v", hits)
 	}
 }
@@ -158,13 +158,13 @@ func TestForbiddenNameHitsSkipsOnlyOmoTaskRuntime(t *testing.T) {
 	if err := os.MkdirAll(runtimeDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(runtimeDir, "transcript.jsonl"), []byte("legacy m"+"16kh runtime text\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(runtimeDir, "transcript.jsonl"), []byte("retired m"+"16kh runtime text\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, ".omo", "mcp.json"), []byte("legacy m"+"16kh project config\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(root, ".omo", "mcp.json"), []byte("retired m"+"16kh project config\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	hits := forbiddenNameHits(root)
+	hits := ForbiddenNameHits(root)
 	if len(hits) != 1 || hits[0] != filepath.Join(".omo", "mcp.json")+" contains m"+"16kh" {
 		t.Fatalf("expected project config hit and no Omo task-runtime hit, got %+v", hits)
 	}
@@ -181,7 +181,7 @@ func BenchmarkForbiddenNameHits(b *testing.B) {
 	}
 	b.ResetTimer()
 	for b.Loop() {
-		if hits := forbiddenNameHits(root); len(hits) != 0 {
+		if hits := ForbiddenNameHits(root); len(hits) != 0 {
 			b.Fatalf("unexpected hits: %+v", hits)
 		}
 	}
@@ -252,7 +252,7 @@ func allowCurrentOwnerHandle(text string) string {
 	return strings.ReplaceAll(text, currentOwnerHandle(), "$CURRENT_OWNER")
 }
 
-func containsForbiddenLegacyOutsideRuntimePaths(text, root string) bool {
+func containsRetiredNameOutsideRuntimePaths(text, root string) bool {
 	sanitized := allowCurrentOwnerHandle(text)
 	replacements := []string{}
 	if abs, err := filepath.Abs(root); err == nil {
@@ -267,7 +267,7 @@ func containsForbiddenLegacyOutsideRuntimePaths(text, root string) bool {
 		}
 		sanitized = strings.ReplaceAll(sanitized, runtimePath, "$RUNTIME_PATH")
 	}
-	for _, needle := range forbiddenLegacyNeedles() {
+	for _, needle := range retiredNameNeedles() {
 		if strings.Contains(sanitized, needle) {
 			return true
 		}

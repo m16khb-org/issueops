@@ -3,6 +3,7 @@ package mcpsmoke
 import (
 	"errors"
 	"fmt"
+	verifydomain "issueops/internal/domain/selfverify"
 	"strings"
 	"testing"
 	"time"
@@ -99,11 +100,11 @@ func TestDepsDefaultsAndSmallHelpers(t *testing.T) {
 	if deps.MkdirTemp == nil || deps.RemoveAll == nil || deps.RunSDKSmoke == nil {
 		t.Fatal("defaults should populate dependencies")
 	}
-	step := failedStep("label", errors.New("boom"))
+	step := verifydomain.FailedStep("label", errors.New("boom"))
 	if step.OK || step.Label != "label" || !strings.Contains(step.Error, "boom") {
 		t.Fatalf("unexpected failed step: %#v", step)
 	}
-	stdout, truncated, bytes := tailWithBudget("abcdef", 3)
+	stdout, truncated, bytes := verifydomain.TailWithBudget("abcdef", 3)
 	if stdout != "[tr" || !truncated || bytes != 6 {
 		t.Fatalf("unexpected tail budget result stdout=%q truncated=%v bytes=%d", stdout, truncated, bytes)
 	}

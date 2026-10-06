@@ -15,7 +15,7 @@ func validateMermaidDocsWithDeps(root string, deps docsValidationDeps) []string 
 		if err != nil {
 			rel = path
 		}
-		errs = append(errs, lintMermaidBlocks(filepath.ToSlash(rel), string(b))...)
+		errs = append(errs, LintMermaidBlocks(filepath.ToSlash(rel), string(b))...)
 	}
 	return errs
 }

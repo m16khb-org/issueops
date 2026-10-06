@@ -51,7 +51,7 @@ func TestSelfVerifyStopsOnFailedStepAndEmitsProgress(t *testing.T) {
 		IssueOpsRoot: func() string { return t.TempDir() },
 		StepDeps:     fakeVerifyLoopStepDeps("docs index smoke", "docs failed"),
 	})
-	if err == nil || !errors.Is(err, ErrSelfVerificationGateFailed) {
+	if err == nil || !errors.Is(err, verifyapp.ErrSelfVerificationGateFailed) {
 		t.Fatalf("expected gate failure, got result=%#v err=%v", result, err)
 	}
 	if result.OK || len(result.Runs) != 1 {
@@ -185,7 +185,7 @@ func TestSelfVerifyCollectAllStepsSurfacesEveryFailure(t *testing.T) {
 	}, Deps{
 		IssueOpsRoot: func() string { return "." }, StepDeps: stepDeps,
 	})
-	if err == nil || !errors.Is(err, ErrSelfVerificationGateFailed) {
+	if err == nil || !errors.Is(err, verifyapp.ErrSelfVerificationGateFailed) {
 		t.Fatalf("collect-all must still fail the gate, got %v", err)
 	}
 	if collect.OK {
@@ -207,7 +207,7 @@ func TestSelfVerifyCollectAllStepsSurfacesEveryFailure(t *testing.T) {
 	ff, err := SelfVerify(Request{BaseSeed: 100, TargetScore: 95}, Deps{
 		IssueOpsRoot: func() string { return "." }, StepDeps: stepDeps,
 	})
-	if err == nil || !errors.Is(err, ErrSelfVerificationGateFailed) {
+	if err == nil || !errors.Is(err, verifyapp.ErrSelfVerificationGateFailed) {
 		t.Fatalf("fail-fast must fail the gate, got %v", err)
 	}
 	ffFailedFirst, ranLater := false, false

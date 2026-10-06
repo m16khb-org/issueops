@@ -258,14 +258,14 @@ func TestFinalizeReleasesInsteadOfClaimableWhenTheWorkspaceIsGone(t *testing.T) 
 	deps := ExecutionReplaceDependencies{OrcaOwner: inspector, inspectWorkspace: quiescentWorkspaceInspector()}
 	source := record.Execution.Workspace.SourceRoot
 
-	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	preview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplacePreview, ExpectedGeneration: 1,
 		Actor: requester, CWD: source,
 	}, deps)
 	if err != nil {
 		t.Fatalf("preview: %v", err)
 	}
-	if _, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	if _, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplaceRevoke, ExpectedGeneration: 1,
 		InventoryFingerprint: preview.InventoryFingerprint, Reason: "worktree was reclaimed elsewhere",
 		Actor: requester, CWD: source, Confirm: true,
@@ -278,7 +278,7 @@ func TestFinalizeReleasesInsteadOfClaimableWhenTheWorkspaceIsGone(t *testing.T) 
 		t.Fatal(err)
 	}
 
-	finalizePreview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	finalizePreview, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplaceFinalizePreview, ExpectedGeneration: 2,
 		Actor: requester, CWD: source,
 	}, deps)
@@ -286,7 +286,7 @@ func TestFinalizeReleasesInsteadOfClaimableWhenTheWorkspaceIsGone(t *testing.T) 
 		t.Fatalf("부재한 worktree에서도 finalize preview는 진행돼야 한다: %v", err)
 	}
 
-	finalized, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, ExecutionReplaceRequest{
+	finalized, err := ReplaceExecutionWithDependencies(context.Background(), stateRoot, issueops.ExecutionReplaceRequest{
 		ID: record.ID, Action: issueops.ExecutionReplaceFinalize, ExpectedGeneration: 2,
 		QuiescenceFingerprint: finalizePreview.QuiescenceFingerprint,
 		Actor:                 requester, CWD: source, Confirm: true,

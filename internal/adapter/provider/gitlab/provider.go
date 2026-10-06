@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
+	policy "issueops/internal/domain/policy"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -100,23 +102,23 @@ func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssuePro
 	}, nil
 }
 
-func (Provider) CreatePullRequest(req port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func (Provider) CreatePullRequest(req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return Provider{}.CreatePullRequestContext(context.Background(), req)
 }
 
-func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("MR title is required")
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("MR title is required")
 	}
 	head := strings.TrimSpace(req.HeadBranch)
 	base := strings.TrimSpace(req.BaseBranch)
 	if head == "" || base == "" {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("source and target branches are required")
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("source and target branches are required")
 	}
 	projectURL, err := gitLabProjectURL(req.ProjectKey)
 	if err != nil {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, err
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, err
 	}
 	args := []string{"mr", "create", "--title", title, "--source-branch", head, "--target-branch", base, "--yes"}
 	if projectURL != "" {
@@ -136,7 +138,7 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 		args = append(args, "--assignee", assignee)
 	}
 	if !req.Confirm {
-		return port.IssueProviderCreatePullRequestResult{
+		return executionissue.IssueProviderCreatePullRequestResult{
 			OK:      true,
 			Preview: providerutil.DryRunPreview("glab", args...),
 		}, nil
@@ -144,7 +146,7 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 	if gitLabProjectRequiresGlab182(projectURL) {
 		version, versionErr := providerutil.RunBoundedReadbackContext(ctx, req.Repo, "glab", "--version")
 		if versionErr != nil || !glabCapabilityAtLeast182(string(version)) {
-			return port.IssueProviderCreatePullRequestResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("GitLab custom web authority requires proven glab >= 1.82.0 capability")}
+			return executionissue.IssueProviderCreatePullRequestResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: fmt.Errorf("GitLab custom web authority requires proven glab >= 1.82.0 capability")}
 		}
 	}
 	result, err := runGlabMRJSON(ctx, args, req.Repo)
@@ -152,10 +154,10 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 		return result, err
 	}
 	if !validCanonicalGitLabMergeRequestURL(result.URL) {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("created artifact URL unavailable; needs reconciliation; not retried")
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("created artifact URL unavailable; needs reconciliation; not retried")
 	}
 	if err := verifyCreatedGitLabMergeRequest(ctx, req, result.URL); err != nil {
-		return port.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL}, gitlabCreatedMergeRequestError(result.URL, err)
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL}, gitlabCreatedMergeRequestError(result.URL, err)
 	}
 	return result, nil
 }
@@ -328,5 +330,5 @@ func glabCapabilityAtLeast182(value string) bool {
 }
 
 func gitlabCreatedMergeRequestError(_ string, err error) error {
-	return fmt.Errorf("created merge request has unknown state with a canonical URL returned separately and needs reconciliation; creation was not retried: %s", providerutil.BoundedDiagnostic(err.Error(), 384))
+	return fmt.Errorf("created merge request has unknown state with a canonical URL returned separately and needs reconciliation; creation was not retried: %s", policy.BoundedDiagnostic(err.Error(), 384))
 }

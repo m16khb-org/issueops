@@ -98,9 +98,5 @@ func (b *boundedBuffer) String() string {
 }
 
 func boundedDiagnostic(value string) string {
-	return BoundedDiagnostic(value, providerDiagnosticLimit)
-}
-
-func BoundedDiagnostic(value string, limit int) string {
-	return policy.BoundedDiagnostic(value, limit)
+	return policy.BoundedDiagnostic(value, providerDiagnosticLimit)
 }

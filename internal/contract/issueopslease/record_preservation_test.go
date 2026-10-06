@@ -2,6 +2,7 @@ package issueopslease_test
 
 import (
 	"encoding/json"
+	leasecontract "issueops/internal/contract/issueopslease"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,14 +15,14 @@ import (
 // execution 하위에서 lease 타입이 모르는 field가 있으면 Encode가 그 field를 조용히
 // 버리므로, production execution의 모든 field가 lease 타입에 있어야 한다.
 func TestLeaseExecutionShapeCoversEveryPersistedExecutionField(t *testing.T) {
-	assertJSONShape(t, reflect.TypeOf(model.Execution{}), reflect.TypeOf(Execution{}), "Execution")
+	assertJSONShape(t, reflect.TypeOf(model.Execution{}), reflect.TypeOf(leasecontract.Execution{}), "Execution")
 }
 
 // lease Record에 없는 최상위 field는 Decode 뒤 Encode에서 사라진다. production
 // record의 모든 최상위 field가 lease Record에 있어야 한다. sidecar는
 // json.RawMessage로 받아 원문 그대로 다시 쓴다.
 func TestLeaseRecordCarriesEveryPersistedTopLevelField(t *testing.T) {
-	lease := jsonTaggedFields(reflect.TypeOf(Record{}))
+	lease := jsonTaggedFields(reflect.TypeOf(leasecontract.Record{}))
 	for _, field := range jsonTaggedFields(reflect.TypeOf(model.IssueOpsRecord{})) {
 		if _, ok := lease[field.tag]; !ok {
 			t.Errorf("persisted field %q is absent from the lease Record and would be dropped on re-encode", field.tag)

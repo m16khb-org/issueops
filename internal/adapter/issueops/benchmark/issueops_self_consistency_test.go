@@ -1,23 +1,25 @@
 package benchmark
 
 import (
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
+	domain "issueops/internal/domain/issueopsbenchmark"
 	"math"
 	"testing"
 )
 
 // sample builds a JudgeSample with the distinct id + provenance the
 // independence guard requires, so the happy-path tests stay terse.
-func sample(id string, avg float64, passed bool) JudgeSample {
-	return JudgeSample{
+func sample(id string, avg float64, passed bool) benchmarkcontract.JudgeSample {
+	return benchmarkcontract.JudgeSample{
 		SampleID:   id,
 		Provenance: "run-" + id,
-		Score:      IssueOpsBenchmarkScore{AverageScore: avg, Passed: passed},
+		Score:      benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: avg, Passed: passed},
 	}
 }
 
 func TestConsensusJudgeVerdict_MajorityVote(t *testing.T) {
 	// 2 pass / 1 fail -> majority passes, agreement 2/3.
-	v, err := ConsensusJudgeVerdict([]JudgeSample{
+	v, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
 		sample("a", 100, true),
 		sample("b", 100, true),
 		sample("c", 60, false),
@@ -38,7 +40,7 @@ func TestConsensusJudgeVerdict_MajorityVote(t *testing.T) {
 
 func TestConsensusJudgeVerdict_MinorityFailsClosed(t *testing.T) {
 	// 1 pass / 2 fail -> majority fails, agreement is the FAIL fraction 2/3.
-	v, err := ConsensusJudgeVerdict([]JudgeSample{
+	v, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
 		sample("a", 100, true),
 		sample("b", 40, false),
 		sample("c", 60, false),
@@ -57,7 +59,7 @@ func TestConsensusJudgeVerdict_MinorityFailsClosed(t *testing.T) {
 func TestConsensusJudgeVerdict_TieFailsClosed(t *testing.T) {
 	// Even split: strict majority is NOT reached, so fail-closed and
 	// agreement is exactly 0.5 — the gate cannot accept on a coin-flip.
-	v, err := ConsensusJudgeVerdict([]JudgeSample{
+	v, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
 		sample("a", 100, true),
 		sample("b", 100, true),
 		sample("c", 50, false),
@@ -76,7 +78,7 @@ func TestConsensusJudgeVerdict_TieFailsClosed(t *testing.T) {
 
 func TestConsensusJudgeVerdict_MedianAndSpread(t *testing.T) {
 	// Scores 60, 80, 100 -> median 80, spread 40, min 60, max 100.
-	v, err := ConsensusJudgeVerdict([]JudgeSample{
+	v, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
 		sample("a", 60, false),
 		sample("b", 80, false),
 		sample("c", 100, true),
@@ -92,7 +94,7 @@ func TestConsensusJudgeVerdict_MedianAndSpread(t *testing.T) {
 	}
 	// Median is robust to the bimodal scorer: with an even count it averages
 	// the two middle values, never inventing an unreachable mean.
-	v2, err := ConsensusJudgeVerdict([]JudgeSample{
+	v2, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
 		sample("a", 0, false),
 		sample("b", 100, true),
 	})
@@ -106,7 +108,7 @@ func TestConsensusJudgeVerdict_MedianAndSpread(t *testing.T) {
 
 func TestConsensusJudgeVerdict_EmpiricalVariance(t *testing.T) {
 	// Population variance of {0,100} = ((0-50)^2 + (100-50)^2)/2 = 2500.
-	v, err := ConsensusJudgeVerdict([]JudgeSample{
+	v, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
 		sample("a", 0, false),
 		sample("b", 100, true),
 	})
@@ -118,7 +120,7 @@ func TestConsensusJudgeVerdict_EmpiricalVariance(t *testing.T) {
 	}
 	// Degenerate (all-equal) samples have ZERO variance — the honest signal
 	// that there is nothing for self-consistency to reduce.
-	vZero, err := ConsensusJudgeVerdict([]JudgeSample{
+	vZero, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
 		sample("a", 100, true),
 		sample("b", 100, true),
 		sample("c", 100, true),
@@ -137,37 +139,37 @@ func TestConsensusJudgeVerdict_EmpiricalVariance(t *testing.T) {
 func TestConsensusJudgeVerdict_IndependenceGuard(t *testing.T) {
 	tests := []struct {
 		name    string
-		samples []JudgeSample
+		samples []benchmarkcontract.JudgeSample
 	}{
 		{
 			name:    "fewer than two samples",
-			samples: []JudgeSample{sample("a", 100, true)},
+			samples: []benchmarkcontract.JudgeSample{sample("a", 100, true)},
 		},
 		{
 			name: "duplicate sample id is one judge dressed as N voters",
-			samples: []JudgeSample{
+			samples: []benchmarkcontract.JudgeSample{
 				sample("dup", 100, true),
 				sample("dup", 100, true),
 			},
 		},
 		{
 			name: "empty sample id",
-			samples: []JudgeSample{
-				{SampleID: "", Provenance: "p1", Score: IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
+			samples: []benchmarkcontract.JudgeSample{
+				{SampleID: "", Provenance: "p1", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
 				sample("b", 100, true),
 			},
 		},
 		{
 			name: "empty provenance",
-			samples: []JudgeSample{
-				{SampleID: "a", Provenance: "  ", Score: IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
+			samples: []benchmarkcontract.JudgeSample{
+				{SampleID: "a", Provenance: "  ", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
 				sample("b", 100, true),
 			},
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := ConsensusJudgeVerdict(tc.samples); err == nil {
+			if _, err := domain.ConsensusJudgeVerdict(tc.samples); err == nil {
 				t.Fatalf("expected error for %q, got nil", tc.name)
 			}
 		})
@@ -178,10 +180,10 @@ func TestConsensusJudgeVerdict_ProvenanceDeduped(t *testing.T) {
 	// Distinct samples may legitimately share a provenance label only when it
 	// is the same source bucket; the reported provenance list is de-duplicated
 	// but the samples themselves remain distinct votes.
-	v, err := ConsensusJudgeVerdict([]JudgeSample{
-		{SampleID: "a", Provenance: "offline-batch-1", Score: IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
-		{SampleID: "b", Provenance: "offline-batch-1", Score: IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
-		{SampleID: "c", Provenance: "offline-batch-2", Score: IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
+	v, err := domain.ConsensusJudgeVerdict([]benchmarkcontract.JudgeSample{
+		{SampleID: "a", Provenance: "offline-batch-1", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
+		{SampleID: "b", Provenance: "offline-batch-1", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
+		{SampleID: "c", Provenance: "offline-batch-2", Score: benchmarkcontract.IssueOpsBenchmarkScore{AverageScore: 100, Passed: true}},
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

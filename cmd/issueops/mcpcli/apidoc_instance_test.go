@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
 
@@ -47,7 +48,7 @@ func apiDocOutcomeDeps(t *testing.T, owner, mode string) MCPDependencies {
 	service.Reviewer.Effects.ReadResult = func(string, string) (string, []byte, error) {
 		return owner + "-result", []byte(`{"verdict":"fail"}`), nil
 	}
-	return MCPDependencies{Catalog: testMCPCatalog(), DefaultTarget: owner, APIDoc: service}
+	return MCPDependencies{Catalog: mcpcatalog.Build(), DefaultTarget: owner, APIDoc: service}
 }
 
 func TestAPIDocDirectAndSDKKeepServicesAndGateErrors(t *testing.T) {

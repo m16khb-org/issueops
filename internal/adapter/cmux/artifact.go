@@ -36,9 +36,6 @@ type BootstrapReceipt struct {
 }
 
 func PrepareLauncher(request cmuxcontract.ArtifactRequest, buildArgv func(string, string, string, string, string) ([]string, error)) (cmuxcontract.PreparedLauncher, error) {
-	if err := requireSupportedPlatform(); err != nil {
-		return cmuxcontract.PreparedLauncher{}, err
-	}
 	if !filepath.IsAbs(request.Root) || !filepath.IsAbs(request.CWD) || !filepath.IsAbs(request.SocketPath) ||
 		!validUUID(request.WindowID) || !validUUID(request.WorkspaceID) || !validUUID(request.SurfaceID) {
 		return cmuxcontract.PreparedLauncher{}, fmt.Errorf("cmux launcher artifact scope is invalid")

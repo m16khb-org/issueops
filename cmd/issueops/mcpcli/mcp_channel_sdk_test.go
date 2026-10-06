@@ -3,6 +3,7 @@ package mcpcli
 import (
 	"context"
 	"encoding/json"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	model "issueops/internal/contract/channel"
 	"strings"
 	"testing"
@@ -14,7 +15,7 @@ import (
 // 수발신이 실제로 동작하는지 검증한다.
 func TestServeMCPStreamAdvertisesAndRunsChannelTools(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Channel: testChannelService()})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: mcpcatalog.Build(), Channel: testChannelService()})
 
 	tools, err := session.ListTools(context.Background(), nil)
 	if err != nil {
@@ -65,8 +66,8 @@ func TestServeMCPStreamAdvertisesAndRunsChannelTools(t *testing.T) {
 }
 
 func TestChannelSDKServersKeepSeparateStores(t *testing.T) {
-	first := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Channel: testChannelServiceAt(t.TempDir())})
-	second := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: testMCPCatalog(), Channel: testChannelServiceAt(t.TempDir())})
+	first := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: mcpcatalog.Build(), Channel: testChannelServiceAt(t.TempDir())})
+	second := startMCPTransportTestSession(t, "stdio", MCPDependencies{Catalog: mcpcatalog.Build(), Channel: testChannelServiceAt(t.TempDir())})
 	for i, session := range []*mcp.ClientSession{first, second} {
 		body := []string{"first", "second"}[i]
 		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "channel_send", Arguments: map[string]any{"channel": "same", "from": "sender", "body": body}})

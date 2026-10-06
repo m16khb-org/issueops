@@ -3,6 +3,7 @@ package issueopsrouting
 import (
 	"context"
 	"fmt"
+	issueopscontract "issueops/internal/contract/issueops"
 
 	cycleapp "issueops/internal/application/issueopscycle"
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
@@ -27,7 +28,7 @@ func (service *Service) Record(
 	id string,
 	phase string,
 	skill string,
-	actor issueopsroutingcontract.Actor,
+	actor issueopscontract.IssueOpsActor,
 ) (issueopsroutingcontract.Record, error) {
 	if service == nil || service.repository == nil || service.clock == nil || service.paths == nil {
 		return issueopsroutingcontract.Record{OK: false, ID: id}, fmt.Errorf(

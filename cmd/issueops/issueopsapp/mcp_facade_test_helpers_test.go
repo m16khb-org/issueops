@@ -55,7 +55,3 @@ func callSDKTool(t *testing.T, params json.RawMessage, deps mcpcli.MCPDependenci
 func handleResourceRead(params json.RawMessage) (any, *jsonrpc.Error) {
 	return mcpcli.HandleResourceRead(params, issueOpsMCPDependencies().Resources)
 }
-
-func textResult(text string) map[string]any {
-	return mcpcli.TextResult(text)
-}

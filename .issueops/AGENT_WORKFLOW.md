@@ -19,7 +19,7 @@ description: Agent start, execution, verification, and completion flow.
 - 기존 사용자 변경을 덮어쓰지 않는다.
 - 새 dependency, 배포, destructive action은 명시 지시나 강한 근거가 있을 때만 진행한다.
 - 문서가 현재 코드/사용자 컨센서스와 어긋나면 MCP `project_docs_read`로 현재 SHA를 확인하고 `project_docs_revise`로 한 문서씩 갱신한다.
-- remote VCS 작업은 canonical worktree의 선택 문서 `.issueops/VCS.md`를 먼저 읽는다. 문서에 없는 provider recipe를 실제로 성공시켰다면 같은 worktree에서 `project_docs_read` 후 `project_docs_revise` SHA-CAS로 갱신한다. GitLab/GitHub 모두 기록할 수 있지만 secret, 개인 tool 경로, server namespace, 추측한 MCP 이름은 남기지 않으며 OpenWiki 자동 update를 실행하지 않는다.
+- remote VCS 작업은 canonical worktree의 선택 문서 `.issueops/VCS.md`를 먼저 읽는다. 문서에 없는 provider recipe를 실제로 성공시켰다면 같은 worktree에서 `project_docs_read` 후 `project_docs_revise` SHA-CAS로 갱신한다. GitLab/GitHub 모두 기록할 수 있지만 secret, 개인 tool 경로, server namespace, 추측한 MCP 이름은 남기지 않는다.
 - 구조 선택이나 대안 기각 사유가 생기면 MCP `project_docs_append(kind=adr)`로 `.issueops/ADR.md`에 남긴다.
 - 반복 실패, false case, 위험한 운영 주의는 MCP `project_docs_append(kind=caution)`으로 `.issueops/CAUTIONS.md`에 남긴다.
 - IssueOps 사이클 안에서 위 두 append의 시점은 `skills/issueops-docs/SKILL.md`가 소유한다. 구현 단계(4)의 append는 정리 봉인보다 앞서므로 그대로 두고, 정리 봉인(5) 뒤의 append는 문서 단계(6)가 재봉인하며, 검증(7) 이후의 append는 두 봉인을 stale로 만들어 `issueops next`가 문서 단계로 되돌린다. 계획 단계(3)에서 읽은 문서는 계획의 `## 적용되는 결정과 주의사항` 절에 남기고, `issueops link-plan`이 그 절을 포함한 네 필수 절의 존재를 검사한다.
@@ -114,7 +114,7 @@ phase 진입은 fail-closed다: `grill` 진입은 problem 완료(`intent_contrac
 ## API documentation gate
 
 - Endpoint/controller/DTO/schema/OpenAPI changes require the API documentation gate before completion.
-- Prefer `issueops api-doc static-check` or MCP `api_doc_static_check`, then `api_doc_review` to render the host-agent prompt/schema and record the supplied review result; both default to staged API candidate files so legacy Swagger/OpenAPI debt is not failed all at once.
+- Prefer `issueops api-doc static-check` or MCP `api_doc_static_check`, then `api_doc_review` to render the host-agent prompt/schema and record the supplied review result; both default to staged API candidate files so pre-existing Swagger/OpenAPI debt is not failed all at once.
 - For NestJS Swagger projects, the gate must catch missing `@ApiOperation`, missing/invalid operation descriptions, missing `@ApiParam`/`@ApiHeader`, missing 400/401 responses, and DTO `@ApiProperty`/`@ApiPropertyOptional`/`@IsOptional` mismatches.
 
 

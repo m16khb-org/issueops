@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"testing"
 
 	"issueops/internal/port"
@@ -15,9 +16,9 @@ type contextPullRequestProvider struct {
 func (provider *contextPullRequestProvider) CreatePullRequestContext(
 	ctx context.Context,
 	_ port.IssueProviderCreatePullRequestRequest,
-) (port.IssueProviderCreatePullRequestResult, error) {
+) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	provider.seen = ctx
-	return port.IssueProviderCreatePullRequestResult{OK: true}, nil
+	return executionissue.IssueProviderCreatePullRequestResult{OK: true}, nil
 }
 
 func TestCreateRemotePullRequestViaProviderPropagatesContext(t *testing.T) {

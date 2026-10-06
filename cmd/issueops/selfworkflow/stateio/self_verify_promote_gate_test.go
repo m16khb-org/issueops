@@ -10,7 +10,7 @@ import (
 
 func writePromoteGateSnapshotForTest(t *testing.T, dir, key string, ok, terminationEligible bool) {
 	t.Helper()
-	snapshot := SelfAugmentStateSnapshot{
+	snapshot := augmentcontract.SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          "self_verification_summary",
 		OK:            ok,

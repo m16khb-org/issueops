@@ -3,6 +3,7 @@ package issueopsreview
 import (
 	"errors"
 	model "issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	port "issueops/internal/port/issueopsreview"
 	"reflect"
 	"testing"
@@ -20,15 +21,15 @@ func TestPlanningRecorderRejectsAuthorityBeforeRequestValidation(t *testing.T) {
 			return e
 		},
 		"design": func(s PlanningRecorder) error {
-			_, e := s.Design("state", "cycle", model.IssueOpsDesignReviewRequest{})
+			_, e := s.Design("state", "cycle", reviewcontract.DesignReviewRequest{})
 			return e
 		},
 		"compatibility": func(s PlanningRecorder) error {
-			_, e := s.Compatibility("state", "cycle", model.IssueOpsCompatibilityReviewRequest{})
+			_, e := s.Compatibility("state", "cycle", reviewcontract.CompatibilityReviewRequest{})
 			return e
 		},
 		"devils advocate": func(s PlanningRecorder) error {
-			_, e := s.DevilsAdvocate("state", "cycle", model.IssueOpsDevilsAdvocateReviewRequest{})
+			_, e := s.DevilsAdvocate("state", "cycle", reviewcontract.DevilsAdvocateReviewRequest{})
 			return e
 		},
 	}

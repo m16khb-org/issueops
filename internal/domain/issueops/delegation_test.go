@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
@@ -10,8 +11,8 @@ func TestMissingPreconditionsAcceptsReviewedParent(t *testing.T) {
 	parent := model.IssueOpsRecord{
 		Phase:                model.IssueOpsPhaseImplement,
 		Branch:               "123-parent",
-		DesignReview:         &model.IssueOpsDesignReview{Approved: true},
-		CompatibilityReview:  &model.IssueOpsCompatibilityReview{Approved: true},
+		DesignReview:         &reviewcontract.DesignReview{Approved: true},
+		CompatibilityReview:  &reviewcontract.CompatibilityReview{Approved: true},
 		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "pass", RecordedAt: "2026-07-07T00:00:00Z"},
 	}
 	if missing := ChildStartMissingPreconditions(parent, model.IssueOpsChildStartRequest{Branch: "123-child"}); len(missing) != 0 {

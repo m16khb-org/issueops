@@ -2,10 +2,9 @@ package github
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"path/filepath"
 	"testing"
-
-	"issueops/internal/port"
 )
 
 func TestReadIssueSnapshotUsesBoundedExactGitHubURL(t *testing.T) {
@@ -15,7 +14,7 @@ if [ "$*" != "issue view https://github.com/acme/repo/issues/69 --json url,body,
 printf '%s' '{"url":"https://github.com/acme/repo/issues/69","body":"AC-01"}'
 `)
 	t.Setenv("PATH", binDir+string(filepath.ListSeparator)+t.TempDir())
-	got, err := NewProvider().ReadIssueSnapshot(context.Background(), port.ExecutionIssueSnapshotRequest{
+	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.ExecutionIssueSnapshotRequest{
 		Repo: repo, URL: "https://github.com/acme/repo/issues/69",
 	})
 	if err != nil {

@@ -2,6 +2,8 @@ package devilsadvocate
 
 import (
 	"errors"
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	reviewport "issueops/internal/port/issueopsreview"
 	"strings"
 	"testing"
 
@@ -9,7 +11,7 @@ import (
 )
 
 func TestValidateRequiresReviewerContext(t *testing.T) {
-	base := model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", Findings: []string{"attacked gate 3: no second use case exists"}}
+	base := reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", Findings: []string{"attacked gate 3: no second use case exists"}}
 	if _, err := Validate(base); err == nil || !strings.Contains(err.Error(), "reviewer_context") {
 		t.Fatalf("missing reviewer_context must fail closed, got %v", err)
 	}
@@ -30,16 +32,16 @@ func TestValidateRequiresReviewerContext(t *testing.T) {
 }
 
 func TestValidatePassRequiresAFinding(t *testing.T) {
-	_, err := Validate(model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent"})
+	_, err := Validate(reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent"})
 	if err == nil || !strings.Contains(err.Error(), "pass verdict requires") {
 		t.Fatalf("pass without findings is a rubber stamp and must fail, got %v", err)
 	}
 }
 
-func bindingStore(t *testing.T, initial model.IssueOpsRecord, digest func(string, model.IssueOpsRecord) (string, error)) (*Store, *model.IssueOpsRecord) {
+func bindingStore(t *testing.T, initial model.IssueOpsRecord, digest func(string, model.IssueOpsRecord) (string, error)) (*reviewport.DevilsAdvocateStore, *model.IssueOpsRecord) {
 	t.Helper()
 	current := initial
-	store := &Store{
+	store := &reviewport.DevilsAdvocateStore{
 		Read: func(_, _ string) (model.IssueOpsRecord, error) { return current, nil },
 		TouchWrite: func(_ string, r model.IssueOpsRecord) (model.IssueOpsRecord, error) {
 			current = r
@@ -55,7 +57,7 @@ func TestRecordPropagatesPlanIdentityError(t *testing.T) {
 	store, _ := bindingStore(t, model.IssueOpsRecord{OK: true, ID: "io-1"}, func(string, model.IssueOpsRecord) (string, error) {
 		return "", boom
 	})
-	_, err := Record(*store, "root", "io-1", model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"f"}})
+	_, err := Record(*store, "root", "io-1", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"f"}})
 	if !errors.Is(err, boom) {
 		t.Fatalf("plan digest failure (no linked or staged plan) must surface, got %v", err)
 	}
@@ -69,7 +71,7 @@ func TestRecordBindsPlanIdentityAndKeepsRounds(t *testing.T) {
 		}
 		return digest, nil
 	})
-	first, err := Record(*store, "root", "io-1", model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "revise", ReviewerContext: "inline", Findings: []string{"gate 1: accidental layer"}})
+	first, err := Record(*store, "root", "io-1", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "revise", ReviewerContext: "inline", Findings: []string{"gate 1: accidental layer"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +80,7 @@ func TestRecordBindsPlanIdentityAndKeepsRounds(t *testing.T) {
 		t.Fatalf("first round must bind the plan and carry no history: %+v", r1)
 	}
 	digest = "d2"
-	second, err := Record(*store, "root", "io-1", model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"gate 1 resolved: layer removed"}})
+	second, err := Record(*store, "root", "io-1", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"gate 1 resolved: layer removed"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +91,7 @@ func TestRecordBindsPlanIdentityAndKeepsRounds(t *testing.T) {
 	if len(r2.History) != 1 || r2.History[0].Verdict != "revise" || r2.History[0].ReviewedPlanDigest != "d1" || r2.History[0].ReviewerContext != "inline" || len(r2.History[0].Findings) != 1 {
 		t.Fatalf("earlier round must be preserved oldest-first: %+v", r2.History)
 	}
-	third, err := Record(*store, "root", "io-1", model.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"gate 2: one model"}})
+	third, err := Record(*store, "root", "io-1", reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"gate 2: one model"}})
 	if err != nil {
 		t.Fatal(err)
 	}

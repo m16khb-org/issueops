@@ -34,19 +34,19 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 	execution := productionIssueOpsExecutionDependencies()
 	state := stateDependencies()
 	root := issueOpsRoot()
-	docsService := newProjectDocsService(resolveTarget(""))
+	docsService := newProjectDocsService(pathutil.ResolveTarget(""))
 	policyService := newPolicyService()
 	compatibility := compatibilityContract()
 	stateRoot := issueOpsStateRoot()
 	deps := mcpcli.MCPDependencies{
 		APIDoc:        newAPIDocService(),
-		DefaultTarget: resolveTarget(""),
-		Inspect:       scopedHarnessInspector(resolveTarget("")),
+		DefaultTarget: pathutil.ResolveTarget(""),
+		Inspect:       scopedHarnessInspector(pathutil.ResolveTarget("")),
 		Preflight:     preflightapp.Service{Observer: preflight.GitObserver{}},
 		Skills:        inspect.ListSkills,
 		Compatibility: func() any { return compatibility },
-		Commit:        newCommitService(resolveTarget("")),
-		Lint:          newLintService(resolveTarget("")),
+		Commit:        newCommitService(pathutil.ResolveTarget("")),
+		Lint:          newLintService(pathutil.ResolveTarget("")),
 		Fetch:         newWebFetch(),
 		Execution:     mcpcli.ExecutionDeps{ExecuteExecution: newExecutionService().Execute, ObserveNativeProcessAncestry: issueopsadapter.ObserveNativeProcessAncestry, IssueOpsStateRoot: func() string { return stateRoot }},
 
@@ -57,7 +57,7 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		Catalog:          mcpcatalog.Build(),
 		Loop:             newLoopService(),
 		ProjectDocs:      docsService,
-		ProjectBootstrap: newProjectBootstrapService(resolveTarget("")),
+		ProjectBootstrap: newProjectBootstrapService(pathutil.ResolveTarget("")),
 		State:            mcpcli.StateDependencies{Write: state.Write, Read: state.Read, List: state.List, Prune: state.Prune, Doctor: state.Doctor, Maintain: state.Maintain},
 		Resources: resources.Config{
 			IssueOpsRoot: root, Version: version, SkillName: skillName,

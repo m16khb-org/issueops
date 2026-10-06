@@ -1,6 +1,9 @@
 package candidateexport
 
 import (
+	augmentcontract "issueops/internal/contract/selfaugment"
+	contract "issueops/internal/contract/selfverify"
+	domain "issueops/internal/domain/selfverify"
 	"path/filepath"
 	"testing"
 )
@@ -11,7 +14,7 @@ func TestExportSelfVerificationCandidatesSelectsNextOpenCandidate(t *testing.T) 
 		t.Fatal(err)
 	}
 	result := ExportSelfVerificationCandidates(root)
-	if !result.OK || result.Kind != SelfVerificationCandidateExportKind || result.LoopKind != "self_verification" {
+	if !result.OK || result.Kind != augmentcontract.SelfVerificationCandidateExportKind || result.LoopKind != "self_verification" {
 		t.Fatalf("unexpected candidate export identity: %+v", result)
 	}
 	if result.CandidateCount < 10 || len(result.Candidates) != result.CandidateCount {
@@ -32,20 +35,20 @@ func TestExportSelfVerificationCandidatesSelectsNextOpenCandidate(t *testing.T) 
 }
 
 func TestSelectedSelfVerificationCandidateIDReturnsStableFallback(t *testing.T) {
-	if got := SelectedSelfVerificationCandidateID(nil); got != "none" {
+	if got := domain.SelectedCandidateID(nil); got != "none" {
 		t.Fatalf("SelectedSelfVerificationCandidateID(nil)=%q, want none", got)
 	}
-	candidate := SelfVerificationCandidate{ID: "verify-next"}
-	if got := SelectedSelfVerificationCandidateID(&candidate); got != "verify-next" {
+	candidate := contract.SelfVerificationCandidate{ID: "verify-next"}
+	if got := domain.SelectedCandidateID(&candidate); got != "verify-next" {
 		t.Fatalf("SelectedSelfVerificationCandidateID returned %q", got)
 	}
 }
 
 func TestSaveSelfVerificationCandidateExportRejectsInvalidStateKey(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	export := SelfVerificationCandidateExportResult{
+	export := augmentcontract.SelfVerificationCandidateExportResult{
 		OK:         true,
-		Kind:       SelfVerificationCandidateExportKind,
+		Kind:       augmentcontract.SelfVerificationCandidateExportKind,
 		LoopKind:   "self_verification",
 		KoreanName: "자기 검증 루프",
 	}

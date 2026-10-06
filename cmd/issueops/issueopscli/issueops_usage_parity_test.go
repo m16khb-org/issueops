@@ -36,7 +36,7 @@ func TestIssueOpsUsageMatchesAdapterUsage(t *testing.T) {
 		t.Fatal("adapter usage exposes no issueops lines; parity test inputs are broken")
 	}
 	shared := 0
-	for _, line := range strings.Split(testLifecycleUsage(), "\n") {
+	for _, line := range strings.Split(cliadapter.LifecycleUsage(), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, "issueops ") {
 			continue
@@ -64,7 +64,7 @@ func TestIssueOpsUsageMatchesAdapterUsage(t *testing.T) {
 func TestAdapterIssueOpsUsageCommandsExistInIssueOpsUsage(t *testing.T) {
 	const prefix = "issueops "
 	issueOpsKeys := map[string]bool{}
-	for _, line := range strings.Split(testLifecycleUsage(), "\n") {
+	for _, line := range strings.Split(cliadapter.LifecycleUsage(), "\n") {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, prefix) {
 			continue

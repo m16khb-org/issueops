@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	app "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"strings"
@@ -22,13 +23,13 @@ func TestSealedArtifactDirUsesOnlyRecordField(t *testing.T) {
 }
 
 func TestIssueArtifactDirForUsesLinkedIssueNumber(t *testing.T) {
-	if got := issueArtifactDirFor(issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/21"}); got != ".issueops/issues/21/artifact" {
+	if got := app.OwnerArtifactDir(issueops.IssueOpsRecord{IssueURL: "https://github.com/acme/repo/issues/21"}); got != ".issueops/issues/21/artifact" {
 		t.Fatalf("linked issue must pick the issue folder, got %q", got)
 	}
-	if got := issueArtifactDirFor(issueops.IssueOpsRecord{BranchPrepare: &issueops.IssueOpsBranchPrepare{IssueURL: "https://gitlab.example.com/g/p/-/work_items/7"}}); got != ".issueops/issues/7/artifact" {
+	if got := app.OwnerArtifactDir(issueops.IssueOpsRecord{BranchPrepare: &issueops.IssueOpsBranchPrepare{IssueURL: "https://gitlab.example.com/g/p/-/work_items/7"}}); got != ".issueops/issues/7/artifact" {
 		t.Fatalf("branch prepare issue URL must be a fallback, got %q", got)
 	}
-	if got := issueArtifactDirFor(issueops.IssueOpsRecord{}); got != "" {
+	if got := app.OwnerArtifactDir(issueops.IssueOpsRecord{}); got != "" {
 		t.Fatalf("no issue number must leave artifact_dir empty, got %q", got)
 	}
 }

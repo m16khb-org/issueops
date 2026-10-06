@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"encoding/json"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -43,7 +44,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	}); err == nil || !strings.Contains(err.Error(), "interpreted_intent must materially differ from raw_request") {
 		t.Fatalf("intent interpretation should reject near-copy raw request, got %v", err)
 	}
-	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "Foldering bug",
 		ProposedDesign: "Gate implementation on reviewed design",
 		Verification:   []string{"go test ./..."},
@@ -86,7 +87,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	if err != nil || record.Phase != issueops.IssueOpsPhasePlan {
 		t.Fatalf("plan should be allowed after intent contract, got %+v err=%v", record, err)
 	}
-	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "Foldering bug",
 		ProposedDesign: "Gate implementation on reviewed design",
 		Verification:   []string{"go test ./..."},
@@ -95,7 +96,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	}); err == nil || !strings.Contains(err.Error(), "open_questions") {
 		t.Fatalf("approved design should reject open questions, got %v", err)
 	}
-	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "Foldering bug",
 		ProposedDesign: "Gate implementation on reviewed design",
 		Verification:   []string{"go test ./..."},
@@ -103,7 +104,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	}); err == nil || !strings.Contains(err.Error(), "refactor_plan") {
 		t.Fatalf("approved design should require a refactor plan, got %v", err)
 	}
-	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "Foldering bug",
 		ProposedDesign: "Gate implementation on reviewed design",
 		RefactorPlan:   "Keep IssueOps state changes localized to core and CLI",
@@ -112,7 +113,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	}); err == nil || !strings.Contains(err.Error(), "alternatives") {
 		t.Fatalf("approved design should require alternatives considered, got %v", err)
 	}
-	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "Foldering bug",
 		ProposedDesign: "Gate implementation on reviewed design",
 		RefactorPlan:   "Keep IssueOps state changes localized to core and CLI",
@@ -122,7 +123,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	}); err == nil || !strings.Contains(err.Error(), "risks") {
 		t.Fatalf("approved design should require risk review, got %v", err)
 	}
-	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "Foldering bug",
 		ProposedDesign: "Gate implementation on reviewed design",
 		RefactorPlan:   "Keep IssueOps state changes localized to core and CLI",
@@ -165,7 +166,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md")); err == nil || !strings.Contains(err.Error(), "design_review") {
 		t.Fatalf("plan link should require approved design review, got %v", err)
 	}
-	record, err = RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	record, err = RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "Foldering bug",
 		ProposedDesign: "Gate implementation on reviewed design",
 		RefactorPlan:   "Keep IssueOps state changes localized to core and CLI",
@@ -179,7 +180,7 @@ func TestIssueOpsIntentAndDesignGatePhaseProgression(t *testing.T) {
 	if _, err := LinkIssueOpsPlan(stateRoot, record.ID, filepath.Join(worktree, "plans/demo.md")); err == nil || !strings.Contains(err.Error(), "design_approval") {
 		t.Fatalf("unapproved design review should not enter implementation, got %v", err)
 	}
-	record, err = RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	record, err = RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "Foldering bug",
 		ProposedDesign: "Gate implementation on reviewed design",
 		RefactorPlan:   "Keep IssueOps state changes localized to core and CLI",
@@ -224,7 +225,7 @@ func TestIssueOpsIntentAndDesignRedactSecretLikeFreeform(t *testing.T) {
 		t.Fatal(err)
 	}
 	setIssueOpsPlanPrepForTest(t, stateRoot, record.ID)
-	record, err = RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	record, err = RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "token=secret-value",
 		ProposedDesign: "Keep design evidence but redact api_key=secret-value",
 		RefactorPlan:   "password=secret-value",

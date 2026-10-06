@@ -1,12 +1,13 @@
 package main
 
 import (
+	issueopsapp "issueops/cmd/issueops/issueopsapp"
 	"os"
 	"testing"
 )
 
 func TestRunHelp(t *testing.T) {
-	if code := run([]string{"--help"}); code != 0 {
+	if code := issueopsapp.RunRootCommand([]string{"--help"}); code != 0 {
 		t.Fatalf("run help exit code = %d", code)
 	}
 }

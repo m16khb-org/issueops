@@ -1,11 +1,10 @@
 package benchmark
 
 import (
+	benchmark "issueops/internal/contract/issueopsbenchmark"
 	"sort"
 	"strings"
 	"testing"
-
-	issueopscontract "issueops/internal/contract/issueops"
 )
 
 // A4 — scorer 검증 충분성(차원별 mutation suite)이다.
@@ -42,36 +41,36 @@ import (
 //     묶어, 충분성 mutator가 없는 새 차원이 추가되지 못하게 한다(A5
 //     dimension-count-regression 교훈).
 
-func adequacyFixtureForTest() issueopscontract.IssueOpsBenchmarkFixture {
-	return issueopscontract.IssueOpsBenchmarkFixture{
+func adequacyFixtureForTest() benchmark.IssueOpsBenchmarkFixture {
+	return benchmark.IssueOpsBenchmarkFixture{
 		ID:                 "adequacy-full",
 		Title:              "Adequacy full fixture",
 		UserPrompt:         "exercise every scoring dimension",
 		PioneerSkillTarget: "database-design",
-		ExpectedRouting:    []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}},
+		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}},
 		// 이 suite는 deterministic 차원 channel만 검증하므로 의도적으로
 		// CriticalFailures를 두지 않는다.
 	}
 }
 
-func adequacyArtifactForTest() issueopscontract.IssueOpsBenchmarkArtifact {
+func adequacyArtifactForTest() benchmark.IssueOpsBenchmarkArtifact {
 	a := completeBenchmarkArtifactForTest()
 	a.PioneerSkillEvidence = coddKeywordEvidence
-	a.RoutingTrace = []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}}
+	a.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}
 	return a
 }
 
-func adequacyRow(score IssueOpsBenchmarkScore, dimension string) IssueOpsDimensionScore {
+func adequacyRow(score benchmark.IssueOpsBenchmarkScore, dimension string) benchmark.IssueOpsDimensionScore {
 	for _, d := range score.DimensionScores {
 		if d.Dimension == dimension {
 			return d
 		}
 	}
 	// Sentinel: 누락 차원은 live-100과 live-0 검증을 모두 실패시킨다.
-	return IssueOpsDimensionScore{Dimension: dimension, Score: -1}
+	return benchmark.IssueOpsDimensionScore{Dimension: dimension, Score: -1}
 }
 
-func adequacyDroppedDims(score IssueOpsBenchmarkScore) []string {
+func adequacyDroppedDims(score benchmark.IssueOpsBenchmarkScore) []string {
 	var dropped []string
 	for _, dim := range issueOpsBenchmarkDimensions {
 		row := adequacyRow(score, dim)
@@ -103,7 +102,7 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 	type adequacyCase struct {
 		// mutate는 대상 차원의 판별 신호만 제거한다. 공유 필드 차원은 coupled에
 		// 선언한 범위만 함께 제거한다.
-		mutate func(issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact
+		mutate func(benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact
 		// coupled는 같은 artifact 필드를 읽어 반드시 함께 하락하는 다른 차원이다.
 		// 비어 있으면 단일 축 mutation이다.
 		coupled []string
@@ -113,7 +112,7 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 		"intent_understanding": {
 			// ok = ProblemSummary!="" || IssueDraft!=""이므로 둘 다 비워야 한다.
 			// IssueDraft를 비우면 공유 필드인 issue_quality도 함께 하락한다.
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.ProblemSummary = ""
 				a.IssueDraft = ""
 				return a
@@ -123,55 +122,55 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 		"issue_quality": {
 			// issue 전용 label-decision 줄만 깨뜨린다. ProblemSummary와 IssueDraft는
 			// 비어 있지 않아 intent_understanding은 100점을 유지한다.
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.ProblemSummary = strings.ReplaceAll(a.ProblemSummary, "선택 라벨: enhancement(score 0.90), 거절 라벨: documentation(score 0.20), threshold 0.70, 수동 override 없음.\n", "")
 				return a
 			},
 		},
 		"domain_contract_quality": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.DomainContractEvidence = ""
 				return a
 			},
 		},
 		"plan_quality": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.Plan = "Implement the change."
 				return a
 			},
 		},
 		"api_doc_gate_quality": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.APIDocGateEvidence = ""
 				return a
 			},
 		},
 		"live_evidence_quality": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.LiveEvidenceMatrix = ""
 				return a
 			},
 		},
 		"task_decomposition": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.TaskBreakdown = ""
 				return a
 			},
 		},
 		"tdd_quality": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.TDDPlan = ""
 				return a
 			},
 		},
 		"subagent_orchestration": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.SubagentPrompts = ""
 				return a
 			},
 		},
 		"review_feedback_accountability": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.ReviewFeedbackEvidence = ""
 				return a
 			},
@@ -181,7 +180,7 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 			// feature/ prefix를 보는 branch_worktree_gate_quality도 함께 하락한다.
 			// 두 차원은 필드를 공유하며 implementation_readiness에는 분리 가능한
 			// 전용 신호가 없다.
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.BranchName = ""
 				return a
 			},
@@ -190,13 +189,13 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 		"pr_mr_quality": {
 			// PRDraft에서 issue-link 절만 제거한다. GuidelineRef는 보존하므로
 			// issue_quality가 공유하는 guideline 절에는 영향이 없다.
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.PRDraft = strings.ReplaceAll(a.PRDraft, "Issue: https://example.com/acme/issueops/issues/1\n", "")
 				return a
 			},
 		},
 		"phase_control_quality": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.PhaseChoices = ""
 				return a
 			},
@@ -204,7 +203,7 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 		"branch_worktree_gate_quality": {
 			// BranchName은 비어 있지 않게 유지해 implementation_readiness는 100점을
 			// 유지하고, feature/ prefix만 제거해 gate 차원만 실패시킨다.
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.BranchName = "main"
 				return a
 			},
@@ -212,19 +211,19 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 		"isolation_compliance": {
 			// worktree 밖에서 구현한 것으로 만든다. WorktreePath/BranchName은 남겨
 			// implementation_readiness와 gate 차원은 100점을 유지한다.
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.ImplementationLocation = "/elsewhere/outside-worktree"
 				return a
 			},
 		},
 		"completion_hygiene_quality": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.CompletionHygiene = ""
 				return a
 			},
 		},
 		"worktree_cleanup_quality": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.WorktreeCleanup = ""
 				return a
 			},
@@ -232,13 +231,13 @@ func TestScoreIssueOpsBenchmarkArtifactEveryDimensionDiscriminates(t *testing.T)
 		"pioneer_skill_contribution": {
 			// fixture의 PioneerSkillTarget을 보존해 차원이 계속 적용되게 하고,
 			// artifact 신호만 제거한다.
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.PioneerSkillEvidence = ""
 				return a
 			},
 		},
 		"skill_routing_fidelity": {
-			mutate: func(a issueopscontract.IssueOpsBenchmarkArtifact) issueopscontract.IssueOpsBenchmarkArtifact {
+			mutate: func(a benchmark.IssueOpsBenchmarkArtifact) benchmark.IssueOpsBenchmarkArtifact {
 				a.RoutingTrace = nil
 				return a
 			},

@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,12 +86,12 @@ func writeContractFile(t *testing.T, root, rel, content string) {
 
 func writeSelfAugmentCompareFixturesForContract(t *testing.T, stateDir string) {
 	t.Helper()
-	summary := SelfAugmentSummary{
+	summary := augmentcontract.SelfAugmentSummary{
 		TotalRuns:   10,
 		TotalSteps:  20,
 		PassedSteps: 20,
 		StepLabels:  []string{"go test", "MCP smoke"},
-		SlowestSteps: []SelfAugmentSlowStep{
+		SlowestSteps: []augmentcontract.SelfAugmentSlowStep{
 			{Iteration: 1, Seed: 600, Label: "go test", DurationMS: 1000},
 		},
 	}
@@ -103,7 +104,7 @@ func writeSelfAugmentCompareFixturesForContract(t *testing.T, stateDir string) {
 		{key: "self-verify-candidate", elapsed: 1100, generatedAt: "2000-01-01T00:01:00Z"},
 	}
 	for _, fixture := range fixtures {
-		if err := writeSelfAugmentSnapshotRecord(stateDir, fixture.key, SelfAugmentStateSnapshot{
+		if err := writeSelfAugmentSnapshotRecord(stateDir, fixture.key, augmentcontract.SelfAugmentStateSnapshot{
 			SchemaVersion: 1,
 			Kind:          "self_verification_summary",
 			OK:            true,

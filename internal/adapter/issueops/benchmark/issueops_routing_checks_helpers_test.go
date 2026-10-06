@@ -1,7 +1,7 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
+	benchmark "issueops/internal/contract/issueopsbenchmark"
 	issueopsroutingdomain "issueops/internal/domain/issueopsrouting"
 )
 
@@ -22,15 +22,6 @@ import (
 //
 // Fixtures without ExpectedRouting are handled as N/A by the scorer and never
 // reach this check.
-func issueOpsSkillRoutingFidelityComplete(fixture issueopscontract.IssueOpsBenchmarkFixture, artifact issueopscontract.IssueOpsBenchmarkArtifact) bool {
-	return RoutingFidelity(fixture.ExpectedRouting, artifact.RoutingTrace).OK
-}
-
-// RoutingFidelity is the shared core of skill_routing_fidelity. It reports
-// whether observed covers every expected (phase, skill) pairing and which are
-// missing. Reused for both the benchmark dimension (observed = artifact trace)
-// and live scoring of a real run (observed = the recorded RoutingTrace), so a
-// real run is scored by the same logic instead of a synthesized tautology.
-func RoutingFidelity(expected, observed []issueopscontract.SkillRouting) RoutingFidelityResult {
-	return issueopsroutingdomain.Score(expected, observed)
+func issueOpsSkillRoutingFidelityComplete(fixture benchmark.IssueOpsBenchmarkFixture, artifact benchmark.IssueOpsBenchmarkArtifact) bool {
+	return issueopsroutingdomain.Score(fixture.ExpectedRouting, artifact.RoutingTrace).OK
 }

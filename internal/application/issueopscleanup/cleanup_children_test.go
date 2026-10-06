@@ -3,6 +3,7 @@ package issueopscleanup_test
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"strings"
 	"sync"
 	"testing"
@@ -206,8 +207,8 @@ func (p *fakeCloseChildProvider) CreateIssue(port.IssueProviderCreateIssueReques
 	return port.IssueProviderCreateIssueResult{}, nil
 }
 
-func (p *fakeCloseChildProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-	return port.IssueProviderCreatePullRequestResult{}, nil
+func (p *fakeCloseChildProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
 
 func (p *fakeCloseChildProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {

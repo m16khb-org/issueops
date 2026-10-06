@@ -6,9 +6,9 @@ import (
 	outbound "issueops/internal/adapter/outbound/quality"
 	app "issueops/internal/application/quality"
 	contract "issueops/internal/contract/quality"
+	qualitycatalogcontract "issueops/internal/contract/qualitycatalog"
 	augmentcontract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
-	catalog "issueops/internal/domain/qualitycatalog"
 	augmentdomain "issueops/internal/domain/selfaugment"
 	verifydomain "issueops/internal/domain/selfverify"
 	"path/filepath"
@@ -42,7 +42,7 @@ func newQualityDependencies(root, dir string) qualitycli.Deps {
 			SelfVerifyOpenCount: func(string) (int, error) {
 				return len(verifydomain.CandidateIDsByStatus(planning.ExportCandidates().Candidates, "open")), nil
 			},
-			Candidates: func(string) []catalog.Candidate {
+			Candidates: func(string) []qualitycatalogcontract.Candidate {
 				plan := planning.Plan(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
 				return app.CandidatesForPlan(plan.Candidates)
 			},

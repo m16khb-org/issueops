@@ -3,6 +3,7 @@ package augmentlesson
 import (
 	"context"
 	"encoding/json"
+	domain "issueops/internal/domain/selfaugment"
 	"strings"
 	"testing"
 
@@ -91,7 +92,7 @@ func TestStateKeySlugNormalizesUnsafeText(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := StateKeySlug(tt.in)
+			got := domain.StateKeySlug(tt.in)
 			if got != tt.want {
 				t.Fatalf("StateKeySlug(%q)=%q, want %q", tt.in, got, tt.want)
 			}

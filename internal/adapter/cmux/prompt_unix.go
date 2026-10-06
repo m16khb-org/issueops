@@ -20,9 +20,6 @@ type promptOpenedComponent struct {
 }
 
 func readPromptPlatform(root, path, expectedDigest string, afterOpen func()) ([]byte, error) {
-	if err := requireSupportedPlatform(); err != nil {
-		return nil, err
-	}
 	if !filepath.IsAbs(root) || filepath.Clean(root) != root || !filepath.IsAbs(path) || filepath.Clean(path) != path ||
 		strings.ContainsRune(root+path, 0) || !validDigest(expectedDigest) {
 		return nil, fmt.Errorf("cmux prompt file must be a clean path inside the canonical worktree")

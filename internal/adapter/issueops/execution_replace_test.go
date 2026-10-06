@@ -2,12 +2,13 @@ package issueops
 
 import (
 	"context"
+	app "issueops/internal/application/issueopsowner"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"issueops/internal/contract/issueops"
-	"issueops/internal/port"
 )
 
 func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
@@ -44,7 +45,7 @@ func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
 				Mode: issueops.ExecutionModeOrca,
 				Workspace: issueops.Workspace{
 					SourceRoot: record.Repo, Root: worktree, Branch: record.Branch,
-					BaseHead: record.BranchPrepare.BaseSHA, Driver: "orca", ArtifactDir: issueArtifactDirFor(record),
+					BaseHead: record.BranchPrepare.BaseSHA, Driver: "orca", ArtifactDir: app.OwnerArtifactDir(record),
 				},
 				Lease: issueops.WriteLease{Generation: 2, Status: issueops.LeaseStatusClaimable},
 				Orca: &issueops.OrcaBinding{
@@ -62,8 +63,8 @@ func TestReplacementResealRequiresExistingPlanIdentity(t *testing.T) {
 			}
 			record.Execution.Lease.ClaimTokenSHA256 = tokenSHA256(token)
 			issueBody := "## Acceptance\n- AC-01 reseal plan\n\n## Verification\n```bash\ngo test ./... -count=1\n```\n"
-			readIssue := func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-				return port.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
+			readIssue := func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+				return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: issueBody}, nil
 			}
 
 			reseal, err := ownerContextForTest(stateRoot, readIssue).Reseal(context.Background(), record)

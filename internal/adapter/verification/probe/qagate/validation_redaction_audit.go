@@ -36,7 +36,7 @@ func validateRedactionAuditWithDeps(root string, deps docsValidationDeps) selfve
 		if err != nil {
 			rel = path
 		}
-		for _, finding := range findUnredactedSecretLike(string(b)) {
+		for _, finding := range FindUnredactedSecretLike(string(b)) {
 			errs = append(errs, filepath.ToSlash(rel)+": "+finding)
 		}
 	}
@@ -85,10 +85,6 @@ func FindUnredactedSecretLike(text string) []string {
 		}
 	}
 	return findings
-}
-
-func findUnredactedSecretLike(text string) []string {
-	return FindUnredactedSecretLike(text)
 }
 
 func lineContainsAllowedSecretPlaceholder(line string) bool {

@@ -99,8 +99,6 @@ Orca worktree/terminal/task create 또는 dispatch는 프로세스 timeout/error
 Orca completion reconciliation은 message `from_handle`이 원래 dispatch `assignee_handle`과 정확히 같을 때만 `worker_done`을 인정한다. Runtime rollover 뒤 `WorkerTerminalHandle`은 바뀔 수 있으므로 completion sender로 쓰면 정상 결과가 무시된다.
 
 - `CoordinatorMailboxHandle`과 `WorkerMailboxHandle`은 dispatch 시 봉인된 immutable mailbox authority다. `WorkerTerminalHandle`은 terminal read/send/steering 같은 live control 관측용이며 rollover만 갱신한다.
-- ownership completion은 immutable completion evidence와 deterministic projection intent(또는 no-call diagnostic)를 같은 cycle lock에서 한 번에 쓴다. lock 밖에서 sealed owner mailbox → sealed source mailbox로 외부 send를 최대 한 번만 호출한다.
-- intent 이후 crash, timeout, malformed response, ambiguous outcome은 자동 재시도하지 않는다. Durable completion이 authority이고 notification success/failure는 cleanup authority가 아니다.
 - 완료 worker의 Stop suppression은 session binding이나 active-cycle 조회에 의존하지 않는다. Native payload `cwd`에서 canonical source checkout과 현재 branch를 한 번 파생하고 deterministic `(repo, branch)` record ID 하나만 읽어 `done` 레코드까지 검증한다. Binding 목록이나 global IssueOps record set을 후보 선택에 쓰지 않는다.
 - Hostless Stop hot path는 IssueOps data DB가 없을 때 `sqlstore.Open`이나 session-bucket scan을 시작하지 않아야 한다. 설치된 numbered-next-action flags 경로에서도 처음 비어 있던 state root와 기존 Stop 응답을 그대로 보존하는 회귀 테스트를 둔다.
 - dispatch preamble은 공식 exact coordinator/task label line과 exact `--dispatch-id` token으로 검증한다. 단순 substring 포함은 spoofing 가능하므로 증거가 아니다.

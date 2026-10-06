@@ -3,6 +3,7 @@ package issueops
 import (
 	"context"
 	"fmt"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"path/filepath"
 	"strings"
@@ -295,7 +296,7 @@ func recordIssueOpsApprovedDesignForTest(t *testing.T, stateRoot, id string) {
 	t.Helper()
 	recordIssueOpsGrillArtifactsForTest(t, stateRoot, id)
 	setIssueOpsPlanPrepForTest(t, stateRoot, id)
-	if _, err := RecordIssueOpsDesignReview(stateRoot, id, issueops.IssueOpsDesignReviewRequest{
+	if _, err := RecordIssueOpsDesignReview(stateRoot, id, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "IssueOps must preserve the work contract",
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
@@ -329,7 +330,7 @@ func recordIssueOpsPreparedExecutionForTest(t *testing.T, stateRoot, id, worktre
 
 func recordIssueOpsCompatibilityReviewForTest(t *testing.T, stateRoot, id string) {
 	t.Helper()
-	if _, err := RecordIssueOpsCompatibilityReview(stateRoot, id, issueops.IssueOpsCompatibilityReviewRequest{
+	if _, err := RecordIssueOpsCompatibilityReview(stateRoot, id, reviewcontract.CompatibilityReviewRequest{
 		BackwardCompatibility: []string{"existing IssueOps state records remain readable"},
 		SideEffects:           []string{"phase order changes are limited to IssueOps lifecycle readiness"},
 		RollbackPlan:          "Revert the compatibility-review phase and readiness gate.",
@@ -340,7 +341,7 @@ func recordIssueOpsCompatibilityReviewForTest(t *testing.T, stateRoot, id string
 	}
 	// The devil's-advocate verdict is a fail-closed implement-entry gate, so bring
 	// the cycle to implement-readiness with a pass verdict alongside compatibility.
-	if _, err := RecordIssueOpsDevilsAdvocateReview(stateRoot, id, issueops.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3: no second caller exists"}}); err != nil {
+	if _, err := RecordIssueOpsDevilsAdvocateReview(stateRoot, id, reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3: no second caller exists"}}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -354,8 +355,8 @@ func issueOpsIntentContractForTest() *issueops.IssueOpsIntentContract {
 	}
 }
 
-func issueOpsCompatibilityReviewForTest() *issueops.IssueOpsCompatibilityReview {
-	return &issueops.IssueOpsCompatibilityReview{
+func issueOpsCompatibilityReviewForTest() *reviewcontract.CompatibilityReview {
+	return &reviewcontract.CompatibilityReview{
 		BackwardCompatibility: []string{"existing IssueOps state records remain readable"},
 		SideEffects:           []string{"phase order changes are limited to IssueOps lifecycle readiness"},
 		RollbackPlan:          "Revert the compatibility-review phase and readiness gate.",
@@ -436,7 +437,7 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 		OK: true, SchemaVersion: issueops.IssueOpsSchemaVersion,
 		ID: newIssueOpsID(repo, branch), Repo: repo, Branch: branch, Phase: issueops.IssueOpsPhasePlan,
 		IssueURL:     "https://github.com/acme/repo/issues/16",
-		DesignReview: &issueops.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},
+		DesignReview: &reviewcontract.DesignReview{Approved: true, ReviewedAt: "2026-07-11T00:00:00Z"},
 		BranchPrepare: &issueops.IssueOpsBranchPrepare{
 			Provider: "github", IssueURL: "https://github.com/acme/repo/issues/16", Branch: branch,
 			BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true, CreatedAt: "2026-07-11T00:00:00Z",
@@ -450,8 +451,8 @@ func executionPrepareRecord(t *testing.T) (string, issueops.IssueOpsRecord) {
 	return stateRoot, written
 }
 
-func issueOpsDesignReviewForTest() *issueops.IssueOpsDesignReview {
-	return &issueops.IssueOpsDesignReview{
+func issueOpsDesignReviewForTest() *reviewcontract.DesignReview {
+	return &reviewcontract.DesignReview{
 		ProblemSummary: "IssueOps must preserve the work contract",
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",
@@ -463,8 +464,8 @@ func issueOpsDesignReviewForTest() *issueops.IssueOpsDesignReview {
 	}
 }
 
-func issueOpsWeakApprovedDesignReviewForTest() *issueops.IssueOpsDesignReview {
-	return &issueops.IssueOpsDesignReview{
+func issueOpsWeakApprovedDesignReviewForTest() *reviewcontract.DesignReview {
+	return &reviewcontract.DesignReview{
 		ProblemSummary: "IssueOps must preserve the work contract",
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		Verification:   []string{"go test ./internal/core/issueops"},

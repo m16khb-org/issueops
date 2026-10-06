@@ -5,6 +5,7 @@ import (
 	delegation "issueops/internal/application/issueopsdelegation"
 	app "issueops/internal/application/issueopsreview"
 	model "issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	domain "issueops/internal/domain/issueops"
 )
 
@@ -14,12 +15,12 @@ func planningRecorderForTest(actor *model.IssueOpsActor) app.PlanningRecorder {
 func RecordIssueOpsIntent(root, id string, req model.IssueOpsIntentRecordRequest) (model.IssueOpsRecord, error) {
 	return planningRecorderForTest(nil).Intent(root, id, req)
 }
-func RecordIssueOpsDesignReview(root, id string, req model.IssueOpsDesignReviewRequest) (model.IssueOpsRecord, error) {
+func RecordIssueOpsDesignReview(root, id string, req reviewcontract.DesignReviewRequest) (model.IssueOpsRecord, error) {
 	return planningRecorderForTest(nil).Design(root, id, req)
 }
-func RecordIssueOpsCompatibilityReview(root, id string, req model.IssueOpsCompatibilityReviewRequest) (model.IssueOpsRecord, error) {
+func RecordIssueOpsCompatibilityReview(root, id string, req reviewcontract.CompatibilityReviewRequest) (model.IssueOpsRecord, error) {
 	return planningRecorderForTest(nil).Compatibility(root, id, req)
 }
-func RecordIssueOpsDevilsAdvocateReview(root, id string, req model.IssueOpsDevilsAdvocateReviewRequest) (model.IssueOpsRecord, error) {
+func RecordIssueOpsDevilsAdvocateReview(root, id string, req reviewcontract.DevilsAdvocateReviewRequest) (model.IssueOpsRecord, error) {
 	return planningRecorderForTest(nil).DevilsAdvocate(root, id, req)
 }

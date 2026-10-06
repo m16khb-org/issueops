@@ -2,6 +2,7 @@ package issueopsremote
 
 import (
 	reportcontract "issueops/internal/contract/artifactreadability"
+	executionissue "issueops/internal/contract/executionissue"
 	"issueops/internal/port"
 )
 
@@ -16,6 +17,6 @@ type ChildCreateResult struct {
 	RecoveryCommand string                `json:"recovery_command,omitempty"`
 }
 type PublicationResult struct {
-	port.IssueProviderCreatePullRequestResult
+	executionissue.IssueProviderCreatePullRequestResult
 	Readability reportcontract.Report `json:"readability"`
 }

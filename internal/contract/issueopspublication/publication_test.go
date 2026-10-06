@@ -63,13 +63,11 @@ func TestMutableProjectionClonesDoNotAliasInput(t *testing.T) {
 		t.Fatalf("create command clone aliased mutable input: %#v", commandClone)
 	}
 
-	prepared := PreparedCreate{
-		Request: ProviderCreateRequest{Labels: []string{}, Assignees: []string{"maintainer"}},
-	}
-	preparedClone := prepared.Clone()
-	prepared.Request.Assignees[0] = "changed"
-	if preparedClone.Request.Labels == nil || preparedClone.Request.Assignees[0] != "maintainer" {
-		t.Fatalf("prepared create clone lost slice shape or aliased input: %#v", preparedClone)
+	request := ProviderCreateRequest{Labels: []string{}, Assignees: []string{"maintainer"}}
+	requestClone := request.Clone()
+	request.Assignees[0] = "changed"
+	if requestClone.Labels == nil || requestClone.Assignees[0] != "maintainer" {
+		t.Fatalf("provider create request clone lost slice shape or aliased input: %#v", requestClone)
 	}
 
 	inventory := Inventory{Candidates: []Candidate{{
@@ -85,10 +83,10 @@ func TestMutableProjectionClonesDoNotAliasInput(t *testing.T) {
 		t.Fatalf("inventory clone aliased mutable input: %#v", inventoryClone)
 	}
 
-	result := ReconcileResult{Record: RecordSnapshot{ID: "io-1", Raw: []byte("{\"ok\":true}")}}
-	resultClone := result.Clone()
-	result.Record.Raw[0] = 'x'
-	if string(resultClone.Record.Raw) != "{\"ok\":true}" {
-		t.Fatalf("reconcile result clone aliased record bytes: %#v", resultClone)
+	record := RecordSnapshot{ID: "io-1", Raw: []byte("{\"ok\":true}")}
+	recordClone := record.Clone()
+	record.Raw[0] = 'x'
+	if string(recordClone.Raw) != "{\"ok\":true}" {
+		t.Fatalf("record snapshot clone aliased record bytes: %#v", recordClone)
 	}
 }

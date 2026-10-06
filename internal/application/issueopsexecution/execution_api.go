@@ -3,11 +3,12 @@ package issueopsexecution
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	model "issueops/internal/contract/issueops"
 	"issueops/internal/port"
 )
 
-func invokeExecutionPrepareHandler(ctx context.Context, stateRoot string, request model.ExecutionPrepareRequest, invocation port.ExecutionPrepareInvocation, handler model.ExecutionPrepareHandler) (model.ExecutionPrepareResult, error) {
+func invokeExecutionPrepareHandler(ctx context.Context, stateRoot string, request model.ExecutionPrepareRequest, invocation executionissue.ExecutionPrepareInvocation, handler model.ExecutionPrepareHandler) (model.ExecutionPrepareResult, error) {
 	if handler == nil {
 		return model.ExecutionPrepareResult{ID: request.ID}, model.ErrPrepareHandlerUnavailable
 	}
@@ -35,7 +36,7 @@ func (s Service) executeAction(ctx context.Context, stateRoot string, req model.
 			OwnerHost: req.OwnerHost, OwnerModel: req.OwnerModel, OwnerEffort: req.OwnerEffort,
 			IssueSnapshotFile: req.IssueSnapshotFile,
 			DirectReason:      req.DirectReason, ExpectedReadinessFingerprint: req.ExpectedReadinessFingerprint, Confirm: req.Confirm,
-		}, port.ExecutionPrepareInvocation{ReadIssue: deps.ReadIssue}, deps.Prepare)
+		}, executionissue.ExecutionPrepareInvocation{ReadIssue: deps.ReadIssue}, deps.Prepare)
 	case model.ExecutionActionStatus:
 		if deps.Status == nil {
 			return model.ExecutionResult{OK: false, ID: req.ID}, fmt.Errorf("issueops execution status handler is not configured")

@@ -2,6 +2,7 @@ package mcpcli
 
 import (
 	"context"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"strings"
 	"testing"
 
@@ -11,7 +12,7 @@ import (
 func initializeInstructions(t *testing.T, transport serverTransport) string {
 	t.Helper()
 	deps := testTransportServices()
-	deps.Catalog = testMCPCatalog()
+	deps.Catalog = mcpcatalog.Build()
 	deps.Resources = resourceConfigForTest()
 	server := newSDKServer(deps, sdkServerOptions(), transport, nil)
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "0"}, nil)

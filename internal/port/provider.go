@@ -3,6 +3,7 @@ package port
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 
 	completionmodel "issueops/internal/contract/issueops"
 )
@@ -257,7 +258,7 @@ type IssueProviderPullRequestCloser interface {
 type IssueProvider interface {
 	Name() string
 	CreateIssue(req IssueProviderCreateIssueRequest) (IssueProviderCreateIssueResult, error)
-	CreatePullRequest(req IssueProviderCreatePullRequestRequest) (IssueProviderCreatePullRequestResult, error)
+	CreatePullRequest(req IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error)
 	CreateChild(req IssueProviderCreateChildRequest) (IssueProviderCreateChildResult, error)
 	CloseChild(req IssueProviderCloseChildRequest) (IssueProviderCloseChildResult, error)
 	CloseIssue(ctx context.Context, req IssueProviderCloseIssueRequest) (IssueProviderCloseIssueResult, error)

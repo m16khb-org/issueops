@@ -1,9 +1,12 @@
 package state
 
-import "testing"
+import (
+	statedomain "issueops/internal/domain/state"
+	"testing"
+)
 
 func TestDoctorOwnsEntryAndCurrentRecordClassification(t *testing.T) {
-	result := Doctor("/state", []DoctorEntry{
+	result := Doctor("/state", []statedomain.DoctorEntry{
 		{Name: "issueops.db", Path: "/state/issueops.db"},
 		{Name: "foreign", Path: "/state/foreign", IsDir: true},
 	}, []DoctorRow{

@@ -1,6 +1,7 @@
 package historycompare
 
 import (
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"testing"
 
 	"issueops/internal/contract/failurecause"
@@ -8,12 +9,12 @@ import (
 )
 
 func TestCompareSelfAugmentSummariesFromSnapshotsCoversWarningsAndGoalRegressions(t *testing.T) {
-	baseline := SelfAugmentStateSnapshot{
+	baseline := augmentcontract.SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,
 		GeneratedAt:   "2000-01-01T00:00:00Z",
-		Summary: SelfAugmentSummary{
+		Summary: augmentcontract.SelfAugmentSummary{
 			TotalSteps:          1,
 			PassedSteps:         1,
 			StepLabels:          []string{"go test"},
@@ -47,10 +48,10 @@ func TestCompareSelfAugmentSummariesFromSnapshotsCoversWarningsAndGoalRegression
 	}
 }
 func TestCompareSelfAugmentSummariesFromSnapshotsWarnsWhenFailureCauseChanges(t *testing.T) {
-	baseline := SelfAugmentStateSnapshot{
+	baseline := augmentcontract.SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
-		Summary: SelfAugmentSummary{
+		Summary: augmentcontract.SelfAugmentSummary{
 			TotalSteps:   1,
 			FailedSteps:  1,
 			FailureCause: failurecause.Model,
@@ -77,10 +78,10 @@ func TestCompareSelfAugmentSummariesFromSnapshotsWarnsWhenFailureCauseChanges(t 
 }
 
 func TestCompareSelfAugmentSummariesFromSnapshotsSkipsCauseWarningWhenOnlyOneSummaryFailed(t *testing.T) {
-	baseline := SelfAugmentStateSnapshot{
+	baseline := augmentcontract.SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
-		Summary: SelfAugmentSummary{
+		Summary: augmentcontract.SelfAugmentSummary{
 			TotalSteps:   1,
 			FailedSteps:  1,
 			FailureCause: failurecause.Model,

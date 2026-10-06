@@ -13,7 +13,7 @@ import (
 // 위험이 없으므로 정리가 진행되어야 한다(#129 AC-05).
 func TestCloseChildrenAcceptsAlreadyClosedChildrenWithoutParentMergeEvidence(t *testing.T) {
 	record := model.IssueOpsRecord{
-		ID:       "io-legacy-umbrella",
+		ID:       "io-umbrella",
 		Repo:     "/repo",
 		IssueURL: "https://github.com/acme/repo/issues/78",
 		IssueLinks: []model.IssueOpsIssueLink{
@@ -49,7 +49,7 @@ func TestCloseChildrenAcceptsAlreadyClosedChildrenWithoutParentMergeEvidence(t *
 // 함께 닫으면 그 작업이 검토 없이 사라진다(#129 AC-06).
 func TestCloseChildrenRejectsOpenChildWithoutParentMergeEvidence(t *testing.T) {
 	record := model.IssueOpsRecord{
-		ID:       "io-legacy-umbrella",
+		ID:       "io-umbrella",
 		Repo:     "/repo",
 		IssueURL: "https://github.com/acme/repo/issues/78",
 		IssueLinks: []model.IssueOpsIssueLink{
@@ -80,7 +80,7 @@ func TestCloseChildrenRejectsOpenChildWithoutParentMergeEvidence(t *testing.T) {
 // 네트워크 실패 한 번으로 무력해진다.
 func TestCloseChildrenRejectsUnknownChildStateWithoutParentMergeEvidence(t *testing.T) {
 	record := model.IssueOpsRecord{
-		ID:       "io-legacy-umbrella",
+		ID:       "io-umbrella",
 		Repo:     "/repo",
 		IssueURL: "https://github.com/acme/repo/issues/78",
 		IssueLinks: []model.IssueOpsIssueLink{
@@ -103,7 +103,7 @@ func TestCloseChildrenRejectsUnknownChildStateWithoutParentMergeEvidence(t *test
 // 운영자가 정리 의도를 명시했을 때만 일어난다.
 func TestCloseChildrenWithoutRequestDoesNotProbeRemote(t *testing.T) {
 	record := model.IssueOpsRecord{
-		ID:       "io-legacy-umbrella",
+		ID:       "io-umbrella",
 		Repo:     "/repo",
 		IssueURL: "https://github.com/acme/repo/issues/78",
 		IssueLinks: []model.IssueOpsIssueLink{

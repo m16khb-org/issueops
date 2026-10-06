@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"context"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"time"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -16,7 +17,7 @@ import (
 
 type IssueOpsCLIDeps struct {
 	AcceptIssueOpsChildWithActor                func(stateRoot, parentID, childID string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error)
-	AddIssueOpsDecisionWithActor                func(stateRoot, id string, req issueopsdecisioncontract.Request, actor issueopsdecisioncontract.Actor) (issueopsdecisioncontract.Record, error)
+	AddIssueOpsDecisionWithActor                func(stateRoot, id string, req issueopsdecisioncontract.Request, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	DropIssueOpsChildWithActor                  func(stateRoot, parentID, childID, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error)
 	IssueOpsChildStatusWithActor                func(stateRoot, parentID string, repair bool, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildStatusResult, error)
 	IssueOpsPRReadiness                         func(record issueopscontract.IssueOpsRecord) issueopscontract.IssueOpsReadiness
@@ -37,16 +38,16 @@ type IssueOpsCLIDeps struct {
 	PruneIssueOps                               func(stateRoot string, maxAge time.Duration, confirm bool) (issueopsretentioncontract.Result, error)
 	ReadIssueOps                                func(stateRoot, id string) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsAISlopCleanEvidenceWithActor  func(stateRoot, id string, categories, verification []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
-	RecordIssueOpsCompatibilityReviewWithActor  func(stateRoot, id string, req issueopscontract.IssueOpsCompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
-	RecordIssueOpsDesignReviewWithActor         func(stateRoot, id string, req issueopscontract.IssueOpsDesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
-	RecordIssueOpsDevilsAdvocateReviewWithActor func(stateRoot, id string, req issueopscontract.IssueOpsDevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+	RecordIssueOpsCompatibilityReviewWithActor  func(stateRoot, id string, req reviewcontract.CompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+	RecordIssueOpsDesignReviewWithActor         func(stateRoot, id string, req reviewcontract.DesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
+	RecordIssueOpsDevilsAdvocateReviewWithActor func(stateRoot, id string, req reviewcontract.DevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsDomainReviewWithActor         func(stateRoot, id string, req issueopscontract.IssueOpsDomainReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsImplementationReviewWithActor func(stateRoot, id string, req issueopscontract.IssueOpsImplementationReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsProjectDocsReviewWithActor    func(stateRoot, id string, req issueopscontract.IssueOpsProjectDocsReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsSchemaEvidenceWithActor       func(stateRoot, id string, req issueopscontract.IssueOpsSchemaEvidenceRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsIntentWithActor               func(stateRoot, id string, req issueopscontract.IssueOpsIntentRecordRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RecordIssueOpsPlanPrepWithActor             func(stateRoot, id string, req issueopscontract.IssueOpsPlanPrepRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
-	RecordIssueOpsRoutingWithActor              func(stateRoot, id, phase, skill string, actor issueopsroutingcontract.Actor) (issueopsroutingcontract.Record, error)
+	RecordIssueOpsRoutingWithActor              func(stateRoot, id, phase, skill string, actor issueopscontract.IssueOpsActor) (issueopsroutingcontract.Record, error)
 	RegressIssueOpsForReplanWithActor           func(stateRoot, id, reason string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)
 	RejectIssueOpsChildWithActor                func(stateRoot, parentID, childID, reason string, evidence []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsChildValidationResult, error)
 	ResolveIssueOpsFeedbackWithActor            func(stateRoot, id string, index int, resolution string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error)

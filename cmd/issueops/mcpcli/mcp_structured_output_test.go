@@ -194,7 +194,7 @@ func TestSDKHarnessInspectForwardsHostReceiptsArgument(t *testing.T) {
 }
 
 func TestSDKStructuredToolErrorResultKeepsTextWithoutStructuredContent(t *testing.T) {
-	handler := sdkToolHandlerWithContext(testMCPCatalog(), func(context.Context, MCPToolCall) MCPToolOutcome {
+	handler := sdkToolHandlerWithContext(mcpcatalog.Build(), func(context.Context, MCPToolCall) MCPToolOutcome {
 		return mcpToolErrorPayload(map[string]any{"ok": false, "error": "boom"})
 	}, "harness_inspect")
 	result, err := handler(t.Context(), &mcp.CallToolRequest{Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)}})

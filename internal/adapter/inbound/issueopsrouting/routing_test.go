@@ -2,6 +2,7 @@ package issueopsrouting
 
 import (
 	"context"
+	issueopscontract "issueops/internal/contract/issueops"
 	"testing"
 	"time"
 
@@ -52,7 +53,7 @@ func TestRoutingHandlersDelegateRecordAndScore(t *testing.T) {
 		liveVerifier(),
 	))
 
-	actor := issueopsroutingcontract.Actor{Host: "codex"}
+	actor := issueopscontract.IssueOpsActor{Host: "codex"}
 	record, err := handlers.Record("/state", "io-3", "plan", "verified-execution", actor)
 	if err != nil {
 		t.Fatalf("record failed: %v", err)
@@ -97,7 +98,7 @@ func TestScorePropagatesReadState(t *testing.T) {
 
 func TestNilServiceFailsClosed(t *testing.T) {
 	handlers := NewHandlers(nil)
-	if _, err := handlers.Record("/state", "io-4", "plan", "verified-execution", issueopsroutingcontract.Actor{}); err == nil {
+	if _, err := handlers.Record("/state", "io-4", "plan", "verified-execution", issueopscontract.IssueOpsActor{}); err == nil {
 		t.Fatal("nil service must fail closed on record")
 	}
 	if _, _, err := handlers.Score("/state", "io-4", nil); err == nil {

@@ -1,6 +1,7 @@
 package apidoc
 
 import (
+	contract "issueops/internal/contract/apidoc"
 	"regexp"
 	"strings"
 )
@@ -8,9 +9,9 @@ import (
 var dtoPropertyRe = regexp.MustCompile(`^\s*(?:readonly\s+)?([A-Za-z_][A-Za-z0-9_]*)\??\s*[!:?]?\s*:`)
 var dtoClassDeclarationRe = regexp.MustCompile(`\b(?:export\s+)?(?:abstract\s+)?class\s+[A-Za-z_][A-Za-z0-9_]*\b`)
 
-func CheckNestDTO(file, text string) []Violation {
+func CheckNestDTO(file, text string) []contract.Violation {
 	lines := strings.Split(text, "\n")
-	var violations []Violation
+	var violations []contract.Violation
 	var decorators []string
 	inClass := false
 	pendingClassBody := false
@@ -59,19 +60,19 @@ func CheckNestDTO(file, text string) []Violation {
 		swaggerOptional := strings.Contains(deco, "@ApiPropertyOptional") || apiPropertyObjectFlag(deco, "required", "false")
 		swaggerRequiredExplicit := strings.Contains(deco, "@ApiProperty") && !strings.Contains(deco, "@ApiPropertyOptional") && (apiPropertyObjectFlag(deco, "required", "true") || !apiPropertyHasRequiredKey(deco))
 		if tsOptional && swaggerRequiredExplicit {
-			violations = append(violations, Violation{File: file, Line: i + 1, Code: "required_optional_mismatch", Message: "optional DTO property " + m[1] + " is documented as required (@ApiProperty required: true/default) but is optional in TypeScript/validation"})
+			violations = append(violations, contract.Violation{File: file, Line: i + 1, Code: "required_optional_mismatch", Message: "optional DTO property " + m[1] + " is documented as required (@ApiProperty required: true/default) but is optional in TypeScript/validation"})
 		} else if !tsOptional && swaggerOptional {
-			violations = append(violations, Violation{File: file, Line: i + 1, Code: "required_optional_mismatch", Message: "required DTO property " + m[1] + " is documented as optional in Swagger but is required in TypeScript/validation"})
+			violations = append(violations, contract.Violation{File: file, Line: i + 1, Code: "required_optional_mismatch", Message: "required DTO property " + m[1] + " is documented as optional in Swagger but is required in TypeScript/validation"})
 		}
 		if tsOptional {
 			if !swaggerOptional && !swaggerRequiredExplicit {
-				violations = append(violations, Violation{File: file, Line: i + 1, Code: "missing_api_property_optional", Message: "optional DTO property " + m[1] + " is missing @ApiPropertyOptional"})
+				violations = append(violations, contract.Violation{File: file, Line: i + 1, Code: "missing_api_property_optional", Message: "optional DTO property " + m[1] + " is missing @ApiPropertyOptional"})
 			}
 			if !strings.Contains(deco, "@IsOptional") {
-				violations = append(violations, Violation{File: file, Line: i + 1, Code: "missing_is_optional", Message: "optional DTO property " + m[1] + " is missing @IsOptional"})
+				violations = append(violations, contract.Violation{File: file, Line: i + 1, Code: "missing_is_optional", Message: "optional DTO property " + m[1] + " is missing @IsOptional"})
 			}
 		} else if !strings.Contains(deco, "@ApiProperty") || strings.Contains(deco, "@ApiPropertyOptional") {
-			violations = append(violations, Violation{File: file, Line: i + 1, Code: "missing_api_property", Message: "required DTO property " + m[1] + " is missing @ApiProperty"})
+			violations = append(violations, contract.Violation{File: file, Line: i + 1, Code: "missing_api_property", Message: "required DTO property " + m[1] + " is missing @ApiProperty"})
 		}
 		decorators = nil
 		classDepth += BraceDepthDelta(line)

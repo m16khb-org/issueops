@@ -10,11 +10,12 @@ import (
 	"issueops/internal/adapter/verification/probe/stepbudget"
 	app "issueops/internal/application/selfaugment"
 	statecontract "issueops/internal/contract/state"
+	statepath "issueops/internal/domain/statepath"
 	"time"
 )
 
 func newProbeSnapshotStore() app.SnapshotStore {
-	return app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: probeStateWriteRecord, Now: time.Now}
+	return app.SnapshotStore{NormalizeKey: statepath.NormalizeKey, WriteRecord: probeStateWriteRecord, Now: time.Now}
 }
 func newStateRoundtripProbe() stateroundtrip.Validator {
 	return stateroundtrip.Validator{StateRead: func(dir, key string) (statecontract.StateResult, error) { return newStateService(dir).Read(key) }, WriteRecord: probeStateWriteRecord, WriteSnapshot: newProbeSnapshotStore().Write, OpenDatabase: func(dir string) (stateroundtrip.StateDatabase, error) { return sqlstore.Open(dir) }}

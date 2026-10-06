@@ -26,7 +26,7 @@ If endpoint, controller, DTO, schema, OpenAPI, Swagger, or public error behavior
 - public error responses reachable from service/usecase/error mapping code;
 - static API-doc check result when the target repo provides one;
 - agent/API-doc review result when business logic can change visible 400/401/403/404/409-style responses;
-- targeted verification commands used to avoid blaming unrelated legacy API-doc debt.
+- targeted verification commands used to avoid blaming unrelated pre-existing API-doc debt.
 
 Prefer the target repo's documented API-doc command. If none exists, record the absence and use the closest available static/review check.
 

@@ -42,7 +42,7 @@ func (deps stateRoundtripValidationDeps) withDefaults() stateRoundtripValidation
 	if deps.run == nil {
 		deps.run = func(root, label string, timeout time.Duration, input string, env []string, command ...string) verifycontract.StepResult {
 			if len(command) == 0 {
-				return failedStep(label, fmt.Errorf("missing command"))
+				return verifydomain.FailedStep(label, fmt.Errorf("missing command"))
 			}
 			return runCommandStepEnv(root, label, timeout, input, env, command[0], command[1:]...)
 		}
@@ -54,20 +54,12 @@ func runCommandStepEnv(root, label string, timeout time.Duration, input string, 
 	return verification.RunEnv(root, label, timeout, input, env, commandOutputBudgetBytes, name, args...)
 }
 
-func failedStep(label string, err error) verifycontract.StepResult {
-	return verifydomain.FailedStep(label, err)
-}
-
 func assertionStepWithOutput(label string, started time.Time, errs []string, stdoutParts []string, commands []string) verifycontract.StepResult {
 	return verifydomain.AssertionStepWithOutput(label, time.Since(started).Milliseconds(), errs, stdoutParts, commands, aggregateOutputBudgetBytes)
 }
 
 func combineFailedStep(label string, started time.Time, child verifycontract.StepResult, stdoutParts []string, commands []string) verifycontract.StepResult {
 	return verifydomain.CombineFailedStep(label, time.Since(started).Milliseconds(), child, stdoutParts, commands, aggregateOutputBudgetBytes)
-}
-
-func tailWithBudget(s string, max int) (string, bool, int) {
-	return verifydomain.TailWithBudget(s, max)
 }
 
 func containsString(values []string, want string) bool {
