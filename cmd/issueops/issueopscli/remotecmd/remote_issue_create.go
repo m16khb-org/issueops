@@ -23,7 +23,7 @@ func (command Command) runRemoteCreateIssue(ctx context.Context, args []string, 
 	var fields repeatedFlag
 	fs.Var(&labels, "label", "label to apply (repeatable)")
 	fs.Var(&assignees, "assignee", "assignee username (repeatable)")
-	fs.Var(&fields, "field", "template field key=value (canonical or documented alias; repeatable)")
+	fs.Var(&fields, "field", "template field key=value (canonical key; repeatable)")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err

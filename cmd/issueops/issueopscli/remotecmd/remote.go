@@ -326,7 +326,7 @@ func (command Command) runRemoteRenderTemplate(args []string, deps Deps) error {
 	title := fs.String("title", "", "artifact title")
 	scoreFile := fs.String("score-file", "", "IssueOps remote score result JSON")
 	var fields repeatedFlag
-	fs.Var(&fields, "field", "template field key=value (canonical or documented alias; repeatable)")
+	fs.Var(&fields, "field", "template field key=value (canonical key; repeatable)")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if help, err := parseFlags(fs, args); help || err != nil {
 		return err

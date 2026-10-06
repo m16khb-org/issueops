@@ -15,7 +15,6 @@ func runProjectBootstrap(bootstrap bootstrapapp.Service, args []string) error {
 	repo := fs.String("repo", ".", "target repository path")
 	sync := fs.Bool("sync", false, "refresh existing project docs as well as creating missing files")
 	dryRun := fs.Bool("dry-run", false, "show project docs plan without writing")
-	write := fs.Bool("write", true, "compatibility alias; use --dry-run for planning")
 	jsonOut := fs.Bool("json", false, "print JSON")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -23,7 +22,7 @@ func runProjectBootstrap(bootstrap bootstrapapp.Service, args []string) error {
 	if fs.NArg() > 0 {
 		*repo = fs.Arg(0)
 	}
-	result, err := bootstrap.Run(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: *repo, Write: *write && !*dryRun, Sync: *sync})
+	result, err := bootstrap.Run(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: *repo, Write: !*dryRun, Sync: *sync})
 	if err != nil {
 		return err
 	}
