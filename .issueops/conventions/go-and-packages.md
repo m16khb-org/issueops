@@ -21,7 +21,7 @@
 
 ```text
 cmd/issueops/main.go
-cmd/issueops/<cli>/                 # issueopsapp, issueopscli, mcpcli, workercli, daemoncli, hookcli, installcli, ...
+cmd/issueops/<cli>/                 # issueopsapp, issueopscli, mcpcli, workercli, hookcli, installcli, ...
 cmd/issueops/testdata/*.golden.*
 internal/contract/<capability>/    # transport/state가 공유하는 versioned DTO
 internal/domain/<capability>/      # I/O를 모르는 순수 규칙과 reducer
@@ -59,7 +59,7 @@ skills/
 | `adapter/hostprotocol` | host별 hook JSON, 실행 인자, Omo extension 코드 생성 | contract, domain의 순수 helper, 표준 라이브러리 | 비즈니스 판정, filesystem/process I/O |
 | `adapter/provider` | github/gitlab issue·PR/MR·child 생성/검증(gh·glab CLI) | contract, port, os/exec | 정책 복제, root 밖 접근 |
 
-> `cmd/issueops/issueopsapp`가 concrete adapter를 조립하는 유일한 composition root다. command별 CLI와 daemon/MCP transport 구현은 현재 `cmd/issueops/*cli`에 있고, 순수 판정·명령 해석은 `internal/domain`, DTO와 CLI/MCP 정적 descriptor·schema는 `internal/contract`가 소유한다. CLI/MCP 목록 조합과 도움말 렌더링은 `internal/adapter/inbound/catalog/{cli,mcp}`에 두고 root가 완성한 목록과 도움말을 호출·서버별 dependency로 전달한다.
+> `cmd/issueops/issueopsapp`가 concrete adapter를 조립하는 유일한 composition root다. command별 CLI와 MCP transport 구현은 현재 `cmd/issueops/*cli`에 있고, 순수 판정·명령 해석은 `internal/domain`, DTO와 CLI/MCP 정적 descriptor·schema는 `internal/contract`가 소유한다. CLI/MCP 목록 조합과 도움말 렌더링은 `internal/adapter/inbound/catalog/{cli,mcp}`에 두고 root가 완성한 목록과 도움말을 호출·서버별 dependency로 전달한다.
 > host protocol builder는 root에서 hook CLI, Omo installer·activation verifier·host probe, cmux launcher에 주입한다. concrete adapter 사이에서 builder를 직접 import하지 않는다.
 > filesystem/git/process 구현은 하나의 범용 fs adapter에 모으지 않고 capability별 outbound adapter로 둔다. `internal/adapter/install`처럼 아직 application orchestration을 함께 가진 기존 package는 새 의존을 확대하지 않고 capability vertical로 점진 이동한다.
 

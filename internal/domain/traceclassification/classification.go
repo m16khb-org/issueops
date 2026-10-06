@@ -9,8 +9,6 @@ func ProposedKnobForStep(step string) string {
 		return "tighten CLI/MCP contract golden coverage and update schema intentionally"
 	case strings.Contains(step, "redaction") || strings.Contains(step, "secret"):
 		return "extend redaction audit fixtures before adding any new logging surface"
-	case strings.Contains(step, "daemon"):
-		return "add daemon stale-lock/socket resilience fixture before changing runtime behavior"
 	case strings.Contains(step, "policy") || strings.Contains(step, "guard"):
 		return "add deterministic policy or guard fixture for the repeated failure"
 	case strings.Contains(step, "go test") || strings.Contains(step, "test"):

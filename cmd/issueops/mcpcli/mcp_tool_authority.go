@@ -100,7 +100,6 @@ var mcpToolAuthorities = map[string]toolAuthority{
 	"channel_send": serverTool,
 	"channel_recv": serverTool,
 	// assistant_worker
-	"daemon_status":        serverTool,
 	"contract_schema":      serverTool,
 	"contract_check":       serverTool,
 	"web_fetch_resilient":  serverTool,

@@ -94,9 +94,6 @@ func TestPlanSelfAugmentationUsesGeniusThinkAndScoreGate(t *testing.T) {
 	if candidateByID(result.Candidates, "worker-stuck-running-detection").Status != augmentcontract.CandidateStatusSatisfied {
 		t.Fatalf("worker stuck-running detection should be satisfied after cleanup-stuck support is implemented: %+v", result.Candidates)
 	}
-	if candidateByID(result.Candidates, "daemon-connection-limit").Status != augmentcontract.CandidateStatusSatisfied {
-		t.Fatalf("daemon connection limit should be satisfied after accept-loop max connection guard is implemented: %+v", result.Candidates)
-	}
 	// Second-wave refill candidates flip to satisfied through evidence-backed
 	// signal rules once their coverage lands; nothing stays open for selection.
 	refill := candidateByID(result.Candidates, "coverage-issueops-inbound-adapters")

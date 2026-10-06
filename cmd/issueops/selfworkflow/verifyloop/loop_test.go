@@ -156,9 +156,6 @@ func fakeVerifyLoopStepDepsOK(ok func(string) selfverify.StepResult) verifyapp.S
 		ValidateParallelTempIsolation: func(string, string, int64) selfverify.StepResult {
 			return ok("parallel isolation")
 		},
-		ValidateDaemonRestartResilience: func(string, string, int64) selfverify.StepResult {
-			return ok("daemon resilience")
-		},
 		ValidatePreflightFuzz: func(string, string, int64) selfverify.StepResult {
 			return ok("preflight fuzz")
 		},

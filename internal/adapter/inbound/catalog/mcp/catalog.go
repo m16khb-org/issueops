@@ -24,7 +24,6 @@ func catalogSections() []catalogSection {
 		{contract.DispatchLoop, true, contract.LoopTools},
 		{contract.DispatchGates, true, contract.GatesTools},
 		{contract.DispatchChannel, true, contract.ChannelTools},
-		{contract.DispatchAssistantWorker, true, func() []contract.Tool { return []contract.Tool{contract.DaemonStatusTool()} }},
 		{contract.DispatchSelfLoop, true, contract.SelfLoopAdvertisedTools},
 		{contract.DispatchAssistantWorker, true, contract.AdapterOwnedTools},
 		{contract.DispatchPolicyState, true, contract.CommandPolicyAuditTools},

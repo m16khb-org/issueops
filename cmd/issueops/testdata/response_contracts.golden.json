@@ -150,11 +150,11 @@
           "name": "preflight"
         },
         {
-          "description": "summarize doctor, daemon, state, worker, and verification status",
+          "description": "summarize doctor, state, worker, and verification status",
           "name": "system-status"
         },
         {
-          "description": "diagnose harness installation, state, hooks, MCP, daemon, and project docs",
+          "description": "diagnose harness installation, state, hooks, MCP, and project docs",
           "name": "doctor"
         },
         {
@@ -212,10 +212,6 @@
         {
           "description": "set up user-level integrations",
           "name": "bootstrap"
-        },
-        {
-          "description": "manage the MCP backend daemon",
-          "name": "daemon"
         },
         {
           "description": "manage safe local worker jobs and read-only command evidence",
@@ -398,7 +394,7 @@
           "name": "status"
         }
       ],
-      "hash": "f6b847a820c70aa6b031a143e6e81f5e40131b1dc66cc566817643db6086f021",
+      "hash": "3cf7398e5ed80d5dd8bf00c052b062dec128fe3b14b9ecd77062c4cfdc6f6b76",
       "mcp_tools": [
         "api_doc_review",
         "api_doc_static_check",
@@ -412,7 +408,6 @@
         "commit_suggest",
         "contract_check",
         "contract_schema",
-        "daemon_status",
         "docs_index",
         "gates_abandon",
         "gates_check",
@@ -509,7 +504,6 @@
           "repo",
           "inspect",
           "doctor",
-          "daemon",
           "state",
           "workers",
           "self_verify",
@@ -834,25 +828,6 @@
       ],
       "version": 3,
       "warnings": []
-    },
-    "daemon_status": {
-      "accepting": false,
-      "active_connections": 0,
-      "code": "stopped",
-      "draining": false,
-      "identity_verified": false,
-      "max_connections": 256,
-      "message": "daemon is not running",
-      "ok": true,
-      "paths": {
-        "dir": "$STATE_DIR/daemon",
-        "lock_file": "$STATE_DIR/daemon/issueops.lock",
-        "log_file": "$STATE_DIR/daemon/issueops.log",
-        "pid_file": "$STATE_DIR/daemon/issueops.pid",
-        "socket": "$STATE_DIR/daemon/issueops.sock"
-      },
-      "reachable": false,
-      "running": false
     },
     "docs_index": {
       "docs_count": "$DOCS_COUNT",
@@ -1452,7 +1427,7 @@
           "path": "$ISSUEOPS_ROOT/skills/slack-delegate"
         },
         {
-          "description": "Run an exhaustive issueops stability audit from install/update through hooks, MCP, daemon, worker, state, process hygiene, memory-growth signals, stale sockets, zombie/orphan processes, and regression verification. Use when the user asks for E2E stability checks, full operational sweep, hook/MCP reliability, install verification, memory leak investigation, zombie process investigation, or “전수조사/안정성 점검”.",
+          "description": "Run an exhaustive issueops stability audit from install/update through hooks, MCP, worker, state, process hygiene, memory-growth signals, zombie/orphan processes, and regression verification. Use when the user asks for E2E stability checks, full operational sweep, hook/MCP reliability, install verification, memory leak investigation, zombie process investigation, or “전수조사/안정성 점검”.",
           "has_openai_yaml": true,
           "has_skill_md": true,
           "name": "stability-audit",
@@ -5032,30 +5007,6 @@
           ]
         },
         {
-          "category": "audit-risk",
-          "expected_gain": [
-            "daemon resource exhaustion has an explicit guard and test"
-          ],
-          "feasibility": 72,
-          "id": "daemon-connection-limit",
-          "impact": 90,
-          "novelty": 58,
-          "risk": 26,
-          "satisfaction_evidence": [
-            "daemon accept loop enforces maxConnections with rejection and graceful-drain coverage"
-          ],
-          "score": 0,
-          "status": "already_satisfied",
-          "title": "Add daemon connection limit protection",
-          "verify_with": [
-            "go test ./cmd/issueops/daemoncli ./internal/adapter/worker -count=1"
-          ],
-          "why_now": [
-            ".issueops/PROJECT_AUDIT.md flags D1 P1 no connection limit",
-            "Already satisfied; do not select in the next self-augmentation cycle"
-          ]
-        },
-        {
           "category": "release-decision",
           "expected_gain": [
             "Homebrew/tarball 선택을 임의 판단이 아니라 체크리스트 결과로 결정",
@@ -5663,7 +5614,6 @@
         "has_command_audit_log": true,
         "has_compatibility_contract": true,
         "has_cross_platform_build_matrix": true,
-        "has_daemon_connection_limit": true,
         "has_distribution_decision": true,
         "has_genius_mermaid_lint": true,
         "has_genius_think": true,
@@ -5819,7 +5769,7 @@
       "warnings": []
     },
     "self_verify_candidates": {
-      "candidate_count": 16,
+      "candidate_count": 15,
       "candidates": [
         {
           "category": "observability",
@@ -6054,7 +6004,7 @@
           "id": "self-verify-parallel-temp-isolation",
           "priority": 14,
           "satisfaction_evidence": [
-            "parallel isolation probes unique temp roots for state, daemon, and artifact paths"
+            "parallel isolation probes unique temp roots for state and artifact paths"
           ],
           "score": 70,
           "status": "already_satisfied",
@@ -6063,7 +6013,7 @@
             "race tier"
           ],
           "why_now": [
-            "parallel self-verify runs must not collide in temp state, daemon, or artifacts"
+            "parallel self-verify runs must not collide in temp state or artifacts"
           ]
         },
         {
@@ -6081,23 +6031,6 @@
           ],
           "why_now": [
             "host MCP duplicate-scope warnings can pass smoke tests while hurting UX"
-          ]
-        },
-        {
-          "category": "daemon",
-          "id": "self-verify-daemon-restart-resilience",
-          "priority": 16,
-          "satisfaction_evidence": [
-            "daemon resilience verifies stale lock/socket recovery, start/status/stop, and socket permissions"
-          ],
-          "score": 68,
-          "status": "already_satisfied",
-          "verify_with": [
-            "daemon resilience step",
-            "stale lock recovery test"
-          ],
-          "why_now": [
-            "daemon-backed MCP proxy must recover from stale lock/socket state"
           ]
         }
       ],
@@ -6123,8 +6056,7 @@
         "self-verify-output-size-budget",
         "self-verify-history-retention-budget",
         "self-verify-parallel-temp-isolation",
-        "self-verify-duplicate-mcp-warning",
-        "self-verify-daemon-restart-resilience"
+        "self-verify-duplicate-mcp-warning"
       ],
       "source_exists": true,
       "source_path": "$ISSUEOPS_ROOT/skills/self-verify/CANDIDATES.md",
@@ -6963,11 +6895,11 @@
                 "name": "preflight"
               },
               {
-                "description": "summarize doctor, daemon, state, worker, and verification status",
+                "description": "summarize doctor, state, worker, and verification status",
                 "name": "system-status"
               },
               {
-                "description": "diagnose harness installation, state, hooks, MCP, daemon, and project docs",
+                "description": "diagnose harness installation, state, hooks, MCP, and project docs",
                 "name": "doctor"
               },
               {
@@ -7025,10 +6957,6 @@
               {
                 "description": "set up user-level integrations",
                 "name": "bootstrap"
-              },
-              {
-                "description": "manage the MCP backend daemon",
-                "name": "daemon"
               },
               {
                 "description": "manage safe local worker jobs and read-only command evidence",
@@ -7211,7 +7139,7 @@
                 "name": "status"
               }
             ],
-            "hash": "f6b847a820c70aa6b031a143e6e81f5e40131b1dc66cc566817643db6086f021",
+            "hash": "3cf7398e5ed80d5dd8bf00c052b062dec128fe3b14b9ecd77062c4cfdc6f6b76",
             "mcp_tools": [
               "api_doc_review",
               "api_doc_static_check",
@@ -7225,7 +7153,6 @@
               "commit_suggest",
               "contract_check",
               "contract_schema",
-              "daemon_status",
               "docs_index",
               "gates_abandon",
               "gates_check",
@@ -7322,7 +7249,6 @@
                 "repo",
                 "inspect",
                 "doctor",
-                "daemon",
                 "state",
                 "workers",
                 "self_verify",
@@ -7647,32 +7573,6 @@
             ],
             "version": 3,
             "warnings": []
-          },
-          "type": "text"
-        }
-      ]
-    },
-    "daemon_status": {
-      "content": [
-        {
-          "json": {
-            "accepting": false,
-            "active_connections": 0,
-            "code": "stopped",
-            "draining": false,
-            "identity_verified": false,
-            "max_connections": 256,
-            "message": "daemon is not running",
-            "ok": true,
-            "paths": {
-              "dir": "$STATE_DIR/daemon",
-              "lock_file": "$STATE_DIR/daemon/issueops.lock",
-              "log_file": "$STATE_DIR/daemon/issueops.log",
-              "pid_file": "$STATE_DIR/daemon/issueops.pid",
-              "socket": "$STATE_DIR/daemon/issueops.sock"
-            },
-            "reachable": false,
-            "running": false
           },
           "type": "text"
         }
@@ -8286,7 +8186,7 @@
                 "path": "$ISSUEOPS_ROOT/skills/slack-delegate"
               },
               {
-                "description": "Run an exhaustive issueops stability audit from install/update through hooks, MCP, daemon, worker, state, process hygiene, memory-growth signals, stale sockets, zombie/orphan processes, and regression verification. Use when the user asks for E2E stability checks, full operational sweep, hook/MCP reliability, install verification, memory leak investigation, zombie process investigation, or “전수조사/안정성 점검”.",
+                "description": "Run an exhaustive issueops stability audit from install/update through hooks, MCP, worker, state, process hygiene, memory-growth signals, zombie/orphan processes, and regression verification. Use when the user asks for E2E stability checks, full operational sweep, hook/MCP reliability, install verification, memory leak investigation, zombie process investigation, or “전수조사/안정성 점검”.",
                 "has_openai_yaml": true,
                 "has_skill_md": true,
                 "name": "stability-audit",
@@ -8623,30 +8523,6 @@
                 "why_now": [
                   "Phase 7 deliverable에 cross-platform build matrix가 남아 있다",
                   "단일 macOS dogfood만으로 배포 호환성을 판단하면 release packaging 리스크가 남는다",
-                  "Already satisfied; do not select in the next self-augmentation cycle"
-                ]
-              },
-              {
-                "category": "audit-risk",
-                "expected_gain": [
-                  "daemon resource exhaustion has an explicit guard and test"
-                ],
-                "feasibility": 72,
-                "id": "daemon-connection-limit",
-                "impact": 90,
-                "novelty": 58,
-                "risk": 26,
-                "satisfaction_evidence": [
-                  "daemon accept loop enforces maxConnections with rejection and graceful-drain coverage"
-                ],
-                "score": 0,
-                "status": "already_satisfied",
-                "title": "Add daemon connection limit protection",
-                "verify_with": [
-                  "go test ./cmd/issueops/daemoncli ./internal/adapter/worker -count=1"
-                ],
-                "why_now": [
-                  ".issueops/PROJECT_AUDIT.md flags D1 P1 no connection limit",
                   "Already satisfied; do not select in the next self-augmentation cycle"
                 ]
               },
@@ -9258,7 +9134,6 @@
               "has_command_audit_log": true,
               "has_compatibility_contract": true,
               "has_cross_platform_build_matrix": true,
-              "has_daemon_connection_limit": true,
               "has_distribution_decision": true,
               "has_genius_mermaid_lint": true,
               "has_genius_think": true,
@@ -9448,7 +9323,7 @@
       "content": [
         {
           "json": {
-            "candidate_count": 16,
+            "candidate_count": 15,
             "candidates": [
               {
                 "category": "observability",
@@ -9683,7 +9558,7 @@
                 "id": "self-verify-parallel-temp-isolation",
                 "priority": 14,
                 "satisfaction_evidence": [
-                  "parallel isolation probes unique temp roots for state, daemon, and artifact paths"
+                  "parallel isolation probes unique temp roots for state and artifact paths"
                 ],
                 "score": 70,
                 "status": "already_satisfied",
@@ -9692,7 +9567,7 @@
                   "race tier"
                 ],
                 "why_now": [
-                  "parallel self-verify runs must not collide in temp state, daemon, or artifacts"
+                  "parallel self-verify runs must not collide in temp state or artifacts"
                 ]
               },
               {
@@ -9710,23 +9585,6 @@
                 ],
                 "why_now": [
                   "host MCP duplicate-scope warnings can pass smoke tests while hurting UX"
-                ]
-              },
-              {
-                "category": "daemon",
-                "id": "self-verify-daemon-restart-resilience",
-                "priority": 16,
-                "satisfaction_evidence": [
-                  "daemon resilience verifies stale lock/socket recovery, start/status/stop, and socket permissions"
-                ],
-                "score": 68,
-                "status": "already_satisfied",
-                "verify_with": [
-                  "daemon resilience step",
-                  "stale lock recovery test"
-                ],
-                "why_now": [
-                  "daemon-backed MCP proxy must recover from stale lock/socket state"
                 ]
               }
             ],
@@ -9752,8 +9610,7 @@
               "self-verify-output-size-budget",
               "self-verify-history-retention-budget",
               "self-verify-parallel-temp-isolation",
-              "self-verify-duplicate-mcp-warning",
-              "self-verify-daemon-restart-resilience"
+              "self-verify-duplicate-mcp-warning"
             ],
             "source_exists": true,
             "source_path": "$ISSUEOPS_ROOT/skills/self-verify/CANDIDATES.md",

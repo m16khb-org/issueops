@@ -13,8 +13,6 @@ import (
 
 func handleAssistantWorkerMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDependencies) MCPToolOutcome {
 	switch call.Name {
-	case "daemon_status":
-		return mcpToolPayload(deps.Daemon.Run())
 	case "commit_suggest":
 		result, err := deps.Commit.Suggest(commitsuggestcontract.CommitSuggestRequest{
 			RepoRoot: deps.resolveTarget(argmap.String(call.Arguments, "repo")),

@@ -24,7 +24,6 @@ func TestSelfVerifyStepRerunCommandCoversOperationalLabels(t *testing.T) {
 		"MCP smoke":              "mcp",
 		"state roundtrip":        "state write",
 		"parallel isolation":     "self-verify --collect-all-steps",
-		"daemon resilience":      "daemon start",
 		"preflight fuzz":         "preflight --json",
 		"native integration":     "install-native.sh",
 		"redaction audit":        "go test ./cmd/issueops -run Test -count=1",

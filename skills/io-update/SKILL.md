@@ -53,7 +53,7 @@ io update --dry-run --json
 - `root`가 의도한 issueops checkout이다.
 - `hosts`의 Codex, Claude, Omo 항목이 모두 성공한다.
 - 새 link와 제거될 stale link가 요청 범위에 맞다.
-- dry-run은 binary, host 설정, legacy daemon을 변경하지 않는다.
+- dry-run은 binary와 host 설정을 변경하지 않는다.
 
 dry-run이 실패하거나 예상하지 않은 root·project-local write를 보이면 실제 update를
 실행하지 않는다.
@@ -76,9 +76,6 @@ update는 다음을 하나의 transaction으로 처리한다.
 2. Codex, Claude, Omo user-scope skill link와 MCP·lifecycle 설정을 갱신한다.
 3. stale harness-owned link를 제거한다.
 4. native activation receipt를 readback해 봉인한다.
-5. dry-run이 아니면 실행 중인 legacy daemon을 내린다. `issueops mcp`는 host 세션 안에서
-   in-process로 동작하므로 daemon을 다시 띄우지 않는다. 이전 binary로 떠 있는 MCP
-   proxy는 재연결하면서 새 binary로 daemon을 띄운다.
 
 ## 완료 확인
 
@@ -105,7 +102,7 @@ io docs --json
 
 - 실패한 update를 성공으로 요약하지 않는다.
 - stdout/stderr와 exit code를 보존하고 실패한 단계(build, install, activation
-  readback, legacy daemon stop)를 구분한다.
+  readback)를 구분한다.
 - 같은 명령을 맹목적으로 반복하지 않는다. 원인을 수정한 뒤 dry-run부터 다시 시작한다.
 - dry-run 성공을 실제 설치 성공으로 보고하지 않는다.
 - update 과정에서 `git pull`, commit, push, branch 변경을 실행하지 않는다.

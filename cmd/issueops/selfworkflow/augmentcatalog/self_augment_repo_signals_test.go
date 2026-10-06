@@ -221,68 +221,6 @@ func TestWorkerMVPSignalRequiresApplicationAndCLI(t *testing.T) {
 	}
 }
 
-func TestDaemonConnectionLimitIsSatisfiedByAcceptLoopGuard(t *testing.T) {
-	root := t.TempDir()
-	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "daemoncli", "daemon_server.go"), `package daemoncli
-
-func (deps Server) Run() {
-	admission := newDaemonAdmission(deps.MaxConnections)
-	_ = admission
-}
-`)
-	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "daemoncli", "daemon_admission.go"), `package daemoncli
-
-const daemonStatusConnectionLimit = "daemon_connection_limit_reached"
-
-type daemonAdmission struct { slots chan struct{} }
-
-func (a *daemonAdmission) acquire() bool {
-	select {
-	case a.slots <- struct{}{}:
-		return true
-	default:
-		return false
-	}
-}
-
-func writeDaemonAdmissionError() {}
-`)
-	writeFileForRepoSignalTest(t, filepath.Join(root, "cmd", "issueops", "daemoncli", "daemon_server_loop_test.go"), `package daemoncli
-
-func TestRunDaemonAcceptLoopRejectsWhenConnectionLimitReached() {}
-func TestRunDaemonAcceptLoopExpires64IdleSessionsAndAdmitsInitialize() {}
-`)
-
-	domainPath := filepath.Join(root, "internal", "domain", "daemon", "settings.go")
-	domainSource := "package daemon\nconst DefaultMaxConnections = 256\nfunc MaxConnections(value string) int {}\n"
-	writeFileForRepoSignalTest(t, domainPath, domainSource)
-	wiringPath := filepath.Join(root, "cmd", "issueops", "issueopsapp", "daemon_wiring.go")
-	wiringSource := "package issueopsapp\ncapacity := domain.MaxConnections(os.Getenv(\"ISSUEOPS_DAEMON_MAX_CONNECTIONS\"))\nMaxConnections: reader.MaxConnections\n"
-	writeFileForRepoSignalTest(t, wiringPath, wiringSource)
-
-	signals := CollectSelfAugmentRepoSignals(root, 0, nil, "")
-	if !signals.HasDaemonConnectionLimit {
-		t.Fatalf("daemon connection limit signal was not detected: %+v", signals)
-	}
-
-	candidate := SelfAugmentCandidate{ID: "daemon-connection-limit", Status: SelfAugmentCandidateStatusOpen, Score: 76.72}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
-		t.Fatalf("daemon connection limit candidate was not marked satisfied: %+v", candidate)
-	}
-	for _, missing := range []string{domainPath, wiringPath} {
-		if err := os.Remove(missing); err != nil {
-			t.Fatal(err)
-		}
-		if CollectSelfAugmentRepoSignals(root, 0, nil, "").HasDaemonConnectionLimit {
-			t.Fatalf("connection limit accepted without %s", missing)
-		}
-		writeFileForRepoSignalTest(t, domainPath, domainSource)
-		writeFileForRepoSignalTest(t, wiringPath, wiringSource)
-	}
-
-}
-
 func TestMCPResourceCoverageIsSatisfiedByCatalogAndReadEdgeTests(t *testing.T) {
 	root := t.TempDir()
 	writeFileForRepoSignalTest(t, filepath.Join(root, "internal", "adapter", "inbound", "catalog", "mcp", "resource_catalog_test.go"), `package mcp

@@ -213,7 +213,7 @@ DDD 관점에서 **업무 규칙과 상태 전이는 domain**, **실행 순서�
 
 | 경로 | 책임 |
 |---|---|
-| `cmd/issueops/` | 의존성 조립과 CLI·MCP·daemon·hook 진입점 |
+| `cmd/issueops/` | 의존성 조립과 CLI·MCP·hook 진입점 |
 | `internal/contract/` | 버전이 있는 DTO와 응답·저장 계약 |
 | `internal/domain/` | I/O 없는 업무 규칙·상태 전이·판정 |
 | `internal/application/` | domain·port를 조합하는 실행 흐름 |

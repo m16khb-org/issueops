@@ -7,7 +7,6 @@ import (
 	"reflect"
 	"testing"
 
-	daemoncontract "issueops/internal/contract/daemon"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspectcontract "issueops/internal/contract/inspect"
 	selfcontract "issueops/internal/contract/selfaugment"
@@ -28,7 +27,6 @@ func summaryContent(t testing.TB, generated string, ok bool) string {
 func historyFixture(list statecontract.StateListResult, contents map[string]string) Service {
 	return Service{
 		Inspect: func(string) inspectcontract.InspectInfo { return inspectcontract.InspectInfo{} },
-		Daemon:  func() daemoncontract.Status { return daemoncontract.Status{} },
 		Doctor: func(doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error) {
 			return doctorcontract.HarnessDoctorResult{OK: true}, nil
 		},

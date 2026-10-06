@@ -14,7 +14,7 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
 - core behavior는 Go core에 두고 host adapter는 CLI/MCP wrapper로 제한한다.
 - shell runner는 argv 우선, workspace root 밖 접근 기본 거부, secret redaction 적용.
 - 프로젝트 지식은 `.issueops/`, runtime state는 user state dir / ignored `.issueops-runtime/`.
-- daemon/worker/socket은 local FS의 user state dir에만 둔다.
+- worker와 MCP service 상태는 local FS의 user state dir에만 둔다.
 - stacked PR을 부모 브랜치 머지 뒤 기본 브랜치로 재타깃하면 `cleanup finish`가
   `base_branch_drifted`로, `cleanup abandon`이 `remote_artifact_unmerged`로 거부해
   레코드가 dead-end에 빠졌다(#490, `io-71af6dd82f0d` 실측). 이제 준비 base가 원격에서
@@ -58,7 +58,7 @@ lesson으로 분리됐고, 여기서는 핵심 한 줄과 탐색 링크만 둔�
 
 | Module | Covers |
 |---|---|
-| [runtime.md](cautions/runtime.md) | daemon, worker, lock, SQLite state, /tmp·install hygiene |
+| [runtime.md](cautions/runtime.md) | worker, lock, SQLite state, /tmp·install hygiene |
 | [security.md](cautions/security.md) | shell/command policy, secrets, git identity, publication git-config authority |
 | [integrations.md](cautions/integrations.md) | host adapters, native hooks, MCP, shared skills, external tools, Slack, Stop-hook output |
 | [issueops-lifecycle.md](cautions/issueops-lifecycle.md) | branches, worktree guards, numbered choices, domain vocab, readiness gates, golden drift |

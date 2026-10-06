@@ -1,11 +1,9 @@
 package updatecli
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -14,34 +12,6 @@ func stubInstallScriptCommandRunner(t *testing.T, fn func(string, ...string) err
 	previous := installScriptCommandRunner
 	installScriptCommandRunner = fn
 	return func() { installScriptCommandRunner = previous }
-}
-
-func stubPostInstallDaemonRefresh(t *testing.T, fn func() (bool, error)) func() {
-	t.Helper()
-	previous := postInstallDaemonRefresh
-	postInstallDaemonRefresh = fn
-	return func() { postInstallDaemonRefresh = previous }
-}
-
-func stubInstalledDaemonCommandRunner(t *testing.T, fn func(string, ...string) error) func() {
-	t.Helper()
-	previous := installedDaemonCommandRunner
-	installedDaemonCommandRunner = fn
-	return func() { installedDaemonCommandRunner = previous }
-}
-
-func stubDaemonProcessLister(t *testing.T, fn func() ([]daemonProcess, error)) func() {
-	t.Helper()
-	previous := daemonProcessLister
-	daemonProcessLister = fn
-	return func() { daemonProcessLister = previous }
-}
-
-func stubDaemonProcessTerminator(t *testing.T, fn func(int) error) func() {
-	t.Helper()
-	previous := daemonProcessTerminator
-	daemonProcessTerminator = fn
-	return func() { daemonProcessTerminator = previous }
 }
 
 func stubMCPProxyProcessLister(t *testing.T, fn func() ([]mcpProxyProcess, error)) func() {
@@ -58,7 +28,7 @@ func stubMCPProxyTerminator(t *testing.T, fn func(int) error) func() {
 	return func() { mcpProxyTerminator = previous }
 }
 
-func TestRunInstallScriptCommandRefreshesDaemonWithoutTouchingMCPProcesses(t *testing.T) {
+func TestRunInstallScriptCommandRunsOnlyTheInstallScript(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("ISSUEOPS_ROOT", root)
 	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0o755); err != nil {
@@ -75,78 +45,12 @@ func TestRunInstallScriptCommandRefreshesDaemonWithoutTouchingMCPProcesses(t *te
 	})
 	defer restore()
 
-	daemonWasRunning := true
-	restoreDaemon := stubPostInstallDaemonRefresh(t, func() (bool, error) {
-		commands = append(commands, "daemon-refresh")
-		return daemonWasRunning, nil
-	})
-	defer restoreDaemon()
-
 	if err := runInstallScriptCommand("update", nil); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{filepath.Join(root, "scripts", "install-native.sh"), "daemon-refresh"}
+	want := []string{filepath.Join(root, "scripts", "install-native.sh")}
 	if !reflect.DeepEqual(commands, want) {
 		t.Fatalf("unexpected command sequence:\n got: %#v\nwant: %#v", commands, want)
-	}
-}
-
-func TestRefreshRunningDaemonAfterInstallUsesInstalledBinaryLifecycle(t *testing.T) {
-	root := t.TempDir()
-	t.Setenv("ISSUEOPS_ROOT", root)
-	t.Setenv("ISSUEOPS_DAEMON_DIR", t.TempDir())
-
-	var commands [][]string
-	restoreRunner := stubInstalledDaemonCommandRunner(t, func(name string, args ...string) error {
-		commands = append(commands, append([]string{name}, args...))
-		return nil
-	})
-	defer restoreRunner()
-	restoreList := stubDaemonProcessLister(t, func() ([]daemonProcess, error) {
-		return nil, nil
-	})
-	defer restoreList()
-
-	refreshed, err := refreshRunningDaemonAfterInstall()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !refreshed {
-		t.Fatal("expected daemon lifecycle refresh")
-	}
-	binary := filepath.Join(root, "bin", "issueops")
-	want := [][]string{
-		{binary, "daemon", "stop", "--json"},
-	}
-	if !reflect.DeepEqual(commands, want) {
-		t.Fatalf("unexpected installed daemon command sequence:\n got: %#v\nwant: %#v", commands, want)
-	}
-}
-
-func TestRefreshRunningDaemonAfterInstallStopsOnInstalledStopFailure(t *testing.T) {
-	root := t.TempDir()
-	t.Setenv("ISSUEOPS_ROOT", root)
-
-	var commands [][]string
-	restoreRunner := stubInstalledDaemonCommandRunner(t, func(name string, args ...string) error {
-		commands = append(commands, append([]string{name}, args...))
-		return errors.New("stop rejected")
-	})
-	defer restoreRunner()
-	restoreList := stubDaemonProcessLister(t, func() ([]daemonProcess, error) {
-		t.Fatal("stale process cleanup must not run after a rejected verified stop")
-		return nil, nil
-	})
-	defer restoreList()
-
-	refreshed, err := refreshRunningDaemonAfterInstall()
-	if !refreshed || err == nil || !strings.Contains(err.Error(), "stop rejected") {
-		t.Fatalf("expected installed stop failure, refreshed=%v err=%v", refreshed, err)
-	}
-	binary := filepath.Join(root, "bin", "issueops")
-	want := [][]string{{binary, "daemon", "stop", "--json"}}
-	if !reflect.DeepEqual(commands, want) {
-		t.Fatalf("unexpected command sequence after stop failure:\n got: %#v\nwant: %#v", commands, want)
 	}
 }
 
@@ -166,11 +70,6 @@ func TestRunUpdateAndBootstrapForwardToInstallScript(t *testing.T) {
 		return nil
 	})
 	defer restore()
-	restoreDaemon := stubPostInstallDaemonRefresh(t, func() (bool, error) {
-		t.Fatal("dry-run wrapper must not refresh daemon")
-		return false, nil
-	})
-	defer restoreDaemon()
 
 	if err := runUpdate([]string{"--dry-run", "--json"}); err != nil {
 		t.Fatal(err)
@@ -215,41 +114,12 @@ func TestRunUpdateUsesResolvedIssueOpsRootOutsideCheckout(t *testing.T) {
 		return nil
 	})
 	defer restore()
-	restoreDaemon := stubPostInstallDaemonRefresh(t, func() (bool, error) { return false, nil })
-	defer restoreDaemon()
 
 	if err := runUpdate([]string{"--dry-run", "--path-mode=skip"}); err != nil {
 		t.Fatal(err)
 	}
 	if got != script {
 		t.Fatalf("update script = %q, want %q", got, script)
-	}
-}
-
-func TestRunInstallScriptCommandSkipsRuntimeProcessRefreshOnDryRun(t *testing.T) {
-	root := t.TempDir()
-	t.Setenv("ISSUEOPS_ROOT", root)
-	if err := os.MkdirAll(filepath.Join(root, "scripts"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(root, "scripts", "install-native.sh"), []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	var refreshed bool
-	restore := stubInstallScriptCommandRunner(t, func(name string, args ...string) error { return nil })
-	defer restore()
-	restoreDaemon := stubPostInstallDaemonRefresh(t, func() (bool, error) {
-		refreshed = true
-		return true, nil
-	})
-	defer restoreDaemon()
-
-	if err := runInstallScriptCommand("update", []string{"--dry-run"}); err != nil {
-		t.Fatal(err)
-	}
-	if refreshed {
-		t.Fatal("dry-run update must not refresh runtime processes")
 	}
 }
 

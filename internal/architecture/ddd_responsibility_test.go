@@ -542,7 +542,6 @@ func dddTask(path string) string {
 		{"internal/domain/selfaugment/llm_gate.go", "T18"},
 		{"internal/adapter/verification/candidate_source.go", "T18"},
 		{"internal/domain/selfaugment/candidate_snapshot.go", "T18"},
-		{"internal/domain/daemon/", "T18"},
 		{"internal/application/selfaugment/planner.go", "T18"},
 		{"internal/application/selfaugment/workflow.go", "T18"},
 		{"internal/application/selfaugment/plan_lessons.go", "T18"},

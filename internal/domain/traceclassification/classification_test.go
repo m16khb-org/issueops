@@ -9,7 +9,6 @@ func TestProposedKnobForStep(t *testing.T) {
 	}{
 		{"contract golden test", "tighten CLI/MCP contract"},
 		{"secret redaction", "extend redaction audit"},
-		{"daemon resilience", "add daemon stale-lock"},
 		{"policy check", "add deterministic policy"},
 		{"go test failure", "reduce failing test to a fixture"},
 		{"build error", "keep build failure fix"},

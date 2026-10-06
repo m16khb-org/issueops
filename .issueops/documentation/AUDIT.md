@@ -60,7 +60,7 @@ incident ledger, which makes targeted retrieval noisy.
 Target ownership:
 
 - `CAUTIONS.md`: risk navigation and mandatory universal cautions
-- `cautions/runtime.md`: process, daemon, worker, lock, and state risks
+- `cautions/runtime.md`: process, MCP service, worker, lock, and state risks
 - `cautions/security.md`: secrets, command policy, and boundary risks
 - `cautions/issueops.md`: IssueOps lifecycle and orchestration risks
 - `cautions/integrations.md`: host, MCP, hook, GitHub/GitLab, and external-tool risks
@@ -93,7 +93,7 @@ Target ownership:
 
 - `ARCHITECTURE.md`: architecture index, dependency direction, and invariants
 - `architecture/hexagonal-core.md`: domain, application, ports, and adapters
-- `architecture/runtime.md`: daemon, MCP proxy, state, and process boundaries
+- `architecture/runtime.md`: MCP, state, and process boundaries
 - `architecture/host-integration.md`: Codex and Claude thin adapters
 - `architecture/issueops.md`: IssueOps vertical ownership
 

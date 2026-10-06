@@ -38,6 +38,6 @@ var testOperationalCollector = func(_ context.Context, repo string) operationalh
 
 func testDoctorCommand() Doctor {
 	home, _ := os.UserHomeDir()
-	return Doctor{Service: testDoctorService(), NormalizeRepoRoot: repopath.NormalizeRoot, IssueOpsRoot: testIssueOpsRoot(), Home: home, Version: "0.1.0", Now: time.Now, CheckDaemonStatus: testDaemonReader().Run, CollectOperationalHealth: testOperationalCollector}
+	return Doctor{Service: testDoctorService(), NormalizeRepoRoot: repopath.NormalizeRoot, IssueOpsRoot: testIssueOpsRoot(), Home: home, Version: "0.1.0", Now: time.Now, CollectOperationalHealth: testOperationalCollector}
 }
 func testRunDoctor(args []string) error { return testDoctorCommand().Run(args) }

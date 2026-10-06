@@ -11,7 +11,7 @@ import (
 
 func TestTraceServicesKeepCapturedStateAndFilePriority(t *testing.T) {
 	var services [2]traceapp.Service
-	for i, step := range []string{"policy check", "daemon probe"} {
+	for i, step := range []string{"policy check", "worker probe"} {
 		state := t.TempDir()
 		t.Setenv("ISSUEOPS_STATE_DIR", state)
 		if _, err := newStateService(state).Write(context.Background(), "trace-fixture", `{"failed_steps":1,"failed_step":"`+step+`"}`); err != nil {
@@ -21,7 +21,7 @@ func TestTraceServicesKeepCapturedStateAndFilePriority(t *testing.T) {
 	}
 	ambient := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", ambient)
-	for i, step := range []string{"policy check", "daemon probe"} {
+	for i, step := range []string{"policy check", "worker probe"} {
 		result, err := services[i].Analyze(tracecontract.TraceAnalyzeRequest{Input: "trace-fixture"})
 		if err != nil || result.InputSource != "state" || len(result.Findings) != 1 || result.Findings[0].RecurringPattern != step {
 			t.Fatalf("state context lost: result=%+v error=%v", result, err)

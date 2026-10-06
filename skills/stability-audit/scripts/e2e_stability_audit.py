@@ -24,8 +24,7 @@ from typing import Any
 
 ROOT = Path.cwd()
 BIN = ROOT / "bin" / "issueops"
-LEGACY_BIN_RE = re.compile(r"/bin/(?:harness|issueops) (daemon --internal|mcp)\b")
-ISSUEOPS_DAEMON_RE = re.compile(r"issueops daemon --internal")
+LEGACY_BIN_RE = re.compile(r"/bin/(?:harness|issueops) mcp\b")
 TEMP_WATCHER_RE = re.compile(r"scripts/codegraph-watcher\.mjs .*/T/tmp\.")
 REGRESSION_TIMEOUT_SECONDS = 300
 SELF_VERIFY_TIMEOUT_SECONDS = 1800
@@ -299,17 +298,11 @@ def terminate(pid: int) -> str:
 
 
 def classify_processes(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    current_daemons = []
-    legacy = []
     current_paths = (str(BIN) + " ", "/usr/local/bin/issueops ", (shutil.which("issueops") or "issueops") + " ")
-    for row in rows:
-        if LEGACY_BIN_RE.search(row["command"]) and not row["command"].startswith(current_paths):
-            legacy.append(row)
-        elif ISSUEOPS_DAEMON_RE.search(row["command"]):
-            current_daemons.append(row)
+    legacy = [r for r in rows if LEGACY_BIN_RE.search(r["command"]) and not r["command"].startswith(current_paths)]
     temp_watchers = [r for r in rows if TEMP_WATCHER_RE.search(r["command"])]
     zombies = [r for r in rows if "Z" in r["state"] and re.search(r"issueops|bin/harness|codegraph", r["command"])]
-    return {"current_daemons": current_daemons, "legacy_harness": legacy, "temp_watchers": temp_watchers, "zombies": zombies}
+    return {"legacy_harness": legacy, "temp_watchers": temp_watchers, "zombies": zombies}
 
 
 def build(report: dict[str, Any]) -> None:
@@ -499,72 +492,57 @@ def temp_state_worker_policy(report: dict[str, Any]) -> None:
         add_step(report, "state_worker_policy", ok, details=details)
 
 
-def daemon_and_mcp_stress(report: dict[str, Any], cycles: int) -> None:
-    baseline = {r["pid"] for r in classify_processes(ps_rows())["current_daemons"] + classify_processes(ps_rows())["legacy_harness"]}
+def harness_mcp_pids() -> set[int]:
+    command = str(BIN) + " mcp"
+    rows = ps_rows()
+    return {r["pid"] for r in rows if r["command"] == command or r["command"].startswith(command + " ")} | {
+        r["pid"] for r in classify_processes(rows)["legacy_harness"]
+    }
+
+
+def mcp_stress(report: dict[str, Any], cycles: int) -> None:
+    baseline = harness_mcp_pids()
+    calls = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "stability-audit", "version": "1"}}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
+        {"jsonrpc": "2.0", "id": 3, "method": "resources/list", "params": {}},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "harness_inspect", "arguments": {}}},
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "docs_index", "arguments": {}}},
+        {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "state_doctor", "arguments": {}}},
+        {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "project_docs_route", "arguments": {"task": "install hook mcp operations"}}},
+    ]
+    ok = True
+    cycle_details = []
     with tempfile.TemporaryDirectory() as td:
-        env = {"ISSUEOPS_DAEMON_DIR": str(Path(td) / "daemon"), "ISSUEOPS_STATE_DIR": str(Path(td) / "state"), "ISSUEOPS_ROOT": str(ROOT)}
-        ok = True
-        cycle_details = []
+        env = {"ISSUEOPS_STATE_DIR": str(Path(td) / "state"), "ISSUEOPS_ROOT": str(ROOT)}
         for i in range(cycles):
-            start = run([str(BIN), "daemon", "start", "--json"], env=env, timeout=20)
-            pid = 0
-            try:
-                obj = parse_json_output(start["stdout"])
-                pid = int(obj.get("pid") or 0)
-            except Exception:
-                ok = False
-            status = run([str(BIN), "daemon", "status", "--json"], env=env, timeout=10)
-            stop = run([str(BIN), "daemon", "stop", "--json"], env=env, timeout=10)
-            time.sleep(0.08)
-            alive = bool(pid and process_alive(pid))
-            if start["returncode"] or status["returncode"] or stop["returncode"] or alive:
-                ok = False
-            cycle_details.append({"cycle": i, "pid": pid, "alive_after_stop": alive, "start_rc": start["returncode"], "status_rc": status["returncode"], "stop_rc": stop["returncode"]})
-        # Standalone MCP JSON-RPC smoke.
-        calls = [
-            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "stability-audit", "version": "1"}}},
-            {"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
-            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}},
-            {"jsonrpc": "2.0", "id": 3, "method": "resources/list", "params": {}},
-            {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "harness_inspect", "arguments": {}}},
-            {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "docs_index", "arguments": {}}},
-            {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "state_doctor", "arguments": {}}},
-            {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "project_docs_route", "arguments": {"task": "install hook mcp daemon operations"}}},
-            {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "daemon_status", "arguments": {}}},
-        ]
-        mcp = run_mcp_jsonrpc_process([str(BIN), "mcp"], calls, env=env, timeout=15)
-        if not mcp["ok"]:
-            ok = False
-        st = run([str(BIN), "daemon", "status", "--json"], env=env, timeout=10)
-        try:
-            temp_pid = int(parse_json_output(st["stdout"]).get("pid") or 0)
-        except Exception:
-            temp_pid = 0
-        run([str(BIN), "daemon", "stop", "--json"], env=env, timeout=10)
-        time.sleep(0.1)
-        temp_leaked = bool(temp_pid and process_alive(temp_pid))
-        if temp_leaked:
-            ok = False
-        after = {r["pid"] for r in classify_processes(ps_rows())["current_daemons"] + classify_processes(ps_rows())["legacy_harness"]}
-        new_pids = sorted(after - baseline)
-        add_step(report, "daemon_mcp_stress", ok and not new_pids, cycles=cycle_details, mcp_ids=mcp["response_ids"], rpc_errors=mcp["rpc_errors"], mcp_missing_ids=mcp["missing_ids"], mcp_duplicate_ids=mcp["duplicate_ids"], mcp_malformed_lines=mcp["malformed_lines"], mcp_timed_out=mcp["timed_out"], temp_mcp_pid=temp_pid, temp_mcp_leaked=temp_leaked, new_daemon_pids_after_stress=new_pids, mcp_stderr=mcp["stderr"][-1000:])
+            mcp = run_mcp_jsonrpc_process([str(BIN), "mcp"], calls, env=env, timeout=15)
+            ok = ok and mcp["ok"]
+            cycle_details.append({"cycle": i, "ok": mcp["ok"], "mcp_ids": mcp["response_ids"], "rpc_errors": mcp["rpc_errors"], "mcp_missing_ids": mcp["missing_ids"], "mcp_duplicate_ids": mcp["duplicate_ids"], "mcp_malformed_lines": mcp["malformed_lines"], "mcp_timed_out": mcp["timed_out"], "mcp_stderr": mcp["stderr"][-1000:]})
+    time.sleep(0.1)
+    new_pids = sorted(harness_mcp_pids() - baseline)
+    add_step(report, "mcp_stress", ok and not new_pids, cycles=cycle_details, new_mcp_pids_after_stress=new_pids)
+
+
+def mcp_service_pid() -> int:
+    status = run([str(BIN), "mcp", "service", "status", "--json"], timeout=10)
+    try:
+        return int(parse_json_output(status["stdout"]).get("pid") or 0)
+    except Exception:
+        return 0
 
 
 def rss_sample(report: dict[str, Any], rounds: int, calls: int) -> None:
-    status = run([str(BIN), "daemon", "status", "--json"], timeout=10)
-    try:
-        pid = int(parse_json_output(status["stdout"]).get("pid") or 0)
-    except Exception:
-        add_step(report, "rss_stability", False, message="cannot read daemon pid")
-        return
+    pid = mcp_service_pid()
     if not pid:
-        add_step(report, "rss_stability", False, message="daemon not running")
+        add_step(report, "rss_stability", False, message="mcp service not running")
         return
     samples = []
     for i in range(rounds):
         before = int(subprocess.check_output(["ps", "-o", "rss=", "-p", str(pid)], text=True).strip() or "0")
         for _ in range(calls):
-            run([str(BIN), "daemon", "status", "--json"], timeout=5)
+            run([str(BIN), "mcp", "service", "status", "--json"], timeout=5)
         after = int(subprocess.check_output(["ps", "-o", "rss=", "-p", str(pid)], text=True).strip() or "0")
         samples.append({"round": i + 1, "before_kb": before, "after_kb": after, "delta_kb": after - before})
     # Allow Go runtime warmup; fail only if every later round grows materially.
@@ -637,7 +615,6 @@ def regression(report: dict[str, Any], race: bool, self_verify: bool) -> None:
         isolated_env = {
             "ISSUEOPS_STATE_DIR": str(isolated_root / "state"),
             "ISSUEOPS_ROOT": str(ROOT),
-            "ISSUEOPS_DAEMON_DIR": str(isolated_root / "daemon"),
             "ISSUEOPS_WORKER_DIR": str(isolated_root / "worker"),
         }
         for key, path in isolated_env.items():
@@ -697,7 +674,7 @@ def main() -> int:
     )
     parser.add_argument("--skip-race", action="store_true", help="skip go test -race")
     parser.add_argument("--skip-self-verify", action="store_true", help="skip canonical deterministic self-verify")
-    parser.add_argument("--daemon-cycles", type=int, default=8)
+    parser.add_argument("--mcp-cycles", type=int, default=3)
     parser.add_argument("--rss-rounds", type=int, default=3)
     parser.add_argument("--rss-calls", type=int, default=200)
     parser.add_argument("--json", action="store_true", help="print JSON report")
@@ -723,7 +700,7 @@ def main() -> int:
     host_mcp_checks(report)
     hook_smoke(report)
     temp_state_worker_policy(report)
-    daemon_and_mcp_stress(report, max(1, args.daemon_cycles))
+    mcp_stress(report, max(1, args.mcp_cycles))
     cleanup_stale(report, args.cleanup_stale)
     rss_sample(report, max(1, args.rss_rounds), max(1, args.rss_calls))
     regression(report, not args.skip_race, not args.skip_self_verify)

@@ -16,7 +16,7 @@ import (
 // If either transport ignores its catalog or validates after dispatch, invalid
 // input reaches Release. Different schemas also detect a shared catalog cache.
 func TestMCPCatalogValidationIsInstanceScopedAndPrecedesEffects(t *testing.T) {
-	for _, entry := range []string{"stdio", "daemon_conn"} {
+	for _, entry := range []string{"stdio", "stream_conn"} {
 		t.Run(entry, func(t *testing.T) {
 			var calls [2]atomic.Int32
 			deps := [2]MCPDependencies{}

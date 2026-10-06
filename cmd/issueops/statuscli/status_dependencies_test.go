@@ -3,31 +3,25 @@ package statuscli
 import (
 	"os"
 
-	daemoncontract "issueops/internal/contract/daemon"
 	inspect "issueops/internal/contract/inspect"
 )
 
 // Deps provides observations for the retained status CLI integration fixtures.
 type Deps struct {
-	IssueOpsRoot      func() string
-	ResolveTarget     func(string) string
-	Version           string
-	InspectHarness    func(string) inspect.InspectInfo
-	CheckDaemonStatus func() daemoncontract.Status
+	IssueOpsRoot   func() string
+	ResolveTarget  func(string) string
+	Version        string
+	InspectHarness func(string) inspect.InspectInfo
 }
 
 var deps = defaultDeps()
 
-// Configure changes only this test package's fixture dependencies.
-func Configure(d Deps) { deps = d }
-
 func defaultDeps() Deps {
 	return Deps{
-		IssueOpsRoot:      defaultIssueOpsRoot,
-		ResolveTarget:     defaultResolveTarget,
-		Version:           "dev",
-		InspectHarness:    func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
-		CheckDaemonStatus: testDaemonReader().Run,
+		IssueOpsRoot:   defaultIssueOpsRoot,
+		ResolveTarget:  defaultResolveTarget,
+		Version:        "dev",
+		InspectHarness: func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
 	}
 }
 

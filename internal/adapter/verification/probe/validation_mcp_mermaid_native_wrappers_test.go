@@ -24,9 +24,6 @@ func TestValidationMCPMermaidNativeWrappersUseDefaultSurfaces(t *testing.T) {
 	writeNativeIntegrationFixture(t, root, home)
 
 	mcpDeps := mcpsmoke.MCPValidationDeps{
-		RunCommandStepEnv: func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
-			return selfverify.StepResult{OK: true}
-		},
 		RunSDKSmoke: func(string, string, []string, time.Duration) selfverify.StepResult {
 			return selfverify.StepResult{Label: "MCP smoke", OK: true, Stdout: validMCPResponses()}
 		},

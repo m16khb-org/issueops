@@ -12,7 +12,6 @@ import (
 	updatecli "issueops/cmd/issueops/updatecli"
 	updateadapter "issueops/internal/adapter/update"
 	qualityapp "issueops/internal/application/quality"
-	updateapp "issueops/internal/application/update"
 	qualitycontract "issueops/internal/contract/quality"
 	updatecontract "issueops/internal/contract/update"
 	"net"
@@ -158,21 +157,7 @@ func TestUpdateAndAPIDocFacadeWrappers(t *testing.T) {
 	if err := command.Run("update", []string{"--dry-run"}); err != nil {
 		t.Fatal(err)
 	}
-	stale := updateapp.StaleDaemons{List: func() ([]updatecontract.DaemonProcess, error) {
-		return []updatecontract.DaemonProcess{{PID: 11, Command: "daemon"}}, nil
-	}, Terminate: func(pid int) error {
-		if pid != 11 {
-			t.Fatalf("unexpected daemon PID %d", pid)
-		}
-		return nil
-	}, CurrentPID: os.Getpid}
-	if count, err := stale.Run(); err != nil || count != 1 {
-		t.Fatalf("stale cleanup %d %v", count, err)
-	}
 	binary := filepath.Join(root, "bin", "issueops")
-	if parsed, ok := updateadapter.ParseDaemonProcess("11 "+binary+" daemon --internal", binary); !ok || parsed.PID != 11 {
-		t.Fatalf("daemon parse %+v %v", parsed, ok)
-	}
 	if parsed, ok := updateadapter.ParseMCPProxyProcessSnapshot("22 1 "+binary+" mcp", binary); !ok || parsed.PID != 22 {
 		t.Fatalf("proxy parse %+v %v", parsed, ok)
 	}

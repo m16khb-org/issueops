@@ -9,7 +9,7 @@ policy, and web-fetch live parity.
 
 문서만 변경해도 문서 링크·구조와 관련 지침의 일치 여부를 확인하고 아래
 [최종 검증 battery](#최종-검증-battery)의 단일 self-verify 결과를 남긴다.
-설치·bootstrap apply·daemon/state 쓰기는 문서-only 최소 완료 기준에 추가하지
+설치·bootstrap apply·state 쓰기는 문서-only 최소 완료 기준에 추가하지
 않는다. self-verify가 수행하는 기존 내부 smoke와 native integration은 유지한다.
 실행용 binary가 없거나 stale이면 먼저 빌드하며, 이 준비 build는 self-verify의
 검증용 임시 build와 구분한다.
@@ -17,7 +17,7 @@ policy, and web-fetch live parity.
 ## 선택적 운영 명령 예시
 
 아래 목록은 전체를 순서대로 실행하는 필수 battery가 아니다. 관련 기능을 변경할
-때 필요한 명령만 선택한다. 설치·bootstrap apply·daemon/state 저장·promote·
+때 필요한 명령만 선택한다. 설치·bootstrap apply·state 저장·promote·
 self-augment는 해당 작업의 승인 범위와 격리된 HOME/state에 따라 실행한다.
 문서 변경만을 이유로 사용자 홈 설치 상태를 바꾸지 않는다.
 
@@ -47,9 +47,6 @@ ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops state list --json
 ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops state prune --max-age 720h --json
 ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops state doctor --json
 ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops state maintain --json
-ISSUEOPS_DAEMON_DIR="$tmp_state/daemon" ./bin/issueops daemon status --json
-ISSUEOPS_DAEMON_DIR="$tmp_state/daemon" ./bin/issueops daemon start --json
-ISSUEOPS_DAEMON_DIR="$tmp_state/daemon" ./bin/issueops daemon stop --json
 ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops self-verify --seed=100 --target-score=95 --llm-eval=false --save-state --state-key self-verify-smoke --json
 ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops self-verify history --prefix self-verify --json
 ISSUEOPS_STATE_DIR="$tmp_state" ./bin/issueops self-verify history --prefix self-verify --retention-limit 1 --prune-retention --json

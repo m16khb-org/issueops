@@ -6,7 +6,7 @@
       ],
       "command": "./bin/issueops",
       "env": {
-        "ISSUEOPS_MCP_CATALOG_SHA256": "d0b943dd5e607f0acb5b5e80040796b34673d0955c2d3b791e8d6eca94b2a913",
+        "ISSUEOPS_MCP_CATALOG_SHA256": "4d58a98bab5daaf84de56573505bd40cfefa798b07bded2609d88130b82c48d1",
         "ISSUEOPS_ROOT": "."
       }
     }

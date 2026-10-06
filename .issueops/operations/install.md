@@ -47,7 +47,7 @@ those snapshots together with the command shims before aborting the transition.
 
 기존 `~/.local/bin/issueops`가 regular file이면 기본 install과 dry-run은 변경 없이 거부한다. 그 파일과 실제 실행 중인 staged/canonical candidate가 모두 정적 Go build identity `issueops/cmd/issueops` / module `issueops`를 만족할 때만 `--adopt-command-file`로 adoption을 명시할 수 있다. 승인된 실행은 같은 디렉터리의 mode `0600` backup을 만든 뒤 temporary symlink와 command path를 atomic exchange하고 displaced identity를 재검증한다. native activation Seal 전 오류에서는 원래 bytes와 mode를 복원하고 exact transition을 Abort한다. Seal이 성공한 뒤 backup 정리만 실패하면 activation은 committed 상태로 유지되고 JSON receipt의 `backup_retained`와 recovery path를 따른다. `io`에는 이 승인 플래그가 적용되지 않는다.
 
-`bootstrap` and `update` use the current `issueops` checkout. They build `bin/issueops`, refresh both command shims through the same installer path, run native host installation, refresh issueops MCP registration, and stop and clean up the legacy daemon without restarting it. They do not run `git pull`. Executable symlinks are resolved back to the checkout, so `io update` works outside the repository directory.
+`bootstrap` and `update` use the current `issueops` checkout. They build `bin/issueops`, refresh both command shims through the same installer path, run native host installation, and refresh issueops MCP registration. They do not run `git pull`. Executable symlinks are resolved back to the checkout, so `io update` works outside the repository directory.
 
 darwin/linux의 기본 `--mcp-transport=http` 설치는 세 host의 issueops entry를 공용 서비스
 `http://127.0.0.1:47831/mcp`와 bearer 헤더로 바꾼다. 설치기는 host plan을 dry-run으로 먼저 검증하고,
@@ -59,7 +59,7 @@ darwin/linux의 기본 `--mcp-transport=http` 설치는 세 host의 issueops ent
 catalog가 바뀌면 두 transport 모두 다음 세션이 새 `tools/list`를 조회한다. 서버는 이 헤더를 읽지 않는다
 (`internal/adapter/omo/mcp.go`의 `omoMCPCatalogHeader`, `TestOmoHTTPEntryChangesWithTheAdvertisedCatalog`).
 
-stdio `issueops mcp`는 host 세션 안에서 in-process로 실행된다. `io update`는 host가 소유한 stdio MCP 프로세스를 열거하거나 종료하지 않으므로, 새 binary의 MCP 동작은 host에서 서버를 재연결(reconnect)할 때 적용된다. 이전 binary로 이미 떠 있는 legacy proxy만 daemon을 사용하며, update가 daemon을 내린 뒤 재연결하면서 새 binary로 daemon을 다시 띄울 수 있다. 실행 모드와 legacy backend의 정규 설명은 [runtime 문서](../architecture/runtime.md)를 따른다.
+stdio `issueops mcp`는 host 세션 안에서 in-process로 실행된다. `io update`는 host가 소유한 stdio MCP 프로세스를 열거하거나 종료하지 않으므로, 새 binary의 MCP 동작은 host에서 서버를 재연결(reconnect)할 때 적용된다. 실행 모드의 정규 설명은 [runtime 문서](../architecture/runtime.md)를 따른다.
 
 Omo는 MCP tool catalog를 server config hash 기준으로 최대 7일 재사용하므로, 같은
 경로의 binary만 교체하면 새 세션도 이전 input schema를 유지할 수 있다. Omo

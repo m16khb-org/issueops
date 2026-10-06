@@ -17,8 +17,7 @@ type Options struct {
 }
 
 type Service struct {
-	Installer     Installer
-	RefreshDaemon func() error
+	Installer Installer
 }
 
 func (service Service) Run(options Options) error {
@@ -44,11 +43,5 @@ func (service Service) Run(options Options) error {
 	if options.MCPTransport != "" {
 		args = append(args, "--mcp-transport="+options.MCPTransport)
 	}
-	if err := service.Installer.Install(options.Root, args); err != nil {
-		return err
-	}
-	if options.DryRun {
-		return nil
-	}
-	return service.RefreshDaemon()
+	return service.Installer.Install(options.Root, args)
 }

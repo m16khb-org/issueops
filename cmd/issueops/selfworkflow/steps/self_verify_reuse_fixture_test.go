@@ -49,8 +49,8 @@ func TestSelfVerifyReuseFixtureEntryPoint(t *testing.T) {
 	})
 
 	// Then
-	if err != nil || !result.OK || !result.TerminationEligible || result.Summary.TotalSteps != 28 ||
-		result.Summary.PassedSteps != 28 || len(result.Summary.CoverageGaps) != 0 || result.Summary.Contract.Version != 7 {
+	if err != nil || !result.OK || !result.TerminationEligible || result.Summary.TotalSteps != 27 ||
+		result.Summary.PassedSteps != 27 || len(result.Summary.CoverageGaps) != 0 || result.Summary.Contract.Version != 8 {
 		t.Fatalf("fixture execution: result=%+v err=%v", result, err)
 	}
 	stats := augmentdomain.StepDurationStatByLabel(result.Summary.StepDurationStats)
@@ -74,7 +74,7 @@ func TestSelfVerifyReuseFixtureEntryPoint(t *testing.T) {
 	if err := augmentdomain.ValidateSummarySnapshot("fixture", decoded); err != nil {
 		t.Fatal(err)
 	}
-	if decoded.SchemaVersion != 1 || decoded.Summary.Contract.Version != 7 {
+	if decoded.SchemaVersion != 1 || decoded.Summary.Contract.Version != 8 {
 		t.Fatalf("serialized contract changed: %+v", decoded)
 	}
 	if _, err := os.Stat(tempDir); !os.IsNotExist(err) {

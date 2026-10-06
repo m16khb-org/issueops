@@ -8,11 +8,11 @@ import (
 	"runtime"
 
 	"issueops/cmd/issueops/mcpcli"
-	daemonadapter "issueops/internal/adapter/daemon"
 	installadapter "issueops/internal/adapter/install"
 	mcpserviceadapter "issueops/internal/adapter/mcpservice"
 	statestore "issueops/internal/adapter/outbound/state"
-	daemoncontract "issueops/internal/contract/daemon"
+	"issueops/internal/adapter/processinspect"
+	"issueops/internal/contract/processidentity"
 )
 
 const (
@@ -31,9 +31,9 @@ func mcpServiceStateDir() string {
 	return dir
 }
 
-func mcpServiceProcessInspector() func(int) (daemoncontract.ProcessIdentity, error) {
+func mcpServiceProcessInspector() func(int) (processidentity.Identity, error) {
 	ps, err := exec.LookPath("ps")
-	return daemonadapter.ProcessInspector{PSExecutable: ps, PSLookupError: err, Environment: os.Environ()}.Inspect
+	return processinspect.Inspector{PSExecutable: ps, PSLookupError: err, Environment: os.Environ()}.Inspect
 }
 
 func newSupervisorMCPService() *mcpserviceadapter.Service {

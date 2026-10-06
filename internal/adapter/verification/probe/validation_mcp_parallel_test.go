@@ -18,9 +18,6 @@ func TestValidateMCPWithDepsCoversSuccessAndResponseFailures(t *testing.T) {
 	deps := mcpsmoke.MCPValidationDeps{
 		MkdirTemp: func(_ string, pattern string) (string, error) { return filepath.Join(root, pattern+"dir"), nil },
 		RemoveAll: func(string) error { return nil },
-		RunCommandStepEnv: func(_ string, label string, _ time.Duration, _ string, _ []string, _ string, args ...string) selfverify.StepResult {
-			return selfverify.StepResult{Label: label, Command: strings.Join(args, " "), OK: true}
-		},
 		RunSDKSmoke: func(_ string, _ string, env []string, _ time.Duration) selfverify.StepResult {
 			if !slices.Contains(env, "ISSUEOPS_STATE_DIR="+filepath.Join(root, "issueops-mcp-state-*dir")) {
 				return selfverify.StepResult{Label: "MCP smoke", OK: false, Error: "missing env"}
@@ -68,21 +65,6 @@ func TestValidateMCPWithDepsCoversTempAndCommandFailure(t *testing.T) {
 	}
 
 	root := t.TempDir()
-	call := 0
-	deps = mcpsmoke.MCPValidationDeps{
-		MkdirTemp: func(_ string, pattern string) (string, error) {
-			call++
-			if call == 2 {
-				return "", errors.New("daemon temp failed")
-			}
-			return filepath.Join(root, pattern), nil
-		},
-		RemoveAll: func(string) error { return nil },
-	}
-	if step := mcpsmoke.ValidateMCPWithDeps("issueops", root, deps); step.OK || !strings.Contains(step.Error, "daemon temp failed") {
-		t.Fatalf("expected daemon temp failure, got %+v", step)
-	}
-
 	deps = mcpsmoke.MCPValidationDeps{
 		MkdirTemp: func(_ string, pattern string) (string, error) { return filepath.Join(root, pattern), nil },
 		RemoveAll: func(string) error { return nil },

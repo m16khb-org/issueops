@@ -34,10 +34,6 @@ func validateParallelTempIsolation(binary, root string, seed int64) selfverify.S
 	return probe.ValidateParallelTempIsolation(binary, root, seed)
 }
 
-func validateDaemonRestartResilience(binary, root string, seed int64) selfverify.StepResult {
-	return probe.ValidateDaemonRestartResilience(binary, root, seed)
-}
-
 func validateCommandAudit(binary, root string, seed int64) selfverify.StepResult {
 	return probe.ValidateCommandAudit(binary, root, seed)
 }

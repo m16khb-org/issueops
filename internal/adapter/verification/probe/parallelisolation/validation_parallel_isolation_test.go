@@ -19,7 +19,7 @@ func TestValidateParallelTempIsolationWithDepsCoversSuccessErrorsAndCollision(t 
 	deps := parallelIsolationValidationDeps{
 		runProbe: func(_ string, _ string, seed int64, worker int) parallelIsolationProbe {
 			base := filepath.Join(root, fmt.Sprintf("worker-%d-%d", seed, worker))
-			return parallelIsolationProbe{Worker: worker, TempRoot: base, StateDir: base + "/state", DaemonDir: base + "/daemon", ArtifactPath: base + "/build/harness", Key: fmt.Sprintf("parallel-%d-%d", seed, worker), Commands: []string{fmt.Sprintf("write-%d", worker)}}
+			return parallelIsolationProbe{Worker: worker, TempRoot: base, StateDir: base + "/state", ArtifactPath: base + "/build/harness", Key: fmt.Sprintf("parallel-%d-%d", seed, worker), Commands: []string{fmt.Sprintf("write-%d", worker)}}
 		},
 	}
 	step := validateParallelTempIsolationWithDeps("issueops", root, 7, deps)
@@ -28,7 +28,7 @@ func TestValidateParallelTempIsolationWithDepsCoversSuccessErrorsAndCollision(t 
 	}
 
 	deps.runProbe = func(_ string, _ string, seed int64, worker int) parallelIsolationProbe {
-		return parallelIsolationProbe{Worker: worker, TempRoot: filepath.Join(root, "same"), StateDir: filepath.Join(root, "state", fmt.Sprint(worker)), DaemonDir: filepath.Join(root, "daemon", fmt.Sprint(worker)), ArtifactPath: filepath.Join(root, "artifact", fmt.Sprint(worker)), Key: fmt.Sprintf("parallel-%d-%d", seed, worker)}
+		return parallelIsolationProbe{Worker: worker, TempRoot: filepath.Join(root, "same"), StateDir: filepath.Join(root, "state", fmt.Sprint(worker)), ArtifactPath: filepath.Join(root, "artifact", fmt.Sprint(worker)), Key: fmt.Sprintf("parallel-%d-%d", seed, worker)}
 	}
 	collision := validateParallelTempIsolationWithDeps("issueops", root, 7, deps)
 	if collision.OK || !strings.Contains(collision.Error, "path collision:") {
@@ -36,7 +36,7 @@ func TestValidateParallelTempIsolationWithDepsCoversSuccessErrorsAndCollision(t 
 	}
 
 	deps.runProbe = func(_ string, _ string, seed int64, worker int) parallelIsolationProbe {
-		return parallelIsolationProbe{Worker: worker, TempRoot: filepath.Join(root, fmt.Sprint(worker)), StateDir: filepath.Join(root, "state", fmt.Sprint(worker)), DaemonDir: filepath.Join(root, "daemon", fmt.Sprint(worker)), ArtifactPath: filepath.Join(root, "artifact", fmt.Sprint(worker)), Key: fmt.Sprintf("parallel-%d-%d", seed, worker), Error: "boom"}
+		return parallelIsolationProbe{Worker: worker, TempRoot: filepath.Join(root, fmt.Sprint(worker)), StateDir: filepath.Join(root, "state", fmt.Sprint(worker)), ArtifactPath: filepath.Join(root, "artifact", fmt.Sprint(worker)), Key: fmt.Sprintf("parallel-%d-%d", seed, worker), Error: "boom"}
 	}
 	failed := validateParallelTempIsolationWithDeps("issueops", root, 7, deps)
 	if failed.OK || !strings.Contains(failed.Error, "worker 0: boom") {

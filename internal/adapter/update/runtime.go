@@ -1,10 +1,9 @@
 package update
 
 import (
-	"bytes"
 	"fmt"
 	"io"
-	daemoncontract "issueops/internal/contract/daemon"
+	"issueops/internal/contract/processidentity"
 	contract "issueops/internal/contract/update"
 	"os"
 	"os/exec"
@@ -36,7 +35,7 @@ type Runtime struct {
 	Input               io.Reader
 	Output, Diagnostics io.Writer
 	ProcessTable        ProcessTable
-	InspectProcess      func(int) (daemoncontract.ProcessIdentity, error)
+	InspectProcess      func(int) (processidentity.Identity, error)
 }
 
 func (r Runtime) Install(root string, args []string) error {
@@ -52,9 +51,6 @@ func (r Runtime) Install(root string, args []string) error {
 	command.Stderr = r.Diagnostics
 	return command.Run()
 }
-func (r Runtime) StopDaemon() error {
-	return r.RunInstalledDaemon(filepath.Join(r.Root, "bin", "issueops"), "daemon", "stop", "--json")
-}
 func (Runtime) CurrentPID() int                 { return os.Getpid() }
 func (Runtime) SupportsOrphanTermination() bool { return runtime.GOOS == "darwin" }
 func (Runtime) Terminate(pid int) error {
@@ -63,40 +59,6 @@ func (Runtime) Terminate(pid int) error {
 		return err
 	}
 	return process.Signal(syscall.SIGTERM)
-}
-func (r Runtime) RunInstalledDaemon(binary string, args ...string) error {
-	cmd := exec.Command(binary, args...)
-	cmd.Dir = r.Root
-	cmd.Env = r.Environment
-	cmd.Stdout = io.Discard
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		command := strings.Join(args, " ")
-		detail := strings.TrimSpace(stderr.String())
-		if detail == "" {
-			return fmt.Errorf("run installed daemon command %q: %w", command, err)
-		}
-		return fmt.Errorf("run installed daemon command %q: %w: %s", command, err, detail)
-	}
-	return nil
-}
-
-func (r Runtime) Daemons() ([]contract.DaemonProcess, error) {
-	out, err := r.ProcessTable.Read("-axo", "pid=,command=")
-	if err != nil {
-		// ps may be unavailable in sandboxed environments; treat as no matching processes.
-		return nil, nil
-	}
-	binary := filepath.Join(r.Root, "bin", "issueops")
-	var processes []contract.DaemonProcess
-	for _, line := range strings.Split(string(out), "\n") {
-		process, ok := ParseDaemonProcess(line, binary)
-		if ok {
-			processes = append(processes, process)
-		}
-	}
-	return processes, nil
 }
 
 func (r Runtime) List() ([]contract.MCPProxyProcess, error) {
@@ -124,26 +86,6 @@ func (r Runtime) List() ([]contract.MCPProxyProcess, error) {
 		processes = append(processes, process)
 	}
 	return processes, nil
-}
-
-func ParseDaemonProcess(line, binary string) (contract.DaemonProcess, bool) {
-	line = strings.TrimSpace(line)
-	if line == "" {
-		return contract.DaemonProcess{}, false
-	}
-	fields := strings.Fields(line)
-	if len(fields) < 3 {
-		return contract.DaemonProcess{}, false
-	}
-	pid, err := strconv.Atoi(fields[0])
-	if err != nil {
-		return contract.DaemonProcess{}, false
-	}
-	command := strings.Join(fields[1:], " ")
-	if command != binary+" daemon --internal" {
-		return contract.DaemonProcess{}, false
-	}
-	return contract.DaemonProcess{PID: pid, Command: command}, true
 }
 
 func ParseMCPProxyProcessSnapshot(line, binary string) (contract.MCPProxyProcess, bool) {

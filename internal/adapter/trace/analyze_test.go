@@ -166,15 +166,15 @@ func TestTraceAnalyzeInvalidJSONAndJSONLFallback(t *testing.T) {
 	}
 
 	jsonl := filepath.Join(t.TempDir(), "fallback.jsonl")
-	if err := os.WriteFile(jsonl, []byte("{\"broken\":\n{\"event\":\"step_end\",\"step\":\"daemon build\",\"ok\":false}\n"), 0o600); err != nil {
+	if err := os.WriteFile(jsonl, []byte("{\"broken\":\n{\"event\":\"step_end\",\"step\":\"policy guard\",\"ok\":false}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	fallback, err := TraceAnalyze(tracecontract.TraceAnalyzeRequest{Input: jsonl})
 	if err != nil {
 		t.Fatalf("TraceAnalyze JSONL fallback: %v", err)
 	}
-	if fallback.FindingCount != 1 || !strings.Contains(fallback.Findings[0].ProposedKnob, "daemon stale-lock") {
-		t.Fatalf("expected JSONL fallback daemon finding: %+v", fallback)
+	if fallback.FindingCount != 1 || !strings.Contains(fallback.Findings[0].ProposedKnob, "deterministic policy or guard fixture") {
+		t.Fatalf("expected JSONL fallback policy finding: %+v", fallback)
 	}
 }
 

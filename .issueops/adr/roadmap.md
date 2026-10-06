@@ -241,7 +241,7 @@ MVP에서 제외:
 2: `schema_version=1` fail-closed, 3: `self-verify history/compare/promote`, 4: required-doc projection
 golden, 5: current-only state, 6: `.issueops/policy.json` override). 같은 날 아키텍처 리뷰가 보류한 후속 후보:
 
-1. legacy MCP daemon 제거: 옛 binary의 MCP proxy가 사라지면 daemon 서버·admission·`daemon_status`를 지운다.
+1. legacy MCP daemon 제거: 2026-10-06 완료. daemon 서버·admission·`daemon_status`·update의 daemon stop 단계를 지웠다.
 2. record 쓰기 진입점 통합: fence가 `Xxx`/`XxxWithActor` 선택에 달려 있다. 누락이 반복되면 단일 mutate 경로로 옮긴다.
 3. evidence gate 비용: gate 추가가 계속되면 typed validation을 유지한 공통 evidence 엔트리를 검토한다.
 4. session launcher 경계: launcher가 더 늘면 `handoff.go`의 launcher별 어휘를 port로 모은다.

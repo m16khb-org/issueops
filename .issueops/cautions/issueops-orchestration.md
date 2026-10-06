@@ -92,7 +92,7 @@ Orca worktree/terminal/task create 또는 dispatch는 프로세스 timeout/error
 
 - 새 ownership/security 필드는 root schema compatibility를 명시적으로 검토하고 removed-shape rejection fixture를 둔다.
 - future schema hook scan은 row 전체를 해석하지 않고 bounded repo/worker identity와 invalid marker만 유지해 mutation을 fail-closed한다.
-- CLI, daemon, Codex, Claude installed binary가 같은 schema를 읽는지 cutover smoke로 확인하기 전에는 mixed-version execution을 시작하지 않는다.
+- CLI, MCP service, Codex, Claude installed binary가 같은 schema를 읽는지 cutover smoke로 확인하기 전에는 mixed-version execution을 시작하지 않는다.
 
 ## Orca worker_done에서 live terminal을 sealed mailbox 대신 쓰지 말 것
 

@@ -9,7 +9,6 @@ import (
 type fakeInstaller struct {
 	calls      []string
 	installErr error
-	refreshErr error
 }
 
 func (fake *fakeInstaller) Install(root string, args []string) error {
@@ -17,12 +16,7 @@ func (fake *fakeInstaller) Install(root string, args []string) error {
 	return fake.installErr
 }
 
-func (fake *fakeInstaller) RefreshDaemon() error {
-	fake.calls = append(fake.calls, "refresh")
-	return fake.refreshErr
-}
-
-func TestServiceRunsInstallerBeforeDaemonRefresh(t *testing.T) {
+func TestServiceForwardsOptionsToInstaller(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		options    Options
@@ -30,14 +24,14 @@ func TestServiceRunsInstallerBeforeDaemonRefresh(t *testing.T) {
 		want       []string
 		wantErr    bool
 	}{
-		{name: "update", options: Options{Root: "/repo", ProjectLocal: true, PathMode: "skip", SkipBuild: true}, want: []string{"/repo", "--project-local", "--path-mode=skip", "--skip-build", "refresh"}},
+		{name: "update", options: Options{Root: "/repo", ProjectLocal: true, PathMode: "skip", SkipBuild: true}, want: []string{"/repo", "--project-local", "--path-mode=skip", "--skip-build"}},
 		{name: "dry run", options: Options{Root: "/repo", DryRun: true, JSON: true}, want: []string{"/repo", "--dry-run", "--json"}},
-		{name: "stdio transport", options: Options{Root: "/repo", MCPTransport: "stdio"}, want: []string{"/repo", "--mcp-transport=stdio", "refresh"}},
+		{name: "stdio transport", options: Options{Root: "/repo", MCPTransport: "stdio"}, want: []string{"/repo", "--mcp-transport=stdio"}},
 		{name: "install failure", options: Options{Root: "/repo"}, installErr: errors.New("write failed"), want: []string{"/repo"}, wantErr: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fake := &fakeInstaller{installErr: tc.installErr}
-			err := (Service{Installer: fake, RefreshDaemon: fake.RefreshDaemon}).Run(tc.options)
+			err := (Service{Installer: fake}).Run(tc.options)
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("error = %v", err)
 			}

@@ -26,8 +26,8 @@ later dated record says so explicitly. Current supersessions include:
   the 2026-09-23 decision that decodes persisted records through the production
   record contract. Unknown-field rejection and sidecar preservation remain.
 - The Phase 3 daemon-backed MCP proxy in `roadmap.md` is superseded by the
-  2026-09-23 in-process MCP decision. The daemon remains only for MCP proxies
-  started from older binaries.
+  2026-09-23 in-process MCP decision. The legacy daemon backend was removed on
+  2026-10-06.
 - The 2026-09-23 in-process MCP decision is narrowed by the 2026-10-02 shared
   Streamable HTTP decision. Codex, Claude Code, and Omo connect directly to one
   local HTTP service and carry a native-issued caller capability. The in-process

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	daemoncontract "issueops/internal/contract/daemon"
+	"issueops/internal/contract/processidentity"
 )
 
 const (
@@ -67,7 +67,7 @@ func AcquireInstance(stateDir string) (*Instance, error) {
 	return &Instance{lock: lock, recordPath: filepath.Join(dir, recordFileName)}, nil
 }
 
-func (instance *Instance) Publish(inspect func(int) (daemoncontract.ProcessIdentity, error), executable string) (Record, error) {
+func (instance *Instance) Publish(inspect func(int) (processidentity.Identity, error), executable string) (Record, error) {
 	pid := os.Getpid()
 	identity, err := inspect(pid)
 	if err != nil {

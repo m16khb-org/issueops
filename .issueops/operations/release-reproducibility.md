@@ -62,7 +62,7 @@ ISSUEOPS_RELEASE_SKIP_BUILD=1 ISSUEOPS_BIN="$PWD/bin/issueops" scripts/release-r
 | `darwin` | `amd64` | supported | Intel macOS compatibility |
 | `linux` | `amd64` | supported | common CI/server target |
 | `linux` | `arm64` | supported | ARM Linux server target |
-| `windows` | `amd64` | excluded | current daemon process setup uses Unix-oriented `syscall.SysProcAttr.Setsid` |
+| `windows` | `amd64` | excluded | install, activation, and workspace cleanup use Unix-only `syscall.Stat_t` and `syscall.Kill` |
 
 기본 실행:
 

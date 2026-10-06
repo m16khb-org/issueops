@@ -1,16 +1,5 @@
 package mcp
 
-// DaemonStatusTool returns the standalone daemon-status assistant-worker tool.
-// It lives in no sub-catalog, so it is declared once here and flows into both
-// the advertised list and DispatchMap via catalogSections.
-func DaemonStatusTool() Tool {
-	return Tool{
-		Name:        "daemon_status",
-		Description: "Report whether a legacy issueops daemon is running, including socket and pid metadata. issueops mcp serves requests in-process; only MCP proxies started from older binaries still connect to this daemon.",
-		InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
-	}
-}
-
 // CoreProjectTools returns the issueops project-management tools. This is their
 // single authoritative definition: the CLI catalog package derives its
 // tools/list payload from AdvertisedTools rather than re-declaring them.

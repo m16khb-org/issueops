@@ -17,16 +17,7 @@ func ValidateMCPWithDeps(binary, root string, deps MCPValidationDeps) selfverify
 		return failedStep("MCP smoke", err)
 	}
 	defer func() { _ = deps.RemoveAll(tempState) }()
-	daemonDir, err := deps.MkdirTemp("", "ahd-*")
-	if err != nil {
-		return failedStep("MCP smoke", err)
-	}
-	defer func() { _ = deps.RemoveAll(daemonDir) }()
-	env := []string{
-		"ISSUEOPS_STATE_DIR=" + tempState,
-		"ISSUEOPS_DAEMON_DIR=" + daemonDir,
-	}
-	defer deps.RunCommandStepEnv(root, "MCP daemon stop", 5*time.Second, "", env, binary, "daemon", "stop", "--json")
+	env := []string{"ISSUEOPS_STATE_DIR=" + tempState}
 
 	step := deps.RunSDKSmoke(root, binary, env, 30*time.Second)
 	if !step.OK {

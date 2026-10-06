@@ -36,8 +36,6 @@ func TestRefreshRunningMCPProxiesAfterInstallDoesNotInspectProcesses(t *testing.
 	}
 	restoreInstall := stubInstallScriptCommandRunner(t, func(string, ...string) error { return nil })
 	defer restoreInstall()
-	restoreDaemon := stubPostInstallDaemonRefresh(t, func() (bool, error) { return true, nil })
-	defer restoreDaemon()
 	err := runInstallScriptCommand("update", nil)
 	if err != nil {
 		t.Fatal(err)

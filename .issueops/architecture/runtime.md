@@ -1,7 +1,7 @@
-# Runtime, daemon, MCP, state, and process topology
+# Runtime, MCP, state, and process topology
 
 > Family index: [`../ARCHITECTURE.md`](../ARCHITECTURE.md). This module owns the
-> execution modes, the daemon/MCP/worker surfaces, the docs/state/config/log
+> execution modes, the MCP/worker surfaces, the docs/state/config/log
 > topology, and the command-policy model. Component boundaries and dependency
 > direction live in [`hexagonal-core.md`](hexagonal-core.md); IssueOps execution
 > state and threat model live in [`issueops.md`](issueops.md); host adapters
@@ -11,20 +11,18 @@
 
 | 모드 | 도입 단계 | 용도 | 원칙 |
 |------|----------|------|------|
-| `issueops` CLI one-shot | 구현됨 | 모든 host에서 공통으로 호출 가능한 최소 표면 | top-level 명령은 `issueops --help`가 정규 목록이다: `api-doc bootstrap channel contract daemon docs doctor gates guard hook inspect install issueops loop mcp policy preflight project quality self-augment self-verify state status trace update verify-work version web-fetch worker` |
+| `issueops` CLI one-shot | 구현됨 | 모든 host에서 공통으로 호출 가능한 최소 표면 | top-level 명령은 `issueops --help`가 정규 목록이다: `api-doc bootstrap channel contract docs doctor gates guard hook inspect install issueops loop mcp policy preflight project quality self-augment self-verify state status trace update verify-work version web-fetch worker` |
 | `issueops mcp --http` 공용 Streamable HTTP 서비스 | 구현됨 | darwin/linux 기본 설치에서 Codex/Claude Code/Omo가 같은 서버 PID에 직접 연결 | `127.0.0.1:47831/mcp` 하나만 쓴다. stateless, bearer 필수(401), Host/Origin 검사(403), body 4MiB. LaunchAgent `io.issueops.mcp` 또는 systemd user `issueops-mcp.service`가 감독하고 `mcp service start/stop/status`가 제어한다. 포트 충돌은 conflict로 실패하고 다른 포트로 옮기지 않는다. 호출자 scope는 서버 cwd나 계보가 아니라 `mcp authorize`가 발급한 `authority_file`과 `workspace_root`/`cwd`로 요청마다 정한다. unit env는 `ISSUEOPS_ROOT`·`ISSUEOPS_STATE_DIR`뿐이다(2026-10-02 ADR). |
-| `issueops mcp` stdio server | 구현됨(호환 표면) | `--mcp-transport=stdio` 설치, agy, 기타 OS에서 같은 MCP schema를 host 세션 안에서 사용 | host가 세션마다 띄운 프로세스 안에서 요청을 처리한다. daemon을 시작하거나 거치지 않으므로 `issueops_execution`이 관측하는 프로세스 계보에 호출 세션이 들어간다. host가 stdin을 닫아도 이미 받은 요청에는 응답한 뒤 종료한다. |
-| `issueops daemon` legacy user-level daemon | 정리 중 | 이전 binary로 떠 있는 MCP proxy가 재연결하는 backend | 새 `issueops mcp`는 쓰지 않는다. `update`/`bootstrap`은 설치 뒤 daemon을 내리기만 하고, 옛 proxy가 재연결하면서 새 binary로 다시 띄운다. `ISSUEOPS_DAEMON_DIR` 또는 `~/.local/state/issueops/daemon`; stale lock, pid, socket, stop/status 제공 |
+| `issueops mcp` stdio server | 구현됨(호환 표면) | `--mcp-transport=stdio` 설치, agy, 기타 OS에서 같은 MCP schema를 host 세션 안에서 사용 | host가 세션마다 띄운 프로세스 안에서 요청을 처리하므로 `issueops_execution`이 관측하는 프로세스 계보에 호출 세션이 들어간다. host가 stdin을 닫아도 이미 받은 요청에는 응답한 뒤 종료한다. |
 | `issueops` | 구현됨 | issue-driven 루프의 durable 상태와 direct/Orca execution v1 lease | IssueOps가 단일 authority다. Orca는 readiness, workspace, native owner launch/inventory만 제공하고 generation/actor/CWD fence는 core가 소유한다. |
 | `issueops loop` | 구현됨 | verify-until-done 루프 계약의 durable 상태와 PR readiness 게이트 | 하네스는 검증 명령을 실행하지 않고 `verify_argv`, 시도 evidence, stop 상태를 기록·게이트한다. |
-| `issueops worker` one-shot jobs | 구현됨 | lifecycle job record(`enqueue/status/list/cancel/cleanup-stuck`)와 policy-gated `run --read-only`(MCP `worker_run_read_only`) | 장기 상주 job daemon은 없다. |
+| `issueops worker` one-shot jobs | 구현됨 | lifecycle job record(`enqueue/status/list/cancel/cleanup-stuck`)와 policy-gated `run --read-only`(MCP `worker_run_read_only`) | 장기 상주 job 프로세스는 없다. |
 | Codex native integration | 구현됨 | user skills, MCP config, `SessionStart` context hook | core 로직 금지, CLI/MCP 호출 래퍼만 허용 |
 | Claude Code native integration | 구현됨 | user skills, user-scope MCP, `SessionStart` context hook | core 정책 우회 금지 |
 | Omo native integration | 구현됨 | user skills, MCP config, `session_start`/`session_compact` extension | core 정책 우회 금지 |
 
 MCP composition은 서버 시작 전에 MCP dependency를 한 번 구성하고 immutable
-snapshot으로 stream에 전달한다. legacy daemon도 listener 시작 전에 같은 방식으로
-구성하고 connection accept 경로에서 process global dependency를 다시 쓰지 않는다.
+snapshot으로 stream에 전달하고 요청 경로에서 process global dependency를 다시 쓰지 않는다.
 따라서 wiring 변경은 새 process에서만 효력을 갖는다.
 
 ## Docs / state / config / logs
@@ -54,7 +52,7 @@ Project docs bootstrap:
 - 제공 표면: CLI `state write/read/list/prune/doctor/maintain`, MCP `state_write/state_read/state_list/state_prune/state_doctor/state_maintain`, resource `issueops://state`
 - cleanup: `state prune --max-age DURATION`은 기본 dry-run이고, 실제 삭제에는 `--confirm`이 필요하다.
 - integrity: `state doctor`는 checkpoint 파일을 수정하지 않고 invalid JSON, key mismatch, byte count drift, timestamp 오류를 보고한다.
-- comprehensive diagnostics: `issueops doctor`는 state doctor를 포함해 install, hooks, MCP, daemon, project docs, lifecycle namespace, repo-local runtime/schema 흔적을 종합 점검한다.
+- comprehensive diagnostics: `issueops doctor`는 state doctor를 포함해 install, hooks, MCP, project docs, lifecycle namespace, repo-local runtime/schema 흔적을 종합 점검한다.
 - maintenance: `state maintain`은 고정 store root(`state`, `issueops`, `worker`, `loop`)와 `projects/<repo-id>` store의 WAL checkpoint를 truncate하고 sidecar 권한(0600)을 복구한다. 현재 context hook은 static project-doc catalog만 읽으므로 유지보수를 자동 실행하지 않는다.
 - self-verify summary checkpoint는 `self-verify history/compare/promote`와 MCP `self_verify_history/self_verify_compare/self_verify_promote`로 조회·비교·승격한다.
 
@@ -72,7 +70,7 @@ Project docs bootstrap:
 맡으며, 후보 감지는 검색어 자체가 들어 있는 observer 대신 실제 구현 파일을 확인한다.
 
 자가 검증 단계 순서·성공 증거 재사용·실패 후 계속 여부는 `domain/selfverify`,
-실행과 저장 순서는 `application/selfverify`가 맡는다. 실제 CLI·MCP·daemon·Git
+실행과 저장 순서는 `application/selfverify`가 맡는다. 실제 CLI·MCP·Git
 검증 driver는 `adapter/verification/probe`, risk tier 실행은 같은 adapter의
 `riskqa`에 둔다. process 실행과 Go 파일 관측은 기존 verification 구현을 공유한다.
 후보 목록 저장은 application이 조율하며, snapshot schema·필드 구성은

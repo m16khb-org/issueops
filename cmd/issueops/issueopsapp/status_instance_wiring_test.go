@@ -22,7 +22,6 @@ func TestStatusInstancesKeepCapturedStoresAndInspectionContext(t *testing.T) {
 		t.Setenv("ISSUEOPS_ROOT", roots[i])
 		t.Setenv("ISSUEOPS_STATE_DIR", filepath.Join(roots[i], "state"))
 		t.Setenv("ISSUEOPS_WORKER_DIR", filepath.Join(roots[i], "worker"))
-		t.Setenv("ISSUEOPS_DAEMON_DIR", filepath.Join(roots[i], "daemon"))
 		if _, err := newStateService(filepath.Join(roots[i], "state")).Write(context.Background(), "self-verify-fixture", payload); err != nil {
 			t.Fatal(err)
 		}

@@ -107,7 +107,7 @@ func TestGetExistingReturnsBoundedErrorWhileDataStoreIsContended(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Transient contention (daemon WAL checkpoints, concurrent writers) must
+	// Transient contention (WAL checkpoints, concurrent writers) must
 	// not fail the read: the read-only connection waits up to its bounded busy
 	// timeout, so a sub-second release yields the committed row instead of a
 	// spurious lock error that fail-closes lifecycle hooks.

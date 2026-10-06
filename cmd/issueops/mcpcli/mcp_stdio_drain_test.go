@@ -10,7 +10,7 @@ import (
 )
 
 // host나 셸 파이프라인이 요청을 보낸 직후 stdin을 닫아도, 이미 받은 요청의 응답은
-// 모두 돌려준 뒤 세션을 닫아야 한다. 예전 daemon proxy가 지키던 동작이다(8a729a33).
+// 모두 돌려준 뒤 세션을 닫아야 한다.
 func TestServeMCPStreamAnswersEveryRequestReadBeforeInputEOF(t *testing.T) {
 	input := strings.Join([]string{
 		`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"eof","version":"0"}}}`,

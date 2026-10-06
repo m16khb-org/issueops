@@ -104,7 +104,7 @@ io doctor --repo . --json
 io docs --json
 ```
 
-`doctor` diagnoses install, state, hooks, MCP, daemon, and project docs in one
+`doctor` diagnoses install, state, hooks, MCP, and project docs in one
 pass. `status` is the daily summary; `inspect` is the detailed projection of the
 install and native integration.
 
@@ -247,11 +247,11 @@ Five boundaries hold:
 | Area | Representative commands | Role |
 |---|---|---|
 | Install and update | `install`, `update`, `bootstrap`, `version` | Refresh the binary, skills, hooks, and MCP wiring; check the version |
-| Diagnostics | `inspect`, `status`, `doctor`, `docs` | Inspect install, daemon, state, and project docs |
+| Diagnostics | `inspect`, `status`, `doctor`, `docs` | Inspect install, state, and project docs |
 | Safety and quality | `policy`, `guard`, `quality`, `verify-work`, `trace`, `contract`, `api-doc`, `preflight` | Execution policy, change quality, evidence and public contract, pre-commit repository checks |
 | Workflow | `issueops`, `loop`, `gates`, `channel` | Durable workflow, completion gate ledgers, cross-session message channels |
 | Docs and hooks | `project`, `hook` | Project doc creation, routing, and refresh; the `SessionStart` context hook entry point |
-| State and runtime | `state`, `daemon`, `mcp`, `worker` | User state, MCP server, legacy daemon, limited local jobs |
+| State and runtime | `state`, `mcp`, `worker` | User state, MCP server, limited local jobs |
 | Improvement and research | `self-verify`, `self-augment`, `web-fetch`, `review-metrics` | Harness verification, improvement candidates, resilient public web fetches, adversarial-review round and verdict metrics |
 
 The full command and MCP tool contract comes from the built binary. The current
@@ -297,7 +297,7 @@ semantic verdicts are under [`testdata/pioneer-holdouts/`](testdata/pioneer-hold
 ## Repository map
 
 ```text
-cmd/issueops/           composition root and CLI/MCP/daemon/hook entry points
+cmd/issueops/           composition root and CLI/MCP/hook entry points
 internal/contract/      versioned DTOs shared by transports and stores
 internal/domain/        pure rules, reducers, and classifiers with no I/O
 internal/application/   use cases composing domain and ports
@@ -356,7 +356,7 @@ first. The README carries no destructive rollback commands.
 | `io` not found after install | Open a new shell or refresh the command cache, and confirm `~/.local/bin` is on PATH |
 | Install refused because `io`/`issueops` exists | Expected: the installer never overwrites another file. Find the conflicting path in `--dry-run --json` |
 | New MCP tools missing in the host | Reopen the host session after `io update` and inspect the catalog and config with `io inspect --json` |
-| Daemon looks unhealthy | Run `io doctor --repo . --json` and `io daemon status --json` |
+| MCP service looks unhealthy | Run `io doctor --repo . --json` and `io mcp service status` |
 | `link-plan` rejects with `missing required sections` | Add the four stage 3 section titles verbatim. Merging or renaming them does not pass |
 | `next` returns to stage 6 with `project_docs_review_stale` | The diff changed after the verdict. Re-check the docs, reseal, and record the verdict again |
 | self-verify looks stuck | Add `--progress=jsonl` to see each step's heartbeat |

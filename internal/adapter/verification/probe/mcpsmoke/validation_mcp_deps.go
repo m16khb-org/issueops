@@ -5,19 +5,16 @@ import (
 	"strings"
 	"time"
 
-	verification "issueops/internal/adapter/verification"
 	verifycontract "issueops/internal/contract/selfverify"
 	verifydomain "issueops/internal/domain/selfverify"
 )
 
 const aggregateOutputBudgetBytes = 8 * 1024
-const commandOutputBudgetBytes = 32 * 1024
 
 type MCPValidationDeps struct {
-	MkdirTemp         func(string, string) (string, error)
-	RemoveAll         func(string) error
-	RunCommandStepEnv func(string, string, time.Duration, string, []string, string, ...string) verifycontract.StepResult
-	RunSDKSmoke       func(string, string, []string, time.Duration) verifycontract.StepResult
+	MkdirTemp   func(string, string) (string, error)
+	RemoveAll   func(string) error
+	RunSDKSmoke func(string, string, []string, time.Duration) verifycontract.StepResult
 }
 
 func (deps MCPValidationDeps) withDefaults() MCPValidationDeps {
@@ -27,17 +24,10 @@ func (deps MCPValidationDeps) withDefaults() MCPValidationDeps {
 	if deps.RemoveAll == nil {
 		deps.RemoveAll = os.RemoveAll
 	}
-	if deps.RunCommandStepEnv == nil {
-		deps.RunCommandStepEnv = runCommandStepEnv
-	}
 	if deps.RunSDKSmoke == nil {
 		deps.RunSDKSmoke = runSDKSmoke
 	}
 	return deps
-}
-
-func runCommandStepEnv(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) verifycontract.StepResult {
-	return verification.RunEnv(dir, label, timeout, stdin, env, commandOutputBudgetBytes, name, args...)
 }
 
 func failedStep(label string, err error) verifycontract.StepResult {

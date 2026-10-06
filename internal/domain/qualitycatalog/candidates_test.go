@@ -44,7 +44,6 @@ func TestCandidatesProjectSpecsIntoOpenCandidates(t *testing.T) {
 
 func TestCandidatesExcludeResolvedAuditDuplicates(t *testing.T) {
 	resolved := map[string]bool{
-		"daemon-connection-limit":        true,
 		"worker-stuck-running-detection": true,
 		"state-write-locking":            true,
 	}

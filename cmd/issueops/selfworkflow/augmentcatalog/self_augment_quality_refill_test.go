@@ -9,7 +9,6 @@ func TestQualityRefillCandidatesStayOpenWithScoresAndVerification(t *testing.T) 
 		"coverage-mcp-resources",
 		"coverage-host-judgement",
 		"coverage-issueops-linking",
-		"daemon-connection-limit",
 		"worker-stuck-running-detection",
 		"state-write-locking",
 	}

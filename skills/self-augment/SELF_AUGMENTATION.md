@@ -42,9 +42,8 @@ The single evidence pass includes at least these checks:
 10. Command policy and path-fuzz checks.
 11. Parallel temp isolation.
 12. Duplicate MCP warning detection.
-13. Daemon resilience for stale locks, sockets, restart, and socket permissions.
-14. Redaction audit for docs, skill metadata, and golden response artifacts.
-15. QA gate for `GENIUS_THINK.md`, loop docs, skill frontmatter, OpenAI metadata, and skill existence.
+13. Redaction audit for docs, skill metadata, and golden response artifacts.
+14. QA gate for `GENIUS_THINK.md`, loop docs, skill frontmatter, OpenAI metadata, and skill existence.
 
 ### Score goals
 
@@ -59,7 +58,6 @@ The single evidence pass includes at least these checks:
 | Install dry-run | install dry-run smoke | score > 95 |
 | Policy/security | command policy, preflight fuzz, redaction audit | score > 95 |
 | Concurrency isolation | parallel isolation | score > 95 |
-| Daemon resilience | daemon resilience | score > 95 |
 | Native integration | native integration | score > 95 |
 
 Use `summary.contract`, `summary.goal_scores`, `summary.coverage`, `summary.coverage_gaps`, failure `summary.failure_class`, `summary.failure_clusters`, `summary.rerun_commands`, `summary.minimum_goal_score`, and `summary.termination_eligible` as the decision surface. `--progress=jsonl` writes progress events to stderr without corrupting the final JSON summary on stdout.

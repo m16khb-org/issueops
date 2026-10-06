@@ -1493,14 +1493,6 @@
     "name": "channel_recv"
   },
   {
-    "description": "Report whether a legacy issueops daemon is running, including socket and pid metadata. issueops mcp serves requests in-process; only MCP proxies started from older binaries still connect to this daemon.",
-    "inputSchema": {
-      "properties": {},
-      "type": "object"
-    },
-    "name": "daemon_status"
-  },
-  {
     "description": "Plan the self-augmentation loop: use GENIUS_THINK.md, repo signals, and research-backed strategies to choose concrete feature/performance/quality improvements. The native skill performs implementation; this tool exposes the scoring contract and candidate curriculum, and can persist the chosen plan to issueops state for durable Reflexion-style memory.",
     "inputSchema": {
       "properties": {

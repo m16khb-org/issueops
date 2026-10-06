@@ -48,7 +48,6 @@ func TestValidateMCPSmokeContract(t *testing.T) {
 
 func TestValidateMCPWithDepsRunsSmokeAndCleanup(t *testing.T) {
 	var removed []string
-	var stopCalled bool
 	deps := MCPValidationDeps{
 		MkdirTemp: func(_, pattern string) (string, error) {
 			return "/tmp/" + strings.TrimSuffix(pattern, "*") + "x", nil
@@ -56,10 +55,6 @@ func TestValidateMCPWithDepsRunsSmokeAndCleanup(t *testing.T) {
 		RemoveAll: func(path string) error {
 			removed = append(removed, path)
 			return nil
-		},
-		RunCommandStepEnv: func(dir, label string, timeout time.Duration, stdin string, env []string, name string, args ...string) selfverify.StepResult {
-			stopCalled = label == "MCP daemon stop" && name == "bin" && len(args) == 3
-			return selfverify.StepResult{OK: true}
 		},
 		RunSDKSmoke: func(dir, name string, env []string, timeout time.Duration) selfverify.StepResult {
 			if dir != "/repo" || name != "bin" {
@@ -72,8 +67,8 @@ func TestValidateMCPWithDepsRunsSmokeAndCleanup(t *testing.T) {
 	if !step.OK || step.Error != "" {
 		t.Fatalf("ValidateMCPWithDeps failed: %#v", step)
 	}
-	if !stopCalled || len(removed) != 2 {
-		t.Fatalf("cleanup not called as expected: stop=%v removed=%#v", stopCalled, removed)
+	if len(removed) != 1 {
+		t.Fatalf("cleanup not called as expected: removed=%#v", removed)
 	}
 	if !step.StdoutTruncated || step.StdoutBytes <= aggregateOutputBudgetBytes {
 		t.Fatalf("expected truncated aggregate stdout, got bytes=%d truncated=%v", step.StdoutBytes, step.StdoutTruncated)
@@ -88,23 +83,8 @@ func TestValidateMCPWithDepsFailurePaths(t *testing.T) {
 		t.Fatalf("expected mkdir failure, got %#v", step)
 	}
 	step = ValidateMCPWithDeps("bin", "/repo", MCPValidationDeps{
-		MkdirTemp: func(_, pattern string) (string, error) {
-			if strings.HasPrefix(pattern, "ahd-") {
-				return "", errors.New("daemon mkdir failed")
-			}
-			return "/tmp/state", nil
-		},
-		RemoveAll: func(string) error { return nil },
-	})
-	if step.OK || !strings.Contains(step.Error, "daemon mkdir failed") {
-		t.Fatalf("expected daemon mkdir failure, got %#v", step)
-	}
-	step = ValidateMCPWithDeps("bin", "/repo", MCPValidationDeps{
 		MkdirTemp: func(_, pattern string) (string, error) { return "/tmp/" + pattern, nil },
 		RemoveAll: func(string) error { return nil },
-		RunCommandStepEnv: func(string, string, time.Duration, string, []string, string, ...string) selfverify.StepResult {
-			return selfverify.StepResult{OK: true}
-		},
 		RunSDKSmoke: func(string, string, []string, time.Duration) selfverify.StepResult {
 			return selfverify.StepResult{OK: false, Error: "mcp failed"}
 		},
@@ -116,7 +96,7 @@ func TestValidateMCPWithDepsFailurePaths(t *testing.T) {
 
 func TestDepsDefaultsAndSmallHelpers(t *testing.T) {
 	deps := (MCPValidationDeps{}).withDefaults()
-	if deps.MkdirTemp == nil || deps.RemoveAll == nil || deps.RunCommandStepEnv == nil || deps.RunSDKSmoke == nil {
+	if deps.MkdirTemp == nil || deps.RemoveAll == nil || deps.RunSDKSmoke == nil {
 		t.Fatal("defaults should populate dependencies")
 	}
 	step := failedStep("label", errors.New("boom"))

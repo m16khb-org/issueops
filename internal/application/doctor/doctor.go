@@ -16,23 +16,18 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 		return HarnessDoctorResult{OK: false, Kind: "harness_doctor", StateDir: service.Effects.StateDir()}, err
 	}
 	result := HarnessDoctorResult{
-		OK:                true,
-		Healthy:           true,
-		Kind:              "harness_doctor",
-		Version:           req.Version,
-		IssueOpsRoot:      req.IssueOpsRoot,
-		RepoRoot:          root,
-		StateDir:          service.Effects.StateDir(),
-		ActiveConnections: req.DaemonAdmission.ActiveConnections,
-		MaxConnections:    req.DaemonAdmission.MaxConnections,
-		Accepting:         req.DaemonAdmission.Accepting,
-		Draining:          req.DaemonAdmission.Draining,
-		Checks:            []HarnessDoctorCheck{},
-		Issues:            []HarnessDoctorIssue{},
-		GeneratedAt:       service.Effects.Now().UTC().Format(time.RFC3339Nano),
+		OK:           true,
+		Healthy:      true,
+		Kind:         "harness_doctor",
+		Version:      req.Version,
+		IssueOpsRoot: req.IssueOpsRoot,
+		RepoRoot:     root,
+		StateDir:     service.Effects.StateDir(),
+		Checks:       []HarnessDoctorCheck{},
+		Issues:       []HarnessDoctorIssue{},
+		GeneratedAt:  service.Effects.Now().UTC().Format(time.RFC3339Nano),
 	}
 	AddCheck(&result, "binary", true, "issueops command is running")
-	CheckDaemonAdmission(&result, req.DaemonAdmission)
 
 	stateDoctor, stateDoctorErr := service.Effects.StateDoctor()
 	if stateDoctorErr != nil {
@@ -106,31 +101,6 @@ func (service Service) Run(req HarnessDoctorRequest) (HarnessDoctorResult, error
 	})
 	result.Healthy = doctordomain.Healthy(result.Checks, result.Issues)
 	return result, nil
-}
-
-func CheckDaemonAdmission(r *HarnessDoctorResult, admission HarnessDoctorDaemonAdmission) {
-	decision := operationalhealth.DecideAdmission(operationalhealth.Admission{
-		Observed: admission.Observed, Active: admission.ActiveConnections, Maximum: admission.MaxConnections,
-		Accepting: admission.Accepting, Draining: admission.Draining,
-	})
-	if !decision.Evaluated {
-		AddCheck(r, "daemon_admission", true, "not evaluated")
-		return
-	}
-	summary := fmt.Sprintf(
-		"active_connections=%d max_connections=%d accepting=%t draining=%t",
-		admission.ActiveConnections,
-		admission.MaxConnections,
-		admission.Accepting,
-		admission.Draining,
-	)
-	AddCheck(r, "daemon_admission", decision.Healthy, summary)
-	switch decision.IssueCode {
-	case "daemon_admission_inconsistent":
-		AddIssue(r, decision.IssueCode, "warning", "daemon admission telemetry is internally inconsistent", "", nil)
-	case "daemon_connection_limit_reached":
-		AddIssue(r, decision.IssueCode, "warning", "daemon is not accepting new MCP connections because its connection limit is exhausted", "", nil)
-	}
 }
 
 func AddCheck(r *HarnessDoctorResult, name string, healthy bool, summary string) {

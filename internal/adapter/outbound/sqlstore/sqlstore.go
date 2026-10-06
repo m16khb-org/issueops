@@ -40,7 +40,7 @@ const (
 	spanLockInitialRetryGap = time.Millisecond
 	spanLockMaxRetryGap     = 10 * time.Millisecond
 	// existingReadBusyTimeout은 read-only existing-store 조회가 일시적 SQLite
-	// 경합(writer commit, daemon WAL checkpoint)에서 대기하는 시간의 상한이다.
+	// 경합(writer commit, WAL checkpoint)에서 대기하는 시간의 상한이다.
 	// 값이 0이면 밀리초 단위 checkpoint 구간 동안 lifecycle-hook 조회가 즉시
 	// 실패해, 건강한 state에서도 mutation guard가 fail-closed됐다. 짧은 유한
 	// 대기는 그런 허위 실패 없이 hook 응답성을 유지한다.

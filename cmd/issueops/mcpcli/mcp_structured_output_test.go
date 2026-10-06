@@ -109,7 +109,7 @@ func assertStructuredToolOverSession(t *testing.T, session *mcp.ClientSession) {
 }
 
 func TestSDKStructuredContentOverStdioAndStream(t *testing.T) {
-	for _, mode := range []string{"stdio", "daemon_conn"} {
+	for _, mode := range []string{"stdio", "stream_conn"} {
 		t.Run(mode, func(t *testing.T) {
 			assertStructuredToolOverSession(t, startMCPTransportTestSession(t, mode, structuredToolDeps(nilSliceInspect)))
 		})

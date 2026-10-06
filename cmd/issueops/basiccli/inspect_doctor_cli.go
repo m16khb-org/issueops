@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	daemoncontract "issueops/internal/contract/daemon"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspectcontract "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
@@ -58,7 +57,7 @@ func (command Doctor) Run(args []string) error {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	repo := fs.String("repo", ".", "target repository path")
 	jsonOut := fs.Bool("json", false, "print JSON")
-	staticOnly := fs.Bool("static-only", false, "skip live operational, daemon, pipe, and MCP probes")
+	staticOnly := fs.Bool("static-only", false, "skip live operational, pipe, and MCP probes")
 	sealed := fs.Bool("sealed", false, "use the sealed audit profile: unowned live terminals and orchestration message history count as residue")
 	var preserveCycles doctorRepeatedFlag
 	var preserveTerminals doctorRepeatedFlag
@@ -87,11 +86,9 @@ func (command Doctor) Run(args []string) error {
 		return err
 	}
 	var snapshot *operationalhealth.Snapshot
-	var daemon daemoncontract.Status
 	if !*staticOnly {
 		observed := command.CollectOperationalHealth(context.Background(), root)
 		snapshot = &observed
-		daemon = command.CheckDaemonStatus()
 	}
 	result, err := command.Service.Run(doctorcontract.HarnessDoctorRequest{
 		RepoRoot:            root,
@@ -105,13 +102,6 @@ func (command Doctor) Run(args []string) error {
 			Profile:                 doctorProfile(*sealed),
 			PreserveCycleIDs:        cycleIDs,
 			PreserveTerminalHandles: terminalHandles,
-		},
-		DaemonAdmission: doctorcontract.HarnessDoctorDaemonAdmission{
-			Observed:          daemon.Running && daemon.Reachable && daemon.IdentityVerified,
-			ActiveConnections: daemon.ActiveConnections,
-			MaxConnections:    daemon.MaxConnections,
-			Accepting:         daemon.Accepting,
-			Draining:          daemon.Draining,
 		},
 	})
 	if err != nil {

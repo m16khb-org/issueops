@@ -52,7 +52,6 @@ priority = impact*0.25 + feasibility*0.20 + novelty*0.15 + (100-risk)*0.15 + (10
 | 13 | `self-verify-history-retention-budget` | state operations | 71 | Unbounded history could slow state and mix stale baselines. | Retention dry-run/confirm tests. |
 | 14 | `self-verify-parallel-temp-isolation` | concurrency | 70 | Concurrent runs needed isolated temp state and build artifacts. | Parallel seeded smoke and race tier. |
 | 15 | `self-verify-duplicate-mcp-warning` | native integration | 70 | Duplicate Claude/Codex MCP registrations can pass smoke checks but harm UX. | Mocked duplicate-scope fixture and warning classification. |
-| 16 | `self-verify-daemon-restart-resilience` | daemon | 68 | Daemon-backed MCP needed stale-lock/socket restart recovery checks. | Temp socket fixture, restart smoke, stale-lock test. |
 
 ## Completion criteria
 

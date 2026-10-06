@@ -36,10 +36,10 @@ python3 skills/stability-audit/scripts/e2e_stability_audit.py --full-install --c
 
 | 지표 | 출처 스텝 / 필드 | 정상 판정 |
 |------|------------------|-----------|
-| 잔존 daemon 수 | `process_hygiene.classified.current_daemons[]` 길이 | 의도된 user-level + 이 repo dogfood daemon 외 0 |
+| 잔존 MCP 프로세스 | `mcp_stress.new_mcp_pids_after_stress[]` 길이 | 0 |
 | zombie 수 | `process_hygiene.classified.zombies[]` 길이 (state `Z` ∧ issueops/bin/harness/codegraph) | 0 |
-| RSS 추이 | `rss_sample` (rounds×calls 후 daemon RSS) | 라운드 간 단조 증가 ✗ (단일 Go 런타임 warmup 점프는 허용) |
-| MCP 재접속 끊김 | `host_mcp_checks`(claude/codex mcp) + daemon_and_mcp_stress의 mcp 왕복 실패 | 0 (도그푸드 관찰도 비고에 병기) |
+| RSS 추이 | `rss_sample` (rounds×calls 후 공용 MCP service RSS) | 라운드 간 단조 증가 ✗ (단일 Go 런타임 warmup 점프는 허용) |
+| MCP 재접속 끊김 | `host_mcp_checks`(claude/codex mcp) + mcp_stress의 mcp 왕복 실패 | 0 (도그푸드 관찰도 비고에 병기) |
 | legacy/temp 잔재 | `classified.legacy_harness[]`, `temp_watchers[]` | stale로 확인된 것만, 0 지향 |
 | self-verify | `regression.self-verify.summary` | ok ∧ termination_eligible |
 
@@ -48,7 +48,7 @@ python3 skills/stability-audit/scripts/e2e_stability_audit.py --full-install --c
 > 채우는 규칙: 1행 = 1회 audit. `ok`는 `failures[]` 비었는지. RSS는 첫 라운드→마지막 라운드 KB.
 > MCP 끊김은 audit 스텝 실패 + 세션 중 도그푸드 관찰을 합산(관찰은 괄호 병기).
 
-| 측정일 | mode | ok | 잔존 daemon | zombie | RSS 추이(KB) | MCP 끊김 | self-verify | 비고 |
+| 측정일 | mode | ok | 잔존 daemon(2026-10-06 이전 지표) | zombie | RSS 추이(KB) | MCP 끊김 | self-verify | 비고 |
 |--------|------|----|-----------|--------|-------------|----------|-------------|------|
 | 2026-06-13 11:51–12:05 KST | evidence-first | ✅ | 2 (user daemon + repo dogfood daemon) | 0 | 15152→16800 (+1648), deltas 768/592/288 | 0 | ✅ 10/10, 230/230, min score 100 | `/tmp/issueops-sta-run1-final-20260613.json`; MCP ids 1–8, temp leak 0, legacy/temp 0 |
 | 2026-06-13 12:06–12:19 KST | evidence-first | ✅ | 2 (user daemon + repo dogfood daemon) | 0 | 15072→16400 (+1328), deltas 720/480/128 | 0 | ✅ 10/10, 230/230, min score 100 | `/tmp/issueops-sta-run2-final-20260613.json`; MCP ids 1–8, temp leak 0, legacy/temp 0 |
@@ -57,7 +57,7 @@ python3 skills/stability-audit/scripts/e2e_stability_audit.py --full-install --c
 ## 갱신 규약
 
 - 측정 회차마다 위 표에 1행 추가, 측정일 명기. `quality-dashboard.md` 측정면 6 동시 갱신.
-- 회귀 의심(daemon 누수·zombie 발생·RSS 단조 증가·MCP 끊김 증가) 시 `failures[]` 원문을 비고에 인용하고 `issueops-debugging` 진단으로 라우팅.
+- 회귀 의심(MCP 프로세스 누수·zombie 발생·RSS 단조 증가·MCP 끊김 증가) 시 `failures[]` 원문을 비고에 인용하고 `issueops-debugging` 진단으로 라우팅.
 - RSS는 단일 warmup 점프와 다회 단조 증가를 구분(스크립트 주석 규약 유지) — 1회 점프를 누수로 판정하지 않는다.
 
 ## 잔여 작업 (Q4 종결 조건)

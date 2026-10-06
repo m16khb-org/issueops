@@ -44,7 +44,7 @@ func TestUpdateRootCommandsKeepCapturedContext(t *testing.T) {
 		receipt := "#!/bin/sh\nprintf '%s\\n' \"$PWD\" \"$ISSUEOPS_ROOT\" \"$UPDATE_TEST_MARKER\" \"$@\" > \"$0.receipt\"\n"
 		writeUpdateFixture(t, script, receipt)
 		writeUpdateFixture(t, binary, receipt)
-		writeUpdateFixture(t, ps, "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$0.receipt\"\ncase \"$*\" in\n '-axo pid=,command=') printf '2147483000 %s mcp\\n' \"$ISSUEOPS_ROOT/bin/issueops\";;\n '-axo pid=,ppid=,command=') printf '2147483000 1 %s mcp\\n' \"$ISSUEOPS_ROOT/bin/issueops\";;\n '-p 2147483000 -o lstart=') printf 'Tue Sep 29 12:00:00 2026\\n';;\n '-p 2147483000 -o comm=') printf '%s/bin/issueops\\n' \"$ISSUEOPS_ROOT\";;\n *) exit 23;;\nesac\n")
+		writeUpdateFixture(t, ps, "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$0.receipt\"\ncase \"$*\" in\n '-axo pid=,ppid=,command=') printf '2147483000 1 %s mcp\\n' \"$ISSUEOPS_ROOT/bin/issueops\";;\n '-p 2147483000 -o lstart=') printf 'Tue Sep 29 12:00:00 2026\\n';;\n '-p 2147483000 -o comm=') printf '%s/bin/issueops\\n' \"$ISSUEOPS_ROOT\";;\n *) exit 23;;\nesac\n")
 		t.Setenv("ISSUEOPS_ROOT", roots[i])
 		t.Setenv("UPDATE_TEST_MARKER", strconv.Itoa(i))
 		t.Setenv("PATH", filepath.Dir(ps)+":/usr/bin:/bin")
@@ -64,21 +64,18 @@ func TestUpdateRootCommandsKeepCapturedContext(t *testing.T) {
 		binary := filepath.Join(roots[i], "bin", "issueops")
 		ps := filepath.Join(roots[i], "bin", "ps")
 		assertUpdateReceipt(t, script, roots[i], i, []string{"--project-local", "--path-mode=skip", "--interactive", "--json", "--skip-build"})
-		assertUpdateReceipt(t, binary, roots[i], i, []string{"daemon", "stop", "--json"})
-		before, err := os.ReadFile(ps + ".receipt")
-		if err != nil {
-			t.Fatal(err)
+		if _, err := os.Stat(binary + ".receipt"); !os.IsNotExist(err) {
+			t.Fatalf("update ran the installed binary after install: %v", err)
 		}
-		if string(before) != "-axo pid=,command=\n" {
-			t.Fatalf("update inspected MCP processes: %q", before)
+		if _, err := os.Stat(ps + ".receipt"); !os.IsNotExist(err) {
+			t.Fatalf("update inspected processes: %v", err)
 		}
 		if err := command.Run("bootstrap", []string{"--dry-run", "--json"}); err != nil {
 			t.Fatal(err)
 		}
 		assertUpdateReceipt(t, script, roots[i], i, []string{"--dry-run", "--json"})
-		after, err := os.ReadFile(ps + ".receipt")
-		if err != nil || string(after) != string(before) {
-			t.Fatalf("dry-run observed processes: %s %v", after, err)
+		if _, err := os.Stat(ps + ".receipt"); !os.IsNotExist(err) {
+			t.Fatalf("dry-run observed processes: %v", err)
 		}
 		raw := captureStdoutForContract(t, func() error { return cleanup[i].Run([]string{"--json"}) })
 		var result contract.MCPCleanupResult

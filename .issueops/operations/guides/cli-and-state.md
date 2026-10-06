@@ -72,7 +72,7 @@ For deeper verification, use `.issueops/operations/verification.md` and `.issueo
 ## Related references
 
 - [operations/cli-and-mcp.md](../cli-and-mcp.md): direct CLI, command policy,
-  guard, state read/write/prune/maintain, loop contracts, daemon, MCP cleanup,
+  guard, state read/write/prune/maintain, loop contracts, MCP cleanup,
   worker, and contract/audit.
 - [operations/verification.md](../verification.md): self-verify, self-augment,
   and the api-doc gate.

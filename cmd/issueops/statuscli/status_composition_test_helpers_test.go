@@ -13,7 +13,7 @@ type Status = statuscontract.Result
 
 func testStatusService(diagnostics doctorapp.Service, worker workerapp.Service) statusapp.Service {
 	home, _ := os.UserHomeDir()
-	return statusapp.Service{Home: home, IssueOpsRoot: deps.IssueOpsRoot(), Version: deps.Version, Inspect: deps.InspectHarness, Daemon: deps.CheckDaemonStatus, Doctor: diagnostics.Run, State: statestore.NewService().List, StateRead: statestore.NewService().Read, Workers: worker.List, ResolveTarget: deps.ResolveTarget}
+	return statusapp.Service{Home: home, IssueOpsRoot: deps.IssueOpsRoot(), Version: deps.Version, Inspect: deps.InspectHarness, Doctor: diagnostics.Run, State: statestore.NewService().List, StateRead: statestore.NewService().Read, Workers: worker.List, ResolveTarget: deps.ResolveTarget}
 }
 func BuildStatus(diagnostics doctorapp.Service, worker workerapp.Service, repo string) Status {
 	return testStatusService(diagnostics, worker).Run(repo)

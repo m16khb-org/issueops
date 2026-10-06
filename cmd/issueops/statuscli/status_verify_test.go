@@ -15,8 +15,6 @@ import (
 	"time"
 
 	statestore "issueops/internal/adapter/outbound/state"
-	daemoncontract "issueops/internal/contract/daemon"
-	inspect "issueops/internal/contract/inspect"
 	"issueops/internal/testsupport"
 )
 
@@ -47,47 +45,6 @@ func TestBuildHarnessStatusReportsStateWorkerAndSelfVerify(t *testing.T) {
 	if !status.SelfVerify.Found || status.SelfVerify.LatestKey != "self-verify-latest" || status.SelfVerify.Bytes == 0 {
 		t.Fatalf("expected self verify latest state, got %#v", status.SelfVerify)
 	}
-	if status.Daemon.Message == "" {
-		t.Fatalf("daemon status should include an operator-facing message")
-	}
-}
-
-func TestBuildHarnessStatusSharesDaemonAdmissionWithDoctor(t *testing.T) {
-	repo := t.TempDir()
-	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	t.Setenv("ISSUEOPS_WORKER_DIR", t.TempDir())
-	oldDeps := deps
-	t.Cleanup(func() { Configure(oldDeps) })
-	want := daemoncontract.Status{
-		Running:           true,
-		Reachable:         true,
-		IdentityVerified:  true,
-		ActiveConnections: 64,
-		MaxConnections:    64,
-		Accepting:         false,
-		Draining:          false,
-	}
-	Configure(Deps{
-		IssueOpsRoot:      func() string { return repo },
-		ResolveTarget:     func(target string) string { return target },
-		Version:           "test",
-		InspectHarness:    func(string) inspect.InspectInfo { return inspect.InspectInfo{} },
-		CheckDaemonStatus: func() daemoncontract.Status { return want },
-	})
-
-	status := BuildStatus(testDoctorService(), testWorkerService(), repo)
-	if status.Daemon != want {
-		t.Fatalf("unexpected daemon status: %#v", status.Daemon)
-	}
-	if status.Doctor.ActiveConnections != 64 || status.Doctor.MaxConnections != 64 || status.Doctor.Accepting || status.Doctor.Draining {
-		t.Fatalf("status doctor drifted from daemon admission: doctor=%#v daemon=%#v", status.Doctor, status.Daemon)
-	}
-	for _, issue := range status.Doctor.Issues {
-		if issue.Code == "daemon_connection_limit_reached" {
-			return
-		}
-	}
-	t.Fatalf("status doctor did not evaluate saturated daemon admission: %+v", status.Doctor)
 }
 
 func TestRunStatusWritesTextAndJSON(t *testing.T) {
@@ -98,7 +55,7 @@ func TestRunStatusWritesTextAndJSON(t *testing.T) {
 	text := captureStatusVerifyStdout(t, func() error {
 		return RunStatus(testDoctorService(), testWorkerService(), []string{"--repo", repo})
 	})
-	if !strings.Contains(text, "issueops system-status:") || !strings.Contains(text, "daemon running:") {
+	if !strings.Contains(text, "issueops system-status:") || !strings.Contains(text, "doctor healthy:") {
 		t.Fatalf("unexpected status text output:\n%s", text)
 	}
 

@@ -44,7 +44,7 @@ The stability audit can false-fail when its smoke assumptions lag the issueops c
 ## Stability audit 명령과 timeout을 현재 공개 계약·측정치에 맞출 것
 
 - top-level install audit에 과거 `bootstrap --sync`를 남기지 않는다. 현재 install 표면은 `bootstrap`/`install-native`; docs sync는 `project bootstrap --sync`다.
-- live 정합성 gate인 `operational_doctor`는 상위 live harness 환경을 그대로 사용해야 한다. 반대로 audit 내부 ordinary/race `go test`는 `ISSUEOPS_ROOT`를 exact audited source checkout으로 고정하고 `ISSUEOPS_STATE_DIR`, `ISSUEOPS_DAEMON_DIR`, `ISSUEOPS_WORKER_DIR`를 audit 전용 임시 루트로 격리한다. live 환경으로 회귀 테스트를 실행하면 성공한 테스트가 IssueOps session row를 다시 만들어 최종 정리가 영구히 종료되지 않으며, `ISSUEOPS_ROOT`를 빈 임시 경로로 바꾸면 source identity를 잃어 정상 회귀 검사가 실패한다.
+- live 정합성 gate인 `operational_doctor`는 상위 live harness 환경을 그대로 사용해야 한다. 반대로 audit 내부 ordinary/race `go test`는 `ISSUEOPS_ROOT`를 exact audited source checkout으로 고정하고 `ISSUEOPS_STATE_DIR`, `ISSUEOPS_WORKER_DIR`를 audit 전용 임시 루트로 격리한다. live 환경으로 회귀 테스트를 실행하면 성공한 테스트가 IssueOps session row를 다시 만들어 최종 정리가 영구히 종료되지 않으며, `ISSUEOPS_ROOT`를 빈 임시 경로로 바꾸면 source identity를 잃어 정상 회귀 검사가 실패한다.
 - full repository test timeout은 가장 느린 정상 package와 race의 관측 상한보다 커야 한다. 현재 regression timeout은 300초다.
 - `self-verify --full --iterations=10` 매 seed test/race 실행 및 3712초/5400초 audit timeout: **해당 CLI mode는 2026-08-11에 제거됐다.** 현재 operational command로 쓰지 않는다. 역사적 기록은 [2026-08-11 — self-verify `--full`/`--iterations` modes removed](lessons/2026-08-11-self-verify-iterations-full-modes-removed.md), 현재 동작은 testing family의 `testing/self-verification.md`를 본다.
 - timeout 실패는 마지막 성공 package, elapsed time, 살아 있는 child command를 확인해 hang과 짧은 wrapper 상한을 구분한다.

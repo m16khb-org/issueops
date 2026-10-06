@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	daemoncontract "issueops/internal/contract/daemon"
 	"issueops/internal/contract/mcpservice"
+	"issueops/internal/contract/processidentity"
 )
 
 const testBearer = "test-bearer-value"
@@ -26,7 +26,7 @@ type fakeWorld struct {
 	holder     int
 	loaded     bool
 	serving    *Record
-	identities map[int]daemoncontract.ProcessIdentity
+	identities map[int]processidentity.Identity
 	commands   []string
 	onLoad     func()
 	waits      int
@@ -48,7 +48,7 @@ func newFakeWorld(t *testing.T) *fakeWorld {
 	if err := os.WriteFile(binary, []byte("build-one"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	w := &fakeWorld{t: t, stateDir: state, binary: binary, identities: map[int]daemoncontract.ProcessIdentity{}, maxWaits: 3, address: freeAddress(t)}
+	w := &fakeWorld{t: t, stateDir: state, binary: binary, identities: map[int]processidentity.Identity{}, maxWaits: 3, address: freeAddress(t)}
 	t.Cleanup(w.closeEndpoint)
 	return w
 }
@@ -86,7 +86,7 @@ func (w *fakeWorld) serve(pid int, buildID string) Record {
 	if err := writeRecord(filepath.Join(httpDir(w.stateDir), recordFileName), record); err != nil {
 		w.t.Fatal(err)
 	}
-	w.identities[pid] = daemoncontract.ProcessIdentity{StartTime: record.StartedAt, Executable: record.Executable}
+	w.identities[pid] = processidentity.Identity{StartTime: record.StartedAt, Executable: record.Executable}
 	w.holder = pid
 	w.serving = &record
 	w.listen()
@@ -147,10 +147,10 @@ func (w *fakeWorld) service(address string) *Service {
 		Address: address, Path: "/mcp", Label: "io.issueops.test", UID: 501,
 		Run:      w.run,
 		LookPath: func(string) (string, error) { return "/bin/launchctl", nil },
-		Inspect: func(pid int) (daemoncontract.ProcessIdentity, error) {
+		Inspect: func(pid int) (processidentity.Identity, error) {
 			identity, ok := w.identities[pid]
 			if !ok {
-				return daemoncontract.ProcessIdentity{}, errors.New("no such process")
+				return processidentity.Identity{}, errors.New("no such process")
 			}
 			return identity, nil
 		},
@@ -236,7 +236,7 @@ func TestStatusRunningRequiresIdentityAndAuthenticatedResponse(t *testing.T) {
 		t.Fatalf("status=%+v err=%v", status, err)
 	}
 
-	w.identities[4242] = daemoncontract.ProcessIdentity{StartTime: "2026-10-02T09:00:00Z", Executable: w.binary}
+	w.identities[4242] = processidentity.Identity{StartTime: "2026-10-02T09:00:00Z", Executable: w.binary}
 	status, err = w.service(address).Status(t.Context())
 	if err == nil || status.Status != mcpservice.StatusConflict || status.ErrorCode != CodeIdentityMismatch {
 		t.Fatalf("reused pid with a different start time: status=%+v err=%v", status, err)

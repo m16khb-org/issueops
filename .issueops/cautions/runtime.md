@@ -1,12 +1,12 @@
 ---
 name: cautions/runtime.md
-description: Cautions for process, daemon, worker, lock, state store, and install/temp-artifact hygiene.
+description: Cautions for process, MCP service, worker, lock, state store, and install/temp-artifact hygiene.
 ---
 
-# Runtime, daemon, worker, lock, and state cautions
+# Runtime, MCP service, worker, lock, and state cautions
 
 Family index: [CAUTIONS.md](../CAUTIONS.md). Evergreen hazards for process,
-daemon, worker, lock, SQLite state store, and build/install temp-artifact
+MCP service, worker, lock, SQLite state store, and build/install temp-artifact
 hygiene. Dated incident lessons live under [lessons/](lessons/).
 
 ## 5. Worker lifecycle 문제
@@ -14,7 +14,6 @@ hygiene. Dated incident lessons live under [lessons/](lessons/).
 현재 worker는 state-first one-shot job record와 policy-gated `run --read-only`만 제공한다. 장기 상주 worker를 추가하면 stale lock, orphan process, socket 권한, 오래된 binary 문제가 생긴다.
 
 주의:
-- 현재 daemon은 이전 binary로 떠 있는 MCP proxy만 쓰는 legacy backend이며 background job runner가 아니다.
 - persistent worker를 도입하기 전에 health/version handshake, graceful shutdown, stale lock cleanup, timeout/cancellation을 고정한다.
 - socket path와 permission을 문서화하고 테스트한다.
 
@@ -36,18 +35,15 @@ hygiene. Dated incident lessons live under [lessons/](lessons/).
 - 1단계는 `issueops inspect`와 state/checkpoint 같은 작은 기능으로 시작한다.
 - 반복 사용으로 필요가 확인된 기능만 worker/plugin layer로 승격한다.
 
-## 13. Daemon lifecycle drift
+## 13. MCP service build drift
 
-stdio `issueops mcp`는 host 세션 안에서 in-process로 동작하므로 새 세션의 MCP는 daemon build와 갈라지지 않는다. 기본 HTTP 설치의 공용 서비스는 다르다. `update`/`bootstrap`/`install-native.sh`는 서비스를 stop하고 binary를 교체한 뒤 다시 start하며, 새 `bin/issueops`의 SHA-256과 서비스가 보고한 `build_id`가 같아야 성공으로 본다. 수동 `go build -o bin/issueops`만 하면 실행 중인 서비스는 옛 build로 남는다. `issueops mcp service status --json`의 `build_id`를 확인하고 필요하면 `mcp service stop`/`start`로 교체한다. 서비스는 서버 cwd를 어떤 도구에서도 쓰지 않으므로 workspace 도구는 항상 `authority_file`과 `workspace_root`를 넘겨야 한다. unit은 `ISSUEOPS_ROOT`·`ISSUEOPS_STATE_DIR`만 넘기므로 서비스의 `HOME`·`PATH`는 supervisor 기본값이고 `CODEX_HOME`은 없다. 테스트용 서비스는 격리 state와 테스트 전용 launchd label로 띄우고, 끝난 뒤 label과 47831 listener가 남지 않았는지 확인한다. 다만 이전 binary로 떠 있는 MCP proxy는 여전히 daemon에 붙는다. `issueops update`와 `issueops bootstrap`은 post-install 단계에서 daemon을 내리기만 하고, 옛 proxy가 재연결하면서 새 binary로 daemon을 다시 띄운다. 수동 `go build`나 `install-native`만 실행한 경우에는 daemon이 옛 binary로 남을 수 있다.
+stdio `issueops mcp`는 host 세션 안에서 in-process로 동작하므로 새 세션의 MCP는 설치된 build를 그대로 쓴다. 기본 HTTP 설치의 공용 서비스는 다르다. `update`/`bootstrap`/`install-native.sh`는 서비스를 stop하고 binary를 교체한 뒤 다시 start하며, 새 `bin/issueops`의 SHA-256과 서비스가 보고한 `build_id`가 같아야 성공으로 본다. 수동 `go build -o bin/issueops`만 하면 실행 중인 서비스는 옛 build로 남는다. `issueops mcp service status --json`의 `build_id`를 확인하고 필요하면 `mcp service stop`/`start`로 교체한다. 서비스는 서버 cwd를 어떤 도구에서도 쓰지 않으므로 workspace 도구는 항상 `authority_file`과 `workspace_root`를 넘겨야 한다. unit은 `ISSUEOPS_ROOT`·`ISSUEOPS_STATE_DIR`만 넘기므로 서비스의 `HOME`·`PATH`는 supervisor 기본값이고 `CODEX_HOME`은 없다. 테스트용 서비스는 격리 state와 테스트 전용 launchd label로 띄우고, 끝난 뒤 label과 47831 listener가 남지 않았는지 확인한다.
 
 주의:
-- 수동 설치/빌드 후 MCP smoke 전에는 필요하면 `issueops daemon stop --json`으로 기존 daemon을 내린다.
-- 테스트는 `ISSUEOPS_DAEMON_DIR=$(mktemp -d)/daemon`으로 실제 user daemon과 분리한다.
-- macOS actual-socket QA는 Unix-domain socket 경로 길이 제한을 피하도록 `/tmp/ahd-*`처럼 짧은 임시 root를 사용한다. 기본 `t.TempDir()`의 긴 `/var/folders/...` 경로는 구현과 무관한 `bind: invalid argument`를 만들 수 있다.
-- QA launcher가 daemon child의 parent라면 `daemon stop`과 parent의 `Wait`를 동시에 진행해 SIGTERM 종료 자식을 즉시 reap한다. unreaped zombie는 `kill(pid, 0)`에 살아 있는 것으로 보여 fail-closed forced-stop 검증을 오탐할 수 있다. 모든 QA는 `defer`/`finally` 정리 후 임시 binary, state root, PID, socket이 0개인지 확인한다.
-- daemon socket/pid/log는 user state dir에 두고 repo나 wiki vault에 쓰지 않는다.
-- accept 루프를 검증하려고 연결을 몰아서 여는 테스트는 대기 중인 연결이 커널 백로그 한도(`kern.ipc.somaxconn`, macOS 기본 128)를 넘지 않게 dial과 수용 확인을 번갈아 수행한다. `maxConnections`(256)만큼 먼저 dial하면 129번째 connect가 `ECONNREFUSED`로 거절되어 부하에 따라 흔들린다 ([2026-08-27 lesson](lessons/2026-08-27-daemon-accept-loop-burst-dial-backlog.md)).
-- **D2 (NFS caveat, accepted)**: daemon single-instance locking은 `daemonlock/lock.go`의 `O_EXCL` create + stale(30s)/PID-liveness 감지로 막는다. lock 파일은 startup handoff 후 child가 삭제하므로(transient) flock fallback은 부적합하다(flock은 inode에 묶여 삭제 시 깨짐). `O_EXCL`은 NFS/FUSE에서 원자성이 보장되지 않으니 **daemon state는 로컬 FS에 둔다**; 네트워크 마운트 home에서는 이론상 두 daemon이 뜰 수 있으나 두 번째는 동일 unix socket bind에서 실패한다.
+- 테스트는 `ISSUEOPS_STATE_DIR=$(mktemp -d)`로 실제 user state와 분리한다.
+- 장기 실행 parent가 자식 프로세스를 띄우면 `Process.Release`만 호출하지 말고 `Wait`로 종료 상태를 회수한다. unreaped zombie는 `kill(pid, 0)`에 살아 있는 것으로 보여 생존 판정을 오탐한다. 모든 QA는 `defer`/`finally` 정리 후 임시 binary, state root, PID가 0개인지 확인한다.
+- MCP service record와 log는 user state dir에 두고 repo나 wiki vault에 쓰지 않는다.
+- 2026-10-06 이전에 설치한 환경에는 `~/.local/state/issueops/daemon/`(또는 `$ISSUEOPS_STATE_DIR/daemon/`)이 남아 있을 수 있다. legacy daemon은 제거됐으므로 `state doctor`가 이 디렉터리를 `unexpected_directory`로 보고하면 안에 실행 중인 프로세스가 없는지 확인한 뒤 지운다.
 
 ## 20. /tmp/issueops-* build artifact cleanup
 

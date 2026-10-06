@@ -10,7 +10,7 @@ import (
 func ContractValue() contract.SelfVerificationContract {
 	contract := contract.SelfVerificationContract{
 		Name:    "self_verification_summary",
-		Version: 7,
+		Version: 8,
 		RequiredFields: []string{
 			"total_runs",
 			"total_steps",
@@ -58,7 +58,6 @@ func GoalDefinitions() []contract.SelfVerificationGoalDefinition {
 		{Name: "policy_security", KoreanName: "정책·보안", Labels: []string{"command policy smoke", "command audit smoke", "preflight fuzz", "redaction audit"}},
 		{Name: "mcp_state_regression", KoreanName: "MCP·상태 회귀", Labels: []string{"MCP smoke", "state roundtrip", "contract check", "tool contract conformance"}},
 		{Name: "concurrency_isolation", KoreanName: "동시성 격리", Labels: []string{"parallel isolation"}},
-		{Name: "daemon_resilience", KoreanName: "데몬 복구력", Labels: []string{"daemon resilience"}},
 		{Name: "worker_lifecycle", KoreanName: "Worker 생명주기", Labels: []string{"worker lifecycle smoke"}},
 		{Name: "native_integration", KoreanName: "네이티브 통합", Labels: []string{"native integration"}},
 	}
@@ -82,7 +81,6 @@ func CoverageDefinitions() []contract.SelfVerificationCoverageDefinition {
 		{Claim: "no-shell worker lifecycle", Labels: []string{"worker lifecycle smoke"}},
 		{Claim: "MCP and state regression", Labels: []string{"MCP smoke", "state roundtrip"}},
 		{Claim: "parallel temp isolation", Labels: []string{"parallel isolation"}},
-		{Claim: "daemon restart resilience", Labels: []string{"daemon resilience"}},
 		{Claim: "git preflight fuzz", Labels: []string{"preflight fuzz"}},
 		{Claim: "native integration", Labels: []string{"native integration"}},
 		{Claim: "secret redaction audit", Labels: []string{"redaction audit"}},

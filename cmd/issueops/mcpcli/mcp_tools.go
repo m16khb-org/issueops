@@ -9,7 +9,6 @@ import (
 	auditapp "issueops/internal/application/audit"
 	channelapp "issueops/internal/application/channel"
 	commitapp "issueops/internal/application/commitsuggest"
-	daemonapp "issueops/internal/application/daemon"
 	gatesapp "issueops/internal/application/gates"
 	lintapp "issueops/internal/application/lintdiagnose"
 	loopapp "issueops/internal/application/looprun"
@@ -68,7 +67,6 @@ type MCPDependencies struct {
 	Channel          channelapp.Service
 	Policy           policyapp.Service
 	Audit            auditapp.Service
-	Daemon           daemonapp.Reader
 	Worker           workerapp.Service
 	Loop             loopapp.Service
 	ProjectBootstrap bootstrapapp.Service

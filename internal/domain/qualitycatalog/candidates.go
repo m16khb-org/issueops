@@ -7,7 +7,6 @@ import (
 const CandidateStatusOpen = "open"
 
 var resolvedCandidateIDs = map[string]bool{
-	"daemon-connection-limit":        true,
 	"worker-stuck-running-detection": true,
 	"state-write-locking":            true,
 	// Resolved wave: signal rules in augmentcatalog confirm satisfaction and the
@@ -105,14 +104,6 @@ func CandidateSpecs() []CandidateSpec {
 			ExpectedGain: []string{"response field drift fails at contract tests before golden updates"},
 			VerifyWith:   []string{"go test ./internal/contract/toolconformance ./internal/contract/issueops -count=1", "go test -cover ./internal/contract/toolconformance ./internal/contract/issueops"},
 			Evidence:     []string{"quality inspect low-coverage evidence"},
-		},
-		{
-			ID: "daemon-connection-limit", Title: "Add daemon connection limit protection", Category: "audit-risk",
-			Impact: 90, Feasibility: 72, Novelty: 58, Risk: 26,
-			WhyNow:       []string{".issueops/PROJECT_AUDIT.md flags D1 P1 no connection limit"},
-			ExpectedGain: []string{"daemon resource exhaustion has an explicit guard and test"},
-			VerifyWith:   []string{"go test ./cmd/issueops/daemoncli ./internal/adapter/worker -count=1"},
-			Evidence:     []string{"PROJECT_AUDIT D1 P1"},
 		},
 		{
 			ID: "worker-stuck-running-detection", Title: "Detect worker jobs stuck running after process crash", Category: "audit-risk",

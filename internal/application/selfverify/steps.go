@@ -31,31 +31,30 @@ os.execv(sys.executable, [sys.executable] + sys.argv[1:])
 const selfVerifyGoTestTimeout = 10 * time.Minute
 
 type SelfVerifyStepDeps struct {
-	IssueOpsRoot                    func() string
-	RunCommandStep                  func(string, string, time.Duration, string, string, ...string) StepResult
-	ValidateHarnessInvariants       func(string) StepResult
-	ValidateGoFormat                func(string) StepResult
-	ValidateRiskQATier              func(string) RiskQAEvidence
-	ValidateRiskQATierWithScope     func(string, string) RiskQAEvidence
-	ValidateInspect                 func(string, string) StepResult
-	ValidateDocsIndex               func(string, string) StepResult
-	ValidateSelfVerifyCandidate     func(string, string, int64) StepResult
-	ValidateStepBudgetBaseline      func(string, string, int64) StepResult
-	ValidateInstallDryRunSmoke      func(string, string, int64) StepResult
-	ValidateCommandPolicy           func(string, string) StepResult
-	ValidateCommandAudit            func(string, string, int64) StepResult
-	ValidateContractCheck           func(string, string) StepResult
-	ValidateToolConformance         func(string, string) StepResult
-	ValidateWorkerLifecycle         func(string, string, int64) StepResult
-	ValidateMCP                     func(string, string) StepResult
-	ValidateStateRoundtrip          func(string, string, int64) StepResult
-	ValidateParallelTempIsolation   func(string, string, int64) StepResult
-	ValidateDaemonRestartResilience func(string, string, int64) StepResult
-	ValidatePreflightFuzz           func(string, string, int64) StepResult
-	ValidateWebFetchBattery         func(string, string, int64) StepResult
-	ValidateNativeIntegration       func(string) StepResult
-	ValidateRedactionAudit          func(string) StepResult
-	ValidateQAGate                  func(string) StepResult
+	IssueOpsRoot                  func() string
+	RunCommandStep                func(string, string, time.Duration, string, string, ...string) StepResult
+	ValidateHarnessInvariants     func(string) StepResult
+	ValidateGoFormat              func(string) StepResult
+	ValidateRiskQATier            func(string) RiskQAEvidence
+	ValidateRiskQATierWithScope   func(string, string) RiskQAEvidence
+	ValidateInspect               func(string, string) StepResult
+	ValidateDocsIndex             func(string, string) StepResult
+	ValidateSelfVerifyCandidate   func(string, string, int64) StepResult
+	ValidateStepBudgetBaseline    func(string, string, int64) StepResult
+	ValidateInstallDryRunSmoke    func(string, string, int64) StepResult
+	ValidateCommandPolicy         func(string, string) StepResult
+	ValidateCommandAudit          func(string, string, int64) StepResult
+	ValidateContractCheck         func(string, string) StepResult
+	ValidateToolConformance       func(string, string) StepResult
+	ValidateWorkerLifecycle       func(string, string, int64) StepResult
+	ValidateMCP                   func(string, string) StepResult
+	ValidateStateRoundtrip        func(string, string, int64) StepResult
+	ValidateParallelTempIsolation func(string, string, int64) StepResult
+	ValidatePreflightFuzz         func(string, string, int64) StepResult
+	ValidateWebFetchBattery       func(string, string, int64) StepResult
+	ValidateNativeIntegration     func(string) StepResult
+	ValidateRedactionAudit        func(string) StepResult
+	ValidateQAGate                func(string) StepResult
 }
 
 func PlannedSteps(root string, tempBin string, seed int64, goTestStep *StepResult, deps SelfVerifyStepDeps) []SelfVerifyPlannedStep {
@@ -113,7 +112,6 @@ func PlannedSteps(root string, tempBin string, seed int64, goTestStep *StepResul
 		{Label: "MCP smoke", Run: func() StepResult { return deps.ValidateMCP(tempBin, root) }},
 		{Label: "state roundtrip", Run: func() StepResult { return deps.ValidateStateRoundtrip(tempBin, root, seed) }},
 		{Label: "parallel isolation", Run: func() StepResult { return deps.ValidateParallelTempIsolation(tempBin, root, seed) }},
-		{Label: "daemon resilience", Run: func() StepResult { return deps.ValidateDaemonRestartResilience(tempBin, root, seed) }},
 		{Label: "preflight fuzz", Run: func() StepResult { return deps.ValidatePreflightFuzz(tempBin, root, seed) }},
 		{Label: "web fetch battery", Run: func() StepResult { return deps.ValidateWebFetchBattery(tempBin, root, seed) }},
 		{Label: "native integration", Run: func() StepResult { return deps.ValidateNativeIntegration(root) }},

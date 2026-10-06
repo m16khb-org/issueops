@@ -86,9 +86,6 @@ func candidateSatisfactionRules() []candidateSatisfactionRule {
 		{"worker-stuck-running-detection", func(signals contract.SelfAugmentRepoSignals) []string {
 			return evidenceWhen(signals.HasWorkerStuckRunningDetection, "worker cleanup-stuck detects running jobs with dead PIDs and marks them failed through CLI/core coverage")
 		}},
-		{"daemon-connection-limit", func(signals contract.SelfAugmentRepoSignals) []string {
-			return evidenceWhen(signals.HasDaemonConnectionLimit, "daemon accept loop enforces maxConnections with rejection and graceful-drain coverage")
-		}},
 		{"genius-mermaid-lint", func(signals contract.SelfAugmentRepoSignals) []string {
 			return evidenceWhen(signals.HasGeniusMermaidLint, "QA gate lints Mermaid fences using GENIUS_THINK quote/<br/> rules and repo diagrams were normalized")
 		}},

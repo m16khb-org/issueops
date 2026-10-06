@@ -41,7 +41,6 @@ func parallelIsolationErrors(probes []parallelIsolationProbe) []string {
 		for label, path := range map[string]string{
 			"temp_root":     probe.TempRoot,
 			"state_dir":     probe.StateDir,
-			"daemon_dir":    probe.DaemonDir,
 			"artifact_path": probe.ArtifactPath,
 		} {
 			if strings.TrimSpace(path) == "" {

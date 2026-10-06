@@ -12,8 +12,8 @@ func newStatusService() statusapp.Service {
 	state := newStateService(statestore.StateDir())
 	return statusapp.Service{
 		Home: home, IssueOpsRoot: issueOpsRoot(), Version: version, Inspect: newHarnessInspector(),
-		Daemon: newDaemonReader().Run, Doctor: newDoctorService().Run,
-		State: state.List, StateRead: state.Read, Workers: newWorkerService().List,
+		Doctor: newDoctorService().Run,
+		State:  state.List, StateRead: state.Read, Workers: newWorkerService().List,
 		ResolveTarget: func(target string) string {
 			if target != "" {
 				return target

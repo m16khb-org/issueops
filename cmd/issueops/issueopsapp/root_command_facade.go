@@ -62,7 +62,6 @@ func rootCommand() rootcmd.Command {
 			"gates":         runGates,
 			"channel":       runChannel,
 			"web-fetch":     runWebFetch,
-			"daemon":        runDaemon,
 			"mcp":           runMCPCommand,
 		},
 		ErrorExitCode: rootSubcommandErrorExitCode,

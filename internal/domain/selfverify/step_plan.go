@@ -23,7 +23,6 @@ var stepOrder = []string{
 	"MCP smoke",
 	"state roundtrip",
 	"parallel isolation",
-	"daemon resilience",
 	"preflight fuzz",
 	"web fetch battery",
 	"native integration",

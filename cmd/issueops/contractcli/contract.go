@@ -108,7 +108,7 @@ func BuildCompatibilityContract(commands []clicontract.Command, tools []map[stri
 		ResponseFields: map[string][]string{
 			"self_verification_summary":       verifydomain.ContractValue().RequiredFields,
 			"harness_doctor":                  {"ok", "healthy", "kind", "repo_root", "state_dir", "lifecycle_state", "pipe_capacity_bytes", "checks", "issues"},
-			"harness_status":                  {"ok", "kind", "version", "repo", "inspect", "doctor", "daemon", "state", "workers", "self_verify", "warnings"},
+			"harness_status":                  {"ok", "kind", "version", "repo", "inspect", "doctor", "state", "workers", "self_verify", "warnings"},
 			"command_policy":                  {"ok", "allowed", "audit_log_id", "workspace_root", "cwd", "argv", "tier", "deny_reasons", "warnings"},
 			"command_run":                     {"ok", "executed", "exit_code", "read_only", "policy", "stdout", "stderr", "error"},
 			"guard_check":                     {"ok", "repo_root", "mode", "checked_files", "findings", "summary"},

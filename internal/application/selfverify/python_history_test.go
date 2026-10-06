@@ -35,7 +35,7 @@ func TestPythonContractDistinguishesHistoricalEvidenceWithoutChangingSnapshotSch
 	hash := sha256.Sum256(bytes)
 	legacyContract.Hash = hex.EncodeToString(hash[:])
 	current := domain.ContractValue()
-	if current.Version != 7 || current.Hash == legacyContract.Hash || !reflect.DeepEqual(current.RequiredFields, legacyContract.RequiredFields) {
+	if current.Version != 8 || current.Hash == legacyContract.Hash || !reflect.DeepEqual(current.RequiredFields, legacyContract.RequiredFields) {
 		t.Fatal(current, legacyContract)
 	}
 	old := augment.SelfAugmentStateSnapshot{SchemaVersion: 1, Kind: "self_verification_summary", OK: true, Summary: incomplete}

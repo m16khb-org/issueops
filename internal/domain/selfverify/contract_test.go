@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-func TestContractV7FencesLegacyTimingEvidence(t *testing.T) {
-	// Given: the v6 contract shape is unchanged apart from its version.
+func TestContractV8FencesV7GoalEvidence(t *testing.T) {
+	// Given: the v7 contract carried the removed daemon resilience goal.
 	current := ContractValue()
 	legacy := current
-	legacy.Version = 6
+	legacy.Version = 7
 	legacy.Hash = ""
 	data, err := json.Marshal(legacy)
 	if err != nil {
@@ -20,8 +20,13 @@ func TestContractV7FencesLegacyTimingEvidence(t *testing.T) {
 	sum := sha256.Sum256(data)
 	legacy.Hash = hex.EncodeToString(sum[:])
 
-	// Then: downstream hash/version checks cannot reuse v6 as a v7 baseline.
-	if current.Version != 7 || current.Hash == legacy.Hash {
-		t.Fatalf("timing contract did not change: current=%+v legacy=%+v", current, legacy)
+	// Then: downstream hash/version checks cannot reuse v7 as a v8 baseline.
+	if current.Version != 8 || current.Hash == legacy.Hash {
+		t.Fatalf("goal contract did not change: current=%+v legacy=%+v", current, legacy)
+	}
+	for _, name := range current.GoalNames {
+		if name == "daemon_resilience" {
+			t.Fatalf("v8 contract still names the removed daemon goal: %+v", current.GoalNames)
+		}
 	}
 }

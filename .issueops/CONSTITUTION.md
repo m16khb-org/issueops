@@ -61,7 +61,7 @@ description: Instruction priority, safety, and accuracy principles.
 - shell/process 실행은 명시적 cwd, timeout, env 정책, audit log 없이 추가하지 않는다.
 - workspace root 밖 파일 접근은 기본 거부하고, 허용이 필요하면 정책으로 드러낸다.
 - secret 원문은 로그, 문서, 테스트 assertion, MCP/CLI 응답에 남기지 않는다.
-- worker daemon은 권한이 제한된 local IPC를 사용하고, stale lock/orphan process 복구 방안을 갖춘다.
+- local worker는 권한이 제한된 local IPC를 사용하고, stale lock/orphan process 복구 방안을 갖춘다.
 - Codex plugin이나 Claude hook은 core 정책을 우회하지 않는다.
 
 문제 해결 원칙:
@@ -174,7 +174,7 @@ Human CLI          ┘                                      ├─> fs/git/proce
 ### KISS
 
 - MVP는 CLI one-shot으로 시작한다.
-- daemon, plugin packaging, multi-agent scheduling은 필요성이 검증된 뒤 확장한다.
+- 상주 프로세스, plugin packaging, multi-agent scheduling은 필요성이 검증된 뒤 확장한다.
 
 ### DRY
 

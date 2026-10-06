@@ -9,13 +9,11 @@ import (
 
 func TestHandleAssistantWorkerMCPToolCallCoversLocalAssistantPayloads(t *testing.T) {
 	repo := makeGitRepoForContract(t)
-	t.Setenv("ISSUEOPS_DAEMON_DIR", t.TempDir())
 	tests := []struct {
 		name     string
 		call     MCPToolCall
 		wantText string
 	}{
-		{name: "daemon status", call: MCPToolCall{Name: "daemon_status", Arguments: map[string]any{}}, wantText: "daemon is not running"},
 		{name: "contract schema", call: MCPToolCall{Name: "contract_schema", Arguments: map[string]any{}}, wantText: "mcp_tools"},
 		{name: "contract check", call: MCPToolCall{Name: "contract_check", Arguments: map[string]any{}}, wantText: "mcp_tools"},
 		{name: "commit suggest no diff", call: MCPToolCall{Name: "commit_suggest", Arguments: map[string]any{"repo": repo}}, wantText: `"executed": false`},

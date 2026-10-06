@@ -39,7 +39,6 @@ func TestPlannedSelfVerifyStepsPreservesExecutionOrder(t *testing.T) {
 		"MCP smoke",
 		"state roundtrip",
 		"parallel isolation",
-		"daemon resilience",
 		"preflight fuzz",
 		"web fetch battery",
 		"native integration",
@@ -293,9 +292,6 @@ func fakeSelfVerifyStepDeps(t *testing.T) SelfVerifyStepDeps {
 		},
 		ValidateParallelTempIsolation: func(string, string, int64) StepResult {
 			return ok("parallel isolation")
-		},
-		ValidateDaemonRestartResilience: func(string, string, int64) StepResult {
-			return ok("daemon resilience")
 		},
 		ValidatePreflightFuzz: func(string, string, int64) StepResult {
 			return ok("preflight fuzz")

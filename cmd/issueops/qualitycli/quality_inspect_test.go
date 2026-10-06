@@ -457,7 +457,7 @@ func branchy(v int) int {
 	writeQualityTestFile(t, filepath.Join(root, ".issueops", "PROJECT_AUDIT.md"), `
 | ID | Area | Title | Priority | Size |
 | --- | --- | --- | --- | --- |
-| D1 | Daemon | No connection limit | P1 | Small |
+| W1 | Worker | No stuck running detection | P1 | Small |
 | X1 | Docs | Low priority docs polish | P3 | Small |
 `)
 
@@ -491,7 +491,7 @@ func branchy(v int) int {
 		t.Fatalf("expected quality candidates")
 	}
 	for _, candidate := range result.Candidates {
-		if candidate.ID == "daemon-connection-limit" || candidate.ID == "worker-stuck-running-detection" || candidate.ID == "state-write-locking" || candidate.ID == "draftwiki-stale-lock" {
+		if candidate.ID == "worker-stuck-running-detection" || candidate.ID == "state-write-locking" || candidate.ID == "draftwiki-stale-lock" {
 			t.Fatalf("resolved audit candidate should not be listed by quality inspect: %+v", candidate)
 		}
 		if candidate.ID == "" || candidate.Status == "" || len(candidate.VerifyWith) == 0 || len(candidate.Evidence) == 0 {

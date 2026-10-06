@@ -153,7 +153,7 @@ class StabilityAuditScriptTest(unittest.TestCase):
             "host_mcp_checks",
             "hook_smoke",
             "temp_state_worker_policy",
-            "daemon_and_mcp_stress",
+            "mcp_stress",
             "cleanup_stale",
             "rss_sample",
             "regression",
@@ -185,7 +185,7 @@ class StabilityAuditScriptTest(unittest.TestCase):
             "host_mcp_checks",
             "hook_smoke",
             "temp_state_worker_policy",
-            "daemon_and_mcp_stress",
+            "mcp_stress",
             "cleanup_stale",
             "rss_sample",
             "regression",
@@ -224,7 +224,7 @@ class StabilityAuditScriptTest(unittest.TestCase):
             "host_mcp_checks",
             "hook_smoke",
             "temp_state_worker_policy",
-            "daemon_and_mcp_stress",
+            "mcp_stress",
             "cleanup_stale",
             "rss_sample",
             "regression",
@@ -396,7 +396,6 @@ class StabilityAuditScriptTest(unittest.TestCase):
             live_env = {
                 "ISSUEOPS_STATE_DIR": str(live_root),
                 "ISSUEOPS_ROOT": str(live_root / "root"),
-                "ISSUEOPS_DAEMON_DIR": str(live_root / "daemon"),
                 "ISSUEOPS_WORKER_DIR": str(live_root / "worker"),
             }
 
@@ -435,7 +434,7 @@ class StabilityAuditScriptTest(unittest.TestCase):
             self.assertIsNotNone(isolated_env)
             self.assertEqual(set(isolated_env), set(live_env))
             self.assertEqual(isolated_env["ISSUEOPS_ROOT"], str(audit.ROOT))
-            for key in ("ISSUEOPS_STATE_DIR", "ISSUEOPS_DAEMON_DIR", "ISSUEOPS_WORKER_DIR"):
+            for key in ("ISSUEOPS_STATE_DIR", "ISSUEOPS_WORKER_DIR"):
                 self.assertNotEqual(isolated_env[key], live_env[key])
         self.assertEqual(go_test_envs[0], go_test_envs[1])
 

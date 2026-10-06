@@ -22,7 +22,7 @@ description: System structure, component boundaries, and responsibilities.
 | [`architecture/hexagonal-core.md`](architecture/hexagonal-core.md) | contract/domain/application/port/adapter 구조, package boundary, 의존 방향 ratchet, cross-host tool contract, operational-health boundary |
 | [`architecture/domain-responsibilities.md`](architecture/domain-responsibilities.md) | capability별 domain·application·adapter 책임과 production wiring |
 | [`architecture/issueops-cleanup.md`](architecture/issueops-cleanup.md) | 실행·정리 소유권, 외부 효과 순서, CAS·drain 경계 |
-| [`architecture/runtime.md`](architecture/runtime.md) | 실행 모드(CLI/MCP/daemon/issueops/loop/worker), docs/state/config/log 토폴로지, lock 직렬화, command/policy model, MCP tool 설계, standalone runtime policy |
+| [`architecture/runtime.md`](architecture/runtime.md) | 실행 모드(CLI/MCP/issueops/loop/worker), docs/state/config/log 토폴로지, lock 직렬화, command/policy model, MCP tool 설계, standalone runtime policy |
 | [`architecture/host-integration.md`](architecture/host-integration.md) | Codex/Claude/Omo 통합 map, pioneer skills layer(host-neutral), host-adapter 변경 체크리스트 |
 | [`architecture/issueops.md`](architecture/issueops.md) | IssueOps v1 execution 상태·schema 권위, capability vertical, operational surface, next_command 권위, actor model, Orca 경계, execution threat model |
 
@@ -51,9 +51,8 @@ description: System structure, component boundaries, and responsibilities.
 
 CLI one-shot, 세 host가 직접 연결하는 사용자당 하나의 로컬 Streamable HTTP MCP
 서비스(`mcp --http`, `mcp service`), 호환 표면으로 남은 host 세션 안의 `mcp` stdio
-server, 이전 binary의 proxy만 쓰는 legacy `daemon`, `issueops`, `loop`, `worker` 부분 구현, 그리고 Phase 5/6의
-Codex/Claude/Omo UX adapter. 각 모드의 도입 단계·용도·원칙 표와 legacy daemon
-socket/lock, MCP schema/descriptor
+server, `issueops`, `loop`, `worker` 부분 구현, 그리고 Phase 5/6의
+Codex/Claude/Omo UX adapter. 각 모드의 도입 단계·용도·원칙 표와 MCP schema/descriptor
 설계, command-policy catalog와 기본 거부/허용 범주, standalone runtime policy는
 [`architecture/runtime.md`](architecture/runtime.md)가 소유한다.
 

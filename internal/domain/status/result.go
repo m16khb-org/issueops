@@ -45,7 +45,3 @@ func Evaluate(facts Observation) Decision {
 	}
 	return Decision{OK: lookupOK && facts.Doctor.OK && facts.State.OK && facts.Workers.OK, Warnings: warnings, SelfVerify: selfVerify}
 }
-
-func DaemonAdmissionObserved(running, reachable, identityVerified bool) bool {
-	return running && reachable && identityVerified
-}

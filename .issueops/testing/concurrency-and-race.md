@@ -44,7 +44,7 @@ package set listed in [issueops-execution.md](issueops-execution.md).
 
 ## Process and lock substrate
 
-- daemon/proxy test는 socket path override, MCP stream, start/status/stop smoke, stale lock 복구를 포함한다.
+- MCP service test는 격리 state, 테스트 전용 supervisor label, start/status/stop smoke, stale record 복구를 포함한다.
 - worker test는 timeout, cancellation, stale lock, concurrent job을 포함한다.
 
 Operational-health stale-scan integration must prove `operational_dead_owner`

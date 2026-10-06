@@ -11,8 +11,11 @@ description: Whole-project audit findings, triage status, and hardening follow-u
 > state → `internal/adapter/outbound/state`, structured JSON decoding →
 > `internal/domain/judgement`, the draft-wiki queue lock and the Z.AI
 > `externalllm` wrapper were removed with the draft-wiki worker, and the daemon
-> lock lives at `cmd/issueops/daemoncli/daemonlock/lock.go`. Section file:line
+> lock lived at `cmd/issueops/daemoncli/daemonlock/lock.go`. Section file:line
 > references are kept as incident-time evidence.
+> Daemon note (2026-10-06): the legacy daemon subsystem (`cmd/issueops/daemoncli`,
+> `internal/*/daemon`, `daemon_status`) was removed. The Daemon findings below
+> (D1–D3, B1, B2, C5) are closed by removal.
 > Scope: All 31 subsystems: daemon, MCP proxy, worker, command policy, state, lifecycle hooks (7 types), project bootstrap/docs, self-verify, self-augment, CLI, install, hook input, search routing, command guard, next-action relay, remote artifact gate, VCS linking, lint diagnose, project docs detection, prompt/compact, context region, API doc, draft wiki, trace, guard, contract CLI, preflight, external LLM, agy settings, commit suggest, repopath, docs index
 
 ---

@@ -1,11 +1,11 @@
 //go:build linux
 
-package daemon
+package processinspect
 
 import (
 	"encoding/binary"
 	"fmt"
-	contract "issueops/internal/contract/daemon"
+	contract "issueops/internal/contract/processidentity"
 	"math"
 	"os"
 	"path/filepath"
@@ -19,37 +19,37 @@ const (
 	maxRepresentableTicksPerSecond = uint64(time.Second)
 )
 
-func (observer ProcessInspector) Inspect(pid int) (contract.ProcessIdentity, error) {
+func (observer Inspector) Inspect(pid int) (contract.Identity, error) {
 	if pid <= 0 {
-		return contract.ProcessIdentity{}, fmt.Errorf("pid must be positive")
+		return contract.Identity{}, fmt.Errorf("pid must be positive")
 	}
 	procDir := filepath.Join("/proc", strconv.Itoa(pid))
 	executable, err := os.Readlink(filepath.Join(procDir, "exe"))
 	if err != nil {
-		return contract.ProcessIdentity{}, fmt.Errorf("read process executable: %w", err)
+		return contract.Identity{}, fmt.Errorf("read process executable: %w", err)
 	}
 	executable = strings.TrimSuffix(executable, " (deleted)")
 	executable, err = canonicalExecutable(executable)
 	if err != nil {
-		return contract.ProcessIdentity{}, err
+		return contract.Identity{}, err
 	}
 	stat, err := os.ReadFile(filepath.Join(procDir, "stat"))
 	if err != nil {
-		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
+		return contract.Identity{}, fmt.Errorf("read process start time: %w", err)
 	}
 	systemStat, err := os.ReadFile("/proc/stat")
 	if err != nil {
-		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
+		return contract.Identity{}, fmt.Errorf("read process start time: %w", err)
 	}
 	auxv, err := os.ReadFile("/proc/self/auxv")
 	if err != nil {
-		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
+		return contract.Identity{}, fmt.Errorf("read process start time: %w", err)
 	}
 	startTime, err := linuxProcessStartTime(stat, systemStat, auxv)
 	if err != nil {
-		return contract.ProcessIdentity{}, fmt.Errorf("read process start time: %w", err)
+		return contract.Identity{}, fmt.Errorf("read process start time: %w", err)
 	}
-	return contract.ProcessIdentity{StartTime: startTime, Executable: executable, ExecutablePathStable: true}, nil
+	return contract.Identity{StartTime: startTime, Executable: executable}, nil
 }
 
 func linuxProcessStartTime(stat, systemStat, auxv []byte) (string, error) {

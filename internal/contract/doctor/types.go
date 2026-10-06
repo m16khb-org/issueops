@@ -13,17 +13,8 @@ type HarnessDoctorRequest struct {
 	Home                string                              `json:"home,omitempty"`
 	Version             string                              `json:"version,omitempty"`
 	StaticOnly          bool                                `json:"-"`
-	DaemonAdmission     HarnessDoctorDaemonAdmission        `json:"daemon_admission,omitempty"`
 	OperationalSnapshot *operationalhealthcontract.Snapshot `json:"-"`
 	OperationalOptions  operationalhealthcontract.Options   `json:"-"`
-}
-
-type HarnessDoctorDaemonAdmission struct {
-	Observed          bool `json:"observed"`
-	ActiveConnections int  `json:"active_connections"`
-	MaxConnections    int  `json:"max_connections"`
-	Accepting         bool `json:"accepting"`
-	Draining          bool `json:"draining"`
 }
 
 type HarnessDoctorResult struct {
@@ -36,10 +27,6 @@ type HarnessDoctorResult struct {
 	StateDir          string                    `json:"state_dir"`
 	LifecycleState    ProjectLifecycleStatePlan `json:"lifecycle_state"`
 	PipeCapacityBytes int                       `json:"pipe_capacity_bytes"`
-	ActiveConnections int                       `json:"active_connections"`
-	MaxConnections    int                       `json:"max_connections"`
-	Accepting         bool                      `json:"accepting"`
-	Draining          bool                      `json:"draining"`
 	Checks            []HarnessDoctorCheck      `json:"checks"`
 	Issues            []HarnessDoctorIssue      `json:"issues"`
 	GeneratedAt       string                    `json:"generated_at"`

@@ -16,28 +16,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// issueops mcp는 호출한 host 세션의 자식 프로세스 안에서 요청을 처리한다. 공유
-// daemon으로 proxy하면 issueops_execution이 호출자 대신 daemon의 프로세스 계보를
-// 관측해 native actor 증명이 성립하지 않는다. 옛 opt-in 환경 변수 없이도 in-process로
-// 동작하고 daemon 파일을 만들지 않아야 한다.
-func TestRunMCPServesInProcessWithoutADaemon(t *testing.T) {
-	t.Setenv("ISSUEOPS_MCP_DIRECT", "")
-	daemonDir := t.TempDir()
-	t.Setenv("ISSUEOPS_DAEMON_DIR", daemonDir)
-	session := startRunMCPTestSession(t, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
-	tools, err := session.ListTools(context.Background(), nil)
-	if err != nil || len(tools.Tools) == 0 {
-		t.Fatalf("RunMCP tool listing failed: tools=%#v err=%v", tools, err)
-	}
-	entries, err := os.ReadDir(daemonDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(entries) != 0 {
-		t.Fatalf("RunMCP must not start or contact a daemon, found %v in %s", entries, daemonDir)
-	}
-}
-
 func TestRunMCPWithDependenciesUsesItsReleaseHandlerOnDirectTransport(t *testing.T) {
 	called := false
 	session := startRunMCPTestSession(t, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
@@ -111,7 +89,7 @@ func TestServeMCPStreamWithDependenciesKeepsConcurrentReleaseHandlersIsolated(t 
 	}
 }
 
-func TestSDKTransportOwnsBothStdioAndDaemonConnections(t *testing.T) {
+func TestSDKTransportOwnsBothStdioAndStreamConnections(t *testing.T) {
 	source, err := os.ReadFile("mcp_transport.go")
 	if err != nil {
 		t.Fatal(err)
@@ -122,7 +100,7 @@ func TestSDKTransportOwnsBothStdioAndDaemonConnections(t *testing.T) {
 		}
 	}
 
-	for _, mode := range []string{"stdio", "daemon_conn"} {
+	for _, mode := range []string{"stdio", "stream_conn"} {
 		t.Run(mode, func(t *testing.T) {
 			session := startMCPTransportTestSession(t, mode, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
 			tools, err := session.ListTools(context.Background(), nil)
@@ -179,7 +157,7 @@ func startMCPTransportTestSession(t *testing.T, mode string, deps MCPDependencie
 		}()
 		reader, writer = clientReader, clientWriter
 		closeClient = func() { _ = clientReader.Close(); _ = clientWriter.Close() }
-	case "daemon_conn":
+	case "stream_conn":
 		serverConn, clientConn := net.Pipe()
 		go func() { done <- ServeMCPStreamContextWithDependencies(ctx, serverConn, serverConn, io.Discard, deps) }()
 		reader, writer = clientConn, clientConn

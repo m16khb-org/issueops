@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	daemoncontract "issueops/internal/contract/daemon"
 	"issueops/internal/contract/mcpservice"
+	"issueops/internal/contract/processidentity"
 )
 
 const (
@@ -50,7 +50,7 @@ type Config struct {
 
 	Run          Runner
 	LookPath     func(string) (string, error)
-	Inspect      func(int) (daemoncontract.ProcessIdentity, error)
+	Inspect      func(int) (processidentity.Identity, error)
 	EnsureBearer func() (string, error)
 	LockHolder   func(string) (int, error)
 	Client       *http.Client

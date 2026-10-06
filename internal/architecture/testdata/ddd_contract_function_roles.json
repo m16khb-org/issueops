@@ -546,11 +546,6 @@
   },
   {
     "path": "internal/contract/mcp/tool_schemas.go",
-    "symbol": "func DaemonStatusTool",
-    "role": "shape"
-  },
-  {
-    "path": "internal/contract/mcp/tool_schemas.go",
     "symbol": "func SelfLoopAdvertisedTools",
     "role": "shape"
   },

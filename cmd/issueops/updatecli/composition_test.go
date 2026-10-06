@@ -11,7 +11,6 @@ import (
 	"runtime"
 )
 
-type daemonProcess = contract.DaemonProcess
 type mcpProxyProcess = contract.MCPProxyProcess
 type MCPCleanupProcess = contract.MCPCleanupProcess
 type Deps struct{ IssueOpsRoot func() string }
@@ -44,10 +43,6 @@ func testRuntime() adapter.Runtime {
 var installScriptCommandRunner = func(script string, args ...string) error {
 	return testRuntime().Install(filepath.Dir(filepath.Dir(script)), args)
 }
-var postInstallDaemonRefresh = refreshRunningDaemonAfterInstall
-var installedDaemonCommandRunner = func(binary string, args ...string) error { return testRuntime().RunInstalledDaemon(binary, args...) }
-var daemonProcessLister = func() ([]daemonProcess, error) { return testRuntime().Daemons() }
-var daemonProcessTerminator = func(pid int) error { return testRuntime().Terminate(pid) }
 var mcpProxyProcessLister = func() ([]mcpProxyProcess, error) { return testRuntime().List() }
 var mcpProxyTerminator = func(pid int) error { return testRuntime().Terminate(pid) }
 var mcpProxyOrphanTerminationSupported = func() bool { return runtime.GOOS == "darwin" }
@@ -62,19 +57,11 @@ func (testInstaller) Install(root string, args []string) error {
 	return installScriptCommandRunner(script, args...)
 }
 func testCommand() Command {
-	return Command{Root: deps.IssueOpsRoot(), Service: app.Service{Installer: testInstaller{}, RefreshDaemon: func() error { _, err := postInstallDaemonRefresh(); return err }}}
+	return Command{Root: deps.IssueOpsRoot(), Service: app.Service{Installer: testInstaller{}}}
 }
 func runInstallScriptCommand(name string, args []string) error { return testCommand().Run(name, args) }
 func runUpdate(args []string) error                            { return runInstallScriptCommand("update", args) }
 func runBootstrap(args []string) error                         { return runInstallScriptCommand("bootstrap", args) }
-func terminateStaleDaemonProcesses() (int, error) {
-	return (app.StaleDaemons{List: daemonProcessLister, Terminate: daemonProcessTerminator, CurrentPID: os.Getpid}).Run()
-}
-func refreshRunningDaemonAfterInstall() (bool, error) {
-	return true, (app.DaemonRefresh{Stop: func() error {
-		return installedDaemonCommandRunner(filepath.Join(deps.IssueOpsRoot(), "bin", "issueops"), "daemon", "stop", "--json")
-	}, Cleanup: app.StaleDaemons{List: daemonProcessLister, Terminate: daemonProcessTerminator, CurrentPID: os.Getpid}}).Run()
-}
 
 type testMCPProxyEffects struct{}
 
@@ -86,9 +73,6 @@ func (testMCPProxyEffects) SupportsOrphanTermination() bool {
 }
 func CleanupMCPProxies(dry bool) (contract.MCPCleanupResult, error) {
 	return app.CleanupMCPProxies(testMCPProxyEffects{}, dry)
-}
-func parseDaemonProcess(line, binary string) (daemonProcess, bool) {
-	return adapter.ParseDaemonProcess(line, binary)
 }
 func parseMCPProxyProcessSnapshot(line, binary string) (mcpProxyProcess, bool) {
 	return adapter.ParseMCPProxyProcessSnapshot(line, binary)

@@ -13,9 +13,7 @@ import (
 
 // host나 셸 파이프라인이 요청을 보낸 직후 stdin을 닫아도, 이미 받은 요청의 응답은
 // 모두 돌려준 뒤 세션을 닫는다. go-sdk는 입력 EOF에서 연결을 닫으면서 처리 중인
-// 요청을 버리므로, 입력 쪽 EOF를 in-flight 요청이 없어질 때까지 미룬다. 예전 daemon
-// proxy가 host EOF 뒤에도 응답을 끝까지 돌려주던 동작(8a729a33)을 in-process
-// stdio 경로에서도 지킨다.
+// 요청을 버리므로, 입력 쪽 EOF를 in-flight 요청이 없어질 때까지 미룬다.
 
 // mcpInputEOFDrainLimit는 입력 EOF 뒤 응답을 기다리는 상한이다. 짝을 찾지 못한
 // 요청이 있어도 host가 떠난 뒤 프로세스가 무기한 남지 않게 한다. 긴 도구 호출도

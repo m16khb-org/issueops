@@ -38,7 +38,7 @@ func TestActiveExecutionGuidanceMatchesCurrentRuntime(t *testing.T) {
 		},
 		{
 			path:    ".issueops/operations/install.md",
-			current: []string{"in-process", "reconnect", "legacy", "architecture/runtime.md"},
+			current: []string{"in-process", "reconnect", "architecture/runtime.md"},
 			retired: []string{"two-event lifecycle surface", "restart the shared daemon when it is already running so the MCP backend uses the rebuilt binary"},
 		},
 	} {

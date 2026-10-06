@@ -366,3 +366,10 @@ func Classify(snapshot Snapshot, opts Options) Result {
 	findings := builder.sorted()
 	return Result{Healthy: len(findings) == 0, Findings: findings}
 }
+
+func SeverityForFinding(code string) string {
+	if code == FindingInventoryUnknown {
+		return "error"
+	}
+	return "warning"
+}

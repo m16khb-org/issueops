@@ -26,15 +26,6 @@ func initSDKServerWithDiagnostics(deps MCPDependencies, diagnostics io.Writer) *
 
 const httpServerInstructions = "This MCP endpoint is the shared local service used by every host session, not a per-host process. Workspace tools need an authority_file issued by 'issueops mcp authorize'. Use harness tools for shared Codex/Claude inspection, atomic commit preflight, state checkpoints, self-verification, self-augmentation, and commit policy context. External wiki or knowledge-base workflows belong to their own separately installed servers, not issueops."
 
-// initSDKServerWithLogger는 진단 writer 대신 로거를 직접 받는 변형이다.
-// 데몬 경로가 세션 루틴 이벤트를 DEBUG로 강등하는 필터 로거를 넘긴다.
-func initSDKServerWithLogger(deps MCPDependencies, logger *slog.Logger) *mcp.Server {
-	if logger == nil {
-		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-	}
-	return newSDKServer(deps, sdkServerOptionsWithLogger(logger), transportStdio, nil)
-}
-
 func newSDKServer(deps MCPDependencies, options *mcp.ServerOptions, transport serverTransport, access *slog.Logger) *mcp.Server {
 	if transport == transportHTTP {
 		options.Instructions = httpServerInstructions
@@ -308,7 +299,7 @@ func sdkReadResourceResult(content map[string]any) *mcp.ReadResourceResult {
 	}
 }
 
-// serveMCPStreamSDK runs both split stdio and bidirectional daemon connections
+// serveMCPStreamSDK runs both split stdio and a bidirectional stream connection
 // through the official go-sdk IOTransport.
 func serveMCPStreamSDK(ctx context.Context, input io.Reader, output io.Writer, diagnostics io.Writer, deps MCPDependencies) error {
 	server := initSDKServerWithDiagnostics(deps, diagnostics)
@@ -325,7 +316,3 @@ func serveMCPStreamSDK(ctx context.Context, input io.Reader, output io.Writer, d
 	writer := &observingWriter{target: output, inflight: inflight}
 	return server.Run(ctx, &mcp.IOTransport{Reader: reader, Writer: writer})
 }
-
-type writeCloser struct{ io.Writer }
-
-func (writeCloser) Close() error { return nil }

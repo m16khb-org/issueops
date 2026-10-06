@@ -31,7 +31,7 @@ instead of duplicating their content here or in a guide.
 | Topic | Owner |
 |-------|-------|
 | First-run install, `io update`, command shims, MCP refresh | [operations/install.md](operations/install.md) |
-| Direct CLI, policy, guard, state, loop, daemon, MCP cleanup, worker, audit | [operations/cli-and-mcp.md](operations/cli-and-mcp.md) |
+| Direct CLI, policy, guard, state, loop, MCP cleanup, worker, audit | [operations/cli-and-mcp.md](operations/cli-and-mcp.md) |
 | Codex/Claude/Omo native skills, MCP registration, lifecycle hooks | [operations/hosts.md](operations/hosts.md) |
 | self-verify, self-augment, api-doc gate, general smoke | [operations/verification.md](operations/verification.md) |
 | Project bootstrap, project-doc routing, MCP document updates | [operations/project-docs.md](operations/project-docs.md) |
@@ -68,17 +68,16 @@ instead of duplicating their content here or in a guide.
    path as `authority_file` plus `workspace_root`/`cwd`. The token itself is
    never printed. `--mcp-transport=stdio` keeps the previous `issueops mcp`
    stdio entry, which serves inside the host session's own process. agy always
-   uses stdio. The legacy `issueops daemon` remains only for MCP proxies started
-   from older binaries. Service limits: the unit passes only `ISSUEOPS_ROOT` and
+   uses stdio. Service limits: the unit passes only `ISSUEOPS_ROOT` and
    `ISSUEOPS_STATE_DIR`. HTTP `harness_inspect` therefore sees the supervisor's
    default `HOME`/`PATH` and no `CODEX_HOME`, and may report
    `host_version_unobservable`. The SDK also advertises `idempotentHint:false`
    on the two read-only tools (`harness_inspect`, `docs_index`), next to the
    catalog's `readOnlyHint:true`/`openWorldHint:false`.
-3. CLI: 29 top-level commands (`install/update/bootstrap/version`,
+3. CLI: 28 top-level commands (`install/update/bootstrap/version`,
    `inspect/preflight/status/doctor/docs`,
    `policy/guard/quality/verify-work/trace/contract/api-doc`, `project/hook`,
-   `state/daemon/mcp/worker`, `issueops/loop/gates/channel`,
+   `state/mcp/worker`, `issueops/loop/gates/channel`,
    `self-verify/self-augment/web-fetch`); `issueops --help` is the
    canonical list.
 4. Loop contracts: `issueops loop start/record-attempt/status/stop` records

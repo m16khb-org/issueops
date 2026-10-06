@@ -88,7 +88,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | 하네스 방식 | **외부 Go 하네스 코어 + 얇은 호스트 어댑터** | 특정 host 전용 구현은 다른 host와 공유하기 어렵다. 외부 CLI/MCP/worker 코어를 두면 Codex, Claude Code, Omo에서 같은 동작을 재사용할 수 있다. |
 | Plugin의 역할 | 핵심 로직이 아니라 **설치·문서·명령 호출 래퍼** | Codex/Claude/Omo별 확장점 차이를 어댑터에 격리한다. |
 | 통합 표면 | 1차 CLI, 2차 공용 로컬 Streamable HTTP MCP 서비스(stdio는 호환 표면), 3차 local job worker | 모든 에이전트는 shell/CLI를 다룰 수 있고, Claude Code는 MCP 연동이 자연스럽다. 세 host는 사용자당 하나인 `127.0.0.1:47831/mcp` 서비스에 직접 연결하고, 요청 권한은 native CLI(`issueops mcp authorize`)가 발급한 caller capability로 정한다. stdio `issueops mcp`는 host 세션 프로세스 안에서 native actor 계보를 보존한다. 공통 state는 SQLite가 맡는다. 장기 job worker는 필요성이 확인된 뒤 도입한다(2026-10-02 ADR). |
-| 구현 언어 | **Go** | 단일 바이너리·동시성·CLI/MCP/daemon 구현 생산성이 Rust보다 유리하다. 요구 toolchain은 `go.mod`를 기준으로 확인한다. |
+| 구현 언어 | **Go** | 단일 바이너리·동시성·CLI/MCP 구현 생산성이 Rust보다 유리하다. 요구 toolchain은 `go.mod`를 기준으로 확인한다. |
 
 상세 근거와 단계별 계획은 `.issueops/ADR.md`를 따른다.
 
@@ -124,14 +124,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - MCP tool schema와 CLI JSON 출력은 호스트별로 다르게 만들지 않는다.
 - command policy는 built-in catalog를 기본으로 하되 workspace별 `.issueops/policy.json` override를 매 평가마다 로드한다. load/parse 문제는 기존 `warnings` 필드로 노출하고, 전역 first-root cache를 만들지 않는다.
 - IssueOps record JSON에는 `schema_version`이 포함된다. 현재 쓰기 버전은 1이며, missing/zero/future/unsupported schema는 모두 generic `invalid state`로 fail-safe 거부한다(`TestIssueOpsReaderRejectsMissingAndZeroSchema`). 자동 승격이나 변환 명령은 없다.
-- local job worker는 workspace 경계, command policy, secret redaction, audit log가 준비된 뒤 도입한다. 현재 daemon은 이전 binary로 떠 있는 MCP proxy만 쓰는 legacy backend다.
+- local job worker는 workspace 경계, command policy, secret redaction, audit log가 준비된 뒤 도입한다.
 - 에이전트 state는 repo 소스와 분리한다. 추적해야 할 지식은 `.issueops/`에, 런타임 캐시/로그는 user state 또는 ignored workspace state에 둔다.
 
 ## 8. Current Directory Map
 
 | 경로 | 목적 |
 |------|------|
-| `cmd/issueops/` | composition root와 inbound CLI/MCP(stdio·Streamable HTTP)/daemon/hook adapter. `mcp`는 `--http`, `service start\|stop\|status`, `authorize`, `cleanup` 하위 명령을 갖는다. top-level 명령(정규 목록은 `issueops --help`): `api-doc`, `bootstrap`, `channel`, `contract`, `daemon`, `docs`, `doctor`, `gates`, `guard`, `hook`, `inspect`, `install`, `issueops`, `loop`, `mcp`, `policy`, `preflight`, `project`, `quality`, `self-augment`, `self-verify`, `state`, `status`, `trace`, `update`, `verify-work`, `version`, `web-fetch`, `worker` |
+| `cmd/issueops/` | composition root와 inbound CLI/MCP(stdio·Streamable HTTP)/hook adapter. `mcp`는 `--http`, `service start\|stop\|status`, `authorize`, `cleanup` 하위 명령을 갖는다. top-level 명령(정규 목록은 `issueops --help`): `api-doc`, `bootstrap`, `channel`, `contract`, `docs`, `doctor`, `gates`, `guard`, `hook`, `inspect`, `install`, `issueops`, `loop`, `mcp`, `policy`, `preflight`, `project`, `quality`, `self-augment`, `self-verify`, `state`, `status`, `trace`, `update`, `verify-work`, `version`, `web-fetch`, `worker` |
 | `internal/contract/` | CLI, MCP, state가 공유하는 versioned DTO와 response contract |
 | `internal/domain/` | filesystem, process, DB를 모르는 순수 규칙, reducer, classifier |
 | `internal/application/` | domain과 좁은 port를 조합하는 capability use case |

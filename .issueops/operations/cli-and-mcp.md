@@ -156,12 +156,9 @@ block entering `pr` until every gate has evidence or an honest `ABANDON`.
 Because the ledger lives in the worktree, real cycles commit it before strict
 readiness checks `worktree_clean`.
 
-## Daemon And MCP
+## MCP
 
 ```bash
-issueops daemon start --json
-issueops daemon status --json
-issueops daemon stop --json
 issueops mcp
 issueops mcp cleanup --json
 issueops mcp cleanup --apply --json
@@ -169,16 +166,7 @@ issueops mcp cleanup --apply --json
 
 기본 HTTP 설치에서 세 host는 `issueops mcp --http`(서비스 제어는 `issueops mcp service start|stop|status --json`)에
 연결하고, HTTP로 workspace 도구를 부르기 전에 native 세션에서 `issueops mcp authorize`를 실행해
-`authority_file`을 받는다. stdio `issueops mcp`는 host 세션 안에서 in-process로 동작하며 daemon을
-시작하지 않는다. 두 경로 모두 daemon을 쓰지 않는다. 아래 daemon 명령과
-admission 설정은 이전 binary로 떠 있는 MCP proxy가 붙는 legacy daemon에만 적용된다.
-
-daemon admission은 기본 256개 동시 MCP 연결을 허용한다. 장기 실행 multi-session
-host에서 더 큰 bounded pool이 필요하면 daemon 시작 전에
-`ISSUEOPS_DAEMON_MAX_CONNECTIONS`를 `1..4096` 범위로 설정하고 daemon을
-재시작한다. 범위를 벗어나거나 해석할 수 없는 값은 기본 256으로 fail-safe
-복귀한다. `daemon status --json`의 `active_connections`,
-`max_connections`, `accepting`으로 실제 admission 상태를 확인한다.
+`authority_file`을 받는다. stdio `issueops mcp`는 host 세션 안에서 in-process로 동작한다.
 
 `mcp cleanup`은 기본 dry-run이다. Darwin의 `--apply`만 현재 checkout의 exact `issueops mcp` 명령, `PPID=1`, 확인된 executable/start time을 모두 만족하고 signal 직전 동일 identity가 다시 확인된 고아를 종료한다. Linux 컨테이너처럼 `PPID=1`이 살아 있는 host일 수 있는 플랫폼은 `skip-unsupported-platform`으로 거부한다. 살아 있는 host proxy, 다른 checkout, 외부 MCP, identity 미확정 프로세스는 건드리지 않는다.
 

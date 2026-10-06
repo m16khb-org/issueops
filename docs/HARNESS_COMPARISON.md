@@ -3,6 +3,8 @@
 작성일: 2026-05-30 KST
 범위: `issueops` 현재 worktree를 기준으로, OMC(oh-my-claudecode), OMX(oh-my-codex), Hermes Agent 계열 하네스와 비교해 부족한 점, 개선이 필요한 점, 바라는 점을 정리한다.
 
+> 작성 시점의 스냅샷이다. 본문의 공유 daemon(`daemon` 명령, `daemon_status`, daemon status)은 2026-10-06에 제거됐다.
+
 ## 1. 요약 결론
 
 `issueops`는 **Codex와 Claude Code가 같은 Go binary, 같은 MCP schema, 같은 command-policy/state/project-doc contract를 쓰게 하는 host-neutral 안전 코어**라는 포지션이 뚜렷하다. OMC/OMX처럼 “팀이 알아서 구현까지 밀어붙이는 오케스트레이션 런타임”이거나 Hermes처럼 “항상 켜져 있는 self-improving agent OS”는 아니다.

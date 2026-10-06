@@ -105,7 +105,6 @@ Usage:
   issueops project bootstrap [--repo PATH] [--sync] [--dry-run] [--json]
   issueops project docs [--repo PATH] [--json]
   issueops project route-docs [--repo PATH] [--task TEXT] [--json]
-  issueops daemon start|status|stop [--json]
   issueops worker enqueue --kind KIND [--payload TEXT] [--json]
   issueops worker run --read-only --kind KIND [--payload TEXT] [--workspace-root PATH] [--cwd PATH] [--json] -- ARGV...
   issueops worker status --id ID [--json]

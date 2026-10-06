@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	daemoncontract "issueops/internal/contract/daemon"
 	doctor "issueops/internal/contract/doctor"
 	inspect "issueops/internal/contract/inspect"
 	"issueops/internal/domain/operationalhealth"
@@ -124,7 +123,6 @@ func TestRunDoctorStaticOnlySkipsLiveOperationalChecks(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	repo := t.TempDir()
 	command := testDoctorCommand()
-	command.CheckDaemonStatus = func() daemoncontract.Status { panic("static doctor must not inspect daemon admission") }
 	command.CollectOperationalHealth = func(context.Context, string) operationalhealth.Snapshot {
 		panic("static doctor must not collect live operational health")
 	}
@@ -148,31 +146,6 @@ func TestRunDoctorStaticOnlySkipsLiveOperationalChecks(t *testing.T) {
 		t.Fatalf("static doctor must retain binary_drift: %#v", result.Checks)
 	} else if check.Name != "binary_drift" {
 		t.Fatalf("unexpected binary_drift check: %#v", check)
-	}
-}
-
-func TestRunDoctor_printsLiveDaemonAdmissionHealth(t *testing.T) {
-	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	repo := t.TempDir()
-	command := testDoctorCommand()
-	command.IssueOpsRoot = repo
-	command.Version = "test"
-	command.CheckDaemonStatus = func() daemoncontract.Status {
-		return daemoncontract.Status{ActiveConnections: 64, MaxConnections: 64, Accepting: false, Draining: false}
-	}
-	command.CollectOperationalHealth = func(_ context.Context, root string) operationalhealth.Snapshot {
-		return healthyCLIOperationalSnapshot(root)
-	}
-
-	out := captureStatusVerifyStdout(t, func() error {
-		return command.Run([]string{"--repo", repo, "--json"})
-	})
-	var result doctor.HarnessDoctorResult
-	if err := json.Unmarshal([]byte(out), &result); err != nil {
-		t.Fatalf("decode doctor json: %v\n%s", err, out)
-	}
-	if result.ActiveConnections != 64 || result.MaxConnections != 64 || result.Accepting || result.Draining {
-		t.Fatalf("doctor CLI lost daemon admission health: %#v", result)
 	}
 }
 

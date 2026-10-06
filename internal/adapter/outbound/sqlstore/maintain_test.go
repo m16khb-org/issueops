@@ -98,7 +98,7 @@ func TestMaintainRestoresPrivateSidecarPermissions(t *testing.T) {
 
 // TestSidecarPermissionsUnderUmask documents how the WAL/SHM sidecars are
 // created under a typical 022 umask: modernc/sqlite derives sidecar modes from
-// the main database file at creation time, but real-world daemons have been
+// the main database file at creation time, but real-world long-running processes have been
 // observed with 0644 sidecars, so Maintain re-asserts 0600 rather than trusting
 // inheritance.
 func TestSidecarPermissionsUnderUmask(t *testing.T) {

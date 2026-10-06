@@ -54,7 +54,6 @@ func issueOpsMCPDependencies() mcpcli.MCPDependencies {
 		Channel: newChannelService(statestore.StateDir()),
 		Policy:  policyService, Audit: newCommandAuditService(policyService),
 		Worker:           newWorkerService(),
-		Daemon:           newDaemonReader(),
 		Catalog:          mcpcatalog.Build(),
 		Loop:             newLoopService(),
 		ProjectDocs:      docsService,

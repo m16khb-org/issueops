@@ -128,13 +128,13 @@ does not certify every Markdown file in the repository.
 ### `architecture/`
 
 - `hexagonal-core.md`: domain, application, port, and adapter boundaries
-- `runtime.md`: daemon, MCP, state, process, and lock topology
+- `runtime.md`: MCP, state, process, and lock topology
 - `host-integration.md`: Codex and Claude thin-adapter design
 - `issueops.md`: IssueOps capability verticals and ownership
 
 ### `cautions/`
 
-- `runtime.md`: process, daemon, worker, lock, and state risks
+- `runtime.md`: process, worker, lock, and state risks
 - `security.md`: secrets, command policy, and trust boundaries
 - `integrations.md`: host, hook, MCP, remote, and external-tool risks
 - `audit-and-process.md`: audit interpretation and verification-process risks
@@ -158,7 +158,7 @@ does not certify every Markdown file in the repository.
 - `operations/guides/issueops-providers.md`: IssueOps preparation and provider contracts
 - `operations/guides/issueops-execution.md`: IssueOps execution and recovery
 
-Existing canonical siblings under `operations/` continue to own MCP, daemon,
+Existing canonical siblings under `operations/` continue to own MCP,
 host, release, and installation procedures linked by `OPERATIONS.md`.
 
 ### `testing/`

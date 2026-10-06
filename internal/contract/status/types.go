@@ -1,7 +1,6 @@
 package status
 
 import (
-	daemoncontract "issueops/internal/contract/daemon"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspect "issueops/internal/contract/inspect"
 	statecontract "issueops/internal/contract/state"
@@ -15,7 +14,6 @@ type Result struct {
 	Repo       string                             `json:"repo"`
 	Inspect    inspect.InspectInfo                `json:"inspect"`
 	Doctor     doctorcontract.HarnessDoctorResult `json:"doctor"`
-	Daemon     daemoncontract.Status              `json:"daemon"`
 	State      statecontract.StateListResult      `json:"state"`
 	Workers    workercontract.WorkerListResult    `json:"workers"`
 	SelfVerify SelfVerifyStatus                   `json:"self_verify"`

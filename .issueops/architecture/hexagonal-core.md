@@ -61,7 +61,7 @@ Mermaid는 보조 자료다. 규칙·경계·검증 명령은 아래 텍스트�
 
 | 경로 | 책임 | 금지/주의 |
 |------|------|----------|
-| `cmd/issueops` | composition root, CLI flag/출력, MCP Streamable HTTP·stdio·JSON-RPC, 요청별 caller scope, daemon lifecycle, self-verify/self-augment orchestration | host별 정책과 domain 판정 복제 금지 |
+| `cmd/issueops` | composition root, CLI flag/출력, MCP Streamable HTTP·stdio·JSON-RPC, 요청별 caller scope, self-verify/self-augment orchestration | host별 정책과 domain 판정 복제 금지 |
 | `internal/contract` | transport/state가 공유하는 versioned DTO와 error vocabulary | 판정 로직과 I/O 금지 |
 | `internal/domain` | 순수 규칙, reducer, classifier | adapter/cmd, filesystem/process/DB I/O 금지. clock은 기본 주입하며 `auditid` timestamp ID 생성은 현재 명시적 예외 |
 | `internal/application` | contract/domain/port를 조합하는 capability use case | concrete adapter와 transport 의존 금지 |
@@ -82,7 +82,7 @@ Mermaid는 보조 자료다. 규칙·경계·검증 명령은 아래 텍스트�
 | `internal/adapter/codex` | Codex user skill symlink와 user MCP config 설치 | 대상 repo 파일 쓰기 금지 |
 | `internal/adapter/claude` | Claude user skill symlink와 user-scope MCP 설정 | 기본 설치에서 `.claude/skills`, `.claude/settings.json`, `.mcp.json` 같은 repo-local 파일 쓰기 금지 |
 | `internal/adapter/omo` | Omo user skill/MCP/extension 설정 설치 | 대상 repo 파일 쓰기와 host 공통 정책 복제 금지 |
-| `internal/adapter/worker` | local IPC, job lifecycle, daemon state | shell policy 우회 금지 |
+| `internal/adapter/worker` | local IPC, job lifecycle | shell policy 우회 금지 |
 | `internal/domain/gates` | unlazy 호환 게이트 ledger의 순수 파서·판정·직렬화(원문 보존) | filesystem/process I/O, policy 실행 금지 |
 | `internal/adapter/gates` | 게이트 파일 I/O와 policy 게이트 실행(argv 토큰화→policy→timeout/audit) | raw shell 실행, 크로스 케퍼빌리티 adapter 직접 import 금지(실행기는 composition root 주입) |
 | `internal/adapter/issueops/gatesgate` | 중복 gate ledger의 파일 관측 | readiness 합성과 판정은 application/domain이 담당 |
@@ -141,9 +141,9 @@ root가 실제 preflight·guard application과 정책 실행기, Git·프로젝�
 
 ### Status aggregation and inspect boundary
 
-`internal/contract/status`가 전체 status 응답을, `internal/domain/status`가 관측 성공 여부·경고 순서·검증된 self-verify metadata 투영과 daemon admission 관측 조건을 소유한다. 전체 성공은 doctor의 `Healthy`가 아닌 `OK`와 state·worker의 `OK`, 조회 오류 여부로 판정한다. self-verify는 기존 `selfaugment.HistoryService`의 summary kind/schema 적격성과 generated_at 정렬을 재사용해 최신 실행을 선택한다. 키 prefix나 실행 성공 여부로 제한하지 않으며 후보 자료는 제외한다. 유효한 generated_at 우선, 생성 시각 내림차순, 유효한 updated_at 우선 및 내림차순, key 사전순의 기존 fallback을 유지한다. 선택된 항목의 key·updated_at·bytes는 그대로 투영한다. 시각 진단 경고만으로 전체 성공을 바꾸지 않지만 추가 state read 오류는 warning과 실패로 노출한다.
+`internal/contract/status`가 전체 status 응답을, `internal/domain/status`가 관측 성공 여부·경고 순서·검증된 self-verify metadata 투영을 소유한다. 전체 성공은 doctor의 `Healthy`가 아닌 `OK`와 state·worker의 `OK`, 조회 오류 여부로 판정한다. self-verify는 기존 `selfaugment.HistoryService`의 summary kind/schema 적격성과 generated_at 정렬을 재사용해 최신 실행을 선택한다. 키 prefix나 실행 성공 여부로 제한하지 않으며 후보 자료는 제외한다. 유효한 generated_at 우선, 생성 시각 내림차순, 유효한 updated_at 우선 및 내림차순, key 사전순의 기존 fallback을 유지한다. 선택된 항목의 key·updated_at·bytes는 그대로 투영한다. 시각 진단 경고만으로 전체 성공을 바꾸지 않지만 추가 state read 오류는 warning과 실패로 노출한다.
 
-`application/status.Service`는 inspect → daemon → doctor → state → worker 순서로 조회하며 오류가 있어도 뒤의 조회를 수행한다. state 조회가 성공하면 그 목록을 history의 List callback에서 재사용하고 각 record를 추가로 한 번 읽는다. 빈 목록과 state 조회 실패에는 추가 읽기가 없으며 retention·삭제·쓰기·승격은 호출하지 않는다. 기존 State.List 내부 record 읽기 외에 O(n) 읽기와 O(k log k) 이력 정렬 비용이 생긴다. JSON decode는 application, 적격성과 순서는 selfaugment domain, 집계와 metadata 투영은 status domain에 둔다. root는 home·harness 경로, 같은 state application 인스턴스의 List·Read, worker application과 inspect 관측 함수를 조립하고 CLI는 flag·출력만 담당한다. status CLI의 전역 setter·state 콜백·결과 builder·DTO 별칭은 제거했다. `adapter/inspect.Observer`는 문서 조회 함수를 인스턴스로 받아 파일 관측을 수행한다. daemon 조회도 root에서 고정한 reader를 받는다. 다른 basic/MCP 진입점의 전역 연결은 후속 이전 대상이다.
+`application/status.Service`는 inspect → doctor → state → worker 순서로 조회하며 오류가 있어도 뒤의 조회를 수행한다. state 조회가 성공하면 그 목록을 history의 List callback에서 재사용하고 각 record를 추가로 한 번 읽는다. 빈 목록과 state 조회 실패에는 추가 읽기가 없으며 retention·삭제·쓰기·승격은 호출하지 않는다. 기존 State.List 내부 record 읽기 외에 O(n) 읽기와 O(k log k) 이력 정렬 비용이 생긴다. JSON decode는 application, 적격성과 순서는 selfaugment domain, 집계와 metadata 투영은 status domain에 둔다. root는 home·harness 경로, 같은 state application 인스턴스의 List·Read, worker application과 inspect 관측 함수를 조립하고 CLI는 flag·출력만 담당한다. status CLI의 전역 setter·state 콜백·결과 builder·DTO 별칭은 제거했다. `adapter/inspect.Observer`는 문서 조회 함수를 인스턴스로 받아 파일 관측을 수행한다. 다른 basic/MCP 진입점의 전역 연결은 후속 이전 대상이다.
 
 ### Worker runtime boundary
 
@@ -151,21 +151,15 @@ worker의 enqueue·read·list·cancel·read-only 실행·stuck 정리는 root가
 
 adapter의 `Store`는 조립 시 고정한 경로로 SQL·파일·프로세스 관측을 수행한다. 상대 state 경로는 기존 응답과 오류 메시지에 유지하고, 실제 파일 접근 경로는 작업 디렉터리가 바뀌어도 고정한다. application은 기존처럼 읽을 수 없는 작업을 목록에서 제외하고 생성 시각 내림차순으로 정렬하며 queue 집계는 domain이 판정한다. 읽기·수정·쓰기 전체의 SQL span 잠금과 명령 실행 중 잠금 해제, 취소 및 dead PID 재확인은 유지한다. 기본 read·list의 저장소 생성 동작도 기존 계약을 따른다.
 
-### Daemon lifecycle decision boundary
+### Process identity boundary
 
-daemon의 준비 완료·시작 차단·종료 허용과 OS 프로세스 신원 비교는 `internal/domain/daemon`이 판정한다. 프로세스 시작 시각 비교는 관측한 시간대를 명시적으로 받아 기존 로케일 형식과 소수 초 정밀도를 보존한다. Linux처럼 실행 파일 경로가 안정된 관측에서만 경로 불일치를 다른 프로세스의 증거로 쓰며, Darwin의 symlink 변경에 따른 경로 차이는 시작 시각·file/socket 신원 확인과 함께 처리한다.
-
-`application/daemon.Reader`는 instance 파일·socket·OS 관측 순서를, `Starter`와 `Waiter`는 시작 잠금·준비 대기·취소를, `StopCoordinator`와 `Stopper`는 잠금 안에서 종료·재확인·파일 정리 순서를 담당한다. 최초 instance 읽기 실패 후 socket이 응답하면 파일을 다시 읽는 기존 시작 경쟁 처리를 유지한다. TERM 전과 강제 종료 직전에 OS 신원을 다시 확인하고, 강제 종료 직전 신원 조회가 실패하면 생존 여부를 재확인해 이미 종료한 프로세스를 오인하지 않는다. 파일·프로세스·잠금·clock 효과는 명시적으로 받는다.
-
-상태 코드·프로세스 관측·socket 응답 DTO와 private probe 식별자는 `contract/daemon`으로 모았다. `adapter/daemon`은 파일·프로세스·잠금·소켓 관측과 실행을 맡는다. root가 경로·환경변수·연결 한도·유휴 제한을 고정해 application, `daemoncli.Command`, `daemoncli.Server`를 조립한다. 연결 한도와 유휴 제한의 기본값·유효 범위는 domain이 판정한다.
-
-MCP 직접 호출·SDK, doctor, status는 조립 시 고정한 daemon reader를 사용한다. daemon 서버도 MCP 의존성을 한 번 받아 각 연결에 전달하므로 다른 서버의 환경 설정으로 바뀌지 않는다. CLI의 전역 함수 setter·서버 factory·실행 facade·DTO 별칭은 제거했다. 테스트용 callback fixture는 실제 application과 adapter를 호출한다. socket accept, admission 동시성, 첫 바이트 재생, idle deadline은 inbound transport 책임으로 유지한다. 실제 Unix 소켓의 두 서버와 MCP 호출로 경로·연결 한도 분리를 검증한다.
+MCP service instance 검증과 `mcp cleanup`은 PID가 같은 프로세스 수명인지 확인하려고 OS 프로세스 신원을 관측한다. 신원 DTO는 `contract/processidentity`, 시작 시각 정규화(C locale `ps lstart`, RFC3339, Linux tick receipt)는 `domain/processidentity`, `ps`와 `/proc` 관측은 `adapter/processinspect.Inspector`가 맡는다. root는 `ps` 경로와 환경을 고정해 두 진입점에 주입한다.
 
 ### Update and explicit MCP cleanup boundary
 
-update/bootstrap CLI는 root에서 조립한 `updatecli.Command`로 flag를 해석하고 `application/update.Service`를 호출한다. 설치 성공 뒤의 daemon stop → stale 목록 조회 → 순차 종료는 `DaemonRefresh`와 `StaleDaemons`가 담당한다. dry-run과 설치 실패는 갱신 전에 끝나며, stop 실패 뒤에는 목록을 조회하지 않는다. 현재 프로세스 제외는 `domain/install.MayTerminateDaemon`이 판정한다.
+update/bootstrap CLI는 root에서 조립한 `updatecli.Command`로 flag를 해석하고 `application/update.Service`를 호출한다. 설치 뒤에 실행 중인 프로세스를 내리거나 다시 띄우지 않는다.
 
-`adapter/update.Runtime`은 설치 script·installed binary 실행, 파일 조회, 프로세스 목록과 신호를 처리한다. root가 harness 경로·환경·ps 실행 경로·프로세스 신원 관측을 고정하므로 다른 명령이 환경변수나 cwd를 바꿔도 설정이 섞이지 않는다. script는 요청한 root에서 실행한다. 기존 daemon 목록 조회 실패의 빈 목록 처리와 MCP 목록 실패의 오류 반환 차이를 유지한다.
+`adapter/update.Runtime`은 설치 script 실행, 파일 조회, 프로세스 목록과 신호를 처리한다. root가 harness 경로·환경·ps 실행 경로·프로세스 신원 관측을 고정하므로 다른 명령이 환경변수나 cwd를 바꿔도 설정이 섞이지 않는다. script는 요청한 root에서 실행한다. MCP 목록 조회 실패는 오류로 반환한다.
 
 활성 MCP 세션은 설치 후 정리 대상이 아니다. 명시적 `mcp cleanup`만 `application/update.CleanupMCPProxies`를 호출하며, domain의 exact command·parent·플랫폼·신원 판정과 종료 직전 재조회를 유지한다. 전역 callback/setter, 호환 facade, 사용하지 않는 PID-only parser와 설치 후 MCP no-op은 제거했다. 기존 no-op 테스트는 실제 update application 호출에서 MCP 조회·종료가 없음을 검증하도록 바꿨고, 격리된 프로세스의 실제 script·ps fixture로 두 root의 CLI 실행을 확인한다.
 

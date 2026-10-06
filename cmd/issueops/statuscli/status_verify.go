@@ -24,7 +24,6 @@ func (command Command) Run(args []string) error {
 	}
 	fmt.Printf("issueops system-status: ok=%v repo=%s\n", status.OK, status.Repo)
 	fmt.Printf("doctor healthy: %v\n", status.Doctor.Healthy)
-	fmt.Printf("daemon running: %v (%s)\n", status.Daemon.Running, status.Daemon.Message)
 	fmt.Printf("state records: %d\n", len(status.State.Records))
 	fmt.Printf("worker jobs: %d\n", len(status.Workers.Jobs))
 	for _, warning := range status.Warnings {

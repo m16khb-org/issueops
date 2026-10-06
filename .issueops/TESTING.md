@@ -32,7 +32,7 @@ description: Verification standards, test practices, and required checks.
 
 검증 명령을 실행할 최신 binary가 없으면 먼저 빌드한다. 이 실행용 binary 준비와
 self-verify 내부의 검증용 임시 build는 목적이 다르다. 문서-only 최소 검증은 별도
-설치·bootstrap apply·daemon/state 쓰기를 요구하지 않으며, self-verify 내부 smoke는
+설치·bootstrap apply·state 쓰기를 요구하지 않으며, self-verify 내부 smoke는
 그대로 수행한다.
 
 Go 코드 변경의 기본 검증(`gofmt -l`, `go test -race ./...`, `go vet ./...`, architecture

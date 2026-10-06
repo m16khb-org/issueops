@@ -59,7 +59,6 @@ func runParallelIsolationProbeWithDeps(binary, root string, seed int64, worker i
 	probe.TempRoot = tempRoot
 	defer func() { _ = deps.removeAll(tempRoot) }()
 	probe.StateDir = filepath.Join(tempRoot, "state")
-	probe.DaemonDir = filepath.Join(tempRoot, "daemon")
 	buildDir := filepath.Join(tempRoot, "build")
 	probe.ArtifactPath = filepath.Join(buildDir, "issueops")
 	if err := deps.mkdirAll(buildDir, 0o700); err != nil {
@@ -70,7 +69,7 @@ func runParallelIsolationProbeWithDeps(binary, root string, seed int64, worker i
 		probe.Error = err.Error()
 		return probe
 	}
-	env := []string{"ISSUEOPS_STATE_DIR=" + probe.StateDir, "ISSUEOPS_DAEMON_DIR=" + probe.DaemonDir}
+	env := []string{"ISSUEOPS_STATE_DIR=" + probe.StateDir}
 	value := fmt.Sprintf("worker=%d seed=%d", worker, seed)
 	write := deps.runCommandStepEnv(root, fmt.Sprintf("parallel state write %d", worker), 30*time.Second, "", env, binary, "state", "write", "--key", probe.Key, "--value", value, "--json")
 	probe.Commands = append(probe.Commands, write.Command)

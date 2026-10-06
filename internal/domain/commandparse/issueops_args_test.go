@@ -40,13 +40,13 @@ func TestParseExactIssueOpsArgsMatchesCommandForms(t *testing.T) {
 		},
 		{
 			// ParseExactIssueOpsArgs는 최상위 `issueops` 이후 argv를 받는
-			// 진입점이다. 상위 명령 검증은 호출자 책임이라 daemon/status도
+			// 진입점이다. 상위 명령 검증은 호출자 책임이라 worker/list도
 			// path로 파싱된다(문서화된 계약).
 			name:     "non-issueops path parses as its own path",
-			args:     []string{"daemon", "status"},
+			args:     []string{"worker", "list"},
 			wantOK:   true,
-			wantPath: "daemon",
-			wantArgv: []string{"daemon", "status"},
+			wantPath: "worker",
+			wantArgv: []string{"worker", "list"},
 		},
 	}
 	for _, tc := range cases {

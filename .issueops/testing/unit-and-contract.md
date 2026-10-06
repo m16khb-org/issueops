@@ -138,7 +138,7 @@ CI도 `RUNNER_TEMP`의 환경을 사용하여 checkout이나 사용자 홈을 �
 - `issueops policy check/fake-run` allow/deny/fake execution output shape
 - `issueops guard check` portable anti-pattern output shape
 - MCP tool schema와 response shape
-- daemon-backed MCP smoke response
+- in-process MCP smoke response
 - `cmd/issueops/testdata/usage.golden.txt`
 - `cmd/issueops/testdata/mcp_tools.golden.json`
 - `cmd/issueops/testdata/mcp_resources.golden.json`
@@ -156,7 +156,6 @@ CI도 `RUNNER_TEMP`의 환경을 사용하여 checkout이나 사용자 홈을 �
 - `issueops self-verify --save-state` summary checkpoint serialization
 - `issueops self-verify history` summary checkpoint discovery and retention dry-run/confirm safety
 - `issueops self-verify` native integration fixture for Claude MCP conflicting-scope warning classification
-- `issueops self-verify` daemon resilience step for stale lock/socket recovery and socket permission checks
 - `issueops self-verify compare` summary checkpoint regression comparison
 - `issueops self-verify promote` dry-run/confirm baseline promotion
 - `issueops self-augment --json` planner/candidate curriculum

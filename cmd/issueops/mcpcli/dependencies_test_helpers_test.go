@@ -11,5 +11,5 @@ import (
 func testTransportServices() MCPDependencies {
 	return MCPDependencies{APIDoc: testAPIDocService(), DefaultTarget: IssueOpsRoot(), Preflight: preflightapp.Service{Observer: preflight.GitObserver{}}, Skills: inspect.ListSkills, Resources: resourceConfigForTest(), Compatibility: func() any {
 		return contractcli.BuildCompatibilityContract(clicatalog.Commands(), testMCPCatalog().Tools)
-	}, Commit: testCommitService(), Lint: testLintService(), Fetch: testWebFetch, Worker: testWorkerService(), Daemon: testDaemonReader(), Execution: testExecutionDeps(), Catalog: testMCPCatalog()}
+	}, Commit: testCommitService(), Lint: testLintService(), Fetch: testWebFetch, Worker: testWorkerService(), Execution: testExecutionDeps(), Catalog: testMCPCatalog()}
 }

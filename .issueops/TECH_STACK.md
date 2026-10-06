@@ -5,7 +5,7 @@ description: Chosen languages, runtimes, tools, and rationale.
 
 # 기술 스택
 
-현재 저장소는 Go module과 `cmd/issueops` 기반 0.1.0 v0 표면(CLI, MCP, daemon, IssueOps, one-shot worker, native host integration)이 구현된 상태다.
+현재 저장소는 Go module과 `cmd/issueops` 기반 0.1.0 v0 표면(CLI, MCP, IssueOps, one-shot worker, native host integration)이 구현된 상태다.
 
 ---
 
@@ -13,7 +13,7 @@ description: Chosen languages, runtimes, tools, and rationale.
 
 | 후보 | 장점 | 단점 | 판단 |
 |------|------|------|------|
-| Go | 단일 바이너리 배포, 빠른 컴파일, goroutine 기반 동시성, CLI/daemon/MCP 구현 생산성 | Rust보다 메모리 안전성의 정적 보장이 약함 | **채택** |
+| Go | 단일 바이너리 배포, 빠른 컴파일, goroutine 기반 동시성, CLI/MCP 구현 생산성 | Rust보다 메모리 안전성의 정적 보장이 약함 | **채택** |
 | Rust | 강한 메모리 안전성, 고성능, 단일 바이너리 | 러닝커브와 구현 속도 비용 | 추후 sandbox/security critical component에만 재검토 |
 
 빠른 반복과 host integration 생산성을 위해 **Go**를 채택한다. untrusted code sandbox나 고위험 parser가 필요해지면 해당 component만 Rust를 재검토한다.
@@ -28,7 +28,7 @@ description: Chosen languages, runtimes, tools, and rationale.
 | toolchain 기준 | 요구 버전은 `go.mod`, 실제 실행 버전은 `go version`으로 확인한다. 린터의 Go 버전 일치는 [테스트 규칙](testing/unit-and-contract.md)을 따른다. |
 | 패키지 관리 | Go modules |
 | 기본 바이너리 | `bin/issueops` (`cmd/issueops` source) |
-| 실행 모드 | CLI one-shot, 사용자당 하나인 로컬 Streamable HTTP MCP 서비스(`issueops mcp --http`, launchd/systemd user 감독), 호환용 in-process MCP stdio server, state-first one-shot worker jobs. legacy daemon은 이전 binary의 MCP proxy만 쓴다 |
+| 실행 모드 | CLI one-shot, 사용자당 하나인 로컬 Streamable HTTP MCP 서비스(`issueops mcp --http`, launchd/systemd user 감독), 호환용 in-process MCP stdio server, state-first one-shot worker jobs |
 | 설정 prefix | `ISSUEOPS_` |
 
 ## 2.1 Core independence and optional upstream provisioning
@@ -73,8 +73,8 @@ source of truth다. 목록·개수는 `issueops inspect --json`의 `skills` 배�
 | CLI | 표준 `flag` | `cmd/issueops` CLI와 command package에서 stdlib `flag` 사용; Cobra는 도입하지 않음 |
 | Config/State 직렬화 | 표준 `encoding/json` | 설정·상태는 JSON으로 직렬화; 외부 config 라이브러리(yaml.v3/toml)는 의존성에 없음 |
 | Logging | 표준 `log/slog` | secret redaction은 host 어댑터 계층에서 처리 |
-| MCP | `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3 | stateless Streamable HTTP(2025 initialize와 2026-07-28 request metadata 동시 지원), stdio server, legacy daemon socket transport가 함께 쓰는 SDK. jsonschema-go는 `harness_inspect`·`docs_index`의 outputSchema를 컴파일해 structuredContent를 검사하는 데 쓴다. hand-rolled JSON-RPC 경로는 2026-08-03에 제거됐다(ADR "MCP go-sdk 채택" 참조) |
-| IPC | loopback HTTP, stdio, Unix socket | 세 host는 기본으로 `http://127.0.0.1:47831/mcp`에 bearer 헤더로 연결한다(2026-10-02 ADR). `--mcp-transport=stdio` 설치와 agy는 stdio를 쓴다. legacy daemon만 Unix socket을 쓴다 |
+| MCP | `github.com/modelcontextprotocol/go-sdk` v1.8.0, `github.com/google/jsonschema-go` v0.4.3 | stateless Streamable HTTP(2025 initialize와 2026-07-28 request metadata 동시 지원), stdio server가 함께 쓰는 SDK. jsonschema-go는 `harness_inspect`·`docs_index`의 outputSchema를 컴파일해 structuredContent를 검사하는 데 쓴다. hand-rolled JSON-RPC 경로는 2026-08-03에 제거됐다(ADR "MCP go-sdk 채택" 참조) |
+| IPC | loopback HTTP, stdio | 세 host는 기본으로 `http://127.0.0.1:47831/mcp`에 bearer 헤더로 연결한다(2026-10-02 ADR). `--mcp-transport=stdio` 설치와 agy는 stdio를 쓴다 |
 | State 저장 | SQLite (`modernc.org/sqlite`, pure Go) | `ISSUEOPS_STATE_DIR` 또는 `~/.local/state/issueops/`; state root마다 `issueops.db`(WAL, records(bucket,id,data) JSON blob) + `issueops.lock.db`(BEGIN IMMEDIATE span lock). 동시성은 per-root sqlstore span으로 직렬화 |
 | Testing | 표준 `testing`, golden file, `net/http/httptest` | 외부 agent host 없이 core contract를 검증하며 HTTP boundary 격리에만 `httptest` 사용 |
 
@@ -127,9 +127,6 @@ issueops state prune --max-age 720h --json
 issueops state prune --max-age 720h --confirm --json
 issueops state doctor --json
 issueops state maintain --json
-issueops daemon start --json
-issueops daemon status --json
-issueops daemon stop --json
 issueops mcp
 issueops self-verify --seed=100 --target-score=95
 issueops self-verify --seed=100 --target-score=95 --save-state --state-key self-verify-latest --json
@@ -151,7 +148,6 @@ issueops worker list --json
 | 사용자 설정 | 현재는 `ISSUEOPS_*` env와 generated host config를 사용하며, `~/.config/issueops/config.yaml` loader는 계획 상태 |
 | 사용자 state/log | OS별 state dir 또는 `~/.local/state/issueops/` |
 | workspace cache | `.issueops-runtime/`는 예약 경로이며 현재 생성하거나 읽지 않음 |
-| daemon socket/pid/log | `~/.local/state/issueops/daemon/` 또는 `ISSUEOPS_DAEMON_DIR` |
 | Codex 템플릿 | `configs/codex/` |
 | Claude 템플릿 | `configs/claude/` |
 

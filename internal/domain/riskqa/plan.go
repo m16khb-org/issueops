@@ -38,7 +38,7 @@ func PlanFromPaths(paths []string) riskqacontract.RiskQATierPlan {
 	}
 	if goChanged && sensitive {
 		plan.Tier = "elevated"
-		plan.Reasons = append(plan.Reasons, "go changes touch policy, MCP, adapter, daemon, state, or harness orchestration surfaces")
+		plan.Reasons = append(plan.Reasons, "go changes touch policy, MCP, adapter, state, or harness orchestration surfaces")
 		plan.Commands = append([]string{FullRaceCommand}, plan.Commands...)
 	}
 	if !goChanged {
@@ -53,7 +53,7 @@ func isRiskSensitivePath(path string) bool {
 	if strings.HasPrefix(path, "cmd/issueops/") || strings.HasPrefix(path, "internal/") {
 		return true
 	}
-	for _, token := range []string{"daemon", "worker", "policy", "state", "mcp", "adapter", "install", "hook", "self_augment", "self-augment"} {
+	for _, token := range []string{"worker", "policy", "state", "mcp", "adapter", "install", "hook", "self_augment", "self-augment"} {
 		if strings.Contains(path, token) {
 			return true
 		}

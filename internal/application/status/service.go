@@ -4,7 +4,6 @@ import (
 	"context"
 
 	selfaugmentapp "issueops/internal/application/selfaugment"
-	daemoncontract "issueops/internal/contract/daemon"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspectcontract "issueops/internal/contract/inspect"
 	selfaugmentcontract "issueops/internal/contract/selfaugment"
@@ -18,7 +17,6 @@ import (
 type Service struct {
 	Home, IssueOpsRoot, Version string
 	Inspect                     func(string) inspectcontract.InspectInfo
-	Daemon                      func() daemoncontract.Status
 	Doctor                      func(doctorcontract.HarnessDoctorRequest) (doctorcontract.HarnessDoctorResult, error)
 	State                       func() (statecontract.StateListResult, error)
 	StateRead                   func(string) (statecontract.StateResult, error)
@@ -28,14 +26,8 @@ type Service struct {
 
 func (service Service) Run(repo string) statuscontract.Result {
 	inspect := service.Inspect(repo)
-	daemon := service.Daemon()
 	doctor, doctorErr := service.Doctor(doctorcontract.HarnessDoctorRequest{
 		RepoRoot: repo, IssueOpsRoot: service.IssueOpsRoot, Home: service.Home, Version: service.Version,
-		DaemonAdmission: doctorcontract.HarnessDoctorDaemonAdmission{
-			Observed:          statusdomain.DaemonAdmissionObserved(daemon.Running, daemon.Reachable, daemon.IdentityVerified),
-			ActiveConnections: daemon.ActiveConnections, MaxConnections: daemon.MaxConnections,
-			Accepting: daemon.Accepting, Draining: daemon.Draining,
-		},
 	})
 	state, stateErr := service.State()
 	workers, workerErr := service.Workers()
@@ -65,5 +57,5 @@ func (service Service) Run(repo string) statuscontract.Result {
 		}
 	}
 	decision := statusdomain.Evaluate(facts)
-	return statuscontract.Result{OK: decision.OK, Kind: "harness_status", Version: service.Version, Repo: service.ResolveTarget(repo), Inspect: inspect, Doctor: doctor, Daemon: daemon, State: state, Workers: workers, SelfVerify: decision.SelfVerify, Warnings: decision.Warnings}
+	return statuscontract.Result{OK: decision.OK, Kind: "harness_status", Version: service.Version, Repo: service.ResolveTarget(repo), Inspect: inspect, Doctor: doctor, State: state, Workers: workers, SelfVerify: decision.SelfVerify, Warnings: decision.Warnings}
 }

@@ -54,8 +54,6 @@ func SelfVerifyStepRerunCommand(label string) (string, bool) {
 		return "tmp_state=\"$(mktemp -d)\" && ISSUEOPS_STATE_DIR=\"$tmp_state\" ./bin/issueops state write --key smoke --value smoke --json && ISSUEOPS_STATE_DIR=\"$tmp_state\" ./bin/issueops state read --key smoke --json; rm -rf \"$tmp_state\"", true
 	case "parallel isolation":
 		return "./bin/issueops self-verify --collect-all-steps --seed=100 --target-score=95 --llm-eval=false --progress=jsonl --json", true
-	case "daemon resilience":
-		return "tmp_daemon=\"$(mktemp -d)\" && ISSUEOPS_DAEMON_DIR=\"$tmp_daemon\" ./bin/issueops daemon start --json && ISSUEOPS_DAEMON_DIR=\"$tmp_daemon\" ./bin/issueops daemon stop --json; rm -rf \"$tmp_daemon\"", true
 	case "preflight fuzz":
 		return "./bin/issueops preflight --json \"$PWD\"", true
 	case "native integration":

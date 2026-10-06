@@ -87,25 +87,23 @@ def _row(command: str, *, state: str = "S", pid: int = 100, ppid: int = 1, rss_k
 class ClassifyProcessesTest(unittest.TestCase):
     """Pins the process-hygiene classification logic (quality program Q4 종결조건 ②;
     classify_processes was previously untested). This is a layer-C contract: it asserts
-    that the daemon/legacy/temp-watcher/zombie buckets match the documented signatures on
+    that the legacy/temp-watcher/zombie buckets match the documented signatures on
     synthetic ps rows — it does NOT prove the live ps enumeration or cleanup actions are
     correct, only that the classifier routes a known command string to the expected bucket."""
 
-    def test_current_daemon_matches_only_current_bucket(self) -> None:
-        result = audit.classify_processes([_row("/usr/local/bin/issueops daemon --internal --socket /tmp/x.sock")])
-        self.assertEqual(len(result["current_daemons"]), 1)
+    def test_current_mcp_matches_no_bucket(self) -> None:
+        result = audit.classify_processes([_row("/usr/local/bin/issueops mcp")])
         self.assertEqual(result["legacy_harness"], [])
         self.assertEqual(result["temp_watchers"], [])
         self.assertEqual(result["zombies"], [])
 
-    def test_legacy_bin_harness_daemon_and_mcp_match_legacy_bucket(self) -> None:
+    def test_legacy_bin_harness_mcp_matches_legacy_bucket(self) -> None:
         rows = [
-            _row("/old/path/bin/issueops daemon --internal"),
             _row("/old/path/bin/issueops mcp"),
+            _row("/old/path/bin/harness mcp"),
         ]
         result = audit.classify_processes(rows)
         self.assertEqual(len(result["legacy_harness"]), 2)
-        self.assertEqual(result["current_daemons"], [])
 
     def test_temp_codegraph_watcher_matches_temp_bucket(self) -> None:
         cmd = "node /repo/scripts/codegraph-watcher.mjs /var/folders/ab/T/tmp.XyZ123/graph"
@@ -114,7 +112,7 @@ class ClassifyProcessesTest(unittest.TestCase):
 
     def test_zombie_requires_both_z_state_and_harness_command(self) -> None:
         rows = [
-            _row("/usr/local/bin/issueops daemon --internal", state="Z"),  # harness + Z -> zombie
+            _row("/usr/local/bin/issueops mcp", state="Z"),  # harness + Z -> zombie
             _row("/usr/bin/python3 some_unrelated_script.py", state="Z"),       # Z but not harness -> not zombie
             _row("codegraph index", state="Z+"),                                # codegraph + Z -> zombie
         ]
@@ -125,14 +123,13 @@ class ClassifyProcessesTest(unittest.TestCase):
 
     def test_unrelated_process_matches_no_bucket(self) -> None:
         result = audit.classify_processes([_row("vim notes.txt"), _row("/bin/zsh -l")])
-        self.assertEqual(result["current_daemons"], [])
         self.assertEqual(result["legacy_harness"], [])
         self.assertEqual(result["temp_watchers"], [])
         self.assertEqual(result["zombies"], [])
 
     def test_empty_rows_yield_empty_buckets(self) -> None:
         result = audit.classify_processes([])
-        self.assertEqual(result, {"current_daemons": [], "legacy_harness": [], "temp_watchers": [], "zombies": []})
+        self.assertEqual(result, {"legacy_harness": [], "temp_watchers": [], "zombies": []})
 
 
 if __name__ == "__main__":
