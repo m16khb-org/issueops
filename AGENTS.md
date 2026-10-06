@@ -142,7 +142,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 | `internal/architecture/` | production import graph와 layer dependency fitness test |
 | `configs/` | Codex/Claude/Omo/MCP 설정 템플릿 |
 | `.omo/mcp.json`, `.agents/mcp_config.json` | 명시적 `--project-local` 때만 생성되는 Omo/agy project MCP 설정. 스킬 링크는 어떤 경우에도 repo-local로 만들지 않으며 git 추적 금지 |
-| `.mcp.json` | 이 하네스 repo의 dogfood/project-local Claude MCP 설정. 기본 설치는 user-scope MCP를 사용하며 대상 repo에는 쓰지 않음 |
+| `.mcp.json` | 이 하네스 repo의 project Claude MCP 설정. 기본값은 빈 `{"mcpServers": {}}`(user-scope MCP 사용). `issueops_project` stdio 템플릿은 `configs/claude/mcp.project.json`이며 `--project-local --mcp-transport=stdio`일 때만 `.mcp.json`에 쓰임 |
 | `bin/issueops` | 빌드된 로컬 하네스 CLI/MCP 바이너리 |
 | `skills/` | Codex/Claude/Omo가 공유하는 스킬 source of truth |
 | `.issueops/` | 에이전트용 프로젝트 지식 베이스 |

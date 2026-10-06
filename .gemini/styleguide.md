@@ -4,7 +4,7 @@ Use this guide when reviewing `issueops` pull requests. Focus on concrete correc
 
 ## Architecture Boundaries
 
-- Prefer host-neutral behavior in `internal/core` or `internal/port` when the logic must be shared by Codex and Claude Code.
+- Prefer host-neutral behavior in `internal/domain`, `internal/application`, or `internal/port` when the logic must be shared by Codex and Claude Code.
 - Keep Codex and Claude adapters thin. Host adapters should translate installation, hook, or MCP surfaces; they must not duplicate command policy, lifecycle state, or redaction rules.
 - Do not recommend new abstractions unless there is a real variation point, external boundary, or repeated responsibility. Flag speculative abstractions that make a small change larger without reducing risk.
 

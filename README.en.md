@@ -73,7 +73,8 @@ io inspect --json
 
 `install` accepts `--interactive`, `--project-local`, and
 `--path-mode=auto|manual|skip`; `bootstrap` adds `--sync`. `--project-local`
-explicitly creates `.mcp.json`, `.omo/mcp.json`, and `.agents/mcp_config.json`,
+explicitly creates project MCP files (`.mcp.json` only with `--mcp-transport=stdio`; with the default HTTP transport it
+uses the user-scope entry), `.omo/mcp.json`, and `.agents/mcp_config.json`,
 but skill links always stay in the user's home. After native activation,
 `install` and `update` optionally provision the Claude plugins and Git skills
 declared in [`configs/upstream.json`](configs/upstream.json). A network failure

@@ -78,7 +78,7 @@ Inside Claude Code:
 /mcp
 ```
 
-Default install registers user-scope MCP server `issueops`. This repo's dogfood `.mcp.json` uses `issueops_project` to avoid scope collisions.
+Default install registers user-scope MCP server `issueops`. This repo's `.mcp.json` is intentionally empty (`{"mcpServers": {}}`); the project stdio entry `issueops_project` is only a template in `configs/claude/mcp.project.json` and is written to `.mcp.json` only by `--project-local --mcp-transport=stdio` (with the default HTTP transport, `--project-local` removes any stale entry instead).
 
 Claude hooks live in `~/.claude/settings.json`. Default installation owns exactly `SessionStart`, calling the same context CLI/core as Codex with `--host claude`; Claude separates the readable `systemMessage` from the model-facing `hookSpecificOutput.additionalContext`. Claude Code 2.1.247 re-runs `SessionStart` with `source:"compact"` after compaction and treats `PostCompact` stdout as a user display string only, so the catalog is re-established through `SessionStart` and `PostCompact` is not registered.
 
