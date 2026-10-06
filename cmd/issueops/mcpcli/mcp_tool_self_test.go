@@ -56,11 +56,6 @@ func TestHandleSelfLoopMCPToolCallCoversLocalPayloads(t *testing.T) {
 			call:     MCPToolCall{Name: "self_verify_history", Arguments: map[string]any{"prefix": "mcp-self", "limit": 5}},
 			wantText: `"entries"`,
 		},
-		{
-			name:     "self augment history alias",
-			call:     MCPToolCall{Name: "self_augment_history", Arguments: map[string]any{"prefix": "mcp-self", "limit": 5}},
-			wantText: `"entries"`,
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -94,18 +89,8 @@ func TestHandleSelfLoopMCPToolCallCoversBoundaryErrorsAndUnknownTool(t *testing.
 			wantMsg: "Self-verify compare failed",
 		},
 		{
-			name:    "self augment compare alias missing baseline",
-			call:    MCPToolCall{Name: "self_augment_compare", Arguments: map[string]any{"candidate_key": "candidate"}},
-			wantMsg: "Self-verify compare failed",
-		},
-		{
 			name:    "self verify promote missing source",
 			call:    MCPToolCall{Name: "self_verify_promote", Arguments: map[string]any{"baseline_key": "baseline", "confirm": true}},
-			wantMsg: "Self-verify promote failed",
-		},
-		{
-			name:    "self augment promote alias missing source",
-			call:    MCPToolCall{Name: "self_augment_promote", Arguments: map[string]any{"baseline_key": "baseline", "confirm": true}},
 			wantMsg: "Self-verify promote failed",
 		},
 	}

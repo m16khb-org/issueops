@@ -550,11 +550,6 @@
     "role": "shape"
   },
   {
-    "path": "internal/contract/mcp/tool_schemas.go",
-    "symbol": "func SelfLoopAliasTools",
-    "role": "shape"
-  },
-  {
     "path": "internal/contract/policy/command_types.go",
     "symbol": "func IsPolicyDenied",
     "role": "error"

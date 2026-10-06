@@ -13,13 +13,8 @@ func TestBuildCatalogPreservesDispatchAndOwnsItsSchemas(t *testing.T) {
 	if !found || first.Dispatch["issueops_execution"] != "issueops" {
 		t.Fatal("public execution tool lost")
 	}
-	for _, tool := range first.Tools {
-		if tool["name"] == "self_augment_history" {
-			t.Fatal("unadvertised alias exposed")
-		}
-	}
-	if first.Dispatch["self_augment_history"] != "self_loop" {
-		t.Fatal("alias dispatch lost")
+	if _, ok := first.Dispatch["self_augment_history"]; ok {
+		t.Fatal("removed self_augment_* alias is still routable")
 	}
 	hasDocs := false
 	for _, resource := range first.Resources {

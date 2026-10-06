@@ -66,7 +66,7 @@ func handleSelfLoopMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDe
 			return mcpToolFailure(newProtocolError(-32000, "Self-verify candidate export save failed", result))
 		}
 		return mcpToolPayload(result)
-	case "self_verify_history", "self_augment_history":
+	case "self_verify_history":
 		result, err := deps.SelfHistory.History(
 			ctx,
 			argmap.StringDefault(call.Arguments, "prefix", "self-verify"),
@@ -81,7 +81,7 @@ func handleSelfLoopMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDe
 			return mcpToolFailure(newProtocolError(-32602, "Self-verify history failed", err.Error()))
 		}
 		return mcpToolPayload(result)
-	case "self_verify_compare", "self_augment_compare":
+	case "self_verify_compare":
 		result, err := deps.SelfHistory.Compare(
 			argmap.String(call.Arguments, "baseline_key"),
 			argmap.String(call.Arguments, "candidate_key"),
@@ -91,7 +91,7 @@ func handleSelfLoopMCPToolCall(ctx context.Context, call MCPToolCall, deps MCPDe
 			return mcpToolFailure(newProtocolError(-32602, "Self-verify compare failed", err.Error()))
 		}
 		return mcpToolPayload(result)
-	case "self_verify_promote", "self_augment_promote":
+	case "self_verify_promote":
 		result, err := deps.SelfState.Promote(
 			ctx,
 			argmap.String(call.Arguments, "from_key"),
