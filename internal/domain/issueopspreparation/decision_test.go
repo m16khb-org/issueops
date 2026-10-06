@@ -42,7 +42,6 @@ func TestDecisionMatrix(t *testing.T) {
 		mode          string
 		confirm       bool
 		execution     *leasecontract.Execution
-		rootConflict  *preparationcontract.RootClaim
 		orca          OrcaReadiness
 		wantCode      Code
 		wantRequested string
@@ -68,20 +67,18 @@ func TestDecisionMatrix(t *testing.T) {
 		{name: "released writerless", mode: "direct", confirm: true, execution: preparedExecution("direct", "released", false, false), wantCode: CodeWriterless, wantRequested: "direct", wantResolved: "direct"},
 		{name: "revoking writerless", mode: "auto", confirm: true, execution: preparedExecution("direct", "revoking", true, false), wantCode: CodeWriterless, wantRequested: "auto", wantResolved: "direct"},
 		{name: "preview exposes writerless as existing", mode: "auto", execution: preparedExecution("orca", "claimable", false, false), wantCode: CodeExisting, wantRequested: "auto", wantResolved: "orca"},
-		{name: "root conflict", mode: "direct", confirm: true, rootConflict: rootClaim(), wantCode: CodeRootConflict, wantRequested: "direct"},
-		{name: "root conflict precedes Orca denial", mode: "orca", confirm: true, rootConflict: rootClaim(), orca: OrcaReadiness{Code: "orca_probe_failed"}, wantCode: CodeRootConflict, wantRequested: "orca"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			directReason := ""
-			if test.mode == preparationcontract.ModeDirect && test.execution == nil && test.rootConflict == nil {
+			if test.mode == preparationcontract.ModeDirect && test.execution == nil {
 				directReason = "planned recovery"
 			}
 			decision, err := Decide(DecisionInput{
 				Command: preparationcontract.Command{ID: "io-prepare", Mode: test.mode, DirectReason: directReason, Confirm: test.confirm},
 				Snapshot: preparationcontract.Snapshot{
 					Record:        leasecontract.Record{ID: "io-prepare", Execution: test.execution},
-					CanonicalRoot: "/repo.worktrees/199-prepare", RootConflict: test.rootConflict,
+					CanonicalRoot: "/repo.worktrees/199-prepare",
 				},
 				Orca: test.orca,
 			})
@@ -94,9 +91,6 @@ func TestDecisionMatrix(t *testing.T) {
 			if err != nil || decision.Code != test.wantCode || decision.RequestedMode != test.wantRequested ||
 				decision.ResolvedMode != test.wantResolved || decision.FallbackCode != test.wantFallback {
 				t.Fatalf("decision=%+v err=%v", decision, err)
-			}
-			if test.wantCode == CodeRootConflict && decision.RootConflict == nil {
-				t.Fatal("root-conflict decision lost the conflicting claim")
 			}
 		})
 	}
@@ -169,10 +163,6 @@ func preparedExecution(mode, status string, holder, pending bool) *leasecontract
 		execution.Pending = &leasecontract.ExternalIntent{OperationID: "operation", Kind: "owner_launch", Marker: "marker"}
 	}
 	return execution
-}
-
-func rootClaim() *preparationcontract.RootClaim {
-	return &preparationcontract.RootClaim{LifecycleID: "io-other", Branch: "other", Root: "/repo.worktrees/199-prepare"}
 }
 
 func denialReasonOf(err error) DenialReason {

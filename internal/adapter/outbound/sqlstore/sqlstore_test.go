@@ -316,16 +316,6 @@ func TestBucketsAreIsolatedAndListSorted(t *testing.T) {
 	if _, ok, _ := d.Get("two", "a"); ok {
 		t.Fatalf("bucket isolation broken")
 	}
-	if err := d.DeleteBucket("one"); err != nil {
-		t.Fatalf("DeleteBucket: %v", err)
-	}
-	ids, _ = d.List("one")
-	if len(ids) != 0 {
-		t.Fatalf("expected empty bucket after DeleteBucket, got %v", ids)
-	}
-	if _, ok, _ := d.Get("two", "z"); !ok {
-		t.Fatalf("DeleteBucket must not touch other buckets")
-	}
 }
 
 func TestWithSpanSerializesAcrossHandles(t *testing.T) {

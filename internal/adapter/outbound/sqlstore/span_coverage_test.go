@@ -58,8 +58,7 @@ func TestSpanCompareAndApplyCommitIsAttributed(t *testing.T) {
 
 func TestSpanAutocommitDeletesAreUnknown(t *testing.T) {
 	for name, write := range map[string]func(*DB) error{
-		"delete":        func(database *DB) error { return database.Delete("span_phase", "seed") },
-		"delete_bucket": func(database *DB) error { return database.DeleteBucket("span_phase") },
+		"delete": func(database *DB) error { return database.Delete("span_phase", "seed") },
 	} {
 		t.Run(name, func(t *testing.T) {
 			database := openTestDB(t)

@@ -129,7 +129,7 @@ func executionSnapshotCLIRecord(t *testing.T) (string, string, string) {
 	issueURL := "https://gitlab.example.com/acme/repo/-/work_items/69"
 	record := issueopscontract.IssueOpsRecord{
 		OK:            true,
-		SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
+		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            (issueops.CycleStartIdentity{}).StableID(repo, branch),
 		Repo:          repo,
 		Branch:        branch,

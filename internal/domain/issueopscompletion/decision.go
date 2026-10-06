@@ -11,7 +11,6 @@ import (
 )
 
 type Actor = completioncontract.Actor
-type ProcessReceipt = completioncontract.ProcessReceipt
 type Lease = completioncontract.Lease
 type Completion = completioncontract.Completion
 type LedgerEntry = completioncontract.LedgerEntry

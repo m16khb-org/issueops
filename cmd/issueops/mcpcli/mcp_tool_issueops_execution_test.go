@@ -133,7 +133,7 @@ func publicationReconcileMCPRecord(t *testing.T, stateRoot string) (issueopscont
 	repo, worktree := t.TempDir(), t.TempDir()
 	actor := issueopscontract.NativeActor{Host: "codex", SessionID: "publication-mcp-session", SessionProcess: &receipt}
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
+		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID: (issueops.CycleStartIdentity{}).StableID(repo, "195-publication-mcp"), Repo: repo, Branch: "195-publication-mcp",
 		Phase: issueopscontract.IssueOpsPhasePR, WorktreePath: worktree,
 		Execution: &issueopscontract.Execution{

@@ -326,55 +326,12 @@ func TestExecutionInspectDeliveryDispatchRequiresDurableRequestAndCurrentAssigne
 	}
 }
 
-func TestExecutionProvisionerCreatesOneWorktreeAndLaunchesOneOwner(t *testing.T) {
-	workspace, request := executionFixture(t)
-	client := &executionFake{workspace: workspace, probeRequest: request}
-	provisioner := NewExecutionClient(client)
-
-	prepared, err := provisioner.PrepareWorkspace(context.Background(), workspace, request)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(client.calls, []string{"list", "create-worktree"}) {
-		t.Fatalf("owner launch ran before the sealed packet existed: %v", client.calls)
-	}
-	launch := executionLaunchFixture(t, prepared.Workspace.Root)
-	got, err := provisioner.LaunchOwner(context.Background(), prepared, request, launch)
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantCalls := []string{"list", "create-worktree", "create-terminal", "create-run", "use-run", "create-task", "dispatch"}
-	if !reflect.DeepEqual(client.calls, wantCalls) {
-		t.Fatalf("unexpected one-shot Orca sequence: got %v want %v", client.calls, wantCalls)
-	}
-	if client.worktreeRequest.Issue != 69 || client.worktreeRequest.Comment != request.Marker ||
-		client.worktreeRequest.BaseBranch != workspace.BaseHead ||
-		client.worktreeRequest.ParentWorktree != workspace.ParentWorktree ||
-		client.worktreeRequest.UpstreamBranch != "" {
-		t.Fatalf("worktree create lost sealed identity: %#v", client.worktreeRequest)
-	}
-	if client.terminalRequest.Agent != "claude" || client.terminalRequest.Model != "caller-selected-model" || client.terminalRequest.ReasoningEffort != "high" {
-		t.Fatalf("owner profile must be caller supplied: %#v", client.terminalRequest)
-	}
-	if client.runRequest.Objective != request.Marker || client.taskRequest.RunID != "run-69" ||
-		client.dispatchRequest.RunID != "run-69" || client.taskRequest.Spec != launch.Prompt ||
-		!client.dispatchRequest.Inject || !client.dispatchRequest.ReturnPreamble {
-		t.Fatalf("owner packet/dispatch contract lost: task=%#v dispatch=%#v", client.taskRequest, client.dispatchRequest)
-	}
-	if got.WorktreeID != "wt-69" || got.RunID != "run-69" || got.TaskID != "task-69" || got.DispatchID != "dispatch-69" || got.TerminalPTYID != "pty-69" {
-		t.Fatalf("receipt did not preserve durable Orca locators: %#v", got)
-	}
-	if strings.Contains(strings.Join([]string{got.RuntimeID, got.RepoID, got.WorktreeID, got.TaskID, got.DispatchID, got.TerminalPTYID}, "\n"), "term-69") {
-		t.Fatalf("runtime-scoped terminal handle leaked into durable receipt: %#v", got)
-	}
-}
-
 func TestExecutionProvisionerAcceptsGitLabMarkerWithoutNativeMetadata(t *testing.T) {
 	workspace, request := executionFixture(t)
 	request = executionGitLabProbe(request)
 	client := &executionFake{workspace: workspace, probeRequest: request}
 
-	if _, err := NewExecutionClient(client).PrepareWorkspace(context.Background(), workspace, request); err != nil {
+	if _, err := invokeExecutionWorktreeIntent(NewExecutionClient(client), workspace, request); err != nil {
 		t.Fatalf("공개 Orca CLI가 native GitLab 필드를 쓰지 못해도 봉인 marker로 준비해야 한다: %v", err)
 	}
 	if client.worktreeRequest.Provider != "gitlab" || client.worktreeRequest.Issue != 69 ||
@@ -389,13 +346,12 @@ func TestExecutionProvisionerRejectsMismatchedNativeGitLabMetadata(t *testing.T)
 	row := executionWorktree(workspace, request)
 	wrong := 70
 	row.GitLabIssue = &wrong
-	client := &executionFake{workspace: workspace, probeRequest: request, worktrees: []port.OrcaWorktree{row}}
+	client := &executionFake{workspace: workspace, probeRequest: request, createdWorktree: &row}
 
-	if _, err := NewExecutionClient(client).PrepareWorkspace(context.Background(), workspace, request); err == nil {
-		t.Fatal("Orca native GitLab IID가 봉인된 IID와 다르면 거부해야 한다")
-	}
-	if !reflect.DeepEqual(client.calls, []string{"list"}) {
-		t.Fatalf("불일치 receipt 뒤에 worktree mutation을 실행했다: %v", client.calls)
+	_, err := invokeExecutionWorktreeIntent(NewExecutionClient(client), workspace, request)
+	var orcaErr *port.OrcaError
+	if !asOrcaError(err, &orcaErr) || orcaErr.Code != "worktree_identity_mismatch" {
+		t.Fatalf("Orca native GitLab IID가 봉인된 IID와 다르면 거부해야 한다: %v", err)
 	}
 }
 
@@ -404,9 +360,9 @@ func TestExecutionProvisionerNormalizesProviderBeforeIssueReadback(t *testing.T)
 	request.Provider = " GitHub "
 	row := executionWorktree(workspace, request)
 	row.Issue = request.Issue + 1
-	client := &executionFake{workspace: workspace, probeRequest: request, worktrees: []port.OrcaWorktree{row}}
+	client := &executionFake{workspace: workspace, probeRequest: request, createdWorktree: &row}
 
-	if _, err := NewExecutionClient(client).PrepareWorkspace(context.Background(), workspace, request); err == nil ||
+	if _, err := invokeExecutionWorktreeIntent(NewExecutionClient(client), workspace, request); err == nil ||
 		!strings.Contains(err.Error(), "linked GitHub issue") {
 		t.Fatalf("normalized provider must enforce the GitHub issue readback, got %v", err)
 	}
@@ -423,7 +379,7 @@ func TestExecutionProvisionerRequiresExactGitLabMarker(t *testing.T) {
 		t.Run(marker, func(t *testing.T) {
 			request.Marker = marker
 			client := &executionFake{workspace: workspace, probeRequest: request}
-			if _, err := NewExecutionClient(client).PrepareWorkspace(context.Background(), workspace, request); err == nil {
+			if _, err := invokeExecutionWorktreeIntent(NewExecutionClient(client), workspace, request); err == nil {
 				t.Fatal("GitLab provider와 IID가 정확히 봉인되지 않은 marker를 허용했다")
 			}
 			if len(client.calls) != 0 {
@@ -793,67 +749,50 @@ func assertExecutionIntentOne(t *testing.T, provisioner *ExecutionProvisioner, r
 	}
 }
 
-func TestExecutionProvisionerAdoptsExactlyOneMatchingReceiptWithoutCreate(t *testing.T) {
-	workspace, request := executionFixture(t)
-	client := &executionFake{workspace: workspace, probeRequest: request, worktrees: []port.OrcaWorktree{executionWorktree(workspace, request)}}
-	if _, err := NewExecutionClient(client).PrepareWorkspace(context.Background(), workspace, request); err != nil {
-		t.Fatal(err)
-	}
-	wantCalls := []string{"list"}
-	if !reflect.DeepEqual(client.calls, wantCalls) {
-		t.Fatalf("matching prior receipt must not create a second worktree: got %v", client.calls)
-	}
-}
-
 func TestExecutionProvisionerAcceptsExplicitManualParentLineage(t *testing.T) {
 	workspace, request := executionFixture(t)
 	matching := executionWorktree(workspace, request)
 	matching.LineageSource = "manual-action"
-	client := &executionFake{workspace: workspace, probeRequest: request, worktrees: []port.OrcaWorktree{matching}}
+	client := &executionFake{workspace: workspace, probeRequest: request, createdWorktree: &matching}
 
-	if _, err := NewExecutionClient(client).PrepareWorkspace(context.Background(), workspace, request); err != nil {
+	if _, err := invokeExecutionWorktreeIntent(NewExecutionClient(client), workspace, request); err != nil {
 		t.Fatalf("명시적 수동 parent 영수증은 같은 canonical parent를 증명해야 한다: %v", err)
-	}
-	if !reflect.DeepEqual(client.calls, []string{"list"}) {
-		t.Fatalf("동등한 parent 영수증을 채택할 때 새 worktree를 만들면 안 된다: %v", client.calls)
 	}
 }
 
-func TestExecutionProvisionerRejectsAmbiguousOrMismatchedWorktree(t *testing.T) {
+func TestExecutionProvisionerRejectsMismatchedWorktreeReceipt(t *testing.T) {
 	workspace, request := executionFixture(t)
 	matching := executionWorktree(workspace, request)
-	for name, rows := range map[string][]port.OrcaWorktree{
-		"ambiguous":  {matching, matching},
-		"wrong head": {func() port.OrcaWorktree { row := matching; row.Head = strings.Repeat("b", 40); return row }()},
-		"missing parent": {func() port.OrcaWorktree {
+	for name, row := range map[string]port.OrcaWorktree{
+		"wrong head": func() port.OrcaWorktree { row := matching; row.Head = strings.Repeat("b", 40); return row }(),
+		"missing parent": func() port.OrcaWorktree {
 			row := matching
 			row.ParentWorktreeID = ""
 			return row
-		}()},
-		"wrong parent": {func() port.OrcaWorktree {
+		}(),
+		"wrong parent": func() port.OrcaWorktree {
 			row := matching
 			row.ParentWorktreeID = row.RepoID + "::" + filepath.Join(filepath.Dir(workspace.ParentWorktree), "67-other")
 			return row
-		}()},
-		"inferred lineage": {func() port.OrcaWorktree {
+		}(),
+		"inferred lineage": func() port.OrcaWorktree {
 			row := matching
 			row.LineageSource = "cwd-context"
 			return row
-		}()},
-		"manual inference": {func() port.OrcaWorktree {
+		}(),
+		"manual inference": func() port.OrcaWorktree {
 			row := matching
 			row.LineageSource = "manual-action"
 			row.LineageConfidence = "inferred"
 			return row
-		}()},
+		}(),
 	} {
 		t.Run(name, func(t *testing.T) {
-			client := &executionFake{workspace: workspace, probeRequest: request, worktrees: rows}
-			if _, err := NewExecutionClient(client).PrepareWorkspace(context.Background(), workspace, request); err == nil {
-				t.Fatalf("%s worktree inventory must fail closed", name)
-			}
-			if len(client.calls) != 1 || client.calls[0] != "list" {
-				t.Fatalf("failure must occur before owner launch: %v", client.calls)
+			client := &executionFake{workspace: workspace, probeRequest: request, createdWorktree: &row}
+			_, err := invokeExecutionWorktreeIntent(NewExecutionClient(client), workspace, request)
+			var orcaErr *port.OrcaError
+			if !asOrcaError(err, &orcaErr) || orcaErr.Code != "worktree_identity_mismatch" {
+				t.Fatalf("%s worktree receipt must fail closed: %v", name, err)
 			}
 		})
 	}
@@ -863,25 +802,32 @@ func TestExecutionProvisionerRejectsUnsealedOwnerLaunchBeforeTerminalMutation(t 
 	workspace, request := executionFixture(t)
 	client := &executionFake{workspace: workspace, probeRequest: request}
 	provisioner := NewExecutionClient(client)
-	prepared, err := provisioner.PrepareWorkspace(context.Background(), workspace, request)
+	prepared, err := invokeExecutionWorktreeIntent(provisioner, workspace, request)
 	if err != nil {
 		t.Fatal(err)
 	}
+	terminalIntent := func(launch port.ExecutionOrcaLaunchRequest) error {
+		_, err := provisioner.InvokeIntent(context.Background(), port.ExecutionOrcaIntentRequest{
+			Stage: port.ExecutionOrcaIntentTerminal, Marker: request.Marker, Workspace: workspace, Probe: request,
+			Prepared: prepared.Workspace, Launch: &launch,
+		})
+		return err
+	}
 	launch := executionLaunchFixture(t, workspace.Root)
 	launch.ContextPacketSHA256 = strings.Repeat("0", 64)
-	if _, err := provisioner.LaunchOwner(context.Background(), prepared, request, launch); err == nil {
+	if err := terminalIntent(launch); err == nil {
 		t.Fatal("packet digest mismatch must fail closed")
 	}
-	if !reflect.DeepEqual(client.calls, []string{"list", "create-worktree"}) {
+	if !reflect.DeepEqual(client.calls, []string{"create-worktree"}) {
 		t.Fatalf("invalid launch mutated Orca owner resources: %v", client.calls)
 	}
 
 	launch = executionLaunchFixture(t, workspace.Root)
 	launch.Prompt += "\n{UNRESOLVED_PLACEHOLDER}"
-	if _, err := provisioner.LaunchOwner(context.Background(), prepared, request, launch); err == nil {
+	if err := terminalIntent(launch); err == nil {
 		t.Fatal("unresolved owner prompt placeholder must fail closed")
 	}
-	if !reflect.DeepEqual(client.calls, []string{"list", "create-worktree"}) {
+	if !reflect.DeepEqual(client.calls, []string{"create-worktree"}) {
 		t.Fatalf("unresolved prompt mutated Orca owner resources: %v", client.calls)
 	}
 }
@@ -1498,6 +1444,12 @@ func executionLaunchFixture(t *testing.T, root string) port.ExecutionOrcaLaunchR
 	}
 }
 
+func invokeExecutionWorktreeIntent(provisioner *ExecutionProvisioner, workspace port.ExecutionWorkspaceRequest, request port.ExecutionOrcaProbeRequest) (port.ExecutionOrcaIntentReceipt, error) {
+	return provisioner.InvokeIntent(context.Background(), port.ExecutionOrcaIntentRequest{
+		Stage: port.ExecutionOrcaIntentWorktree, Marker: request.Marker, Workspace: workspace, Probe: request,
+	})
+}
+
 func executionWorktree(workspace port.ExecutionWorkspaceRequest, request port.ExecutionOrcaProbeRequest) port.OrcaWorktree {
 	return port.OrcaWorktree{
 		RuntimeID: "runtime-69", ID: "wt-69", InstanceID: "instance-69", RepoID: "repo-69",
@@ -1513,6 +1465,7 @@ type executionFake struct {
 	probeRequest              port.ExecutionOrcaProbeRequest
 	worktrees                 []port.OrcaWorktree
 	worktreeRequest           port.OrcaCreateWorktreeRequest
+	createdWorktree           *port.OrcaWorktree
 	terminalRequest           port.OrcaCreateTerminalRequest
 	createdTerminal           *port.OrcaTerminal
 	runs                      []port.OrcaRun
@@ -1551,6 +1504,9 @@ func (f *executionFake) ListWorktrees(context.Context, string) ([]port.OrcaWorkt
 func (f *executionFake) CreateWorktree(_ context.Context, req port.OrcaCreateWorktreeRequest) (port.OrcaWorktree, error) {
 	f.calls = append(f.calls, "create-worktree")
 	f.worktreeRequest = req
+	if f.createdWorktree != nil {
+		return *f.createdWorktree, nil
+	}
 	return executionWorktree(f.workspace, f.probeRequest), nil
 }
 
@@ -1680,16 +1636,6 @@ func (f *executionFake) showTerminalInventory(_ context.Context, handle string) 
 		}, nil
 	}
 	return executionTerminalDetailInventory{}, fmt.Errorf("terminal detail not found")
-}
-
-func (f *executionFake) ListTasks(context.Context) ([]port.OrcaTask, error) {
-	f.calls = append(f.calls, "list-ready-tasks")
-	return append([]port.OrcaTask(nil), f.readyTasks...), nil
-}
-
-func (f *executionFake) ListAllTasks(context.Context) ([]port.OrcaTask, error) {
-	f.calls = append(f.calls, "list-all-tasks")
-	return append([]port.OrcaTask(nil), f.tasks...), nil
 }
 
 func (f *executionFake) listAllTasksInventory(context.Context) (executionTaskInventory, error) {

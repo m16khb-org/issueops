@@ -80,7 +80,7 @@ func publicationReconcileCLIRecord(t *testing.T) (string, issueopscontract.Issue
 	stateRoot, repo, worktree := t.TempDir(), t.TempDir(), t.TempDir()
 	actor := issueopscontract.NativeActor{Host: "codex", SessionID: "publication-cli-session", SessionProcess: &receipt}
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
+		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID: (issueops.CycleStartIdentity{}).StableID(repo, "195-publication-cli"), Repo: repo, Branch: "195-publication-cli",
 		Phase: issueopscontract.IssueOpsPhasePR, WorktreePath: worktree,
 		Execution: &issueopscontract.Execution{

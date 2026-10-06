@@ -20,25 +20,37 @@ type StructuredPromptSpec struct {
 	Data                  []PromptDataSection
 }
 
+const (
+	headingIdentity              = "## Identity"
+	headingObjective             = "## Objective"
+	headingOperatingPhases       = "## Operating Phases"
+	headingInputs                = "## Inputs"
+	headingRules                 = "## Rules"
+	headingOutputContract        = "## Output Contract"
+	headingVerificationChecklist = "## Verification Checklist"
+)
+
+// StructuredPromptSectionHeadings lists the fixed sections BuildStructuredPrompt
+// emits, in order.
 var StructuredPromptSectionHeadings = []string{
-	"## Identity",
-	"## Objective",
-	"## Operating Phases",
-	"## Inputs",
-	"## Rules",
-	"## Output Contract",
-	"## Verification Checklist",
+	headingIdentity,
+	headingObjective,
+	headingOperatingPhases,
+	headingInputs,
+	headingRules,
+	headingOutputContract,
+	headingVerificationChecklist,
 }
 
 func BuildStructuredPrompt(spec StructuredPromptSpec) string {
 	var b strings.Builder
-	writePromptSection(&b, "## Identity", spec.Identity)
-	writePromptSection(&b, "## Objective", spec.Objective)
-	writePromptListSection(&b, "## Operating Phases", spec.Phases)
-	writePromptListSection(&b, "## Inputs", spec.Inputs)
-	writePromptListSection(&b, "## Rules", spec.Rules)
-	writePromptListSection(&b, "## Output Contract", spec.OutputContract)
-	writePromptListSection(&b, "## Verification Checklist", spec.VerificationChecklist)
+	writePromptSection(&b, headingIdentity, spec.Identity)
+	writePromptSection(&b, headingObjective, spec.Objective)
+	writePromptListSection(&b, headingOperatingPhases, spec.Phases)
+	writePromptListSection(&b, headingInputs, spec.Inputs)
+	writePromptListSection(&b, headingRules, spec.Rules)
+	writePromptListSection(&b, headingOutputContract, spec.OutputContract)
+	writePromptListSection(&b, headingVerificationChecklist, spec.VerificationChecklist)
 	for _, section := range spec.Data {
 		title := strings.TrimSpace(section.Title)
 		if title == "" {

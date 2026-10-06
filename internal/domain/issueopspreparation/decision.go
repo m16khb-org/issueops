@@ -23,7 +23,6 @@ const (
 	CodePendingReconcile Code = "pending_reconcile"
 	CodeModeMismatch     Code = "mode_mismatch"
 	CodeWriterless       Code = "writerless"
-	CodeRootConflict     Code = "root_conflict"
 )
 
 type OrcaReadiness struct {
@@ -53,7 +52,6 @@ type Decision struct {
 	ProbeIssue           int
 	ReadinessFingerprint string
 	ExplicitDirectReason string
-	RootConflict         *preparationcontract.RootClaim
 }
 
 type DenialReason string
@@ -101,12 +99,6 @@ func Decide(input DecisionInput) (Decision, error) {
 		default:
 			decision.Code = CodeExisting
 		}
-		return decision, nil
-	}
-	if input.Snapshot.RootConflict != nil {
-		claim := *input.Snapshot.RootConflict
-		decision.Code = CodeRootConflict
-		decision.RootConflict = &claim
 		return decision, nil
 	}
 	if requested == preparationcontract.ModeDirect {

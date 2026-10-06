@@ -23,7 +23,6 @@ func TestWriteExclusionBlocksEveryRecordMutationAndPreservesBytes(t *testing.T) 
 	}{
 		{"put", func(d *DB) error { return d.Put("records", "new", []byte("new")) }},
 		{"delete", func(d *DB) error { return d.Delete("records", "owner") }},
-		{"delete bucket", func(d *DB) error { return d.DeleteBucket("records") }},
 		{"apply", func(d *DB) error {
 			return d.Apply(ctx, []port.RecordMutation{{Bucket: "records", ID: "new", Data: []byte("new"), RequireAbsent: true}})
 		}},

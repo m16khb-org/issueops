@@ -529,82 +529,6 @@ func executionPreflightError(err error) error {
 	return &port.OrcaError{Code: "intent_preflight_rejected", Detail: err.Error(), Invoked: false}
 }
 
-func (p *ExecutionProvisioner) PrepareWorkspace(ctx context.Context, workspace port.ExecutionWorkspaceRequest, req port.ExecutionOrcaProbeRequest) (port.ExecutionOrcaWorkspaceReceipt, error) {
-	if p == nil || p.client == nil {
-		return port.ExecutionOrcaWorkspaceReceipt{}, fmt.Errorf("Orca client is unavailable")
-	}
-	if err := validateExecutionPrepare(workspace, req); err != nil {
-		return port.ExecutionOrcaWorkspaceReceipt{}, err
-	}
-	worktree, err := p.prepareWorktree(ctx, workspace, req)
-	if err != nil {
-		return port.ExecutionOrcaWorkspaceReceipt{}, err
-	}
-	return port.ExecutionOrcaWorkspaceReceipt{
-		Workspace: port.ExecutionWorkspaceReceipt{
-			SourceRoot: workspace.SourceRoot, Root: filepath.Clean(worktree.Path), Branch: workspace.Branch,
-			BaseHead: workspace.BaseHead, ParentWorktree: workspace.ParentWorktree,
-			Driver: "orca", Exists: true,
-		},
-		RuntimeID: worktree.RuntimeID, RepoID: worktree.RepoID, WorktreeID: worktree.ID,
-		WorktreeInstanceID: worktree.InstanceID,
-	}, nil
-}
-
-func (p *ExecutionProvisioner) LaunchOwner(ctx context.Context, prepared port.ExecutionOrcaWorkspaceReceipt, req port.ExecutionOrcaProbeRequest, launch port.ExecutionOrcaLaunchRequest) (port.ExecutionOrcaReceipt, error) {
-	if p == nil || p.client == nil {
-		return port.ExecutionOrcaReceipt{}, fmt.Errorf("Orca client is unavailable")
-	}
-	if err := validateExecutionOwnerLaunch(prepared, req, launch); err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	terminal, err := p.client.CreateTerminal(ctx, port.OrcaCreateTerminalRequest{
-		WorktreeID: prepared.WorktreeID, Agent: req.Host, Model: req.Model, ReasoningEffort: req.Effort,
-		Title: req.Marker, AllowCodexHookTrustBypass: req.Host == "codex",
-	})
-	if err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	terminal, err = p.reconcileCreatedTerminal(ctx, terminal, prepared, req.Marker)
-	if err != nil {
-		return port.ExecutionOrcaReceipt{}, &port.OrcaError{Code: "terminal_identity_mismatch", Detail: err.Error(), Invoked: true}
-	}
-	run, err := p.client.CreateRun(ctx, port.OrcaCreateRunRequest{Objective: req.Marker})
-	if err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	if err := validateExecutionIntentRun(run, prepared, req.Marker); err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	used, err := p.client.UseRun(ctx, run.ID)
-	if err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	if err := validateExecutionIntentRun(used, prepared, req.Marker); err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	task, err := p.client.CreateTask(ctx, port.OrcaCreateTaskRequest{
-		RunID: run.ID, Spec: launch.Prompt, Title: executionTaskTitle(req.Marker, launch.PromptSHA256), DisplayName: prepared.Workspace.Branch,
-	})
-	if err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	dispatch, err := p.client.Dispatch(ctx, port.OrcaDispatchRequest{
-		RunID: run.ID, TaskID: task.ID, ToHandle: terminal.Handle, Inject: true, ReturnPreamble: true,
-	})
-	if err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	if err := validateExecutionLaunch(prepared.WorktreeID, run.ID, terminal, task, dispatch); err != nil {
-		return port.ExecutionOrcaReceipt{}, err
-	}
-	return port.ExecutionOrcaReceipt{
-		Workspace: prepared.Workspace,
-		RuntimeID: prepared.RuntimeID, RepoID: prepared.RepoID, WorktreeID: prepared.WorktreeID,
-		WorktreeInstanceID: prepared.WorktreeInstanceID, RunID: run.ID, TaskID: task.ID, DispatchID: dispatch.ID, TerminalPTYID: terminal.PTYID,
-	}, nil
-}
-
 func (p *ExecutionProvisioner) InspectOwner(ctx context.Context, req port.ExecutionOrcaOwnerInventoryRequest) (port.ExecutionOrcaOwnerInventory, error) {
 	client, ok := p.client.(executionInventoryClient)
 	if !ok {
@@ -753,41 +677,6 @@ func executionTerminalTaskStatus(status string) bool {
 	default:
 		return false
 	}
-}
-
-func (p *ExecutionProvisioner) prepareWorktree(ctx context.Context, workspace port.ExecutionWorkspaceRequest, req port.ExecutionOrcaProbeRequest) (port.OrcaWorktree, error) {
-	rows, err := p.client.ListWorktrees(ctx, workspace.SourceRoot)
-	if err != nil {
-		return port.OrcaWorktree{}, err
-	}
-	candidates := make([]port.OrcaWorktree, 0, 1)
-	for _, row := range rows {
-		if samePath(row.Path, workspace.Root) || strings.TrimSpace(row.Comment) == req.Marker {
-			candidates = append(candidates, row)
-		}
-	}
-	if len(candidates) > 1 {
-		return port.OrcaWorktree{}, fmt.Errorf("Orca worktree reconciliation is ambiguous")
-	}
-	if len(candidates) == 1 {
-		candidate := candidates[0]
-		if err := validateExecutionWorktree(candidate, workspace, req); err != nil {
-			return port.OrcaWorktree{}, err
-		}
-		return candidate, nil
-	}
-	created, err := p.client.CreateWorktree(ctx, port.OrcaCreateWorktreeRequest{
-		Repo: workspace.SourceRoot, Name: workspace.Branch, BaseBranch: workspace.BaseHead,
-		ParentWorktree: workspace.ParentWorktree,
-		Provider:       req.Provider, Issue: req.Issue, Comment: req.Marker,
-	})
-	if err != nil {
-		return port.OrcaWorktree{}, err
-	}
-	if err := validateExecutionWorktree(created, workspace, req); err != nil {
-		return port.OrcaWorktree{}, err
-	}
-	return created, nil
 }
 
 // executionTerminalSettleBudget과 executionTerminalSettleInterval은 Orca가 만든

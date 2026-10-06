@@ -144,6 +144,7 @@ func TestClassifyAcceptsOrcaOptionalInstanceAndPTY(t *testing.T) {
 	cycle.OrcaRepoID = "repo-id"
 	cycle.OrcaWorktreeID = "worktree-id"
 	cycle.OrcaOwnerHost = "codex"
+	cycle.RunID = "run-explicit"
 	cycle.TaskID = "task-id"
 	cycle.DispatchID = "dispatch-id"
 	cycle.OrcaWorktreeInstanceID = ""

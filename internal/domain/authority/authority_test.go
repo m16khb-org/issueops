@@ -7,6 +7,7 @@ import (
 	"time"
 
 	contract "issueops/internal/contract/authority"
+	issueopscontract "issueops/internal/contract/issueops"
 )
 
 var issuedAt = time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC)
@@ -14,8 +15,8 @@ var issuedAt = time.Date(2026, 10, 2, 0, 0, 0, 0, time.UTC)
 func testActor() contract.NativeActor {
 	return contract.NativeActor{
 		Host: " CODEX ", SessionID: " session ", AgentID: " agent ",
-		SessionProcess:  &contract.ProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"},
-		ProcessAncestry: []contract.ProcessReceipt{{PID: 42, StartedAt: "start", Executable: "/bin/codex"}},
+		SessionProcess:  &issueopscontract.NativeProcessReceipt{PID: 42, StartedAt: "start", Executable: "/bin/codex"},
+		ProcessAncestry: []issueopscontract.NativeProcessReceipt{{PID: 42, StartedAt: "start", Executable: "/bin/codex"}},
 	}
 }
 
@@ -153,7 +154,7 @@ func TestMatchIdentityAcceptsEmptyOrSameCaller(t *testing.T) {
 	other := testActor()
 	other.SessionID = "other"
 	reused := testActor()
-	reused.SessionProcess = &contract.ProcessReceipt{PID: 42, StartedAt: "later", Executable: "/bin/codex"}
+	reused.SessionProcess = &issueopscontract.NativeProcessReceipt{PID: 42, StartedAt: "later", Executable: "/bin/codex"}
 	for _, supplied := range []contract.NativeActor{other, reused} {
 		if err := MatchIdentity(granted, supplied); err == nil {
 			t.Fatalf("mismatched caller %+v accepted", supplied)

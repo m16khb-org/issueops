@@ -856,16 +856,3 @@ func (d *DB) GetAll(bucket string) ([]port.RecordRow, error) {
 	}
 	return out, rows.Err()
 }
-
-// DeleteBucket은 bucket의 모든 record를 제거한다.
-func (d *DB) DeleteBucket(bucket string) error {
-	release, err := d.acquireRecordWriter(context.Background())
-	if err != nil {
-		return err
-	}
-	defer release()
-	return d.unattributedWrite(func() error {
-		_, err := d.data.Exec(`DELETE FROM records WHERE bucket = ?`, bucket)
-		return err
-	})
-}

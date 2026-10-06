@@ -3,7 +3,6 @@ package orca
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"os"
@@ -287,29 +286,8 @@ func validateRunID(runID string) (string, error) {
 	return runID, nil
 }
 
-func (c *Client) ListTasks(ctx context.Context) ([]port.OrcaTask, error) {
-	return c.listTasksAcrossRuns(ctx, "--ready")
-}
-
-func (c *Client) ListDispatchedTasks(ctx context.Context) ([]port.OrcaTask, error) {
-	return c.listTasksAcrossRuns(ctx, "--status", "dispatched")
-}
-
-func (c *Client) ListAllTasks(ctx context.Context) ([]port.OrcaTask, error) {
-	return c.listTasksAcrossRuns(ctx, "--brief")
-}
-
 func (c *Client) listAllTasksInventory(ctx context.Context) (executionTaskInventory, error) {
 	return c.listTasksAcrossRunsInventory(ctx, "--brief")
-}
-
-func (c *Client) ListFailedTasks(ctx context.Context) ([]port.OrcaTask, error) {
-	return c.listTasksAcrossRuns(ctx, "--status", "failed")
-}
-
-func (c *Client) listTasksAcrossRuns(ctx context.Context, flags ...string) ([]port.OrcaTask, error) {
-	inventory, err := c.listTasksAcrossRunsInventory(ctx, flags...)
-	return inventory.Rows, err
 }
 
 func (c *Client) listTasksAcrossRunsInventory(ctx context.Context, flags ...string) (executionTaskInventory, error) {
@@ -378,32 +356,6 @@ func (c *Client) listRunTasksInventory(ctx context.Context, runID string, flags 
 		result = append(result, value)
 	}
 	return executionTaskInventory{RuntimeID: runtimeID, Rows: result}, nil
-}
-
-func (c *Client) ListGates(ctx context.Context) ([]port.OrcaGate, error) {
-	var payload struct {
-		Gates []struct {
-			ID     string `json:"id"`
-			TaskID string `json:"task_id"`
-			Status string `json:"status"`
-		} `json:"gates"`
-		Count *int `json:"count"`
-	}
-	runtimeID, err := c.runJSON(ctx, "", readTimeout, []string{"orca", "orchestration", "gate-list", "--json"}, &payload)
-	if err != nil {
-		return nil, err
-	}
-	if err := requireReturnedCount("gate", len(payload.Gates), payload.Count); err != nil {
-		return nil, err
-	}
-	result := make([]port.OrcaGate, 0, len(payload.Gates))
-	for _, gate := range payload.Gates {
-		if strings.TrimSpace(gate.ID) == "" || strings.TrimSpace(gate.TaskID) == "" || strings.TrimSpace(gate.Status) == "" {
-			return nil, fmt.Errorf("Orca gate row identity is incomplete")
-		}
-		result = append(result, port.OrcaGate{RuntimeID: runtimeID, ID: gate.ID, TaskID: gate.TaskID, Status: gate.Status})
-	}
-	return result, nil
 }
 
 func (c *Client) listRunGatesInventory(ctx context.Context, runID string) (executionGateInventory, error) {
@@ -479,76 +431,6 @@ func (c *Client) CreateTask(ctx context.Context, req port.OrcaCreateTaskRequest)
 	return created, err
 }
 
-// taskStatusCompleted는 정상 종료된 task의 terminal 상태다. 어떤 값이 종결로
-// 취급되는지는 Orca의 지식이므로 호출자가 리터럴을 반복하지 않도록 여기서 정한다.
-const taskStatusCompleted = "completed"
-
-// SettleTask는 명시적으로 권한을 받은 Orca task mutation에서 task를 terminal 상태로
-// 옮긴다. IssueOps execution complete는 durable lifecycle만 완료하므로 이 메서드를
-// 호출하지 않는다.
-//
-// 이 메서드가 별도로 있는 이유는 어떤 status가 종결인지가 Orca 쪽 지식이기
-// 때문이다. 호출자는 "종결시켜라"만 말하고 값은 알 필요가 없다.
-func (c *Client) SettleTask(ctx context.Context, runID, id string) error {
-	err := c.UpdateTask(ctx, runID, id, taskStatusCompleted, "")
-	if err == nil || !isConsumerFenced(err) {
-		return err
-	}
-	// Orca는 task mutation을 Run 단위로 격리하고 호출 terminal이 그 Run의
-	// current consumer인지 인증한다. coordinator가 그 사이 다른 Run에
-	// 바인딩됐으면 task mutation이 consumer_fenced로 실패한다(#325).
-	//
-	// 봉인된 Run은 record가 이미 알고 있으므로 다시 바인딩하면 authority가
-	// 회복된다. 실측(relay 0.1.0+66c426c5173c):
-	//   task-update --run A → consumer_fenced ("bound to B, not A")
-	//   run-use --id A      → ok
-	//   task-update --run A → ok
-	//
-	// 재시도는 정확히 한 번이다. 반복하면 fence가 풀리지 않는 상황에서
-	// 무한히 매달린다. 바인딩 자체가 실패하면 원래 fence 진단을 그대로
-	// 돌려준다 — 그것이 사용자가 볼 근본 원인이다.
-	//
-	// 바인딩은 UseRun으로 한다. UseRun은 Orca가 돌려준 Run이 요청한 Run과
-	// 같은지까지 확인하므로, 엉뚱한 Run에 바인딩된 채로 재시도해 잘못된
-	// authority로 mutation하는 경로가 없다. 바인딩을 되돌리지도 않는다 —
-	// 이전 바인딩을 복원하면 그 사이 일어난 다른 mutation의 authority를
-	// 되돌리는 셈이 된다.
-	if _, bindErr := c.UseRun(ctx, runID); bindErr != nil {
-		return err
-	}
-	return c.UpdateTask(ctx, runID, id, taskStatusCompleted, "")
-}
-
-// isConsumerFenced는 오류가 Orca의 Run consumer fence인지 보고한다.
-func isConsumerFenced(err error) bool {
-	typed, ok := errors.AsType[*port.OrcaError](err)
-	return ok && typed.Code == "consumer_fenced"
-}
-
-// UpdateTask는 Orca task 상태를 명시적으로 변경하는 저수준 명령이다. IssueOps
-// execution complete는 Orca dispatch의 terminal authority가 아니므로 이 경로를
-// 사용하지 않는다.
-//
-// #121이 이 명령을 residue 해법으로 기각했던 근거("상태를 바꿔도 소유자 조회가
-// 0건이라 분류기가 잔여물로 보고한다")는 #121 자신의 수정으로 사라졌다. 그
-// 수정이 종결된 task를 면제하게 만들었으므로 이제 상태 변경이 곧 해법이다.
-func (c *Client) UpdateTask(ctx context.Context, runID, id, status, result string) error {
-	runID, err := validateRunID(runID)
-	if err != nil {
-		return err
-	}
-	if _, err := currentCoordinatorHandle(); err != nil {
-		return err
-	}
-	argv := []string{"orca", "orchestration", "task-update", "--id", id, "--status", status}
-	if result != "" {
-		argv = append(argv, "--result", result)
-	}
-	argv = append(argv, "--run", runID, "--json")
-	_, err = c.runJSON(ctx, "", readTimeout, argv, &struct{}{})
-	return err
-}
-
 func (c *Client) Dispatch(ctx context.Context, req port.OrcaDispatchRequest) (port.OrcaDispatch, error) {
 	runID, err := validateRunID(req.RunID)
 	if err != nil {
@@ -590,10 +472,6 @@ func (c *Client) ShowDispatch(ctx context.Context, taskID string) (port.OrcaDisp
 
 func (c *Client) showDispatchInventory(ctx context.Context, taskID string) (executionDispatchInventory, error) {
 	return c.dispatchInventoryResult(ctx, []string{"orca", "orchestration", "dispatch-show", "--task", taskID, "--json"})
-}
-
-func (c *Client) ShowDispatchFrom(ctx context.Context, taskID, fromHandle string) (port.OrcaDispatch, error) {
-	return c.dispatchResult(ctx, []string{"orca", "orchestration", "dispatch-show", "--task", taskID, "--preamble", "--from", fromHandle, "--json"})
 }
 
 func (c *Client) ShowRequest(ctx context.Context, requestID string) (port.OrcaRequestObservation, error) {

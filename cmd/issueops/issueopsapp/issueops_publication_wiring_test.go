@@ -49,7 +49,7 @@ func TestIssueOpsPublicationCompositionBuildsBothServicesAndCreatesPreview(t *te
 	repo := t.TempDir()
 	branch := "195-publication-composition"
 	record := issueopscontract.IssueOpsRecord{
-		OK: true, SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
+		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID: (issueops.CycleStartIdentity{}).StableID(repo, branch), Repo: repo, Branch: branch, Phase: issueopscontract.IssueOpsPhasePR,
 		IssueURL: "https://github.com/acme/repo/issues/195",
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{

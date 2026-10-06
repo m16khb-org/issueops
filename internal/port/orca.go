@@ -66,8 +66,8 @@ type OrcaStatus struct {
 }
 
 // CleanupOrcaTerminals는 cleanup finish/abandon이 워크트리에 매인 Orca 터미널을
-// 관측하고 닫는 좁은 표면이다. 기존 OrcaClient/OwnerInspector fake를 건드리지
-// 않도록 별도 인터페이스로 둔다(#477).
+// 관측하고 닫는 좁은 표면이다. 기존 OwnerInspector fake를 건드리지 않도록 별도
+// 인터페이스로 둔다(#477).
 type CleanupOrcaTerminals interface {
 	Status(ctx context.Context) (OrcaStatus, error)
 	// ListAllTerminals는 요청자 터미널을 ORCA_PANE_KEY/ORCA_TERMINAL_HANDLE과
@@ -129,13 +129,6 @@ type OrcaCreateWorktreeRequest struct {
 	Comment        string `json:"comment"`
 }
 
-type OrcaAdoptWorktreeRequest struct {
-	WorktreeID string `json:"worktree_id"`
-	Provider   string `json:"provider,omitempty"`
-	Issue      int    `json:"issue,omitempty"`
-	Comment    string `json:"comment"`
-}
-
 type OrcaTerminal struct {
 	RuntimeID      string `json:"runtime_id,omitempty"`
 	Handle         string `json:"handle"`
@@ -156,17 +149,6 @@ type OrcaCreateTerminalRequest struct {
 	Model                     string `json:"model,omitempty"`
 	ReasoningEffort           string `json:"reasoning_effort,omitempty"`
 	Title                     string `json:"title,omitempty"`
-	AllowCodexHookTrustBypass bool   `json:"allow_codex_hook_trust_bypass,omitempty"`
-}
-
-// OrcaBootstrapTerminalAgentRequest starts the selected supported host agent
-// in an already-owned sole-writer terminal. It is limited to recovery of an
-// exact owned worktree terminal; it never targets an arbitrary shell.
-type OrcaBootstrapTerminalAgentRequest struct {
-	TerminalHandle            string `json:"terminal_handle"`
-	Agent                     string `json:"agent"`
-	Model                     string `json:"model,omitempty"`
-	ReasoningEffort           string `json:"reasoning_effort,omitempty"`
 	AllowCodexHookTrustBypass bool   `json:"allow_codex_hook_trust_bypass,omitempty"`
 }
 
@@ -322,16 +304,6 @@ func ValidateExecutionOrcaDeliveryReceipt(receipt ExecutionOrcaIntentReceipt, ex
 	return nil
 }
 
-type OrcaMessage struct {
-	ID         string `json:"id,omitempty"`
-	FromHandle string `json:"from_handle,omitempty"`
-	ToHandle   string `json:"to_handle,omitempty"`
-	Type       string `json:"type,omitempty"`
-	Subject    string `json:"subject,omitempty"`
-	Body       string `json:"body,omitempty"`
-	Sequence   int64  `json:"sequence,omitempty"`
-}
-
 type OrcaWorkerDoneRequest struct {
 	RunID        string   `json:"run_id"`
 	FromHandle   string   `json:"from_handle"`
@@ -359,63 +331,13 @@ type OrcaWorkerDoneResult struct {
 // dispatched owner가 native worker_done 명령으로 수행한다. application wiring이
 // 같은 capability를 다시 소유하면 두 authority가 completion 순서를 경쟁한다.
 //
-// UpdateTask와 SendWorkerDone의 목적은 다르다. 전자는 Orca task 상태 mutation이고,
-// 후자는 dispatch protocol의 완료 메시지다. 이 adapter는 capability와 응답 검증을
-// 보존하지만 IssueOps completion path에는 배선하지 않는다.
+// SendWorkerDone은 Orca task 상태 mutation이 아니라 dispatch protocol의 완료
+// 메시지다. 이 adapter는 capability와 응답 검증을 보존하지만 IssueOps completion
+// path에는 배선하지 않는다.
 //
 // 어떤 조건에서 배선되는가: Orca dispatch 프로토콜의 메시지 채널이 issueops
 // 계약에 편입될 때다. 그런 요구가 생기기 전까지 이 인터페이스는 adapter가 이미
 // 구현한 능력의 선언으로 남는다.
 type OrcaWorkerDoneClient interface {
 	SendWorkerDone(context.Context, OrcaWorkerDoneRequest) (OrcaWorkerDoneResult, error)
-}
-
-type OrcaProbeClient interface {
-	Probe(context.Context, OrcaProbeRequest) (OrcaProbeResult, error)
-}
-
-type OrcaRunClient interface {
-	ListRuns(context.Context) ([]OrcaRun, error)
-	CreateRun(context.Context, OrcaCreateRunRequest) (OrcaRun, error)
-	CurrentRun(context.Context) (*OrcaRun, error)
-	UseRun(context.Context, string) (OrcaRun, error)
-}
-
-type OrcaWorktreeClient interface {
-	ListWorktrees(context.Context, string) ([]OrcaWorktree, error)
-	ShowWorktree(context.Context, string) (OrcaWorktree, error)
-	CreateWorktree(context.Context, OrcaCreateWorktreeRequest) (OrcaWorktree, error)
-	AdoptWorktree(context.Context, OrcaAdoptWorktreeRequest) (OrcaWorktree, error)
-	RemoveWorktree(context.Context, string, bool) error
-}
-
-type OrcaTerminalClient interface {
-	ListTerminals(context.Context, string) ([]OrcaTerminal, error)
-	CreateTerminal(context.Context, OrcaCreateTerminalRequest) (OrcaTerminal, error)
-	RefreshTerminal(context.Context, string, string) (OrcaTerminal, error)
-}
-
-type OrcaTaskClient interface {
-	ListTasks(context.Context) ([]OrcaTask, error)
-	ListDispatchedTasks(context.Context) ([]OrcaTask, error)
-	CreateTask(context.Context, OrcaCreateTaskRequest) (OrcaTask, error)
-	UpdateTask(context.Context, string, string, string, string) error
-}
-
-type OrcaDispatchClient interface {
-	Dispatch(context.Context, OrcaDispatchRequest) (OrcaDispatch, error)
-	ShowDispatch(context.Context, string) (OrcaDispatch, error)
-	ShowDispatchFrom(context.Context, string, string) (OrcaDispatch, error)
-	ShowRequest(context.Context, string) (OrcaRequestObservation, error)
-}
-
-// OrcaClient keeps the historical aggregate method set for compatibility.
-// New consumers should accept only the role interface they actually use.
-type OrcaClient interface {
-	OrcaProbeClient
-	OrcaRunClient
-	OrcaWorktreeClient
-	OrcaTerminalClient
-	OrcaTaskClient
-	OrcaDispatchClient
 }

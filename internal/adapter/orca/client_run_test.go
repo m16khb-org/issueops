@@ -169,7 +169,7 @@ func TestClientTaskInventoryKeepsSameTaskIDDistinctAcrossRuns(t *testing.T) {
 		runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"runId":"` + runID + `","tasks":[{"id":"task-shared","status":"ready"}],"count":1},"_meta":{"runtimeId":"runtime-1"}}`)}
 	}
 
-	got, err := NewClient(runner).ListAllTasks(context.Background())
+	got, err := listAllTaskRows(NewClient(runner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -193,7 +193,7 @@ func TestClientTaskInventoryReadsOpaqueRunRowsUniformly(t *testing.T) {
 		runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"runId":"` + runID + `","tasks":[],"count":0},"_meta":{"runtimeId":"runtime-1"}}`)}
 	}
 
-	got, err := NewClient(runner).ListAllTasks(context.Background())
+	got, err := listAllTaskRows(NewClient(runner))
 	if err != nil || len(got) != 0 || len(runner.calls) != 3 {
 		t.Fatalf("opaque read-only Run inventory: got=%#v err=%v calls=%#v", got, err, runner.calls)
 	}

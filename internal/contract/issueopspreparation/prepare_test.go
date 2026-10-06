@@ -27,7 +27,6 @@ func TestPrepareContractClonesMutableAuthority(t *testing.T) {
 	snapshot := Snapshot{
 		Record:    leasecontract.Record{ID: command.ID, BranchPrepare: []byte(`{"provider":"github"}`), Execution: execution},
 		RecordRaw: []byte("record"), CanonicalRoot: "/repo.worktrees/prepare",
-		RootConflict: &RootClaim{LifecycleID: "io-other", Root: "/repo.worktrees/prepare"},
 	}
 
 	commandClone := command.Clone()
@@ -42,13 +41,11 @@ func TestPrepareContractClonesMutableAuthority(t *testing.T) {
 	snapshotClone.Record.Execution.SyncBaseResolution.Actor.SessionProcess.PID = 9
 	snapshotClone.Record.Execution.SyncBaseResolution.ConflictFiles[0] = "internal/changed.go"
 	snapshotClone.Record.Execution.SyncBaseEvents[0].Mode = "finalize"
-	snapshotClone.RootConflict.LifecycleID = "changed"
 
 	if command.Actor.SessionProcess.PID != 42 || result.Execution.Lease.Holder.SessionID != "session" ||
 		result.Execution.Completion.Verification[0] != "go test ./..." || result.Execution.CompletionHistory[0].Completion.Verification[0] != "old verification" || string(snapshot.RecordRaw) != "record" ||
 		string(snapshot.Record.BranchPrepare) != `{"provider":"github"}` || snapshot.Record.Execution.SyncBaseResolution.Actor.SessionProcess.PID != 42 ||
-		snapshot.Record.Execution.SyncBaseResolution.ConflictFiles[0] != "internal/a.go" || snapshot.Record.Execution.SyncBaseEvents[0].Mode != "apply" ||
-		snapshot.RootConflict.LifecycleID != "io-other" {
+		snapshot.Record.Execution.SyncBaseResolution.ConflictFiles[0] != "internal/a.go" || snapshot.Record.Execution.SyncBaseEvents[0].Mode != "apply" {
 		t.Fatal("a preparation clone mutated its source")
 	}
 }

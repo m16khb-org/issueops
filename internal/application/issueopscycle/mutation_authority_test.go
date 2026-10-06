@@ -11,10 +11,11 @@ import (
 	model "issueops/internal/contract/issueops"
 	authoritydomain "issueops/internal/domain/authority"
 	authorityport "issueops/internal/port/authority"
+	"issueops/internal/testsupport/authoritytest"
 )
 
 func liveVerifier() authorityport.ActorVerifier {
-	return authorityapp.New(nil, authorityport.ProcessInspectorFunc(func(_ context.Context, receipt model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) {
+	return authorityapp.New(nil, authoritytest.ProcessInspectorFunc(func(_ context.Context, receipt model.NativeProcessReceipt) (string, model.NativeProcessReceipt, error) {
 		return "live", receipt, nil
 	}), nil, nil, nil, nil)
 }

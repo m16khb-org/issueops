@@ -156,7 +156,7 @@ func TestServiceBoundsUnreadableDiagnosticsWithoutStoppingPrune(t *testing.T) {
 func TestServiceReturnsPartialReceiptWhenLaterDeleteFails(t *testing.T) {
 	now := time.Date(2026, 8, 14, 12, 0, 0, 0, time.UTC)
 	old := issueopscontract.IssueOpsRecord{
-		SchemaVersion: issueopscontract.IssueOpsCurrentSchemaVersion,
+		SchemaVersion: issueopscontract.IssueOpsSchemaVersion,
 		ID:            "old",
 		Phase:         issueopscontract.IssueOpsPhaseDone,
 		UpdatedAt:     now.Add(-60 * 24 * time.Hour).Format(time.RFC3339Nano),

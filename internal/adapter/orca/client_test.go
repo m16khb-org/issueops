@@ -648,34 +648,6 @@ func TestClientRejectsGitLabNumericSuffixWithoutExactSealedRemoteBranch(t *testi
 	}
 }
 
-func TestClientAdoptsExistingGitHubWorktreeWithIssueAndMarker(t *testing.T) {
-	runner := newFakeRunner(t)
-	command := "orca worktree set --worktree id:worktree-1 --comment issueops:cycle=io-demo;attempt=1;epoch=epoch-1 --issue 16 --json"
-	runner.responses[command] = fixtureOutput(t, "worktree_create.json")
-	got, err := NewClient(runner).AdoptWorktree(context.Background(), port.OrcaAdoptWorktreeRequest{
-		WorktreeID: "worktree-1", Provider: "github", Issue: 16, Comment: "issueops:cycle=io-demo;attempt=1;epoch=epoch-1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != "worktree-1" || got.InstanceID != "instance-1" || len(runner.calls) != 1 || strings.Join(runner.calls[0], " ") != command {
-		t.Fatalf("adopted worktree = %#v calls=%#v", got, runner.calls)
-	}
-}
-
-func TestClientShowsExistingWorktreeByExactPath(t *testing.T) {
-	runner := newFakeRunner(t)
-	command := "orca worktree show --worktree path:/repo.worktrees/16-demo --json"
-	runner.responses[command] = fixtureOutput(t, "worktree_create.json")
-	got, err := NewClient(runner).ShowWorktree(context.Background(), "/repo.worktrees/16-demo")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.ID != "worktree-1" || got.InstanceID != "instance-1" || len(runner.calls) != 1 || strings.Join(runner.calls[0], " ") != command {
-		t.Fatalf("shown worktree = %#v calls=%#v", got, runner.calls)
-	}
-}
-
 func TestClientCreateWorktreeUsesProviderSpecificIssueMetadata(t *testing.T) {
 	for _, tt := range []struct {
 		name, provider, command, output string
@@ -715,18 +687,6 @@ func TestClientCreateWorktreeUsesProviderSpecificIssueMetadata(t *testing.T) {
 				t.Fatalf("%s linked GitLab metadata = %#v", tt.provider, got.GitLabIssue)
 			}
 		})
-	}
-}
-
-func TestClientRefreshesTerminalHandleByWorktreeAndPTY(t *testing.T) {
-	runner := newFakeRunner(t)
-	runner.responses["orca terminal list --worktree id:worktree-1 --limit 512 --json"] = fixtureOutput(t, "terminal_list.json")
-	terminal, err := NewClient(runner).RefreshTerminal(context.Background(), "worktree-1", "pty-2")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if terminal.RuntimeID != "runtime-1" || terminal.Handle != "term-live" || terminal.PTYID != "pty-2" || terminal.TabID != "tab-live" || terminal.LeafID != "leaf-live" || terminal.Title != "issueops=io-demo ownership=epoch-1 attempt=1" {
-		t.Fatalf("refreshed terminal = %#v", terminal)
 	}
 }
 
@@ -828,23 +788,6 @@ func TestClientCreateTerminalUsesCallerSelectedHostLaunchProfile(t *testing.T) {
 				t.Fatalf("terminal launch = %#v, want %#v", runner.calls, want)
 			}
 		})
-	}
-}
-
-func TestClientBootstrapsExactOwnedTerminalWithSealedCodexProfile(t *testing.T) {
-	runner := newFakeRunner(t)
-	command := `codex --model 'gpt-6-astra' -c model_reasoning_effort='high' --dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust`
-	runner.responses["orca terminal send --terminal term-owned --text "+command+" --enter --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"send":{"accepted":true}}}`)}
-	runner.responses["orca terminal wait --terminal term-owned --for tui-idle --timeout-ms 10000 --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"wait":{"satisfied":true}}}`)}
-	if err := NewClient(runner).BootstrapTerminalAgent(context.Background(), port.OrcaBootstrapTerminalAgentRequest{TerminalHandle: "term-owned", Agent: "codex", Model: "gpt-6-astra", ReasoningEffort: "high", AllowCodexHookTrustBypass: true}); err != nil {
-		t.Fatal(err)
-	}
-	want := [][]string{
-		{"orca", "terminal", "send", "--terminal", "term-owned", "--text", command, "--enter", "--json"},
-		{"orca", "terminal", "wait", "--terminal", "term-owned", "--for", "tui-idle", "--timeout-ms", "10000", "--json"},
-	}
-	if !reflect.DeepEqual(runner.calls, want) {
-		t.Fatalf("bootstrap calls = %#v, want %#v", runner.calls, want)
 	}
 }
 
@@ -1209,12 +1152,12 @@ func TestClientCreateTerminalRejectsIncompleteRuntimeIdentity(t *testing.T) {
 	}
 }
 
-func TestClientListAllTasksProjectsCompletionSemanticsWithoutRawResult(t *testing.T) {
+func TestClientAllTaskInventoryProjectsCompletionSemanticsWithoutRawResult(t *testing.T) {
 	runner := newFakeRunner(t)
 	command := "orca orchestration task-list --brief --run run_issueops_1 --json"
 	runner.responses[command] = fixtureOutput(t, "task_list_all.json")
 
-	got, err := NewClient(runner).ListAllTasks(context.Background())
+	got, err := listAllTaskRows(NewClient(runner))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1230,63 +1173,16 @@ func TestClientListAllTasksProjectsCompletionSemanticsWithoutRawResult(t *testin
 	}
 }
 
-func TestClientListAllTasksRejectsCountMismatch(t *testing.T) {
+func TestClientAllTaskInventoryRejectsCountMismatch(t *testing.T) {
 	runner := newFakeRunner(t)
 	command := "orca orchestration task-list --brief --run run_issueops_1 --json"
 	runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"runId":"run_issueops_1","tasks":[{"id":"task-1","status":"ready"}],"count":2}}`)}
 
-	_, err := NewClient(runner).ListAllTasks(context.Background())
+	_, err := listAllTaskRows(NewClient(runner))
 
 	if err == nil || !strings.Contains(err.Error(), "incomplete") {
 		t.Fatalf("count mismatch error = %v", err)
 	}
-}
-
-func TestClientListFailedTasksUsesStatusFilter(t *testing.T) {
-	runner := newFakeRunner(t)
-	command := "orca orchestration task-list --status failed --run run_issueops_1 --json"
-	runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"runId":"run_issueops_1","tasks":[{"id":"task-failed","status":"failed"}],"count":1},"_meta":{"runtimeId":"runtime-1"}}`)}
-
-	got, err := NewClient(runner).ListFailedTasks(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 1 || got[0].ID != "task-failed" || got[0].Status != "failed" || got[0].RuntimeID != "runtime-1" {
-		t.Fatalf("failed-task projection = %#v", got)
-	}
-	if len(runner.calls) != 2 || strings.Join(runner.calls[1], " ") != command {
-		t.Fatalf("failed-task command = %#v", runner.calls)
-	}
-}
-
-func TestClientListGatesRequiresCountEquality(t *testing.T) {
-	t.Run("complete", func(t *testing.T) {
-		runner := newFakeRunner(t)
-		command := "orca orchestration gate-list --json"
-		runner.responses[command] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"gates":[{"id":"gate-1","task_id":"task-1","status":"pending","question":"raw-question-must-not-escape"}],"count":1},"_meta":{"runtimeId":"runtime-1"}}`)}
-
-		got, err := NewClient(runner).ListGates(context.Background())
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(got) != 1 || got[0].RuntimeID != "runtime-1" || got[0].ID != "gate-1" || got[0].TaskID != "task-1" || got[0].Status != "pending" || strings.Contains(fmt.Sprintf("%#v", got), "raw-question-must-not-escape") {
-			t.Fatalf("gate projection = %#v", got)
-		}
-		if len(runner.calls) != 1 || strings.Join(runner.calls[0], " ") != command {
-			t.Fatalf("gate-list command = %#v", runner.calls)
-		}
-	})
-
-	t.Run("count mismatch", func(t *testing.T) {
-		runner := newFakeRunner(t)
-		runner.responses["orca orchestration gate-list --json"] = CommandOutput{Stdout: []byte(`{"ok":true,"result":{"gates":[],"count":1}}`)}
-
-		_, err := NewClient(runner).ListGates(context.Background())
-
-		if err == nil || !strings.Contains(err.Error(), "incomplete") {
-			t.Fatalf("gate count mismatch error = %v", err)
-		}
-	})
 }
 
 func TestClientOperationalInventoryRejectsMalformedIdentity(t *testing.T) {
@@ -1300,13 +1196,7 @@ func TestClientOperationalInventoryRejectsMalformedIdentity(t *testing.T) {
 			name:    "task id",
 			command: "orca orchestration task-list --brief --run run_issueops_1 --json",
 			result:  `{"runId":"run_issueops_1","tasks":[{"id":"","status":"ready"}],"count":1}`,
-			call:    func(client *Client) error { _, err := client.ListAllTasks(context.Background()); return err },
-		},
-		{
-			name:    "gate task id",
-			command: "orca orchestration gate-list --json",
-			result:  `{"gates":[{"id":"gate-1","task_id":"","status":"pending"}],"count":1}`,
-			call:    func(client *Client) error { _, err := client.ListGates(context.Background()); return err },
+			call:    func(client *Client) error { _, err := listAllTaskRows(client); return err },
 		},
 	}
 	for _, test := range tests {
@@ -1407,37 +1297,6 @@ func TestClientCreateTaskDecodesOfficialSnakeCaseShape(t *testing.T) {
 	}
 }
 
-func TestClientListTasksUsesInstalledCountContract(t *testing.T) {
-	runner := newFakeRunner(t)
-	runner.responses["orca orchestration task-list --ready --run run_issueops_1 --json"] = fixtureOutput(t, "task_list.json")
-	got, err := NewClient(runner).ListTasks(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 1 || got[0].ID != "task-1" || got[0].Title != "issueops marker" || got[0].Status != "ready" {
-		t.Fatalf("task list projection = %#v", got)
-	}
-}
-
-func TestClientListDispatchedTasksUsesServerFilteredCompleteInventory(t *testing.T) {
-	runner := newFakeRunner(t)
-	runner.responses["orca orchestration task-list --status dispatched --run run_issueops_1 --json"] = CommandOutput{Stdout: []byte(`{
-		"ok": true,
-		"result": {"runId": "run_issueops_1", "tasks": [{"id": "task-dispatched", "task_title": "writer", "status": "dispatched"}], "count": 1},
-		"_meta": {"runtimeId": "runtime-1"}
-	}`)}
-	got, err := NewClient(runner).ListDispatchedTasks(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 1 || got[0].RuntimeID != "runtime-1" || got[0].ID != "task-dispatched" || got[0].Status != "dispatched" {
-		t.Fatalf("dispatched task projection = %#v", got)
-	}
-	if len(runner.calls) != 2 || strings.Join(runner.calls[1], " ") != "orca orchestration task-list --status dispatched --run run_issueops_1 --json" {
-		t.Fatalf("dispatched task inventory was not server filtered: %#v", runner.calls)
-	}
-}
-
 func TestClientShowDispatchDecodesInstalledShapeWithoutInjectedField(t *testing.T) {
 	runner := newFakeRunner(t)
 	runner.responses["orca orchestration dispatch-show --task task-1 --json"] = fixtureOutput(t, "dispatch_show.json")
@@ -1518,19 +1377,6 @@ func TestClientShowTerminalInventoryPreservesPaneRuntimeEvidence(t *testing.T) {
 	}
 }
 
-func TestClientShowDispatchFromRequestsOfficialPreambleForSealedCoordinator(t *testing.T) {
-	runner := newFakeRunner(t)
-	command := "orca orchestration dispatch-show --task task-1 --preamble --from term_coordinator --json"
-	runner.responses[command] = CommandOutput{Invoked: true, Stdout: []byte(`{"ok":true,"result":{"dispatch":{"id":"dispatch-1","task_id":"task-1","assignee_handle":"term_worker","status":"dispatched"},"preamble":"Your coordinator's terminal handle is: term_coordinator\nYour task ID is: task-1\n--dispatch-id dispatch-1"}}`)}
-	got, err := NewClient(runner).ShowDispatchFrom(context.Background(), "task-1", "term_coordinator")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Preamble == "" || len(runner.calls) != 1 || strings.Join(runner.calls[0], " ") != command {
-		t.Fatalf("dispatch preamble projection=%#v calls=%#v", got, runner.calls)
-	}
-}
-
 func TestClientRejectsIncompleteExternalLists(t *testing.T) {
 	for _, tt := range []struct {
 		name, command, field string
@@ -1538,7 +1384,7 @@ func TestClientRejectsIncompleteExternalLists(t *testing.T) {
 	}{
 		{name: "worktree truncated", command: "orca worktree list --repo path:/repo --limit 512 --json", field: "worktrees", call: func(c *Client) error { _, err := c.ListWorktrees(context.Background(), "/repo"); return err }},
 		{name: "terminal total mismatch", command: "orca terminal list --worktree id:wt-1 --limit 512 --json", field: "terminals", call: func(c *Client) error { _, err := c.ListTerminals(context.Background(), "wt-1"); return err }},
-		{name: "task missing metadata", command: "orca orchestration task-list --ready --run run_issueops_1 --json", field: `runId":"run_issueops_1","tasks`, call: func(c *Client) error { _, err := c.ListTasks(context.Background()); return err }},
+		{name: "task missing metadata", command: "orca orchestration task-list --brief --run run_issueops_1 --json", field: `runId":"run_issueops_1","tasks`, call: func(c *Client) error { _, err := listAllTaskRows(c); return err }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := newFakeRunner(t)
@@ -1637,4 +1483,9 @@ func addCompleteProbeLeafHelp(runner *fakeRunner) {
 	runner.responses["codex --help"] = CommandOutput{Stdout: []byte("--model --config --dangerously-bypass-hook-trust --dangerously-bypass-approvals-and-sandbox")}
 	runner.responses["claude --help"] = CommandOutput{Stdout: []byte("--model --dangerously-skip-permissions")}
 	runner.responses["omo --help"] = CommandOutput{Stdout: []byte("--model")}
+}
+
+func listAllTaskRows(client *Client) ([]port.OrcaTask, error) {
+	inventory, err := client.listAllTasksInventory(context.Background())
+	return inventory.Rows, err
 }
