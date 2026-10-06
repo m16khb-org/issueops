@@ -3,7 +3,7 @@
 작성일: 2026-05-30 KST
 범위: `issueops` 현재 worktree를 기준으로, OMC(oh-my-claudecode), OMX(oh-my-codex), Hermes Agent 계열 하네스와 비교해 부족한 점, 개선이 필요한 점, 바라는 점을 정리한다.
 
-> 작성 시점의 스냅샷이다. 본문의 공유 daemon(`daemon` 명령, `daemon_status`, daemon status)은 2026-10-06에 제거됐다.
+> 작성 시점의 스냅샷이다. 본문의 공유 daemon(`daemon` 명령, `daemon_status`, daemon status)은 2026-10-06에 제거됐다. 본문의 `internal/core/*` 경로도 당시 경로이며 현재는 `internal/domain`·`internal/application`·`internal/adapter` 아래에 있다.
 
 ## 1. 요약 결론
 

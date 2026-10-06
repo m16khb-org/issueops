@@ -7,7 +7,7 @@ description: Whole-project audit findings, triage status, and hardening follow-u
 > Generated: 2026-06-14
 > Path note (2026-08-26): the `internal/core/<pkg>` paths cited in the dated
 > sections below predate the 2026-08-08 relocation (`ccee5d5f`). Current homes:
-> worker/lifecycle/hookfailure/hookmetrics/policy/preflight/guard → `internal/adapter/<pkg>`,
+> worker/lifecycle/policy/preflight/guard → `internal/adapter/<pkg>` (hookfailure/hookmetrics는 2026-08-27 legacy hook 표면과 함께 제거됨),
 > state → `internal/adapter/outbound/state`, structured JSON decoding →
 > `internal/domain/judgement`, the draft-wiki queue lock and the Z.AI
 > `externalllm` wrapper were removed with the draft-wiki worker, and the daemon
