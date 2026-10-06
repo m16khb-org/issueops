@@ -1,13 +1,13 @@
 package projectbootstrap
 
 import (
+	projectdoccontract "issueops/internal/contract/projectdoc"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	projectdocs "issueops/internal/contract/projectdocs"
-	projectdoc "issueops/internal/domain/projectdoc"
 	projectdocdomain "issueops/internal/domain/projectdoc"
 )
 
@@ -47,7 +47,7 @@ func containsProjectCommand(commands []projectdocdomain.EvidenceCommand, command
 	return false
 }
 
-func projectPlanContainsRel(files []projectdoc.ProjectDocsPlannedFile, rel string) bool {
+func projectPlanContainsRel(files []projectdoccontract.ProjectDocsPlannedFile, rel string) bool {
 	for _, file := range files {
 		if file.RelPath == rel {
 			return true

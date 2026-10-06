@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	pathutil "issueops/cmd/issueops/pathutil"
 	"issueops/cmd/issueops/policycli"
 	auditadapter "issueops/internal/adapter/audit"
 
@@ -24,7 +25,7 @@ func newCommandAuditService(policy policyapp.Service) auditapp.Service {
 
 func newPolicyCommand() policycli.Command {
 	policy := newPolicyService()
-	return policycli.Command{DefaultRoot: resolveTarget(""), Policy: policy, Audit: newCommandAuditService(policy)}
+	return policycli.Command{DefaultRoot: pathutil.ResolveTarget(""), Policy: policy, Audit: newCommandAuditService(policy)}
 }
 
 func runPolicy(args []string) error { return newPolicyCommand().Run(args) }

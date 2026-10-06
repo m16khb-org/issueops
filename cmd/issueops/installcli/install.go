@@ -47,7 +47,7 @@ func (c Command) runInstall(args []string) error {
 		*dryRun = choices.DryRun
 		*pathMode = choices.PathMode
 	}
-	if !validInstallPathMode(*pathMode) {
+	if !installdomain.ValidPathMode(*pathMode) {
 		return fmt.Errorf("invalid --path-mode %q: expected auto, manual, or skip", *pathMode)
 	}
 	mcpTransport, err := c.resolveMCPTransport(*mcpTransportFlag)
@@ -71,7 +71,7 @@ func (c Command) runInstall(args []string) error {
 	if !req.DryRun && c.ActivationBackend == nil {
 		return fmt.Errorf("native activation backend is unavailable")
 	}
-	activationStep, err := nativeActivationStep(req.DryRun, os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_STEP"))
+	activationStep, err := installdomain.ActivationStep(req.DryRun, os.Getenv("ISSUEOPS_NATIVE_ACTIVATION_STEP"))
 	if err != nil {
 		return err
 	}
@@ -144,10 +144,6 @@ func outputInstallResult(result port.NativeInstallResult, err error, jsonOut boo
 	return err
 }
 
-func nativeActivationStep(dryRun bool, raw string) (string, error) {
-	return installdomain.ActivationStep(dryRun, raw)
-}
-
 func installUserHomeDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -157,8 +153,4 @@ func installUserHomeDir() (string, error) {
 		return "", errors.New("determine user home directory: empty path")
 	}
 	return home, nil
-}
-
-func validInstallPathMode(mode string) bool {
-	return installdomain.ValidPathMode(mode)
 }

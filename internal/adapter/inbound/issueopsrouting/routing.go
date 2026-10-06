@@ -2,6 +2,7 @@ package issueopsrouting
 
 import (
 	"context"
+	issueopscontract "issueops/internal/contract/issueops"
 
 	issueopsroutingapplication "issueops/internal/application/issueopsrouting"
 	issueopsroutingcontract "issueops/internal/contract/issueopsrouting"
@@ -13,7 +14,7 @@ type Handlers struct {
 		string,
 		string,
 		string,
-		issueopsroutingcontract.Actor,
+		issueopscontract.IssueOpsActor,
 	) (issueopsroutingcontract.Record, error)
 	Score func(
 		string,
@@ -29,7 +30,7 @@ func NewHandlers(service *issueopsroutingapplication.Service) Handlers {
 			id string,
 			phase string,
 			skill string,
-			actor issueopsroutingcontract.Actor,
+			actor issueopscontract.IssueOpsActor,
 		) (issueopsroutingcontract.Record, error) {
 			return service.Record(context.Background(), stateRoot, id, phase, skill, actor)
 		},

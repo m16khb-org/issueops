@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"time"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -30,7 +31,7 @@ func issueOpsReconcileHandler(ctx context.Context, stateRoot string, request iss
 	return leaseinbound.NewReconcileHandler(service)(ctx, stateRoot, request, deps)
 }
 
-func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrcaProvisioner, readIssue port.ExecutionIssueSnapshotReadFunc, snapshot *issueopscontract.IssueOpsRecord, now func() time.Time) (*leaseapp.ReconcileService, error) {
+func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrcaProvisioner, readIssue executionissue.ExecutionIssueSnapshotReadFunc, snapshot *issueopscontract.IssueOpsRecord, now func() time.Time) (*leaseapp.ReconcileService, error) {
 	db, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return nil, err
@@ -53,7 +54,7 @@ func newIssueOpsReconcileService(stateRoot string, provisioner port.ExecutionOrc
 type coreReconcileEffects struct {
 	stateRoot   string
 	provisioner port.ExecutionOrcaProvisioner
-	readIssue   port.ExecutionIssueSnapshotReadFunc
+	readIssue   executionissue.ExecutionIssueSnapshotReadFunc
 }
 
 func (e *coreReconcileEffects) PrepareWorktree(ctx context.Context, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt) (preparationcontract.OwnerArtifacts, error) {

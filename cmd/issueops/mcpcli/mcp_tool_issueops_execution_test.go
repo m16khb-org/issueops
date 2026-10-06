@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"os"
 	"reflect"
 	"strings"
@@ -22,7 +23,7 @@ func TestMCPExecutionDependenciesPropagatePublicationReconcileWithoutInvocation(
 		return issueopscontract.ExecutionReconcileResult{}, nil
 	})
 
-	deps := issueOpsExecutionActionDependencies(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Publication: PublicationHandlers{Reconcile: handler}})
+	deps := issueOpsExecutionActionDependencies(MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Publication: PublicationHandlers{Reconcile: handler}})
 	if deps.RemoteReconcile == nil {
 		t.Fatal("publication reconcile handler was not propagated")
 	}
@@ -61,7 +62,7 @@ func TestMCPExecutionDependenciesPropagateCompletionWithoutInvocation(t *testing
 		invoked++
 		return issueopscontract.ExecutionResult{}, nil
 	})
-	deps := issueOpsExecutionActionDependencies(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Complete: handler})
+	deps := issueOpsExecutionActionDependencies(MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Complete: handler})
 	if deps.Complete == nil || reflect.ValueOf(deps.Complete).Pointer() != reflect.ValueOf(handler).Pointer() {
 		t.Fatal("completion handler was not propagated unchanged")
 	}
@@ -92,7 +93,7 @@ func TestMCPPublicationReconcilePreservesToolErrorClassification(t *testing.T) {
 				"host": "codex", "session_id": "publication-mcp-session",
 				"session_pid": float64(receipt.PID), "session_started_at": receipt.StartedAt,
 				"session_executable": receipt.Executable, "cwd": record.Execution.Workspace.Root,
-			}, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Publication: PublicationHandlers{Reconcile: func(_ context.Context, _ string, request issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
+			}, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Publication: PublicationHandlers{Reconcile: func(_ context.Context, _ string, request issueopscontract.ExecutionReconcileRequest) (issueopscontract.ExecutionReconcileResult, error) {
 				calls++
 				if request.Snapshot == nil || request.Snapshot.ID != record.ID {
 					t.Fatalf("publication reconcile snapshot=%#v", request.Snapshot)
@@ -230,7 +231,7 @@ func TestSDKCallToolRoutesResumeToInjectedHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	calls := 0
-	response, rpcErr := callSDKTool(t, params, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resume: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
+	response, rpcErr := callSDKTool(t, params, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resume: func(_ context.Context, stateRoot string, request issueopscontract.ExecutionResumeRequest) (issueopscontract.ExecutionResumeResult, error) {
 		calls++
 		if stateRoot == "" || request.ID != "io-aaaaaaaaaaaa" || request.ExpectedGeneration != 3 || request.CWD != "/repo.worktrees/resume" || !request.Confirm {
 			t.Fatalf("resume handler request=%+v state_root=%q", request, stateRoot)

@@ -3,6 +3,7 @@ package issueopsdecision
 import (
 	"context"
 	"fmt"
+	issueopscontract "issueops/internal/contract/issueops"
 
 	cycleapp "issueops/internal/application/issueopscycle"
 	issueopsdecisioncontract "issueops/internal/contract/issueopsdecision"
@@ -26,20 +27,20 @@ func (service *Service) Add(
 	stateRoot string,
 	id string,
 	request issueopsdecisioncontract.Request,
-	actor *issueopsdecisioncontract.Actor,
-) (issueopsdecisioncontract.Record, error) {
+	actor *issueopscontract.IssueOpsActor,
+) (issueopscontract.IssueOpsRecord, error) {
 	if service == nil || service.repository == nil || service.clock == nil || service.paths == nil {
-		return issueopsdecisioncontract.Record{OK: false, ID: id}, fmt.Errorf(
+		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, fmt.Errorf(
 			"issueops decision dependencies are required",
 		)
 	}
 	decision, err := issueopsdecisiondomain.Build(request, service.clock.Now())
 	if err != nil {
-		return issueopsdecisioncontract.Record{OK: false, ID: id}, err
+		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, err
 	}
 	return service.repository.Update(ctx, stateRoot, id, func(
-		record issueopsdecisioncontract.Record,
-	) (issueopsdecisioncontract.Record, error) {
+		record issueopscontract.IssueOpsRecord,
+	) (issueopscontract.IssueOpsRecord, error) {
 		if err := cycleapp.AuthorizeHolder(
 			ctx,
 			record,

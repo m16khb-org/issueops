@@ -1,6 +1,7 @@
 package issueopsreview
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
@@ -12,7 +13,7 @@ func TestRegressPersistsOneAuditedTransition(t *testing.T) {
 	record := model.IssueOpsRecord{
 		ID: "io-regress", Phase: model.IssueOpsPhasePlan,
 		DevilsAdvocateReview: &model.IssueOpsDevilsAdvocateReview{Verdict: "stop", IssueReflectedAt: at},
-		DesignReview:         &model.IssueOpsDesignReview{Approved: true},
+		DesignReview:         &reviewcontract.DesignReview{Approved: true},
 	}
 	writes := 0
 	store := reviewport.RegressStore{

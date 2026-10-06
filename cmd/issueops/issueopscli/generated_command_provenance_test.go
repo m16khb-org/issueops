@@ -6,7 +6,7 @@ import (
 	issueopscore "issueops/internal/adapter/issueops"
 	commandparsecontract "issueops/internal/contract/commandparse"
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/domain/commandparse"
+	shelltoken "issueops/internal/domain/shelltoken"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 	"os"
 	"path/filepath"
@@ -111,7 +111,7 @@ func TestGeneratedCommandRunsExactObservedBinaryEnvelopeWithoutCallerRepair(t *t
 	if err != nil {
 		t.Fatal(err)
 	}
-	tokens := commandparse.SplitCommandTokens(command)
+	tokens := shelltoken.SplitCommandTokens(command)
 	if len(tokens) < 3 || tokens[0] != evidence.ExecutablePath || tokens[1] != "execution" {
 		t.Fatalf("generated command does not select exact observed binary: %q", command)
 	}

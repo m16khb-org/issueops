@@ -8,5 +8,3 @@ func testCLIUsageDependencies() Dependencies {
 func runIssueOps(args []string) error {
 	return runIssueOpsForTest(args, testCLIUsageDependencies())
 }
-func testLifecycleUsage() string { return clicatalog.LifecycleUsage() }
-func testChildUsage() string     { return clicatalog.ChildUsage() }

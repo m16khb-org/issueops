@@ -1,6 +1,7 @@
 package issueopspreparation
 
 import (
+	leasecontract "issueops/internal/contract/issueopslease"
 	"strings"
 	"testing"
 
@@ -11,8 +12,8 @@ func TestBuildResumeIntentSealsOwnerIdentityAndStage(t *testing.T) {
 	record := preparationcontract.Record{
 		ID: "io-1", Repo: "/repo", IssueURL: "https://github.com/example/repo/issues/193",
 		BranchPrepare: []byte(`{"provider":"github","issue_url":"https://github.com/example/repo/issues/193","link_verified":true}`),
-		Execution: &preparationcontract.Execution{
-			Mode: "orca", Workspace: preparationcontract.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/193-fix", Branch: "193-fix", BaseHead: "base"},
+		Execution: &leasecontract.Execution{
+			Mode: "orca", Workspace: leasecontract.Workspace{SourceRoot: "/repo", Root: "/repo.worktrees/193-fix", Branch: "193-fix", BaseHead: "base"},
 			Lease: preparationcontract.Lease{Generation: 4, Status: "claimable", ClaimTokenSHA256: strings.Repeat("b", 64)},
 			Orca:  &preparationcontract.OrcaBinding{RuntimeID: "old-runtime", RepoID: "repo-id", WorktreeID: "tree-id", OwnerHost: "codex", OwnerModel: "model", OwnerEffort: "high", TaskID: "task", DispatchID: "dispatch", LeaseGeneration: 4},
 		},

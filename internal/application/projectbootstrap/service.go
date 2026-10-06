@@ -32,24 +32,12 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 	if err != nil {
 		return projectbootstrapcontract.ProjectDocsBootstrapResult{}, err
 	}
-	files := []projectdoc.ProjectDocsPlannedFile{}
+	files := []projectdoccontract.ProjectDocsPlannedFile{}
 	warnings := append([]string{}, lifecycleState.Warnings...)
 	contents := effects.Render(root, signals)
 	contents["AGENTS.md"] = effects.RenderAgents(root, contents["AGENTS.md"])
 	manifestPath := effects.JoinPath(root, projectdoc.ManifestRelPath())
 	manifestExisted := effects.Exists(manifestPath)
-	legacyFlat := false
-	if !manifestExisted {
-		for _, family := range projectdoc.DocFamilies() {
-			if effects.Exists(effects.JoinPath(root, pathpkg.Join(projectdoc.ProjectDocsDir, family.Root))) {
-				legacyFlat = true
-				break
-			}
-		}
-	}
-	if legacyFlat {
-		warnings = projectdoc.AppendUnique(warnings, "legacy_flat_layout_preserved: existing flat family roots were kept without partial modular scaffolding; restructure with project-docs-optimize instead of bootstrap")
-	}
 	familyPreserved := false
 	for _, rel := range append([]string{"AGENTS.md"}, projectdoc.PrefixedKnownProjectDocNames()...) {
 		content := contents[rel]
@@ -59,7 +47,7 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 		path := effects.JoinPath(root, rel)
 		action := effects.Action(path, content)
 		decision := projectdoc.DecideBootstrapFile(projectdoc.BootstrapFileInput{
-			Kind: projectdoc.BootstrapRootFile, Rel: rel, Action: action, Write: request.Write, Sync: request.Sync, LegacyFlat: legacyFlat,
+			Kind: projectdoc.BootstrapRootFile, Rel: rel, Action: action, Write: request.Write, Sync: request.Sync,
 		})
 		if decision.FamilyPreserved {
 			familyPreserved = true
@@ -71,7 +59,7 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 		} else if decision.SyncWarning {
 			warnings = projectdoc.AppendUnique(warnings, "sync_available: existing project docs were preserved; pass --sync to refresh them from current templates and repo evidence")
 		}
-		files = append(files, projectdoc.ProjectDocsPlannedFile{
+		files = append(files, projectdoccontract.ProjectDocsPlannedFile{
 			RelPath: effects.ToSlash(rel), Path: path, Action: action, Bytes: len([]byte(content)),
 			SHA256: projectdoc.SHA256Hex(content), Reason: projectDocReason(rel), Preserved: decision.Preserved,
 		})
@@ -85,7 +73,7 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 		path := effects.JoinPath(root, rel)
 		action := effects.Action(path, content)
 		decision := projectdoc.DecideBootstrapFile(projectdoc.BootstrapFileInput{
-			Kind: projectdoc.BootstrapModuleFile, Rel: rel, Action: action, Write: request.Write, Sync: request.Sync, LegacyFlat: legacyFlat,
+			Kind: projectdoc.BootstrapModuleFile, Rel: rel, Action: action, Write: request.Write, Sync: request.Sync,
 		})
 		if decision.Write {
 			if err := effects.Write(path, content); err != nil {
@@ -95,7 +83,7 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 			familyPreserved = true
 		}
 		if decision.Report {
-			files = append(files, projectdoc.ProjectDocsPlannedFile{
+			files = append(files, projectdoccontract.ProjectDocsPlannedFile{
 				RelPath: rel, Path: path, Action: action, Bytes: len([]byte(content)),
 				SHA256: projectdoc.SHA256Hex(content), Reason: projectDocReason(rel), Preserved: decision.Preserved,
 			})
@@ -105,7 +93,7 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 	manifestAction := effects.Action(manifestPath, manifestContent)
 	manifestDecision := projectdoc.DecideBootstrapFile(projectdoc.BootstrapFileInput{
 		Kind: projectdoc.BootstrapManifestFile, Rel: projectdoc.ManifestRelPath(), Action: manifestAction,
-		Write: request.Write, Sync: request.Sync, LegacyFlat: legacyFlat,
+		Write: request.Write, Sync: request.Sync,
 	})
 	if manifestDecision.Write {
 		if err := effects.Write(manifestPath, manifestContent); err != nil {
@@ -113,7 +101,7 @@ func Bootstrap(request projectbootstrapcontract.ProjectDocsBootstrapRequest, eff
 		}
 	}
 	if manifestDecision.Report {
-		files = append(files, projectdoc.ProjectDocsPlannedFile{
+		files = append(files, projectdoccontract.ProjectDocsPlannedFile{
 			RelPath: projectdoc.ManifestRelPath(), Path: manifestPath, Action: manifestAction,
 			Bytes: len([]byte(manifestContent)), SHA256: projectdoc.SHA256Hex(manifestContent), Reason: "modular documentation contract manifest",
 		})

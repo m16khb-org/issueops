@@ -1,6 +1,8 @@
 package updatecli
 
 import (
+	adapter "issueops/internal/adapter/update"
+	contract "issueops/internal/contract/update"
 	"os"
 	"path/filepath"
 	"testing"
@@ -8,7 +10,7 @@ import (
 
 func TestParseMCPProxyProcessOnlyMatchesCurrentHarnessMCP(t *testing.T) {
 	binary := filepath.Join(t.TempDir(), "bin", "issueops")
-	match, ok := parseMCPProxyProcessSnapshot("  123 1 "+binary+" mcp", binary)
+	match, ok := adapter.ParseMCPProxyProcessSnapshot("  123 1 "+binary+" mcp", binary)
 	if !ok || match.PID != 123 || match.Command != binary+" mcp" {
 		t.Fatalf("expected MCP proxy match, got match=%+v ok=%v", match, ok)
 	}
@@ -18,7 +20,7 @@ func TestParseMCPProxyProcessOnlyMatchesCurrentHarnessMCP(t *testing.T) {
 		"126 1 /other/bin/issueops mcp",
 		"not-a-pid 1 " + binary + " mcp",
 	} {
-		if got, ok := parseMCPProxyProcessSnapshot(line, binary); ok {
+		if got, ok := adapter.ParseMCPProxyProcessSnapshot(line, binary); ok {
 			t.Fatalf("unexpected match for %q: %+v", line, got)
 		}
 	}
@@ -26,7 +28,7 @@ func TestParseMCPProxyProcessOnlyMatchesCurrentHarnessMCP(t *testing.T) {
 
 func TestParseMCPProxyProcessSnapshotRequiresExactHarnessCommand(t *testing.T) {
 	binary := filepath.Join(t.TempDir(), "bin", "issueops")
-	process, ok := parseMCPProxyProcessSnapshot("123 1 "+binary+" mcp", binary)
+	process, ok := adapter.ParseMCPProxyProcessSnapshot("123 1 "+binary+" mcp", binary)
 	if !ok || process.PID != 123 || process.ParentPID != 1 || process.Command != binary+" mcp" {
 		t.Fatalf("exact snapshot parse = %#v ok=%v", process, ok)
 	}
@@ -36,14 +38,14 @@ func TestParseMCPProxyProcessSnapshotRequiresExactHarnessCommand(t *testing.T) {
 		"126 900 " + binary + " worker run",
 		"127 1 /other/bin/issueops mcp",
 	} {
-		if process, ok := parseMCPProxyProcessSnapshot(line, binary); ok {
+		if process, ok := adapter.ParseMCPProxyProcessSnapshot(line, binary); ok {
 			t.Fatalf("external or non-proxy process matched %q: %#v", line, process)
 		}
 	}
 }
 
 func TestRefreshRunningMCPProxiesAfterInstallPreservesAllActiveProcesses(t *testing.T) {
-	restoreList := stubMCPProxyProcessLister(t, func() ([]mcpProxyProcess, error) {
+	restoreList := stubMCPProxyProcessLister(t, func() ([]contract.MCPProxyProcess, error) {
 		t.Fatal("post-install refresh must not enumerate host-owned MCP processes")
 		return nil, nil
 	})

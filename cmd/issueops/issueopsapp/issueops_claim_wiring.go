@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"strings"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -12,7 +13,6 @@ import (
 	leaseoutbound "issueops/internal/adapter/outbound/issueopslease"
 	"issueops/internal/adapter/outbound/sqlstore"
 	leaseapp "issueops/internal/application/issueopslease"
-	"issueops/internal/port"
 )
 
 func issueOpsClaimHandler(ctx context.Context, stateRoot string, request issueopscontract.ExecutionClaimRequest, deps issueopscontract.ExecutionClaimDependencies) (issueopscontract.ExecutionResult, error) {
@@ -32,7 +32,7 @@ func issueOpsClaimHandler(ctx context.Context, stateRoot string, request issueop
 		if deps.ReadIssue == nil {
 			return leaseapp.IssueSnapshot{}, fmt.Errorf("remote issue snapshot reader is unavailable for the Orca claim")
 		}
-		snapshot, err := deps.ReadIssue(ctx, providerName, port.ExecutionIssueSnapshotRequest{Repo: repo, URL: issueURL})
+		snapshot, err := deps.ReadIssue(ctx, providerName, executionissue.ExecutionIssueSnapshotRequest{Repo: repo, URL: issueURL})
 		if err != nil {
 			return leaseapp.IssueSnapshot{}, err
 		}

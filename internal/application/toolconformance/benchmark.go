@@ -107,7 +107,7 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 					if !selectedPair || episode.Status != fixturecontract.EpisodeCompleted {
 						continue
 					}
-					expectation := completedEpisodeExpectation{
+					expectation := toolconformancedomain.CompletedEpisodeExpectation{
 						Host: host, HostVersion: preflight.Version, RequestedModel: hostReport.RequestedModel,
 						Profile: request.Profile, Fixture: fixture, Attempt: episode.Attempt,
 					}
@@ -163,7 +163,7 @@ func RunLiveBenchmark(ctx context.Context, request LiveBenchmarkRequest, descrip
 					RunToken:              deps.Token(),
 				})
 				episode := policy.classifyHostResult(runResult, fixture)
-				expectation := completedEpisodeExpectation{
+				expectation := toolconformancedomain.CompletedEpisodeExpectation{
 					Host: host, HostVersion: preflight.Version, RequestedModel: hostReport.RequestedModel,
 					Profile: request.Profile, Fixture: fixture, Attempt: attempt,
 				}
@@ -222,10 +222,8 @@ type benchmarkPolicy struct {
 	classify func(bool, []failurecausecontract.Evidence) failurecausecontract.Result
 }
 
-type fixturePair = toolconformancedomain.SelectedFixturePair
-
-func selectFixturePairs(hosts []string, fixtures []fixturecontract.Fixture, only string) ([]fixturePair, error) {
-	pairs := []fixturePair{}
+func selectFixturePairs(hosts []string, fixtures []fixturecontract.Fixture, only string) ([]toolconformancedomain.SelectedFixturePair, error) {
+	pairs := []toolconformancedomain.SelectedFixturePair{}
 	onlyHost, onlyFixture := "", ""
 	if only != "" {
 		parts := strings.Split(only, ":")
@@ -239,7 +237,7 @@ func selectFixturePairs(hosts []string, fixtures []fixturecontract.Fixture, only
 			if only != "" && (host != onlyHost || fixture.ID != onlyFixture) {
 				continue
 			}
-			pairs = append(pairs, fixturePair{Host: host, Fixture: fixture})
+			pairs = append(pairs, toolconformancedomain.SelectedFixturePair{Host: host, Fixture: fixture})
 		}
 	}
 	if len(pairs) == 0 {
@@ -367,9 +365,7 @@ func (policy benchmarkPolicy) incompleteHostResult(result port.HostProbeResult, 
 	return episode
 }
 
-type completedEpisodeExpectation = toolconformancedomain.CompletedEpisodeExpectation
-
-func (policy benchmarkPolicy) validCompletedEpisode(episode fixturecontract.EpisodeReport, expected completedEpisodeExpectation) bool {
+func (policy benchmarkPolicy) validCompletedEpisode(episode fixturecontract.EpisodeReport, expected toolconformancedomain.CompletedEpisodeExpectation) bool {
 	return toolconformancedomain.ValidCompletedEpisode(episode, expected)
 }
 func (policy benchmarkPolicy) incompleteEpisode(host, version string, fixture fixturecontract.Fixture, profile, model string, attempt int, cause, code, source string) fixturecontract.EpisodeReport {

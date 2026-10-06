@@ -2,6 +2,7 @@ package verifyloop
 
 import (
 	selfverify "issueops/internal/contract/selfverify"
+	selfverifydomain "issueops/internal/domain/selfverify"
 
 	"fmt"
 	"os"
@@ -13,8 +14,6 @@ import (
 	application "issueops/internal/application/selfverify"
 	augmentcontract "issueops/internal/contract/selfaugment"
 )
-
-var ErrSelfVerificationGateFailed = application.ErrSelfVerificationGateFailed
 
 type Deps struct {
 	IssueOpsRoot func() string
@@ -60,7 +59,7 @@ func (deps Deps) withDefaults() Deps {
 		deps.IssueOpsRoot = func() string { return "." }
 	}
 	if deps.FailedStep == nil {
-		deps.FailedStep = commandstep.FailedStep
+		deps.FailedStep = selfverifydomain.FailedStep
 	}
 	if deps.PrintStep == nil {
 		deps.PrintStep = commandstep.PrintStep

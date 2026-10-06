@@ -3,17 +3,17 @@ package issueopsexecution
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"issueops/internal/contract/issueops"
 	snapshotdomain "issueops/internal/domain/issueops"
-	"issueops/internal/port"
 	"strings"
 )
 
 func (s Service) snapshotReader(
 	stateRoot string,
 	req issueops.ExecutionActionRequest,
-	fallback port.ExecutionIssueSnapshotReadFunc,
-) (port.ExecutionIssueSnapshotReadFunc, func() string, error) {
+	fallback executionissue.ExecutionIssueSnapshotReadFunc,
+) (executionissue.ExecutionIssueSnapshotReadFunc, func() string, error) {
 	if req.IssueSnapshot == nil {
 		return executionGitLabFallbackSnapshotReader(fallback)
 	}
@@ -29,14 +29,14 @@ func (s Service) snapshotReader(
 		return nil, nil, err
 	}
 	evidence := *req.IssueSnapshot
-	snapshot := port.ExecutionIssueSnapshot{URL: evidence.WebURL, Body: evidence.Body, State: evidence.State, Source: evidence.Source}
+	snapshot := executionissue.ExecutionIssueSnapshot{URL: evidence.WebURL, Body: evidence.Body, State: evidence.State, Source: evidence.Source}
 	linkedURL := strings.TrimSpace(record.IssueURL)
-	reader := func(ctx context.Context, provider string, snapshotReq port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+	reader := func(ctx context.Context, provider string, snapshotReq executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 		if err := ctx.Err(); err != nil {
-			return port.ExecutionIssueSnapshot{}, err
+			return executionissue.ExecutionIssueSnapshot{}, err
 		}
 		if provider != "gitlab" || !s.SamePath(snapshotReq.Repo, record.Repo) || strings.TrimSpace(snapshotReq.URL) != linkedURL {
-			return port.ExecutionIssueSnapshot{}, fmt.Errorf("issue_snapshot request does not match the linked IssueOps identity")
+			return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("issue_snapshot request does not match the linked IssueOps identity")
 		}
 		snapshot.URL = linkedURL
 		return snapshot, nil
@@ -45,29 +45,29 @@ func (s Service) snapshotReader(
 }
 
 func executionGitLabFallbackSnapshotReader(
-	fallback port.ExecutionIssueSnapshotReadFunc,
-) (port.ExecutionIssueSnapshotReadFunc, func() string, error) {
+	fallback executionissue.ExecutionIssueSnapshotReadFunc,
+) (executionissue.ExecutionIssueSnapshotReadFunc, func() string, error) {
 	source := ""
-	reader := func(ctx context.Context, provider string, req port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+	reader := func(ctx context.Context, provider string, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 		if fallback == nil {
 			err := fmt.Errorf("remote issue snapshot reader is unavailable")
 			if provider == "gitlab" {
-				return port.ExecutionIssueSnapshot{}, fmt.Errorf("gitlab_issue_snapshot_unavailable: %w", err)
+				return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("gitlab_issue_snapshot_unavailable: %w", err)
 			}
-			return port.ExecutionIssueSnapshot{}, err
+			return executionissue.ExecutionIssueSnapshot{}, err
 		}
 		snapshot, err := fallback(ctx, provider, req)
 		if err != nil {
 			if provider == "gitlab" {
-				return port.ExecutionIssueSnapshot{}, fmt.Errorf("gitlab_issue_snapshot_unavailable: %w", err)
+				return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("gitlab_issue_snapshot_unavailable: %w", err)
 			}
-			return port.ExecutionIssueSnapshot{}, err
+			return executionissue.ExecutionIssueSnapshot{}, err
 		}
 		if provider != "gitlab" {
 			return snapshot, nil
 		}
 		if err := snapshotdomain.ValidateGitLabExecutionSnapshot(req.URL, snapshot.URL, snapshot.Body, snapshot.State); err != nil {
-			return port.ExecutionIssueSnapshot{}, fmt.Errorf("gitlab_issue_snapshot_unavailable: %w", err)
+			return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("gitlab_issue_snapshot_unavailable: %w", err)
 		}
 		snapshot.URL = strings.TrimSpace(req.URL)
 		snapshot.Source = "glab_cli"

@@ -3,6 +3,7 @@ package issueopspublication_test
 import (
 	"bytes"
 	"encoding/json"
+	executionissue "issueops/internal/contract/executionissue"
 	"testing"
 
 	publication "issueops/internal/contract/issueopspublication"
@@ -60,19 +61,19 @@ func TestProviderCreateResultJSONMatchesPort(t *testing.T) {
 	tests := []struct {
 		name        string
 		contract    publication.ProviderCreateResult
-		port        port.IssueProviderCreatePullRequestResult
+		port        executionissue.IssueProviderCreatePullRequestResult
 		literalJSON string
 	}{
 		{
 			name:        "created",
 			contract:    publication.ProviderCreateResult{OK: true, URL: "https://github.com/acme/repo/pull/1", Number: "1", Preview: "preview"},
-			port:        port.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/1", Number: "1", Preview: "preview"},
+			port:        executionissue.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/1", Number: "1", Preview: "preview"},
 			literalJSON: "{\"ok\":true,\"url\":\"https://github.com/acme/repo/pull/1\",\"number\":\"1\",\"preview\":\"preview\"}",
 		},
 		{
 			name:        "empty preview omitted",
 			contract:    publication.ProviderCreateResult{},
-			port:        port.IssueProviderCreatePullRequestResult{},
+			port:        executionissue.IssueProviderCreatePullRequestResult{},
 			literalJSON: "{\"ok\":false,\"url\":\"\",\"number\":\"\"}",
 		},
 	}

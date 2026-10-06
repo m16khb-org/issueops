@@ -1,9 +1,12 @@
 package selfverify
 
-import "testing"
+import (
+	contract "issueops/internal/contract/selfverify"
+	"testing"
+)
 
 func TestScoreGoalsPreservesMissingIterationsAndExclusiveTarget(t *testing.T) {
-	goals := []GoalDefinition{{Name: "test_suite", KoreanName: "테스트 스위트", Labels: []string{"go test", "golden"}}}
+	goals := []contract.SelfVerificationGoalDefinition{{Name: "test_suite", KoreanName: "테스트 스위트", Labels: []string{"go test", "golden"}}}
 	runs := []Run{
 		{Iteration: 1, Checks: []Check{{Label: "go test", OK: true}, {Label: "golden", OK: true}}},
 		{Iteration: 2, Checks: []Check{{Label: "go test", OK: true}}},
@@ -23,7 +26,7 @@ func TestScoreGoalsPreservesMissingIterationsAndExclusiveTarget(t *testing.T) {
 }
 
 func TestScoreGoalsUsesFirstRunAndLastMatchingStep(t *testing.T) {
-	goals := []GoalDefinition{{Name: "gate", Labels: []string{"check"}}}
+	goals := []contract.SelfVerificationGoalDefinition{{Name: "gate", Labels: []string{"check"}}}
 	runs := []Run{
 		{Iteration: 1, Checks: []Check{{Label: "check", OK: true}, {Label: "check", OK: false}}},
 		{Iteration: 1, Checks: []Check{{Label: "check", OK: true}}},

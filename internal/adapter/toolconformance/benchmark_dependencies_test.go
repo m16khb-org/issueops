@@ -2,11 +2,11 @@ package toolconformance_test
 
 import (
 	"context"
-	failurecause "issueops/internal/adapter/failurecause"
 	adapter "issueops/internal/adapter/toolconformance"
 	app "issueops/internal/application/toolconformance"
 	failurecontract "issueops/internal/contract/failurecause"
 	contract "issueops/internal/contract/toolconformance"
+	failurecausedomain "issueops/internal/domain/failurecause"
 	"issueops/internal/port"
 	"testing"
 	"time"
@@ -21,7 +21,7 @@ func runLiveBenchmark(ctx context.Context, request app.LiveBenchmarkRequest, des
 		deps.Token = adapter.RandomToken
 	}
 	deps.LoadManifest = (app.FixtureService{Files: adapter.FixtureFiles{}}).LoadManifest
-	deps.Classify = failurecause.Classify
+	deps.Classify = failurecausedomain.Classify
 	return app.RunLiveBenchmark(ctx, request, descriptors, deps)
 }
 
@@ -33,7 +33,7 @@ func TestLiveBenchmarksKeepTheirFailureClassifier(t *testing.T) {
 			Now:     func() time.Time { return time.Unix(1, 0) }, Token: func() string { return "token" },
 			LoadManifest: (app.FixtureService{Files: adapter.FixtureFiles{}}).LoadManifest,
 			Classify: func(failed bool, evidence []failurecontract.Evidence) failurecontract.Result {
-				result := failurecause.Classify(failed, evidence)
+				result := failurecausedomain.Classify(failed, evidence)
 				result.Reason = reason
 				return result
 			},

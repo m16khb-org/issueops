@@ -6,47 +6,37 @@ import (
 	policy "issueops/internal/domain/quality"
 )
 
-type InspectResult = contract.InspectResult
-type Summary = contract.Summary
-type Signal = contract.Signal
-type BranchFunction = contract.BranchFunction
-type AuditItem = contract.AuditItem
-type PioneerCoverage = contract.PioneerCoverage
-type SNRResult = contract.SNRResult
-
-const CollectionStatusOK = contract.CollectionStatusOK
-
 type InspectDeps struct {
 	Now                  func() string
 	Coverage             func(string) (string, error)
-	BranchFunctions      func(string) ([]BranchFunction, []string)
-	AuditItems           func(string) ([]AuditItem, []string)
+	BranchFunctions      func(string) ([]contract.BranchFunction, []string)
+	AuditItems           func(string) ([]contract.AuditItem, []string)
 	SelfAugmentOpenCount func(string) (int, error)
 	SelfVerifyOpenCount  func(string) (int, error)
 	Candidates           func(string) []catalog.Candidate
-	CodeSNR              func(string) (SNRResult, error)
-	PioneerCoverage      func(string) (PioneerCoverage, error)
+	CodeSNR              func(string) (contract.SNRResult, error)
+	PioneerCoverage      func(string) (contract.PioneerCoverage, error)
 }
 
-func Inspect(root string, deps InspectDeps) InspectResult {
+func Inspect(root string, deps InspectDeps) contract.InspectResult {
 	type textResult struct {
 		value string
 		err   error
 	}
 	type branchResult struct {
-		value    []BranchFunction
+		value    []contract.BranchFunction
 		warnings []string
 	}
 	type auditResult struct {
-		value    []AuditItem
+		value    []contract.AuditItem
 		warnings []string
 	}
 	type pioneerResult struct {
-		value PioneerCoverage
+		value contract.PioneerCoverage
 		err   error
 	}
 	type snrResult struct {
-		value SNRResult
+		value contract.SNRResult
 		err   error
 	}
 	coverageResults := make(chan textResult, 1)
@@ -115,7 +105,7 @@ func Inspect(root string, deps InspectDeps) InspectResult {
 			highBranchCount++
 		}
 	}
-	signals := []Signal{
+	signals := []contract.Signal{
 		{ID: "self-augment-open-candidates", Category: "candidate", Status: policy.StatusForCollector(selfAugmentErr, "ok"), Value: float64(selfAugmentOpen), Evidence: []string{"self-augment candidate catalog"}},
 		{ID: "self-verify-open-candidates", Category: "candidate", Status: policy.StatusForCollector(selfVerifyErr, "ok"), Value: float64(selfVerifyOpen), Evidence: []string{"self-verify candidate export"}},
 		{ID: "low-coverage-packages", Category: "coverage", Status: policy.StatusForCollector(coverage.err, policy.StatusForCount(len(lowCoverage))), Value: float64(len(lowCoverage)), Threshold: 60, Evidence: policy.CoverageEvidence(lowCoverage)},
@@ -129,14 +119,14 @@ func Inspect(root string, deps InspectDeps) InspectResult {
 	}
 	findings := policy.CollectQualityFindings(warnings, lowCoverage, branchFunctions, auditItems, pioneer.value)
 	collectionStatus, healthStatus, gateStatus := policy.QualityStatuses(warnings, findings)
-	return InspectResult{
-		OK:               collectionStatus == CollectionStatusOK,
+	return contract.InspectResult{
+		OK:               collectionStatus == contract.CollectionStatusOK,
 		CollectionStatus: collectionStatus,
 		HealthStatus:     healthStatus,
 		GateStatus:       gateStatus,
 		GeneratedAt:      deps.Now(),
 		IssueOpsRoot:     root,
-		Summary: Summary{
+		Summary: contract.Summary{
 			SelfAugmentOpenCandidates: selfAugmentOpen,
 			SelfVerifyOpenCandidates:  selfVerifyOpen,
 			LowCoveragePackages:       len(lowCoverage),

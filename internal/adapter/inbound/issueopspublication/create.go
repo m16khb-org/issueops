@@ -2,12 +2,12 @@ package issueopspublication
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 
 	issueopscontract "issueops/internal/contract/issueops"
 
 	publicationapp "issueops/internal/application/issueopspublication"
 	publicationcontract "issueops/internal/contract/issueopspublication"
-	"issueops/internal/port"
 )
 
 type createService interface {
@@ -21,13 +21,13 @@ type CreateHandler struct{ service createService }
 // 반환 타입은 어댑터의 이름 붙은 핸들러 타입 대신 같은 시그니처를 직접 쓴다.
 // Go에서 두 형태는 할당 호환이므로 소비자는 그대로 동작하고, inbound 어댑터는
 // issueops 어댑터를 알 필요가 없어진다.
-func NewCreateHandler(service createService) func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func NewCreateHandler(service createService) func(context.Context, string, issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return CreateHandler{service: service}.Handle
 }
 
-func (h CreateHandler) Handle(ctx context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func (h CreateHandler) Handle(ctx context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	if h.service == nil {
-		return port.IssueProviderCreatePullRequestResult{}, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable
+		return executionissue.IssueProviderCreatePullRequestResult{}, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable
 	}
 	result, err := h.service.Create(ctx, publicationcontract.CreateCommand{
 		ID: request.ID, Provider: request.Provider, Title: request.Title, Body: request.Body,
@@ -36,7 +36,7 @@ func (h CreateHandler) Handle(ctx context.Context, _ string, request issueopscon
 		ExpectedGeneration: request.ExpectedGeneration, Actor: publicationActor(request.Actor),
 		CWD: request.CWD, Confirm: request.Confirm,
 	})
-	return port.IssueProviderCreatePullRequestResult{
+	return executionissue.IssueProviderCreatePullRequestResult{
 		OK: result.OK, URL: result.URL, Number: result.Number, Preview: result.Preview,
 	}, err
 }

@@ -69,8 +69,8 @@ func TestCompletionHeadRequiresFullMatchingHash(t *testing.T) {
 }
 
 func TestTerminalCompletionRetryRequiresReleasedReceiptAndSameEvidence(t *testing.T) {
-	command := Command{Generation: 3, FinalHead: strings.Repeat("a", 40), Verification: []string{"test"}, RemoteArtifactURL: "https://example.com/pull/1"}
-	base := Snapshot{Phase: "done", Lease: Lease{Generation: 3, Status: "released", ReleasedAt: "then"}, Completion: &Completion{Generation: 3, FinalHead: strings.Repeat("A", 40), CompletedAt: "then", Verification: []string{"test"}, RemoteArtifactURL: command.RemoteArtifactURL}}
+	command := contract.Command{Generation: 3, FinalHead: strings.Repeat("a", 40), Verification: []string{"test"}, RemoteArtifactURL: "https://example.com/pull/1"}
+	base := Snapshot{Phase: "done", Lease: contract.Lease{Generation: 3, Status: "released", ReleasedAt: "then"}, Completion: &contract.Completion{Generation: 3, FinalHead: strings.Repeat("A", 40), CompletedAt: "then", Verification: []string{"test"}, RemoteArtifactURL: command.RemoteArtifactURL}}
 	for _, tc := range []struct {
 		name    string
 		change  func(*Snapshot)
@@ -81,7 +81,7 @@ func TestTerminalCompletionRetryRequiresReleasedReceiptAndSameEvidence(t *testin
 		{"active phase", func(s *Snapshot) { s.Phase = "pr" }, false},
 		{"different generation", func(s *Snapshot) { s.Lease.Generation = 4 }, false},
 		{"active lease", func(s *Snapshot) { s.Lease.Status = "active" }, false},
-		{"holder", func(s *Snapshot) { s.Lease.Holder = &Actor{} }, false},
+		{"holder", func(s *Snapshot) { s.Lease.Holder = &contract.Actor{} }, false},
 		{"token", func(s *Snapshot) { s.Lease.ClaimTokenSHA256 = "token" }, false},
 		{"missing release", func(s *Snapshot) { s.Lease.ReleasedAt = " " }, false},
 		{"missing receipt", func(s *Snapshot) { s.Completion = nil }, false},

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	executionissue "issueops/internal/contract/executionissue"
+	shelltoken "issueops/internal/domain/shelltoken"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,7 +16,6 @@ import (
 	issueopscore "issueops/internal/adapter/issueops"
 	"issueops/internal/adapter/preflight"
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/domain/commandparse"
 	"issueops/internal/port"
 )
 
@@ -48,7 +49,7 @@ func TestIssueOpsPrepareWiringRunsRealDirectPreviewWithoutPersistence(t *testing
 	result, err := handler(context.Background(), stateRoot, issueopscontract.ExecutionPrepareRequest{
 		ID: record.ID, Mode: "direct", Actor: issueopscontract.NativeActor{Host: "codex", SessionID: "session", SessionProcess: process},
 		CWD: repo, DirectReason: "wiring preview test", Confirm: false,
-	}, port.ExecutionPrepareInvocation{})
+	}, executionissue.ExecutionPrepareInvocation{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,15 +85,15 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	fallbackCalls := 0
-	fallback := func(context.Context, string, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+	fallback := func(context.Context, string, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 		fallbackCalls++
-		return port.ExecutionIssueSnapshot{}, context.DeadlineExceeded
+		return executionissue.ExecutionIssueSnapshot{}, context.DeadlineExceeded
 	}
 	handler := newIssueOpsPreparationHandler(issueOpsPreparationCompositionDeps{
 		Orca: &reconcileProvisionerFake{}, ReadIssue: fallback,
 	})
 
-	issueSnapshot := &port.ExecutionIssueSnapshotEvidence{
+	issueSnapshot := &executionissue.ExecutionIssueSnapshotEvidence{
 		Provider: "gitlab", Source: "glab_mcp",
 		WebURL: "https://gitlab.example.com/acme/repo/-/issues/199",
 		Body:   claimWiringIssueBody(), State: "opened",
@@ -124,7 +125,7 @@ func TestIssueOpsPrepareWiringUsesRequestScopedIssueSnapshot(t *testing.T) {
 	if !strings.Contains(preview.NextCommand, "--issue-snapshot-file '") {
 		t.Fatalf("snapshot-backed preview lost exact confirm source: %s", preview.NextCommand)
 	}
-	tokens := commandparse.SplitCommandTokens(preview.NextCommand)
+	tokens := shelltoken.SplitCommandTokens(preview.NextCommand)
 	if len(tokens) < 4 || strings.Join(tokens[:3], " ") != "issueops execution prepare" {
 		t.Fatalf("invalid next command: %q tokens=%v", preview.NextCommand, tokens)
 	}
@@ -164,7 +165,7 @@ func TestIssueOpsPrepareWiringRejectsActorBeforeStateMutation(t *testing.T) {
 		context.Background(),
 		stateRoot,
 		issueopscontract.ExecutionPrepareRequest{ID: "io-forged-actor"},
-		port.ExecutionPrepareInvocation{},
+		executionissue.ExecutionPrepareInvocation{},
 	)
 
 	if err == nil || !strings.Contains(err.Error(), "not in the local process ancestry") {

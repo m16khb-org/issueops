@@ -13,8 +13,8 @@ func TestBootstrapFileDecisionPreservesCuratedDocs(t *testing.T) {
 		{name: "agents routing", input: BootstrapFileInput{Kind: BootstrapRootFile, Rel: "AGENTS.md", Action: "update", Write: true}, write: true, report: true},
 		{name: "family root", input: BootstrapFileInput{Kind: BootstrapRootFile, Rel: ".issueops/ADR.md", Action: "update", Write: true, Sync: true}, preserved: true, report: true, familyPreserved: true},
 		{name: "family module create", input: BootstrapFileInput{Kind: BootstrapModuleFile, Rel: ".issueops/adr/overview.md", Action: "create", Write: true}, write: true, report: true},
-		{name: "legacy module", input: BootstrapFileInput{Kind: BootstrapModuleFile, Rel: ".issueops/adr/overview.md", Action: "create", Write: true, LegacyFlat: true}},
-		{name: "legacy module update", input: BootstrapFileInput{Kind: BootstrapModuleFile, Rel: ".issueops/adr/overview.md", Action: "update", Write: true, LegacyFlat: true}, familyPreserved: true},
+		{name: "family module update", input: BootstrapFileInput{Kind: BootstrapModuleFile, Rel: ".issueops/adr/overview.md", Action: "update", Write: true, Sync: true}, preserved: true, report: true, familyPreserved: true},
+		{name: "family root create", input: BootstrapFileInput{Kind: BootstrapRootFile, Rel: ".issueops/ADR.md", Action: "create", Write: true}, write: true, report: true},
 		{name: "manifest update", input: BootstrapFileInput{Kind: BootstrapManifestFile, Rel: ".issueops/documentation/manifest.json", Action: "update", Write: true, Sync: true}, report: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

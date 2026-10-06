@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"fmt"
 	"io"
+	pathutil "issueops/cmd/issueops/pathutil"
 	"os"
 
 	cliadapter "issueops/internal/adapter/inbound/catalog/cli"
@@ -32,7 +33,7 @@ func newHarnessInspector() func(string) inspectcontract.InspectInfo {
 }
 
 func newHarnessHostInspector() func(string, inspectcontract.Options) inspectcontract.InspectInfo {
-	return harnessInspectorWithDefault(resolveTarget(""), "")
+	return harnessInspectorWithDefault(pathutil.ResolveTarget(""), "")
 }
 
 func scopedHarnessInspector(defaultTarget string) func(string, string) any {

@@ -93,8 +93,17 @@ func TestDDDResponsibilityInventoryMatchesSource(t *testing.T) {
 	for _, source := range want.Sources {
 		byPath[source.Path] = source
 	}
+	testNames := collectDDDTestNames(t, root)
 	ids := map[string]bool{}
 	for _, policy := range want.Policies {
+		if _, ok := byPath[policy.SourcePath]; !ok {
+			t.Errorf("%s source path %s is not a production source file; prune the policy", policy.ID, policy.SourcePath)
+		}
+		for _, evidence := range policy.EvidenceTests {
+			if !dddEvidenceTestExists(root, testNames, evidence) {
+				t.Errorf("%s evidence test %s does not exist", policy.ID, evidence)
+			}
+		}
 		if policy.ID == "" || ids[policy.ID] || policy.Responsibility == "" || policy.Target == "" || policy.Task == "" ||
 			len(policy.Entrypoints) == 0 || len(policy.EvidenceTests) == 0 {
 			t.Errorf("incomplete or duplicate policy entry: %+v", policy)
@@ -181,6 +190,72 @@ func TestDDDContractFunctionsHaveExplicitRoles(t *testing.T) {
 			t.Errorf("contract function has no reviewed role: %s", key)
 		}
 	}
+}
+
+// collectDDDTestNames maps each package directory (slash-separated, relative
+// to the repo root) to the Test functions declared in it.
+func collectDDDTestNames(t *testing.T, root string) map[string]map[string]bool {
+	t.Helper()
+	names := map[string]map[string]bool{}
+	for _, top := range []string{"cmd", "internal"} {
+		err := filepath.WalkDir(filepath.Join(root, top), func(path string, entry os.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() || !strings.HasSuffix(path, "_test.go") {
+				return nil
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			rel, err := filepath.Rel(root, filepath.Dir(path))
+			if err != nil {
+				return err
+			}
+			dir := filepath.ToSlash(rel)
+			for _, line := range strings.Split(string(data), "\n") {
+				rest, ok := strings.CutPrefix(line, "func Test")
+				if !ok {
+					continue
+				}
+				name, _, ok := strings.Cut(rest, "(")
+				if !ok {
+					continue
+				}
+				if names[dir] == nil {
+					names[dir] = map[string]bool{}
+				}
+				names[dir]["Test"+name] = true
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return names
+}
+
+// dddEvidenceTestExists resolves a policy evidence reference: a test file
+// path, a package-qualified test (internal/pkg.TestName), or a bare test name.
+func dddEvidenceTestExists(root string, names map[string]map[string]bool, evidence string) bool {
+	if strings.HasSuffix(evidence, "_test.go") {
+		_, err := os.Stat(filepath.Join(root, filepath.FromSlash(evidence)))
+		return err == nil
+	}
+	if dir, name, ok := strings.Cut(evidence, ".Test"); ok {
+		return names[dir]["Test"+name]
+	}
+	if !strings.HasPrefix(evidence, "Test") {
+		return false
+	}
+	for _, tests := range names {
+		if tests[evidence] {
+			return true
+		}
+	}
+	return false
 }
 
 func slicesContains(values []string, value string) bool {

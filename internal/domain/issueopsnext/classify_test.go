@@ -1,6 +1,7 @@
 package issueopsnext
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"strings"
 	"testing"
 
@@ -51,7 +52,7 @@ func withStagedPlan(in Input) Input {
 }
 
 func withDesign(in Input) Input {
-	in.Record.DesignReview = &issueopscontract.IssueOpsDesignReview{
+	in.Record.DesignReview = &reviewcontract.DesignReview{
 		ProblemSummary: "summary", ProposedDesign: "design",
 		Verification: []string{"design review checked alternatives and risks"},
 		Approved:     true, ReviewedAt: "2026-09-05T00:00:00Z",

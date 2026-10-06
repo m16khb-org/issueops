@@ -4,21 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	statestore "issueops/internal/adapter/outbound/state"
 	augmentapp "issueops/internal/application/selfaugment"
 	verifyapp "issueops/internal/application/selfverify"
-	mcpcontract "issueops/internal/contract/mcp"
 	contract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
+	statepath "issueops/internal/domain/statepath"
 	"testing"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
-
-func testMCPCatalog() mcpcontract.Catalog { return mcpcatalog.Build() }
 
 func testCallSDKTool(t *testing.T, params json.RawMessage) (any, *jsonrpc.Error) {
 	t.Helper()
@@ -75,7 +72,7 @@ func testHandleSelfLoopMCPToolCall(call MCPToolCall) MCPToolOutcome {
 }
 
 func selfStateForTest() SelfStateDependencies {
-	snapshots := augmentapp.SnapshotStore{ReadState: statestore.NewService().Read, NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+	snapshots := augmentapp.SnapshotStore{ReadState: statestore.NewService().Read, NormalizeKey: statepath.NormalizeKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
 		return statestore.WriteStateRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}
 	return SelfStateDependencies{

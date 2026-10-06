@@ -1,7 +1,14 @@
 package selfworkflow
 
 import (
+	llmeval "issueops/cmd/issueops/selfworkflow/llmeval"
+	progresscontract "issueops/cmd/issueops/selfworkflow/progress"
+	augmentation "issueops/internal/adapter/augmentation"
+	augmentapp "issueops/internal/application/selfaugment"
+	app "issueops/internal/application/selfverify"
+	augmentcontract "issueops/internal/contract/selfaugment"
 	selfverify "issueops/internal/contract/selfverify"
+	verifydomain "issueops/internal/domain/selfverify"
 
 	"bytes"
 	"errors"
@@ -15,7 +22,7 @@ import (
 	"time"
 )
 
-func TestSelfWorkflowCandidateExportAndStateWrappers(t *testing.T) {
+func TestSelfWorkflowCandidateExportAndState(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
 	candidatePath := filepath.Join(root, "skills", "self-verify", "CANDIDATES.md")
@@ -36,13 +43,13 @@ func TestSelfWorkflowCandidateExportAndStateWrappers(t *testing.T) {
 	if result.CandidateCount == 0 || len(result.Candidates) != result.CandidateCount {
 		t.Fatalf("candidate catalog mismatch: %#v", result)
 	}
-	if SelectedSelfVerificationCandidateID(nil) != "none" {
+	if verifydomain.SelectedCandidateID(nil) != "none" {
 		t.Fatal("nil verification candidate should format as none")
 	}
-	if result.SelectedCandidate != nil && SelectedSelfVerificationCandidateID(result.SelectedCandidate) == "none" {
+	if result.SelectedCandidate != nil && verifydomain.SelectedCandidateID(result.SelectedCandidate) == "none" {
 		t.Fatal("selected candidate should have a real ID")
 	}
-	openIDs := SelfVerificationCandidateIDsByStatus(result.Candidates, SelfAugmentCandidateStatusOpen)
+	openIDs := verifydomain.CandidateIDsByStatus(result.Candidates, augmentcontract.CandidateStatusOpen)
 	if len(openIDs) != len(result.OpenCandidateIDs) {
 		t.Fatalf("open ID count mismatch: %d vs %d", len(openIDs), len(result.OpenCandidateIDs))
 	}
@@ -51,7 +58,7 @@ func TestSelfWorkflowCandidateExportAndStateWrappers(t *testing.T) {
 	}
 }
 
-func TestSelfWorkflowAugmentWrapperHelpers(t *testing.T) {
+func TestSelfWorkflowAugmentHelpers(t *testing.T) {
 	root := t.TempDir()
 	docsDir := filepath.Join(root, ".issueops")
 	if err := os.MkdirAll(docsDir, 0o755); err != nil {
@@ -67,47 +74,47 @@ func TestSelfWorkflowAugmentWrapperHelpers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !DocsContainTerm(root, "coverage") || !DirContainsTerm(root, ".issueops", "qualitySignal") || !FileContainsTerm(root, ".issueops/TESTING.md", "self-verify") {
+	if !docsContainTerm(root, "coverage") || !augmentation.DirContainsTerm(root, ".issueops", "qualitySignal") || !augmentation.FileContainsTerm(root, ".issueops/TESTING.md", "self-verify") {
 		t.Fatal("term detection wrappers should find fixture content")
 	}
-	if FileContainsTerm(root, "missing.md", "x") {
+	if augmentation.FileContainsTerm(root, "missing.md", "x") {
 		t.Fatal("missing file should not contain term")
 	}
-	if ScoreBool(true) != 100 || ScoreBool(false) != 0 {
+	if domain.ScoreBool(true) != 100 || domain.ScoreBool(false) != 0 {
 		t.Fatal("ScoreBool wrapper returned unexpected values")
 	}
-	if FormatScore(98.25) == "" {
+	if verifydomain.FormatScore(98.25) == "" {
 		t.Fatal("FormatScore should return non-empty text")
 	}
-	if SelectedCandidateID(nil) != "" {
+	if domain.SelectedCandidateID(nil) != "" {
 		t.Fatal("nil augment candidate should format as empty ID")
 	}
-	candidate := SelfAugmentCandidate{ID: "candidate-refill-curriculum", Impact: 1, Feasibility: 1, Novelty: 1}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, SelfAugmentRepoSignals{HasCandidateRefill: true})
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied {
+	candidate := augmentcontract.SelfAugmentCandidate{ID: "candidate-refill-curriculum", Impact: 1, Feasibility: 1, Novelty: 1}
+	domain.MarkSatisfiedCandidate(&candidate, augmentcontract.SelfAugmentRepoSignals{HasCandidateRefill: true})
+	if candidate.Status != augmentcontract.CandidateStatusSatisfied {
 		t.Fatalf("candidate status = %q", candidate.Status)
 	}
-	candidates := SelfAugmentCandidates(SelfAugmentRepoSignals{HasCandidateRefill: true})
-	if len(candidates) == 0 || SelfAugmentCandidateScore(candidates[0]) <= 0 {
+	candidates := augmentapp.Candidates(augmentcontract.SelfAugmentRepoSignals{HasCandidateRefill: true})
+	if len(candidates) == 0 || domain.CandidateScore(candidates[0]) <= 0 {
 		t.Fatal("expected scored augment candidates")
 	}
-	ids := SelfAugmentCandidateIDsByStatus(candidates, SelfAugmentCandidateStatusOpen)
+	ids := domain.CandidateIDsByStatus(candidates, augmentcontract.CandidateStatusOpen)
 	if len(ids) == 0 {
 		t.Fatal("expected open augment candidate IDs")
 	}
-	if len(SelfAugmentResearchInfluences()) == 0 {
+	if len(domain.ResearchInfluences()) == 0 {
 		t.Fatal("research influences should not be empty")
 	}
-	if !AllSelfAugmentGoalsPassed([]SelfAugmentGoal{{Passed: true}}) || AllSelfAugmentGoalsPassed([]SelfAugmentGoal{{Passed: false}}) {
+	if !domain.AllGoalsPassed([]augmentcontract.SelfAugmentGoal{{Passed: true}}) || domain.AllGoalsPassed([]augmentcontract.SelfAugmentGoal{{Passed: false}}) {
 		t.Fatal("goal pass wrapper returned unexpected value")
 	}
-	signals := CollectSelfAugmentRepoSignals(root, 1, []string{"self-augment"}, "GENIUS_THINK")
+	signals := collectSelfAugmentRepoSignals(root, 1, []string{"self-augment"}, "GENIUS_THINK")
 	if !signals.HasGeniusThink || signals.DocsIndexed != 1 {
 		t.Fatalf("unexpected repo signals: %#v", signals)
 	}
 }
 
-func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
+func TestSelfWorkflowSummaryAndHistory(t *testing.T) {
 	if !containsString([]string{"a", "b"}, "b") || containsString([]string{"a"}, "z") {
 		t.Fatal("containsString mismatch")
 	}
@@ -126,28 +133,28 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if nonNilStringSliceForTest(nil) == nil || nonNilSlowStepSliceForTest(nil) == nil {
 		t.Fatal("non-nil wrappers should return empty slices")
 	}
-	slow := []SelfAugmentSlowStep{{Label: "test", DurationMS: 10}, {Label: "test", DurationMS: 20}}
-	if MaxSlowStepDurationByLabel(slow)["test"] != 20 {
+	slow := []augmentcontract.SelfAugmentSlowStep{{Label: "test", DurationMS: 10}, {Label: "test", DurationMS: 20}}
+	if domain.MaxSlowStepDurationByLabel(slow)["test"] != 20 {
 		t.Fatal("max slow step duration mismatch")
 	}
-	stats := BuildStepDurationStats(map[string][]int64{"test": {10, 20, 30}})
+	stats := domain.BuildStepDurationStats(map[string][]int64{"test": {10, 20, 30}})
 	if len(stats) != 1 || stats[0].Label != "test" {
 		t.Fatalf("BuildStepDurationStats = %#v", stats)
 	}
-	if StepDurationStatByLabel(stats)["test"].MaxDurationMS != 30 {
+	if domain.StepDurationStatByLabel(stats)["test"].MaxDurationMS != 30 {
 		t.Fatal("step duration lookup mismatch")
 	}
 	regressions := domain.CompareStepBudgetRegressions(
-		[]SelfAugmentStepDurationStat{{Label: "test", Count: 1, P95DurationMS: 100}},
-		[]SelfAugmentStepDurationStat{{Label: "test", Count: 1, P95DurationMS: 140}},
+		[]augmentcontract.SelfAugmentStepDurationStat{{Label: "test", Count: 1, P95DurationMS: 100}},
+		[]augmentcontract.SelfAugmentStepDurationStat{{Label: "test", Count: 1, P95DurationMS: 140}},
 		10,
 	)
 	if len(regressions) != 1 {
 		t.Fatalf("expected budget regression, got %#v", regressions)
 	}
 	slowRegressions := domain.CompareSlowestStepRegressions(
-		[]SelfAugmentSlowStep{{Label: "test", DurationMS: 10}},
-		[]SelfAugmentSlowStep{{Label: "test", DurationMS: 20}},
+		[]augmentcontract.SelfAugmentSlowStep{{Label: "test", DurationMS: 10}},
+		[]augmentcontract.SelfAugmentSlowStep{{Label: "test", DurationMS: 20}},
 		10,
 	)
 	if len(slowRegressions) != 1 {
@@ -157,64 +164,64 @@ func TestSelfWorkflowSummaryAndHistoryWrappers(t *testing.T) {
 	if result.Iterations != 1 || result.IssueOpsRoot == "" {
 		t.Fatalf("unexpected loop result: %#v", result)
 	}
-	coverage, gaps := BuildSelfVerificationCoverage([]string{"install dry-run"})
+	coverage, gaps := verifydomain.CoverageForLabels([]string{"install dry-run"})
 	if len(coverage) == 0 || len(gaps) == 0 {
 		t.Fatal("coverage definitions should produce coverage and gaps")
 	}
 	if len(SelfVerificationCoverageDefinitions()) == 0 || len(SelfVerificationGoalDefinitions()) == 0 {
 		t.Fatal("self-verification definitions should not be empty")
 	}
-	if BuildSelfVerificationContract().Name == "" {
+	if verifydomain.ContractValue().Name == "" {
 		t.Fatal("contract should have a name")
 	}
-	if len(SelfVerifyRerunCommands("go test", 100, 95)) == 0 {
+	if len(verifydomain.SelfVerifyRerunCommands("go test", 100, 95)) == 0 {
 		t.Fatal("rerun commands should not be empty")
 	}
-	if _, ok := SelfVerifyStepRerunCommand("unknown"); ok {
+	if _, ok := verifydomain.SelfVerifyStepRerunCommand("unknown"); ok {
 		t.Fatal("unknown step should not have a rerun command")
 	}
-	summary := SummarizeSelfVerification(SelfAugmentResult{Runs: []SelfAugmentIteration{{Steps: []StepResult{{Label: "step", OK: true}}}}}, 95)
+	summary := app.SummarizeSelfVerification(augmentcontract.SelfAugmentResult{Runs: []augmentcontract.SelfAugmentIteration{{Steps: []selfverify.StepResult{{Label: "step", OK: true}}}}}, 95)
 	if summary.TotalSteps != 1 {
 		t.Fatalf("summary total steps = %d", summary.TotalSteps)
 	}
-	if len(SummarizeSelfVerification(SelfAugmentResult{Runs: []SelfAugmentIteration{{Seed: 1, Steps: []StepResult{{Label: "fail", OK: false}}}}}, 95).FailureClusters) != 1 {
+	if len(app.SummarizeSelfVerification(augmentcontract.SelfAugmentResult{Runs: []augmentcontract.SelfAugmentIteration{{Seed: 1, Steps: []selfverify.StepResult{{Label: "fail", OK: false}}}}}, 95).FailureClusters) != 1 {
 		t.Fatal("failure clusters should include failed step")
 	}
 }
 
-func TestSelfVerifyLLMEvalAndProgressWrappers(t *testing.T) {
-	if NormalizeSelfVerifyLLMEvalMode("") != "advisory" {
+func TestSelfVerifyLLMEvalAndProgress(t *testing.T) {
+	if verifydomain.NormalizeLLMEvalMode("") != "advisory" {
 		t.Fatal("empty LLM eval mode should normalize to advisory")
 	}
-	if err := ValidateSelfVerifyLLMEvalMode("gate"); err != nil {
+	if err := verifydomain.ValidateLLMEvalMode("gate"); err != nil {
 		t.Fatalf("valid gate mode rejected: %v", err)
 	}
-	if err := ValidateSelfVerifyLLMEvalMode("bad"); err == nil {
+	if err := verifydomain.ValidateLLMEvalMode("bad"); err == nil {
 		t.Fatal("invalid LLM eval mode should fail")
 	}
-	enabled, mode, err := ParseSelfVerifyLLMEvalEnv("gate")
+	enabled, mode, err := verifydomain.ParseLLMEvalEnv("gate")
 	if err != nil || !enabled || mode != "gate" {
 		t.Fatalf("ParseSelfVerifyLLMEvalEnv = enabled=%v mode=%q err=%v", enabled, mode, err)
 	}
-	config, err := ResolveSelfVerifyLLMEvalConfig(false, false, "", false, func(string) (string, bool) { return "advisory", true })
+	config, err := llmeval.ResolveSelfVerifyLLMEvalConfig(false, false, "", false, func(string) (string, bool) { return "advisory", true })
 	if err != nil || !config.Enabled || config.Mode != "advisory" {
 		t.Fatalf("ResolveSelfVerifyLLMEvalConfig = %#v err=%v", config, err)
 	}
-	if BoundedLLMEvalError("prefix", errors.New("boom"), "output") == "" {
+	if llmeval.BoundedLLMEvalError("prefix", errors.New("boom"), "output") == "" {
 		t.Fatal("bounded error should be non-empty")
 	}
-	result := SelfAugmentResult{OK: true, TerminationEligible: true, Summary: SelfAugmentSummary{TerminationEligible: true}}
-	if out, err := ApplySelfVerifyLLMEval(result, SelfVerifyLLMEvalOptions{}); err != nil || !out.OK {
+	result := augmentcontract.SelfAugmentResult{OK: true, TerminationEligible: true, Summary: augmentcontract.SelfAugmentSummary{TerminationEligible: true}}
+	if out, err := llmeval.ApplySelfVerifyLLMEval(result, selfverify.LLMEvalOptions{}); err != nil || !out.OK {
 		t.Fatalf("disabled LLM eval should preserve result: %#v err=%v", out, err)
 	}
-	if SelfVerifyLLMResponseSchemaExample() == "" || len(SelfVerifyLLMResponseFieldTypes()) == 0 {
+	if llmeval.SelfVerifyLLMResponseSchemaExample() == "" || len(llmeval.SelfVerifyLLMResponseFieldTypes()) == 0 {
 		t.Fatal("LLM response schema helpers should return content")
 	}
 	if boolPtr(true) == nil || !*boolPtr(true) {
 		t.Fatal("boolPtr should return pointer to value")
 	}
 	var progress bytes.Buffer
-	reporter, err := NewSelfVerifyProgressReporter("jsonl", &progress)
+	reporter, err := progresscontract.NewSelfVerifyProgressReporter("jsonl", &progress)
 	if err != nil {
 		t.Fatalf("NewSelfVerifyProgressReporter: %v", err)
 	}
@@ -225,46 +232,46 @@ func TestSelfVerifyLLMEvalAndProgressWrappers(t *testing.T) {
 	}
 }
 
-func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
+func TestSelfVerifyCLIAndState(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
-	runResult := SelfAugmentResult{
+	runResult := augmentcontract.SelfAugmentResult{
 		OK:                  true,
 		LoopKind:            "self_verification",
-		KoreanName:          SelfVerificationKoreanName,
+		KoreanName:          augmentcontract.SelfVerificationKoreanName,
 		Iterations:          1,
 		BaseSeed:            100,
 		TargetScore:         95,
 		TerminationEligible: true,
 		IssueOpsRoot:        t.TempDir(),
-		Summary:             SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true},
+		Summary:             augmentcontract.SelfAugmentSummary{MinimumGoalScore: 100, TerminationEligible: true},
 	}
 	if err := verifycmd.Run([]string{"--json", "--save-state", "--state-key", "verify-latest", "--seed", "100"}, verifycmd.Deps{
 		LookupEnv:      func(string) (string, bool) { return "", false },
 		ProgressWriter: &bytes.Buffer{},
-		Verify: func(request SelfVerifyRequest) (SelfAugmentResult, error) {
+		Verify: func(request app.LoopRequest) (augmentcontract.SelfAugmentResult, error) {
 			if request.BaseSeed != 100 || request.Verbose {
 				t.Fatalf("unexpected verify request: %+v", request)
 			}
 			return runResult, nil
 		},
-		SaveSummary: func(result *SelfAugmentResult, key string) error {
+		SaveSummary: func(result *augmentcontract.SelfAugmentResult, key string) error {
 			if key != "verify-latest" {
 				t.Fatalf("state key = %q", key)
 			}
 			return nil
 		},
-		ApplyLLMEval: func(SelfAugmentResult, selfverify.LLMEvalOptions) (SelfAugmentResult, error) {
-			return SelfAugmentResult{}, fmt.Errorf("LLM eval should not run without an explicit flag or env")
+		ApplyLLMEval: func(augmentcontract.SelfAugmentResult, selfverify.LLMEvalOptions) (augmentcontract.SelfAugmentResult, error) {
+			return augmentcontract.SelfAugmentResult{}, fmt.Errorf("LLM eval should not run without an explicit flag or env")
 		},
 		PrintJSON: func(any) error { return nil },
 	}); err != nil {
 		t.Fatalf("RunSelfVerifyWithDeps: %v", err)
 	}
-	candidateExport := SelfVerificationCandidateExportResult{OK: true, Kind: SelfVerificationCandidateExportKind, KoreanName: SelfVerificationKoreanName, CandidateCount: 1, Candidates: []SelfVerificationCandidate{{ID: "c1"}}}
+	candidateExport := augmentcontract.SelfVerificationCandidateExportResult{OK: true, Kind: augmentcontract.SelfVerificationCandidateExportKind, KoreanName: augmentcontract.SelfVerificationKoreanName, CandidateCount: 1, Candidates: []selfverify.SelfVerificationCandidate{{ID: "c1"}}}
 	savedCandidate := false
 	if err := RunSelfVerifyCandidatesWithDeps([]string{"--save-state", "--state-key", "candidates", "--json"}, SelfVerifyCandidatesDeps{
-		Export: func() SelfVerificationCandidateExportResult { return candidateExport },
-		Save: func(result *SelfVerificationCandidateExportResult, key string) error {
+		Export: func() augmentcontract.SelfVerificationCandidateExportResult { return candidateExport },
+		Save: func(result *augmentcontract.SelfVerificationCandidateExportResult, key string) error {
 			savedCandidate = key == "candidates" && result.CandidateCount == 1
 			return nil
 		},
@@ -275,17 +282,17 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 		t.Fatal("candidate export was not saved through deps")
 	}
 	if err := promotecmd.Run([]string{"--from-key", "verify-latest", "--baseline-key", "baseline", "--json"}, promotecmd.Deps{PrintJSON: printJSON,
-		Promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (SelfAugmentPromoteResult, error) {
-			return SelfAugmentPromoteResult{OK: true, FromKey: fromKey, BaselineKey: baselineKey, Confirm: confirm, DryRun: !confirm, SourcePassed: true}, nil
+		Promote: func(fromKey, baselineKey string, confirm, allowFailedSource bool) (augmentcontract.SelfAugmentPromoteResult, error) {
+			return augmentcontract.SelfAugmentPromoteResult{OK: true, FromKey: fromKey, BaselineKey: baselineKey, Confirm: confirm, DryRun: !confirm, SourcePassed: true}, nil
 		},
 	}); err != nil {
 		t.Fatalf("RunSelfVerifyPromoteWithDeps: %v", err)
 	}
-	if !IsSelfVerificationSummaryKind(SelfVerificationSummaryKind) || IsSelfVerificationSummaryKind("other") {
+	if !domain.IsSelfVerificationSummaryKind(domain.SelfVerificationSummaryKind) || domain.IsSelfVerificationSummaryKind("other") {
 		t.Fatal("summary kind classifier mismatch")
 	}
-	snapshot := NewSelfVerificationSummarySnapshot(runResult, time.Now().UTC())
-	if snapshot.Kind != SelfVerificationSummaryKind {
+	snapshot := domain.NewSelfVerificationSummarySnapshot(runResult, time.Now().UTC())
+	if snapshot.Kind != domain.SelfVerificationSummaryKind {
 		t.Fatalf("snapshot kind = %q", snapshot.Kind)
 	}
 	if err := WriteSelfAugmentSnapshotRecord(t.TempDir(), "snapshot", snapshot); err != nil {
@@ -297,21 +304,21 @@ func TestSelfVerifyCLIAndStateWrappers(t *testing.T) {
 	if _, err := ReadSelfAugmentStateSnapshot("verify-summary"); err != nil {
 		t.Fatalf("ReadSelfAugmentStateSnapshot: %v", err)
 	}
-	if err := SaveSelfAugmentSummary(&runResult, "augment-summary"); err != nil {
+	if err := SaveSelfVerificationSummary(&runResult, "augment-summary"); err != nil {
 		t.Fatalf("SaveSelfAugmentSummary: %v", err)
 	}
-	plan := PlanSelfAugmentation(SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
+	plan := planSelfAugmentation(augmentcontract.SelfAugmentPlanRequest{Cycles: 1, TargetScore: 95})
 	if !plan.OK || plan.Cycles != 1 {
 		t.Fatalf("PlanSelfAugmentation: %#v", plan)
 	}
 	if err := SaveSelfAugmentPlan(&plan, "augment-plan"); err != nil {
 		t.Fatalf("SaveSelfAugmentPlan: %v", err)
 	}
-	lesson, err := SaveSelfAugmentLesson(SelfAugmentLessonRequest{CandidateID: "c1", Lesson: "lesson", NextAction: "next", Source: "test", Severity: "low", StateKey: "lesson"})
+	lesson, err := SaveSelfAugmentLesson(augmentcontract.SelfAugmentLessonRequest{CandidateID: "c1", Lesson: "lesson", NextAction: "next", Source: "test", Severity: "low", StateKey: "lesson"})
 	if err != nil || !lesson.OK {
 		t.Fatalf("SaveSelfAugmentLesson: %#v err=%v", lesson, err)
 	}
-	if StateKeySlug("Hello, World!") != "hello-world" {
+	if domain.StateKeySlug("Hello, World!") != "hello-world" {
 		t.Fatalf("StateKeySlug mismatch")
 	}
 	promote, err := PromoteSelfAugmentBaseline("verify-summary", "baseline", false, false)
@@ -326,9 +333,9 @@ func nonNilStringSliceForTest(items []string) []string {
 	}
 	return items
 }
-func nonNilSlowStepSliceForTest(items []SelfAugmentSlowStep) []SelfAugmentSlowStep {
+func nonNilSlowStepSliceForTest(items []augmentcontract.SelfAugmentSlowStep) []augmentcontract.SelfAugmentSlowStep {
 	if items == nil {
-		return []SelfAugmentSlowStep{}
+		return []augmentcontract.SelfAugmentSlowStep{}
 	}
 	return items
 }

@@ -20,8 +20,8 @@ func inspectSmokeValidationErrors(info inspect.InspectInfo, stdout, root string)
 	if !info.Integration.ProjectClaudeMCPConfig {
 		errs = append(errs, "project Claude MCP config missing")
 	}
-	if containsForbiddenLegacyOutsideRuntimePaths(stdout, root) {
-		errs = append(errs, "inspect output contains legacy "+"m"+"16 name")
+	if containsRetiredNameOutsideRuntimePaths(stdout, root) {
+		errs = append(errs, "inspect output contains retired "+"m"+"16 name")
 	}
 	return errs
 }
@@ -49,7 +49,7 @@ func docsIndexSmokeValidationErrors(index docs.DocsIndexResult, root string) []s
 			break
 		}
 		if strings.Contains(doc.RelPath, "m"+"16") || strings.Contains(doc.Title, "m"+"16") {
-			errs = append(errs, "docs index contains legacy "+"m"+"16 name")
+			errs = append(errs, "docs index contains retired "+"m"+"16 name")
 			break
 		}
 	}
@@ -65,7 +65,7 @@ func docIndexContains(docs []docs.DocIndexInfo, relPath string) bool {
 	return false
 }
 
-func containsForbiddenLegacyOutsideRuntimePaths(text, root string) bool {
+func containsRetiredNameOutsideRuntimePaths(text, root string) bool {
 	sanitized := allowCurrentOwnerHandle(text)
 	replacements := []string{}
 	if abs, err := filepath.Abs(root); err == nil {
@@ -80,7 +80,7 @@ func containsForbiddenLegacyOutsideRuntimePaths(text, root string) bool {
 		}
 		sanitized = strings.ReplaceAll(sanitized, runtimePath, "$RUNTIME_PATH")
 	}
-	for _, needle := range forbiddenLegacyNeedles() {
+	for _, needle := range retiredNameNeedles() {
 		if strings.Contains(sanitized, needle) {
 			return true
 		}
@@ -88,7 +88,7 @@ func containsForbiddenLegacyOutsideRuntimePaths(text, root string) bool {
 	return false
 }
 
-func forbiddenLegacyNeedles() []string {
+func retiredNameNeedles() []string {
 	return []string{"m" + "16kh", "m" + "16h", "M" + "16H", "m" + "16"}
 }
 

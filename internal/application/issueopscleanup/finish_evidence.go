@@ -3,6 +3,7 @@ package issueopscleanup
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -13,7 +14,7 @@ import (
 type FinishEvidenceReader struct {
 	Provider          port.IssueProvider
 	VerifyMergedHead  func(model.IssueOpsRemoteArtifactVerification) (model.CleanupRemoteBranchArtifactHead, error)
-	ReadIssueSnapshot func(context.Context, port.IssueProvider, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error)
+	ReadIssueSnapshot func(context.Context, port.IssueProvider, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error)
 }
 
 // Observe derives evidence from the executor's exact record snapshot. Arm will
@@ -39,7 +40,7 @@ func (s FinishEvidenceReader) Observe(ctx context.Context, record model.IssueOps
 			return req, fmt.Errorf("superseding merge evidence readback failed (refusing to continue): %w", err)
 		}
 	}
-	snapshot, err := s.ReadIssueSnapshot(ctx, s.Provider, port.ExecutionIssueSnapshotRequest{Repo: record.Repo, URL: record.IssueURL})
+	snapshot, err := s.ReadIssueSnapshot(ctx, s.Provider, executionissue.ExecutionIssueSnapshotRequest{Repo: record.Repo, URL: record.IssueURL})
 	if err != nil {
 		return req, fmt.Errorf("issue readback failed (refusing to continue): %w", err)
 	}

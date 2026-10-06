@@ -2,13 +2,13 @@ package projectbootstrap
 
 import (
 	"encoding/json"
+	projectbootstrapcontract "issueops/internal/contract/projectbootstrap"
 	projectdoccontract "issueops/internal/contract/projectdoc"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	projectdoc "issueops/internal/domain/projectdoc"
 	projectdocdomain "issueops/internal/domain/projectdoc"
 )
 
@@ -18,7 +18,7 @@ func TestBootstrapProjectDocsDryRunAndWrite(t *testing.T) {
 	mustWrite(t, filepath.Join(root, "go.mod"), "module example.com/app\n")
 	mustWrite(t, filepath.Join(root, "AGENTS.md"), "# Existing Rules\n\nKeep this.\n")
 
-	dry, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root})
+	dry, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestBootstrapProjectDocsDryRunAndWrite(t *testing.T) {
 		t.Fatalf("dry-run profile not inferred from repo evidence: %+v", dry.Signals.Profile)
 	}
 
-	written, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true})
+	written, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +119,7 @@ func TestBootstrapProjectDocsDryRunAndWrite(t *testing.T) {
 func TestRouteProjectDocsForPreciseTasks(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
-	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
+	if _, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	cases := []struct {
@@ -151,13 +151,13 @@ func TestProjectBootstrapPreservesExistingDocsUnlessSync(t *testing.T) {
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, projectdocdomain.ProjectDocsDir, "TESTING.md"), "# Custom Testing\n\nKeep local detail.\n")
 	mustWrite(t, filepath.Join(root, projectdocdomain.ProjectDocsDir, "COMMIT_POLICY.md"), "# Custom Commit Policy\n\nKeep local policy detail.\n")
-	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
+	if _, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	if got := mustRead(t, filepath.Join(root, projectdocdomain.ProjectDocsDir, "TESTING.md")); !strings.Contains(got, "Keep local detail.") {
 		t.Fatalf("bootstrap without sync replaced existing doc:\n%s", got)
 	}
-	synced, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true, Sync: true})
+	synced, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true, Sync: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestProjectBootstrapPreservesExistingDocsUnlessSync(t *testing.T) {
 func TestBootstrapWritesMetaFrontmatterIntoCreatedDocs(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
-	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
+	if _, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	arch := mustRead(t, filepath.Join(root, projectdocdomain.ProjectDocsDir, "ARCHITECTURE.md"))
@@ -208,7 +208,7 @@ func TestBootstrapAddsFrontmatterToExistingDocPreservingBody(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Non-sync bootstrap must NOT overwrite the body but must add frontmatter.
-	if _, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
+	if _, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true}); err != nil {
 		t.Fatal(err)
 	}
 	got := mustRead(t, filepath.Join(dir, "CONVENTIONS.md"))
@@ -222,7 +222,7 @@ func TestBootstrapAddsFrontmatterToExistingDocPreservingBody(t *testing.T) {
 }
 
 func TestProjectDocsBootstrapResultJSONContract(t *testing.T) {
-	result := ProjectDocsBootstrapResult{
+	result := projectbootstrapcontract.ProjectDocsBootstrapResult{
 		OK:       true,
 		Kind:     "project_docs_bootstrap",
 		RepoRoot: "/repo",
@@ -241,7 +241,7 @@ func TestProjectDocsBootstrapResultJSONContract(t *testing.T) {
 				Languages: []string{"go"},
 			},
 		},
-		Files: []projectdoc.ProjectDocsPlannedFile{
+		Files: []projectdoccontract.ProjectDocsPlannedFile{
 			{RelPath: ".issueops/ARCHITECTURE.md", Action: "write", SHA256: "abc"},
 		},
 	}
@@ -264,60 +264,51 @@ func TestProjectDocsBootstrapResultJSONContract(t *testing.T) {
 	}
 }
 
-func TestBootstrapKeepsLegacyFlatLayoutUnmigrated(t *testing.T) {
+func TestBootstrapScaffoldsModulesAroundExistingFamilyRootWithoutManifest(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	root := t.TempDir()
 	dir := filepath.Join(root, projectdocdomain.ProjectDocsDir)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	// Legacy in-progress repo: curated flat family root, no modular manifest.
+	// Curated family root, no modular manifest: bootstrap takes the normal
+	// modular path and never overwrites the existing family file.
 	if err := os.WriteFile(filepath.Join(dir, "ARCHITECTURE.md"), []byte("# Architecture\n\nCurated flat detail.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	result, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root, Write: true})
+	dry, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root})
 	if err != nil {
 		t.Fatal(err)
-	}
-	warned := false
-	for _, w := range result.Warnings {
-		if strings.Contains(w, "legacy_flat_layout_preserved") {
-			warned = true
-		}
-	}
-	if !warned {
-		t.Fatalf("legacy flat repo must warn: %#v", result.Warnings)
-	}
-	if _, err := os.Stat(filepath.Join(root, projectdocdomain.ManifestRelPath())); !os.IsNotExist(err) {
-		t.Fatal("bootstrap must not seed a modular manifest around legacy flat roots")
-	}
-	for _, f := range projectdocdomain.DocFamilies() {
-		module := filepath.Join(dir, filepath.FromSlash(f.ModuleDir))
-		if _, err := os.Stat(module); err == nil {
-			t.Fatalf("bootstrap must not half-migrate legacy flat repo with %s", module)
-		}
-	}
-	if got := mustRead(t, filepath.Join(dir, "ARCHITECTURE.md")); !strings.Contains(got, "Curated flat detail.") {
-		t.Fatalf("legacy flat root content must be preserved:\n%s", got)
-	}
-	// Dry-run must expose the same preservation signals so agents can plan.
-	dry, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root})
-	if err != nil {
-		t.Fatal(err)
-	}
-	dryWarned := false
-	for _, w := range dry.Warnings {
-		if strings.Contains(w, "legacy_flat_layout_preserved") {
-			dryWarned = true
-		}
-	}
-	if !dryWarned {
-		t.Fatalf("dry-run must surface legacy flat preservation: %#v", dry.Warnings)
 	}
 	for _, f := range dry.Files {
 		if f.Preserved && f.Action != "update" {
 			t.Fatalf("preserved flag requires update action: %#v", f)
 		}
+	}
+	result, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root, Write: true, Sync: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	familyWarned := false
+	for _, w := range result.Warnings {
+		if strings.Contains(w, "family_docs_preserved") {
+			familyWarned = true
+		}
+	}
+	if !familyWarned {
+		t.Fatalf("existing family root must be reported as preserved: %#v", result.Warnings)
+	}
+	if _, err := os.Stat(filepath.Join(root, projectdocdomain.ManifestRelPath())); err != nil {
+		t.Fatalf("bootstrap must seed the modular manifest: %v", err)
+	}
+	for _, f := range projectdocdomain.DocFamilies() {
+		overview := filepath.Join(dir, filepath.FromSlash(f.OverviewRel()))
+		if _, err := os.Stat(overview); err != nil {
+			t.Fatalf("bootstrap must scaffold %s: %v", overview, err)
+		}
+	}
+	if got := mustRead(t, filepath.Join(dir, "ARCHITECTURE.md")); !strings.Contains(got, "Curated flat detail.") {
+		t.Fatalf("existing family root content must be preserved even with --sync:\n%s", got)
 	}
 }
 
@@ -331,7 +322,7 @@ func TestBootstrapPlanMarksPreservedFilesOnDryRun(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "COMMIT_POLICY.md"), []byte("# Custom Policy\n\nLocal rule.\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	dry, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: root})
+	dry, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: root})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +352,7 @@ func TestBootstrapCreatesDesignDocOnlyForClientRepositories(t *testing.T) {
 	mustWrite(t, filepath.Join(clientRoot, "package.json"), `{"dependencies":{"react":"^18.0.0"},"devDependencies":{"vite":"^5.0.0"}}`)
 	mustWrite(t, filepath.Join(clientRoot, "DESIGN.md"), "# Curated Design\n")
 
-	result, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: clientRoot, Write: true})
+	result, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: clientRoot, Write: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,7 +377,7 @@ func TestBootstrapCreatesDesignDocOnlyForClientRepositories(t *testing.T) {
 
 	backendRoot := t.TempDir()
 	mustWrite(t, filepath.Join(backendRoot, "go.mod"), "module example.com/app\n")
-	backendResult, err := BootstrapProjectDocs(ProjectDocsBootstrapRequest{RepoRoot: backendRoot, Write: true})
+	backendResult, err := BootstrapProjectDocs(projectbootstrapcontract.ProjectDocsBootstrapRequest{RepoRoot: backendRoot, Write: true})
 	if err != nil {
 		t.Fatal(err)
 	}

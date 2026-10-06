@@ -2,6 +2,7 @@ package steps
 
 import (
 	"encoding/json"
+	contract "issueops/internal/contract/selfverify"
 	"os"
 	"path/filepath"
 	"testing"
@@ -19,14 +20,14 @@ func TestSelfVerifyReuseFixtureEntryPoint(t *testing.T) {
 	tempDir := filepath.Join(root, "verification")
 	stepDeps := fakeSelfVerifyStepDeps(t)
 	stepDeps.IssueOpsRoot = func() string { return root }
-	stepDeps.ValidateRiskQATier = func(string) RiskQAEvidence {
-		return RiskQAEvidence{
-			Step:             StepResult{Label: "risk QA tier", Command: "fixture full-suite race", OK: true, DurationMS: 137},
+	stepDeps.ValidateRiskQATier = func(string) application.RiskQAEvidence {
+		return application.RiskQAEvidence{
+			Step:             contract.StepResult{Label: "risk QA tier", Command: "fixture full-suite race", OK: true, DurationMS: 137},
 			CoversFullGoTest: true,
 		}
 	}
 	command := stepDeps.RunCommandStep
-	stepDeps.RunCommandStep = func(cwd, label string, timeout time.Duration, stdin, executable string, args ...string) StepResult {
+	stepDeps.RunCommandStep = func(cwd, label string, timeout time.Duration, stdin, executable string, args ...string) contract.StepResult {
 		if label == "go test" || label == "contract golden tests" {
 			t.Fatalf("covered command ran again: %s", label)
 		}

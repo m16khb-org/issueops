@@ -385,7 +385,7 @@ func normalizeOwnerDefaults(command preparationcontract.Command) preparationcont
 	return command
 }
 
-func normalizeActor(actor preparationcontract.Actor) (preparationcontract.Actor, error) {
+func normalizeActor(actor leasecontract.Actor) (leasecontract.Actor, error) {
 	actor.Host = strings.ToLower(strings.TrimSpace(actor.Host))
 	actor.SessionID = strings.TrimSpace(actor.SessionID)
 	actor.AgentID = strings.TrimSpace(actor.AgentID)
@@ -488,19 +488,19 @@ func prepareConfirmCommand(command preparationcontract.Command, decision prepara
 	return strings.Join(append(parts, "--confirm", "--json"), " ")
 }
 
-func cloneExecution(execution *preparationcontract.Execution) *preparationcontract.Execution {
+func cloneExecution(execution *leasecontract.Execution) *leasecontract.Execution {
 	if execution == nil {
 		return nil
 	}
 	return preparationcontract.Result{Execution: execution}.Clone().Execution
 }
 
-func workspaceResult(request preparationcontract.WorkspaceRequest, driver, linkedAt string) preparationcontract.Workspace {
-	return preparationcontract.Workspace{SourceRoot: request.SourceRoot, Root: request.Root, Branch: request.Branch, BaseHead: request.BaseHead, ParentWorktree: request.ParentWorktree, Driver: driver, LinkedAt: linkedAt}
+func workspaceResult(request preparationcontract.WorkspaceRequest, driver, linkedAt string) leasecontract.Workspace {
+	return leasecontract.Workspace{SourceRoot: request.SourceRoot, Root: request.Root, Branch: request.Branch, BaseHead: request.BaseHead, ParentWorktree: request.ParentWorktree, Driver: driver, LinkedAt: linkedAt}
 }
 
-func workspaceResultFromReceipt(receipt preparationcontract.WorkspaceReceipt, linkedAt string) preparationcontract.Workspace {
-	return preparationcontract.Workspace{SourceRoot: receipt.SourceRoot, Root: receipt.Root, Branch: receipt.Branch, BaseHead: receipt.BaseHead, ParentWorktree: receipt.ParentWorktree, Driver: receipt.Driver, LinkedAt: linkedAt}
+func workspaceResultFromReceipt(receipt preparationcontract.WorkspaceReceipt, linkedAt string) leasecontract.Workspace {
+	return leasecontract.Workspace{SourceRoot: receipt.SourceRoot, Root: receipt.Root, Branch: receipt.Branch, BaseHead: receipt.BaseHead, ParentWorktree: receipt.ParentWorktree, Driver: receipt.Driver, LinkedAt: linkedAt}
 }
 
 func writerlessNextCommand(snapshot preparationcontract.Snapshot) string {

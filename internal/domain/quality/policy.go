@@ -11,26 +11,7 @@ import (
 	contract "issueops/internal/contract/quality"
 )
 
-const (
-	CollectionStatusOK         = contract.CollectionStatusOK
-	CollectionStatusError      = contract.CollectionStatusError
-	HealthStatusHealthy        = contract.HealthStatusHealthy
-	HealthStatusNeedsAttention = contract.HealthStatusNeedsAttention
-	HealthStatusUnknown        = contract.HealthStatusUnknown
-	GateStatusPass             = contract.GateStatusPass
-	GateStatusReportOnly       = contract.GateStatusReportOnly
-	GateStatusBlock            = contract.GateStatusBlock
-)
-
-type InspectResult = contract.InspectResult
-type Signal = contract.Signal
-type CoveragePackage = contract.CoveragePackage
-type BranchFunction = contract.BranchFunction
-type AuditItem = contract.AuditItem
-type Finding = contract.Finding
-type PioneerCoverage = contract.PioneerCoverage
-
-func AddQualityCollectorFailure(result *InspectResult, warning string) {
+func AddQualityCollectorFailure(result *contract.InspectResult, warning string) {
 	result.Warnings = append(result.Warnings, warning)
 	found := false
 	for index := range result.Findings {
@@ -41,7 +22,7 @@ func AddQualityCollectorFailure(result *InspectResult, warning string) {
 		}
 	}
 	if !found {
-		result.Findings = append([]Finding{{
+		result.Findings = append([]contract.Finding{{
 			ID:            "quality-collector-error",
 			Severity:      "p0",
 			Title:         "Quality evidence collection failed",
@@ -52,13 +33,13 @@ func AddQualityCollectorFailure(result *InspectResult, warning string) {
 		}}, result.Findings...)
 	}
 	result.OK = false
-	result.CollectionStatus = CollectionStatusError
-	result.HealthStatus = HealthStatusUnknown
-	result.GateStatus = GateStatusBlock
+	result.CollectionStatus = contract.CollectionStatusError
+	result.HealthStatus = contract.HealthStatusUnknown
+	result.GateStatus = contract.GateStatusBlock
 }
 
-func AddSNRRegressionFinding(result *InspectResult, baseline, current float64) {
-	result.Findings = append(result.Findings, Finding{
+func AddSNRRegressionFinding(result *contract.InspectResult, baseline, current float64) {
+	result.Findings = append(result.Findings, contract.Finding{
 		ID:            "code-snr-regression",
 		Severity:      "p1",
 		Title:         "Code signal-to-noise regressed from baseline",
@@ -67,11 +48,11 @@ func AddSNRRegressionFinding(result *InspectResult, baseline, current float64) {
 		Remediation:   "Inspect the changed production code for avoidable structural noise or explicitly save an approved new baseline.",
 		VerifyCommand: "./bin/issueops quality inspect --trend --json",
 	})
-	result.HealthStatus = HealthStatusNeedsAttention
-	result.GateStatus = GateStatusBlock
+	result.HealthStatus = contract.HealthStatusNeedsAttention
+	result.GateStatus = contract.GateStatusBlock
 }
 
-func SuccessfulSignalValue(signals []Signal, id string) (float64, bool) {
+func SuccessfulSignalValue(signals []contract.Signal, id string) (float64, bool) {
 	for _, signal := range signals {
 		if signal.ID == id {
 			return signal.Value, signal.Status == "ok"
@@ -82,14 +63,14 @@ func SuccessfulSignalValue(signals []Signal, id string) (float64, bool) {
 
 func CollectQualityFindings(
 	warnings []string,
-	lowCoverage []CoveragePackage,
-	branchFunctions []BranchFunction,
-	auditItems []AuditItem,
-	pioneer PioneerCoverage,
-) []Finding {
-	findings := make([]Finding, 0, 5)
+	lowCoverage []contract.CoveragePackage,
+	branchFunctions []contract.BranchFunction,
+	auditItems []contract.AuditItem,
+	pioneer contract.PioneerCoverage,
+) []contract.Finding {
+	findings := make([]contract.Finding, 0, 5)
 	if len(warnings) > 0 {
-		findings = append(findings, Finding{
+		findings = append(findings, contract.Finding{
 			ID:            "quality-collector-error",
 			Severity:      "p0",
 			Title:         "Quality evidence collection failed",
@@ -107,7 +88,7 @@ func CollectQualityFindings(
 		for _, name := range pioneer.ReproductionMissing {
 			evidence = append(evidence, "reproduction missing: "+name)
 		}
-		findings = append(findings, Finding{
+		findings = append(findings, contract.Finding{
 			ID:            "pioneer-skill-coverage",
 			Severity:      "p1",
 			Title:         "Canonical pioneer skill evaluation is incomplete",
@@ -118,7 +99,7 @@ func CollectQualityFindings(
 	}
 	if pioneer.IsolatedExpected > 0 &&
 		(pioneer.IsolatedObserved != pioneer.IsolatedExpected || pioneer.IsolatedFailed > 0) {
-		findings = append(findings, Finding{
+		findings = append(findings, contract.Finding{
 			ID:            "pioneer-isolated-evaluation-incomplete",
 			Severity:      "p0",
 			Title:         "Fresh-context pioneer evaluation evidence is incomplete or failed",
@@ -128,7 +109,7 @@ func CollectQualityFindings(
 			VerifyCommand: "./bin/issueops quality inspect --json",
 		})
 	} else if pioneer.IsolatedBlocked > 0 {
-		findings = append(findings, Finding{
+		findings = append(findings, contract.Finding{
 			ID:            "pioneer-isolated-evaluation-blocked",
 			Severity:      "p1",
 			Title:         "Fresh-context pioneer evaluation has capability-blocked cases",
@@ -138,7 +119,7 @@ func CollectQualityFindings(
 		})
 	}
 	if len(lowCoverage) > 0 {
-		findings = append(findings, Finding{
+		findings = append(findings, contract.Finding{
 			ID:            "low-coverage-packages",
 			Severity:      "p2",
 			Title:         "Packages remain below the coverage observation threshold",
@@ -154,7 +135,7 @@ func CollectQualityFindings(
 		}
 	}
 	if highBranchCount > 0 {
-		findings = append(findings, Finding{
+		findings = append(findings, contract.Finding{
 			ID:            "high-branch-functions",
 			Severity:      "p2",
 			Title:         "High-branch production functions need targeted review",
@@ -173,7 +154,7 @@ func CollectQualityFindings(
 				break
 			}
 		}
-		findings = append(findings, Finding{
+		findings = append(findings, contract.Finding{
 			ID:            "project-audit-items",
 			Severity:      severity,
 			Title:         "P0, P1, or P2 project audit items remain open",
@@ -193,23 +174,23 @@ func BoundedEvidence(evidence []string, limit int) []string {
 	return append([]string(nil), evidence[:limit]...)
 }
 
-func QualityStatuses(warnings []string, findings []Finding) (string, string, string) {
+func QualityStatuses(warnings []string, findings []contract.Finding) (string, string, string) {
 	if len(warnings) > 0 {
-		return CollectionStatusError, HealthStatusUnknown, GateStatusBlock
+		return contract.CollectionStatusError, contract.HealthStatusUnknown, contract.GateStatusBlock
 	}
 	if len(findings) == 0 {
-		return CollectionStatusOK, HealthStatusHealthy, GateStatusPass
+		return contract.CollectionStatusOK, contract.HealthStatusHealthy, contract.GateStatusPass
 	}
 	for _, finding := range findings {
 		if finding.Blocking {
-			return CollectionStatusOK, HealthStatusNeedsAttention, GateStatusBlock
+			return contract.CollectionStatusOK, contract.HealthStatusNeedsAttention, contract.GateStatusBlock
 		}
 	}
-	return CollectionStatusOK, HealthStatusNeedsAttention, GateStatusReportOnly
+	return contract.CollectionStatusOK, contract.HealthStatusNeedsAttention, contract.GateStatusReportOnly
 }
 
-func ParseCoveragePackages(output string, threshold float64) []CoveragePackage {
-	var packages []CoveragePackage
+func ParseCoveragePackages(output string, threshold float64) []contract.CoveragePackage {
+	var packages []contract.CoveragePackage
 	for _, line := range strings.Split(output, "\n") {
 		if !strings.Contains(line, "coverage:") || !strings.Contains(line, "% of statements") {
 			continue
@@ -237,7 +218,7 @@ func ParseCoveragePackages(output string, threshold float64) []CoveragePackage {
 		if (fields[0] == "ok" || fields[0] == "?") && len(fields) > 1 {
 			packageName = fields[1]
 		}
-		packages = append(packages, CoveragePackage{Package: packageName, Coverage: value})
+		packages = append(packages, contract.CoveragePackage{Package: packageName, Coverage: value})
 	}
 	sort.Slice(packages, func(i, j int) bool {
 		if packages[i].Coverage != packages[j].Coverage {
@@ -262,7 +243,7 @@ func StatusForCollector(err error, fallback string) string {
 	return fallback
 }
 
-func PioneerIsolatedStatus(coverage PioneerCoverage) string {
+func PioneerIsolatedStatus(coverage contract.PioneerCoverage) string {
 	if coverage.IsolatedExpected == 0 {
 		return "unknown"
 	}
@@ -274,7 +255,7 @@ func PioneerIsolatedStatus(coverage PioneerCoverage) string {
 	return "ok"
 }
 
-func PioneerIsolatedEvidence(coverage PioneerCoverage) []string {
+func PioneerIsolatedEvidence(coverage contract.PioneerCoverage) []string {
 	return []string{
 		fmt.Sprintf(
 			"observed=%d expected=%d pass=%d blocked=%d fail=%d hidden=%d",
@@ -296,7 +277,7 @@ func FirstQualityWarning(warnings []string) error {
 	return errors.New(warnings[0])
 }
 
-func CoverageEvidence(packages []CoveragePackage) []string {
+func CoverageEvidence(packages []contract.CoveragePackage) []string {
 	evidence := []string{}
 	for _, pkg := range packages {
 		evidence = append(evidence, fmt.Sprintf("%s %.1f%%", pkg.Package, pkg.Coverage))
@@ -307,7 +288,7 @@ func CoverageEvidence(packages []CoveragePackage) []string {
 	return evidence
 }
 
-func BranchEvidence(functions []BranchFunction, threshold int) []string {
+func BranchEvidence(functions []contract.BranchFunction, threshold int) []string {
 	evidence := []string{}
 	for _, fn := range functions {
 		if fn.Branches <= threshold {
@@ -324,7 +305,7 @@ func BranchEvidence(functions []BranchFunction, threshold int) []string {
 	return evidence
 }
 
-func AuditEvidence(items []AuditItem) []string {
+func AuditEvidence(items []contract.AuditItem) []string {
 	evidence := []string{}
 	for _, item := range items {
 		evidence = append(evidence, fmt.Sprintf("%s %s %s", item.ID, item.Priority, item.Title))

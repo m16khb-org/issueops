@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
+	policy "issueops/internal/domain/policy"
 	"net/url"
 	"os/exec"
 	"strings"
@@ -362,27 +364,27 @@ func runGlabJSONContext(ctx context.Context, args []string, repo string, kind st
 		}
 		return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: cause}
 	}
-	diagnostic := strings.TrimPrefix(providerutil.BoundedDiagnostic(err.Error(), 384), "command failed after start: ")
+	diagnostic := strings.TrimPrefix(policy.BoundedDiagnostic(err.Error(), 384), "command failed after start: ")
 	if strings.TrimSpace(url) != "" {
 		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab %s create failed: %s; outcome unknown with a canonical URL returned separately; do not retry", kind, diagnostic)}
 	}
 	return port.IssueProviderCreateIssueResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("glab %s create failed: %s; outcome unknown; do not retry", kind, diagnostic)}
 }
 
-func runGlabMRJSON(ctx context.Context, args []string, repo string) (port.IssueProviderCreatePullRequestResult, error) {
+func runGlabMRJSON(ctx context.Context, args []string, repo string) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	out, invoked, err := providerutil.RunBoundedMutationContext(ctx, repo, "glab", args...)
 	url, number := parseGlabOutput(string(out))
-	result := port.IssueProviderCreatePullRequestResult{OK: err == nil, URL: url, Number: number}
+	result := executionissue.IssueProviderCreatePullRequestResult{OK: err == nil, URL: url, Number: number}
 	if err == nil {
 		return result, nil
 	}
 	if !invoked {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: err}
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
 	if validCanonicalGitLabMergeRequestURL(url) {
-		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("GitLab MR creation outcome unknown with a canonical URL returned separately; do not retry: %s", providerutil.BoundedDiagnostic(err.Error(), 384))}
+		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("GitLab MR creation outcome unknown with a canonical URL returned separately; do not retry: %s", policy.BoundedDiagnostic(err.Error(), 384))}
 	}
-	return port.IssueProviderCreatePullRequestResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("GitLab MR creation outcome unknown; do not retry: %s", providerutil.BoundedDiagnostic(err.Error(), 384))}
+	return executionissue.IssueProviderCreatePullRequestResult{OK: false}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("GitLab MR creation outcome unknown; do not retry: %s", policy.BoundedDiagnostic(err.Error(), 384))}
 }
 
 // parseGlabOutput extracts the created artifact's web URL by scanning glab

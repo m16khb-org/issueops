@@ -39,7 +39,7 @@ func TestPromoteSelfAugmentBaselineRejectsMissingKeysAndBadSource(t *testing.T) 
 func TestPromoteSelfAugmentBaselinePropagatesDestinationWriteError(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	source := SelfAugmentStateSnapshot{
+	source := augmentcontract.SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,

@@ -3,6 +3,8 @@ package issueopsapp
 import (
 	"context"
 	"encoding/json"
+	executionissue "issueops/internal/contract/executionissue"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"path/filepath"
 	"strings"
@@ -126,9 +128,9 @@ func TestIssueOpsReconcileVerticalUsesRequestScopedReaderForWorktreeReceipt(t *t
 		Actor: claimWiringActor(t), CWD: record.Execution.Workspace.SourceRoot,
 	}, port.ExecutionActionDependencies{
 		Orca: fake, Reconcile: issueOpsReconcileHandler,
-		ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+		ReadIssue: func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 			reads++
-			return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
+			return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
 		},
 	})
 	if err != nil {
@@ -364,7 +366,7 @@ func reconcilePendingFixtureForHost(t *testing.T, failStage port.ExecutionOrcaIn
 	record := issueopscontract.IssueOpsRecord{
 		OK: true, SchemaVersion: issueopscontract.IssueOpsSchemaVersion, ID: (issueops.CycleStartIdentity{}).StableID(repo, branch),
 		Repo: repo, Branch: branch, Phase: issueopscontract.IssueOpsPhasePlan, IssueURL: "https://github.com/acme/repo/issues/194",
-		DesignReview:  &issueopscontract.IssueOpsDesignReview{Approved: true, ReviewedAt: "2026-08-01T00:00:00Z"},
+		DesignReview:  &reviewcontract.DesignReview{Approved: true, ReviewedAt: "2026-08-01T00:00:00Z"},
 		BranchPrepare: &issueopscontract.IssueOpsBranchPrepare{Provider: "github", IssueURL: "https://github.com/acme/repo/issues/194", Branch: branch, BaseBranch: "main", BaseSHA: baseHead, LinkVerified: true, CreatedAt: "2026-08-01T00:00:00Z"},
 		CreatedAt:     "2026-08-01T00:00:00Z", UpdatedAt: "2026-08-01T00:00:00Z",
 	}
@@ -377,20 +379,20 @@ func reconcilePendingFixtureForHost(t *testing.T, failStage port.ExecutionOrcaIn
 	seedPlannerGates(t, stateRoot, record.ID)
 	fake := &reconcileProvisionerFake{failStage: failStage}
 	prepare := newIssueOpsPreparationHandler(issueOpsPreparationCompositionDeps{
-		Orca: fake, ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-			return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
+		Orca: fake, ReadIssue: func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+			return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
 		},
 	})
 	request := issueopscontract.ExecutionPrepareRequest{
 		ID: record.ID, Mode: "orca", Actor: claimWiringActor(t), CWD: repo, OwnerHost: host, OwnerModel: "model", Confirm: true,
 	}
 	request.Confirm = false
-	preview, err := prepare(context.Background(), stateRoot, request, port.ExecutionPrepareInvocation{})
+	preview, err := prepare(context.Background(), stateRoot, request, executionissue.ExecutionPrepareInvocation{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	request.ExpectedReadinessFingerprint, request.Confirm = preview.ReadinessFingerprint, true
-	_, err = prepare(context.Background(), stateRoot, request, port.ExecutionPrepareInvocation{})
+	_, err = prepare(context.Background(), stateRoot, request, executionissue.ExecutionPrepareInvocation{})
 	if err == nil {
 		t.Fatal("fixture must stop on an ambiguous terminal mutation")
 	}

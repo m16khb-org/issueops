@@ -182,7 +182,7 @@ func TestValidateInteractiveInstallInputRejectsPipe(t *testing.T) {
 	}
 	defer stdin.Close()
 	defer stdout.Close()
-	if err := ValidateInteractiveInput(stdin); err == nil || !strings.Contains(err.Error(), "requires a terminal") {
+	if err := validateInteractiveInstallInput(stdin); err == nil || !strings.Contains(err.Error(), "requires a terminal") {
 		t.Fatalf("validateInteractiveInstallInput error = %v, want terminal requirement", err)
 	}
 }

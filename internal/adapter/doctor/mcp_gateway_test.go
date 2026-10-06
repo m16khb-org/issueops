@@ -1,6 +1,8 @@
 package doctor
 
 import (
+	doctorcontract "issueops/internal/contract/doctor"
+	doctordomain "issueops/internal/domain/doctor"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,7 +37,7 @@ func TestHarnessDoctorReportsMCPGatewayCheck(t *testing.T) {
 	countMCPGatewayFDs = func(port int) (int, error) { return 24, nil }
 	t.Cleanup(func() { probeMCPGateway, countMCPGatewayFDs = oldProbe, oldCount })
 
-	result, err := HarnessDoctor(HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
+	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +64,7 @@ func TestHarnessDoctorWarnsOnUnreachableMCPGateway(t *testing.T) {
 	countMCPGatewayFDs = func(port int) (int, error) { return 24, nil }
 	t.Cleanup(func() { probeMCPGateway, countMCPGatewayFDs = oldProbe, oldCount })
 
-	result, err := HarnessDoctor(HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
+	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,10 +82,10 @@ func TestHarnessDoctorWarnsOnMCPGatewayFDPressure(t *testing.T) {
 	writeClaudeMCPConfigForTest(t, home, loopbackGatewayConfigForTest)
 	oldProbe, oldCount := probeMCPGateway, countMCPGatewayFDs
 	probeMCPGateway = func(target string) error { return nil }
-	countMCPGatewayFDs = func(port int) (int, error) { return mcpGatewayFDWarningThreshold, nil }
+	countMCPGatewayFDs = func(port int) (int, error) { return doctordomain.MCPGatewayFDWarningThreshold, nil }
 	t.Cleanup(func() { probeMCPGateway, countMCPGatewayFDs = oldProbe, oldCount })
 
-	result, err := HarnessDoctor(HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
+	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: home, Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +99,7 @@ func TestHarnessDoctorWarnsOnMCPGatewayFDPressure(t *testing.T) {
 }
 
 func TestHarnessDoctorSkipsMCPGatewayWithoutConfig(t *testing.T) {
-	result, err := HarnessDoctor(HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: t.TempDir(), Version: "test"})
+	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}

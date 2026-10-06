@@ -5,7 +5,7 @@ import (
 	"issueops/cmd/issueops/qualitycli"
 	qualityapp "issueops/internal/application/quality"
 	qualitycontract "issueops/internal/contract/quality"
-	catalog "issueops/internal/domain/qualitycatalog"
+	contract "issueops/internal/contract/qualitycatalog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -66,7 +66,7 @@ func TestQualityAuditCollectorCLIStates(t *testing.T) {
 			deps := qualitycliInspectDepsForContract()
 			deps.Coverage = func(string) (string, error) { return "", nil }
 			deps.BranchFunctions = func(string) ([]qualitycontract.BranchFunction, []string) { return nil, nil }
-			deps.Candidates = func(string) []catalog.Candidate { return nil }
+			deps.Candidates = func(string) []contract.Candidate { return nil }
 			var result qualitycontract.InspectResult
 			err := qualitycli.Run([]string{"inspect", "--repo", root, "--json"}, qualitycli.Deps{
 				Inspect:   func(root string) qualitycontract.InspectResult { return inspectQualityForTest(root, deps) },

@@ -28,10 +28,6 @@ func issueOpsRoot() string {
 	return pathutil.IssueOpsRoot(filepath.Join("skills", skillName, "SKILL.md"))
 }
 
-func resolveTarget(arg string) string {
-	return pathutil.ResolveTarget(arg)
-}
-
 func runAPIDoc(args []string) error {
 	return newAPIDocCommand().Run(args)
 }

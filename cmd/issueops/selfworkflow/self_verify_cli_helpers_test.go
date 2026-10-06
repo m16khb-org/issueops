@@ -1,10 +1,13 @@
 package selfworkflow
 
-import "issueops/cmd/issueops/selfworkflow/candidatescmd"
+import (
+	"issueops/cmd/issueops/selfworkflow/candidatescmd"
+	contract "issueops/internal/contract/selfaugment"
+)
 
 type SelfVerifyCandidatesDeps struct {
-	Export func() SelfVerificationCandidateExportResult
-	Save   func(*SelfVerificationCandidateExportResult, string) error
+	Export func() contract.SelfVerificationCandidateExportResult
+	Save   func(*contract.SelfVerificationCandidateExportResult, string) error
 }
 
 func RunSelfVerifyCandidatesWithDeps(args []string, deps SelfVerifyCandidatesDeps) error {

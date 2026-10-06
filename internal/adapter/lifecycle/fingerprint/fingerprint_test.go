@@ -41,8 +41,8 @@ func TestForRoot(t *testing.T) {
 func TestRepoID(t *testing.T) {
 	fp1 := forRootForTest("/tmp/a")
 	fp2 := forRootForTest("/tmp/b")
-	id1 := RepoID(fp1)
-	id2 := RepoID(fp2)
+	id1 := lifecycledomain.RepoID(fp1)
+	id2 := lifecycledomain.RepoID(fp2)
 	if id1 == "" || id2 == "" {
 		t.Error("expected non-empty RepoID")
 	}
@@ -59,18 +59,14 @@ func TestEqual(t *testing.T) {
 	fp2 := forRootForTest("/tmp/a")
 	fp3 := forRootForTest("/tmp/b")
 
-	if !Equal(fp1, fp2) {
+	if !lifecycledomain.EqualFingerprint(fp1, fp2) {
 		t.Error("same roots should be equal")
 	}
-	if Equal(fp1, fp3) {
+	if lifecycledomain.EqualFingerprint(fp1, fp3) {
 		t.Error("different roots should not be equal")
 	}
 }
 
 func forRootForTest(root string) lifecyclecontract.ProjectFingerprint {
 	return ForRoot(root, projectdocs.ReadGitOriginURL)
-}
-func RepoID(fp lifecyclecontract.ProjectFingerprint) string { return lifecycledomain.RepoID(fp) }
-func Equal(a, b lifecyclecontract.ProjectFingerprint) bool {
-	return lifecycledomain.EqualFingerprint(a, b)
 }

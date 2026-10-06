@@ -3,6 +3,7 @@ package issueopsapp
 import (
 	"issueops/cmd/issueops/hookcli"
 	"issueops/cmd/issueops/hookcli/hookcatalog"
+	pathutil "issueops/cmd/issueops/pathutil"
 	hookcontract "issueops/internal/contract/hookprompt"
 	"os"
 	"path/filepath"
@@ -11,7 +12,7 @@ import (
 
 func TestResolveTarget(t *testing.T) {
 	tmp := t.TempDir()
-	got := resolveTarget(tmp)
+	got := pathutil.ResolveTarget(tmp)
 	absTmp, _ := filepath.Abs(tmp)
 	if got != absTmp {
 		t.Fatalf("resolveTarget(%q) = %q, want %q", tmp, got, absTmp)
@@ -20,7 +21,7 @@ func TestResolveTarget(t *testing.T) {
 	t.Run("with CLAUDE_PROJECT_DIR", func(t *testing.T) {
 		t.Setenv("CLAUDE_PROJECT_DIR", tmp)
 		t.Setenv("PWD", "")
-		if res := resolveTarget(""); res != absTmp {
+		if res := pathutil.ResolveTarget(""); res != absTmp {
 			t.Fatalf("expected %q, got %q", absTmp, res)
 		}
 	})
@@ -28,7 +29,7 @@ func TestResolveTarget(t *testing.T) {
 	t.Run("with PWD", func(t *testing.T) {
 		t.Setenv("CLAUDE_PROJECT_DIR", "")
 		t.Setenv("PWD", tmp)
-		if res := resolveTarget(""); res != absTmp {
+		if res := pathutil.ResolveTarget(""); res != absTmp {
 			t.Fatalf("expected %q, got %q", absTmp, res)
 		}
 	})
@@ -38,7 +39,7 @@ func TestResolveTarget(t *testing.T) {
 		t.Setenv("PWD", "")
 		cwd, _ := os.Getwd()
 		absCwd, _ := filepath.Abs(cwd)
-		if res := resolveTarget(""); res != absCwd {
+		if res := pathutil.ResolveTarget(""); res != absCwd {
 			t.Fatalf("expected %q, got %q", absCwd, res)
 		}
 	})

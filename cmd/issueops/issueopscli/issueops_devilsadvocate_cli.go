@@ -3,8 +3,7 @@ package issueopscli
 import (
 	"flag"
 	"fmt"
-
-	issueopscontract "issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 )
 
 func (cli command) runIssueOpsDevilsAdvocate(args []string) error {
@@ -31,7 +30,7 @@ func (cli command) runIssueOpsDevilsAdvocate(args []string) error {
 	if *reviewerContext == "" {
 		return fmt.Errorf("--reviewer-context subagent|inline is required: record how the devil's-advocate review ran")
 	}
-	record, err := cli.Runtime.RecordIssueOpsDevilsAdvocateReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsDevilsAdvocateReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsDevilsAdvocateReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, reviewcontract.DevilsAdvocateReviewRequest{
 		Verdict:         *verdict,
 		Findings:        findings,
 		Waived:          *waive,

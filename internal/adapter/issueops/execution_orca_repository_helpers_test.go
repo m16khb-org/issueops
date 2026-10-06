@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"reflect"
 	"time"
 
@@ -61,7 +62,7 @@ func beginOrcaIntentViaRepository(stateRoot string, record issueops.IssueOpsReco
 
 type reconcileWorktreeTestEffects struct {
 	stateRoot string
-	readIssue port.ExecutionIssueSnapshotReadFunc
+	readIssue executionissue.ExecutionIssueSnapshotReadFunc
 }
 
 type ExecutionResumeIntentState struct {
@@ -102,7 +103,7 @@ func (e reconcileWorktreeTestEffects) PrepareWorktree(ctx context.Context, snaps
 	return PrepareExecutionPreparationOwner(ctx, e.stateRoot, snapshot, command, intent, receipt, e.readIssue)
 }
 
-func advanceOrcaIntentReceiptViaRepository(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected preparationcontract.Intent, receipt port.ExecutionOrcaIntentReceipt, readIssue port.ExecutionIssueSnapshotReadFunc, _ func() time.Time) (issueops.IssueOpsRecord, preparationcontract.Intent, error) {
+func advanceOrcaIntentReceiptViaRepository(ctx context.Context, stateRoot string, record issueops.IssueOpsRecord, expected preparationcontract.Intent, receipt port.ExecutionOrcaIntentReceipt, readIssue executionissue.ExecutionIssueSnapshotReadFunc, _ func() time.Time) (issueops.IssueOpsRecord, preparationcontract.Intent, error) {
 	store, err := sqlstore.Open(stateRoot)
 	if err != nil {
 		return record, expected, err

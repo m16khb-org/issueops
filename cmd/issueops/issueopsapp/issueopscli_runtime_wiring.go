@@ -4,6 +4,7 @@ import (
 	"context"
 	"issueops/cmd/issueops/issueopscli"
 	branchpreflight "issueops/internal/adapter/preflight"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"time"
 
@@ -81,13 +82,13 @@ func newIssueOpsCLIRuntime(stateRoot string) issueopscli.IssueOpsCLIDeps {
 		RecordIssueOpsAISlopCleanEvidenceWithActor: func(root, id string, categories, verification []string, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return reviewapp.RecordAISlopCleanEvidence(reviewport.AISlopCleanStore{ReviewMutationStore: issueopscore.NewReviewMutationStore(&actor), Refresh: newCyclePhaseService(&actor).Refresh}, root, id, categories, verification)
 		},
-		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req issueopscontract.IssueOpsCompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req reviewcontract.CompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newPlanningRecorder(&actor).Compatibility(root, id, req)
 		},
-		RecordIssueOpsDesignReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsDesignReviewWithActor: func(root, id string, req reviewcontract.DesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newPlanningRecorder(&actor).Design(root, id, req)
 		},
-		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req reviewcontract.DevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return newPlanningRecorder(&actor).DevilsAdvocate(root, id, req)
 		},
 		RecordIssueOpsDomainReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDomainReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {

@@ -2,6 +2,7 @@ package issueopsdecision
 
 import (
 	"context"
+	issueopscontract "issueops/internal/contract/issueops"
 
 	issueopsdecisionapplication "issueops/internal/application/issueopsdecision"
 	issueopsdecisioncontract "issueops/internal/contract/issueopsdecision"
@@ -12,13 +13,13 @@ type Handlers struct {
 		string,
 		string,
 		issueopsdecisioncontract.Request,
-	) (issueopsdecisioncontract.Record, error)
+	) (issueopscontract.IssueOpsRecord, error)
 	AddWithActor func(
 		string,
 		string,
 		issueopsdecisioncontract.Request,
-		issueopsdecisioncontract.Actor,
-	) (issueopsdecisioncontract.Record, error)
+		issueopscontract.IssueOpsActor,
+	) (issueopscontract.IssueOpsRecord, error)
 }
 
 func NewHandlers(service *issueopsdecisionapplication.Service) Handlers {
@@ -27,15 +28,15 @@ func NewHandlers(service *issueopsdecisionapplication.Service) Handlers {
 			stateRoot string,
 			id string,
 			request issueopsdecisioncontract.Request,
-		) (issueopsdecisioncontract.Record, error) {
+		) (issueopscontract.IssueOpsRecord, error) {
 			return service.Add(context.Background(), stateRoot, id, request, nil)
 		},
 		AddWithActor: func(
 			stateRoot string,
 			id string,
 			request issueopsdecisioncontract.Request,
-			actor issueopsdecisioncontract.Actor,
-		) (issueopsdecisioncontract.Record, error) {
+			actor issueopscontract.IssueOpsActor,
+		) (issueopscontract.IssueOpsRecord, error) {
 			return service.Add(context.Background(), stateRoot, id, request, &actor)
 		},
 	}

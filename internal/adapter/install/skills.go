@@ -18,14 +18,10 @@ func ListSkillNames(root string) ([]string, error) {
 			names = append(names, entry.Name())
 		}
 	}
-	return normalizeSkillNames(names), nil
+	return installdomain.NormalizeSkillNames(names), nil
 }
 
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-func normalizeSkillNames(names []string) []string {
-	return installdomain.NormalizeSkillNames(names)
 }

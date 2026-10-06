@@ -1,6 +1,7 @@
 package projectdocs
 
 import (
+	detection "issueops/internal/adapter/projectdocs/detection"
 	projectdoccontract "issueops/internal/contract/projectdoc"
 	projectdoc "issueops/internal/domain/projectdoc"
 	"os"
@@ -11,9 +12,9 @@ import (
 func inferProjectProfile(root string, signals projectdoc.ProjectSignals) projectdoccontract.ProjectProfile {
 	vcs := inferProjectVCS(root)
 	observedEvidence := []string{}
-	addEvidence := func(value string) { observedEvidence = appendUnique(observedEvidence, value) }
-	frameworks := detectFrameworks(root, signals.Files, addEvidence)
-	monorepo := detectMonorepo(root, signals.Files, addEvidence)
+	addEvidence := func(value string) { observedEvidence = projectdoc.AppendUnique(observedEvidence, value) }
+	frameworks := detection.Frameworks(root, signals.Files, addEvidence)
+	monorepo := detection.Monorepo(root, signals.Files, addEvidence)
 	projectTypes := inferProjectTypes(root, signals, frameworks, monorepo, addEvidence)
 	return projectdoc.BuildProfile(signals, vcs, frameworks, monorepo, projectTypes, observedEvidence)
 }

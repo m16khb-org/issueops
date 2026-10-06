@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -489,102 +488,6 @@ func (c *Client) ShowRequest(ctx context.Context, requestID string) (port.OrcaRe
 		return port.OrcaRequestObservation{}, err
 	}
 	return port.OrcaRequestObservation{RuntimeID: runtimeID, RequestID: payload.RequestID, Status: payload.State, Method: payload.Method}, nil
-}
-
-// SendWorkerDone은 core와 CLI에서 호출되지 않는다(#127에서 보존 결정). 판단
-// 근거는 port의 OrcaWorkerDoneClient 주석에 있다.
-//
-// 삭제 대신 보존한 이유: 아래 검증(응답 정체 일치, payload 일치, bounded 핸들과
-// 경로 요구)은 Orca dispatch 프로토콜의 완료 보고를 신뢰 가능하게 만드는 부분이며
-// 재작성 비용이 작지 않다. #130이 task 종결 경로를 설계할 때 이 구현이 후보다.
-func (c *Client) SendWorkerDone(ctx context.Context, req port.OrcaWorkerDoneRequest) (port.OrcaWorkerDoneResult, error) {
-	if err := validateWorkerDoneRequest(req); err != nil {
-		return port.OrcaWorkerDoneResult{}, &port.OrcaError{Code: "worker_done_invalid", Detail: err.Error()}
-	}
-	argv := []string{
-		"orca", "orchestration", "send",
-		"--run", req.RunID,
-		"--to", req.ToHandle,
-		"--from", req.FromHandle,
-		"--type", "worker_done",
-		"--subject", req.Subject,
-		"--body", req.Body,
-		"--task-id", req.TaskID,
-		"--dispatch-id", req.DispatchID,
-		"--outcome", req.Outcome,
-	}
-	if len(req.ChangedFiles) > 0 {
-		argv = append(argv, "--files-modified", strings.Join(req.ChangedFiles, ","))
-	}
-	argv = append(argv, "--report-path", req.ReportPath, "--json")
-	output, err := c.runner.Run(ctx, "", createTimeout, argv)
-	if err != nil {
-		return port.OrcaWorkerDoneResult{}, err
-	}
-	var payload struct {
-		Message struct {
-			ID         string `json:"id"`
-			FromHandle string `json:"from_handle"`
-			ToHandle   string `json:"to_handle"`
-			Type       string `json:"type"`
-			Subject    string `json:"subject"`
-			Body       string `json:"body"`
-			Payload    string `json:"payload"`
-			Sequence   int64  `json:"sequence"`
-		} `json:"message"`
-	}
-	if _, err := decodeResult(output, &payload); err != nil {
-		return port.OrcaWorkerDoneResult{}, &port.OrcaError{Code: "worker_done_response_malformed", Detail: boundedDiagnostic(err.Error()), Invoked: output.Invoked}
-	}
-	message := payload.Message
-	if message.ID == "" || len(message.ID) > 1024 || message.Sequence <= 0 || message.FromHandle != req.FromHandle || message.ToHandle != req.ToHandle || message.Type != "worker_done" || message.Subject != req.Subject || message.Body != req.Body {
-		return port.OrcaWorkerDoneResult{}, &port.OrcaError{Code: "worker_done_response_mismatch", Detail: "Orca message identity or evidence does not match the requested projection", Invoked: true}
-	}
-	var evidence struct {
-		TaskID        string   `json:"taskId"`
-		DispatchID    string   `json:"dispatchId"`
-		Outcome       string   `json:"outcome"`
-		FilesModified []string `json:"filesModified"`
-		ReportPath    string   `json:"reportPath"`
-	}
-	if len(message.Payload) > 64*1024 || json.Unmarshal([]byte(message.Payload), &evidence) != nil || evidence.TaskID != req.TaskID || evidence.DispatchID != req.DispatchID || evidence.Outcome != req.Outcome || !slices.Equal(evidence.FilesModified, req.ChangedFiles) || evidence.ReportPath != req.ReportPath {
-		return port.OrcaWorkerDoneResult{}, &port.OrcaError{Code: "worker_done_response_mismatch", Detail: "Orca message payload does not match the requested projection", Invoked: true}
-	}
-	return port.OrcaWorkerDoneResult{MessageID: message.ID, Sequence: message.Sequence}, nil
-}
-
-func validateWorkerDoneRequest(req port.OrcaWorkerDoneRequest) error {
-	if _, err := validateRunID(req.RunID); err != nil {
-		return fmt.Errorf("worker_done requires a concrete current Run identity")
-	}
-	if !concreteTerminalHandlePattern.MatchString(req.FromHandle) || !concreteTerminalHandlePattern.MatchString(req.ToHandle) || req.FromHandle == req.ToHandle || len(req.FromHandle) > 256 || len(req.ToHandle) > 256 {
-		return fmt.Errorf("worker_done requires distinct concrete bounded Orca terminal handles")
-	}
-	for name, value := range map[string]struct {
-		value string
-		limit int
-	}{
-		"subject": {req.Subject, 256}, "body": {req.Body, 4096}, "task id": {req.TaskID, 1024}, "dispatch id": {req.DispatchID, 1024},
-	} {
-		if strings.TrimSpace(value.value) == "" || value.value != strings.TrimSpace(value.value) || len(value.value) > value.limit || strings.ContainsRune(value.value, 0) {
-			return fmt.Errorf("worker_done %s is missing, non-canonical, or unbounded", name)
-		}
-	}
-	if req.Outcome != "succeeded" && req.Outcome != "failed" {
-		return fmt.Errorf("worker_done outcome must be succeeded or failed")
-	}
-	if len(req.ChangedFiles) > 512 {
-		return fmt.Errorf("worker_done changed files are unbounded")
-	}
-	for _, path := range req.ChangedFiles {
-		if path == "" || strings.ContainsAny(path, ",\x00") {
-			return fmt.Errorf("worker_done changed files cannot be represented exactly")
-		}
-	}
-	if !filepath.IsAbs(req.ReportPath) || filepath.Clean(req.ReportPath) != req.ReportPath || len(req.ReportPath) > 4096 || strings.ContainsRune(req.ReportPath, 0) {
-		return fmt.Errorf("worker_done report path must be an exact bounded absolute path")
-	}
-	return nil
 }
 
 func (c *Client) dispatchResult(ctx context.Context, argv []string) (port.OrcaDispatch, error) {

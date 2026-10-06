@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"strings"
 	"testing"
 
@@ -63,7 +64,7 @@ func TestAdvanceToImplementGatesOnDesignApproval(t *testing.T) {
 	// An UNAPPROVED design review: implement entry must be blocked SPECIFICALLY on
 	// design_approval (the plan-before-execute gate — a plan exists/was reviewed
 	// but not approved).
-	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, issueops.IssueOpsDesignReviewRequest{
+	if _, err := RecordIssueOpsDesignReview(stateRoot, record.ID, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "IssueOps must preserve the work contract",
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		Verification:   []string{"design review checked alternatives and risks"},

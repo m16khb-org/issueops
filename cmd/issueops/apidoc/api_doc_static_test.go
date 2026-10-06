@@ -1,6 +1,9 @@
 package apidoc
 
-import "testing"
+import (
+	staticcheck "issueops/internal/domain/apidoc"
+	"testing"
+)
 
 func TestCheckNestDTOStaticIgnoresConstObjectKeys(t *testing.T) {
 	text := `
@@ -14,7 +17,7 @@ export class SearchRequestDto {
   keyword!: string
 }
 `
-	got := checkNestDTOStatic("search.dto.ts", text)
+	got := staticcheck.CheckNestDTO("search.dto.ts", text)
 	if len(got) != 0 {
 		t.Fatalf("const object keys must not be treated as DTO properties: %+v", got)
 	}
@@ -26,7 +29,7 @@ export class SearchRequestDto {
   keyword!: string
 }
 `
-	got := checkNestDTOStatic("search.dto.ts", text)
+	got := staticcheck.CheckNestDTO("search.dto.ts", text)
 	if len(got) != 1 {
 		t.Fatalf("expected missing ApiProperty violation for class property, got %+v", got)
 	}

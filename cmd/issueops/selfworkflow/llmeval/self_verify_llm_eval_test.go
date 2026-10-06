@@ -68,16 +68,16 @@ func TestResolveSelfVerifyLLMEvalConfigRejectsInvalidEnv(t *testing.T) {
 
 func TestParseSelfVerifyLLMEvalEnvParsesDisabledAliasesAndRejectsUnknown(t *testing.T) {
 	for _, value := range []string{"", "0", "false", "no", "off", "disabled"} {
-		enabled, mode, err := ParseSelfVerifyLLMEvalEnv(value)
+		enabled, mode, err := selfverify.ParseLLMEvalEnv(value)
 		if err != nil || enabled || mode != "advisory" {
 			t.Fatalf("ParseSelfVerifyLLMEvalEnv(%q) enabled=%v mode=%q err=%v", value, enabled, mode, err)
 		}
 	}
-	enabled, mode, err := ParseSelfVerifyLLMEvalEnv(" gate ")
+	enabled, mode, err := selfverify.ParseLLMEvalEnv(" gate ")
 	if err != nil || !enabled || mode != "gate" {
 		t.Fatalf("gate env parse enabled=%v mode=%q err=%v", enabled, mode, err)
 	}
-	if _, _, err := ParseSelfVerifyLLMEvalEnv("maybe"); err == nil || !strings.Contains(err.Error(), selfverify.LLMEvalEnvName) {
+	if _, _, err := selfverify.ParseLLMEvalEnv("maybe"); err == nil || !strings.Contains(err.Error(), selfverify.LLMEvalEnvName) {
 		t.Fatalf("expected named env parse error, got %v", err)
 	}
 }

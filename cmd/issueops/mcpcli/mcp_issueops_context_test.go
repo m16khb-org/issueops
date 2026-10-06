@@ -3,6 +3,7 @@ package mcpcli
 import (
 	"context"
 	"errors"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	"testing"
 
 	issueopscontract "issueops/internal/contract/issueops"
@@ -30,7 +31,7 @@ func TestIssueOpsMCPExecutionPropagatesRequestCancellation(t *testing.T) {
 			Name:      "issueops_execution",
 			Arguments: map[string]any{"action": "status", "id": "io-context"},
 		},
-		MCPDependencies{Execution: execution, Catalog: testMCPCatalog()},
+		MCPDependencies{Execution: execution, Catalog: mcpcatalog.Build()},
 	)
 
 	if observed == nil || !errors.Is(observed.Err(), context.Canceled) {

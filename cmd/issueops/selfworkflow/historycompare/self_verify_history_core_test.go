@@ -1,6 +1,7 @@
 package historycompare
 
 import (
+	augmentcontract "issueops/internal/contract/selfaugment"
 	"testing"
 
 	augmentdomain "issueops/internal/domain/selfaugment"
@@ -9,19 +10,19 @@ import (
 func TestSelfAugmentHistoryCoversInvalidTimestampSchemaSkipAndNilSlices(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("ISSUEOPS_STATE_DIR", dir)
-	if err := writeSnapshotForTest(dir, "self-verify-invalid-time", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-invalid-time", augmentcontract.SelfAugmentStateSnapshot{
 		SchemaVersion: 1,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
 		OK:            true,
 		GeneratedAt:   "not-a-time",
-		Summary:       SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1},
+		Summary:       augmentcontract.SelfAugmentSummary{TotalRuns: 1, TotalSteps: 1},
 	}); err != nil {
 		t.Fatalf("write invalid time: %v", err)
 	}
-	if err := writeSnapshotForTest(dir, "self-verify-bad-schema", SelfAugmentStateSnapshot{
+	if err := writeSnapshotForTest(dir, "self-verify-bad-schema", augmentcontract.SelfAugmentStateSnapshot{
 		SchemaVersion: 2,
 		Kind:          augmentdomain.SelfVerificationSummaryKind,
-		Summary:       SelfAugmentSummary{TotalRuns: 1},
+		Summary:       augmentcontract.SelfAugmentSummary{TotalRuns: 1},
 	}); err != nil {
 		t.Fatalf("write bad schema: %v", err)
 	}
@@ -42,13 +43,13 @@ func TestSelfAugmentHistoryCoversInvalidTimestampSchemaSkipAndNilSlices(t *testi
 }
 
 func TestParseSelfAugmentTimestampCoversEmptyInvalidAndRFC3339Fallback(t *testing.T) {
-	if _, ok := ParseSelfAugmentTimestamp(""); ok {
+	if _, ok := augmentdomain.ParseHistoryTimestamp(""); ok {
 		t.Fatal("empty timestamp parsed")
 	}
-	if _, ok := ParseSelfAugmentTimestamp("not-a-time"); ok {
+	if _, ok := augmentdomain.ParseHistoryTimestamp("not-a-time"); ok {
 		t.Fatal("invalid timestamp parsed")
 	}
-	parsed, ok := ParseSelfAugmentTimestamp("2000-01-01T00:00:00Z")
+	parsed, ok := augmentdomain.ParseHistoryTimestamp("2000-01-01T00:00:00Z")
 	if !ok || parsed.Year() != 2000 {
 		t.Fatalf("expected RFC3339 timestamp to parse, parsed=%v ok=%v", parsed, ok)
 	}

@@ -151,9 +151,6 @@ type IssueOpsIntentRecordRequest struct {
 	IntentClass       string
 }
 
-type IssueOpsDesignReview = reviewcontract.DesignReview
-type IssueOpsDesignReviewRequest = reviewcontract.DesignReviewRequest
-
 type IssueOpsDecision struct {
 	Title              string   `json:"title"`
 	Body               string   `json:"body"`
@@ -201,14 +198,10 @@ type IssueOpsPlanPrepRequest struct {
 	CodebaseSurvey IssueOpsPlanPrepItemRequest
 }
 
-type IssueOpsCompatibilityReview = reviewcontract.CompatibilityReview
-type IssueOpsCompatibilityReviewRequest = reviewcontract.CompatibilityReviewRequest
-
-// The aliases preserve the persisted IssueOps record shape while review policy
-// moves to the issueopsreview capability.
+// domain/issueops may import only this contract package, and its plan-review
+// rendering names these types, so they stay visible here.
 type IssueOpsDevilsAdvocateReview = reviewcontract.DevilsAdvocateReview
 type IssueOpsDevilsAdvocateRound = reviewcontract.DevilsAdvocateRound
-type IssueOpsDevilsAdvocateReviewRequest = reviewcontract.DevilsAdvocateReviewRequest
 
 // IssueOpsDomainReview captures the grill-phase domain grilling outcome:
 // terminology, current model fit, risks, and unresolved uncertainties. It is a
@@ -339,7 +332,7 @@ type IssueOpsRecord struct {
 	Branch                  string                              `json:"branch,omitempty"`
 	Phase                   IssueOpsPhase                       `json:"phase"`
 	Intent                  *IssueOpsIntentContract             `json:"intent,omitempty"`
-	DesignReview            *IssueOpsDesignReview               `json:"design_review,omitempty"`
+	DesignReview            *reviewcontract.DesignReview        `json:"design_review,omitempty"`
 	DomainReview            *IssueOpsDomainReview               `json:"domain_review,omitempty"`
 	IssueURL                string                              `json:"issue_url,omitempty"`
 	ChildCreateOperations   []ChildCreateOperation              `json:"child_create_operations,omitempty"`
@@ -352,7 +345,7 @@ type IssueOpsRecord struct {
 	BodySyncs               []IssueOpsRemoteBodySync            `json:"body_syncs,omitempty"`
 	Decisions               []IssueOpsDecision                  `json:"decisions,omitempty"`
 	PlanPrep                *IssueOpsPlanPrep                   `json:"plan_prep,omitempty"`
-	CompatibilityReview     *IssueOpsCompatibilityReview        `json:"compatibility_review,omitempty"`
+	CompatibilityReview     *reviewcontract.CompatibilityReview `json:"compatibility_review,omitempty"`
 	DevilsAdvocateReview    *IssueOpsDevilsAdvocateReview       `json:"devils_advocate_review,omitempty"`
 	Feedback                []IssueOpsFeedbackItem              `json:"feedback,omitempty"`
 	RegressEvents           []IssueOpsRegressEvent              `json:"regress_events,omitempty"`

@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func runProject(deps Dependencies, args []string) error {
+func Run(deps Dependencies, args []string) error {
 	if len(args) == 0 {
 		projectUsage()
 		return fmt.Errorf("missing project subcommand")

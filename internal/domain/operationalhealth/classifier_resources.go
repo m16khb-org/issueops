@@ -2,17 +2,18 @@ package operationalhealth
 
 import (
 	"fmt"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"sort"
 	"strings"
 )
 
-func validateCycleResources(builder *findingBuilder, resources resourceIndex, cycle Cycle, authority CycleAuthority, repoScoped bool, gitPathCounts, worktreeCounts, terminalCounts, ptyCounts, taskCounts, dispatchCounts map[string]int) {
-	var gitWorktree GitWorktree
+func validateCycleResources(builder *findingBuilder, resources resourceIndex, cycle operationalhealthcontract.Cycle, authority operationalhealthcontract.CycleAuthority, repoScoped bool, gitPathCounts, worktreeCounts, terminalCounts, ptyCounts, taskCounts, dispatchCounts map[string]int) {
+	var gitWorktree operationalhealthcontract.GitWorktree
 	gitWorktreeOK := false
 	if repoScoped && (authority == AuthorityLive || strings.TrimSpace(cycle.WorktreePath) != "") {
 		gitWorktree, gitWorktreeOK = resources.gitPaths.unique(cycle.WorktreePath)
 		if !gitWorktreeOK || gitPathCounts[clean(cycle.WorktreePath)] != 1 || strings.TrimSpace(gitWorktree.Branch) != strings.TrimSpace(cycle.Branch) {
-			builder.add(FindingInventoryUnknown, "git_worktree", clean(cycle.WorktreePath), "cycle identity does not match exactly one Git worktree", clean(cycle.WorktreePath))
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "git_worktree", clean(cycle.WorktreePath), "cycle identity does not match exactly one Git worktree", clean(cycle.WorktreePath))
 		}
 	}
 	isOrca := strings.TrimSpace(cycle.ExecutionMode) == "orca"
@@ -21,22 +22,22 @@ func validateCycleResources(builder *findingBuilder, resources resourceIndex, cy
 		headMismatch := gitWorktreeOK && strings.TrimSpace(worktree.Head) != strings.TrimSpace(gitWorktree.Head)
 		instanceMismatch := strings.TrimSpace(cycle.OrcaWorktreeInstanceID) != "" && strings.TrimSpace(worktree.InstanceID) != strings.TrimSpace(cycle.OrcaWorktreeInstanceID)
 		if !ok || worktreeCounts[strings.TrimSpace(cycle.OrcaWorktreeID)] != 1 || strings.TrimSpace(worktree.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) || strings.TrimSpace(worktree.RepoID) != strings.TrimSpace(cycle.OrcaRepoID) || instanceMismatch || clean(worktree.Repo) != clean(cycle.Repo) || clean(worktree.Path) != clean(cycle.WorktreePath) || strings.TrimSpace(worktree.Branch) != strings.TrimSpace(cycle.Branch) || headMismatch {
-			builder.add(FindingInventoryUnknown, "worktree", cycle.OrcaWorktreeID, "cycle worktree identity does not match exactly one Orca worktree", clean(cycle.WorktreePath))
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "worktree", cycle.OrcaWorktreeID, "cycle worktree identity does not match exactly one Orca worktree", clean(cycle.WorktreePath))
 		}
 	}
-	var dispatch OrcaDispatch
+	var dispatch operationalhealthcontract.OrcaDispatch
 	dispatchOK := false
 	if isOrca || strings.TrimSpace(cycle.DispatchID) != "" {
 		dispatch, dispatchOK = resources.dispatches.unique(cycle.DispatchID)
 		statusMismatch := authority == AuthorityLive && strings.TrimSpace(dispatch.Status) != "dispatched"
 		if !dispatchOK || dispatchCounts[cycle.DispatchID] != 1 || strings.TrimSpace(dispatch.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) ||
 			orcaTaskKey(dispatch.RunID, dispatch.TaskID) != orcaTaskKey(cycle.RunID, cycle.TaskID) || statusMismatch {
-			builder.add(FindingInventoryUnknown, "dispatch", cycle.DispatchID, "cycle dispatch identity does not match exactly one expected dispatch", "")
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "dispatch", cycle.DispatchID, "cycle dispatch identity does not match exactly one expected dispatch", "")
 		}
 	}
 	if isOrca || strings.TrimSpace(cycle.TerminalPTYID) != "" {
 		handle := strings.TrimSpace(dispatch.AssigneeHandle)
-		var terminal OrcaTerminal
+		var terminal operationalhealthcontract.OrcaTerminal
 		terminalOK := false
 		if strings.TrimSpace(cycle.TerminalPTYID) != "" {
 			terminal, terminalOK = resources.ptys.unique(cycle.TerminalPTYID)
@@ -48,14 +49,14 @@ func validateCycleResources(builder *findingBuilder, resources resourceIndex, cy
 		if !terminalOK || countMismatch || strings.TrimSpace(terminal.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) ||
 			(dispatchOK && strings.TrimSpace(terminal.Handle) != handle) || strings.TrimSpace(terminal.WorktreeID) != strings.TrimSpace(cycle.OrcaWorktreeID) ||
 			clean(terminal.WorktreePath) != clean(cycle.WorktreePath) || liveMismatch {
-			builder.add(FindingInventoryUnknown, "terminal", firstNonEmpty(handle, cycle.TerminalPTYID), "cycle terminal identity or liveness does not match exactly one expected terminal", clean(cycle.WorktreePath))
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "terminal", firstNonEmpty(handle, cycle.TerminalPTYID), "cycle terminal identity or liveness does not match exactly one expected terminal", clean(cycle.WorktreePath))
 		}
 	}
 	if isOrca || strings.TrimSpace(cycle.TaskID) != "" {
 		taskKey := orcaTaskKey(cycle.RunID, cycle.TaskID)
 		task, ok := resources.tasks.unique(taskKey)
 		if !ok || taskCounts[taskKey] != 1 || strings.TrimSpace(task.RuntimeID) != strings.TrimSpace(cycle.OrcaRuntimeID) || (authority == AuthorityLive && strings.TrimSpace(task.Status) != "dispatched") || (strings.TrimSpace(task.DispatchID) != "" && strings.TrimSpace(task.DispatchID) != strings.TrimSpace(cycle.DispatchID)) {
-			builder.add(FindingInventoryUnknown, "task", cycle.TaskID, "cycle task identity or status does not match exactly one task", "")
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "task", cycle.TaskID, "cycle task identity or status does not match exactly one task", "")
 		}
 	}
 }
@@ -68,8 +69,8 @@ func orcaTaskKey(runID, taskID string) string {
 	return runID + "\x00" + taskID
 }
 
-func validateLeaseHolderIndexes(builder *findingBuilder, cycles []Cycle, indexes []LeaseHolderIndex) {
-	active := make([]Cycle, 0, len(cycles))
+func validateLeaseHolderIndexes(builder *findingBuilder, cycles []operationalhealthcontract.Cycle, indexes []operationalhealthcontract.LeaseHolderIndex) {
+	active := make([]operationalhealthcontract.Cycle, 0, len(cycles))
 	holderOwners := make(map[string][]string)
 	activeCounts := make(map[leaseHolderKey]int)
 	indexCounts := make(map[leaseHolderKey]int)
@@ -87,15 +88,15 @@ func validateLeaseHolderIndexes(builder *findingBuilder, cycles []Cycle, indexes
 	for identity, owners := range holderOwners {
 		if identity != "" && len(owners) > 1 {
 			sort.Strings(owners)
-			builder.add(FindingInventoryUnknown, "lease_holder", identity, "native session is recorded as holder of multiple active cycles: "+strings.Join(owners, ","), "")
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "lease_holder", identity, "native session is recorded as holder of multiple active cycles: "+strings.Join(owners, ","), "")
 		}
 	}
-	keyCounts := countBy(indexes, func(index LeaseHolderIndex) string { return strings.TrimSpace(index.Key) })
+	keyCounts := countBy(indexes, func(index operationalhealthcontract.LeaseHolderIndex) string { return strings.TrimSpace(index.Key) })
 	addDuplicateFindings(builder, "lease_holder", keyCounts)
 	for _, cycle := range active {
 		matches := indexCounts[holderKey(cycle.ID, cycle.Generation, cycle.HolderHost, cycle.HolderSessionID, cycle.HolderAgentID)]
 		if matches != 1 {
-			builder.add(FindingInventoryUnknown, "lease_holder", strings.TrimSpace(cycle.ID), "active cycle must match exactly one lease-holder reverse index", "")
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "lease_holder", strings.TrimSpace(cycle.ID), "active cycle must match exactly one lease-holder reverse index", "")
 		}
 	}
 	for _, index := range indexes {
@@ -103,7 +104,7 @@ func validateLeaseHolderIndexes(builder *findingBuilder, cycles []Cycle, indexes
 			validNativeHost(index.Host) && strings.TrimSpace(index.SessionID) != ""
 		matches := activeCounts[holderKey(index.LifecycleID, index.Generation, index.Host, index.SessionID, index.AgentID)]
 		if !valid || matches != 1 {
-			builder.add(FindingInventoryUnknown, "lease_holder", firstNonEmpty(strings.TrimSpace(index.Key), strings.TrimSpace(index.LifecycleID), "index"), "lease-holder reverse index must match exactly one active cycle", "")
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, "lease_holder", firstNonEmpty(strings.TrimSpace(index.Key), strings.TrimSpace(index.LifecycleID), "index"), "lease-holder reverse index must match exactly one active cycle", "")
 		}
 	}
 }
@@ -128,22 +129,22 @@ func nativeHolderIdentity(host, sessionID, agentID string) string {
 	return strings.ToLower(host) + "\x00" + sessionID + "\x00" + agentID
 }
 
-func classifyMessages(builder *findingBuilder, messages MessagePresence, profile string) {
+func classifyMessages(builder *findingBuilder, messages operationalhealthcontract.MessagePresence, profile string) {
 	if messages.Count < 0 {
-		builder.add(FindingInventoryUnknown, "message", "inbox", "message count is invalid", "")
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "message", "inbox", "message count is invalid", "")
 		return
 	}
 	// Interactively, the orchestration inbox is durable message history the
 	// CLI cannot purge; rows only prove past coordination, not residue.
-	if profile == ProfileInteractive {
+	if profile == operationalhealthcontract.ProfileInteractive {
 		return
 	}
 	if messages.Count > 0 || !messages.Empty {
-		builder.add(FindingMessageResidue, "message", "inbox", fmt.Sprintf("orchestration inbox returned %d message rows", messages.Count), "")
+		builder.add(operationalhealthcontract.FindingMessageResidue, "message", "inbox", fmt.Sprintf("orchestration inbox returned %d message rows", messages.Count), "")
 		return
 	}
 	if !messages.CompleteAbsence {
-		builder.add(FindingInventoryUnknown, "message", "inbox", "bounded inbox observation does not prove absence", "")
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "message", "inbox", "bounded inbox observation does not prove absence", "")
 	}
 }
 
@@ -176,7 +177,7 @@ func normalizedSet(values []string) (map[string]bool, []string) {
 	return result, invalid
 }
 
-func ownerIndex(cycles []Cycle, identity func(Cycle) string) map[string][]string {
+func ownerIndex(cycles []operationalhealthcontract.Cycle, identity func(operationalhealthcontract.Cycle) string) map[string][]string {
 	owners := make(map[string][]string)
 	for _, cycle := range cycles {
 		addOwner(owners, identity(cycle), cycle.ID)
@@ -195,7 +196,7 @@ func addOwner(owners map[string][]string, resourceID, cycleID string) {
 	owners[resourceID] = append(owners[resourceID], strings.TrimSpace(cycleID))
 }
 
-func cycleTerminalHandle(cycle Cycle, resources resourceIndex) string {
+func cycleTerminalHandle(cycle operationalhealthcontract.Cycle, resources resourceIndex) string {
 	if ptyID := strings.TrimSpace(cycle.TerminalPTYID); ptyID != "" {
 		if terminal, ok := resources.ptys.unique(ptyID); ok {
 			return strings.TrimSpace(terminal.Handle)
@@ -222,7 +223,7 @@ func countBy[T any](values []T, identity func(T) string) map[string]int {
 func addDuplicateFindings(builder *findingBuilder, kind string, counts map[string]int) {
 	for id, count := range counts {
 		if count > 1 {
-			builder.add(FindingInventoryUnknown, kind, id, fmt.Sprintf("%s identity occurs %d times", kind, count), "")
+			builder.add(operationalhealthcontract.FindingInventoryUnknown, kind, id, fmt.Sprintf("%s identity occurs %d times", kind, count), "")
 		}
 	}
 }
@@ -268,28 +269,28 @@ func (index resourceLookup[T]) counts() map[string]int {
 }
 
 type resourceIndex struct {
-	cycles     resourceLookup[Cycle]
-	worktrees  resourceLookup[OrcaWorktree]
-	instances  resourceLookup[OrcaWorktree]
-	terminals  resourceLookup[OrcaTerminal]
-	ptys       resourceLookup[OrcaTerminal]
-	tasks      resourceLookup[OrcaTask]
-	dispatches resourceLookup[OrcaDispatch]
-	gates      resourceLookup[OrcaGate]
-	gitPaths   resourceLookup[GitWorktree]
+	cycles     resourceLookup[operationalhealthcontract.Cycle]
+	worktrees  resourceLookup[operationalhealthcontract.OrcaWorktree]
+	instances  resourceLookup[operationalhealthcontract.OrcaWorktree]
+	terminals  resourceLookup[operationalhealthcontract.OrcaTerminal]
+	ptys       resourceLookup[operationalhealthcontract.OrcaTerminal]
+	tasks      resourceLookup[operationalhealthcontract.OrcaTask]
+	dispatches resourceLookup[operationalhealthcontract.OrcaDispatch]
+	gates      resourceLookup[operationalhealthcontract.OrcaGate]
+	gitPaths   resourceLookup[operationalhealthcontract.GitWorktree]
 }
 
 func newResourceIndex(snapshot Snapshot) resourceIndex {
 	return resourceIndex{
-		cycles:     indexBy(snapshot.Cycles, func(cycle Cycle) string { return cycle.ID }),
-		worktrees:  indexBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return worktree.ID }),
-		instances:  indexBy(snapshot.OrcaWorktrees, func(worktree OrcaWorktree) string { return worktree.InstanceID }),
-		terminals:  indexBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return terminal.Handle }),
-		ptys:       indexBy(snapshot.Terminals, func(terminal OrcaTerminal) string { return terminal.PTYID }),
-		tasks:      indexBy(snapshot.Tasks, func(task OrcaTask) string { return orcaTaskKey(task.RunID, task.ID) }),
-		dispatches: indexBy(snapshot.Dispatches, func(dispatch OrcaDispatch) string { return dispatch.ID }),
-		gates:      indexBy(snapshot.Gates, func(gate OrcaGate) string { return gate.ID }),
-		gitPaths:   indexBy(snapshot.GitWorktrees, func(worktree GitWorktree) string { return clean(worktree.Path) }),
+		cycles:     indexBy(snapshot.Cycles, func(cycle operationalhealthcontract.Cycle) string { return cycle.ID }),
+		worktrees:  indexBy(snapshot.OrcaWorktrees, func(worktree operationalhealthcontract.OrcaWorktree) string { return worktree.ID }),
+		instances:  indexBy(snapshot.OrcaWorktrees, func(worktree operationalhealthcontract.OrcaWorktree) string { return worktree.InstanceID }),
+		terminals:  indexBy(snapshot.Terminals, func(terminal operationalhealthcontract.OrcaTerminal) string { return terminal.Handle }),
+		ptys:       indexBy(snapshot.Terminals, func(terminal operationalhealthcontract.OrcaTerminal) string { return terminal.PTYID }),
+		tasks:      indexBy(snapshot.Tasks, func(task operationalhealthcontract.OrcaTask) string { return orcaTaskKey(task.RunID, task.ID) }),
+		dispatches: indexBy(snapshot.Dispatches, func(dispatch operationalhealthcontract.OrcaDispatch) string { return dispatch.ID }),
+		gates:      indexBy(snapshot.Gates, func(gate operationalhealthcontract.OrcaGate) string { return gate.ID }),
+		gitPaths:   indexBy(snapshot.GitWorktrees, func(worktree operationalhealthcontract.GitWorktree) string { return clean(worktree.Path) }),
 	}
 }
 
@@ -307,12 +308,12 @@ func firstNonEmpty(values ...string) string {
 }
 
 type findingBuilder struct {
-	findings []Finding
+	findings []operationalhealthcontract.Finding
 	seen     map[string]struct{}
 }
 
 func (builder *findingBuilder) add(code, kind, id, summary, path string) {
-	finding := Finding{Code: code, ResourceKind: kind, ResourceID: id, Summary: summary, Path: path}
+	finding := operationalhealthcontract.Finding{Code: code, ResourceKind: kind, ResourceID: id, Summary: summary, Path: path}
 	key := strings.Join([]string{code, kind, id, path, summary}, "\x00")
 	if _, exists := builder.seen[key]; exists {
 		return
@@ -321,7 +322,7 @@ func (builder *findingBuilder) add(code, kind, id, summary, path string) {
 	builder.findings = append(builder.findings, finding)
 }
 
-func (builder *findingBuilder) sorted() []Finding {
+func (builder *findingBuilder) sorted() []operationalhealthcontract.Finding {
 	sort.Slice(builder.findings, func(i, j int) bool {
 		left := builder.findings[i]
 		right := builder.findings[j]

@@ -2,6 +2,7 @@ package commandstep
 
 import (
 	"fmt"
+	selfverifydomain "issueops/internal/domain/selfverify"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -9,7 +10,7 @@ import (
 
 func TestTailWithBudgetUTF8Safe(t *testing.T) {
 	s := strings.Repeat("가", 500)
-	got, truncated, originalBytes := TailWithBudget(s, 200)
+	got, truncated, originalBytes := selfverifydomain.TailWithBudget(s, 200)
 	if !truncated || originalBytes != len(s) {
 		t.Fatalf("TailWithBudget truncated=%v originalBytes=%d", truncated, originalBytes)
 	}

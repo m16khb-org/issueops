@@ -15,14 +15,10 @@ func validateExecutionMutation(ctx context.Context, record issueops.IssueOpsReco
 	return cycleapp.NewMutationAuthority(samePath, verifier).Validate(ctx, record, actor)
 }
 
-func validateWorkspacePreparationMutation(ctx context.Context, record issueops.IssueOpsRecord, actor *issueops.IssueOpsActor, verifier authorityport.ActorVerifier) error {
-	return validateExecutionMutation(ctx, record, actor, verifier)
-}
-
 func ValidateIssueOpsMutationActor(ctx context.Context, stateRoot, id string, actor issueops.IssueOpsActor, verifier authorityport.ActorVerifier) error {
 	record, err := ReadIssueOps(stateRoot, id)
 	if err != nil {
 		return err
 	}
-	return validateWorkspacePreparationMutation(ctx, record, &actor, verifier)
+	return validateExecutionMutation(ctx, record, &actor, verifier)
 }

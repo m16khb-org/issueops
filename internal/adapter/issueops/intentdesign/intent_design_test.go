@@ -1,6 +1,7 @@
 package intentdesign
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"testing"
 
 	model "issueops/internal/contract/issueops"
@@ -83,19 +84,19 @@ func TestRecordDesignReviewWritesApprovedReview(t *testing.T) {
 			if !record.DesignReview.Approved {
 				t.Fatal("design review should be approved")
 			}
-			if got := record.DesignReview.Verification; !stringSlicesEqual(got, []string{"go test", DesignReviewEvidenceExample}) {
+			if got := record.DesignReview.Verification; !stringSlicesEqual(got, []string{"go test", model.IssueOpsDesignReviewEvidenceExample}) {
 				t.Fatalf("verification = %#v", got)
 			}
 			return record, nil
 		},
 	}
-	record, err := RecordDesignReview(store, "state", "io-1", model.IssueOpsDesignReviewRequest{
+	record, err := RecordDesignReview(store, "state", "io-1", reviewcontract.DesignReviewRequest{
 		ProblemSummary: "quality signal is low",
 		ProposedDesign: "add focused tests",
 		RefactorPlan:   "keep production unchanged",
 		Alternatives:   []string{"raise threshold", "ignore package"},
 		Risks:          []string{"brittle tests"},
-		Verification:   []string{"go test", DesignReviewEvidenceExample},
+		Verification:   []string{"go test", model.IssueOpsDesignReviewEvidenceExample},
 		Approved:       true,
 	})
 	if err != nil {
@@ -119,7 +120,7 @@ func TestRecordDesignReviewRejectsIncompleteApprovedReview(t *testing.T) {
 			return model.IssueOpsRecord{}, nil
 		},
 	}
-	req := model.IssueOpsDesignReviewRequest{
+	req := reviewcontract.DesignReviewRequest{
 		ProblemSummary: "quality signal is low",
 		ProposedDesign: "add focused tests",
 		RefactorPlan:   "keep production unchanged",
@@ -131,7 +132,7 @@ func TestRecordDesignReviewRejectsIncompleteApprovedReview(t *testing.T) {
 	if _, err := RecordDesignReview(store, "state", "io-1", req); err == nil {
 		t.Fatal("approved design review without design review evidence should fail")
 	}
-	req.Verification = []string{DesignReviewEvidenceExample}
+	req.Verification = []string{model.IssueOpsDesignReviewEvidenceExample}
 	req.OpenQuestions = []string{"what next"}
 	if _, err := RecordDesignReview(store, "state", "io-1", req); err == nil {
 		t.Fatal("approved design review with open questions should fail")

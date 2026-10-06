@@ -6,28 +6,13 @@ import (
 	selfverify "issueops/internal/contract/selfverify"
 
 	"issueops/internal/adapter/verification/riskqa"
-	riskqadomain "issueops/internal/domain/riskqa"
 )
 
 func validateRiskQATierWithDeps(root string, deps riskQATierDeps) selfverify.StepResult {
 	return riskqa.ValidateWithDeps(root, riskqax.ExecuteDeps{Plan: deps.plan, Run: deps.run})
 }
 
-func planRiskQATier(root string) RiskQATierPlan {
-	return riskqa.Plan(root)
-}
-
-func planRiskQATierFromPaths(paths []string) RiskQATierPlan {
-	return riskqadomain.PlanFromPaths(paths)
-}
-
-func riskQATierPlanJSON(plan RiskQATierPlan) string {
-	return riskqa.PlanJSON(plan)
-}
-
 type riskQATierDeps struct {
-	plan func(string) RiskQATierPlan
+	plan func(string) riskqaxx.RiskQATierPlan
 	run  func(root string, command string) selfverify.StepResult
 }
-
-type RiskQATierPlan = riskqaxx.RiskQATierPlan

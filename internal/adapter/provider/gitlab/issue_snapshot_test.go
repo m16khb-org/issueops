@@ -2,10 +2,9 @@ package gitlab
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"path/filepath"
 	"testing"
-
-	"issueops/internal/port"
 )
 
 func TestReadIssueSnapshotUsesBoundedExactGitLabURL(t *testing.T) {
@@ -15,7 +14,7 @@ if [ "$*" != "api projects/acme%2Frepo/issues/69 --hostname gitlab.example.com" 
 printf '%s' '{"web_url":"https://gitlab.example.com/acme/repo/-/issues/69","description":"AC-01","state":"opened"}'
 `)
 	t.Setenv("PATH", binDir+string(filepath.ListSeparator)+t.TempDir())
-	got, err := NewProvider().ReadIssueSnapshot(context.Background(), port.ExecutionIssueSnapshotRequest{
+	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.ExecutionIssueSnapshotRequest{
 		Repo: repo, URL: "https://gitlab.example.com/acme/repo/-/issues/69",
 	})
 	if err != nil {
@@ -33,7 +32,7 @@ if [ "$*" != "api projects/acme%2Frepo/issues/69 --hostname gitlab.example.com" 
 printf '%s' '{"web_url":"https://gitlab.example.com/acme/repo/-/issues/69","description":"AC-01","state":"opened"}'
 `)
 	t.Setenv("PATH", binDir+string(filepath.ListSeparator)+t.TempDir())
-	got, err := NewProvider().ReadIssueSnapshot(context.Background(), port.ExecutionIssueSnapshotRequest{
+	got, err := NewProvider().ReadIssueSnapshot(context.Background(), executionissue.ExecutionIssueSnapshotRequest{
 		Repo: repo, URL: "https://gitlab.example.com/acme/repo/-/work_items/69",
 	})
 	if err != nil {

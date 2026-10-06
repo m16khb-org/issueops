@@ -3,7 +3,9 @@ package issueopsapp
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	replacementmodel "issueops/internal/contract/issueops"
+	shelltoken "issueops/internal/domain/shelltoken"
 	"os"
 	"strings"
 	"testing"
@@ -12,7 +14,6 @@ import (
 	"issueops/internal/adapter/issueops"
 	basesyncoutbound "issueops/internal/adapter/outbound/issueopsbasesync"
 	model "issueops/internal/contract/issueops"
-	"issueops/internal/domain/commandparse"
 	"issueops/internal/port"
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
@@ -46,7 +47,7 @@ func TestIssueOpsReseedHandlerUsesResolvedSnapshotReader(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preview reseed inventory: %v", err)
 	}
-	evidence := &port.ExecutionIssueSnapshotEvidence{
+	evidence := &executionissue.ExecutionIssueSnapshotEvidence{
 		Provider: "gitlab", Source: "glab_mcp", WebURL: "https://gitlab.example.com/acme/repo/-/issues/16",
 		Body: claimWiringIssueBody(), State: "opened",
 	}
@@ -56,9 +57,9 @@ func TestIssueOpsReseedHandlerUsesResolvedSnapshotReader(t *testing.T) {
 		ExpectedGeneration: 1, InventoryFingerprint: preview.InventoryFingerprint, Reason: "resolved snapshot reseed",
 		Actor: actor, CWD: record.Execution.Workspace.Root, Confirm: true, IssueSnapshot: evidence,
 	}, port.ExecutionActionDependencies{
-		ReadIssue: func(context.Context, string, port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+		ReadIssue: func(context.Context, string, executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 			fallbackCalls++
-			return port.ExecutionIssueSnapshot{}, context.DeadlineExceeded
+			return executionissue.ExecutionIssueSnapshot{}, context.DeadlineExceeded
 		},
 		Reseed: func(ctx context.Context, root string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
 			return issueOpsReseedHandlerWithOwner(ctx, root, request, owner)
@@ -111,8 +112,8 @@ func TestExecutionReseedCLIDogfoodDirectAndOrca(t *testing.T) {
 				},
 			}
 			if mode == model.ExecutionModeOrca {
-				deps.ReadIssue = func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-					return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
+				deps.ReadIssue = func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+					return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
 				}
 			}
 			process := actor.SessionProcess
@@ -180,8 +181,8 @@ func TestExecutionReseedCompletedStatusExposesReopenContract(t *testing.T) {
 	if !strings.Contains(preview.NextCommand, "--completion-generation 1") {
 		t.Fatalf("preview lost typed completion provenance: %q", preview.NextCommand)
 	}
-	result, err := issueOpsReseedHandlerWithOwner(context.Background(), stateRoot, model.ExecutionReseedRequest{ID: record.ID, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root, InventoryFingerprint: preview.InventoryFingerprint, Reason: "functional HEAD changed", Confirm: true, ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-		return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
+	result, err := issueOpsReseedHandlerWithOwner(context.Background(), stateRoot, model.ExecutionReseedRequest{ID: record.ID, ExpectedGeneration: 1, CompletionGeneration: 1, Actor: actor, CWD: record.Execution.Workspace.Root, InventoryFingerprint: preview.InventoryFingerprint, Reason: "functional HEAD changed", Confirm: true, ReadIssue: func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+		return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
 	}}, owner)
 	if err != nil {
 		t.Fatalf("completed reseed: %v", err)
@@ -314,7 +315,7 @@ func TestExecutionReseedPreviewNextCommandRunsWithoutCallerRepair(t *testing.T) 
 			t.Fatalf("preview next command %q does not contain %s", preview.NextCommand, flag)
 		}
 	}
-	tokens := commandparse.SplitCommandTokens(preview.NextCommand)
+	tokens := shelltoken.SplitCommandTokens(preview.NextCommand)
 	if len(tokens) < 5 || strings.Join(tokens[:3], " ") != "issueops execution replace" {
 		t.Fatalf("unexpected preview next command: %q", preview.NextCommand)
 	}
@@ -328,8 +329,8 @@ func TestExecutionReseedPreviewNextCommandRunsWithoutCallerRepair(t *testing.T) 
 		Runtime:    newIssueOpsExecutionRunners(),
 		StateRoot:  func() string { return stateRoot },
 		Provenance: reseedProvenanceObserver{},
-		ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-			return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
+		ReadIssue: func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+			return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody(), State: "opened"}, nil
 		},
 		Reseed: func(ctx context.Context, root string, request model.ExecutionReseedRequest) (model.ExecutionReplaceResult, error) {
 			return issueOpsReseedHandlerWithOwner(ctx, root, request, owner)

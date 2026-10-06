@@ -35,7 +35,7 @@ func TestIssueOpsChildUsageMatchesCanonicalCatalog(t *testing.T) {
 	want := "Usage:\n" + strings.Join(lines, "\n") + "\n\n" +
 		clicontract.IssueOpsActorFlagLegend
 	got := strings.TrimSuffix(captureStdoutForContract(t, func() error {
-		return testIssueOpsCommand().runIssueOpsChild([]string{"--help"}, testChildUsage())
+		return testIssueOpsCommand().runIssueOpsChild([]string{"--help"}, cliadapter.ChildUsage())
 	}), "\n")
 	if got != want {
 		t.Fatalf("child help가 canonical catalog projection과 다르다\nwant:\n%s\n\ngot:\n%s", want, got)

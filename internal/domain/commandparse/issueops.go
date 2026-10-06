@@ -9,20 +9,6 @@ import (
 	"issueops/internal/domain/shelltoken"
 )
 
-// 셸 토큰 판정은 도메인 규칙이므로 shelltoken이 소유한다. 아래 별칭은 이 파일이
-// 원래 같은 패키지에서 쓰던 이름을 그대로 유지해, 분리가 호출부 문법을 바꾸지
-// 않게 한다.
-var (
-	SplitCommandTokens                 = shelltoken.SplitCommandTokens
-	HasActiveShellSpecialQuoting       = shelltoken.HasActiveShellSpecialQuoting
-	HasActiveZshEqualsExpansion        = shelltoken.HasActiveZshEqualsExpansion
-	HasUnquotedControlOperator         = shelltoken.HasUnquotedControlOperator
-	HasActiveCommandSubstitution       = shelltoken.HasActiveCommandSubstitution
-	HasActiveOutputRedirect            = shelltoken.HasActiveOutputRedirect
-	HasActiveParameterOrTildeExpansion = shelltoken.HasActiveParameterOrTildeExpansion
-	HasActivePathnameExpansion         = shelltoken.HasActivePathnameExpansion
-)
-
 // ExactIssueOpsCommand은 파싱된 정확한 `issueops …` 명령이다.
 // subcommand path, 전체 token slice, 그리고 flag가 시작되는 인덱스를 담는다.
 type ExactIssueOpsCommand struct {
@@ -38,10 +24,10 @@ type ExactIssueOpsCommand struct {
 // 파싱되고, 지원되는 두 단어 subcommand는 Path로 합쳐진다.
 func ParseExactIssueOpsCommand(command string) (ExactIssueOpsCommand, bool) {
 	command = strings.TrimSpace(command)
-	if command == "" || HasUnquotedControlOperator(command) || HasActiveCommandSubstitution(command) || HasActiveOutputRedirect(command) || HasActiveParameterOrTildeExpansion(command) || HasActivePathnameExpansion(command) || HasActiveShellSpecialQuoting(command) || HasActiveZshEqualsExpansion(command) {
+	if command == "" || shelltoken.HasUnquotedControlOperator(command) || shelltoken.HasActiveCommandSubstitution(command) || shelltoken.HasActiveOutputRedirect(command) || shelltoken.HasActiveParameterOrTildeExpansion(command) || shelltoken.HasActivePathnameExpansion(command) || shelltoken.HasActiveShellSpecialQuoting(command) || shelltoken.HasActiveZshEqualsExpansion(command) {
 		return ExactIssueOpsCommand{}, false
 	}
-	tokens := SplitCommandTokens(command)
+	tokens := shelltoken.SplitCommandTokens(command)
 	if len(tokens) < 2 || !clidomain.IsLifecycleCommand(tokens[1]) {
 		return ExactIssueOpsCommand{}, false
 	}

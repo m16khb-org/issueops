@@ -12,10 +12,10 @@ const (
 	ModeOrca   = "orca"
 )
 
-type Actor = leasecontract.Actor
+// domain/issueopspreparation은 이 contract 패키지만 import할 수 있어서
+// (preparation domain의 dependency 규칙) lease 어휘를 여기서 이 이름으로 둔다.
 type Record = leasecontract.Record
-type Execution = leasecontract.Execution
-type Workspace = leasecontract.Workspace
+
 type Lease = leasecontract.Lease
 type OrcaBinding = leasecontract.OrcaBinding
 type Selection = leasecontract.Selection
@@ -26,17 +26,17 @@ const SchemaVersion = leasecontract.SchemaVersion
 const OrcaArtifactIdentityVersion = leasecontract.OrcaArtifactIdentityVersion
 
 type Command struct {
-	ID                           string `json:"id"`
-	Mode                         string `json:"mode"`
-	Actor                        Actor  `json:"actor"`
-	CWD                          string `json:"cwd"`
-	OwnerHost                    string `json:"owner_host,omitempty"`
-	OwnerModel                   string `json:"owner_model,omitempty"`
-	OwnerEffort                  string `json:"owner_effort,omitempty"`
-	IssueSnapshotFile            string `json:"issue_snapshot_file,omitempty"`
-	DirectReason                 string `json:"direct_reason,omitempty"`
-	ExpectedReadinessFingerprint string `json:"expected_readiness_fingerprint,omitempty"`
-	Confirm                      bool   `json:"confirm,omitempty"`
+	ID                           string              `json:"id"`
+	Mode                         string              `json:"mode"`
+	Actor                        leasecontract.Actor `json:"actor"`
+	CWD                          string              `json:"cwd"`
+	OwnerHost                    string              `json:"owner_host,omitempty"`
+	OwnerModel                   string              `json:"owner_model,omitempty"`
+	OwnerEffort                  string              `json:"owner_effort,omitempty"`
+	IssueSnapshotFile            string              `json:"issue_snapshot_file,omitempty"`
+	DirectReason                 string              `json:"direct_reason,omitempty"`
+	ExpectedReadinessFingerprint string              `json:"expected_readiness_fingerprint,omitempty"`
+	Confirm                      bool                `json:"confirm,omitempty"`
 }
 
 func (command Command) Clone() Command {
@@ -58,7 +58,7 @@ type Result struct {
 	ProbeCode            string                   `json:"probe_code,omitempty"`
 	ReadinessFingerprint string                   `json:"readiness_fingerprint,omitempty"`
 	ExplicitDirectReason string                   `json:"explicit_direct_reason,omitempty"`
-	Workspace            Workspace                `json:"workspace"`
+	Workspace            leasecontract.Workspace  `json:"workspace"`
 	Execution            *leasecontract.Execution `json:"execution,omitempty"`
 	ClaimTokenPath       string                   `json:"claim_token_path,omitempty"`
 	IssueBodySHA256      string                   `json:"issue_body_sha256,omitempty"`

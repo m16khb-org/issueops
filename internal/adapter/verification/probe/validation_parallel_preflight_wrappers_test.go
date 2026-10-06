@@ -2,6 +2,7 @@ package probe
 
 import (
 	"encoding/json"
+	parallelisolation "issueops/internal/adapter/verification/probe/parallelisolation"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,7 +17,7 @@ func TestValidationParallelPreflightWrappersUseDefaultSurfaces(t *testing.T) {
 	root := t.TempDir()
 	binary := writeParallelPreflightFakeBinary(t, t.TempDir())
 
-	parallel := ValidateParallelTempIsolation(binary, root, 606)
+	parallel := parallelisolation.Validate(binary, root, 606)
 	if !parallel.OK || parallel.Label != "parallel isolation" {
 		t.Fatalf("expected parallel isolation wrapper success, got %#v", parallel)
 	}

@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -74,7 +75,7 @@ func TestIssueOpsPhaseImplementRequiresCompatibilityReviewPhase(t *testing.T) {
 	if _, err := AdvanceIssueOpsPhase(stateRoot, record.ID, string(issueops.IssueOpsPhaseImplement)); err == nil || !strings.Contains(err.Error(), "compatibility_review") {
 		t.Fatalf("implement phase should require compatibility_review, got %v", err)
 	}
-	record, err = RecordIssueOpsCompatibilityReview(stateRoot, record.ID, issueops.IssueOpsCompatibilityReviewRequest{
+	record, err = RecordIssueOpsCompatibilityReview(stateRoot, record.ID, reviewcontract.CompatibilityReviewRequest{
 		BackwardCompatibility: []string{"existing IssueOps JSON records remain readable"},
 		SideEffects:           []string{"phase order changes are limited to IssueOps lifecycle transitions"},
 		RollbackPlan:          "Revert the phase and readiness gate if host integration breaks.",
@@ -87,7 +88,7 @@ func TestIssueOpsPhaseImplementRequiresCompatibilityReviewPhase(t *testing.T) {
 	if record.Phase != issueops.IssueOpsPhaseCompatibilityReview {
 		t.Fatalf("compatibility review should persist the compatibility-review phase, got %+v", record)
 	}
-	if _, err := RecordIssueOpsDevilsAdvocateReview(stateRoot, record.ID, issueops.IssueOpsDevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
+	if _, err := RecordIssueOpsDevilsAdvocateReview(stateRoot, record.ID, reviewcontract.DevilsAdvocateReviewRequest{Verdict: "pass", ReviewerContext: "subagent", Findings: []string{"attacked gate 3"}}); err != nil {
 		t.Fatal(err)
 	}
 	record = recordIssueOpsPreparedExecutionForTest(t, stateRoot, record.ID, worktree)

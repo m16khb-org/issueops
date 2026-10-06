@@ -4,6 +4,7 @@ import (
 	"context"
 	ownerapp "issueops/internal/application/issueopsowner"
 	reviewapp "issueops/internal/application/issueopsreview"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"path/filepath"
 	"time"
@@ -127,13 +128,13 @@ func wireIssueOpsRuntimeForTests() {
 		PruneIssueOps:                              issueopsretentioninbound.NewPruneHandler(retention),
 		ReadIssueOps:                               issueopscore.ReadIssueOps,
 		RecordIssueOpsAISlopCleanEvidenceWithActor: recordAISlopEvidenceForTest,
-		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req issueopscontract.IssueOpsCompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsCompatibilityReviewWithActor: func(root, id string, req reviewcontract.CompatibilityReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return planningRecorderForTest(&actor).Compatibility(root, id, req)
 		},
-		RecordIssueOpsDesignReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsDesignReviewWithActor: func(root, id string, req reviewcontract.DesignReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return planningRecorderForTest(&actor).Design(root, id, req)
 		},
-		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
+		RecordIssueOpsDevilsAdvocateReviewWithActor: func(root, id string, req reviewcontract.DevilsAdvocateReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {
 			return planningRecorderForTest(&actor).DevilsAdvocate(root, id, req)
 		},
 		RecordIssueOpsDomainReviewWithActor: func(root, id string, req issueopscontract.IssueOpsDomainReviewRequest, actor issueopscontract.IssueOpsActor) (issueopscontract.IssueOpsRecord, error) {

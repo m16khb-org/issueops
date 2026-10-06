@@ -2,6 +2,7 @@ package remotecmd
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"strconv"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	remoteapp "issueops/internal/application/issueopsremote"
 	reportcontract "issueops/internal/contract/artifactreadability"
 	issueopscontract "issueops/internal/contract/issueops"
-	port "issueops/internal/port"
 )
 
 // readableIssueBody satisfies the implementation-task contract and the
@@ -156,9 +156,9 @@ func TestRemoteCreateChildAndPRRefuseCriticalReadability(t *testing.T) {
 	handlerCalls := 0
 	var printed []any
 	prDeps := Deps{
-		Publication: PublicationHandlers{Create: func(_ context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Publication: PublicationHandlers{Create: func(_ context.Context, _ string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 			handlerCalls++
-			return port.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/7", Number: "7"}, nil
+			return executionissue.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/7", Number: "7"}, nil
 		}},
 		ObserveProcessAncestry: func(int) ([]issueopscontract.NativeProcessReceipt, error) {
 			return append([]issueopscontract.NativeProcessReceipt(nil), ancestry...), nil

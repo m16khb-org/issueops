@@ -2,7 +2,7 @@ package intentdesign
 
 import (
 	"errors"
-	issueopscontract "issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"time"
 
 	intentapp "issueops/internal/application/issueopsintent"
@@ -20,7 +20,6 @@ type Store struct {
 }
 
 const (
-	DesignReviewEvidenceExample  = issueopscontract.IssueOpsDesignReviewEvidenceExample
 	designReviewEvidenceGuidance = `approved design review requires design_review_evidence: this is not a separate flag or decision record; add --verification "design review checked alternatives and risks" or a Korean equivalent such as "설계 검토 완료: 대안과 위험 확인"`
 )
 
@@ -32,7 +31,7 @@ func RecordIntent(store Store, stateRoot, id string, req model.IssueOpsIntentRec
 	}, stateRoot, id, req)
 }
 
-func RecordDesignReview(store Store, stateRoot, id string, req model.IssueOpsDesignReviewRequest) (model.IssueOpsRecord, error) {
+func RecordDesignReview(store Store, stateRoot, id string, req reviewcontract.DesignReviewRequest) (model.IssueOpsRecord, error) {
 	record, err := reviewapp.RecordDesignReview(reviewport.DesignReviewStore{
 		Read:          store.Read,
 		PlanReadiness: store.PlanReadiness,

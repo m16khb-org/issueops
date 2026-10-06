@@ -1,17 +1,14 @@
 package issueopspublication
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
-)
-
-import (
 	"context"
 	"errors"
+	executionissue "issueops/internal/contract/executionissue"
+	issueopscontract "issueops/internal/contract/issueops"
 	"reflect"
 	"testing"
 
 	publicationcontract "issueops/internal/contract/issueopspublication"
-	"issueops/internal/port"
 )
 
 func TestCreateHandlerMapsAllPublicFields(t *testing.T) {
@@ -45,7 +42,7 @@ func TestCreateHandlerMapsAllPublicFields(t *testing.T) {
 	if !reflect.DeepEqual(service.command, wantCommand) {
 		t.Fatalf("command=%#v want=%#v", service.command, wantCommand)
 	}
-	wantResult := port.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/1", Number: "1", Preview: "created preview"}
+	wantResult := executionissue.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/1", Number: "1", Preview: "created preview"}
 	if !reflect.DeepEqual(got, wantResult) {
 		t.Fatalf("result=%#v want=%#v", got, wantResult)
 	}
@@ -99,7 +96,7 @@ func TestCreateHandlerPreservesNilAndEmptySliceShape(t *testing.T) {
 
 func TestCreateHandlerFailsClosedWithoutService(t *testing.T) {
 	got, err := NewCreateHandler(nil)(context.Background(), "/state", fullCoreCreateRequest())
-	if !errors.Is(err, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable) || got != (port.IssueProviderCreatePullRequestResult{}) {
+	if !errors.Is(err, issueopscontract.ErrRemotePullRequestCreateHandlerUnavailable) || got != (executionissue.IssueProviderCreatePullRequestResult{}) {
 		t.Fatalf("result=%#v err=%v", got, err)
 	}
 }

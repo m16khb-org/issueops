@@ -1,9 +1,8 @@
 package llmeval
 
 import (
+	selfverifydomain "issueops/internal/domain/selfverify"
 	"strings"
-
-	"issueops/cmd/issueops/commandstep"
 )
 
 const selfVerifyLLMEvalErrorBudgetBytes = 512
@@ -14,6 +13,6 @@ func BoundedLLMEvalError(prefix string, err error, output string) string {
 	if output != "" {
 		message += ": " + output
 	}
-	bounded, _, _ := commandstep.TailWithBudget(message, selfVerifyLLMEvalErrorBudgetBytes)
+	bounded, _, _ := selfverifydomain.TailWithBudget(message, selfVerifyLLMEvalErrorBudgetBytes)
 	return bounded
 }

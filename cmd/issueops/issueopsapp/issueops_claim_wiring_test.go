@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	replacementmodel "issueops/internal/contract/issueops"
 	"os"
 	"os/exec"
@@ -52,12 +53,12 @@ func TestIssueOpsClaimHandlerUsesResolvedSnapshotReader(t *testing.T) {
 	result, err := issueOpsClaimHandler(context.Background(), stateRoot, issueopscontract.ExecutionClaimRequest{
 		ID: record.ID, Generation: 1, Actor: claimWiringActor(t), CWD: record.Execution.Workspace.Root,
 		TokenFile: token, IssueBodySHA256: issueDigest, ContextPacketSHA256: packetDigest,
-	}, issueopscontract.ExecutionClaimDependencies{ReadIssue: func(_ context.Context, providerName string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+	}, issueopscontract.ExecutionClaimDependencies{ReadIssue: func(_ context.Context, providerName string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 		reads++
 		if providerName != "gitlab" || request.URL != record.IssueURL {
 			t.Fatalf("snapshot request provider=%q url=%q", providerName, request.URL)
 		}
-		return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
+		return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
 	},
 	})
 	if err != nil {
@@ -401,8 +402,8 @@ func TestIssueOpsConcurrentReceiversHaveOneAuthorityHolderAndLoserDoesNoWork(t *
 }
 
 func claimWiringDependencies(record issueopscontract.IssueOpsRecord) issueopscontract.ExecutionClaimDependencies {
-	return issueopscontract.ExecutionClaimDependencies{ReadIssue: func(_ context.Context, _ string, request port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
-		return port.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
+	return issueopscontract.ExecutionClaimDependencies{ReadIssue: func(_ context.Context, _ string, request executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
+		return executionissue.ExecutionIssueSnapshot{URL: request.URL, Body: claimWiringIssueBody()}, nil
 	}}
 }
 

@@ -17,7 +17,3 @@ func RunMCPWithDependencies(deps MCPDependencies) error {
 func ServeMCPStreamWithDependencies(input io.Reader, output io.Writer, diagnostics io.Writer, deps MCPDependencies) error {
 	return ServeMCPStreamContextWithDependencies(context.Background(), input, output, diagnostics, deps)
 }
-
-func ServeMCPStreamContextWithDependencies(ctx context.Context, input io.Reader, output io.Writer, diagnostics io.Writer, deps MCPDependencies) error {
-	return serveMCPStreamSDK(ctx, input, output, diagnostics, deps)
-}

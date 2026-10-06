@@ -51,7 +51,7 @@ func TestValidateNativeIntegrationWithDepsCoversSuccessAndMissingPaths(t *testin
 				return nil, errors.New("unexpected read")
 			}
 		},
-		duplicateWarningFixture: claudeMCPDuplicateWarningFixture,
+		duplicateWarningFixture: ClaudeMCPDuplicateWarningFixture,
 	}
 
 	step := validateNativeIntegrationWithDeps(root, deps)
@@ -161,7 +161,7 @@ func TestValidateNativeIntegrationReportsStableRootResolutionError(t *testing.T)
 				return nil, errors.New("unexpected read")
 			}
 		},
-		duplicateWarningFixture: claudeMCPDuplicateWarningFixture,
+		duplicateWarningFixture: ClaudeMCPDuplicateWarningFixture,
 	}
 
 	step := validateNativeIntegrationWithDeps(root, deps)
@@ -283,7 +283,7 @@ func TestValidateNativeIntegrationWithDepsCoversHomeFailure(t *testing.T) {
 }
 
 func TestDetectClaudeMCPDuplicateWarnings(t *testing.T) {
-	warnings := detectClaudeMCPDuplicateWarnings(claudeMCPDuplicateWarningFixture())
+	warnings := DetectClaudeMCPDuplicateWarnings(ClaudeMCPDuplicateWarningFixture())
 	if len(warnings) != 1 {
 		t.Fatalf("expected one duplicate warning, got %+v", warnings)
 	}
@@ -293,7 +293,7 @@ func TestDetectClaudeMCPDuplicateWarnings(t *testing.T) {
 	if len(warnings[0].Suggestions) != 1 || !strings.Contains(warnings[0].Suggestions[0], "claude mcp remove issueops") {
 		t.Fatalf("duplicate warning suggestion missing: %+v", warnings[0].Suggestions)
 	}
-	if got := detectClaudeMCPDuplicateWarnings("issueops: ./bin/issueops mcp - ✓ Connected\n"); len(got) != 0 {
+	if got := DetectClaudeMCPDuplicateWarnings("issueops: ./bin/issueops mcp - ✓ Connected\n"); len(got) != 0 {
 		t.Fatalf("non-conflicting output produced warnings: %+v", got)
 	}
 }

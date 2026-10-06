@@ -406,17 +406,7 @@
   },
   {
     "path": "internal/contract/issueopspublication/publication.go",
-    "symbol": "func PreparedCreate.Clone",
-    "role": "clone"
-  },
-  {
-    "path": "internal/contract/issueopspublication/publication.go",
     "symbol": "func ProviderCreateRequest.Clone",
-    "role": "clone"
-  },
-  {
-    "path": "internal/contract/issueopspublication/publication.go",
-    "symbol": "func ReconcileResult.Clone",
     "role": "clone"
   },
   {

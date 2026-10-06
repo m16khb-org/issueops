@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	pathutil "issueops/cmd/issueops/pathutil"
 	guardadapter "issueops/internal/adapter/guard"
 
 	policyadapter "issueops/internal/adapter/policy"
@@ -20,7 +21,7 @@ func newVerifyWorkService() verifyworkapp.Service {
 	preflight := preflightapp.Service{Observer: preflightadapter.GitObserver{}}
 	guard := guardapp.Service{Source: guardadapter.Source{}}
 	return verifyworkapp.Service{
-		ResolveTarget:  resolveTarget,
+		ResolveTarget:  pathutil.ResolveTarget,
 		GitStatus:      verifyworkadapter.GitStatus,
 		Preflight:      func(root string) preflightcontract.PreflightResult { return preflight.Check(root, harnessRoot) },
 		Guard:          guard.Check,

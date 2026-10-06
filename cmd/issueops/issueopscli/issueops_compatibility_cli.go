@@ -3,8 +3,7 @@ package issueopscli
 import (
 	"flag"
 	"fmt"
-
-	issueopscontract "issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 )
 
 func (cli command) runIssueOpsCompatibility(args []string) error {
@@ -32,7 +31,7 @@ func (cli command) runIssueOpsCompatibility(args []string) error {
 	if help, err := parseIssueOpsFlags(fs, args[1:]); help || err != nil {
 		return err
 	}
-	record, err := cli.Runtime.RecordIssueOpsCompatibilityReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, issueopscontract.IssueOpsCompatibilityReviewRequest{
+	record, err := cli.Runtime.RecordIssueOpsCompatibilityReviewWithActor(cli.Runtime.IssueOpsStateRoot(), *id, reviewcontract.CompatibilityReviewRequest{
 		BackwardCompatibility: backwardCompatibility,
 		SideEffects:           sideEffects,
 		RollbackPlan:          *rollbackPlan,

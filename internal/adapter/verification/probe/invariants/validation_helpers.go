@@ -55,8 +55,8 @@ func ValidateHarnessInvariants(root string) verifycontract.StepResult {
 	if err := validateSkillShape(filepath.Join(root, "skills", skillName)); err != nil {
 		errs = append(errs, err.Error())
 	}
-	if hits := forbiddenNameHits(root); len(hits) > 0 {
-		errs = append(errs, "forbidden legacy name hits: "+strings.Join(hits, "; "))
+	if hits := ForbiddenNameHits(root); len(hits) > 0 {
+		errs = append(errs, "retired name hits: "+strings.Join(hits, "; "))
 	}
 	return verifydomain.AssertionStep("harness invariants", time.Since(started).Milliseconds(), errs)
 }

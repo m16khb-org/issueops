@@ -2,7 +2,17 @@ package issueopsapp
 
 import (
 	"context"
+	commandstep "issueops/cmd/issueops/commandstep"
+	candidateexport "issueops/internal/adapter/verification/probe/candidateexport"
+	commandpolicy "issueops/internal/adapter/verification/probe/commandpolicy"
+	contractauditworker "issueops/internal/adapter/verification/probe/contractauditworker"
+	installdryrun "issueops/internal/adapter/verification/probe/installdryrun"
+	invariants "issueops/internal/adapter/verification/probe/invariants"
+	mcpsmoke "issueops/internal/adapter/verification/probe/mcpsmoke"
+	parallelisolation "issueops/internal/adapter/verification/probe/parallelisolation"
+	smoke "issueops/internal/adapter/verification/probe/smoke"
 	selfverify "issueops/internal/contract/selfverify"
+	selfverifydomain "issueops/internal/domain/selfverify"
 
 	"fmt"
 	preflightadapter "issueops/internal/adapter/preflight"
@@ -81,8 +91,8 @@ func selfVerifyLoopDeps(root string) app.LoopDeps {
 		RemoveAll:      os.RemoveAll,
 		TempBinaryPath: func(dir string) string { return filepath.Join(dir, "issueops") },
 		Now:            time.Now,
-		FailedStep:     failedStep,
-		PrintStep:      printStep,
+		FailedStep:     selfverifydomain.FailedStep,
+		PrintStep:      commandstep.PrintStep,
 	}
 }
 
@@ -92,34 +102,30 @@ func selfVerifyStepDeps(root string) app.SelfVerifyStepDeps {
 	docsProbe := newDocsQAProbe()
 	return app.SelfVerifyStepDeps{
 		IssueOpsRoot:                func() string { return root },
-		RunCommandStep:              runCommandStepAdapter,
-		ValidateHarnessInvariants:   validateHarnessInvariants,
+		RunCommandStep:              runCommandStep,
+		ValidateHarnessInvariants:   invariants.ValidateHarnessInvariants,
 		ValidateGoFormat:            validateGoFormat,
 		ValidateRiskQATier:          validateRiskQATierEvidence,
 		ValidateRiskQATierWithScope: validateRiskQATierEvidenceWithScope,
-		ValidateInspect:             validateInspect,
-		ValidateDocsIndex:           validateDocsIndex,
-		ValidateSelfVerifyCandidate: validateSelfVerifyCandidateExport,
+		ValidateInspect:             smoke.ValidateInspect,
+		ValidateDocsIndex:           smoke.ValidateDocsIndex,
+		ValidateSelfVerifyCandidate: candidateexport.ValidateSelfVerifyCandidateExport,
 		ValidateStepBudgetBaseline: func(binary, root string, seed int64) selfverify.StepResult {
 			return stepbudget.ValidateStepBudgetBaselineWithDeps(binary, root, seed, budgetProbe)
 		},
-		ValidateInstallDryRunSmoke:    validateInstallDryRunSmoke,
-		ValidateCommandPolicy:         validateCommandPolicy,
-		ValidateCommandAudit:          validateCommandAudit,
-		ValidateContractCheck:         validateContractCheck,
-		ValidateToolConformance:       validateToolConformance,
-		ValidateWorkerLifecycle:       validateWorkerLifecycle,
-		ValidateMCP:                   validateMCP,
+		ValidateInstallDryRunSmoke:    installdryrun.Validate,
+		ValidateCommandPolicy:         commandpolicy.Validate,
+		ValidateCommandAudit:          contractauditworker.ValidateCommandAudit,
+		ValidateContractCheck:         contractauditworker.ValidateContractCheck,
+		ValidateToolConformance:       contractauditworker.ValidateToolConformance,
+		ValidateWorkerLifecycle:       contractauditworker.ValidateWorkerLifecycle,
+		ValidateMCP:                   mcpsmoke.ValidateMCP,
 		ValidateStateRoundtrip:        stateProbe.Validate,
-		ValidateParallelTempIsolation: validateParallelTempIsolation,
+		ValidateParallelTempIsolation: parallelisolation.Validate,
 		ValidatePreflightFuzz:         (preflightfuzz.Validator{Git: preflightadapter.GitCmd}).Validate,
 		ValidateWebFetchBattery:       newWebFetchProbe().Validate,
 		ValidateNativeIntegration:     newNativeIntegrationProbe().Validate,
 		ValidateRedactionAudit:        docsProbe.RedactionAudit,
 		ValidateQAGate:                docsProbe.Validate,
 	}
-}
-
-func runCommandStepAdapter(dir string, label string, timeout time.Duration, stdin string, name string, args ...string) selfverify.StepResult {
-	return runCommandStep(dir, label, timeout, stdin, name, args...)
 }

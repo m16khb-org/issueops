@@ -1,6 +1,7 @@
 package issueopsapp
 
 import (
+	pathutil "issueops/cmd/issueops/pathutil"
 	statestore "issueops/internal/adapter/outbound/state"
 	statusapp "issueops/internal/application/status"
 	"os"
@@ -8,7 +9,7 @@ import (
 
 func newStatusService() statusapp.Service {
 	home, _ := os.UserHomeDir()
-	defaultTarget := resolveTarget("")
+	defaultTarget := pathutil.ResolveTarget("")
 	state := newStateService(statestore.StateDir())
 	return statusapp.Service{
 		Home: home, IssueOpsRoot: issueOpsRoot(), Version: version, Inspect: newHarnessInspector(),

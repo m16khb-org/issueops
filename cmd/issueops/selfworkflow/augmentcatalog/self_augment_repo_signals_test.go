@@ -1,6 +1,8 @@
 package augmentcatalog
 
 import (
+	contract "issueops/internal/contract/selfaugment"
+	domain "issueops/internal/domain/selfaugment"
 	"os"
 	"path/filepath"
 	"testing"
@@ -52,9 +54,9 @@ func TestSelfAugmentSignalTableIsSatisfiedByRepoSignalRules(t *testing.T) {
 		t.Fatalf("self-augment signal table signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "self-augment-signal-table", Status: SelfAugmentCandidateStatusOpen, Score: 83.8}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "self-augment-signal-table", Status: contract.CandidateStatusOpen, Score: 83.8}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("self-augment signal-table candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -70,9 +72,9 @@ func TestQualitySignalHarvesterIsSatisfiedByQualityInspectCLIAndSignals(t *testi
 		t.Fatalf("quality inspect signals were not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "quality-signal-harvester", Status: SelfAugmentCandidateStatusOpen, Score: 89.24}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "quality-signal-harvester", Status: contract.CandidateStatusOpen, Score: 89.24}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("quality signal harvester candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -99,9 +101,9 @@ func TestValidateIssueURL() {}
 		t.Fatalf("issueops linking boundary coverage signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "coverage-issueops-linking", Status: SelfAugmentCandidateStatusOpen, Score: 77.4}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "coverage-issueops-linking", Status: contract.CandidateStatusOpen, Score: 77.4}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("issueops linking coverage candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -134,9 +136,9 @@ func TestStateWriteWaitsForKeyLock() {}
 		t.Fatalf("state write locking signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "state-write-locking", Status: SelfAugmentCandidateStatusOpen, Score: 77.22}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "state-write-locking", Status: contract.CandidateStatusOpen, Score: 77.22}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("state write locking candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -184,9 +186,9 @@ func TestRunWorkerCleanupStuckMarksDeadPIDJobsFailed() {}
 		t.Fatalf("worker stuck-running detection signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "worker-stuck-running-detection", Status: SelfAugmentCandidateStatusOpen, Score: 76.96}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "worker-stuck-running-detection", Status: contract.CandidateStatusOpen, Score: 76.96}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("worker stuck-running candidate was not marked satisfied: %+v", candidate)
 	}
 
@@ -247,9 +249,9 @@ func TestResourcesContextIsByteDeterministic() {}
 		t.Fatalf("MCP resource coverage signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "coverage-mcp-resources", Status: SelfAugmentCandidateStatusOpen, Score: 76.16}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "coverage-mcp-resources", Status: contract.CandidateStatusOpen, Score: 76.16}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("MCP resource coverage candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -267,9 +269,9 @@ func TestDecodeStructuredJSONObjectBoundsLargeErrorOutput() {}
 		t.Fatalf("host judgement coverage signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "coverage-host-judgement", Status: SelfAugmentCandidateStatusOpen, Score: 76}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "coverage-host-judgement", Status: contract.CandidateStatusOpen, Score: 76}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("host judgement coverage candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -285,9 +287,9 @@ func TestReleaseReproPackIsSatisfiedByChecklistScriptAndTestingSignal(t *testing
 		t.Fatalf("release repro pack signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "release-repro-pack", Status: SelfAugmentCandidateStatusOpen, Score: 79}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "release-repro-pack", Status: contract.CandidateStatusOpen, Score: 79}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("release repro candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -302,9 +304,9 @@ func TestReleaseUserReadmeIsSatisfiedByInstallUpdateRollbackGuide(t *testing.T) 
 		t.Fatalf("release user README signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "release-user-readme", Status: SelfAugmentCandidateStatusOpen, Score: 80.28}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "release-user-readme", Status: contract.CandidateStatusOpen, Score: 80.28}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("release user README candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -364,9 +366,9 @@ func TestCrossPlatformBuildMatrixIsSatisfiedByScriptDocsAndTestingSignal(t *test
 		t.Fatalf("cross-platform build matrix signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "cross-platform-build-matrix", Status: SelfAugmentCandidateStatusOpen, Score: 78.76}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "cross-platform-build-matrix", Status: contract.CandidateStatusOpen, Score: 78.76}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("cross-platform build matrix candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -382,9 +384,9 @@ func TestDistributionDecisionRecordIsSatisfiedByADRReleaseDocsAndReadme(t *testi
 		t.Fatalf("distribution decision signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "distribution-decision-record", Status: SelfAugmentCandidateStatusOpen, Score: 78.54}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "distribution-decision-record", Status: contract.CandidateStatusOpen, Score: 78.54}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("distribution decision candidate was not marked satisfied: %+v", candidate)
 	}
 }
@@ -411,19 +413,19 @@ func TestReleaseDogfoodNotesIsSatisfiedByHostTranscripts(t *testing.T) {
 		t.Fatalf("release dogfood notes signal was not detected: %+v", signals)
 	}
 
-	candidate := SelfAugmentCandidate{ID: "release-dogfood-notes", Status: SelfAugmentCandidateStatusOpen, Score: 78.44}
-	MarkSatisfiedSelfAugmentCandidate(&candidate, signals)
-	if candidate.Status != SelfAugmentCandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
+	candidate := contract.SelfAugmentCandidate{ID: "release-dogfood-notes", Status: contract.CandidateStatusOpen, Score: 78.44}
+	domain.MarkSatisfiedCandidate(&candidate, signals)
+	if candidate.Status != contract.CandidateStatusSatisfied || candidate.Score != 0 || len(candidate.SatisfactionEvidence) == 0 {
 		t.Fatalf("release dogfood notes candidate was not marked satisfied: %+v", candidate)
 	}
 }
 
 func TestSelectedCandidateIDReturnsStableFallback(t *testing.T) {
-	if got := SelectedCandidateID(nil); got != "" {
+	if got := domain.SelectedCandidateID(nil); got != "" {
 		t.Fatalf("SelectedCandidateID(nil)=%q, want empty string", got)
 	}
-	candidate := SelfAugmentCandidate{ID: "augment-next"}
-	if got := SelectedCandidateID(&candidate); got != "augment-next" {
+	candidate := contract.SelfAugmentCandidate{ID: "augment-next"}
+	if got := domain.SelectedCandidateID(&candidate); got != "augment-next" {
 		t.Fatalf("SelectedCandidateID returned %q", got)
 	}
 }

@@ -44,7 +44,9 @@ func (f *fakeReconcileService) Reconcile(_ context.Context, id string) (publicat
 	}
 	f.called = true
 	f.id = id
-	return f.result.Clone(), f.err
+	result := f.result
+	result.Record = f.result.Record.Clone()
+	return result, f.err
 }
 
 var _ createService = (*fakeCreateService)(nil)

@@ -2,6 +2,7 @@ package issueopsdecision
 
 import (
 	"context"
+	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"testing"
 	"time"
@@ -21,15 +22,15 @@ func (repo *fakeRepository) Update(
 	_ context.Context,
 	stateRoot string,
 	id string,
-	mutate func(issueopsdecisioncontract.Record) (issueopsdecisioncontract.Record, error),
-) (issueopsdecisioncontract.Record, error) {
+	mutate func(issueopscontract.IssueOpsRecord) (issueopscontract.IssueOpsRecord, error),
+) (issueopscontract.IssueOpsRecord, error) {
 	repo.updateCalls++
 	repo.stateRoot = stateRoot
 	repo.id = id
 	if repo.err != nil {
-		return issueopsdecisioncontract.Record{OK: false, ID: id}, repo.err
+		return issueopscontract.IssueOpsRecord{OK: false, ID: id}, repo.err
 	}
-	return mutate(issueopsdecisioncontract.Record{ID: id})
+	return mutate(issueopscontract.IssueOpsRecord{ID: id})
 }
 
 type fixedClock struct{ now time.Time }
@@ -77,7 +78,7 @@ func TestHandlersAddWithActorUsesSamePath(t *testing.T) {
 	repo := &fakeRepository{}
 	handlers := newTestHandlers(repo)
 
-	actor := issueopsdecisioncontract.Actor{Host: "codex", SessionID: "s-1"}
+	actor := issueopscontract.IssueOpsActor{Host: "codex", SessionID: "s-1"}
 	if _, err := handlers.AddWithActor("/state", "io-8", sampleRequest(), actor); err != nil {
 		t.Fatalf("add with actor failed: %v", err)
 	}

@@ -55,7 +55,3 @@ func LintMermaidBlocks(relPath, text string) []string {
 	}
 	return errs
 }
-
-func lintMermaidBlocks(relPath, text string) []string {
-	return LintMermaidBlocks(relPath, text)
-}

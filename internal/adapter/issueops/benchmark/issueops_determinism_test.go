@@ -1,7 +1,8 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
+	benchmark "issueops/internal/contract/issueopsbenchmark"
+	domain "issueops/internal/domain/issueopsbenchmark"
 	"reflect"
 	"testing"
 )
@@ -15,7 +16,7 @@ import (
 
 // scorerOutputsEqual compares the order-sensitive persisted outputs of the
 // scorer (what CompareIssueOpsBenchmarkRuns and JSON persistence actually diff).
-func scorerOutputsEqual(a, b IssueOpsBenchmarkScore) bool {
+func scorerOutputsEqual(a, b benchmark.IssueOpsBenchmarkScore) bool {
 	return reflect.DeepEqual(a.DimensionScores, b.DimensionScores) &&
 		reflect.DeepEqual(a.DeterministicFailures, b.DeterministicFailures) &&
 		reflect.DeepEqual(a.CriticalFailures, b.CriticalFailures)
@@ -25,15 +26,15 @@ func TestScorerDeterminismOrderedOutputsStable(t *testing.T) {
 	// A partially-FAILING artifact so the failure slices are non-empty and their
 	// ordering is actually exercised (an all-pass artifact would compare empty
 	// slices and prove little).
-	fixture := issueopscontract.IssueOpsBenchmarkFixture{
+	fixture := benchmark.IssueOpsBenchmarkFixture{
 		ID:                 "determinism",
 		PioneerSkillTarget: "database-design",
-		ExpectedRouting:    []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}},
+		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}},
 		CriticalFailures:   []string{"skips domain contract evidence", "skips live evidence matrix"},
 	}
 	artifact := completeBenchmarkArtifactForTest()
 	artifact.PioneerSkillEvidence = coddKeywordEvidence
-	artifact.RoutingTrace = []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}}
+	artifact.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}
 	artifact.DomainContractEvidence = ""
 	artifact.LiveEvidenceMatrix = ""
 	artifact.PhaseChoices = ""
@@ -53,7 +54,7 @@ func TestScorerDeterminismOrderedOutputsStable(t *testing.T) {
 		avgs = append(avgs, got.AverageScore)
 	}
 	// Acceptance (b) literally: the score interval collapses to a point.
-	if _, _, w := ScoreSpread(avgs); w != 0 {
+	if _, _, w := domain.ScoreSpread(avgs); w != 0 {
 		t.Fatalf("deterministic gate score spread must be width 0, got %v", w)
 	}
 }
@@ -64,7 +65,7 @@ func TestScorerDeterminismOrderedOutputsStable(t *testing.T) {
 // future refactor that ranged the checks map and scrambled order would slip
 // through). This proves the comparison discriminates ordering.
 func TestScorerDeterminismComparisonCatchesReordering(t *testing.T) {
-	fixture := issueopscontract.IssueOpsBenchmarkFixture{
+	fixture := benchmark.IssueOpsBenchmarkFixture{
 		ID:               "determinism-teeth",
 		CriticalFailures: []string{"skips domain contract evidence", "skips live evidence matrix"},
 	}

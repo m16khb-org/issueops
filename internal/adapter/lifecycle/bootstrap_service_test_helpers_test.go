@@ -8,6 +8,7 @@ import (
 	"issueops/internal/adapter/repopath"
 	lifecycleapp "issueops/internal/application/lifecycle"
 	lifecyclecontract "issueops/internal/contract/lifecycle"
+	projectdoccontract "issueops/internal/contract/projectdoc"
 )
 
 func testLifecycleService() lifecycleapp.Service {
@@ -19,12 +20,12 @@ func testLifecycleService() lifecycleapp.Service {
 	}}
 }
 
-func ResolveProjectLifecycleState(root string) (ProjectLifecycleStatePlan, error) {
+func ResolveProjectLifecycleState(root string) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
 	return testLifecycleService().Resolve(root)
 }
-func ValidateProjectLifecycleState(root string) (ProjectLifecycleStatePlan, error) {
+func ValidateProjectLifecycleState(root string) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
 	return testLifecycleService().Resolve(root)
 }
-func InitProjectLifecycleState(root string, confirm bool, profiles ...ProjectProfile) (ProjectLifecycleStatePlan, error) {
+func InitProjectLifecycleState(root string, confirm bool, profiles ...projectdoccontract.ProjectProfile) (lifecyclecontract.ProjectLifecycleStatePlan, error) {
 	return testLifecycleService().Init(root, confirm, profiles...)
 }

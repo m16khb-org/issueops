@@ -7,6 +7,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 
 	"issueops/internal/adapter/provider/github"
 	"issueops/internal/adapter/provider/gitlab"
@@ -26,14 +27,14 @@ func Resolve(name string) (port.IssueProvider, error) {
 	}
 }
 
-func ReadExecutionIssueSnapshot(ctx context.Context, name string, req port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+func ReadExecutionIssueSnapshot(ctx context.Context, name string, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 	resolved, err := Resolve(name)
 	if err != nil {
-		return port.ExecutionIssueSnapshot{}, err
+		return executionissue.ExecutionIssueSnapshot{}, err
 	}
 	reader, ok := resolved.(port.ExecutionIssueSnapshotReader)
 	if !ok {
-		return port.ExecutionIssueSnapshot{}, fmt.Errorf("provider %q cannot read issue snapshots", name)
+		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("provider %q cannot read issue snapshots", name)
 	}
 	return reader.ReadIssueSnapshot(ctx, req)
 }

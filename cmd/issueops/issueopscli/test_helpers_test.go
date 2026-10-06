@@ -4,6 +4,7 @@ import (
 	"context"
 	issueopscore "issueops/internal/adapter/issueops"
 	issueopscontract "issueops/internal/contract/issueops"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"issueops/internal/testsupport"
 	"os"
 	"strings"
@@ -89,7 +90,7 @@ func recordIssueOpsCLIPlanPrepForTest(t *testing.T, id string) {
 
 func recordIssueOpsCoreDesignForCLITest(t *testing.T, id string) {
 	t.Helper()
-	if _, err := planningRecorderForTest(nil).Design(issueOpsStateRootForTest(), id, issueopscontract.IssueOpsDesignReviewRequest{
+	if _, err := planningRecorderForTest(nil).Design(issueOpsStateRootForTest(), id, reviewcontract.DesignReviewRequest{
 		ProblemSummary: "IssueOps must preserve the work contract",
 		ProposedDesign: "Gate implementation on a reviewed design contract",
 		RefactorPlan:   "Keep IssueOps state and adapter changes scoped to the active cycle",

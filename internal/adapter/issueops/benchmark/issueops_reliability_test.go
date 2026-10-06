@@ -1,6 +1,8 @@
 package benchmark
 
 import (
+	benchmarkcontract "issueops/internal/contract/issueopsbenchmark"
+	domain "issueops/internal/domain/issueopsbenchmark"
 	"math"
 	"testing"
 )
@@ -23,7 +25,7 @@ func TestClopperPearsonMatchesPublishedValues(t *testing.T) {
 		{2, 3, 0.0943, 0.9916},
 	}
 	for _, tc := range cases {
-		lo, hi, err := clopperPearson(tc.c, tc.n, 0.05)
+		lo, hi, err := domain.ClopperPearson(tc.c, tc.n, 0.05)
 		if err != nil {
 			t.Fatalf("clopperPearson(%d,%d) error: %v", tc.c, tc.n, err)
 		}
@@ -38,14 +40,14 @@ func TestClopperPearsonRejectsBadDomain(t *testing.T) {
 		c, n  int
 		alpha float64
 	}{
-		{1, 0, 0.05},                        // n<=0
-		{5, 4, 0.05},                        // c>n
-		{-1, 4, 0.05},                       // c<0
-		{1, 4, 0},                           // alpha<=0
-		{1, 4, 1},                           // alpha>=1
-		{1, maxReliabilityTrials + 1, 0.05}, // n over cap
+		{1, 0, 0.05},  // n<=0
+		{5, 4, 0.05},  // c>n
+		{-1, 4, 0.05}, // c<0
+		{1, 4, 0},     // alpha<=0
+		{1, 4, 1},     // alpha>=1
+		{1, domain.MaxReliabilityTrials + 1, 0.05}, // n over cap
 	} {
-		if _, _, err := clopperPearson(tc.c, tc.n, tc.alpha); err == nil {
+		if _, _, err := domain.ClopperPearson(tc.c, tc.n, tc.alpha); err == nil {
 			t.Fatalf("clopperPearson(%d,%d,%v) must error on bad domain", tc.c, tc.n, tc.alpha)
 		}
 	}
@@ -65,7 +67,7 @@ func TestPassPowKKernel(t *testing.T) {
 		{3, 3, 3, 1.0},      // all pass, all drawn
 	}
 	for _, tc := range cases {
-		got, err := passPowK(tc.c, tc.n, tc.k)
+		got, err := domain.PassPowK(tc.c, tc.n, tc.k)
 		if err != nil {
 			t.Fatalf("passPowK(%d,%d,%d) error: %v", tc.c, tc.n, tc.k, err)
 		}
@@ -86,7 +88,7 @@ func TestPassPowKRejectsInvalidDomainInsteadOfNaN(t *testing.T) {
 		{8, 10, -1}, // k<0
 		{-1, 10, 1}, // successes<0
 	} {
-		got, err := passPowK(tc.c, tc.n, tc.k)
+		got, err := domain.PassPowK(tc.c, tc.n, tc.k)
 		if err == nil {
 			t.Fatalf("passPowK(%d,%d,%d) must error, got %v", tc.c, tc.n, tc.k, got)
 		}
@@ -96,16 +98,16 @@ func TestPassPowKRejectsInvalidDomainInsteadOfNaN(t *testing.T) {
 	}
 }
 
-func fixtureRel(report ReliabilityReport, id string) (FixtureReliability, bool) {
+func fixtureRel(report benchmarkcontract.ReliabilityReport, id string) (benchmarkcontract.FixtureReliability, bool) {
 	for _, f := range report.Fixtures {
 		if f.FixtureID == id {
 			return f, true
 		}
 	}
-	return FixtureReliability{}, false
+	return benchmarkcontract.FixtureReliability{}, false
 }
 
-func curveAt(report ReliabilityReport, k int) (float64, bool) {
+func curveAt(report benchmarkcontract.ReliabilityReport, k int) (float64, bool) {
 	for _, p := range report.PassPowKCurve {
 		if p.K == k {
 			return p.PassPowK, true
@@ -115,12 +117,12 @@ func curveAt(report ReliabilityReport, k int) (float64, bool) {
 }
 
 func TestComputeReliabilityMacroAggregatesPerFixture(t *testing.T) {
-	rec := RecordedOutcomes{Runs: []RecordedRun{
+	rec := benchmarkcontract.RecordedOutcomes{Runs: []benchmarkcontract.RecordedRun{
 		{RunID: "r1", Provenance: "recorded-holdout", Outcomes: map[string]bool{"A": true, "B": true}},
 		{RunID: "r2", Provenance: "recorded-holdout", Outcomes: map[string]bool{"A": true, "B": false}},
 		{RunID: "r3", Provenance: "recorded-holdout", Outcomes: map[string]bool{"A": true, "B": true}},
 	}}
-	report, err := ComputeReliability(rec, 0.05)
+	report, err := domain.ComputeReliability(rec, 0.05)
 	if err != nil {
 		t.Fatalf("ComputeReliability error: %v", err)
 	}
@@ -156,13 +158,13 @@ func TestComputeReliabilityMacroAggregatesPerFixture(t *testing.T) {
 // 0.667 too... use an asymmetric case where pooled != macro to lock the unit.
 func TestComputeReliabilityIsNotPooled(t *testing.T) {
 	// A=2/2 (perfect), B=2/4 -> macro and pooled diverge.
-	rec := RecordedOutcomes{Runs: []RecordedRun{
+	rec := benchmarkcontract.RecordedOutcomes{Runs: []benchmarkcontract.RecordedRun{
 		{RunID: "r1", Provenance: "p", Outcomes: map[string]bool{"A": true, "B": true}},
 		{RunID: "r2", Provenance: "p", Outcomes: map[string]bool{"A": true, "B": true}},
 		{RunID: "r3", Provenance: "p", Outcomes: map[string]bool{"A": true, "B": false}},
 		{RunID: "r4", Provenance: "p", Outcomes: map[string]bool{"A": true, "B": false}},
 	}}
-	report, err := ComputeReliability(rec, 0.05)
+	report, err := domain.ComputeReliability(rec, 0.05)
 	if err != nil {
 		t.Fatalf("ComputeReliability error: %v", err)
 	}
@@ -178,8 +180,8 @@ func TestComputeReliabilityIsNotPooled(t *testing.T) {
 }
 
 func TestComputeReliabilityEnforcesProvenanceGuard(t *testing.T) {
-	base := func() []RecordedRun {
-		return []RecordedRun{
+	base := func() []benchmarkcontract.RecordedRun {
+		return []benchmarkcontract.RecordedRun{
 			{RunID: "r1", Provenance: "p", Outcomes: map[string]bool{"A": true}},
 			{RunID: "r2", Provenance: "p", Outcomes: map[string]bool{"A": false}},
 		}
@@ -187,45 +189,45 @@ func TestComputeReliabilityEnforcesProvenanceGuard(t *testing.T) {
 	// duplicate run_id (re-scoring of one artifact dressed as two runs)
 	dup := base()
 	dup[1].RunID = "r1"
-	if _, err := ComputeReliability(RecordedOutcomes{Runs: dup}, 0.05); err == nil {
+	if _, err := domain.ComputeReliability(benchmarkcontract.RecordedOutcomes{Runs: dup}, 0.05); err == nil {
 		t.Fatal("duplicate run_id must be rejected")
 	}
 	// empty provenance
 	noProv := base()
 	noProv[0].Provenance = "  "
-	if _, err := ComputeReliability(RecordedOutcomes{Runs: noProv}, 0.05); err == nil {
+	if _, err := domain.ComputeReliability(benchmarkcontract.RecordedOutcomes{Runs: noProv}, 0.05); err == nil {
 		t.Fatal("empty provenance must be rejected")
 	}
 	// empty run_id
 	noID := base()
 	noID[0].RunID = ""
-	if _, err := ComputeReliability(RecordedOutcomes{Runs: noID}, 0.05); err == nil {
+	if _, err := domain.ComputeReliability(benchmarkcontract.RecordedOutcomes{Runs: noID}, 0.05); err == nil {
 		t.Fatal("empty run_id must be rejected")
 	}
 	// fewer than 2 runs
-	if _, err := ComputeReliability(RecordedOutcomes{Runs: base()[:1]}, 0.05); err == nil {
+	if _, err := domain.ComputeReliability(benchmarkcontract.RecordedOutcomes{Runs: base()[:1]}, 0.05); err == nil {
 		t.Fatal("single run must be rejected")
 	}
 	// misaligned fixture sets
 	misaligned := base()
 	misaligned[1].Outcomes = map[string]bool{"A": false, "B": true}
-	if _, err := ComputeReliability(RecordedOutcomes{Runs: misaligned}, 0.05); err == nil {
+	if _, err := domain.ComputeReliability(benchmarkcontract.RecordedOutcomes{Runs: misaligned}, 0.05); err == nil {
 		t.Fatal("misaligned fixture sets must be rejected")
 	}
 	// bad alpha
-	if _, err := ComputeReliability(RecordedOutcomes{Runs: base()}, 0); err == nil {
+	if _, err := domain.ComputeReliability(benchmarkcontract.RecordedOutcomes{Runs: base()}, 0); err == nil {
 		t.Fatal("alpha=0 must be rejected")
 	}
 }
 
 func TestScoreSpread(t *testing.T) {
-	if _, _, w := ScoreSpread([]float64{100, 100, 100}); w != 0 {
+	if _, _, w := domain.ScoreSpread([]float64{100, 100, 100}); w != 0 {
 		t.Fatalf("identical scores must have width 0, got %v", w)
 	}
-	if lo, hi, w := ScoreSpread([]float64{100, 50, 75}); lo != 50 || hi != 100 || w != 50 {
+	if lo, hi, w := domain.ScoreSpread([]float64{100, 50, 75}); lo != 50 || hi != 100 || w != 50 {
 		t.Fatalf("spread = [%v,%v] w=%v, want [50,100] w=50", lo, hi, w)
 	}
-	if _, _, w := ScoreSpread(nil); w != 0 {
+	if _, _, w := domain.ScoreSpread(nil); w != 0 {
 		t.Fatalf("empty spread width must be 0, got %v", w)
 	}
 }

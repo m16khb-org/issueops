@@ -116,13 +116,6 @@ type PreparedCreate struct {
 	Eligibility CreateEligibility
 }
 
-func (p PreparedCreate) Clone() PreparedCreate {
-	cloned := p
-	cloned.Command = p.Command.Clone()
-	cloned.Request = p.Request.Clone()
-	return cloned
-}
-
 type Candidate struct {
 	URL              string
 	ProjectKey       string
@@ -199,12 +192,6 @@ type ReconcileResult struct {
 	Reconciled             bool
 	Code                   string
 	ExternalStateInspected bool
-}
-
-func (r ReconcileResult) Clone() ReconcileResult {
-	cloned := r
-	cloned.Record = r.Record.Clone()
-	return cloned
 }
 
 func cloneStrings(values []string) []string {

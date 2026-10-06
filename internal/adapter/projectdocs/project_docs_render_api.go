@@ -14,7 +14,7 @@ This project-specific API documentation prompt is for agents and MCP routing whe
 3. Agent gate evidence: ` + "`issueops api-doc review --result FILE --json`" + `
 4. Combined gate with evidence: ` + "`issueops api-doc check --result FILE --json`" + `
 
-Default scope is staged API candidate files. Scan all legacy debt only when ` + "`--all`" + ` is explicitly supplied.
+Default scope is staged API candidate files. Scan all pre-existing debt only when ` + "`--all`" + ` is explicitly supplied.
 
 ## Static omissions to block
 

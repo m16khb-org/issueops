@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	app "issueops/internal/application/issueopsowner"
+	executionissue "issueops/internal/contract/executionissue"
 	model "issueops/internal/contract/issueops"
 	leasecontract "issueops/internal/contract/issueopslease"
 	preparationcontract "issueops/internal/contract/issueopspreparation"
@@ -11,22 +12,19 @@ import (
 	"issueops/internal/port"
 )
 
-type executionOwnerIssue = model.OwnerIssue
-type executionOwnerContextPacket = model.OwnerContextPacket
-
 type executionOwnerSnapshot struct {
 	issue                                                             model.OwnerIssue
 	requiredDocs, requiredSkills, acceptanceIDs, verificationCommands []string
 }
 type executionOwnerArtifacts struct{ packetPath, packetSHA256, promptPath, promptSHA256, prompt string }
 
-func ownerContextForTest(root string, read port.ExecutionIssueSnapshotReadFunc) app.Service {
+func ownerContextForTest(root string, read executionissue.ExecutionIssueSnapshotReadFunc) app.Service {
 	return app.Service{Files: OwnerContextFiles{StateRoot: root}, ReadIssue: read, Template: executionOwnerPromptTemplate, ReadRecord: (CycleRecordStore{StateRoot: root}).Load}
 }
-func ReadExecutionPreparationOwnerEvidence(ctx context.Context, root string, snapshot preparationcontract.Snapshot, read port.ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerEvidence, error) {
+func ReadExecutionPreparationOwnerEvidence(ctx context.Context, root string, snapshot preparationcontract.Snapshot, read executionissue.ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerEvidence, error) {
 	return ownerContextForTest(root, read).ReadPreparationEvidence(ctx, snapshot)
 }
-func PrepareExecutionPreparationOwner(ctx context.Context, root string, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt, read port.ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerArtifacts, error) {
+func PrepareExecutionPreparationOwner(ctx context.Context, root string, snapshot preparationcontract.Snapshot, command preparationcontract.Command, intent preparationcontract.Intent, receipt preparationcontract.IntentReceipt, read executionissue.ExecutionIssueSnapshotReadFunc) (preparationcontract.OwnerArtifacts, error) {
 	return ownerContextForTest(root, read).Prepare(ctx, snapshot, command, intent, receipt)
 }
 func buildExecutionOwnerArtifacts(record model.IssueOpsRecord, req model.ExecutionPrepareRequest, snapshot executionOwnerSnapshot, manifest map[string]string) (executionOwnerArtifacts, error) {
@@ -39,26 +37,19 @@ func executionOwnerCommandsFor(record model.IssueOpsRecord, req model.ExecutionP
 func renderExecutionOwnerPrompt(packet model.OwnerContextPacket, path, digest string) (string, error) {
 	return domain.RenderOwnerPrompt(packet, path, digest, executionOwnerPromptTemplate, leasecontract.OwnerArtifactMaxBytes)
 }
-func validateExecutionOwnerCatalog(commands model.OwnerCommands) error {
-	return app.ValidateOwnerCatalog(commands)
-}
+
 func RequireStagedExecutionOwnerPlan(root string, record model.IssueOpsRecord) (model.OwnerPlanIdentity, error) {
 	return ownerContextForTest(root, nil).RequirePlan(record)
 }
 func materializeExecutionOwnerArtifacts(root string, record model.IssueOpsRecord) (model.OwnerPlanIdentity, map[string]string, error) {
 	return ownerContextForTest(root, nil).MaterializePlan(record)
 }
-func issueArtifactDirFor(record model.IssueOpsRecord) string { return app.OwnerArtifactDir(record) }
 
 type executionResumeArtifacts struct{ claimTokenPath, issueBodySHA256, packetPath, packetSHA256, promptPath, promptSHA256 string }
 
 func readExecutionResumeArtifacts(record model.IssueOpsRecord) (executionResumeArtifacts, error) {
 	out, err := (app.ResumeReader{Files: OwnerContextFiles{}}).Read(record)
 	return executionResumeArtifacts{out.ClaimTokenPath, out.IssueBodySHA256, out.ContextPacketPath, out.ContextPacketSHA256, out.OwnerPromptPath, out.OwnerPromptSHA256}, err
-}
-
-func executionWriterAbsentRecoveryCommand(record model.IssueOpsRecord) string {
-	return app.WriterlessCommand(record)
 }
 
 func executionWorkspaceRequest(record model.IssueOpsRecord, confirm bool) (port.ExecutionWorkspaceRequest, error) {

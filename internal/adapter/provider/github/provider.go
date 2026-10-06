@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
+	policy "issueops/internal/domain/policy"
 	"net/url"
 	"os/exec"
 	"strconv"
@@ -114,23 +116,23 @@ func (Provider) FindIssueCreateCandidates(ctx context.Context, req port.IssuePro
 	}, nil
 }
 
-func (Provider) CreatePullRequest(req port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func (Provider) CreatePullRequest(req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	return Provider{}.CreatePullRequestContext(context.Background(), req)
 }
 
-func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("PR title is required")
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("PR title is required")
 	}
 	head := strings.TrimSpace(req.HeadBranch)
 	base := strings.TrimSpace(req.BaseBranch)
 	if head == "" || base == "" {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("head and base branches are required")
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("head and base branches are required")
 	}
 	projectSelector, err := githubProjectSelector(req.ProjectKey)
 	if err != nil {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, err
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, err
 	}
 	args := []string{"pr", "create", "--title", title, "--head", head, "--base", base}
 	if projectSelector != "" {
@@ -150,28 +152,28 @@ func (Provider) CreatePullRequestContext(ctx context.Context, req port.IssueProv
 		args = append(args, "--assignee", assignee)
 	}
 	if !req.Confirm {
-		return port.IssueProviderCreatePullRequestResult{
+		return executionissue.IssueProviderCreatePullRequestResult{
 			OK:      true,
 			Preview: providerutil.DryRunPreview("gh", args...),
 		}, nil
 	}
 	result, err := runGhPRCreate(ctx, args, req.Repo)
 	if err != nil {
-		return port.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL}, err
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL}, err
 	}
 	resultProject := githubPullRequestProjectKey(result.URL)
 	if !validCanonicalGitHubPullRequestURL(result.URL) || projectSelector != "" && resultProject != projectSelector || projectSelector == "" && !strings.HasPrefix(resultProject, "github.com/") {
-		return port.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("created artifact URL unavailable; needs reconciliation; not retried")
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false}, fmt.Errorf("created artifact URL unavailable; needs reconciliation; not retried")
 	}
 	if err := verifyCreatedGitHubPullRequest(ctx, req, result.URL); err != nil {
-		return port.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL}, githubCreatedPullRequestError(result.URL, err)
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL}, githubCreatedPullRequestError(result.URL, err)
 	}
 	number := createdArtifactNumber(result.URL)
 	if number == "" {
-		return port.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL},
+		return executionissue.IssueProviderCreatePullRequestResult{OK: false, URL: result.URL},
 			fmt.Errorf("created pull request URL %q has no canonical number; needs reconciliation; not retried", result.URL)
 	}
-	return port.IssueProviderCreatePullRequestResult{
+	return executionissue.IssueProviderCreatePullRequestResult{
 		OK:     true,
 		URL:    result.URL,
 		Number: number,
@@ -188,9 +190,9 @@ func runGhPRCreate(ctx context.Context, args []string, repo string) (ghResult, e
 		return ghResult{}, &port.IssueProviderCreateError{Invoked: false, Err: err}
 	}
 	if validCanonicalGitHubPullRequestURL(result.URL) {
-		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("gh PR creation outcome unknown with a canonical URL returned separately; do not retry: %s", providerutil.BoundedDiagnostic(err.Error(), 384))}
+		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("gh PR creation outcome unknown with a canonical URL returned separately; do not retry: %s", policy.BoundedDiagnostic(err.Error(), 384))}
 	}
-	return ghResult{}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("gh PR creation outcome unknown; do not retry: %s", providerutil.BoundedDiagnostic(err.Error(), 384))}
+	return ghResult{}, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("gh PR creation outcome unknown; do not retry: %s", policy.BoundedDiagnostic(err.Error(), 384))}
 }
 
 func validCanonicalGitHubPullRequestURL(raw string) bool {
@@ -368,7 +370,7 @@ func providerBodySHA256(body string) string {
 }
 
 func githubCreatedPullRequestError(_ string, err error) error {
-	return fmt.Errorf("created pull request has unknown state with a canonical URL returned separately and needs reconciliation; creation was not retried: %s", providerutil.BoundedDiagnostic(err.Error(), 384))
+	return fmt.Errorf("created pull request has unknown state with a canonical URL returned separately and needs reconciliation; creation was not retried: %s", policy.BoundedDiagnostic(err.Error(), 384))
 }
 
 func (Provider) CreateChild(req port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
@@ -579,7 +581,7 @@ func runGhJSONContext(ctx context.Context, args []string, repo string, kind stri
 		}
 		return ghResult{}, &port.IssueProviderCreateError{Invoked: false, Err: cause}
 	}
-	diagnostic := strings.TrimPrefix(providerutil.BoundedDiagnostic(err.Error(), 384), "command failed after start: ")
+	diagnostic := strings.TrimPrefix(policy.BoundedDiagnostic(err.Error(), 384), "command failed after start: ")
 	if createdArtifactNumber(result.URL) != "" {
 		return result, &port.IssueProviderCreateError{Invoked: true, Err: fmt.Errorf("gh %s create failed: %s; outcome unknown with a canonical URL returned separately; do not retry", kind, diagnostic)}
 	}

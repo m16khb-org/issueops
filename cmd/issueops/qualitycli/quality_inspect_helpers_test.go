@@ -1,12 +1,12 @@
 package qualitycli
 
 import (
+	qualitycatalogcontract "issueops/internal/contract/qualitycatalog"
 	"path/filepath"
 	"time"
 
 	qualityapp "issueops/internal/application/quality"
 	contract "issueops/internal/contract/quality"
-	"issueops/internal/domain/qualitycatalog"
 )
 
 type InspectDeps struct {
@@ -14,14 +14,12 @@ type InspectDeps struct {
 	Coverage             func(root string) (string, error)
 	SelfAugmentOpenCount func(root string) (int, error)
 	SelfVerifyOpenCount  func(root string) (int, error)
-	Candidates           func(root string) []QualityCandidate
-	CodeSNR              func(root string) (SNRResult, error)
-	PioneerCoverage      func(root string) (PioneerCoverage, error)
+	Candidates           func(root string) []qualitycatalogcontract.Candidate
+	CodeSNR              func(root string) (contract.SNRResult, error)
+	PioneerCoverage      func(root string) (contract.PioneerCoverage, error)
 	SaveSNRBaseline      func(string, float64) error
 	ReadSNRBaseline      func(string) (float64, bool, error)
 }
-
-type QualityCandidate = qualitycatalog.Candidate
 
 const (
 	CollectionStatusOK    = "ok"
@@ -36,26 +34,16 @@ const (
 	GateStatusBlock      = "block"
 )
 
-type InspectResult = contract.InspectResult
-type Summary = contract.Summary
-type Signal = contract.Signal
-type CoveragePackage = contract.CoveragePackage
-type BranchFunction = contract.BranchFunction
-type AuditItem = contract.AuditItem
-type Finding = contract.Finding
-type PioneerCoverage = contract.PioneerCoverage
-type PioneerBlockedCase = contract.PioneerBlockedCase
-
 func testCLIDeps(deps InspectDeps) Deps {
 	deps = deps.withDefaults()
-	return Deps{Root: hostDeps.IssueOpsRoot(), PrintJSON: hostDeps.PrintJSON, Inspect: func(root string) InspectResult { return Inspect(root, deps) }, SaveSNRBaseline: deps.SaveSNRBaseline, ReadSNRBaseline: deps.ReadSNRBaseline}
+	return Deps{Root: hostDeps.IssueOpsRoot(), PrintJSON: hostDeps.PrintJSON, Inspect: func(root string) contract.InspectResult { return Inspect(root, deps) }, SaveSNRBaseline: deps.SaveSNRBaseline, ReadSNRBaseline: deps.ReadSNRBaseline}
 }
 func RunInspectWithDeps(args []string, deps InspectDeps) error {
 	return RunInspect(args, testCLIDeps(deps))
 }
 func runForTest(args []string) error { return Run(args, testCLIDeps(InspectDeps{})) }
 
-func Inspect(root string, deps InspectDeps) InspectResult {
+func Inspect(root string, deps InspectDeps) contract.InspectResult {
 	root = resolveRoot(root)
 	deps = deps.withDefaults()
 	return qualityapp.Inspect(root, qualityapp.InspectDeps{
@@ -113,6 +101,6 @@ func resolveRoot(root string) string {
 	return abs
 }
 
-func collectPioneerCoverage(root string) (PioneerCoverage, error) {
+func collectPioneerCoverage(root string) (contract.PioneerCoverage, error) {
 	return pioneerCoverageCollector(root)
 }

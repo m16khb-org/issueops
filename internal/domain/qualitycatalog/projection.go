@@ -1,8 +1,12 @@
 package qualitycatalog
 
-func ApplyPlanStatus(catalog []Candidate, plan []Candidate) []Candidate {
-	candidates := append([]Candidate{}, catalog...)
-	byID := make(map[string]Candidate, len(plan))
+import (
+	contract "issueops/internal/contract/qualitycatalog"
+)
+
+func ApplyPlanStatus(catalog []contract.Candidate, plan []contract.Candidate) []contract.Candidate {
+	candidates := append([]contract.Candidate{}, catalog...)
+	byID := make(map[string]contract.Candidate, len(plan))
 	for _, candidate := range plan {
 		byID[candidate.ID] = candidate
 	}

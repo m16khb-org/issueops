@@ -3,6 +3,7 @@ package issueops
 import (
 	"context"
 	"encoding/json"
+	app "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,10 +64,10 @@ func TestResumePlanIdentityRejectsUnsealedOrDriftedPlan(t *testing.T) {
 		mutate func(t *testing.T, record *issueops.IssueOpsRecord)
 	}{
 		{name: "manifest plan missing", mutate: func(t *testing.T, record *issueops.IssueOpsRecord) {
-			mutateResumePacket(t, record, func(packet *executionOwnerContextPacket) { delete(packet.ArtifactManifest, "plan") })
+			mutateResumePacket(t, record, func(packet *issueops.OwnerContextPacket) { delete(packet.ArtifactManifest, "plan") })
 		}},
 		{name: "manifest plan digest invalid", mutate: func(t *testing.T, record *issueops.IssueOpsRecord) {
-			mutateResumePacket(t, record, func(packet *executionOwnerContextPacket) { packet.ArtifactManifest["plan"] = "invalid" })
+			mutateResumePacket(t, record, func(packet *issueops.OwnerContextPacket) { packet.ArtifactManifest["plan"] = "invalid" })
 		}},
 		{name: "sealed plan artifact missing", mutate: func(t *testing.T, record *issueops.IssueOpsRecord) {
 			if err := os.Remove(filepath.Join(record.Execution.Workspace.Root, filepath.FromSlash(sealedArtifactDir(*record)), "plan.md")); err != nil {
@@ -121,17 +122,17 @@ func TestExecutionWriterAbsentRecoveryRoutesUnversionedOrcaThroughReseed(t *test
 	legacy.Execution.Orca.IssueBodySHA256 = ""
 	legacy.Execution.Orca.ContextPacketSHA256 = ""
 	legacy.Execution.Orca.OwnerPromptSHA256 = ""
-	legacyCommand := executionWriterAbsentRecoveryCommand(legacy)
+	legacyCommand := app.WriterlessCommand(legacy)
 	if !strings.Contains(legacyCommand, "execution replace") || !strings.Contains(legacyCommand, "--preview") || strings.Contains(legacyCommand, "execution resume") {
 		t.Fatalf("legacy recovery command=%q", legacyCommand)
 	}
 	current, _ := sealedResumeIdentityFixture(t)
-	currentCommand := executionWriterAbsentRecoveryCommand(current)
+	currentCommand := app.WriterlessCommand(current)
 	if !strings.Contains(currentCommand, "execution resume") || strings.Contains(currentCommand, "--preview") {
 		t.Fatalf("current recovery command=%q", currentCommand)
 	}
 	current.BranchPrepare.LinkVerified = false
-	unverifiedGitHubCommand := executionWriterAbsentRecoveryCommand(current)
+	unverifiedGitHubCommand := app.WriterlessCommand(current)
 	if !strings.Contains(unverifiedGitHubCommand, "execution resume") {
 		t.Fatalf("unverified GitHub launch recovery command=%q", unverifiedGitHubCommand)
 	}
@@ -206,7 +207,7 @@ func sealedResumeIdentityFixture(t *testing.T) (issueops.IssueOpsRecord, executi
 	}
 	writePrivateResumeFixture(t, tokenPath, []byte(token+"\n"))
 	snapshot := executionOwnerSnapshot{
-		issue:          executionOwnerIssue{URL: record.IssueURL, Body: issueBody, BodySHA256: digestExecutionOwnerBytes([]byte(issueBody))},
+		issue:          issueops.OwnerIssue{URL: record.IssueURL, Body: issueBody, BodySHA256: digestExecutionOwnerBytes([]byte(issueBody))},
 		requiredSkills: []string{"issueops"}, acceptanceIDs: []string{"AC-01"}, verificationCommands: []string{"go test ./..."},
 	}
 	manifest := map[string]string{"plan": digestExecutionOwnerBytes([]byte(plan))}
@@ -225,14 +226,14 @@ func sealedResumeIdentityFixture(t *testing.T) (issueops.IssueOpsRecord, executi
 	}
 }
 
-func mutateResumePacket(t *testing.T, record *issueops.IssueOpsRecord, mutate func(*executionOwnerContextPacket)) {
+func mutateResumePacket(t *testing.T, record *issueops.IssueOpsRecord, mutate func(*issueops.OwnerContextPacket)) {
 	t.Helper()
 	packetPath, _ := executionOwnerArtifactPaths(*record)
 	raw, err := os.ReadFile(packetPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var packet executionOwnerContextPacket
+	var packet issueops.OwnerContextPacket
 	if err := json.Unmarshal(raw, &packet); err != nil {
 		t.Fatal(err)
 	}

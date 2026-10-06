@@ -3,6 +3,7 @@ package issueops
 import (
 	"encoding/json"
 	"fmt"
+	readinesspaths "issueops/internal/adapter/issueops/readinesspaths"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,7 +55,7 @@ func readLinkedPlanIdentity(record issueops.IssueOpsRecord) (issueops.OwnerPlanI
 	}
 	worktree, planPath = filepath.Clean(worktree), filepath.Clean(planPath)
 	worktreeInfo, err := os.Stat(worktree)
-	if err != nil || !worktreeInfo.IsDir() || !issueOpsPlanPathInsideWorktree(worktree, planPath) {
+	if err != nil || !worktreeInfo.IsDir() || !readinesspaths.PlanPathInsideWorktree(worktree, planPath) {
 		return issueops.OwnerPlanIdentity{}, fmt.Errorf("durable plan path is outside the canonical worktree")
 	}
 	info, err := os.Lstat(planPath)

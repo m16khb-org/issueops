@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -82,8 +83,8 @@ func TestRunVerifyArtifactAndRemoteCreateDryRuns(t *testing.T) {
 			}
 			return nil
 		},
-		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-			return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
+		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+			return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 		}},
 	}
 	if err := testRemoteCommand().Run([]string{"create-issue", "--id", record.ID, "--title", "Title", "--body", "Body", "--label", "bug", "--json"}, deps); err != nil {
@@ -237,9 +238,9 @@ func TestRunRemoteCreatePRDryRunRejectsSecretLikeContentBeforeProviderCall(t *te
 	secret := "api_key=opaque-token password=opaque-password Authorization: Bearer opaque-bearer /tmp/secret.pem"
 	providerCalls := 0
 	deps := Deps{
-		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 			providerCalls++
-			return port.IssueProviderCreatePullRequestResult{OK: true}, nil
+			return executionissue.IssueProviderCreatePullRequestResult{OK: true}, nil
 		}},
 	}
 	err := testRemoteCommand().Run([]string{"create-pr", "--id", record.ID, "--provider", "github", "--title", "PR", "--body", secret, "--head", record.Branch, "--base", "main", "--json"}, deps)
@@ -265,9 +266,9 @@ func TestRunRemoteCreatePRRejectsSecretLikeMetadataBeforeProviderCall(t *testing
 		t.Run(test.name, func(t *testing.T) {
 			providerCalls := 0
 			deps := Deps{Publication: PublicationHandlers{
-				Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+				Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 					providerCalls++
-					return port.IssueProviderCreatePullRequestResult{OK: true}, nil
+					return executionissue.IssueProviderCreatePullRequestResult{OK: true}, nil
 				},
 			}}
 			args := []string{
@@ -305,15 +306,15 @@ func TestRunRemoteCreatePRUsesPublicationHandlerForPreviewAndConfirm(t *testing.
 	handlerCalls := 0
 	var printed []any
 	deps := Deps{
-		Publication: PublicationHandlers{Create: func(_ context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Publication: PublicationHandlers{Create: func(_ context.Context, stateRoot string, request issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 			handlerCalls++
 			if stateRoot != issueOpsStateRootForTest() || request.ID != record.ID || request.Provider != "github" || request.Title != "PR" {
 				t.Fatalf("stateRoot=%q request=%#v", stateRoot, request)
 			}
 			if request.Confirm {
-				return port.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/195", Number: "195"}, nil
+				return executionissue.IssueProviderCreatePullRequestResult{OK: true, URL: "https://github.com/acme/repo/pull/195", Number: "195"}, nil
 			}
-			return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
+			return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 		}},
 		ObserveProcessAncestry: func(int) ([]issueopscontract.NativeProcessReceipt, error) {
 			return append([]issueopscontract.NativeProcessReceipt(nil), ancestry...), nil
@@ -370,9 +371,9 @@ func TestRunRemoteCreatePRObservesAncestryOnlyForConfirmedMutation(t *testing.T)
 			observeCalls++
 			return nil, errors.New("ps unavailable")
 		},
-		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		Publication: PublicationHandlers{Create: func(context.Context, string, issueopscontract.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 			providerCalls++
-			return port.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
+			return executionissue.IssueProviderCreatePullRequestResult{OK: true, Preview: "would create pull request"}, nil
 		}},
 	}
 	baseArgs := []string{

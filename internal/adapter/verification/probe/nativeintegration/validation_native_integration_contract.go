@@ -156,7 +156,7 @@ func (deps nativeIntegrationValidationDeps) canonicalStableNativeRoot(root strin
 }
 
 func nativeIntegrationDuplicateWarningOutput(fixture string) ([]string, string) {
-	duplicateWarnings := detectClaudeMCPDuplicateWarnings(fixture)
+	duplicateWarnings := DetectClaudeMCPDuplicateWarnings(fixture)
 	warningBytes, _ := json.MarshalIndent(map[string]any{
 		"duplicate_mcp_warning_fixture": duplicateWarnings,
 	}, "", "  ")

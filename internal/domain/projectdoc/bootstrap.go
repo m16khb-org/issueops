@@ -11,12 +11,11 @@ const (
 )
 
 type BootstrapFileInput struct {
-	Kind       BootstrapFileKind
-	Rel        string
-	Action     string
-	Write      bool
-	Sync       bool
-	LegacyFlat bool
+	Kind   BootstrapFileKind
+	Rel    string
+	Action string
+	Write  bool
+	Sync   bool
 }
 
 type BootstrapFileDecision struct {
@@ -29,9 +28,6 @@ type BootstrapFileDecision struct {
 
 func DecideBootstrapFile(input BootstrapFileInput) BootstrapFileDecision {
 	if input.Kind == BootstrapModuleFile || input.Kind == BootstrapManifestFile {
-		if input.LegacyFlat {
-			return BootstrapFileDecision{FamilyPreserved: input.Kind == BootstrapModuleFile && input.Action == "update"}
-		}
 		return BootstrapFileDecision{
 			Write:           input.Write && input.Action == "create",
 			Preserved:       input.Kind == BootstrapModuleFile && input.Action == "update",
@@ -42,7 +38,7 @@ func DecideBootstrapFile(input BootstrapFileInput) BootstrapFileDecision {
 	familyDoc := IsFamilyDocRel(input.Rel)
 	shouldWrite := input.Write && input.Action != "unchanged" && !familyDoc &&
 		(input.Sync || input.Action == "create" || input.Rel == "AGENTS.md")
-	if familyDoc && input.Action == "create" && !input.LegacyFlat {
+	if familyDoc && input.Action == "create" {
 		shouldWrite = input.Write
 	}
 	return BootstrapFileDecision{

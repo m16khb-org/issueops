@@ -1316,7 +1316,7 @@ func legacyEdges(edges []dependencyEdge) []dependencyEdge {
 	for _, edge := range edges {
 		if (isCore(edge.importer) && isLegacyInfrastructure(edge.imported)) ||
 			(isAdapter(edge.importer) && isCore(edge.imported) && !isMigratedInboundAdapter(edge.importer)) ||
-			(isConcreteAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
+			(isAdapter(edge.imported) && !isCompositionRoot(edge.importer) && !isSameCapabilityAdapter(edge.importer, edge.imported) &&
 				!isSharedStorageEngineEdge(edge.importer, edge.imported) && !isProcessLifetimeEdge(edge.importer, edge.imported)) {
 			legacy = append(legacy, edge)
 		}
@@ -1375,8 +1375,6 @@ func isDomain(path string) bool {
 func isApplication(path string) bool {
 	return path == "internal/application" || strings.HasPrefix(path, "internal/application/") || isLeaseVerticalLayer(path, "application")
 }
-
-func isConcreteAdapter(path string) bool { return isAdapter(path) }
 
 // adapterCapability는 adapter 경로가 구현하는 capability 이름을 돌려준다.
 // outbound/inbound는 capability가 아니라 방향 분류이므로 그 다음 요소까지 읽는다.

@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 
 	core "issueops/internal/adapter/issueops"
@@ -15,7 +16,7 @@ import (
 func newPublicationCommand(root string, publish model.RemotePullRequestCreateHandler, observe application.AncestryObserver) *application.PublicationCommandService {
 	var invoke application.PublicationInvoker
 	if publish != nil {
-		invoke = func(ctx context.Context, req model.RemotePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
+		invoke = func(ctx context.Context, req model.RemotePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
 			return publish(ctx, root, req)
 		}
 	}

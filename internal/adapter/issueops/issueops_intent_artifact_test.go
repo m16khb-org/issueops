@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	app "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +24,7 @@ func intentArtifactRecord(t *testing.T, intent *issueopscontract.IssueOpsIntentC
 	record.Intent = intent
 	record.Execution = &issueopscontract.Execution{
 		Mode:      issueopscontract.ExecutionModeDirect,
-		Workspace: issueopscontract.Workspace{Root: worktree, ArtifactDir: issueArtifactDirFor(record)},
+		Workspace: issueopscontract.Workspace{Root: worktree, ArtifactDir: app.OwnerArtifactDir(record)},
 		Lease:     issueopscontract.WriteLease{Generation: 1, Status: issueopscontract.LeaseStatusActive},
 	}
 	return stateRoot, record, worktree
@@ -46,7 +47,7 @@ func TestMaterializeStagedArtifactsSealsDerivedIntent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(worktree, filepath.FromSlash(issueArtifactDirFor(record)), "intent.md")
+	path := filepath.Join(worktree, filepath.FromSlash(app.OwnerArtifactDir(record)), "intent.md")
 	info, err := os.Lstat(path)
 	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
 		t.Fatalf("intent artifact must be a 0600 regular file: info=%v err=%v", info, err)
@@ -75,7 +76,7 @@ func TestMaterializeStagedArtifactsWithoutIntentKeepsManifest(t *testing.T) {
 	if len(manifest) != 1 || manifest["plan"] == "" {
 		t.Fatalf("manifest without intent must carry only plan: %v", manifest)
 	}
-	if _, err := os.Lstat(filepath.Join(worktree, filepath.FromSlash(issueArtifactDirFor(record)), "intent.md")); !os.IsNotExist(err) {
+	if _, err := os.Lstat(filepath.Join(worktree, filepath.FromSlash(app.OwnerArtifactDir(record)), "intent.md")); !os.IsNotExist(err) {
 		t.Fatalf("intent.md must not exist without record.intent: %v", err)
 	}
 }

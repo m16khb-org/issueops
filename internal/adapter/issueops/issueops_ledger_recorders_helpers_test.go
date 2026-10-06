@@ -16,7 +16,7 @@ func RecordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomai
 func recordIssueOpsDomainReview(stateRoot, id string, req issueops.IssueOpsDomainReviewRequest, actor *issueops.IssueOpsActor) (issueops.IssueOpsRecord, error) {
 	store := NewReviewMutationStore(actor)
 	store.ValidateMutation = func(record issueops.IssueOpsRecord) error {
-		return validateWorkspacePreparationMutation(context.Background(), record, actor, liveTestVerifier())
+		return validateExecutionMutation(context.Background(), record, actor, liveTestVerifier())
 	}
 	return reviewapp.RecordDomainReview(store, stateRoot, id, req)
 }

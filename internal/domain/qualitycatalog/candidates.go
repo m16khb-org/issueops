@@ -23,15 +23,11 @@ var resolvedCandidateIDs = map[string]bool{
 	"coverage-issueops-transport-boundaries": true,
 }
 
-type VerificationKind = contract.VerificationKind
-
-const ToolSignalKind = contract.ToolSignalKind
-
 type CandidateSpec struct {
 	ID               string
 	Title            string
 	Category         string
-	VerificationKind VerificationKind
+	VerificationKind contract.VerificationKind
 	Impact           float64
 	Feasibility      float64
 	Novelty          float64
@@ -41,8 +37,6 @@ type CandidateSpec struct {
 	VerifyWith       []string
 	Evidence         []string
 }
-
-type Candidate = contract.Candidate
 
 func CandidateSpecs() []CandidateSpec {
 	specs := []CandidateSpec{
@@ -123,20 +117,20 @@ func CandidateSpecs() []CandidateSpec {
 	// ToolSignal unless a future spec explicitly classifies itself otherwise.
 	for i := range specs {
 		if specs[i].VerificationKind == "" {
-			specs[i].VerificationKind = ToolSignalKind
+			specs[i].VerificationKind = contract.ToolSignalKind
 		}
 	}
 	return specs
 }
 
-func Candidates() []Candidate {
+func Candidates() []contract.Candidate {
 	specs := CandidateSpecs()
-	out := make([]Candidate, 0, len(specs))
+	out := make([]contract.Candidate, 0, len(specs))
 	for _, spec := range specs {
 		if resolvedCandidateIDs[spec.ID] {
 			continue
 		}
-		out = append(out, Candidate{
+		out = append(out, contract.Candidate{
 			ID:          spec.ID,
 			Title:       spec.Title,
 			Category:    spec.Category,

@@ -2,6 +2,7 @@ package issueopsapp
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"time"
 
 	"issueops/internal/adapter/gitworktree"
@@ -22,7 +23,7 @@ import (
 type issueOpsPreparationCompositionDeps struct {
 	Direct         port.ExecutionWorkspaceProvisioner
 	Orca           port.ExecutionOrcaProvisioner
-	ReadIssue      port.ExecutionIssueSnapshotReadFunc
+	ReadIssue      executionissue.ExecutionIssueSnapshotReadFunc
 	Now            func() time.Time
 	NewOperationID func() (string, error)
 	ValidateActor  func(context.Context, issueopscontract.NativeActor) error
@@ -32,7 +33,7 @@ type issueOpsExecutionCompositionDeps struct {
 	Prepare   issueopscontract.ExecutionPrepareHandler
 	Orca      port.ExecutionOrcaProvisioner
 	OrcaOwner port.ExecutionOrcaOwnerInspector
-	ReadIssue port.ExecutionIssueSnapshotReadFunc
+	ReadIssue executionissue.ExecutionIssueSnapshotReadFunc
 }
 
 func productionIssueOpsExecutionDependencies() issueOpsExecutionCompositionDeps {
@@ -48,7 +49,7 @@ func productionIssueOpsExecutionDependencies() issueOpsExecutionCompositionDeps 
 }
 
 func newIssueOpsPreparationHandler(deps issueOpsPreparationCompositionDeps) issueopscontract.ExecutionPrepareHandler {
-	return func(ctx context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, invocation port.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+	return func(ctx context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, invocation executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 		if deps.ValidateActor != nil {
 			if err := deps.ValidateActor(ctx, request.Actor); err != nil {
 				return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err

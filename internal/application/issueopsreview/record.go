@@ -2,6 +2,7 @@ package issueopsreview
 
 import (
 	"fmt"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"strings"
 
 	model "issueops/internal/contract/issueops"
@@ -9,7 +10,7 @@ import (
 	reviewport "issueops/internal/port/issueopsreview"
 )
 
-func RecordDevilsAdvocate(store reviewport.DevilsAdvocateStore, stateRoot, id string, req model.IssueOpsDevilsAdvocateReviewRequest, recordedAt string) (model.IssueOpsRecord, error) {
+func RecordDevilsAdvocate(store reviewport.DevilsAdvocateStore, stateRoot, id string, req reviewcontract.DevilsAdvocateReviewRequest, recordedAt string) (model.IssueOpsRecord, error) {
 	review, err := reviewdomain.ValidateReview(req, recordedAt)
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err
@@ -34,7 +35,7 @@ func RecordDevilsAdvocate(store reviewport.DevilsAdvocateStore, stateRoot, id st
 	return store.TouchWrite(stateRoot, record)
 }
 
-func RecordCompatibilityReview(store reviewport.CompatibilityStore, stateRoot, id string, req model.IssueOpsCompatibilityReviewRequest, recordedAt string) (model.IssueOpsRecord, error) {
+func RecordCompatibilityReview(store reviewport.CompatibilityStore, stateRoot, id string, req reviewcontract.CompatibilityReviewRequest, recordedAt string) (model.IssueOpsRecord, error) {
 	review, err := reviewdomain.ValidateCompatibilityReview(req, recordedAt)
 	if err != nil {
 		return model.IssueOpsRecord{OK: false}, err

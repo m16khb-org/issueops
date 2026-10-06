@@ -1,7 +1,7 @@
 package benchmark
 
 import (
-	issueopscontract "issueops/internal/contract/issueops"
+	benchmark "issueops/internal/contract/issueopsbenchmark"
 	"strings"
 	"testing"
 )
@@ -12,21 +12,21 @@ const coddKeywordEvidence = "Schema/row count: orders has 12M rows\nEXPLAIN evid
 // Same-entry pairing: the expected (phase,skill) must match ONE trace entry on
 // BOTH fields. A trace with the right skill at the WRONG phase must fail.
 func TestSkillRoutingFidelitySameEntryPairing(t *testing.T) {
-	fixture := issueopscontract.IssueOpsBenchmarkFixture{ExpectedRouting: []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}}}
+	fixture := benchmark.IssueOpsBenchmarkFixture{ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}}
 
-	matched := issueopscontract.IssueOpsBenchmarkArtifact{RoutingTrace: []issueopscontract.SkillRouting{{Phase: "Plan", Skill: "DATABASE-DESIGN"}}}
+	matched := benchmark.IssueOpsBenchmarkArtifact{RoutingTrace: []benchmark.SkillRouting{{Phase: "Plan", Skill: "DATABASE-DESIGN"}}}
 	if !issueOpsSkillRoutingFidelityComplete(fixture, matched) {
 		t.Fatal("case-insensitive same-entry pairing must pass")
 	}
 
 	// 'plan' present (from debugging entry) and 'database-design' present (from review entry),
 	// but database-design never fired at plan -> must FAIL same-entry pairing.
-	crossPaired := issueopscontract.IssueOpsBenchmarkArtifact{RoutingTrace: []issueopscontract.SkillRouting{{Phase: "plan", Skill: "issueops-debugging"}, {Phase: "review", Skill: "database-design"}}}
+	crossPaired := benchmark.IssueOpsBenchmarkArtifact{RoutingTrace: []benchmark.SkillRouting{{Phase: "plan", Skill: "issueops-debugging"}, {Phase: "review", Skill: "database-design"}}}
 	if issueOpsSkillRoutingFidelityComplete(fixture, crossPaired) {
 		t.Fatal("cross-paired trace (right skill at wrong phase) must FAIL same-entry pairing")
 	}
 
-	if issueOpsSkillRoutingFidelityComplete(fixture, issueopscontract.IssueOpsBenchmarkArtifact{}) {
+	if issueOpsSkillRoutingFidelityComplete(fixture, benchmark.IssueOpsBenchmarkArtifact{}) {
 		t.Fatal("empty trace must fail when routing is expected")
 	}
 }
@@ -34,7 +34,7 @@ func TestSkillRoutingFidelitySameEntryPairing(t *testing.T) {
 // Direction A: a fixture WITHOUT expected_routing keeps pre-dimension scores
 // (true N/A: excluded from average/minimum/Passed) while still recorded.
 func TestRoutingDimensionNAExcludedForNonRoutingFixture(t *testing.T) {
-	fixture := issueopscontract.IssueOpsBenchmarkFixture{ID: "fixture"}
+	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "fixture"}
 	score := ScoreIssueOpsBenchmarkArtifact(fixture, completeBenchmarkArtifactForTest())
 
 	if score.AverageScore != 100 || score.MinimumScore != 100 || !score.Passed {
@@ -57,7 +57,7 @@ func TestRoutingDimensionNAExcludedForNonRoutingFixture(t *testing.T) {
 // Direction B (silent-no-op guard): a routing fixture with an empty trace must
 // actually participate — minimum drops to 0 and a routing failure is recorded.
 func TestRoutingDimensionParticipatesForRoutingFixture(t *testing.T) {
-	fixture := issueopscontract.IssueOpsBenchmarkFixture{ID: "f", ExpectedRouting: []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}}}
+	fixture := benchmark.IssueOpsBenchmarkFixture{ID: "f", ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}}
 	score := ScoreIssueOpsBenchmarkArtifact(fixture, completeBenchmarkArtifactForTest())
 
 	if score.MinimumScore != 0 || score.Passed {
@@ -79,16 +79,16 @@ func TestRoutingDimensionParticipatesForRoutingFixture(t *testing.T) {
 // ONLY the routing critical rule (not "skips pioneer method"), isolating the two
 // axes so the ONLY thing distinguishing tampered from clean is routing.
 func TestSkillRoutingFidelityCatchesKeywordWithoutRouting(t *testing.T) {
-	fixture := issueopscontract.IssueOpsBenchmarkFixture{
+	fixture := benchmark.IssueOpsBenchmarkFixture{
 		ID:                 "routing-boundary",
 		PioneerSkillTarget: "database-design",
-		ExpectedRouting:    []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}},
+		ExpectedRouting:    []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}},
 		CriticalFailures:   []string{"skips expected routing"},
 	}
 
 	clean := completeBenchmarkArtifactForTest()
 	clean.PioneerSkillEvidence = coddKeywordEvidence
-	clean.RoutingTrace = []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}}
+	clean.RoutingTrace = []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}}
 	cleanScore := ScoreIssueOpsBenchmarkArtifact(fixture, clean)
 
 	if dimScore(cleanScore, "skill_routing_fidelity") != 100 {
@@ -131,7 +131,7 @@ func TestSkillRoutingFidelityCatchesKeywordWithoutRouting(t *testing.T) {
 	}
 }
 
-func dimScore(score IssueOpsBenchmarkScore, dimension string) float64 {
+func dimScore(score benchmark.IssueOpsBenchmarkScore, dimension string) float64 {
 	for _, dim := range score.DimensionScores {
 		if dim.Dimension == dimension {
 			return dim.Score

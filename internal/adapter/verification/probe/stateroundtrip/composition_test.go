@@ -15,7 +15,7 @@ import (
 )
 
 func testValidator() Validator {
-	store := app.SnapshotStore{NormalizeKey: statestore.NormalizeStateKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
+	store := app.SnapshotStore{NormalizeKey: statepath.NormalizeKey, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {
 		return statestore.WriteStateRecord(context.Background(), dir, key, record)
 	}, Now: time.Now}
 	return Validator{StateRead: readProbeState, WriteRecord: func(dir, key string, record statecontract.RecordEnvelope) (string, error) {

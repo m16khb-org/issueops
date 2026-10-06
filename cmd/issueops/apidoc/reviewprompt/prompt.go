@@ -16,7 +16,7 @@ func Build(files []string, diff, extraPrompt, evidence string) string {
 	}
 	return prompt.BuildStructuredPrompt(prompt.StructuredPromptSpec{
 		Identity:  "You are a strict, framework-agnostic pre-commit reviewer for API documentation contract drift.",
-		Objective: "Review the provided diff/content for the listed files, then inspect the directly related endpoint/controller/handler, DTO/schema, service/usecase, and error-mapping code needed to understand the public API contract. Do not fail unrelated legacy debt outside the changed endpoint/DTO/API surface.",
+		Objective: "Review the provided diff/content for the listed files, then inspect the directly related endpoint/controller/handler, DTO/schema, service/usecase, and error-mapping code needed to understand the public API contract. Do not fail unrelated pre-existing debt outside the changed endpoint/DTO/API surface.",
 		Phases: []string{
 			"Scan the changed API surface and directly related public contract code.",
 			"Compare the documentation against the target project's existing framework and style.",
@@ -48,7 +48,7 @@ func Build(files []string, diff, extraPrompt, evidence string) string {
 		},
 		VerificationChecklist: []string{
 			"Every blocking finding cites a file and line when available.",
-			"The verdict ignores unrelated legacy documentation debt.",
+			"The verdict ignores unrelated pre-existing documentation debt.",
 			"Business-logic public error contracts visible from the change were considered.",
 			"Every error type in the evidence section was cross-checked against the documented responses for the endpoint that reaches it.",
 			"The output is strict JSON with no prose or Markdown wrapper.",

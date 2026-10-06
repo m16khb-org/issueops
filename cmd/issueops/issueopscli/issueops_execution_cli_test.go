@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"io"
 	"issueops/cmd/issueops/issueopscli/remotecmd"
-	issueopsport "issueops/internal/port"
+	executionissue "issueops/internal/contract/executionissue"
+	shelltoken "issueops/internal/domain/shelltoken"
 
 	"issueops/cmd/issueops/mcpcli"
 	ownerdomain "issueops/internal/domain/issueops"
@@ -29,7 +30,6 @@ import (
 	commandparsecontract "issueops/internal/contract/commandparse"
 
 	issueopscontract "issueops/internal/contract/issueops"
-	"issueops/internal/domain/commandparse"
 
 	provenanceport "issueops/internal/port/issueopsprovenance"
 )
@@ -172,7 +172,7 @@ func TestIssueOpsExecutionStatusProjectsActorFreeResumeCommand(t *testing.T) {
 }
 
 func sameGeneratedExecutionCommand(got, raw string, generation uint64) bool {
-	tokens := commandparse.SplitCommandTokens(got)
+	tokens := shelltoken.SplitCommandTokens(got)
 	if len(tokens) < 2 {
 		return false
 	}
@@ -180,7 +180,7 @@ func sameGeneratedExecutionCommand(got, raw string, generation uint64) bool {
 	if err != nil || !present || provenance.LeaseGeneration != generation || tokens[0] != provenance.ExecutablePath {
 		return false
 	}
-	want := commandparse.SplitCommandTokens(raw)
+	want := shelltoken.SplitCommandTokens(raw)
 	return len(want) > 1 && strings.Join(clean, "\x00") == strings.Join(want[1:], "\x00")
 }
 
@@ -271,7 +271,7 @@ func TestIssueOpsExecutionPrepareCLIFailsClosedWithoutHandler(t *testing.T) {
 
 func executionCLIPrepareHandler(t *testing.T) issueopscontract.ExecutionPrepareHandler {
 	t.Helper()
-	return func(_ context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, _ issueopsport.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
+	return func(_ context.Context, stateRoot string, request issueopscontract.ExecutionPrepareRequest, _ executionissue.ExecutionPrepareInvocation) (issueopscontract.ExecutionPrepareResult, error) {
 		record, err := issueopscore.ReadIssueOps(stateRoot, request.ID)
 		if err != nil {
 			return issueopscontract.ExecutionPrepareResult{ID: request.ID}, err

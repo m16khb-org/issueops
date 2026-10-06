@@ -12,7 +12,7 @@ func TestValidateReconcileSnapshotPreservesAuthority(t *testing.T) {
 	current := preparationcontract.Record{
 		ID: "io-1", IssueURL: "https://github.com/example/repo/issues/193",
 		BranchPrepare: []byte(`{"provider":"github","issue_url":"https://github.com/example/repo/issues/193"}`),
-		Execution:     &preparationcontract.Execution{Mode: "orca", Pending: &leasecontract.ExternalIntent{OperationID: "op"}},
+		Execution:     &leasecontract.Execution{Mode: "orca", Pending: &leasecontract.ExternalIntent{OperationID: "op"}},
 	}
 	if err := ValidateReconcileSnapshot(current, current); err != nil {
 		t.Fatal(err)
@@ -23,7 +23,7 @@ func TestValidateReconcileSnapshotPreservesAuthority(t *testing.T) {
 		t.Fatalf("equivalent branch evidence rejected: %v", err)
 	}
 	stale := current
-	stale.Execution = &preparationcontract.Execution{Mode: "direct"}
+	stale.Execution = &leasecontract.Execution{Mode: "direct"}
 	if err := ValidateReconcileSnapshot(current, stale); err == nil || !strings.Contains(err.Error(), "orca_intent_authority_changed") {
 		t.Fatalf("stale authority error=%v", err)
 	}

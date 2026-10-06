@@ -4,16 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	statestore "issueops/internal/adapter/outbound/state"
+	contract "issueops/internal/contract/selfaugment"
 	statecontract "issueops/internal/contract/state"
 	"time"
 
 	application "issueops/internal/application/selfaugment"
 )
 
-func SaveSelfAugmentPlan(result *SelfAugmentPlanResult, key string) error {
+func SaveSelfAugmentPlan(result *contract.SelfAugmentPlanResult, key string) error {
 	return application.SavePlan(result, key, application.SavePlanDeps{
 		Now: time.Now,
-		Encode: func(snapshot SelfAugmentPlanStateSnapshot) ([]byte, error) {
+		Encode: func(snapshot contract.SelfAugmentPlanStateSnapshot) ([]byte, error) {
 			return json.MarshalIndent(snapshot, "", "  ")
 		},
 		Write: func(key, content string) (statecontract.StateResult, error) {

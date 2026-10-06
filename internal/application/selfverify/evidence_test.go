@@ -2,6 +2,7 @@ package selfverify
 
 import (
 	"encoding/json"
+	contract "issueops/internal/contract/selfverify"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 	"issueops/internal/adapter/verification"
 )
 
-func evidenceRunner(root, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+func evidenceRunner(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 	return verification.Run(root, label, timeout, stdin, 16384, name, args...)
 }
 
@@ -52,7 +53,7 @@ func TestGoldenFallbackRequiresActualPassingTests(t *testing.T) {
 				}
 				writeEvidenceFixture(t, filepath.Join(root, "cmd/issueops", pkg, "golden_test.go"), body)
 			}
-			result := CachedContractGoldenStep(StepResult{OK: false}, SelfVerifyStepDeps{IssueOpsRoot: func() string { return root }, RunCommandStep: evidenceRunner})
+			result := CachedContractGoldenStep(contract.StepResult{OK: false}, SelfVerifyStepDeps{IssueOpsRoot: func() string { return root }, RunCommandStep: evidenceRunner})
 			if result.OK != (mode == "pass") {
 				t.Fatalf("%s: %+v", mode, result)
 			}
@@ -98,12 +99,12 @@ func TestBinaryDriftUsesRealDoctorObservation(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			var raw StepResult
-			deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) StepResult {
+			var raw contract.StepResult
+			deps := SelfVerifyStepDeps{RunCommandStep: func(root, label string, timeout time.Duration, stdin, name string, args ...string) contract.StepResult {
 				raw = evidenceRunner(root, label, timeout, stdin, name, args...)
 				return raw
 			}}
-			var full StepResult
+			var full contract.StepResult
 			result := PlannedSteps(fixture, bin, 100, &full, deps)[8].Run()
 			if !raw.OK {
 				t.Fatalf("doctor exit contract changed: %+v", raw)
@@ -150,19 +151,19 @@ func TestBinaryDriftRejectsInvalidEvidenceAndPreservesCommandFailure(t *testing.
 		{"trailing", `{"checks":[{"name":"binary_drift","healthy":true}]} {}`, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			deps := SelfVerifyStepDeps{RunCommandStep: func(string, string, time.Duration, string, string, ...string) StepResult {
-				return StepResult{Label: "binary drift", OK: true, Stdout: tc.body}
+			deps := SelfVerifyStepDeps{RunCommandStep: func(string, string, time.Duration, string, string, ...string) contract.StepResult {
+				return contract.StepResult{Label: "binary drift", OK: true, Stdout: tc.body}
 			}}
-			var full StepResult
+			var full contract.StepResult
 			result := PlannedSteps("/repo", "/bin", 100, &full, deps)[8].Run()
 			if result.OK != tc.ok || (!tc.ok && result.Error == "") {
 				t.Fatalf("%s: %+v", tc.name, result)
 			}
 		})
 	}
-	original := StepResult{Label: "binary drift", OK: false, Error: "timeout after 10s", Stdout: "partial", DurationMS: 10000}
-	deps := SelfVerifyStepDeps{RunCommandStep: func(string, string, time.Duration, string, string, ...string) StepResult { return original }}
-	var full StepResult
+	original := contract.StepResult{Label: "binary drift", OK: false, Error: "timeout after 10s", Stdout: "partial", DurationMS: 10000}
+	deps := SelfVerifyStepDeps{RunCommandStep: func(string, string, time.Duration, string, string, ...string) contract.StepResult { return original }}
+	var full contract.StepResult
 	if got := PlannedSteps("/repo", "/bin", 100, &full, deps)[8].Run(); !reflect.DeepEqual(got, original) {
 		t.Fatalf("command failure changed: %+v", got)
 	}
@@ -198,10 +199,10 @@ func TestGoldenFallbackRejectsIncompleteJSONEvidence(t *testing.T) {
 		{"empty", "", false, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			deps := SelfVerifyStepDeps{IssueOpsRoot: func() string { return "/repo" }, RunCommandStep: func(string, string, time.Duration, string, string, ...string) StepResult {
-				return StepResult{OK: true, Stdout: tc.body, StdoutTruncated: tc.truncated}
+			deps := SelfVerifyStepDeps{IssueOpsRoot: func() string { return "/repo" }, RunCommandStep: func(string, string, time.Duration, string, string, ...string) contract.StepResult {
+				return contract.StepResult{OK: true, Stdout: tc.body, StdoutTruncated: tc.truncated}
 			}}
-			got := CachedContractGoldenStep(StepResult{OK: false}, deps)
+			got := CachedContractGoldenStep(contract.StepResult{OK: false}, deps)
 			if got.OK != tc.ok || (!tc.ok && got.Error == "") {
 				t.Fatalf("%s: %+v", tc.name, got)
 			}

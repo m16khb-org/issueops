@@ -2,6 +2,7 @@ package feedbackcleanup
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"testing"
 
 	issueopscore "issueops/internal/adapter/issueops"
@@ -98,8 +99,8 @@ func (fakeCleanupAbandonProvider) Name() string { return "github" }
 func (fakeCleanupAbandonProvider) CreateIssue(port.IssueProviderCreateIssueRequest) (port.IssueProviderCreateIssueResult, error) {
 	return port.IssueProviderCreateIssueResult{}, nil
 }
-func (fakeCleanupAbandonProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (port.IssueProviderCreatePullRequestResult, error) {
-	return port.IssueProviderCreatePullRequestResult{}, nil
+func (fakeCleanupAbandonProvider) CreatePullRequest(port.IssueProviderCreatePullRequestRequest) (executionissue.IssueProviderCreatePullRequestResult, error) {
+	return executionissue.IssueProviderCreatePullRequestResult{}, nil
 }
 func (fakeCleanupAbandonProvider) CreateChild(port.IssueProviderCreateChildRequest) (port.IssueProviderCreateChildResult, error) {
 	return port.IssueProviderCreateChildResult{}, nil

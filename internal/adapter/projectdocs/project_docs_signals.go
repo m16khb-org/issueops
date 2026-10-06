@@ -9,9 +9,9 @@ import (
 func AnalyzeProjectSignals(root string) projectdoc.ProjectSignals {
 	files := listInterestingFiles(root)
 	s := projectdoc.ProjectSignals{Files: files}
-	addLang := func(v string) { s.Languages = appendUnique(s.Languages, v) }
-	addPM := func(v string) { s.PackageManagers = appendUnique(s.PackageManagers, v) }
-	addConvention := func(v string) { s.DetectedConventions = appendUnique(s.DetectedConventions, v) }
+	addLang := func(v string) { s.Languages = projectdoc.AppendUnique(s.Languages, v) }
+	addPM := func(v string) { s.PackageManagers = projectdoc.AppendUnique(s.PackageManagers, v) }
+	addConvention := func(v string) { s.DetectedConventions = projectdoc.AppendUnique(s.DetectedConventions, v) }
 	for _, rel := range files {
 		switch rel {
 		case "go.mod":
@@ -41,7 +41,7 @@ func AnalyzeProjectSignals(root string) projectdoc.ProjectSignals {
 		case "Taskfile.yml", "Taskfile.yaml":
 			addConvention("Taskfile exists; prefer documented task targets when present")
 		case "AGENTS.md", "CLAUDE.md":
-			s.ExistingAgentDocs = appendUnique(s.ExistingAgentDocs, rel)
+			s.ExistingAgentDocs = projectdoc.AppendUnique(s.ExistingAgentDocs, rel)
 		}
 		switch {
 		case rel != "go.mod" && strings.HasSuffix(rel, "/go.mod"):
@@ -57,7 +57,7 @@ func AnalyzeProjectSignals(root string) projectdoc.ProjectSignals {
 			addPM("cargo")
 		}
 		if strings.HasPrefix(rel, ".github/workflows/") {
-			s.GitHubWorkflows = appendUnique(s.GitHubWorkflows, rel)
+			s.GitHubWorkflows = projectdoc.AppendUnique(s.GitHubWorkflows, rel)
 		}
 	}
 	sort.Strings(s.Languages)

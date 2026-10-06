@@ -16,7 +16,7 @@ func TestNewSelfVerificationSummarySnapshotCopiesResultFields(t *testing.T) {
 	generatedAt := time.Date(2026, 6, 6, 1, 2, 3, 4, time.UTC)
 	result := selfVerificationSummaryResultForSaveTest()
 
-	snapshot := NewSelfVerificationSummarySnapshot(result, generatedAt)
+	snapshot := augmentdomain.NewSelfVerificationSummarySnapshot(result, generatedAt)
 
 	if snapshot.SchemaVersion != 1 ||
 		snapshot.Kind != augmentdomain.SelfVerificationSummaryKind ||
@@ -53,7 +53,7 @@ func TestSaveSelfVerificationSummaryWritesDefaultKeyAndRejectsInvalidKey(t *test
 	if err != nil {
 		t.Fatalf("read saved summary: %v", err)
 	}
-	var snapshot SelfAugmentStateSnapshot
+	var snapshot augmentcontract.SelfAugmentStateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("decode saved summary: %v\n%s", err, state.Record.Content)
 	}
@@ -91,7 +91,7 @@ func TestSaveSelfAugmentSummary(t *testing.T) {
 			StepLabels:  []string{"go test"},
 		},
 	}
-	if err := SaveSelfAugmentSummary(&result, "self-verify-test"); err != nil {
+	if err := SaveSelfVerificationSummary(&result, "self-verify-test"); err != nil {
 		t.Fatalf("SaveSelfAugmentSummary: %v", err)
 	}
 	if result.StateCheckpoint == nil || !result.StateCheckpoint.OK {
@@ -104,7 +104,7 @@ func TestSaveSelfAugmentSummary(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StateRead: %v", err)
 	}
-	var snapshot SelfAugmentStateSnapshot
+	var snapshot augmentcontract.SelfAugmentStateSnapshot
 	if err := json.Unmarshal([]byte(state.Record.Content), &snapshot); err != nil {
 		t.Fatalf("unmarshal saved snapshot: %v", err)
 	}
@@ -113,8 +113,8 @@ func TestSaveSelfAugmentSummary(t *testing.T) {
 	}
 }
 
-func selfVerificationSummaryResultForSaveTest() SelfAugmentResult {
-	return SelfAugmentResult{
+func selfVerificationSummaryResultForSaveTest() augmentcontract.SelfAugmentResult {
+	return augmentcontract.SelfAugmentResult{
 		OK:           true,
 		LoopKind:     "self_verification",
 		KoreanName:   augmentcontract.SelfVerificationKoreanName,

@@ -4,23 +4,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"strings"
 
 	"issueops/internal/adapter/provider/providerutil"
 	"issueops/internal/port"
 )
 
-func (Provider) ReadIssueSnapshot(ctx context.Context, req port.ExecutionIssueSnapshotRequest) (port.ExecutionIssueSnapshot, error) {
+func (Provider) ReadIssueSnapshot(ctx context.Context, req executionissue.ExecutionIssueSnapshotRequest) (executionissue.ExecutionIssueSnapshot, error) {
 	if err := ctx.Err(); err != nil {
-		return port.ExecutionIssueSnapshot{}, err
+		return executionissue.ExecutionIssueSnapshot{}, err
 	}
 	issueURL := strings.TrimSpace(req.URL)
 	if issueURL == "" {
-		return port.ExecutionIssueSnapshot{}, fmt.Errorf("issue URL is required")
+		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("issue URL is required")
 	}
 	out, err := providerutil.RunBoundedReadbackContext(ctx, req.Repo, "gh", "issue", "view", issueURL, "--json", "url,body,state")
 	if err != nil {
-		return port.ExecutionIssueSnapshot{}, fmt.Errorf("gh issue snapshot read failed: %w", err)
+		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("gh issue snapshot read failed: %w", err)
 	}
 	var payload struct {
 		URL   string `json:"url"`
@@ -28,12 +29,12 @@ func (Provider) ReadIssueSnapshot(ctx context.Context, req port.ExecutionIssueSn
 		State string `json:"state"`
 	}
 	if err := json.Unmarshal(out, &payload); err != nil {
-		return port.ExecutionIssueSnapshot{}, fmt.Errorf("parse gh issue snapshot: %w", err)
+		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("parse gh issue snapshot: %w", err)
 	}
 	if strings.TrimSpace(payload.URL) != issueURL {
-		return port.ExecutionIssueSnapshot{}, fmt.Errorf("gh issue snapshot URL does not match the linked issue")
+		return executionissue.ExecutionIssueSnapshot{}, fmt.Errorf("gh issue snapshot URL does not match the linked issue")
 	}
-	return port.ExecutionIssueSnapshot{URL: issueURL, Body: payload.Body, State: payload.State}, nil
+	return executionissue.ExecutionIssueSnapshot{URL: issueURL, Body: payload.Body, State: payload.State}, nil
 }
 
 var _ port.ExecutionIssueSnapshotReader = Provider{}

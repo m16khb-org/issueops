@@ -1,50 +1,61 @@
 package operationalhealth
 
 import (
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"testing"
 	"time"
 )
 
 func TestEvaluateCycleAuthorityUsesExecutionLease(t *testing.T) {
-	base := Cycle{
+	base := operationalhealthcontract.Cycle{
 		ID: "io-v1", Repo: "/repo", Branch: "69-v1", Phase: "implement",
 		ExecutionMode: "direct", LeaseStatus: "active", Generation: 1,
 		WorktreePath: "/repo.worktrees/69-v1", HolderHost: "codex", HolderSessionID: "session",
 		HolderPID: 123, HolderStartedAt: "2026-07-22T00:00:00Z", HolderExecutable: "/opt/codex",
-		HolderProcessStatus: ProcessStatusLive,
+		HolderProcessStatus: operationalhealthcontract.ProcessStatusLive,
 	}
 	tests := []struct {
 		name  string
-		cycle Cycle
-		want  CycleAuthority
+		cycle operationalhealthcontract.Cycle
+		want  operationalhealthcontract.CycleAuthority
 	}{
-		{name: "planning", cycle: Cycle{ID: "io-plan", Repo: "/repo", Branch: "69-plan", Phase: "plan"}, want: AuthorityPreserved},
+		{name: "planning", cycle: operationalhealthcontract.Cycle{ID: "io-plan", Repo: "/repo", Branch: "69-plan", Phase: "plan"}, want: AuthorityPreserved},
 		{name: "active", cycle: base, want: AuthorityLive},
-		{name: "active dead process", cycle: withCycle(base, func(c *Cycle) { c.HolderProcessStatus = ProcessStatusDead }), want: AuthorityDead},
-		{name: "active reused pid", cycle: withCycle(base, func(c *Cycle) { c.HolderProcessStatus = ProcessStatusIdentityMismatch }), want: AuthorityDead},
-		{name: "active probe unknown", cycle: withCycle(base, func(c *Cycle) { c.HolderProcessStatus = ProcessStatusUnknown }), want: AuthorityUnknown},
-		{name: "active missing process", cycle: withCycle(base, func(c *Cycle) { c.HolderPID = 0 }), want: AuthorityUnknown},
-		{name: "claimable", cycle: withCycle(base, func(c *Cycle) { c.LeaseStatus = "claimable"; clearCycleHolder(c) }), want: AuthorityPreserved},
-		{name: "revoking", cycle: withCycle(base, func(c *Cycle) { c.LeaseStatus = "revoking" }), want: AuthorityPreserved},
-		{name: "released", cycle: withCycle(base, func(c *Cycle) { c.LeaseStatus = "released"; clearCycleHolder(c) }), want: AuthorityPreserved},
-		{name: "done", cycle: withCycle(base, func(c *Cycle) {
+		{name: "active dead process", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) {
+			c.HolderProcessStatus = operationalhealthcontract.ProcessStatusDead
+		}), want: operationalhealthcontract.AuthorityDead},
+		{name: "active reused pid", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) {
+			c.HolderProcessStatus = operationalhealthcontract.ProcessStatusIdentityMismatch
+		}), want: operationalhealthcontract.AuthorityDead},
+		{name: "active probe unknown", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) {
+			c.HolderProcessStatus = operationalhealthcontract.ProcessStatusUnknown
+		}), want: AuthorityUnknown},
+		{name: "active missing process", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) { c.HolderPID = 0 }), want: AuthorityUnknown},
+		{name: "claimable", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) { c.LeaseStatus = "claimable"; clearCycleHolder(c) }), want: AuthorityPreserved},
+		{name: "revoking", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) { c.LeaseStatus = "revoking" }), want: AuthorityPreserved},
+		{name: "released", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) { c.LeaseStatus = "released"; clearCycleHolder(c) }), want: AuthorityPreserved},
+		{name: "done", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) {
 			c.Phase = "done"
 			c.LeaseStatus = "released"
 			c.CompletionPresent = true
 			clearCycleHolder(c)
-		}), want: AuthorityDead},
-		{name: "done active lease", cycle: withCycle(base, func(c *Cycle) { c.Phase = "done"; c.CompletionPresent = true }), want: AuthorityUnknown},
-		{name: "done missing completion", cycle: withCycle(base, func(c *Cycle) { c.Phase = "done"; c.LeaseStatus = "released"; clearCycleHolder(c) }), want: AuthorityUnknown},
-		{name: "invalid lease state", cycle: withCycle(base, func(c *Cycle) { c.LeaseStatus = "owner_active" }), want: AuthorityUnknown},
-		{name: "invalid mode", cycle: withCycle(base, func(c *Cycle) { c.ExecutionMode = "inline" }), want: AuthorityUnknown},
-		{name: "orca missing binding", cycle: withCycle(base, func(c *Cycle) { c.ExecutionMode = "orca" }), want: AuthorityUnknown},
-		{name: "orca active", cycle: withCycle(base, func(c *Cycle) {
+		}), want: operationalhealthcontract.AuthorityDead},
+		{name: "done active lease", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) { c.Phase = "done"; c.CompletionPresent = true }), want: AuthorityUnknown},
+		{name: "done missing completion", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) {
+			c.Phase = "done"
+			c.LeaseStatus = "released"
+			clearCycleHolder(c)
+		}), want: AuthorityUnknown},
+		{name: "invalid lease state", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) { c.LeaseStatus = "owner_active" }), want: AuthorityUnknown},
+		{name: "invalid mode", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) { c.ExecutionMode = "inline" }), want: AuthorityUnknown},
+		{name: "orca missing binding", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) { c.ExecutionMode = "orca" }), want: AuthorityUnknown},
+		{name: "orca active", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) {
 			c.ExecutionMode = "orca"
 			c.OrcaRuntimeID, c.OrcaRepoID, c.OrcaWorktreeID = "runtime", "repo-id", "worktree-id"
 			c.OrcaOwnerHost = "codex"
 			c.TerminalPTYID, c.TaskID, c.DispatchID = "pty-id", "task-id", "dispatch-id"
 		}), want: AuthorityLive},
-		{name: "orca owner host mismatch", cycle: withCycle(base, func(c *Cycle) {
+		{name: "orca owner host mismatch", cycle: withCycle(base, func(c *operationalhealthcontract.Cycle) {
 			c.ExecutionMode = "orca"
 			c.OrcaRuntimeID, c.OrcaRepoID, c.OrcaWorktreeID = "runtime", "repo-id", "worktree-id"
 			c.OrcaOwnerHost, c.TaskID, c.DispatchID = "claude", "task-id", "dispatch-id"
@@ -71,7 +82,7 @@ func TestClassifyRequiresExactLeaseHolderIndex(t *testing.T) {
 	}{
 		{name: "missing", mutate: func(snapshot *Snapshot) { snapshot.LeaseHolderIndexes = nil }},
 		{name: "orphan", mutate: func(snapshot *Snapshot) {
-			snapshot.LeaseHolderIndexes = append(snapshot.LeaseHolderIndexes, LeaseHolderIndex{Key: "orphan", LifecycleID: "io-orphan", Generation: 1, Host: "codex", SessionID: "other"})
+			snapshot.LeaseHolderIndexes = append(snapshot.LeaseHolderIndexes, operationalhealthcontract.LeaseHolderIndex{Key: "orphan", LifecycleID: "io-orphan", Generation: 1, Host: "codex", SessionID: "other"})
 		}},
 		{name: "stale generation", mutate: func(snapshot *Snapshot) { snapshot.LeaseHolderIndexes[0].Generation++ }},
 		{name: "wrong actor", mutate: func(snapshot *Snapshot) { snapshot.LeaseHolderIndexes[0].SessionID = "other" }},
@@ -83,11 +94,11 @@ func TestClassifyRequiresExactLeaseHolderIndex(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			snapshot := base
-			snapshot.Cycles = append([]Cycle(nil), base.Cycles...)
-			snapshot.LeaseHolderIndexes = append([]LeaseHolderIndex(nil), base.LeaseHolderIndexes...)
+			snapshot.Cycles = append([]operationalhealthcontract.Cycle(nil), base.Cycles...)
+			snapshot.LeaseHolderIndexes = append([]operationalhealthcontract.LeaseHolderIndex(nil), base.LeaseHolderIndexes...)
 			test.mutate(&snapshot)
 			result := Classify(snapshot, Options{Now: time.Now()})
-			if !hasFinding(result, FindingInventoryUnknown, "lease_holder") {
+			if !hasFinding(result, operationalhealthcontract.FindingInventoryUnknown, "lease_holder") {
 				t.Fatalf("findings = %#v, want lease-holder inventory failure", result.Findings)
 			}
 		})
@@ -128,10 +139,10 @@ func TestClassifyRejectsOneNativeSessionOwningTwoActiveCycles(t *testing.T) {
 	second.Branch = "70-v1"
 	second.WorktreePath = "/repo.worktrees/70-v1"
 	snapshot.Cycles = append(snapshot.Cycles, second)
-	snapshot.GitWorktrees = append(snapshot.GitWorktrees, GitWorktree{Path: second.WorktreePath, Branch: second.Branch, Head: snapshot.SourceHead, Clean: true})
-	snapshot.LeaseHolderIndexes = append(snapshot.LeaseHolderIndexes, LeaseHolderIndex{Key: "second", LifecycleID: second.ID, Generation: second.Generation, Host: second.HolderHost, SessionID: second.HolderSessionID})
+	snapshot.GitWorktrees = append(snapshot.GitWorktrees, operationalhealthcontract.GitWorktree{Path: second.WorktreePath, Branch: second.Branch, Head: snapshot.SourceHead, Clean: true})
+	snapshot.LeaseHolderIndexes = append(snapshot.LeaseHolderIndexes, operationalhealthcontract.LeaseHolderIndex{Key: "second", LifecycleID: second.ID, Generation: second.Generation, Host: second.HolderHost, SessionID: second.HolderSessionID})
 	result := Classify(snapshot, Options{Now: time.Now()})
-	if !hasFinding(result, FindingInventoryUnknown, "lease_holder") {
+	if !hasFinding(result, operationalhealthcontract.FindingInventoryUnknown, "lease_holder") {
 		t.Fatalf("findings = %#v, want duplicate native-session finding", result.Findings)
 	}
 }
@@ -152,14 +163,14 @@ func TestClassifyAcceptsOrcaOptionalInstanceAndPTY(t *testing.T) {
 	snapshot.OrcaObserved = true
 	snapshot.OrcaRuntimeID = "runtime"
 	snapshot.OrcaRepoID = "repo-id"
-	snapshot.OrcaWorktrees = []OrcaWorktree{
+	snapshot.OrcaWorktrees = []operationalhealthcontract.OrcaWorktree{
 		{RuntimeID: "runtime", RepoID: "repo-id", ID: "main-id", InstanceID: "main-instance", Repo: "/repo", Path: "/repo", Branch: "main", Head: snapshot.SourceHead},
 		{RuntimeID: "runtime", RepoID: "repo-id", ID: "worktree-id", InstanceID: "observed-instance", Repo: "/repo", Path: cycle.WorktreePath, Branch: cycle.Branch, Head: snapshot.SourceHead},
 	}
-	snapshot.Terminals = []OrcaTerminal{{RuntimeID: "runtime", Handle: "terminal", PTYID: "observed-pty", WorktreeID: "worktree-id", WorktreePath: cycle.WorktreePath, Connected: true, Writable: true}}
-	snapshot.Tasks = []OrcaTask{{RuntimeID: "runtime", RunID: "run-explicit", ID: "task-id", Status: "dispatched", DispatchID: "dispatch-id"}}
-	snapshot.Dispatches = []OrcaDispatch{{RuntimeID: "runtime", RunID: "run-explicit", ID: "dispatch-id", TaskID: "task-id", AssigneeHandle: "terminal", Status: "dispatched"}}
-	snapshot.Messages = MessagePresence{RuntimeID: "runtime", Empty: true, CompleteAbsence: true}
+	snapshot.Terminals = []operationalhealthcontract.OrcaTerminal{{RuntimeID: "runtime", Handle: "terminal", PTYID: "observed-pty", WorktreeID: "worktree-id", WorktreePath: cycle.WorktreePath, Connected: true, Writable: true}}
+	snapshot.Tasks = []operationalhealthcontract.OrcaTask{{RuntimeID: "runtime", RunID: "run-explicit", ID: "task-id", Status: "dispatched", DispatchID: "dispatch-id"}}
+	snapshot.Dispatches = []operationalhealthcontract.OrcaDispatch{{RuntimeID: "runtime", RunID: "run-explicit", ID: "dispatch-id", TaskID: "task-id", AssigneeHandle: "terminal", Status: "dispatched"}}
+	snapshot.Messages = operationalhealthcontract.MessagePresence{RuntimeID: "runtime", Empty: true, CompleteAbsence: true}
 	if result := Classify(snapshot, Options{Now: time.Now()}); !result.Healthy {
 		t.Fatalf("optional Orca identities should be healthy: %#v", result.Findings)
 	}
@@ -167,28 +178,28 @@ func TestClassifyAcceptsOrcaOptionalInstanceAndPTY(t *testing.T) {
 
 func healthyDirectSnapshot() Snapshot {
 	const head = "0123456789abcdef0123456789abcdef01234567"
-	cycle := Cycle{
+	cycle := operationalhealthcontract.Cycle{
 		ID: "io-v1", Repo: "/repo", Branch: "69-v1", Phase: "implement",
 		ExecutionMode: "direct", LeaseStatus: "active", Generation: 1,
 		WorktreePath: "/repo.worktrees/69-v1", HolderHost: "codex", HolderSessionID: "session",
 		HolderPID: 123, HolderStartedAt: "2026-07-22T00:00:00Z", HolderExecutable: "/opt/codex",
-		HolderProcessStatus: ProcessStatusLive,
+		HolderProcessStatus: operationalhealthcontract.ProcessStatusLive,
 	}
 	return Snapshot{
 		RepoRoot: "/repo", CanonicalBranch: "main", SourceHead: head, SourceClean: true,
-		Cycles:             []Cycle{cycle},
-		LeaseHolderIndexes: []LeaseHolderIndex{{Key: "current", LifecycleID: cycle.ID, Generation: cycle.Generation, Host: cycle.HolderHost, SessionID: cycle.HolderSessionID}},
-		GitWorktrees: []GitWorktree{
+		Cycles:             []operationalhealthcontract.Cycle{cycle},
+		LeaseHolderIndexes: []operationalhealthcontract.LeaseHolderIndex{{Key: "current", LifecycleID: cycle.ID, Generation: cycle.Generation, Host: cycle.HolderHost, SessionID: cycle.HolderSessionID}},
+		GitWorktrees: []operationalhealthcontract.GitWorktree{
 			{Path: "/repo", Branch: "main", Head: head, Clean: true, Canonical: true},
 			{Path: cycle.WorktreePath, Branch: cycle.Branch, Head: head, Clean: true},
 		},
-		LocalRefs:  []GitRef{{Name: "refs/heads/main", Branch: "main", OID: head, Location: "local"}},
-		RemoteRefs: []GitRef{{Name: "refs/remotes/origin/main", Branch: "main", OID: head, Location: "remote"}},
-		Messages:   MessagePresence{Empty: true, CompleteAbsence: true},
+		LocalRefs:  []operationalhealthcontract.GitRef{{Name: "refs/heads/main", Branch: "main", OID: head, Location: "local"}},
+		RemoteRefs: []operationalhealthcontract.GitRef{{Name: "refs/remotes/origin/main", Branch: "main", OID: head, Location: "remote"}},
+		Messages:   operationalhealthcontract.MessagePresence{Empty: true, CompleteAbsence: true},
 	}
 }
 
-func hasFinding(result Result, code, kind string) bool {
+func hasFinding(result operationalhealthcontract.Result, code, kind string) bool {
 	for _, finding := range result.Findings {
 		if finding.Code == code && finding.ResourceKind == kind {
 			return true
@@ -210,7 +221,7 @@ func TestKnownExecutionLeaseStatesRejectRemovedStates(t *testing.T) {
 	}
 }
 
-func clearCycleHolder(cycle *Cycle) {
+func clearCycleHolder(cycle *operationalhealthcontract.Cycle) {
 	cycle.HolderHost = ""
 	cycle.HolderSessionID = ""
 	cycle.HolderAgentID = ""
@@ -220,7 +231,7 @@ func clearCycleHolder(cycle *Cycle) {
 	cycle.HolderProcessStatus = ""
 }
 
-func withCycle(cycle Cycle, mutate func(*Cycle)) Cycle {
+func withCycle(cycle operationalhealthcontract.Cycle, mutate func(*operationalhealthcontract.Cycle)) operationalhealthcontract.Cycle {
 	mutate(&cycle)
 	return cycle
 }
@@ -229,17 +240,17 @@ func snapshotWithUserTerminalAndInboxHistory() Snapshot {
 	snapshot := healthyDirectSnapshot()
 	// A live Orca tab the user opened directly: no cycle references it, so it
 	// has no invocation owner, but it is not residue on a live desktop.
-	snapshot.Terminals = []OrcaTerminal{{RuntimeID: "runtime", Handle: "term_user_tab", WorktreePath: "/repo", Connected: true, Writable: true}}
-	snapshot.Messages = MessagePresence{Count: 3}
+	snapshot.Terminals = []operationalhealthcontract.OrcaTerminal{{RuntimeID: "runtime", Handle: "term_user_tab", WorktreePath: "/repo", Connected: true, Writable: true}}
+	snapshot.Messages = operationalhealthcontract.MessagePresence{Count: 3}
 	return snapshot
 }
 
 func TestClassifyInteractiveProfileAcceptsUserTerminalsAndInboxHistory(t *testing.T) {
-	result := Classify(snapshotWithUserTerminalAndInboxHistory(), Options{Now: time.Now(), Profile: ProfileInteractive})
-	if hasFinding(result, FindingTerminalResidue, "terminal") {
+	result := Classify(snapshotWithUserTerminalAndInboxHistory(), Options{Now: time.Now(), Profile: operationalhealthcontract.ProfileInteractive})
+	if hasFinding(result, operationalhealthcontract.FindingTerminalResidue, "terminal") {
 		t.Fatalf("interactive profile must not flag an unowned live terminal: %+v", result.Findings)
 	}
-	if hasFinding(result, FindingMessageResidue, "message") {
+	if hasFinding(result, operationalhealthcontract.FindingMessageResidue, "message") {
 		t.Fatalf("interactive profile must not flag orchestration message history: %+v", result.Findings)
 	}
 	if !result.Healthy {
@@ -253,9 +264,9 @@ func TestClassifyInteractiveProfileAcceptsUserTerminalsAndInboxHistory(t *testin
 func TestClassifyExemptsSettledTasksFromOwnerRequirement(t *testing.T) {
 	for _, status := range []string{"completed", "failed"} {
 		snapshot := healthyDirectSnapshot()
-		snapshot.Tasks = []OrcaTask{{RuntimeID: "runtime", ID: "task-settled", Status: status, CompletedAt: time.Now().UTC()}}
+		snapshot.Tasks = []operationalhealthcontract.OrcaTask{{RuntimeID: "runtime", ID: "task-settled", Status: status, CompletedAt: time.Now().UTC()}}
 		result := Classify(snapshot, Options{Now: time.Now()})
-		if hasFinding(result, FindingTaskResidue, "task") {
+		if hasFinding(result, operationalhealthcontract.FindingTaskResidue, "task") {
 			t.Fatalf("settled %s task must not be task residue: %+v", status, result.Findings)
 		}
 	}
@@ -264,9 +275,9 @@ func TestClassifyExemptsSettledTasksFromOwnerRequirement(t *testing.T) {
 func TestClassifyStillFlagsUnsettledTasksWithoutOwner(t *testing.T) {
 	for _, status := range []string{"ready", "dispatched"} {
 		snapshot := healthyDirectSnapshot()
-		snapshot.Tasks = []OrcaTask{{RuntimeID: "runtime", ID: "task-open", Status: status}}
+		snapshot.Tasks = []operationalhealthcontract.OrcaTask{{RuntimeID: "runtime", ID: "task-open", Status: status}}
 		result := Classify(snapshot, Options{Now: time.Now()})
-		if !hasFinding(result, FindingTaskResidue, "task") {
+		if !hasFinding(result, operationalhealthcontract.FindingTaskResidue, "task") {
 			t.Fatalf("unsettled %s task without an owner must stay flagged: %+v", status, result.Findings)
 		}
 	}
@@ -275,9 +286,9 @@ func TestClassifyStillFlagsUnsettledTasksWithoutOwner(t *testing.T) {
 func TestClassifyKeepsReadyCompletionMetadataContradiction(t *testing.T) {
 	snapshot := healthyDirectSnapshot()
 	snapshot.Cycles[0].TaskID = "task-contradiction"
-	snapshot.Tasks = []OrcaTask{{RuntimeID: "runtime", ID: "task-contradiction", Status: "ready", HasResult: true}}
+	snapshot.Tasks = []operationalhealthcontract.OrcaTask{{RuntimeID: "runtime", ID: "task-contradiction", Status: "ready", HasResult: true}}
 	result := Classify(snapshot, Options{Now: time.Now()})
-	if !hasFinding(result, FindingTaskResidue, "task") {
+	if !hasFinding(result, operationalhealthcontract.FindingTaskResidue, "task") {
 		t.Fatalf("ready task carrying completion metadata must stay flagged even with an owner: %+v", result.Findings)
 	}
 }
@@ -285,13 +296,13 @@ func TestClassifyKeepsReadyCompletionMetadataContradiction(t *testing.T) {
 func TestClassifySealedProfileStillFlagsUnownedTerminalsAndMessages(t *testing.T) {
 	for _, opts := range []Options{
 		{Now: time.Now()},
-		{Now: time.Now(), Profile: ProfileSealed},
+		{Now: time.Now(), Profile: operationalhealthcontract.ProfileSealed},
 	} {
 		result := Classify(snapshotWithUserTerminalAndInboxHistory(), opts)
-		if !hasFinding(result, FindingTerminalResidue, "terminal") {
+		if !hasFinding(result, operationalhealthcontract.FindingTerminalResidue, "terminal") {
 			t.Fatalf("sealed/default profile must flag an unowned terminal: %+v", result.Findings)
 		}
-		if !hasFinding(result, FindingMessageResidue, "message") {
+		if !hasFinding(result, operationalhealthcontract.FindingMessageResidue, "message") {
 			t.Fatalf("sealed/default profile must flag inbox rows: %+v", result.Findings)
 		}
 	}
@@ -320,49 +331,49 @@ func TestClassifyFlagsOrcaInventoryIdentityDefects(t *testing.T) {
 		{
 			name: "worktree identity mismatch",
 			mutate: func(s *Snapshot) {
-				s.OrcaWorktrees = []OrcaWorktree{{RuntimeID: "other-runtime", RepoID: "repo", ID: "wt-1"}}
+				s.OrcaWorktrees = []operationalhealthcontract.OrcaWorktree{{RuntimeID: "other-runtime", RepoID: "repo", ID: "wt-1"}}
 			},
 			wantID: "wt-1",
 		},
 		{
 			name: "terminal runtime mismatch",
 			mutate: func(s *Snapshot) {
-				s.Terminals = []OrcaTerminal{{RuntimeID: "other-runtime", Handle: "term-1"}}
+				s.Terminals = []operationalhealthcontract.OrcaTerminal{{RuntimeID: "other-runtime", Handle: "term-1"}}
 			},
 			wantID: "term-1",
 		},
 		{
 			name: "task runtime mismatch",
 			mutate: func(s *Snapshot) {
-				s.Tasks = []OrcaTask{{RuntimeID: "other-runtime", ID: "task-1", Status: "running"}}
+				s.Tasks = []operationalhealthcontract.OrcaTask{{RuntimeID: "other-runtime", ID: "task-1", Status: "running"}}
 			},
 			wantID: "task-1",
 		},
 		{
 			name: "dispatch runtime mismatch",
 			mutate: func(s *Snapshot) {
-				s.Dispatches = []OrcaDispatch{{RuntimeID: "other-runtime", ID: "disp-1"}}
+				s.Dispatches = []operationalhealthcontract.OrcaDispatch{{RuntimeID: "other-runtime", ID: "disp-1"}}
 			},
 			wantID: "disp-1",
 		},
 		{
 			name: "gate runtime mismatch",
 			mutate: func(s *Snapshot) {
-				s.Gates = []OrcaGate{{RuntimeID: "other-runtime", ID: "gate-1"}}
+				s.Gates = []operationalhealthcontract.OrcaGate{{RuntimeID: "other-runtime", ID: "gate-1"}}
 			},
 			wantID: "gate-1",
 		},
 		{
 			name: "message presence runtime mismatch",
 			mutate: func(s *Snapshot) {
-				s.Messages = MessagePresence{RuntimeID: "other-runtime", Count: 3}
+				s.Messages = operationalhealthcontract.MessagePresence{RuntimeID: "other-runtime", Count: 3}
 			},
 			wantID: "inbox",
 		},
 		{
 			name: "inventory problem propagates",
 			mutate: func(s *Snapshot) {
-				s.InventoryProblems = []InventoryProblem{{Source: "ps", Code: "EIO", Detail: "probe failed"}}
+				s.InventoryProblems = []operationalhealthcontract.InventoryProblem{{Source: "ps", Code: "EIO", Detail: "probe failed"}}
 			},
 			wantID: "EIO",
 		},
@@ -377,7 +388,7 @@ func TestClassifyFlagsOrcaInventoryIdentityDefects(t *testing.T) {
 			result := Classify(snapshot, Options{Now: now})
 			found := false
 			for _, finding := range result.Findings {
-				if finding.Code == FindingInventoryUnknown && finding.ResourceID == test.wantID {
+				if finding.Code == operationalhealthcontract.FindingInventoryUnknown && finding.ResourceID == test.wantID {
 					found = true
 					break
 				}
@@ -394,7 +405,7 @@ func TestClassifyRequiresExplicitClock(t *testing.T) {
 	result := Classify(Snapshot{RepoRoot: "/repo"}, Options{})
 	found := false
 	for _, finding := range result.Findings {
-		if finding.Code == FindingInventoryUnknown && finding.ResourceID == "now" {
+		if finding.Code == operationalhealthcontract.FindingInventoryUnknown && finding.ResourceID == "now" {
 			found = true
 			break
 		}

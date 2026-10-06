@@ -1,6 +1,7 @@
 package issueops
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"strings"
 	"testing"
 
@@ -20,8 +21,8 @@ func TestBuildDelegatedProfileInheritsParentState(t *testing.T) {
 		DomainReview: &model.IssueOpsDomainReview{
 			ModelFit: "go", Terminology: []string{"term"}, Risks: []string{"risk"}, OpenUncertainties: []string{"u"},
 		},
-		DesignReview:        &model.IssueOpsDesignReview{Approved: false, Verification: []string{"v"}},
-		CompatibilityReview: &model.IssueOpsCompatibilityReview{Approved: false, Blockers: []string{"b"}},
+		DesignReview:        &reviewcontract.DesignReview{Approved: false, Verification: []string{"v"}},
+		CompatibilityReview: &reviewcontract.CompatibilityReview{Approved: false, Blockers: []string{"b"}},
 	}
 	child := model.IssueOpsRecord{OK: true, ID: "io-child", Repo: "/repo", Branch: "6001-child", Phase: model.IssueOpsPhaseProblem}
 	req := model.IssueOpsChildStartRequest{

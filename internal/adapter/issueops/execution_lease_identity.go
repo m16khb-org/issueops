@@ -18,7 +18,7 @@ func (NativeProcessInspector) Inspect(ctx context.Context, receipt issueops.Nati
 	if err := ctx.Err(); err != nil {
 		return NativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, err
 	}
-	return inspectNativeProcessReceipt(receipt)
+	return InspectNativeProcessReceipt(receipt)
 }
 
 // NativeActorVerifier proves callers only by observed native ancestry and the
@@ -71,5 +71,5 @@ func inspectNativeProcessReceiptForRollover(
 	if processSnapshot != nil {
 		return inspectNativeProcessReceiptFromSnapshot(receipt, processSnapshot)
 	}
-	return inspectNativeProcessReceipt(receipt)
+	return InspectNativeProcessReceipt(receipt)
 }

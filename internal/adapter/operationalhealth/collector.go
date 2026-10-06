@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,10 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/sync/errgroup"
 	issueopscontract "issueops/internal/contract/issueops"
 	corehealth "issueops/internal/domain/operationalhealth"
 	"issueops/internal/port"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type OrcaInventory interface {
@@ -106,7 +108,7 @@ func (collector Collector) Collect(ctx context.Context, repo string) corehealth.
 	repo = canonicalInventoryPath(repo)
 	snapshot := corehealth.Snapshot{
 		RepoRoot: repo,
-		Messages: corehealth.MessagePresence{Empty: true},
+		Messages: operationalhealthcontract.MessagePresence{Empty: true},
 	}
 	if repo == "" {
 		addProblem(&snapshot, "repo", "repo_invalid", "requested repository path is empty")
@@ -114,7 +116,7 @@ func (collector Collector) Collect(ctx context.Context, repo string) corehealth.
 	}
 	_, orcaOwned := collector.collectIssueOps(&snapshot)
 	gitSnapshot := corehealth.Snapshot{RepoRoot: repo}
-	orcaSnapshot := corehealth.Snapshot{RepoRoot: repo, Messages: corehealth.MessagePresence{Empty: true}}
+	orcaSnapshot := corehealth.Snapshot{RepoRoot: repo, Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 	reads, readCtx := errgroup.WithContext(ctx)
 	reads.Go(func() error {
 		collector.collectGit(readCtx, &gitSnapshot, true)
@@ -275,7 +277,7 @@ func (collector Collector) collectIssueOps(snapshot *corehealth.Snapshot) ([]iss
 		addProblem(snapshot, "issueops_lease_holder", "issueops_lease_holder_list_failed", "IssueOps active lease-holder index inventory failed")
 	} else {
 		for _, index := range indexes {
-			snapshot.LeaseHolderIndexes = append(snapshot.LeaseHolderIndexes, corehealth.LeaseHolderIndex{
+			snapshot.LeaseHolderIndexes = append(snapshot.LeaseHolderIndexes, operationalhealthcontract.LeaseHolderIndex{
 				Key: index.Key, LifecycleID: index.LifecycleID, Generation: index.Generation,
 				Host: index.Host, SessionID: index.SessionID, AgentID: index.AgentID,
 			})
@@ -334,7 +336,7 @@ func (collector Collector) collectOrca(ctx context.Context, snapshot *corehealth
 			if strings.TrimSpace(value.RuntimeID) != snapshot.OrcaRuntimeID || strings.TrimSpace(value.ID) == "" || strings.TrimSpace(value.InstanceID) == "" || canonicalInventoryPath(value.Path) == "" || (resolved.ID != "" && strings.TrimSpace(value.RepoID) != strings.TrimSpace(resolved.ID)) {
 				addProblem(snapshot, "orca_worktrees", "orca_worktree_identity_invalid", "Orca worktree identity is incomplete or mismatched")
 			}
-			snapshot.OrcaWorktrees = append(snapshot.OrcaWorktrees, corehealth.OrcaWorktree{
+			snapshot.OrcaWorktrees = append(snapshot.OrcaWorktrees, operationalhealthcontract.OrcaWorktree{
 				RuntimeID: value.RuntimeID, RepoID: value.RepoID, ID: value.ID, InstanceID: value.InstanceID, Repo: repoPath,
 				Path: canonicalInventoryPath(value.Path), Branch: strings.TrimSpace(value.Branch), Head: strings.TrimSpace(value.Head),
 			})
@@ -349,7 +351,7 @@ func (collector Collector) collectOrca(ctx context.Context, snapshot *corehealth
 			if strings.TrimSpace(value.RuntimeID) != snapshot.OrcaRuntimeID || strings.TrimSpace(value.Handle) == "" || strings.TrimSpace(value.PTYID) == "" || strings.TrimSpace(value.WorktreeID) == "" || strings.TrimSpace(value.TabID) == "" || strings.TrimSpace(value.LeafID) == "" {
 				addProblem(snapshot, "orca_terminals", "orca_terminal_identity_invalid", "Orca terminal identity is incomplete")
 			}
-			snapshot.Terminals = append(snapshot.Terminals, corehealth.OrcaTerminal{
+			snapshot.Terminals = append(snapshot.Terminals, operationalhealthcontract.OrcaTerminal{
 				RuntimeID: value.RuntimeID, Handle: value.Handle, PTYID: value.PTYID, TabID: value.TabID, LeafID: value.LeafID, WorktreeID: value.WorktreeID,
 				WorktreePath: canonicalInventoryPath(value.WorktreePath), Connected: value.Connected, Writable: value.Writable,
 			})
@@ -397,7 +399,7 @@ func (collector Collector) collectOrca(ctx context.Context, snapshot *corehealth
 		addProblem(snapshot, "orca_tasks", "orca_tasks_failed", "Orca task inventory failed")
 	} else {
 		for _, value := range tasks {
-			task := corehealth.OrcaTask{RuntimeID: strings.TrimSpace(value.RuntimeID), RunID: strings.TrimSpace(value.RunID), ID: strings.TrimSpace(value.ID), Status: strings.TrimSpace(value.Status), HasResult: value.HasResult}
+			task := operationalhealthcontract.OrcaTask{RuntimeID: strings.TrimSpace(value.RuntimeID), RunID: strings.TrimSpace(value.RunID), ID: strings.TrimSpace(value.ID), Status: strings.TrimSpace(value.Status), HasResult: value.HasResult}
 			if task.RuntimeID != snapshot.OrcaRuntimeID {
 				addProblem(snapshot, "orca_tasks", "orca_task_runtime_mismatch", "task "+task.ID+" runtime identity does not match")
 			}
@@ -444,7 +446,7 @@ func (collector Collector) collectOrca(ctx context.Context, snapshot *corehealth
 				addProblem(snapshot, "orca_dispatches", "orca_dispatch_failed", "could not resolve dispatch for task "+taskID)
 				continue
 			}
-			value := corehealth.OrcaDispatch{RuntimeID: strings.TrimSpace(dispatch.RuntimeID), RunID: strings.TrimSpace(task.RunID), ID: strings.TrimSpace(dispatch.ID), TaskID: strings.TrimSpace(dispatch.TaskID), AssigneeHandle: strings.TrimSpace(dispatch.AssigneeHandle), Status: strings.TrimSpace(dispatch.Status)}
+			value := operationalhealthcontract.OrcaDispatch{RuntimeID: strings.TrimSpace(dispatch.RuntimeID), RunID: strings.TrimSpace(task.RunID), ID: strings.TrimSpace(dispatch.ID), TaskID: strings.TrimSpace(dispatch.TaskID), AssigneeHandle: strings.TrimSpace(dispatch.AssigneeHandle), Status: strings.TrimSpace(dispatch.Status)}
 			if value.RuntimeID != snapshot.OrcaRuntimeID || value.ID == "" || value.TaskID != taskID || value.AssigneeHandle == "" || value.Status != "dispatched" {
 				addProblem(snapshot, "orca_dispatches", "orca_dispatch_identity_mismatch", "dispatch identity does not match task "+taskID)
 			}
@@ -463,7 +465,7 @@ func (collector Collector) collectOrca(ctx context.Context, snapshot *corehealth
 		addProblem(snapshot, "orca_gates", "orca_gates_failed", "Orca gate inventory failed")
 	} else {
 		for _, value := range gates {
-			gate := corehealth.OrcaGate{RuntimeID: strings.TrimSpace(value.RuntimeID), ID: strings.TrimSpace(value.ID), TaskID: strings.TrimSpace(value.TaskID), Status: strings.TrimSpace(value.Status)}
+			gate := operationalhealthcontract.OrcaGate{RuntimeID: strings.TrimSpace(value.RuntimeID), ID: strings.TrimSpace(value.ID), TaskID: strings.TrimSpace(value.TaskID), Status: strings.TrimSpace(value.Status)}
 			if gate.RuntimeID != snapshot.OrcaRuntimeID {
 				addProblem(snapshot, "orca_gates", "orca_gate_runtime_mismatch", "gate "+gate.ID+" runtime identity does not match")
 			}
@@ -474,26 +476,26 @@ func (collector Collector) collectOrca(ctx context.Context, snapshot *corehealth
 	if err != nil {
 		addProblem(snapshot, "orca_inbox", "orca_inbox_failed", "Orca inbox presence inventory failed")
 	} else {
-		snapshot.Messages = corehealth.MessagePresence{RuntimeID: strings.TrimSpace(inbox.RuntimeID), Count: inbox.Count, Empty: inbox.RowCount == 0, CompleteAbsence: inbox.CompleteAbsence}
+		snapshot.Messages = operationalhealthcontract.MessagePresence{RuntimeID: strings.TrimSpace(inbox.RuntimeID), Count: inbox.Count, Empty: inbox.RowCount == 0, CompleteAbsence: inbox.CompleteAbsence}
 		if snapshot.Messages.RuntimeID != snapshot.OrcaRuntimeID || inbox.Count != inbox.RowCount || inbox.RowCount < 0 || inbox.RowCount > 1 {
 			addProblem(snapshot, "orca_inbox", "orca_inbox_count_mismatch", "bounded Orca inbox count does not match returned rows")
 		}
 	}
 }
 
-func cycleFromRecord(record issueopscontract.IssueOpsRecord, inspect NativeProcessInspector) (corehealth.Cycle, []corehealth.InventoryProblem) {
+func cycleFromRecord(record issueopscontract.IssueOpsRecord, inspect NativeProcessInspector) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
 	return cycleFromRecordAt(record, inspect, time.Now().UTC())
 }
 
-func cycleFromRecordAt(record issueopscontract.IssueOpsRecord, inspect NativeProcessInspector, now time.Time) (corehealth.Cycle, []corehealth.InventoryProblem) {
-	cycle := corehealth.Cycle{
+func cycleFromRecordAt(record issueopscontract.IssueOpsRecord, inspect NativeProcessInspector, now time.Time) (operationalhealthcontract.Cycle, []operationalhealthcontract.InventoryProblem) {
+	cycle := operationalhealthcontract.Cycle{
 		ID: strings.TrimSpace(record.ID), Repo: canonicalInventoryPath(record.Repo), Branch: strings.TrimSpace(record.Branch),
 		Phase:                     string(record.Phase),
 		ExecutionFailurePresent:   record.Execution != nil && record.Execution.Failure != nil,
 		CleanupFailurePresent:     record.CleanupFinishFailure != nil || record.CleanupAbandonFailure != nil,
 		IssueCreateFailurePresent: issueCreateIntentNeedsReconciliationAt(record.IssueCreateIntent, now),
 	}
-	var problems []corehealth.InventoryProblem
+	var problems []operationalhealthcontract.InventoryProblem
 	worktreeConflict := false
 	mergeWorktreePath := func(raw string) {
 		path := canonicalInventoryPath(raw)
@@ -505,7 +507,7 @@ func cycleFromRecordAt(record issueopscontract.IssueOpsRecord, inspect NativePro
 			return
 		}
 		if cycle.WorktreePath != path && !worktreeConflict {
-			problems = append(problems, corehealth.InventoryProblem{Source: "issueops_record", Code: "issueops_worktree_identity_mismatch", Detail: "IssueOps record " + cycle.ID + " contains conflicting worktree paths"})
+			problems = append(problems, operationalhealthcontract.InventoryProblem{Source: "issueops_record", Code: "issueops_worktree_identity_mismatch", Detail: "IssueOps record " + cycle.ID + " contains conflicting worktree paths"})
 			worktreeConflict = true
 		}
 	}
@@ -532,8 +534,8 @@ func cycleFromRecordAt(record issueopscontract.IssueOpsRecord, inspect NativePro
 				status, _, err := inspect(receipt)
 				cycle.HolderProcessStatus = strings.TrimSpace(status)
 				if err != nil {
-					cycle.HolderProcessStatus = corehealth.ProcessStatusUnknown
-					problems = append(problems, corehealth.InventoryProblem{Source: "issueops_process", Code: "issueops_process_probe_failed", Detail: "IssueOps record " + cycle.ID + " native process identity could not be observed"})
+					cycle.HolderProcessStatus = operationalhealthcontract.ProcessStatusUnknown
+					problems = append(problems, operationalhealthcontract.InventoryProblem{Source: "issueops_process", Code: "issueops_process_probe_failed", Detail: "IssueOps record " + cycle.ID + " native process identity could not be observed"})
 				}
 			}
 		}
@@ -563,9 +565,9 @@ func recordOwnsOrca(record issueopscontract.IssueOpsRecord) bool {
 	return record.Execution != nil && record.Execution.Mode == issueopscontract.ExecutionModeOrca
 }
 
-func parseWorktrees(output []byte, repo string) ([]corehealth.GitWorktree, error) {
-	var result []corehealth.GitWorktree
-	current := corehealth.GitWorktree{}
+func parseWorktrees(output []byte, repo string) ([]operationalhealthcontract.GitWorktree, error) {
+	var result []operationalhealthcontract.GitWorktree
+	current := operationalhealthcontract.GitWorktree{}
 	flush := func() error {
 		if current.Path == "" {
 			if current.Head == "" && current.Branch == "" {
@@ -578,7 +580,7 @@ func parseWorktrees(output []byte, repo string) ([]corehealth.GitWorktree, error
 		}
 		current.Canonical = current.Path == repo
 		result = append(result, current)
-		current = corehealth.GitWorktree{}
+		current = operationalhealthcontract.GitWorktree{}
 		return nil
 	}
 	for _, raw := range bytes.Split(output, []byte{0}) {
@@ -605,7 +607,7 @@ func parseWorktrees(output []byte, repo string) ([]corehealth.GitWorktree, error
 	return result, nil
 }
 
-func parseLocalRefs(output []byte) ([]corehealth.GitRef, error) {
+func parseLocalRefs(output []byte) ([]operationalhealthcontract.GitRef, error) {
 	var fields []string
 	for _, raw := range bytes.Split(output, []byte{0}) {
 		if value := strings.TrimSpace(string(raw)); value != "" {
@@ -615,19 +617,19 @@ func parseLocalRefs(output []byte) ([]corehealth.GitRef, error) {
 	if len(fields)%2 != 0 {
 		return nil, fmt.Errorf("local ref tuple incomplete")
 	}
-	result := make([]corehealth.GitRef, 0, len(fields)/2)
+	result := make([]operationalhealthcontract.GitRef, 0, len(fields)/2)
 	for index := 0; index < len(fields); index += 2 {
 		name, oid := fields[index], fields[index+1]
 		if !strings.HasPrefix(name, "refs/heads/") || !validOID(oid) {
 			return result, fmt.Errorf("local ref identity invalid")
 		}
-		result = append(result, corehealth.GitRef{Name: name, Branch: strings.TrimPrefix(name, "refs/heads/"), OID: oid, Location: "local"})
+		result = append(result, operationalhealthcontract.GitRef{Name: name, Branch: strings.TrimPrefix(name, "refs/heads/"), OID: oid, Location: "local"})
 	}
 	return result, nil
 }
 
-func parseRemoteRefs(output []byte) ([]corehealth.GitRef, error) {
-	var result []corehealth.GitRef
+func parseRemoteRefs(output []byte) ([]operationalhealthcontract.GitRef, error) {
+	var result []operationalhealthcontract.GitRef
 	for _, raw := range bytes.Split(output, []byte{'\n'}) {
 		line := strings.TrimSpace(string(raw))
 		if line == "" {
@@ -637,7 +639,7 @@ func parseRemoteRefs(output []byte) ([]corehealth.GitRef, error) {
 		if len(fields) != 2 || !validOID(fields[0]) || !strings.HasPrefix(fields[1], "refs/heads/") {
 			return result, fmt.Errorf("remote ref identity invalid")
 		}
-		result = append(result, corehealth.GitRef{Name: fields[1], Branch: strings.TrimPrefix(fields[1], "refs/heads/"), OID: fields[0], Location: "remote"})
+		result = append(result, operationalhealthcontract.GitRef{Name: fields[1], Branch: strings.TrimPrefix(fields[1], "refs/heads/"), OID: fields[0], Location: "remote"})
 	}
 	return result, nil
 }
@@ -656,7 +658,7 @@ func validOID(value string) bool {
 	return true
 }
 
-func countTasksWithStatus(values []corehealth.OrcaTask, runID, id, status string) int {
+func countTasksWithStatus(values []operationalhealthcontract.OrcaTask, runID, id, status string) int {
 	count := 0
 	for _, value := range values {
 		if operationalTaskKey(value.RunID, value.ID) == operationalTaskKey(runID, id) && value.Status == status {
@@ -671,7 +673,7 @@ func operationalTaskKey(runID, taskID string) string {
 }
 
 func addProblem(snapshot *corehealth.Snapshot, source, code, detail string) {
-	snapshot.InventoryProblems = append(snapshot.InventoryProblems, corehealth.InventoryProblem{Source: source, Code: code, Detail: detail})
+	snapshot.InventoryProblems = append(snapshot.InventoryProblems, operationalhealthcontract.InventoryProblem{Source: source, Code: code, Detail: detail})
 }
 
 func sortSnapshot(snapshot *corehealth.Snapshot) {
@@ -740,7 +742,7 @@ func sortSnapshot(snapshot *corehealth.Snapshot) {
 	})
 }
 
-func sortRefs(values []corehealth.GitRef) {
+func sortRefs(values []operationalhealthcontract.GitRef) {
 	sort.Slice(values, func(i, j int) bool {
 		left, right := values[i], values[j]
 		return orderedBefore([]string{left.Name, left.Branch, left.OID, left.Location}, []string{right.Name, right.Branch, right.OID, right.Location})

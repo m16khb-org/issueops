@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	issueopscontract "issueops/internal/contract/issueops"
 	"strings"
 	"sync"
@@ -13,7 +14,7 @@ import (
 )
 
 func TestSDKToolHandlerDispatchesCatalogTool(t *testing.T) {
-	handler := sdkToolHandlerWithContext(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
+	handler := sdkToolHandlerWithContext(mcpcatalog.Build(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
 	result, err := handler(context.Background(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{}`)},
 	})
@@ -43,7 +44,7 @@ func TestSDKDirectContentPreservesTextAndError(t *testing.T) {
 				}
 				server := initSDKServer(MCPDependencies{})
 				server.AddTool(&mcp.Tool{Name: "commit_policy", InputSchema: map[string]any{"type": "object"}},
-					sdkToolHandlerWithContext(testMCPCatalog(), func(context.Context, MCPToolCall) MCPToolOutcome {
+					sdkToolHandlerWithContext(mcpcatalog.Build(), func(context.Context, MCPToolCall) MCPToolOutcome {
 						return mcpToolDirect(map[string]any{"content": content, "isError": isError})
 					}, "commit_policy"))
 				serverTransport, clientTransport := mcp.NewInMemoryTransports()
@@ -81,7 +82,7 @@ func TestSDKCommitPolicyReturnsExactResourceText(t *testing.T) {
 }
 
 func TestSDKToolHandlerRejectsInvalidRawArguments(t *testing.T) {
-	handler := sdkToolHandlerWithContext(testMCPCatalog(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
+	handler := sdkToolHandlerWithContext(mcpcatalog.Build(), resolveHandlerGroup(testTransportServices(), "contract_schema"), "contract_schema")
 	_, err := handler(context.Background(), &mcp.CallToolRequest{
 		Params: &mcp.CallToolParamsRaw{Arguments: json.RawMessage(`{not json`)},
 	})
@@ -128,7 +129,7 @@ func TestInitSDKServerAcceptsPublicationReconcileWithoutInvokingIt(t *testing.T)
 		return issueopscontract.ExecutionReconcileResult{}, nil
 	})
 
-	server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Publication: PublicationHandlers{Reconcile: handler}})
+	server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Publication: PublicationHandlers{Reconcile: handler}})
 	if server == nil {
 		t.Fatal("initSDKServer returned nil")
 	}
@@ -147,7 +148,7 @@ func TestInitSDKServerDispatchesConcurrentReleaseWithIsolatedDependencies(t *tes
 		group.Add(1)
 		go func(id string) {
 			defer group.Done()
-			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
+			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				token := id + "::" + request.ID
 				called <- token
 				return issueopscontract.ExecutionResult{OK: true, ID: token}, nil
@@ -216,7 +217,7 @@ func TestSDKServerHandshakeOmitsLoggingAndKeepsCatalogCapabilities(t *testing.T)
 		sdkServerOptions(),
 	)
 	registerAllTools(server, testTransportServices(), transportStdio, nil)
-	registerAllResources(server, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest()})
+	registerAllResources(server, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resources: resourceConfigForTest()})
 	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "0"}, nil)
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 	ctx, cancel := context.WithCancel(context.Background())

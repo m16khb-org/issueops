@@ -2,6 +2,8 @@ package lifecycle
 
 import (
 	"encoding/json"
+	lifecyclecontract "issueops/internal/contract/lifecycle"
+	projectdoccontract "issueops/internal/contract/projectdoc"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,7 +72,7 @@ func TestValidateProjectLifecycleStateDetectsNamespaceMismatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var profile ProjectLifecycleProfile
+	var profile lifecyclecontract.ProjectLifecycleProfile
 	b, err := os.ReadFile(written.ProjectJSONPath)
 	if err != nil {
 		t.Fatal(err)
@@ -102,7 +104,7 @@ func TestInitProjectLifecycleStateConcurrentNoDuplicates(t *testing.T) {
 
 	const n = 5
 	var wg sync.WaitGroup
-	results := make([]ProjectLifecycleStatePlan, n)
+	results := make([]lifecyclecontract.ProjectLifecycleStatePlan, n)
 	errs := make([]error, n)
 
 	for i := 0; i < n; i++ {
@@ -138,7 +140,7 @@ func TestInitProjectLifecycleStateConcurrentNoDuplicates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var onDisk ProjectLifecycleProfile
+	var onDisk lifecyclecontract.ProjectLifecycleProfile
 	if err := json.Unmarshal(b, &onDisk); err != nil {
 		t.Fatalf("on-disk profile is not valid JSON: %v", err)
 	}
@@ -175,7 +177,7 @@ func TestInitProjectLifecycleStateUpdatesExistingWithMetadata(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	meta := ProjectProfile{
+	meta := projectdoccontract.ProjectProfile{
 		Languages: []string{"Go"},
 	}
 	updated, err := InitProjectLifecycleState(repo, true, meta)
@@ -200,7 +202,7 @@ func TestInitProjectLifecycleStateWithInvalidNamespaceDoesNotOverwrite(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	var profile ProjectLifecycleProfile
+	var profile lifecyclecontract.ProjectLifecycleProfile
 	b, err := os.ReadFile(written.ProjectJSONPath)
 	if err != nil {
 		t.Fatal(err)

@@ -1,6 +1,8 @@
 package issueops
 
 import (
+	cycleapp "issueops/internal/application/issueopscycle"
+	app "issueops/internal/application/issueopsowner"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,10 +11,6 @@ import (
 	"issueops/internal/adapter/preflight"
 	"issueops/internal/contract/issueops"
 )
-
-func preflightGitForReviewTest(dir string, args ...string) (int, string, string) {
-	return preflight.GitCmd(dir, args...)
-}
 
 func TestRecordIssueOpsImplementationReviewValidation(t *testing.T) {
 	stateRoot := filepath.Join(t.TempDir(), "issueops")
@@ -57,7 +55,7 @@ func gitInitedRepoForReviewTest(t *testing.T) string {
 	t.Helper()
 	repo := t.TempDir()
 	for _, args := range [][]string{{"init", "-q"}, {"config", "user.email", "t@t"}, {"config", "user.name", "t"}} {
-		if code, _, stderr := preflightGitForReviewTest(repo, args...); code != 0 {
+		if code, _, stderr := preflight.GitCmd(repo, args...); code != 0 {
 			t.Fatalf("git %v failed: %s", args, stderr)
 		}
 	}
@@ -71,32 +69,32 @@ func gitInitedRepoForReviewTest(t *testing.T) string {
 // 레코드(사이클을 준비하기 전, legacy)만 면제다.
 func TestImplementationReviewMissingAppliesToEveryExecutionMode(t *testing.T) {
 	record := issueops.IssueOpsRecord{}
-	if got := implementationReviewMissing(record, ""); got != "" {
+	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "" {
 		t.Fatalf("record without execution must not be gated: %q", got)
 	}
 	for _, mode := range []issueops.ExecutionMode{issueops.ExecutionModeDirect, issueops.ExecutionModeOrca} {
 		record.Execution = &issueops.Execution{Mode: mode}
 		record.ImplementationReview = nil
-		if got := implementationReviewMissing(record, ""); got != "implementation_review" {
+		if got := cycleapp.ImplementationReviewMissing(record, ""); got != "implementation_review" {
 			t.Fatalf("%s mode without review must be gated: %q", mode, got)
 		}
 	}
 	record.Execution = &issueops.Execution{Mode: issueops.ExecutionModeOrca}
 	record.ImplementationReview = &issueops.IssueOpsImplementationReview{Verdict: "revise"}
-	if got := implementationReviewMissing(record, ""); got != "implementation_review_verdict_revise" {
+	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "implementation_review_verdict_revise" {
 		t.Fatalf("non-pass verdict must be gated with its verdict: %q", got)
 	}
 	record.ImplementationReview.Verdict = "pass"
-	if got := implementationReviewMissing(record, ""); got != "" {
+	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "" {
 		t.Fatalf("pass verdict must clear the gate: %q", got)
 	}
 	// C4b-F1: fingerprint가 현재 변경 집합과 다르면 stale로 거부.
 	record.ImplementationReview.ReviewedFingerprint = "old"
-	if got := implementationReviewMissing(record, "new"); got != "implementation_review_stale" {
+	if got := cycleapp.ImplementationReviewMissing(record, "new"); got != "implementation_review_stale" {
 		t.Fatalf("drifted fingerprint must be stale: %q", got)
 	}
 	record.ImplementationReview.ReviewedFingerprint = "new"
-	if got := implementationReviewMissing(record, "new"); got != "" {
+	if got := cycleapp.ImplementationReviewMissing(record, "new"); got != "" {
 		t.Fatalf("matching fingerprint must clear the gate: %q", got)
 	}
 }
@@ -141,7 +139,7 @@ func TestOwnerCommandsIncludeImplementationReviewWithRuntimeInputs(t *testing.T)
 				!strings.Contains(commands.ImplementationReview, "--reviewer-model <REVIEWER_MODEL> --reviewer-effort <REVIEWER_EFFORT>") {
 				t.Fatalf("owner command must accept actual runtime reviewer values: %s", commands.ImplementationReview)
 			}
-			if err := validateExecutionOwnerCatalog(commands); err != nil {
+			if err := app.ValidateOwnerCatalog(commands); err != nil {
 				t.Fatalf("implementation review command must match the catalog: %v", err)
 			}
 		})
@@ -156,10 +154,10 @@ func TestImplementationReviewSealsAnEmptyFingerprintAndCatchesItLater(t *testing
 		Execution:            &issueops.Execution{Mode: issueops.ExecutionModeDirect},
 		ImplementationReview: &issueops.IssueOpsImplementationReview{Verdict: "pass", ReviewedFingerprint: ""},
 	}
-	if got := implementationReviewMissing(record, ""); got != "" {
+	if got := cycleapp.ImplementationReviewMissing(record, ""); got != "" {
 		t.Fatalf("an empty seal with no computable fingerprint must pass: %q", got)
 	}
-	if got := implementationReviewMissing(record, "now-computable"); got != "implementation_review_stale" {
+	if got := cycleapp.ImplementationReviewMissing(record, "now-computable"); got != "implementation_review_stale" {
 		t.Fatalf("an empty seal must go stale once a fingerprint exists: %q", got)
 	}
 }

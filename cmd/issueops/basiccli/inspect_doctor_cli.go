@@ -6,6 +6,7 @@ import (
 	"fmt"
 	doctorcontract "issueops/internal/contract/doctor"
 	inspectcontract "issueops/internal/contract/inspect"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"issueops/internal/domain/operationalhealth"
 	"sort"
 	"strings"
@@ -147,7 +148,7 @@ func normalizeDoctorPreserve(values []string, flagName string) ([]string, error)
 // 때문이다. sealed audit 호출자는 엄격한 residue 계약을 다시 선택한다.
 func doctorProfile(sealed bool) string {
 	if sealed {
-		return operationalhealth.ProfileSealed
+		return operationalhealthcontract.ProfileSealed
 	}
-	return operationalhealth.ProfileInteractive
+	return operationalhealthcontract.ProfileInteractive
 }

@@ -1,7 +1,7 @@
 // Package hookinput reads the few host hook stdin fields the context hooks
-// need. Hosts send the current working directory as cwd; explicit repo,
-// workspace, and project_dir aliases plus a nested hook_input envelope are
-// accepted so the same reader serves Codex, Claude Code, and direct CLI use.
+// need. Hosts send the current working directory as cwd; the repo, workspace,
+// workspace_root, and project_dir keys and a nested hook_input envelope are
+// read too, so the same reader serves Codex, Claude Code, and direct CLI use.
 package hookinput
 
 import (

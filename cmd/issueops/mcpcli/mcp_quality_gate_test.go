@@ -2,6 +2,7 @@ package mcpcli
 
 import (
 	"encoding/json"
+	app "issueops/internal/application/selfverify"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,7 +78,7 @@ func TestQualityGateSentinelsAreRecognizedAsNormalMCPOutcomes(t *testing.T) {
 			t.Fatalf("%s gate outcome=%s", mode, text)
 		}
 	}
-	if !isSelfVerificationGateError(errSelfVerificationGateFailed) {
+	if !isSelfVerificationGateError(app.ErrSelfVerificationGateFailed) {
 		t.Fatal("self-verification gate sentinel should be recognized")
 	}
 }

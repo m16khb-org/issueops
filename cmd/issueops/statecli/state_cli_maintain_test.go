@@ -31,7 +31,7 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 	}
 
 	out := captureStatusVerifyStdout(t, func() error {
-		return runState(testDependencies(), []string{"maintain", "--json"})
+		return Run(testDependencies(), []string{"maintain", "--json"})
 	})
 	var result statecontract.StateMaintainResult
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
@@ -53,7 +53,7 @@ func TestRunStateMaintainReportsRoots(t *testing.T) {
 	}
 
 	text := captureStatusVerifyStdout(t, func() error {
-		return runState(testDependencies(), []string{"maintain"})
+		return Run(testDependencies(), []string{"maintain"})
 	})
 	if !strings.Contains(text, "maintained 2 store roots") {
 		t.Fatalf("unexpected maintain text:\n%s", text)

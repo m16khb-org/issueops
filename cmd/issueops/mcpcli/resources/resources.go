@@ -32,7 +32,7 @@ func apiDocGuidanceText() string {
 
 Use deterministic ` + "`issueops api-doc static-check`" + `/MCP ` + "`api_doc_static_check`" + ` first, then ` + "`issueops api-doc review`" + `/MCP ` + "`api_doc_review`" + ` to render the host-agent prompt/schema or record a supplied result file whenever endpoint, controller, handler, DTO, schema, or OpenAPI files change.
 
-Default scope is staged API candidate files. Do not fail unrelated legacy Swagger/OpenAPI debt.
+Default scope is staged API candidate files. Do not fail unrelated pre-existing Swagger/OpenAPI debt.
 Use ` + "`--all`" + ` or MCP ` + "`all: true`" + ` only for an explicit full tracked-file review.
 
 The static check catches deterministic omissions such as missing operation descriptions, path/query/header/body documentation, 400/401 responses, and DTO required/optional decorator mismatches where the framework convention is known.

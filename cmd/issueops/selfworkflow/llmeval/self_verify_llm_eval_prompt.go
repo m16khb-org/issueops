@@ -2,8 +2,8 @@ package llmeval
 
 import (
 	"encoding/json"
+	selfverifydomain "issueops/internal/domain/selfverify"
 
-	"issueops/cmd/issueops/commandstep"
 	augmentcontract "issueops/internal/contract/selfaugment"
 	judgement "issueops/internal/domain/judgement"
 )
@@ -39,7 +39,7 @@ func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.SelfAugmentResult) (str
 		return "", 0, err
 	}
 	allowedEvidenceBytes := SelfVerifyLLMEvalEvidenceBudgetBytes
-	evidenceJSON, _, _ := commandstep.TailWithBudget(string(evidenceBytes), allowedEvidenceBytes)
+	evidenceJSON, _, _ := selfverifydomain.TailWithBudget(string(evidenceBytes), allowedEvidenceBytes)
 	packet := struct {
 		Identity              string   `json:"identity"`
 		Objective             string   `json:"objective"`
@@ -108,7 +108,7 @@ func BuildSelfVerifyLLMEvalPrompt(result augmentcontract.SelfAugmentResult) (str
 		if allowedEvidenceBytes < 0 {
 			allowedEvidenceBytes = 0
 		}
-		evidenceJSON, _, _ = commandstep.TailWithBudget(string(evidenceBytes), allowedEvidenceBytes)
+		evidenceJSON, _, _ = selfverifydomain.TailWithBudget(string(evidenceBytes), allowedEvidenceBytes)
 		packet.EvidenceJSON = evidenceJSON
 		b, err = json.Marshal(packet)
 		if err != nil {

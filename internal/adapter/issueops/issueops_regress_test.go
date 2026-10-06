@@ -2,6 +2,7 @@ package issueops
 
 import (
 	"context"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"strings"
 	"testing"
 
@@ -20,7 +21,7 @@ func recordAtPhaseForRegressTest(t *testing.T, phase issueops.IssueOpsPhase) (st
 		t.Fatalf("start: %v", err)
 	}
 	rec.Phase = phase
-	rec.DesignReview = &issueops.IssueOpsDesignReview{ProblemSummary: "s", ProposedDesign: "d", Verification: []string{"v"}, Approved: true, ReviewedAt: "2026-06-29T00:00:00Z"}
+	rec.DesignReview = &reviewcontract.DesignReview{ProblemSummary: "s", ProposedDesign: "d", Verification: []string{"v"}, Approved: true, ReviewedAt: "2026-06-29T00:00:00Z"}
 	rec.DevilsAdvocateReview = &issueops.IssueOpsDevilsAdvocateReview{Verdict: "stop", Findings: []string{"gold-plating"}, RecordedAt: "2026-06-29T00:00:00Z", IssueReflectedAt: "2026-06-29T00:02:00Z"}
 	rec.PlanPath = "/repo/plans/x.md"
 	rec.PhaseLedger = issueops.IssueOpsPhaseLedger{

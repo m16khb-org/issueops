@@ -1,6 +1,7 @@
 package apidoc
 
 import (
+	contract "issueops/internal/contract/apidoc"
 	"regexp"
 	"strconv"
 	"strings"
@@ -36,9 +37,9 @@ var methodNameRe = regexp.MustCompile(`^\s*(?:async\s+)?[A-Za-z_][A-Za-z0-9_]*\s
 var queryNamedRe = regexp.MustCompile(`@Query\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]`)
 var bodyNamedRe = regexp.MustCompile(`@Body\s*\(\s*["'\x60]([^"'\x60]+)["'\x60]`)
 
-func CheckNestController(file, text string) []Violation {
+func CheckNestController(file, text string) []contract.Violation {
 	lines := strings.Split(text, "\n")
-	var violations []Violation
+	var violations []contract.Violation
 	for i := 0; i < len(lines); i++ {
 		if !methodNameRe.MatchString(lines[i]) {
 			continue
@@ -55,33 +56,33 @@ func CheckNestController(file, text string) []Violation {
 		}
 		line := i + 1
 		if !strings.Contains(block, "@ApiOperation") {
-			violations = append(violations, Violation{File: file, Line: line, Code: "missing_api_operation", Message: "route method is missing @ApiOperation"})
+			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_operation", Message: "route method is missing @ApiOperation"})
 		} else if !strings.Contains(block, "description") {
-			violations = append(violations, Violation{File: file, Line: line, Code: "missing_api_operation_description", Message: "@ApiOperation is missing description"})
+			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_operation_description", Message: "@ApiOperation is missing description"})
 		} else if !strings.Contains(block, "### ") {
-			violations = append(violations, Violation{File: file, Line: line, Code: "invalid_api_operation_description_format", Message: "@ApiOperation.description must use the project sectioned Markdown format"})
+			violations = append(violations, contract.Violation{File: file, Line: line, Code: "invalid_api_operation_description_format", Message: "@ApiOperation.description must use the project sectioned Markdown format"})
 		}
 		for _, m := range nestPathParamRe.FindAllStringSubmatch(route[2], -1) {
 			if !regexp.MustCompile(`@ApiParam\s*\(\s*\{[^}]*name\s*:\s*["'\x60]` + regexp.QuoteMeta(m[1]) + `["'\x60]`).MatchString(block) {
-				violations = append(violations, Violation{File: file, Line: line, Code: "missing_api_param", Message: "path parameter :" + m[1] + " is missing @ApiParam documentation"})
+				violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_param", Message: "path parameter :" + m[1] + " is missing @ApiParam documentation"})
 			}
 		}
 		if strings.Contains(block, "@Headers") && !strings.Contains(block, "@ApiHeader") {
-			violations = append(violations, Violation{File: file, Line: line, Code: "missing_api_header", Message: "@Headers usage is missing @ApiHeader documentation"})
+			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_header", Message: "@Headers usage is missing @ApiHeader documentation"})
 		}
 		for _, m := range queryNamedRe.FindAllStringSubmatch(block, -1) {
 			if !regexp.MustCompile(`@ApiQuery\s*\(\s*\{[^}]*name\s*:\s*["'\x60]` + regexp.QuoteMeta(m[1]) + `["'\x60]`).MatchString(block) {
-				violations = append(violations, Violation{File: file, Line: line, Code: "missing_api_query", Message: "named query parameter " + m[1] + " is missing @ApiQuery documentation"})
+				violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_query", Message: "named query parameter " + m[1] + " is missing @ApiQuery documentation"})
 			}
 		}
 		if bodyNamedRe.MatchString(block) && !strings.Contains(block, "@ApiBody") {
-			violations = append(violations, Violation{File: file, Line: line, Code: "missing_api_body", Message: "named @Body usage is missing @ApiBody documentation"})
+			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_api_body", Message: "named @Body usage is missing @ApiBody documentation"})
 		}
 		if (strings.Contains(block, "@Body") || strings.Contains(block, "@Query") || strings.Contains(block, "@Headers")) && !HasNestResponseStatus(block, 400) {
-			violations = append(violations, Violation{File: file, Line: line, Code: "missing_400_response", Message: "body/query/header validation surface is missing a 400 Swagger response"})
+			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_400_response", Message: "body/query/header validation surface is missing a 400 Swagger response"})
 		}
 		if IsNestPrivateRoute(block, text) && !HasNestResponseStatus(block, 401) {
-			violations = append(violations, Violation{File: file, Line: line, Code: "missing_401_response", Message: "private/auth route is missing a 401 Swagger response"})
+			violations = append(violations, contract.Violation{File: file, Line: line, Code: "missing_401_response", Message: "private/auth route is missing a 401 Swagger response"})
 		}
 	}
 	return violations

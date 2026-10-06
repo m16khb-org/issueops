@@ -1,14 +1,13 @@
 package benchmarkartifact
 
 import (
+	benchmark "issueops/internal/contract/issueopsbenchmark"
 	"strings"
 	"testing"
-
-	issueopscontract "issueops/internal/contract/issueops"
 )
 
 func TestDefaultsForNoExtraRequirementsFixture(t *testing.T) {
-	artifact := FromFixture(issueopscontract.IssueOpsBenchmarkFixture{
+	artifact := FromFixture(benchmark.IssueOpsBenchmarkFixture{
 		ID:          "empty-requirements",
 		Title:       "Fallback title",
 		UserPrompt:  "   ",
@@ -40,14 +39,14 @@ func TestDefaultsForNoExtraRequirementsFixture(t *testing.T) {
 // benchmark scores skill_routing_fidelity; without this the dim would be N/A
 // even for a fixture that declares ExpectedRouting (A5).
 func TestFromFixtureForwardsRoutingTrace(t *testing.T) {
-	withRouting := FromFixture(issueopscontract.IssueOpsBenchmarkFixture{
+	withRouting := FromFixture(benchmark.IssueOpsBenchmarkFixture{
 		ID:              "routing",
-		ExpectedRouting: []issueopscontract.SkillRouting{{Phase: "plan", Skill: "database-design"}},
+		ExpectedRouting: []benchmark.SkillRouting{{Phase: "plan", Skill: "database-design"}},
 	})
-	if len(withRouting.RoutingTrace) != 1 || withRouting.RoutingTrace[0] != (issueopscontract.SkillRouting{Phase: "plan", Skill: "database-design"}) {
+	if len(withRouting.RoutingTrace) != 1 || withRouting.RoutingTrace[0] != (benchmark.SkillRouting{Phase: "plan", Skill: "database-design"}) {
 		t.Fatalf("FromFixture must synthesize RoutingTrace from ExpectedRouting, got %+v", withRouting.RoutingTrace)
 	}
-	if got := FromFixture(issueopscontract.IssueOpsBenchmarkFixture{ID: "no-routing"}); len(got.RoutingTrace) != 0 {
+	if got := FromFixture(benchmark.IssueOpsBenchmarkFixture{ID: "no-routing"}); len(got.RoutingTrace) != 0 {
 		t.Fatalf("fixture without expected_routing must get empty RoutingTrace, got %+v", got.RoutingTrace)
 	}
 }

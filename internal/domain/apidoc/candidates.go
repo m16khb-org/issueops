@@ -1,6 +1,7 @@
 package apidoc
 
 import (
+	contract "issueops/internal/contract/apidoc"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -33,7 +34,7 @@ func StaticKinds(file string) (controller, dto bool) {
 	return controller, dto
 }
 
-func SortViolations(violations []Violation) {
+func SortViolations(violations []contract.Violation) {
 	sort.Slice(violations, func(i, j int) bool {
 		if violations[i].File != violations[j].File {
 			return violations[i].File < violations[j].File

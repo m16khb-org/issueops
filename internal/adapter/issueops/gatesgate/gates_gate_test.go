@@ -2,6 +2,7 @@ package gatesgate
 
 import (
 	"context"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -64,7 +65,7 @@ func readyGatesGateRecord(t *testing.T) issueopscontract.IssueOpsRecord {
 			SuccessCriteria:   []string{"gates gate works"},
 			RecordedAt:        "2026-07-07T00:00:00Z",
 		},
-		DesignReview: &issueopscontract.IssueOpsDesignReview{
+		DesignReview: &reviewcontract.DesignReview{
 			ProblemSummary: "gates ledger readiness",
 			ProposedDesign: "block PR while gates unmet",
 			RefactorPlan:   "apply the gates gate",

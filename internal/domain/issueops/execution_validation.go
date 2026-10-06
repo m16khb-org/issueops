@@ -9,30 +9,8 @@ import (
 	issueopscontract "issueops/internal/contract/issueops"
 )
 
-type Execution = issueopscontract.Execution
-type ExecutionMode = issueopscontract.ExecutionMode
-type ExecutionSelection = issueopscontract.ExecutionSelection
-type ExecutionSyncBaseResolution = issueopscontract.ExecutionSyncBaseResolution
-type ExecutionCompletion = issueopscontract.ExecutionCompletion
-type ExecutionSyncBaseEvent = issueopscontract.ExecutionSyncBaseEvent
-type Workspace = issueopscontract.Workspace
-type WriteLease = issueopscontract.WriteLease
-type OrcaBinding = issueopscontract.OrcaBinding
-
-const (
-	ExecutionModeDirect            = issueopscontract.ExecutionModeDirect
-	ExecutionModeOrca              = issueopscontract.ExecutionModeOrca
-	LeaseStatusClaimable           = issueopscontract.LeaseStatusClaimable
-	LeaseStatusActive              = issueopscontract.LeaseStatusActive
-	LeaseStatusRevoking            = issueopscontract.LeaseStatusRevoking
-	LeaseStatusReleased            = issueopscontract.LeaseStatusReleased
-	ExecutionSyncBaseEventApply    = issueopscontract.ExecutionSyncBaseEventApply
-	ExecutionSyncBaseEventFinalize = issueopscontract.ExecutionSyncBaseEventFinalize
-	OrcaArtifactIdentityVersion    = issueopscontract.OrcaArtifactIdentityVersion
-)
-
-func ValidateExecution(execution Execution) error {
-	if execution.Mode != ExecutionModeDirect && execution.Mode != ExecutionModeOrca {
+func ValidateExecution(execution issueopscontract.Execution) error {
+	if execution.Mode != issueopscontract.ExecutionModeDirect && execution.Mode != issueopscontract.ExecutionModeOrca {
 		return fmt.Errorf("execution mode must be direct or orca")
 	}
 	if err := validateWorkspace(execution.Workspace, execution.Mode); err != nil {
@@ -46,7 +24,7 @@ func ValidateExecution(execution Execution) error {
 			return err
 		}
 	}
-	if execution.Mode == ExecutionModeDirect && execution.Orca != nil {
+	if execution.Mode == issueopscontract.ExecutionModeDirect && execution.Orca != nil {
 		return fmt.Errorf("direct execution must not contain an Orca binding")
 	}
 	if execution.Orca != nil {
@@ -102,8 +80,8 @@ func ValidateExecution(execution Execution) error {
 	return nil
 }
 
-func validateExecutionSyncBaseResolution(execution Execution, resolution ExecutionSyncBaseResolution) error {
-	if execution.Lease.Status != LeaseStatusReleased || execution.Completion == nil ||
+func validateExecutionSyncBaseResolution(execution issueopscontract.Execution, resolution issueopscontract.ExecutionSyncBaseResolution) error {
+	if execution.Lease.Status != issueopscontract.LeaseStatusReleased || execution.Completion == nil ||
 		resolution.Generation == 0 || resolution.Generation != execution.Lease.Generation ||
 		resolution.CompletionGeneration == 0 || resolution.CompletionGeneration != execution.Completion.Generation {
 		return fmt.Errorf("execution sync-base resolution must bind the released current completion")
@@ -125,7 +103,7 @@ func validateExecutionSyncBaseResolution(execution Execution, resolution Executi
 	return nil
 }
 
-func validateExecutionCompletion(completion ExecutionCompletion) error {
+func validateExecutionCompletion(completion issueopscontract.ExecutionCompletion) error {
 	if !validCommitSHA(completion.FinalHead) || strings.TrimSpace(completion.VerificationReportPath) == "" ||
 		len(completion.Verification) == 0 || strings.TrimSpace(completion.RemoteArtifactURL) == "" || strings.TrimSpace(completion.CompletedAt) == "" {
 		return fmt.Errorf("execution completion is incomplete")
@@ -138,7 +116,7 @@ func validateExecutionCompletion(completion ExecutionCompletion) error {
 	return nil
 }
 
-func validateExecutionSelection(selection ExecutionSelection, mode ExecutionMode) error {
+func validateExecutionSelection(selection issueopscontract.ExecutionSelection, mode issueopscontract.ExecutionMode) error {
 	if selection.RequestedMode != "auto" && selection.RequestedMode != "direct" && selection.RequestedMode != "orca" {
 		return fmt.Errorf("selection requested_mode must be auto, direct, or orca")
 	}
@@ -157,21 +135,21 @@ func validateExecutionSelection(selection ExecutionSelection, mode ExecutionMode
 	if selection.RequestedMode != "direct" && !selection.ProbeAttempted {
 		return fmt.Errorf("auto and Orca selections require a readiness probe")
 	}
-	if (selection.RequestedMode == "direct" && mode != ExecutionModeDirect) ||
-		(selection.RequestedMode == "orca" && mode != ExecutionModeOrca) {
+	if (selection.RequestedMode == "direct" && mode != issueopscontract.ExecutionModeDirect) ||
+		(selection.RequestedMode == "orca" && mode != issueopscontract.ExecutionModeOrca) {
 		return fmt.Errorf("explicit selection mode must equal execution mode")
 	}
-	if mode == ExecutionModeOrca && !selection.ProbeReady {
+	if mode == issueopscontract.ExecutionModeOrca && !selection.ProbeReady {
 		return fmt.Errorf("Orca selection requires a ready probe")
 	}
-	if selection.RequestedMode == "auto" && mode == ExecutionModeDirect {
+	if selection.RequestedMode == "auto" && mode == issueopscontract.ExecutionModeDirect {
 		probeCode := strings.TrimSpace(selection.ProbeCode)
 		fallbackCode := strings.TrimSpace(selection.FallbackCode)
 		if selection.ProbeReady || fallbackCode == "" || fallbackCode != probeCode || fallbackCode != selection.FallbackCode {
 			return fmt.Errorf("auto direct selection requires the exact probe failure fallback_code")
 		}
 	}
-	if mode == ExecutionModeOrca && strings.TrimSpace(selection.FallbackCode) != "" {
+	if mode == issueopscontract.ExecutionModeOrca && strings.TrimSpace(selection.FallbackCode) != "" {
 		return fmt.Errorf("Orca selection must not contain fallback_code")
 	}
 	if selection.RequestedMode == "direct" {
@@ -190,8 +168,8 @@ func validateExecutionSelection(selection ExecutionSelection, mode ExecutionMode
 	return nil
 }
 
-func validateExecutionSyncBaseEvent(event ExecutionSyncBaseEvent) error {
-	if event.Mode != ExecutionSyncBaseEventApply && event.Mode != ExecutionSyncBaseEventFinalize {
+func validateExecutionSyncBaseEvent(event issueopscontract.ExecutionSyncBaseEvent) error {
+	if event.Mode != issueopscontract.ExecutionSyncBaseEventApply && event.Mode != issueopscontract.ExecutionSyncBaseEventFinalize {
 		return fmt.Errorf("execution sync-base event mode must be apply or finalize")
 	}
 	if !validCommitSHA(event.BaseOID) || !validCommitSHA(event.MergeCommit) {
@@ -206,7 +184,7 @@ func validateExecutionSyncBaseEvent(event ExecutionSyncBaseEvent) error {
 	return nil
 }
 
-func validateWorkspace(workspace Workspace, mode ExecutionMode) error {
+func validateWorkspace(workspace issueopscontract.Workspace, mode issueopscontract.ExecutionMode) error {
 	for name, value := range map[string]string{
 		"source_root": workspace.SourceRoot,
 		"root":        workspace.Root,
@@ -222,32 +200,32 @@ func validateWorkspace(workspace Workspace, mode ExecutionMode) error {
 	if workspace.SourceRoot == workspace.Root {
 		return fmt.Errorf("canonical worktree must be isolated from source_root")
 	}
-	if mode == ExecutionModeDirect && workspace.Driver != "git" {
+	if mode == issueopscontract.ExecutionModeDirect && workspace.Driver != "git" {
 		return fmt.Errorf("direct execution workspace driver must be git")
 	}
-	if mode == ExecutionModeOrca && workspace.Driver != "orca" {
+	if mode == issueopscontract.ExecutionModeOrca && workspace.Driver != "orca" {
 		return fmt.Errorf("Orca execution workspace driver must be orca")
 	}
 	return nil
 }
 
-func validateWriteLease(lease WriteLease) error {
+func validateWriteLease(lease issueopscontract.WriteLease) error {
 	if lease.Generation == 0 {
 		return fmt.Errorf("lease generation must start at 1")
 	}
 	switch lease.Status {
-	case LeaseStatusClaimable:
+	case issueopscontract.LeaseStatusClaimable:
 		if lease.Holder != nil || !validSHA256(lease.ClaimTokenSHA256) {
 			return fmt.Errorf("claimable lease requires no holder and one token hash")
 		}
-	case LeaseStatusActive:
+	case issueopscontract.LeaseStatusActive:
 		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" || lease.ClaimedAt == "" {
 			return fmt.Errorf("active lease requires one holder and no token hash")
 		}
 		if err := ValidateNativeActor(*lease.Holder); err != nil {
 			return err
 		}
-	case LeaseStatusRevoking:
+	case issueopscontract.LeaseStatusRevoking:
 		// 이전 holder는 quiescence 진단에만 남고 이 상태에서는 writer가 아니다.
 		if lease.Holder == nil || lease.ClaimTokenSHA256 != "" {
 			return fmt.Errorf("revoking lease requires the fenced holder and no token hash")
@@ -255,7 +233,7 @@ func validateWriteLease(lease WriteLease) error {
 		if err := ValidateNativeActor(*lease.Holder); err != nil {
 			return err
 		}
-	case LeaseStatusReleased:
+	case issueopscontract.LeaseStatusReleased:
 		if lease.Holder != nil || lease.ClaimTokenSHA256 != "" {
 			return fmt.Errorf("released lease must not retain a holder or token hash")
 		}
@@ -265,7 +243,7 @@ func validateWriteLease(lease WriteLease) error {
 	return nil
 }
 
-func validateOrcaBinding(binding OrcaBinding) error {
+func validateOrcaBinding(binding issueopscontract.OrcaBinding) error {
 	for name, value := range map[string]string{
 		"runtime_id":  binding.RuntimeID,
 		"repo_id":     binding.RepoID,
@@ -300,7 +278,7 @@ func validateOrcaBinding(binding OrcaBinding) error {
 		if present != 0 {
 			return fmt.Errorf("Orca binding sealed artifact identity requires artifact identity version")
 		}
-	case OrcaArtifactIdentityVersion:
+	case issueopscontract.OrcaArtifactIdentityVersion:
 		if present != len(digests) {
 			return fmt.Errorf("Orca binding artifact identity version requires a complete sealed artifact identity")
 		}

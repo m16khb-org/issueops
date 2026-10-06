@@ -96,7 +96,7 @@ func TestPreparationRepositoryRejectsRecordIdentityDriftBeforePersistence(t *tes
 		Repo: record.Repo, Host: "codex", Model: "gpt-6-astra", Effort: "xhigh",
 		Provider: "github", Issue: 16,
 	}
-	snapshot := executionOwnerSnapshot{issue: executionOwnerIssue{BodySHA256: strings.Repeat("a", 64)}}
+	snapshot := executionOwnerSnapshot{issue: issueops.OwnerIssue{BodySHA256: strings.Repeat("a", 64)}}
 
 	_, _, err = beginOrcaIntentViaRepository(stateRoot, passed, workspace, probe, issueops.ExecutionPrepareRequest{
 		OwnerHost: "codex", OwnerModel: "gpt-6-astra", OwnerEffort: "xhigh",

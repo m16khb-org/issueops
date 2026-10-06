@@ -9,13 +9,13 @@ import (
 
 func TestApplyCompletionReleasesLeaseAndStampsDoneLedger(t *testing.T) {
 	now := time.Date(2026, 8, 2, 0, 0, 0, 123456789, time.UTC)
-	holder := Actor{Host: "codex", SessionID: "session", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
+	holder := completioncontract.Actor{Host: "codex", SessionID: "session", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
 	snapshot := Snapshot{
 		Phase:  "pr",
-		Lease:  Lease{Generation: 3, Status: "active", Holder: &holder},
-		Ledger: map[string]LedgerEntry{"pr": {Phase: "pr", EnteredAt: "before"}},
+		Lease:  completioncontract.Lease{Generation: 3, Status: "active", Holder: &holder},
+		Ledger: map[string]completioncontract.LedgerEntry{"pr": {Phase: "pr", EnteredAt: "before"}},
 	}
-	command := Command{
+	command := completioncontract.Command{
 		Generation: 3, Actor: holder, FinalHead: "0123456789012345678901234567890123456789",
 		VerificationReportPath: "/repo/verified-execution.json", Verification: []string{"go test ./..."},
 		RemoteArtifactURL: "https://github.com/example/repo/pull/198",
@@ -37,9 +37,9 @@ func TestApplyCompletionReleasesLeaseAndStampsDoneLedger(t *testing.T) {
 }
 
 func TestValidateActiveRejectsForeignHolder(t *testing.T) {
-	holder := Actor{Host: "codex", SessionID: "holder", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
-	err := ValidateActive(Snapshot{Phase: "pr", Lease: Lease{Generation: 3, Status: "active", Holder: &holder}}, Command{
-		Generation: 3, Actor: Actor{Host: "claude", SessionID: "foreign", Process: holder.Process},
+	holder := completioncontract.Actor{Host: "codex", SessionID: "holder", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
+	err := ValidateActive(Snapshot{Phase: "pr", Lease: completioncontract.Lease{Generation: 3, Status: "active", Holder: &holder}}, completioncontract.Command{
+		Generation: 3, Actor: completioncontract.Actor{Host: "claude", SessionID: "foreign", Process: holder.Process},
 	}, true)
 	if err == nil || CodeOf(err) != DenyAuthority {
 		t.Fatalf("foreign holder error=%v code=%q", err, CodeOf(err))
@@ -48,17 +48,17 @@ func TestValidateActiveRejectsForeignHolder(t *testing.T) {
 
 func TestApplyCompletionClearsCompletedReseedStaleNotesFromPRAndDone(t *testing.T) {
 	now := time.Date(2026, 8, 4, 0, 0, 0, 0, time.UTC)
-	holder := Actor{Host: "codex", SessionID: "session", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
+	holder := completioncontract.Actor{Host: "codex", SessionID: "session", Process: &completioncontract.ProcessReceipt{PID: 7, StartedAt: "start", Executable: "/bin/codex"}}
 	stale := "stale: completed execution reseed (4 -> 5)"
 	snapshot := Snapshot{
 		Phase: "pr",
-		Lease: Lease{Generation: 5, Status: "active", Holder: &holder},
-		Ledger: map[string]LedgerEntry{
+		Lease: completioncontract.Lease{Generation: 5, Status: "active", Holder: &holder},
+		Ledger: map[string]completioncontract.LedgerEntry{
 			"pr":   {Phase: "pr", EnteredAt: "old-pr", Notes: []string{"keep pr", stale}},
 			"done": {Phase: "done", EnteredAt: "old-done", Notes: []string{stale, "keep done"}},
 		},
 	}
-	command := Command{Generation: 5, Actor: holder, FinalHead: "ff27b34520e4e253d8ebfd523e4e4352bf93e8d8", VerificationReportPath: "/repo/verified-execution.json", Verification: []string{"new verification"}, RemoteArtifactURL: "https://github.com/example/repo/pull/304"}
+	command := completioncontract.Command{Generation: 5, Actor: holder, FinalHead: "ff27b34520e4e253d8ebfd523e4e4352bf93e8d8", VerificationReportPath: "/repo/verified-execution.json", Verification: []string{"new verification"}, RemoteArtifactURL: "https://github.com/example/repo/pull/304"}
 	outcome := ApplyAt(snapshot, command, command.VerificationReportPath, now, now)
 	if got := outcome.Ledger["pr"].Notes; len(got) != 1 || got[0] != "keep pr" {
 		t.Fatalf("pr notes=%v", got)

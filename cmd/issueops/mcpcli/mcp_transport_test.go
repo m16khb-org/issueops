@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	mcpcatalog "issueops/internal/adapter/inbound/catalog/mcp"
 	issueopscontract "issueops/internal/contract/issueops"
 	"net"
 	"os"
@@ -18,7 +19,7 @@ import (
 
 func TestRunMCPWithDependenciesUsesItsReleaseHandlerOnDirectTransport(t *testing.T) {
 	called := false
-	session := startRunMCPTestSession(t, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
+	session := startRunMCPTestSession(t, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 		called = true
 		return issueopscontract.ExecutionResult{OK: true, ID: request.ID}, nil
 	}})
@@ -46,7 +47,7 @@ func TestServeMCPStreamWithDependenciesKeepsConcurrentReleaseHandlersIsolated(t 
 		group.Add(1)
 		go func(tc testCase) {
 			defer group.Done()
-			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
+			server := initSDKServer(MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Release: func(_ context.Context, _ string, request issueopscontract.ExecutionReleaseRequest) (issueopscontract.ExecutionResult, error) {
 				called <- tc.id
 				return issueopscontract.ExecutionResult{OK: true, ID: request.ID}, nil
 			}})
@@ -102,7 +103,7 @@ func TestSDKTransportOwnsBothStdioAndStreamConnections(t *testing.T) {
 
 	for _, mode := range []string{"stdio", "stream_conn"} {
 		t.Run(mode, func(t *testing.T) {
-			session := startMCPTransportTestSession(t, mode, MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
+			session := startMCPTransportTestSession(t, mode, MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resources: resourceConfigForTest(), State: publicStateForTest()})
 			tools, err := session.ListTools(context.Background(), nil)
 			if err != nil || !containsSDKTool(tools.Tools, "issueops_execution") {
 				t.Fatalf("SDK tool listing failed: tools=%#v err=%v", tools, err)
@@ -116,7 +117,7 @@ func TestSDKTransportOwnsBothStdioAndStreamConnections(t *testing.T) {
 }
 
 func TestSDKTransportPreservesStructuredToolErrors(t *testing.T) {
-	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Execution: testExecutionDeps(), Catalog: testMCPCatalog(), Resources: resourceConfigForTest(), State: publicStateForTest()})
+	session := startMCPTransportTestSession(t, "stdio", MCPDependencies{Execution: testExecutionDeps(), Catalog: mcpcatalog.Build(), Resources: resourceConfigForTest(), State: publicStateForTest()})
 	_, err := session.CallTool(context.Background(), &mcp.CallToolParams{
 		Name: "state_prune", Arguments: map[string]any{"max_age": "not-a-duration"},
 	})

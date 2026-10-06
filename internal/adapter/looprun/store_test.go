@@ -13,7 +13,7 @@ import (
 func TestReadLoopRefusesFutureSchema(t *testing.T) {
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	loop := startLoopForTest(t, "future-schema", 2)
-	db, err := sqlstore.Open(StateRoot())
+	db, err := sqlstore.Open(testLoopStateRoot())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,9 +33,9 @@ func TestRepoGateSummaryDoesNotRepairExistingLoopStore(t *testing.T) {
 	}
 
 	paths := []string{
-		StateRoot(),
-		filepath.Join(StateRoot(), "issueops.db"),
-		filepath.Join(StateRoot(), "issueops.lock.db"),
+		testLoopStateRoot(),
+		filepath.Join(testLoopStateRoot(), "issueops.db"),
+		filepath.Join(testLoopStateRoot(), "issueops.lock.db"),
 	}
 	for index, path := range paths {
 		mode := os.FileMode(0o644)

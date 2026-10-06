@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func runState(deps Dependencies, args []string) error {
+func Run(deps Dependencies, args []string) error {
 	if len(args) == 0 {
 		stateUsage()
 		return fmt.Errorf("missing state subcommand")

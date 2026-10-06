@@ -5,6 +5,8 @@ import (
 	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 )
 
+// domain/doctor는 contract/doctor만 import할 수 있어서 lifecycle 계획 타입을 여기서
+// 이 이름으로 둔다.
 type ProjectLifecycleStatePlan = lifecyclecontract.ProjectLifecycleStatePlan
 
 type HarnessDoctorRequest struct {

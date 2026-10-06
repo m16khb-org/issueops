@@ -8,9 +8,9 @@ import (
 
 func MapGoalScores(result augment.SelfAugmentResult, targetScore float64) []verify.SelfVerificationGoalScore {
 	definitions := domain.GoalDefinitions()
-	goals := make([]domain.GoalDefinition, 0, len(definitions))
+	goals := make([]verify.SelfVerificationGoalDefinition, 0, len(definitions))
 	for _, definition := range definitions {
-		goals = append(goals, domain.GoalDefinition(definition))
+		goals = append(goals, verify.SelfVerificationGoalDefinition(definition))
 	}
 	runs := projectRuns(result)
 	domainScores := domain.ScoreGoals(goals, runs, result.Iterations, targetScore)

@@ -8,6 +8,8 @@ import (
 	publicationcontract "issueops/internal/contract/issueopspublication"
 )
 
+// domain/issueops는 contract/issueops만 import할 수 있어서 publication 계약의
+// issue-create intent 상태를 여기서 이 이름으로 둔다.
 const (
 	IssueCreateIntentPending            = publicationcontract.IssueCreateIntentPending
 	IssueCreateIntentNotInvoked         = publicationcontract.IssueCreateIntentNotInvoked

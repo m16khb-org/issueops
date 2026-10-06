@@ -1,13 +1,17 @@
 package doctor
 
-import "testing"
+import (
+	doctorcontract "issueops/internal/contract/doctor"
+	doctordomain "issueops/internal/domain/doctor"
+	"testing"
+)
 
 func TestHarnessDoctorReportsPipeCapacityCheck(t *testing.T) {
 	oldMeasure := measurePipeCapacity
-	measurePipeCapacity = func() (int, error) { return pipeCapacityWarningThreshold, nil }
+	measurePipeCapacity = func() (int, error) { return doctordomain.PipeCapacityWarningThreshold, nil }
 	t.Cleanup(func() { measurePipeCapacity = oldMeasure })
 
-	result, err := HarnessDoctor(HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: t.TempDir(), Version: "test"})
+	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -15,8 +19,8 @@ func TestHarnessDoctorReportsPipeCapacityCheck(t *testing.T) {
 	if !ok || !check.Healthy {
 		t.Fatalf("expected healthy pipe_capacity check, got check=%+v ok=%v result=%+v", check, ok, result)
 	}
-	if result.PipeCapacityBytes != pipeCapacityWarningThreshold {
-		t.Fatalf("pipe capacity bytes = %d, want %d", result.PipeCapacityBytes, pipeCapacityWarningThreshold)
+	if result.PipeCapacityBytes != doctordomain.PipeCapacityWarningThreshold {
+		t.Fatalf("pipe capacity bytes = %d, want %d", result.PipeCapacityBytes, doctordomain.PipeCapacityWarningThreshold)
 	}
 	if hasHarnessDoctorIssueForTest(result.Issues, "pipe_capacity_degraded") {
 		t.Fatalf("did not expect degraded pipe warning: %+v", result.Issues)
@@ -28,7 +32,7 @@ func TestHarnessDoctorWarnsOnDegradedPipeCapacity(t *testing.T) {
 	measurePipeCapacity = func() (int, error) { return 512, nil }
 	t.Cleanup(func() { measurePipeCapacity = oldMeasure })
 
-	result, err := HarnessDoctor(HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: t.TempDir(), Version: "test"})
+	result, err := HarnessDoctor(doctorcontract.HarnessDoctorRequest{RepoRoot: t.TempDir(), IssueOpsRoot: t.TempDir(), Home: t.TempDir(), Version: "test"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,16 +48,16 @@ func TestHarnessDoctorWarnsOnDegradedPipeCapacity(t *testing.T) {
 	}
 }
 
-func harnessDoctorCheckForTest(checks []HarnessDoctorCheck, name string) (HarnessDoctorCheck, bool) {
+func harnessDoctorCheckForTest(checks []doctorcontract.HarnessDoctorCheck, name string) (doctorcontract.HarnessDoctorCheck, bool) {
 	for _, check := range checks {
 		if check.Name == name {
 			return check, true
 		}
 	}
-	return HarnessDoctorCheck{}, false
+	return doctorcontract.HarnessDoctorCheck{}, false
 }
 
-func hasHarnessDoctorIssueForTest(issues []HarnessDoctorIssue, code string) bool {
+func hasHarnessDoctorIssueForTest(issues []doctorcontract.HarnessDoctorIssue, code string) bool {
 	for _, issue := range issues {
 		if issue.Code == code {
 			return true

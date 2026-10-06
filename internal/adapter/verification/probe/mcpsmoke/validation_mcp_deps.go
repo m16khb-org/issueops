@@ -6,7 +6,6 @@ import (
 	"time"
 
 	verifycontract "issueops/internal/contract/selfverify"
-	verifydomain "issueops/internal/domain/selfverify"
 )
 
 const aggregateOutputBudgetBytes = 8 * 1024
@@ -28,14 +27,6 @@ func (deps MCPValidationDeps) withDefaults() MCPValidationDeps {
 		deps.RunSDKSmoke = runSDKSmoke
 	}
 	return deps
-}
-
-func failedStep(label string, err error) verifycontract.StepResult {
-	return verifydomain.FailedStep(label, err)
-}
-
-func tailWithBudget(s string, max int) (string, bool, int) {
-	return verifydomain.TailWithBudget(s, max)
 }
 
 func splitLines(s string) []string {

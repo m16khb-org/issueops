@@ -6,20 +6,8 @@ import (
 	"issueops/internal/adapter/preflight"
 	app "issueops/internal/application/apidoc"
 	contract "issueops/internal/contract/apidoc"
-	domain "issueops/internal/domain/apidoc"
 	"os"
 )
-
-type apiDocReviewOptions = app.ReviewOptions
-type apiDocStaticOptions = app.StaticOptions
-type apiDocReviewResult = contract.ReviewResult
-type apiDocStaticResult = contract.StaticResult
-type apiDocCheckResult = contract.CheckResult
-type apiDocReviewFinding = contract.ReviewFinding
-
-var ErrReviewGateFailed = app.ErrReviewGateFailed
-var ErrReviewResultRequired = app.ErrReviewResultRequired
-var ErrStaticGateFailed = app.ErrStaticGateFailed
 
 func IsStaticGateError(err error) bool { return errors.Is(err, app.ErrStaticGateFailed) }
 func testCommand() Command {
@@ -38,13 +26,13 @@ func runAPIDoc(args []string) error            { return testCommand().Run(args) 
 func runAPIDocReview(args []string) error      { return testCommand().runAPIDocReview(args) }
 func runAPIDocStaticCheck(args []string) error { return testCommand().runAPIDocStaticCheck(args) }
 func runAPIDocCheck(args []string) error       { return testCommand().runAPIDocCheck(args) }
-func runAPIDocReviewWithOptions(o apiDocReviewOptions) (apiDocReviewResult, error) {
+func runAPIDocReviewWithOptions(o app.ReviewOptions) (contract.ReviewResult, error) {
 	return testAPIDocService().Reviewer.Review(o)
 }
-func runAPIDocStaticCheckWithOptions(o apiDocStaticOptions) (apiDocStaticResult, error) {
+func runAPIDocStaticCheckWithOptions(o app.StaticOptions) (contract.StaticResult, error) {
 	return testAPIDocService().Static.Check(o)
 }
-func ReviewExtraPrompt(repo, file string) (string, error) { return reviewfiles.ExtraPrompt(repo, file) }
+
 func Diff(repo string, files []string, file string) (string, error) {
 	return (reviewfiles.Files{GitCmd: preflight.GitCmd}).Diff(repo, files, file)
 }
@@ -54,4 +42,3 @@ func Input(repo string, files []string, file string, all bool) (string, error) {
 func TrackedFiles(repo string) []string {
 	return (reviewfiles.Files{GitCmd: preflight.GitCmd}).Tracked(repo)
 }
-func IsCandidate(file string) bool { return domain.IsCandidate(file) }

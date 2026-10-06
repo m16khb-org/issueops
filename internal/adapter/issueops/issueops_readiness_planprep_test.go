@@ -2,6 +2,7 @@ package issueops
 
 import (
 	cycleapp "issueops/internal/application/issueopscycle"
+	reviewcontract "issueops/internal/contract/issueopsreview"
 	"path/filepath"
 	"testing"
 
@@ -107,7 +108,7 @@ func TestImplementationReadinessRequiresExecutionLease(t *testing.T) {
 		BaseBranch:   "main",
 		LinkVerified: true,
 	}
-	rec.DesignReview = &issueops.IssueOpsDesignReview{
+	rec.DesignReview = &reviewcontract.DesignReview{
 		ProblemSummary: "prepare worktree tools",
 		ProposedDesign: "record worktree tool preparation before implementation",
 		RefactorPlan:   "durable gate only",

@@ -4,6 +4,7 @@ import (
 	outbound "issueops/internal/adapter/outbound/quality"
 	app "issueops/internal/application/quality"
 	contract "issueops/internal/contract/quality"
+	qualitycatalogcontract "issueops/internal/contract/qualitycatalog"
 	catalog "issueops/internal/domain/qualitycatalog"
 	"os"
 	"path/filepath"
@@ -29,7 +30,7 @@ func inspectQualityForTest(root string, deps app.InspectDeps) contract.InspectRe
 		deps.AuditItems = outbound.CollectAuditItems
 	}
 	if deps.Candidates == nil {
-		deps.Candidates = func(string) []catalog.Candidate { return catalog.Candidates() }
+		deps.Candidates = func(string) []qualitycatalogcontract.Candidate { return catalog.Candidates() }
 	}
 	return app.Inspect(root, deps)
 }

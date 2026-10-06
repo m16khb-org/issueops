@@ -37,7 +37,7 @@ func RecordAttempt(id string, req loopcontract.RecordAttemptRequest) (loopcontra
 	return testLoopService().RecordAttempt(context.Background(), id, req)
 }
 func ReadLoop(id string) (loopcontract.LoopRun, error) { return testLoopStore().Read(id) }
-func StateRoot() string                                { return testLoopStateRoot() }
+
 func RepoGateSummaryFor(repo string) (loopcontract.RepoGateSummary, []string) {
 	return testLoopReader().RepoGateSummaryFor(repo)
 }

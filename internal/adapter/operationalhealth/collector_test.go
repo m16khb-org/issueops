@@ -3,6 +3,7 @@ package operationalhealth
 import (
 	"context"
 	"errors"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"reflect"
 	"strings"
 	"sync"
@@ -33,7 +34,7 @@ func TestCycleFromRecordProjectsExecution(t *testing.T) {
 		},
 	}
 	cycle, problems := cycleFromRecord(record, func(receipt issueopscontract.NativeProcessReceipt) (string, issueopscontract.NativeProcessReceipt, error) {
-		return corehealth.ProcessStatusLive, receipt, nil
+		return operationalhealthcontract.ProcessStatusLive, receipt, nil
 	})
 	if len(problems) != 0 {
 		t.Fatalf("problems = %#v", problems)
@@ -42,7 +43,7 @@ func TestCycleFromRecordProjectsExecution(t *testing.T) {
 		t.Fatalf("lease projection = %#v", cycle)
 	}
 	if cycle.HolderHost != "codex" || cycle.HolderSessionID != "session-v1" || cycle.HolderAgentID != "agent-v1" ||
-		cycle.HolderPID != 123 || cycle.HolderStartedAt != "2026-07-22T00:00:00Z" || cycle.HolderExecutable != "/opt/../opt/codex" || cycle.HolderProcessStatus != corehealth.ProcessStatusLive ||
+		cycle.HolderPID != 123 || cycle.HolderStartedAt != "2026-07-22T00:00:00Z" || cycle.HolderExecutable != "/opt/../opt/codex" || cycle.HolderProcessStatus != operationalhealthcontract.ProcessStatusLive ||
 		cycle.WorktreePath != "/repo.worktrees/69-v1" {
 		t.Fatalf("holder/workspace projection = %#v", cycle)
 	}
@@ -59,9 +60,9 @@ func TestCycleFromRecordReportsNativeProcessProbeFailure(t *testing.T) {
 		}},
 	}}
 	cycle, problems := cycleFromRecord(record, func(issueopscontract.NativeProcessReceipt) (string, issueopscontract.NativeProcessReceipt, error) {
-		return corehealth.ProcessStatusUnknown, issueopscontract.NativeProcessReceipt{}, errors.New("probe failed")
+		return operationalhealthcontract.ProcessStatusUnknown, issueopscontract.NativeProcessReceipt{}, errors.New("probe failed")
 	})
-	if cycle.HolderProcessStatus != corehealth.ProcessStatusUnknown || len(problems) != 1 || problems[0].Code != "issueops_process_probe_failed" {
+	if cycle.HolderProcessStatus != operationalhealthcontract.ProcessStatusUnknown || len(problems) != 1 || problems[0].Code != "issueops_process_probe_failed" {
 		t.Fatalf("cycle/problems = %#v / %#v", cycle, problems)
 	}
 }
@@ -99,7 +100,7 @@ func TestCollectOrcaSharesOneRunSnapshotAndPreservesCrossChecks(t *testing.T) {
 		inventory: port.OrcaRunInventory{RuntimeID: "runtime", Runs: []port.OrcaRun{{RuntimeID: "runtime", ID: "run-1"}}},
 		allTasks:  []port.OrcaTask{{RuntimeID: "runtime", RunID: "run-1", ID: "task-1", Status: "dispatched"}},
 	}
-	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: corehealth.MessagePresence{Empty: true}}
+	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 	Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
 
 	if orca.inventoryCalls != 1 {
@@ -142,7 +143,7 @@ func TestCollectOverlapsGitAndOrcaInventory(t *testing.T) {
 
 func TestCollectOrcaFailsClosedForRunRuntimeMismatch(t *testing.T) {
 	orca := &runInventoryOrca{inventory: port.OrcaRunInventory{RuntimeID: "other"}}
-	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: corehealth.MessagePresence{Empty: true}}
+	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 	Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
 
 	if !hasProblemCode(snapshot.InventoryProblems, "orca_run_runtime_mismatch") {
@@ -160,7 +161,7 @@ func TestCollectOrcaReportsReaderFailuresInFixedOrder(t *testing.T) {
 		dispatchedErr: errors.New("dispatched failed"),
 		gatesErr:      errors.New("gates failed"),
 	}
-	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: corehealth.MessagePresence{Empty: true}}
+	snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 	Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
 
 	var codes []string
@@ -212,7 +213,7 @@ func (statusOnlyOrca) InboxPresence(context.Context) (port.OrcaInboxPresence, er
 	return port.OrcaInboxPresence{}, errors.New("unexpected InboxPresence call")
 }
 
-func hasProblemCode(problems []corehealth.InventoryProblem, code string) bool {
+func hasProblemCode(problems []operationalhealthcontract.InventoryProblem, code string) bool {
 	for _, problem := range problems {
 		if problem.Code == code {
 			return true
@@ -361,7 +362,7 @@ func TestCollectOrcaFiltersResourceIdentityAndReportsResolveProblems(t *testing.
 	t.Run("repo resolution failure is reported", func(t *testing.T) {
 		orca := base()
 		orca.repoErr = errors.New("resolve failed")
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: corehealth.MessagePresence{Empty: true}}
+		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
 		if !hasProblemCode(snapshot.InventoryProblems, "orca_repo_failed") {
 			t.Fatalf("resolve failure problem missing: %#v", snapshot.InventoryProblems)
@@ -370,7 +371,7 @@ func TestCollectOrcaFiltersResourceIdentityAndReportsResolveProblems(t *testing.
 	t.Run("repo identity mismatch is reported", func(t *testing.T) {
 		orca := base()
 		orca.repo = port.OrcaRepo{RuntimeID: "other", ID: "repo", Path: "/repo"}
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: corehealth.MessagePresence{Empty: true}}
+		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
 		if !hasProblemCode(snapshot.InventoryProblems, "orca_repo_identity_mismatch") {
 			t.Fatalf("identity mismatch problem missing: %#v", snapshot.InventoryProblems)
@@ -386,7 +387,7 @@ func TestCollectOrcaFiltersResourceIdentityAndReportsResolveProblems(t *testing.
 			{RuntimeID: "runtime", Handle: "term-ok", PTYID: "pty-ok", WorktreeID: "wt", TabID: "tab", LeafID: "leaf"},
 			{RuntimeID: "runtime", Handle: "term-incomplete", PTYID: ""},
 		}
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: corehealth.MessagePresence{Empty: true}}
+		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
 		if len(snapshot.OrcaWorktrees) != 2 {
 			t.Fatalf("worktree rows must all flow into the snapshot: %#v", snapshot.OrcaWorktrees)
@@ -408,7 +409,7 @@ func TestCollectOrcaFiltersResourceIdentityAndReportsResolveProblems(t *testing.
 		orca := base()
 		orca.worktreesErr = errors.New("wt failed")
 		orca.terminalsErr = errors.New("term failed")
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: corehealth.MessagePresence{Empty: true}}
+		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
 		if !hasProblemCode(snapshot.InventoryProblems, "orca_worktrees_failed") ||
 			!hasProblemCode(snapshot.InventoryProblems, "orca_terminals_failed") {
@@ -418,7 +419,7 @@ func TestCollectOrcaFiltersResourceIdentityAndReportsResolveProblems(t *testing.
 	t.Run("inbox and dispatch surfaces flow through", func(t *testing.T) {
 		orca := base()
 		orca.inbox = port.OrcaInboxPresence{RuntimeID: "runtime", Count: 2}
-		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: corehealth.MessagePresence{Empty: true}}
+		snapshot := corehealth.Snapshot{RepoRoot: "/repo", Messages: operationalhealthcontract.MessagePresence{Empty: true}}
 		Collector{Orca: orca}.collectOrca(context.Background(), &snapshot, false)
 		if snapshot.Messages.RuntimeID != "runtime" || snapshot.Messages.Count != 2 {
 			t.Fatalf("inbox presence projection wrong: %#v", snapshot.Messages)

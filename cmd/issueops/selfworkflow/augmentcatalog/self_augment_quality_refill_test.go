@@ -1,6 +1,10 @@
 package augmentcatalog
 
-import "testing"
+import (
+	app "issueops/internal/application/selfaugment"
+	contract "issueops/internal/contract/selfaugment"
+	"testing"
+)
 
 func TestQualityRefillCandidatesStayOpenWithScoresAndVerification(t *testing.T) {
 	wantIDs := []string{
@@ -13,8 +17,8 @@ func TestQualityRefillCandidatesStayOpenWithScoresAndVerification(t *testing.T) 
 		"state-write-locking",
 	}
 
-	byID := map[string]SelfAugmentCandidate{}
-	for _, candidate := range SelfAugmentCandidates(SelfAugmentRepoSignals{}) {
+	byID := map[string]contract.SelfAugmentCandidate{}
+	for _, candidate := range app.Candidates(contract.SelfAugmentRepoSignals{}) {
 		byID[candidate.ID] = candidate
 	}
 
@@ -23,7 +27,7 @@ func TestQualityRefillCandidatesStayOpenWithScoresAndVerification(t *testing.T) 
 		if !ok {
 			t.Fatalf("quality refill candidate %q missing", id)
 		}
-		if candidate.Status != SelfAugmentCandidateStatusOpen {
+		if candidate.Status != contract.CandidateStatusOpen {
 			t.Fatalf("candidate %q status=%q, want open", id, candidate.Status)
 		}
 		if candidate.Score <= 0 || candidate.Impact <= 0 || candidate.Feasibility <= 0 || candidate.Risk <= 0 {

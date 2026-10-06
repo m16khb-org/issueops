@@ -1,6 +1,8 @@
 package devilsadvocate
 
 import (
+	reviewcontract "issueops/internal/contract/issueopsreview"
+	reviewport "issueops/internal/port/issueopsreview"
 	"strings"
 	"testing"
 
@@ -8,7 +10,7 @@ import (
 )
 
 // storeWithRounds는 이미 기록된 라운드를 가진 record를 돌려주는 최소 store다.
-func storeWithRounds(rounds ...model.IssueOpsDevilsAdvocateRound) (Store, *model.IssueOpsRecord) {
+func storeWithRounds(rounds ...model.IssueOpsDevilsAdvocateRound) (reviewport.DevilsAdvocateStore, *model.IssueOpsRecord) {
 	written := &model.IssueOpsRecord{}
 	var review *model.IssueOpsDevilsAdvocateReview
 	if len(rounds) > 0 {
@@ -19,7 +21,7 @@ func storeWithRounds(rounds ...model.IssueOpsDevilsAdvocateRound) (Store, *model
 			History: append([]model.IssueOpsDevilsAdvocateRound{}, rounds[:len(rounds)-1]...),
 		}
 	}
-	return Store{
+	return reviewport.DevilsAdvocateStore{
 		Read: func(_, id string) (model.IssueOpsRecord, error) {
 			return model.IssueOpsRecord{OK: true, ID: id, PlanPath: "plans/demo.md", DevilsAdvocateReview: review}, nil
 		},
@@ -39,7 +41,7 @@ func reviseRound(findings string) model.IssueOpsDevilsAdvocateRound {
 // 네 번째 revise는 거부하고, 실제로 열려 있는 탈출 경로만 안내한다.
 func TestRecordRejectsFourthUnwaivedReviseRound(t *testing.T) {
 	store, written := storeWithRounds(reviseRound("one"), reviseRound("two"), reviseRound("three"))
-	_, err := Record(store, "state", "io-cap", model.IssueOpsDevilsAdvocateReviewRequest{
+	_, err := Record(store, "state", "io-cap", reviewcontract.DevilsAdvocateReviewRequest{
 		Verdict: "revise", ReviewerContext: "subagent", Findings: []string{"four"},
 	})
 	if err == nil {
@@ -64,7 +66,7 @@ func TestRecordRejectsFourthUnwaivedReviseRound(t *testing.T) {
 func TestRecordAllowsTerminalVerdictsAfterThreeRevises(t *testing.T) {
 	for _, verdict := range []string{"pass", "stop"} {
 		store, written := storeWithRounds(reviseRound("one"), reviseRound("two"), reviseRound("three"))
-		if _, err := Record(store, "state", "io-cap", model.IssueOpsDevilsAdvocateReviewRequest{
+		if _, err := Record(store, "state", "io-cap", reviewcontract.DevilsAdvocateReviewRequest{
 			Verdict: verdict, ReviewerContext: "subagent", Findings: []string{"attacked and settled"},
 		}); err != nil {
 			t.Fatalf("%s after three revises must be allowed: %v", verdict, err)
@@ -81,7 +83,7 @@ func TestRecordAllowsTerminalVerdictsAfterThreeRevises(t *testing.T) {
 // waiver는 의도적인 override이므로 통과하고, 카운트에도 들어가지 않는다.
 func TestRecordAllowsWaivedReviseAndExcludesItFromTheCount(t *testing.T) {
 	store, _ := storeWithRounds(reviseRound("one"), reviseRound("two"), reviseRound("three"))
-	if _, err := Record(store, "state", "io-cap", model.IssueOpsDevilsAdvocateReviewRequest{
+	if _, err := Record(store, "state", "io-cap", reviewcontract.DevilsAdvocateReviewRequest{
 		Verdict: "revise", ReviewerContext: "subagent", Waived: true, WaiverRationale: "scoped follow-up issue filed",
 	}); err != nil {
 		t.Fatalf("a waived revise must be allowed past the cap: %v", err)
@@ -89,7 +91,7 @@ func TestRecordAllowsWaivedReviseAndExcludesItFromTheCount(t *testing.T) {
 
 	waived := model.IssueOpsDevilsAdvocateRound{Verdict: "revise", Waived: true, WaiverRationale: "override", RecordedAt: "2026-09-08T00:00:00Z"}
 	store, written := storeWithRounds(reviseRound("one"), waived, reviseRound("two"))
-	if _, err := Record(store, "state", "io-cap", model.IssueOpsDevilsAdvocateReviewRequest{
+	if _, err := Record(store, "state", "io-cap", reviewcontract.DevilsAdvocateReviewRequest{
 		Verdict: "revise", ReviewerContext: "subagent", Findings: []string{"third unwaived"},
 	}); err != nil {
 		t.Fatalf("two unwaived revises plus one waived must stay under the cap: %v", err)
@@ -102,7 +104,7 @@ func TestRecordAllowsWaivedReviseAndExcludesItFromTheCount(t *testing.T) {
 // 첫 라운드부터 세 번째까지는 그대로 통과한다.
 func TestRecordAllowsTheFirstThreeReviseRounds(t *testing.T) {
 	store, _ := storeWithRounds(reviseRound("one"), reviseRound("two"))
-	if _, err := Record(store, "state", "io-cap", model.IssueOpsDevilsAdvocateReviewRequest{
+	if _, err := Record(store, "state", "io-cap", reviewcontract.DevilsAdvocateReviewRequest{
 		Verdict: "revise", ReviewerContext: "subagent", Findings: []string{"three"},
 	}); err != nil {
 		t.Fatalf("the third revise must be allowed: %v", err)

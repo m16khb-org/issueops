@@ -34,7 +34,7 @@ This file preserves dated caution entries that should remain searchable without 
 - Source: self-verify
 - Summary: When `issueops self-verify` fails on harness invariants, treat the failure as actionable unless the evidence proves it is physically impossible to fix in the current environment.
 - Evidence: `self-verify --progress=jsonl --json` stops at the first failed invariant step, so later coverage gaps are a consequence of early termination, not separate proof that the README or code change is safe.
-- Resolution: For forbidden legacy name hits, inspect the exact file:line evidence, generalize personal GitHub owners and absolute local paths to neutral examples, run `rg` for all forbidden needles, then rerun self-verify.
+- Resolution: For retired name hits, inspect the exact file:line evidence, generalize personal GitHub owners and absolute local paths to neutral examples, run `rg` for all forbidden needles, then rerun self-verify.
 
 ## 2026-06-03 — Separate PR/MR merge from IssueOps worktree cleanup
 

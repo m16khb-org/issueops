@@ -24,10 +24,6 @@ import (
 // namespace 이름은 issueops.IssueOpsSchemaVersion에서 파생된다.
 var issueOpsBucket = fmt.Sprintf("issueops_v%d", issueops.IssueOpsSchemaVersion)
 
-func ReadIssueOps(stateRoot, id string) (issueops.IssueOpsRecord, error) {
-	return readIssueOpsUnchecked(stateRoot, id)
-}
-
 // ReadIssueOpsExisting reads exactly one existing record without creating,
 // repairing, migrating, or changing permissions on the state store.
 func ReadIssueOpsExisting(stateRoot, id string) (issueops.IssueOpsRecord, error) {
@@ -45,7 +41,7 @@ func ReadIssueOpsExisting(stateRoot, id string) (issueops.IssueOpsRecord, error)
 	return decodeIssueOpsRecord(id, b)
 }
 
-func readIssueOpsUnchecked(stateRoot, id string) (issueops.IssueOpsRecord, error) {
+func ReadIssueOps(stateRoot, id string) (issueops.IssueOpsRecord, error) {
 	id, err := normalizeIssueOpsID(id)
 	if err != nil {
 		return issueops.IssueOpsRecord{OK: false}, err

@@ -11,18 +11,6 @@ import (
 
 const stateBucket = "state"
 
-func StateDir() string {
-	return stateDir()
-}
-
-func NormalizeStateKey(key string) (string, error) {
-	return statepath.NormalizeKey(key)
-}
-
-func statePath(dir, key string) string {
-	return statepath.Path(dir, key)
-}
-
 func openStateStore(dir string) (stateport.Store, error) {
 	return sqlstore.Open(dir)
 }
@@ -40,7 +28,7 @@ var _ stateport.ExistingReader = ExistingRecords{}
 // directory and the shared SQLite store.
 func NewService() *stateapplication.Service {
 	return stateapplication.NewService(stateapplication.Dependencies{
-		StateDir:        stateDir,
+		StateDir:        StateDir,
 		StatePath:       statepath.Path,
 		OpenStore:       openStateStore,
 		ExistingRecords: ExistingRecords{},

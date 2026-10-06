@@ -105,7 +105,7 @@ func Classify(in Input) Decision {
 		decision.NextCommand = "issueops execution reconcile --id " + id + " --preview"
 		return finish(in, decision)
 	}
-	if execution == nil && phaseRank(in.Record.Phase) >= phaseRank(issueopsnextcontract.PhasePlan) &&
+	if execution == nil && issueopsdomain.IssueOpsPhaseRank(in.Record.Phase) >= issueopsdomain.IssueOpsPhaseRank(issueopsnextcontract.PhasePlan) &&
 		strings.TrimSpace(in.RootConflictID) != "" {
 		decision.Stage = stage(issueopsnextcontract.StageBlockedRoot, 3)
 		decision.NextCommand = "issueops list --repo " + placeholder(in.SourceRoot, "<source_root>") + " --json"
@@ -353,10 +353,6 @@ func phaseIndex(phase issueopsnextcontract.Phase) int {
 	default:
 		return 0
 	}
-}
-
-func phaseRank(phase issueopsnextcontract.Phase) int {
-	return issueopsdomain.IssueOpsPhaseRank(phase)
 }
 
 // planningPhase는 execution이 아직 없어도 정상인 phase다. ai-slop-clean 이후에

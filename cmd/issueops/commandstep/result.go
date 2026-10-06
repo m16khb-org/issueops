@@ -5,13 +5,7 @@ import (
 
 	"fmt"
 	"strings"
-
-	selfverifydomain "issueops/internal/domain/selfverify"
 )
-
-func FailedStep(label string, err error) selfverify.StepResult {
-	return selfverifydomain.FailedStep(label, err)
-}
 
 func PrintStep(step selfverify.StepResult) {
 	if step.OK {
@@ -25,10 +19,6 @@ func PrintStep(step selfverify.StepResult) {
 	if step.Stderr != "" {
 		fmt.Printf("  stderr:\n%s\n", IndentLines(step.Stderr))
 	}
-}
-
-func TailWithBudget(s string, max int) (string, bool, int) {
-	return selfverifydomain.TailWithBudget(s, max)
 }
 
 func IndentLines(s string) string {

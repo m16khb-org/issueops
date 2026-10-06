@@ -5,6 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	contract "issueops/internal/contract/quality"
+	qualitycatalogcontract "issueops/internal/contract/qualitycatalog"
+	quality "issueops/internal/domain/quality"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,7 +23,7 @@ func TestParseCoverageFindsPackagesBelowThreshold(t *testing.T) {
 		"ok  \tissueops/internal/adapter/outbound/state\t0.012s\tcoverage: 81.0% of statements\n" +
 		"?   \tissueops/internal/adapter/empty\t[no test files]\n"
 
-	got := parseCoveragePackages(output, 60)
+	got := quality.ParseCoveragePackages(output, 60)
 	if len(got) != 1 {
 		t.Fatalf("low coverage packages=%#v, want one", got)
 	}
@@ -32,7 +35,7 @@ func TestParseCoverageFindsPackagesBelowThreshold(t *testing.T) {
 func TestParseCoverageFindsBarePackageOutput(t *testing.T) {
 	output := "issueops/internal/domain/issueopsinventory\t\tcoverage: 0.0% of statements\n"
 
-	got := parseCoveragePackages(output, 60)
+	got := quality.ParseCoveragePackages(output, 60)
 
 	if len(got) != 1 || got[0].Package != "issueops/internal/domain/issueopsinventory" || got[0].Coverage != 0 {
 		t.Fatalf("parseCoveragePackages() = %+v", got)
@@ -140,7 +143,7 @@ func TestRunInspectWithDepsPrintsTextAndJSON(t *testing.T) {
 	jsonOut := captureQualityStdout(t, func() error {
 		return RunInspectWithDeps([]string{"--json", root}, deps)
 	})
-	var result InspectResult
+	var result contract.InspectResult
 	if err := json.Unmarshal([]byte(jsonOut), &result); err != nil {
 		t.Fatalf("decode JSON: %v\n%s", err, jsonOut)
 	}
@@ -188,14 +191,14 @@ func TestInspectRunsIndependentSignalsConcurrently(t *testing.T) {
 		},
 		SelfAugmentOpenCount: func(string) (int, error) { return 0, nil },
 		SelfVerifyOpenCount:  func(string) (int, error) { return 0, nil },
-		Candidates:           func(string) []QualityCandidate { return nil },
-		CodeSNR: func(string) (SNRResult, error) {
+		Candidates:           func(string) []qualitycatalogcontract.Candidate { return nil },
+		CodeSNR: func(string) (contract.SNRResult, error) {
 			started <- "snr"
 			<-release
-			return SNRResult{}, nil
+			return contract.SNRResult{}, nil
 		},
 	}
-	result := make(chan InspectResult, 1)
+	result := make(chan contract.InspectResult, 1)
 	go func() {
 		result <- Inspect(qualityRootForTest(t), deps)
 	}()
@@ -215,8 +218,8 @@ func TestInspectRunsIndependentSignalsConcurrently(t *testing.T) {
 
 func TestInspectSeparatesCollectionHealthAndGateStatus(t *testing.T) {
 	deps := qualityDepsForTest("now")
-	deps.PioneerCoverage = func(string) (PioneerCoverage, error) {
-		return PioneerCoverage{
+	deps.PioneerCoverage = func(string) (contract.PioneerCoverage, error) {
+		return contract.PioneerCoverage{
 			Expected:             12,
 			BenchmarkObserved:    9,
 			BenchmarkMissing:     []string{"requirements-analysis", "design-review", "meeting-notes"},
@@ -247,8 +250,8 @@ func TestInspectCollectorErrorBlocksWithoutClaimingHealth(t *testing.T) {
 	deps.Coverage = func(string) (string, error) {
 		return "", errors.New("coverage failed")
 	}
-	deps.PioneerCoverage = func(string) (PioneerCoverage, error) {
-		return PioneerCoverage{Expected: 12}, errors.New("pioneer scan failed")
+	deps.PioneerCoverage = func(string) (contract.PioneerCoverage, error) {
+		return contract.PioneerCoverage{Expected: 12}, errors.New("pioneer scan failed")
 	}
 
 	result := Inspect(t.TempDir(), deps)
@@ -267,8 +270,8 @@ func TestInspectCollectorErrorBlocksWithoutClaimingHealth(t *testing.T) {
 
 func TestInspectMarksFailedSNRCollectorSignalAsError(t *testing.T) {
 	deps := qualityDepsForTest("now")
-	deps.CodeSNR = func(string) (SNRResult, error) {
-		return SNRResult{}, errors.New("walk failed")
+	deps.CodeSNR = func(string) (contract.SNRResult, error) {
+		return contract.SNRResult{}, errors.New("walk failed")
 	}
 
 	result := Inspect(t.TempDir(), deps)
@@ -321,7 +324,7 @@ func TestRunInspectBlocksOnBaselineWriteFailureAndRegression(t *testing.T) {
 			name: "regression",
 			deps: func() InspectDeps {
 				deps := qualityDepsForTest("now")
-				deps.CodeSNR = func(string) (SNRResult, error) { return SNRResult{Ratio: 0.50}, nil }
+				deps.CodeSNR = func(string) (contract.SNRResult, error) { return contract.SNRResult{Ratio: 0.50}, nil }
 				deps.ReadSNRBaseline = func(string) (float64, bool, error) { return 0.75, true, nil }
 				return deps
 			},
@@ -355,8 +358,8 @@ func TestRunInspectBlocksOnBaselineWriteFailureAndRegression(t *testing.T) {
 
 func TestRunInspectDoesNotOverwriteBaselineWhenSNRCollectionFails(t *testing.T) {
 	deps := qualityDepsForTest("now")
-	deps.CodeSNR = func(string) (SNRResult, error) {
-		return SNRResult{}, errors.New("walk failed")
+	deps.CodeSNR = func(string) (contract.SNRResult, error) {
+		return contract.SNRResult{}, errors.New("walk failed")
 	}
 	writes := 0
 	deps.SaveSNRBaseline = func(string, float64) error {
@@ -380,7 +383,7 @@ func TestRunInspectDoesNotOverwriteBaselineWhenSNRCollectionFails(t *testing.T) 
 	}
 }
 
-func findQualityFinding(findings []Finding, id string) *Finding {
+func findQualityFinding(findings []contract.Finding, id string) *contract.Finding {
 	for index := range findings {
 		if findings[index].ID == id {
 			return &findings[index]
@@ -414,8 +417,8 @@ func qualityDepsForTest(now string) InspectDeps {
 		},
 		SelfAugmentOpenCount: func(string) (int, error) { return 2, nil },
 		SelfVerifyOpenCount:  func(string) (int, error) { return 1, nil },
-		PioneerCoverage: func(string) (PioneerCoverage, error) {
-			return PioneerCoverage{Expected: 12, BenchmarkObserved: 12, ReproductionObserved: 12}, nil
+		PioneerCoverage: func(string) (contract.PioneerCoverage, error) {
+			return contract.PioneerCoverage{Expected: 12, BenchmarkObserved: 12, ReproductionObserved: 12}, nil
 		},
 	}
 }
@@ -468,8 +471,8 @@ func branchy(v int) int {
 		},
 		SelfAugmentOpenCount: func(string) (int, error) { return 10, nil },
 		SelfVerifyOpenCount:  func(string) (int, error) { return 0, nil },
-		Candidates: func(string) []QualityCandidate {
-			return []QualityCandidate{
+		Candidates: func(string) []qualitycatalogcontract.Candidate {
+			return []qualitycatalogcontract.Candidate{
 				{ID: "next-improvement-candidate", Status: "open", Score: 80.5, VerifyWith: []string{"go test ./... -count=1"}, Evidence: []string{"quality inspect signal"}},
 			}
 		},
@@ -510,8 +513,8 @@ func TestInspectQualityCandidatesCanUseProjectedStatuses(t *testing.T) {
 		},
 		SelfAugmentOpenCount: func(string) (int, error) { return 8, nil },
 		SelfVerifyOpenCount:  func(string) (int, error) { return 0, nil },
-		Candidates: func(string) []QualityCandidate {
-			return []QualityCandidate{
+		Candidates: func(string) []qualitycatalogcontract.Candidate {
+			return []qualitycatalogcontract.Candidate{
 				{ID: "quality-signal-harvester", Status: "already_satisfied", Score: 0, VerifyWith: []string{"issueops quality inspect --json"}, Evidence: []string{"quality inspect CLI"}},
 				{ID: "coverage-issueops-linking", Status: "open", Score: 77.4, VerifyWith: []string{"go test ./internal/application/issueopsbranch -count=1"}, Evidence: []string{"PROJECT_AUDIT"}},
 			}

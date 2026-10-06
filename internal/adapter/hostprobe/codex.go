@@ -96,7 +96,7 @@ func (r CodexRunner) Run(ctx context.Context, request port.HostProbeRequest) (re
 	}
 	capture, err := decodeEpisodeCapture(resultPath, request)
 	if err != nil {
-		cause, code := codexCaptureFailure(err)
+		cause, code := normalizedCaptureFailure(err)
 		return failedResult(r.Name(), "", request, started, r.deps, cause, code)
 	}
 	result = completedResult(r.Name(), "", request, started, r.deps, capture)
@@ -351,8 +351,4 @@ func codexArgvMode(executable, root string, request port.HostProbeRequest, resul
 
 func codexProcessFailure(err error) (string, string) {
 	return normalizedProcessFailure(err, "host_process_failed")
-}
-
-func codexCaptureFailure(err error) (string, string) {
-	return normalizedCaptureFailure(err)
 }

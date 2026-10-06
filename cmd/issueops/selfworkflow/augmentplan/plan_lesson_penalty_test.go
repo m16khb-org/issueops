@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	domain "issueops/internal/domain/selfaugment"
 	"strings"
 	"testing"
 	"time"
@@ -26,7 +27,7 @@ func TestApplyLessonPenaltiesDemotesRepeatedSevereLessons(t *testing.T) {
 		"floor-case":   3,
 	}
 
-	warnings := applyLessonPenalties(candidates, counts)
+	warnings := domain.ApplyLessonPenalties(candidates, counts)
 
 	if got := candidates[0].Score; got != 50 {
 		t.Errorf("repeat-fail score = %v, want 50 (80 - 2*15)", got)

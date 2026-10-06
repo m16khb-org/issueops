@@ -2,6 +2,7 @@ package operationalhealth
 
 import (
 	"fmt"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"strings"
 )
 
@@ -10,20 +11,20 @@ func validateCanonicalSource(builder *findingBuilder, snapshot Snapshot) {
 	branch := strings.TrimSpace(snapshot.CanonicalBranch)
 	head := strings.TrimSpace(snapshot.SourceHead)
 	if repo == "" || branch == "" || head == "" {
-		builder.add(FindingInventoryUnknown, "source", "source", "canonical source repository, branch, and HEAD identity must be complete", repo)
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "source", "source", "canonical source repository, branch, and HEAD identity must be complete", repo)
 		return
 	}
 	if !snapshot.SourceClean {
-		builder.add(FindingInventoryUnknown, "source", repo, "canonical source checkout is not clean", repo)
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "source", repo, "canonical source checkout is not clean", repo)
 	}
-	canonicalWorktrees := make([]GitWorktree, 0, 1)
+	canonicalWorktrees := make([]operationalhealthcontract.GitWorktree, 0, 1)
 	for _, worktree := range snapshot.GitWorktrees {
 		if worktree.Canonical || clean(worktree.Path) == repo {
 			canonicalWorktrees = append(canonicalWorktrees, worktree)
 		}
 	}
 	if len(canonicalWorktrees) != 1 || clean(canonicalWorktrees[0].Path) != repo || !canonicalWorktrees[0].Canonical || strings.TrimSpace(canonicalWorktrees[0].Branch) != branch || strings.TrimSpace(canonicalWorktrees[0].Head) != head || !canonicalWorktrees[0].Clean {
-		builder.add(FindingInventoryUnknown, "source_worktree", repo, "canonical Git worktree must occur once and match the clean source branch and HEAD", repo)
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "source_worktree", repo, "canonical Git worktree must occur once and match the clean source branch and HEAD", repo)
 	}
 	validateCanonicalRef(builder, snapshot.LocalRefs, "local", branch, head)
 	validateCanonicalRef(builder, snapshot.RemoteRefs, "remote", branch, head)
@@ -35,26 +36,26 @@ func validateCanonicalOrcaSource(builder *findingBuilder, snapshot Snapshot) {
 	head := strings.TrimSpace(snapshot.SourceHead)
 	runtimeID := strings.TrimSpace(snapshot.OrcaRuntimeID)
 	repoID := strings.TrimSpace(snapshot.OrcaRepoID)
-	matches := make([]OrcaWorktree, 0, 1)
+	matches := make([]operationalhealthcontract.OrcaWorktree, 0, 1)
 	for _, worktree := range snapshot.OrcaWorktrees {
 		if clean(worktree.Path) == repo {
 			matches = append(matches, worktree)
 		}
 	}
 	if len(matches) != 1 || strings.TrimSpace(matches[0].RuntimeID) != runtimeID || strings.TrimSpace(matches[0].RepoID) != repoID || clean(matches[0].Repo) != repo || strings.TrimSpace(matches[0].Branch) != branch || strings.TrimSpace(matches[0].Head) != head {
-		builder.add(FindingInventoryUnknown, "orca_source_worktree", repo, "canonical Orca worktree must occur once and match the source runtime, repository, branch, and HEAD", repo)
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "orca_source_worktree", repo, "canonical Orca worktree must occur once and match the source runtime, repository, branch, and HEAD", repo)
 	}
 }
 
-func validateCanonicalRef(builder *findingBuilder, refs []GitRef, location, branch, head string) {
-	matches := make([]GitRef, 0, 1)
+func validateCanonicalRef(builder *findingBuilder, refs []operationalhealthcontract.GitRef, location, branch, head string) {
+	matches := make([]operationalhealthcontract.GitRef, 0, 1)
 	for _, ref := range refs {
 		if strings.TrimSpace(ref.Location) == location && strings.TrimSpace(ref.Branch) == branch {
 			matches = append(matches, ref)
 		}
 	}
 	if len(matches) != 1 || strings.TrimSpace(matches[0].OID) != head {
-		builder.add(FindingInventoryUnknown, "branch", location+":"+branch, fmt.Sprintf("canonical %s ref must occur once at source HEAD %s", location, head), "")
+		builder.add(operationalhealthcontract.FindingInventoryUnknown, "branch", location+":"+branch, fmt.Sprintf("canonical %s ref must occur once at source HEAD %s", location, head), "")
 	}
 }
 
@@ -76,12 +77,12 @@ func knownLeaseStatus(value string) bool {
 	}
 }
 
-func hasExecutionProjection(cycle Cycle) bool {
+func hasExecutionProjection(cycle operationalhealthcontract.Cycle) bool {
 	return strings.TrimSpace(cycle.ExecutionMode) != "" || cycle.Generation != 0 || strings.TrimSpace(cycle.WorktreePath) != "" ||
 		!holderIdentityEmpty(cycle) || hasOrcaIdentity(cycle)
 }
 
-func executionIdentityComplete(cycle Cycle) bool {
+func executionIdentityComplete(cycle operationalhealthcontract.Cycle) bool {
 	if strings.TrimSpace(cycle.Branch) == "" || strings.TrimSpace(cycle.WorktreePath) == "" || cycle.Generation == 0 {
 		return false
 	}
@@ -97,14 +98,14 @@ func executionIdentityComplete(cycle Cycle) bool {
 	}
 }
 
-func activeHolderIdentityComplete(cycle Cycle) bool {
+func activeHolderIdentityComplete(cycle operationalhealthcontract.Cycle) bool {
 	if !holderIdentityComplete(cycle) {
 		return false
 	}
 	return strings.TrimSpace(cycle.ExecutionMode) != "orca" || strings.TrimSpace(cycle.OrcaOwnerHost) == strings.TrimSpace(cycle.HolderHost)
 }
 
-func retainedLeaseIdentityComplete(cycle Cycle) bool {
+func retainedLeaseIdentityComplete(cycle operationalhealthcontract.Cycle) bool {
 	switch strings.TrimSpace(cycle.LeaseStatus) {
 	case "claimable", "released":
 		return holderIdentityEmpty(cycle)
@@ -116,7 +117,7 @@ func retainedLeaseIdentityComplete(cycle Cycle) bool {
 
 }
 
-func holderIdentityComplete(cycle Cycle) bool {
+func holderIdentityComplete(cycle operationalhealthcontract.Cycle) bool {
 	host := strings.TrimSpace(cycle.HolderHost)
 	return validNativeHost(host) && strings.TrimSpace(cycle.HolderSessionID) != "" &&
 		cycle.HolderPID > 0 && strings.TrimSpace(cycle.HolderStartedAt) != "" && strings.TrimSpace(cycle.HolderExecutable) != ""
@@ -132,13 +133,13 @@ func validOrcaOwnerHost(host string) bool {
 	return host == "codex" || host == "claude" || host == "omo"
 }
 
-func holderIdentityEmpty(cycle Cycle) bool {
+func holderIdentityEmpty(cycle operationalhealthcontract.Cycle) bool {
 	return strings.TrimSpace(cycle.HolderHost) == "" && strings.TrimSpace(cycle.HolderSessionID) == "" &&
 		strings.TrimSpace(cycle.HolderAgentID) == "" && cycle.HolderPID == 0 && strings.TrimSpace(cycle.HolderStartedAt) == "" &&
 		strings.TrimSpace(cycle.HolderExecutable) == ""
 }
 
-func hasOrcaIdentity(cycle Cycle) bool {
+func hasOrcaIdentity(cycle operationalhealthcontract.Cycle) bool {
 	return strings.TrimSpace(cycle.OrcaRuntimeID) != "" || strings.TrimSpace(cycle.OrcaRepoID) != "" ||
 		strings.TrimSpace(cycle.OrcaWorktreeID) != "" || strings.TrimSpace(cycle.OrcaWorktreeInstanceID) != "" ||
 		strings.TrimSpace(cycle.OrcaOwnerHost) != "" || strings.TrimSpace(cycle.TerminalPTYID) != "" ||
@@ -241,7 +242,7 @@ func settledGateStatus(value string) bool {
 	return value == "resolved" || value == "timeout"
 }
 
-func preservableIdentityComplete(cycle Cycle) bool {
+func preservableIdentityComplete(cycle operationalhealthcontract.Cycle) bool {
 	if strings.TrimSpace(cycle.ID) == "" || strings.TrimSpace(cycle.Repo) == "" || strings.TrimSpace(cycle.Branch) == "" {
 		return false
 	}
@@ -253,7 +254,7 @@ func preservableIdentityComplete(cycle Cycle) bool {
 		return false
 	}
 	if status == "active" {
-		return activeHolderIdentityComplete(cycle) && strings.TrimSpace(cycle.HolderProcessStatus) == ProcessStatusLive
+		return activeHolderIdentityComplete(cycle) && strings.TrimSpace(cycle.HolderProcessStatus) == operationalhealthcontract.ProcessStatusLive
 	}
 	return retainedLeaseIdentityComplete(cycle)
 }

@@ -3,6 +3,7 @@ package orphancleanup
 import (
 	"context"
 	"errors"
+	contract "issueops/internal/contract/issueopsorphancleanup"
 	"os"
 	"path/filepath"
 	"strings"
@@ -61,7 +62,7 @@ func TestOrphanEffectsExcludeNewOwnersAndCompetingCleanup(t *testing.T) {
 			t.Errorf("competing cleanup admitted during effect: %v", err)
 		}
 	}}
-	result, err := service.Apply(context.Background(), fixture.request(), ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint})
+	result, err := service.Apply(context.Background(), fixture.request(), contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint})
 	if err != nil || !result.Applied || !observed {
 		t.Fatalf("apply=%+v err=%v observed=%t", result, err, observed)
 	}
@@ -84,7 +85,7 @@ func TestOrphanCancellationAfterWorktreeRemovalPreservesBranch(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	service.Environment = interceptOrphanEnvironment{OrphanEnvironment: service.Environment, afterRemove: cancel}
-	result, err := service.Apply(ctx, fixture.request(), ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint})
+	result, err := service.Apply(ctx, fixture.request(), contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint})
 	if !errors.Is(err, context.Canceled) || result.Applied || !result.LocalWorktreeRemoved || result.LocalBranchRemoved {
 		t.Fatalf("partial result=%+v err=%v", result, err)
 	}
@@ -117,7 +118,7 @@ func TestOrphanLocalRefreshRefusesInvalidRecordsAndChangedHead(t *testing.T) {
 				}
 				return db.Put(bucket, "io-corrupt", []byte(`{"schema_version":0}`))
 			}
-			result, err := Apply(context.Background(), fixture.request(), ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
+			result, err := Apply(context.Background(), fixture.request(), contract.ApplyRequest{Confirm: true, Fingerprint: preview.Fingerprint}, deps)
 			if err == nil || result.Applied || result.LocalWorktreeRemoved || result.LocalBranchRemoved {
 				t.Fatalf("unknown/drifted inventory admitted: %+v %v", result, err)
 			}

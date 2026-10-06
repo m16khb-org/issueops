@@ -2,6 +2,7 @@ package feedbackcleanup
 
 import (
 	"context"
+	executionissue "issueops/internal/contract/executionissue"
 	"testing"
 
 	cleanupapp "issueops/internal/application/issueopscleanup"
@@ -16,7 +17,7 @@ func TestRunCleanupFinishPropagatesKeepRemoteBranchExactly(t *testing.T) {
 	command := testCleanupCommand()
 	t.Setenv("ISSUEOPS_STATE_DIR", t.TempDir())
 	record := cleanupStatusRecord(t, true, true)
-	provider := &cleanupStatusProvider{snapshot: port.ExecutionIssueSnapshot{
+	provider := &cleanupStatusProvider{snapshot: executionissue.ExecutionIssueSnapshot{
 		URL: record.IssueURL, Body: issueopscontract.IssueBodyCompletionStartMarker, State: "closed",
 	}}
 	deps := cleanupStatusDeps(nil)

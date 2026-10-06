@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	operationalhealthcontract "issueops/internal/contract/operationalhealth"
 	"reflect"
 	"strings"
 	"testing"
@@ -16,7 +17,7 @@ func indexedHealthSnapshot(n int) Snapshot {
 	s.Cycles, s.LeaseHolderIndexes = nil, nil
 	s.GitWorktrees = s.GitWorktrees[:1]
 	s.OrcaObserved, s.OrcaRuntimeID, s.OrcaRepoID = true, "runtime", "repo-id"
-	s.OrcaWorktrees = []OrcaWorktree{{RuntimeID: "runtime", RepoID: "repo-id", ID: "main", Repo: "/repo", Path: "/repo", Branch: "main", Head: s.SourceHead}}
+	s.OrcaWorktrees = []operationalhealthcontract.OrcaWorktree{{RuntimeID: "runtime", RepoID: "repo-id", ID: "main", Repo: "/repo", Path: "/repo", Branch: "main", Head: s.SourceHead}}
 	s.Messages.RuntimeID = "runtime"
 	for i := 0; i < n; i++ {
 		id := fmt.Sprintf("resource-%d", i)
@@ -26,12 +27,12 @@ func indexedHealthSnapshot(n int) Snapshot {
 		c.OrcaWorktreeID, c.OrcaWorktreeInstanceID, c.TerminalPTYID = id, id, id
 		c.RunID, c.TaskID, c.DispatchID = "run", id, id
 		s.Cycles = append(s.Cycles, c)
-		s.LeaseHolderIndexes = append(s.LeaseHolderIndexes, LeaseHolderIndex{Key: id, LifecycleID: id, Generation: c.Generation, Host: c.HolderHost, SessionID: id})
-		s.GitWorktrees = append(s.GitWorktrees, GitWorktree{Path: c.WorktreePath, Branch: id, Head: s.SourceHead, Clean: true})
-		s.OrcaWorktrees = append(s.OrcaWorktrees, OrcaWorktree{RuntimeID: "runtime", RepoID: "repo-id", ID: id, InstanceID: id, Repo: "/repo", Path: c.WorktreePath, Branch: id, Head: s.SourceHead})
-		s.Terminals = append(s.Terminals, OrcaTerminal{RuntimeID: "runtime", Handle: id, PTYID: id, WorktreeID: id, WorktreePath: c.WorktreePath, Connected: true, Writable: true})
-		s.Tasks = append(s.Tasks, OrcaTask{RuntimeID: "runtime", RunID: "run", ID: id, Status: "dispatched", DispatchID: id})
-		s.Dispatches = append(s.Dispatches, OrcaDispatch{RuntimeID: "runtime", RunID: "run", ID: id, TaskID: id, AssigneeHandle: id, Status: "dispatched"})
+		s.LeaseHolderIndexes = append(s.LeaseHolderIndexes, operationalhealthcontract.LeaseHolderIndex{Key: id, LifecycleID: id, Generation: c.Generation, Host: c.HolderHost, SessionID: id})
+		s.GitWorktrees = append(s.GitWorktrees, operationalhealthcontract.GitWorktree{Path: c.WorktreePath, Branch: id, Head: s.SourceHead, Clean: true})
+		s.OrcaWorktrees = append(s.OrcaWorktrees, operationalhealthcontract.OrcaWorktree{RuntimeID: "runtime", RepoID: "repo-id", ID: id, InstanceID: id, Repo: "/repo", Path: c.WorktreePath, Branch: id, Head: s.SourceHead})
+		s.Terminals = append(s.Terminals, operationalhealthcontract.OrcaTerminal{RuntimeID: "runtime", Handle: id, PTYID: id, WorktreeID: id, WorktreePath: c.WorktreePath, Connected: true, Writable: true})
+		s.Tasks = append(s.Tasks, operationalhealthcontract.OrcaTask{RuntimeID: "runtime", RunID: "run", ID: id, Status: "dispatched", DispatchID: id})
+		s.Dispatches = append(s.Dispatches, operationalhealthcontract.OrcaDispatch{RuntimeID: "runtime", RunID: "run", ID: id, TaskID: id, AssigneeHandle: id, Status: "dispatched"})
 	}
 	return s
 }
@@ -52,7 +53,7 @@ func TestClassifyIndexedFindingsBaseline(t *testing.T) {
 			s.Tasks = append(s.Tasks, s.Tasks[0])
 			s.Dispatches = append(s.Dispatches, s.Dispatches[0])
 			s.LeaseHolderIndexes = append(s.LeaseHolderIndexes, s.LeaseHolderIndexes[0])
-			s.Gates = []OrcaGate{{RuntimeID: "runtime", ID: "gate", Status: "pending"}, {RuntimeID: "runtime", ID: "gate", Status: "pending"}}
+			s.Gates = []operationalhealthcontract.OrcaGate{{RuntimeID: "runtime", ID: "gate", Status: "pending"}, {RuntimeID: "runtime", ID: "gate", Status: "pending"}}
 		}, "f584dfaa9efeaa0447da99217c853df3b99444fd521bc3805c76d4bb1e448138"},
 		{"missing", func(s *Snapshot) {
 			s.GitWorktrees = s.GitWorktrees[:1]
@@ -132,12 +133,12 @@ func BenchmarkClassifyScaling(b *testing.B) {
 func TestResourceIndexVisitsEachValueOnce(t *testing.T) {
 	for _, n := range []int{100, 1000, 10000} {
 		t.Run(fmt.Sprint(n), func(t *testing.T) {
-			values := make([]OrcaTask, n)
+			values := make([]operationalhealthcontract.OrcaTask, n)
 			for i := range values {
 				values[i].ID = fmt.Sprint(i)
 			}
 			visits := 0
-			index := indexBy(values, func(task OrcaTask) string {
+			index := indexBy(values, func(task operationalhealthcontract.OrcaTask) string {
 				visits++
 				return task.ID
 			})
@@ -154,8 +155,8 @@ func TestResourceIndexVisitsEachValueOnce(t *testing.T) {
 }
 
 func TestResourceIndexPreservesDuplicatesAndEmptyKeys(t *testing.T) {
-	index := indexBy([]OrcaTask{{ID: " task ", RunID: "first"}, {ID: "task", RunID: "second"}, {ID: " "}}, func(task OrcaTask) string { return task.ID })
-	if got, ok := index.unique("task"); ok || got != (OrcaTask{}) || index.counts()["task"] != 2 {
+	index := indexBy([]operationalhealthcontract.OrcaTask{{ID: " task ", RunID: "first"}, {ID: "task", RunID: "second"}, {ID: " "}}, func(task operationalhealthcontract.OrcaTask) string { return task.ID })
+	if got, ok := index.unique("task"); ok || got != (operationalhealthcontract.OrcaTask{}) || index.counts()["task"] != 2 {
 		t.Fatalf("duplicate lookup = %+v, %t; counts = %+v", got, ok, index.counts())
 	}
 	if got, ok := index.unique(""); !ok || got.ID != " " || index.counts()[""] != 0 {
@@ -166,22 +167,22 @@ func TestResourceIndexPreservesDuplicatesAndEmptyKeys(t *testing.T) {
 func TestLeaseHolderIndexUsesEveryExactTupleField(t *testing.T) {
 	tests := []struct {
 		name   string
-		mutate func(*LeaseHolderIndex)
+		mutate func(*operationalhealthcontract.LeaseHolderIndex)
 	}{
-		{"lifecycle", func(i *LeaseHolderIndex) { i.LifecycleID = "other" }},
-		{"generation", func(i *LeaseHolderIndex) { i.Generation++ }},
-		{"host", func(i *LeaseHolderIndex) { i.Host = "claude" }},
-		{"session", func(i *LeaseHolderIndex) { i.SessionID = "other" }},
-		{"agent", func(i *LeaseHolderIndex) { i.AgentID = "other" }},
+		{"lifecycle", func(i *operationalhealthcontract.LeaseHolderIndex) { i.LifecycleID = "other" }},
+		{"generation", func(i *operationalhealthcontract.LeaseHolderIndex) { i.Generation++ }},
+		{"host", func(i *operationalhealthcontract.LeaseHolderIndex) { i.Host = "claude" }},
+		{"session", func(i *operationalhealthcontract.LeaseHolderIndex) { i.SessionID = "other" }},
+		{"agent", func(i *operationalhealthcontract.LeaseHolderIndex) { i.AgentID = "other" }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := healthyDirectSnapshot()
 			tt.mutate(&s.LeaseHolderIndexes[0])
 			result := Classify(s, Options{Now: time.Unix(1, 0)})
-			want := []Finding{
-				{Code: FindingInventoryUnknown, ResourceKind: "lease_holder", ResourceID: "current", Summary: "lease-holder reverse index must match exactly one active cycle"},
-				{Code: FindingInventoryUnknown, ResourceKind: "lease_holder", ResourceID: "io-v1", Summary: "active cycle must match exactly one lease-holder reverse index"},
+			want := []operationalhealthcontract.Finding{
+				{Code: operationalhealthcontract.FindingInventoryUnknown, ResourceKind: "lease_holder", ResourceID: "current", Summary: "lease-holder reverse index must match exactly one active cycle"},
+				{Code: operationalhealthcontract.FindingInventoryUnknown, ResourceKind: "lease_holder", ResourceID: "io-v1", Summary: "active cycle must match exactly one lease-holder reverse index"},
 			}
 			if !reflect.DeepEqual(result.Findings, want) {
 				t.Fatalf("findings = %+v, want %+v", result.Findings, want)

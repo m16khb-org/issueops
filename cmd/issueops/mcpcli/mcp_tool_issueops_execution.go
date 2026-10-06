@@ -3,6 +3,7 @@ package mcpcli
 import (
 	"context"
 	"fmt"
+	executionissue "issueops/internal/contract/executionissue"
 	"os"
 
 	"issueops/cmd/issueops/mcpcli/argmap"
@@ -114,7 +115,7 @@ func executionActionRequestFromMCPWithAncestry(args map[string]any, ancestry []m
 	}, nil
 }
 
-func executionIssueSnapshotFromMCP(args map[string]any) (*port.ExecutionIssueSnapshotEvidence, error) {
+func executionIssueSnapshotFromMCP(args map[string]any) (*executionissue.ExecutionIssueSnapshotEvidence, error) {
 	raw, exists := args["issue_snapshot"]
 	if !exists {
 		return nil, nil
@@ -166,7 +167,7 @@ func executionIssueSnapshotFromMCP(args map[string]any) (*port.ExecutionIssueSna
 	if err != nil {
 		return nil, err
 	}
-	return &port.ExecutionIssueSnapshotEvidence{
+	return &executionissue.ExecutionIssueSnapshotEvidence{
 		Provider: provider,
 		Source:   source,
 		WebURL:   webURL,

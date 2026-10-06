@@ -1,10 +1,11 @@
 package summary
 
-import app "issueops/internal/application/selfverify"
+import (
+	augmentcontract "issueops/internal/contract/selfaugment"
 
-func SummarizeSelfAugment(result SelfAugmentResult) SelfAugmentSummary {
+	app "issueops/internal/application/selfverify"
+)
+
+func SummarizeSelfAugment(result augmentcontract.SelfAugmentResult) augmentcontract.SelfAugmentSummary {
 	return app.SummarizeSelfVerification(result, defaultLoopTargetScoreExclusive)
-}
-func SummarizeSelfVerification(result SelfAugmentResult, target float64) SelfAugmentSummary {
-	return app.SummarizeSelfVerification(result, target)
 }

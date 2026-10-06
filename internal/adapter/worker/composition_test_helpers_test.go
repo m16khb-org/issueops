@@ -21,7 +21,6 @@ func testWorkerStore() Store {
 }
 func testWorkerService() workerapp.Service { return workerapp.Service{Effects: testWorkerStore()} }
 
-func workerDir() (string, error)                     { return ResolveDirectory() }
 func openWorkerDB(dir string) (StateDatabase, error) { return sqlstore.Open(dir) }
 func EnqueueWorkerJob(kind, payload string) (workercontract.WorkerJob, error) {
 	return testWorkerService().Enqueue(context.Background(), kind, payload)

@@ -176,13 +176,7 @@ func parseNativeProcessStart(value string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("invalid process start identity %q", value)
 }
 
-// InspectNativeProcessReceipt는 lease replacement이 쓰는 것과 동일한 PID
-// 재사용에 안전한 read-only 관측을 운영 inventory 수집기에 노출한다.
 func InspectNativeProcessReceipt(receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {
-	return inspectNativeProcessReceipt(receipt)
-}
-
-func inspectNativeProcessReceipt(receipt issueops.NativeProcessReceipt) (string, issueops.NativeProcessReceipt, error) {
 	alive, err := nativePIDAlive(receipt.PID)
 	if err != nil {
 		return NativeProcessStatusUnknown, issueops.NativeProcessReceipt{}, fmt.Errorf("inspect native process identity: %w", err)

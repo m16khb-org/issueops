@@ -2,6 +2,7 @@ package issueopscli
 
 import (
 	"flag"
+	clicatalog "issueops/internal/adapter/inbound/catalog/cli"
 	"strings"
 	"testing"
 )
@@ -29,7 +30,7 @@ func TestRepeatedFlagRoundTripsRepeatedValues(t *testing.T) {
 // subcommand는 issueOpsUsage(testLifecycleUsage())에 나타나야 한다.
 func TestIssueOpsUsageListsNewlyAddedSubcommands(t *testing.T) {
 	usage, err := captureProjectCLIStderr(t, func() error {
-		issueOpsUsage(testLifecycleUsage())
+		issueOpsUsage(clicatalog.LifecycleUsage())
 		return nil
 	})
 	if err != nil {

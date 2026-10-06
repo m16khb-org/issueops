@@ -1,6 +1,7 @@
 package rerun
 
 import (
+	domain "issueops/internal/domain/selfverify"
 	"strings"
 	"testing"
 )
@@ -33,7 +34,7 @@ func TestSelfVerifyStepRerunCommandCoversOperationalLabels(t *testing.T) {
 	}
 	for label, want := range tests {
 		t.Run(label, func(t *testing.T) {
-			got, ok := SelfVerifyStepRerunCommand(label)
+			got, ok := domain.SelfVerifyStepRerunCommand(label)
 			if want == "" {
 				if ok || got != "" {
 					t.Fatalf("expected no rerun command for %q, got %q ok=%v", label, got, ok)
@@ -51,7 +52,7 @@ func TestSelfVerifyStepRerunCommandCoversOperationalLabels(t *testing.T) {
 }
 
 func TestSelfVerifyRerunCommandsAndScoreFormatting(t *testing.T) {
-	commands := SelfVerifyRerunCommands("go test", 100, 95.5)
+	commands := domain.SelfVerifyRerunCommands("go test", 100, 95.5)
 	if len(commands) != 2 {
 		t.Fatalf("expected specific and collect-all rerun commands, got %#v", commands)
 	}
@@ -61,7 +62,7 @@ func TestSelfVerifyRerunCommandsAndScoreFormatting(t *testing.T) {
 		strings.Contains(commands[1], "--iterations") {
 		t.Fatalf("collect-all rerun command does not match the current deterministic CLI contract: %q", commands[1])
 	}
-	commands = SelfVerifyRerunCommands("unknown", 200, 95)
+	commands = domain.SelfVerifyRerunCommands("unknown", 200, 95)
 	if len(commands) != 1 ||
 		!strings.Contains(commands[0], "--collect-all-steps") ||
 		!strings.Contains(commands[0], "--llm-eval=false") ||
@@ -69,7 +70,7 @@ func TestSelfVerifyRerunCommandsAndScoreFormatting(t *testing.T) {
 		strings.Contains(commands[0], "--iterations") {
 		t.Fatalf("unexpected fallback rerun command: %#v", commands)
 	}
-	if FormatScore(100) != "100" || FormatScore(99.25) != "99.25" {
+	if domain.FormatScore(100) != "100" || domain.FormatScore(99.25) != "99.25" {
 		t.Fatal("FormatScore should preserve integer and fractional forms")
 	}
 }

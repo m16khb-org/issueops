@@ -8,21 +8,21 @@ import (
 const validBenchmarkJudgeJSON = `{"ok":true,"fixture_id":"fixture","average_score":100,"minimum_score":100,"dimension_scores":[{"dimension":"intent_understanding","score":100,"evidence":"matches request"}],"deterministic_failures":[],"judge_failures":[],"critical_failures":[],"passed":true}`
 
 func TestIssueOpsJudgeFileParsesStrictJSON(t *testing.T) {
-	result, err := DecodeIssueOpsBenchmarkJudgeJSON([]byte(validBenchmarkJudgeJSON))
+	result, err := DecodeJudgeScore([]byte(validBenchmarkJudgeJSON))
 	if err != nil || !result.OK || len(result.DimensionScores) != 1 {
 		t.Fatalf("unexpected judge result err=%v result=%+v", err, result)
 	}
 }
 
 func TestIssueOpsJudgeFileParsesFencedJSON(t *testing.T) {
-	result, err := DecodeIssueOpsBenchmarkJudgeJSON([]byte("```json\n" + validBenchmarkJudgeJSON + "\n```"))
+	result, err := DecodeJudgeScore([]byte("```json\n" + validBenchmarkJudgeJSON + "\n```"))
 	if err != nil || !result.OK || len(result.DimensionScores) != 1 {
 		t.Fatalf("expected fenced JSON judge result err=%v result=%+v", err, result)
 	}
 }
 
 func TestIssueOpsJudgeFileRejectsNoisyOutput(t *testing.T) {
-	_, err := DecodeIssueOpsBenchmarkJudgeJSON([]byte(`I will judge now. {"ok":true}`))
+	_, err := DecodeJudgeScore([]byte(`I will judge now. {"ok":true}`))
 	if err == nil {
 		t.Fatal("expected strict JSON error")
 	}
@@ -30,7 +30,7 @@ func TestIssueOpsJudgeFileRejectsNoisyOutput(t *testing.T) {
 
 func TestIssueOpsJudgeFileRejectsDimensionScoreObjectWithOutputEvidence(t *testing.T) {
 	output := `{"ok":true,"fixture_id":"fixture","average_score":100,"minimum_score":100,"dimension_scores":{"intent_understanding":{"score":100,"evidence":"object is invalid"}},"deterministic_failures":[],"judge_failures":[],"critical_failures":[],"passed":true}`
-	_, err := DecodeIssueOpsBenchmarkJudgeJSON([]byte(output))
+	_, err := DecodeJudgeScore([]byte(output))
 	if err == nil {
 		t.Fatal("expected object-shaped dimension_scores to fail")
 	}
@@ -41,7 +41,7 @@ func TestIssueOpsJudgeFileRejectsDimensionScoreObjectWithOutputEvidence(t *testi
 }
 
 func TestIssueOpsJudgeFileRejectsFencedUnknownField(t *testing.T) {
-	_, err := DecodeIssueOpsBenchmarkJudgeJSON([]byte("```json\n" + `{"ok":true,"fixture_id":"fixture","average_score":100,"minimum_score":100,"dimension_scores":[{"dimension":"intent_understanding","score":100,"evidence":"matches request"}],"deterministic_failures":[],"judge_failures":[],"critical_failures":[],"passed":true,"unexpected":true}` + "\n```"))
+	_, err := DecodeJudgeScore([]byte("```json\n" + `{"ok":true,"fixture_id":"fixture","average_score":100,"minimum_score":100,"dimension_scores":[{"dimension":"intent_understanding","score":100,"evidence":"matches request"}],"deterministic_failures":[],"judge_failures":[],"critical_failures":[],"passed":true,"unexpected":true}` + "\n```"))
 	if err == nil || !strings.Contains(err.Error(), "unknown field") {
 		t.Fatalf("expected unknown field error, got %v", err)
 	}

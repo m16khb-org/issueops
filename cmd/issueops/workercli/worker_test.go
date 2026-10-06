@@ -23,7 +23,7 @@ func TestRunWorkerRoutesUsageAndUnknownSubcommands(t *testing.T) {
 	}
 }
 
-func TestExportWrappersDelegateToWorkerCommands(t *testing.T) {
+func TestExportedCommandsDelegateToWorkerSubcommands(t *testing.T) {
 	t.Setenv("ISSUEOPS_WORKER_DIR", t.TempDir())
 	tests := []struct {
 		name    string

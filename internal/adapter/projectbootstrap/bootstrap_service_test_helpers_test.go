@@ -11,6 +11,7 @@ import (
 	lifecycleapp "issueops/internal/application/lifecycle"
 	bootstrapapp "issueops/internal/application/projectbootstrap"
 	lifecyclecontract "issueops/internal/contract/lifecycle"
+	projectbootstrapcontract "issueops/internal/contract/projectbootstrap"
 )
 
 func testLifecycleService() lifecycleapp.Service {
@@ -30,6 +31,6 @@ func testBootstrapService() bootstrapapp.Service {
 	}}
 }
 
-func BootstrapProjectDocs(request ProjectDocsBootstrapRequest) (ProjectDocsBootstrapResult, error) {
+func BootstrapProjectDocs(request projectbootstrapcontract.ProjectDocsBootstrapRequest) (projectbootstrapcontract.ProjectDocsBootstrapResult, error) {
 	return testBootstrapService().Run(request)
 }
