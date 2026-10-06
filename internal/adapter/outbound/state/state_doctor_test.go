@@ -112,6 +112,9 @@ func TestStateDoctorAllowsHarnessOwnedAuxiliaryState(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(dir, "audit"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.MkdirAll(filepath.Join(dir, "mcp-http"), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(dir, "unknown.jsonl"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +130,7 @@ func TestStateDoctorAllowsHarnessOwnedAuxiliaryState(t *testing.T) {
 		t.Fatalf("unknown auxiliary state should still keep doctor unhealthy: %+v", result)
 	}
 	for _, issue := range result.Issues {
-		if strings.Contains(issue.Path, "hook-failures.jsonl") || strings.Contains(issue.Path, "issueops-benchmarks") || strings.Contains(issue.Path, "audit") {
+		if strings.Contains(issue.Path, "hook-failures.jsonl") || strings.Contains(issue.Path, "issueops-benchmarks") || strings.Contains(issue.Path, "audit") || strings.Contains(issue.Path, "mcp-http") {
 			t.Fatalf("harness-owned auxiliary state should not warn: %+v", result.Issues)
 		}
 	}
